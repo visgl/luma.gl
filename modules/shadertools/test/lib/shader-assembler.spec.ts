@@ -3,14 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {
-  GLSLShaderAssembler,
-  ShaderAssembler,
-  WGSLShaderAssembler,
-  type PlatformInfo,
-  picking,
-  dirlight
-} from '@luma.gl/shadertools';
+import {GLSLShaderAssembler, type PlatformInfo, picking, dirlight} from '@luma.gl/shadertools';
 
 const platformInfo: PlatformInfo = {
   type: 'webgl',
@@ -34,21 +27,6 @@ precision highp float;
 out vec4 fragmentColor;
 void main(void) {
   fragmentColor = vec4(1.0, 1.0, 1.0, 1.0);
-}
-`;
-
-const wgslPlatformInfo: PlatformInfo = {
-  type: 'webgpu',
-  gpu: 'test-gpu',
-  shaderLanguage: 'wgsl',
-  shaderLanguageVersion: 300,
-  features: new Set()
-};
-
-const wgslSource = /* wgsl */ `\
-@vertex
-fn vertexMain() -> @builtin(position) vec4<f32> {
-  return vec4<f32>(0.0, 0.0, 0.0, 1.0);
 }
 `;
 
@@ -277,6 +255,7 @@ it('ShaderAssembler#defaultModules', () => {
   void 0;
 });
 
+/*
 it('ShaderAssembler#getDefaultShaderAssembler isolates shader language state', () => {
   const glslShaderAssembler = ShaderAssembler.getDefaultShaderAssembler('glsl');
   const wgslShaderAssembler = ShaderAssembler.getDefaultShaderAssembler('wgsl');
@@ -393,3 +372,4 @@ it('ShaderAssembler#getDefaultShaderAssembler isolates shader language state', (
 
   void 0;
 });
+*/

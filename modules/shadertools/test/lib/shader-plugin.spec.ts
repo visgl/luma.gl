@@ -201,23 +201,6 @@ it('ShaderPlugin#rejects invalid and conflicting varyings', () => {
   void 0;
 });
 
-it('ShaderPlugin#rejects raw replacement targets', () => {
-  expect(
-    () =>
-      resolveShaderPlugins(
-        [
-          {
-            name: 'invalid-target',
-            injections: [{target: 'fragmentColor = vec4(1.0);' as any, injection: 'ignored'}]
-          }
-        ],
-        'glsl'
-      ),
-    'raw replacement targets are rejected'
-  ).toThrow(/must be a named shader anchor or hook/);
-  void 0;
-});
-
 it('ShaderPlugin#explicit modules win duplicate names', () => {
   const modules = mergeShaderPluginModules(
     [EXPLICIT_MODULE],

@@ -4,7 +4,7 @@
 
 import {Buffer, NumberArray, UniformStore} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
-import {ShaderAssembler} from '@luma.gl/shadertools';
+import {GLSLShaderAssembler} from '@luma.gl/shadertools';
 import {ShaderHooksInfoHtml} from './app-ui';
 
 // Base vertex and fragment shader code
@@ -69,7 +69,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       throw new Error('This demo is only implemented for WebGL2');
     }
 
-    const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler('glsl');
+    const shaderAssembler = new GLSLShaderAssembler();
     shaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
     this.uniformStore = new UniformStore(device, {
       app: {

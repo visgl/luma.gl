@@ -12,8 +12,9 @@ functions, and injections before luma.gl creates shader resources:
 - `GLSLShaderAssembler` assembles GLSL vertex and fragment shaders for WebGL.
 - `WGSLShaderAssembler` assembles unified WGSL shaders for WebGPU.
 
-Each shader language has its own default assembler, keeping language-specific
-hooks, default modules, and other assembly state isolated.
+Create a shader assembler for each independent owner of shader state. Hook
+functions, default modules, and other assembly state belong to the assembler
+instance and are not shared globally.
 
 For the assembly model, see
 [Shader Assembly](/docs/api-guide/shaders/shader-assembly). For extension design,
@@ -30,9 +31,9 @@ For WGSL binding relocation and conditionals, see
   {label: 'Cost', value: 'Assemble when source configuration changes, before pipeline creation—not per draw'}
 ]} />
 
-:::warning Common mistake
-The default assembler is shared state for one shader language. Register global hooks or default modules
-deliberately; use an isolated assembler when one application must not affect another.
+:::tip Ownership
+Hook functions and default modules belong to the assembler instance. Create and retain an assembler
+for each independent owner of shader state.
 :::
 
 ## Usage
@@ -40,11 +41,10 @@ deliberately; use an isolated assembler when one application must not affect ano
 ```typescript
 import {
   GLSLShaderAssembler,
-  ShaderAssembler,
   WGSLShaderAssembler
 } from '@luma.gl/shadertools';
 
-const glslShaderAssembler = ShaderAssembler.getDefaultShaderAssembler('glsl');
+const glslShaderAssembler = new GLSLShaderAssembler();
 glslShaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
 
 const assembledShaders = glslShaderAssembler.assembleGLSLShaderPair({
@@ -54,7 +54,7 @@ const assembledShaders = glslShaderAssembler.assembleGLSLShaderPair({
   modules: [offsetLeftModule]
 });
 
-const wgslShaderAssembler = ShaderAssembler.getDefaultShaderAssembler('wgsl');
+const wgslShaderAssembler = new WGSLShaderAssembler();
 const assembledWGSLShader = wgslShaderAssembler.assembleWGSLShader({
   platformInfo: wgslPlatformInfo,
   source: wgslShaderSource,
@@ -88,15 +88,6 @@ Common assembly props:
 | `prologue?: boolean` | GLSL only: whether to emit the luma.gl shader prologue. |
 
 ## Static Methods
-
-### `getDefaultShaderAssembler('glsl'): GLSLShaderAssembler`
-
-### `getDefaultShaderAssembler('wgsl'): WGSLShaderAssembler`
-
-Returns the shared assembler for the explicitly requested shader language. The
-language argument is required. GLSL and WGSL use separate instances, so
-registering hooks for one language cannot overwrite or remove hooks for the
-other.
 
 ## Methods
 

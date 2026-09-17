@@ -7,15 +7,7 @@ import type {ShaderModule} from './shader-module/shader-module';
 import {shaderTypeDecoder, type AttributeShaderType} from '@luma.gl/core';
 
 /** Named shader anchor or hook target accepted by ShaderPlugin injections. */
-export type ShaderPluginInjectionTarget =
-  | 'vs:#decl'
-  | 'vs:#main-start'
-  | 'vs:#main-end'
-  | 'fs:#decl'
-  | 'fs:#main-start'
-  | 'fs:#main-end'
-  | `vs:${string}`
-  | `fs:${string}`;
+export type ShaderPluginInjectionTarget = `${'vs' | 'fs'}:${string}`;
 
 /** Named shader source injection contributed by a ShaderPlugin. */
 export type ShaderPluginInjection = {
@@ -81,9 +73,6 @@ export type ResolvedShaderPlugins = {
   /** Resolved cross-stage varyings in plugin declaration order. */
   varyings: Record<string, ResolvedShaderPluginVarying>;
 };
-
-const SHADER_PLUGIN_INJECTION_TARGET_REGEX =
-  /^(vs|fs):(?:#(?:decl|main-start|main-end)|[A-Za-z_][\w-]*)$/;
 
 /** Resolve shared and backend-specific contributions from shader plugins. */
 export function resolveShaderPlugins(
@@ -174,7 +163,6 @@ function appendShaderPluginVariant(
   }
 
   for (const injection of variant.injections || []) {
-    assertNamedShaderPluginInjectionTarget(injection.target);
     if (!resolved.injections[injection.target]) {
       resolved.injections[injection.target] = [];
     }
@@ -203,12 +191,4 @@ function normalizeShaderPluginVarying(
     throw new Error(`ShaderPlugin integer varying "${name}" must use flat interpolation`);
   }
   return {type: varying.type, interpolation};
-}
-
-function assertNamedShaderPluginInjectionTarget(target: ShaderPluginInjectionTarget): void {
-  if (!SHADER_PLUGIN_INJECTION_TARGET_REGEX.test(target)) {
-    throw new Error(
-      `ShaderPlugin injection target "${target}" must be a named shader anchor or hook`
-    );
-  }
 }

@@ -7,7 +7,6 @@ import {LuSpatialPointLayer} from '@deck.gl-community/gpu-layers';
 import {Buffer, type Device} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
 import {DrawCommandBuffer} from '@luma.gl/gpgpu/gpu-core';
-import {ShaderAssembler} from '@luma.gl/shadertools';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it} from 'vitest';
 import {vi, type MockInstance} from 'vitest';
@@ -129,23 +128,7 @@ function createTestDeck(
     views: new OrthographicView({id: 'main'}),
     initialViewState: {target: [0, 0], zoom: 0},
     layers: [layer],
-    onError,
-    onDeviceInitialized: initializedDevice => {
-      const getDefaultShaderAssembler = ShaderAssembler.getDefaultShaderAssembler;
-      const shaderAssemblerSpy = vi.spyOn(ShaderAssembler, 'getDefaultShaderAssembler');
-      const restore = () => shaderAssemblerSpy.mockRestore();
-      onShaderAssemblerReady(restore);
-      shaderAssemblerSpy.mockImplementation(shaderLanguage => {
-        if (shaderLanguage !== undefined) {
-          return getDefaultShaderAssembler.call(ShaderAssembler, shaderLanguage);
-        }
-        restore();
-        return getDefaultShaderAssembler.call(
-          ShaderAssembler,
-          initializedDevice.info.shadingLanguage
-        );
-      });
-    }
+    onError
   });
 }
 

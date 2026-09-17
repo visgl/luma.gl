@@ -16,7 +16,6 @@ import {
 } from './shader-assembly/wgsl-binding-debug';
 import {preprocess} from './preprocessor/preprocessor';
 import {scanWGSLInterface} from './shader-assembly/wgsl-interface-scan';
-import {assert} from './utils/assert';
 import type {ShaderLayout} from '@luma.gl/core';
 
 /**
@@ -24,44 +23,12 @@ import type {ShaderLayout} from '@luma.gl/core';
  * Supports setting of default modules and hooks.
  */
 export abstract class ShaderAssembler {
-  /** Shared assemblers, with independent module and hook state for each shader language. */
-  private static readonly defaultShaderAssemblers: {
-    glsl?: GLSLShaderAssembler;
-    wgsl?: WGSLShaderAssembler;
-  } = {};
   /** Shader language accepted by this assembler. */
   abstract readonly shaderLanguage: 'glsl' | 'wgsl';
   /** Hook functions */
   protected readonly _hookFunctions: any[] = [];
   /** Shader modules */
   protected _defaultModules: ShaderModule[] = [];
-
-  /**
-   * A default shader assembler instance - the natural place to register default modules and hooks
-   * @param shaderLanguage Shader language whose shared assembler should be returned.
-   * @returns Shared default shader assembler for the requested language.
-   */
-  static getDefaultShaderAssembler(shaderLanguage: 'glsl'): GLSLShaderAssembler;
-  static getDefaultShaderAssembler(shaderLanguage: 'wgsl'): WGSLShaderAssembler;
-  static getDefaultShaderAssembler(
-    shaderLanguage: 'glsl' | 'wgsl'
-  ): GLSLShaderAssembler | WGSLShaderAssembler;
-  static getDefaultShaderAssembler(
-    shaderLanguage: 'glsl' | 'wgsl'
-  ): GLSLShaderAssembler | WGSLShaderAssembler {
-    // Shader language must be explicit to avoid mixing GLSL and WGSL hooks.
-    assert(shaderLanguage === 'glsl' || shaderLanguage === 'wgsl');
-
-    if (shaderLanguage === 'wgsl') {
-      ShaderAssembler.defaultShaderAssemblers.wgsl =
-        ShaderAssembler.defaultShaderAssemblers.wgsl || new WGSLShaderAssembler();
-      return ShaderAssembler.defaultShaderAssemblers.wgsl;
-    }
-
-    ShaderAssembler.defaultShaderAssemblers.glsl =
-      ShaderAssembler.defaultShaderAssemblers.glsl || new GLSLShaderAssembler();
-    return ShaderAssembler.defaultShaderAssemblers.glsl;
-  }
 
   /**
    * Add a default module that does not have to be provided with every assembly call.

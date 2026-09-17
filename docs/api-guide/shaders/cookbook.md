@@ -44,7 +44,7 @@ const exposure = {
 ## Add a hook
 
 ```ts
-const assembler = ShaderAssembler.getDefaultShaderAssembler('wgsl');
+const assembler = new WGSLShaderAssembler();
 assembler.addShaderHook(
   'fs:FILTER_COLOR(color: ptr<function, vec4<f32>>)'
 );

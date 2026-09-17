@@ -43,11 +43,11 @@ import type {
   ShaderBindingDebugRow,
   ShaderModule,
   ShaderPlugin,
-  PlatformInfo,
-  GLSLShaderAssembler,
-  WGSLShaderAssembler
+  PlatformInfo
 } from '@luma.gl/shadertools';
 import {
+  GLSLShaderAssembler,
+  WGSLShaderAssembler,
   mergeShaderPluginModules,
   resolveShaderPlugins,
   ShaderAssembler
@@ -236,7 +236,7 @@ export class Model {
     pipelineFactory: undefined!,
     shaderFactory: undefined!,
     transformFeedback: undefined!,
-    shaderAssembler: ShaderAssembler.getDefaultShaderAssembler('glsl'),
+    shaderAssembler: undefined!,
 
     debugShaders: undefined!,
     disableWarnings: undefined!
@@ -346,15 +346,14 @@ export class Model {
   }
 
   constructor(device: Device, props: ModelProps) {
-    const defaultShaderAssembler = Model.defaultProps.shaderAssembler;
     this.props = {
       ...Model.defaultProps,
       ...props,
       shaderAssembler:
         props.shaderAssembler ??
-        (isShaderAssemblerForLanguage(defaultShaderAssembler, device.info.shadingLanguage)
-          ? defaultShaderAssembler
-          : ShaderAssembler.getDefaultShaderAssembler(device.info.shadingLanguage))
+        (device.info.shadingLanguage === 'wgsl'
+          ? new WGSLShaderAssembler()
+          : new GLSLShaderAssembler())
     };
     props = this.props;
     this.id = props.id || uid('model');
