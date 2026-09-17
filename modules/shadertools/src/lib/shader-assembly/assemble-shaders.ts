@@ -44,6 +44,12 @@ import {
 const INJECT_SHADER_DECLARATIONS = `\n\n${DECLARATION_INJECT_MARKER}\n`;
 const RESERVED_APPLICATION_GROUP_0_BINDING_LIMIT = 100;
 
+type ShaderAssemblyLog = {
+  deprecated?: (...args: unknown[]) => () => unknown;
+  removed?: (...args: unknown[]) => () => unknown;
+  warn?: (...args: unknown[]) => () => unknown;
+};
+
 /**
  * Precision prologue to inject before functions are injected in shader
  * TODO - extract any existing prologue in the fragment source and move it up...
@@ -94,7 +100,7 @@ export type AssembleShaderOptions = {
   /** Whether to inject prologue */
   prologue?: boolean;
   /** logger object */
-  log?: (...args: unknown[]) => void;
+  log?: ShaderAssemblyLog;
 };
 
 type AssembleStageOptions = {
@@ -126,7 +132,7 @@ type AssembleStageOptions = {
   /** Whether to inject prologue */
   prologue?: boolean;
   /** logger object */
-  log?: (...args: unknown[]) => void;
+  log?: ShaderAssemblyLog;
   /** @internal Stable per-assembler WGSL binding assignments. */
   _bindingRegistry?: Map<string, number>;
 };
@@ -414,7 +420,7 @@ function assembleShaderGLSL(
     pluginVertexInputs?: Record<string, AttributeShaderType>;
     pluginVaryings?: Record<string, ResolvedShaderPluginVarying>;
     prologue?: boolean;
-    log?: (...args: unknown[]) => void;
+    log?: ShaderAssemblyLog;
   }
 ) {
   const {

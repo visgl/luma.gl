@@ -93,10 +93,7 @@ export abstract class ShaderAssembler {
    * @param opts Optional hook metadata such as always-on header and footer source.
    */
   addShaderHook(hook: string, opts?: Omit<ShaderHook, 'hook' | 'signature'>): void {
-    if (opts) {
-      hook = Object.assign(opts, {hook});
-    }
-    this._hookFunctions.push(hook);
+    this._hookFunctions.push(opts ? {...opts, hook} : hook);
   }
 
   /**
