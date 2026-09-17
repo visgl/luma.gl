@@ -94,7 +94,7 @@ export type AssembleShaderOptions = {
   /** Whether to inject prologue */
   prologue?: boolean;
   /** logger object */
-  log?: any;
+  log?: (...args: unknown[]) => void;
 };
 
 type AssembleStageOptions = {
@@ -126,7 +126,7 @@ type AssembleStageOptions = {
   /** Whether to inject prologue */
   prologue?: boolean;
   /** logger object */
-  log?: any;
+  log?: (...args: unknown[]) => void;
   /** @internal Stable per-assembler WGSL binding assignments. */
   _bindingRegistry?: Map<string, number>;
 };
@@ -289,7 +289,7 @@ export function assembleShaderWGSL(
   appendInjections(pluginInjections, hookInjections, declInjections, mainInjections);
 
   for (const key in inject) {
-    const injection =
+    const injection: ShaderInjection =
       typeof inject[key] === 'string' ? {injection: inject[key], order: 0} : inject[key];
     const match = /^(v|f)s:(#)?([\w-]+)$/.exec(key);
     if (match) {
@@ -297,16 +297,16 @@ export function assembleShaderWGSL(
       const name = match[3];
       if (hash) {
         if (name === 'decl') {
-          declInjections[key] = [injection as any];
+          declInjections[key] = [injection];
         } else {
-          mainInjections[key] = [injection as any];
+          mainInjections[key] = [injection];
         }
       } else {
-        hookInjections[key] = [injection as any];
+        hookInjections[key] = [injection];
       }
     } else {
       // Regex injection
-      mainInjections[key] = [injection as any];
+      mainInjections[key] = [injection];
     }
   }
   appendGeneratedVertexInputInjections(
@@ -408,13 +408,13 @@ function assembleShaderGLSL(
     stage: 'vertex' | 'fragment';
     modules: ShaderModule[];
     defines?: Record<string, boolean | number>;
-    hookFunctions?: any[];
+    hookFunctions?: (ShaderHook | string)[];
     inject?: Record<string, string | ShaderInjection>;
     pluginInjections?: Record<string, ShaderInjection[]>;
     pluginVertexInputs?: Record<string, AttributeShaderType>;
     pluginVaryings?: Record<string, ResolvedShaderPluginVarying>;
     prologue?: boolean;
-    log?: any;
+    log?: (...args: unknown[]) => void;
   }
 ) {
   const {
