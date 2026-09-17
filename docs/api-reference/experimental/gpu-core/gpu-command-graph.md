@@ -73,7 +73,7 @@ concurrently. It does not submit commands, execute a warm-up decode, or wait for
 synchronous `compile()` only when immediate construction is required or when measuring compatibility
 with an older integration.
 
-Node callbacks that construct `Computation` or `Model` instances need no special handling: the graph
+Node callbacks that construct `Kernel`, `Computation`, or `Model` instances need no special handling: the graph
 collects their asynchronous pipeline work automatically. A custom node that prepares some other
 asynchronous resource can provide `compileAsync(context)` alongside its required synchronous
 `compile(context)` callback. `compileAsync()` prefers that callback for the node; `compile()` always

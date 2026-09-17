@@ -8,15 +8,14 @@ import {TempestOceanExample} from '@site/src/examples';
 
 ## Overview
 
-`GPUFFT2D` records a bounded, out-of-place two-dimensional complex fast Fourier transform on
-WebGPU. It accepts caller-owned row-major storage buffers, owns one equally sized scratch buffer,
-and records every bit-reversal and radix-2 butterfly pass onto the application's
-`CommandEncoder`. It never submits commands or reads values back to the CPU.
+`GPUFFT2D` adds an out-of-place two-dimensional complex fast Fourier transform to a
+`GPUCommandGraph`. It accepts borrowed `GraphDataView<'float32x2'>` or
+`GraphVectorView<'float32x2'>` operands and declares graph-owned scratch. The compiled graph
+owns kernels and immutable pass parameters. Encoding never submits work or reads values back.
 
-The initial implementation targets reusable simulation and signal-processing foundations such as
-spectral oceans, frequency-domain filters, convolution, and procedural fields. It deliberately
-does not own textures, convert real-valued inputs, select padding dimensions, or hide command
-submission.
+Contiguous batches use the existing 8-by-8 kernel with one transform per dispatch-depth slice.
+Independently chunked operands use two reusable, single-transform scratch fields. Only active
+spans are copied into algorithm scratch; source chunks keep their storage, offsets and ownership.
 
 The live ocean below makes the transform's value tangible: GPU spectral coefficients evolve over
 time, inverse FFT passes reconstruct spatial displacement fields, and the renderer turns those
@@ -54,91 +53,66 @@ Each complex value occupies two consecutive `float32` components: real followed 
 Values are row-major, so the complete field contains `width * height * 2` floats.
 
 ```ts
-import {Buffer} from '@luma.gl/core';
-import {GPUFFT2D} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph, GPUFFT2D} from '@luma.gl/gpgpu/gpu-core';
 
-const width = 256;
-const height = 256;
-const complexByteLength = width * height * 2 * Float32Array.BYTES_PER_ELEMENT;
-
-const inputBuffer = device.createBuffer({
-  data: initialComplexValues,
-  usage: Buffer.STORAGE | Buffer.COPY_DST
-});
-const frequencyBuffer = device.createBuffer({
-  byteLength: complexByteLength,
-  usage: Buffer.STORAGE
-});
-const reconstructedBuffer = device.createBuffer({
-  byteLength: complexByteLength,
-  usage: Buffer.STORAGE
-});
-const transform = new GPUFFT2D(device, {width, height});
-
-const commandEncoder = device.createCommandEncoder({id: 'spectral-step'});
-transform.encode(commandEncoder, {
-  inputBuffer,
-  outputBuffer: frequencyBuffer,
-  direction: 'forward'
-});
-transform.encode(commandEncoder, {
-  inputBuffer: frequencyBuffer,
-  outputBuffer: reconstructedBuffer,
-  direction: 'inverse'
-});
-device.submit(commandEncoder.finish());
+const graph = new GPUCommandGraph(device);
+// These are GPUVector<'float32x2'> values; each can have independent chunk boundaries.
+const input = graph.importGPUVector('input', spatialValues);
+const frequency = graph.importGPUVector('frequency', frequencyValues);
+const reconstructed = graph.importGPUVector('reconstructed', reconstructedValues);
+graph.add([
+  new GPUFFT2D({id: 'forward', input, output: frequency, width, height, batchCount}),
+  new GPUFFT2D({
+    id: 'inverse', input: frequency, output: reconstructed,
+    width, height, batchCount, direction: 'inverse'
+  })
+]);
+const compiled = graph.compile();
+const encoder = device.createCommandEncoder();
+compiled.encode(encoder, {parameters: undefined});
+device.submit(encoder.finish());
+// After the application finishes using the plan:
+compiled.destroy();
 ```
 
-The two calls above compose in one command buffer. The second transform observes the first
-transform's output through ordinary WebGPU command ordering; no intermediate submission or CPU
-synchronization is required.
+Both transforms compose in one command buffer without intermediate submission or CPU
+synchronization. Use `graph.importBuffer()` and `graph.createDataView()` for individual buffers.
 
 ## Constructor
 
-### `new GPUFFT2D(device, props)`
+### `new GPUFFT2D(props)`
 
 ```ts
 type GPUFFT2DProps = {
   id?: string;
+  input: GraphDataView<'float32x2'> | GraphVectorView<'float32x2'>;
+  output: GraphDataView<'float32x2'> | GraphVectorView<'float32x2'>;
   width: number;
   height: number;
-};
-```
-
-`width` and `height` must each be powers of two from 2 through 2048. Rectangular transforms are
-supported. The bound keeps allocation and dispatch costs predictable: the maximum field contains
-4,194,304 complex values and occupies 32 MiB per complex buffer.
-
-Construction allocates one field-sized scratch buffer, one compute pipeline, and two immutable
-32-byte parameter buffers per pass so forward and inverse encodings never race through rewritten
-uniforms. Input and output storage remain caller-owned.
-
-## Encoding
-
-### `encode(commandEncoder, options): Buffer`
-
-```ts
-type GPUFFT2DEncodeOptions = {
-  inputBuffer: Buffer;
-  outputBuffer: Buffer;
+  batchCount?: number;
   direction?: 'forward' | 'inverse';
 };
 ```
 
-Both buffers must belong to the transform's device, declare `Buffer.STORAGE`, and contain at least
-`stats.complexBufferByteLength` bytes. They must be separate allocations; the source is never
-modified. Separate wrapper objects around the same underlying `GPUBuffer` are also rejected,
-because the physical allocation would still alias across parallel butterfly invocations.
-`encode()` returns `outputBuffer` for convenient downstream binding.
+Each dimension must be a power of two from 2 through 2048. `batchCount` defaults to one.
+Each operand must hold at least `width * height * batchCount` complex values. Views must be
+packed and aligned to eight bytes; input and output must use separate buffers. Writable chunks
+must not overlap. Construction is CPU-only; adding the primitive declares resources and nodes,
+and graph compilation allocates GPU resources.
+
+### `getCommandNodes(graph)`
+
+Returns the ordered bit-reversal and butterfly nodes. Normally use `graph.add(transform)` or
+`graph.add([transform, otherOperation])` so the graph expands the primitive.
 
 The normalization convention is:
 
 - `forward`: negative complex exponent and no normalization;
 - `inverse`: positive complex exponent and division by `width * height` on the final pass.
 
-The transform first bit-reverses and evaluates every row, then does the same for every column.
-Passes ping-pong between the class-owned scratch field and the caller's output so the final pass
-always lands in `outputBuffer`.
+The transform first evaluates rows, then columns. Chunked transforms borrow source and destination
+spans and reuse bounded scratch across the batch. No source vector is concatenated into an owned
+whole-vector allocation.
 
 ## Support query
 
@@ -146,7 +120,8 @@ always lands in `outputBuffer`.
 
 The support query validates dimensions before allocation and reports WebGPU compute, workgroup,
 dispatch, storage-binding, and buffer-size limits. A valid plan is included in `stats` even when a
-device limit prevents execution.
+device limit prevents execution. With `input` and `output` views supplied, support is checked
+for one bounded scratch field; without views it describes the contiguous batched fast path.
 
 ```ts
 const support = getGPUFFT2DSupport(device, {width: 512, height: 256});
@@ -162,26 +137,21 @@ if (!support.supported) {
 | Field | Meaning |
 | --- | --- |
 | `width`, `height`, `elementCount` | Logical complex-field dimensions and value count. |
-| `complexBufferByteLength` | Minimum byte length of input, output, and scratch fields. |
+| `complexBufferByteLength` | Logical bytes across the batch (contiguous-plan scratch size). |
 | `horizontalStageCount`, `verticalStageCount` | Radix-2 butterfly stages per axis. |
 | `passCount`, `dispatchCountPerEncode` | Two bit-reversal passes plus all butterfly stages. |
 | `workgroupSize`, `workgroupCount` | Fixed 8-by-8 invocation tile and dispatch grid. |
-| `scratchBufferByteLength` | Class-owned transform scratch. |
-| `parameterBufferCount`, `parameterBufferByteLength` | Immutable forward/inverse pass metadata. |
+| `scratchBufferByteLength` | Contiguous-plan graph scratch; chunked plans use two single-transform fields. |
+| `parameterBufferCount`, `parameterBufferByteLength` | One immutable 48-byte parameter block per pass in the chosen direction. |
 
 `makeGPUFFT2DStats(width, height)` computes the same plan without a device or GPU allocation.
 
 ## Ownership and lifecycle
 
-`GPUFFT2D` owns only its compute pipeline, scratch buffer, and parameter buffers. The caller owns
-input buffers, output buffers, command encoders, submission, and any optional readback. Destroying
-the transform releases only class-owned resources and is idempotent. Previously supplied caller
-buffers remain valid.
-
-The same instance may encode more than one ordered transform into a command encoder. Do not encode
-the same instance concurrently into command buffers that may execute simultaneously because those
-encodings share its scratch field. Use separate instances when independent queues or overlapping
-submissions need the same dimensions.
+The primitive owns no GPU resources and has no `encode()` or `destroy()` method. Destroy the
+compiled graph to release scratch, kernels and immutable parameters. Imported buffers remain
+caller-owned. The compiled graph supports ordered reuse and normal external buffer rebinding;
+replacement buffers must satisfy the original graph descriptors.
 
 ## Current limits
 
@@ -189,7 +159,8 @@ submissions need the same dimensions.
 - Power-of-two dimensions from 2 through 2048.
 - Packed row-major complex `float32` fields only.
 - Out-of-place input and output only.
-- One shared scratch field per instance; no concurrent execution contract.
+- One complete transform must fit the device storage-binding and buffer-size limits.
+- Scratch is reused across ordered encodings of the compiled graph.
 - No hidden padding, real-to-complex packing, texture conversion, submission, or readback.
 
 These constraints keep the primitive small and predictable while allowing higher-level systems to

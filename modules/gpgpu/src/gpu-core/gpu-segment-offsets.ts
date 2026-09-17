@@ -4,7 +4,7 @@
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from './gpu-command-graph';
 import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from './gpu-dispatch-utils';
 import {GPUScan, type GPUScanInput} from './gpu-scan';
@@ -278,7 +278,7 @@ function addPass<Parameters>(
       },
       resources: resources.map(resource => ({buffer: resource.view, usage: resource.usage})),
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id,
           source,
           shaderLayout: {
@@ -296,10 +296,15 @@ function addPass<Parameters>(
             for (const resource of resources) {
               bindings[resource.name] = getViewBinding(resource.view, getBuffer);
             }
-            computation.setBindings(bindings);
-            computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+
+            kernel.dispatch(computePass, {
+              bindings,
+              x: dispatchLayout.x,
+              y: dispatchLayout.y,
+              z: dispatchLayout.z
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })

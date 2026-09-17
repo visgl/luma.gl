@@ -4,7 +4,7 @@
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {type GPUCommandGraph, type GraphDataView, GraphVectorView} from './gpu-command-graph';
 import {getBoundedDispatchLayout, type GPUBoundedDispatchLayout} from './gpu-dispatch-utils';
 import {
@@ -369,7 +369,7 @@ ${useSubgroups ? getSubgroupSegmentedBitonicShader(width) : getPortableSegmented
         {buffer: sort.outputValues, usage: 'storage-write'}
       ],
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: identifier,
           source,
           shaderLayout: {
@@ -387,10 +387,15 @@ ${useSubgroups ? getSubgroupSegmentedBitonicShader(width) : getPortableSegmented
             for (const [name, view] of Object.entries(bindingViews)) {
               bindings[name] = getViewBinding(view, getBuffer);
             }
-            computation.setBindings(bindings);
-            computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+
+            kernel.dispatch(computePass, {
+              bindings,
+              x: dispatchLayout.x,
+              y: dispatchLayout.y,
+              z: dispatchLayout.z
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })

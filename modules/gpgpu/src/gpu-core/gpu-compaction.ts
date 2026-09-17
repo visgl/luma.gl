@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from './gpu-command-graph';
 import {
   getBoundedDispatchLayout,
@@ -171,7 +171,7 @@ function addClearCountPass<Parameters>(
       id: passId,
       resources: [{buffer: count, usage: 'storage-write'}],
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: passId,
           source: `const COUNT_OFFSET: u32 = ${getViewElementOffset(count)}u;
 @group(0) @binding(0) var<storage, read_write> outputCount: array<u32>;
@@ -182,10 +182,12 @@ function addClearCountPass<Parameters>(
         });
         return {
           encode: ({computePass, getBuffer}) => {
-            computation.setBindings({outputCount: getViewBinding(count, getBuffer)});
-            computation.dispatch(computePass, 1);
+            kernel.dispatch(computePass, {
+              bindings: {outputCount: getViewBinding(count, getBuffer)},
+              x: 1
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })
@@ -381,7 +383,7 @@ function addCompactionPass<Parameters>(
       },
       resources: props.resources,
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: props.id,
           source: props.source,
           shaderLayout: {
@@ -399,15 +401,15 @@ function addCompactionPass<Parameters>(
             for (const [name, view] of Object.entries(props.bindings)) {
               bindings[name] = getViewBinding(view, getBuffer);
             }
-            computation.setBindings(bindings);
-            computation.dispatch(
-              computePass,
-              props.dispatchLayout.x,
-              props.dispatchLayout.y,
-              props.dispatchLayout.z
-            );
+
+            kernel.dispatch(computePass, {
+              bindings,
+              x: props.dispatchLayout.x,
+              y: props.dispatchLayout.y,
+              z: props.dispatchLayout.z
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })

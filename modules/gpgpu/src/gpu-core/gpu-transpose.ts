@@ -4,7 +4,7 @@
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding, Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {getGPUVectorChunks} from '@luma.gl/gpgpu/gpu-data';
 import {GPUCommandGraph, type GraphDataView, type GraphVectorView} from './gpu-command-graph';
 import {getBoundedDispatchLayout, type GPUBoundedDispatchLayout} from './gpu-dispatch-utils';
@@ -273,7 +273,7 @@ function addGPUTransposePass<Parameters>(
         {buffer: transpose.output, usage: 'storage-write'}
       ],
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: transpose.id,
           source,
           shaderLayout: {
@@ -289,10 +289,15 @@ function addGPUTransposePass<Parameters>(
               inputValues: getViewBinding(transpose.input, getBuffer),
               outputValues: getViewBinding(transpose.output, getBuffer)
             };
-            computation.setBindings(bindings);
-            computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+
+            kernel.dispatch(computePass, {
+              bindings,
+              x: dispatchLayout.x,
+              y: dispatchLayout.y,
+              z: dispatchLayout.z
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })

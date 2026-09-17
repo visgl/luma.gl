@@ -35,6 +35,9 @@ contracts. No compatibility contributor or second public vector wrapper is intro
 - Prepared compression streams and indirect draw buffers expose explicit physical byte/command
   layouts. They must not silently pack unrelated caller buffers.
 
+GPU core execution now uses `Kernel`; see the [execution migration and baseline](arisia-kernel-migration.md).
+That migration preserves the storage boundaries described below.
+
 ## Remaining architectural debt
 
 These are real limits, not completed vector support:

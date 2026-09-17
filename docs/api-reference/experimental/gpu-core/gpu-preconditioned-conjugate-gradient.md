@@ -33,7 +33,7 @@ M = diag(A)
 M^-1 = diag(1 / A[i,i])
 ```
 
-For CSR input, `GPUJacobiPreconditioner` scans each row once to find its diagonal entry and stores the reciprocal diagonal. `GPUApplyJacobiPreconditioner` then applies the preconditioner with one elementwise multiply:
+For independently chunked CSR input, `GPUJacobiPreconditioner` sums diagonal entries across chunk boundaries and stores the reciprocal. Duplicate diagonal entries follow the same summation convention as SpMV. Missing or zero diagonals produce zero. `GPUElementwise` applies the preconditioner with a multiply:
 
 ```text
 z[i] = inverseDiagonal[i] * r[i]
@@ -83,6 +83,47 @@ Jacobi ─ vector multiply     │   scalar arithmetic
 ```
 
 PCG is therefore a composition test for the GPU graph architecture rather than a private solver kernel.
+
+## Graph API and convergence
+
+`GPUJacobiPCG` accepts graph data or vector views for CSR row offsets, column indices, values,
+right-hand side and solution. The operands can have independent chunk boundaries. Solver scratch
+follows the right-hand side topology and remains graph-owned. Input storage is borrowed; only the
+solution and declared scratch are written.
+
+```ts
+import {GPUJacobiPCG} from '@luma.gl/gpgpu/gpu-core/gpu-pcg';
+
+const solver = new GPUJacobiPCG({
+  rowOffsets, columnIndices, values, rhs, solution,
+  columns: rhs.length,
+  iterations: 64,
+  toleranceSquared: 1e-12
+});
+graph.add(solver);
+const {initialResidualSquared, residualSquared, breakdown} = solver.getResult();
+const compiled = graph.compile();
+compiled.encode(encoder, {parameters: undefined});
+```
+
+`iterations` is a maximum budget. `toleranceSquared` is an absolute squared residual threshold,
+defaulting to `1e-12`. Every encoding starts from the current solution and computes `rhs - A * solution`.
+An already-converged initial guess performs no solver updates. GPU predicates stop later updates
+when the residual reaches the tolerance; no per-iteration CPU readback is required.
+
+The result scalars can feed later graph operations or explicit diagnostic copies. `breakdown` is
+nonzero if a nonpositive preconditioned residual product or search curvature prevents a valid step.
+Such a solve preserves its last valid solution instead of dividing by zero. This is an SPD solver;
+these checks do not establish that an arbitrary input matrix is positive definite. Small positive
+curvature and ill-conditioned inputs remain subject to ordinary float32 accuracy limits.
+
+`createGPUConjugateGradientProgram()` provides the unpreconditioned semantic program path. It
+also checks the initial residual before entering its loop, stops on nonpositive curvature, and
+returns `residualSquared` and `breakdown` program scalars in addition to its resource bindings.
+
+Both paths use `GPUDotProductScalar`: bounded hierarchical reduction over borrowed spans, optional
+subgroup reduction, and direct scalar-arena output. Each gated level uses its own exact workgroup
+count, including multidimensional dispatch and independently chunked vector updates.
 
 ## Hero example: interactive Poisson solve
 

@@ -4,7 +4,7 @@
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding, Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView, type GraphVectorView} from './gpu-command-graph';
 import {getGPUVectorChunks} from '@luma.gl/gpgpu/gpu-data';
 import {getGraphVectorData} from './graph-vector-view-utils';
@@ -827,7 +827,7 @@ function addGPUConvolutionComputePass<Parameters>(
         }))
       ],
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: props.id,
           source: props.source,
           shaderLayout: {
@@ -845,15 +845,15 @@ function addGPUConvolutionComputePass<Parameters>(
             for (const [name, view] of entries) {
               bindings[name] = getViewBinding(view, getBuffer);
             }
-            computation.setBindings(bindings);
-            computation.dispatch(
-              computePass,
-              props.dispatchLayout.x,
-              props.dispatchLayout.y,
-              props.dispatchLayout.z
-            );
+
+            kernel.dispatch(computePass, {
+              bindings,
+              x: props.dispatchLayout.x,
+              y: props.dispatchLayout.y,
+              z: props.dispatchLayout.z
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })

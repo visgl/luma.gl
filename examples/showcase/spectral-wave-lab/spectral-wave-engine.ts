@@ -4,7 +4,12 @@
 
 import {Buffer, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {GPUFFT2D} from '@luma.gl/gpgpu/gpu-core';
+import {
+  GPUFFT2D,
+  GPUCommandGraph,
+  makeGPUFFT2DStats,
+  type CompiledGPUCommandGraph
+} from '@luma.gl/gpgpu/gpu-core';
 
 const WORKGROUP_SIZE = 256;
 const TWO_PI = 2 * Math.PI;
@@ -28,7 +33,7 @@ export class SpectralWaveEngine {
   readonly evolvedSpectrum: Buffer; /** Inverse-FFT real-space field consumed directly by the physical-space view. */
   readonly field: Buffer;
   readonly stats: SpectralWaveLabStats;
-  private readonly fft: GPUFFT2D;
+  private readonly fft: Record<'forward' | 'inverse', CompiledGPUCommandGraph>;
   private readonly evolve: Computation;
   private readonly parameters: Buffer;
   private initialized = false;
@@ -75,11 +80,36 @@ export class SpectralWaveEngine {
       byteLength: 16,
       usage: Buffer.UNIFORM | Buffer.COPY_DST
     });
-    this.fft = new GPUFFT2D(device, {
-      id: 'spectral-fft',
-      width: this.resolution,
-      height: this.resolution
-    });
+    const compileTransform = (
+      direction: 'forward' | 'inverse',
+      inputBuffer: Buffer,
+      outputBuffer: Buffer
+    ) => {
+      const graph = new GPUCommandGraph(device, {id: `spectral-fft-${direction}`});
+      const input = graph.importBuffer(
+        {id: 'input', byteLength, usage: inputBuffer.usage},
+        inputBuffer
+      );
+      const output = graph.importBuffer(
+        {id: 'output', byteLength, usage: outputBuffer.usage},
+        outputBuffer
+      );
+      graph.add(
+        new GPUFFT2D({
+          width: this.resolution,
+          height: this.resolution,
+          direction,
+          input: graph.createDataView(input, {format: 'float32x2', length: this.resolution ** 2}),
+          output: graph.createDataView(output, {format: 'float32x2', length: this.resolution ** 2})
+        })
+      );
+      return graph.compile();
+    };
+    this.fft = {
+      forward: compileTransform('forward', this.initialSpatial, this.initialSpectrum),
+      inverse: compileTransform('inverse', this.evolvedSpectrum, this.field)
+    };
+    const fftStats = makeGPUFFT2DStats(this.resolution, this.resolution);
     this.evolve = new Computation(device, {
       id: 'spectral-evolve',
       source: EVOLVE_SHADER,
@@ -94,9 +124,9 @@ export class SpectralWaveEngine {
     this.stats = Object.freeze({
       resolution: this.resolution,
       elementCount: this.resolution * this.resolution,
-      fftPasses: this.fft.stats.passCount,
-      fftDispatchesPerFrame: this.fft.stats.dispatchCountPerEncode,
-      workgroupSize: this.fft.stats.workgroupSize,
+      fftPasses: fftStats.passCount,
+      fftDispatchesPerFrame: fftStats.dispatchCountPerEncode,
+      workgroupSize: fftStats.workgroupSize,
       domainSize: this.domainSize,
       waveSpeed: this.waveSpeed
     });
@@ -106,11 +136,7 @@ export class SpectralWaveEngine {
     if (!Number.isFinite(timeSeconds)) throw new Error('Spectral Lab time must be finite.');
     const encoder = this.device.commandEncoder;
     if (!this.initialized) {
-      this.fft.encode(encoder, {
-        inputBuffer: this.initialSpatial,
-        outputBuffer: this.initialSpectrum,
-        direction: 'forward'
-      });
+      this.fft.forward.encode(encoder, {parameters: undefined});
       this.initialized = true;
     }
     this.parameters.write(
@@ -125,15 +151,12 @@ export class SpectralWaveEngine {
     });
     this.evolve.dispatch(pass, Math.ceil(this.stats.elementCount / WORKGROUP_SIZE), 1, 1);
     pass.end();
-    this.fft.encode(encoder, {
-      inputBuffer: this.evolvedSpectrum,
-      outputBuffer: this.field,
-      direction: 'inverse'
-    });
+    this.fft.inverse.encode(encoder, {parameters: undefined});
     return this.field;
   }
   destroy(): void {
-    this.fft.destroy();
+    this.fft.forward.destroy();
+    this.fft.inverse.destroy();
     this.evolve.destroy();
     this.parameters.destroy();
     this.initialSpatial.destroy();

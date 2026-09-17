@@ -2,210 +2,119 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
-import type {Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
-import {
-  getViewBinding,
-  getViewElementOffset,
-  validatePackedUint32View,
-  validatePackedView
-} from './graph-data-view-utils';
-
-const WORKGROUP_SIZE = 256;
+import type {GPUCommandGraph, GraphDataView, GraphVectorView} from './gpu-command-graph';
+import type {GPUCommandNode} from './gpu-command-node';
+import {getViewElementOffset, validatePackedView} from './graph-data-view-utils';
+import {alignGraphVectorViews, getGraphVectorData} from './graph-vector-view-utils';
+import {createChunkNode, getGraphDataRange, validateChunkViews} from './gpu-chunk-utils';
+import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from './gpu-dispatch-utils';
 
 export type GPUJacobiPreconditionerProps = {
   id?: string;
-  rowOffsets: GraphDataView<'uint32'>;
-  columnIndices: GraphDataView<'uint32'>;
-  values: GraphDataView<'float32'>;
-  /** Reciprocal diagonal written here: `inverseDiagonal[i] = 1 / A[i,i]`. */
-  inverseDiagonal: GraphDataView<'float32'>;
+  rowOffsets: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
+  columnIndices: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
+  values: GraphDataView<'float32'> | GraphVectorView<'float32'>;
+  /** Reciprocal of the sum of each row's diagonal entries; zero when the diagonal is missing. */
+  inverseDiagonal: GraphDataView<'float32'> | GraphVectorView<'float32'>;
 };
 
-/**
- * Builds a Jacobi preconditioner from a CSR matrix.
- *
- * Jacobi uses only the matrix diagonal: `M = diag(A)`. Applying the preconditioner is therefore
- * a cheap elementwise multiply by the reciprocal diagonal. Keeping construction and application
- * separate allows the inverse diagonal to be built once and reused by every PCG iteration.
- */
+/** Builds a Jacobi reciprocal diagonal from independently chunked CSR storage. */
 export class GPUJacobiPreconditioner {
   readonly id: string;
-  readonly props: GPUJacobiPreconditionerProps;
-
-  constructor(props: GPUJacobiPreconditionerProps) {
+  constructor(readonly props: GPUJacobiPreconditionerProps) {
     this.id = props.id ?? 'gpu-jacobi-preconditioner';
-    this.props = props;
-    validatePackedUint32View(props.rowOffsets, `${this.id} rowOffsets`);
-    validatePackedUint32View(props.columnIndices, `${this.id} columnIndices`);
-    validatePackedView(props.values, ['float32'], `${this.id} values`);
-    validatePackedView(props.inverseDiagonal, ['float32'], `${this.id} inverseDiagonal`);
-    if (props.rowOffsets.length !== props.inverseDiagonal.length + 1) {
-      throw new Error(`${this.id} rowOffsets length must equal inverseDiagonal.length + 1`);
-    }
-    if (props.columnIndices.length !== props.values.length) {
-      throw new Error(`${this.id} columnIndices and values must have equal length`);
-    }
-  }
-
-  getCommandNodes<Parameters>(
-    graph: GPUCommandGraph<Parameters>
-  ): readonly GPUCommandNode<Parameters>[] {
-    const nodes: GPUCommandNode<Parameters>[] = [];
-    const {rowOffsets, columnIndices, values, inverseDiagonal} = this.props;
-    for (const view of [rowOffsets, columnIndices, values, inverseDiagonal]) {
-      if (view.buffer.graph !== graph)
-        throw new Error(`${this.id} views must belong to target graph`);
-    }
-    const rows = inverseDiagonal.length;
-    if (rows === 0) return nodes;
-    const source = `const ROWS:u32=${rows}u;
-const ROW_OFFSET:u32=${getViewElementOffset(rowOffsets)}u;
-const COLUMN_OFFSET:u32=${getViewElementOffset(columnIndices)}u;
-const VALUE_OFFSET:u32=${getViewElementOffset(values)}u;
-const OUTPUT_OFFSET:u32=${getViewElementOffset(inverseDiagonal)}u;
-@group(0) @binding(0) var<storage,read> rowOffsets:array<u32>;
-@group(0) @binding(1) var<storage,read> columnIndices:array<u32>;
-@group(0) @binding(2) var<storage,read> matrixValues:array<f32>;
-@group(0) @binding(3) var<storage,read_write> inverseDiagonal:array<f32>;
-@compute @workgroup_size(${WORKGROUP_SIZE}) fn main(@builtin(global_invocation_id) gid:vec3u){
-  let row=gid.x;if(row>=ROWS){return;}let begin=rowOffsets[ROW_OFFSET+row];let end=rowOffsets[ROW_OFFSET+row+1u];var diagonal=0.0;
-  for(var i=begin;i<end;i++){if(columnIndices[COLUMN_OFFSET+i]==row){diagonal=matrixValues[VALUE_OFFSET+i];break;}}
-  inverseDiagonal[OUTPUT_OFFSET+row]=select(0.0,1.0/diagonal,diagonal!=0.0);
-}`;
-    nodes.push(
-      createGPUComputeCommandNode<Parameters>({
-        id: this.id,
-        workload: {
-          operation: 'GPUJacobiPreconditioner',
-          commandCount: 1,
-          maximumWorkgroupCount: Math.ceil(rows / WORKGROUP_SIZE),
-          maximumInvocationCount: Math.ceil(rows / WORKGROUP_SIZE) * WORKGROUP_SIZE,
-          readByteLength: (rowOffsets.length + columnIndices.length + values.length) * 4,
-          writeByteLength: rows * 4
-        },
-        resources: [
-          {buffer: rowOffsets, usage: 'storage-read'},
-          {buffer: columnIndices, usage: 'storage-read'},
-          {buffer: values, usage: 'storage-read'},
-          {buffer: inverseDiagonal, usage: 'storage-write'}
-        ],
-        compile: ({device}) => {
-          const computation = new Computation(device, {
-            id: this.id,
-            source,
-            shaderLayout: {
-              bindings: [
-                {name: 'rowOffsets', type: 'read-only-storage', group: 0, location: 0},
-                {name: 'columnIndices', type: 'read-only-storage', group: 0, location: 1},
-                {name: 'matrixValues', type: 'read-only-storage', group: 0, location: 2},
-                {name: 'inverseDiagonal', type: 'storage', group: 0, location: 3}
-              ]
-            }
-          });
-          return {
-            encode: ({computePass, getBuffer}) => {
-              const bindings: Record<string, Binding> = {
-                rowOffsets: getViewBinding(rowOffsets, getBuffer),
-                columnIndices: getViewBinding(columnIndices, getBuffer),
-                matrixValues: getViewBinding(values, getBuffer),
-                inverseDiagonal: getViewBinding(inverseDiagonal, getBuffer)
-              };
-              computation.setBindings(bindings);
-              computation.dispatch(computePass, Math.ceil(rows / WORKGROUP_SIZE), 1, 1);
-            },
-            destroy: () => computation.destroy()
-          };
-        }
-      })
-    );
-
-    return nodes;
-  }
-}
-
-/** Applies `z = M^-1 r` for a precomputed Jacobi reciprocal diagonal. */
-export class GPUApplyJacobiPreconditioner {
-  readonly id: string;
-  constructor(
-    readonly props: {
-      id?: string;
-      inverseDiagonal: GraphDataView<'float32'>;
-      residual: GraphDataView<'float32'>;
-      output: GraphDataView<'float32'>;
-    }
-  ) {
-    this.id = props.id ?? 'gpu-apply-jacobi-preconditioner';
     for (const [name, view] of Object.entries({
-      inverseDiagonal: props.inverseDiagonal,
-      residual: props.residual,
-      output: props.output
+      rowOffsets: props.rowOffsets,
+      columnIndices: props.columnIndices,
+      values: props.values,
+      inverseDiagonal: props.inverseDiagonal
     })) {
-      validatePackedView(view, ['float32'], `${this.id} ${name}`);
+      if (typeof view === 'string') continue;
+      for (const chunk of getGraphVectorData(view))
+        validatePackedView(
+          chunk,
+          [name === 'rowOffsets' || name === 'columnIndices' ? 'uint32' : 'float32'],
+          this.id
+        );
     }
     if (
-      props.inverseDiagonal.length !== props.residual.length ||
-      props.residual.length !== props.output.length
-    ) {
-      throw new Error(`${this.id} vector lengths must match`);
-    }
+      props.rowOffsets.length !== props.inverseDiagonal.length + 1 ||
+      props.columnIndices.length !== props.values.length
+    )
+      throw new Error('Jacobi CSR dimensions must match the destination');
   }
-
   getCommandNodes<Parameters>(
     graph: GPUCommandGraph<Parameters>
   ): readonly GPUCommandNode<Parameters>[] {
+    const {rowOffsets, columnIndices, values, inverseDiagonal} = this.props;
+    validateChunkViews(graph, [rowOffsets, columnIndices, values], [inverseDiagonal]);
+    const rows = alignGraphVectorViews(graph, [
+      getGraphDataRange(graph, rowOffsets, 0, inverseDiagonal.length),
+      getGraphDataRange(graph, rowOffsets, 1, inverseDiagonal.length),
+      inverseDiagonal
+    ]);
+    const entries = alignGraphVectorViews(graph, [columnIndices, values]);
     const nodes: GPUCommandNode<Parameters>[] = [];
-    const {inverseDiagonal, residual, output} = this.props;
-    if ([inverseDiagonal, residual, output].some(view => view.buffer.graph !== graph))
-      throw new Error(`${this.id} views must belong to target graph`);
-    const length = output.length;
-    if (length === 0) return nodes;
-    const source = `const LENGTH:u32=${length}u;const D:u32=${getViewElementOffset(inverseDiagonal)}u;const R:u32=${getViewElementOffset(residual)}u;const O:u32=${getViewElementOffset(output)}u;@group(0)@binding(0)var<storage,read>d:array<f32>;@group(0)@binding(1)var<storage,read>r:array<f32>;@group(0)@binding(2)var<storage,read_write>o:array<f32>;@compute @workgroup_size(${WORKGROUP_SIZE})fn main(@builtin(global_invocation_id)gid:vec3u){let i=gid.x;if(i<LENGTH){o[O+i]=d[D+i]*r[R+i];}}`;
-    nodes.push(
-      createGPUComputeCommandNode<Parameters>({
-        id: this.id,
-        workload: {
-          operation: 'GPUApplyJacobiPreconditioner',
-          commandCount: 1,
-          maximumWorkgroupCount: Math.ceil(length / WORKGROUP_SIZE),
-          maximumInvocationCount: Math.ceil(length / WORKGROUP_SIZE) * WORKGROUP_SIZE,
-          readByteLength: length * 8,
-          writeByteLength: length * 4
-        },
-        resources: [
-          {buffer: inverseDiagonal, usage: 'storage-read'},
-          {buffer: residual, usage: 'storage-read'},
-          {buffer: output, usage: 'storage-write'}
-        ],
-        compile: ({device}) => {
-          const computation = new Computation(device, {
-            id: this.id,
+    let rowStart = 0;
+    for (const [rowIndex, [begins, ends, output]] of rows.entries()) {
+      let entryStart = 0;
+      const dispatch = getBoundedDispatchLayout(
+        this.id,
+        output.length,
+        256,
+        graph.device.limits.maxComputeWorkgroupsPerDimension
+      );
+      for (let entryIndex = 0; entryIndex < Math.max(entries.length, 1); entryIndex++) {
+        const pair = entries[entryIndex];
+        const final = entryIndex === Math.max(entries.length, 1) - 1;
+        const source = `
+@group(0) @binding(0) var<storage, read> rowBegins: array<u32>;
+@group(0) @binding(1) var<storage, read> rowEnds: array<u32>;
+${
+  pair
+    ? `@group(0) @binding(2) var<storage, read> columns: array<u32>;
+@group(0) @binding(3) var<storage, read> values: array<f32>;`
+    : ''
+}
+@group(0) @binding(${pair ? 4 : 2}) var<storage, read_write> diagonalValues: array<f32>;
+@compute @workgroup_size(256)
+fn main(@builtin(workgroup_id) workgroupId: vec3u, @builtin(local_invocation_index) localInvocationIndex: u32) {
+  ${getBoundedInvocationIndexSource(dispatch, 256)}
+  if (index >= ${output.length}u) { return; }
+  let destination = ${getViewElementOffset(output)}u + index;
+  var diagonal = ${entryIndex === 0 ? '0.0' : 'diagonalValues[destination]'};
+  ${
+    pair
+      ? `let begin = max(rowBegins[${getViewElementOffset(begins)}u + index], ${entryStart}u);
+  let end = min(rowEnds[${getViewElementOffset(ends)}u + index], ${entryStart + pair[0].length}u);
+  for (var entry = begin; entry < end; entry++) {
+    let localEntry = entry - ${entryStart}u;
+    if (columns[${getViewElementOffset(pair[0])}u + localEntry] == ${rowStart}u + index) {
+      diagonal += values[${getViewElementOffset(pair[1])}u + localEntry];
+    }
+  }`
+      : ''
+  }
+  ${final ? `if (diagonal != 0.0) { diagonal = 1.0 / diagonal; }` : ''}
+  diagonalValues[destination] = diagonal;
+}`;
+        nodes.push(
+          createChunkNode(graph, {
+            id: `${this.id}-rows-${rowIndex}-entries-${entryIndex}`,
             source,
-            shaderLayout: {
-              bindings: [
-                {name: 'd', type: 'read-only-storage', group: 0, location: 0},
-                {name: 'r', type: 'read-only-storage', group: 0, location: 1},
-                {name: 'o', type: 'storage', group: 0, location: 2}
-              ]
-            }
-          });
-          return {
-            encode: ({computePass, getBuffer}) => {
-              computation.setBindings({
-                d: getViewBinding(inverseDiagonal, getBuffer),
-                r: getViewBinding(residual, getBuffer),
-                o: getViewBinding(output, getBuffer)
-              });
-              computation.dispatch(computePass, Math.ceil(length / WORKGROUP_SIZE), 1, 1);
+            inputs: {
+              rowBegins: begins,
+              rowEnds: ends,
+              ...(pair ? {columns: pair[0], values: pair[1]} : {})
             },
-            destroy: () => computation.destroy()
-          };
-        }
-      })
-    );
-
+            outputs: {diagonalValues: output},
+            dispatch
+          })
+        );
+        entryStart += pair?.[0].length ?? 0;
+      }
+      rowStart += output.length;
+    }
     return nodes;
   }
 }
