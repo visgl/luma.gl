@@ -1,5 +1,15 @@
 # luma.gl CHANGELOG
 
+## v10.0
+
+### v10.0.0-alpha.1
+
+- First alpha release of luma.gl v10 from master.
+- Add batch-aware GPU operations and incremental streaming execution caching.
+- Improve GPU graph planning and sparse matrix routing performance.
+- Tighten shader hook and uniform types and resolve shader dependencies with topological sorting.
+- Fix indexed model draws to honor explicit vertex counts.
+
 ## v9.4
 
 ### v9.4.0-alpha.4
