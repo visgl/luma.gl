@@ -1,0 +1,83 @@
+diff --git a/dist/index.cjs b/dist/index.cjs
+index 6eb94624eb82b1cd86040f5047ba3290f0fb00be..4adcdc2a4ed64fa75af1e55c7bd21b1d911bd136 100644
+--- a/dist/index.cjs
++++ b/dist/index.cjs
+@@ -1615,7 +1615,7 @@ var SHADER_HOOKS_WGSL = [
+   // Not yet supported
+ ];
+ function getShaderAssembler(language) {
+-  const shaderAssembler = import_shadertools3.ShaderAssembler.getDefaultShaderAssembler();
++  const shaderAssembler = language === "glsl" ? new import_shadertools3.GLSLShaderAssembler() : new import_shadertools3.WGSLShaderAssembler();
+   for (const shaderModule of DEFAULT_MODULES) {
+     shaderAssembler.addDefaultModule(shaderModule);
+   }
+@@ -11580,6 +11580,7 @@ var Layer = class extends component_default {
+     return (_a = this.getAttributeManager()) == null ? void 0 : _a.getBounds(["positions", "instancePositions"]);
+   }
+   getShaders(shaders) {
++    shaders = mergeShaders({ shaderAssembler: this.context.shaderAssembler }, shaders);
+     shaders = mergeShaders(shaders, {
+       disableWarnings: true,
+       modules: this.context.defaultShaderModules
+diff --git a/dist/lib/layer.js b/dist/lib/layer.js
+index 95bb0d51832de76ae36c2b45295d3b70d9691533..84a8b34b40aa3ac120893e2bacc5479c84969105 100644
+--- a/dist/lib/layer.js
++++ b/dist/lib/layer.js
+@@ -312,6 +312,7 @@ class Layer extends Component {
+         return this.getAttributeManager()?.getBounds(['positions', 'instancePositions']);
+     }
+     getShaders(shaders) {
++        shaders = mergeShaders({ shaderAssembler: this.context.shaderAssembler }, shaders);
+         shaders = mergeShaders(shaders, {
+             disableWarnings: true,
+             modules: this.context.defaultShaderModules
+diff --git a/dist/shaderlib/index.js b/dist/shaderlib/index.js
+index cfa2124fd009aff11e862c882e10cd023ddb8386..e793a5f446ac2018465bd47548dc9ec3d0d6df54 100644
+--- a/dist/shaderlib/index.js
++++ b/dist/shaderlib/index.js
+@@ -1,7 +1,7 @@
+ // deck.gl
+ // SPDX-License-Identifier: MIT
+ // Copyright (c) vis.gl contributors
+-import { ShaderAssembler, gouraudMaterial, phongMaterial } from '@luma.gl/shadertools';
++import { GLSLShaderAssembler, WGSLShaderAssembler, gouraudMaterial, phongMaterial } from '@luma.gl/shadertools';
+ import { layerUniforms } from "./misc/layer-uniforms.js";
+ import color from "./color/color.js";
+ import geometry from "./misc/geometry.js";
+@@ -20,7 +20,7 @@ const SHADER_HOOKS_WGSL = [
+ // Not yet supported
+ ];
+ export function getShaderAssembler(language) {
+-    const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler();
++    const shaderAssembler = language === 'glsl' ? new GLSLShaderAssembler() : new WGSLShaderAssembler();
+     for (const shaderModule of DEFAULT_MODULES) {
+         shaderAssembler.addDefaultModule(shaderModule);
+     }
+diff --git a/src/lib/layer.ts b/src/lib/layer.ts
+index 0de7732711295ca05a0c40a42acc20e568d0ffde..7a397d740345faa9c9372ceeaa104a8ade2ab293 100644
+--- a/src/lib/layer.ts
++++ b/src/lib/layer.ts
+@@ -456,2 +456,3 @@ export default abstract class Layer<PropsT extends {} = {}> extends Component<
+   getShaders(shaders: any): any {
++    shaders = mergeShaders({shaderAssembler: this.context.shaderAssembler}, shaders);
+     shaders = mergeShaders(shaders, {
+diff --git a/src/shaderlib/index.ts b/src/shaderlib/index.ts
+index 1eda4ee9557711fbbb37c1bf29edc87ad0f919dc..e3f751e05a0e3c64db02d1725cddd3cabca4d124 100644
+--- a/src/shaderlib/index.ts
++++ b/src/shaderlib/index.ts
+@@ -5,4 +5,10 @@
+-import {ShaderAssembler, gouraudMaterial, phongMaterial} from '@luma.gl/shadertools';
++import {
++  GLSLShaderAssembler,
++  WGSLShaderAssembler,
++  type ShaderAssembler,
++  gouraudMaterial,
++  phongMaterial
++} from '@luma.gl/shadertools';
+ import {layerUniforms} from './misc/layer-uniforms';
+ import color from './color/color';
+ import geometry from './misc/geometry';
+@@ -28 +34,2 @@ export function getShaderAssembler(language: 'glsl' | 'wgsl'): ShaderAssembler {
+-  const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler();
++  const shaderAssembler =
++    language === 'glsl' ? new GLSLShaderAssembler() : new WGSLShaderAssembler();

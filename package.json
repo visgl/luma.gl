@@ -95,6 +95,7 @@
     "@luma.gl/engine": "workspace:*",
     "@luma.gl/shadertools": "workspace:*",
     "@luma.gl/webgl": "workspace:*",
+    "@deck.gl/core@npm:9.3.4": "patch:@deck.gl/core@npm%3A9.3.4#~/.yarn/patches/@deck.gl-core-npm-9.3.4-e8a476f6b5.patch",
     "@loaders.gl/schema-utils@npm:5.0.0-alpha.5": "patch:@loaders.gl/schema-utils@npm%3A5.0.0-alpha.5#~/.yarn/patches/@loaders.gl-schema-utils-npm-5.0.0-alpha.5-b7b149a264.patch"
   },
   "packageExtensions": {
