@@ -124,15 +124,10 @@ describe('ShaderModules', () => {
     // Should not throw (old implementation would fail at depth 5)
     const result = getShaderModuleDependencies([A]);
 
-    expect(result.map(m => m.name), 'Deep graph resolves correctly').toEqual([
-      'G',
-      'F',
-      'E',
-      'D',
-      'C',
-      'B',
-      'A'
-    ]);
+    expect(
+      result.map(m => m.name),
+      'Deep graph resolves correctly'
+    ).toEqual(['G', 'F', 'E', 'D', 'C', 'B', 'A']);
   });
 
   // Tests that expose bugs in the old depth-counting implementation
@@ -148,7 +143,10 @@ describe('ShaderModules', () => {
 
     const result = getShaderModuleDependencies([A]);
 
-    expect(result.map(m => m.name), 'Depth 5 chain works').toEqual(['F', 'E', 'D', 'C', 'B', 'A']);
+    expect(
+      result.map(m => m.name),
+      'Depth 5 chain works'
+    ).toEqual(['F', 'E', 'D', 'C', 'B', 'A']);
   });
 
   it('handles very deep chain (depth 10) without false positive', () => {

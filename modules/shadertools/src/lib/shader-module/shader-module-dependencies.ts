@@ -25,9 +25,9 @@ type AbstractModule = {
  */
 export function getShaderModuleDependencies<T extends AbstractModule>(modules: T[]): T[] {
   // Data structures for topological sort
-  const visited = new Set<T>();              // Fully processed modules (black nodes)
-  const recursionStack = new Set<T>();       // Modules in current DFS path (gray nodes)
-  const result: T[] = [];                    // Post-order traversal result
+  const visited = new Set<T>(); // Fully processed modules (black nodes)
+  const recursionStack = new Set<T>(); // Modules in current DFS path (gray nodes)
+  const result: T[] = []; // Post-order traversal result
   const nameToModule = new Map<string, T>(); // Name collision detection
 
   /**
@@ -38,7 +38,7 @@ export function getShaderModuleDependencies<T extends AbstractModule>(modules: T
     if (existing && existing !== module) {
       throw new Error(
         `Shader module name collision: Multiple different module objects share the name "${module.name}". ` +
-        `Each module object must have a unique name.`
+          `Each module object must have a unique name.`
       );
     }
     nameToModule.set(module.name, module);
