@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {type CompiledGPUCommandGraph, GPUCommandGraph} from './gpu-command-graph';
 
 const WORKGROUP_SIZE = 256;
@@ -228,7 +228,7 @@ function makeBenchmarkPath(
     id: `${benchmarkId}-${strategy}-local-scan`,
     resources: [{buffer: output, usage: 'storage-write'}],
     compile: () => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: `${benchmarkId}-${strategy}-local-scan`,
         source:
           strategy === 'subgroups' ? getSubgroupShader(roundCount) : getPortableShader(roundCount),
@@ -238,12 +238,14 @@ function makeBenchmarkPath(
       });
       return {
         encode: ({computePass, getBuffer}) => {
-          computation.setBindings({outputValues: getBuffer(output)});
           for (let dispatchIndex = 0; dispatchIndex < dispatchCount; dispatchIndex++) {
-            computation.dispatch(computePass, workgroupCount);
+            kernel.dispatch(computePass, {
+              bindings: {outputValues: getBuffer(output)},
+              x: workgroupCount
+            });
           }
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

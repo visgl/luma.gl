@@ -6,7 +6,7 @@ import {alignGraphVectorViews} from './graph-vector-view-utils';
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {
   GPUCommandGraph,
   GraphVectorView,
@@ -327,7 +327,7 @@ const OUTPUT_OFFSET: u32 = ${getViewElementOffset(output)}u;
   if (index < BIN_COUNT) { atomicStore(&outputCounts[OUTPUT_OFFSET + index], 0u); }
 }`;
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: passId,
       source,
       resources: [{buffer: output, usage: 'storage-write'}],
@@ -376,7 +376,7 @@ const VALIDITY_OFFSET: u32 = ${getViewElementOffset(validity)}u;
   }
 }`;
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: `${id}-validate-edges`,
       source,
       resources: [
@@ -513,7 +513,7 @@ ${useSubgroups ? getSubgroupBallotHelpersWGSL() : ''}
     ...(props.mask ? ([{buffer: props.mask, usage: 'storage-read'}] as GraphBufferUse[]) : []),
     {buffer: props.output, usage: 'storage-read-write'}
   ];
-  return addComputationPass(graph, {
+  return addKernelPass(graph, {
     id: props.id,
     source,
     resources,
@@ -678,7 +678,7 @@ ${useSubgroups ? getSubgroupBallotHelpersWGSL() : ''}
     ...(props.mask ? ([{buffer: props.mask, usage: 'storage-read'}] as GraphBufferUse[]) : []),
     {buffer: props.output, usage: 'storage-read-write'}
   ];
-  return addComputationPass(graph, {
+  return addKernelPass(graph, {
     id: props.id,
     source,
     resources,
@@ -693,7 +693,7 @@ ${useSubgroups ? getSubgroupBallotHelpersWGSL() : ''}
 }
 
 /** Wraps generated WGSL in a graph compute node with deferred physical buffer resolution. */
-function addComputationPass<Parameters>(
+function addKernelPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: {
     id: string;
@@ -719,7 +719,7 @@ function addComputationPass<Parameters>(
         maximumInvocationCount: maximumWorkgroupCount * HISTOGRAM_WORKGROUP_SIZE
       },
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: props.id,
           source: props.source,
           shaderLayout: {
@@ -737,19 +737,19 @@ function addComputationPass<Parameters>(
             for (const [name, view] of Object.entries(props.bindings)) {
               bindings[name] = getViewBinding(view, getBuffer);
             }
-            computation.setBindings(bindings);
+
             if (props.dispatchLayout) {
-              computation.dispatch(
-                computePass,
-                props.dispatchLayout.x,
-                props.dispatchLayout.y,
-                props.dispatchLayout.z
-              );
+              kernel.dispatch(computePass, {
+                bindings,
+                x: props.dispatchLayout.x,
+                y: props.dispatchLayout.y,
+                z: props.dispatchLayout.z
+              });
             } else {
-              computation.dispatch(computePass, props.dispatchCount ?? 1);
+              kernel.dispatch(computePass, {bindings, x: props.dispatchCount ?? 1});
             }
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })

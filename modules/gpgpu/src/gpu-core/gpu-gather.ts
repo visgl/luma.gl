@@ -4,7 +4,7 @@
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {
   getGPUVectorFormatInfo,
   getGPUVectorChunks,
@@ -165,7 +165,7 @@ export function getGatherCommandNodes<Parameters>(
             {buffer: destination, usage: 'storage-write'}
           ],
           compile: ({device}) => {
-            const computation = new Computation(device, {
+            const kernel = new Kernel(device, {
               id,
               source,
               shaderLayout: {
@@ -194,15 +194,15 @@ export function getGatherCommandNodes<Parameters>(
                   bindings['sourceWords'] = getViewBinding(sourceView, getBuffer);
                   bindings['indices'] = getViewBinding(indices, getBuffer);
                 }
-                computation.setBindings(bindings);
-                computation.dispatch(
-                  computePass,
-                  dispatchLayout.x,
-                  dispatchLayout.y,
-                  dispatchLayout.z
-                );
+
+                kernel.dispatch(computePass, {
+                  bindings,
+                  x: dispatchLayout.x,
+                  y: dispatchLayout.y,
+                  z: dispatchLayout.z
+                });
               },
-              destroy: () => computation.destroy()
+              destroy: () => kernel.destroy()
             };
           }
         })

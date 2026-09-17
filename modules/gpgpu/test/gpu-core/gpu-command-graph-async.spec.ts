@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {ComputePipelineProps} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, test} from 'vitest';
@@ -29,13 +29,13 @@ test('GPUCommandGraph#compileAsync starts graph-owned pipelines in parallel', as
     graph.addComputePass({
       id: suffix,
       compile: ({device: compileDevice}) => {
-        const computation = new Computation(compileDevice, {
+        const kernel = new Kernel(compileDevice, {
           id: `async-${suffix}`,
           source: `@compute @workgroup_size(1) fn main() { let ${suffix} = 1u; }`
         });
         return {
-          encode: ({computePass}) => computation.dispatch(computePass, 1),
-          destroy: () => computation.destroy()
+          encode: ({computePass}) => kernel.dispatch(computePass, {x: 1}),
+          destroy: () => kernel.destroy()
         };
       }
     });

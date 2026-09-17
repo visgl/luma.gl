@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import type {Device} from '@luma.gl/core';
 import {getGPUVectorChunks} from '@luma.gl/gpgpu/gpu-data';
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
@@ -259,7 +259,7 @@ function makeComputeNode<Parameters>(
       writeByteLength
     },
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id,
         source,
         shaderLayout: {
@@ -271,13 +271,17 @@ function makeComputeNode<Parameters>(
       });
       return {
         encode: ({computePass, getBuffer}) => {
-          computation.setBindings({
-            inputValues: getViewBinding(input, getBuffer),
-            outputValues: getViewBinding(output, getBuffer)
+          kernel.dispatch(computePass, {
+            bindings: {
+              inputValues: getViewBinding(input, getBuffer),
+              outputValues: getViewBinding(output, getBuffer)
+            },
+            x: layout.x,
+            y: layout.y,
+            z: layout.z
           });
-          computation.dispatch(computePass, layout.x, layout.y, layout.z);
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

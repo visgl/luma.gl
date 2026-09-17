@@ -4,7 +4,7 @@
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
 import {
   getViewBinding,
@@ -85,7 +85,7 @@ export class GPUSegmentedScan {
           {buffer: this.output, usage: 'storage-write'}
         ],
         compile: ({device}) => {
-          const computation = new Computation(device, {
+          const kernel = new Kernel(device, {
             id: this.id,
             source,
             shaderLayout: {
@@ -103,10 +103,10 @@ export class GPUSegmentedScan {
                 segmentOffsets: getViewBinding(this.segmentOffsets, getBuffer),
                 outputValues: getViewBinding(this.output, getBuffer)
               };
-              computation.setBindings(bindings);
-              computation.dispatch(computePass, segmentCount, 1, 1);
+
+              kernel.dispatch(computePass, {bindings, x: segmentCount, y: 1, z: 1});
             },
-            destroy: () => computation.destroy()
+            destroy: () => kernel.destroy()
           };
         }
       })

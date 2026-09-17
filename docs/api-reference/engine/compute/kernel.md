@@ -38,6 +38,20 @@ kernel.dispatch(computePass, {
 Bindings are supplied per dispatch rather than retained as mutable kernel state. Direct and indirect
 dispatch are supported.
 
+## GPU core integration
+
+GPU core primitives execute their generated WGSL through `Kernel`. Each graph node resolves its
+current physical resources during encoding and supplies the complete bindings to `dispatch()` or
+`dispatchIndirect()`. Reusing a compiled graph with different imported buffers does not retain the
+previous encoding's bindings. Shader and pipeline factories retain shared compiled resources until
+the last kernel releases them. `GPUCommandGraph.compileAsync()` also prepares kernel pipelines
+asynchronously.
+
+The kernel migration preserves operation semantics, chunk topology, dispatch dimensions, and
+resource ownership. Device-owned FFT and solver APIs still need the separate graph/program
+lifecycle migration; using `Kernel` does not change their public storage contracts. `Kernel` itself
+still uses luma core resource objects.
+
 ## RenderKernel
 
 `RenderKernel` is the render-side counterpart. It owns vertex/fragment shaders and a render pipeline,

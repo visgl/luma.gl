@@ -4,7 +4,7 @@
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from './gpu-command-graph';
 import type {GPUBVHBoundsView} from './gpu-bvh';
 import {
@@ -233,7 +233,7 @@ ${visitedBinding}
       : [])
   ];
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: `${query.id}-initialize`,
       source,
       resources,
@@ -312,7 +312,7 @@ fn finite(value: f32) -> bool {
   }
 }`;
     nodes.push(
-      ...addComputationPass(graph, {
+      ...addKernelPass(graph, {
         id: `${query.id}-depth-${depth}`,
         source,
         resources: [
@@ -386,7 +386,7 @@ fn finite(value: f32) -> bool {
   }
 }`;
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: `${query.id}-depth-${depth}`,
       source,
       resources: [
@@ -466,7 +466,7 @@ const MASK_OFFSET: u32 = ${getViewElementOffset(query.outputMask!)}u;
   if (objectId < MASK_LENGTH) { atomicStore(&outputMask[MASK_OFFSET + objectId], 1u); }
 }`;
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: `${query.id}-output-mask`,
       source,
       resources: [
@@ -529,7 +529,7 @@ function makeNodePredicate(query: GPUBVHQuery): string {
   let selected = ${validNode} && ${validQuery} && ${intersects};`;
 }
 
-function addComputationPass<Parameters>(
+function addKernelPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: {
     id: string;
@@ -545,7 +545,7 @@ function addComputationPass<Parameters>(
       id: props.id,
       resources: props.resources,
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: props.id,
           source: props.source,
           shaderLayout: {
@@ -563,10 +563,10 @@ function addComputationPass<Parameters>(
             for (const [name, view] of Object.entries(props.bindings)) {
               bindings[name] = getViewBinding(view, getBuffer);
             }
-            computation.setBindings(bindings);
-            computation.dispatch(computePass, props.dispatchCount);
+
+            kernel.dispatch(computePass, {bindings, x: props.dispatchCount});
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })

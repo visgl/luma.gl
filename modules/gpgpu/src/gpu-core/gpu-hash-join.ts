@@ -4,7 +4,7 @@
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {
   GPUCommandGraph,
   GraphVectorView,
@@ -314,7 +314,7 @@ const OVERFLOW_OFFSET: u32 = ${getViewElementOffset(join.overflow)}u;
   overflow[OVERFLOW_OFFSET] = 0u;
 }`;
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: `${join.id}-empty`,
       source,
       resources: [
@@ -389,7 +389,7 @@ ${leftRowsBinding}
   }
 }`;
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: `${join.id}-scatter`,
       source,
       resources: [
@@ -442,7 +442,7 @@ const OVERFLOW_OFFSET: u32 = ${getViewElementOffset(join.overflow)}u;
   overflow[OVERFLOW_OFFSET] = select(0u, 1u, requiredCount > ${join.outputLeftRows.length}u);
 }`;
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: `${join.id}-count-only`,
       source,
       resources: [
@@ -477,7 +477,7 @@ const OVERFLOW_OFFSET: u32 = ${getViewElementOffset(overflow)}u;
   }
 }`;
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: `${id}-source-overflow`,
       source,
       resources: [
@@ -527,7 +527,7 @@ function getDispatchLayout(elementCount: number, maximumDimension: number): Disp
   return {x, y, z};
 }
 
-function addComputationPass<Parameters>(
+function addKernelPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: {
     id: string;
@@ -543,7 +543,7 @@ function addComputationPass<Parameters>(
       id: props.id,
       resources: props.resources,
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: props.id,
           source: props.source,
           shaderLayout: {
@@ -561,15 +561,15 @@ function addComputationPass<Parameters>(
             for (const [name, view] of Object.entries(props.bindings)) {
               bindings[name] = getViewBinding(view, getBuffer);
             }
-            computation.setBindings(bindings);
-            computation.dispatch(
-              computePass,
-              props.dispatchSize.x,
-              props.dispatchSize.y,
-              props.dispatchSize.z
-            );
+
+            kernel.dispatch(computePass, {
+              bindings,
+              x: props.dispatchSize.x,
+              y: props.dispatchSize.y,
+              z: props.dispatchSize.z
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {getGPUVectorChunks} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUCommandGraph, GraphDataView, GraphVectorView} from './gpu-command-graph';
 import {createGPUComputeCommandNode, type GPUCommandNode} from './gpu-command-node';
@@ -142,7 +142,7 @@ export function createDenseNode<Parameters>(
       {buffer: props.output, usage: props.accumulate ? 'storage-read-write' : 'storage-write'}
     ],
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: props.id,
         source: props.source,
         shaderLayout: {
@@ -156,17 +156,19 @@ export function createDenseNode<Parameters>(
       });
       return {
         encode: ({computePass, getBuffer}) => {
-          computation.setBindings(
-            Object.fromEntries(
+          kernel.dispatch(computePass, {
+            bindings: Object.fromEntries(
               Object.entries(bindings).map(([name, view]) => [
                 name,
                 getViewBinding(view, getBuffer)
               ])
-            )
-          );
-          computation.dispatch(computePass, props.dispatch.x, props.dispatch.y, props.dispatch.z);
+            ),
+            x: props.dispatch.x,
+            y: props.dispatch.y,
+            z: props.dispatch.z
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

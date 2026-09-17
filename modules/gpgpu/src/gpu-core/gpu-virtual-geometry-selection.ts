@@ -4,7 +4,7 @@
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {Buffer, type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {getGPUVectorFormatInfo, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from './gpu-command-graph';
 import {
@@ -345,7 +345,7 @@ const SELECTED_OFFSET: u32 = ${getViewElementOffset(selectedMask)}u;
   selectedMask[SELECTED_OFFSET + nodeIndex] = 0u;
 }`;
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: `${selection.id}-initialize`,
       source,
       resources: [
@@ -384,7 +384,7 @@ const OUTPUT_OFFSET: u32 = ${getViewElementOffset(packedView)}u;
   packedView[OUTPUT_OFFSET + 4u] = maximumScreenSpaceError[ERROR_OFFSET];
 }`;
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: `${selection.id}-pack-view`,
       source,
       resources: [
@@ -524,7 +524,7 @@ fn sphereVisible(center: vec3f, radius: f32) -> bool {
   selectedMask[SELECTED_OFFSET + nodeIndex] = 1u;
 }`;
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: `${selection.id}-level-${levelIndex}`,
       source,
       resources: [
@@ -600,7 +600,7 @@ ${totalCountBinding}
   }
 }`;
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: `${selection.id}-finalize`,
       source,
       resources: [
@@ -630,7 +630,7 @@ ${totalCountBinding}
   return nodes;
 }
 
-function addComputationPass<Parameters>(
+function addKernelPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: {
     id: string;
@@ -646,7 +646,7 @@ function addComputationPass<Parameters>(
       id: props.id,
       resources: props.resources,
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: props.id,
           source: props.source,
           shaderLayout: {
@@ -664,10 +664,10 @@ function addComputationPass<Parameters>(
             for (const [name, view] of Object.entries(props.bindings)) {
               bindings[name] = getViewBinding(view, getBuffer);
             }
-            computation.setBindings(bindings);
-            computation.dispatch(computePass, props.dispatchCount);
+
+            kernel.dispatch(computePass, {bindings, x: props.dispatchCount});
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })

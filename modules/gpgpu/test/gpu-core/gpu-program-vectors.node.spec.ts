@@ -146,7 +146,7 @@ test('MADD and dot product lower differing chunk boundaries, including GPU predi
   });
   const ids = compilation.lowering.nodes.map(node => node.nodeId);
   expect(ids.filter(id => /^madd-chunk-\d+$/.test(id))).toHaveLength(4);
-  expect(ids.filter(id => /^dot-chunk-\d+$/.test(id))).toHaveLength(3);
+  expect(ids.filter(id => /^dot-chunk-\d+-level-0$/.test(id))).toHaveLength(3);
   expect(compilation.vectors.get('input')!.data.map(chunk => chunk.length)).toEqual([2, 0, 3]);
   device.destroy();
 });

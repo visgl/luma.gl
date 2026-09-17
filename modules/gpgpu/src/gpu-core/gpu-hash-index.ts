@@ -4,7 +4,7 @@
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {
   GPUCommandGraph,
   type GraphVectorView,
@@ -382,7 +382,7 @@ const STATISTICS_OFFSET: u32 = ${getViewElementOffset(index.statistics)}u;
   }
 }`;
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: `${index.id}-initialize`,
       source,
       resources: [
@@ -503,7 +503,7 @@ fn hashKey(key: u32) -> u32 {
   }
 }`;
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: `${batch.id}-build`,
       source,
       resources: [
@@ -573,7 +573,7 @@ ${valueBinding}
   tableValues[TABLE_VALUES_OFFSET + slot] = ${valueExpression};
 }`;
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: `${batch.id}-finalize`,
       source,
       resources: [
@@ -613,7 +613,7 @@ const STATISTICS_OFFSET: u32 = ${getViewElementOffset(query.statistics)}u;
   }
 }`;
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: `${query.id}-initialize`,
       source,
       resources: [{buffer: query.statistics, usage: 'storage-write'}],
@@ -700,7 +700,7 @@ fn hashKey(key: u32) -> u32 {
   atomicMax(&statistics[STATISTICS_OFFSET + 3u], probes);
 }`;
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: `${query.id}-lookup`,
       source,
       resources: [
@@ -776,7 +776,7 @@ function getDispatchLayout(elementCount: number, maximumDimension: number): Disp
   return {x, y, z};
 }
 
-function addComputationPass<Parameters>(
+function addKernelPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: {
     id: string;
@@ -792,7 +792,7 @@ function addComputationPass<Parameters>(
       id: props.id,
       resources: props.resources,
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: props.id,
           source: props.source,
           shaderLayout: {
@@ -810,15 +810,15 @@ function addComputationPass<Parameters>(
             for (const [name, view] of Object.entries(props.bindings)) {
               bindings[name] = getViewBinding(view, getBuffer);
             }
-            computation.setBindings(bindings);
-            computation.dispatch(
-              computePass,
-              props.dispatchSize.x,
-              props.dispatchSize.y,
-              props.dispatchSize.z
-            );
+
+            kernel.dispatch(computePass, {
+              bindings,
+              x: props.dispatchSize.x,
+              y: props.dispatchSize.y,
+              z: props.dispatchSize.z
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })

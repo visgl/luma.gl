@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {createGPUComputeCommandNode, type GPUCommandNode} from './gpu-command-node';
 import type {GPUCommandGraph, GraphBufferUse, GraphDataView} from './gpu-command-graph';
 import type {GPUBoundedDispatchLayout} from './gpu-dispatch-utils';
@@ -50,7 +50,7 @@ export function getSpatialCommandNodes<Parameters>(
       id: props.id,
       resources: props.resources,
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: props.id,
           source: props.source,
           shaderLayout: {
@@ -67,10 +67,15 @@ export function getSpatialCommandNodes<Parameters>(
             const bindings: Record<string, Binding> = {};
             for (const [name, view] of Object.entries(props.bindings))
               bindings[name] = getViewBinding(view, getBuffer);
-            computation.setBindings(bindings);
-            computation.dispatch(computePass, props.dispatch.x, props.dispatch.y, props.dispatch.z);
+
+            kernel.dispatch(computePass, {
+              bindings,
+              x: props.dispatch.x,
+              y: props.dispatch.y,
+              z: props.dispatch.z
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })
