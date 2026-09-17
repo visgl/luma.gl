@@ -99,6 +99,20 @@ export abstract class ShaderAssembler {
   }
 
   /**
+   * Clear all registered shader hooks.
+   * Useful when switching shader languages or re-initializing the assembler.
+   * After clearing, new hooks can be added via `addShaderHook()`.
+   *
+   * @example
+   * // When switching from GLSL to WGSL
+   * shaderAssembler.resetShaderHooks();
+   * shaderAssembler.addShaderHook('vs:WGSL_HOOK(value: ptr<function, vec4<f32>>)');
+   */
+  resetShaderHooks(): void {
+    this._hookFunctions.length = 0;
+  }
+
+  /**
    * Dedupe and combine with default modules
    */
   _getModuleList(appModules: ShaderModule[] = []): ShaderModule[] {

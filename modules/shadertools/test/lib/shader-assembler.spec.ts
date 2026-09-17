@@ -215,6 +215,49 @@ it('ShaderAssembler#hooks', () => {
   void 0;
 });
 
+it('ShaderAssembler#resetShaderHooks', () => {
+  const shaderAssembler = new GLSLShaderAssembler();
+
+  // Add hooks
+  shaderAssembler.addShaderHook('vs:LUMAGL_pickColor(inout vec4 color)');
+  shaderAssembler.addShaderHook('fs:LUMAGL_fragmentColor(inout vec4 color)');
+
+  // Verify hooks are present
+  const withHooks = shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs});
+  expect(
+    Boolean(withHooks.vs.indexOf('LUMAGL_pickColor') > -1),
+    'hook present before reset'
+  ).toBe(true);
+
+  // Reset hooks
+  shaderAssembler.resetShaderHooks();
+
+  // Verify hooks are cleared
+  const afterReset = shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs});
+  expect(
+    Boolean(afterReset.vs.indexOf('LUMAGL_pickColor') === -1),
+    'hook removed after reset'
+  ).toBe(true);
+  expect(
+    Boolean(afterReset.fs.indexOf('LUMAGL_fragmentColor') === -1),
+    'hook removed after reset'
+  ).toBe(true);
+
+  // Verify new hooks can be added
+  shaderAssembler.addShaderHook('vs:LUMAGL_newHook(inout vec4 value)');
+  const afterReAdd = shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs});
+  expect(
+    Boolean(afterReAdd.vs.indexOf('LUMAGL_newHook') > -1),
+    'new hook can be added after reset'
+  ).toBe(true);
+  expect(
+    Boolean(afterReAdd.vs.indexOf('LUMAGL_pickColor') === -1),
+    'old hook still absent'
+  ).toBe(true);
+
+  void 0;
+});
+
 it('ShaderAssembler#defaultModules', () => {
   const shaderAssembler = new GLSLShaderAssembler();
 
