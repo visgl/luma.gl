@@ -58,8 +58,9 @@ renderPass.end();
 | `geometry?` | `Geometry \| GPUGeometry \| null` | Geometry source for attributes and indices. |
 | `isInstanced?` | `boolean` | Optional override for instancing. |
 | `instanceCount?` | `number` | Number of instances to draw. |
-| `vertexCount?` | `number` | Number of vertices to draw. |
+| `vertexCount?` | `number` | Number of vertices to draw. For indexed models, this is used as the index count when `indexCount` is not provided, including an explicit value of `0`. |
 | `indexBuffer?` | `Buffer \| DynamicBuffer \| null` | Optional index buffer. |
+| `indexCount?` | `number` | Number of indices to draw. Takes precedence over `vertexCount`; if neither is provided, the full index buffer is drawn. |
 | `attributes?` | `Record<string, Buffer \| DynamicBuffer>` | Buffer-valued attributes. |
 | `constantAttributes?` | `Record<string, TypedArray>` | Constant attributes, primarily for WebGL. |
 | `disableWarnings?` | `boolean` | Suppress warnings for unused attributes and bindings. |
@@ -173,7 +174,11 @@ Updates the instance count.
 
 ### `setVertexCount(vertexCount: number): void`
 
-Updates the vertex count.
+Updates the vertex count. For indexed models without an explicit index count, this also limits the number of indices drawn.
+
+### `setIndexCount(indexCount: number | undefined): void`
+
+Updates the indexed draw count. An explicit index count takes precedence over the vertex count.
 
 ### `setShaderInputs(shaderInputs: ShaderInputs): void`
 
