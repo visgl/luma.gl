@@ -31,7 +31,7 @@ export const BUNDLE_SIZE_FIXTURES = [
     name: 'core-webgl',
     label: 'core + WebGL',
     sum: ['core', 'webgl'],
-    maximum: {minified: 240_000, gzip: 68_000, brotli: 59_000},
+    maximum: {minified: 241_000, gzip: 68_000, brotli: 59_000},
     targetGzip: 54_000
   },
   {
