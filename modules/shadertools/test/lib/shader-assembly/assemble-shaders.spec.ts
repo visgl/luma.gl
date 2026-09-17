@@ -9,7 +9,9 @@ import {
   assembleGLSLShaderPair,
   picking,
   fp64,
+  lighting,
   pbrMaterial,
+  pbrScene,
   PlatformInfo,
   WGSLShaderAssembler
 } from '@luma.gl/shadertools';
@@ -344,6 +346,30 @@ it('assembleGLSLShaderPair#version_directive', async () => {
     'version directive should be first statement'
   ).toBe(0);
   void 0;
+});
+
+it.each([
+  {name: 'without lighting', modules: [pbrScene]},
+  {name: 'before lighting', modules: [pbrScene, lighting]},
+  {name: 'after lighting', modules: [lighting, pbrScene]}
+])('assembleGLSLShaderPair#pbrScene links $name', async ({modules}) => {
+  const webglDevice = await getWebGLTestDevice();
+  const assembleResult = assembleGLSLShaderPair({
+    platformInfo: getInfo(webglDevice),
+    modules,
+    vs: `#version 300 es
+void main() {
+  gl_Position = vec4(float(pbrScene.toneMapMode), float(pbrScene.outputEncoding), 0.0, 1.0);
+}`,
+    fs: `#version 300 es
+out vec4 fragmentColor;
+void main() {
+  fragmentColor = vec4(float(pbrScene.toneMapMode), float(pbrScene.outputEncoding), 0.0, 1.0);
+}`
+  });
+
+  // Shared block members must match across stages even before lighting sets integer precision.
+  expect(compileAndLinkShaders(webglDevice, assembleResult)).toBe(true);
 });
 
 it('assembleGLSLShaderPair#warns on non-std140 app-authored uniform blocks', () => {
