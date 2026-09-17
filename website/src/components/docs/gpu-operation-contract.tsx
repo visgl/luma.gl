@@ -21,6 +21,18 @@ const COMMON = {
 } as const;
 
 export const GPUGRAPH_OPERATION_CONTRACTS = {
+  'gpu-incremental-execution': {
+    problem: 'Update analytical results over changing batches without repeating unchanged source work.',
+    readsWrites: 'Batch graphs read borrowed inputs and write cached partials; the merge writes caller-owned outputs.',
+    ownership: 'The executor owns cached partial buffers and temporary graphs; sources and final outputs remain borrowed.',
+    output: 'GPU-resident analytical results plus computed, reused, removed, command, and cache-byte counters.',
+    work: 'Only new or invalidated batches execute; each changed snapshot merges all live partials.',
+    chunks: 'Preserves source batches and their chunk topology; only explicit derived candidates may be staged.',
+    execution: 'update() owns submission and commits its cache only after successful synchronous submission.',
+    neighborhood: 'versioned batches → batch-local graph operations → cached partials → live merge.',
+    cost: 'Persistent storage scales with live partials; merge cost scales with live partial count.',
+    mistake: 'Bump revisions for buffer writes and shared parameter changes; byte mutations are not inferred.'
+  },
   'gpu-command-graph': {
     problem: 'Compose reusable compute, copy, and render work into one validated execution plan.',
     readsWrites: 'Nodes declare every logical resource range they read or write.',

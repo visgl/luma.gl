@@ -445,6 +445,7 @@
                   "api-reference/experimental/gpu-core/concepts",
             "api-guide/gpu/batch-semantics",
                   "api-reference/experimental/gpu-core/gpu-command-graph",
+                  "api-reference/experimental/gpu-core/gpu-incremental-execution",
                   "api-reference/experimental/gpu-core/gpu-texture-history",
                   "api-reference/experimental/gpu-core/gpu-readback-ring",
                   "api-reference/experimental/gpu-core/draw-command-buffer"

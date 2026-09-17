@@ -26,6 +26,10 @@ Use a command graph for repeated multi-pass GPU work whose capacities and resour
 
 Use direct command encoding for a one-off pass or a sequence that is already simple and local. A command graph does not own submission, presentation, the frame loop, or unbounded allocation. See [Execution and composition](./concepts) for the mental model, terminology, hazard scheduling, conditions, resumable work, budgets, and instrumentation.
 
+For changing batch topology, [GPUIncrementalExecution](./gpu-incremental-execution) caches explicit
+per-batch results and submits changed batches followed by a merge. It provides revision tracking,
+replacement/removal semantics, and work counters around ordinary command graphs.
+
 ## Quick usage
 
 This example composes reduction, histogram, and grid-binning nodes in one reusable graph:
