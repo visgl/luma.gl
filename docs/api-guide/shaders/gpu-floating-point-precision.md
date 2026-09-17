@@ -10,7 +10,7 @@ That distinction matters on WebGPU. Classic double-single arithmetic can be fast
 
 ## Live Mandelbrot And Compute Benchmark[​](#live-mandelbrot-and-compute-benchmark "Direct link to Live Mandelbrot And Compute Benchmark")
 
-The two Mandelbrot views follow the same deep zoom. The left view uses native `f32`; the right uses luma.gl's `fp64arithmetic` double-single representation. On WebGPU, use the benchmark below the canvases to compare native `f32`, automatic selection, the classic transforms, and the integer-controlled path on the active device.
+The two Mandelbrot views follow the same deep zoom. The left view uses native `f32`; the right uses luma.gl's `fp64arithmetic` double-single representation. On Apple WebGPU, the live FP64 pane uses a hybrid double-single path: integer operations reconstruct the critical high-part residuals while native `f32` accumulates lower-order terms. This is faster than fully integer-controlled arithmetic and more optimizer-resistant than the classic path, but it is not fully reliable. The fully integer-controlled path remains available in the benchmark. On WebGPU, use the benchmark below the canvases to compare native `f32`, automatic selection, the classic transforms, the hybrid path, and the integer-controlled path on the active device.
 
 Optional interactive GPU benchmark**Explore floating-point precision.**&#x43;ompare Mandelbrot rendering and compute precision when you are ready to use your GPU.Launch precision benchmark →
 

@@ -6,6 +6,8 @@ Add Phong shading to a textured cube using luma.gl's shader module system.
 
 <!-- -->
 
+**Loading example**Preparing GPU resources…
+
 It is assumed you've set up your development environment as described in [Setup](https://luma.gl/docs/tutorials.md).
 
 The base shaders handle geometry and texture sampling. Lighting calculations are delegated to shader modules which implement the Phong shading model and a configurable material. A `ShaderInputs` instance wires module uniforms together and exposes light and material parameters to JavaScript. The current example uses a `DynamicTexture` for the logo image and lets the shader modules reserve their own binding slots in the generated pipeline layout.

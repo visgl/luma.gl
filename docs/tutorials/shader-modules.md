@@ -6,6 +6,8 @@ This tutorial shows how to build reusable shader functionality with luma.gl's sh
 
 <!-- -->
 
+**Loading example**Preparing GPU resources…
+
 It is assumed you've set up your development environment as described in [Setup](https://luma.gl/docs/tutorials.md).
 
 A shader module bundles reusable WGSL and GLSL snippets, plus any uniforms or functions it needs. The `color` module defined here converts HSV values to RGB and applies an animated banded fill. Two separate models import the module and supply different HSV values and animation phases, demonstrating how module code can be shared across programs.

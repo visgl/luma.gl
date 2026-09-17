@@ -1,6 +1,6 @@
 # ANARI Arrays and Geometry
 
-ExperimentalPublished packageFrom v9.4
+ExperimentalPrivate workspaceFrom v10
 
 `ANARIArray` describes shared application data, and `ANARIGeometry` describes one reusable geometric primitive. Geometry becomes visible when paired with a material in an [`ANARISurface`](https://luma.gl/docs/api-reference/scene/anari-scene.md).
 

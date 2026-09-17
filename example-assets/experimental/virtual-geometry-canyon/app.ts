@@ -99,7 +99,6 @@ export default class VirtualGeometryCanyonAnimationLoopTemplate extends Animatio
   private graphResources: CanyonGraphResources | null = null;
   private readonly windAudio = new CanyonWindAudio();
   private canvas: HTMLCanvasElement | null = null;
-  private canvasTouchAction = '';
   private frameIndex = 0;
   private lastFrameTimeMilliseconds: number | null = null;
   private routeTimeSeconds = 0;
@@ -196,7 +195,6 @@ export default class VirtualGeometryCanyonAnimationLoopTemplate extends Animatio
       return;
     }
     this.canvas = canvas;
-    this.canvasTouchAction = canvas.style.touchAction;
     canvas.style.cursor = 'grab';
     canvas.style.touchAction = 'none';
     canvas.addEventListener('pointerdown', this.handlePointerDown);
@@ -264,7 +262,6 @@ export default class VirtualGeometryCanyonAnimationLoopTemplate extends Animatio
 
   override onFinalize(): void {
     if (this.canvas) {
-      this.canvas.style.touchAction = this.canvasTouchAction;
       this.canvas.removeEventListener('pointerdown', this.handlePointerDown);
       this.canvas.removeEventListener('pointermove', this.handlePointerMove);
       this.canvas.removeEventListener('pointerup', this.handlePointerUp);
@@ -419,7 +416,7 @@ export default class VirtualGeometryCanyonAnimationLoopTemplate extends Animatio
       }),
       overflow: graph.createDataView(overflowBuffer, {format: 'uint32', length: 1})
     });
-    selection.addToGraph(graph);
+    graph.add(selection);
 
     const frameColor = graph.importFrameTexture({
       id: 'frame-color',

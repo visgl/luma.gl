@@ -324,6 +324,7 @@ export default class LLMNetworkAnimationLoopTemplate extends AnimationLoopTempla
   private orbitDragging = false;
   private previousPointerPosition: [number, number] = [0, 0];
   private scrollingStory = false;
+  private previousTouchAction = '';
 
   constructor({device}: AnimationProps) {
     super();
@@ -334,6 +335,8 @@ export default class LLMNetworkAnimationLoopTemplate extends AnimationLoopTempla
   override async onInitialize({canvas}: AnimationProps): Promise<void> {
     if (!(canvas instanceof HTMLCanvasElement)) return;
     this.canvas = canvas;
+    this.previousTouchAction = canvas.style.touchAction;
+    canvas.style.touchAction = 'none';
     canvas.setAttribute('role', 'img');
     canvas.setAttribute(
       'aria-label',
@@ -374,8 +377,18 @@ export default class LLMNetworkAnimationLoopTemplate extends AnimationLoopTempla
   }
 
   override onFinalize(): void {
+    if (this.canvas) {
+      this.canvas.removeEventListener('pointermove', this.handleCanvasPointerMove);
+      this.canvas.removeEventListener('pointerleave', this.handleCanvasPointerLeave);
+      this.canvas.removeEventListener('pointerdown', this.handleCanvasPointerDown);
+      this.canvas.removeEventListener('pointerup', this.handleCanvasPointerUp);
+      this.canvas.removeEventListener('pointercancel', this.handleCanvasPointerUp);
+      this.canvas.removeEventListener('wheel', this.handleCanvasWheel);
+      this.canvas.style.touchAction = this.previousTouchAction;
+    }
     this.root?.remove();
     this.root = null;
+    this.canvas = null;
     this.renderer.destroy();
   }
 
@@ -415,54 +428,12 @@ export default class LLMNetworkAnimationLoopTemplate extends AnimationLoopTempla
     this.root?.querySelector<HTMLInputElement>('[data-speed]')?.addEventListener('input', event => {
       this.flowSpeed = Number((event.currentTarget as HTMLInputElement).value);
     });
-    this.canvas?.addEventListener('pointermove', event => {
-      const bounds = this.canvas?.getBoundingClientRect();
-      if (!bounds) return;
-      this.pointer = [
-        (event.clientX - bounds.left) / bounds.width,
-        1 - (event.clientY - bounds.top) / bounds.height
-      ];
-      this.pointerActive = true;
-      if (this.orbitDragging) {
-        this.orbitYaw += (event.clientX - this.previousPointerPosition[0]) * 0.008;
-        this.orbitPitch = Math.max(
-          0.15,
-          Math.min(
-            1.25,
-            this.orbitPitch + (event.clientY - this.previousPointerPosition[1]) * 0.006
-          )
-        );
-        this.previousPointerPosition = [event.clientX, event.clientY];
-      }
-    });
-    this.canvas?.addEventListener('pointerleave', () => {
-      this.pointerActive = false;
-    });
-    this.canvas?.addEventListener('pointerdown', event => {
-      if (this.stage < 5) return;
-      this.orbitDragging = true;
-      this.previousPointerPosition = [event.clientX, event.clientY];
-      this.canvas?.setPointerCapture(event.pointerId);
-      this.root?.classList.add('orbit-dragging');
-    });
-    this.canvas?.addEventListener('pointerup', event => {
-      this.orbitDragging = false;
-      if (this.canvas?.hasPointerCapture(event.pointerId))
-        this.canvas.releasePointerCapture(event.pointerId);
-      this.root?.classList.remove('orbit-dragging');
-    });
-    this.canvas?.addEventListener(
-      'wheel',
-      event => {
-        if (this.stage < 5) return;
-        event.preventDefault();
-        this.orbitZoom = Math.max(
-          0.68,
-          Math.min(1.45, this.orbitZoom * Math.exp(-event.deltaY * 0.001))
-        );
-      },
-      {passive: false}
-    );
+    this.canvas?.addEventListener('pointermove', this.handleCanvasPointerMove);
+    this.canvas?.addEventListener('pointerleave', this.handleCanvasPointerLeave);
+    this.canvas?.addEventListener('pointerdown', this.handleCanvasPointerDown);
+    this.canvas?.addEventListener('pointerup', this.handleCanvasPointerUp);
+    this.canvas?.addEventListener('pointercancel', this.handleCanvasPointerUp);
+    this.canvas?.addEventListener('wheel', this.handleCanvasWheel, {passive: false});
     this.root?.querySelector('[data-story]')?.addEventListener('scroll', event => {
       if (this.scrollingStory) return;
       const story = event.currentTarget as HTMLElement;
@@ -484,6 +455,52 @@ export default class LLMNetworkAnimationLoopTemplate extends AnimationLoopTempla
       }
     });
   }
+
+  private readonly handleCanvasPointerMove = (event: PointerEvent): void => {
+    const bounds = this.canvas?.getBoundingClientRect();
+    if (!bounds) return;
+    this.pointer = [
+      (event.clientX - bounds.left) / bounds.width,
+      1 - (event.clientY - bounds.top) / bounds.height
+    ];
+    this.pointerActive = true;
+    if (this.orbitDragging) {
+      this.orbitYaw += (event.clientX - this.previousPointerPosition[0]) * 0.008;
+      this.orbitPitch = Math.max(
+        0.15,
+        Math.min(1.25, this.orbitPitch + (event.clientY - this.previousPointerPosition[1]) * 0.006)
+      );
+      this.previousPointerPosition = [event.clientX, event.clientY];
+    }
+  };
+
+  private readonly handleCanvasPointerLeave = (): void => {
+    this.pointerActive = false;
+  };
+
+  private readonly handleCanvasPointerDown = (event: PointerEvent): void => {
+    if (this.stage < 5) return;
+    this.orbitDragging = true;
+    this.previousPointerPosition = [event.clientX, event.clientY];
+    this.canvas?.setPointerCapture(event.pointerId);
+    this.root?.classList.add('orbit-dragging');
+  };
+
+  private readonly handleCanvasPointerUp = (event: PointerEvent): void => {
+    this.orbitDragging = false;
+    if (this.canvas?.hasPointerCapture(event.pointerId))
+      this.canvas.releasePointerCapture(event.pointerId);
+    this.root?.classList.remove('orbit-dragging');
+  };
+
+  private readonly handleCanvasWheel = (event: WheelEvent): void => {
+    if (this.stage < 5) return;
+    event.preventDefault();
+    this.orbitZoom = Math.max(
+      0.68,
+      Math.min(1.45, this.orbitZoom * Math.exp(-event.deltaY * 0.001))
+    );
+  };
 
   private setStage(stage: number, scrollStory = false): void {
     this.stage = Math.max(0, Math.min(STAGES.length - 1, Math.round(stage)));

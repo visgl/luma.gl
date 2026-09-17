@@ -86,7 +86,7 @@ Capacities default to one directional, one spot, and one point light. Configurab
 
 ## Contact refinement[​](#contact-refinement "Direct link to Contact refinement")
 
-`createContactShadowShaderPassPipeline({quality})` creates a depth ray-march, two depth/normal-aware bilateral passes, and a composite. Bind camera depth, view-space normals, projection matrices, the primary directional-light vector, and a texture containing that light's already-shadowed direct contribution. The composite subtracts only the occluded directional direct term, preserving ambient and emissive lighting. Run contact refinement immediately after scene shading and before SSAO, SSR, fog, outlines, TAA, and motion blur.
+`createContactShadowCompositeShaderPass({quality})` creates a depth ray-march, two depth/normal-aware bilateral passes, and a composite. Bind camera depth, view-space normals, projection matrices, the primary directional-light vector, and a texture containing that light's already-shadowed direct contribution. The composite subtracts only the occluded directional direct term, preserving ambient and emissive lighting. Run contact refinement immediately after scene shading and before SSAO, SSR, fog, outlines, TAA, and motion blur.
 
 ## Lifecycle[​](#lifecycle "Direct link to Lifecycle")
 

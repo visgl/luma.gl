@@ -1,1 +1,0 @@
-import{i as e}from"./webgl-device-Upc5CJ-J.js";export{e as webgl2Adapter};

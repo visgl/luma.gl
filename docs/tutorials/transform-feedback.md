@@ -6,6 +6,8 @@ This tutorial demonstrates animating geometry using transform feedback via the `
 
 <!-- -->
 
+**Loading example**Preparing GPU resources…
+
 It is assumed you've set up your development environment as described in [Setup](https://luma.gl/docs/tutorials.md).
 
 Transform feedback allows us to capture vertex shader results from one pass and use them in subsequent passes. It is a powerful tool that can be used to set up massively parallelized animations or data transformations. Note that transform feedback can only be used with WebGL 2.

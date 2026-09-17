@@ -250,10 +250,10 @@ True if the device is already lost (GPU is disconnected).
 ### lost[​](#lost "Direct link to lost")
 
 ```
-lost: Promise<{reason: 'destroyed'; message: string}>;
+lost: Promise<DeviceLostInfo>;
 ```
 
-Promise that resolves with an error message if the device is lost (GPU is disconnected).
+Promise that resolves when the underlying device is lost. `reason` is `'destroyed'` for an application-initiated loss and `'unknown'` for every unexpected or platform-initiated loss. `message` is implementation-defined diagnostic text and must not be parsed by applications.
 
 info
 
@@ -400,6 +400,14 @@ createRenderPipeline(props: RenderPipelineProps): RenderPipeline
 
 Creates a [`RenderPipeline`](https://luma.gl/docs/api-reference/core/resources/render-pipeline.md) (aka program). See [`RenderPipelineProps`](https://luma.gl/docs/api-reference/core/resources/render-pipeline.md#renderpipelineprops) for available options.
 
+### createRenderPipelineAsync[​](#createrenderpipelineasync "Direct link to createRenderPipelineAsync")
+
+```
+createRenderPipelineAsync(props: RenderPipelineProps): Promise<RenderPipeline>
+```
+
+Creates a render pipeline through the backend's asynchronous compilation path. On WebGPU this uses the native `GPUDevice.createRenderPipelineAsync()` API; synchronous backends return an already resolved promise.
+
 ### createComputePipeline[​](#createcomputepipeline "Direct link to createComputePipeline")
 
 WebGPU supportedWebGL 2 not supported
@@ -409,6 +417,14 @@ createComputePipeline(props: ComputePipelineProps): ComputePipeline
 ```
 
 Creates a [`ComputePipeline`](https://luma.gl/docs/api-reference/core/resources/compute-pipeline.md) (aka program). See [`ComputePipelineProps`](https://luma.gl/docs/api-reference/core/resources/compute-pipeline.md#computepipelineprops) for available options.
+
+### createComputePipelineAsync[​](#createcomputepipelineasync "Direct link to createComputePipelineAsync")
+
+```
+createComputePipelineAsync(props: ComputePipelineProps): Promise<ComputePipeline>
+```
+
+Creates a compute pipeline through the backend's asynchronous compilation path. Start independent calls together and await them with `Promise.all()` when minimizing WebGPU preparation latency.
 
 ### createRenderBundleEncoder[​](#createrenderbundleencoder "Direct link to createRenderBundleEncoder")
 

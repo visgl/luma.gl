@@ -1,26 +1,6 @@
 <!doctype html>
 <html lang="en">
   <head>
-  <!-- luma-example-support -->
-  <meta name="luma-example-id" content="experimental/lucim-volume-lab" />
-  <meta name="luma-example-backends" content="webgpu" />
-  <meta name="luma-example-mobile" content="reduced" />
-  <meta name="luma-example-mobile-profile" content="simulation" />
-  <script data-luma-example-support-promise>
-    window.lumaExampleSupportPromise = new Promise(resolve => {
-      window.addEventListener('luma-example-support-ready', event => resolve(event.detail), {
-        once: true
-      });
-    });
-  </script>
-  <script type="module" data-luma-example-support-bootstrap>
-    import {installStandaloneExampleSupport} from '../../example-support.ts';
-    const exampleSupport = installStandaloneExampleSupport();
-    window.dispatchEvent(
-      new CustomEvent('luma-example-support-ready', {detail: exampleSupport})
-    );
-  </script>
-  <!-- /luma-example-support -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#020914" />
@@ -89,34 +69,31 @@
       <p id="volume-startup">Preparing a synthetic CT-like phantom and WebGPU graph…</p>
       <div id="example-panel-host" data-example-panel-host></div>
     </aside>
-    <script type="module" data-luma-example-application>
-      const exampleSupport = await window.lumaExampleSupportPromise;
-      if (exampleSupport.supported) {
-        const startup = document.querySelector('#volume-startup');
-        try {
-          if (!navigator.gpu) {
-            throw new Error('LuCIM Volume Lab requires a current WebGPU-capable browser.');
-          }
-          const [{luma}, {makeAnimationLoop}, {webgpuAdapter}, {default: AnimationLoopTemplate}] =
-            await Promise.all([
-              import('@luma.gl/core'),
-              import('@luma.gl/engine'),
-              import('@luma.gl/webgpu'),
-              import('./app.ts')
-            ]);
-          const device = await luma.createDevice({
-            id: 'lucim-volume-lab',
-            adapters: [webgpuAdapter],
-            featureLevel: 'best-available',
-            powerPreference: 'high-performance',
-            waitForPageLoad: false,
-            createCanvasContext: true
-          });
-          await makeAnimationLoop(AnimationLoopTemplate, {device}).start();
-        } catch (error) {
-          startup.dataset.state = 'error';
-          startup.textContent = error instanceof Error ? error.message : String(error);
+    <script type="module">
+      const startup = document.querySelector('#volume-startup');
+      try {
+        if (!navigator.gpu) {
+          throw new Error('LuCIM Volume Lab requires a current WebGPU-capable browser.');
         }
+        const [{luma}, {makeAnimationLoop}, {webgpuAdapter}, {default: AnimationLoopTemplate}] =
+          await Promise.all([
+            import('@luma.gl/core'),
+            import('@luma.gl/engine'),
+            import('@luma.gl/webgpu'),
+            import('./app.ts')
+          ]);
+        const device = await luma.createDevice({
+          id: 'lucim-volume-lab',
+          adapters: [webgpuAdapter],
+          featureLevel: 'best-available',
+          powerPreference: 'high-performance',
+          waitForPageLoad: false,
+          createCanvasContext: true
+        });
+        await makeAnimationLoop(AnimationLoopTemplate, {device}).start();
+      } catch (error) {
+        startup.dataset.state = 'error';
+        startup.textContent = error instanceof Error ? error.message : String(error);
       }
     </script>
   </body>

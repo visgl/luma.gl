@@ -1,6 +1,6 @@
 # Motion Blur
 
-Integrate scene color along per-pixel motion vectors while reducing bleed across depth discontinuities. `createMotionBlurShaderPassPipeline` produces directional shutter blur from the same depth and velocity attachments used by temporal reconstruction.
+Integrate scene color along per-pixel motion vectors while reducing bleed across depth discontinuities. `createMotionBlurCompositeShaderPass` produces directional shutter blur from the same depth and velocity attachments used by temporal reconstruction.
 
 ### Advanced Effects: Visualization City
 
@@ -14,13 +14,15 @@ Mobile quality
 // Loading source…
 ```
 
+**Loading example**Preparing GPU resources…
+
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ## At a Glance[​](#at-a-glance "Direct link to At a Glance")
 
 | Property          | Value                                     |
 | ----------------- | ----------------------------------------- |
-| Export            | `createMotionBlurShaderPassPipeline`      |
+| Export            | `createMotionBlurCompositeShaderPass`     |
 | Backend           | WebGPU                                    |
 | Render passes     | One depth-aware directional sampling pass |
 | Required bindings | `depthTexture` and `velocityTexture`      |
@@ -31,13 +33,13 @@ Scroll page · Ctrl/⌘ + scroll to interact
 ```
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
-import {createMotionBlurShaderPassPipeline} from '@luma.gl/effects';
+import {createMotionBlurCompositeShaderPass} from '@luma.gl/effects';
 
 
 
 const renderer = new ShaderPassRenderer(device, {
 
-  shaderPasses: [createMotionBlurShaderPassPipeline()]
+  shaderPasses: [createMotionBlurCompositeShaderPass()]
 
 });
 

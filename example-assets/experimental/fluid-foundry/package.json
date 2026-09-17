@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-experimental-fluid-foundry",
-  "version": "9.4.1",
+  "version": "10.0.0-alpha.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,12 +9,12 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/core": "9.4.1",
-    "@luma.gl/effects": "9.4.1",
-    "@luma.gl/engine": "9.4.1",
-    "@luma.gl/experimental": "9.4.1",
-    "@luma.gl/shadertools": "9.4.1",
-    "@luma.gl/webgpu": "9.4.1"
+    "@luma.gl/core": "10.0.0-alpha.1",
+    "@luma.gl/effects": "10.0.0-alpha.1",
+    "@luma.gl/engine": "10.0.0-alpha.1",
+    "@luma.gl/experimental": "10.0.0-alpha.1",
+    "@luma.gl/shadertools": "10.0.0-alpha.1",
+    "@luma.gl/webgpu": "10.0.0-alpha.1"
   },
   "devDependencies": {
     "typescript": "^6.0.3",

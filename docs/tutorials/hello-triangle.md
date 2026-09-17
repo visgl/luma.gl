@@ -8,6 +8,8 @@ Every rendered world starts somewhere. This live example turns one `Model` into 
 
 <!-- -->
 
+**Loading example**Preparing GPU resources…
+
 The canvas displays a red triangle. When both backends are available, switch between WebGPU and WebGL2 above the example to see the same application logic run through either GPU API.
 
 ## The mental model[​](#the-mental-model "Direct link to The mental model")
@@ -24,7 +26,7 @@ This first model does not need a vertex buffer. Both shaders use the built-in ve
 4. `model.draw(renderPass)` records the draw.
 5. Ending the pass allows the device to submit and present the frame.
 
-**Runnable source**[View on GitHub](https://github.com/visgl/luma.gl/tree/9.4-release/examples/tutorials/hello-triangle)
+**Runnable source**[View on GitHub](https://github.com/visgl/luma.gl/tree/master/examples/tutorials/hello-triangle)
 
 ```
 // Loading canonical example source…
