@@ -337,6 +337,44 @@ it('Model#draw', async () => {
   void 0;
 });
 
+it('Model#draw uses vertexCount for indexed draws when indexCount is unset', async () => {
+  const webglDevice = await getWebGLTestDevice();
+  const {gl} = webglDevice;
+  const indexBuffer = webglDevice.createBuffer({
+    usage: Buffer.INDEX,
+    data: new Uint16Array([0, 1, 2, 0, 2, 3])
+  });
+  const model = new Model(webglDevice, {
+    id: 'indexed-draw-count-test',
+    vs: DUMMY_VS,
+    fs: DUMMY_FS,
+    indexBuffer,
+    vertexCount: 3
+  });
+  const renderPass = webglDevice.beginRenderPass({clearColor: [0, 0, 0, 0]});
+  const drawElements = gl.drawElements.bind(gl);
+  const indexedDrawCounts: number[] = [];
+  gl.drawElements = ((mode, count, type, offset) => {
+    indexedDrawCounts.push(count);
+    drawElements(mode, count, type, offset);
+  }) as typeof gl.drawElements;
+
+  try {
+    model.draw(renderPass);
+    model.setVertexCount(0);
+    model.draw(renderPass);
+  } finally {
+    gl.drawElements = drawElements;
+  }
+
+  expect(indexedDrawCounts, 'indexed draw uses explicit vertex counts').toEqual([3, 0]);
+
+  renderPass.destroy();
+  model.destroy();
+  indexBuffer.destroy();
+  void 0;
+});
+
 it('Model.createAsync prepares a WebGPU render pipeline and vertex array', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (!webgpuDevice) return;
