@@ -16,6 +16,12 @@ import {
 } from './shader-assembly/wgsl-binding-debug';
 import {preprocess} from './preprocessor/preprocessor';
 import {scanWGSLInterface} from './shader-assembly/wgsl-interface-scan';
+import {
+  createShaderHookRegistry,
+  registerShaderHook,
+  type ShaderHookOptions,
+  type ShaderHookRegistry
+} from './shader-assembly/shader-hooks';
 import {assert} from './utils/assert';
 import type {ShaderLayout} from '@luma.gl/core';
 
@@ -32,7 +38,7 @@ export abstract class ShaderAssembler {
   /** Shader language accepted by this assembler. */
   abstract readonly shaderLanguage: 'glsl' | 'wgsl';
   /** Hook functions */
-  protected readonly _hookFunctions: any[] = [];
+  protected readonly _hookFunctions: ShaderHookRegistry = createShaderHookRegistry();
   /** Shader modules */
   protected _defaultModules: ShaderModule[] = [];
 
@@ -89,13 +95,10 @@ export abstract class ShaderAssembler {
   /**
    * Register a shader hook
    * @param hook Stage-prefixed hook signature, such as `vs:OFFSET_POSITION(inout vec4 position)`.
-   * @param opts Optional hook metadata such as always-on header and footer source.
+   * @param options Optional hook metadata such as always-on header and footer source.
    */
-  addShaderHook(hook: string, opts?: any): void {
-    if (opts) {
-      hook = Object.assign(opts, {hook});
-    }
-    this._hookFunctions.push(hook);
+  addShaderHook(hook: string, options?: ShaderHookOptions): void {
+    registerShaderHook(this._hookFunctions, hook, options);
   }
 
   /**
