@@ -943,6 +943,70 @@ fn fragmentMain() -> @location(0) vec4<f32> {
   void 0;
 });
 
+it('WGSLShaderAssembler ignores inactive module hook injections', () => {
+  const shaderAssembler = new WGSLShaderAssembler();
+
+  const assembledShader = shaderAssembler.assembleWGSLShader({
+    platformInfo: {
+      type: 'webgpu',
+      gpu: 'test-gpu',
+      shaderLanguage: 'wgsl',
+      shaderLanguageVersion: 300,
+      features: new Set()
+    },
+    source: /* wgsl */ `\
+@vertex
+fn vertexMain() -> @builtin(position) vec4<f32> {
+  return vec4<f32>(0.0);
+}
+
+@fragment
+fn fragmentMain() -> @location(0) vec4<f32> {
+  return vec4<f32>(1.0);
+}
+`,
+    modules: [
+      {
+        name: 'legacy-language-specific-injections',
+        inject: {
+          'vs:LEGACY_VERTEX_HOOK': 'position.x += 1.0;',
+          'fs:LEGACY_FRAGMENT_HOOK': 'color.r = 0.25;'
+        }
+      }
+    ]
+  });
+
+  expect(assembledShader.source).not.toContain('position.x += 1.0;');
+  expect(assembledShader.source).not.toContain('color.r = 0.25;');
+  void 0;
+});
+
+it('WGSLShaderAssembler rejects explicit hook injections when the registry is empty', () => {
+  const shaderAssembler = new WGSLShaderAssembler();
+
+  expect(() =>
+    shaderAssembler.assembleWGSLShader({
+      platformInfo: {
+        type: 'webgpu',
+        gpu: 'test-gpu',
+        shaderLanguage: 'wgsl',
+        shaderLanguageVersion: 300,
+        features: new Set()
+      },
+      source: /* wgsl */ `\
+@vertex
+fn vertexMain() -> @builtin(position) vec4<f32> {
+  return vec4<f32>(0.0);
+}
+`,
+      inject: {
+        'vs:MISSING_APPLICATION_HOOK': 'position.x += 1.0;'
+      }
+    })
+  ).toThrow('Unknown shader hook "vs:MISSING_APPLICATION_HOOK". Valid shader hooks: (none).');
+  void 0;
+});
+
 it('assembleGLSLShaderPair#injection order', async () => {
   const webglDevice = await getWebGLTestDevice();
 

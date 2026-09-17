@@ -359,7 +359,7 @@ export function assembleShaderWGSL(
         const injectionType = name === 'decl' ? declInjections : mainInjections;
         injectionType[key] = injectionType[key] || [];
         injectionType[key].push(injections[key]);
-      } else {
+      } else if (hasRegisteredWGSLShaderHooksForStage(hookFunctionMap, key)) {
         hookInjections[key] = hookInjections[key] || [];
         hookInjections[key].push(injections[key]);
       }
@@ -696,6 +696,18 @@ function getWGSLModuleInjections(module: ShaderModule): Record<string, ShaderInj
     ...(module.instance?.normalizedInjections.vertex || {}),
     ...(module.instance?.normalizedInjections.fragment || {})
   };
+}
+
+/**
+ * Shader module injections are not language-specific, so WGSL modules may still expose legacy
+ * GLSL hook injections. If WGSL declares no hooks for that stage, those injections are inactive.
+ */
+function hasRegisteredWGSLShaderHooksForStage(
+  hookFunctionMap: ReturnType<typeof normalizeShaderHooks>,
+  hookName: string
+): boolean {
+  const stageHooks = hookName.startsWith('vs:') ? hookFunctionMap.vertex : hookFunctionMap.fragment;
+  return Object.keys(stageHooks).length > 0;
 }
 
 function getWGSLDeclarationInjections(
