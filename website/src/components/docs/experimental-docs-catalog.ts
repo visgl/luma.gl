@@ -65,6 +65,7 @@ export type GPUCoreDocsTabId =
   | 'recipes'
   | 'concepts'
   | 'command-graph'
+  | 'incremental-execution'
   | 'texture-history'
   | 'scan'
   | 'segmented-scan'
@@ -242,6 +243,7 @@ const GPU_CORE_DOCS_TABS: Record<GPUCoreDocsTabId, DocsTab<GPUCoreDocsTabId>> = 
   recipes: {id: 'recipes', label: 'Cookbook', href: '/docs/api-reference/experimental/gpu-core/recipes'},
   concepts: {id: 'concepts', label: 'Concepts', href: '/docs/api-reference/experimental/gpu-core/concepts'},
   'command-graph': {id: 'command-graph', label: 'Command Graph', href: '/docs/api-reference/experimental/gpu-core/gpu-command-graph'},
+  'incremental-execution': {id: 'incremental-execution', label: 'Incremental Execution', href: '/docs/api-reference/experimental/gpu-core/gpu-incremental-execution'},
   'texture-history': {id: 'texture-history', label: 'Texture History', href: '/docs/api-reference/experimental/gpu-core/gpu-texture-history'},
   scan: {id: 'scan', label: 'Scan', href: '/docs/api-reference/experimental/gpu-core/gpu-scan'},
   'segmented-scan': {id: 'segmented-scan', label: 'Segmented Scan', href: '/docs/api-reference/experimental/gpu-core/gpu-segmented-scan'},
@@ -302,7 +304,7 @@ function getGPUCoreTabs(
 
 export const GPU_CORE_DOCS_TAB_GROUPS: readonly DocsTabGroup<GPUCoreDocsTabId>[] = [
   {id: 'learning', label: 'Learn GPU Core', tabs: getGPUCoreTabs(['overview', 'tutorial', 'recipes', 'concepts'])},
-  {id: 'graph-execution', label: 'Graph execution', tabs: getGPUCoreTabs(['command-graph', 'texture-history', 'readback-ring', 'draw-command-buffer'])},
+  {id: 'graph-execution', label: 'Graph execution', tabs: getGPUCoreTabs(['command-graph', 'incremental-execution', 'texture-history', 'readback-ring', 'draw-command-buffer'])},
   {id: 'data-movement', label: 'Data movement', tabs: getGPUCoreTabs(['scan', 'segmented-scan', 'scatter', 'gather'])},
   {id: 'selection-and-compaction', label: 'Selection and compaction', tabs: getGPUCoreTabs(['galloping-search', 'compaction', 'segmented-layout', 'mask', 'visibility-workflow', 'virtual-geometry'])},
   {id: 'hierarchies-and-traversal', label: 'Hierarchies and traversal', tabs: getGPUCoreTabs(['hierarchy-layout', 'graph-traversal', 'ancestor-projection'])},
