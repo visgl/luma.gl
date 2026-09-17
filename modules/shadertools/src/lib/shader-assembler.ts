@@ -10,6 +10,7 @@ import {
   assembleWGSLShader,
   assembleGLSLShaderPair
 } from './shader-assembly/assemble-shaders';
+import type {ShaderHook} from './shader-assembly/shader-hooks';
 import {
   getShaderBindingDebugRowsFromWGSL,
   type ShaderBindingDebugRow
@@ -32,7 +33,7 @@ export abstract class ShaderAssembler {
   /** Shader language accepted by this assembler. */
   abstract readonly shaderLanguage: 'glsl' | 'wgsl';
   /** Hook functions */
-  protected readonly _hookFunctions: any[] = [];
+  protected readonly _hookFunctions: (ShaderHook | string)[] = [];
   /** Shader modules */
   protected _defaultModules: ShaderModule[] = [];
 
@@ -91,11 +92,8 @@ export abstract class ShaderAssembler {
    * @param hook Stage-prefixed hook signature, such as `vs:OFFSET_POSITION(inout vec4 position)`.
    * @param opts Optional hook metadata such as always-on header and footer source.
    */
-  addShaderHook(hook: string, opts?: any): void {
-    if (opts) {
-      hook = Object.assign(opts, {hook});
-    }
-    this._hookFunctions.push(hook);
+  addShaderHook(hook: string, opts?: Omit<ShaderHook, 'hook' | 'signature'>): void {
+    this._hookFunctions.push(opts ? {...opts, hook} : hook);
   }
 
   /**
