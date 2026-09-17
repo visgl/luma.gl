@@ -75,13 +75,11 @@ export class GPUScatter<T extends GPUScatterFormat = GPUScatterFormat> {
     if (this.source.length < this.indices.length) {
       throw new Error(`${this.id} source must contain at least indices.length rows`);
     }
-    if (
-      getGraphVectorData(this.output).some(output =>
-        [...getGraphVectorData(this.source), ...getGraphVectorData(this.indices)].some(
-          input => output.buffer === input.buffer
-        )
-      )
-    ) {
+    const inputBuffers = new Set([
+      ...getGraphVectorData(this.source).map(chunk => chunk.buffer),
+      ...getGraphVectorData(this.indices).map(chunk => chunk.buffer)
+    ]);
+    if (getGraphVectorData(this.output).some(chunk => inputBuffers.has(chunk.buffer))) {
       throw new Error(`${this.id} output must use a separate buffer`);
     }
 

@@ -11,6 +11,7 @@ import {
 } from './graph-data-view-utils';
 import {alignGraphVectorViews, getGraphVectorData} from './graph-vector-view-utils';
 import {getGPUVectorChunks} from '../gpu-data/gpu-vector-chunks';
+import {GPUGather} from './gpu-gather';
 import {
   createChunkNode,
   getChunkDispatch,
@@ -112,117 +113,162 @@ export class GPUAdaptiveSpMV {
     const nonzeros = alignGraphVectorViews(graph, [columnIndices, values]);
     const vectors = getGPUVectorChunks(getGraphVectorData(vector)).filter(chunk => chunk.length);
     const maximum = graph.device.limits.maxComputeWorkgroupsPerDimension;
-    let rowIndex = 0;
+    // Row blocks are reused across matrix spans. Gather indexed vector values once per
+    // matrix span when that removes dispatches, rather than rescanning each vector chunk
+    // for every row block. Scratch follows nonzero spans and dies before the next gather.
+    const blockLength = Math.min(
+      4096,
+      Math.floor(graph.device.limits.maxStorageBufferBindingSize / (parts * 4))
+    );
+    if (blockLength < 1) throw new Error('SpMV count scratch must fit a storage binding');
+    const rowBlocks: GraphDataView[][] = [];
     for (const rowSpan of rows) {
-      // Bound long-row reduction scratch independently of the matrix and destination partitions.
-      const blockLength = Math.min(
-        4096,
-        Math.floor(graph.device.limits.maxStorageBufferBindingSize / (parts * 4))
-      );
-      if (blockLength < 1) throw new Error('SpMV count scratch must fit a storage binding');
       for (let start = 0; start < rowSpan[0].length; start += blockLength) {
         const length = Math.min(blockLength, rowSpan[0].length - start);
-        const [begins, ends, destination] = rowSpan.map(view =>
-          graph.createDataView(view.buffer, {
-            format: view.format,
-            length,
-            byteOffset: view.byteOffset + start * 4
-          })
-        );
-        const partials =
-          strategy === 'long-row'
-            ? createTransientView(
-                graph,
-                `${this.id}-rows-${rowIndex}-partials`,
-                'float32',
-                length * parts
-              )
-            : undefined;
-        let initialize = true;
-        let nonzeroStart = 0;
-        for (const [nonzeroIndex, [indices, matrixValues]] of nonzeros.entries()) {
-          for (const [vectorIndex, chunk] of vectors.entries()) {
-            const id = `${this.id}-rows-${rowIndex}-nonzeros-${nonzeroIndex}-vector-${vectorIndex}-${strategy}`;
-            // One subgroup owns each row, independent of the device's subgroup width.
-            const workgroups =
-              strategy === 'scalar-row' ? Math.ceil(length / workgroupSize) : length * parts;
-            const dispatch = getChunkDispatch(workgroups, maximum);
-            const outputView = partials ?? destination;
-            const source = makeShader({
-              strategy,
-              workgroupSize,
-              parts,
+        rowBlocks.push(
+          rowSpan.map(view =>
+            graph.createDataView(view.buffer, {
+              format: view.format,
               length,
-              begins,
-              ends,
-              indices,
-              matrixValues,
-              vector: chunk.data,
-              output: outputView,
-              nonzeroStart,
-              vectorStart: chunk.offset,
-              initialize,
-              dispatch
-            });
+              byteOffset: view.byteOffset + start * 4
+            })
+          )
+        );
+      }
+    }
+    const rowPartials = rowBlocks.map(([begins], rowIndex) =>
+      strategy === 'long-row'
+        ? createTransientView(
+            graph,
+            `${this.id}-rows-${rowIndex}-partials`,
+            'float32',
+            begins.length * parts
+          )
+        : undefined
+    );
+    const gatherVector =
+      vectors.length > 1 && rowBlocks.length * vectors.length > vectors.length + rowBlocks.length;
+    let nonzeroStart = 0;
+    let previousConsumers: string[] = [];
+    for (const [nonzeroIndex, [indices, matrixValues]] of nonzeros.entries()) {
+      let gathered: GraphDataView<'float32'> | undefined;
+      if (gatherVector) {
+        gathered = createTransientView(
+          graph,
+          `${this.id}-gather-${nonzeroIndex}`,
+          'float32',
+          indices.length
+        );
+        const gatherNodes = new GPUGather({
+          id: `${this.id}-gather-${nonzeroIndex}`,
+          source: vector,
+          indices,
+          output: gathered
+        }).getCommandNodes(graph);
+        // Complete this span's consumers before the next span can reuse its scratch.
+        for (const [index, node] of gatherNodes.entries()) {
+          nodes.push(
+            index === 0
+              ? {...node, dependsOn: [...(node.dependsOn ?? []), ...previousConsumers]}
+              : node
+          );
+        }
+      }
+      const vectorPasses = gathered ? [{data: gathered, offset: 0}] : vectors;
+      const consumers: string[] = [];
+      for (const [rowIndex, [begins, ends, destination]] of rowBlocks.entries()) {
+        const length = begins.length;
+        const partials = rowPartials[rowIndex];
+        for (const [vectorIndex, chunk] of vectorPasses.entries()) {
+          const initialize = nonzeroIndex === 0 && vectorIndex === 0;
+          const id = `${this.id}-rows-${rowIndex}-nonzeros-${nonzeroIndex}-vector-${vectorIndex}-${strategy}`;
+          const workgroups =
+            strategy === 'scalar-row' ? Math.ceil(length / workgroupSize) : length * parts;
+          const dispatch = getChunkDispatch(workgroups, maximum);
+          const outputView = partials ?? destination;
+          nodes.push(
+            createChunkNode(graph, {
+              id,
+              source: makeShader({
+                strategy,
+                workgroupSize,
+                parts,
+                length,
+                begins,
+                ends,
+                indices,
+                matrixValues,
+                vector: chunk.data,
+                output: outputView,
+                nonzeroStart,
+                vectorStart: chunk.offset,
+                initialize,
+                dispatch,
+                gathered: Boolean(gathered),
+                columns: this.props.columns
+              }),
+              inputs: {
+                rowBegins: begins,
+                rowEnds: ends,
+                columnIndices: indices,
+                matrixValues,
+                vectorValues: chunk.data
+              },
+              outputs: {[partials ? 'rowPartials' : 'outputValues']: outputView},
+              dispatch,
+              workgroupSize
+            })
+          );
+          if (partials) {
+            const finalizeDispatch = getChunkDispatch(Math.ceil(length / 64), maximum);
             nodes.push(
               createChunkNode(graph, {
-                id,
-                source,
-                inputs: {
-                  rowBegins: begins,
-                  rowEnds: ends,
-                  columnIndices: indices,
-                  matrixValues,
-                  vectorValues: chunk.data
-                },
-                outputs: {[partials ? 'rowPartials' : 'outputValues']: outputView},
-                dispatch,
-                workgroupSize
-              })
-            );
-            if (partials) {
-              const finalizeDispatch = getChunkDispatch(Math.ceil(length / 64), maximum);
-              nodes.push(
-                createChunkNode(graph, {
-                  id: `${id}-finalize`,
-                  inputs: {rowPartials: partials},
-                  outputs: {outputValues: destination},
-                  dispatch: finalizeDispatch,
-                  workgroupSize: 64,
-                  source: /* wgsl */ `
+                id: `${id}-finalize`,
+                inputs: {rowPartials: partials},
+                outputs: {outputValues: destination},
+                dispatch: finalizeDispatch,
+                workgroupSize: 64,
+                source: /* wgsl */ `
 @group(0) @binding(0) var<storage, read> rowPartials: array<f32>;
 @group(0) @binding(1) var<storage, read_write> outputValues: array<f32>;
-@compute @workgroup_size(64) fn main(@builtin(workgroup_id) workgroupId: vec3u, @builtin(local_invocation_index) localInvocationIndex: u32) {
+@compute @workgroup_size(64)
+fn main(@builtin(workgroup_id) workgroupId: vec3u, @builtin(local_invocation_index) localInvocationIndex: u32) {
   ${getBoundedInvocationIndexSource(finalizeDispatch, 64)}
   if (index >= ${length}u) { return; }
   var sum = 0.0;
-  for (var part = 0u; part < ${parts}u; part++) { sum += rowPartials[index * ${parts}u + part]; }
+  for (var part = 0u; part < ${parts}u; part++) {
+    sum += rowPartials[index * ${parts}u + part];
+  }
   outputValues[${getViewElementOffset(destination)}u + index] ${initialize ? '=' : '+='} sum;
 }`
-                })
-              );
-            }
-            initialize = false;
+              })
+            );
           }
-          nonzeroStart += indices.length;
         }
-        if (initialize) {
-          const dispatch = getChunkDispatch(Math.ceil(length / 256), maximum);
-          nodes.push(
-            createChunkNode(graph, {
-              id: `${this.id}-rows-${rowIndex}-clear`,
-              outputs: {outputValues: destination},
-              dispatch,
-              source: /* wgsl */ `
+        if (vectorPasses.length) consumers.push(nodes[nodes.length - 1].id);
+      }
+      previousConsumers = consumers;
+      nonzeroStart += indices.length;
+    }
+    if (!nonzeros.length || !vectors.length) {
+      for (const [rowIndex, [begins, , destination]] of rowBlocks.entries()) {
+        const dispatch = getChunkDispatch(Math.ceil(begins.length / 256), maximum);
+        nodes.push(
+          createChunkNode(graph, {
+            id: `${this.id}-rows-${rowIndex}-clear`,
+            outputs: {outputValues: destination},
+            dispatch,
+            source: /* wgsl */ `
 @group(0) @binding(0) var<storage, read_write> outputValues: array<f32>;
-@compute @workgroup_size(256) fn main(@builtin(workgroup_id) workgroupId: vec3u, @builtin(local_invocation_index) localInvocationIndex: u32) {
+@compute @workgroup_size(256)
+fn main(@builtin(workgroup_id) workgroupId: vec3u, @builtin(local_invocation_index) localInvocationIndex: u32) {
   ${getBoundedInvocationIndexSource(dispatch, 256)}
-  if (index < ${length}u) { outputValues[${getViewElementOffset(destination)}u + index] = 0.0; }
+  if (index < ${begins.length}u) {
+    outputValues[${getViewElementOffset(destination)}u + index] = 0.0;
+  }
 }`
-            })
-          );
-        }
-        rowIndex++;
+          })
+        );
       }
     }
     return nodes;
@@ -243,6 +289,8 @@ function makeShader(props: {
   nonzeroStart: number;
   vectorStart: number;
   initialize: boolean;
+  gathered: boolean;
+  columns: number;
   dispatch: {x: number; y: number; z: number};
 }): string {
   const {strategy, workgroupSize, parts, length, dispatch} = props;
@@ -279,9 +327,16 @@ ${cooperative ? `var<workgroup> scratch: array<f32, ${workgroupSize}>;` : ''}
     if (begin >= end || localIndex >= end - begin) { break; }
     let nonzero = begin - ${props.nonzeroStart}u + localIndex;
     let column = columnIndices[${getViewElementOffset(props.indices)}u + nonzero];
-    if (column >= ${props.vectorStart}u && column - ${props.vectorStart}u < ${props.vector.length}u) {
+    ${
+      props.gathered
+        ? `if (column < ${props.columns}u) {
+      sum += matrixValues[${getViewElementOffset(props.matrixValues)}u + nonzero] * vectorValues[${getViewElementOffset(props.vector)}u + nonzero];
+    }`
+        : `if (column >= ${props.vectorStart}u && column - ${props.vectorStart}u < ${props.vector.length}u) {
       sum += matrixValues[${getViewElementOffset(props.matrixValues)}u + nonzero] * vectorValues[${getViewElementOffset(props.vector)}u + column - ${props.vectorStart}u];
+    }`
     }
+
     if (end - begin - localIndex <= stride) { break; }
     localIndex += stride;
   }
