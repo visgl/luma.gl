@@ -6,6 +6,10 @@ import {Buffer, type Binding} from '@luma.gl/core';
 import {Kernel} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphBufferHandle} from './gpu-command-graph';
 import {createGPUComputeCommandNode, type GPUCommandNode} from './gpu-command-node';
+import {
+  getGPUComputeDispatchWorkgroups,
+  setGPUComputeDispatchWorkgroups
+} from './gpu-command-dispatch-metadata';
 import {GPUScalar, getGPUScalarWGSLLoad, getGPUValueArenaWGSLBinding} from './gpu-scalar';
 
 /** Reusable indirect-dispatch gate controlled by one uint32 GPUScalar (zero = disabled). */
@@ -37,7 +41,15 @@ export class GPUScalarDispatchGate {
       throw new Error(`${this.id} active scalar must belong to target graph`);
     const arenaBuffer = this.active.arena.buffer;
     const [x, y, z] = this.workgroups;
-    const source = `${getGPUValueArenaWGSLBinding(0, 0)}\n@group(0) @binding(1) var<storage,read_write> dispatch:array<u32>;\n@compute @workgroup_size(1) fn main(){let enabled=${getGPUScalarWGSLLoad(this.active)} != 0u;dispatch[0]=select(0u,${x}u,enabled);dispatch[1]=${y}u;dispatch[2]=${z}u;}`;
+    const source = `${getGPUValueArenaWGSLBinding(0, 0)}
+@group(0) @binding(1) var<storage, read_write> dispatch: array<u32>;
+@compute @workgroup_size(1)
+fn main() {
+  let enabled = ${getGPUScalarWGSLLoad(this.active)} != 0u;
+  dispatch[0] = select(0u, ${x}u, enabled);
+  dispatch[1] = ${y}u;
+  dispatch[2] = ${z}u;
+}`;
     return [
       createGPUComputeCommandNode<Parameters>({
         id,
@@ -87,4 +99,27 @@ export class GPUScalarDispatchGate {
       buffer: this.dispatchBuffer
     };
   }
+}
+
+/** Adds a fresh GPU predicate command for each concrete dispatch. @internal */
+export function gateGPUCommandNodes<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  nodes: readonly GPUCommandNode<Parameters>[],
+  active: GPUScalar<'uint32'>
+): GPUCommandNode<Parameters>[] {
+  return nodes.flatMap(node => {
+    const workgroups = getGPUComputeDispatchWorkgroups(node);
+    if (node.type !== 'compute' || node.condition || !workgroups) {
+      throw new Error(
+        'Gated primitives must expose unconditional compute nodes with exact dispatch geometry'
+      );
+    }
+    const gate = new GPUScalarDispatchGate(graph, {id: `${node.id}-gate`, active, workgroups});
+    return [
+      ...gate
+        .getUpdateCommandNodes(graph)
+        .map(update => setGPUComputeDispatchWorkgroups(update, [1, 1, 1])),
+      {...node, condition: gate.condition}
+    ];
+  });
 }

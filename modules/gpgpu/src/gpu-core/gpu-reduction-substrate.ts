@@ -2,142 +2,106 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
-import type {Binding, Device} from '@luma.gl/core';
+import type {Binding} from '@luma.gl/core';
 import {Kernel} from '@luma.gl/engine';
-import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
-import {
-  createTransientView,
-  getViewBinding,
-  getViewElementOffset,
-  validatePackedView
-} from './graph-data-view-utils';
+import type {GPUCommandGraph, GraphDataView} from './gpu-command-graph';
+import {createGPUComputeCommandNode, type GPUCommandNode} from './gpu-command-node';
+import {createTransientView, getViewBinding, getViewElementOffset} from './graph-data-view-utils';
 import {getGPUShaderSubgroupStrategy} from './gpu-subgroup-utils';
-import {GPUScalar, getGPUScalarWGSLStore, getGPUValueArenaWGSLBinding} from './gpu-scalar';
-import type {GPUScalarDispatchGate} from './gpu-scalar-dispatch-gate';
+import {
+  GPUScalar,
+  getGPUScalarWGSLLoad,
+  getGPUScalarWGSLStore,
+  getGPUValueArenaWGSLBinding
+} from './gpu-scalar';
+import {setGPUComputeDispatchWorkgroups} from './gpu-command-dispatch-metadata';
+import {getChunkDispatch} from './gpu-chunk-utils';
+
 export const GPU_REDUCTION_WORKGROUP_SIZE = 256;
-export type GPUFloat32ReductionMap = 'identity' | 'square' | 'multiply';
-export type GPUHierarchicalReductionStrategy = 'portable' | 'subgroups';
-export function getGPUHierarchicalReductionStrategy(
-  device: Device
-): GPUHierarchicalReductionStrategy {
-  return getGPUShaderSubgroupStrategy(device, {requiresSubgroupId: true});
-}
-export function getGPUReductionNextLength(length: number): number {
-  if (!Number.isSafeInteger(length) || length < 1)
-    throw new Error('reduction length must be positive');
-  return Math.ceil(length / GPU_REDUCTION_WORKGROUP_SIZE);
-}
+
+/** Partial lengths for a bounded hierarchical reduction, including its final scalar. @internal */
 export function getGPUHierarchicalReductionLevels(length: number): number[] {
   if (!Number.isSafeInteger(length) || length < 1)
     throw new Error('reduction length must be positive');
   const levels: number[] = [];
-  let count = length;
   do {
-    count = getGPUReductionNextLength(count);
-    levels.push(count);
-  } while (count > 1);
+    length = Math.ceil(length / GPU_REDUCTION_WORKGROUP_SIZE);
+    levels.push(length);
+  } while (length > 1);
   return levels;
 }
-export type GPUFloat32HierarchicalReductionProps = {
-  id?: string;
-  input: GraphDataView<'float32'>;
-  inputB?: GraphDataView<'float32'>;
-  map?: GPUFloat32ReductionMap;
-  output: GPUScalar<'float32'>;
-  gate?: GPUScalarDispatchGate;
-};
-export class GPUFloat32HierarchicalReduction {
-  readonly id: string;
-  readonly props: Readonly<GPUFloat32HierarchicalReductionProps>;
-  constructor(props: GPUFloat32HierarchicalReductionProps) {
-    this.id = props.id ?? 'gpu-float32-hierarchical-reduction';
-    this.props = Object.freeze({...props, id: this.id, map: props.map ?? 'identity'});
-    validatePackedView(props.input, ['float32'], `${this.id} input`);
-    if (props.input.length < 1) throw new Error(`${this.id} input must not be empty`);
-    if (this.props.map === 'multiply') {
-      if (!props.inputB) throw new Error(`${this.id} multiply map requires inputB`);
-      validatePackedView(props.inputB, ['float32'], `${this.id} inputB`);
-      if (props.inputB.length !== props.input.length)
-        throw new Error(`${this.id} input lengths must match`);
-    } else if (props.inputB) throw new Error(`${this.id} inputB is only valid for multiply map`);
-  }
-  getCommandNodes<Parameters>(
-    graph: GPUCommandGraph<Parameters>
-  ): readonly GPUCommandNode<Parameters>[] {
-    const nodes: GPUCommandNode<Parameters>[] = [];
-    const {input, inputB, output, gate} = this.props;
-    if (
-      input.buffer.graph !== graph ||
-      inputB?.buffer.graph !== graph ||
-      output.arena.graph !== graph
-    )
-      throw new Error(`${this.id} resources must belong to target graph`);
-    let current = input;
-    let currentB: GraphDataView<'float32'> | undefined = inputB;
-    let map = this.props.map ?? 'identity';
-    let level = 0;
-    while (current.length > GPU_REDUCTION_WORKGROUP_SIZE) {
-      const partials = createTransientView(
-        graph,
-        `${this.id}-level-${level}-partials`,
-        'float32',
-        getGPUReductionNextLength(current.length)
-      );
-      nodes.push(
-        ...addReductionLevel(graph, {
-          id: `${this.id}-level-${level}`,
-          input: current,
-          inputB: currentB,
-          map,
-          output: partials,
-          gate
-        })
-      );
-      current = partials;
-      currentB = undefined;
-      map = 'identity';
-      level++;
-    }
-    nodes.push(
-      ...addReductionLevel(graph, {
-        id: `${this.id}-level-${level}`,
-        input: current,
-        inputB: currentB,
-        map,
-        finalScalar: output,
-        gate
-      })
-    );
 
-    return nodes;
-  }
-}
 type ReductionLevelProps = {
   id: string;
   input: GraphDataView<'float32'>;
   inputB?: GraphDataView<'float32'>;
-  map: GPUFloat32ReductionMap;
+  square?: boolean;
   output?: GraphDataView<'float32'>;
   finalScalar?: GPUScalar<'float32'>;
-  gate?: GPUScalarDispatchGate;
+  accumulate?: boolean;
 };
-function addReductionLevel<Parameters>(
+
+/** Shared lowering behind GPUDotProductScalar; each workgroup consumes at most 256 rows. @internal */
+export function getGPUScalarReductionNodes<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  props: {
+    id: string;
+    input: GraphDataView<'float32'>;
+    inputB: GraphDataView<'float32'>;
+    output: GPUScalar<'float32'>;
+    accumulate: boolean;
+  }
+): GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  let input = props.input;
+  let inputB: GraphDataView<'float32'> | undefined =
+    props.inputB === input ? undefined : props.inputB;
+  let square = props.inputB === input;
+  for (const [level, length] of getGPUHierarchicalReductionLevels(input.length).entries()) {
+    const output =
+      length > 1
+        ? createTransientView(graph, `${props.id}-partials-${level}`, 'float32', length)
+        : undefined;
+    nodes.push(
+      createReductionLevel(graph, {
+        id: `${props.id}-level-${level}`,
+        input,
+        inputB,
+        square,
+        output,
+        finalScalar: output ? undefined : props.output,
+        accumulate: props.accumulate
+      })
+    );
+    if (output) input = output;
+    inputB = undefined;
+    square = false;
+  }
+  return nodes;
+}
+
+function createReductionLevel<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: ReductionLevelProps
-): readonly GPUCommandNode<Parameters>[] {
-  const nodes: GPUCommandNode<Parameters>[] = [];
+): GPUCommandNode<Parameters> {
   const outputCount = props.output?.length ?? 1;
+  const dispatch = getChunkDispatch(
+    outputCount,
+    graph.device.limits.maxComputeWorkgroupsPerDimension
+  );
   const arenaBuffer = props.finalScalar?.arena.buffer;
-  nodes.push(
+  const outputLocation = props.inputB ? 2 : 1;
+  const usesSubgroups =
+    getGPUShaderSubgroupStrategy(graph.device, {requiresSubgroupId: true}) === 'subgroups';
+  const source = makeReductionLevelSource(props, dispatch, usesSubgroups);
+  return setGPUComputeDispatchWorkgroups(
     createGPUComputeCommandNode<Parameters>({
       id: props.id,
-      condition: props.gate?.condition,
       workload: {
-        operation: 'GPUHierarchicalReductionLevel',
+        operation: 'GPUDotProductScalar',
         commandCount: 1,
-        maximumWorkgroupCount: outputCount,
-        maximumInvocationCount: outputCount * GPU_REDUCTION_WORKGROUP_SIZE,
+        maximumWorkgroupCount: dispatch.x * dispatch.y * dispatch.z,
+        maximumInvocationCount: dispatch.x * dispatch.y * dispatch.z * GPU_REDUCTION_WORKGROUP_SIZE,
         readByteLength: props.input.length * 4 * (props.inputB ? 2 : 1),
         writeByteLength: outputCount * 4
       },
@@ -145,103 +109,119 @@ function addReductionLevel<Parameters>(
         {buffer: props.input, usage: 'storage-read'},
         ...(props.inputB ? [{buffer: props.inputB, usage: 'storage-read' as const}] : []),
         ...(props.output ? [{buffer: props.output, usage: 'storage-write' as const}] : []),
-        ...(arenaBuffer ? [{buffer: arenaBuffer, usage: 'storage-write' as const}] : []),
-        ...(props.gate ? [{buffer: props.gate.dispatchBuffer, usage: 'indirect' as const}] : [])
+        ...(arenaBuffer ? [{buffer: arenaBuffer, usage: 'storage-read-write' as const}] : [])
       ],
       compile: ({device}) => {
-        const strategy = getGPUHierarchicalReductionStrategy(device);
-        const source = makeReductionLevelSource(props, strategy);
-        const bindings = [
-          {name: 'inputValues', type: 'read-only-storage' as const, group: 0, location: 0},
-          ...(props.inputB
-            ? [{name: 'inputBValues', type: 'read-only-storage' as const, group: 0, location: 1}]
-            : []),
-          props.output
-            ? {
-                name: 'outputValues',
-                type: 'storage' as const,
-                group: 0,
-                location: props.inputB ? 2 : 1
-              }
-            : {
-                name: 'gpuValues',
-                type: 'storage' as const,
-                group: 0,
-                location: props.inputB ? 2 : 1
-              }
-        ];
         const kernel = new Kernel(device, {
           id: props.id,
           source,
-          shaderLayout: {bindings}
+          shaderLayout: {
+            bindings: [
+              {name: 'inputValues', type: 'read-only-storage', group: 0, location: 0},
+              ...(props.inputB
+                ? [
+                    {
+                      name: 'inputBValues',
+                      type: 'read-only-storage' as const,
+                      group: 0,
+                      location: 1
+                    }
+                  ]
+                : []),
+              {
+                name: props.output ? 'outputValues' : 'gpuValues',
+                type: 'storage',
+                group: 0,
+                location: outputLocation
+              }
+            ]
+          }
         });
         return {
           encode: ({computePass, getBuffer}) => {
-            const resolved: Record<string, Binding> = {
+            const bindings: Record<string, Binding> = {
               inputValues: getViewBinding(props.input, getBuffer)
             };
-            if (props.inputB) resolved['inputBValues'] = getViewBinding(props.inputB, getBuffer);
-            if (props.output) resolved['outputValues'] = getViewBinding(props.output, getBuffer);
-            if (arenaBuffer) resolved['gpuValues'] = getBuffer(arenaBuffer);
-
-            if (props.gate)
-              kernel.dispatchIndirect(computePass, {
-                bindings: resolved,
-                indirectBuffer: getBuffer(props.gate.dispatchBuffer)
-              });
-            else kernel.dispatch(computePass, {bindings: resolved, x: outputCount, y: 1, z: 1});
+            if (props.inputB) bindings['inputBValues'] = getViewBinding(props.inputB, getBuffer);
+            if (props.output) bindings['outputValues'] = getViewBinding(props.output, getBuffer);
+            if (arenaBuffer) bindings['gpuValues'] = getBuffer(arenaBuffer);
+            kernel.dispatch(computePass, {bindings, ...dispatch});
           },
           destroy: () => kernel.destroy()
         };
       }
-    })
+    }),
+    [dispatch.x, dispatch.y, dispatch.z]
   );
-
-  return nodes;
 }
+
 function makeReductionLevelSource(
   props: ReductionLevelProps,
-  strategy: GPUHierarchicalReductionStrategy
+  dispatch: {x: number; y: number},
+  usesSubgroups: boolean
 ): string {
-  const inputBDeclaration = props.inputB
-    ? `const INPUT_B_OFFSET:u32=${getViewElementOffset(props.inputB)}u;\n@group(0)@binding(1)var<storage,read>inputBValues:array<f32>;`
-    : '';
-  const outputBinding = props.inputB ? 2 : 1;
-  const outputDeclaration = props.output
-    ? `@group(0)@binding(${outputBinding})var<storage,read_write>outputValues:array<f32>;`
-    : getGPUValueArenaWGSLBinding(0, outputBinding);
-  const mapped = getMappedExpression(
-    props.map,
-    props.inputB ? 'inputBValues[INPUT_B_OFFSET+i]' : undefined
-  );
+  const outputLocation = props.inputB ? 2 : 1;
+  const inputValue = `inputValues[${getViewElementOffset(props.input)}u + index]`;
+  const mappedValue = props.inputB
+    ? `${inputValue} * inputBValues[${getViewElementOffset(props.inputB)}u + index]`
+    : props.square
+      ? `${inputValue} * ${inputValue}`
+      : inputValue;
   const store = props.output
-    ? 'outputValues[workgroupId.x]=total;'
-    : getGPUScalarWGSLStore(props.finalScalar!, 'total');
-  const subgroupHeader = strategy === 'subgroups' ? 'enable subgroups;\nrequires subgroup_id;' : '';
-  const reducer = strategy === 'subgroups' ? getSubgroupReducerWGSL() : getPortableReducerWGSL();
-  const subgroupParams =
-    strategy === 'subgroups'
-      ? ',@builtin(subgroup_invocation_id) subgroupInvocationId:u32,@builtin(subgroup_size) subgroupSize:u32,@builtin(subgroup_id) subgroupId:u32'
-      : '';
-  const reducerCall =
-    strategy === 'subgroups'
-      ? 'reduceValue(value,lane,subgroupInvocationId,subgroupSize,subgroupId)'
-      : 'reduceValue(value,lane)';
-  return `${subgroupHeader}\nconst LENGTH:u32=${props.input.length}u;const INPUT_OFFSET:u32=${getViewElementOffset(props.input)}u;@group(0)@binding(0)var<storage,read>inputValues:array<f32>;${inputBDeclaration}${outputDeclaration}${reducer}@compute @workgroup_size(${GPU_REDUCTION_WORKGROUP_SIZE})fn main(@builtin(local_invocation_index)lane:u32,@builtin(workgroup_id)workgroupId:vec3u${subgroupParams}){let i=workgroupId.x*${GPU_REDUCTION_WORKGROUP_SIZE}u+lane;var value=0.0;if(i<LENGTH){value=${mapped};}let total=${reducerCall};if(lane==0u){${store}}}`;
-}
-function getMappedExpression(map: GPUFloat32ReductionMap, inputB?: string): string {
-  switch (map) {
-    case 'identity':
-      return 'inputValues[INPUT_OFFSET+i]';
-    case 'square':
-      return 'inputValues[INPUT_OFFSET+i]*inputValues[INPUT_OFFSET+i]';
-    case 'multiply':
-      return `inputValues[INPUT_OFFSET+i]*${inputB}`;
+    ? `outputValues[${getViewElementOffset(props.output)}u + groupIndex] = total;`
+    : getGPUScalarWGSLStore(
+        props.finalScalar!,
+        props.accumulate ? `${getGPUScalarWGSLLoad(props.finalScalar!)} + total` : 'total'
+      );
+  return `${usesSubgroups ? 'enable subgroups;\nrequires subgroup_id;\n' : ''}
+@group(0) @binding(0) var<storage, read> inputValues: array<f32>;
+${props.inputB ? '@group(0) @binding(1) var<storage, read> inputBValues: array<f32>;' : ''}
+${props.output ? `@group(0) @binding(${outputLocation}) var<storage, read_write> outputValues: array<f32>;` : getGPUValueArenaWGSLBinding(0, outputLocation)}
+${usesSubgroups ? subgroupReducer : portableReducer}
+@compute @workgroup_size(${GPU_REDUCTION_WORKGROUP_SIZE})
+fn main(
+  @builtin(local_invocation_index) lane: u32,
+  @builtin(workgroup_id) workgroupId: vec3u${
+    usesSubgroups
+      ? `,
+  @builtin(subgroup_invocation_id) subgroupInvocationId: u32,
+  @builtin(subgroup_size) subgroupSize: u32,
+  @builtin(subgroup_id) subgroupId: u32`
+      : ''
   }
+) {
+  let groupIndex = workgroupId.x + ${dispatch.x}u * (workgroupId.y + ${dispatch.y}u * workgroupId.z);
+  if (groupIndex >= ${props.output?.length ?? 1}u) { return; }
+  let index = groupIndex * ${GPU_REDUCTION_WORKGROUP_SIZE}u + lane;
+  var value = 0.0;
+  if (index < ${props.input.length}u) { value = ${mappedValue}; }
+  let total = reduceValue(value, lane${usesSubgroups ? ', subgroupInvocationId, subgroupSize, subgroupId' : ''});
+  if (lane == 0u) { ${store} }
+}`;
 }
-function getPortableReducerWGSL(): string {
-  return `var<workgroup> reductionScratch:array<f32,${GPU_REDUCTION_WORKGROUP_SIZE}>;fn reduceValue(inputValue:f32,lane:u32)->f32{reductionScratch[lane]=inputValue;workgroupBarrier();for(var stride=${GPU_REDUCTION_WORKGROUP_SIZE / 2}u;stride>0u;stride/=2u){if(lane<stride){reductionScratch[lane]+=reductionScratch[lane+stride];}workgroupBarrier();}return reductionScratch[0];}`;
-}
-function getSubgroupReducerWGSL(): string {
-  return `var<workgroup> subgroupTotals:array<f32,64>;fn reduceValue(inputValue:f32,lane:u32,subgroupInvocationId:u32,subgroupSize:u32,subgroupId:u32)->f32{let subgroupTotal=subgroupAdd(inputValue);if(subgroupInvocationId==0u){subgroupTotals[subgroupId]=subgroupTotal;}workgroupBarrier();let subgroupCount=${GPU_REDUCTION_WORKGROUP_SIZE}u/subgroupSize;if(subgroupCount>1u){for(var stride=subgroupCount/2u;stride>0u;stride/=2u){if(lane<stride){subgroupTotals[lane]+=subgroupTotals[lane+stride];}workgroupBarrier();}}return subgroupTotals[0];}`;
-}
+
+const portableReducer = `
+var<workgroup> reductionScratch: array<f32, ${GPU_REDUCTION_WORKGROUP_SIZE}>;
+fn reduceValue(value: f32, lane: u32) -> f32 {
+  reductionScratch[lane] = value;
+  workgroupBarrier();
+  for (var stride = ${GPU_REDUCTION_WORKGROUP_SIZE / 2}u; stride > 0u; stride /= 2u) {
+    if (lane < stride) { reductionScratch[lane] += reductionScratch[lane + stride]; }
+    workgroupBarrier();
+  }
+  return reductionScratch[0];
+}`;
+
+const subgroupReducer = `
+var<workgroup> subgroupTotals: array<f32, 64>;
+fn reduceValue(value: f32, lane: u32, subgroupInvocationId: u32, subgroupSize: u32, subgroupId: u32) -> f32 {
+  let subtotal = subgroupAdd(value);
+  if (subgroupInvocationId == 0u) { subgroupTotals[subgroupId] = subtotal; }
+  workgroupBarrier();
+  let subgroupCount = ${GPU_REDUCTION_WORKGROUP_SIZE}u / subgroupSize;
+  for (var stride = subgroupCount / 2u; stride > 0u; stride /= 2u) {
+    if (lane < stride) { subgroupTotals[lane] += subgroupTotals[lane + stride]; }
+    workgroupBarrier();
+  }
+  return subgroupTotals[0];
+}`;

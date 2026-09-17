@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {setGPUComputeDispatchWorkgroups} from './gpu-command-dispatch-metadata';
 import type {Binding} from '@luma.gl/core';
 import {Kernel} from '@luma.gl/engine';
 import type {GPUCommandGraph} from './gpu-command-graph';
@@ -64,33 +65,38 @@ export class GPUScalarCompute {
     const buffer = arena.buffer;
     const source = makeShaderSource(this);
     return [
-      createGPUComputeCommandNode({
-        id: this.id,
-        workload: {
-          operation: 'GPUScalarCompute',
-          commandCount: 1,
-          maximumWorkgroupCount: 1,
-          maximumInvocationCount: 1,
-          readByteLength: this.right ? 8 : 4,
-          writeByteLength: 4
-        },
-        resources: [{buffer, usage: 'storage-write'}],
-        compile: ({device}) => {
-          const kernel = new Kernel(device, {
-            id: this.id,
-            source,
-            shaderLayout: {bindings: [{name: 'gpuValues', type: 'storage', group: 0, location: 0}]}
-          });
-          return {
-            encode: ({computePass, getBuffer}) => {
-              const bindings: Record<string, Binding> = {gpuValues: getBuffer(buffer)};
+      setGPUComputeDispatchWorkgroups(
+        createGPUComputeCommandNode({
+          id: this.id,
+          workload: {
+            operation: 'GPUScalarCompute',
+            commandCount: 1,
+            maximumWorkgroupCount: 1,
+            maximumInvocationCount: 1,
+            readByteLength: this.right ? 8 : 4,
+            writeByteLength: 4
+          },
+          resources: [{buffer, usage: 'storage-write'}],
+          compile: ({device}) => {
+            const kernel = new Kernel(device, {
+              id: this.id,
+              source,
+              shaderLayout: {
+                bindings: [{name: 'gpuValues', type: 'storage', group: 0, location: 0}]
+              }
+            });
+            return {
+              encode: ({computePass, getBuffer}) => {
+                const bindings: Record<string, Binding> = {gpuValues: getBuffer(buffer)};
 
-              kernel.dispatch(computePass, {bindings, x: 1, y: 1, z: 1});
-            },
-            destroy: () => kernel.destroy()
-          };
-        }
-      })
+                kernel.dispatch(computePass, {bindings, x: 1, y: 1, z: 1});
+              },
+              destroy: () => kernel.destroy()
+            };
+          }
+        }),
+        [1, 1, 1]
+      )
     ];
   }
 }

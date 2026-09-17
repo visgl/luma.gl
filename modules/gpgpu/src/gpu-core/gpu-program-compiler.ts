@@ -246,8 +246,8 @@ export class GPUProgramCompiler<Parameters = void> {
       c.recordDecision({
         operationId: o.id,
         operationType: o.type,
-        lowering: 'webgpu-fused-dot',
-        reason: 'dot product lowers through one explicit command node'
+        lowering: 'webgpu-hierarchical-dot',
+        reason: 'chunk dot products use bounded hierarchical reductions into the scalar arena'
       });
     });
     this.lowerings.register<GPUProgramSpMV>('spmv', (o, c) => {

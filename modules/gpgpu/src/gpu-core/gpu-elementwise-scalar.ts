@@ -9,7 +9,7 @@ import {createGPUComputeCommandNode, type GPUCommandNode} from './gpu-command-no
 import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from './gpu-dispatch-utils';
 import {getViewBinding, getViewElementOffset, validatePackedView} from './graph-data-view-utils';
 import {GPUScalar, getGPUScalarWGSLLoad, getGPUValueArenaWGSLBinding} from './gpu-scalar';
-import type {GPUScalarDispatchGate} from './gpu-scalar-dispatch-gate';
+import {type GPUScalarDispatchGate, gateGPUCommandNodes} from './gpu-scalar-dispatch-gate';
 import {alignGraphVectorViews, getGraphVectorData} from './graph-vector-view-utils';
 import {setGPUComputeDispatchWorkgroups} from './gpu-command-dispatch-metadata';
 const WORKGROUP_SIZE = 256;
@@ -101,11 +101,10 @@ fn main(
   outputValues[O + index] = ${getGPUScalarWGSLLoad(scale)} * x + y;
 }
 `;
-    return [
+    const nodes = [
       setGPUComputeDispatchWorkgroups(
         createGPUComputeCommandNode<Parameters>({
           id: this.id,
-          condition: gate?.condition,
           workload: {
             operation: 'GPUVectorScalarMADD',
             commandCount: 1,
@@ -121,8 +120,7 @@ fn main(
               buffer: output,
               usage: input === output || addend === output ? 'storage-read-write' : 'storage-write'
             },
-            {buffer: arenaBuffer, usage: 'storage-read'},
-            ...(gate ? [{buffer: gate.dispatchBuffer, usage: 'indirect' as const}] : [])
+            {buffer: arenaBuffer, usage: 'storage-read'}
           ],
           compile: ({device}) => {
             const kernel = new Kernel(device, {
@@ -164,18 +162,7 @@ fn main(
                   gpuValues: getBuffer(arenaBuffer)
                 };
 
-                if (gate)
-                  kernel.dispatchIndirect(computePass, {
-                    bindings,
-                    indirectBuffer: getBuffer(gate.dispatchBuffer)
-                  });
-                else
-                  kernel.dispatch(computePass, {
-                    bindings,
-                    x: layout.x,
-                    y: layout.y,
-                    z: layout.z
-                  });
+                kernel.dispatch(computePass, {bindings, x: layout.x, y: layout.y, z: layout.z});
               },
               destroy: () => kernel.destroy()
             };
@@ -184,5 +171,6 @@ fn main(
         [layout.x, layout.y, layout.z]
       )
     ];
+    return gate ? gateGPUCommandNodes(graph, nodes, gate.active) : nodes;
   }
 }
