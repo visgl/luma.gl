@@ -17,10 +17,13 @@ import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from './gpu-d
 import {
   getGraphDataPrefix,
   getViewBinding,
+  getViewBindingRange,
   getViewElementOffset,
   validatePackedUint32View
 } from './graph-data-view-utils';
 import {alignGraphVectorViews, getGraphVectorData} from './graph-vector-view-utils';
+
+import {setGPUComputeDispatchWorkgroups} from './gpu-command-dispatch-metadata';
 
 const GATHER_WORKGROUP_SIZE = 256;
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
@@ -127,6 +130,11 @@ export function getGatherCommandNodes<Parameters>(
     );
     for (const [sourceIndex, chunk] of sourcePasses.entries()) {
       const sourceView = chunk?.data;
+      for (const view of [destination, ...(sourceView ? [sourceView, indices] : [])]) {
+        if (getViewBindingRange(view).size > graph.device.limits.maxStorageBufferBindingSize) {
+          throw new Error('Active chunks must fit a storage binding');
+        }
+      }
       const id =
         spans.length === 1 && sourcePasses.length === 1
           ? gather.id
@@ -142,70 +150,78 @@ export function getGatherCommandNodes<Parameters>(
         dispatchLayout
       });
       nodes.push(
-        createGPUComputeCommandNode<Parameters>({
-          id,
-          workload: {
-            operation,
-            commandCount: 1,
-            maximumWorkgroupCount: dispatchLayout.x * dispatchLayout.y * dispatchLayout.z,
-            maximumInvocationCount:
-              dispatchLayout.x * dispatchLayout.y * dispatchLayout.z * GATHER_WORKGROUP_SIZE,
-            readByteLength: sourceView
-              ? indices.length * (UINT32_BYTE_LENGTH + sourceView.rowByteLength)
-              : 0,
-            writeByteLength: indices.length * destination.rowByteLength
-          },
-          resources: [
-            ...(sourceView
-              ? [
-                  {buffer: sourceView, usage: 'storage-read' as const},
-                  {buffer: indices, usage: 'storage-read' as const}
-                ]
-              : []),
-            {buffer: destination, usage: 'storage-write'}
-          ],
-          compile: ({device}) => {
-            const kernel = new Kernel(device, {
-              id,
-              source,
-              shaderLayout: {
-                bindings: [
-                  {name: 'outputWords', type: 'storage', group: 0, location: 0},
-                  ...(sourceView
-                    ? [
-                        {
-                          name: 'sourceWords',
-                          type: 'read-only-storage' as const,
-                          group: 0,
-                          location: 1
-                        },
-                        {name: 'indices', type: 'read-only-storage' as const, group: 0, location: 2}
-                      ]
-                    : [])
-                ]
-              }
-            });
-            return {
-              encode: ({computePass, getBuffer}) => {
-                const bindings: Record<string, Binding> = {
-                  outputWords: getViewBinding(destination, getBuffer)
-                };
-                if (sourceView) {
-                  bindings['sourceWords'] = getViewBinding(sourceView, getBuffer);
-                  bindings['indices'] = getViewBinding(indices, getBuffer);
+        setGPUComputeDispatchWorkgroups(
+          createGPUComputeCommandNode<Parameters>({
+            id,
+            workload: {
+              operation,
+              commandCount: 1,
+              maximumWorkgroupCount: dispatchLayout.x * dispatchLayout.y * dispatchLayout.z,
+              maximumInvocationCount:
+                dispatchLayout.x * dispatchLayout.y * dispatchLayout.z * GATHER_WORKGROUP_SIZE,
+              readByteLength: sourceView
+                ? indices.length * (UINT32_BYTE_LENGTH + sourceView.rowByteLength)
+                : 0,
+              writeByteLength: indices.length * destination.rowByteLength
+            },
+            resources: [
+              ...(sourceView
+                ? [
+                    {buffer: sourceView, usage: 'storage-read' as const},
+                    {buffer: indices, usage: 'storage-read' as const}
+                  ]
+                : []),
+              {buffer: destination, usage: 'storage-write'}
+            ],
+            compile: ({device}) => {
+              const kernel = new Kernel(device, {
+                id,
+                source,
+                shaderLayout: {
+                  bindings: [
+                    {name: 'outputWords', type: 'storage', group: 0, location: 0},
+                    ...(sourceView
+                      ? [
+                          {
+                            name: 'sourceWords',
+                            type: 'read-only-storage' as const,
+                            group: 0,
+                            location: 1
+                          },
+                          {
+                            name: 'indices',
+                            type: 'read-only-storage' as const,
+                            group: 0,
+                            location: 2
+                          }
+                        ]
+                      : [])
+                  ]
                 }
+              });
+              return {
+                encode: ({computePass, getBuffer}) => {
+                  const bindings: Record<string, Binding> = {
+                    outputWords: getViewBinding(destination, getBuffer)
+                  };
+                  if (sourceView) {
+                    bindings['sourceWords'] = getViewBinding(sourceView, getBuffer);
+                    bindings['indices'] = getViewBinding(indices, getBuffer);
+                  }
 
-                kernel.dispatch(computePass, {
-                  bindings,
-                  x: dispatchLayout.x,
-                  y: dispatchLayout.y,
-                  z: dispatchLayout.z
-                });
-              },
-              destroy: () => kernel.destroy()
-            };
-          }
-        })
+                  kernel.dispatch(computePass, {
+                    bindings,
+                    x: dispatchLayout.x,
+                    y: dispatchLayout.y,
+                    z: dispatchLayout.z
+                  });
+                },
+                destroy: () => kernel.destroy()
+              };
+            }
+          }),
+          [dispatchLayout.x, dispatchLayout.y, dispatchLayout.z]
+        )
       );
     }
   }

@@ -9,11 +9,7 @@ import {getGPUVectorFormatInfo, type GPUVectorFormat} from '../gpu-data/gpu-vect
 import {type GPUCommandGraph, type GraphDataView, GraphVectorView} from './gpu-command-graph';
 import {createGPUComputeCommandNode, type GPUCommandNode} from './gpu-command-node';
 import {getGraphVectorData} from './graph-vector-view-utils';
-import {
-  doGraphDataViewsOverlap,
-  getViewBinding,
-  getViewBindingRange
-} from './graph-data-view-utils';
+import {getViewBinding, getViewBindingRange} from './graph-data-view-utils';
 import type {GPUBoundedDispatchLayout} from './gpu-dispatch-utils';
 
 /** Borrows a logical interval, retaining whole chunks and their storage identities. @internal */
@@ -35,8 +31,24 @@ export function getGraphDataRange<
   )
     throw new Error('Graph range must fit the source');
   const data: GraphDataView<Format>[] = [];
-  let offset = 0;
-  for (const chunk of getGraphVectorData(input)) {
+  const chunks =
+    input instanceof GraphVectorView
+      ? input.chunks
+      : [{offset: 0, length: input.length, data: input}];
+  // Seek to the first intersecting chunk in O(log C), then visit only the requested range.
+  let firstChunk = 0;
+  let lastChunk = chunks.length;
+  while (firstChunk < lastChunk) {
+    const middle = Math.floor((firstChunk + lastChunk) / 2);
+    if (chunks[middle].offset + chunks[middle].length <= start) firstChunk = middle + 1;
+    else lastChunk = middle;
+  }
+  for (
+    let index = firstChunk;
+    index < chunks.length && chunks[index].offset < start + length;
+    index++
+  ) {
+    const {data: chunk, offset} = chunks[index];
     const first = Math.max(start, offset);
     const last = Math.min(start + length, offset + chunk.length);
     if (first < last)
@@ -51,7 +63,6 @@ export function getGraphDataRange<
               rowByteLength: chunk.rowByteLength
             })
       );
-    offset += chunk.length;
   }
   return new GraphVectorView({
     id: `graph-range-${start}-${length}`,
@@ -83,11 +94,23 @@ export function validateChunkViews<Parameters>(
   for (const view of [...reads, ...writes]) {
     if (view.buffer.graph !== graph) throw new Error('Views must belong to the target graph');
   }
-  for (const [index, output] of writes.entries()) {
-    if (reads.some(input => input.buffer === output.buffer))
+  const inputBuffers = new Set(reads.map(input => input.buffer));
+  const outputRanges = new Map<GraphDataView['buffer'], GraphDataView[]>();
+  for (const output of writes) {
+    if (inputBuffers.has(output.buffer))
       throw new Error('Outputs must use separate buffers from inputs');
-    if (writes.slice(0, index).some(previous => doGraphDataViewsOverlap(previous, output)))
-      throw new Error('Writable chunks must not overlap');
+    if (!output.length) continue;
+    const ranges = outputRanges.get(output.buffer) ?? [];
+    ranges.push(output);
+    outputRanges.set(output.buffer, ranges);
+  }
+  for (const ranges of outputRanges.values()) {
+    ranges.sort((left, right) => left.byteOffset - right.byteOffset);
+    let previousEnd = 0;
+    for (const range of ranges) {
+      if (range.byteOffset < previousEnd) throw new Error('Writable chunks must not overlap');
+      previousEnd = range.byteOffset + (range.length - 1) * range.byteStride + range.rowByteLength;
+    }
   }
 }
 

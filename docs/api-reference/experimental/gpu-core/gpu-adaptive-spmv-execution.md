@@ -53,7 +53,7 @@ row
                   finalize row
 ```
 
-The partial buffer is a graph transient and can eventually participate in large-transient lifetime reuse.
+The partial buffer is a graph transient and participates in lifetime-based allocation reuse.
 
 ## No tuning readback
 
@@ -69,3 +69,23 @@ Adaptive SpMV is the first irregular workload to exercise the common GPU strateg
 ## Chunked storage
 
 CSR row offsets, column indices, values, input vector, and output accept independently partitioned graph vectors. Row boundaries, nonzero indices, and column IDs are global. Adjacent offsets can straddle chunks, and one row may consume nonzeros and vector entries from many chunks. All four strategies remain available; subgroup execution uses one subgroup per row without assuming a fixed subgroup width. Long-row partial scratch is bounded by a row block and the storage binding limit. Each encoding overwrites the previous result before accumulating contributions. `GPUProgramSpMV` uses the same lowering and preserves external `GPUData[]` bindings.
+
+### Fragmentation-aware routing
+
+For `R` row blocks, `N` aligned nonzero spans and `V` nonempty vector chunks, direct routing
+requires `R × N × V` row dispatches. When `R × V > R + V`, the lowering first gathers
+`vector[columnIndices]` for each nonzero span and reuses those values across row blocks.
+Scalar, subgroup and workgroup paths then require `N × (V + R)` dispatches; long-row execution
+also finalizes each row block. A single vector chunk or a small row set keeps direct routing.
+
+This is indexed algorithm scratch, not concatenation of the source vector. Source buffers and
+chunk boundaries remain unchanged. Gathered spans are sequenced so their storage can be reused;
+physical gather scratch is bounded by the largest aligned nonzero span (four bytes per entry).
+Long-row partials have their own allocation lifetimes. The gather executes again on every encoding,
+including when the operation is GPU-gated, so changes to vector or index contents are observed.
+Invalid column indices contribute nothing, even when the corresponding matrix value is non-finite.
+
+The dispatch-count heuristic does not guarantee a speedup for every matrix. It trades an indexed
+scratch write/read for fewer kernels and repeated CSR scans. Floating-point addition order may
+change. Routing still grows with `N × (V + R)`; it is not constant-cost for arbitrarily fragmented
+inputs. No CPU readback is used to select the path.
