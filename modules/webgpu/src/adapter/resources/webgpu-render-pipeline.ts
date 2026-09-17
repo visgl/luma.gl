@@ -113,7 +113,11 @@ export class WebGPURenderPipeline extends RenderPipeline {
   }
 
   override destroy(): void {
+    if (this.destroyed) {
+      return;
+    }
     // WebGPURenderPipeline has no destroy method.
+    this.destroyResource();
     // @ts-expect-error
     this.handle = null;
   }
@@ -207,6 +211,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     const layout = this.device.createPipelineLayout({
       shaderLayout: this.shaderLayout
     });
+    this.attachResource(layout);
 
     // Create a partially populated descriptor
     const descriptor: GPURenderPipelineDescriptor = {

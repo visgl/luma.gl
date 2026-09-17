@@ -8,7 +8,7 @@ import {
   type Device,
   type TextureProps,
   type TextureViewProps,
-  type Sampler,
+  Sampler,
   type SamplerProps,
   type CopyElementImageOptions,
   type CopyExternalImageOptions,
@@ -147,27 +147,32 @@ export class WEBGLTexture extends Texture {
     }
     // @ts-ignore TODO - fix types
     this.view = new WEBGLTextureView(this.device, {...this.props, texture: this});
+    this.attachResource(this.view);
 
     Object.seal(this);
   }
 
   override destroy(): void {
-    if (this.handle) {
-      // Destroy any cached framebuffer
-      this._framebuffer?.destroy();
-      this._framebuffer = null;
-      this._framebufferAttachmentKey = null;
+    if (this.destroyed) {
+      return;
+    }
 
-      this.removeStats();
+    // Destroy any cached framebuffer
+    this._framebuffer?.destroy();
+    this._framebuffer = null;
+    this._framebufferAttachmentKey = null;
+
+    if (this.handle) {
       if (this.ownsHandle) {
         this.gl.deleteTexture(this.handle);
         this.trackDeallocatedMemory('Texture');
       } else {
         this.trackDeallocatedReferencedMemory('Texture');
       }
-      // this.handle = null;
-      this.destroyed = true;
     }
+    this.destroyResource();
+    // @ts-expect-error destroyed resources release their native handle
+    this.handle = null;
   }
 
   createView(props: TextureViewProps): WEBGLTextureView {
@@ -190,6 +195,9 @@ export class WEBGLTexture extends Texture {
   override setSampler(sampler: Sampler | SamplerProps = {}): void {
     this._assertWritable('set sampler parameters on');
     super.setSampler(sampler);
+    if (!(sampler instanceof Sampler)) {
+      this.attachResource(this.sampler);
+    }
     // Apply sampler parameters to texture
     const parameters = convertSamplerParametersToWebGL(this.sampler.props);
     this._setSamplerParameters(parameters);

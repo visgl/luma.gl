@@ -204,9 +204,6 @@ export class WEBGLRenderPass extends RenderPass {
     if (!pipeline) {
       throw new Error('RenderPass.setPipeline() must be called before draw()');
     }
-    if (!vertexArray) {
-      throw new Error('RenderPass.setVertexArray() must be called before draw()');
-    }
     if (pipeline.shaderLayout.bindings.length > 0 && this.bindingsPipeline !== pipeline) {
       throw new Error('RenderPass.setBindings() must be called after setPipeline() before draw()');
     }
@@ -220,13 +217,15 @@ export class WEBGLRenderPass extends RenderPass {
       instanceCount,
       isInstanced = false,
       firstVertex = 0,
+      firstIndex = 0,
       transformFeedback,
       uniforms = pipeline.uniforms
     } = options;
 
     const glDrawMode = getGLDrawMode(topology);
-    const isIndexed = Boolean(vertexArray.indexBuffer);
-    const glIndexType = (vertexArray.indexBuffer as WEBGLBuffer)?.glIndexType;
+    const isIndexed = Boolean(vertexArray?.indexBuffer);
+    const glIndexType = (vertexArray?.indexBuffer as WEBGLBuffer)?.glIndexType;
+    const indexByteOffset = firstIndex * (glIndexType === GL.UNSIGNED_INT ? 4 : 2);
     const indexedDrawCount = indexCount ?? vertexCount ?? 0;
 
     if (pipeline.linkStatus !== 'success') {
@@ -239,7 +238,7 @@ export class WEBGLRenderPass extends RenderPass {
     }
 
     this.device.gl.useProgram(pipeline.handle);
-    vertexArray.bindBeforeRender(this);
+    vertexArray?.bindBeforeRender(this);
 
     const webglTransformFeedback = transformFeedback as WEBGLTransformFeedback | undefined;
     if (webglTransformFeedback) {
@@ -255,11 +254,11 @@ export class WEBGLRenderPass extends RenderPass {
           glDrawMode,
           indexedDrawCount,
           glIndexType,
-          firstVertex,
+          indexByteOffset,
           instanceCount || 0
         );
       } else if (isIndexed) {
-        this.device.gl.drawElements(glDrawMode, indexedDrawCount, glIndexType, firstVertex);
+        this.device.gl.drawElements(glDrawMode, indexedDrawCount, glIndexType, indexByteOffset);
       } else if (isInstanced) {
         this.device.gl.drawArraysInstanced(
           glDrawMode,
@@ -276,7 +275,7 @@ export class WEBGLRenderPass extends RenderPass {
       }
     });
 
-    vertexArray.unbindAfterRender(this);
+    vertexArray?.unbindAfterRender(this);
     return true;
   }
 
