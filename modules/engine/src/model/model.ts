@@ -134,7 +134,7 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
 
   /** Optional index buffer. Dynamic buffers are rebound when resized. */
   indexBuffer?: ModelBuffer | null;
-  /** Optional indexed draw count. Defaults to the full bound index buffer length. */
+  /** Optional indexed draw count. Defaults to vertexCount, then the full bound index buffer length. */
   indexCount?: number;
   /** First vertex byte offset for WebGL indexed draws or first vertex for non-indexed draws. */
   firstVertex?: number;
@@ -255,7 +255,7 @@ export class Model {
   instanceCount: number = 0;
   /** Vertex count */
   vertexCount: number;
-  /** Indexed draw count override. Undefined draws the full bound index buffer. */
+  /** Indexed draw count override. Undefined uses vertexCount, then the full bound index buffer. */
   indexCount: number | undefined;
   /** First vertex byte offset for WebGL indexed draws or first vertex for non-indexed draws. */
   firstVertex: number;
@@ -306,6 +306,7 @@ export class Model {
   private _needsRedraw: string | false = 'initializing';
   private _drawBlockedReason: string | false = false;
   private _destroyed = false;
+  private _vertexCountSet = false;
 
   /** "Time" of last draw. Monotonically increasing timestamp */
   _lastDrawTimestamp: number = -1;
@@ -321,6 +322,7 @@ export class Model {
 
   constructor(device: Device, props: ModelProps) {
     const defaultShaderAssembler = Model.defaultProps.shaderAssembler;
+    const vertexCountSet = props.vertexCount !== undefined;
     this.props = {
       ...Model.defaultProps,
       ...props,
@@ -330,6 +332,7 @@ export class Model {
           ? defaultShaderAssembler
           : ShaderAssembler.getDefaultShaderAssembler(device.info.shadingLanguage))
     };
+    this._vertexCountSet = vertexCountSet;
     props = this.props;
     this.id = props.id || uid('model');
     this.device = device;
@@ -625,7 +628,9 @@ export class Model {
           const {indexBuffer} = this.vertexArray;
           const indexCount = indexBuffer
             ? (this.indexCount ??
-              indexBuffer.byteLength / (indexBuffer.indexType === 'uint32' ? 4 : 2))
+              (this._vertexCountSet
+                ? this.vertexCount
+                : indexBuffer.byteLength / (indexBuffer.indexType === 'uint32' ? 4 : 2)))
             : undefined;
 
           renderPass.setPipeline(this.pipeline);
@@ -774,6 +779,7 @@ export class Model {
    */
   setVertexCount(vertexCount: number): void {
     this.vertexCount = vertexCount;
+    this._vertexCountSet = true;
     this.setNeedsRedraw('vertexCount');
   }
 
@@ -1081,6 +1087,7 @@ export class Model {
 
     // TODO - delete previous geometry?
     this.vertexCount = gpuGeometry.vertexCount;
+    this._vertexCountSet = true;
     this.setIndexBuffer(gpuGeometry.indices || null);
     this.setAttributes(gpuGeometry.attributes, {disableWarnings: true});
     this.setAttributes(attributes, {disableWarnings: this.props.disableWarnings});
