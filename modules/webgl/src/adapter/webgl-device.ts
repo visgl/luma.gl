@@ -76,6 +76,7 @@ import {
 } from '../context/parameters/unified-parameter-api';
 import {withGLParameters} from '../context/state-tracker/with-parameters';
 import {getWebGLExtension} from '../context/helpers/webgl-extensions';
+import {getGLKey, getGLKeys} from '../constants/webgl-constant-utils';
 
 /** WebGPU style Device API for a WebGL context */
 export class WebGLDevice extends Device {
@@ -112,9 +113,6 @@ export class WebGLDevice extends Device {
 
   /** WebGL2 context. */
   readonly gl!: WebGL2RenderingContext;
-
-  /** Lazily built reverse lookup of numeric WebGL constants. */
-  private _glKeyByValue: Map<number, string> | null = null;
 
   /** Store constants */
   // @ts-ignore TODO fix
@@ -545,35 +543,14 @@ export class WebGLDevice extends Device {
    * so this isn't guaranteed to return the right key in all cases.
    */
   getGLKey(value: unknown, options?: {emptyIfUnknown?: boolean}): string {
-    const number = Number(value);
-    if (!this._glKeyByValue) {
-      this._glKeyByValue = new Map<number, string>();
-      for (const key in this.gl) {
-        // @ts-ignore expect-error depends on settings
-        const constantValue = this.gl[key];
-        if (typeof constantValue === 'number' && !this._glKeyByValue.has(constantValue)) {
-          this._glKeyByValue.set(constantValue, `GL.${key}`);
-        }
-      }
-    }
-    const key = this._glKeyByValue.get(number);
-    if (key) {
-      return key;
-    }
-    // No constant found. Stringify the value and return it.
-    return options?.emptyIfUnknown ? '' : String(value);
+    return getGLKey(value, options);
   }
 
   /**
    * Returns a map with any GL.<KEY> constants mapped to strings, both for keys and values
    */
   getGLKeys(glParameters: Record<number, unknown>): Record<string, string> {
-    const opts = {emptyIfUnknown: true};
-    return Object.entries(glParameters).reduce<Record<string, string>>((keys, [key, value]) => {
-      // eslint-disable-next-line @typescript-eslint/no-base-to-string
-      keys[`${key}:${this.getGLKey(key, opts)}`] = `${value}:${this.getGLKey(value, opts)}`;
-      return keys;
-    }, {});
+    return getGLKeys(glParameters);
   }
 
   /**
