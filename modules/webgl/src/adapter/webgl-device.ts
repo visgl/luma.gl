@@ -76,7 +76,7 @@ import {
 } from '../context/parameters/unified-parameter-api';
 import {withGLParameters} from '../context/state-tracker/with-parameters';
 import {getWebGLExtension} from '../context/helpers/webgl-extensions';
-import {getGLKey, getGLKeys} from '../constants/webgl-constant-utils';
+import {createGLKeyByValue, type GLKeyByValue} from '../constants/webgl-constant-utils';
 
 /** WebGPU style Device API for a WebGL context */
 export class WebGLDevice extends Device {
@@ -113,6 +113,8 @@ export class WebGLDevice extends Device {
 
   /** WebGL2 context. */
   readonly gl!: WebGL2RenderingContext;
+
+  private _glKeyByValue: GLKeyByValue | null = null;
 
   /** Store constants */
   // @ts-ignore TODO fix
@@ -543,14 +545,29 @@ export class WebGLDevice extends Device {
    * so this isn't guaranteed to return the right key in all cases.
    */
   getGLKey(value: unknown, options?: {emptyIfUnknown?: boolean}): string {
-    return getGLKey(value, options);
+    if (!this._glKeyByValue) {
+      this._glKeyByValue = createGLKeyByValue(this.gl);
+    }
+    const key = this._glKeyByValue.get(Number(value));
+    if (key) {
+      return key;
+    }
+    return options?.emptyIfUnknown ? '' : String(value);
   }
 
   /**
    * Returns a map with any GL.<KEY> constants mapped to strings, both for keys and values
    */
   getGLKeys(glParameters: Record<number, unknown>): Record<string, string> {
-    return getGLKeys(glParameters);
+    if (!this._glKeyByValue) {
+      this._glKeyByValue = createGLKeyByValue(this.gl);
+    }
+    const options = {emptyIfUnknown: true};
+    return Object.entries(glParameters).reduce<Record<string, string>>((keys, [key, value]) => {
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string
+      keys[`${key}:${this.getGLKey(key, options)}`] = `${value}:${this.getGLKey(value, options)}`;
+      return keys;
+    }, {});
   }
 
   /**
