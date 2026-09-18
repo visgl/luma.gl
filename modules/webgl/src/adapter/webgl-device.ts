@@ -545,10 +545,7 @@ export class WebGLDevice extends Device {
    * so this isn't guaranteed to return the right key in all cases.
    */
   getGLKey(value: unknown, options?: {emptyIfUnknown?: boolean}): string {
-    if (!this._glKeyByValue) {
-      this._glKeyByValue = createGLKeyByValue(this.gl);
-    }
-    const key = this._glKeyByValue.get(Number(value));
+    const key = this._getGLKeyByValue().get(Number(value));
     if (key) {
       return key;
     }
@@ -559,15 +556,17 @@ export class WebGLDevice extends Device {
    * Returns a map with any GL.<KEY> constants mapped to strings, both for keys and values
    */
   getGLKeys(glParameters: Record<number, unknown>): Record<string, string> {
-    if (!this._glKeyByValue) {
-      this._glKeyByValue = createGLKeyByValue(this.gl);
-    }
     const options = {emptyIfUnknown: true};
     return Object.entries(glParameters).reduce<Record<string, string>>((keys, [key, value]) => {
       // eslint-disable-next-line @typescript-eslint/no-base-to-string
       keys[`${key}:${this.getGLKey(key, options)}`] = `${value}:${this.getGLKey(value, options)}`;
       return keys;
     }, {});
+  }
+
+  private _getGLKeyByValue(): GLKeyByValue {
+    this._glKeyByValue ??= createGLKeyByValue(this.gl);
+    return this._glKeyByValue;
   }
 
   /**
