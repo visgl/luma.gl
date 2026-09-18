@@ -4,6 +4,7 @@
 
 // utils
 import './utils/fill-array.spec';
+import './constants/webgl-constant-utils.spec';
 
 // Note that we do two test runs on luma.gl, with and without headless-gl
 // This file imports tests that should run *with* headless-gl included
