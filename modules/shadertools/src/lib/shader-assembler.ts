@@ -202,16 +202,23 @@ export class WGSLShaderAssembler extends ShaderAssembler {
       props.platformInfo.shaderLanguage === 'wgsl'
         ? preprocess(assembledSource, {defines})
         : assembledSource;
+    const shaderLayout = scanWGSLInterface(preprocessedSource, {
+      vertexEntryPoint: props.vertexEntryPoint,
+      scanVertexAttributes: props.scanVertexAttributes
+    });
+    // The binding table is debug metadata. Nothing on a render path reads it, so it is
+    // computed on first access rather than on every assembly.
+    let bindingTable: ShaderBindingDebugRow[] | undefined;
     return {
       source: preprocessedSource,
       getUniforms,
       modules,
       bindingAssignments,
-      bindingTable: getShaderBindingDebugRowsFromWGSL(preprocessedSource, bindingAssignments),
-      shaderLayout: scanWGSLInterface(preprocessedSource, {
-        vertexEntryPoint: props.vertexEntryPoint,
-        scanVertexAttributes: props.scanVertexAttributes
-      })
+      get bindingTable(): ShaderBindingDebugRow[] {
+        bindingTable ??= getShaderBindingDebugRowsFromWGSL(preprocessedSource, bindingAssignments);
+        return bindingTable;
+      },
+      shaderLayout
     };
   }
 

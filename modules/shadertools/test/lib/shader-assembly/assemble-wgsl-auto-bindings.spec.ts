@@ -3,7 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {WGSLShaderAssembler, type PlatformInfo, type ShaderModule} from '@luma.gl/shadertools';
+import {
+  WGSLShaderAssembler,
+  getShaderModuleDependencies,
+  type PlatformInfo,
+  type ShaderModule
+} from '@luma.gl/shadertools';
 import {skin} from '../../../src/modules/engine/skin/skin';
 import {ibl} from '../../../src/modules/lighting/ibl/ibl';
 import {lighting} from '../../../src/modules/lighting/lights/lighting';
@@ -1456,7 +1461,9 @@ it('assembleWGSLShader#rejects duplicate explicit module bindings', () => {
       }),
     'duplicate explicit module bindings rejected'
   ).toThrow(
-    /Duplicate WGSL binding assignment for module "duplicateGroup2ModuleB" binding "duplicateGroup2B": group 2, binding 0/
+    // Explicit module bindings are reserved before any auto binding is allocated, so
+    // the conflict is reported by the reservation pass and names both modules.
+    /Duplicate WGSL binding reservation for modules "2:duplicateGroup2ModuleA:duplicateGroup2A" and "2:duplicateGroup2ModuleB:duplicateGroup2B": group 2, binding 0/
   );
 
   void 0;
@@ -1492,6 +1499,190 @@ it('assembleWGSLShader#rejects unresolved auto bindings with module and binding 
   ).toThrow(
     /Unresolved @binding\(auto\) for module "unsupportedModuleAutoBinding" binding "unsupportedModuleBinding" remained in assembled WGSL source/
   );
+
+  void 0;
+});
+
+it('assembleWGSLShader#module order changes only the order module blocks are emitted in', () => {
+  // Two callers asking for the same modules in different orders get sources that are
+  // permutations of each other: identical lines and identical binding assignments, but
+  // different bytes, so they miss in the shader and pipeline caches and build duplicate
+  // pipelines for the same program. `getShaderModuleDependencies({canonicalOrder: true})`
+  // removes that, but is not yet enabled for assembly - see the note in
+  // `assembleWGSLShader`. This test pins down what the remaining difference is.
+  const assembleWith = (modules: ShaderModule[]) =>
+    new WGSLShaderAssembler().assembleWGSLShader({
+      platformInfo: PLATFORM_INFO,
+      source: APP_WGSL,
+      modules
+    });
+
+  const forward = assembleWith([MULTILINE_EXPLICIT_MODULE, MULTILINE_AUTO_MODULE]);
+  const reversed = assembleWith([MULTILINE_AUTO_MODULE, MULTILINE_EXPLICIT_MODULE]);
+
+  expect(
+    reversed.source.split('\n').sort(),
+    'reordering modules permutes the assembled source without changing its lines'
+  ).toEqual(forward.source.split('\n').sort());
+  const byModuleName = (assignments: typeof forward.bindingAssignments) =>
+    [...assignments].sort((a, b) => (a.moduleName < b.moduleName ? -1 : 1));
+  expect(
+    byModuleName(reversed.bindingAssignments),
+    'module order does not change which location each module binding gets'
+  ).toEqual(byModuleName(forward.bindingAssignments));
+
+  void 0;
+});
+
+it('getShaderModuleDependencies#canonicalOrder makes the result a function of the module set', () => {
+  const forward = getShaderModuleDependencies([MULTILINE_EXPLICIT_MODULE, MULTILINE_AUTO_MODULE], {
+    canonicalOrder: true
+  });
+  const reversed = getShaderModuleDependencies([MULTILINE_AUTO_MODULE, MULTILINE_EXPLICIT_MODULE], {
+    canonicalOrder: true
+  });
+
+  expect(
+    reversed.map(module => module.name),
+    'canonical order does not depend on the order the caller listed modules in'
+  ).toEqual(forward.map(module => module.name));
+
+  const unsorted = getShaderModuleDependencies([MULTILINE_AUTO_MODULE, MULTILINE_EXPLICIT_MODULE]);
+  expect(
+    unsorted.map(module => module.name),
+    'the default preserves caller order, which GLSL assembly depends on'
+  ).toEqual([MULTILINE_AUTO_MODULE.name, MULTILINE_EXPLICIT_MODULE.name]);
+
+  void 0;
+});
+
+it('assembleWGSLShader#explicit module bindings are reserved before auto bindings regardless of order', () => {
+  // Listing the auto-binding module first used to let it take group 2 binding 0,
+  // which the explicit module declares, and assembly threw.
+  for (const modules of [
+    [MULTILINE_EXPLICIT_MODULE, MULTILINE_AUTO_MODULE],
+    [MULTILINE_AUTO_MODULE, MULTILINE_EXPLICIT_MODULE]
+  ]) {
+    const assembledShader = new WGSLShaderAssembler().assembleWGSLShader({
+      platformInfo: PLATFORM_INFO,
+      source: APP_WGSL,
+      modules
+    });
+
+    expect(
+      assembledShader.bindingTable.find(row => row.name === 'multilineExplicit')?.binding,
+      `explicit binding keeps group 2 binding 0 for order [${modules.map(m => m.name)}]`
+    ).toBe(0);
+    expect(
+      assembledShader.bindingTable.find(row => row.name === 'multilineAuto')?.binding,
+      `auto binding allocates around the explicit reservation for order [${modules.map(m => m.name)}]`
+    ).toBe(1);
+  }
+
+  void 0;
+});
+
+const RESERVATION_AUTO_MODULE_A: ShaderModule = {
+  name: 'reservationAutoModuleA',
+  bindingLayout: [{name: 'reservationAutoA', group: 2}],
+  source: /* wgsl */ `\
+struct ReservationAutoAUniforms {
+  value: f32
+};
+
+@group(2) @binding(auto) var<uniform> reservationAutoA: ReservationAutoAUniforms;
+`
+};
+
+const RESERVATION_AUTO_MODULE_B: ShaderModule = {
+  name: 'reservationAutoModuleB',
+  bindingLayout: [{name: 'reservationAutoB', group: 2}],
+  source: /* wgsl */ `\
+struct ReservationAutoBUniforms {
+  value: f32
+};
+
+@group(2) @binding(auto) var<uniform> reservationAutoB: ReservationAutoBUniforms;
+`
+};
+
+const RESERVATION_EXPLICIT_MODULE: ShaderModule = {
+  name: 'reservationExplicitModule',
+  bindingLayout: [{name: 'reservationExplicit', group: 2}],
+  source: /* wgsl */ `\
+struct ReservationExplicitUniforms {
+  value: f32
+};
+
+@group(2) @binding(1) var<uniform> reservationExplicit: ReservationExplicitUniforms;
+`
+};
+
+it('assembleWGSLShader#an explicit binding keeps its location whatever order modules are listed in', () => {
+  // The reservation pass claims every explicit module binding before any auto binding
+  // is allocated. Without it, an auto module assembled first took binding 1 and the
+  // explicit module then collided with it, so whether assembly succeeded depended on
+  // the order the caller happened to list modules in.
+  const orders: ShaderModule[][] = [
+    [RESERVATION_EXPLICIT_MODULE, RESERVATION_AUTO_MODULE_A, RESERVATION_AUTO_MODULE_B],
+    [RESERVATION_AUTO_MODULE_A, RESERVATION_EXPLICIT_MODULE, RESERVATION_AUTO_MODULE_B],
+    [RESERVATION_AUTO_MODULE_A, RESERVATION_AUTO_MODULE_B, RESERVATION_EXPLICIT_MODULE]
+  ];
+
+  const locationsPerOrder = orders.map(modules => {
+    const label = modules.map(module => module.name).join(', ');
+    const assembledShader = new WGSLShaderAssembler().assembleWGSLShader({
+      platformInfo: PLATFORM_INFO,
+      source: APP_WGSL,
+      modules
+    });
+
+    const locationOf = (name: string) =>
+      assembledShader.bindingTable.find(row => row.name === name)?.binding;
+    const locations = {
+      reservationExplicit: locationOf('reservationExplicit'),
+      reservationAutoA: locationOf('reservationAutoA'),
+      reservationAutoB: locationOf('reservationAutoB')
+    };
+
+    expect(
+      locations.reservationExplicit,
+      `explicit binding keeps its declared location for [${label}]`
+    ).toBe(1);
+    expect(
+      new Set(Object.values(locations)).size,
+      `no two bindings share a location for [${label}]`
+    ).toBe(3);
+
+    return {label, locations};
+  });
+
+  // The whole point: the assignment is a function of the module set, not of its order.
+  for (const {label, locations} of locationsPerOrder.slice(1)) {
+    expect(
+      locations,
+      `[${label}] assigns the same locations as [${locationsPerOrder[0].label}]`
+    ).toEqual(locationsPerOrder[0].locations);
+  }
+
+  void 0;
+});
+
+it('assembleWGSLShader#reports an explicit binding conflict whatever order modules are listed in', () => {
+  for (const modules of [
+    [DUPLICATE_GROUP_2_MODULE_A, DUPLICATE_GROUP_2_MODULE_B],
+    [DUPLICATE_GROUP_2_MODULE_B, DUPLICATE_GROUP_2_MODULE_A]
+  ]) {
+    expect(
+      () =>
+        new WGSLShaderAssembler().assembleWGSLShader({
+          platformInfo: PLATFORM_INFO,
+          source: APP_WGSL,
+          modules
+        }),
+      `conflict is reported for [${modules.map(module => module.name).join(', ')}]`
+    ).toThrow(/Duplicate WGSL binding reservation for modules/);
+  }
 
   void 0;
 });
