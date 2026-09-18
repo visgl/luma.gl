@@ -1652,3 +1652,28 @@ it('Model#bounds the number of cached pipeline variants', async () => {
 
   void 0;
 });
+
+it('Model#getBindingDebugTable is stable across repeated reads', async () => {
+  const webgpuDevice = await getWebGPUTestDevice();
+  if (!webgpuDevice) {
+    void 0;
+    return;
+  }
+
+  // The binding table is computed on first access now, so reading it twice must not
+  // produce a second, different result.
+  const model = new Model(webgpuDevice, {
+    id: 'binding-table-memo-test',
+    source: DUMMY_WGSL_WITH_BINDING,
+    vertexCount: 3
+  });
+
+  const first = model.getBindingDebugTable();
+  const second = model.getBindingDebugTable();
+
+  expect(second, 'repeated reads return the same rows').toEqual(first);
+  expect(first.length > 0, 'a shader with bindings reports binding rows').toBe(true);
+
+  model.destroy();
+  void 0;
+});

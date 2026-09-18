@@ -94,6 +94,8 @@ const PIPELINE_INITIALIZATION_FAILED = 'render pipeline initialization failed';
 const MAX_CACHED_PIPELINE_VARIANTS = 8;
 /** The one invalidation reason that only selects a different pipeline variant. */
 const ATTACHMENT_FORMATS_CHANGED = 'attachment formats';
+/** Returned by `getBindingDebugTable()` for GLSL models, which have no WGSL bindings. */
+const EMPTY_BINDING_TABLE: readonly ShaderBindingDebugRow[] = [];
 const DEPTH_STENCIL_ATTACHMENT_FORMATS: TextureFormatDepthStencil[] = [
   'stencil8',
   'depth16unorm',
@@ -364,7 +366,11 @@ export class Model {
 
   /** "Time" of last draw. Monotonically increasing timestamp */
   _lastDrawTimestamp: number = -1;
-  private _bindingTable: ShaderBindingDebugRow[] = [];
+  /**
+   * WGSL assembly result, kept so that `getBindingDebugTable()` can read its lazily
+   * computed binding table without every model paying for debug metadata it never uses.
+   */
+  private _assembledShader: {readonly bindingTable: readonly ShaderBindingDebugRow[]} | null = null;
   private _pipelineInitialization?: Promise<void>;
 
   get [Symbol.toStringTag](): string {
@@ -436,12 +442,7 @@ export class Model {
       const shaderAssembler = this.props.shaderAssembler;
       // WGSL sources require an assembler with WGSL-specific hooks and binding state.
       assert(isShaderAssemblerForLanguage(shaderAssembler, 'wgsl'));
-      const {
-        source,
-        getUniforms,
-        bindingTable,
-        shaderLayout: assembledShaderLayout
-      } = shaderAssembler.assembleWGSLShader({
+      const assembled = shaderAssembler.assembleWGSLShader({
         platformInfo,
         ...this.props,
         modules,
@@ -450,13 +451,15 @@ export class Model {
         pluginVertexInputs: resolvedPlugins.vertexInputs,
         pluginVaryings: resolvedPlugins.varyings
       });
-      this.source = source;
+      this.source = assembled.source;
       // @ts-expect-error
-      this._getModuleUniforms = getUniforms;
-      this._bindingTable = bindingTable;
+      this._getModuleUniforms = assembled.getUniforms;
+      // Hold the assembly result rather than its `bindingTable`, which is debug
+      // metadata that `assembleWGSLShader()` computes on first access.
+      this._assembledShader = assembled;
       // Infer the layout after modules have been added so their bindings are included.
       const scannedOrReflectedShaderLayout =
-        assembledShaderLayout ??
+        assembled.shaderLayout ??
         (device as Device & {getShaderLayout?: (source: string) => any}).getShaderLayout?.(
           this.source
         );
@@ -490,7 +493,8 @@ export class Model {
       this.fs = fs;
       // @ts-expect-error
       this._getModuleUniforms = getUniforms;
-      this._bindingTable = [];
+      // GLSL models have no WGSL binding table.
+      this._assembledShader = null;
     }
 
     this.vertexCount = this.props.vertexCount;
@@ -587,7 +591,7 @@ export class Model {
 
   /** Returns WGSL binding debug rows for the assembled shader. Returns an empty array for GLSL models. */
   getBindingDebugTable(): readonly ShaderBindingDebugRow[] {
-    return this._bindingTable;
+    return this._assembledShader?.bindingTable ?? EMPTY_BINDING_TABLE;
   }
 
   /**
