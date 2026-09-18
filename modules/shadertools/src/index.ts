@@ -66,7 +66,11 @@ export {resolveModules as _resolveModules} from './lib/shader-module/shader-modu
 
 // ShaderAssembler
 export {ShaderAssembler, GLSLShaderAssembler, WGSLShaderAssembler} from './lib/shader-assembler';
-export type {ShaderHook} from './lib/shader-assembly/shader-hooks';
+export type {
+  ShaderHook,
+  ShaderHookOptions,
+  ShaderHookRegistry
+} from './lib/shader-assembly/shader-hooks';
 export type {ShaderInjection} from './lib/shader-assembly/shader-injections';
 
 // SHADER HELPERS
