@@ -22,8 +22,6 @@ Mobile
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
-
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ## Choose The Binding Path[​](#choose-the-binding-path "Direct link to Choose The Binding Path")

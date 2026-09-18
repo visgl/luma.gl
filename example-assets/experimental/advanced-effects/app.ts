@@ -13,23 +13,23 @@ import {
   ShaderPassRenderer
 } from '@luma.gl/engine';
 import {
-  createMotionBlurCompositeShaderPass,
-  createOutlineCompositeShaderPass,
-  createSSAOCompositeShaderPass,
-  createSSRCompositeShaderPass,
-  createTAACompositeShaderPass,
-  createVolumetricFogCompositeShaderPass,
-  depthAwareBlurCompositeShaderPass
+  createMotionBlurShaderPassPipeline,
+  createOutlineShaderPassPipeline,
+  createSSAOShaderPassPipeline,
+  createSSRShaderPassPipeline,
+  createTAAShaderPassPipeline,
+  createVolumetricFogShaderPassPipeline,
+  depthAwareBlurShaderPassPipeline
 } from '@luma.gl/effects';
 import {
   ComparisonSplitter,
-  createContactShadowCompositeShaderPass,
+  createContactShadowShaderPassPipeline,
   GBuffer,
   shadow,
   ShadowMapRenderer,
   type ShadowShaderProps
 } from '@luma.gl/experimental';
-import type {ShaderModule, ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
+import type {ShaderModule, ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
 import {Matrix4, radians, type NumberArray3} from '@math.gl/core';
 import {
   type Panel,
@@ -234,7 +234,7 @@ const cityUniforms: ShaderModule<CityUniforms> = {
 
 const {CITY_SHADER, displayPass} = getShaderSources();
 
-const displayPipeline: CompositeShaderPass = {
+const displayPipeline: ShaderPassPipeline = {
   name: 'advancedEffectsDisplayPipeline',
   steps: [
     {
@@ -557,35 +557,33 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   private createRenderer(): ShaderPassRenderer {
     const scale = SHADOW_QUALITY_SCALE[this.settings.shadowQuality];
-    const pipelines: CompositeShaderPass[] = [];
+    const pipelines: ShaderPassPipeline[] = [];
     const shadowDebugView = isShadowDebugView(this.settings.debugView);
     if (this.settings.contactShadowsEnabled) {
-      pipelines.push(
-        createContactShadowCompositeShaderPass({quality: this.settings.shadowQuality})
-      );
+      pipelines.push(createContactShadowShaderPassPipeline({quality: this.settings.shadowQuality}));
     }
     if (!shadowDebugView && this.settings.ssaoEnabled) {
       pipelines.push(
-        createSSAOCompositeShaderPass({normalSource: 'normal-texture', resolutionScale: scale})
+        createSSAOShaderPassPipeline({normalSource: 'normal-texture', resolutionScale: scale})
       );
     }
     if (!shadowDebugView && this.settings.depthBlurEnabled) {
-      pipelines.push(depthAwareBlurCompositeShaderPass);
+      pipelines.push(depthAwareBlurShaderPassPipeline);
     }
     if (!shadowDebugView && this.settings.ssrEnabled) {
-      pipelines.push(createSSRCompositeShaderPass({resolutionScale: scale}));
+      pipelines.push(createSSRShaderPassPipeline({resolutionScale: scale}));
     }
     if (!shadowDebugView && this.settings.fogEnabled) {
-      pipelines.push(createVolumetricFogCompositeShaderPass());
+      pipelines.push(createVolumetricFogShaderPassPipeline());
     }
     if (!shadowDebugView && this.settings.outlinesEnabled) {
-      pipelines.push(createOutlineCompositeShaderPass({normalSource: 'normal-texture'}));
+      pipelines.push(createOutlineShaderPassPipeline({normalSource: 'normal-texture'}));
     }
     if (!shadowDebugView && this.settings.taaEnabled) {
-      pipelines.push(createTAACompositeShaderPass());
+      pipelines.push(createTAAShaderPassPipeline());
     }
     if (!shadowDebugView && this.settings.motionBlurEnabled) {
-      pipelines.push(createMotionBlurCompositeShaderPass());
+      pipelines.push(createMotionBlurShaderPassPipeline());
     }
     pipelines.push(displayPipeline);
     return new ShaderPassRenderer(this.device, {shaderPasses: pipelines, flipY: true});

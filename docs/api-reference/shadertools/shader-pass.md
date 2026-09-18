@@ -2,7 +2,7 @@
 
 [ShaderPass](https://luma.gl/docs/api-reference/shadertools/shader-pass.md)[Assembler](https://luma.gl/docs/api-reference/shadertools/shader-assembler.md)[Shader parsing](https://luma.gl/docs/api-reference/shadertools/shader-info.md)[WGSL](https://luma.gl/docs/api-reference/shadertools/wgsl-support.md)
 
-`ShaderPass` is a [`ShaderModule`](https://luma.gl/docs/api-reference/shadertools/shader-module.md) that can be executed as a standalone fullscreen texture-processing stage. `ShaderPass` and `CompositeShaderPass` are descriptors from `@luma.gl/shadertools`; [`ShaderPassRenderer`](https://luma.gl/docs/api-reference/engine/passes/shader-pass-renderer.md) is the engine class that executes them.
+`ShaderPass` is a [`ShaderModule`](https://luma.gl/docs/api-reference/shadertools/shader-module.md) that can be executed as a standalone fullscreen texture-processing stage. `ShaderPass` and `ShaderPassPipeline` are descriptors from `@luma.gl/shadertools`; [`ShaderPassRenderer`](https://luma.gl/docs/api-reference/engine/passes/shader-pass-renderer.md) is the engine class that executes them.
 
 For the authoring model, see [Shader Passes](https://luma.gl/docs/api-guide/shaders/shader-passes.md).
 
@@ -41,7 +41,7 @@ import {ShaderPassRenderer} from '@luma.gl/engine';
 
 const renderer = new ShaderPassRenderer(device, {
 
-  shaderPasses: [myShaderPass, myCompositeShaderPass]
+  shaderPasses: [myShaderPass, myShaderPassPipeline]
 
 });
 
@@ -50,7 +50,7 @@ const renderer = new ShaderPassRenderer(device, {
 const outputTexture = renderer.renderToTexture({sourceTexture});
 ```
 
-Use a plain `ShaderPass` when subpasses only need the logical `original` or `previous` texture sources. Use a `CompositeShaderPass` when later steps need named intermediate render targets.
+Use a plain `ShaderPass` when subpasses only need the logical `original` or `previous` texture sources. Use a `ShaderPassPipeline` when later steps need named intermediate render targets.
 
 ## Types[​](#types "Direct link to Types")
 
@@ -146,24 +146,24 @@ export type ShaderPassRenderTarget = {
 
 `history` targets retain the last successfully rendered value through an internal ping-pong pair. When one step reads and writes the same history target, it reads the previous frame and writes the current frame. `initialize` controls the first value after construction, resize, or reset.
 
-### `CompositeShaderPass`[​](#compositeshaderpass "Direct link to compositeshaderpass")
+### `ShaderPassPipeline`[​](#shaderpasspipeline "Direct link to shaderpasspipeline")
 
 ```
-export type CompositeShaderPass<TargetNameT extends string = string> = {
+export type ShaderPassPipeline<TargetNameT extends string = string> = {
 
   name: string;
 
   renderTargets?: Record<TargetNameT, ShaderPassRenderTarget>;
 
-  steps: CompositeShaderPassStep<TargetNameT>[];
+  steps: ShaderPassPipelineStep<TargetNameT>[];
 
 };
 ```
 
-### `CompositeShaderPassStep`[​](#compositeshaderpassstep "Direct link to compositeshaderpassstep")
+### `ShaderPassPipelineStep`[​](#shaderpasspipelinestep "Direct link to shaderpasspipelinestep")
 
 ```
-export type CompositeShaderPassStep<TargetNameT extends string = string> = {
+export type ShaderPassPipelineStep<TargetNameT extends string = string> = {
 
   shaderPass: ShaderPass<any, any, any, any>;
 
@@ -176,7 +176,7 @@ export type CompositeShaderPassStep<TargetNameT extends string = string> = {
 };
 ```
 
-`CompositeShaderPass` owns named render targets. A plain `ShaderPass` does not. For routing validation, draw-time uniforms and bindings, resize behavior, and presentation methods, see [`ShaderPassRenderer`](https://luma.gl/docs/api-reference/engine/passes/shader-pass-renderer.md).
+`ShaderPassPipeline` owns named render targets. A plain `ShaderPass` does not. For routing validation, draw-time uniforms and bindings, resize behavior, and presentation methods, see [`ShaderPassRenderer`](https://luma.gl/docs/api-reference/engine/passes/shader-pass-renderer.md).
 
 ## Related Pages[​](#related-pages "Direct link to Related Pages")
 

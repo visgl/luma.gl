@@ -12,9 +12,9 @@ Engine offers small wrappers for bounded GPU computation. Choose one from the ba
 | Buffer-to-buffer vertex transform feedback         | [`BufferTransform`](https://luma.gl/docs/api-reference/engine/compute/buffer-transform.md)   | WebGL 2                          |
 | Existing texture-to-texture transform code         | [`TextureTransform`](https://luma.gl/docs/api-reference/engine/compute/texture-transform.md) | Compatibility helper; deprecated |
 | Exact pass, pipeline, or synchronization control   | [Core compute commands](https://luma.gl/docs/api-guide/gpu/gpu-commands.md)                  | Backend-dependent                |
-| Several dependent operations with shared resources | [GPU Core](https://luma.gl/docs/api-reference/experimental/gpu-core.md)                      | WebGPU                           |
+| Several dependent operations with shared resources | GPU scheduling                                                                               | WebGPU                           |
 
-The conclusion is intentionally narrow: use an Engine helper for one reusable operation. Move down to Core for exact control or up to GPU Core when the operation becomes a pipeline.
+The conclusion is intentionally narrow: use an Engine helper for one reusable operation. Move down to Core for exact control or up to GPU scheduling when the operation becomes a pipeline.
 
 ## Mental model[​](#mental-model "Direct link to Mental model")
 
@@ -114,7 +114,7 @@ This avoids designing a new workflow around a compatibility abstraction with a n
 
 ## When the operation becomes a graph[​](#when-the-operation-becomes-a-graph "Direct link to When the operation becomes a graph")
 
-One computation followed by one draw does not require GPU Core. A graph becomes useful when the workflow has several of these properties:
+One computation followed by one draw does not require GPU scheduling. A graph becomes useful when the workflow has several of these properties:
 
 * multiple dependent compute, copy, and render stages;
 * temporary resources whose lifetimes can be reused;
@@ -144,5 +144,4 @@ At that point, package the operation as a graph contributor rather than manually
 * [`Computation`](https://luma.gl/docs/api-reference/engine/compute/computation.md)
 * [`BufferTransform`](https://luma.gl/docs/api-reference/engine/compute/buffer-transform.md)
 * [`TextureTransform`](https://luma.gl/docs/api-reference/engine/compute/texture-transform.md)
-* [Core GPU data processing](https://luma.gl/docs/api-guide/gpu/gpu-data-processing.md)
-* [GPU Core tutorial](https://luma.gl/docs/api-reference/experimental/gpu-core/tutorial.md)
+* GPU scheduling tutorial

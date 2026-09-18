@@ -88,8 +88,6 @@ Mobile
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
-
 Scroll page · Ctrl/⌘ + scroll to interact
 
 #### Texture Wrapping[​](#texture-wrapping "Direct link to Texture Wrapping")

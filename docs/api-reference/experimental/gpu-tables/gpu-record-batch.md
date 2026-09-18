@@ -26,8 +26,6 @@ const batch = new GPURecordBatch({
 });
 ```
 
-When the source is an Arrow `RecordBatch`, prefer [`makeGPURecordBatchFromArrowRecordBatch()`](https://luma.gl/docs/api-reference/arrow/supported-arrow-types.md) from `@luma.gl/arrow`.
-
 ## Constructor[​](#constructor "Direct link to Constructor")
 
 ### `new GPURecordBatch(props)`[​](#new-gpurecordbatchprops "Direct link to new-gpurecordbatchprops")

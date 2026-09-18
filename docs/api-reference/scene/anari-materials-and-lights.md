@@ -1,6 +1,6 @@
 # ANARI Materials and Lights
 
-ExperimentalPrivate workspaceFrom v10
+ExperimentalPublished packageFrom v9.4
 
 Retained ANARI materials translate directly into the canonical `@luma.gl/shadertools` PBR uniforms and texture bindings. ANARI does not own a separate BRDF or shader implementation. Lights reuse the shared ambient, directional, point, and spot lighting descriptions.
 

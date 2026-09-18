@@ -11,8 +11,8 @@ import type {
   TextureFormatColor
 } from '@luma.gl/core';
 import {
-  bloomCompositeShaderPass,
-  createBloomCompositeShaderPass,
+  bloomShaderPassPipeline,
+  createBloomShaderPassPipeline,
   toneMapping
 } from '@luma.gl/effects';
 import type {AnimationProps, Geometry} from '@luma.gl/engine';
@@ -64,7 +64,7 @@ import {
   wboit,
   wboitPlugin
 } from '@luma.gl/experimental';
-import type {ShaderModule, CompositeShaderPass, ShaderPlugin} from '@luma.gl/shadertools';
+import type {ShaderModule, ShaderPassPipeline, ShaderPlugin} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 import {type Panel, type SettingsChangeDescriptor} from '@deck.gl-community/panels';
 import {
@@ -3739,15 +3739,15 @@ function makeBalancedEmissionColor(color: Color, alpha: number): Color {
 function makeBloomPipeline(
   colorFormat: TextureFormatColor,
   renderProfile: NetworkRenderProfile
-): CompositeShaderPass {
+): ShaderPassPipeline {
   const bloomPipeline = renderProfile.handheld
-    ? createBloomCompositeShaderPass({
+    ? createBloomShaderPassPipeline({
         blurAlgorithm: 'dual-kawase',
         colorFormat,
         quality: renderProfile.bloomQuality,
         resolutionScale: renderProfile.bloomResolutionScale
       })
-    : bloomCompositeShaderPass;
+    : bloomShaderPassPipeline;
 
   return {
     ...bloomPipeline,

@@ -108,6 +108,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   });
   private readonly settingsPanel: ExampleSettingsPanelManager;
   private readonly canvas: HTMLInCanvasElement;
+  private readonly canvasTouchAction: string;
   private readonly supported: boolean;
   private activeFaceId: PrismFaceId = 'info';
   private dragPointerId: number | null = null;
@@ -131,6 +132,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     super();
     this.canvas = device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
     activePrismByCanvas.get(this.canvas)?.deactivateForReplacement();
+    this.canvasTouchAction = this.canvas.style.touchAction;
     activePrismByCanvas.set(this.canvas, this);
 
     this.supported = HTMLTexture.isSupported(device, this.canvas);
@@ -170,6 +172,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       return;
     }
     this.finalized = true;
+    this.canvas.style.touchAction = this.canvasTouchAction;
     this.settingsPanel.finalize();
     this.prismFaces.forEach(face => {
       renderExamplePanel(face.panelHostElement, null);

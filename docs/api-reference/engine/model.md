@@ -41,7 +41,7 @@ const dynamicTexture = new DynamicTexture(device, {data: loadImageBitmap(url)});
 
 
 
-const model = await Model.createAsync(device, {
+const model = new Model(device, {
 
   vs: GLSL_VERTEX_SHADER,
 
@@ -154,10 +154,6 @@ Application-owned metadata attached to the model.
 ### `constructor(device: Device, props: ModelProps)`[​](#constructordevice-device-props-modelprops "Direct link to constructordevice-device-props-modelprops")
 
 Creates a render model for one device.
-
-### `Model.createAsync(device: Device, props: ModelProps): Promise<Model>`[​](#modelcreateasyncdevice-device-props-modelprops-promisemodel "Direct link to modelcreateasyncdevice-device-props-modelprops-promisemodel")
-
-Creates the model through the device's asynchronous render-pipeline path and resolves after its pipeline and vertex array are ready. Prefer it during WebGPU loading when multiple independent models can be created with `Promise.all()`. The `new Model(...)` constructor remains the synchronous compatibility path.
 
 ### `destroy(): void`[​](#destroy-void "Direct link to destroy-void")
 

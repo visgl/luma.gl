@@ -1,6 +1,6 @@
 # Abstract Class: ComputePass
 
-Defined in: [modules/core/src/adapter/resources/compute-pass.ts:21](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L21)
+Defined in: [modules/core/src/adapter/resources/compute-pass.ts:20](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L20)
 
 Base class for GPU (WebGPU/WebGL) Resources
 
@@ -14,7 +14,7 @@ Base class for GPU (WebGPU/WebGL) Resources
 
 > **new ComputePass**(`device`, `props`): `ComputePass`
 
-Defined in: [modules/core/src/adapter/resources/compute-pass.ts:22](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L22)
+Defined in: [modules/core/src/adapter/resources/compute-pass.ts:21](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L21)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 
@@ -124,7 +124,7 @@ User data object, reserved for the application
 
 > `static` **defaultProps**: `Required`<[`ComputePassProps`](https://luma.gl/docs/api-reference/generated/core/type-aliases/ComputePassProps.md)>
 
-Defined in: [modules/core/src/adapter/resources/compute-pass.ts:57](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L57)
+Defined in: [modules/core/src/adapter/resources/compute-pass.ts:56](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L56)
 
 Default properties for resource
 
@@ -140,7 +140,7 @@ Default properties for resource
 
 > **get** **\[toStringTag]**(): `string`
 
-Defined in: [modules/core/src/adapter/resources/compute-pass.ts:64](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L64)
+Defined in: [modules/core/src/adapter/resources/compute-pass.ts:63](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L63)
 
 ##### Returns[​](#returns-1 "Direct link to Returns")
 
@@ -240,7 +240,7 @@ Use destroy()
 
 > `abstract` **destroy**(): `void`
 
-Defined in: [modules/core/src/adapter/resources/compute-pass.ts:26](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L26)
+Defined in: [modules/core/src/adapter/resources/compute-pass.ts:25](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L25)
 
 destroy can be called on any resource to release it before it is garbage collected.
 
@@ -324,7 +324,7 @@ Detach an attached resource. The resource will no longer be auto-destroyed when 
 
 > `abstract` **dispatch**(`x`, `y?`, `z?`): `void`
 
-Defined in: [modules/core/src/adapter/resources/compute-pass.ts:41](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L41)
+Defined in: [modules/core/src/adapter/resources/compute-pass.ts:40](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L40)
 
 Dispatch work to be performed with the current ComputePipeline.
 
@@ -358,7 +358,7 @@ Z dimension of the grid of workgroups to dispatch.
 
 > `abstract` **dispatchIndirect**(`indirectBuffer`, `indirectOffset?`): `void`
 
-Defined in: [modules/core/src/adapter/resources/compute-pass.ts:48](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L48)
+Defined in: [modules/core/src/adapter/resources/compute-pass.ts:47](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L47)
 
 Dispatch work to be performed with the current ComputePipeline.
 
@@ -384,7 +384,7 @@ buffer must be a tightly packed block of three 32-bit unsigned integer values (1
 
 > `abstract` **end**(): `void`
 
-Defined in: [modules/core/src/adapter/resources/compute-pass.ts:28](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L28)
+Defined in: [modules/core/src/adapter/resources/compute-pass.ts:27](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L27)
 
 #### Returns[​](#returns-12 "Direct link to Returns")
 
@@ -416,7 +416,7 @@ returns a map of overridden default props
 
 > `abstract` **insertDebugMarker**(`markerLabel`): `void`
 
-Defined in: [modules/core/src/adapter/resources/compute-pass.ts:55](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L55)
+Defined in: [modules/core/src/adapter/resources/compute-pass.ts:54](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L54)
 
 Marks a point in a stream of commands with a label
 
@@ -436,7 +436,7 @@ Marks a point in a stream of commands with a label
 
 > `abstract` **popDebugGroup**(): `void`
 
-Defined in: [modules/core/src/adapter/resources/compute-pass.ts:53](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L53)
+Defined in: [modules/core/src/adapter/resources/compute-pass.ts:52](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L52)
 
 Ends the labeled debug group most recently started by pushDebugGroup()
 
@@ -450,7 +450,7 @@ Ends the labeled debug group most recently started by pushDebugGroup()
 
 > `abstract` **pushDebugGroup**(`groupLabel`): `void`
 
-Defined in: [modules/core/src/adapter/resources/compute-pass.ts:51](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L51)
+Defined in: [modules/core/src/adapter/resources/compute-pass.ts:50](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L50)
 
 Begins a labeled debug group containing subsequent commands
 
@@ -466,39 +466,19 @@ Begins a labeled debug group containing subsequent commands
 
 ***
 
-### setBindings()[​](#setbindings "Direct link to setBindings()")
-
-> `abstract` **setBindings**(`bindings`): `void`
-
-Defined in: [modules/core/src/adapter/resources/compute-pass.ts:33](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L33)
-
-Replaces the bindings used by subsequent dispatch commands.
-
-#### Parameters[​](#parameters-8 "Direct link to Parameters")
-
-##### bindings[​](#bindings "Direct link to bindings")
-
-[`Bindings`](https://luma.gl/docs/api-reference/generated/core/type-aliases/Bindings.md) | `Partial`<`Record`<`number`, [`Bindings`](https://luma.gl/docs/api-reference/generated/core/type-aliases/Bindings.md)>>
-
-#### Returns[​](#returns-17 "Direct link to Returns")
-
-`void`
-
-***
-
 ### setPipeline()[​](#setpipeline "Direct link to setPipeline()")
 
 > `abstract` **setPipeline**(`pipeline`): `void`
 
-Defined in: [modules/core/src/adapter/resources/compute-pass.ts:30](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L30)
+Defined in: [modules/core/src/adapter/resources/compute-pass.ts:29](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L29)
 
-#### Parameters[​](#parameters-9 "Direct link to Parameters")
+#### Parameters[​](#parameters-8 "Direct link to Parameters")
 
 ##### pipeline[​](#pipeline "Direct link to pipeline")
 
 [`ComputePipeline`](https://luma.gl/docs/api-reference/generated/core/classes/ComputePipeline.md)
 
-#### Returns[​](#returns-18 "Direct link to Returns")
+#### Returns[​](#returns-17 "Direct link to Returns")
 
 `void`
 
@@ -512,7 +492,7 @@ Defined in: [modules/core/src/adapter/resources/resource.ts:113](https://github.
 
 Compact serialization for assertion diffs and structured debug logs.
 
-#### Returns[​](#returns-19 "Direct link to Returns")
+#### Returns[​](#returns-18 "Direct link to Returns")
 
 `string`
 
@@ -528,7 +508,7 @@ Compact serialization for assertion diffs and structured debug logs.
 
 Defined in: [modules/core/src/adapter/resources/resource.ts:108](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L108)
 
-#### Returns[​](#returns-20 "Direct link to Returns")
+#### Returns[​](#returns-19 "Direct link to Returns")
 
 `string`
 

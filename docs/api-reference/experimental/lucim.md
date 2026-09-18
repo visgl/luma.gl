@@ -1,8 +1,8 @@
 # LuCIM GPU Volume Algorithms
 
-From v10WebGPU requiredExperimental
+From v9.4WebGPU requiredExperimental
 
-`@luma.gl/experimental/lucim` contributes three-dimensional image-processing algorithms to a caller-owned [`GPUCommandGraph`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-command-graph.md). LuCIM is inspired by [RAPIDS cuCIM](https://docs.rapids.ai/api/cucim/stable/) and its GPU-accelerated n-dimensional image-processing categories. It is not a JavaScript port or an API-compatibility layer: cuCIM targets CUDA arrays and a scikit-image-compatible Python surface, while LuCIM targets portable browser WebGPU, explicit graph resources, and application-owned command submission.
+`@luma.gl/experimental/lucim` contributes three-dimensional image-processing algorithms to a caller-owned `GPUCommandGraph`. LuCIM is inspired by [RAPIDS cuCIM](https://docs.rapids.ai/api/cucim/stable/) and its GPU-accelerated n-dimensional image-processing categories. It is not a JavaScript port or an API-compatibility layer: cuCIM targets CUDA arrays and a scikit-image-compatible Python surface, while LuCIM targets portable browser WebGPU, explicit graph resources, and application-owned command submission.
 
 ## Implemented tranches[​](#implemented-tranches "Direct link to Implemented tranches")
 

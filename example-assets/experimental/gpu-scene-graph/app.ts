@@ -256,37 +256,35 @@ export default class GPUSceneGraphAnimationLoopTemplate extends AnimationLoopTem
         };
       }
     });
-    graph.add([
-      new GPUVisibilityWorkflow({
-        id: 'scene-graph-visible-rows',
-        predicates: [{kind: 'bounds', mask: visibility.view}],
-        output: visibleRows.view,
-        count: visibleCount.view
-      }),
-      new GPUSceneDrawGeneration({
-        id: 'scene-graph-draw-generation',
-        scene: source,
-        visibility: visibility.view,
-        commands: commandViews,
-        requiredCount: requiredCount.view,
-        publishedCount: publishedCount.view,
-        overflow: drawOverflow.view
-      }),
-      new GPUSceneResourceGroups({
-        id: 'scene-graph-resource-groups',
-        scene: source,
-        commands: commandViews,
-        groups: SCENE_GRAPH_GROUPS.map((_, groupIndex) => ({
-          id: groupIndex,
-          firstCommand: groupIndex * SCENE_GRAPH_OBJECTS_PER_GROUP,
-          commandCount: SCENE_GRAPH_OBJECTS_PER_GROUP,
-          geometryId: 0
-        })),
-        counts: groupCounts.view,
-        overflows: groupOverflows.view,
-        overflow: groupOverflow.view
-      })
-    ]);
+    new GPUVisibilityWorkflow({
+      id: 'scene-graph-visible-rows',
+      predicates: [{kind: 'bounds', mask: visibility.view}],
+      output: visibleRows.view,
+      count: visibleCount.view
+    }).addToGraph(graph);
+    new GPUSceneDrawGeneration({
+      id: 'scene-graph-draw-generation',
+      scene: source,
+      visibility: visibility.view,
+      commands: commandViews,
+      requiredCount: requiredCount.view,
+      publishedCount: publishedCount.view,
+      overflow: drawOverflow.view
+    }).addToGraph(graph);
+    new GPUSceneResourceGroups({
+      id: 'scene-graph-resource-groups',
+      scene: source,
+      commands: commandViews,
+      groups: SCENE_GRAPH_GROUPS.map((_, groupIndex) => ({
+        id: groupIndex,
+        firstCommand: groupIndex * SCENE_GRAPH_OBJECTS_PER_GROUP,
+        commandCount: SCENE_GRAPH_OBJECTS_PER_GROUP,
+        geometryId: 0
+      })),
+      counts: groupCounts.view,
+      overflows: groupOverflows.view,
+      overflow: groupOverflow.view
+    }).addToGraph(graph);
     graph.addComputePass({
       id: 'scene-graph-picking',
       resources: [

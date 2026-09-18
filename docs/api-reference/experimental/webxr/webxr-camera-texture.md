@@ -1,6 +1,6 @@
 # WebXRCameraTexture
 
-From v10Experimental API
+From v9.4Experimental API
 
 `WebXRCameraTexture` is the experimental `@luma.gl/experimental` binding source for WebXR Raw Camera Access. It wraps the browser-owned camera `WebGLTexture` for one `XRView` as a borrowed read-only luma [`Texture`](https://luma.gl/docs/api-reference/core/resources/texture.md).
 
@@ -44,7 +44,7 @@ vec4 color = texture(uTexture, uv);
 
 ## Behavior[​](#behavior "Direct link to Behavior")
 
-* WebGL-only in the current v10 API.
+* WebGL-only in the experimental 9.4 API.
 * Resolves only ordinary texture bindings such as GLSL `sampler2D`.
 * `setView(view)` selects `view.camera` and advances the source generation for the next draw.
 * `resolveTextureBinding()` calls `XRWebGLBinding.getCameraImage(camera)` at most once per source generation.

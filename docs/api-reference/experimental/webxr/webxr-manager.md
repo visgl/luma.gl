@@ -1,6 +1,6 @@
 # WebXRManager
 
-From v10Experimental API
+From v9.4Experimental API
 
 `WebXRManager` is the experimental WebGPU and WebGL session and per-view render-state helper for luma.gl. It prepares a native WebGPU projection layer or an `XRWebGLLayer`, requests a reference space, and resolves framebuffers, viewports, projection matrices, and view matrices for one active `XRFrame`.
 

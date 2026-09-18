@@ -145,20 +145,20 @@ For every optional implementation path:
 
 The experimental GPU primitives follow this pattern. Every subgroup path requires the `subgroups` device feature. Paths that address workgroup data using subgroup indices also require the `subgroup_id` WGSL language feature; ballot- and shuffle-only paths do not. If a complete path is unavailable, the same public operation records its portable shader.
 
-| Primitive or consumer                                                                                             | Subgroup work                                                     | Optimized scope                                                          |
-| ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| [`GPUScan`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-scan.md)                                 | Native prefix collectives reduce workgroup barriers               | Unsegmented scans                                                        |
-| [`GPUReduction`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-reduction.md)                       | Native reductions merge each subgroup before shared-memory totals | Every reduction level; also PageRank and automatic histogram domains     |
-| Indexed range compaction                                                                                          | Native prefix collectives compute local range offsets             | `GPUIndexedRangeCompaction` and `GPUPartitionedIndexedRangeCompaction`   |
-| [`GPUSort`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-sort.md)                                 | Register shuffles handle subgroup-local bitonic stages            | Local bitonic networks through 256 rows, including `GPUBatchSort` chunks |
-| [`GPUSegmentedSort`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-segmented-sort.md)              | The same shuffle network runs for every packed segment            | Segments through 256 rows                                                |
-| [`GPUHistogram`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-histogram.md)                       | Equal-bin lanes coalesce into one local atomic update             | Histograms with at most 16 bins                                          |
-| [`GPUGridBinning`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-grid-binning.md)                  | Equal-cell lanes coalesce into one local atomic update            | Grids with at most 16 cells                                              |
-| [`GPUGridAggregation`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-grid-aggregation.md)          | Equal-cell lanes combine weights before statistic atomics         | Aggregations with at most 16 cells                                       |
-| [`GPUGroupAggregation`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-group-aggregation.md)        | Equal-key lanes coalesce count or statistic atomics               | Aggregations with at most 16 groups                                      |
-| [`GPUIndexPickingTarget`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-index-picking-target.md)   | Valid region hits reserve one output block per subgroup           | Region-result publication                                                |
-| [`GPUSceneDrawGeneration`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-scene-draw-generation.md) | Eligible and published rows coalesce diagnostic counter atomics   | Required and published counts plus collision reporting                   |
-| `GPUChunkedIndexedScatter`                                                                                        | Equal-destination routes reserve contiguous output blocks         | Scatters with at most 16 chunks                                          |
+| Primitive or consumer      | Subgroup work                                                     | Optimized scope                                                          |
+| -------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `GPUScan`                  | Native prefix collectives reduce workgroup barriers               | Unsegmented scans                                                        |
+| `GPUReduction`             | Native reductions merge each subgroup before shared-memory totals | Every reduction level; also PageRank and automatic histogram domains     |
+| Indexed range compaction   | Native prefix collectives compute local range offsets             | `GPUIndexedRangeCompaction` and `GPUPartitionedIndexedRangeCompaction`   |
+| `GPUSort`                  | Register shuffles handle subgroup-local bitonic stages            | Local bitonic networks through 256 rows, including `GPUBatchSort` chunks |
+| `GPUSegmentedSort`         | The same shuffle network runs for every packed segment            | Segments through 256 rows                                                |
+| `GPUHistogram`             | Equal-bin lanes coalesce into one local atomic update             | Histograms with at most 16 bins                                          |
+| `GPUGridBinning`           | Equal-cell lanes coalesce into one local atomic update            | Grids with at most 16 cells                                              |
+| `GPUGridAggregation`       | Equal-cell lanes combine weights before statistic atomics         | Aggregations with at most 16 cells                                       |
+| `GPUGroupAggregation`      | Equal-key lanes coalesce count or statistic atomics               | Aggregations with at most 16 groups                                      |
+| `GPUIndexPickingTarget`    | Valid region hits reserve one output block per subgroup           | Region-result publication                                                |
+| `GPUSceneDrawGeneration`   | Eligible and published rows coalesce diagnostic counter atomics   | Required and published counts plus collision reporting                   |
+| `GPUChunkedIndexedScatter` | Equal-destination routes reserve contiguous output blocks         | Scatters with at most 16 chunks                                          |
 
 The narrow keyed-atomic thresholds are deliberate: the coalescing shader has bounded work proportional to the number of possible keys. Larger outputs retain the existing workgroup-local or direct global atomic implementations. The live GPU Sort and GPU Data Analysis examples request the `'max'` feature level, validate results against CPU oracles, and therefore exercise these paths on supporting browsers without changing their public controls.
 

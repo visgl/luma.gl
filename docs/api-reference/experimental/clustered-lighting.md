@@ -24,8 +24,6 @@ Mobile quality
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
-
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ## Cluster contract[​](#cluster-contract "Direct link to Cluster contract")
@@ -52,7 +50,7 @@ import {
 
   ClusteredLightGrid,
 
-  createClusteredDeferredLightingCompositeShaderPass,
+  createClusteredDeferredLightingShaderPassPipeline,
 
   makeDeferredPointLightBufferData,
 
@@ -100,7 +98,7 @@ clusteredLightGrid.encode(device.commandEncoder, {
 
 const renderer = new ShaderPassRenderer(device, {
 
-  shaderPasses: [createClusteredDeferredLightingCompositeShaderPass()],
+  shaderPasses: [createClusteredDeferredLightingShaderPassPipeline()],
 
   colorFormat: 'rgba16float'
 
@@ -171,9 +169,9 @@ Returns `clusterLightCounts` and `clusterLightIndices` for `clusteredDeferredLig
 
 Returns the dimensions, retained capacity, active point-light count from the latest `encode()`, and logarithmic depth-range uniforms needed by the fullscreen resolve.
 
-### `createClusteredDeferredLightingCompositeShaderPass()`[​](#createclustereddeferredlightingcompositeshaderpass "Direct link to createclustereddeferredlightingcompositeshaderpass")
+### `createClusteredDeferredLightingShaderPassPipeline()`[​](#createclustereddeferredlightingshaderpasspipeline "Direct link to createclustereddeferredlightingshaderpasspipeline")
 
-Returns a one-step `CompositeShaderPass` that resolves the current cluster's point-light list into the ordered `previous` color chain.
+Returns a one-step `ShaderPassPipeline` that resolves the current cluster's point-light list into the ordered `previous` color chain.
 
 ## Related pages[​](#related-pages "Direct link to Related pages")
 

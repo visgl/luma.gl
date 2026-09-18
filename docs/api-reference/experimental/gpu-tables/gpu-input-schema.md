@@ -253,4 +253,4 @@ The built-in table and text models expose schemas for their prepared inputs:
 * `PolygonAttributeModel` and `PolygonStorageModel`;
 * `TextAttributeModel`, `TextStorageModel`, `TextRowIndexedStorageModel`, and `TextDictionaryModel`.
 
-These schemas describe the GPU-facing boundary. Arrow-specific source types and conversion rules remain in `@luma.gl/arrow`.
+These schemas describe the GPU-facing boundary. Source-specific types and conversion rules remain in application adapters.

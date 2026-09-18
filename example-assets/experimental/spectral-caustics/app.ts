@@ -14,7 +14,7 @@ import {
   TruncatedConeGeometry,
   type AnimationProps
 } from '@luma.gl/engine';
-import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/effects';
+import {createBloomShaderPassPipeline, toneMapping} from '@luma.gl/effects';
 import {
   spectralCaustics,
   SpectralCausticsRenderer,
@@ -274,7 +274,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
     this.postprocessingRenderer = new ShaderPassRenderer(device, {
       shaderPasses: [
-        createBloomCompositeShaderPass({colorFormat: 'rgba16float', resolutionScale: 0.72}),
+        createBloomShaderPassPipeline({colorFormat: 'rgba16float', resolutionScale: 0.72}),
         toneMapping
       ],
       colorFormat: 'rgba16float'

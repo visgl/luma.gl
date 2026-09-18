@@ -1,6 +1,6 @@
 # Clustered Volumetric Lighting
 
-Integrate participating-media illumination from the same directional and clustered point lights used by scene shading. `createClusteredVolumetricLightingCompositeShaderPass` combines height fog, anisotropic scattering, depth-occluded light shafts, temporal reprojection, bilateral denoising, and Beer-Lambert extinction.
+Integrate participating-media illumination from the same directional and clustered point lights used by scene shading. `createClusteredVolumetricLightingShaderPassPipeline` combines height fog, anisotropic scattering, depth-occluded light shafts, temporal reprojection, bilateral denoising, and Beer-Lambert extinction.
 
 ### Deferred Rendering: Illumination Lab
 
@@ -14,15 +14,13 @@ Mobile quality
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
-
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ## At a Glance[​](#at-a-glance "Direct link to At a Glance")
 
 | Property                  | Value                                                                                   |
 | ------------------------- | --------------------------------------------------------------------------------------- |
-| Export                    | `createClusteredVolumetricLightingCompositeShaderPass`                                  |
+| Export                    | `createClusteredVolumetricLightingShaderPassPipeline`                                   |
 | Backend                   | WebGPU                                                                                  |
 | Render passes             | Six: integration, temporal resolve, depth history, two bilateral filters, and composite |
 | Required scene inputs     | Depth, velocity, camera transforms, directional lighting, and point-light storage       |
@@ -34,7 +32,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 ```
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
-import {createClusteredVolumetricLightingCompositeShaderPass} from '@luma.gl/effects';
+import {createClusteredVolumetricLightingShaderPassPipeline} from '@luma.gl/effects';
 
 
 
@@ -60,7 +58,7 @@ const renderer = new ShaderPassRenderer(device, {
 
   shaderPasses: [
 
-    createClusteredVolumetricLightingCompositeShaderPass({resolutionScale: 0.5})
+    createClusteredVolumetricLightingShaderPassPipeline({resolutionScale: 0.5})
 
   ]
 

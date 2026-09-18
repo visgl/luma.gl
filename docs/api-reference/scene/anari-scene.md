@@ -1,6 +1,6 @@
 # ANARI Scene Hierarchy
 
-ExperimentalPrivate workspaceFrom v10
+ExperimentalPublished packageFrom v9.4
 
 The scene hierarchy combines geometry and materials into surfaces, groups related surfaces and lights, places groups through transform instances, and collects everything in a world.
 

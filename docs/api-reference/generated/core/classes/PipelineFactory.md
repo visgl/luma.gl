@@ -1,6 +1,6 @@
 # Class: PipelineFactory
 
-Defined in: [modules/core/src/factories/pipeline-factory.ts:27](https://github.com/visgl/luma.gl/blob/master/modules/core/src/factories/pipeline-factory.ts#L27)
+Defined in: [modules/core/src/factories/pipeline-factory.ts:21](https://github.com/visgl/luma.gl/blob/master/modules/core/src/factories/pipeline-factory.ts#L21)
 
 Efficiently creates / caches pipelines
 
@@ -10,7 +10,7 @@ Efficiently creates / caches pipelines
 
 > **new PipelineFactory**(`device`): `PipelineFactory`
 
-Defined in: [modules/core/src/factories/pipeline-factory.ts:87](https://github.com/visgl/luma.gl/blob/master/modules/core/src/factories/pipeline-factory.ts#L87)
+Defined in: [modules/core/src/factories/pipeline-factory.ts:47](https://github.com/visgl/luma.gl/blob/master/modules/core/src/factories/pipeline-factory.ts#L47)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 
@@ -28,7 +28,7 @@ Defined in: [modules/core/src/factories/pipeline-factory.ts:87](https://github.c
 
 > `readonly` **device**: [`Device`](https://luma.gl/docs/api-reference/generated/core/classes/Device.md)
 
-Defined in: [modules/core/src/factories/pipeline-factory.ts:67](https://github.com/visgl/luma.gl/blob/master/modules/core/src/factories/pipeline-factory.ts#L67)
+Defined in: [modules/core/src/factories/pipeline-factory.ts:31](https://github.com/visgl/luma.gl/blob/master/modules/core/src/factories/pipeline-factory.ts#L31)
 
 ***
 
@@ -36,7 +36,7 @@ Defined in: [modules/core/src/factories/pipeline-factory.ts:67](https://github.c
 
 > `static` **defaultProps**: `Required`<[`PipelineFactoryProps`](https://luma.gl/docs/api-reference/generated/core/type-aliases/PipelineFactoryProps.md)>
 
-Defined in: [modules/core/src/factories/pipeline-factory.ts:28](https://github.com/visgl/luma.gl/blob/master/modules/core/src/factories/pipeline-factory.ts#L28)
+Defined in: [modules/core/src/factories/pipeline-factory.ts:22](https://github.com/visgl/luma.gl/blob/master/modules/core/src/factories/pipeline-factory.ts#L22)
 
 ## Accessors[​](#accessors "Direct link to Accessors")
 
@@ -46,7 +46,7 @@ Defined in: [modules/core/src/factories/pipeline-factory.ts:28](https://github.c
 
 > **get** **\[toStringTag]**(): `string`
 
-Defined in: [modules/core/src/factories/pipeline-factory.ts:79](https://github.com/visgl/luma.gl/blob/master/modules/core/src/factories/pipeline-factory.ts#L79)
+Defined in: [modules/core/src/factories/pipeline-factory.ts:39](https://github.com/visgl/luma.gl/blob/master/modules/core/src/factories/pipeline-factory.ts#L39)
 
 ##### Returns[​](#returns-1 "Direct link to Returns")
 
@@ -58,7 +58,7 @@ Defined in: [modules/core/src/factories/pipeline-factory.ts:79](https://github.c
 
 > **createComputePipeline**(`props`): [`ComputePipeline`](https://luma.gl/docs/api-reference/generated/core/classes/ComputePipeline.md)
 
-Defined in: [modules/core/src/factories/pipeline-factory.ts:174](https://github.com/visgl/luma.gl/blob/master/modules/core/src/factories/pipeline-factory.ts#L174)
+Defined in: [modules/core/src/factories/pipeline-factory.ts:104](https://github.com/visgl/luma.gl/blob/master/modules/core/src/factories/pipeline-factory.ts#L104)
 
 Return a ComputePipeline matching supplied props. Reuses an equivalent pipeline if already created.
 
@@ -74,35 +74,31 @@ Return a ComputePipeline matching supplied props. Reuses an equivalent pipeline 
 
 ***
 
-### createComputePipelineAsync()[​](#createcomputepipelineasync "Direct link to createComputePipelineAsync()")
+### createRenderPipeline()[​](#createrenderpipeline "Direct link to createRenderPipeline()")
 
-> **createComputePipelineAsync**(`props`): `Promise`<[`ComputePipeline`](https://luma.gl/docs/api-reference/generated/core/classes/ComputePipeline.md)>
+> **createRenderPipeline**(`props`): [`RenderPipeline`](https://luma.gl/docs/api-reference/generated/core/classes/RenderPipeline.md)
 
-Defined in: [modules/core/src/factories/pipeline-factory.ts:213](https://github.com/visgl/luma.gl/blob/master/modules/core/src/factories/pipeline-factory.ts#L213)
+Defined in: [modules/core/src/factories/pipeline-factory.ts:64](https://github.com/visgl/luma.gl/blob/master/modules/core/src/factories/pipeline-factory.ts#L64)
 
-Asynchronously returns a compute pipeline matching the supplied props.
-
-Concurrent requests for an equivalent pipeline share one pending backend compilation.
+Return a RenderPipeline matching supplied props. Reuses an equivalent pipeline if already created.
 
 #### Parameters[​](#parameters-2 "Direct link to Parameters")
 
 ##### props[​](#props-1 "Direct link to props")
 
-[`ComputePipelineProps`](https://luma.gl/docs/api-reference/generated/core/type-aliases/ComputePipelineProps.md)
+[`RenderPipelineProps`](https://luma.gl/docs/api-reference/generated/core/type-aliases/RenderPipelineProps.md)
 
 #### Returns[​](#returns-3 "Direct link to Returns")
 
-`Promise`<[`ComputePipeline`](https://luma.gl/docs/api-reference/generated/core/classes/ComputePipeline.md)>
+[`RenderPipeline`](https://luma.gl/docs/api-reference/generated/core/classes/RenderPipeline.md)
 
 ***
 
-### createRenderPipeline()[​](#createrenderpipeline "Direct link to createRenderPipeline()")
+### createSharedRenderPipeline()[​](#createsharedrenderpipeline "Direct link to createSharedRenderPipeline()")
 
-> **createRenderPipeline**(`props`): [`RenderPipeline`](https://luma.gl/docs/api-reference/generated/core/classes/RenderPipeline.md)
+> **createSharedRenderPipeline**(`props`): [`SharedRenderPipeline`](https://luma.gl/docs/api-reference/generated/core/classes/SharedRenderPipeline.md)
 
-Defined in: [modules/core/src/factories/pipeline-factory.ts:104](https://github.com/visgl/luma.gl/blob/master/modules/core/src/factories/pipeline-factory.ts#L104)
-
-Return a RenderPipeline matching supplied props. Reuses an equivalent pipeline if already created.
+Defined in: [modules/core/src/factories/pipeline-factory.ts:161](https://github.com/visgl/luma.gl/blob/master/modules/core/src/factories/pipeline-factory.ts#L161)
 
 #### Parameters[​](#parameters-3 "Direct link to Parameters")
 
@@ -112,46 +108,6 @@ Return a RenderPipeline matching supplied props. Reuses an equivalent pipeline i
 
 #### Returns[​](#returns-4 "Direct link to Returns")
 
-[`RenderPipeline`](https://luma.gl/docs/api-reference/generated/core/classes/RenderPipeline.md)
-
-***
-
-### createRenderPipelineAsync()[​](#createrenderpipelineasync "Direct link to createRenderPipelineAsync()")
-
-> **createRenderPipelineAsync**(`props`): `Promise`<[`RenderPipeline`](https://luma.gl/docs/api-reference/generated/core/classes/RenderPipeline.md)>
-
-Defined in: [modules/core/src/factories/pipeline-factory.ts:148](https://github.com/visgl/luma.gl/blob/master/modules/core/src/factories/pipeline-factory.ts#L148)
-
-Asynchronously returns a render pipeline matching the supplied props.
-
-Concurrent requests for an equivalent pipeline share one pending backend compilation.
-
-#### Parameters[​](#parameters-4 "Direct link to Parameters")
-
-##### props[​](#props-3 "Direct link to props")
-
-[`RenderPipelineProps`](https://luma.gl/docs/api-reference/generated/core/type-aliases/RenderPipelineProps.md)
-
-#### Returns[​](#returns-5 "Direct link to Returns")
-
-`Promise`<[`RenderPipeline`](https://luma.gl/docs/api-reference/generated/core/classes/RenderPipeline.md)>
-
-***
-
-### createSharedRenderPipeline()[​](#createsharedrenderpipeline "Direct link to createSharedRenderPipeline()")
-
-> **createSharedRenderPipeline**(`props`): [`SharedRenderPipeline`](https://luma.gl/docs/api-reference/generated/core/classes/SharedRenderPipeline.md)
-
-Defined in: [modules/core/src/factories/pipeline-factory.ts:255](https://github.com/visgl/luma.gl/blob/master/modules/core/src/factories/pipeline-factory.ts#L255)
-
-#### Parameters[​](#parameters-5 "Direct link to Parameters")
-
-##### props[​](#props-4 "Direct link to props")
-
-[`RenderPipelineProps`](https://luma.gl/docs/api-reference/generated/core/type-aliases/RenderPipelineProps.md)
-
-#### Returns[​](#returns-6 "Direct link to Returns")
-
 [`SharedRenderPipeline`](https://luma.gl/docs/api-reference/generated/core/classes/SharedRenderPipeline.md)
 
 ***
@@ -160,15 +116,15 @@ Defined in: [modules/core/src/factories/pipeline-factory.ts:255](https://github.
 
 > **release**(`pipeline`): `void`
 
-Defined in: [modules/core/src/factories/pipeline-factory.ts:232](https://github.com/visgl/luma.gl/blob/master/modules/core/src/factories/pipeline-factory.ts#L232)
+Defined in: [modules/core/src/factories/pipeline-factory.ts:138](https://github.com/visgl/luma.gl/blob/master/modules/core/src/factories/pipeline-factory.ts#L138)
 
-#### Parameters[​](#parameters-6 "Direct link to Parameters")
+#### Parameters[​](#parameters-4 "Direct link to Parameters")
 
 ##### pipeline[​](#pipeline "Direct link to pipeline")
 
 [`RenderPipeline`](https://luma.gl/docs/api-reference/generated/core/classes/RenderPipeline.md) | [`ComputePipeline`](https://luma.gl/docs/api-reference/generated/core/classes/ComputePipeline.md)
 
-#### Returns[​](#returns-7 "Direct link to Returns")
+#### Returns[​](#returns-5 "Direct link to Returns")
 
 `void`
 
@@ -178,15 +134,15 @@ Defined in: [modules/core/src/factories/pipeline-factory.ts:232](https://github.
 
 > **releaseSharedRenderPipeline**(`pipeline`): `void`
 
-Defined in: [modules/core/src/factories/pipeline-factory.ts:267](https://github.com/visgl/luma.gl/blob/master/modules/core/src/factories/pipeline-factory.ts#L267)
+Defined in: [modules/core/src/factories/pipeline-factory.ts:173](https://github.com/visgl/luma.gl/blob/master/modules/core/src/factories/pipeline-factory.ts#L173)
 
-#### Parameters[​](#parameters-7 "Direct link to Parameters")
+#### Parameters[​](#parameters-5 "Direct link to Parameters")
 
 ##### pipeline[​](#pipeline-1 "Direct link to pipeline")
 
 [`RenderPipeline`](https://luma.gl/docs/api-reference/generated/core/classes/RenderPipeline.md)
 
-#### Returns[​](#returns-8 "Direct link to Returns")
+#### Returns[​](#returns-6 "Direct link to Returns")
 
 `void`
 
@@ -196,9 +152,9 @@ Defined in: [modules/core/src/factories/pipeline-factory.ts:267](https://github.
 
 > **toString**(): `string`
 
-Defined in: [modules/core/src/factories/pipeline-factory.ts:83](https://github.com/visgl/luma.gl/blob/master/modules/core/src/factories/pipeline-factory.ts#L83)
+Defined in: [modules/core/src/factories/pipeline-factory.ts:43](https://github.com/visgl/luma.gl/blob/master/modules/core/src/factories/pipeline-factory.ts#L43)
 
-#### Returns[​](#returns-9 "Direct link to Returns")
+#### Returns[​](#returns-7 "Direct link to Returns")
 
 `string`
 
@@ -208,16 +164,16 @@ Defined in: [modules/core/src/factories/pipeline-factory.ts:83](https://github.c
 
 > `static` **getDefaultPipelineFactory**(`device`): `PipelineFactory`
 
-Defined in: [modules/core/src/factories/pipeline-factory.ts:31](https://github.com/visgl/luma.gl/blob/master/modules/core/src/factories/pipeline-factory.ts#L31)
+Defined in: [modules/core/src/factories/pipeline-factory.ts:25](https://github.com/visgl/luma.gl/blob/master/modules/core/src/factories/pipeline-factory.ts#L25)
 
 Get the singleton default pipeline factory for the specified device
 
-#### Parameters[​](#parameters-8 "Direct link to Parameters")
+#### Parameters[​](#parameters-6 "Direct link to Parameters")
 
 ##### device[​](#device-2 "Direct link to device")
 
 [`Device`](https://luma.gl/docs/api-reference/generated/core/classes/Device.md)
 
-#### Returns[​](#returns-10 "Direct link to Returns")
+#### Returns[​](#returns-8 "Direct link to Returns")
 
 `PipelineFactory`

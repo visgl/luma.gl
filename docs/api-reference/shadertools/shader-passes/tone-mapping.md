@@ -14,8 +14,6 @@ Mobile quality
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
-
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ## At a Glance[​](#at-a-glance "Direct link to At a Glance")
@@ -32,7 +30,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 ```
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
-import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/effects';
+import {createBloomShaderPassPipeline, toneMapping} from '@luma.gl/effects';
 
 
 
@@ -40,7 +38,7 @@ const renderer = new ShaderPassRenderer(device, {
 
   colorFormat: 'rgba16float',
 
-  shaderPasses: [createBloomCompositeShaderPass(), toneMapping]
+  shaderPasses: [createBloomShaderPassPipeline(), toneMapping]
 
 });
 

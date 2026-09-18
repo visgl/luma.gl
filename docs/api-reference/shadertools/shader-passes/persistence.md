@@ -14,8 +14,6 @@ Mobile quality
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
-
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ## At a Glance[​](#at-a-glance "Direct link to At a Glance")
@@ -85,7 +83,7 @@ The current implementation has no public scalar uniforms. Its visual response is
 
 ## Composition and Cost[​](#composition-and-cost "Direct link to Composition and Cost")
 
-The shader adds one fullscreen pass and samples the caller-supplied previous accumulation. Unlike named-history `CompositeShaderPass` effects, the standalone pass does not allocate, clear, or rotate history automatically. Use a cleared initial texture and explicitly avoid read/write aliasing.
+The shader adds one fullscreen pass and samples the caller-supplied previous accumulation. Unlike named-history `ShaderPassPipeline` effects, the standalone pass does not allocate, clear, or rotate history automatically. Use a cleared initial texture and explicitly avoid read/write aliasing.
 
 ## Related Effects[​](#related-effects "Direct link to Related Effects")
 

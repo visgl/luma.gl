@@ -126,15 +126,6 @@ In-place operations require stricter ownership and aliasing rules. They are prac
 | Run compute over raw storage values                              | Packed or segmented                     |
 | Extract one column frequently                                    | Packed or segmented                     |
 
-## Arrow Notes[​](#arrow-notes "Direct link to Arrow Notes")
-
-Arrow is naturally columnar. A normal Arrow column maps cleanly to a packed GPU vector.
-
-Interleaved GPU buffers do not map to a single numeric Arrow column. In luma.gl they are represented as `GPUVector<Binary>` with `bufferLayout` metadata describing the attributes inside each row.
-
-Segmented buffers are still columnar, but the columns share one GPU allocation. They need table-level segment metadata so each column name can resolve to a buffer, byte offset, row count, row stride, and Arrow type.
-
 ## Related References[​](#related-references "Direct link to Related References")
 
 * [GPU Tables](https://luma.gl/docs/api-guide/gpu/gpu-tables.md)
-* [Supported Arrow Types](https://luma.gl/docs/api-reference/arrow/supported-arrow-types.md)

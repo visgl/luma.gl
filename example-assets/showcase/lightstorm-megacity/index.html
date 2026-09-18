@@ -1,5 +1,25 @@
 <!doctype html>
 <head>
+  <!-- luma-example-support -->
+  <meta name="luma-example-id" content="showcase/lightstorm-megacity" />
+  <meta name="luma-example-backends" content="webgpu" />
+  <meta name="luma-example-mobile" content="reduced" />
+  <meta name="luma-example-mobile-profile" content="large-data" />
+  <script data-luma-example-support-promise>
+    window.lumaExampleSupportPromise = new Promise(resolve => {
+      window.addEventListener('luma-example-support-ready', event => resolve(event.detail), {
+        once: true
+      });
+    });
+  </script>
+  <script type="module" data-luma-example-support-bootstrap>
+    import {installStandaloneExampleSupport} from '../../example-support.ts';
+    const exampleSupport = installStandaloneExampleSupport();
+    window.dispatchEvent(
+      new CustomEvent('luma-example-support-ready', {detail: exampleSupport})
+    );
+  </script>
+  <!-- /luma-example-support -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Lightstorm Megacity</title>
@@ -8,37 +28,40 @@
     canvas { display: block; width: 100vw !important; height: 100vh !important; }
   </style>
 </head>
-<script type="module">
-  import {luma} from '@luma.gl/core';
-  import {makeAnimationLoop} from '@luma.gl/engine';
-  import {webgpuAdapter} from '@luma.gl/webgpu';
-  import AnimationLoopTemplate from './app.ts';
+<script type="module" data-luma-example-application>
+  const exampleSupport = await window.lumaExampleSupportPromise;
+  if (exampleSupport.supported) {
+    const {luma} = await import('@luma.gl/core');
+    const {makeAnimationLoop} = await import('@luma.gl/engine');
+    const {webgpuAdapter} = await import('@luma.gl/webgpu');
+    const {default: AnimationLoopTemplate} = await import('./app.ts');
 
-  const supportsHighDynamicRange =
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(dynamic-range: high)').matches;
+    const supportsHighDynamicRange =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(dynamic-range: high)').matches;
 
-  let device;
-  try {
-    device = await luma.createDevice({
-      id: 'lightstorm-megacity',
-      adapters: [webgpuAdapter],
-      createCanvasContext: supportsHighDynamicRange
-        ? {colorFormat: 'rgba16float', colorSpace: 'display-p3', toneMapping: 'extended'}
-        : true
-    });
-  } catch (error) {
-    if (!supportsHighDynamicRange) {
-      throw error;
+    let device;
+    try {
+      device = await luma.createDevice({
+        id: 'lightstorm-megacity',
+        adapters: [webgpuAdapter],
+        createCanvasContext: supportsHighDynamicRange
+          ? {colorFormat: 'rgba16float', colorSpace: 'display-p3', toneMapping: 'extended'}
+          : true
+      });
+    } catch (error) {
+      if (!supportsHighDynamicRange) {
+        throw error;
+      }
+      device = await luma.createDevice({
+        id: 'lightstorm-megacity-sdr-fallback',
+        adapters: [webgpuAdapter],
+        createCanvasContext: true
+      });
     }
-    device = await luma.createDevice({
-      id: 'lightstorm-megacity-sdr-fallback',
-      adapters: [webgpuAdapter],
-      createCanvasContext: true
-    });
-  }
 
-  const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {device});
-  animationLoop.start();
+    const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {device});
+    animationLoop.start();
+  }
 </script>
 <body></body>

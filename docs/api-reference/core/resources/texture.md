@@ -206,8 +206,6 @@ Mobile quality
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
-
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ## ExternalImage[​](#externalimage "Direct link to ExternalImage")

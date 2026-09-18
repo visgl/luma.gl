@@ -131,8 +131,6 @@ A single device can present into multiple canvases. On WebGPU each canvas is bac
 
 Initializing device...
 
-**Loading example**Preparing GPU resources…
-
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ### Additional canvas contexts[​](#additional-canvas-contexts "Direct link to Additional canvas contexts")

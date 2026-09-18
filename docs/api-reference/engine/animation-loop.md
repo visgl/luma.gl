@@ -228,7 +228,7 @@ Triggers a redraw and returns the current HTML canvas as a data URL.
 
 ## Experimental Frame Provider[​](#experimental-frame-provider "Direct link to Experimental Frame Provider")
 
-From v10Experimental API
+From v9.4Experimental API
 
 `AnimationLoop` accepts an experimental `animationFrameProvider` for schedulers that carry a per-frame payload. During those frames, `AnimationProps.animationFrame` contains the provider payload; it is `null` for ordinary browser frames.
 
