@@ -814,10 +814,20 @@ it('Model#topology', async () => {
   void 0;
 });
 
+/**
+ * Wait for a render pipeline to report a link error.
+ *
+ * WebGPU reports pipeline compilation status asynchronously, and how long that takes
+ * depends on how busy the GPU and the browser's compilation threads are. The budget
+ * here used to be 500ms, which was enough when this spec was small but times out once
+ * the suite creates more pipelines in parallel - producing a failure that looks like a
+ * product regression but is only this poll giving up early. 5s is still bounded, and
+ * the loop exits as soon as the status resolves.
+ */
 async function waitForPipelineError(pipeline: {
   linkStatus: 'pending' | 'success' | 'error';
 }): Promise<'pending' | 'success' | 'error'> {
-  for (let iteration = 0; iteration < 50 && pipeline.linkStatus !== 'error'; iteration++) {
+  for (let iteration = 0; iteration < 500 && pipeline.linkStatus === 'pending'; iteration++) {
     await new Promise(resolve => setTimeout(resolve, 10));
   }
   return pipeline.linkStatus;
@@ -1301,3 +1311,344 @@ test('PipelineFactory#defaultModules', (t) => {
 });
 
 */
+
+// PIPELINE VARIANT CACHE
+//
+// A model drawn into render passes with different attachment formats - a shadow or
+// picking pass alongside the main pass - used to rebuild its pipeline on every
+// alternation, taking a fresh `PipelineFactory` reference each time. These tests pin
+// down that the model now keeps one pipeline (and one reference) per attachment-format
+// variant, bounded, and hands every reference back.
+
+/** Total `PipelineFactory` references the factory is currently handing out. */
+function countPipelineReferences(pipelineFactory: PipelineFactory): number {
+  const cache = (
+    pipelineFactory as unknown as {
+      _renderPipelineCache: Record<string, {useCount: number}>;
+    }
+  )._renderPipelineCache;
+  return Object.values(cache).reduce((total, item) => total + item.useCount, 0);
+}
+
+/** Every non-zero `PipelineFactory` reference count, for reporting leaks. */
+function pipelineReferenceCounts(pipelineFactory: PipelineFactory): number[] {
+  const cache = (
+    pipelineFactory as unknown as {
+      _renderPipelineCache: Record<string, {useCount: number}>;
+    }
+  )._renderPipelineCache;
+  return Object.values(cache).map(item => item.useCount);
+}
+
+/** Total `ShaderFactory` references, which the pipeline variants also own. */
+function countShaderReferences(shaderFactory: ShaderFactory): number {
+  const cache = (shaderFactory as unknown as {_cache: Record<string, {useCount: number}>})._cache;
+  return Object.values(cache).reduce((total, item) => total + item.useCount, 0);
+}
+
+function cachedVariantCount(model: Model): number {
+  return (model as unknown as {_pipelineCache: Map<string, unknown>})._pipelineCache.size;
+}
+
+it('Model#reuses one pipeline per attachment-format variant across alternating passes', async () => {
+  const webgpuDevice = await getWebGPUTestDevice();
+  if (!webgpuDevice) {
+    void 0;
+    return;
+  }
+
+  const pipelineFactory = new PipelineFactory(webgpuDevice);
+  const shaderFactory = new ShaderFactory(webgpuDevice);
+  const model = new Model(webgpuDevice, {
+    id: 'attachment-variant-reuse-test',
+    source: DUMMY_WGSL,
+    vertexCount: 3,
+    pipelineFactory,
+    shaderFactory
+  });
+
+  // The shadow-map shape: a depth-only target plus a colour target.
+  const depthOnlyFramebuffer = webgpuDevice.createFramebuffer({
+    id: 'attachment-variant-depth-only',
+    width: 4,
+    height: 4,
+    colorAttachments: [],
+    depthStencilAttachment: 'depth32float'
+  });
+  const colorFramebuffer = webgpuDevice.createFramebuffer({
+    id: 'attachment-variant-color',
+    width: 4,
+    height: 4,
+    colorAttachments: ['rgba8unorm']
+  });
+
+  const device = webgpuDevice;
+  function alternate(times: number): void {
+    for (let i = 0; i < times; ++i) {
+      for (const framebuffer of [depthOnlyFramebuffer, colorFramebuffer]) {
+        const renderPass = device.beginRenderPass({framebuffer});
+        model.draw(renderPass);
+        renderPass.end();
+        device.submit();
+      }
+    }
+  }
+
+  // Warm both variants, then keep alternating. References must not grow with the
+  // number of alternations - that growth was the leak.
+  alternate(3);
+  const referencesAfterWarmup = countPipelineReferences(pipelineFactory);
+  const shaderReferencesAfterWarmup = countShaderReferences(shaderFactory);
+  const variantsAfterWarmup = cachedVariantCount(model);
+
+  alternate(30);
+
+  expect(
+    countPipelineReferences(pipelineFactory),
+    'alternating attachment formats does not take additional pipeline references'
+  ).toBe(referencesAfterWarmup);
+  expect(
+    countShaderReferences(shaderFactory),
+    'alternating attachment formats does not take additional shader references'
+  ).toBe(shaderReferencesAfterWarmup);
+  expect(
+    cachedVariantCount(model),
+    'alternating between two render targets caches a bounded number of variants'
+  ).toBe(variantsAfterWarmup);
+  expect(
+    cachedVariantCount(model) <= 3,
+    `two render targets cache at most three variants, got ${cachedVariantCount(model)}`
+  ).toBe(true);
+
+  // Draws keep working after all the swapping.
+  const finalRenderPass = webgpuDevice.beginRenderPass({framebuffer: colorFramebuffer});
+  expect(model.draw(finalRenderPass), 'model still draws after variant swaps').toBe(true);
+  finalRenderPass.end();
+  webgpuDevice.submit();
+
+  model.destroy();
+  depthOnlyFramebuffer.destroy();
+  colorFramebuffer.destroy();
+
+  void 0;
+});
+
+it('Model#releases every cached pipeline variant on destroy', async () => {
+  const webgpuDevice = await getWebGPUTestDevice();
+  if (!webgpuDevice) {
+    void 0;
+    return;
+  }
+
+  const pipelineFactory = new PipelineFactory(webgpuDevice);
+  const shaderFactory = new ShaderFactory(webgpuDevice);
+  const model = new Model(webgpuDevice, {
+    id: 'attachment-variant-release-test',
+    source: DUMMY_WGSL,
+    vertexCount: 3,
+    pipelineFactory,
+    shaderFactory
+  });
+
+  const framebuffers = [
+    webgpuDevice.createFramebuffer({
+      id: 'variant-release-a',
+      width: 4,
+      height: 4,
+      colorAttachments: ['rgba8unorm']
+    }),
+    webgpuDevice.createFramebuffer({
+      id: 'variant-release-b',
+      width: 4,
+      height: 4,
+      colorAttachments: ['rgba16float']
+    })
+  ];
+
+  for (let i = 0; i < 10; ++i) {
+    const renderPass = webgpuDevice.beginRenderPass({framebuffer: framebuffers[i % 2]});
+    model.draw(renderPass);
+    renderPass.end();
+    webgpuDevice.submit();
+  }
+
+  expect(
+    countPipelineReferences(pipelineFactory) > 0,
+    'model holds pipeline references while alive'
+  ).toBe(true);
+
+  model.destroy();
+
+  expect(
+    pipelineReferenceCounts(pipelineFactory),
+    'destroy hands back every pipeline reference the model took'
+  ).toEqual(pipelineReferenceCounts(pipelineFactory).map(() => 0));
+  expect(
+    countShaderReferences(shaderFactory),
+    'destroy hands back every shader reference the variants took'
+  ).toBe(0);
+
+  framebuffers.forEach(framebuffer => framebuffer.destroy());
+
+  void 0;
+});
+
+it('Model#discards cached variants when the pipeline shape changes', async () => {
+  const webgpuDevice = await getWebGPUTestDevice();
+  if (!webgpuDevice) {
+    void 0;
+    return;
+  }
+
+  const pipelineFactory = new PipelineFactory(webgpuDevice);
+  const shaderFactory = new ShaderFactory(webgpuDevice);
+  const model = new Model(webgpuDevice, {
+    id: 'attachment-variant-stale-test',
+    source: DUMMY_WGSL,
+    vertexCount: 3,
+    topology: 'triangle-list',
+    pipelineFactory,
+    shaderFactory
+  });
+
+  const framebuffers = [
+    webgpuDevice.createFramebuffer({
+      id: 'variant-stale-a',
+      width: 4,
+      height: 4,
+      colorAttachments: ['rgba8unorm']
+    }),
+    webgpuDevice.createFramebuffer({
+      id: 'variant-stale-b',
+      width: 4,
+      height: 4,
+      colorAttachments: ['rgba16float']
+    })
+  ];
+
+  for (let i = 0; i < 4; ++i) {
+    const renderPass = webgpuDevice.beginRenderPass({framebuffer: framebuffers[i % 2]});
+    model.draw(renderPass);
+    renderPass.end();
+    webgpuDevice.submit();
+  }
+  expect(cachedVariantCount(model) > 1, 'several attachment variants were cached').toBe(true);
+
+  // Topology changes the shape of every variant, so all of them become obsolete.
+  model.setTopology('point-list');
+  model.predraw(webgpuDevice.commandEncoder);
+
+  expect(
+    cachedVariantCount(model),
+    'a shape change drops the obsolete variants and keeps only the rebuilt one'
+  ).toBe(1);
+
+  const renderPass = webgpuDevice.beginRenderPass({framebuffer: framebuffers[0]});
+  expect(model.draw(renderPass), 'model draws after a shape change').toBe(true);
+  renderPass.end();
+  webgpuDevice.submit();
+
+  model.destroy();
+  expect(
+    pipelineReferenceCounts(pipelineFactory),
+    'obsolete variants were released rather than leaked'
+  ).toEqual(pipelineReferenceCounts(pipelineFactory).map(() => 0));
+  expect(
+    countShaderReferences(shaderFactory),
+    'shader references balance after a shape change'
+  ).toBe(0);
+
+  framebuffers.forEach(framebuffer => framebuffer.destroy());
+
+  void 0;
+});
+
+it('Model#bounds the number of cached pipeline variants', async () => {
+  const webgpuDevice = await getWebGPUTestDevice();
+  if (!webgpuDevice) {
+    void 0;
+    return;
+  }
+
+  // More distinct attachment-format combinations than the model is allowed to cache,
+  // so eviction runs. Eviction must never release the pipeline that is still bound.
+  const candidateFormats: {color: Texture['format'][]; depth: string | null}[] = [
+    {color: ['rgba8unorm'], depth: null},
+    {color: ['rgba8unorm'], depth: 'depth16unorm'},
+    {color: ['rgba8unorm'], depth: 'depth24plus'},
+    {color: ['rgba8unorm'], depth: 'depth32float'},
+    {color: ['rgba16float'], depth: null},
+    {color: ['rgba16float'], depth: 'depth16unorm'},
+    {color: ['rgba16float'], depth: 'depth24plus'},
+    {color: ['rgba16float'], depth: 'depth32float'},
+    {color: ['bgra8unorm'], depth: null},
+    {color: ['bgra8unorm'], depth: 'depth24plus'},
+    {color: [], depth: 'depth32float'},
+    {color: [], depth: 'depth24plus'}
+  ];
+
+  const framebuffers = candidateFormats
+    .map((formats, index) => {
+      try {
+        return webgpuDevice.createFramebuffer({
+          id: `variant-bound-${index}`,
+          width: 4,
+          height: 4,
+          colorAttachments: formats.color as never,
+          depthStencilAttachment: formats.depth as never
+        });
+      } catch {
+        return null;
+      }
+    })
+    .filter(framebuffer => framebuffer !== null);
+
+  if (framebuffers.length < 10) {
+    // Not enough distinct render targets on this backend to force eviction.
+    framebuffers.forEach(framebuffer => framebuffer!.destroy());
+    void 0;
+    return;
+  }
+
+  const pipelineFactory = new PipelineFactory(webgpuDevice);
+  const shaderFactory = new ShaderFactory(webgpuDevice);
+  const model = new Model(webgpuDevice, {
+    id: 'attachment-variant-bound-test',
+    source: DUMMY_WGSL,
+    vertexCount: 3,
+    pipelineFactory,
+    shaderFactory
+  });
+
+  // Two full cycles, so evicted variants are requested again.
+  for (let cycle = 0; cycle < 2; ++cycle) {
+    for (const framebuffer of framebuffers) {
+      const renderPass = webgpuDevice.beginRenderPass({framebuffer: framebuffer!});
+      expect(model.draw(renderPass), `model draws into every render target (cycle ${cycle})`).toBe(
+        true
+      );
+      renderPass.end();
+      webgpuDevice.submit();
+    }
+  }
+
+  expect(
+    cachedVariantCount(model) <= 8,
+    `cached variants stay bounded, got ${cachedVariantCount(model)}`
+  ).toBe(true);
+  expect(
+    countPipelineReferences(pipelineFactory) <= 8,
+    `pipeline references stay bounded, got ${countPipelineReferences(pipelineFactory)}`
+  ).toBe(true);
+
+  model.destroy();
+  expect(
+    pipelineReferenceCounts(pipelineFactory),
+    'eviction plus destroy balances every pipeline reference'
+  ).toEqual(pipelineReferenceCounts(pipelineFactory).map(() => 0));
+  expect(countShaderReferences(shaderFactory), 'eviction balances shader references').toBe(0);
+
+  framebuffers.forEach(framebuffer => framebuffer!.destroy());
+
+  void 0;
+});
