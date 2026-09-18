@@ -113,6 +113,9 @@ export class WebGLDevice extends Device {
   /** WebGL2 context. */
   readonly gl!: WebGL2RenderingContext;
 
+  /** Lazily built reverse lookup of numeric WebGL constants. */
+  private _glKeyByValue: Map<number, string> | null = null;
+
   /** Store constants */
   // @ts-ignore TODO fix
   _constants: (TypedArray | null)[];
@@ -543,11 +546,19 @@ export class WebGLDevice extends Device {
    */
   getGLKey(value: unknown, options?: {emptyIfUnknown?: boolean}): string {
     const number = Number(value);
-    for (const key in this.gl) {
-      // @ts-ignore expect-error depends on settings
-      if (this.gl[key] === number) {
-        return `GL.${key}`;
+    if (!this._glKeyByValue) {
+      this._glKeyByValue = new Map<number, string>();
+      for (const key in this.gl) {
+        // @ts-ignore expect-error depends on settings
+        const constantValue = this.gl[key];
+        if (typeof constantValue === 'number' && !this._glKeyByValue.has(constantValue)) {
+          this._glKeyByValue.set(constantValue, `GL.${key}`);
+        }
       }
+    }
+    const key = this._glKeyByValue.get(number);
+    if (key) {
+      return key;
     }
     // No constant found. Stringify the value and return it.
     return options?.emptyIfUnknown ? '' : String(value);
