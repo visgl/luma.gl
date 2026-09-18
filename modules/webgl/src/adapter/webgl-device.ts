@@ -417,11 +417,15 @@ export class WebGLDevice extends Device {
   }
 
   override writeBufferViaCommandEncoder(
-    _commandEncoder: CommandEncoder,
+    commandEncoder: CommandEncoder,
     destinationBuffer: Buffer,
     data: ArrayBufferLike | ArrayBufferView | SharedArrayBuffer,
     byteOffset: number = 0
   ): void {
+    const webglCommandEncoder = commandEncoder as WEBGLCommandEncoder;
+    // WebGL writes execute immediately. Flush earlier deferred copies first so
+    // this write keeps its position in the command stream.
+    webglCommandEncoder.commandBuffer._executeCommands();
     destinationBuffer.write(data, byteOffset);
   }
 
@@ -512,6 +516,7 @@ export class WebGLDevice extends Device {
    */
   override loseDevice(): boolean {
     this._lossWasRequested = true;
+    this._isLost = true;
     let deviceLossTriggered = false;
     const extensions = this.getExtension('WEBGL_lose_context');
     const ext = extensions.WEBGL_lose_context;

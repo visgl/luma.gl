@@ -47,6 +47,9 @@ export class WEBGLCommandEncoder extends CommandEncoder {
   }
 
   beginRenderPass(props: RenderPassProps = {}): WEBGLRenderPass {
+    // WebGL render passes execute immediately. Flush earlier deferred copies so
+    // their effects are visible to this pass and command order is preserved.
+    this.commandBuffer._executeCommands();
     return new WEBGLRenderPass(this.device, this._applyTimeProfilingToPassProps(props));
   }
 
