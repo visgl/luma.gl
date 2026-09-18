@@ -2747,6 +2747,30 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@deck.gl/core@patch:@deck.gl/core@npm%3A9.3.4#~/.yarn/patches/@deck.gl-core-npm-9.3.4-e8a476f6b5.patch":
+  version: 9.3.4
+  resolution: "@deck.gl/core@patch:@deck.gl/core@npm%3A9.3.4#~/.yarn/patches/@deck.gl-core-npm-9.3.4-e8a476f6b5.patch::version=9.3.4&hash=d8261b"
+  dependencies:
+    "@loaders.gl/core": "npm:^4.4.1"
+    "@loaders.gl/images": "npm:^4.4.1"
+    "@luma.gl/core": "npm:^9.3.3"
+    "@luma.gl/engine": "npm:^9.3.3"
+    "@luma.gl/shadertools": "npm:^9.3.3"
+    "@luma.gl/webgl": "npm:^9.3.3"
+    "@math.gl/core": "npm:^4.1.0"
+    "@math.gl/sun": "npm:^4.1.0"
+    "@math.gl/types": "npm:^4.1.0"
+    "@math.gl/web-mercator": "npm:^4.1.0"
+    "@probe.gl/env": "npm:^4.1.1"
+    "@probe.gl/log": "npm:^4.1.1"
+    "@probe.gl/stats": "npm:^4.1.1"
+    "@types/offscreencanvas": "npm:^2019.6.4"
+    gl-matrix: "npm:^3.0.0"
+    mjolnir.js: "npm:^3.0.0"
+  checksum: 10c0/e5da8435dd7a6ec5bf00f322b01e6cb91479aee62c3eb65f0365056a08ed56a1ce00c3d82cd4dcd627feea6da60e5e9c5c5bdb87423e2b3f5a2e144f3bc2eaa3
+  languageName: node
+  linkType: hard
+
 "@discoveryjs/json-ext@npm:0.5.7":
   version: 0.5.7
   resolution: "@discoveryjs/json-ext@npm:0.5.7"

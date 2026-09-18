@@ -32,6 +32,10 @@ fn secondVertex(@location(1) secondPosition: vec3f) -> @builtin(position) vec4f 
 }
 `;
 
+it('Computation does not retain a mutable shader assembler in its default props', () => {
+  expect(Computation.defaultProps.shaderAssembler).toBeUndefined();
+});
+
 it('Computation#construct/delete', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (webgpuDevice) {

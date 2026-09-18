@@ -8,7 +8,6 @@ import {makeArrowFixedSizeListVector, makeGPUVectorFromArrow} from '@luma.gl/arr
 import {expect, it} from 'vitest';
 import type {Device} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
-import {ShaderAssembler} from '@luma.gl/shadertools';
 import {buildBitmapFontAtlas} from '@luma.gl/text';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {
@@ -20,7 +19,7 @@ import {
   vectorFromArray,
   type RecordBatch
 } from 'apache-arrow';
-import {afterAll, vi} from 'vitest';
+import {afterAll} from 'vitest';
 import {
   makeArrowLineRecordBatches,
   makeArrowLineSourceData
@@ -35,10 +34,8 @@ const TEXT_FONT_ATLAS = buildBitmapFontAtlas({
   characterSet: ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-'
 });
 let sharedStorageDeck: {deck: Deck; parent: HTMLDivElement} | null = null;
-let restoreLegacyDeckShaderAssembler: (() => void) | null = null;
 
 afterAll(() => {
-  restoreLegacyDeckShaderAssembler?.();
   finalizeSharedStorageDeck();
 });
 
@@ -642,31 +639,7 @@ function createTestDeck(device?: Device): {deck: Deck; parent: HTMLDivElement} {
     ...(device ? {device} : {}),
     views: new OrthographicView({id: 'main'}),
     initialViewState: {target: [0, 0], zoom: 0},
-    layers: [],
-    onDeviceInitialized: initializedDevice => {
-      restoreLegacyDeckShaderAssembler?.();
-
-      const getDefaultShaderAssembler = ShaderAssembler.getDefaultShaderAssembler;
-      const shaderAssemblerSpy = vi.spyOn(ShaderAssembler, 'getDefaultShaderAssembler');
-      restoreLegacyDeckShaderAssembler = () => {
-        shaderAssemblerSpy.mockRestore();
-        restoreLegacyDeckShaderAssembler = null;
-      };
-
-      shaderAssemblerSpy.mockImplementation(shaderLanguage => {
-        if (shaderLanguage !== undefined) {
-          return getDefaultShaderAssembler.call(ShaderAssembler, shaderLanguage);
-        }
-
-        // deck.gl 9.3.4 requests its assembler without the now-required language.
-        // Restore strict behavior before forwarding this single legacy call.
-        restoreLegacyDeckShaderAssembler?.();
-        return getDefaultShaderAssembler.call(
-          ShaderAssembler,
-          initializedDevice.info.shadingLanguage
-        );
-      });
-    }
+    layers: []
   });
   return {deck, parent};
 }
