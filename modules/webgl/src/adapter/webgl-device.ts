@@ -75,6 +75,7 @@ import {
 } from '../context/parameters/unified-parameter-api';
 import {withGLParameters} from '../context/state-tracker/with-parameters';
 import {getWebGLExtension} from '../context/helpers/webgl-extensions';
+import {createGLKeyByValue, type GLKeyByValue} from '../constants/webgl-constant-utils';
 
 /** WebGPU style Device API for a WebGL context */
 export class WebGLDevice extends Device {
@@ -110,6 +111,8 @@ export class WebGLDevice extends Device {
 
   /** WebGL2 context. */
   readonly gl!: WebGL2RenderingContext;
+
+  private _glKeyByValue: GLKeyByValue | null = null;
 
   /** Store constants */
   // @ts-ignore TODO fix
@@ -537,14 +540,10 @@ export class WebGLDevice extends Device {
    * so this isn't guaranteed to return the right key in all cases.
    */
   getGLKey(value: unknown, options?: {emptyIfUnknown?: boolean}): string {
-    const number = Number(value);
-    for (const key in this.gl) {
-      // @ts-ignore expect-error depends on settings
-      if (this.gl[key] === number) {
-        return `GL.${key}`;
-      }
+    const key = this._getGLKeyByValue().get(Number(value));
+    if (key) {
+      return key;
     }
-    // No constant found. Stringify the value and return it.
     return options?.emptyIfUnknown ? '' : String(value);
   }
 
@@ -552,12 +551,17 @@ export class WebGLDevice extends Device {
    * Returns a map with any GL.<KEY> constants mapped to strings, both for keys and values
    */
   getGLKeys(glParameters: Record<number, unknown>): Record<string, string> {
-    const opts = {emptyIfUnknown: true};
+    const options = {emptyIfUnknown: true};
     return Object.entries(glParameters).reduce<Record<string, string>>((keys, [key, value]) => {
       // eslint-disable-next-line @typescript-eslint/no-base-to-string
-      keys[`${key}:${this.getGLKey(key, opts)}`] = `${value}:${this.getGLKey(value, opts)}`;
+      keys[`${key}:${this.getGLKey(key, options)}`] = `${value}:${this.getGLKey(value, options)}`;
       return keys;
     }, {});
+  }
+
+  private _getGLKeyByValue(): GLKeyByValue {
+    this._glKeyByValue ??= createGLKeyByValue(this.gl);
+    return this._glKeyByValue;
   }
 
   /**
