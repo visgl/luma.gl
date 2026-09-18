@@ -3208,7 +3208,28 @@ body:has(.integration-example-page) .theme-layout-footer {
 }
 
 .theme-layout-footer .footer__copyright {
+  align-items: start;
+  column-gap: 2rem;
+  display: grid;
+  font-size: 0.75rem;
+  grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr);
+  line-height: 1.4;
   margin-top: 0.75rem;
+}
+
+.theme-layout-footer .footer__legal-links {
+  text-align: right;
+}
+
+@media (max-width: 700px) {
+  .theme-layout-footer .footer__copyright {
+    display: block;
+  }
+
+  .theme-layout-footer .footer__legal-links {
+    margin-top: 0.5rem;
+    text-align: left;
+  }
 }
 
 /* Getting Started is an invitation into the GPU laboratory, not an install screen. */
