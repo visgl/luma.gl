@@ -3,8 +3,6 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 export {GL} from './webgl-constants';
-export {createGLKeyByValue, getGLKey, getGLKeys} from './webgl-constant-utils';
-export type {GLKeyByValue} from './webgl-constant-utils';
 
 export type {
   GLTextureTarget,
