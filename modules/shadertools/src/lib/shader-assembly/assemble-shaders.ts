@@ -144,22 +144,40 @@ export type HookFunction = {hook: string; header: string; footer: string; signat
  */
 export type GetUniformsFunc = (opts: Record<string, any>) => Record<string, any>;
 
-/**
- * Inject a list of shader modules into a single shader source for WGSL
- */
-export function assembleWGSLShader(
-  options: AssembleShaderOptions & {
-    /** Single WGSL shader */
-    source: string;
-    /** @internal Stable per-assembler WGSL binding assignments. */
-    _bindingRegistry?: Map<string, number>;
-  }
-): {
+type AssembleWGSLShaderOptions = AssembleShaderOptions & {
+  /** Single WGSL shader */
+  source: string;
+  /** @internal Stable per-assembler WGSL binding assignments. */
+  _bindingRegistry?: Map<string, number>;
+};
+
+/** Inject shader modules and compute metadata for the resulting WGSL source. */
+export function assembleWGSLShader(options: AssembleWGSLShaderOptions): {
   source: string;
   getUniforms: GetUniformsFunc;
-  bindingAssignments: {moduleName: string; name: string; group: number; location: number}[];
+  bindingAssignments: WGSLBindingAssignment[];
   bindingTable: ShaderBindingDebugRow[];
   shaderLayout: ShaderLayout | null;
+} {
+  const assembledShader = assembleWGSLSource(options);
+  return {
+    ...assembledShader,
+    bindingTable: getShaderBindingDebugRowsFromWGSL(
+      assembledShader.source,
+      assembledShader.bindingAssignments
+    ),
+    shaderLayout: scanWGSLInterface(assembledShader.source, {
+      vertexEntryPoint: options.vertexEntryPoint,
+      scanVertexAttributes: options.scanVertexAttributes
+    })
+  };
+}
+
+/** @internal Assemble source without scanning metadata that subsequent preprocessing invalidates. */
+export function assembleWGSLSource(options: AssembleWGSLShaderOptions): {
+  source: string;
+  getUniforms: GetUniformsFunc;
+  bindingAssignments: WGSLBindingAssignment[];
 } {
   const modules = getShaderModuleDependencies(options.modules || []);
   const {source, bindingAssignments} = assembleShaderWGSL(options.platformInfo, {
@@ -172,12 +190,7 @@ export function assembleWGSLShader(
   return {
     source,
     getUniforms: assembleGetUniforms(modules),
-    bindingAssignments,
-    bindingTable: getShaderBindingDebugRowsFromWGSL(source, bindingAssignments),
-    shaderLayout: scanWGSLInterface(source, {
-      vertexEntryPoint: options.vertexEntryPoint,
-      scanVertexAttributes: options.scanVertexAttributes
-    })
+    bindingAssignments
   };
 }
 
