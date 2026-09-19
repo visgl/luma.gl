@@ -18,7 +18,9 @@ import {
   getGPUVectorFormatInfo,
   isValueListGPUVectorFormat,
   isVertexListGPUVectorFormat,
-  type GPUVectorFormat
+  type GPUVectorFormat,
+  type ValueList,
+  type VertexList
 } from '@luma.gl/gpgpu/gpu-data';
 import type {TypedArray, TypedArrayConstructor} from '@math.gl/types';
 import {bufferPool} from '../utils/buffer-pool';
@@ -89,6 +91,10 @@ export type GPUDataEvaluatorProps = {
   gpuData?: GPUData;
   /** Optional memory format preserved for GPUVector interop. */
   format?: GPUVectorFormat;
+  /** Start indices when this evaluator represents flattened variable-length values. */
+  startIndices?: GPUDataEvaluator;
+  /** Original variable-length format used to preserve list kind across value transforms. */
+  segmentedFormat?: VertexList | ValueList;
   /** Lazy operation or evaluator whose output initializes this evaluator. */
   source?: Operation | GPUDataEvaluator | null;
   /** Whether every row should read the same value. */
@@ -149,6 +155,10 @@ export class GPUDataEvaluator {
   readonly source: Operation | GPUDataEvaluator | null = null;
   /** Optional memory format preserved for GPUVector interop. */
   readonly format?: GPUVectorFormat;
+  /** Start indices when this evaluator represents flattened variable-length values. */
+  readonly startIndices?: GPUDataEvaluator;
+  /** Original variable-length format used to preserve list kind across value transforms. */
+  readonly segmentedFormat?: VertexList | ValueList;
 
   /** User-assigned id for easy debugging. */
   protected _id?: string;
@@ -169,6 +179,8 @@ export class GPUDataEvaluator {
   private _bufferOwnership: GPUDataEvaluatorBufferOwnership = 'owned';
   /** Borrowed output storage applied when a deferred operation is next evaluated. */
   private _targetBuffer?: Required<GPUDataEvaluatorTargetBuffer>;
+  /** Whether this evaluator created and owns its start-index evaluator. */
+  private _ownsStartIndices = false;
 
   /**
    * Constructs one evaluator from a CPU array.
@@ -259,6 +271,16 @@ export class GPUDataEvaluator {
     data: GPUData,
     options: GPUDataEvaluatorFromGPUDataOptions = {}
   ): GPUDataEvaluator {
+    if (data.format && isVertexListGPUVectorFormat(data.format)) {
+      const evaluator = makeGPUDataEvaluatorFromSegmentedGPUData(data, options);
+      evaluator._ownsStartIndices = true;
+      return evaluator;
+    }
+    if (data.format && isValueListGPUVectorFormat(data.format)) {
+      const evaluator = makeGPUDataEvaluatorFromSegmentedGPUData(data, options);
+      evaluator._ownsStartIndices = true;
+      return evaluator;
+    }
     validateFixedWidthGPUData(data);
     const view = new GPUDataView({
       buffer: data.buffer,
@@ -300,7 +322,17 @@ export class GPUDataEvaluator {
    * @param props - Row layout and one value, buffer, GPUData, or deferred source.
    */
   constructor(props: GPUDataEvaluatorProps) {
-    const {id, value, buffer, gpuData, format, source = null, isConstant = false} = props;
+    const {
+      id,
+      value,
+      buffer,
+      gpuData,
+      format,
+      startIndices,
+      segmentedFormat,
+      source = null,
+      isConstant = false
+    } = props;
     if (!source && !value && !buffer && !gpuData) {
       throw new Error('GPUDataEvaluator must have a value source');
     }
@@ -331,6 +363,10 @@ export class GPUDataEvaluator {
     this.normalized = normalized;
     this.source = source;
     this.format = format;
+    this.startIndices =
+      startIndices ?? (source instanceof GPUDataEvaluator ? source.startIndices : undefined);
+    this.segmentedFormat =
+      segmentedFormat ?? (source instanceof GPUDataEvaluator ? source.segmentedFormat : undefined);
     if (length === undefined) {
       if (isConstant) {
         length = 1;
@@ -509,6 +545,9 @@ export class GPUDataEvaluator {
       options.format ?? this.format ?? tryGetVertexFormat(this.type, this.size, this.normalized);
 
     if (options.interleaved) {
+      if (this.startIndices) {
+        throw new Error('GPUDataEvaluator cannot materialize segmented data as interleaved rows');
+      }
       const attributes =
         typeof options.interleaved === 'object' && options.interleaved.attributes
           ? options.interleaved.attributes
@@ -523,6 +562,34 @@ export class GPUDataEvaluator {
         byteStride: this.stride,
         attributes,
         ownsBuffer: false
+      });
+    }
+
+    if (this.startIndices && this.segmentedFormat) {
+      if (!format) {
+        throw new Error('GPUDataEvaluator cannot determine a segmented output element format');
+      }
+      const valueOffsets = getStartIndicesValue(this.startIndices, this.length);
+      const segmentedFormat = makeSegmentedGPUVectorFormat(this.segmentedFormat, format);
+      const data = new GPUData({
+        buffer: options.buffer,
+        format: segmentedFormat,
+        length: valueOffsets.length - 1,
+        valueLength: this.length,
+        stride: this.size,
+        byteOffset: this.offset,
+        byteStride: this.stride,
+        rowByteLength: this.ValueType.BYTES_PER_ELEMENT * this.size,
+        valueOffsets,
+        valueByteLength: this.byteLength,
+        ownsBuffer: false
+      });
+      return new GPUVector({
+        type: 'data',
+        name,
+        format: segmentedFormat,
+        data: [data],
+        ownsData: false
       });
     }
 
@@ -652,6 +719,9 @@ export class GPUDataEvaluator {
 
   /** Releases cached GPU storage owned by this evaluator and prevents future evaluation. */
   destroy(): void {
+    if (this._ownsStartIndices) {
+      this.startIndices?.destroy();
+    }
     if (this._gpuVector) {
       if (this._bufferOwnership === 'owned') {
         bufferPool.recycle(getBufferFromGPUVector(this._gpuVector));
@@ -747,6 +817,100 @@ function validateFixedWidthGPUData(data: GPUData): void {
       `GPUDataEvaluator.fromGPUData() requires rowByteLength ${expectedRowByteLength} for GPUData`
     );
   }
+}
+
+function makeGPUDataEvaluatorFromSegmentedGPUData(
+  data: GPUData,
+  options: GPUDataEvaluatorFromGPUDataOptions
+): GPUDataEvaluator {
+  const format = data.format;
+  if (!format || (!isVertexListGPUVectorFormat(format) && !isValueListGPUVectorFormat(format))) {
+    throw new Error('GPUDataEvaluator.fromGPUData() requires variable-length format metadata');
+  }
+
+  const formatInfo = getGPUVectorFormatInfo(format);
+  if (data.rowByteLength !== formatInfo.byteLength) {
+    throw new Error(
+      `GPUDataEvaluator.fromGPUData() requires rowByteLength ${formatInfo.byteLength} for GPUData`
+    );
+  }
+  if (data.byteStride !== data.rowByteLength) {
+    throw new Error('GPUDataEvaluator.fromGPUData() requires packed variable-length input');
+  }
+
+  const valueOffsets = data.valueOffsets;
+  if (!valueOffsets) {
+    throw new Error('GPUDataEvaluator.fromGPUData() requires variable-length value offsets');
+  }
+  validateSegmentedValueOffsets(valueOffsets, data.length, data.valueLength);
+
+  const id = options.id ?? 'data';
+  const startIndices = new GPUDataEvaluator({
+    id: `${id}.startIndices`,
+    type: 'sint32',
+    size: 1,
+    value: valueOffsets
+  });
+  return new GPUDataEvaluator({
+    id,
+    type: formatInfo.signedDataType,
+    size: formatInfo.components,
+    offset: data.byteOffset,
+    stride: data.byteStride,
+    length: data.valueLength,
+    buffer: data.buffer,
+    format: formatInfo.elementFormat,
+    startIndices,
+    segmentedFormat: format
+  });
+}
+
+function validateSegmentedValueOffsets(
+  valueOffsets: Int32Array,
+  rowCount: number,
+  valueLength: number
+): void {
+  if (valueOffsets.length !== rowCount + 1) {
+    throw new Error('GPUDataEvaluator.fromGPUData() requires one value offset per row boundary');
+  }
+  if (valueOffsets[0] !== 0) {
+    throw new Error(
+      'GPUDataEvaluator.fromGPUData() requires chunk-local value offsets starting at 0'
+    );
+  }
+  let previousValueOffset = 0;
+  for (const valueOffset of valueOffsets) {
+    if (valueOffset < previousValueOffset) {
+      throw new Error('GPUDataEvaluator.fromGPUData() requires non-decreasing value offsets');
+    }
+    previousValueOffset = valueOffset;
+  }
+  if (previousValueOffset !== valueLength) {
+    throw new Error(
+      'GPUDataEvaluator.fromGPUData() requires the final value offset to match valueLength'
+    );
+  }
+}
+
+function getStartIndicesValue(startIndices: GPUDataEvaluator, valueLength: number): Int32Array {
+  const valueOffsets = startIndices.value;
+  if (!(valueOffsets instanceof Int32Array)) {
+    throw new Error(
+      'GPUDataEvaluator segmented start indices must be CPU-accessible sint32 values'
+    );
+  }
+  validateSegmentedValueOffsets(valueOffsets, startIndices.length - 1, valueLength);
+  return valueOffsets;
+}
+
+function makeSegmentedGPUVectorFormat(
+  sourceFormat: VertexList | ValueList,
+  elementFormat: GPUVectorFormat
+): VertexList | ValueList {
+  const resolvedElementFormat = getGPUVectorFormatInfo(elementFormat).elementFormat;
+  return isVertexListGPUVectorFormat(sourceFormat)
+    ? `vertex-list<${resolvedElementFormat}>`
+    : `value-list<${resolvedElementFormat}>`;
 }
 
 function getGPUDataEvaluatorPropsFromGPUDataView(
