@@ -324,35 +324,37 @@ export function assembleShaderWGSL(
   appendGeneratedVaryingInjections(pluginVaryingAssembly, declInjections, mainInjections);
 
   // TODO - hack until shadertool modules support WebGPU
-  const modulesToInject = modules;
+  const modulesToInject = modules.map(module => ({
+    module,
+    source: preprocess(getShaderModuleSource(module, 'wgsl', log), {defines})
+  }));
   const applicationRelocation = relocateWGSLApplicationBindings(coreSource);
   const usedBindingsByGroup = getUsedBindingsByGroupFromApplicationWGSL(
     applicationRelocation.source
   );
-  const reservedBindingKeysByGroup = reserveRegisteredModuleBindings(
+  const reservedBindingKeysByGroup = reserveModuleBindings(
     modulesToInject,
     options._bindingRegistry,
-    usedBindingsByGroup,
-    defines
+    usedBindingsByGroup
   );
   const bindingAssignments: WGSLBindingAssignment[] = [];
 
-  for (const module of modulesToInject) {
-    if (log) {
-      checkShaderModuleDeprecations(module, coreSource, log);
-    }
-    const preprocessedModuleSource = preprocess(getShaderModuleSource(module, 'wgsl', log), {
-      defines
-    });
-    const relocation = relocateWGSLModuleBindings(preprocessedModuleSource, module, {
+  // Resolve all bindings before emitting source, preserving module and declaration order.
+  const relocatedModules = modulesToInject.map(({module, source: moduleSource}) => {
+    const relocation = relocateWGSLModuleBindings(moduleSource, module, {
       usedBindingsByGroup,
       bindingRegistry: options._bindingRegistry,
       reservedBindingKeysByGroup
     });
     bindingAssignments.push(...relocation.bindingAssignments);
-    const relocatedModuleSource = relocation.source;
-    // Add the module source, and a #define that declares it presence
-    assembledSource += relocatedModuleSource;
+    return {module, source: relocation.source};
+  });
+
+  for (const {module, source: moduleSource} of relocatedModules) {
+    if (log) {
+      checkShaderModuleDeprecations(module, coreSource, log);
+    }
+    assembledSource += moduleSource;
 
     const injections = getWGSLModuleInjections(module);
     for (const key in injections) {
@@ -969,12 +971,17 @@ function relocateWGSLModuleBindingMatch(
 
   const location = Number(bindingToken);
   validateModuleWGSLBinding(module.name, group, location, name);
-  registerUsedBindingLocation(
-    context.usedBindingsByGroup,
-    group,
-    location,
-    `module "${module.name}" binding "${name}"`
-  );
+  const registryKey = getBindingRegistryKey(group, module.name, name);
+  if (
+    !claimReservedBindingLocation(context.reservedBindingKeysByGroup, group, location, registryKey)
+  ) {
+    registerUsedBindingLocation(
+      context.usedBindingsByGroup,
+      group,
+      location,
+      `module "${module.name}" binding "${name}"`
+    );
+  }
   bindingAssignments.push({moduleName: module.name, name, group, location});
   return match;
 }
@@ -1003,40 +1010,55 @@ function relocateWGSLApplicationBindingMatch(
   return match;
 }
 
-function reserveRegisteredModuleBindings(
-  modules: ShaderModule[],
+/** Reserve declared locations before reusing registry assignments or allocating new bindings. */
+function reserveModuleBindings(
+  modules: {module: ShaderModule; source: string}[],
   bindingRegistry: Map<string, number> | undefined,
-  usedBindingsByGroup: Map<number, Set<number>>,
-  defines: Record<string, boolean | number>
+  usedBindingsByGroup: Map<number, Set<number>>
 ): Map<number, Map<number, string>> {
   const reservedBindingKeysByGroup = new Map<number, Map<number, string>>();
-  if (!bindingRegistry) {
-    return reservedBindingKeysByGroup;
+  const autoBindings: {module: ShaderModule; name: string; group: number}[] = [];
+
+  function reserveBinding(
+    group: number,
+    location: number,
+    registryKey: string,
+    label: string
+  ): void {
+    registerUsedBindingLocation(usedBindingsByGroup, group, location, label);
+    const reservedBindingKeys = reservedBindingKeysByGroup.get(group) || new Map<number, string>();
+    reservedBindingKeys.set(location, registryKey);
+    reservedBindingKeysByGroup.set(group, reservedBindingKeys);
   }
 
-  for (const module of modules) {
-    for (const binding of getModuleWGSLBindingDeclarations(module, defines)) {
-      const registryKey = getBindingRegistryKey(binding.group, module.name, binding.name);
-      const location = bindingRegistry.get(registryKey);
-      if (location !== undefined) {
-        const reservedBindingKeys =
-          reservedBindingKeysByGroup.get(binding.group) || new Map<number, string>();
-        const existingReservation = reservedBindingKeys.get(location);
-        if (existingReservation && existingReservation !== registryKey) {
-          throw new Error(
-            `Duplicate WGSL binding reservation for modules "${existingReservation}" and "${registryKey}": group ${binding.group}, binding ${location}.`
-          );
-        }
-
-        registerUsedBindingLocation(
-          usedBindingsByGroup,
-          binding.group,
-          location,
-          `registered module binding "${registryKey}"`
-        );
-        reservedBindingKeys.set(location, registryKey);
-        reservedBindingKeysByGroup.set(binding.group, reservedBindingKeys);
+  for (const {module, source} of modules) {
+    for (const binding of getWGSLBindingDeclarationMatches(
+      source,
+      MODULE_WGSL_BINDING_DECLARATION_REGEXES
+    )) {
+      const group = Number(binding.groupToken);
+      if (binding.bindingToken === 'auto') {
+        autoBindings.push({module, name: binding.name, group});
+        continue;
       }
+      const location = Number(binding.bindingToken);
+      validateModuleWGSLBinding(module.name, group, location, binding.name);
+      reserveBinding(
+        group,
+        location,
+        getBindingRegistryKey(group, module.name, binding.name),
+        `module "${module.name}" binding "${binding.name}"`
+      );
+    }
+  }
+
+  // Only auto declarations reuse registry entries. Explicit declarations already own their slots.
+  // Conflicting active assignments remain errors so previously assembled shaders keep their layout.
+  for (const {module, name, group} of autoBindings) {
+    const registryKey = getBindingRegistryKey(group, module.name, name);
+    const location = bindingRegistry?.get(registryKey);
+    if (location !== undefined) {
+      reserveBinding(group, location, registryKey, `registered module binding "${registryKey}"`);
     }
   }
 
@@ -1063,27 +1085,8 @@ function claimReservedBindingLocation(
       `Registered module binding "${registryKey}" collided with "${reservedKey}": group ${group}, binding ${location}.`
     );
   }
+  reservedBindingKeys.delete(location);
   return true;
-}
-
-function getModuleWGSLBindingDeclarations(
-  module: ShaderModule,
-  defines: Record<string, boolean | number>
-): {name: string; group: number}[] {
-  const declarations: {name: string; group: number}[] = [];
-  const moduleSource = preprocess(module.source || '', {defines});
-
-  for (const match of getWGSLBindingDeclarationMatches(
-    moduleSource,
-    MODULE_WGSL_BINDING_DECLARATION_REGEXES
-  )) {
-    declarations.push({
-      name: match.name,
-      group: Number(match.groupToken)
-    });
-  }
-
-  return declarations;
 }
 
 function validateApplicationWGSLBinding(group: number, location: number, name: string): void {
