@@ -1495,3 +1495,116 @@ it('assembleWGSLShader#rejects unresolved auto bindings with module and binding 
 
   void 0;
 });
+
+it('assembleWGSLShader#avoids explicit bindings in every module permutation', () => {
+  const explicitModule: ShaderModule = {
+    name: 'reservationExplicit',
+    source: '@group(2) @binding(1) var<uniform> reservationExplicit: f32;'
+  };
+  const modules = [explicitModule, GROUP_2_REGISTRY_A, GROUP_2_REGISTRY_B];
+  for (const firstModule of modules) {
+    for (const secondModule of modules.filter(module => module !== firstModule)) {
+      const thirdModule = modules.find(
+        module => module !== firstModule && module !== secondModule
+      )!;
+      const orderedModules = [firstModule, secondModule, thirdModule];
+      const shaderAssembler = new WGSLShaderAssembler();
+      const firstShader = shaderAssembler.assembleWGSLShader({
+        platformInfo: PLATFORM_INFO,
+        source: APP_WGSL,
+        modules: orderedModules
+      });
+      expect(
+        firstShader.bindingAssignments.find(binding => binding.name === 'reservationExplicit')
+          ?.location
+      ).toBe(1);
+      expect(new Set(firstShader.bindingAssignments.map(binding => binding.location)).size).toBe(3);
+      const repeatedShader = shaderAssembler.assembleWGSLShader({
+        platformInfo: PLATFORM_INFO,
+        source: APP_WGSL,
+        modules: [...orderedModules].reverse()
+      });
+      for (const binding of firstShader.bindingAssignments) {
+        expect(repeatedShader.bindingAssignments).toContainEqual(binding);
+      }
+      const sourceOffsets = orderedModules.map(module =>
+        firstShader.source.indexOf(`// ----- MODULE ${module.name} `)
+      );
+      expect(sourceOffsets).toEqual([...sourceOffsets].sort((first, second) => first - second));
+    }
+  }
+});
+
+it('assembleWGSLShader#reserves explicit declarations later in the same module', () => {
+  const module: ShaderModule = {
+    name: 'mixedBindings',
+    source: `
+@group(2) @binding(auto) var<uniform> autoValue: f32;
+@group(2) @binding(0) var<uniform> explicitValue: f32;
+`
+  };
+  const assembledShader = new WGSLShaderAssembler().assembleWGSLShader({
+    platformInfo: PLATFORM_INFO,
+    source: APP_WGSL,
+    modules: [module]
+  });
+  expect(assembledShader.bindingAssignments.map(binding => binding.location)).toEqual([1, 0]);
+});
+
+it('assembleWGSLShader#rejects repeated explicit declarations within a module', () => {
+  for (const secondName of ['firstValue', 'secondValue']) {
+    expect(() =>
+      new WGSLShaderAssembler().assembleWGSLShader({
+        platformInfo: PLATFORM_INFO,
+        source: APP_WGSL,
+        modules: [
+          {
+            name: 'duplicateDeclarations',
+            source: `
+@group(2) @binding(0) var<uniform> firstValue: f32;
+@group(2) @binding(0) var<uniform> ${secondName}: f32;
+`
+          }
+        ]
+      })
+    ).toThrow(/Duplicate WGSL binding assignment/);
+  }
+});
+
+it('assembleWGSLShader#reserves only active explicit declarations', () => {
+  const module: ShaderModule = {
+    name: 'conditionalReservation',
+    source: `
+@group(2) @binding(auto) var<uniform> autoValue: f32;
+#if USE_EXPLICIT
+@group(2) @binding(0) var<uniform> explicitValue: f32;
+#endif
+`
+  };
+  for (const useExplicit of [false, true]) {
+    const assembledShader = new WGSLShaderAssembler().assembleWGSLShader({
+      platformInfo: PLATFORM_INFO,
+      source: APP_WGSL,
+      modules: [module],
+      defines: {USE_EXPLICIT: useExplicit}
+    });
+    expect(assembledShader.bindingAssignments[0].location).toBe(useExplicit ? 1 : 0);
+    expect(assembledShader.bindingAssignments).toHaveLength(useExplicit ? 2 : 1);
+  }
+});
+
+it('assembleWGSLShader#rejects explicit conflicts with active registry assignments', () => {
+  const shaderAssembler = new WGSLShaderAssembler();
+  shaderAssembler.assembleWGSLShader({
+    platformInfo: PLATFORM_INFO,
+    source: APP_WGSL,
+    modules: [GROUP_2_REGISTRY_A]
+  });
+  expect(() =>
+    shaderAssembler.assembleWGSLShader({
+      platformInfo: PLATFORM_INFO,
+      source: APP_WGSL,
+      modules: [GROUP_2_REGISTRY_A, DUPLICATE_GROUP_2_MODULE_A]
+    })
+  ).toThrow(/Duplicate WGSL binding assignment/);
+});
