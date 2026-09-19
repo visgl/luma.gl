@@ -2,6 +2,12 @@
 
 ## v9.4
 
+### v9.4.2
+
+- fix(engine): honor vertex count for indexed model draws (#3293)
+- Backport 9.4 maintenance patches (#3300)
+- Update the website OpenJS footer.
+
 ### v9.4.1
 
 - fix(core): resize the default framebuffer after an external canvas resize (#3178)
