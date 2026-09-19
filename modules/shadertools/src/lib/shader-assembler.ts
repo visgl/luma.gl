@@ -7,7 +7,7 @@ import {initializeShaderModules} from './shader-module/shader-module';
 import {
   AssembleShaderProps,
   GetUniformsFunc,
-  assembleWGSLShader,
+  assembleWGSLSource,
   assembleGLSLShaderPair
 } from './shader-assembly/assemble-shaders';
 import type {ShaderHook} from './shader-assembly/shader-hooks';
@@ -188,7 +188,7 @@ export class WGSLShaderAssembler extends ShaderAssembler {
       source: assembledSource,
       getUniforms,
       bindingAssignments
-    } = assembleWGSLShader({
+    } = assembleWGSLSource({
       ...props,
       // @ts-expect-error
       source: preprocessedApplicationSource,
