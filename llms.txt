@@ -754,6 +754,12 @@ GPU programming is all about performance, so having tools to systematically
 
 - [Profiling](https://luma.gl/docs/developer-guide/profiling.md): GPU programming is all about performance, so having tools to systematically
 
+#### releasing
+
+This guide describes the repository release path for publishing luma.gl packages to npm.
+
+- [Releasing luma.gl](https://luma.gl/docs/developer-guide/releasing.md): This guide describes the repository release path for publishing luma.gl packages to npm.
+
 #### testing
 
 The primary test runner is Vitest.
