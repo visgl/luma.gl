@@ -1267,10 +1267,15 @@ export class Model {
     if (this._pipelineCacheStale) {
       return false;
     }
-    const cached = this._pipelineCache.get(this._getAttachmentFormatKey());
+    const key = this._getAttachmentFormatKey();
+    const cached = this._pipelineCache.get(key);
     if (!cached) {
       return false;
     }
+    // Refresh recency without changing ownership. Eviction is LRU rather than
+    // insertion-order FIFO, which keeps frequently reused render targets hot.
+    this._pipelineCache.delete(key);
+    this._pipelineCache.set(key, cached);
     this.pipeline = cached.pipeline;
     this._attributeInfos = cached.attributeInfos;
     return true;
@@ -1278,10 +1283,13 @@ export class Model {
 
   /** Identifies the render-target shape a pipeline was built for. */
   private _getAttachmentFormatKey(): string {
-    const colorFormats = this._colorAttachmentFormats
-      ? this._colorAttachmentFormats.map(format => format ?? '-').join(',')
-      : '';
-    return `${colorFormats}|${this._depthStencilAttachmentFormat ?? ''}`;
+    // JSON keeps the key unambiguous as the descriptor grows. Normalize absent
+    // values so an omitted attachment list and an explicit undefined do not
+    // create accidental variants.
+    return JSON.stringify({
+      colorAttachmentFormats: this._colorAttachmentFormats ?? null,
+      depthStencilAttachmentFormat: this._depthStencilAttachmentFormat ?? null
+    });
   }
 
   /**
@@ -1294,7 +1302,7 @@ export class Model {
     if (previous && previous.pipeline !== this.pipeline) {
       this._releasePipelineVariant(previous.pipeline);
     }
-    // Re-insert rather than overwrite, so Map iteration order stays oldest-added first.
+    // Re-insert so Map iteration order tracks least-recently-used first.
     this._pipelineCache.delete(key);
     while (this._pipelineCache.size >= MAX_CACHED_PIPELINE_VARIANTS) {
       // Never evict the bound pipeline: its reference would be left without an owner.
