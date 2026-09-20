@@ -267,6 +267,7 @@ describe('getting-started onboarding', () => {
           'developer-guide/debugging',
           'developer-guide/profiling',
           'developer-guide/bundling',
+          'developer-guide/releasing',
           'developer-guide/working-with-ai'
         ]
       },
