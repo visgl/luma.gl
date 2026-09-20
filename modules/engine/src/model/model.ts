@@ -236,7 +236,7 @@ export class Model {
     pipelineFactory: undefined!,
     shaderFactory: undefined!,
     transformFeedback: undefined!,
-    shaderAssembler: ShaderAssembler.getDefaultShaderAssembler('glsl'),
+    shaderAssembler: undefined!,
 
     debugShaders: undefined!,
     disableWarnings: undefined!
@@ -347,16 +347,13 @@ export class Model {
   }
 
   constructor(device: Device, props: ModelProps) {
-    const defaultShaderAssembler = Model.defaultProps.shaderAssembler;
     const vertexCountSet = Object.hasOwn(props, 'vertexCount');
     this.props = {
       ...Model.defaultProps,
       ...props,
       shaderAssembler:
         props.shaderAssembler ??
-        (isShaderAssemblerForLanguage(defaultShaderAssembler, device.info.shadingLanguage)
-          ? defaultShaderAssembler
-          : ShaderAssembler.getDefaultShaderAssembler(device.info.shadingLanguage))
+        ShaderAssembler.getDefaultShaderAssembler(device.info.shadingLanguage)
     };
     this._vertexCountSet = vertexCountSet;
     props = this.props;

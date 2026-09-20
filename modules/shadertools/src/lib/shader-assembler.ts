@@ -41,6 +41,7 @@ export abstract class ShaderAssembler {
    * A default shader assembler instance - the natural place to register default modules and hooks
    * @param shaderLanguage Shader language whose shared assembler should be returned.
    * @returns Shared default shader assembler for the requested language.
+   * @deprecated Construct and explicitly pass a language-specific shader assembler instead.
    */
   static getDefaultShaderAssembler(shaderLanguage: 'glsl'): GLSLShaderAssembler;
   static getDefaultShaderAssembler(shaderLanguage: 'wgsl'): WGSLShaderAssembler;

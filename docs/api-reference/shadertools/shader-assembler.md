@@ -40,11 +40,10 @@ deliberately; use an isolated assembler when one application must not affect ano
 ```typescript
 import {
   GLSLShaderAssembler,
-  ShaderAssembler,
   WGSLShaderAssembler
 } from '@luma.gl/shadertools';
 
-const glslShaderAssembler = ShaderAssembler.getDefaultShaderAssembler('glsl');
+const glslShaderAssembler = new GLSLShaderAssembler();
 glslShaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
 
 const assembledShaders = glslShaderAssembler.assembleGLSLShaderPair({
@@ -54,7 +53,7 @@ const assembledShaders = glslShaderAssembler.assembleGLSLShaderPair({
   modules: [offsetLeftModule]
 });
 
-const wgslShaderAssembler = ShaderAssembler.getDefaultShaderAssembler('wgsl');
+const wgslShaderAssembler = new WGSLShaderAssembler();
 const assembledWGSLShader = wgslShaderAssembler.assembleWGSLShader({
   platformInfo: wgslPlatformInfo,
   source: wgslShaderSource,
@@ -96,7 +95,8 @@ Common assembly props:
 Returns the shared assembler for the explicitly requested shader language. The
 language argument is required. GLSL and WGSL use separate instances, so
 registering hooks for one language cannot overwrite or remove hooks for the
-other.
+other. This compatibility API is deprecated; construct a language-specific
+assembler and pass it explicitly to `Model` or `Computation` instead.
 
 ## Methods
 

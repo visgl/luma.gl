@@ -3,15 +3,13 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {ShaderAssembler} from '@luma.gl/shadertools';
-import {describe, expect, it, vi} from 'vitest';
+import {beforeEach, describe, expect, it, vi} from 'vitest';
 
 const testState = vi.hoisted(() => {
   // Node workers reuse modules; reload ArrowDeck after installing this file's Deck mock.
   vi.resetModules();
   return {
     device: {info: {shadingLanguage: 'wgsl'}},
-    consumeLegacyCall: true,
-    assemblerDuringInitialization: null as ShaderAssembler | null,
     finalizeCallCount: 0
   };
 });
@@ -21,15 +19,10 @@ vi.mock('@deck.gl/core', () => ({
     device = testState.device;
 
     constructor(properties: {
-      onDeviceInitialized: (device: typeof testState.device) => void;
+      onDeviceInitialized?: (device: typeof testState.device) => void;
       onLoad: () => void;
     }) {
-      properties.onDeviceInitialized(this.device);
-      if (testState.consumeLegacyCall) {
-        const getDefaultShaderAssembler =
-          ShaderAssembler.getDefaultShaderAssembler as () => ShaderAssembler;
-        testState.assemblerDuringInitialization = getDefaultShaderAssembler.call(ShaderAssembler);
-      }
+      properties.onDeviceInitialized?.(this.device);
       properties.onLoad();
     }
 
@@ -42,35 +35,54 @@ vi.mock('@deck.gl/core', () => ({
 import {ArrowDeck} from '../../examples/deck/arrow-deck';
 
 describe('ArrowDeck device initialization', () => {
-  it('scopes the legacy shader assembler shim to LayerManager construction', () => {
-    const strictGetDefaultShaderAssembler = ShaderAssembler.getDefaultShaderAssembler;
-    let userCallbackDevice: typeof testState.device | null = null;
+  beforeEach(() => {
+    testState.finalizeCallCount = 0;
+  });
 
-    new ArrowDeck({
+  it('forwards device initialization without replacing the default shader assembler', () => {
+    const getDefaultShaderAssembler = ShaderAssembler.getDefaultShaderAssembler;
+    let userCallbackDevice: typeof testState.device | null = null;
+    let finalizeCallCount = 0;
+
+    const deck = new ArrowDeck({
       onDeviceInitialized: device => {
         userCallbackDevice = device;
-        expect(ShaderAssembler.getDefaultShaderAssembler).toBe(strictGetDefaultShaderAssembler);
-      }
+      },
+      onFinalize: () => finalizeCallCount++
     });
 
     expect(userCallbackDevice).toBe(testState.device);
-    expect(testState.assemblerDuringInitialization).toBe(
-      strictGetDefaultShaderAssembler.call(ShaderAssembler, 'wgsl')
-    );
-    expect(ShaderAssembler.getDefaultShaderAssembler).toBe(strictGetDefaultShaderAssembler);
-    expect(() =>
-      (ShaderAssembler.getDefaultShaderAssembler as unknown as () => ShaderAssembler).call(
-        ShaderAssembler
-      )
-    ).toThrow();
+    expect(ShaderAssembler.getDefaultShaderAssembler).toBe(getDefaultShaderAssembler);
 
-    testState.device = {info: {shadingLanguage: 'glsl'}};
-    testState.consumeLegacyCall = false;
-    const unconsumedDeck = new ArrowDeck({});
-    expect(ShaderAssembler.getDefaultShaderAssembler).not.toBe(strictGetDefaultShaderAssembler);
-
-    unconsumedDeck.finalize();
-    expect(ShaderAssembler.getDefaultShaderAssembler).toBe(strictGetDefaultShaderAssembler);
+    deck.finalize();
+    expect(finalizeCallCount).toBe(1);
     expect(testState.finalizeCallCount).toBe(1);
+  });
+
+  it('does not unhook or re-hook the static getter across overlapping Deck lifecycles', () => {
+    const getDefaultShaderAssembler = ShaderAssembler.getDefaultShaderAssembler;
+    let initializationCallCount = 0;
+
+    const makeDeck = () =>
+      new ArrowDeck({
+        onDeviceInitialized: () => {
+          initializationCallCount++;
+          expect(ShaderAssembler.getDefaultShaderAssembler).toBe(getDefaultShaderAssembler);
+        }
+      });
+
+    const firstDeck = makeDeck();
+    expect(ShaderAssembler.getDefaultShaderAssembler).toBe(getDefaultShaderAssembler);
+
+    const secondDeck = makeDeck();
+    expect(ShaderAssembler.getDefaultShaderAssembler).toBe(getDefaultShaderAssembler);
+
+    firstDeck.finalize();
+    expect(ShaderAssembler.getDefaultShaderAssembler).toBe(getDefaultShaderAssembler);
+
+    secondDeck.finalize();
+    expect(ShaderAssembler.getDefaultShaderAssembler).toBe(getDefaultShaderAssembler);
+    expect(initializationCallCount).toBe(2);
+    expect(testState.finalizeCallCount).toBe(2);
   });
 });
