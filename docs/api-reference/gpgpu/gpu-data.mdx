@@ -118,6 +118,9 @@ order, offsets, formats, row stride, and optional `stepMode`.
 | `byteOffset` | `number` | `0` | Byte offset of the first logical row in this chunk's buffer. Most adapters use `0` because chunks own their uploaded buffers. |
 | `byteStride` | `number` | Derived from `format` | Bytes between adjacent fixed rows or flattened elements. |
 | `rowByteLength` | `number` | Derived from `format` | Bytes occupied by one fixed row or flattened element payload. |
+| `valueOffsets` | `Int32Array` | `undefined` | Chunk-local row boundaries for `vertex-list<...>` and `value-list<...>` data. |
+| `nullBitmap` | `Uint8Array` | `undefined` | Optional row-validity bitmap normalized to this chunk. |
+| `valueByteLength` | `number` | `undefined` | Number of uploaded value bytes referenced by this chunk. |
 | `ownsBuffer` | `boolean` | `false` | Whether `destroy()` releases the backing buffer. |
 | `readbackMetadata` | `unknown` | `undefined` | Producer-owned metadata retained for adapter-level readback. |
 | `dataType` | `unknown` | `undefined` | Deprecated adapter-owned logical metadata retained during migration. |
@@ -136,8 +139,70 @@ order, offsets, formats, row stride, and optional `stepMode`.
 | `byteOffset` | `number` | Byte offset of the first logical row. |
 | `byteStride` | `number` | Bytes between adjacent fixed rows or flattened elements. |
 | `rowByteLength` | `number` | Bytes occupied by one fixed row or flattened element payload. |
+| `valueOffsets` | `Int32Array \| undefined` | Chunk-local row boundaries for variable-length data. |
+| `nullBitmap` | `Uint8Array \| undefined` | Optional row-validity bitmap normalized to this chunk. |
+| `valueByteLength` | `number \| undefined` | Number of uploaded value bytes referenced by this chunk. |
 | `readbackMetadata` | `unknown` | Optional producer-owned metadata. |
 | `ownsBuffer` | `boolean` | Whether this data range currently owns its backing buffer. |
+
+## Variable-Length and Segmented Data
+
+`vertex-list<format>` and `value-list<format>` store variable-length logical
+rows in one flat value buffer. `GPUData` keeps the two lengths separate:
+
+- `length` is the number of logical rows or segments.
+- `valueLength` is the number of flattened elements in the buffer.
+- `byteStride` and `rowByteLength` describe one flattened element.
+- `byteOffset` locates the first flattened element referenced by the chunk.
+
+`valueOffsets` maps each logical row to a half-open range of flattened elements.
+For a chunk with `length` rows, the offsets must satisfy this contract:
+
+- `valueOffsets.length === length + 1`.
+- The first offset is `0` and the final offset equals `valueLength`.
+- Offsets are non-decreasing.
+- Repeated offsets represent empty rows.
+
+Offsets are local to one `GPUData` chunk. When a `GPUVector` preserves several
+source batches, every chunk starts its own offsets at zero; the vector does not
+concatenate, rebase, or repack them.
+
+```ts
+import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+
+const firstBatch = new GPUData({
+  buffer: firstBatchBuffer,
+  format: 'vertex-list<float32x2>',
+  length: 3,
+  valueLength: 3,
+  byteStride: 8,
+  valueOffsets: new Int32Array([0, 2, 2, 3]) // Empty second row.
+});
+
+const secondBatch = new GPUData({
+  buffer: secondBatchBuffer,
+  format: 'vertex-list<float32x2>',
+  length: 2,
+  valueLength: 4,
+  byteStride: 8,
+  valueOffsets: new Int32Array([0, 1, 4]) // Restarts at zero.
+});
+
+const paths = new GPUVector({
+  type: 'data',
+  name: 'paths',
+  format: 'vertex-list<float32x2>',
+  data: [firstBatch, secondBatch]
+});
+
+paths.length; // 5 logical rows.
+paths.valueLength; // 7 flattened float32x2 elements.
+```
+
+`valueOffsets`, `nullBitmap`, and `valueByteLength` are explicit chunk metadata
+used by core segmented consumers. `readbackMetadata` remains producer-specific
+metadata for reconstructing a source representation and should not be required
+to discover the core segmentation topology.
 
 Fixed-size storage lists preserve table rows independently from flattened scalar
 coordinates:
