@@ -104,8 +104,8 @@
     "@luma.gl/core": "~9.4.0-alpha.1",
     "@luma.gl/engine": "~9.4.0-alpha.1",
     "@luma.gl/shadertools": "~9.4.0-alpha.1",
-    "@math.gl/crs": "~5.0.0-alpha.5",
-    "@math.gl/proj4": "~5.0.0-alpha.5"
+    "@math.gl/crs": "~5.0.0-alpha.9",
+    "@math.gl/proj4": "~5.0.0-alpha.9"
   },
   "peerDependenciesMeta": {
     "@math.gl/crs": {
@@ -116,11 +116,11 @@
     }
   },
   "dependencies": {
-    "@loaders.gl/core": "~5.0.0-alpha.5",
-    "@loaders.gl/sql": "~5.0.0-alpha.5",
+    "@loaders.gl/core": "~5.0.0-alpha.7",
+    "@loaders.gl/sql": "~5.0.0-alpha.7",
     "@luma.gl/gpgpu": "9.4.0-alpha.4",
-    "@math.gl/core": "^4.1.0",
-    "@math.gl/types": "^4.1.0"
+    "@math.gl/core": "patch:@math.gl/core@npm%3A5.0.0-alpha.9#~/.yarn/patches/@math.gl-core-npm-5.0.0-alpha.9-2f20ecccc4.patch",
+    "@math.gl/types": "~5.0.0-alpha.9"
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
 }

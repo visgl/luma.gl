@@ -66,7 +66,7 @@ describe('optional GPU Graph deck.gl integration package isolation', () => {
     ) as {private?: boolean; dependencies?: Record<string, string>};
 
     expect(packageJson.private).toBe(true);
-    expect(packageJson.dependencies?.['@deck.gl/core']).toBe('9.3.4');
+    expect(packageJson.dependencies?.['@deck.gl/core']).toContain('9.4.0');
     expect(packageJson.dependencies?.['@luma.gl/experimental']).toBe('9.4.0-alpha.4');
     expect(packageJson.dependencies?.['@luma.gl/gpgpu']).toBe('9.4.0-alpha.4');
     expect(packageJson.dependencies?.['@luma.gl/tables']).toBeUndefined();
