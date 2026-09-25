@@ -78,10 +78,11 @@ it('Buffer#constructor offset and size', async () => {
   const data = new Float32Array([1, 2, 3]);
 
   for (const device of await getTestDevices(DEVICE_TYPES)) {
-    if (device.type === 'webgpu') {
-      continue;
-    }
-    let buffer = device.createBuffer({data, byteOffset: 8});
+    let buffer = device.createBuffer({
+      data,
+      byteOffset: 8,
+      usage: Buffer.COPY_SRC | Buffer.COPY_DST
+    });
     let expectedData = new Float32Array([0, 0, 1, 2, 3]);
     expect(buffer.byteLength, `${device.type} Buffer byteLength set properly`).toBe(
       expectedData.byteLength
@@ -94,7 +95,11 @@ it('Buffer#constructor offset and size', async () => {
     ).toEqual(expectedData);
     buffer.destroy();
 
-    buffer = device.createBuffer({data, byteLength: data.byteLength + 12});
+    buffer = device.createBuffer({
+      data,
+      byteLength: data.byteLength + 12,
+      usage: Buffer.COPY_SRC | Buffer.COPY_DST
+    });
     expectedData = new Float32Array([1, 2, 3, 0, 0, 0]);
     expect(buffer.byteLength, `${device.type} Buffer byteLength set properly`).toBe(
       expectedData.byteLength
@@ -107,7 +112,12 @@ it('Buffer#constructor offset and size', async () => {
     ).toEqual(expectedData);
     buffer.destroy();
 
-    buffer = device.createBuffer({data, byteOffset: 8, byteLength: data.byteLength + 12});
+    buffer = device.createBuffer({
+      data,
+      byteOffset: 8,
+      byteLength: data.byteLength + 12,
+      usage: Buffer.COPY_SRC | Buffer.COPY_DST
+    });
     expectedData = new Float32Array([0, 0, 1, 2, 3, 0]);
     expect(buffer.byteLength, `${device.type} Buffer byteLength set properly`).toBe(
       expectedData.byteLength

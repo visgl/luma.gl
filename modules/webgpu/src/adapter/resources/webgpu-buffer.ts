@@ -21,7 +21,8 @@ export class WebGPUBuffer extends Buffer {
     super(device, props);
     this.device = device;
 
-    this.byteLength = props.byteLength || props.data?.byteLength || 0;
+    const dataByteOffset = props.byteOffset ?? 0;
+    this.byteLength = props.byteLength ?? (props.data ? props.data.byteLength + dataByteOffset : 0);
     this.paddedByteLength = Math.ceil(this.byteLength / 4) * 4;
     const mappedAtCreation = Boolean(this.props.onMapped || props.data);
 
@@ -54,9 +55,10 @@ export class WebGPUBuffer extends Buffer {
       try {
         const arrayBuffer = this.handle.getMappedRange();
         if (props.data) {
-          const typedArray = props.data;
-          // @ts-expect-error
-          new typedArray.constructor(arrayBuffer).set(typedArray);
+          const sourceData = ArrayBuffer.isView(props.data)
+            ? new Uint8Array(props.data.buffer, props.data.byteOffset, props.data.byteLength)
+            : new Uint8Array(props.data);
+          new Uint8Array(arrayBuffer, dataByteOffset, sourceData.byteLength).set(sourceData);
         } else {
           props.onMapped?.(arrayBuffer, 'mapped');
         }

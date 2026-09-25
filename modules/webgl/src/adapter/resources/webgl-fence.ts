@@ -14,7 +14,7 @@ export class WEBGLFence extends Fence {
   private _signaled = false;
 
   constructor(device: WebGLDevice, props: FenceProps = {}) {
-    super(device, {});
+    super(device, props);
     this.device = device;
     this.gl = device.gl;
 
@@ -48,8 +48,14 @@ export class WEBGLFence extends Fence {
   }
 
   destroy(): void {
-    if (!this.destroyed) {
+    if (this.destroyed) {
+      return;
+    }
+    if (this.handle && this.ownsHandle) {
       this.gl.deleteSync(this.handle);
     }
+    this.destroyResource();
+    // @ts-expect-error destroyed resources release their native handle
+    this.handle = null;
   }
 }
