@@ -1,6 +1,6 @@
 {
   "name": "@deck.gl-community/gpu-layers",
-  "version": "9.4.0-alpha.4",
+  "version": "9.4.0-alpha.5",
   "private": true,
   "description": "deck.gl layers using the WebGPU-only GPU compute graph",
   "license": "MIT",
@@ -32,9 +32,9 @@
   "sideEffects": false,
   "dependencies": {
     "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch",
-    "@luma.gl/core": "9.4.0-alpha.4",
-    "@luma.gl/engine": "9.4.0-alpha.4",
-    "@luma.gl/experimental": "9.4.0-alpha.4",
-    "@luma.gl/shadertools": "9.4.0-alpha.4"
+    "@luma.gl/core": "9.4.0-alpha.5",
+    "@luma.gl/engine": "9.4.0-alpha.5",
+    "@luma.gl/experimental": "9.4.0-alpha.5",
+    "@luma.gl/shadertools": "9.4.0-alpha.5"
   }
 }
