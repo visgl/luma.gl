@@ -64,9 +64,14 @@ export function installLegacyDeckShaderAssemblerCompatibility(device: Device): (
         ? original.call(ShaderAssembler, 'wgsl')
         : original.call(ShaderAssembler, 'glsl');
     }
-    return shaderLanguage === 'wgsl'
-      ? original.call(ShaderAssembler, 'wgsl')
-      : original.call(ShaderAssembler, 'glsl');
+    const shaderAssembler =
+      shaderLanguage === 'wgsl'
+        ? original.call(ShaderAssembler, 'wgsl')
+        : original.call(ShaderAssembler, 'glsl');
+    // deck.gl 9.4 passes its language explicitly, so the compatibility hook can be removed
+    // immediately after the first bridged call instead of waiting for a legacy no-argument call.
+    restore();
+    return shaderAssembler;
   }
 
   ShaderAssembler.getDefaultShaderAssembler = getLegacyDeckShaderAssembler;
