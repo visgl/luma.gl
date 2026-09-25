@@ -344,11 +344,6 @@ export class WEBGLRenderPass extends RenderPass {
    */
   protected clearColorBuffer(drawBuffer: number = 0, value: NumericArray = [0, 0, 0, 0]) {
     withGLParameters(this.device.gl, {framebuffer: this.props.framebuffer}, () => {
-      if (value.constructor.name === 'Float16Array') {
-        this.device.gl.clearBufferfv(GL.COLOR, drawBuffer, new Float32Array(value));
-        return;
-      }
-
       // Method selection per OpenGL ES 3 docs
       switch (value.constructor) {
         case Int8Array:
@@ -363,10 +358,11 @@ export class WEBGLRenderPass extends RenderPass {
           this.device.gl.clearBufferuiv(GL.COLOR, drawBuffer, value);
           break;
         case Float32Array:
-          this.device.gl.clearBufferfv(GL.COLOR, drawBuffer, value);
+        case Float16Array:
+          this.device.gl.clearBufferfv(GL.COLOR, drawBuffer, value as Float32Array);
           break;
         default:
-          throw new Error('clearColorBuffer: color must be typed array');
+          throw new Error('invalid color');
       }
     });
   }

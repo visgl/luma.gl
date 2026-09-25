@@ -31,7 +31,7 @@
   ],
   "sideEffects": false,
   "dependencies": {
-    "@deck.gl/core": "9.3.4",
+    "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch",
     "@luma.gl/core": "9.4.0-alpha.4",
     "@luma.gl/engine": "9.4.0-alpha.4",
     "@luma.gl/experimental": "9.4.0-alpha.4",

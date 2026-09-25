@@ -11,7 +11,7 @@
   "dependencies": {
     "@deck.gl-community/arrow-layers": "workspace:*",
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e",
-    "@deck.gl/core": "9.3.4",
+    "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch",
     "@luma.gl/arrow": "9.4.0-alpha.4",
     "@luma.gl/core": "9.4.0-alpha.4",
     "@luma.gl/webgl": "9.4.0-alpha.4",
