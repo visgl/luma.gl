@@ -344,6 +344,11 @@ export class WEBGLRenderPass extends RenderPass {
    */
   protected clearColorBuffer(drawBuffer: number = 0, value: NumericArray = [0, 0, 0, 0]) {
     withGLParameters(this.device.gl, {framebuffer: this.props.framebuffer}, () => {
+      if (value.constructor.name === 'Float16Array') {
+        this.device.gl.clearBufferfv(GL.COLOR, drawBuffer, new Float32Array(value));
+        return;
+      }
+
       // Method selection per OpenGL ES 3 docs
       switch (value.constructor) {
         case Int8Array:
