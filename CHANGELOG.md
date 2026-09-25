@@ -2,6 +2,8 @@
 
 ## v9.4
 
+### v9.4.0-alpha.5
+
 ### v9.4.0-alpha.4
 
 - fix(gpgpu): remove circular reference (#2869)
