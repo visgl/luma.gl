@@ -13,7 +13,7 @@ index f422729d30d771241da5f3a430fa38c88d3ca9b7..0669bf3f192dc90a402e4ea9f5e079eb
  __export(index_exports, {
    Euler: () => Euler,
    Matrix3: () => Matrix3,
-@@ -43,11 +47,15 @@ __export(index_exports, {
+@@ -43,11 +47,16 @@ __export(index_exports, {
    formatValue: () => formatValue,
    isArray: () => isArray,
    lerp: () => lerp,
@@ -26,6 +26,7 @@ index f422729d30d771241da5f3a430fa38c88d3ca9b7..0669bf3f192dc90a402e4ea9f5e079eb
 +  vec2: () => vec2,
 +  vec3: () => vec3,
 +  vec4: () => vec4,
++  _SphericalCoordinates: () => SphericalCoordinates,
    withEpsilon: () => withEpsilon
  });
  module.exports = __toCommonJS(index_exports);
@@ -33,7 +34,7 @@ diff --git a/dist/index.d.ts b/dist/index.d.ts
 index e927fae42d847731dc1e7ad5f6acc9e2a92b6c95..8e2984727a030e6017e8ec3a391d8bd5bb87c7b8 100644
 --- a/dist/index.d.ts
 +++ b/dist/index.d.ts
-@@ -21,4 +21,8 @@ export type { EulerLike, EulerRotationOrder } from "./classes/euler-types.js";
+@@ -21,4 +21,9 @@ export type { EulerLike, EulerRotationOrder } from "./classes/euler-types.js";
  export * as _MathUtils from "./lib/math-utils.js";
  export { assert } from "./lib/assert.js";
  export { config, configure, safeMod, normalizeAngle, formatValue, isArray, clone, equals, exactEquals, toRadians, toDegrees, radians, degrees, clamp, lerp, withEpsilon } from "./lib/common.js";
@@ -41,12 +42,13 @@ index e927fae42d847731dc1e7ad5f6acc9e2a92b6c95..8e2984727a030e6017e8ec3a391d8bd5
 +export * as vec2 from "./gl-matrix/vec2.js";
 +export * as vec3 from "./gl-matrix/vec3.js";
 +export * as vec4 from "./gl-matrix/vec4.js";
++export {SphericalCoordinates as _SphericalCoordinates} from "./classes/spherical-coordinates.js";
  //# sourceMappingURL=index.d.ts.map
 diff --git a/dist/index.js b/dist/index.js
 index 59fef81cdf7273e048ff3a1ab21e10f15b5b168a..cee4045e97a439711f39e0cc01548321fe72122b 100644
 --- a/dist/index.js
 +++ b/dist/index.js
-@@ -23,4 +23,9 @@ export {
+@@ -23,4 +23,10 @@ export {
  config, configure, safeMod, normalizeAngle, formatValue, isArray, clone, equals, exactEquals, toRadians, toDegrees, 
  // math.gl "GLSL"-style functions
  radians, degrees, clamp, lerp, withEpsilon } from "./lib/common.js";
@@ -55,4 +57,5 @@ index 59fef81cdf7273e048ff3a1ab21e10f15b5b168a..cee4045e97a439711f39e0cc01548321
 +import * as vec3 from "./gl-matrix/vec3.js";
 +import * as vec4 from "./gl-matrix/vec4.js";
 +export {mat4, vec2, vec3, vec4};
++export {SphericalCoordinates as _SphericalCoordinates} from "./classes/spherical-coordinates.js";
  //# sourceMappingURL=index.js.map
