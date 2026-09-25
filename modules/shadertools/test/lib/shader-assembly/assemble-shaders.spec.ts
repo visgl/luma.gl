@@ -796,6 +796,59 @@ it('assembleGLSLShaderPair#shaderhooks', async () => {
   void 0;
 });
 
+it('assembleGLSLShaderPair rejects unknown application hook injections', () => {
+  expect(() =>
+    assembleGLSLShaderPair({
+      platformInfo: STATIC_PLATFORM_INFO,
+      vs: VS_GLSL_300,
+      fs: FS_GLSL_300,
+      hookFunctions: [
+        'vs:KNOWN_VERTEX_HOOK(inout vec4 position)',
+        'fs:KNOWN_FRAGMENT_HOOK(inout vec4 color)'
+      ],
+      inject: {
+        'vs:KNOWN_VERTEX_HOOK_TYPO': 'position.x += 1.0;'
+      }
+    })
+  ).toThrow(
+    'Unknown shader hook "vs:KNOWN_VERTEX_HOOK_TYPO". Valid shader hooks: ' +
+      '"fs:KNOWN_FRAGMENT_HOOK", "vs:KNOWN_VERTEX_HOOK".'
+  );
+  void 0;
+});
+
+it('assembleGLSLShaderPair rejects unknown plugin hooks and reports an empty registry', () => {
+  expect(() =>
+    assembleGLSLShaderPair({
+      platformInfo: STATIC_PLATFORM_INFO,
+      vs: VS_GLSL_300,
+      fs: FS_GLSL_300,
+      pluginInjections: {
+        'fs:UNDECLARED_PLUGIN_HOOK': [{injection: 'color.r = 1.0;', order: 0}]
+      }
+    })
+  ).toThrow('Unknown shader hook "fs:UNDECLARED_PLUGIN_HOOK". Valid shader hooks: (none).');
+  void 0;
+});
+
+it('assembleGLSLShaderPair does not validate anchors or source-pattern injections as hooks', () => {
+  const assembled = assembleGLSLShaderPair({
+    platformInfo: STATIC_PLATFORM_INFO,
+    vs: VS_GLSL_300,
+    fs: FS_GLSL_300,
+    inject: {
+      'vs:#decl': 'uniform float declaredValue;',
+      'fs:#main-start': 'float fragmentStart = 1.0;',
+      'fragmentColor = vec4(1.0, 1.0, 1.0, 1.0);': 'fragmentColor.r = 0.5;'
+    }
+  });
+
+  expect(assembled.vs).toContain('uniform float declaredValue;');
+  expect(assembled.fs).toContain('float fragmentStart = 1.0;');
+  expect(assembled.fs).toContain('fragmentColor.r = 0.5;');
+  void 0;
+});
+
 it('WGSLShaderAssembler#assembleWGSLShader supports hooks and named injections', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   shaderAssembler.addShaderHook('vs:OFFSET_POSITION(position: ptr<function, vec4<f32>>)');
@@ -872,6 +925,111 @@ fn fragmentMain() -> @location(0) vec4<f32> {
     Boolean(assembledShader.source.includes('void OFFSET_POSITION')),
     'WGSL hook functions do not use GLSL declarations'
   ).toBe(false);
+  void 0;
+});
+
+it('WGSLShaderAssembler rejects unknown module hook injections', () => {
+  const shaderAssembler = new WGSLShaderAssembler();
+  shaderAssembler.addShaderHook('vs:KNOWN_VERTEX_HOOK(position: ptr<function, vec4<f32>>)');
+  shaderAssembler.addShaderHook('fs:KNOWN_FRAGMENT_HOOK(color: ptr<function, vec4<f32>>)');
+
+  expect(() =>
+    shaderAssembler.assembleWGSLShader({
+      platformInfo: {
+        type: 'webgpu',
+        gpu: 'test-gpu',
+        shaderLanguage: 'wgsl',
+        shaderLanguageVersion: 300,
+        features: new Set()
+      },
+      source: /* wgsl */ `\
+@vertex
+fn vertexMain() -> @builtin(position) vec4<f32> {
+  return vec4<f32>(0.0);
+}
+
+@fragment
+fn fragmentMain() -> @location(0) vec4<f32> {
+  return vec4<f32>(1.0);
+}
+`,
+      modules: [
+        {
+          name: 'misspelled-hook-injection',
+          inject: {
+            'fs:KNOWN_FRAGMENT_HOOK_TYPO': '(*color).r = 0.25;'
+          }
+        }
+      ]
+    })
+  ).toThrow(
+    'Unknown shader hook "fs:KNOWN_FRAGMENT_HOOK_TYPO". Valid shader hooks: ' +
+      '"fs:KNOWN_FRAGMENT_HOOK", "vs:KNOWN_VERTEX_HOOK".'
+  );
+  void 0;
+});
+
+it('WGSLShaderAssembler ignores inactive module hook injections', () => {
+  const shaderAssembler = new WGSLShaderAssembler();
+
+  const assembledShader = shaderAssembler.assembleWGSLShader({
+    platformInfo: {
+      type: 'webgpu',
+      gpu: 'test-gpu',
+      shaderLanguage: 'wgsl',
+      shaderLanguageVersion: 300,
+      features: new Set()
+    },
+    source: /* wgsl */ `\
+@vertex
+fn vertexMain() -> @builtin(position) vec4<f32> {
+  return vec4<f32>(0.0);
+}
+
+@fragment
+fn fragmentMain() -> @location(0) vec4<f32> {
+  return vec4<f32>(1.0);
+}
+`,
+    modules: [
+      {
+        name: 'legacy-language-specific-injections',
+        inject: {
+          'vs:LEGACY_VERTEX_HOOK': 'position.x += 1.0;',
+          'fs:LEGACY_FRAGMENT_HOOK': 'color.r = 0.25;'
+        }
+      }
+    ]
+  });
+
+  expect(assembledShader.source).not.toContain('position.x += 1.0;');
+  expect(assembledShader.source).not.toContain('color.r = 0.25;');
+  void 0;
+});
+
+it('WGSLShaderAssembler rejects explicit hook injections when the registry is empty', () => {
+  const shaderAssembler = new WGSLShaderAssembler();
+
+  expect(() =>
+    shaderAssembler.assembleWGSLShader({
+      platformInfo: {
+        type: 'webgpu',
+        gpu: 'test-gpu',
+        shaderLanguage: 'wgsl',
+        shaderLanguageVersion: 300,
+        features: new Set()
+      },
+      source: /* wgsl */ `\
+@vertex
+fn vertexMain() -> @builtin(position) vec4<f32> {
+  return vec4<f32>(0.0);
+}
+`,
+      inject: {
+        'vs:MISSING_APPLICATION_HOOK': 'position.x += 1.0;'
+      }
+    })
+  ).toThrow('Unknown shader hook "vs:MISSING_APPLICATION_HOOK". Valid shader hooks: (none).');
   void 0;
 });
 

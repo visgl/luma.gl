@@ -215,6 +215,23 @@ it('ShaderAssembler#hooks', () => {
   void 0;
 });
 
+it('ShaderAssembler#hooks preserves last-registration-wins behavior', () => {
+  const shaderAssembler = new GLSLShaderAssembler();
+  shaderAssembler.addShaderHook('vs:REPLACED_HOOK(inout vec4 position)', {
+    header: 'position.x = 1.0;\n'
+  });
+  shaderAssembler.addShaderHook('vs:REPLACED_HOOK(inout vec4 position)', {
+    header: 'position.x = 2.0;\n'
+  });
+
+  const assembled = shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs});
+
+  expect(assembled.vs).not.toContain('position.x = 1.0;');
+  expect(assembled.vs).toContain('position.x = 2.0;');
+  expect(assembled.vs.match(/void REPLACED_HOOK/g)).toHaveLength(1);
+  void 0;
+});
+
 it('ShaderAssembler#defaultModules', () => {
   const shaderAssembler = new GLSLShaderAssembler();
 

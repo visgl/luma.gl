@@ -14,7 +14,12 @@ import {
 } from '../shader-module/shader-module-uniform-layout';
 import type {ShaderInjection} from './shader-injections';
 import type {ShaderModule} from '../shader-module/shader-module';
-import {ShaderHook, normalizeShaderHooks, getShaderHooks} from './shader-hooks';
+import {
+  normalizeShaderHooks,
+  getShaderHooks,
+  validateShaderHookInjections,
+  type ShaderHookInput
+} from './shader-hooks';
 import {assert} from '../utils/assert';
 import {getShaderInfo} from '../glsl-utils/get-shader-info';
 import {getShaderBindingDebugRowsFromWGSL, type ShaderBindingDebugRow} from './wgsl-binding-debug';
@@ -82,7 +87,7 @@ export type AssembleShaderOptions = {
   /** GLSL only: Overrides to be injected. In WGSL these are supplied during Pipeline creation time */
   constants?: Record<string, number>;
   /** Hook functions */
-  hookFunctions?: (ShaderHook | string)[];
+  hookFunctions?: ShaderHookInput;
   /** Code injections */
   inject?: Record<string, string | ShaderInjection>;
   /** Ordered code injections contributed by ShaderPlugin descriptors. */
@@ -116,7 +121,7 @@ type AssembleStageOptions = {
   /** GLSL only: Overrides to be injected. In WGSL these are supplied during Pipeline creation time */
   constants?: Record<string, number>;
   /** Hook functions */
-  hookFunctions?: (ShaderHook | string)[];
+  hookFunctions?: ShaderHookInput;
   /** Code injections */
   inject?: Record<string, string | ShaderInjection>;
   /** Ordered code injections contributed by ShaderPlugin descriptors. */
@@ -136,8 +141,6 @@ type AssembleStageOptions = {
   /** @internal Stable per-assembler WGSL binding assignments. */
   _bindingRegistry?: Map<string, number>;
 };
-
-export type HookFunction = {hook: string; header: string; footer: string; signature?: string};
 
 /**
  * getUniforms function returned from the shader module system
@@ -377,12 +380,14 @@ export function assembleShaderWGSL(
         const injectionType = name === 'decl' ? declInjections : mainInjections;
         injectionType[key] = injectionType[key] || [];
         injectionType[key].push(injections[key]);
-      } else {
+      } else if (hasRegisteredWGSLShaderHooksForStage(hookFunctionMap, key)) {
         hookInjections[key] = hookInjections[key] || [];
         hookInjections[key].push(injections[key]);
       }
     }
   }
+
+  validateShaderHookInjections(hookFunctionMap, hookInjections);
 
   // For injectShader
   assembledSource += INJECT_SHADER_DECLARATIONS;
@@ -429,7 +434,7 @@ function assembleShaderGLSL(
     stage: 'vertex' | 'fragment';
     modules: ShaderModule[];
     defines?: Record<string, boolean | number>;
-    hookFunctions?: (ShaderHook | string)[];
+    hookFunctions?: ShaderHookInput;
     inject?: Record<string, string | ShaderInjection>;
     pluginInjections?: Record<string, ShaderInjection[]>;
     pluginVertexInputs?: Record<string, AttributeShaderType>;
@@ -579,6 +584,8 @@ ${getApplicationDefines(allDefines)}
     }
   }
 
+  validateShaderHookInjections(hookFunctionMap, hookInjections, stage);
+
   assembledSource += '// ----- MAIN SHADER SOURCE -------------------------';
 
   // For injectShader
@@ -710,6 +717,18 @@ function getWGSLModuleInjections(module: ShaderModule): Record<string, ShaderInj
     ...(module.instance?.normalizedInjections.vertex || {}),
     ...(module.instance?.normalizedInjections.fragment || {})
   };
+}
+
+/**
+ * Shader module injections are not language-specific, so WGSL modules may still expose legacy
+ * GLSL hook injections. If WGSL declares no hooks for that stage, those injections are inactive.
+ */
+function hasRegisteredWGSLShaderHooksForStage(
+  hookFunctionMap: ReturnType<typeof normalizeShaderHooks>,
+  hookName: string
+): boolean {
+  const stageHooks = hookName.startsWith('vs:') ? hookFunctionMap.vertex : hookFunctionMap.fragment;
+  return Object.keys(stageHooks).length > 0;
 }
 
 function getWGSLDeclarationInjections(
@@ -1259,63 +1278,3 @@ function isInApplicationWGSLSection(source: string, index: number): boolean {
 function formatWGSLSourceSnippet(source: string): string {
   return source.replace(/\s+/g, ' ').trim();
 }
-
-/*
-function getHookFunctions(
-  hookFunctions: Record<string, HookFunction>,
-  hookInjections: Record<string, Injection[]>
-): string {
-  let result = '';
-  for (const hookName in hookFunctions) {
-    const hookFunction = hookFunctions[hookName];
-    result += `void ${hookFunction.signature} {\n`;
-    if (hookFunction.header) {
-      result += `  ${hookFunction.header}`;
-    }
-    if (hookInjections[hookName]) {
-      const injections = hookInjections[hookName];
-      injections.sort((a: {order: number}, b: {order: number}): number => a.order - b.order);
-      for (const injection of injections) {
-        result += `  ${injection.injection}\n`;
-      }
-    }
-    if (hookFunction.footer) {
-      result += `  ${hookFunction.footer}`;
-    }
-    result += '}\n';
-  }
-
-  return result;
-}
-
-function normalizeHookFunctions(hookFunctions: (string | HookFunction)[]): {
-  vs: Record<string, HookFunction>;
-  fs: Record<string, HookFunction>;
-} {
-  const result: {vs: Record<string, any>; fs: Record<string, any>} = {
-    vs: {},
-    fs: {}
-  };
-
-  hookFunctions.forEach((hookFunction: string | HookFunction) => {
-    let opts: HookFunction;
-    let hook: string;
-    if (typeof hookFunction !== 'string') {
-      opts = hookFunction;
-      hook = opts.hook;
-    } else {
-      opts = {} as HookFunction;
-      hook = hookFunction;
-    }
-    hook = hook.trim();
-    const [stage, signature] = hook.split(':');
-    const name = hook.replace(/\(.+/, '');
-    if (stage !== 'vs' && stage !== 'fs') {
-      throw new Error(stage);
-    }
-    result[stage][name] = Object.assign(opts, {signature});
-  });
-
-  return result;
-}
-*/
