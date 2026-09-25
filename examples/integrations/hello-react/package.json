@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-hello-react",
-  "version": "9.4.0-alpha.5",
+  "version": "10.0.0-alpha.2",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -8,10 +8,10 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/core": "9.4.0-alpha.5",
-    "@luma.gl/engine": "9.4.0-alpha.5",
-    "@luma.gl/shadertools": "9.4.0-alpha.5",
-    "@luma.gl/webgl": "9.4.0-alpha.5",
+    "@luma.gl/core": "10.0.0-alpha.2",
+    "@luma.gl/engine": "10.0.0-alpha.2",
+    "@luma.gl/shadertools": "10.0.0-alpha.2",
+    "@luma.gl/webgl": "10.0.0-alpha.2",
     "@math.gl/core": "patch:@math.gl/core@npm%3A5.0.0-alpha.9#~/.yarn/patches/@math.gl-core-npm-5.0.0-alpha.9-2f20ecccc4.patch",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
