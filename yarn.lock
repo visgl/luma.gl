@@ -2750,7 +2750,7 @@ __metadata:
 
 "@deck.gl/core@patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch":
   version: 9.4.0
-  resolution: "@deck.gl/core@patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch::version=9.4.0&hash=05d192"
+  resolution: "@deck.gl/core@patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch::version=9.4.0&hash=446a24"
   dependencies:
     "@loaders.gl/core": "npm:^4.4.3"
     "@loaders.gl/images": "npm:^4.4.3"
@@ -2769,7 +2769,7 @@ __metadata:
     "@types/offscreencanvas": "npm:^2019.6.4"
     gl-matrix: "npm:^3.0.0"
     mjolnir.js: "npm:^3.1.1"
-  checksum: 10c0/8fab7fc00c4064479dc1f77a29d65d7b711b30abf2353a48e5fb7540580f5543b12e4d69f769c57bf3c0fa785fb8047072864d263fb5babe2805c1487812e367
+  checksum: 10c0/555bbf85609472088b97a560592ced97c392befa4ac1aae181b47a45ce86b157b1f8c1e5c06298803d97864e95d787d52289b44e29d62907196d0c8f5ed3c051
   languageName: node
   linkType: hard
 
@@ -15446,6 +15446,23 @@ __metadata:
     "@luma.gl/webgl": "npm:10.0.0-alpha.2"
     "@luma.gl/webgpu": "npm:10.0.0-alpha.2"
     apache-arrow: "npm:^17.0.0"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-deck-city-scene@workspace:examples/deck/city-scene":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-deck-city-scene@workspace:examples/deck/city-scene"
+  dependencies:
+    "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
+    "@luma.gl/core": "npm:10.0.0-alpha.2"
+    "@luma.gl/engine": "npm:10.0.0-alpha.2"
+    "@luma.gl/shadertools": "npm:10.0.0-alpha.2"
+    "@luma.gl/webgl": "npm:10.0.0-alpha.2"
+    "@luma.gl/webgpu": "npm:10.0.0-alpha.2"
+    playwright: "npm:^1.58.0"
+    pngjs: "npm:^7.0.0"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.0.0"
   languageName: unknown

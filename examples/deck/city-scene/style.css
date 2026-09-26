@@ -1,0 +1,19 @@
+/* luma.gl
+ * SPDX-License-Identifier: MIT
+ * SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+ */
+:root { color-scheme: dark; font: 14px/1.5 system-ui, sans-serif; color: #e7ece9; background: #11181f; }
+body { margin: 0; }
+#city { position: absolute; inset: 0; }
+aside { position: absolute; top: 24px; left: 24px; width: 240px; padding: 24px; background: #101c25ee; border: 1px solid #b7cec329; border-radius: 16px; box-shadow: 0 16px 60px #0004; }
+h1 { margin: 4px 0 8px; font-size: 29px; font-weight: 550; letter-spacing: -1px; }
+p { color: #a5b8bd; }
+.eyebrow { margin: 0; color: #86cbbd; text-transform: uppercase; font-size: 10px; letter-spacing: 2px; }
+label { display: flex; align-items: center; justify-content: space-between; margin: 16px 0; }
+select { padding: 7px 8px; background: #20303a; color: inherit; border: 1px solid #40525b; border-radius: 5px; }
+.toggle { justify-content: flex-start; gap: 8px; }
+input { accent-color: #86cbbd; }
+output { display: block; font-size: 12px; margin-top: 14px; }
+#selection { padding-top: 14px; border-top: 1px solid #ffffff20; color: #e6c995; }
+.hint { font-size: 11px; margin-bottom: 0; }
+@media (max-width: 600px) { aside { top: 12px; left: 12px; width: 185px; padding: 16px; } h1 { font-size: 24px; } }

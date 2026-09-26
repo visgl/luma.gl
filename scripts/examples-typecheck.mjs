@@ -8,6 +8,7 @@ const repoRoot = fileURLToPath(new URL('..', import.meta.url));
 const examplesRoot = join(repoRoot, 'examples');
 const tscPath = join(repoRoot, 'node_modules', '.bin', 'tsc');
 const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
+  'deck/city-scene',
   'api/blending',
   'api/multi-canvas',
   'api/render-bundles',
@@ -64,6 +65,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
 
 const PACKAGE_FREE_EXAMPLE_WORKSPACES = new Set(['showcase/raster-lab']);
 const NATIVE_TYPESCRIPT_CONFIG_WORKSPACES = new Set([
+  'deck/city-scene',
   'api/multi-canvas',
   'experimental/fp64',
   'showcase/scene',

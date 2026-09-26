@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- luma-example-support -->
+    <meta name="luma-example-id" content="deck/city-scene" />
+    <meta name="luma-example-backends" content="webgpu,webgl2" />
+    <meta name="luma-example-mobile" content="full" />
+    <meta name="luma-example-mobile-profile" content="standard" />
+    <script type="module" data-luma-example-support-bootstrap>
+      import {installStandaloneExampleSupport} from '../../example-support.ts';
+      const exampleSupport = await installStandaloneExampleSupport();
+      if (!exampleSupport.supported) {
+        document.querySelectorAll('script[type="module"]:not([data-luma-example-support-bootstrap])').forEach(script => script.remove());
+      }
+    </script>
+    <!-- /luma-example-support -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>River District · luma.gl</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div id="city" aria-label="Interactive three-dimensional river district"></div>
+    <aside>
+      <p class="eyebrow">luma.gl + deck.gl</p>
+      <h1>River District</h1>
+      <p>A small city, a river, and room to explore.</p>
+      <label>View <select id="camera"><option value="district">District</option><option value="overhead">Overhead</option><option value="waterfront">Waterfront</option></select></label>
+      <label>Renderer <select id="backend"><option value="webgpu">WebGPU</option><option value="webgl">WebGL2</option></select></label>
+      <label class="toggle"><input id="buildings" type="checkbox" checked /> Show buildings</label>
+      <output id="status" aria-live="polite">Preparing the district…</output>
+      <output id="selection" aria-live="polite">Click a building or the river</output>
+      <p class="hint">Drag to move · Scroll to zoom<br />Shift + drag to orbit</p>
+    </aside>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

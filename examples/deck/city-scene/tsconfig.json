@@ -1,0 +1,6 @@
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {"noEmit": true, "lib": ["DOM", "DOM.Iterable", "ESNext"], "paths": {}},
+  "include": ["app.ts", "main.ts", "city-data.ts", "city-mesh-layer.ts"],
+  "exclude": ["dist"]
+}
