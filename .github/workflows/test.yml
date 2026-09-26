@@ -75,7 +75,7 @@ jobs:
         if: ${{ matrix.shard == 1 }}
         env:
           CITY_SCENE_ARTIFACTS: ${{ runner.temp }}
-        run: yarn workspace luma.gl-examples-deck-city-scene test:visual
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-city-scene test:visual
 
       - name: Upload Deck city scene screenshots
         if: ${{ always() && matrix.shard == 1 }}

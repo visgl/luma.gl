@@ -19,7 +19,11 @@ assert(url);
 try {
   for (const backend of ['webgpu', 'webgl']) {
     const browser = await chromium.launch(getPlaywrightLaunchOptions({
-      headless: true, backend, softwareGpu: process.env.CITY_SCENE_HARDWARE !== 'true'
+      headless: true, backend, softwareGpu: process.env.CITY_SCENE_HARDWARE !== 'true',
+      // Linux canvas presentation needs the Vulkan compositor and an X display (see #2874).
+      launchOptions: process.platform === 'linux' && backend === 'webgpu'
+        ? {args: ['--enable-gpu', '--enable-features=Vulkan', '--use-vulkan=swiftshader']}
+        : {}
     }));
     try {
       const page = await browser.newPage({viewport: {width: 1200, height: 850}});
