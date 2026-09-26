@@ -1,6 +1,37 @@
 # @deck.gl-community/gpu-layers
 
-Reusable deck.gl layers for GPU-selected spatial data.
+Reusable deck.gl layers that consume caller-owned GPU buffers.
+
+## Water surfaces
+
+`WaterSurfaceLayer` shades flat, triangulated water polygons on WebGPU and WebGL2 using the shared
+`@luma.gl/shadertools` water material. Supply packed `float32x3` positions in local east/north/up
+meters, `vertexCount`, and Deck's `coordinateOrigin`. The layer borrows the position buffer and owns
+only its render model; the application must release the buffer after removing/finalizing the layer.
+
+```ts
+const water = new WaterSurfaceLayer({
+  id: 'river',
+  positions,
+  vertexCount,
+  coordinateOrigin: [-74.006, 40.7128, 0],
+  data: [{name: 'River'}],
+  pickable: true,
+  time: () => elapsedSeconds,
+  material: {normalStrength: 0.55, coordinateScale: [0.22, 0.22]}
+});
+```
+
+Import `WaterSurfaceLayer` from `@deck.gl-community/gpu-layers`. All triangles form one pickable
+surface (`index: 0`). Supply separate layers for independently selectable surfaces. `time` accepts
+seconds or a callback; the caller schedules frames, for example with Deck's `_animate` option, and
+disables animation when paused. Material defaults use opaque water and planar UV coordinates in
+local meters, so ripple wavelength is independent of the polygon's triangulation.
+The prototype assumes a flat local surface with a +Z normal and fixed ambient/directional lighting.
+It provides animated normal shading, not geometry displacement, terrain draping, scene reflections,
+or general LayerExtension support. See `examples/deck/city-scene` for a complete application.
+
+## Spatial points
 
 `LuSpatialPointLayer` binds caller-owned position and point-ID buffers directly and replays a
 caller-owned `DrawCommandBuffer`. The layer owns only its render model and style-uniform buffer;

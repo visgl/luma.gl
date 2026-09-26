@@ -15455,6 +15455,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-deck-city-scene@workspace:examples/deck/city-scene"
   dependencies:
+    "@deck.gl-community/gpu-layers": "workspace:*"
     "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
     "@luma.gl/core": "npm:10.0.0-alpha.2"
     "@luma.gl/engine": "npm:10.0.0-alpha.2"
