@@ -1,5 +1,5 @@
 diff --git a/dist/index.cjs b/dist/index.cjs
-index 966d28dd008a077f22be496d5cb3b89a925531bf..90a1762d38ddc2e240545af9bcb7d8cbd64bc431 100644
+index 966d28dd008a077f22be496d5cb3b89a925531bf..3a0e7fff1ac1775953ab0879eca5a350b06a0a04 100644
 --- a/dist/index.cjs
 +++ b/dist/index.cjs
 @@ -395,6 +395,7 @@ var import_shadertools = require("@luma.gl/shadertools");
@@ -10,8 +10,86 @@ index 966d28dd008a077f22be496d5cb3b89a925531bf..90a1762d38ddc2e240545af9bcb7d8cb
  
  // dist/lib/constants.js
  var import_mjolnir = require("mjolnir.js");
+@@ -3405,7 +3406,9 @@ var PickLayersPass = class extends LayersPass {
+   _drawPickingBuffer({ layers, layerFilter, views, viewports, onViewportActive, pickingFBO, deviceRect: { x, y, width, height }, cullRect, effects, pass = "picking", pickZ, canvasContext, shaderModuleProps, clearColor }) {
+     this.pickZ = pickZ;
+     const colorEncoderState = this._resetColorEncoder(pickZ);
+-    const scissorRect = [x, y, width, height];
++    // Picking rectangles use a bottom-left origin; WebGPU scissors use a top-left origin.
++    const scissorY = this.device.type === 'webgpu' ? pickingFBO.height - y - height : y;
++    const scissorRect = [x, scissorY, width, height];
+     const renderStatus = super._render({
+       target: pickingFBO,
+       layers,
+@@ -7280,7 +7283,11 @@ var DeckPicker = class {
+       usage: import_core14.Buffer.COPY_DST | import_core14.Buffer.MAP_READ
+     });
+     try {
+-      texture.readBuffer(options, readBuffer);
++      // Picking rectangles use bottom-left coordinates; WebGPU textures use top-left coordinates.
++      const readOptions = this.device.type === 'webgpu'
++        ? {...options, y: texture.height - options.y - height}
++        : options;
++      texture.readBuffer(readOptions, readBuffer);
+       const readData = await readBuffer.readAsync(0, layout.byteLength);
+       const bytesPerElement = ArrayType.BYTES_PER_ELEMENT;
+       if (layout.bytesPerRow % bytesPerElement !== 0) {
+@@ -7294,7 +7301,9 @@ var DeckPicker = class {
+       }
+       const packed = new ArrayType(width * height * 4);
+       for (let row = 0; row < height; row++) {
+-        const sourceStart = row * sourceRowLength;
++        // Preserve bottom-to-top row order for the picking decoders on both backends.
++        const sourceRow = this.device.type === 'webgpu' ? height - row - 1 : row;
++        const sourceStart = sourceRow * sourceRowLength;
+         packed.set(source3.subarray(sourceStart, sourceStart + packedRowLength), row * packedRowLength);
+       }
+       return packed;
+diff --git a/dist/lib/deck-picker.js b/dist/lib/deck-picker.js
+index b1f82276fc3958d6c16efd91c6fa71fae9bb92bc..f287d3a0442c1bd4bb92499e1ce383ad37ada09e 100644
+--- a/dist/lib/deck-picker.js
++++ b/dist/lib/deck-picker.js
+@@ -597,7 +597,11 @@ export default class DeckPicker {
+             usage: Buffer.COPY_DST | Buffer.MAP_READ
+         });
+         try {
+-            texture.readBuffer(options, readBuffer);
++            // Picking rectangles use bottom-left coordinates; WebGPU textures use top-left coordinates.
++            const readOptions = this.device.type === 'webgpu'
++              ? {...options, y: texture.height - options.y - height}
++              : options;
++            texture.readBuffer(readOptions, readBuffer);
+             const readData = await readBuffer.readAsync(0, layout.byteLength);
+             const bytesPerElement = ArrayType.BYTES_PER_ELEMENT;
+             if (layout.bytesPerRow % bytesPerElement !== 0) {
+@@ -613,7 +617,9 @@ export default class DeckPicker {
+             }
+             const packed = new ArrayType(width * height * 4);
+             for (let row = 0; row < height; row++) {
+-                const sourceStart = row * sourceRowLength;
++                // Preserve bottom-to-top row order for the picking decoders on both backends.
++                const sourceRow = this.device.type === 'webgpu' ? height - row - 1 : row;
++                const sourceStart = sourceRow * sourceRowLength;
+                 packed.set(source.subarray(sourceStart, sourceStart + packedRowLength), row * packedRowLength);
+             }
+             return packed;
+diff --git a/dist/passes/pick-layers-pass.js b/dist/passes/pick-layers-pass.js
+index 11182391d6422f163ad6b315c80b7bc58e8a9bbd..563076620e1d9193d64f152f28cc68d4923263d1 100644
+--- a/dist/passes/pick-layers-pass.js
++++ b/dist/passes/pick-layers-pass.js
+@@ -31,7 +31,9 @@ export default class PickLayersPass extends LayersPass {
+     _drawPickingBuffer({ layers, layerFilter, views, viewports, onViewportActive, pickingFBO, deviceRect: { x, y, width, height }, cullRect, effects, pass = 'picking', pickZ, canvasContext, shaderModuleProps, clearColor }) {
+         this.pickZ = pickZ;
+         const colorEncoderState = this._resetColorEncoder(pickZ);
+-        const scissorRect = [x, y, width, height];
++        // Picking rectangles use a bottom-left origin; WebGPU scissors use a top-left origin.
++    const scissorY = this.device.type === 'webgpu' ? pickingFBO.height - y - height : y;
++    const scissorRect = [x, scissorY, width, height];
+         // Make sure we clear scissor test and fbo bindings in case of exceptions
+         // We are only interested in one pixel, no need to render anything else
+         // Note that the callback here is called synchronously.
 diff --git a/dist.webgl-only/index.cjs b/dist.webgl-only/index.cjs
-index 545b82927189ff12c717c8c1aab07d8435407de4..aabaeee4238bbaac5d61b938b2fd55602ad2e680 100644
+index 545b82927189ff12c717c8c1aab07d8435407de4..6107a2724a9e77cf64361b59abcb7940895e3032 100644
 --- a/dist.webgl-only/index.cjs
 +++ b/dist.webgl-only/index.cjs
 @@ -345,6 +345,7 @@ var import_shadertools = require("@luma.gl/shadertools");
@@ -22,8 +100,86 @@ index 545b82927189ff12c717c8c1aab07d8435407de4..aabaeee4238bbaac5d61b938b2fd5560
  
  // dist/lib/constants.js
  var import_mjolnir = require("mjolnir.js");
+@@ -2931,7 +2932,9 @@ var PickLayersPass = class extends LayersPass {
+   _drawPickingBuffer({ layers, layerFilter, views, viewports, onViewportActive, pickingFBO, deviceRect: { x, y, width, height }, cullRect, effects, pass = "picking", pickZ, canvasContext, shaderModuleProps, clearColor }) {
+     this.pickZ = pickZ;
+     const colorEncoderState = this._resetColorEncoder(pickZ);
+-    const scissorRect = [x, y, width, height];
++    // Picking rectangles use a bottom-left origin; WebGPU scissors use a top-left origin.
++    const scissorY = this.device.type === 'webgpu' ? pickingFBO.height - y - height : y;
++    const scissorRect = [x, scissorY, width, height];
+     const renderStatus = super._render({
+       target: pickingFBO,
+       layers,
+@@ -6806,7 +6809,11 @@ var DeckPicker = class {
+       usage: import_core14.Buffer.COPY_DST | import_core14.Buffer.MAP_READ
+     });
+     try {
+-      texture.readBuffer(options, readBuffer);
++      // Picking rectangles use bottom-left coordinates; WebGPU textures use top-left coordinates.
++      const readOptions = this.device.type === 'webgpu'
++        ? {...options, y: texture.height - options.y - height}
++        : options;
++      texture.readBuffer(readOptions, readBuffer);
+       const readData = await readBuffer.readAsync(0, layout.byteLength);
+       const bytesPerElement = ArrayType.BYTES_PER_ELEMENT;
+       if (layout.bytesPerRow % bytesPerElement !== 0) {
+@@ -6820,7 +6827,9 @@ var DeckPicker = class {
+       }
+       const packed = new ArrayType(width * height * 4);
+       for (let row = 0; row < height; row++) {
+-        const sourceStart = row * sourceRowLength;
++        // Preserve bottom-to-top row order for the picking decoders on both backends.
++        const sourceRow = this.device.type === 'webgpu' ? height - row - 1 : row;
++        const sourceStart = sourceRow * sourceRowLength;
+         packed.set(source3.subarray(sourceStart, sourceStart + packedRowLength), row * packedRowLength);
+       }
+       return packed;
+diff --git a/dist.webgl-only/lib/deck-picker.js b/dist.webgl-only/lib/deck-picker.js
+index b1f82276fc3958d6c16efd91c6fa71fae9bb92bc..f287d3a0442c1bd4bb92499e1ce383ad37ada09e 100644
+--- a/dist.webgl-only/lib/deck-picker.js
++++ b/dist.webgl-only/lib/deck-picker.js
+@@ -597,7 +597,11 @@ export default class DeckPicker {
+             usage: Buffer.COPY_DST | Buffer.MAP_READ
+         });
+         try {
+-            texture.readBuffer(options, readBuffer);
++            // Picking rectangles use bottom-left coordinates; WebGPU textures use top-left coordinates.
++            const readOptions = this.device.type === 'webgpu'
++              ? {...options, y: texture.height - options.y - height}
++              : options;
++            texture.readBuffer(readOptions, readBuffer);
+             const readData = await readBuffer.readAsync(0, layout.byteLength);
+             const bytesPerElement = ArrayType.BYTES_PER_ELEMENT;
+             if (layout.bytesPerRow % bytesPerElement !== 0) {
+@@ -613,7 +617,9 @@ export default class DeckPicker {
+             }
+             const packed = new ArrayType(width * height * 4);
+             for (let row = 0; row < height; row++) {
+-                const sourceStart = row * sourceRowLength;
++                // Preserve bottom-to-top row order for the picking decoders on both backends.
++                const sourceRow = this.device.type === 'webgpu' ? height - row - 1 : row;
++                const sourceStart = sourceRow * sourceRowLength;
+                 packed.set(source.subarray(sourceStart, sourceStart + packedRowLength), row * packedRowLength);
+             }
+             return packed;
+diff --git a/dist.webgl-only/passes/pick-layers-pass.js b/dist.webgl-only/passes/pick-layers-pass.js
+index b24dc6f17b8d162a99801cbfdcbd9e8a73792202..439f9a51a3860def804caf94c1ccf4e369f8d587 100644
+--- a/dist.webgl-only/passes/pick-layers-pass.js
++++ b/dist.webgl-only/passes/pick-layers-pass.js
+@@ -31,7 +31,9 @@ export default class PickLayersPass extends LayersPass {
+     _drawPickingBuffer({ layers, layerFilter, views, viewports, onViewportActive, pickingFBO, deviceRect: { x, y, width, height }, cullRect, effects, pass = 'picking', pickZ, canvasContext, shaderModuleProps, clearColor }) {
+         this.pickZ = pickZ;
+         const colorEncoderState = this._resetColorEncoder(pickZ);
+-        const scissorRect = [x, y, width, height];
++        // Picking rectangles use a bottom-left origin; WebGPU scissors use a top-left origin.
++    const scissorY = this.device.type === 'webgpu' ? pickingFBO.height - y - height : y;
++    const scissorRect = [x, scissorY, width, height];
+         // Make sure we clear scissor test and fbo bindings in case of exceptions
+         // We are only interested in one pixel, no need to render anything else
+         // Note that the callback here is called synchronously.
 diff --git a/dist.webgl-only/shaderlib/project/project-functions.js b/dist.webgl-only/shaderlib/project/project-functions.js
-index bc1791b811e97ed5bc0b1d67474c67793e6ef2fc..d18b837ad196c2e48ea0005f1f96262c20b71352 100644
+index bc1791b811e97ed5bc0b1d67474c67793e6ef2fc..ead3d5f3e0c80d7884dbe3e2e8a8ee4428fdfaed 100644
 --- a/dist.webgl-only/shaderlib/project/project-functions.js
 +++ b/dist.webgl-only/shaderlib/project/project-functions.js
 @@ -7,7 +7,8 @@
@@ -37,7 +193,7 @@ index bc1791b811e97ed5bc0b1d67474c67793e6ef2fc..d18b837ad196c2e48ea0005f1f96262c
  const DEFAULT_COORDINATE_ORIGIN = [0, 0, 0];
  // In project.glsl, offset modes calculate z differently from LNG_LAT mode.
 diff --git a/dist.webgl-only/shaderlib/project/viewport-uniforms.js b/dist.webgl-only/shaderlib/project/viewport-uniforms.js
-index 21bf677dd8ddada10dfc23b7de5a832fad883e33..6782cf1da484c40ed5f3ea96ed207be67e4c860e 100644
+index 21bf677dd8ddada10dfc23b7de5a832fad883e33..c26db77562a50a47065993f3a4cfa6521df5f43d 100644
 --- a/dist.webgl-only/shaderlib/project/viewport-uniforms.js
 +++ b/dist.webgl-only/shaderlib/project/viewport-uniforms.js
 @@ -2,7 +2,8 @@
@@ -51,7 +207,7 @@ index 21bf677dd8ddada10dfc23b7de5a832fad883e33..6782cf1da484c40ed5f3ea96ed207be6
  import memoize from "../../utils/memoize.js";
  // To quickly set a vector to zero
 diff --git a/dist.webgl-only/viewports/globe-utils.js b/dist.webgl-only/viewports/globe-utils.js
-index 71905b438867e17b688f60272c146278353b1c78..23baab6918d428848aab0940b1040da50caf364e 100644
+index 71905b438867e17b688f60272c146278353b1c78..18fb662e7ee8981f882388e7e85a3f1b54b758bc 100644
 --- a/dist.webgl-only/viewports/globe-utils.js
 +++ b/dist.webgl-only/viewports/globe-utils.js
 @@ -1,7 +1,8 @@
@@ -65,7 +221,7 @@ index 71905b438867e17b688f60272c146278353b1c78..23baab6918d428848aab0940b1040da5
  import { zoomAdjust } from "./globe-viewport.js";
  const DEGREES_TO_RADIANS = Math.PI / 180;
 diff --git a/dist.webgl-only/viewports/globe-viewport.js b/dist.webgl-only/viewports/globe-viewport.js
-index 1f35572fc29957ed3bd4248034c6b42f2ab68cd8..9a5be6bc44598680a77661dc6995ac1893c44497 100644
+index 1f35572fc29957ed3bd4248034c6b42f2ab68cd8..4e245c8a0da95e1823d2bb8bf116441d9cdb3f40 100644
 --- a/dist.webgl-only/viewports/globe-viewport.js
 +++ b/dist.webgl-only/viewports/globe-viewport.js
 @@ -1,7 +1,9 @@
@@ -80,7 +236,7 @@ index 1f35572fc29957ed3bd4248034c6b42f2ab68cd8..9a5be6bc44598680a77661dc6995ac18
  import Viewport from "./viewport.js";
  import { PROJECTION_MODE } from "../lib/constants.js";
 diff --git a/dist.webgl-only/viewports/orthographic-viewport.js b/dist.webgl-only/viewports/orthographic-viewport.js
-index 71cd34ff180fd8ffd6def5af466fea54ebddba82..213098298a5430b9b9724ebbe9c5f1862468bdcf 100644
+index 71cd34ff180fd8ffd6def5af466fea54ebddba82..06644366c19fbd7c4a8b9f1cdd80c8edece74ad2 100644
 --- a/dist.webgl-only/viewports/orthographic-viewport.js
 +++ b/dist.webgl-only/viewports/orthographic-viewport.js
 @@ -2,7 +2,8 @@
@@ -94,7 +250,7 @@ index 71cd34ff180fd8ffd6def5af466fea54ebddba82..213098298a5430b9b9724ebbe9c5f186
  const viewMatrix = new Matrix4().lookAt({ eye: [0, 0, 1] });
  function getProjectionMatrix({ width, height, near, far, padding }) {
 diff --git a/dist.webgl-only/viewports/viewport.js b/dist.webgl-only/viewports/viewport.js
-index c3bc7d6f7f6dc785ac6f751e83ffe0b8c2ff0241..0ba0590ef251b97c160d4d7000a49673d456df8c 100644
+index c3bc7d6f7f6dc785ac6f751e83ffe0b8c2ff0241..919fb0bcd2dab292497581d3eba83d7a44a7744a 100644
 --- a/dist.webgl-only/viewports/viewport.js
 +++ b/dist.webgl-only/viewports/viewport.js
 @@ -3,7 +3,8 @@
@@ -108,7 +264,7 @@ index c3bc7d6f7f6dc785ac6f751e83ffe0b8c2ff0241..0ba0590ef251b97c160d4d7000a49673
  import { PROJECTION_MODE } from "../lib/constants.js";
  const DEGREES_TO_RADIANS = Math.PI / 180;
 diff --git a/dist.webgl-only/viewports/web-mercator-viewport.js b/dist.webgl-only/viewports/web-mercator-viewport.js
-index b480b63780bfc74229b18b15490e72f35601b15c..bd911b3cb98cee2ac461ed93555a0699ffcdd059 100644
+index b480b63780bfc74229b18b15490e72f35601b15c..16acbfe2e2ce1eecb2b05d0ce5b2cbfd26807a91 100644
 --- a/dist.webgl-only/viewports/web-mercator-viewport.js
 +++ b/dist.webgl-only/viewports/web-mercator-viewport.js
 @@ -5,7 +5,8 @@
@@ -121,6 +277,49 @@ index b480b63780bfc74229b18b15490e72f35601b15c..bd911b3cb98cee2ac461ed93555a0699
  /**
   * Manages transformations to/from WGS84 coordinates using the Web Mercator Projection.
   */
+diff --git a/src/lib/deck-picker.ts b/src/lib/deck-picker.ts
+index bbd4daa0e0a4c7212a1358c409e415adbdbf6964..084ceeeb49c41a79ad7f21423e91da94c5f18644 100644
+--- a/src/lib/deck-picker.ts
++++ b/src/lib/deck-picker.ts
+@@ -901,7 +901,11 @@ export default class DeckPicker {
+     });
+ 
+     try {
+-      texture.readBuffer(options, readBuffer);
++      // Picking rectangles use bottom-left coordinates; WebGPU textures use top-left coordinates.
++      const readOptions = this.device.type === 'webgpu'
++        ? {...options, y: texture.height - options.y - height}
++        : options;
++      texture.readBuffer(readOptions, readBuffer);
+       const readData = await readBuffer.readAsync(0, layout.byteLength);
+       const bytesPerElement = ArrayType.BYTES_PER_ELEMENT;
+       if (layout.bytesPerRow % bytesPerElement !== 0) {
+@@ -926,7 +930,9 @@ export default class DeckPicker {
+       const packed = new ArrayType(width * height * 4);
+ 
+       for (let row = 0; row < height; row++) {
+-        const sourceStart = row * sourceRowLength;
++        // Preserve bottom-to-top row order for the picking decoders on both backends.
++        const sourceRow = this.device.type === 'webgpu' ? height - row - 1 : row;
++        const sourceStart = sourceRow * sourceRowLength;
+         packed.set(
+           source.subarray(sourceStart, sourceStart + packedRowLength),
+           row * packedRowLength
+diff --git a/src/passes/pick-layers-pass.ts b/src/passes/pick-layers-pass.ts
+index f5864cecc447c80ebf3f2a7b443ecf91537a3786..98f966606525517f69fd230fe1347117defc995a 100644
+--- a/src/passes/pick-layers-pass.ts
++++ b/src/passes/pick-layers-pass.ts
+@@ -83,7 +83,9 @@ export default class PickLayersPass extends LayersPass {
+   } {
+     this.pickZ = pickZ;
+     const colorEncoderState = this._resetColorEncoder(pickZ);
+-    const scissorRect = [x, y, width, height];
++    // Picking rectangles use a bottom-left origin; WebGPU scissors use a top-left origin.
++    const scissorY = this.device.type === 'webgpu' ? pickingFBO.height - y - height : y;
++    const scissorRect = [x, scissorY, width, height];
+ 
+     // Make sure we clear scissor test and fbo bindings in case of exceptions
+     // We are only interested in one pixel, no need to render anything else
 diff --git a/src/shaderlib/project/project-functions.ts b/src/shaderlib/project/project-functions.ts
 index c249d2d88cbda7f7282b9e944e6fe9d5461565de..9f3f69d1db5e4da34d17706a616040b322b044b0 100644
 --- a/src/shaderlib/project/project-functions.ts
