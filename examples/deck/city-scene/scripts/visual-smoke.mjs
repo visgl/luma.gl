@@ -34,6 +34,13 @@ try {
       await page.waitForFunction(() => document.body.dataset.ready === 'true', undefined, {timeout: 60_000});
       await page.waitForFunction(() => window.cityScene?.diagnostics.frames > 0);
       assert.equal(await page.evaluate(() => window.cityScene.diagnostics.backend), backend);
+      await page.waitForFunction(() => window.cityScene.diagnostics.timeSeconds > 0);
+      await page.click('#playback');
+      await page.mouse.move(1190, 840);
+      await page.waitForTimeout(150);
+      const pausedFrames = await page.evaluate(() => window.cityScene.diagnostics.frames);
+      await page.waitForTimeout(150);
+      assert.equal(await page.evaluate(() => window.cityScene.diagnostics.frames), pausedFrames, `${backend}: pause stops drawing`);
       await page.selectOption('#camera', 'overhead');
       await page.waitForFunction(() => window.cityScene.deck.getViewports()[0].pitch === 0);
       await page.screenshot({path: join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), `city-scene-${backend}-overhead.png`)});
@@ -64,6 +71,14 @@ try {
         return info?.object?.kind;
       });
       assert.equal(replacement, 'water', `${backend}: river picking after layer replacement`);
+      await page.evaluate(() => {
+        window.borrowedWaterPositions = window.cityScene.deck.props.layers.find(layer => layer?.id === 'river-water').props.positions;
+      });
+      await page.uncheck('#water');
+      await page.waitForTimeout(100);
+      assert.equal(await page.evaluate(() => window.borrowedWaterPositions.destroyed), false, 'removing water preserves borrowed positions');
+      await page.check('#water');
+      await page.waitForFunction(() => window.cityScene.deck.props.layers.some(layer => layer?.id === 'river-water'));
       await page.check('#buildings');
       await page.selectOption('#camera', 'waterfront');
       await page.waitForFunction(() => window.cityScene.deck.getViewports()[0].pitch === 68);
@@ -71,6 +86,25 @@ try {
       await page.waitForFunction(() => window.cityScene.deck.width === 1000);
       await page.selectOption('#camera', 'district');
       await page.waitForFunction(() => window.cityScene.deck.getViewports()[0].pitch === 52);
+      await page.mouse.move(990, 710);
+      await page.evaluate(() => window.cityScene.setTime(2));
+      await page.waitForTimeout(100);
+      const firstWaterImage = PNG.sync.read(await page.screenshot());
+      await page.evaluate(() => window.cityScene.setTime(8));
+      await page.waitForTimeout(100);
+      const secondWaterImage = PNG.sync.read(await page.screenshot());
+      let changedPixels = 0;
+      for (let vertical = 120; vertical < 650; vertical++) {
+        for (let horizontal = 350; horizontal < 950; horizontal++) {
+          const offset = (vertical * firstWaterImage.width + horizontal) * 4;
+          if (Math.abs(firstWaterImage.data[offset] - secondWaterImage.data[offset]) > 3) changedPixels++;
+        }
+      }
+      assert(changedPixels > 100, `${backend}: time changes water shading (${changedPixels} pixels)`);
+      await page.evaluate(() => window.cityScene.setTime(2));
+      await page.waitForTimeout(100);
+      const repeatedWaterImage = PNG.sync.read(await page.screenshot());
+      assert.deepEqual(repeatedWaterImage.data, firstWaterImage.data, `${backend}: replaying time is deterministic`);
       const screenshotPath = join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), `city-scene-${backend}.png`);
       const screenshot = PNG.sync.read(await page.screenshot({path: screenshotPath}));
       const colors = new Set();
@@ -84,11 +118,12 @@ try {
       assert(colors.size > 20, `${backend}: scene contains shaded geometry`);
       assert.equal(await page.evaluate(() => window.cityScene.diagnostics.error), '');
       await page.evaluate(() => { window.cityScene.finalize(); window.cityScene.finalize(); });
+      assert.equal(await page.evaluate(() => window.borrowedWaterPositions.destroyed), true, 'application releases water positions on finalization');
       const frames = await page.evaluate(() => window.cityScene.diagnostics.frames);
       await page.waitForTimeout(150);
       assert.equal(await page.evaluate(() => window.cityScene.diagnostics.frames), frames, 'finalization stops rendering');
       assert.deepEqual(errors, [], `${backend}: browser errors`);
-      process.stdout.write(`${backend}: picking, layer replacement, camera, resize, finalization passed. ${screenshotPath}\n`);
+      process.stdout.write(`${backend}: animated water, deterministic time, pause, picking, buffer ownership, camera, resize, finalization passed. ${screenshotPath}\n`);
     } finally {
       await browser.close();
     }

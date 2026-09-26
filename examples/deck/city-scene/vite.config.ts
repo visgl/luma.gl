@@ -7,6 +7,7 @@ import {defineConfig} from 'vite';
 export default defineConfig({
   resolve: {
     alias: {
+      '@deck.gl-community/gpu-layers': `${__dirname}/../../../modules/deck-gpu-layers/src`,
       '@luma.gl/core': `${__dirname}/../../../modules/core/src`,
       '@luma.gl/engine': `${__dirname}/../../../modules/engine/src`,
       '@luma.gl/gpgpu': `${__dirname}/../../../modules/gpgpu/src`,

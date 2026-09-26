@@ -13,6 +13,8 @@ label { display: flex; align-items: center; justify-content: space-between; marg
 select { padding: 7px 8px; background: #20303a; color: inherit; border: 1px solid #40525b; border-radius: 5px; }
 .toggle { justify-content: flex-start; gap: 8px; }
 input { accent-color: #86cbbd; }
+input[type="range"] { width: 125px; }
+button { background: #20303a; color: inherit; border: 1px solid #40525b; border-radius: 5px; padding: 7px 12px; cursor: pointer; }
 output { display: block; font-size: 12px; margin-top: 14px; }
 #selection { padding-top: 14px; border-top: 1px solid #ffffff20; color: #e6c995; }
 .hint { font-size: 11px; margin-bottom: 0; }

@@ -6,3 +6,5 @@ export {
   LuSpatialPointLayer,
   type LuSpatialPointLayerProps
 } from './layers/luspatial-point-layer';
+
+export {WaterSurfaceLayer, type WaterSurfaceLayerProps} from './layers/water-surface-layer';
