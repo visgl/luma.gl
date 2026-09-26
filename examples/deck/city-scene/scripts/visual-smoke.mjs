@@ -32,7 +32,7 @@ try {
       assert.equal(await page.evaluate(() => window.cityScene.diagnostics.backend), backend);
       await page.selectOption('#camera', 'overhead');
       await page.waitForFunction(() => window.cityScene.deck.getViewports()[0].pitch === 0);
-      await page.screenshot({path: join(tmpdir(), `city-scene-${backend}-overhead.png`)});
+      await page.screenshot({path: join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), `city-scene-${backend}-overhead.png`)});
       const picked = await page.evaluate(async () => {
         const position = window.cityScene.getFeatureScreenPosition('East 4.1');
         if (!position) throw new Error('Missing fixture building');

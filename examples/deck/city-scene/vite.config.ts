@@ -15,5 +15,5 @@ export default defineConfig({
       '@luma.gl/webgpu': `${__dirname}/../../../modules/webgpu/src`
     }
   },
-  optimizeDeps: {exclude: ['@deck.gl/core']}
+  optimizeDeps: {exclude: ['@deck.gl/core'], noDiscovery: true}
 });

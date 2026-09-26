@@ -98,6 +98,8 @@ struct CityVertex {
 ) -> CityVertex {
   var output: CityVertex;
   output.position = project_position_to_clipspace(position, vec3<f32>(0.0), vec3<f32>(0.0));
+  // Deck's projection uses OpenGL depth; WebGPU clips to [0, w].
+  output.position.z = (output.position.z + output.position.w) * 0.5;
   output.color = color * (0.45 + 0.55 * max(dot(normal, normalize(vec3<f32>(-0.5, -0.3, 0.8))), 0.0));
   output.pickingColor = picking_getPickingColorFromIndex(u32(featureIndex));
   return output;
