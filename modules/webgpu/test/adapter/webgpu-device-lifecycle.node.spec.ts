@@ -181,4 +181,100 @@ describe('WebGPU device creation lifecycle', () => {
 
     await expect(getWebGPUAdapterInfo({} as GPUAdapter)).resolves.toEqual({});
   });
+
+  test('forwards custom requiredLimits to requestDevice()', async () => {
+    const pendingLoss = makeDeferred<GPUDeviceLostInfo>();
+    const nativeDevice = makeNativeDevice(pendingLoss.promise);
+    const nativeAdapter = makeNativeAdapter(nativeDevice.device);
+    nativeAdapter.adapter.limits = {
+      maxStorageBufferBindingSize: 1024 * 1024 * 1024,
+      maxBufferSize: 2 * 1024 * 1024 * 1024
+    } as GPUSupportedLimits;
+
+    const adapter = new MockWebGPUAdapter([nativeAdapter.adapter]);
+    const device = await adapter.create({
+      requiredLimits: {
+        maxStorageBufferBindingSize: 256 * 1024 * 1024,
+        maxBufferSize: 512 * 1024 * 1024
+      }
+    } as DeviceProps);
+
+    expect(nativeAdapter.requestDevice).toHaveBeenCalledWith({
+      requiredLimits: {
+        maxStorageBufferBindingSize: 256 * 1024 * 1024,
+        maxBufferSize: 512 * 1024 * 1024
+      }
+    });
+    device.destroy();
+  });
+
+  test('rejects over-limit requests with descriptive error', async () => {
+    const nativeError = new Error(
+      'Failed to execute "requestDevice": maxStorageBufferBindingSize (2147483648) is greater than the supported limit (1073741824)'
+    );
+    const nativeAdapter = {
+      features: new Set(),
+      limits: {
+        maxStorageBufferBindingSize: 1024 * 1024 * 1024
+      } as GPUSupportedLimits,
+      info: {},
+      requestDevice: vi.fn(async () => {
+        throw nativeError;
+      })
+    } as unknown as GPUAdapter;
+    const adapter = new MockWebGPUAdapter([nativeAdapter]);
+
+    await expect(
+      adapter.create({
+        requiredLimits: {
+          maxStorageBufferBindingSize: 2 * 1024 * 1024 * 1024
+        }
+      } as DeviceProps)
+    ).rejects.toMatchObject({
+      message: 'WebGPU device request failed',
+      cause: nativeError
+    });
+  });
+
+  test('requiredLimits merges with featureLevel max', async () => {
+    const pendingLoss = makeDeferred<GPUDeviceLostInfo>();
+    const nativeDevice = makeNativeDevice(pendingLoss.promise);
+    const nativeAdapter = makeNativeAdapter(nativeDevice.device);
+    nativeAdapter.adapter.limits = {
+      maxBufferSize: 2 * 1024 * 1024 * 1024,
+      maxStorageBufferBindingSize: 1024 * 1024 * 1024,
+      maxComputeWorkgroupsPerDimension: 65535
+    } as GPUSupportedLimits;
+
+    const adapter = new MockWebGPUAdapter([nativeAdapter.adapter]);
+    const device = await adapter.create({
+      featureLevel: 'max',
+      requiredLimits: {
+        maxBufferSize: 512 * 1024 * 1024
+      }
+    } as DeviceProps);
+
+    expect(nativeAdapter.requestDevice).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requiredLimits: expect.objectContaining({
+          maxBufferSize: 512 * 1024 * 1024,
+          maxStorageBufferBindingSize: 1024 * 1024 * 1024,
+          maxComputeWorkgroupsPerDimension: 65535
+        })
+      })
+    );
+    device.destroy();
+  });
+
+  test('featureLevel core with no requiredLimits uses empty descriptor', async () => {
+    const pendingLoss = makeDeferred<GPUDeviceLostInfo>();
+    const nativeDevice = makeNativeDevice(pendingLoss.promise);
+    const nativeAdapter = makeNativeAdapter(nativeDevice.device);
+
+    const adapter = new MockWebGPUAdapter([nativeAdapter.adapter]);
+    const device = await adapter.create({featureLevel: 'core'} as DeviceProps);
+
+    expect(nativeAdapter.requestDevice).toHaveBeenCalledWith({});
+    device.destroy();
+  });
 });

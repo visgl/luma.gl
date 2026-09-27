@@ -396,6 +396,8 @@ export type DeviceProps = {
   optionalFeatures?: readonly WebGPUDeviceFeature[];
   /** WebGPU only: requests an adapter that can present frames to a WebXR session. */
   xrCompatible?: boolean;
+  /** WebGPU only: specific device limits to request. The created device enforces these limits regardless of adapter capability. Values exceeding adapter.limits will cause device creation to fail (rejected by requestDevice). */
+  requiredLimits?: Partial<Record<keyof GPUSupportedLimits, number>>;
 
   /** WebGL specific: Properties passed through to WebGL2RenderingContext creation: `canvas.getContext('webgl2', props.webgl)` */
   webgl?: WebGLContextProps;
