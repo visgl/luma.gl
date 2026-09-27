@@ -63,7 +63,9 @@ try {
         return hits.map(hit => hit.object?.name);
       });
       assert(neighborhood.includes('East 4.1'), `${backend}: multi-row picking readback`);
+      const framesBeforeReplacement = await page.evaluate(() => window.cityScene.diagnostics.frames);
       await page.uncheck('#buildings');
+      await page.waitForFunction(previousFrames => window.cityScene.diagnostics.frames > previousFrames, framesBeforeReplacement);
       const replacement = await page.evaluate(async () => {
         const scene = window.cityScene;
         const position = scene.deck.getViewports()[0].project([-74.006, 40.7128]);
@@ -71,6 +73,12 @@ try {
         return info?.object?.kind;
       });
       assert.equal(replacement, 'water', `${backend}: river picking after layer replacement`);
+      const bridge = await page.evaluate(async () => {
+        const position = window.cityScene.getFeatureScreenPosition('North bridge');
+        const info = await window.cityScene.deck.pickObjectAsync({x: position[0], y: position[1]});
+        return info?.object?.kind;
+      });
+      assert.equal(bridge, 'bridge', `${backend}: bridge occludes the water surface`);
       await page.evaluate(() => {
         window.borrowedWaterPositions = window.cityScene.deck.props.layers.find(layer => layer?.id === 'river-water').props.positions;
       });

@@ -107,15 +107,16 @@ struct WaterVertex {
   @builtin(position) position: vec4<f32>,
   @location(0) commonPosition: vec3<f32>,
   @location(1) localPosition: vec3<f32>,
+  @location(2) commonNormal: vec3<f32>,
 };
 @vertex fn vertexMain(@location(0) position: vec3<f32>) -> WaterVertex {
   let projected = project_position_to_clipspace_and_commonspace(position, vec3<f32>(0.0), vec3<f32>(0.0));
   var output: WaterVertex;
   output.position = projected.clipPosition;
-  // Deck's projection uses OpenGL depth; WebGPU clips to [0, w].
-  output.position.z = (output.position.z + output.position.w) * 0.5;
+  geometry.position = projected.commonPosition;
   output.commonPosition = projected.commonPosition.xyz;
   output.localPosition = position;
+  output.commonNormal = project_normal(vec3<f32>(0.0, 0.0, 1.0));
   return output;
 }
 @fragment fn fragmentMain(input: WaterVertex) -> @location(0) vec4<f32> {
@@ -124,7 +125,7 @@ struct WaterVertex {
     if (picking_isColorZero(pickingColor)) { discard; }
     return vec4<f32>(pickingColor, 1.0);
   }
-  var color = water_getColorMapped(project.cameraPosition, input.commonPosition, input.localPosition, vec3<f32>(0.0, 0.0, 1.0), input.localPosition.xy);
+  var color = water_getColorMapped(project.cameraPosition, input.commonPosition, input.localPosition, input.commonNormal, input.localPosition.xy);
   if (picking.isHighlightActive > 0.5 && distance(pickingColor, picking_normalizeColor(picking.highlightedObjectColor)) < 0.00001) {
     color = vec4<f32>(mix(color.rgb, picking.highlightColor.rgb, picking.highlightColor.a), color.a);
   }
@@ -137,11 +138,14 @@ in vec3 position;
 out vec3 commonPosition;
 out vec3 localPosition;
 out vec3 cameraPosition;
+out vec3 commonNormal;
 void main() {
   geometry.worldPosition = position;
   geometry.pickingColor = picking_getPickingColorFromIndex(0.0);
   vec4 commonPosition4;
   gl_Position = project_position_to_clipspace(position, vec3(0.0), vec3(0.0), commonPosition4);
+  geometry.position = commonPosition4;
+  commonNormal = project_normal(vec3(0.0, 0.0, 1.0));
   DECKGL_FILTER_GL_POSITION(gl_Position, geometry);
   commonPosition = commonPosition4.xyz;
   localPosition = position;
@@ -156,9 +160,10 @@ precision highp float;
 in vec3 commonPosition;
 in vec3 localPosition;
 in vec3 cameraPosition;
+in vec3 commonNormal;
 out vec4 fragColor;
 void main() {
-  fragColor = water_getColorMapped(cameraPosition, commonPosition, localPosition, vec3(0.0, 0.0, 1.0), localPosition.xy);
+  fragColor = water_getColorMapped(cameraPosition, commonPosition, localPosition, commonNormal, localPosition.xy);
   fragColor.a *= layer.opacity;
   DECKGL_FILTER_COLOR(fragColor, geometry);
 }
