@@ -30,6 +30,8 @@ export class WaterSurfaceLayer extends Layer<WaterSurfaceLayerProps> {
   static override layerName = 'WaterSurfaceLayer';
   static override defaultProps = {
     coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+    // Deck's index-based WebGL bias can otherwise pull water in front of nearby bridges.
+    getPolygonOffset: () => [0, 0],
     time: 0
   };
   declare state: {model: Model};

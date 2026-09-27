@@ -65,7 +65,7 @@ try {
       assert(neighborhood.includes('East 4.1'), `${backend}: multi-row picking readback`);
       const framesBeforeReplacement = await page.evaluate(() => window.cityScene.diagnostics.frames);
       await page.uncheck('#buildings');
-      await page.waitForFunction(previousFrames => window.cityScene.diagnostics.frames > previousFrames, framesBeforeReplacement);
+      await page.waitForFunction(previousFrames => window.cityScene.diagnostics.frames > previousFrames && window.cityScene.deck.props.layers.find(layer => layer?.id === 'city-mesh').isLoaded, framesBeforeReplacement);
       const replacement = await page.evaluate(async () => {
         const scene = window.cityScene;
         const position = scene.deck.getViewports()[0].project([-74.006, 40.7128]);
