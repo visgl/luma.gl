@@ -155,6 +155,15 @@ This allows applications to use the luma.gl API to "interleave" rendering with o
 - `adapters` - list of `Device` backend classes. Can be omitted if `luma.registerAdapters()` has been called.
 - `...deviceProps`: See [`DeviceProps`](./device.md#deviceprops) for device specific options.
 
+When attaching a `GPUDevice`:
+
+- `device.limits` and `device.features` come from the `GPUDevice`, so limits and features the application requested are preserved.
+- Pass `createCanvasContext: {canvas}` if the device will render to a canvas, for example when passing it to deck.gl's `new Deck({device})`.
+- `device.destroy()` releases luma.gl's canvas context and error listener but does not destroy the `GPUDevice`. Pass `_ownsHandle: true` to have luma.gl destroy it.
+- Attaching the same `GPUDevice` again returns the existing luma.gl `Device`.
+- `device.info.featureLevel` is `'core'` if the `GPUDevice` has the `core-features-and-limits` feature or `featureLevel: 'core'` is passed, and `'compatibility'` otherwise.
+- luma.gl calls `preventDefault()` on `uncapturederror` events, which suppresses the browser's console warning for those errors, until `device.destroy()`.
+
 Note that while you cannot directly attach a luma.gl `Device` to a WebGL 1 `WebGLRenderingContext`, you may be able to work around it using `luma.enforceWebGL2()`.
 
 ### `luma.registerAdapters()`

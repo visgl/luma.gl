@@ -32,7 +32,7 @@ export class WebGPUCanvasContext extends CanvasContext {
     return 'WebGPUCanvasContext';
   }
 
-  constructor(device: WebGPUDevice, adapter: GPUAdapter, props: CanvasContextProps) {
+  constructor(device: WebGPUDevice, adapter: GPUAdapter | null, props: CanvasContextProps) {
     super(props);
 
     const context = this.canvas.getContext('webgpu');

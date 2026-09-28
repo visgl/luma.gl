@@ -73,12 +73,20 @@ import {
   getTimestamp
 } from './helpers/cpu-hotspot-profiler';
 
+/** Live luma.gl wrappers, so attaching the same GPUDevice twice returns one wrapper. */
+const devicesByHandle = new WeakMap<GPUDevice, WebGPUDevice>();
+
 /** WebGPU Device implementation */
 export class WebGPUDevice extends Device {
+  /** Returns the live luma.gl device wrapping a GPUDevice, if any. */
+  static getDeviceFromHandle(handle: GPUDevice): WebGPUDevice | null {
+    return devicesByHandle.get(handle) || null;
+  }
+
   /** The underlying WebGPU device */
   readonly handle: GPUDevice;
-  /* The underlying WebGPU adapter */
-  readonly adapter: GPUAdapter;
+  /* The underlying WebGPU adapter, `null` when attached to an external GPUDevice */
+  readonly adapter: GPUAdapter | null;
   /* The underlying WebGPU adapter's info */
   readonly adapterInfo: GPUAdapterInfo;
 
@@ -99,6 +107,14 @@ export class WebGPUDevice extends Device {
 
   private _isLost: boolean = false;
   private _defaultSampler: WebGPUSampler | null = null;
+  private _onUncapturedError = (event: Event): void => {
+    event.preventDefault();
+    // TODO is this the right way to make sure the error is an Error instance?
+    const errorMessage =
+      event instanceof GPUUncapturedErrorEvent ? event.error.message : 'Unknown WebGPU error';
+    this.reportError(new Error(errorMessage), this)();
+    this.debug();
+  };
   commandEncoder: WebGPUCommandEncoder;
 
   override get [Symbol.toStringTag](): string {
@@ -112,7 +128,7 @@ export class WebGPUDevice extends Device {
   constructor(
     props: DeviceProps,
     device: GPUDevice,
-    adapter: GPUAdapter,
+    adapter: GPUAdapter | null,
     adapterInfo: GPUAdapterInfo
   ) {
     super({...props, id: props.id || 'webgpu-device'});
@@ -130,15 +146,10 @@ export class WebGPUDevice extends Device {
     this.features = this._getFeatures();
     this.limits = getWebGPUDeviceLimits(this.handle.limits);
 
+    devicesByHandle.set(device, this);
+
     // Listen for uncaptured WebGPU errors
-    device.addEventListener('uncapturederror', (event: Event) => {
-      event.preventDefault();
-      // TODO is this the right way to make sure the error is an Error instance?
-      const errorMessage =
-        event instanceof GPUUncapturedErrorEvent ? event.error.message : 'Unknown WebGPU error';
-      this.reportError(new Error(errorMessage), this)();
-      this.debug();
-    });
+    device.addEventListener('uncapturederror', this._onUncapturedError);
 
     // "Context" loss handling
     this.lost = this.handle.lost.then(lostInfo => {
@@ -173,7 +184,17 @@ export class WebGPUDevice extends Device {
     this.commandEncoder?.destroy();
     this._defaultSampler?.destroy();
     this._defaultSampler = null;
-    this.handle.destroy();
+    // Unconfigures the canvas and releases its attachments, which an attached GPUDevice would keep alive
+    this.canvasContext?.destroy();
+    if (devicesByHandle.get(this.handle) === this) {
+      devicesByHandle.delete(this.handle);
+    }
+    // Attached GPUDevices belong to the application unless ownership was transferred
+    if (this.props._ownsHandle) {
+      this.handle.destroy();
+    } else {
+      this.handle.removeEventListener('uncapturederror', this._onUncapturedError);
+    }
   }
 
   get isLost(): boolean {
@@ -509,12 +530,12 @@ export class WebGPUDevice extends Device {
     const [driver, driverVersion] = ((this.adapterInfo as any).driver || '').split(' Version ');
 
     // See https://developer.chrome.com/blog/new-in-webgpu-120#adapter_information_updates
-    const vendor = this.adapterInfo.vendor || this.adapter.__brand || 'unknown';
+    const vendor = this.adapterInfo.vendor || this.adapter?.__brand || 'unknown';
     const renderer = driver || '';
     const version = driverVersion || '';
     const fallback = Boolean(
       (this.adapterInfo as any).isFallbackAdapter ??
-        (this.adapter as any).isFallbackAdapter ??
+        (this.adapter as any)?.isFallbackAdapter ??
         false
     );
     const softwareRenderer = /SwiftShader/i.test(
