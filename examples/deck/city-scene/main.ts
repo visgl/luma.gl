@@ -17,6 +17,7 @@ const backend = document.querySelector<HTMLSelectElement>('#backend');
 const camera = document.querySelector<HTMLSelectElement>('#camera');
 const buildings = document.querySelector<HTMLInputElement>('#buildings');
 const water = document.querySelector<HTMLInputElement>('#water');
+const waterStyle = document.querySelector<HTMLSelectElement>('#water-style');
 const strength = document.querySelector<HTMLInputElement>('#strength');
 const playback = document.querySelector<HTMLButtonElement>('#playback');
 if (
@@ -27,6 +28,7 @@ if (
   !camera ||
   !buildings ||
   !water ||
+  !waterStyle ||
   !strength ||
   !playback
 ) {
@@ -38,6 +40,7 @@ const cameraControl = camera;
 const buildingsControl = buildings;
 const backendControl = backend;
 const waterControl = water;
+const waterStyleControl = waterStyle;
 const strengthControl = strength;
 const playbackControl = playback;
 let scene: CityScene;
@@ -56,6 +59,7 @@ async function startScene() {
     cameraControl.value = 'district';
     buildingsControl.checked = true;
     waterControl.checked = true;
+    waterStyleControl.value = 'river';
     strengthControl.value = '0.55';
     playbackControl.textContent = 'Pause waves';
     cityStatus.value = `${scene.features.filter(feature => feature.kind === 'building').length} buildings · local fixture`;
@@ -75,6 +79,9 @@ camera.addEventListener('change', () => {
 });
 buildings.addEventListener('change', () => scene.setBuildingsVisible(buildingsControl.checked));
 water.addEventListener('change', () => scene.setWaterEnabled(waterControl.checked));
+waterStyle.addEventListener('change', () =>
+  scene.setWaterStyle(waterStyleControl.value === 'classic' ? 'classic' : 'river')
+);
 strength.addEventListener('input', () => scene.setWaveStrength(Number(strengthControl.value)));
 playback.addEventListener('click', () => {
   scene.setPlaying(!scene.diagnostics.playing);

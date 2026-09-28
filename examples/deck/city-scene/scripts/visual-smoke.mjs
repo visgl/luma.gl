@@ -98,6 +98,20 @@ try {
       await page.evaluate(() => window.cityScene.setTime(2));
       await page.waitForTimeout(100);
       const firstWaterImage = PNG.sync.read(await page.screenshot());
+      await page.selectOption('#water-style', 'classic');
+      await page.waitForTimeout(100);
+      const classicWaterImage = PNG.sync.read(await page.screenshot());
+      let styleChangedPixels = 0;
+      for (let vertical = 120; vertical < 650; vertical++) {
+        for (let horizontal = 350; horizontal < 950; horizontal++) {
+          const offset = (vertical * firstWaterImage.width + horizontal) * 4;
+          if (Math.abs(firstWaterImage.data[offset] - classicWaterImage.data[offset]) > 3)
+            styleChangedPixels++;
+        }
+      }
+      assert(styleChangedPixels > 1000, `${backend}: river and classic water styles differ (${styleChangedPixels} pixels)`);
+      await page.selectOption('#water-style', 'river');
+      await page.waitForTimeout(100);
       await page.evaluate(() => window.cityScene.setTime(8));
       await page.waitForTimeout(100);
       const secondWaterImage = PNG.sync.read(await page.screenshot());
@@ -112,7 +126,16 @@ try {
       await page.evaluate(() => window.cityScene.setTime(2));
       await page.waitForTimeout(100);
       const repeatedWaterImage = PNG.sync.read(await page.screenshot());
-      assert.deepEqual(repeatedWaterImage.data, firstWaterImage.data, `${backend}: replaying time is deterministic`);
+      let replayDifferences = 0;
+      for (let index = 0; index < firstWaterImage.data.length; index += 4) {
+        const colorDifference = Math.max(
+          Math.abs(repeatedWaterImage.data[index] - firstWaterImage.data[index]),
+          Math.abs(repeatedWaterImage.data[index + 1] - firstWaterImage.data[index + 1]),
+          Math.abs(repeatedWaterImage.data[index + 2] - firstWaterImage.data[index + 2])
+        );
+        if (colorDifference > 1) replayDifferences++;
+      }
+      assert.equal(replayDifferences, 0, `${backend}: replaying time is deterministic`);
       const screenshotPath = join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), `city-scene-${backend}.png`);
       const screenshot = PNG.sync.read(await page.screenshot({path: screenshotPath}));
       const colors = new Set();

@@ -13,7 +13,7 @@ import {
 } from '@deck.gl/core';
 import type {Buffer, RenderPass} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import {waterMaterial, type WaterMaterialProps} from '@luma.gl/shadertools';
+import {riverWaterMaterial, waterMaterial, type WaterMaterialProps} from '@luma.gl/shadertools';
 
 export type WaterSurfaceLayerProps = LayerProps & {
   /** Borrowed packed float32x3 triangle vertices in local east/north/up meters. */
@@ -21,6 +21,8 @@ export type WaterSurfaceLayerProps = LayerProps & {
   vertexCount: number;
   /** Surface shading parameters. Wave coordinates are local east/north meters. */
   material?: Omit<WaterMaterialProps, 'mapping' | 'time'>;
+  /** Select the original shared water shader or the layered river surface variant. */
+  style?: 'classic' | 'river';
   /** Seconds supplied by the caller. Reading a clock does not schedule additional frames. */
   time?: number | (() => number);
 };
@@ -32,7 +34,8 @@ export class WaterSurfaceLayer extends Layer<WaterSurfaceLayerProps> {
     coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
     // Deck's index-based WebGL bias can otherwise pull water in front of nearby bridges.
     getPolygonOffset: () => [0, 0],
-    time: 0
+    time: 0,
+    style: 'classic'
   };
   declare state: {model: Model};
 
@@ -46,7 +49,7 @@ export class WaterSurfaceLayer extends Layer<WaterSurfaceLayerProps> {
         source: SOURCE,
         vs: VERTEX_SHADER,
         fs: FRAGMENT_SHADER,
-        modules: [project32, picking, waterMaterial]
+        modules: [project32, picking, waterMaterial, riverWaterMaterial]
       }),
       id: `${this.id}-water`,
       topology: 'triangle-list',
@@ -87,6 +90,7 @@ export class WaterSurfaceLayer extends Layer<WaterSurfaceLayerProps> {
         ...this.props.material,
         time: typeof this.props.time === 'function' ? this.props.time() : this.props.time
       },
+      riverWaterMaterial: {enabled: this.props.style === 'river' ? 1 : 0},
       lighting: {
         enabled: true,
         lights: [
@@ -128,6 +132,9 @@ struct WaterVertex {
     return vec4<f32>(pickingColor, 1.0);
   }
   var color = water_getColorMapped(project.cameraPosition, input.commonPosition, input.localPosition, input.commonNormal, input.localPosition.xy);
+  if (riverWaterMaterial.enabled > 0) {
+    color = riverWater_getColorMapped(project.cameraPosition, input.commonPosition, input.localPosition, input.commonNormal, input.localPosition.xy);
+  }
   if (picking.isHighlightActive > 0.5 && distance(pickingColor, picking_normalizeColor(picking.highlightedObjectColor)) < 0.00001) {
     color = vec4<f32>(mix(color.rgb, picking.highlightColor.rgb, picking.highlightColor.a), color.a);
   }
@@ -166,6 +173,9 @@ in vec3 commonNormal;
 out vec4 fragColor;
 void main() {
   fragColor = water_getColorMapped(cameraPosition, commonPosition, localPosition, commonNormal, localPosition.xy);
+  if (riverWaterMaterial.enabled > 0) {
+    fragColor = riverWater_getColorMapped(cameraPosition, commonPosition, localPosition, commonNormal, localPosition.xy);
+  }
   fragColor.a *= layer.opacity;
   DECKGL_FILTER_COLOR(fragColor, geometry);
 }

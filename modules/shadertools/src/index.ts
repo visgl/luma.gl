@@ -173,6 +173,11 @@ export type {
 } from './modules/lighting/water-material/water-material';
 export {waterMaterial} from './modules/lighting/water-material/water-material';
 export type {
+  RiverWaterMaterialProps,
+  RiverWaterMaterialUniforms
+} from './modules/lighting/water-material/river-water-material';
+export {riverWaterMaterial} from './modules/lighting/water-material/river-water-material';
+export type {
   PBRMaterialBindings,
   PBRMaterialProps,
   PBRMaterialUniforms

@@ -40,6 +40,7 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
     error: '',
     timeSeconds: 0,
     waterEnabled: true,
+    waterStyle: 'river' as 'classic' | 'river',
     playing: true
   };
   const ready = Promise.withResolvers<void>();
@@ -119,6 +120,7 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
             pickable: true,
             autoHighlight: true,
             highlightColor: [255, 196, 92, 160],
+            style: diagnostics.waterStyle,
             time: () => diagnostics.timeSeconds,
             material: {
               baseColor: [0.045, 0.26, 0.32],
@@ -152,6 +154,10 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
     setWaterEnabled(enabled: boolean) {
       diagnostics.waterEnabled = enabled;
       lastFrameTime = null;
+      updateLayers();
+    },
+    setWaterStyle(style: 'classic' | 'river') {
+      diagnostics.waterStyle = style;
       updateLayers();
     },
     setPlaying(playing: boolean) {

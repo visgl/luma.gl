@@ -9,8 +9,9 @@ cd examples/deck/city-scene
 yarn start
 ```
 
-Choose WebGPU or WebGL2, change camera presets, toggle buildings and water shading, adjust ripple
-strength, pause the waves, and click surfaces to inspect features. Positions use Deck's meter-offset
+Choose WebGPU or WebGL2, change camera presets, toggle buildings and water shading, compare the
+classic and layered river water styles, adjust ripple strength, pause the waves, and click surfaces
+to inspect features. Positions use Deck's meter-offset
 coordinate system around a fixed geographic origin. Deck owns the frame loop and presentation
 device. The example owns the water positions; `WaterSurfaceLayer` borrows them and owns its model.
 
@@ -21,6 +22,8 @@ screenshots in the system temporary directory. Tests use software rendering for 
 do not establish hardware performance targets. Set `CITY_SCENE_HARDWARE=true` to run them with the
 available hardware adapter instead.
 
-The river uses luma.gl's procedural `waterMaterial` with normal perturbation and Fresnel/specular
-shading. It does not displace geometry or reflect surrounding buildings. The small city mesh adapter
-remains local to the example and does not promise arbitrary mesh formats or terrain draping.
+The classic style uses luma.gl's procedural `waterMaterial`. The River style layers crossing wave
+scales, animated surface shimmer, Fresnel response, and directional-light glints in the separate
+`riverWaterMaterial`; the existing material remains available unchanged. Neither style displaces
+geometry or reflects surrounding buildings. The small city mesh adapter remains local to the example
+and does not promise arbitrary mesh formats or terrain draping.
