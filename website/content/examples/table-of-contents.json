@@ -249,6 +249,11 @@
   },
   {
     "type": "category",
+    "label": "Deck.gl",
+    "items": ["deck/city-scene"]
+  },
+  {
+    "type": "category",
     "label": "GPU Graph Layers - deck.gl v10",
     "items": [
       {
