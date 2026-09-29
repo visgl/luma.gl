@@ -1,0 +1,154 @@
+/* luma.gl
+ * SPDX-License-Identifier: MIT
+ * SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+ */
+
+/* Shared by the website InfoBox and standalone example overlays. */
+.luma-example-infobox {
+  --luma-infobox-surface: #080c14e8;
+  --luma-infobox-card: #09121fc9;
+  --luma-infobox-control: #1e293a;
+  --luma-infobox-border: #7e9bcd42;
+  --luma-infobox-card-border: #899fc21c;
+  --luma-infobox-control-border: #8ca9d14d;
+  --luma-infobox-text: #e7ece9;
+  --luma-infobox-muted: #8293a2;
+  --luma-infobox-heading: #8fb4e7;
+  --luma-infobox-accent: #86cbbd;
+  box-sizing: border-box;
+  padding: 12px;
+  color: var(--luma-infobox-text);
+  background: var(--luma-infobox-surface);
+  border: 1px solid var(--luma-infobox-border);
+  border-radius: 8px;
+  box-shadow: 0 12px 30px #0004;
+  backdrop-filter: blur(14px) saturate(145%);
+  -webkit-backdrop-filter: blur(14px) saturate(145%);
+  color-scheme: dark;
+  font: 12px/1.4 system-ui, sans-serif;
+}
+
+.luma-example-infobox[data-info-box-appearance='light'] {
+  --luma-infobox-surface: #fffffff5;
+  --luma-infobox-card: #f8fafc;
+  --luma-infobox-control: #fff;
+  --luma-infobox-border: #0f172a26;
+  --luma-infobox-card-border: #0f172a1a;
+  --luma-infobox-control-border: #0f172a40;
+  --luma-infobox-text: #111;
+  --luma-infobox-muted: #596579;
+  --luma-infobox-heading: #365b86;
+  --luma-infobox-accent: #167565;
+  color-scheme: light;
+}
+
+/* Placement is separate from appearance so website panels can still resize. */
+.luma-example-infobox--overlay {
+  position: absolute;
+  z-index: 1;
+  top: 12px;
+  left: 12px;
+  width: 258px;
+  max-width: calc(100% - 24px);
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
+}
+
+.luma-example-infobox h1 {
+  margin: 2px 0 9px;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -.5px;
+  color: inherit;
+}
+.luma-example-infobox .eyebrow {
+  margin: 0;
+  color: var(--luma-infobox-accent);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 2px;
+}
+.luma-example-infobox .control-card {
+  margin: 8px 0 0;
+  padding: 8px;
+  min-width: 0;
+  border: 1px solid var(--luma-infobox-card-border);
+  border-radius: 7px;
+  background: var(--luma-infobox-card);
+}
+.luma-example-infobox .control-card h2 {
+  margin: 0 0 5px;
+  color: var(--luma-infobox-heading);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .075em;
+  text-transform: uppercase;
+}
+.luma-example-infobox .control-card label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 6px 0;
+  font-size: 11px;
+}
+.luma-example-infobox .control-card .toggle {
+  justify-content: flex-start;
+}
+.luma-example-infobox .control-card :is(select, button, input[type='color']) {
+  padding: 4px 6px;
+  background: var(--luma-infobox-control);
+  color: inherit;
+  border: 1px solid var(--luma-infobox-control-border);
+  border-radius: 4px;
+  font: inherit;
+}
+.luma-example-infobox .control-card select {
+  min-width: 105px;
+  max-width: 140px;
+}
+.luma-example-infobox .control-card button {
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.luma-example-infobox input {
+  accent-color: var(--luma-infobox-accent);
+}
+.luma-example-infobox .control-card input[type='range'] {
+  width: 112px;
+  min-width: 0;
+}
+.luma-example-infobox .control-card input[type='color'] {
+  width: 38px;
+  height: 24px;
+  padding: 1px;
+}
+.luma-example-infobox :is(input, select, button, a):focus-visible {
+  outline: 2px solid var(--luma-infobox-accent);
+  outline-offset: 2px;
+}
+.luma-example-infobox output {
+  display: block;
+  font-size: 10px;
+  margin-top: 8px;
+}
+.luma-example-infobox .selection {
+  padding-top: 8px;
+  border-top: 1px solid var(--luma-infobox-border);
+}
+.luma-example-infobox .hint {
+  font-size: 10px;
+  margin: 8px 0 0;
+  color: var(--luma-infobox-muted);
+}
+@media (max-width: 600px) {
+  .luma-example-infobox { padding: 10px; }
+  .luma-example-infobox--overlay {
+    top: 8px;
+    left: 8px;
+    width: 238px;
+    max-width: calc(100% - 16px);
+    max-height: calc(100% - 16px);
+  }
+  .luma-example-infobox h1 { font-size: 20px; }
+}
