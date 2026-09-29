@@ -72,6 +72,17 @@ jobs:
       - name: Install Playwright Chromium
         run: yarn playwright:install
 
+      - name: Run Deck pattern fill visual checks
+        if: ${{ matrix.shard == 2 }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-pattern-fills test:visual
+
+      - name: Upload Deck pattern fill screenshots
+        if: ${{ always() && matrix.shard == 2 }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: deck-pattern-fills
+          path: /tmp/pattern-fills-*.png
+
       - name: Run Deck sketch edges visual checks
         if: ${{ matrix.shard == 2 }}
         run: xvfb-run -a yarn workspace luma.gl-examples-deck-sketch-edges test:visual
