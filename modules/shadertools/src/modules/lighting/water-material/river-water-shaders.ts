@@ -39,11 +39,16 @@ fn riverWater_waveGradient(
   speed: f32,
   phaseOffset: f32
 ) -> vec2<f32> {
-  let variationCoordinates = coordinates * 0.48 + vec2<f32>(phaseOffset * 3.7, waterMaterial.time * 0.16);
+  // Advect the irregular wave packets together with their carrier waves.
+  let movingCoordinates = coordinates + direction * (waterMaterial.time * speed / frequency);
+  let crossDirection = vec2<f32>(-direction.y, direction.x);
+  let variationCoordinates = vec2<f32>(dot(movingCoordinates, crossDirection), dot(movingCoordinates, direction)) * frequency * vec2<f32>(0.38, 0.16) + vec2<f32>(phaseOffset * 3.7);
   let variation = riverWater_noise(variationCoordinates);
-  let phase = dot(coordinates, direction) * frequency + waterMaterial.time * speed + phaseOffset + variation * 5.0;
+  let detail = riverWater_noise(variationCoordinates * 2.13 + vec2<f32>(11.3, 7.9));
+  let envelope = smoothstep(0.12, 0.88, riverWater_noise(variationCoordinates * 0.71 + vec2<f32>(23.6, 5.2)));
+  let phase = dot(movingCoordinates, direction) * frequency + phaseOffset + (variation - 0.5) * 7.0 + (detail - 0.5) * 2.5;
   let attenuation = 1.0 - smoothstep(0.8, 3.0, fwidth(phase));
-  return direction * (cos(phase) * frequency * amplitude * attenuation * (0.45 + variation));
+  return direction * (cos(phase) * frequency * amplitude * attenuation * (0.15 + envelope * 1.2));
 }
 
 fn riverWater_getNormal(
@@ -55,14 +60,15 @@ fn riverWater_getNormal(
   let coordinates = riverWater_getFlowCoordinates(
     water_getCoordinates(position_worldspace, position_objectspace, uv)
   );
-  let warp = vec2<f32>(
-    sin(coordinates.y * 0.72 + waterMaterial.time * 0.72),
-    sin(coordinates.y * 0.58 + waterMaterial.time * 0.58)
-  ) * 0.1;
+  let driftCoordinates = coordinates * 0.7 + vec2<f32>(0.0, waterMaterial.time * 0.22);
+  let warp = (vec2<f32>(
+    riverWater_noise(driftCoordinates),
+    riverWater_noise(driftCoordinates + vec2<f32>(17.2, 9.4))
+  ) - vec2<f32>(0.5)) * 0.65;
   let warpedCoordinates = coordinates + warp;
   let gradient =
-    riverWater_waveGradient(warpedCoordinates, normalize(vec2<f32>(0.08, 1.0)), 2.1, 0.035, 1.25, 0.0) +
-    riverWater_waveGradient(warpedCoordinates, normalize(vec2<f32>(-0.28, 1.0)), 3.7, 0.02, 0.95, 1.7) +
+    riverWater_waveGradient(warpedCoordinates, normalize(vec2<f32>(0.08, 1.0)), 2.1, 0.018, 1.25, 0.0) +
+    riverWater_waveGradient(warpedCoordinates, normalize(vec2<f32>(-0.28, 1.0)), 3.7, 0.018, 0.95, 1.7) +
     riverWater_waveGradient(warpedCoordinates, normalize(vec2<f32>(0.47, 1.0)), 5.3, 0.012, 1.7, 3.2) +
     riverWater_waveGradient(warpedCoordinates, normalize(vec2<f32>(-0.68, 1.0)), 7.9, 0.008, 0.76, 0.8) +
     riverWater_waveGradient(warpedCoordinates, normalize(vec2<f32>(0.92, 1.0)), 11.6, 0.004, 2.2, 2.1) +
@@ -136,11 +142,16 @@ float riverWater_noise(vec2 coordinates) {
 vec2 riverWater_waveGradient(
   vec2 coordinates, vec2 direction, float frequency, float amplitude, float speed, float phaseOffset
 ) {
-  vec2 variationCoordinates = coordinates * 0.48 + vec2(phaseOffset * 3.7, waterMaterial.time * 0.16);
+  // Advect the irregular wave packets together with their carrier waves.
+  vec2 movingCoordinates = coordinates + direction * (waterMaterial.time * speed / frequency);
+  vec2 crossDirection = vec2(-direction.y, direction.x);
+  vec2 variationCoordinates = vec2(dot(movingCoordinates, crossDirection), dot(movingCoordinates, direction)) * frequency * vec2(0.38, 0.16) + vec2(phaseOffset * 3.7);
   float variation = riverWater_noise(variationCoordinates);
-  float phase = dot(coordinates, direction) * frequency + waterMaterial.time * speed + phaseOffset + variation * 5.0;
+  float detail = riverWater_noise(variationCoordinates * 2.13 + vec2(11.3, 7.9));
+  float envelope = smoothstep(0.12, 0.88, riverWater_noise(variationCoordinates * 0.71 + vec2(23.6, 5.2)));
+  float phase = dot(movingCoordinates, direction) * frequency + phaseOffset + (variation - 0.5) * 7.0 + (detail - 0.5) * 2.5;
   float attenuation = 1.0 - smoothstep(0.8, 3.0, fwidth(phase));
-  return direction * (cos(phase) * frequency * amplitude * attenuation * (0.45 + variation));
+  return direction * (cos(phase) * frequency * amplitude * attenuation * (0.15 + envelope * 1.2));
 }
 
 vec3 riverWater_getNormal(
@@ -152,14 +163,15 @@ vec3 riverWater_getNormal(
   vec2 coordinates = riverWater_getFlowCoordinates(
     water_getCoordinates(position_worldspace, position_objectspace, uv)
   );
-  vec2 warp = vec2(
-    sin(coordinates.y * 0.72 + waterMaterial.time * 0.72),
-    sin(coordinates.y * 0.58 + waterMaterial.time * 0.58)
-  ) * 0.1;
+  vec2 driftCoordinates = coordinates * 0.7 + vec2(0.0, waterMaterial.time * 0.22);
+  vec2 warp = (vec2(
+    riverWater_noise(driftCoordinates),
+    riverWater_noise(driftCoordinates + vec2(17.2, 9.4))
+  ) - vec2(0.5)) * 0.65;
   vec2 warpedCoordinates = coordinates + warp;
   vec2 gradient =
-    riverWater_waveGradient(warpedCoordinates, normalize(vec2(0.08, 1.0)), 2.1, 0.035, 1.25, 0.0) +
-    riverWater_waveGradient(warpedCoordinates, normalize(vec2(-0.28, 1.0)), 3.7, 0.02, 0.95, 1.7) +
+    riverWater_waveGradient(warpedCoordinates, normalize(vec2(0.08, 1.0)), 2.1, 0.018, 1.25, 0.0) +
+    riverWater_waveGradient(warpedCoordinates, normalize(vec2(-0.28, 1.0)), 3.7, 0.018, 0.95, 1.7) +
     riverWater_waveGradient(warpedCoordinates, normalize(vec2(0.47, 1.0)), 5.3, 0.012, 1.7, 3.2) +
     riverWater_waveGradient(warpedCoordinates, normalize(vec2(-0.68, 1.0)), 7.9, 0.008, 0.76, 0.8) +
     riverWater_waveGradient(warpedCoordinates, normalize(vec2(0.92, 1.0)), 11.6, 0.004, 2.2, 2.1) +
