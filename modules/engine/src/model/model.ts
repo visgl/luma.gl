@@ -140,6 +140,14 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
   firstVertex?: number;
   /** First index element for WebGPU indexed draws. */
   firstIndex?: number;
+  /**
+   * WebGPU only. Buffer holding an indirect draw record whose `instanceCount` is written on the GPU.
+   * When set, `draw()` issues `drawIndirect()` / `drawIndexedIndirect()` instead of using `instanceCount`.
+   * @see {@link Model.setIndirectBuffer}
+   */
+  indirectBuffer?: Buffer | null;
+  /** Byte offset of the indirect draw record in `indirectBuffer`. Must be a multiple of 4. */
+  indirectOffset?: number;
   /** Buffer-valued attributes. Dynamic buffers are rebound when resized. */
   attributes?: Record<string, ModelBuffer>;
   /**   */
@@ -221,6 +229,8 @@ export class Model {
     indexCount: undefined!,
     firstVertex: 0,
     firstIndex: 0,
+    indirectBuffer: null,
+    indirectOffset: 0,
     attributes: {},
     constantAttributes: {},
     bindings: {},
@@ -289,6 +299,10 @@ export class Model {
 
   /** Index buffer */
   indexBuffer: Buffer | null = null;
+  /** WebGPU indirect draw record supplying a GPU-resident instance count. `null` draws `instanceCount`. */
+  indirectBuffer: Buffer | null = null;
+  /** Byte offset of the indirect draw record in `indirectBuffer`. */
+  indirectOffset: number = 0;
   /** Buffer-valued attributes */
   bufferAttributes: Record<string, Buffer> = {};
   /** Constant-valued attributes */
@@ -332,6 +346,8 @@ export class Model {
   private _drawBlockedReason: string | false = false;
   private _destroyed = false;
   private _vertexCountSet = false;
+  /** Draw-record words (all but `instanceCount`) last written to `indirectBuffer`, or `null`. */
+  private _indirectRecordWords: number[] | null = null;
 
   /** "Time" of last draw. Monotonically increasing timestamp */
   _lastDrawTimestamp: number = -1;
@@ -513,6 +529,7 @@ export class Model {
     if (props.instanceCount) this.setInstanceCount(props.instanceCount);
     if (props.vertexCount) this.setVertexCount(props.vertexCount);
     if (props.indexBuffer) this.setIndexBuffer(props.indexBuffer);
+    if (props.indirectBuffer) this.setIndirectBuffer(props.indirectBuffer, props.indirectOffset);
     if (props.attributes) this.setAttributes(props.attributes);
     if (props.constantAttributes) this.setConstantAttributes(props.constantAttributes);
     if (props.bindings) this.setBindings(props.bindings);
@@ -656,22 +673,27 @@ export class Model {
           });
           renderPass.setVertexArray(this.vertexArray);
           const hasNoInstances = this.isInstanced === true && this.instanceCount === 0;
-          drawSuccess = hasNoInstances
-            ? true
-            : renderPass.draw({
-                isInstanced: this.isInstanced,
-                vertexCount: this.vertexCount,
-                instanceCount: this.isInstanced ? this.instanceCount : undefined,
-                indexCount,
-                firstVertex: this.firstVertex,
-                firstIndex: this.firstIndex,
-                transformFeedback: this.transformFeedback || undefined,
-                uniforms: this.props.uniforms,
-                // WebGL shares underlying cached programs even for models that have different
-                // parameters and topology, so those compatibility overrides remain per draw.
-                parameters: this.parameters,
-                topology: this.topology
-              });
+          if (this.indirectBuffer) {
+            // The GPU owns the instance count, so a CPU instanceCount of 0 must not skip the draw.
+            drawSuccess = this._drawIndirect(renderPass, this.indirectBuffer, indexCount);
+          } else {
+            drawSuccess = hasNoInstances
+              ? true
+              : renderPass.draw({
+                  isInstanced: this.isInstanced,
+                  vertexCount: this.vertexCount,
+                  instanceCount: this.isInstanced ? this.instanceCount : undefined,
+                  indexCount,
+                  firstVertex: this.firstVertex,
+                  firstIndex: this.firstIndex,
+                  transformFeedback: this.transformFeedback || undefined,
+                  uniforms: this.props.uniforms,
+                  // WebGL shares underlying cached programs even for models that have different
+                  // parameters and topology, so those compatibility overrides remain per draw.
+                  parameters: this.parameters,
+                  topology: this.topology
+                });
+          }
         }
       }
     } finally {
@@ -693,6 +715,42 @@ export class Model {
       this._needsRedraw = 'waiting for resource initialization';
     }
     return drawSuccess;
+  }
+
+  /** Syncs the model-owned words of the indirect draw record, then records the indirect draw. */
+  private _drawIndirect(
+    renderPass: RenderPass,
+    indirectBuffer: Buffer,
+    indexCount: number | undefined
+  ): boolean {
+    const isIndexed = indexCount !== undefined;
+    // Words 0 and 2..: count, then firstVertex/firstIndex, [baseVertex,] firstInstance.
+    const recordWords = isIndexed
+      ? [indexCount, this.firstIndex, 0, 0]
+      : [this.vertexCount, this.firstVertex, 0];
+    const recordByteLength = (recordWords.length + 1) * 4;
+    // The indirect draw record must fit inside indirectBuffer
+    assert(
+      this.indirectOffset + recordByteLength <= indirectBuffer.byteLength,
+      'Model indirectBuffer is too small for the draw record'
+    );
+    const previousWords = this._indirectRecordWords;
+    if (
+      !previousWords ||
+      previousWords.length !== recordWords.length ||
+      previousWords.some((word, index) => word !== recordWords[index])
+    ) {
+      // Skip the instanceCount word so GPU-written counts are never overwritten.
+      indirectBuffer.write(new Uint32Array(recordWords.slice(0, 1)), this.indirectOffset);
+      indirectBuffer.write(new Uint32Array(recordWords.slice(1)), this.indirectOffset + 8);
+      this._indirectRecordWords = recordWords;
+    }
+    if (isIndexed) {
+      renderPass.drawIndexedIndirect(indirectBuffer, this.indirectOffset);
+    } else {
+      renderPass.drawIndirect(indirectBuffer, this.indirectOffset);
+    }
+    return true;
   }
 
   // Update fixed fields (can trigger pipeline rebuild)
@@ -877,6 +935,45 @@ export class Model {
         : null;
     this.vertexArray.setIndexBuffer(resolvedIndexBuffer);
     this.setNeedsRedraw('indexBuffer');
+  }
+
+  /**
+   * Draws with an instance count that lives in GPU memory, e.g. written by a compute pass.
+   * WebGPU only: WebGL2 has no indirect draws, so this throws on WebGL rather than drawing a
+   * stale CPU count.
+   *
+   * `indirectBuffer` holds one WebGPU indirect draw record at `indirectOffset`:
+   * - non-indexed: `[vertexCount, instanceCount, firstVertex, firstInstance]` (16 bytes)
+   * - indexed: `[indexCount, instanceCount, firstIndex, baseVertex, firstInstance]` (20 bytes)
+   *
+   * The model owns every word except `instanceCount`: it writes them from its own vertex/index
+   * count and draw offsets (with `baseVertex` and `firstInstance` of `0`) whenever they change,
+   * using queue writes that are legal while a render pass is open. The application owns the
+   * `instanceCount` word (byte `indirectOffset + 4`) and must write it before the render pass
+   * begins, e.g. from a compute shader or with `commandEncoder.copyBufferToBuffer()`.
+   *
+   * The buffer needs `Buffer.INDIRECT | Buffer.COPY_DST` usage. Pass `null` to return to
+   * drawing `instanceCount`.
+   */
+  setIndirectBuffer(indirectBuffer: Buffer | null, indirectOffset: number = 0): void {
+    if (indirectBuffer) {
+      // Indirect draws are only supported in WebGPU
+      assert(this.device.type === 'webgpu', 'Model indirect draws require WebGPU');
+      // The model consumes the record with drawIndirect and writes its non-instance-count words
+      assert(
+        (indirectBuffer.usage & (Buffer.INDIRECT | Buffer.COPY_DST)) ===
+          (Buffer.INDIRECT | Buffer.COPY_DST),
+        'Model indirectBuffer requires Buffer.INDIRECT | Buffer.COPY_DST usage'
+      );
+      // WebGPU requires 4-byte aligned indirect offsets
+      assert(indirectOffset % 4 === 0, 'Model indirectOffset must be a multiple of 4');
+    }
+    if (indirectBuffer !== this.indirectBuffer || indirectOffset !== this.indirectOffset) {
+      this._indirectRecordWords = null;
+    }
+    this.indirectBuffer = indirectBuffer;
+    this.indirectOffset = indirectBuffer ? indirectOffset : 0;
+    this.setNeedsRedraw('indirectBuffer');
   }
 
   /**
