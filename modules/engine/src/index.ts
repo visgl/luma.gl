@@ -91,6 +91,8 @@ export {ModelNode} from './scenegraph/model-node';
 // Geometries
 export type {GeometryProps, GeometryAttribute, GeometryAttributeInput} from './geometry/geometry';
 export {Geometry} from './geometry/geometry';
+export {makeEdgeGeometry} from './geometry/edge-geometry';
+export type {MakeEdgeGeometryOptions} from './geometry/edge-geometry';
 export type {MakeInterleavedGeometryOptions} from './geometry/geometry-utils';
 export {makeInterleavedGeometry} from './geometry/geometry-utils';
 export type {

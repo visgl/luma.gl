@@ -156,3 +156,37 @@ and returns the original instance.
 - `bufferLayout` is synthesized when omitted.
 - `makeGPUGeometry()` interleaves CPU `Geometry` before uploading it to GPU buffers.
 - Use [`GPUGeometry`](/docs/api-reference/engine/geometry/gpu-geometry) when geometry data is already uploaded into GPU buffers.
+
+## Extracting architectural edges
+
+`makeEdgeGeometry(geometry, options?)` creates an indexed `line-list` geometry containing open
+boundaries and creases between adjacent triangle faces. It removes coplanar triangulation
+edges, welds duplicate positions across attribute seams, ignores duplicate and degenerate
+triangles, and retains edges shared by more than two faces.
+
+```typescript
+import {CubeGeometry, makeEdgeGeometry} from '@luma.gl/engine';
+
+const surface = new CubeGeometry();
+const edges = makeEdgeGeometry(surface, {angleThreshold: 30});
+// Twelve cuboid edges, without face diagonals or duplicated seam edges.
+```
+
+Options:
+
+- `angleThreshold`: minimum dihedral angle in degrees (0–180), default 30. Coplanar internal
+  edges are omitted even at zero. Adjacent triangles should have consistent winding.
+- `weldTolerance`: nonnegative position distance in source coordinate units, default zero for
+  exact welding. Positive values also merge nearby vertices across spatial bucket boundaries.
+- `positionAttribute`: CPU position attribute name, default `POSITION`. Set it explicitly for
+  legacy or custom attribute names. The name is preserved in the returned geometry.
+
+Input must be an indexed or non-indexed `triangle-list` with a packed three-component position
+attribute. Only the active `vertexCount` is inspected. Interleaved or GPU-only input must first
+be converted to packed CPU positions. The result borrows the source position attribute and owns
+new `Uint32Array` indices; it neither mutates the source nor copies unrelated attributes.
+
+This is CPU preprocessing for static mesh edges. Run it when geometry changes, rather than every
+frame. It does not compute view-dependent silhouettes, deduplicate separately processed tiles,
+or connect the resulting segments into joined paths. Render opaque surfaces before an edge
+overlay to provide hidden-edge occlusion; stroke width and material are renderer concerns.
