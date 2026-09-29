@@ -1,10 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head><meta charset="utf-8" /><link rel="icon" href="data:," /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Riverfront outlines · luma.gl</title>
-<link rel="stylesheet" href="../../example-infobox.css" />
-<style>
-html,body,#scene {margin:0;width:100%;height:100%;overflow:hidden;background:#e6e2d9}
-</style></head>
+<link rel="stylesheet" href="./style.css" /></head>
 <body><div id="scene" aria-label="Interactive architectural sketch"></div><aside class="luma-example-infobox luma-example-infobox--overlay"><p class="eyebrow">luma.gl + deck.gl</p><h1>Riverfront outlines</h1>
 <section class="control-card"><h2>Scene</h2><label>Renderer<select id="backend"><option value="webgpu">WebGPU</option><option value="webgl">WebGL2</option></select></label><label class="toggle"><input id="fills" type="checkbox" checked /> Building faces</label><label class="toggle"><input id="context" type="checkbox" checked /> Surroundings</label><label class="toggle"><input id="edges" type="checkbox" checked /> Edges</label></section>
 <section class="control-card"><h2>Edges</h2><label>Geometry<select id="edge-mode"><option value="architectural">Architectural</option><option value="triangles">Triangle mesh</option></select></label><label>Crease angle<input id="angle" type="range" min="0" max="120" step="1" value="30" /></label></section>
