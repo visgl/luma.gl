@@ -1,3 +1,4 @@
+import '../../../../examples/example-infobox.css';
 import React, {CSSProperties, FC, useEffect, useRef, useState} from 'react';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import CodeBlock from '@theme/CodeBlock';
@@ -21,32 +22,11 @@ const INFO_BOX_KEYBOARD_RESIZE_STEP = 10;
 const INFO_BOX_LARGE_KEYBOARD_RESIZE_STEP = 30;
 const INFO_BOX_BASE_STYLE: CSSProperties = {
   boxSizing: 'border-box',
-  borderRadius: 'var(--luma-example-radius, 14px)',
   width: 420,
   minWidth: 0,
   maxWidth: '100%',
   overflow: 'hidden',
-  padding: '13px 15px',
   zIndex: 10
-};
-const INFO_BOX_APPEARANCE_STYLES: Record<InfoBoxAppearance, CSSProperties> = {
-  cinematic: {
-    backdropFilter: `var(--luma-example-backdrop, ${EXAMPLE_THEME_TOKENS.cinematic.backdrop})`,
-    background:
-      'radial-gradient(ellipse at 12% 0%, rgba(56, 189, 248, 0.08), transparent 42%), linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(5, 12, 24, 0.91))',
-    border: `1px solid var(--luma-example-border, ${EXAMPLE_THEME_TOKENS.cinematic.border})`,
-    boxShadow: `var(--luma-example-shadow, ${EXAMPLE_THEME_TOKENS.cinematic.shadow})`,
-    color: `var(--luma-example-text, ${EXAMPLE_THEME_TOKENS.cinematic.text})`,
-    colorScheme: 'dark',
-    WebkitBackdropFilter: `var(--luma-example-backdrop, ${EXAMPLE_THEME_TOKENS.cinematic.backdrop})`
-  },
-  light: {
-    backgroundColor: 'rgba(255, 255, 255, 0.96)',
-    border: `1px solid var(--luma-example-border, ${EXAMPLE_THEME_TOKENS.light.border})`,
-    boxShadow: `var(--luma-example-shadow, ${EXAMPLE_THEME_TOKENS.light.shadow})`,
-    color: `var(--luma-example-text, ${EXAMPLE_THEME_TOKENS.light.text})`,
-    colorScheme: 'light'
-  }
 };
 const INFO_BOX_CHROME_STYLE = `
 [data-info-box-appearance] [data-luma-example-chrome-action] {
@@ -430,11 +410,11 @@ function InfoBoxView(props: InfoBoxViewProps) {
   return (
     <div
       ref={setInfoBoxElement}
+      className="luma-example-infobox"
       data-info-box-appearance={appearance}
       data-luma-info-box-collapsed={isCollapsed ? 'true' : 'false'}
       style={{
         ...INFO_BOX_BASE_STYLE,
-        ...INFO_BOX_APPEARANCE_STYLES[appearance],
         ...props.style,
         display: 'flex',
         flexDirection: 'column',
@@ -489,8 +469,8 @@ function InfoBoxView(props: InfoBoxViewProps) {
                 data-luma-example-title=""
                 style={{
                   color: 'inherit',
-                  fontSize: 17,
-                  fontWeight: 720,
+                  fontSize: 22,
+                  fontWeight: 600,
                   letterSpacing: '-0.022em',
                   lineHeight: 1.3,
                   marginTop: 0,
