@@ -13,7 +13,12 @@ import {makeBuildings, makeEdges, ORIGIN} from './building-data';
 export function createSketchScene(parent: HTMLDivElement, options: DeckExampleDeviceOptions = {}) {
   const features = makeBuildings();
   const edgeData = makeEdges(features);
-  const ready = Promise.withResolvers<void>();
+  let resolveReady: () => void;
+  let rejectReady: (error: Error) => void;
+  const ready = new Promise<void>((resolve, reject) => {
+    resolveReady = resolve;
+    rejectReady = reject;
+  });
   const diagnostics = {frames: 0, backend: '', error: '', selected: '', finalized: false};
   let segments: Buffer | null = null;
   let style: SketchStrokeProps = {
@@ -43,14 +48,14 @@ export function createSketchScene(parent: HTMLDivElement, options: DeckExampleDe
     },
     onLoad: () => {
       updateLayers();
-      ready.resolve();
+      resolveReady();
     },
     onAfterRender: () => {
       diagnostics.frames++;
     },
     onError: error => {
       diagnostics.error = error.message;
-      ready.reject(error);
+      rejectReady(error);
     },
     onClick: info => {
       diagnostics.selected = info.object?.name || '';
@@ -88,7 +93,7 @@ export function createSketchScene(parent: HTMLDivElement, options: DeckExampleDe
     deck,
     features,
     diagnostics,
-    ready: ready.promise,
+    ready,
     get segments() {
       return segments;
     },

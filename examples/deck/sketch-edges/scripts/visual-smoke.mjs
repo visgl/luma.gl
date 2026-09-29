@@ -35,7 +35,7 @@ try {
       const errors = [];
       page.on('pageerror', error => {errors.push(error.message); console.error(error.message);});
       page.on('console', message => {if (message.type() === 'error') {errors.push(message.text()); console.error(message.text());}});
-      await page.goto(`${server.resolvedUrls.local[0]}?backend=${backend}`);
+      await page.goto(`${process.env.SKETCH_EXAMPLE_URL || server.resolvedUrls.local[0]}?backend=${backend}`);
       await page.waitForFunction(() => document.body.dataset.ready === 'true', undefined, {timeout: 60_000});
       await page.waitForTimeout(500);
       const pencil = PNG.sync.read(await page.screenshot({path: join(tmpdir(), `sketch-edges-${backend}.png`)}));

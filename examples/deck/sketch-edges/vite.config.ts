@@ -4,8 +4,12 @@
 
 import {defineConfig} from 'vite';
 
-export default defineConfig({
-  base: './',
+export default defineConfig(({mode}) => ({
+  // Website hosts may redirect index.html to a clean URL without a trailing slash.
+  base:
+    mode === 'website'
+      ? `${(process.env['WEBSITE_BASE_URL'] || '/').replace(/\/?$/, '/')}standalone-examples/sketch-edges/`
+      : './',
   resolve: {
     alias: {
       '@deck.gl-community/gpu-layers': `${__dirname}/../../../modules/deck-gpu-layers/src`,
@@ -18,4 +22,4 @@ export default defineConfig({
     }
   },
   optimizeDeps: {exclude: ['@deck.gl/core'], noDiscovery: true}
-});
+}));

@@ -26,3 +26,7 @@ and readback orientation; no city or water example files are needed here.
 `yarn test:visual` renders both backends with software GPU adapters and checks visible style
 changes, stable replacement, hidden-edge occlusion, picking, resize, grazing views, and cleanup.
 Screenshots are written to the system temporary folder. These checks are not hardware benchmarks.
+
+To exercise a built website with the same visual checks, run a local website server and set
+`SKETCH_EXAMPLE_URL=http://localhost:3001/standalone-examples/sketch-edges/index.html` when invoking
+`yarn test:visual`. Website bundles honor `WEBSITE_BASE_URL` and support clean-URL redirects.
