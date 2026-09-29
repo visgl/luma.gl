@@ -24,6 +24,7 @@ available hardware adapter instead.
 
 The classic style uses luma.gl's procedural `waterMaterial`. The River style layers crossing wave
 scales, animated surface shimmer, Fresnel response, and directional-light glints in the separate
-`riverWaterMaterial`; the existing material remains available unchanged. Neither style displaces
-geometry or reflects surrounding buildings. The small city mesh adapter remains local to the example
-and does not promise arbitrary mesh formats or terrain draping.
+`riverWaterMaterial`; its wave travel follows the dominant axis of the river footprint. The existing
+material remains available unchanged. Neither style displaces geometry or reflects surrounding
+buildings. The small city mesh adapter remains local to the example and does not promise arbitrary
+mesh formats or terrain draping.

@@ -47,8 +47,14 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
   let activeFeatures = features;
   let waterPositions: Buffer | null = null;
   let waveStrength = 0.55;
+  let waterColor: [number, number, number] = [11 / 255, 66 / 255, 82 / 255];
   let lastFrameTime: number | null = null;
   const waterFeatures = features.filter(feature => feature.kind === 'water');
+  const riverFeature = waterFeatures[0];
+  const flowDirection: [number, number] =
+    riverFeature && Math.abs(riverFeature.size[0]) > Math.abs(riverFeature.size[1])
+      ? [1, 0]
+      : [0, 1];
   const waterMesh = makeCityMesh(waterFeatures);
   const waterVertices = new Float32Array((waterMesh.length / 10) * 3);
   for (
@@ -121,10 +127,18 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
             autoHighlight: true,
             highlightColor: [255, 196, 92, 160],
             style: diagnostics.waterStyle,
+            flowDirection,
             time: () => diagnostics.timeSeconds,
             material: {
-              baseColor: [0.045, 0.26, 0.32],
-              fresnelColor: [0.7, 0.87, 0.92],
+              baseColor: diagnostics.waterStyle === 'river' ? waterColor : [0.045, 0.26, 0.32],
+              fresnelColor:
+                diagnostics.waterStyle === 'river'
+                  ? (waterColor.map(channel => Math.min(channel + 0.48, 1)) as [
+                      number,
+                      number,
+                      number
+                    ])
+                  : [0.7, 0.87, 0.92],
               normalStrength: waveStrength,
               coordinateScale: [0.22, 0.22],
               waveASpeed: 1.1,
@@ -158,6 +172,10 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
     },
     setWaterStyle(style: 'classic' | 'river') {
       diagnostics.waterStyle = style;
+      updateLayers();
+    },
+    setWaterColor(color: [number, number, number]) {
+      waterColor = color;
       updateLayers();
     },
     setPlaying(playing: boolean) {

@@ -25,14 +25,21 @@
     <aside>
       <p class="eyebrow">luma.gl + deck.gl</p>
       <h1>River District</h1>
-      <p>A small city, a river, and room to explore.</p>
-      <label>View <select id="camera"><option value="district">District</option><option value="overhead">Overhead</option><option value="waterfront">Waterfront</option></select></label>
-      <label>Renderer <select id="backend"><option value="webgpu">WebGPU</option><option value="webgl">WebGL2</option></select></label>
-      <label class="toggle"><input id="buildings" type="checkbox" checked /> Show buildings</label>
-      <label class="toggle"><input id="water" type="checkbox" checked /> Animated water</label>
-      <label>Water style <select id="water-style"><option value="river">River</option><option value="classic">Classic</option></select></label>
-      <label>Ripples <input id="strength" type="range" min="0" max="1" step="0.05" value="0.55" /></label>
-      <button id="playback" type="button">Pause waves</button>
+      <section class="control-card">
+        <h2>Scene</h2>
+        <label>View <select id="camera"><option value="district">District</option><option value="overhead">Overhead</option><option value="waterfront">Waterfront</option></select></label>
+        <label>Renderer <select id="backend"><option value="webgpu">WebGPU</option><option value="webgl">WebGL2</option></select></label>
+        <label class="toggle"><input id="buildings" type="checkbox" checked /> Show buildings</label>
+      </section>
+      <section class="control-card">
+        <h2>Water</h2>
+        <label class="toggle"><input id="water" type="checkbox" checked /> Animated water</label>
+        <label>Style <select id="water-style"><option value="river">River</option><option value="classic">Classic</option></select></label>
+        <label>Water tint <select id="water-preset"><option value="teal">River teal</option><option value="slate">Slate grey</option><option value="deep-blue">Deep blue</option><option value="custom">Custom color</option></select></label>
+        <label>Custom tint <input id="water-color" type="color" value="#0b4252" /></label>
+        <label>Ripples <input id="strength" type="range" min="0" max="1" step="0.05" value="0.55" /></label>
+        <button id="playback" type="button">Pause waves</button>
+      </section>
       <output id="status" aria-live="polite">Preparing the district…</output>
       <output id="selection" aria-live="polite">Click a building or the river</output>
       <p class="hint">Drag to move · Scroll to zoom<br />Shift + drag to orbit</p>

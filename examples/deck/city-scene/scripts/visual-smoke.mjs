@@ -34,7 +34,30 @@ try {
       await page.waitForFunction(() => document.body.dataset.ready === 'true', undefined, {timeout: 60_000});
       await page.waitForFunction(() => window.cityScene?.diagnostics.frames > 0);
       assert.equal(await page.evaluate(() => window.cityScene.diagnostics.backend), backend);
+      assert.deepEqual(
+        await page.evaluate(() =>
+          window.cityScene.deck.props.layers.find(layer => layer?.id === 'river-water')?.props.flowDirection
+        ),
+        [0, 1],
+        `${backend}: river flow follows its north-south footprint axis`
+      );
       await page.waitForFunction(() => window.cityScene.diagnostics.timeSeconds > 0);
+      const playingWaterImage = PNG.sync.read(await page.screenshot());
+      await page.waitForTimeout(650);
+      const movingWaterImage = PNG.sync.read(await page.screenshot());
+      let animatedWaterPixels = 0;
+      for (let vertical = 120; vertical < 650; vertical++) {
+        for (let horizontal = 350; horizontal < 950; horizontal++) {
+          const offset = (vertical * playingWaterImage.width + horizontal) * 4;
+          const colorDifference = Math.max(
+            Math.abs(playingWaterImage.data[offset] - movingWaterImage.data[offset]),
+            Math.abs(playingWaterImage.data[offset + 1] - movingWaterImage.data[offset + 1]),
+            Math.abs(playingWaterImage.data[offset + 2] - movingWaterImage.data[offset + 2])
+          );
+          if (colorDifference > 3) animatedWaterPixels++;
+        }
+      }
+      assert(animatedWaterPixels > 100, `${backend}: water visibly moves during playback (${animatedWaterPixels} pixels)`);
       await page.click('#playback');
       await page.mouse.move(1190, 840);
       await page.waitForTimeout(150);
@@ -97,7 +120,49 @@ try {
       await page.mouse.move(990, 710);
       await page.evaluate(() => window.cityScene.setTime(2));
       await page.waitForTimeout(100);
+      await page.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur());
       const firstWaterImage = PNG.sync.read(await page.screenshot());
+      await page.selectOption('#water-preset', 'slate');
+      await page.waitForTimeout(100);
+      assert.equal(await page.locator('#water-color').inputValue(), '#67747a');
+      const slateWaterImage = PNG.sync.read(await page.screenshot());
+      let slateChangedPixels = 0;
+      for (let vertical = 120; vertical < 650; vertical++) {
+        for (let horizontal = 350; horizontal < 950; horizontal++) {
+          const offset = (vertical * firstWaterImage.width + horizontal) * 4;
+          if (Math.abs(firstWaterImage.data[offset] - slateWaterImage.data[offset]) > 3 ||
+              Math.abs(firstWaterImage.data[offset + 1] - slateWaterImage.data[offset + 1]) > 3 ||
+              Math.abs(firstWaterImage.data[offset + 2] - slateWaterImage.data[offset + 2]) > 3) {
+            slateChangedPixels++;
+          }
+        }
+      }
+      assert(slateChangedPixels > 1000, `${backend}: slate preset changes water tint (${slateChangedPixels} pixels)`);
+      await page.selectOption('#water-preset', 'teal');
+      await page.waitForTimeout(100);
+      await page.locator('#water-color').evaluate(input => {
+        input.value = '#d47a24';
+        input.dispatchEvent(new Event('input', {bubbles: true}));
+      });
+      await page.waitForTimeout(100);
+      const coloredWaterImage = PNG.sync.read(await page.screenshot());
+      let colorChangedPixels = 0;
+      for (let vertical = 120; vertical < 650; vertical++) {
+        for (let horizontal = 350; horizontal < 950; horizontal++) {
+          const offset = (vertical * firstWaterImage.width + horizontal) * 4;
+          if (Math.abs(firstWaterImage.data[offset] - coloredWaterImage.data[offset]) > 3 ||
+              Math.abs(firstWaterImage.data[offset + 1] - coloredWaterImage.data[offset + 1]) > 3 ||
+              Math.abs(firstWaterImage.data[offset + 2] - coloredWaterImage.data[offset + 2]) > 3) {
+            colorChangedPixels++;
+          }
+        }
+      }
+      assert(colorChangedPixels > 1000, `${backend}: river color selector changes water appearance (${colorChangedPixels} pixels)`);
+      await page.locator('#water-color').evaluate(input => {
+        input.value = '#0b4252';
+        input.dispatchEvent(new Event('input', {bubbles: true}));
+      });
+      await page.waitForTimeout(100);
       await page.selectOption('#water-style', 'classic');
       await page.waitForTimeout(100);
       const classicWaterImage = PNG.sync.read(await page.screenshot());
@@ -125,15 +190,19 @@ try {
       assert(changedPixels > 100, `${backend}: time changes water shading (${changedPixels} pixels)`);
       await page.evaluate(() => window.cityScene.setTime(2));
       await page.waitForTimeout(100);
+      await page.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur());
       const repeatedWaterImage = PNG.sync.read(await page.screenshot());
       let replayDifferences = 0;
-      for (let index = 0; index < firstWaterImage.data.length; index += 4) {
-        const colorDifference = Math.max(
-          Math.abs(repeatedWaterImage.data[index] - firstWaterImage.data[index]),
-          Math.abs(repeatedWaterImage.data[index + 1] - firstWaterImage.data[index + 1]),
-          Math.abs(repeatedWaterImage.data[index + 2] - firstWaterImage.data[index + 2])
-        );
-        if (colorDifference > 1) replayDifferences++;
+      for (let vertical = 120; vertical < 650; vertical++) {
+        for (let horizontal = 350; horizontal < 950; horizontal++) {
+          const index = (vertical * firstWaterImage.width + horizontal) * 4;
+          const colorDifference = Math.max(
+            Math.abs(repeatedWaterImage.data[index] - firstWaterImage.data[index]),
+            Math.abs(repeatedWaterImage.data[index + 1] - firstWaterImage.data[index + 1]),
+            Math.abs(repeatedWaterImage.data[index + 2] - firstWaterImage.data[index + 2])
+          );
+          if (colorDifference > 1) replayDifferences++;
+        }
       }
       assert.equal(replayDifferences, 0, `${backend}: replaying time is deterministic`);
       const screenshotPath = join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), `city-scene-${backend}.png`);

@@ -23,6 +23,8 @@ export type WaterSurfaceLayerProps = LayerProps & {
   material?: Omit<WaterMaterialProps, 'mapping' | 'time'>;
   /** Select the original shared water shader or the layered river surface variant. */
   style?: 'classic' | 'river';
+  /** Local east/north direction that river waves and shimmer follow. */
+  flowDirection?: [number, number];
   /** Seconds supplied by the caller. Reading a clock does not schedule additional frames. */
   time?: number | (() => number);
 };
@@ -35,7 +37,8 @@ export class WaterSurfaceLayer extends Layer<WaterSurfaceLayerProps> {
     // Deck's index-based WebGL bias can otherwise pull water in front of nearby bridges.
     getPolygonOffset: () => [0, 0],
     time: 0,
-    style: 'classic'
+    style: 'classic',
+    flowDirection: [0, 1]
   };
   declare state: {model: Model};
 
@@ -90,7 +93,10 @@ export class WaterSurfaceLayer extends Layer<WaterSurfaceLayerProps> {
         ...this.props.material,
         time: typeof this.props.time === 'function' ? this.props.time() : this.props.time
       },
-      riverWaterMaterial: {enabled: this.props.style === 'river' ? 1 : 0},
+      riverWaterMaterial: {
+        enabled: this.props.style === 'river' ? 1 : 0,
+        flowDirection: this.props.flowDirection
+      },
       lighting: {
         enabled: true,
         lights: [
