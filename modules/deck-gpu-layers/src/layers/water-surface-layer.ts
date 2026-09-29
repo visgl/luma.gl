@@ -14,6 +14,7 @@ import {
 import type {Buffer, RenderPass} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {riverWaterMaterial, waterMaterial, type WaterMaterialProps} from '@luma.gl/shadertools';
+import {surfaceBuffer} from './surface-buffer';
 
 export type WaterSurfaceLayerProps = LayerProps & {
   /** Borrowed packed float32x3 triangle vertices in local east/north/up meters. */
@@ -52,7 +53,7 @@ export class WaterSurfaceLayer extends Layer<WaterSurfaceLayerProps> {
         source: SOURCE,
         vs: VERTEX_SHADER,
         fs: FRAGMENT_SHADER,
-        modules: [project32, picking, waterMaterial, riverWaterMaterial]
+        modules: [project32, picking, waterMaterial, riverWaterMaterial, surfaceBuffer]
       }),
       id: `${this.id}-water`,
       topology: 'triangle-list',
@@ -84,6 +85,19 @@ export class WaterSurfaceLayer extends Layer<WaterSurfaceLayerProps> {
   }
 
   override draw({renderPass}: {renderPass: RenderPass}): void {
+    const parameters = {...this.state.model.parameters};
+    if (renderPass.props.framebuffer && !renderPass.props.framebuffer.depthStencilAttachment) {
+      delete parameters.depthCompare;
+      delete parameters.depthWriteEnabled;
+      delete parameters.depthFormat;
+      delete parameters.depthBias;
+      delete parameters.depthBiasSlopeScale;
+      delete parameters.depthBiasClamp;
+    } else {
+      parameters.depthCompare = 'less-equal';
+      parameters.depthWriteEnabled = true;
+    }
+    this.state.model.setParameters(parameters);
     this.state.model.shaderInputs.setProps({
       waterMaterial: {
         ...waterMaterial.defaultUniforms,
@@ -132,6 +146,13 @@ struct WaterVertex {
   return output;
 }
 @fragment fn fragmentMain(input: WaterVertex) -> @location(0) vec4<f32> {
+  if (surfaceBuffer.enabled > 0) {
+    var normal = water_getNormal(input.commonPosition, input.localPosition, input.commonNormal, input.localPosition.xy);
+    if (riverWaterMaterial.enabled > 0) {
+      normal = riverWater_getNormal(input.commonPosition, input.localPosition, input.commonNormal, input.localPosition.xy);
+    }
+    return surfaceBuffer_encode(normal, 0.08);
+  }
   let pickingColor = picking_getPickingColorFromIndex(0u);
   if (picking.isActive > 0.5) {
     if (picking_isColorZero(pickingColor)) { discard; }
@@ -178,6 +199,14 @@ in vec3 cameraPosition;
 in vec3 commonNormal;
 out vec4 fragColor;
 void main() {
+  if (surfaceBuffer.enabled > 0) {
+    vec3 normal = water_getNormal(commonPosition, localPosition, commonNormal, localPosition.xy);
+    if (riverWaterMaterial.enabled > 0) {
+      normal = riverWater_getNormal(commonPosition, localPosition, commonNormal, localPosition.xy);
+    }
+    fragColor = surfaceBuffer_encode(normal, 0.08);
+    return;
+  }
   fragColor = water_getColorMapped(cameraPosition, commonPosition, localPosition, commonNormal, localPosition.xy);
   if (riverWaterMaterial.enabled > 0) {
     fragColor = riverWater_getColorMapped(cameraPosition, commonPosition, localPosition, commonNormal, localPosition.xy);

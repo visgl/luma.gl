@@ -17,6 +17,7 @@ const backend = document.querySelector<HTMLSelectElement>('#backend');
 const camera = document.querySelector<HTMLSelectElement>('#camera');
 const buildings = document.querySelector<HTMLInputElement>('#buildings');
 const water = document.querySelector<HTMLInputElement>('#water');
+const reflections = document.querySelector<HTMLInputElement>('#reflections');
 const waterStyle = document.querySelector<HTMLSelectElement>('#water-style');
 const waterPreset = document.querySelector<HTMLSelectElement>('#water-preset');
 const waterColor = document.querySelector<HTMLInputElement>('#water-color');
@@ -30,6 +31,7 @@ if (
   !camera ||
   !buildings ||
   !water ||
+  !reflections ||
   !waterStyle ||
   !waterPreset ||
   !waterColor ||
@@ -44,6 +46,7 @@ const cameraControl = camera;
 const buildingsControl = buildings;
 const backendControl = backend;
 const waterControl = water;
+const reflectionsControl = reflections;
 const waterStyleControl = waterStyle;
 const waterPresetControl = waterPreset;
 const waterColorControl = waterColor;
@@ -79,6 +82,11 @@ async function startScene() {
     cameraControl.value = 'district';
     buildingsControl.checked = true;
     waterControl.checked = true;
+    reflectionsControl.disabled = scene.diagnostics.backend !== 'webgpu';
+    reflectionsControl.checked = !reflectionsControl.disabled;
+    reflectionsControl.title = reflectionsControl.disabled
+      ? 'Scene reflections require WebGPU'
+      : '';
     waterStyleControl.value = 'river';
     waterPresetControl.value = 'teal';
     waterColorControl.value = '#0b4252';
@@ -101,6 +109,9 @@ camera.addEventListener('change', () => {
 });
 buildings.addEventListener('change', () => scene.setBuildingsVisible(buildingsControl.checked));
 water.addEventListener('change', () => scene.setWaterEnabled(waterControl.checked));
+reflections.addEventListener('change', () =>
+  scene.setReflectionsEnabled(reflectionsControl.checked)
+);
 waterStyle.addEventListener('change', () =>
   scene.setWaterStyle(waterStyleControl.value === 'classic' ? 'classic' : 'river')
 );

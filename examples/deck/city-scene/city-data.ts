@@ -48,7 +48,7 @@ export function makeCityFeatures(): CityFeature[] {
   for (const side of [-1, 1]) {
     for (let row = 0; row < 8; row++) {
       for (let column = 0; column < 3; column++) {
-        const center: [number, number, number] = [side * (150 + column * 125), row * 135 - 470, 0];
+        const center: [number, number, number] = [side * (122 + column * 135), row * 135 - 470, 0];
         if ((row + column * 2) % 7 === 0) {
           features.push({
             name: `Riverside garden ${features.length}`,

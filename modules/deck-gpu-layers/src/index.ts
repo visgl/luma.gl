@@ -8,3 +8,4 @@ export {
 } from './layers/luspatial-point-layer';
 
 export {WaterSurfaceLayer, type WaterSurfaceLayerProps} from './layers/water-surface-layer';
+export {surfaceBuffer} from './layers/surface-buffer';

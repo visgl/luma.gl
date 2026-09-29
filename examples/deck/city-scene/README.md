@@ -22,9 +22,22 @@ screenshots in the system temporary directory. Tests use software rendering for 
 do not establish hardware performance targets. Set `CITY_SCENE_HARDWARE=true` to run them with the
 available hardware adapter instead.
 
-The classic style uses luma.gl's procedural `waterMaterial`. The River style layers crossing wave
-scales, animated surface shimmer, Fresnel response, and directional-light glints in the separate
+The classic style uses luma.gl's procedural `waterMaterial`. The River style layers small crossing
+ripples, Fresnel response, and directional-light glints in the separate
 `riverWaterMaterial`; its wave travel follows the dominant axis of the river footprint. The existing
-material remains available unchanged. Neither style displaces geometry or reflects surrounding
-buildings. The small city mesh adapter remains local to the example and does not promise arbitrary
-mesh formats or terrain draping.
+material remains available unchanged. Neither style displaces geometry. Ripple frequencies fade
+below a pixel to limit distant flicker.
+
+On WebGPU, **Scene reflections** adds screen-space building and bridge reflections. The example's
+`RiverReflectionEffect` rerenders its participating opaque layers into color/depth and view-normal/
+roughness buffers, then uses luma.gl's shared SSR tracer and spatial filters at half resolution.
+The `surfaceBuffer` shader module lets participating layers write normals and roughness for the
+auxiliary pass. This is a workaround for Deck's color-only postprocess input, scoped to this
+single-view fixture and installed as its final effect. It does not add buffers to arbitrary Deck
+layers. WebGL keeps the procedural material and disables the reflection control.
+
+SSR can only reflect surfaces visible in the current frame; screen-edge and occlusion gaps remain.
+There is no temporal accumulation because this fixture does not provide motion vectors. Buildings
+sit close to the river to make their reflections easier to see. The scene uses face lighting,
+without cast shadows. The small city mesh adapter remains local to the example and does not
+promise arbitrary mesh formats or terrain draping.

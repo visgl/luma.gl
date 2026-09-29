@@ -42,7 +42,7 @@ try {
         `${backend}: river flow follows its north-south footprint axis`
       );
       await page.waitForFunction(() => window.cityScene.diagnostics.timeSeconds > 0);
-      const playingWaterImage = PNG.sync.read(await page.screenshot());
+      const playingWaterImage = PNG.sync.read(await page.screenshot({path: join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), `city-scene-${backend}-playing.png`)}));
       await page.waitForTimeout(650);
       const movingWaterImage = PNG.sync.read(await page.screenshot());
       let animatedWaterPixels = 0;
@@ -64,6 +64,34 @@ try {
       const pausedFrames = await page.evaluate(() => window.cityScene.diagnostics.frames);
       await page.waitForTimeout(150);
       assert.equal(await page.evaluate(() => window.cityScene.diagnostics.frames), pausedFrames, `${backend}: pause stops drawing`);
+      if (backend === 'webgpu') {
+        await page.evaluate(() => {
+          window.cityScene.setTime(2);
+          window.cityScene.setReflectionDebugMode(1);
+        });
+        await page.waitForTimeout(250);
+        const reflections = PNG.sync.read(await page.screenshot({path: join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), 'city-scene-reflections.png')}));
+        let reflectedPixels = 0;
+        for (let vertical = 120; vertical < 650; vertical++) {
+          for (let horizontal = 350; horizontal < 950; horizontal++) {
+            const offset = (vertical * reflections.width + horizontal) * 4;
+            if (Math.max(...reflections.data.subarray(offset, offset + 3)) > 8) reflectedPixels++;
+          }
+        }
+        assert(reflectedPixels > 1000, `SSR traces visible scene reflections (${reflectedPixels} pixels)`);
+        await page.evaluate(() => {
+          window.cityScene.setReflectionDebugMode(0);
+          window.reflectionTexture = window.cityScene.deck.props.effects[0].normalTexture;
+        });
+        await page.uncheck('#reflections');
+        await page.waitForTimeout(150);
+        assert.equal(await page.evaluate(() => window.reflectionTexture.destroyed), true, 'disabling SSR releases auxiliary textures');
+        await page.check('#reflections');
+        await page.waitForTimeout(250);
+        assert.equal(await page.evaluate(() => window.cityScene.deck.props.effects[0].normalTexture.destroyed), false, 'enabling SSR recreates auxiliary textures');
+      } else {
+        assert(await page.locator('#reflections').isDisabled(), 'WebGL clearly disables the WebGPU reflection pass');
+      }
       await page.selectOption('#camera', 'overhead');
       await page.waitForFunction(() => window.cityScene.deck.getViewports()[0].pitch === 0);
       await page.screenshot({path: join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), `city-scene-${backend}-overhead.png`)});

@@ -8,6 +8,7 @@ import type {Buffer} from '@luma.gl/core';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
 import {CITY_ORIGIN, makeCityFeatures, makeCityMesh, type CityFeature} from './city-data';
 import {CityMeshLayer} from './city-mesh-layer';
+import {RiverReflectionEffect} from './river-reflection-effect';
 
 export const CAMERA_PRESETS = {
   district: {
@@ -41,6 +42,7 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
     timeSeconds: 0,
     waterEnabled: true,
     waterStyle: 'river' as 'classic' | 'river',
+    reflectionsEnabled: true,
     playing: true
   };
   const ready = Promise.withResolvers<void>();
@@ -48,6 +50,7 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
   let waterPositions: Buffer | null = null;
   let waveStrength = 0.55;
   let waterColor: [number, number, number] = [11 / 255, 66 / 255, 82 / 255];
+  let riverReflectionEffect: RiverReflectionEffect | null = null;
   let lastFrameTime: number | null = null;
   const waterFeatures = features.filter(feature => feature.kind === 'water');
   const riverFeature = waterFeatures[0];
@@ -78,6 +81,12 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
     onDeviceInitialized: device => {
       diagnostics.backend = device.type;
       waterPositions = device.createBuffer({id: 'river-positions', data: waterVertices});
+      if (device.type === 'webgpu') {
+        riverReflectionEffect = new RiverReflectionEffect();
+        updateEffects();
+      } else {
+        diagnostics.reflectionsEnabled = false;
+      }
     },
     onBeforeRender: () => {
       const now = performance.now();
@@ -153,6 +162,13 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
     });
   }
 
+  function updateEffects() {
+    deck.setProps({
+      effects:
+        diagnostics.reflectionsEnabled && riverReflectionEffect ? [riverReflectionEffect] : []
+    });
+  }
+
   return {
     deck,
     ready: ready.promise,
@@ -173,6 +189,14 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
     setWaterStyle(style: 'classic' | 'river') {
       diagnostics.waterStyle = style;
       updateLayers();
+    },
+    setReflectionsEnabled(enabled: boolean) {
+      diagnostics.reflectionsEnabled = enabled && Boolean(riverReflectionEffect);
+      updateEffects();
+    },
+    setReflectionDebugMode(mode: number) {
+      if (riverReflectionEffect) riverReflectionEffect.debugMode = mode;
+      deck.redraw('reflection debug view');
     },
     setWaterColor(color: [number, number, number]) {
       waterColor = color;

@@ -13,6 +13,7 @@ import {
 } from '@deck.gl/core';
 import type {Buffer, RenderPass} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
+import {surfaceBuffer} from '@deck.gl-community/gpu-layers';
 import {makeCityMesh, type CityFeature} from './city-data';
 
 type CityMeshLayerProps = LayerProps & {features: readonly CityFeature[]};
@@ -38,7 +39,7 @@ export class CityMeshLayer extends Layer<CityMeshLayerProps> {
           source: SOURCE,
           vs: VERTEX_SHADER,
           fs: FRAGMENT_SHADER,
-          modules: [project32, picking]
+          modules: [project32, picking, surfaceBuffer]
         }),
         id: `${this.id}-mesh`,
         topology: 'triangle-list',
@@ -69,6 +70,21 @@ export class CityMeshLayer extends Layer<CityMeshLayerProps> {
     return this.state.model ? [this.state.model] : [];
   }
   override draw({renderPass}: {renderPass: RenderPass}): void {
+    if (this.state.model) {
+      const parameters = {...this.state.model.parameters};
+      if (renderPass.props.framebuffer && !renderPass.props.framebuffer.depthStencilAttachment) {
+        delete parameters.depthCompare;
+        delete parameters.depthWriteEnabled;
+        delete parameters.depthFormat;
+        delete parameters.depthBias;
+        delete parameters.depthBiasSlopeScale;
+        delete parameters.depthBiasClamp;
+      } else {
+        parameters.depthCompare = 'less-equal';
+        parameters.depthWriteEnabled = true;
+      }
+      this.state.model.setParameters(parameters);
+    }
     this.state.model?.draw(renderPass);
   }
   override getPickingInfo({info}: {info: PickingInfo}): PickingInfo {
@@ -91,6 +107,7 @@ struct CityVertex {
   @builtin(position) position: vec4<f32>,
   @location(0) color: vec3<f32>,
   @location(1) @interpolate(flat) pickingColor: vec3<f32>,
+  @location(2) normal: vec3<f32>,
 };
 @vertex fn vertexMain(
   @location(0) position: vec3<f32>, @location(1) normal: vec3<f32>,
@@ -99,10 +116,14 @@ struct CityVertex {
   var output: CityVertex;
   output.position = project_position_to_clipspace(position, vec3<f32>(0.0), vec3<f32>(0.0));
   output.color = color * (0.45 + 0.55 * max(dot(normal, normalize(vec3<f32>(-0.5, -0.3, 0.8))), 0.0));
+  output.normal = project_normal(normal);
   output.pickingColor = picking_getPickingColorFromIndex(u32(featureIndex));
   return output;
 }
 @fragment fn fragmentMain(input: CityVertex) -> @location(0) vec4<f32> {
+  if (surfaceBuffer.enabled > 0) {
+    return surfaceBuffer_encode(input.normal, 1.0);
+  }
   if (picking.isActive > 0.5) {
     if (picking_isColorZero(input.pickingColor)) { discard; }
     return vec4<f32>(input.pickingColor, 1.0);
@@ -121,6 +142,7 @@ in vec3 normal;
 in vec3 color;
 in float featureIndex;
 out vec4 vertexColor;
+out vec3 commonNormal;
 void main() {
   geometry.worldPosition = position;
   geometry.pickingColor = picking_getPickingColorFromIndex(featureIndex);
@@ -128,14 +150,20 @@ void main() {
   DECKGL_FILTER_GL_POSITION(gl_Position, geometry);
   float light = 0.45 + 0.55 * max(dot(normal, normalize(vec3(-0.5, -0.3, 0.8))), 0.0);
   vertexColor = vec4(color * light, layer.opacity);
+  commonNormal = project_normal(normal);
   DECKGL_FILTER_COLOR(vertexColor, geometry);
 }
 `;
 const FRAGMENT_SHADER = /* glsl */ `#version 300 es
 precision highp float;
 in vec4 vertexColor;
+in vec3 commonNormal;
 out vec4 fragColor;
 void main() {
+  if (surfaceBuffer.enabled > 0) {
+    fragColor = surfaceBuffer_encode(commonNormal, 1.0);
+    return;
+  }
   fragColor = vertexColor;
   DECKGL_FILTER_COLOR(fragColor, geometry);
 }

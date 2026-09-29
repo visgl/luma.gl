@@ -16,6 +16,21 @@ fn riverWater_getFlowCoordinates(coordinates: vec2<f32>) -> vec2<f32> {
   return vec2<f32>(dot(coordinates, crossDirection), dot(coordinates, flowDirection));
 }
 
+// Smooth spatial variation travels with the surface; it does not flicker per frame.
+fn riverWater_noise(coordinates: vec2<f32>) -> f32 {
+  let cell = floor(coordinates);
+  let fraction = fract(coordinates);
+  let blend = fraction * fraction * (vec2<f32>(3.0) - 2.0 * fraction);
+  let corners = vec4<f32>(
+    dot(cell, vec2<f32>(127.1, 311.7)),
+    dot(cell + vec2<f32>(1.0, 0.0), vec2<f32>(127.1, 311.7)),
+    dot(cell + vec2<f32>(0.0, 1.0), vec2<f32>(127.1, 311.7)),
+    dot(cell + vec2<f32>(1.0, 1.0), vec2<f32>(127.1, 311.7))
+  );
+  let values = fract(sin(corners) * 43758.5453);
+  return mix(mix(values.x, values.y, blend.x), mix(values.z, values.w, blend.x), blend.y);
+}
+
 fn riverWater_waveGradient(
   coordinates: vec2<f32>,
   direction: vec2<f32>,
@@ -24,8 +39,11 @@ fn riverWater_waveGradient(
   speed: f32,
   phaseOffset: f32
 ) -> vec2<f32> {
-  let phase = dot(coordinates, direction) * frequency + waterMaterial.time * speed + phaseOffset;
-  return direction * (cos(phase) * frequency * amplitude);
+  let variationCoordinates = coordinates * 0.48 + vec2<f32>(phaseOffset * 3.7, waterMaterial.time * 0.16);
+  let variation = riverWater_noise(variationCoordinates);
+  let phase = dot(coordinates, direction) * frequency + waterMaterial.time * speed + phaseOffset + variation * 5.0;
+  let attenuation = 1.0 - smoothstep(0.8, 3.0, fwidth(phase));
+  return direction * (cos(phase) * frequency * amplitude * attenuation * (0.45 + variation));
 }
 
 fn riverWater_getNormal(
@@ -38,16 +56,17 @@ fn riverWater_getNormal(
     water_getCoordinates(position_worldspace, position_objectspace, uv)
   );
   let warp = vec2<f32>(
-    sin(coordinates.y * 0.31 + waterMaterial.time * 0.72),
-    sin(coordinates.y * 0.27 + waterMaterial.time * 0.58)
-  ) * 0.42;
-  let p = coordinates + warp;
+    sin(coordinates.y * 0.72 + waterMaterial.time * 0.72),
+    sin(coordinates.y * 0.58 + waterMaterial.time * 0.58)
+  ) * 0.1;
+  let warpedCoordinates = coordinates + warp;
   let gradient =
-    riverWater_waveGradient(p, normalize(vec2<f32>(0.08, 1.0)), 0.19, 0.42, 1.25, 0.0) +
-    riverWater_waveGradient(p, normalize(vec2<f32>(-0.16, 1.0)), 0.37, 0.24, 0.95, 1.7) +
-    riverWater_waveGradient(p, normalize(vec2<f32>(0.24, 1.0)), 0.78, 0.11, 1.7, 3.2) +
-    riverWater_waveGradient(p, normalize(vec2<f32>(-0.33, 1.0)), 1.42, 0.045, 0.76, 0.8) +
-    riverWater_waveGradient(p, normalize(vec2<f32>(0.42, 1.0)), 2.36, 0.019, 2.2, 2.1);
+    riverWater_waveGradient(warpedCoordinates, normalize(vec2<f32>(0.08, 1.0)), 2.1, 0.035, 1.25, 0.0) +
+    riverWater_waveGradient(warpedCoordinates, normalize(vec2<f32>(-0.28, 1.0)), 3.7, 0.02, 0.95, 1.7) +
+    riverWater_waveGradient(warpedCoordinates, normalize(vec2<f32>(0.47, 1.0)), 5.3, 0.012, 1.7, 3.2) +
+    riverWater_waveGradient(warpedCoordinates, normalize(vec2<f32>(-0.68, 1.0)), 7.9, 0.008, 0.76, 0.8) +
+    riverWater_waveGradient(warpedCoordinates, normalize(vec2<f32>(0.92, 1.0)), 11.6, 0.004, 2.2, 2.1) +
+    riverWater_waveGradient(warpedCoordinates, normalize(vec2<f32>(-1.22, 1.0)), 16.3, 0.002, 1.45, 2.8);
   let tangent = water_getTangent(normalize(normal_worldspace));
   let bitangent = normalize(cross(normalize(normal_worldspace), tangent));
   return normalize(normal_worldspace + waterMaterial.normalStrength * 3.2 *
@@ -66,13 +85,6 @@ fn riverWater_getColorMapped(
   );
   let viewDirection = normalize(cameraPosition - position_worldspace);
   let fresnel = pow(1.0 - max(dot(viewDirection, waterNormal), 0.0), 3.2);
-  let coordinates = riverWater_getFlowCoordinates(
-    water_getCoordinates(position_worldspace, position_objectspace, uv)
-  );
-  let flow = coordinates * 0.19 + vec2<f32>(0.0, waterMaterial.time * 1.35);
-  let shimmerPattern = sin(flow.x * 2.1 + sin(flow.y * 0.73)) *
-    sin(flow.y * 1.45 - flow.x * 0.38);
-  let shimmer = smoothstep(0.61, 0.96, shimmerPattern) * (0.16 + 0.5 * fresnel);
   let deepColor = waterMaterial.baseColor * vec3<f32>(0.52, 0.74, 0.9);
   let reflectedColor = mix(waterMaterial.fresnelColor, vec3<f32>(0.22, 0.48, 0.57), 0.32);
   let surfaceColor = mix(deepColor, reflectedColor, clamp(fresnel * 0.78, 0.0, 0.78));
@@ -89,7 +101,6 @@ fn riverWater_getColorMapped(
     color += vec3<f32>(0.72, 0.88, 0.94) * directionalLight.color * brokenSpecular * 2.1;
   }
 
-  color += vec3<f32>(0.38, 0.68, 0.78) * shimmer;
   color = mix(color, reflectedColor, clamp(fresnel * 0.3, 0.0, 0.3));
   return vec4<f32>(color, waterMaterial.opacity);
 }
@@ -107,11 +118,29 @@ vec2 riverWater_getFlowCoordinates(vec2 coordinates) {
   return vec2(dot(coordinates, crossDirection), dot(coordinates, flowDirection));
 }
 
+// Smooth spatial variation travels with the surface; it does not flicker per frame.
+float riverWater_noise(vec2 coordinates) {
+  vec2 cell = floor(coordinates);
+  vec2 fraction = fract(coordinates);
+  vec2 blend = fraction * fraction * (vec2(3.0) - 2.0 * fraction);
+  vec4 corners = vec4(
+    dot(cell, vec2(127.1, 311.7)),
+    dot(cell + vec2(1.0, 0.0), vec2(127.1, 311.7)),
+    dot(cell + vec2(0.0, 1.0), vec2(127.1, 311.7)),
+    dot(cell + vec2(1.0, 1.0), vec2(127.1, 311.7))
+  );
+  vec4 values = fract(sin(corners) * 43758.5453);
+  return mix(mix(values.x, values.y, blend.x), mix(values.z, values.w, blend.x), blend.y);
+}
+
 vec2 riverWater_waveGradient(
   vec2 coordinates, vec2 direction, float frequency, float amplitude, float speed, float phaseOffset
 ) {
-  float phase = dot(coordinates, direction) * frequency + waterMaterial.time * speed + phaseOffset;
-  return direction * (cos(phase) * frequency * amplitude);
+  vec2 variationCoordinates = coordinates * 0.48 + vec2(phaseOffset * 3.7, waterMaterial.time * 0.16);
+  float variation = riverWater_noise(variationCoordinates);
+  float phase = dot(coordinates, direction) * frequency + waterMaterial.time * speed + phaseOffset + variation * 5.0;
+  float attenuation = 1.0 - smoothstep(0.8, 3.0, fwidth(phase));
+  return direction * (cos(phase) * frequency * amplitude * attenuation * (0.45 + variation));
 }
 
 vec3 riverWater_getNormal(
@@ -124,16 +153,17 @@ vec3 riverWater_getNormal(
     water_getCoordinates(position_worldspace, position_objectspace, uv)
   );
   vec2 warp = vec2(
-    sin(coordinates.y * 0.31 + waterMaterial.time * 0.72),
-    sin(coordinates.y * 0.27 + waterMaterial.time * 0.58)
-  ) * 0.42;
-  vec2 p = coordinates + warp;
+    sin(coordinates.y * 0.72 + waterMaterial.time * 0.72),
+    sin(coordinates.y * 0.58 + waterMaterial.time * 0.58)
+  ) * 0.1;
+  vec2 warpedCoordinates = coordinates + warp;
   vec2 gradient =
-    riverWater_waveGradient(p, normalize(vec2(0.08, 1.0)), 0.19, 0.42, 1.25, 0.0) +
-    riverWater_waveGradient(p, normalize(vec2(-0.16, 1.0)), 0.37, 0.24, 0.95, 1.7) +
-    riverWater_waveGradient(p, normalize(vec2(0.24, 1.0)), 0.78, 0.11, 1.7, 3.2) +
-    riverWater_waveGradient(p, normalize(vec2(-0.33, 1.0)), 1.42, 0.045, 0.76, 0.8) +
-    riverWater_waveGradient(p, normalize(vec2(0.42, 1.0)), 2.36, 0.019, 2.2, 2.1);
+    riverWater_waveGradient(warpedCoordinates, normalize(vec2(0.08, 1.0)), 2.1, 0.035, 1.25, 0.0) +
+    riverWater_waveGradient(warpedCoordinates, normalize(vec2(-0.28, 1.0)), 3.7, 0.02, 0.95, 1.7) +
+    riverWater_waveGradient(warpedCoordinates, normalize(vec2(0.47, 1.0)), 5.3, 0.012, 1.7, 3.2) +
+    riverWater_waveGradient(warpedCoordinates, normalize(vec2(-0.68, 1.0)), 7.9, 0.008, 0.76, 0.8) +
+    riverWater_waveGradient(warpedCoordinates, normalize(vec2(0.92, 1.0)), 11.6, 0.004, 2.2, 2.1) +
+    riverWater_waveGradient(warpedCoordinates, normalize(vec2(-1.22, 1.0)), 16.3, 0.002, 1.45, 2.8);
   vec3 tangent = water_getTangent(normalize(normal_worldspace));
   vec3 bitangent = normalize(cross(normalize(normal_worldspace), tangent));
   return normalize(normal_worldspace + waterMaterial.normalStrength * 3.2 *
@@ -152,13 +182,6 @@ vec4 riverWater_getColorMapped(
   );
   vec3 viewDirection = normalize(cameraPosition - position_worldspace);
   float fresnel = pow(1.0 - max(dot(viewDirection, waterNormal), 0.0), 3.2);
-  vec2 coordinates = riverWater_getFlowCoordinates(
-    water_getCoordinates(position_worldspace, position_objectspace, uv)
-  );
-  vec2 flow = coordinates * 0.19 + vec2(0.0, waterMaterial.time * 1.35);
-  float shimmerPattern = sin(flow.x * 2.1 + sin(flow.y * 0.73)) *
-    sin(flow.y * 1.45 - flow.x * 0.38);
-  float shimmer = smoothstep(0.61, 0.96, shimmerPattern) * (0.16 + 0.5 * fresnel);
   vec3 deepColor = waterMaterial.baseColor * vec3(0.52, 0.74, 0.9);
   vec3 reflectedColor = mix(waterMaterial.fresnelColor, vec3(0.22, 0.48, 0.57), 0.32);
   vec3 surfaceColor = mix(deepColor, reflectedColor, clamp(fresnel * 0.78, 0.0, 0.78));
@@ -175,7 +198,6 @@ vec4 riverWater_getColorMapped(
     color += vec3(0.72, 0.88, 0.94) * directionalLight.color * brokenSpecular * 2.1;
   }
 
-  color += vec3(0.38, 0.68, 0.78) * shimmer;
   color = mix(color, reflectedColor, clamp(fresnel * 0.3, 0.0, 0.3));
   return vec4(color, waterMaterial.opacity);
 }
