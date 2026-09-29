@@ -31,9 +31,26 @@ const edges = document.querySelector<HTMLInputElement>('#edges')!;
 edges.addEventListener('change', () => scene.setEdgesVisible(edges.checked));
 const fills = document.querySelector<HTMLInputElement>('#fills')!;
 fills.addEventListener('change', () => scene.setFillsVisible(fills.checked));
+const context = document.querySelector<HTMLInputElement>('#context')!;
+context.addEventListener('change', () => scene.setContextVisible(context.checked));
+const edgeMode = document.querySelector<HTMLSelectElement>('#edge-mode')!;
+edgeMode.addEventListener('change', () => {
+  scene.setEdgeOptions({includeCoplanarEdges: edgeMode.value === 'triangles'});
+  updateSummary();
+});
+const angle = document.querySelector<HTMLInputElement>('#angle')!;
+angle.addEventListener('input', () => {
+  scene.setEdgeOptions({angleThreshold: Number(angle.value)});
+  updateSummary();
+});
+function updateSummary() {
+  document.querySelector('#edge-count')!.textContent =
+    `${scene.features.length} buildings · ${scene.diagnostics.edgeCount} edges`;
+}
 scene.ready
   .then(() => {
     document.body.dataset['ready'] = 'true';
+    updateSummary();
   })
   .catch(error => {
     document.querySelector('#status')!.textContent = error.message;

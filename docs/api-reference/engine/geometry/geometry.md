@@ -174,6 +174,7 @@ const edges = makeEdgeGeometry(surface, {angleThreshold: 30});
 
 Options:
 
+- `includeCoplanarEdges`: retain triangulation edges as well as architectural edges, default false.
 - `angleThreshold`: minimum dihedral angle in degrees (0–180), default 30. Coplanar internal
   edges are omitted even at zero. Adjacent triangles should have consistent winding.
 - `weldTolerance`: nonnegative position distance in source coordinate units, default zero for

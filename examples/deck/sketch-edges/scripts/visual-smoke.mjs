@@ -57,6 +57,9 @@ try {
       assert(differentPixels(solid, filled) > 500, `${backend}: edges contribute visible pixels`);
       assert.equal(await page.evaluate(() => window.sketchScene.segments.destroyed), false, 'edge layer borrows its input buffer');
       await page.check('#edges');
+      await page.uncheck('#context');
+      await page.waitForTimeout(150);
+      const solidWithoutContext = PNG.sync.read(await page.screenshot());
       // Use opaque solid strokes so background-dependent pencil grain cannot bias this comparison.
       await page.uncheck('#fills');
       await page.waitForTimeout(150);
@@ -72,32 +75,37 @@ try {
         }
         return count;
       };
-      assert(countDark(wireframe) > countDark(solid) * 1.15, `${backend}: opaque faces hide rear dark strokes`);
+      assert(countDark(wireframe) > countDark(solidWithoutContext) * 1.15, `${backend}: opaque faces hide rear dark strokes`);
       await page.check('#fills');
+      await page.check('#context');
+      await page.selectOption('#edge-mode', 'triangles');
+      await page.waitForFunction(() => window.sketchScene.diagnostics.edgeCount === 680);
+      await page.selectOption('#edge-mode', 'architectural');
+      await page.waitForFunction(() => window.sketchScene.diagnostics.edgeCount === 480);
       await page.selectOption('#style', 'sketch');
       const picked = await page.evaluate(async () => {
         const scene = window.sketchScene;
-        scene.deck.setProps({initialViewState: {longitude: -74.006, latitude: 40.7128, zoom: 16.6, pitch: 0, bearing: 0}});
+        scene.deck.setProps({initialViewState: {longitude: -74.006, latitude: 40.7128, zoom: 15.6, pitch: 0, bearing: 0}});
         await new Promise(resolve => setTimeout(resolve, 150));
-        const feature = scene.features[6];
+        const feature = scene.features.find(feature => feature.name === 'East 4.1');
         const position = scene.deck.props.layers[0].project([feature.center[0], feature.center[1], feature.center[2] + feature.size[2]]);
         const info = await scene.deck.pickObjectAsync({x: position[0], y: position[1]});
         return info?.object?.name;
       });
-      assert.equal(picked, 'Building 7', `${backend}: roof picking`);
+      assert.equal(picked, 'East 4.1', `${backend}: roof picking`);
       const edgePick = await page.evaluate(async () => {
         const scene = window.sketchScene;
         const layer = scene.deck.props.layers.find(layer => layer?.id === 'sketch-edges');
-        const feature = scene.features[6];
+        const feature = scene.features.find(feature => feature.name === 'East 4.1');
         const position = layer.project([feature.center[0], feature.center[1] - feature.size[1] / 2, feature.size[2]]);
         const info = await scene.deck.pickObjectAsync({x: position[0], y: position[1], radius: 3, layerIds: ['sketch-edges']});
         return info?.object?.name;
       });
-      assert.equal(edgePick, 'Building 7', `${backend}: stroke picking returns its feature`);
+      assert.equal(edgePick, 'East 4.1', `${backend}: stroke picking returns its feature`);
 
       await page.setViewportSize({width: 900, height: 650});
       await page.waitForFunction(() => window.sketchScene.deck.width === 900);
-      await page.evaluate(() => window.sketchScene.deck.setProps({initialViewState: {longitude: -74.006, latitude: 40.7128, zoom: 17.5, pitch: 78, bearing: 15}}));
+      await page.evaluate(() => window.sketchScene.deck.setProps({initialViewState: {longitude: -74.006, latitude: 40.7128, zoom: 16.3, pitch: 78, bearing: 15}}));
       await page.waitForTimeout(200);
       await page.screenshot({path: join(tmpdir(), `sketch-edges-${backend}-grazing.png`)});
       await page.evaluate(() => {window.borrowedSegments = window.sketchScene.segments; window.sketchScene.finalize(); window.sketchScene.finalize();});

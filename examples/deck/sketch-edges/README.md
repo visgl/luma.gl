@@ -1,11 +1,12 @@
-# Sketch buildings
+# Riverfront outlines
 
 An independent Deck example of solid and pencil-like architectural edges. Run `yarn start` in
 this folder after installing and building the workspace. The example is also built into the website.
 
 `SketchEdgeLayer` draws borrowed, interleaved segment buffers in local meter offsets. Each row is
-`start.xyz, end.xyz, featureIndex, seed` (eight float32 values). The fixture supplies twelve edges
-per cuboid; this is explicit architectural geometry, not automatic mesh-edge extraction.
+`start.xyz, end.xyz, featureIndex, seed` (eight float32 values). The riverfront fixture uses `makeEdgeGeometry` to extract architectural edges from the building
+triangles. Compare these with the complete triangle mesh, or adjust the crease angle. The default
+view has 40 buildings and 480 architectural edges.
 
 `sketchStroke` in shadertools provides grain, width variation, centerline variation, antialiasing,
 and endpoint extension. It has no Deck dependency. The shader takes normalized along-segment
@@ -14,8 +15,8 @@ so layer replacement and data reordering do not re-randomize the marks.
 
 The layer expands independent segments in screen space on WebGPU and WebGL2. Width, jitter, and
 extension use CSS pixels. Opaque building faces supply depth occlusion; disable faces to inspect
-the complete wireframe. There are no path joins, dash patterns, silhouettes, arbitrary mesh-edge
-extraction, or terrain draping in this increment. Close strokes are clipped at the near plane.
+the complete wireframe. There are no path joins, dash patterns, view-dependent silhouettes,
+or terrain draping in this increment. Close strokes are clipped at the near plane.
 The fixed small clip-depth bias exposes coplanar edges; extremely close surfaces can still overlap.
 
 The scene has no animation loop. Deck redraws on camera and style changes. The application owns

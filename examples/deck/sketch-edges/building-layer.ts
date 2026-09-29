@@ -13,9 +13,9 @@ import {
 } from '@deck.gl/core';
 import type {Buffer, RenderPass} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import {makeBuildingMesh, type BuildingFeature} from './building-data';
+import {makeCityMesh, type CityFeature} from '../river-district-data';
 
-type BuildingMeshLayerProps = LayerProps & {features: readonly BuildingFeature[]};
+type BuildingMeshLayerProps = LayerProps & {features: readonly CityFeature[]};
 
 /** Example-owned mesh adapter; Deck supplies projection, picking uniforms, and the render pass. */
 export class BuildingMeshLayer extends Layer<BuildingMeshLayerProps> {
@@ -30,7 +30,7 @@ export class BuildingMeshLayer extends Layer<BuildingMeshLayerProps> {
   override updateState({props, oldProps}: UpdateParameters<this>): void {
     if (this.state.model && props.features === oldProps.features) return;
     this.destroyMesh();
-    const mesh = makeBuildingMesh(props.features);
+    const mesh = makeCityMesh(props.features);
     const vertices = this.context.device.createBuffer({data: mesh});
     try {
       const model = new Model(this.context.device, {

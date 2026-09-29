@@ -6,6 +6,8 @@ import {assert} from '@luma.gl/core';
 import {Geometry} from './geometry';
 
 export type MakeEdgeGeometryOptions = {
+  /** Keep coplanar internal edges to inspect the original triangulation. Defaults to false. */
+  includeCoplanarEdges?: boolean;
   /** Minimum angle between adjacent face normals, in degrees. Defaults to 30. */
   angleThreshold?: number;
   /** Position welding distance in source units. Zero (default) welds exact duplicates. */
@@ -133,7 +135,7 @@ export function makeEdgeGeometry(
   }
 
   const selected = [...edges.values()]
-    .filter(edge => edge.faceCount !== 2 || edge.crease)
+    .filter(edge => options.includeCoplanarEdges || edge.faceCount !== 2 || edge.crease)
     .sort((left, right) => left.start - right.start || left.end - right.end);
   return new Geometry({
     id: `${geometry.id}-edges`,

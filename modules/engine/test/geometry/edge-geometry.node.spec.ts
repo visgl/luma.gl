@@ -17,6 +17,7 @@ test('edge geometry removes coplanar triangulation and ignores face ordering', (
   const input = makeQuad();
   const edges = makeEdgeGeometry(input, {angleThreshold: 0});
   expect(edges.topology).toBe('line-list');
+  expect(makeEdgeGeometry(input, {includeCoplanarEdges: true}).vertexCount).toBe(10);
   expect(Array.from(edges.indices!.value)).toEqual([0, 1, 0, 3, 1, 2, 2, 3]);
   expect(edges.attributes.POSITION).toBe(input.attributes.POSITION);
   expect(edges.vertexCount).toBe(8);

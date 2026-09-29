@@ -5,6 +5,8 @@
 import {COORDINATE_SYSTEM, Deck, MapView} from '@deck.gl/core';
 import {SketchEdgeLayer} from '@deck.gl-community/gpu-layers';
 import type {Buffer} from '@luma.gl/core';
+import type {MakeEdgeGeometryOptions} from '@luma.gl/engine';
+import {makeCityFeatures} from '../river-district-data';
 import type {SketchStrokeProps} from '@luma.gl/shadertools';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
 import {BuildingMeshLayer} from './building-layer';
@@ -12,14 +14,23 @@ import {makeBuildings, makeEdges, ORIGIN} from './building-data';
 
 export function createSketchScene(parent: HTMLDivElement, options: DeckExampleDeviceOptions = {}) {
   const features = makeBuildings();
-  const edgeData = makeEdges(features);
+  const surroundings = makeCityFeatures().filter(feature => feature.kind !== 'building');
+  let edgeOptions: MakeEdgeGeometryOptions = {angleThreshold: 30};
+  let edgeData = makeEdges(features, edgeOptions);
   let resolveReady: () => void;
   let rejectReady: (error: Error) => void;
   const ready = new Promise<void>((resolve, reject) => {
     resolveReady = resolve;
     rejectReady = reject;
   });
-  const diagnostics = {frames: 0, backend: '', error: '', selected: '', finalized: false};
+  const diagnostics = {
+    frames: 0,
+    backend: '',
+    error: '',
+    selected: '',
+    finalized: false,
+    edgeCount: edgeData.length / 8
+  };
   let segments: Buffer | null = null;
   let style: SketchStrokeProps = {
     width: 2.2,
@@ -30,6 +41,7 @@ export function createSketchScene(parent: HTMLDivElement, options: DeckExampleDe
   };
   let edgesVisible = true;
   let fillsVisible = true;
+  let contextVisible = true;
   const deck = new Deck({
     parent,
     ...getDeckExampleProps(options),
@@ -37,9 +49,9 @@ export function createSketchScene(parent: HTMLDivElement, options: DeckExampleDe
     initialViewState: {
       longitude: ORIGIN[0],
       latitude: ORIGIN[1],
-      zoom: 16.6,
+      zoom: 15.6,
       pitch: 52,
-      bearing: -25
+      bearing: -28
     },
     layers: [],
     onDeviceInitialized: device => {
@@ -65,6 +77,14 @@ export function createSketchScene(parent: HTMLDivElement, options: DeckExampleDe
   function updateLayers() {
     deck.setProps({
       layers: [
+        new BuildingMeshLayer({
+          id: 'surroundings',
+          features: surroundings,
+          data: surroundings,
+          visible: contextVisible,
+          coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+          coordinateOrigin: ORIGIN
+        }),
         new BuildingMeshLayer({
           id: 'buildings',
           features,
@@ -99,6 +119,20 @@ export function createSketchScene(parent: HTMLDivElement, options: DeckExampleDe
     },
     setStyle(next: SketchStrokeProps) {
       style = {...style, ...next};
+      updateLayers();
+    },
+    setEdgeOptions(next: MakeEdgeGeometryOptions) {
+      edgeOptions = {...edgeOptions, ...next};
+      if (!segments) return;
+      edgeData = makeEdges(features, edgeOptions);
+      diagnostics.edgeCount = edgeData.length / 8;
+      const previous = segments;
+      segments = previous.device.createBuffer({id: 'building-edges', data: edgeData});
+      updateLayers();
+      previous.destroy();
+    },
+    setContextVisible(visible: boolean) {
+      contextVisible = visible;
       updateLayers();
     },
     setEdgesVisible(visible: boolean) {
