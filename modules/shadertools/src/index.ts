@@ -200,6 +200,11 @@ export {
   type PatternFillProps,
   type PatternFillUniforms
 } from './modules/geometry/pattern-fill/pattern-fill';
+export {
+  pointGlow,
+  type PointGlowProps,
+  type PointGlowUniforms
+} from './modules/geometry/point-glow/point-glow';
 
 export {heightFog} from './modules/lighting/height-fog/height-fog';
 export {heightFogFunctions} from './modules/lighting/height-fog/height-fog-functions';
