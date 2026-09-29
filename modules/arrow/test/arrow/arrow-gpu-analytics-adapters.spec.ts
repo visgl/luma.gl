@@ -3,8 +3,15 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {makeGPUAnalyticsTableFromArrowTable} from '@luma.gl/arrow';
-import {Buffer} from '@luma.gl/core';
+import {Buffer, type Device} from '@luma.gl/core';
+import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {type GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {
+  GPUDataFrame,
+  column,
+  literal,
+  type GPUDataFrameQueryParameters
+} from '@luma.gl/experimental/gpu-dataframe';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 import {expect, it} from 'vitest';
@@ -111,6 +118,114 @@ it('Arrow analytics ingestion preserves WebGPU batches, sliced validity, and dic
 
   void 0;
 });
+
+it('Arrow analytics ingestion packs 2048-row streamed batches into one WebGPU batch', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    return;
+  }
+
+  // DuckDB-Wasm and other streamed producers emit 2048-row batches; only one batch has nulls.
+  const {table: source, values, valid} = createStreamedAnalyticsTable([2048, 2048, 2048, 1000]);
+  const expectedSelected = values.filter((value, row) => valid[row] && value > 0.5).length;
+  const packed = makeGPUAnalyticsTableFromArrowTable(device, source, {packBatches: true});
+  const preserved = makeGPUAnalyticsTableFromArrowTable(device, source);
+
+  try {
+    expect(packed.table.batches.map(batch => batch.numRows)).toEqual([7144]);
+    expect(packed.table.batches[0].sourceInfo).toEqual({
+      sourceBatchIndex: 0,
+      sourceRowIndexOffset: 0,
+      sourceRowCount: 7144
+    });
+    expect(packed.validity['value']?.data).toHaveLength(1);
+
+    const packedData = packed.table.gpuVectors['value'].data[0];
+    const packedBytes = await packedData.buffer.readAsync(0, packedData.length * 4);
+    expect(
+      Array.from(new Float32Array(packedBytes.buffer, packedBytes.byteOffset, packedData.length)),
+      'every source chunk is written at its row offset'
+    ).toEqual(Array.from(values));
+    expect(await readGPUValidity(packed.validity['value']!)).toEqual([Array.from(valid)]);
+
+    const packedFilter = await readSelectedCount(device, new GPUDataFrame({...packed}));
+    const preservedFilter = await readSelectedCount(device, new GPUDataFrame({...preserved}));
+    expect(packedFilter.outputChunks, 'packed filters dispatch one batch').toBe(1);
+    expect(preservedFilter.outputChunks, 'preserved filters dispatch per source batch').toBe(4);
+    expect(packedFilter.selected).toBe(expectedSelected);
+    expect(preservedFilter.selected).toBe(expectedSelected);
+  } finally {
+    for (const result of [packed, preserved]) {
+      result.table.destroy();
+      for (const validity of Object.values(result.validity)) validity?.destroy();
+    }
+  }
+});
+
+function createStreamedAnalyticsTable(batchRowCounts: readonly number[]): {
+  table: arrow.Table<{value: arrow.Float32}>;
+  values: Float32Array;
+  valid: Uint32Array;
+} {
+  const rowCount = batchRowCounts.reduce((total, batchRowCount) => total + batchRowCount, 0);
+  const values = new Float32Array(rowCount);
+  const valid = new Uint32Array(rowCount).fill(1);
+  for (let row = 0; row < rowCount; row++) values[row] = ((row * 7919) % 1000) / 1000;
+
+  const schema = new arrow.Schema<{value: arrow.Float32}>([
+    new arrow.Field('value', new arrow.Float32(), true)
+  ]);
+  let start = 0;
+  const batches = batchRowCounts.map((length, batchIndex) => {
+    let nullBitmap: Uint8Array | undefined;
+    let nullCount = 0;
+    if (batchIndex === 1) {
+      nullBitmap = new Uint8Array(Math.ceil(length / 8)).fill(0xff);
+      for (let row = 0; row < length; row += 3) {
+        nullBitmap[row >> 3] &= ~(1 << (row & 7));
+        valid[start + row] = 0;
+        nullCount++;
+      }
+    }
+    const child = arrow.makeData({
+      type: new arrow.Float32(),
+      length,
+      data: values.subarray(start, start + length),
+      nullBitmap,
+      nullCount
+    });
+    start += length;
+    return new arrow.RecordBatch(
+      schema,
+      arrow.makeData({type: new arrow.Struct(schema.fields), length, children: [child]})
+    );
+  });
+  return {table: new arrow.Table(schema, batches), values, valid};
+}
+
+async function readSelectedCount(
+  device: Device,
+  dataFrame: GPUDataFrame<{value: 'float32'}>
+): Promise<{selected: number; outputChunks: number}> {
+  const compiled = dataFrame.filter(column('value').greaterThan(literal(0.5))).compile(
+    new GPUCommandGraph<GPUDataFrameQueryParameters>(device, {
+      id: 'arrow-analytics-packed-filter'
+    })
+  );
+  try {
+    const commandEncoder = device.createCommandEncoder({id: 'arrow-analytics-packed-filter'});
+    compiled.encode(commandEncoder);
+    device.submit(commandEncoder.finish());
+    let selected = 0;
+    for (const data of compiled.selectedCounts.data) {
+      const bytes = await data.buffer.readAsync(data.byteOffset, 4);
+      selected += new Uint32Array(bytes.buffer, bytes.byteOffset, 1)[0];
+    }
+    return {selected, outputChunks: compiled.selectedCounts.data.length};
+  } finally {
+    compiled.destroy();
+  }
+}
 
 function createBrowserAnalyticsTable(): arrow.Table {
   const dictionaryType = new arrow.Dictionary(new arrow.Utf8(), new arrow.Uint32(), 12, true);

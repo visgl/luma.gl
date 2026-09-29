@@ -75,6 +75,7 @@ Target Release Date: Q3, 2026
 
 **@luma.gl/arrow (Private)**
 
+- **Packed Arrow analytics ingestion** - `makeGPUAnalyticsTableFromArrowTable(device, table, {packBatches: true})` writes every source record batch directly into one buffer per column (or into `minBatchSize` groups), with matching validity sidecars, so streamed producers such as DuckDB-Wasm that emit 2048-row batches no longer compile and dispatch dataframe queries once per source batch.
 - **High-dimensional Arrow storage columns** - Existing Arrow table/vector adapters map wide `FixedSizeList` values directly into row-aligned fixed-size-list GPU columns, with optional named validity siblings and preserved parent/child nulls, record batches, and source identity.
 - **Arrow polygon and GeoArrow rendering** - `ArrowPolygonRenderer` converts nested Arrow polygon
   columns for attribute- or storage-backed rendering, and the
