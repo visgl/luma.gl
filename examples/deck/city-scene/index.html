@@ -22,7 +22,7 @@
   </head>
   <body>
     <div id="city" aria-label="Interactive three-dimensional river district"></div>
-    <aside>
+    <aside class="luma-example-infobox luma-example-infobox--overlay">
       <p class="eyebrow">luma.gl + deck.gl</p>
       <h1>River District</h1>
       <section class="control-card">
@@ -42,7 +42,7 @@
         <button id="playback" type="button">Pause waves</button>
       </section>
       <output id="status" aria-live="polite">Preparing the district…</output>
-      <output id="selection" aria-live="polite">Click a building or the river</output>
+      <output class="selection" id="selection" aria-live="polite">Click a building or the river</output>
       <p class="hint">Drag to move · Scroll to zoom<br />Shift + drag to orbit</p>
     </aside>
     <script type="module" src="./main.ts"></script>

@@ -2,22 +2,8 @@
  * SPDX-License-Identifier: MIT
  * SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
  */
-:root { color-scheme: dark; font: 12px/1.4 system-ui, sans-serif; color: #e7ece9; background: #11181f; }
+@import '../../example-infobox.css';
+
+:root { color-scheme: dark; background: #11181f; }
 body { margin: 0; }
 #city { position: absolute; inset: 0; }
-aside { position: absolute; top: 12px; left: 12px; width: 258px; max-height: calc(100vh - 24px); overflow-y: auto; box-sizing: border-box; padding: 12px; background: #080c14e8; border: 1px solid #7e9bcd42; border-radius: 8px; box-shadow: 0 12px 30px #0004; backdrop-filter: blur(14px) saturate(145%); }
-h1 { margin: 2px 0 9px; font-size: 22px; font-weight: 600; letter-spacing: -.5px; }
-.eyebrow { margin: 0; color: #86cbbd; text-transform: uppercase; font-size: 10px; letter-spacing: 2px; }
-.control-card { margin-top: 8px; padding: 8px; border: 1px solid #899fc21c; border-radius: 7px; background: #09121fc9; }
-.control-card h2 { margin: 0 0 5px; color: #8fb4e7; font-size: 9px; font-weight: 700; letter-spacing: .075em; text-transform: uppercase; }
-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0; font-size: 11px; }
-select { min-width: 105px; padding: 4px 6px; background: #1e293a; color: inherit; border: 1px solid #8ca9d14d; border-radius: 4px; font: inherit; }
-.toggle { justify-content: flex-start; gap: 8px; }
-input { accent-color: #86cbbd; }
-input[type="range"] { width: 112px; }
-input[type="color"] { width: 38px; height: 24px; padding: 1px; border: 1px solid #8ca9d14d; border-radius: 4px; background: #1e293a; }
-button { background: #1e293a; color: inherit; border: 1px solid #8ca9d14d; border-radius: 4px; padding: 4px 8px; cursor: pointer; font: inherit; }
-output { display: block; font-size: 10px; margin-top: 8px; color: #c3d0df; }
-#selection { padding-top: 8px; border-top: 1px solid #ffffff20; color: #e6c995; }
-.hint { font-size: 10px; margin: 8px 0 0; color: #8293a2; }
-@media (max-width: 600px) { aside { top: 8px; left: 8px; width: min(238px, calc(100vw - 16px)); max-height: calc(100vh - 16px); padding: 10px; } h1 { font-size: 20px; } }
