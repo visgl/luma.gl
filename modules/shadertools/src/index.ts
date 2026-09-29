@@ -187,3 +187,5 @@ export type {PBRProjectionProps} from './modules/lighting/pbr-material/pbr-proje
 
 export {pbrMaterial} from './modules/lighting/pbr-material/pbr-material';
 export {pbrScene, PBR_TONE_MAP_MODE} from './modules/lighting/pbr-material/pbr-scene';
+
+export {sketchStroke, type SketchStrokeProps} from './modules/geometry/sketch-stroke/sketch-stroke';

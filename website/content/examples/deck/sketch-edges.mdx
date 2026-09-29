@@ -1,0 +1,22 @@
+---
+title: Sketch buildings
+description: Stable pencil strokes and solid architectural edges in a Deck view.
+sidebar_custom_props:
+  description: Compare pencil grain, irregularity, and extended building-edge strokes.
+  backends: [webgpu, webgl2]
+  difficulty: intermediate
+  maturity: experimental
+  mobile: full
+  mobileProfile: standard
+  topics: [deck.gl, rendering, geometry, materials, picking]
+---
+
+import useBaseUrl from '@docusaurus/useBaseUrl';
+
+export const SketchPreview = () => (
+  <iframe title="Sketch buildings interactive example"
+    src={useBaseUrl('/standalone-examples/sketch-edges/index.html')}
+    style={{width: '100%', height: '78vh', minHeight: 640, border: 0, borderRadius: 12}} />
+);
+
+<SketchPreview />

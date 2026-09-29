@@ -6,3 +6,5 @@ export {
   LuSpatialPointLayer,
   type LuSpatialPointLayerProps
 } from './layers/luspatial-point-layer';
+
+export {SketchEdgeLayer, type SketchEdgeLayerProps} from './layers/sketch-edge-layer';

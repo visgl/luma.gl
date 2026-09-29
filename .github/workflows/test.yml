@@ -71,6 +71,19 @@ jobs:
       - name: Install Playwright Chromium
         run: yarn playwright:install
 
+      - name: Run Deck sketch edges visual checks
+        if: ${{ matrix.shard == 2 }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-sketch-edges test:visual
+
+      - name: Upload Deck sketch edge screenshots
+        if: ${{ always() && matrix.shard == 2 }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: deck-sketch-edges
+          path: /tmp/sketch-edges-*.png
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Reclaim install cache and report disk usage
         run: |
           rm -rf "${HOME}/.yarn/berry/cache"
