@@ -8,7 +8,7 @@ import type {HeightFogProps, PrecipitationProps} from '@luma.gl/shadertools';
 import {WeatherParticleLayer} from '@deck.gl-community/gpu-layers';
 import {CITY_ORIGIN, makeCityFeatures, type CityFeature} from '../river-district-data';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
-import {BuildingMeshLayer} from './building-layer';
+import {RiverDistrictLayer} from '../river-district-layer';
 
 export type WeatherPreset = 'clear' | 'rain' | 'snow' | 'fog';
 const SURFACE_BOUNDS: [number, number, number, number] = [-700, -900, 700, 900];
@@ -97,7 +97,7 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
     };
     deck.setProps({
       layers: [
-        new BuildingMeshLayer({
+        new RiverDistrictLayer({
           id: 'district',
           features,
           fog,

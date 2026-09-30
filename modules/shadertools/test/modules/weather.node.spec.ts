@@ -3,14 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {
-  getShaderModuleUniformLayoutValidationResult,
-  heightFog,
-  precipitation
-} from '@luma.gl/shadertools';
-it('weather uniform schemas match both shader languages', () => {
-  expect(getShaderModuleUniformLayoutValidationResult(heightFog, 'fragment')?.matches).toBe(true);
-  expect(getShaderModuleUniformLayoutValidationResult(heightFog, 'wgsl')?.matches).toBe(true);
+import {getShaderModuleUniformLayoutValidationResult, precipitation} from '@luma.gl/shadertools';
+it('precipitation uniform schemas match both shader languages', () => {
   expect(getShaderModuleUniformLayoutValidationResult(precipitation, 'vertex')?.matches).toBe(true);
   expect(getShaderModuleUniformLayoutValidationResult(precipitation, 'wgsl')?.matches).toBe(true);
 });

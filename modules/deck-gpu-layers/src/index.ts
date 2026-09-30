@@ -11,3 +11,5 @@ export {
   WeatherParticleLayer,
   type WeatherParticleLayerProps
 } from './layers/weather-particle-layer';
+
+export {surfaceBuffer} from './layers/surface-buffer';

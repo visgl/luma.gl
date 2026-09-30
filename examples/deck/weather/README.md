@@ -41,3 +41,8 @@ module; it is not a whole-scene postprocess.
 Run `yarn workspace luma.gl-examples-deck-weather test:visual` for both-backend movement,
 pause, fog, depth-occlusion, surface-mask, and ownership checks. GPU module tests separately
 check analytic fog and seeded, world-anchored motion.
+
+The district geometry is rendered by `../river-district-layer.ts`, shared with the other riverfront
+examples. It uses luma.gl's Lambert material for lighting, optional `heightFog`, and `surfaceBuffer`
+for view-space normals/roughness and selection output. The layer owns its generated mesh buffer and
+model; Deck owns their layer lifecycle. Fog defaults to zero density.
