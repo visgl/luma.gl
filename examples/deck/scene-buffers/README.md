@@ -7,8 +7,8 @@ Run `yarn workspace luma.gl-examples-deck-scene-buffers start` from the reposito
 The website route is `/examples/deck/scene-buffers`.
 
 `SceneBufferEffect` captures the explicitly participating layers into a shared `GBuffer` per
-view. The example-owned final effect consumes those buffers with `ShaderPassRenderer` and
-presents the resulting image. Bright roof beacons retain HDR radiance until tone mapping;
+view. The example configures the existing bloom and outline passes, while the shared
+`ShaderPassEffect` delegates execution to `ShaderPassRenderer` and presents the resulting image. Bright roof beacons retain HDR radiance until tone mapping;
 the glass pavilion blends after opaque capture and does not replace opaque depth or normals.
 
 The adapter supports multiple views, but this final presentation example intentionally has

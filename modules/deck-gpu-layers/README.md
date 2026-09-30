@@ -322,3 +322,37 @@ part of its halo. This layer does not illuminate nearby geometry or cast shadows
 
 See the Riverfront lights website example for both renderers and the shared `pointGlow` module
 for applications that supply their own geometry and composition.
+
+## Shader-pass graphs in Deck
+
+`ShaderPassEffect` adapts the existing luma.gl `ShaderPassRenderer` to Deck's postprocessing
+chain. It owns the renderer and presentation model, resizes intermediate targets with the
+source, resets history on size changes, respects explicit output targets and downstream
+effects, and releases its resources on removal. It does not participate in picking.
+
+```ts
+const composite = new ShaderPassEffect({
+  id: 'scene-composite',
+  shaderPasses: [createBloomCompositeShaderPass({downsample: 'render'}), toneMapping],
+  colorFormat: 'rgba16float',
+  getRenderOptions: options => {
+    const viewport = options.viewports[0];
+    const frame = viewport && capture.getFrame(viewport.id);
+    return frame ? {sourceTexture: frame.buffer.colorTexture} : null;
+  }
+});
+```
+
+Without `getRenderOptions`, the source is Deck's ordinary color input; floating-point
+intermediate targets do not recover highlights already clipped in that input. Supply an
+HDR capture to retain highlight energy. Input textures, framebuffers, and auxiliary bindings
+are borrowed. The callback can also supply uniforms, bindings, and `resetHistory`; returning
+null leaves the incoming frame unchanged. Effects with their own camera state can delegate
+to `render(options, inputs)` instead of implementing presentation again.
+
+`setShaderPasses` replaces the graph and releases its previous resources. `resetHistory`
+invalidates temporal targets without replacing them. Removing the effect releases all its
+owned resources; adding it again creates a fresh renderer. Backend support follows the passes
+provided, not just this adapter. The renderer processes one supplied image per frame; an
+application selecting a per-view capture must arrange its own multi-view composition and
+history isolation. Tone mapping and output transfer remain explicit steps in the graph.

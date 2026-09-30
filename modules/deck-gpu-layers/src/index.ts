@@ -22,3 +22,8 @@ export {
 } from './effects/scene-buffer-effect';
 export {getMeterOffsetPosition} from './projection/meter-offset-position';
 export {GlowPointLayer, type GlowPointLayerProps} from './layers/glow-point-layer';
+export {
+  ShaderPassEffect,
+  type ShaderPassEffectProps,
+  type ShaderPassEffectRenderOptions
+} from './effects/shader-pass-effect';

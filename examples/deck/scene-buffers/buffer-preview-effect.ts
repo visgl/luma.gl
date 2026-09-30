@@ -2,15 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import type {Effect, EffectContext, PostRenderOptions, PreRenderOptions} from '@deck.gl/core';
-import type {Device, Framebuffer} from '@luma.gl/core';
-import {BackgroundTextureModel, ShaderPassRenderer} from '@luma.gl/engine';
+import type {Framebuffer} from '@luma.gl/core';
 import {
   createBloomCompositeShaderPass,
   createOutlineCompositeShaderPass,
   selectionOutline,
   toneMapping
 } from '@luma.gl/effects';
-import type {SceneBufferEffect} from '@deck.gl-community/gpu-layers';
+import {ShaderPassEffect, type SceneBufferEffect} from '@deck.gl-community/gpu-layers';
 import type {ShaderPass} from '@luma.gl/shadertools';
 
 export type BufferPreviewMode = 'scene' | 'normals' | 'depth' | 'selection' | 'previous';
@@ -24,14 +23,12 @@ export class BufferPreviewEffect implements Effect {
   edges = false;
   selection = true;
   strength = 0.5;
-  private device?: Device;
-  private renderer?: ShaderPassRenderer;
-  private debugRenderer?: ShaderPassRenderer;
-  private presenter?: BackgroundTextureModel;
+  private renderer?: ShaderPassEffect;
+  private debugRenderer?: ShaderPassEffect;
   constructor(readonly capture: SceneBufferEffect) {}
-  setup({device}: EffectContext): void {
-    this.device = device;
-    this.renderer = new ShaderPassRenderer(device, {
+  setup(context: EffectContext): void {
+    this.renderer = new ShaderPassEffect({
+      id: this.id,
       colorFormat: 'rgba16float',
       flipY: true,
       shaderPasses: [
@@ -47,22 +44,24 @@ export class BufferPreviewEffect implements Effect {
         toneMapping
       ]
     });
-    this.debugRenderer = new ShaderPassRenderer(device, {
+    this.debugRenderer = new ShaderPassEffect({
+      id: this.id,
       colorFormat: 'rgba16float',
       flipY: true,
       shaderPasses: [bufferPreview]
     });
+    this.renderer.setup(context);
+    this.debugRenderer.setup(context);
   }
   preRender(_options: PreRenderOptions): void {}
   postRender(options: PostRenderOptions): Framebuffer {
     const frame = this.capture.getFrame('main');
-    if (!frame || !this.device || !this.renderer || !this.debugRenderer) return options.inputBuffer;
+    if (!frame || !this.renderer || !this.debugRenderer) return options.inputBuffer;
     const buffer = this.mode === 'previous' ? frame.previousBuffer || frame.buffer : frame.buffer;
     const sourceTexture = buffer.colorTexture;
     const renderer =
       this.mode === 'scene' || this.mode === 'previous' ? this.renderer : this.debugRenderer;
-    renderer.resize([buffer.width, buffer.height]);
-    const output = renderer.renderToTexture({
+    return renderer.render(options, {
       sourceTexture,
       bindings: {
         depthTexture: buffer.depthTexture,
@@ -82,38 +81,12 @@ export class BufferPreviewEffect implements Effect {
         bufferPreview: {mode: this.mode === 'normals' ? 1 : this.mode === 'depth' ? 2 : 3}
       }
     });
-    if (!output) return options.inputBuffer;
-    this.presenter ??= new BackgroundTextureModel(this.device, {
-      backgroundTexture: output,
-      flipY: true
-    });
-    this.presenter.setProps({backgroundTexture: output});
-    const lastEffect = options.effects?.filter(effect => effect.postRender).at(-1);
-    const target =
-      options.target ||
-      (lastEffect?.id === this.id
-        ? (options.canvasContext || this.device.getCanvasContext()).getCurrentFramebuffer()
-        : options.swapBuffer);
-    const encoder = this.device.commandEncoder;
-    this.presenter.predraw(encoder);
-    const pass = encoder.beginRenderPass({
-      framebuffer: target,
-      clearColor: [0, 0, 0, 1],
-      clearDepth: false
-    });
-    this.presenter.draw(pass);
-    pass.end();
-    this.device.submit();
-    return target;
   }
   cleanup(): void {
-    this.renderer?.destroy();
-    this.debugRenderer?.destroy();
-    this.presenter?.destroy();
+    this.renderer?.cleanup();
+    this.debugRenderer?.cleanup();
     this.renderer = undefined;
     this.debugRenderer = undefined;
-    this.presenter = undefined;
-    this.device = undefined;
   }
 }
 const bufferPreview = {
