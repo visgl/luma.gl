@@ -9,3 +9,9 @@ export {
 
 export {WaterSurfaceLayer, type WaterSurfaceLayerProps} from './layers/water-surface-layer';
 export {surfaceBuffer} from './layers/surface-buffer';
+export {
+  SceneBufferEffect,
+  type SceneBufferEffectProps,
+  type SceneBufferFrame,
+  type SceneBufferLayerOptions
+} from './effects/scene-buffer-effect';

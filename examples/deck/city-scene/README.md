@@ -29,15 +29,25 @@ material remains available unchanged. Neither style displaces geometry. Ripple f
 below a pixel to limit distant flicker.
 
 On WebGPU, **Scene reflections** adds screen-space building and bridge reflections. The example's
-`RiverReflectionEffect` rerenders its participating opaque layers into color/depth and view-normal/
-roughness buffers, then uses luma.gl's shared SSR tracer and spatial filters at half resolution.
-The `surfaceBuffer` shader module lets participating layers write normals and roughness for the
-auxiliary pass. This is a workaround for Deck's color-only postprocess input, scoped to this
-single-view fixture and installed as its final effect. It does not add buffers to arbitrary Deck
-layers. WebGL keeps the procedural material and disables the reflection control.
+`SceneBufferEffect` captures participating opaque layers into the shared luma.gl `GBuffer`.
+`RiverReflectionEffect` borrows its color, depth, and view-normal/roughness textures and runs
+luma.gl's shared SSR tracer, camera-reprojected history, spatial filtering, and compositing.
+The reflection adapter owns only the postprocessing pipeline and its temporal history; scene
+capture, layer filtering, target resizing, and texture cleanup belong to `SceneBufferEffect`.
+
+The `surfaceBuffer` shader module lets participating layers supply normals and roughness. Capture
+runs before Deck's display pass, and reflections are installed as this single-view fixture's final
+effect. Arbitrary Deck layers must explicitly participate in capture and normal output. WebGL keeps
+the procedural material and disables the reflection control.
 
 SSR can only reflect surfaces visible in the current frame; screen-edge and occlusion gaps remain.
-There is no temporal accumulation because this fixture does not provide motion vectors. Buildings
-sit close to the river to make their reflections easier to see. The scene uses face lighting,
+Camera-only temporal accumulation follows the static district through camera movement. Each
+history tap must match the reprojected depth, surface normal, and roughness; a neighborhood clamp
+limits stale reflection colors. The animated water's changing normals can reject history. Camera
+presets, large camera jumps, resize, time resets, and material changes clear history. Moving objects
+would require motion vectors or explicit history resets. Depth history preserves 24-bit depth in
+RGBA8 textures, avoiding optional float-filtering support. Reflection history stays at half
+resolution while depth and normal history use full resolution. Buildings sit close to the river
+to make their reflections easier to see. The scene uses face lighting,
 without cast shadows. The small city mesh adapter remains local to the example and does not
 promise arbitrary mesh formats or terrain draping.

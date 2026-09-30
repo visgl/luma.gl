@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {COORDINATE_SYSTEM, Deck, MapView, type MapViewState} from '@deck.gl/core';
-import {WaterSurfaceLayer} from '@deck.gl-community/gpu-layers';
+import {SceneBufferEffect, WaterSurfaceLayer} from '@deck.gl-community/gpu-layers';
 import type {Buffer} from '@luma.gl/core';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
 import {CITY_ORIGIN, makeCityFeatures, makeCityMesh, type CityFeature} from './city-data';
@@ -82,7 +82,16 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
       diagnostics.backend = device.type;
       waterPositions = device.createBuffer({id: 'river-positions', data: waterVertices});
       if (device.type === 'webgpu') {
-        riverReflectionEffect = new RiverReflectionEffect();
+        riverReflectionEffect = new RiverReflectionEffect(
+          new SceneBufferEffect({
+            id: 'city-scene-buffers',
+            colorFormat: 'rgba8unorm',
+            getLayerOptions: layer =>
+              layer instanceof CityMeshLayer || layer instanceof WaterSurfaceLayer
+                ? {mode: 'opaque', surfaceBuffer: true}
+                : null
+          })
+        );
         updateEffects();
       } else {
         diagnostics.reflectionsEnabled = false;
@@ -113,6 +122,7 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
   });
 
   function updateLayers() {
+    riverReflectionEffect?.resetHistory();
     const mesh = new CityMeshLayer({
       id: 'city-mesh',
       features: diagnostics.waterEnabled
@@ -165,7 +175,9 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
   function updateEffects() {
     deck.setProps({
       effects:
-        diagnostics.reflectionsEnabled && riverReflectionEffect ? [riverReflectionEffect] : []
+        diagnostics.reflectionsEnabled && riverReflectionEffect
+          ? [riverReflectionEffect.capture, riverReflectionEffect]
+          : []
     });
   }
 
@@ -175,6 +187,7 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
     diagnostics,
     features,
     setCamera(preset: keyof typeof CAMERA_PRESETS) {
+      riverReflectionEffect?.resetHistory();
       deck.setProps({initialViewState: {...CAMERA_PRESETS[preset]}});
     },
     setBuildingsVisible(visible: boolean) {
@@ -208,6 +221,7 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
       deck.setProps({_animate: playing && diagnostics.waterEnabled});
     },
     setTime(timeSeconds: number) {
+      riverReflectionEffect?.resetHistory();
       diagnostics.playing = false;
       diagnostics.timeSeconds = timeSeconds;
       lastFrameTime = null;

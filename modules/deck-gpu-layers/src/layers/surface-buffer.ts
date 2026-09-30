@@ -16,6 +16,7 @@ struct SurfaceBufferUniforms {
 };
 @group(3) @binding(auto) var<uniform> surfaceBuffer: SurfaceBufferUniforms;
 fn surfaceBuffer_encode(normal: vec3<f32>, roughness: f32) -> vec4<f32> {
+  if (surfaceBuffer.enabled == 2) { return vec4<f32>(1.0); }
   let viewNormal = normalize((surfaceBuffer.viewMatrix * vec4<f32>(normal, 0.0)).xyz);
   return vec4<f32>(viewNormal * 0.5 + 0.5, roughness);
 }
@@ -26,6 +27,7 @@ layout(std140) uniform surfaceBufferUniforms {
   mat4 viewMatrix;
 } surfaceBuffer;
 vec4 surfaceBuffer_encode(vec3 normal, float roughness) {
+  if (surfaceBuffer.enabled == 2) return vec4(1.0);
   vec3 viewNormal = normalize((surfaceBuffer.viewMatrix * vec4(normal, 0.0)).xyz);
   return vec4(viewNormal * 0.5 + 0.5, roughness);
 }

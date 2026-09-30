@@ -3,47 +3,90 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Effect, EffectContext, PostRenderOptions, PreRenderOptions} from '@deck.gl/core';
-import {type Device, type Framebuffer, Texture} from '@luma.gl/core';
+import type {Device, Framebuffer, Texture} from '@luma.gl/core';
 import {BackgroundTextureModel, ShaderPassRenderer} from '@luma.gl/engine';
-import {ssrTrace, ssrSpatial, ssrComposite} from '@luma.gl/effects';
+import {
+  ssrTrace,
+  ssrSpatial,
+  ssrComposite,
+  ssrCameraTemporal,
+  ssrCameraDepthHistoryCopy,
+  ssrNormalHistoryCopy
+} from '@luma.gl/effects';
 import {Matrix4} from '@math.gl/core';
-import {WaterSurfaceLayer} from '@deck.gl-community/gpu-layers';
-import {CityMeshLayer} from './city-mesh-layer';
+import type {SceneBufferEffect} from '@deck.gl-community/gpu-layers';
 
-/** Opt-in auxiliary passes for this single-view, opaque city fixture. */
+/** Final reflection composite consuming the shared capture for this single-view fixture. */
 export class RiverReflectionEffect implements Effect {
   readonly id = 'city-river-reflections';
   readonly props = {};
   readonly useInPicking = false;
   frameCount = 0;
   debugMode = 0;
+  historyFrames = 0;
+  private previousViewProjection: Matrix4 | null = null;
+  private previousView: Matrix4 | null = null;
+  private previousInverseProjection: Matrix4 | null = null;
   private device: Device | null = null;
   private renderer: ShaderPassRenderer | null = null;
-  private sceneFramebuffer: Framebuffer | null = null;
-  private normalFramebuffer: Framebuffer | null = null;
-  private colorTexture: Texture | null = null;
-  private depthTexture: Texture | null = null;
-  private normalTexture: Texture | null = null;
+  private capturedColor: Texture | null = null;
   private presenter: BackgroundTextureModel | null = null;
+
+  constructor(readonly capture: SceneBufferEffect) {}
 
   setup({device}: EffectContext): void {
     this.device = device;
-    // Reuse the shared tracer and spatial filters. This fixture has no motion buffer;
-    // omit temporal accumulation rather than reprojecting with incorrect velocities.
+    // Geometry is static; camera reprojection validates depth and animated water normals.
     this.renderer = new ShaderPassRenderer(device, {
       shaderPasses: [
         {
           name: 'cityWaterReflections',
           renderTargets: {
             reflectionRaw: {format: 'rgba16float', scale: [0.5, 0.5]},
+            reflectionHistory: {
+              format: 'rgba16float',
+              scale: [0.5, 0.5],
+              lifetime: 'history',
+              initialize: {clearColor: [0, 0, 0, 0]}
+            },
+            depthHistory: {
+              format: 'rgba8unorm',
+              lifetime: 'history',
+              initialize: {clearColor: [1, 1, 1, 1]}
+            },
+            normalHistory: {
+              format: 'rgba8unorm',
+              lifetime: 'history',
+              initialize: {clearColor: [0.5, 0.5, 1, 1]}
+            },
             reflectionScratch: {format: 'rgba16float', scale: [0.5, 0.5]},
             reflectionFiltered: {format: 'rgba16float', scale: [0.5, 0.5]}
           },
           steps: [
             {shaderPass: ssrTrace, inputs: {sourceTexture: 'previous'}, output: 'reflectionRaw'},
             {
+              shaderPass: ssrCameraTemporal,
+              inputs: {
+                sourceTexture: 'reflectionRaw',
+                historyTexture: 'reflectionHistory',
+                previousDepthTexture: 'depthHistory',
+                previousNormalTexture: 'normalHistory'
+              },
+              output: 'reflectionHistory'
+            },
+            {
+              shaderPass: ssrCameraDepthHistoryCopy,
+              inputs: {sourceTexture: 'previous'},
+              output: 'depthHistory'
+            },
+            {
+              shaderPass: ssrNormalHistoryCopy,
+              inputs: {sourceTexture: 'previous'},
+              output: 'normalHistory'
+            },
+            {
               shaderPass: ssrSpatial,
-              inputs: {sourceTexture: 'reflectionRaw'},
+              inputs: {sourceTexture: 'reflectionHistory'},
               output: 'reflectionScratch',
               uniforms: {direction: [1, 0]}
             },
@@ -73,64 +116,17 @@ export class RiverReflectionEffect implements Effect {
     const renderer = this.renderer!;
     const viewport = options.viewports[0];
     if (!viewport) return options.inputBuffer;
-    const {width, height} = options.inputBuffer;
-    if (this.sceneFramebuffer?.width !== width || this.sceneFramebuffer?.height !== height) {
-      this.destroyBuffers();
-      this.createBuffers(width, height);
+    const frame = this.capture.getFrame(viewport.id);
+    if (!frame) return options.inputBuffer;
+    const {buffer} = frame;
+    const {width, height} = buffer;
+    if (this.capturedColor !== buffer.colorTexture) {
+      this.capturedColor = buffer.colorTexture;
       renderer.resize([width, height]);
+      this.resetHistory();
     }
-    const layers = options.layers.filter(
-      layer =>
-        layer.props.visible &&
-        (layer instanceof CityMeshLayer || layer instanceof WaterSurfaceLayer)
-    );
-    const models = layers.flatMap(layer => layer.getModels());
     const commandEncoder = device.commandEncoder;
-    const parameters = models.map(model => ({...model.parameters}));
     const viewRect: [number, number, number, number] = [0, 0, width, height];
-
-    // Deck's postprocess input has no depth attachment. Re-render the participating
-    // opaque layers so both the color source and ray-hit depth preserve occlusion.
-    for (const layer of layers) layer.setShaderModuleProps({surfaceBuffer: {enabled: 0}});
-    for (const model of models) {
-      model.setParameters({
-        ...model.parameters,
-        blend: false,
-        blendColorSrcFactor: 'one',
-        blendColorDstFactor: 'zero',
-        blendAlphaSrcFactor: 'one',
-        blendAlphaDstFactor: 'zero',
-        depthWriteEnabled: true,
-        depthCompare: 'less-equal'
-      });
-      model.predraw(commandEncoder);
-    }
-    const scenePass = commandEncoder.beginRenderPass({
-      id: 'city-reflection-scene',
-      framebuffer: this.sceneFramebuffer!,
-      parameters: {viewport: viewRect},
-      clearColor: [0, 0, 0, 0],
-      clearDepth: 1
-    });
-    for (const model of models) model.draw(scenePass);
-    scenePass.end();
-
-    // Buildings supply hit normals with roughness 1; only water starts reflection rays.
-    for (const layer of layers) {
-      layer.setShaderModuleProps({surfaceBuffer: {enabled: 1, viewMatrix: viewport.viewMatrix}});
-    }
-    for (const model of models) model.predraw(commandEncoder);
-    const normalPass = commandEncoder.beginRenderPass({
-      id: 'city-reflection-normals',
-      framebuffer: this.normalFramebuffer!,
-      parameters: {viewport: viewRect},
-      clearColor: [0.5, 0.5, 1, 1],
-      clearDepth: false
-    });
-    for (const model of models) model.draw(normalPass);
-    normalPass.end();
-    for (const layer of layers) layer.setShaderModuleProps({surfaceBuffer: {enabled: 0}});
-    models.forEach((model, index) => model.setParameters(parameters[index]));
 
     // Deck stores OpenGL clip depth and normalizes view distances by viewport size.
     // The shared SSR tracer expects WebGPU clip depth and metre-sized view positions.
@@ -142,9 +138,24 @@ export class RiverReflectionEffect implements Effect {
       .multiplyRight(viewport.projectionMatrix)
       .scale(viewUnitsPerMeter);
     const inverseProjectionMatrix = new Matrix4(projectionMatrix).invert();
+    const clipDepthConversion = new Matrix4([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 1]);
+    const viewProjection = new Matrix4(clipDepthConversion).multiplyRight(
+      viewport.viewProjectionMatrix
+    );
+    const currentClipToPreviousClip = this.previousViewProjection
+      ? new Matrix4(this.previousViewProjection).multiplyRight(new Matrix4(viewProjection).invert())
+      : new Matrix4();
+    // Large camera changes have little overlapping history. Reset instead of leaving stale radiance.
+    if (
+      currentClipToPreviousClip.some(
+        (value, index) => Math.abs(value - (index % 5 === 0 ? 1 : 0)) > 0.5
+      )
+    ) {
+      this.resetHistory();
+    }
     const outputTexture = renderer.renderToTexture({
-      sourceTexture: this.colorTexture!,
-      bindings: {depthTexture: this.depthTexture!, normalTexture: this.normalTexture!},
+      sourceTexture: buffer.colorTexture,
+      bindings: {depthTexture: buffer.depthTexture, normalTexture: buffer.normalRoughnessTexture},
       uniforms: {
         ssrTrace: {
           projectionMatrix,
@@ -154,7 +165,18 @@ export class RiverReflectionEffect implements Effect {
           thickness: 1.5,
           sampleCount: 96,
           maxRoughness: 0.8,
-          frameIndex: 0
+          frameIndex: this.historyFrames
+        },
+        ssrCameraTemporal: {
+          currentClipToPreviousClip,
+          currentViewToPreviousView: this.previousView
+            ? new Matrix4(this.previousView).multiplyRight(new Matrix4(viewMatrix).invert())
+            : new Matrix4(),
+          previousInverseProjectionMatrix:
+            this.previousInverseProjection ?? inverseProjectionMatrix,
+          historyWeight: this.historyFrames ? 0.8 : 0,
+          depthThreshold: 0.01,
+          normalThreshold: 0.96
         },
         ssrSpatial: {inverseProjectionMatrix, maxRadius: 2},
         ssrComposite: {inverseProjectionMatrix, strength: 1, debugMode: this.debugMode}
@@ -162,6 +184,10 @@ export class RiverReflectionEffect implements Effect {
     });
     if (!outputTexture) return options.inputBuffer;
     this.frameCount++;
+    this.historyFrames++;
+    this.previousViewProjection = viewProjection;
+    this.previousView = new Matrix4(viewMatrix);
+    this.previousInverseProjection = inverseProjectionMatrix;
     this.presenter ??= new BackgroundTextureModel(device, {
       id: 'city-reflection-presenter',
       backgroundTexture: outputTexture,
@@ -187,59 +213,21 @@ export class RiverReflectionEffect implements Effect {
     return outputFramebuffer;
   }
 
+  resetHistory(): void {
+    this.renderer?.resetHistory();
+    this.historyFrames = 0;
+    this.previousViewProjection = null;
+    this.previousView = null;
+    this.previousInverseProjection = null;
+  }
+
   cleanup(): void {
+    this.resetHistory();
     this.renderer?.destroy();
     this.presenter?.destroy();
-    this.destroyBuffers();
+    this.capturedColor = null;
     this.renderer = null;
     this.presenter = null;
     this.device = null;
-  }
-
-  private createBuffers(width: number, height: number): void {
-    const device = this.device!;
-    const textureProps = {width, height, usage: Texture.RENDER | Texture.SAMPLE};
-    this.colorTexture = device.createTexture({
-      ...textureProps,
-      id: 'city-reflection-color',
-      format: 'rgba8unorm'
-    });
-    this.depthTexture = device.createTexture({
-      ...textureProps,
-      id: 'city-reflection-depth',
-      format: 'depth24plus'
-    });
-    this.normalTexture = device.createTexture({
-      ...textureProps,
-      id: 'city-reflection-normal',
-      format: 'rgba8unorm'
-    });
-    this.sceneFramebuffer = device.createFramebuffer({
-      id: 'city-reflection-scene',
-      width,
-      height,
-      colorAttachments: [this.colorTexture],
-      depthStencilAttachment: this.depthTexture
-    });
-    this.normalFramebuffer = device.createFramebuffer({
-      id: 'city-reflection-normal',
-      width,
-      height,
-      colorAttachments: [this.normalTexture],
-      depthStencilAttachment: this.depthTexture
-    });
-  }
-
-  private destroyBuffers(): void {
-    this.sceneFramebuffer?.destroy();
-    this.normalFramebuffer?.destroy();
-    this.colorTexture?.destroy();
-    this.depthTexture?.destroy();
-    this.normalTexture?.destroy();
-    this.sceneFramebuffer = null;
-    this.normalFramebuffer = null;
-    this.colorTexture = null;
-    this.depthTexture = null;
-    this.normalTexture = null;
   }
 }

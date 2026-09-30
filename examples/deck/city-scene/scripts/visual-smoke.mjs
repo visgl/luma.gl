@@ -58,6 +58,9 @@ try {
         }
       }
       assert(animatedWaterPixels > 100, `${backend}: water visibly moves during playback (${animatedWaterPixels} pixels)`);
+      if (backend === 'webgpu') {
+        assert(await page.evaluate(() => window.cityScene.deck.props.effects.find(effect => effect.id === 'city-river-reflections').historyFrames > 1), 'SSR accumulates successive frames');
+      }
       await page.click('#playback');
       await page.mouse.move(1190, 840);
       await page.waitForTimeout(150);
@@ -65,10 +68,13 @@ try {
       await page.waitForTimeout(150);
       assert.equal(await page.evaluate(() => window.cityScene.diagnostics.frames), pausedFrames, `${backend}: pause stops drawing`);
       if (backend === 'webgpu') {
-        await page.evaluate(() => {
+        const restartedHistoryFrames = await page.evaluate(() => {
           window.cityScene.setTime(2);
+          const frames = window.cityScene.deck.props.effects.find(effect => effect.id === 'city-river-reflections').historyFrames;
           window.cityScene.setReflectionDebugMode(1);
+          return frames;
         });
+        assert.equal(restartedHistoryFrames, 1, 'time reset starts fresh reflection history');
         await page.waitForTimeout(250);
         const reflections = PNG.sync.read(await page.screenshot({path: join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), 'city-scene-reflections.png')}));
         let reflectedPixels = 0;
@@ -79,16 +85,52 @@ try {
           }
         }
         assert(reflectedPixels > 1000, `SSR traces visible scene reflections (${reflectedPixels} pixels)`);
+        // Fixed water/camera isolates stochastic ray noise from physical surface animation.
+        await page.evaluate(() => {
+          const effect = window.cityScene.deck.props.effects.find(effect => effect.id === 'city-river-reflections');
+          const renderer = effect.renderer;
+          const render = renderer.renderToTexture.bind(renderer);
+          window.reflectionHistoryWeight = 0;
+          renderer.renderToTexture = options => render({...options, uniforms: {...options.uniforms,
+            ssrCameraTemporal: {...options.uniforms.ssrCameraTemporal, historyWeight: window.reflectionHistoryWeight}
+          }});
+          window.restoreReflectionRenderer = () => {renderer.renderToTexture = render;};
+        });
+        const variation = [];
+        for (const historyWeight of [0, 0.8]) {
+          await page.evaluate(weight => {
+            window.reflectionHistoryWeight = weight;
+            window.cityScene.deck.props.effects.find(effect => effect.id === 'city-river-reflections').resetHistory();
+            for (let frame = 0; frame < 8; frame++) window.cityScene.deck.redraw('warm reflection history');
+          }, historyWeight);
+          let previous = PNG.sync.read(await page.screenshot());
+          let difference = 0;
+          for (let frame = 0; frame < 5; frame++) {
+            await page.evaluate(() => window.cityScene.deck.redraw('sample reflection history'));
+            const current = PNG.sync.read(await page.screenshot());
+            for (let vertical = 120; vertical < 650; vertical++) for (let horizontal = 350; horizontal < 950; horizontal++) {
+              const offset = (vertical * current.width + horizontal) * 4;
+              for (let channel = 0; channel < 3; channel++) difference += Math.abs(current.data[offset + channel] - previous.data[offset + channel]);
+            }
+            previous = current;
+          }
+          variation.push(difference);
+        }
+        await page.evaluate(() => window.restoreReflectionRenderer());
+        assert(variation[0] > 1000, 'stochastic reflection rays produce measurable variation');
+        assert(variation[1] < variation[0] * 0.8, `SSR history reduces static-scene flicker (${variation.join(' -> ')})`);
+        process.stdout.write(`SSR static-scene variation: ${variation.join(' -> ')}\n`);
+
         await page.evaluate(() => {
           window.cityScene.setReflectionDebugMode(0);
-          window.reflectionTexture = window.cityScene.deck.props.effects[0].normalTexture;
+          window.reflectionTexture = window.cityScene.deck.props.effects.find(effect => effect.id === 'city-river-reflections').capture.getFrame('city').buffer.normalRoughnessTexture;
         });
         await page.uncheck('#reflections');
         await page.waitForTimeout(150);
         assert.equal(await page.evaluate(() => window.reflectionTexture.destroyed), true, 'disabling SSR releases auxiliary textures');
         await page.check('#reflections');
         await page.waitForTimeout(250);
-        assert.equal(await page.evaluate(() => window.cityScene.deck.props.effects[0].normalTexture.destroyed), false, 'enabling SSR recreates auxiliary textures');
+        assert.equal(await page.evaluate(() => window.cityScene.deck.props.effects.find(effect => effect.id === 'city-river-reflections').capture.getFrame('city').buffer.normalRoughnessTexture.destroyed), false, 'enabling SSR recreates auxiliary textures');
       } else {
         assert(await page.locator('#reflections').isDisabled(), 'WebGL clearly disables the WebGPU reflection pass');
       }

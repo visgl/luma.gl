@@ -66,6 +66,31 @@ renderer.renderToScreen({
 | `depthThreshold` | `0.018` | Temporal rejection threshold for disoccluded reflected surfaces. |
 | `strength` | `1` | Final `ssrComposite` contribution blended into scene color. |
 
+## Camera-only history
+
+For static geometry without a velocity attachment, `ssrCameraTemporal` provides a WebGPU
+camera-reprojection resolve. Place it after `ssrTrace` and before `ssrSpatial`. Supply
+`currentClipToPreviousClip` (previous view-projection multiplied by inverse current view-projection,
+using WebGPU clip depth), `currentViewToPreviousView`, and `previousInverseProjectionMatrix`.
+Form the clip-to-clip product on the CPU to avoid reconstructing large world coordinates in the
+shader. Matrix conventions and units must match the depth and view-normal attachments.
+
+The pass reads `depthTexture`, `normalTexture`, `historyTexture`, `previousDepthTexture`, and
+`previousNormalTexture`. Maintain three renderer history targets: RGBA16F reflection radiance,
+RGBA8 packed depth, and RGBA8 encoded view normals plus roughness. Write depth with
+`ssrCameraDepthHistoryCopy` and normals with `ssrNormalHistoryCopy` **after** the temporal resolve.
+Initialize reflection history to zero and packed depth history to `[1, 1, 1, 1]`. The packed depth
+preserves 24 bits without requiring filterable 32-bit float textures; it is not interchangeable
+with the red-channel output of `ssrDepthHistoryCopy`.
+
+History defaults to weight `0.8`, relative depth tolerance `0.01`, and normal dot threshold `0.96`.
+Each bilinear history tap is validated separately against expected previous depth, transformed
+normals, and roughness before neighborhood clamping. Depth and normal histories can remain full
+resolution when reflection radiance is half resolution. Reset history on camera cuts, resize,
+material changes, and scene edits. This is camera-only reprojection: moving geometry needs motion
+vectors or a caller-controlled reset. Changing water normals can reject history, but reflected
+view-dependent radiance is still an approximation.
+
 ## Quality and Limitations
 
 SSR cannot reflect geometry outside the current viewport, hidden behind the first visible depth

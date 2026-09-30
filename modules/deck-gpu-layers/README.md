@@ -121,3 +121,86 @@ are sampled asynchronously and never gate the GPU-driven render path. Readbacks 
 `onStats` is supplied, or explicitly with `enableDiagnostics`. The effect owns every buffer and
 graph it creates; Deck calls `cleanup`, while applications may call `destroy` when an effect is
 constructed but never adopted.
+
+## Auxiliary scene buffers
+
+`SceneBufferEffect` captures participating layers into luma.gl `GBuffer` textures before Deck's
+normal display pass. This WebGPU adapter makes HDR scene color, sampleable opaque depth, encoded
+view normals/roughness, and an opaque selection mask available to subsequent effects. It does not
+replace Deck's display output or modify the picking pass.
+
+```ts
+import {SceneBufferEffect} from '@deck.gl-community/gpu-layers';
+
+const sceneBuffers = new SceneBufferEffect({
+  history: true,
+  getLayerOptions: layer => {
+    if (layer.id === 'buildings') {
+      return {mode: 'opaque', surfaceBuffer: true, selected: true};
+    }
+    if (layer.id === 'glass') return {mode: 'transparent'};
+    return null;
+  }
+});
+deck.setProps({effects: [sceneBuffers]});
+
+// Read after SceneBufferEffect.preRender, for example from another effect's postRender.
+const frame = sceneBuffers.getFrame('main');
+if (frame) {
+  const colorTexture = frame.buffer.colorTexture;
+  const depthTexture = frame.buffer.depthTexture;
+  const normalTexture = frame.buffer.normalRoughnessTexture;
+  const selectionTexture = frame.buffer.getExtraColorTexture('selection');
+  // Pass these borrowed textures to a luma.gl shader-pass pipeline.
+}
+```
+
+Opaque participants write color and depth. Transparent participants blend color afterward without
+changing opaque depth, normals, or selection. Declare their alpha/blending parameters as for normal
+Deck rendering. Layer visibility, filtering, projection, transitions, and shader-module effects are
+handled by Deck's layer pass. Place capture after effects whose pre-render work its layers need.
+Selection includes only visible opaque fragments from selected layers implementing `surfaceBuffer`.
+Nonparticipating layers and an external basemap are not represented in these textures.
+
+### Normal and selection output
+
+A participating mesh opts into the exported `surfaceBuffer` shader module. Its fragment shader must
+branch before material output:
+
+```wgsl
+if (surfaceBuffer.enabled != 0) {
+  return surfaceBuffer_encode(commonSpaceNormal, roughness);
+}
+```
+
+The module converts the supplied common-space normal to view space, packs it into RGB in [0, 1],
+and stores roughness in alpha. Apply any model/projection normal transformation before calling it.
+The capture pass also uses this function for white selection-mask output. Normal material output
+uses `enabled = 0`; the adapter restores that mode and model render parameters after auxiliary
+passes. Layers without the module may still provide scene color and opaque depth; their normal
+pixels retain the default roughness of 1.
+
+### Views and history
+
+Each view ID has separate full-canvas targets. `viewportBounds` locates its region in top-origin
+physical texture pixels. Normal rendering, side-by-side views, and vertically split views use the
+same pinned Deck viewport-origin correction. The adapter supplies its own cleared targets, so it
+omits per-view clear operations that would nest WebGPU render passes in this Deck version.
+
+`history: true` retains the previous completed capture in a second slot. `previousBuffer` is absent
+on the first frame, after allocation resize, or after viewport bounds change. Call
+`sceneBuffers.resetHistory(viewId)` for camera cuts, teleports, discontinuous time changes, or scene
+replacement; omit the ID to reset all views. Camera matrices are copied per frame in Deck's native
+common-space/OpenGL clip convention. They are not motion vectors, and retaining history does not
+perform reprojection or temporal filtering by itself.
+
+All returned textures are borrowed. Do not destroy them or retain them beyond the slot's next reuse.
+Removing a view destroys its targets. Resize replaces its targets. Removing the effect or finalizing
+Deck releases all captures; repeated cleanup is safe. Default formats use approximately 17 bytes per
+canvas pixel per view, doubled when history is enabled, plus driver overhead. Capture issues four
+passes per view and preserves the normal Deck display pass, so callers should measure the cost for
+their scenes. The adapter currently requires WebGPU and explicit layer participation.
+
+The repository's pinned Deck patch also adds depth to the first postprocessing scene target.
+Without it, depth-writing layers are incompatible with that color-only WebGPU target as soon
+as a `postRender` effect is installed. The second fullscreen swap target remains color-only.

@@ -189,3 +189,10 @@ export type {SSAOCompositeShaderPassOptions} from './passes/screen-space/ssao';
 export {createSSAOCompositeShaderPass} from './passes/screen-space/ssao';
 export {createTAACompositeShaderPass} from './passes/screen-space/temporal-antialiasing';
 export {createVolumetricFogCompositeShaderPass} from './passes/screen-space/volumetric-fog';
+
+export {
+  ssrCameraTemporal,
+  ssrNormalHistoryCopy,
+  ssrCameraDepthHistoryCopy
+} from './passes/screen-space/ssr-camera-temporal';
+export type {SSRCameraTemporalUniforms} from './passes/screen-space/ssr-camera-temporal';
