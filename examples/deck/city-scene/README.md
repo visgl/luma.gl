@@ -85,3 +85,6 @@ can therefore appear in reflected scene color without pretending that strokes ha
 surface normals. This remains a single-view local-map example. Use `CITY_SCENE_URL=http://localhost:3000/standalone-examples/city-scene` to run its visual
 checks against served production assets. Use the canonical URL without `.html` or a trailing slash
 so the website redirect does not discard the renderer query parameter.
+
+`yarn benchmark` measures completed-frame latency and tracked GPU allocations on hardware
+WebGPU. See the [measurement method and hardware-specific budgets](benchmarks/README.md).

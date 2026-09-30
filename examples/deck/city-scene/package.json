@@ -7,7 +7,8 @@
     "start": "vite",
     "build": "tsc && vite build",
     "build:website": "tsc && vite build --mode website --outDir ../../../website/.generated/example-assets/standalone-examples/city-scene --emptyOutDir",
-    "test:visual": "node scripts/visual-smoke.mjs"
+    "test:visual": "node scripts/visual-smoke.mjs",
+    "benchmark": "node scripts/benchmark.mjs"
   },
   "dependencies": {
     "@deck.gl-community/gpu-layers": "workspace:*",
