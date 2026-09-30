@@ -39,7 +39,9 @@ for (const [identifier, setter] of [
   ['intensity', scene.setIntensity],
   ['wind-speed', scene.setWindSpeed],
   ['wind-direction', scene.setWindDirection],
-  ['visibility', scene.setVisibility]
+  ['visibility', scene.setVisibility],
+  ['fog-variation', scene.setFogVariation],
+  ['fog-speed', scene.setFogSpeed]
 ] as const) {
   const input = document.querySelector<HTMLInputElement>(`#${identifier}`)!;
   input.addEventListener('input', () => setter(Number(input.value)));
@@ -53,8 +55,3 @@ scene.ready
     document.querySelector('#status')!.textContent = error.message;
   });
 window.addEventListener('pagehide', () => scene.finalize());
-
-const projection = document.querySelector<HTMLSelectElement>('#projection')!;
-projection.addEventListener('change', () =>
-  scene.setProjection(projection.value === 'globe' ? 'globe' : 'map')
-);

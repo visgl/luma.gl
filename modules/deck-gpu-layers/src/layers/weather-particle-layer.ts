@@ -32,7 +32,7 @@ export type WeatherParticleLayerProps = LayerProps & {
   time?: number | (() => number);
   particleCount?: number;
   precipitation?: PrecipitationProps | ((viewport: Viewport) => PrecipitationProps);
-  fog?: HeightFogProps;
+  fog?: HeightFogProps | (() => HeightFogProps);
   widthPixels?: number;
   streakLength?: number;
   color?: [number, number, number, number];
@@ -158,7 +158,10 @@ export class WeatherParticleLayer extends Layer<WeatherParticleLayerProps> {
           : props.precipitation),
         time: typeof props.time === 'function' ? props.time() : props.time
       },
-      heightFog: props.fog,
+      heightFog: {
+        ...heightFog.defaultUniforms,
+        ...(typeof props.fog === 'function' ? props.fog() : props.fog)
+      },
       weatherRender: {
         cameraPosition: getMeterOffsetPosition(
           this.context.viewport,

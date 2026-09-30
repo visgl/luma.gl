@@ -1,16 +1,18 @@
 # Riverfront weather
 
-A portable WebGPU/WebGL2 example with wind-driven rain, drifting snow, and height fog.
+A portable WebGPU/WebGL2 example with wind-driven rain, drifting snow, and wispy height fog.
+It opens in Fog mode, with slowly drifting banks.
 Run `yarn workspace luma.gl-examples-deck-weather start`; the website route is
 `/examples/deck/weather`.
 
 Choose Clear, Rain, Snow, or Fog. Intensity controls the particle count, wind uses metres
 per second with direction clockwise from north, and visibility sets the fog extinction.
 Pause freezes the clock exactly; reset returns to the seeded initial particle positions.
-Clear, Fog, and zero particle intensity stop the precipitation clock and continuous redraws,
-even when Animate is checked. Changing a setting or moving the camera still redraws the scene.
-Camera movement remains available while paused. The View selector switches between map and globe
-projection; both use a local east/north/up metre frame for fog and particle sizing. Time gaps above 0.1 seconds are dropped
+Clear stops continuous redraws. With no precipitation, fog keeps animating only when both
+Fog variation and Fog drift are nonzero. Zero variation restores uniform fog; zero drift
+keeps static wisps. Animate pauses both fog and precipitation. Changing a setting or moving the camera still redraws the scene.
+Camera movement remains available while paused. The scene uses map projection; scroll over the scene to zoom. The visual tests also exercise
+globe projection through the scene API. Both use a local east/north/up metre frame for fog and particle sizing. Time gaps above 0.1 seconds are dropped
 so resuming a hidden or slow tab does not produce a large jump.
 
 `precipitation` and `heightFog` are reusable shader modules. `WeatherParticleLayer` connects
@@ -34,7 +36,13 @@ for very long sessions eventually loses float precision; applications can reset 
 between sessions. Fade at volume boundaries hides recycling. Particle count is capped at
 262,144; practical limits depend on overdraw, viewport, and hardware.
 
-Fog integrates exponential density along a ray in local metres. Density is constant below
+Fog integrates exponential density along a ray in local metres. Variation modulates that
+density with warped, multiscale noise sampled along twelve ray segments. Fog drift moves
+the field along the wind direction in metres per second; its speed is independent of
+precipitation wind speed. Wisps also deform gently as they drift. Drift accumulates over
+time, so changing its speed does not jump the fog to a new position. The shader is shared by material and depth-pass fog and adds no
+textures, history, or render passes. The fixed sample count can undersample small wisps
+along very long rays; this remains a neighborhood-scale approximation. The underlying height profile is constant below
 the base height and decays exponentially above it. The visibility slider uses `3.912 / distance`
 as base extinction, corresponding to 2% transmittance through a homogeneous medium. Height
 falloff makes visibility greater above that base. The model uses a constant fog tint, without

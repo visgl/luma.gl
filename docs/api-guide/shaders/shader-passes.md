@@ -481,5 +481,11 @@ tint and a flat up axis; it does not include light scattering, shadowed fog, cur
 atmospheres, or automatic geographic-to-metre conversion. The input depth can come from any
 opaque renderer, including terrain, without modifying its material shaders.
 
+Set `variation` (0–1), `wispScale` (metres), `velocity` (metres per second), and `time`
+(seconds) for drifting fog banks. Both the pass and material use the same world-space density
+field and twelve-segment ray approximation, with no noise texture or history. Keep their parameters
+and coordinate frames consistent. Set `evolutionSpeed` above zero to deform the wisps internally as time advances. Zero
+variation uses the original analytic integral; zero velocity and evolution leave static wisps. Small wisps across very long rays can be undersampled.
+
 Visualization City's Height Fog section offers both modes. Riverfront Weather uses the same
 calculation directly in its building and precipitation materials.

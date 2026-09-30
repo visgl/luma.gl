@@ -58,6 +58,11 @@ struct heightFogPassUniforms {
   density: f32,
   baseHeight: f32,
   heightFalloff: f32,
+  variation: f32,
+  wispScale: f32,
+  velocity: vec3f,
+  time: f32,
+  evolutionSpeed: f32,
   inverseViewProjectionMatrix: mat4x4f,
   cameraPosition: vec3f,
   backgroundDistance: f32,
@@ -84,9 +89,9 @@ fn heightFogPass_sampleColor(sourceTexture: texture_2d<f32>, sourceTextureSample
     let direction = position - heightFogPass.cameraPosition;
     position = heightFogPass.cameraPosition + direction / max(length(direction), 0.000001) * heightFogPass.backgroundDistance;
   }
-  let transmittance = heightFog_getRayTransmittance(distance(position, heightFogPass.cameraPosition),
-    dot(heightFogPass.cameraPosition, heightFogPass.upDirection), dot(position, heightFogPass.upDirection),
-    heightFogPass.density, heightFogPass.baseHeight, heightFogPass.heightFalloff);
+  let transmittance = heightFog_getSpatialTransmittance(heightFogPass.cameraPosition, position, heightFogPass.upDirection,
+    heightFogPass.density, heightFogPass.baseHeight, heightFogPass.heightFalloff,
+    heightFogPass.variation, heightFogPass.wispScale, heightFogPass.time, heightFogPass.velocity, heightFogPass.evolutionSpeed);
   return vec4f(mix(heightFogPass.color, color.rgb, transmittance), color.a);
 }
 `,
@@ -96,6 +101,11 @@ layout(std140) uniform heightFogPassUniforms {
   float density;
   float baseHeight;
   float heightFalloff;
+  float variation;
+  float wispScale;
+  vec3 velocity;
+  float time;
+  float evolutionSpeed;
   mat4 inverseViewProjectionMatrix;
   vec3 cameraPosition;
   float backgroundDistance;
@@ -120,9 +130,9 @@ vec4 heightFogPass_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCo
     vec3 direction = position - heightFogPass.cameraPosition;
     position = heightFogPass.cameraPosition + direction / max(length(direction), 0.000001) * heightFogPass.backgroundDistance;
   }
-  float transmittance = heightFog_getRayTransmittance(distance(position, heightFogPass.cameraPosition),
-    dot(heightFogPass.cameraPosition, heightFogPass.upDirection), dot(position, heightFogPass.upDirection),
-    heightFogPass.density, heightFogPass.baseHeight, heightFogPass.heightFalloff);
+  float transmittance = heightFog_getSpatialTransmittance(heightFogPass.cameraPosition, position, heightFogPass.upDirection,
+    heightFogPass.density, heightFogPass.baseHeight, heightFogPass.heightFalloff,
+    heightFogPass.variation, heightFogPass.wispScale, heightFogPass.time, heightFogPass.velocity, heightFogPass.evolutionSpeed);
   return vec4(mix(heightFogPass.color, color.rgb, transmittance), color.a);
 }
 `,

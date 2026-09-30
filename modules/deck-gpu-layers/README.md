@@ -100,7 +100,9 @@ from the current viewport when the volume should follow the camera. Keep the vol
 constant while moving its center to retain particle positions in overlapping space.
 
 `weather`, `widthPixels`, `streakLength` in metres, and linear RGBA `color` control appearance.
-`fog` accepts `heightFog` props. The optional borrowed `surfaceTexture` is an `r32float`
+`fog` accepts `heightFog` props or a callback returning them, allowing a shared animation clock
+to drive drifting density without rebuilding layer geometry. Zero variation keeps uniform fog.
+The optional borrowed `surfaceTexture` is an `r32float`
 height field with local metre bounds `[west, south, east, north]`; row zero is south and
 samples are texel-centered. It hides particles below the highest surface. Outside the field,
 zero is used as the surface height. Opaque scene layers must draw before weather and write

@@ -80,6 +80,15 @@ for (const backend of ['webgpu', 'webgl'] as const) {
       clearDepth(0.5);
       const cases: Partial<HeightFogPassUniforms>[] = [
         {density: 0.3, heightFalloff: 0},
+        {
+          density: 0.3,
+          heightFalloff: 0,
+          variation: 0.9,
+          evolutionSpeed: 0.1,
+          wispScale: 2,
+          velocity: [1, 0.5, 0],
+          time: 3
+        },
         {density: 0.3, heightFalloff: 0.5, baseHeight: -0.2, upDirection: [0, 1, 0]},
         {
           density: 0.02,
@@ -128,7 +137,8 @@ for (const backend of ['webgpu', 'webgl'] as const) {
             for (let channel = 0; channel < 3; channel++) {
               const expected =
                 uniforms.color[channel] * (1 - transmittance) + original[channel] * transmittance;
-              expect(colors[(row * 2 + column) * 4 + channel]).toBeCloseTo(expected, 5);
+              if (uniforms.variation === 0)
+                expect(colors[(row * 2 + column) * 4 + channel]).toBeCloseTo(expected, 5);
             }
             expect(colors[(row * 2 + column) * 4 + 3]).toBeCloseTo(original[3], 6);
           }
@@ -155,7 +165,12 @@ for (const backend of ['webgpu', 'webgl'] as const) {
               color: uniforms.color,
               density: uniforms.density,
               baseHeight: uniforms.baseHeight,
-              heightFalloff: uniforms.heightFalloff
+              heightFalloff: uniforms.heightFalloff,
+              variation: uniforms.variation,
+              wispScale: uniforms.wispScale,
+              velocity: uniforms.velocity,
+              time: uniforms.time,
+              evolutionSpeed: uniforms.evolutionSpeed
             }
           });
           const materialColors = await material.read();

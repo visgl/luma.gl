@@ -13,14 +13,14 @@ import {getPlaywrightLaunchOptions} from '../../../../scripts/playwright/get-pla
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const server = await createServer({root, logLevel: 'error', server: {host: '127.0.0.1', port: 0}});
 await server.listen();
-function changedPixels(first, second) {
+function changedPixels(first, second, threshold = 10) {
   let count = 0;
   for (let vertical = 0; vertical < first.height; vertical++)
     for (let horizontal = 310; horizontal < first.width; horizontal++) {
       const offset = (vertical * first.width + horizontal) * 4;
       if (
         [0, 1, 2].some(
-          channel => Math.abs(first.data[offset + channel] - second.data[offset + channel]) > 10
+          channel => Math.abs(first.data[offset + channel] - second.data[offset + channel]) > threshold
         )
       )
         count++;
@@ -61,6 +61,16 @@ try {
       await page.waitForFunction(() => document.body.dataset.ready === 'true', undefined, {
         timeout: 60_000
       });
+      await page.waitForFunction(() => window.weatherScene?.diagnostics.frames > 2);
+      assert.equal(await page.inputValue('#preset'), 'fog', `${backend}: opens with fog`);
+      assert.equal(await page.inputValue('#visibility'), '700', `${backend}: fog is apparent by default`);
+      await page.screenshot({path: join(tmpdir(), `weather-default-${backend}.png`)});
+      const initialZoom = await page.evaluate(() => window.weatherScene.deck.getViewports()[0].zoom);
+      await page.mouse.move(850, 400);
+      await page.mouse.wheel(0, 240);
+      await page.waitForFunction(initialZoom => window.weatherScene.deck.getViewports()[0].zoom < initialZoom - 0.1, initialZoom);
+      await page.evaluate(() => window.weatherScene.deck.setProps({initialViewState: {longitude: -74.006, latitude: 40.7128, zoom: 15.6, pitch: 58, bearing: -25}}));
+      await page.selectOption('#preset', 'rain');
       await page.waitForFunction(() => window.weatherScene?.diagnostics.frames > 8, undefined, {
         timeout: 30_000
       });
@@ -137,7 +147,8 @@ try {
       await page.evaluate(() =>
         window.weatherScene.deck.setProps({layers: window.originalWeatherLayers})
       );
-      // Disabled precipitation must stop both the clock and frame requests, even with Animate enabled.
+      await page.evaluate(() => window.weatherScene.setFogVariation(0));
+      // With fog motion disabled, disabled precipitation must stop both the clock and frame requests, even with Animate enabled.
       await page.check('#playing');
       for (const preset of ['clear', 'fog', 'snow']) {
         await page.selectOption('#preset', preset);
@@ -172,7 +183,55 @@ try {
         ) > 10000,
         `${backend}: visibility changes world-space fog`
       );
-      await page.selectOption('#projection', 'globe');
+      // Fog varies spatially at a fixed clock and drifts without particles or new GPU resources.
+      await page.evaluate(() => {
+        const scene = window.weatherScene;
+        scene.setVisibility(900);
+        scene.setFogVariation(0);
+        scene.setTime(0);
+      });
+      await page.waitForTimeout(150);
+      const uniformFog = PNG.sync.read(await page.screenshot());
+      await page.evaluate(() => window.weatherScene.setFogVariation(0.85));
+      await page.waitForTimeout(150);
+      const wispyFog = PNG.sync.read(await page.screenshot({path: join(tmpdir(), `weather-wisps-${backend}.png`)}));
+      assert(changedPixels(uniformFog, wispyFog) > 1000, `${backend}: fog density varies spatially`);
+      await page.evaluate(() => {
+        window.fogDistrictModel = window.weatherScene.deck.layerManager.getLayers().find(layer => layer.id === 'district').state.model;
+        window.weatherScene.setTime(40);
+      });
+      await page.waitForTimeout(150);
+      const driftedFog = PNG.sync.read(await page.screenshot({path: join(tmpdir(), `weather-wisps-drifted-${backend}.png`)}));
+      assert(changedPixels(wispyFog, driftedFog) > 1000, `${backend}: wisps advect through the scene`);
+      await page.waitForTimeout(200);
+      assert.equal(changedPixels(driftedFog, PNG.sync.read(await page.screenshot())), 0, `${backend}: pause freezes fog`);
+      await page.evaluate(() => window.weatherScene.setTime(0));
+      await page.waitForTimeout(150);
+      assert.equal(changedPixels(wispyFog, PNG.sync.read(await page.screenshot())), 0, `${backend}: fog reset is deterministic`);
+      // The image must move during playback, not only after an explicit time/slider change.
+      await page.evaluate(() => window.weatherScene.setFogSpeed(3));
+      await page.waitForTimeout(150);
+      const liveFogStart = PNG.sync.read(await page.screenshot());
+      await page.check('#playing');
+      await page.waitForFunction(() => window.weatherScene.diagnostics.time > 2.5, undefined, {timeout: 30000});
+      const liveFogChanges = changedPixels(liveFogStart, PNG.sync.read(await page.screenshot()), 3);
+      assert(liveFogChanges > 1000, `${backend}: fog visibly animates over 2.5 seconds (${liveFogChanges} pixels)`);
+      assert(await page.evaluate(() => window.weatherScene.deck.props._animate), `${backend}: fog alone schedules animation`);
+      assert(await page.evaluate(() => window.fogDistrictModel === window.weatherScene.deck.layerManager.getLayers().find(layer => layer.id === 'district').state.model), `${backend}: fog animation reuses district geometry`);
+      await page.uncheck('#playing');
+      await page.waitForTimeout(150);
+      const beforeSpeedChange = PNG.sync.read(await page.screenshot());
+      await page.evaluate(() => window.weatherScene.setFogSpeed(9));
+      await page.waitForTimeout(150);
+      assert.equal(changedPixels(beforeSpeedChange, PNG.sync.read(await page.screenshot()), 1), 0, `${backend}: changing drift speed does not jump paused fog`);
+      await page.check('#playing');
+      await page.evaluate(() => window.weatherScene.setFogSpeed(0));
+      await page.waitForTimeout(250);
+      const idleFog = await page.evaluate(() => ({...window.weatherScene.diagnostics}));
+      await page.waitForTimeout(250);
+      assert.deepEqual(await page.evaluate(() => ({...window.weatherScene.diagnostics})), idleFog, `${backend}: zero drift stops fog redraws`);
+      await page.uncheck('#playing');
+      await page.evaluate(() => window.weatherScene.setProjection('globe'));
       await page.selectOption('#preset', 'snow');
       await page.evaluate(() => window.weatherScene.setVisibility(3000));
       await page.waitForTimeout(200);
@@ -186,7 +245,7 @@ try {
       await page.waitForTimeout(150);
       assert(changedPixels(globe, PNG.sync.read(await page.screenshot())) > 200, `${backend}: snow remains visible on the globe`);
       await page.evaluate(() => window.weatherScene.setIntensity(0.6));
-      await page.selectOption('#projection', 'map');
+      await page.evaluate(() => window.weatherScene.setProjection('map'));
       await page.selectOption('#preset', 'snow');
       await page.evaluate(() => {
         window.weatherScene.setVisibility(5000);
