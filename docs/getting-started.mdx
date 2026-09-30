@@ -3,13 +3,17 @@ title: Getting Started
 description: Get started with your first hello triangle
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import {HelloTriangleExample} from '@site/src/examples';
+
+
 # Getting Started
 
-In this getting started we will get you setup with you rendering your first triangle. In graphics applications
-we call it `hello triangle` similar to printing `hello world` when learning a new programming language.
+In this getting started we will guide you through rendering your first `Hello Triangle`. `Hello Triangle` is a simple triangle that is rendered to the screen.
+Its synonymous with printing `Hello World` to the console when learning a programming new language.
 
 ## Prerequisites
-- A current Node.js LTS release
 - A browser with WebGPU or WebGL2 support
 - Basic TypeScript knowledge
 - Basic WebGL2 or WebGPU knowledge
@@ -39,7 +43,7 @@ import {webgpuAdapter} from '@luma.gl/webgpu';
 import {webgl2Adapter} from '@luma.gl/webgl';
 
 // This class extends AnimationLoopTemplate to define the main render loop
-class App extends AnimationLoopTemplate {
+class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   // main render loop
   override onRender({device}: AnimationProps): void {
     const renderPass = device.beginRenderPass({
@@ -66,9 +70,10 @@ const device = await luma.createDevice({
 });
 
 // sets up the animation loop
-makeAnimationLoop(App, {
+makeAnimationLoop(AppAnimationLoopTemplate, {
   device
 }).start();
+
 ```
 
 With that you can run the vite development server and see the result.
@@ -79,14 +84,12 @@ npm run dev
 You should see a light gray background.
 
 ### Step 2. Write the shaders
-In this step you will write the shaders that will render the triangle both in GLSL and WGSL seperarely.
-
-add the following code to main.ts file below the `makeAnimationLoop` call.
+In this step you will write the shaders that will render the triangle both in GLSL and WGSL seperarely. Add the following code to `main.ts` file.
+The shaders below uses the vertex index to determine the position of each vertex.
 
 ```ts
 // vertex shader in GLSL
-const VS_GLSL = /* glsl */`
-  #version 300 es
+const VS_GLSL = /* glsl */`#version 300 es
 
   const vec2 pos[3] = vec2[3](vec2(0.0f, 0.5f), vec2(-0.5f, -0.5f), vec2(0.5f, -0.5f));
 
@@ -97,50 +100,50 @@ const VS_GLSL = /* glsl */`
 
 // fragment shader in GLSL
 const FS_GLSL = /* glsl */ `\
-#version 300 es
+    #version 300 es
 
-precision highp float;
+    precision highp float;
 
-layout(location = 0) out vec4 outColor;
+    layout(location = 0) out vec4 outColor;
 
-void main() {
-   outColor = vec4(1.0, 0.0, 0.0, 1.0);
-}
+    void main() {
+    outColor = vec4(1.0, 0.0, 0.0, 1.0);
+    }
 `;
 
 // vertex shader in WGSL
 const WGSL_SHADER = /* wgsl */ `\
-@vertex
-fn vertexMain(@builtin(vertex_index) vertexIndex : u32) -> @builtin(position) vec4<f32> {
-  var positions = array<vec2<f32>, 3>(vec2(0.0, 0.5), vec2(-0.5, -0.5), vec2(0.5, -0.5));
-  return vec4<f32>(positions[vertexIndex], 0.0, 1.0);
-}
+    @vertex
+    fn vertexMain(@builtin(vertex_index) vertexIndex : u32) -> @builtin(position) vec4<f32> {
+
+    var positions = array<vec2<f32>, 3>(vec2(0.0, 0.5), vec2(-0.5, -0.5), vec2(0.5, -0.5));
+        return vec4<f32>(positions[vertexIndex], 0.0, 1.0);
+    }
 
 
-@fragment
-fn fragmentMain() -> @location(0) vec4<f32> {
-  return vec4<f32>(1.0, 0.0, 0.0, 1.0);
-}
+    @fragment
+    fn fragmentMain() -> @location(0) vec4<f32> {
+        return vec4<f32>(1.0, 0.0, 0.0, 1.0);
+    }
 `
 ```
 
-The above shader use the vertex index to determine the position of each vertex.
 
 
 ### Step 3. Render the triangle
-In order to render the triangle, we need to create a `Model` resource and call its `draw` method in the `onRender` method.
+In order to render the triangle, we need to create a `Model` resource and call its `draw` method in the `onRender` method of the `AppAnimationLoopTemplate`.
+In the model we pass in all the necessary data to it such as the shader sources, vertex data, topology etc which will then be used to render the triangle.
 
-`Model` is a resource that contains per draw call resources such as vertex, index buffers, uniforms and pipeline.
-It is the core building block of luma.gl when using the engine API and is the primary api that allows you to write both glsl and wgsl shaders at a go.
+`Model` is a resource that contains per draw call resources such as vertex, index buffers, uniforms and pipeline. For more information, see the [Model](docs/api-reference/engine/model) documentation.
 
 ```ts
 import {AnimationLoopTemplate, type AnimationProps, makeAnimationLoop,Model} from '@luma.gl/engine';
 
 // This class extends AnimationLoopTemplate to define the main render loop
-class App extends AnimationLoopTemplate {
+class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   model: Model;
 
-  constructor() {
+  constructor({device}: AnimationProps) {
     super();
 
     this.model = new Model(device, {
@@ -176,7 +179,136 @@ class App extends AnimationLoopTemplate {
 }
 ```
 
+### Step 4. Putting it all together
+Your `main.ts` and `index.html` file should look like this:
+
+<Tabs>
+  <TabItem value="main" label="src/main.ts" default>
+  ```ts
+  import { luma } from '@luma.gl/core';
+  import {AnimationLoopTemplate, type AnimationProps, makeAnimationLoop,Model} from '@luma.gl/engine';
+  import {webgpuAdapter} from '@luma.gl/webgpu';
+  import {webgl2Adapter} from '@luma.gl/webgl';
+
+  // This class extends AnimationLoopTemplate to define the main render loop
+  class AppAnimationLoopTemplate extends AnimationLoopTemplate {
+    model: Model;
+
+    constructor({device}: AnimationProps) {
+      super();
+
+      this.model = new Model(device, {
+        source: WGSL_SHADER,
+        vs: VS_GLSL,
+        fs: FS_GLSL,
+        topology: 'triangle-list',
+        vertexCount: 3,
+        shaderLayout: {
+          attributes: [],
+          bindings: []
+        },
+        parameters: {
+          depthFormat: 'depth24plus'
+        }
+      });
+    }
+
+    // main render loop
+    override onRender({device}: AnimationProps): void {
+      const renderPass = device.beginRenderPass({
+         clearColor: [0.961, 0.961, 0.961, 1] // clears the color buffer to a light gray color
+      });
+
+      this.model.draw(renderPass);
+
+      renderPass.end(); // ends the render pass
+    }
+
+    onFinalize(): void {
+      this.model.destroy();
+    }
+  }
+
+  // gets the container element to render to
+  const container = document.getElementById('app')!;
+
+  // sets up the device
+  const device = await luma.createDevice({
+    adapters: [webgpuAdapter,webgl2Adapter],
+    createCanvasContext: {
+      container,
+      width: 500,
+      height: 500,
+    },
+  });
+
+  // sets up the animation loop
+  makeAnimationLoop(AppAnimationLoopTemplate, {
+    device
+  }).start();
+
+  // vertex shader in GLSL
+  const VS_GLSL = /* glsl */`#version 300 es
+
+    const vec2 pos[3] = vec2[3](vec2(0.0f, 0.5f), vec2(-0.5f, -0.5f), vec2(0.5f, -0.5f));
+
+    void main() {
+      gl_Position = vec4(pos[gl_VertexID], 0.0, 1.0);
+    }
+  `;
+
+  // fragment shader in GLSL
+  const FS_GLSL = /* glsl */ `\
+  #version 300 es
+
+  precision highp float;
+
+  layout(location = 0) out vec4 outColor;
+
+  void main() {
+     outColor = vec4(1.0, 0.0, 0.0, 1.0);
+  }
+  `;
+
+  // vertex shader in WGSL
+  const WGSL_SHADER = /* wgsl */ `\
+  @vertex
+  fn vertexMain(@builtin(vertex_index) vertexIndex : u32) -> @builtin(position) vec4<f32> {
+    var positions = array<vec2<f32>, 3>(vec2(0.0, 0.5), vec2(-0.5, -0.5), vec2(0.5, -0.5));
+    return vec4<f32>(positions[vertexIndex], 0.0, 1.0);
+  }
+
+
+  @fragment
+  fn fragmentMain() -> @location(0) vec4<f32> {
+    return vec4<f32>(1.0, 0.0, 0.0, 1.0);
+  }
+  `
+
+  ```
+  </TabItem>
+  <TabItem value="index.html" label="index.html">
+    ```html
+    <!doctype html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>luma-demo</title>
+      </head>
+      <body>
+        <div id="app"></div>
+        <script type="module" src="/src/main.ts"></script>
+      </body>
+    </html>
+    ```
+  </TabItem>
+</Tabs>
+
 You should now see a red triangle rendered on the screen.
+
+<HelloTriangleExample showHeader={false} showStats={false} />
 
 ## Whats next ?
 
