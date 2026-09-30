@@ -13,7 +13,7 @@ import {
 import {ScatterplotLayer} from '@deck.gl/layers';
 import {SceneBufferEffect, surfaceBuffer} from '@deck.gl-community/gpu-layers';
 import {luma, Buffer, Texture, type Device, type RenderPass} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter, WebGPUDevice} from '@luma.gl/webgpu';
 import {Model} from '@luma.gl/engine';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, test} from 'vitest';
@@ -216,19 +216,29 @@ test.each([false, true])(
 
 test('scene capture accepts stock Deck color and depth without inventing normals or selection', async context => {
   if (!(await getWebGPUTestDevice())) return context.skip('WebGPU unavailable');
+  const errors: string[] = [];
+  let stage = 'ordinary stock rendering';
   // Own this presentation context instead of reusing the earlier Deck fixtures' canvas.
   const device = await luma.createDevice({
     type: 'webgpu',
     adapters: [webgpuAdapter],
     featureLevel: 'max',
     createCanvasContext: {width: 64, height: 64},
-    debug: true
+    debug: true,
+    onError: error => {
+      errors.push(error.message);
+    }
+  });
+  const nativeDevice = device instanceof WebGPUDevice ? device.handle : undefined;
+  expect(nativeDevice).toBeDefined();
+  let deviceLoss: Awaited<typeof device.lost> | undefined;
+  void device.lost.then(info => {
+    deviceLoss = info;
   });
   const parent = document.createElement('div');
   parent.style.width = '64px';
   parent.style.height = '64px';
   document.body.append(parent);
-  const errors: string[] = [];
   type Point = {position: [number, number, number]};
   const capturedData: Point[] = [{position: [0, 0, 0]}];
   const excludedData: Point[] = [{position: [18, 0, 0]}];
@@ -273,7 +283,7 @@ test('scene capture accepts stock Deck color and depth without inventing normals
     views: new OrthographicView({id: 'stock'}),
     initialViewState: {target: [0, 0], zoom: 0},
     layers: [captured, excluded],
-    effects: [effect],
+    effects: [],
     _animate: true,
     onAfterRender: () => {
       frames++;
@@ -283,12 +293,19 @@ test('scene capture accepts stock Deck color and depth without inventing normals
     }
   });
   try {
+    await waitUntil(() => frames >= 3 && captured.isLoaded, errors);
+    // Distinguish stock layer/device failures from capture-specific failures.
+    await nativeDevice!.queue.onSubmittedWorkDone();
+    stage = 'captured stock rendering';
+    frames = 0;
+    deck.setProps({effects: [effect]});
     await waitUntil(
       () => frames >= 3 && captured.isLoaded && Boolean(effect.getFrame('stock')),
       errors
     );
     deck.setProps({_animate: false});
     deck.redraw('stock capture');
+    stage = 'opaque capture readback';
     const opaque = await readCapture(device, effect, 'stock');
     expect(opaque[0]).toBeCloseTo(192 / 255, 3);
     expect(opaque[1]).toBe(1);
@@ -296,6 +313,7 @@ test('scene capture accepts stock Deck color and depth without inventing normals
     expect(opaque[2]).toBeLessThan(1);
     expect(opaque[3]).toBe(0);
     expect(Array.from(await readCapture(device, effect, 'stock', [50, 32]))).toEqual([0, 1, 1, 0]);
+    stage = 'stock picking';
     const picked = await deck.pickObjectAsync({x: 32, y: 32});
     expect(picked?.layer?.id).toBe('stock-captured');
     expect(picked?.index).toBe(0);
@@ -303,6 +321,7 @@ test('scene capture accepts stock Deck color and depth without inventing normals
     const excludedPick = await deck.pickObjectAsync({x: 50, y: 32});
     expect(excludedPick?.layer?.id).toBe('stock-excluded');
 
+    stage = 'transparent capture';
     const transparent = new ScatterplotLayer<Point>({
       id: 'stock-transparent',
       data: capturedData,
@@ -331,6 +350,7 @@ test('scene capture accepts stock Deck color and depth without inventing normals
     expect(blended[0]).toBeCloseTo((192 / 255) * (1 - 128 / 255), 3);
     expect(blended.slice(1)).toEqual(opaque.slice(1));
     const texture = effect.getFrame('stock')!.buffer.colorTexture;
+    stage = 'capture removal';
     deck.setProps({effects: []});
     await waitUntil(
       () => texture.destroyed,
@@ -339,6 +359,16 @@ test('scene capture accepts stock Deck color and depth without inventing normals
     );
     expect((await deck.pickObjectAsync({x: 32, y: 32}))?.object).toBe(capturedData[0]);
     expect(errors).toEqual([]);
+  } catch (error) {
+    console.error('Stock scene capture failure', {
+      stage,
+      frames,
+      device: device.info,
+      isLost: device.isLost,
+      deviceLoss,
+      errors
+    });
+    throw error;
   } finally {
     deck.finalize();
     parent.remove();

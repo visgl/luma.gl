@@ -179,6 +179,9 @@ jobs:
           retention-days: 7
 
       - name: Run headless tests and generate coverage
+        env:
+          # Include browser process failures alongside WebGPU test assertions.
+          DEBUG: pw:browser
         run: |
           yarn test-coverage --shard=${{ matrix.shard }}/3
 
