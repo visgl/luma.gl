@@ -293,7 +293,11 @@ test('scene capture accepts stock Deck color and depth without inventing normals
     }
   });
   try {
-    await waitUntil(() => frames >= 3 && captured.isLoaded, errors);
+    await waitUntil(
+      () => frames >= 3 && captured.isLoaded,
+      errors,
+      () => deck.redraw('stock scene frame')
+    );
     // Distinguish stock layer/device failures from capture-specific failures.
     await nativeDevice!.queue.onSubmittedWorkDone();
     stage = 'captured stock rendering';
@@ -301,7 +305,8 @@ test('scene capture accepts stock Deck color and depth without inventing normals
     deck.setProps({effects: [effect]});
     await waitUntil(
       () => frames >= 3 && captured.isLoaded && Boolean(effect.getFrame('stock')),
-      errors
+      errors,
+      () => deck.redraw('stock capture frame')
     );
     deck.setProps({_animate: false});
     deck.redraw('stock capture');
