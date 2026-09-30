@@ -95,9 +95,12 @@
   font-size: 11px;
 }
 .luma-example-infobox .control-card .toggle {
-  display: flex;
-  justify-content: flex-start;
   cursor: pointer;
+}
+.luma-example-infobox .control-card .toggle > input {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: start;
 }
 .luma-example-infobox .control-card :is(select, button, input[type='color']) {
   padding: 4px 6px;
@@ -177,19 +180,18 @@
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 15%), 0 1px 1px rgb(0 0 0 / 35%);
   cursor: pointer;
 }
-.luma-example-infobox input:is([type='checkbox'], [type='radio'])::before {
+.luma-example-infobox input[type='radio']::before {
   content: '';
   width: 8px;
   height: 8px;
   background: var(--luma-infobox-control);
-  clip-path: polygon(0 45%, 20% 25%, 40% 50%, 80% 0, 100% 20%, 40% 100%);
   transform: scale(0);
 }
 .luma-example-infobox input:is([type='checkbox'], [type='radio']):checked {
   border-color: var(--luma-infobox-accent);
   background: var(--luma-infobox-accent);
 }
-.luma-example-infobox input:is([type='checkbox'], [type='radio']):checked::before {
+.luma-example-infobox input[type='radio']:checked::before {
   transform: scale(1);
 }
 .luma-example-infobox input[type='radio'] {
