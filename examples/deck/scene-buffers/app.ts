@@ -32,6 +32,7 @@ export function createBufferScene(parent: HTMLDivElement, options: DeckExampleDe
   let showGlass = true;
   const capture = new SceneBufferEffect({
     history: true,
+    selection: true,
     getLayerOptions: layer => ({
       mode: layer.id === 'glass' ? 'transparent' : 'opaque',
       surfaceBuffer: layer.id !== 'glass',

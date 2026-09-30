@@ -20,7 +20,7 @@ History uses a second complete set of scene textures. Reset it on camera cuts or
 replacement. Transparent objects are absent from normals and selection masks. No motion
 vectors, temporal rejection, or screen-space reflections are applied here.
 
-Four capture passes run in addition to Deck's normal draw. Captures cost about 17 bytes per
+This example requests `selection: true` for its outline and mask views. Four capture passes run in addition to Deck's normal draw. Captures cost about 17 bytes per
 physical canvas pixel per view, doubled with history, before bloom and presentation targets.
 The adapter uses Deck's experimental layer-pass interface and the repository's pinned patch;
 it is experimental and currently requires WebGPU.
