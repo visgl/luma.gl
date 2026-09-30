@@ -13,6 +13,7 @@ import {
   type CityFeature
 } from '../river-district-data';
 import {RiverDistrictLayer} from '../river-district-layer';
+import type {SSRQuality} from '@luma.gl/effects';
 import {RiverReflectionEffect} from './river-reflection-effect';
 
 export const CAMERA_PRESETS = {
@@ -48,6 +49,7 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
     waterEnabled: true,
     waterStyle: 'river' as 'classic' | 'river',
     reflectionsEnabled: true,
+    reflectionQuality: 'balanced' as SSRQuality,
     playing: true
   };
   const ready = Promise.withResolvers<void>();
@@ -211,6 +213,11 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
     setReflectionsEnabled(enabled: boolean) {
       diagnostics.reflectionsEnabled = enabled && Boolean(riverReflectionEffect);
       updateEffects();
+    },
+    setReflectionQuality(quality: SSRQuality) {
+      diagnostics.reflectionQuality = quality;
+      riverReflectionEffect?.setQuality(quality);
+      deck.redraw('reflection quality changed');
     },
     setReflectionDebugMode(mode: number) {
       if (riverReflectionEffect) riverReflectionEffect.debugMode = mode;

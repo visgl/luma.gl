@@ -46,10 +46,9 @@ history tap must match the reprojected depth, surface normal, and roughness; a n
 limits stale reflection colors. The animated water's changing normals can reject history. Camera
 presets, large camera jumps, resize, time resets, and material changes clear history. Moving objects
 would require motion vectors or explicit history resets. Depth history preserves 24-bit depth in
-RGBA8 textures, avoiding optional float-filtering support. Reflection history stays at half
-resolution while depth and normal history use full resolution. Buildings sit close to the river
-to make their reflections easier to see. The scene uses face lighting,
-without cast shadows. The shared fixture adapter does not promise arbitrary mesh formats or terrain draping.
+RGBA8 textures, avoiding optional float-filtering support. Reflection history uses the selected
+quality resolution while depth and normal history use full resolution. Buildings sit close to the
+river to make their reflections easier to see. The scene uses face lighting without cast shadows. The shared fixture adapter does not promise arbitrary mesh formats or terrain draping.
 
 Website builds use an explicit asset prefix (including `WEBSITE_BASE_URL` when set), so clean-URL
 redirects cannot move relative asset requests out of the embedded example directory. Standalone
@@ -59,3 +58,12 @@ The district geometry is rendered by `../river-district-layer.ts`, shared with t
 examples. It uses luma.gl's Lambert material for lighting, optional `heightFog`, and `surfaceBuffer`
 for view-space normals/roughness and selection output. The layer owns its generated mesh buffer and
 model; Deck owns their layer lifecycle. Fog defaults to zero density.
+
+Reflection quality uses the same `createSSRCompositeShaderPass` factory as other luma.gl scenes,
+with `reprojection: 'camera'`. Balanced retains the original appearance (half resolution, 96 trace
+samples, two-pixel denoising radius, 0.8 history weight). Fast uses quarter resolution, 32 samples,
+a three-pixel radius and 0.9 history weight. Detailed uses full resolution with the Balanced tracing
+and history settings. Switching quality releases reflection targets and resets history, while
+retaining shared scene capture. Depth and normal histories stay full resolution at every quality.
+These settings describe relative work; they are not hardware frame-rate guarantees. WebGL disables
+both reflection controls and retains the procedural water material.

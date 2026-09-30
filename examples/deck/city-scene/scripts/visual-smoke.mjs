@@ -121,6 +121,42 @@ try {
         assert(variation[1] < variation[0] * 0.8, `SSR history reduces static-scene flicker (${variation.join(' -> ')})`);
         process.stdout.write(`SSR static-scene variation: ${variation.join(' -> ')}\n`);
 
+        // Quality switches replace only postprocessing targets, retaining shared scene capture.
+        for (const [quality, scale] of [['fast', 0.25], ['detailed', 1], ['balanced', 0.5]]) {
+          await page.evaluate(() => {
+            const effect = window.cityScene.deck.props.effects.find(effect => effect.id === 'city-river-reflections');
+            window.previousReflectionTexture = effect.renderer.passRenderers[0].renderTargets.ssrRaw.texture;
+            window.previousCaptureTexture = effect.capture.getFrame('city').buffer.colorTexture;
+          });
+          await page.selectOption('#reflection-quality', quality);
+          const targets = await page.evaluate(() => {
+            const effect = window.cityScene.deck.props.effects.find(effect => effect.id === 'city-river-reflections');
+            const capture = effect.capture.getFrame('city').buffer;
+            const targets = effect.renderer.passRenderers[0].renderTargets;
+            return {
+              released: window.previousReflectionTexture.destroyed,
+              captureReused: capture.colorTexture === window.previousCaptureTexture,
+              width: targets.ssrRaw.texture.width,
+              expectedWidth: capture.width,
+              historyWidth: targets.ssrHistoryDepth.texture.width,
+              historyFrames: effect.historyFrames
+            };
+          });
+          assert(targets.released, `${quality}: switching quality releases old reflection targets`);
+          assert(targets.captureReused, `${quality}: quality reuses scene capture`);
+          assert.equal(targets.width, Math.max(1, Math.ceil(targets.expectedWidth * scale)));
+          assert.equal(targets.historyWidth, targets.expectedWidth, 'camera depth history remains full resolution');
+          assert(targets.historyFrames >= 1 && targets.historyFrames <= 2, 'quality starts fresh history');
+          for (let frame = 0; frame < 4; frame++) await page.evaluate(() => window.cityScene.deck.redraw('warm quality preset'));
+          const qualityImage = PNG.sync.read(await page.screenshot());
+          let litPixels = 0;
+          for (let vertical = 120; vertical < 650; vertical++) for (let horizontal = 350; horizontal < 950; horizontal++) {
+            const offset = (vertical * qualityImage.width + horizontal) * 4;
+            if (Math.max(...qualityImage.data.subarray(offset, offset + 3)) > 8) litPixels++;
+          }
+          assert(litPixels > 1000, `${quality}: produces visible reflection radiance`);
+        }
+
         await page.evaluate(() => {
           window.cityScene.setReflectionDebugMode(0);
           window.reflectionTexture = window.cityScene.deck.props.effects.find(effect => effect.id === 'city-river-reflections').capture.getFrame('city').buffer.normalRoughnessTexture;
@@ -132,6 +168,7 @@ try {
         await page.waitForTimeout(250);
         assert.equal(await page.evaluate(() => window.cityScene.deck.props.effects.find(effect => effect.id === 'city-river-reflections').capture.getFrame('city').buffer.normalRoughnessTexture.destroyed), false, 'enabling SSR recreates auxiliary textures');
       } else {
+        assert(await page.locator('#reflection-quality').isDisabled(), 'WebGL disables reflection quality');
         assert(await page.locator('#reflections').isDisabled(), 'WebGL clearly disables the WebGPU reflection pass');
       }
       await page.selectOption('#camera', 'overhead');

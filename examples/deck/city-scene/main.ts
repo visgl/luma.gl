@@ -17,6 +17,7 @@ const backend = document.querySelector<HTMLSelectElement>('#backend');
 const camera = document.querySelector<HTMLSelectElement>('#camera');
 const buildings = document.querySelector<HTMLInputElement>('#buildings');
 const water = document.querySelector<HTMLInputElement>('#water');
+const reflectionQuality = document.querySelector<HTMLSelectElement>('#reflection-quality');
 const reflections = document.querySelector<HTMLInputElement>('#reflections');
 const waterStyle = document.querySelector<HTMLSelectElement>('#water-style');
 const waterPreset = document.querySelector<HTMLSelectElement>('#water-preset');
@@ -32,6 +33,7 @@ if (
   !buildings ||
   !water ||
   !reflections ||
+  !reflectionQuality ||
   !waterStyle ||
   !waterPreset ||
   !waterColor ||
@@ -47,6 +49,7 @@ const buildingsControl = buildings;
 const backendControl = backend;
 const waterControl = water;
 const reflectionsControl = reflections;
+const reflectionQualityControl = reflectionQuality;
 const waterStyleControl = waterStyle;
 const waterPresetControl = waterPreset;
 const waterColorControl = waterColor;
@@ -87,6 +90,8 @@ async function startScene() {
     reflectionsControl.title = reflectionsControl.disabled
       ? 'Scene reflections require WebGPU'
       : '';
+    reflectionQualityControl.disabled = reflectionsControl.disabled;
+    reflectionQualityControl.value = 'balanced';
     waterStyleControl.value = 'river';
     waterPresetControl.value = 'teal';
     waterColorControl.value = '#0b4252';
@@ -109,9 +114,14 @@ camera.addEventListener('change', () => {
 });
 buildings.addEventListener('change', () => scene.setBuildingsVisible(buildingsControl.checked));
 water.addEventListener('change', () => scene.setWaterEnabled(waterControl.checked));
-reflections.addEventListener('change', () =>
-  scene.setReflectionsEnabled(reflectionsControl.checked)
-);
+reflections.addEventListener('change', () => {
+  scene.setReflectionsEnabled(reflectionsControl.checked);
+  reflectionQualityControl.disabled = !reflectionsControl.checked;
+});
+reflectionQuality.addEventListener('change', () => {
+  const quality = reflectionQualityControl.value;
+  scene.setReflectionQuality(quality === 'fast' || quality === 'detailed' ? quality : 'balanced');
+});
 waterStyle.addEventListener('change', () =>
   scene.setWaterStyle(waterStyleControl.value === 'classic' ? 'classic' : 'river')
 );

@@ -176,9 +176,13 @@ export {
   ssgiTemporal,
   ssgiTrace
 } from './passes/screen-space/screen-space-global-illumination';
-export type {SSRCompositeShaderPassOptions} from './passes/screen-space/screen-space-reflections';
+export type {
+  SSRCompositeShaderPassOptions,
+  SSRQuality
+} from './passes/screen-space/screen-space-reflections';
 export {
   createSSRCompositeShaderPass,
+  SSR_QUALITY_PRESETS,
   ssrComposite,
   ssrDepthHistoryCopy,
   ssrSpatial,

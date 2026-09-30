@@ -5,14 +5,7 @@
 import type {Effect, EffectContext, PostRenderOptions, PreRenderOptions} from '@deck.gl/core';
 import type {Device, Framebuffer, Texture} from '@luma.gl/core';
 import {BackgroundTextureModel, ShaderPassRenderer} from '@luma.gl/engine';
-import {
-  ssrTrace,
-  ssrSpatial,
-  ssrComposite,
-  ssrCameraTemporal,
-  ssrCameraDepthHistoryCopy,
-  ssrNormalHistoryCopy
-} from '@luma.gl/effects';
+import {createSSRCompositeShaderPass, type SSRQuality} from '@luma.gl/effects';
 import {Matrix4} from '@math.gl/core';
 import type {SceneBufferEffect} from '@deck.gl-community/gpu-layers';
 
@@ -24,6 +17,7 @@ export class RiverReflectionEffect implements Effect {
   frameCount = 0;
   debugMode = 0;
   historyFrames = 0;
+  quality: SSRQuality = 'balanced';
   private previousViewProjection: Matrix4 | null = null;
   private previousView: Matrix4 | null = null;
   private previousInverseProjection: Matrix4 | null = null;
@@ -36,74 +30,23 @@ export class RiverReflectionEffect implements Effect {
 
   setup({device}: EffectContext): void {
     this.device = device;
-    // Geometry is static; camera reprojection validates depth and animated water normals.
-    this.renderer = new ShaderPassRenderer(device, {
-      shaderPasses: [
-        {
-          name: 'cityWaterReflections',
-          renderTargets: {
-            reflectionRaw: {format: 'rgba16float', scale: [0.5, 0.5]},
-            reflectionHistory: {
-              format: 'rgba16float',
-              scale: [0.5, 0.5],
-              lifetime: 'history',
-              initialize: {clearColor: [0, 0, 0, 0]}
-            },
-            depthHistory: {
-              format: 'rgba8unorm',
-              lifetime: 'history',
-              initialize: {clearColor: [1, 1, 1, 1]}
-            },
-            normalHistory: {
-              format: 'rgba8unorm',
-              lifetime: 'history',
-              initialize: {clearColor: [0.5, 0.5, 1, 1]}
-            },
-            reflectionScratch: {format: 'rgba16float', scale: [0.5, 0.5]},
-            reflectionFiltered: {format: 'rgba16float', scale: [0.5, 0.5]}
-          },
-          steps: [
-            {shaderPass: ssrTrace, inputs: {sourceTexture: 'previous'}, output: 'reflectionRaw'},
-            {
-              shaderPass: ssrCameraTemporal,
-              inputs: {
-                sourceTexture: 'reflectionRaw',
-                historyTexture: 'reflectionHistory',
-                previousDepthTexture: 'depthHistory',
-                previousNormalTexture: 'normalHistory'
-              },
-              output: 'reflectionHistory'
-            },
-            {
-              shaderPass: ssrCameraDepthHistoryCopy,
-              inputs: {sourceTexture: 'previous'},
-              output: 'depthHistory'
-            },
-            {
-              shaderPass: ssrNormalHistoryCopy,
-              inputs: {sourceTexture: 'previous'},
-              output: 'normalHistory'
-            },
-            {
-              shaderPass: ssrSpatial,
-              inputs: {sourceTexture: 'reflectionHistory'},
-              output: 'reflectionScratch',
-              uniforms: {direction: [1, 0]}
-            },
-            {
-              shaderPass: ssrSpatial,
-              inputs: {sourceTexture: 'reflectionScratch'},
-              output: 'reflectionFiltered',
-              uniforms: {direction: [0, 1]}
-            },
-            {
-              shaderPass: ssrComposite,
-              inputs: {sourceTexture: 'previous', reflectionTexture: 'reflectionFiltered'},
-              output: 'previous'
-            }
-          ]
-        }
-      ],
+    this.renderer = this.createRenderer(device);
+  }
+
+  setQuality(quality: SSRQuality): void {
+    if (quality === this.quality) return;
+    this.quality = quality;
+    this.resetHistory();
+    this.renderer?.destroy();
+    this.presenter?.destroy();
+    this.presenter = null;
+    this.capturedColor = null;
+    this.renderer = this.device ? this.createRenderer(this.device) : null;
+  }
+
+  private createRenderer(device: Device): ShaderPassRenderer {
+    return new ShaderPassRenderer(device, {
+      shaderPasses: [createSSRCompositeShaderPass({reprojection: 'camera', quality: this.quality})],
       colorFormat: 'rgba16float',
       flipY: true
     });
@@ -163,7 +106,6 @@ export class RiverReflectionEffect implements Effect {
           intensity: 1.5,
           maxDistance: 450,
           thickness: 1.5,
-          sampleCount: 96,
           maxRoughness: 0.8,
           frameIndex: this.historyFrames
         },
@@ -174,11 +116,11 @@ export class RiverReflectionEffect implements Effect {
             : new Matrix4(),
           previousInverseProjectionMatrix:
             this.previousInverseProjection ?? inverseProjectionMatrix,
-          historyWeight: this.historyFrames ? 0.8 : 0,
+          ...(this.historyFrames ? {} : {historyWeight: 0}),
           depthThreshold: 0.01,
           normalThreshold: 0.96
         },
-        ssrSpatial: {inverseProjectionMatrix, maxRadius: 2},
+        ssrSpatial: {inverseProjectionMatrix},
         ssrComposite: {inverseProjectionMatrix, strength: 1, debugMode: this.debugMode}
       }
     });
