@@ -5,7 +5,7 @@ import {COORDINATE_SYSTEM, Deck, MapView} from '@deck.gl/core';
 import {SceneBufferEffect} from '@deck.gl-community/gpu-layers';
 import {CITY_ORIGIN, makeCityFeatures, type CityFeature} from '../river-district-data';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
-import {BuildingMeshLayer} from './building-layer';
+import {RiverDistrictLayer} from '../river-district-layer';
 import {BufferPreviewEffect, type BufferPreviewMode} from './buffer-preview-effect';
 
 export function createBufferScene(parent: HTMLDivElement, options: DeckExampleDeviceOptions = {}) {
@@ -89,35 +89,36 @@ export function createBufferScene(parent: HTMLDivElement, options: DeckExampleDe
   function updateLayers() {
     const coordinates = {
       coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
-      coordinateOrigin: CITY_ORIGIN
+      coordinateOrigin: CITY_ORIGIN,
+      roughness: 0.7
     };
     const selectedFeatures = buildings.filter(feature => feature.name === selected);
     const otherBuildings = buildings.filter(feature => feature.name !== selected);
     deck.setProps({
       layers: [
-        new BuildingMeshLayer({
+        new RiverDistrictLayer({
           id: 'context',
           features: context,
           data: context,
           pickable: true,
           ...coordinates
         }),
-        new BuildingMeshLayer({
+        new RiverDistrictLayer({
           id: 'buildings',
           features: otherBuildings,
           data: otherBuildings,
           pickable: true,
           ...coordinates
         }),
-        new BuildingMeshLayer({
+        new RiverDistrictLayer({
           id: 'selected',
           features: selectedFeatures,
           data: selectedFeatures,
           pickable: true,
           ...coordinates
         }),
-        new BuildingMeshLayer({id: 'lights', features: lights, data: lights, ...coordinates}),
-        new BuildingMeshLayer({
+        new RiverDistrictLayer({id: 'lights', features: lights, data: lights, ...coordinates}),
+        new RiverDistrictLayer({
           id: 'glass',
           features: glass,
           data: glass,
