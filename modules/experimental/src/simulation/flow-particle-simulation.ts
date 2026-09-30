@@ -5,6 +5,7 @@
 import {Buffer, type Device, type Framebuffer, Texture} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {assert} from '@luma.gl/core';
+import {validateFlowParticleField, type FlowParticleField} from './flow-particle-field';
 import {
   FLOW_PARTICLE_FRAGMENT,
   FLOW_PARTICLE_VERTEX,
@@ -16,20 +17,7 @@ export const MAX_FLOW_PARTICLES = 1048576;
 /** Maximum simulated seconds per substep. A step executes at most eight substeps. */
 export const FLOW_PARTICLE_TIME_STEP = 1 / 30;
 
-/** A row-major vector grid. Row zero is the southern/lower edge, columns run west to east. */
-export type FlowParticleField = {
-  /** Borrowed rgba32float texture: (east velocity, north velocity, validity, unused).
-   * Velocities are metres/second; validity >= 0.5 means data is present. All values must be finite.
-   * Grid samples include the bounds' endpoints. At least two samples per axis are required.
-   */
-  texture: Texture;
-  /** [west, south, east, north]. Metres for cartesian fields, degrees for lnglat fields.
-   * For a dateline crossing, unwrap east above 180 (for example [170, -10, 190, 10]).
-   */
-  bounds: readonly [number, number, number, number];
-  /** lnglat uses spherical east/north conversion at each particle's latitude, restricted to ±85°. */
-  coordinates: 'cartesian' | 'lnglat';
-};
+export type {FlowParticleField} from './flow-particle-field';
 
 export type FlowParticleSimulationProps = {
   id?: string;
@@ -100,7 +88,7 @@ export class FlowParticleSimulation {
     );
     assert(Number.isFinite(this.lifetime) && this.lifetime > 0);
     assert(Number.isInteger(this.seed) && this.seed >= 0 && this.seed <= 16777215);
-    this.field = validateField(device, props.field);
+    this.field = validateFlowParticleField(device, props.field);
     this.width = Math.min(1024, Math.ceil(Math.sqrt(this.particleCount)));
     this.height = Math.ceil(this.particleCount / this.width);
     this.byteLength = this.width * this.height * 16 * 2;
@@ -176,7 +164,7 @@ export class FlowParticleSimulation {
   /** Replaces a time-varying grid. Bounds/coordinate changes invalidate old particle positions. */
   setField(field: FlowParticleField): void {
     assert(!this.destroyed);
-    const nextField = validateField(this.device, field);
+    const nextField = validateFlowParticleField(this.device, field);
     const changedDomain =
       nextField.coordinates !== this.field.coordinates ||
       nextField.bounds.some((value, index) => value !== this.field.bounds[index]);
@@ -260,19 +248,4 @@ export class FlowParticleSimulation {
     for (const framebuffer of this.framebuffers) framebuffer.destroy();
     for (const texture of this.textures) texture.destroy();
   }
-}
-
-function validateField(device: Device, field: FlowParticleField): FlowParticleField {
-  const [west, south, east, north] = field.bounds;
-  // Field samples must be finite; a finite validity channel marks missing data.
-  assert(
-    field.texture.device === device &&
-      !field.texture.destroyed &&
-      field.texture.format === 'rgba32float'
-  );
-  assert(field.texture.width >= 2 && field.texture.height >= 2);
-  assert(field.bounds.every(Number.isFinite) && east > west && north > south);
-  assert(field.coordinates === 'cartesian' || field.coordinates === 'lnglat');
-  assert(field.coordinates !== 'lnglat' || (south >= -85 && north <= 85 && east - west <= 360));
-  return {...field, bounds: [...field.bounds]};
 }

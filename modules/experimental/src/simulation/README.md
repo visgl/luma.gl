@@ -54,3 +54,46 @@ The class submits one pass itself. Call it before the application's drawing pass
 There is no CPU particle readback and no implicit animation loop. Two state textures cost
 32 bytes per allocated texel; the hard limit of 1,048,576 particles caps them at 32 MiB.
 The caller owns the velocity grid and controls particle density independently of view size.
+
+## Tiled and changing fields
+
+`FlowFieldAtlas` owns a fixed-capacity `rgba32float` grid. Pass its `field` to
+`FlowParticleSimulation`; the simulation borrows the texture. `writeTile(column, row, data)`
+updates one complete tile in place, and `clearTile(column, row)` marks it missing. Neither
+operation resets particles or reallocates the texture. Destroy the simulation before the atlas.
+
+Tiles are non-overlapping blocks of a single regular sample lattice, ordered west to east
+and south to north. `bounds` describe the first and last samples across the **whole** grid,
+not tile edges. For example, a 2×2 atlas of 2×2-sample tiles with bounds `[0, 0, 3, 3]` has
+sample coordinates 0, 1, 2, 3 on each axis. Do not duplicate border samples or add gutters.
+The existing bilinear sampler interpolates across adjacent tiles. A cell touching any missing
+sample is invalid, including along unloaded tile boundaries. Particles reseed when they reach
+invalid cells; tile arrival alone does not reset valid particles.
+
+```ts
+const atlas = new FlowFieldAtlas(device, {
+  bounds: [0, 0, 3, 3],
+  coordinates: 'cartesian',
+  tileSize: [2, 2],
+  tileCount: [2, 2]
+});
+// Four row-major samples: east velocity, north velocity, validity, unused.
+atlas.writeTile(0, 0, new Float32Array([
+  1, 0, 1, 0, 1, 0, 1, 0,
+  1, 0, 1, 0, 1, 0, 1, 0
+]));
+const simulation = new FlowParticleSimulation(device, {field: atlas.field, particleCount: 1024});
+```
+
+The next simulation step observes completed writes. Updating several tiles synchronously
+before that step gives one coherent field snapshot. Snapshots are piecewise constant; there
+is no implicit interpolation in time. The application owns timestamps, out-of-order arrival
+handling, loading and eviction. For deterministic replay, repeat the same field writes and
+step intervals. Geographic atlases use the existing unwrapped longitude/latitude contract;
+tiles must share one coordinate system and resolution. Mixed-resolution pyramids and reprojection
+of arbitrary source tiles are not supported by this container.
+
+`MAX_FLOW_FIELD_SAMPLES` limits GPU storage to 64 MiB, also subject to the device texture-size
+limit. `byteLength` reports GPU sample bytes. Initialization uses an equally sized temporary CPU
+array, and the atlas retains one zero-filled tile for clearing. Uploaded caller arrays are not
+retained. Missing tiles occupy their reserved capacity; memory never grows with streaming updates.

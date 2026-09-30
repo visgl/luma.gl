@@ -53,6 +53,7 @@ try {
         await page.screenshot({path: join(tmpdir(), `flow-failure-${backend}.png`)});
         throw error;
       }
+      assert.equal(await page.evaluate(() => window.flowScene.diagnostics.backend), backend, `${backend}: requested backend is active`);
       const frameSynchronization = await page.evaluate(async () => {
         const scene = window.flowScene;
         const originalAfterRender = scene.deck.props.onAfterRender;
@@ -91,6 +92,30 @@ try {
       const longTrails = countParticlePixels(PNG.sync.read(await page.screenshot()));
       assert(longTrails > shortTrails * 2, `${backend}: long trails remain visible above the river (${longTrails} vs ${shortTrails} pixels)`);
       if (process.env.FLOW_THUMBNAIL && backend === 'webgpu') await page.screenshot({path: process.env.FLOW_THUMBNAIL, type: 'jpeg', quality: 90});
+      await page.evaluate(() => {
+        window.borrowedFieldTexture = window.flowScene.fieldAtlas.texture;
+        window.originalSimulation = window.flowScene.simulation;
+      });
+      await page.selectOption('#field', 'changing');
+      await page.uncheck('#northern-section');
+      await page.check('#northern-section');
+      assert.equal(await page.evaluate(() => window.flowScene.simulation === window.originalSimulation), true, `${backend}: field edits preserve simulation`);
+      await page.check('#playing');
+      const firstFieldUpdate = await page.evaluate(() => window.flowScene.diagnostics.fieldUpdates);
+      await page.waitForFunction(first => window.flowScene.diagnostics.fieldUpdates >= first + 2, firstFieldUpdate);
+      await page.uncheck('#playing');
+      await page.waitForTimeout(100);
+      const pausedField = await page.evaluate(() => ({time: window.flowScene.diagnostics.fieldTime, updates: window.flowScene.diagnostics.fieldUpdates}));
+      await page.waitForTimeout(250);
+      assert.deepEqual(await page.evaluate(() => ({time: window.flowScene.diagnostics.fieldTime, updates: window.flowScene.diagnostics.fieldUpdates})), pausedField, `${backend}: pause freezes the changing field`);
+      await page.click('#reset');
+      await page.waitForTimeout(100);
+      const firstReset = PNG.sync.read(await page.screenshot());
+      await page.click('#reset');
+      await page.waitForTimeout(100);
+      assert.equal(changedPixels(firstReset, PNG.sync.read(await page.screenshot())), 0, `${backend}: reset restores seeded particles and field time`);
+      assert.equal(await page.evaluate(() => window.flowScene.diagnostics.fieldTime), 0);
+      await page.selectOption('#field', 'river');
       for (const count of process.env.FLOW_SKIP_TIMING ? [] : [2048, 8192, 32768]) {
         await page.selectOption('#count', String(count));
         await page.check('#playing');
@@ -111,6 +136,7 @@ try {
       await page.selectOption('#field', 'missing');
       await page.selectOption('#field', 'river');
       await page.selectOption('#count', '2048');
+      assert.equal(await page.evaluate(() => window.flowScene.fieldAtlas.texture === window.borrowedFieldTexture && !window.borrowedFieldTexture.destroyed), true, `${backend}: field texture survives pattern and density changes`);
       await page.evaluate(async () => {
         const scene = window.flowScene;
         scene.deck.setProps({initialViewState: {longitude: -74.006, latitude: 40.7128, zoom: 15.6, pitch: 0, bearing: 0}});
@@ -144,8 +170,33 @@ try {
       assert.equal(await page.evaluate(() => window.borrowedParticleTexture.destroyed), false, `${backend}: layer borrows textures`);
       await page.evaluate(() => {window.flowScene.finalize(); window.flowScene.finalize();});
       assert.equal(await page.evaluate(() => window.borrowedParticleTexture.destroyed), true, `${backend}: simulation owns textures`);
+      assert.equal(await page.evaluate(() => window.borrowedFieldTexture.destroyed), true, `${backend}: application owns field texture`);
       assert.deepEqual(errors, [], `${backend}: browser/GPU errors`);
       console.log(`${backend}: animation, pause, fields, density, picking, occlusion, ownership and cleanup passed`);
+      if (backend === 'webgl') {
+        for (const unavailable of ['absent', 'null', 'rejected']) {
+          const fallbackPage = await browser.newPage();
+          const fallbackErrors = [];
+          fallbackPage.on('pageerror', error => fallbackErrors.push(error.message));
+          await fallbackPage.addInitScript(mode => {
+            Object.defineProperty(navigator, 'gpu', {value: mode === 'absent' ? undefined : {
+              requestAdapter: async () => {
+                if (mode === 'rejected') throw new Error('Adapter unavailable');
+                return null;
+              }
+            }});
+          }, unavailable);
+          await fallbackPage.goto(process.env.FLOW_EXAMPLE_URL || server.resolvedUrls.local[0]);
+          await fallbackPage.waitForFunction(() => document.body.dataset.ready === 'true', undefined, {timeout: 60_000});
+          assert.equal(await fallbackPage.evaluate(() => window.flowScene.diagnostics.backend), 'webgl', `default falls back when WebGPU is ${unavailable}`);
+          assert.equal(await fallbackPage.locator('#backend').inputValue(), 'webgl');
+          await fallbackPage.evaluate(() => window.flowScene.finalize());
+          assert.deepEqual(fallbackErrors, []);
+          await fallbackPage.close();
+        }
+        console.log('Default backend: absent, null and rejected WebGPU adapter fallback passed');
+      }
+
     } finally {await browser.close();}
   }
 } finally {await server.close();}

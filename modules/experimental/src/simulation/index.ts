@@ -28,3 +28,6 @@ export type {
   FlowParticleSimulationProps,
   FlowParticleStepResult
 } from './flow-particle-simulation';
+
+export {FlowFieldAtlas, MAX_FLOW_FIELD_SAMPLES} from './flow-field-atlas';
+export type {FlowFieldAtlasProps} from './flow-field-atlas';

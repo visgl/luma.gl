@@ -25,3 +25,12 @@ Run `yarn workspace luma.gl-examples-deck-flow-particles test:visual` for render
 animation, pause, picking, bridge occlusion, buffer ownership, and cleanup checks on both
 backends. It also reports frame timing for the three density settings. Those wall-clock
 measurements include browser, rendering, and test overhead, and are not isolated GPU timings.
+
+
+The 64×256 velocity grid uses `FlowFieldAtlas` with four 64×64 sample blocks. The Northern
+section checkbox removes or reloads just the northern tile. The remaining field and particle
+state stay allocated. The Changing currents preset uploads coherent snapshots every half
+second of simulation time; pause freezes both clocks. Reset restores time zero and the seeded
+particles. Field changes use the same advection shader and bilinear sampler as a single grid.
+Density changes rebuild particle state while preserving the field atlas (256 KiB of GPU storage).
+Trails still extrapolate the latest velocity; they do not store curved trajectory history.

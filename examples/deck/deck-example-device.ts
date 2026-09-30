@@ -22,6 +22,18 @@ export type DeckExampleDeviceOptions = {
   deviceType?: DeckExampleDeviceType;
 };
 
+/** Honors an explicit backend; otherwise prefers a usable WebGPU adapter over WebGL2. */
+export async function resolveDeckExampleDeviceType(
+  requestedType: string | null
+): Promise<DeckExampleDeviceType> {
+  if (requestedType === 'webgpu' || requestedType === 'webgl') return requestedType;
+  try {
+    return (await navigator.gpu?.requestAdapter()) ? 'webgpu' : 'webgl';
+  } catch {
+    return 'webgl';
+  }
+}
+
 /** Returns the luma.gl device request used when Deck creates its presentation device. */
 export function getDeckExampleDeviceProps(deviceType: DeckExampleDeviceType) {
   return {
