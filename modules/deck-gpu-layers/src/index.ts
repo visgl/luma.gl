@@ -6,3 +6,5 @@ export {
   LuSpatialPointLayer,
   type LuSpatialPointLayerProps
 } from './layers/luspatial-point-layer';
+
+export {FlowParticleLayer, type FlowParticleLayerProps} from './layers/flow-particle-layer';

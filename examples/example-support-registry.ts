@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import flowParticlesSupport from './deck/flow-particles/mobile-support';
 import type {ExampleSupportDefinition} from './example-support';
 import standaloneSupport0 from './api/texture-compressed/mobile-support';
 import standaloneSupport1 from './integrations/hello-react/mobile-support';
@@ -177,6 +178,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'arrow/arrow-particles': support76,
   'arrow/arrow-dggs-polygons': support77,
   'arrow/arrow-columns': support78,
+  'deck/flow-particles': flowParticlesSupport,
   'deck/arrow-path-layer': support79,
   'deck/arrow-polygon-layer': support80,
   'deck/arrow-text-layer': support81,

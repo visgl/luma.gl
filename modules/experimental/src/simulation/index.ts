@@ -16,3 +16,15 @@ export type {
   SpectralOceanSimulationStats,
   SpectralOceanSimulationSupport
 } from './spectral-ocean-simulation';
+
+export {
+  FlowParticleSimulation,
+  isFlowParticleSimulationSupported,
+  MAX_FLOW_PARTICLES,
+  FLOW_PARTICLE_TIME_STEP
+} from './flow-particle-simulation';
+export type {
+  FlowParticleField,
+  FlowParticleSimulationProps,
+  FlowParticleStepResult
+} from './flow-particle-simulation';
