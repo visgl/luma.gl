@@ -258,7 +258,7 @@
   {
     "type": "category",
     "label": "Visual Effects - deck.gl",
-    "items": ["deck/city-scene", "deck/weather"]
+    "items": ["deck/city-scene", "deck/weather", "deck/scene-buffers"]
   },
   {
     "type": "category",

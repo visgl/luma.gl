@@ -203,3 +203,7 @@ export type {SSRCameraTemporalUniforms} from './passes/screen-space/ssr-camera-t
 export {heightFogPass} from './passes/screen-space/height-fog';
 export type {HeightFogPassProps, HeightFogPassUniforms} from './passes/screen-space/height-fog';
 export type {VolumetricFogCompositeShaderPassOptions} from './passes/screen-space/volumetric-fog';
+  selectionOutline,
+  type SelectionOutlineProps,
+  type SelectionOutlineUniforms
+} from './passes/screen-space/selection-outline';

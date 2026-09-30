@@ -132,6 +132,17 @@ jobs:
           name: deck-styled-paths
           path: /tmp/styled-paths-*.png
 
+      - name: Run riverfront effects visual smoke
+        if: ${{ matrix.shard == 2 }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-scene-buffers test:visual
+
+      - name: Upload riverfront effects screenshots
+        if: ${{ always() && matrix.shard == 2 }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: deck-scene-buffers
+          path: /tmp/scene-buffers-*.png
+
       - name: Reclaim install cache and report disk usage
         run: |
           rm -rf "${HOME}/.yarn/berry/cache"

@@ -7,6 +7,7 @@ import weatherSupport from './deck/weather/mobile-support';
 import patternSupport from './deck/pattern-fills/mobile-support';
 import pointGlowSupport from './deck/point-glow/mobile-support';
 import styledPathsSupport from './deck/styled-paths/mobile-support';
+import sceneBuffersSupport from './deck/scene-buffers/mobile-support';
 import type {ExampleSupportDefinition} from './example-support';
 import citySceneSupport from './deck/city-scene/mobile-support';
 import standaloneSupport0 from './api/texture-compressed/mobile-support';
@@ -104,6 +105,7 @@ import support85 from './showcase/spectral-wave-lab/mobile-support';
  * Metadata-only support registry. Importing this file never imports an example application.
  */
 export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDefinition>> = {
+  'deck/scene-buffers': sceneBuffersSupport,
   'showcase/gaussian-splat-viewer': support0,
   'showcase/gaussian-splats': support1,
   'showcase/instancing': support2,
