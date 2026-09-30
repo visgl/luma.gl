@@ -100,6 +100,8 @@ export {
   resolveUseByteColors
 } from './lib/color/normalize-byte-colors';
 
+export {sketchStroke, type SketchStrokeProps} from './modules/geometry/sketch-stroke/sketch-stroke';
+
 // math libraries
 export {random} from './modules/math/random/random';
 export {volumeRaymarch} from './modules/volume/volume-raymarch';

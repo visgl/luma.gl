@@ -29,7 +29,7 @@ material remains available unchanged. Neither style displaces geometry. Ripple f
 below a pixel to limit distant flicker.
 
 On WebGPU, **Scene reflections** adds screen-space building and bridge reflections. The example's
-`SceneBufferEffect` captures participating opaque layers into the shared luma.gl `GBuffer`.
+`SceneBufferEffect` captures participating opaque layers and transparent edge color into the shared luma.gl `GBuffer`.
 `RiverReflectionEffect` borrows its color, depth, and view-normal/roughness textures and runs
 luma.gl's shared SSR tracer, camera-reprojected history, spatial filtering, and compositing.
 The reflection adapter owns only the postprocessing pipeline and its temporal history; scene
@@ -37,7 +37,7 @@ capture, layer filtering, target resizing, and texture cleanup belong to `SceneB
 
 The `surfaceBuffer` shader module lets participating layers supply normals and roughness. Capture
 runs before Deck's display pass, and reflections are installed as this single-view fixture's final
-effect. Arbitrary Deck layers must explicitly participate in capture and normal output. WebGL keeps
+effect. Deck layers must explicitly opt into capture; reflective surfaces also provide normal/roughness output. WebGL keeps
 the procedural material and disables the reflection control.
 
 SSR can only reflect surfaces visible in the current frame; screen-edge and occlusion gaps remain.
@@ -67,3 +67,16 @@ and history settings. Switching quality releases reflection targets and resets h
 retaining shared scene capture. Depth and normal histories stay full resolution at every quality.
 These settings describe relative work; they are not hardware frame-rate guarantees. WebGL disables
 both reflection controls and retains the procedural water material.
+
+Building edges can independently use None, Solid, or Pencil styling, with a CSS-pixel width control.
+The example composes the same `SketchEdgeLayer`, `sketchStroke`, `makeEdgeGeometry`, and shared
+`river-district-edges.ts` fixture conversion used by Riverfront outlines. Style changes reuse the
+edge buffer; hiding buildings removes both their fills and edges. The application owns the borrowed
+segment buffer and releases it after Deck finalization. Static edges never request animation.
+
+With WebGPU reflections enabled, the shared scene capture includes strokes in its transparent color
+pass after opaque geometry. The building surfaces continue supplying depth and normals; pencil ink
+can therefore appear in reflected scene color without pretending that strokes have their own
+surface normals. This remains a single-view local-map example. Use `CITY_SCENE_URL=http://localhost:3000/standalone-examples/city-scene` to run its visual
+checks against served production assets. Use the canonical URL without `.html` or a trailing slash
+so the website redirect does not discard the renderer query parameter.

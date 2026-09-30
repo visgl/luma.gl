@@ -16,6 +16,8 @@ const selection = document.querySelector<HTMLOutputElement>('#selection');
 const backend = document.querySelector<HTMLSelectElement>('#backend');
 const camera = document.querySelector<HTMLSelectElement>('#camera');
 const buildings = document.querySelector<HTMLInputElement>('#buildings');
+const edgeStyle = document.querySelector<HTMLSelectElement>('#edge-style');
+const edgeWidth = document.querySelector<HTMLInputElement>('#edge-width');
 const water = document.querySelector<HTMLInputElement>('#water');
 const reflectionQuality = document.querySelector<HTMLSelectElement>('#reflection-quality');
 const reflections = document.querySelector<HTMLInputElement>('#reflections');
@@ -31,6 +33,8 @@ if (
   !backend ||
   !camera ||
   !buildings ||
+  !edgeStyle ||
+  !edgeWidth ||
   !water ||
   !reflections ||
   !reflectionQuality ||
@@ -47,6 +51,8 @@ const cityStatus = status;
 const cameraControl = camera;
 const buildingsControl = buildings;
 const backendControl = backend;
+const edgeStyleControl = edgeStyle;
+const edgeWidthControl = edgeWidth;
 const waterControl = water;
 const reflectionsControl = reflections;
 const reflectionQualityControl = reflectionQuality;
@@ -84,6 +90,9 @@ async function startScene() {
     if (scene !== startingScene) return;
     cameraControl.value = 'district';
     buildingsControl.checked = true;
+    edgeStyleControl.value = 'none';
+    edgeWidthControl.value = '2.2';
+    edgeWidthControl.disabled = true;
     waterControl.checked = true;
     reflectionsControl.disabled = scene.diagnostics.backend !== 'webgpu';
     reflectionsControl.checked = !reflectionsControl.disabled;
@@ -113,6 +122,12 @@ camera.addEventListener('change', () => {
   scene.setCamera(value === 'overhead' || value === 'waterfront' ? value : 'district');
 });
 buildings.addEventListener('change', () => scene.setBuildingsVisible(buildingsControl.checked));
+edgeStyle.addEventListener('change', () => {
+  const style = edgeStyleControl.value;
+  scene.setEdgeStyle(style === 'solid' || style === 'pencil' ? style : 'none');
+  edgeWidthControl.disabled = style === 'none';
+});
+edgeWidth.addEventListener('input', () => scene.setEdgeWidth(Number(edgeWidthControl.value)));
 water.addEventListener('change', () => scene.setWaterEnabled(waterControl.checked));
 reflections.addEventListener('change', () => {
   scene.setReflectionsEnabled(reflectionsControl.checked);

@@ -30,7 +30,7 @@ try {
       const errors = [];
       page.on('pageerror', error => { errors.push(error.message); process.stderr.write(`${error.message}\n`); });
       page.on('console', message => { if (message.type() === 'error') { errors.push(message.text()); process.stderr.write(`${message.text()}\n`); } });
-      await page.goto(`${url}?backend=${backend}`);
+      await page.goto(`${process.env.CITY_SCENE_URL || url}?backend=${backend}`);
       await page.waitForFunction(() => document.body.dataset.ready === 'true', undefined, {timeout: 60_000});
       await page.waitForFunction(() => window.cityScene?.diagnostics.frames > 0);
       assert.equal(await page.evaluate(() => window.cityScene.diagnostics.backend), backend);
@@ -318,6 +318,110 @@ try {
         await page.check('#reflections');
         await page.waitForTimeout(150);
       }
+      // Compose the existing edge layer with water and the shared SSR capture.
+      await page.selectOption('#camera', 'overhead');
+      await page.waitForTimeout(150);
+      const roof = await page.evaluate(() => {
+        const scene = window.cityScene;
+        const building = scene.features.find(feature => feature.name === 'East 4.1');
+        const layer = scene.deck.props.layers.find(layer => layer?.id === 'city-mesh');
+        const corners = [-1, 1].flatMap(east => [-1, 1].map(north => layer.project([
+          building.center[0] + east * building.size[0] / 2,
+          building.center[1] + north * building.size[1] / 2,
+          building.center[2] + building.size[2]
+        ])));
+        return [Math.floor(Math.min(...corners.map(point => point[0])) - 8),
+          Math.floor(Math.min(...corners.map(point => point[1])) - 8),
+          Math.ceil(Math.max(...corners.map(point => point[0])) + 8),
+          Math.ceil(Math.max(...corners.map(point => point[1])) + 8)];
+      });
+      function changedRoofPixels(first, second) {
+        let count = 0;
+        for (let vertical = Math.max(0, roof[1]); vertical < Math.min(first.height, roof[3]); vertical++) {
+          for (let horizontal = Math.max(300, roof[0]); horizontal < Math.min(first.width, roof[2]); horizontal++) {
+            const offset = (vertical * first.width + horizontal) * 4;
+            if ([0, 1, 2].some(channel => Math.abs(first.data[offset + channel] - second.data[offset + channel]) > 3)) count++;
+          }
+        }
+        return count;
+      }
+      for (const reflections of backend === 'webgpu' ? [false, true] : [false]) {
+        if (backend === 'webgpu') await page.locator('#reflections').setChecked(reflections);
+        await page.selectOption('#edge-style', 'none');
+        await page.waitForTimeout(100);
+        const ordinaryRoof = PNG.sync.read(await page.screenshot());
+        await page.selectOption('#edge-style', 'solid');
+        await page.waitForTimeout(100);
+        const solidRoof = PNG.sync.read(await page.screenshot());
+        assert(changedRoofPixels(ordinaryRoof, solidRoof) > 20, `${backend}: solid edges visible with SSR=${reflections}`);
+        await page.evaluate(() => {
+          const layer = window.cityScene.deck.props.layers.find(layer => layer?.id === 'city-building-edges');
+          window.cityDistrictVertices = window.cityScene.deck.props.layers.find(layer => layer?.id === 'city-mesh').state.vertices;
+          window.borrowedCityEdges = layer.props.segments;
+          window.cityEdgeCorners = layer.state.corners;
+        });
+        await page.selectOption('#edge-style', 'pencil');
+        await page.waitForTimeout(100);
+        assert(changedRoofPixels(solidRoof, PNG.sync.read(await page.screenshot())) > 20,
+          `${backend}: pencil grain changes the roof edges with SSR=${reflections}`);
+        assert(await page.evaluate(() => {
+          const layer = window.cityScene.deck.props.layers.find(layer => layer?.id === 'city-building-edges');
+          return layer.props.segments === window.borrowedCityEdges && layer.state.corners === window.cityEdgeCorners &&
+            window.cityScene.deck.props.layers.find(candidate => candidate?.id === 'city-mesh').state.vertices === window.cityDistrictVertices;
+        }), 'edge style changes reuse district geometry, borrowed segments, and layer resources');
+        if (reflections) assert.equal(await page.evaluate(() => {
+          const scene = window.cityScene;
+          const layer = scene.deck.props.layers.find(layer => layer?.id === 'city-building-edges');
+          return scene.deck.props.effects.find(effect => effect.id === 'city-scene-buffers').props.getLayerOptions(layer).mode;
+        }), 'transparent', 'edges contribute color without replacing opaque depth or normals');
+      }
+      await page.selectOption('#edge-style', 'solid');
+      const framesBeforeWidth = await page.evaluate(() => {
+        const scene = window.cityScene;
+        const frames = scene.diagnostics.frames;
+        scene.setEdgeWidth(4);
+        return frames;
+      });
+      await page.waitForFunction(frames => window.cityScene.diagnostics.frames > frames, framesBeforeWidth);
+      const edgePicking = await page.evaluate(async () => {
+        const scene = window.cityScene;
+        const building = scene.features.find(feature => feature.name === 'East 4.1');
+        const layer = scene.deck.props.layers.find(layer => layer?.id === 'city-mesh');
+        const positions = [
+          [building.center[0], building.center[1] + building.size[1] / 2, building.center[2] + building.size[2]],
+          [building.center[0], building.center[1] - building.size[1] / 2, building.center[2]]
+        ].map(position => layer.project(position));
+        const hits = [];
+        for (const position of positions) {
+          const hit = await scene.deck.pickObjectAsync({x: position[0], y: position[1]});
+          hits.push({name: hit?.object?.name, layer: hit?.layer.id});
+        }
+        return hits;
+      });
+      assert.deepEqual(edgePicking[0], {name: 'East 4.1', layer: 'city-building-edges'}, `${backend}: roof edges pick their building`);
+      assert.deepEqual(edgePicking[1], {name: 'East 4.1', layer: 'city-mesh'}, `${backend}: opaque roof occludes the bottom edge`);
+      await page.uncheck('#water');
+      await page.evaluate(() => window.cityScene.setPlaying(true));
+      await page.waitForTimeout(150);
+      const staticFrames = await page.evaluate(() => window.cityScene.diagnostics.frames);
+      await page.waitForTimeout(150);
+      assert.equal(await page.evaluate(() => window.cityScene.diagnostics.frames), staticFrames, 'static edges do not animate when water is disabled');
+      assert(await page.evaluate(() => window.cityScene.deck.props.layers.some(layer => layer?.id === 'city-building-edges')), 'water toggle preserves building edges');
+      await page.uncheck('#buildings');
+      await page.waitForTimeout(100);
+      assert(await page.evaluate(() => window.cityEdgeCorners.destroyed && !window.borrowedCityEdges.destroyed), 'hiding buildings releases edge-layer resources but preserves borrowed segments');
+      assert(!await page.evaluate(() => window.cityScene.deck.props.layers.some(layer => layer?.id === 'city-building-edges')), 'hidden buildings have no stray strokes');
+      await page.check('#buildings');
+      await page.check('#water');
+      await page.selectOption('#edge-style', 'pencil');
+      await page.evaluate(() => {window.cityScene.setTime(2); window.cityScene.setEdgeWidth(2.2);});
+      await page.selectOption('#camera', 'waterfront');
+      await page.waitForFunction(() => window.cityScene.deck.getViewports()[0].pitch === 68);
+      await page.waitForTimeout(100);
+      await page.screenshot({path: join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), `city-scene-${backend}-pencil-waterfront.png`)});
+      assert(await page.evaluate(() => window.cityScene.deck.props.layers.find(layer => layer?.id === 'city-building-edges').props.segments === window.borrowedCityEdges), 'camera changes preserve world-anchored edge geometry');
+      await page.selectOption('#camera', 'district');
+      await page.waitForTimeout(150);
       const screenshotPath = join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), `city-scene-${backend}.png`);
       const screenshot = PNG.sync.read(await page.screenshot({path: screenshotPath}));
       const colors = new Set();
@@ -332,11 +436,12 @@ try {
       assert.equal(await page.evaluate(() => window.cityScene.diagnostics.error), '');
       await page.evaluate(() => { window.cityScene.finalize(); window.cityScene.finalize(); });
       assert.equal(await page.evaluate(() => window.borrowedWaterPositions.destroyed), true, 'application releases water positions on finalization');
+      assert(await page.evaluate(() => window.borrowedCityEdges.destroyed), 'application releases edge segments on finalization');
       const frames = await page.evaluate(() => window.cityScene.diagnostics.frames);
       await page.waitForTimeout(150);
       assert.equal(await page.evaluate(() => window.cityScene.diagnostics.frames), frames, 'finalization stops rendering');
       assert.deepEqual(errors, [], `${backend}: browser errors`);
-      process.stdout.write(`${backend}: animated water, deterministic time, pause, picking, buffer ownership, camera, resize, finalization passed. ${screenshotPath}\n`);
+      process.stdout.write(`${backend}: animated water, shared building edges, SSR composition, deterministic time, pause, picking, buffer ownership, camera, resize, finalization passed. ${screenshotPath}\n`);
     } finally {
       await browser.close();
     }

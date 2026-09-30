@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {COORDINATE_SYSTEM, Deck, MapView, type MapViewState} from '@deck.gl/core';
-import {SceneBufferEffect, WaterSurfaceLayer} from '@deck.gl-community/gpu-layers';
+import {SceneBufferEffect, SketchEdgeLayer, WaterSurfaceLayer} from '@deck.gl-community/gpu-layers';
 import type {Buffer} from '@luma.gl/core';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
 import {
@@ -13,6 +13,7 @@ import {
   type CityFeature
 } from '../river-district-data';
 import {RiverDistrictLayer} from '../river-district-layer';
+import {makeBuildings, makeEdges} from '../river-district-edges';
 import type {SSRQuality} from '@luma.gl/effects';
 import {RiverReflectionEffect} from './river-reflection-effect';
 
@@ -34,11 +35,15 @@ export const CAMERA_PRESETS = {
   }
 } satisfies Record<string, MapViewState>;
 
+export type BuildingEdgeStyle = 'none' | 'solid' | 'pencil';
+
 export type CityScene = ReturnType<typeof createCityScene>;
 
 /** Owns the example's Deck instance; Deck owns the device, frame loop, and mesh-layer lifecycle. */
 export function createCityScene(parent: HTMLDivElement, options: DeckExampleDeviceOptions = {}) {
   const features = makeCityFeatures();
+  const buildings = makeBuildings();
+  const edgeVertices = makeEdges(buildings);
   const diagnostics = {
     frames: 0,
     backend: '',
@@ -47,6 +52,8 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
     error: '',
     timeSeconds: 0,
     waterEnabled: true,
+    buildingsVisible: true,
+    edgeStyle: 'none' as BuildingEdgeStyle,
     waterStyle: 'river' as 'classic' | 'river',
     reflectionsEnabled: true,
     reflectionQuality: 'balanced' as SSRQuality,
@@ -54,7 +61,10 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
   };
   const ready = Promise.withResolvers<void>();
   let activeFeatures = features;
+  let dryFeatures = features.filter(feature => feature.kind !== 'water');
   let waterPositions: Buffer | null = null;
+  let edgeSegments: Buffer | null = null;
+  let edgeWidth = 2.2;
   let waveStrength = 0.55;
   let waterColor: [number, number, number] = [11 / 255, 66 / 255, 82 / 255];
   let riverReflectionEffect: RiverReflectionEffect | null = null;
@@ -88,6 +98,7 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
     onDeviceInitialized: device => {
       diagnostics.backend = device.type;
       waterPositions = device.createBuffer({id: 'river-positions', data: waterVertices});
+      edgeSegments = device.createBuffer({id: 'city-building-edges', data: edgeVertices});
       if (device.type === 'webgpu') {
         riverReflectionEffect = new RiverReflectionEffect(
           new SceneBufferEffect({
@@ -96,7 +107,9 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
             getLayerOptions: layer =>
               layer instanceof RiverDistrictLayer || layer instanceof WaterSurfaceLayer
                 ? {mode: 'opaque', surfaceBuffer: true}
-                : null
+                : layer instanceof SketchEdgeLayer
+                  ? {mode: 'transparent'}
+                  : null
           })
         );
         updateEffects();
@@ -132,9 +145,7 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
     riverReflectionEffect?.resetHistory();
     const mesh = new RiverDistrictLayer({
       id: 'city-mesh',
-      features: diagnostics.waterEnabled
-        ? activeFeatures.filter(feature => feature.kind !== 'water')
-        : activeFeatures,
+      features: diagnostics.waterEnabled ? dryFeatures : activeFeatures,
       pickable: true,
       autoHighlight: true,
       highlightColor: [255, 196, 92, 160],
@@ -174,7 +185,28 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
           })
         : null;
     deck.setProps({
-      layers: [mesh, water],
+      layers: [
+        mesh,
+        water,
+        diagnostics.buildingsVisible && diagnostics.edgeStyle !== 'none' && edgeSegments
+          ? new SketchEdgeLayer({
+              id: 'city-building-edges',
+              segments: edgeSegments,
+              segmentCount: edgeVertices.length / 8,
+              data: buildings,
+              coordinateOrigin: CITY_ORIGIN,
+              pickable: true,
+              style: {
+                width: edgeWidth,
+                sketch: diagnostics.edgeStyle === 'pencil' ? 1 : 0,
+                jitter: 0.85,
+                variation: 0.65,
+                grain: 0.6,
+                extension: diagnostics.edgeStyle === 'pencil' ? 4 : 0
+              }
+            })
+          : null
+      ],
       _animate: diagnostics.waterEnabled && diagnostics.playing
     });
   }
@@ -197,8 +229,18 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
       riverReflectionEffect?.resetHistory();
       deck.setProps({initialViewState: {...CAMERA_PRESETS[preset]}});
     },
+    setEdgeStyle(style: BuildingEdgeStyle) {
+      diagnostics.edgeStyle = style;
+      updateLayers();
+    },
+    setEdgeWidth(width: number) {
+      edgeWidth = width;
+      updateLayers();
+    },
     setBuildingsVisible(visible: boolean) {
+      diagnostics.buildingsVisible = visible;
       activeFeatures = visible ? features : features.filter(feature => feature.kind !== 'building');
+      dryFeatures = activeFeatures.filter(feature => feature.kind !== 'water');
       updateLayers();
     },
     setWaterEnabled(enabled: boolean) {
@@ -260,6 +302,8 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
       deck.finalize();
       waterPositions?.destroy();
       waterPositions = null;
+      edgeSegments?.destroy();
+      edgeSegments = null;
     }
   };
 }

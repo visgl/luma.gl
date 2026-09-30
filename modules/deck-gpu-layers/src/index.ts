@@ -8,6 +8,7 @@ export {
 } from './layers/luspatial-point-layer';
 
 export {WaterSurfaceLayer, type WaterSurfaceLayerProps} from './layers/water-surface-layer';
+export {SketchEdgeLayer, type SketchEdgeLayerProps} from './layers/sketch-edge-layer';
 export {surfaceBuffer} from './layers/surface-buffer';
 export {
   SceneBufferEffect,
