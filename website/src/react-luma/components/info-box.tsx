@@ -28,53 +28,6 @@ const INFO_BOX_BASE_STYLE: CSSProperties = {
   overflow: 'hidden',
   zIndex: 10
 };
-const INFO_BOX_CHROME_STYLE = `
-[data-info-box-appearance] [data-luma-example-chrome-action] {
-  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
-}
-[data-info-box-appearance] [data-luma-example-chrome-action]:hover,
-[data-info-box-appearance] [data-luma-example-chrome-action]:focus-visible {
-  border-color: var(--luma-example-accent) !important;
-  color: var(--luma-example-accent) !important;
-}
-[data-info-box-appearance] [data-luma-example-chrome-action]:focus-visible {
-  outline: 2px solid var(--luma-example-accent);
-  outline-offset: 2px;
-}
-[data-luma-example-source] .theme-code-block,
-[data-luma-example-source] .theme-code-block pre,
-[data-luma-example-source] .theme-code-block code {
-  background: var(--luma-example-surface) !important;
-  color: var(--luma-example-text) !important;
-}
-[data-luma-example-source] .theme-code-block {
-  margin: 0 !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-}
-[data-luma-example-source] .theme-code-block pre {
-  margin: 0 !important;
-  padding: 14px !important;
-}
-[data-info-box-appearance='cinematic'] [data-luma-example-source] .token.comment {
-  color: var(--luma-example-text-muted) !important;
-}
-[data-info-box-appearance='cinematic'] [data-luma-example-info-content] pre {
-  background: var(--luma-example-surface) !important;
-  color: var(--luma-example-text) !important;
-}
-[data-info-box-appearance='cinematic'] [data-luma-example-info-content] :not(pre) > code {
-  background: var(--luma-example-surface-raised) !important;
-  border: 1px solid var(--luma-example-border) !important;
-  color: var(--luma-example-text) !important;
-}
-@media (prefers-reduced-motion: reduce) {
-  [data-info-box-appearance] [data-luma-example-chrome-action] {
-    transition: none;
-  }
-}
-`;
 
 let isInfoBoxCollapsedByDefault = true;
 
@@ -425,7 +378,6 @@ function InfoBoxView(props: InfoBoxViewProps) {
         maxHeight: isCollapsed ? undefined : infoBoxSizeBounds?.maxHeight
       }}
     >
-      <style>{INFO_BOX_CHROME_STYLE}</style>
       <div
         data-luma-example-info-header=""
         style={{
