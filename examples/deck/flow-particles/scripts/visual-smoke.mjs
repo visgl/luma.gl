@@ -95,6 +95,9 @@ try {
       await page.evaluate(() => {
         window.borrowedFieldTexture = window.flowScene.fieldAtlas.texture;
         window.originalSimulation = window.flowScene.simulation;
+        const district = window.flowScene.deck.layerManager.getLayers().find(layer => layer.id === 'buildings');
+        window.districtModel = district.state.model;
+        window.districtVertices = district.state.vertices;
       });
       await page.selectOption('#field', 'changing');
       await page.uncheck('#northern-section');
@@ -165,9 +168,14 @@ try {
       assert.equal(picked.visibleId, 0, `${backend}: stable particle ID`);
       assert.equal(picked.hiddenLayer, 'buildings', `${backend}: bridge occlusion`);
       assert.equal(picked.hiddenName, 'North bridge');
+      assert(await page.evaluate(() => {
+        const district = window.flowScene.deck.layerManager.getLayers().find(layer => layer.id === 'buildings');
+        return district.state.model === window.districtModel && district.state.vertices === window.districtVertices;
+      }), `${backend}: particle controls and navigation reuse district geometry`);
       await page.evaluate(() => window.flowScene.deck.setProps({layers: []}));
       await page.waitForTimeout(100);
       assert.equal(await page.evaluate(() => window.borrowedParticleTexture.destroyed), false, `${backend}: layer borrows textures`);
+      assert(await page.evaluate(() => window.districtModel._destroyed && window.districtVertices.destroyed), `${backend}: removing district releases its model and geometry`);
       await page.evaluate(() => {window.flowScene.finalize(); window.flowScene.finalize();});
       assert.equal(await page.evaluate(() => window.borrowedParticleTexture.destroyed), true, `${backend}: simulation owns textures`);
       assert.equal(await page.evaluate(() => window.borrowedFieldTexture.destroyed), true, `${backend}: application owns field texture`);

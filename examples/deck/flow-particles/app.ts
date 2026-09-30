@@ -12,7 +12,7 @@ import {
 } from '@luma.gl/experimental';
 import {CITY_ORIGIN, makeCityFeatures} from '../river-district-data';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
-import {BuildingMeshLayer} from './building-layer';
+import {RiverDistrictLayer} from '../river-district-layer';
 
 const BOUNDS = [-84, -620, 84, 620] as const;
 export type FlowPattern = 'river' | 'eddies' | 'missing' | 'changing';
@@ -152,7 +152,7 @@ export function createFlowScene(parent: HTMLDivElement, options: DeckExampleDevi
     };
     deck.setProps({
       layers: [
-        new BuildingMeshLayer({
+        new RiverDistrictLayer({
           id: 'buildings',
           features: buildings,
           data: buildings,

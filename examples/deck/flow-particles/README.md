@@ -34,3 +34,8 @@ second of simulation time; pause freezes both clocks. Reset restores time zero a
 particles. Field changes use the same advection shader and bilinear sampler as a single grid.
 Density changes rebuild particle state while preserving the field atlas (256 KiB of GPU storage).
 Trails still extrapolate the latest velocity; they do not store curved trajectory history.
+
+The district uses the shared `RiverDistrictLayer` fixture adapter and luma.gl's Lambert
+material, with the same projection, picking, and resource ownership as the other riverfront
+examples. Fog and auxiliary surface output default to disabled; this example does not
+allocate scene-capture targets.
