@@ -51,3 +51,7 @@ resolution while depth and normal history use full resolution. Buildings sit clo
 to make their reflections easier to see. The scene uses face lighting,
 without cast shadows. The small city mesh adapter remains local to the example and does not
 promise arbitrary mesh formats or terrain draping.
+
+Website builds use an explicit asset prefix (including `WEBSITE_BASE_URL` when set), so clean-URL
+redirects cannot move relative asset requests out of the embedded example directory. Standalone
+builds retain relative asset URLs.
