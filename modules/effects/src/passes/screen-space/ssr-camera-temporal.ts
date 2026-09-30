@@ -5,6 +5,7 @@
 import type {Texture} from '@luma.gl/core';
 import type {ShaderPass} from '@luma.gl/shadertools';
 import type {NumberArray16} from '@math.gl/core';
+import {temporalHelpers} from './screen-space-shader-helpers';
 
 export type SSRCameraTemporalUniforms = {
   /** Previous view-projection times inverse current view-projection, using WebGPU clip depth. */
@@ -32,6 +33,7 @@ const IDENTITY_MATRIX: NumberArray16 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0
 export const ssrCameraTemporal = {
   name: 'ssrCameraTemporal',
   source: /* wgsl */ `
+${temporalHelpers}
 struct SSRCameraTemporalUniforms {
   currentClipToPreviousClip: mat4x4f,
   currentViewToPreviousView: mat4x4f,
@@ -47,82 +49,57 @@ struct SSRCameraTemporalUniforms {
 @group(0) @binding(auto) var previousDepthTexture: texture_2d<f32>;
 @group(0) @binding(auto) var previousNormalTexture: texture_2d<f32>;
 
-fn ssrCameraTemporal_coordinate(coordinate: vec2f, dimensions: vec2u) -> vec2i {
-  return clamp(vec2i(coordinate * vec2f(dimensions)), vec2i(0), vec2i(dimensions) - vec2i(1));
-}
-fn ssrCameraTemporal_viewDepth(coordinate: vec2f, depth: f32) -> f32 {
-  let position = ssrCameraTemporal.previousInverseProjectionMatrix *
-    vec4f(coordinate * vec2f(2.0, -2.0) + vec2f(-1.0, 1.0), depth, 1.0);
-  return abs(position.z / max(abs(position.w), 0.000001));
-}
 fn ssrCameraTemporal_sampleColor(
   sourceTexture: texture_2d<f32>, sourceTextureSampler: sampler,
   texSize: vec2f, texCoord: vec2f
 ) -> vec4f {
   let current = textureSampleLevel(sourceTexture, sourceTextureSampler, texCoord, 0);
   let currentDepth = textureLoad(depthTexture,
-    ssrCameraTemporal_coordinate(texCoord, textureDimensions(depthTexture)), 0);
+    temporal_getTexelCoordinate(texCoord, textureDimensions(depthTexture)), 0);
   if (currentDepth >= 0.99999 || ssrCameraTemporal.historyWeight <= 0.0) {return current;}
   let previousClip = ssrCameraTemporal.currentClipToPreviousClip *
-    vec4f(texCoord * vec2f(2.0, -2.0) + vec2f(-1.0, 1.0), currentDepth, 1.0);
-  if (previousClip.w <= 0.000001) {return current;}
-  let previousPosition = previousClip.xyz / previousClip.w;
-  let previousCoordinate = previousPosition.xy * vec2f(0.5, -0.5) + vec2f(0.5);
-  if (any(previousCoordinate < vec2f(0.0)) || any(previousCoordinate > vec2f(1.0)) ||
-      previousPosition.z < 0.0 || previousPosition.z >= 1.0) {return current;}
+    temporal_getClipPosition(texCoord, currentDepth);
+  let previousFrame = temporal_getPreviousFrame(previousClip, vec2f(0.0), 0.000001);
+  if (previousFrame.w < 0.5 || previousFrame.z >= 1.0) {return current;}
+  let previousCoordinate = previousFrame.xy;
   let currentSurface = textureLoad(normalTexture,
-    ssrCameraTemporal_coordinate(texCoord, textureDimensions(normalTexture)), 0);
+    temporal_getTexelCoordinate(texCoord, textureDimensions(normalTexture)), 0);
   let expectedNormal = normalize((ssrCameraTemporal.currentViewToPreviousView *
     vec4f(currentSurface.xyz * 2.0 - 1.0, 0.0)).xyz);
-  let expectedDepth = ssrCameraTemporal_viewDepth(previousCoordinate, previousPosition.z);
-  let historyDimensions = textureDimensions(historyTexture);
-  let historyPosition = previousCoordinate * vec2f(historyDimensions) - vec2f(0.5);
-  let historyBase = vec2i(floor(historyPosition));
-  let historyFraction = fract(historyPosition);
+  let expectedDepth = temporal_getViewDepth(previousCoordinate, previousFrame.z,
+    ssrCameraTemporal.previousInverseProjectionMatrix, 0.000001);
+  let footprint = temporal_getHistoryFootprint(previousCoordinate, textureDimensions(historyTexture));
   var accumulatedHistory = vec4f(0.0);
   var accumulatedWeight = 0.0;
   // Validate each bilinear tap before mixing to avoid borrowing a foreground edge's history.
   for (var vertical = 0; vertical < 2; vertical++) {
     for (var horizontal = 0; horizontal < 2; horizontal++) {
-      let coordinate = clamp(historyBase + vec2i(horizontal, vertical),
-        vec2i(0), vec2i(historyDimensions) - vec2i(1));
-      let tapCoordinate = (vec2f(coordinate) + vec2f(0.5)) / vec2f(historyDimensions);
+      let tap = temporal_getHistoryTap(footprint, vec2i(horizontal, vertical));
+      let tapCoordinate = tap.normalizedCoordinate;
       let packedDepth = textureLoad(previousDepthTexture,
-        ssrCameraTemporal_coordinate(tapCoordinate, textureDimensions(previousDepthTexture)), 0).rgb;
+        temporal_getTexelCoordinate(tapCoordinate, textureDimensions(previousDepthTexture)), 0).rgb;
       let depth = dot(round(packedDepth * 255.0), vec3f(65536.0, 256.0, 1.0)) / 16777215.0;
       let surface = textureLoad(previousNormalTexture,
-        ssrCameraTemporal_coordinate(tapCoordinate, textureDimensions(previousNormalTexture)), 0);
+        temporal_getTexelCoordinate(tapCoordinate, textureDimensions(previousNormalTexture)), 0);
       let normal = normalize(surface.xyz * 2.0 - 1.0);
-      let depthDifference = abs(ssrCameraTemporal_viewDepth(tapCoordinate, depth) - expectedDepth) /
+      let depthDifference = abs(temporal_getViewDepth(tapCoordinate, depth,
+        ssrCameraTemporal.previousInverseProjectionMatrix, 0.000001) - expectedDepth) /
         max(expectedDepth, 0.000001);
       let valid = depth < 0.99999 && depthDifference <= ssrCameraTemporal.depthThreshold &&
         dot(normal, expectedNormal) >= ssrCameraTemporal.normalThreshold &&
         abs(surface.a - currentSurface.a) < 0.05;
-      let horizontalWeight = select(1.0 - historyFraction.x, historyFraction.x, horizontal == 1);
-      let verticalWeight = select(1.0 - historyFraction.y, historyFraction.y, vertical == 1);
-      let weight = select(0.0, horizontalWeight * verticalWeight, valid);
-      accumulatedHistory += textureLoad(historyTexture, coordinate, 0) * weight;
+      let weight = select(0.0, tap.weight, valid);
+      accumulatedHistory += textureLoad(historyTexture, tap.coordinate, 0) * weight;
       accumulatedWeight += weight;
     }
   }
   if (accumulatedWeight <= 0.000001) {return current;}
   let history = accumulatedHistory / accumulatedWeight;
-  let sourceTexel = 1.0 / vec2f(textureDimensions(sourceTexture));
-  var minimum = current;
-  var maximum = current;
-  for (var vertical = -1; vertical <= 1; vertical++) {
-    for (var horizontal = -1; horizontal <= 1; horizontal++) {
-      let coordinate = clamp(texCoord + vec2f(f32(horizontal), f32(vertical)) * sourceTexel,
-        vec2f(0.0), vec2f(1.0));
-      let sample = textureSampleLevel(sourceTexture, sourceTextureSampler, coordinate, 0);
-      minimum = min(minimum, sample);
-      maximum = max(maximum, sample);
-    }
-  }
+  let bounds = temporal_getColorBounds(sourceTexture, sourceTextureSampler, texCoord, current);
   // Missing rays may retain confidence briefly, but never increase it without current support.
   let weight = clamp(ssrCameraTemporal.historyWeight, 0.0, 0.97);
-  if (maximum.a <= 0.001) {return vec4f(history.rgb, history.a * weight);}
-  return mix(current, clamp(history, minimum, maximum), weight);
+  if (bounds.maximum.a <= 0.001) {return vec4f(history.rgb, history.a * weight);}
+  return mix(current, clamp(history, bounds.minimum, bounds.maximum), weight);
 }
 `,
   bindingLayout: [

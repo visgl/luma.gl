@@ -5,6 +5,7 @@
 import type {Texture} from '@luma.gl/core';
 import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 import type {NumberArray16} from '@math.gl/core';
+import {temporalHelpers} from './screen-space-shader-helpers';
 
 /** Construction options for temporally stabilized screen-space reflections. */
 export type SSRCompositeShaderPassOptions = {
@@ -264,6 +265,7 @@ fn ssrTrace_sampleColor(
 export const ssrTemporal = {
   name: 'ssrTemporal',
   source: /* wgsl */ `\
+${temporalHelpers}
 struct SSRTemporalUniforms {
   inverseProjectionMatrix: mat4x4f,
   historyWeight: f32,
@@ -279,12 +281,6 @@ struct SSRTemporalUniforms {
 @group(0) @binding(auto) var depthTextureSampler: sampler;
 @group(0) @binding(auto) var previousDepthTexture: texture_2d<f32>;
 @group(0) @binding(auto) var previousDepthTextureSampler: sampler;
-
-fn ssrTemporal_reconstructViewDepth(texCoord: vec2f, depth: f32) -> f32 {
-  let clip = vec4f(texCoord.x * 2.0 - 1.0, 1.0 - texCoord.y * 2.0, depth, 1.0);
-  let viewPosition = ssrTemporal.inverseProjectionMatrix * clip;
-  return abs(viewPosition.z / max(abs(viewPosition.w), 0.00001));
-}
 
 fn ssrTemporal_sampleColor(
   sourceTexture: texture_2d<f32>,
@@ -309,32 +305,15 @@ fn ssrTemporal_sampleColor(
     clampedPreviousCoord,
     0
   ).r;
-  let currentViewDepth = ssrTemporal_reconstructViewDepth(texCoord, currentDepth);
-  let previousViewDepth = ssrTemporal_reconstructViewDepth(clampedPreviousCoord, previousDepth);
+  let currentViewDepth = temporal_getViewDepth(texCoord, currentDepth, ssrTemporal.inverseProjectionMatrix, 0.00001);
+  let previousViewDepth = temporal_getViewDepth(clampedPreviousCoord, previousDepth, ssrTemporal.inverseProjectionMatrix, 0.00001);
   let relativeDepthDifference = abs(previousViewDepth - currentViewDepth) /
     max(currentViewDepth, 0.0001);
   let validDepth = relativeDepthDifference < ssrTemporal.depthThreshold;
 
-  let texel = 1.0 / vec2f(textureDimensions(sourceTexture));
-  var minimumReflection = current;
-  var maximumReflection = current;
-  for (var sampleY: i32 = -1; sampleY <= 1; sampleY++) {
-    for (var sampleX: i32 = -1; sampleX <= 1; sampleX++) {
-      let sampleCoord = clamp(
-        texCoord + vec2f(f32(sampleX), f32(sampleY)) * texel,
-        vec2f(0.0),
-        vec2f(1.0)
-      );
-      let neighborhoodReflection = textureSampleLevel(
-        sourceTexture,
-        sourceTextureSampler,
-        sampleCoord,
-        0
-      );
-      minimumReflection = min(minimumReflection, neighborhoodReflection);
-      maximumReflection = max(maximumReflection, neighborhoodReflection);
-    }
-  }
+  let bounds = temporal_getColorBounds(sourceTexture, sourceTextureSampler, texCoord, current);
+  let minimumReflection = bounds.minimum;
+  let maximumReflection = bounds.maximum;
 
   let historyReflection = textureSampleLevel(
     historyTexture,
