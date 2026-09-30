@@ -20,7 +20,7 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
   let windSpeed = 6;
   let windDirection = 45;
   let visibility = 700;
-  let fogVariation = 0.85;
+  let fogVariation = 1;
   let fogSpeed = 3;
   let playing = true;
   let time = 0;
@@ -32,6 +32,11 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
     resolveReady = resolve;
     rejectReady = reject;
   });
+  // Pause the clock across hidden-tab gaps without slowing visible low-frame-rate rendering.
+  const resetFrameTime = () => {
+    previousTime = 0;
+  };
+  document.addEventListener('visibilitychange', resetFrameTime);
   const diagnostics = {frames: 0, time: 0, error: '', backend: '', finalized: false};
   const deviceProps = getDeckExampleProps(options);
   const deck = new Deck<MapView | _GlobeView>({
@@ -62,12 +67,12 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
     },
     onBeforeRender: () => {
       const now = performance.now();
-      if (isWeatherAnimating() && previousTime) {
-        const elapsed = Math.min((now - previousTime) / 1000, 0.1);
+      if (!document.hidden && isWeatherAnimating() && previousTime) {
+        const elapsed = (now - previousTime) / 1000;
         time += elapsed;
         if (preset !== 'clear' && fogVariation > 0) fogTime += elapsed * fogSpeed;
       }
-      previousTime = isWeatherAnimating() ? now : 0;
+      previousTime = !document.hidden && isWeatherAnimating() ? now : 0;
       diagnostics.time = time;
     },
     onAfterRender: () => {
@@ -111,10 +116,10 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
       baseHeight: 30,
       heightFalloff: preset === 'fog' ? 0.012 : 0.003,
       variation: fogVariation,
-      wispScale: 180,
+      wispScale: 140,
       // Integrate drift into this clock so changing speed does not jump the density field.
       velocity: [Math.sin(angle), Math.cos(angle), 0],
-      evolutionSpeed: 0.012,
+      evolutionSpeed: 0.06,
       time: fogTime
     };
   }
@@ -210,6 +215,7 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
     finalize() {
       if (diagnostics.finalized) return;
       diagnostics.finalized = true;
+      document.removeEventListener('visibilitychange', resetFrameTime);
       deck.finalize();
       surfaceTexture?.destroy();
     }

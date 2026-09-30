@@ -12,8 +12,7 @@ Clear stops continuous redraws. With no precipitation, fog keeps animating only 
 Fog variation and Fog drift are nonzero. Zero variation restores uniform fog; zero drift
 keeps static wisps. Animate pauses both fog and precipitation. Changing a setting or moving the camera still redraws the scene.
 Camera movement remains available while paused. The scene uses map projection; scroll over the scene to zoom. The visual tests also exercise
-globe projection through the scene API. Both use a local east/north/up metre frame for fog and particle sizing. Time gaps above 0.1 seconds are dropped
-so resuming a hidden or slow tab does not produce a large jump.
+globe projection through the scene API. Both use a local east/north/up metre frame for fog and particle sizing. The clock pauses while the document is hidden. Visible rendering uses elapsed time, so slower frame rates do not slow the weather.
 
 `precipitation` and `heightFog` are reusable shader modules. `WeatherParticleLayer` connects
 those modules to Deck projection and depth. Its particle volume follows the view's ground

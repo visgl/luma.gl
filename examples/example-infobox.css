@@ -95,9 +95,12 @@
   font-size: 11px;
 }
 .luma-example-infobox .control-card .toggle {
-  display: flex;
-  justify-content: flex-start;
   cursor: pointer;
+}
+.luma-example-infobox .control-card .toggle > input {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: start;
 }
 .luma-example-infobox .control-card :is(select, button, input[type='color']) {
   padding: 4px 6px;

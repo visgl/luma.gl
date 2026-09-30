@@ -65,6 +65,25 @@ try {
       assert.equal(await page.inputValue('#preset'), 'fog', `${backend}: opens with fog`);
       assert.equal(await page.inputValue('#visibility'), '700', `${backend}: fog is apparent by default`);
       await page.screenshot({path: join(tmpdir(), `weather-default-${backend}.png`)});
+      const defaultFogStart = PNG.sync.read(await page.screenshot());
+      const defaultFogTime = await page.evaluate(() => window.weatherScene.diagnostics.time);
+      await page.waitForTimeout(2500);
+      const defaultFogEnd = PNG.sync.read(await page.screenshot({path: join(tmpdir(), `weather-default-moving-${backend}.png`)}));
+      const defaultFogChanges = changedPixels(defaultFogStart, defaultFogEnd, 8);
+      const defaultFogElapsed = await page.evaluate(() => window.weatherScene.diagnostics.time) - defaultFogTime;
+      console.log(`${backend}: default fog changes ${defaultFogChanges} pixels in ${defaultFogElapsed.toFixed(2)} simulation seconds`);
+      assert(defaultFogChanges > 10000, `${backend}: default fog has clearly visible motion over 2.5 seconds (${defaultFogChanges} pixels)`);
+      // A slow visible frame must not silently reduce the animation speed.
+      const slowFrame = await page.evaluate(() => {
+        const scene = window.weatherScene;
+        const before = {frames: scene.diagnostics.frames, time: scene.diagnostics.time};
+        const start = performance.now();
+        while (performance.now() - start < 350) { /* Simulate one long visible frame. */ }
+        return before;
+      });
+      await page.waitForFunction(frames => window.weatherScene.diagnostics.frames > frames, slowFrame.frames);
+      assert(await page.evaluate(() => window.weatherScene.diagnostics.time) - slowFrame.time >= 0.3,
+        `${backend}: slow frames preserve elapsed animation time`);
       const initialZoom = await page.evaluate(() => window.weatherScene.deck.getViewports()[0].zoom);
       await page.mouse.move(850, 400);
       await page.mouse.wheel(0, 240);
