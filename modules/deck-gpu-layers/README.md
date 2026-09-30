@@ -219,6 +219,27 @@ uses `enabled = 0`; the adapter restores that mode and model render parameters a
 passes. Layers without the module may still provide scene color and opaque depth; their normal
 pixels retain the default roughness of 1.
 
+### Layer participation
+
+| Participating layer | Captured color | Opaque depth | Normal/roughness | Selection mask |
+| --- | --- | --- | --- | --- |
+| Opaque custom layer with `surfaceBuffer` | Yes, including HDR values | Yes | Shader-provided | When selected and requested |
+| Opaque stock layer without `surfaceBuffer` | Yes | Yes | Default roughness 1; no surface normal supplied | No |
+| Transparent layer | Blended over opaque color | Preserved | Preserved | Preserved |
+| Nonparticipating layer or external basemap | Absent | Absent | Absent | Absent |
+
+The GPU integration test exercises the unmodified `ScatterplotLayer` from Deck 9.4.0: opaque
+color/depth capture, transparent blending, exclusion, native picking, and removal of the effect.
+It does not establish compatibility with every stock layer or create normals for them. The pinned
+stock WebGPU shaders do not expose a consistent fragment normal/color-extension hook; supplying
+`surfaceBuffer` output currently requires a participating shader implementation.
+
+`SceneBufferEffect` itself leaves ordinary Deck rendering and picking in place. Removing it releases
+its textures and keeps stock-layer picking working. A final effect that replaces the image with
+captured color must explicitly compose any omitted layers or basemap; capture alone cannot include
+a separately rendered map. Create this adapter only on WebGPU, or retain ordinary rendering without
+it on an unsupported backend.
+
 ### Views and history
 
 Each view ID has separate full-canvas targets. `viewportBounds` locates its region in top-origin
