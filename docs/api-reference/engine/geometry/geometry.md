@@ -188,6 +188,33 @@ be converted to packed CPU positions. The result borrows the source position att
 new `Uint32Array` indices; it neither mutates the source nor copies unrelated attributes.
 
 This is CPU preprocessing for static mesh edges. Run it when geometry changes, rather than every
-frame. It does not compute view-dependent silhouettes, deduplicate separately processed tiles,
-or connect the resulting segments into joined paths. Render opaque surfaces before an edge
+frame. It does not compute view-dependent silhouettes or connect segments into joined paths. Render opaque surfaces before an edge
 overlay to provide hidden-edge occlusion; stroke width and material are renderer concerns.
+
+
+### Adjacent meshes and tile boundaries
+
+`makeEdgeGeometryFromGeometries(geometries, options?)` explicitly batches CPU meshes before
+running the same edge classifier. Shared coplanar edges disappear, while a crease between
+meshes is emitted once. Separately extracting each tile cannot distinguish a tile seam from
+an open boundary.
+
+```typescript
+import {makeEdgeGeometryFromGeometries} from '@luma.gl/engine';
+
+const edges = makeEdgeGeometryFromGeometries(loadedTileGeometries, {
+  angleThreshold: 30,
+  weldTolerance: 0.001
+});
+```
+
+Provide a nonempty batch with positions in one common coordinate frame and the same position
+attribute name, typed-array constructor, and normalization setting. Coordinates are copied
+without changing their scalar type. The result owns new position and index arrays; source
+geometries and their draw ranges remain unchanged. Other attributes are not copied.
+
+The caller chooses the batch and recomputes it when tiles arrive, leave, or change. Render the
+batch output once, not once per tile. A missing neighbor remains an open boundary. Matching
+edge endpoints and consistent face winding are required: this helper does not split T-junctions,
+reconcile mixed levels of detail, transform tile coordinates, or remove skirts. Positive weld
+tolerance can reconcile small coordinate differences but can also merge nearby distinct edges.
