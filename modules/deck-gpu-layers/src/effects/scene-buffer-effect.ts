@@ -34,6 +34,8 @@ export type SceneBufferEffectProps = {
   colorFormat?: TextureFormatColor;
   /** Allocate a second complete capture for the preceding frame. Defaults to false. */
   history?: boolean;
+  /** Allocate and render an opaque selection mask. Defaults to false. */
+  selection?: boolean;
 };
 export type SceneBufferFrame = {
   /** Owned by the effect. Contents are valid until this slot is reused. */
@@ -49,7 +51,7 @@ type CaptureResources = {
   buffer: GBuffer;
   colorFramebuffer: Framebuffer;
   normalFramebuffer: Framebuffer;
-  selectionFramebuffer: Framebuffer;
+  selectionFramebuffer?: Framebuffer;
 };
 type ViewCapture = {
   slots: CaptureResources[];
@@ -171,14 +173,16 @@ export class SceneBufferEffect implements Effect {
           clearCanvas: false,
           clearColor: [0.5, 0.5, 1, 1]
         });
-        this.capturePass.captureMode = 'selection';
-        this.capturePass.render({
-          ...viewOptions,
-          pass: `${this.id}-selection`,
-          target: target.selectionFramebuffer,
-          clearCanvas: false,
-          clearColor: [0, 0, 0, 0]
-        });
+        if (target.selectionFramebuffer) {
+          this.capturePass.captureMode = 'selection';
+          this.capturePass.render({
+            ...viewOptions,
+            pass: `${this.id}-selection`,
+            target: target.selectionFramebuffer,
+            clearCanvas: false,
+            clearColor: [0, 0, 0, 0]
+          });
+        }
         this.capturePass.captureMode = 'transparent';
         this.capturePass.render({
           ...viewOptions,
@@ -225,14 +229,16 @@ export class SceneBufferEffect implements Effect {
           height,
           colorFormat: this.props.colorFormat || 'rgba16float',
           velocity: false,
-          extraColorAttachments: [{name: 'selection', format: 'r8unorm'}]
+          extraColorAttachments: this.props.selection
+            ? [{name: 'selection', format: 'r8unorm'}]
+            : []
         });
         const framebuffers: Framebuffer[] = [];
         try {
           for (const texture of [
             buffer.colorTexture,
             buffer.normalRoughnessTexture,
-            buffer.getExtraColorTexture('selection')
+            ...(this.props.selection ? [buffer.getExtraColorTexture('selection')] : [])
           ]) {
             framebuffers.push(
               this.device!.createFramebuffer({
@@ -320,7 +326,7 @@ function destroyCapture(capture: ViewCapture): void {
   for (const slot of capture.slots) {
     slot.colorFramebuffer.destroy();
     slot.normalFramebuffer.destroy();
-    slot.selectionFramebuffer.destroy();
+    slot.selectionFramebuffer?.destroy();
     slot.buffer.destroy();
   }
 }

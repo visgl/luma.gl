@@ -32,7 +32,8 @@ On WebGPU, **Scene reflections** adds screen-space building and bridge reflectio
 `SceneBufferEffect` captures participating opaque layers and transparent edge color into the shared luma.gl `GBuffer`.
 `RiverReflectionEffect` borrows its color, depth, and view-normal/roughness textures and runs
 luma.gl's shared SSR tracer, camera-reprojected history, spatial filtering, and compositing.
-The reflection adapter owns only the postprocessing pipeline and its temporal history; scene
+Selection capture stays disabled: the river consumes no selection mask, saving one full-size
+`r8unorm` texture and one capture pass per view. The reflection adapter owns only the postprocessing pipeline and its temporal history; scene
 capture, layer filtering, target resizing, and texture cleanup belong to `SceneBufferEffect`.
 
 The `surfaceBuffer` shader module lets participating layers supply normals and roughness. Capture

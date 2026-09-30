@@ -61,7 +61,10 @@ const SOURCE = /* wgsl */ `
 }
 `;
 
-test('scene capture preserves HDR, masks, depth, per-view history, resize and ownership', async context => {
+test.each([
+  false,
+  true
+])('scene capture selection=%s preserves HDR, depth, per-view history, resize and ownership', async (selection, context) => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     context.skip('WebGPU unavailable');
@@ -74,6 +77,7 @@ test('scene capture preserves HDR, masks, depth, per-view history, resize and ow
   let selected = true;
   const effect = new SceneBufferEffect({
     history: true,
+    selection,
     getLayerOptions: layer => ({
       mode: layer.id === 'transparent' ? 'transparent' : 'opaque',
       surfaceBuffer: layer.id !== 'transparent',
@@ -126,11 +130,15 @@ test('scene capture preserves HDR, masks, depth, per-view history, resize and ow
     expect(frame.buffer.colorTexture.format).toBe('rgba16float');
     expect(frame.previousBuffer).toBeDefined();
     expect(frame.previousBuffer).not.toBe(frame.buffer);
+    expect(frame.buffer.framebuffer.colorAttachments).toHaveLength(selection ? 3 : 2);
+    if (!selection) {
+      expect(() => frame.buffer.getExtraColorTexture('selection')).toThrow();
+    }
     const values = await readCapture(device, effect, 'main');
     expect(values[0]).toBeCloseTo(2, 3);
     expect(values[1]).toBeCloseTo(0.25, 2);
     expect(values[2]).toBeCloseTo(0.3, 3);
-    expect(values[3]).toBe(1);
+    expect(values[3]).toBe(selection ? 1 : 0);
     const firstSlots = [frame.buffer, frame.previousBuffer!];
     selected = false;
     deck.redraw('capture test');
@@ -227,6 +235,7 @@ async function readCapture(
   coordinate = [32, 32]
 ): Promise<Float32Array> {
   const frame = effect.getFrame(id)!;
+  const selection = effect.props.selection;
   const texture = device.createTexture({
     width: 1,
     height: 1,
@@ -240,7 +249,7 @@ async function readCapture(
 @group(0) @binding(auto) var colorTexture: texture_2d<f32>;
 @group(0) @binding(auto) var normalTexture: texture_2d<f32>;
 @group(0) @binding(auto) var depthTexture: texture_depth_2d;
-@group(0) @binding(auto) var selectionTexture: texture_2d<f32>;
+${selection ? '@group(0) @binding(auto) var selectionTexture: texture_2d<f32>;' : ''}
 @vertex fn vertexMain(@builtin(vertex_index) index: u32) -> @builtin(position) vec4<f32> {
   let positions = array<vec2<f32>, 3>(vec2<f32>(-1.0, -1.0), vec2<f32>(3.0, -1.0), vec2<f32>(-1.0, 3.0));
   return vec4<f32>(positions[index], 0.0, 1.0);
@@ -249,7 +258,7 @@ async function readCapture(
   let coordinate = vec2<i32>(${coordinate[0]}, ${coordinate[1]});
   return vec4<f32>(textureLoad(colorTexture, coordinate, 0).r,
     textureLoad(normalTexture, coordinate, 0).a, textureLoad(depthTexture, coordinate, 0),
-    textureLoad(selectionTexture, coordinate, 0).r);
+    ${selection ? 'textureLoad(selectionTexture, coordinate, 0).r' : '0.0'});
 }
 `,
     vertexCount: 3,
@@ -257,7 +266,7 @@ async function readCapture(
       colorTexture: frame.buffer.colorTexture,
       normalTexture: frame.buffer.normalRoughnessTexture,
       depthTexture: frame.buffer.depthTexture,
-      selectionTexture: frame.buffer.getExtraColorTexture('selection')
+      ...(selection ? {selectionTexture: frame.buffer.getExtraColorTexture('selection')} : {})
     }
   });
   try {

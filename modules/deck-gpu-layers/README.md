@@ -126,7 +126,7 @@ constructed but never adopted.
 
 `SceneBufferEffect` captures participating layers into luma.gl `GBuffer` textures before Deck's
 normal display pass. This WebGPU adapter makes HDR scene color, sampleable opaque depth, encoded
-view normals/roughness, and an opaque selection mask available to subsequent effects. It does not
+view normals/roughness, and an optional opaque selection mask available to subsequent effects. It does not
 replace Deck's display output or modify the picking pass.
 
 ```ts
@@ -134,6 +134,7 @@ import {SceneBufferEffect} from '@deck.gl-community/gpu-layers';
 
 const sceneBuffers = new SceneBufferEffect({
   history: true,
+  selection: true,
   getLayerOptions: layer => {
     if (layer.id === 'buildings') {
       return {mode: 'opaque', surfaceBuffer: true, selected: true};
@@ -159,7 +160,8 @@ Opaque participants write color and depth. Transparent participants blend color 
 changing opaque depth, normals, or selection. Declare their alpha/blending parameters as for normal
 Deck rendering. Layer visibility, filtering, projection, transitions, and shader-module effects are
 handled by Deck's layer pass. Place capture after effects whose pre-render work its layers need.
-Selection includes only visible opaque fragments from selected layers implementing `surfaceBuffer`.
+`selection: true` allocates an `r8unorm` mask and adds its capture pass; it defaults to false.
+Only request it when a downstream effect consumes the mask. Selection includes only visible opaque fragments from selected layers implementing `surfaceBuffer`.
 Nonparticipating layers and an external basemap are not represented in these textures.
 
 ### Normal and selection output
@@ -196,9 +198,9 @@ perform reprojection or temporal filtering by itself.
 
 All returned textures are borrowed. Do not destroy them or retain them beyond the slot's next reuse.
 Removing a view destroys its targets. Resize replaces its targets. Removing the effect or finalizing
-Deck releases all captures; repeated cleanup is safe. Default formats use approximately 17 bytes per
-canvas pixel per view, doubled when history is enabled, plus driver overhead. Capture issues four
-passes per view and preserves the normal Deck display pass, so callers should measure the cost for
+Deck releases all captures; repeated cleanup is safe. Default formats use approximately 16 bytes per
+canvas pixel per view, or 17 with selection, doubled when history is enabled, plus driver overhead.
+Capture issues three passes per view, or four with selection, and preserves the normal Deck display pass, so callers should measure the cost for
 their scenes. The adapter currently requires WebGPU and explicit layer participation.
 
 The repository's pinned Deck patch also adds depth to the first postprocessing scene target.
