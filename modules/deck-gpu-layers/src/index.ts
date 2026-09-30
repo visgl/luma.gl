@@ -6,3 +6,8 @@ export {
   LuSpatialPointLayer,
   type LuSpatialPointLayerProps
 } from './layers/luspatial-point-layer';
+
+export {
+  WeatherParticleLayer,
+  type WeatherParticleLayerProps
+} from './layers/weather-particle-layer';

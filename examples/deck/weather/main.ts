@@ -1,0 +1,52 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import {createWeatherScene, type WeatherPreset} from './app';
+declare global {
+  interface Window {
+    weatherScene: ReturnType<typeof createWeatherScene>;
+  }
+}
+const backend = document.querySelector<HTMLSelectElement>('#backend')!;
+backend.value =
+  new URLSearchParams(location.search).get('backend') === 'webgl' ? 'webgl' : 'webgpu';
+const scene = createWeatherScene(document.querySelector<HTMLDivElement>('#scene')!, {
+  deviceType: backend.value === 'webgl' ? 'webgl' : 'webgpu'
+});
+window.weatherScene = scene;
+backend.addEventListener('change', () => {
+  location.search = `?backend=${backend.value}`;
+});
+const preset = document.querySelector<HTMLSelectElement>('#preset')!;
+preset.addEventListener('change', () => {
+  const value: WeatherPreset =
+    preset.value === 'snow'
+      ? 'snow'
+      : preset.value === 'fog'
+        ? 'fog'
+        : preset.value === 'clear'
+          ? 'clear'
+          : 'rain';
+  scene.setPreset(value);
+});
+const playing = document.querySelector<HTMLInputElement>('#playing')!;
+playing.addEventListener('change', () => scene.setPlaying(playing.checked));
+for (const [identifier, setter] of [
+  ['intensity', scene.setIntensity],
+  ['wind-speed', scene.setWindSpeed],
+  ['wind-direction', scene.setWindDirection],
+  ['visibility', scene.setVisibility]
+] as const) {
+  const input = document.querySelector<HTMLInputElement>(`#${identifier}`)!;
+  input.addEventListener('input', () => setter(Number(input.value)));
+}
+document.querySelector('#reset')!.addEventListener('click', () => scene.reset());
+scene.ready
+  .then(() => {
+    document.body.dataset['ready'] = 'true';
+  })
+  .catch(error => {
+    document.querySelector('#status')!.textContent = error.message;
+  });
+window.addEventListener('pagehide', () => scene.finalize());
