@@ -1,6 +1,6 @@
 # River District
 
-A standalone Deck city scene rendered by an example-owned luma.gl mesh layer. The fictional
+A standalone Deck city scene rendered by the shared river-district mesh layer. The fictional
 district uses deterministic local geometry, so it requires no basemap service or credentials.
 
 ```sh
@@ -49,9 +49,13 @@ would require motion vectors or explicit history resets. Depth history preserves
 RGBA8 textures, avoiding optional float-filtering support. Reflection history stays at half
 resolution while depth and normal history use full resolution. Buildings sit close to the river
 to make their reflections easier to see. The scene uses face lighting,
-without cast shadows. The small city mesh adapter remains local to the example and does not
-promise arbitrary mesh formats or terrain draping.
+without cast shadows. The shared fixture adapter does not promise arbitrary mesh formats or terrain draping.
 
 Website builds use an explicit asset prefix (including `WEBSITE_BASE_URL` when set), so clean-URL
 redirects cannot move relative asset requests out of the embedded example directory. Standalone
 builds retain relative asset URLs.
+
+The district geometry is rendered by `../river-district-layer.ts`, shared with the other riverfront
+examples. It uses luma.gl's Lambert material for lighting, optional `heightFog`, and `surfaceBuffer`
+for view-space normals/roughness and selection output. The layer owns its generated mesh buffer and
+model; Deck owns their layer lifecycle. Fog defaults to zero density.

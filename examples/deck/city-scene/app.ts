@@ -6,8 +6,13 @@ import {COORDINATE_SYSTEM, Deck, MapView, type MapViewState} from '@deck.gl/core
 import {SceneBufferEffect, WaterSurfaceLayer} from '@deck.gl-community/gpu-layers';
 import type {Buffer} from '@luma.gl/core';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
-import {CITY_ORIGIN, makeCityFeatures, makeCityMesh, type CityFeature} from './city-data';
-import {CityMeshLayer} from './city-mesh-layer';
+import {
+  CITY_ORIGIN,
+  makeCityFeatures,
+  makeCityMesh,
+  type CityFeature
+} from '../river-district-data';
+import {RiverDistrictLayer} from '../river-district-layer';
 import {RiverReflectionEffect} from './river-reflection-effect';
 
 export const CAMERA_PRESETS = {
@@ -87,7 +92,7 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
             id: 'city-scene-buffers',
             colorFormat: 'rgba8unorm',
             getLayerOptions: layer =>
-              layer instanceof CityMeshLayer || layer instanceof WaterSurfaceLayer
+              layer instanceof RiverDistrictLayer || layer instanceof WaterSurfaceLayer
                 ? {mode: 'opaque', surfaceBuffer: true}
                 : null
           })
@@ -123,7 +128,7 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
 
   function updateLayers() {
     riverReflectionEffect?.resetHistory();
-    const mesh = new CityMeshLayer({
+    const mesh = new RiverDistrictLayer({
       id: 'city-mesh',
       features: diagnostics.waterEnabled
         ? activeFeatures.filter(feature => feature.kind !== 'water')
@@ -233,9 +238,9 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
       updateLayers();
     },
     getFeatureScreenPosition(name: string): number[] | null {
-      const layer = deck.props.layers?.find(candidate => candidate instanceof CityMeshLayer);
+      const layer = deck.props.layers?.find(candidate => candidate instanceof RiverDistrictLayer);
       const feature = activeFeatures.find(candidate => candidate.name === name);
-      if (!(layer instanceof CityMeshLayer) || !feature) return null;
+      if (!(layer instanceof RiverDistrictLayer) || !feature) return null;
       return layer.project([
         feature.center[0],
         feature.center[1],

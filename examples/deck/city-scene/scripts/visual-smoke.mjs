@@ -188,6 +188,8 @@ try {
       await page.selectOption('#camera', 'district');
       await page.waitForFunction(() => window.cityScene.deck.getViewports()[0].pitch === 52);
       await page.mouse.move(990, 710);
+      // Test material replay independently of SSR's intentionally stochastic redraw history.
+      if (backend === 'webgpu') await page.uncheck('#reflections');
       await page.evaluate(() => window.cityScene.setTime(2));
       await page.waitForTimeout(100);
       await page.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur());
@@ -275,6 +277,10 @@ try {
         }
       }
       assert.equal(replayDifferences, 0, `${backend}: replaying time is deterministic`);
+      if (backend === 'webgpu') {
+        await page.check('#reflections');
+        await page.waitForTimeout(150);
+      }
       const screenshotPath = join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), `city-scene-${backend}.png`);
       const screenshot = PNG.sync.read(await page.screenshot({path: screenshotPath}));
       const colors = new Set();
