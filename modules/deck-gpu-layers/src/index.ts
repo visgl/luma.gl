@@ -16,3 +16,5 @@ export {
   type SceneBufferFrame,
   type SceneBufferLayerOptions
 } from './effects/scene-buffer-effect';
+
+export {getMeterOffsetPosition} from './projection/meter-offset-position';

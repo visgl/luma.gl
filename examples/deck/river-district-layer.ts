@@ -19,7 +19,7 @@ import {
   type HeightFogProps,
   type ShaderModule
 } from '@luma.gl/shadertools';
-import {surfaceBuffer} from '@deck.gl-community/gpu-layers';
+import {getMeterOffsetPosition, surfaceBuffer} from '@deck.gl-community/gpu-layers';
 import {makeCityMesh, type CityFeature} from './river-district-data';
 
 type RiverDistrictLayerProps = LayerProps & {
@@ -87,7 +87,14 @@ export class RiverDistrictLayer extends Layer<RiverDistrictLayerProps> {
   override draw({renderPass}: {renderPass: RenderPass}): void {
     this.state.model?.shaderInputs.setProps({
       heightFog: {...heightFog.defaultUniforms, ...this.props.fog},
-      districtMesh: {roughness: this.props.roughness},
+      districtMesh: {
+        roughness: this.props.roughness,
+        cameraPosition: getMeterOffsetPosition(
+          this.context.viewport,
+          this.props.coordinateOrigin!,
+          this.context.viewport.cameraPosition
+        )
+      },
       lambertMaterial: {ambient: 0.45, diffuse: 0.55},
       lighting: {
         enabled: true,
@@ -117,11 +124,17 @@ export class RiverDistrictLayer extends Layer<RiverDistrictLayerProps> {
 const districtMesh = {
   name: 'districtMesh',
   bindingLayout: [{name: 'districtMesh', group: 3}],
-  source: `struct DistrictMeshUniforms { roughness: f32 };
+  source: `struct DistrictMeshUniforms {
+  roughness: f32,
+  cameraPosition: vec3f,
+};
 @group(3) @binding(auto) var<uniform> districtMesh: DistrictMeshUniforms;`,
-  fs: `layout(std140) uniform districtMeshUniforms { float roughness; } districtMesh;`,
-  uniformTypes: {roughness: 'f32'},
-  defaultUniforms: {roughness: 1}
+  fs: `layout(std140) uniform districtMeshUniforms {
+  float roughness;
+  vec3 cameraPosition;
+} districtMesh;`,
+  uniformTypes: {roughness: 'f32', cameraPosition: 'vec3<f32>'},
+  defaultUniforms: {roughness: 1, cameraPosition: [0, 0, 0]}
 } as const satisfies ShaderModule;
 
 const SOURCE = /* wgsl */ `
@@ -154,7 +167,7 @@ struct CityVertex {
     if (picking_isColorZero(input.pickingColor)) { discard; }
     return vec4<f32>(input.pickingColor, 1.0);
   }
-  let cameraPosition = project.cameraPosition / project.commonUnitsPerMeter;
+  let cameraPosition = districtMesh.cameraPosition;
   var color = lighting_getLightColor2(input.color, cameraPosition, input.worldPosition, normalize(input.normal));
   if (picking.isHighlightActive > 0.5 && distance(input.pickingColor, picking_normalizeColor(picking.highlightedObjectColor)) < 0.00001) {
     color = mix(color, picking.highlightColor.rgb, picking.highlightColor.a);
@@ -172,9 +185,7 @@ out vec4 vertexColor;
 out vec3 worldPosition;
 out vec3 worldNormal;
 out vec3 commonNormal;
-out vec3 cameraPosition;
 void main() {
-  cameraPosition = project.cameraPosition / project.commonUnitsPerMeter;
   worldPosition = position;
   worldNormal = normal;
   commonNormal = project_normal(normal);
@@ -192,15 +203,14 @@ in vec4 vertexColor;
 in vec3 worldPosition;
 in vec3 worldNormal;
 in vec3 commonNormal;
-in vec3 cameraPosition;
 out vec4 fragColor;
 void main() {
   if (surfaceBuffer.enabled != 0) {
     fragColor = surfaceBuffer_encode(commonNormal, districtMesh.roughness);
     return;
   }
-  vec3 color = lighting_getLightColor(vertexColor.rgb, cameraPosition, worldPosition, normalize(worldNormal));
-  fragColor = heightFog_getColor(vec4(color, vertexColor.a), worldPosition, cameraPosition);
+  vec3 color = lighting_getLightColor(vertexColor.rgb, districtMesh.cameraPosition, worldPosition, normalize(worldNormal));
+  fragColor = heightFog_getColor(vec4(color, vertexColor.a), worldPosition, districtMesh.cameraPosition);
   DECKGL_FILTER_COLOR(fragColor, geometry);
 }
 `;
