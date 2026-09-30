@@ -127,6 +127,7 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
     },
     onAfterRender: () => {
       diagnostics.frames++;
+      updateAnimation();
     },
     onError: error => {
       diagnostics.error = error.message;
@@ -207,8 +208,21 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
             })
           : null
       ],
-      _animate: diagnostics.waterEnabled && diagnostics.playing
+      _animate: shouldAnimate()
     });
+  }
+
+  function shouldAnimate(): boolean {
+    return (
+      diagnostics.waterEnabled &&
+      (diagnostics.playing ||
+        Boolean(diagnostics.reflectionsEnabled && riverReflectionEffect?.needsRedraw))
+    );
+  }
+
+  function updateAnimation(): void {
+    const animate = shouldAnimate();
+    if (deck.props._animate !== animate) deck.setProps({_animate: animate});
   }
 
   function updateEffects() {
@@ -216,7 +230,8 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
       effects:
         diagnostics.reflectionsEnabled && riverReflectionEffect
           ? [riverReflectionEffect.capture, riverReflectionEffect]
-          : []
+          : [],
+      _animate: shouldAnimate()
     });
   }
 
@@ -227,7 +242,7 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
     features,
     setCamera(preset: keyof typeof CAMERA_PRESETS) {
       riverReflectionEffect?.resetHistory();
-      deck.setProps({initialViewState: {...CAMERA_PRESETS[preset]}});
+      deck.setProps({initialViewState: {...CAMERA_PRESETS[preset]}, _animate: shouldAnimate()});
     },
     setEdgeStyle(style: BuildingEdgeStyle) {
       diagnostics.edgeStyle = style;
@@ -272,7 +287,8 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
     setPlaying(playing: boolean) {
       diagnostics.playing = playing;
       lastFrameTime = null;
-      deck.setProps({_animate: playing && diagnostics.waterEnabled});
+      if (!playing) riverReflectionEffect?.requestConvergence();
+      updateAnimation();
     },
     setTime(timeSeconds: number) {
       riverReflectionEffect?.resetHistory();

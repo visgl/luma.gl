@@ -5,7 +5,7 @@
 import type {Effect, EffectContext, PostRenderOptions, PreRenderOptions} from '@deck.gl/core';
 import type {Device, Framebuffer, Texture} from '@luma.gl/core';
 import {BackgroundTextureModel, ShaderPassRenderer} from '@luma.gl/engine';
-import {createSSRCompositeShaderPass, type SSRQuality} from '@luma.gl/effects';
+import {createSSRCompositeShaderPass, SSR_QUALITY_PRESETS, type SSRQuality} from '@luma.gl/effects';
 import {Matrix4} from '@math.gl/core';
 import type {SceneBufferEffect} from '@deck.gl-community/gpu-layers';
 
@@ -18,6 +18,7 @@ export class RiverReflectionEffect implements Effect {
   debugMode = 0;
   historyFrames = 0;
   quality: SSRQuality = 'balanced';
+  private stableFrames = 0;
   private previousViewProjection: Matrix4 | null = null;
   private previousView: Matrix4 | null = null;
   private previousInverseProjection: Matrix4 | null = null;
@@ -42,6 +43,21 @@ export class RiverReflectionEffect implements Effect {
     this.presenter = null;
     this.capturedColor = null;
     this.renderer = this.device ? this.createRenderer(this.device) : null;
+  }
+
+  /** Bound idle accumulation so the initial sample contributes less than one percent. */
+  get settlingFrameCount(): number {
+    return (
+      1 + Math.ceil(Math.log(0.01) / Math.log(SSR_QUALITY_PRESETS[this.quality].historyWeight))
+    );
+  }
+
+  get needsRedraw(): boolean {
+    return Boolean(this.renderer) && this.stableFrames < this.settlingFrameCount;
+  }
+
+  requestConvergence(): void {
+    this.stableFrames = 0;
   }
 
   private createRenderer(device: Device): ShaderPassRenderer {
@@ -85,6 +101,12 @@ export class RiverReflectionEffect implements Effect {
     const viewProjection = new Matrix4(clipDepthConversion).multiplyRight(
       viewport.viewProjectionMatrix
     );
+    if (
+      this.previousViewProjection &&
+      viewProjection.some((value, index) => value !== this.previousViewProjection![index])
+    ) {
+      this.requestConvergence();
+    }
     const currentClipToPreviousClip = this.previousViewProjection
       ? new Matrix4(this.previousViewProjection).multiplyRight(new Matrix4(viewProjection).invert())
       : new Matrix4();
@@ -127,6 +149,7 @@ export class RiverReflectionEffect implements Effect {
     if (!outputTexture) return options.inputBuffer;
     this.frameCount++;
     this.historyFrames++;
+    this.stableFrames++;
     this.previousViewProjection = viewProjection;
     this.previousView = new Matrix4(viewMatrix);
     this.previousInverseProjection = inverseProjectionMatrix;
@@ -158,6 +181,7 @@ export class RiverReflectionEffect implements Effect {
   resetHistory(): void {
     this.renderer?.resetHistory();
     this.historyFrames = 0;
+    this.requestConvergence();
     this.previousViewProjection = null;
     this.previousView = null;
     this.previousInverseProjection = null;

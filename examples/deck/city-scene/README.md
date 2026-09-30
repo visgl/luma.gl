@@ -45,7 +45,12 @@ Camera-only temporal accumulation follows the static district through camera mov
 history tap must match the reprojected depth, surface normal, and roughness; a neighborhood clamp
 limits stale reflection colors. The animated water's changing normals can reject history. Camera
 presets, large camera jumps, resize, time resets, and material changes clear history. Moving objects
-would require motion vectors or explicit history resets. Depth history preserves 24-bit depth in
+would require motion vectors or explicit history resets. While water is paused, the example renders
+a bounded sequence after camera changes, history resets, or quality changes, then returns to idle.
+The bound comes from the shared quality preset's history weight: 22 frames for Balanced/Detailed,
+or 45 for Fast. Pausing keeps the water clock fixed throughout;
+disabling water or reflections cancels this extra rendering. This limits the initial sample's
+nominal history contribution below one percent, rather than guaranteeing noise-free convergence. Depth history preserves 24-bit depth in
 RGBA8 textures, avoiding optional float-filtering support. Reflection history uses the selected
 quality resolution while depth and normal history use full resolution. Buildings sit close to the
 river to make their reflections easier to see. The scene uses face lighting without cast shadows. The shared fixture adapter does not promise arbitrary mesh formats or terrain draping.

@@ -27,6 +27,7 @@ try {
     }));
     try {
       const page = await browser.newPage({viewport: {width: 1200, height: 850}});
+      const waitForIdle = () => page.waitForFunction(() => !window.cityScene.deck.props._animate && !window.cityScene.deck.needsRedraw(), undefined, {timeout: 60_000});
       const errors = [];
       page.on('pageerror', error => { errors.push(error.message); process.stderr.write(`${error.message}\n`); });
       page.on('console', message => { if (message.type() === 'error') { errors.push(message.text()); process.stderr.write(`${message.text()}\n`); } });
@@ -63,6 +64,9 @@ try {
       }
       await page.click('#playback');
       await page.mouse.move(1190, 840);
+      const pausedTime = await page.evaluate(() => window.cityScene.diagnostics.timeSeconds);
+      await waitForIdle();
+      assert.equal(await page.evaluate(() => window.cityScene.diagnostics.timeSeconds), pausedTime, 'settling reflections never advances paused water');
       await page.waitForTimeout(150);
       const pausedFrames = await page.evaluate(() => window.cityScene.diagnostics.frames);
       await page.waitForTimeout(150);
@@ -75,7 +79,16 @@ try {
           return frames;
         });
         assert.equal(restartedHistoryFrames, 1, 'time reset starts fresh reflection history');
-        await page.waitForTimeout(250);
+        await waitForIdle();
+        const settled = await page.evaluate(() => {
+          const effect = window.cityScene.deck.props.effects.find(effect => effect.id === 'city-river-reflections');
+          return {frames: effect.historyFrames, budget: effect.settlingFrameCount, time: window.cityScene.diagnostics.timeSeconds};
+        });
+        assert(settled.frames >= settled.budget && settled.frames <= settled.budget + 2, 'reset settles within the quality-derived frame budget');
+        assert.equal(settled.time, 2, 'time reset stays exact during accumulation');
+        const settledFrames = await page.evaluate(() => window.cityScene.diagnostics.frames);
+        await page.waitForTimeout(150);
+        assert.equal(await page.evaluate(() => window.cityScene.diagnostics.frames), settledFrames, 'reset returns to idle after settling');
         const reflections = PNG.sync.read(await page.screenshot({path: join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), 'city-scene-reflections.png')}));
         let reflectedPixels = 0;
         for (let vertical = 120; vertical < 650; vertical++) {
@@ -103,6 +116,7 @@ try {
             window.cityScene.deck.props.effects.find(effect => effect.id === 'city-river-reflections').resetHistory();
             for (let frame = 0; frame < 8; frame++) window.cityScene.deck.redraw('warm reflection history');
           }, historyWeight);
+          await waitForIdle();
           let previous = PNG.sync.read(await page.screenshot());
           let difference = 0;
           for (let frame = 0; frame < 5; frame++) {
@@ -139,15 +153,20 @@ try {
               width: targets.ssrRaw.texture.width,
               expectedWidth: capture.width,
               historyWidth: targets.ssrHistoryDepth.texture.width,
-              historyFrames: effect.historyFrames
+              historyFrames: effect.historyFrames,
+              settlingFrameCount: effect.settlingFrameCount
             };
           });
           assert(targets.released, `${quality}: switching quality releases old reflection targets`);
           assert(targets.captureReused, `${quality}: quality reuses scene capture`);
           assert.equal(targets.width, Math.max(1, Math.ceil(targets.expectedWidth * scale)));
           assert.equal(targets.historyWidth, targets.expectedWidth, 'camera depth history remains full resolution');
-          assert(targets.historyFrames >= 1 && targets.historyFrames <= 2, 'quality starts fresh history');
-          for (let frame = 0; frame < 4; frame++) await page.evaluate(() => window.cityScene.deck.redraw('warm quality preset'));
+          assert(targets.historyFrames >= 1 && targets.historyFrames <= targets.settlingFrameCount + 2, 'quality starts fresh history');
+          await waitForIdle();
+          const qualityFrames = await page.evaluate(() => window.cityScene.diagnostics.frames);
+          await page.waitForTimeout(100);
+          assert.equal(await page.evaluate(() => window.cityScene.diagnostics.frames), qualityFrames, `${quality}: returns to idle after bounded settling`);
+          assert.equal(await page.evaluate(() => window.cityScene.diagnostics.timeSeconds), 2, `${quality}: water time remains frozen`);
           const qualityImage = PNG.sync.read(await page.screenshot());
           let litPixels = 0;
           for (let vertical = 120; vertical < 650; vertical++) for (let horizontal = 350; horizontal < 950; horizontal++) {
@@ -161,18 +180,36 @@ try {
           window.cityScene.setReflectionDebugMode(0);
           window.reflectionTexture = window.cityScene.deck.props.effects.find(effect => effect.id === 'city-river-reflections').capture.getFrame('city').buffer.normalRoughnessTexture;
         });
+        await page.evaluate(() => window.cityScene.setTime(2));
+        assert(await page.evaluate(() => window.cityScene.deck.props._animate), 'reset starts bounded reflection drawing');
         await page.uncheck('#reflections');
+        assert(!await page.evaluate(() => window.cityScene.deck.props._animate), 'disabling reflections cancels settling');
         await page.waitForTimeout(150);
         assert.equal(await page.evaluate(() => window.reflectionTexture.destroyed), true, 'disabling SSR releases auxiliary textures');
         await page.check('#reflections');
-        await page.waitForTimeout(250);
+        await page.waitForFunction(() => window.cityScene.deck.props.effects.find(effect => effect.id === 'city-river-reflections')?.capture.getFrame('city'));
+        await waitForIdle();
         assert.equal(await page.evaluate(() => window.cityScene.deck.props.effects.find(effect => effect.id === 'city-river-reflections').capture.getFrame('city').buffer.normalRoughnessTexture.destroyed), false, 'enabling SSR recreates auxiliary textures');
+        const cameraChange = await page.evaluate(() => {
+          const scene = window.cityScene;
+          const effect = scene.deck.props.effects.find(effect => effect.id === 'city-river-reflections');
+          const longitude = scene.deck.getViewports()[0].longitude + 0.000005;
+          const before = {frames: effect.frameCount, budget: effect.settlingFrameCount, longitude};
+          scene.deck.setProps({initialViewState: {...scene.deck.props.initialViewState, longitude}});
+          return before;
+        });
+        await page.waitForFunction(longitude => window.cityScene.deck.getViewports()[0].longitude === longitude, cameraChange.longitude);
+        await waitForIdle();
+        const cameraFrames = await page.evaluate(() => window.cityScene.deck.props.effects.find(effect => effect.id === 'city-river-reflections').frameCount);
+        assert(cameraFrames - cameraChange.frames >= cameraChange.budget && cameraFrames - cameraChange.frames <= cameraChange.budget + 2, 'a small camera move schedules bounded settling without an explicit reset');
+        assert.equal(await page.evaluate(() => window.cityScene.diagnostics.timeSeconds), 2, 'camera settling keeps water paused');
       } else {
         assert(await page.locator('#reflection-quality').isDisabled(), 'WebGL disables reflection quality');
         assert(await page.locator('#reflections').isDisabled(), 'WebGL clearly disables the WebGPU reflection pass');
       }
       await page.selectOption('#camera', 'overhead');
       await page.waitForFunction(() => window.cityScene.deck.getViewports()[0].pitch === 0);
+      await waitForIdle();
       await page.screenshot({path: join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), `city-scene-${backend}-overhead.png`)});
       const picked = await page.evaluate(async () => {
         const position = window.cityScene.getFeatureScreenPosition('East 4.1');
@@ -220,8 +257,11 @@ try {
       await page.check('#buildings');
       await page.selectOption('#camera', 'waterfront');
       await page.waitForFunction(() => window.cityScene.deck.getViewports()[0].pitch === 68);
+      const timeBeforeResize = await page.evaluate(() => window.cityScene.diagnostics.timeSeconds);
       await page.setViewportSize({width: 1000, height: 720});
       await page.waitForFunction(() => window.cityScene.deck.width === 1000);
+      await waitForIdle();
+      assert.equal(await page.evaluate(() => window.cityScene.diagnostics.timeSeconds), timeBeforeResize, 'resize settles without advancing water');
       await page.selectOption('#camera', 'district');
       await page.waitForFunction(() => window.cityScene.deck.getViewports()[0].pitch === 52);
       await page.mouse.move(990, 710);
@@ -320,7 +360,7 @@ try {
       }
       // Compose the existing edge layer with water and the shared SSR capture.
       await page.selectOption('#camera', 'overhead');
-      await page.waitForTimeout(150);
+      await waitForIdle();
       const roof = await page.evaluate(() => {
         const scene = window.cityScene;
         const building = scene.features.find(feature => feature.name === 'East 4.1');
@@ -348,10 +388,10 @@ try {
       for (const reflections of backend === 'webgpu' ? [false, true] : [false]) {
         if (backend === 'webgpu') await page.locator('#reflections').setChecked(reflections);
         await page.selectOption('#edge-style', 'none');
-        await page.waitForTimeout(100);
+        await waitForIdle();
         const ordinaryRoof = PNG.sync.read(await page.screenshot());
         await page.selectOption('#edge-style', 'solid');
-        await page.waitForTimeout(100);
+        await waitForIdle();
         const solidRoof = PNG.sync.read(await page.screenshot());
         assert(changedRoofPixels(ordinaryRoof, solidRoof) > 20, `${backend}: solid edges visible with SSR=${reflections}`);
         await page.evaluate(() => {
@@ -361,7 +401,7 @@ try {
           window.cityEdgeCorners = layer.state.corners;
         });
         await page.selectOption('#edge-style', 'pencil');
-        await page.waitForTimeout(100);
+        await waitForIdle();
         assert(changedRoofPixels(solidRoof, PNG.sync.read(await page.screenshot())) > 20,
           `${backend}: pencil grain changes the roof edges with SSR=${reflections}`);
         assert(await page.evaluate(() => {
@@ -408,7 +448,7 @@ try {
       assert.equal(await page.evaluate(() => window.cityScene.diagnostics.frames), staticFrames, 'static edges do not animate when water is disabled');
       assert(await page.evaluate(() => window.cityScene.deck.props.layers.some(layer => layer?.id === 'city-building-edges')), 'water toggle preserves building edges');
       await page.uncheck('#buildings');
-      await page.waitForTimeout(100);
+      await page.waitForFunction(() => window.cityEdgeCorners.destroyed);
       assert(await page.evaluate(() => window.cityEdgeCorners.destroyed && !window.borrowedCityEdges.destroyed), 'hiding buildings releases edge-layer resources but preserves borrowed segments');
       assert(!await page.evaluate(() => window.cityScene.deck.props.layers.some(layer => layer?.id === 'city-building-edges')), 'hidden buildings have no stray strokes');
       await page.check('#buildings');
@@ -417,10 +457,11 @@ try {
       await page.evaluate(() => {window.cityScene.setTime(2); window.cityScene.setEdgeWidth(2.2);});
       await page.selectOption('#camera', 'waterfront');
       await page.waitForFunction(() => window.cityScene.deck.getViewports()[0].pitch === 68);
-      await page.waitForTimeout(100);
+      await waitForIdle();
       await page.screenshot({path: join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), `city-scene-${backend}-pencil-waterfront.png`)});
       assert(await page.evaluate(() => window.cityScene.deck.props.layers.find(layer => layer?.id === 'city-building-edges').props.segments === window.borrowedCityEdges), 'camera changes preserve world-anchored edge geometry');
       await page.selectOption('#camera', 'district');
+      await waitForIdle();
       await page.waitForTimeout(150);
       const screenshotPath = join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), `city-scene-${backend}.png`);
       const screenshot = PNG.sync.read(await page.screenshot({path: screenshotPath}));
@@ -434,7 +475,7 @@ try {
       }
       assert(colors.size > 20, `${backend}: scene contains shaded geometry`);
       assert.equal(await page.evaluate(() => window.cityScene.diagnostics.error), '');
-      await page.evaluate(() => { window.cityScene.finalize(); window.cityScene.finalize(); });
+      await page.evaluate(() => { window.cityScene.setTime(9); window.cityScene.finalize(); window.cityScene.finalize(); });
       assert.equal(await page.evaluate(() => window.borrowedWaterPositions.destroyed), true, 'application releases water positions on finalization');
       assert(await page.evaluate(() => window.borrowedCityEdges.destroyed), 'application releases edge segments on finalization');
       const frames = await page.evaluate(() => window.cityScene.diagnostics.frames);
