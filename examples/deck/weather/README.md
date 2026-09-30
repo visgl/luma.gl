@@ -7,7 +7,8 @@ Run `yarn workspace luma.gl-examples-deck-weather start`; the website route is
 Choose Clear, Rain, Snow, or Fog. Intensity controls the particle count, wind uses metres
 per second with direction clockwise from north, and visibility sets the fog extinction.
 Pause freezes the clock exactly; reset returns to the seeded initial particle positions.
-Camera movement remains available while paused. Time gaps above 0.1 seconds are dropped
+Camera movement remains available while paused. The View selector switches between map and globe
+projection; both use a local east/north/up metre frame for fog and particle sizing. Time gaps above 0.1 seconds are dropped
 so resuming a hidden or slow tab does not produce a large jump.
 
 `precipitation` and `heightFog` are reusable shader modules. `WeatherParticleLayer` connects
@@ -36,11 +37,16 @@ the base height and decays exponentially above it. The visibility slider uses `3
 as base extinction, corresponding to 2% transmittance through a homogeneous medium. Height
 falloff makes visibility greater above that base. The model uses a constant fog tint, without
 light scattering, shadowed fog, or temporal accumulation. Materials must opt into the fog
-module; it is not a whole-scene postprocess.
+module in this example. The same analytic integral also powers the height mode of
+`createVolumetricFogCompositeShaderPass` in `@luma.gl/effects`, demonstrated by Visualization City.
+That pass can fog opaque geometry from depth; transparent precipitation applies fog in its material
+afterward to avoid using the background depth. Neither path models a planet-scale atmosphere.
 
 Run `yarn workspace luma.gl-examples-deck-weather test:visual` for both-backend movement,
-pause, fog, depth-occlusion, surface-mask, and ownership checks. GPU module tests separately
-check analytic fog and seeded, world-anchored motion.
+pause, fog, map/globe projection, depth-occlusion, surface-mask, and ownership checks. GPU module tests separately
+check analytic fog and seeded, world-anchored motion. Projection tests round-trip local positions
+through the actual Deck shaders, including high latitudes and globe poles. The pinned Deck patch
+corrects its WGSL globe tangent-basis selection to match GLSL.
 
 The district geometry is rendered by `../river-district-layer.ts`, shared with the other riverfront
 examples. It uses luma.gl's Lambert material for lighting, optional `heightFog`, and `surfaceBuffer`

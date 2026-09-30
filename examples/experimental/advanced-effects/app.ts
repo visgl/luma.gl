@@ -88,6 +88,7 @@ type AdvancedEffectsSettings = {
   depthBlurEnabled: boolean;
   ssrEnabled: boolean;
   fogEnabled: boolean;
+  fogMode: 'screen-space' | 'height';
   outlinesEnabled: boolean;
   taaEnabled: boolean;
   motionBlurEnabled: boolean;
@@ -186,6 +187,7 @@ const SHADOW_QUALITY_SCALE: Record<'low' | 'balanced' | 'cinematic', number> = {
 
 const DEFAULT_SETTINGS: AdvancedEffectsSettings = {
   preset: 'Shadow Study',
+  fogMode: 'screen-space',
   shadowQuality: 'balanced',
   animate: true,
   split: 0.52,
@@ -529,6 +531,20 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           inverseProjectionMatrix,
           debugMode: this.settings.debugView === 'Reflections' ? 1 : 0
         },
+        heightFogPass: {
+          inverseViewProjectionMatrix: new Matrix4()
+            .translate([jitter[0] * 2, jitter[1] * 2, 0])
+            .multiplyRight(viewProjectionMatrix)
+            .invert(),
+          cameraPosition: eye,
+          upDirection: [0, 1, 0],
+          color: [0.53, 0.61, 0.67],
+          density: this.settings.preset === 'Foggy Depth' ? 0.035 : 0.012,
+          baseHeight: 0,
+          heightFalloff: 0.12,
+          backgroundDistance: FAR_PLANE,
+          clipDepthRange: [0, 1]
+        },
         volumetricFog: {
           density: this.settings.preset === 'Foggy Depth' ? 0.2 : 0.08,
           historyWeight: this.settings.shadowQuality === 'low' ? 0.08 : 0.18,
@@ -576,7 +592,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       pipelines.push(createSSRCompositeShaderPass({resolutionScale: scale}));
     }
     if (!shadowDebugView && this.settings.fogEnabled) {
-      pipelines.push(createVolumetricFogCompositeShaderPass());
+      pipelines.push(createVolumetricFogCompositeShaderPass({mode: this.settings.fogMode}));
     }
     if (!shadowDebugView && this.settings.outlinesEnabled) {
       pipelines.push(createOutlineCompositeShaderPass({normalSource: 'normal-texture'}));
@@ -852,10 +868,22 @@ function makeSettingsSchema(): SettingsSchema {
       },
       {
         id: 'atmosphere',
-        name: 'Volumetric Height Fog',
-        description: 'Compact atmospheric depth and stylized directional glow.',
+        name: 'Height Fog',
+        description: 'Choose analytic height fog or the stylized screen-space atmosphere.',
         initiallyCollapsed: true,
-        settings: [toggle('fogEnabled', 'Enable Height Fog')]
+        settings: [
+          toggle('fogEnabled', 'Enable Height Fog'),
+          {
+            name: 'fogMode',
+            label: 'Fog model',
+            type: 'select',
+            persist: 'none',
+            options: [
+              {value: 'screen-space', label: 'Screen-space'},
+              {value: 'height', label: 'Height (metres)'}
+            ]
+          }
+        ]
       },
       {
         id: 'outlines',

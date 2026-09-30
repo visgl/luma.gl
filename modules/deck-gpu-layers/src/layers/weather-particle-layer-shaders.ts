@@ -7,6 +7,7 @@ const UNIFORMS = `layout(std140) uniform weatherRenderUniforms {
   vec4 appearance;
   vec4 surfaceBounds;
   vec4 color;
+  vec3 cameraPosition;
 } weatherRender;`;
 export const weatherRender = {
   name: 'weatherRender',
@@ -14,17 +15,24 @@ export const weatherRender = {
     appearance: vec4<f32>,
     surfaceBounds: vec4<f32>,
     color: vec4<f32>,
+    cameraPosition: vec3<f32>,
   };
   @group(3) @binding(auto) var<uniform> weatherRender: weatherRenderUniforms;
   @group(3) @binding(7) var surfaceElevation: texture_2d<f32>;`,
   vs: UNIFORMS + '\nuniform highp sampler2D surfaceElevation;',
   fs: UNIFORMS,
-  uniformTypes: {appearance: 'vec4<f32>', surfaceBounds: 'vec4<f32>', color: 'vec4<f32>'},
+  uniformTypes: {
+    appearance: 'vec4<f32>',
+    surfaceBounds: 'vec4<f32>',
+    color: 'vec4<f32>',
+    cameraPosition: 'vec3<f32>'
+  },
   bindingLayout: [
     {name: 'weatherRender', group: 3},
     {name: 'surfaceElevation', group: 3, visibility: 1}
   ],
   defaultUniforms: {
+    cameraPosition: [0, 0, 0],
     appearance: [1.2, 12, 0, 0],
     surfaceBounds: [-1, -1, 2, 2],
     color: [0.75, 0.85, 0.95, 0.7]
@@ -41,7 +49,7 @@ struct WeatherVertex {
 @vertex fn vertexMain(@location(0) corner: vec2<f32>, @builtin(instance_index) identifier: u32) -> WeatherVertex {
   let position = precipitation_getPosition(identifier);
   let snow = weatherRender.appearance.z > 0.5;
-  let cameraPosition = project.cameraPosition / project.commonUnitsPerMeter;
+  let cameraPosition = weatherRender.cameraPosition;
   let variation = 0.65 + precipitation_random(identifier + 1337u) * 0.7;
   let width = weatherRender.appearance.x * project.devicePixelRatio * variation * clamp(350.0 / max(distance(cameraPosition, position), 1.0), 0.5, 3.0);
   let currentClip = project_position_to_clipspace(position, vec3<f32>(0.0), vec3<f32>(0.0));
@@ -78,7 +86,7 @@ struct WeatherVertex {
   if (weatherRender.appearance.z > 0.5) {coverage = 1.0 - smoothstep(0.3, 1.0, length(input.coordinates));}
   let opacity = weatherRender.color.a * input.opacity * coverage * layer.opacity;
   if (opacity < 0.002) {discard;}
-  return heightFog_getColor(vec4<f32>(weatherRender.color.rgb, opacity), input.worldPosition, project.cameraPosition / project.commonUnitsPerMeter);
+  return heightFog_getColor(vec4<f32>(weatherRender.color.rgb, opacity), input.worldPosition, weatherRender.cameraPosition);
 }
 `;
 export const VERTEX_SHADER = /* glsl */ `#version 300 es
@@ -90,7 +98,7 @@ out float opacity;
 void main() {
   vec3 position = precipitation_getPosition(uint(gl_InstanceID));
   bool snow = weatherRender.appearance.z > 0.5;
-  cameraPosition = project.cameraPosition / project.commonUnitsPerMeter;
+  cameraPosition = weatherRender.cameraPosition;
   float variation = 0.65 + precipitation_random(uint(gl_InstanceID) + 1337u) * 0.7;
   float width = weatherRender.appearance.x * project.devicePixelRatio * variation * clamp(350.0 / max(distance(cameraPosition, position), 1.0), 0.5, 3.0);
   vec4 currentClip = project_position_to_clipspace(position, vec3(0.0), vec3(0.0));

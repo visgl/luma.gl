@@ -1,5 +1,5 @@
 diff --git a/dist/index.cjs b/dist/index.cjs
-index 966d28dd008a077f22be496d5cb3b89a925531bf..90a1762d38ddc2e240545af9bcb7d8cbd64bc431 100644
+index 966d28dd008a077f22be496d5cb3b89a925531bf..97525c19e512429f79e7aa414f5979b96717f7d5 100644
 --- a/dist/index.cjs
 +++ b/dist/index.cjs
 @@ -395,6 +395,7 @@ var import_shadertools = require("@luma.gl/shadertools");
@@ -10,6 +10,42 @@ index 966d28dd008a077f22be496d5cb3b89a925531bf..90a1762d38ddc2e240545af9bcb7d8cb
  
  // dist/lib/constants.js
  var import_mjolnir = require("mjolnir.js");
+@@ -832,11 +833,10 @@ fn project_size_vec4(meters: vec4<f32>) -> vec4<f32> {
+ // Returns a rotation matrix aligning the z\u2011axis with the given up vector.
+ fn project_get_orientation_matrix(up: vec3<f32>) -> mat3x3<f32> {
+   let uz = normalize(up);
+-  let ux = select(
+-    vec3<f32>(1.0, 0.0, 0.0),
+-    normalize(vec3<f32>(uz.y, -uz.x, 0.0)),
+-    abs(uz.z) == 1.0
+-  );
++  var ux = vec3<f32>(1.0, 0.0, 0.0);
++  if (abs(uz.z) != 1.0) {
++    ux = normalize(vec3<f32>(uz.y, -uz.x, 0.0));
++  }
+   let uy = cross(uz, ux);
+   return mat3x3<f32>(ux, uy, uz);
+ }
+diff --git a/dist/shaderlib/project/project.wgsl.js b/dist/shaderlib/project/project.wgsl.js
+index 3a4cd4fedee8316781b7b3633d5f29ba4cf014b8..06da1e1e72698c6141ecb699800d9e69750bae60 100644
+--- a/dist/shaderlib/project/project.wgsl.js
++++ b/dist/shaderlib/project/project.wgsl.js
+@@ -129,11 +129,10 @@ fn project_size_vec4(meters: vec4<f32>) -> vec4<f32> {
+ // Returns a rotation matrix aligning the z‑axis with the given up vector.
+ fn project_get_orientation_matrix(up: vec3<f32>) -> mat3x3<f32> {
+   let uz = normalize(up);
+-  let ux = select(
+-    vec3<f32>(1.0, 0.0, 0.0),
+-    normalize(vec3<f32>(uz.y, -uz.x, 0.0)),
+-    abs(uz.z) == 1.0
+-  );
++  var ux = vec3<f32>(1.0, 0.0, 0.0);
++  if (abs(uz.z) != 1.0) {
++    ux = normalize(vec3<f32>(uz.y, -uz.x, 0.0));
++  }
+   let uy = cross(uz, ux);
+   return mat3x3<f32>(ux, uy, uz);
+ }
 diff --git a/dist.webgl-only/index.cjs b/dist.webgl-only/index.cjs
 index 545b82927189ff12c717c8c1aab07d8435407de4..aabaeee4238bbaac5d61b938b2fd55602ad2e680 100644
 --- a/dist.webgl-only/index.cjs
@@ -23,7 +59,7 @@ index 545b82927189ff12c717c8c1aab07d8435407de4..aabaeee4238bbaac5d61b938b2fd5560
  // dist/lib/constants.js
  var import_mjolnir = require("mjolnir.js");
 diff --git a/dist.webgl-only/shaderlib/project/project-functions.js b/dist.webgl-only/shaderlib/project/project-functions.js
-index bc1791b811e97ed5bc0b1d67474c67793e6ef2fc..d18b837ad196c2e48ea0005f1f96262c20b71352 100644
+index bc1791b811e97ed5bc0b1d67474c67793e6ef2fc..ead3d5f3e0c80d7884dbe3e2e8a8ee4428fdfaed 100644
 --- a/dist.webgl-only/shaderlib/project/project-functions.js
 +++ b/dist.webgl-only/shaderlib/project/project-functions.js
 @@ -7,7 +7,8 @@
@@ -37,7 +73,7 @@ index bc1791b811e97ed5bc0b1d67474c67793e6ef2fc..d18b837ad196c2e48ea0005f1f96262c
  const DEFAULT_COORDINATE_ORIGIN = [0, 0, 0];
  // In project.glsl, offset modes calculate z differently from LNG_LAT mode.
 diff --git a/dist.webgl-only/shaderlib/project/viewport-uniforms.js b/dist.webgl-only/shaderlib/project/viewport-uniforms.js
-index 21bf677dd8ddada10dfc23b7de5a832fad883e33..6782cf1da484c40ed5f3ea96ed207be67e4c860e 100644
+index 21bf677dd8ddada10dfc23b7de5a832fad883e33..c26db77562a50a47065993f3a4cfa6521df5f43d 100644
 --- a/dist.webgl-only/shaderlib/project/viewport-uniforms.js
 +++ b/dist.webgl-only/shaderlib/project/viewport-uniforms.js
 @@ -2,7 +2,8 @@
@@ -51,7 +87,7 @@ index 21bf677dd8ddada10dfc23b7de5a832fad883e33..6782cf1da484c40ed5f3ea96ed207be6
  import memoize from "../../utils/memoize.js";
  // To quickly set a vector to zero
 diff --git a/dist.webgl-only/viewports/globe-utils.js b/dist.webgl-only/viewports/globe-utils.js
-index 71905b438867e17b688f60272c146278353b1c78..23baab6918d428848aab0940b1040da50caf364e 100644
+index 71905b438867e17b688f60272c146278353b1c78..18fb662e7ee8981f882388e7e85a3f1b54b758bc 100644
 --- a/dist.webgl-only/viewports/globe-utils.js
 +++ b/dist.webgl-only/viewports/globe-utils.js
 @@ -1,7 +1,8 @@
@@ -65,7 +101,7 @@ index 71905b438867e17b688f60272c146278353b1c78..23baab6918d428848aab0940b1040da5
  import { zoomAdjust } from "./globe-viewport.js";
  const DEGREES_TO_RADIANS = Math.PI / 180;
 diff --git a/dist.webgl-only/viewports/globe-viewport.js b/dist.webgl-only/viewports/globe-viewport.js
-index 1f35572fc29957ed3bd4248034c6b42f2ab68cd8..9a5be6bc44598680a77661dc6995ac1893c44497 100644
+index 1f35572fc29957ed3bd4248034c6b42f2ab68cd8..4e245c8a0da95e1823d2bb8bf116441d9cdb3f40 100644
 --- a/dist.webgl-only/viewports/globe-viewport.js
 +++ b/dist.webgl-only/viewports/globe-viewport.js
 @@ -1,7 +1,9 @@
@@ -80,7 +116,7 @@ index 1f35572fc29957ed3bd4248034c6b42f2ab68cd8..9a5be6bc44598680a77661dc6995ac18
  import Viewport from "./viewport.js";
  import { PROJECTION_MODE } from "../lib/constants.js";
 diff --git a/dist.webgl-only/viewports/orthographic-viewport.js b/dist.webgl-only/viewports/orthographic-viewport.js
-index 71cd34ff180fd8ffd6def5af466fea54ebddba82..213098298a5430b9b9724ebbe9c5f1862468bdcf 100644
+index 71cd34ff180fd8ffd6def5af466fea54ebddba82..06644366c19fbd7c4a8b9f1cdd80c8edece74ad2 100644
 --- a/dist.webgl-only/viewports/orthographic-viewport.js
 +++ b/dist.webgl-only/viewports/orthographic-viewport.js
 @@ -2,7 +2,8 @@
@@ -94,7 +130,7 @@ index 71cd34ff180fd8ffd6def5af466fea54ebddba82..213098298a5430b9b9724ebbe9c5f186
  const viewMatrix = new Matrix4().lookAt({ eye: [0, 0, 1] });
  function getProjectionMatrix({ width, height, near, far, padding }) {
 diff --git a/dist.webgl-only/viewports/viewport.js b/dist.webgl-only/viewports/viewport.js
-index c3bc7d6f7f6dc785ac6f751e83ffe0b8c2ff0241..0ba0590ef251b97c160d4d7000a49673d456df8c 100644
+index c3bc7d6f7f6dc785ac6f751e83ffe0b8c2ff0241..919fb0bcd2dab292497581d3eba83d7a44a7744a 100644
 --- a/dist.webgl-only/viewports/viewport.js
 +++ b/dist.webgl-only/viewports/viewport.js
 @@ -3,7 +3,8 @@
@@ -108,7 +144,7 @@ index c3bc7d6f7f6dc785ac6f751e83ffe0b8c2ff0241..0ba0590ef251b97c160d4d7000a49673
  import { PROJECTION_MODE } from "../lib/constants.js";
  const DEGREES_TO_RADIANS = Math.PI / 180;
 diff --git a/dist.webgl-only/viewports/web-mercator-viewport.js b/dist.webgl-only/viewports/web-mercator-viewport.js
-index b480b63780bfc74229b18b15490e72f35601b15c..bd911b3cb98cee2ac461ed93555a0699ffcdd059 100644
+index b480b63780bfc74229b18b15490e72f35601b15c..16acbfe2e2ce1eecb2b05d0ce5b2cbfd26807a91 100644
 --- a/dist.webgl-only/viewports/web-mercator-viewport.js
 +++ b/dist.webgl-only/viewports/web-mercator-viewport.js
 @@ -5,7 +5,8 @@
@@ -135,6 +171,26 @@ index c249d2d88cbda7f7282b9e944e6fe9d5461565de..9f3f69d1db5e4da34d17706a616040b3
  import {addMetersToLngLat} from '@math.gl/web-mercator';
  
  import type {CoordinateSystem} from '../../lib/constants';
+diff --git a/src/shaderlib/project/project.wgsl.ts b/src/shaderlib/project/project.wgsl.ts
+index 26057f0d324eeed37cf995e0f7ce6f788b8999df..c35ec1829145f47c41153af0075c90aecb1de1f7 100644
+--- a/src/shaderlib/project/project.wgsl.ts
++++ b/src/shaderlib/project/project.wgsl.ts
+@@ -137,11 +137,10 @@ fn project_size_vec4(meters: vec4<f32>) -> vec4<f32> {
+ // Returns a rotation matrix aligning the z‑axis with the given up vector.
+ fn project_get_orientation_matrix(up: vec3<f32>) -> mat3x3<f32> {
+   let uz = normalize(up);
+-  let ux = select(
+-    vec3<f32>(1.0, 0.0, 0.0),
+-    normalize(vec3<f32>(uz.y, -uz.x, 0.0)),
+-    abs(uz.z) == 1.0
+-  );
++  var ux = vec3<f32>(1.0, 0.0, 0.0);
++  if (abs(uz.z) != 1.0) {
++    ux = normalize(vec3<f32>(uz.y, -uz.x, 0.0));
++  }
+   let uy = cross(uz, ux);
+   return mat3x3<f32>(ux, uy, uz);
+ }
 diff --git a/src/shaderlib/project/viewport-uniforms.ts b/src/shaderlib/project/viewport-uniforms.ts
 index 34a94ad66664908b13827ba2af3eaac6937cc123..b684aaa7603e1c891a6bf0ddd77fb1c5607896d5 100644
 --- a/src/shaderlib/project/viewport-uniforms.ts

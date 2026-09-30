@@ -64,6 +64,7 @@ try {
       await page.waitForFunction(() => window.weatherScene?.diagnostics.frames > 8, undefined, {
         timeout: 30_000
       });
+      assert.equal(await page.evaluate(() => window.weatherScene.diagnostics.error), '', `${backend}: scene initialization`);
       const moving = PNG.sync.read(await page.screenshot());
       await page.waitForTimeout(350);
       assert(
@@ -97,10 +98,31 @@ try {
       );
       await page.uncheck('#playing');
       await page.waitForTimeout(150);
-      const normalDepth = PNG.sync.read(await page.screenshot());
+      // Put snow inside an opaque building so this tests depth independently of roof masking.
       await page.evaluate(() => {
         const scene = window.weatherScene;
         window.originalWeatherLayers = scene.deck.props.layers;
+        const building = scene.deck.props.layers.find(layer => layer.id === 'district').props.features.find(
+          feature => feature.kind === 'building' && feature.center[0] === 122 && Math.abs(feature.center[1]) < 150
+        );
+        scene.deck.setProps({
+          layers: scene.deck.props.layers.map(layer => layer.id === 'weather' ? layer.clone({
+            particleCount: 2048,
+            surfaceTexture: null,
+            fog: {density: 0},
+            widthPixels: 6,
+            precipitation: {
+              seed: 29, fallSpeed: 0, turbulence: 0, wind: [0, 0],
+              volumeCenter: [building.center[0], building.center[1], building.center[2] + building.size[2] / 2],
+              volumeSize: building.size.map(value => value * 0.25)
+            }
+          }) : layer)
+        });
+      });
+      await page.waitForTimeout(150);
+      const normalDepth = PNG.sync.read(await page.screenshot());
+      await page.evaluate(() => {
+        const scene = window.weatherScene;
         scene.deck.setProps({
           layers: scene.deck.props.layers.map(layer =>
             layer.id === 'weather'
@@ -110,10 +132,8 @@ try {
         });
       });
       await page.waitForTimeout(150);
-      assert(
-        changedPixels(normalDepth, PNG.sync.read(await page.screenshot())) > 50,
-        `${backend}: opaque scene depth hides snow`
-      );
+      const occludedPixels = changedPixels(normalDepth, PNG.sync.read(await page.screenshot({path: join(tmpdir(), `weather-depth-always-${backend}.png`)})));
+      assert(occludedPixels > 50, `${backend}: opaque scene depth hides snow (${occludedPixels} pixels)`);
       await page.evaluate(() =>
         window.weatherScene.deck.setProps({layers: window.originalWeatherLayers})
       );
@@ -130,6 +150,21 @@ try {
         ) > 10000,
         `${backend}: visibility changes world-space fog`
       );
+      await page.selectOption('#projection', 'globe');
+      await page.selectOption('#preset', 'snow');
+      await page.evaluate(() => window.weatherScene.setVisibility(3000));
+      await page.waitForTimeout(200);
+      const globe = PNG.sync.read(await page.screenshot({path: join(tmpdir(), `weather-globe-${backend}.png`)}));
+      const localCamera = await page.evaluate(() => {
+        const layer = window.weatherScene.deck.layerManager.getLayers().find(layer => layer.id === 'weather');
+        return Array.from(layer.state.model.shaderInputs.getUniformValues().weatherRender.cameraPosition);
+      });
+      assert(localCamera.every(Number.isFinite) && Math.hypot(...localCamera) < 10000, `${backend}: globe camera is local metres`);
+      await page.evaluate(() => window.weatherScene.setIntensity(0));
+      await page.waitForTimeout(150);
+      assert(changedPixels(globe, PNG.sync.read(await page.screenshot())) > 200, `${backend}: snow remains visible on the globe`);
+      await page.evaluate(() => window.weatherScene.setIntensity(0.6));
+      await page.selectOption('#projection', 'map');
       await page.selectOption('#preset', 'snow');
       await page.evaluate(() => {
         window.weatherScene.setVisibility(5000);
@@ -176,10 +211,34 @@ try {
         true,
         `${backend}: application releases surface texture`
       );
+      assert.equal(await page.evaluate(() => window.weatherScene.diagnostics.error), '', `${backend}: scene errors`);
       assert.deepEqual(errors, [], `${backend}: GPU/browser errors`);
       console.log(
         `${backend}: rain, snow, fog, pause, depth occlusion, surface masking and cleanup passed`
       );
+      if (backend === 'webgl') {
+        for (const unavailable of ['absent', 'null', 'rejected']) {
+          const fallbackPage = await browser.newPage();
+          const fallbackErrors = [];
+          fallbackPage.on('pageerror', error => fallbackErrors.push(error.message));
+          await fallbackPage.addInitScript(mode => {
+            Object.defineProperty(navigator, 'gpu', {value: mode === 'absent' ? undefined : {
+              requestAdapter: async () => {
+                if (mode === 'rejected') throw new Error('Adapter unavailable');
+                return null;
+              }
+            }});
+          }, unavailable);
+          await fallbackPage.goto(process.env.WEATHER_EXAMPLE_URL || server.resolvedUrls.local[0]);
+          await fallbackPage.waitForFunction(() => document.body.dataset.ready === 'true', undefined, {timeout: 60_000});
+          assert.equal(await fallbackPage.evaluate(() => window.weatherScene.diagnostics.backend), 'webgl', `default falls back when WebGPU is ${unavailable}`);
+          assert.equal(await fallbackPage.locator('#backend').inputValue(), 'webgl');
+          await fallbackPage.evaluate(() => window.weatherScene.finalize());
+          assert.deepEqual(fallbackErrors, []);
+          await fallbackPage.close();
+        }
+        console.log('Default backend: absent, null and rejected WebGPU adapter fallback passed');
+      }
     } finally {
       await browser.close();
     }

@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {COORDINATE_SYSTEM, Deck, MapView, type Viewport} from '@deck.gl/core';
+import {COORDINATE_SYSTEM, Deck, MapView, _GlobeView, type Viewport} from '@deck.gl/core';
 import type {Device, Texture} from '@luma.gl/core';
 import type {HeightFogProps, PrecipitationProps} from '@luma.gl/shadertools';
-import {WeatherParticleLayer} from '@deck.gl-community/gpu-layers';
+import {getMeterOffsetPosition, WeatherParticleLayer} from '@deck.gl-community/gpu-layers';
 import {CITY_ORIGIN, makeCityFeatures, type CityFeature} from '../river-district-data';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
 import {RiverDistrictLayer} from '../river-district-layer';
@@ -31,7 +31,7 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
   });
   const diagnostics = {frames: 0, time: 0, error: '', backend: '', finalized: false};
   const deviceProps = getDeckExampleProps(options);
-  const deck = new Deck({
+  const deck = new Deck<MapView | _GlobeView>({
     parent,
     ...deviceProps,
     deviceProps: {
@@ -72,11 +72,10 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
     }
   });
   function getPrecipitation(viewport: Viewport): PrecipitationProps {
-    const origin = viewport.projectPosition(CITY_ORIGIN);
     const target = viewport.projectPosition(
       viewport.unproject([viewport.width / 2, viewport.height / 2])
     );
-    const scale = viewport.getDistanceScales(CITY_ORIGIN).metersPerUnit;
+    const center = getMeterOffsetPosition(viewport, CITY_ORIGIN, target);
     const angle = (windDirection * Math.PI) / 180;
     return {
       seed: 29,
@@ -84,7 +83,7 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
       turbulence: preset === 'snow' ? 2 : 0,
       wind: [Math.sin(angle) * windSpeed, Math.cos(angle) * windSpeed],
       volumeSize: [1500, 1800, 450],
-      volumeCenter: [(target[0] - origin[0]) * scale[0], (target[1] - origin[1]) * scale[1], 225]
+      volumeCenter: [center[0], center[1], 225]
     };
   }
   function updateLayers() {
@@ -128,6 +127,12 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
     diagnostics,
     get surfaceTexture() {
       return surfaceTexture;
+    },
+    setProjection(value: 'map' | 'globe') {
+      deck.setProps({
+        views:
+          value === 'globe' ? new _GlobeView({controller: true}) : new MapView({controller: true})
+      });
     },
     setPreset(value: WeatherPreset) {
       preset = value;

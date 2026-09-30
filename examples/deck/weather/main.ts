@@ -3,16 +3,19 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {createWeatherScene, type WeatherPreset} from './app';
+import {resolveDeckExampleDeviceType} from '../deck-example-device';
 declare global {
   interface Window {
     weatherScene: ReturnType<typeof createWeatherScene>;
   }
 }
 const backend = document.querySelector<HTMLSelectElement>('#backend')!;
-backend.value =
-  new URLSearchParams(location.search).get('backend') === 'webgl' ? 'webgl' : 'webgpu';
+const deviceType = await resolveDeckExampleDeviceType(
+  new URLSearchParams(location.search).get('backend')
+);
+backend.value = deviceType;
 const scene = createWeatherScene(document.querySelector<HTMLDivElement>('#scene')!, {
-  deviceType: backend.value === 'webgl' ? 'webgl' : 'webgpu'
+  deviceType
 });
 window.weatherScene = scene;
 backend.addEventListener('change', () => {
@@ -50,3 +53,8 @@ scene.ready
     document.querySelector('#status')!.textContent = error.message;
   });
 window.addEventListener('pagehide', () => scene.finalize());
+
+const projection = document.querySelector<HTMLSelectElement>('#projection')!;
+projection.addEventListener('change', () =>
+  scene.setProjection(projection.value === 'globe' ? 'globe' : 'map')
+);

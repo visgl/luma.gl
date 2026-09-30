@@ -13,6 +13,7 @@ import {
 } from '@deck.gl/core';
 import {assert, type Buffer, type RenderPass, type Texture} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
+import {getMeterOffsetPosition} from '../projection/meter-offset-position';
 import {
   heightFog,
   precipitation,
@@ -138,6 +139,7 @@ export class WeatherParticleLayer extends Layer<WeatherParticleLayerProps> {
         props.surfaceTexture.device === this.context.device &&
           props.surfaceTexture.format === 'r32float'
       );
+    this.state.model.setParameters({...PARAMETERS, ...props.parameters});
     this.state.model.setInstanceCount(props.particleCount!);
     this.state.model.setBindings({
       surfaceElevation: props.surfaceTexture || this.state.emptySurface
@@ -158,6 +160,11 @@ export class WeatherParticleLayer extends Layer<WeatherParticleLayerProps> {
       },
       heightFog: props.fog,
       weatherRender: {
+        cameraPosition: getMeterOffsetPosition(
+          this.context.viewport,
+          props.coordinateOrigin!,
+          this.context.viewport.cameraPosition
+        ),
         appearance: [
           props.widthPixels,
           props.streakLength,
