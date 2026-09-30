@@ -176,6 +176,44 @@ try {
           assert(litPixels > 1000, `${quality}: produces visible reflection radiance`);
         }
 
+        const captureBeforeViews = await page.evaluate(() => {
+          window.captureBeforeViews = window.cityScene.deck.props.effects.find(effect => effect.id === 'city-river-reflections').capture.getFrame('city').buffer;
+          return window.cityScene.diagnostics.timeSeconds;
+        });
+        await page.selectOption('#reflection-view', '3');
+        const fallbackImage = PNG.sync.read(await page.screenshot({path: join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), 'city-scene-material-fallback.png')}));
+        await page.selectOption('#reflection-view', '2');
+        const coverageImage = PNG.sync.read(await page.screenshot({path: join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), 'city-scene-reflection-coverage.png')}));
+        await page.selectOption('#reflection-view', '0');
+        const combinedImage = PNG.sync.read(await page.screenshot());
+        const waterSamples = await page.evaluate(async () => {
+          const deck = window.cityScene.deck;
+          const viewport = deck.getViewports()[0];
+          const samples = [];
+          for (const longitudeOffset of [-0.0003, 0, 0.0003]) {
+            for (let latitudeIndex = -8; latitudeIndex <= 8; latitudeIndex++) {
+              const [horizontal, vertical] = viewport.project([-74.006 + longitudeOffset, 40.7128 + latitudeIndex * 0.0004]);
+              if (horizontal < 350 || horizontal >= 950 || vertical < 120 || vertical >= 650) continue;
+              const picked = await deck.pickObjectAsync({x: horizontal, y: vertical});
+              if (picked?.object?.kind === 'water') samples.push([Math.floor(horizontal), Math.floor(vertical)]);
+            }
+          }
+          return samples;
+        });
+        let fallbackSamples = 0;
+        for (const [horizontal, vertical] of waterSamples) {
+          const offset = (vertical * coverageImage.width + horizontal) * 4;
+          // Exact zero-confidence debug color: this ray has no reliable screen-space contribution.
+          if (coverageImage.data[offset] !== 11 || coverageImage.data[offset + 1] !== 20 || coverageImage.data[offset + 2] !== 56) continue;
+          fallbackSamples++;
+          for (const channel of [0, 1, 2]) assert(Math.abs(combinedImage.data[offset + channel] - fallbackImage.data[offset + channel]) <= 3, 'unresolved water reflections retain the material fallback');
+        }
+        assert(fallbackSamples > 0, 'sample visible water with zero screen-space reflection confidence');
+        assert(countSceneDifferences(fallbackImage, combinedImage) > 100, 'scene reflections contribute beyond the sky material fallback');
+        assert(countSceneDifferences(coverageImage, combinedImage) > 1000, 'coverage view distinguishes reflection confidence from the final image');
+        assert.equal(await page.evaluate(() => window.cityScene.diagnostics.timeSeconds), captureBeforeViews, 'debug views preserve the paused clock');
+        assert(await page.evaluate(() => window.captureBeforeViews === window.cityScene.deck.props.effects.find(effect => effect.id === 'city-river-reflections').capture.getFrame('city').buffer), 'debug views reuse capture targets');
+
         await page.evaluate(() => {
           window.cityScene.setReflectionDebugMode(0);
           window.reflectionTexture = window.cityScene.deck.props.effects.find(effect => effect.id === 'city-river-reflections').capture.getFrame('city').buffer.normalRoughnessTexture;
@@ -186,6 +224,9 @@ try {
         assert(!await page.evaluate(() => window.cityScene.deck.props._animate), 'disabling reflections cancels settling');
         await page.waitForTimeout(150);
         assert.equal(await page.evaluate(() => window.reflectionTexture.destroyed), true, 'disabling SSR releases auxiliary textures');
+        assert(await page.locator('#reflection-view').isDisabled(), 'disabling SSR disables its debug views');
+        const withoutReflections = PNG.sync.read(await page.screenshot());
+        assert(countSceneDifferences(fallbackImage, withoutReflections) < 1000, 'material fallback agrees with ordinary rendering when SSR is disabled');
         await page.check('#reflections');
         await page.waitForFunction(() => window.cityScene.deck.props.effects.find(effect => effect.id === 'city-river-reflections')?.capture.getFrame('city'));
         await waitForIdle();
@@ -205,6 +246,7 @@ try {
         assert.equal(await page.evaluate(() => window.cityScene.diagnostics.timeSeconds), 2, 'camera settling keeps water paused');
       } else {
         assert(await page.locator('#reflection-quality').isDisabled(), 'WebGL disables reflection quality');
+        assert(await page.locator('#reflection-view').isDisabled(), 'WebGL retains sky material and disables SSR views');
         assert(await page.locator('#reflections').isDisabled(), 'WebGL clearly disables the WebGPU reflection pass');
       }
       await page.selectOption('#camera', 'overhead');
@@ -271,6 +313,26 @@ try {
       await page.waitForTimeout(100);
       await page.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur());
       const firstWaterImage = PNG.sync.read(await page.screenshot());
+      await page.evaluate(() => {
+        const deck = window.cityScene.deck;
+        const water = deck.props.layers.find(layer => layer?.id === 'river-water');
+        window.waterMaterialBeforeSky = water.props.material;
+        window.waterModelBeforeSky = water.state.model;
+        deck.setProps({layers: deck.props.layers.map(layer => layer === water ? water.clone({material: {...water.props.material, skyZenithColor: [1, 0.05, 0.05]}}) : layer)});
+      });
+      await waitForIdle();
+      const customSkyImage = PNG.sync.read(await page.screenshot());
+      assert(countSceneDifferences(firstWaterImage, customSkyImage) > 100, `${backend}: custom sky color changes the material fallback`);
+      await page.evaluate(() => {
+        const deck = window.cityScene.deck;
+        const water = deck.props.layers.find(layer => layer?.id === 'river-water');
+        deck.setProps({layers: deck.props.layers.map(layer => layer === water ? water.clone({material: window.waterMaterialBeforeSky}) : layer)});
+      });
+      await waitForIdle();
+      const restoredSkyImage = PNG.sync.read(await page.screenshot());
+      assert.equal(countSceneDifferences(firstWaterImage, restoredSkyImage), 0, `${backend}: removing the custom sky prop restores default shading`);
+      assert(await page.evaluate(() => window.waterModelBeforeSky === window.cityScene.deck.props.layers.find(layer => layer?.id === 'river-water').state.model), `${backend}: sky updates reuse the water model`);
+
       await page.selectOption('#water-preset', 'slate');
       await page.waitForTimeout(100);
       assert.equal(await page.locator('#water-color').inputValue(), '#67747a');
@@ -489,4 +551,15 @@ try {
   }
 } finally {
   await server.close();
+}
+
+function countSceneDifferences(first, second) {
+  let count = 0;
+  for (let vertical = 120; vertical < 650; vertical++) {
+    for (let horizontal = 350; horizontal < 950; horizontal++) {
+      const offset = (vertical * first.width + horizontal) * 4;
+      if ([0, 1, 2].some(channel => Math.abs(first.data[offset + channel] - second.data[offset + channel]) > 3)) count++;
+    }
+  }
+  return count;
 }

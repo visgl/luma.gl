@@ -12,6 +12,7 @@ only its render model; the application must release the buffer after removing/fi
 ```ts
 const water = new WaterSurfaceLayer({
   id: 'river',
+  style: 'river',
   positions,
   vertexCount,
   coordinateOrigin: [-74.006, 40.7128, 0],
@@ -27,6 +28,13 @@ surface (`index: 0`). Supply separate layers for independently selectable surfac
 seconds or a callback; the caller schedules frames, for example with Deck's `_animate` option, and
 disables animation when paused. Material defaults use opaque water and planar UV coordinates in
 local meters, so ripple wavelength is independent of the polygon's triangulation.
+`style: 'river'` selects the separate layered-ripple material; `'classic'` retains the original
+material and remains the default. The River material includes a directional sky fallback using
+a horizon tint derived from `material.fresnelColor` and `material.skyZenithColor` above it, in linear RGB.
+`material.skyUpDirection` defaults to `[0, 0, 1]`, appropriate for this local map layer. These
+parameters use the same coordinate frame as the material normal. The sky approximation adds no
+textures or capture passes and remains available when screen-space reflections are disabled.
+
 The prototype assumes a flat local surface with a +Z normal and fixed ambient/directional lighting.
 It provides animated normal shading, not geometry displacement, terrain draping, scene reflections,
 or general LayerExtension support. See `examples/deck/city-scene` for a complete application.

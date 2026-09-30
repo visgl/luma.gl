@@ -41,7 +41,19 @@ runs before Deck's display pass, and reflections are installed as this single-vi
 effect. Deck layers must explicitly opt into capture; reflective surfaces also provide normal/roughness output. WebGL keeps
 the procedural material and disables the reflection control.
 
-SSR can only reflect surfaces visible in the current frame; screen-edge and occlusion gaps remain.
+SSR can only reflect surfaces visible in the current frame; screen-edge and occlusion gaps retain
+the underlying material. River water uses a directional sky gradient in its material: the reflection
+vector samples a horizon tint derived from `fresnelColor` and a configurable `skyZenithColor`, around
+`skyUpDirection` (Z-up by default). This stays attached to the scene and runs on both backends without
+an environment texture or another render pass. It approximates sky radiance; it does not invent
+hidden buildings, capture clouds, or simulate atmospheric scattering. Classic water is unchanged.
+
+**Reflection view** exposes the final image, scene reflection radiance, reflection coverage, and the
+material fallback with the SSR contribution suppressed. Coverage runs from blue (little or no SSR)
+to gold (higher confidence); this is reflection confidence, not a visibility map of hidden geometry.
+Material fallback includes the surface tint and direct lighting as well as sky shading. Debug views
+reuse the existing composite and preserve capture/history allocations. These controls require
+WebGPU; WebGL retains the same River sky material without scene reflections.
 Camera-only temporal accumulation follows the static district through camera movement. Each
 history tap must match the reprojected depth, surface normal, and roughness; a neighborhood clamp
 limits stale reflection colors. The animated water's changing normals can reject history. Camera

@@ -6,6 +6,8 @@ export const RIVER_WATER_WGSL = /* wgsl */ `\
 struct riverWaterMaterialUniforms {
   enabled: i32,
   flowDirection: vec2<f32>,
+  skyZenithColor: vec3<f32>,
+  skyUpDirection: vec3<f32>,
 };
 
 @group(3) @binding(auto) var<uniform> riverWaterMaterial : riverWaterMaterialUniforms;
@@ -79,6 +81,13 @@ fn riverWater_getNormal(
     (gradient.x * tangent + gradient.y * bitangent));
 }
 
+// Camera-independent sky approximation; missing scene reflections retain this material color.
+fn riverWater_getSkyColor(reflectionDirection: vec3<f32>) -> vec3<f32> {
+  let elevation = clamp(dot(normalize(reflectionDirection), normalize(riverWaterMaterial.skyUpDirection)), 0.0, 1.0);
+  let horizonColor = mix(waterMaterial.fresnelColor, riverWaterMaterial.skyZenithColor, 0.32);
+  return mix(horizonColor, riverWaterMaterial.skyZenithColor, smoothstep(0.0, 1.0, elevation));
+}
+
 fn riverWater_getColorMapped(
   cameraPosition: vec3<f32>,
   position_worldspace: vec3<f32>,
@@ -92,7 +101,7 @@ fn riverWater_getColorMapped(
   let viewDirection = normalize(cameraPosition - position_worldspace);
   let fresnel = pow(1.0 - max(dot(viewDirection, waterNormal), 0.0), 3.2);
   let deepColor = waterMaterial.baseColor * vec3<f32>(0.52, 0.74, 0.9);
-  let reflectedColor = mix(waterMaterial.fresnelColor, vec3<f32>(0.22, 0.48, 0.57), 0.32);
+  let reflectedColor = riverWater_getSkyColor(reflect(-viewDirection, waterNormal));
   let surfaceColor = mix(deepColor, reflectedColor, clamp(fresnel * 0.78, 0.0, 0.78));
   var color = surfaceColor * (0.32 + 0.68 * lighting.ambientColor);
 
@@ -116,6 +125,8 @@ export const RIVER_WATER_GLSL = /* glsl */ `\
 layout(std140) uniform riverWaterMaterialUniforms {
   uniform int enabled;
   uniform vec2 flowDirection;
+  uniform vec3 skyZenithColor;
+  uniform vec3 skyUpDirection;
 } riverWaterMaterial;
 
 vec2 riverWater_getFlowCoordinates(vec2 coordinates) {
@@ -182,6 +193,13 @@ vec3 riverWater_getNormal(
     (gradient.x * tangent + gradient.y * bitangent));
 }
 
+// Camera-independent sky approximation; missing scene reflections retain this material color.
+vec3 riverWater_getSkyColor(vec3 reflectionDirection) {
+  float elevation = clamp(dot(normalize(reflectionDirection), normalize(riverWaterMaterial.skyUpDirection)), 0.0, 1.0);
+  vec3 horizonColor = mix(waterMaterial.fresnelColor, riverWaterMaterial.skyZenithColor, 0.32);
+  return mix(horizonColor, riverWaterMaterial.skyZenithColor, smoothstep(0.0, 1.0, elevation));
+}
+
 vec4 riverWater_getColorMapped(
   vec3 cameraPosition,
   vec3 position_worldspace,
@@ -195,7 +213,7 @@ vec4 riverWater_getColorMapped(
   vec3 viewDirection = normalize(cameraPosition - position_worldspace);
   float fresnel = pow(1.0 - max(dot(viewDirection, waterNormal), 0.0), 3.2);
   vec3 deepColor = waterMaterial.baseColor * vec3(0.52, 0.74, 0.9);
-  vec3 reflectedColor = mix(waterMaterial.fresnelColor, vec3(0.22, 0.48, 0.57), 0.32);
+  vec3 reflectedColor = riverWater_getSkyColor(reflect(-viewDirection, waterNormal));
   vec3 surfaceColor = mix(deepColor, reflectedColor, clamp(fresnel * 0.78, 0.0, 0.78));
   vec3 color = surfaceColor * (0.32 + 0.68 * lighting.ambientColor);
 

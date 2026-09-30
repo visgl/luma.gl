@@ -13,7 +13,12 @@ import {
 } from '@deck.gl/core';
 import type {Buffer, RenderPass} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import {riverWaterMaterial, waterMaterial, type WaterMaterialProps} from '@luma.gl/shadertools';
+import {
+  riverWaterMaterial,
+  waterMaterial,
+  type WaterMaterialProps,
+  type RiverWaterMaterialProps
+} from '@luma.gl/shadertools';
 import {surfaceBuffer} from './surface-buffer';
 
 export type WaterSurfaceLayerProps = LayerProps & {
@@ -21,7 +26,8 @@ export type WaterSurfaceLayerProps = LayerProps & {
   positions: Buffer;
   vertexCount: number;
   /** Surface shading parameters. Wave coordinates are local east/north meters. */
-  material?: Omit<WaterMaterialProps, 'mapping' | 'time'>;
+  material?: Omit<WaterMaterialProps, 'mapping' | 'time'> &
+    Pick<RiverWaterMaterialProps, 'skyZenithColor' | 'skyUpDirection'>;
   /** Select the original shared water shader or the layered river surface variant. */
   style?: 'classic' | 'river';
   /** Local east/north direction that river waves and shimmer follow. */
@@ -98,18 +104,21 @@ export class WaterSurfaceLayer extends Layer<WaterSurfaceLayerProps> {
       parameters.depthWriteEnabled = true;
     }
     this.state.model.setParameters(parameters);
+    const {skyZenithColor, skyUpDirection, ...material} = this.props.material || {};
     this.state.model.shaderInputs.setProps({
       waterMaterial: {
         ...waterMaterial.defaultUniforms,
         mapping: 'uv',
         coordinateScale: [0.08, 0.08],
         opacity: 1,
-        ...this.props.material,
+        ...material,
         time: typeof this.props.time === 'function' ? this.props.time() : this.props.time
       },
       riverWaterMaterial: {
         enabled: this.props.style === 'river' ? 1 : 0,
-        flowDirection: this.props.flowDirection
+        flowDirection: this.props.flowDirection,
+        skyZenithColor: skyZenithColor ?? riverWaterMaterial.defaultUniforms!.skyZenithColor,
+        skyUpDirection: skyUpDirection ?? riverWaterMaterial.defaultUniforms!.skyUpDirection
       },
       lighting: {
         enabled: true,

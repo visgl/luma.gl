@@ -143,7 +143,11 @@ export class RiverReflectionEffect implements Effect {
           normalThreshold: 0.96
         },
         ssrSpatial: {inverseProjectionMatrix},
-        ssrComposite: {inverseProjectionMatrix, strength: 1, debugMode: this.debugMode}
+        ssrComposite: {
+          inverseProjectionMatrix,
+          strength: this.debugMode === 3 ? 0 : 1,
+          debugMode: this.debugMode === 3 ? 0 : this.debugMode
+        }
       }
     });
     if (!outputTexture) return options.inputBuffer;

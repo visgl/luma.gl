@@ -21,6 +21,7 @@ const edgeWidth = document.querySelector<HTMLInputElement>('#edge-width');
 const water = document.querySelector<HTMLInputElement>('#water');
 const reflectionQuality = document.querySelector<HTMLSelectElement>('#reflection-quality');
 const reflections = document.querySelector<HTMLInputElement>('#reflections');
+const reflectionView = document.querySelector<HTMLSelectElement>('#reflection-view');
 const waterStyle = document.querySelector<HTMLSelectElement>('#water-style');
 const waterPreset = document.querySelector<HTMLSelectElement>('#water-preset');
 const waterColor = document.querySelector<HTMLInputElement>('#water-color');
@@ -38,6 +39,7 @@ if (
   !water ||
   !reflections ||
   !reflectionQuality ||
+  !reflectionView ||
   !waterStyle ||
   !waterPreset ||
   !waterColor ||
@@ -56,6 +58,7 @@ const edgeWidthControl = edgeWidth;
 const waterControl = water;
 const reflectionsControl = reflections;
 const reflectionQualityControl = reflectionQuality;
+const reflectionViewControl = reflectionView;
 const waterStyleControl = waterStyle;
 const waterPresetControl = waterPreset;
 const waterColorControl = waterColor;
@@ -101,6 +104,8 @@ async function startScene() {
       : '';
     reflectionQualityControl.disabled = reflectionsControl.disabled;
     reflectionQualityControl.value = 'balanced';
+    reflectionViewControl.value = '0';
+    reflectionViewControl.disabled = reflectionsControl.disabled;
     waterStyleControl.value = 'river';
     waterPresetControl.value = 'teal';
     waterColorControl.value = '#0b4252';
@@ -132,7 +137,11 @@ water.addEventListener('change', () => scene.setWaterEnabled(waterControl.checke
 reflections.addEventListener('change', () => {
   scene.setReflectionsEnabled(reflectionsControl.checked);
   reflectionQualityControl.disabled = !reflectionsControl.checked;
+  reflectionViewControl.disabled = !reflectionsControl.checked;
 });
+reflectionView.addEventListener('change', () =>
+  scene.setReflectionDebugMode(Number(reflectionViewControl.value))
+);
 reflectionQuality.addEventListener('change', () => {
   const quality = reflectionQualityControl.value;
   scene.setReflectionQuality(quality === 'fast' || quality === 'detailed' ? quality : 'balanced');
