@@ -2750,7 +2750,7 @@ __metadata:
 
 "@deck.gl/core@patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch":
   version: 9.4.0
-  resolution: "@deck.gl/core@patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch::version=9.4.0&hash=ecaf04"
+  resolution: "@deck.gl/core@patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch::version=9.4.0&hash=307be7"
   dependencies:
     "@loaders.gl/core": "npm:^4.4.3"
     "@loaders.gl/images": "npm:^4.4.3"
@@ -2769,7 +2769,7 @@ __metadata:
     "@types/offscreencanvas": "npm:^2019.6.4"
     gl-matrix: "npm:^3.0.0"
     mjolnir.js: "npm:^3.1.1"
-  checksum: 10c0/e515a98a88fddab98d35b9ca2f9c2203c8a82ff6862bad5714839abc20c68480c2209cb6ad841aa9a6334353fd7ff07713a95d8f0ee625047eecd199ece9ec1b
+  checksum: 10c0/2868cac4f77bf83122ede54b5871fc1662cff7c5b0a0317a4afe304c6cef6589788115833db9170e140929888446ddf77c2f45399725cad6111a398e116e60bd
   languageName: node
   linkType: hard
 

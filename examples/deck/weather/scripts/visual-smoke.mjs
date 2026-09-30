@@ -137,6 +137,28 @@ try {
       await page.evaluate(() =>
         window.weatherScene.deck.setProps({layers: window.originalWeatherLayers})
       );
+      // Disabled precipitation must stop both the clock and frame requests, even with Animate enabled.
+      await page.check('#playing');
+      for (const preset of ['clear', 'fog', 'snow']) {
+        await page.selectOption('#preset', preset);
+        if (preset === 'snow') await page.evaluate(() => window.weatherScene.setIntensity(0));
+        await page.waitForTimeout(250);
+        const idle = await page.evaluate(() => ({...window.weatherScene.diagnostics}));
+        await page.waitForTimeout(250);
+        const settled = await page.evaluate(() => ({...window.weatherScene.diagnostics}));
+        assert.equal(settled.frames, idle.frames, `${backend}: ${preset} disabled precipitation stops redraws`);
+        assert.equal(settled.time, idle.time, `${backend}: ${preset} disabled precipitation freezes time`);
+        await page.evaluate(() => window.weatherScene.setWindDirection(90));
+        await page.waitForTimeout(150);
+        assert.equal(await page.evaluate(() => window.weatherScene.diagnostics.time), idle.time,
+          `${backend}: an idle settings redraw does not advance time`);
+      }
+      const stoppedTime = await page.evaluate(() => window.weatherScene.diagnostics.time);
+      await page.evaluate(() => window.weatherScene.setIntensity(0.6));
+      await page.waitForTimeout(250);
+      assert(await page.evaluate(() => window.weatherScene.diagnostics.time) > stoppedTime,
+        `${backend}: restoring particle count resumes animation`);
+      await page.uncheck('#playing');
       await page.selectOption('#preset', 'fog');
       await page.evaluate(() => window.weatherScene.setVisibility(5000));
       await page.waitForTimeout(150);

@@ -20,6 +20,7 @@
     createCanvasContext: true,
     featureLevel: 'max'
   });
-  makeAnimationLoop(AnimationLoopTemplate, {device}).start();
+  window.visualizationCity = makeAnimationLoop(AnimationLoopTemplate, {device});
+  window.visualizationCity.start();
 </script>
 <body><aside id="controls" data-info-box-appearance="cinematic"></aside></body>

@@ -48,7 +48,7 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
       bearing: -25
     },
     layers: [],
-    _animate: true,
+    _animate: isPrecipitationAnimating(),
     onDeviceInitialized: device => {
       surfaceTexture = makeSurfaceTexture(device, features);
       diagnostics.backend = device.type;
@@ -59,8 +59,10 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
     },
     onBeforeRender: () => {
       const now = performance.now();
-      if (playing && previousTime) time += Math.min((now - previousTime) / 1000, 0.1);
-      previousTime = now;
+      if (isPrecipitationAnimating() && previousTime) {
+        time += Math.min((now - previousTime) / 1000, 0.1);
+      }
+      previousTime = isPrecipitationAnimating() ? now : 0;
       diagnostics.time = time;
     },
     onAfterRender: () => {
@@ -71,6 +73,12 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
       rejectReady(error);
     }
   });
+  function getParticleCount(): number {
+    return Math.round(intensity * 20000);
+  }
+  function isPrecipitationAnimating(): boolean {
+    return playing && getParticleCount() > 0 && (preset === 'rain' || preset === 'snow');
+  }
   function getPrecipitation(viewport: Viewport): PrecipitationProps {
     const target = viewport.projectPosition(
       viewport.unproject([viewport.width / 2, viewport.height / 2])
@@ -95,6 +103,7 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
       heightFalloff: preset === 'fog' ? 0.012 : 0.003
     };
     deck.setProps({
+      _animate: isPrecipitationAnimating(),
       layers: [
         new RiverDistrictLayer({
           id: 'district',
@@ -109,7 +118,7 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
           coordinateOrigin: CITY_ORIGIN,
           weather: preset === 'snow' ? 'snow' : 'rain',
           time: () => time,
-          particleCount: Math.round(intensity * 20000),
+          particleCount: getParticleCount(),
           precipitation: getPrecipitation,
           fog,
           widthPixels: preset === 'snow' ? 4 : 1.4,
@@ -157,7 +166,7 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
     setPlaying(value: boolean) {
       playing = value;
       previousTime = 0;
-      deck.setProps({_animate: value});
+      deck.setProps({_animate: isPrecipitationAnimating()});
     },
     reset() {
       time = 0;

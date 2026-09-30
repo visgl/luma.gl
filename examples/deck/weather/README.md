@@ -7,6 +7,8 @@ Run `yarn workspace luma.gl-examples-deck-weather start`; the website route is
 Choose Clear, Rain, Snow, or Fog. Intensity controls the particle count, wind uses metres
 per second with direction clockwise from north, and visibility sets the fog extinction.
 Pause freezes the clock exactly; reset returns to the seeded initial particle positions.
+Clear, Fog, and zero particle intensity stop the precipitation clock and continuous redraws,
+even when Animate is checked. Changing a setting or moving the camera still redraws the scene.
 Camera movement remains available while paused. The View selector switches between map and globe
 projection; both use a local east/north/up metre frame for fog and particle sizing. Time gaps above 0.1 seconds are dropped
 so resuming a hidden or slow tab does not produce a large jump.

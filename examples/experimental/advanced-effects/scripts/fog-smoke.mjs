@@ -63,8 +63,12 @@ try {
   const height = await screenshot('height');
   assert(changedPixels(clear, height) > 2000, 'analytic fog visibly affects the scene');
   assert(changedPixels(stylized, height) > 2000, 'fog model control switches the rendering path');
-  const jitter = changedPixels(height, await screenshot());
-  assert(jitter < changedPixels(clear, height) * 0.1, `jitter does not displace the fog (${jitter} pixels)`);
+  const settings = await page.evaluate(() => window.visualizationCity.getAnimationLoopTemplate().settings);
+  for (const name of ['animate', 'taaEnabled', 'ssrEnabled', 'ssaoEnabled', 'contactShadowsEnabled']) {
+    assert.equal(settings[name], false, `${name}: changing fog preserves the clean, paused preset`);
+  }
+  const variation = changedPixels(height, await screenshot('static'));
+  assert.equal(variation, 0, `paused geometry and fog are stable with temporal AA disabled (${variation} pixels)`);
   await page.mouse.move(820, 500);
   await page.mouse.down();
   await page.mouse.move(900, 550, {steps: 8});
@@ -76,7 +80,7 @@ try {
   await setToggle('fogEnabled', false);
   assert(changedPixels(resized, await screenshot()) > 2000, 'fog remains aligned after camera movement and resize');
   assert.deepEqual(errors, [], 'no browser or GPU errors');
-  console.log('Visualization City: fog mode, enable/disable, jitter, orbit and resize passed');
+  console.log('Visualization City: fog mode, enable/disable, static rendering, orbit and resize passed');
 } finally {
   await browser.close();
   await server.close();

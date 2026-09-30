@@ -89,6 +89,26 @@ for (const backend of ['webgpu', 'webgl'] as const) {
         },
         {density: 0.3, heightFalloff: 0.5, upDirection: [0, 1, 0], clipDepthRange: [-1, 1]}
       ];
+      const viewProjection = new Matrix4()
+        .perspective({fovy: Math.PI / 3, aspect: 1, near: 1, far: 100})
+        .multiplyRight(new Matrix4().lookAt({eye: [3, 8, 15], center: [0, 0, 0], up: [0, 1, 0]}));
+      // At this 2x2 resolution these offsets represent subpixel projection jitter.
+      for (const jitter of [
+        [0, 0],
+        [0.2, -0.15],
+        [-0.1, 0.25]
+      ]) {
+        cases.push({
+          density: 0.2,
+          heightFalloff: 0.1,
+          cameraPosition: [3, 8, 15],
+          upDirection: [0, 1, 0],
+          inverseViewProjectionMatrix: new Matrix4()
+            .translate([jitter[0], jitter[1], 0])
+            .multiplyRight(viewProjection)
+            .invert()
+        });
+      }
       for (const overrides of cases) {
         const uniforms: HeightFogPassUniforms = {
           ...heightFogPass.defaultUniforms,

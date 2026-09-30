@@ -378,6 +378,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
             maxDistance: 100,
             minPitch: 0.06,
             maxPitch: 1.38,
+            enableRotate: true,
             autoRotate: this.settings.animate,
             autoRotateSpeed: 0.055
           })
@@ -421,8 +422,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.previousViewProjectionMatrix = new Matrix4(viewProjectionMatrix);
       this.previousTime = time;
     }
-    const jitter = getJitter(this.frameIndex, width, height);
-    const previousJitter = getJitter(Math.max(0, this.frameIndex - 1), width, height);
+    const jitter: [number, number] = this.settings.taaEnabled
+      ? getJitter(this.frameIndex, width, height)
+      : [0, 0];
+    const previousJitter: [number, number] = this.settings.taaEnabled
+      ? getJitter(Math.max(0, this.frameIndex - 1), width, height)
+      : [0, 0];
     const lights = getCityShadowLights(time);
     const shadowProps = this.shadowRenderer.render({
       camera: {
@@ -648,6 +653,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         split
       };
       this.settingsPanel.setSchemaAndSettings(makeSettingsSchema(), this.settings);
+      this.panels.setPanel(this.makePanel());
     }
     this.orbitControls?.setAutoRotate(this.settings.animate);
     this.comparisonSplitter?.setValue(this.settings.split);
