@@ -107,6 +107,13 @@ export {
   type PathDashUniforms
 } from './modules/geometry/path-dash/path-dash';
 
+export {sketchStroke, type SketchStrokeProps} from './modules/geometry/sketch-stroke/sketch-stroke';
+export {
+  pointGlow,
+  type PointGlowProps,
+  type PointGlowUniforms
+} from './modules/geometry/point-glow/point-glow';
+
 // math libraries
 export {random} from './modules/math/random/random';
 export {volumeRaymarch} from './modules/volume/volume-raymarch';

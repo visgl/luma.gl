@@ -23,3 +23,14 @@ In the fragment shader, call `pathDash_getCoverage(distanceAlongPath)` to obtain
 Lengths and offset use the coordinate's units. A positive offset moves the pattern toward decreasing path distance. A zero gap produces solid coverage, including when dash length is zero. Otherwise, zero dash length produces no coverage. Partial uniform updates retain previous values.
 
 Coverage integrates the periodic pulse over the fragment's derivative footprint. Distant dashes converge to their average ink fraction instead of flickering between solid and empty. Call this function before divergent fragment branches so derivatives remain valid. This filters dash boundaries; it does not antialias the outer stroke silhouette, choose line width, or generate caps and joins. Use [`makeStrokeGeometry`](../../engine/geometry/stroke-geometry.md) or a custom line renderer for the geometry.
+
+## Compose stroke styles
+
+Dash coverage can multiply `sketchStroke_getCoverage` for pencil paths or the radiance returned by
+`pointGlow_getColor` for luminous paths. The [Riverfront routes example](/examples/deck/styled-paths)
+uses both with the same `makeStrokeGeometry` output. It passes metres to the pencil shader and sets
+`minimumAntialias: 0` to rely on derivatives; existing pixel-sized pencil strokes retain the `0.7`
+default. Glow maps transverse distance, and endpoint distance for caps, into the point shader's
+normalized radial coordinates. Blend that radiance additively and keep faint halo fragments out of
+the picking pass. The caller remains responsible for geometry, blend state, occlusion, and stable
+feature seeds.

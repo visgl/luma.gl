@@ -7,11 +7,24 @@ import type {PathDashProps} from '@luma.gl/shadertools';
 import {CITY_ORIGIN, makeCityFeatures} from '../river-district-data';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
 import {BuildingMeshLayer} from './building-layer';
-import {StrokeMeshLayer} from './stroke-layer';
+import {
+  StrokeMeshLayer,
+  getStrokeParameters,
+  type Route,
+  type StrokeAppearance
+} from './stroke-layer';
 import {ROUTES} from './routes';
 
 export function createStrokeScene(parent: HTMLDivElement, options: DeckExampleDeviceOptions = {}) {
   const features = makeCityFeatures();
+  const darkFeatures: typeof features = features.map(feature => ({
+    ...feature,
+    color: [feature.color[0] * 0.12, feature.color[1] * 0.17, feature.color[2] * 0.24]
+  }));
+  let appearance: StrokeAppearance = 'plain';
+  let grain = 0.6;
+  let glowIntensity = 0.8;
+  let routes: readonly Route[] = ROUTES;
   let geometryOptions: StrokeGeometryOptions = {
     width: 9,
     cap: 'round',
@@ -51,6 +64,7 @@ export function createStrokeScene(parent: HTMLDivElement, options: DeckExampleDe
     },
     onError: error => {
       diagnostics.error ||= error.message;
+      parent.dispatchEvent(new Event('stroke-error'));
       rejectReady(error);
     },
     onClick: info => {
@@ -64,19 +78,25 @@ export function createStrokeScene(parent: HTMLDivElement, options: DeckExampleDe
       coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
       coordinateOrigin: CITY_ORIGIN
     };
+    parent.style.backgroundColor = appearance === 'glow' ? '#08101b' : '#e6e2d9';
+    const activeFeatures = appearance === 'glow' ? darkFeatures : features;
     deck.setProps({
       layers: [
         new BuildingMeshLayer({
           id: 'district',
-          features,
-          data: features,
+          features: activeFeatures,
+          data: activeFeatures,
           pickable: true,
           ...coordinates
         }),
         new StrokeMeshLayer({
           id: 'routes',
-          routes: ROUTES,
-          data: ROUTES,
+          routes,
+          data: routes,
+          appearance,
+          parameters: getStrokeParameters(appearance),
+          grain,
+          glowIntensity,
           geometryOptions,
           dash: {...dash, gapLength: enabled ? dash.gapLength : 0},
           pickable: true,
@@ -96,6 +116,22 @@ export function createStrokeScene(parent: HTMLDivElement, options: DeckExampleDe
     },
     setDash(next: PathDashProps) {
       dash = {...dash, ...next};
+      updateLayers();
+    },
+    setAppearance(value: StrokeAppearance) {
+      appearance = value;
+      updateLayers();
+    },
+    setGrain(value: number) {
+      grain = value;
+      updateLayers();
+    },
+    setGlowIntensity(value: number) {
+      glowIntensity = value;
+      updateLayers();
+    },
+    setRoutes(value: readonly Route[]) {
+      routes = value;
       updateLayers();
     },
     setEnabled(value: boolean) {

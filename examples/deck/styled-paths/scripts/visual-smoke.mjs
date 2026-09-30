@@ -36,7 +36,9 @@ try {
       page.on('console', message => {if (message.type() === 'error') {errors.push(message.text()); console.error(message.text());}});
       await page.goto(`${process.env.STROKE_EXAMPLE_URL || server.resolvedUrls.local[0]}?backend=${backend}`);
       await page.waitForFunction(() => document.body.dataset.ready === 'true', undefined, {timeout: 60_000});
-      await page.waitForTimeout(400);
+      await page.waitForFunction(() => window.strokeScene.diagnostics.error || window.strokeScene.deck.props.layers.find(layer => layer.id === 'routes')?.isLoaded);
+      assert.equal(await page.evaluate(() => window.strokeScene.diagnostics.error), '', `${backend}: layer initialization`);
+      await page.waitForTimeout(150);
       const dashed = PNG.sync.read(await page.screenshot({path: join(tmpdir(), `styled-paths-${backend}.png`)}));
       if (process.env.STROKE_THUMBNAIL && backend === 'webgpu') {
         await page.screenshot({path: process.env.STROKE_THUMBNAIL, type: 'jpeg', quality: 90});
@@ -55,6 +57,40 @@ try {
       const solid = PNG.sync.read(await page.screenshot());
       assert(differentPixels(dashed, solid) > 100, `${backend}: dash toggle changes coverage`);
       assert.equal(await page.evaluate(() => window.ownedVertices === window.strokeScene.deck.props.layers.find(layer => layer.id === 'routes').state.vertices), true, `${backend}: dash uniforms reuse geometry`);
+      await page.selectOption('#appearance', 'sketch');
+      await page.waitForTimeout(150);
+      const pencil = PNG.sync.read(await page.screenshot({path: join(tmpdir(), `styled-paths-pencil-${backend}.png`)}));
+      assert(differentPixels(solid, pencil) > 100, `${backend}: shared pencil coverage changes the route ink`);
+      await page.evaluate(() => {
+        window.styleVertices = window.strokeScene.deck.props.layers.find(layer => layer.id === 'routes').state.vertices;
+        window.strokeScene.setGrain(0);
+      });
+      await page.waitForTimeout(150);
+      assert(differentPixels(pencil, PNG.sync.read(await page.screenshot())) > 30, `${backend}: grain affects pencil coverage`);
+      assert(await page.evaluate(() => window.styleVertices === window.strokeScene.deck.props.layers.find(layer => layer.id === 'routes').state.vertices), `${backend}: grain reuses geometry`);
+      await page.evaluate(() => {
+        window.strokeScene.setGrain(0.6);
+        window.strokeScene.setRoutes(window.strokeScene.routes.slice(0, 2));
+      });
+      await page.waitForTimeout(150);
+      const orderedPencil = PNG.sync.read(await page.screenshot());
+      await page.evaluate(() => window.strokeScene.setRoutes(window.strokeScene.routes.slice(0, 2).reverse()));
+      await page.waitForTimeout(150);
+      assert.equal(differentPixels(orderedPencil, PNG.sync.read(await page.screenshot())), 0, `${backend}: feature order does not reseed pencil grain`);
+      await page.evaluate(() => window.strokeScene.setRoutes(window.strokeScene.routes));
+      await page.selectOption('#appearance', 'glow');
+      await page.waitForTimeout(150);
+      const luminous = PNG.sync.read(await page.screenshot({path: join(tmpdir(), `styled-paths-glow-${backend}.png`)}));
+      await page.evaluate(() => {
+        window.styleVertices = window.strokeScene.deck.props.layers.find(layer => layer.id === 'routes').state.vertices;
+        window.strokeScene.setGlowIntensity(0);
+      });
+      await page.waitForTimeout(150);
+      const unlit = PNG.sync.read(await page.screenshot());
+      assert(differentPixels(luminous, unlit) > 100, `${backend}: glow adds visible radiance without bloom`);
+      assert(await page.evaluate(() => window.styleVertices === window.strokeScene.deck.props.layers.find(layer => layer.id === 'routes').state.vertices), `${backend}: intensity reuses geometry`);
+      await page.evaluate(() => window.strokeScene.setGlowIntensity(0.8));
+      await page.selectOption('#appearance', 'plain');
       await page.selectOption('#join', 'bevel');
       await page.selectOption('#cap', 'square');
       await page.locator('#width').focus();
@@ -79,6 +115,41 @@ try {
       });
       assert.equal(picked.ink, 'South crossing', `${backend}: route picking`);
       assert.equal(picked.gap, 'South bridge', `${backend}: gaps pick the surface below`);
+      await page.selectOption('#appearance', 'glow');
+      const glowPicking = await page.evaluate(async () => {
+        const scene = window.strokeScene;
+        scene.setEnabled(false);
+        await new Promise(resolve => setTimeout(resolve, 150));
+        const layer = scene.deck.props.layers.find(layer => layer.id === 'routes');
+        const center = layer.project([0, -265, 14]);
+        const halo = layer.project([0, -247, 14]);
+        const centerHit = await scene.deck.pickObjectAsync({x: center[0], y: center[1]});
+        const haloHit = await scene.deck.pickObjectAsync({x: halo[0], y: halo[1]});
+        scene.setGlowIntensity(0);
+        await new Promise(resolve => setTimeout(resolve, 100));
+        const disabledHit = await scene.deck.pickObjectAsync({x: center[0], y: center[1]});
+        scene.setGlowIntensity(0.8);
+        return {center: centerHit?.object?.name, halo: haloHit?.object?.name, disabled: disabledHit?.object?.name};
+      });
+      assert.equal(glowPicking.center, 'South crossing', `${backend}: glow core remains pickable`);
+      assert.equal(glowPicking.halo, 'River', `${backend}: faint halo does not intercept picking`);
+      assert.equal(glowPicking.disabled, 'South bridge', `${backend}: invisible glow does not intercept picking`);
+      const hidden = await page.evaluate(async () => {
+        const scene = window.strokeScene;
+        const district = scene.deck.props.layers.find(layer => layer.id === 'district');
+        const building = district.props.features.find(feature => feature.kind === 'building');
+        scene.setRoutes([{name: 'Hidden route', color: [1, 1, 1], path: [
+          [building.center[0] - 5, building.center[1], 2],
+          [building.center[0] + 5, building.center[1], 2]
+        ]}]);
+        await new Promise(resolve => setTimeout(resolve, 150));
+        const layer = scene.deck.props.layers.find(layer => layer.id === 'routes');
+        const position = layer.project([building.center[0], building.center[1], 2]);
+        const hit = await scene.deck.pickObjectAsync({x: position[0], y: position[1]});
+        return {actual: hit?.object?.name, expected: building.name};
+      });
+      assert.equal(hidden.actual, hidden.expected, `${backend}: opaque roofs occlude glow picking`);
+      await page.evaluate(() => window.strokeScene.setRoutes(window.strokeScene.routes));
       await page.evaluate(() => window.strokeScene.setGeometryOptions({width: 0}));
       await page.waitForTimeout(150);
       assert.equal(await page.evaluate(() => window.strokeScene.deck.props.layers.find(layer => layer.id === 'routes').state.model.vertexCount), 0, `${backend}: zero width is empty`);
@@ -89,8 +160,9 @@ try {
         window.strokeScene.finalize(); window.strokeScene.finalize();
       });
       assert.equal(await page.evaluate(() => window.ownedVertices.destroyed), true, `${backend}: finalization releases owned geometry`);
+      assert.equal(await page.evaluate(() => window.strokeScene.diagnostics.error), '', `${backend}: Deck layer errors`);
       assert.deepEqual(errors, [], `${backend}: GPU and browser errors`);
-      console.log(`${backend}: caps, joins, dashes, phase, picking gaps, resize, zero width, reuse and cleanup passed`);
+      console.log(`${backend}: caps, joins, dashes, pencil grain, stable seeds, additive glow, halo picking, depth, resize, zero width, reuse and cleanup passed`);
     } finally {await browser.close();}
   }
 } finally {await server.close();}
