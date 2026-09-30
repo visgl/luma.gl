@@ -62,7 +62,8 @@ try {
         timeout: 60_000
       });
       await page.waitForFunction(() => window.weatherScene?.diagnostics.frames > 2);
-      assert.equal(await page.inputValue('#preset'), 'fog', `${backend}: opens with fog`);
+      assert.equal(await page.inputValue('#preset'), 'clear', `${backend}: opens without precipitation`);
+      assert(await page.isChecked('#fog-enabled'), `${backend}: opens with independent fog enabled`);
       assert.equal(await page.inputValue('#visibility'), '700', `${backend}: fog is apparent by default`);
       await page.screenshot({path: join(tmpdir(), `weather-default-${backend}.png`)});
       const defaultFogStart = PNG.sync.read(await page.screenshot());
@@ -84,6 +85,29 @@ try {
       await page.waitForFunction(frames => window.weatherScene.diagnostics.frames > frames, slowFrame.frames);
       assert(await page.evaluate(() => window.weatherScene.diagnostics.time) - slowFrame.time >= 0.3,
         `${backend}: slow frames preserve elapsed animation time`);
+      await page.uncheck('#playing');
+      for (const preset of ['clear', 'rain', 'snow']) {
+        await page.selectOption('#preset', preset);
+        await page.uncheck('#fog-enabled');
+        await page.waitForTimeout(150);
+        const withoutFog = PNG.sync.read(await page.screenshot());
+        assert(await page.isDisabled('#visibility'), `${backend}: disabled fog dims its controls`);
+        await page.check('#fog-enabled');
+        await page.waitForTimeout(150);
+        assert(changedPixels(withoutFog, PNG.sync.read(await page.screenshot())) > 10000,
+          `${backend}: fog toggles independently with ${preset}`);
+        assert.equal(await page.inputValue('#preset'), preset, `${backend}: fog preserves weather choice`);
+        assert.equal(await page.inputValue('#visibility'), '700', `${backend}: fog retains visibility`);
+      }
+      await page.selectOption('#preset', 'clear');
+      await page.uncheck('#fog-enabled');
+      await page.check('#playing');
+      await page.waitForTimeout(200);
+      const noWeather = await page.evaluate(() => ({...window.weatherScene.diagnostics}));
+      await page.waitForTimeout(250);
+      assert.deepEqual(await page.evaluate(() => ({...window.weatherScene.diagnostics})), noWeather,
+        `${backend}: no precipitation and no fog stops animation`);
+      await page.check('#fog-enabled');
       const initialZoom = await page.evaluate(() => window.weatherScene.deck.getViewports()[0].zoom);
       await page.mouse.move(850, 400);
       await page.mouse.wheel(0, 240);
@@ -169,15 +193,20 @@ try {
       await page.evaluate(() => window.weatherScene.setFogVariation(0));
       // With fog motion disabled, disabled precipitation must stop both the clock and frame requests, even with Animate enabled.
       await page.check('#playing');
-      for (const preset of ['clear', 'fog', 'snow']) {
+      for (const preset of ['clear', 'rain', 'snow']) {
         await page.selectOption('#preset', preset);
-        if (preset === 'snow') await page.evaluate(() => window.weatherScene.setIntensity(0));
+        if (preset !== 'clear') await page.evaluate(() => window.weatherScene.setIntensity(0));
         await page.waitForTimeout(250);
         const idle = await page.evaluate(() => ({...window.weatherScene.diagnostics}));
         await page.waitForTimeout(250);
         const settled = await page.evaluate(() => ({...window.weatherScene.diagnostics}));
-        assert.equal(settled.frames, idle.frames, `${backend}: ${preset} disabled precipitation stops redraws`);
+        assert(settled.frames - idle.frames <= 1,
+          `${backend}: ${preset} disabled precipitation drains one pending frame`);
         assert.equal(settled.time, idle.time, `${backend}: ${preset} disabled precipitation freezes time`);
+        await page.waitForTimeout(250);
+        const quiet = await page.evaluate(() => ({...window.weatherScene.diagnostics}));
+        assert.equal(quiet.frames, settled.frames, `${backend}: ${preset} stays idle after pending frame`);
+        assert.equal(quiet.time, settled.time, `${backend}: ${preset} keeps time frozen while idle`);
         await page.evaluate(() => window.weatherScene.setWindDirection(90));
         await page.waitForTimeout(150);
         assert.equal(await page.evaluate(() => window.weatherScene.diagnostics.time), idle.time,
@@ -189,7 +218,7 @@ try {
       assert(await page.evaluate(() => window.weatherScene.diagnostics.time) > stoppedTime,
         `${backend}: restoring particle count resumes animation`);
       await page.uncheck('#playing');
-      await page.selectOption('#preset', 'fog');
+      await page.selectOption('#preset', 'clear');
       await page.evaluate(() => window.weatherScene.setVisibility(5000));
       await page.waitForTimeout(150);
       const thinFog = PNG.sync.read(await page.screenshot());

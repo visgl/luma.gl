@@ -24,14 +24,15 @@ backend.addEventListener('change', () => {
 const preset = document.querySelector<HTMLSelectElement>('#preset')!;
 preset.addEventListener('change', () => {
   const value: WeatherPreset =
-    preset.value === 'snow'
-      ? 'snow'
-      : preset.value === 'fog'
-        ? 'fog'
-        : preset.value === 'clear'
-          ? 'clear'
-          : 'rain';
+    preset.value === 'snow' ? 'snow' : preset.value === 'rain' ? 'rain' : 'clear';
   scene.setPreset(value);
+});
+const fogEnabled = document.querySelector<HTMLInputElement>('#fog-enabled')!;
+fogEnabled.addEventListener('change', () => {
+  scene.setFogEnabled(fogEnabled.checked);
+  for (const identifier of ['visibility', 'fog-variation', 'fog-speed']) {
+    document.querySelector<HTMLInputElement>(`#${identifier}`)!.disabled = !fogEnabled.checked;
+  }
 });
 const playing = document.querySelector<HTMLInputElement>('#playing')!;
 playing.addEventListener('change', () => scene.setPlaying(playing.checked));

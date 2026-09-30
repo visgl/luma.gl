@@ -10,12 +10,13 @@ import {CITY_ORIGIN, makeCityFeatures, type CityFeature} from '../river-district
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
 import {RiverDistrictLayer} from '../river-district-layer';
 
-export type WeatherPreset = 'clear' | 'rain' | 'snow' | 'fog';
+export type WeatherPreset = 'clear' | 'rain' | 'snow';
 const SURFACE_BOUNDS: [number, number, number, number] = [-700, -900, 700, 900];
 export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleDeviceOptions = {}) {
   const features = makeCityFeatures();
   let surfaceTexture: Texture | null = null;
-  let preset: WeatherPreset = 'fog';
+  let preset: WeatherPreset = 'clear';
+  let fogEnabled = true;
   let intensity = 0.6;
   let windSpeed = 6;
   let windDirection = 45;
@@ -70,7 +71,7 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
       if (!document.hidden && isWeatherAnimating() && previousTime) {
         const elapsed = (now - previousTime) / 1000;
         time += elapsed;
-        if (preset !== 'clear' && fogVariation > 0) fogTime += elapsed * fogSpeed;
+        if (fogEnabled && fogVariation > 0) fogTime += elapsed * fogSpeed;
       }
       previousTime = !document.hidden && isWeatherAnimating() ? now : 0;
       diagnostics.time = time;
@@ -90,7 +91,7 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
     return (
       playing &&
       ((getParticleCount() > 0 && (preset === 'rain' || preset === 'snow')) ||
-        (preset !== 'clear' && fogVariation > 0 && fogSpeed > 0))
+        (fogEnabled && fogVariation > 0 && fogSpeed > 0))
     );
   }
   function getPrecipitation(viewport: Viewport): PrecipitationProps {
@@ -112,9 +113,9 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
     const angle = (windDirection * Math.PI) / 180;
     return {
       color: [0.53, 0.61, 0.67],
-      density: preset === 'clear' ? 0 : 3.912 / visibility,
+      density: fogEnabled ? 3.912 / visibility : 0,
       baseHeight: 30,
-      heightFalloff: preset === 'fog' ? 0.012 : 0.003,
+      heightFalloff: 0.012,
       variation: fogVariation,
       wispScale: 140,
       // Integrate drift into this clock so changing speed does not jump the density field.
@@ -185,6 +186,10 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
     },
     setVisibility(value: number) {
       visibility = value;
+      updateLayers();
+    },
+    setFogEnabled(value: boolean) {
+      fogEnabled = value;
       updateLayers();
     },
     setFogVariation(value: number) {

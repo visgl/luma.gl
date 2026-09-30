@@ -1,14 +1,14 @@
 # Riverfront weather
 
 A portable WebGPU/WebGL2 example with wind-driven rain, drifting snow, and wispy height fog.
-It opens in Fog mode, with slowly drifting banks.
+It opens with fog enabled and no precipitation.
 Run `yarn workspace luma.gl-examples-deck-weather start`; the website route is
 `/examples/deck/weather`.
 
-Choose Clear, Rain, Snow, or Fog. Intensity controls the particle count, wind uses metres
+Choose None, Rain, or Snow, then toggle Fog independently. The fog controls retain their values while disabled. Intensity controls the particle count, wind uses metres
 per second with direction clockwise from north, and visibility sets the fog extinction.
 Pause freezes the clock exactly; reset returns to the seeded initial particle positions.
-Clear stops continuous redraws. With no precipitation, fog keeps animating only when both
+With no precipitation and fog disabled, continuous redraws stop. Fog keeps animating only when enabled and both
 Fog variation and Fog drift are nonzero. Zero variation restores uniform fog; zero drift
 keeps static wisps. Animate pauses both fog and precipitation. Changing a setting or moving the camera still redraws the scene.
 Camera movement remains available while paused. The scene uses map projection; scroll over the scene to zoom. The visual tests also exercise
