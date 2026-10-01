@@ -328,6 +328,13 @@ export class WebGPUAdapter extends Adapter {
       throw new Error('WebGPU device is already lost', {cause: immediateLoss});
     }
 
+    // Another attach may have completed while the loss check yielded. Construction
+    // below is synchronous, so rechecking here gives every caller the same wrapper.
+    const attachedDevice = WebGPUDevice.getDeviceFromHandle(handle);
+    if (attachedDevice) {
+      return attachedDevice;
+    }
+
     // GPUDevice has no reference to its GPUAdapter, only to the adapter info
     const adapterInfo = handle.adapterInfo || ({} as GPUAdapterInfo);
     const featureLevel = getAttachedWebGPUFeatureLevel(props.featureLevel, handle.features);

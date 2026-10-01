@@ -286,3 +286,25 @@ describe('WebGPU device creation lifecycle', () => {
     device.destroy();
   });
 });
+
+test.each([
+  false,
+  true
+])('concurrent attach reuses one wrapper across adapters: %s', async separateAdapters => {
+  const pendingLoss = makeDeferred<GPUDeviceLostInfo>();
+  const nativeDevice = makeNativeDevice(pendingLoss.promise);
+  const adapter = new MockWebGPUAdapter([]);
+  const otherAdapter = separateAdapters ? new MockWebGPUAdapter([]) : adapter;
+  const devices = await Promise.all([
+    adapter.attach(nativeDevice.device),
+    otherAdapter.attach(nativeDevice.device)
+  ]);
+  try {
+    expect(devices[0]).toBe(devices[1]);
+    expect(nativeDevice.device.addEventListener).toHaveBeenCalledTimes(1);
+  } finally {
+    for (const device of new Set(devices)) device.destroy();
+  }
+  expect(nativeDevice.device.removeEventListener).toHaveBeenCalledTimes(1);
+  expect(nativeDevice.device.destroy).not.toHaveBeenCalled();
+});
