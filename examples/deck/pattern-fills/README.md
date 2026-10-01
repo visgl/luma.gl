@@ -21,3 +21,10 @@ Both WebGPU and WebGL2 are supported. The standalone app and website use the sha
 infobox stylesheet. `yarn test:visual` checks pattern changes, stable redraws, picking, resize,
 and resource cleanup on both renderers. GPU module tests additionally measure ink area and
 minification stability from rendered pixels.
+
+`patternFill` is a luma.gl `ShaderModule`, separate from Deck's fill-pattern layer extension and
+the existing `fillPatternShaderPlugin` helper. The plugin injects shader functions and lets a
+caller provide pattern type, size, and coordinates; this module exposes typed shader inputs and
+filters coverage across the pixel footprint. This example uses a custom luma.gl `Model`, so it
+does not use Deck's extension hooks or its per-layer attributes. The APIs overlap in pattern
+behavior, while serving different integration points.
