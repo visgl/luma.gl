@@ -200,6 +200,9 @@ export type {PBRProjectionProps} from './modules/lighting/pbr-material/pbr-proje
 export {pbrMaterial} from './modules/lighting/pbr-material/pbr-material';
 export {pbrScene, PBR_TONE_MAP_MODE} from './modules/lighting/pbr-material/pbr-scene';
 
+export {heightFog} from './modules/lighting/height-fog/height-fog';
+export {heightFogFunctions} from './modules/lighting/height-fog/height-fog-functions';
+export type {HeightFogProps, HeightFogUniforms} from './modules/lighting/height-fog/height-fog';
 export {
   patternFill,
   type PatternFillProps,
@@ -211,9 +214,6 @@ export {
   type PointGlowUniforms
 } from './modules/geometry/point-glow/point-glow';
 
-export {heightFog} from './modules/lighting/height-fog/height-fog';
-export {heightFogFunctions} from './modules/lighting/height-fog/height-fog-functions';
-export type {HeightFogProps, HeightFogUniforms} from './modules/lighting/height-fog/height-fog';
 export {precipitation} from './modules/geometry/precipitation/precipitation';
 export type {
   PrecipitationProps,

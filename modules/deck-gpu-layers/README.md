@@ -130,6 +130,19 @@ are sampled asynchronously and never gate the GPU-driven render path. Readbacks 
 graph it creates; Deck calls `cleanup`, while applications may call `destroy` when an effect is
 constructed but never adopted.
 
+## FlowParticleLayer
+
+`FlowParticleLayer` draws `FlowParticleSimulation` state textures as depth-tested streaks.
+Pass `particles` from `simulation.step(...)`, `particleCount`, and the field `bounds`.
+When stepping in `onBeforeRender`, pass `particles: () => currentParticles` so the layer
+reads the current buffers and their time interval together at draw time. Deck prepares
+layer props before that callback; replacing a snapshot there would lag one frame.
+Use `COORDINATE_SYSTEM.METER_OFFSETS` with a coordinate origin for a local metre grid,
+or `COORDINATE_SYSTEM.LNGLAT` for geographic bounds. `widthPixels` is screen-space;
+`trailSeconds` extrapolates the latest motion vector rather than retaining a curved trail.
+Picking returns `{id}` with the stable row-major particle index. The simulation and both
+state textures remain caller-owned. Run the simulation before Deck renders, and finalize
+Deck before destroying the simulation. See the riverfront flow example for integration.
 ## Architectural strokes
 
 `SketchEdgeLayer` renders solid or pencil-like independent segments on WebGPU and WebGL2.

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import flowParticlesSupport from './deck/flow-particles/mobile-support';
 import sketchSupport from './deck/sketch-edges/mobile-support';
 import weatherSupport from './deck/weather/mobile-support';
 import patternSupport from './deck/pattern-fills/mobile-support';
@@ -185,6 +186,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'arrow/arrow-particles': support76,
   'arrow/arrow-dggs-polygons': support77,
   'arrow/arrow-columns': support78,
+  'deck/flow-particles': flowParticlesSupport,
   'deck/arrow-path-layer': support79,
   'deck/city-scene': citySceneSupport,
   'deck/arrow-polygon-layer': support80,

@@ -149,6 +149,10 @@ jobs:
           df -h .
           du -sh . "${HOME}/.yarn" "${HOME}/.cache/ms-playwright" "${RUNNER_TEMP}" 2>/dev/null || true
 
+      - name: Test riverfront GPU flow
+        if: ${{ matrix.shard == 2 }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-flow-particles test:visual
+
       - name: Test riverfront weather
         if: ${{ matrix.shard == 2 }}
         run: xvfb-run -a yarn workspace luma.gl-examples-deck-weather test:visual
