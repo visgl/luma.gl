@@ -1,6 +1,6 @@
 # GPUSegmentedLayout
 
-[Scan](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-scan.md)[Galloping Search](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-galloping-search.md)[Compaction](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-compaction.md)[Segmented Layout](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segmented-layout.md)[Masks](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-mask.md)[Visibility](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-visibility-workflow.md)[Virtual Geometry](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-virtual-geometry-selection.md)
+[Galloping Search](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-galloping-search.md)[Compaction](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-compaction.md)[Segmented Layout](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segmented-layout.md)[Masks](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-mask.md)[Visibility](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-visibility-workflow.md)[Virtual Geometry](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-virtual-geometry-selection.md)
 
 ## Overview[​](#overview "Direct link to Overview")
 
@@ -8,16 +8,16 @@
 
 ## At a glance
 
-| Question                 | Answer                                                                                                                    |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| **Problem**              | Turn slot-aligned value, element, and segment-start flags into dense columnar layout metadata.                            |
-| **Reads / writes**       | Reads three packed binary flag streams; writes value and element offsets, segment indices and offsets, and three counts.  |
-| **Ownership**            | All public inputs and outputs are caller-owned; hierarchical scan scratch is graph-owned transient memory.                |
-| **Output contract**      | Exact source-aligned offsets plus a segment-offset prefix named by segmentCount.                                          |
-| **Expected work**        | Three hierarchical scans, one segment-offset pass, and one scalar-count pass.                                             |
-| **Chunks**               | The initial contract consumes packed GraphDataView inputs; preserve source batches by invoking it once per durable chunk. |
-| **Conditions / budgets** | Contributes ordinary graph nodes and does not compile, submit, read back, or publish results.                             |
-| **Neighborhood**         | format-specific classification → GPUSegmentedLayout → compaction, gather, nested layout, or rendering.                    |
+| Question                 | Answer                                                                                                                                    |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **Problem**              | Turn slot-aligned value, element, and segment-start flags into dense columnar layout metadata.                                            |
+| **Reads / writes**       | Reads three packed binary flag streams; writes value and element offsets, segment indices and offsets, and three counts.                  |
+| **Ownership**            | All public inputs and outputs are caller-owned; hierarchical scan scratch is graph-owned transient memory.                                |
+| **Output contract**      | Exact source-aligned offsets plus a segment-offset prefix named by segmentCount.                                                          |
+| **Expected work**        | Three hierarchical scans, segment-offset publication over aligned spans, and one scalar-count pass.                                       |
+| **Chunks**               | Six slot views may mix independent atomic/vector partitions; scans carry globally without packing. List offsets and counts remain atomic. |
+| **Conditions / budgets** | Contributes ordinary graph nodes and does not compile, submit, read back, or publish results.                                             |
+| **Neighborhood**         | format-specific classification → GPUSegmentedLayout → compaction, gather, nested layout, or rendering.                                    |
 
 **Cost**Every slot is scanned three times even when few values are present or few segments are produced.
 
@@ -42,11 +42,11 @@ All flag values must be exactly `0` or `1`. A non-empty input has one implicit f
 | View                | Length                  | Meaning                                                         |
 | ------------------- | ----------------------- | --------------------------------------------------------------- |
 | `valueFlags`        | slot count              | One when the slot owns a physical value                         |
-| `elementFlags`      | slot count              | One when the slot represents a logical element                  |
-| `segmentStartFlags` | slot count              | One when the slot starts a segment after the first              |
-| `valueOffsets`      | slot count              | Exclusive dense physical-value index for each slot              |
-| `elementOffsets`    | slot count              | Exclusive dense logical-element index for each slot             |
-| `segmentIndices`    | slot count              | Inclusive scan of segment starts; the dense segment index       |
+| `elementFlags`      | at least slot count     | One when the slot represents a logical element                  |
+| `segmentStartFlags` | at least slot count     | One when the slot starts a segment after the first              |
+| `valueOffsets`      | at least slot count     | Exclusive dense physical-value index for each slot              |
+| `elementOffsets`    | at least slot count     | Exclusive dense logical-element index for each slot             |
+| `segmentIndices`    | at least slot count     | Inclusive scan of segment starts; the dense segment index       |
 | `segmentOffsets`    | at least slot count + 1 | Logical-element offset for every segment plus a terminal offset |
 | `valueCount`        | at least 1              | Total physical values in element zero                           |
 | `elementCount`      | at least 1              | Total logical elements in element zero                          |
@@ -85,7 +85,7 @@ const graph = new GPUCommandGraph(device, {id: 'column-layout'});
 
 
 
-new GPUSegmentedLayout({
+graph.add(new GPUSegmentedLayout({
 
   id: 'nullable-lists',
 
@@ -109,10 +109,10 @@ new GPUSegmentedLayout({
 
   segmentCount
 
-}).addToGraph(graph);
+}));
 ```
 
-The operation contributes three `GPUScan` pipelines, one segment-offset pass, and one count pass. The publication work is split so every shader stays within the eight-storage-buffer limit of the default WebGPU CORE profile. It does not compile the graph, submit commands, map counts, or move physical payload values.
+The operation contributes three `GPUScan` pipelines, segment-offset passes over aligned spans, and one count pass for the full sequence. The publication work is split so every shader stays within the eight-storage-buffer limit of the default WebGPU CORE profile. It does not compile the graph, submit commands, map counts, or move physical payload values.
 
 ## Composition patterns[​](#composition-patterns "Direct link to Composition patterns")
 
@@ -132,6 +132,10 @@ Use `segmentOffsets` as one list-offset level. A format adapter can run another 
 
 The operation performs three complete prefix scans plus one complete publication pass. It is most appropriate when several downstream stages reuse the resulting layout or when avoiding a CPU decode/readback/re-upload boundary matters more than a single lightweight CPU pass.
 
-The initial API accepts packed `GraphDataView<'uint32'>` inputs and outputs. Invoke it once per durable source chunk rather than concatenating streaming batches implicitly. Slot counts and offsets must fit in `uint32`; split larger datasets at existing page or batch boundaries.
+The six slot-aligned views may independently be packed `GraphDataView<'uint32'>` or `GraphVectorView<'uint32'>` values. Their chunk boundaries may differ. Scans carry across chunks, including segments spanning multiple chunks; empty chunks do not introduce segments. Alignment borrows views without concatenating or copying source storage.
+
+`valueFlags.length` defines the active source range. Extra input capacity is ignored and extra slot-output capacity is left untouched. Re-encoding recomputes the layout and counts from current flags. Only the first logical row initializes the implicit segment, and only the final logical row publishes its terminal offset.
+
+`segmentOffsets` and the three counts remain atomic destinations. Chunked final list-offset storage is follow-up work. Slot counts and offsets must fit in `uint32`; split larger datasets at existing page or batch boundaries.
 
 `GPUSegmentedLayout` validates view formats, lengths, and graph ownership. It cannot cheaply inspect GPU-resident flag contents during graph construction, so the classifier is responsible for binary flags and the zero first-segment-start convention.

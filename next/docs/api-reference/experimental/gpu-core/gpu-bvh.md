@@ -108,7 +108,7 @@ const bvh = new GPUBVH({
 
 
 
-bvh.addToGraph(graph);
+graph.add(bvh);
 ```
 
 All views must be packed and belong to the target command graph. `nodeMinima`, `nodeMaxima`, and `nodeChildren` each contain `2 * leafCapacity - 1` rows; `leafIds` contains `leafCapacity` rows. The primitive does not allocate caller-visible storage, submit, read back, or spatially sort the hierarchy. Use [`GPUBVHQuery`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-bvh-query.md) for exact point containment and bounds-intersection traversal.

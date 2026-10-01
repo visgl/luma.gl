@@ -6,6 +6,8 @@
 
 <!-- -->
 
+**Loading example**Preparing GPU resources…
+
 ## Shared and per-instance data[​](#shared-and-per-instance-data "Direct link to Shared and per-instance data")
 
 Instancing separates attributes by update frequency:

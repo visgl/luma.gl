@@ -18,6 +18,8 @@ Mobile quality
 // Loading source…
 ```
 
+**Loading example**Preparing GPU resources…
+
 Scroll page · Ctrl/⌘ + scroll to interact
 
 The live viewer feeds the same candidate output to exact spans, density aggregation, labels, dependencies, and picking. This prevents independent viewport tests from disagreeing or visibly flickering as the view changes.

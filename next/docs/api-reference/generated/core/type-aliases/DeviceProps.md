@@ -12,7 +12,7 @@ Device properties
 
 > `optional` **\_cachePipelines?**: `boolean`
 
-Defined in: [modules/core/src/adapter/device.ts:461](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L461)
+Defined in: [modules/core/src/adapter/device.ts:468](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L468)
 
 Enable pipeline caching (via PipelineFactory)
 
@@ -22,7 +22,7 @@ Enable pipeline caching (via PipelineFactory)
 
 > `optional` **\_cacheShaders?**: `boolean`
 
-Defined in: [modules/core/src/adapter/device.ts:453](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L453)
+Defined in: [modules/core/src/adapter/device.ts:460](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L460)
 
 Enable shader caching (via ShaderFactory)
 
@@ -32,7 +32,7 @@ Enable shader caching (via ShaderFactory)
 
 > `optional` **\_destroyPipelines?**: `boolean`
 
-Defined in: [modules/core/src/adapter/device.ts:469](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L469)
+Defined in: [modules/core/src/adapter/device.ts:476](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L476)
 
 Destroy cached pipelines when they become unused. Defaults to `false` so repeated create/destroy cycles can still reuse cached pipelines. Enable this if the application creates very large numbers of distinct pipelines and needs cache eviction.
 
@@ -42,7 +42,7 @@ Destroy cached pipelines when they become unused. Defaults to `false` so repeate
 
 > `optional` **\_destroyShaders?**: `boolean`
 
-Defined in: [modules/core/src/adapter/device.ts:459](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L459)
+Defined in: [modules/core/src/adapter/device.ts:466](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L466)
 
 Destroy cached shaders when they become unused. Defaults to `false` so repeated create/destroy cycles can still reuse cached shaders. Enable this if the application creates very large numbers of distinct shaders and needs cache eviction.
 
@@ -52,7 +52,7 @@ Destroy cached shaders when they become unused. Defaults to `false` so repeated 
 
 > `optional` **\_disabledFeatures?**: `Partial`<`Record`<[`DeviceFeature`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/DeviceFeature.md), `boolean`>>
 
-Defined in: [modules/core/src/adapter/device.ts:449](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L449)
+Defined in: [modules/core/src/adapter/device.ts:456](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L456)
 
 Disable specific features
 
@@ -62,7 +62,7 @@ Disable specific features
 
 > `optional` **\_handle?**: `unknown`
 
-Defined in: [modules/core/src/adapter/device.ts:472](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L472)
+Defined in: [modules/core/src/adapter/device.ts:479](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L479)
 
 #### Deprecated[​](#deprecated "Direct link to Deprecated")
 
@@ -74,7 +74,7 @@ Internal, Do not use directly! Use `luma.attachDevice()` to attach to pre-create
 
 > `optional` **\_initializeFeatures?**: `boolean`
 
-Defined in: [modules/core/src/adapter/device.ts:451](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L451)
+Defined in: [modules/core/src/adapter/device.ts:458](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L458)
 
 WebGL specific - Initialize all features on startup
 
@@ -84,7 +84,7 @@ WebGL specific - Initialize all features on startup
 
 > `optional` **\_reuseDevices?**: `boolean`
 
-Defined in: [modules/core/src/adapter/device.ts:447](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L447)
+Defined in: [modules/core/src/adapter/device.ts:454](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L454)
 
 adapter.create() returns the existing Device if the provided canvas' WebGL context is already associated with a Device.
 
@@ -94,7 +94,7 @@ adapter.create() returns the existing Device if the provided canvas' WebGL conte
 
 > `optional` **\_sharePipelines?**: `boolean`
 
-Defined in: [modules/core/src/adapter/device.ts:463](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L463)
+Defined in: [modules/core/src/adapter/device.ts:470](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L470)
 
 Enable sharing of backend render-pipeline implementations when caching is enabled. Currently used by WebGL.
 
@@ -114,7 +114,7 @@ Properties for creating a default canvas context
 
 > `optional` **debug?**: `boolean`
 
-Defined in: [modules/core/src/adapter/device.ts:428](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L428)
+Defined in: [modules/core/src/adapter/device.ts:435](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L435)
 
 Turn on implementation defined checks that slow down execution but help break where errors occur
 
@@ -124,7 +124,7 @@ Turn on implementation defined checks that slow down execution but help break wh
 
 > `optional` **debugFactories?**: `boolean`
 
-Defined in: [modules/core/src/adapter/device.ts:436](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L436)
+Defined in: [modules/core/src/adapter/device.ts:443](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L443)
 
 Traces resource caching, reuse, and destroys in the PipelineFactory
 
@@ -134,7 +134,7 @@ Traces resource caching, reuse, and destroys in the PipelineFactory
 
 > `optional` **debugFramebuffers?**: `boolean`
 
-Defined in: [modules/core/src/adapter/device.ts:434](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L434)
+Defined in: [modules/core/src/adapter/device.ts:441](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L441)
 
 Renders a small version of updated Framebuffers into the primary canvas context. Can be set in console luma.log.set('debug-framebuffers', true)
 
@@ -144,7 +144,7 @@ Renders a small version of updated Framebuffers into the primary canvas context.
 
 > `optional` **debugGPUTime?**: `boolean`
 
-Defined in: [modules/core/src/adapter/device.ts:430](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L430)
+Defined in: [modules/core/src/adapter/device.ts:437](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L437)
 
 Enable GPU timestamp collection without enabling all debug validation paths.
 
@@ -154,7 +154,7 @@ Enable GPU timestamp collection without enabling all debug validation paths.
 
 > `optional` **debugShaders?**: `"never"` | `"errors"` | `"warnings"` | `"always"`
 
-Defined in: [modules/core/src/adapter/device.ts:432](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L432)
+Defined in: [modules/core/src/adapter/device.ts:439](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L439)
 
 Show shader source in browser? The default is `'error'`, meaning that logs are shown when shader compilation has errors
 
@@ -164,7 +164,7 @@ Show shader source in browser? The default is `'error'`, meaning that logs are s
 
 > `optional` **debugSpectorJS?**: `boolean`
 
-Defined in: [modules/core/src/adapter/device.ts:440](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L440)
+Defined in: [modules/core/src/adapter/device.ts:447](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L447)
 
 WebGL specific - Initialize the SpectorJS WebGL debugger. Can be set in console luma.log.set('debug-spectorjs', true)
 
@@ -174,7 +174,7 @@ WebGL specific - Initialize the SpectorJS WebGL debugger. Can be set in console 
 
 > `optional` **debugSpectorJSUrl?**: `string`
 
-Defined in: [modules/core/src/adapter/device.ts:442](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L442)
+Defined in: [modules/core/src/adapter/device.ts:449](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L449)
 
 WebGL specific - SpectorJS URL. Override if CDN is down or different SpectorJS version is desired.
 
@@ -184,7 +184,7 @@ WebGL specific - SpectorJS URL. Override if CDN is down or different SpectorJS v
 
 > `optional` **debugWebGL?**: `boolean`
 
-Defined in: [modules/core/src/adapter/device.ts:438](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L438)
+Defined in: [modules/core/src/adapter/device.ts:445](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L445)
 
 WebGL specific - Trace WebGL calls (instruments WebGL2RenderingContext at the expense of performance). Can be set in console luma.log.set('debug-webgl', true)
 
@@ -224,7 +224,7 @@ string id for debugging. Stored on the object, used in logging and set on underl
 
 > `optional` **onDevicePixelRatioChange?**: (`ctx`, `info`) => `unknown`
 
-Defined in: [modules/core/src/adapter/device.ts:420](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L420)
+Defined in: [modules/core/src/adapter/device.ts:427](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L427)
 
 Called when the device pixel ratio of a CanvasContext's canvas changes
 
@@ -250,7 +250,7 @@ Called when the device pixel ratio of a CanvasContext's canvas changes
 
 > `optional` **onError?**: (`error`, `context?`) => `unknown`
 
-Defined in: [modules/core/src/adapter/device.ts:406](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L406)
+Defined in: [modules/core/src/adapter/device.ts:413](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L413)
 
 Error handler. If it returns a probe logger style function, it will be called at the site of the error to optimize console error links.
 
@@ -274,7 +274,7 @@ Error handler. If it returns a probe logger style function, it will be called at
 
 > `optional` **onPositionChange?**: (`ctx`, `info`) => `unknown`
 
-Defined in: [modules/core/src/adapter/device.ts:413](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L413)
+Defined in: [modules/core/src/adapter/device.ts:420](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L420)
 
 Called when the absolute position of a CanvasContext's canvas changes. Must set `CanvasContextProps.trackPosition: true`
 
@@ -300,7 +300,7 @@ Called when the absolute position of a CanvasContext's canvas changes. Must set 
 
 > `optional` **onResize?**: (`ctx`, `info`) => `unknown`
 
-Defined in: [modules/core/src/adapter/device.ts:408](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L408)
+Defined in: [modules/core/src/adapter/device.ts:415](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L415)
 
 Called when the size of a CanvasContext's canvas changes
 
@@ -326,7 +326,7 @@ Called when the size of a CanvasContext's canvas changes
 
 > `optional` **onVisibilityChange?**: (`ctx`) => `unknown`
 
-Defined in: [modules/core/src/adapter/device.ts:418](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L418)
+Defined in: [modules/core/src/adapter/device.ts:425](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L425)
 
 Called when the visibility of a CanvasContext's canvas changes
 
@@ -362,11 +362,21 @@ Control which type of GPU is preferred on systems with both integrated and discr
 
 ***
 
+### requiredLimits?[​](#requiredlimits "Direct link to requiredLimits?")
+
+> `optional` **requiredLimits?**: `Partial`<`Record`\<keyof [`DeviceLimits`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceLimits.md), `number`>>
+
+Defined in: [modules/core/src/adapter/device.ts:405](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L405)
+
+WebGPU only: device limits to request, forwarded to `GPUDeviceDescriptor.requiredLimits`. The device gets exactly these values when they are better than the spec defaults; values worse than the defaults are raised to the defaults. Values the adapter cannot provide make device creation fail. Ignored by `attach()`, WebGL, and null devices.
+
+***
+
 ### webgl?[​](#webgl "Direct link to webgl?")
 
 > `optional` **webgl?**: `WebGLContextProps`
 
-Defined in: [modules/core/src/adapter/device.ts:401](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L401)
+Defined in: [modules/core/src/adapter/device.ts:408](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L408)
 
 WebGL specific: Properties passed through to WebGL2RenderingContext creation: `canvas.getContext('webgl2', props.webgl)`
 

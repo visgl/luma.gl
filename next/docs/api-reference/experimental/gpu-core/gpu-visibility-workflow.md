@@ -1,6 +1,6 @@
 # GPUVisibilityWorkflow
 
-[Scan](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-scan.md)[Galloping Search](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-galloping-search.md)[Compaction](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-compaction.md)[Segmented Layout](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segmented-layout.md)[Masks](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-mask.md)[Visibility](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-visibility-workflow.md)[Virtual Geometry](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-virtual-geometry-selection.md)
+[Galloping Search](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-galloping-search.md)[Compaction](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-compaction.md)[Segmented Layout](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segmented-layout.md)[Masks](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-mask.md)[Visibility](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-visibility-workflow.md)[Virtual Geometry](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-virtual-geometry-selection.md)
 
 ## Overview[​](#overview "Direct link to Overview")
 
@@ -8,16 +8,16 @@
 
 ## At a glance
 
-| Question                 | Answer                                                                                            |
-| ------------------------ | ------------------------------------------------------------------------------------------------- |
-| **Problem**              | Turn visibility decisions into one mask, stable ID list, and draw-ready count.                    |
-| **Reads / writes**       | Reads predicate masks and optional source IDs; writes mask, packed IDs, and count.                |
-| **Ownership**            | Inputs, outputs, and count are caller-owned; identity, scan, and compaction scratch are internal. |
-| **Output contract**      | Bounded stable IDs; only the GPU-written count prefix is valid.                                   |
-| **Expected work**        | Mask intersection, optional identity generation, hierarchical scan, and stable scatter.           |
-| **Chunks**               | Matching vector chunks are preserved as one logical sequence.                                     |
-| **Conditions / budgets** | Contributed nodes may share a branch condition; no custom resumable plan is exposed.              |
-| **Neighborhood**         | time, bounds, LOD, and selection masks → GPUVisibilityWorkflow → indirect consumer.               |
+| Question                 | Answer                                                                                                                              |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **Problem**              | Turn visibility decisions into one mask, stable ID list, and draw-ready count.                                                      |
+| **Reads / writes**       | Reads predicate masks and optional source IDs; writes mask, packed IDs, and count.                                                  |
+| **Ownership**            | Inputs, outputs, and count are caller-owned; identity, scan, and compaction scratch are internal.                                   |
+| **Output contract**      | Bounded stable IDs; only the GPU-written count prefix is valid.                                                                     |
+| **Expected work**        | Mask intersection, optional identity generation, hierarchical scan, and stable scatter.                                             |
+| **Chunks**               | Source-aligned masks and IDs align by logical row; atomic and vector views and independent output capacity topologies may be mixed. |
+| **Conditions / budgets** | Contributed nodes may share a branch condition; no custom resumable plan is exposed.                                                |
+| **Neighborhood**         | time, bounds, LOD, and selection masks → GPUVisibilityWorkflow → indirect consumer.                                                 |
 
 **Cost**All candidate rows are masked and compacted; bound candidates before this workflow when possible.
 
@@ -46,7 +46,7 @@ const count = graph.importGPUData(
 
 
 
-new GPUVisibilityWorkflow({
+graph.add(new GPUVisibilityWorkflow({
 
   id: 'visible-objects',
 
@@ -68,7 +68,7 @@ new GPUVisibilityWorkflow({
 
   count
 
-}).addToGraph(graph);
+}));
 ```
 
 The workflow owns mask intersection, identity generation, scan, stable scatter, and count publication. Applications remain responsible for producing predicate masks. This fixed contract lets a time filter, frustum test, LOD rule, or selection kernel share the same downstream workflow without embedding renderer state or application WGSL in the API.
@@ -91,7 +91,7 @@ When `outputMask` is provided, the workflow writes the canonical composed mask a
 By default, the workflow generates consecutive source IDs beginning at zero. Set `firstSourceIndex` when the input represents a slice of a larger stable identity space:
 
 ```
-new GPUVisibilityWorkflow({
+graph.add(new GPUVisibilityWorkflow({
 
   predicates: [{kind: 'selection', mask: groupMask}],
 
@@ -101,7 +101,7 @@ new GPUVisibilityWorkflow({
 
   firstSourceIndex: group.firstRow
 
-}).addToGraph(graph);
+}));
 ```
 
 Alternatively, supply `sourceIds` to compact an explicit ID vector. `sourceIds` and `firstSourceIndex` are mutually exclusive. Selected IDs preserve source order.
@@ -110,7 +110,7 @@ Alternatively, supply `sourceIds` to compact an explicit ID vector. `sourceIds` 
 
 ## Chunked vectors[​](#chunked-vectors "Direct link to Chunked vectors")
 
-Predicates, source IDs, output masks, and outputs may all be atomic `GraphDataView<'uint32'>` values or all be `GraphVectorView<'uint32'>` values. Vector inputs must have identical ordered chunk topology. The workflow preserves chunk boundaries, generates IDs in the global logical order, and reports one vector-wide count; it never concatenates or repacks the caller-owned buffers.
+Predicates, source IDs, output masks, and outputs may each be atomic `GraphDataView<'uint32'>` values or `GraphVectorView<'uint32'>` values. Source-aligned masks and IDs must have equal logical length, while their atomic/vector boundaries may differ. Output only needs enough logical capacity and may use an independent topology. The workflow aligns rows by logical position, preserves caller-owned chunk boundaries, generates IDs in global order, and reports one vector-wide count; it never concatenates or repacks buffers.
 
 Output capacity must cover every source row. All views must belong to the target graph, and generated IDs must fit in `uint32`.
 

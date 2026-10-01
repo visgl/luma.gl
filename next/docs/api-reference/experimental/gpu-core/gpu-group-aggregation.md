@@ -1,6 +1,6 @@
 # GPUGroupAggregation
 
-[Reduction](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-reduction.md)[Histogram](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-histogram.md)[Group Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-group-aggregation.md)
+[Reduction](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-reduction.md)[Segmented Reduction](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segmented-reduction.md)[RLE and Unique](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-run-length-encode.md)[Histogram](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-histogram.md)[Group Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-group-aggregation.md)
 
 ## Overview[​](#overview "Direct link to Overview")
 
@@ -51,7 +51,7 @@ This is useful when group distributions accompany an interactive view. A chart c
 
 ### Chunk preservation and contention[​](#chunk-preservation-and-contention "Direct link to Chunk preservation and contention")
 
-For `GraphVectorView` inputs, keys, masks, and values must have identical ordered chunk lengths. Every encoding initializes the output once, then each non-empty chunk accumulates into the shared group rows without concatenation or repacking. Empty chunks retain their place in the source topology but add no accumulation pass.
+Keys, masks, and values must have equal logical lengths. Each can be a data view or vector with independent chunk boundaries. Lowering intersects boundaries using borrowed views and preserves each column's format, byte offset, and stride. Every encoding initializes the output once, then each non-empty chunk accumulates into the shared group rows without concatenation or repacking. Empty chunks retain their place in the source topology but add no accumulation pass.
 
 Counts with up to 256 groups use workgroup-local atomics before merging into the result; larger count outputs and floating-point statistics use global atomics directly. This keeps small, highly contended count dictionaries efficient while avoiding unbounded workgroup storage. Large input chunks use bounded three-dimensional dispatches rather than assuming every workgroup fits in one device dimension.
 
@@ -60,33 +60,35 @@ Counts wrap modulo 2^32. Sum and mean use atomic compare-exchange addition, so o
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-new GPUGroupAggregation({
+graph.add([
 
-  keys: serviceCodes,
+  new GPUGroupAggregation({
 
-  mask: visibleRequests,
+    keys: serviceCodes,
 
-  output: requestCountsByService,
+    mask: visibleRequests,
 
-  operation: 'count'
+    output: requestCountsByService,
 
-}).addToGraph(graph);
+    operation: 'count'
 
+  }),
 
+  new GPUGroupAggregation({
 
-new GPUGroupAggregation({
+    keys: serviceCodes,
 
-  keys: serviceCodes,
+    values: requestLatencies,
 
-  values: requestLatencies,
+    mask: visibleRequests,
 
-  mask: visibleRequests,
+    output: meanLatencyByService,
 
-  output: meanLatencyByService,
+    operation: 'mean'
 
-  operation: 'mean'
+  })
 
-}).addToGraph(graph);
+]);
 ```
 
 ## Constructor[​](#constructor "Direct link to Constructor")
@@ -117,7 +119,7 @@ type GPUGroupAggregationProps = {
 );
 ```
 
-`output` must contain at least one group and must not alias the key, mask, or value buffers. Paired inputs must use the same atomic/vector view kind and, for vectors, identical chunk topology. All inputs and output must belong to the target graph.
+`output` must contain at least one group and must not alias the key, mask, or value buffers. Paired inputs must have equal logical lengths; their view kinds and chunk boundaries may differ. All inputs and output must belong to the target graph.
 
 The graph owns no persistent result buffer, performs no submission, and introduces no readback. Out-of-range keys are ignored so callers can use a sentinel such as `0xffffffff` for missing or unmapped values.
 

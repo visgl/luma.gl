@@ -14,12 +14,12 @@
 | **Reads / writes**       | Reads float32x2 positions and weights; writes per-cell accumulators, counts, and final values.                |
 | **Ownership**            | Public inputs and outputs are caller-owned; scratch storage is graph-owned transient memory.                  |
 | **Output contract**      | Dense row-major grid statistics with explicit empty-cell behavior.                                            |
-| **Expected work**        | One input visit plus a bounded finalization pass over grid cells.                                             |
-| **Chunks**               | Preserves declared views and source identity; it does not implicitly concatenate or repack chunks.            |
+| **Expected work**        | Input visits per output chunk plus initialization and finalization over cells.                                |
+| **Chunks**               | Independent position, weight, and cell-output chunks; mean-count scratch follows output chunks.               |
 | **Conditions / budgets** | May be conditioned with its dependent branch; encoding, submission, and publication remain application-owned. |
 | **Neighborhood**         | positions + weights → GPUGridAggregation → texture upload, contours, or chart readback.                       |
 
-**Cost**Source rows, grid cell count, and atomic contention in dense cells.
+**Cost**Aligned input spans times output chunks, cell count, and atomic contention.
 
 **Common mistake**Do not infer a mean from sums without preserving counts and empty-cell policy.
 
@@ -39,12 +39,12 @@ Minimum and maximum encode each finite float as a monotonically ordered `uint32`
 
 Empty sum cells contain positive zero. Empty minimum, maximum, and mean cells contain a canonical quiet NaN, making “no accepted rows” distinct from a real zero-valued statistic.
 
-For vectors, positions and weights must have identical ordered chunk lengths. Each encoding clears the output once, then accumulates non-empty chunk pairs without concatenating or repacking either input. This keeps table batches aligned while producing one grid-wide result.
+Positions and weights require equal logical lengths but may use independent atomic/vector boundaries. Alignment borrows paired spans without copying either input. Output may independently partition consecutive cells of the global row-major grid, including splits inside rows. Each encoding initializes each output chunk, accumulates every aligned input span, then finalizes that chunk. Empty chunks remain in caller topology and emit no work. Mean-count scratch follows output chunks, so no contiguous whole-grid scratch is required. Each active chunk, including its binding-alignment prefix, must fit a storage binding.
 
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-new GPUGridAggregation({
+graph.add(new GPUGridAggregation({
 
   positions,
 
@@ -58,7 +58,7 @@ new GPUGridAggregation({
 
   bounds: [-180, -90, 180, 90]
 
-}).addToGraph(graph);
+}));
 ```
 
 ## Constructor[​](#constructor "Direct link to Constructor")
@@ -72,7 +72,7 @@ type GPUGridAggregationProps = {
 
   weights: GraphDataView<'float32'> | GraphVectorView<'float32'>;
 
-  output: GraphDataView<'float32'>;
+  output: GraphDataView<'float32'> | GraphVectorView<'float32'>;
 
   operation?: 'sum' | 'min' | 'max' | 'mean';
 
@@ -89,4 +89,6 @@ Counts remain independently available from [`GPUGridBinning`](https://luma.gl/ne
 
 ## Performance notes[​](#performance-notes "Direct link to Performance notes")
 
-On subgroup-capable devices, grids with at most 16 cells combine weights from lanes targeting the same cell before issuing sum, minimum, maximum, or mean atomics. This targets coarse, highly contended spatial summaries. Larger grids and devices without both subgroup capabilities retain the existing direct-global-atomic implementation.
+On subgroup-capable devices, output chunks with at most 16 cells combine weights from lanes targeting the same cell before issuing sum, minimum, maximum, or mean atomics. This targets coarse, highly contended spatial summaries. Larger chunks and devices without both subgroup capabilities retain the existing direct-global-atomic implementation.
+
+Dispatch count grows with aligned input spans times output chunks. Every output chunk revisits the input and accepts only its global cell range. Highly fragmented storage increases routing overhead; automatic repacking is not performed.

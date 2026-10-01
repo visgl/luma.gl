@@ -6,6 +6,8 @@
 
 <!-- -->
 
+**Loading example**Preparing GPU resources…
+
 It is assumed you've set up your development environment as described in [Setup](https://luma.gl/next/docs/tutorials.md).
 
 The base shaders keep the vertex interface explicit:

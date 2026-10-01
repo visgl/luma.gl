@@ -18,6 +18,8 @@ Mobile quality
 // Loading source…
 ```
 
+**Loading example**Preparing GPU resources…
+
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ## Material attachment contract[​](#material-attachment-contract "Direct link to Material attachment contract")

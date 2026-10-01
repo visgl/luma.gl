@@ -14,12 +14,12 @@
 | **Reads / writes**       | Reads float32x2 positions; atomically writes uint32 cell counts.                                              |
 | **Ownership**            | Public inputs and outputs are caller-owned; scratch storage is graph-owned transient memory.                  |
 | **Output contract**      | Exact modulo-2^32 counts for the configured bounds and grid extent.                                           |
-| **Expected work**        | One source-row visit plus grid initialization.                                                                |
-| **Chunks**               | Preserves declared views and source identity; it does not implicitly concatenate or repack chunks.            |
+| **Expected work**        | Input visits per output chunk plus grid initialization.                                                       |
+| **Chunks**               | Independent position and cell-output chunks; global row-major cell addresses.                                 |
 | **Conditions / budgets** | May be conditioned with its dependent branch; encoding, submission, and publication remain application-owned. |
 | **Neighborhood**         | positions → GPUGridBinning → density texture, histogram, or threshold mask.                                   |
 
-**Cost**Initialization scales with cells; updates scale with points and contention.
+**Cost**Position chunks times output chunks, cell count, and atomic contention.
 
 **Common mistake**Do not confuse cell counts with an exact object-level spatial query.
 
@@ -36,7 +36,7 @@ Typical uses include point-density heatmaps, screen-tile occupancy, coarse parti
 Grid binning intentionally loses object identity. It is the wrong result for “which objects are in this cell?”, exact nearest-neighbor queries, or non-rectilinear regions; those require picking or a spatial index. Grid resolution is also an application tradeoff: finer grids preserve locality but increase clearing, contention, and result storage.
 
 ```
-new GPUGridBinning({
+graph.add(new GPUGridBinning({
 
   positions,
 
@@ -46,7 +46,7 @@ new GPUGridBinning({
 
   bounds: [-180, -90, 180, 90]
 
-}).addToGraph(graph);
+}));
 ```
 
 ## Constructor[​](#constructor "Direct link to Constructor")
@@ -58,7 +58,7 @@ type GPUGridBinningProps = {
 
   positions: GraphDataView<'float32x2'> | GraphVectorView<'float32x2'>;
 
-  output: GraphDataView<'uint32'>;
+  output: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
 
   gridSize: readonly [number, number];
 
@@ -67,12 +67,14 @@ type GPUGridBinningProps = {
 };
 ```
 
-`output.length` must equal `width * height`. Non-finite and out-of-bounds positions are ignored; exact maximum coordinates enter the final column or row. Each encoding clears the output. Up to 256 cells use workgroup-local atomics, and larger grids use direct global atomics.
+`output.length` must equal `width * height`. Non-finite and out-of-bounds positions are ignored; exact maximum coordinates enter the final column or row. Each encoding clears the output. Up to 256 cells per output chunk use workgroup-local atomics; larger chunks use direct global atomics.
 
-For a `GraphVectorView`, each encoding clears the grid once and then accumulates every non-empty position chunk in source order. Chunk boundaries and backing buffers are preserved; the primitive does not concatenate or pack positions.
+Positions and output may independently use atomic views or vectors. Output chunks cover consecutive ranges of the global row-major grid, including splits inside rows. Each encoding clears each output chunk once, then visits every non-empty position chunk in source order. Empty chunks are skipped; source buffers and destination partitions are preserved without concatenation or scratch storage. Each active chunk, including its binding-alignment prefix, must fit a storage binding.
 
 This API accumulates counts only. Weighted floating-point sums are provided separately by `GPUGridAggregation`, keeping integer count overflow and floating-point rounding contracts explicit.
 
 ## Performance notes[​](#performance-notes "Direct link to Performance notes")
 
-On subgroup-capable devices, grids with at most 16 cells combine lanes targeting the same cell before updating workgroup memory. This is intended for coarse, highly contended occupancy grids; larger grids and devices without both subgroup capabilities retain the existing paths.
+On subgroup-capable devices, output chunks with at most 16 cells combine lanes targeting the same cell before updating workgroup memory. This is intended for coarse, highly contended occupancy grids; larger grids and devices without both subgroup capabilities retain the existing paths.
+
+Dispatch count grows with position chunks times output chunks. Each destination chunk revisits the source points and accepts only its global cell range. This preserves bounded bindings; routing points to destination chunks more efficiently remains performance work.

@@ -15,7 +15,7 @@
 | **Ownership**            | Public inputs and outputs are caller-owned; scratch storage is graph-owned transient memory.                  |
 | **Output contract**      | Exact stable order within the requested packed or per-batch domain.                                           |
 | **Expected work**        | Bounded multi-pass sorting determined by capacity and key representation.                                     |
-| **Chunks**               | GPUBatchSort preserves aligned chunks; use explicit packing for one global order.                             |
+| **Chunks**               | GPUSort merges one stable global order across independent chunks; GPUBatchSort retains per-batch order.       |
 | **Conditions / budgets** | May be conditioned with its dependent branch; encoding, submission, and publication remain application-owned. |
 | **Neighborhood**         | keys + values → GPUSort/GPUBatchSort → top-K, grouping, index, or renderer.                                   |
 
@@ -31,13 +31,13 @@ Paired sorting moves each value with its key, so values commonly hold stable sou
 
 ### Global order and batch order answer different questions[​](#global-order-and-batch-order-answer-different-questions "Direct link to Global order and batch order answer different questions")
 
-`GPUSort` treats one packed view as one global comparison domain. Use it when every row must be ranked against every other row—for example, one back-to-front draw list or one global event timeline.
+`GPUSort` treats an atomic view or a vector as one global comparison domain. Use it when every row must be ranked against every other row—for example, one back-to-front draw list or one global event timeline.
 
 `GPUBatchSort` treats every `GraphVectorView` chunk as an independent comparison domain. It keeps the number, order, and length of chunks unchanged. This is the right contract when boundaries are meaningful: streaming record batches may have separate lifetimes, map tiles may render independently, and incremental ingestion may need newly arrived data sorted without rewriting older batches. A row never crosses a boundary, even when its key would place it in another batch under a global sort.
 
-The distinction is deliberate. Silently concatenating chunks would allocate packed storage, discard useful partition metadata, and turn an incremental operation into whole-dataset work. Callers that need a global order across chunks must explicitly choose and provision a packed representation.
+The distinction is deliberate. Silently concatenating chunks would allocate packed storage, discard useful partition metadata, and turn an incremental operation into whole-dataset work. Callers that need a global order across chunks can supply vectors directly to `GPUSort`, with independently partitioned caller-owned destinations. They may also explicitly provision a packed representation.
 
-When independent domains are already packed into four shared parent buffers, [`GPUSegmentedSort`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segmented-sort.md) keeps the boundaries and inter-segment padding intact while sorting equal-width domains together. It does not combine separately allocated streaming chunks; it only exploits storage that the application explicitly packed in advance.
+When independent domains are already packed into four shared parent buffers, [`GPUSegmentedSort`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segmented-sort.md) keeps the boundaries and inter-segment padding intact while sorting equal-width domains together. It does not combine separately allocated streaming chunks. With vector parents it borrows each logical segment and sorts across its storage seams; the eight-dispatch bound applies to atomic parents.
 
 ### Algorithm selection follows the work unit[​](#algorithm-selection-follows-the-work-unit "Direct link to Algorithm selection follows the work unit")
 
@@ -46,6 +46,8 @@ Bitonic sort favors smaller fixed networks; radix sort scales larger inputs by p
 Scratch remains graph-owned and batch-local. Empty chunks add no nodes, single-row chunks use the copy fast path, and later chunk sorts can reuse transient allocations from earlier chunks.
 
 The live example switches between one packed Arrow column and preserved Arrow chunks. Its streaming case preserves batch boundaries and reports the algorithm selected independently for each chunk:
+
+**Loading example**Preparing GPU resources…
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
@@ -98,7 +100,7 @@ const sort = new GPUSort({
 
 });
 
-sort.addToGraph(graph);
+graph.add(sort);
 
 
 
@@ -136,7 +138,7 @@ const sort = new GPUBatchSort({
 
 });
 
-sort.addToGraph(graph);
+graph.add(sort);
 ```
 
 ## Constructor[​](#constructor "Direct link to Constructor")
@@ -204,7 +206,7 @@ type GPUBatchSortProps = {
 * `resolvedAlgorithms` contains one concrete choice per chunk in source order.
 * Inputs and outputs remain caller-owned; no vector is concatenated or repacked.
 
-## `addToGraph(graph)`[​](#addtographgraph "Direct link to addtographgraph")
+## `getCommandNodes(graph)`[​](#getcommandnodesgraph "Direct link to getcommandnodesgraph")
 
 Adds all compute passes and transient scratch declarations to the supplied graph. The graph must own every input and output view. Scratch buffers are graph-owned, participate in transient lifetime reuse, and are released by `CompiledGPUCommandGraph.destroy()`.
 
@@ -219,3 +221,9 @@ The method does not compile the graph, create an encoder, submit work, or map ou
 * At most `0x80000000` rows are accepted; practical limits are normally lower device buffer and dispatch limits.
 
 See the runnable [GPU sort example](https://luma.gl/next/examples/experimental/gpu-sort) for packed and preserved-batch Arrow upload, per-batch algorithm selection, graph compilation statistics, explicit submission, and CPU-oracle validation.
+
+## Chunked storage[​](#chunked-storage "Direct link to Chunked storage")
+
+`GPUSort` accepts an atomic view or independently partitioned `GraphVectorView` for each of its four columns. Keys and payloads share a logical length, not a required physical partition. It produces one stable global order across all source chunks, including equal keys that cross chunk boundaries. Source buffers are borrowed unchanged; sorted-span scratch and rank scratch follow the intersections of key and payload chunks. The merge searches other sorted spans and scatters global ranks into destination chunks. Its dispatch count grows with the number of spans; fragmented inputs warrant benchmarking.
+
+`GPUBatchSort` continues to sort each batch independently. Chunk boundaries are comparison-domain boundaries only in that API.

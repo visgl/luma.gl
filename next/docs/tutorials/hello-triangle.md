@@ -8,6 +8,8 @@ Every rendered world starts somewhere. This live example turns one `Model` into 
 
 <!-- -->
 
+**Loading example**Preparing GPU resources…
+
 The canvas displays a red triangle. When both backends are available, switch between WebGPU and WebGL2 above the example to see the same application logic run through either GPU API.
 
 ## The mental model[​](#the-mental-model "Direct link to The mental model")

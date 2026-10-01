@@ -12,16 +12,16 @@ This solves a common GPU data-boundary problem: one buffer contains observations
 
 ## At a glance
 
-| Question                 | Answer                                                                                                        |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| **Problem**              | Produce stable inner-join row pairs from sparse exact-key lookup.                                             |
-| **Reads / writes**       | Reads left keys and a GPUHashIndexView; writes match mask, offsets, row pairs, count, and overflow.           |
-| **Ownership**            | Public inputs and outputs are caller-owned; scratch storage is graph-owned transient memory.                  |
-| **Output contract**      | Capacity is fixed at compilation; counts and diagnostics report incomplete or overflowed output.              |
-| **Expected work**        | Hash lookup followed by scan and stable scatter.                                                              |
-| **Chunks**               | Use GPUBatchHashJoin to preserve per-chunk output domains.                                                    |
-| **Conditions / budgets** | May be conditioned with its dependent branch; encoding, submission, and publication remain application-owned. |
-| **Neighborhood**         | GPUHashIndex + left keys → GPUHashJoin → joined aggregation or rendering.                                     |
+| Question                 | Answer                                                                                                            |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| **Problem**              | Produce stable inner-join row pairs from sparse exact-key lookup.                                                 |
+| **Reads / writes**       | Reads left keys and a GPUHashIndexView; writes match mask, offsets, row pairs, count, and overflow.               |
+| **Ownership**            | Public inputs and outputs are caller-owned; scratch storage is graph-owned transient memory.                      |
+| **Output contract**      | Capacity is fixed at compilation; counts and diagnostics report incomplete or overflowed output.                  |
+| **Expected work**        | Hash lookup followed by scan and stable scatter.                                                                  |
+| **Chunks**               | Independent input/output chunks form one global result. GPUBatchHashJoin keeps separate per-chunk output domains. |
+| **Conditions / budgets** | May be conditioned with its dependent branch; encoding, submission, and publication remain application-owned.     |
+| **Neighborhood**         | GPUHashIndex + left keys → GPUHashJoin → joined aggregation or rendering.                                         |
 
 **Cost**Probe count and output cardinality; a small result does not remove lookup cost.
 
@@ -43,7 +43,7 @@ An inner join removes misses. `GPUHashJoin` scans the same found mask and writes
 
 ### The first contract is many-to-one[​](#the-first-contract-is-many-to-one "Direct link to The first contract is many-to-one")
 
-The right index stores one value per distinct key. If right-side input contains duplicate keys, either hash-index implementation deterministically retains the value from the lowest source row. For `GPUBatchHashIndex`, that winner is the earliest row across all preserved right-side chunks. The resulting join is therefore many-left-to-one-right: repeated left keys may all map to one right row.
+The right index stores one value per distinct key. If right-side input contains duplicate keys, either hash-index implementation deterministically retains the value from the lowest source row. For both index builders, that winner is the earliest row across all right-side chunks. The resulting join is therefore many-left-to-one-right: repeated left keys may all map to one right row.
 
 This is intentional. One-to-many and many-to-many joins require a different right-side structure, usually key-group offsets plus a value list, and can expand output far beyond left input length. Adding that behavior to an exact map would obscure both memory requirements and overflow. It remains a separate future contract.
 
@@ -59,6 +59,14 @@ Stable order is valuable for deterministic rendering, reproducible exports, and 
 
 The join never resizes its outputs. A workload can choose fixed worst-case storage, use observed counts to size a later frame, or reject overflow in correctness-sensitive processing. The contract keeps allocation and latency policy with the application.
 
+### One global result across independent chunks[​](#one-global-result-across-independent-chunks "Direct link to One global result across independent chunks")
+
+`GPUHashJoin` treats all input chunks as one ordered sequence. A global scan carries match offsets across boundaries, and pairs fill the caller's existing output chunks up to their total capacity. The left and right output vectors may be partitioned differently. Empty chunks and zero output capacity are valid; count and overflow are still published. Unused output rows are untouched. Generated left IDs use global source positions, not positions within a chunk.
+
+Inputs and outputs stay borrowed. Matched rows and scan scratch follow the key topology, and caller-provided found/probe vectors keep their own boundaries. Lowering aligns views without concatenation. Scatter dispatch count grows with the product of aligned source and destination spans; optimizing routing for heavily fragmented vectors remains future work.
+
+Use [`GPUBatchHashJoin`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-batch-hash-join.md) when each source chunk must instead have its own output capacity, required count, overflow, and diagnostics. Its publication domains intentionally do not spill into neighboring batches.
+
 ### Probe statistics separate lookup cost from join density[​](#probe-statistics-separate-lookup-cost-from-join-density "Direct link to Probe statistics separate lookup cost from join density")
 
 The four-row statistics block comes directly from `GPUHashIndexQuery`:
@@ -71,9 +79,9 @@ Join density is `found / left row count`; lookup health is described by average 
 
 ### Composition and ownership[​](#composition-and-ownership "Direct link to Composition and ownership")
 
-The workflow reuses `GPUHashIndexQuery` and `GPUScan`, then adds one pair-scatter pass. Callers own the persistent right index, left keys, published pairs, count, overflow, and statistics. The graph owns transient matched rows, flags, probe counts, and scan offsets unless their diagnostic outputs are supplied explicitly.
+The workflow reuses `GPUHashIndexQuery` and `GPUScan`, then adds pair-scatter passes over aligned source and destination spans. Callers own the persistent right index, left keys, published pairs, count, overflow, and statistics. The graph owns transient matched rows, flags, probe counts, and scan offsets unless their diagnostic outputs are supplied explicitly.
 
-All current inputs are packed `uint32` views. Preserved chunk topology, multiple right matches, payload materialization, outer joins, and join chaining remain future contracts. Keeping this slice row-ID-oriented lets downstream consumers gather their own typed columns without making the join primitive depend on Arrow or a particular table representation.
+Keys, explicit left rows, diagnostic outputs, and pair outputs accept packed `uint32` atomic views or vectors. Their boundaries may differ. Tables, count, overflow, and statistics remain atomic views. Multiple right matches, payload materialization, outer joins, and join chaining remain future contracts. Keeping this slice row-ID-oriented lets downstream consumers gather their own typed columns without making the join primitive depend on Arrow or a particular table representation.
 
 ## Usage[​](#usage "Direct link to Usage")
 
@@ -92,11 +100,11 @@ const propertyIndex = new GPUHashIndex({
 
 });
 
-propertyIndex.addToGraph(graph);
+graph.add(propertyIndex);
 
 
 
-new GPUHashJoin({
+graph.add(new GPUHashJoin({
 
   index: propertyIndex,
 
@@ -116,13 +124,13 @@ new GPUHashJoin({
 
   found: visibleObjectsWithProperties
 
-}).addToGraph(graph);
+}));
 ```
 
 For an aligned left join without compaction, use the underlying query directly:
 
 ```
-new GPUHashIndexQuery({
+graph.add(new GPUHashIndexQuery({
 
   index: propertyIndex,
 
@@ -136,7 +144,7 @@ new GPUHashIndexQuery({
 
   statistics: lookupStatistics
 
-}).addToGraph(graph);
+}));
 ```
 
 ## Constructor[​](#constructor "Direct link to Constructor")

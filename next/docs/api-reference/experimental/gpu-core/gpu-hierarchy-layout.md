@@ -20,6 +20,8 @@ Mobile quality
 // Loading source…
 ```
 
+**Loading example**Preparing GPU resources…
+
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ## At a glance
@@ -54,7 +56,7 @@ import {GPUHierarchyLayout} from '@luma.gl/gpgpu/gpu-core';
 
 
 
-new GPUHierarchyLayout({
+graph.add(new GPUHierarchyLayout({
 
   id: 'process-thread-layout',
 
@@ -74,7 +76,7 @@ new GPUHierarchyLayout({
 
   collapsedParentHeight: 1
 
-}).addToGraph(graph);
+}));
 ```
 
 Inputs and outputs may be packed `GraphDataView<'uint32'>` values or ordered `GraphVectorView<'uint32'>` partitions. A nonzero state is expanded; a zero state is collapsed.
@@ -85,7 +87,7 @@ Inputs and outputs may be packed `GraphDataView<'uint32'>` values or ordered `Gr
 * A collapsed parent publishes `collapsedParentHeight` through its first child; its other children publish zero.
 * `GPUScan` converts the effective child heights into stable exclusive row offsets.
 
-`childStates.length` must equal `parentStates.length * childrenPerParent`. Both output lengths must equal the child count. Vector heights and offsets preserve the exact child-state chunk topology; parent partitions may use different boundaries.
+`childStates.length` must equal `parentStates.length * childrenPerParent`. Both output lengths must equal the child count. Parent states, child states, heights, and offsets may use independent chunk boundaries.
 
 ### Partitioned hierarchy identity[​](#partitioned-hierarchy-identity "Direct link to Partitioned hierarchy identity")
 
@@ -96,3 +98,7 @@ This matters for streamed or incrementally replaced batches: an application can 
 Heights and offsets are caller-owned and cannot alias each other or their input buffers.
 
 Expansion states can be updated between graph encodings. The operation allocates only graph-owned scan scratch and does not submit, repack, or read back data.
+
+## Chunked storage[​](#chunked-storage "Direct link to Chunked storage")
+
+Parent states, child states, heights, and offsets may have independent chunk boundaries or mix atomic and vector views. Cumulative logical row IDs define parent/child relationships. Height passes intersect child/output spans with parent ranges, and the scan carries offsets across every output chunk. Empty chunks do not introduce hierarchy or scan boundaries.

@@ -18,6 +18,8 @@ Mobile quality
 // Loading source…
 ```
 
+**Loading example**Preparing GPU resources…
+
 Scroll page · Ctrl/⌘ + scroll to interact
 
 The live viewer uses a separate analysis command graph. It can profile the entire trace, the visible viewport, or a measured time interval; viewport updates are deferred until navigation settles. The graph keeps group counts, duration histograms, and clipped time buckets on the GPU and reads back only the small fixed-size chart result. Unchanged scope generations reuse cached output.

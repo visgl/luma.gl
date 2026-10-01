@@ -30,6 +30,8 @@ Mobile quality
 // Loading source…
 ```
 
+**Loading example**Preparing GPU resources…
+
 Scroll page · Ctrl/⌘ + scroll to interact
 
 The graph inspector opens automatically and lets you compare five real GPU-backed color modes:

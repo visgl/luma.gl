@@ -7,11 +7,11 @@
 | Question                 | Answer                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------- |
 | **Problem**              | Apply a centered same-size two-dimensional float32 convolution.                                               |
-| **Reads / writes**       | Reads packed input and kernel views; writes a separate packed output view.                                    |
+| **Reads / writes**       | Reads independently chunked packed input and kernel views; writes separate output chunks.                     |
 | **Ownership**            | Public inputs and outputs are caller-owned; scratch storage is graph-owned transient memory.                  |
 | **Output contract**      | One same-size convolved field with explicit zero or wrap boundaries.                                          |
-| **Expected work**        | Uses one direct pass or an explicit FFT pipeline selected from the configured strategy.                       |
-| **Chunks**               | Requires one packed 2D domain.                                                                                |
+| **Expected work**        | Uses direct chunk contributions or an explicit FFT pipeline selected from the configured strategy.            |
+| **Chunks**               | Global field/kernel coordinates cross arbitrary chunks; FFT scratch remains bounded by one binding per field. |
 | **Conditions / budgets** | May be conditioned with its dependent branch; encoding, submission, and publication remain application-owned. |
 | **Neighborhood**         | field + kernel → GPUConvolution → raster filter, simulation, or analysis.                                     |
 
@@ -21,7 +21,7 @@
 
 ## Overview[​](#overview "Direct link to Overview")
 
-`GPUConvolution` adds a same-size, centered two-dimensional `float32` convolution to a `GPUCommandGraph`. It accepts GPU-resident input, kernel, and output views and records either one direct spatial pass or a graph-native frequency-domain pipeline. Neither path compiles, submits, or reads data back by itself.
+`GPUConvolution` adds a same-size, centered two-dimensional `float32` convolution to a `GPUCommandGraph`. It accepts GPU-resident input, kernel, and output views and records either direct spatial passes or a graph-native frequency-domain pipeline. Neither path compiles, submits, or reads data back by itself.
 
 The spectral path reuses the radix-2 planning and complex arithmetic factored out for `GPUFFT1D`. Packing, two forward transforms, spectral multiplication, the inverse transform, and cropping are all explicit graph nodes. Their nine logical complex scratch fields are graph-owned transients, so the compiler can alias fields whose lifetimes do not overlap.
 
@@ -36,7 +36,7 @@ import {GPUConvolution} from '@luma.gl/experimental';
 
 
 
-new GPUConvolution({
+graph.add(new GPUConvolution({
 
   id: 'blur',
 
@@ -58,10 +58,18 @@ new GPUConvolution({
 
   strategy: 'auto'
 
-}).addToGraph(graph);
+}));
 ```
 
-All three values are packed `GraphDataView<'float32'>` views belonging to the target graph. The input and output contain at least `width * height` row-major values. The kernel contains at least `kernelWidth * kernelHeight` values. Input, kernel, and output use separate graph buffers, and both kernel dimensions must be positive odd integers so the center is unambiguous.
+All three values accept packed `GraphDataView<'float32'>` or `GraphVectorView<'float32'>` views belonging to the target graph. The input and output contain at least `width * height` row-major values. The kernel contains at least `kernelWidth * kernelHeight` values. Input, kernel, and output use separate graph buffers, and both kernel dimensions must be positive odd integers so the center is unambiguous.
+
+## Physical chunks[​](#physical-chunks "Direct link to Physical chunks")
+
+Input, kernel, and output partitions are independent. Chunk boundaries can split field or kernel rows; neighborhood coordinates remain global. Empty chunks, nonzero byte offsets, and spare capacity are supported. Output chunks must not overlap, and unused output rows remain unchanged.
+
+Direct execution borrows the original chunks and accumulates contributions from each input/kernel chunk pair into each output chunk, using no scratch. Each output is initialized again on every encoding. Different partitions can change floating-point summation order; compare results with an appropriate tolerance.
+
+FFT execution packs chunks directly into its existing padded complex fields and crops directly into output chunks. These fields are algorithm scratch, not concatenation of caller storage. The pipeline retains nine logical scratch fields; chunking adds pack/crop passes, not new fields.
 
 This operation computes convolution rather than correlation. For output coordinate `(x, y)`, a kernel coordinate `(kx, ky)` samples the input at `(x - (kx - centerX), y - (ky - centerY))`.
 
@@ -74,11 +82,13 @@ This operation computes convolution rather than correlation. For output coordina
 
 `strategy` may be `auto`, `direct`, or `fft`. The initial `auto` heuristic selects direct execution for kernel areas through `GPU_CONVOLUTION_AUTO_DIRECT_KERNEL_AREA` (currently 4096, approximately a 64-by-64 square) and FFT execution above that cutoff when the FFT dimensions and device limits are supported. Explicit strategies are useful for workload-specific measurements.
 
-`getGPUConvolutionSupport(device, props)` reports the selected strategy, planned dimensions, and any device or FFT constraint that prevents execution. `convolution.stats` and `makeGPUConvolutionStats(props)` expose the direct multiply-add count, padded FFT field, transform and dispatch counts, and logical transient byte requirement.
+`getGPUConvolutionSupport(device, props)` reports the selected strategy, planned dimensions, and any device or FFT constraint that prevents execution. `convolution.stats` and `makeGPUConvolutionStats(props)` expose the direct multiply-add count, padded FFT field, transform and dispatch counts, and logical transient byte requirement. Pass counts describe the contiguous baseline; inspect the compiled graph for actual chunk-lowered counts. Include `input`, `kernel`, and `output` in the support query to check active chunk bindings rather than whole logical fields.
 
 ## Performance notes[​](#performance-notes "Direct link to Performance notes")
 
 Direct execution performs `width * height * kernelWidth * kernelHeight` multiply-adds. It avoids padding and intermediate buffers, so small kernels usually win; performance is driven by kernel area, input-cache reuse, boundary checks, and memory bandwidth. The current general shader does not detect separable kernels.
+
+The number of direct passes grows with the product of input, kernel, and output chunk counts. More selective neighborhood routing remains performance work; many tiny chunks can be expensive.
 
 FFT execution scales with the padded field size times its logarithm rather than kernel area, but it performs three complete transforms plus packing, spectral multiplication, and cropping. Large kernels can amortize that fixed work. Zero boundaries can round each padded dimension up sharply, so a small change in field or kernel shape may move the crossover. Memory capacity and the graph compiler's transient aliasing are also important for the nine logical complex scratch fields.
 
@@ -93,4 +103,5 @@ Subgroups offer limited benefit to the direct path because neighboring lanes do 
 * Same-size output with centered, odd-sized kernels.
 * Zero and wrap boundaries only.
 * FFT dimensions are powers of two no larger than 2048.
+* Each active caller chunk binding must fit device limits. Direct execution supports logical fields larger than one binding; FFT execution still requires each padded complex field to fit one binding. `auto` falls back to direct execution when the FFT plan is unsupported.
 * Out-of-place buffers only; no hidden submission or readback.

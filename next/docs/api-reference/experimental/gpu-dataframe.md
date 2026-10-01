@@ -68,6 +68,8 @@ const compiledGraph = graph.compile();
 
 [Open full page](https://luma.gl/next/examples/experimental/gpu-data-analysis)[View source](https://github.com/visgl/luma.gl/tree/master/examples/experimental/gpu-data-analysis)[Inspect graph](https://luma.gl/next/examples/experimental/gpu-data-analysis?panel=graph)
 
+**Loading example**Preparing GPU resources…
+
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ## Operations and API index[​](#operations-and-api-index "Direct link to Operations and API index")

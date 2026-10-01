@@ -6,6 +6,8 @@
 
 <!-- -->
 
+**Loading example**Preparing GPU resources…
+
 ## From a draw to a scene object[​](#from-a-draw-to-a-scene-object "Direct link to From a draw to a scene object")
 
 `CubeGeometry` supplies positions, texture coordinates, and indices. `Model` converts that geometry into GPU buffers and associates the attributes with the locations declared by the WGSL and GLSL vertex shaders.

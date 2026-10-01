@@ -8,7 +8,7 @@ GPU Core separates reusable GPU operations from application lifecycle. Contribut
 
 The lifecycle has two distinct preparation steps:
 
-1. Calling a contributor's `addToGraph()` expands the operation into logical resources and low-level nodes.
+1. Calling a contributor's `getCommandNodes()` expands the operation into logical resources and low-level nodes.
 2. Calling `compile()` validates those declarations, infers resource dependencies, chooses a stable topological order, plans compatible transient reuse, creates physical resources, and compiles node callbacks.
 
 Encoding then records the immutable plan using current parameters and compatible imported resources. The application still submits the resulting command buffer.
@@ -48,7 +48,7 @@ Work**1M invocations**
 Publishes**Packed IDs and a GPU-written indirect count**
 
 ```
-new GPUCompaction({input: source, flags, output: visibleIds, count}).addToGraph(graph);
+graph.add(new GPUCompaction({input: source, flags, output: visibleIds, count}));
 ```
 
 ## When to use it[​](#when-to-use-it "Direct link to When to use it")
@@ -147,3 +147,7 @@ Measure the complete pipeline: candidates, compute invocations, bytes touched, p
 * [`GPUTextureHistory`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-texture-history.md) manages rotating retained texture state.
 * [`GPUReadbackRing`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-readback-ring.md) supports bounded asynchronous readback.
 * The [GPU Core overview](https://luma.gl/next/docs/api-reference/experimental/gpu-core.md) indexes reusable operations and domain modules.
+
+## Batch semantics[​](#batch-semantics "Direct link to Batch semantics")
+
+See [batch semantics and coverage](https://luma.gl/next/docs/api-guide/gpu/batch-semantics.md) for logical row alignment, physical chunk preservation, empty results, aliasing, and the audited operation families.

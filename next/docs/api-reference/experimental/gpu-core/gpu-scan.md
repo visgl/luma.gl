@@ -1,6 +1,6 @@
 # GPUScan
 
-[Scan](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-scan.md)[Galloping Search](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-galloping-search.md)[Compaction](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-compaction.md)[Segmented Layout](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segmented-layout.md)[Masks](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-mask.md)[Visibility](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-visibility-workflow.md)[Virtual Geometry](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-virtual-geometry-selection.md)
+[Scan](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-scan.md)[Segmented Scan](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segmented-scan.md)[Scatter](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-scatter.md)[Gather](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-gather.md)
 
 ## Overview[​](#overview "Direct link to Overview")
 
@@ -8,16 +8,16 @@
 
 ## At a glance
 
-| Question                 | Answer                                                                                            |
-| ------------------------ | ------------------------------------------------------------------------------------------------- |
-| **Problem**              | Give each row the sum contributed before it, or through it in inclusive mode.                     |
-| **Reads / writes**       | Reads packed uint32 values and optional segment flags; writes packed prefixes.                    |
-| **Ownership**            | Input, flags, and output are caller-owned; hierarchical scratch is graph-owned transient storage. |
-| **Output contract**      | Exact, source-aligned, and modulo 2^32.                                                           |
-| **Expected work**        | Linear reads/writes plus bounded hierarchical block-summary and offset passes.                    |
-| **Chunks**               | Preserved as one logical sequence; matching vector topology is required.                          |
-| **Conditions / budgets** | Can sit inside a conditioned branch; standalone scan has no resumable plan.                       |
-| **Neighborhood**         | counts or flags → GPUScan → offsets, cumulative values, or compaction scatter.                    |
+| Question                 | Answer                                                                                                                 |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| **Problem**              | Give each row the sum contributed before it, or through it in inclusive mode.                                          |
+| **Reads / writes**       | Reads packed uint32 values and optional segment flags; writes packed prefixes.                                         |
+| **Ownership**            | Input, flags, and output are caller-owned; hierarchical scratch is graph-owned transient storage.                      |
+| **Output contract**      | Exact, source-aligned, and modulo 2^32.                                                                                |
+| **Expected work**        | Linear reads/writes plus bounded hierarchical block-summary and offset passes.                                         |
+| **Chunks**               | Input and flags align by logical row; atomic and vector views and independent output capacity topologies may be mixed. |
+| **Conditions / budgets** | Can sit inside a conditioned branch; standalone scan has no resumable plan.                                            |
+| **Neighborhood**         | counts or flags → GPUScan → offsets, cumulative values, or compaction scatter.                                         |
 
 **Cost**The complete input and hierarchy summaries are processed even when the final count is small.
 
@@ -41,7 +41,7 @@ Choose a scan when each row needs the total contributed by preceding rows. Besid
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-new GPUScan({
+graph.add(new GPUScan({
 
   id: 'selection-offsets',
 
@@ -49,13 +49,13 @@ new GPUScan({
 
   output: offsets
 
-}).addToGraph(graph);
+}));
 ```
 
 Set `mode: 'inclusive'` when each output should include its corresponding input value. Supply `segmentFlags` to reset the prefix at every nonzero flag:
 
 ```
-new GPUScan({
+graph.add(new GPUScan({
 
   id: 'cumulative-counts-by-group',
 
@@ -67,12 +67,12 @@ new GPUScan({
 
   segmentFlags: groupStarts
 
-}).addToGraph(graph);
+}));
 ```
 
-`input` and `output` may both be packed, four-byte-aligned `GraphDataView<'uint32'>` values or both be `GraphVectorView<'uint32'>` values. A data-view output must contain at least as many rows as its input. Vector input and output must have identical ordered chunk lengths.
+`input` and `output` may be packed, four-byte-aligned `GraphDataView<'uint32'>` values or `GraphVectorView<'uint32'>` values. The output must cover the input's logical length; scalar views may provide extra capacity, while vector views must have equal logical lengths. Physical chunk boundaries may differ.
 
-`segmentFlags`, when supplied, must use the same view kind as `input` and must not share an underlying graph buffer with `output`. An atomic flags view must contain at least as many rows as the input; vector flags must have identical ordered chunk lengths. The first logical row begins a segment even if its flag is zero. Every later nonzero flag begins a new segment. Segments continue across vector chunk boundaries unless the first row in a later chunk is flagged.
+`segmentFlags`, when supplied, must cover the logical length of `input` and must not share an underlying graph buffer with `output`. Its physical chunk boundaries may differ. The first logical row begins a segment even if its flag is zero. Every later nonzero flag begins a new segment. Segments continue across vector chunk boundaries unless the first row in a later chunk is flagged.
 
 Scan treats chunked vectors as one logical sequence, while all caller-visible buffers and chunk boundaries remain intact. It scans each chunk locally, scans the ordered chunk totals, and adds the resulting carry to each original output chunk. Empty chunks retain their place in that sequence.
 
@@ -81,6 +81,18 @@ For input `[1, 0, 1, 1]`, exclusive output is `[0, 1, 1, 2]` and inclusive outpu
 The implementation scans 256 values per workgroup, recursively scans block sums, and propagates block offsets back to lower levels. Segmented scans propagate associative `(sum, segment)` summaries between workgroups and only apply a carry before the first local segment start. Vector scans add transient chunk-summary and carry buffers; they never concatenate or repack caller data. All scratch allocations participate in graph lifetime reuse. Arbitrary non-power-of-two lengths are supported. A zero-length scan adds no nodes.
 
 All arithmetic wraps modulo 2^32. Signed, floating-point, minimum/maximum, and custom associative scans remain future work.
+
+### Split-word 64-bit scan[​](#split-word-64-bit-scan "Direct link to Split-word 64-bit scan")
+
+`GPUScanUint64` computes inclusive prefixes modulo 2^64 using packed `uint32` low and high words:
+
+```
+graph.add(new GPUScanUint64({inputLow, inputHigh, outputLow, outputHigh}));
+```
+
+All four operands accept atomic views or chunked vectors with independent boundaries. Inputs must have equal logical lengths. Outputs may have extra capacity; only the input-length prefix is written. Empty input writes nothing. Carries cross chunk boundaries, and adjusted high-word scratch follows the high input's topology without packing caller data.
+
+Low output buffers must be separate from both inputs and the high output. The high output may reuse the high input's storage: the operation reads all high words into scratch before writing their prefixes. Chunks within each output must not overlap. Each encoding rebuilds the carry; an aliased high input reads the previous output unless the caller updates it.
 
 ## Performance notes[​](#performance-notes "Direct link to Performance notes")
 

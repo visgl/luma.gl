@@ -8,6 +8,8 @@
 
 This contract is designed for streaming record batches, Arrow chunks, tiles, partitions, and incremental uploads where the boundary is part of the data model rather than an implementation detail. It reuses `GPUHashJoin` per chunk; it does not concatenate, repack, submit, or read back.
 
+For one global compacted result across independently partitioned input and output vectors, use [`GPUHashJoin`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-hash-join.md). It preserves caller storage while allowing matches to fill the total output capacity across chunk boundaries.
+
 ## At a glance
 
 | Question                 | Answer                                                                                                        |
@@ -88,7 +90,7 @@ The workflow remains packed `uint32`, many-left-to-one-right, and row-ID-oriente
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-new GPUBatchHashJoin({
+graph.add(new GPUBatchHashJoin({
 
   index: sharedPropertyIndex,
 
@@ -108,7 +110,7 @@ new GPUBatchHashJoin({
 
   found: propertyFoundByEventBatch
 
-}).addToGraph(graph);
+}));
 ```
 
 ## Constructor[​](#constructor "Direct link to Constructor")

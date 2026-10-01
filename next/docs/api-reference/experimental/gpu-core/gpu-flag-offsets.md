@@ -8,16 +8,16 @@
 
 ## At a glance
 
-| Question                 | Answer                                                                                      |
-| ------------------------ | ------------------------------------------------------------------------------------------- |
-| **Problem**              | Turn one packed binary flag stream into stable dense indices and a count.                   |
-| **Reads / writes**       | Reads uint32 zero-or-one flags; writes exclusive uint32 offsets and one scalar count.       |
-| **Ownership**            | Flags, offsets, and count are caller-owned; hierarchical scan scratch is graph-owned.       |
-| **Output contract**      | One source-aligned exclusive offset per flag and an exact count modulo uint32.              |
-| **Expected work**        | One hierarchical exclusive scan plus one scalar publication pass.                           |
-| **Chunks**               | Consumes one GraphDataView; invoke once per durable source chunk to retain boundaries.      |
-| **Conditions / budgets** | Contributes ordinary graph nodes and never compiles, submits, maps, or reads back.          |
-| **Neighborhood**         | format classifier → GPUFlagOffsets → compaction destinations, counts, or GPUSegmentOffsets. |
+| Question                 | Answer                                                                                                       |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| **Problem**              | Turn one packed binary flag stream into stable dense indices and a count.                                    |
+| **Reads / writes**       | Reads uint32 zero-or-one flags; writes exclusive uint32 offsets and one scalar count.                        |
+| **Ownership**            | Flags, offsets, and count are caller-owned; hierarchical scan scratch is graph-owned.                        |
+| **Output contract**      | One source-aligned exclusive offset per flag and an exact count modulo uint32.                               |
+| **Expected work**        | One hierarchical exclusive scan plus one scalar publication pass.                                            |
+| **Chunks**               | Atomic and vector views may have independent boundaries; only the flag-length destination prefix is written. |
+| **Conditions / budgets** | Contributes ordinary graph nodes and never compiles, submits, maps, or reads back.                           |
+| **Neighborhood**         | format classifier → GPUFlagOffsets → compaction destinations, counts, or GPUSegmentOffsets.                  |
 
 **Cost**The complete flag stream is scanned even when few flags are set.
 
@@ -37,7 +37,7 @@ Use `GPUScan` directly if no total count is needed. Use `GPUCompaction` if the o
 | `offsets` | at least slot count | Exclusive prefix sum; the dense destination for each slot |
 | `count`   | at least 1          | Total set flags in element zero                           |
 
-An empty input writes `count[0] = 0`. No offset element exists for an empty input. Counts and offsets use `uint32` arithmetic, so callers must retain page or batch boundaries before overflow.
+`flags` and `offsets` may independently be atomic views or `GraphVectorView`s with different partitions. The scan carries across chunks without repacking their buffers, and `count` covers the complete flag sequence. Extra offset capacity is left untouched. An empty input writes `count[0] = 0`. No offset element exists for an empty input. Counts and offsets use `uint32` arithmetic, so callers must retain page or batch boundaries before overflow.
 
 ## Usage[​](#usage "Direct link to Usage")
 
@@ -50,7 +50,7 @@ const graph = new GPUCommandGraph(device, {id: 'nullable-column'});
 
 
 
-new GPUFlagOffsets({
+graph.add(new GPUFlagOffsets({
 
   id: 'present-values',
 
@@ -60,7 +60,7 @@ new GPUFlagOffsets({
 
   count: nonNullValueCount
 
-}).addToGraph(graph);
+}));
 ```
 
 The class contributes graph nodes only. It does not allocate public outputs, compile the graph, submit work, or map the count. A compiled graph can be reused when its view sizes and topology stay fixed; imported buffers may be rebound for each encoding.

@@ -1,6 +1,6 @@
 # GPUReduction
 
-[Reduction](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-reduction.md)[Histogram](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-histogram.md)[Group Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-group-aggregation.md)
+[Reduction](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-reduction.md)[Segmented Reduction](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segmented-reduction.md)[RLE and Unique](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-run-length-encode.md)[Histogram](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-histogram.md)[Group Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-group-aggregation.md)
 
 ## Overview[​](#overview "Direct link to Overview")
 
@@ -34,7 +34,7 @@ Reductions answer whole-input questions that should remain on the GPU: compute a
 Use grouped, grid, or histogram aggregation when the result must retain categories, spatial cells, or a distribution. A reduction deliberately discards row identity and intermediate structure; it does not report which row produced a minimum or maximum.
 
 ```
-new GPUReduction({input: values, output: extent, operation: 'extent'}).addToGraph(graph);
+graph.add(new GPUReduction({input: values, output: extent, operation: 'extent'}));
 ```
 
 ## Constructor[​](#constructor "Direct link to Constructor")
@@ -109,6 +109,12 @@ When a max-feature device exposes both `subgroups` and the `subgroup_id` WGSL fe
 
 The fast path also benefits automatic histogram domains, raster statistics, graph summaries, PageRank, and global data-frame aggregations. Gains are largest when synchronization matters; bandwidth-bound graphs may improve less.
 
-## `addToGraph(graph)`[​](#addtographgraph "Direct link to addtographgraph")
+## `getCommandNodes(graph)`[​](#getcommandnodesgraph "Direct link to getcommandnodesgraph")
 
 Declares reduction levels and a final normalization pass. It does not compile, encode, submit, map, or destroy imported buffers.
+
+## Batch selection[​](#batch-selection "Direct link to Batch selection")
+
+An optional `uint32` mask selects rows by logical index: zero excludes a row and any nonzero value includes it. Input and mask must have equal logical lengths, but may use different chunk boundaries or mix a data view with a vector. Lowering creates borrowed slices at shared boundaries; it never concatenates or uploads input data. Empty chunks contribute no rows. The output is reinitialized on every encoding.
+
+See the [batch semantics contract](https://luma.gl/next/docs/api-guide/gpu/batch-semantics.md) for layout, alias, and empty-result rules.

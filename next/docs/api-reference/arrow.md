@@ -18,6 +18,8 @@ Mobile quality
 // Loading source…
 ```
 
+**Loading example**Preparing GPU resources…
+
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ## Arrow Rendering[​](#arrow-rendering "Direct link to Arrow Rendering")
@@ -35,6 +37,8 @@ InfoSource
 ```
 // Loading source…
 ```
+
+**Loading example**Preparing GPU resources…
 
 ## API Reference[​](#api-reference "Direct link to API Reference")
 

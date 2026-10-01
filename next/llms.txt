@@ -140,6 +140,7 @@ Build rendered applications around Model, then add updates, redraw, interaction,
 Follow the GPU lifecycle from device creation and resource ownership through bindings, command encoding, submission, and presentation.
 
 - [Core GPU programming](https://luma.gl/next/docs/api-guide/gpu.md): Follow the GPU lifecycle from device creation and resource ownership through bindings, command encoding, submission, and presentation.
+- [Batch semantics and coverage](https://luma.gl/next/docs/api-guide/gpu/batch-semantics.md): A GPUVector is an ordered logical array backed by GPUData[]. Chunk boundaries describe
 - [Core GPU cookbook](https://luma.gl/next/docs/api-guide/gpu/cookbook.md): These recipes are intentionally small. Follow the linked guide for the mental model and the
 - [GPGPU programming](https://luma.gl/next/docs/api-guide/gpu/gpgpu.md): Choose and compose luma.gl APIs for portable GPU data processing, GPU tables, and WebGPU command graphs.
 - [Antialiasing and Multisampling](https://luma.gl/next/docs/api-guide/gpu/gpu-antialiasing.md): Aliasing is not one problem with one switch. A jagged triangle edge, a shimmering checkerboard,
@@ -273,6 +274,7 @@ Render models with geometry and shader inputs, manage redraw and interaction, an
 - [ClipSpace](https://luma.gl/next/docs/api-reference/engine/clip-space.md): ClipSpace is a convenience subclass of Model that draws a fullscreen quad in clip space.
 - [BufferTransform](https://luma.gl/next/docs/api-reference/engine/compute/buffer-transform.md): BufferTransform is the engine wrapper for WebGL transform-feedback workflows.
 - [Computation](https://luma.gl/next/docs/api-reference/engine/compute/computation.md): WebGPU supported
+- [Kernel and RenderKernel](https://luma.gl/next/docs/api-reference/engine/compute/kernel.md): Overview
 - [Swap](https://luma.gl/next/docs/api-reference/engine/compute/swap.md): Swap is a small double-buffering helper for pairs of GPU resources.
 - [TextureTransform](https://luma.gl/next/docs/api-reference/engine/compute/texture-transform.md): TextureTransform is the engine helper for texture-to-texture transform passes.
 - [DynamicBuffer](https://luma.gl/next/docs/api-reference/engine/dynamic-buffer.md): From v10
@@ -280,6 +282,7 @@ Render models with geometry and shader inputs, manage redraw and interaction, an
 - [Geometry](https://luma.gl/next/docs/api-reference/engine/geometry.md): Geometry is the CPU-side geometry container used by engine classes.
 - [Built-in Geometries](https://luma.gl/next/docs/api-reference/engine/geometry/geometries.md): @luma.gl/engine exports several ready-made geometry classes. All of them extend Geometry and populate standard glTF mesh attribute semantics such as POSITION, NORMAL, and TEXCOORD_0.
 - [GPUGeometry](https://luma.gl/next/docs/api-reference/engine/geometry/gpu-geometry.md): GPUGeometry is the GPU-backed counterpart to Geometry.
+- [makeStrokeGeometry](https://luma.gl/next/docs/api-reference/engine/geometry/stroke-geometry.md): Triangulates a connected path into a local XY stroke, with butt, square, or round caps and miter, bevel, or round joins. Optional vertex elevations are preserved. Width and distance use the same units as the input coordinates; convert geographic coordinates to a local Cartesian system before calling this helper.
 - [loadImageBitmap](https://luma.gl/next/docs/api-reference/engine/load-image-bitmap.md): A simple small utility to load images from URLs. The loaded ImageBitmaps can be used to create textures.
 - [Model](https://luma.gl/next/docs/api-reference/engine/model.md): Model is the main engine-level rendering class in luma.gl.
 - [OrbitControls](https://luma.gl/next/docs/api-reference/engine/orbit-controls.md): OrbitControls adds pointer-driven orbiting, optional two-finger camera roll, wheel and pinch zoom, optional panning, automatic orbiting, and configurable camera bounds to an HTML canvas. The controls maintain a camera position and up direction around a target without depending on a specific renderer, scene graph, or GPU backend.
@@ -306,20 +309,29 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Glass Material](https://luma.gl/next/docs/api-reference/experimental/glass-material.md): glassMaterial is an experimental cross-backend shader module for refractive translucent surfaces.
 - [GPU A5](https://luma.gl/next/docs/api-reference/experimental/gpu-a5.md): @luma.gl/gpgpu/gpu-a5 brings the same GPU-resident cell-center workflow to A5 indexes. Its API is
 - [GPU Core](https://luma.gl/next/docs/api-reference/experimental/gpu-core.md): From v10
+- [Compositional GPU architecture](https://luma.gl/next/docs/api-reference/experimental/gpu-core/compositional-architecture.md): Overview
 - [GPU Core Execution and Composition](https://luma.gl/next/docs/api-reference/experimental/gpu-core/concepts.md): Overview
 - [DrawCommandBuffer](https://luma.gl/next/docs/api-reference/experimental/gpu-core/draw-command-buffer.md): Overview
+- [Adaptive GPU reductions](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-adaptive-reduction.md): Overview
+- [Adaptive CSR SpMV execution](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-adaptive-spmv-execution.md): Overview
 - [GPUAncestorProjection](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-ancestor-projection.md): Overview
 - [GPUBatchHashIndex](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-batch-hash-index.md): Overview
 - [GPUBatchHashJoin](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-batch-hash-join.md): Overview
 - [GPUBVH](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-bvh.md): Overview
 - [GPUBVHQuery](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-bvh-query.md): Overview
+- [GPU-resident solver integration](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-cg-integration.md): Overview
 - [GPUCommandGraph](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-command-graph.md): Overview
 - [GPUCompaction](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-compaction.md): Overview
+- [GPU operation control flow](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-control-flow-operation.md): Overview
 - [GPUConvolution](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-convolution.md): Overview
+- [GPUCOOToCSR](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-coo-to-csr.md): Overview
+- [GPUElementwise](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-elementwise.md): Overview
 - [GPUFFT1D](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-fft1d.md): Overview
 - [GPUFFT2D](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-fft2d.md): Overview
+- [GPUFiniteDifference2D and GPUFiniteDifference3D](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-finite-differences.md): Overview
 - [GPUFlagOffsets](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-flag-offsets.md): Overview
 - [GPUGallopingSearch](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-galloping-search.md): Overview
+- [GPUGather](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-gather.md): Overview
 - [GPUGraphTraversal](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-graph-traversal.md): Overview
 - [GPUGridAggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-grid-aggregation.md): Overview
 - [GPUGridBinning](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-grid-binning.md): Overview
@@ -330,12 +342,27 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [GPUHashJoin](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-hash-join.md): Overview
 - [GPUHierarchyLayout](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-hierarchy-layout.md): Overview
 - [GPUHistogram](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-histogram.md): Overview
+- [GPUIncrementalExecution](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-incremental-execution.md): Overview
 - [GPUIndexPickingTarget](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-index-picking-target.md): Overview
 - [GPUMask](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-mask.md): Overview
+- [GPUMatMul](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-matmul.md): Overview
+- [GPUMatVec](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-matvec.md): Overview
+- [GPU operations and composition](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-operation.md): Overview
+- [GPU operation lowering](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-operation-lowering.md): Overview
+- [GPU operation metadata](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-operation-metadata.md): Overview
 - [GPUPointSpatialFilter](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-point-spatial-filter.md): Overview
+- [Preconditioned conjugate gradient](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-preconditioned-conjugate-gradient.md): Overview
+- [GPUProgram](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-program.md): Overview
+- [GPU program lowering](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-program-lowering.md): Overview
+- [Semantic conjugate gradient](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-program-pcg.md): Overview
 - [GPUReadbackRing](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-readback-ring.md): Overview
 - [GPUReduction](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-reduction.md): Overview
+- [GPU reduction substrate](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-reduction-substrate.md): Overview
+- [GPURunLengthEncode and GPUUnique](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-run-length-encode.md): Overview
+- [GPUScalar](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-scalar.md): Overview
+- [GPU scalar operations](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-scalar-operation.md): Overview
 - [GPUScan](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-scan.md): Overview
+- [GPUScatter](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-scatter.md): Overview
 - [GPUScene](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-scene.md): Overview
 - [GPUScene adapters](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-scene-adapters.md): Overview
 - [GPUSceneDrawGeneration](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-scene-draw-generation.md): Overview
@@ -343,16 +370,24 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [GPUSegmentOffsets](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segment-offsets.md): Overview
 - [GPUSegmentedBVH](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segmented-bvh.md): Overview
 - [GPUSegmentedLayout](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segmented-layout.md): Overview
+- [GPUSegmentedReduction](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segmented-reduction.md): Overview
+- [GPUSegmentedScan](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segmented-scan.md): Overview
 - [GPUSegmentedSort](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segmented-sort.md): Overview
 - [GPUSort](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-sort.md): Overview
 - [GPU spatial query benchmark](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-spatial-query-benchmark.md): Run on your device
+- [GPU execution strategies](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-strategy-selection.md): Overview
 - [GPUTextureHistory](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-texture-history.md): Overview
+- [Transient buffer lifetime reuse](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-transient-lifetimes.md): Overview
 - [GPUTranspose](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-transpose.md): Overview
+- [GPUValueArena](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-value-arena.md): Overview
+- [GPU value arena materialization](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-value-arena-finalization.md): Overview
 - [GPUVirtualGeometrySelection](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-virtual-geometry-selection.md): Overview
 - [GPUVisibilityWorkflow](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-visibility-workflow.md): Overview
 - [GPU Core Cookbook](https://luma.gl/next/docs/api-reference/experimental/gpu-core/recipes.md): Overview
 - [GPU Core Tutorial](https://luma.gl/next/docs/api-reference/experimental/gpu-core/tutorial.md): Overview
+- [WebGPU runtime control-flow lowering](https://luma.gl/next/docs/api-reference/experimental/gpu-core/webgpu-runtime-control.md): Overview
 - [GPU Crossfilter](https://luma.gl/next/docs/api-reference/experimental/gpu-crossfilter.md): Overview
+- [GPU sparse matrices](https://luma.gl/next/docs/api-reference/experimental/gpu-data/gpu-sparse-matrix.md): Sparse matrices store only nonzero entries. Jarnevon's initial sparse substrate uses two complementary representations.
 - [GPU Dataframe](https://luma.gl/next/docs/api-reference/experimental/gpu-dataframe.md): Overview
 - [GPU Dataframe grouping and aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-dataframe-aggregation.md): Group categorical values and compute reductions and histograms on GPU-resident tables.
 - [GPU Dataframe expressions and filtering](https://luma.gl/next/docs/api-reference/experimental/gpu-dataframe-expressions.md): Plan filters and nullable derived columns, then compile reusable GPU-resident results.
@@ -420,15 +455,15 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Abstract Class: CanvasContext](https://luma.gl/next/docs/api-reference/generated/core/classes/CanvasContext.md): Defined in12
 - [Abstract Class: CommandBuffer](https://luma.gl/next/docs/api-reference/generated/core/classes/CommandBuffer.md): Defined in17
 - [Abstract Class: CommandEncoder](https://luma.gl/next/docs/api-reference/generated/core/classes/CommandEncoder.md): Defined in145
-- [Abstract Class: ComputePass](https://luma.gl/next/docs/api-reference/generated/core/classes/ComputePass.md): Defined in20
+- [Abstract Class: ComputePass](https://luma.gl/next/docs/api-reference/generated/core/classes/ComputePass.md): Defined in21
 - [Abstract Class: ComputePipeline](https://luma.gl/next/docs/api-reference/generated/core/classes/ComputePipeline.md): Defined in28
-- [Abstract Class: Device](https://luma.gl/next/docs/api-reference/generated/core/classes/Device.md): Defined in515
+- [Abstract Class: Device](https://luma.gl/next/docs/api-reference/generated/core/classes/Device.md): Defined in522
 - [Class: DeviceFeatures](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceFeatures.md): Defined in261
 - [Abstract Class: DeviceLimits](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceLimits.md): Defined in109
 - [Abstract Class: ExternalTexture](https://luma.gl/next/docs/api-reference/generated/core/classes/ExternalTexture.md): Defined in24
 - [Abstract Class: Fence](https://luma.gl/next/docs/api-reference/generated/core/classes/Fence.md): Defined in11
 - [Abstract Class: Framebuffer](https://luma.gl/next/docs/api-reference/generated/core/classes/Framebuffer.md): Defined in27
-- [Class: PipelineFactory](https://luma.gl/next/docs/api-reference/generated/core/classes/PipelineFactory.md): Defined in21
+- [Class: PipelineFactory](https://luma.gl/next/docs/api-reference/generated/core/classes/PipelineFactory.md): Defined in27
 - [Abstract Class: PipelineLayout](https://luma.gl/next/docs/api-reference/generated/core/classes/PipelineLayout.md): Defined in14
 - [Abstract Class: PresentationContext](https://luma.gl/next/docs/api-reference/generated/core/classes/PresentationContext.md): Defined in14
 - [Abstract Class: QuerySet](https://luma.gl/next/docs/api-reference/generated/core/classes/QuerySet.md): Defined in28
@@ -595,7 +630,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Type Alias: TextureViewProps](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureViewProps.md): TextureViewProps = ResourceProps & object
 - [Type Alias: TextureWriteOptions](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureWriteOptions.md): TextureWriteOptions = object
 - [Type Alias: TransformFeedbackProps](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TransformFeedbackProps.md): TransformFeedbackProps = ResourceProps & object
-- [Type Alias: TypedArray](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TypedArray.md): TypedArray = Int8Array \| Uint8Array \| Uint8ClampedArray \| Int16Array \| Uint16Array \| Int32Array \| Uint32Array \| Float32Array \| Float64Array
+- [Type Alias: TypedArray](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TypedArray.md): TypedArray = Int8Array \| Uint8Array \| Uint8ClampedArray \| Int16Array \| Uint16Array \| Int32Array \| Uint32Array \| Float16Array \| Float32Array \| Float64Array
 - [Type Alias: TypedArrayConstructor](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TypedArrayConstructor.md): TypedArrayConstructor = Int8ArrayConstructor \| Uint8ArrayConstructor \| Int16ArrayConstructor \| Uint16ArrayConstructor \| Int32ArrayConstructor \| Uint32ArrayConstructor \| Uint8ClampedArrayConstructor \| Float32ArrayConstructor \| Float64ArrayConstructor
 - [Type Alias: TypedArrayConstructorT<T>](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TypedArrayConstructorT.md): TypedArrayConstructorT\ = T extends "uint8" ? Uint8ArrayConstructor T extends "unorm8" ? Uint8ArrayConstructor T extends "uint16" ? Uint16ArrayConstructor T extends "unorm16" ? Uint16ArrayConstructor T extends "uint32" ? Uint32ArrayConstructor ... extends ... ? ... : ...
 - [Type Alias: UniformBinding](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/UniformBinding.md): UniformBinding = object
@@ -686,11 +721,15 @@ Assemble reusable WGSL and GLSL shader modules, hooks, injections, plugins, unif
 - [gpuPicking](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/gpu-picking.md): From v9.1
 - [lambertMaterial](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/lambert-material.md): This lambertMaterial shader module provides a diffuse-only matte material
 - [lighting](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/lighting.md): The lighting shader module collects scene lighting into a single uniform block
+- [pathDash](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/path-dash.md): pathDash computes filtered dash coverage from cumulative path distance. It provides matching GLSL and WGSL fragment-stage implementations, with no textures or vertex-buffer allocation.
+- [patternFill](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/pattern-fill.md): patternFill returns antialiased coverage for hatch, crosshatch, and dot fills. It supports GLSL
 - [pbrMaterial](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/pbr-material.md): Implements Physically Based Shading of a microfacet surface defined by a glTF material.
 - [phongMaterial](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/phong-material.md): This phongMaterial shader module provides functions to apply Phong shading
 - [picking](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/picking.md): Deprecated in v9.1
+- [pointGlow](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/point-glow.md): pointGlow produces linear RGB radiance for a bounded point sprite with a white core and a
 - [project](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/project.md): A basic projection module.
 - [random](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/random.md): The random shader module injects a small random-number helper into shaders.
+- [sketchStroke](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/sketch-stroke.md): Reusable GLSL and WGSL fragment coverage for solid or pencil-like strokes. Import sketchStroke
 - [skin](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/skin.md): The skin shader module provides GPU skinning helpers for skinned meshes,
 - [ShaderPass](https://luma.gl/next/docs/api-reference/shadertools/shader-pass.md): ShaderPass is a ShaderModule
 - [Bloom](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/bloom.md): Spread bright scene highlights into a controllable photographic glow. luma.gl provides a compact
@@ -824,6 +863,12 @@ This guide covers the recommended way to use luma.gl with more than one canvas.
 GPU programming is all about performance, so having tools to systematically
 
 - [Profiling](https://luma.gl/next/docs/developer-guide/profiling.md): GPU programming is all about performance, so having tools to systematically
+
+#### releasing
+
+This guide describes the repository release path for publishing luma.gl packages to npm.
+
+- [Releasing luma.gl](https://luma.gl/next/docs/developer-guide/releasing.md): This guide describes the repository release path for publishing luma.gl packages to npm.
 
 #### testing
 

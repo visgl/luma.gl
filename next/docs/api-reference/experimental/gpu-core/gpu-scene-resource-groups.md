@@ -22,6 +22,8 @@ Mobile quality
 // Loading source…
 ```
 
+**Loading example**Preparing GPU resources…
+
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ## At a glance
@@ -95,7 +97,7 @@ const commandView = commands.importToGraph(graph);
 
 
 
-new GPUSceneDrawGeneration({
+graph.add(new GPUSceneDrawGeneration({
 
   scene: sceneView,
 
@@ -109,7 +111,7 @@ new GPUSceneDrawGeneration({
 
   overflow: drawOverflow
 
-}).addToGraph(graph);
+}));
 
 
 
@@ -139,7 +141,7 @@ const groups = new GPUSceneResourceGroups({
 
 
 
-groups.addToGraph(graph);
+graph.add(groups);
 
 
 
@@ -158,7 +160,7 @@ for (const group of groups.groups) {
 
 ## Methods and properties[​](#methods-and-properties "Direct link to Methods and properties")
 
-`addToGraph(graph)` adds initialization and command-classification passes without compiling, submitting, or reading results. Every supplied view must belong to the same graph.
+`getCommandNodes(graph)` adds initialization and command-classification passes without compiling, submitting, or reading results. Every supplied view must belong to the same graph.
 
 `groups` contains immutable descriptors in renderer-authored order. `stats` reports the group count, command capacity, largest command window, and caller-owned diagnostic output bytes.
 

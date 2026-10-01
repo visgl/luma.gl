@@ -20,6 +20,8 @@ Mobile quality
 // Loading source…
 ```
 
+**Loading example**Preparing GPU resources…
+
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ## At a glance
@@ -27,10 +29,10 @@ Scroll page · Ctrl/⌘ + scroll to interact
 | Question                 | Answer                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------- |
 | **Problem**              | Reconnect hidden graph endpoints to their nearest visible canonical ancestor.                                 |
-| **Reads / writes**       | Reads parents and a visibility mask; writes projected ancestor IDs and validation status.                     |
+| **Reads / writes**       | Reads parents and visibility; writes projected ancestor IDs or the invalid sentinel.                          |
 | **Ownership**            | Public inputs and outputs are caller-owned; scratch storage is graph-owned transient memory.                  |
-| **Output contract**      | One source-aligned projected identity per node, plus bounded cycle/depth diagnostics.                         |
-| **Expected work**        | Bounded pointer jumping over the configured maximum hierarchy depth.                                          |
+| **Output contract**      | One source-aligned projected identity per node; unresolved ancestry writes the invalid sentinel.              |
+| **Expected work**        | Bounded parent traversal over the configured maximum hierarchy depth.                                         |
 | **Chunks**               | Preserves declared views and source identity; it does not implicitly concatenate or repack chunks.            |
 | **Conditions / budgets** | May be conditioned with its dependent branch; encoding, submission, and publication remain application-owned. |
 | **Neighborhood**         | visibility mask + parent forest → GPUAncestorProjection → dependency routing or rendering.                    |
@@ -54,7 +56,7 @@ import {GPUAncestorProjection} from '@luma.gl/gpgpu/gpu-core';
 
 
 
-new GPUAncestorProjection({
+graph.add(new GPUAncestorProjection({
 
   id: 'visible-parent-projection',
 
@@ -66,7 +68,7 @@ new GPUAncestorProjection({
 
   maxDepth: 32
 
-}).addToGraph(graph);
+}));
 ```
 
 All three views are packed `GraphDataView<'uint32'>` values with identical logical row counts. For each source node:
@@ -79,3 +81,7 @@ All three views are packed `GraphDataView<'uint32'>` values with identical logic
 `maxDepth` bounds the number of hidden parent links followed per source row. This makes malformed or cyclic inputs safe without CPU-side graph inspection. It must be a `uint32` because it is compiled into the WGSL projection bound. The writable output cannot alias either source view.
 
 Projection preserves canonical source IDs; it does not rewrite dependency records, repack span buffers, submit GPU work, or read results back. Render and dependency-visibility shaders can use the projected indices directly while retaining original edge identity for picking and inspection.
+
+## Chunked storage[​](#chunked-storage "Direct link to Chunked storage")
+
+Parents, visibility, and output accept independent vector partitions. Parent IDs address global logical rows. The chunked path composes parent jumps in at most 32 levels using chunk-preserving scratch vectors. Visible ancestors become absorbing nodes, preserving the nearest-visible result while honoring the exact depth bound. Visible nodes resolve to themselves; depth exhaustion, invalid IDs, and unresolved cycles retain `invalidValue`. The optional exact visibility value is a scalar. The atomic path retains its single-pass traversal; chunked dispatch cost grows with the logarithm of depth and intersecting chunk pairs.

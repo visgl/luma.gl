@@ -17,7 +17,7 @@ The word **candidate** is essential. A uniform grid indexes cells, not exact obj
 | **Ownership**            | Public inputs and outputs are caller-owned; scratch storage is graph-owned transient memory.                  |
 | **Output contract**      | Capacity is fixed at compilation; counts and diagnostics report incomplete or overflowed output.              |
 | **Expected work**        | Visits intersecting cells and their indexed ID ranges.                                                        |
-| **Chunks**               | Returns canonical source IDs independent of index storage order.                                              |
+| **Chunks**               | Independent cell, ID, output, and mask chunks retain canonical source IDs.                                    |
 | **Conditions / budgets** | May be conditioned with its dependent branch; encoding, submission, and publication remain application-owned. |
 | **Neighborhood**         | GPUGridIndex + query → GPUGridIndexQuery → exact GPUPointSpatialFilter or consumer.                           |
 
@@ -84,11 +84,11 @@ const index = new GPUGridIndex({
 
 });
 
-index.addToGraph(graph);
+graph.add(index);
 
 
 
-new GPUGridIndexQuery({
+graph.add(new GPUGridIndexQuery({
 
   index,
 
@@ -104,9 +104,13 @@ new GPUGridIndexQuery({
 
   outputMask: candidateMask
 
-}).addToGraph(graph);
+}));
 ```
 
 For three dimensions, a radius query contains `[x, y, z, radius]`; bounds contain `[minX, minY, minZ, maxX, maxY, maxZ]`. Updating the query buffer and encoding the compiled graph again changes the candidates without rebuilding graph structure.
 
 The primitive neither builds the index nor applies exact object tests. It does not submit, grow capacity, sort or deduplicate IDs, or download results. Queries over an overflowed source index are explicitly marked incomplete.
+
+## Chunked storage[​](#chunked-storage "Direct link to Chunked storage")
+
+Cell offsets, indexed object IDs, candidate outputs, and the optional source-ID mask may each use independent vector partitions. Queries borrow adjacent cell starts/ends across seams, assign each selected stored ID one global destination, then route results to output chunks. The mask covers every selected stored ID even when candidate capacity is zero or truncated. Count and overflow retain their scalar contracts, and index overflow propagates to the query result. Query parameters remain a small atomic record.

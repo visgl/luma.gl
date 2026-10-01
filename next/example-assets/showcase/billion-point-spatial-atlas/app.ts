@@ -1080,16 +1080,18 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     });
     const count = graph.createDataView(countBuffer, {format: 'uint32', length: 1});
     const overflow = graph.createDataView(overflowBuffer, {format: 'uint32', length: 1});
-    new GPUGridIndex({
-      id: 'spatial-atlas-grid',
-      positions,
-      gridSize: resources.gridSize,
-      bounds: resources.domain,
-      cellOffsets,
-      objectIds: rowIndices,
-      count,
-      overflow
-    }).addToGraph(graph);
+    graph.add(
+      new GPUGridIndex({
+        id: 'spatial-atlas-grid',
+        positions,
+        gridSize: resources.gridSize,
+        bounds: resources.domain,
+        cellOffsets,
+        objectIds: rowIndices,
+        count,
+        overflow
+      })
+    );
     return graph.compile();
   }
 

@@ -86,7 +86,7 @@ const query = new GPUBVHQuery({
 
 
 
-query.addToGraph(graph);
+graph.add(query);
 ```
 
 The point query contains two or three packed `float32` values, matching the BVH dimension. The bounds query contains minima followed by maxima and therefore contains four or six values. All views must be packed and belong to the target command graph. The primitive does not allocate caller-visible output, submit commands, read results back, or apply application-specific geometry tests.

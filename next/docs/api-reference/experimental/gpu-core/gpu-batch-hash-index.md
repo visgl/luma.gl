@@ -27,9 +27,9 @@ The result implements the same `GPUHashIndexView` contract as `GPUHashIndex`, so
 
 ## Why this feature exists[​](#why-this-feature-exists "Direct link to Why this feature exists")
 
-`GPUHashIndex` accepts one packed `GraphDataView` and clears its table every time its build runs. Calling it separately for three streamed right-side batches would therefore overwrite the first two batches. Concatenating those batches beforehand would allocate new storage, copy their rows, erase their original offsets, and violate streaming ownership.
+`GPUHashIndex` already accepts atomic views or vectors and builds one shared table with global source positions. Use `GPUBatchHashIndex` when the source batches carry additional metadata: per-chunk generated row-ID bases or validity masks. Its keys, values, and validity vectors must have matching chunk topology. Independently partitioned columns without that metadata can use `GPUHashIndex` directly.
 
-`GPUBatchHashIndex` instead declares one table initialization followed by one ordered insertion and value-finalization sequence per nonempty chunk. It keeps source buffers borrowed, preserves empty batches, and retains the globally earliest source row when duplicate keys span chunks.
+`GPUBatchHashIndex` declares one table initialization followed by one ordered insertion and value-finalization sequence per nonempty chunk. It keeps source buffers borrowed, preserves empty batches, and retains the globally earliest source row when duplicate keys span chunks.
 
 Choose it for:
 
@@ -112,11 +112,11 @@ const featureIndex = new GPUBatchHashIndex({
 
 });
 
-featureIndex.addToGraph(graph);
+graph.add(featureIndex);
 
 
 
-new GPUHashIndexQuery({
+graph.add(new GPUHashIndexQuery({
 
   id: 'lookup-visible-features',
 
@@ -132,7 +132,7 @@ new GPUHashIndexQuery({
 
   statistics: lookupStatistics
 
-}).addToGraph(graph);
+}));
 
 
 
@@ -170,11 +170,11 @@ const propertyIndex = new GPUBatchHashIndex({
 
 });
 
-propertyIndex.addToGraph(graph);
+graph.add(propertyIndex);
 
 
 
-new GPUBatchHashJoin({
+graph.add(new GPUBatchHashJoin({
 
   id: 'join-instance-batches',
 
@@ -192,7 +192,7 @@ new GPUBatchHashJoin({
 
   statistics: batchLookupStatistics
 
-}).addToGraph(graph);
+}));
 ```
 
 Left and right chunk topologies do not need to match. Right-side chunks contribute to one shared index; each left chunk independently preserves its own match capacity, stable row order, required count, overflow flag, and lookup diagnostics.
@@ -219,6 +219,6 @@ The implementation stores a global internal source ordinal for deterministic dup
 
 ## Ownership, commands, and repeated execution[​](#ownership-commands-and-repeated-execution "Direct link to Ownership, commands, and repeated execution")
 
-The application owns all imported input vectors, table buffers, and statistics. The graph owns its transient source-row bookkeeping and reclaims it when the compiled graph is destroyed. `GPUBatchHashIndex.addToGraph(graph)` only contributes command-graph nodes; it never compiles the graph, submits GPU work, copies rows, maps buffers, or destroys caller-owned data.
+The application owns all imported input vectors, table buffers, and statistics. The graph owns its transient source-row bookkeeping and reclaims it when the compiled graph is destroyed. `GPUBatchHashIndex.getCommandNodes(graph)` only contributes command-graph nodes; it never compiles the graph, submits GPU work, copies rows, maps buffers, or destroys caller-owned data.
 
 Each repeated `CompiledGPUCommandGraph.encode()` rebuilds the index by clearing once and replaying its ordered chunk commands. Compile once when the workload shape is stable, reuse the compiled graph for successive frames or parameters, and keep imported resources alive until execution has completed. Shared physical buffers should be imported under one canonical graph handle whenever a command can write to them; see [physical buffer overlap and writable aliases](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-command-graph.md#physical-buffer-overlap-and-writable-aliases).

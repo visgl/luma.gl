@@ -16,12 +16,12 @@ This primitive supplies the narrow phase that a grid deliberately does not. A gr
 | **Reads / writes**       | Reads positions and optional candidate IDs; writes one source-row-aligned exact mask.                         |
 | **Ownership**            | Public inputs and outputs are caller-owned; scratch storage is graph-owned transient memory.                  |
 | **Output contract**      | Exact membership mask in canonical source-row space.                                                          |
-| **Expected work**        | Linear in all source rows or only the supplied candidate list.                                                |
-| **Chunks**               | Preserves declared views and source identity; it does not implicitly concatenate or repack chunks.            |
+| **Expected work**        | Aligned source spans, or candidate chunks visited for each aligned source span.                               |
+| **Chunks**               | Independent positions, masks, and candidate-ID chunks; IDs address global source rows.                        |
 | **Conditions / budgets** | May be conditioned with its dependent branch; encoding, submission, and publication remain application-owned. |
 | **Neighborhood**         | grid candidates or source rows → GPUPointSpatialFilter → scan, compaction, or aggregation.                    |
 
-**Cost**Candidate count determines whether index refinement beats a full scan.
+**Cost**Candidate count and chunk-routing overhead determine whether refinement beats a full scan.
 
 **Common mistake**Do not emit candidate-relative identities when downstream consumers expect source-row masks.
 
@@ -50,7 +50,7 @@ Non-finite positions or query values, reversed bounds, and negative radii do not
 
 ### Candidate rows and stable identity[​](#candidate-rows-and-stable-identity "Direct link to Candidate rows and stable identity")
 
-Candidate IDs are interpreted as source-row addresses because the filter uses them to load packed positions and set the corresponding mask row. This is intentionally narrower than `GPUGridIndexQuery`, whose stable IDs may be arbitrary. Use this refinement path when the index was built with generated row IDs. Applications with global or sparse IDs can keep a separate row-to-ID vector for final visibility output, or provide a domain-specific refinement pass.
+Candidate IDs are interpreted as global source-row addresses because the filter uses them to load packed positions and set the corresponding mask row. This is intentionally narrower than `GPUGridIndexQuery`, whose stable IDs may be arbitrary. Use this refinement path when the index was built with generated row IDs. Applications with global or sparse IDs can keep a separate row-to-ID vector for final visibility output, or provide a domain-specific refinement pass.
 
 The candidate `count` is clamped to candidate storage capacity before dispatch. Invalid row IDs are ignored rather than read. Candidate overflow is propagated, because an exact mask refined from a truncated broad phase is incomplete even if every stored candidate was tested successfully.
 
@@ -79,47 +79,57 @@ const candidateMask = graph.createDataView(candidateMaskBuffer, {
 
 
 
-new GPUPointSpatialFilter({
+graph.add([
 
-  positions,
+  new GPUPointSpatialFilter({
 
-  kind: 'radius',
+    positions,
 
-  query: centerAndRadius,
+    kind: 'radius',
 
-  candidates: {
+    query: centerAndRadius,
 
-    ids: gridCandidates,
+    candidates: {
 
-    count: gridCandidateCount,
+      ids: gridCandidates,
 
-    overflow: gridCandidateOverflow
+      count: gridCandidateCount,
 
-  },
+      overflow: gridCandidateOverflow
 
-  outputMask: candidateMask,
+    },
 
-  overflow: exactResultOverflow
+    outputMask: candidateMask,
 
-}).addToGraph(graph);
+    overflow: exactResultOverflow
 
+  }),
 
+  new GPUVisibilityWorkflow({
 
-new GPUVisibilityWorkflow({
+    predicates: [
 
-  predicates: [
+      {kind: 'bounds', mask: candidateMask},
 
-    {kind: 'bounds', mask: candidateMask},
+      {kind: 'selection', mask: selectedRows}
 
-    {kind: 'selection', mask: selectedRows}
+    ],
 
-  ],
+    output: visibleIds,
 
-  output: visibleIds,
+    count: visibleCount
 
-  count: visibleCount
+  })
 
-}).addToGraph(graph);
+]);
 ```
 
 Omit `candidates` to dispatch the identical exact predicate over every source point. Query-buffer updates require no graph recompilation. The primitive clears its output mask and overflow word on every encoding; it does not submit, read back, compact, or allocate caller-visible results.
+
+## Chunked storage[​](#chunked-storage "Direct link to Chunked storage")
+
+`positions`, `outputMask`, and `candidates.ids` accept atomic `GraphDataView` or chunked `GraphVectorView` resources. Positions and masks have equal logical lengths; their boundaries and candidate-ID boundaries may differ. IDs address the complete source vector, not a candidate chunk or position chunk. Duplicate candidates set the same mask row; out-of-range IDs are ignored. Candidate count is clamped to the total ID capacity across all chunks, and producer overflow is propagated even for empty source or candidate vectors.
+
+Unindexed execution borrows aligned position/mask spans. Indexed execution visits each candidate chunk for each aligned source span and filters IDs to that span's global row range. Neither path allocates packed buffers or scratch. Query, count, and overflow metadata remain atomic views. Empty chunks emit no data work, but overflow is still initialized on every encoding. Writable views must not overlap inputs or other outputs; each active binding must fit the device limit.
+
+Indexed dispatch overhead scales with candidate chunks times aligned source spans. Fragmented routing remains a performance consideration when comparing an index with a full scan.

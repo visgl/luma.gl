@@ -1,6 +1,6 @@
 # Abstract Class: Device
 
-Defined in: [modules/core/src/adapter/device.ts:515](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L515)
+Defined in: [modules/core/src/adapter/device.ts:522](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L522)
 
 WebGPU Device/WebGL context abstraction
 
@@ -10,7 +10,7 @@ WebGPU Device/WebGL context abstraction
 
 > **new Device**(`props`): `Device`
 
-Defined in: [modules/core/src/adapter/device.ts:576](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L576)
+Defined in: [modules/core/src/adapter/device.ts:583](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L583)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 
@@ -28,7 +28,7 @@ Defined in: [modules/core/src/adapter/device.ts:576](https://github.com/visgl/lu
 
 > **\_factories**: `DeviceFactories` = `{}`
 
-Defined in: [modules/core/src/adapter/device.ts:545](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L545)
+Defined in: [modules/core/src/adapter/device.ts:552](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L552)
 
 Internal per-device factory storage
 
@@ -38,7 +38,7 @@ Internal per-device factory storage
 
 > **\_reused**: `boolean` = `false`
 
-Defined in: [modules/core/src/adapter/device.ts:550](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L550)
+Defined in: [modules/core/src/adapter/device.ts:557](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L557)
 
 True if this device has been reused during device creation (app has multiple references)
 
@@ -48,7 +48,7 @@ True if this device has been reused during device creation (app has multiple ref
 
 > `abstract` **canvasContext**: [`CanvasContext`](https://luma.gl/next/docs/api-reference/generated/core/classes/CanvasContext.md) | `null`
 
-Defined in: [modules/core/src/adapter/device.ts:745](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L745)
+Defined in: [modules/core/src/adapter/device.ts:752](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L752)
 
 Default / primary canvas context. Can be null as WebGPU devices can be created without a CanvasContext
 
@@ -58,7 +58,7 @@ Default / primary canvas context. Can be null as WebGPU devices can be created w
 
 > `abstract` **commandEncoder**: [`CommandEncoder`](https://luma.gl/next/docs/api-reference/generated/core/classes/CommandEncoder.md)
 
-Defined in: [modules/core/src/adapter/device.ts:536](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L536)
+Defined in: [modules/core/src/adapter/device.ts:543](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L543)
 
 ***
 
@@ -66,7 +66,7 @@ Defined in: [modules/core/src/adapter/device.ts:536](https://github.com/visgl/lu
 
 > `abstract` **features**: [`DeviceFeatures`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceFeatures.md)
 
-Defined in: [modules/core/src/adapter/device.ts:559](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L559)
+Defined in: [modules/core/src/adapter/device.ts:566](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L566)
 
 Optional capability discovery
 
@@ -76,7 +76,7 @@ Optional capability discovery
 
 > `abstract` `readonly` **handle**: `unknown`
 
-Defined in: [modules/core/src/adapter/device.ts:535](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L535)
+Defined in: [modules/core/src/adapter/device.ts:542](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L542)
 
 ***
 
@@ -84,7 +84,7 @@ Defined in: [modules/core/src/adapter/device.ts:535](https://github.com/visgl/lu
 
 > `readonly` **id**: `string`
 
-Defined in: [modules/core/src/adapter/device.ts:532](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L532)
+Defined in: [modules/core/src/adapter/device.ts:539](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L539)
 
 id of this device, primarily for debugging
 
@@ -94,7 +94,7 @@ id of this device, primarily for debugging
 
 > `abstract` **info**: [`DeviceInfo`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/DeviceInfo.md)
 
-Defined in: [modules/core/src/adapter/device.ts:557](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L557)
+Defined in: [modules/core/src/adapter/device.ts:564](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L564)
 
 Information about the device (vendor, versions etc)
 
@@ -104,7 +104,7 @@ Information about the device (vendor, versions etc)
 
 > `abstract` `readonly` **lost**: `Promise`<[`DeviceLostInfo`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/DeviceLostInfo.md)>
 
-Defined in: [modules/core/src/adapter/device.ts:678](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L678)
+Defined in: [modules/core/src/adapter/device.ts:685](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L685)
 
 Promise that resolves when the underlying device or context is lost.
 
@@ -114,7 +114,7 @@ Promise that resolves when the underlying device or context is lost.
 
 > `abstract` **preferredColorFormat**: `"rgba8unorm"` | `"bgra8unorm"` | `"rgba16float"`
 
-Defined in: [modules/core/src/adapter/device.ts:568](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L568)
+Defined in: [modules/core/src/adapter/device.ts:575](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L575)
 
 Optimal presentation format, including rgba16float for high-dynamic-range canvases.
 
@@ -124,7 +124,7 @@ Optimal presentation format, including rgba16float for high-dynamic-range canvas
 
 > `abstract` **preferredDepthFormat**: `"depth24plus"` | `"depth32float"` | `"depth16"`
 
-Defined in: [modules/core/src/adapter/device.ts:570](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L570)
+Defined in: [modules/core/src/adapter/device.ts:577](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L577)
 
 Default depth format used on this system
 
@@ -134,7 +134,7 @@ Default depth format used on this system
 
 > `readonly` **props**: `Required`<[`DeviceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/DeviceProps.md)>
 
-Defined in: [modules/core/src/adapter/device.ts:539](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L539)
+Defined in: [modules/core/src/adapter/device.ts:546](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L546)
 
 A copy of the device props
 
@@ -144,7 +144,7 @@ A copy of the device props
 
 > `readonly` **statsManager**: [`StatsManager`](https://luma.gl/next/docs/api-reference/generated/core/interfaces/StatsManager.md) = `lumaStats`
 
-Defined in: [modules/core/src/adapter/device.ts:543](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L543)
+Defined in: [modules/core/src/adapter/device.ts:550](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L550)
 
 stats
 
@@ -154,7 +154,7 @@ stats
 
 > **timestamp**: `number` = `0`
 
-Defined in: [modules/core/src/adapter/device.ts:547](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L547)
+Defined in: [modules/core/src/adapter/device.ts:554](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L554)
 
 An abstract timestamp used for change tracking
 
@@ -164,7 +164,7 @@ An abstract timestamp used for change tracking
 
 > `abstract` `readonly` **type**: `"webgl"` | `"webgpu"` | `"null"` | `"unknown"`
 
-Defined in: [modules/core/src/adapter/device.ts:534](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L534)
+Defined in: [modules/core/src/adapter/device.ts:541](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L541)
 
 type of this device
 
@@ -174,7 +174,7 @@ type of this device
 
 > **userData**: `object` = `{}`
 
-Defined in: [modules/core/src/adapter/device.ts:541](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L541)
+Defined in: [modules/core/src/adapter/device.ts:548](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L548)
 
 Available for the application to store data on the device
 
@@ -188,7 +188,7 @@ Available for the application to store data on the device
 
 > `readonly` **wgslLanguageFeatures**: `ReadonlySet`<`string`>
 
-Defined in: [modules/core/src/adapter/device.ts:561](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L561)
+Defined in: [modules/core/src/adapter/device.ts:568](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L568)
 
 WGSL language extensions exposed by the browser. These are discovered, not requested.
 
@@ -198,7 +198,7 @@ WGSL language extensions exposed by the browser. These are discovered, not reque
 
 > `static` **defaultProps**: `Required`<[`DeviceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/DeviceProps.md)>
 
-Defined in: [modules/core/src/adapter/device.ts:516](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L516)
+Defined in: [modules/core/src/adapter/device.ts:523](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L523)
 
 ## Accessors[​](#accessors "Direct link to Accessors")
 
@@ -208,7 +208,7 @@ Defined in: [modules/core/src/adapter/device.ts:516](https://github.com/visgl/lu
 
 > **get** **\[toStringTag]**(): `string`
 
-Defined in: [modules/core/src/adapter/device.ts:518](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L518)
+Defined in: [modules/core/src/adapter/device.ts:525](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L525)
 
 ##### Returns[​](#returns-1 "Direct link to Returns")
 
@@ -222,7 +222,7 @@ Defined in: [modules/core/src/adapter/device.ts:518](https://github.com/visgl/lu
 
 > **get** `abstract` **isLost**(): `boolean`
 
-Defined in: [modules/core/src/adapter/device.ts:675](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L675)
+Defined in: [modules/core/src/adapter/device.ts:682](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L682)
 
 `true` if device is already lost
 
@@ -238,7 +238,7 @@ Defined in: [modules/core/src/adapter/device.ts:675](https://github.com/visgl/lu
 
 > **get** `abstract` **limits**(): [`DeviceLimits`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceLimits.md)
 
-Defined in: [modules/core/src/adapter/device.ts:563](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L563)
+Defined in: [modules/core/src/adapter/device.ts:570](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L570)
 
 WebGPU style device limits
 
@@ -252,7 +252,7 @@ WebGPU style device limits
 
 > **\_createBindGroupLayoutWebGPU**(`_pipeline`, `_group`): `unknown`
 
-Defined in: [modules/core/src/adapter/device.ts:852](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L852)
+Defined in: [modules/core/src/adapter/device.ts:879](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L879)
 
 Internal WebGPU-only helper for retrieving the native bind-group layout for a pipeline group.
 
@@ -276,7 +276,7 @@ Internal WebGPU-only helper for retrieving the native bind-group layout for a pi
 
 > **\_createBindGroupWebGPU**(`_bindGroupLayout`, `_shaderLayout`, `_bindings`, `_group`, `_label?`): `unknown`
 
-Defined in: [modules/core/src/adapter/device.ts:860](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L860)
+Defined in: [modules/core/src/adapter/device.ts:887](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L887)
 
 Internal WebGPU-only helper for creating a native bind group.
 
@@ -312,7 +312,7 @@ Internal WebGPU-only helper for creating a native bind group.
 
 > **\_createSharedRenderPipelineWebGL**(`_props`): [`SharedRenderPipeline`](https://luma.gl/next/docs/api-reference/generated/core/classes/SharedRenderPipeline.md)
 
-Defined in: [modules/core/src/adapter/device.ts:847](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L847)
+Defined in: [modules/core/src/adapter/device.ts:874](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L874)
 
 Internal helper for creating a shareable WebGL render-pipeline implementation.
 
@@ -332,7 +332,7 @@ Internal helper for creating a shareable WebGL render-pipeline implementation.
 
 > **\_disableDebugGPUTime**(): `void`
 
-Defined in: [modules/core/src/adapter/device.ts:913](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L913)
+Defined in: [modules/core/src/adapter/device.ts:940](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L940)
 
 Internal helper that disables device-managed GPU timing collection and restores the default command encoder to an unprofiled state.
 
@@ -346,7 +346,7 @@ Internal helper that disables device-managed GPU timing collection and restores 
 
 > **\_enableDebugGPUTime**(`queryCount?`): [`QuerySet`](https://luma.gl/next/docs/api-reference/generated/core/classes/QuerySet.md) | `null`
 
-Defined in: [modules/core/src/adapter/device.ts:887](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L887)
+Defined in: [modules/core/src/adapter/device.ts:914](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L914)
 
 Internal helper that enables device-managed GPU timing collection on the default command encoder. Reuses the existing query set if timing is already enabled.
 
@@ -370,7 +370,7 @@ The device-managed timestamp QuerySet, or `null` when timing is not supported or
 
 > **\_isDebugGPUTimeEnabled**(): `boolean`
 
-Defined in: [modules/core/src/adapter/device.ts:929](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L929)
+Defined in: [modules/core/src/adapter/device.ts:956](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L956)
 
 Internal helper that returns `true` when device-managed GPU timing is currently active.
 
@@ -384,7 +384,7 @@ Internal helper that returns `true` when device-managed GPU timing is currently 
 
 > **\_supportsDebugGPUTime**(): `boolean`
 
-Defined in: [modules/core/src/adapter/device.ts:874](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L874)
+Defined in: [modules/core/src/adapter/device.ts:901](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L901)
 
 Internal helper that returns `true` when timestamp-query GPU timing should be collected for this device.
 
@@ -398,7 +398,7 @@ Internal helper that returns `true` when timestamp-query GPU timing should be co
 
 > **beginComputePass**(`props?`): [`ComputePass`](https://luma.gl/next/docs/api-reference/generated/core/classes/ComputePass.md)
 
-Defined in: [modules/core/src/adapter/device.ts:819](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L819)
+Defined in: [modules/core/src/adapter/device.ts:846](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L846)
 
 Create a ComputePass using the default CommandEncoder
 
@@ -418,7 +418,7 @@ Create a ComputePass using the default CommandEncoder
 
 > **beginRenderPass**(`props?`): [`RenderPass`](https://luma.gl/next/docs/api-reference/generated/core/classes/RenderPass.md)
 
-Defined in: [modules/core/src/adapter/device.ts:814](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L814)
+Defined in: [modules/core/src/adapter/device.ts:841](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L841)
 
 Create a RenderPass using the default CommandEncoder
 
@@ -438,7 +438,7 @@ Create a RenderPass using the default CommandEncoder
 
 > **clearWebGL**(`options?`): `void`
 
-Defined in: [modules/core/src/adapter/device.ts:1003](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L1003)
+Defined in: [modules/core/src/adapter/device.ts:1030](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L1030)
 
 #### Parameters[​](#parameters-7 "Direct link to Parameters")
 
@@ -474,7 +474,7 @@ Defined in: [modules/core/src/adapter/device.ts:1003](https://github.com/visgl/l
 
 > `abstract` **createBuffer**(`props`): [`Buffer`](https://luma.gl/next/docs/api-reference/generated/core/classes/Buffer.md)
 
-Defined in: [modules/core/src/adapter/device.ts:767](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L767)
+Defined in: [modules/core/src/adapter/device.ts:774](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L774)
 
 Create a buffer
 
@@ -494,7 +494,7 @@ Create a buffer
 
 > `abstract` **createCanvasContext**(`props?`): [`CanvasContext`](https://luma.gl/next/docs/api-reference/generated/core/classes/CanvasContext.md)
 
-Defined in: [modules/core/src/adapter/device.ts:756](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L756)
+Defined in: [modules/core/src/adapter/device.ts:763](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L763)
 
 Creates a new CanvasContext (WebGPU only)
 
@@ -514,7 +514,7 @@ Creates a new CanvasContext (WebGPU only)
 
 > `abstract` **createCommandEncoder**(`props?`): [`CommandEncoder`](https://luma.gl/next/docs/api-reference/generated/core/classes/CommandEncoder.md)
 
-Defined in: [modules/core/src/adapter/device.ts:801](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L801)
+Defined in: [modules/core/src/adapter/device.ts:828](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L828)
 
 #### Parameters[​](#parameters-10 "Direct link to Parameters")
 
@@ -532,7 +532,7 @@ Defined in: [modules/core/src/adapter/device.ts:801](https://github.com/visgl/lu
 
 > `abstract` **createComputePipeline**(`props`): [`ComputePipeline`](https://luma.gl/next/docs/api-reference/generated/core/classes/ComputePipeline.md)
 
-Defined in: [modules/core/src/adapter/device.ts:788](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L788)
+Defined in: [modules/core/src/adapter/device.ts:805](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L805)
 
 Create a compute pipeline (aka program). WebGPU only.
 
@@ -548,21 +548,43 @@ Create a compute pipeline (aka program). WebGPU only.
 
 ***
 
-### createExternalTexture()[​](#createexternaltexture "Direct link to createExternalTexture()")
+### createComputePipelineAsync()[​](#createcomputepipelineasync "Direct link to createComputePipelineAsync()")
 
-> `abstract` **createExternalTexture**(`props`): [`ExternalTexture`](https://luma.gl/next/docs/api-reference/generated/core/classes/ExternalTexture.md)
+> **createComputePipelineAsync**(`props`): `Promise`<[`ComputePipeline`](https://luma.gl/next/docs/api-reference/generated/core/classes/ComputePipeline.md)>
 
-Defined in: [modules/core/src/adapter/device.ts:773](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L773)
+Defined in: [modules/core/src/adapter/device.ts:813](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L813)
 
-Create a temporary external texture binding when available on this backend.
+Create a compute pipeline asynchronously when the backend supports it.
+
+The default implementation preserves compatibility with synchronous backends. WebGPU implementations override this method to use `GPUDevice.createComputePipelineAsync()`.
 
 #### Parameters[​](#parameters-12 "Direct link to Parameters")
 
 ##### props[​](#props-8 "Direct link to props")
 
-[`ExternalTextureProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ExternalTextureProps.md)
+[`ComputePipelineProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ComputePipelineProps.md)
 
 #### Returns[​](#returns-18 "Direct link to Returns")
+
+`Promise`<[`ComputePipeline`](https://luma.gl/next/docs/api-reference/generated/core/classes/ComputePipeline.md)>
+
+***
+
+### createExternalTexture()[​](#createexternaltexture "Direct link to createExternalTexture()")
+
+> `abstract` **createExternalTexture**(`props`): [`ExternalTexture`](https://luma.gl/next/docs/api-reference/generated/core/classes/ExternalTexture.md)
+
+Defined in: [modules/core/src/adapter/device.ts:780](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L780)
+
+Create a temporary external texture binding when available on this backend.
+
+#### Parameters[​](#parameters-13 "Direct link to Parameters")
+
+##### props[​](#props-9 "Direct link to props")
+
+[`ExternalTextureProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ExternalTextureProps.md)
+
+#### Returns[​](#returns-19 "Direct link to Returns")
 
 [`ExternalTexture`](https://luma.gl/next/docs/api-reference/generated/core/classes/ExternalTexture.md)
 
@@ -572,11 +594,11 @@ Create a temporary external texture binding when available on this backend.
 
 > **createFence**(): [`Fence`](https://luma.gl/next/docs/api-reference/generated/core/classes/Fence.md)
 
-Defined in: [modules/core/src/adapter/device.ts:809](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L809)
+Defined in: [modules/core/src/adapter/device.ts:836](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L836)
 
 Create a fence sync object
 
-#### Returns[​](#returns-19 "Direct link to Returns")
+#### Returns[​](#returns-20 "Direct link to Returns")
 
 [`Fence`](https://luma.gl/next/docs/api-reference/generated/core/classes/Fence.md)
 
@@ -586,17 +608,17 @@ Create a fence sync object
 
 > `abstract` **createFramebuffer**(`props`): [`Framebuffer`](https://luma.gl/next/docs/api-reference/generated/core/classes/Framebuffer.md)
 
-Defined in: [modules/core/src/adapter/device.ts:779](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L779)
+Defined in: [modules/core/src/adapter/device.ts:786](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L786)
 
 Create a Framebuffer. Must have at least one attachment.
 
-#### Parameters[​](#parameters-13 "Direct link to Parameters")
+#### Parameters[​](#parameters-14 "Direct link to Parameters")
 
-##### props[​](#props-9 "Direct link to props")
+##### props[​](#props-10 "Direct link to props")
 
 [`FramebufferProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/FramebufferProps.md)
 
-#### Returns[​](#returns-20 "Direct link to Returns")
+#### Returns[​](#returns-21 "Direct link to Returns")
 
 [`Framebuffer`](https://luma.gl/next/docs/api-reference/generated/core/classes/Framebuffer.md)
 
@@ -606,17 +628,17 @@ Create a Framebuffer. Must have at least one attachment.
 
 > `abstract` **createPresentationContext**(`props?`): [`PresentationContext`](https://luma.gl/next/docs/api-reference/generated/core/classes/PresentationContext.md)
 
-Defined in: [modules/core/src/adapter/device.ts:759](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L759)
+Defined in: [modules/core/src/adapter/device.ts:766](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L766)
 
 Creates a presentation context for a destination canvas. WebGL requires the default canvas context to use an OffscreenCanvas.
 
-#### Parameters[​](#parameters-14 "Direct link to Parameters")
+#### Parameters[​](#parameters-15 "Direct link to Parameters")
 
-##### props?[​](#props-10 "Direct link to props?")
+##### props?[​](#props-11 "Direct link to props?")
 
 [`CanvasContextProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/CanvasContextProps.md)
 
-#### Returns[​](#returns-21 "Direct link to Returns")
+#### Returns[​](#returns-22 "Direct link to Returns")
 
 [`PresentationContext`](https://luma.gl/next/docs/api-reference/generated/core/classes/PresentationContext.md)
 
@@ -626,15 +648,15 @@ Creates a presentation context for a destination canvas. WebGL requires the defa
 
 > `abstract` **createQuerySet**(`props`): [`QuerySet`](https://luma.gl/next/docs/api-reference/generated/core/classes/QuerySet.md)
 
-Defined in: [modules/core/src/adapter/device.ts:806](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L806)
+Defined in: [modules/core/src/adapter/device.ts:833](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L833)
 
-#### Parameters[​](#parameters-15 "Direct link to Parameters")
+#### Parameters[​](#parameters-16 "Direct link to Parameters")
 
-##### props[​](#props-11 "Direct link to props")
+##### props[​](#props-12 "Direct link to props")
 
 [`QuerySetProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/QuerySetProps.md)
 
-#### Returns[​](#returns-22 "Direct link to Returns")
+#### Returns[​](#returns-23 "Direct link to Returns")
 
 [`QuerySet`](https://luma.gl/next/docs/api-reference/generated/core/classes/QuerySet.md)
 
@@ -644,19 +666,19 @@ Defined in: [modules/core/src/adapter/device.ts:806](https://github.com/visgl/lu
 
 > `abstract` **createRenderBundleEncoder**(`props?`): [`RenderBundleEncoder`](https://luma.gl/next/docs/api-reference/generated/core/classes/RenderBundleEncoder.md)
 
-Defined in: [modules/core/src/adapter/device.ts:796](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L796)
+Defined in: [modules/core/src/adapter/device.ts:823](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L823)
 
 Creates an encoder for reusable WebGPU draw commands.
 
-#### Parameters[​](#parameters-16 "Direct link to Parameters")
+#### Parameters[​](#parameters-17 "Direct link to Parameters")
 
-##### props?[​](#props-12 "Direct link to props?")
+##### props?[​](#props-13 "Direct link to props?")
 
 [`RenderBundleEncoderProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/RenderBundleEncoderProps.md)
 
 Resource metadata and render-attachment compatibility requirements.
 
-#### Returns[​](#returns-23 "Direct link to Returns")
+#### Returns[​](#returns-24 "Direct link to Returns")
 
 [`RenderBundleEncoder`](https://luma.gl/next/docs/api-reference/generated/core/classes/RenderBundleEncoder.md)
 
@@ -672,19 +694,41 @@ On backends other than WebGPU.
 
 > `abstract` **createRenderPipeline**(`props`): [`RenderPipeline`](https://luma.gl/next/docs/api-reference/generated/core/classes/RenderPipeline.md)
 
-Defined in: [modules/core/src/adapter/device.ts:785](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L785)
+Defined in: [modules/core/src/adapter/device.ts:792](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L792)
 
 Create a render pipeline (aka program)
 
-#### Parameters[​](#parameters-17 "Direct link to Parameters")
+#### Parameters[​](#parameters-18 "Direct link to Parameters")
 
-##### props[​](#props-13 "Direct link to props")
+##### props[​](#props-14 "Direct link to props")
 
 [`RenderPipelineProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/RenderPipelineProps.md)
 
-#### Returns[​](#returns-24 "Direct link to Returns")
+#### Returns[​](#returns-25 "Direct link to Returns")
 
 [`RenderPipeline`](https://luma.gl/next/docs/api-reference/generated/core/classes/RenderPipeline.md)
+
+***
+
+### createRenderPipelineAsync()[​](#createrenderpipelineasync "Direct link to createRenderPipelineAsync()")
+
+> **createRenderPipelineAsync**(`props`): `Promise`<[`RenderPipeline`](https://luma.gl/next/docs/api-reference/generated/core/classes/RenderPipeline.md)>
+
+Defined in: [modules/core/src/adapter/device.ts:800](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L800)
+
+Create a render pipeline asynchronously when the backend supports it.
+
+The default implementation preserves compatibility with synchronous backends. WebGPU implementations override this method to use `GPUDevice.createRenderPipelineAsync()`.
+
+#### Parameters[​](#parameters-19 "Direct link to Parameters")
+
+##### props[​](#props-15 "Direct link to props")
+
+[`RenderPipelineProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/RenderPipelineProps.md)
+
+#### Returns[​](#returns-26 "Direct link to Returns")
+
+`Promise`<[`RenderPipeline`](https://luma.gl/next/docs/api-reference/generated/core/classes/RenderPipeline.md)>
 
 ***
 
@@ -692,17 +736,17 @@ Create a render pipeline (aka program)
 
 > `abstract` **createSampler**(`props`): [`Sampler`](https://luma.gl/next/docs/api-reference/generated/core/classes/Sampler.md)
 
-Defined in: [modules/core/src/adapter/device.ts:776](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L776)
+Defined in: [modules/core/src/adapter/device.ts:783](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L783)
 
 Create a sampler
 
-#### Parameters[​](#parameters-18 "Direct link to Parameters")
+#### Parameters[​](#parameters-20 "Direct link to Parameters")
 
-##### props[​](#props-14 "Direct link to props")
+##### props[​](#props-16 "Direct link to props")
 
 [`SamplerProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/SamplerProps.md)
 
-#### Returns[​](#returns-25 "Direct link to Returns")
+#### Returns[​](#returns-27 "Direct link to Returns")
 
 [`Sampler`](https://luma.gl/next/docs/api-reference/generated/core/classes/Sampler.md)
 
@@ -712,17 +756,17 @@ Create a sampler
 
 > `abstract` **createShader**(`props`): [`Shader`](https://luma.gl/next/docs/api-reference/generated/core/classes/Shader.md)
 
-Defined in: [modules/core/src/adapter/device.ts:782](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L782)
+Defined in: [modules/core/src/adapter/device.ts:789](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L789)
 
 Create a shader
 
-#### Parameters[​](#parameters-19 "Direct link to Parameters")
+#### Parameters[​](#parameters-21 "Direct link to Parameters")
 
-##### props[​](#props-15 "Direct link to props")
+##### props[​](#props-17 "Direct link to props")
 
 [`ShaderProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ShaderProps.md)
 
-#### Returns[​](#returns-26 "Direct link to Returns")
+#### Returns[​](#returns-28 "Direct link to Returns")
 
 [`Shader`](https://luma.gl/next/docs/api-reference/generated/core/classes/Shader.md)
 
@@ -732,17 +776,17 @@ Create a shader
 
 > `abstract` **createTexture**(`props`): [`Texture`](https://luma.gl/next/docs/api-reference/generated/core/classes/Texture.md)
 
-Defined in: [modules/core/src/adapter/device.ts:770](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L770)
+Defined in: [modules/core/src/adapter/device.ts:777](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L777)
 
 Create a texture
 
-#### Parameters[​](#parameters-20 "Direct link to Parameters")
+#### Parameters[​](#parameters-22 "Direct link to Parameters")
 
-##### props[​](#props-16 "Direct link to props")
+##### props[​](#props-18 "Direct link to props")
 
 [`TextureProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureProps.md)
 
-#### Returns[​](#returns-27 "Direct link to Returns")
+#### Returns[​](#returns-29 "Direct link to Returns")
 
 [`Texture`](https://luma.gl/next/docs/api-reference/generated/core/classes/Texture.md)
 
@@ -752,17 +796,17 @@ Create a texture
 
 > `abstract` **createTransformFeedback**(`props`): [`TransformFeedback`](https://luma.gl/next/docs/api-reference/generated/core/classes/TransformFeedback.md)
 
-Defined in: [modules/core/src/adapter/device.ts:804](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L804)
+Defined in: [modules/core/src/adapter/device.ts:831](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L831)
 
 Create a transform feedback (immutable set of output buffer bindings). WebGL only.
 
-#### Parameters[​](#parameters-21 "Direct link to Parameters")
+#### Parameters[​](#parameters-23 "Direct link to Parameters")
 
-##### props[​](#props-17 "Direct link to props")
+##### props[​](#props-19 "Direct link to props")
 
 [`TransformFeedbackProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TransformFeedbackProps.md)
 
-#### Returns[​](#returns-28 "Direct link to Returns")
+#### Returns[​](#returns-30 "Direct link to Returns")
 
 [`TransformFeedback`](https://luma.gl/next/docs/api-reference/generated/core/classes/TransformFeedback.md)
 
@@ -772,17 +816,17 @@ Create a transform feedback (immutable set of output buffer bindings). WebGL onl
 
 > `abstract` **createVertexArray**(`props`): [`VertexArray`](https://luma.gl/next/docs/api-reference/generated/core/classes/VertexArray.md)
 
-Defined in: [modules/core/src/adapter/device.ts:799](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L799)
+Defined in: [modules/core/src/adapter/device.ts:826](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L826)
 
 Create a vertex array
 
-#### Parameters[​](#parameters-22 "Direct link to Parameters")
+#### Parameters[​](#parameters-24 "Direct link to Parameters")
 
-##### props[​](#props-18 "Direct link to props")
+##### props[​](#props-20 "Direct link to props")
 
 [`VertexArrayProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/VertexArrayProps.md)
 
-#### Returns[​](#returns-29 "Direct link to Returns")
+#### Returns[​](#returns-31 "Direct link to Returns")
 
 [`VertexArray`](https://luma.gl/next/docs/api-reference/generated/core/classes/VertexArray.md)
 
@@ -792,11 +836,11 @@ Create a vertex array
 
 > **debug**(): `void`
 
-Defined in: [modules/core/src/adapter/device.ts:728](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L728)
+Defined in: [modules/core/src/adapter/device.ts:735](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L735)
 
 Break in the debugger - if device.props.debug is true
 
-#### Returns[​](#returns-30 "Direct link to Returns")
+#### Returns[​](#returns-32 "Direct link to Returns")
 
 `void`
 
@@ -806,9 +850,9 @@ Break in the debugger - if device.props.debug is true
 
 > `abstract` **destroy**(): `void`
 
-Defined in: [modules/core/src/adapter/device.ts:581](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L581)
+Defined in: [modules/core/src/adapter/device.ts:588](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L588)
 
-#### Returns[​](#returns-31 "Direct link to Returns")
+#### Returns[​](#returns-33 "Direct link to Returns")
 
 `void`
 
@@ -818,17 +862,17 @@ Defined in: [modules/core/src/adapter/device.ts:581](https://github.com/visgl/lu
 
 > **generateMipmapsWebGPU**(`_texture`): `void`
 
-Defined in: [modules/core/src/adapter/device.ts:842](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L842)
+Defined in: [modules/core/src/adapter/device.ts:869](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L869)
 
 Generate mipmaps for a WebGPU texture. WebGPU textures must be created up front with the required mip count, usage flags, and a format that supports the chosen generation path. WebGL uses `Texture.generateMipmapsWebGL()` directly because the backend manages mip generation on the texture object itself.
 
-#### Parameters[​](#parameters-23 "Direct link to Parameters")
+#### Parameters[​](#parameters-25 "Direct link to Parameters")
 
 ##### \_texture[​](#_texture "Direct link to _texture")
 
 [`Texture`](https://luma.gl/next/docs/api-reference/generated/core/classes/Texture.md)
 
-#### Returns[​](#returns-32 "Direct link to Returns")
+#### Returns[​](#returns-34 "Direct link to Returns")
 
 `void`
 
@@ -838,9 +882,9 @@ Generate mipmaps for a WebGPU texture. WebGPU textures must be created up front 
 
 > **getCanvasContext**(): [`CanvasContext`](https://luma.gl/next/docs/api-reference/generated/core/classes/CanvasContext.md)
 
-Defined in: [modules/core/src/adapter/device.ts:944](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L944)
+Defined in: [modules/core/src/adapter/device.ts:971](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L971)
 
-#### Returns[​](#returns-33 "Direct link to Returns")
+#### Returns[​](#returns-35 "Direct link to Returns")
 
 [`CanvasContext`](https://luma.gl/next/docs/api-reference/generated/core/classes/CanvasContext.md)
 
@@ -854,11 +898,11 @@ Use getDefaultCanvasContext()
 
 > **getDefaultCanvasContext**(): [`CanvasContext`](https://luma.gl/next/docs/api-reference/generated/core/classes/CanvasContext.md)
 
-Defined in: [modules/core/src/adapter/device.ts:748](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L748)
+Defined in: [modules/core/src/adapter/device.ts:755](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L755)
 
 Returns the default / primary canvas context. Throws an error if no canvas context is available (a WebGPU compute device)
 
-#### Returns[​](#returns-34 "Direct link to Returns")
+#### Returns[​](#returns-36 "Direct link to Returns")
 
 [`CanvasContext`](https://luma.gl/next/docs/api-reference/generated/core/classes/CanvasContext.md)
 
@@ -868,17 +912,17 @@ Returns the default / primary canvas context. Throws an error if no canvas conte
 
 > **getExternalImageSize**(`data`): `object`
 
-Defined in: [modules/core/src/adapter/device.ts:621](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L621)
+Defined in: [modules/core/src/adapter/device.ts:628](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L628)
 
 Get the size of an external image
 
-#### Parameters[​](#parameters-24 "Direct link to Parameters")
+#### Parameters[​](#parameters-26 "Direct link to Parameters")
 
 ##### data[​](#data "Direct link to data")
 
 [`ExternalImage`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ExternalImage.md)
 
-#### Returns[​](#returns-35 "Direct link to Returns")
+#### Returns[​](#returns-37 "Direct link to Returns")
 
 `object`
 
@@ -896,11 +940,11 @@ Get the size of an external image
 
 > **getMipLevelCount**(`width`, `height`, `depth3d?`): `number`
 
-Defined in: [modules/core/src/adapter/device.ts:610](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L610)
+Defined in: [modules/core/src/adapter/device.ts:617](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L617)
 
 Calculates the number of mip levels for a texture of width, height and in case of 3d textures only, depth
 
-#### Parameters[​](#parameters-25 "Direct link to Parameters")
+#### Parameters[​](#parameters-27 "Direct link to Parameters")
 
 ##### width[​](#width-1 "Direct link to width")
 
@@ -914,7 +958,7 @@ Calculates the number of mip levels for a texture of width, height and in case o
 
 `number` = `1`
 
-#### Returns[​](#returns-36 "Direct link to Returns")
+#### Returns[​](#returns-38 "Direct link to Returns")
 
 `number`
 
@@ -924,7 +968,7 @@ Calculates the number of mip levels for a texture of width, height and in case o
 
 > **getModuleData**<`ModuleDataT`>(`moduleName`): `ModuleDataT`
 
-Defined in: [modules/core/src/adapter/device.ts:1014](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L1014)
+Defined in: [modules/core/src/adapter/device.ts:1041](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L1041)
 
 #### Type Parameters[​](#type-parameters "Direct link to Type Parameters")
 
@@ -932,13 +976,13 @@ Defined in: [modules/core/src/adapter/device.ts:1014](https://github.com/visgl/l
 
 `ModuleDataT` *extends* `Record`<`string`, `unknown`>
 
-#### Parameters[​](#parameters-26 "Direct link to Parameters")
+#### Parameters[​](#parameters-28 "Direct link to Parameters")
 
 ##### moduleName[​](#modulename "Direct link to moduleName")
 
 `string`
 
-#### Returns[​](#returns-37 "Direct link to Returns")
+#### Returns[​](#returns-39 "Direct link to Returns")
 
 `ModuleDataT`
 
@@ -948,15 +992,15 @@ Defined in: [modules/core/src/adapter/device.ts:1014](https://github.com/visgl/l
 
 > **getParametersWebGL**(`parameters`): `void`
 
-Defined in: [modules/core/src/adapter/device.ts:993](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L993)
+Defined in: [modules/core/src/adapter/device.ts:1020](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L1020)
 
-#### Parameters[​](#parameters-27 "Direct link to Parameters")
+#### Parameters[​](#parameters-29 "Direct link to Parameters")
 
-##### parameters[​](#parameters-28 "Direct link to parameters")
+##### parameters[​](#parameters-30 "Direct link to parameters")
 
 `any`
 
-#### Returns[​](#returns-38 "Direct link to Returns")
+#### Returns[​](#returns-40 "Direct link to Returns")
 
 `void`
 
@@ -970,11 +1014,11 @@ Defined in: [modules/core/src/adapter/device.ts:993](https://github.com/visgl/lu
 
 > **getSupportedCompressedTextureFormats**(): `TextureFormatCompressed`\[]
 
-Defined in: [modules/core/src/adapter/device.ts:646](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L646)
+Defined in: [modules/core/src/adapter/device.ts:653](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L653)
 
 Returns the compressed texture formats that can be created and sampled on this device
 
-#### Returns[​](#returns-39 "Direct link to Returns")
+#### Returns[​](#returns-41 "Direct link to Returns")
 
 `TextureFormatCompressed`\[]
 
@@ -984,17 +1028,17 @@ Returns the compressed texture formats that can be created and sampled on this d
 
 > **getTextureFormatCapabilities**(`format`): [`DeviceTextureFormatCapabilities`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/DeviceTextureFormatCapabilities.md)
 
-Defined in: [modules/core/src/adapter/device.ts:599](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L599)
+Defined in: [modules/core/src/adapter/device.ts:606](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L606)
 
 Determines what operations are supported on a texture format on this particular device (checks against supported device features)
 
-#### Parameters[​](#parameters-29 "Direct link to Parameters")
+#### Parameters[​](#parameters-31 "Direct link to Parameters")
 
 ##### format[​](#format "Direct link to format")
 
 [`TextureFormat`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureFormat.md)
 
-#### Returns[​](#returns-40 "Direct link to Returns")
+#### Returns[​](#returns-42 "Direct link to Returns")
 
 [`DeviceTextureFormatCapabilities`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/DeviceTextureFormatCapabilities.md)
 
@@ -1004,17 +1048,17 @@ Determines what operations are supported on a texture format on this particular 
 
 > **getTextureFormatInfo**(`format`): [`TextureFormatInfo`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureFormatInfo.md)
 
-Defined in: [modules/core/src/adapter/device.ts:594](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L594)
+Defined in: [modules/core/src/adapter/device.ts:601](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L601)
 
 Returns information about a texture format, such as data type, channels, bits per channel, compression etc
 
-#### Parameters[​](#parameters-30 "Direct link to Parameters")
+#### Parameters[​](#parameters-32 "Direct link to Parameters")
 
 ##### format[​](#format-1 "Direct link to format")
 
 [`TextureFormat`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureFormat.md)
 
-#### Returns[​](#returns-41 "Direct link to Returns")
+#### Returns[​](#returns-43 "Direct link to Returns")
 
 [`TextureFormatInfo`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureFormatInfo.md)
 
@@ -1024,15 +1068,15 @@ Returns information about a texture format, such as data type, channels, bits pe
 
 > **getVertexFormatInfo**(`format`): `VertexFormatInfo`
 
-Defined in: [modules/core/src/adapter/device.ts:585](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L585)
+Defined in: [modules/core/src/adapter/device.ts:592](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L592)
 
-#### Parameters[​](#parameters-31 "Direct link to Parameters")
+#### Parameters[​](#parameters-33 "Direct link to Parameters")
 
 ##### format[​](#format-2 "Direct link to format")
 
 [`VertexFormat`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/VertexFormat.md)
 
-#### Returns[​](#returns-42 "Direct link to Returns")
+#### Returns[​](#returns-44 "Direct link to Returns")
 
 `VertexFormatInfo`
 
@@ -1042,11 +1086,11 @@ Defined in: [modules/core/src/adapter/device.ts:585](https://github.com/visgl/lu
 
 > **incrementTimestamp**(): `number`
 
-Defined in: [modules/core/src/adapter/device.ts:690](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L690)
+Defined in: [modules/core/src/adapter/device.ts:697](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L697)
 
 A monotonic counter for tracking buffer and texture updates
 
-#### Returns[​](#returns-43 "Direct link to Returns")
+#### Returns[​](#returns-45 "Direct link to Returns")
 
 `number`
 
@@ -1056,15 +1100,15 @@ A monotonic counter for tracking buffer and texture updates
 
 > **insertDebugMarker**(`markerLabel`): `void`
 
-Defined in: [modules/core/src/adapter/device.ts:668](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L668)
+Defined in: [modules/core/src/adapter/device.ts:675](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L675)
 
-#### Parameters[​](#parameters-32 "Direct link to Parameters")
+#### Parameters[​](#parameters-34 "Direct link to Parameters")
 
 ##### markerLabel[​](#markerlabel "Direct link to markerLabel")
 
 `string`
 
-#### Returns[​](#returns-44 "Direct link to Returns")
+#### Returns[​](#returns-46 "Direct link to Returns")
 
 `void`
 
@@ -1074,17 +1118,17 @@ Defined in: [modules/core/src/adapter/device.ts:668](https://github.com/visgl/lu
 
 > **isExternalImage**(`data`): `data is ExternalImage`
 
-Defined in: [modules/core/src/adapter/device.ts:616](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L616)
+Defined in: [modules/core/src/adapter/device.ts:623](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L623)
 
 Check if data is an external image
 
-#### Parameters[​](#parameters-33 "Direct link to Parameters")
+#### Parameters[​](#parameters-35 "Direct link to Parameters")
 
 ##### data[​](#data-1 "Direct link to data")
 
 `unknown`
 
-#### Returns[​](#returns-45 "Direct link to Returns")
+#### Returns[​](#returns-47 "Direct link to Returns")
 
 `data is ExternalImage`
 
@@ -1094,53 +1138,13 @@ Check if data is an external image
 
 > **isTextureFormatCompressed**(`format`): `boolean`
 
-Defined in: [modules/core/src/adapter/device.ts:641](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L641)
+Defined in: [modules/core/src/adapter/device.ts:648](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L648)
 
 Check if a specific texture format is GPU compressed
 
-#### Parameters[​](#parameters-34 "Direct link to Parameters")
-
-##### format[​](#format-3 "Direct link to format")
-
-[`TextureFormat`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureFormat.md)
-
-#### Returns[​](#returns-46 "Direct link to Returns")
-
-`boolean`
-
-***
-
-### isTextureFormatFilterable()[​](#istextureformatfilterable "Direct link to isTextureFormatFilterable()")
-
-> **isTextureFormatFilterable**(`format`): `boolean`
-
-Defined in: [modules/core/src/adapter/device.ts:631](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L631)
-
-Check if linear filtering (sampler interpolation) is supported for a specific texture format
-
-#### Parameters[​](#parameters-35 "Direct link to Parameters")
-
-##### format[​](#format-4 "Direct link to format")
-
-[`TextureFormat`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureFormat.md)
-
-#### Returns[​](#returns-47 "Direct link to Returns")
-
-`boolean`
-
-***
-
-### isTextureFormatRenderable()[​](#istextureformatrenderable "Direct link to isTextureFormatRenderable()")
-
-> **isTextureFormatRenderable**(`format`): `boolean`
-
-Defined in: [modules/core/src/adapter/device.ts:636](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L636)
-
-Check if device supports rendering to a framebuffer color attachment of a specific texture format
-
 #### Parameters[​](#parameters-36 "Direct link to Parameters")
 
-##### format[​](#format-5 "Direct link to format")
+##### format[​](#format-3 "Direct link to format")
 
 [`TextureFormat`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureFormat.md)
 
@@ -1150,17 +1154,17 @@ Check if device supports rendering to a framebuffer color attachment of a specif
 
 ***
 
-### isTextureFormatSupported()[​](#istextureformatsupported "Direct link to isTextureFormatSupported()")
+### isTextureFormatFilterable()[​](#istextureformatfilterable "Direct link to isTextureFormatFilterable()")
 
-> **isTextureFormatSupported**(`format`): `boolean`
+> **isTextureFormatFilterable**(`format`): `boolean`
 
-Defined in: [modules/core/src/adapter/device.ts:626](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L626)
+Defined in: [modules/core/src/adapter/device.ts:638](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L638)
 
-Check if device supports a specific texture format (creation and `nearest` sampling)
+Check if linear filtering (sampler interpolation) is supported for a specific texture format
 
 #### Parameters[​](#parameters-37 "Direct link to Parameters")
 
-##### format[​](#format-6 "Direct link to format")
+##### format[​](#format-4 "Direct link to format")
 
 [`TextureFormat`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureFormat.md)
 
@@ -1170,19 +1174,59 @@ Check if device supports a specific texture format (creation and `nearest` sampl
 
 ***
 
+### isTextureFormatRenderable()[​](#istextureformatrenderable "Direct link to isTextureFormatRenderable()")
+
+> **isTextureFormatRenderable**(`format`): `boolean`
+
+Defined in: [modules/core/src/adapter/device.ts:643](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L643)
+
+Check if device supports rendering to a framebuffer color attachment of a specific texture format
+
+#### Parameters[​](#parameters-38 "Direct link to Parameters")
+
+##### format[​](#format-5 "Direct link to format")
+
+[`TextureFormat`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureFormat.md)
+
+#### Returns[​](#returns-50 "Direct link to Returns")
+
+`boolean`
+
+***
+
+### isTextureFormatSupported()[​](#istextureformatsupported "Direct link to isTextureFormatSupported()")
+
+> **isTextureFormatSupported**(`format`): `boolean`
+
+Defined in: [modules/core/src/adapter/device.ts:633](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L633)
+
+Check if device supports a specific texture format (creation and `nearest` sampling)
+
+#### Parameters[​](#parameters-39 "Direct link to Parameters")
+
+##### format[​](#format-6 "Direct link to format")
+
+[`TextureFormat`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureFormat.md)
+
+#### Returns[​](#returns-51 "Direct link to Returns")
+
+`boolean`
+
+***
+
 ### isVertexFormatSupported()[​](#isvertexformatsupported "Direct link to isVertexFormatSupported()")
 
 > **isVertexFormatSupported**(`format`): `boolean`
 
-Defined in: [modules/core/src/adapter/device.ts:589](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L589)
+Defined in: [modules/core/src/adapter/device.ts:596](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L596)
 
-#### Parameters[​](#parameters-38 "Direct link to Parameters")
+#### Parameters[​](#parameters-40 "Direct link to Parameters")
 
 ##### format[​](#format-7 "Direct link to format")
 
 [`VertexFormat`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/VertexFormat.md)
 
-#### Returns[​](#returns-50 "Direct link to Returns")
+#### Returns[​](#returns-52 "Direct link to Returns")
 
 `boolean`
 
@@ -1192,11 +1236,11 @@ Defined in: [modules/core/src/adapter/device.ts:589](https://github.com/visgl/lu
 
 > **loseDevice**(): `boolean`
 
-Defined in: [modules/core/src/adapter/device.ts:685](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L685)
+Defined in: [modules/core/src/adapter/device.ts:692](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L692)
 
 Trigger device loss.
 
-#### Returns[​](#returns-51 "Direct link to Returns")
+#### Returns[​](#returns-53 "Direct link to Returns")
 
 `boolean`
 
@@ -1212,9 +1256,9 @@ primarily intended for testing how application reacts to device loss
 
 > **popDebugGroup**(): `void`
 
-Defined in: [modules/core/src/adapter/device.ts:664](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L664)
+Defined in: [modules/core/src/adapter/device.ts:671](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L671)
 
-#### Returns[​](#returns-52 "Direct link to Returns")
+#### Returns[​](#returns-54 "Direct link to Returns")
 
 `void`
 
@@ -1224,15 +1268,15 @@ Defined in: [modules/core/src/adapter/device.ts:664](https://github.com/visgl/lu
 
 > **pushDebugGroup**(`groupLabel`): `void`
 
-Defined in: [modules/core/src/adapter/device.ts:660](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L660)
+Defined in: [modules/core/src/adapter/device.ts:667](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L667)
 
-#### Parameters[​](#parameters-39 "Direct link to Parameters")
+#### Parameters[​](#parameters-41 "Direct link to Parameters")
 
 ##### groupLabel[​](#grouplabel "Direct link to groupLabel")
 
 `string`
 
-#### Returns[​](#returns-53 "Direct link to Returns")
+#### Returns[​](#returns-55 "Direct link to Returns")
 
 `void`
 
@@ -1242,9 +1286,9 @@ Defined in: [modules/core/src/adapter/device.ts:660](https://github.com/visgl/lu
 
 > **readPixelsToArrayWebGL**(`source`, `options?`): `Uint16Array`<`ArrayBufferLike`> | `Uint8Array`<`ArrayBufferLike`> | `Float32Array`<`ArrayBufferLike`>
 
-Defined in: [modules/core/src/adapter/device.ts:952](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L952)
+Defined in: [modules/core/src/adapter/device.ts:979](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L979)
 
-#### Parameters[​](#parameters-40 "Direct link to Parameters")
+#### Parameters[​](#parameters-42 "Direct link to Parameters")
 
 ##### source[​](#source "Direct link to source")
 
@@ -1284,7 +1328,7 @@ Defined in: [modules/core/src/adapter/device.ts:952](https://github.com/visgl/lu
 
 `Uint16Array`<`ArrayBufferLike`> | `Uint8Array`<`ArrayBufferLike`> | `Float32Array`<`ArrayBufferLike`>
 
-#### Returns[​](#returns-54 "Direct link to Returns")
+#### Returns[​](#returns-56 "Direct link to Returns")
 
 `Uint16Array`<`ArrayBufferLike`> | `Uint8Array`<`ArrayBufferLike`> | `Float32Array`<`ArrayBufferLike`>
 
@@ -1298,9 +1342,9 @@ Defined in: [modules/core/src/adapter/device.ts:952](https://github.com/visgl/lu
 
 > **readPixelsToBufferWebGL**(`source`, `options?`): [`Buffer`](https://luma.gl/next/docs/api-reference/generated/core/classes/Buffer.md)
 
-Defined in: [modules/core/src/adapter/device.ts:970](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L970)
+Defined in: [modules/core/src/adapter/device.ts:997](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L997)
 
-#### Parameters[​](#parameters-41 "Direct link to Parameters")
+#### Parameters[​](#parameters-43 "Direct link to Parameters")
 
 ##### source[​](#source-1 "Direct link to source")
 
@@ -1340,7 +1384,7 @@ Defined in: [modules/core/src/adapter/device.ts:970](https://github.com/visgl/lu
 
 `number`
 
-#### Returns[​](#returns-55 "Direct link to Returns")
+#### Returns[​](#returns-57 "Direct link to Returns")
 
 [`Buffer`](https://luma.gl/next/docs/api-reference/generated/core/classes/Buffer.md)
 
@@ -1354,7 +1398,7 @@ Defined in: [modules/core/src/adapter/device.ts:970](https://github.com/visgl/lu
 
 > **reportError**(`error`, `context`, ...`args`): () => `unknown`
 
-Defined in: [modules/core/src/adapter/device.ts:711](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L711)
+Defined in: [modules/core/src/adapter/device.ts:718](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L718)
 
 Reports Device errors in a way that optimizes for developer experience / debugging.
 
@@ -1366,7 +1410,7 @@ Conventions when calling reportError():
 * Always call the returned function - to ensure error is logged, at the error site
 * Follow with a call to device.debug() - to ensure that the debugger breaks at the error site
 
-#### Parameters[​](#parameters-42 "Direct link to Parameters")
+#### Parameters[​](#parameters-44 "Direct link to Parameters")
 
 ##### error[​](#error "Direct link to error")
 
@@ -1384,7 +1428,7 @@ pass `this` as context, otherwise it may not be available in the debugger for as
 
 ...`unknown`\[]
 
-#### Returns[​](#returns-56 "Direct link to Returns")
+#### Returns[​](#returns-58 "Direct link to Returns")
 
 the logger function returned by device.props.onError() so that it can be called from the error site.
 
@@ -1404,9 +1448,9 @@ device.reportError(new Error(...), this)();
 
 > **resetWebGL**(): `void`
 
-Defined in: [modules/core/src/adapter/device.ts:1008](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L1008)
+Defined in: [modules/core/src/adapter/device.ts:1035](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L1035)
 
-#### Returns[​](#returns-57 "Direct link to Returns")
+#### Returns[​](#returns-59 "Direct link to Returns")
 
 `void`
 
@@ -1420,15 +1464,15 @@ Defined in: [modules/core/src/adapter/device.ts:1008](https://github.com/visgl/l
 
 > **setParametersWebGL**(`parameters`): `void`
 
-Defined in: [modules/core/src/adapter/device.ts:988](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L988)
+Defined in: [modules/core/src/adapter/device.ts:1015](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L1015)
 
-#### Parameters[​](#parameters-43 "Direct link to Parameters")
+#### Parameters[​](#parameters-45 "Direct link to Parameters")
 
-##### parameters[​](#parameters-44 "Direct link to parameters")
+##### parameters[​](#parameters-46 "Direct link to parameters")
 
 `any`
 
-#### Returns[​](#returns-58 "Direct link to Returns")
+#### Returns[​](#returns-60 "Direct link to Returns")
 
 `void`
 
@@ -1442,17 +1486,17 @@ Defined in: [modules/core/src/adapter/device.ts:988](https://github.com/visgl/lu
 
 > `abstract` **submit**(`commandBuffer?`): `void`
 
-Defined in: [modules/core/src/adapter/device.ts:762](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L762)
+Defined in: [modules/core/src/adapter/device.ts:769](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L769)
 
 Call after rendering a frame (necessary e.g. on WebGL OffscreenCanvas)
 
-#### Parameters[​](#parameters-45 "Direct link to Parameters")
+#### Parameters[​](#parameters-47 "Direct link to Parameters")
 
 ##### commandBuffer?[​](#commandbuffer "Direct link to commandBuffer?")
 
 [`CommandBuffer`](https://luma.gl/next/docs/api-reference/generated/core/classes/CommandBuffer.md)
 
-#### Returns[​](#returns-59 "Direct link to Returns")
+#### Returns[​](#returns-61 "Direct link to Returns")
 
 `void`
 
@@ -1462,11 +1506,11 @@ Call after rendering a frame (necessary e.g. on WebGL OffscreenCanvas)
 
 > **toJSON**(): `string`
 
-Defined in: [modules/core/src/adapter/device.ts:527](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L527)
+Defined in: [modules/core/src/adapter/device.ts:534](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L534)
 
 Compact serialization for assertion diffs and structured debug logs.
 
-#### Returns[​](#returns-60 "Direct link to Returns")
+#### Returns[​](#returns-62 "Direct link to Returns")
 
 `string`
 
@@ -1476,9 +1520,9 @@ Compact serialization for assertion diffs and structured debug logs.
 
 > **toString**(): `string`
 
-Defined in: [modules/core/src/adapter/device.ts:522](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L522)
+Defined in: [modules/core/src/adapter/device.ts:529](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L529)
 
-#### Returns[​](#returns-61 "Direct link to Returns")
+#### Returns[​](#returns-63 "Direct link to Returns")
 
 `string`
 
@@ -1488,11 +1532,11 @@ Defined in: [modules/core/src/adapter/device.ts:522](https://github.com/visgl/lu
 
 > **withParametersWebGL**(`parameters`, `func`): `any`
 
-Defined in: [modules/core/src/adapter/device.ts:998](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L998)
+Defined in: [modules/core/src/adapter/device.ts:1025](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L1025)
 
-#### Parameters[​](#parameters-46 "Direct link to Parameters")
+#### Parameters[​](#parameters-48 "Direct link to Parameters")
 
-##### parameters[​](#parameters-47 "Direct link to parameters")
+##### parameters[​](#parameters-49 "Direct link to parameters")
 
 `any`
 
@@ -1500,7 +1544,7 @@ Defined in: [modules/core/src/adapter/device.ts:998](https://github.com/visgl/lu
 
 `any`
 
-#### Returns[​](#returns-62 "Direct link to Returns")
+#### Returns[​](#returns-64 "Direct link to Returns")
 
 `any`
 
@@ -1514,11 +1558,11 @@ Defined in: [modules/core/src/adapter/device.ts:998](https://github.com/visgl/lu
 
 > **writeBufferViaCommandEncoder**(`_commandEncoder`, `_destinationBuffer`, `_data`, `_byteOffset?`): `void`
 
-Defined in: [modules/core/src/adapter/device.ts:828](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L828)
+Defined in: [modules/core/src/adapter/device.ts:855](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L855)
 
 Internal helper for encoding CPU-to-buffer uploads in submission order. Backends may record onto the supplied command encoder or fall back to an immediate write when no separate queue ordering is required.
 
-#### Parameters[​](#parameters-48 "Direct link to Parameters")
+#### Parameters[​](#parameters-50 "Direct link to Parameters")
 
 ##### \_commandEncoder[​](#_commandencoder "Direct link to _commandEncoder")
 
@@ -1536,7 +1580,7 @@ Internal helper for encoding CPU-to-buffer uploads in submission order. Backends
 
 `number` = `0`
 
-#### Returns[​](#returns-63 "Direct link to Returns")
+#### Returns[​](#returns-65 "Direct link to Returns")
 
 `void`
 
@@ -1546,16 +1590,16 @@ Internal helper for encoding CPU-to-buffer uploads in submission order. Backends
 
 > `static` **\_getCanvasContextProps**(`props`): [`CanvasContextProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/CanvasContextProps.md) | `undefined`
 
-Defined in: [modules/core/src/adapter/device.ts:1024](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L1024)
+Defined in: [modules/core/src/adapter/device.ts:1051](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L1051)
 
 Helper to get the canvas context props
 
-#### Parameters[​](#parameters-49 "Direct link to Parameters")
+#### Parameters[​](#parameters-51 "Direct link to Parameters")
 
-##### props[​](#props-19 "Direct link to props")
+##### props[​](#props-21 "Direct link to props")
 
 [`DeviceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/DeviceProps.md)
 
-#### Returns[​](#returns-64 "Direct link to Returns")
+#### Returns[​](#returns-66 "Direct link to Returns")
 
 [`CanvasContextProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/CanvasContextProps.md) | `undefined`

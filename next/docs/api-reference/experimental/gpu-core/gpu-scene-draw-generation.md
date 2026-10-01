@@ -20,6 +20,8 @@ Mobile quality
 // Loading source…
 ```
 
+**Loading example**Preparing GPU resources…
+
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ## At a glance
@@ -65,7 +67,7 @@ These values distinguish an empty result from an incomplete result without requi
 
 When multiple visible rows request one slot, the lowest scene-record index owns it. The command is therefore repeatable across runs, while `overflow` records that some requested work was not published. Inactive, invisible, invalid-reference, and losing rows cannot leave a stale draw: every encoding first clears all command instance counts and first-instance fields.
 
-The winner's scene-record index becomes `firstInstance`. Shaders can use that index to fetch the record's transform, bounds, stable object ID, or renderer-owned references from the scene buffer. Because scene rows beyond zero produce nonzero `firstInstance` values, the device must expose the optional WebGPU `indirect-first-instance` feature. `addToGraph()` rejects unsupported devices before adding passes; applications should request the feature when creating their device.
+The winner's scene-record index becomes `firstInstance`. Shaders can use that index to fetch the record's transform, bounds, stable object ID, or renderer-owned references from the scene buffer. Because scene rows beyond zero produce nonzero `firstInstance` values, the device must expose the optional WebGPU `indirect-first-instance` feature. `getCommandNodes()` rejects unsupported devices before adding passes; applications should request the feature when creating their device.
 
 ### Visibility is optional and parameter-only[​](#visibility-is-optional-and-parameter-only "Direct link to Visibility is optional and parameter-only")
 
@@ -77,7 +79,7 @@ The scene and command capacities remain compile-time topology. Changing either r
 
 ### Submission and draw recording stay with the application[​](#submission-and-draw-recording-stay-with-the-application "Direct link to Submission and draw recording stay with the application")
 
-`addToGraph()` adds initialization, eligibility, ownership, and publication passes but does not compile, encode, submit, or read back. After the graph runs, the application still records one indirect draw for each renderer-owned command slot. Slots with `instanceCount === 0` do no visible work.
+`getCommandNodes()` adds initialization, eligibility, ownership, and publication passes but does not compile, encode, submit, or read back. After the graph runs, the application still records one indirect draw for each renderer-owned command slot. Slots with `instanceCount === 0` do no visible work.
 
 WebGPU does not provide a portable bindless multi-draw contract that would let this primitive choose arbitrary pipelines and bindings. [`GPUSceneResourceGroups`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-scene-resource-groups.md) therefore adds explicit renderer-owned binding windows as a separate workflow rather than hiding pipeline policy inside draw generation.
 
@@ -110,7 +112,7 @@ const generation = new GPUSceneDrawGeneration({
 
 
 
-generation.addToGraph(graph);
+graph.add(generation);
 
 
 
@@ -127,7 +129,7 @@ for (let slot = 0; slot < commands.capacity; slot++) {
 
 ## Methods[​](#methods "Direct link to Methods")
 
-### `addToGraph(graph)`[​](#addtographgraph "Direct link to addtographgraph")
+### `getCommandNodes(graph)`[​](#getcommandnodesgraph "Direct link to getcommandnodesgraph")
 
 Adds the fixed-capacity draw-generation passes to the target graph. Every supplied view must belong to that graph.
 

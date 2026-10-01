@@ -1,6 +1,6 @@
 # GPUVirtualGeometrySelection
 
-[Scan](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-scan.md)[Galloping Search](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-galloping-search.md)[Compaction](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-compaction.md)[Segmented Layout](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segmented-layout.md)[Masks](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-mask.md)[Visibility](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-visibility-workflow.md)[Virtual Geometry](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-virtual-geometry-selection.md)
+[Galloping Search](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-galloping-search.md)[Compaction](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-compaction.md)[Segmented Layout](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segmented-layout.md)[Masks](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-mask.md)[Visibility](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-visibility-workflow.md)[Virtual Geometry](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-virtual-geometry-selection.md)
 
 ## Overview[​](#overview "Direct link to Overview")
 
@@ -52,7 +52,7 @@ const count = graph.importGPUData('visible-count', drawCommands.getInstanceCount
 
 
 
-new GPUVirtualGeometrySelection({
+graph.add(new GPUVirtualGeometrySelection({
 
   hierarchy: {
 
@@ -88,7 +88,7 @@ new GPUVirtualGeometrySelection({
 
   overflow
 
-}).addToGraph(graph);
+}));
 ```
 
 `graph.compile()` produces initialization, one traversal pass per breadth level, stable visibility compaction, and bounded publication. The compiled graph records into an application-supplied command encoder; it does not submit or read results.

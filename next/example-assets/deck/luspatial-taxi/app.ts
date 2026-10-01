@@ -62,7 +62,7 @@ export type LuSpatialTaxiDeckOptions = DeckExampleDeviceOptions & {
 };
 
 /** Creates the WebGPU-only luSpatial taxi explorer with a synchronized MapLibre basemap. */
-export function createLuSpatialTaxiDeck(
+export function createGPUSpatialTaxiDeck(
   parent?: HTMLDivElement,
   options: LuSpatialTaxiDeckOptions = {}
 ) {

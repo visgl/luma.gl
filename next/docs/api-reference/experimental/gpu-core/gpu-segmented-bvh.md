@@ -102,7 +102,7 @@ const hierarchy = new GPUSegmentedBVH({
 
 
 
-hierarchy.addToGraph(graph);
+graph.add(hierarchy);
 
 
 
@@ -185,7 +185,7 @@ Every required range must fit its parent view. Source ranges may overlap because
 
 The constructor snapshots segment descriptors. Updating only the contents of caller-owned source buffers does not require recompilation. Changing capacities, segment domains, or offsets requires recording a new operation.
 
-## `addToGraph(graph)`[​](#addtographgraph "Direct link to addtographgraph")
+## `getCommandNodes(graph)`[​](#getcommandnodesgraph "Direct link to getcommandnodesgraph")
 
 Adds one compute graph node for each occupied capacity bucket. Possible capacities are 1, 2, 4, 8, 16, 32, 64, and 128, so any number of supported hierarchies requires at most eight graph nodes. Each hierarchy runs in one workgroup with exactly `leafCapacity` invocations. Dispatches expand across all three WebGPU workgroup dimensions where needed; surplus workgroups exit before reading descriptors or touching destination rows.
 

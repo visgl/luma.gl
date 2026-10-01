@@ -72,6 +72,8 @@ Read [GPU Raster concepts](https://luma.gl/next/docs/api-reference/experimental/
 
 Preparing GPU experience**GPURaster: Satellite Raster Lab**Loading synthetic satellite bands and the GPU-native raster-analysis graph.
 
+**Loading example**Preparing GPU resources…
+
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ## Operations and API index[​](#operations-and-api-index "Direct link to Operations and API index")

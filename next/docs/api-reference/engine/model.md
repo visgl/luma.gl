@@ -41,7 +41,7 @@ const dynamicTexture = new DynamicTexture(device, {data: loadImageBitmap(url)});
 
 
 
-const model = new Model(device, {
+const model = await Model.createAsync(device, {
 
   vs: GLSL_VERTEX_SHADER,
 
@@ -84,8 +84,9 @@ renderPass.end();
 | `geometry?`           | `Geometry \| GPUGeometry \| null`                                                        | Geometry source for attributes and indices.                                                                                                                                            |
 | `isInstanced?`        | `boolean`                                                                                | Optional override for instancing.                                                                                                                                                      |
 | `instanceCount?`      | `number`                                                                                 | Number of instances to draw.                                                                                                                                                           |
-| `vertexCount?`        | `number`                                                                                 | Number of vertices to draw.                                                                                                                                                            |
+| `vertexCount?`        | `number`                                                                                 | Number of vertices to draw. For indexed models, this is used as the index count when `indexCount` is not provided, including an explicit value of `0`.                                 |
 | `indexBuffer?`        | `Buffer \| DynamicBuffer \| null`                                                        | Optional index buffer.                                                                                                                                                                 |
+| `indexCount?`         | `number`                                                                                 | Number of indices to draw. Takes precedence over `vertexCount`; if neither is provided, the full index buffer is drawn.                                                                |
 | `attributes?`         | `Record<string, Buffer \| DynamicBuffer>`                                                | Buffer-valued attributes.                                                                                                                                                              |
 | `constantAttributes?` | `Record<string, TypedArray>`                                                             | Constant attributes, primarily for WebGL.                                                                                                                                              |
 | `disableWarnings?`    | `boolean`                                                                                | Suppress warnings for unused attributes and bindings.                                                                                                                                  |
@@ -154,6 +155,10 @@ Application-owned metadata attached to the model.
 
 Creates a render model for one device.
 
+### `Model.createAsync(device: Device, props: ModelProps): Promise<Model>`[​](#modelcreateasyncdevice-device-props-modelprops-promisemodel "Direct link to modelcreateasyncdevice-device-props-modelprops-promisemodel")
+
+Creates the model through the device's asynchronous render-pipeline path and resolves after its pipeline and vertex array are ready. Prefer it during WebGPU loading when multiple independent models can be created with `Promise.all()`. The `new Model(...)` constructor remains the synchronous compatibility path.
+
 ### `destroy(): void`[​](#destroy-void "Direct link to destroy-void")
 
 Releases cached pipeline and shader references and destroys the internal uniform store.
@@ -196,7 +201,11 @@ Updates the instance count.
 
 ### `setVertexCount(vertexCount: number): void`[​](#setvertexcountvertexcount-number-void "Direct link to setvertexcountvertexcount-number-void")
 
-Updates the vertex count.
+Updates the vertex count. For indexed models without an explicit index count, this also limits the number of indices drawn.
+
+### `setIndexCount(indexCount: number | undefined): void`[​](#setindexcountindexcount-number--undefined-void "Direct link to setindexcountindexcount-number--undefined-void")
+
+Updates the indexed draw count. An explicit index count takes precedence over the vertex count.
 
 ### `setShaderInputs(shaderInputs: ShaderInputs): void`[​](#setshaderinputsshaderinputs-shaderinputs-void "Direct link to setshaderinputsshaderinputs-shaderinputs-void")
 

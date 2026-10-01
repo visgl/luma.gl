@@ -20,6 +20,8 @@ Mobile quality
 // Loading source…
 ```
 
+**Loading example**Preparing GPU resources…
+
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ## At a glance
@@ -54,7 +56,7 @@ import {GPUGraphTraversal} from '@luma.gl/gpgpu/gpu-core';
 
 
 
-new GPUGraphTraversal({
+graph.add(new GPUGraphTraversal({
 
   id: 'focused-dependencies',
 
@@ -78,7 +80,7 @@ new GPUGraphTraversal({
 
   direction: 'both'
 
-}).addToGraph(graph);
+}));
 ```
 
 Inputs may use one packed `GraphDataView<'uint32'>` adjacency or partitioned `GraphVectorView<'uint32'>` adjacency:

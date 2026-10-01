@@ -1,6 +1,6 @@
 # GPUCompaction
 
-[Scan](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-scan.md)[Galloping Search](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-galloping-search.md)[Compaction](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-compaction.md)[Segmented Layout](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segmented-layout.md)[Masks](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-mask.md)[Visibility](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-visibility-workflow.md)[Virtual Geometry](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-virtual-geometry-selection.md)
+[Galloping Search](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-galloping-search.md)[Compaction](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-compaction.md)[Segmented Layout](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segmented-layout.md)[Masks](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-mask.md)[Visibility](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-visibility-workflow.md)[Virtual Geometry](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-virtual-geometry-selection.md)
 
 ## Overview[​](#overview "Direct link to Overview")
 
@@ -34,7 +34,7 @@ Use compaction when a later stage needs a dense work list rather than one flag p
 Keep the mask un-compacted when downstream shaders already visit every source row or need random source-aligned membership tests. Compaction adds scan and scatter work, and only the prefix selected by `count` is meaningful; it does not shrink the caller-owned output allocation.
 
 ```
-new GPUCompaction({
+graph.add(new GPUCompaction({
 
   id: 'visible-ids',
 
@@ -46,14 +46,14 @@ new GPUCompaction({
 
   count: visibleCount
 
-}).addToGraph(graph);
+}));
 ```
 
 Flags should contain `0` or `1`. Nonzero values are clamped to one by the scatter pass. Selected values retain their source order. `count` must provide at least one packed `uint32` row.
 
-`input`, `flags`, and `output` may all be packed `GraphDataView<'uint32'>` values or all be `GraphVectorView<'uint32'>` values. Vector inputs, flags, and outputs must have identical ordered chunk lengths. Scan and compaction treat chunked vectors as one logical sequence, while all caller-visible buffers and chunk boundaries remain intact. Selected values fill the logical output sequence across those existing output chunks, and `count` reports one vector-wide total.
+`input`, `flags`, and `output` may each be a packed `GraphDataView<'uint32'>` or `GraphVectorView<'uint32'>`. Input and flag lengths must match, but their atomic/vector boundaries may differ. The output only needs enough logical capacity and may use an independent atomic or vector topology. Scan and compaction align source rows by logical position, preserve caller-owned buffers and output chunk boundaries, and report one vector-wide total without concatenating data.
 
-The algorithm composes `GPUScan`, allocates offsets as graph transients, scatters selected values, and writes the final count. The count view may point at the `instanceCount` field of a `DrawCommandBuffer`, enabling compute-to-indirect-render dataflow without readback. The vector path uses vector-wide scan offsets directly and does not pack source or output chunks.
+The algorithm composes `GPUScan`, allocates graph-owned offset scratch with the flags' chunking when needed, scatters selected values, and writes the final count. The count view may point at the `instanceCount` field of a `DrawCommandBuffer`, enabling compute-to-indirect-render dataflow without readback. Alignment borrows subviews from the original buffers; it does not pack source, flag, or output chunks, or require one scratch allocation for a streamed vector.
 
 The initial implementation compacts IDs rather than arbitrary records. Renderers and subsequent kernels use those IDs to fetch source data.
 

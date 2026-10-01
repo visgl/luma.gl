@@ -1,6 +1,6 @@
 # GPUGallopingSearch
 
-[Scan](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-scan.md)[Galloping Search](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-galloping-search.md)[Compaction](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-compaction.md)[Segmented Layout](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segmented-layout.md)[Masks](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-mask.md)[Visibility](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-visibility-workflow.md)[Virtual Geometry](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-virtual-geometry-selection.md)
+[Galloping Search](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-galloping-search.md)[Compaction](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-compaction.md)[Segmented Layout](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segmented-layout.md)[Masks](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-mask.md)[Visibility](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-visibility-workflow.md)[Virtual Geometry](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-virtual-geometry-selection.md)
 
 ## Overview[​](#overview "Direct link to Overview")
 
@@ -21,7 +21,7 @@ The design is based on Lalit Maganti's explanation of [Perfetto's batched expone
 | **Ownership**            | Inputs, outputs, and validation storage are caller-owned; operation state is graph-owned.            |
 | **Output contract**      | One exact lower-bound position per valid query; malformed queries are reported.                      |
 | **Expected work**        | One binary-search seed per tile, then exponential probes and bounded finishing searches.             |
-| **Chunks**               | Uses explicit segments rather than implicit vector chunk traversal.                                  |
+| **Chunks**               | Global segment ranges cross independent value, query, descriptor, and output chunks.                 |
 | **Conditions / budgets** | Can sit inside a conditioned branch; it has no custom resumable plan.                                |
 | **Neighborhood**         | sorted secondary index + ordered queries → GPUGallopingSearch → range selection or join.             |
 
@@ -32,7 +32,7 @@ The design is based on Lalit Maganti's explanation of [Perfetto's batched expone
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-new GPUGallopingSearch({
+graph.add(new GPUGallopingSearch({
 
   values: sortedValues,
 
@@ -50,7 +50,7 @@ new GPUGallopingSearch({
 
   validationErrors
 
-}).addToGraph(graph);
+}));
 ```
 
 `segments` contains packed four-word records:
@@ -79,3 +79,9 @@ Decreasing queries are therefore reported without making the corresponding outpu
 ## Cost model[​](#cost-model "Direct link to Cost model")
 
 With one completely ordered query stream, the ideal CPU algorithm is `O(M + log N)`. GPU tiles trade some repeated binary-search seeds for parallelism. With `T` queries per tile the operation uses approximately `M / T` independent seeds, while the remaining queries gallop from a preceding position. The default `T = 32` is a policy starting point and should be benchmarked against the target adapter and data distribution.
+
+## Chunked storage[​](#chunked-storage "Direct link to Chunked storage")
+
+Values, optional value order, queries, segment records, and output may be independently partitioned vectors. Segment ranges and results use global logical indices. The atomic path retains exponential probing. The vector path gathers bounded query tiles and sums per-chunk lower bounds over each segment; it preserves malformed-range bits, decreasing-query diagnostics, and stop-on-non-finite behavior within each query tile. Four-word descriptor records may cross chunk boundaries.
+
+Indirect searches explicitly gather the requested permutation into scratch with the order vector's chunk boundaries. Direct searches borrow values without copies. No whole-column concatenation is performed. Vector-path command count grows with segment count, reserved query tiles, and value/output chunks; optimizing fragmented workloads remains performance work.

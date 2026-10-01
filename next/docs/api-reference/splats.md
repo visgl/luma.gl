@@ -24,6 +24,8 @@ Mobile quality
 // Loading source…
 ```
 
+**Loading example**Preparing GPU resources…
+
 Scroll page · Ctrl/⌘ + scroll to interact
 
 [Open the full Gaussian splat showcase](https://luma.gl/next/examples/showcase/gaussian-splats).

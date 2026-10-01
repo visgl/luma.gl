@@ -156,12 +156,12 @@ const flags = graph.importGPUData('visibility-flags', flagsData);
 const visibleIds = graph.importGPUData('visible-ids', visibleIdsData);
 const commandViews = drawCommands.importToGraph(graph);
 
-new GPUCompaction({
+addGPUCommandNodes(graph, new GPUCompaction({
   input: sourceIds,
   flags,
   output: visibleIds,
   count: commandViews.instanceCounts
-}).addToGraph(graph);
+}).getCommandNodes(graph));
 
 const compiled = graph.compile();
 compiled.encode(encoder, {parameters: undefined});
@@ -187,7 +187,7 @@ From composition to commands
 ### From declared intent to an executable plan
 
 1. **Composed**The application combines its mask node with a GPUCompaction contributor.
-2. **Declared**addToGraph() expands compaction into logical resources, scan nodes, and scatter nodes.
+2. **Declared**getCommandNodes() expands compaction into logical resources, scan nodes, and scatter nodes.
 3. **Scheduled**Read-after-write and write-after-read hazards derive the legal pass order.
 4. **Allocated**Scan offsets are transient; source, packed output, and draw arguments remain borrowed.
 5. **Encoded**The immutable plan records into the command encoder supplied by the application.

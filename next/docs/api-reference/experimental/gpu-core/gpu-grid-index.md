@@ -17,7 +17,7 @@ A grid index trades one rebuild for cheaper repeated spatial queries. It is most
 | **Ownership**            | Public inputs and outputs are caller-owned; scratch storage is graph-owned transient memory.                  |
 | **Output contract**      | Capacity is fixed at compilation; counts and diagnostics report incomplete or overflowed output.              |
 | **Expected work**        | Classify, count, scan, and stable scatter over source rows and grid cells.                                    |
-| **Chunks**               | Canonical IDs remain stable; the index is one explicit packed output.                                         |
+| **Chunks**               | Positions, source IDs, cell offsets, and object IDs may be independently chunked.                             |
 | **Conditions / budgets** | May be conditioned with its dependent branch; encoding, submission, and publication remain application-owned. |
 | **Neighborhood**         | positions → GPUGridIndex → GPUGridIndexQuery → GPUPointSpatialFilter.                                         |
 
@@ -84,13 +84,13 @@ const index = new GPUGridIndex({
 
 
 
-index.addToGraph(graph);
+graph.add(index);
 ```
 
 Three-dimensional positions use `float32x3`, a three-component `gridSize`, and minima followed by maxima in `bounds`:
 
 ```
-new GPUGridIndex({
+graph.add(new GPUGridIndex({
 
   positions: particlePositions,
 
@@ -106,9 +106,13 @@ new GPUGridIndex({
 
   overflow
 
-}).addToGraph(graph);
+}));
 ```
 
 `cellOffsets.length` must equal `width * height + 1` or `width * height * depth + 1`. `objectIds.length` is the ID capacity. `count` and `overflow` each provide at least one packed `uint32` row. Generated IDs and the accepted population must fit in `uint32`.
 
 The primitive records build work only. It does not submit commands, allocate persistent output, read results back, choose a cell size, grow capacity, or perform an exact spatial query.
+
+## Chunked storage[​](#chunked-storage "Direct link to Chunked storage")
+
+Positions, optional source IDs, cell offsets, and object IDs accept independently partitioned vectors. Cell offsets and generated IDs use global logical indices, even when adjacent cell boundaries occupy different chunks. Count/cursor scratch follows cell chunks, and per-position rank scratch computes each destination once before scattering IDs into output chunks. The total accepted count is independent of destination capacity; overflow reports truncation. Counts and overflow remain atomic scalar views. Source data is never concatenated.

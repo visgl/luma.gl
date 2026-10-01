@@ -5,6 +5,7 @@
 import {makeArrowFixedSizeListVector, makeGPUVectorFromArrow} from '@luma.gl/arrow';
 import {parseSQLPredicate} from '@loaders.gl/sql';
 import {Buffer, luma, type Device} from '@luma.gl/core';
+import {mountStreamingPanel} from './streaming-panel';
 import {
   GPUCommandGraph,
   GPUGridAggregation,
@@ -70,6 +71,7 @@ class GPUDataAnalysisExample {
   private benchmarkController: AbortController | null = null;
   private readonly benchmarkHistory: GPUDataFrameBenchmarkResult[] = [];
   private destroyed = false;
+  private destroyStreamingPanel?: () => void;
   private hasRunGPUDataFrameDemo = false;
   private runVersion = 0;
 
@@ -115,6 +117,10 @@ class GPUDataAnalysisExample {
         return;
       }
       this.device = device;
+      this.destroyStreamingPanel = mountStreamingPanel(
+        document.getElementById('gpu-data-analysis-app')!,
+        device
+      );
       await this.run();
       if (!this.destroyed) {
         this.elements.gpuDataFrameBenchmark.disabled = false;
@@ -148,6 +154,7 @@ class GPUDataAnalysisExample {
     ]) {
       element.removeEventListener('change', this.handleRun);
     }
+    this.destroyStreamingPanel?.();
     this.releaseResources();
     this.device?.destroy();
     this.device = null;
@@ -327,87 +334,89 @@ class GPUDataAnalysisExample {
         'float32',
         GROUP_COUNT
       );
-      new GPUReduction({
-        id: 'extent',
-        input: valuesImport,
-        output: extent,
-        operation: 'extent'
-      }).addToGraph(graph);
-      new GPUHistogram({
-        id: 'histogram',
-        input: valuesImport,
-        output: histogram,
-        ...(histogramEdges ? {edges: histogramEdges} : {domain: extent})
-      }).addToGraph(graph);
-      new GPUScan({
-        id: 'cumulative-histogram',
-        input: histogram,
-        output: cumulativeHistogram,
-        mode: 'inclusive'
-      }).addToGraph(graph);
-      new GPUGridBinning({
-        id: 'grid',
-        positions: positionsImport,
-        output: grid,
-        gridSize: [gridWidth, gridWidth],
-        bounds: [-1, -1, 1, 1]
-      }).addToGraph(graph);
-      new GPUGridAggregation({
-        id: 'grid-weight-sums',
-        positions: positionsImport,
-        weights: valuesImport,
-        output: gridWeightSums,
-        gridSize: [gridWidth, gridWidth],
-        bounds: [-1, -1, 1, 1]
-      }).addToGraph(graph);
-      new GPUGridAggregation({
-        id: 'grid-weight-minimums',
-        positions: positionsImport,
-        weights: valuesImport,
-        output: gridWeightMinimums,
-        operation: 'min',
-        gridSize: [gridWidth, gridWidth],
-        bounds: [-1, -1, 1, 1]
-      }).addToGraph(graph);
-      new GPUGridAggregation({
-        id: 'grid-weight-maximums',
-        positions: positionsImport,
-        weights: valuesImport,
-        output: gridWeightMaximums,
-        operation: 'max',
-        gridSize: [gridWidth, gridWidth],
-        bounds: [-1, -1, 1, 1]
-      }).addToGraph(graph);
-      new GPUGridAggregation({
-        id: 'grid-weight-means',
-        positions: positionsImport,
-        weights: valuesImport,
-        output: gridWeightMeans,
-        operation: 'mean',
-        gridSize: [gridWidth, gridWidth],
-        bounds: [-1, -1, 1, 1]
-      }).addToGraph(graph);
-      new GPUScan({
-        id: 'cumulative-grid-rows',
-        input: grid,
-        output: cumulativeGrid,
-        mode: 'inclusive',
-        segmentFlags: gridSegmentFlags
-      }).addToGraph(graph);
-      new GPUGroupAggregation({
-        id: 'group-counts',
-        keys: groupKeysImport,
-        mask: selectionImport,
-        output: groupCounts
-      }).addToGraph(graph);
-      new GPUGroupAggregation({
-        id: 'group-means',
-        keys: groupKeysImport,
-        values: valuesImport,
-        mask: selectionImport,
-        output: groupMeans,
-        operation: 'mean'
-      }).addToGraph(graph);
+      graph.add([
+        new GPUReduction({
+          id: 'extent',
+          input: valuesImport,
+          output: extent,
+          operation: 'extent'
+        }),
+        new GPUHistogram({
+          id: 'histogram',
+          input: valuesImport,
+          output: histogram,
+          ...(histogramEdges ? {edges: histogramEdges} : {domain: extent})
+        }),
+        new GPUScan({
+          id: 'cumulative-histogram',
+          input: histogram,
+          output: cumulativeHistogram,
+          mode: 'inclusive'
+        }),
+        new GPUGridBinning({
+          id: 'grid',
+          positions: positionsImport,
+          output: grid,
+          gridSize: [gridWidth, gridWidth],
+          bounds: [-1, -1, 1, 1]
+        }),
+        new GPUGridAggregation({
+          id: 'grid-weight-sums',
+          positions: positionsImport,
+          weights: valuesImport,
+          output: gridWeightSums,
+          gridSize: [gridWidth, gridWidth],
+          bounds: [-1, -1, 1, 1]
+        }),
+        new GPUGridAggregation({
+          id: 'grid-weight-minimums',
+          positions: positionsImport,
+          weights: valuesImport,
+          output: gridWeightMinimums,
+          operation: 'min',
+          gridSize: [gridWidth, gridWidth],
+          bounds: [-1, -1, 1, 1]
+        }),
+        new GPUGridAggregation({
+          id: 'grid-weight-maximums',
+          positions: positionsImport,
+          weights: valuesImport,
+          output: gridWeightMaximums,
+          operation: 'max',
+          gridSize: [gridWidth, gridWidth],
+          bounds: [-1, -1, 1, 1]
+        }),
+        new GPUGridAggregation({
+          id: 'grid-weight-means',
+          positions: positionsImport,
+          weights: valuesImport,
+          output: gridWeightMeans,
+          operation: 'mean',
+          gridSize: [gridWidth, gridWidth],
+          bounds: [-1, -1, 1, 1]
+        }),
+        new GPUScan({
+          id: 'cumulative-grid-rows',
+          input: grid,
+          output: cumulativeGrid,
+          mode: 'inclusive',
+          segmentFlags: gridSegmentFlags
+        }),
+        new GPUGroupAggregation({
+          id: 'group-counts',
+          keys: groupKeysImport,
+          mask: selectionImport,
+          output: groupCounts
+        }),
+        new GPUGroupAggregation({
+          id: 'group-means',
+          keys: groupKeysImport,
+          values: valuesImport,
+          mask: selectionImport,
+          output: groupMeans,
+          operation: 'mean'
+        })
+      ]);
       const compileStart = performance.now();
       const compiled = graph.compile();
       const compileTime = performance.now() - compileStart;

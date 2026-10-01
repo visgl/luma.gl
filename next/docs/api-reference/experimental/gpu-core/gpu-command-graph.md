@@ -1,10 +1,10 @@
 # GPUCommandGraph
 
-[Command Graph](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-command-graph.md)[Texture History](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-texture-history.md)[Readback Ring](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-readback-ring.md)[Indirect Draw](https://luma.gl/next/docs/api-reference/experimental/gpu-core/draw-command-buffer.md)
+[Command Graph](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-command-graph.md)[Incremental Execution](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-incremental-execution.md)[Texture History](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-texture-history.md)[Readback Ring](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-readback-ring.md)[Indirect Draw](https://luma.gl/next/docs/api-reference/experimental/gpu-core/draw-command-buffer.md)
 
 ## Overview[​](#overview "Direct link to Overview")
 
-`GPUCommandGraph<Parameters>` declares fixed-capacity WebGPU buffer and texture resources plus ordered compute, render, and copy nodes. `compile()` returns a `CompiledGPUCommandGraph` that owns transient resources and node state but borrows every import. Render nodes can resolve multisampled attachments and consume explicitly numbered, frame-scoped swapchain and external-image bindings.
+`GPUCommandGraph<Parameters>` declares fixed-capacity WebGPU buffer and texture resources plus ordered compute, render, and copy nodes. `compile()` returns a `CompiledGPUCommandGraph` through the legacy synchronous pipeline-creation path. `await compileAsync()` prepares independent pipelines in parallel where the backend supports it. Both forms return a graph that owns transient resources and node state but borrows every import. Render nodes can resolve multisampled attachments and consume explicitly numbered, frame-scoped swapchain and external-image bindings.
 
 See [Choosing a GPU Data-Processing API](https://luma.gl/next/docs/api-guide/gpu/gpu-data-processing.md) for guidance on when to use a command graph, portable GPGPU evaluators, or lower-level compute helpers.
 
@@ -31,9 +31,13 @@ Use a command graph for repeated multi-pass GPU work whose capacities and resour
 
 Use direct command encoding for a one-off pass or a sequence that is already simple and local. A command graph does not own submission, presentation, the frame loop, or unbounded allocation. See [Execution and composition](https://luma.gl/next/docs/api-reference/experimental/gpu-core/concepts.md) for the mental model, terminology, hazard scheduling, conditions, resumable work, budgets, and instrumentation.
 
+For changing batch topology, [GPUIncrementalExecution](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-incremental-execution.md) caches explicit per-batch results and submits changed batches followed by a merge. It provides revision tracking, replacement/removal semantics, and work counters around ordinary command graphs.
+
 ## Quick usage[​](#quick-usage "Direct link to Quick usage")
 
 This example composes reduction, histogram, and grid-binning nodes in one reusable graph:
+
+**Loading example**Preparing GPU resources…
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
@@ -78,7 +82,7 @@ graph.addComputePass({
 
 
 
-const compiled = graph.compile();
+const compiled = await graph.compileAsync();
 
 const encoding = compiled.encode(device.commandEncoder, {parameters: {time}});
 
@@ -87,18 +91,22 @@ console.log(encoding.stats.cpuEncodeTimeMilliseconds);
 
 ## Lifecycle and ownership[​](#lifecycle-and-ownership "Direct link to Lifecycle and ownership")
 
-A graph definition is mutable until `compile()` is called. Compilation freezes the definition, infers a stable node order, plans transient allocation reuse, creates physical transients, and calls each node's `compile` callback once. The returned `CompiledGPUCommandGraph` can then be encoded repeatedly with different parameters and compatible imported-resource replacements.
+A graph definition is mutable until `compile()` or `compileAsync()` is called. Compilation freezes the definition, infers a stable node order, plans transient allocation reuse, creates physical transients, and calls each node's `compile` callback once. The returned `CompiledGPUCommandGraph` can then be encoded repeatedly with different parameters and compatible imported-resource replacements.
 
-Imported buffers, textures, external textures, `GPUData`, and `GPUVector` chunks are borrowed. The compiled graph owns only node-created resources, physical transients, and cached texture views/framebuffers. Calling `destroy()` releases those owned resources and never destroys an import.
+Prefer `compileAsync()` for WebGPU graphs with multiple shader pipelines. It begins every independent compute and render pipeline compilation before awaiting completion, and its promise resolves only when all node executables are ready to encode. This moves compilation latency behind an explicit awaitable preparation boundary and gives the browser and driver an opportunity to compile pipelines concurrently. It does not submit commands, execute a warm-up decode, or wait for queue work. Use the synchronous `compile()` only when immediate construction is required or when measuring compatibility with an older integration.
+
+Node callbacks that construct `Kernel`, `Computation`, or `Model` instances need no special handling: the graph collects their asynchronous pipeline work automatically. A custom node that prepares some other asynchronous resource can provide `compileAsync(context)` alongside its required synchronous `compile(context)` callback. `compileAsync()` prefers that callback for the node; `compile()` always uses the synchronous callback.
+
+Imported buffers, textures, external textures, `GPUData`, and `GPUVectorLike` chunks are borrowed. `importGPUVector()` accepts structural vectors as well as `GPUVector` instances. The compiled graph owns only node-created resources, physical transients, and cached texture views/framebuffers. Calling `destroy()` releases those owned resources and never destroys an import.
 
 ## Extension libraries[​](#extension-libraries "Direct link to Extension libraries")
 
-Small algorithm libraries can implement the structural `GPUCommandGraphContributor` interface:
+Small algorithm libraries can implement the structural `GPUProgramPrimitive` interface:
 
 ```
-class GPUAlgorithm implements GPUCommandGraphContributor {
+class GPUAlgorithm implements GPUProgramPrimitive {
 
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(graph: GPUCommandGraph<Parameters>): readonly GPUCommandNode<Parameters>[] {
 
     const output = createTransientView(
 
@@ -114,7 +122,9 @@ class GPUAlgorithm implements GPUCommandGraphContributor {
 
     );
 
-    // Declare compute, render, or copy nodes that use output.
+    // Return compute, render, or copy nodes that use output.
+
+    return [createGPUComputeCommandNode({id: 'algorithm', resources: [{buffer: output, usage: 'storage-write'}], compile: compileAlgorithm})];
 
   }
 
@@ -122,10 +132,12 @@ class GPUAlgorithm implements GPUCommandGraphContributor {
 
 
 
-new GPUAlgorithm().addToGraph(graph);
+graph.add(new GPUAlgorithm());
 ```
 
-A contributor only declares resources and nodes. It does not compile the graph, encode commands, submit work, or read results back. This keeps ownership and scheduling with the application and allows independently authored contributors to compose without a runtime registry.
+`graph.add(node)` accepts command nodes, leaf primitives, groups exposing `getNodes()`, and arrays. Groups return child primitives or nested groups without receiving a graph. The graph recursively expands them in depth-first order and calls `getCommandNodes(graph)` on leaves before scheduling their compute, render, and copy nodes. `GPUNode<Parameters>` describes this structural input. It rejects additions after compilation, before invoking the primitive. Use `getCommandNodes(graph)` directly when you need to inspect or transform nodes before scheduling them with `addGPUCommandNodes(graph, nodes)`.
+
+A primitive only declares resources and constructs nodes. It does not compile the graph, encode commands, submit work, or read results back. This keeps ownership and scheduling with the application and allows independently authored primitives to compose without a runtime registry.
 
 The exported `createTransientView()` helper creates packed, graph-owned typed storage for fixed-width `VertexFormat` values. Variable-length `vertex-list<...>` and `value-list<...>` formats require an explicit adapter that owns their offsets and value counts; the helper rejects them before declaring a graph resource. Its optional usage argument replaces the default `Buffer.STORAGE` value and must retain `Buffer.STORAGE` while adding flags such as `Buffer.INDIRECT`. Lengths must be non-negative safe integers.
 
@@ -198,7 +210,7 @@ graph.addComputePass({
 });
 ```
 
-Do not work around this check by importing the same writable physical allocation under separate IDs. If two independently authored contributors need it, pass them the same handle or typed view. When one shader needs distinct input and output bindings in a shared allocation, their aligned binding ranges must not overlap; otherwise expose the shared range through one read-write binding. Validation never destroys caller-owned imports; after a rejected override, the caller can retry with distinct buffers or the original compatible defaults.
+Do not work around this check by importing the same writable physical allocation under separate IDs. If two independently authored primitives need it, pass them the same handle or typed view. When one shader needs distinct input and output bindings in a shared allocation, their aligned binding ranges must not overlap; otherwise expose the shared range through one read-write binding. Validation never destroys caller-owned imports; after a rejected override, the caller can retry with distinct buffers or the original compatible defaults.
 
 ## Primitive multi-chunk support[​](#primitive-multi-chunk-support "Direct link to Primitive multi-chunk support")
 
@@ -454,7 +466,7 @@ Because an application-provided framebuffer is not a declared graph resource, th
 
 ## Node APIs and graph commands[​](#node-apis-and-graph-commands "Direct link to Node APIs and graph commands")
 
-A graph command is a reusable description of GPU work, not a second command queue or a hidden submission API. `compile()` prepares node executables once; `encode(commandEncoder, options)` records them into the application's existing `CommandEncoder`; the application decides when to submit that encoder. This distinction lets analytics, rendering, and explicitly requested readback share one dependency-ordered execution without taking ownership of the frame loop.
+A graph command is a reusable description of GPU work, not a second command queue or a hidden submission API. `compile()` or `await compileAsync()` prepares node executables once; `encode(commandEncoder, options)` records them into the application's existing `CommandEncoder`; the application decides when to submit that encoder. This distinction lets analytics, rendering, and explicitly requested readback share one dependency-ordered execution without taking ownership of the frame loop.
 
 | Feature             | Why it exists                                                                            | Typical use                                                                                       |
 | ------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
@@ -675,7 +687,7 @@ graph.addComputePass({
 });
 ```
 
-Primitives such as `GPUBatchHashIndex`, `GPUScan`, and `GPUHashJoin` use this same public graph contract: `primitive.addToGraph(graph)` contributes compute nodes but does not compile, submit, or read back the graph on the application's behalf.
+Primitives such as `GPUBatchHashIndex`, `GPUScan`, and `GPUHashJoin` use this same public graph contract: `primitive.getCommandNodes(graph)` contributes compute nodes but does not compile, submit, or read back the graph on the application's behalf.
 
 ### `addRenderPass(node)`[​](#addrenderpassnode "Direct link to addrenderpassnode")
 

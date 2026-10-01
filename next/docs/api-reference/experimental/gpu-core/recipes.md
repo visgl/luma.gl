@@ -169,46 +169,52 @@ See [Resumable execution and work budgets](https://luma.gl/next/docs/api-referen
 
 ## Package a reusable operation[​](#package-a-reusable-operation "Direct link to Package a reusable operation")
 
-**Pipeline neighborhood:** typed props → contributor `addToGraph()` → logical resources and nodes → caller compilation and encoding
+**Pipeline neighborhood:** typed props → composite `getNodes()` → leaf `getCommandNodes(graph)` → command nodes → caller compilation and encoding
 
-A contributor validates its fixed contract, declares every resource use, creates any bounded transients, and adds nodes with stable identifiers. It does not submit commands, own the frame loop, or map application data. Expose ordinary graph views, masks, counts, and indirect commands so the next operation can compose without CPU translation.
+A contributor validates its fixed contract, declares every resource use, creates any bounded transients, and constructs nodes with stable identifiers. Composites can return their child primitives from `getNodes()` without receiving a graph; `graph.add()` recursively expands them in order. It does not submit commands, own the frame loop, or map application data. Expose ordinary graph views, masks, counts, and indirect commands so the next operation can compose without CPU translation.
 
 ```
-class VisibleItems implements GPUCommandGraphContributor {
+class VisibleItems {
 
   constructor(readonly props: VisibleItemsProps) {}
 
 
 
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getNodes() {
 
-    new GPUMask({
+    return [
 
-      inputs: this.props.predicateMasks,
+      new GPUMask({
 
-      output: this.props.visibleMask,
+        inputs: this.props.predicateMasks,
 
-      operation: 'and'
+        output: this.props.visibleMask,
 
-    }).addToGraph(graph);
+        operation: 'and'
 
+      }),
 
+      new GPUCompaction({
 
-    new GPUCompaction({
+        input: this.props.sourceIds,
 
-      input: this.props.sourceIds,
+        flags: this.props.visibleMask,
 
-      flags: this.props.visibleMask,
+        output: this.props.visibleIds,
 
-      output: this.props.visibleIds,
+        count: this.props.visibleCount
 
-      count: this.props.visibleCount
+      })
 
-    }).addToGraph(graph);
+    ];
 
   }
 
 }
+
+
+
+graph.add(new VisibleItems(props));
 ```
 
 * **Cost to watch:** attach estimates for invocations, bytes, dispatches, draws, and whether each estimate is exact or an upper bound.
