@@ -230,8 +230,7 @@ test('scene capture accepts stock Deck color and depth without inventing normals
       errors.push(error.message);
     }
   });
-  const nativeDevice = device instanceof WebGPUDevice ? device.handle : undefined;
-  expect(nativeDevice).toBeDefined();
+  expect(device).toBeInstanceOf(WebGPUDevice);
   let deviceLoss: Awaited<typeof device.lost> | undefined;
   void device.lost.then(info => {
     deviceLoss = info;
@@ -299,8 +298,7 @@ test('scene capture accepts stock Deck color and depth without inventing normals
       errors,
       () => deck.redraw('stock scene frame')
     );
-    // Distinguish stock layer/device failures from capture-specific failures.
-    await nativeDevice!.queue.onSubmittedWorkDone();
+    expect(device.isLost, 'stock rendering should keep the WebGPU device active').toBe(false);
     stage = 'captured stock rendering';
     frames = 0;
     deck.setProps({effects: [effect]});
