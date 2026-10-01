@@ -115,6 +115,10 @@ half-float, packed `unorm10-10-10-2`, and BGRA formats.
 
 Varying columns produce batch-local `Binding` ranges that preserve `GPUData.byteOffset`
 and uploaded byte size. Constants produce aligned one-row storage buffers.
+WebGPU requires each storage binding to start at a multiple of
+`device.limits.minStorageBufferOffsetAlignment` (256 bytes by default), so a varying
+chunk whose `byteOffset` is not a multiple of that alignment is rejected when bindings
+are prepared.
 
 When storage declarations are present, `shaderModule` contributes:
 
