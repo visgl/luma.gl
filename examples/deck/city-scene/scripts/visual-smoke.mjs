@@ -504,6 +504,7 @@ try {
       assert.deepEqual(edgePicking[1], {name: 'East 4.1', layer: 'city-mesh'}, `${backend}: opaque roof occludes the bottom edge`);
       await page.uncheck('#water');
       await page.evaluate(() => window.cityScene.setPlaying(true));
+      await waitForIdle();
       await page.waitForTimeout(150);
       const staticFrames = await page.evaluate(() => window.cityScene.diagnostics.frames);
       await page.waitForTimeout(150);
