@@ -53,24 +53,23 @@ const {message} = await device.lost;
 console.error(message);
 ```
 
-Enforce specific WebGPU device limits (WebGPU only):
+Request specific WebGPU device limits (WebGPU only):
 
 ```typescript
 import {luma} from '@luma.gl/core';
 
-// Request specific limits to catch overuse during development
+// Declare the limits the application needs instead of taking every adapter limit
 const device = await luma.createDevice({
   type: 'webgpu',
   requiredLimits: {
     maxStorageBuffersPerShaderStage: 10,
-    maxStorageBufferBindingSize: 512 * 1024 * 1024,
-    maxBufferSize: 1024 * 1024 * 1024
+    maxStorageBufferBindingSize: 512 * 1024 * 1024
   }
 });
 
-// The device enforces these limits regardless of adapter capability.
-// A kernel using 12 storage buffers will fail at pipeline creation
-// on both high-end and low-end hardware, catching the mistake early.
+// device.limits.maxStorageBuffersPerShaderStage is 10 even on a GPU that supports 16,
+// so a kernel that binds 12 storage buffers fails during development, not only on 10-buffer GPUs.
+// A GPU that cannot provide 10 storage buffers fails device creation instead.
 ```
 
 ## Types
@@ -93,7 +92,7 @@ Specifies props to use when luma creates the device.
 | `powerPreference?: string` | `'high-performance'` | `'default' \| 'high-performance' \| 'low-power'` (WebGL). |
 | `featureLevel?: 'core' \| 'max' \| 'compatibility' \| 'best-available'` | `'core'` | WebGPU feature/limit profile to request. `'core'` is the portable default; `'max'` requests every supported adapter feature and limit; `'compatibility'` opts into compatibility mode; `'best-available'` upgrades a compatibility adapter to core when available. WebGL and null devices ignore this prop. |
 | `optionalFeatures?: WebGPUDeviceFeature[]` | `[]` | WebGPU device features to request in addition to the selected profile. Unsupported entries are ignored. Use this for targeted capabilities such as `'subgroups'` without enabling the full `'max'` profile. |
-| `requiredLimits?: Partial<Record<keyof GPUSupportedLimits, number>>` | `undefined` | WebGPU device limits to request. The created device enforces these limits regardless of adapter capability, catching limit overuse at development time. Values exceeding `adapter.limits` will cause device creation to fail (rejected by the browser's `requestDevice()`). Custom limits merge with `featureLevel: 'max'` (custom values override). Misspelled limit names fail at compile time. |
+| `requiredLimits?: Partial<Record<keyof DeviceLimits, number>>` | `undefined` | WebGPU device limits to request, using the same names as `device.limits`. The device gets exactly the requested value when it is better than the WebGPU spec default (for example above the default 8 `maxStorageBuffersPerShaderStage`), which lets a high-end development GPU enforce the limits the application targets. Values worse than the spec default are raised to the default, so this cannot make a device stricter than the spec defaults. Values the adapter cannot provide, and limit names the browser does not support, make device creation fail. Applied on top of `featureLevel: 'max'` (requested values override). Ignored by `attach()`, which wraps an existing device, and by WebGL and null devices. |
 | `xrCompatible?: boolean` | `false` | Request a WebGPU adapter that can present frames to a WebXR session. Standard adapter requests remain unchanged unless this is enabled. |
 | `failIfMajorPerformanceCaveat?: boolean` | `false` | Fail device creation if only a low-performance or software GPU is available. |
 | `webgl?: WebGLContextAttributes` | [`WebGLContextAttributes`][webgl-attributes] | Attributes passed on to WebGL (`canvas.getContext('webgl2', props.webgl)` |
