@@ -100,6 +100,8 @@ export {
   resolveUseByteColors
 } from './lib/color/normalize-byte-colors';
 
+export {sketchStroke, type SketchStrokeProps} from './modules/geometry/sketch-stroke/sketch-stroke';
+
 // math libraries
 export {random} from './modules/math/random/random';
 export {volumeRaymarch} from './modules/volume/volume-raymarch';
@@ -172,6 +174,11 @@ export type {
   WaterMaterialUniforms
 } from './modules/lighting/water-material/water-material';
 export {waterMaterial} from './modules/lighting/water-material/water-material';
+export type {
+  RiverWaterMaterialProps,
+  RiverWaterMaterialUniforms
+} from './modules/lighting/water-material/river-water-material';
+export {riverWaterMaterial} from './modules/lighting/water-material/river-water-material';
 export type {
   PBRMaterialBindings,
   PBRMaterialProps,

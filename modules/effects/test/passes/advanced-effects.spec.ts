@@ -740,6 +740,7 @@ it('advanced effects compose in order with existing effects', async () => {
     createGTAOCompositeShaderPass(),
     createSSGICompositeShaderPass(),
     createSSRCompositeShaderPass(),
+    createSSRCompositeShaderPass({reprojection: 'camera', quality: 'fast'}),
     createClusteredVolumetricLightingCompositeShaderPass(),
     createHDRAutoExposureCompositeShaderPass(),
     bloomCompositeShaderPass,

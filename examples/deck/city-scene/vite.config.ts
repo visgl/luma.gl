@@ -4,10 +4,18 @@
 
 import {defineConfig} from 'vite';
 
-export default defineConfig({
+export default defineConfig(({mode}) => ({
+  // Website hosts may redirect index.html to a clean URL without a trailing slash.
+  base:
+    mode === 'website'
+      ? `${(process.env['WEBSITE_BASE_URL'] || '/').replace(/\/?$/, '/')}standalone-examples/city-scene/`
+      : './',
   resolve: {
     alias: {
+      '@deck.gl-community/gpu-layers': `${__dirname}/../../../modules/deck-gpu-layers/src`,
       '@luma.gl/core': `${__dirname}/../../../modules/core/src`,
+      '@luma.gl/effects': `${__dirname}/../../../modules/effects/src`,
+      '@luma.gl/experimental': `${__dirname}/../../../modules/experimental/src`,
       '@luma.gl/engine': `${__dirname}/../../../modules/engine/src`,
       '@luma.gl/gpgpu': `${__dirname}/../../../modules/gpgpu/src`,
       '@luma.gl/shadertools': `${__dirname}/../../../modules/shadertools/src`,
@@ -16,4 +24,4 @@ export default defineConfig({
     }
   },
   optimizeDeps: {exclude: ['@deck.gl/core'], noDiscovery: true}
-});
+}));
