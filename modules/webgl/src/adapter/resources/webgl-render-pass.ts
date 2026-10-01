@@ -224,6 +224,10 @@ export class WEBGLRenderPass extends RenderPass {
 
     const glDrawMode = getGLDrawMode(topology);
     const isIndexed = Boolean(vertexArray?.indexBuffer);
+    if (indexCount !== undefined && !isIndexed) {
+      // indexCount requires an index buffer on the vertex array; attribute-less draws must use vertexCount
+      throw new Error('RenderPass.draw(): indexCount without index buffer');
+    }
     const glIndexType = (vertexArray?.indexBuffer as WEBGLBuffer)?.glIndexType;
     // Indexed draws start at `firstIndex` like WebGPU drawIndexed(); WebGL has no base vertex, so `firstVertex` only applies to non-indexed draws
     const indexByteOffset = firstIndex * (glIndexType === GL.UNSIGNED_INT ? 4 : 2);
