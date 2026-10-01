@@ -174,7 +174,10 @@
   {
     "type": "category",
     "label": "Integrations",
-    "items": ["integrations/external-context", "integrations/react-strict-mode"]
+    "items": [
+      "integrations/external-context",
+      "integrations/react-strict-mode"
+    ]
   },
   {
     "type": "category",
@@ -245,6 +248,13 @@
       "deck/arrow-path-layer",
       "deck/arrow-polygon-layer",
       "deck/arrow-text-layer"
+    ]
+  },
+  {
+    "type": "category",
+    "label": "Visual Effects - deck.gl",
+    "items": [
+      "deck/weather"
     ]
   },
   {
