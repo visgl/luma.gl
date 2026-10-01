@@ -1256,7 +1256,7 @@ export class Model {
     // The replacement now exists, so obsolete variants can be released safely: a shader
     // or pipeline shared with the replacement keeps a reference.
     if (this._pipelineCacheStale) {
-      this._releasePipelineCache(this.pipeline);
+      this._releasePipelineCache();
       this._pipelineCacheStale = false;
     }
     this._cachePipelineVariant();
@@ -1299,7 +1299,7 @@ export class Model {
   private _cachePipelineVariant(): void {
     const key = this._getAttachmentFormatKey();
     const previous = this._pipelineCache.get(key);
-    if (previous && previous.pipeline !== this.pipeline) {
+    if (previous) {
       this._releasePipelineVariant(previous.pipeline);
     }
     // Re-insert so Map iteration order tracks least-recently-used first.
@@ -1321,12 +1321,10 @@ export class Model {
     });
   }
 
-  /** Release every pipeline (and its shaders) held by `_pipelineCache`, except `keep`. */
-  private _releasePipelineCache(keep?: RenderPipeline): void {
+  /** Release the reference owned by every entry, including shared pipeline objects. */
+  private _releasePipelineCache(): void {
     for (const {pipeline} of this._pipelineCache.values()) {
-      if (pipeline !== keep) {
-        this._releasePipelineVariant(pipeline);
-      }
+      this._releasePipelineVariant(pipeline);
     }
     this._pipelineCache.clear();
   }
