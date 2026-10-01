@@ -63,9 +63,10 @@ const SOURCE = /* wgsl */ `
 }
 `;
 
-test.each([false, true])(
-  'scene capture selection=%s preserves HDR, depth, per-view history, resize and ownership',
-  async (selection, context) => {
+test.each([
+  false,
+  true
+])('scene capture selection=%s preserves HDR, depth, per-view history, resize and ownership', async (selection, context) => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     context.skip('WebGPU unavailable');
