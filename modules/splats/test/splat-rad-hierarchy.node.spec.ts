@@ -2022,6 +2022,43 @@ it('SplatRADHierarchyManager retargets a resolved frontier without collapsing ca
 });
 
 it.each([
+  128, 256
+])('refinement updates dependency leases linearly for a %i-row chain', rowCount => {
+  const device = new NullDevice({});
+  const page = makeRADPage(device, {
+    id: 'linear-dependency-chain',
+    rowIndexBase: 0,
+    positions: new Array(rowCount * 3).fill(0),
+    childCounts: Array.from({length: rowCount}, (_, rowIndex) => Number(rowIndex < rowCount - 1)),
+    childStarts: Array.from({length: rowCount}, (_, rowIndex) => rowIndex + 1)
+  });
+  const manager = new SplatRADHierarchyManager({
+    pages: [page],
+    maximumScreenSpaceError: 0,
+    maximumActiveRows: 1
+  });
+  manager.refineView(makeRADView(), 1);
+  const dependencyCounts = manager['incrementalTraversal']!.state.dependencyPageCounts;
+  const writes = vi.spyOn(dependencyCounts, 'set');
+  try {
+    manager.continueTraversal(Number.POSITIVE_INFINITY);
+    expect(getFrontierSourceRows(manager.frontier)).toEqual([[rowCount - 1]]);
+    expect(dependencyCounts.get(page.id), 'retains every required ancestor lease').toBe(
+      rowCount - 1
+    );
+    expect(
+      writes.mock.calls.length,
+      'does not remove and rebuild unchanged ancestor leases'
+    ).toBeLessThan(rowCount * 4);
+  } finally {
+    writes.mockRestore();
+    manager.destroy();
+    page.data.destroy();
+    device.destroy();
+  }
+});
+
+it.each([
   'update',
   'refineView'
 ] as const)('SplatRADHierarchyManager %s retargets deep retained branches without recursive tree scans', method => {

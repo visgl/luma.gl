@@ -215,7 +215,10 @@ type SplatRADFrontierCandidate<TData extends SplatRADHierarchyData = GPUSplatDat
   isVisible: boolean;
   children?: SplatRADFrontierCandidate<TData>[];
   parent?: SplatRADFrontierCandidate<TData>;
-  selectedDescendantCount?: number;
+  /** Number of direct child subtrees containing visible selected rows. */
+  selectedChildCount?: number;
+  /** Whether this row itself currently contributes visible frontier coverage. */
+  isSelected?: boolean;
   dependencyPageIds?: string[];
   suppressRefinement?: boolean;
 };
@@ -1262,13 +1265,14 @@ export class SplatRADHierarchyManager<TData extends SplatRADHierarchyData = GPUS
     traversal: Pick<SplatRADIncrementalTraversal<TData>, 'selectedRows' | 'state'>
   ): void {
     const wasSelected = traversal.selectedRows.get(candidate.globalRowIndex) === candidate;
+    // Keep ancestor coverage alive while the parent replaces its selected descendants.
+    traversal.selectedRows.set(candidate.globalRowIndex, candidate);
     for (const child of candidate.children ?? []) {
       this.removeSelectedCandidateBranch(child, traversal.selectedRows, traversal.state);
     }
     candidate.isFallback = false;
     candidate.isCapacityLimited = false;
     traversal.state.refinedRows.delete(candidate.globalRowIndex);
-    traversal.selectedRows.set(candidate.globalRowIndex, candidate);
     this.changedPageIds.add(candidate.registeredPage.page.id);
     if (!wasSelected) {
       traversal.state.allocatedRowCount += candidate.isVisible ? 1 : 0;
@@ -1352,7 +1356,6 @@ export class SplatRADHierarchyManager<TData extends SplatRADHierarchyData = GPUS
       return false;
     }
     candidate.isCapacityLimited = false;
-    traversal.selectedRows.delete(candidate.globalRowIndex);
     this.changedPageIds.add(candidate.registeredPage.page.id);
     traversal.state.allocatedRowCount = nextAllocatedRowCount;
     traversal.state.refinedRows.add(candidate.globalRowIndex);
@@ -1360,6 +1363,7 @@ export class SplatRADHierarchyManager<TData extends SplatRADHierarchyData = GPUS
       traversal.selectedRows.set(child.globalRowIndex, child);
       this.changedPageIds.add(child.registeredPage.page.id);
     }
+    traversal.selectedRows.delete(candidate.globalRowIndex);
     return true;
   }
 
@@ -2011,7 +2015,6 @@ export class SplatRADHierarchyManager<TData extends SplatRADHierarchyData = GPUS
       return false;
     }
 
-    selectedRows.delete(globalRowIndex);
     this.changedPageIds.add(page.id);
     state.allocatedRowCount = nextAllocatedRowCount;
     state.refinedRows.add(globalRowIndex);
@@ -2020,6 +2023,8 @@ export class SplatRADHierarchyManager<TData extends SplatRADHierarchyData = GPUS
     for (const child of childCandidates) {
       this.addFrontierCandidate(child, selectedRows, refinementQueue);
     }
+    // Add the replacement before removing its parent so shared ancestor leases never drop to zero.
+    selectedRows.delete(globalRowIndex);
     return false;
   }
 
@@ -2113,14 +2118,19 @@ export class SplatRADHierarchyManager<TData extends SplatRADHierarchyData = GPUS
     if (selected) selectedPage!.selectedRows!.set(candidate.localRowIndex, candidate);
     else selectedPage?.selectedRows?.delete(candidate.localRowIndex);
     this.changedPageIds.add(pageId);
+    candidate.isSelected = selected;
 
-    // Only a zero/nonzero subtree transition changes ownership of its ancestor and complete
-    // sibling pages. Updating these small reference counts avoids walking every published leaf.
+    // Selection can temporarily include both sides of an atomic sibling replacement. If children
+    // already cover this subtree, selecting or deselecting its parent does not change its ancestors.
+    if (candidate.selectedChildCount) return;
+
+    // Count covered child branches, not all descendant leaves. Propagate only a subtree's
+    // zero/nonzero transition; replacing a deep leaf must not revisit every unchanged ancestor.
     for (let ancestor = candidate.parent; ancestor; ancestor = ancestor.parent) {
-      const previousCount = ancestor.selectedDescendantCount ?? 0;
+      const previousCount = ancestor.selectedChildCount ?? 0;
       const nextCount = previousCount + (selected ? 1 : -1);
-      ancestor.selectedDescendantCount = nextCount;
-      if (previousCount > 0 && nextCount > 0) continue;
+      ancestor.selectedChildCount = nextCount;
+      if (previousCount > 0 && nextCount > 0) break;
       if (nextCount > 0) {
         ancestor.dependencyPageIds = Array.from(
           new Set([
@@ -2135,6 +2145,7 @@ export class SplatRADHierarchyManager<TData extends SplatRADHierarchyData = GPUS
         else state.dependencyPageCounts.delete(dependencyId);
       }
       if (nextCount === 0) ancestor.dependencyPageIds = undefined;
+      if (ancestor.isSelected) break;
     }
   }
 
