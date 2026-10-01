@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {expect, it} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import type {Device} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import {GLSLShaderAssembler, WGSLShaderAssembler, type ShaderAssembler} from '@luma.gl/shadertools';
+import {GLSLShaderAssembler, ShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shadertools';
 import {NullDevice} from '@luma.gl/test-utils';
 
 const WGSL_SOURCE = /* wgsl */ `\
@@ -46,6 +46,10 @@ class TrackingWGSLShaderAssembler extends WGSLShaderAssembler {
     return super.assembleWGSLShader(props);
   }
 }
+
+it('Model does not retain a mutable shader assembler in its default props', () => {
+  expect(Model.defaultProps.shaderAssembler).toBeUndefined();
+});
 
 it('Model preserves explicitly supplied custom WGSL shader assemblers', () => {
   const device = makeWebGPUDevice();
@@ -156,50 +160,21 @@ it('Model preserves legacy Deck assemblers for both shader languages', () => {
   void 0;
 });
 
-it('Model preserves a legacy default shader assembler override for WebGPU', () => {
+it('Model uses the language-specific fallback when no shader assembler is supplied', () => {
   const device = makeWebGPUDevice();
-  const originalDefaultShaderAssembler = Model.defaultProps.shaderAssembler;
-  const glslShaderAssembler = new GLSLShaderAssembler();
-  const wgslShaderAssembler = new TrackingWGSLShaderAssembler();
-  wgslShaderAssembler.addDefaultModule({
-    name: 'legacyDefaultWGSLModule',
-    source: 'const LEGACY_DEFAULT_WGSL_MODULE_MARKER: f32 = 1.0;'
-  });
-  wgslShaderAssembler.addShaderHook(
-    'vs:LEGACY_DEFAULT_WGSL_HOOK(position: ptr<function, vec4<f32>>)'
-  );
-
-  const legacyDefaultShaderAssembler = {
-    addDefaultModule: wgslShaderAssembler.addDefaultModule.bind(wgslShaderAssembler),
-    removeDefaultModule: wgslShaderAssembler.removeDefaultModule.bind(wgslShaderAssembler),
-    addShaderHook: wgslShaderAssembler.addShaderHook.bind(wgslShaderAssembler),
-    assembleGLSLShaderPair: glslShaderAssembler.assembleGLSLShaderPair.bind(glslShaderAssembler),
-    assembleWGSLShader: wgslShaderAssembler.assembleWGSLShader.bind(wgslShaderAssembler)
-  };
+  const getDefaultShaderAssembler = vi.spyOn(ShaderAssembler, 'getDefaultShaderAssembler');
   let model: Model | null = null;
 
   try {
-    Model.defaultProps.shaderAssembler = legacyDefaultShaderAssembler as unknown as ShaderAssembler;
     model = new Model(device, {
-      id: 'legacy-default-wgsl-shader-assembler',
+      id: 'default-wgsl-shader-assembler',
       source: WGSL_SOURCE,
       vertexCount: 1
     });
 
-    expect(
-      wgslShaderAssembler.assemblyCount,
-      'the configured legacy default is retained for WebGPU'
-    ).toBe(1);
-    expect(
-      Boolean(model.source.includes('LEGACY_DEFAULT_WGSL_MODULE_MARKER')),
-      'legacy default assembler modules are preserved'
-    ).toBe(true);
-    expect(
-      Boolean(model.source.includes('fn LEGACY_DEFAULT_WGSL_HOOK(')),
-      'legacy default assembler hooks are preserved'
-    ).toBe(true);
+    expect(getDefaultShaderAssembler).toHaveBeenCalledWith('wgsl');
   } finally {
-    Model.defaultProps.shaderAssembler = originalDefaultShaderAssembler;
+    getDefaultShaderAssembler.mockRestore();
     try {
       model?.destroy();
     } finally {
@@ -313,3 +288,83 @@ function makeWebGPUDevice(): Device {
 
   return webgpuDevice;
 }
+
+it('Model preserves a legacy default shader assembler override for WebGPU', () => {
+  const device = makeWebGPUDevice();
+  const originalDefaultShaderAssembler = Model.defaultProps.shaderAssembler;
+  const glslShaderAssembler = new GLSLShaderAssembler();
+  const wgslShaderAssembler = new TrackingWGSLShaderAssembler();
+  wgslShaderAssembler.addDefaultModule({
+    name: 'legacyDefaultWGSLModule',
+    source: 'const LEGACY_DEFAULT_WGSL_MODULE_MARKER: f32 = 1.0;'
+  });
+  wgslShaderAssembler.addShaderHook(
+    'vs:LEGACY_DEFAULT_WGSL_HOOK(position: ptr<function, vec4<f32>>)'
+  );
+
+  const legacyDefaultShaderAssembler = {
+    addDefaultModule: wgslShaderAssembler.addDefaultModule.bind(wgslShaderAssembler),
+    removeDefaultModule: wgslShaderAssembler.removeDefaultModule.bind(wgslShaderAssembler),
+    addShaderHook: wgslShaderAssembler.addShaderHook.bind(wgslShaderAssembler),
+    assembleGLSLShaderPair: glslShaderAssembler.assembleGLSLShaderPair.bind(glslShaderAssembler),
+    assembleWGSLShader: wgslShaderAssembler.assembleWGSLShader.bind(wgslShaderAssembler)
+  };
+  let model: Model | null = null;
+
+  try {
+    Model.defaultProps.shaderAssembler = legacyDefaultShaderAssembler as unknown as ShaderAssembler;
+    model = new Model(device, {
+      id: 'legacy-default-wgsl-shader-assembler',
+      source: WGSL_SOURCE,
+      vertexCount: 1
+    });
+
+    expect(
+      wgslShaderAssembler.assemblyCount,
+      'the configured legacy default is retained for WebGPU'
+    ).toBe(1);
+    expect(
+      Boolean(model.source.includes('LEGACY_DEFAULT_WGSL_MODULE_MARKER')),
+      'legacy default assembler modules are preserved'
+    ).toBe(true);
+    expect(
+      Boolean(model.source.includes('fn LEGACY_DEFAULT_WGSL_HOOK(')),
+      'legacy default assembler hooks are preserved'
+    ).toBe(true);
+  } finally {
+    Model.defaultProps.shaderAssembler = originalDefaultShaderAssembler;
+    try {
+      model?.destroy();
+    } finally {
+      device.destroy();
+    }
+  }
+
+  void 0;
+});
+
+it.each([
+  'glsl',
+  'wgsl'
+] as const)('Model honors configured %s defaults and explicit overrides', language => {
+  const device = language === 'wgsl' ? makeWebGPUDevice() : new NullDevice({});
+  const original = Model.defaultProps.shaderAssembler;
+  const configured = language === 'wgsl' ? new WGSLShaderAssembler() : new GLSLShaderAssembler();
+  const explicit = language === 'wgsl' ? new WGSLShaderAssembler() : new GLSLShaderAssembler();
+  const shaderProps =
+    language === 'wgsl'
+      ? {source: WGSL_SOURCE}
+      : {vs: GLSL_VERTEX_SOURCE, fs: GLSL_FRAGMENT_SOURCE};
+  const models: Model[] = [];
+  try {
+    Model.defaultProps.shaderAssembler = configured;
+    models.push(new Model(device, shaderProps));
+    models.push(new Model(device, {...shaderProps, shaderAssembler: explicit}));
+    expect(models[0].props.shaderAssembler).toBe(configured);
+    expect(models[1].props.shaderAssembler).toBe(explicit);
+  } finally {
+    Model.defaultProps.shaderAssembler = original;
+    for (const model of models) model.destroy();
+    device.destroy();
+  }
+});

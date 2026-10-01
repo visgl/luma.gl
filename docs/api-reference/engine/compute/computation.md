@@ -46,7 +46,7 @@ computePass.end();
 | `bindings?` | `Record<string, Binding>` | Bound textures, samplers, storage buffers, or uniform buffers. |
 | `pipelineFactory?` | `PipelineFactory` | Factory from `@luma.gl/core` used to create cached compute pipelines. |
 | `shaderFactory?` | `ShaderFactory` | Factory from `@luma.gl/core` used to create cached shader resources. |
-| `shaderAssembler?` | `ShaderAssembler` | WGSL shader assembler to use. |
+| `shaderAssembler?` | `ShaderAssembler` | WGSL shader assembler to use. Falls back to `Computation.defaultProps.shaderAssembler`, then to the shared WGSL assembler. |
 | `debugShaders?` | `'never' \| 'errors' \| 'warnings' \| 'always'` | Debug shader output policy. |
 
 `ComputationProps` also includes the standard `ComputePipelineProps` supported by `device.createComputePipeline(...)`.

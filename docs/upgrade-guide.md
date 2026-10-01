@@ -31,6 +31,11 @@ See [GPUFFT2D](./api-reference/experimental/gpu-core/gpu-fft2d) for the migratio
 
 **@luma.gl/shadertools**
 
+- `ShaderAssembler.getDefaultShaderAssembler()` is deprecated. Construct a `GLSLShaderAssembler` or
+  `WGSLShaderAssembler`, register hooks and default modules on it, and pass it as
+  `shaderAssembler` to `Model` or `Computation` (or assign it to `Model.defaultProps.shaderAssembler`
+  / `Computation.defaultProps.shaderAssembler`). The shared per-language assemblers remain the
+  fallback when no assembler is supplied.
 - `ShaderPassPipeline`, `ShaderPassPipelineStep`, and `ShaderPassComputeOptimization` have been
   renamed to `CompositeShaderPass`, `CompositeShaderPassStep`, and
   `CompositeShaderPassComputeOptimization`. Effect factories and values likewise replace their
@@ -41,6 +46,16 @@ See [GPUFFT2D](./api-reference/experimental/gpu-core/gpu-fft2d) for the migratio
 - OIT fullscreen resolution is now exposed as `createABufferResolveCompositeShaderPass()` and
   `createWBOITResolveCompositeShaderPass()`. `WBOITRenderer.capture()` returns the accumulation and
   revealage bindings for inserting the WBOIT resolve into a larger shader-pass stack.
+
+**@luma.gl/engine**
+
+- `Model.defaultProps.shaderAssembler` and `Computation.defaultProps.shaderAssembler` are now
+  `undefined` unless an application assigns them, and their type is `ShaderAssembler | undefined`.
+  `Model` and `Computation` resolve the shared assembler for the device's shader language when they
+  are constructed. Code that read the shared assembler from `defaultProps` (for example
+  `Model.defaultProps.shaderAssembler.addShaderHook(...)`) should construct an assembler and pass or
+  assign it instead. Assigning a configured assembler to `defaultProps` still works and is honored
+  when it matches the device's shader language.
 
 ## Upgrading to v9.4
 
