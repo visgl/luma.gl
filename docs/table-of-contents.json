@@ -295,6 +295,7 @@
             "items": [
               "api-reference/engine/geometry/geometries",
               "api-reference/engine/geometry/geometry",
+              "api-reference/engine/geometry/stroke-geometry",
               "api-reference/engine/geometry/gpu-geometry",
               "api-reference/engine/dynamic-buffer",
               "api-reference/engine/dynamic-texture",
@@ -863,6 +864,7 @@
                   "api-reference/shadertools/shader-modules/dggs",
                   "api-reference/shadertools/shader-modules/gpu-picking",
                   "api-reference/shadertools/shader-modules/picking",
+                  "api-reference/shadertools/shader-modules/path-dash",
                   "api-reference/shadertools/shader-modules/project",
                   "api-reference/shadertools/shader-modules/skin"
                 ]

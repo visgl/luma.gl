@@ -253,7 +253,7 @@
   {
     "type": "category",
     "label": "Cartographic styles",
-    "items": ["deck/sketch-edges", "deck/pattern-fills", "deck/point-glow"]
+    "items": ["deck/styled-paths", "deck/sketch-edges", "deck/pattern-fills", "deck/point-glow"]
   },
   {
     "type": "category",

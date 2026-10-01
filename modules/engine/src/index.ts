@@ -93,6 +93,11 @@ export type {GeometryProps, GeometryAttribute, GeometryAttributeInput} from './g
 export {Geometry} from './geometry/geometry';
 export {makeEdgeGeometry, makeEdgeGeometryFromGeometries} from './geometry/edge-geometry';
 export type {MakeEdgeGeometryOptions} from './geometry/edge-geometry';
+export {
+  makeStrokeGeometry,
+  type StrokeGeometryOptions,
+  type StrokePosition
+} from './geometry/stroke-geometry';
 export type {MakeInterleavedGeometryOptions} from './geometry/geometry-utils';
 export {makeInterleavedGeometry} from './geometry/geometry-utils';
 export type {

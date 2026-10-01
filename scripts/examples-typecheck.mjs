@@ -33,6 +33,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'deck/gpu-culled-trace',
   'deck/pattern-fills',
   'deck/point-glow',
+  'deck/styled-paths',
   'experimental/gpu-sort',
   'experimental/spectral-caustics',
   'experimental/volumetric-fire-forge',

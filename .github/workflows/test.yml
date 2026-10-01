@@ -121,6 +121,17 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      - name: Run riverfront routes visual smoke
+        if: ${{ matrix.shard == 2 }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-styled-paths test:visual
+
+      - name: Upload riverfront routes screenshots
+        if: ${{ always() && matrix.shard == 2 }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: deck-styled-paths
+          path: /tmp/styled-paths-*.png
+
       - name: Reclaim install cache and report disk usage
         run: |
           rm -rf "${HOME}/.yarn/berry/cache"
