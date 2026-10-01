@@ -1,0 +1,25 @@
+{
+  "name": "luma.gl-examples-deck-city-scene",
+  "version": "10.0.0-alpha.2",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "vite",
+    "build": "tsc && vite build",
+    "test:visual": "node scripts/visual-smoke.mjs"
+  },
+  "dependencies": {
+    "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch",
+    "@luma.gl/core": "10.0.0-alpha.2",
+    "@luma.gl/engine": "10.0.0-alpha.2",
+    "@luma.gl/shadertools": "10.0.0-alpha.2",
+    "@luma.gl/webgl": "10.0.0-alpha.2",
+    "@luma.gl/webgpu": "10.0.0-alpha.2"
+  },
+  "devDependencies": {
+    "playwright": "^1.58.0",
+    "pngjs": "^7.0.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.0"
+  }
+}
