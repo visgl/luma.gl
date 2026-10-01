@@ -3,7 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import sketchSupport from './deck/sketch-edges/mobile-support';
+import weatherSupport from './deck/weather/mobile-support';
 import type {ExampleSupportDefinition} from './example-support';
+import citySceneSupport from './deck/city-scene/mobile-support';
 import standaloneSupport0 from './api/texture-compressed/mobile-support';
 import standaloneSupport1 from './integrations/hello-react/mobile-support';
 import standaloneSupport2 from './showcase/algebraic-varieties/mobile-support';
@@ -179,6 +181,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'arrow/arrow-dggs-polygons': support77,
   'arrow/arrow-columns': support78,
   'deck/arrow-path-layer': support79,
+  'deck/city-scene': citySceneSupport,
   'deck/arrow-polygon-layer': support80,
   'deck/arrow-text-layer': support81,
   'deck/luspatial-taxi': support82,
@@ -190,6 +193,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'showcase/algebraic-varieties': standaloneSupport2,
   'experimental/gpu-parquet-constellation': parquetSupport,
   'deck/sketch-edges': sketchSupport,
+  'deck/weather': weatherSupport,
   'homepage/instancing': support2
 };
 

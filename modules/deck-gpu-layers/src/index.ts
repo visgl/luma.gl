@@ -8,3 +8,11 @@ export {
 } from './layers/luspatial-point-layer';
 
 export {SketchEdgeLayer, type SketchEdgeLayerProps} from './layers/sketch-edge-layer';
+export {
+  WeatherParticleLayer,
+  type WeatherParticleLayerProps
+} from './layers/weather-particle-layer';
+
+export {surfaceBuffer} from './layers/surface-buffer';
+
+export {getMeterOffsetPosition} from './projection/meter-offset-position';

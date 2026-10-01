@@ -81,6 +81,18 @@ jobs:
         with:
           name: deck-sketch-edges
           path: /tmp/sketch-edges-*.png
+      - name: Run Deck city scene visual smoke
+        if: ${{ matrix.shard == 1 }}
+        env:
+          CITY_SCENE_ARTIFACTS: ${{ runner.temp }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-city-scene test:visual
+
+      - name: Upload Deck city scene screenshots
+        if: ${{ always() && matrix.shard == 1 }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: deck-city-scene
+          path: ${{ runner.temp }}/city-scene-*.png
           if-no-files-found: warn
           retention-days: 7
 
@@ -89,6 +101,14 @@ jobs:
           rm -rf "${HOME}/.yarn/berry/cache"
           df -h .
           du -sh . "${HOME}/.yarn" "${HOME}/.cache/ms-playwright" "${RUNNER_TEMP}" 2>/dev/null || true
+
+      - name: Test riverfront weather
+        if: ${{ matrix.shard == 2 }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-weather test:visual
+
+      - name: Test shared height fog in Visualization City
+        if: ${{ matrix.shard == 2 }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-experimental-advanced-effects test:fog
 
       # Run the standalone WebGPU smoke before the coverage suite so its SwiftShader device starts
       # from a clean runner state instead of inheriting resource pressure from prior browser tests.
