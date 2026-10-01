@@ -201,7 +201,7 @@ survived a GPU filter or compaction pass, without reading it back to the CPU. Wh
 index buffer, instead of a direct draw with `instanceCount`. A CPU `instanceCount` of `0` does not
 skip the draw. Pass `null` to return to `instanceCount`.
 
-`indirectBuffer` holds one WebGPU indirect draw record at `indirectOffset` (a multiple of 4):
+`indirectBuffer` holds one WebGPU indirect draw record at `indirectOffset` (nonnegative and a multiple of 4):
 
 | Draw | Record (`uint32` words) | Bytes |
 | --- | --- | --- |
@@ -211,9 +211,13 @@ skip the draw. Pass `null` to return to `instanceCount`.
 The model and the application split ownership of the record:
 
 - The model writes every word except `instanceCount` from its own vertex or index count and
-  draw offsets (`baseVertex` and `firstInstance` are `0`). It rewrites them when they change, with
-  queue writes that are legal while a render pass is open, so callers never need to know the
-  model's geometry.
+  draw offsets (`baseVertex` and `firstInstance` are `0`), so callers never need to know the
+  model's geometry. The first draw can initialize these words with queue writes. After that,
+  call `model.predraw(commandEncoder)` before opening the render pass whenever the geometry,
+  indirect buffer, or offset changes. This encodes uploads in order with earlier draws;
+  unprepared changes throw in `draw()`. Use separate passes with `predraw()` between them when
+  drawing different geometry through the same record. With custom command encoders, call
+  `predraw()` on each encoder before its render pass, even if the geometry is unchanged.
 - The application owns the `instanceCount` word at byte `indirectOffset + 4`. It must be written
   before the render pass begins, typically by the compute pass that produced it or by a
   `copyBufferToBuffer()` encoded after that pass. Buffer copies cannot be encoded inside a render
@@ -241,6 +245,7 @@ device.commandEncoder.copyBufferToBuffer({
   size: 4
 });
 
+model.predraw(device.commandEncoder); // orders geometry updates before this pass
 const renderPass = device.beginRenderPass({});
 model.draw(renderPass); // drawIndirect / drawIndexedIndirect
 renderPass.end();
