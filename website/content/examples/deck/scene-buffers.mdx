@@ -1,8 +1,8 @@
 ---
-title: Riverfront effects
-description: Capture scene buffers for bloom, surface edges, and selection outlines.
+title: Riverfront effects (WebGPU)
+description: Inspect captured color, depth, normals, and selection buffers, then composite bloom and outlines.
 sidebar_custom_props:
-  description: Explore HDR light, selection contours, and scene-buffer views around a riverfront.
+  description: Inspect WebGPU scene buffers and their bloom, edge, and selection composites.
   backends: [webgpu]
   difficulty: advanced
   maturity: experimental
@@ -14,7 +14,7 @@ sidebar_custom_props:
 import useBaseUrl from '@docusaurus/useBaseUrl';
 
 export const BufferPreview = () => (
-  <iframe title="Riverfront effects interactive example"
+  <iframe title="Riverfront effects (WebGPU) interactive example"
     src={useBaseUrl('/standalone-examples/scene-buffers/index.html')}
     style={{width: '100%', height: '78vh', minHeight: 640, border: 0, borderRadius: 12}} />
 );

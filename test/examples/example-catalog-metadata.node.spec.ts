@@ -260,7 +260,13 @@ describe('live example catalog metadata', () => {
       }
 
       if (
-        categories.some(category => category.includes('v10') || category.startsWith('GPGPU Graph'))
+        categories.some(
+          category =>
+            category.startsWith('Apache Arrow') ||
+            category.startsWith('Arrow Layers') ||
+            category.startsWith('GPU Graph Layers') ||
+            category.startsWith('GPGPU Graph')
+        )
       ) {
         expect(metadata?.difficulty, `${id} is an advanced GPU-data example`).toBe('advanced');
         expect(metadata?.maturity, `${id} demonstrates prerelease v10 APIs`).toBe('experimental');

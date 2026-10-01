@@ -252,13 +252,17 @@
   },
   {
     "type": "category",
-    "label": "Cartographic styles",
-    "items": ["deck/styled-paths", "deck/sketch-edges", "deck/pattern-fills", "deck/point-glow"]
-  },
-  {
-    "type": "category",
-    "label": "Visual Effects - deck.gl",
-    "items": ["deck/flow-particles", "deck/city-scene", "deck/weather", "deck/scene-buffers"]
+    "label": "Visual Effects - deck.gl v10",
+    "items": [
+      "deck/weather",
+      "deck/city-scene",
+      "deck/flow-particles",
+      "deck/point-glow",
+      "deck/scene-buffers",
+      "deck/pattern-fills",
+      "deck/styled-paths",
+      "deck/sketch-edges"
+    ]
   },
   {
     "type": "category",
