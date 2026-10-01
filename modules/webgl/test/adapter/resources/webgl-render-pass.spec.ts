@@ -167,3 +167,60 @@ it('WEBGLRenderPass resizes the default framebuffer after an external canvas res
   renderPass.end();
   device.destroy();
 });
+
+const ATTRIBUTELESS_VERTEX_SOURCE = `#version 300 es
+const vec2 positions[3] = vec2[3](vec2(-1.0, -1.0), vec2(3.0, -1.0), vec2(-1.0, 3.0));
+void main() {
+  gl_Position = vec4(positions[gl_VertexID], 0.0, 1.0);
+}
+`;
+
+const RED_FRAGMENT_SOURCE = `#version 300 es
+precision highp float;
+out vec4 fragmentColor;
+void main() {
+  fragmentColor = vec4(1.0, 0.0, 0.0, 1.0);
+}
+`;
+
+it('WEBGLRenderPass#draw supports attribute-less draws and rejects indexCount without indices', async () => {
+  const device = await getWebGLTestDevice();
+  const vertexShader = device.createShader({stage: 'vertex', source: ATTRIBUTELESS_VERTEX_SOURCE});
+  const fragmentShader = device.createShader({stage: 'fragment', source: RED_FRAGMENT_SOURCE});
+  await Promise.all([vertexShader.asyncCompilationStatus, fragmentShader.asyncCompilationStatus]);
+  const shaderLayout = {attributes: [], bindings: []};
+  const renderPipeline = device.createRenderPipeline({
+    vs: vertexShader,
+    fs: fragmentShader,
+    shaderLayout
+  });
+  const framebuffer = device.createFramebuffer({
+    width: 1,
+    height: 1,
+    colorAttachments: ['rgba8unorm']
+  });
+  const vertexArray = device.createVertexArray({shaderLayout, bufferLayout: []});
+
+  const renderPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 1]});
+  renderPass.setPipeline(renderPipeline);
+  expect(renderPass.draw({vertexCount: 3}), 'attribute-less draw is issued').toBe(true);
+  expect(
+    () => renderPass.draw({indexCount: 3}),
+    'indexCount without a vertex array is rejected'
+  ).toThrow('indexCount without index buffer');
+  renderPass.setVertexArray(vertexArray);
+  expect(
+    () => renderPass.draw({indexCount: 3}),
+    'indexCount with a vertex array that has no index buffer is rejected'
+  ).toThrow('indexCount without index buffer');
+  renderPass.end();
+
+  const pixel = device.readPixelsToArrayWebGL(framebuffer, {sourceWidth: 1, sourceHeight: 1});
+  expect(Array.from(pixel.slice(0, 4)), 'attribute-less draw rendered').toEqual([255, 0, 0, 255]);
+
+  vertexArray.destroy();
+  framebuffer.destroy();
+  renderPipeline.destroy();
+  vertexShader.destroy();
+  fragmentShader.destroy();
+});
