@@ -11,7 +11,7 @@ import {
   packDggsQuadkeyKey,
   packDggsS2CellKey
 } from '@luma.gl/arrow';
-import {getS2IndexFromToken, getS2TokenFromIndex} from '@math.gl/dggs-s2';
+import {getS2IndexFromToken, getS2TokenFromIndex} from '@math.gl/dggs/s2';
 import {hexToU64, u64ToHex} from 'a5-js';
 import {h3IndexToSplitLong, splitLongToH3Index} from 'h3-js';
 

@@ -90,3 +90,24 @@ are sampled asynchronously and never gate the GPU-driven render path. Readbacks 
 `onStats` is supplied, or explicitly with `enableDiagnostics`. The effect owns every buffer and
 graph it creates; Deck calls `cleanup`, while applications may call `destroy` when an effect is
 constructed but never adopted.
+
+## WeatherParticleLayer
+
+`WeatherParticleLayer` draws seeded rain or snow in `COORDINATE_SYSTEM.METER_OFFSETS`.
+Provide a local `coordinateOrigin`, an application-owned `time` in seconds (or a getter),
+`particleCount`, and `precipitation` shader props. A function may supply precipitation props
+from the current viewport when the volume should follow the camera. Keep the volume size
+constant while moving its center to retain particle positions in overlapping space.
+
+`weather`, `widthPixels`, `streakLength` in metres, and linear RGBA `color` control appearance.
+`fog` accepts `heightFog` props or a callback returning them, allowing a shared animation clock
+to drive drifting density without rebuilding layer geometry. Zero variation keeps uniform fog.
+The optional borrowed `surfaceTexture` is an `r32float`
+height field with local metre bounds `[west, south, east, north]`; row zero is south and
+samples are texel-centered. It hides particles below the highest surface. Outside the field,
+zero is used as the surface height. Opaque scene layers must draw before weather and write
+depth. Transparent occluders are not represented by this height field.
+
+The layer owns its model, corner buffer, and one-texel fallback texture. It never destroys a
+supplied surface texture and performs no CPU particle updates. Particles are decorative and
+are not pickable. See the riverfront weather example for clock, volume, and teardown usage.

@@ -190,6 +190,11 @@ jobs:
       - name: Build packages
         run: yarn build
 
+      - name: Verify changelog entry
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          grep -Fx "### v${version}" CHANGELOG.md
+
       # ocular-publish creates the GitHub Release before publishing the tagged packages to npm.
       - name: Post GitHub release and publish to NPM
         run: npx ocular-publish from-git

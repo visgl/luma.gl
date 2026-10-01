@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import weatherSupport from './deck/weather/mobile-support';
 import type {ExampleSupportDefinition} from './example-support';
 import standaloneSupport0 from './api/texture-compressed/mobile-support';
 import standaloneSupport1 from './integrations/hello-react/mobile-support';
@@ -188,6 +189,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'integrations/hello-react': standaloneSupport1,
   'showcase/algebraic-varieties': standaloneSupport2,
   'experimental/gpu-parquet-constellation': parquetSupport,
+  'deck/weather': weatherSupport,
   'homepage/instancing': support2
 };
 

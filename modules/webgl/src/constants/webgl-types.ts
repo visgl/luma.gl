@@ -21,7 +21,8 @@ export type TypedArray =
   | Uint32Array
   | Uint8ClampedArray
   | Float32Array
-  | Float64Array;
+  | Float64Array
+  | Float16Array;
 
 /** type covering all typed arrays and classic arrays consisting of numbers */
 

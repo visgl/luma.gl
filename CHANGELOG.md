@@ -1,6 +1,12 @@
 # luma.gl CHANGELOG
 
+## v10.0
+
+### v10.0.0-alpha.2
+
 ## v9.4
+
+### v9.4.0-alpha.5
 
 ### v9.4.0-alpha.4
 
