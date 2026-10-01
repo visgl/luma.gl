@@ -18,8 +18,8 @@ jobs:
   browser_coverage:
     name: Browser coverage (${{ matrix.shard }}/3)
     runs-on: ubuntu-22.04
-    # The first shard also runs the city visual suite before coverage.
-    timeout-minutes: ${{ matrix.shard == 1 && 25 || 15 }}
+    # Shards 1 and 2 run longer visual and headless coverage workloads.
+    timeout-minutes: ${{ matrix.shard < 3 && 25 || 15 }}
     strategy:
       fail-fast: false
       matrix:
@@ -132,6 +132,17 @@ jobs:
           name: deck-styled-paths
           path: /tmp/styled-paths-*.png
 
+      - name: Run riverfront effects visual smoke
+        if: ${{ matrix.shard == 2 }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-scene-buffers test:visual
+
+      - name: Upload riverfront effects screenshots
+        if: ${{ always() && matrix.shard == 2 }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: deck-scene-buffers
+          path: /tmp/scene-buffers-*.png
+
       - name: Reclaim install cache and report disk usage
         run: |
           rm -rf "${HOME}/.yarn/berry/cache"
@@ -172,6 +183,9 @@ jobs:
           retention-days: 7
 
       - name: Run headless tests and generate coverage
+        env:
+          # Include browser process failures alongside WebGPU test assertions.
+          DEBUG: pw:browser
         run: |
           yarn test-coverage --shard=${{ matrix.shard }}/3
 
