@@ -6,7 +6,8 @@ import {readFileSync} from 'node:fs';
 
 import {
   makeArrowTableFromGPUAnalyticsTable,
-  makeGPUAnalyticsTableFromArrowTable
+  makeGPUAnalyticsTableFromArrowTable,
+  readArrowGPUDataAsync
 } from '@luma.gl/arrow';
 import {Buffer, type BufferProps} from '@luma.gl/core';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
@@ -295,6 +296,14 @@ describe('makeGPUAnalyticsTableFromArrowTable packed batches', () => {
       expect(Array.from(readback.getChild('category') ?? [])).toEqual(
         Array.from(source.getChild('category') ?? [])
       );
+
+      const fareData = await readArrowGPUDataAsync(result.table.gpuVectors['fare'].data[0]);
+      expect(
+        Array.from(new arrow.Vector([fareData])),
+        'generic readback restores nulls from the merged packed bitmap'
+      ).toEqual([null, 8, null, 10, 11]);
+      expect(result.table.gpuVectors['category'].data[0].readbackMetadata).toBeUndefined();
+      expect(result.table.gpuVectors['distance'].data[0].readbackMetadata).toBeUndefined();
     } finally {
       createBuffer.mockRestore();
       submit.mockRestore();
@@ -324,6 +333,17 @@ describe('makeGPUAnalyticsTableFromArrowTable packed batches', () => {
         [0, 1, 1]
       ]);
       expect(() => new GPUDataFrame({...result})).not.toThrow();
+
+      const fareChunks = await Promise.all(
+        result.table.gpuVectors['fare'].data.map(data => readArrowGPUDataAsync(data))
+      );
+      expect(
+        fareChunks.map(data => Array.from(new arrow.Vector([data]))),
+        'packed and single-source chunks restore nulls the same way'
+      ).toEqual([
+        [null, 8],
+        [null, 10, 11]
+      ]);
     } finally {
       destroyAnalyticsResult(result);
     }
@@ -346,6 +366,35 @@ describe('makeGPUAnalyticsTableFromArrowTable packed batches', () => {
     } finally {
       destroyAnalyticsResult(result);
     }
+  });
+
+  test('rejects truncated numeric values before allocating GPU storage', () => {
+    const device = new NullDevice({id: 'arrow-analytics-packed-truncated'});
+    const createBuffer = vi.spyOn(device, 'createBuffer');
+    const schema = new arrow.Schema([new arrow.Field('value', new arrow.Float32(), false)]);
+    const batches = [
+      // Four logical rows backed by only two values would shift the next chunk's rows.
+      arrow.makeData({type: new arrow.Float32(), length: 4, data: new Float32Array(2)}),
+      arrow.makeData({type: new arrow.Float32(), length: 2, data: new Float32Array([1, 2])})
+    ].map(
+      child =>
+        new arrow.RecordBatch(
+          schema,
+          arrow.makeData({
+            type: new arrow.Struct(schema.fields),
+            length: child.length,
+            children: [child]
+          })
+        )
+    );
+
+    expect(() =>
+      makeGPUAnalyticsTableFromArrowTable(device, new arrow.Table(schema, batches), {
+        packBatches: true
+      })
+    ).toThrow(/truncated values/);
+    expect(createBuffer).not.toHaveBeenCalled();
+    createBuffer.mockRestore();
   });
 
   test('rejects invalid minBatchSize before allocating GPU storage', () => {

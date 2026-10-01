@@ -148,7 +148,13 @@ export function makeGPUAnalyticsTableFromArrowTable<T extends GPUTypeMap = GPUTy
         const data =
           sourceData.length === 1
             ? makeGPUAnalyticsData(device, sourceData[0], column.format, requiredBufferProps)
-            : makePackedGPUAnalyticsData(device, sourceData, column.format, requiredBufferProps);
+            : makePackedGPUAnalyticsData(
+                device,
+                sourceData,
+                sourceBatchIndices.map(batchIndex => column.validity[batchIndex]),
+                column.format,
+                requiredBufferProps
+              );
         allocatedData.push(data);
         gpuData[column.field.name] = data;
       }
@@ -341,6 +347,8 @@ function prepareGPUAnalyticsColumns(
         }
         column.dictionary ??= dictionary;
         validateGPUAnalyticsDictionaryIndices(data, dictionary, validity, columnName);
+      } else {
+        validateGPUAnalyticsValues(data, columnName);
       }
 
       column.chunks.push(data);
@@ -457,6 +465,22 @@ function validateGPUAnalyticsDictionaryIndices(
   }
 }
 
+/**
+ * Ensures numeric values cover every logical row. Packed uploads advance each write offset by the
+ * chunk's value bytes, so a short chunk would shift later chunks to the wrong rows.
+ *
+ * Alternative: reuse `getArrowDataBufferSource()` in `getGPUAnalyticsValues()`, which throws the
+ * same error at upload time, after earlier columns have already allocated (and then destroyed)
+ * their GPU buffers.
+ */
+function validateGPUAnalyticsValues(data: Data, columnName: string): void {
+  const values = data.values as Float32Array | Int32Array | Uint32Array | undefined;
+  const startIndex = values?.length === data.length ? 0 : (data.offset ?? 0);
+  if (data.length > 0 && (!values || startIndex + data.length > values.length)) {
+    throw new Error(`GPU analytics column "${columnName}" has truncated values`);
+  }
+}
+
 /** Verifies independently supplied record batches use the same category encoding. */
 function areGPUAnalyticsDictionariesEqual(
   first: GPUAnalyticsDictionary,
@@ -507,9 +531,11 @@ function makeGPUAnalyticsData(
 function makePackedGPUAnalyticsData(
   device: Device,
   sources: Data[],
+  validity: Uint32Array[],
   format: GPUAnalyticsVectorFormat,
   bufferProps: GPUVectorBufferProps
 ): GPUData {
+  const readbackMetadata = makePackedGPUAnalyticsReadbackMetadata(sources, validity);
   const buffer = writePackedGPUAnalyticsBuffer(
     device,
     sources.map(source => getGPUAnalyticsValues(source)),
@@ -524,12 +550,44 @@ function makePackedGPUAnalyticsData(
       byteStride: 4,
       rowByteLength: 4,
       dataType: sources[0].type,
-      ownsBuffer: true
+      ownsBuffer: true,
+      ...(readbackMetadata ? {readbackMetadata, nullBitmap: readbackMetadata.nullBitmap} : {})
     });
   } catch (error) {
     buffer.destroy();
     throw error;
   }
+}
+
+/**
+ * Merges per-chunk validity into one Arrow bitmap so generic `readArrowGPUDataAsync()` restores
+ * nulls for packed chunks exactly as it does for unpacked ones. Unpacked dictionary chunks carry
+ * no numeric readback metadata, so dictionary columns are skipped here too.
+ *
+ * Alternative: skip this CPU bitmap (one bit per row) and document that packed chunks carry nulls
+ * only in the validity sidecars read by `makeArrowTableFromGPUAnalyticsTable()`. Generic readback
+ * of packed chunks would then return zero-filled payloads where unpacked chunks return nulls.
+ */
+function makePackedGPUAnalyticsReadbackMetadata(
+  sources: Data[],
+  validity: Uint32Array[]
+): {kind: 'numeric'; nullCount: number; nullBitmap: Uint8Array} | undefined {
+  const nullCount = sources.reduce((total, source) => total + source.nullCount, 0);
+  if (nullCount === 0 || DataType.isDictionary(sources[0].type)) {
+    return undefined;
+  }
+
+  const rowCount = validity.reduce((total, values) => total + values.length, 0);
+  const nullBitmap = new Uint8Array(Math.ceil(rowCount / 8));
+  let rowIndex = 0;
+  for (const values of validity) {
+    for (let valueIndex = 0; valueIndex < values.length; valueIndex++, rowIndex++) {
+      if (values[valueIndex]) {
+        nullBitmap[rowIndex >> 3] |= 1 << (rowIndex & 7);
+      }
+    }
+  }
+  return {kind: 'numeric', nullCount, nullBitmap};
 }
 
 /** Returns the logical 32-bit values or dictionary indices of one possibly sliced Arrow chunk. */
