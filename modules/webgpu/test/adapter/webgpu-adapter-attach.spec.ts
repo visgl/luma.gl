@@ -253,13 +253,25 @@ it('WebGPUAdapter#attach returns one wrapper per GPUDevice', async () => {
   device.destroy();
 });
 
-it('WebGPUAdapter#attach destroy() destroys the GPUDevice when luma owns it', async () => {
+it('WebGPUAdapter#attach destroy() restores a canvas the application configured', async () => {
   const gpuDevice = await requestMaxStorageBufferDevice();
-  const device = await webgpuAdapter.attach(gpuDevice, {_ownsHandle: true});
+  const canvas = document.createElement('canvas');
+  const canvasContext = canvas.getContext('webgpu')!;
+  const format = navigator.gpu.getPreferredCanvasFormat();
+  canvasContext.configure({device: gpuDevice, format, alphaMode: 'premultiplied'});
+
+  const device = await webgpuAdapter.attach(gpuDevice, {
+    createCanvasContext: {canvas, alphaMode: 'opaque'}
+  });
+  expect(canvasContext.getConfiguration()?.alphaMode).toBe('opaque');
+
   device.destroy();
 
-  const lostInfo = await gpuDevice.lost;
-  expect(lostInfo.reason).toBe('destroyed');
+  const configuration = canvasContext.getConfiguration();
+  expect(configuration?.device).toBe(gpuDevice);
+  expect(configuration?.format).toBe(format);
+  expect(configuration?.alphaMode).toBe('premultiplied');
+  expect(() => canvasContext.getCurrentTexture()).not.toThrow();
 });
 
 it('WebGPUAdapter#attach routes uncaptured errors to luma until destroyed', async () => {

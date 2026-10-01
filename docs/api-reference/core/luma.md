@@ -157,10 +157,12 @@ This allows applications to use the luma.gl API to "interleave" rendering with o
 
 When attaching a `GPUDevice`:
 
-- `device.limits` and `device.features` come from the `GPUDevice`, so limits and features the application requested are preserved.
-- Pass `createCanvasContext: {canvas}` if the device will render to a canvas, for example when passing it to deck.gl's `new Deck({device})`.
-- `device.destroy()` releases luma.gl's canvas context and error listener but does not destroy the `GPUDevice`. Pass `_ownsHandle: true` to have luma.gl destroy it.
-- Attaching the same `GPUDevice` again returns the existing luma.gl `Device`.
+- `device.limits` and `device.features` come from the `GPUDevice`, so limits and features the application requested are preserved. Creation-time props such as `featureLevel: 'max'` and `optionalFeatures` cannot change an existing device.
+- Pass `createCanvasContext: {canvas}` if the device will render to a canvas, for example when passing it to deck.gl's `new Deck({device})`. Unlike WebGL attachment, which wraps the context's own canvas and disables `autoResize` because the application already sizes it, a WebGPU canvas context is only created when requested and uses the same defaults as `luma.createDevice()`. Pass `autoResize: false` if the application sizes the canvas itself.
+- If the application already configured the canvas, luma.gl reconfigures it for rendering and `device.destroy()` restores the application's configuration. Otherwise `device.destroy()` unconfigures the canvas.
+- `device.destroy()` releases luma.gl's canvas context and error listener but does not destroy the `GPUDevice`, which the application still owns. Call `gpuDevice.destroy()` to release it.
+- Because the `GPUDevice` stays alive, buffers, textures, and other resources created through the luma.gl `Device` also stay allocated after `device.destroy()`. Destroy them before destroying the device. (A device created by luma.gl releases them when its `GPUDevice` is destroyed.)
+- Attaching the same `GPUDevice` again returns the existing luma.gl `Device` until that device is destroyed. Attaching a lost `GPUDevice` throws.
 - `device.info.featureLevel` is `'core'` if the `GPUDevice` has the `core-features-and-limits` feature or `featureLevel: 'core'` is passed, and `'compatibility'` otherwise.
 - luma.gl calls `preventDefault()` on `uncapturederror` events, which suppresses the browser's console warning for those errors, until `device.destroy()`.
 

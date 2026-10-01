@@ -24,6 +24,8 @@ export class WebGPUCanvasContext extends CanvasContext {
   colorSpace?: 'srgb' | 'display-p3';
   toneMapping?: 'standard' | 'extended';
 
+  /** Configuration the application set on this canvas before luma.gl configured it, restored by `destroy()`. */
+  private readonly previousConfiguration: GPUCanvasConfiguration | null;
   private colorAttachment: WebGPUTexture | null = null;
   private depthStencilAttachment: WebGPUTexture | null = null;
   private framebuffer: WebGPUFramebuffer | null = null;
@@ -41,6 +43,8 @@ export class WebGPUCanvasContext extends CanvasContext {
     }
     this.device = device;
     this.handle = context;
+    // An application sharing its GPUDevice may already render to this canvas
+    this.previousConfiguration = context.getConfiguration();
 
     // Base class constructor cannot access derived methods/fields, so we need to call these functions in the subclass constructor
     this._setAutoCreatedCanvasId(`${this.device.id}-canvas`);
@@ -48,7 +52,7 @@ export class WebGPUCanvasContext extends CanvasContext {
     this._startObservers();
   }
 
-  /** Destroy any textures produced while configured and remove the context configuration. */
+  /** Destroy any textures produced while configured and restore the canvas configuration luma.gl found. */
   override destroy(): void {
     if (this.framebuffer) {
       this.framebuffer.destroy();
@@ -62,7 +66,13 @@ export class WebGPUCanvasContext extends CanvasContext {
       this.depthStencilAttachment.destroy();
       this.depthStencilAttachment = null;
     }
-    this.handle.unconfigure();
+    // Return the canvas as luma.gl found it. Unconfiguring releases the canvas textures,
+    // which would otherwise stay alive with an application-owned GPUDevice.
+    if (this.previousConfiguration) {
+      this.handle.configure(this.previousConfiguration);
+    } else {
+      this.handle.unconfigure();
+    }
     super.destroy();
   }
 

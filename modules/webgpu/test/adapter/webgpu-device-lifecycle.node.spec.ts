@@ -199,15 +199,19 @@ describe('WebGPU device creation lifecycle', () => {
     );
   });
 
-  test('attach destroys the device when ownership is transferred', async () => {
+  test('attach stops returning a wrapper once its device is lost', async () => {
     const pendingLoss = makeDeferred<GPUDeviceLostInfo>();
     const nativeDevice = makeNativeDevice(pendingLoss.promise);
     const adapter = new MockWebGPUAdapter([]);
 
-    const device = await adapter.attach(nativeDevice.device, {_ownsHandle: true});
-    device.destroy();
+    const device = await adapter.attach(nativeDevice.device);
+    pendingLoss.resolve({reason: 'unknown', message: 'Driver reset'} as GPUDeviceLostInfo);
+    await device.lost;
 
-    expect(nativeDevice.device.destroy).toHaveBeenCalledTimes(1);
+    await expect(adapter.attach(nativeDevice.device)).rejects.toMatchObject({
+      message: expect.stringContaining('already lost')
+    });
+    device.destroy();
   });
 
   test('attach rejects an already lost device without destroying it', async () => {
@@ -227,9 +231,7 @@ describe('WebGPU device creation lifecycle', () => {
     const nativeDevice = makeNativeDevice(pendingLoss.promise);
     const nativeAdapter = makeNativeAdapter(nativeDevice.device);
 
-    const device = await new MockWebGPUAdapter([nativeAdapter.adapter]).create({
-      _ownsHandle: false
-    } as DeviceProps);
+    const device = await new MockWebGPUAdapter([nativeAdapter.adapter]).create({});
     device.destroy();
 
     expect(nativeDevice.device.destroy).toHaveBeenCalledTimes(1);

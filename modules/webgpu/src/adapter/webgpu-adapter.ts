@@ -273,7 +273,7 @@ export class WebGPUAdapter extends Adapter {
 
     const {WebGPUDevice} = await import('./webgpu-device');
     const featureLevel = getEffectiveWebGPUFeatureLevel(requestedFeatureLevel, gpuDevice.features);
-    const deviceProps = {...props, featureLevel, _ownsHandle: true};
+    const deviceProps = {...props, featureLevel};
 
     log.groupCollapsed(1, 'WebGPUDevice created')();
     try {
@@ -307,7 +307,7 @@ export class WebGPUAdapter extends Adapter {
 
   /**
    * Wraps an application-created GPUDevice, keeping its requested limits and features.
-   * @note `device.destroy()` leaves the GPUDevice alive unless `props._ownsHandle` is set.
+   * @note `device.destroy()` leaves the GPUDevice alive. Call `GPUDevice.destroy()` to release it.
    * @note Returns the existing wrapper if the GPUDevice is already attached or luma-created.
    */
   async attach(handle: GPUDevice | WebGPUDevice, props: DeviceProps = {}): Promise<WebGPUDevice> {
@@ -338,13 +338,8 @@ export class WebGPUAdapter extends Adapter {
     // GPUDevice has no reference to its GPUAdapter, only to the adapter info
     const adapterInfo = handle.adapterInfo || ({} as GPUAdapterInfo);
     const featureLevel = getAttachedWebGPUFeatureLevel(props.featureLevel, handle.features);
-    const deviceProps = {
-      ...props,
-      featureLevel,
-      _handle: handle,
-      _ownsHandle: Boolean(props._ownsHandle)
-    };
-    const device = new WebGPUDevice(deviceProps, handle, null, adapterInfo);
+    const deviceProps = {...props, featureLevel, _handle: handle};
+    const device = new WebGPUDevice(deviceProps, handle, null, adapterInfo, false);
 
     const canvasContextProps = WebGPUDevice.getCanvasContextProps(deviceProps);
     if (canvasContextProps) {

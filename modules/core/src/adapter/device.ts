@@ -470,8 +470,6 @@ export type DeviceProps = {
 
   /** @deprecated Internal, Do not use directly! Use `luma.attachDevice()` to attach to pre-created contexts/devices. */
   _handle?: unknown; // WebGL2RenderingContext | GPUDevice | null;
-  /** Internal, WebGPU only. When attaching an external GPUDevice, `true` lets `device.destroy()` destroy it. Ignored by WebGL, which cannot destroy contexts. */
-  _ownsHandle?: boolean;
 };
 
 type DeviceFactories = {

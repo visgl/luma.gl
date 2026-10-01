@@ -8,16 +8,14 @@ import {Model} from '@luma.gl/engine';
 import {ShaderAssembler} from '@luma.gl/shadertools';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 import {expect, it} from 'vitest';
-import {commands} from 'vitest/browser';
 
 const VIEWPORT_SIZE = 16;
 const REGION_OFFSET = 4;
 const REGION_SIZE = 8;
 const CHANNEL_TOLERANCE = 2;
 const TEST_TIMEOUT_MILLISECONDS = 10_000;
-/** Vitest browser commands resolve file paths from the repository root. */
-const GOLDEN_IMAGE_PATH =
-  'modules/deck-gpu-layers/test/golden-images/deck-attached-webgpu-device.png';
+/** `FULL_VIEWPORT_SHADER` fill color as 8-bit RGBA. */
+const EXPECTED_PIXEL = [51, 153, 255, 255];
 
 const FULL_VIEWPORT_SHADER = /* wgsl */ `\
 @vertex
@@ -120,17 +118,11 @@ it('Deck renders one frame on an attached application GPUDevice', async () => {
     expect(frameImage, 'Deck rendered a frame').not.toBeNull();
 
     const actualRegion = getImageRegion(frameImage!);
-    const goldenImage = await loadGoldenImage();
-    if (!goldenImage) {
-      await writeGoldenImage(frameImage!);
-      expect.fail(`Created ${GOLDEN_IMAGE_PATH}. Inspect it, then rerun this test.`);
-    }
-    const goldenRegion = getImageRegion(goldenImage);
-    for (let byteIndex = 0; byteIndex < goldenRegion.length; byteIndex++) {
-      const difference = Math.abs(actualRegion[byteIndex] - goldenRegion[byteIndex]);
-      if (difference > CHANNEL_TOLERANCE) {
+    for (let byteIndex = 0; byteIndex < actualRegion.length; byteIndex++) {
+      const expectedValue = EXPECTED_PIXEL[byteIndex % 4];
+      if (Math.abs(actualRegion[byteIndex] - expectedValue) > CHANNEL_TOLERANCE) {
         expect.fail(
-          `pixel byte ${byteIndex}: expected ${goldenRegion[byteIndex]}, got ${actualRegion[byteIndex]}`
+          `pixel byte ${byteIndex}: expected ${expectedValue}, got ${actualRegion[byteIndex]}`
         );
       }
     }
@@ -168,32 +160,4 @@ function getImageRegion(image: ImageData): Uint8ClampedArray {
     );
   }
   return region;
-}
-
-async function loadGoldenImage(): Promise<ImageData | null> {
-  let base64: string;
-  try {
-    base64 = await commands.readFile(GOLDEN_IMAGE_PATH, {encoding: 'base64'});
-  } catch {
-    return null;
-  }
-  const bytes = Uint8Array.from(atob(base64), character => character.charCodeAt(0));
-  const bitmap = await createImageBitmap(new Blob([bytes], {type: 'image/png'}));
-  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-  const context = canvas.getContext('2d')!;
-  context.drawImage(bitmap, 0, 0);
-  return context.getImageData(0, 0, bitmap.width, bitmap.height);
-}
-
-async function writeGoldenImage(image: ImageData): Promise<void> {
-  const canvas = new OffscreenCanvas(image.width, image.height);
-  canvas.getContext('2d')!.putImageData(image, 0, 0);
-  const bytes = new Uint8Array(
-    await (await canvas.convertToBlob({type: 'image/png'})).arrayBuffer()
-  );
-  let binary = '';
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  await commands.writeFile(GOLDEN_IMAGE_PATH, btoa(binary), {encoding: 'base64'});
 }

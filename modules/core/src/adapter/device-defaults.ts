@@ -56,8 +56,7 @@ export const DEVICE_DEFAULT_PROPS: Required<DeviceProps> = {
   },
 
   // INTERNAL
-  _handle: undefined!,
-  _ownsHandle: false
+  _handle: undefined!
 };
 
 /**
