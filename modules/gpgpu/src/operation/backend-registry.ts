@@ -15,9 +15,9 @@ export type BackendModule = Record<string, unknown>;
  * Registry for operation backends keyed by luma.gl device type.
  *
  * The CPU backend is available by default. WebGL and WebGPU backends are loaded lazily
- * with dynamic imports when no backend has been registered for those device types.
+ * with dynamic imports when a requested handler has not been registered.
  */
-class BackendRegistry {
+export class BackendRegistry {
   private _modules: {[deviceType: string]: BackendModule | Promise<BackendModule>} = {
     cpu: cpuBackend
   };
@@ -32,20 +32,31 @@ class BackendRegistry {
     deviceType: string,
     moduleOrPromise: BackendModule | Promise<BackendModule>
   ): Promise<BackendModule> {
-    const existingModuleOrPromise = this._modules[deviceType];
+    return this._addModule(deviceType, moduleOrPromise, true);
+  }
 
-    if (typeof (moduleOrPromise as Promise<BackendModule>).then === 'function') {
-      const loader = Promise.all([
-        Promise.resolve(existingModuleOrPromise || {}),
-        moduleOrPromise as Promise<BackendModule>
-      ]).then(([existingModule, incomingModule]) => ({
-        ...existingModule,
-        ...incomingModule
-      }));
+  private _addModule(
+    deviceType: string,
+    moduleOrPromise: BackendModule | Promise<BackendModule>,
+    overwrite: boolean
+  ): Promise<BackendModule> {
+    const existingModuleOrPromise = this._modules[deviceType];
+    const mergeModules = (existingModule: BackendModule, incomingModule: BackendModule) =>
+      overwrite ? {...existingModule, ...incomingModule} : {...incomingModule, ...existingModule};
+    if (
+      typeof (moduleOrPromise as Promise<BackendModule>).then === 'function' ||
+      typeof (existingModuleOrPromise as Promise<BackendModule> | undefined)?.then === 'function'
+    ) {
+      const loader = Promise.all([existingModuleOrPromise || {}, moduleOrPromise]).then(
+        ([existingModule, incomingModule]) => mergeModules(existingModule, incomingModule)
+      );
       this._modules[deviceType] = loader;
       loader
         .then(module => {
-          this._modules[deviceType] = module;
+          // A later registration or clear() owns the registry entry now.
+          if (this._modules[deviceType] === loader) {
+            this._modules[deviceType] = module;
+          }
         })
         .catch(ex => {
           log.error(`Failed to register ${deviceType} backend: ${ex}`)();
@@ -53,31 +64,10 @@ class BackendRegistry {
       return loader;
     }
 
-    if (
-      existingModuleOrPromise &&
-      typeof (existingModuleOrPromise as Promise<BackendModule>).then === 'function'
-    ) {
-      const loader = Promise.resolve(existingModuleOrPromise)
-        .then(existingModule => ({
-          ...existingModule,
-          ...moduleOrPromise
-        }))
-        .then(module => {
-          this._modules[deviceType] = module;
-          return module;
-        })
-        .catch(ex => {
-          log.error(`Failed to register ${deviceType} backend: ${ex}`)();
-          throw ex;
-        });
-      this._modules[deviceType] = loader;
-      return loader;
-    }
-
-    const mergedModule = {
-      ...(existingModuleOrPromise || {}),
-      ...moduleOrPromise
-    };
+    const mergedModule = mergeModules(
+      (existingModuleOrPromise || {}) as BackendModule,
+      moduleOrPromise as BackendModule
+    );
     this._modules[deviceType] = mergedModule;
     return Promise.resolve(mergedModule);
   }
@@ -88,17 +78,20 @@ class BackendRegistry {
    * Pending async backend registrations are awaited before lookup.
    */
   async get(deviceType: string, operationName: string): Promise<OperationHandler> {
-    let module = this._modules[deviceType];
-    if (!module) {
+    let resolvedModule = await this._modules[deviceType];
+    if (typeof resolvedModule?.[operationName] !== 'function') {
       if (deviceType === 'webgl') {
-        module = this.add('webgl', import('../operations/webgl/index'));
+        resolvedModule = await this._addModule('webgl', import('../operations/webgl/index'), false);
       } else if (deviceType === 'webgpu') {
-        module = this.add('webgpu', import('../operations/webgpu/index'));
-      } else {
+        resolvedModule = await this._addModule(
+          'webgpu',
+          import('../operations/webgpu/index'),
+          false
+        );
+      } else if (!resolvedModule) {
         throw new Error(`${deviceType} backend not registered`);
       }
     }
-    const resolvedModule = await module;
     const operationHandler = resolvedModule[operationName];
     if (typeof operationHandler !== 'function') {
       throw new Error(`${deviceType} backend does not implement ${operationName}`);

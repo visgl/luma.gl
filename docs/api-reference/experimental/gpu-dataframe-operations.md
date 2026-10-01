@@ -116,18 +116,27 @@ source batches into shared per-column buffers instead:
 // One GPU record batch: every source chunk is written at its row offset in one buffer per column.
 const packed = makeGPUAnalyticsTableFromArrowTable(device, arrowTable, {packBatches: true});
 
-// Or bound buffer sizes: group adjacent source batches until each has at least 1M rows.
+// Group adjacent source batches toward a minimum of 1,048,576 rows per group.
 const grouped = makeGPUAnalyticsTableFromArrowTable(device, arrowTable, {
   packBatches: {minBatchSize: 1 << 20}
 });
 ```
 
+`minBatchSize` is a lower target, not an upper limit. Groups can overshoot it, the final group can
+be smaller, and individual source batches are never split. For example, source batches of 7 and 7
+rows with `minBatchSize: 8` produce one 14-row batch. Ensure each output column and validity buffer
+(4 bytes per row) fits both `device.limits.maxBufferSize` and
+`device.limits.maxStorageBufferBindingSize`. If necessary, split oversized source batches before
+uploading and account for grouping overshoot; `minBatchSize` alone does not guarantee either limit.
+
 Packing at upload writes each Arrow chunk directly into its final buffer, with no JavaScript
 concatenation, GPU copy pass, or transient second allocation. Validity sidecars follow the packed
-batches, so nullable columns remain usable with `GPUDataFrame`. A packed batch's `sourceInfo`
-identifies its first source batch and the contiguous source rows it spans; `nullCounts` stay in
-source record-batch order. `GPUTable.packBatches()` remains available for tables that are already
-on the GPU, but it does not repack separate validity sidecars.
+batches, so nullable columns remain usable with `GPUDataFrame`. As with `GPUTable.packBatches()`,
+`sourceInfo` is omitted when an output batch spans multiple source batches. Dataframe queries retain
+global row indices; `resolveArrowPickInfo()` returns `null` for `batchIndex` and `batchRowIndex` when
+given a table without that batch's source mapping. Single-source batches retain their `sourceInfo`,
+and `nullCounts` stay in source record-batch order. `GPUTable.packBatches()` remains available for
+tables that are already on the GPU, but it does not repack separate validity sidecars.
 
 Applications with an existing generic GPU table can provide their own masks and dictionaries:
 

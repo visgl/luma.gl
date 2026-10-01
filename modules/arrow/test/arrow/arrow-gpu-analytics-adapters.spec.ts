@@ -128,16 +128,18 @@ it('Arrow analytics ingestion packs 2048-row streamed batches into one WebGPU ba
   // DuckDB-Wasm and other streamed producers emit 2048-row batches; only one batch has nulls.
   const {table: source, values, valid} = createStreamedAnalyticsTable([2048, 2048, 2048, 1000]);
   const expectedSelected = values.filter((value, row) => valid[row] && value > 0.5).length;
+  const expectedRowIndices = Array.from(values.keys()).filter(
+    row => valid[row] && values[row] > 0.5
+  );
   const packed = makeGPUAnalyticsTableFromArrowTable(device, source, {packBatches: true});
   const preserved = makeGPUAnalyticsTableFromArrowTable(device, source);
+  const grouped = makeGPUAnalyticsTableFromArrowTable(device, source, {
+    packBatches: {minBatchSize: 4096}
+  });
 
   try {
     expect(packed.table.batches.map(batch => batch.numRows)).toEqual([7144]);
-    expect(packed.table.batches[0].sourceInfo).toEqual({
-      sourceBatchIndex: 0,
-      sourceRowIndexOffset: 0,
-      sourceRowCount: 7144
-    });
+    expect(packed.table.batches[0].sourceInfo).toBeUndefined();
     expect(packed.validity['value']?.data).toHaveLength(1);
 
     const packedData = packed.table.gpuVectors['value'].data[0];
@@ -148,14 +150,23 @@ it('Arrow analytics ingestion packs 2048-row streamed batches into one WebGPU ba
     ).toEqual(Array.from(values));
     expect(await readGPUValidity(packed.validity['value']!)).toEqual([Array.from(valid)]);
 
-    const packedFilter = await readSelectedCount(device, new GPUDataFrame({...packed}));
-    const preservedFilter = await readSelectedCount(device, new GPUDataFrame({...preserved}));
+    const packedFilter = await readFilterResult(device, new GPUDataFrame({...packed}));
+    const preservedFilter = await readFilterResult(device, new GPUDataFrame({...preserved}));
+    const groupedFilter = await readFilterResult(device, new GPUDataFrame({...grouped}));
     expect(packedFilter.outputChunks, 'packed filters dispatch one batch').toBe(1);
     expect(preservedFilter.outputChunks, 'preserved filters dispatch per source batch').toBe(4);
+    expect(groupedFilter.outputChunks).toBe(2);
     expect(packedFilter.selected).toBe(expectedSelected);
     expect(preservedFilter.selected).toBe(expectedSelected);
+    expect(groupedFilter.selected).toBe(expectedSelected);
+    for (const filtered of [packedFilter, preservedFilter, groupedFilter]) {
+      expect(
+        filtered.rowIndices,
+        'global row identities survive missing packed source metadata'
+      ).toEqual(expectedRowIndices);
+    }
   } finally {
-    for (const result of [packed, preserved]) {
+    for (const result of [packed, preserved, grouped]) {
       result.table.destroy();
       for (const validity of Object.values(result.validity)) validity?.destroy();
     }
@@ -203,10 +214,10 @@ function createStreamedAnalyticsTable(batchRowCounts: readonly number[]): {
   return {table: new arrow.Table(schema, batches), values, valid};
 }
 
-async function readSelectedCount(
+async function readFilterResult(
   device: Device,
   dataFrame: GPUDataFrame<{value: 'float32'}>
-): Promise<{selected: number; outputChunks: number}> {
+): Promise<{selected: number; outputChunks: number; rowIndices: number[]}> {
   const compiled = dataFrame.filter(column('value').greaterThan(literal(0.5))).compile(
     new GPUCommandGraph<GPUDataFrameQueryParameters>(device, {
       id: 'arrow-analytics-packed-filter'
@@ -217,11 +228,18 @@ async function readSelectedCount(
     compiled.encode(commandEncoder);
     device.submit(commandEncoder.finish());
     let selected = 0;
-    for (const data of compiled.selectedCounts.data) {
+    const rowIndices: number[] = [];
+    for (const [batchIndex, data] of compiled.selectedCounts.data.entries()) {
       const bytes = await data.buffer.readAsync(data.byteOffset, 4);
-      selected += new Uint32Array(bytes.buffer, bytes.byteOffset, 1)[0];
+      const selectedCount = new Uint32Array(bytes.buffer, bytes.byteOffset, 1)[0];
+      selected += selectedCount;
+      if (selectedCount > 0) {
+        const rowData = compiled.rowIndices.data[batchIndex];
+        const rowBytes = await rowData.buffer.readAsync(rowData.byteOffset, selectedCount * 4);
+        rowIndices.push(...new Uint32Array(rowBytes.buffer, rowBytes.byteOffset, selectedCount));
+      }
     }
-    return {selected, outputChunks: compiled.selectedCounts.data.length};
+    return {selected, outputChunks: compiled.selectedCounts.data.length, rowIndices};
   } finally {
     compiled.destroy();
   }

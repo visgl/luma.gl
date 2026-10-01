@@ -33,6 +33,12 @@ This repo uses `@vis.gl/dev-tools` for shared Vitest wiring and keeps repository
   - `browser`
   - `headless`
 - Browser execution uses Playwright through `@vis.gl/dev-tools`.
+- `yarn test` runs the Node suite followed by three serial headless shards, matching the CI shard
+  layout. Each shard starts a fresh browser so the full GPU suite does not accumulate work in one
+  long-lived browser session. Use `yarn test-headless --shard=1/3` (then `2/3` and `3/3`) to run the
+  browser suite separately, or pass a test path after an option to run a focused selection.
+- Local headless runs use at most two browser workers to limit concurrent GPU workloads. The full
+  `yarn test` command and CI run one file at a time within each shard.
 - Node test files run in worker threads and reuse the worker's module graph. Tests that replace
   globals or mutate module-level state must restore that state in an `afterEach` or `afterAll` hook.
 - `nodeOnlyTestPatterns` routes audited CPU-only legacy specs away from browser-page isolation.

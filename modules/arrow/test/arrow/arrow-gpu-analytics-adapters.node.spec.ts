@@ -7,7 +7,8 @@ import {readFileSync} from 'node:fs';
 import {
   makeArrowTableFromGPUAnalyticsTable,
   makeGPUAnalyticsTableFromArrowTable,
-  readArrowGPUDataAsync
+  readArrowGPUDataAsync,
+  resolveArrowPickInfo
 } from '@luma.gl/arrow';
 import {Buffer, type BufferProps} from '@luma.gl/core';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
@@ -246,11 +247,7 @@ describe('makeGPUAnalyticsTableFromArrowTable packed batches', () => {
     try {
       expect(result.table.numRows).toBe(5);
       expect(result.table.batches).toHaveLength(1);
-      expect(result.table.batches[0].sourceInfo).toEqual({
-        sourceBatchIndex: 0,
-        sourceRowIndexOffset: 0,
-        sourceRowCount: 5
-      });
+      expect(result.table.batches[0].sourceInfo).toBeUndefined();
       expect(result.table.batches[0].nullCount).toBe(
         source.batches.reduce((nullCount, batch) => nullCount + batch.nullCount, 0)
       );
@@ -322,7 +319,7 @@ describe('makeGPUAnalyticsTableFromArrowTable packed batches', () => {
       expect(result.table.batches.map(batch => batch.numRows)).toEqual([2, 3]);
       expect(result.table.batches.map(batch => batch.sourceInfo)).toEqual([
         {sourceBatchIndex: 0, sourceRowIndexOffset: 0, sourceRowCount: 2},
-        {sourceBatchIndex: 1, sourceRowIndexOffset: 2, sourceRowCount: 3}
+        undefined
       ]);
       expect(await readWords(result.table.gpuVectors['zone'])).toEqual([
         [7, 8],
@@ -347,6 +344,68 @@ describe('makeGPUAnalyticsTableFromArrowTable packed batches', () => {
     } finally {
       destroyAnalyticsResult(result);
     }
+  });
+
+  test('reports only known source-local picking identities after packing', () => {
+    const device = new NullDevice({id: 'arrow-analytics-packed-picking'});
+    const source = createAnalyticsTable();
+    const cases = [
+      {packBatches: false, batchIndices: [0, 0, 2, 2, 2], batchRowIndices: [0, 1, 0, 1, 2]},
+      {
+        packBatches: true,
+        batchIndices: [null, null, null, null, null],
+        batchRowIndices: [null, null, null, null, null]
+      },
+      {
+        packBatches: {minBatchSize: 2},
+        batchIndices: [0, 0, null, null, null],
+        batchRowIndices: [0, 1, null, null, null]
+      }
+    ];
+
+    for (const {packBatches, batchIndices, batchRowIndices} of cases) {
+      const result = makeGPUAnalyticsTableFromArrowTable(device, source, {packBatches});
+      try {
+        let rowIndex = 0;
+        for (const [batchIndex, batch] of result.table.batches.entries()) {
+          for (let batchRowIndex = 0; batchRowIndex < batch.numRows; batchRowIndex++, rowIndex++) {
+            const pickInfo = {batchIndex, objectIndex: rowIndex};
+            for (const pickingSource of [
+              result.table,
+              {table: result.table},
+              result.table.batches.map(sourceBatch => sourceBatch.sourceInfo)
+            ]) {
+              expect(resolveArrowPickInfo(pickInfo, pickingSource)).toEqual({
+                batchIndex: batchIndices[rowIndex],
+                rowIndex,
+                batchRowIndex: batchRowIndices[rowIndex]
+              });
+            }
+          }
+        }
+      } finally {
+        destroyAnalyticsResult(result);
+      }
+    }
+  });
+
+  test('keeps raw picking fallback only when no source mapping was supplied', () => {
+    const pickInfo = {batchIndex: 2, objectIndex: 3};
+    expect(resolveArrowPickInfo(pickInfo)).toEqual({
+      batchIndex: 2,
+      rowIndex: 3,
+      batchRowIndex: null
+    });
+    expect(resolveArrowPickInfo(pickInfo, [])).toEqual({
+      batchIndex: null,
+      rowIndex: 3,
+      batchRowIndex: null
+    });
+    expect(resolveArrowPickInfo({batchIndex: null, objectIndex: null}, [])).toEqual({
+      batchIndex: null,
+      rowIndex: null,
+      batchRowIndex: null
+    });
   });
 
   test('packs zero-row source batches into bindable storage', async () => {

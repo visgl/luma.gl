@@ -67,7 +67,10 @@ export type GPUAnalyticsTableFromArrowTableProps<T extends GPUTypeMap = GPUTypeM
    * greedily groups adjacent source batches until each group reaches that row count. Each source
    * chunk is written directly at its byte offset, so packing needs no JavaScript concatenation,
    * no GPU copy pass, and no transient second allocation. Validity sidecars follow the packed
-   * batches. Defaults to `false`, which preserves every source record batch.
+   * batches. `minBatchSize` is a lower target, not a size cap: source batches are never split,
+   * groups can overshoot, and the final group can be smaller. Callers must ensure each resulting
+   * buffer fits the device's allocation and storage-binding limits.
+   * Defaults to `false`, which preserves every source record batch.
    */
   packBatches?: boolean | GPUTablePackBatchesOptions;
 };
@@ -164,12 +167,15 @@ export function makeGPUAnalyticsTableFromArrowTable<T extends GPUTypeMap = GPUTy
         fields: columns.map(column => makeGPUAnalyticsField(column)),
         numRows,
         metadata: new Map(recordBatches[0].schema.metadata),
-        // A packed batch identifies its first source batch and the contiguous source rows it spans.
-        sourceInfo: {
-          sourceBatchIndex: sourceBatchIndices[0],
-          sourceRowIndexOffset,
-          sourceRowCount: numRows
-        },
+        // Groups spanning source batches have no single source identity, as in GPUTable.packBatches().
+        sourceInfo:
+          sourceBatchIndices.length === 1
+            ? {
+                sourceBatchIndex: sourceBatchIndices[0],
+                sourceRowIndexOffset,
+                sourceRowCount: numRows
+              }
+            : undefined,
         nullCount: recordBatches.reduce((nullCount, batch) => nullCount + batch.nullCount, 0)
       });
       sourceRowIndexOffset += numRows;
