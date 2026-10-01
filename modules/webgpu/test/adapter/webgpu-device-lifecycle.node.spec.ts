@@ -89,6 +89,62 @@ describe('WebGPU device creation lifecycle', () => {
     device.destroy();
   });
 
+  test('forwards custom requiredLimits to requestDevice()', async () => {
+    const pendingLoss = makeDeferred<GPUDeviceLostInfo>();
+    const nativeDevice = makeNativeDevice(pendingLoss.promise);
+    const nativeAdapter = makeNativeAdapter(nativeDevice.device);
+    nativeAdapter.adapter.limits = {
+      maxStorageBufferBindingSize: 1024 * 1024 * 1024,
+      maxBufferSize: 2 * 1024 * 1024 * 1024
+    } as GPUSupportedLimits;
+
+    const adapter = new MockWebGPUAdapter([nativeAdapter.adapter]);
+    const device = await adapter.create({
+      requiredLimits: {
+        maxStorageBufferBindingSize: 256 * 1024 * 1024,
+        maxBufferSize: 512 * 1024 * 1024
+      }
+    });
+
+    expect(nativeAdapter.requestDevice).toHaveBeenCalledWith({
+      requiredLimits: {
+        maxStorageBufferBindingSize: 256 * 1024 * 1024,
+        maxBufferSize: 512 * 1024 * 1024
+      }
+    });
+    device.destroy();
+  });
+
+  test('requiredLimits merges with featureLevel max', async () => {
+    const pendingLoss = makeDeferred<GPUDeviceLostInfo>();
+    const nativeDevice = makeNativeDevice(pendingLoss.promise);
+    const nativeAdapter = makeNativeAdapter(nativeDevice.device);
+    nativeAdapter.adapter.limits = {
+      maxBufferSize: 2 * 1024 * 1024 * 1024,
+      maxStorageBufferBindingSize: 1024 * 1024 * 1024,
+      maxComputeWorkgroupsPerDimension: 65535
+    } as GPUSupportedLimits;
+
+    const adapter = new MockWebGPUAdapter([nativeAdapter.adapter]);
+    const device = await adapter.create({
+      featureLevel: 'max',
+      requiredLimits: {
+        maxBufferSize: 512 * 1024 * 1024
+      }
+    });
+
+    expect(nativeAdapter.requestDevice).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requiredLimits: expect.objectContaining({
+          maxBufferSize: 512 * 1024 * 1024,
+          maxStorageBufferBindingSize: 1024 * 1024 * 1024,
+          maxComputeWorkgroupsPerDimension: 65535
+        })
+      })
+    );
+    device.destroy();
+  });
+
   test('retries one immediately lost device with a fresh adapter', async () => {
     const firstDevice = makeNativeDevice(
       Promise.resolve({reason: 'unknown', message: 'Transient driver loss'} as GPUDeviceLostInfo)

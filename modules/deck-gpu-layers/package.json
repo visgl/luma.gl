@@ -35,6 +35,7 @@
     "@luma.gl/core": "10.0.0-alpha.2",
     "@luma.gl/engine": "10.0.0-alpha.2",
     "@luma.gl/experimental": "10.0.0-alpha.2",
-    "@luma.gl/shadertools": "10.0.0-alpha.2"
+    "@luma.gl/shadertools": "10.0.0-alpha.2",
+    "@math.gl/core": "^4.1.0"
   }
 }

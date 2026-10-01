@@ -1,0 +1,25 @@
+---
+title: Riverfront Water
+description: Animated river water, pencil building edges, and screen-space reflections in one Deck city scene.
+sidebar_custom_props:
+  description: Explore animated river water, building edges, and scene reflections.
+  backends: [webgpu, webgl2]
+  difficulty: intermediate
+  maturity: experimental
+  mobile: full
+  mobileProfile: standard
+  topics: [deck.gl, rendering, materials, water, picking]
+---
+
+import useBaseUrl from '@docusaurus/useBaseUrl';
+
+export const CityScenePreview = () => (
+  <iframe
+    title="Riverfront Water interactive example"
+    src={useBaseUrl('/standalone-examples/city-scene/index.html')}
+    style={{width: '100%', height: '78vh', minHeight: 640, border: 0, borderRadius: 12}}
+    allow="fullscreen"
+  />
+);
+
+<CityScenePreview />

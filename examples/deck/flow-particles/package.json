@@ -6,7 +6,7 @@
   "scripts": {
     "start": "vite",
     "build": "tsc && vite build",
-    "build:website": "tsc && vite build --mode website --outDir ../../../website/.generated/example-assets/standalone-examples/flow-particles --emptyOutDir",
+    "build:website": "vite build --mode website --outDir ../../../website/.generated/example-assets/standalone-examples/flow-particles --emptyOutDir",
     "test:visual": "node scripts/visual-smoke.mjs"
   },
   "dependencies": {

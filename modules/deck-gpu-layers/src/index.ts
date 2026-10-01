@@ -11,3 +11,17 @@ export {FlowParticleLayer, type FlowParticleLayerProps} from './layers/flow-part
 
 export {surfaceBuffer} from './layers/surface-buffer';
 export {getMeterOffsetPosition} from './projection/meter-offset-position';
+export {WaterSurfaceLayer, type WaterSurfaceLayerProps} from './layers/water-surface-layer';
+export {SketchEdgeLayer, type SketchEdgeLayerProps} from './layers/sketch-edge-layer';
+export {
+  WeatherParticleLayer,
+  type WeatherParticleLayerProps
+} from './layers/weather-particle-layer';
+export {
+  SceneBufferEffect,
+  type SceneBufferEffectProps,
+  type SceneBufferFrame,
+  type SceneBufferLayerOptions
+} from './effects/scene-buffer-effect';
+
+export {GlowPointLayer, type GlowPointLayerProps} from './layers/glow-point-layer';

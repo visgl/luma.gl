@@ -111,7 +111,7 @@ describe('live example catalog metadata', () => {
   });
 
   test('provides complete, curated filters for every sidebar example', () => {
-    expect(LIVE_EXAMPLES).toHaveLength(88);
+    expect(LIVE_EXAMPLES).toHaveLength(93);
 
     for (const {id, metadata} of LIVE_EXAMPLES) {
       expect(metadata, `${id} requires sidebar_custom_props`).toBeDefined();
@@ -179,7 +179,7 @@ describe('live example catalog metadata', () => {
     expect(supportPolicy).not.toContain('website/src/examples');
     expect(supportRegistry).not.toMatch(/(?:import|export).*\/app['"]/);
 
-    expect(Object.keys(EXAMPLE_SUPPORT_REGISTRY)).toHaveLength(92);
+    expect(Object.keys(EXAMPLE_SUPPORT_REGISTRY)).toHaveLength(97);
     for (const example of LIVE_EXAMPLES) {
       expect(
         EXAMPLE_SUPPORT_REGISTRY[example.id],
@@ -192,7 +192,7 @@ describe('live example catalog metadata', () => {
     }
 
     const standaloneFiles = findStandaloneHtmlFiles(path.join(process.cwd(), 'examples'));
-    expect(standaloneFiles).toHaveLength(87);
+    expect(standaloneFiles).toHaveLength(92);
     for (const relativeFile of standaloneFiles) {
       const standaloneId = relativeFile.replace(/\/(?:index|playground)\.html$/, match =>
         match === '/index.html' ? '' : '/playground'

@@ -227,8 +227,13 @@ export class WebGPUAdapter extends Adapter {
       deviceDescriptor.requiredFeatures = requiredFeatures;
     }
 
-    if (requestedFeatureLevel === 'max') {
-      deviceDescriptor.requiredLimits = getRequiredWebGPULimits(adapter.limits);
+    // Explicitly requested limits override the adapter maximums requested by 'max'
+    const requiredLimits = {
+      ...(requestedFeatureLevel === 'max' ? getRequiredWebGPULimits(adapter.limits) : {}),
+      ...props.requiredLimits
+    };
+    if (Object.keys(requiredLimits).length > 0) {
+      deviceDescriptor.requiredLimits = requiredLimits;
     }
 
     let gpuDevice: GPUDevice;

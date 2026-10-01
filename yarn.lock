@@ -2704,6 +2704,7 @@ __metadata:
     "@luma.gl/engine": "npm:10.0.0-alpha.2"
     "@luma.gl/experimental": "npm:10.0.0-alpha.2"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.2"
+    "@math.gl/core": "npm:^4.1.0"
   languageName: unknown
   linkType: soft
 
@@ -15451,6 +15452,26 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-deck-city-scene@workspace:examples/deck/city-scene":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-deck-city-scene@workspace:examples/deck/city-scene"
+  dependencies:
+    "@deck.gl-community/gpu-layers": "workspace:*"
+    "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
+    "@luma.gl/core": "npm:10.0.0-alpha.2"
+    "@luma.gl/effects": "npm:10.0.0-alpha.2"
+    "@luma.gl/engine": "npm:10.0.0-alpha.2"
+    "@luma.gl/shadertools": "npm:10.0.0-alpha.2"
+    "@luma.gl/webgl": "npm:10.0.0-alpha.2"
+    "@luma.gl/webgpu": "npm:10.0.0-alpha.2"
+    "@math.gl/core": "npm:^4.1.0"
+    playwright: "npm:^1.58.0"
+    pngjs: "npm:^7.0.0"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-deck-flow-particles@workspace:examples/deck/flow-particles":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-deck-flow-particles@workspace:examples/deck/flow-particles"
@@ -15501,6 +15522,77 @@ __metadata:
     "@luma.gl/shadertools": "npm:10.0.0-alpha.2"
     "@luma.gl/webgpu": "npm:10.0.0-alpha.2"
     maplibre-gl: "npm:^5.20.0"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-deck-pattern-fills@workspace:examples/deck/pattern-fills":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-deck-pattern-fills@workspace:examples/deck/pattern-fills"
+  dependencies:
+    "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
+    "@luma.gl/core": "npm:10.0.0-alpha.2"
+    "@luma.gl/engine": "npm:10.0.0-alpha.2"
+    "@luma.gl/shadertools": "npm:10.0.0-alpha.2"
+    "@luma.gl/webgl": "npm:10.0.0-alpha.2"
+    "@luma.gl/webgpu": "npm:10.0.0-alpha.2"
+    playwright: "npm:^1.58.0"
+    pngjs: "npm:^7.0.0"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-deck-point-glow@workspace:examples/deck/point-glow":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-deck-point-glow@workspace:examples/deck/point-glow"
+  dependencies:
+    "@deck.gl-community/gpu-layers": "npm:10.0.0-alpha.2"
+    "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
+    "@luma.gl/core": "npm:10.0.0-alpha.2"
+    "@luma.gl/engine": "npm:10.0.0-alpha.2"
+    "@luma.gl/shadertools": "npm:10.0.0-alpha.2"
+    "@luma.gl/webgl": "npm:10.0.0-alpha.2"
+    "@luma.gl/webgpu": "npm:10.0.0-alpha.2"
+    playwright: "npm:^1.58.0"
+    pngjs: "npm:^7.0.0"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-deck-sketch-edges@workspace:examples/deck/sketch-edges":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-deck-sketch-edges@workspace:examples/deck/sketch-edges"
+  dependencies:
+    "@deck.gl-community/gpu-layers": "workspace:*"
+    "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
+    "@luma.gl/core": "npm:10.0.0-alpha.2"
+    "@luma.gl/engine": "npm:10.0.0-alpha.2"
+    "@luma.gl/shadertools": "npm:10.0.0-alpha.2"
+    "@luma.gl/webgl": "npm:10.0.0-alpha.2"
+    "@luma.gl/webgpu": "npm:10.0.0-alpha.2"
+    playwright: "npm:^1.58.0"
+    pngjs: "npm:^7.0.0"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-deck-weather@workspace:examples/deck/weather":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-deck-weather@workspace:examples/deck/weather"
+  dependencies:
+    "@deck.gl-community/gpu-layers": "npm:10.0.0-alpha.2"
+    "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
+    "@luma.gl/core": "npm:10.0.0-alpha.2"
+    "@luma.gl/engine": "npm:10.0.0-alpha.2"
+    "@luma.gl/shadertools": "npm:10.0.0-alpha.2"
+    "@luma.gl/webgl": "npm:10.0.0-alpha.2"
+    "@luma.gl/webgpu": "npm:10.0.0-alpha.2"
+    playwright: "npm:^1.58.0"
+    pngjs: "npm:^7.0.0"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.0.0"
   languageName: unknown
