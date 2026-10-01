@@ -7,12 +7,18 @@ export {
   type LuSpatialPointLayerProps
 } from './layers/luspatial-point-layer';
 
+export {WaterSurfaceLayer, type WaterSurfaceLayerProps} from './layers/water-surface-layer';
 export {SketchEdgeLayer, type SketchEdgeLayerProps} from './layers/sketch-edge-layer';
 export {
   WeatherParticleLayer,
   type WeatherParticleLayerProps
 } from './layers/weather-particle-layer';
-
 export {surfaceBuffer} from './layers/surface-buffer';
+export {
+  SceneBufferEffect,
+  type SceneBufferEffectProps,
+  type SceneBufferFrame,
+  type SceneBufferLayerOptions
+} from './effects/scene-buffer-effect';
 
 export {getMeterOffsetPosition} from './projection/meter-offset-position';

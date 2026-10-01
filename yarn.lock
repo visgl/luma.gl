@@ -2704,6 +2704,7 @@ __metadata:
     "@luma.gl/engine": "npm:10.0.0-alpha.2"
     "@luma.gl/experimental": "npm:10.0.0-alpha.2"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.2"
+    "@math.gl/core": "npm:^4.1.0"
   languageName: unknown
   linkType: soft
 
@@ -15455,12 +15456,15 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-deck-city-scene@workspace:examples/deck/city-scene"
   dependencies:
+    "@deck.gl-community/gpu-layers": "workspace:*"
     "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
     "@luma.gl/core": "npm:10.0.0-alpha.2"
+    "@luma.gl/effects": "npm:10.0.0-alpha.2"
     "@luma.gl/engine": "npm:10.0.0-alpha.2"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.2"
     "@luma.gl/webgl": "npm:10.0.0-alpha.2"
     "@luma.gl/webgpu": "npm:10.0.0-alpha.2"
+    "@math.gl/core": "npm:^4.1.0"
     playwright: "npm:^1.58.0"
     pngjs: "npm:^7.0.0"
     typescript: "npm:^6.0.3"

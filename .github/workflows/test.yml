@@ -18,7 +18,8 @@ jobs:
   browser_coverage:
     name: Browser coverage (${{ matrix.shard }}/3)
     runs-on: ubuntu-22.04
-    timeout-minutes: 15
+    # The first shard also runs the city visual suite before coverage.
+    timeout-minutes: ${{ matrix.shard == 1 && 25 || 15 }}
     strategy:
       fail-fast: false
       matrix:
