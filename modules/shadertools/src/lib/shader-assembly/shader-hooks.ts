@@ -51,25 +51,8 @@ export type ShaderHookRegistry = {
   fragment: Record<string, NormalizedShaderHook>;
 };
 
-/** Hook declarations accepted by the legacy shader assembly API. */
+/** Hook declarations accepted by shader assembly. */
 export type ShaderHookDeclarations = readonly (ShaderHook | string)[];
-
-/** Normalized or legacy hook declarations accepted by shader assembly. */
-export type ShaderHookInput = ShaderHookDeclarations | ShaderHookRegistry;
-
-/** Create an empty typed hook registry. */
-export function createShaderHookRegistry(): ShaderHookRegistry {
-  return {vertex: {}, fragment: {}};
-}
-
-/** Register a stage-prefixed hook declaration in a typed registry. */
-export function registerShaderHook(
-  registry: ShaderHookRegistry,
-  hook: string,
-  options: ShaderHookOptions = {}
-): void {
-  addShaderHookToRegistry(registry, {hook, ...options});
-}
 
 /** Generate hook source code */
 export function getShaderHooks(
@@ -102,15 +85,11 @@ export function getShaderHooks(
 }
 
 /**
- * Parse string based hook functions
- * And split per shader
+ * Parse string based hook functions and split them per shader stage.
+ * A later declaration of the same stage-prefixed hook name replaces an earlier one.
  */
-export function normalizeShaderHooks(hookFunctions: ShaderHookInput): ShaderHookRegistry {
-  if (!Array.isArray(hookFunctions)) {
-    return hookFunctions as ShaderHookRegistry;
-  }
-
-  const result = createShaderHookRegistry();
+export function normalizeShaderHooks(hookFunctions: ShaderHookDeclarations): ShaderHookRegistry {
+  const result: ShaderHookRegistry = {vertex: {}, fragment: {}};
 
   for (const hookFunction of hookFunctions) {
     addShaderHookToRegistry(result, hookFunction);
@@ -119,16 +98,21 @@ export function normalizeShaderHooks(hookFunctions: ShaderHookInput): ShaderHook
   return result;
 }
 
-/** Validate named hook injections against the declarations active for this assembly. */
+/** Returns true if a stage-prefixed hook name such as `vs:MY_HOOK` is declared. */
+export function isShaderHookRegistered(registry: ShaderHookRegistry, hookName: string): boolean {
+  const stageRegistry = hookName.startsWith('vs:') ? registry.vertex : registry.fragment;
+  return Boolean(stageRegistry[hookName]);
+}
+
+/**
+ * Throws if a named hook injection targets a hook that is not declared for this assembly.
+ * @param stage Only validate injections for this GLSL stage. WGSL validates both stages.
+ */
 export function validateShaderHookInjections(
   registry: ShaderHookRegistry,
   hookInjections: Record<string, ShaderInjection[]>,
   stage?: 'vertex' | 'fragment'
 ): void {
-  const validHookNames = [
-    ...Object.keys(registry.vertex),
-    ...Object.keys(registry.fragment)
-  ].sort();
   const stagePrefix = stage === 'vertex' ? 'vs:' : stage === 'fragment' ? 'fs:' : null;
 
   for (const hookName of Object.keys(hookInjections)) {
@@ -136,12 +120,17 @@ export function validateShaderHookInjections(
       continue;
     }
 
-    const stageRegistry = hookName.startsWith('vs:') ? registry.vertex : registry.fragment;
-    if (!stageRegistry[hookName]) {
-      const validHooks = validHookNames.length
-        ? validHookNames.map(name => `"${name}"`).join(', ')
-        : '(none)';
-      throw new Error(`Unknown shader hook "${hookName}". Valid shader hooks: ${validHooks}.`);
+    if (!isShaderHookRegistered(registry, hookName)) {
+      // Unknown shader hook: the injection targets a hook that was never declared with
+      // `ShaderAssembler.addShaderHook()` (or `hookFunctions`). Check the hook name and stage
+      // prefix against the registered hooks listed in the message.
+      const registeredHookNames = [
+        ...Object.keys(registry.vertex),
+        ...Object.keys(registry.fragment)
+      ].sort();
+      throw new Error(
+        `Unknown shader hook ${hookName} (registered: ${registeredHookNames.join(', ') || 'none'})`
+      );
     }
   }
 }

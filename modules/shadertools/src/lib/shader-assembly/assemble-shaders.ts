@@ -18,7 +18,8 @@ import {
   normalizeShaderHooks,
   getShaderHooks,
   validateShaderHookInjections,
-  type ShaderHookInput
+  isShaderHookRegistered,
+  type ShaderHookDeclarations
 } from './shader-hooks';
 import {assert} from '../utils/assert';
 import {getShaderInfo} from '../glsl-utils/get-shader-info';
@@ -87,7 +88,7 @@ export type AssembleShaderOptions = {
   /** GLSL only: Overrides to be injected. In WGSL these are supplied during Pipeline creation time */
   constants?: Record<string, number>;
   /** Hook functions */
-  hookFunctions?: ShaderHookInput;
+  hookFunctions?: ShaderHookDeclarations;
   /** Code injections */
   inject?: Record<string, string | ShaderInjection>;
   /** Ordered code injections contributed by ShaderPlugin descriptors. */
@@ -121,7 +122,7 @@ type AssembleStageOptions = {
   /** GLSL only: Overrides to be injected. In WGSL these are supplied during Pipeline creation time */
   constants?: Record<string, number>;
   /** Hook functions */
-  hookFunctions?: ShaderHookInput;
+  hookFunctions?: ShaderHookDeclarations;
   /** Code injections */
   inject?: Record<string, string | ShaderInjection>;
   /** Ordered code injections contributed by ShaderPlugin descriptors. */
@@ -339,6 +340,9 @@ export function assembleShaderWGSL(
   );
   appendGeneratedVaryingInjections(pluginVaryingAssembly, declInjections, mainInjections);
 
+  // Application and plugin injections are WGSL-specific, so every named hook they target must exist.
+  validateShaderHookInjections(hookFunctionMap, hookInjections);
+
   // TODO - hack until shadertool modules support WebGPU
   const modulesToInject = modules.map(module => ({
     module,
@@ -380,14 +384,14 @@ export function assembleShaderWGSL(
         const injectionType = name === 'decl' ? declInjections : mainInjections;
         injectionType[key] = injectionType[key] || [];
         injectionType[key].push(injections[key]);
-      } else if (hasRegisteredWGSLShaderHooksForStage(hookFunctionMap, key)) {
+      } else if (isShaderHookRegistered(hookFunctionMap, key)) {
+        // `ShaderModule.inject` is not language-specific and often carries GLSL-only hook
+        // injections, so WGSL silently skips module injections into hooks it has not declared.
         hookInjections[key] = hookInjections[key] || [];
         hookInjections[key].push(injections[key]);
       }
     }
   }
-
-  validateShaderHookInjections(hookFunctionMap, hookInjections);
 
   // For injectShader
   assembledSource += INJECT_SHADER_DECLARATIONS;
@@ -434,7 +438,7 @@ function assembleShaderGLSL(
     stage: 'vertex' | 'fragment';
     modules: ShaderModule[];
     defines?: Record<string, boolean | number>;
-    hookFunctions?: ShaderHookInput;
+    hookFunctions?: ShaderHookDeclarations;
     inject?: Record<string, string | ShaderInjection>;
     pluginInjections?: Record<string, ShaderInjection[]>;
     pluginVertexInputs?: Record<string, AttributeShaderType>;
@@ -584,6 +588,7 @@ ${getApplicationDefines(allDefines)}
     }
   }
 
+  // GLSL module injections are GLSL source, so application, plugin, and module hook targets must exist.
   validateShaderHookInjections(hookFunctionMap, hookInjections, stage);
 
   assembledSource += '// ----- MAIN SHADER SOURCE -------------------------';
@@ -717,18 +722,6 @@ function getWGSLModuleInjections(module: ShaderModule): Record<string, ShaderInj
     ...(module.instance?.normalizedInjections.vertex || {}),
     ...(module.instance?.normalizedInjections.fragment || {})
   };
-}
-
-/**
- * Shader module injections are not language-specific, so WGSL modules may still expose legacy
- * GLSL hook injections. If WGSL declares no hooks for that stage, those injections are inactive.
- */
-function hasRegisteredWGSLShaderHooksForStage(
-  hookFunctionMap: ReturnType<typeof normalizeShaderHooks>,
-  hookName: string
-): boolean {
-  const stageHooks = hookName.startsWith('vs:') ? hookFunctionMap.vertex : hookFunctionMap.fragment;
-  return Object.keys(stageHooks).length > 0;
 }
 
 function getWGSLDeclarationInjections(
