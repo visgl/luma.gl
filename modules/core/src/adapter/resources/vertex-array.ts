@@ -43,6 +43,8 @@ export abstract class VertexArray extends Resource<VertexArrayProps> {
   indexBuffer: Buffer | null = null;
   /** Buffers or constants indexed by backend-defined buffer slot or attribute location. */
   attributes: (Buffer | TypedArray | null)[];
+  /** Byte offsets added to every attribute read from each buffer slot or attribute location. */
+  attributeByteOffsets: number[];
 
   /**
    * Creates a backend-agnostic vertex-array container.
@@ -53,12 +55,17 @@ export abstract class VertexArray extends Resource<VertexArrayProps> {
     super(device, props, VertexArray.defaultProps);
     this.maxVertexAttributes = device.limits.maxVertexAttributes;
     this.attributes = new Array(this.maxVertexAttributes).fill(null);
+    this.attributeByteOffsets = new Array(this.maxVertexAttributes).fill(0);
   }
 
   /** Sets the index buffer used for indexed rendering. */
   abstract setIndexBuffer(indices: Buffer | null): void;
-  /** Sets one backend-defined buffer slot or attribute location. */
-  abstract setBuffer(bufferSlot: number, buffer: Buffer | null): void;
+  /**
+   * Sets one backend-defined buffer slot or attribute location.
+   * @param byteOffset Byte offset added to every attribute read from this buffer, for example
+   * when the buffer is shared and the vertex data starts inside it. Defaults to 0.
+   */
+  abstract setBuffer(bufferSlot: number, buffer: Buffer | null, byteOffset?: number): void;
 
   /** Applies any backend-specific bindings required before a draw call. */
   abstract bindBeforeRender(renderPass: RenderPass): void;

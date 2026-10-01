@@ -85,6 +85,35 @@ it('GPUTableShaderBindings resolves draw-ready buffers per preserved batch', () 
   void 0;
 });
 
+it('GPUTableShaderBindings returns per-batch attribute byte offsets for chunk views', () => {
+  const device = new NullDevice({});
+  const positionsByteOffset = Float32Array.BYTES_PER_ELEMENT * 2 * 3;
+  const offsetBatch = new GPURecordBatch({
+    gpuData: {
+      positions: makeVector(device, 'positions', 'float32x2', 2, positionsByteOffset).data[0],
+      weights: makeVector(device, 'weights', 'float32', 2).data[0]
+    }
+  });
+  const table = new GPUTable({batches: [makeBatch(device, 2), offsetBatch]});
+  const shaderBindings = new GPUTableShaderBindings(device, {
+    table,
+    gpuInputSchema: GPU_INPUT_SCHEMA,
+    shaderLayout: SHADER_LAYOUT
+  });
+
+  expect(
+    shaderBindings.batches.map(batch => batch.attributeByteOffsets),
+    'reports where each batch chunk starts inside its attribute buffer'
+  ).toEqual([{positions: 0}, {positions: positionsByteOffset}]);
+  expect(
+    shaderBindings.bufferLayout,
+    'keeps one shared buffer layout instead of folding chunk offsets into it'
+  ).toEqual([{name: 'positions', byteStride: 8, format: 'float32x2'}]);
+
+  shaderBindings.destroy();
+  table.destroy();
+});
+
 it('GPUTableShaderBindings binds complete fixed-size-list rows without trailing padding', () => {
   const device = new NullDevice({});
   const embeddingsData = new GPUData({

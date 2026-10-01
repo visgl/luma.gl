@@ -21,6 +21,7 @@ Target Release Date: Q3, 2026
 **@luma.gl/core**
 
 - **Targeted WebGPU limits** - `DeviceProps.requiredLimits` requests specific WebGPU device limits, such as `maxStorageBuffersPerShaderStage`, without taking every adapter limit and feature through `featureLevel: 'max'`. A development GPU then enforces the limits the application targets.
+- **Vertex buffer byte offsets** - `VertexArray.setBuffer()` accepts an optional `byteOffset`, so vertex data can start inside a shared buffer without changing the buffer layout or render pipeline.
 
 **@luma.gl/gpgpu**
 
@@ -57,6 +58,7 @@ Target Release Date: Q3, 2026
 
 **@luma.gl/engine**
 
+- **Attribute byte offsets** - `Model.setAttributes(buffers, {byteOffsets})` binds each named buffer at the byte offset where its vertex data starts.
 - **Awaitable pipeline creation** - `Computation.createAsync()` and `Model.createAsync()` expose
   native asynchronous WebGPU pipeline creation for application loading phases, backed by
   cache-aware asynchronous `Device` and `PipelineFactory` methods.
