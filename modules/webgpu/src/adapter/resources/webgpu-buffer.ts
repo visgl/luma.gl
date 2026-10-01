@@ -191,20 +191,21 @@ export class WebGPUBuffer extends Buffer {
     // Unless the application created and supplied a mappable buffer, a staging buffer is needed
     const isMappable = (this.usage & Buffer.MAP_READ) !== 0;
     const mappableBuffer: WebGPUBuffer | null = !isMappable
-      ? this._getMappableBuffer(Buffer.MAP_READ | Buffer.COPY_DST, 0, this.paddedByteLength)
+      ? this._getMappableBuffer(Buffer.MAP_READ | Buffer.COPY_DST, 0, mappedByteLength)
       : null;
 
     const readBuffer = mappableBuffer || this;
+    const readByteOffset = mappableBuffer ? 0 : mappedByteOffset;
 
     // Map the temp buffer and read the data.
     this.device.pushErrorScope('validation');
     try {
       await this.device.handle.queue.onSubmittedWorkDone();
       if (mappableBuffer) {
-        mappableBuffer._copyBuffer(this, mappedByteOffset, mappedByteLength);
+        mappableBuffer._copyBuffer(this, mappedByteOffset, mappedByteLength, 0);
       }
-      await readBuffer.handle.mapAsync(GPUMapMode.READ, mappedByteOffset, mappedByteLength);
-      const arrayBuffer = readBuffer.handle.getMappedRange(mappedByteOffset, mappedByteLength);
+      await readBuffer.handle.mapAsync(GPUMapMode.READ, readByteOffset, mappedByteLength);
+      const arrayBuffer = readBuffer.handle.getMappedRange(readByteOffset, mappedByteLength);
       const mappedRange =
         lifetime === 'mapped'
           ? arrayBuffer
@@ -246,7 +247,8 @@ export class WebGPUBuffer extends Buffer {
   protected _copyBuffer(
     sourceBuffer: WebGPUBuffer,
     byteOffset: number = 0,
-    byteLength: number = this.byteLength
+    byteLength: number = this.byteLength,
+    destinationByteOffset: number = byteOffset
   ) {
     // Now do a GPU-side copy into the temp buffer we can actually read.
     // TODO - we are spinning up an independent command queue here, what does this mean
@@ -256,7 +258,7 @@ export class WebGPUBuffer extends Buffer {
       sourceBuffer.handle,
       byteOffset,
       this.handle,
-      byteOffset,
+      destinationByteOffset,
       byteLength
     );
     this.device.handle.queue.submit([commandEncoder.finish()]);
