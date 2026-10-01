@@ -29,6 +29,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'experimental/gpu-frustum-culling',
   'experimental/gpu-trace-viewer',
   'deck/sketch-edges',
+  'deck/scene-buffers',
   'deck/luspatial-taxi',
   'deck/gpu-culled-trace',
   'deck/pattern-fills',

@@ -37,5 +37,8 @@
     "@luma.gl/experimental": "10.0.0-alpha.2",
     "@luma.gl/shadertools": "10.0.0-alpha.2",
     "@math.gl/core": "^4.1.0"
+  },
+  "devDependencies": {
+    "@deck.gl/layers": "9.4.0"
   }
 }
