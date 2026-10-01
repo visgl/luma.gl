@@ -1,6 +1,6 @@
 # @deck.gl-community/gpu-layers
 
-Reusable deck.gl layers that consume caller-owned GPU buffers.
+Reusable deck.gl layers for geographic rendering that consume caller-owned GPU buffers.
 
 ## Water surfaces
 
@@ -130,6 +130,35 @@ are sampled asynchronously and never gate the GPU-driven render path. Readbacks 
 graph it creates; Deck calls `cleanup`, while applications may call `destroy` when an effect is
 constructed but never adopted.
 
+## Architectural strokes
+
+`SketchEdgeLayer` renders solid or pencil-like independent segments on WebGPU and WebGL2.
+The caller owns an interleaved float32 buffer with eight values per segment:
+`start.xyz, end.xyz, featureIndex, seed`. Use a stable seed for each geometric edge and a row
+index into `data` for picking. Local meter offsets are the default coordinate system.
+
+```ts
+import {SketchEdgeLayer} from '@deck.gl-community/gpu-layers';
+
+const edges = new SketchEdgeLayer({
+  id: 'building-edges',
+  segments,
+  segmentCount,
+  coordinateOrigin: [-74.006, 40.7128, 0],
+  data: buildings,
+  pickable: true,
+  color: [35, 31, 29, 255],
+  style: {width: 2, jitter: 0.7, variation: 0.35, grain: 0.45, extension: 3, sketch: 1}
+});
+```
+
+Width, jitter, and endpoint extension use CSS pixels. Set `sketch: 0` for solid strokes on the
+same geometry. Draw opaque fill layers first to hide rear edges. The layer owns its model and
+quad buffer, and borrows `segments`; the application destroys that buffer after finalizing Deck.
+It does not extract mesh boundaries, join paths, or drape lines over terrain. The
+[Sketch buildings example](../../examples/deck/sketch-edges) demonstrates the controls, picking,
+and hidden-edge rendering. The underlying `sketchStroke` shader in `@luma.gl/shadertools`
+can also be used by non-Deck renderers.
 ## Auxiliary scene buffers
 
 `SceneBufferEffect` captures participating layers into luma.gl `GBuffer` textures before Deck's

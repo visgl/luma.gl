@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import sketchSupport from './deck/sketch-edges/mobile-support';
 import weatherSupport from './deck/weather/mobile-support';
 import type {ExampleSupportDefinition} from './example-support';
 import citySceneSupport from './deck/city-scene/mobile-support';
@@ -191,6 +192,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'integrations/hello-react': standaloneSupport1,
   'showcase/algebraic-varieties': standaloneSupport2,
   'experimental/gpu-parquet-constellation': parquetSupport,
+  'deck/sketch-edges': sketchSupport,
   'deck/weather': weatherSupport,
   'homepage/instancing': support2
 };

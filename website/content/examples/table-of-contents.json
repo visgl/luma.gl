@@ -252,11 +252,13 @@
   },
   {
     "type": "category",
+    "label": "Cartographic styles",
+    "items": ["deck/sketch-edges"]
+  },
+  {
+    "type": "category",
     "label": "Visual Effects - deck.gl",
-    "items": [
-      "deck/city-scene",
-      "deck/weather"
-    ]
+    "items": ["deck/city-scene", "deck/weather"]
   },
   {
     "type": "category",

@@ -28,6 +28,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'experimental/deferred-rendering',
   'experimental/gpu-frustum-culling',
   'experimental/gpu-trace-viewer',
+  'deck/sketch-edges',
   'deck/luspatial-taxi',
   'deck/gpu-culled-trace',
   'experimental/gpu-sort',

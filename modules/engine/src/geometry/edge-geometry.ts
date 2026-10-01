@@ -3,7 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {assert} from '@luma.gl/core';
-import {Geometry} from './geometry';
+import type {TypedArray} from '@math.gl/core';
+import {Geometry, type GeometryAttribute} from './geometry';
 
 export type MakeEdgeGeometryOptions = {
   /** Keep coplanar internal edges to inspect the original triangulation. Defaults to false. */
@@ -25,20 +26,13 @@ export function makeEdgeGeometry(
   options: MakeEdgeGeometryOptions = {}
 ): Geometry {
   const {angleThreshold = 30, weldTolerance = 0, positionAttribute = 'POSITION'} = options;
-  const positions = geometry.attributes[positionAttribute];
-  // Edge extraction requires packed xyz positions and complete triangle-list primitives.
-  assert(geometry.topology === 'triangle-list' && positions?.size === 3);
-  assert(positions.value.length % 3 === 0 && geometry.vertexCount % 3 === 0);
-  assert(
-    !positions['byteStride'] || positions['byteStride'] === positions.value.BYTES_PER_ELEMENT * 3
-  );
+  const positions = getTrianglePositions(geometry, positionAttribute);
   // Thresholds use source units and degrees, respectively.
   assert(Number.isFinite(weldTolerance) && weldTolerance >= 0);
   assert(Number.isFinite(angleThreshold) && angleThreshold >= 0 && angleThreshold <= 180);
 
   const sourceIndices = geometry.indices?.value;
   const sourceCount = positions.value.length / 3;
-  assert(geometry.vertexCount <= (sourceIndices?.length ?? sourceCount));
   const representatives = new Map<number, number>();
   const buckets = new Map<string, number[]>();
   const faces = new Set<string>();
@@ -143,4 +137,68 @@ export function makeEdgeGeometry(
     attributes: {[positionAttribute]: positions},
     indices: new Uint32Array(selected.flatMap(edge => [edge.start, edge.end]))
   });
+}
+
+/** Classifies adjacent meshes together to suppress coplanar tile seams and duplicate edges. */
+export function makeEdgeGeometryFromGeometries(
+  geometries: readonly Geometry[],
+  options: MakeEdgeGeometryOptions = {}
+): Geometry {
+  // A batch needs at least one source to define its position storage type.
+  assert(geometries.length > 0);
+  const positionAttribute = options.positionAttribute ?? 'POSITION';
+  const attributes = geometries.map(geometry => getTrianglePositions(geometry, positionAttribute));
+  const firstAttribute = attributes[0];
+  // Preserve source precision and normalization; callers convert incompatible inputs explicitly.
+  assert(
+    attributes.every(
+      attribute =>
+        attribute.value.constructor === firstAttribute.value.constructor &&
+        Boolean(attribute['normalized']) === Boolean(firstAttribute['normalized'])
+    )
+  );
+  const PositionArray = firstAttribute.value.constructor as {new (length: number): TypedArray};
+  const positions = new PositionArray(
+    attributes.reduce((count, attribute) => count + attribute.value.length, 0)
+  );
+  const indices = new Uint32Array(
+    geometries.reduce((count, geometry) => count + geometry.vertexCount, 0)
+  );
+  let positionOffset = 0;
+  let indexOffset = 0;
+  for (const [geometryIndex, geometry] of geometries.entries()) {
+    const attribute = attributes[geometryIndex];
+    positions.set(attribute.value, positionOffset);
+    for (let offset = 0; offset < geometry.vertexCount; offset++) {
+      const index = geometry.indices?.value[offset] ?? offset;
+      // Validate before offsetting: an invalid tile index could otherwise address its neighbor.
+      assert(Number.isInteger(index) && index >= 0 && index < attribute.value.length / 3);
+      indices[indexOffset++] = index + positionOffset / 3;
+    }
+    positionOffset += attribute.value.length;
+  }
+  return makeEdgeGeometry(
+    new Geometry({
+      id: `${geometries[0].id}-batch`,
+      topology: 'triangle-list',
+      attributes: {[positionAttribute]: {...firstAttribute, value: positions}},
+      indices
+    }),
+    options
+  );
+}
+
+function getTrianglePositions(geometry: Geometry, positionAttribute: string): GeometryAttribute {
+  const positions = geometry.attributes[positionAttribute];
+  // Edge extraction requires packed xyz positions and complete triangle-list primitives.
+  assert(geometry.topology === 'triangle-list' && positions?.size === 3);
+  assert(positions.value.length % 3 === 0 && geometry.vertexCount % 3 === 0);
+  assert(
+    !positions['byteStride'] || positions['byteStride'] === positions.value.BYTES_PER_ELEMENT * 3
+  );
+  assert(
+    geometry.vertexCount >= 0 &&
+      geometry.vertexCount <= (geometry.indices?.value.length ?? positions.value.length / 3)
+  );
+  return positions;
 }

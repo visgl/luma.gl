@@ -838,7 +838,8 @@
                   "api-reference/shadertools/shader-modules/fp32",
                   "api-reference/shadertools/shader-modules/fp64",
                   "api-reference/shadertools/shader-modules/fp64-arithmetic",
-                  "api-reference/shadertools/shader-modules/random"
+                  "api-reference/shadertools/shader-modules/random",
+                  "api-reference/shadertools/shader-modules/sketch-stroke"
                 ]
               },
               {

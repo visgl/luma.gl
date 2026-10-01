@@ -72,6 +72,16 @@ jobs:
       - name: Install Playwright Chromium
         run: yarn playwright:install
 
+      - name: Run Deck sketch edges visual checks
+        if: ${{ matrix.shard == 2 }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-sketch-edges test:visual
+
+      - name: Upload Deck sketch edge screenshots
+        if: ${{ always() && matrix.shard == 2 }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: deck-sketch-edges
+          path: /tmp/sketch-edges-*.png
       - name: Run Deck city scene visual smoke
         if: ${{ matrix.shard == 1 }}
         env:
