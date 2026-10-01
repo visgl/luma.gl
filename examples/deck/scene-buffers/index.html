@@ -18,13 +18,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" href="data:," />
   <link rel="stylesheet" href="./style.css" />
-  <title>Riverfront effects · luma.gl</title>
+  <title>Riverfront effects (WebGPU) · luma.gl</title>
 </head>
 <body>
   <div id="scene" aria-label="Interactive riverfront effects"></div>
   <aside class="luma-example-infobox luma-example-infobox--overlay">
-    <p class="eyebrow">luma.gl + deck.gl</p><h1>Riverfront effects</h1>
+    <p class="eyebrow">luma.gl + deck.gl</p><h1>Riverfront effects (WebGPU)</h1>
     <section class="control-card"><h2>Scene</h2>
+      <label>Renderer<select id="backend" aria-label="Renderer"><option value="webgpu">WebGPU</option></select></label>
       <label>View<select id="mode"><option value="scene">Final image</option><option value="normals">Surface normals</option><option value="depth">Depth</option><option value="selection">Selected building</option><option value="previous">Previous frame</option></select></label>
       <label class="toggle"><input id="glass" type="checkbox" checked /> Glass pavilion</label>
     </section>
