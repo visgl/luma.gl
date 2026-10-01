@@ -101,6 +101,11 @@ export {
 } from './lib/color/normalize-byte-colors';
 
 export {sketchStroke, type SketchStrokeProps} from './modules/geometry/sketch-stroke/sketch-stroke';
+export {
+  pathDash,
+  type PathDashProps,
+  type PathDashUniforms
+} from './modules/geometry/path-dash/path-dash';
 
 // math libraries
 export {random} from './modules/math/random/random';
