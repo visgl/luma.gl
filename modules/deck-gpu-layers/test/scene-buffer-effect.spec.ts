@@ -12,8 +12,7 @@ import {
 } from '@deck.gl/core';
 import {ScatterplotLayer} from '@deck.gl/layers';
 import {SceneBufferEffect, surfaceBuffer} from '@deck.gl-community/gpu-layers';
-import {luma, Buffer, Texture, type Device, type RenderPass} from '@luma.gl/core';
-import {webgpuAdapter, WebGPUDevice} from '@luma.gl/webgpu';
+import {Buffer, Texture, type Device, type RenderPass} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, test} from 'vitest';
@@ -216,21 +215,10 @@ test.each([
 });
 
 test('scene capture accepts stock Deck color and depth without inventing normals or selection', async context => {
-  if (!(await getWebGPUTestDevice())) return context.skip('WebGPU unavailable');
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
   const errors: string[] = [];
   let stage = 'ordinary stock rendering';
-  // Own this presentation context instead of reusing the earlier Deck fixtures' canvas.
-  const device = await luma.createDevice({
-    type: 'webgpu',
-    adapters: [webgpuAdapter],
-    featureLevel: 'max',
-    createCanvasContext: {width: 64, height: 64},
-    debug: true,
-    onError: error => {
-      errors.push(error.message);
-    }
-  });
-  expect(device).toBeInstanceOf(WebGPUDevice);
   let deviceLoss: Awaited<typeof device.lost> | undefined;
   void device.lost.then(info => {
     deviceLoss = info;
@@ -376,7 +364,6 @@ test('scene capture accepts stock Deck color and depth without inventing normals
   } finally {
     deck.finalize();
     parent.remove();
-    device.destroy();
   }
 });
 
