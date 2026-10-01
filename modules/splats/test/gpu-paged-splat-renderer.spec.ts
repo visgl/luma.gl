@@ -57,7 +57,8 @@ it('sparse-to-dense frontiers clear borrowed row indirection while reusing capac
       viewportSize: [16, 16]
     });
 
-    expect(renderer.encode(device.commandEncoder)).toBeDefined();
+    // This regression reads compute-produced indirect counts; presentation is tested separately.
+    expect(renderer.prepare(device.commandEncoder)).toBeDefined();
     device.submit();
     const originalGraph = renderer.compiledGraph;
     expect(renderer.stats.globalSortCapacity).toBe(4);
@@ -66,7 +67,7 @@ it('sparse-to-dense frontiers clear borrowed row indirection while reusing capac
       {id: 'sparse-page', data: firstPage},
       {id: 'capacity-page', data: secondPage, activeRows: new Uint32Array([0])}
     ]);
-    expect(renderer.encode(device.commandEncoder)).toBeDefined();
+    expect(renderer.prepare(device.commandEncoder)).toBeDefined();
     expect(renderer.compiledGraph, 'reuses the graph within the existing sort bucket').toBe(
       originalGraph
     );
