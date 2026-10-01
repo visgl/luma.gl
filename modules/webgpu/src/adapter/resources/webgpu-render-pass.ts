@@ -13,7 +13,14 @@ import type {
   BindingsByGroup,
   VertexArray
 } from '@luma.gl/core';
-import {Buffer, RenderPass, RenderPipeline, _getDefaultBindGroupFactory, log} from '@luma.gl/core';
+import {
+  Buffer,
+  RenderPass,
+  RenderPipeline,
+  _getDefaultBindGroupFactory,
+  log,
+  textureFormatDecoder
+} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUBuffer} from './webgpu-buffer';
 // import {WebGPUCommandEncoder} from './webgpu-command-encoder';
@@ -188,15 +195,15 @@ export class WebGPURenderPass extends RenderPass {
     if (options.indexCount !== undefined) {
       this.handle.drawIndexed(
         options.indexCount,
-        options.instanceCount,
+        options.instanceCount ?? 1,
         options.firstIndex,
         options.baseVertex,
         options.firstInstance
       );
     } else {
       this.handle.draw(
-        options.vertexCount || 0,
-        options.instanceCount || 1,
+        options.vertexCount ?? 0,
+        options.instanceCount ?? 1,
         options.firstVertex,
         options.firstInstance
       );
@@ -222,7 +229,7 @@ export class WebGPURenderPass extends RenderPass {
     if (blendConstant) {
       this.handle.setBlendConstant(blendConstant);
     }
-    if (stencilReference) {
+    if (stencilReference !== undefined) {
       this.handle.setStencilReference(stencilReference);
     }
     if (scissorRect) {
@@ -319,20 +326,21 @@ export class WebGPURenderPass extends RenderPass {
       // STENCIL
       if (this.props.stencilReadOnly) {
         depthStencilAttachment.stencilReadOnly = true;
+      } else if (this.props.clearStencil !== false) {
+        depthStencilAttachment.stencilClearValue = this.props.clearStencil;
       }
-      // if (!this.props.stencilReadOnly && this.props.clearStencil !== false) {
-      //   depthStencilAttachment.stencilClearValue = this.props.clearStencil;
-      // }
 
-      // WebGPU only wants us to set these parameters if the texture format actually has a depth aspect
-      const hasDepthAspect = true;
+      // WebGPU requires load/store ops for exactly the aspects the attachment format has
+      const attachmentFormat = framebuffer.depthStencilAttachment.texture.format;
+      const attachmentAspects = textureFormatDecoder.getInfo(attachmentFormat).attachment;
+      const hasDepthAspect = attachmentAspects !== 'stencil';
       if (hasDepthAspect && !this.props.depthReadOnly) {
         depthStencilAttachment.depthLoadOp = this.props.clearDepth !== false ? 'clear' : 'load';
         depthStencilAttachment.depthStoreOp = 'store'; // TODO - support 'discard'?
       }
 
-      // WebGPU only wants us to set these parameters if the texture format actually has a stencil aspect
-      const hasStencilAspect = false;
+      const hasStencilAspect =
+        attachmentAspects === 'stencil' || attachmentAspects === 'depth-stencil';
       if (hasStencilAspect && !this.props.stencilReadOnly) {
         depthStencilAttachment.stencilLoadOp = this.props.clearStencil !== false ? 'clear' : 'load';
         depthStencilAttachment.stencilStoreOp = 'store'; // TODO - support 'discard'?
