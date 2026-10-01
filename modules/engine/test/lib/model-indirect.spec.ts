@@ -65,6 +65,8 @@ it('Model#setIndirectBuffer draws a GPU-written instance count', async () => {
     isInstanced: true,
     indirectBuffer: drawRecord
   });
+  // The record is caller-owned; ask the model for its geometry words once.
+  model.writeIndirectDrawRecord(drawRecord);
 
   const computePass = device.beginComputePass({});
   kernel.dispatch(computePass, {bindings: {selectedCount}, x: 1});
@@ -86,7 +88,7 @@ it('Model#setIndirectBuffer draws a GPU-written instance count', async () => {
   expect(await readRedChannel(texture), 'exactly the GPU-counted instances drew').toEqual([
     255, 255, 0, 0
   ]);
-  expect(await readWords(drawRecord), 'model filled the non-indexed geometry words').toEqual([
+  expect(await readWords(drawRecord), 'record holds the model geometry and GPU count').toEqual([
     4, 2, 0, 0
   ]);
 
@@ -109,7 +111,38 @@ it('Model#setIndirectBuffer draws a GPU-written instance count', async () => {
   texture.destroy();
 });
 
-it('Model#setIndirectBuffer uses indexed records and tracks geometry changes', async () => {
+it('Model#draw never writes a caller-owned indirect record', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+
+  const {framebuffer, texture} = createTarget(device);
+  // A complete record: 4 vertices, 1 instance. The model's own vertexCount differs.
+  const drawRecord = device.createBuffer({
+    usage: Buffer.INDIRECT | Buffer.COPY_DST | Buffer.COPY_SRC,
+    data: new Uint32Array([4, 1, 0, 0])
+  });
+  const model = new Model(device, {
+    source: INSTANCE_PER_PIXEL_WGSL,
+    topology: 'triangle-strip',
+    vertexCount: 3,
+    indirectBuffer: drawRecord
+  });
+
+  const renderPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
+  expect(model.draw(renderPass)).toBe(true);
+  renderPass.end();
+  device.submit();
+
+  expect(await readRedChannel(texture), 'the record counts were drawn').toEqual([255, 0, 0, 0]);
+  expect(await readWords(drawRecord), 'the record is unchanged').toEqual([4, 1, 0, 0]);
+
+  model.destroy();
+  drawRecord.destroy();
+  framebuffer.destroy();
+  texture.destroy();
+});
+
+it('Model#writeIndirectDrawRecord writes indexed records at an offset', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) return;
 
@@ -131,6 +164,7 @@ it('Model#setIndirectBuffer uses indexed records and tracks geometry changes', a
     isInstanced: true
   });
   model.setIndirectBuffer(drawRecords, 20);
+  model.writeIndirectDrawRecord(drawRecords, 20);
 
   let renderPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
   model.draw(renderPass);
@@ -140,22 +174,22 @@ it('Model#setIndirectBuffer uses indexed records and tracks geometry changes', a
   expect(await readRedChannel(texture), 'indexed indirect draw used the GPU count').toEqual([
     255, 255, 255, 0
   ]);
+  let words = await readWords(drawRecords);
   expect(
-    (await readWords(drawRecords)).slice(5),
-    'model filled indexCount, firstIndex, baseVertex, firstInstance'
+    words.slice(5),
+    'indexCount, instanceCount, firstIndex, baseVertex, firstInstance'
   ).toEqual([6, 3, 0, 0, 0]);
-  expect((await readWords(drawRecords))[4], 'words outside the record are untouched').toBe(99);
+  expect(words[4], 'words outside the record are untouched').toBe(99);
 
-  // An index-count change is rewritten into the record; the GPU-owned instanceCount is kept.
+  // An index-count change is rewritten through the encoder; the instanceCount word is kept.
   model.setIndexCount(3);
-  model.predraw(device.commandEncoder);
+  model.writeIndirectDrawRecord(drawRecords, 20, device.commandEncoder);
   renderPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
   model.draw(renderPass);
   renderPass.end();
   device.submit();
-  expect((await readWords(drawRecords)).slice(5), 'indexCount change is synced').toEqual([
-    3, 3, 0, 0, 0
-  ]);
+  words = await readWords(drawRecords);
+  expect(words.slice(5), 'indexCount change is written').toEqual([3, 3, 0, 0, 0]);
 
   model.destroy();
   indexBuffer.destroy();
@@ -165,13 +199,10 @@ it('Model#setIndirectBuffer uses indexed records and tracks geometry changes', a
 });
 
 it.each([
-  {indexed: false, prepareFirstDraw: false},
-  {indexed: false, prepareFirstDraw: true},
-  {indexed: true, prepareFirstDraw: false},
-  {indexed: true, prepareFirstDraw: true}
-])('Model indirect geometry stays ordered across passes: %j', async ({
-  indexed,
-  prepareFirstDraw
+  {indexed: false},
+  {indexed: true}
+])('Model#writeIndirectDrawRecord stays ordered across passes in one submission: %j', async ({
+  indexed
 }) => {
   const device = await getWebGPUTestDevice();
   if (!device) return;
@@ -192,7 +223,6 @@ it.each([
     topology: indexed ? 'triangle-list' : 'triangle-strip',
     indexBuffer,
     indirectBuffer: drawRecord,
-    instanceCount: 0,
     isInstanced: true
   });
 
@@ -201,7 +231,8 @@ it.each([
       const count = passIndex === 1 ? 0 : indexed ? 6 : 4;
       if (indexed) model.setIndexCount(count);
       else model.setVertexCount(count);
-      if (passIndex > 0 || prepareFirstDraw) model.predraw(device.commandEncoder);
+      // Encoded copies run between passes, so each pass sees its own geometry.
+      model.writeIndirectDrawRecord(drawRecord, 0, device.commandEncoder);
       const renderPass = device.beginRenderPass({
         framebuffer: targets[passIndex].framebuffer,
         clearColor: [0, 0, 0, 0]
@@ -209,12 +240,11 @@ it.each([
       expect(model.draw(renderPass)).toBe(true);
       renderPass.end();
     }
-    // All three passes deliberately share a submission: queue writes cannot preserve their order.
     device.submit();
     expect(await readRedChannel(targets[0].texture)).toEqual([255, 255, 0, 0]);
     expect(await readRedChannel(targets[1].texture)).toEqual([0, 0, 0, 0]);
     expect(await readRedChannel(targets[2].texture)).toEqual([255, 255, 0, 0]);
-    expect((await readWords(drawRecord))[1], 'ordered geometry uploads preserve the count').toBe(2);
+    expect((await readWords(drawRecord))[1], 'geometry writes preserve the count').toBe(2);
   } finally {
     model.destroy();
     indexBuffer?.destroy();
@@ -224,125 +254,6 @@ it.each([
       texture.destroy();
     }
   }
-});
-
-it('Model rejects unprepared indirect changes without corrupting a pending draw', async () => {
-  const device = await getWebGPUTestDevice();
-  if (!device) return;
-
-  const {framebuffer, texture} = createTarget(device);
-  const drawRecord = device.createBuffer({
-    usage: Buffer.INDIRECT | Buffer.COPY_DST,
-    data: new Uint32Array([0, 1, 0, 0])
-  });
-  const model = new Model(device, {
-    source: INSTANCE_PER_PIXEL_WGSL,
-    topology: 'triangle-strip',
-    vertexCount: 4,
-    indirectBuffer: drawRecord
-  });
-  const renderPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
-  try {
-    expect(model.draw(renderPass)).toBe(true);
-    model.setVertexCount(0);
-    expect(() => model.draw(renderPass)).toThrow();
-    // Rebinding the same record must not reopen the queue-initialization path.
-    model.setIndirectBuffer(null);
-    model.setIndirectBuffer(drawRecord);
-    expect(() => model.draw(renderPass)).toThrow();
-  } finally {
-    renderPass.end();
-    device.submit();
-  }
-  try {
-    expect(await readRedChannel(texture), 'the first draw retains its geometry').toEqual([
-      255, 0, 0, 0
-    ]);
-  } finally {
-    model.destroy();
-    drawRecord.destroy();
-    framebuffer.destroy();
-    texture.destroy();
-  }
-});
-
-it('Model prepares unchanged indirect geometry on independent command encoders', async () => {
-  const device = await getWebGPUTestDevice();
-  if (!device) return;
-
-  const {framebuffer, texture} = createTarget(device);
-  const drawRecord = device.createBuffer({
-    usage: Buffer.INDIRECT | Buffer.COPY_DST,
-    data: new Uint32Array([0, 1, 0, 0])
-  });
-  const model = new Model(device, {
-    source: INSTANCE_PER_PIXEL_WGSL,
-    topology: 'triangle-strip',
-    vertexCount: 4,
-    indirectBuffer: drawRecord
-  });
-  const discardedEncoder = device.createCommandEncoder();
-  const submittedEncoder = device.createCommandEncoder();
-  try {
-    // Force an ordered update after the one-time queue initialization.
-    model.setVertexCount(0);
-    model.predraw(device.commandEncoder);
-    model.setVertexCount(4);
-    model.predraw(discardedEncoder);
-    model.predraw(submittedEncoder);
-    const renderPass = submittedEncoder.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
-    expect(model.draw(renderPass)).toBe(true);
-    renderPass.end();
-    device.submit(submittedEncoder.finish());
-    expect(await readRedChannel(texture)).toEqual([255, 0, 0, 0]);
-  } finally {
-    discardedEncoder.destroy();
-    model.destroy();
-    drawRecord.destroy();
-    framebuffer.destroy();
-    texture.destroy();
-  }
-});
-
-it('Model#setIndirectBuffer validates buffer usage and alignment', async () => {
-  const device = await getWebGPUTestDevice();
-  if (!device) return;
-
-  const model = new Model(device, {
-    source: INSTANCE_PER_PIXEL_WGSL,
-    topology: 'triangle-strip',
-    vertexCount: 4
-  });
-  const storageOnly = device.createBuffer({byteLength: 16, usage: Buffer.STORAGE});
-  const drawRecord = device.createBuffer({
-    byteLength: 16,
-    usage: Buffer.INDIRECT | Buffer.COPY_DST
-  });
-
-  model.setIndirectBuffer(drawRecord);
-  expect(() => model.setIndirectBuffer(storageOnly)).toThrow();
-  for (const invalidOffset of [-4, 2, 0.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
-    expect(() => model.setIndirectBuffer(drawRecord, invalidOffset)).toThrow();
-    expect(model.indirectBuffer, 'invalid binding leaves the buffer unchanged').toBe(drawRecord);
-    expect(model.indirectOffset, 'invalid binding leaves the offset unchanged').toBe(0);
-  }
-
-  // A 16-byte buffer cannot hold a record at offset 4.
-  model.setIndirectBuffer(drawRecord, 4);
-  const {framebuffer, texture} = createTarget(device);
-  const renderPass = device.beginRenderPass({framebuffer});
-  try {
-    expect(() => model.draw(renderPass)).toThrow();
-  } finally {
-    renderPass.end();
-    device.submit();
-  }
-
-  model.destroy();
-  storageOnly.destroy();
-  drawRecord.destroy();
-  framebuffer.destroy();
-  texture.destroy();
 });
 
 it('Model#setIndirectBuffer throws on WebGL', async () => {
@@ -361,7 +272,7 @@ void main() { fragColor = vec4(1.0); }`,
   const buffer = device.createBuffer({byteLength: 16});
 
   expect(() => model.setIndirectBuffer(buffer)).toThrow();
-  expect(model.indirectBuffer, 'failed call leaves CPU instance counts active').toBe(null);
+  expect(model.indirectBuffer, 'failed call leaves direct draws active').toBe(null);
   expect(() => model.setIndirectBuffer(null), 'clearing is always allowed').not.toThrow();
 
   model.destroy();

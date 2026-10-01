@@ -61,7 +61,7 @@ renderPass.end();
 | `vertexCount?` | `number` | Number of vertices to draw. For indexed models, this is used as the index count when `indexCount` is not provided, including an explicit value of `0`. |
 | `indexBuffer?` | `Buffer \| DynamicBuffer \| null` | Optional index buffer. |
 | `indexCount?` | `number` | Number of indices to draw. Takes precedence over `vertexCount`; if neither is provided, the full index buffer is drawn. |
-| `indirectBuffer?` | `Buffer \| null` | WebGPU only. Indirect draw record whose `instanceCount` is written on the GPU. See [`setIndirectBuffer()`](#setindirectbufferindirectbuffer-buffer--null-indirectoffset-number-void). |
+| `indirectBuffer?` | `Buffer \| null` | WebGPU only. Caller-owned indirect draw record that `draw()` consumes instead of `vertexCount` / `instanceCount`. See [`setIndirectBuffer()`](#setindirectbufferindirectbuffer-buffer--null-indirectoffset-number-void). |
 | `indirectOffset?` | `number` | Byte offset of the indirect draw record in `indirectBuffer`. Defaults to `0`. |
 | `attributes?` | `Record<string, Buffer \| DynamicBuffer>` | Buffer-valued attributes. |
 | `constantAttributes?` | `Record<string, TypedArray>` | Constant attributes, primarily for WebGL. |
@@ -99,7 +99,7 @@ Draw-count state for the model.
 
 ### `indirectBuffer`, `indirectOffset`
 
-WebGPU indirect draw record that supplies a GPU-resident instance count, or `null` when the model draws `instanceCount`.
+Caller-owned WebGPU indirect draw record, or `null` when the model draws `vertexCount` / `instanceCount`.
 
 ### `indexBuffer`, `bufferAttributes`, `constantAttributes`
 
@@ -195,39 +195,41 @@ Updates the indexed draw count. An explicit index count takes precedence over th
 
 ### `setIndirectBuffer(indirectBuffer: Buffer | null, indirectOffset?: number): void`
 
-Draws with an instance count that lives in GPU memory, for example the number of rows that
-survived a GPU filter or compaction pass, without reading it back to the CPU. While set,
-`draw()` records `renderPass.drawIndirect()`, or `drawIndexedIndirect()` when the model has an
-index buffer, instead of a direct draw with `instanceCount`. A CPU `instanceCount` of `0` does not
-skip the draw. Pass `null` to return to `instanceCount`.
+Draws from an indirect draw record in GPU memory instead of `vertexCount` / `instanceCount`. A
+typical record holds the number of rows that survived a GPU filter or compaction pass, so the count
+never has to be read back to the CPU. While set, `draw()` records `renderPass.drawIndirect()`, or
+`drawIndexedIndirect()` when the model has an index buffer. A CPU `instanceCount` of `0` does not
+skip the draw. Pass `null` to return to direct draws.
 
-`indirectBuffer` holds one WebGPU indirect draw record at `indirectOffset` (nonnegative and a multiple of 4):
+`indirectBuffer` holds one WebGPU indirect draw record at `indirectOffset` (a multiple of 4):
 
 | Draw | Record (`uint32` words) | Bytes |
 | --- | --- | --- |
 | non-indexed | `vertexCount, instanceCount, firstVertex, firstInstance` | 16 |
 | indexed | `indexCount, instanceCount, firstIndex, baseVertex, firstInstance` | 20 |
 
-The model and the application split ownership of the record:
+The record belongs to the application, and `draw()` never writes it. The buffer needs
+`Buffer.INDIRECT` usage, plus `Buffer.COPY_DST` or `Buffer.STORAGE` depending on how the
+application writes it. A [`DrawCommandBuffer`](/docs/api-reference/experimental/gpu-core/draw-command-buffer)
+from `@luma.gl/gpgpu` can be passed directly: use `drawCommands.buffer` and
+`drawCommands.getCommandByteOffset(index)`.
 
-- The model writes every word except `instanceCount` from its own vertex or index count and
-  draw offsets (`baseVertex` and `firstInstance` are `0`), so callers never need to know the
-  model's geometry. The first draw can initialize these words with queue writes. After that,
-  call `model.predraw(commandEncoder)` before opening the render pass whenever the geometry,
-  indirect buffer, or offset changes. This encodes uploads in order with earlier draws;
-  unprepared changes throw in `draw()`. Use separate passes with `predraw()` between them when
-  drawing different geometry through the same record. With custom command encoders, call
-  `predraw()` on each encoder before its render pass, even if the geometry is unchanged.
-- The application owns the `instanceCount` word at byte `indirectOffset + 4`. It must be written
-  before the render pass begins, typically by the compute pass that produced it or by a
-  `copyBufferToBuffer()` encoded after that pass. Buffer copies cannot be encoded inside a render
-  pass, which is why the model does not copy the count itself.
+WebGL2 has no indirect draws. On WebGL this asserts instead of drawing a stale CPU count. Because
+the count changes on the GPU, call `setNeedsRedraw()` when a new count is published.
 
-The buffer needs `Buffer.INDIRECT | Buffer.COPY_DST` usage (add `Buffer.STORAGE` if a shader
-writes the count directly). A [`DrawCommandBuffer`](/docs/api-reference/experimental/gpu-core/draw-command-buffer)
-from `@luma.gl/gpgpu` is compatible: pass `drawCommands.buffer` and
-`drawCommands.getCommandByteOffset(index)`. Use one record per model; models that share a record
-would overwrite each other's geometry words.
+### `writeIndirectDrawRecord(indirectBuffer: Buffer, indirectOffset?: number, commandEncoder?: CommandEncoder): void`
+
+Writes the model's geometry into an indirect draw record: the vertex or index count,
+`firstVertex` or `firstIndex`, and `0` for `baseVertex` and `firstInstance`. The `instanceCount`
+word at byte `indirectOffset + 4` is not written, so a GPU-written count survives. The buffer
+needs `Buffer.COPY_DST` usage.
+
+- Without `commandEncoder`, the words are written with queue writes. They apply before the next
+  submitted command buffer, so all draws in that submission see the last value written.
+- With `commandEncoder`, the words are encoded as ordered copies, so each render pass sees the
+  geometry written before it. This must be called outside a render pass.
+
+Call it again whenever the vertex or index count, `firstVertex` or `firstIndex` changes.
 
 ```ts
 const drawRecord = device.createBuffer({
@@ -235,6 +237,7 @@ const drawRecord = device.createBuffer({
   usage: Buffer.INDIRECT | Buffer.COPY_DST
 });
 model.setIndirectBuffer(drawRecord);
+model.writeIndirectDrawRecord(drawRecord); // geometry words, once or when geometry changes
 
 // Before the render pass: publish the GPU-resident count (a single u32) into the record.
 runCompaction(device.commandEncoder); // writes selectedCount on the GPU
@@ -245,14 +248,10 @@ device.commandEncoder.copyBufferToBuffer({
   size: 4
 });
 
-model.predraw(device.commandEncoder); // orders geometry updates before this pass
 const renderPass = device.beginRenderPass({});
 model.draw(renderPass); // drawIndirect / drawIndexedIndirect
 renderPass.end();
 ```
-
-Throws on WebGL, which has no indirect draws, rather than drawing a stale CPU count. Because the
-count changes on the GPU, call `setNeedsRedraw()` when a new count is published.
 
 ### `setShaderInputs(shaderInputs: ShaderInputs): void`
 

@@ -53,10 +53,11 @@ Target Release Date: Q3, 2026
 
 **@luma.gl/engine**
 
-- **GPU-resident instance counts** - [`Model.setIndirectBuffer()`](/docs/api-reference/engine/model#setindirectbufferindirectbuffer-buffer--null-indirectoffset-number-void)
-  (or the `indirectBuffer` prop) draws an instance count written on the GPU, such as the survivors
-  of a compaction pass, with `drawIndirect` / `drawIndexedIndirect` on WebGPU. The model keeps the
-  record's vertex or index count in sync, so no CPU readback or geometry knowledge is needed.
+- **Indirect draws** - [`Model.setIndirectBuffer()`](/docs/api-reference/engine/model#setindirectbufferindirectbuffer-buffer--null-indirectoffset-number-void)
+  (or the `indirectBuffer` prop) draws from a caller-owned WebGPU indirect draw record, such as one
+  whose instance count a compaction pass wrote, with `drawIndirect` / `drawIndexedIndirect` and no CPU
+  readback. [`Model.writeIndirectDrawRecord()`](/docs/api-reference/engine/model#writeindirectdrawrecordindirectbuffer-buffer-indirectoffset-number-commandencoder-commandencoder-void)
+  fills in the model's vertex or index count and leaves the instance count alone.
 - **Awaitable pipeline creation** - `Computation.createAsync()` and `Model.createAsync()` expose
   native asynchronous WebGPU pipeline creation for application loading phases, backed by
   cache-aware asynchronous `Device` and `PipelineFactory` methods.
