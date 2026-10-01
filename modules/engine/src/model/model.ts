@@ -551,15 +551,8 @@ export class Model {
   destroy(): void {
     if (!this._destroyed) {
       // `_pipelineCache` owns one reference per variant this model built, including the
-      // bound one, and releases each pipeline before the shaders it uses. Release
-      // `this.pipeline` directly only if eviction already dropped its entry.
-      const boundVariantIsCached = [...this._pipelineCache.values()].some(
-        entry => entry.pipeline === this.pipeline
-      );
+      // bound one, and releases each pipeline before the shaders it uses.
       this._releasePipelineCache();
-      if (this.pipeline && !boundVariantIsCached) {
-        this._releasePipelineVariant(this.pipeline);
-      }
       this._uniformStore.destroy();
       // TODO - mark resource as managed and destroyIfManaged() ?
       this._gpuGeometry?.destroy();
@@ -1297,23 +1290,15 @@ export class Model {
    * ownership of one reference to it and to its shaders.
    */
   private _cachePipelineVariant(): void {
+    // The key is never cached here: a cached key is adopted instead of rebuilt, and a stale
+    // rebuild clears the cache first.
     const key = this._getAttachmentFormatKey();
-    const previous = this._pipelineCache.get(key);
-    if (previous) {
-      this._releasePipelineVariant(previous.pipeline);
-    }
-    // Re-insert so Map iteration order tracks least-recently-used first.
-    this._pipelineCache.delete(key);
-    while (this._pipelineCache.size >= MAX_CACHED_PIPELINE_VARIANTS) {
-      // Never evict the bound pipeline: its reference would be left without an owner.
-      const evicted = [...this._pipelineCache].find(
-        ([, entry]) => entry.pipeline !== this.pipeline
-      );
-      if (!evicted) {
-        break;
-      }
-      this._pipelineCache.delete(evicted[0]);
-      this._releasePipelineVariant(evicted[1].pipeline);
+    if (this._pipelineCache.size >= MAX_CACHED_PIPELINE_VARIANTS) {
+      // Map iteration order is least-recently-used first. Each entry owns its own reference,
+      // so evicting one that shares the bound pipeline object leaves the bound entry intact.
+      const [evictedKey, evicted] = this._pipelineCache.entries().next().value!;
+      this._pipelineCache.delete(evictedKey);
+      this._releasePipelineVariant(evicted.pipeline);
     }
     this._pipelineCache.set(key, {
       pipeline: this.pipeline,

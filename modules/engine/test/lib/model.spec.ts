@@ -1652,3 +1652,84 @@ it('Model#bounds the number of cached pipeline variants', async () => {
 
   void 0;
 });
+
+it('Model#evicts a cached variant that shares the bound pipeline object', async () => {
+  const webgpuDevice = await getWebGPUTestDevice();
+  if (!webgpuDevice) {
+    void 0;
+    return;
+  }
+
+  // The construction-time variant (no attachment formats) and an explicit pass with the
+  // preferred color format and no depth resolve to one pipeline object under two keys.
+  const preferredColorFormat = webgpuDevice.preferredColorFormat;
+  const otherFormats = [
+    {color: 'rgba8unorm', depth: undefined},
+    {color: 'rgba8unorm', depth: 'depth16unorm'},
+    {color: 'rgba8unorm', depth: 'depth24plus'},
+    {color: 'rgba8unorm', depth: 'depth32float'},
+    {color: 'rgba16float', depth: undefined},
+    {color: 'rgba16float', depth: 'depth16unorm'},
+    {color: 'rgba16float', depth: 'depth24plus'},
+    {color: 'rgba16float', depth: 'depth32float'}
+  ]
+    .filter(formats => formats.color !== preferredColorFormat)
+    .slice(0, 7);
+  if (otherFormats.length < 7) {
+    void 0;
+    return;
+  }
+  const framebuffers = [...otherFormats, {color: preferredColorFormat, depth: undefined}].map(
+    (formats, index) =>
+      webgpuDevice.createFramebuffer({
+        id: `variant-shared-${index}`,
+        width: 4,
+        height: 4,
+        colorAttachments: [formats.color as never],
+        depthStencilAttachment: formats.depth as never
+      })
+  );
+
+  const pipelineFactory = new PipelineFactory(webgpuDevice);
+  const shaderFactory = new ShaderFactory(webgpuDevice);
+  const model = new Model(webgpuDevice, {
+    id: 'attachment-variant-shared-test',
+    source: DUMMY_WGSL,
+    vertexCount: 3,
+    pipelineFactory,
+    shaderFactory
+  });
+  const constructionPipeline = model.pipeline;
+
+  for (const framebuffer of framebuffers) {
+    const renderPass = webgpuDevice.beginRenderPass({framebuffer});
+    expect(model.draw(renderPass), 'model draws into every render target').toBe(true);
+    renderPass.end();
+    webgpuDevice.submit();
+  }
+
+  // The last pass evicted the least recently used entry, the construction-time variant,
+  // even though it holds the same pipeline object that is now bound.
+  expect(model.pipeline, 'the preferred-format pass reuses the construction pipeline').toBe(
+    constructionPipeline
+  );
+  expect(cachedVariantCount(model), 'cached variants stay at the bound').toBe(8);
+  const renderPipelineCache = (
+    pipelineFactory as unknown as {_renderPipelineCache: Record<string, {useCount: number}>}
+  )._renderPipelineCache;
+  expect(
+    renderPipelineCache[constructionPipeline.hash].useCount,
+    'only the bound entry still references the shared pipeline'
+  ).toBe(1);
+
+  model.destroy();
+  expect(
+    pipelineReferenceCounts(pipelineFactory),
+    'destroy balances every pipeline reference'
+  ).toEqual(pipelineReferenceCounts(pipelineFactory).map(() => 0));
+  expect(countShaderReferences(shaderFactory), 'destroy balances shader references').toBe(0);
+
+  framebuffers.forEach(framebuffer => framebuffer.destroy());
+
+  void 0;
+});
