@@ -171,9 +171,23 @@ Returns `null` for an unknown field or non-struct data.
 Returns a borrowed field view by declaration order, or `null` when the index is
 out of range or the data is not struct-formatted.
 
+### `retainBufferOwnership(target): void`
+
+Gives a borrowed `GPUData` chunk over the same buffer an independent ownership reference.
+The source must own the buffer and the target must borrow it. Each owner releases its reference
+on `destroy()`; the last owner destroys the buffer. Borrowed views do not acquire references
+implicitly. `GPUTable.detachBatches()` and `GPUTable.packBatches()` use this so that every view
+of a buffer shared across the resulting batch groups can be destroyed in any order.
+
+### `transferBufferOwnership(target): void`
+
+Moves this chunk's ownership reference to a borrowed chunk over the same buffer. The source
+becomes borrowed; no extra reference is created.
+
 ### `destroy(): void`
 
-Destroys the backing buffer only when `ownsBuffer` is true. Borrowed buffers are
+Releases this chunk's ownership reference when `ownsBuffer` is true. The backing buffer is
+destroyed after its last ownership reference is released. Borrowed buffers are
 left alive.
 
 ## Ownership
@@ -186,3 +200,9 @@ is controlled here.
 buffer. If a streaming adapter receives a new source batch, it should create new
 `GPUData` objects with their own buffers and append those chunks to a
 `GPUVector`.
+
+When a producer deliberately creates several `GPUData` views of one buffer, it
+decides how their lifetimes relate. One owning view with borrowing siblings ties
+every sibling to the owner's lifetime. Giving each view its own reference with
+`retainBufferOwnership()` lets each view, and the batch that holds it, be
+destroyed independently; the buffer is released with the last reference.
