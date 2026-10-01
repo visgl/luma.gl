@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Texture, type Device, type Framebuffer, type TextureFormatColor} from '@luma.gl/core';
-import {bloom, createBloomShaderPassPipeline, toneMapping} from '@luma.gl/effects';
+import {bloom, createBloomCompositeShaderPass, toneMapping} from '@luma.gl/effects';
 import {
   AnimationLoopTemplate,
   type AnimationProps,
@@ -12,7 +12,7 @@ import {
   ShaderPassRenderer
 } from '@luma.gl/engine';
 import {getGPUConvolutionBloomSupport, GPUConvolutionBloom} from '@luma.gl/experimental';
-import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 import type {Panel, SettingsSchema, SettingsState} from '@deck.gl-community/panels';
 import {
   ExamplePanelManager,
@@ -71,7 +71,7 @@ type BloomSettings = {
   spectralSpread: number;
   animate: boolean;
 };
-type ShaderPassLike = ShaderPass | ShaderPassPipeline;
+type ShaderPassLike = ShaderPass | CompositeShaderPass;
 
 const DEFAULT_SETTINGS: BloomSettings = {
   technique: 'Multiscale HDR',
@@ -246,7 +246,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           .supported)
     ) {
       shaderPasses.push(
-        createBloomShaderPassPipeline({
+        createBloomCompositeShaderPass({
           colorFormat: this.colorFormat,
           threshold: this.settings.threshold,
           exposure: this.settings.exposure,

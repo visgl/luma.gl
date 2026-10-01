@@ -16,7 +16,7 @@ Keeping those steps separate prevents controls, picking, and highlighting from b
 
 Engine provides focused helpers, not an application-wide event system:
 
-* `OrbitControls` converts canvas pointer, pinch, two-finger pan, and wheel input into camera state.
+* `OrbitControls` converts canvas pointer, pinch, optional two-finger roll and pan, and wheel input into camera state.
 * `PickingManager` renders object identity into an offscreen target and reads the identity at a requested pixel.
 * Highlighting remains a normal render concern. Store the hovered or selected identity, pass it to the shader, and render that object differently.
 
@@ -24,7 +24,7 @@ Use browser events or an application framework to decide which canvas receives i
 
 ## Camera interaction[​](#camera-interaction "Direct link to Camera interaction")
 
-`OrbitControls` attaches mouse, wheel, and touch orbit behavior to one HTML canvas. A single finger rotates the camera, two fingers pinch to zoom, and enabling panning lets two fingers move the orbit target. Update the controls before deriving the view matrix, then invalidate the view only when its state changes.
+`OrbitControls` attaches mouse, wheel, and touch orbit behavior to one HTML canvas. A single finger changes yaw and pitch; two fingers pinch to zoom; enabling rotation lets a twist roll the camera up axis; enabling panning lets two fingers move the orbit target. Update the controls before deriving the view matrix, then invalidate the view only when its state changes.
 
 ```
 import {OrbitControls} from '@luma.gl/engine';
@@ -53,7 +53,9 @@ function updateCamera(timeMilliseconds: number): void {
 
   const eyePosition = controls.getEyePosition();
 
-  // Build the view matrix from eyePosition and controls.props.target.
+  const upDirection = controls.getUpDirection();
+
+  // Build the view matrix from eyePosition, controls.props.target, and upDirection.
 
 }
 

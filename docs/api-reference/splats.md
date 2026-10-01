@@ -4,13 +4,31 @@
 
 `@luma.gl/splats` provides experimental GPU-native Gaussian splat rendering. It owns prepared splat data, directional spherical harmonics, semantic filtering, GPU picking, hierarchy traversal, bounded residency, decoded Khronos glTF attributes, covariance projection, depth ordering, and render models without depending on Apache Arrow, loaders.gl, glTF packages, or deck.gl.
 
-Install the published experimental module with `yarn add @luma.gl/splats`. Its APIs may evolve without a 9.4 semver compatibility promise.
+The module is currently a private, unpublished luma.gl workspace. Install dependencies from the repository root and add `"@luma.gl/splats": "workspace:*"` to another workspace package when developing against it locally.
 
-## Interactive Gaussian splat viewer[​](#interactive-gaussian-splat-viewer "Direct link to Interactive Gaussian splat viewer")
+## Interactive Gaussian splat showcase[​](#interactive-gaussian-splat-showcase "Direct link to Interactive Gaussian splat showcase")
 
-Explore the complete 741,883-splat Train capture with progressive loading, GPU depth ordering, and WebGL2 fallback. The viewer also includes Truck, Dr Johnson, Playroom, and custom authorized source URLs.
+Explore a deterministic generated Gaussian scene without downloading a third-party capture. WebGPU projects, orders, and draws each progressively added batch through a GPU command graph.
 
-[Open the Gaussian Splat Viewer](https://luma.gl/examples/showcase/gaussian-splat-viewer).
+### Gaussian Splats
+
+Progressive HDR Gaussian splat rendering
+
+[GitHub](https://github.com/visgl/luma.gl/tree/master/examples/showcase/gaussian-splats)Info
+
+InfoSource
+
+Mobile quality
+
+```
+// Loading source…
+```
+
+**Loading example**Preparing GPU resources…
+
+Scroll page · Ctrl/⌘ + scroll to interact
+
+[Open the full Gaussian splat showcase](https://luma.gl/examples/showcase/gaussian-splats).
 
 ## Choose a topic[​](#choose-a-topic "Direct link to Choose a topic")
 
@@ -20,13 +38,14 @@ Explore the complete 741,883-splat Train capture with progressive loading, GPU d
 | [Data and shading](https://luma.gl/docs/api-reference/splats/data-and-shading.md)               | Source columns, covariance, spherical harmonics, semantics, and updates. |
 | [Picking and scenes](https://luma.gl/docs/api-reference/splats/picking-and-scenes.md)           | GPU picking and mixed mesh-and-splat scenes.                             |
 | [Streaming and residency](https://luma.gl/docs/api-reference/splats/streaming-and-residency.md) | Bounded residency, hierarchy traversal, and foveated LOD.                |
-| [Formats and loaders](https://luma.gl/docs/api-reference/splats/formats-and-loaders.md)         | Khronos glTF splats, 3D Tiles, SPZ, and loaders.                         |
+| [Formats and loaders](https://luma.gl/docs/api-reference/splats/formats-and-loaders.md)         | Khronos glTF splats, 3D Tiles, SPZ, Arrow, and loaders.                  |
 
 ## Limits and compatibility[​](#limits-and-compatibility "Direct link to Limits and compatibility")
 
-The graph renderer, GPU ordering, hierarchy traversal, and storage-backed features require WebGPU. Use the prepared SplatRenderer path when WebGL 2 compatibility or caller-provided source ordering is required. The package is published with an experimental API.
+The graph renderer, GPU ordering, hierarchy traversal, and storage-backed features require WebGPU. Use the prepared SplatRenderer path when WebGL 2 compatibility or caller-provided source ordering is required. The package remains an experimental private workspace.
 
 ## Related modules[​](#related-modules "Direct link to Related modules")
 
 * [glTF](https://luma.gl/docs/api-reference/gltf.md)
-* Experimental GPU primitives
+* [Arrow](https://luma.gl/docs/api-reference/arrow.md)
+* [Experimental GPU primitives](https://luma.gl/docs/api-reference/experimental/gpu-core.md)

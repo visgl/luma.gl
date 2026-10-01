@@ -1,39 +1,16 @@
 <!doctype html>
 <head>
-  <!-- luma-example-support -->
-  <meta name="luma-example-id" content="experimental/shadow-map" />
-  <meta name="luma-example-backends" content="webgpu" />
-  <meta name="luma-example-mobile" content="reduced" />
-  <meta name="luma-example-mobile-profile" content="effects" />
-  <script data-luma-example-support-promise>
-    window.lumaExampleSupportPromise = new Promise(resolve => {
-      window.addEventListener('luma-example-support-ready', event => resolve(event.detail), {
-        once: true
-      });
-    });
-  </script>
-  <script type="module" data-luma-example-support-bootstrap>
-    import {installStandaloneExampleSupport} from '../../example-support.ts';
-    const exampleSupport = installStandaloneExampleSupport();
-    window.dispatchEvent(
-      new CustomEvent('luma-example-support-ready', {detail: exampleSupport})
-    );
-  </script>
-  <!-- /luma-example-support -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Effects: Shadow Map Quality</title>
   <style>body { margin: 0; background: #0b111a; color-scheme: dark; }</style>
 </head>
-<script type="module" data-luma-example-application>
-  const exampleSupport = await window.lumaExampleSupportPromise;
-  if (exampleSupport.supported) {
-    const {makeAnimationLoop} = await import('@luma.gl/engine');
-    const {webgpuAdapter} = await import('@luma.gl/webgpu');
-    const {default: AnimationLoopTemplate} = await import('./app.ts');
+<script type="module">
+  import {makeAnimationLoop} from '@luma.gl/engine';
+  import {webgpuAdapter} from '@luma.gl/webgpu';
+  import AnimationLoopTemplate from './app.ts';
 
-    const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgpuAdapter]});
-    animationLoop.start();
-  }
+  const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgpuAdapter]});
+  animationLoop.start();
 </script>
 <body></body>

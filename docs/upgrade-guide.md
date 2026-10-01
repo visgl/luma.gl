@@ -8,6 +8,24 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 *For detailed commit level logs that include alpha and beta releases, see the [CHANGELOG](https://github.com/visgl/luma.gl/blob/master/CHANGELOG.md) in the github repository.*
 
+## Upgrading to v10.0[​](#upgrading-to-v100 "Direct link to Upgrading to v10.0")
+
+**@luma.gl/gpgpu**
+
+### GPUFFT2D graph lifecycle[​](#gpufft2d-graph-lifecycle "Direct link to GPUFFT2D graph lifecycle")
+
+`GPUFFT2D` now takes `{input, output, width, height, batchCount?, direction?}` graph views. Replace `new GPUFFT2D(device, dimensions)` and `transform.encode(encoder, buffers)` with `graph.add(new GPUFFT2D(props))`, `graph.compile()`, and `compiled.encode(encoder, {parameters: undefined})`. Destroy the compiled graph instead of the primitive. `GPUFFT2DEncodeOptions` is removed. Forward and inverse transforms are separate graph operations; pass parameters are immutable. See [GPUFFT2D](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-fft2d.md) for the migration example.
+
+* `GPULZByteDecompressor` descriptors now contain five uint32 words per record: `[outputOffset, byteLength, literalSourceOffset, literalPeriod, matchOffset]`. Code that creates descriptor buffers directly must add `literalPeriod` and use `GPU_LZ_BYTE_DESCRIPTOR_WORDS` when allocating and indexing them. Prefer `planGPULZByteDescriptors()` to convert the unchanged four-word parser spans into GPU descriptors.
+
+**@luma.gl/shadertools**
+
+* `ShaderPassPipeline`, `ShaderPassPipelineStep`, and `ShaderPassComputeOptimization` have been renamed to `CompositeShaderPass`, `CompositeShaderPassStep`, and `CompositeShaderPassComputeOptimization`. Effect factories and values likewise replace their `ShaderPassPipeline` suffix with `CompositeShaderPass`.
+
+**@luma.gl/experimental**
+
+* OIT fullscreen resolution is now exposed as `createABufferResolveCompositeShaderPass()` and `createWBOITResolveCompositeShaderPass()`. `WBOITRenderer.capture()` returns the accumulation and revealage bindings for inserting the WBOIT resolve into a larger shader-pass stack.
+
 ## Upgrading to v9.4[​](#upgrading-to-v94 "Direct link to Upgrading to v9.4")
 
 **@luma.gl/core**
@@ -141,3 +159,9 @@ luma.gl v9 is a major modernization of the luma.gl API, with many breaking chang
 ## Upgrading to v8 and earlier releases[​](#upgrading-to-v8-and-earlier-releases "Direct link to Upgrading to v8 and earlier releases")
 
 This page only covers luma.gl v9 and later releases. For information on upgrading to from v8 and earlier releases, see the [Legacy Upgrade Guide](https://luma.gl/docs/legacy/legacy-upgrade-guide).
+
+## GPU Core composition[​](#gpu-core-composition "Direct link to GPU Core composition")
+
+GPU Core primitives now expose `getCommandNodes(graph)` instead of `addToGraph(graph)`. Schedule a primitive with `graph.add(primitive)`, which calls `getCommandNodes(graph)` internally. To inspect or modify nodes before scheduling, use `addGPUCommandNodes(graph, nodes)`. Graph-independent primitives can also be added to `GPUProgram`. `GPUCommandGraphContributor` and the compiler's legacy mutation fallback were removed. The three range/scatter primitives that also publish scratch views expose `getCommands(graph)` returning `{nodes, ...views}`; schedule `nodes` explicitly.
+
+`GPUProgramBindings.vectors` now accepts typed `GPUData`, readonly `GPUData[]`, or `GPUVector` instead of raw buffers. Compiler vector resolution returns `GraphVectorView`; access physical chunks through `.data` or canonical logical descriptors through `.chunks`.

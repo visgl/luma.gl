@@ -182,3 +182,52 @@ Calling `makeInterleavedGeometry()` on an already interleaved geometry with the 
 * `bufferLayout` is synthesized when omitted.
 * `makeGPUGeometry()` interleaves CPU `Geometry` before uploading it to GPU buffers.
 * Use [`GPUGeometry`](https://luma.gl/docs/api-reference/engine/geometry/gpu-geometry.md) when geometry data is already uploaded into GPU buffers.
+
+## Extracting architectural edges[​](#extracting-architectural-edges "Direct link to Extracting architectural edges")
+
+`makeEdgeGeometry(geometry, options?)` creates an indexed `line-list` geometry containing open boundaries and creases between adjacent triangle faces. It removes coplanar triangulation edges, welds duplicate positions across attribute seams, ignores duplicate and degenerate triangles, and retains edges shared by more than two faces.
+
+```
+import {CubeGeometry, makeEdgeGeometry} from '@luma.gl/engine';
+
+
+
+const surface = new CubeGeometry();
+
+const edges = makeEdgeGeometry(surface, {angleThreshold: 30});
+
+// Twelve cuboid edges, without face diagonals or duplicated seam edges.
+```
+
+Options:
+
+* `includeCoplanarEdges`: retain triangulation edges as well as architectural edges, default false.
+* `angleThreshold`: minimum dihedral angle in degrees (0–180), default 30. Coplanar internal edges are omitted even at zero. Adjacent triangles should have consistent winding.
+* `weldTolerance`: nonnegative position distance in source coordinate units, default zero for exact welding. Positive values also merge nearby vertices across spatial bucket boundaries.
+* `positionAttribute`: CPU position attribute name, default `POSITION`. Set it explicitly for legacy or custom attribute names. The name is preserved in the returned geometry.
+
+Input must be an indexed or non-indexed `triangle-list` with a packed three-component position attribute. Only the active `vertexCount` is inspected. Interleaved or GPU-only input must first be converted to packed CPU positions. The result borrows the source position attribute and owns new `Uint32Array` indices; it neither mutates the source nor copies unrelated attributes.
+
+This is CPU preprocessing for static mesh edges. Run it when geometry changes, rather than every frame. It does not compute view-dependent silhouettes or connect segments into joined paths. Render opaque surfaces before an edge overlay to provide hidden-edge occlusion; stroke width and material are renderer concerns.
+
+### Adjacent meshes and tile boundaries[​](#adjacent-meshes-and-tile-boundaries "Direct link to Adjacent meshes and tile boundaries")
+
+`makeEdgeGeometryFromGeometries(geometries, options?)` explicitly batches CPU meshes before running the same edge classifier. Shared coplanar edges disappear, while a crease between meshes is emitted once. Separately extracting each tile cannot distinguish a tile seam from an open boundary.
+
+```
+import {makeEdgeGeometryFromGeometries} from '@luma.gl/engine';
+
+
+
+const edges = makeEdgeGeometryFromGeometries(loadedTileGeometries, {
+
+  angleThreshold: 30,
+
+  weldTolerance: 0.001
+
+});
+```
+
+Provide a nonempty batch with positions in one common coordinate frame and the same position attribute name, typed-array constructor, and normalization setting. Coordinates are copied without changing their scalar type. The result owns new position and index arrays; source geometries and their draw ranges remain unchanged. Other attributes are not copied.
+
+The caller chooses the batch and recomputes it when tiles arrive, leave, or change. Render the batch output once, not once per tile. A missing neighbor remains an open boundary. Matching edge endpoints and consistent face winding are required: this helper does not split T-junctions, reconcile mixed levels of detail, transform tile coordinates, or remove skirts. Positive weld tolerance can reconcile small coordinate differences but can also merge nearby distinct edges.

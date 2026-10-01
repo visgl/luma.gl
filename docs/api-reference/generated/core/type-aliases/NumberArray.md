@@ -2,7 +2,7 @@
 
 > **NumberArray** = `number`\[]
 
-Defined in: node\_modules/@math.gl/types/dist/array-types.d.ts:21
+Defined in: node\_modules/@math.gl/types/dist/array-types.d.ts:27
 
 Type for classic arrays consisting of numbers
 

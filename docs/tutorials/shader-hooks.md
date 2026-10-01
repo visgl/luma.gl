@@ -6,6 +6,8 @@ Shader hooks let shader modules inject code into designated points in a shader. 
 
 <!-- -->
 
+**Loading example**Preparing GPU resources…
+
 It is assumed you've set up your development environment as described in [Setup](https://luma.gl/docs/tutorials.md).
 
 Hooks act like named callbacks within shader code. The base vertex shader calls `OFFSET_POSITION`, and modules supply implementations that modify the position. By attaching different modules to each model, one triangle is nudged left while the other is pushed right.

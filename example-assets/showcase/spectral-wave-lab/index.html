@@ -1,0 +1,82 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Spectral Wave Lab · luma.gl</title>
+    <style>
+      html,
+      body,
+      #canvas {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #01030b;
+      }
+      #canvas {
+        position: absolute;
+        inset: 0;
+      }
+      #example-panel-shell {
+        position: fixed;
+        z-index: 2;
+        left: 22px;
+        top: 22px;
+        width: min(390px, calc(100vw - 44px));
+        max-height: calc(100vh - 44px);
+        overflow: auto;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+      }
+      dl {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 4px 14px;
+        margin: 0;
+      }
+      dd {
+        margin: 0;
+        font-variant-numeric: tabular-nums;
+      }
+      @media (width <= 650px) {
+        #example-panel-shell {
+          left: 12px;
+          top: 12px;
+          width: calc(100vw - 24px);
+          max-height: calc(50vh - 12px);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+    <aside id="example-panel-shell" data-info-box-appearance="cinematic">
+      <div id="example-panel-host" data-example-panel-host></div>
+    </aside>
+    <script type="module">
+      const panelHost = document.querySelector('#example-panel-host');
+
+      try {
+        const [{luma}, {makeAnimationLoop}, {webgpuAdapter}, {default: SpectralWaveLab}] =
+          await Promise.all([
+            import('@luma.gl/core'),
+            import('@luma.gl/engine'),
+            import('@luma.gl/webgpu'),
+            import('./app.ts')
+          ]);
+        const device = await luma.createDevice({
+          id: 'spectral-wave-lab',
+          adapters: [webgpuAdapter],
+          createCanvasContext: {canvas: 'canvas'},
+          waitForPageLoad: false
+        });
+        await makeAnimationLoop(SpectralWaveLab, {device}).start();
+      } catch (error) {
+        console.error('Spectral Wave Lab failed to start.', error);
+        panelHost.textContent = error instanceof Error ? error.stack || error.message : String(error);
+        panelHost.style.whiteSpace = 'pre-wrap';
+      }
+    </script>
+  </body>
+</html>

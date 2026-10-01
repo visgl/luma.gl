@@ -2,7 +2,7 @@
 
 > **ComputePassProps** = [`ResourceProps`](https://luma.gl/docs/api-reference/generated/core/type-aliases/ResourceProps.md) & `object`
 
-Defined in: [modules/core/src/adapter/resources/compute-pass.ts:11](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L11)
+Defined in: [modules/core/src/adapter/resources/compute-pass.ts:12](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L12)
 
 ## Type Declaration[​](#type-declaration "Direct link to Type Declaration")
 

@@ -1,6 +1,6 @@
 # ANARI Cameras, Renderers, and Frames
 
-ExperimentalPublished packageFrom v9.4
+ExperimentalPrivate workspaceFrom v10
 
 An `ANARICamera` describes the view, an `ANARIRenderer` selects shading and presentation settings, and an `ANARIFrame` combines both with a world to produce an image.
 

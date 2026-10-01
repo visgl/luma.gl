@@ -24,7 +24,7 @@ Named `extraColorAttachments` are appended in declaration order after the enable
 ```
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
-import {createSSRShaderPassPipeline, createTAAShaderPassPipeline} from '@luma.gl/effects';
+import {createSSRCompositeShaderPass, createTAACompositeShaderPass} from '@luma.gl/effects';
 
 import {GBuffer} from '@luma.gl/experimental';
 
@@ -72,7 +72,7 @@ scenePass.end();
 
 const effects = new ShaderPassRenderer(device, {
 
-  shaderPasses: [createSSRShaderPassPipeline(), createTAAShaderPassPipeline()]
+  shaderPasses: [createSSRCompositeShaderPass(), createTAACompositeShaderPass()]
 
 });
 

@@ -4,7 +4,7 @@
 
 import type {Panel} from '@deck.gl-community/panels';
 import {Buffer, type Device, type RenderBundle, Texture} from '@luma.gl/core';
-import {createBloomShaderPassPipeline, toneMapping} from '@luma.gl/effects';
+import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/effects';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Model, ShaderPassRenderer} from '@luma.gl/engine';
 import {
@@ -216,7 +216,6 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
   private resources: AtlasResources | null = null;
   private animationLoop: AnimationProps['animationLoop'] | null = null;
   private canvas: HTMLCanvasElement | null = null;
-  private canvasTouchAction = '';
   private canvasContainer: HTMLElement | null = null;
   private canvasContainerPosition = '';
   private navigationOverlay: HTMLDivElement | null = null;
@@ -332,7 +331,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     this.pickingModel = this.createModel('picking');
     this.postprocessingRenderer = new ShaderPassRenderer(device, {
       shaderPasses: [
-        createBloomShaderPassPipeline({colorFormat: this.sceneColorFormat}),
+        createBloomCompositeShaderPass({colorFormat: this.sceneColorFormat}),
         toneMapping
       ],
       colorFormat: this.sceneColorFormat
@@ -351,7 +350,6 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     this.animationLoop = animationLoop;
     if (canvas instanceof HTMLCanvasElement) {
       this.canvas = canvas;
-      this.canvasTouchAction = canvas.style.touchAction;
       canvas.style.cursor = 'crosshair';
       canvas.style.touchAction = 'none';
       canvas.tabIndex = 0;
@@ -549,7 +547,6 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     this.lidarLoadAbortController?.abort();
     if (this.lidarPublishTimer) clearTimeout(this.lidarPublishTimer);
     if (this.canvas) {
-      this.canvas.style.touchAction = this.canvasTouchAction;
       this.canvas.removeEventListener('pointerdown', this.handlePointerDown);
       this.canvas.removeEventListener('pointermove', this.handlePointerMove);
       this.canvas.removeEventListener('pointerleave', this.handlePointerLeave);
@@ -1083,16 +1080,18 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     });
     const count = graph.createDataView(countBuffer, {format: 'uint32', length: 1});
     const overflow = graph.createDataView(overflowBuffer, {format: 'uint32', length: 1});
-    new GPUGridIndex({
-      id: 'spatial-atlas-grid',
-      positions,
-      gridSize: resources.gridSize,
-      bounds: resources.domain,
-      cellOffsets,
-      objectIds: rowIndices,
-      count,
-      overflow
-    }).addToGraph(graph);
+    graph.add(
+      new GPUGridIndex({
+        id: 'spatial-atlas-grid',
+        positions,
+        gridSize: resources.gridSize,
+        bounds: resources.domain,
+        cellOffsets,
+        objectIds: rowIndices,
+        count,
+        overflow
+      })
+    );
     return graph.compile();
   }
 

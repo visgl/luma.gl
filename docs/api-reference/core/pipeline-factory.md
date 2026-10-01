@@ -19,7 +19,15 @@ import {PipelineFactory} from '@luma.gl/core';
 
 const pipelineFactory = PipelineFactory.getDefaultPipelineFactory(device);
 
-const pipeline = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
+const pipeline = await pipelineFactory.createRenderPipelineAsync({
+
+  vs,
+
+  fs,
+
+  topology: 'triangle-list'
+
+});
 
 
 
@@ -53,6 +61,14 @@ Returns a render pipeline. If caching is enabled and an equivalent cached wrappe
 WebGPU supportedWebGL 2 not supported
 
 Equivalent cache-aware constructor for compute pipelines.
+
+### `createRenderPipelineAsync(props: RenderPipelineProps): Promise<RenderPipeline>`[​](#createrenderpipelineasyncprops-renderpipelineprops-promiserenderpipeline "Direct link to createrenderpipelineasyncprops-renderpipelineprops-promiserenderpipeline")
+
+Uses the backend's asynchronous pipeline creation path and resolves when the render pipeline is ready. Use it when pipeline creation is part of an awaitable loading or preparation phase. Multiple concurrent requests for equivalent props share the same pending compilation as well as the finished cache entry.
+
+### `createComputePipelineAsync(props: ComputePipelineProps): Promise<ComputePipeline>`[​](#createcomputepipelineasyncprops-computepipelineprops-promisecomputepipeline "Direct link to createcomputepipelineasyncprops-computepipelineprops-promisecomputepipeline")
+
+WebGPU equivalent of `createRenderPipelineAsync()`. Starting several calls before awaiting them lets the browser and driver compile independent pipelines concurrently. On a backend without native asynchronous pipeline creation, the device preserves the API by resolving a synchronously created pipeline.
 
 ### `release(pipeline: RenderPipeline | ComputePipeline): void`[​](#releasepipeline-renderpipeline--computepipeline-void "Direct link to releasepipeline-renderpipeline--computepipeline-void")
 
@@ -88,5 +104,5 @@ If an application creates very large numbers of distinct pipelines and cache gro
 
 * `PipelineFactory` hashing is based on pipeline inputs and device type, not just object identity.
 * WebGPU render-pipeline caching tracks immutable descriptor-shaping inputs such as shader sources, entry points, layouts, parameters, topology, buffer layout, and attachment formats.
-* Callers that use `createRenderPipeline()` or `createComputePipeline()` directly should pair those calls with `release()` to avoid leaking cached references.
+* Callers that use any synchronous or asynchronous `create*Pipeline()` method directly should pair each resolved pipeline with `release()` to avoid leaking cached references.
 * The exported `PipelineFactoryProps` type is currently an alias of [`RenderPipelineProps`](https://luma.gl/docs/api-reference/core/resources/render-pipeline.md#renderpipelineprops).

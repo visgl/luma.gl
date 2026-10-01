@@ -21,12 +21,13 @@ The experimental `@luma.gl/gpgpu/gpu-data` subpath provides Arrow-independent GP
 * [`GPUVector`](https://luma.gl/docs/api-reference/gpgpu/gpu-vector.md) preserves an ordered list of `GPUData` chunks.
 * [`GPUConstant`](https://luma.gl/docs/api-reference/gpgpu/gpu-constant.md) represents one fixed-width value shared across logical rows.
 * [`GPUVectorFormat`](https://luma.gl/docs/api-reference/gpgpu/gpu-vector-format.md) describes stored bytes independently from shader-facing value types.
+* [`GPU Vector Search`](https://luma.gl/docs/api-reference/gpgpu/gpu-vector-search.md) performs exact, bounded similarity search over borrowed fixed-size GPU rows.
 
 Each `GPUData` owns or borrows exactly one buffer. A `GPUVector` does not own a separate raw buffer; it preserves its ordered `GPUData` chunks and their source batch boundaries. Packing and repacking are explicit higher-level operations, never side effects of append or streaming.
 
 Runtime format strings describe GPU memory, including fixed-width formats such as `float32x3`, normalized formats such as `unorm8x4`, and variable-length formats such as `vertex-list<float32x3>`. Shader compatibility is checked at adapter and model boundaries.
 
-[`@luma.gl/experimental/gpu-tables`](https://luma.gl/docs/api-reference/experimental/gpu-tables.md) adds record batches, schemas, table bindings, computations, and planners above these primitives.
+[`@luma.gl/experimental/gpu-tables`](https://luma.gl/docs/api-reference/experimental/gpu-tables.md) adds record batches, schemas, table bindings, computations, and planners above these primitives. [`@luma.gl/arrow`](https://luma.gl/docs/api-reference/arrow.md) converts Apache Arrow inputs to the shared GPU data objects; the GPU data types do not depend on Apache Arrow.
 
 ## Installing[​](#installing "Direct link to Installing")
 
@@ -163,6 +164,7 @@ The CPU backend can be imported from `@luma.gl/gpgpu/cpu` when explicitly regist
 
 ## Concepts[​](#concepts "Direct link to Concepts")
 
+* [`Choosing a GPU Data-Processing API`](https://luma.gl/docs/api-guide/gpu/gpu-data-processing.md) compares portable GPGPU evaluators with `GPUCommandGraph` and lower-level compute helpers.
 * [`Operations`](https://luma.gl/docs/api-reference/gpgpu/operations.md) documents the supported lazy compute operations such as `add()`, `interleave()`, and `fround()`.
 * [`Custom Operations`](https://luma.gl/docs/api-reference/gpgpu/custom-operation.md) shows how to define lazy operations and register backend handlers.
 * [`GPU Evaluators`](https://luma.gl/docs/api-reference/gpgpu/gpu-data-evaluator.md) documents `GPUDataEvaluator` for one fixed-width `GPUData` or borrowed strided `GPUDataView`, and `GPUVectorEvaluator` for chunk-preserving `GPUVector.data[]` transforms.

@@ -1,0 +1,1 @@
+{"extends": "../../../examples/arrow/arrow-text-2d/tsconfig.json", "include": ["."]}

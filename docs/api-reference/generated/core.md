@@ -93,6 +93,7 @@
 * [DepthStencilParameters](https://luma.gl/docs/api-reference/generated/core/type-aliases/DepthStencilParameters.md)
 * [DeviceFeature](https://luma.gl/docs/api-reference/generated/core/type-aliases/DeviceFeature.md)
 * [DeviceInfo](https://luma.gl/docs/api-reference/generated/core/type-aliases/DeviceInfo.md)
+* [DeviceLostInfo](https://luma.gl/docs/api-reference/generated/core/type-aliases/DeviceLostInfo.md)
 * [DeviceProps](https://luma.gl/docs/api-reference/generated/core/type-aliases/DeviceProps.md)
 * [DeviceTextureFormatCapabilities](https://luma.gl/docs/api-reference/generated/core/type-aliases/DeviceTextureFormatCapabilities.md)
 * [ExternalImage](https://luma.gl/docs/api-reference/generated/core/type-aliases/ExternalImage.md)
