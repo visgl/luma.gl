@@ -31,7 +31,7 @@ export type GPUTableModelProps = ModelProps & {
 };
 
 export type GPUTableModelDrawBatchesOptions = {
-  /** Called immediately before drawing each preserved GPU record batch. */
+  /** Called immediately before drawing each non-empty preserved GPU record batch. */
   onBatch?: (batch: GPURecordBatch, batchIndex: number) => void;
 };
 
@@ -135,6 +135,8 @@ export class GPUTableModel extends Model {
   /**
    * Draws each preserved GPU record batch by rebinding batch-local buffers.
    *
+   * Batches with zero rows are skipped, because their empty storage chunks would produce
+   * zero-size bindings that WebGPU rejects. The table and its batches are not modified.
    * The table-level attributes and bindings are restored before returning.
    */
   drawBatches(renderPass: RenderPass, options: GPUTableModelDrawBatchesOptions = {}): boolean {
@@ -155,6 +157,9 @@ export class GPUTableModel extends Model {
     this.drawingTableBatches = true;
     try {
       for (const [batchIndex, batch] of table.batches.entries()) {
+        if (batch.numRows === 0) {
+          continue;
+        }
         const preparedBatch = this.tableShaderBindings?.batches[batchIndex];
         if (this.tableShaderBindings && !preparedBatch) {
           throw new Error('GPUTableModel.drawBatches() is missing prepared batch bindings');

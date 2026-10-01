@@ -105,6 +105,44 @@ const PIXEL_VALUE_INPUT_SCHEMA = [
   }
 ] as const satisfies GPUInputSchema;
 
+const STORAGE_PIXEL_WGSL = /* wgsl */ `\
+@group(0) @binding(auto) var<storage, read> pixels : array<vec2<f32>>;
+
+struct VertexOutputs {
+  @builtin(position) position : vec4<f32>,
+  @location(0) @interpolate(flat) value : f32,
+};
+
+@vertex
+fn vertexMain(@builtin(instance_index) instanceIndex : u32) -> VertexOutputs {
+  let pixel = pixels[gpuTable_getRowIndex(instanceIndex, gpuTableColumns.pixelsRowMultiplier)];
+  var outputs : VertexOutputs;
+  outputs.position = vec4<f32>((pixel.x + 0.5) / 2.0 - 1.0, 0.0, 0.0, 1.0);
+  outputs.value = pixel.y;
+  return outputs;
+}
+
+@fragment
+fn fragmentMain(inputs : VertexOutputs) -> @location(0) vec4<f32> {
+  return vec4<f32>(inputs.value / 255.0, 0.0, 0.0, 1.0);
+}
+`;
+
+const STORAGE_PIXEL_SHADER_LAYOUT = {
+  attributes: [],
+  bindings: [{name: 'pixels', type: 'read-only-storage', group: 0, location: 0}]
+} satisfies ShaderLayout;
+
+const STORAGE_PIXEL_INPUT_SCHEMA = [
+  {
+    columnName: 'pixels',
+    storageBindingName: 'pixels',
+    kind: 'positions',
+    required: true,
+    formats: ['float32x2']
+  }
+] as const satisfies GPUInputSchema;
+
 const PIXEL_COUNT = 4;
 
 it('GPUTableComputation skips empty batches and dispatches the remaining batches', async ({
@@ -222,6 +260,85 @@ it('GPUTableModel reads vertex attributes from each chunk byteOffset', async ({s
         buffer.destroy();
       }
     }
+  }
+});
+
+it('GPUTableModel skips empty storage-backed batches and draws the remaining batches', async ({
+  skip
+}) => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    skip('WebGPU unavailable');
+    return;
+  }
+  // Each pixel row is (pixelIndex, value). The middle batch has no rows.
+  const batchPixels = [new Float32Array([0, 1]), new Float32Array(0), new Float32Array([1, 2])];
+  const buffers = batchPixels.map(pixels =>
+    device.createBuffer({
+      usage: Buffer.STORAGE | Buffer.COPY_DST,
+      data: pixels.length > 0 ? pixels : new Float32Array(2)
+    })
+  );
+  const table = new GPUTable({
+    batches: batchPixels.map(
+      (pixels, batchIndex) =>
+        new GPURecordBatch({
+          gpuData: {
+            pixels: new GPUData({
+              buffer: buffers[batchIndex],
+              format: 'float32x2',
+              length: pixels.length / 2
+            })
+          }
+        })
+    )
+  });
+  const model = new GPUTableModel(device, {
+    id: 'gpu-table-empty-storage-batch',
+    source: STORAGE_PIXEL_WGSL,
+    shaderLayout: STORAGE_PIXEL_SHADER_LAYOUT,
+    gpuInputSchema: STORAGE_PIXEL_INPUT_SCHEMA,
+    topology: 'point-list',
+    vertexCount: 1,
+    table,
+    tableCount: 'instance',
+    colorAttachmentFormats: ['rgba8unorm']
+  });
+  const colorTexture = device.createTexture({
+    width: PIXEL_COUNT,
+    height: 1,
+    format: 'rgba8unorm',
+    usage: Texture.RENDER | Texture.COPY_SRC
+  });
+  const framebuffer = device.createFramebuffer({
+    width: PIXEL_COUNT,
+    height: 1,
+    colorAttachments: [colorTexture]
+  });
+  const drawnBatchIndices: number[] = [];
+
+  const renderPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
+  const drawSuccess = model.drawBatches(renderPass, {
+    onBatch: (_batch, batchIndex) => drawnBatchIndices.push(batchIndex)
+  });
+  renderPass.end();
+  device.submit();
+
+  const pixels = await readPixels(colorTexture, PIXEL_COUNT);
+  expect(
+    Array.from({length: PIXEL_COUNT}, (_, pixelIndex) => pixels[pixelIndex * 4]),
+    'draws the batches before and after the empty batch'
+  ).toEqual([1, 2, 0, 0]);
+  expect(Boolean(drawSuccess), 'reports a successful batched draw').toBe(true);
+  expect(drawnBatchIndices, 'does not draw the empty batch').toEqual([0, 2]);
+  expect(table.batches.length, 'preserves the empty batch').toBe(3);
+
+  framebuffer.destroy();
+  colorTexture.destroy();
+  model.destroy();
+  table.destroy();
+  for (const buffer of buffers) {
+    buffer.destroy();
   }
 });
 
