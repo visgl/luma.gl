@@ -18,6 +18,10 @@ Target Release Date: Q3, 2026
 - **`@luma.gl/arrow` (currently private)** - Arrow adapters and renderers are being prepared for
   publication as a standalone module.
 
+**@luma.gl/core**
+
+- **Targeted WebGPU limits** - `DeviceProps.requiredLimits` requests specific WebGPU device limits, such as `maxStorageBuffersPerShaderStage`, without taking every adapter limit and feature through `featureLevel: 'max'`. A development GPU then enforces the limits the application targets.
+
 **@luma.gl/gpgpu**
 
 - **Incremental GPU execution** - [`GPUIncrementalExecution`](/docs/api-reference/experimental/gpu-core/gpu-incremental-execution) caches explicitly versioned batch partials, preserves borrowed source storage, and submits only changed batch work plus the live merge. The GPU Data Analysis example shows streaming sums, histograms, grouped counts, and unsigned Top-K with reuse instrumentation.
