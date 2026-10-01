@@ -189,3 +189,7 @@ export type {SSAOCompositeShaderPassOptions} from './passes/screen-space/ssao';
 export {createSSAOCompositeShaderPass} from './passes/screen-space/ssao';
 export {createTAACompositeShaderPass} from './passes/screen-space/temporal-antialiasing';
 export {createVolumetricFogCompositeShaderPass} from './passes/screen-space/volumetric-fog';
+
+export {heightFogPass} from './passes/screen-space/height-fog';
+export type {HeightFogPassProps, HeightFogPassUniforms} from './passes/screen-space/height-fog';
+export type {VolumetricFogCompositeShaderPassOptions} from './passes/screen-space/volumetric-fog';

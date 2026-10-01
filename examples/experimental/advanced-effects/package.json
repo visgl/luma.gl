@@ -6,7 +6,8 @@
   "scripts": {
     "start": "vite",
     "build": "tsc && vite build",
-    "serve": "vite preview"
+    "serve": "vite preview",
+    "test:fog": "node scripts/fog-smoke.mjs"
   },
   "dependencies": {
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e",
