@@ -88,6 +88,7 @@ type AdvancedEffectsSettings = {
   depthBlurEnabled: boolean;
   ssrEnabled: boolean;
   fogEnabled: boolean;
+  fogMode: 'screen-space' | 'height';
   outlinesEnabled: boolean;
   taaEnabled: boolean;
   motionBlurEnabled: boolean;
@@ -186,6 +187,7 @@ const SHADOW_QUALITY_SCALE: Record<'low' | 'balanced' | 'cinematic', number> = {
 
 const DEFAULT_SETTINGS: AdvancedEffectsSettings = {
   preset: 'Shadow Study',
+  fogMode: 'screen-space',
   shadowQuality: 'balanced',
   animate: true,
   split: 0.52,
@@ -376,6 +378,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
             maxDistance: 100,
             minPitch: 0.06,
             maxPitch: 1.38,
+            enableRotate: true,
             autoRotate: this.settings.animate,
             autoRotateSpeed: 0.055
           })
@@ -419,8 +422,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.previousViewProjectionMatrix = new Matrix4(viewProjectionMatrix);
       this.previousTime = time;
     }
-    const jitter = getJitter(this.frameIndex, width, height);
-    const previousJitter = getJitter(Math.max(0, this.frameIndex - 1), width, height);
+    const jitter: [number, number] = this.settings.taaEnabled
+      ? getJitter(this.frameIndex, width, height)
+      : [0, 0];
+    const previousJitter: [number, number] = this.settings.taaEnabled
+      ? getJitter(Math.max(0, this.frameIndex - 1), width, height)
+      : [0, 0];
     const lights = getCityShadowLights(time);
     const shadowProps = this.shadowRenderer.render({
       camera: {
@@ -529,6 +536,20 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           inverseProjectionMatrix,
           debugMode: this.settings.debugView === 'Reflections' ? 1 : 0
         },
+        heightFogPass: {
+          inverseViewProjectionMatrix: new Matrix4()
+            .translate([jitter[0] * 2, jitter[1] * 2, 0])
+            .multiplyRight(viewProjectionMatrix)
+            .invert(),
+          cameraPosition: eye,
+          upDirection: [0, 1, 0],
+          color: [0.53, 0.61, 0.67],
+          density: this.settings.preset === 'Foggy Depth' ? 0.035 : 0.012,
+          baseHeight: 0,
+          heightFalloff: 0.12,
+          backgroundDistance: FAR_PLANE,
+          clipDepthRange: [0, 1]
+        },
         volumetricFog: {
           density: this.settings.preset === 'Foggy Depth' ? 0.2 : 0.08,
           historyWeight: this.settings.shadowQuality === 'low' ? 0.08 : 0.18,
@@ -576,7 +597,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       pipelines.push(createSSRCompositeShaderPass({resolutionScale: scale}));
     }
     if (!shadowDebugView && this.settings.fogEnabled) {
-      pipelines.push(createVolumetricFogCompositeShaderPass());
+      pipelines.push(createVolumetricFogCompositeShaderPass({mode: this.settings.fogMode}));
     }
     if (!shadowDebugView && this.settings.outlinesEnabled) {
       pipelines.push(createOutlineCompositeShaderPass({normalSource: 'normal-texture'}));
@@ -632,6 +653,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         split
       };
       this.settingsPanel.setSchemaAndSettings(makeSettingsSchema(), this.settings);
+      this.panels.setPanel(this.makePanel());
     }
     this.orbitControls?.setAutoRotate(this.settings.animate);
     this.comparisonSplitter?.setValue(this.settings.split);
@@ -852,10 +874,22 @@ function makeSettingsSchema(): SettingsSchema {
       },
       {
         id: 'atmosphere',
-        name: 'Volumetric Height Fog',
-        description: 'Compact atmospheric depth and stylized directional glow.',
+        name: 'Height Fog',
+        description: 'Choose analytic height fog or the stylized screen-space atmosphere.',
         initiallyCollapsed: true,
-        settings: [toggle('fogEnabled', 'Enable Height Fog')]
+        settings: [
+          toggle('fogEnabled', 'Enable Height Fog'),
+          {
+            name: 'fogMode',
+            label: 'Fog model',
+            type: 'select',
+            persist: 'none',
+            options: [
+              {value: 'screen-space', label: 'Screen-space'},
+              {value: 'height', label: 'Height (metres)'}
+            ]
+          }
+        ]
       },
       {
         id: 'outlines',

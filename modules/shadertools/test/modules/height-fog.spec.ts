@@ -57,3 +57,83 @@ const FOG_GLSL = `void main() {
   if (index == 5) {camera.z = -200.0; position = vec3(0.0,0.0,-100.0);}
   fragmentColor = vec4(heightFog_getTransmittance(position, camera),0.0,0.0,1.0);
 }`;
+
+for (const backend of ['webgpu', 'webgl'] as const) {
+  it(`heightFog wisps vary in space, advect continuously and freeze deterministically on ${backend}`, async context => {
+    const device = await getTestDevice(backend);
+    if (!device || !device.isTextureFormatRenderable('rgba32float')) return context.skip();
+    const renderer = makeShaderModuleRenderer(
+      device,
+      [heightFog],
+      `@fragment fn fragmentMain(@builtin(position) fragment: vec4f) -> @location(0) vec4f {
+        let camera = vec3f(floor(fragment.x) * 160.0, 0.0, 5.0);
+        let position = camera + vec3f(100.0, 100.0, 0.0);
+        let offset = heightFog.velocity * heightFog.time;
+        return vec4f(heightFog_getTransmittance(position, camera),
+          heightFog_getTransmittance(position + offset, camera + offset), 0.0, 0.37);
+      }`,
+      `void main() {
+        vec3 camera = vec3(floor(gl_FragCoord.x) * 160.0, 0.0, 5.0);
+        vec3 position = camera + vec3(100.0, 100.0, 0.0);
+        vec3 offset = heightFog.velocity * heightFog.time;
+        fragmentColor = vec4(heightFog_getTransmittance(position, camera),
+          heightFog_getTransmittance(position + offset, camera + offset), 0.0, 0.37);
+      }`
+    );
+    try {
+      renderer.model.shaderInputs.setProps({
+        heightFog: {
+          density: 0.01,
+          heightFalloff: 0,
+          variation: 1,
+          wispScale: 160,
+          velocity: [3, 2, 0],
+          time: 0
+        }
+      });
+      const initial = await renderer.read();
+      const samples = initial.filter((_, index) => index % 4 === 0);
+      expect(Math.max(...samples) - Math.min(...samples)).toBeGreaterThan(0.05);
+      renderer.model.shaderInputs.setProps({heightFog: {time: 30}});
+      const moved = await renderer.read();
+      expect(
+        moved.some((value, index) => index % 4 === 0 && Math.abs(value - initial[index]) > 0.02)
+      ).toBe(true);
+      for (let index = 0; index < 6; index++) {
+        expect(moved[index * 4]).toBeGreaterThanOrEqual(0);
+        expect(moved[index * 4]).toBeLessThanOrEqual(1);
+        // Following the moving fog preserves the same density field in world space.
+        expect(moved[index * 4 + 1]).toBeCloseTo(initial[index * 4], 4);
+      }
+      expect(await renderer.read()).toEqual(moved);
+      renderer.model.shaderInputs.setProps({
+        heightFog: {velocity: [0, 0, 0], time: 0, evolutionSpeed: 0.1}
+      });
+      const evolvingStart = await renderer.read();
+      renderer.model.shaderInputs.setProps({heightFog: {time: 10}});
+      const evolvingEnd = await renderer.read();
+      expect(
+        evolvingEnd.some(
+          (value, index) => index % 4 === 0 && Math.abs(value - evolvingStart[index]) > 0.02
+        )
+      ).toBe(true);
+      expect(await renderer.read()).toEqual(evolvingEnd);
+      renderer.model.shaderInputs.setProps({
+        heightFog: {velocity: [3, 2, 0], time: 30, evolutionSpeed: 0}
+      });
+      renderer.model.shaderInputs.setProps({heightFog: {time: 30.01}});
+      const nearby = await renderer.read();
+      nearby.forEach((value, index) => expect(Math.abs(value - moved[index])).toBeLessThan(0.002));
+      renderer.model.shaderInputs.setProps({heightFog: {variation: 0}});
+      const uniform = await renderer.read();
+      uniform
+        .filter((_, index) => index % 4 < 2)
+        .forEach(value => expect(value).toBeCloseTo(Math.exp(-Math.sqrt(20000) * 0.01), 4));
+      renderer.model.shaderInputs.setProps({heightFog: {variation: 1, density: 0}});
+      const disabled = await renderer.read();
+      disabled.filter((_, index) => index % 4 < 2).forEach(value => expect(value).toBe(1));
+    } finally {
+      renderer.destroy();
+    }
+  });
+}

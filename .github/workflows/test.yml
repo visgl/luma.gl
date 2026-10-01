@@ -93,6 +93,14 @@ jobs:
           df -h .
           du -sh . "${HOME}/.yarn" "${HOME}/.cache/ms-playwright" "${RUNNER_TEMP}" 2>/dev/null || true
 
+      - name: Test riverfront weather
+        if: ${{ matrix.shard == 2 }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-weather test:visual
+
+      - name: Test shared height fog in Visualization City
+        if: ${{ matrix.shard == 2 }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-experimental-advanced-effects test:fog
+
       # Run the standalone WebGPU smoke before the coverage suite so its SwiftShader device starts
       # from a clean runner state instead of inheriting resource pressure from prior browser tests.
       - name: Install Spatial Atlas Playwright Chromium

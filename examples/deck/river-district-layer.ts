@@ -24,7 +24,7 @@ import {makeCityMesh, type CityFeature} from './river-district-data';
 
 type RiverDistrictLayerProps = LayerProps & {
   features: readonly CityFeature[];
-  fog?: HeightFogProps;
+  fog?: HeightFogProps | (() => HeightFogProps);
   roughness?: number;
 };
 
@@ -86,7 +86,10 @@ export class RiverDistrictLayer extends Layer<RiverDistrictLayerProps> {
   }
   override draw({renderPass}: {renderPass: RenderPass}): void {
     this.state.model?.shaderInputs.setProps({
-      heightFog: {...heightFog.defaultUniforms, ...this.props.fog},
+      heightFog: {
+        ...heightFog.defaultUniforms,
+        ...(typeof this.props.fog === 'function' ? this.props.fog() : this.props.fog)
+      },
       districtMesh: {
         roughness: this.props.roughness,
         cameraPosition: getMeterOffsetPosition(
