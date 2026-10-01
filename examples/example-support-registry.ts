@@ -5,6 +5,7 @@
 import sketchSupport from './deck/sketch-edges/mobile-support';
 import weatherSupport from './deck/weather/mobile-support';
 import patternSupport from './deck/pattern-fills/mobile-support';
+import pointGlowSupport from './deck/point-glow/mobile-support';
 import type {ExampleSupportDefinition} from './example-support';
 import citySceneSupport from './deck/city-scene/mobile-support';
 import standaloneSupport0 from './api/texture-compressed/mobile-support';
@@ -196,6 +197,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'deck/sketch-edges': sketchSupport,
   'deck/weather': weatherSupport,
   'deck/pattern-fills': patternSupport,
+  'deck/point-glow': pointGlowSupport,
   'homepage/instancing': support2
 };
 

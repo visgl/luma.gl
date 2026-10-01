@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "docusaurus": "docusaurus",
-    "build:standalone-examples": "yarn workspace luma.gl-examples-showcase-scene build:website && yarn workspace luma.gl-examples-deck-city-scene build:website && yarn workspace luma.gl-examples-deck-sketch-edges build:website && yarn workspace luma.gl-examples-deck-weather build:website && yarn workspace luma.gl-examples-deck-pattern-fills build:website",
+    "build:standalone-examples": "yarn workspace luma.gl-examples-showcase-scene build:website && yarn workspace luma.gl-examples-deck-city-scene build:website && yarn workspace luma.gl-examples-deck-sketch-edges build:website && yarn workspace luma.gl-examples-deck-weather build:website && yarn workspace luma.gl-examples-deck-pattern-fills build:website && yarn workspace luma.gl-examples-deck-point-glow build:website",
     "start": "node ./scripts/sync-example-assets.mjs && yarn build:standalone-examples && docusaurus start",
     "build": "node ./scripts/sync-example-assets.mjs && yarn build:standalone-examples && docusaurus build && node ./scripts/normalize-llm-output.mjs && node ./scripts/check-llm-output.mjs",
     "build-staging": "WEBSITE_BASE_URL=/luma.gl/ yarn build",

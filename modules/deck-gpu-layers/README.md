@@ -263,3 +263,41 @@ depth. Transparent occluders are not represented by this height field.
 The layer owns its model, corner buffer, and one-texel fallback texture. It never destroys a
 supplied surface texture and performs no CPU particle updates. Particles are decorative and
 are not pickable. See the riverfront weather example for clock, volume, and teardown usage.
+
+## Glow points
+
+`GlowPointLayer` renders depth-tested additive sprites on WebGPU and WebGL2. It borrows a buffer
+of 32-byte float32 rows: position XYZ, linear RGB tint, opacity, and feature index. The layer owns
+its model and its six-corner vertex buffer. Set `pointCount` explicitly, including zero for an
+empty draw. Replace `points` to bind a different caller-owned buffer.
+
+```ts
+import {GlowPointLayer} from '@deck.gl-community/gpu-layers';
+
+const lights = new GlowPointLayer({
+  id: 'lights',
+  points,
+  pointCount,
+  radiusPixels: 18,
+  pickingRadiusPixels: 5,
+  style: {coreRadius: 0.12, coreIntensity: 1, haloIntensity: 0.6, falloff: 5},
+  pickable: true,
+  data: features
+});
+```
+
+Positions use the normal Deck coordinate-system and origin props. Both radii use CSS pixels and
+stay constant with perspective depth. `pickingRadiusPixels` is clamped to the outer radius. The
+buffer's feature index selects `data` entries through Deck's normal picking API; use integer
+indices through `16_777_214`, or a negative index for an unpickable sprite.
+
+The `style` object supplies `PointGlowProps`. Intensity can exceed one for HDR output. Radius and
+style updates reuse geometry. Layer opacity and per-point opacity scale radiance; depth writes
+are disabled, and the default blend state adds RGB while preserving destination alpha. Use an
+opaque presentation surface or an explicit HDR composition pass. The example requests an opaque
+canvas on both backends. Opaque occluders must also participate in Deck's picking pass to prevent
+selection through buildings. The sprite uses its center's depth, so intersecting geometry can clip
+part of its halo. This layer does not illuminate nearby geometry or cast shadows.
+
+See the Riverfront lights website example for both renderers and the shared `pointGlow` module
+for applications that supply their own geometry and composition.

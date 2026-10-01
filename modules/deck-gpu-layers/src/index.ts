@@ -22,3 +22,4 @@ export {
 } from './effects/scene-buffer-effect';
 
 export {getMeterOffsetPosition} from './projection/meter-offset-position';
+export {GlowPointLayer, type GlowPointLayerProps} from './layers/glow-point-layer';
