@@ -136,10 +136,42 @@ state. Relevant page demand remains active across partial retargets; requests ar
 traversal proves they cannot contribute. Protected parents remain visible when the residency budget
 cannot admit every required child.
 
-Call `hierarchy.setTraversalBudget(maximumRows)` to switch between a small interactive traversal
-window and a more detailed settled view without reallocating resident source pages. Browser
-traversal remains synchronous JavaScript; the showcase debounces its detailed pass so active
-camera movement does not repeatedly walk the entire authored scene.
+`hierarchy.update(view)` performs synchronous traversal. Use `maxTraversalRows` to bound the
+number of evaluated rows and `continueTraversal(maximumRows)` for subsequent slices of the same
+retained tree. Publishing a frontier still visits its selected rows; a row budget is not a
+wall-clock frame-time guarantee. Changing the configured budget with `setTraversalBudget` resets
+traversal, so it is not a per-frame scheduling control.
+
+For progressive worker-driven camera updates, use `hierarchy.refineView(view, maximumRows)`.
+It starts from the displayed coherent selection and publishes completed sibling replacements
+after each slice, including while a changed view is still refining. It does not merge independent
+cuts or draw parents over their descendants. Retargeting walks the retained cut once to update
+priorities; `maximumRows` bounds subsequent refinement, not that retargeting pass. Keep this work
+off the render thread and coalesce camera inputs to the latest view.
+
+Retargeting may collapse a branch only after its selected descendants are all outside the current
+frustum. A parent's Gaussian support is not a conservative bound on its descendants, so checking
+the parent alone is not sufficient. Under row pressure, visible complete sibling groups can yield
+capacity only to a visible, small-screen-error parent. Page budgets remain hard limits: if retained
+visible detail occupies the available pages, new refinement may wait rather than discard that
+coverage. `selectView` remains available for callers that want an independent, whole-cut rebalance.
+
+### CPU-only selection and worker ownership
+
+`SplatRADHierarchyManager<TData>` defaults to `GPUSplatData` for existing GPU callers. A worker can
+instead provide `TData extends SplatRADHierarchyData`: decoded `source.positions`, `source.scales`,
+`source.opacities`, a `revision`, and the allocation/identity/lifecycle fields from
+`SplatResidencyData`. No rendering device, color columns, spherical harmonics, or GPU buffers are
+required. `SplatResidencyManager<TData>` and its callbacks preserve that exact data type; its byte
+budget accounts for the supplied `byteLength` even when the allocation is CPU-only.
+
+The hierarchy does not create workers or serialize pages. The application must acknowledge GPU
+admission before allowing CPU metadata to participate in selection, preserve original page/row
+identities, and retain the previous rendered pages until a complete coherent replacement is ready.
+Transfer copies of `activeRows`, not the hierarchy's own retained arrays. Send the renderer its
+latest camera independently of worker progress, and coalesce camera requests rather than queuing
+every input event. Eviction of a page unused by the retained traversal does not reset visible detail;
+loss of an actual traversal input still requires rebuilding its selection.
 
 Top-level RAD metadata contains source page ranges, but not spatial page bounds. Bounds are
 derived conservatively after a page is decoded; missing-page requests use authored global child

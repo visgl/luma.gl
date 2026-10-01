@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {expect, it} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {Buffer, Texture, type Device} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {makeGPUSplatData, type SplatSource} from '@luma.gl/splats';
@@ -13,6 +13,174 @@ import {
   GPU_PAGED_SPLAT_RENDER_SHADER_LAYOUT
 } from '../src/gpu-paged-splat-shaders';
 import './gpu-paged-splat-renderer.node.spec';
+
+it('camera-only frames skip unchanged sparse row uploads on real WebGPU', async () => {
+  const devices = await getTestDevices(['webgpu']);
+  expect(devices.length).toBeGreaterThan(0);
+  for (const device of devices) {
+    const data = makeGPUSplatData(device, makeBrowserPagedSplatSource([0.1, 0.3, 0.8], 0, 0));
+    const activeRows = new Uint32Array([2, 0]);
+    const renderer = new GPUPagedSplatRenderer(device, {
+      pages: [{id: 'page', data, activeRows}],
+      viewportSize: [16, 16]
+    });
+    renderer.prepare(device.commandEncoder);
+    device.submit();
+    const segment = renderer['sourceSegments'][0];
+    const write = vi.spyOn(segment.activeRowBuffer, 'write');
+    renderer.setProps({cameraPosition: [1, 0, 2]});
+    renderer.prepare(device.commandEncoder);
+    device.submit();
+    expect(write).not.toHaveBeenCalled();
+    // Explicit setFrontier also supports re-submitting a mutated row array.
+    activeRows[0] = 1;
+    renderer.setFrontier([{id: 'page', data, activeRows}]);
+    renderer.prepare(device.commandEncoder);
+    device.submit();
+    expect(write).toHaveBeenCalledTimes(1);
+    renderer.destroy();
+    data.destroy();
+  }
+});
+
+it('sparse-to-dense frontiers clear borrowed row indirection while reusing capacity', async () => {
+  const devices = await getTestDevices(['webgpu']);
+  expect(devices.length).toBeGreaterThan(0);
+  for (const device of devices) {
+    const firstPage = makeGPUSplatData(device, makeBrowserPagedSplatSource([0.1, 0.3, 0.8], 0, 0));
+    const secondPage = makeGPUSplatData(device, makeBrowserPagedSplatSource([0.2, 0.6], 1, 3));
+    const renderer = new GPUPagedSplatRenderer(device, {
+      pages: [
+        {id: 'sparse-page', data: firstPage, activeRows: new Uint32Array([2])},
+        {id: 'capacity-page', data: secondPage}
+      ],
+      viewportSize: [16, 16]
+    });
+
+    expect(renderer.encode(device.commandEncoder)).toBeDefined();
+    device.submit();
+    const originalGraph = renderer.compiledGraph;
+    expect(renderer.stats.globalSortCapacity).toBe(4);
+
+    renderer.setFrontier([
+      {id: 'sparse-page', data: firstPage},
+      {id: 'capacity-page', data: secondPage, activeRows: new Uint32Array([0])}
+    ]);
+    expect(renderer.encode(device.commandEncoder)).toBeDefined();
+    expect(renderer.compiledGraph, 'reuses the graph within the existing sort bucket').toBe(
+      originalGraph
+    );
+    expect(renderer.stats.globalSortCapacity, 'preserves the reusable sort capacity').toBe(4);
+    expect(
+      renderer.stats.activeRowCount,
+      'selects all dense rows plus the remaining sparse row'
+    ).toBe(4);
+    expect(
+      renderer['sourceSegments'][0].activeRows,
+      'clears stale sparse indirection when the page becomes dense'
+    ).toBeUndefined();
+    device.submit();
+
+    const commandBytes = await renderer.drawCommands.buffer.readAsync();
+    const commands = new Uint32Array(
+      commandBytes.buffer,
+      commandBytes.byteOffset,
+      commandBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
+    );
+    expect(commands[5], 'publishes the complete dense-plus-sparse draw count').toBe(4);
+
+    renderer.destroy();
+    firstPage.destroy();
+    secondPage.destroy();
+  }
+});
+
+it('GPUPagedSplatRenderer prepares before and draws repeatedly inside host-owned passes', async () => {
+  const devices = await getTestDevices(['webgpu']);
+  expect(devices.length).toBeGreaterThan(0);
+  for (const device of devices) {
+    const page = makeGPUSplatData(device, makeBrowserPagedSplatSource([0.5], 0, 0));
+    const renderer = new GPUPagedSplatRenderer(device, {
+      pages: [{id: 'page', data: page}],
+      viewportSize: [16, 16]
+    });
+    const encoder = device.commandEncoder;
+    const beginRenderPass = vi.spyOn(encoder, 'beginRenderPass');
+    expect(renderer.prepare(encoder)).toBeDefined();
+    expect(beginRenderPass).not.toHaveBeenCalled();
+    beginRenderPass.mockRestore();
+    const renderPass = device.beginRenderPass({clearColor: false, clearDepth: 1});
+    const draw = vi.spyOn(renderPass, 'drawIndirect');
+    const end = vi.spyOn(renderPass, 'end');
+    renderer.draw(renderPass);
+    renderer.draw(renderPass);
+    expect(draw).toHaveBeenCalledTimes(2);
+    expect(end).not.toHaveBeenCalled();
+    renderPass.end();
+    device.submit();
+    expect(renderer.prepare(device.commandEncoder)).toBeUndefined();
+    renderer.setFrontier([]);
+    expect(renderer.prepare(device.commandEncoder)).toBeUndefined();
+    const emptyPass = device.beginRenderPass({clearColor: false, clearDepth: false});
+    const emptyDraw = vi.spyOn(emptyPass, 'drawIndirect');
+    renderer.draw(emptyPass);
+    expect(emptyDraw).not.toHaveBeenCalled();
+    emptyPass.end();
+    device.submit();
+    renderer.destroy();
+    expect(page.destroyed).toBe(false);
+    page.destroy();
+  }
+});
+
+it('GPUPagedSplatRenderer rebuilds the presentation boundary when switching render modes', async () => {
+  const devices = await getTestDevices(['webgpu']);
+  expect(devices.length).toBeGreaterThan(0);
+  for (const device of devices) {
+    const page = makeGPUSplatData(device, makeBrowserPagedSplatSource([0.5], 0, 0));
+    const renderer = new GPUPagedSplatRenderer(device, {
+      pages: [{id: 'page', data: page}],
+      viewportSize: [16, 16]
+    });
+
+    expect(renderer.encode(device.commandEncoder)).toBeDefined();
+    const internalGraph = renderer.compiledGraph;
+    expect(
+      internalGraph?.stats.nodeOrder.includes('paged-gaussian-segmented-render'),
+      'includes the renderer-owned presentation pass in encode mode'
+    ).toBe(true);
+    device.submit();
+
+    expect(renderer.prepare(device.commandEncoder)).toBeDefined();
+    const externalGraph = renderer.compiledGraph;
+    expect(externalGraph, 'rebuilds when the host takes ownership of presentation').not.toBe(
+      internalGraph
+    );
+    expect(
+      externalGraph?.stats.nodeOrder.includes('paged-gaussian-segmented-render'),
+      'omits the renderer-owned presentation pass in prepare mode'
+    ).toBe(false);
+    const renderPass = device.beginRenderPass({clearColor: false, clearDepth: 1});
+    const draw = vi.spyOn(renderPass, 'drawIndirect');
+    renderer.draw(renderPass);
+    expect(draw, 'draws prepared content inside the host-owned pass').toHaveBeenCalledTimes(1);
+    renderPass.end();
+    device.submit();
+
+    expect(renderer.encode(device.commandEncoder)).toBeDefined();
+    expect(renderer.compiledGraph, 'rebuilds again when returning to encode mode').not.toBe(
+      externalGraph
+    );
+    expect(
+      renderer.compiledGraph?.stats.nodeOrder.includes('paged-gaussian-segmented-render'),
+      'restores the renderer-owned presentation pass'
+    ).toBe(true);
+    device.submit();
+
+    renderer.destroy();
+    page.destroy();
+  }
+});
 
 it('GPUPagedSplatRenderer executes sparse source lifecycle on every browser WebGPU adapter', async () => {
   const devices = await getTestDevices(['webgpu']);
