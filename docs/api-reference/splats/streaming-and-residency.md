@@ -154,7 +154,17 @@ frustum. A parent's Gaussian support is not a conservative bound on its descenda
 the parent alone is not sufficient. Under row pressure, visible complete sibling groups can yield
 capacity only to a visible, small-screen-error parent. Page budgets remain hard limits: if retained
 visible detail occupies the available pages, new refinement may wait rather than discard that
-coverage. `selectView` remains available for callers that want an independent, whole-cut rebalance.
+coverage. `selectView(view, maximumRows)` remains available for an independent, whole-cut rebalance.
+With a row budget it retains the previous frontier until the new cut completes; an initially empty
+scene publishes coarse coverage on its first slice. Resume with `continueTraversal(maximumRows)`.
+Omitting the budget completes selection synchronously.
+
+Set `maximumResidentPages` to bound the nominal page indices reserved by selection, including
+ancestors and pending sibling replacements. Leave room in the physical residency window for overlap
+with the displayed view. `maximumPendingPages` is a soft request limit: one complete sibling
+replacement may exceed it when no other requests are pending, so a partial group cannot deadlock
+refinement. Both limits default to unlimited. Set `frustumCulling: false` to retain coarse coverage
+in every direction and let the renderer clip primitives while view-cone foveation selects detail.
 
 ### CPU-only selection and worker ownership
 
