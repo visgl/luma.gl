@@ -81,22 +81,20 @@ export function getRequiredWebGPULimits(
 
 /**
  * Returns the limits to request for a feature level.
- * Compatibility devices otherwise receive the low compatibility defaults (for example zero
- * vertex-stage storage buffers) even when the adapter supports far more.
+ * Only `'max'` and `'compatibility-max'` request adapter-supported limits. `'compatibility'`
+ * and a `'best-available'` request that cannot upgrade to core keep the compatibility default
+ * limits, so a compatibility device behaves the same on every adapter.
  * @param supportedLimits Limits exposed by the selected WebGPU adapter.
  * @param featureLevel Requested WebGPU feature level.
- * @param requiredLimits Explicitly requested limits, which override adapter maximums.
+ * @param requiredLimits Explicitly requested limits, which override profile limits.
  * @returns Limits to forward through `GPUDeviceDescriptor.requiredLimits`.
  */
 export function getRequestedWebGPULimits(
   supportedLimits: GPUSupportedLimits,
-  supportedFeatures: GPUSupportedFeatures,
   featureLevel: RequestedWebGPUFeatureLevel,
   requiredLimits: DeviceProps['requiredLimits'] = {}
 ): Record<string, number> {
-  const requestsAdapterLimits =
-    featureLevel === 'max' ||
-    (featureLevel === 'best-available' && !supportedFeatures.has(CORE_FEATURES_AND_LIMITS));
+  const requestsAdapterLimits = featureLevel === 'max' || featureLevel === 'compatibility-max';
   const adapterLimits = requestsAdapterLimits ? getRequiredWebGPULimits(supportedLimits) : {};
   return {...adapterLimits, ...requiredLimits};
 }
@@ -118,10 +116,7 @@ export function getWebGPUFeatureLevel(props: DeviceProps): RequestedWebGPUFeatur
 export function getWebGPURequestAdapterOptions(props: DeviceProps): GPURequestAdapterOptions {
   const featureLevel = getWebGPUFeatureLevel(props);
   const options: GPURequestAdapterOptions = {
-    featureLevel:
-      featureLevel === 'compatibility' || featureLevel === 'best-available'
-        ? 'compatibility'
-        : 'core'
+    featureLevel: isCompatibilityFeatureLevel(featureLevel) ? 'compatibility' : 'core'
   };
 
   if (props.powerPreference && props.powerPreference !== 'default') {
@@ -148,6 +143,13 @@ export function getRequiredWebGPUFeatures(
 ): GPUFeatureName[] {
   if (featureLevel === 'max') {
     return Array.from(supportedFeatures) as GPUFeatureName[];
+  }
+
+  if (featureLevel === 'compatibility-max') {
+    // Requesting core-features-and-limits would upgrade the device to core validation
+    return Array.from(supportedFeatures).filter(
+      feature => feature !== CORE_FEATURES_AND_LIMITS
+    ) as GPUFeatureName[];
   }
 
   const requiredFeatures: GPUFeatureName[] = [];
@@ -178,14 +180,23 @@ export function getEffectiveWebGPUFeatureLevel(
   requestedFeatureLevel: RequestedWebGPUFeatureLevel,
   deviceFeatures: GPUSupportedFeatures
 ): EffectiveWebGPUFeatureLevel {
-  if (
-    (requestedFeatureLevel === 'compatibility' || requestedFeatureLevel === 'best-available') &&
-    deviceFeatures.has(CORE_FEATURES_AND_LIMITS)
-  ) {
-    return 'core';
+  if (!isCompatibilityFeatureLevel(requestedFeatureLevel)) {
+    return requestedFeatureLevel;
   }
 
-  return requestedFeatureLevel === 'best-available' ? 'compatibility' : requestedFeatureLevel;
+  // Browsers may return a core adapter for a compatibility request
+  return deviceFeatures.has(CORE_FEATURES_AND_LIMITS) ? 'core' : 'compatibility';
+}
+
+/** Returns true for feature levels that request a compatibility adapter. */
+function isCompatibilityFeatureLevel(
+  featureLevel: RequestedWebGPUFeatureLevel
+): featureLevel is 'compatibility' | 'compatibility-max' | 'best-available' {
+  return (
+    featureLevel === 'compatibility' ||
+    featureLevel === 'compatibility-max' ||
+    featureLevel === 'best-available'
+  );
 }
 
 export class WebGPUAdapter extends Adapter {
@@ -251,7 +262,6 @@ export class WebGPUAdapter extends Adapter {
 
     const requiredLimits = getRequestedWebGPULimits(
       adapter.limits,
-      adapter.features,
       requestedFeatureLevel,
       props.requiredLimits
     );

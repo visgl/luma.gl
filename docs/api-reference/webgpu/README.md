@@ -88,7 +88,23 @@ This follows the compatibility upgrade flow described by
 [WebGPU Fundamentals](https://webgpufundamentals.org/webgpu/lessons/webgpu-compatibility-mode.html):
 luma.gl requests a compatibility adapter, then requires `core-features-and-limits` when that
 adapter exposes it. For `'best-available'`, `device.info.featureLevel` reports whether the
-created device is `'core'` or `'compatibility'`.
+created device is `'core'` or `'compatibility'`. A `'best-available'` device that stays in
+compatibility mode keeps the compatibility default limits, the same as `'compatibility'`.
+
+Applications that need compatibility validation and larger limits, such as vertex-stage storage
+buffers or larger compute workgroups, can request them explicitly:
+
+```typescript
+const device = await luma.createDevice({
+  type: 'webgpu',
+  adapters: [webgpuAdapter],
+  featureLevel: 'compatibility-max'
+});
+```
+
+`'compatibility-max'` requests every adapter feature and supported limit without upgrading to
+core, so its limits vary by adapter. Prefer `requiredLimits` with `'compatibility'` to request
+only the limits an application needs.
 
 Read `device.info.featureLevel` to see the effective level. Use `device.limits`
 when selecting optional paths such as vertex-stage storage

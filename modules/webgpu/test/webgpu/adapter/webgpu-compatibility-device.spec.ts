@@ -6,17 +6,46 @@ import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import type {WebGPUTexture} from '@luma.gl/webgpu';
 
-it('WebGPU best-available fallback requests adapter-supported limits', async () => {
-  const device = await getWebGPUTestDevice('best-available');
+const COMPATIBILITY_LIMIT_NAMES = [
+  'maxStorageBuffersInVertexStage',
+  'maxStorageBuffersPerShaderStage',
+  'maxComputeInvocationsPerWorkgroup'
+] as const;
+
+// WebGPU compatibility-mode defaults that are lower than the core defaults
+// https://www.w3.org/TR/webgpu/#limits
+const COMPATIBILITY_DEFAULT_LIMITS = {
+  maxStorageBuffersInVertexStage: 0,
+  maxComputeInvocationsPerWorkgroup: 128
+} as const;
+
+it('WebGPU compatibility devices keep compatibility default limits', async () => {
+  for (const featureLevel of ['compatibility', 'best-available'] as const) {
+    const device = await getWebGPUTestDevice(featureLevel);
+    if (!device || device.info.featureLevel !== 'compatibility') {
+      continue;
+    }
+
+    for (const [limitName, defaultLimit] of Object.entries(COMPATIBILITY_DEFAULT_LIMITS)) {
+      expect(
+        device.handle.limits[limitName as keyof typeof COMPATIBILITY_DEFAULT_LIMITS],
+        `${featureLevel} ${limitName} uses the compatibility default`
+      ).toBe(defaultLimit);
+    }
+  }
+});
+
+it('WebGPU compatibility-max devices request adapter-supported limits', async () => {
+  const device = await getWebGPUTestDevice('compatibility-max');
   if (!device || device.info.featureLevel !== 'compatibility') {
     return;
   }
 
-  for (const limitName of [
-    'maxStorageBuffersInVertexStage',
-    'maxStorageBuffersPerShaderStage',
-    'maxComputeInvocationsPerWorkgroup'
-  ] as const) {
+  expect(
+    device.features.has('core-features-and-limits'),
+    'compatibility-max does not upgrade to core'
+  ).toBe(false);
+  for (const limitName of COMPATIBILITY_LIMIT_NAMES) {
     expect(device.handle.limits[limitName], `${limitName} matches the adapter`).toBe(
       device.adapter.limits[limitName]
     );

@@ -84,13 +84,24 @@ export type DeviceInfo = {
  * WebGPU feature/limit profile requested during device creation.
  * - `'core'` requests the portable WebGPU core profile.
  * - `'max'` requests every adapter feature and supported limit that luma.gl can forward.
- * - `'compatibility'` requests WebGPU compatibility mode.
+ * - `'compatibility'` requests WebGPU compatibility mode with compatibility default limits.
+ * - `'compatibility-max'` requests WebGPU compatibility mode with every adapter feature and
+ *   supported limit, without upgrading to core.
  * - `'best-available'` requests compatibility mode, then upgrades to core when available.
+ *   Without the upgrade it keeps compatibility default limits, like `'compatibility'`.
  */
-export type WebGPUFeatureLevel = 'core' | 'max' | 'compatibility' | 'best-available';
+export type WebGPUFeatureLevel =
+  | 'core'
+  | 'max'
+  | 'compatibility'
+  | 'compatibility-max'
+  | 'best-available';
 
 /** Effective WebGPU feature level reported by a created WebGPU device. */
-export type WebGPUDeviceFeatureLevel = Exclude<WebGPUFeatureLevel, 'best-available'>;
+export type WebGPUDeviceFeatureLevel = Exclude<
+  WebGPUFeatureLevel,
+  'compatibility-max' | 'best-available'
+>;
 
 /**
  * Information supplied when a device is lost.
@@ -390,7 +401,7 @@ export type DeviceProps = {
   powerPreference?: 'default' | 'high-performance' | 'low-power';
   /** Hints that device creation should fail if no hardware GPU is available (if the system performance is "low"). */
   failIfMajorPerformanceCaveat?: boolean;
-  /** WebGPU only: selects the feature/limit profile. Defaults to `'core'`; use `'max'` to request every supported adapter feature and limit, `'compatibility'` to use compatibility validation and default limits, or `'best-available'` to upgrade to core or request the compatibility adapter's supported limits if it cannot upgrade. */
+  /** WebGPU only: selects the feature/limit profile. Defaults to `'core'`; use `'max'` to request every supported adapter feature and limit, `'compatibility'` to use compatibility validation and default limits, `'compatibility-max'` to use compatibility validation with every supported adapter feature and limit, or `'best-available'` to upgrade to core when possible and otherwise keep compatibility default limits. */
   featureLevel?: WebGPUFeatureLevel;
   /** WebGPU only: additional supported device features to request without enabling the full `'max'` profile. Unsupported entries are ignored. */
   optionalFeatures?: readonly WebGPUDeviceFeature[];
