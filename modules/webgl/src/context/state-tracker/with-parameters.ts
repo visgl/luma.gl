@@ -8,9 +8,10 @@ import {WebGLStateTracker} from './webgl-state-tracker';
 /**
  * Execute a function with a set of temporary WebGL parameter overrides
  * - Saves current "global" WebGL context settings
- * - Sets the supplies WebGL context parameters,
+ * - Sets the supplied WebGL context parameters,
  * - Executes supplied function
- * - Restores parameters
+ * - Restores parameters, including when setup or the callback throws
+ * - `nocatch: true` skips exception cleanup; use only for operations known not to throw
  * - Returns the return value of the supplied function
  */
 export function withGLParameters(
@@ -23,22 +24,21 @@ export function withGLParameters(
     return func(gl);
   }
 
-  const {nocatch = true} = parameters;
+  const {nocatch = false} = parameters;
 
   const webglState = WebGLStateTracker.get(gl);
   webglState.push();
-  setGLParameters(gl, parameters);
-
-  // Setup is done, call the function
   let value;
 
   if (nocatch) {
-    // Avoid try catch to minimize stack size impact for safe execution paths
+    // Explicit opt-out for operations known not to throw.
+    setGLParameters(gl, parameters);
     value = func(gl);
     webglState.pop();
   } else {
-    // Wrap in a try-catch to ensure that parameters are restored on exceptions
+    // Restore state if setup or the callback throws; propagate the exception.
     try {
+      setGLParameters(gl, parameters);
       value = func(gl);
     } finally {
       webglState.pop();
