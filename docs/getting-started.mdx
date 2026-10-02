@@ -33,8 +33,8 @@ npm install @luma.gl/core @luma.gl/engine @luma.gl/webgl @luma.gl/webgpu
 ```
 
 ## Setup
-### Step 1. Render a frame
-Replace src/main.ts with:
+### Step 1. Set up the render loop
+Replace `src/main.ts` with:
 
 ```ts
 import {luma} from '@luma.gl/core';
@@ -81,7 +81,7 @@ With that you can run the vite development server and see the result.
 npm run dev
 ```
 
-You should see a light gray background.
+At this checkpoint, you should see a light gray background. The next steps add the shaders and draw the triangle.
 
 ### Step 2. Write the shaders
 In this step you will write the shaders that will render the triangle both in GLSL and WGSL seperarely. Add the following code to `main.ts` file.
@@ -134,7 +134,7 @@ const WGSL_SHADER = /* wgsl */ `\
 In order to render the triangle, we need to create a `Model` resource and call its `draw` method in the `onRender` method of the `AppAnimationLoopTemplate`.
 In the model we pass in all the necessary data to it such as the shader sources, vertex data, topology etc which will then be used to render the triangle.
 
-`Model` is a resource that contains per draw call resources such as vertex, index buffers, uniforms and pipeline. For more information, see the [Model](docs/api-reference/engine/model) documentation.
+`Model` is a resource that contains per draw call resources such as vertex, index buffers, uniforms and pipeline. For more information, see the [Model](/docs/api-reference/engine/model) documentation.
 
 ```ts
 import {AnimationLoopTemplate, type AnimationProps, makeAnimationLoop,Model} from '@luma.gl/engine';
@@ -189,6 +189,44 @@ Your `main.ts` and `index.html` file should look like this:
   import {AnimationLoopTemplate, type AnimationProps, makeAnimationLoop,Model} from '@luma.gl/engine';
   import {webgpuAdapter} from '@luma.gl/webgpu';
   import {webgl2Adapter} from '@luma.gl/webgl';
+
+  // vertex shader in GLSL
+  const VS_GLSL = /* glsl */`#version 300 es
+
+    const vec2 pos[3] = vec2[3](vec2(0.0f, 0.5f), vec2(-0.5f, -0.5f), vec2(0.5f, -0.5f));
+
+    void main() {
+      gl_Position = vec4(pos[gl_VertexID], 0.0, 1.0);
+    }
+  `;
+
+  // fragment shader in GLSL
+  const FS_GLSL = /* glsl */ `\
+  #version 300 es
+
+  precision highp float;
+
+  layout(location = 0) out vec4 outColor;
+
+  void main() {
+     outColor = vec4(1.0, 0.0, 0.0, 1.0);
+  }
+  `;
+
+  // vertex shader in WGSL
+  const WGSL_SHADER = /* wgsl */ `\
+  @vertex
+  fn vertexMain(@builtin(vertex_index) vertexIndex : u32) -> @builtin(position) vec4<f32> {
+    var positions = array<vec2<f32>, 3>(vec2(0.0, 0.5), vec2(-0.5, -0.5), vec2(0.5, -0.5));
+    return vec4<f32>(positions[vertexIndex], 0.0, 1.0);
+  }
+
+
+  @fragment
+  fn fragmentMain() -> @location(0) vec4<f32> {
+    return vec4<f32>(1.0, 0.0, 0.0, 1.0);
+  }
+  `
 
   // This class extends AnimationLoopTemplate to define the main render loop
   class AppAnimationLoopTemplate extends AnimationLoopTemplate {
@@ -247,43 +285,7 @@ Your `main.ts` and `index.html` file should look like this:
     device
   }).start();
 
-  // vertex shader in GLSL
-  const VS_GLSL = /* glsl */`#version 300 es
 
-    const vec2 pos[3] = vec2[3](vec2(0.0f, 0.5f), vec2(-0.5f, -0.5f), vec2(0.5f, -0.5f));
-
-    void main() {
-      gl_Position = vec4(pos[gl_VertexID], 0.0, 1.0);
-    }
-  `;
-
-  // fragment shader in GLSL
-  const FS_GLSL = /* glsl */ `\
-  #version 300 es
-
-  precision highp float;
-
-  layout(location = 0) out vec4 outColor;
-
-  void main() {
-     outColor = vec4(1.0, 0.0, 0.0, 1.0);
-  }
-  `;
-
-  // vertex shader in WGSL
-  const WGSL_SHADER = /* wgsl */ `\
-  @vertex
-  fn vertexMain(@builtin(vertex_index) vertexIndex : u32) -> @builtin(position) vec4<f32> {
-    var positions = array<vec2<f32>, 3>(vec2(0.0, 0.5), vec2(-0.5, -0.5), vec2(0.5, -0.5));
-    return vec4<f32>(positions[vertexIndex], 0.0, 1.0);
-  }
-
-
-  @fragment
-  fn fragmentMain() -> @location(0) vec4<f32> {
-    return vec4<f32>(1.0, 0.0, 0.0, 1.0);
-  }
-  `
 
   ```
   </TabItem>
