@@ -86,6 +86,7 @@ export class WebGPUCanvasContext extends CanvasContext {
     }
 
     const requestedColorFormat = this.colorFormat || this.device.preferredColorFormat;
+
     const requestedConfiguration: GPUCanvasConfiguration = {
       device: this.device.handle,
       format: requestedColorFormat,
@@ -100,7 +101,6 @@ export class WebGPUCanvasContext extends CanvasContext {
           : Texture.RENDER_ATTACHMENT
     };
 
-    // Reconfigure the canvas size.
     this.handle.configure(requestedConfiguration);
 
     let configuredConfiguration = requestedConfiguration;

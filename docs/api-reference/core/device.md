@@ -89,7 +89,7 @@ Specifies props to use when luma creates the device.
 | ------------------------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `id?: string` | `null` | Optional string id, mainly intended for debugging. |
 | `createCanvasContext?: CanvasContextProps` \| `true` | [CanvasContexProps][canvas-context-props] | Create a default `CanvasContext` for the new `Device`. `true` creates a context with default props. |
-| `powerPreference?: string` | `'high-performance'` | `'default' \| 'high-performance' \| 'low-power'` (WebGL). |
+| `powerPreference?: string` | `'default'` | `'default' \| 'high-performance' \| 'low-power'`. WebGPU omits the request hint when this is `'default'`. |
 | `featureLevel?: 'core' \| 'max' \| 'compatibility' \| 'best-available'` | `'core'` | WebGPU feature/limit profile to request. `'core'` is the portable default; `'max'` requests every supported adapter feature and limit; `'compatibility'` opts into compatibility mode; `'best-available'` upgrades a compatibility adapter to core when available. WebGL and null devices ignore this prop. |
 | `optionalFeatures?: WebGPUDeviceFeature[]` | `[]` | WebGPU device features to request in addition to the selected profile. Unsupported entries are ignored. Use this for targeted capabilities such as `'subgroups'` without enabling the full `'max'` profile. |
 | `requiredLimits?: Partial<Record<keyof DeviceLimits, number>>` | `undefined` | WebGPU device limits to request, using the same names as `device.limits`. The device gets exactly the requested value when it is better than the WebGPU spec default (for example above the default 8 `maxStorageBuffersPerShaderStage`), which lets a high-end development GPU enforce the limits the application targets. Values worse than the spec default are raised to the default, so this cannot make a device stricter than the spec defaults. Values the adapter cannot provide, and limit names the browser does not support, make device creation fail. Applied on top of `featureLevel: 'max'` (requested values override). Ignored by `attach()`, which wraps an existing device, and by WebGL and null devices. |
@@ -113,6 +113,8 @@ Specifies props to use when luma creates the device.
 :::tip
 Learn more GPU debugging in our [Debugging](../../developer-guide/debugging.md) guide.
 :::
+
+`device.lost` preserves whether loss was intentional (`destroyed`) or unexpected (`unknown`).
 
 #### Internal caching props
 
