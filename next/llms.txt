@@ -5,15 +5,15 @@
 
 ## docs
 
-Learn high-performance WebGPU and WebGL 2 rendering, compute, shaders, models, and GPU data processing with luma.gl.
+luma gl is a high performance WebGL and WebGPU toolkit
 
-- [luma.gl Documentation](https://luma.gl/next/docs.md): Learn high-performance WebGPU and WebGL 2 rendering, compute, shaders, models, and GPU data processing with luma.gl.
+- [Introduction](https://luma.gl/next/docs.md): luma gl is a high performance WebGL and WebGPU toolkit
 
 ### getting-started
 
-Discover real-time rendering, physical simulation, GPU compute, and interactive visualization built with luma.gl.
+Get started with your first hello triangle
 
-- [Your GPU is the canvas.](https://luma.gl/next/docs/getting-started.md): Discover real-time rendering, physical simulation, GPU compute, and interactive visualization built with luma.gl.
+- [Getting Started](https://luma.gl/next/docs/getting-started.md): Get started with your first hello triangle
 
 ### capabilities
 

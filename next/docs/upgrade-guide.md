@@ -22,6 +22,10 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 * `ShaderPassPipeline`, `ShaderPassPipelineStep`, and `ShaderPassComputeOptimization` have been renamed to `CompositeShaderPass`, `CompositeShaderPassStep`, and `CompositeShaderPassComputeOptimization`. Effect factories and values likewise replace their `ShaderPassPipeline` suffix with `CompositeShaderPass`.
 
+**@luma.gl/webgpu**
+
+* `WebGPUDevice.adapter` is now typed `GPUAdapter | null`. It is `null` for devices wrapped with `webgpuAdapter.attach()` / `luma.attachDevice()`, because a `GPUDevice` does not reference its `GPUAdapter`. Devices from `luma.createDevice()` still have an adapter; TypeScript code that reads `device.adapter` needs a null check or non-null assertion. Use `device.adapterInfo` for adapter metadata.
+
 **@luma.gl/experimental**
 
 * OIT fullscreen resolution is now exposed as `createABufferResolveCompositeShaderPass()` and `createWBOITResolveCompositeShaderPass()`. `WBOITRenderer.capture()` returns the accumulation and revealage bindings for inserting the WBOIT resolve into a larger shader-pass stack.
