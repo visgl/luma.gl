@@ -81,9 +81,8 @@ float sketchStroke_getCoverage(vec2 coordinates, float strokeLength, float seed)
   float distance = max(abs(coordinates.y - center) - radius, endDistance);
   float antialias = max(fwidth(distance), max(sketchStroke.minimumAntialias, 0.0001));
   float coverage = 1.0 - smoothstep(-antialias * 0.5, antialias * 0.5, distance);
-  float pigment = smoothstep(0.32, 0.72, grainTexture);
-  float charcoal = mix(1.0, 0.68 + pigment * 0.32, sketchStroke.grain * sketchStroke.sketch);
-  return coverage * charcoal;
+  // Keep the pigment opaque; grain changes the stroke edge so the paper does not show through as white flecks.
+  return coverage;
 }
 `;
 
@@ -132,9 +131,8 @@ fn sketchStroke_getCoverage(coordinates: vec2<f32>, strokeLength: f32, seed: f32
   let distance = max(abs(coordinates.y - center) - radius, endDistance);
   let antialias = max(fwidth(distance), max(sketchStroke.minimumAntialias, 0.0001));
   let coverage = 1.0 - smoothstep(-antialias * 0.5, antialias * 0.5, distance);
-  let pigment = smoothstep(0.32, 0.72, grainTexture);
-  let charcoal = mix(1.0, 0.68 + pigment * 0.32, sketchStroke.grain * sketchStroke.sketch);
-  return coverage * charcoal;
+  // Keep the pigment opaque; grain changes the stroke edge so the paper does not show through as white flecks.
+  return coverage;
 }
 `;
 

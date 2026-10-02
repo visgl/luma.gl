@@ -47,7 +47,7 @@ export function createSketchScene(parent: HTMLDivElement, options: DeckExampleDe
     extension: 5
   };
   let edgesVisible = true;
-  let fillsVisible = true;
+  let fillsVisible = false;
   let contextVisible = true;
   const deck = new Deck({
     parent,
@@ -126,7 +126,7 @@ export function createSketchScene(parent: HTMLDivElement, options: DeckExampleDe
             segments,
             segmentCount: edgeData.length / 8,
             data: features,
-            color: [48, 44, 40, 238],
+            color: [48, 44, 40, 255],
             style,
             visible: edgesVisible,
             coordinateOrigin: ORIGIN,

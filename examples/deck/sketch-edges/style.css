@@ -11,3 +11,8 @@ html, body, #scene {
   overflow: hidden;
   background: #e6e2d9;
 }
+
+/* Keep selects flush with sliders and toggle controls in the shared label grid. */
+.luma-example-infobox .control-card select {
+  width: 112px;
+}
