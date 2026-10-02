@@ -139,9 +139,12 @@ it('GPUVector-first Arrow fixed-width adapters create direct WebGPU models', asy
   void 0;
 });
 
-it('picks the global row from both physical scatterplot chunks', async () => {
+it('picks the global row from both physical scatterplot chunks', async context => {
   const device = await getWebGPUTestDevice('core');
-  if (!device) return;
+  if (!device || isSoftwareBackedDevice(device)) {
+    context.skip('Deck picking readback requires a hardware WebGPU device');
+    return;
+  }
   const firstPositions = makeArrowFixedSizeListVector(
     new Float32(),
     2,
@@ -188,9 +191,12 @@ it('picks the global row from both physical scatterplot chunks', async () => {
   }
 });
 
-it('clips temporal path fragments at both ends of the trail window', async () => {
+it('clips temporal path fragments at both ends of the trail window', async context => {
   const device = await getWebGPUTestDevice('core');
-  if (!device) return;
+  if (!device || isSoftwareBackedDevice(device)) {
+    context.skip('Deck picking readback requires a hardware WebGPU device');
+    return;
+  }
   const pointType = new arrow.FixedSizeList(2, new arrow.Field('xy', new Float32(), false));
   const pathType = new arrow.List(new arrow.Field('vertices', pointType, false));
   const timestampType = new arrow.List(new arrow.Field('timestamp', new Float32(), false));
