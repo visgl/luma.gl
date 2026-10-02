@@ -209,6 +209,7 @@ export class WEBGLTexture extends Texture {
 
     // WebGL cube maps specify faces by overriding target instead of using the z parameter
     const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, z);
+    // ImageBitmap ignores these flags; set imageOrientation/premultiplyAlpha at bitmap creation.
     // Always set explicitly - an ambient value left by a previous upload must not leak in
     const glParameters: GLValueParameters = {
       [GL.UNPACK_FLIP_Y_WEBGL]: Boolean(options.flipY),
