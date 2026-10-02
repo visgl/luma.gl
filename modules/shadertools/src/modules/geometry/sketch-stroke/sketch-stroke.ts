@@ -68,7 +68,7 @@ float sketchStroke_noise2(vec2 coordinate) {
 float sketchStroke_getCoverage(vec2 coordinates, float strokeLength, float seed) {
   float along = coordinates.x;
   float side = sketchStroke_noise(seed * 29.0) < 0.5 ? -1.0 : 1.0;
-  float center = (sketchStroke_noise(along * 17.0 + seed * 19.0) * 2.0 - 1.0) * sketchStroke.jitter * sketchStroke.sketch + side * sketchStroke.offset * sketchStroke.sketch;
+  float center = (sketchStroke_noise(along * strokeLength / 36.0 + seed * 19.0) * 2.0 - 1.0) * sketchStroke.jitter * sketchStroke.sketch + side * sketchStroke.offset * sketchStroke.sketch;
   float variation = mix(1.0, 0.55 + sketchStroke_noise(along * 31.0 + seed * 7.0) * 0.75, sketchStroke.variation * sketchStroke.sketch);
   vec2 grainCoordinates = vec2(along * strokeLength, coordinates.y) + vec2(seed * 17.0, seed * 53.0);
   float coarseGrain = sketchStroke_noise2(grainCoordinates * 0.55);
@@ -118,7 +118,7 @@ fn sketchStroke_noise2(coordinate: vec2<f32>) -> f32 {
 fn sketchStroke_getCoverage(coordinates: vec2<f32>, strokeLength: f32, seed: f32) -> f32 {
   let along = coordinates.x;
   let side = select(1.0, -1.0, sketchStroke_noise(seed * 29.0) < 0.5);
-  let center = (sketchStroke_noise(along * 17.0 + seed * 19.0) * 2.0 - 1.0) * sketchStroke.jitter * sketchStroke.sketch + side * sketchStroke.offset * sketchStroke.sketch;
+  let center = (sketchStroke_noise(along * strokeLength / 36.0 + seed * 19.0) * 2.0 - 1.0) * sketchStroke.jitter * sketchStroke.sketch + side * sketchStroke.offset * sketchStroke.sketch;
   let variation = mix(1.0, 0.55 + sketchStroke_noise(along * 31.0 + seed * 7.0) * 0.75, sketchStroke.variation * sketchStroke.sketch);
   let grainCoordinates = vec2<f32>(along * strokeLength, coordinates.y) + vec2<f32>(seed * 17.0, seed * 53.0);
   let coarseGrain = sketchStroke_noise2(grainCoordinates * 0.55);

@@ -41,10 +41,10 @@ export function createSketchScene(parent: HTMLDivElement, options: DeckExampleDe
   let segments: Buffer | null = null;
   let style: SketchStrokeProps = {
     width: 3.1,
-    jitter: 0.1,
+    jitter: 0.65,
     grain: 0.9,
     variation: 0.45,
-    extension: 10
+    extension: 5
   };
   let edgesVisible = true;
   let fillsVisible = false;
