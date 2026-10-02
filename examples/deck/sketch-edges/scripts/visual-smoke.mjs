@@ -38,8 +38,7 @@ try {
       await page.goto(`${process.env.SKETCH_EXAMPLE_URL || server.resolvedUrls.local[0]}?backend=${backend}`);
       await page.waitForFunction(() => document.body.dataset.ready === 'true', undefined, {timeout: 60_000});
       await page.waitForTimeout(500);
-      assert.equal(await page.isChecked('#fills'), false, `${backend}: building faces are off by default`);
-      await page.check('#fills');
+      assert.equal(await page.isChecked('#fills'), true, `${backend}: building faces are on by default`);
       await page.waitForTimeout(150);
       const pencil = PNG.sync.read(await page.screenshot({path: join(tmpdir(), `sketch-edges-${backend}.png`)}));
       if (process.env.SKETCH_THUMBNAIL && backend === 'webgpu') {

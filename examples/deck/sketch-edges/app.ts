@@ -47,7 +47,7 @@ export function createSketchScene(parent: HTMLDivElement, options: DeckExampleDe
     extension: 5
   };
   let edgesVisible = true;
-  let fillsVisible = false;
+  let fillsVisible = true;
   let contextVisible = true;
   const deck = new Deck({
     parent,
@@ -97,7 +97,7 @@ export function createSketchScene(parent: HTMLDivElement, options: DeckExampleDe
           features,
           data: features,
           pickable: true,
-          opacity: 0.34,
+          opacity: 0.28,
           visible: fillsVisible,
           coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
           coordinateOrigin: ORIGIN
