@@ -44,7 +44,7 @@ export function createSketchScene(parent: HTMLDivElement, options: DeckExampleDe
     jitter: 0.1,
     grain: 0.9,
     variation: 0.45,
-    extension: 5
+    extension: 10
   };
   let edgesVisible = true;
   let fillsVisible = false;
@@ -97,6 +97,7 @@ export function createSketchScene(parent: HTMLDivElement, options: DeckExampleDe
           features,
           data: features,
           pickable: true,
+          opacity: 0.34,
           visible: fillsVisible,
           coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
           coordinateOrigin: ORIGIN
