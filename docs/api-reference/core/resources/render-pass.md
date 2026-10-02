@@ -116,6 +116,9 @@ Draws with the active pipeline, bindings, and vertex array. `options` contains
 draw counts and offsets such as `vertexCount`, `indexCount`,
 `instanceCount`, `firstVertex`, and `firstIndex`.
 
+For indexed draws, `indexCount` takes precedence. When it is omitted, the active
+backend may use `vertexCount` as the indexed draw count for compatibility.
+
 ```ts
 renderPass.setPipeline(pipeline);
 renderPass.setBindings({frameUniforms, materialUniforms});

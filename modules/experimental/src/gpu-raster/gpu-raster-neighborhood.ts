@@ -4,12 +4,7 @@
 
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import type {
-  GPUCommandGraph,
-  GPUCommandGraphContributor,
-  GraphDataView,
-  GraphResourceUse
-} from '@luma.gl/gpgpu/gpu-core';
+import type {GPUCommandGraph, GraphDataView, GraphResourceUse} from '@luma.gl/gpgpu/gpu-core';
 import {getViewBinding, getViewElementOffset} from '@luma.gl/gpgpu/gpu-core';
 import {
   assertRasterStorageBindingFits,
@@ -68,7 +63,7 @@ const MAXIMUM_RASTER_NEIGHBORHOOD_RADIUS = 8;
  * evaluating their shared neighborhood. Source and destination buffers never alias, center
  * invalidity is preserved, and invalid output pixels receive a canonical quiet NaN.
  */
-export class GPURasterNeighborhood implements GPUCommandGraphContributor {
+export class GPURasterNeighborhood {
   readonly id: string;
   readonly width: number;
   readonly height: number;

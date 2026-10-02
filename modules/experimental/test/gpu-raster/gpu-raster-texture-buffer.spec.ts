@@ -202,20 +202,24 @@ it('GPURaster composes gathered validity with a GPU-resident masked extent and h
     output: values,
     outputValidity: validity
   }).addToGraph(graph);
-  new GPUReduction({
-    id: 'valid-extent',
-    input: values,
-    mask: validity,
-    output: extent,
-    operation: 'extent'
-  }).addToGraph(graph);
-  new GPUHistogram({
-    id: 'valid-histogram',
-    input: values,
-    mask: validity,
-    domain: extent,
-    output: histogram
-  }).addToGraph(graph);
+  graph.add(
+    new GPUReduction({
+      id: 'valid-extent',
+      input: values,
+      mask: validity,
+      output: extent,
+      operation: 'extent'
+    })
+  );
+  graph.add(
+    new GPUHistogram({
+      id: 'valid-histogram',
+      input: values,
+      mask: validity,
+      domain: extent,
+      output: histogram
+    })
+  );
 
   const compiled = graph.compile();
   const gatherIndex = compiled.stats.nodeOrder.indexOf('raster-gather');

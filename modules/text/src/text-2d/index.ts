@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-export {type FontAtlas} from './atlas/font-atlas';
+export {type FontAtlas} from '../fonts/atlas/font-atlas';
 export {
   type GPUTextData,
   type GPUTextStats,
@@ -14,19 +14,19 @@ export {
   measureFontAtlasText,
   type FontAtlasTextMetrics,
   type FontAtlasTextMetricsOptions
-} from './atlas/text-metrics';
+} from '../fonts/atlas/text-metrics';
 export {
   buildBitmapFontAtlas,
   type BitmapFontAtlasSettings
-} from './build-bitmap-font-atlas';
-export {buildSdfFontAtlas, type SdfFontAtlasSettings} from './build-sdf-font-atlas';
+} from '../fonts/build-bitmap-font-atlas';
+export {buildSdfFontAtlas, type SdfFontAtlasSettings} from '../fonts/build-sdf-font-atlas';
 export {
   buildMsdfFontAtlas,
   loadMsdfFontAtlas,
   type BmFontMsdfCharacter,
   type BmFontMsdfData,
   type BmFontMsdfKerning
-} from './build-msdf-font-atlas';
+} from '../fonts/build-msdf-font-atlas';
 export {
   buildMapping,
   getCharacterAtlasPage,
@@ -36,7 +36,7 @@ export {
   type Character,
   type CharacterMapping,
   type TextKerning
-} from './atlas/text-utils';
+} from '../fonts/atlas/text-utils';
 export {type TextGlyphLayout} from './model-utils/gpu-text-types';
 export {
   buildTextGlyphLayout,

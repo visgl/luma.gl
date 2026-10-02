@@ -4,12 +4,7 @@
 
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {
-  GPUCommandGraph,
-  type GPUCommandGraphContributor,
-  type GraphBufferUse,
-  type GraphDataView
-} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from '@luma.gl/gpgpu/gpu-core';
 import {
   doGraphDataViewsOverlap,
@@ -88,7 +83,7 @@ export type GPUTraceComparisonStats = {
  * A renderer or filter can map the resulting delta, score, or mask columns through the same dense
  * operation dictionary without allocating another per-span output set for very large traces.
  */
-export class GPUTraceComparison implements GPUCommandGraphContributor {
+export class GPUTraceComparison {
   readonly id: string;
   readonly props: GPUTraceComparisonProps;
   readonly stats: Readonly<GPUTraceComparisonStats>;

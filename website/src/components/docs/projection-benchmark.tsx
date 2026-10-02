@@ -16,7 +16,7 @@ const PROJECTION_BENCHMARK_ROW_COUNTS = [4_096, 16_384, 65_536, 262_144] as cons
 /** Runs the documented projection benchmark against the reader's actual browser and GPU. */
 export function ProjectionBenchmark(): ReactNode {
   const selectedDevice = useStore(store => store.presentationDevice || store.device);
-  const [coordinateCount, setCoordinateCount] = useState<number>(16_384);
+  const [coordinateCount, setCoordinateCount] = useState<number>(PROJECTION_BENCHMARK_ROW_COUNTS[0]);
   const [webGPUUnavailable, setWebGPUUnavailable] = useState(false);
 
   useEffect(() => {

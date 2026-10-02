@@ -206,208 +206,15 @@ const DISPLAY_MODULE = {
   }
 } as const;
 
-const SOLID_WGSL = /* wgsl */ `
-struct AppUniforms {
-  rect: vec4<f32>,
-  color: vec4<f32>,
-};
-
-@group(0) @binding(auto) var<uniform> app: AppUniforms;
-
-struct VertexOutputs {
-  @builtin(position) position: vec4<f32>,
-};
-
-@vertex
-fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> VertexOutputs {
-  let localPositions = array<vec2<f32>, 6>(
-    vec2<f32>(-0.5, -0.5),
-    vec2<f32>(0.5, -0.5),
-    vec2<f32>(-0.5, 0.5),
-    vec2<f32>(-0.5, 0.5),
-    vec2<f32>(0.5, -0.5),
-    vec2<f32>(0.5, 0.5)
-  );
-  let localPosition = localPositions[vertexIndex];
-  var outputs: VertexOutputs;
-  outputs.position = vec4<f32>(app.rect.xy + localPosition * app.rect.zw, 0.0, 1.0);
-  return outputs;
-}
-
-@fragment
-fn fragmentMain() -> @location(0) vec4<f32> {
-  return app.color;
-}
-`;
-
-const DUAL_SOURCE_SOLID_WGSL = /* wgsl */ `
-struct AppUniforms {
-  rect: vec4<f32>,
-  color: vec4<f32>,
-};
-
-@group(0) @binding(auto) var<uniform> app: AppUniforms;
-
-struct VertexOutputs {
-  @builtin(position) position: vec4<f32>,
-};
-
-struct FragmentOutputs {
-  @location(0) @blend_src(0) color: vec4<f32>,
-  @location(0) @blend_src(1) secondaryColor: vec4<f32>,
-};
-
-@vertex
-fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> VertexOutputs {
-  let localPositions = array<vec2<f32>, 6>(
-    vec2<f32>(-0.5, -0.5),
-    vec2<f32>(0.5, -0.5),
-    vec2<f32>(-0.5, 0.5),
-    vec2<f32>(-0.5, 0.5),
-    vec2<f32>(0.5, -0.5),
-    vec2<f32>(0.5, 0.5)
-  );
-  let localPosition = localPositions[vertexIndex];
-  var outputs: VertexOutputs;
-  outputs.position = vec4<f32>(app.rect.xy + localPosition * app.rect.zw, 0.0, 1.0);
-  return outputs;
-}
-
-@fragment
-fn fragmentMain() -> FragmentOutputs {
-  var outputs: FragmentOutputs;
-  outputs.color = app.color;
-  outputs.secondaryColor = vec4<f32>(vec3<f32>(1.0) - app.color.rgb, app.color.a);
-  return outputs;
-}
-`;
-
-const SOLID_VS_GLSL = /* glsl */ `#version 300 es
-uniform appUniforms {
-  vec4 rect;
-  vec4 color;
-} app;
-
-const vec2 POSITIONS[6] = vec2[6](
-  vec2(-0.5, -0.5),
-  vec2(0.5, -0.5),
-  vec2(-0.5, 0.5),
-  vec2(-0.5, 0.5),
-  vec2(0.5, -0.5),
-  vec2(0.5, 0.5)
-);
-
-void main(void) {
-  gl_Position = vec4(app.rect.xy + POSITIONS[gl_VertexID] * app.rect.zw, 0.0, 1.0);
-}
-`;
-
-const SOLID_FS_GLSL = /* glsl */ `#version 300 es
-precision highp float;
-
-uniform appUniforms {
-  vec4 rect;
-  vec4 color;
-} app;
-
-out vec4 fragColor;
-
-void main(void) {
-  fragColor = app.color;
-}
-`;
-
-const DISPLAY_WGSL = /* wgsl */ `
-struct AppUniforms {
-  rect: vec4<f32>,
-  options: vec4<f32>,
-};
-
-@group(0) @binding(auto) var<uniform> app: AppUniforms;
-@group(0) @binding(auto) var uTexture: texture_2d<f32>;
-@group(0) @binding(auto) var uTextureSampler: sampler;
-
-struct VertexOutputs {
-  @builtin(position) position: vec4<f32>,
-  @location(0) uv: vec2<f32>,
-};
-
-@vertex
-fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> VertexOutputs {
-  let localPositions = array<vec2<f32>, 6>(
-    vec2<f32>(-0.5, -0.5),
-    vec2<f32>(0.5, -0.5),
-    vec2<f32>(-0.5, 0.5),
-    vec2<f32>(-0.5, 0.5),
-    vec2<f32>(0.5, -0.5),
-    vec2<f32>(0.5, 0.5)
-  );
-  let localPosition = localPositions[vertexIndex];
-  var outputs: VertexOutputs;
-  outputs.position = vec4<f32>(app.rect.xy + localPosition * app.rect.zw, 0.0, 1.0);
-  outputs.uv = localPosition + vec2<f32>(0.5);
-  return outputs;
-}
-
-@fragment
-fn fragmentMain(inputs: VertexOutputs) -> @location(0) vec4<f32> {
-  let color = textureSample(uTexture, uTextureSampler, vec2<f32>(inputs.uv.x, 1.0 - inputs.uv.y));
-  if (app.options.x > 0.5) {
-    return vec4<f32>(vec3<f32>(color.a), 1.0);
-  }
-  let checkerIndex = floor(inputs.uv.x * 12.0) + floor(inputs.uv.y * 12.0);
-  let checker = select(vec3<f32>(0.18), vec3<f32>(0.42), fract(checkerIndex * 0.5) > 0.25);
-  return vec4<f32>(mix(checker, color.rgb, color.a), 1.0);
-}
-`;
-
-const DISPLAY_VS_GLSL = /* glsl */ `#version 300 es
-uniform appUniforms {
-  vec4 rect;
-  vec4 options;
-} app;
-
-const vec2 POSITIONS[6] = vec2[6](
-  vec2(-0.5, -0.5),
-  vec2(0.5, -0.5),
-  vec2(-0.5, 0.5),
-  vec2(-0.5, 0.5),
-  vec2(0.5, -0.5),
-  vec2(0.5, 0.5)
-);
-
-out vec2 vUV;
-
-void main(void) {
-  vec2 localPosition = POSITIONS[gl_VertexID];
-  gl_Position = vec4(app.rect.xy + localPosition * app.rect.zw, 0.0, 1.0);
-  vUV = localPosition + vec2(0.5);
-}
-`;
-
-const DISPLAY_FS_GLSL = /* glsl */ `#version 300 es
-precision highp float;
-
-uniform sampler2D uTexture;
-uniform appUniforms {
-  vec4 rect;
-  vec4 options;
-} app;
-
-in vec2 vUV;
-out vec4 fragColor;
-
-void main(void) {
-  vec4 color = texture(uTexture, vec2(vUV.x, 1.0 - vUV.y));
-  if (app.options.x > 0.5) {
-    fragColor = vec4(vec3(color.a), 1.0);
-    return;
-  }
-  float checkerIndex = floor(vUV.x * 12.0) + floor(vUV.y * 12.0);
-  vec3 checker = fract(checkerIndex * 0.5) > 0.25 ? vec3(0.42) : vec3(0.18);
-  fragColor = vec4(mix(checker, color.rgb, color.a), 1.0);
-}
-`;
+const {
+  SOLID_WGSL,
+  DUAL_SOURCE_SOLID_WGSL,
+  SOLID_VS_GLSL,
+  SOLID_FS_GLSL,
+  DISPLAY_WGSL,
+  DISPLAY_VS_GLSL,
+  DISPLAY_FS_GLSL
+} = getShaderSources();
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeExamplePanelHostHtml();
@@ -998,4 +805,219 @@ function escapeHtml(value: string): string {
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;');
+}
+
+function getShaderSources() {
+  const SOLID_WGSL = /* wgsl */ `
+struct AppUniforms {
+  rect: vec4<f32>,
+  color: vec4<f32>,
+};
+
+@group(0) @binding(auto) var<uniform> app: AppUniforms;
+
+struct VertexOutputs {
+  @builtin(position) position: vec4<f32>,
+};
+
+@vertex
+fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> VertexOutputs {
+  let localPositions = array<vec2<f32>, 6>(
+    vec2<f32>(-0.5, -0.5),
+    vec2<f32>(0.5, -0.5),
+    vec2<f32>(-0.5, 0.5),
+    vec2<f32>(-0.5, 0.5),
+    vec2<f32>(0.5, -0.5),
+    vec2<f32>(0.5, 0.5)
+  );
+  let localPosition = localPositions[vertexIndex];
+  var outputs: VertexOutputs;
+  outputs.position = vec4<f32>(app.rect.xy + localPosition * app.rect.zw, 0.0, 1.0);
+  return outputs;
+}
+
+@fragment
+fn fragmentMain() -> @location(0) vec4<f32> {
+  return app.color;
+}
+`;
+
+  const DUAL_SOURCE_SOLID_WGSL = /* wgsl */ `
+struct AppUniforms {
+  rect: vec4<f32>,
+  color: vec4<f32>,
+};
+
+@group(0) @binding(auto) var<uniform> app: AppUniforms;
+
+struct VertexOutputs {
+  @builtin(position) position: vec4<f32>,
+};
+
+struct FragmentOutputs {
+  @location(0) @blend_src(0) color: vec4<f32>,
+  @location(0) @blend_src(1) secondaryColor: vec4<f32>,
+};
+
+@vertex
+fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> VertexOutputs {
+  let localPositions = array<vec2<f32>, 6>(
+    vec2<f32>(-0.5, -0.5),
+    vec2<f32>(0.5, -0.5),
+    vec2<f32>(-0.5, 0.5),
+    vec2<f32>(-0.5, 0.5),
+    vec2<f32>(0.5, -0.5),
+    vec2<f32>(0.5, 0.5)
+  );
+  let localPosition = localPositions[vertexIndex];
+  var outputs: VertexOutputs;
+  outputs.position = vec4<f32>(app.rect.xy + localPosition * app.rect.zw, 0.0, 1.0);
+  return outputs;
+}
+
+@fragment
+fn fragmentMain() -> FragmentOutputs {
+  var outputs: FragmentOutputs;
+  outputs.color = app.color;
+  outputs.secondaryColor = vec4<f32>(vec3<f32>(1.0) - app.color.rgb, app.color.a);
+  return outputs;
+}
+`;
+
+  const SOLID_VS_GLSL = /* glsl */ `#version 300 es
+uniform appUniforms {
+  vec4 rect;
+  vec4 color;
+} app;
+
+const vec2 POSITIONS[6] = vec2[6](
+  vec2(-0.5, -0.5),
+  vec2(0.5, -0.5),
+  vec2(-0.5, 0.5),
+  vec2(-0.5, 0.5),
+  vec2(0.5, -0.5),
+  vec2(0.5, 0.5)
+);
+
+void main(void) {
+  gl_Position = vec4(app.rect.xy + POSITIONS[gl_VertexID] * app.rect.zw, 0.0, 1.0);
+}
+`;
+
+  const SOLID_FS_GLSL = /* glsl */ `#version 300 es
+precision highp float;
+
+uniform appUniforms {
+  vec4 rect;
+  vec4 color;
+} app;
+
+out vec4 fragColor;
+
+void main(void) {
+  fragColor = app.color;
+}
+`;
+
+  const DISPLAY_WGSL = /* wgsl */ `
+struct AppUniforms {
+  rect: vec4<f32>,
+  options: vec4<f32>,
+};
+
+@group(0) @binding(auto) var<uniform> app: AppUniforms;
+@group(0) @binding(auto) var uTexture: texture_2d<f32>;
+@group(0) @binding(auto) var uTextureSampler: sampler;
+
+struct VertexOutputs {
+  @builtin(position) position: vec4<f32>,
+  @location(0) uv: vec2<f32>,
+};
+
+@vertex
+fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> VertexOutputs {
+  let localPositions = array<vec2<f32>, 6>(
+    vec2<f32>(-0.5, -0.5),
+    vec2<f32>(0.5, -0.5),
+    vec2<f32>(-0.5, 0.5),
+    vec2<f32>(-0.5, 0.5),
+    vec2<f32>(0.5, -0.5),
+    vec2<f32>(0.5, 0.5)
+  );
+  let localPosition = localPositions[vertexIndex];
+  var outputs: VertexOutputs;
+  outputs.position = vec4<f32>(app.rect.xy + localPosition * app.rect.zw, 0.0, 1.0);
+  outputs.uv = localPosition + vec2<f32>(0.5);
+  return outputs;
+}
+
+@fragment
+fn fragmentMain(inputs: VertexOutputs) -> @location(0) vec4<f32> {
+  let color = textureSample(uTexture, uTextureSampler, vec2<f32>(inputs.uv.x, 1.0 - inputs.uv.y));
+  if (app.options.x > 0.5) {
+    return vec4<f32>(vec3<f32>(color.a), 1.0);
+  }
+  let checkerIndex = floor(inputs.uv.x * 12.0) + floor(inputs.uv.y * 12.0);
+  let checker = select(vec3<f32>(0.18), vec3<f32>(0.42), fract(checkerIndex * 0.5) > 0.25);
+  return vec4<f32>(mix(checker, color.rgb, color.a), 1.0);
+}
+`;
+
+  const DISPLAY_VS_GLSL = /* glsl */ `#version 300 es
+uniform appUniforms {
+  vec4 rect;
+  vec4 options;
+} app;
+
+const vec2 POSITIONS[6] = vec2[6](
+  vec2(-0.5, -0.5),
+  vec2(0.5, -0.5),
+  vec2(-0.5, 0.5),
+  vec2(-0.5, 0.5),
+  vec2(0.5, -0.5),
+  vec2(0.5, 0.5)
+);
+
+out vec2 vUV;
+
+void main(void) {
+  vec2 localPosition = POSITIONS[gl_VertexID];
+  gl_Position = vec4(app.rect.xy + localPosition * app.rect.zw, 0.0, 1.0);
+  vUV = localPosition + vec2(0.5);
+}
+`;
+
+  const DISPLAY_FS_GLSL = /* glsl */ `#version 300 es
+precision highp float;
+
+uniform sampler2D uTexture;
+uniform appUniforms {
+  vec4 rect;
+  vec4 options;
+} app;
+
+in vec2 vUV;
+out vec4 fragColor;
+
+void main(void) {
+  vec4 color = texture(uTexture, vec2(vUV.x, 1.0 - vUV.y));
+  if (app.options.x > 0.5) {
+    fragColor = vec4(vec3(color.a), 1.0);
+    return;
+  }
+  float checkerIndex = floor(vUV.x * 12.0) + floor(vUV.y * 12.0);
+  vec3 checker = fract(checkerIndex * 0.5) > 0.25 ? vec3(0.42) : vec3(0.18);
+  fragColor = vec4(mix(checker, color.rgb, color.a), 1.0);
+}
+`;
+
+  return {
+    SOLID_WGSL,
+    DUAL_SOURCE_SOLID_WGSL,
+    SOLID_VS_GLSL,
+    SOLID_FS_GLSL,
+    DISPLAY_WGSL,
+    DISPLAY_VS_GLSL,
+    DISPLAY_FS_GLSL
+  } as const;
 }

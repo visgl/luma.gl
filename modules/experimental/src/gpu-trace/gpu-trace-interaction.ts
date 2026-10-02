@@ -256,61 +256,71 @@ export class GPUTraceInteraction {
       throw new Error(`${this.id} views must belong to the target graph`);
     }
 
-    new GPUHierarchyLayout({
-      id: `${this.id}-hierarchy`,
-      parentStates: this.processStates,
-      childStates: this.threadStates,
-      heights: this.threadHeights,
-      offsets: this.threadOffsets,
-      childrenPerParent: this.threadsPerProcess,
-      expandedChildHeight: this.lanesPerThread,
-      collapsedChildHeight: 1,
-      collapsedParentHeight: 1
-    }).addToGraph(graph);
+    graph.add(
+      new GPUHierarchyLayout({
+        id: `${this.id}-hierarchy`,
+        parentStates: this.processStates,
+        childStates: this.threadStates,
+        heights: this.threadHeights,
+        offsets: this.threadOffsets,
+        childrenPerParent: this.threadsPerProcess,
+        expandedChildHeight: this.lanesPerThread,
+        collapsedChildHeight: 1,
+        collapsedParentHeight: 1
+      })
+    );
 
-    new GPUGraphTraversal({
-      id: `${this.id}-focus`,
-      offsets: this.trace.outgoingOffsets,
-      neighbors: this.trace.outgoingNeighbors,
-      reverseOffsets: this.trace.incomingOffsets,
-      reverseNeighbors: this.trace.incomingNeighbors,
-      seeds: this.selectedSpans,
-      seedCount: this.selectedCount,
-      output: this.reachedSpans,
-      maxDepth: this.maxFocusDepth,
-      activeDepth: this.focusDepth,
-      direction: this.focusDirection
-    }).addToGraph(graph);
+    graph.add(
+      new GPUGraphTraversal({
+        id: `${this.id}-focus`,
+        offsets: this.trace.outgoingOffsets,
+        neighbors: this.trace.outgoingNeighbors,
+        reverseOffsets: this.trace.incomingOffsets,
+        reverseNeighbors: this.trace.incomingNeighbors,
+        seeds: this.selectedSpans,
+        seedCount: this.selectedCount,
+        output: this.reachedSpans,
+        maxDepth: this.maxFocusDepth,
+        activeDepth: this.focusDepth,
+        direction: this.focusDirection
+      })
+    );
 
     addPolicyPass(graph, this);
 
-    new GPUVisibilityWorkflow({
-      id: `${this.id}-visibility`,
-      predicates: [{kind: ['time-range', 'bounds', 'selection'], mask: this.visibleMask}],
-      output: this.visibleSpans,
-      outputMask: this.visibleMask,
-      count: this.visibleCount
-    }).addToGraph(graph);
+    graph.add(
+      new GPUVisibilityWorkflow({
+        id: `${this.id}-visibility`,
+        predicates: [{kind: ['time-range', 'bounds', 'selection'], mask: this.visibleMask}],
+        output: this.visibleSpans,
+        outputMask: this.visibleMask,
+        count: this.visibleCount
+      })
+    );
 
     if (this.stats.spanCount > 0) {
-      new GPUAncestorProjection({
-        id: `${this.id}-ancestors`,
-        parents: this.trace.parents,
-        visibility: this.visibleMask,
-        output: this.projectedAncestors,
-        maxDepth: this.maxAncestorDepth
-      }).addToGraph(graph);
+      graph.add(
+        new GPUAncestorProjection({
+          id: `${this.id}-ancestors`,
+          parents: this.trace.parents,
+          visibility: this.visibleMask,
+          output: this.projectedAncestors,
+          maxDepth: this.maxAncestorDepth
+        })
+      );
     }
 
-    new GPUSceneDrawGeneration({
-      id: `${this.id}-draws`,
-      scene: this.trace.scene,
-      visibility: this.visibleMask,
-      commands: this.draw.commands,
-      requiredCount: this.draw.requiredCount,
-      publishedCount: this.draw.publishedCount,
-      overflow: this.draw.overflow
-    }).addToGraph(graph);
+    graph.add(
+      new GPUSceneDrawGeneration({
+        id: `${this.id}-draws`,
+        scene: this.trace.scene,
+        visibility: this.visibleMask,
+        commands: this.draw.commands,
+        requiredCount: this.draw.requiredCount,
+        publishedCount: this.draw.publishedCount,
+        overflow: this.draw.overflow
+      })
+    );
   }
 }
 

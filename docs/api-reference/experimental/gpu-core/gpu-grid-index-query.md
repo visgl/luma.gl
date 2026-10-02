@@ -90,9 +90,9 @@ const index = new GPUGridIndex({
   count: indexCount,
   overflow: indexOverflow
 });
-index.addToGraph(graph);
+graph.add(index);
 
-new GPUGridIndexQuery({
+graph.add(new GPUGridIndexQuery({
   index,
   kind: 'radius',
   query: centerAndRadius, // packed float32 [x, y, radius]
@@ -100,7 +100,7 @@ new GPUGridIndexQuery({
   count: candidateCount,
   overflow: candidateOverflow,
   outputMask: candidateMask
-}).addToGraph(graph);
+}));
 ```
 
 For three dimensions, a radius query contains `[x, y, z, radius]`; bounds contain
@@ -110,3 +110,8 @@ again changes the candidates without rebuilding graph structure.
 The primitive neither builds the index nor applies exact object tests. It does not submit, grow
 capacity, sort or deduplicate IDs, or download results. Queries over an overflowed source index are
 explicitly marked incomplete.
+
+
+## Chunked storage
+
+Cell offsets, indexed object IDs, candidate outputs, and the optional source-ID mask may each use independent vector partitions. Queries borrow adjacent cell starts/ends across seams, assign each selected stored ID one global destination, then route results to output chunks. The mask covers every selected stored ID even when candidate capacity is zero or truncated. Count and overflow retain their scalar contracts, and index overflow propagates to the query result. Query parameters remain a small atomic record.

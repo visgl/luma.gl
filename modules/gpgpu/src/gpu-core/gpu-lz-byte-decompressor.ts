@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding, Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
 import {
   getBoundedDispatchLayout,
@@ -16,14 +17,135 @@ import {
   validatePackedUint32View
 } from './graph-data-view-utils';
 
-export const GPU_LZ_BYTE_DESCRIPTOR_WORDS = 4;
+export const GPU_LZ_BYTE_DESCRIPTOR_WORDS = 5;
 export const GPU_LZ_BYTE_WORKGROUP_SIZE = 256;
+
+/** CPU result for compact LZ spans annotated with direct compressed-input provenance. */
+export type GPULZByteDescriptorPlan = Readonly<{
+  descriptors: Uint32Array;
+  descriptorCount: number;
+  directCopyCount: number;
+  recursiveCopyCount: number;
+  directCopyByteLength: number;
+  recursiveCopyByteLength: number;
+}>;
+
+/**
+ * Converts four-word `[outputOffset, byteLength, literalSourceOffset, matchOffset]` spans into
+ * five-word `[outputOffset, byteLength, literalSourceOffset, literalPeriod, matchOffset]` GPU
+ * records. Use `GPU_LZ_BYTE_DESCRIPTOR_WORDS` when allocating or indexing the returned records.
+ *
+ * A copy becomes a direct compressed-input gather when its source cycle is contained by one prior
+ * direct descriptor. Other copies retain their compact backreference. Planning remains one record
+ * per input span and never materializes byte-level provenance, keeping CPU work and upload size
+ * bounded while removing descriptor recursion from the common literal-followed-by-copy pattern.
+ */
+export function planGPULZByteDescriptors(spans: readonly number[]): GPULZByteDescriptorPlan {
+  if (spans.length % 4 !== 0) {
+    throw new Error('LZ byte spans must contain four words per record');
+  }
+  const descriptors: number[] = [];
+  let directCopyCount = 0;
+  let recursiveCopyCount = 0;
+  let directCopyByteLength = 0;
+  let recursiveCopyByteLength = 0;
+  for (let spanOffset = 0; spanOffset < spans.length; spanOffset += 4) {
+    const outputOffset = spans[spanOffset];
+    const byteLength = spans[spanOffset + 1];
+    const literalSourceOffset = spans[spanOffset + 2];
+    const matchOffset = spans[spanOffset + 3];
+    if (matchOffset === 0) {
+      descriptors.push(outputOffset, byteLength, literalSourceOffset, 0, 0);
+      continue;
+    }
+    const directCopy = findDirectCopy(
+      descriptors,
+      outputOffset - matchOffset,
+      byteLength,
+      matchOffset
+    );
+    if (directCopy) {
+      descriptors.push(
+        outputOffset,
+        byteLength,
+        directCopy.literalSourceOffset,
+        directCopy.literalPeriod,
+        0
+      );
+      directCopyCount++;
+      directCopyByteLength += byteLength;
+    } else {
+      descriptors.push(outputOffset, byteLength, 0, 0, matchOffset);
+      recursiveCopyCount++;
+      recursiveCopyByteLength += byteLength;
+    }
+  }
+  return Object.freeze({
+    descriptors: Uint32Array.from(descriptors),
+    descriptorCount: descriptors.length / GPU_LZ_BYTE_DESCRIPTOR_WORDS,
+    directCopyCount,
+    recursiveCopyCount,
+    directCopyByteLength,
+    recursiveCopyByteLength
+  });
+}
+
+function findDirectCopy(
+  descriptors: readonly number[],
+  sourceOutputOffset: number,
+  byteLength: number,
+  matchOffset: number
+): {literalSourceOffset: number; literalPeriod: number} | undefined {
+  const descriptorIndex = findContainingDescriptor(descriptors, sourceOutputOffset);
+  if (descriptorIndex < 0) return undefined;
+  const descriptorOffset = descriptorIndex * GPU_LZ_BYTE_DESCRIPTOR_WORDS;
+  const descriptorOutputOffset = descriptors[descriptorOffset];
+  const descriptorByteLength = descriptors[descriptorOffset + 1];
+  const literalSourceOffset = descriptors[descriptorOffset + 2];
+  const literalPeriod = descriptors[descriptorOffset + 3];
+  const sourceMatchOffset = descriptors[descriptorOffset + 4];
+  if (sourceMatchOffset !== 0) return undefined;
+  const relativeSourceOffset = sourceOutputOffset - descriptorOutputOffset;
+  const sourceCycleLength = Math.min(byteLength, matchOffset);
+  if (relativeSourceOffset + sourceCycleLength > descriptorByteLength) return undefined;
+  if (literalPeriod === 0) {
+    return {
+      literalSourceOffset: literalSourceOffset + relativeSourceOffset,
+      literalPeriod: byteLength > matchOffset ? matchOffset : 0
+    };
+  }
+  const literalPhase = relativeSourceOffset % literalPeriod;
+  const repeatsSourceCycle = byteLength > matchOffset;
+  if (literalPhase !== 0 || (repeatsSourceCycle && matchOffset % literalPeriod !== 0)) {
+    return undefined;
+  }
+  return {literalSourceOffset, literalPeriod};
+}
+
+function findContainingDescriptor(descriptors: readonly number[], outputOffset: number): number {
+  let lowerIndex = 0;
+  let upperIndex = descriptors.length / GPU_LZ_BYTE_DESCRIPTOR_WORDS;
+  while (lowerIndex < upperIndex) {
+    const middleIndex = lowerIndex + Math.floor((upperIndex - lowerIndex) / 2);
+    if (descriptors[middleIndex * GPU_LZ_BYTE_DESCRIPTOR_WORDS] <= outputOffset) {
+      lowerIndex = middleIndex + 1;
+    } else {
+      upperIndex = middleIndex;
+    }
+  }
+  const descriptorIndex = lowerIndex - 1;
+  if (descriptorIndex < 0) return -1;
+  const descriptorOffset = descriptorIndex * GPU_LZ_BYTE_DESCRIPTOR_WORDS;
+  return outputOffset < descriptors[descriptorOffset] + descriptors[descriptorOffset + 1]
+    ? descriptorIndex
+    : -1;
+}
 
 export type GPULZByteDecompressorProps = {
   id?: string;
   /** Compressed bytes packed into little-endian uint32 words. */
   input: GraphDataView<'uint32'>;
-  /** Sorted `[outputOffset, byteLength, literalSourceOffset, matchOffset]` records. */
+  /** Sorted `[outputOffset, byteLength, literalSourceOffset, literalPeriod, matchOffset]` records. */
   descriptors: GraphDataView<'uint32'>;
   /** Decompressed bytes packed into little-endian uint32 words. */
   output: GraphDataView<'uint32'>;
@@ -35,10 +157,11 @@ export type GPULZByteDecompressorProps = {
 /**
  * Expands literal and LZ backreference spans into a packed byte buffer.
  *
- * A zero `matchOffset` marks a literal span and uses `literalSourceOffset`. A nonzero
- * `matchOffset` marks a copy from the already-defined output prefix. Each invocation owns one
- * complete output word and recursively resolves backreferences to literals, so overlapping copies
- * are deterministic without global barriers or byte-level write races.
+ * A zero `matchOffset` gathers compressed literal bytes directly; a nonzero `literalPeriod`
+ * repeats that source range for a resolved overlapping copy. A nonzero `matchOffset` retains a
+ * copy whose provenance crosses descriptor boundaries. Each invocation owns one complete output
+ * word and only recursively resolves those remaining backreferences, so overlapping copies are
+ * deterministic without global barriers or byte-level write races.
  */
 export class GPULZByteDecompressor {
   readonly id: string;
@@ -50,7 +173,10 @@ export class GPULZByteDecompressor {
     validateConfiguration(this.props);
   }
 
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     const props = this.props;
     for (const view of [props.input, props.descriptors, props.output]) {
       if (view.buffer.graph !== graph) {
@@ -58,7 +184,7 @@ export class GPULZByteDecompressor {
       }
     }
     if (props.outputByteLength === 0) {
-      return;
+      return nodes;
     }
     validateDevice(graph.device, this.id);
     const outputWordCount = Math.ceil(props.outputByteLength / 4);
@@ -68,7 +194,9 @@ export class GPULZByteDecompressor {
       GPU_LZ_BYTE_WORKGROUP_SIZE,
       graph.device.limits.maxComputeWorkgroupsPerDimension
     );
-    addDecompressionPass(graph, props, dispatchLayout);
+    nodes.push(...addDecompressionPass(graph, props, dispatchLayout));
+
+    return nodes;
   }
 }
 
@@ -97,7 +225,7 @@ fn findDescriptor(outputByteIndex: u32) -> u32 {
   while (lowerDescriptorIndex < upperDescriptorIndex) {
     let middleDescriptorIndex = lowerDescriptorIndex +
       (upperDescriptorIndex - lowerDescriptorIndex) / 2u;
-    let descriptorOutputOffset = descriptors[DESCRIPTOR_OFFSET + middleDescriptorIndex * 4u];
+    let descriptorOutputOffset = descriptors[DESCRIPTOR_OFFSET + middleDescriptorIndex * 5u];
     if (descriptorOutputOffset <= outputByteIndex) {
       lowerDescriptorIndex = middleDescriptorIndex + 1u;
     } else {
@@ -106,18 +234,24 @@ fn findDescriptor(outputByteIndex: u32) -> u32 {
   }
   return lowerDescriptorIndex - 1u;
 }
-fn resolveLiteralByte(outputByteIndex: u32) -> u32 {
+fn resolveLiteralByte(outputByteIndex: u32, initialDescriptorIndex: u32) -> u32 {
   var sourceOutputByteIndex = outputByteIndex;
+  var sourceDescriptorIndex = initialDescriptorIndex;
   for (var depth = 0u; depth < DESCRIPTOR_COUNT; depth++) {
-    let descriptorIndex = DESCRIPTOR_OFFSET + findDescriptor(sourceOutputByteIndex) * 4u;
+    let descriptorIndex = DESCRIPTOR_OFFSET + sourceDescriptorIndex * 5u;
     let descriptorOutputOffset = descriptors[descriptorIndex];
     let literalSourceOffset = descriptors[descriptorIndex + 2u];
-    let matchOffset = descriptors[descriptorIndex + 3u];
-    let relativeByteIndex = sourceOutputByteIndex - descriptorOutputOffset;
+    let literalPeriod = descriptors[descriptorIndex + 3u];
+    let matchOffset = descriptors[descriptorIndex + 4u];
+    var relativeByteIndex = sourceOutputByteIndex - descriptorOutputOffset;
     if (matchOffset == 0u) {
+      if (literalPeriod != 0u) {
+        relativeByteIndex %= literalPeriod;
+      }
       return readInputByte(literalSourceOffset + relativeByteIndex);
     }
     sourceOutputByteIndex = descriptorOutputOffset - matchOffset + relativeByteIndex % matchOffset;
+    sourceDescriptorIndex = findDescriptor(sourceOutputByteIndex);
   }
   return 0u;
 }
@@ -130,10 +264,15 @@ fn main(
   let outputWordIndex = index;
   if (outputWordIndex >= OUTPUT_WORD_COUNT) { return; }
   var outputWord = 0u;
+  var descriptorIndex = findDescriptor(outputWordIndex * 4u);
   for (var byteLane = 0u; byteLane < 4u; byteLane++) {
     let outputByteIndex = outputWordIndex * 4u + byteLane;
     if (outputByteIndex < OUTPUT_BYTE_LENGTH) {
-      outputWord |= resolveLiteralByte(outputByteIndex) << (byteLane * 8u);
+      if (descriptorIndex + 1u < DESCRIPTOR_COUNT &&
+          descriptors[DESCRIPTOR_OFFSET + (descriptorIndex + 1u) * 5u] <= outputByteIndex) {
+        descriptorIndex += 1u;
+      }
+      outputWord |= resolveLiteralByte(outputByteIndex, descriptorIndex) << (byteLane * 8u);
     }
   }
   outputWords[OUTPUT_OFFSET + outputWordIndex] = outputWord;
@@ -144,53 +283,63 @@ function addDecompressionPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: Readonly<GPULZByteDecompressorProps>,
   dispatchLayout: GPUBoundedDispatchLayout
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const source = getGPULZByteDecompressorShaderSource(props, dispatchLayout);
   const outputWordCount = Math.ceil(props.outputByteLength / 4);
   const workgroupCount = Math.ceil(outputWordCount / GPU_LZ_BYTE_WORKGROUP_SIZE);
-  graph.addComputePass({
-    id: props.id ?? 'gpu-lz-byte-decompressor',
-    workload: {
-      operation: 'GPULZByteDecompressor',
-      commandCount: 1,
-      maximumWorkgroupCount: workgroupCount,
-      maximumInvocationCount: workgroupCount * GPU_LZ_BYTE_WORKGROUP_SIZE,
-      readByteLength:
-        props.inputByteLength +
-        props.descriptorCount * GPU_LZ_BYTE_DESCRIPTOR_WORDS * Uint32Array.BYTES_PER_ELEMENT,
-      writeByteLength: props.outputByteLength
-    },
-    resources: [
-      {buffer: props.input, usage: 'storage-read'},
-      {buffer: props.descriptors, usage: 'storage-read'},
-      {buffer: props.output, usage: 'storage-write'}
-    ],
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: props.id,
-        source,
-        shaderLayout: {
-          bindings: [
-            {name: 'inputWords', type: 'read-only-storage', group: 0, location: 0},
-            {name: 'descriptors', type: 'read-only-storage', group: 0, location: 1},
-            {name: 'outputWords', type: 'storage', group: 0, location: 2}
-          ]
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {
-            inputWords: getViewBinding(props.input, getBuffer),
-            descriptors: getViewBinding(props.descriptors, getBuffer),
-            outputWords: getViewBinding(props.output, getBuffer)
-          };
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: props.id ?? 'gpu-lz-byte-decompressor',
+      workload: {
+        operation: 'GPULZByteDecompressor',
+        commandCount: 1,
+        maximumWorkgroupCount: workgroupCount,
+        maximumInvocationCount: workgroupCount * GPU_LZ_BYTE_WORKGROUP_SIZE,
+        readByteLength:
+          props.inputByteLength +
+          props.descriptorCount * GPU_LZ_BYTE_DESCRIPTOR_WORDS * Uint32Array.BYTES_PER_ELEMENT,
+        writeByteLength: props.outputByteLength
+      },
+      resources: [
+        {buffer: props.input, usage: 'storage-read'},
+        {buffer: props.descriptors, usage: 'storage-read'},
+        {buffer: props.output, usage: 'storage-write'}
+      ],
+      compile: ({device}) => {
+        const kernel = new Kernel(device, {
+          id: props.id,
+          source,
+          shaderLayout: {
+            bindings: [
+              {name: 'inputWords', type: 'read-only-storage', group: 0, location: 0},
+              {name: 'descriptors', type: 'read-only-storage', group: 0, location: 1},
+              {name: 'outputWords', type: 'storage', group: 0, location: 2}
+            ]
+          }
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {
+              inputWords: getViewBinding(props.input, getBuffer),
+              descriptors: getViewBinding(props.descriptors, getBuffer),
+              outputWords: getViewBinding(props.output, getBuffer)
+            };
+
+            kernel.dispatch(computePass, {
+              bindings,
+              x: dispatchLayout.x,
+              y: dispatchLayout.y,
+              z: dispatchLayout.z
+            });
+          },
+          destroy: () => kernel.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 function validateConfiguration(props: Readonly<GPULZByteDecompressorProps>): void {

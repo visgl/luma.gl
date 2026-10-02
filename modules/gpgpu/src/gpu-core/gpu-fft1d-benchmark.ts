@@ -204,14 +204,16 @@ function makeGPUFFT1DBenchmarkPath(
   );
   const input = graph.createDataView(inputHandle, {format: 'float32x2', length: elementCount});
   const output = graph.createDataView(outputHandle, {format: 'float32x2', length: elementCount});
-  new GPUFFT1D({
-    id: `${benchmarkId}-${strategy}`,
-    input,
-    output,
-    length,
-    batchCount,
-    strategy
-  }).addToGraph(graph);
+  graph.add(
+    new GPUFFT1D({
+      id: `${benchmarkId}-${strategy}`,
+      input,
+      output,
+      length,
+      batchCount,
+      strategy
+    })
+  );
   return {strategy, outputBuffer, compiled: graph.compile()};
 }
 

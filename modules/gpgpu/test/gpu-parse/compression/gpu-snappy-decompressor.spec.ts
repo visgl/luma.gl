@@ -42,7 +42,10 @@ it('GPUSnappyDecompressor resolves raw Snappy backreferences', async () => {
   );
   new GPUSnappyDecompressor({
     input: graph.createDataView(inputHandle, {format: 'uint32', length: 3}),
-    descriptors: graph.createDataView(descriptorHandle, {format: 'uint32', length: 12}),
+    descriptors: graph.createDataView(descriptorHandle, {
+      format: 'uint32',
+      length: plan.descriptors.length
+    }),
     output: graph.createDataView(outputHandle, {format: 'uint32', length: 3}),
     compressedByteLength: plan.compressedByteLength,
     outputByteLength: plan.outputByteLength,

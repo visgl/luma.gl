@@ -303,7 +303,7 @@ it('GPUHistogram reads interleaved scalar columns with explicit edges', async ()
     byteStride: 8
   });
   const output = importView(graph, 'interleaved-histogram-output', outputBuffer, 'uint32', 3);
-  new GPUHistogram({input, output, edges: [0, 1, 10, 20]}).addToGraph(graph);
+  graph.add(new GPUHistogram({input, output, edges: [0, 1, 10, 20]}));
 
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'interleaved-histogram-test'});
@@ -332,7 +332,7 @@ it('GPUHistogram accumulates fixed-width GPUVector chunks after one clear', asyn
   expect(literal.counts, 'every non-empty chunk contributes counts').toEqual([1, 1, 1, 2]);
   expect(
     literal.nodeOrder,
-    'one clear precedes ordered per-chunk accumulation and empty chunks keep their source index'
+    'one clear precedes ordered aligned-span accumulation and empty chunks keep their source index'
   ).toEqual(['gpu-histogram-clear', 'gpu-histogram-chunk-0-local', 'gpu-histogram-chunk-2-local']);
   expect(
     literal.logicalTransientBufferCount,
@@ -406,8 +406,8 @@ it('GPUHistogram clears counts for every graph encoding and composes with reduct
   const input = importView(graph, 'values', inputBuffer, 'uint32', values.length);
   const counts = importView(graph, 'counts', countsBuffer, 'uint32', 4);
   const total = importView(graph, 'total', totalBuffer, 'uint32', 1);
-  new GPUHistogram({input, output: counts, domain: [0, 3]}).addToGraph(graph);
-  new GPUReduction({input: counts, output: total, operation: 'sum'}).addToGraph(graph);
+  graph.add(new GPUHistogram({input, output: counts, domain: [0, 3]}));
+  graph.add(new GPUReduction({input: counts, output: total, operation: 'sum'}));
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'histogram-repeat'});
   compiled.encode(commandEncoder, {parameters: undefined});
@@ -554,10 +554,10 @@ it('GPUGroupAggregation preserves aligned vector chunks', async () => {
     4
   );
   expect(result.counts, 'aligned non-empty chunks share dense counts').toEqual([1, 1, 0, 1]);
-  expect(result.nodeOrder, 'one clear precedes ordered per-chunk accumulation').toEqual([
+  expect(result.nodeOrder, 'one clear precedes ordered aligned-span accumulation').toEqual([
     'gpu-group-aggregation-clear',
     'gpu-group-aggregation-chunk-0-local',
-    'gpu-group-aggregation-chunk-2-local'
+    'gpu-group-aggregation-chunk-1-local'
   ]);
   expect(
     result.logicalTransientBufferCount,
@@ -579,7 +579,7 @@ it('GPUGroupAggregation preserves aligned vector chunks', async () => {
   ).toEqual([
     'gpu-group-aggregation-initialize',
     'gpu-group-aggregation-chunk-0-mean',
-    'gpu-group-aggregation-chunk-2-mean',
+    'gpu-group-aggregation-chunk-1-mean',
     'gpu-group-aggregation-finalize'
   ]);
   expect(mean.logicalTransientBufferCount, 'mean owns one transient group-count buffer').toBe(1);
@@ -634,9 +634,9 @@ it('GPUGridBinning clears once and accumulates GPUVector chunks in order', async
     result.nodeOrder,
     'one clear precedes ordered accumulation and empty chunks keep their source index'
   ).toEqual([
-    'gpu-grid-binning-clear',
-    'gpu-grid-binning-chunk-0-local',
-    'gpu-grid-binning-chunk-2-local'
+    'gpu-grid-binning-output-0-clear',
+    'gpu-grid-binning-output-0-input-0-local',
+    'gpu-grid-binning-output-0-input-2-local'
   ]);
   expect(result.logicalTransientBufferCount, 'position chunks are not packed or concatenated').toBe(
     0
@@ -761,9 +761,9 @@ it('GPUGridAggregation preserves paired GPUVector chunk topology', async () => {
   );
   expect(result.values, 'aligned chunks accumulate in source order').toEqual([1.25, 2.5, -3, 4.75]);
   expect(result.nodeOrder, 'one clear precedes each non-empty aligned chunk').toEqual([
-    'gpu-grid-aggregation-clear',
-    'gpu-grid-aggregation-chunk-0-sum',
-    'gpu-grid-aggregation-chunk-2-sum'
+    'gpu-grid-aggregation-output-0-clear',
+    'gpu-grid-aggregation-output-0-input-0-sum',
+    'gpu-grid-aggregation-output-0-input-1-sum'
   ]);
   expect(result.logicalTransientBufferCount, 'paired chunks are not packed or concatenated').toBe(
     0
@@ -782,10 +782,10 @@ it('GPUGridAggregation preserves paired GPUVector chunk topology', async () => {
     mean.nodeOrder,
     'mean initializes once, accumulates every non-empty chunk, and finalizes once'
   ).toEqual([
-    'gpu-grid-aggregation-initialize',
-    'gpu-grid-aggregation-chunk-0-mean',
-    'gpu-grid-aggregation-chunk-2-mean',
-    'gpu-grid-aggregation-finalize'
+    'gpu-grid-aggregation-output-0-initialize',
+    'gpu-grid-aggregation-output-0-input-0-mean',
+    'gpu-grid-aggregation-output-0-input-1-mean',
+    'gpu-grid-aggregation-output-0-finalize'
   ]);
   expect(mean.logicalTransientBufferCount, 'mean owns one transient cell-count buffer').toBe(1);
 });
@@ -940,7 +940,7 @@ async function runReduction(
   const graph = new GPUCommandGraph(device);
   const input = importView(graph, 'input', inputBuffer, format, values.length);
   const output = importView(graph, 'output', outputBuffer, format, outputLength);
-  new GPUReduction({input, output, operation}).addToGraph(graph);
+  graph.add(new GPUReduction({input, output, operation}));
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'reduction-test'});
   compiled.encode(commandEncoder, {parameters: undefined});
@@ -977,7 +977,7 @@ async function runVectorReduction(
   const graph = new GPUCommandGraph(device);
   const input = graph.importGPUVector('input', vector);
   const output = importView(graph, 'output', outputBuffer, format, outputLength);
-  new GPUReduction({input, output, operation}).addToGraph(graph);
+  graph.add(new GPUReduction({input, output, operation}));
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'vector-reduction-test'});
   compiled.encode(commandEncoder, {parameters: undefined});
@@ -1014,7 +1014,7 @@ async function runHistogram(
     domainBuffer = createInputBuffer(device, DomainArray.from(domain));
     histogramDomain = importView(graph, 'domain', domainBuffer, format, 2);
   }
-  new GPUHistogram({input, output, domain: histogramDomain as never}).addToGraph(graph);
+  graph.add(new GPUHistogram({input, output, domain: histogramDomain as never}));
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'histogram-test'});
   compiled.encode(commandEncoder, {parameters: undefined});
@@ -1049,7 +1049,7 @@ async function runIrregularHistogram(
     edgesBuffer = createInputBuffer(device, EdgeArray.from(edges));
     histogramEdges = importView(graph, 'edges', edgesBuffer, format, edges.length);
   }
-  new GPUHistogram({input, output, edges: histogramEdges as never}).addToGraph(graph);
+  graph.add(new GPUHistogram({input, output, edges: histogramEdges as never}));
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'irregular-histogram-test'});
   compiled.encode(commandEncoder, {parameters: undefined});
@@ -1094,7 +1094,7 @@ async function runVectorHistogram(
   const graph = new GPUCommandGraph(device);
   const input = graph.importGPUVector('input', vector);
   const output = importView(graph, 'output', outputBuffer, 'uint32', binCount);
-  new GPUHistogram({input, output, domain}).addToGraph(graph);
+  graph.add(new GPUHistogram({input, output, domain}));
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'vector-histogram-test'});
   compiled.encode(commandEncoder, {parameters: undefined});
@@ -1133,7 +1133,7 @@ async function runIrregularVectorHistogram(
   const input = graph.importGPUVector('input', vector);
   const edgeView = importView(graph, 'edges', edgesBuffer, format, edges.length);
   const output = importView(graph, 'output', outputBuffer, 'uint32', edges.length - 1);
-  new GPUHistogram({input, output, edges: edgeView as never}).addToGraph(graph);
+  graph.add(new GPUHistogram({input, output, edges: edgeView as never}));
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'irregular-vector-histogram-test'});
   compiled.encode(commandEncoder, {parameters: undefined});
@@ -1164,7 +1164,7 @@ async function runGroupAggregation(
     ? importView(graph, 'group-mask', maskBuffer, 'uint32', mask!.length)
     : undefined;
   const output = importView(graph, 'group-counts', outputBuffer, 'uint32', groupCount);
-  new GPUGroupAggregation({keys: keysView, mask: maskView, output}).addToGraph(graph);
+  graph.add(new GPUGroupAggregation({keys: keysView, mask: maskView, output}));
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'group-aggregation-test'});
   compiled.encode(commandEncoder, {parameters: undefined});
@@ -1204,13 +1204,15 @@ async function runGroupStatistic(
     ? importView(graph, 'group-mask', maskBuffer, 'uint32', mask!.length)
     : undefined;
   const output = importView(graph, 'group-statistic', outputBuffer, 'float32', groupCount);
-  new GPUGroupAggregation({
-    keys: keysView,
-    values: valuesView,
-    mask: maskView,
-    output,
-    operation
-  }).addToGraph(graph);
+  graph.add(
+    new GPUGroupAggregation({
+      keys: keysView,
+      values: valuesView,
+      mask: maskView,
+      output,
+      operation
+    })
+  );
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'group-statistic-test'});
   compiled.encode(commandEncoder, {parameters: undefined});
@@ -1267,7 +1269,7 @@ async function runVectorGroupAggregation(
   const keys = graph.importGPUVector('group-keys', keysVector);
   const mask = graph.importGPUVector('group-mask', maskVector);
   const output = importView(graph, 'group-counts', outputBuffer, 'uint32', groupCount);
-  new GPUGroupAggregation({keys, mask, output}).addToGraph(graph);
+  graph.add(new GPUGroupAggregation({keys, mask, output}));
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'vector-group-aggregation-test'});
   compiled.encode(commandEncoder, {parameters: undefined});
@@ -1344,7 +1346,7 @@ async function runVectorGroupStatistic(
   const values = graph.importGPUVector('group-values', valuesVector);
   const mask = graph.importGPUVector('group-mask', maskVector);
   const output = importView(graph, 'group-statistic', outputBuffer, 'float32', groupCount);
-  new GPUGroupAggregation({keys, values, mask, output, operation}).addToGraph(graph);
+  graph.add(new GPUGroupAggregation({keys, values, mask, output, operation}));
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'vector-group-statistic-test'});
   compiled.encode(commandEncoder, {parameters: undefined});
@@ -1384,12 +1386,14 @@ async function runGrid(
     boundsBuffer = createInputBuffer(device, Float32Array.from(bounds));
     gridBounds = importView(graph, 'bounds', boundsBuffer, 'float32x4', 1);
   }
-  new GPUGridBinning({
-    positions: positionsView as never,
-    output,
-    gridSize,
-    bounds: gridBounds as never
-  }).addToGraph(graph);
+  graph.add(
+    new GPUGridBinning({
+      positions: positionsView as never,
+      output,
+      gridSize,
+      bounds: gridBounds as never
+    })
+  );
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'grid-test'});
   compiled.encode(commandEncoder, {parameters: undefined});
@@ -1429,7 +1433,7 @@ async function runVectorGrid(
   const graph = new GPUCommandGraph(device);
   const positions = graph.importGPUVector('positions', vector);
   const output = importView(graph, 'output', outputBuffer, 'uint32', gridSize[0] * gridSize[1]);
-  new GPUGridBinning({positions, output, gridSize, bounds}).addToGraph(graph);
+  graph.add(new GPUGridBinning({positions, output, gridSize, bounds}));
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'vector-grid-test'});
   compiled.encode(commandEncoder, {parameters: undefined});
@@ -1471,14 +1475,16 @@ async function runGridAggregation(
     boundsBuffer = createInputBuffer(device, Float32Array.from(bounds));
     aggregationBounds = importView(graph, 'bounds', boundsBuffer, 'float32x4', 1);
   }
-  new GPUGridAggregation({
-    positions,
-    weights,
-    output,
-    operation,
-    gridSize,
-    bounds: aggregationBounds as never
-  }).addToGraph(graph);
+  graph.add(
+    new GPUGridAggregation({
+      positions,
+      weights,
+      output,
+      operation,
+      gridSize,
+      bounds: aggregationBounds as never
+    })
+  );
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'grid-aggregation-test'});
   compiled.encode(commandEncoder, {parameters: undefined});
@@ -1538,8 +1544,15 @@ async function runVectorGridAggregation(
   const positions = graph.importGPUVector('positions', positionsVector);
   const weights = graph.importGPUVector('weights', weightsVector);
   const output = importView(graph, 'output', outputBuffer, 'float32', gridSize[0] * gridSize[1]);
-  new GPUGridAggregation({positions, weights, output, operation, gridSize, bounds}).addToGraph(
-    graph
+  graph.add(
+    new GPUGridAggregation({
+      positions,
+      weights,
+      output,
+      operation,
+      gridSize,
+      bounds
+    })
   );
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'vector-grid-aggregation-test'});

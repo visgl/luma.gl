@@ -11,18 +11,7 @@ sidebar_custom_props:
 
 import {DeferredRenderingExample} from '@site/src/examples';
 
-<DeferredRenderingExample>
-  <div>
-    A WebGPU-only illumination laboratory that writes five surface targets once, then reconstructs
-    view position from depth and resolves a directional light plus hundreds of compute-clustered
-    storage-buffer point lights in one fullscreen pass. Temporally stabilized GTAO grounds the
-    contacts, diffuse screen-space global illumination transfers colored light between surfaces,
-    stochastic reflections bounce the animated scene across polished floors, and clustered
-    participating media turns the same point lights and sun into colored atmospheric halos and
-    depth-occluded crepuscular god rays. GPU-driven adaptive exposure and floating-point multiscale
-    bloom finish the scene without clipping its brightest highlights.
-  </div>
-</DeferredRenderingExample>
+<DeferredRenderingExample />
 
 Open **Illumination Effects** to inspect the actual render-stack stages through separate
 accordions for clustered deferred lighting, GTAO, diffuse global illumination, screen-space

@@ -235,14 +235,15 @@ export class UniformStore<
         }
       }
 
-      // logging - TODO - don't query the values unnecessarily
-      const uniformValues = this.uniformBlocks.get(uniformBufferName)?.getAllUniforms();
-      log.log(
-        4,
-        `Writing to uniform buffer ${String(uniformBufferName)}`,
-        uniformBufferData,
-        uniformValues
-      )();
+      if (log.level >= 4) {
+        const uniformValues = this.uniformBlocks.get(uniformBufferName)?.getAllUniforms();
+        log.log(
+          4,
+          `Writing to uniform buffer ${String(uniformBufferName)}`,
+          uniformBufferData,
+          uniformValues
+        )();
+      }
     }
     return reason;
   }

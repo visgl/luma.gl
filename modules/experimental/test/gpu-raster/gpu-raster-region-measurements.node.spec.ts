@@ -4,6 +4,8 @@
 
 import {Buffer} from '@luma.gl/core';
 import {
+  addGPUCommandNodes,
+  type GPUCommandNodeProducer,
   GraphBufferHandle,
   GraphDataView,
   type GPUCommandGraph,
@@ -363,6 +365,9 @@ function makeRecordingGraph(
     },
     passes,
     transientBuffers,
+    add(this: GPUCommandGraph, primitive: GPUCommandNodeProducer): void {
+      addGPUCommandNodes(this, primitive.getCommandNodes(this));
+    },
     addComputePass(pass: GPUCommandGraphComputeNode): void {
       passes.push(pass);
     },

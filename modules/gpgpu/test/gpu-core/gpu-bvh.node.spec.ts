@@ -3,6 +3,7 @@ import {expect, it} from 'vitest';
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes, type GPUCommandNodeProducer} from '../../src/gpu-core/gpu-command-node';
 import type {GPUCommandGraph, GraphDataView} from '../../src/gpu-core/gpu-command-graph';
 import {GPUBVH, type GPUBVHStrategy} from '../../src/gpu-core/gpu-bvh';
 
@@ -18,7 +19,7 @@ type MockGraph = GPUCommandGraph & {
 it('GPUBVH automatically fuses portable small hierarchies into one graph node', () => {
   const graph = makeGraph();
   const hierarchy = makeHierarchy(graph, {dimension: 3, leafCapacity: 128, sourceCount: 87});
-  hierarchy.addToGraph(graph);
+  graph.add(hierarchy);
 
   expect(hierarchy.strategy).toBe('auto');
   expect(hierarchy.resolvedStrategy).toBe('fused');
@@ -40,7 +41,7 @@ it('GPUBVH preserves explicit source IDs in the fused graph contributor', () => 
     sourceCount: 5,
     sourceIds: true
   });
-  hierarchy.addToGraph(graph);
+  graph.add(hierarchy);
 
   expect(hierarchy.resolvedStrategy).toBe('fused');
   expect(
@@ -70,7 +71,7 @@ it('GPUBVH remaps explicit source IDs after per-level hierarchy publication', ()
     sourceIds: true,
     strategy: 'level'
   });
-  hierarchy.addToGraph(graph);
+  graph.add(hierarchy);
 
   expect(hierarchy.resolvedStrategy).toBe('level');
   expect(graph.recordedNodes.map(node => node.id)).toEqual([
@@ -88,7 +89,7 @@ it('GPUBVH remaps explicit source IDs after per-level hierarchy publication', ()
 it('GPUBVH fuses empty and singleton hierarchies without requiring a parent level', () => {
   const graph = makeGraph();
   const hierarchy = makeHierarchy(graph, {dimension: 2, leafCapacity: 1, sourceCount: 0});
-  hierarchy.addToGraph(graph);
+  graph.add(hierarchy);
 
   expect(hierarchy.resolvedStrategy).toBe('fused');
   expect(hierarchy.internalNodeCount).toBe(0);
@@ -104,7 +105,7 @@ it('GPUBVH retains forced and automatic multi-pass hierarchy construction', () =
     sourceCount: 3,
     strategy: 'level'
   });
-  forcedHierarchy.addToGraph(forcedGraph);
+  forcedGraph.add(forcedHierarchy);
 
   expect(forcedHierarchy.resolvedStrategy).toBe('level');
   expect(forcedGraph.recordedNodes.map(node => node.id)).toEqual([
@@ -119,7 +120,7 @@ it('GPUBVH retains forced and automatic multi-pass hierarchy construction', () =
     leafCapacity: 256,
     sourceCount: 131
   });
-  largeHierarchy.addToGraph(largeGraph);
+  largeGraph.add(largeHierarchy);
 
   expect(largeHierarchy.resolvedStrategy).toBe('level');
   expect(largeGraph.recordedNodes.length, 'one leaf load precedes eight tree levels').toBe(9);
@@ -164,6 +165,9 @@ function makeGraph(limitOverrides: Record<string, number> = {}): MockGraph {
       }
     },
     recordedNodes,
+    add(this: GPUCommandGraph, primitive: GPUCommandNodeProducer): void {
+      addGPUCommandNodes(this, primitive.getCommandNodes(this));
+    },
     addComputePass: (node: RecordedGraphNode) => recordedNodes.push(node)
   } as unknown as MockGraph;
 }

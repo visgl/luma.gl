@@ -6,7 +6,6 @@ import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {
   GPUCommandGraph,
-  type GPUCommandGraphContributor,
   type GraphBufferUse,
   type GraphDataView,
   GraphVectorView
@@ -82,7 +81,7 @@ export type GPUTraceCriticalPathStats = {
  * building block. Multi-parent DAG preparation and CPM slack can compose on top without changing
  * the output identity or diagnostics contract.
  */
-export class GPUTraceCriticalPath implements GPUCommandGraphContributor {
+export class GPUTraceCriticalPath {
   readonly id: string;
   readonly props: GPUTraceCriticalPathProps;
   readonly stats: Readonly<GPUTraceCriticalPathStats>;

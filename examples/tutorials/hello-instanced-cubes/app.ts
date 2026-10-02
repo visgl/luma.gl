@@ -5,84 +5,16 @@
 import {Buffer} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
+import {HelloInstancedCubesInfoHtml} from './app-ui';
 
 export const title = 'Two Cubes';
 export const description = 'Shows usage of multiple uniform buffers.';
 
 // WGSL
 
-const WGSL_SHADER = /* WGSL */ `\
-struct Uniforms {
-  modelViewProjectionMatrix : array<mat4x4<f32>, 16>,
-};
-
-@group(0) @binding(auto) var<uniform> app : Uniforms;
-
-struct VertexInputs {
-  @builtin(instance_index) instanceIdx : u32,
-  // CUBE GEOMETRY
-  @location(0) positions : vec4<f32>,
-  @location(1) texCoords : vec2<f32>
-}
-
-struct FragmentInputs {
-  @builtin(position) Position : vec4<f32>,
-  @location(0) fragUV : vec2<f32>,
-  @location(1) fragPosition: vec4<f32>,
-}
-
-@vertex
-fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
-  var outputs : FragmentInputs;
-  outputs.Position = app.modelViewProjectionMatrix[inputs.instanceIdx] * inputs.positions;
-  outputs.fragUV = inputs.texCoords;
-  outputs.fragPosition = 0.5 * (inputs.positions + vec4<f32>(1.0, 1.0, 1.0, 1.0));
-  return outputs;
-}
-
-@fragment
-fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  return inputs.fragPosition;
-}
-`;
+const {WGSL_SHADER, VS_GLSL, FS_GLSL} = getShaderSources();
 
 // GLSL
-
-const VS_GLSL = /* glsl */ `\
-#version 300 es
-#define SHADER_NAME cube-vs
-
-uniform appUniforms {
-  mat4 modelViewProjectionMatrix[16];
-} app;
-
-// CUBE GEOMETRY
-layout(location=0) in vec3 positions;
-layout(location=1) in vec2 texCoords;
-
-out vec2 fragUV;
-out vec4 fragPosition;
-
-void main() {
-  gl_Position = app.modelViewProjectionMatrix[gl_InstanceID] * vec4(positions, 1.0);
-  fragUV = texCoords;
-  fragPosition = vec4(positions, 1.);
-}
-`;
-
-const FS_GLSL = /* glsl */ `\
-#version 300 es
-#define SHADER_NAME cube-fs
-precision highp float;
-in vec2 fragUV;
-in vec4 fragPosition;
-
-layout (location=0) out vec4 fragColor;
-
-void main() {
-  fragColor = fragPosition;
-}
-`;
 
 const X_COUNT = 4;
 const Y_COUNT = 4;
@@ -91,9 +23,7 @@ const MATRIX_SIZE = 4 * 4 * 4; // 4x4 (x4 bytes) matrix
 const UNIFORM_BUFFER_SIZE = NUMBER_OF_INSTANCES * MATRIX_SIZE; // 4x4 (x4 bytes) matrix
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = `\
-Instanced cubes drawn using luma.gl's high-level API.
-  `;
+  static info = HelloInstancedCubesInfoHtml;
 
   cubeModel: Model;
   uniformBuffer: Buffer;
@@ -184,4 +114,79 @@ function getMVPMatrixArray(projectionMatrix: Matrix4, now: number): Float32Array
     }
   }
   return mvpMatricesData;
+}
+
+function getShaderSources() {
+  const WGSL_SHADER = /* WGSL */ `\
+struct Uniforms {
+  modelViewProjectionMatrix : array<mat4x4<f32>, 16>,
+};
+
+@group(0) @binding(auto) var<uniform> app : Uniforms;
+
+struct VertexInputs {
+  @builtin(instance_index) instanceIdx : u32,
+  // CUBE GEOMETRY
+  @location(0) positions : vec4<f32>,
+  @location(1) texCoords : vec2<f32>
+}
+
+struct FragmentInputs {
+  @builtin(position) Position : vec4<f32>,
+  @location(0) fragUV : vec2<f32>,
+  @location(1) fragPosition: vec4<f32>,
+}
+
+@vertex
+fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+  var outputs : FragmentInputs;
+  outputs.Position = app.modelViewProjectionMatrix[inputs.instanceIdx] * inputs.positions;
+  outputs.fragUV = inputs.texCoords;
+  outputs.fragPosition = 0.5 * (inputs.positions + vec4<f32>(1.0, 1.0, 1.0, 1.0));
+  return outputs;
+}
+
+@fragment
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
+  return inputs.fragPosition;
+}
+`;
+
+  const VS_GLSL = /* glsl */ `\
+#version 300 es
+#define SHADER_NAME cube-vs
+
+uniform appUniforms {
+  mat4 modelViewProjectionMatrix[16];
+} app;
+
+// CUBE GEOMETRY
+layout(location=0) in vec3 positions;
+layout(location=1) in vec2 texCoords;
+
+out vec2 fragUV;
+out vec4 fragPosition;
+
+void main() {
+  gl_Position = app.modelViewProjectionMatrix[gl_InstanceID] * vec4(positions, 1.0);
+  fragUV = texCoords;
+  fragPosition = vec4(positions, 1.);
+}
+`;
+
+  const FS_GLSL = /* glsl */ `\
+#version 300 es
+#define SHADER_NAME cube-fs
+precision highp float;
+in vec2 fragUV;
+in vec4 fragPosition;
+
+layout (location=0) out vec4 fragColor;
+
+void main() {
+  fragColor = fragPosition;
+}
+`;
+
+  return {WGSL_SHADER, VS_GLSL, FS_GLSL} as const;
 }

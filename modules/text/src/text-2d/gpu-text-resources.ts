@@ -4,7 +4,7 @@
 
 import type {Device} from '@luma.gl/core';
 import {DynamicTexture} from '@luma.gl/engine';
-import type {FontAtlas} from './atlas/font-atlas';
+import type {FontAtlas} from '../fonts/atlas/font-atlas';
 import type {GPUTextData} from './gpu-text-data';
 
 /** Construction properties for shared GPU text resources. */

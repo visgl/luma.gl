@@ -22,8 +22,31 @@ import type {WebGPURenderPass} from './webgpu-render-pass';
 
 /** Creates a new render pipeline when parameters change */
 export class WebGPURenderPipeline extends RenderPipeline {
+  /** Creates the native pipeline through WebGPU's asynchronous compilation entry point. */
+  static async createAsync(
+    device: WebGPUDevice,
+    props: RenderPipelineProps
+  ): Promise<WebGPURenderPipeline> {
+    if (props.handle) {
+      return new WebGPURenderPipeline(device, props);
+    }
+    const pipeline = new WebGPURenderPipeline(device, props, true);
+    // The deferred constructor always creates the descriptor.
+    const descriptor = pipeline.descriptor!;
+    try {
+      pipeline.handle = await device.handle.createRenderPipelineAsync(descriptor);
+    } catch (error) {
+      pipeline.linkStatus = 'error';
+      pipeline.destroy();
+      throw error;
+    }
+    pipeline.handle.label = pipeline.props.id;
+    pipeline.linkStatus = 'success';
+    return pipeline;
+  }
+
   readonly device: WebGPUDevice;
-  readonly handle: GPURenderPipeline;
+  handle!: GPURenderPipeline;
   readonly descriptor: GPURenderPipelineDescriptor | null;
 
   readonly vs: WebGPUShader;
@@ -37,7 +60,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     return 'WebGPURenderPipeline';
   }
 
-  constructor(device: WebGPUDevice, props: RenderPipelineProps) {
+  constructor(device: WebGPUDevice, props: RenderPipelineProps, deferPipelineCreation = false) {
     super(device, props);
     this.device = device;
     if (!this.shaderLayout) {
@@ -57,17 +80,24 @@ export class WebGPURenderPipeline extends RenderPipeline {
       log.probe(1, JSON.stringify(descriptor, null, 2))();
       log.groupEnd(1)();
 
-      this.device.pushErrorScope('validation');
-      this.handle = this.device.handle.createRenderPipeline(descriptor);
-      validationPromise = this.device.popErrorScope((error: GPUError) => {
-        this.linkStatus = 'error';
-        this.device.reportError(new Error(`${this} creation failed:\n"${error.message}"`), this)();
-        this.device.debug();
-      });
+      if (!deferPipelineCreation) {
+        this.device.pushErrorScope('validation');
+        this.handle = this.device.handle.createRenderPipeline(descriptor);
+        validationPromise = this.device.popErrorScope((error: GPUError) => {
+          this.linkStatus = 'error';
+          this.device.reportError(
+            new Error(`${this} creation failed:\n"${error.message}"`),
+            this
+          )();
+          this.device.debug();
+        });
+      }
     }
     this.descriptor = descriptor;
-    this.handle.label = this.props.id;
-    this.linkStatus = validationPromise ? 'pending' : 'success';
+    if (this.handle) {
+      this.handle.label = this.props.id;
+    }
+    this.linkStatus = validationPromise || deferPipelineCreation ? 'pending' : 'success';
     validationPromise?.then(() => {
       if (this.linkStatus !== 'error') {
         this.linkStatus = 'success';
@@ -76,7 +106,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
 
     // Note: Often the same shader in WebGPU
     this.vs = props.vs as WebGPUShader;
-    this.fs = props.fs as WebGPUShader;
+    this.fs = (props.fs as WebGPUShader | null) || null;
     this._bindingsByGroup =
       props.bindGroups || normalizeBindingsByGroup(this.shaderLayout, props.bindings);
     this._bindGroupCacheKeysByGroup = createBindGroupCacheKeys(this._bindingsByGroup);
@@ -172,23 +202,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
       buffers: getVertexBufferLayout(this.shaderLayout, this.props.bufferLayout)
     };
 
-    // Populate color targets
-    // TODO - at the moment blend and write mask are only set on the first target
-    const targets: (GPUColorTargetState | null)[] = [];
-    if (this.props.colorAttachmentFormats) {
-      for (const format of this.props.colorAttachmentFormats) {
-        targets.push(format ? {format: getWebGPUTextureFormat(format)} : null);
-      }
-    } else {
-      targets.push({format: getWebGPUTextureFormat(this.device.preferredColorFormat)});
-    }
-
-    // Set up the fragment stage
-    const fragment: GPUFragmentState = {
-      module: (this.props.fs as WebGPUShader).handle,
-      entryPoint: this.props.fragmentEntryPoint || 'main',
-      targets
-    };
+    const fragment = this._getFragmentState();
 
     const layout = this.device.createPipelineLayout({
       shaderLayout: this.shaderLayout
@@ -197,7 +211,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     // Create a partially populated descriptor
     const descriptor: GPURenderPipelineDescriptor = {
       vertex,
-      fragment,
+      ...(fragment && {fragment}),
       primitive: {
         topology: this.props.topology
       },
@@ -217,8 +231,33 @@ export class WebGPURenderPipeline extends RenderPipeline {
 
     // Set parameters on the descriptor
     applyParametersToRenderPipelineDescriptor(descriptor, this.props.parameters);
+    if (!fragment) {
+      delete descriptor.fragment;
+    }
 
     return descriptor;
+  }
+
+  private _getFragmentState(): GPUFragmentState | undefined {
+    if (!this.props.fs) {
+      return undefined;
+    }
+
+    // TODO - at the moment blend and write mask are only set on the first target
+    const targets: (GPUColorTargetState | null)[] = [];
+    if (this.props.colorAttachmentFormats) {
+      for (const format of this.props.colorAttachmentFormats) {
+        targets.push(format ? {format: getWebGPUTextureFormat(format)} : null);
+      }
+    } else {
+      targets.push({format: getWebGPUTextureFormat(this.device.preferredColorFormat)});
+    }
+
+    return {
+      module: (this.props.fs as WebGPUShader).handle,
+      entryPoint: this.props.fragmentEntryPoint || 'main',
+      targets
+    };
   }
 }
 

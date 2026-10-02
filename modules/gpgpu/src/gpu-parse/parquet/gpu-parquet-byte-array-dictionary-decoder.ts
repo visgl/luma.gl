@@ -47,33 +47,41 @@ export class GPUParquetByteArrayDictionaryDecoder {
       'uint32',
       this.props.indices.length
     );
-    new GPUUint32Gather({
-      id: `${this.id}-lengths`,
-      source: this.props.dictionaryLengths,
-      indices: this.props.indices,
-      output: this.props.outputLengths
-    }).addToGraph(graph);
-    new GPUUint32Gather({
-      id: `${this.id}-source-offsets`,
-      source: this.props.dictionaryOffsets,
-      indices: this.props.indices,
-      output: sourceOffsets
-    }).addToGraph(graph);
-    new GPUScan({
-      id: `${this.id}-output-offsets`,
-      input: this.props.outputLengths,
-      output: this.props.outputOffsets,
-      mode: 'exclusive'
-    }).addToGraph(graph);
-    new GPUByteRangeGather({
-      id: `${this.id}-bytes`,
-      source: this.props.dictionary,
-      sourceOffsets,
-      lengths: this.props.outputLengths,
-      outputOffsets: this.props.outputOffsets,
-      output: this.props.output,
-      sourceByteLength: this.props.dictionaryByteLength,
-      outputByteCapacity: this.props.outputByteCapacity
-    }).addToGraph(graph);
+    graph.add(
+      new GPUUint32Gather({
+        id: `${this.id}-lengths`,
+        source: this.props.dictionaryLengths,
+        indices: this.props.indices,
+        output: this.props.outputLengths
+      })
+    );
+    graph.add(
+      new GPUUint32Gather({
+        id: `${this.id}-source-offsets`,
+        source: this.props.dictionaryOffsets,
+        indices: this.props.indices,
+        output: sourceOffsets
+      })
+    );
+    graph.add(
+      new GPUScan({
+        id: `${this.id}-output-offsets`,
+        input: this.props.outputLengths,
+        output: this.props.outputOffsets,
+        mode: 'exclusive'
+      })
+    );
+    graph.add(
+      new GPUByteRangeGather({
+        id: `${this.id}-bytes`,
+        source: this.props.dictionary,
+        sourceOffsets,
+        lengths: this.props.outputLengths,
+        outputOffsets: this.props.outputOffsets,
+        output: this.props.output,
+        sourceByteLength: this.props.dictionaryByteLength,
+        outputByteCapacity: this.props.outputByteCapacity
+      })
+    );
   }
 }

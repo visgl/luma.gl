@@ -48,12 +48,14 @@ export class GPUParquetDeltaBinaryPackedInt64Decoder {
       outputDeltaLow: deltaLow,
       outputDeltaHigh: deltaHigh
     }).addToGraph(graph);
-    new GPUScanUint64({
-      id: `${this.id}-scan`,
-      inputLow: deltaLow,
-      inputHigh: deltaHigh,
-      outputLow: props.outputLow,
-      outputHigh: props.outputHigh
-    }).addToGraph(graph);
+    graph.add(
+      new GPUScanUint64({
+        id: `${this.id}-scan`,
+        inputLow: deltaLow,
+        inputHigh: deltaHigh,
+        outputLow: props.outputLow,
+        outputHigh: props.outputHigh
+      })
+    );
   }
 }

@@ -40,7 +40,7 @@ const count = graph.importGPUData(
   drawCommands.getInstanceCountData(0)
 );
 
-new GPUVisibilityWorkflow({
+graph.add(new GPUVisibilityWorkflow({
   id: 'visible-objects',
   predicates: [
     {kind: 'time-range', mask: timeRangeMask},
@@ -51,7 +51,7 @@ new GPUVisibilityWorkflow({
   outputMask: visibleMask,
   output: visibleIds,
   count
-}).addToGraph(graph);
+}));
 ```
 
 The workflow owns mask intersection, identity generation, scan, stable scatter, and count
@@ -83,12 +83,12 @@ By default, the workflow generates consecutive source IDs beginning at zero. Set
 `firstSourceIndex` when the input represents a slice of a larger stable identity space:
 
 ```ts
-new GPUVisibilityWorkflow({
+graph.add(new GPUVisibilityWorkflow({
   predicates: [{kind: 'selection', mask: groupMask}],
   output: groupVisibleIds,
   count: groupInstanceCount,
   firstSourceIndex: group.firstRow
-}).addToGraph(graph);
+}));
 ```
 
 Alternatively, supply `sourceIds` to compact an explicit ID vector. `sourceIds` and
@@ -100,11 +100,12 @@ updates the output IDs and count without recompiling the graph.
 
 ## Chunked vectors
 
-Predicates, source IDs, output masks, and outputs may all be atomic
-`GraphDataView<'uint32'>` values or all be `GraphVectorView<'uint32'>` values. Vector inputs must
-have identical ordered chunk topology. The workflow preserves chunk boundaries, generates IDs in
-the global logical order, and reports one vector-wide count; it never concatenates or repacks the
-caller-owned buffers.
+Predicates, source IDs, output masks, and outputs may each be atomic `GraphDataView<'uint32'>`
+values or `GraphVectorView<'uint32'>` values. Source-aligned masks and IDs must have equal logical
+length, while their atomic/vector boundaries may differ. Output only needs enough logical capacity
+and may use an independent topology. The workflow aligns rows by logical position, preserves
+caller-owned chunk boundaries, generates IDs in global order, and reports one vector-wide count; it
+never concatenates or repacks buffers.
 
 Output capacity must cover every source row. All views must belong to the target graph, and
 generated IDs must fit in `uint32`.

@@ -32,10 +32,7 @@ import {
 
 it('packet-spraying handheld rendering preserves glass with a bounded mobile GPU budget', () => {
   const handheld = makeNetworkRenderProfile({
-    coarsePointer: true,
-    maxTouchPoints: 5,
-    viewportHeight: 844,
-    viewportWidth: 390
+    handheld: true
   });
 
   expect(handheld.handheld, 'touchscreen phone viewports use the mobile profile').toBe(true);
@@ -54,16 +51,10 @@ it('packet-spraying handheld rendering preserves glass with a bounded mobile GPU
 
 it('packet-spraying retains complete desktop optics in narrow non-touch viewports', () => {
   const desktop = makeNetworkRenderProfile({
-    coarsePointer: false,
-    maxTouchPoints: 0,
-    viewportHeight: 844,
-    viewportWidth: 390
+    handheld: false
   });
   const tablet = makeNetworkRenderProfile({
-    coarsePointer: true,
-    maxTouchPoints: 5,
-    viewportHeight: 1024,
-    viewportWidth: 768
+    handheld: false
   });
 
   for (const profile of [desktop, tablet]) {

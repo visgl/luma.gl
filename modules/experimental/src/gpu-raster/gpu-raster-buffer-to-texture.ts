@@ -6,7 +6,6 @@ import type {Binding, BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import type {
   GPUCommandGraph,
-  GPUCommandGraphContributor,
   GraphDataView,
   GraphResourceUse,
   GraphTextureView
@@ -52,8 +51,7 @@ export type GPURasterBufferToTextureProps<
 export class GPURasterBufferToTexture<
   InputFormat extends GPURasterScalarFormat = GPURasterScalarFormat,
   OutputFormat extends GPURasterScalarFormat = GPURasterScalarFormat
-> implements GPUCommandGraphContributor
-{
+> {
   readonly id: string;
   readonly input: GPURasterBufferBand<InputFormat>;
   readonly output: GraphTextureView<GPURasterTextureFormat<OutputFormat>>;

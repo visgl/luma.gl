@@ -12,9 +12,14 @@ import {
   makeEvaluatorTableColumn,
   makeSegmentedEvaluatorTableColumn,
   VirtualGPUTableRenderer,
-  type RenderedTableElements,
   type TableColumn
 } from './table-renderer';
+import {
+  getExpressionElements,
+  getGPGPUShowcaseRoot,
+  getRenderedTableElements,
+  updateMetadata
+} from './app-ui';
 
 // Keep the default workload conservative for browsers while preserving the ten-million-row
 // stress case through the rows query parameter.
@@ -32,10 +37,7 @@ export type GPGPUShowcaseProps = {
 };
 
 export function initializeGPGPUShowcase(props: GPGPUShowcaseProps = {}): GPGPUShowcaseHandle {
-  const root = document.getElementById('app');
-  if (!root) {
-    throw new Error('GPGPU showcase requires #app');
-  }
+  getGPGPUShowcaseRoot();
 
   const evaluationDevicePromise = props.device
     ? Promise.resolve(props.device)
@@ -140,29 +142,6 @@ export function initializeGPGPUShowcase(props: GPGPUShowcaseProps = {}): GPGPUSh
   });
 
   return {destroy};
-}
-
-function getRenderedTableElements(): RenderedTableElements {
-  return {
-    scrollContainer: getRequiredElement('table-scroll'),
-    headerRow: getRequiredElement('table-header'),
-    rowLayer: getRequiredElement('table-row-layer'),
-    status: getRequiredElement('table-status')
-  };
-}
-
-function getExpressionElements(): {
-  form: HTMLFormElement;
-  input: HTMLInputElement;
-  runButton: HTMLButtonElement;
-  message: HTMLElement;
-} {
-  return {
-    form: getRequiredElement('expression-form'),
-    input: getRequiredElement('expression-input'),
-    runButton: getRequiredElement('expression-run'),
-    message: getRequiredElement('expression-message')
-  };
 }
 
 async function runExpression({
@@ -287,26 +266,6 @@ async function validateMetricSegmentedOutput(
 
 function formatEvaluatorType(evaluator: GPUDataEvaluator): string {
   return `${evaluator.type}${evaluator.size === 1 ? '' : `x${evaluator.size}`}`;
-}
-
-function updateMetadata(values: {
-  rows: string;
-  columns: string;
-  metricValues: string;
-  arrowBatches: string;
-}): void {
-  getRequiredElement('metadata-rows').textContent = values.rows;
-  getRequiredElement('metadata-columns').textContent = values.columns;
-  getRequiredElement('metadata-metric-values').textContent = values.metricValues;
-  getRequiredElement('metadata-arrow-batches').textContent = values.arrowBatches;
-}
-
-function getRequiredElement<T extends HTMLElement = HTMLElement>(id: string): T {
-  const element = document.getElementById(id);
-  if (!element) {
-    throw new Error(`GPGPU showcase requires #${id}`);
-  }
-  return element as T;
 }
 
 function formatInteger(value: number): string {

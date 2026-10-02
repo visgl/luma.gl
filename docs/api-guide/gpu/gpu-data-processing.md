@@ -65,7 +65,7 @@ execution.
 | --- | --- | --- |
 | Backend support | CPU, WebGL, and WebGPU | WebGPU only |
 | Programming model | Functional operations that produce lazy values | Explicit resources and compute, render, or copy nodes |
-| Execution | `await evaluator.evaluate(device)` | `compile()`, then encode into a caller-owned command encoder |
+| Execution | `await evaluator.evaluate(device)` | Prefer `await compileAsync()`, then encode into a caller-owned command encoder |
 | Submission | Managed by the selected backend | Controlled by the application |
 | Reuse | Materialized results are cached | A compiled workflow can be encoded repeatedly |
 | Temporary memory | Output buffers come from a reusable pool | Graph compilation aliases compatible transients with non-overlapping lifetimes |

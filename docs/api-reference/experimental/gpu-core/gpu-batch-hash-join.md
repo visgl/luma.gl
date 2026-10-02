@@ -16,6 +16,10 @@ This contract is designed for streaming record batches, Arrow chunks, tiles, par
 incremental uploads where the boundary is part of the data model rather than an implementation
 detail. It reuses `GPUHashJoin` per chunk; it does not concatenate, repack, submit, or read back.
 
+For one global compacted result across independently partitioned input and output vectors, use
+[`GPUHashJoin`](/docs/api-reference/experimental/gpu-core/gpu-hash-join). It preserves caller storage
+while allowing matches to fill the total output capacity across chunk boundaries.
+
 <GPUOperationContract operation="gpu-batch-hash-join" />
 
 ## Concepts
@@ -113,7 +117,7 @@ their memory and identity contracts.
 ## Usage
 
 ```ts
-new GPUBatchHashJoin({
+graph.add(new GPUBatchHashJoin({
   index: sharedPropertyIndex,
   keys: eventIdBatches,
   firstLeftRow: streamBaseRow,
@@ -123,7 +127,7 @@ new GPUBatchHashJoin({
   overflows: overflowByBatch,
   statistics: lookupStatisticsByBatch,
   found: propertyFoundByEventBatch
-}).addToGraph(graph);
+}));
 ```
 
 ## Constructor

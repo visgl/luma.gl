@@ -4,12 +4,7 @@
 
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import type {
-  GPUCommandGraph,
-  GPUCommandGraphContributor,
-  GraphDataView,
-  GraphResourceUse
-} from '@luma.gl/gpgpu/gpu-core';
+import type {GPUCommandGraph, GraphDataView, GraphResourceUse} from '@luma.gl/gpgpu/gpu-core';
 import {getViewBinding, getViewElementOffset} from '@luma.gl/gpgpu/gpu-core';
 import {
   assertRasterStorageBindingFits,
@@ -57,7 +52,7 @@ export type GPURasterBandMathProps = {
  * Native-format nodata sentinels and source masks are resolved before independent float32
  * calibration. Invalid, nonfinite, or unstable samples remain separate from the output validity.
  */
-export class GPURasterBandMath implements GPUCommandGraphContributor {
+export class GPURasterBandMath {
   readonly id: string;
   readonly width: number;
   readonly height: number;
@@ -239,15 +234,22 @@ export class GPURasterBandMath implements GPUCommandGraphContributor {
       ...getBandValidityConditions(this.left, 'left'),
       ...getBandValidityConditions(this.right, 'right')
     ];
-    const denominatorExpression =
+    const denominatorValidation =
       this.operation === 'divide'
-        ? 'rightSample'
+        ? `\n  let denominator = rightSample;\n  if (!isFiniteValue(denominator) || abs(denominator) <= ${getRasterFloatLiteral(this.epsilon)}) {\n    validSample = false;\n  }`
         : this.operation === 'normalized-difference'
-          ? 'leftSample + rightSample'
-          : undefined;
-    const denominatorValidation = denominatorExpression
-      ? `\n  let denominator = ${denominatorExpression};\n  if (!isFiniteValue(denominator) || abs(denominator) <= ${getRasterFloatLiteral(this.epsilon)}) {\n    validSample = false;\n  }`
-      : '';
+          ? `
+  let leftDominant = abs(leftSample) >= abs(rightSample);
+  let dominantSample = select(rightSample, leftSample, leftDominant);
+  let secondarySample = select(leftSample, rightSample, leftDominant);
+  let safeDominantSample = select(1.0, dominantSample, dominantSample != 0.0);
+  let sampleRatio = secondarySample / safeDominantSample;
+  let scaledDenominator = 1.0 + sampleRatio;
+  let denominator = leftSample + rightSample;
+  if (!isFiniteValue(denominator) || abs(denominator) <= ${getRasterFloatLiteral(this.epsilon)}) {
+    validSample = false;
+  }`
+          : '';
     const resultExpression = getBandMathResultExpression(this.operation);
     const clampedExpression = this.clamp
       ? `clamp(result, ${getRasterFloatLiteral(this.clamp[0])}, ${getRasterFloatLiteral(this.clamp[1])})`
@@ -268,7 +270,7 @@ ${leftValidityDeclaration}
 ${rightValidityDeclaration}
 
 fn isFiniteValue(value: f32) -> bool {
-  return value == value && abs(value) <= 3.402823466e+38;
+  return value == value && abs(value) <= bitcast<f32>(0x7f7fffffu);
 }
 
 @compute @workgroup_size(${RASTER_WORKGROUP_DIMENSION}, ${RASTER_WORKGROUP_DIMENSION})
@@ -331,6 +333,6 @@ function getBandMathResultExpression(operation: GPURasterBandMathOperation): str
     case 'divide':
       return 'leftSample / denominator';
     case 'normalized-difference':
-      return '(leftSample - rightSample) / denominator';
+      return 'select((sampleRatio - 1.0) / scaledDenominator, (1.0 - sampleRatio) / scaledDenominator, leftDominant)';
   }
 }

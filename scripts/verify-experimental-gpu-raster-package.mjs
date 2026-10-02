@@ -354,6 +354,7 @@ try {
   const temporaryPackageScope = path.join(temporaryDirectory, 'node_modules', '@luma.gl');
   mkdirSync(temporaryPackageScope, {recursive: true});
   symlinkSync(packageRoot, path.join(temporaryPackageScope, 'experimental'));
+  symlinkSync(path.join(repositoryRoot, 'modules/gpgpu'), path.join(temporaryPackageScope, 'gpgpu'));
   const typeTestPath = path.join(temporaryDirectory, 'index.mts');
   writeFileSync(
     typeTestPath,
@@ -500,12 +501,12 @@ try {
 } from '@luma.gl/experimental/gpu-raster';
 import type {
   CompiledGPUCommandGraph,
-  GPUCommandGraphContributor,
   GPUReductionMask,
   GraphDataView
-} from '@luma.gl/experimental';
+} from '@luma.gl/gpgpu/gpu-core';
 
-declare const contributor: GPUCommandGraphContributor;
+// Experimental raster builders retain their own mutation API until their domain migration.
+type RasterCommandBuilder = Pick<GPURasterBandMath, 'addToGraph'>;
 declare const rasterBand: GPURasterBand;
 declare const bandMathOperation: GPURasterBandMathOperation;
 declare const bandMathOptions: GPURasterBandMathProps;
@@ -642,90 +643,90 @@ declare const tileHaloLease: GPURasterTileHaloLease;
 declare const tileLease: GPURasterTileLease;
 declare const tileReader: GPURasterTileReader;
 declare const textureToBuffer: GPURasterTextureToBuffer;
-const bandMathContributor: GPUCommandGraphContributor = bandMath;
-const boxBlurContributor: GPUCommandGraphContributor = boxBlur;
-const categoricalOverviewContributor: GPUCommandGraphContributor = categoricalOverview;
-const closingContributor: GPUCommandGraphContributor = closing;
-const connectedComponentsContributor: GPUCommandGraphContributor = connectedComponents;
-const contrastContributor: GPUCommandGraphContributor = contrast;
-const contourClassifierContributor: GPUCommandGraphContributor = contourClassifier;
-const contoursContributor: GPUCommandGraphContributor = contours;
-const convolutionContributor: GPUCommandGraphContributor = convolution;
-const crossTileComponentsContributor: GPUCommandGraphContributor = crossTileComponents;
-const denseComponentsContributor: GPUCommandGraphContributor = denseComponents;
-const regionMeasurementsContributor: GPUCommandGraphContributor = regionMeasurements;
-const dilationContributor: GPUCommandGraphContributor = dilation;
-const erosionContributor: GPUCommandGraphContributor = erosion;
-const gaussianBlurContributor: GPUCommandGraphContributor = gaussianBlur;
-const globalHistogramMergeContributor: GPUCommandGraphContributor = globalHistogramMerge;
-const globalInitializeContributor: GPUCommandGraphContributor = globalInitialize;
-const globalPercentileContributor: GPUCommandGraphContributor = globalPercentile;
-const globalStatisticsMergeContributor: GPUCommandGraphContributor = globalStatisticsMerge;
-const gradientContributor: GPUCommandGraphContributor = gradient;
-const gradientMagnitudeContributor: GPUCommandGraphContributor = gradientMagnitude;
-const laplacianContributor: GPUCommandGraphContributor = laplacian;
-const morphologyContributor: GPUCommandGraphContributor = morphology;
-const ndviContributor: GPUCommandGraphContributor = ndvi;
-const neighborhoodContributor: GPUCommandGraphContributor = neighborhood;
-const openingContributor: GPUCommandGraphContributor = opening;
-const otsuContributor: GPUCommandGraphContributor = otsu;
-const overviewContributor: GPUCommandGraphContributor = overview;
-const scharrContributor: GPUCommandGraphContributor = scharr;
-const sobelContributor: GPUCommandGraphContributor = sobel;
-const statisticsContributor: GPUCommandGraphContributor = statistics;
-const histogramContributor: GPUCommandGraphContributor = histogram;
-const thresholdContributor: GPUCommandGraphContributor = threshold;
-const tileCoreExtractContributor: GPUCommandGraphContributor = tileCoreExtract;
-const tileHaloFillContributor: GPUCommandGraphContributor = tileHaloFill;
-const rasterContributor: GPUCommandGraphContributor = textureToBuffer;
-const configuredGradient: GPUCommandGraphContributor = new GPURasterGradient(gradientOptions);
-const configuredGradientMagnitude: GPUCommandGraphContributor = new GPURasterGradientMagnitude(
+const bandMathContributor: RasterCommandBuilder = bandMath;
+const boxBlurContributor: RasterCommandBuilder = boxBlur;
+const categoricalOverviewContributor: RasterCommandBuilder = categoricalOverview;
+const closingContributor: RasterCommandBuilder = closing;
+const connectedComponentsContributor: RasterCommandBuilder = connectedComponents;
+const contrastContributor: RasterCommandBuilder = contrast;
+const contourClassifierContributor: RasterCommandBuilder = contourClassifier;
+const contoursContributor: RasterCommandBuilder = contours;
+const convolutionContributor: RasterCommandBuilder = convolution;
+const crossTileComponentsContributor: RasterCommandBuilder = crossTileComponents;
+const denseComponentsContributor: RasterCommandBuilder = denseComponents;
+const regionMeasurementsContributor: RasterCommandBuilder = regionMeasurements;
+const dilationContributor: RasterCommandBuilder = dilation;
+const erosionContributor: RasterCommandBuilder = erosion;
+const gaussianBlurContributor: RasterCommandBuilder = gaussianBlur;
+const globalHistogramMergeContributor: RasterCommandBuilder = globalHistogramMerge;
+const globalInitializeContributor: RasterCommandBuilder = globalInitialize;
+const globalPercentileContributor: RasterCommandBuilder = globalPercentile;
+const globalStatisticsMergeContributor: RasterCommandBuilder = globalStatisticsMerge;
+const gradientContributor: RasterCommandBuilder = gradient;
+const gradientMagnitudeContributor: RasterCommandBuilder = gradientMagnitude;
+const laplacianContributor: RasterCommandBuilder = laplacian;
+const morphologyContributor: RasterCommandBuilder = morphology;
+const ndviContributor: RasterCommandBuilder = ndvi;
+const neighborhoodContributor: RasterCommandBuilder = neighborhood;
+const openingContributor: RasterCommandBuilder = opening;
+const otsuContributor: RasterCommandBuilder = otsu;
+const overviewContributor: RasterCommandBuilder = overview;
+const scharrContributor: RasterCommandBuilder = scharr;
+const sobelContributor: RasterCommandBuilder = sobel;
+const statisticsContributor: RasterCommandBuilder = statistics;
+const histogramContributor: RasterCommandBuilder = histogram;
+const thresholdContributor: RasterCommandBuilder = threshold;
+const tileCoreExtractContributor: RasterCommandBuilder = tileCoreExtract;
+const tileHaloFillContributor: RasterCommandBuilder = tileHaloFill;
+const rasterContributor: RasterCommandBuilder = textureToBuffer;
+const configuredGradient: RasterCommandBuilder = new GPURasterGradient(gradientOptions);
+const configuredGradientMagnitude: RasterCommandBuilder = new GPURasterGradientMagnitude(
   gradientMagnitudeOptions
 );
-const configuredLaplacian: GPUCommandGraphContributor = new GPURasterLaplacian(laplacianOptions);
-const configuredMorphology: GPUCommandGraphContributor = new GPURasterMorphology(morphologyOptions);
-const configuredBinaryDilation: GPUCommandGraphContributor = new GPURasterDilation(
+const configuredLaplacian: RasterCommandBuilder = new GPURasterLaplacian(laplacianOptions);
+const configuredMorphology: RasterCommandBuilder = new GPURasterMorphology(morphologyOptions);
+const configuredBinaryDilation: RasterCommandBuilder = new GPURasterDilation(
   binaryMorphologyOptions
 );
-const configuredGrayscaleErosion: GPUCommandGraphContributor = new GPURasterErosion(
+const configuredGrayscaleErosion: RasterCommandBuilder = new GPURasterErosion(
   grayscaleMorphologyOptions
 );
-const configuredDilation: GPUCommandGraphContributor = new GPURasterDilation(dilationOptions);
-const configuredErosion: GPUCommandGraphContributor = new GPURasterErosion(erosionOptions);
-const configuredOpening: GPUCommandGraphContributor = new GPURasterOpening(openingOptions);
-const configuredClosing: GPUCommandGraphContributor = new GPURasterClosing(closingOptions);
-const configuredConnectedComponents: GPUCommandGraphContributor =
+const configuredDilation: RasterCommandBuilder = new GPURasterDilation(dilationOptions);
+const configuredErosion: RasterCommandBuilder = new GPURasterErosion(erosionOptions);
+const configuredOpening: RasterCommandBuilder = new GPURasterOpening(openingOptions);
+const configuredClosing: RasterCommandBuilder = new GPURasterClosing(closingOptions);
+const configuredConnectedComponents: RasterCommandBuilder =
   new GPURasterConnectedComponents(connectedComponentsOptions);
-const configuredDenseComponents: GPUCommandGraphContributor =
+const configuredDenseComponents: RasterCommandBuilder =
   new GPURasterDenseComponents(denseComponentsOptions);
-const configuredRegionMeasurements: GPUCommandGraphContributor =
+const configuredRegionMeasurements: RasterCommandBuilder =
   new GPURasterRegionMeasurements(regionMeasurementsOptions);
-const configuredCrossTileComponents: GPUCommandGraphContributor =
+const configuredCrossTileComponents: RasterCommandBuilder =
   new GPURasterCrossTileComponents(crossTileComponentsOptions);
-const configuredOverview: GPUCommandGraphContributor = new GPURasterOverview(overviewOptions);
-const configuredGlobalInitialize: GPUCommandGraphContributor = new GPURasterGlobalInitialize(
+const configuredOverview: RasterCommandBuilder = new GPURasterOverview(overviewOptions);
+const configuredGlobalInitialize: RasterCommandBuilder = new GPURasterGlobalInitialize(
   globalInitializeOptions
 );
-const configuredGlobalStatisticsMerge: GPUCommandGraphContributor =
+const configuredGlobalStatisticsMerge: RasterCommandBuilder =
   new GPURasterGlobalStatisticsMerge(globalStatisticsMergeOptions);
-const configuredGlobalHistogramMerge: GPUCommandGraphContributor =
+const configuredGlobalHistogramMerge: RasterCommandBuilder =
   new GPURasterGlobalHistogramMerge(globalHistogramMergeOptions);
-const configuredGlobalPercentile: GPUCommandGraphContributor = new GPURasterGlobalPercentile(
+const configuredGlobalPercentile: RasterCommandBuilder = new GPURasterGlobalPercentile(
   globalPercentileOptions
 );
-const configuredCategoricalOverview: GPUCommandGraphContributor = new GPURasterCategoricalOverview(
+const configuredCategoricalOverview: RasterCommandBuilder = new GPURasterCategoricalOverview(
   categoricalOverviewOptions
 );
-const configuredSignedCategoricalOverview: GPUCommandGraphContributor =
+const configuredSignedCategoricalOverview: RasterCommandBuilder =
   new GPURasterCategoricalOverview(signedCategoricalOverviewOptions);
-const configuredScharr: GPUCommandGraphContributor = new GPURasterScharr(scharrOptions);
-const configuredSobel: GPUCommandGraphContributor = new GPURasterSobel(sobelOptions);
+const configuredScharr: RasterCommandBuilder = new GPURasterScharr(scharrOptions);
+const configuredSobel: RasterCommandBuilder = new GPURasterSobel(sobelOptions);
 const configuredTileCache = new GPURasterTileCache(tileCacheOptions);
-const configuredTileCoreExtract: GPUCommandGraphContributor = new GPURasterTileCoreExtract(
+const configuredTileCoreExtract: RasterCommandBuilder = new GPURasterTileCoreExtract(
   tileCoreExtractOptions
 );
 const configuredTileHaloAssembler = new GPURasterTileHaloAssembler(configuredTileCache);
-const configuredTileHaloFill: GPUCommandGraphContributor = new GPURasterTileHaloFill(
+const configuredTileHaloFill: RasterCommandBuilder = new GPURasterTileHaloFill(
   tileHaloFillOptions
 );
 const configuredTileReader = new GPURasterTileReader(tileSource);
@@ -1207,7 +1208,6 @@ void getRasterDeviceLimits;
 void getRasterRegionWorldCentroid;
 void makeRasterOverviewMetadata;
 void planRasterDispatchStripes;
-void contributor;
 void rasterBand;
 void bandMathOperation;
 void bandMathOptions;

@@ -21,12 +21,17 @@ import {
   type ParquetDeltaLengthByteArrayPlan
 } from './parquet-delta-length-byte-array';
 import {
+  parseParquetDeltaByteArrayPlan,
+  type ParquetDeltaByteArrayPlan
+} from './parquet-delta-byte-array';
+import {
   parseParquetPlainByteArrayPlan,
   type ParquetPlainByteArrayPlan
 } from './parquet-plain-byte-array';
 import {
   parseParquetBitPackedRunPlan,
   parseParquetDictionaryIndicesPlan,
+  parseParquetLengthPrefixedRleBitPackedRunPlan,
   type ParquetBitPackedPlan,
   type ParquetDictionaryIndicesPlan
 } from './parquet-rle-framing';
@@ -105,7 +110,29 @@ export type GPUParquetCompressionPlan = Readonly<{
   input: GPUParquetUploadSection;
   descriptors: GPUParquetUploadSection;
   descriptorCount: number;
+  /** Match/copy descriptors resolved to compressed-input gathers during CPU planning. */
+  directCopyCount: number;
+  /** Match/copy descriptors that still require output-prefix recursion on the GPU. */
+  recursiveCopyCount: number;
+  /** Decoded bytes covered by direct copy descriptors. */
+  directCopyByteLength: number;
+  /** Decoded bytes covered by recursive copy descriptors. */
+  recursiveCopyByteLength: number;
   outputByteLength: number;
+}>;
+
+/** Runtime metadata for one two-pass batch of compressed `BYTE_STREAM_SPLIT` pages. */
+export type GPUParquetLZByteStreamSplitBatchPlan = Readonly<{
+  /** Eight-word decode records stored in the page-batch upload. */
+  jobs: GPUParquetUploadSection;
+  /** Indices into `GPUParquetEncodedPageBatchPlan.pages`, in runtime job order. */
+  pageIndices: readonly number[];
+  /** Word-aligned final output range for every job, in runtime job order. */
+  outputs: readonly GPUParquetUploadSection[];
+  /** Total byte capacity occupied by the aggregate output. */
+  outputByteLength: number;
+  /** Largest final output word count among the jobs. */
+  maximumOutputWordCount: number;
 }>;
 
 /** RLE or legacy BIT_PACKED work for one definition- or repetition-level stream. */
@@ -154,6 +181,18 @@ export type GPUParquetValuePlan =
       decodedByteLength: number;
     }>
   | Readonly<{
+      kind: 'empty-byte-array';
+      valueCount: 0;
+      decodedByteLength: 0;
+    }>
+  | Readonly<{
+      kind: 'rle-boolean';
+      valueCount: number;
+      decodedByteLength: number;
+      runPlan: ParquetRleBitPackedRunPlan;
+      runDescriptors: GPUParquetUploadSection;
+    }>
+  | Readonly<{
       kind: 'plain-byte-array';
       valueCount: number;
       decodedByteLength: number;
@@ -183,6 +222,14 @@ export type GPUParquetValuePlan =
       deltaPlan: ParquetDeltaLengthByteArrayPlan;
       miniBlockDescriptors: GPUParquetUploadSection;
       payload: GPUParquetUploadSection;
+    }>
+  | Readonly<{
+      kind: 'delta-byte-array';
+      valueCount: number;
+      decodedByteLength: number;
+      deltaPlan: ParquetDeltaByteArrayPlan;
+      prefixMiniBlockDescriptors: GPUParquetUploadSection;
+      suffixMiniBlockDescriptors: GPUParquetUploadSection;
     }>
   | Readonly<{
       kind: 'dictionary-fixed' | 'dictionary-byte-array';
@@ -226,6 +273,7 @@ export type CPUParquetPageFallbackPlan = Readonly<{
     | 'unsupported-encoding'
     | 'unsupported-physical-type'
     | 'missing-dictionary'
+    | 'missing-output-capacity'
     | 'variable-dictionary-output';
   detail: string;
   page: ParquetEncodedPage;
@@ -238,6 +286,8 @@ export type GPUParquetEncodedPageBatchPlan = Readonly<{
   uploadData: Uint8Array;
   dictionaries: readonly (GPUParquetDictionaryPlan | undefined)[];
   pages: readonly (GPUParquetDecodedPagePlan | CPUParquetPageFallbackPlan)[];
+  /** Shared runtime batch for compressed byte-stream-split pages, when present. */
+  lzByteStreamSplitBatch?: GPUParquetLZByteStreamSplitBatchPlan;
   gpuPageCount: number;
   cpuFallbackPageCount: number;
 }>;
@@ -248,6 +298,15 @@ export type GPUParquetEncodedPageBatchPlanOptions = Readonly<{
   minimumGPUByteLength?: number;
   /** Compression codecs retained by loaders.gl and accepted by this adapter. */
   compressionCodecs?: readonly ('SNAPPY' | 'LZ4_RAW')[];
+  /**
+   * Returns an exact decoded byte length for a variable-width page when metadata outside the
+   * encoded payload already provides it. Enables bounded `DELTA_BYTE_ARRAY` reconstruction without
+   * a GPU allocation/readback round trip.
+   */
+  getPageOutputByteLength?: (
+    column: LoadersGLParquetEncodedColumnChunk,
+    page: LoadersGLParquetEncodedPage
+  ) => number | undefined;
   /** Throws instead of returning a mixed plan when any page needs CPU work. */
   requireGPU?: boolean;
 }>;
@@ -305,6 +364,7 @@ export function planGPUParquetEncodedPageBatch(
           pageIndex,
           minimumGPUByteLength,
           compressionCodecs,
+          options.getPageOutputByteLength,
           upload,
           dictionaries[columnIndex],
           dictionaryErrors[columnIndex]
@@ -329,14 +389,77 @@ export function planGPUParquetEncodedPageBatch(
   }
 
   const gpuPageCount = pages.filter(page => page.mode === 'gpu').length;
+  const lzByteStreamSplitBatch = planLZByteStreamSplitBatch(pages, upload);
   return Object.freeze({
     shape: 'gpu-parquet-page-batch-plan' as const,
     source: batch,
     uploadData: upload.finish(),
     dictionaries: Object.freeze(dictionaries),
     pages: Object.freeze(pages),
+    lzByteStreamSplitBatch,
     gpuPageCount,
     cpuFallbackPageCount: pages.length - gpuPageCount
+  });
+}
+
+function planLZByteStreamSplitBatch(
+  pages: readonly (GPUParquetDecodedPagePlan | CPUParquetPageFallbackPlan)[],
+  upload: GPUParquetUploadBuilder
+): GPUParquetLZByteStreamSplitBatchPlan | undefined {
+  const pageIndices: number[] = [];
+  const outputs: GPUParquetUploadSection[] = [];
+  const jobWords: number[] = [];
+  let outputByteLength = 0;
+  let maximumOutputWordCount = 0;
+
+  for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
+    const page = pages[pageIndex];
+    if (
+      page.mode !== 'gpu' ||
+      !page.compression ||
+      page.values.kind !== 'byte-stream-split' ||
+      page.values.decodedByteLength === 0
+    ) {
+      continue;
+    }
+    if (page.compression.outputByteLength !== page.values.decodedByteLength) {
+      throw new Error('Compressed BYTE_STREAM_SPLIT byte lengths do not match');
+    }
+    const alignedOutputByteOffset = Math.ceil(outputByteLength / 4) * 4;
+    const nextOutputByteLength = alignedOutputByteOffset + page.values.decodedByteLength;
+    if (!Number.isSafeInteger(nextOutputByteLength) || nextOutputByteLength > 0xffffffff) {
+      throw new Error('Batched Parquet BYTE_STREAM_SPLIT output exceeds uint32');
+    }
+    const output = Object.freeze({
+      byteOffset: alignedOutputByteOffset,
+      byteLength: page.values.decodedByteLength
+    });
+    pageIndices.push(pageIndex);
+    outputs.push(output);
+    jobWords.push(
+      page.compression.input.byteOffset,
+      page.compression.descriptors.byteOffset / 4,
+      alignedOutputByteOffset,
+      page.values.decodedByteLength,
+      page.compression.descriptorCount,
+      page.values.valueCount,
+      page.values.byteWidth,
+      0
+    );
+    outputByteLength = nextOutputByteLength;
+    maximumOutputWordCount = Math.max(
+      maximumOutputWordCount,
+      Math.ceil(page.values.decodedByteLength / 4)
+    );
+  }
+
+  if (pageIndices.length === 0) return undefined;
+  return Object.freeze({
+    jobs: upload.add(Uint32Array.from(jobWords), 'batched byte-stream-split jobs'),
+    pageIndices: Object.freeze(pageIndices),
+    outputs: Object.freeze(outputs),
+    outputByteLength: Math.ceil(outputByteLength / 4) * 4,
+    maximumOutputWordCount
   });
 }
 
@@ -425,6 +548,7 @@ function planPage(
   pageIndex: number,
   minimumGPUByteLength: number,
   compressionCodecs: ReadonlySet<string>,
+  getPageOutputByteLength: GPUParquetEncodedPageBatchPlanOptions['getPageOutputByteLength'],
   upload: GPUParquetUploadBuilder,
   dictionary: GPUParquetDictionaryPlan | undefined,
   dictionaryError: PlannerError | undefined
@@ -477,6 +601,7 @@ function planPage(
     physicalValueCount,
     sections.decodedValuesByteLength,
     Boolean(compression),
+    getPageOutputByteLength,
     upload,
     dictionary,
     dictionaryError
@@ -575,6 +700,10 @@ function planCompression(
       input,
       descriptors: upload.add(plan.descriptors, 'snappy descriptors'),
       descriptorCount: plan.descriptorCount,
+      directCopyCount: plan.directCopyCount,
+      recursiveCopyCount: plan.recursiveCopyCount,
+      directCopyByteLength: plan.directCopyByteLength,
+      recursiveCopyByteLength: plan.recursiveCopyByteLength,
       outputByteLength
     });
   }
@@ -590,6 +719,10 @@ function planCompression(
       input,
       descriptors: upload.add(plan.descriptors, 'lz4 descriptors'),
       descriptorCount: plan.descriptorCount,
+      directCopyCount: plan.directCopyCount,
+      recursiveCopyCount: plan.recursiveCopyCount,
+      directCopyByteLength: plan.directCopyByteLength,
+      recursiveCopyByteLength: plan.recursiveCopyByteLength,
       outputByteLength
     });
   }
@@ -607,6 +740,7 @@ function planValues(
   valueCount: number,
   decodedValuesByteLength: number,
   isCompressed: boolean,
+  getPageOutputByteLength: GPUParquetEncodedPageBatchPlanOptions['getPageOutputByteLength'],
   upload: GPUParquetUploadBuilder,
   dictionary: GPUParquetDictionaryPlan | undefined,
   dictionaryError: PlannerError | undefined
@@ -686,11 +820,29 @@ function planValues(
     });
   }
 
+  if (encoding === 'DELTA_BYTE_ARRAY' && physicalType === 'BYTE_ARRAY' && valueCount === 0) {
+    return Object.freeze({
+      kind: 'empty-byte-array' as const,
+      valueCount: 0 as const,
+      decodedByteLength: 0 as const
+    });
+  }
+
   if (isCompressed) {
     throw makePlannerError(
       'compressed-control-stream',
       `Compressed ${encoding} control headers require CPU decompression before GPU planning`
     );
+  }
+  if (encoding === 'RLE' && physicalType === 'BOOLEAN') {
+    const runPlan = parseParquetLengthPrefixedRleBitPackedRunPlan(encoded, 1, valueCount);
+    return Object.freeze({
+      kind: 'rle-boolean' as const,
+      valueCount,
+      decodedByteLength: multiplyUint32(valueCount, 4, 'RLE BOOLEAN output'),
+      runPlan,
+      runDescriptors: upload.add(runPlan.runDescriptors, 'boolean RLE descriptors')
+    });
   }
   if (encoding === 'DELTA_BINARY_PACKED' && physicalType === 'INT32') {
     const deltaPlan = parseParquetDeltaBinaryPackedPlan(encoded);
@@ -729,6 +881,32 @@ function planValues(
       payload: upload.add(
         encoded.subarray(deltaPlan.payloadByteOffset),
         'delta length byte-array payload'
+      )
+    });
+  }
+  if (encoding === 'DELTA_BYTE_ARRAY' && physicalType === 'BYTE_ARRAY') {
+    const pageOutputByteLength = getPageOutputByteLength?.(column, page);
+    if (pageOutputByteLength === undefined) {
+      throw makePlannerError(
+        'missing-output-capacity',
+        'DELTA_BYTE_ARRAY requires an exact decoded byte length from getPageOutputByteLength'
+      );
+    }
+    validateUint32(pageOutputByteLength, 'DELTA_BYTE_ARRAY output byte length');
+    const deltaPlan = parseParquetDeltaByteArrayPlan(encoded);
+    validatePlannedValueCount(deltaPlan.prefixLengthPlan.valueCount, valueCount, encoding);
+    return Object.freeze({
+      kind: 'delta-byte-array' as const,
+      valueCount,
+      decodedByteLength: pageOutputByteLength,
+      deltaPlan,
+      prefixMiniBlockDescriptors: upload.add(
+        deltaPlan.prefixLengthPlan.miniBlockDescriptors,
+        'delta byte-array prefix descriptors'
+      ),
+      suffixMiniBlockDescriptors: upload.add(
+        deltaPlan.suffixLengthPlan.miniBlockDescriptors,
+        'delta byte-array suffix descriptors'
       )
     });
   }

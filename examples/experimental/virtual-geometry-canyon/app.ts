@@ -196,6 +196,7 @@ export default class VirtualGeometryCanyonAnimationLoopTemplate extends Animatio
     }
     this.canvas = canvas;
     canvas.style.cursor = 'grab';
+    canvas.style.touchAction = 'none';
     canvas.addEventListener('pointerdown', this.handlePointerDown);
     canvas.addEventListener('pointermove', this.handlePointerMove);
     canvas.addEventListener('pointerup', this.handlePointerUp);
@@ -415,7 +416,7 @@ export default class VirtualGeometryCanyonAnimationLoopTemplate extends Animatio
       }),
       overflow: graph.createDataView(overflowBuffer, {format: 'uint32', length: 1})
     });
-    selection.addToGraph(graph);
+    graph.add(selection);
 
     const frameColor = graph.importFrameTexture({
       id: 'frame-color',

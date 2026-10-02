@@ -2,6 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+export {GPUMatVec} from './gpu-matvec';
+export type {GPUMatVecProps} from './gpu-matvec';
+export {GPUMatMul} from './gpu-matmul';
+export type {GPUMatMulProps} from './gpu-matmul';
+
 export {
   CompiledGPUCommandGraph,
   GPUCommandGraph,
@@ -66,7 +71,6 @@ export type {
   GraphTextureUse,
   GraphTextureViewProps
 } from './gpu-command-graph';
-export type {GPUCommandGraphContributor} from './gpu-command-graph';
 export {GPUCommandGraphExecutionBudgetController} from './gpu-command-graph-budget-controller';
 export type {
   GPUCommandGraphExecutionBudgetControllerProps,
@@ -133,13 +137,27 @@ export {GPUUint32Gather} from './gpu-uint32-gather';
 export type {GPUUint32GatherProps} from './gpu-uint32-gather';
 export {GPUByteRangeGather} from './gpu-byte-range-gather';
 export type {GPUByteRangeGatherProps} from './gpu-byte-range-gather';
+export {GPUGather} from './gpu-gather';
+export type {GPUGatherFormat, GPUGatherProps} from './gpu-gather';
 export {
   GPULZByteDecompressor,
   GPU_LZ_BYTE_DESCRIPTOR_WORDS,
   GPU_LZ_BYTE_WORKGROUP_SIZE,
-  getGPULZByteDecompressorShaderSource
+  getGPULZByteDecompressorShaderSource,
+  planGPULZByteDescriptors
 } from './gpu-lz-byte-decompressor';
-export type {GPULZByteDecompressorProps} from './gpu-lz-byte-decompressor';
+export type {
+  GPULZByteDecompressorProps,
+  GPULZByteDescriptorPlan
+} from './gpu-lz-byte-decompressor';
+export {
+  GPULZByteBatchDecompressor,
+  GPU_LZ_BYTE_BATCH_JOB_WORDS,
+  GPU_LZ_BYTE_BATCH_WORKGROUP_SIZE,
+  getGPULZByteBatchDecompressorShaderSource,
+  type GPULZByteBatchDecompressorProps,
+  type GPULZByteBatchDecompressorStats
+} from './gpu-lz-byte-batch-decompressor';
 export {
   runGPUWorkgroupScanBenchmark,
   summarizeGPUWorkgroupScanBenchmarkSamples
@@ -162,6 +180,12 @@ export {GPUSegmentedSort} from './gpu-segmented-sort';
 export type {GPUSegmentedSortProps, GPUSortSegment} from './gpu-segmented-sort';
 export {GPUCompaction} from './gpu-compaction';
 export type {GPUCompactionInput, GPUCompactionProps} from './gpu-compaction';
+export {GPUFlagOffsets} from './gpu-flag-offsets';
+export type {GPUFlagOffsetsProps} from './gpu-flag-offsets';
+export {GPUSegmentOffsets} from './gpu-segment-offsets';
+export type {GPUSegmentOffsetsProps} from './gpu-segment-offsets';
+export {GPUSegmentedLayout} from './gpu-segmented-layout';
+export type {GPUSegmentedLayoutProps} from './gpu-segmented-layout';
 export {
   GPUIndexedRangeCompaction,
   GPUPartitionedIndexedRangeCompaction
@@ -253,7 +277,6 @@ export {
 } from './gpu-fft2d';
 export type {
   GPUFFT2DDirection,
-  GPUFFT2DEncodeOptions,
   GPUFFT2DProps,
   GPUFFT2DStats,
   GPUFFT2DSupport
@@ -325,6 +348,9 @@ export type {
   GPUConvolutionBenchmarkReport,
   GPUConvolutionBenchmarkStrategy
 } from './gpu-convolution-benchmark';
+
+export {GPUElementwise} from './gpu-elementwise';
+export type {GPUElementwiseProps, GPUElementwiseOperation} from './gpu-elementwise';
 
 export {
   getGPUFiniteDifference2DSupport,
@@ -524,3 +550,92 @@ export type {
   DispatchCommand,
   DispatchCommandBufferProps
 } from './dispatch-command-buffer';
+
+export {
+  addGPUCommandNode,
+  addGPUCommandNodes,
+  createGPUComputeCommandNode,
+  createGPUCopyCommandNode,
+  createGPURenderCommandNode
+} from './gpu-command-node';
+export type {
+  GPUNode,
+  GPUCommandNode,
+  GPUCommandNodeProducer,
+  GPUCommandNodeType,
+  GPUComputeCommandNode,
+  GPUCopyCommandNode,
+  GPURenderCommandNode
+} from './gpu-command-node';
+export {
+  getGPUOperationTree,
+  GPUCompositeOperation,
+  isGPUCommandNodeProducer,
+  isGPUOperation
+} from './gpu-operation';
+export type {
+  GPUOperation,
+  GPUOperationConstraints,
+  GPUOperationLike,
+  GPUOperationMetadata,
+  GPUOperationResource,
+  GPUOperationTree,
+  GPUOperationWorkload,
+  GPUProgramOperation,
+  GPUProgramPrimitive
+} from './gpu-operation';
+export {
+  GPUConditionalOperation,
+  GPULoopOperation,
+  isGPUControlFlowOperation
+} from './gpu-control-flow-operation';
+export type {
+  GPUControlFlowLowering,
+  GPUOperationPredicate
+} from './gpu-control-flow-operation';
+export {composite, GPUProgram} from './gpu-program';
+export {GPUProgramScalar, GPUProgramVector} from './gpu-program-value';
+export type {GPUProgramScalarFormat, GPUProgramVectorFormat} from './gpu-program-value';
+export {GPUProgramCompiler} from './gpu-program-compiler';
+export type {
+  GPUProgramBindings,
+  GPUProgramCompilation,
+  GPUProgramLoweredNode,
+  GPUProgramLoweringReport
+} from './gpu-program-compiler';
+export {GPUOperationLoweringRegistry} from './gpu-program-lowering';
+export type {
+  GPUOperationLowerer,
+  GPUOperationLoweringContext,
+  GPUOperationLoweringDecision,
+  GPUProgramBackendCapabilities
+} from './gpu-program-lowering';
+export {inspectGPUProgramCompilation} from './gpu-program-inspector';
+export type {GPUProgramCompilationSummary} from './gpu-program-inspector';
+export {validateGPUProgram} from './gpu-program-validation';
+export type {
+  GPUProgramValidationIssue,
+  GPUProgramValidationReport
+} from './gpu-program-validation';
+export {GPUProgramScalarLiteral} from './gpu-semantic-state-operation';
+export {
+  GPUProgramScalarOperation,
+  scalarArithmetic,
+  scalarCompare
+} from './gpu-semantic-scalar-operation';
+export {GPUProgramDotProduct, GPUProgramVectorMADD} from './gpu-semantic-vector-operation';
+export {GPUProgramCSRMatrix, GPUProgramSpMV} from './gpu-semantic-spmv';
+export {createGPUConjugateGradientProgram} from './gpu-conjugate-gradient-program';
+
+export {GPUCOOToCSR} from './gpu-coo-to-csr';
+export type {GPUCOOToCSRProps} from './gpu-coo-to-csr';
+export {GPURunLengthEncode, GPUUnique} from './gpu-run-length-encode';
+export type {GPURunLengthEncodeProps} from './gpu-run-length-encode';
+
+export {GPUIncrementalExecution} from './gpu-incremental-execution';
+export type {
+  GPUIncrementalBatch,
+  GPUIncrementalContext,
+  GPUIncrementalExecutionProps,
+  GPUIncrementalExecutionStats
+} from './gpu-incremental-execution';

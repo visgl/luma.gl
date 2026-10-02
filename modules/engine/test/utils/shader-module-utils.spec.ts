@@ -6,10 +6,32 @@ import {expect, it} from 'vitest';
 import type {ShaderLayout} from '../../../core/src';
 import type {ShaderModule} from '../../../shadertools/src';
 import {lighting, pbrMaterial} from '../../../shadertools/src';
+import {projection} from '../../../shadertools/src/modules/engine/project/project';
 import {
+  getShaderModuleUniformBlockLayouts,
   mergeInferredShaderLayout,
   mergeShaderModuleBindingsIntoLayout
 } from '../../src/utils/shader-module-utils';
+
+it('getShaderModuleUniformBlockLayouts exposes module uniformTypes under the GLSL block name', () => {
+  expect(getShaderModuleUniformBlockLayouts([lighting])).toEqual([
+    {name: 'lightingUniforms', uniformTypes: lighting.uniformTypes}
+  ]);
+  expect(
+    getShaderModuleUniformBlockLayouts([projection]),
+    'uses the parsed name of a uniquely declared built-in block'
+  ).toEqual([{name: 'Project', uniformTypes: projection.uniformTypes}]);
+
+  const nonStd140Module = {
+    name: 'packed',
+    uniformTypes: {value: 'f32'},
+    vs: 'uniform packedUniforms { float value; } packed;'
+  } as const satisfies ShaderModule;
+  expect(
+    getShaderModuleUniformBlockLayouts([nonStd140Module]),
+    'does not assume std140 packing for blocks without the qualifier'
+  ).toEqual([]);
+});
 
 it('mergeShaderModuleBindingsIntoLayout does not create placeholder layouts', () => {
   const shaderLayout = mergeShaderModuleBindingsIntoLayout<ShaderLayout | null>(null, [lighting]);

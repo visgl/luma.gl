@@ -160,6 +160,48 @@ export function createTransientVectorView<T extends VertexFormat, Parameters>(
   });
 }
 
+/** Borrows a fixed-width row prefix without allocating or combining chunks. @internal */
+export function getGraphDataPrefix<
+  Parameters,
+  T extends Exclude<GPUVectorFormat, `vertex-list<${string}>` | `value-list<${string}>`>
+>(
+  graph: GPUCommandGraph<Parameters>,
+  input: GraphDataView<T> | GraphVectorView<T>,
+  length: number
+): GraphDataView<T> | GraphVectorView<T> {
+  if (!Number.isSafeInteger(length) || length < 0 || length > input.length) {
+    throw new Error('Graph prefix must fit within the input');
+  }
+  if (length === input.length) return input;
+  const chunks = input instanceof GraphVectorView ? input.data : [input];
+  let remaining = length;
+  const data: GraphDataView<T>[] = [];
+  for (const chunk of chunks) {
+    const chunkLength = Math.min(remaining, chunk.length);
+    data.push(
+      chunkLength === chunk.length
+        ? chunk
+        : graph.createDataView(chunk.buffer, {
+            format: chunk.format,
+            length: chunkLength,
+            byteOffset: chunk.byteOffset,
+            byteStride: chunk.byteStride,
+            rowByteLength: chunk.rowByteLength
+          })
+    );
+    remaining -= chunkLength;
+    if (remaining === 0) break;
+  }
+  return input instanceof GraphVectorView
+    ? new GraphVectorView({
+        ...input,
+        length,
+        valueLength: length * (getGPUVectorFormatInfo(input.format).listSize ?? 1),
+        data
+      })
+    : data[0];
+}
+
 /** Validates that two vectors have identical ordered chunk lengths. @internal */
 export function validateMatchingVectorTopology(
   first: GraphVectorView,

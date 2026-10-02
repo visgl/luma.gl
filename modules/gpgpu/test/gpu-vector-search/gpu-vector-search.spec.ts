@@ -1,3 +1,4 @@
+import {createGPUComputeCommandNode, type GPUCommandNode} from '@luma.gl/gpgpu/gpu-core';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -1202,7 +1203,11 @@ it('GPUSimilaritySearch indexes substantial stable candidate-ID allowlists on th
 
   assertMatchesIndependentCPU(fixture, result, 'hashed stable candidate-ID membership');
   expect(
-    Boolean(result.nodeOrder.some(nodeId => nodeId.includes('-candidate-index-build'))),
+    Boolean(
+      result.nodeOrder.some(
+        nodeId => nodeId.includes('-candidate-index-batch-') && nodeId.endsWith('-build')
+      )
+    ),
     'substantial allowlists build bounded GPU membership instead of repeated linear scans'
   ).toBe(true);
   expect(
@@ -1224,9 +1229,14 @@ it('GPUSimilaritySearch preserves every allowlisted ID when bounded GPU hash ins
     candidateCounts: true,
     k: 6
   };
-  const originalAddToGraph = GPUHashIndex.prototype.addToGraph;
-  GPUHashIndex.prototype.addToGraph = function <Parameters>(graph: GPUCommandGraph<Parameters>) {
-    originalAddToGraph.call(this, graph);
+  const originalGetCommandNodes = GPUHashIndex.prototype.getCommandNodes;
+  GPUHashIndex.prototype.getCommandNodes = function <Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ) {
+    const nodes = (originalGetCommandNodes<Parameters>).call(
+      this,
+      graph
+    ) as readonly GPUCommandNode<Parameters>[];
     const index = this;
     const identifier = `${index.id}-simulate-candidate-overflow`;
     const source = /* wgsl */ `
@@ -1242,35 +1252,38 @@ fn main(@builtin(global_invocation_id) globalInvocationId: vec3u) {
     statistics[${getViewElementOffset(index.statistics)}u + 2u] = 1u;
   }
 }`;
-    graph.addComputePass({
-      id: identifier,
-      resources: [
-        {buffer: index.tableKeys, usage: 'storage-read-write'},
-        {buffer: index.statistics, usage: 'storage-read-write'}
-      ],
-      compile: ({device: graphDevice}) => {
-        const computation = new Computation(graphDevice, {
-          id: identifier,
-          source,
-          shaderLayout: {
-            bindings: [
-              {name: 'tableKeys', type: 'storage', group: 0, location: 0},
-              {name: 'statistics', type: 'storage', group: 0, location: 1}
-            ]
-          }
-        });
-        return {
-          encode: ({computePass, getBuffer}) => {
-            computation.setBindings({
-              tableKeys: getViewBinding(index.tableKeys, getBuffer),
-              statistics: getViewBinding(index.statistics, getBuffer)
-            });
-            computation.dispatch(computePass, Math.ceil(index.tableKeys.length / 64), 1, 1);
-          },
-          destroy: () => computation.destroy()
-        };
-      }
-    });
+    return [
+      ...nodes,
+      createGPUComputeCommandNode<Parameters>({
+        id: identifier,
+        resources: [
+          {buffer: index.tableKeys, usage: 'storage-read-write'},
+          {buffer: index.statistics, usage: 'storage-read-write'}
+        ],
+        compile: ({device: graphDevice}) => {
+          const computation = new Computation(graphDevice, {
+            id: identifier,
+            source,
+            shaderLayout: {
+              bindings: [
+                {name: 'tableKeys', type: 'storage', group: 0, location: 0},
+                {name: 'statistics', type: 'storage', group: 0, location: 1}
+              ]
+            }
+          });
+          return {
+            encode: ({computePass, getBuffer}) => {
+              computation.setBindings({
+                tableKeys: getViewBinding(index.tableKeys, getBuffer),
+                statistics: getViewBinding(index.statistics, getBuffer)
+              });
+              computation.dispatch(computePass, Math.ceil(index.tableKeys.length / 64), 1, 1);
+            },
+            destroy: () => computation.destroy()
+          };
+        }
+      })
+    ];
   };
 
   try {
@@ -1282,7 +1295,7 @@ fn main(@builtin(global_invocation_id) globalInvocationId: vec3u) {
     ).toBe(true);
     expect(result.candidateCounts, 'no allowlisted row disappears').toEqual([sourceRowIds.length]);
   } finally {
-    GPUHashIndex.prototype.addToGraph = originalAddToGraph;
+    GPUHashIndex.prototype.getCommandNodes = originalGetCommandNodes;
   }
 });
 

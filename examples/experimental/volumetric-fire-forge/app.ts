@@ -7,14 +7,13 @@ import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, OrbitControls} from '@luma.gl/engine';
 import {VolumetricFireSimulation} from '@luma.gl/experimental';
 import {Matrix4, radians, type NumberArray3} from '@math.gl/core';
-import type {Panel, SettingsChangeDescriptor, SettingsSchema} from '@deck.gl-community/panels';
 import {
-  ExamplePanelManager,
-  ExampleSettingsPanelManager,
-  makeExamplePanelHostHtml,
-  makeExampleTabbedPanel,
-  makeHtmlCustomPanel
-} from '../../example-panels';
+  DEFAULT_VOLUMETRIC_FIRE_FORGE_SETTINGS,
+  VOLUMETRIC_FIRE_FORGE_INFO_HTML,
+  VOLUMETRIC_FIRE_QUALITY_DIMENSIONS,
+  VolumetricFireForgeUserInterface,
+  type VolumetricFireForgeSettings
+} from './app-ui';
 import {VolumetricFireForgeAudio} from './volumetric-fire-forge-audio';
 import {
   advanceVolumetricFireForgeFlareSchedule,
@@ -33,11 +32,13 @@ import {
   VOLUMETRIC_FIRE_FORGE_PRESETS,
   type VolumetricFireForgePreset
 } from './volumetric-fire-forge-scene';
-import {
-  VolumetricFireForgeRenderer,
-  type VolumetricFireForgeRenderSettings
-} from './volumetric-fire-forge-renderer';
-import {VOLUMETRIC_FIRE_DEBUG_VIEWS} from './volumetric-fire-forge-shaders';
+import {VolumetricFireForgeRenderer} from './volumetric-fire-forge-renderer';
+
+export {
+  DEFAULT_VOLUMETRIC_FIRE_FORGE_SETTINGS,
+  makeVolumetricFireForgeSettingsSchema
+} from './app-ui';
+export type {VolumetricFireForgeSettings} from './app-ui';
 
 export const title = 'Volumetric Fire Forge';
 export const description =
@@ -53,49 +54,6 @@ const INITIAL_WARMUP_STEP_COUNT = 24;
 const CLICK_MOVEMENT_THRESHOLD_PIXELS = 7;
 const CLICK_BURNER_RADIUS_PIXELS = 72;
 const CLICKED_FLARE_INTENSITY = 1.28;
-
-type VolumetricFireQuality = 'Interactive' | 'High' | 'Cinematic';
-
-const VOLUMETRIC_FIRE_QUALITY_DIMENSIONS: Record<
-  VolumetricFireQuality,
-  readonly [number, number, number]
-> = {
-  Interactive: [40, 48, 32],
-  High: [56, 72, 48],
-  Cinematic: [72, 96, 60]
-};
-
-export type VolumetricFireForgeSettings = VolumetricFireForgeRenderSettings & {
-  preset: string;
-  quality: VolumetricFireQuality;
-  paused: boolean;
-  timeScale: number;
-  buoyancyScale: number;
-  turbulenceScale: number;
-  reactionScale: number;
-  autoOrbitCamera: boolean;
-};
-
-export const DEFAULT_VOLUMETRIC_FIRE_FORGE_SETTINGS: VolumetricFireForgeSettings = {
-  preset: 'foundry',
-  quality: 'High',
-  paused: false,
-  timeScale: 1,
-  buoyancyScale: 1,
-  turbulenceScale: 1,
-  reactionScale: 1,
-  autoOrbitCamera: true,
-  debugView: 'Final',
-  sampleCount: 88,
-  densityAbsorption: 2.8,
-  emissionStrength: 3.2,
-  smokeScattering: 0.9,
-  shadowStrength: 0.74,
-  exposure: 0.88,
-  bloomThreshold: 0.7,
-  bloomIntensity: 0.76,
-  bloomRadius: 12
-};
 
 type VolumetricFireForgeConstructorProps = AnimationProps & {
   simulationDimensions?: readonly [number, number, number];
@@ -115,12 +73,11 @@ type PointerStart = {
 
 /** WebGPU fire laboratory with a fixed-step compute solver and HDR volume rendering. */
 export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = makeExamplePanelHostHtml();
+  static info = VOLUMETRIC_FIRE_FORGE_INFO_HTML;
 
   readonly device: Device;
   readonly renderer: VolumetricFireForgeRenderer;
-  readonly settingsPanel: ExampleSettingsPanelManager;
-  readonly panels: ExamplePanelManager;
+  readonly userInterface: VolumetricFireForgeUserInterface;
   readonly flareAudio = new VolumetricFireForgeAudio();
 
   simulation!: VolumetricFireSimulation;
@@ -168,26 +125,25 @@ export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationL
     this.simulationDimensionsOverride = simulationDimensions;
     this.pressureIterations = pressureIterations;
     let renderer: VolumetricFireForgeRenderer | undefined;
-    let settingsPanel: ExampleSettingsPanelManager | undefined;
-    let panels: ExamplePanelManager | undefined;
+    let userInterface: VolumetricFireForgeUserInterface | undefined;
     try {
       this.rebuildSimulation();
       renderer = new VolumetricFireForgeRenderer(device, width, height);
       this.renderer = renderer;
-      settingsPanel = new ExampleSettingsPanelManager({
-        id: 'volumetric-fire-forge-settings',
-        schema: makeVolumetricFireForgeSettingsSchema(),
+      userInterface = new VolumetricFireForgeUserInterface({
+        preferredColorFormat: device.preferredColorFormat,
         settings: this.settings,
-        sectionPresentation: 'accordion',
-        onSettingsChange: this.handleSettingsChange
+        onSettingsChange: this.handleSettingsChange,
+        onReset: this.handleReset,
+        onSingleStep: this.handleSingleStep,
+        onResetCamera: this.handleResetCamera,
+        onToggleSound: this.handleToggleSound,
+        onArmAudio: () => void this.flareAudio.arm()
       });
-      this.settingsPanel = settingsPanel;
-      panels = new ExamplePanelManager({panel: this.makePanel()});
-      this.panels = panels;
-      panels.mount();
+      this.userInterface = userInterface;
+      userInterface.mount();
     } catch (error) {
-      panels?.finalize();
-      settingsPanel?.finalize();
+      userInterface?.finalize();
       renderer?.destroy();
       this.simulation?.destroy();
       this.obstacleTexture?.destroy();
@@ -213,18 +169,8 @@ export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationL
       canvas.addEventListener('pointerup', this.handleCanvasPointerUp);
       canvas.addEventListener('pointercancel', this.handleCanvasPointerCancel);
     }
-    document.addEventListener('keydown', this.handleKeyDown);
-    document.getElementById('volumetric-fire-reset')?.addEventListener('click', this.handleReset);
-    document
-      .getElementById('volumetric-fire-single-step')
-      ?.addEventListener('click', this.handleSingleStep);
-    document
-      .getElementById('volumetric-fire-reset-camera')
-      ?.addEventListener('click', this.handleResetCamera);
-    document
-      .getElementById('volumetric-fire-toggle-sound')
-      ?.addEventListener('click', this.handleToggleSound);
-    this.updateSoundButton();
+    this.userInterface.initialize();
+    this.userInterface.updateSoundButton(this.flareAudio.muted);
   }
 
   onRender({device, width, height, aspect, time}: AnimationProps): void {
@@ -260,7 +206,13 @@ export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationL
       burnerFlareIntensities: this.burnerFlareIntensities,
       settings: this.settings
     });
-    this.updateTelemetry();
+    this.userInterface.updateTelemetry({
+      dimensions: this.simulation.dimensions,
+      stepsThisFrame: this.stepsThisFrame,
+      graphNodeCount: this.simulation.stats.nodeOrder.length,
+      sceneColorFormat: this.renderer.sceneColorFormat,
+      secondsUntilNextFlare: this.flareSchedule.nextFlareTimeSeconds - this.simulationTimeSeconds
+    });
     this.frameIndex += this.stepsThisFrame;
   }
 
@@ -269,22 +221,8 @@ export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationL
     this.canvas?.removeEventListener('pointerup', this.handleCanvasPointerUp);
     this.canvas?.removeEventListener('pointercancel', this.handleCanvasPointerCancel);
     this.canvas = null;
-    document.removeEventListener('keydown', this.handleKeyDown);
-    document
-      .getElementById('volumetric-fire-reset')
-      ?.removeEventListener('click', this.handleReset);
-    document
-      .getElementById('volumetric-fire-single-step')
-      ?.removeEventListener('click', this.handleSingleStep);
-    document
-      .getElementById('volumetric-fire-reset-camera')
-      ?.removeEventListener('click', this.handleResetCamera);
-    document
-      .getElementById('volumetric-fire-toggle-sound')
-      ?.removeEventListener('click', this.handleToggleSound);
     this.flareAudio.destroy();
-    this.settingsPanel.finalize();
-    this.panels.finalize();
+    this.userInterface.finalize();
     this.orbitControls?.destroy();
     this.renderer.destroy();
     this.simulation.destroy();
@@ -546,35 +484,7 @@ export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationL
     );
   }
 
-  private makePanel(): Panel {
-    return makeExampleTabbedPanel({
-      id: 'volumetric-fire-forge-tabs',
-      title: `Volumetric Fire Forge${this.device.preferredColorFormat === 'rgba16float' ? ' · HDR' : ''}`,
-      panels: [
-        makeHtmlCustomPanel({
-          id: 'volumetric-fire-forge-overview',
-          title: 'Overview',
-          html: `
-            <p><b>Reactive fire, not a flipbook.</b> WebGPU evolves velocity, pressure, fuel, heat, and smoke in a solid-aware 3D volume. A depth-clipped ray marcher turns the live fields into heat-shaped HDR emission, Beer-Lambert extinction, self-shadowed smoke, and bloom.</p>
-            <p>Click a flame for an individual HDR flare and low combustion whoomph; drag to orbit. Automatic flares follow a repeatable irregular schedule. Inspect density, temperature, fuel, age, velocity, obstacles, and transmittance without a GPU readback.</p>
-            <p><button id="volumetric-fire-reset">Reset fire</button> <button id="volumetric-fire-single-step">Single step</button> <button id="volumetric-fire-reset-camera">Reset camera</button> <button id="volumetric-fire-toggle-sound" aria-pressed="false">Mute sound</button></p>
-            <p id="volumetric-fire-telemetry"></p>
-          `
-        }),
-        this.settingsPanel.makePanel(),
-        makeHtmlCustomPanel({
-          id: 'volumetric-fire-forge-background',
-          title: 'Pipeline',
-          html: '<p><b>One encoder, no CPU staging:</b> fixed 60 Hz solver steps and the volume compositor are recorded in order before the frame is submitted. Opaque depth stops the ray at forge surfaces; a world-to-volume transform keeps the collision mask, visible geometry, and 3D sampling aligned.</p><p><b>Stable exposure:</b> the forge uses fixed exposure so rapidly changing flames never pump the whole screen. HDR energy remains linear through multiscale bloom and reaches extended-range displays through the final tone map.</p>'
-        })
-      ]
-    });
-  }
-
-  private readonly handleSettingsChange = (
-    nextSettings: Record<string, unknown>,
-    _changedSettings?: SettingsChangeDescriptor[]
-  ): void => {
+  private readonly handleSettingsChange = (nextSettings: Record<string, unknown>): void => {
     const previousSettings = this.settings;
     this.settings = {...this.settings, ...(nextSettings as VolumetricFireForgeSettings)};
     if (previousSettings.quality !== this.settings.quality && !this.simulationDimensionsOverride) {
@@ -648,227 +558,11 @@ export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationL
     this.pointerStart = null;
   };
 
-  private readonly handleKeyDown = (): void => {
-    void this.flareAudio.arm();
-  };
-
   private readonly handleToggleSound = (): void => {
     this.flareAudio.setMuted(!this.flareAudio.muted);
     if (!this.flareAudio.muted) {
       void this.flareAudio.arm();
     }
-    this.updateSoundButton();
-  };
-
-  private updateSoundButton(): void {
-    const soundButton = document.getElementById('volumetric-fire-toggle-sound');
-    if (!soundButton) {
-      return;
-    }
-    soundButton.textContent = this.flareAudio.muted ? 'Unmute sound' : 'Mute sound';
-    soundButton.setAttribute('aria-pressed', String(this.flareAudio.muted));
-  }
-
-  private updateTelemetry(): void {
-    const telemetryElement = document.getElementById('volumetric-fire-telemetry');
-    if (!telemetryElement) {
-      return;
-    }
-    const voxelCount = this.simulation.dimensions.reduce(
-      (product, dimension) => product * dimension,
-      1
-    );
-    telemetryElement.textContent =
-      `${this.simulation.dimensions.join(' × ')} · ${voxelCount.toLocaleString()} voxels · ` +
-      `${this.stepsThisFrame} solver step${this.stepsThisFrame === 1 ? '' : 's'} · ` +
-      `${this.simulation.stats.nodeOrder.length} GPU nodes · ${this.renderer.sceneColorFormat} · ` +
-      `next flare ${Math.max(
-        this.flareSchedule.nextFlareTimeSeconds - this.simulationTimeSeconds,
-        0
-      ).toFixed(1)} s`;
-  }
-}
-
-export function makeVolumetricFireForgeSettingsSchema(): SettingsSchema {
-  return {
-    title: 'Fire Forge Controls',
-    sections: [
-      {
-        id: 'fire-state',
-        name: 'Fire State',
-        initiallyCollapsed: false,
-        settings: [
-          {
-            name: 'preset',
-            label: 'Preset',
-            type: 'select',
-            persist: 'none',
-            options: VOLUMETRIC_FIRE_FORGE_PRESETS.map(preset => ({
-              value: preset.id,
-              label: preset.label
-            }))
-          },
-          {
-            name: 'quality',
-            label: 'Volume Quality',
-            type: 'select',
-            persist: 'none',
-            options: Object.keys(VOLUMETRIC_FIRE_QUALITY_DIMENSIONS)
-          },
-          {name: 'paused', label: 'Pause Solver', type: 'boolean', persist: 'none'},
-          {
-            name: 'timeScale',
-            label: 'Time Scale',
-            type: 'number',
-            persist: 'none',
-            min: 0.25,
-            max: 2,
-            step: 0.05
-          }
-        ]
-      },
-      {
-        id: 'simulation',
-        name: 'Simulation',
-        initiallyCollapsed: true,
-        settings: [
-          {
-            name: 'buoyancyScale',
-            label: 'Buoyancy',
-            type: 'number',
-            persist: 'none',
-            min: 0,
-            max: 2,
-            step: 0.05
-          },
-          {
-            name: 'turbulenceScale',
-            label: 'Turbulence',
-            type: 'number',
-            persist: 'none',
-            min: 0,
-            max: 2.5,
-            step: 0.05
-          },
-          {
-            name: 'reactionScale',
-            label: 'Reaction Rate',
-            type: 'number',
-            persist: 'none',
-            min: 0,
-            max: 2,
-            step: 0.05
-          }
-        ]
-      },
-      {
-        id: 'volume-rendering',
-        name: 'Volume Rendering',
-        initiallyCollapsed: false,
-        settings: [
-          {
-            name: 'debugView',
-            label: 'View',
-            type: 'select',
-            persist: 'none',
-            options: [...VOLUMETRIC_FIRE_DEBUG_VIEWS]
-          },
-          {
-            name: 'sampleCount',
-            label: 'Ray Samples',
-            type: 'number',
-            persist: 'none',
-            min: 24,
-            max: 160,
-            step: 4
-          },
-          {
-            name: 'densityAbsorption',
-            label: 'Smoke Absorption',
-            type: 'number',
-            persist: 'none',
-            min: 0,
-            max: 6,
-            step: 0.05
-          },
-          {
-            name: 'emissionStrength',
-            label: 'HDR Emission',
-            type: 'number',
-            persist: 'none',
-            min: 0,
-            max: 8,
-            step: 0.1
-          },
-          {
-            name: 'smokeScattering',
-            label: 'Smoke Light',
-            type: 'number',
-            persist: 'none',
-            min: 0,
-            max: 3,
-            step: 0.05
-          },
-          {
-            name: 'shadowStrength',
-            label: 'Self Shadow',
-            type: 'number',
-            persist: 'none',
-            min: 0,
-            max: 1,
-            step: 0.05
-          }
-        ]
-      },
-      {
-        id: 'camera-output',
-        name: 'Camera & HDR',
-        initiallyCollapsed: true,
-        settings: [
-          {
-            name: 'autoOrbitCamera',
-            label: 'Auto Orbit',
-            type: 'boolean',
-            persist: 'none'
-          },
-          {
-            name: 'exposure',
-            label: 'Fixed Exposure',
-            type: 'number',
-            persist: 'none',
-            min: 0.2,
-            max: 2,
-            step: 0.05
-          },
-          {
-            name: 'bloomThreshold',
-            label: 'Bloom Threshold',
-            type: 'number',
-            persist: 'none',
-            min: 0,
-            max: 3,
-            step: 0.05
-          },
-          {
-            name: 'bloomIntensity',
-            label: 'Bloom Intensity',
-            type: 'number',
-            persist: 'none',
-            min: 0,
-            max: 3,
-            step: 0.05
-          },
-          {
-            name: 'bloomRadius',
-            label: 'Bloom Radius',
-            type: 'number',
-            persist: 'none',
-            min: 1,
-            max: 24,
-            step: 1
-          }
-        ]
-      }
-    ]
+    this.userInterface.updateSoundButton(this.flareAudio.muted);
   };
 }

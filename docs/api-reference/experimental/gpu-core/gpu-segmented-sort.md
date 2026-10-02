@@ -64,7 +64,7 @@ const sort = new GPUSegmentedSort({
   ]
 });
 
-sort.addToGraph(graph);
+graph.add(sort);
 
 const compiled = graph.compile();
 const commandEncoder = device.createCommandEncoder({id: 'sort-packed-meshes'});
@@ -116,7 +116,7 @@ The constructor snapshots segment descriptors. Editing the original descriptor o
 not change a recorded operation. Changing the segment layout requires a new operation and graph;
 changing only caller-owned key and payload contents does not.
 
-## `addToGraph(graph)`
+## `getCommandNodes(graph)`
 
 Adds one compute node for each occupied padded workgroup width. Possible widths are 2, 4, 8, 16,
 32, 64, 128, and 256, so any number of supported segments requires at most eight nodes. Empty
@@ -143,3 +143,8 @@ readback remain application-owned.
 Segments larger than 256 rows are rejected. Use `GPUSort` for an individual larger domain or
 `GPUBatchSort` for separately allocated chunks. A segmented multi-workgroup radix implementation
 could extend this contract later without changing independent-domain semantics.
+
+
+## Chunked storage
+
+Each parent column may be an atomic view or an independently partitioned vector. A CPU-known sort segment may cross physical chunk seams, and output gaps remain untouched. Atomic parents retain the width-bucket workgroup kernels. Vector parents borrow each logical segment and use stable chunk-aware `GPUSort` within that domain. The existing limit of 256 rows per segment remains a domain constraint; use `GPUSort` for larger or global domains.

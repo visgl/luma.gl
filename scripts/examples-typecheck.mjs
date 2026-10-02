@@ -8,6 +8,7 @@ const repoRoot = fileURLToPath(new URL('..', import.meta.url));
 const examplesRoot = join(repoRoot, 'examples');
 const tscPath = join(repoRoot, 'node_modules', '.bin', 'tsc');
 const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
+  'deck/city-scene',
   'api/blending',
   'api/multi-canvas',
   'api/render-bundles',
@@ -22,12 +23,18 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'arrow/arrow-points',
   'arrow/arrow-polygons',
   'experimental/fluid-foundry',
+  'experimental/fp64',
   'experimental/advanced-effects',
   'experimental/deferred-rendering',
   'experimental/gpu-frustum-culling',
   'experimental/gpu-trace-viewer',
+  'deck/sketch-edges',
+  'deck/scene-buffers',
   'deck/luspatial-taxi',
   'deck/gpu-culled-trace',
+  'deck/pattern-fills',
+  'deck/point-glow',
+  'deck/styled-paths',
   'experimental/gpu-sort',
   'experimental/spectral-caustics',
   'experimental/volumetric-fire-forge',
@@ -49,6 +56,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'showcase/packet-spraying',
   'showcase/persistence',
   'showcase/raster-lab',
+  'showcase/spectral-wave-lab',
   'tutorials/hello-instanced-cubes',
   'tutorials/hello-instancing',
   'tutorials/hello-triangle',
@@ -61,7 +69,14 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
 ]);
 
 const PACKAGE_FREE_EXAMPLE_WORKSPACES = new Set(['showcase/raster-lab']);
-const NATIVE_TYPESCRIPT_CONFIG_WORKSPACES = new Set(['showcase/scene', 'showcase/raster-lab']);
+const NATIVE_TYPESCRIPT_CONFIG_WORKSPACES = new Set([
+  'deck/city-scene',
+  'api/multi-canvas',
+  'experimental/fp64',
+  'showcase/scene',
+  'showcase/raster-lab',
+  'showcase/spectral-wave-lab'
+]);
 
 const SHARED_COMPILER_OPTIONS = {
   noEmit: true,

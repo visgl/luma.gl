@@ -2,244 +2,23 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {NumberArray3, NumberArray16} from '@math.gl/types';
-import {Device} from '@luma.gl/core';
 import {
   AnimationLoopTemplate,
   AnimationProps,
-  CubeGeometry,
-  Model,
-  ModelProps,
   loadImageBitmap,
   DynamicTexture,
   ShaderInputs
 } from '@luma.gl/engine';
-import {ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 
-// ROOM CUBE
-
-type AppUniforms = {
-  modelMatrix: NumberArray16;
-  viewMatrix: NumberArray16;
-  projectionMatrix: NumberArray16;
-  eyePosition: NumberArray3;
-};
-
-const app: ShaderModule<AppUniforms, AppUniforms> = {
-  name: 'app',
-  uniformTypes: {
-    modelMatrix: 'mat4x4<f32>',
-    viewMatrix: 'mat4x4<f32>',
-    projectionMatrix: 'mat4x4<f32>',
-    eyePosition: 'vec3<f32>'
-  }
-};
-
-class RoomCube extends Model {
-  constructor(device: Device, props: Omit<ModelProps, 'vs' | 'fs'>) {
-    super(device, {
-      ...props,
-      id: 'room-cube',
-      geometry: new CubeGeometry(),
-      source: RoomCube.source,
-      vs: RoomCube.vs,
-      fs: RoomCube.fs
-    });
-  }
-
-  static source = /* wgsl */ `\
-struct appUniforms {
-  modelMatrix: mat4x4<f32>,
-  viewMatrix: mat4x4<f32>,
-  projectionMatrix: mat4x4<f32>,
-};
-
-@group(0) @binding(auto) var<uniform> app : appUniforms;
-@group(0) @binding(auto) var cubeTexture : texture_cube<f32>;
-@group(0) @binding(auto) var cubeTextureSampler : sampler;
-
-struct VertexInputs {
-  @location(0) positions : vec3<f32>,
-};
-
-struct FragmentInputs {
-  @builtin(position) Position : vec4<f32>,
-  @location(0) dir : vec3<f32>,
-};
-
-@vertex 
-fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
-  var outputs : FragmentInputs;
-  outputs.Position = app.projectionMatrix * app.viewMatrix * app.modelMatrix * vec4<f32>(inputs.positions, 1.0);
-  outputs.dir = (app.modelMatrix * vec4<f32>(inputs.positions, 0.0)).xyz;
-  return outputs;
-}
-
-@fragment 
-fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  // The outer cube just samples the texture cube directly
-  return textureSample(cubeTexture, cubeTextureSampler, normalize(inputs.dir));
-}
-  `;
-
-  static vs = /* glsl */ `\
-#version 300 es
-in vec3 positions;
-
-uniform appUniforms {
-  mat4 modelMatrix;
-  mat4 viewMatrix;
-  mat4 projectionMatrix;
-} app;
-
-out vec3 vPosition;
-
-void main(void) {
-  gl_Position = app.projectionMatrix * app.viewMatrix * app.modelMatrix * vec4(positions, 1.0);
-  vPosition = positions;
-}
-  `;
-
-  static fs = /* glsl */ `\
-#version 300 es
-precision highp float;
-
-uniform appUniforms {
-  mat4 modelMatrix;
-  mat4 viewMatrix;
-  mat4 projectionMatrix;
-} app;
-
-uniform samplerCube cubeTexture;
-
-in vec3 vPosition;
-out vec4 fragColor;
-
-void main(void) {
-  // The outer cube just samples the texture cube directly
-  fragColor = texture(cubeTexture, normalize(vPosition));
-}
-  `;
-}
-
-class Prism extends Model {
-  constructor(device: Device, props: Omit<ModelProps, 'vs' | 'fs'>) {
-    super(device, {
-      ...props,
-      id: 'prism',
-      geometry: new CubeGeometry({indices: true}),
-      source: Prism.source,
-      vs: Prism.vs,
-      fs: Prism.fs
-    });
-  }
-
-  static source = /* wgsl */ `\
-struct appUniforms {
-  modelMatrix: mat4x4<f32>,
-  viewMatrix: mat4x4<f32>,
-  projectionMatrix: mat4x4<f32>,
-  eyePosition: vec3<f32>,
-};
-
-@group(0) @binding(auto) var<uniform> app : appUniforms;
-@group(0) @binding(auto) var cubeTexture : texture_cube<f32>;
-@group(0) @binding(auto) var cubeTextureSampler : sampler;
-@group(0) @binding(auto) var prismTexture : texture_2d<f32>;
-@group(0) @binding(auto) var prismTextureSampler : sampler;
-
-struct VertexInputs {
-  @location(0) positions : vec3<f32>,
-  @location(1) normals : vec3<f32>,
-  @location(2) texCoords : vec2<f32>,
-};
-
-struct FragmentInputs {
-  @builtin(position) Position : vec4<f32>,
-  @location(0) position : vec3<f32>,
-  @location(1) normal : vec3<f32>,
-  @location(2) uv : vec2<f32>,
-};
-
-@vertex 
-fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
-  var outputs : FragmentInputs;
-  outputs.Position = app.projectionMatrix * app.viewMatrix * app.modelMatrix * vec4(inputs.positions, 1.0);
-  outputs.position = (app.modelMatrix * vec4(inputs.positions, 1.0)).xyz;
-  outputs.normal = normalize((app.modelMatrix * vec4(inputs.normals, 0.0)).xyz);
-  outputs.uv = inputs.texCoords;
-  return outputs;
-}
-
-@fragment 
-fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  let color = textureSample(prismTexture, prismTextureSampler, vec2(inputs.uv.x, 1.0 - inputs.uv.y));
-  let reflectedDir = reflect(normalize(inputs.position - app.eyePosition), inputs.normal);
-  let reflectedColor = textureSample(cubeTexture, cubeTextureSampler, reflectedDir);
-
-  return mix(color, reflectedColor, 0.8);
-}
-    `;
-
-  static vs = /* glsl */ `\
-#version 300 es
-in vec3 positions;
-in vec3 normals;
-in vec2 texCoords;
-
-out vec3 vPosition;
-out vec3 vNormal;
-out vec2 vUV;
-
-uniform appUniforms {
-  mat4 modelMatrix;
-  mat4 viewMatrix;
-  mat4 projectionMatrix;
-  vec3 eyePosition;
-} app;
-
-void main(void) {
-  gl_Position = app.projectionMatrix * app.viewMatrix * app.modelMatrix * vec4(positions, 1.0);
-  vPosition = vec3(app.modelMatrix * vec4(positions, 1.0));
-  vNormal = normalize(vec3(app.modelMatrix * vec4(normals, 0.0)));
-  vUV = texCoords;
-}
-  `;
-
-  static fs = /* glsl */ `\
-#version 300 es
-precision highp float;
-
-in vec3 vPosition;
-in vec3 vNormal;
-in vec2 vUV;
-
-out vec4 fragColor;
-
-uniform appUniforms {
-  mat4 modelMatrix;
-  mat4 viewMatrix;
-  mat4 projectionMatrix;
-  vec3 eyePosition;
-} app;
-
-uniform sampler2D prismTexture;
-uniform samplerCube cubeTexture;
-
-void main(void) {
-  vec4 color = texture(prismTexture, vec2(vUV.x, 1.0 - vUV.y));
-  vec3 reflectedDir = reflect(normalize(vPosition - app.eyePosition), vNormal);
-  vec4 reflectedColor = texture(cubeTexture, reflectedDir);
-  fragColor = mix(color, reflectedColor, 0.8);
-}
-  `;
-}
+import {CUBEMAP_INFO_HTML} from './app-ui';
+import type {NumberArray3, NumberArray16} from '@math.gl/types';
+import type {Device} from '@luma.gl/core';
+import {CubeGeometry, Model, type ModelProps} from '@luma.gl/engine';
+import type {ShaderModule} from '@luma.gl/shadertools';
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = `\
-Uses a luma.gl <code>TextureCube</code> to simulate a reflective surface
-`;
+  static info = CUBEMAP_INFO_HTML;
 
   cube: RoomCube;
   prism: Prism;
@@ -363,4 +142,242 @@ Uses a luma.gl <code>TextureCube</code> to simulate a reflective surface
 
     renderPass.end();
   }
+}
+
+// ROOM CUBE
+
+type AppUniforms = {
+  modelMatrix: NumberArray16;
+  viewMatrix: NumberArray16;
+  projectionMatrix: NumberArray16;
+  eyePosition: NumberArray3;
+};
+
+const app: ShaderModule<AppUniforms, AppUniforms> = {
+  name: 'app',
+  uniformTypes: {
+    modelMatrix: 'mat4x4<f32>',
+    viewMatrix: 'mat4x4<f32>',
+    projectionMatrix: 'mat4x4<f32>',
+    eyePosition: 'vec3<f32>'
+  }
+};
+
+const {ROOM_CUBE_SOURCE, ROOM_CUBE_VS, ROOM_CUBE_FS, PRISM_SOURCE, PRISM_VS, PRISM_FS} =
+  getShaderSources();
+
+class RoomCube extends Model {
+  constructor(device: Device, props: Omit<ModelProps, 'vs' | 'fs'>) {
+    super(device, {
+      ...props,
+      id: 'room-cube',
+      geometry: new CubeGeometry(),
+      source: RoomCube.source,
+      vs: RoomCube.vs,
+      fs: RoomCube.fs
+    });
+  }
+
+  static source = /* wgsl */ ROOM_CUBE_SOURCE;
+
+  static vs = /* glsl */ ROOM_CUBE_VS;
+
+  static fs = /* glsl */ ROOM_CUBE_FS;
+}
+
+class Prism extends Model {
+  constructor(device: Device, props: Omit<ModelProps, 'vs' | 'fs'>) {
+    super(device, {
+      ...props,
+      id: 'prism',
+      geometry: new CubeGeometry({indices: true}),
+      source: Prism.source,
+      vs: Prism.vs,
+      fs: Prism.fs
+    });
+  }
+
+  static source = /* wgsl */ PRISM_SOURCE;
+
+  static vs = /* glsl */ PRISM_VS;
+
+  static fs = /* glsl */ PRISM_FS;
+}
+
+function getShaderSources() {
+  const ROOM_CUBE_SOURCE = `\
+struct appUniforms {
+  modelMatrix: mat4x4<f32>,
+  viewMatrix: mat4x4<f32>,
+  projectionMatrix: mat4x4<f32>,
+};
+
+@group(0) @binding(auto) var<uniform> app : appUniforms;
+@group(0) @binding(auto) var cubeTexture : texture_cube<f32>;
+@group(0) @binding(auto) var cubeTextureSampler : sampler;
+
+struct VertexInputs {
+  @location(0) positions : vec3<f32>,
+};
+
+struct FragmentInputs {
+  @builtin(position) Position : vec4<f32>,
+  @location(0) dir : vec3<f32>,
+};
+
+@vertex
+fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+  var outputs : FragmentInputs;
+  outputs.Position = app.projectionMatrix * app.viewMatrix * app.modelMatrix * vec4<f32>(inputs.positions, 1.0);
+  outputs.dir = (app.modelMatrix * vec4<f32>(inputs.positions, 0.0)).xyz;
+  return outputs;
+}
+
+@fragment
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
+  // The outer cube just samples the texture cube directly
+  return textureSample(cubeTexture, cubeTextureSampler, normalize(inputs.dir));
+}
+  `;
+
+  const ROOM_CUBE_VS = `\
+#version 300 es
+in vec3 positions;
+
+uniform appUniforms {
+  mat4 modelMatrix;
+  mat4 viewMatrix;
+  mat4 projectionMatrix;
+} app;
+
+out vec3 vPosition;
+
+void main(void) {
+  gl_Position = app.projectionMatrix * app.viewMatrix * app.modelMatrix * vec4(positions, 1.0);
+  vPosition = positions;
+}
+  `;
+
+  const ROOM_CUBE_FS = `\
+#version 300 es
+precision highp float;
+
+uniform appUniforms {
+  mat4 modelMatrix;
+  mat4 viewMatrix;
+  mat4 projectionMatrix;
+} app;
+
+uniform samplerCube cubeTexture;
+
+in vec3 vPosition;
+out vec4 fragColor;
+
+void main(void) {
+  // The outer cube just samples the texture cube directly
+  fragColor = texture(cubeTexture, normalize(vPosition));
+}
+  `;
+
+  const PRISM_SOURCE = `\
+struct appUniforms {
+  modelMatrix: mat4x4<f32>,
+  viewMatrix: mat4x4<f32>,
+  projectionMatrix: mat4x4<f32>,
+  eyePosition: vec3<f32>,
+};
+
+@group(0) @binding(auto) var<uniform> app : appUniforms;
+@group(0) @binding(auto) var cubeTexture : texture_cube<f32>;
+@group(0) @binding(auto) var cubeTextureSampler : sampler;
+@group(0) @binding(auto) var prismTexture : texture_2d<f32>;
+@group(0) @binding(auto) var prismTextureSampler : sampler;
+
+struct VertexInputs {
+  @location(0) positions : vec3<f32>,
+  @location(1) normals : vec3<f32>,
+  @location(2) texCoords : vec2<f32>,
+};
+
+struct FragmentInputs {
+  @builtin(position) Position : vec4<f32>,
+  @location(0) position : vec3<f32>,
+  @location(1) normal : vec3<f32>,
+  @location(2) uv : vec2<f32>,
+};
+
+@vertex
+fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+  var outputs : FragmentInputs;
+  outputs.Position = app.projectionMatrix * app.viewMatrix * app.modelMatrix * vec4(inputs.positions, 1.0);
+  outputs.position = (app.modelMatrix * vec4(inputs.positions, 1.0)).xyz;
+  outputs.normal = normalize((app.modelMatrix * vec4(inputs.normals, 0.0)).xyz);
+  outputs.uv = inputs.texCoords;
+  return outputs;
+}
+
+@fragment
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
+  let color = textureSample(prismTexture, prismTextureSampler, vec2(inputs.uv.x, 1.0 - inputs.uv.y));
+  let reflectedDir = reflect(normalize(inputs.position - app.eyePosition), inputs.normal);
+  let reflectedColor = textureSample(cubeTexture, cubeTextureSampler, reflectedDir);
+
+  return mix(color, reflectedColor, 0.8);
+}
+    `;
+
+  const PRISM_VS = `\
+#version 300 es
+in vec3 positions;
+in vec3 normals;
+in vec2 texCoords;
+
+out vec3 vPosition;
+out vec3 vNormal;
+out vec2 vUV;
+
+uniform appUniforms {
+  mat4 modelMatrix;
+  mat4 viewMatrix;
+  mat4 projectionMatrix;
+  vec3 eyePosition;
+} app;
+
+void main(void) {
+  gl_Position = app.projectionMatrix * app.viewMatrix * app.modelMatrix * vec4(positions, 1.0);
+  vPosition = vec3(app.modelMatrix * vec4(positions, 1.0));
+  vNormal = normalize(vec3(app.modelMatrix * vec4(normals, 0.0)));
+  vUV = texCoords;
+}
+  `;
+
+  const PRISM_FS = `\
+#version 300 es
+precision highp float;
+
+in vec3 vPosition;
+in vec3 vNormal;
+in vec2 vUV;
+
+out vec4 fragColor;
+
+uniform appUniforms {
+  mat4 modelMatrix;
+  mat4 viewMatrix;
+  mat4 projectionMatrix;
+  vec3 eyePosition;
+} app;
+
+uniform sampler2D prismTexture;
+uniform samplerCube cubeTexture;
+
+void main(void) {
+  vec4 color = texture(prismTexture, vec2(vUV.x, 1.0 - vUV.y));
+  vec3 reflectedDir = reflect(normalize(vPosition - app.eyePosition), vNormal);
+  vec4 reflectedColor = texture(cubeTexture, reflectedDir);
+  fragColor = mix(color, reflectedColor, 0.8);
+}
+  `;
+
+  return {ROOM_CUBE_SOURCE, ROOM_CUBE_VS, ROOM_CUBE_FS, PRISM_SOURCE, PRISM_VS, PRISM_FS} as const;
 }

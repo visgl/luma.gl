@@ -18,7 +18,7 @@ import {
 import {
   TEMPEST_OCEAN_SKY_SHADER,
   TEMPEST_OCEAN_SURFACE_SHADER
-} from '../../examples/showcase/tempest-ocean/tempest-ocean-shaders';
+} from '../../examples/showcase/tempest-ocean/app';
 import {
   convertLinearDisplayP3ToSrgbBytes,
   packTempestOceanFloatRows

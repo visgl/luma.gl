@@ -2,16 +2,17 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {Buffer} from '@luma.gl/core';
 import {GPUCommandGraph, GPUCompaction, GPUVisibilityWorkflow} from '@luma.gl/gpgpu/gpu-core';
 import {NullDevice} from '@luma.gl/test-utils';
 import {describe, expect, test, vi} from 'vitest';
-import {addGPUCompactionToGraphWithDispatchLimit} from '../../src/gpu-core/gpu-compaction';
+import {getGPUCompactionCommandNodesWithDispatchLimit} from '../../src/gpu-core/gpu-compaction';
 import {
   getBoundedDispatchLayout,
   getBoundedInvocationIndexSource
 } from '../../src/gpu-core/gpu-dispatch-utils';
-import {addGPUVisibilityWorkflowToGraphWithDispatchLimit} from '../../src/gpu-core/gpu-visibility-workflow';
+import {getGPUVisibilityWorkflowCommandNodesWithDispatchLimit} from '../../src/gpu-core/gpu-visibility-workflow';
 
 const WORKGROUP_SIZE = 256;
 
@@ -53,7 +54,10 @@ describe('bounded GPU visibility dispatch', () => {
     const addComputePass = vi.spyOn(fixture.graph, 'addComputePass');
 
     try {
-      addGPUVisibilityWorkflowToGraphWithDispatchLimit(fixture.workflow, fixture.graph, 2);
+      addGPUCommandNodes(
+        fixture.graph,
+        getGPUVisibilityWorkflowCommandNodesWithDispatchLimit(fixture.workflow, fixture.graph, 2)
+      );
 
       const passIds = addComputePass.mock.calls.map(([pass]) => pass.id);
       expect(passIds).toContain('node-visibility-compose');
@@ -72,7 +76,10 @@ describe('bounded GPU visibility dispatch', () => {
 
     try {
       expect(() =>
-        addGPUVisibilityWorkflowToGraphWithDispatchLimit(fixture.workflow, fixture.graph, 2)
+        addGPUCommandNodes(
+          fixture.graph,
+          getGPUVisibilityWorkflowCommandNodesWithDispatchLimit(fixture.workflow, fixture.graph, 2)
+        )
       ).toThrow(/GPUMask.*exceeding the 3D dispatch limit/i);
     } finally {
       fixture.device.destroy();
@@ -91,7 +98,10 @@ describe('bounded GPU visibility dispatch', () => {
 
     try {
       const compaction = new GPUCompaction({id: 'empty-compaction', input, flags, output, count});
-      addGPUCompactionToGraphWithDispatchLimit(compaction, graph, 0);
+      addGPUCommandNodes(
+        graph,
+        getGPUCompactionCommandNodesWithDispatchLimit(compaction, graph, 0)
+      );
       expect(addComputePass.mock.calls.map(([pass]) => pass.id)).toEqual([
         'empty-compaction-clear-count'
       ]);

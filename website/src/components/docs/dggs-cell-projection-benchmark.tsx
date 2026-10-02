@@ -48,7 +48,7 @@ export function DGGSCellProjectionBenchmark(): ReactNode {
   const selectedDevice = useStore(store => store.presentationDevice || store.device);
   const [family, setFamily] = useState<DGGSCellFamily>('h3');
   const [projection, setProjection] = useState<DGGSCellProjectionKind>('unit-vector');
-  const [cellCount, setCellCount] = useState<number>(262_144);
+  const [cellCount, setCellCount] = useState<number>(CELL_COUNTS[0]);
   const [webGPUUnavailable, setWebGPUUnavailable] = useState(false);
   const familyId = useId();
   const projectionId = useId();

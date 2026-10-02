@@ -4,12 +4,7 @@
 
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import type {
-  GPUCommandGraph,
-  GPUCommandGraphContributor,
-  GraphDataView,
-  GraphResourceUse
-} from '@luma.gl/gpgpu/gpu-core';
+import type {GPUCommandGraph, GraphDataView, GraphResourceUse} from '@luma.gl/gpgpu/gpu-core';
 import {createTransientView, getViewBinding, getViewElementOffset} from '@luma.gl/gpgpu/gpu-core';
 import {GPUHistogram} from '@luma.gl/gpgpu/gpu-core';
 import {GPUReduction} from '@luma.gl/gpgpu/gpu-core';
@@ -53,9 +48,7 @@ export type GPURasterHistogramProps<Format extends GPURasterScalarFormat = GPURa
  * Caller inputs, output bins, and an optional published domain remain borrowed; generated domain
  * and validity buffers belong to the graph.
  */
-export class GPURasterHistogram<Format extends GPURasterScalarFormat = GPURasterScalarFormat>
-  implements GPUCommandGraphContributor
-{
+export class GPURasterHistogram<Format extends GPURasterScalarFormat = GPURasterScalarFormat> {
   readonly id: string;
   readonly input: GPURasterBufferBand<Format>;
   readonly output: GraphDataView<'uint32'>;
@@ -151,13 +144,15 @@ export class GPURasterHistogram<Format extends GPURasterScalarFormat = GPURaster
         this.domainOutput ??
         createTransientView(graph, `${this.id}-valid-domain`, this.input.format, 2);
       assertRasterStorageBindingFits(graph.device, resolvedDomain, `${this.id} domain`);
-      new GPUReduction<GPURasterScalarFormat>({
-        id: `${this.id}-valid-extent`,
-        input: values,
-        mask,
-        output: resolvedDomain,
-        operation: 'extent'
-      }).addToGraph(graph);
+      graph.add(
+        new GPUReduction<GPURasterScalarFormat>({
+          id: `${this.id}-valid-extent`,
+          input: values,
+          mask,
+          output: resolvedDomain,
+          operation: 'extent'
+        })
+      );
       domain = resolvedDomain;
     } else {
       domain = this.domain;
@@ -166,13 +161,15 @@ export class GPURasterHistogram<Format extends GPURasterScalarFormat = GPURaster
       }
     }
 
-    new GPUHistogram<GPURasterScalarFormat>({
-      id: `${this.id}-bins`,
-      input: values,
-      mask,
-      output: this.output,
-      domain
-    }).addToGraph(graph);
+    graph.add(
+      new GPUHistogram<GPURasterScalarFormat>({
+        id: `${this.id}-bins`,
+        input: values,
+        mask,
+        output: this.output,
+        domain
+      })
+    );
   }
 
   private resolveValidity<Parameters>(

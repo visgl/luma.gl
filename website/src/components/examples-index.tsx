@@ -1,6 +1,12 @@
 import React, {useEffect, useMemo, useState} from 'react';
 import {useDocsSidebar, useDocsVersion} from '@docusaurus/plugin-content-docs/client';
 import useBaseUrl from '@docusaurus/useBaseUrl';
+import type {
+  ExampleBackend,
+  ExampleMobileMode,
+  ExampleMobileQualityProfile
+} from '../../../examples/example-support';
+import {getExampleSupportDefinition} from '../../../examples/example-support-registry';
 import {ExampleCard} from './example-card';
 import styles from './examples-index.module.css';
 
@@ -10,7 +16,6 @@ type ExampleDisplay = 'hdr-capable' | 'standard';
 type ExampleMaturity = 'stable' | 'experimental';
 
 type ExampleCustomProps = {
-  backends?: ExampleBackend[];
   difficulty?: ExampleDifficulty;
   display?: ExampleDisplay;
   maturity?: ExampleMaturity;
@@ -43,6 +48,8 @@ type CatalogItem = SidebarDocItem & {
   difficulty: ExampleDifficulty;
   display: ExampleDisplay;
   maturity: ExampleMaturity;
+  mobile: ExampleMobileMode;
+  mobileProfile: ExampleMobileQualityProfile;
   topics: string[];
 };
 
@@ -232,6 +239,7 @@ export function ExamplesIndex({getThumbnail}: ExamplesIndexProps) {
                   highDynamicRange={item.display === 'hdr-capable'}
                   difficulty={item.difficulty}
                   maturity={item.maturity}
+                  mobile={item.mobile}
                   topics={item.topics}
                 />
               );
@@ -301,15 +309,18 @@ function normalizeItem(
   documentDescription?: string
 ): CatalogItem {
   const customProps = item.customProps || {};
+  const supportDefinition = item.docId ? getExampleSupportDefinition(item.docId) : undefined;
   const topic = getDefaultTopic(category);
   return {
     ...item,
-    backends: customProps.backends || getDefaultBackends(category),
+    backends: [...(supportDefinition?.requirements?.backends || getDefaultBackends(category))],
     category,
     description: documentDescription || `${item.label} — ${category.toLowerCase()} example.`,
     difficulty: customProps.difficulty || getDefaultDifficulty(category),
     display: customProps.display || 'standard',
     maturity: customProps.maturity || getDefaultMaturity(category),
+    mobile: supportDefinition?.mobileMode || 'full',
+    mobileProfile: supportDefinition?.mobileProfile || 'standard',
     topics: customProps.topics || [topic]
   };
 }

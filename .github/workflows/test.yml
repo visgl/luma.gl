@@ -18,7 +18,8 @@ jobs:
   browser_coverage:
     name: Browser coverage (${{ matrix.shard }}/3)
     runs-on: ubuntu-22.04
-    timeout-minutes: 15
+    # Shards 1 and 2 run longer visual and headless coverage workloads.
+    timeout-minutes: ${{ matrix.shard < 3 && 25 || 15 }}
     strategy:
       fail-fast: false
       matrix:
@@ -71,11 +72,94 @@ jobs:
       - name: Install Playwright Chromium
         run: yarn playwright:install
 
+      - name: Run Deck pattern fill visual checks
+        if: ${{ matrix.shard == 2 }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-pattern-fills test:visual
+
+      - name: Upload Deck pattern fill screenshots
+        if: ${{ always() && matrix.shard == 2 }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: deck-pattern-fills
+          path: /tmp/pattern-fills-*.png
+
+      - name: Run Deck sketch edges visual checks
+        if: ${{ matrix.shard == 2 }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-sketch-edges test:visual
+
+      - name: Upload Deck sketch edge screenshots
+        if: ${{ always() && matrix.shard == 2 }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: deck-sketch-edges
+          path: /tmp/sketch-edges-*.png
+      - name: Run Deck city scene visual smoke
+        if: ${{ matrix.shard == 1 }}
+        env:
+          CITY_SCENE_ARTIFACTS: ${{ runner.temp }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-city-scene test:visual
+
+      - name: Upload Deck city scene screenshots
+        if: ${{ always() && matrix.shard == 1 }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: deck-city-scene
+          path: ${{ runner.temp }}/city-scene-*.png
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Run Deck point glow visual checks
+        if: ${{ matrix.shard == 2 }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-point-glow test:visual
+
+      - name: Upload Deck point glow screenshots
+        if: ${{ always() && matrix.shard == 2 }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: deck-point-glow
+          path: /tmp/point-glow-*.png
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Run riverfront routes visual smoke
+        if: ${{ matrix.shard == 2 }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-styled-paths test:visual
+
+      - name: Upload riverfront routes screenshots
+        if: ${{ always() && matrix.shard == 2 }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: deck-styled-paths
+          path: /tmp/styled-paths-*.png
+
+      - name: Run riverfront effects visual smoke
+        if: ${{ matrix.shard == 2 }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-scene-buffers test:visual
+
+      - name: Upload riverfront effects screenshots
+        if: ${{ always() && matrix.shard == 2 }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: deck-scene-buffers
+          path: /tmp/scene-buffers-*.png
+
       - name: Reclaim install cache and report disk usage
         run: |
           rm -rf "${HOME}/.yarn/berry/cache"
           df -h .
           du -sh . "${HOME}/.yarn" "${HOME}/.cache/ms-playwright" "${RUNNER_TEMP}" 2>/dev/null || true
+
+      - name: Test riverfront GPU flow
+        if: ${{ matrix.shard == 2 }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-flow-particles test:visual
+
+      - name: Test riverfront weather
+        if: ${{ matrix.shard == 2 }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-weather test:visual
+
+      - name: Test shared height fog in Visualization City
+        if: ${{ matrix.shard == 2 }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-experimental-advanced-effects test:fog
 
       # Run the standalone WebGPU smoke before the coverage suite so its SwiftShader device starts
       # from a clean runner state instead of inheriting resource pressure from prior browser tests.
@@ -99,6 +183,9 @@ jobs:
           retention-days: 7
 
       - name: Run headless tests and generate coverage
+        env:
+          # Include browser process failures alongside WebGPU test assertions.
+          DEBUG: pw:browser
         run: |
           yarn test-coverage --shard=${{ matrix.shard }}/3
 

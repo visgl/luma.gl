@@ -8,7 +8,7 @@ import {GPU_FFT_COMMON_SHADER_SOURCE} from './gpu-fft-utils';
 export const GPU_FFT2D_WORKGROUP_DIMENSION = 8;
 
 /** Byte length of the uniform block consumed by every GPUFFT2D pass. */
-export const GPU_FFT2D_PARAMETER_BYTE_LENGTH = 32;
+export const GPU_FFT2D_PARAMETER_BYTE_LENGTH = 48;
 
 /** Shared bit-reversal and butterfly kernel used by every GPUFFT2D pass. */
 export const GPU_FFT2D_SHADER = /* wgsl */ `\
@@ -21,6 +21,9 @@ struct GPUFFT2DParameters {
   stage: u32,
   directionSign: f32,
   normalizationScale: f32,
+  inputOffset: u32,
+  outputOffset: u32,
+  padding: vec2u,
 };
 
 @group(0) @binding(0) var<storage, read> inputValues: array<vec2f>;
@@ -59,8 +62,8 @@ fn main(@builtin(global_invocation_id) globalIdentifier: vec3u) {
     let firstY = select(firstCoordinate, globalIdentifier.y, horizontal);
     let secondX = select(globalIdentifier.x, secondCoordinate, horizontal);
     let secondY = select(secondCoordinate, globalIdentifier.y, horizontal);
-    let firstValue = inputValues[getLinearIndex(firstX, firstY, globalIdentifier.z)];
-    let secondValue = inputValues[getLinearIndex(secondX, secondY, globalIdentifier.z)];
+    let firstValue = inputValues[parameters.inputOffset + getLinearIndex(firstX, firstY, globalIdentifier.z)];
+    let secondValue = inputValues[parameters.inputOffset + getLinearIndex(secondX, secondY, globalIdentifier.z)];
     let angle = parameters.directionSign * 2.0 * GPU_FFT_PI *
       f32(twiddleIndex) / f32(butterflySpan);
     let twiddle = vec2f(cos(angle), sin(angle));
@@ -70,15 +73,15 @@ fn main(@builtin(global_invocation_id) globalIdentifier: vec3u) {
       firstValue - rotatedSecondValue,
       butterflyOffset >= butterflyHalfSpan
     );
-    outputValues[getLinearIndex(globalIdentifier.x, globalIdentifier.y, globalIdentifier.z)] =
+    outputValues[parameters.outputOffset + getLinearIndex(globalIdentifier.x, globalIdentifier.y, globalIdentifier.z)] =
       butterflyValue * parameters.normalizationScale;
     return;
   }
 
   let sourceX = select(globalIdentifier.x, sourceCoordinate, horizontal);
   let sourceY = select(sourceCoordinate, globalIdentifier.y, horizontal);
-  outputValues[getLinearIndex(globalIdentifier.x, globalIdentifier.y, globalIdentifier.z)] =
-    inputValues[getLinearIndex(sourceX, sourceY, globalIdentifier.z)] *
+  outputValues[parameters.outputOffset + getLinearIndex(globalIdentifier.x, globalIdentifier.y, globalIdentifier.z)] =
+    inputValues[parameters.inputOffset + getLinearIndex(sourceX, sourceY, globalIdentifier.z)] *
       parameters.normalizationScale;
 }
 `;

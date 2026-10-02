@@ -13,6 +13,14 @@ export type {
 } from './projection-benchmark';
 
 export {runGPUProjectionBenchmark} from './gpu-projection-benchmark';
+export {runProjectionProgramBenchmark} from './projection-program-benchmark';
+export type {ProjectionProgramCPUPathReport} from './projection-program-cpu-benchmark';
+export type {
+  ProjectionProgramBenchmarkVariant,
+  ProjectionProgramBenchmarkOptions,
+  ProjectionProgramBenchmarkPathReport,
+  ProjectionProgramBenchmarkReport
+} from './projection-program-benchmark';
 export type {
   GPUProjectionBenchmarkInputFormat,
   GPUProjectionBenchmarkPatchStrategy,

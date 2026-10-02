@@ -187,7 +187,8 @@ describe('@deck.gl-community/gpu-layers package boundary', () => {
       '@luma.gl/experimental',
       '@luma.gl/gpgpu',
       '@luma.gl/shadertools',
-      '@luma.gl/text'
+      '@luma.gl/text',
+      '@math.gl/core'
     ]);
   });
 });

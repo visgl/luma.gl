@@ -4,6 +4,12 @@
 
 import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 import {copyPass} from './copy-pass';
+import {heightFogPass} from './height-fog';
+
+export type VolumetricFogCompositeShaderPassOptions = {
+  /** Existing stylized screen-space fog, or analytic metre-space height fog without history. */
+  mode?: 'screen-space' | 'height';
+};
 
 type FogUniforms = {
   fogColor: [number, number, number, number];
@@ -72,7 +78,15 @@ fn volumetricFog_sampleColor(
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
 
-export function createVolumetricFogCompositeShaderPass(): CompositeShaderPass<'fogHistory'> {
+export function createVolumetricFogCompositeShaderPass(
+  options: VolumetricFogCompositeShaderPassOptions = {}
+): CompositeShaderPass<'fogHistory'> {
+  if (options.mode === 'height') {
+    return {
+      name: 'heightFogCompositeShaderPass',
+      steps: [{shaderPass: heightFogPass, inputs: {sourceTexture: 'previous'}, output: 'previous'}]
+    };
+  }
   return {
     name: 'volumetricFogCompositeShaderPass',
     renderTargets: {fogHistory: {lifetime: 'history', initialize: 'original'}},

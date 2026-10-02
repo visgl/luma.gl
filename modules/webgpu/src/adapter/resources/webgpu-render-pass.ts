@@ -185,7 +185,7 @@ export class WebGPURenderPass extends RenderPass {
     }
 
     this.vertexArray?.bindBeforeRender(this);
-    if (options.indexCount) {
+    if (options.indexCount !== undefined) {
       this.handle.drawIndexed(
         options.indexCount,
         options.instanceCount,

@@ -182,7 +182,7 @@ function createFixture(device: Device, outputCapacity: number): Fixture {
     totalCount: importView(graph, 'total-count', totalCount, 'uint32', 1),
     overflow: importView(graph, 'overflow', overflow, 'uint32', 1)
   });
-  selection.addToGraph(graph);
+  graph.add(selection);
   return {
     compiled: graph.compile(),
     selection,

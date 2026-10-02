@@ -150,11 +150,13 @@ export function getGPUAnalyticsSelectionMask<Selection extends GPUTypeMap>(
     `${id}-combined-mask`,
     context.selectionMask
   );
-  new GPUMask({
-    id: `${id}-combine-validity`,
-    inputs: [context.selectionMask, validityView],
-    output
-  }).addToGraph(context.graph);
+  context.graph.add(
+    new GPUMask({
+      id: `${id}-combine-validity`,
+      inputs: [context.selectionMask, validityView],
+      output
+    })
+  );
   return output;
 }
 

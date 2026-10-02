@@ -92,6 +92,19 @@ export type WebGPUFeatureLevel = 'core' | 'max' | 'compatibility' | 'best-availa
 /** Effective WebGPU feature level reported by a created WebGPU device. */
 export type WebGPUDeviceFeatureLevel = Exclude<WebGPUFeatureLevel, 'best-available'>;
 
+/**
+ * Information supplied when a device is lost.
+ *
+ * The reason values intentionally mirror WebGPU. `destroyed` means an
+ * application-initiated loss and `unknown` means any unexpected or
+ * platform-initiated loss. The message is diagnostic text and must not be
+ * parsed by applications.
+ */
+export type DeviceLostInfo = {
+  readonly reason: 'unknown' | 'destroyed';
+  readonly message: string;
+};
+
 /** Limits for a device (max supported sizes of resources, max number of bindings etc) */
 export abstract class DeviceLimits {
   /** max number of TextureDimension1D */
@@ -383,6 +396,13 @@ export type DeviceProps = {
   optionalFeatures?: readonly WebGPUDeviceFeature[];
   /** WebGPU only: requests an adapter that can present frames to a WebXR session. */
   xrCompatible?: boolean;
+  /**
+   * WebGPU only: device limits to request, forwarded to `GPUDeviceDescriptor.requiredLimits`.
+   * The device gets exactly these values when they are better than the spec defaults; values worse than
+   * the defaults are raised to the defaults. Values the adapter cannot provide make device creation fail.
+   * Ignored by `attach()`, WebGL, and null devices.
+   */
+  requiredLimits?: Partial<Record<keyof DeviceLimits, number>>;
 
   /** WebGL specific: Properties passed through to WebGL2RenderingContext creation: `canvas.getContext('webgl2', props.webgl)` */
   webgl?: WebGLContextProps;
@@ -661,8 +681,8 @@ export abstract class Device {
   /** `true` if device is already lost */
   abstract get isLost(): boolean;
 
-  /** Promise that resolves when device is lost */
-  abstract readonly lost: Promise<{reason: 'destroyed'; message: string}>;
+  /** Promise that resolves when the underlying device or context is lost. */
+  abstract readonly lost: Promise<DeviceLostInfo>;
 
   /**
    * Trigger device loss.
@@ -771,8 +791,28 @@ or create a device with the 'debug: true' prop.`;
   /** Create a render pipeline (aka program) */
   abstract createRenderPipeline(props: RenderPipelineProps): RenderPipeline;
 
+  /**
+   * Create a render pipeline asynchronously when the backend supports it.
+   *
+   * The default implementation preserves compatibility with synchronous backends. WebGPU
+   * implementations override this method to use `GPUDevice.createRenderPipelineAsync()`.
+   */
+  async createRenderPipelineAsync(props: RenderPipelineProps): Promise<RenderPipeline> {
+    return this.createRenderPipeline(props);
+  }
+
   /** Create a compute pipeline (aka program). WebGPU only. */
   abstract createComputePipeline(props: ComputePipelineProps): ComputePipeline;
+
+  /**
+   * Create a compute pipeline asynchronously when the backend supports it.
+   *
+   * The default implementation preserves compatibility with synchronous backends. WebGPU
+   * implementations override this method to use `GPUDevice.createComputePipelineAsync()`.
+   */
+  async createComputePipelineAsync(props: ComputePipelineProps): Promise<ComputePipeline> {
+    return this.createComputePipeline(props);
+  }
 
   /**
    * Creates an encoder for reusable WebGPU draw commands.

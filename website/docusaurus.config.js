@@ -28,7 +28,11 @@ const config = getDocusaurusConfig({
   exampleTableOfContents: require('./content/examples/table-of-contents.json'),
 
   search: 'local',
+  // TODO: Remove after @vis.gl/docusaurus-website handles an omitted webpack resolve config.
+  webpackConfig: {resolve: {}},
   customCss: ['./src/custom.css'],
+  // The shared website package deep-merges this field and currently requires an object.
+  webpackConfig: {resolve: {}},
   navbarItems: [
     {
       to: '/showcase',
@@ -180,7 +184,9 @@ module.exports = {
             items: section.items.map(item =>
               item.label === 'deck.gl' ? {...item, href: 'https://deck.gl'} : item
             )
-          }))
+          })),
+          copyright:
+            '<div class="footer__legal-notice">Copyright <a href="https://openjsf.org">OpenJS Foundation</a> and luma.gl contributors. All rights reserved. The <a href="https://openjsf.org">OpenJS Foundation</a> has registered trademarks and uses trademarks. For a list of trademarks of the <a href="https://openjsf.org">OpenJS Foundation</a>, please see our <a href="https://trademark-policy.openjsf.org/">Trademark Policy</a> and <a href="https://trademark-list.openjsf.org/">Trademark List</a>. Trademarks and logos not indicated on the <a href="https://trademark-list.openjsf.org">list of OpenJS Foundation trademarks</a> are trademarks™ or registered® trademarks of their respective holders. Use of them does not imply any affiliation with or endorsement by them.</div><div class="footer__legal-links"><a href="https://openjsf.org/">The OpenJS Foundation</a> | <a href="https://ai-coding-assistants-policy.openjsf.org/">AI Coding Assistants Policy</a> | <a href="https://bylaws.openjsf.org/">Bylaws</a> | <a href="https://code-of-conduct.openjsf.org">Code of Conduct</a> | <a href="https://www.linuxfoundation.org/cookies/">Cookie Policy</a> | <a href="https://privacy-policy.openjsf.org/">Privacy Policy</a> | <a href="https://terms-of-use.openjsf.org/">Terms of Use</a> | <a href="https://trademark-list.openjsf.org/">Trademark List</a> | <a href="https://trademark-policy.openjsf.org/">Trademark Policy</a></div>'
         }
       : undefined
   },
@@ -219,6 +225,14 @@ module.exports = {
       }
       return plugin;
     }),
+    function exampleNavigationLifecycle() {
+      return {
+        name: 'example-navigation-lifecycle',
+        getClientModules() {
+          return [path.resolve(__dirname, 'src/client-modules/example-navigation.ts')];
+        }
+      };
+    },
     [
       '@signalwire/docusaurus-plugin-llms-txt',
       {
@@ -314,6 +328,10 @@ module.exports = {
           return {
             resolve: {
               alias: {
+                'apache-arrow/type$': path.resolve(
+                  __dirname,
+                  '../examples/experimental/gpu-parquet-constellation/apache-arrow-type-compat.js'
+                ),
                 '@deck.gl-community/arrow-layers$': path.resolve(
                   __dirname,
                   '../modules/deck-arrow-layers/src/index.ts'

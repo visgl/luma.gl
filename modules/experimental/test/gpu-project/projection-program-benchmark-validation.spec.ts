@@ -1,0 +1,101 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import {expect, it, vi} from 'vitest';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {runProjectionProgramBenchmark} from '@luma.gl/experimental/gpu-project/benchmarks';
+
+it('refuses accuracy/validity failures before warmup and does not return misleading timing', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  if (device.info.gpu === 'software' || device.info.gpuType === 'cpu' || device.info.fallback)
+    context.skip();
+  const submit = vi.spyOn(device, 'submit');
+  try {
+    for (const valid of [true, false]) {
+      submit.mockClear();
+      await expect(
+        runProjectionProgramBenchmark(device, {
+          coordinates: [[1, 2]],
+          oracle: () => ({position: [100, 200], valid}),
+          variants: ['first', 'second'].map(id => ({
+            id,
+            maximumError: 0,
+            createProgram: () => ({precision: 'double-single', operations: []})
+          })),
+          warmupIterations: 5,
+          measuredIterations: 5
+        })
+      ).rejects.toThrow(valid ? /exceeds error budget/ : /validity differs/);
+      expect(submit).toHaveBeenCalledTimes(1);
+    }
+  } finally {
+    vi.restoreAllMocks();
+  }
+});
+
+it.for([
+  'local-f32',
+  'double-single'
+] as const)('decodes %s identity output and refuses mismatched output precision', async (precision, context) => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  if (device.info.gpu === 'software' || device.info.gpuType === 'cpu' || device.info.fallback)
+    context.skip();
+  const report = await runProjectionProgramBenchmark(device, {
+    coordinates: [[10000000.25, 20000000.5]],
+    consumerCount: 3,
+    gpuTiming: false,
+    oracle: position => ({position, valid: true}),
+    variants: ['first', 'second'].map(id => ({
+      id,
+      maximumError: 0,
+      createProgram: () => ({
+        precision,
+        destinationOrigin: [10000000, 20000000],
+        operations: []
+      })
+    })),
+    warmupIterations: 0,
+    measuredIterations: 1
+  });
+  expect(report.paths.every(path => path.maximumObservedError === 0)).toBe(true);
+  expect(report.consumerCount).toBe(3);
+  expect(report.cpuProvider).toBe('caller-supplied oracle');
+  expect(report.cpuPaths.map(path => path.checksum)).toEqual([90000002.25, 90000002.25]);
+  expect(report.cpuPaths.every(path => path.outputEncoding === 'binary64')).toBe(true);
+  expect(report.comparison).toBe('equal-error-budget');
+  expect(report.timestampQueries).toBe(false);
+  for (const path of report.paths) {
+    expect(path.gpuTimeMilliseconds).toBeUndefined();
+    expect(path.adaptiveStages).toEqual([]);
+    expect(path.projectionsPerRow).toBe(path.mode === 'inline' ? 3 : 1);
+    expect(path.dispatchCount).toBe(path.mode === 'inline' ? 3 : 4);
+    const rowBytes = precision === 'double-single' ? 20 : 12;
+    expect(path.intermediateByteLength).toBe(path.mode === 'inline' ? 0 : rowBytes);
+    expect(path.bufferByteLength).toBe(
+      16 + 3 * rowBytes + path.parameterByteLength + path.intermediateByteLength
+    );
+  }
+  await expect(
+    runProjectionProgramBenchmark(device, {
+      coordinates: [[1, 2]],
+      oracle: position => ({position, valid: true}),
+      variants: [
+        {
+          id: 'local',
+          maximumError: 0,
+          createProgram: () => ({precision: 'local-f32', operations: []})
+        },
+        {
+          id: 'double',
+          maximumError: 0,
+          createProgram: () => ({precision: 'double-single', operations: []})
+        }
+      ],
+      warmupIterations: 0,
+      measuredIterations: 1
+    })
+  ).rejects.toThrow(/share output precision/);
+});

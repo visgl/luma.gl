@@ -4,12 +4,7 @@
 
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {
-  GPUCommandGraph,
-  type GPUCommandGraphContributor,
-  type GraphBufferUse,
-  type GraphDataView
-} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {
   getBoundedDispatchLayout,
   getBoundedInvocationIndexSource,
@@ -88,7 +83,7 @@ export type GPUTraceLaneIndexBuilderStats = {
  * graph when source partitions change and retain the output for interactive frame graphs. Large
  * builds can use `CompiledGPUCommandGraph.createExecution()` to spread sort stages across frames.
  */
-export class GPUTraceLaneIndexBuilder implements GPUCommandGraphContributor {
+export class GPUTraceLaneIndexBuilder {
   readonly id: string;
   readonly source: GPUTraceLaneIndexSource;
   readonly output: GPUTraceLaneIndexOutput;
@@ -156,23 +151,27 @@ export class GPUTraceLaneIndexBuilder implements GPUCommandGraphContributor {
     addClearPass(graph, this, laneCounts);
     if (this.stats.spanCount > 0) {
       addTimeKeyPass(graph, this, sourceTimeKeys, sourceSpanIds);
-      new GPUSort({
-        id: `${this.id}-start-time-sort`,
-        keys: sourceTimeKeys,
-        values: sourceSpanIds,
-        outputKeys: timeSortedKeys,
-        outputValues: timeSortedSpanIds,
-        algorithm: 'radix'
-      }).addToGraph(graph);
+      graph.add(
+        new GPUSort({
+          id: `${this.id}-start-time-sort`,
+          keys: sourceTimeKeys,
+          values: sourceSpanIds,
+          outputKeys: timeSortedKeys,
+          outputValues: timeSortedSpanIds,
+          algorithm: 'radix'
+        })
+      );
       addLaneKeyPass(graph, this, timeSortedSpanIds, timeOrderedLaneKeys);
-      new GPUSort({
-        id: `${this.id}-lane-sort`,
-        keys: timeOrderedLaneKeys,
-        values: timeSortedSpanIds,
-        outputKeys: sortedLaneKeys,
-        outputValues: this.output.spanIds,
-        algorithm: 'radix'
-      }).addToGraph(graph);
+      graph.add(
+        new GPUSort({
+          id: `${this.id}-lane-sort`,
+          keys: timeOrderedLaneKeys,
+          values: timeSortedSpanIds,
+          outputKeys: sortedLaneKeys,
+          outputValues: this.output.spanIds,
+          algorithm: 'radix'
+        })
+      );
       if (this.output.startTimes && this.output.durations) {
         addGatherPass(graph, this, sortedLaneKeys, laneCounts);
       } else {
@@ -180,12 +179,14 @@ export class GPUTraceLaneIndexBuilder implements GPUCommandGraphContributor {
       }
     }
     if (this.stats.laneCount > 0) {
-      new GPUScan({
-        id: `${this.id}-lane-offsets`,
-        input: laneCounts,
-        output: this.output.laneOffsets,
-        mode: 'exclusive'
-      }).addToGraph(graph);
+      graph.add(
+        new GPUScan({
+          id: `${this.id}-lane-offsets`,
+          input: laneCounts,
+          output: this.output.laneOffsets,
+          mode: 'exclusive'
+        })
+      );
     }
     addOffsetSentinelPass(graph, this, laneCounts);
   }

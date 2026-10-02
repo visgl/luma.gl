@@ -41,8 +41,7 @@ const TEMPORARY_MIXED_LICENSE_EXCEPTIONS = new Set([
   'modules/effects/src/passes/postprocessing/fxaa/fxaa.ts',
   'modules/engine/src/geometries/plane-geometry.ts',
   'modules/engine/src/geometries/truncated-cone-geometry.ts',
-  'modules/engine/src/geometries/sphere-geometry.ts',
-  'modules/text/src/fonts/helvetiker.ts'
+  'modules/engine/src/geometries/sphere-geometry.ts'
 ]);
 
 // This declaration file was copied from Spector.js and must retain its independently reviewed

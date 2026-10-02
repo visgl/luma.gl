@@ -17,9 +17,9 @@
   - `yarn test-coverage`
   - `yarn website-debug`
 - The test commands use the shared `@vis.gl/dev-tools` Vitest runner and the root `vitest.config.ts`.
-- Luma-specific Playwright utilities live under [`scripts/playwright`](/Users/ibgreen/code/luma.gl/scripts/playwright).
-- Playwright example aliases and defaults live in [`\.ocularrc.js`](/Users/ibgreen/code/luma.gl/.ocularrc.js).
-- For details, see [docs/developer/dev-tools/llm-friendly-test-setup.md](/Users/ibgreen/code/luma.gl/docs/developer/dev-tools/llm-friendly-test-setup.md).
+- Luma-specific Playwright utilities live under [`scripts/playwright`](./scripts/playwright).
+- Playwright example aliases and defaults live in [`.ocularrc.js`](./.ocularrc.js).
+- For details, see [docs/developer/dev-tools/llm-friendly-test-setup.md](./docs/developer/dev-tools/llm-friendly-test-setup.md).
 
 ## Before committing
 - Format code: `yarn lint fix`
@@ -27,6 +27,13 @@
 
 ## Pull requests
 - When opening a PR, wait 15 minutes for review comments, address them and respond, then make sure CI is green.
+
+## Publishing releases
+- Follow the [release guide](docs/developer-guide/releasing.md) before publishing packages.
+- Publish only from `master` or a release branch matching `*-release` (for example, `9.4-release`).
+- Before invoking the release tooling, update [`CHANGELOG.md`](CHANGELOG.md), stage it with `git add CHANGELOG.md`, and commit it on the release branch. Use a heading that exactly matches the tag version (for example, `### v9.4.2`). The release workflow verifies that exact heading before publishing.
+- The release workflow publishes only after `yarn build`, node tests, and all headless test shards pass. It creates the GitHub release from the changelog entry and then publishes the packages to npm.
+- For a patch release from an existing release branch, use the release branch as the source of truth and tag the release commit as `v<version>` (for example, `v9.4.2`).
 
 ## Merge preparation
 - When asked to "get ready for merge", create a copyable Markdown description of the changes versus `master`.

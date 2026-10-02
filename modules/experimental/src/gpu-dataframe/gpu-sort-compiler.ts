@@ -167,15 +167,17 @@ function addGPUBatchSortToGraph<Selection extends GPUTypeMap>(
     });
   }
 
-  new GPUBatchSort({
-    id: `${id}-numeric`,
-    keys: encodedKeys,
-    values: localIndices,
-    outputKeys: sortedKeys,
-    outputValues: sortedIndices,
-    direction: options.direction,
-    algorithm: options.algorithm
-  }).addToGraph(graph);
+  graph.add(
+    new GPUBatchSort({
+      id: `${id}-numeric`,
+      keys: encodedKeys,
+      values: localIndices,
+      outputKeys: sortedKeys,
+      outputValues: sortedIndices,
+      direction: options.direction,
+      algorithm: options.algorithm
+    })
+  );
 
   for (const [batchIndex, values] of input.data.entries()) {
     if (values.length === 0) {
@@ -197,15 +199,17 @@ function addGPUBatchSortToGraph<Selection extends GPUTypeMap>(
     );
   }
 
-  new GPUBatchSort({
-    id: `${id}-classes`,
-    keys: sortedKeys,
-    values: sortedIndices,
-    outputKeys: encodedKeys,
-    outputValues: localIndices,
-    direction: 'ascending',
-    algorithm: options.algorithm
-  }).addToGraph(graph);
+  graph.add(
+    new GPUBatchSort({
+      id: `${id}-classes`,
+      keys: sortedKeys,
+      values: sortedIndices,
+      outputKeys: encodedKeys,
+      outputValues: localIndices,
+      direction: 'ascending',
+      algorithm: options.algorithm
+    })
+  );
 
   let sourceOffset = 0;
   for (const [batchIndex, batch] of context.table.batches.entries()) {

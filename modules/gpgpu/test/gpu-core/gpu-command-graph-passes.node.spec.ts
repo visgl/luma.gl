@@ -5,6 +5,8 @@
 import {
   Buffer,
   ComputePass,
+  type Bindings,
+  type BindingsByGroup,
   type CommandEncoder,
   type ComputePassProps,
   type ComputePipeline,
@@ -107,6 +109,41 @@ describe('GPUCommandGraphEncoding constructor compatibility', () => {
 
     expect(encoding.stats.computePassCount).toBe(1);
     expect(encoding.stats.coalescedComputeNodeCount).toBe(1);
+  });
+});
+
+describe('GPUCommandGraph asynchronous compilation', () => {
+  test('starts independent node compilation concurrently and preserves scheduled order', async () => {
+    const device = new NullDevice({id: 'async-compilation-device'});
+    Object.defineProperty(device, 'type', {value: 'webgpu'});
+    const graph = new GPUCommandGraph(device, {id: 'parallel-async-compilation'});
+    const startedNodes: string[] = [];
+    let releaseCompilation!: () => void;
+    const compilationGate = new Promise<void>(resolve => {
+      releaseCompilation = resolve;
+    });
+
+    for (const id of ['first', 'second', 'third']) {
+      graph.addComputePass({
+        id,
+        compile: () => ({encode: () => {}}),
+        compileAsync: async () => {
+          startedNodes.push(id);
+          await compilationGate;
+          return {encode: () => {}};
+        }
+      });
+    }
+
+    const compilationPromise = graph.compileAsync();
+    await Promise.resolve();
+    expect(startedNodes).toEqual(['first', 'second', 'third']);
+
+    releaseCompilation();
+    const compiled = await compilationPromise;
+    expect(compiled.stats.nodeOrder).toEqual(['first', 'second', 'third']);
+    compiled.destroy();
+    device.destroy();
   });
 });
 
@@ -454,6 +491,8 @@ class RecordingComputePass extends ComputePass {
   }
 
   override setPipeline(_pipeline: ComputePipeline): void {}
+
+  override setBindings(_bindings: Bindings | BindingsByGroup): void {}
 
   override dispatch(x: number, y = 1, z = 1): void {
     this.events.push(`dispatch:${x}:${y}:${z}`);

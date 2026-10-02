@@ -2,13 +2,19 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-export const LZ4_RAW_DESCRIPTOR_WORDS = 4;
+import {GPU_LZ_BYTE_DESCRIPTOR_WORDS, planGPULZByteDescriptors} from '@luma.gl/gpgpu/gpu-core';
+
+export const LZ4_RAW_DESCRIPTOR_WORDS = GPU_LZ_BYTE_DESCRIPTOR_WORDS;
 
 /** CPU-parsed LZ4_RAW sequence control data for GPU upload. */
 export type LZ4RawDecompressionPlan = {
-  /** Generic `[outputOffset, byteLength, literalSourceOffset, matchOffset]` LZ spans. */
+  /** GPU LZ descriptors with direct compressed-input provenance where tractable. */
   descriptors: Uint32Array;
   descriptorCount: number;
+  directCopyCount: number;
+  recursiveCopyCount: number;
+  directCopyByteLength: number;
+  recursiveCopyByteLength: number;
   compressedByteLength: number;
   outputByteLength: number;
 };
@@ -54,8 +60,7 @@ export function parseLZ4RawDecompressionPlan(compressed: Uint8Array): LZ4RawDeco
     outputByteOffset = addOutputLength(outputByteOffset, literalLength + matchLength);
   }
   return Object.freeze({
-    descriptors: Uint32Array.from(descriptors),
-    descriptorCount: descriptors.length / LZ4_RAW_DESCRIPTOR_WORDS,
+    ...planGPULZByteDescriptors(descriptors),
     compressedByteLength: compressed.length,
     outputByteLength: outputByteOffset
   });

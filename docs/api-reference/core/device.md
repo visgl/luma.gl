@@ -53,6 +53,25 @@ const {message} = await device.lost;
 console.error(message);
 ```
 
+Request specific WebGPU device limits (WebGPU only):
+
+```typescript
+import {luma} from '@luma.gl/core';
+
+// Declare the limits the application needs instead of taking every adapter limit
+const device = await luma.createDevice({
+  type: 'webgpu',
+  requiredLimits: {
+    maxStorageBuffersPerShaderStage: 10,
+    maxStorageBufferBindingSize: 512 * 1024 * 1024
+  }
+});
+
+// device.limits.maxStorageBuffersPerShaderStage is 10 even on a GPU that supports 16,
+// so a kernel that binds 12 storage buffers fails during development, not only on 10-buffer GPUs.
+// A GPU that cannot provide 10 storage buffers fails device creation instead.
+```
+
 ## Types
 
 ### `DeviceProps`
@@ -73,6 +92,7 @@ Specifies props to use when luma creates the device.
 | `powerPreference?: string` | `'high-performance'` | `'default' \| 'high-performance' \| 'low-power'` (WebGL). |
 | `featureLevel?: 'core' \| 'max' \| 'compatibility' \| 'best-available'` | `'core'` | WebGPU feature/limit profile to request. `'core'` is the portable default; `'max'` requests every supported adapter feature and limit; `'compatibility'` opts into compatibility mode; `'best-available'` upgrades a compatibility adapter to core when available. WebGL and null devices ignore this prop. |
 | `optionalFeatures?: WebGPUDeviceFeature[]` | `[]` | WebGPU device features to request in addition to the selected profile. Unsupported entries are ignored. Use this for targeted capabilities such as `'subgroups'` without enabling the full `'max'` profile. |
+| `requiredLimits?: Partial<Record<keyof DeviceLimits, number>>` | `undefined` | WebGPU device limits to request, using the same names as `device.limits`. The device gets exactly the requested value when it is better than the WebGPU spec default (for example above the default 8 `maxStorageBuffersPerShaderStage`), which lets a high-end development GPU enforce the limits the application targets. Values worse than the spec default are raised to the default, so this cannot make a device stricter than the spec defaults. Values the adapter cannot provide, and limit names the browser does not support, make device creation fail. Applied on top of `featureLevel: 'max'` (requested values override). Ignored by `attach()`, which wraps an existing device, and by WebGL and null devices. |
 | `xrCompatible?: boolean` | `false` | Request a WebGPU adapter that can present frames to a WebXR session. Standard adapter requests remain unchanged unless this is enabled. |
 | `failIfMajorPerformanceCaveat?: boolean` | `false` | Fail device creation if only a low-performance or software GPU is available. |
 | `webgl?: WebGLContextAttributes` | [`WebGLContextAttributes`][webgl-attributes] | Attributes passed on to WebGL (`canvas.getContext('webgl2', props.webgl)` |
@@ -252,10 +272,12 @@ True if the device is already lost (GPU is disconnected).
 ### lost
 
 ```typescript
-lost: Promise<{reason: 'destroyed'; message: string}>;
+lost: Promise<DeviceLostInfo>;
 ```
 
-Promise that resolves with an error message if the device is lost (GPU is disconnected).
+Promise that resolves when the underlying device is lost. `reason` is `'destroyed'` for an
+application-initiated loss and `'unknown'` for every unexpected or platform-initiated loss.
+`message` is implementation-defined diagnostic text and must not be parsed by applications.
 
 :::info
 GPU disconnections normally happen when the computer goes to sleep but it can also happen
@@ -415,6 +437,16 @@ createRenderPipeline(props: RenderPipelineProps): RenderPipeline
 
 Creates a [`RenderPipeline`](./resources/render-pipeline) (aka program). See [`RenderPipelineProps`](./resources/render-pipeline.md#renderpipelineprops) for available options.
 
+### createRenderPipelineAsync
+
+```typescript
+createRenderPipelineAsync(props: RenderPipelineProps): Promise<RenderPipeline>
+```
+
+Creates a render pipeline through the backend's asynchronous compilation path. On WebGPU this uses
+the native `GPUDevice.createRenderPipelineAsync()` API; synchronous backends return an already
+resolved promise.
+
 ### createComputePipeline
 
 <DocumentationBadges>
@@ -427,6 +459,15 @@ createComputePipeline(props: ComputePipelineProps): ComputePipeline
 ```
 
 Creates a [`ComputePipeline`](./resources/compute-pipeline) (aka program). See [`ComputePipelineProps`](./resources/compute-pipeline.md#computepipelineprops) for available options.
+
+### createComputePipelineAsync
+
+```typescript
+createComputePipelineAsync(props: ComputePipelineProps): Promise<ComputePipeline>
+```
+
+Creates a compute pipeline through the backend's asynchronous compilation path. Start independent
+calls together and await them with `Promise.all()` when minimizing WebGPU preparation latency.
 
 ### createRenderBundleEncoder
 

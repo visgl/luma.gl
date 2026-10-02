@@ -1,3 +1,4 @@
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -10,7 +11,6 @@ import {
   DispatchCommandBuffer,
   DrawCommandBuffer,
   GPUCommandGraph,
-  type GPUCommandGraphContributor,
   GPUCompaction,
   GPUScan,
   GPUTextSelection,
@@ -25,7 +25,7 @@ import {
 } from '../../src/gpu-core/gpu-dispatch-utils';
 import {getGPUReductionStrategy} from '../../src/gpu-core/gpu-reduction';
 import {
-  addGPUScanToGraphWithDispatchLimit,
+  getGPUScanCommandNodesWithDispatchLimit,
   getGPUScanDispatchLayout,
   getGPUScanInvocationIndexSource,
   getGPUScanStrategy
@@ -472,8 +472,8 @@ it('GPUCommandGraph exposes safe extension-library helpers', async () => {
 
   const graph = new GPUCommandGraph(device);
   let contributorOutputUsage = 0;
-  const contributor: GPUCommandGraphContributor = {
-    addToGraph: targetGraph => {
+  const contributor = {
+    getCommandNodes: (targetGraph: GPUCommandGraph) => {
       const output = createTransientView(
         targetGraph,
         'contributor-output',
@@ -482,9 +482,10 @@ it('GPUCommandGraph exposes safe extension-library helpers', async () => {
         Buffer.STORAGE | Buffer.INDIRECT
       );
       contributorOutputUsage = output.buffer.usage;
+      return [];
     }
   };
-  contributor.addToGraph(graph);
+  graph.add(contributor);
   expect(contributorOutputUsage, 'contributors can request additional transient usage flags').toBe(
     Buffer.STORAGE | Buffer.INDIRECT
   );
@@ -974,7 +975,7 @@ it('GPUScan computes exclusive uint32 prefixes', async () => {
     );
     const input = graph.createDataView(inputHandle, {format: 'uint32', length});
     const output = graph.createDataView(outputHandle, {format: 'uint32', length});
-    new GPUScan({input, output}).addToGraph(graph);
+    graph.add(new GPUScan({input, output}));
     const compiled = graph.compile();
     const commandEncoder = device.createCommandEncoder({id: `scan-${length}-encoder`});
     compiled.encode(commandEncoder, {parameters: undefined});
@@ -1021,6 +1022,29 @@ it('GPUScan propagates carries across GPUVector chunks without changing topology
     ),
     'final local scan levels write compact chunk totals without separate passes'
   ).toBe(false);
+});
+
+it('GPUScan aligns independent input, output, and segment partitions', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+
+  const result = await runVectorScan(
+    device,
+    [Uint32Array.from([1, 2]), new Uint32Array(0), Uint32Array.from([3, 4, 5])],
+    {
+      outputChunks: [
+        Uint32Array.from({length: 1}, () => 0),
+        Uint32Array.from({length: 2}, () => 0),
+        Uint32Array.from({length: 2}, () => 0)
+      ],
+      segmentFlagChunks: [Uint32Array.from([0]), Uint32Array.from([1, 0]), Uint32Array.from([0, 1])]
+    }
+  );
+  expect(result.chunks, 'scan preserves logical order while borrowing output slices').toEqual([
+    [0],
+    [0, 2],
+    [5, 0]
+  ]);
 });
 
 it('GPUScan computes inclusive and segmented uint32 prefixes across block boundaries', async () => {
@@ -1162,12 +1186,14 @@ it('GPUCompaction preserves selected order and writes indirect instance count', 
     length: values.length
   });
   const countView = graph.importGPUData('draw-count', drawCommands.getInstanceCountData(0));
-  new GPUCompaction({
-    input: valuesView,
-    flags: flagsView,
-    output: outputView,
-    count: countView
-  }).addToGraph(graph);
+  graph.add(
+    new GPUCompaction({
+      input: valuesView,
+      flags: flagsView,
+      output: outputView,
+      count: countView
+    })
+  );
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'compaction-test-encoder'});
   compiled.encode(commandEncoder, {parameters: undefined});
@@ -1242,26 +1268,28 @@ it('GPUTextSelection gathers selected row-indexed glyph records and indirect cou
     },
     selectedRecordBuffer
   );
-  new GPUTextSelection({
-    glyphRows: graph.createDataView(recordsHandle, {
-      format: 'uint32',
-      length: 5,
-      byteOffset: 2 * Uint32Array.BYTES_PER_ELEMENT,
-      byteStride: 3 * Uint32Array.BYTES_PER_ELEMENT
-    }),
-    rowFlags: graph.createDataView(rowFlagsHandle, {format: 'uint32', length: 3}),
-    output: graph.createDataView(selectedIdsHandle, {format: 'uint32', length: 5}),
-    count: graph.importGPUData('selected-count', drawCommands.getInstanceCountData(0)),
-    sourceRecords: graph.createDataView(recordsHandle, {
-      format: 'uint32',
-      length: records.length
-    }),
-    outputRecords: graph.createDataView(selectedRecordsHandle, {
-      format: 'uint32',
-      length: records.length
-    }),
-    recordWordLength: 3
-  }).addToGraph(graph);
+  graph.add(
+    new GPUTextSelection({
+      glyphRows: graph.createDataView(recordsHandle, {
+        format: 'uint32',
+        length: 5,
+        byteOffset: 2 * Uint32Array.BYTES_PER_ELEMENT,
+        byteStride: 3 * Uint32Array.BYTES_PER_ELEMENT
+      }),
+      rowFlags: graph.createDataView(rowFlagsHandle, {format: 'uint32', length: 3}),
+      output: graph.createDataView(selectedIdsHandle, {format: 'uint32', length: 5}),
+      count: graph.importGPUData('selected-count', drawCommands.getInstanceCountData(0)),
+      sourceRecords: graph.createDataView(recordsHandle, {
+        format: 'uint32',
+        length: records.length
+      }),
+      outputRecords: graph.createDataView(selectedRecordsHandle, {
+        format: 'uint32',
+        length: records.length
+      }),
+      recordWordLength: 3
+    })
+  );
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'text-selection-test-encoder'});
   compiled.encode(commandEncoder, {parameters: undefined});
@@ -1361,6 +1389,88 @@ it('GPUCompaction preserves GPUVector topology while selecting across chunks', a
     result.logicalTransientBufferCount,
     'zero-length offset chunks share one transient backing view'
   ).toBe(5);
+});
+
+it('GPUCompaction aligns independently partitioned inputs and output capacity', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    return;
+  }
+
+  const result = await runVectorCompaction(
+    device,
+    [Uint32Array.from([10, 11]), Uint32Array.from([12, 13, 14])],
+    [Uint32Array.from([1]), Uint32Array.from([0, 1, 0, 1])],
+    [new Uint32Array(2), new Uint32Array(3)]
+  );
+  expect(result.count, 'count spans independently partitioned source and flag vectors').toBe(3);
+  expect(result.chunks, 'selected rows preserve order in the caller output topology').toEqual([
+    [10, 12],
+    [14, 0xffffffff, 0xffffffff]
+  ]);
+});
+
+it('GPUCompaction gives atomic input and chunked output passes unique node IDs', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    return;
+  }
+
+  const values = Uint32Array.from([20, 21, 22, 23]);
+  const flags = Uint32Array.from([1, 0, 1, 1]);
+  const valuesBuffer = device.createBuffer({data: values, usage: Buffer.STORAGE | Buffer.COPY_DST});
+  const flagsBuffer = device.createBuffer({data: flags, usage: Buffer.STORAGE | Buffer.COPY_DST});
+  const outputFixture = createUint32VectorFixture(
+    device,
+    'atomic-input-output',
+    [new Uint32Array(2), new Uint32Array(2)],
+    0xffffffff
+  );
+  const countBuffer = device.createBuffer({
+    byteLength: Uint32Array.BYTES_PER_ELEMENT,
+    usage: Buffer.STORAGE | Buffer.COPY_SRC
+  });
+  const graph = new GPUCommandGraph(device, {id: 'atomic-input-output'});
+  const valuesHandle = graph.importBuffer(
+    {id: 'values', byteLength: valuesBuffer.byteLength, usage: valuesBuffer.usage},
+    valuesBuffer
+  );
+  const flagsHandle = graph.importBuffer(
+    {id: 'flags', byteLength: flagsBuffer.byteLength, usage: flagsBuffer.usage},
+    flagsBuffer
+  );
+  const output = graph.importGPUVector('output', outputFixture.vector);
+  const countHandle = graph.importBuffer(
+    {id: 'count', byteLength: countBuffer.byteLength, usage: countBuffer.usage},
+    countBuffer
+  );
+  graph.add(
+    new GPUCompaction({
+      input: graph.createDataView(valuesHandle, {format: 'uint32', length: values.length}),
+      flags: graph.createDataView(flagsHandle, {format: 'uint32', length: flags.length}),
+      output,
+      count: graph.createDataView(countHandle, {format: 'uint32', length: 1})
+    })
+  );
+  const compiled = graph.compile();
+  const commandEncoder = device.createCommandEncoder({id: 'atomic-input-output-encoder'});
+  compiled.encode(commandEncoder, {parameters: undefined});
+  device.submit(commandEncoder.finish());
+  const [outputChunks, countBytes] = await Promise.all([
+    readUint32VectorFixture(outputFixture),
+    countBuffer.readAsync()
+  ]);
+  expect(outputChunks).toEqual([
+    [20, 22],
+    [23, 0xffffffff]
+  ]);
+  expect(new Uint32Array(countBytes.buffer, countBytes.byteOffset, 1)[0]).toBe(3);
+
+  compiled.destroy();
+  valuesBuffer.destroy();
+  flagsBuffer.destroy();
+  destroyUint32VectorFixture(outputFixture);
+  countBuffer.destroy();
 });
 
 it('DrawCommandBuffer replays an indirect draw through a render bundle', async () => {
@@ -1479,12 +1589,18 @@ async function runVectorScan(
   chunks: Uint32Array[],
   options: {
     mode?: 'exclusive' | 'inclusive';
+    outputChunks?: Uint32Array[];
     segmentFlagChunks?: Uint32Array[];
     maxComputeWorkgroupsPerDimension?: number;
   } = {}
 ): Promise<{chunks: number[][]; nodeOrder: string[]}> {
   const inputFixture = createUint32VectorFixture(device, 'input', chunks);
-  const outputFixture = createUint32VectorFixture(device, 'output', chunks, 0);
+  const outputFixture = createUint32VectorFixture(
+    device,
+    'output',
+    options.outputChunks ?? chunks,
+    0
+  );
   const segmentFlagsFixture = options.segmentFlagChunks
     ? createUint32VectorFixture(device, 'segment-flags', options.segmentFlagChunks)
     : null;
@@ -1496,9 +1612,12 @@ async function runVectorScan(
     : undefined;
   const scan = new GPUScan({input, output, mode: options.mode, segmentFlags});
   if (options.maxComputeWorkgroupsPerDimension === undefined) {
-    scan.addToGraph(graph);
+    graph.add(scan);
   } else {
-    addGPUScanToGraphWithDispatchLimit(scan, graph, options.maxComputeWorkgroupsPerDimension);
+    addGPUCommandNodes(
+      graph,
+      getGPUScanCommandNodesWithDispatchLimit(scan, graph, options.maxComputeWorkgroupsPerDimension)
+    );
   }
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'vector-scan-encoder'});
@@ -1564,9 +1683,12 @@ async function runScan(
     : undefined;
   const scan = new GPUScan({input, output, mode: options.mode, segmentFlags});
   if (options.maxComputeWorkgroupsPerDimension === undefined) {
-    scan.addToGraph(graph);
+    graph.add(scan);
   } else {
-    addGPUScanToGraphWithDispatchLimit(scan, graph, options.maxComputeWorkgroupsPerDimension);
+    addGPUCommandNodes(
+      graph,
+      getGPUScanCommandNodesWithDispatchLimit(scan, graph, options.maxComputeWorkgroupsPerDimension)
+    );
   }
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'scan-variant-encoder'});
@@ -1600,7 +1722,8 @@ function getExpectedScan(
 async function runVectorCompaction(
   device: Device,
   valueChunks: Uint32Array[],
-  flagChunks: Uint32Array[]
+  flagChunks: Uint32Array[],
+  outputChunks: Uint32Array[] = valueChunks
 ): Promise<{
   chunks: number[][];
   count: number;
@@ -1609,7 +1732,7 @@ async function runVectorCompaction(
 }> {
   const valuesFixture = createUint32VectorFixture(device, 'values', valueChunks);
   const flagsFixture = createUint32VectorFixture(device, 'flags', flagChunks);
-  const outputFixture = createUint32VectorFixture(device, 'output', valueChunks, 0xffffffff);
+  const outputFixture = createUint32VectorFixture(device, 'output', outputChunks, 0xffffffff);
   const countBuffer = device.createBuffer({
     byteLength: Uint32Array.BYTES_PER_ELEMENT,
     usage: Buffer.STORAGE | Buffer.COPY_SRC
@@ -1623,7 +1746,7 @@ async function runVectorCompaction(
     countBuffer
   );
   const count = graph.createDataView(countHandle, {format: 'uint32', length: 1});
-  new GPUCompaction({input: values, flags, output, count}).addToGraph(graph);
+  graph.add(new GPUCompaction({input: values, flags, output, count}));
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'vector-compaction-encoder'});
   compiled.encode(commandEncoder, {parameters: undefined});
@@ -1743,12 +1866,14 @@ async function runCompaction(
     {id: 'count', byteLength: countBuffer.byteLength, usage: countBuffer.usage},
     countBuffer
   );
-  new GPUCompaction({
-    input: graph.createDataView(valuesHandle, {format: 'uint32', length: values.length}),
-    flags: graph.createDataView(flagsHandle, {format: 'uint32', length: flags.length}),
-    output: graph.createDataView(outputHandle, {format: 'uint32', length: values.length}),
-    count: graph.createDataView(countHandle, {format: 'uint32', length: 1})
-  }).addToGraph(graph);
+  graph.add(
+    new GPUCompaction({
+      input: graph.createDataView(valuesHandle, {format: 'uint32', length: values.length}),
+      flags: graph.createDataView(flagsHandle, {format: 'uint32', length: flags.length}),
+      output: graph.createDataView(outputHandle, {format: 'uint32', length: values.length}),
+      count: graph.createDataView(countHandle, {format: 'uint32', length: 1})
+    })
+  );
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: `compaction-${id}-encoder`});
   compiled.encode(commandEncoder, {parameters: undefined});

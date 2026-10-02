@@ -11,6 +11,8 @@ import {
 } from '@luma.gl/core';
 import {DynamicBuffer, type DynamicBufferProps} from '@luma.gl/engine';
 import {GPUData} from './gpu-data';
+import type {GPUVectorLike} from './gpu-vector-like';
+import {getGPUVectorChunks} from './gpu-vector-chunks';
 import {getGPUVectorFormatInfo, type GPUVectorFormat} from './gpu-vector-format';
 
 /** Buffer creation props used by format-specific producers before wrapping storage in a GPUVector. */
@@ -81,7 +83,7 @@ export type GPUVectorFromDataProps<T extends GPUVectorFormat = GPUVectorFormat> 
   /** Canonical memory-layout descriptor shared by every chunk. Defaults to the first chunk format. */
   format?: T;
   /** Existing GPU data chunks to expose through this vector. */
-  data: GPUData<T>[];
+  data: readonly GPUData<T>[];
   /** Number of scalar values represented by one fixed row or flattened element. */
   stride?: number;
   /** Number of fixed rows, fixed-list elements, or flattened variable-length values. */
@@ -139,7 +141,7 @@ export type GPUVectorCreateProps<T extends GPUVectorFormat = GPUVectorFormat> =
  * Format-specific modules upload bytes and use these vectors to expose shared
  * lifecycle, chunking, batching, and ownership semantics.
  */
-export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
+export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> implements GPUVectorLike<T> {
   /** Stable vector name. */
   readonly name: string;
   /** Optional adapter-owned metadata; core tables do not inspect this value. */
@@ -170,6 +172,10 @@ export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
   private ownsDataChunks = true;
   private readonly ownedVectors: GPUVector[] = [];
   private appendableByteLength = 0;
+
+  get chunks() {
+    return getGPUVectorChunks(this.data);
+  }
 
   constructor(props: GPUVectorCreateProps<T>) {
     switch (props.type) {
@@ -437,13 +443,15 @@ function getResolvedGPUVectorLayout<T extends GPUVectorFormat>(props: {
 }
 
 /** Returns the first chunk format using the vector's shared generic specialization. */
-function getFirstGPUVectorDataFormat<T extends GPUVectorFormat>(data: GPUData<T>[]): T | undefined {
+function getFirstGPUVectorDataFormat<T extends GPUVectorFormat>(
+  data: readonly GPUData<T>[]
+): T | undefined {
   // GPUVector validation guarantees that every chunk uses the vector's shared format T.
   return data[0]?.format as T | undefined;
 }
 
 function validateGPUVectorDataFormats<T extends GPUVectorFormat>(
-  data: GPUData<T>[],
+  data: readonly GPUData<T>[],
   format: T
 ): void {
   const mismatchedChunk = data.find(chunk => chunk.format !== format);

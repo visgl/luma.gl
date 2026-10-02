@@ -143,15 +143,17 @@ it('GPUConvolution validates views, capacity, aliasing, and graph ownership', ()
   const otherGraph = new GPUCommandGraph(makeSupportDevice());
   const otherOutput = makeView(otherGraph, 'other-output', 64);
   expect(() =>
-    new GPUConvolution({
-      input,
-      kernel,
-      output: otherOutput,
-      width: 8,
-      height: 8,
-      kernelWidth: 3,
-      kernelHeight: 3
-    }).addToGraph(graph)
+    graph.add(
+      new GPUConvolution({
+        input,
+        kernel,
+        output: otherOutput,
+        width: 8,
+        height: 8,
+        kernelWidth: 3,
+        kernelHeight: 3
+      })
+    )
   ).toThrow(/different GPUCommandGraph/);
 });
 
@@ -170,8 +172,14 @@ it('GPUConvolution generated direct, packing, and FFT shaders reflect', () => {
     kernelHeight: 3,
     boundary: 'wrap'
   });
-  const direct = getGPUConvolutionDirectShaderSource(convolution, {x: 1, y: 1, z: 1});
-  const pack = getGPUConvolutionPackShaderSource(convolution, {x: 1, y: 1, z: 1});
+  const direct = getGPUConvolutionDirectShaderSource(
+    {...convolution, input, kernel, output},
+    {x: 1, y: 1, z: 1}
+  );
+  const pack = getGPUConvolutionPackShaderSource(
+    {...convolution, input, kernel},
+    {x: 1, y: 1, z: 1}
+  );
   const complexInput = makeComplexView(graph, 'complex-input', 64);
   const complexOutput = makeComplexView(graph, 'complex-output', 64);
   const fft = getGPUConvolutionFFTShaderSource(
@@ -229,5 +237,5 @@ function makeSupportDevice(): Device {
       maxComputeWorkgroupSizeY: 256,
       maxComputeWorkgroupsPerDimension: 65_535
     }
-  } as Device;
+  } as unknown as Device;
 }

@@ -5,11 +5,7 @@
 import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {dggs} from '@luma.gl/shadertools';
-import {
-  GPUCommandGraph,
-  type GPUCommandGraphContributor,
-  type GraphDataView
-} from '../gpu-core/gpu-command-graph';
+import {GPUCommandGraph, type GraphDataView} from '../gpu-core/gpu-command-graph';
 import {
   getViewBinding,
   getViewElementOffset,
@@ -52,7 +48,7 @@ type NormalizedDGGSCellProjectionProps = Required<
  * Prefer the H3 and A5 subclasses when the family is known statically. This class is useful for
  * planners, benchmarks, and applications that select a supported grid at runtime.
  */
-export class GPUDGGSCellProjection implements GPUCommandGraphContributor {
+export class GPUDGGSCellProjection {
   readonly id: string;
   readonly family: DGGSCellFamily;
   readonly cells: GraphDataView<'uint32x2'>;

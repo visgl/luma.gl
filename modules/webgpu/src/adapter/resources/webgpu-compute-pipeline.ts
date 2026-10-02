@@ -14,12 +14,32 @@ import {
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUShader} from './webgpu-shader';
 
-const EMPTY_BIND_GROUPS: BindingsByGroup = {};
-
 // COMPUTE PIPELINE
 
 /** Creates a new compute pipeline when parameters change */
 export class WebGPUComputePipeline extends ComputePipeline {
+  /** Creates the native pipeline through WebGPU's asynchronous compilation entry point. */
+  static async createAsync(
+    device: WebGPUDevice,
+    props: ComputePipelineProps
+  ): Promise<WebGPUComputePipeline> {
+    if (props.handle) {
+      return new WebGPUComputePipeline(device, props);
+    }
+    const allProps: Required<ComputePipelineProps> = {...ComputePipeline.defaultProps, ...props};
+    const webgpuShader = allProps.shader as WebGPUShader;
+    const handle = await device.handle.createComputePipelineAsync({
+      label: allProps.id,
+      compute: {
+        module: webgpuShader.handle,
+        entryPoint: allProps.entryPoint,
+        constants: allProps.constants
+      },
+      layout: 'auto'
+    });
+    return new WebGPUComputePipeline(device, {...allProps, handle});
+  }
+
   readonly device: WebGPUDevice;
   readonly handle: GPUComputePipeline;
 
@@ -54,7 +74,8 @@ export class WebGPUComputePipeline extends ComputePipeline {
         layout: 'auto'
       });
 
-    this._bindingsByGroup = EMPTY_BIND_GROUPS;
+    // Each pipeline owns its mutable bindings; other pipelines may use per-dispatch bindings.
+    this._bindingsByGroup = {};
     this._bindGroupCacheKeysByGroup = {};
   }
 

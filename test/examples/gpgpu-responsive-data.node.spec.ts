@@ -18,6 +18,7 @@ const GEOGRAPHIC_QUERY_EFFECT_SOURCE_PATH = path.join(
   'modules/deck-gpu-layers/src/query/luspatial-geographic-point-query-effect.ts'
 );
 const TAXI_APP_SOURCE_PATH = path.join(process.cwd(), 'examples/deck/luspatial-taxi/app.ts');
+const TAXI_APP_UI_SOURCE_PATH = path.join(process.cwd(), 'examples/deck/luspatial-taxi/app-ui.ts');
 const ATLAS_APP_SOURCE_PATH = path.join(
   process.cwd(),
   'examples/showcase/billion-point-spatial-atlas/app.ts'
@@ -108,6 +109,7 @@ describe('responsive GPU data examples', () => {
   test('composes actual luProj projection with cancellable luSpatial graph execution', () => {
     const effectSource = readFileSync(GEOGRAPHIC_QUERY_EFFECT_SOURCE_PATH, 'utf8');
     const appSource = readFileSync(TAXI_APP_SOURCE_PATH, 'utf8');
+    const appUiSource = readFileSync(TAXI_APP_UI_SOURCE_PATH, 'utf8');
 
     expect(effectSource).toMatch(/from ['"]@luma\.gl\/experimental\/gpu-project['"]/);
     expect(effectSource).toMatch(/new GPUProjection\s*\(/);
@@ -116,7 +118,7 @@ describe('responsive GPU data examples', () => {
     expect(effectSource).toMatch(/if\s*\(!viewportBoundsChanged && !this\.queryInputsChanged\)/);
     expect(appSource).toMatch(/makeLuSpatialTaxiDataAsync\s*\(/);
     expect(appSource).toMatch(/generationController\.abort\(\)/);
-    expect(appSource).toMatch(/role="progressbar"/);
+    expect(appUiSource).toMatch(/role="progressbar"/);
     expect(appSource).toMatch(/map\.off\('error', handleBasemapError\)/);
   });
 

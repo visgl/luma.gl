@@ -4,12 +4,7 @@
 
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import type {
-  GPUCommandGraph,
-  GPUCommandGraphContributor,
-  GraphDataView,
-  GraphResourceUse
-} from '@luma.gl/gpgpu/gpu-core';
+import type {GPUCommandGraph, GraphDataView, GraphResourceUse} from '@luma.gl/gpgpu/gpu-core';
 import {getViewBinding, getViewElementOffset} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPURasterTileCache,
@@ -234,9 +229,7 @@ export class GPURasterTileHaloLease {
  * storage-binding limits. Raw scalar bits, source validity, nodata sentinels, and calibration
  * metadata remain untouched; downstream analytics apply source calibration exactly once.
  */
-export class GPURasterTileHaloFill<Format extends GPURasterScalarFormat = GPURasterScalarFormat>
-  implements GPUCommandGraphContributor
-{
+export class GPURasterTileHaloFill<Format extends GPURasterScalarFormat = GPURasterScalarFormat> {
   readonly id: string;
   readonly pixelBounds: GPURasterPixelBounds;
   readonly sources: readonly GPURasterTileHaloSource<Format>[];
@@ -335,9 +328,9 @@ export class GPURasterTileHaloFill<Format extends GPURasterScalarFormat = GPURas
 }
 
 /** Copies only an owned half-open processed core; padded halo pixels are never published. */
-export class GPURasterTileCoreExtract<Format extends GPURasterScalarFormat = GPURasterScalarFormat>
-  implements GPUCommandGraphContributor
-{
+export class GPURasterTileCoreExtract<
+  Format extends GPURasterScalarFormat = GPURasterScalarFormat
+> {
   readonly id: string;
   readonly availablePixelBounds: GPURasterPixelBounds;
   readonly corePixelBounds: GPURasterPixelBounds;

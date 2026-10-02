@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuGraph.
 
+import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import type {GPUCommandGraph, GraphBufferUse, GraphDataView} from '../gpu-core/gpu-command-graph';
@@ -12,7 +13,7 @@ import {
   getBoundedInvocationIndexSource
 } from '../gpu-core/gpu-dispatch-utils';
 import {GPUGridIndex} from '../gpu-core/gpu-grid-index';
-import {addGPUGridIndexToGraphWithDispatchLimit} from '../gpu-core/gpu-grid-index-internals';
+import {getGPUGridIndexCommandNodesWithDispatchLimit} from '../gpu-core/gpu-grid-index-internals';
 import {
   createTransientView,
   getViewBinding,
@@ -161,10 +162,13 @@ export function addGPUGraphSpatialForceLayoutToGraphWithDispatchLimit<Parameters
       count: state.count,
       overflow: state.overflow
     });
-    addGPUGridIndexToGraphWithDispatchLimit(
-      index,
+    addGPUCommandNodes(
       commandGraph,
-      state.maxComputeWorkgroupsPerDimension
+      getGPUGridIndexCommandNodesWithDispatchLimit(
+        index,
+        commandGraph,
+        state.maxComputeWorkgroupsPerDimension
+      )
     );
     addValidityPass(commandGraph, {state, iteration});
     addCellCenterPass(commandGraph, {state, iteration});

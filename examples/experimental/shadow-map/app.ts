@@ -28,6 +28,7 @@ import {
   makeHtmlCustomPanel,
   makeExampleTabbedPanel
 } from '../../example-panels';
+import {PCSS_BACKGROUND_HTML} from './app-ui';
 
 const NEAR_PLANE = 0.1;
 const FAR_PLANE = 150;
@@ -72,17 +73,6 @@ const DEFAULT_SETTINGS: ShadowMapSettings = {
   autoOrbitCamera: true
 };
 
-const PCSS_BACKGROUND_HTML = `
-<p><b>PCSS (Percentage-Closer Soft Shadows)</b> is a real-time shadow-map filtering technique that models a light source with area instead of treating it as a perfect point.</p>
-<p><b>Why it looks natural:</b> a caster close to its receiver makes a crisp shadow. As the separation grows, the penumbra widens and softens. PCSS estimates that relationship per shaded point instead of applying one uniform blur everywhere.</p>
-<p><b>How it works:</b></p>
-<ol>
-  <li><b>Blocker search:</b> sample the shadow map around the receiver to find occluders between the light and the surface, then estimate their average depth.</li>
-  <li><b>Variable filtering:</b> use the blocker-to-receiver separation and apparent light size to choose a filtering radius. Nearby blockers get a tight kernel; distant blockers get a wider one.</li>
-</ol>
-<p><b>Compared with PCF (Percentage-Closer Filtering):</b> ordinary PCF usually filters with a fixed-size kernel. PCSS adds the blocker search so softness changes across the shadow, producing widening penumbrae while still smoothing aliasing.</p>
-`;
-
 const sceneUniforms: ShaderModule<SceneUniforms> = {
   name: 'shadowMapScene',
   uniformTypes: {
@@ -98,93 +88,7 @@ const shadowCasterUniforms: ShaderModule<ShadowCasterUniforms> = {
   uniformTypes: {viewProjectionMatrix: 'mat4x4<f32>'}
 };
 
-const SCENE_SHADER = /* wgsl */ `
-struct ShadowMapSceneUniforms {
-  viewProjectionMatrix: mat4x4f,
-  viewMatrix: mat4x4f,
-  sunDirection: vec3f,
-  debugMode: f32,
-};
-@group(0) @binding(auto) var<uniform> shadowMapScene: ShadowMapSceneUniforms;
-
-struct VertexInputs {
-  @location(0) positions: vec3f,
-  @location(1) normals: vec3f,
-  @location(2) instancePositions: vec3f,
-  @location(3) instanceScales: vec3f,
-  @location(4) instanceColors: vec4f,
-};
-
-struct FragmentInputs {
-  @builtin(position) position: vec4f,
-  @location(0) worldPosition: vec3f,
-  @location(1) worldNormal: vec3f,
-  @location(2) viewPosition: vec3f,
-  @location(3) color: vec3f,
-};
-
-@vertex
-fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
-  let worldPosition = inputs.positions * inputs.instanceScales + inputs.instancePositions;
-  var output: FragmentInputs;
-  output.position = shadowMapScene.viewProjectionMatrix * vec4f(worldPosition, 1.0);
-  output.worldPosition = worldPosition;
-  output.worldNormal = normalize(inputs.normals);
-  output.viewPosition = (shadowMapScene.viewMatrix * vec4f(worldPosition, 1.0)).xyz;
-  output.color = inputs.instanceColors.rgb;
-  return output;
-}
-
-@fragment
-fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
-  let worldNormal = normalize(inputs.worldNormal);
-  let viewDepth = -inputs.viewPosition.z;
-  let visibility = shadow_getDirectionalFactor(inputs.worldPosition, worldNormal, viewDepth);
-  if (shadowMapScene.debugMode > 0.5 && shadowMapScene.debugMode < 1.5) {
-    return vec4f(vec3f(visibility), 1.0);
-  }
-  if (shadowMapScene.debugMode > 1.5) {
-    let colors = array<vec3f, 4>(
-      vec3f(0.16, 0.54, 1.0),
-      vec3f(0.18, 0.86, 0.42),
-      vec3f(1.0, 0.67, 0.12),
-      vec3f(1.0, 0.22, 0.33)
-    );
-    let cascadeIndex = clamp(shadow_getDirectionalCascadeIndex(viewDepth), 0, 3);
-    return vec4f(colors[cascadeIndex] * (0.32 + visibility * 0.68), 1.0);
-  }
-
-  let diffuse = max(dot(worldNormal, normalize(shadowMapScene.sunDirection)), 0.0);
-  let hemi = 0.07 + 0.09 * max(worldNormal.y, 0.0);
-  let direct = diffuse * visibility * 1.4;
-  let color = inputs.color * (hemi + direct);
-  let skyFill = vec3f(0.08, 0.11, 0.16) * max(worldNormal.y, 0.0);
-  let gammaCorrected = pow(color + skyFill, vec3f(1.0 / 2.2));
-  return vec4f(gammaCorrected, 1.0);
-}
-`;
-
-const SHADOW_CASTER_SHADER = /* wgsl */ `
-struct ShadowMapCasterUniforms {
-  viewProjectionMatrix: mat4x4f,
-};
-@group(0) @binding(auto) var<uniform> shadowMapCaster: ShadowMapCasterUniforms;
-
-struct VertexInputs {
-  @location(0) positions: vec3f,
-  @location(1) instancePositions: vec3f,
-  @location(2) instanceScales: vec3f,
-};
-
-@vertex
-fn vertexMain(inputs: VertexInputs) -> @builtin(position) vec4f {
-  let worldPosition = inputs.positions * inputs.instanceScales + inputs.instancePositions;
-  return shadowMapCaster.viewProjectionMatrix * vec4f(worldPosition, 1.0);
-}
-
-@fragment
-fn fragmentMain() {}
-`;
+const {SCENE_SHADER, SHADOW_CASTER_SHADER} = getShaderSources();
 
 /** One instanced scene keeps the quality comparison focused on shadow-map behavior. */
 class ShadowMapScene {
@@ -548,4 +452,96 @@ function getDebugMode(debugView: DebugView): number {
 function normalize3(vector: NumberArray3): NumberArray3 {
   const length = Math.hypot(vector[0], vector[1], vector[2]);
   return [vector[0] / length, vector[1] / length, vector[2] / length];
+}
+
+function getShaderSources() {
+  const SCENE_SHADER = /* wgsl */ `
+struct ShadowMapSceneUniforms {
+  viewProjectionMatrix: mat4x4f,
+  viewMatrix: mat4x4f,
+  sunDirection: vec3f,
+  debugMode: f32,
+};
+@group(0) @binding(auto) var<uniform> shadowMapScene: ShadowMapSceneUniforms;
+
+struct VertexInputs {
+  @location(0) positions: vec3f,
+  @location(1) normals: vec3f,
+  @location(2) instancePositions: vec3f,
+  @location(3) instanceScales: vec3f,
+  @location(4) instanceColors: vec4f,
+};
+
+struct FragmentInputs {
+  @builtin(position) position: vec4f,
+  @location(0) worldPosition: vec3f,
+  @location(1) worldNormal: vec3f,
+  @location(2) viewPosition: vec3f,
+  @location(3) color: vec3f,
+};
+
+@vertex
+fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+  let worldPosition = inputs.positions * inputs.instanceScales + inputs.instancePositions;
+  var output: FragmentInputs;
+  output.position = shadowMapScene.viewProjectionMatrix * vec4f(worldPosition, 1.0);
+  output.worldPosition = worldPosition;
+  output.worldNormal = normalize(inputs.normals);
+  output.viewPosition = (shadowMapScene.viewMatrix * vec4f(worldPosition, 1.0)).xyz;
+  output.color = inputs.instanceColors.rgb;
+  return output;
+}
+
+@fragment
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
+  let worldNormal = normalize(inputs.worldNormal);
+  let viewDepth = -inputs.viewPosition.z;
+  let visibility = shadow_getDirectionalFactor(inputs.worldPosition, worldNormal, viewDepth);
+  if (shadowMapScene.debugMode > 0.5 && shadowMapScene.debugMode < 1.5) {
+    return vec4f(vec3f(visibility), 1.0);
+  }
+  if (shadowMapScene.debugMode > 1.5) {
+    let colors = array<vec3f, 4>(
+      vec3f(0.16, 0.54, 1.0),
+      vec3f(0.18, 0.86, 0.42),
+      vec3f(1.0, 0.67, 0.12),
+      vec3f(1.0, 0.22, 0.33)
+    );
+    let cascadeIndex = clamp(shadow_getDirectionalCascadeIndex(viewDepth), 0, 3);
+    return vec4f(colors[cascadeIndex] * (0.32 + visibility * 0.68), 1.0);
+  }
+
+  let diffuse = max(dot(worldNormal, normalize(shadowMapScene.sunDirection)), 0.0);
+  let hemi = 0.07 + 0.09 * max(worldNormal.y, 0.0);
+  let direct = diffuse * visibility * 1.4;
+  let color = inputs.color * (hemi + direct);
+  let skyFill = vec3f(0.08, 0.11, 0.16) * max(worldNormal.y, 0.0);
+  let gammaCorrected = pow(color + skyFill, vec3f(1.0 / 2.2));
+  return vec4f(gammaCorrected, 1.0);
+}
+`;
+
+  const SHADOW_CASTER_SHADER = /* wgsl */ `
+struct ShadowMapCasterUniforms {
+  viewProjectionMatrix: mat4x4f,
+};
+@group(0) @binding(auto) var<uniform> shadowMapCaster: ShadowMapCasterUniforms;
+
+struct VertexInputs {
+  @location(0) positions: vec3f,
+  @location(1) instancePositions: vec3f,
+  @location(2) instanceScales: vec3f,
+};
+
+@vertex
+fn vertexMain(inputs: VertexInputs) -> @builtin(position) vec4f {
+  let worldPosition = inputs.positions * inputs.instanceScales + inputs.instancePositions;
+  return shadowMapCaster.viewProjectionMatrix * vec4f(worldPosition, 1.0);
+}
+
+@fragment
+fn fragmentMain() {}
+`;
+
+  return {SCENE_SHADER, SHADOW_CASTER_SHADER} as const;
 }

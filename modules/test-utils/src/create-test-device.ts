@@ -13,8 +13,6 @@ const DEFAULT_CANVAS_CONTEXT_PROPS: CanvasContextProps = {width: 1, height: 1};
 const TEST_DEVICE_CACHE_KEY = '__lumaTestDeviceCache';
 
 type TestDeviceCache = {
-  /** A null device intended for testing - @note Only available after getTestDevices() has completed */
-  nullDevicePromise: Promise<NullDevice> | null;
   /** This WebGL Device can be used directly but will not have WebGL debugging initialized */
   webglDevicePromise: Promise<WebGLDevice> | null;
   /** A shared offscreen WebGL device for presentation-context tests */
@@ -32,6 +30,9 @@ declare global {
 }
 
 const testDeviceCache = getOrCreateTestDeviceCache();
+// Unlike native devices, a null device is cheap to recreate. Keep it in the current module
+// graph so module resets cannot mix old resource classes with reloaded pipeline factories.
+let nullDevicePromise: Promise<NullDevice> | null = null;
 
 type LostAwareDevice = {
   isLost: boolean;
@@ -145,8 +146,8 @@ function getOrCreatePresentationWebGLTestDevicePromise(): Promise<WebGLDevice | 
 }
 
 function getOrCreateNullTestDevicePromise(): Promise<NullDevice> {
-  testDeviceCache.nullDevicePromise ||= makeNullTestDevice();
-  return testDeviceCache.nullDevicePromise;
+  nullDevicePromise ||= makeNullTestDevice();
+  return nullDevicePromise;
 }
 
 async function makeWebGPUTestDevice(
@@ -245,7 +246,7 @@ async function makeNullTestDevice(): Promise<NullDevice> {
   } catch (error) {
     log.error(String(error))();
     // @ts-ignore TODO
-    testDeviceCache.nullDevicePromise = Promise.resolve(null);
+    nullDevicePromise = Promise.resolve(null);
   }
   return nullDeviceResolvers.promise;
 }
@@ -270,7 +271,6 @@ function getOrCreateTestDeviceCache(): TestDeviceCache {
   };
 
   rootObject[TEST_DEVICE_CACHE_KEY] ||= {
-    nullDevicePromise: null,
     webglDevicePromise: null,
     presentationWebglDevicePromise: null,
     webgpuDevicePromises: {}

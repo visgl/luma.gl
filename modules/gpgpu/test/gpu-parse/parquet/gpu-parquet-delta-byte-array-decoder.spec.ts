@@ -48,6 +48,10 @@ it('GPUParquetDeltaByteArrayDecoder reconstructs prefix-compressed values', asyn
     byteLength: 16,
     usage: Buffer.STORAGE | Buffer.COPY_SRC
   });
+  const valueLengthsBuffer = device.createBuffer({
+    byteLength: 16,
+    usage: Buffer.STORAGE | Buffer.COPY_SRC
+  });
   const outputBuffer = device.createBuffer({
     byteLength: 16,
     usage: Buffer.STORAGE | Buffer.COPY_SRC
@@ -59,6 +63,7 @@ it('GPUParquetDeltaByteArrayDecoder reconstructs prefix-compressed values', asyn
   const prefixLengths = importView(graph, prefixLengthsBuffer, 'prefix-lengths', 4);
   const suffixLengths = importView(graph, suffixLengthsBuffer, 'suffix-lengths', 4);
   const valueOffsets = importView(graph, valueOffsetsBuffer, 'value-offsets', 4);
+  const valueLengths = importView(graph, valueLengthsBuffer, 'value-lengths', 4);
   const output = importView(graph, outputBuffer, 'output', 4);
   new GPUParquetDeltaByteArrayDecoder({
     input,
@@ -66,6 +71,7 @@ it('GPUParquetDeltaByteArrayDecoder reconstructs prefix-compressed values', asyn
     suffixMiniBlockDescriptors: suffixDescriptors,
     prefixLengths,
     suffixLengths,
+    valueLengths,
     valueOffsets,
     output,
     encodedByteLength: ENCODED.length,
@@ -86,10 +92,12 @@ it('GPUParquetDeltaByteArrayDecoder reconstructs prefix-compressed values', asyn
     const decodedPrefixLengths = await prefixLengthsBuffer.readAsync();
     const decodedSuffixLengths = await suffixLengthsBuffer.readAsync();
     const decodedValueOffsets = await valueOffsetsBuffer.readAsync();
+    const decodedValueLengths = await valueLengthsBuffer.readAsync();
     const decodedOutput = await outputBuffer.readAsync();
     expect(readUint32(decodedPrefixLengths, 4)).toEqual([0, 2, 3, 0]);
     expect(readUint32(decodedSuffixLengths, 4)).toEqual([3, 1, 4, 3]);
     expect(readUint32(decodedValueOffsets, 4)).toEqual([0, 3, 6, 13]);
+    expect(readUint32(decodedValueLengths, 4)).toEqual([3, 3, 7, 3]);
     expect(new TextDecoder().decode(decodedOutput)).toBe('catcarcartoondog');
   } finally {
     compiled.destroy();
@@ -99,6 +107,7 @@ it('GPUParquetDeltaByteArrayDecoder reconstructs prefix-compressed values', asyn
     prefixLengthsBuffer.destroy();
     suffixLengthsBuffer.destroy();
     valueOffsetsBuffer.destroy();
+    valueLengthsBuffer.destroy();
     outputBuffer.destroy();
   }
 });

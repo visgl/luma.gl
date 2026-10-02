@@ -56,7 +56,7 @@ it('GPUTranspose validates packed capacity, format, aliasing, and graph ownershi
   const input = graph.createDataView(inputHandle, {format: 'float32', length: 12});
   const output = graph.createDataView(outputHandle, {format: 'float32', length: 12});
   const transpose = new GPUTranspose({input, output, rows: 3, columns: 4});
-  expect(() => transpose.addToGraph(graph), 'valid transpose adds one graph node').not.toThrow();
+  expect(() => graph.add(transpose), 'valid transpose adds one graph node').not.toThrow();
 
   const shortOutput = graph.createDataView(outputHandle, {format: 'float32', length: 11});
   expect(() => new GPUTranspose({input, output: shortOutput, rows: 3, columns: 4})).toThrow(
@@ -91,7 +91,7 @@ it('GPUTranspose validates packed capacity, format, aliasing, and graph ownershi
   });
   const otherOutput = otherGraph.createDataView(otherHandle, {format: 'float32', length: 12});
   const crossGraphTranspose = new GPUTranspose({input, output: otherOutput, rows: 3, columns: 4});
-  expect(() => crossGraphTranspose.addToGraph(graph)).toThrow(/different GPUCommandGraph/);
+  expect(() => graph.add(crossGraphTranspose)).toThrow(/different GPUCommandGraph/);
 
   const emptyGraph = new GPUCommandGraph(makeSupportDevice());
   const emptyInputHandle = emptyGraph.importBuffer({
@@ -106,9 +106,7 @@ it('GPUTranspose validates packed capacity, format, aliasing, and graph ownershi
   });
   const emptyInput = emptyGraph.createDataView(emptyInputHandle, {format: 'uint32', length: 0});
   const emptyOutput = emptyGraph.createDataView(emptyOutputHandle, {format: 'uint32', length: 0});
-  new GPUTranspose({input: emptyInput, output: emptyOutput, rows: 0, columns: 7}).addToGraph(
-    emptyGraph
-  );
+  emptyGraph.add(new GPUTranspose({input: emptyInput, output: emptyOutput, rows: 0, columns: 7}));
   const compiledEmptyGraph = emptyGraph.compile();
   expect(compiledEmptyGraph.stats.nodeOrder.length, 'empty transpose adds no graph node').toBe(0);
   compiledEmptyGraph.destroy();
@@ -129,14 +127,14 @@ it('GPUTranspose shader uses padded workgroup tiles and bounded tile indexing', 
   const input = graph.createDataView(inputHandle, {format: 'sint32', length: 17 * 35});
   const output = graph.createDataView(outputHandle, {format: 'sint32', length: 17 * 35});
   const transpose = new GPUTranspose({input, output, rows: 17, columns: 35});
-  const source = getGPUTransposeShaderSource(transpose, {x: 6, y: 1, z: 1});
+  const source = getGPUTransposeShaderSource({...transpose, input, output}, {x: 6, y: 1, z: 1});
   const reflection = new WgslReflect(source);
 
   expect(
     reflection.entry.compute.map(entry => entry.name),
     'shader exposes one compute entry point'
   ).toEqual(['main']);
-  expect(source, 'tile is padded by one column').toMatch(/array<array<i32, 17>, 16>/);
+  expect(source, 'raw-word tile is padded by one column').toMatch(/array<array<u32, 17>, 16>/);
   expect(source, 'tile load is synchronized before writing').toMatch(/workgroupBarrier/);
   expect(source, 'partial bounded dispatch workgroups are guarded').toMatch(/tileIndex >= 6u/);
   expect(source, 'rectangular output stride uses rows').toMatch(

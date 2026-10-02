@@ -90,14 +90,14 @@ const index = new GPUGridIndex({
   overflow
 });
 
-index.addToGraph(graph);
+graph.add(index);
 ```
 
 Three-dimensional positions use `float32x3`, a three-component `gridSize`, and minima followed by
 maxima in `bounds`:
 
 ```ts
-new GPUGridIndex({
+graph.add(new GPUGridIndex({
   positions: particlePositions,
   gridSize: [32, 16, 32],
   bounds: [-100, -50, -100, 100, 50, 100],
@@ -105,7 +105,7 @@ new GPUGridIndex({
   objectIds,
   count,
   overflow
-}).addToGraph(graph);
+}));
 ```
 
 `cellOffsets.length` must equal `width * height + 1` or `width * height * depth + 1`.
@@ -114,3 +114,8 @@ new GPUGridIndex({
 
 The primitive records build work only. It does not submit commands, allocate persistent output,
 read results back, choose a cell size, grow capacity, or perform an exact spatial query.
+
+
+## Chunked storage
+
+Positions, optional source IDs, cell offsets, and object IDs accept independently partitioned vectors. Cell offsets and generated IDs use global logical indices, even when adjacent cell boundaries occupy different chunks. Count/cursor scratch follows cell chunks, and per-position rank scratch computes each destination once before scattering IDs into output chunks. The total accepted count is independent of destination capacity; overflow reports truncation. Counts and overflow remain atomic scalar views. Source data is never concatenated.

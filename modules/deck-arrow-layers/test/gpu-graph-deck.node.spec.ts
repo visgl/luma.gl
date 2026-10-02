@@ -26,6 +26,7 @@ import {
   makeGraphExplorerDataset
 } from '../../../examples/experimental/gpu-graph-explorer/graph-data';
 import {getExampleThumbnailPath} from '../../../website/src/example-thumbnails';
+import {getExampleSupportDefinition} from '../../../examples/example-support-registry';
 
 type ExampleContentsEntry = {
   type: string;
@@ -62,12 +63,12 @@ describe('optional GPU Graph deck.gl integration package isolation', () => {
   test('keeps deck.gl and GPU graph dependencies inside the existing private layers package', () => {
     const packageJson = JSON.parse(
       readFileSync(new URL('../package.json', import.meta.url), 'utf8')
-    ) as {private?: boolean; dependencies?: Record<string, string>};
+    ) as {private?: boolean; version?: string; dependencies?: Record<string, string>};
 
     expect(packageJson.private).toBe(true);
-    expect(packageJson.dependencies?.['@deck.gl/core']).toBe('9.3.4');
-    expect(packageJson.dependencies?.['@luma.gl/experimental']).toBe('9.4.0-alpha.4');
-    expect(packageJson.dependencies?.['@luma.gl/gpgpu']).toBe('9.4.0-alpha.4');
+    expect(packageJson.dependencies?.['@deck.gl/core']).toContain('9.4.0');
+    expect(packageJson.dependencies?.['@luma.gl/experimental']).toBe(packageJson.version);
+    expect(packageJson.dependencies?.['@luma.gl/gpgpu']).toBe(packageJson.version);
     expect(packageJson.dependencies?.['@luma.gl/tables']).toBeUndefined();
   });
 
@@ -180,10 +181,12 @@ describe('GPU Graph native deck.gl resident layers', () => {
   });
 
   test('renders accessible graph scale, truthful GPU diagnostics, and real analytic controls', () => {
-    const source = readFileSync(
-      new URL('../../../examples/deck/gpu-graph-explorer/app.ts', import.meta.url),
-      'utf8'
-    );
+    const source = [
+      '../../../examples/deck/gpu-graph-explorer/app.ts',
+      '../../../examples/deck/gpu-graph-explorer/app-ui.ts'
+    ]
+      .map(path => readFileSync(new URL(path, import.meta.url), 'utf8'))
+      .join('\n');
 
     for (const attribute of [
       'data-gpu-graph-size',
@@ -223,7 +226,7 @@ describe('GPU Graph native deck.gl resident layers', () => {
 
   test('disables exact and spatial layout controls at their actual execution boundaries', () => {
     const source = readFileSync(
-      new URL('../../../examples/deck/gpu-graph-explorer/app.ts', import.meta.url),
+      new URL('../../../examples/deck/gpu-graph-explorer/app-ui.ts', import.meta.url),
       'utf8'
     );
 
@@ -298,7 +301,9 @@ describe('optional GPU Graph deck.gl gallery and API guide', () => {
       .split(',')
       .map(topic => topic.trim());
 
-    expect(examplePage).toContain('backends: [webgpu]');
+    expect(getExampleSupportDefinition('deck/gpu-graph-explorer')?.requirements?.backends).toEqual([
+      'webgpu'
+    ]);
     expect(examplePage).toContain('<DeckGPUGraphExplorerExample />');
     expect(topics?.length).toBeGreaterThanOrEqual(2);
     expect(topics?.length).toBeLessThanOrEqual(5);

@@ -140,6 +140,8 @@ export abstract class CanvasSurface {
   protected destroyed = false;
   /** Whether the drawing buffer size needs to be resized (deferred resizing to avoid flicker) */
   protected _needsDrawingBufferResize: boolean = true;
+  /** Drawing buffer size the device was last configured for; subclass constructors configure at the initial canvas size */
+  protected _configuredDrawingBufferSize: [number, number] = [0, 0];
 
   abstract get [Symbol.toStringTag](): string;
 
@@ -182,6 +184,7 @@ export abstract class CanvasSurface {
     this.devicePixelHeight = this.canvas.height;
     this.drawingBufferWidth = this.canvas.width;
     this.drawingBufferHeight = this.canvas.height;
+    this._configuredDrawingBufferSize = [this.canvas.width, this.canvas.height];
     this.devicePixelRatio = globalThis.devicePixelRatio || 1;
     this._position = [0, 0];
     this._canvasObserver = new CanvasObserver({
@@ -435,13 +438,21 @@ export abstract class CanvasSurface {
   _resizeDrawingBufferIfNeeded() {
     if (this._needsDrawingBufferResize) {
       this._needsDrawingBufferResize = false;
-      const sizeChanged =
+      const canvasSizeChanged =
         this.drawingBufferWidth !== this.canvas.width ||
         this.drawingBufferHeight !== this.canvas.height;
-      if (sizeChanged) {
+      if (canvasSizeChanged) {
         this.canvas.width = this.drawingBufferWidth;
         this.canvas.height = this.drawingBufferHeight;
+      }
+      // The canvas owner may already have resized the canvas; the device still needs to follow.
+      const [configuredWidth, configuredHeight] = this._configuredDrawingBufferSize;
+      const configuredSizeChanged =
+        this.drawingBufferWidth !== configuredWidth ||
+        this.drawingBufferHeight !== configuredHeight;
+      if (configuredSizeChanged) {
         this._configureDevice();
+        this._configuredDrawingBufferSize = [this.drawingBufferWidth, this.drawingBufferHeight];
       }
     }
   }

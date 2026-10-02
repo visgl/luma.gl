@@ -54,13 +54,14 @@ The output is a distribution, not a prefix sum. Compose it with inclusive `GPUSc
 cumulative distribution, or reduce the bins to validate the accepted-row total.
 
 ```ts
-new GPUHistogram({input: values, output: counts, domain: 'auto'}).addToGraph(graph);
-
-new GPUHistogram({
-  input: durations,
-  output: latencyCounts,
-  edges: [0.00001, 0.0001, 0.001, 0.01, 0.1, 1, 10]
-}).addToGraph(graph);
+graph.add([
+  new GPUHistogram({input: values, output: counts, domain: 'auto'}),
+  new GPUHistogram({
+    input: durations,
+    output: latencyCounts,
+    edges: [0.00001, 0.0001, 0.001, 0.01, 0.1, 1, 10]
+  })
+]);
 ```
 
 ## Constructor
@@ -78,8 +79,8 @@ type GPUHistogramProps<T extends 'uint32' | 'sint32' | 'float32'> = {
 ```
 
 For a `GraphVectorView`, the histogram preserves the ordered input topology: it does not pack,
-concatenate, or rewrite chunks. The output is cleared once, then each non-empty `GraphDataView`
-chunk accumulates into the same bins in source order. Empty chunks add no accumulation pass.
+concatenate, or rewrite chunks. The output is cleared once, then each non-empty aligned `GraphDataView`
+span accumulates into the same bins in source order. Empty chunks add no accumulation pass.
 
 Explicit domains and edges accept interleaved scalar columns directly. Automatic domains require
 packed input because the inserted generic extent reduction currently consumes packed scalars.
@@ -98,3 +99,13 @@ On subgroup-capable devices, histograms with at most 16 bins combine lanes targe
 before updating workgroup memory. This replaces many contended local atomics with one update per
 represented bin and subgroup. Larger histograms and devices without both subgroup capabilities
 retain the existing paths automatically.
+
+## Batch selection
+
+An optional `uint32` mask selects rows by logical index: zero excludes a row and any nonzero
+value includes it. Input and mask must have equal logical lengths, but may use different chunk
+boundaries or mix a data view with a vector. Lowering creates borrowed slices at shared boundaries;
+it never concatenates or uploads input data. Empty chunks contribute no rows. The output is
+reinitialized on every encoding.
+
+See the [batch semantics contract](../../../api-guide/gpu/batch-semantics.md) for layout, alias, and empty-result rules.

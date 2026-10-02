@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import type {GPUBVHBoundsView} from './gpu-bvh';
 import type {GPUCommandGraph, GraphDataView} from './gpu-command-graph';
 import {getBoundedDispatchLayout, type GPUBoundedDispatchLayout} from './gpu-dispatch-utils';
@@ -158,21 +159,29 @@ export class GPUSegmentedBVH {
   }
 
   /** Records one CORE-compatible complete hierarchy pass for each occupied leaf-capacity bucket. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    addGPUSegmentedBVHToGraphWithDispatchLimit(
-      this,
-      graph,
-      graph.device.limits.maxComputeWorkgroupsPerDimension
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
+    nodes.push(
+      ...getGPUSegmentedBVHCommandNodesWithDispatchLimit(
+        this,
+        graph,
+        graph.device.limits.maxComputeWorkgroupsPerDimension
+      )
     );
+
+    return nodes;
   }
 }
 
 /** Adds packed hierarchy work while propagating a bounded 3D dispatch limit. @internal */
-export function addGPUSegmentedBVHToGraphWithDispatchLimit<Parameters>(
+export function getGPUSegmentedBVHCommandNodesWithDispatchLimit<Parameters>(
   hierarchy: GPUSegmentedBVH,
   graph: GPUCommandGraph<Parameters>,
   maxComputeWorkgroupsPerDimension: number
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   for (const view of [
     hierarchy.minima,
     hierarchy.maxima,
@@ -205,8 +214,18 @@ export function addGPUSegmentedBVHToGraphWithDispatchLimit<Parameters>(
   });
 
   for (const plan of plans) {
-    addHierarchyBucketPass(graph, hierarchy, plan.leafCapacity, plan.segments, plan.dispatchLayout);
+    nodes.push(
+      ...addHierarchyBucketPass(
+        graph,
+        hierarchy,
+        plan.leafCapacity,
+        plan.segments,
+        plan.dispatchLayout
+      )
+    );
   }
+
+  return nodes;
 }
 
 /** Validates and snapshots one hierarchy against its corresponding packed parent domains. */
@@ -333,7 +352,8 @@ function addHierarchyBucketPass<Parameters>(
   leafCapacity: number,
   segments: readonly GPUBVHSegment[],
   dispatchLayout: GPUBoundedDispatchLayout
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const descriptorSource = segments
     .map(
       segment =>
@@ -474,42 +494,51 @@ fn finite(value: f32) -> bool {
     outputCounts: hierarchy.counts,
     outputOverflows: hierarchy.overflows
   };
-  graph.addComputePass({
-    id: identifier,
-    resources: [
-      {buffer: hierarchy.minima, usage: 'storage-read'},
-      {buffer: hierarchy.maxima, usage: 'storage-read'},
-      {buffer: hierarchy.nodeMinima, usage: 'storage-write'},
-      {buffer: hierarchy.nodeMaxima, usage: 'storage-write'},
-      {buffer: hierarchy.nodeChildren, usage: 'storage-write'},
-      {buffer: hierarchy.leafIds, usage: 'storage-write'},
-      {buffer: hierarchy.counts, usage: 'storage-write'},
-      {buffer: hierarchy.overflows, usage: 'storage-write'}
-    ],
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: identifier,
-        source,
-        shaderLayout: {
-          bindings: Object.keys(bindingViews).map((name, location) => ({
-            name,
-            type: 'storage' as const,
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {};
-          for (const [name, view] of Object.entries(bindingViews)) {
-            bindings[name] = getViewBinding(view, getBuffer);
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: identifier,
+      resources: [
+        {buffer: hierarchy.minima, usage: 'storage-read'},
+        {buffer: hierarchy.maxima, usage: 'storage-read'},
+        {buffer: hierarchy.nodeMinima, usage: 'storage-write'},
+        {buffer: hierarchy.nodeMaxima, usage: 'storage-write'},
+        {buffer: hierarchy.nodeChildren, usage: 'storage-write'},
+        {buffer: hierarchy.leafIds, usage: 'storage-write'},
+        {buffer: hierarchy.counts, usage: 'storage-write'},
+        {buffer: hierarchy.overflows, usage: 'storage-write'}
+      ],
+      compile: ({device}) => {
+        const kernel = new Kernel(device, {
+          id: identifier,
+          source,
+          shaderLayout: {
+            bindings: Object.keys(bindingViews).map((name, location) => ({
+              name,
+              type: 'storage' as const,
+              group: 0,
+              location
+            }))
           }
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {};
+            for (const [name, view] of Object.entries(bindingViews)) {
+              bindings[name] = getViewBinding(view, getBuffer);
+            }
+
+            kernel.dispatch(computePass, {
+              bindings,
+              x: dispatchLayout.x,
+              y: dispatchLayout.y,
+              z: dispatchLayout.z
+            });
+          },
+          destroy: () => kernel.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }

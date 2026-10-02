@@ -672,16 +672,18 @@ export class GPUPagedSplatRenderer {
       this.addFeaturePass(graph, segment, depthKeys, drawCommandViews.buffer, semanticSelections);
     }
 
-    new GPUSort({
-      id: 'paged-gaussian-global-depth-sort',
-      keys: depthKeys,
-      values: sourceIndices,
-      outputKeys: sortedKeys,
-      outputValues: sortedIndices,
-      algorithm: 'radix',
-      direction: 'ascending',
-      keyBits: 16
-    }).addToGraph(graph);
+    graph.add(
+      new GPUSort({
+        id: 'paged-gaussian-global-depth-sort',
+        keys: depthKeys,
+        values: sourceIndices,
+        outputKeys: sortedKeys,
+        outputValues: sortedIndices,
+        algorithm: 'radix',
+        direction: 'ascending',
+        keyBits: 16
+      })
+    );
     this.addInversePermutationPass(graph, sortedIndices, inverseIndices);
 
     for (let segmentIndex = 0; segmentIndex < outputSegmentCount; segmentIndex++) {
@@ -1261,7 +1263,7 @@ fn main() {
       integerValues[29] =
         (hasFloatColor ? 1 : 0) | (this.props.lodOpacity ? 2 : 0) | (encodeLinearColor ? 4 : 0);
       integerValues[30] = segment.activeRows ? 1 : 0;
-      integerValues[31] = segment.sourceRowOffset - segment.sourceBindingRowOffset;
+      integerValues[31] = segment.sourceRowOffset;
       segment.uniformBuffer.write(new Uint8Array(uniformData));
 
       const featureData = new ArrayBuffer(GPU_SPLAT_GRAPH_FEATURE_UNIFORM_BYTE_LENGTH);

@@ -4,54 +4,12 @@
 
 import {Buffer} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, Swap, BufferTransform} from '@luma.gl/engine';
+import {TransformFeedbackInfoHtml} from './app-ui';
 
-const transformVs = /* glsl */ `\
-#version 300 es
-#define SIN2 0.03489949
-#define COS2 0.99939082
-
-mat2 rotation = mat2(
-  COS2, SIN2,
-  -SIN2, COS2
-);
-
-in vec2 oldPositions;
-out vec2 newPositions;
-
-void main() {
-  newPositions = rotation * oldPositions;
-}
-`;
-
-const renderVs = /* glsl */ `\
-#version 300 es
-
-in vec2 position;
-in vec3 color;
-out vec3 vColor;
-
-void main() {
-    vColor = color;
-    gl_Position = vec4(position, 0.0, 1.0);
-}
-`;
-
-const renderFs = /* glsl */ `\
-#version 300 es
-precision highp float;
-
-in vec3 vColor;
-out vec4 fragColor;
-
-void main() {
-    fragColor = vec4(vColor, 1.0);
-}
-`;
+const {transformVs, renderVs, renderFs} = getShaderSources();
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = `
-Animation via transform feedback.
-`;
+  static info = TransformFeedbackInfoHtml;
 
   transform: BufferTransform;
   model: Model;
@@ -115,4 +73,51 @@ Animation via transform feedback.
     this.model.draw(renderPass);
     renderPass.end();
   }
+}
+
+function getShaderSources() {
+  const transformVs = /* glsl */ `\
+#version 300 es
+#define SIN2 0.03489949
+#define COS2 0.99939082
+
+mat2 rotation = mat2(
+  COS2, SIN2,
+  -SIN2, COS2
+);
+
+in vec2 oldPositions;
+out vec2 newPositions;
+
+void main() {
+  newPositions = rotation * oldPositions;
+}
+`;
+
+  const renderVs = /* glsl */ `\
+#version 300 es
+
+in vec2 position;
+in vec3 color;
+out vec3 vColor;
+
+void main() {
+    vColor = color;
+    gl_Position = vec4(position, 0.0, 1.0);
+}
+`;
+
+  const renderFs = /* glsl */ `\
+#version 300 es
+precision highp float;
+
+in vec3 vColor;
+out vec4 fragColor;
+
+void main() {
+    fragColor = vec4(vColor, 1.0);
+}
+`;
+
+  return {transformVs, renderVs, renderFs} as const;
 }

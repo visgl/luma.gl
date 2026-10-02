@@ -6,6 +6,8 @@ import {useDoc} from '@docusaurus/plugin-content-docs/client';
 import Heading from '@theme/Heading';
 import MDXComponents from '@theme/MDXComponents';
 import {MarkdownTable} from '../../../components/docs/markdown-table';
+import {ExampleSupportProvider} from '../../../react-luma/example-support-context';
+import {getExampleSupportDefinition} from '../../../../../examples/example-support-registry';
 
 type DocItemContentProps = {
   children: ReactNode;
@@ -40,7 +42,10 @@ function DocsMDXContent({children}: DocItemContentProps): ReactNode {
  * Renders doc markdown with luma.gl docs presentation components.
  */
 export default function DocItemContent({children}: DocItemContentProps): ReactNode {
+  const {metadata} = useDoc();
   const syntheticTitle = useSyntheticTitle();
+  const supportDefinition = getExampleSupportDefinition(metadata.id);
+  const content = <DocsMDXContent>{children}</DocsMDXContent>;
 
   return (
     <div className={clsx(ThemeClassNames.docs.docMarkdown, 'markdown')}>
@@ -49,7 +54,11 @@ export default function DocItemContent({children}: DocItemContentProps): ReactNo
           <Heading as="h1">{syntheticTitle}</Heading>
         </header>
       )}
-      <DocsMDXContent>{children}</DocsMDXContent>
+      {supportDefinition ? (
+        <ExampleSupportProvider id={metadata.id}>{content}</ExampleSupportProvider>
+      ) : (
+        content
+      )}
     </div>
   );
 }

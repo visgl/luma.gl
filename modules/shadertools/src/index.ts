@@ -63,7 +63,6 @@ export {
 export {getShaderModuleSource} from './lib/shader-assembly/assemble-shaders';
 
 export {resolveModules as _resolveModules} from './lib/shader-module/shader-module-dependencies';
-export {getDependencyGraph as _getDependencyGraph} from './lib/shader-module/shader-module-dependencies';
 
 // ShaderAssembler
 export {ShaderAssembler, GLSLShaderAssembler, WGSLShaderAssembler} from './lib/shader-assembler';
@@ -100,6 +99,13 @@ export {
   normalizeByteColor4,
   resolveUseByteColors
 } from './lib/color/normalize-byte-colors';
+
+export {sketchStroke, type SketchStrokeProps} from './modules/geometry/sketch-stroke/sketch-stroke';
+export {
+  pathDash,
+  type PathDashProps,
+  type PathDashUniforms
+} from './modules/geometry/path-dash/path-dash';
 
 // math libraries
 export {random} from './modules/math/random/random';
@@ -174,6 +180,11 @@ export type {
 } from './modules/lighting/water-material/water-material';
 export {waterMaterial} from './modules/lighting/water-material/water-material';
 export type {
+  RiverWaterMaterialProps,
+  RiverWaterMaterialUniforms
+} from './modules/lighting/water-material/river-water-material';
+export {riverWaterMaterial} from './modules/lighting/water-material/river-water-material';
+export type {
   PBRMaterialBindings,
   PBRMaterialProps,
   PBRMaterialUniforms
@@ -188,3 +199,23 @@ export type {PBRProjectionProps} from './modules/lighting/pbr-material/pbr-proje
 
 export {pbrMaterial} from './modules/lighting/pbr-material/pbr-material';
 export {pbrScene, PBR_TONE_MAP_MODE} from './modules/lighting/pbr-material/pbr-scene';
+
+export {heightFog} from './modules/lighting/height-fog/height-fog';
+export {heightFogFunctions} from './modules/lighting/height-fog/height-fog-functions';
+export type {HeightFogProps, HeightFogUniforms} from './modules/lighting/height-fog/height-fog';
+export {
+  patternFill,
+  type PatternFillProps,
+  type PatternFillUniforms
+} from './modules/geometry/pattern-fill/pattern-fill';
+export {
+  pointGlow,
+  type PointGlowProps,
+  type PointGlowUniforms
+} from './modules/geometry/point-glow/point-glow';
+
+export {precipitation} from './modules/geometry/precipitation/precipitation';
+export type {
+  PrecipitationProps,
+  PrecipitationUniforms
+} from './modules/geometry/precipitation/precipitation';

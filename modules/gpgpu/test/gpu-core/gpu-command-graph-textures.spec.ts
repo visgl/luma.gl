@@ -12,7 +12,7 @@ import {
   type Framebuffer,
   type SamplerProps
 } from '@luma.gl/core';
-import {Computation, Model} from '@luma.gl/engine';
+import {Kernel, Model} from '@luma.gl/engine';
 import {
   decodeGPUIndexPickInfo,
   decodeGPUIndexPickRegion,
@@ -827,7 +827,7 @@ it('GPUCommandGraph composes storage texture output with sampled rendering', asy
     id: 'write-storage',
     resources: [{texture: storageView, usage: 'storage-write'}],
     compile: ({device: compileDevice}) => {
-      const computation = new Computation(compileDevice, {
+      const kernel = new Kernel(compileDevice, {
         id: 'write-storage-computation',
         source: `@group(0) @binding(0) var image: texture_storage_2d<rgba8unorm, write>;
 @compute @workgroup_size(1) fn main(@builtin(global_invocation_id) id: vec3<u32>) {
@@ -848,10 +848,14 @@ it('GPUCommandGraph composes storage texture output with sampled rendering', asy
       });
       return {
         encode: ({computePass, getTextureView}) => {
-          computation.setBindings({image: getTextureView(storageView)});
-          computation.dispatch(computePass, 4, 4, 1);
+          kernel.dispatch(computePass, {
+            bindings: {image: getTextureView(storageView)},
+            x: 4,
+            y: 4,
+            z: 1
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

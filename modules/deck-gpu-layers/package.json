@@ -1,9 +1,13 @@
 {
   "name": "@deck.gl-community/gpu-layers",
-  "version": "9.4.0-alpha.4",
+  "version": "10.0.0-alpha.2",
   "private": true,
   "description": "deck.gl layers using the WebGPU-only GPU compute graph",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/visgl/luma.gl"
+  },
   "type": "module",
   "types": "dist/index.d.ts",
   "main": "dist/index.cjs",
@@ -27,12 +31,16 @@
   ],
   "sideEffects": false,
   "dependencies": {
-    "@deck.gl/core": "9.3.4",
-    "@luma.gl/core": "9.4.0-alpha.4",
-    "@luma.gl/engine": "9.4.0-alpha.4",
-    "@luma.gl/experimental": "9.4.0-alpha.4",
-    "@luma.gl/gpgpu": "9.4.0-alpha.4",
-    "@luma.gl/shadertools": "9.4.0-alpha.4",
-    "@luma.gl/text": "9.4.0-alpha.4"
+    "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch",
+    "@luma.gl/core": "10.0.0-alpha.2",
+    "@luma.gl/engine": "10.0.0-alpha.2",
+    "@luma.gl/experimental": "10.0.0-alpha.2",
+    "@luma.gl/gpgpu": "10.0.0-alpha.2",
+    "@luma.gl/shadertools": "10.0.0-alpha.2",
+    "@luma.gl/text": "10.0.0-alpha.2",
+    "@math.gl/core": "^4.1.0"
+  },
+  "devDependencies": {
+    "@deck.gl/layers": "9.4.0"
   }
 }

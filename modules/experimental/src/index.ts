@@ -291,6 +291,5 @@ export {FlatController, RectangleSelectController} from './controls/flat-control
 export * from './webxr/index';
 
 export {GPUGridIndex, GraphVectorView} from '@luma.gl/gpgpu/gpu-core';
-export type {GPUCommandGraphContributor} from '@luma.gl/gpgpu/gpu-core';
 
 export * from './simulation/index';

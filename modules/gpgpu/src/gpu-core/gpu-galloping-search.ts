@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {
   GPUCommandGraph,
-  type GPUCommandGraphContributor,
   type GraphBufferUse,
-  type GraphDataView
+  type GraphDataView,
+  GraphVectorView
 } from './gpu-command-graph';
 import {
   getBoundedDispatchLayout,
@@ -21,6 +22,10 @@ import {
   validatePackedUint32View,
   validatePackedView
 } from './graph-data-view-utils';
+
+import {getGraphVectorData} from './graph-vector-view-utils';
+import {validateChunkViews} from './gpu-chunk-utils';
+import {getChunkedGallopingSearchNodes} from './gpu-galloping-search-chunks';
 
 const GALLOPING_SEARCH_WORKGROUP_SIZE = 64;
 const DEFAULT_QUERIES_PER_TILE = 32;
@@ -46,19 +51,19 @@ export type GPUGallopingSearchProps<
   /** Prefix for generated graph nodes. */
   id?: string;
   /** Packed values sorted in ascending order within each declared value segment. */
-  values: GraphDataView<Format>;
+  values: GraphDataView<Format> | GraphVectorView<Format>;
   /** Optional packed sorted row indices into values. Segment value ranges then address this view. */
-  valueOrder?: GraphDataView<'uint32'>;
+  valueOrder?: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Packed queries, normally sorted in ascending order within each query segment. */
-  queries: GraphDataView<Format>;
+  queries: GraphDataView<Format> | GraphVectorView<Format>;
   /** Packed `[valueOffset, valueCount, queryOffset, queryCount]` records. */
-  segments: GraphDataView<'uint32'>;
+  segments: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Largest query count reserved by any segment. */
   maximumQueryCount: number;
   /** Consecutive queries handled by one shader invocation. Defaults to 32. */
   queriesPerTile?: number;
   /** Packed lower-bound positions addressed like the query view. */
-  output: GraphDataView<'uint32'>;
+  output: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** One persistent validation word populated by malformed GPU-visible inputs. */
   validationErrors: GraphDataView<'uint32'>;
   /** Preserve existing validation bits instead of clearing them before this operation. */
@@ -89,15 +94,15 @@ export type GPUGallopingSearchStats = {
  * Segment/tile pairs run independently, retaining parallel GPU work while exploiting ordered-query
  * locality. Output positions are absolute indices relative to the supplied value view.
  */
-export class GPUGallopingSearch<Format extends GPUGallopingSearchFormat = GPUGallopingSearchFormat>
-  implements GPUCommandGraphContributor
-{
+export class GPUGallopingSearch<
+  Format extends GPUGallopingSearchFormat = GPUGallopingSearchFormat
+> {
   readonly id: string;
-  readonly values: GraphDataView<Format>;
-  readonly valueOrder?: GraphDataView<'uint32'>;
-  readonly queries: GraphDataView<Format>;
-  readonly segments: GraphDataView<'uint32'>;
-  readonly output: GraphDataView<'uint32'>;
+  readonly values: GraphDataView<Format> | GraphVectorView<Format>;
+  readonly valueOrder?: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
+  readonly queries: GraphDataView<Format> | GraphVectorView<Format>;
+  readonly segments: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
+  readonly output: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   readonly validationErrors: GraphDataView<'uint32'>;
   readonly preserveValidationErrors: boolean;
   readonly stats: Readonly<GPUGallopingSearchStats>;
@@ -112,13 +117,18 @@ export class GPUGallopingSearch<Format extends GPUGallopingSearchFormat = GPUGal
     this.validationErrors = props.validationErrors;
     this.preserveValidationErrors = props.preserveValidationErrors ?? false;
 
-    validateScalarValueView(this.values, `${this.id} values`);
+    for (const chunk of getGraphVectorData(this.values))
+      validateScalarValueView(chunk, `${this.id} values`);
     if (this.valueOrder) {
-      validatePackedUint32View(this.valueOrder, `${this.id} valueOrder`);
+      for (const chunk of getGraphVectorData(this.valueOrder))
+        validatePackedUint32View(chunk, `${this.id} valueOrder`);
     }
-    validatePackedView(this.queries, ['float32', 'uint32'], `${this.id} queries`);
-    validatePackedUint32View(this.segments, `${this.id} segments`);
-    validatePackedUint32View(this.output, `${this.id} output`);
+    for (const chunk of getGraphVectorData(this.queries))
+      validatePackedView(chunk, ['float32', 'uint32'], `${this.id} queries`);
+    for (const chunk of getGraphVectorData(this.segments))
+      validatePackedUint32View(chunk, `${this.id} segments`);
+    for (const chunk of getGraphVectorData(this.output))
+      validatePackedUint32View(chunk, `${this.id} output`);
     validatePackedUint32View(this.validationErrors, `${this.id} validationErrors`);
     if (this.values.format !== this.queries.format) {
       throw new Error(`${this.id} values and queries must have matching scalar formats`);
@@ -132,7 +142,11 @@ export class GPUGallopingSearch<Format extends GPUGallopingSearchFormat = GPUGal
     if (this.validationErrors.length !== 1) {
       throw new Error(`${this.id} validationErrors must contain one uint32`);
     }
-    if (!Number.isSafeInteger(props.maximumQueryCount) || props.maximumQueryCount < 0) {
+    if (
+      !Number.isSafeInteger(props.maximumQueryCount) ||
+      props.maximumQueryCount < 0 ||
+      props.maximumQueryCount > 0xffffffff
+    ) {
       throw new Error(`${this.id} maximumQueryCount must be a non-negative safe integer`);
     }
     const queriesPerTile = props.queriesPerTile ?? DEFAULT_QUERIES_PER_TILE;
@@ -145,16 +159,22 @@ export class GPUGallopingSearch<Format extends GPUGallopingSearchFormat = GPUGal
         `${this.id} queriesPerTile must be an integer from 1 through ${MAXIMUM_QUERIES_PER_TILE}`
       );
     }
-    const sources = [
+    const sources: (GraphDataView | GraphVectorView)[] = [
       this.values,
       ...(this.valueOrder ? [this.valueOrder] : []),
       this.queries,
       this.segments
     ];
     if (
-      sources.some(view => view.buffer === this.output.buffer) ||
-      sources.some(view => view.buffer === this.validationErrors.buffer) ||
-      this.output.buffer === this.validationErrors.buffer
+      sources
+        .flatMap(getGraphVectorData)
+        .some(view =>
+          getGraphVectorData(this.output).some(output => view.buffer === output.buffer)
+        ) ||
+      sources
+        .flatMap(getGraphVectorData)
+        .some(view => view.buffer === this.validationErrors.buffer) ||
+      getGraphVectorData(this.output).some(output => output.buffer === this.validationErrors.buffer)
     ) {
       throw new Error(`${this.id} sources, output, and validationErrors must use separate buffers`);
     }
@@ -172,25 +192,31 @@ export class GPUGallopingSearch<Format extends GPUGallopingSearchFormat = GPUGal
   }
 
   /** Adds optional validation reset and one tiled search pass to a caller-owned graph. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    for (const view of [
-      this.values,
-      ...(this.valueOrder ? [this.valueOrder] : []),
-      this.queries,
-      this.segments,
-      this.output,
-      this.validationErrors
-    ]) {
-      if (view.buffer.graph !== graph) {
-        throw new Error(`${this.id} views must belong to the target graph`);
-      }
-    }
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
+    validateChunkViews(
+      graph,
+      [this.values, this.queries, this.segments, ...(this.valueOrder ? [this.valueOrder] : [])],
+      [this.output, this.validationErrors]
+    );
     if (!this.preserveValidationErrors) {
-      addValidationClearPass(graph, this.id, this.validationErrors);
+      nodes.push(...addValidationClearPass(graph, this.id, this.validationErrors));
     }
     if (this.stats.maximumSearchCount > 0) {
-      addSearchPass(graph, this);
+      if (
+        [this.values, this.valueOrder, this.queries, this.segments, this.output].some(
+          view => view instanceof GraphVectorView
+        )
+      ) {
+        nodes.push(...getChunkedGallopingSearchNodes(graph, this));
+      } else {
+        nodes.push(...addSearchPass(graph, this as AtomicGallopingSearch<Format>));
+      }
     }
+
+    return nodes;
   }
 }
 
@@ -198,43 +224,51 @@ function addValidationClearPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   id: string,
   validationErrors: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const source = /* wgsl */ `
 const ERROR_OFFSET: u32 = ${getViewElementOffset(validationErrors)}u;
 @group(0) @binding(0) var<storage, read_write> errors: array<u32>;
 @compute @workgroup_size(1) fn main() { errors[ERROR_OFFSET] = 0u; }`;
-  graph.addComputePass({
-    id: `${id}-clear-validation`,
-    resources: [{buffer: validationErrors, usage: 'storage-write'}],
-    workload: {
-      operation: 'GPUGallopingSearch',
-      commandCount: 1,
-      maximumWorkgroupCount: 1,
-      maximumInvocationCount: 1
-    },
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: `${id}-clear-validation`,
-        source,
-        shaderLayout: {
-          bindings: [{name: 'errors', type: 'storage', group: 0, location: 0}]
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          computation.setBindings({errors: getViewBinding(validationErrors, getBuffer)});
-          computation.dispatch(computePass, 1);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: `${id}-clear-validation`,
+      resources: [{buffer: validationErrors, usage: 'storage-write'}],
+      workload: {
+        operation: 'GPUGallopingSearch',
+        commandCount: 1,
+        maximumWorkgroupCount: 1,
+        maximumInvocationCount: 1
+      },
+      compile: ({device}) => {
+        const kernel = new Kernel(device, {
+          id: `${id}-clear-validation`,
+          source,
+          shaderLayout: {
+            bindings: [{name: 'errors', type: 'storage', group: 0, location: 0}]
+          }
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            kernel.dispatch(computePass, {
+              bindings: {errors: getViewBinding(validationErrors, getBuffer)},
+              x: 1
+            });
+          },
+          destroy: () => kernel.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 function addSearchPass<Parameters, Format extends GPUGallopingSearchFormat>(
   graph: GPUCommandGraph<Parameters>,
-  search: GPUGallopingSearch<Format>
-): void {
+  search: AtomicGallopingSearch<Format>
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const tilesPerSegment = Math.ceil(search.stats.maximumQueryCount / search.stats.queriesPerTile);
   const dispatchLayout = getBoundedDispatchLayout(
     search.id,
@@ -257,7 +291,7 @@ function addSearchPass<Parameters, Format extends GPUGallopingSearchFormat>(
     : 'return values[VALUE_OFFSET + position * VALUE_STRIDE];';
   const finiteQuery =
     search.values.format === 'float32'
-      ? 'searchValue == searchValue && abs(searchValue) <= 3.402823466e+38'
+      ? '(bitcast<u32>(searchValue) & 0x7f800000u) != 0x7f800000u'
       : 'true';
   const source = /* wgsl */ `
 const VALUE_COUNT: u32 = ${search.stats.orderedValueCount}u;
@@ -371,15 +405,18 @@ fn gallopForward(segmentEnd: u32, position: u32, searchValue: ${scalarType}) -> 
     searchValue = nextSearchValue;
   }
 }`;
-  addSearchComputationPass(graph, search, source, dispatchLayout);
+  nodes.push(...addSearchKernelPass(graph, search, source, dispatchLayout));
+
+  return nodes;
 }
 
-function addSearchComputationPass<Parameters, Format extends GPUGallopingSearchFormat>(
+function addSearchKernelPass<Parameters, Format extends GPUGallopingSearchFormat>(
   graph: GPUCommandGraph<Parameters>,
-  search: GPUGallopingSearch<Format>,
+  search: AtomicGallopingSearch<Format>,
   source: string,
   dispatchLayout: GPUBoundedDispatchLayout
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const bindings = {
     values: search.values,
     ...(search.valueOrder ? {valueOrder: search.valueOrder} : {}),
@@ -396,42 +433,51 @@ function addSearchComputationPass<Parameters, Format extends GPUGallopingSearchF
     {buffer: search.output, usage: 'storage-write'},
     {buffer: search.validationErrors, usage: 'storage-read-write'}
   ];
-  graph.addComputePass({
-    id: `${search.id}-query`,
-    resources,
-    workload: {
-      operation: 'GPUGallopingSearch',
-      commandCount: 1,
-      maximumWorkgroupCount: dispatchLayout.x * dispatchLayout.y * dispatchLayout.z,
-      maximumInvocationCount:
-        dispatchLayout.x * dispatchLayout.y * dispatchLayout.z * GALLOPING_SEARCH_WORKGROUP_SIZE
-    },
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: `${search.id}-query`,
-        source,
-        shaderLayout: {
-          bindings: Object.keys(bindings).map((name, location) => ({
-            name,
-            type: 'storage' as const,
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const resolvedBindings: Record<string, Binding> = {};
-          for (const [name, view] of Object.entries(bindings)) {
-            resolvedBindings[name] = getViewBinding(view, getBuffer);
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: `${search.id}-query`,
+      resources,
+      workload: {
+        operation: 'GPUGallopingSearch',
+        commandCount: 1,
+        maximumWorkgroupCount: dispatchLayout.x * dispatchLayout.y * dispatchLayout.z,
+        maximumInvocationCount:
+          dispatchLayout.x * dispatchLayout.y * dispatchLayout.z * GALLOPING_SEARCH_WORKGROUP_SIZE
+      },
+      compile: ({device}) => {
+        const kernel = new Kernel(device, {
+          id: `${search.id}-query`,
+          source,
+          shaderLayout: {
+            bindings: Object.keys(bindings).map((name, location) => ({
+              name,
+              type: 'storage' as const,
+              group: 0,
+              location
+            }))
           }
-          computation.setBindings(resolvedBindings);
-          computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const resolvedBindings: Record<string, Binding> = {};
+            for (const [name, view] of Object.entries(bindings)) {
+              resolvedBindings[name] = getViewBinding(view, getBuffer);
+            }
+
+            kernel.dispatch(computePass, {
+              bindings: resolvedBindings,
+              x: dispatchLayout.x,
+              y: dispatchLayout.y,
+              z: dispatchLayout.z
+            });
+          },
+          destroy: () => kernel.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 function validateScalarValueView(
@@ -448,3 +494,14 @@ function validateScalarValueView(
     throw new Error(`${name} must be uint32-aligned scalar GPU data`);
   }
 }
+
+type AtomicGallopingSearch<Format extends GPUGallopingSearchFormat> = Omit<
+  GPUGallopingSearch<Format>,
+  'values' | 'valueOrder' | 'queries' | 'segments' | 'output'
+> & {
+  values: GraphDataView<Format>;
+  valueOrder?: GraphDataView<'uint32'>;
+  queries: GraphDataView<Format>;
+  segments: GraphDataView<'uint32'>;
+  output: GraphDataView<'uint32'>;
+};

@@ -164,6 +164,7 @@ export default class GPUTraceSceneAnimationLoopTemplate extends AnimationLoopTem
   override async onInitialize({canvas}: AnimationProps): Promise<void> {
     if (canvas instanceof HTMLCanvasElement) {
       this.canvas = canvas;
+      canvas.style.touchAction = 'none';
       canvas.addEventListener('click', this.handleClick);
       canvas.addEventListener('wheel', this.handleWheel, {passive: false});
     }
@@ -308,20 +309,22 @@ export default class GPUTraceSceneAnimationLoopTemplate extends AnimationLoopTem
     const groupCounts = makeUint32('group-counts', new Uint32Array(dataset.groups.length));
     const groupOverflows = makeUint32('group-overflows', new Uint32Array(dataset.groups.length));
     const groupOverflow = makeUint32('group-overflow', new Uint32Array(1));
-    new GPUSceneResourceGroups({
-      id: 'scene-trace-resource-groups',
-      scene: source.scene,
-      commands: commandViews,
-      groups: dataset.groups.map(group => ({
-        id: group.groupIndex,
-        firstCommand: group.firstSpanIndex,
-        commandCount: group.count,
-        geometryId: 0
-      })),
-      counts: groupCounts.view,
-      overflows: groupOverflows.view,
-      overflow: groupOverflow.view
-    }).addToGraph(graph);
+    graph.add(
+      new GPUSceneResourceGroups({
+        id: 'scene-trace-resource-groups',
+        scene: source.scene,
+        commands: commandViews,
+        groups: dataset.groups.map(group => ({
+          id: group.groupIndex,
+          firstCommand: group.firstSpanIndex,
+          commandCount: group.count,
+          geometryId: 0
+        })),
+        counts: groupCounts.view,
+        overflows: groupOverflows.view,
+        overflow: groupOverflow.view
+      })
+    );
 
     const pickRequest = makeUint32('pick-request', new Uint32Array(4));
     const pickResult = makeUint32('pick-result', Uint32Array.of(TRACE_INVALID_SPAN_INDEX));

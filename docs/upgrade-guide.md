@@ -12,59 +12,37 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ## Upgrading to v10.0
 
+**@luma.gl/gpgpu**
+
+### GPUFFT2D graph lifecycle
+
+`GPUFFT2D` now takes `{input, output, width, height, batchCount?, direction?}` graph views.
+Replace `new GPUFFT2D(device, dimensions)` and `transform.encode(encoder, buffers)` with
+`graph.add(new GPUFFT2D(props))`, `graph.compile()`, and `compiled.encode(encoder, {parameters: undefined})`.
+Destroy the compiled graph instead of the primitive. `GPUFFT2DEncodeOptions` is removed.
+Forward and inverse transforms are separate graph operations; pass parameters are immutable.
+See [GPUFFT2D](./api-reference/experimental/gpu-core/gpu-fft2d) for the migration example.
+
+- `GPULZByteDecompressor` descriptors now contain five uint32 words per record:
+  `[outputOffset, byteLength, literalSourceOffset, literalPeriod, matchOffset]`. Code that creates
+  descriptor buffers directly must add `literalPeriod` and use `GPU_LZ_BYTE_DESCRIPTOR_WORDS` when
+  allocating and indexing them. Prefer `planGPULZByteDescriptors()` to convert the unchanged
+  four-word parser spans into GPU descriptors.
+
 **@luma.gl/shadertools**
 
 - `ShaderPassPipeline`, `ShaderPassPipelineStep`, and `ShaderPassComputeOptimization` have been
   renamed to `CompositeShaderPass`, `CompositeShaderPassStep`, and
   `CompositeShaderPassComputeOptimization`. Effect factories and values likewise replace their
   `ShaderPassPipeline` suffix with `CompositeShaderPass`.
-- `ShaderAssembler` is now abstract and can no longer be constructed directly. Replace
-  `new ShaderAssembler()` with `new GLSLShaderAssembler()` for GLSL or
-  `new WGSLShaderAssembler()` for WGSL.
-- `ShaderAssembler.getDefaultShaderAssembler()` now requires an explicit shader language.
-  Replace calls without an argument with `ShaderAssembler.getDefaultShaderAssembler('glsl')`
-  or `ShaderAssembler.getDefaultShaderAssembler('wgsl')`.
-- `assembleGLSLShaderPair()` is available only on `GLSLShaderAssembler`, and
-  `assembleWGSLShader()` is available only on `WGSLShaderAssembler`. Narrow existing
-  `ShaderAssembler` references with `instanceof GLSLShaderAssembler` or
-  `instanceof WGSLShaderAssembler` before assembling shader source.
 
 **@luma.gl/experimental**
 
-- `ABufferRenderer.render()` and `WBOITRenderer.render()` now accept an already-rendered opaque
-  `sourceTexture` and return the resolved color texture. Applications must render opaque color and
-  depth before invoking the OIT renderer; the former base-pass/framebuffer callbacks were removed.
 - OIT fullscreen resolution is now exposed as `createABufferResolveCompositeShaderPass()` and
   `createWBOITResolveCompositeShaderPass()`. `WBOITRenderer.capture()` returns the accumulation and
   revealage bindings for inserting the WBOIT resolve into a larger shader-pass stack.
 
-**@luma.gl/arrow**
-- Arrow materialization now stays in `@luma.gl/arrow` adapter helpers instead of table constructors and instance readback methods:
-  - `makeGPUDataFromArrowData(...)`, `makeGPUVectorFromArrow(...)`, `makeGPURecordBatchFromArrowRecordBatch(...)`, and `makeGPUTableFromArrowTable(...)`
-  - `readArrowGPUDataAsync(...)` and `readArrowGPUVectorAsync(...)`
-- Arrow append-in-place helpers and streaming wrapper classes have been removed. Convert each Arrow record batch with `makeGPURecordBatchFromArrowRecordBatch(device, recordBatch, ...)` and retain it with `gpuTable.addBatch(...)`.
-
-**@luma.gl/gpgpu**
-
-- `GPUTableEvaluator` and `getGPUTableEvaluator()` have been removed. Use `GPUDataEvaluator` and `getGPUDataEvaluator()` for one packed fixed-width `GPUData` chunk.
-- Leaf GPGPU operations no longer adapt `GPUVector` inputs. Use `GPUVectorEvaluator.fromGPUVector(vector).mapGPUData(...)` to apply one leaf transform independently across preserved `GPUVector.data[]` chunks.
-- The experimental direct `BitonicArgsort` WebGPU helper has been removed. Use graph-native `GPUSort` from `@luma.gl/gpgpu/gpu-core` with explicit key/value output views and command submission.
-
 ## Upgrading to v9.4
-
-**GPU compute and table imports**
-
-- `@luma.gl/tables` has been removed without compatibility re-exports. Import primitive GPU data
-  APIs (`GPUData`, `GPUDataView`, `GPUVector`, `GPUVectorFormat`, `GPUConstant`, formats, and basic
-  helpers) from `@luma.gl/gpgpu/gpu-data`.
-- Import `GPURecordBatch`, `GPUTable`, schemas, table bindings, table computations, and generic table
-  planners from `@luma.gl/experimental/gpu-tables`.
-- Import path and polygon models, their GPU input helpers, and model-specific planners from
-  `@luma.gl/experimental/models`.
-- `@luma.gl/experimental/gpu-core` and `@luma.gl/experimental/gpu-graph` have been removed without
-  compatibility re-exports. Import them from `@luma.gl/gpgpu/gpu-core` and
-  `@luma.gl/gpgpu/gpu-graph`; graph benchmarks move to
-  `@luma.gl/gpgpu/gpu-graph/benchmarks`.
 
 **@luma.gl/core**
 
@@ -88,12 +66,18 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 - `getShaderLayoutFromWGSL()` now uses lightweight interface scanning and returns `null` when WGSL is ambiguous or outside the supported subset. Raw render and compute pipelines must provide an explicit `shaderLayout` in that case. Uniform-buffer member reflection is no longer included in the returned layout.
 
-**@luma.gl/arrow**
+**@luma.gl/shadertools**
 
-- Arrow 2D text clip rectangles now require `FixedSizeList<Float32>[4]` columns, and GPU-backed
-  clip rectangles require `GPUVector<'float32x4'>`. Rebuild any previous
-  `FixedSizeList<Int16>[4]` or `GPUVector<'sint16x4'>` inputs as 32-bit floats. Rectangle values are
-  interpreted as `[x, y, width, height]` offsets in the text anchor's world coordinate space.
+- `ShaderAssembler` is now abstract and can no longer be constructed directly. Replace
+  `new ShaderAssembler()` with `new GLSLShaderAssembler()` for GLSL or
+  `new WGSLShaderAssembler()` for WGSL.
+- `ShaderAssembler.getDefaultShaderAssembler()` now requires an explicit shader language.
+  Replace calls without an argument with `ShaderAssembler.getDefaultShaderAssembler('glsl')`
+  or `ShaderAssembler.getDefaultShaderAssembler('wgsl')`.
+- `assembleGLSLShaderPair()` is available only on `GLSLShaderAssembler`, and
+  `assembleWGSLShader()` is available only on `WGSLShaderAssembler`. Narrow existing
+  `ShaderAssembler` references with `instanceof GLSLShaderAssembler` or
+  `instanceof WGSLShaderAssembler` before assembling shader source.
 
 ## Upgrading to v9.3
 
@@ -201,3 +185,16 @@ luma.gl v9 is a major modernization of the luma.gl API, with many breaking chang
 
 This page only covers luma.gl v9 and later releases. 
 For information on upgrading to from v8 and earlier releases, see the [Legacy Upgrade Guide](/docs/legacy/legacy-upgrade-guide).
+
+## GPU Core composition
+
+GPU Core primitives now expose `getCommandNodes(graph)` instead of `addToGraph(graph)`. Schedule
+a primitive with `graph.add(primitive)`, which calls `getCommandNodes(graph)` internally. To inspect
+or modify nodes before scheduling, use `addGPUCommandNodes(graph, nodes)`. Graph-independent
+primitives can also be added to `GPUProgram`. `GPUCommandGraphContributor` and the compiler's legacy mutation fallback were
+removed. The three range/scatter primitives that also publish scratch views expose
+`getCommands(graph)` returning `{nodes, ...views}`; schedule `nodes` explicitly.
+
+`GPUProgramBindings.vectors` now accepts typed `GPUData`, readonly `GPUData[]`, or `GPUVector`
+instead of raw buffers. Compiler vector resolution returns `GraphVectorView`; access physical
+chunks through `.data` or canonical logical descriptors through `.chunks`.

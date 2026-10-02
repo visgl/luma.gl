@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuSpatial.
 
-import {type GPUCommandGraph, type GPUCommandGraphContributor} from '@luma.gl/gpgpu/gpu-core';
+import {type GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import type {GPUFloat32Positions, GPUFloat64Positions, GPUScalarRows} from './types';
 import {
   GEOSPATIAL_WORKGROUP_SIZE,
@@ -54,7 +54,7 @@ export type GPUHaversineDistanceProps = GPUHaversineDistanceBaseProps &
  * Trigonometric operations and the final result remain f32. Raw Float64 inputs preserve each
  * coordinate delta through a correctly rounded raw-binary64 subtraction before f32 trigonometry.
  */
-export class GPUHaversineDistance implements GPUCommandGraphContributor {
+export class GPUHaversineDistance {
   readonly id: string;
   readonly left: GPUFloat32Positions | GPUFloat64Positions;
   readonly right: GPUFloat32Positions | GPUFloat64Positions;

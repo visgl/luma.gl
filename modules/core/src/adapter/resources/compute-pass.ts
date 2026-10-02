@@ -7,6 +7,7 @@ import {ComputePipeline} from './compute-pipeline';
 import type {Device} from '../device';
 import {Buffer} from './buffer';
 import {QuerySet} from './query-set';
+import type {Bindings, BindingsByGroup} from '../types/shader-layout';
 
 export type ComputePassProps = ResourceProps & {
   /** QuerySet to write beging/end timestamps to */
@@ -28,8 +29,8 @@ export abstract class ComputePass extends Resource<ComputePassProps> {
 
   abstract setPipeline(pipeline: ComputePipeline): void;
 
-  /** Sets an array of bindings (uniform buffers, samplers, textures, ...) */
-  // abstract setBindings(bindings: Binding[]): void;
+  /** Replaces the bindings used by subsequent dispatch commands. */
+  abstract setBindings(bindings: Bindings | BindingsByGroup): void;
 
   /**
    * Dispatch work to be performed with the current ComputePipeline.

@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import type {GPUCommandNode} from './gpu-command-node';
 import {
   GPUCommandGraph,
   GraphVectorView,
@@ -13,12 +12,14 @@ import {
 import type {GPUGridBinningBounds} from './gpu-grid-binning';
 import {
   createTransientView,
-  getViewBinding,
   getViewElementOffset,
-  validateMatchingVectorTopology,
   validatePackedView
 } from './graph-data-view-utils';
 import {getGPUShaderSubgroupStrategy, getSubgroupBallotHelpersWGSL} from './gpu-subgroup-utils';
+
+import {alignGraphVectorViews, getGraphVectorData} from './graph-vector-view-utils';
+import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from './gpu-dispatch-utils';
+import {getSpatialCommandNodes, validateSpatialWrites} from './gpu-spatial-utils';
 
 const GRID_AGGREGATION_WORKGROUP_SIZE = 256;
 const MAXIMUM_SUBGROUP_COALESCED_CELL_COUNT = 16;
@@ -38,10 +39,10 @@ export type GPUGridAggregationProps = {
   id?: string;
   /** One packed position view or an ordered vector of packed position chunks. */
   positions: GPUGridAggregationPositions;
-  /** One finite floating-point contribution per position with identical chunk topology. */
+  /** One finite floating-point contribution per position with equal logical length and independent chunk boundaries. */
   weights: GPUGridAggregationWeights;
   /** Caller-owned row-major floating-point cell statistics. */
-  output: GraphDataView<'float32'>;
+  output: GraphDataView<'float32'> | GraphVectorView<'float32'>;
   /** Cell statistic to compute. Defaults to `'sum'`. */
   operation?: GPUGridAggregationOperation;
   /** Positive integer `[width, height]` cell dimensions. */
@@ -64,10 +65,10 @@ export class GPUGridAggregation {
   readonly id: string;
   /** Packed positions or ordered position vector. */
   readonly positions: GPUGridAggregationPositions;
-  /** Packed weights with the same view kind and chunk topology as positions. */
+  /** Packed weights with the same logical length as positions. */
   readonly weights: GPUGridAggregationWeights;
   /** Caller-owned row-major floating-point cell statistics. */
-  readonly output: GraphDataView<'float32'>;
+  readonly output: GraphDataView<'float32'> | GraphVectorView<'float32'>;
   /** Cell statistic computed by this aggregation. */
   readonly operation: GPUGridAggregationOperation;
   /** Positive integer grid dimensions. */
@@ -78,7 +79,7 @@ export class GPUGridAggregation {
   /**
    * Creates and validates a weighted grid-aggregation description.
    *
-   * @throws If view layouts, paired chunk topology, grid dimensions, output length, ownership, or
+   * @throws If view layouts, paired logical lengths, grid dimensions, output length, ownership, or
    * bounds are invalid.
    */
   constructor(props: GPUGridAggregationProps) {
@@ -96,8 +97,15 @@ export class GPUGridAggregation {
     for (const chunk of getWeightChunks(this.weights)) {
       validatePackedView(chunk, ['float32'], `${this.id} weights`);
     }
-    validateMatchingInputs(this.positions, this.weights, this.id);
-    validatePackedView(this.output, ['float32'], `${this.id} output`);
+    if (this.positions.length !== this.weights.length)
+      throw new Error(`${this.id} positions and weights must contain the same number of rows`);
+    for (const chunk of getGraphVectorData(this.output))
+      validatePackedView(chunk, ['float32'], `${this.id} output`);
+    validateSpatialWrites(
+      this.id,
+      [...getPositionChunks(this.positions), ...getWeightChunks(this.weights)],
+      getGraphVectorData(this.output)
+    );
 
     const [width, height] = this.gridSize;
     if (
@@ -108,7 +116,11 @@ export class GPUGridAggregation {
     ) {
       throw new Error(`${this.id} gridSize must contain two positive integers`);
     }
-    if (this.output.length !== width * height) {
+    if (
+      !Number.isSafeInteger(width * height) ||
+      width * height > 0xffffffff ||
+      this.output.length !== width * height
+    ) {
       throw new Error(`${this.id} output.length must equal gridSize width * height`);
     }
     if (!['sum', 'min', 'max', 'mean'].includes(this.operation)) {
@@ -118,8 +130,12 @@ export class GPUGridAggregation {
       throw new Error(`${this.id} mean input length must fit in uint32 cell counts`);
     }
     if (
-      getPositionChunks(this.positions).some(chunk => chunk.buffer === this.output.buffer) ||
-      getWeightChunks(this.weights).some(chunk => chunk.buffer === this.output.buffer)
+      getPositionChunks(this.positions).some(chunk =>
+        getGraphVectorData(this.output).some(output => chunk.buffer === output.buffer)
+      ) ||
+      getWeightChunks(this.weights).some(chunk =>
+        getGraphVectorData(this.output).some(output => chunk.buffer === output.buffer)
+      )
     ) {
       throw new Error(`${this.id} inputs and output must use separate buffers`);
     }
@@ -138,25 +154,32 @@ export class GPUGridAggregation {
       if (this.bounds.length !== 1) {
         throw new Error(`${this.id} GPU bounds must contain one float32x4 row`);
       }
-      if (this.bounds.buffer === this.output.buffer) {
+      if (
+        getGraphVectorData(this.output).some(
+          output => output.buffer === (this.bounds as GraphDataView).buffer
+        )
+      ) {
         throw new Error(`${this.id} bounds and output must use separate buffers`);
       }
     }
   }
 
   /**
-   * Adds initialization, one accumulation pass per non-empty aligned chunk, and finalization when
+   * For each output chunk, adds initialization, aligned input passes, and finalization when
    * required by the selected statistic.
    *
    * This method declares work only and does not submit or read back commands.
    */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     const positionChunks = getPositionChunks(this.positions);
     const weightChunks = getWeightChunks(this.weights);
     if (
       positionChunks.some(chunk => chunk.buffer.graph !== graph) ||
       weightChunks.some(chunk => chunk.buffer.graph !== graph) ||
-      this.output.buffer.graph !== graph
+      getGraphVectorData(this.output).some(chunk => chunk.buffer.graph !== graph)
     ) {
       throw new Error(`${this.id} views must belong to the target graph`);
     }
@@ -164,29 +187,38 @@ export class GPUGridAggregation {
       throw new Error(`${this.id} bounds must belong to the target graph`);
     }
 
-    const counts =
-      this.operation === 'mean'
-        ? createTransientView(graph, `${this.id}-counts`, 'uint32', this.output.length)
-        : undefined;
-    addInitializeGridAggregationPass(graph, this.id, this.output, this.operation, counts);
-    for (let chunkIndex = 0; chunkIndex < positionChunks.length; chunkIndex++) {
-      if (positionChunks[chunkIndex].length > 0) {
-        addGridAggregationPass(graph, {
-          id:
-            this.positions instanceof GraphVectorView ? `${this.id}-chunk-${chunkIndex}` : this.id,
-          positions: positionChunks[chunkIndex],
-          weights: weightChunks[chunkIndex],
-          output: this.output,
-          operation: this.operation,
-          counts,
-          gridSize: this.gridSize,
-          bounds: this.bounds
-        });
+    const spans = alignGraphVectorViews(graph, [this.positions, this.weights]);
+    let outputStart = 0;
+    for (const [outputIndex, output] of getGraphVectorData(this.output).entries()) {
+      if (output.length) {
+        const id = `${this.id}-output-${outputIndex}`;
+        const counts =
+          this.operation === 'mean'
+            ? createTransientView(graph, `${id}-counts`, 'uint32', output.length)
+            : undefined;
+        nodes.push(...addInitializeGridAggregationPass(graph, id, output, this.operation, counts));
+        for (const [spanIndex, [positions, weights]] of spans.entries()) {
+          nodes.push(
+            ...addGridAggregationPass(graph, {
+              id: `${id}-input-${spanIndex}`,
+              positions,
+              weights,
+              output,
+              outputStart,
+              operation: this.operation,
+              counts,
+              gridSize: this.gridSize,
+              bounds: this.bounds
+            })
+          );
+        }
+        if (this.operation !== 'sum')
+          nodes.push(...addFinalizeGridAggregationPass(graph, id, output, this.operation, counts));
       }
+      outputStart += output.length;
     }
-    if (this.operation !== 'sum') {
-      addFinalizeGridAggregationPass(graph, this.id, this.output, this.operation, counts);
-    }
+
+    return nodes;
   }
 }
 
@@ -197,13 +229,20 @@ function addInitializeGridAggregationPass<Parameters>(
   output: GraphDataView<'float32'>,
   operation: GPUGridAggregationOperation,
   counts?: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  const dispatch = getBoundedDispatchLayout(
+    id,
+    output.length,
+    GRID_AGGREGATION_WORKGROUP_SIZE,
+    graph.device.limits.maxComputeWorkgroupsPerDimension
+  );
   const initialBits = operation === 'min' ? '0xffffffffu' : '0u';
   const countBinding = counts
     ? '@group(0) @binding(1) var<storage, read_write> outputCounts: array<atomic<u32>>;'
     : '';
   const countInitialization = counts
-    ? `atomicStore(&outputCounts[${getViewElementOffset(counts)}u + globalId.x], 0u);`
+    ? `atomicStore(&outputCounts[${getViewElementOffset(counts)}u + index], 0u);`
     : '';
   const source = /* wgsl */ `
 const CELL_COUNT: u32 = ${output.length}u;
@@ -211,23 +250,29 @@ const OUTPUT_OFFSET: u32 = ${getViewElementOffset(output)}u;
 @group(0) @binding(0) var<storage, read_write> outputValues: array<atomic<u32>>;
 ${countBinding}
 @compute @workgroup_size(${GRID_AGGREGATION_WORKGROUP_SIZE}) fn main(
-  @builtin(global_invocation_id) globalId: vec3<u32>
+  @builtin(workgroup_id) workgroupId: vec3<u32>,
+  @builtin(local_invocation_index) localInvocationIndex: u32
 ) {
-  if (globalId.x < CELL_COUNT) {
-    atomicStore(&outputValues[OUTPUT_OFFSET + globalId.x], ${initialBits});
+  ${getBoundedInvocationIndexSource(dispatch, GRID_AGGREGATION_WORKGROUP_SIZE)}
+  if (index < CELL_COUNT) {
+    atomicStore(&outputValues[OUTPUT_OFFSET + index], ${initialBits});
     ${countInitialization}
   }
 }`;
-  addComputationPass(graph, {
-    id: operation === 'sum' ? `${id}-clear` : `${id}-initialize`,
-    source,
-    resources: [
-      {buffer: output, usage: 'storage-write'},
-      ...(counts ? ([{buffer: counts, usage: 'storage-write'}] as GraphBufferUse[]) : [])
-    ],
-    bindings: {outputValues: output, ...(counts ? {outputCounts: counts} : {})},
-    dispatchCount: Math.ceil(output.length / GRID_AGGREGATION_WORKGROUP_SIZE)
-  });
+  nodes.push(
+    ...getSpatialCommandNodes(graph, {
+      id: operation === 'sum' ? `${id}-clear` : `${id}-initialize`,
+      source,
+      resources: [
+        {buffer: output, usage: 'storage-write'},
+        ...(counts ? ([{buffer: counts, usage: 'storage-write'}] as GraphBufferUse[]) : [])
+      ],
+      bindings: {outputValues: output, ...(counts ? {outputCounts: counts} : {})},
+      dispatch
+    })
+  );
+
+  return nodes;
 }
 
 /** Adds one direct global-atomic weighted-statistic accumulation pass. */
@@ -238,13 +283,21 @@ function addGridAggregationPass<Parameters>(
     positions: GraphDataView<'float32x2'>;
     weights: GraphDataView<'float32'>;
     output: GraphDataView<'float32'>;
+    outputStart: number;
     operation: GPUGridAggregationOperation;
     counts?: GraphDataView<'uint32'>;
     gridSize: readonly [number, number];
     bounds: GPUGridBinningBounds;
   }
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const [width, height] = aggregation.gridSize;
+  const dispatch = getBoundedDispatchLayout(
+    aggregation.id,
+    aggregation.positions.length,
+    GRID_AGGREGATION_WORKGROUP_SIZE,
+    graph.device.limits.maxComputeWorkgroupsPerDimension
+  );
   const useSubgroups =
     aggregation.output.length <= MAXIMUM_SUBGROUP_COALESCED_CELL_COUNT &&
     getGPUShaderSubgroupStrategy(graph.device) === 'subgroups';
@@ -281,6 +334,8 @@ ${useSubgroups ? 'enable subgroups;' : ''}
 const ELEMENT_COUNT: u32 = ${aggregation.positions.length}u;
 const WIDTH: u32 = ${width}u;
 const HEIGHT: u32 = ${height}u;
+const OUTPUT_START: u32 = ${aggregation.outputStart}u;
+const CELL_COUNT: u32 = ${aggregation.output.length}u;
 const POSITIONS_OFFSET: u32 = ${getViewElementOffset(aggregation.positions)}u;
 const WEIGHTS_OFFSET: u32 = ${getViewElementOffset(aggregation.weights)}u;
 ${gpuBounds ? `const BOUNDS_OFFSET: u32 = ${getViewElementOffset(aggregation.bounds as GraphDataView)}u;` : ''}
@@ -301,9 +356,10 @@ ${getAggregationFunction(aggregation.operation)}
 ${useSubgroups ? getSubgroupBallotHelpersWGSL() : ''}
 
 @compute @workgroup_size(${GRID_AGGREGATION_WORKGROUP_SIZE}) fn main(
-  @builtin(global_invocation_id) globalId: vec3<u32>${useSubgroups ? ',\n  @builtin(subgroup_invocation_id) subgroupInvocationId: u32' : ''}
+  @builtin(workgroup_id) workgroupId: vec3<u32>,
+  @builtin(local_invocation_index) localInvocationIndex: u32${useSubgroups ? ',\n  @builtin(subgroup_invocation_id) subgroupInvocationId: u32' : ''}
 ) {
-  let index = globalId.x;
+  ${getBoundedInvocationIndexSource(dispatch, GRID_AGGREGATION_WORKGROUP_SIZE)}
   ${boundsInitialization}
   var accepted = false;
   var cellIndex = 0u;
@@ -319,8 +375,9 @@ ${useSubgroups ? getSubgroupBallotHelpersWGSL() : ''}
     if (finitePosition && finiteWeight && inX && inY) {
       let column = getCoordinate(x, minimumX, maximumX, WIDTH);
       let row = getCoordinate(y, minimumY, maximumY, HEIGHT);
-      cellIndex = row * WIDTH + column;
-      accepted = true;
+      let globalCell = row * WIDTH + column;
+      accepted = globalCell >= OUTPUT_START && globalCell - OUTPUT_START < CELL_COUNT;
+      if (accepted) { cellIndex = globalCell - OUTPUT_START; }
     }
   }
 ${accumulation}
@@ -336,19 +393,23 @@ ${accumulation}
       ? ([{buffer: aggregation.counts, usage: 'storage-read-write'}] as GraphBufferUse[])
       : [])
   ];
-  addComputationPass(graph, {
-    id: `${aggregation.id}-${aggregation.operation}`,
-    source,
-    resources,
-    bindings: {
-      positions: aggregation.positions,
-      weights: aggregation.weights,
-      ...(gpuBounds ? {boundsValues: aggregation.bounds as GraphDataView} : {}),
-      outputValues: aggregation.output,
-      ...(aggregation.counts ? {outputCounts: aggregation.counts} : {})
-    },
-    dispatchCount: Math.ceil(aggregation.positions.length / GRID_AGGREGATION_WORKGROUP_SIZE)
-  });
+  nodes.push(
+    ...getSpatialCommandNodes(graph, {
+      id: `${aggregation.id}-${aggregation.operation}`,
+      source,
+      resources,
+      bindings: {
+        positions: aggregation.positions,
+        weights: aggregation.weights,
+        ...(gpuBounds ? {boundsValues: aggregation.bounds as GraphDataView} : {}),
+        outputValues: aggregation.output,
+        ...(aggregation.counts ? {outputCounts: aggregation.counts} : {})
+      },
+      dispatch
+    })
+  );
+
+  return nodes;
 }
 
 /** Converts aggregate identities into empty-cell NaNs and divides sums for means. */
@@ -358,7 +419,14 @@ function addFinalizeGridAggregationPass<Parameters>(
   output: GraphDataView<'float32'>,
   operation: Exclude<GPUGridAggregationOperation, 'sum'>,
   counts?: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  const dispatch = getBoundedDispatchLayout(
+    id,
+    output.length,
+    GRID_AGGREGATION_WORKGROUP_SIZE,
+    graph.device.limits.maxComputeWorkgroupsPerDimension
+  );
   const countBinding = counts
     ? '@group(0) @binding(1) var<storage, read> outputCounts: array<u32>;'
     : '';
@@ -391,23 +459,28 @@ const OUTPUT_OFFSET: u32 = ${getViewElementOffset(output)}u;
 ${countBinding}
 ${decodeFunction}
 @compute @workgroup_size(${GRID_AGGREGATION_WORKGROUP_SIZE}) fn main(
-  @builtin(global_invocation_id) globalId: vec3<u32>
+  @builtin(workgroup_id) workgroupId: vec3<u32>,
+  @builtin(local_invocation_index) localInvocationIndex: u32
 ) {
-  let index = globalId.x;
+  ${getBoundedInvocationIndexSource(dispatch, GRID_AGGREGATION_WORKGROUP_SIZE)}
   if (index < CELL_COUNT) {
     ${finalizeStatement}
   }
 }`;
-  addComputationPass(graph, {
-    id: `${id}-finalize`,
-    source,
-    resources: [
-      {buffer: output, usage: 'storage-read-write'},
-      ...(counts ? ([{buffer: counts, usage: 'storage-read'}] as GraphBufferUse[]) : [])
-    ],
-    bindings: {outputValues: output, ...(counts ? {outputCounts: counts} : {})},
-    dispatchCount: Math.ceil(output.length / GRID_AGGREGATION_WORKGROUP_SIZE)
-  });
+  nodes.push(
+    ...getSpatialCommandNodes(graph, {
+      id: `${id}-finalize`,
+      source,
+      resources: [
+        {buffer: output, usage: 'storage-read-write'},
+        ...(counts ? ([{buffer: counts, usage: 'storage-read'}] as GraphBufferUse[]) : [])
+      ],
+      bindings: {outputValues: output, ...(counts ? {outputCounts: counts} : {})},
+      dispatch
+    })
+  );
+
+  return nodes;
 }
 
 /** Returns the WGSL helper for one cell operation. */
@@ -480,48 +553,6 @@ function getSubgroupGridAggregationWGSL(
   }`;
 }
 
-/** Wraps generated WGSL in a graph compute node with deferred physical buffer resolution. */
-function addComputationPass<Parameters>(
-  graph: GPUCommandGraph<Parameters>,
-  props: {
-    id: string;
-    source: string;
-    resources: GraphBufferUse[];
-    bindings: Record<string, GraphDataView>;
-    dispatchCount: number;
-  }
-): void {
-  graph.addComputePass({
-    id: props.id,
-    resources: props.resources,
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: props.id,
-        source: props.source,
-        shaderLayout: {
-          bindings: Object.keys(props.bindings).map((name, location) => ({
-            name,
-            type: 'storage' as const,
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {};
-          for (const [name, view] of Object.entries(props.bindings)) {
-            bindings[name] = getViewBinding(view, getBuffer);
-          }
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, props.dispatchCount);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
-}
-
 /** Formats a finite JavaScript number as a WGSL `f32` literal. */
 function getFloatLiteral(value: number): string {
   return Number.isInteger(value) ? `${value}.0` : `${value}`;
@@ -540,19 +571,4 @@ function getPositionChunks(
 
 function getWeightChunks(weights: GPUGridAggregationWeights): readonly GraphDataView<'float32'>[] {
   return weights instanceof GraphVectorView ? weights.data : [weights];
-}
-
-/** Requires row-aligned atomic views or vectors with identical ordered chunk boundaries. */
-function validateMatchingInputs(
-  positions: GPUGridAggregationPositions,
-  weights: GPUGridAggregationWeights,
-  id: string
-): void {
-  if (positions instanceof GraphVectorView && weights instanceof GraphVectorView) {
-    validateMatchingVectorTopology(positions, weights, `${id} positions and weights`);
-  } else if (positions instanceof GraphVectorView || weights instanceof GraphVectorView) {
-    throw new Error(`${id} positions and weights must both be data views or both be vectors`);
-  } else if (positions.length !== weights.length) {
-    throw new Error(`${id} positions and weights must contain the same number of rows`);
-  }
 }

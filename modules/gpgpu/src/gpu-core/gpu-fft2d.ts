@@ -2,8 +2,20 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Buffer, type CommandEncoder, type Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Buffer, type Device} from '@luma.gl/core';
+import {Kernel} from '@luma.gl/engine';
+import {GPUCommandGraph, GraphVectorView, type GraphDataView} from './gpu-command-graph';
+import {createGPUComputeCommandNode, type GPUCommandNode} from './gpu-command-node';
+import {setGPUComputeDispatchWorkgroups} from './gpu-command-dispatch-metadata';
+import {
+  createTransientView,
+  getViewBinding,
+  getViewBindingRange,
+  getGraphDataPrefix
+} from './graph-data-view-utils';
+import {getGraphVectorData} from './graph-vector-view-utils';
+import {createChunkNode, getGraphDataRange, validateChunkViews} from './gpu-chunk-utils';
+import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from './gpu-dispatch-utils';
 import {
   GPU_FFT2D_PARAMETER_BYTE_LENGTH,
   GPU_FFT2D_SHADER,
@@ -24,7 +36,12 @@ export const GPU_FFT2D_MAX_DIMENSION = GPU_FFT_MAX_LENGTH;
 
 /** Construction options for {@link GPUFFT2D}. */
 export type GPUFFT2DProps = {
-  /** Prefix used for owned GPU resource labels. */
+  /** Borrowed row-major complex values, with independent input/output chunk boundaries. */
+  input: GraphDataView<'float32x2'> | GraphVectorView<'float32x2'>;
+  output: GraphDataView<'float32x2'> | GraphVectorView<'float32x2'>;
+  /** Forward is unnormalized; inverse divides by width * height. */
+  direction?: GPUFFT2DDirection;
+  /** Prefix used for graph resource labels. */
   id?: string;
   /** Number of complex values in each row. Must be a power of two from 2 through 2048. */
   width: number;
@@ -37,17 +54,7 @@ export type GPUFFT2DProps = {
 /** Transform sign and normalization convention. */
 export type GPUFFT2DDirection = GPUFFTDirection;
 
-/** Caller-owned resources supplied to {@link GPUFFT2D.encode}. */
-export type GPUFFT2DEncodeOptions = {
-  /** Row-major complex `vec2<f32>` input. The transform never modifies this buffer. */
-  inputBuffer: Buffer;
-  /** Separate row-major complex `vec2<f32>` destination. */
-  outputBuffer: Buffer;
-  /** `forward` is unnormalized; `inverse` divides by `width * height`. */
-  direction?: GPUFFT2DDirection;
-};
-
-/** Immutable allocation and dispatch plan for one transform instance. */
+/** Contiguous-plan statistics; inspect the compiled graph for chunk-lowered scratch and dispatches. */
 export type GPUFFT2DStats = {
   width: number;
   height: number;
@@ -84,126 +91,260 @@ type GPUFFT2DPassPlan = {
   stage: number;
 };
 
-type GPUFFT2DPassResources = {
-  parameterBuffers: Record<GPUFFT2DDirection, Buffer>;
-};
-
-type GPUFFT2DResources = {
-  scratchBuffer: Buffer;
-  computation: Computation;
-  passResources: GPUFFT2DPassResources[];
-};
-
 /**
- * Reusable out-of-place two-dimensional complex FFT for WebGPU storage buffers.
+ * Graph-native out-of-place two-dimensional complex FFT.
  *
- * The transform owns one scratch buffer, one compute pipeline, and immutable pass parameters.
- * Input/output buffers and command submission remain caller-owned. `encode()` records the complete
- * bit-reversal and radix-2 butterfly sequence onto the supplied encoder without submitting or
- * reading data back.
+ * Contiguous fields retain the batched dispatch path. Chunked fields run one complete transform
+ * at a time in reusable graph scratch; caller chunks are borrowed and never repacked or owned.
  */
 export class GPUFFT2D {
-  readonly device: Device;
   readonly id: string;
-  readonly width: number;
-  readonly height: number;
-  readonly batchCount: number;
   readonly stats: GPUFFT2DStats;
+  readonly props: GPUFFT2DProps;
 
-  private readonly scratchBuffer: Buffer;
-  private readonly computation: Computation;
-  private readonly passResources: GPUFFT2DPassResources[];
-  private destroyed = false;
-
-  constructor(device: Device, props: GPUFFT2DProps) {
-    const support = getGPUFFT2DSupport(device, props);
-    if (!support.supported || !support.stats) {
-      throw new Error(support.reason);
-    }
-
-    this.device = device;
+  constructor(props: GPUFFT2DProps) {
+    this.props = props;
     this.id = props.id ?? 'gpu-fft2d';
-    this.width = props.width;
-    this.height = props.height;
-    this.batchCount = props.batchCount ?? 1;
-    this.stats = support.stats;
-    const resources = createGPUFFT2DResources(device, {
-      id: this.id,
-      width: this.width,
-      height: this.height,
-      stats: this.stats
-    });
-    this.scratchBuffer = resources.scratchBuffer;
-    this.computation = resources.computation;
-    this.passResources = resources.passResources;
-  }
-
-  /**
-   * Records one complete transform and returns the caller-owned output buffer.
-   *
-   * Forward transforms use the conventional negative exponent without normalization. Inverse
-   * transforms use the positive exponent and divide the final pass by `width * height`.
-   */
-  encode(commandEncoder: CommandEncoder, options: GPUFFT2DEncodeOptions): Buffer {
-    if (this.destroyed) {
-      throw new Error('GPUFFT2D has been destroyed.');
-    }
-    if (commandEncoder.device !== this.device) {
-      throw new Error('GPUFFT2D command encoder belongs to a different device.');
-    }
-    const direction = options.direction ?? 'forward';
+    this.stats = makeGPUFFT2DStats(props.width, props.height, props.batchCount ?? 1);
+    const direction = props.direction ?? 'forward';
     if (direction !== 'forward' && direction !== 'inverse') {
-      throw new Error('GPUFFT2D direction must be forward or inverse.');
+      throw new Error('GPUFFT2D direction must be forward or inverse');
     }
-    validateGPUFFT2DBuffer(this.device, options.inputBuffer, this.stats, 'input');
-    validateGPUFFT2DBuffer(this.device, options.outputBuffer, this.stats, 'output');
-    if (
-      options.inputBuffer === options.outputBuffer ||
-      options.inputBuffer.handle === options.outputBuffer.handle
-    ) {
-      throw new Error('GPUFFT2D input and output buffers must be separate.');
+    for (const view of [props.input, props.output]) {
+      if (view.length < this.stats.elementCount * (props.batchCount ?? 1)) {
+        throw new Error('GPUFFT2D views must contain width * height * batchCount complex values');
+      }
+      for (const chunk of getGraphVectorData(view)) {
+        if (
+          chunk.format !== 'float32x2' ||
+          chunk.byteStride !== 8 ||
+          chunk.rowByteLength !== 8 ||
+          chunk.byteOffset % 8 !== 0
+        ) {
+          throw new Error('GPUFFT2D requires packed, vec2-aligned float32x2 views');
+        }
+      }
     }
-
-    this.computation.predraw(commandEncoder);
-    const computePass = commandEncoder.beginComputePass({id: `${this.id}-${direction}`});
-    let inputBuffer = options.inputBuffer;
-    for (const [passIndex, passResources] of this.passResources.entries()) {
-      const remainingPassCount = this.passResources.length - passIndex;
-      const outputBuffer = remainingPassCount % 2 === 0 ? this.scratchBuffer : options.outputBuffer;
-      this.computation.setBindings({
-        inputValues: inputBuffer,
-        outputValues: outputBuffer,
-        parameters: passResources.parameterBuffers[direction]
-      });
-      this.computation.dispatch(
-        computePass,
-        this.stats.workgroupCount[0],
-        this.stats.workgroupCount[1],
-        this.stats.workgroupCount[2]
-      );
-      inputBuffer = outputBuffer;
-    }
-    computePass.end();
-    return options.outputBuffer;
   }
 
-  /** Releases the owned compute pipeline, scratch storage, and immutable parameter buffers. */
-  destroy(): void {
-    if (this.destroyed) {
-      return;
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    validateChunkViews(graph, [this.props.input], [this.props.output]);
+    const support = getGPUFFT2DSupport(graph.device, this.props);
+    if (!support.supported) throw new Error(support.reason);
+    const count = this.stats.elementCount * (this.props.batchCount ?? 1);
+    const input = getGraphDataPrefix(graph, this.props.input, count);
+    const output = getGraphDataPrefix(graph, this.props.output, count);
+    const nodes: GPUCommandNode<Parameters>[] = [];
+    const contiguous =
+      !(input instanceof GraphVectorView) &&
+      !(output instanceof GraphVectorView) &&
+      [input, output].every(
+        view => getViewBindingRange(view).size <= graph.device.limits.maxStorageBufferBindingSize
+      ) &&
+      this.stats.complexBufferByteLength <= graph.device.limits.maxBufferSize &&
+      (this.props.batchCount ?? 1) <= graph.device.limits.maxComputeWorkgroupsPerDimension;
+    const capacity = contiguous ? count : this.stats.elementCount;
+    const scratch = createTransientView(graph, `${this.id}-scratch`, 'float32x2', capacity);
+    if (contiguous) {
+      return createFFT2DPasses(
+        graph,
+        this,
+        input,
+        output,
+        scratch,
+        this.props.batchCount ?? 1,
+        this.id
+      );
     }
-    this.destroyed = true;
-    this.computation.destroy();
-    this.scratchBuffer.destroy();
-    for (const passResources of this.passResources) {
-      passResources.parameterBuffers.forward.destroy();
-      passResources.parameterBuffers.inverse.destroy();
+    const field = createTransientView(graph, `${this.id}-field`, 'float32x2', capacity);
+    const gathered = this.stats.passCount % 2 === 0 ? field : scratch;
+    for (let batch = 0; batch < (this.props.batchCount ?? 1); batch++) {
+      const offset = batch * capacity;
+      const prefix = `${this.id}-batch-${batch}`;
+      nodes.push(
+        ...copyFFT2DSpans(
+          graph,
+          `${prefix}-gather`,
+          getGraphDataRange(graph, input, offset, capacity),
+          gathered,
+          true
+        )
+      );
+      // The gathered field is no longer needed after the first pass; ping-pong back into it.
+      nodes.push(...createFFT2DPasses(graph, this, gathered, field, scratch, 1, prefix));
+      nodes.push(
+        ...copyFFT2DSpans(
+          graph,
+          `${prefix}-scatter`,
+          getGraphDataRange(graph, output, offset, capacity),
+          field,
+          false
+        )
+      );
     }
+    return nodes;
   }
 }
 
+function createFFT2DPasses<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  transform: GPUFFT2D,
+  input: GraphDataView<'float32x2'>,
+  output: GraphDataView<'float32x2'>,
+  scratch: GraphDataView<'float32x2'>,
+  batchCount: number,
+  id: string
+): GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  const plans = makeGPUFFT2DPassPlan(transform.props.width, transform.props.height);
+  let source = input;
+  for (const [index, plan] of plans.entries()) {
+    const destination = (plans.length - index) % 2 === 0 ? scratch : output;
+    const passInput = source;
+    const passId = `${id}-${index}`;
+    const direction = transform.props.direction ?? 'forward';
+    const data = makeGPUFFT2DParameterData({
+      width: transform.props.width,
+      height: transform.props.height,
+      ...plan,
+      direction,
+      normalizationScale:
+        direction === 'inverse' && index === plans.length - 1
+          ? 1 / transform.stats.elementCount
+          : 1,
+      inputOffset: (passInput.byteOffset % 256) / 8,
+      outputOffset: (destination.byteOffset % 256) / 8
+    });
+    const workgroups = [
+      transform.stats.workgroupCount[0],
+      transform.stats.workgroupCount[1],
+      batchCount
+    ] as const;
+    nodes.push(
+      setGPUComputeDispatchWorkgroups(
+        createGPUComputeCommandNode<Parameters>({
+          id: passId,
+          resources: [
+            {buffer: passInput, usage: 'storage-read'},
+            {buffer: destination, usage: 'storage-write'}
+          ],
+          workload: {
+            commandCount: 1,
+            maximumWorkgroupCount: workgroups[0] * workgroups[1] * batchCount,
+            maximumInvocationCount: workgroups[0] * workgroups[1] * batchCount * 64
+          },
+          compile: ({device}) => {
+            const parameters = device.createBuffer({
+              id: `${passId}-parameters`,
+              data,
+              usage: Buffer.UNIFORM
+            });
+            let kernel: Kernel;
+            try {
+              kernel = new Kernel(device, {
+                id: passId,
+                source: GPU_FFT2D_SHADER,
+                shaderLayout: {
+                  bindings: [
+                    {name: 'inputValues', type: 'read-only-storage', group: 0, location: 0},
+                    {name: 'outputValues', type: 'storage', group: 0, location: 1},
+                    {name: 'parameters', type: 'uniform', group: 0, location: 2}
+                  ]
+                }
+              });
+            } catch (error) {
+              parameters.destroy();
+              throw error;
+            }
+            return {
+              encode: ({computePass, getBuffer}) =>
+                kernel.dispatch(computePass, {
+                  bindings: {
+                    inputValues: getViewBinding(passInput, getBuffer),
+                    outputValues: getViewBinding(destination, getBuffer),
+                    parameters
+                  },
+                  x: workgroups[0],
+                  y: workgroups[1],
+                  z: workgroups[2]
+                }),
+              destroy: () => {
+                kernel.destroy();
+                parameters.destroy();
+              }
+            };
+          }
+        }),
+        workgroups
+      )
+    );
+    source = destination;
+  }
+  return nodes;
+}
+
+/** Copy only active spans into explicit per-transform scratch, using storage-only caller buffers. */
+function copyFFT2DSpans<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  id: string,
+  spans: GraphVectorView<'float32x2'>,
+  field: GraphDataView<'float32x2'>,
+  gather: boolean
+): GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  let logicalOffset = 0;
+  for (const chunk of spans.data) {
+    for (let start = 0; start < chunk.length; ) {
+      const byteOffset = chunk.byteOffset + start * 8;
+      const length = Math.min(
+        chunk.length - start,
+        Math.floor((graph.device.limits.maxStorageBufferBindingSize - (byteOffset % 256)) / 8)
+      );
+      if (length < 1) throw new Error('GPUFFT2D chunk offset exceeds storage binding capacity');
+      const view = graph.createDataView(chunk.buffer, {format: 'float32x2', byteOffset, length});
+      const input = gather ? view : field;
+      const output = gather ? field : view;
+      const sourceOffset = gather ? (byteOffset % 256) / 8 : logicalOffset + start;
+      const destinationOffset = gather ? logicalOffset + start : (byteOffset % 256) / 8;
+      const dispatch = getBoundedDispatchLayout(
+        id,
+        length,
+        64,
+        graph.device.limits.maxComputeWorkgroupsPerDimension
+      );
+      nodes.push(
+        createChunkNode(graph, {
+          id: `${id}-${nodes.length}`,
+          inputs: {inputValues: input},
+          outputs: {outputValues: output},
+          dispatch,
+          workgroupSize: 64,
+          source: `@group(0) @binding(0) var<storage, read> inputValues: array<vec2f>;
+@group(0) @binding(1) var<storage, read_write> outputValues: array<vec2f>;
+@compute @workgroup_size(64)
+fn main(@builtin(workgroup_id) workgroupId: vec3u, @builtin(local_invocation_index) localInvocationIndex: u32) {
+  ${getBoundedInvocationIndexSource(dispatch, 64)}
+  if (index < ${length}u) {
+    outputValues[${destinationOffset}u + index] = inputValues[${sourceOffset}u + index];
+  }
+}`
+        })
+      );
+      start += length;
+    }
+    logicalOffset += chunk.length;
+  }
+  return nodes;
+}
+
 /** Reports whether a device can allocate and dispatch the requested bounded radix-2 transform. */
-export function getGPUFFT2DSupport(device: Device, props: GPUFFT2DProps): GPUFFT2DSupport {
+export function getGPUFFT2DSupport(
+  device: Device,
+  props: Pick<GPUFFT2DProps, 'width' | 'height' | 'batchCount'> &
+    Partial<Pick<GPUFFT2DProps, 'input' | 'output'>>
+): GPUFFT2DSupport {
   const dimensionReason = getGPUFFT2DDimensionReason(
     props.width,
     props.height,
@@ -234,7 +375,8 @@ export function getGPUFFT2DSupport(device: Device, props: GPUFFT2DProps): GPUFFT
   if (
     stats.workgroupCount[0] > device.limits.maxComputeWorkgroupsPerDimension ||
     stats.workgroupCount[1] > device.limits.maxComputeWorkgroupsPerDimension ||
-    stats.workgroupCount[2] > device.limits.maxComputeWorkgroupsPerDimension
+    (props.input && props.output ? 1 : stats.workgroupCount[2]) >
+      device.limits.maxComputeWorkgroupsPerDimension
   ) {
     return {
       supported: false,
@@ -242,14 +384,16 @@ export function getGPUFFT2DSupport(device: Device, props: GPUFFT2DProps): GPUFFT
       stats
     };
   }
-  if (stats.complexBufferByteLength > device.limits.maxStorageBufferBindingSize) {
+  const requiredByteLength =
+    props.input && props.output ? stats.elementCount * 8 : stats.complexBufferByteLength;
+  if (requiredByteLength > device.limits.maxStorageBufferBindingSize) {
     return {
       supported: false,
       reason: 'GPUFFT2D complex buffer exceeds maxStorageBufferBindingSize.',
       stats
     };
   }
-  if (stats.complexBufferByteLength > device.limits.maxBufferSize) {
+  if (requiredByteLength > device.limits.maxBufferSize) {
     return {supported: false, reason: 'GPUFFT2D complex buffer exceeds maxBufferSize.', stats};
   }
   return {supported: true, stats};
@@ -287,8 +431,8 @@ export function makeGPUFFT2DStats(width: number, height: number, batchCount = 1)
       batchCount
     ]) as readonly [number, number, number],
     scratchBufferByteLength: complexBufferByteLength,
-    parameterBufferCount: passCount * 2,
-    parameterBufferByteLength: passCount * 2 * GPU_FFT2D_PARAMETER_BYTE_LENGTH
+    parameterBufferCount: passCount,
+    parameterBufferByteLength: passCount * GPU_FFT2D_PARAMETER_BYTE_LENGTH
   });
 }
 
@@ -297,72 +441,6 @@ function makeGPUFFT2DPassPlan(width: number, height: number): GPUFFT2DPassPlan[]
   addAxisPasses(passes, 'horizontal', width);
   addAxisPasses(passes, 'vertical', height);
   return passes;
-}
-
-function createGPUFFT2DResources(
-  device: Device,
-  props: {id: string; width: number; height: number; stats: GPUFFT2DStats}
-): GPUFFT2DResources {
-  let scratchBuffer: Buffer | undefined;
-  let computation: Computation | undefined;
-  const allocatedParameterBuffers: Buffer[] = [];
-  try {
-    scratchBuffer = device.createBuffer({
-      id: `${props.id}-scratch`,
-      byteLength: props.stats.scratchBufferByteLength,
-      usage: Buffer.STORAGE
-    });
-    computation = new Computation(device, {
-      id: `${props.id}-pass`,
-      source: GPU_FFT2D_SHADER,
-      shaderLayout: {
-        bindings: [
-          {name: 'inputValues', type: 'read-only-storage', group: 0, location: 0},
-          {name: 'outputValues', type: 'storage', group: 0, location: 1},
-          {name: 'parameters', type: 'uniform', group: 0, location: 2}
-        ]
-      }
-    });
-    const passResources = makeGPUFFT2DPassPlan(props.width, props.height).map((plan, passIndex) => {
-      const forward = createGPUFFT2DParameterBuffer(device, props, plan, passIndex, 'forward');
-      allocatedParameterBuffers.push(forward);
-      const inverse = createGPUFFT2DParameterBuffer(device, props, plan, passIndex, 'inverse');
-      allocatedParameterBuffers.push(inverse);
-      return {parameterBuffers: {forward, inverse}};
-    });
-    return {scratchBuffer, computation, passResources};
-  } catch (error) {
-    for (const parameterBuffer of allocatedParameterBuffers) {
-      parameterBuffer.destroy();
-    }
-    computation?.destroy();
-    scratchBuffer?.destroy();
-    throw error;
-  }
-}
-
-function createGPUFFT2DParameterBuffer(
-  device: Device,
-  props: {id: string; width: number; height: number; stats: GPUFFT2DStats},
-  plan: GPUFFT2DPassPlan,
-  passIndex: number,
-  direction: GPUFFT2DDirection
-): Buffer {
-  const finalInversePass = direction === 'inverse' && passIndex === props.stats.passCount - 1;
-  return device.createBuffer({
-    id: `${props.id}-${direction}-${passIndex}-parameters`,
-    data: makeGPUFFT2DParameterData({
-      width: props.width,
-      height: props.height,
-      axis: plan.axis,
-      kind: plan.kind,
-      transformSize: plan.transformSize,
-      stage: plan.stage,
-      direction,
-      normalizationScale: finalInversePass ? 1 / props.stats.elementCount : 1
-    }),
-    usage: Buffer.UNIFORM | Buffer.COPY_DST
-  });
 }
 
 function addAxisPasses(
@@ -384,6 +462,8 @@ function makeGPUFFT2DParameterData(props: {
   stage: number;
   direction: GPUFFT2DDirection;
   normalizationScale: number;
+  inputOffset: number;
+  outputOffset: number;
 }): Uint32Array {
   const data = new ArrayBuffer(GPU_FFT2D_PARAMETER_BYTE_LENGTH);
   const unsignedValues = new Uint32Array(data);
@@ -396,6 +476,8 @@ function makeGPUFFT2DParameterData(props: {
   unsignedValues[5] = props.stage;
   floatValues[6] = props.direction === 'forward' ? -1 : 1;
   floatValues[7] = props.normalizationScale;
+  unsignedValues[8] = props.inputOffset;
+  unsignedValues[9] = props.outputOffset;
   return unsignedValues;
 }
 
@@ -415,31 +497,11 @@ function getGPUFFT2DDimensionReason(
   if (!Number.isSafeInteger(batchCount) || batchCount <= 0) {
     return 'GPUFFT2D batchCount must be a positive integer.';
   }
+  if (width * height * batchCount > 0xffffffff)
+    return 'GPUFFT2D logical length must fit uint32 addressing.';
   return undefined;
 }
 
 function getDimensionReason(name: string, dimension: number): string | undefined {
   return getGPUFFTLengthReason('GPUFFT2D', name, dimension);
-}
-
-function validateGPUFFT2DBuffer(
-  device: Device,
-  buffer: Buffer,
-  stats: GPUFFT2DStats,
-  label: string
-): void {
-  if (buffer.device !== device) {
-    throw new Error(`GPUFFT2D ${label} buffer belongs to a different device.`);
-  }
-  if (buffer.destroyed) {
-    throw new Error(`GPUFFT2D ${label} buffer has been destroyed.`);
-  }
-  if (!(buffer.usage & Buffer.STORAGE)) {
-    throw new Error(`GPUFFT2D ${label} buffer requires Buffer.STORAGE usage.`);
-  }
-  if (buffer.byteLength < stats.complexBufferByteLength) {
-    throw new Error(
-      `GPUFFT2D ${label} buffer must contain at least ${stats.complexBufferByteLength} bytes.`
-    );
-  }
 }

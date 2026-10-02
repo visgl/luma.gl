@@ -6,6 +6,7 @@ import {existsSync, readFileSync} from 'node:fs';
 import path from 'node:path';
 import {describe, expect, test} from 'vitest';
 import {parse} from 'yaml';
+import {getExampleSupportDefinition} from '../../examples/example-support-registry';
 
 type ExampleSidebarEntry =
   | string
@@ -27,6 +28,7 @@ const GENERAL_PURPOSE_GPU_EXAMPLE_IDENTIFIERS = [
   'experimental/gpu-trace-scene',
   'experimental/gpu-scene-graph',
   'showcase/vector-field-lab',
+  'showcase/spectral-wave-lab',
   'experimental/gpu-sort',
   'experimental/gpu-data-analysis'
 ] as const;
@@ -94,7 +96,7 @@ describe('GPGPU example catalog navigation', () => {
       id: 'showcase/million-row-crossfilter',
       label: 'GPUCrossfilter: Million-Row Crossfilter Explorer'
     });
-    expect(crossfilterExampleSource).toContain("title: 'Million-Row Crossfilter Explorer'");
+    expect(crossfilterExampleSource).toContain("title: 'Million-Row DataFrame Crossfilter'");
     expect(crossfilterExampleSource).toContain('<MillionRowCrossfilterExample />');
     expect(
       existsSync(
@@ -183,17 +185,12 @@ describe('GPGPU example catalog navigation', () => {
         `${exampleIdentifier} must not remain duplicated in WebGPU`
       ).toBe(false);
 
-      const frontmatter = readFileSync(examplePath, 'utf8').match(/^---\n([\s\S]*?)\n---/);
-      expect(frontmatter, `${exampleIdentifier} must declare example metadata`).not.toBeNull();
-
-      const metadata = parse(frontmatter![1]) as {
-        sidebar_custom_props?: {backends?: string[]; topics?: string[]};
-      };
-
       expect(
-        metadata.sidebar_custom_props?.backends,
+        getExampleSupportDefinition(exampleIdentifier)?.requirements?.backends,
         `${exampleIdentifier} requires a WebGPU device`
       ).toEqual(['webgpu']);
+      const frontmatter = readFileSync(examplePath, 'utf8').match(/^---\n([\s\S]*?)\n---/);
+      const metadata = parse(frontmatter![1]) as {sidebar_custom_props?: {topics?: string[]}};
       expect(
         metadata.sidebar_custom_props?.topics,
         `${exampleIdentifier} must remain discoverable as GPU compute`
@@ -219,6 +216,7 @@ describe('GPGPU example catalog navigation', () => {
       'experimental/gpu-trace-scene',
       'experimental/gpu-scene-graph',
       'showcase/vector-field-lab',
+      'showcase/spectral-wave-lab',
       'showcase/quantum-state-studio',
       'experimental/gpu-sort',
       'experimental/gpu-data-analysis'
@@ -226,6 +224,7 @@ describe('GPGPU example catalog navigation', () => {
     expect(readCategoryIdentifiers(nestedCategories[1])).toEqual([
       'showcase/million-row-crossfilter',
       'showcase/raster-lab',
+      'experimental/gpu-parquet-constellation',
       'showcase/billion-point-spatial-atlas',
       'experimental/gpt-2'
     ]);

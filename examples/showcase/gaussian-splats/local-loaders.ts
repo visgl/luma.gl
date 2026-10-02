@@ -288,7 +288,8 @@ export const GAUSSIAN_SPLAT_SOURCE_CATALOG: readonly GaussianSplatSourceCatalogE
 
 /** Keeps scene defaults local to each viewer while preserving explicit URL selections. */
 export function getLocalGaussianSplatLoadersConfiguration(
-  defaultScene?: GaussianSplatSourceCatalogEntry['id']
+  defaultScene?: GaussianSplatSourceCatalogEntry['id'],
+  defaultRADResidentSplatCount = DEFAULT_RAD_RESIDENT_SPLAT_COUNT
 ): LocalGaussianSplatLoadersConfiguration | undefined {
   if (typeof window === 'undefined') {
     return undefined;
@@ -326,7 +327,12 @@ export function getLocalGaussianSplatLoadersConfiguration(
       sceneId: 'custom',
       sourceLabel: getGaussianSplatSourceLabel(customSourceUrl),
       ...(sourceFormat === 'RAD'
-        ? {maxResidentSplatCount: getGaussianSplatResidentSplatCount(parameters)}
+        ? {
+            maxResidentSplatCount: getGaussianSplatResidentSplatCount(
+              parameters,
+              defaultRADResidentSplatCount
+            )
+          }
         : {}),
       upAxis: 'z',
       up: [0, 0, 1]
@@ -349,7 +355,9 @@ export function getLocalGaussianSplatLoadersConfiguration(
   const sourceUrls = scene.sourceUrls || [sourceUrl];
   const sourceFormat = getGaussianSplatSourceFormat(sourceUrl);
   const maxResidentSplatCount =
-    sourceFormat === 'RAD' ? getGaussianSplatResidentSplatCount(parameters) : undefined;
+    sourceFormat === 'RAD'
+      ? getGaussianSplatResidentSplatCount(parameters, defaultRADResidentSplatCount)
+      : undefined;
 
   return {
     loaderMode,
@@ -1166,10 +1174,13 @@ function getExpectedGaussianSplatBatchCount(
   );
 }
 
-function getGaussianSplatResidentSplatCount(parameters: URLSearchParams): number {
+function getGaussianSplatResidentSplatCount(
+  parameters: URLSearchParams,
+  defaultResidentSplatCount: number
+): number {
   const requestedCount = parameters.get('residentSplats');
   if (requestedCount === null) {
-    return DEFAULT_RAD_RESIDENT_SPLAT_COUNT;
+    return defaultResidentSplatCount;
   }
   const residentSplatCount = Number(requestedCount);
   if (!Number.isSafeInteger(residentSplatCount) || residentSplatCount <= 0) {

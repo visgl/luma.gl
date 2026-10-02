@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {Buffer, type Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {
   GPUBatchSort,
   GPUCommandGraph,
@@ -15,7 +16,7 @@ import {
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
-import {addGPUSortToGraphWithDispatchLimit} from '../../src/gpu-core/gpu-sort';
+import {getGPUSortCommandNodesWithDispatchLimit} from '../../src/gpu-core/gpu-sort';
 
 it('GPUSort bitonic stably sorts paired uint32 values in both directions', async () => {
   const device = await getWebGPUTestDevice();
@@ -43,7 +44,7 @@ it('GPUSort fuses irregular workgroup-local networks on CORE WebGPU devices', as
     return;
   }
 
-  const dispatchSpy = vi.spyOn(Computation.prototype, 'dispatch');
+  const dispatchSpy = vi.spyOn(Kernel.prototype, 'dispatch');
   try {
     for (const length of [2, 3, 4, 5, 9, 17, 33, 65, 255, 256]) {
       const keys = Uint32Array.from({length}, (_, index) =>
@@ -242,7 +243,7 @@ it('GPUSort bounds bitonic and radix stages across all three dispatch dimensions
     ['bitonic', 'ascending'],
     ['radix', 'descending']
   ] as const) {
-    const dispatchSpy = vi.spyOn(Computation.prototype, 'dispatch');
+    const dispatchSpy = vi.spyOn(Kernel.prototype, 'dispatch');
 
     try {
       const result = await runSort(device, keys, values, algorithm, direction, undefined, 2);
@@ -253,30 +254,30 @@ it('GPUSort bounds bitonic and radix stages across all three dispatch dimensions
         `${algorithm} preserves duplicate-key payload order across workgroups`
       ).toEqual(expected.values);
 
-      const dispatches = dispatchSpy.mock.instances.map((computation, index) => ({
-        id: (computation as Computation).id,
-        dimensions: dispatchSpy.mock.calls[index].slice(1)
+      const dispatches = dispatchSpy.mock.instances.map((kernel, index) => ({
+        id: (kernel as Kernel).id,
+        dimensions: dispatchSpy.mock.calls[index][1]
       }));
       const expectedPasses =
         algorithm === 'bitonic'
           ? [
-              ['sort-bitonic-initialize', [2, 2, 2]],
-              ['sort-bitonic-2048-1', [2, 2, 2]],
-              ['sort-bitonic-gather', [2, 2, 2]]
+              ['sort-bitonic-initialize', {x: 2, y: 2, z: 2}],
+              ['sort-bitonic-2048-1', {x: 2, y: 2, z: 2}],
+              ['sort-bitonic-gather', {x: 2, y: 2, z: 2}]
             ]
           : [
-              ['sort-radix-digit-0-histogram', [2, 2, 2]],
-              ['sort-radix-digit-0-scan-level-0-scan', [1, 1, 1]],
-              ['sort-radix-digit-0-scatter', [2, 2, 2]],
-              ['sort-radix-digit-28-histogram', [2, 2, 2]],
-              ['sort-radix-digit-28-scatter', [2, 2, 2]]
+              ['sort-radix-digit-0-histogram', {x: 2, y: 2, z: 2}],
+              ['sort-radix-digit-0-scan-level-0-scan', {x: 1, y: 1, z: 1}],
+              ['sort-radix-digit-0-scatter', {x: 2, y: 2, z: 2}],
+              ['sort-radix-digit-28-histogram', {x: 2, y: 2, z: 2}],
+              ['sort-radix-digit-28-scatter', {x: 2, y: 2, z: 2}]
             ];
 
       for (const [identifier, expectedDimensions] of expectedPasses) {
         expect(
           dispatches.find(dispatch => dispatch.id === identifier)?.dimensions,
           `${identifier} respects the synthetic per-dimension dispatch limit`
-        ).toEqual(expectedDimensions);
+        ).toMatchObject(expectedDimensions);
       }
     } finally {
       dispatchSpy.mockRestore();
@@ -284,7 +285,7 @@ it('GPUSort bounds bitonic and radix stages across all three dispatch dimensions
   }
 
   const limitedKeys = Uint32Array.from(keys, key => key & 0x7fff);
-  const dispatchSpy = vi.spyOn(Computation.prototype, 'dispatch');
+  const dispatchSpy = vi.spyOn(Kernel.prototype, 'dispatch');
   try {
     const result = await runSort(device, limitedKeys, values, 'radix', 'ascending', 15, 2);
     const expected = getStableSortedPairs(limitedKeys, values, 'ascending');
@@ -294,12 +295,12 @@ it('GPUSort bounds bitonic and radix stages across all three dispatch dimensions
     );
 
     const finalScatterDispatchIndex = dispatchSpy.mock.instances.findIndex(
-      computation => (computation as Computation).id === 'sort-radix-digit-12-scatter'
+      kernel => (kernel as Kernel).id === 'sort-radix-digit-12-scatter'
     );
     expect(
-      dispatchSpy.mock.calls[finalScatterDispatchIndex]?.slice(1),
+      dispatchSpy.mock.calls[finalScatterDispatchIndex]?.[1],
       'partial final radix digits respect the synthetic per-dimension dispatch limit'
-    ).toEqual([2, 2, 2]);
+    ).toMatchObject({x: 2, y: 2, z: 2});
   } finally {
     dispatchSpy.mockRestore();
   }
@@ -345,15 +346,17 @@ it('GPUSort honors offset storage views for local bitonic and multi-workgroup ra
     const inputValues = createPaddedView('values', values, 2);
     const outputKeys = createPaddedView('output-keys', new Uint32Array(length), 3);
     const outputValues = createPaddedView('output-values', new Uint32Array(length), 4);
-    new GPUSort({
-      id: `offset-${algorithm}`,
-      keys: inputKeys.view,
-      values: inputValues.view,
-      outputKeys: outputKeys.view,
-      outputValues: outputValues.view,
-      algorithm,
-      direction: 'descending'
-    }).addToGraph(graph);
+    graph.add(
+      new GPUSort({
+        id: `offset-${algorithm}`,
+        keys: inputKeys.view,
+        values: inputValues.view,
+        outputKeys: outputKeys.view,
+        outputValues: outputValues.view,
+        algorithm,
+        direction: 'descending'
+      })
+    );
 
     const compiled = graph.compile();
     const commandEncoder = device.createCommandEncoder({id: `offset-${algorithm}-encoder`});
@@ -624,7 +627,7 @@ it('GPUSort validates layouts, lengths, graph ownership, and output buffers', as
 
   const otherGraph = new GPUCommandGraph(device, {id: 'other-sort-graph'});
   const sort = new GPUSort({keys, values, outputKeys, outputValues});
-  expect(() => sort.addToGraph(otherGraph), 'foreign graph is rejected').toThrow(/target graph/);
+  expect(() => otherGraph.add(sort), 'foreign graph is rejected').toThrow(/target graph/);
 });
 
 it('GPUSort rejects borrowed physical-buffer aliases before encoding either algorithm', async () => {
@@ -654,7 +657,7 @@ it('GPUSort rejects borrowed physical-buffer aliases before encoding either algo
       outputValues: importView(graph, 'output-values', outputValuesBuffer, 4),
       algorithm
     });
-    sort.addToGraph(graph);
+    graph.add(sort);
     const compiled = graph.compile();
     const rejectedEncoder = device.createCommandEncoder({id: `${algorithm}-rejected-alias`});
 
@@ -721,7 +724,7 @@ it('GPUBatchSort rejects physically aliased output overrides before encoding', a
     outputKeys: makeImportedGraphVector(graph, 'batch-output-keys', outputKeysBuffer, 3),
     outputValues: makeImportedGraphVector(graph, 'batch-output-values', outputValuesBuffer, 3)
   });
-  sort.addToGraph(graph);
+  graph.add(sort);
   const compiled = graph.compile();
   const rejectedEncoder = device.createCommandEncoder({id: 'batch-sort-rejected-alias'});
 
@@ -810,9 +813,12 @@ async function runSort(
     keyBits
   });
   if (maxComputeWorkgroupsPerDimension === undefined) {
-    sort.addToGraph(graph);
+    graph.add(sort);
   } else {
-    addGPUSortToGraphWithDispatchLimit(sort, graph, maxComputeWorkgroupsPerDimension);
+    addGPUCommandNodes(
+      graph,
+      getGPUSortCommandNodesWithDispatchLimit(sort, graph, maxComputeWorkgroupsPerDimension)
+    );
   }
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'sort-test-encoder'});
@@ -867,7 +873,7 @@ async function runBatchSort(
     algorithm,
     direction
   });
-  sort.addToGraph(graph);
+  graph.add(sort);
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'batch-sort-test-encoder'});
   compiled.encode(commandEncoder, {parameters: undefined});

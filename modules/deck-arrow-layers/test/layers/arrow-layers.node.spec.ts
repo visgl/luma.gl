@@ -4,14 +4,27 @@
 
 import {expect, it} from 'vitest';
 import {ArrowPathLayer, ArrowPolygonLayer, ArrowTextLayer} from '@deck.gl-community/arrow-layers';
-import {makeArrowFixedSizeListVector} from '@luma.gl/arrow';
+import {makeGPUVectorFromArrow, makeArrowFixedSizeListVector} from '@luma.gl/arrow';
 import type {Model} from '@luma.gl/engine';
-import {Float32, Float64} from 'apache-arrow';
+import {NullDevice} from '@luma.gl/test-utils';
+import * as arrow from 'apache-arrow';
+import {
+  convertArrowLayerColorVector,
+  readArrowLayerGPUVector
+} from '../../src/layers/arrow-layer-input';
 import {assertLayerArrowVectorFormat} from '../../src/layers/arrow-gpu-layer-utils';
 
 it('Arrow GPU layer adapters reject columns whose storage does not match the GPU format', () => {
-  const float32Positions = makeArrowFixedSizeListVector(new Float32(), 2, new Float32Array([1, 2]));
-  const float64Positions = makeArrowFixedSizeListVector(new Float64(), 2, new Float64Array([1, 2]));
+  const float32Positions = makeArrowFixedSizeListVector(
+    new arrow.Float32(),
+    2,
+    new Float32Array([1, 2])
+  );
+  const float64Positions = makeArrowFixedSizeListVector(
+    new arrow.Float64(),
+    2,
+    new Float64Array([1, 2])
+  );
 
   expect(() =>
     assertLayerArrowVectorFormat(float32Positions, 'float32x2', 'positions')
@@ -87,5 +100,47 @@ it('Arrow deck layers preserve alpha blending defaults', () => {
       'src-alpha'
     );
   }
+  void 0;
+});
+
+it('Arrow layer conversion preserves nested per-vertex color vectors', async () => {
+  const device = new NullDevice({});
+  const rowColorType = new arrow.FixedSizeList(
+    4,
+    new arrow.Field('channel', new arrow.Uint8(), false)
+  );
+  const vertexColorType = new arrow.List(new arrow.Field('color', rowColorType, false));
+  const colors = arrow.vectorFromArray(
+    [
+      [
+        [255, 0, 0, 255],
+        [0, 255, 0, 255]
+      ]
+    ],
+    vertexColorType
+  );
+
+  const converted = await convertArrowLayerColorVector(device, colors, 'nested-colors');
+
+  expect(converted, 'specialized nested colors bypass fixed-width row normalization').toBe(colors);
+  device.destroy();
+  void 0;
+});
+
+it('Arrow path scalar GPU width vectors bypass color normalization', async () => {
+  const device = new NullDevice({});
+  const widths = makeGPUVectorFromArrow(
+    device,
+    arrow.vectorFromArray(new Float32Array([1, 2]), new arrow.Float32()),
+    {name: 'widths', format: 'float32'}
+  );
+
+  const roundTrip = await readArrowLayerGPUVector(device, widths, 'widths', false);
+
+  expect(Array.from(roundTrip.toArray()), 'reads scalar widths without color conversion').toEqual([
+    1, 2
+  ]);
+  widths.destroy();
+  device.destroy();
   void 0;
 });

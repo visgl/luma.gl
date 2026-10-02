@@ -83,12 +83,12 @@ const flags = graph.importGPUData('visibility-flags', flagsData);
 const visibleIds = graph.importGPUData('visible-ids', visibleIdsData);
 const commandViews = drawCommands.importToGraph(graph);
 
-new GPUCompaction({
+addGPUCommandNodes(graph, new GPUCompaction({
   input: sourceIds,
   flags,
   output: visibleIds,
   count: commandViews.instanceCounts
-}).addToGraph(graph);
+}).getCommandNodes(graph));
 
 const compiled = graph.compile();
 compiled.encode(encoder, {parameters: undefined});
@@ -431,7 +431,7 @@ function OwnershipCard({
 function CompilationSection(): ReactNode {
   const steps = [
     ['Composed', 'The application combines its mask node with a GPUCompaction contributor.'],
-    ['Declared', 'addToGraph() expands compaction into logical resources, scan nodes, and scatter nodes.'],
+    ['Declared', 'getCommandNodes() expands compaction into logical resources, scan nodes, and scatter nodes.'],
     ['Scheduled', 'Read-after-write and write-after-read hazards derive the legal pass order.'],
     ['Allocated', 'Scan offsets are transient; source, packed output, and draw arguments remain borrowed.'],
     ['Encoded', 'The immutable plan records into the command encoder supplied by the application.']

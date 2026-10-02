@@ -46,6 +46,13 @@ export {
   type ConvertArrowMatrixToGPUVectorOptions
 } from './arrow/vectors/arrow-matrix-gpu-vector';
 export {
+  canConvertColors,
+  convertColors,
+  convertArrowColors,
+  convertArrowColorsToArrow,
+  type ArrowColorType
+} from './arrow/arrow-colors';
+export {
   getArrowMatrixVectorInfo,
   makeArrowMatrixVector,
   makeArrowMatrix2x2Vector,
@@ -238,7 +245,31 @@ export {
   type ArrowTableFromGPUAnalyticsTableProps
 } from './arrow/gpu/arrow-gpu-analytics-readback';
 export {
+  convertArrowRecordBatchToGPURecordBatch,
+  convertArrowRecordBatchesToGPURecordBatches,
+  convertArrowTableToGPUTable,
+  convertArrowToGPUVector,
+  planArrowGPUConversion,
+  planArrowTableGPUConversion,
+  type ArrowGPUConversionBackend,
+  type ArrowGPUConversionCost,
+  type ArrowGPUConversionOptions,
+  type ArrowGPUConversionPlan,
+  type ArrowGPUConversionPolicy,
+  type ArrowGPUConversionSemantic,
+  type ArrowGPUConversionSource,
+  type ArrowGPUConversionStrategy,
+  type ArrowRecordBatchConversionSource,
+  type ArrowGPUTableConversionColumn,
+  type ArrowGPUTableConversionPlan,
+  type ArrowGPUTableConversionSchema,
+  type PreparedArrowGPUVector,
+  type PreparedArrowGPURecordBatch,
+  type PreparedArrowGPUTable
+} from './arrow/gpu/arrow-gpu-conversion';
+export {
   getRequiredArrowGPUVectorDataType,
+  getGPUVectorFormatFromArrowDataType,
   makeGPUDataFromArrowData,
   makeGPURecordBatchFromArrowRecordBatch,
   makeGPUTableFromArrowTable,

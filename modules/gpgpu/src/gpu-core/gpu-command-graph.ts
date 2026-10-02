@@ -17,7 +17,7 @@ import type {
 import {DynamicBuffer, DynamicTexture} from '@luma.gl/engine';
 import {
   type GPUData,
-  type GPUVector,
+  type GPUVectorLike,
   type GPUVectorFormat,
   getGPUVectorFormatInfo,
   isValueListGPUVectorFormat,
@@ -25,6 +25,7 @@ import {
 } from '@luma.gl/gpgpu/gpu-data';
 import {
   compileGPUCommandGraph,
+  compileGPUCommandGraphAsync,
   getBufferHandle,
   getTextureHandle,
   isGraphBufferUse,
@@ -43,6 +44,7 @@ import {
   GraphTextureView,
   GraphVectorView
 } from './gpu-command-graph-types';
+import {addGPUCommandNode, addGPUCommandNodes, type GPUNode} from './gpu-command-node';
 import type {GPUCommandGraphAutotuner} from './gpu-command-graph-autotuner';
 
 import type {
@@ -132,11 +134,6 @@ export type {
   GraphTextureUse,
   GraphTextureViewProps
 } from './gpu-command-graph-types';
-
-/** A reusable algorithm or workflow that contributes nodes to a command graph. */
-export interface GPUCommandGraphContributor {
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void;
-}
 
 /** Per-submission limits for a resumable command-graph execution. */
 export type GPUCommandGraphExecutionBudget = {
@@ -753,7 +750,10 @@ export class GPUCommandGraph<Parameters = void> {
    * Shared physical buffers map to one graph handle while each chunk retains its own offset and
    * layout. Interleaved and variable-length vectors are rejected.
    */
-  importGPUVector<T extends GPUVectorFormat>(id: string, vector: GPUVector<T>): GraphVectorView<T> {
+  importGPUVector<T extends GPUVectorFormat>(
+    id: string,
+    vector: GPUVectorLike<T>
+  ): GraphVectorView<T> {
     if (vector.bufferLayout) {
       throw new Error(`GPUCommandGraph import "${id}" does not accept interleaved GPUVector data`);
     }
@@ -764,6 +764,7 @@ export class GPUCommandGraph<Parameters = void> {
     if (isVertexListGPUVectorFormat(format) || isValueListGPUVectorFormat(format)) {
       throw new Error(`GPUCommandGraph import "${id}" requires a fixed-width GPUVector format`);
     }
+    const formatInfo = getGPUVectorFormatInfo(format);
     const data = vector.data.map((chunk, chunkIndex) => {
       if (chunk.format !== format) {
         throw new Error(`GPUCommandGraph import "${id}" requires matching GPUVector chunk formats`);
@@ -773,13 +774,17 @@ export class GPUCommandGraph<Parameters = void> {
     });
     return new GraphVectorView({
       id,
-      name: vector.name,
+      name: vector.name ?? id,
       format,
       length: vector.length,
-      valueLength: vector.valueLength,
-      stride: vector.stride,
-      byteStride: vector.byteStride,
-      rowByteLength: vector.rowByteLength,
+      valueLength:
+        vector.valueLength ?? vector.data.reduce((sum, chunk) => sum + chunk.valueLength, 0),
+      stride:
+        vector.stride ??
+        vector.data[0]?.stride ??
+        formatInfo.components * (formatInfo.listSize ?? 1),
+      byteStride: vector.byteStride ?? data[0]?.byteStride ?? formatInfo.byteLength,
+      rowByteLength: vector.rowByteLength ?? data[0]?.rowByteLength ?? formatInfo.byteLength,
       data
     });
   }
@@ -858,6 +863,20 @@ export class GPUCommandGraph<Parameters = void> {
     return new GraphTextureView(texture, normalizedProps);
   }
 
+  /** Expands groups and primitives, scheduling concrete command nodes in depth-first order. */
+  add(node: GPUNode<Parameters>): void {
+    this.assertMutable();
+    if ('getNodes' in node) {
+      for (const child of node.getNodes()) this.add(child);
+    } else if ('getCommandNodes' in node) {
+      addGPUCommandNodes(this, node.getCommandNodes(this));
+    } else if ('type' in node) {
+      addGPUCommandNode(this, node);
+    } else {
+      for (const child of node) this.add(child);
+    }
+  }
+
   /**
    * Adds a compute node.
    *
@@ -926,6 +945,34 @@ export class GPUCommandGraph<Parameters = void> {
     this.compiled = true;
     return new CompiledGPUCommandGraph(
       compileGPUCommandGraph({
+        device: this.device,
+        id: this.id,
+        buffers: this.buffers,
+        textures: this.textures,
+        externalTextures: this.externalTextures,
+        nodes: this.nodes
+      })
+    );
+  }
+
+  /**
+   * Compiles graph resources with asynchronous backend pipeline creation.
+   *
+   * Every node's asynchronous compile callback is started before compilation waits for any one
+   * node. This lets independent WebGPU pipelines compile concurrently. Nodes that do not provide
+   * an asynchronous callback use their existing synchronous compile callback.
+   *
+   * Compilation freezes this graph immediately. A graph can be compiled only once, including when
+   * asynchronous compilation rejects.
+   *
+   * @returns An executable graph whose pipelines are ready before the promise resolves.
+   */
+  async compileAsync(): Promise<CompiledGPUCommandGraph<Parameters>> {
+    this.assertMutable();
+    assertDeviceAvailable(this.device, 'compilation');
+    this.compiled = true;
+    return new CompiledGPUCommandGraph(
+      await compileGPUCommandGraphAsync({
         device: this.device,
         id: this.id,
         buffers: this.buffers,

@@ -13,7 +13,10 @@ import {
   type PolygonShaderInputs,
   type PolygonStorageModelProps
 } from '@luma.gl/experimental/models';
-import {RecordBatch, Table} from 'apache-arrow';
+import {DataType, RecordBatch, Table, Uint8, Vector} from 'apache-arrow';
+import {canConvertColors} from '../../../arrow-colors';
+import {convertArrowToGPUVector} from '../../../gpu/arrow-gpu-conversion';
+import {readArrowGPUVectorAsync} from '../../../gpu/arrow-gpu-table-adapters';
 import {
   clearArrowPickingState,
   createArrowPickingManager,
@@ -486,7 +489,7 @@ export async function prepareArrowPolygonInput(
   props: ArrowPolygonRendererProps,
   options: {rowIndexOffset?: number; sourceBatchIndex?: number; id?: string} = {}
 ): Promise<ArrowPolygonRendererInput> {
-  const sourceVectors = resolveArrowPolygonSourceVectors({
+  let sourceVectors = resolveArrowPolygonSourceVectors({
     data: getArrowPolygonSourceData(props.data),
     selectors: {polygons: props.polygons, colors: props.colors}
   });
@@ -494,6 +497,23 @@ export async function prepareArrowPolygonInput(
   const stylingArrowByteLength = sourceVectors.colors
     ? getArrowVectorByteLength(sourceVectors.colors)
     : 0;
+  if (sourceVectors.colors && needsArrowColorConversion(sourceVectors.colors)) {
+    const preparedColors = await convertArrowToGPUVector(device, sourceVectors.colors, {
+      name: `${options.id ?? 'arrow-polygons'}-colors`,
+      semantic: 'color',
+      format: 'unorm8x4'
+    });
+    let normalizedColors: Vector;
+    try {
+      normalizedColors = await readArrowGPUVectorAsync(preparedColors.vector);
+    } finally {
+      preparedColors.destroy();
+    }
+    sourceVectors = {
+      ...sourceVectors,
+      colors: normalizedColors as ArrowPolygonSourceVectors['colors']
+    };
+  }
   const startedAt = getTimestampMilliseconds();
   const converted = await convertArrowPolygonColumnsToGPUVectors(device, sourceVectors, {
     rowIndexOffset: options.rowIndexOffset,
@@ -509,6 +529,16 @@ export async function prepareArrowPolygonInput(
     stylingArrowByteLength,
     tessellationTimeMs: getTimestampMilliseconds() - startedAt
   };
+}
+
+function needsArrowColorConversion(colors: ArrowPolygonSourceVectors['colors']): boolean {
+  return Boolean(
+    colors &&
+      canConvertColors(colors) &&
+      (!DataType.isFixedSizeList(colors.type) ||
+        colors.type.listSize !== 4 ||
+        !(colors.type.children[0]?.type instanceof Uint8))
+  );
 }
 
 /** Converts Arrow polygon columns into GPU vectors without creating render models or metrics. */

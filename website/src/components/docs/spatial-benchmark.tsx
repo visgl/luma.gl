@@ -10,7 +10,7 @@ import {createDevice, useStore} from '../../react-luma/store/device-store';
 import {LiveBenchmarkPanel} from './live-benchmark-panel';
 
 const POINT_COUNTS = [16_384, 65_536, 262_144] as const;
-const DEFAULT_POINT_COUNT = 65_536;
+const DEFAULT_POINT_COUNT = POINT_COUNTS[0];
 const GRID_DIMENSION = 32;
 const WARMUP_ITERATIONS = 2;
 const MEASURED_ITERATIONS = 7;
@@ -40,7 +40,7 @@ type SpatialBenchmarkResult = {
 /** Compares real luSpatial scan and indexed queries against one equivalent CPU predicate. */
 export function SpatialBenchmark(): ReactNode {
   const selectedDevice = useStore(store => store.presentationDevice);
-  const [pointCount, setPointCount] = useState(DEFAULT_POINT_COUNT);
+  const [pointCount, setPointCount] = useState<number>(DEFAULT_POINT_COUNT);
   const [unsupportedReason, setUnsupportedReason] = useState<string>();
   const pointCountId = useId();
 
@@ -374,7 +374,7 @@ function compileIndexBuild(
   const count = importSpatialView(graph, 'index-count', index.count, 'uint32', 1);
   const overflow = importSpatialView(graph, 'index-overflow', index.overflow, 'uint32', 1);
 
-  new GPUGridIndex({
+  graph.add(new GPUGridIndex({
     id: 'docs-spatial-grid',
     positions: positionView,
     gridSize: [GRID_DIMENSION, GRID_DIMENSION],
@@ -383,7 +383,7 @@ function compileIndexBuild(
     objectIds: rowIndices,
     count,
     overflow
-  }).addToGraph(graph);
+  }));
 
   return graph.compile();
 }

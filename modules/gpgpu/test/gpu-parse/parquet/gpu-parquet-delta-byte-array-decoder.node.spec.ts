@@ -62,6 +62,11 @@ it('GPUParquetDeltaByteArrayDecoder composes both decoders, scans, and reconstru
     byteLength: 16,
     usage: Buffer.STORAGE
   });
+  const valueLengthHandle = graph.importBuffer({
+    id: 'value-lengths',
+    byteLength: 32,
+    usage: Buffer.STORAGE
+  });
   const outputHandle = graph.importBuffer({id: 'output', byteLength: 16, usage: Buffer.STORAGE});
   const decoder = new GPUParquetDeltaByteArrayDecoder({
     input: graph.createDataView(inputHandle, {format: 'uint32', length: 14}),
@@ -75,6 +80,7 @@ it('GPUParquetDeltaByteArrayDecoder composes both decoders, scans, and reconstru
     }),
     prefixLengths: graph.createDataView(prefixLengthHandle, {format: 'uint32', length: 4}),
     suffixLengths: graph.createDataView(suffixLengthHandle, {format: 'uint32', length: 4}),
+    valueLengths: graph.createDataView(valueLengthHandle, {format: 'uint32', length: 4}),
     valueOffsets: graph.createDataView(valueOffsetHandle, {format: 'uint32', length: 4}),
     output: graph.createDataView(outputHandle, {format: 'uint32', length: 4}),
     encodedByteLength: ENCODED.length,
@@ -87,7 +93,7 @@ it('GPUParquetDeltaByteArrayDecoder composes both decoders, scans, and reconstru
     firstPrefixLength: 0,
     firstSuffixLength: 3
   });
-  const valueLengthHandle = graph.importBuffer({
+  const shaderValueLengthHandle = graph.importBuffer({
     id: 'test-value-lengths',
     byteLength: 16,
     usage: Buffer.STORAGE
@@ -99,7 +105,7 @@ it('GPUParquetDeltaByteArrayDecoder composes both decoders, scans, and reconstru
   });
   const source = getGPUParquetDeltaByteArrayReconstructionShaderSource(
     decoder,
-    graph.createDataView(valueLengthHandle, {format: 'uint32', length: 4}),
+    graph.createDataView(shaderValueLengthHandle, {format: 'uint32', length: 4}),
     graph.createDataView(suffixOffsetHandle, {format: 'uint32', length: 4}),
     {x: 1, y: 1, z: 1}
   );
@@ -109,6 +115,18 @@ it('GPUParquetDeltaByteArrayDecoder composes both decoders, scans, and reconstru
   expect(() => decoder.addToGraph(graph)).not.toThrow();
   expect(Boolean(addComputePass.mock.calls.length >= 7)).toBe(true);
   expect(addComputePass.mock.calls.at(-1)?.[0].id).toBe('gpu-parquet-delta-byte-array-reconstruct');
+  expect(
+    () =>
+      new GPUParquetDeltaByteArrayDecoder({
+        ...decoder.props,
+        valueLengths: graph.createDataView(valueLengthHandle, {
+          format: 'uint32',
+          length: 4,
+          byteStride: 8
+        })
+      }),
+    'rejects strided value lengths because the shaders use packed indexing'
+  ).toThrow(/must be packed/);
 });
 
 function makeSupportDevice(): Device {

@@ -4,7 +4,7 @@
 
 import {Buffer, Texture, type Binding, type RenderPassProps} from '@luma.gl/core';
 import type {PickInfo} from '@luma.gl/engine';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {
   GPUCommandGraph,
   type GraphBufferHandle,
@@ -234,7 +234,7 @@ export class GPUIndexPickingTarget<Parameters = void> {
       id: clearId,
       resources: [{buffer: props.result, usage: 'storage-write'}],
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: clearId,
           source: `const RESULT_OFFSET: u32 = ${resultOffset}u;
 @group(0) @binding(0) var<storage, read_write> result: array<atomic<u32>>;
@@ -248,10 +248,12 @@ export class GPUIndexPickingTarget<Parameters = void> {
         });
         return {
           encode: ({computePass, getBuffer}) => {
-            computation.setBindings({result: getViewBinding(props.result, getBuffer)});
-            computation.dispatch(computePass, 1);
+            kernel.dispatch(computePass, {
+              bindings: {result: getViewBinding(props.result, getBuffer)},
+              x: 1
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     });
@@ -266,7 +268,7 @@ export class GPUIndexPickingTarget<Parameters = void> {
       ],
       compile: ({device}) => {
         const useSubgroups = getGPUShaderSubgroupStrategy(device) === 'subgroups';
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id,
           source: `${useSubgroups ? 'enable subgroups;' : ''}
 const REGION_OFFSET: u32 = ${regionOffset}u;
@@ -351,14 +353,14 @@ ${
               region: getViewBinding(props.region, getBuffer),
               result: getViewBinding(props.result, getBuffer)
             };
-            computation.setBindings(bindings);
-            computation.dispatch(
-              computePass,
-              Math.ceil(this.width / 8),
-              Math.ceil(this.height / 8)
-            );
+
+            kernel.dispatch(computePass, {
+              bindings,
+              x: Math.ceil(this.width / 8),
+              y: Math.ceil(this.height / 8)
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     });

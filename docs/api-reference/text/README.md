@@ -8,6 +8,22 @@
 line-height data, optional kerning, image pages, and fragment sampling settings together so layout
 and rendering code do not branch on the source font format.
 
+Import font preparation from the dependency-isolated subpath:
+
+```ts
+import {
+  buildBitmapFontAtlas,
+  buildMsdfFontAtlas,
+  buildSdfFontAtlas,
+  loadMsdfFontAtlas,
+  measureFontAtlasText,
+  type FontAtlas
+} from '@luma.gl/text/fonts';
+```
+
+The subpath has no luma.gl, loaders.gl, or GPU module imports. Existing imports from
+`@luma.gl/text` remain supported.
+
 - `buildBitmapFontAtlas()` measures and rasterizes a browser font into a bitmap atlas.
 - `buildSdfFontAtlas()` uses the same measurement and packing path, but rasterizes glyphs as signed
   distance fields and records the required threshold and smoothing settings.
@@ -25,6 +41,7 @@ with Apache Arrow 17 runtimes. Binary and `BinaryView` columns are not text inpu
 
 | Responsibility | Public APIs |
 | --- | --- |
+| CPU font preparation in `@luma.gl/text/fonts` | `FontAtlas`, atlas builders/loaders, mapping, kerning, and measurement |
 | Arrow conversion in `@luma.gl/arrow` | `makeGPUTextDataFromArrow()`, `makeGPUTextDataFromArrowStream()`, `ArrowTextRenderer` |
 | Stable rendering in `@luma.gl/text` | `GPUTextResources`, `GPUTextData`, `TextRenderer` |
 | Benchmark internals | `@luma.gl/text/experimental` specialized models and forced strategies |
@@ -79,9 +96,10 @@ The automatic strategy uses the attribute path for WebGL and per-character color
 
 The attribute path supports row colors and per-character color lists. It expands text rows into generated glyph vertex attributes and renders through a GPU table.
 
-Atlas-backed text requires a normalized `fontAtlas`. Build browser-font atlases explicitly with
-`buildBitmapFontAtlas()` or `buildSdfFontAtlas()`, or load BMFont JSON MSDF atlases with
-`buildMsdfFontAtlas()` or `loadMsdfFontAtlas()` before constructing a text renderer or model.
+Atlas-backed text requires a normalized `fontAtlas`. Use `@luma.gl/text/fonts` to build browser-font
+atlases explicitly with `buildBitmapFontAtlas()` or `buildSdfFontAtlas()`, or load BMFont JSON MSDF
+atlases with `buildMsdfFontAtlas()` or `loadMsdfFontAtlas()` before constructing a text renderer or
+model.
 
 ## Storage Path
 

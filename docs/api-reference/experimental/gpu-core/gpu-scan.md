@@ -42,33 +42,33 @@ chunks.
 ## Usage
 
 ```ts
-new GPUScan({
+graph.add(new GPUScan({
   id: 'selection-offsets',
   input: flags,
   output: offsets
-}).addToGraph(graph);
+}));
 ```
 
 Set `mode: 'inclusive'` when each output should include its corresponding input value. Supply
 `segmentFlags` to reset the prefix at every nonzero flag:
 
 ```ts
-new GPUScan({
+graph.add(new GPUScan({
   id: 'cumulative-counts-by-group',
   input: counts,
   output: cumulativeCounts,
   mode: 'inclusive',
   segmentFlags: groupStarts
-}).addToGraph(graph);
+}));
 ```
 
-`input` and `output` may both be packed, four-byte-aligned `GraphDataView<'uint32'>` values or both
-be `GraphVectorView<'uint32'>` values. A data-view output must contain at least as many rows as its
-input. Vector input and output must have identical ordered chunk lengths.
+`input` and `output` may be packed, four-byte-aligned `GraphDataView<'uint32'>` values or
+`GraphVectorView<'uint32'>` values. The output must cover the input's logical length; scalar views
+may provide extra capacity, while vector views must have equal logical lengths. Physical chunk
+boundaries may differ.
 
-`segmentFlags`, when supplied, must use the same view kind as `input` and must not share an
-underlying graph buffer with `output`. An atomic flags view must contain at least as many rows as
-the input; vector flags must have identical ordered chunk lengths. The first logical row begins a
+`segmentFlags`, when supplied, must cover the logical length of `input` and must not share an
+underlying graph buffer with `output`. Its physical chunk boundaries may differ. The first logical row begins a
 segment even if its flag is zero. Every later nonzero flag begins a new segment. Segments continue
 across vector chunk boundaries unless the first row in a later chunk is flagged.
 
@@ -89,6 +89,24 @@ are supported. A zero-length scan adds no nodes.
 
 All arithmetic wraps modulo 2^32. Signed, floating-point, minimum/maximum, and custom associative
 scans remain future work.
+
+### Split-word 64-bit scan
+
+`GPUScanUint64` computes inclusive prefixes modulo 2^64 using packed `uint32` low and high words:
+
+```ts
+graph.add(new GPUScanUint64({inputLow, inputHigh, outputLow, outputHigh}));
+```
+
+All four operands accept atomic views or chunked vectors with independent boundaries. Inputs
+must have equal logical lengths. Outputs may have extra capacity; only the input-length prefix
+is written. Empty input writes nothing. Carries cross chunk boundaries, and adjusted high-word
+scratch follows the high input's topology without packing caller data.
+
+Low output buffers must be separate from both inputs and the high output. The high output may
+reuse the high input's storage: the operation reads all high words into scratch before writing
+their prefixes. Chunks within each output must not overlap. Each encoding rebuilds the carry;
+an aliased high input reads the previous output unless the caller updates it.
 
 ## Performance notes
 

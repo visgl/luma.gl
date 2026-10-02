@@ -1,3 +1,4 @@
+import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -54,7 +55,7 @@ it('GPUPartitionedIndexedRangeCompaction keeps visible IDs in bounded chunks', a
     output: output.view,
     count: count.view
   });
-  compaction.addToGraph(graph);
+  addGPUCommandNodes(graph, compaction.getCommands(graph).nodes);
   const compiled = graph.compile();
 
   try {

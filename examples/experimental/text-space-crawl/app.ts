@@ -5,14 +5,14 @@
 import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {_resolveLoadFileUrl, AnimationLoopTemplate, OrbitControls} from '@luma.gl/engine';
+import {parseFont, type Text3DBounds} from '@luma.gl/text/text-3d';
 import {
   buildBitmapFontAtlas,
   buildSdfFontAtlas,
+  helvetiker,
   loadMsdfFontAtlas,
   type FontAtlas
-} from '@luma.gl/text';
-import {parseFont, type Text3DBounds} from '@luma.gl/text/text-3d';
-import {helvetiker} from '@luma.gl/text/fonts';
+} from '@luma.gl/text/fonts';
 import {Matrix4} from '@math.gl/core';
 import {
   ExamplePanelManager,

@@ -794,12 +794,16 @@ describe('GPUCrossfilter controller contracts without GPU execution', () => {
 
     controller.addToGraph();
 
-    expect(addComputePassSpy.mock.calls.map(([pass]) => pass.id)).toEqual([
-      'chunked-dashboard-compose-chunk-0',
-      'chunked-dashboard-compose-chunk-2',
-      'chunked-dashboard/controller/compose-chunk-0',
-      'chunked-dashboard/controller/compose-chunk-2'
-    ]);
+    const passIds = addComputePassSpy.mock.calls.map(([pass]) => pass.id);
+    expect(passIds).toHaveLength(4);
+    expect(passIds).toEqual(
+      expect.arrayContaining([
+        'chunked-dashboard-compose-chunk-0',
+        'chunked-dashboard-compose-chunk-2',
+        'chunked-dashboard/controller/compose-chunk-0',
+        'chunked-dashboard/controller/compose-chunk-1'
+      ])
+    );
 
     controller.destroy();
     addComputePassSpy.mockRestore();

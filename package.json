@@ -41,6 +41,8 @@
     "test-geospatial-package": "node ./scripts/verify-experimental-geospatial-package.mjs",
     "test-gpu-raster-package": "node ./scripts/verify-experimental-gpu-raster-package.mjs",
     "examples:typecheck": "node ./scripts/examples-typecheck.mjs",
+    "examples:synchronize-mobile-support": "node ./scripts/examples/synchronize-mobile-support-metadata.mjs",
+    "examples:test-mobile": "node ./scripts/playwright/mobile-example-smoke.mjs",
     "test-fast": "yarn lint && yarn test-node",
     "test-website": "yarn website:build",
     "website:build": "yarn workspace website-docusaurus build",
@@ -48,27 +50,27 @@
     "website-debug": "node ./scripts/playwright/website-playwright.mjs",
     "gltf:reference-evidence": "node ./scripts/gltf-reference/capture-reference-evidence.mjs",
     "gltf:reference-evidence:test": "node --test ./scripts/gltf-reference/*.test.mjs ./scripts/playwright/*.test.mjs",
-    "playwright:install": "playwright install chromium",
+    "playwright:install": "playwright install chromium webkit",
     "metrics": "./scripts/metrics.sh && ocular-metrics"
   },
   "devDependencies": {
     "@babel/core": "^7.28.3",
     "@babel/preset-env": "^7.28.3",
-    "@loaders.gl/core": "~5.0.0-alpha.5",
-    "@loaders.gl/gltf": "~5.0.0-alpha.5",
-    "@loaders.gl/las": "~5.0.0-alpha.5",
-    "@loaders.gl/parquet": "~5.0.0-alpha.5",
-    "@loaders.gl/polyfills": "~5.0.0-alpha.5",
-    "@math.gl/dggs-geohash": "^4.1.0",
-    "@math.gl/dggs-quadkey": "^4.1.0",
-    "@math.gl/dggs-s2": "^4.1.0",
+    "@loaders.gl/core": "~5.0.0-alpha.7",
+    "@loaders.gl/gltf": "~5.0.0-alpha.7",
+    "@loaders.gl/las": "~5.0.0-alpha.7",
+    "@loaders.gl/parquet": "~5.0.0-alpha.7",
+    "@loaders.gl/polyfills": "~5.0.0-alpha.7",
+    "@math.gl/crs": "~5.0.0-alpha.9",
+    "@math.gl/dggs": "~5.0.0-alpha.9",
+    "@math.gl/proj4": "~5.0.0-alpha.9",
     "@probe.gl/bench": "^4.1.1",
     "@probe.gl/stats": "^4.1.1",
     "@probe.gl/stats-widget": "^4.1.1",
     "@probe.gl/test-utils": "^4.1.1",
     "@types/node": "22.15.2",
-    "@vis.gl/dev-tools": "^2.0.0-alpha.4",
-    "@vis.gl/ts-plugins": "^2.0.0-alpha.4",
+    "@vis.gl/dev-tools": "^2.0.0-beta.1",
+    "@vis.gl/ts-plugins": "^2.0.0-beta.1",
     "@vitest/coverage-istanbul": "4.1.0",
     "a5-js": "^0.8.0",
     "esbuild": "^0.28.1",
@@ -91,17 +93,21 @@
     "@luma.gl/engine": "workspace:*",
     "@luma.gl/shadertools": "workspace:*",
     "@luma.gl/webgl": "workspace:*",
-    "@loaders.gl/schema-utils@npm:5.0.0-alpha.5": "patch:@loaders.gl/schema-utils@npm%3A5.0.0-alpha.5#~/.yarn/patches/@loaders.gl-schema-utils-npm-5.0.0-alpha.5-b7b149a264.patch"
+    "@math.gl/sun": "~5.0.0-alpha.9",
+    "@math.gl/web-mercator": "~5.0.0-alpha.9",
+    "@deck.gl/core@npm:9.4.0": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch",
+    "@math.gl/core@npm:5.0.0-alpha.9": "patch:@math.gl/core@npm%3A5.0.0-alpha.9#~/.yarn/patches/@math.gl-core-npm-5.0.0-alpha.9-2f20ecccc4.patch",
+    "@math.gl/core@npm:^4.1.0": "patch:@math.gl/core@npm%3A5.0.0-alpha.9#~/.yarn/patches/@math.gl-core-npm-5.0.0-alpha.9-2f20ecccc4.patch"
   },
   "packageExtensions": {
-    "@loaders.gl/gltf@~5.0.0-alpha.5": {
+    "@loaders.gl/gltf@~5.0.0-alpha.7": {
       "peerDependencies": {
-        "@loaders.gl/core": "~5.0.0-alpha.5"
+        "@loaders.gl/core": "~5.0.0-alpha.7"
       }
     },
-    "@loaders.gl/images@~5.0.0-alpha.5": {
+    "@loaders.gl/images@~5.0.0-alpha.7": {
       "peerDependencies": {
-        "@loaders.gl/core": "~5.0.0-alpha.5"
+        "@loaders.gl/core": "~5.0.0-alpha.7"
       }
     }
   },
@@ -110,7 +116,7 @@
   ],
   "dependencies": {
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e",
-    "@math.gl/types": "^4.1.0",
+    "@math.gl/types": "~5.0.0-alpha.9",
     "@types/offscreencanvas": "^2019.7.3",
     "preact": "^10.17.0"
   },

@@ -10,13 +10,7 @@
     "items": [
       "showcase/gaussian-splat-viewer",
       "showcase/gaussian-splats",
-      "showcase/gltf",
       "showcase/instancing",
-      {
-        "type": "doc",
-        "id": "experimental/scene-playground",
-        "label": "Scene Playground"
-      },
       "showcase/globe",
       "showcase/packet-spraying",
       {
@@ -33,6 +27,12 @@
         "type": "doc",
         "id": "showcase/persistence",
         "label": "Effects: Persistence"
+      },
+      "showcase/gltf",
+      {
+        "type": "doc",
+        "id": "experimental/scene-playground",
+        "label": "Scene Playground"
       }
     ]
   },
@@ -102,6 +102,11 @@
           },
           {
             "type": "doc",
+            "id": "showcase/spectral-wave-lab",
+            "label": "GPUFFT2D: Spectral Dynamics Lab"
+          },
+          {
+            "type": "doc",
             "id": "showcase/quantum-state-studio",
             "label": "GPUCommandGraph: Quantum State Studio"
           },
@@ -122,6 +127,11 @@
             "type": "doc",
             "id": "showcase/raster-lab",
             "label": "GPURaster: Satellite Raster Lab"
+          },
+          {
+            "type": "doc",
+            "id": "experimental/gpu-parquet-constellation",
+            "label": "GPU Parse: Parquet Constellation"
           },
           "showcase/billion-point-spatial-atlas",
           "experimental/gpt-2"
@@ -164,7 +174,10 @@
   {
     "type": "category",
     "label": "Integrations",
-    "items": ["integrations/external-context", "integrations/react-strict-mode"]
+    "items": [
+      "integrations/external-context",
+      "integrations/react-strict-mode"
+    ]
   },
   {
     "type": "category",
@@ -235,6 +248,20 @@
       "deck/arrow-path-layer",
       "deck/arrow-polygon-layer",
       "deck/arrow-text-layer"
+    ]
+  },
+  {
+    "type": "category",
+    "label": "Visual Effects - deck.gl v10",
+    "items": [
+      "deck/weather",
+      "deck/city-scene",
+      "deck/flow-particles",
+      "deck/point-glow",
+      "deck/sketch-edges",
+      "deck/scene-buffers",
+      "deck/pattern-fills",
+      "deck/styled-paths"
     ]
   },
   {

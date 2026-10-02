@@ -24,6 +24,7 @@ import {
   makeExampleTabbedPanel,
   makeHtmlCustomPanel
 } from '../../example-panels';
+import {ANTIALIASING_BACKGROUND_HTML, makeAntialiasingDescriptionHtml} from './app-ui';
 
 export const title = 'Antialiasing Techniques';
 export const description =
@@ -83,13 +84,6 @@ const DEFAULT_SETTINGS: AntialiasingSettings = {
   split: 0.5
 };
 
-const ANTIALIASING_BACKGROUND_HTML = `
-<p><b>Aliasing is under-sampling:</b> one pixel sample cannot represent thin geometry, diagonal edges, alpha cutouts, or minified texture detail that changes faster than the pixel grid.</p>
-<p><b>FXAA:</b> a fullscreen shader detects high-contrast edges in the finished image and smooths along them. It is cheap and works after any render path, but it cannot recover hidden subpixel geometry or texture detail.</p>
-<p><b>Supersampling:</b> render the scene into a 2× or 4× larger offscreen target, then filter down once. It improves geometry, shading, and texture aliasing together, but pixel cost grows with area: 2× per axis means roughly 4× fragments; 4× means roughly 16×.</p>
-<p><b>Texture sampling:</b> mipmaps choose prefiltered resolution for minification and anisotropy spends extra samples along steep texture footprints. These solve texture-frequency aliasing, complementing edge antialiasing rather than replacing it.</p>
-`;
-
 const appShaderModule = {
   name: 'app',
   uniformTypes: {
@@ -106,205 +100,13 @@ const comparisonShaderModule = {
   }
 } as const satisfies ShaderModule<ComparisonUniforms>;
 
-const SCENE_WGSL = /* wgsl */ `\
-struct AppUniforms {
-  time: f32,
-  viewMode: f32,
-  zoom: f32,
-};
-
-@group(0) @binding(auto) var<uniform> app: AppUniforms;
-@group(0) @binding(auto) var checkerTexture: texture_2d<f32>;
-@group(0) @binding(auto) var checkerTextureSampler: sampler;
-
-struct VertexInputs {
-  @location(0) positions: vec3<f32>,
-  @location(1) texCoords: vec2<f32>,
-  @location(2) kinds: f32,
-};
-
-struct VertexOutputs {
-  @builtin(position) position: vec4<f32>,
-  @location(0) uv: vec2<f32>,
-  @location(1) @interpolate(flat) kind: f32,
-};
-
-@vertex
-fn vertexMain(inputs: VertexInputs) -> VertexOutputs {
-  let offset = vec2<f32>(
-    sin(app.time * 1.1 + inputs.kinds * 2.7) * 0.025,
-    cos(app.time * 0.8 + inputs.kinds * 1.9) * 0.018
-  );
-  let halfCenter = select(0.5, -0.5, inputs.positions.x < 0.0);
-  let center = vec2<f32>(halfCenter, 0.0);
-  var outputs: VertexOutputs;
-  outputs.position = vec4<f32>(
-    center + (inputs.positions.xy + offset - center) * app.zoom,
-    inputs.positions.z,
-    1.0
-  );
-  outputs.uv = inputs.texCoords;
-  outputs.kind = inputs.kinds;
-  return outputs;
-}
-
-@fragment
-fn fragmentMain(inputs: VertexOutputs) -> @location(0) vec4<f32> {
-  let checker = textureSample(checkerTexture, checkerTextureSampler, inputs.uv);
-
-  if (app.viewMode > 0.5) {
-    let depth = 1.0 - inputs.position.z;
-    return vec4<f32>(vec3<f32>(depth), 1.0);
-  }
-
-  if (inputs.kind < 0.5) {
-    return vec4<f32>(0.98, 0.22, 0.16, 1.0);
-  }
-  if (inputs.kind < 1.5) {
-    return vec4<f32>(0.08, 0.74, 0.95, 1.0);
-  }
-  if (inputs.kind < 2.5) {
-    return vec4<f32>(1.0, 1.0, 1.0, 1.0);
-  }
-
-  if (inputs.kind < 3.5) {
-    return vec4<f32>(checker.rgb, 1.0);
-  }
-
-  if (checker.a < 0.5) {
-    discard;
-  }
-  let cutoutColor = mix(checker.rgb, vec3<f32>(1.0, 0.82, 0.12), 0.55);
-  return vec4<f32>(cutoutColor, 1.0);
-}
-`;
-
-const SCENE_VERTEX_SHADER = /* glsl */ `\
-#version 300 es
-
-layout(location = 0) in vec3 positions;
-layout(location = 1) in vec2 texCoords;
-layout(location = 2) in float kinds;
-
-uniform appUniforms {
-  float time;
-  float viewMode;
-  float zoom;
-} app;
-
-out vec2 uv;
-flat out float kind;
-
-void main(void) {
-  vec2 offset = vec2(
-    sin(app.time * 1.1 + kinds * 2.7) * 0.025,
-    cos(app.time * 0.8 + kinds * 1.9) * 0.018
-  );
-  float halfCenter = positions.x < 0.0 ? -0.5 : 0.5;
-  vec2 center = vec2(halfCenter, 0.0);
-  gl_Position = vec4(center + (positions.xy + offset - center) * app.zoom, positions.z, 1.0);
-  uv = texCoords;
-  kind = kinds;
-}
-`;
-
-const SCENE_FRAGMENT_SHADER = /* glsl */ `\
-#version 300 es
-precision highp float;
-
-uniform sampler2D checkerTexture;
-uniform appUniforms {
-  float time;
-  float viewMode;
-  float zoom;
-} app;
-
-in vec2 uv;
-flat in float kind;
-
-out vec4 fragColor;
-
-void main(void) {
-  if (app.viewMode > 0.5) {
-    float depth = 1.0 - gl_FragCoord.z;
-    fragColor = vec4(vec3(depth), 1.0);
-    return;
-  }
-
-  if (kind < 0.5) {
-    fragColor = vec4(0.98, 0.22, 0.16, 1.0);
-    return;
-  }
-  if (kind < 1.5) {
-    fragColor = vec4(0.08, 0.74, 0.95, 1.0);
-    return;
-  }
-  if (kind < 2.5) {
-    fragColor = vec4(1.0);
-    return;
-  }
-
-  vec4 checker = texture(checkerTexture, uv);
-  if (kind < 3.5) {
-    fragColor = vec4(checker.rgb, 1.0);
-    return;
-  }
-
-  if (checker.a < 0.5) {
-    discard;
-  }
-  vec3 cutoutColor = mix(checker.rgb, vec3(1.0, 0.82, 0.12), 0.55);
-  fragColor = vec4(cutoutColor, 1.0);
-}
-`;
-
-const COMPARISON_WGSL = /* wgsl */ `\
-struct ComparisonUniforms {
-  split: f32,
-};
-
-@group(0) @binding(auto) var<uniform> comparison: ComparisonUniforms;
-@group(0) @binding(auto) var baselineTexture: texture_2d<f32>;
-@group(0) @binding(auto) var baselineTextureSampler: sampler;
-@group(0) @binding(auto) var techniqueTexture: texture_2d<f32>;
-@group(0) @binding(auto) var techniqueTextureSampler: sampler;
-
-@fragment
-fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  let baselineColor = textureSample(baselineTexture, baselineTextureSampler, inputs.uv);
-  let techniqueColor = textureSample(techniqueTexture, techniqueTextureSampler, inputs.uv);
-  let separator = abs(inputs.uv.x - comparison.split) < 0.0025;
-  if (separator) {
-    return vec4<f32>(1.0, 0.85, 0.2, 1.0);
-  }
-  if (inputs.uv.x < comparison.split) {
-    return baselineColor;
-  }
-  return techniqueColor;
-}
-`;
-
-const COMPARISON_FRAGMENT_SHADER = /* glsl */ `\
-#version 300 es
-precision highp float;
-
-uniform comparisonUniforms {
-  float split;
-} comparison;
-uniform sampler2D baselineTexture;
-uniform sampler2D techniqueTexture;
-
-in vec2 uv;
-out vec4 fragColor;
-
-void main(void) {
-  if (abs(uv.x - comparison.split) < 0.0025) {
-    fragColor = vec4(1.0, 0.85, 0.2, 1.0);
-    return;
-  }
-  fragColor = uv.x < comparison.split ? texture(baselineTexture, uv) : texture(techniqueTexture, uv);
-}
-`;
+const {
+  SCENE_WGSL,
+  SCENE_VERTEX_SHADER,
+  SCENE_FRAGMENT_SHADER,
+  COMPARISON_WGSL,
+  COMPARISON_FRAGMENT_SHADER
+} = getShaderSources();
 
 export default class AntialiasingAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeExamplePanelHostHtml();
@@ -539,7 +341,11 @@ export default class AntialiasingAnimationLoopTemplate extends AnimationLoopTemp
         makeHtmlCustomPanel({
           id: 'antialiasing-description',
           title: 'Overview',
-          html: makeDescriptionHtml(this.settings, this.effectiveSupersampleScale)
+          html: makeAntialiasingDescriptionHtml({
+            technique: this.settings.technique,
+            requestedSupersampleScale: getSupersampleScale(this.settings.technique),
+            effectiveSupersampleScale: this.effectiveSupersampleScale
+          })
         }),
         this.settingsPanel.makePanel(),
         makeHtmlCustomPanel({
@@ -995,24 +801,6 @@ function makeSettingsState(settings: AntialiasingSettings): SettingsState {
   return {...settings};
 }
 
-function makeDescriptionHtml(
-  settings: AntialiasingSettings,
-  effectiveSupersampleScale: 1 | 2 | 4
-): string {
-  const requestedSupersampleScale = getSupersampleScale(settings.technique);
-  const supersampleLimitNote =
-    requestedSupersampleScale > effectiveSupersampleScale
-      ? `<p>Requested ${requestedSupersampleScale}x supersampling is capped to ${effectiveSupersampleScale}x by the device texture-size limit.</p>`
-      : '';
-  return (
-    '<p><b>Before:</b> single-sample baseline. <b>After:</b> ' +
-    settings.technique +
-    '. Use Zoom, then move or drag the divider to compare them.</p><p>The scene combines thin geometry, minified texture detail, alpha cutouts, and depth discontinuities. ' +
-    'Canvas antialiasing and explicit MSAA are documented separately: WebGPU <code>Texture.samples</code> still needs the managed resolve workflow proposed in RFC #2741, while WebGL uses context or renderbuffer paths.</p>' +
-    supersampleLimitNote
-  );
-}
-
 function isTechnique(value: unknown): value is Technique {
   return typeof value === 'string' && TECHNIQUES.includes(value as Technique);
 }
@@ -1027,4 +815,214 @@ function isOutputMode(value: unknown): value is OutputMode {
 
 function clampZoom(value: number): number {
   return Math.min(4, Math.max(0.5, value));
+}
+
+function getShaderSources() {
+  const SCENE_WGSL = /* wgsl */ `\
+struct AppUniforms {
+  time: f32,
+  viewMode: f32,
+  zoom: f32,
+};
+
+@group(0) @binding(auto) var<uniform> app: AppUniforms;
+@group(0) @binding(auto) var checkerTexture: texture_2d<f32>;
+@group(0) @binding(auto) var checkerTextureSampler: sampler;
+
+struct VertexInputs {
+  @location(0) positions: vec3<f32>,
+  @location(1) texCoords: vec2<f32>,
+  @location(2) kinds: f32,
+};
+
+struct VertexOutputs {
+  @builtin(position) position: vec4<f32>,
+  @location(0) uv: vec2<f32>,
+  @location(1) @interpolate(flat) kind: f32,
+};
+
+@vertex
+fn vertexMain(inputs: VertexInputs) -> VertexOutputs {
+  let offset = vec2<f32>(
+    sin(app.time * 1.1 + inputs.kinds * 2.7) * 0.025,
+    cos(app.time * 0.8 + inputs.kinds * 1.9) * 0.018
+  );
+  let halfCenter = select(0.5, -0.5, inputs.positions.x < 0.0);
+  let center = vec2<f32>(halfCenter, 0.0);
+  var outputs: VertexOutputs;
+  outputs.position = vec4<f32>(
+    center + (inputs.positions.xy + offset - center) * app.zoom,
+    inputs.positions.z,
+    1.0
+  );
+  outputs.uv = inputs.texCoords;
+  outputs.kind = inputs.kinds;
+  return outputs;
+}
+
+@fragment
+fn fragmentMain(inputs: VertexOutputs) -> @location(0) vec4<f32> {
+  let checker = textureSample(checkerTexture, checkerTextureSampler, inputs.uv);
+
+  if (app.viewMode > 0.5) {
+    let depth = 1.0 - inputs.position.z;
+    return vec4<f32>(vec3<f32>(depth), 1.0);
+  }
+
+  if (inputs.kind < 0.5) {
+    return vec4<f32>(0.98, 0.22, 0.16, 1.0);
+  }
+  if (inputs.kind < 1.5) {
+    return vec4<f32>(0.08, 0.74, 0.95, 1.0);
+  }
+  if (inputs.kind < 2.5) {
+    return vec4<f32>(1.0, 1.0, 1.0, 1.0);
+  }
+
+  if (inputs.kind < 3.5) {
+    return vec4<f32>(checker.rgb, 1.0);
+  }
+
+  if (checker.a < 0.5) {
+    discard;
+  }
+  let cutoutColor = mix(checker.rgb, vec3<f32>(1.0, 0.82, 0.12), 0.55);
+  return vec4<f32>(cutoutColor, 1.0);
+}
+`;
+
+  const SCENE_VERTEX_SHADER = /* glsl */ `\
+#version 300 es
+
+layout(location = 0) in vec3 positions;
+layout(location = 1) in vec2 texCoords;
+layout(location = 2) in float kinds;
+
+uniform appUniforms {
+  float time;
+  float viewMode;
+  float zoom;
+} app;
+
+out vec2 uv;
+flat out float kind;
+
+void main(void) {
+  vec2 offset = vec2(
+    sin(app.time * 1.1 + kinds * 2.7) * 0.025,
+    cos(app.time * 0.8 + kinds * 1.9) * 0.018
+  );
+  float halfCenter = positions.x < 0.0 ? -0.5 : 0.5;
+  vec2 center = vec2(halfCenter, 0.0);
+  gl_Position = vec4(center + (positions.xy + offset - center) * app.zoom, positions.z, 1.0);
+  uv = texCoords;
+  kind = kinds;
+}
+`;
+
+  const SCENE_FRAGMENT_SHADER = /* glsl */ `\
+#version 300 es
+precision highp float;
+
+uniform sampler2D checkerTexture;
+uniform appUniforms {
+  float time;
+  float viewMode;
+  float zoom;
+} app;
+
+in vec2 uv;
+flat in float kind;
+
+out vec4 fragColor;
+
+void main(void) {
+  if (app.viewMode > 0.5) {
+    float depth = 1.0 - gl_FragCoord.z;
+    fragColor = vec4(vec3(depth), 1.0);
+    return;
+  }
+
+  if (kind < 0.5) {
+    fragColor = vec4(0.98, 0.22, 0.16, 1.0);
+    return;
+  }
+  if (kind < 1.5) {
+    fragColor = vec4(0.08, 0.74, 0.95, 1.0);
+    return;
+  }
+  if (kind < 2.5) {
+    fragColor = vec4(1.0);
+    return;
+  }
+
+  vec4 checker = texture(checkerTexture, uv);
+  if (kind < 3.5) {
+    fragColor = vec4(checker.rgb, 1.0);
+    return;
+  }
+
+  if (checker.a < 0.5) {
+    discard;
+  }
+  vec3 cutoutColor = mix(checker.rgb, vec3(1.0, 0.82, 0.12), 0.55);
+  fragColor = vec4(cutoutColor, 1.0);
+}
+`;
+
+  const COMPARISON_WGSL = /* wgsl */ `\
+struct ComparisonUniforms {
+  split: f32,
+};
+
+@group(0) @binding(auto) var<uniform> comparison: ComparisonUniforms;
+@group(0) @binding(auto) var baselineTexture: texture_2d<f32>;
+@group(0) @binding(auto) var baselineTextureSampler: sampler;
+@group(0) @binding(auto) var techniqueTexture: texture_2d<f32>;
+@group(0) @binding(auto) var techniqueTextureSampler: sampler;
+
+@fragment
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
+  let baselineColor = textureSample(baselineTexture, baselineTextureSampler, inputs.uv);
+  let techniqueColor = textureSample(techniqueTexture, techniqueTextureSampler, inputs.uv);
+  let separator = abs(inputs.uv.x - comparison.split) < 0.0025;
+  if (separator) {
+    return vec4<f32>(1.0, 0.85, 0.2, 1.0);
+  }
+  if (inputs.uv.x < comparison.split) {
+    return baselineColor;
+  }
+  return techniqueColor;
+}
+`;
+
+  const COMPARISON_FRAGMENT_SHADER = /* glsl */ `\
+#version 300 es
+precision highp float;
+
+uniform comparisonUniforms {
+  float split;
+} comparison;
+uniform sampler2D baselineTexture;
+uniform sampler2D techniqueTexture;
+
+in vec2 uv;
+out vec4 fragColor;
+
+void main(void) {
+  if (abs(uv.x - comparison.split) < 0.0025) {
+    fragColor = vec4(1.0, 0.85, 0.2, 1.0);
+    return;
+  }
+  fragColor = uv.x < comparison.split ? texture(baselineTexture, uv) : texture(techniqueTexture, uv);
+}
+`;
+
+  return {
+    SCENE_WGSL,
+    SCENE_VERTEX_SHADER,
+    SCENE_FRAGMENT_SHADER,
+    COMPARISON_WGSL,
+    COMPARISON_FRAGMENT_SHADER
+  } as const;
 }

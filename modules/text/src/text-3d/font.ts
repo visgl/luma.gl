@@ -5,50 +5,14 @@
 // Adapted from THREE.js FontLoader (https://github.com/mrdoob/three.js/) under the MIT License.
 
 import {Vector2} from '@math.gl/core';
+import type {TypefaceFontData, TypefaceGlyph} from '../fonts/typeface-font-data';
 import {ShapePath} from './paths/shape-path';
 import {Shape} from './paths/path';
 
+export type {TypefaceFontData} from '../fonts/typeface-font-data';
+
 /** Command tokens found in the typeface outline. */
 type GlyphCommand = 'm' | 'l' | 'q' | 'b';
-
-/** Typeface glyph outline definition parsed from JSON. */
-type TypefaceGlyph = {
-  /** Horizontal advance after rendering the glyph. */
-  ha: number;
-  /** Optional minimum x coordinate included by typeface.js font data. */
-  x_min?: number;
-  /** Optional maximum x coordinate included by typeface.js font data. */
-  x_max?: number;
-  /** Outline command sequence describing the glyph. */
-  o?: string;
-  /** Cached outline tokens for repeated parsing. */
-  _cachedOutline?: string[];
-};
-
-/** Typeface JSON font definition accepted by the loader. */
-export type TypefaceFontData = {
-  /** Additional typeface.js metadata retained by source font JSON. */
-  [key: string]: unknown;
-  /** Name of the font family. */
-  familyName: string;
-  /** Glyph table keyed by character. */
-  glyphs: Record<string, TypefaceGlyph | undefined>;
-  /** Font resolution from the source generator. */
-  resolution: number;
-  /** Font bounding box extents. */
-  boundingBox: {
-    /** Optional minimum x coordinate included by typeface.js font data. */
-    xMin?: number;
-    /** Minimum y coordinate for glyph outlines. */
-    yMin: number;
-    /** Optional maximum x coordinate included by typeface.js font data. */
-    xMax?: number;
-    /** Maximum y coordinate for glyph outlines. */
-    yMax: number;
-  };
-  /** Underline thickness for the font. */
-  underlineThickness: number;
-};
 
 /** Layout options applied while generating glyph shapes. */
 export type TextLayoutOptions = {

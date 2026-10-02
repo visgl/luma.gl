@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Buffer, Texture, textureFormatDecoder} from '@luma.gl/core';
+import {GPUPlanningHeap} from './gpu-planning-heap';
+import {Buffer, PipelineFactory, Texture, textureFormatDecoder} from '@luma.gl/core';
 import type {Device, TextureFormat} from '@luma.gl/core';
 import type {
   GPUCommandGraphComputeExecutable,
@@ -104,6 +105,15 @@ export type GPUCommandGraphCompilation<Parameters> = {
   preflight: GPUCommandGraphPreflightReport;
 };
 
+type GPUCommandGraphCompilerProps<Parameters> = {
+  device: Device;
+  id: string;
+  buffers: Map<string, GraphBufferHandle>;
+  textures: Map<string, GraphTextureHandle>;
+  externalTextures: Map<string, GraphExternalTextureHandle>;
+  nodes: GPUCommandGraphNode<Parameters>[];
+};
+
 /**
  * Compiles scheduling, transient allocations, and executable node resources.
  *
@@ -114,14 +124,9 @@ export type GPUCommandGraphCompilation<Parameters> = {
  *
  * @internal
  */
-export function compileGPUCommandGraph<Parameters>(props: {
-  device: Device;
-  id: string;
-  buffers: Map<string, GraphBufferHandle>;
-  textures: Map<string, GraphTextureHandle>;
-  externalTextures: Map<string, GraphExternalTextureHandle>;
-  nodes: GPUCommandGraphNode<Parameters>[];
-}): GPUCommandGraphCompilation<Parameters> {
+export function compileGPUCommandGraph<Parameters>(
+  props: GPUCommandGraphCompilerProps<Parameters>
+): GPUCommandGraphCompilation<Parameters> {
   const nodeOrder = getNodeOrder(props.nodes);
   const bufferPlan = getBufferTransientAllocationPlan(nodeOrder, props.buffers.values());
   const texturePlan = getTextureTransientAllocationPlan(nodeOrder, props.textures.values());
@@ -166,6 +171,115 @@ export function compileGPUCommandGraph<Parameters>(props: {
     throw error;
   }
 
+  return finishGPUCommandGraphCompilation(
+    props,
+    nodeOrder,
+    compiledNodes,
+    transientBuffers,
+    transientTextures,
+    bufferPlan,
+    texturePlan
+  );
+}
+
+/**
+ * Compiles graph node resources concurrently through their asynchronous compilation callbacks.
+ *
+ * Scheduling and transient allocation remain deterministic and synchronous. All node compilation
+ * promises are started before any is awaited, allowing WebGPU pipeline compilation to overlap.
+ * Nodes without an asynchronous callback retain their synchronous compatibility path.
+ *
+ * @internal
+ */
+export async function compileGPUCommandGraphAsync<Parameters>(
+  props: GPUCommandGraphCompilerProps<Parameters>
+): Promise<GPUCommandGraphCompilation<Parameters>> {
+  const nodeOrder = getNodeOrder(props.nodes);
+  const bufferPlan = getBufferTransientAllocationPlan(nodeOrder, props.buffers.values());
+  const texturePlan = getTextureTransientAllocationPlan(nodeOrder, props.textures.values());
+  const transientBuffers = new Map<GraphBufferHandle, Buffer>();
+  const transientTextures = new Map<GraphTextureHandle, Texture>();
+
+  try {
+    for (const allocation of bufferPlan) {
+      allocation.buffer = props.device.createBuffer({
+        id: `${props.id}-transient-buffer-${bufferPlan.indexOf(allocation)}`,
+        byteLength: allocation.byteLength,
+        usage: allocation.usage
+      });
+      for (const handle of allocation.handles) {
+        transientBuffers.set(handle, allocation.buffer);
+      }
+    }
+    for (const allocation of texturePlan) {
+      allocation.texture = props.device.createTexture({
+        ...allocation.descriptor,
+        id: `${props.id}-transient-texture-${texturePlan.indexOf(allocation)}`
+      });
+      for (const handle of allocation.handles) {
+        transientTextures.set(handle, allocation.texture);
+      }
+    }
+
+    const asyncPipelineCompilation = PipelineFactory.beginAsyncCompilation(props.device);
+    const nodeCompilationPromises = nodeOrder.map(async node => ({
+      node,
+      executable: node.compileAsync
+        ? await node.compileAsync({device: props.device})
+        : node.compile({device: props.device})
+    }));
+    PipelineFactory.endAsyncCompilation(props.device, asyncPipelineCompilation);
+    const [results, pipelineResults] = await Promise.all([
+      Promise.allSettled(nodeCompilationPromises),
+      Promise.allSettled(asyncPipelineCompilation)
+    ]);
+    const compiledNodes: CompiledNode<Parameters>[] = [];
+    const pipelineFailure = pipelineResults.find(result => result.status === 'rejected');
+    let compilationError: unknown =
+      pipelineFailure?.status === 'rejected' ? pipelineFailure.reason : undefined;
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        compiledNodes.push(result.value);
+      } else {
+        compilationError ??= result.reason;
+      }
+    }
+    if (compilationError) {
+      for (const compiledNode of compiledNodes) {
+        compiledNode.executable.destroy?.();
+      }
+      throw compilationError;
+    }
+
+    return finishGPUCommandGraphCompilation(
+      props,
+      nodeOrder,
+      compiledNodes,
+      transientBuffers,
+      transientTextures,
+      bufferPlan,
+      texturePlan
+    );
+  } catch (error) {
+    for (const allocation of bufferPlan) {
+      allocation.buffer?.destroy();
+    }
+    for (const allocation of texturePlan) {
+      allocation.texture?.destroy();
+    }
+    throw error;
+  }
+}
+
+function finishGPUCommandGraphCompilation<Parameters>(
+  props: GPUCommandGraphCompilerProps<Parameters>,
+  nodeOrder: GPUCommandGraphNode<Parameters>[],
+  compiledNodes: CompiledNode<Parameters>[],
+  transientBuffers: Map<GraphBufferHandle, Buffer>,
+  transientTextures: Map<GraphTextureHandle, Texture>,
+  bufferPlan: BufferTransientAllocation[],
+  texturePlan: TextureTransientAllocation[]
+): GPUCommandGraphCompilation<Parameters> {
   const logicalBuffers = Array.from(props.buffers.values());
   const importedBuffers = logicalBuffers.filter(buffer => !buffer.transient);
   const logicalTransientBuffers = logicalBuffers.filter(buffer => buffer.transient);
@@ -313,7 +427,7 @@ function getGPUCommandGraphPreflightReport<Parameters>(
           resource.usage === 'storage-write' ||
           resource.usage === 'storage-read-write')
       ) {
-        maximum = Math.max(maximum, getBufferHandle(resource.buffer).byteLength);
+        maximum = Math.max(maximum, getStorageBindingRange(resource.buffer).size);
       }
     }
     return maximum;
@@ -549,26 +663,30 @@ function getNodeOrder<Parameters>(
     dependencies.set(node.id, nodeDependencies);
   }
 
+  // Visit only outgoing edges when a node completes. Keep the existing insertion-ordered
+  // waves: nodes unlocked by this wave are scheduled in the next one.
+  const dependents = nodes.map(() => [] as number[]);
   const insertionIndex = new Map(nodes.map((node, index) => [node.id, index]));
-  const remaining = new Map(
-    Array.from(dependencies, ([id, values]) => [id, new Set(values)] as const)
-  );
-  const ordered: GPUCommandGraphNode<Parameters>[] = [];
-  while (remaining.size > 0) {
-    const ready = Array.from(remaining)
-      .filter(([, values]) => values.size === 0)
-      .map(([id]) => id)
-      .sort((left, right) => insertionIndex.get(left)! - insertionIndex.get(right)!);
-    if (ready.length === 0) {
-      throw new Error('GPUCommandGraph contains a dependency cycle');
+  const remainingCounts = nodes.map(node => dependencies.get(node.id)!.size);
+  for (const [index, node] of nodes.entries()) {
+    for (const dependency of dependencies.get(node.id)!) {
+      dependents[insertionIndex.get(dependency)!].push(index);
     }
-    for (const id of ready) {
-      ordered.push(nodeById.get(id)!);
-      remaining.delete(id);
-      for (const values of remaining.values()) {
-        values.delete(id);
+  }
+  let ready = remainingCounts.flatMap((count, index) => (count === 0 ? [index] : []));
+  const ordered: GPUCommandGraphNode<Parameters>[] = [];
+  while (ready.length) {
+    const next: number[] = [];
+    for (const index of ready) {
+      ordered.push(nodes[index]);
+      for (const dependent of dependents[index]) {
+        if (--remainingCounts[dependent] === 0) next.push(dependent);
       }
     }
+    ready = next.sort((left, right) => left - right);
+  }
+  if (ordered.length !== nodes.length) {
+    throw new Error('GPUCommandGraph contains a dependency cycle');
   }
   return ordered;
 }
@@ -657,21 +775,38 @@ function getBufferTransientAllocationPlan<Parameters>(
         (right.lifetime?.firstUse ?? Number.MAX_SAFE_INTEGER)
     );
 
+  // Completed allocations enter a capacity-ordered pool. Each allocation changes heaps only
+  // once per lifetime; a large set of simultaneously live chunks no longer causes full scans.
+  type Candidate = {allocation: BufferTransientAllocation; index: number};
+  const active = new GPUPlanningHeap<Candidate>(
+    (left, right) => left.allocation.lastUse - right.allocation.lastUse || left.index - right.index
+  );
+  const available = new GPUPlanningHeap<Candidate>(
+    (left, right) =>
+      left.allocation.byteLength - right.allocation.byteLength || left.index - right.index
+  );
+
   for (const {buffer, lifetime} of transientBuffers) {
     if (!lifetime) {
       continue;
     }
-    let allocation = allocations
-      .filter(candidate => candidate.lastUse < lifetime.firstUse)
-      .sort((left, right) => left.byteLength - right.byteLength)[0];
-    if (!allocation) {
-      allocation = {byteLength: 0, usage: 0, lastUse: -1, handles: []};
-      allocations.push(allocation);
+    while (active.peek() && active.peek()!.allocation.lastUse < lifetime.firstUse) {
+      available.push(active.pop()!);
     }
+    let candidate = available.pop();
+    if (!candidate) {
+      candidate = {
+        allocation: {byteLength: 0, usage: 0, lastUse: -1, handles: []},
+        index: allocations.length
+      };
+      allocations.push(candidate.allocation);
+    }
+    const {allocation} = candidate;
     allocation.byteLength = Math.max(allocation.byteLength, buffer.byteLength);
     allocation.usage |= buffer.usage;
     allocation.lastUse = lifetime.lastUse;
     allocation.handles.push(buffer);
+    active.push(candidate);
   }
   return allocations;
 }

@@ -4,8 +4,8 @@
 
 import {Buffer, type Device} from '@luma.gl/core';
 import {Model, type ModelProps} from '@luma.gl/engine';
-import type {FontAtlas} from './atlas/font-atlas';
-import {measureFontAtlasText} from './atlas/text-metrics';
+import type {FontAtlas} from '../fonts/atlas/font-atlas';
+import {measureFontAtlasText} from '../fonts/atlas/text-metrics';
 import {GPUTextResources} from './gpu-text-resources';
 import {buildTextGpuDictionaryCompressedStream} from './model-utils/text-layout';
 

@@ -1,9 +1,10 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) three.js authors
 // Adapted from THREE.js helvetiker_regular.typeface.json (https://github.com/mrdoob/three.js/) under the MIT License.
 
-import type {TypefaceFontData} from '../text-3d/font';
+import type {TypefaceFontData} from './typeface-font-data';
 
 /** Bundled Helvetiker typeface data for examples and simple extruded-text applications. */
 export const helvetiker: TypefaceFontData = {

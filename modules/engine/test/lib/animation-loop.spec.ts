@@ -202,6 +202,7 @@ it('engine#AnimationLoop start followed immediately by stop() should stop', asyn
 it('engine#makeAnimationLoop stops after template initialization failure', async () => {
   const device = await getWebGLTestDevice();
   let renderCalled = 0;
+  const reportedErrors: Error[] = [];
 
   class FailingAnimationLoopTemplate extends AnimationLoopTemplate {
     override async onInitialize(): Promise<unknown> {
@@ -221,11 +222,13 @@ it('engine#makeAnimationLoop stops after template initialization failure', async
   console.error = () => {};
   try {
     const animationLoop = makeAnimationLoop(FailingAnimationLoopTemplate, {
-      device
+      device,
+      onError: error => reportedErrors.push(error)
     });
     const startResult = await animationLoop.start();
     expect(startResult, 'Animation loop stops after template initialization failure').toBe(null);
     expect(renderCalled, 'onRender is not called after template initialization failure').toBe(0);
+    expect(reportedErrors.map(error => error.message)).toEqual(['Expected initialization failure']);
     animationLoop.destroy();
   } finally {
     // biome-ignore lint/suspicious/noConsole: test restores console state after suppressing expected logging.
@@ -236,6 +239,36 @@ it('engine#makeAnimationLoop stops after template initialization failure', async
   }
 
   void 0;
+});
+
+it('engine#AnimationLoop reports scheduled-frame errors and stops the loop', async () => {
+  const device = await getWebGLTestDevice();
+  let scheduledCallback: ((time: DOMHighResTimeStamp) => void) | null = null;
+  let cancelAnimationFrameCallCount = 0;
+  const reportedErrors: Error[] = [];
+  const animationLoop = new AnimationLoop({
+    device,
+    animationFrameProvider: {
+      requestAnimationFrame(callback: (time: DOMHighResTimeStamp) => void) {
+        scheduledCallback = callback;
+        return 1;
+      },
+      cancelAnimationFrame() {
+        cancelAnimationFrameCallCount++;
+      }
+    },
+    onRender: () => {
+      throw new Error('Expected scheduled-frame failure');
+    },
+    onError: error => reportedErrors.push(error)
+  });
+
+  await animationLoop.start();
+  scheduledCallback?.(123);
+
+  expect(reportedErrors.map(error => error.message)).toEqual(['Expected scheduled-frame failure']);
+  expect(cancelAnimationFrameCallCount).toBe(1);
+  animationLoop.destroy();
 });
 
 it('engine#makeAnimationLoop exposes the active template instance', async () => {

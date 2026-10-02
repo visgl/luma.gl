@@ -1,3 +1,4 @@
+import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -63,7 +64,7 @@ it('GPUChunkedIndexedScatter routes compacted IDs into indirect-ready chunk rang
     chunkEnds: [4, 8, 12],
     output: importView('output', outputBuffer, sourceIds.length * 2)
   });
-  scatter.addToGraph(graph);
+  addGPUCommandNodes(graph, scatter.getCommands(graph).nodes);
   const compiled = graph.compile();
 
   try {

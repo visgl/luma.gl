@@ -169,31 +169,33 @@ async function runHashJoin(device: Device, props: JoinFixtureProps) {
     tableValues: importView(graph, 'table-values', buffers.tableValues, props.tableCapacity ?? 8),
     statistics: importView(graph, 'build-statistics', buffers.buildStatistics, 6)
   });
-  index.addToGraph(graph);
-  new GPUHashJoin({
-    index,
-    keys: importView(graph, 'left-keys', buffers.leftKeys, props.leftKeys.length),
-    ...(buffers.leftRows
-      ? {leftRows: importView(graph, 'left-rows', buffers.leftRows, props.leftRows!.length)}
-      : {firstLeftRow: props.firstLeftRow}),
-    outputLeftRows: importView(
-      graph,
-      'output-left-rows',
-      buffers.outputLeftRows,
-      props.outputCapacity
-    ),
-    outputRightRows: importView(
-      graph,
-      'output-right-rows',
-      buffers.outputRightRows,
-      props.outputCapacity
-    ),
-    count: importView(graph, 'count', buffers.count, 1),
-    overflow: importView(graph, 'overflow', buffers.overflow, 1),
-    statistics: importView(graph, 'statistics', buffers.statistics, 4),
-    found: importView(graph, 'found', buffers.found, props.leftKeys.length),
-    probes: importView(graph, 'probes', buffers.probes, props.leftKeys.length)
-  }).addToGraph(graph);
+  graph.add(index);
+  graph.add(
+    new GPUHashJoin({
+      index,
+      keys: importView(graph, 'left-keys', buffers.leftKeys, props.leftKeys.length),
+      ...(buffers.leftRows
+        ? {leftRows: importView(graph, 'left-rows', buffers.leftRows, props.leftRows!.length)}
+        : {firstLeftRow: props.firstLeftRow}),
+      outputLeftRows: importView(
+        graph,
+        'output-left-rows',
+        buffers.outputLeftRows,
+        props.outputCapacity
+      ),
+      outputRightRows: importView(
+        graph,
+        'output-right-rows',
+        buffers.outputRightRows,
+        props.outputCapacity
+      ),
+      count: importView(graph, 'count', buffers.count, 1),
+      overflow: importView(graph, 'overflow', buffers.overflow, 1),
+      statistics: importView(graph, 'statistics', buffers.statistics, 4),
+      found: importView(graph, 'found', buffers.found, props.leftKeys.length),
+      probes: importView(graph, 'probes', buffers.probes, props.leftKeys.length)
+    })
+  );
 
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'hash-join-test'});

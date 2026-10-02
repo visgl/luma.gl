@@ -11,8 +11,8 @@ const ROUND_COUNTS = [1, 8, 32, 128] as const;
 /** Compares portable and subgroup workgroup scans on the reader's actual WebGPU adapter. */
 export function WorkgroupScanBenchmark(): ReactNode {
   const selectedDevice = useStore(store => store.presentationDevice || store.device);
-  const [workgroupCount, setWorkgroupCount] = useState<number>(4096);
-  const [roundCount, setRoundCount] = useState<number>(32);
+  const [workgroupCount, setWorkgroupCount] = useState<number>(WORKGROUP_COUNTS[0]);
+  const [roundCount, setRoundCount] = useState<number>(ROUND_COUNTS[0]);
   const [webGPUUnavailable, setWebGPUUnavailable] = useState(false);
   const workgroupCountId = useId();
   const roundCountId = useId();

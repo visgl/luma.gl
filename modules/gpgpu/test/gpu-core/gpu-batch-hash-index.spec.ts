@@ -187,16 +187,18 @@ async function runBatchHashIndex(device: Device, fixture: BatchHashIndexFixture)
     tableValues: tableValues.view,
     statistics: buildStatistics.view
   });
-  index.addToGraph(graph);
-  new GPUHashIndexQuery({
-    id: 'browser-batch-query',
-    index,
-    keys: queryKeys,
-    values: outputValues.view,
-    found: found.view,
-    probes: probes.view,
-    statistics: queryStatistics.view
-  }).addToGraph(graph);
+  graph.add(index);
+  graph.add(
+    new GPUHashIndexQuery({
+      id: 'browser-batch-query',
+      index,
+      keys: queryKeys,
+      values: outputValues.view,
+      found: found.view,
+      probes: probes.view,
+      statistics: queryStatistics.view
+    })
+  );
 
   const compiled = graph.compile();
   try {

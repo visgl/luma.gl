@@ -7,7 +7,7 @@ import {Computation, DynamicBuffer} from '@luma.gl/engine';
 import {fp64arithmetic, type ShaderModule} from '@luma.gl/shadertools';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {FixedSizeList, Float32, Vector} from 'apache-arrow';
-import {getArrowVectorBufferSource} from '../gpu/arrow-gpu-data';
+import {getArrowDataBufferSource} from '../gpu/arrow-gpu-data';
 import {
   getArrowMatrixVectorInfo,
   makeArrowMatrixVector,
@@ -71,6 +71,8 @@ export async function convertArrowMatrixToGPUVector(
     }
     return convertArrowMatrixToGPUVectorOnGPU(device, source, sourceInfo, {name, id});
   }
+
+  validateArrowMatrixNullability(source);
 
   const canonicalVector = isCanonicalFloat32Matrix(sourceInfo)
     ? (source as Vector<FixedSizeList<Float32>>)
@@ -276,23 +278,24 @@ function makeCanonicalArrowMatrixVector(
   source: ArrowMatrixVector,
   sourceInfo: ArrowMatrixVectorInfo
 ): Vector<FixedSizeList<Float32>> {
-  const sourceValues = getArrowVectorBufferSource(source as Vector<any>) as
-    | Float32Array
-    | Float64Array;
-  const canonicalValues = new Float32Array(source.length * sourceInfo.logicalComponentCount);
+  const outputData = source.data.map(sourceData => {
+    const sourceValues = getArrowDataBufferSource(sourceData as any) as Float32Array | Float64Array;
+    const canonicalValues = new Float32Array(sourceData.length * sourceInfo.logicalComponentCount);
 
-  for (let matrixIndex = 0; matrixIndex < source.length; matrixIndex++) {
-    const targetMatrixOffset = matrixIndex * sourceInfo.logicalComponentCount;
-    for (let columnIndex = 0; columnIndex < sourceInfo.columns; columnIndex++) {
-      for (let rowIndex = 0; rowIndex < sourceInfo.rows; rowIndex++) {
-        canonicalValues[targetMatrixOffset + columnIndex * sourceInfo.rows + rowIndex] = Number(
-          sourceValues[getMatrixSourceScalarIndex(sourceInfo, matrixIndex, columnIndex, rowIndex)]
-        );
+    for (let matrixIndex = 0; matrixIndex < sourceData.length; matrixIndex++) {
+      const targetMatrixOffset = matrixIndex * sourceInfo.logicalComponentCount;
+      for (let columnIndex = 0; columnIndex < sourceInfo.columns; columnIndex++) {
+        for (let rowIndex = 0; rowIndex < sourceInfo.rows; rowIndex++) {
+          canonicalValues[targetMatrixOffset + columnIndex * sourceInfo.rows + rowIndex] = Number(
+            sourceValues[getMatrixSourceScalarIndex(sourceInfo, matrixIndex, columnIndex, rowIndex)]
+          );
+        }
       }
     }
-  }
 
-  return makeArrowMatrixVector(sourceInfo.shape, canonicalValues);
+    return makeArrowMatrixVector(sourceInfo.shape, canonicalValues).data[0];
+  });
+  return new Vector(outputData);
 }
 
 function makeArrowMatrixGPUVector(
@@ -301,37 +304,43 @@ function makeArrowMatrixGPUVector(
   options: Required<Pick<ConvertArrowMatrixToGPUVectorOptions, 'name' | 'id'>>
 ): GPUVector {
   const matrixInfo = getRequiredArrowMatrixVectorInfo(vector);
-  const buffer = new DynamicBuffer(device, {
-    id: options.id,
-    usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
-    data: getArrowVectorBufferSource(vector as Vector<any>) as Float32Array
+  const data = vector.data.map((sourceData, chunkIndex) => {
+    const buffer = new DynamicBuffer(device, {
+      id: `${options.id}-${chunkIndex}`,
+      usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+      data: getArrowDataBufferSource(sourceData as any) as Float32Array
+    });
+    return new GPUData({
+      buffer,
+      dataType: vector.type,
+      format: 'float32x4',
+      length: sourceData.length,
+      valueLength: sourceData.length,
+      stride: matrixInfo.physicalComponentCount,
+      byteStride: matrixInfo.byteStride,
+      rowByteLength: matrixInfo.byteStride,
+      ownsBuffer: true
+    });
   });
   return new GPUVector({
     type: 'data',
     name: options.name,
     dataType: vector.type,
     format: 'float32x4',
-    data: [
-      new GPUData({
-        buffer,
-        dataType: vector.type,
-        format: 'float32x4',
-        length: vector.length,
-        valueLength: vector.data.reduce(
-          (totalValueLength, chunk) => totalValueLength + chunk.length,
-          0
-        ),
-        stride: matrixInfo.physicalComponentCount,
-        byteStride: matrixInfo.byteStride,
-        rowByteLength: matrixInfo.byteStride,
-        ownsBuffer: true
-      })
-    ],
+    data,
     stride: matrixInfo.physicalComponentCount,
     byteStride: matrixInfo.byteStride,
     rowByteLength: matrixInfo.byteStride,
     ownsData: true
   });
+}
+
+function validateArrowMatrixNullability(source: ArrowMatrixVector): void {
+  if (
+    source.data.some(data => data.nullCount > 0 || data.children.some(child => child.nullCount > 0))
+  ) {
+    throw new Error('convertArrowMatrixToGPUVector does not support nullable matrix values');
+  }
 }
 
 function getMatrixSourceScalarIndex(

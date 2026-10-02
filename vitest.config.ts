@@ -45,7 +45,7 @@ const nodeOnlyTestPatterns = [
   'modules/engine/test/scenegraph/scenegraph-node.spec.{ts,js}',
   'modules/engine/test/utils/**/*.spec.{ts,js}',
   'modules/engine/test/shader-inputs.spec.{ts,js}',
-  'modules/text/test/text-2d/{text-layout,arrow-text,text-utils,build-msdf-font-atlas,font-atlas-builders}.spec.{ts,js}',
+  'modules/text/test/text-2d/{text-layout,arrow-text,text-utils}.spec.{ts,js}',
   'modules/text/test/text-3d/**/*.spec.{ts,js}',
   'modules/tables/test/table/{gpu-table-model,generated-buffer-batches,table-buffer-planner}.spec.{ts,js}',
   'modules/webgpu/test/adapter/helpers/get-vertex-buffer-layout.spec.{ts,js}',
@@ -117,9 +117,12 @@ const nodeCoverageNativePatterns = [
   'test/dev-modules/**/*.node.spec.{ts,js}',
   'modules/gltf/test/gltf/gltf-animated-crowd.node.spec.{ts,js}',
   'modules/scene/test/{gltf-import,scene-export,scene-interchange}.node.spec.{ts,js}',
+  'modules/arrow/test/arrow/{arrow-colors,arrow-gpu-conversion,arrow-gpu-data,arrow-renderer-preparation}.node.spec.{ts,js}',
   'modules/arrow/test/geoarrow/{geoarrow-dense-union,arrow-polygon-tessellation}.node.spec.{ts,js}',
   'modules/splats/test/{splat-renderer,gpu-paged-splat-renderer,splat-residency,splat-hierarchy}.node.spec.{ts,js}',
   'modules/gpgpu/test/gpu-core/gpu-command-graph-{history,passes,planning}.node.spec.{ts,js}',
+  'modules/gpgpu/test/operations/{cast-data,convert-colors}.node.spec.{ts,js}',
+  'modules/deck-arrow-layers/test/layers/arrow-layers.node.spec.{ts,js}',
   'modules/experimental/test/gpu-raster/{gpu-raster-tile-source,gpu-raster-tile-cache,gpu-raster-cross-tile-components}.node.spec.{ts,js}',
   'modules/experimental/test/gpu-sql/lu-sql.node.spec.{ts,js}'
 ];
@@ -130,11 +133,15 @@ const nodeCoveragePatterns = [
 // Benchmarks answer performance questions but do not add stable correctness coverage. Keep them
 // out of every pull request's instrumented browser run and expose them through an opt-in project.
 const browserBenchmarkTestPatterns = [
+  'modules/gpgpu/test/gpu-core/gpu-kernel-benchmark.spec.ts',
+  'modules/gpgpu/test/gpu-core/gpu-fragmentation-benchmark.spec.ts',
   'modules/experimental/test/gpu-core/gpu-spatial-query-benchmark.spec.ts',
   'modules/experimental/test/gpu-core/gpu-workgroup-reduction-benchmark.spec.ts',
   'modules/experimental/test/gpu-core/gpu-workgroup-scan-benchmark.spec.ts',
   'modules/experimental/test/gpu-graph/gpu-graph-benchmark.spec.ts',
-  'modules/experimental/test/gpu-project/projection-benchmark.spec.ts'
+  'modules/experimental/test/gpu-project/projection-benchmark.spec.ts',
+  'modules/experimental/test/gpu-project/projection-performance.spec.ts',
+  'modules/experimental/test/gpu-project/projection-program-benchmark.spec.ts'
 ];
 const runBrowserBenchmarks = process.env.LUMA_TEST_BROWSER_BENCHMARKS === 'true';
 const runNodeCoverage = process.env.LUMA_TEST_NODE_COVERAGE === 'true';
@@ -159,10 +166,15 @@ const vitestConfig = getVitestConfig({
   },
   overrides: {
     // Keep deck.gl in Vite's source graph so it shares this repository's luma.gl runtime.
-    ssr: {noExternal: ['@deck.gl/core']},
+    ssr: {noExternal: ['@deck.gl/core', '@deck.gl/layers']},
     // loaders.gl's optional writer peer must remain importable without installing its 33 MB CLI.
     // Disabling discovery keeps Vite from restarting a CI shard when it first encounters zod.
-    optimizeDeps: {exclude: ['@deck.gl/core'], noDiscovery: true}
+    optimizeDeps: {
+      exclude: ['@deck.gl/core', '@deck.gl/layers'],
+      // Stock layers remain in the source graph; only their CommonJS triangulator is bundled.
+      include: ['@deck.gl/layers > earcut'],
+      noDiscovery: true
+    }
   },
   projects: {
     node: {

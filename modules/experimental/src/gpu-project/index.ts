@@ -10,6 +10,7 @@ export type {
   ProjectionDegree,
   ProjectionPatch,
   ProjectionPlan,
+  ProjectionPrecision,
   ProjectionProvider
 } from './types';
 
@@ -29,4 +30,31 @@ export {
 } from './web-mercator';
 
 export {GPUProjection} from './gpu-projection';
-export type {GPUProjectionPatchIds, GPUProjectionProps} from './gpu-projection';
+export {
+  CompiledProjection,
+  compileProjectionProgram,
+  invertProjectionProgram,
+  evaluateProjectionProgram
+} from './projection-program';
+export type {
+  ProjectionProgram,
+  ProjectionOperation,
+  ProjectionInputFormat,
+  ProjectionShader
+} from './projection-program';
+export {GPUProjectionProgram} from './gpu-projection-program';
+export {getProjectionProgramMetadata} from './projection-metadata';
+export type {
+  ProjectionErrorMetadata,
+  ProjectionStageMetadata,
+  ProjectionProgramMetadata
+} from './projection-metadata';
+export type {GPUProjectionProgramProps} from './gpu-projection-program';
+export type {LongitudeWrapOperation} from './projection-longitude-wrap';
+export type {
+  GPUProjectionDoubleSingleProps,
+  GPUProjectionLocalFloat32Props,
+  GPUProjectionPatchIds,
+  GPUProjectionProps,
+  GPUProjectionValidity
+} from './gpu-projection';

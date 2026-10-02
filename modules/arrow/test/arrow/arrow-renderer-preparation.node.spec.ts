@@ -9,6 +9,8 @@ import {
   createArrowTextGPUTable,
   makeArrowFixedSizeListVector,
   prepareArrowPolygonInput,
+  prepareArrowTextInputFromData,
+  readArrowGPUVectorAsync,
   resolveArrowPickInfo
 } from '@luma.gl/arrow';
 import {Buffer} from '@luma.gl/core';
@@ -206,6 +208,51 @@ it('prepareArrowPolygonInput preserves rows, batch layout, row offsets, and owne
     'destroy releases owned polygon attribute buffers'
   ).toBe(true);
   expect(Boolean(indexBuffer.destroyed), 'destroy releases the polygon index buffer').toBe(true);
+  void 0;
+});
+
+it('Arrow polygon and text preparation normalize named Float32 color columns', async () => {
+  const device = new NullDevice({});
+  const floatColors = makeArrowFixedSizeListVector(
+    new arrow.Float32(),
+    3,
+    new Float32Array([0.25, 0.5, 0.75])
+  );
+  const polygons = makePathVector(new Int32Array([0, 3]), new Float32Array([0, 0, 1, 0, 0, 1]));
+  const polygonPrepared = await prepareArrowPolygonInput(device, {
+    data: new arrow.Table({polygons, displayColors: floatColors}),
+    polygons: 'polygons',
+    colors: 'displayColors',
+    tessellated: true
+  });
+
+  expect(
+    Array.from(polygonPrepared.tessellation.colors),
+    'polygon preparation resolves and normalizes the selected color column'
+  ).toEqual([64, 128, 191, 255, 64, 128, 191, 255, 64, 128, 191, 255]);
+
+  const textPrepared = await prepareArrowTextInputFromData(device, {
+    data: new arrow.Table({
+      positions: makeArrowFixedSizeListVector(new arrow.Float32(), 2, new Float32Array([0, 0])),
+      texts: arrow.vectorFromArray(['A'], new arrow.Utf8()),
+      displayColors: floatColors
+    }),
+    positions: 'positions',
+    texts: 'texts',
+    colors: 'displayColors'
+  });
+  const textColors = textPrepared.colors
+    ? await readArrowGPUVectorAsync(textPrepared.colors)
+    : null;
+
+  expect(
+    textColors ? Array.from(textColors.get(0) as Iterable<number>) : null,
+    'text preparation resolves and normalizes the selected color column'
+  ).toEqual([64, 128, 191, 255]);
+
+  polygonPrepared.destroy();
+  textPrepared.destroy();
+  device.destroy();
   void 0;
 });
 

@@ -2,15 +2,19 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {GPU_LZ_BYTE_DESCRIPTOR_WORDS} from '@luma.gl/gpgpu/gpu-core';
+import {GPU_LZ_BYTE_DESCRIPTOR_WORDS, planGPULZByteDescriptors} from '@luma.gl/gpgpu/gpu-core';
 
 export const SNAPPY_DESCRIPTOR_WORDS = GPU_LZ_BYTE_DESCRIPTOR_WORDS;
 
 /** CPU-parsed raw Snappy block control data for GPU upload. */
 export type SnappyDecompressionPlan = {
-  /** Generic `[outputOffset, byteLength, literalSourceOffset, matchOffset]` LZ spans. */
+  /** GPU LZ descriptors with direct compressed-input provenance where tractable. */
   descriptors: Uint32Array;
   descriptorCount: number;
+  directCopyCount: number;
+  recursiveCopyCount: number;
+  directCopyByteLength: number;
+  recursiveCopyByteLength: number;
   compressedByteLength: number;
   outputByteLength: number;
 };
@@ -50,8 +54,7 @@ export function parseSnappyDecompressionPlan(compressed: Uint8Array): SnappyDeco
     throw new Error('Snappy decoded length does not match the preamble');
   }
   return Object.freeze({
-    descriptors: Uint32Array.from(descriptors),
-    descriptorCount: descriptors.length / SNAPPY_DESCRIPTOR_WORDS,
+    ...planGPULZByteDescriptors(descriptors),
     compressedByteLength: compressed.length,
     outputByteLength
   });

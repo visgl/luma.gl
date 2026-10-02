@@ -243,11 +243,13 @@ export class GPUCrossfilter<Parameters = void> {
     }
 
     for (const selection of this.selections.values()) selection.addToGraph(graph);
-    new GPUMask({
-      id: `${this.id}/controller/compose`,
-      inputs: Array.from(this.selections.values(), selection => selection.mask),
-      output: this.mask
-    }).addToGraph(graph);
+    graph.add(
+      new GPUMask({
+        id: `${this.id}/controller/compose`,
+        inputs: Array.from(this.selections.values(), selection => selection.mask),
+        output: this.mask
+      })
+    );
 
     for (const view of this.views) {
       const mask = this.getEffectiveMask(view);
@@ -313,11 +315,13 @@ export class GPUCrossfilter<Parameters = void> {
       `${this.id}/controller/mask/without/${view.dimension}`,
       this.mask
     );
-    new GPUMask({
-      id: `${this.id}/controller/compose-without/${view.dimension}`,
-      inputs,
-      output
-    }).addToGraph(this.graph);
+    this.graph.add(
+      new GPUMask({
+        id: `${this.id}/controller/compose-without/${view.dimension}`,
+        inputs,
+        output
+      })
+    );
     this.excludedDimensionMasks.set(view.dimension, output);
     return output;
   }
@@ -329,46 +333,54 @@ export class GPUCrossfilter<Parameters = void> {
   ): void {
     const id = `${this.id}/view/${view.id.length}:${view.id}`;
     if (view.edges !== undefined) {
+      this.graph.add(
+        new GPUHistogram({
+          id,
+          input: view.input,
+          output: view.output,
+          edges: view.edges,
+          mask
+        })
+      );
+      return;
+    }
+    this.graph.add(
       new GPUHistogram({
         id,
         input: view.input,
         output: view.output,
-        edges: view.edges,
+        domain: view.domain,
         mask
-      }).addToGraph(this.graph);
-      return;
-    }
-    new GPUHistogram({
-      id,
-      input: view.input,
-      output: view.output,
-      domain: view.domain,
-      mask
-    }).addToGraph(this.graph);
+      })
+    );
   }
 
   /** Adds source-aligned masked counts or floating-point grouped statistics. */
   private addGroupView(view: GPUCrossfilterGroupView, mask: GPUCrossfilterMask | undefined): void {
     const id = `${this.id}/view/${view.id.length}:${view.id}`;
     if (!isGroupStatisticView(view)) {
-      new GPUGroupAggregation({
-        id,
-        keys: view.keys,
-        output: view.output,
-        operation: 'count',
-        mask
-      }).addToGraph(this.graph);
+      this.graph.add(
+        new GPUGroupAggregation({
+          id,
+          keys: view.keys,
+          output: view.output,
+          operation: 'count',
+          mask
+        })
+      );
       return;
     }
 
-    new GPUGroupAggregation({
-      id,
-      keys: view.keys,
-      values: view.values,
-      output: view.output,
-      operation: view.operation,
-      mask
-    }).addToGraph(this.graph);
+    this.graph.add(
+      new GPUGroupAggregation({
+        id,
+        keys: view.keys,
+        values: view.values,
+        output: view.output,
+        operation: view.operation,
+        mask
+      })
+    );
   }
 
   /** Adds stable row-ID compaction and an optional public source-aligned predicate. */
@@ -378,26 +390,30 @@ export class GPUCrossfilter<Parameters = void> {
   ): void {
     const selectionMask = mask ?? this.createAllRowsMask(view.id);
     this.viewMasks.set(view.id, selectionMask);
-    new GPUVisibilityWorkflow({
-      id: `${this.id}/view/${view.id.length}:${view.id}`,
-      predicates: [{kind: 'selection', mask: selectionMask}],
-      output: view.output,
-      count: view.count,
-      outputMask: view.outputMask,
-      sourceIds: view.sourceIds,
-      firstSourceIndex: view.firstSourceIndex
-    }).addToGraph(this.graph);
+    this.graph.add(
+      new GPUVisibilityWorkflow({
+        id: `${this.id}/view/${view.id.length}:${view.id}`,
+        predicates: [{kind: 'selection', mask: selectionMask}],
+        output: view.output,
+        count: view.count,
+        outputMask: view.outputMask,
+        sourceIds: view.sourceIds,
+        firstSourceIndex: view.firstSourceIndex
+      })
+    );
   }
 
   /** Publishes one effective source-aligned view mask without transferring GPU ownership. */
   private addMaskView(view: GPUCrossfilterMaskView, mask: GPUCrossfilterMask | undefined): void {
     const selectionMask = mask ?? this.createAllRowsMask(view.id);
     if (selectionMask !== view.output) {
-      new GPUMask({
-        id: `${this.id}/view/${view.id.length}:${view.id}`,
-        inputs: [selectionMask],
-        output: view.output
-      }).addToGraph(this.graph);
+      this.graph.add(
+        new GPUMask({
+          id: `${this.id}/view/${view.id.length}:${view.id}`,
+          inputs: [selectionMask],
+          output: view.output
+        })
+      );
     }
     this.viewMasks.set(view.id, view.output);
   }
@@ -409,18 +425,22 @@ export class GPUCrossfilter<Parameters = void> {
     const firstMask = this.selections.values().next().value!.mask;
     const inverse = createMaskLike(this.graph, `${id}-inverse`, firstMask);
     const output = createMaskLike(this.graph, id, firstMask);
-    new GPUMask({
-      id: `${nodeId}/not`,
-      inputs: [firstMask],
-      output: inverse,
-      operation: 'not'
-    }).addToGraph(this.graph);
-    new GPUMask({
-      id: `${nodeId}/compose`,
-      inputs: [firstMask, inverse],
-      output,
-      operation: 'or'
-    }).addToGraph(this.graph);
+    this.graph.add(
+      new GPUMask({
+        id: `${nodeId}/not`,
+        inputs: [firstMask],
+        output: inverse,
+        operation: 'not'
+      })
+    );
+    this.graph.add(
+      new GPUMask({
+        id: `${nodeId}/compose`,
+        inputs: [firstMask, inverse],
+        output,
+        operation: 'or'
+      })
+    );
     return output;
   }
 

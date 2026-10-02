@@ -6,7 +6,6 @@ import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {
   GPUCommandGraph,
-  type GPUCommandGraphContributor,
   type GraphBufferUse,
   type GraphDataView,
   GraphVectorView
@@ -91,7 +90,7 @@ export type GPUTraceAnomalyScoringStats = {
  * a saved deployment cohort, or GPU aggregations over the current selection. Per-span scores and
  * masks stay GPU-resident; only the four-word summary needs readback for a compact UI result.
  */
-export class GPUTraceAnomalyScoring implements GPUCommandGraphContributor {
+export class GPUTraceAnomalyScoring {
   readonly id: string;
   readonly props: GPUTraceAnomalyScoringProps;
   readonly stats: Readonly<GPUTraceAnomalyScoringStats>;

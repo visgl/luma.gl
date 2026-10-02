@@ -1,0 +1,58 @@
+---
+title: GPU Parquet Constellation
+sidebar_label: GPU Parquet constellation
+description: Decode a deliberately GPU-friendly Parquet galaxy on the CPU or GPU and render the result without readback.
+sidebar_custom_props:
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  topics: [compute, rendering, parquet, data, command-graphs]
+---
+
+import {GPUParquetConstellationExample} from '@site/src/examples';
+
+<GPUParquetConstellationExample />
+
+This example is a visible vertical slice through `@luma.gl/gpgpu/gpu-parse`. It creates one real
+Parquet row group containing position, radius, temperature, and sequence fields for 600,000 animated
+points in a five-arm galaxy. The four `FLOAT` columns use `BYTE_STREAM_SPLIT`; the
+monotonic `UINT32` sequence uses `DELTA_BINARY_PACKED`. DataPageV2 and multiple pages per column
+exercise page-batch planning and composable value decoders rather than a convenient PLAIN-only
+fixture. The fixture is checked in so file generation does not pollute the measured decode paths.
+
+Use the **Compression** selector to load otherwise identical uncompressed, Snappy, or LZ4_RAW
+fixtures. Compression applies to the four `BYTE_STREAM_SPLIT` value columns. The
+`DELTA_BINARY_PACKED` sequence stays uncompressed because its control headers must remain visible to
+the CPU-side graph planner. The infobox reports every codec found in page metadata, compressed and
+decoded page-payload sizes, and their ratio. This makes the compression trade-off visible instead
+of silently changing the benchmark. The generic Snappy/LZ4_RAW resolver favors compact descriptors
+and deterministic overlapping-copy semantics; descriptor searches and irregular backreference
+chains can therefore dominate some files even when compression reduces transfer bytes.
+
+In **GPU command graph** mode, loaders.gl reads page headers and preserves the encoded value
+sections. `planGPUParquetEncodedPageBatch()` validates and packs those sections, and
+`addGPUParquetEncodedPageBatchToGraph()` composes the required column decoders. A final graph copy
+places each decoded page in persistent render storage. The render graph then binds those buffers
+directly; values never return to JavaScript.
+
+In **CPU on main thread** mode, the same loaders.gl source fully decodes the values and constructs
+Arrow arrays before luma.gl uploads five materialized columns. Keeping this comparison explicitly on
+the main thread makes UI responsiveness measurable. A production application can instead use a
+loaders.gl worker, trading worker startup, memory, and transfer costs against main-thread work.
+
+The initial load automatically prepares CPU and GPU results, leaves the GPU scene active, and
+populates both measurement columns. Use **Compare CPU → GPU** to repeat the full comparison after
+the fixture is built. The emphasized **Parquet → render-ready** row is the top-line comparison: it
+starts after file fetch and ends when decoded columns are resident in buffers that can drive the
+render. **Graph + pipeline preparation** isolates `await graph.compileAsync()`, including
+transient allocation, shader creation, and parallel preparation of the graph's independent WebGPU
+pipelines. A browser or driver may still defer additional work, so **Decode stage (first run)** reports
+the first GPU command submission through queue completion separately. The timing uses an asynchronous
+`GPUQueue.onSubmittedWorkDone()` wait rather than blocking or polling the JavaScript thread.
+
+The GPU path retains its compiled graph and immutable input buffer. It submits one unmeasured
+warm-up, yields two animation frames, then reports the median of three subsequent submissions as
+**Warmed graph median**. Selecting GPU and choosing **Decode and display** repeats that protocol.
+**Longest frame** records the largest animation gap while the old constellation remains active,
+making main-thread stalls visible. Results depend on the browser, GPU, row count, and cache state;
+they are an experiment, not a fixed performance claim.

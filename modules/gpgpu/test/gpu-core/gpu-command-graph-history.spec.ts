@@ -4,7 +4,7 @@ import {expect, it} from 'vitest';
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, Texture, type Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {GPUCommandGraph, GPUTextureHistory} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
@@ -56,7 +56,7 @@ it('GPUTextureHistory preserves GPU results across copy-free CORE WebGPU frame r
       {texture: currentView, usage: 'storage-write'}
     ],
     compile: ({device: compileDevice}) => {
-      const computation = new Computation(compileDevice, {
+      const kernel = new Kernel(compileDevice, {
         id: 'accumulate-core-history',
         source: `
 @group(0) @binding(0) var previousImage: texture_2d<f32>;
@@ -90,13 +90,17 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
       });
       return {
         encode: ({computePass, getTextureView}) => {
-          computation.setBindings({
-            previousImage: getTextureView(previousView),
-            currentImage: getTextureView(currentView)
+          kernel.dispatch(computePass, {
+            bindings: {
+              previousImage: getTextureView(previousView),
+              currentImage: getTextureView(currentView)
+            },
+            x: 1,
+            y: 1,
+            z: 1
           });
-          computation.dispatch(computePass, 1, 1, 1);
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

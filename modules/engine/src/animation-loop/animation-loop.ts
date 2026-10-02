@@ -32,6 +32,9 @@ const defaultAnimationFrameProvider: AnimationFrameProvider = {
 export type AnimationLoopProps = {
   device: Device | Promise<Device>;
 
+  /** Optional application-provided quality settings for adaptive renderers. */
+  mobileQuality?: Readonly<Record<string, boolean | number>>;
+
   onAddHTML?: (div: HTMLDivElement) => string; // innerHTML
   onInitialize?: (animationProps: AnimationProps) => Promise<unknown>;
   /** Encode a frame. Return false when no GPU work was encoded to skip device submission. */
@@ -47,6 +50,10 @@ export type AnimationLoopProps = {
   animationFrameProvider?: AnimationFrameProvider;
 };
 
+type ResolvedAnimationLoopProps = Omit<Required<AnimationLoopProps>, 'mobileQuality'> & {
+  mobileQuality?: AnimationLoopProps['mobileQuality'];
+};
+
 export type MutableAnimationLoopProps = {
   // view parameters
   autoResizeViewport?: boolean;
@@ -58,6 +65,7 @@ export type MutableAnimationLoopProps = {
 export class AnimationLoop {
   static defaultAnimationLoopProps = {
     device: null!,
+    mobileQuality: undefined,
 
     onAddHTML: () => '',
     onInitialize: async () => null,
@@ -73,12 +81,12 @@ export class AnimationLoop {
     // view parameters
     autoResizeViewport: false,
     animationFrameProvider: defaultAnimationFrameProvider
-  } as const satisfies Readonly<Required<AnimationLoopProps>>;
+  } as const satisfies Readonly<ResolvedAnimationLoopProps>;
 
   device: Device | null = null;
   canvas: HTMLCanvasElement | OffscreenCanvas | null = null;
 
-  props: Required<AnimationLoopProps>;
+  props: ResolvedAnimationLoopProps;
   animationProps: AnimationProps | null = null;
   timeline: Timeline | null = null;
   stats: Stats;
@@ -144,8 +152,15 @@ export class AnimationLoop {
   }
 
   reportError(error: Error): void {
-    this.props.onError(error);
     this._error = error;
+    this.props.onError(error);
+    if (
+      this.props.onError === AnimationLoop.defaultAnimationLoopProps.onError &&
+      typeof window !== 'undefined' &&
+      typeof ErrorEvent !== 'undefined'
+    ) {
+      window.dispatchEvent(new ErrorEvent('error', {error, message: error.message}));
+    }
   }
 
   /** Flags this animation loop as needing redraw */
@@ -228,17 +243,17 @@ export class AnimationLoop {
   stop() {
     // console.debug(`Stopping ${this.constructor.name}`);
     if (this._running) {
+      const animationProps = this.animationProps;
       // call callback
       // If stop is called immediately, we can end up in a state where props haven't been initialized...
-      if (this.animationProps && !this._error) {
-        this.props.onFinalize(this.animationProps);
-      }
-
       this._cancelAnimationFrame();
       this._nextFramePromise = null;
       this._resolveNextFrame = null;
       this._running = false;
       this._lastFrameTime = 0;
+      if (animationProps) {
+        this.props.onFinalize(animationProps);
+      }
     }
     return this;
   }
@@ -358,8 +373,14 @@ export class AnimationLoop {
     if (!this._running) {
       return;
     }
-    this.redraw(time, animationFrame ?? null);
-    this._requestAnimationFrame();
+    try {
+      this.redraw(time, animationFrame ?? null);
+      this._requestAnimationFrame();
+    } catch (error) {
+      const renderError = error instanceof Error ? error : new Error(String(error));
+      this.reportError(renderError);
+      this.stop();
+    }
   }
 
   // Called on each frame, can be overridden to call onRender multiple times
@@ -426,7 +447,8 @@ export class AnimationLoop {
 
       // Experimental
       animationFrame: null,
-      _mousePosition: null // Event props
+      _mousePosition: null, // Event props
+      mobileQuality: this.props.mobileQuality
     };
   }
 

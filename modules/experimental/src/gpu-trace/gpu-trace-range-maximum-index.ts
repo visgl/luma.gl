@@ -4,12 +4,7 @@
 
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {
-  GPUCommandGraph,
-  type GPUCommandGraphContributor,
-  type GraphBufferUse,
-  type GraphDataView
-} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {
   getBoundedDispatchLayout,
   getBoundedInvocationIndexSource,
@@ -68,7 +63,7 @@ export type GPUTraceRangeMaximumIndexBuilderStats = {
  * initialization pass and one dependency-ordered pass per binary-tree level. It belongs in a
  * source-update graph and can be spread across frames with graph execution budgets.
  */
-export class GPUTraceRangeMaximumIndexBuilder implements GPUCommandGraphContributor {
+export class GPUTraceRangeMaximumIndexBuilder {
   readonly id: string;
   readonly props: GPUTraceRangeMaximumIndexBuilderProps;
   readonly stats: Readonly<GPUTraceRangeMaximumIndexBuilderStats>;

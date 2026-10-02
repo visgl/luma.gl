@@ -5,11 +5,7 @@
 
 import {Buffer, type Device, type QuerySet} from '@luma.gl/core';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {
-  GPUCommandGraph,
-  type CompiledGPUCommandGraph,
-  type GPUCommandGraphContributor
-} from '../gpu-core/gpu-command-graph';
+import {GPUCommandGraph, type CompiledGPUCommandGraph} from '../gpu-core/gpu-command-graph';
 import {GPUGridIndex} from '../gpu-core/gpu-grid-index';
 import {GPUGraph} from './gpu-graph';
 import {
@@ -91,7 +87,7 @@ export async function runGPUGraphBenchmark(
     const uploadTimeMilliseconds = getGPUGraphBenchmarkTime() - uploadStartTime;
 
     let compilationTimeMilliseconds = 0;
-    const contributors: [GPUGraphBenchmarkAlgorithm, GPUCommandGraphContributor][] = [
+    const contributors = [
       ['topology', resources.topology],
       ['breadth-first-search', resources.search],
       ['single-source-shortest-path', resources.shortestPath],
@@ -101,7 +97,7 @@ export async function runGPUGraphBenchmark(
       ['page-rank', resources.pageRank],
       ['exact-layout', resources.exactLayout],
       ['spatial-layout', resources.spatialLayout]
-    ];
+    ] as const;
     for (const [algorithm, contributor] of contributors) {
       const startTime = getGPUGraphBenchmarkTime();
       const graph = new GPUCommandGraph(device, {id: `gpu-graph-benchmark-${algorithm}`});
@@ -348,7 +344,7 @@ class GPUGraphBenchmarkResources {
       count: importVector('spatial-count', this.spatialLayout.count),
       overflow: importVector('spatial-overflow', this.spatialLayout.overflow)
     });
-    index.addToGraph(graph);
+    graph.add(index);
     return graph.compile();
   }
 

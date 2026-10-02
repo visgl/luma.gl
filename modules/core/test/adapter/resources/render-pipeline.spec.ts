@@ -44,6 +44,14 @@ const BUILTIN_ONLY_RENDER_SOURCE = /* WGSL */ `
 }
 `;
 
+const VERTEX_ONLY_RENDER_SOURCE = /* WGSL */ `
+@vertex fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4<f32> {
+  let x = f32(i32(vertexIndex) - 1);
+  let y = f32(i32(vertexIndex & 1u) * 2 - 1);
+  return vec4<f32>(x, y, 0.0, 1.0);
+}
+`;
+
 const UNSUPPORTED_RENDER_SOURCE = /* WGSL */ `
 @group(0) @binding(0) var textures: binding_array<texture_2d<f32>>;
 
@@ -80,6 +88,36 @@ it('RenderPipeline can infer an empty shader layout for builtin-only WGSL shader
   renderPipeline.destroy();
   shader.destroy();
   void 0;
+});
+
+it('RenderPipeline supports synchronous and asynchronous vertex-only pipelines', async () => {
+  const webgpuDevice = await getWebGPUTestDevice();
+
+  if (!webgpuDevice) {
+    return;
+  }
+
+  const vertexShader = webgpuDevice.createShader({
+    stage: 'vertex',
+    source: VERTEX_ONLY_RENDER_SOURCE
+  });
+  const pipelineProps = {
+    vs: vertexShader,
+    fs: null,
+    colorAttachmentFormats: [],
+    depthStencilAttachmentFormat: 'depth24plus' as const
+  };
+  const synchronousPipeline = webgpuDevice.createRenderPipeline(pipelineProps);
+  const asynchronousPipeline = await webgpuDevice.createRenderPipelineAsync(pipelineProps);
+
+  expect(synchronousPipeline.fs).toBeNull();
+  expect(synchronousPipeline.descriptor).not.toHaveProperty('fragment');
+  expect(asynchronousPipeline.fs).toBeNull();
+  expect(asynchronousPipeline.descriptor).not.toHaveProperty('fragment');
+
+  asynchronousPipeline.destroy();
+  synchronousPipeline.destroy();
+  vertexShader.destroy();
 });
 
 it('RenderPipeline requires a layout when lightweight WGSL scanning is unsafe', async () => {

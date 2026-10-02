@@ -1,0 +1,116 @@
+---
+title: 'Poisson Lab'
+description: Paint a field, solve a sparse Poisson system on WebGPU, and inspect the numerical evidence behind the image.
+sidebar_custom_props:
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  topics: [compute, rendering, simulation, sparse, solvers]
+---
+
+# Poisson Lab
+
+Poisson Lab is designed as a hero-caliber GPU compute example, but visual impact is not its correctness criterion. The example couples an interactive Poisson solve with a manufactured problem whose exact analytical solution is known, so the same pipeline can report both solver residual and actual discretization/solution error.
+
+## Beauty mode
+
+The primary view presents the solved scalar field as an illuminated height surface with contour lines and an optional gradient-flow overlay. Users can paint positive and negative sources and reshape boundary/obstacle regions; the field responds to the changed mathematical problem rather than selecting a prerecorded result.
+
+The intended visual language is restrained: the solution surface is the hero, contours establish shape, and motion is reserved for interaction or convergence. UI should not compete with the field.
+
+## Engineering mode
+
+A second view makes the computation inspectable:
+
+```text
+Poisson domain
+      ↓
+five-point discretization
+      ↓
+CSR matrix
+      ↓
+Jacobi preconditioner
+      ↓
+adaptive SpMV + PCG
+      ↓
+GPU solution buffer
+```
+
+The panel should expose:
+
+- grid resolution and unknown count;
+- nonzero count and selected SpMV strategy;
+- PCG iteration count and convergence tolerance;
+- relative residual `||b-Ax||₂ / ||b||₂`;
+- GPU timings when timestamp queries are available;
+- graph node/resource diagnostics.
+
+## Manufactured-solution verification
+
+The verification preset solves
+
+```text
+-Δu = f  on (0,1)²
+u = 0    on the boundary
+```
+
+with
+
+```text
+u(x,y) = sin(πx) sin(πy)
+f(x,y) = 2π² sin(πx) sin(πy).
+```
+
+Because `u` is known analytically, the example can distinguish three different questions that are too often conflated:
+
+1. **Did the iterative solver converge?** Measure the algebraic residual.
+2. **Did it solve the discretized system accurately?** Compare against a high-accuracy solve/reference.
+3. **Does the discretization approximate the continuous PDE?** Compare grid samples against the analytical `u(x,y)` and verify expected refinement behavior.
+
+A visually plausible field is therefore never treated as evidence of correctness.
+
+## Numerical contract
+
+The initial discretization uses the standard second-order five-point stencil for `-Δ`, with homogeneous Dirichlet boundaries eliminated from the unknown vector. The resulting matrix is symmetric positive definite and therefore valid for CG/PCG.
+
+The Jacobi preconditioner uses the reciprocal matrix diagonal. PCG should terminate from a relative residual criterion rather than an arbitrary fixed iteration count, while retaining a maximum-iteration guard.
+
+For the manufactured preset, refinement should reduce the continuous-solution error at approximately second order until floating-point/solver error becomes significant. This refinement check belongs in automated tests, not merely in the showcase text.
+
+## Architecture
+
+The point of the example is composition:
+
+```text
+CSR
+ └─ adaptive SpMV
+
+PCG
+ ├─ adaptive SpMV
+ ├─ hierarchical dot/reduction → GPUScalar
+ ├─ scalar arithmetic
+ ├─ vector MADD
+ ├─ Jacobi application
+ └─ GPU convergence control
+
+rendering
+ ├─ solution field
+ ├─ contours
+ └─ gradient/flow overlay
+```
+
+No solver-sized result should be read back every iteration. Small diagnostic readbacks may be used deliberately for the engineering panel, but the iterative numerical path remains GPU resident.
+
+## Correctness gates before calling this a hero
+
+Poisson Lab should not be promoted from experimental until all of the following hold:
+
+- CSR symmetry and positive diagonal are tested for generated problems;
+- manufactured-solution residual reaches the documented tolerance;
+- error decreases under grid refinement at the expected order;
+- CPU reference tests validate small grids;
+- WebGPU results agree with the reference within documented `f32` tolerances;
+- interactive boundary/source edits cannot silently invalidate the solver assumptions;
+- engineering metrics are measured values, never simulated placeholders.
+
+The hero earns its visuals by being numerically boring in all the right ways.

@@ -515,6 +515,11 @@ export const CROSSFILTER_STYLES = `
   background: color-mix(in srgb, var(--histogram-color) 23%, transparent);
 }
 
+[data-crossfilter-dashboard] .crossfilter-histogram-card[data-selection-active="true"]
+  .crossfilter-histogram-baseline {
+  opacity: 0;
+}
+
 [data-crossfilter-dashboard] .crossfilter-histogram-axis {
   display: flex;
   justify-content: space-between;

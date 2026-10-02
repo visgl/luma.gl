@@ -74,14 +74,16 @@ it('GPUSceneResourceGroups preserves binding order and classifies regrouped comm
   const required = makeOutput(device, graph, 'required', 1);
   const published = makeOutput(device, graph, 'published', 1);
   const drawOverflow = makeOutput(device, graph, 'draw-overflow', 1);
-  new GPUSceneDrawGeneration({
-    scene: sceneView,
-    visibility,
-    commands: commandView,
-    requiredCount: required.view,
-    publishedCount: published.view,
-    overflow: drawOverflow.view
-  }).addToGraph(graph);
+  graph.add(
+    new GPUSceneDrawGeneration({
+      scene: sceneView,
+      visibility,
+      commands: commandView,
+      requiredCount: required.view,
+      publishedCount: published.view,
+      overflow: drawOverflow.view
+    })
+  );
 
   const counts = makeOutput(device, graph, 'group-counts', 3);
   const overflows = makeOutput(device, graph, 'group-overflows', 3);
@@ -104,7 +106,7 @@ it('GPUSceneResourceGroups preserves binding order and classifies regrouped comm
     maximumGroupCommandCount: 2,
     outputByteLength: 28
   });
-  groups.addToGraph(graph);
+  graph.add(groups);
   const compiled = graph.compile();
 
   encode(device, compiled);
@@ -249,25 +251,29 @@ it('GPUSceneResourceGroups classifies records inserted after graph compilation',
   const required = makeOutput(device, graph, 'growing-required', 1);
   const published = makeOutput(device, graph, 'growing-published', 1);
   const drawOverflow = makeOutput(device, graph, 'growing-draw-overflow', 1);
-  new GPUSceneDrawGeneration({
-    scene: sceneView,
-    commands: commandView,
-    requiredCount: required.view,
-    publishedCount: published.view,
-    overflow: drawOverflow.view
-  }).addToGraph(graph);
+  graph.add(
+    new GPUSceneDrawGeneration({
+      scene: sceneView,
+      commands: commandView,
+      requiredCount: required.view,
+      publishedCount: published.view,
+      overflow: drawOverflow.view
+    })
+  );
 
   const counts = makeOutput(device, graph, 'growing-group-counts', 1);
   const overflows = makeOutput(device, graph, 'growing-group-overflows', 1);
   const overflow = makeOutput(device, graph, 'growing-group-overflow', 1);
-  new GPUSceneResourceGroups({
-    scene: sceneView,
-    commands: commandView,
-    groups: [{id: 7, firstCommand: 0, commandCount: 2, geometryId: 11}],
-    counts: counts.view,
-    overflows: overflows.view,
-    overflow: overflow.view
-  }).addToGraph(graph);
+  graph.add(
+    new GPUSceneResourceGroups({
+      scene: sceneView,
+      commands: commandView,
+      groups: [{id: 7, firstCommand: 0, commandCount: 2, geometryId: 11}],
+      counts: counts.view,
+      overflows: overflows.view,
+      overflow: overflow.view
+    })
+  );
 
   const compiled = graph.compile();
   encode(device, compiled);

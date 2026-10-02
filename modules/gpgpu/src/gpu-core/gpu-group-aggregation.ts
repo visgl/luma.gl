@@ -2,8 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {alignGraphVectorViews} from './graph-vector-view-utils';
+
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {
   GPUCommandGraph,
   GraphVectorView,
@@ -19,7 +22,6 @@ import {
   createTransientView,
   getViewBinding,
   getViewElementOffset,
-  validateMatchingVectorTopology,
   validatePackedView,
   validatePackedUint32View
 } from './graph-data-view-utils';
@@ -39,10 +41,10 @@ type GPUGroupAggregationDispatchLayout = GPUBoundedDispatchLayout;
 /** One scalar group-key chunk or an ordered vector of scalar group-key chunks. */
 export type GPUGroupAggregationKeys = GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
 
-/** Optional nonzero/zero row selection with the same topology as the group keys. */
+/** Optional nonzero/zero row selection with the same logical length as the group keys. */
 export type GPUGroupAggregationMask = GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
 
-/** Optional floating-point contributions with the same topology as the group keys. */
+/** Optional floating-point contributions with the same logical length as the group keys. */
 export type GPUGroupAggregationValues = GraphDataView<'float32'> | GraphVectorView<'float32'>;
 
 /** Statistic computed by {@link GPUGroupAggregation}. */
@@ -53,7 +55,7 @@ type GPUGroupAggregationBaseProps = {
   id?: string;
   /** Dense unsigned group keys. Keys outside the output range are ignored. */
   keys: GPUGroupAggregationKeys;
-  /** Optional nonzero/zero selection with the same view kind and chunk topology as `keys`. */
+  /** Optional nonzero/zero selection with the same logical length as `keys`; chunk boundaries may differ. */
   mask?: GPUGroupAggregationMask;
 };
 
@@ -68,7 +70,7 @@ export type GPUGroupAggregationProps = GPUGroupAggregationBaseProps &
         values?: never;
       }
     | {
-        /** One finite floating-point contribution per key with identical chunk topology. */
+        /** One finite floating-point contribution per key with equal logical length. */
         values: GPUGroupAggregationValues;
         /** Caller-owned floating-point group statistics. */
         output: GraphDataView<'float32'>;
@@ -91,7 +93,7 @@ export class GPUGroupAggregation {
   readonly id: string;
   /** Packed group keys or ordered group-key vector. */
   readonly keys: GPUGroupAggregationKeys;
-  /** Optional packed values with the same view kind and chunk topology as keys. */
+  /** Optional packed values with the same logical length as keys. */
   readonly values?: GPUGroupAggregationValues;
   /** Caller-owned dense group result. */
   readonly output: GraphDataView<'uint32'> | GraphDataView<'float32'>;
@@ -162,10 +164,13 @@ export class GPUGroupAggregation {
    *
    * This method declares work only and does not submit or read back commands.
    */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    const keyChunks = getGroupChunks(this.keys);
-    const maskChunks = this.mask ? getGroupChunks(this.mask) : undefined;
-    const valueChunks = this.values ? getValueChunks(this.values) : undefined;
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
+    let keyChunks = getGroupChunks(this.keys);
+    let maskChunks = this.mask ? getGroupChunks(this.mask) : undefined;
+    let valueChunks = this.values ? getValueChunks(this.values) : undefined;
     if (
       keyChunks.some(chunk => chunk.buffer.graph !== graph) ||
       maskChunks?.some(chunk => chunk.buffer.graph !== graph) ||
@@ -174,29 +179,41 @@ export class GPUGroupAggregation {
     ) {
       throw new Error(`${this.id} views must belong to the target graph`);
     }
+    if (this.values) {
+      const spans = alignGraphVectorViews(graph, [this.keys, this.values, this.mask ?? this.keys]);
+      keyChunks = spans.map(([keys]) => keys);
+      valueChunks = spans.map(([, values]) => values);
+      maskChunks = this.mask ? spans.map(([, , mask]) => mask) : undefined;
+    } else if (this.mask) {
+      const spans = alignGraphVectorViews(graph, [this.keys, this.mask]);
+      keyChunks = spans.map(([keys]) => keys);
+      maskChunks = spans.map(([, mask]) => mask);
+    }
 
     if (this.operation === 'count') {
       const output = this.output as GraphDataView<'uint32'>;
-      addClearGroupsPass(graph, this.id, output);
+      nodes.push(...addClearGroupsPass(graph, this.id, output));
       const accumulationPath = output.length <= MAXIMUM_LOCAL_GROUP_COUNT ? 'local' : 'global';
       for (let chunkIndex = 0; chunkIndex < keyChunks.length; chunkIndex++) {
         const keys = keyChunks[chunkIndex];
         if (keys.length === 0) continue;
-        addGroupCountPass(graph, {
-          id:
-            this.keys instanceof GraphVectorView
-              ? `${this.id}-chunk-${chunkIndex}-${accumulationPath}`
-              : `${this.id}-${accumulationPath}`,
-          keys,
-          output,
-          mask: maskChunks?.[chunkIndex],
-          dispatchLayout: getGPUGroupAggregationDispatchLayout(
-            keys.length,
-            graph.device.limits.maxComputeWorkgroupsPerDimension
-          )
-        });
+        nodes.push(
+          ...addGroupCountPass(graph, {
+            id:
+              this.keys instanceof GraphVectorView || keyChunks.length > 1
+                ? `${this.id}-chunk-${chunkIndex}-${accumulationPath}`
+                : `${this.id}-${accumulationPath}`,
+            keys,
+            output,
+            mask: maskChunks?.[chunkIndex],
+            dispatchLayout: getGPUGroupAggregationDispatchLayout(
+              keys.length,
+              graph.device.limits.maxComputeWorkgroupsPerDimension
+            )
+          })
+        );
       }
-      return;
+      return nodes;
     }
 
     const output = this.output as GraphDataView<'float32'>;
@@ -205,27 +222,34 @@ export class GPUGroupAggregation {
       operation === 'mean'
         ? createTransientView(graph, `${this.id}-counts`, 'uint32', output.length)
         : undefined;
-    addInitializeGroupStatisticsPass(graph, this.id, output, operation, counts);
+    nodes.push(...addInitializeGroupStatisticsPass(graph, this.id, output, operation, counts));
     for (let chunkIndex = 0; chunkIndex < keyChunks.length; chunkIndex++) {
       const keys = keyChunks[chunkIndex];
       if (keys.length === 0) continue;
-      addGroupStatisticPass(graph, {
-        id: this.keys instanceof GraphVectorView ? `${this.id}-chunk-${chunkIndex}` : this.id,
-        keys,
-        values: valueChunks![chunkIndex],
-        mask: maskChunks?.[chunkIndex],
-        output,
-        operation,
-        counts,
-        dispatchLayout: getGPUGroupAggregationDispatchLayout(
-          keys.length,
-          graph.device.limits.maxComputeWorkgroupsPerDimension
-        )
-      });
+      nodes.push(
+        ...addGroupStatisticPass(graph, {
+          id:
+            this.keys instanceof GraphVectorView || keyChunks.length > 1
+              ? `${this.id}-chunk-${chunkIndex}`
+              : this.id,
+          keys,
+          values: valueChunks![chunkIndex],
+          mask: maskChunks?.[chunkIndex],
+          output,
+          operation,
+          counts,
+          dispatchLayout: getGPUGroupAggregationDispatchLayout(
+            keys.length,
+            graph.device.limits.maxComputeWorkgroupsPerDimension
+          )
+        })
+      );
     }
     if (operation !== 'sum') {
-      addFinalizeGroupStatisticsPass(graph, this.id, output, operation, counts);
+      nodes.push(...addFinalizeGroupStatisticsPass(graph, this.id, output, operation, counts));
     }
+
+    return nodes;
   }
 }
 
@@ -261,18 +285,13 @@ function getValueChunks(input: GPUGroupAggregationValues): readonly GraphDataVie
   return input instanceof GraphVectorView ? input.data : [input];
 }
 
-/** Validates atomic/vector kind, row count, and ordered vector chunk lengths. */
+/** Validates row correspondence independently of physical chunk boundaries. */
 function validateMatchingInputs(
   keys: GPUGroupAggregationKeys,
   paired: GPUGroupAggregationMask | GPUGroupAggregationValues,
   label: string
 ): void {
-  if (keys instanceof GraphVectorView !== paired instanceof GraphVectorView) {
-    throw new Error(`${label} must use the same view kind`);
-  }
-  if (keys instanceof GraphVectorView && paired instanceof GraphVectorView) {
-    validateMatchingVectorTopology(keys, paired, label);
-  } else if (keys.length !== paired.length) {
+  if (keys.length !== paired.length) {
     throw new Error(`${label} lengths must match`);
   }
 }
@@ -282,7 +301,8 @@ function addClearGroupsPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   id: string,
   output: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const dispatchLayout = getGPUGroupAggregationDispatchLayout(
     output.length,
     graph.device.limits.maxComputeWorkgroupsPerDimension
@@ -302,13 +322,17 @@ fn main(
     atomicStore(&outputCounts[OUTPUT_OFFSET + index], 0u);
   }
 }`;
-  addComputationPass(graph, {
-    id: `${id}-clear`,
-    source,
-    resources: [{buffer: output, usage: 'storage-write'}],
-    bindings: {outputCounts: output},
-    dispatchSize: dispatchLayout
-  });
+  nodes.push(
+    ...addKernelPass(graph, {
+      id: `${id}-clear`,
+      source,
+      resources: [{buffer: output, usage: 'storage-write'}],
+      bindings: {outputCounts: output},
+      dispatchSize: dispatchLayout
+    })
+  );
+
+  return nodes;
 }
 
 /** Counts one packed key chunk using local or global atomics. */
@@ -321,7 +345,8 @@ function addGroupCountPass<Parameters>(
     mask?: GraphDataView<'uint32'>;
     dispatchLayout: GPUGroupAggregationDispatchLayout;
   }
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const local = props.output.length <= MAXIMUM_LOCAL_GROUP_COUNT;
   const useSubgroups =
     local &&
@@ -383,17 +408,21 @@ ${useSubgroups ? getSubgroupBallotHelpersWGSL() : ''}
     ...(props.mask ? ([{buffer: props.mask, usage: 'storage-read'}] as GraphBufferUse[]) : []),
     {buffer: props.output, usage: 'storage-read-write'}
   ];
-  addComputationPass(graph, {
-    id: props.id,
-    source,
-    resources,
-    bindings: {
-      groupKeys: props.keys,
-      ...(props.mask ? {selectionMask: props.mask} : {}),
-      outputCounts: props.output
-    },
-    dispatchSize: props.dispatchLayout
-  });
+  nodes.push(
+    ...addKernelPass(graph, {
+      id: props.id,
+      source,
+      resources,
+      bindings: {
+        groupKeys: props.keys,
+        ...(props.mask ? {selectionMask: props.mask} : {}),
+        outputCounts: props.output
+      },
+      dispatchSize: props.dispatchLayout
+    })
+  );
+
+  return nodes;
 }
 
 /** Initializes every floating-point group result and optional mean count. */
@@ -403,7 +432,8 @@ function addInitializeGroupStatisticsPass<Parameters>(
   output: GraphDataView<'float32'>,
   operation: Exclude<GPUGroupAggregationOperation, 'count'>,
   counts?: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const dispatchLayout = getGPUGroupAggregationDispatchLayout(
     output.length,
     graph.device.limits.maxComputeWorkgroupsPerDimension
@@ -430,16 +460,20 @@ ${countBinding}
     ${countInitialization}
   }
 }`;
-  addComputationPass(graph, {
-    id: operation === 'sum' ? `${id}-clear` : `${id}-initialize`,
-    source,
-    resources: [
-      {buffer: output, usage: 'storage-write'},
-      ...(counts ? ([{buffer: counts, usage: 'storage-write'}] as GraphBufferUse[]) : [])
-    ],
-    bindings: {outputValues: output, ...(counts ? {outputCounts: counts} : {})},
-    dispatchSize: dispatchLayout
-  });
+  nodes.push(
+    ...addKernelPass(graph, {
+      id: operation === 'sum' ? `${id}-clear` : `${id}-initialize`,
+      source,
+      resources: [
+        {buffer: output, usage: 'storage-write'},
+        ...(counts ? ([{buffer: counts, usage: 'storage-write'}] as GraphBufferUse[]) : [])
+      ],
+      bindings: {outputValues: output, ...(counts ? {outputCounts: counts} : {})},
+      dispatchSize: dispatchLayout
+    })
+  );
+
+  return nodes;
 }
 
 /** Accumulates one aligned packed key/value chunk with direct global atomics. */
@@ -455,7 +489,8 @@ function addGroupStatisticPass<Parameters>(
     counts?: GraphDataView<'uint32'>;
     dispatchLayout: GPUGroupAggregationDispatchLayout;
   }
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const useSubgroups =
     props.output.length <= MAXIMUM_SUBGROUP_COALESCED_GROUP_COUNT &&
     getGPUShaderSubgroupStrategy(graph.device) === 'subgroups';
@@ -519,19 +554,23 @@ ${accumulation}
       ? ([{buffer: props.counts, usage: 'storage-read-write'}] as GraphBufferUse[])
       : [])
   ];
-  addComputationPass(graph, {
-    id: `${props.id}-${props.operation}`,
-    source,
-    resources,
-    bindings: {
-      groupKeys: props.keys,
-      inputValues: props.values,
-      ...(props.mask ? {selectionMask: props.mask} : {}),
-      outputValues: props.output,
-      ...(props.counts ? {outputCounts: props.counts} : {})
-    },
-    dispatchSize: props.dispatchLayout
-  });
+  nodes.push(
+    ...addKernelPass(graph, {
+      id: `${props.id}-${props.operation}`,
+      source,
+      resources,
+      bindings: {
+        groupKeys: props.keys,
+        inputValues: props.values,
+        ...(props.mask ? {selectionMask: props.mask} : {}),
+        outputValues: props.output,
+        ...(props.counts ? {outputCounts: props.counts} : {})
+      },
+      dispatchSize: props.dispatchLayout
+    })
+  );
+
+  return nodes;
 }
 
 /** Converts aggregate identities into empty-group NaNs and divides sums for means. */
@@ -541,7 +580,8 @@ function addFinalizeGroupStatisticsPass<Parameters>(
   output: GraphDataView<'float32'>,
   operation: 'min' | 'max' | 'mean',
   counts?: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const dispatchLayout = getGPUGroupAggregationDispatchLayout(
     output.length,
     graph.device.limits.maxComputeWorkgroupsPerDimension
@@ -586,16 +626,20 @@ ${decodeFunction}
     ${finalizeStatement}
   }
 }`;
-  addComputationPass(graph, {
-    id: `${id}-finalize`,
-    source,
-    resources: [
-      {buffer: output, usage: 'storage-read-write'},
-      ...(counts ? ([{buffer: counts, usage: 'storage-read'}] as GraphBufferUse[]) : [])
-    ],
-    bindings: {outputValues: output, ...(counts ? {outputCounts: counts} : {})},
-    dispatchSize: dispatchLayout
-  });
+  nodes.push(
+    ...addKernelPass(graph, {
+      id: `${id}-finalize`,
+      source,
+      resources: [
+        {buffer: output, usage: 'storage-read-write'},
+        ...(counts ? ([{buffer: counts, usage: 'storage-read'}] as GraphBufferUse[]) : [])
+      ],
+      bindings: {outputValues: output, ...(counts ? {outputCounts: counts} : {})},
+      dispatchSize: dispatchLayout
+    })
+  );
+
+  return nodes;
 }
 
 /** Returns the WGSL helper for one floating-point group statistic. */
@@ -684,7 +728,7 @@ export function getGPUGroupAggregationDispatchLayout(
 }
 
 /** Wraps generated WGSL in one graph compute node with deferred physical buffer resolution. */
-function addComputationPass<Parameters>(
+function addKernelPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: {
     id: string;
@@ -694,52 +738,57 @@ function addComputationPass<Parameters>(
     dispatchCount?: number;
     dispatchSize?: GPUGroupAggregationDispatchLayout;
   }
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const maximumWorkgroupCount = props.dispatchSize
     ? props.dispatchSize.x * props.dispatchSize.y * props.dispatchSize.z
     : (props.dispatchCount ?? 1);
-  graph.addComputePass({
-    id: props.id,
-    resources: props.resources,
-    workload: {
-      operation: 'GPUGroupAggregation',
-      commandCount: 1,
-      maximumWorkgroupCount,
-      maximumInvocationCount: maximumWorkgroupCount * GROUP_AGGREGATION_WORKGROUP_SIZE
-    },
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: props.id,
-        source: props.source,
-        shaderLayout: {
-          bindings: Object.keys(props.bindings).map((name, location) => ({
-            name,
-            type: 'storage' as const,
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {};
-          for (const [name, view] of Object.entries(props.bindings)) {
-            bindings[name] = getViewBinding(view, getBuffer);
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: props.id,
+      resources: props.resources,
+      workload: {
+        operation: 'GPUGroupAggregation',
+        commandCount: 1,
+        maximumWorkgroupCount,
+        maximumInvocationCount: maximumWorkgroupCount * GROUP_AGGREGATION_WORKGROUP_SIZE
+      },
+      compile: ({device}) => {
+        const kernel = new Kernel(device, {
+          id: props.id,
+          source: props.source,
+          shaderLayout: {
+            bindings: Object.keys(props.bindings).map((name, location) => ({
+              name,
+              type: 'storage' as const,
+              group: 0,
+              location
+            }))
           }
-          computation.setBindings(bindings);
-          if (props.dispatchSize) {
-            computation.dispatch(
-              computePass,
-              props.dispatchSize.x,
-              props.dispatchSize.y,
-              props.dispatchSize.z
-            );
-          } else {
-            computation.dispatch(computePass, props.dispatchCount!);
-          }
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {};
+            for (const [name, view] of Object.entries(props.bindings)) {
+              bindings[name] = getViewBinding(view, getBuffer);
+            }
+
+            if (props.dispatchSize) {
+              kernel.dispatch(computePass, {
+                bindings,
+                x: props.dispatchSize.x,
+                y: props.dispatchSize.y,
+                z: props.dispatchSize.z
+              });
+            } else {
+              kernel.dispatch(computePass, {bindings, x: props.dispatchCount!});
+            }
+          },
+          destroy: () => kernel.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }

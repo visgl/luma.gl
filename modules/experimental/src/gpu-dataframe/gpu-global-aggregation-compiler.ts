@@ -106,12 +106,14 @@ function addGPUGlobalAggregationsToGraph<Selection extends GPUTypeMap, Result ex
           nullable: false,
           metadata: new Map()
         });
-        new GPUReduction({
-          id,
-          input: context.selectionMask,
-          output: context.graph.importGPUVector(`${id}-output`, output).data[0],
-          operation: 'sum'
-        }).addToGraph(context.graph);
+        context.graph.add(
+          new GPUReduction({
+            id,
+            input: context.selectionMask,
+            output: context.graph.importGPUVector(`${id}-output`, output).data[0],
+            operation: 'sum'
+          })
+        );
         continue;
       }
 
@@ -139,12 +141,14 @@ function addGPUGlobalAggregationsToGraph<Selection extends GPUTypeMap, Result ex
 
       const sanitized = getGPUSanitizedMetricValues(context, state, definition.operation, id);
       const outputView = context.graph.importGPUVector(`${id}-output`, output).data[0];
-      new GPUReduction({
-        id: `${id}-reduce`,
-        input: sanitized,
-        output: outputView,
-        operation: definition.operation === 'mean' ? 'sum' : definition.operation
-      }).addToGraph(context.graph);
+      context.graph.add(
+        new GPUReduction({
+          id: `${id}-reduce`,
+          input: sanitized,
+          output: outputView,
+          operation: definition.operation === 'mean' ? 'sum' : definition.operation
+        })
+      );
       if (definition.operation !== 'sum') {
         addGPUFinalizeGlobalMetricPass(
           context.graph,
@@ -194,12 +198,14 @@ function createGPUGlobalMetricState<Selection extends GPUTypeMap>(
         )
       : selectedRows;
   const acceptedCount = createTransientView(context.graph, `${id}-accepted-count`, 'uint32', 1);
-  new GPUReduction({
-    id: `${id}-count-valid`,
-    input: acceptedRows,
-    output: acceptedCount,
-    operation: 'sum'
-  }).addToGraph(context.graph);
+  context.graph.add(
+    new GPUReduction({
+      id: `${id}-count-valid`,
+      input: acceptedRows,
+      output: acceptedCount,
+      operation: 'sum'
+    })
+  );
 
   const validity = createGPUAnalyticsOutputVector(
     context.graph.device,

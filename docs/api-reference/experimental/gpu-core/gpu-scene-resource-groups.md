@@ -109,14 +109,14 @@ dispatch envelope are rejected before encoding.
 const sceneView = scene.importToGraph(graph);
 const commandView = commands.importToGraph(graph);
 
-new GPUSceneDrawGeneration({
+graph.add(new GPUSceneDrawGeneration({
   scene: sceneView,
   visibility,
   commands: commandView,
   requiredCount,
   publishedCount,
   overflow: drawOverflow
-}).addToGraph(graph);
+}));
 
 const groups = new GPUSceneResourceGroups({
   scene: sceneView,
@@ -131,7 +131,7 @@ const groups = new GPUSceneResourceGroups({
   overflow: anyResourceMismatch
 });
 
-groups.addToGraph(graph);
+graph.add(groups);
 
 for (const group of groups.groups) {
   bindRendererResources(renderPass, group.id);
@@ -143,7 +143,7 @@ for (const group of groups.groups) {
 
 ## Methods and properties
 
-`addToGraph(graph)` adds initialization and command-classification passes without compiling,
+`getCommandNodes(graph)` adds initialization and command-classification passes without compiling,
 submitting, or reading results. Every supplied view must belong to the same graph.
 
 `groups` contains immutable descriptors in renderer-authored order. `stats` reports the group

@@ -151,7 +151,6 @@ export async function canCreateDeviceType(type: DeviceType): Promise<boolean> {
   cachedDeviceAvailability[type] ||= (async () => {
     try {
       await createDevice(type);
-      await createPresentationDevice(type);
       return true;
     } catch {
       return false;

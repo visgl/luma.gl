@@ -5,6 +5,7 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
 import {
   DeviceTabs,
   ExampleHeader,
+  ExampleLoadingIndicator,
   ExamplePage,
   getCanvasContainer,
   InfoBox,
@@ -24,6 +25,7 @@ import type {GPGPUShowcaseHandle} from '../../examples/v10/gpgpu/src/app';
 import type {ExternalWebGLContextHandle} from '../../examples/integrations/external-context/app';
 import type {GaussianSplatSourceCatalogEntry} from '../../examples/showcase/gaussian-splats/local-loaders';
 import {getErrorMessage, logError} from './react-luma/utils/error-utils';
+import {startExclusiveExample} from './react-luma/utils/example-lifecycle';
 
 const exampleConfig = {};
 
@@ -42,6 +44,8 @@ const loadArrowPolygonRendererApp = () => import('../../examples/arrow/arrow-pol
 const loadBloomApp = () => import('../../examples/experimental/bloom/app');
 const loadHTMLUIPrismApp = () => import('../../examples/experimental/html-ui-prism/app');
 const loadGPUFrustumCullingApp = () => import('../../examples/experimental/gpu-frustum-culling/app');
+const loadGPUParquetConstellationApp = () =>
+  import('../../examples/experimental/gpu-parquet-constellation/app');
 const loadGPUSceneGraphApp = () => import('../../examples/experimental/gpu-scene-graph/app');
 const loadGPUTraceSceneApp = () => import('../../examples/experimental/gpu-trace-scene/app');
 const loadGPUTraceViewerApp = () => import('../../examples/experimental/gpu-trace-viewer/app');
@@ -74,6 +78,7 @@ const loadInstancingApp = () => import('../../examples/showcase/instancing/app')
 const loadLightstormMegacityApp = () => import('../../examples/showcase/lightstorm-megacity/app');
 const loadLLMNetworkApp = () => import('../../examples/showcase/llm-network/app');
 const loadVectorFieldLabApp = () => import('../../examples/showcase/vector-field-lab/app');
+const loadSpectralWaveLabApp = () => import('../../examples/showcase/spectral-wave-lab/app');
 const loadQuantumStateStudioApp = () => import('../../examples/showcase/quantum-state-studio/app');
 const loadTempestOceanApp = () => import('../../examples/showcase/tempest-ocean/app');
 const loadRenderBundlesApp = () => import('../../examples/api/render-bundles/app');
@@ -188,6 +193,7 @@ function DeferredGPUExampleStatus({
     <ExamplePage
       embedded={embedded}
       embeddedHeight={embeddedHeight}
+      runtimeState={errorMessage ? 'failed' : 'loading'}
       style={{
         background:
           'radial-gradient(ellipse at 22% 16%, rgba(56, 189, 248, 0.16), transparent 42%), #07101d',
@@ -339,55 +345,78 @@ function DeckArrowLayerCanvas({
 }): React.ReactNode {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const device = useStore(state => state.device);
+  const [runtimeState, setRuntimeState] = useState<'loading' | 'running' | 'failed'>('loading');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container || !device) {
       return;
     }
+    setRuntimeState('loading');
+    setErrorMessage(null);
 
     const deviceCanvas = device.getDefaultCanvasContext().canvas;
     if (!(deviceCanvas instanceof HTMLCanvasElement)) {
       throw new Error('Website Deck examples require the shared device canvas to be an HTMLCanvasElement');
     }
-    Object.assign(deviceCanvas.style, {
-      display: 'block',
-      position: 'absolute',
-      inset: '0',
-      width: '100%',
-      height: '100%'
-    });
-    container.replaceChildren(deviceCanvas);
-
     let isFinalized = false;
     let deck: DeckExampleHandle | null = null;
-    void Promise.resolve(createDeck(container, {device}))
-      .then(createdDeck => {
-        if (isFinalized) {
-          createdDeck.finalize();
-          return;
-        }
-        deck = createdDeck;
-      })
-      .catch(error => {
+    const stopExclusiveExample = startExclusiveExample({
+      start: async () => {
+        Object.assign(deviceCanvas.style, {
+          display: 'block',
+          position: 'absolute',
+          inset: '0',
+          width: '100%',
+          height: '100%'
+        });
+        container.replaceChildren(deviceCanvas);
+        void device.lost.then(loss => {
+          if (!isFinalized && loss.reason !== 'destroyed') {
+            setErrorMessage(loss.message || 'The graphics device was lost while this example ran.');
+            setRuntimeState('failed');
+          }
+        });
+        deck = await createDeck(container, {device});
         if (!isFinalized) {
+          setRuntimeState('running');
+        }
+      },
+      stop: () => {
+        isFinalized = true;
+        deck?.finalize();
+        deck = null;
+        container.replaceChildren();
+        getCanvasContainer().appendChild(deviceCanvas);
+      },
+      onError: error => {
+        if (!isFinalized) {
+          setErrorMessage(getErrorMessage(error));
+          setRuntimeState('failed');
           logError(`Failed to initialize ${panel.id} Deck example`, error);
         }
-      });
+      }
+    });
 
     return () => {
       isFinalized = true;
-      deck?.finalize();
       container.replaceChildren();
-      getCanvasContainer().appendChild(deviceCanvas);
+      stopExclusiveExample();
     };
   }, [createDeck, device, panel.id]);
 
   return (
-    <>
+    <div data-luma-example-state={runtimeState} style={{position: 'absolute', inset: 0}}>
       <div ref={containerRef} style={{position: 'absolute', inset: 0, overflow: 'hidden'}} />
       <DeckArrowLayerPanel {...panel} />
-    </>
+      {runtimeState === 'loading' ? <ExampleLoadingIndicator /> : null}
+      {errorMessage ? (
+        <div role="alert" style={{position: 'absolute', inset: 20, zIndex: 30}}>
+          {errorMessage}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -948,6 +977,19 @@ export const VectorFieldLabExample: React.FC<WebsiteExampleProps> = props => (
   />
 );
 
+export const SpectralWaveLabExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="spectral-wave-lab"
+    title="Spectral Dynamics Lab"
+    subtitle="One GPU wave state in synchronized physical and Fourier views"
+    directory="showcase"
+    devices={['webgpu']}
+    loadTemplate={loadSpectralWaveLabApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
 export const LLMNetworkExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="llm-network"
@@ -1210,6 +1252,7 @@ export const ArrowDggsPolygonsExample: React.FC = props => (
 
 export const GPGPUExample: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
   const deviceType = useStore(store => store.deviceType);
   const device = useStore(store => store.device);
 
@@ -1218,30 +1261,43 @@ export const GPGPUExample: React.FC = () => {
       return;
     }
 
-    let isCancelled = false;
     let handle: GPGPUShowcaseHandle | null = null;
     setErrorMessage(null);
-    void loadGPGPUShowcaseExample()
-      .then(({initializeGPGPUShowcase}) => {
+    setIsRunning(false);
+    let isCancelled = false;
+    const stopExclusiveExample = startExclusiveExample({
+      start: async () => {
+        const {initializeGPGPUShowcase} = await loadGPGPUShowcaseExample();
         if (!isCancelled) {
           handle = initializeGPGPUShowcase({device});
+          setIsRunning(true);
         }
-      })
-      .catch(error => {
+      },
+      stop: () => {
+        isCancelled = true;
+        setIsRunning(false);
+        handle?.destroy();
+        handle = null;
+      },
+      onError: error => {
         if (!isCancelled) {
           setErrorMessage(getErrorMessage(error));
           logError('Failed to initialize GPGPU example', error);
         }
-      });
+      }
+    });
 
     return () => {
       isCancelled = true;
-      handle?.destroy();
+      stopExclusiveExample();
     };
   }, [deviceType, device]);
 
   return (
-    <ExamplePage style={{background: '#f7f8fb', overflow: 'hidden'}}>
+    <ExamplePage
+      runtimeState={errorMessage ? 'failed' : isRunning ? 'running' : 'loading'}
+      style={{background: '#f7f8fb', overflow: 'hidden'}}
+    >
       <style>{GPGPU_EXAMPLE_STYLE}</style>
       <main id="app" className="gpgpu-showcase">
         <DeviceTabs devices={['webgpu']} style={{marginBottom: 16}} />
@@ -1312,26 +1368,36 @@ export const GPGPUExample: React.FC = () => {
 /** Docusaurus wrapper for the graph-native paired GPU sort example. */
 export const GPUSortExample: React.FC<WebsiteExampleProps> = ({embeddedHeight, ...props}) => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
 
   useEffect(() => {
     let isCancelled = false;
     let handle: GPUSortExampleHandle | null = null;
-    void loadGPUSortExample()
-      .then(({initializeGPUSortExample}) => {
+    const stopExclusiveExample = startExclusiveExample({
+      start: async () => {
+        const {initializeGPUSortExample} = await loadGPUSortExample();
         if (!isCancelled) {
           handle = initializeGPUSortExample();
+          setIsRunning(true);
         }
-      })
-      .catch(error => {
+      },
+      stop: () => {
+        isCancelled = true;
+        setIsRunning(false);
+        handle?.destroy();
+        handle = null;
+      },
+      onError: error => {
         if (!isCancelled) {
           setErrorMessage(getErrorMessage(error));
           logError('Failed to initialize GPU sort example', error);
         }
-      });
+      }
+    });
 
     return () => {
       isCancelled = true;
-      handle?.destroy();
+      stopExclusiveExample();
     };
   }, []);
 
@@ -1339,6 +1405,7 @@ export const GPUSortExample: React.FC<WebsiteExampleProps> = ({embeddedHeight, .
     <ExamplePage
       {...props}
       embeddedHeight={embeddedHeight ?? (props.embedded ? 720 : undefined)}
+      runtimeState={errorMessage ? 'failed' : isRunning ? 'running' : 'loading'}
       style={{background: '#f7f8fb', overflow: 'auto', ...props.style}}
     >
       <main id="gpu-sort-app" />
@@ -1357,25 +1424,35 @@ export const GPUDataAnalysisExample: React.FC<WebsiteExampleProps> = ({
   ...props
 }) => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
 
   useEffect(() => {
     let isCancelled = false;
     let handle: GPUDataAnalysisExampleHandle | null = null;
-    void loadGPUDataAnalysisExample()
-      .then(({initializeGPUDataAnalysisExample}) => {
+    const stopExclusiveExample = startExclusiveExample({
+      start: async () => {
+        const {initializeGPUDataAnalysisExample} = await loadGPUDataAnalysisExample();
         if (!isCancelled) {
           handle = initializeGPUDataAnalysisExample();
+          setIsRunning(true);
         }
-      })
-      .catch(error => {
+      },
+      stop: () => {
+        isCancelled = true;
+        setIsRunning(false);
+        handle?.destroy();
+        handle = null;
+      },
+      onError: error => {
         if (!isCancelled) {
           setErrorMessage(getErrorMessage(error));
           logError('Failed to initialize GPU data-analysis example', error);
         }
-      });
+      }
+    });
     return () => {
       isCancelled = true;
-      handle?.destroy();
+      stopExclusiveExample();
     };
   }, []);
 
@@ -1383,6 +1460,7 @@ export const GPUDataAnalysisExample: React.FC<WebsiteExampleProps> = ({
     <ExamplePage
       {...props}
       embeddedHeight={embeddedHeight ?? (props.embedded ? 720 : undefined)}
+      runtimeState={errorMessage ? 'failed' : isRunning ? 'running' : 'loading'}
       style={{background: '#f6f8fb', overflow: 'auto', ...props.style}}
     >
       <main id="gpu-data-analysis-app" />
@@ -1960,6 +2038,18 @@ export const GPUFrustumCullingExample: React.FC = props => (
   />
 );
 
+export const GPUParquetConstellationExample: React.FC = props => (
+  <LumaExample
+    id="gpu-parquet-constellation"
+    title="GPU Parquet Constellation"
+    directory="experimental"
+    devices={['webgpu-max']}
+    loadTemplate={loadGPUParquetConstellationApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
 export const ArrowMeshGeometryExample: React.FC = props => (
   <LumaExample
     id="arrow-mesh-geometry"
@@ -2033,8 +2123,11 @@ export const MultiCanvasExample: React.FC<WebsiteExampleProps> = props => {
 
   if (presentationDeviceError || errorMessage) {
     return (
-      <ExamplePage {...exampleDisplayProps}>
-        <div>{presentationDeviceError || errorMessage}</div>
+      <ExamplePage
+        {...exampleDisplayProps}
+        runtimeState={presentationDeviceError ? 'unsupported' : 'failed'}
+      >
+        <div role="alert">{presentationDeviceError || errorMessage}</div>
       </ExamplePage>
     );
   }
@@ -2047,8 +2140,8 @@ export const MultiCanvasExample: React.FC<WebsiteExampleProps> = props => {
       {...exampleDisplayProps}
     />
   ) : (
-    <ExamplePage {...exampleDisplayProps}>
-      <div>Initializing device...</div>
+    <ExamplePage {...exampleDisplayProps} runtimeState="loading">
+      <div role="status">Initializing device...</div>
     </ExamplePage>
   );
 };
@@ -2128,7 +2221,15 @@ export const FP64Example: React.FC<WebsiteExampleProps> = ({
   }
 
   if (presentationDeviceError) {
-    return <div>{presentationDeviceError}</div>;
+    return (
+      <ExamplePage
+        {...props}
+        embeddedHeight={embeddedHeight ?? (props.embedded ? 720 : undefined)}
+        runtimeState="unsupported"
+      >
+        <div role="alert">{presentationDeviceError}</div>
+      </ExamplePage>
+    );
   }
 
   if (errorMessage || !module) {
@@ -2156,6 +2257,7 @@ export const FP64Example: React.FC<WebsiteExampleProps> = ({
     <ExamplePage
       {...props}
       embeddedHeight={embeddedHeight ?? (props.embedded ? 720 : undefined)}
+      runtimeState="loading"
     >
       <div>Initializing device...</div>
     </ExamplePage>
@@ -2203,6 +2305,9 @@ export const TextureTesterExample: React.FC<WebsiteExampleProps> = ({
         (props.embedded ? 'docs-embedded-example docs-embedded-example--content' : undefined)
       }
       embeddedHeight={embeddedHeight ?? (props.embedded ? 'auto' : undefined)}
+      runtimeState={
+        presentationDeviceError ? 'unsupported' : errorMessage ? 'failed' : TextureTesterApp ? 'running' : 'loading'
+      }
       style={{
         width: '100%',
         height: props.embedded ? 'auto' : '100%',
@@ -2224,7 +2329,7 @@ export const TextureTesterExample: React.FC<WebsiteExampleProps> = ({
         </div>
       ) : null}
       {presentationDeviceError || errorMessage ? (
-        <div>{presentationDeviceError || errorMessage}</div>
+        <div role="alert">{presentationDeviceError || errorMessage}</div>
       ) : deviceType && presentationDevice && TextureTesterApp ? (
         <TextureTesterApp
           compact={props.embedded}
@@ -2256,6 +2361,7 @@ export const RenderBundlesExample: React.FC<WebsiteExampleProps> = props => (
 export const ExternalContextExample: React.FC = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -2264,39 +2370,53 @@ export const ExternalContextExample: React.FC = () => {
     let isCancelled = false;
     let exampleHandle: ExternalWebGLContextHandle | null = null;
 
-    loadExternalContextExample()
-      .then(({default: initializeExternalWebGLContext}) =>
-        initializeExternalWebGLContext({container})
-      )
-      .then(instance => {
+    const stopExclusiveExample = startExclusiveExample({
+      start: async () => {
+        const {default: initializeExternalWebGLContext} = await loadExternalContextExample();
+        const instance = await initializeExternalWebGLContext({container});
         if (isCancelled) {
           instance.destroy();
           return;
         }
         exampleHandle = instance;
-      })
-      .catch(caughtError => {
+        setIsRunning(true);
+      },
+      stop: () => {
+        isCancelled = true;
+        setIsRunning(false);
+        exampleHandle?.destroy();
+        exampleHandle = null;
+      },
+      onError: caughtError => {
         if (!isCancelled) {
           logError('External WebGL context example failed', caughtError);
           setError(getErrorMessage(caughtError));
         }
-      });
+      }
+    });
 
     return () => {
       isCancelled = true;
-      exampleHandle?.destroy();
+      stopExclusiveExample();
     };
   }, []);
 
   return (
-    <ExamplePage style={{minHeight: '640px'}}>
+    <ExamplePage
+      runtimeState={error ? 'failed' : isRunning ? 'running' : 'loading'}
+      style={{minHeight: '640px'}}
+    >
       <div
         className="integration-example-page"
         style={{position: 'relative', width: '100%', minHeight: '640px'}}
       >
         <div ref={containerRef} style={{position: 'absolute', inset: 0}} />
       </div>
-      {error ? <p style={{color: '#b00020', marginTop: 12}}>{error}</p> : null}
+      {error ? (
+        <p role="alert" style={{color: '#b00020', marginTop: 12}}>
+          {error}
+        </p>
+      ) : null}
     </ExamplePage>
   );
 };
@@ -2317,7 +2437,10 @@ export const ReactStrictModeExample: React.FC = () => {
   };
 
   return (
-    <ExamplePage style={{minHeight: '640px'}}>
+    <ExamplePage
+      runtimeState={errorMessage ? 'failed' : HelloReactApp ? 'running' : 'loading'}
+      style={{minHeight: '640px'}}
+    >
       <ExampleHeader
         title="React Strict Mode"
         sourcePath="examples/integrations/hello-react"

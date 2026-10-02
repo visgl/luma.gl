@@ -206,6 +206,60 @@ it('WEBGLRenderPipeline#uniformBlockBinding applies block indices in the correct
   void 0;
 });
 
+it('WEBGLRenderPipeline creates module-backed blocks without driver member reflection', async () => {
+  const device = await getWebGLTestDevice();
+  const {gl} = device;
+  const vertexShader = device.createShader({stage: 'vertex', source: VS_THREE_UBOS});
+  const fragmentShader = device.createShader({stage: 'fragment', source: FS_THREE_UBOS});
+  const getActiveUniforms = gl.getActiveUniforms.bind(gl);
+
+  gl.getActiveUniforms = (() => null) as typeof gl.getActiveUniforms;
+  let renderPipeline: ReturnType<typeof device.createRenderPipeline>;
+  try {
+    renderPipeline = device.createRenderPipeline({
+      vs: vertexShader,
+      fs: fragmentShader,
+      topology: 'triangle-list',
+      _uniformBlockLayouts: ['BlockA', 'BlockB', 'BlockC'].map(name => ({
+        name,
+        uniformTypes: {[`value${name.at(-1)}`]: 'f32'}
+      }))
+    });
+  } finally {
+    gl.getActiveUniforms = getActiveUniforms;
+  }
+
+  expect(
+    renderPipeline.shaderLayout.bindings.map(binding => ({
+      name: binding.name,
+      minBindingSize: binding.minBindingSize,
+      uniforms: binding.type === 'uniform' ? binding.uniforms : undefined
+    }))
+  ).toEqual([
+    {
+      name: 'BlockA',
+      minBindingSize: 16,
+      uniforms: [{name: 'valueA', format: 'f32', arrayLength: 1, byteOffset: 0, byteStride: 0}]
+    },
+    {
+      name: 'BlockB',
+      minBindingSize: 16,
+      uniforms: [{name: 'valueB', format: 'f32', arrayLength: 1, byteOffset: 0, byteStride: 0}]
+    },
+    {
+      name: 'BlockC',
+      minBindingSize: 16,
+      uniforms: [{name: 'valueC', format: 'f32', arrayLength: 1, byteOffset: 0, byteStride: 0}]
+    }
+  ]);
+
+  renderPipeline.destroy();
+  vertexShader.destroy();
+  fragmentShader.destroy();
+  device.destroy();
+  void 0;
+});
+
 it('WEBGLRenderPipeline initializes mixed sampler uniforms before validation', async () => {
   const device = await getWebGLTestDevice();
 

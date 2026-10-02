@@ -10,7 +10,13 @@ import {
   type Device
 } from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {getGPUFFT2DSupport, GPUFFT2D, makeGPUFFT2DStats} from '@luma.gl/gpgpu/gpu-core';
+import {
+  getGPUFFT2DSupport,
+  GPUFFT2D,
+  makeGPUFFT2DStats,
+  GPUCommandGraph,
+  type CompiledGPUCommandGraph
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   FFT_BLOOM_COMPOSITE_SHADER,
   FFT_BLOOM_EXTRACT_SHADER,
@@ -137,7 +143,7 @@ export type BloomPointSpreadFunctionOptions = {
 };
 
 type GPUConvolutionBloomResources = {
-  transform: GPUFFT2D;
+  transform: Record<'forward' | 'inverse', CompiledGPUCommandGraph>;
   parameters: Buffer;
   kernelSpectrum: Buffer;
   spatialChannels: Buffer;
@@ -264,10 +270,9 @@ export class GPUConvolutionBloom {
     );
 
     if (this.kernelNeedsTransform) {
-      this.resources.transform.encode(commandEncoder, {
-        inputBuffer: this.resources.spatialChannels,
-        outputBuffer: this.resources.kernelSpectrum,
-        direction: 'forward'
+      this.resources.transform.forward.encode(commandEncoder, {
+        parameters: undefined,
+        buffers: {input: this.resources.spatialChannels, output: this.resources.kernelSpectrum}
       });
       this.kernelNeedsTransform = false;
     }
@@ -286,10 +291,9 @@ export class GPUConvolutionBloom {
       Math.ceil(this.stats.transformHeight / FFT_BLOOM_WORKGROUP_DIMENSION)
     );
 
-    this.resources.transform.encode(commandEncoder, {
-      inputBuffer: this.resources.spatialChannels,
-      outputBuffer: this.resources.spectralChannels,
-      direction: 'forward'
+    this.resources.transform.forward.encode(commandEncoder, {
+      parameters: undefined,
+      buffers: {input: this.resources.spatialChannels, output: this.resources.spectralChannels}
     });
 
     this.resources.multiply.setBindings({
@@ -308,10 +312,9 @@ export class GPUConvolutionBloom {
       Math.ceil(multiplyWorkgroupCount / FFT_BLOOM_MULTIPLY_WORKGROUPS_PER_ROW)
     );
 
-    this.resources.transform.encode(commandEncoder, {
-      inputBuffer: this.resources.spatialChannels,
-      outputBuffer: this.resources.spectralChannels,
-      direction: 'inverse'
+    this.resources.transform.inverse.encode(commandEncoder, {
+      parameters: undefined,
+      buffers: {input: this.resources.spatialChannels, output: this.resources.spectralChannels}
     });
 
     const compositeBindings: Record<string, Buffer | Texture['view']> = {
@@ -448,7 +451,8 @@ export function makeGPUConvolutionBloomStats(
   );
   const batchCount = 3;
   const transformStats = makeGPUFFT2DStats(transformWidth, transformHeight, batchCount);
-  const complexBufferCount = 4;
+  // Three application fields plus one scratch field per compiled transform direction.
+  const complexBufferCount = 5;
 
   return Object.freeze({
     width: props.width,
@@ -543,7 +547,7 @@ function createGPUConvolutionBloomResources(
     temporalStability: boolean;
   }
 ): GPUConvolutionBloomResources {
-  let transform: GPUFFT2D | undefined;
+  const transforms: CompiledGPUCommandGraph[] = [];
   const buffers: Buffer[] = [];
   const computations: Computation[] = [];
   const textures: Texture[] = [];
@@ -558,12 +562,6 @@ function createGPUConvolutionBloomResources(
   };
 
   try {
-    transform = new GPUFFT2D(device, {
-      id: `${options.id}-fft`,
-      width: options.stats.transformWidth,
-      height: options.stats.transformHeight,
-      batchCount: options.stats.batchCount
-    });
     const parameters = device.createBuffer({
       id: `${options.id}-parameters`,
       byteLength: FFT_BLOOM_PARAMETER_BYTE_LENGTH,
@@ -576,6 +574,34 @@ function createGPUConvolutionBloomResources(
       makeComplexPointSpreadFunction(options.pointSpreadFunction, options.stats.elementCount)
     );
     const spectralChannels = makeStorageBuffer('rgb-spectrum');
+    const compileTransform = (direction: 'forward' | 'inverse') => {
+      const graph = new GPUCommandGraph(device, {id: `${options.id}-fft-${direction}`});
+      const input = graph.importBuffer(
+        {id: 'input', byteLength: spatialChannels.byteLength, usage: spatialChannels.usage},
+        spatialChannels
+      );
+      const output = graph.importBuffer(
+        {id: 'output', byteLength: spectralChannels.byteLength, usage: spectralChannels.usage},
+        spectralChannels
+      );
+      const length = options.stats.elementCount * options.stats.batchCount;
+      graph.add(
+        new GPUFFT2D({
+          id: `${options.id}-fft-${direction}`,
+          width: options.stats.transformWidth,
+          height: options.stats.transformHeight,
+          batchCount: options.stats.batchCount,
+          direction,
+          input: graph.createDataView(input, {format: 'float32x2', length}),
+          output: graph.createDataView(output, {format: 'float32x2', length})
+        })
+      );
+      const compiled = graph.compile();
+      transforms.push(compiled);
+      return compiled;
+    };
+    const transform = {forward: compileTransform('forward'), inverse: compileTransform('inverse')};
+
     const historyTextures = options.temporalStability
       ? ([0, 1].map(historyIndex => {
           const texture = device.createTexture({
@@ -704,7 +730,7 @@ function createGPUConvolutionBloomResources(
     for (const texture of textures) {
       texture.destroy();
     }
-    transform?.destroy();
+    for (const transform of transforms) transform.destroy();
     throw error;
   }
 }
@@ -857,7 +883,8 @@ function destroyGPUConvolutionBloomResources(resources: GPUConvolutionBloomResou
   resources.extract.destroy();
   resources.multiply.destroy();
   resources.composite.destroy();
-  resources.transform.destroy();
+  resources.transform.forward.destroy();
+  resources.transform.inverse.destroy();
   resources.parameters.destroy();
   resources.kernelSpectrum.destroy();
   resources.spatialChannels.destroy();

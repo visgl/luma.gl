@@ -16,6 +16,7 @@ import {
 } from '../../examples/showcase/gltf/gltf-animation-studio';
 import {getGLTFReferenceLedger} from '../../examples/showcase/gltf/gltf-reference-ledger';
 import {
+  GLTF_ANIMATION_STUDIO_ASSETS,
   GLTF_STUDIO_ASSETS,
   ROBOT_EXPRESSIVE_SOURCE_REVISION,
   getGLTFStudioAsset
@@ -237,6 +238,15 @@ describe('curated glTF Animation Studio', () => {
         source: 'three.js',
         sourceRevision: ROBOT_EXPRESSIVE_SOURCE_REVISION
       })
+    );
+  });
+
+  test('limits the Animation Studio menu to authored animation assets', () => {
+    expect(GLTF_ANIMATION_STUDIO_ASSETS.length).toBeGreaterThan(0);
+    expect(GLTF_ANIMATION_STUDIO_ASSETS.every(asset => asset.category === 'animation')).toBe(true);
+    expect(GLTF_ANIMATION_STUDIO_ASSETS.map(asset => asset.name)).toContain('RobotExpressive');
+    expect(GLTF_ANIMATION_STUDIO_ASSETS.map(asset => asset.name)).not.toContain(
+      'DiffuseTransmissionPlant'
     );
   });
 

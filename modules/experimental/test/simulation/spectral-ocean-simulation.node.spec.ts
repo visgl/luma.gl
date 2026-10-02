@@ -50,8 +50,8 @@ it('SpectralOceanSimulation publishes an immutable bounded dispatch plan', () =>
       workgroupSize: [8, 8, 1],
       workgroupCount: [2, 2, 1],
       scratchBufferByteLength: 2048,
-      parameterBufferCount: 20,
-      parameterBufferByteLength: 640
+      parameterBufferCount: 10,
+      parameterBufferByteLength: 480
     }
   });
   expect(Boolean(Object.isFrozen(stats)), 'stats are immutable').toBe(true);

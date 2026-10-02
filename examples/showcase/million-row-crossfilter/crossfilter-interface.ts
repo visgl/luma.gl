@@ -96,7 +96,7 @@ type BrushPhase = CrossfilterBrushEvent['phase'];
 const HISTOGRAM_DEFINITIONS: readonly HistogramDefinition[] = [
   {id: 'value', label: 'Flow intensity', unit: 'SIGNAL', domain: [0, 100], color: '#54edff'},
   {id: 'risk', label: 'Anomaly probability', unit: 'RISK', domain: [0, 1], color: '#ff839a'},
-  {id: 'hour', label: 'UTC activity window', unit: 'UTC', domain: [0, 24], color: '#aa91ff'}
+  {id: 'hour', label: 'Transaction hour', unit: 'h', domain: [0, 24], color: '#aa91ff'}
 ];
 
 const DEFAULT_GROUPS: readonly CrossfilterGroup[] = [
@@ -314,6 +314,7 @@ export class CrossfilterInterface {
   setHistogramBrush(identifier: string, normalizedRange: [number, number] | null): void {
     const elements = this.histogramElements.get(identifier);
     if (!elements) return;
+    elements.card.dataset.selectionActive = String(normalizedRange !== null);
     if (!normalizedRange) {
       elements.brush.dataset.active = 'false';
       return;

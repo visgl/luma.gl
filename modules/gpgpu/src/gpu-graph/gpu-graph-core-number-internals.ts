@@ -133,12 +133,14 @@ export function addGPUGraphCoreNumberToGraphWithDispatchLimit<Parameters>(
   }
 
   if (state.degeneracy) {
-    new GPUReduction({
-      id: `${state.id}-degeneracy`,
-      input: state.output,
-      output: state.degeneracy,
-      operation: 'max'
-    }).addToGraph(commandGraph);
+    commandGraph.add(
+      new GPUReduction({
+        id: `${state.id}-degeneracy`,
+        input: state.output,
+        output: state.degeneracy,
+        operation: 'max'
+      })
+    );
   }
 }
 

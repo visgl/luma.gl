@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Computation, Kernel} from '@luma.gl/engine';
 import {SpectralOceanSimulation} from '@luma.gl/experimental';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
@@ -235,10 +235,12 @@ it('SpectralOceanSimulation construction unwinds partial allocations', async () 
   const originalCreateBuffer = device.createBuffer;
   const originalComputationDestroy = Computation.prototype.destroy;
   let computationDestroyCount = 0;
+  const originalKernelDestroy = Kernel.prototype.destroy;
+  let kernelDestroyCount = 0;
 
   device.createBuffer = ((props: Parameters<Device['createBuffer']>[0]) => {
     const bufferId = (props as {id?: string}).id;
-    if (bufferId === `${id}-fft-inverse-1-parameters`) {
+    if (bufferId === `${id}-fft-1-parameters`) {
       throw new Error('injected SpectralOceanSimulation allocation failure');
     }
     const buffer = originalCreateBuffer.call(device, props);
@@ -247,6 +249,10 @@ it('SpectralOceanSimulation construction unwinds partial allocations', async () 
     }
     return buffer;
   }) as Device['createBuffer'];
+  Kernel.prototype.destroy = function (): void {
+    kernelDestroyCount++;
+    originalKernelDestroy.call(this);
+  };
   Computation.prototype.destroy = function (): void {
     computationDestroyCount++;
     originalComputationDestroy.call(this);
@@ -260,6 +266,7 @@ it('SpectralOceanSimulation construction unwinds partial allocations', async () 
   } finally {
     device.createBuffer = originalCreateBuffer;
     Computation.prototype.destroy = originalComputationDestroy;
+    Kernel.prototype.destroy = originalKernelDestroy;
   }
 
   expect(
@@ -270,7 +277,8 @@ it('SpectralOceanSimulation construction unwinds partial allocations', async () 
     Boolean(allocatedBuffers.every(buffer => buffer.destroyed)),
     'every buffer allocated before the failure is destroyed'
   ).toBe(true);
-  expect(computationDestroyCount, 'both simulation computations and the FFT are unwound').toBe(3);
+  expect(computationDestroyCount, 'both simulation computations are unwound').toBe(2);
+  expect(kernelDestroyCount, 'the FFT kernel is unwound').toBe(1);
   expect(
     getResourceCount(device, 'Buffers'),
     'active buffer accounting returns to its baseline'

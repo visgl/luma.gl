@@ -72,6 +72,34 @@ it('convertArrowMatrixToGPUVector normalizes packed row-major Float64 matrices',
   void 0;
 });
 
+it('convertArrowMatrixToGPUVector preserves Arrow matrix chunks', async () => {
+  const device = new NullDevice({});
+  const first = makeRawMatrixVector(new arrow.Float64(), 4, new Float64Array([1, 2, 3, 4]), {
+    shape: 'mat2x2',
+    order: 'row-major',
+    layout: 'packed'
+  });
+  const second = makeRawMatrixVector(new arrow.Float64(), 4, new Float64Array([5, 6, 7, 8]), {
+    shape: 'mat2x2',
+    order: 'row-major',
+    layout: 'packed'
+  });
+  const source = new arrow.Vector([first.data[0], second.data[0]]);
+  const prepared = await convertArrowMatrixToGPUVector(device, source);
+  const result = await readArrowGPUVectorAsync(prepared.matrix);
+
+  expect(prepared.matrix.data.length, 'keeps one GPUData chunk per Arrow chunk').toBe(2);
+  expect(result.data.length, 'keeps chunks through readback').toBe(2);
+  expect(
+    getArrowFixedSizeListValues(result as arrow.Vector<arrow.FixedSizeList<arrow.Float32>>),
+    'converts both chunks in source order'
+  ).toEqual(new Float32Array([1, 3, 2, 4, 5, 7, 6, 8]));
+
+  prepared.destroy();
+  device.destroy();
+  void 0;
+});
+
 function makeRawMatrixVector<T extends arrow.Float32 | arrow.Float64>(
   childType: T,
   listSize: number,

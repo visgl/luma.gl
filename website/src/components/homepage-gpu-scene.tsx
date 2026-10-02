@@ -10,6 +10,9 @@ export default function HomepageGPUScene(): React.JSX.Element {
       directory="showcase"
       template={InstancingApp}
       config={{}}
+      exampleId="homepage/instancing"
+      mobileMode="reduced"
+      mobileProfile="large-data"
       canvasContextProfile="high-dynamic-range"
       panel={false}
     />

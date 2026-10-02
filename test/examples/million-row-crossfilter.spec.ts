@@ -41,6 +41,22 @@ describe('Million-Row Crossfilter Explorer GPU-resident dashboard', () => {
       await waitForAnimationFrame();
       expect(onResize).toHaveBeenCalledTimes(1);
 
+      dashboard.setHistogram('hour', new Uint32Array([2, 4, 2]), {
+        baselineBins: new Uint32Array([8, 8, 8])
+      });
+      dashboard.setHistogramBrush('hour', [0.4, 0.6]);
+      const hourHistogram = container.querySelector<HTMLElement>(
+        '[data-crossfilter-histogram="hour"]'
+      );
+      expect(hourHistogram?.dataset.selectionActive).toBe('true');
+      const baseline = hourHistogram?.querySelector<HTMLElement>('.crossfilter-histogram-baseline');
+      expect(baseline).not.toBeNull();
+      if (!baseline) return;
+      expect(getComputedStyle(baseline).opacity).toBe('0');
+
+      dashboard.setHistogramBrush('hour', null);
+      expect(hourHistogram?.dataset.selectionActive).toBe('false');
+
       overlay.dispatchEvent(new Event('scroll'));
       dashboard.destroy();
       await waitForAnimationFrame();

@@ -29,7 +29,7 @@ export function parseParquetDictionaryIndicesPlan(
   return Object.freeze({bitWidth, runPlan, bytesConsumed: runPlan.bytesConsumed});
 }
 
-/** Reads the four-byte little-endian length used by Data Page V1 RLE level/value streams. */
+/** Reads the four-byte little-endian length used by V1 RLE levels and RLE value streams. */
 export function parseParquetLengthPrefixedRleBitPackedRunPlan(
   encoded: Uint8Array,
   bitWidth: number,

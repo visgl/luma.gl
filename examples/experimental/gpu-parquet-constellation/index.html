@@ -1,0 +1,23 @@
+<!doctype html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GPU Parquet Constellation</title>
+  <style>
+    body { margin: 0; background: #01030d; color: #e2e8f0; font: 14px/1.4 system-ui, sans-serif; }
+    #controls { position: fixed; z-index: 1; top: 16px; left: 16px; width: min(360px, calc(100vw - 66px)); max-height: calc(100vh - 66px); overflow: auto; padding: 16px; border: 1px solid #334155; border-radius: 10px; background: rgb(2 6 23 / 88%); backdrop-filter: blur(8px); }
+    button, select { margin-left: 6px; }
+  </style>
+</head>
+<body>
+  <aside id="controls"></aside>
+</body>
+<script type="module">
+  import {makeAnimationLoop} from '@luma.gl/engine';
+  import {webgpuAdapter} from '@luma.gl/webgpu';
+  import AnimationLoopTemplate from './app.ts';
+
+  document.querySelector('#controls').innerHTML = AnimationLoopTemplate.info;
+  const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgpuAdapter]});
+  animationLoop.start();
+</script>

@@ -9,6 +9,7 @@ import {
   GPUFiniteDifference3D,
   makeGPUFiniteDifference3DStats
 } from '@luma.gl/gpgpu/gpu-core';
+import {getGraphVectorData} from '../../src/gpu-core/graph-vector-view-utils';
 import {WgslReflect} from 'wgsl_reflect';
 import {getGPUFiniteDifference3DShaderSource} from '../../src/gpu-core/gpu-finite-difference-3d';
 
@@ -68,12 +69,26 @@ it('GPUFiniteDifference3D generates valid scalar and vector kernels', () => {
     boundary: 'periodic'
   });
   for (const operation of [gradient, curl]) {
-    const source = getGPUFiniteDifference3DShaderSource(operation, {x: 1, y: 1, z: 1});
+    const source = getGPUFiniteDifference3DShaderSource(
+      {
+        ...operation,
+        input: getGraphVectorData(operation.input)[0],
+        output: getGraphVectorData(operation.output)[0]
+      },
+      {x: 1, y: 1, z: 1}
+    );
     expect(new WgslReflect(source).entry.compute.map(entry => entry.name)).toEqual(['main']);
   }
-  expect(getGPUFiniteDifference3DShaderSource(curl, {x: 1, y: 1, z: 1})).toMatch(
-    /OUTPUT_OFFSET: u32 = 1u/
-  );
+  expect(
+    getGPUFiniteDifference3DShaderSource(
+      {
+        ...curl,
+        input: getGraphVectorData(curl.input)[0],
+        output: getGraphVectorData(curl.output)[0]
+      },
+      {x: 1, y: 1, z: 1}
+    )
+  ).toMatch(/OUTPUT_OFFSET: u32 = 1u/);
 });
 
 function makeView(

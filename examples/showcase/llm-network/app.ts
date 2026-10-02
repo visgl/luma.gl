@@ -4,6 +4,7 @@
 
 import type {CanvasContext, Device} from '@luma.gl/core';
 import {AnimationLoopTemplate, type AnimationProps} from '@luma.gl/engine';
+import {getLLMNetworkMarkup} from './app-ui';
 import {LLMNetworkRenderer} from './llm-network-renderer';
 import './llm-network-styles.css';
 
@@ -323,6 +324,7 @@ export default class LLMNetworkAnimationLoopTemplate extends AnimationLoopTempla
   private orbitDragging = false;
   private previousPointerPosition: [number, number] = [0, 0];
   private scrollingStory = false;
+  private previousTouchAction = '';
 
   constructor({device}: AnimationProps) {
     super();
@@ -333,6 +335,8 @@ export default class LLMNetworkAnimationLoopTemplate extends AnimationLoopTempla
   override async onInitialize({canvas}: AnimationProps): Promise<void> {
     if (!(canvas instanceof HTMLCanvasElement)) return;
     this.canvas = canvas;
+    this.previousTouchAction = canvas.style.touchAction;
+    canvas.style.touchAction = 'none';
     canvas.setAttribute('role', 'img');
     canvas.setAttribute(
       'aria-label',
@@ -340,7 +344,11 @@ export default class LLMNetworkAnimationLoopTemplate extends AnimationLoopTempla
     );
     this.root = document.createElement('section');
     this.root.className = 'llm-network-interface';
-    this.root.innerHTML = getInterfaceMarkup();
+    this.root.innerHTML = getLLMNetworkMarkup({
+      stages: STAGES,
+      prompts: PROMPTS,
+      conceptTooltips: CONCEPT_TOOLTIPS
+    });
     (canvas.parentElement ?? document.body).appendChild(this.root);
     this.previousAdvanceTime = performance.now();
     this.installEvents();
@@ -369,8 +377,18 @@ export default class LLMNetworkAnimationLoopTemplate extends AnimationLoopTempla
   }
 
   override onFinalize(): void {
+    if (this.canvas) {
+      this.canvas.removeEventListener('pointermove', this.handleCanvasPointerMove);
+      this.canvas.removeEventListener('pointerleave', this.handleCanvasPointerLeave);
+      this.canvas.removeEventListener('pointerdown', this.handleCanvasPointerDown);
+      this.canvas.removeEventListener('pointerup', this.handleCanvasPointerUp);
+      this.canvas.removeEventListener('pointercancel', this.handleCanvasPointerUp);
+      this.canvas.removeEventListener('wheel', this.handleCanvasWheel);
+      this.canvas.style.touchAction = this.previousTouchAction;
+    }
     this.root?.remove();
     this.root = null;
+    this.canvas = null;
     this.renderer.destroy();
   }
 
@@ -410,54 +428,12 @@ export default class LLMNetworkAnimationLoopTemplate extends AnimationLoopTempla
     this.root?.querySelector<HTMLInputElement>('[data-speed]')?.addEventListener('input', event => {
       this.flowSpeed = Number((event.currentTarget as HTMLInputElement).value);
     });
-    this.canvas?.addEventListener('pointermove', event => {
-      const bounds = this.canvas?.getBoundingClientRect();
-      if (!bounds) return;
-      this.pointer = [
-        (event.clientX - bounds.left) / bounds.width,
-        1 - (event.clientY - bounds.top) / bounds.height
-      ];
-      this.pointerActive = true;
-      if (this.orbitDragging) {
-        this.orbitYaw += (event.clientX - this.previousPointerPosition[0]) * 0.008;
-        this.orbitPitch = Math.max(
-          0.15,
-          Math.min(
-            1.25,
-            this.orbitPitch + (event.clientY - this.previousPointerPosition[1]) * 0.006
-          )
-        );
-        this.previousPointerPosition = [event.clientX, event.clientY];
-      }
-    });
-    this.canvas?.addEventListener('pointerleave', () => {
-      this.pointerActive = false;
-    });
-    this.canvas?.addEventListener('pointerdown', event => {
-      if (this.stage < 5) return;
-      this.orbitDragging = true;
-      this.previousPointerPosition = [event.clientX, event.clientY];
-      this.canvas?.setPointerCapture(event.pointerId);
-      this.root?.classList.add('orbit-dragging');
-    });
-    this.canvas?.addEventListener('pointerup', event => {
-      this.orbitDragging = false;
-      if (this.canvas?.hasPointerCapture(event.pointerId))
-        this.canvas.releasePointerCapture(event.pointerId);
-      this.root?.classList.remove('orbit-dragging');
-    });
-    this.canvas?.addEventListener(
-      'wheel',
-      event => {
-        if (this.stage < 5) return;
-        event.preventDefault();
-        this.orbitZoom = Math.max(
-          0.68,
-          Math.min(1.45, this.orbitZoom * Math.exp(-event.deltaY * 0.001))
-        );
-      },
-      {passive: false}
-    );
+    this.canvas?.addEventListener('pointermove', this.handleCanvasPointerMove);
+    this.canvas?.addEventListener('pointerleave', this.handleCanvasPointerLeave);
+    this.canvas?.addEventListener('pointerdown', this.handleCanvasPointerDown);
+    this.canvas?.addEventListener('pointerup', this.handleCanvasPointerUp);
+    this.canvas?.addEventListener('pointercancel', this.handleCanvasPointerUp);
+    this.canvas?.addEventListener('wheel', this.handleCanvasWheel, {passive: false});
     this.root?.querySelector('[data-story]')?.addEventListener('scroll', event => {
       if (this.scrollingStory) return;
       const story = event.currentTarget as HTMLElement;
@@ -479,6 +455,52 @@ export default class LLMNetworkAnimationLoopTemplate extends AnimationLoopTempla
       }
     });
   }
+
+  private readonly handleCanvasPointerMove = (event: PointerEvent): void => {
+    const bounds = this.canvas?.getBoundingClientRect();
+    if (!bounds) return;
+    this.pointer = [
+      (event.clientX - bounds.left) / bounds.width,
+      1 - (event.clientY - bounds.top) / bounds.height
+    ];
+    this.pointerActive = true;
+    if (this.orbitDragging) {
+      this.orbitYaw += (event.clientX - this.previousPointerPosition[0]) * 0.008;
+      this.orbitPitch = Math.max(
+        0.15,
+        Math.min(1.25, this.orbitPitch + (event.clientY - this.previousPointerPosition[1]) * 0.006)
+      );
+      this.previousPointerPosition = [event.clientX, event.clientY];
+    }
+  };
+
+  private readonly handleCanvasPointerLeave = (): void => {
+    this.pointerActive = false;
+  };
+
+  private readonly handleCanvasPointerDown = (event: PointerEvent): void => {
+    if (this.stage < 5) return;
+    this.orbitDragging = true;
+    this.previousPointerPosition = [event.clientX, event.clientY];
+    this.canvas?.setPointerCapture(event.pointerId);
+    this.root?.classList.add('orbit-dragging');
+  };
+
+  private readonly handleCanvasPointerUp = (event: PointerEvent): void => {
+    this.orbitDragging = false;
+    if (this.canvas?.hasPointerCapture(event.pointerId))
+      this.canvas.releasePointerCapture(event.pointerId);
+    this.root?.classList.remove('orbit-dragging');
+  };
+
+  private readonly handleCanvasWheel = (event: WheelEvent): void => {
+    if (this.stage < 5) return;
+    event.preventDefault();
+    this.orbitZoom = Math.max(
+      0.68,
+      Math.min(1.45, this.orbitZoom * Math.exp(-event.deltaY * 0.001))
+    );
+  };
 
   private setStage(stage: number, scrollStory = false): void {
     this.stage = Math.max(0, Math.min(STAGES.length - 1, Math.round(stage)));
@@ -547,37 +569,4 @@ export default class LLMNetworkAnimationLoopTemplate extends AnimationLoopTempla
         .join('');
     }
   }
-}
-
-function getInterfaceMarkup(): string {
-  return `
-    <header class="llm-header">
-      <div><p class="llm-eyebrow">luma.gl · visual transformer tour</p><h1>Inside a Transformer</h1></div>
-      <nav data-prompts aria-label="Example prompts">
-        ${PROMPTS.map((prompt, index) => `<button data-prompt="${index}">${prompt.label}</button>`).join('')}
-      </nav>
-    </header>
-    <ol class="llm-stage-rail" data-stages aria-label="Transformer stages">
-      ${STAGES.map((stage, index) => `<li><button data-stage="${index}" title="${stage.name}"><small>${String(index + 1).padStart(2, '0')}</small><span>${stage.name}</span></button></li>`).join('')}
-    </ol>
-    <section class="llm-token-stack" aria-label="Prompt tokens">
-      <p>Prompt tokens</p><div data-token-list></div>
-    </section>
-    <section class="llm-output-stack" aria-label="Next token probabilities">
-      <p>Next token</p><ol data-candidates></ol>
-    </section>
-    <p class="llm-orbit-hint">Drag to orbit · scroll to zoom</p>
-    <div class="llm-hotspots" aria-label="Concept explanations">
-      ${CONCEPT_TOOLTIPS.map((tooltip, index) => `<button data-tooltip-stages="${tooltip.stages}" ${tooltip.align ? `data-align="${tooltip.align}"` : ''} style="--hotspot-left:${tooltip.left}%;--hotspot-top:${tooltip.top}%" aria-describedby="llm-tooltip-${index}"><span aria-hidden="true">i</span><span class="llm-tooltip-card" id="llm-tooltip-${index}" role="tooltip"><strong>${tooltip.label}</strong>${tooltip.copy}</span></button>`).join('')}
-    </div>
-    <section class="llm-story" data-story aria-label="Transformer story">
-      ${STAGES.map((stage, index) => `<article data-story-stage="${index}"><p><span>${String(index + 1).padStart(2, '0')}</span> ${stage.kicker}</p><h2>${stage.name}</h2><p>${stage.copy}</p><code>${stage.formula}</code><small>Scroll to continue ↓</small></article>`).join('')}
-    </section>
-    <section class="llm-controls" aria-label="Visualization controls">
-      <button data-play>Pause tour</button>
-      <label class="stage-scrubber"><span>Pipeline</span><input data-stage-range type="range" min="0" max="9" step="1" value="2" aria-label="Transformer stage"></label>
-      <label><span>Layer depth</span><input data-layer type="range" min="1" max="12" step="1" value="6"><output data-layer-output>6 / 12</output></label>
-      <label><span>Signal speed</span><input data-speed type="range" min="0.2" max="2.5" step="0.1" value="1"></label>
-    </section>
-    <footer><span>Illustrative transformer anatomy · not a model trace</span><span>GPU-rendered with one luma.gl model</span></footer>`;
 }

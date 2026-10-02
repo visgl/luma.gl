@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {GPUVectorLike} from '../gpu-data/gpu-vector-like';
+import {getGPUVectorChunks, type GPUVectorChunk} from '../gpu-data/gpu-vector-chunks';
+
 import type {
   Buffer,
   CommandEncoder,
@@ -219,7 +222,11 @@ export class GraphDataView<T extends GPUVectorFormat = GPUVectorFormat> {
  * A vector view is metadata and an ordered list only. Nodes declare uses of individual
  * {@link GraphDataView} chunks so that the compiler continues to track physical buffer hazards.
  */
-export class GraphVectorView<T extends GPUVectorFormat = GPUVectorFormat> {
+export class GraphVectorView<T extends GPUVectorFormat = GPUVectorFormat>
+  implements GPUVectorLike<T, GraphDataView<T>>
+{
+  /** Canonical logical positions and physical views for every chunk. */
+  readonly chunks: readonly GPUVectorChunk<GraphDataView<T>>[];
   /** Identifier supplied to `GPUCommandGraph.importGPUVector`. */
   readonly id: string;
   /** Source vector name. */
@@ -259,7 +266,16 @@ export class GraphVectorView<T extends GPUVectorFormat = GPUVectorFormat> {
     this.stride = props.stride;
     this.byteStride = props.byteStride;
     this.rowByteLength = props.rowByteLength;
-    this.data = props.data;
+    if (
+      props.data.some(data => data.format !== props.format) ||
+      props.data.reduce((length, data) => length + data.length, 0) !== props.length
+    ) {
+      throw new Error(
+        `${props.id} length must equal its ordered source chunks, with matching formats`
+      );
+    }
+    this.data = Object.freeze([...props.data]);
+    this.chunks = getGPUVectorChunks(this.data);
   }
 }
 
@@ -611,6 +627,10 @@ export type GPUCommandGraphComputeNode<Parameters> = GPUCommandGraphNodeBase<
   type: 'compute';
   /** Creates reusable node resources and the encode callback. */
   compile: (context: GPUCommandGraphCompileContext) => GPUCommandGraphComputeExecutable<Parameters>;
+  /** Creates reusable node resources through asynchronous backend compilation when available. */
+  compileAsync?: (
+    context: GPUCommandGraphCompileContext
+  ) => Promise<GPUCommandGraphComputeExecutable<Parameters>>;
 };
 
 /** Render node compiled once and encoded into a graph-owned render pass. */
@@ -623,6 +643,10 @@ export type GPUCommandGraphRenderNode<Parameters> = GPUCommandGraphNodeBase<
   attachments?: GraphRenderPassAttachments;
   /** Creates reusable node resources and the encode callback. */
   compile: (context: GPUCommandGraphCompileContext) => GPUCommandGraphRenderExecutable<Parameters>;
+  /** Creates reusable node resources through asynchronous backend compilation when available. */
+  compileAsync?: (
+    context: GPUCommandGraphCompileContext
+  ) => Promise<GPUCommandGraphRenderExecutable<Parameters>>;
 };
 
 /** Copy or pass-independent node compiled once and encoded directly on the command encoder. */
@@ -633,6 +657,10 @@ export type GPUCommandGraphCopyNode<Parameters> = GPUCommandGraphNodeBase<
   type: 'copy';
   /** Creates reusable node resources and the encode callback. */
   compile: (context: GPUCommandGraphCompileContext) => GPUCommandGraphCopyExecutable<Parameters>;
+  /** Creates reusable node resources through asynchronous backend compilation when available. */
+  compileAsync?: (
+    context: GPUCommandGraphCompileContext
+  ) => Promise<GPUCommandGraphCopyExecutable<Parameters>>;
 };
 
 /** Any node accepted by a `GPUCommandGraph`. */

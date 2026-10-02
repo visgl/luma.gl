@@ -2,8 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {alignGraphVectorViews} from './graph-vector-view-utils';
+
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {
   GPUCommandGraph,
   GraphVectorView,
@@ -20,7 +23,6 @@ import {
   getViewBinding,
   getViewElementOffset,
   type GPUScalarFormat,
-  validateMatchingVectorTopology,
   validatePackedUint32View,
   validatePackedView
 } from './graph-data-view-utils';
@@ -52,7 +54,7 @@ export type GPUHistogramInput<T extends GPUScalarFormat = GPUScalarFormat> =
   | GraphDataView<T>
   | GraphVectorView<T>;
 
-/** Optional nonzero/zero row selection with the same topology as histogram input. */
+/** Optional nonzero/zero row selection with the same logical length as histogram input. */
 export type GPUHistogramMask = GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
 
 /** Ordered bin boundaries accepted by {@link GPUHistogram}. */
@@ -68,7 +70,7 @@ type GPUHistogramBaseProps<T extends GPUScalarFormat> = {
   input: GPUHistogramInput<T>;
   /** Caller-owned `uint32` counts; its length defines the bin count. */
   output: GraphDataView<'uint32'>;
-  /** Optional nonzero/zero selection with the same view kind and chunk topology as `input`. */
+  /** Optional nonzero/zero selection with the same logical length as `input`; chunk boundaries may differ. */
   mask?: GPUHistogramMask;
 };
 
@@ -140,18 +142,13 @@ export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
       throw new Error(`${this.id} input and output must use separate buffers`);
     }
     if (this.mask) {
-      if (this.input instanceof GraphVectorView !== this.mask instanceof GraphVectorView) {
-        throw new Error(`${this.id} input and mask must use the same view kind`);
-      }
       for (const [chunkIndex, mask] of getHistogramMasks(this.mask).entries()) {
         validatePackedUint32View(mask, `${this.id} mask chunk ${chunkIndex}`);
         if (mask.buffer === this.output.buffer) {
           throw new Error(`${this.id} mask and output must use separate buffers`);
         }
       }
-      if (this.input instanceof GraphVectorView && this.mask instanceof GraphVectorView) {
-        validateMatchingVectorTopology(this.input, this.mask, `${this.id} input and mask`);
-      } else if (this.input.length !== this.mask.length) {
+      if (this.input.length !== this.mask.length) {
         throw new Error(`${this.id} input and mask lengths must match`);
       }
     }
@@ -184,15 +181,23 @@ export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
    * Automatic domains compose a {@link GPUReduction} extent. Empty inputs still clear output but
    * add no accumulation pass.
    */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    const inputs = getHistogramInputs(this.input);
-    const masks = this.mask ? getHistogramMasks(this.mask) : undefined;
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
+    let inputs = getHistogramInputs(this.input);
+    let masks = this.mask ? getHistogramMasks(this.mask) : undefined;
     if (
       inputs.some(input => input.buffer.graph !== graph) ||
       masks?.some(mask => mask.buffer.graph !== graph) ||
       this.output.buffer.graph !== graph
     ) {
       throw new Error(`${this.id} views must belong to the target graph`);
+    }
+    if (this.mask) {
+      const spans = alignGraphVectorViews(graph, [this.input, this.mask]);
+      inputs = spans.map(([input]) => input);
+      masks = spans.map(([, mask]) => mask);
     }
     let domain = this.domain;
     const edges = this.edges;
@@ -204,25 +209,27 @@ export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
         ? createTransientView(graph, `${this.id}-edge-validity`, 'uint32', 1)
         : undefined;
       if (isGPUHistogramEdgesView(edges) && edgeValidity) {
-        addValidateHistogramEdgesPass(graph, this.id, edges, edgeValidity);
+        nodes.push(...addValidateHistogramEdgesPass(graph, this.id, edges, edgeValidity));
       }
-      addClearHistogramPass(graph, this.id, this.output);
+      nodes.push(...addClearHistogramPass(graph, this.id, this.output));
       const accumulationPath = this.output.length <= MAXIMUM_LOCAL_BIN_COUNT ? 'local' : 'global';
       inputs.forEach((input, chunkIndex) => {
         if (input.length === 0) return;
-        addIrregularHistogramPass(graph, {
-          id:
-            this.input instanceof GraphVectorView
-              ? `${this.id}-chunk-${chunkIndex}-edges-${accumulationPath}`
-              : `${this.id}-edges-${accumulationPath}`,
-          input,
-          output: this.output,
-          mask: masks?.[chunkIndex],
-          edges,
-          edgeValidity
-        });
+        nodes.push(
+          ...addIrregularHistogramPass(graph, {
+            id:
+              this.input instanceof GraphVectorView || inputs.length > 1
+                ? `${this.id}-chunk-${chunkIndex}-edges-${accumulationPath}`
+                : `${this.id}-edges-${accumulationPath}`,
+            input,
+            output: this.output,
+            mask: masks?.[chunkIndex],
+            edges,
+            edgeValidity
+          })
+        );
       });
-      return;
+      return nodes;
     }
     if (isGPUHistogramDomainView(domain) && domain.buffer.graph !== graph) {
       throw new Error(`${this.id} domain must belong to the target graph`);
@@ -234,34 +241,40 @@ export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
         this.input.format,
         2
       ) as GraphDataView<T>;
-      new GPUReduction({
-        id: `${this.id}-extent`,
-        input: this.input,
-        output: inferredDomain,
-        operation: 'extent'
-      }).addToGraph(graph);
+      nodes.push(
+        ...new GPUReduction({
+          id: `${this.id}-extent`,
+          input: this.input,
+          output: inferredDomain,
+          operation: 'extent'
+        }).getCommandNodes(graph)
+      );
       domain = inferredDomain;
     }
     if (domain === undefined) {
       throw new Error(`${this.id} requires either domain or edges`);
     }
-    addClearHistogramPass(graph, this.id, this.output);
+    nodes.push(...addClearHistogramPass(graph, this.id, this.output));
     const accumulationPath = this.output.length <= MAXIMUM_LOCAL_BIN_COUNT ? 'local' : 'global';
     inputs.forEach((input, chunkIndex) => {
       if (input.length === 0) {
         return;
       }
-      addHistogramPass(graph, {
-        id:
-          this.input instanceof GraphVectorView
-            ? `${this.id}-chunk-${chunkIndex}-${accumulationPath}`
-            : `${this.id}-${accumulationPath}`,
-        input,
-        output: this.output,
-        mask: masks?.[chunkIndex],
-        domain
-      });
+      nodes.push(
+        ...addHistogramPass(graph, {
+          id:
+            this.input instanceof GraphVectorView || inputs.length > 1
+              ? `${this.id}-chunk-${chunkIndex}-${accumulationPath}`
+              : `${this.id}-${accumulationPath}`,
+          input,
+          output: this.output,
+          mask: masks?.[chunkIndex],
+          domain
+        })
+      );
     });
+
+    return nodes;
   }
 }
 
@@ -298,7 +311,8 @@ function addClearHistogramPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   id: string,
   output: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const passId = `${id}-clear`;
   const dispatchLayout = getHistogramDispatchLayout(graph, output.length);
   const source = /* wgsl */ `
@@ -312,13 +326,17 @@ const OUTPUT_OFFSET: u32 = ${getViewElementOffset(output)}u;
   ${getBoundedInvocationIndexSource(dispatchLayout, HISTOGRAM_WORKGROUP_SIZE)}
   if (index < BIN_COUNT) { atomicStore(&outputCounts[OUTPUT_OFFSET + index], 0u); }
 }`;
-  addComputationPass(graph, {
-    id: passId,
-    source,
-    resources: [{buffer: output, usage: 'storage-write'}],
-    bindings: {outputCounts: output},
-    dispatchLayout
-  });
+  nodes.push(
+    ...addKernelPass(graph, {
+      id: passId,
+      source,
+      resources: [{buffer: output, usage: 'storage-write'}],
+      bindings: {outputCounts: output},
+      dispatchLayout
+    })
+  );
+
+  return nodes;
 }
 
 /** Validates GPU-resident edge ordering into one graph-owned flag without readback. */
@@ -327,7 +345,8 @@ function addValidateHistogramEdgesPass<Parameters, T extends GPUScalarFormat>(
   id: string,
   edges: GraphDataView<T>,
   validity: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const shaderType = getShaderType(edges.format);
   const finiteCondition =
     edges.format === 'float32'
@@ -356,16 +375,20 @@ const VALIDITY_OFFSET: u32 = ${getViewElementOffset(validity)}u;
     edgeIndex = edgeIndex + ${HISTOGRAM_WORKGROUP_SIZE}u;
   }
 }`;
-  addComputationPass(graph, {
-    id: `${id}-validate-edges`,
-    source,
-    resources: [
-      {buffer: edges, usage: 'storage-read'},
-      {buffer: validity, usage: 'storage-write'}
-    ],
-    bindings: {edgeValues: edges, edgeValidity: validity},
-    dispatchCount: 1
-  });
+  nodes.push(
+    ...addKernelPass(graph, {
+      id: `${id}-validate-edges`,
+      source,
+      resources: [
+        {buffer: edges, usage: 'storage-read'},
+        {buffer: validity, usage: 'storage-write'}
+      ],
+      bindings: {edgeValues: edges, edgeValidity: validity},
+      dispatchCount: 1
+    })
+  );
+
+  return nodes;
 }
 
 /** Adds one binary-search irregular-edge accumulation pass. */
@@ -379,7 +402,7 @@ function addIrregularHistogramPass<Parameters, T extends GPUScalarFormat>(
     edges: GPUHistogramEdges<T>;
     edgeValidity?: GraphDataView<'uint32'>;
   }
-): void {
+): readonly GPUCommandNode<Parameters>[] {
   const dispatchLayout = getHistogramDispatchLayout(graph, props.input.length);
   const local = props.output.length <= MAXIMUM_LOCAL_BIN_COUNT;
   const useSubgroups =
@@ -490,7 +513,7 @@ ${useSubgroups ? getSubgroupBallotHelpersWGSL() : ''}
     ...(props.mask ? ([{buffer: props.mask, usage: 'storage-read'}] as GraphBufferUse[]) : []),
     {buffer: props.output, usage: 'storage-read-write'}
   ];
-  addComputationPass(graph, {
+  return addKernelPass(graph, {
     id: props.id,
     source,
     resources,
@@ -515,7 +538,7 @@ function addHistogramPass<Parameters, T extends GPUScalarFormat>(
     mask?: GraphDataView<'uint32'>;
     domain: readonly [number, number] | GraphDataView<T>;
   }
-): void {
+): readonly GPUCommandNode<Parameters>[] {
   const dispatchLayout = getHistogramDispatchLayout(graph, props.input.length);
   const local = props.output.length <= MAXIMUM_LOCAL_BIN_COUNT;
   const useSubgroups =
@@ -655,7 +678,7 @@ ${useSubgroups ? getSubgroupBallotHelpersWGSL() : ''}
     ...(props.mask ? ([{buffer: props.mask, usage: 'storage-read'}] as GraphBufferUse[]) : []),
     {buffer: props.output, usage: 'storage-read-write'}
   ];
-  addComputationPass(graph, {
+  return addKernelPass(graph, {
     id: props.id,
     source,
     resources,
@@ -670,7 +693,7 @@ ${useSubgroups ? getSubgroupBallotHelpersWGSL() : ''}
 }
 
 /** Wraps generated WGSL in a graph compute node with deferred physical buffer resolution. */
-function addComputationPass<Parameters>(
+function addKernelPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: {
     id: string;
@@ -680,54 +703,59 @@ function addComputationPass<Parameters>(
     dispatchCount?: number;
     dispatchLayout?: GPUBoundedDispatchLayout;
   }
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const maximumWorkgroupCount = props.dispatchLayout
     ? props.dispatchLayout.x * props.dispatchLayout.y * props.dispatchLayout.z
     : (props.dispatchCount ?? 1);
-  graph.addComputePass({
-    id: props.id,
-    resources: props.resources,
-    workload: {
-      operation: 'GPUHistogram',
-      commandCount: 1,
-      maximumWorkgroupCount,
-      maximumInvocationCount: maximumWorkgroupCount * HISTOGRAM_WORKGROUP_SIZE
-    },
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: props.id,
-        source: props.source,
-        shaderLayout: {
-          bindings: Object.keys(props.bindings).map((name, location) => ({
-            name,
-            type: 'storage' as const,
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {};
-          for (const [name, view] of Object.entries(props.bindings)) {
-            bindings[name] = getViewBinding(view, getBuffer);
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: props.id,
+      resources: props.resources,
+      workload: {
+        operation: 'GPUHistogram',
+        commandCount: 1,
+        maximumWorkgroupCount,
+        maximumInvocationCount: maximumWorkgroupCount * HISTOGRAM_WORKGROUP_SIZE
+      },
+      compile: ({device}) => {
+        const kernel = new Kernel(device, {
+          id: props.id,
+          source: props.source,
+          shaderLayout: {
+            bindings: Object.keys(props.bindings).map((name, location) => ({
+              name,
+              type: 'storage' as const,
+              group: 0,
+              location
+            }))
           }
-          computation.setBindings(bindings);
-          if (props.dispatchLayout) {
-            computation.dispatch(
-              computePass,
-              props.dispatchLayout.x,
-              props.dispatchLayout.y,
-              props.dispatchLayout.z
-            );
-          } else {
-            computation.dispatch(computePass, props.dispatchCount ?? 1);
-          }
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {};
+            for (const [name, view] of Object.entries(props.bindings)) {
+              bindings[name] = getViewBinding(view, getBuffer);
+            }
+
+            if (props.dispatchLayout) {
+              kernel.dispatch(computePass, {
+                bindings,
+                x: props.dispatchLayout.x,
+                y: props.dispatchLayout.y,
+                z: props.dispatchLayout.z
+              });
+            } else {
+              kernel.dispatch(computePass, {bindings, x: props.dispatchCount ?? 1});
+            }
+          },
+          destroy: () => kernel.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 /** Plans histogram accumulation and output clearing across bounded workgroup dimensions. */

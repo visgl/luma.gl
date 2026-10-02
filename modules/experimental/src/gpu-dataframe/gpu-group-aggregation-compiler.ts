@@ -170,13 +170,15 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
         const output = createGPUGroupedOutputVector(graph.device, metricId, groupCount, 'uint32');
         ownedVectors.push(output);
         outputVectors.set(definition.name, output);
-        new GPUGroupAggregation({
-          id: metricId,
-          keys,
-          mask: baseMask,
-          output: graph.importGPUVector(`${metricId}-output`, output).data[0],
-          operation: 'count'
-        }).addToGraph(graph);
+        graph.add(
+          new GPUGroupAggregation({
+            id: metricId,
+            keys,
+            mask: baseMask,
+            output: graph.importGPUVector(`${metricId}-output`, output).data[0],
+            operation: 'count'
+          })
+        );
         continue;
       }
 
@@ -202,14 +204,16 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
       ownedVectors.push(output);
       outputVectors.set(definition.name, output);
       validity[definition.name] = state.validity;
-      new GPUGroupAggregation({
-        id: metricId,
-        keys,
-        values: state.values,
-        mask: state.mask,
-        output: graph.importGPUVector(`${metricId}-output`, output).data[0],
-        operation: definition.operation
-      }).addToGraph(graph);
+      graph.add(
+        new GPUGroupAggregation({
+          id: metricId,
+          keys,
+          values: state.values,
+          mask: state.mask,
+          output: graph.importGPUVector(`${metricId}-output`, output).data[0],
+          operation: definition.operation
+        })
+      );
     }
 
     resultTable = createGPUGroupedResultTable<Selection, Result>(
@@ -295,7 +299,7 @@ function combineGPUGroupingMasks(
   second: GraphVectorView<'uint32'>
 ): GraphVectorView<'uint32'> {
   const output = createTransientVectorView(graph, id, first);
-  new GPUMask({id: `${id}-compose`, inputs: [first, second], output}).addToGraph(graph);
+  graph.add(new GPUMask({id: `${id}-compose`, inputs: [first, second], output}));
   return output;
 }
 
@@ -328,13 +332,15 @@ function createGPUGroupedMetricState<Selection extends GPUTypeMap>(
   );
   ownedVectors.push(validity);
   const output = context.graph.importGPUVector(`${id}-group-validity-vector`, validity).data[0];
-  new GPUGroupAggregation({
-    id: `${id}-accepted-count`,
-    keys,
-    mask: finiteRows,
-    output,
-    operation: 'count'
-  }).addToGraph(context.graph);
+  context.graph.add(
+    new GPUGroupAggregation({
+      id: `${id}-accepted-count`,
+      keys,
+      mask: finiteRows,
+      output,
+      operation: 'count'
+    })
+  );
   addGPUNormalizeGroupValidityPass(context.graph, `${id}-normalize-validity`, output);
   return {values, mask: finiteRows, validity};
 }

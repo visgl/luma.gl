@@ -26,15 +26,17 @@ export class GPUParquetPlainByteArrayDecoder {
   }
 
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    new GPUByteRangeGather({
-      id: this.id,
-      source: this.props.input,
-      sourceOffsets: this.props.sourceOffsets,
-      lengths: this.props.valueLengths,
-      outputOffsets: this.props.valueOffsets,
-      output: this.props.output,
-      sourceByteLength: this.props.encodedByteLength,
-      outputByteCapacity: this.props.outputByteLength
-    }).addToGraph(graph);
+    graph.add(
+      new GPUByteRangeGather({
+        id: this.id,
+        source: this.props.input,
+        sourceOffsets: this.props.sourceOffsets,
+        lengths: this.props.valueLengths,
+        outputOffsets: this.props.valueOffsets,
+        output: this.props.output,
+        sourceByteLength: this.props.encodedByteLength,
+        outputByteCapacity: this.props.outputByteLength
+      })
+    );
   }
 }

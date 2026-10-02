@@ -24,6 +24,7 @@ export {
   type GPUParquetEncodedPageBatchPlan,
   type GPUParquetEncodedPageBatchPlanOptions,
   type GPUParquetLevelPlan,
+  type GPUParquetLZByteStreamSplitBatchPlan,
   type GPUParquetUploadSection,
   type GPUParquetValuePlan
 } from './parquet/parquet-encoded-page-batch';
@@ -37,6 +38,14 @@ export {
   type GPUParquetInt64PageValues
 } from './parquet/gpu-parquet-encoded-page-batch';
 export {
+  GPUParquetEncodedPageBatchStream,
+  GPUParquetEncodedPageBatchStreamTicket,
+  getGPUParquetEncodedPageBatchLayoutKey,
+  type GPUParquetEncodedPageBatchStreamGraphContext,
+  type GPUParquetEncodedPageBatchStreamProps,
+  type GPUParquetEncodedPageBatchStreamStats
+} from './parquet/gpu-parquet-encoded-page-batch-stream';
+export {
   GPUParquetByteStreamSplitDecoder,
   GPU_PARQUET_BYTE_STREAM_SPLIT_WORKGROUP_SIZE,
   getGPUParquetByteStreamSplitShaderSource,
@@ -44,6 +53,13 @@ export {
   type GPUParquetByteStreamSplitDecoderProps,
   type GPUParquetByteStreamSplitStats
 } from './parquet/gpu-parquet-byte-stream-split-decoder';
+export {
+  GPUParquetByteStreamSplitBatchDecoder,
+  GPU_PARQUET_BYTE_STREAM_SPLIT_BATCH_WORKGROUP_SIZE,
+  getGPUParquetByteStreamSplitBatchShaderSource,
+  type GPUParquetByteStreamSplitBatchDecoderProps,
+  type GPUParquetByteStreamSplitBatchStats
+} from './parquet/gpu-parquet-byte-stream-split-batch-decoder';
 export {
   PARQUET_RLE_RUN_DESCRIPTOR_WORDS,
   parseParquetRleBitPackedRunPlan,
@@ -84,6 +100,13 @@ export {
   GPUParquetLevelLayout,
   type GPUParquetLevelLayoutProps
 } from './parquet/gpu-parquet-level-layout';
+export {
+  GPUParquetNestedColumnLayout,
+  type GPUParquetNestedColumnDepth,
+  type GPUParquetNestedColumnDepthLayout,
+  type GPUParquetNestedColumnLayoutProps,
+  type GPUParquetNestedColumnLayoutResult
+} from './parquet/gpu-parquet-nested-column-layout';
 export {
   PARQUET_DELTA_BINARY_PACKED_DESCRIPTOR_WORDS,
   parseParquetDeltaBinaryPackedPlan,

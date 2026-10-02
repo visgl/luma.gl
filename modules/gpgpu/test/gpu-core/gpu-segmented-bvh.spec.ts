@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {Buffer, type Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {
   GPUCommandGraph,
   GPUSegmentedBVH,
@@ -13,7 +14,7 @@ import {
 } from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
-import {addGPUSegmentedBVHToGraphWithDispatchLimit} from '../../src/gpu-core/gpu-segmented-bvh';
+import {getGPUSegmentedBVHCommandNodesWithDispatchLimit} from '../../src/gpu-core/gpu-segmented-bvh';
 
 const SOURCE_GAP = -123_456;
 const NODE_GAP = 654_321;
@@ -68,7 +69,7 @@ it('GPUSegmentedBVH refits 96 independent four-leaf trees in one eight-binding d
     Array.from({length: 96}, () => 4),
     Array.from({length: 96}, () => 3)
   );
-  const dispatch = vi.spyOn(Computation.prototype, 'dispatch');
+  const dispatch = vi.spyOn(Kernel.prototype, 'dispatch');
   const compiled = compileFixture(fixture);
 
   try {
@@ -80,7 +81,11 @@ it('GPUSegmentedBVH refits 96 independent four-leaf trees in one eight-binding d
     expect(dispatch.mock.calls.length, 'all 96 independent hierarchies require one dispatch').toBe(
       1
     );
-    expect(dispatch.mock.calls[0].slice(1), 'one workgroup handles each tree').toEqual([96, 1, 1]);
+    expect(dispatch.mock.calls[0][1], 'one workgroup handles each tree').toMatchObject({
+      x: 96,
+      y: 1,
+      z: 1
+    });
     expect(
       Boolean(source.includes('@workgroup_size(4)')),
       'only four lanes wake for each four-leaf tree'
@@ -102,14 +107,21 @@ it('GPUSegmentedBVH bounds singleton hierarchy workgroups across all three dispa
   }
 
   const fixture = createSegmentedBVHFixture(device, 2, [1, 1, 1, 1, 1], [0, 1, 1, 0, 1]);
-  const dispatch = vi.spyOn(Computation.prototype, 'dispatch');
-  addGPUSegmentedBVHToGraphWithDispatchLimit(fixture.hierarchy, fixture.graph, 2);
+  const dispatch = vi.spyOn(Kernel.prototype, 'dispatch');
+  addGPUCommandNodes(
+    fixture.graph,
+    getGPUSegmentedBVHCommandNodesWithDispatchLimit(fixture.hierarchy, fixture.graph, 2)
+  );
   const compiled = fixture.graph.compile();
 
   try {
     encodeFixture(device, compiled);
     await assertFixture(fixture, 'bounded singleton');
-    expect(dispatch.mock.calls[0].slice(1), 'workgroups span three dimensions').toEqual([2, 2, 2]);
+    expect(dispatch.mock.calls[0][1], 'workgroups span three dimensions').toMatchObject({
+      x: 2,
+      y: 2,
+      z: 2
+    });
     expect(
       Boolean((dispatch.mock.instances.at(-1)?.source ?? '').includes('@workgroup_size(1)')),
       'singleton roots use exactly one invocation per workgroup'
@@ -485,7 +497,7 @@ function importView<T extends 'float32x2' | 'float32x3' | 'uint32x2' | 'uint32'>
 }
 
 function compileFixture(fixture: SegmentedBVHFixture): CompiledGPUCommandGraph {
-  fixture.hierarchy.addToGraph(fixture.graph);
+  fixture.graph.add(fixture.hierarchy);
   return fixture.graph.compile();
 }
 

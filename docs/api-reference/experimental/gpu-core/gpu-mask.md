@@ -34,12 +34,12 @@ not evaluate geometric, temporal, or application-specific predicates itself.
 ```ts
 import {GPUMask} from '@luma.gl/gpgpu/gpu-core';
 
-new GPUMask({
+graph.add(new GPUMask({
   id: 'visible-focused-records',
   inputs: [viewportMask, hierarchyMask, focusedSelectionMask],
   output: visibleRecordMask,
   operation: 'and'
-}).addToGraph(graph);
+}));
 ```
 
 Every nonzero input is true. Outputs are canonical `0` or `1` and can feed `GPUScan`,
@@ -53,9 +53,10 @@ Supported operations:
 - `'difference'`: retain rows accepted by the first input and none of the remaining inputs.
 - `'not'`: invert exactly one input.
 
-Inputs and output must all be packed `GraphDataView<'uint32'>` values or all be
-`GraphVectorView<'uint32'>` values. Vector masks must have identical ordered chunk topology.
-Composition emits one pass per nonempty chunk and never concatenates or repacks source data.
+Inputs and output must have equal logical lengths and may be packed `GraphDataView<'uint32'>`
+values or `GraphVectorView<'uint32'>` values with independent chunk boundaries. Composition
+intersects boundaries with borrowed views, emits one pass per nonempty span, and never concatenates
+or repacks source data.
 
 The output must use a different physical buffer from all inputs. Graph ownership, command
 submission, and optional readback remain with the caller. An empty mask adds no compute nodes.

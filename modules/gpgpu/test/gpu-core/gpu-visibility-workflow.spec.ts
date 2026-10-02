@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {Buffer, type Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {
   DrawCommandBuffer,
   GPUCommandGraph,
@@ -13,7 +14,7 @@ import {
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
-import {addGPUVisibilityWorkflowToGraphWithDispatchLimit} from '../../src/gpu-core/gpu-visibility-workflow';
+import {getGPUVisibilityWorkflowCommandNodesWithDispatchLimit} from '../../src/gpu-core/gpu-visibility-workflow';
 
 it('GPUVisibilityWorkflow composes predicates and publishes indirect-ready results', async () => {
   const device = await getWebGPUTestDevice();
@@ -97,7 +98,7 @@ it('GPUVisibilityWorkflow composes predicates and publishes indirect-ready resul
     count,
     firstSourceIndex: 40
   });
-  workflow.addToGraph(graph);
+  graph.add(workflow);
   const compiled = graph.compile();
 
   await encodeAndSubmit(device, compiled, 'visibility-first');
@@ -200,9 +201,12 @@ it('GPUVisibilityWorkflow scales mask, identity, scan, and scatter through bound
     count: importView('count', countBuffer, 1),
     firstSourceIndex
   });
-  addGPUVisibilityWorkflowToGraphWithDispatchLimit(workflow, graph, 2);
+  addGPUCommandNodes(
+    graph,
+    getGPUVisibilityWorkflowCommandNodesWithDispatchLimit(workflow, graph, 2)
+  );
   const compiled = graph.compile();
-  const dispatchSpy = vi.spyOn(Computation.prototype, 'dispatch');
+  const dispatchSpy = vi.spyOn(Kernel.prototype, 'dispatch');
 
   try {
     await encodeAndSubmit(device, compiled, 'bounded-visibility-encoding');
@@ -220,9 +224,9 @@ it('GPUVisibilityWorkflow scales mask, identity, scan, and scatter through bound
       'padded multidimensional workgroups never inflate the selected count'
     ).toEqual([expectedSourceIds.length]);
 
-    const dispatches = dispatchSpy.mock.instances.map((computation, index) => ({
-      id: (computation as Computation).id,
-      dimensions: dispatchSpy.mock.calls[index].slice(1)
+    const dispatches = dispatchSpy.mock.instances.map((kernel, index) => ({
+      id: (kernel as Kernel).id,
+      dimensions: dispatchSpy.mock.calls[index][1]
     }));
     for (const passId of [
       'bounded-visibility-compose',
@@ -234,7 +238,7 @@ it('GPUVisibilityWorkflow scales mask, identity, scan, and scatter through bound
       expect(
         dispatches.find(dispatch => dispatch.id === passId)?.dimensions,
         `${passId} inherits the same bounded three-dimensional dispatch limit`
-      ).toEqual([2, 2, 2]);
+      ).toMatchObject({x: 2, y: 2, z: 2});
     }
   } finally {
     dispatchSpy.mockRestore();
@@ -275,11 +279,13 @@ it('GPUVisibilityWorkflow preserves chunk topology while generating global IDs',
     {id: 'count', byteLength: countBuffer.byteLength, usage: countBuffer.usage},
     countBuffer
   );
-  new GPUVisibilityWorkflow({
-    predicates: [{kind: 'bounds', mask}],
-    output,
-    count: graph.createDataView(countHandle, {format: 'uint32', length: 1})
-  }).addToGraph(graph);
+  graph.add(
+    new GPUVisibilityWorkflow({
+      predicates: [{kind: 'bounds', mask}],
+      output,
+      count: graph.createDataView(countHandle, {format: 'uint32', length: 1})
+    })
+  );
   const compiled = graph.compile();
   await encodeAndSubmit(device, compiled, 'chunked-visibility');
 
@@ -291,7 +297,7 @@ it('GPUVisibilityWorkflow preserves chunk topology while generating global IDs',
   expect(
     compiled.stats.nodeOrder.filter(id => id.includes('compose')),
     'one noncanonical predicate is normalized before compaction'
-  ).toEqual(['gpu-visibility-compose-chunk-0', 'gpu-visibility-compose-chunk-2']);
+  ).toEqual(['gpu-visibility-compose-chunk-0', 'gpu-visibility-compose-chunk-1']);
   expect(
     compiled.stats.nodeOrder.filter(id => id.includes('identity')),
     'empty chunks retain topology without an unnecessary dispatch'
@@ -299,6 +305,66 @@ it('GPUVisibilityWorkflow preserves chunk topology while generating global IDs',
 
   compiled.destroy();
   destroyVectorFixture(maskFixture);
+  destroyVectorFixture(outputFixture);
+  countBuffer.destroy();
+});
+
+it('GPUVisibilityWorkflow aligns predicate vectors and preserves an independent output topology', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    return;
+  }
+
+  const firstPredicateFixture = createVectorFixture(device, 'first-predicate', [
+    Uint32Array.from([2, 3, 0]),
+    Uint32Array.from([4, 5])
+  ]);
+  const secondPredicateFixture = createVectorFixture(device, 'second-predicate', [
+    Uint32Array.from([1]),
+    Uint32Array.from([1, 1, 0, 1])
+  ]);
+  const outputFixture = createVectorFixture(
+    device,
+    'independent-output',
+    [new Uint32Array(2), new Uint32Array(3)],
+    0xffffffff
+  );
+  const countBuffer = device.createBuffer({
+    byteLength: Uint32Array.BYTES_PER_ELEMENT,
+    usage: Buffer.STORAGE | Buffer.COPY_SRC
+  });
+  const graph = new GPUCommandGraph(device, {id: 'independent-visibility'});
+  const firstPredicate = graph.importGPUVector('first-predicate', firstPredicateFixture.vector);
+  const secondPredicate = graph.importGPUVector('second-predicate', secondPredicateFixture.vector);
+  const output = graph.importGPUVector('independent-output', outputFixture.vector);
+  const countHandle = graph.importBuffer(
+    {id: 'count', byteLength: countBuffer.byteLength, usage: countBuffer.usage},
+    countBuffer
+  );
+  graph.add(
+    new GPUVisibilityWorkflow({
+      id: 'independent-visibility',
+      predicates: [
+        {kind: 'bounds', mask: firstPredicate},
+        {kind: 'selection', mask: secondPredicate}
+      ],
+      output,
+      count: graph.createDataView(countHandle, {format: 'uint32', length: 1}),
+      firstSourceIndex: 10
+    })
+  );
+  const compiled = graph.compile();
+  await encodeAndSubmit(device, compiled, 'independent-visibility');
+
+  expect(await readVectorFixture(outputFixture)).toEqual([
+    [10, 11],
+    [14, 0xffffffff, 0xffffffff]
+  ]);
+  expect(await readUint32(countBuffer, 1)).toEqual([3]);
+
+  compiled.destroy();
+  destroyVectorFixture(firstPredicateFixture);
+  destroyVectorFixture(secondPredicateFixture);
   destroyVectorFixture(outputFixture);
   countBuffer.destroy();
 });

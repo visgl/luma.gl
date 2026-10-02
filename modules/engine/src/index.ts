@@ -91,6 +91,13 @@ export {ModelNode} from './scenegraph/model-node';
 // Geometries
 export type {GeometryProps, GeometryAttribute, GeometryAttributeInput} from './geometry/geometry';
 export {Geometry} from './geometry/geometry';
+export {makeEdgeGeometry, makeEdgeGeometryFromGeometries} from './geometry/edge-geometry';
+export type {MakeEdgeGeometryOptions} from './geometry/edge-geometry';
+export {
+  makeStrokeGeometry,
+  type StrokeGeometryOptions,
+  type StrokePosition
+} from './geometry/stroke-geometry';
 export type {MakeInterleavedGeometryOptions} from './geometry/geometry-utils';
 export {makeInterleavedGeometry} from './geometry/geometry-utils';
 export type {
@@ -173,6 +180,18 @@ export {SwapFramebuffers} from './compute/swap';
 
 export type {ComputationProps} from './compute/computation';
 export {Computation} from './compute/computation';
+export type {
+  KernelProps,
+  KernelDispatchOptions,
+  KernelDispatchIndirectOptions
+} from './compute/kernel';
+export {Kernel} from './compute/kernel';
+export type {
+  RenderKernelProps,
+  RenderKernelDrawOptions,
+  RenderKernelIndirectDrawOptions
+} from './compute/render-kernel';
+export {RenderKernel} from './compute/render-kernel';
 
 export type {
   PickInfo,

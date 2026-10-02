@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuSpatial.
 
-import {type GPUCommandGraph, type GPUCommandGraphContributor} from '@luma.gl/gpgpu/gpu-core';
+import {type GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import type {GPUFloat32Positions, GPUFloat64Positions} from './types';
 import {
   GEOSPATIAL_WORKGROUP_SIZE,
@@ -45,7 +45,7 @@ export type GPUSinusoidalProjectionProps = {
  * toward the origin, and evaluates the x scale at the midpoint latitude. Raw Float64 coordinate
  * deltas are rounded once to f32 before the remaining f32 arithmetic and trigonometry.
  */
-export class GPUSinusoidalProjection implements GPUCommandGraphContributor {
+export class GPUSinusoidalProjection {
   readonly id: string;
   readonly positions: GPUFloat32Positions | GPUFloat64Positions;
   readonly output: GPUFloat32Positions;

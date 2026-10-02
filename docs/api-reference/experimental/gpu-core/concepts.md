@@ -13,7 +13,7 @@ plan. Encoding records the compiled plan into a caller-owned command encoder.
 
 The lifecycle has two distinct preparation steps:
 
-1. Calling a contributor's `addToGraph()` expands the operation into logical resources and
+1. Calling a contributor's `getCommandNodes()` expands the operation into logical resources and
    low-level nodes.
 2. Calling `compile()` validates those declarations, infers resource dependencies, chooses a stable
    topological order, plans compatible transient reuse, creates physical resources, and compiles
@@ -150,3 +150,8 @@ indirect draws, readback cadence, and GPU duration. Row count alone is not a suf
 - [`GPUTextureHistory`](./gpu-texture-history) manages rotating retained texture state.
 - [`GPUReadbackRing`](./gpu-readback-ring) supports bounded asynchronous readback.
 - The [GPU Core overview](/docs/api-reference/experimental/gpu-core) indexes reusable operations and domain modules.
+
+## Batch semantics
+
+See [batch semantics and coverage](../../../api-guide/gpu/batch-semantics.md) for logical row alignment, physical
+chunk preservation, empty results, aliasing, and the audited operation families.

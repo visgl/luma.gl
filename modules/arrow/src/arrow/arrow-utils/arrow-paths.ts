@@ -97,9 +97,9 @@ export function getArrowDataByPath(
 }
 
 /** Returns the Arrow vector at a dot-separated table column path. */
-export function getArrowVectorByPath(arrowTable: Table, columnPath: string): Vector {
+export function getArrowVectorByPath(arrowObject: Table | RecordBatch, columnPath: string): Vector {
   // Make a temporary vector from the top level struct data.
-  const vector = makeVector(arrowTable.data);
+  const vector = makeVector(getArrowDataArray(arrowObject));
 
   const path = decomposePath(columnPath);
   let nestedVector = vector;
@@ -129,9 +129,9 @@ export function getArrowVectorByPath(arrowTable: Table, columnPath: string): Vec
 }
 
 /** Returns the Arrow schema field at a dot-separated table column path. */
-export function getArrowFieldByPath(arrowTable: Table, columnPath: string): Field {
+export function getArrowFieldByPath(arrowObject: Table | RecordBatch, columnPath: string): Field {
   const path = decomposePath(columnPath);
-  let fields = arrowTable.schema.fields;
+  let fields = arrowObject.schema.fields;
   let resolvedField: Field | null = null;
 
   for (let pathIndex = 0; pathIndex < path.length; pathIndex++) {

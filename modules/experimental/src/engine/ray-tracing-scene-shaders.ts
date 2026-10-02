@@ -1037,16 +1037,10 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
   let sampleCount = clamp(u32(uniforms.settings.z), 1u, 16u);
   let guideRay = makeGuideCameraRay(pixel);
   let guideHit = intersectScene(guideRay, RAY_INFINITY);
-  let useStableGuideSample = sampleCount == 1u &&
-    uniforms.previousCameraPosition.w < 0.5 && uniforms.temporal.w < 0.5;
   var accumulatedColor = vec3<f32>(0.0);
   for (var sampleIndex = 0u; sampleIndex < sampleCount; sampleIndex++) {
-    var ray = guideRay;
-    var hit = guideHit;
-    if (!useStableGuideSample) {
-      ray = makeCameraRay(pixel, sampleIndex);
-      hit = intersectScene(ray, RAY_INFINITY);
-    }
+    let ray = makeCameraRay(pixel, sampleIndex);
+    let hit = intersectScene(ray, RAY_INFINITY);
     var color = uniforms.background.rgb;
     if (hit.distance < RAY_INFINITY) {
       color = evaluateDirectLighting(ray, hit);

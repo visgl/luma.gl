@@ -27,7 +27,7 @@ const GRAPH_BENCHMARK_DATASETS: {
 export function GPUGraphBenchmark(): ReactNode {
   const selectedDevice = useStore(store => store.presentationDevice || store.device);
   const [datasetKind, setDatasetKind] = useState<GPUGraphBenchmarkDatasetKind>('scale-free');
-  const [vertexCount, setVertexCount] = useState<number>(128);
+  const [vertexCount, setVertexCount] = useState<number>(GRAPH_BENCHMARK_VERTEX_COUNTS[0]);
   const [webGPUUnavailable, setWebGPUUnavailable] = useState(false);
 
   useEffect(() => {

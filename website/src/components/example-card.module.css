@@ -189,6 +189,21 @@
   padding: 17px 17px 16px;
 }
 
+.mobile {
+  border-color: rgba(134, 239, 172, 0.3);
+  color: #bbf7d0;
+}
+
+.mobileReduced {
+  border-color: rgba(125, 211, 252, 0.32);
+  color: #bae6fd;
+}
+
+.desktopOnly {
+  border-color: rgba(251, 146, 60, 0.34);
+  color: #fed7aa;
+}
+
 .heading {
   display: flex;
   align-items: center;

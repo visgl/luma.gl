@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {Buffer, type Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {
   GPUCommandGraph,
   GPUSegmentedSort,
@@ -14,7 +15,7 @@ import {
 } from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
-import {addGPUSegmentedSortToGraphWithDispatchLimit} from '../../src/gpu-core/gpu-segmented-sort';
+import {getGPUSegmentedSortCommandNodesWithDispatchLimit} from '../../src/gpu-core/gpu-segmented-sort';
 
 const UNSORTED_GAP = 0xcafef00d;
 const OUTPUT_GAP = 0xdeadbeef;
@@ -80,7 +81,7 @@ it('GPUSegmentedSort batches many workgroups into one four-binding CORE dispatch
     Array.from({length: 96}, () => 3),
     'ascending'
   );
-  const dispatch = vi.spyOn(Computation.prototype, 'dispatch');
+  const dispatch = vi.spyOn(Kernel.prototype, 'dispatch');
   const compiled = compileFixture(fixture);
 
   try {
@@ -99,9 +100,11 @@ it('GPUSegmentedSort batches many workgroups into one four-binding CORE dispatch
       '96 independent three-row sorts require one graph node'
     ).toEqual(['segmented-sort-bitonic-local-4']);
     expect(dispatch.mock.calls.length, 'the graph encodes exactly one GPU dispatch').toBe(1);
-    expect(dispatch.mock.calls[0].slice(1), 'one workgroup handles each domain').toEqual([
-      96, 1, 1
-    ]);
+    expect(dispatch.mock.calls[0][1], 'one workgroup handles each domain').toMatchObject({
+      x: 96,
+      y: 1,
+      z: 1
+    });
     expect(
       Boolean(source.includes('@workgroup_size(4)')),
       'only four lanes wake for each three-row domain'
@@ -127,8 +130,11 @@ it('GPUSegmentedSort bounds segment workgroups across all three dispatch dimensi
   }
 
   const fixture = createSegmentedSortFixture(device, [3, 3, 3, 3, 3], 'descending');
-  const dispatch = vi.spyOn(Computation.prototype, 'dispatch');
-  addGPUSegmentedSortToGraphWithDispatchLimit(fixture.sort, fixture.graph, 2);
+  const dispatch = vi.spyOn(Kernel.prototype, 'dispatch');
+  addGPUCommandNodes(
+    fixture.graph,
+    getGPUSegmentedSortCommandNodesWithDispatchLimit(fixture.sort, fixture.graph, 2)
+  );
   const compiled = fixture.graph.compile();
 
   try {
@@ -142,9 +148,11 @@ it('GPUSegmentedSort bounds segment workgroups across all three dispatch dimensi
       outputValues,
       'out-of-range padded workgroups leave caller-owned gaps untouched'
     ).toEqual(Array.from(fixture.expectedOutputValues));
-    expect(dispatch.mock.calls[0].slice(1), 'workgroups span all three dimensions').toEqual([
-      2, 2, 2
-    ]);
+    expect(dispatch.mock.calls[0][1], 'workgroups span all three dimensions').toMatchObject({
+      x: 2,
+      y: 2,
+      z: 2
+    });
     expect(
       Boolean(
         (dispatch.mock.instances.at(-1)?.source ?? '').includes(
@@ -371,7 +379,7 @@ function importView(
 }
 
 function compileFixture(fixture: SegmentedSortFixture): CompiledGPUCommandGraph {
-  fixture.sort.addToGraph(fixture.graph);
+  fixture.graph.add(fixture.sort);
   return fixture.graph.compile();
 }
 

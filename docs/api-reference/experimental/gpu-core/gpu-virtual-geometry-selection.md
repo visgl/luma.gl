@@ -32,7 +32,7 @@ const drawCommands = new DrawCommandBuffer(device, {
 const graph = new GPUCommandGraph(device);
 const count = graph.importGPUData('visible-count', drawCommands.getInstanceCountData(0));
 
-new GPUVirtualGeometrySelection({
+graph.add(new GPUVirtualGeometrySelection({
   hierarchy: {
     sphereBounds,
     geometricErrors,
@@ -50,7 +50,7 @@ new GPUVirtualGeometrySelection({
   count,
   totalCount,
   overflow
-}).addToGraph(graph);
+}));
 ```
 
 `graph.compile()` produces initialization, one traversal pass per breadth level, stable visibility

@@ -5,6 +5,7 @@
 import {Buffer, NumberArray, UniformStore} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 import {ShaderAssembler} from '@luma.gl/shadertools';
+import {ShaderHooksInfoHtml} from './app-ui';
 
 // Base vertex and fragment shader code
 const vs = `\
@@ -47,9 +48,7 @@ const offsetRightModule = {
 };
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = `
-Modifying shader behavior with shader hooks
-`;
+  static info = ShaderHooksInfoHtml;
 
   model1: Model;
   model2: Model;

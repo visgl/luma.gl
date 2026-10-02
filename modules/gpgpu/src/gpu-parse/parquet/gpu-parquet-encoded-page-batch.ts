@@ -5,6 +5,7 @@
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   GPUCommandGraph,
+  GPULZByteBatchDecompressor,
   createTransientView,
   type GraphBufferHandle,
   type GraphDataView
@@ -13,10 +14,12 @@ import {GPULZ4RawDecompressor} from '../compression/gpu-lz4-raw-decompressor';
 import {GPUSnappyDecompressor} from '../compression/gpu-snappy-decompressor';
 import {GPUParquetBitPackedDecoder} from './gpu-parquet-bit-packed-decoder';
 import {GPUParquetByteArrayDictionaryDecoder} from './gpu-parquet-byte-array-dictionary-decoder';
+import {GPUParquetByteStreamSplitBatchDecoder} from './gpu-parquet-byte-stream-split-batch-decoder';
 import {GPUParquetByteStreamSplitDecoder} from './gpu-parquet-byte-stream-split-decoder';
 import {GPUParquetDeltaBinaryPackedDecoder} from './gpu-parquet-delta-binary-packed-decoder';
 import {GPUParquetDeltaBinaryPackedInt64Decoder} from './gpu-parquet-delta-binary-packed-int64-decoder';
 import {GPUParquetDeltaLengthByteArrayDecoder} from './gpu-parquet-delta-length-byte-array-decoder';
+import {GPUParquetDeltaByteArrayDecoder} from './gpu-parquet-delta-byte-array-decoder';
 import {GPUParquetPlainBooleanDecoder} from './gpu-parquet-plain-boolean-decoder';
 import {GPUParquetPlainByteArrayDecoder} from './gpu-parquet-plain-byte-array-decoder';
 import {GPUParquetRleBitPackedDecoder} from './gpu-parquet-rle-bit-packed-decoder';
@@ -27,6 +30,7 @@ import type {
   GPUParquetDecodedPagePlan,
   GPUParquetDictionaryPlan,
   GPUParquetEncodedPageBatchPlan,
+  GPUParquetLZByteStreamSplitBatchPlan,
   GPUParquetLevelPlan,
   GPUParquetUploadSection,
   GPUParquetValuePlan
@@ -124,30 +128,133 @@ export function addGPUParquetEncodedPageBatchToGraph<Parameters>(
       );
     }
   }
-  const pages = plan.pages.map(page =>
-    page.mode === 'cpu-fallback' ? page : addPageToGraph(graph, inputHandle, page, dictionaries)
+  const batchedByteStreamSplitValues =
+    plan.lzByteStreamSplitBatch &&
+    canUseLZByteStreamSplitBatch(
+      graph.device,
+      plan.uploadData.byteLength,
+      plan.lzByteStreamSplitBatch
+    )
+      ? addLZByteStreamSplitBatchToGraph(
+          graph,
+          inputHandle,
+          plan.uploadData.byteLength,
+          plan.lzByteStreamSplitBatch
+        )
+      : new Map<number, GraphDataView<'uint32'>>();
+  const pages = plan.pages.map((page, pageIndex) =>
+    page.mode === 'cpu-fallback'
+      ? page
+      : addPageToGraph(
+          graph,
+          inputHandle,
+          page,
+          dictionaries,
+          batchedByteStreamSplitValues.get(pageIndex)
+        )
   );
   return Object.freeze({inputBuffer, pages: Object.freeze(pages)});
+}
+
+function canUseLZByteStreamSplitBatch(
+  device: Device,
+  uploadByteLength: number,
+  plan: GPUParquetLZByteStreamSplitBatchPlan
+): boolean {
+  const maximumBindingByteLength = device.limits.maxStorageBufferBindingSize;
+  return (
+    uploadByteLength <= maximumBindingByteLength &&
+    plan.outputByteLength <= maximumBindingByteLength &&
+    plan.pageIndices.length <= device.limits.maxComputeWorkgroupsPerDimension
+  );
+}
+
+function addLZByteStreamSplitBatchToGraph<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  inputHandle: GraphBufferHandle,
+  uploadByteLength: number,
+  plan: GPUParquetLZByteStreamSplitBatchPlan
+): Map<number, GraphDataView<'uint32'>> {
+  const upload = graph.createDataView(inputHandle, {
+    format: 'uint32',
+    length: Math.ceil(uploadByteLength / Uint32Array.BYTES_PER_ELEMENT)
+  });
+  const jobs = createUploadView(graph, inputHandle, plan.jobs);
+  const byteStreamSplit = createTransientPackedBytes(
+    graph,
+    `${graph.id}-parquet-lz-byte-stream-split-input`,
+    plan.outputByteLength
+  );
+  const output = createTransientPackedBytes(
+    graph,
+    `${graph.id}-parquet-lz-byte-stream-split-output`,
+    plan.outputByteLength,
+    Buffer.STORAGE | Buffer.COPY_SRC
+  );
+  graph.add(
+    new GPULZByteBatchDecompressor({
+      id: `${graph.id}-parquet-lz-byte-batch`,
+      upload,
+      jobs,
+      output: byteStreamSplit,
+      jobCount: plan.pageIndices.length,
+      outputByteLength: plan.outputByteLength,
+      maximumOutputWordCount: plan.maximumOutputWordCount
+    })
+  );
+  new GPUParquetByteStreamSplitBatchDecoder({
+    id: `${graph.id}-parquet-byte-stream-split-batch`,
+    input: byteStreamSplit,
+    jobs,
+    output,
+    jobCount: plan.pageIndices.length,
+    outputByteLength: plan.outputByteLength,
+    maximumOutputWordCount: plan.maximumOutputWordCount
+  }).addToGraph(graph);
+
+  const values = new Map<number, GraphDataView<'uint32'>>();
+  for (let jobIndex = 0; jobIndex < plan.pageIndices.length; jobIndex++) {
+    const outputSection = plan.outputs[jobIndex];
+    values.set(
+      plan.pageIndices[jobIndex],
+      graph.createDataView(output.buffer, {
+        format: 'uint32',
+        length: Math.ceil(outputSection.byteLength / Uint32Array.BYTES_PER_ELEMENT),
+        byteOffset: outputSection.byteOffset
+      })
+    );
+  }
+  return values;
 }
 
 function addPageToGraph<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   inputHandle: GraphBufferHandle,
   plan: GPUParquetDecodedPagePlan,
-  dictionaries: ReadonlyMap<GPUParquetDictionaryPlan, GPUParquetGraphDictionary>
+  dictionaries: ReadonlyMap<GPUParquetDictionaryPlan, GPUParquetGraphDictionary>,
+  batchedByteStreamSplitValues: GraphDataView<'uint32'> | undefined
 ): GPUParquetDecodedPage {
   const id = `parquet-${plan.columnIndex}-${plan.pageOrdinal}`;
   const encodedValues = createUploadView(graph, inputHandle, plan.encodedValues);
-  const valueInput = plan.compression
-    ? addDecompressionToGraph(graph, inputHandle, plan.compression, id)
-    : encodedValues;
+  const valueInput =
+    batchedByteStreamSplitValues ??
+    (plan.compression
+      ? addDecompressionToGraph(graph, inputHandle, plan.compression, id)
+      : encodedValues);
   const repetitionLevels = plan.repetitionLevels
     ? addLevelToGraph(graph, inputHandle, plan.repetitionLevels, `${id}-repetition`)
     : undefined;
   const definitionLevels = plan.definitionLevels
     ? addLevelToGraph(graph, inputHandle, plan.definitionLevels, `${id}-definition`)
     : undefined;
-  const values = addValuesToGraph(graph, inputHandle, valueInput, plan.values, id, dictionaries);
+  const values = batchedByteStreamSplitValues
+    ? Object.freeze({
+        layout: 'packed-bytes' as const,
+        values: batchedByteStreamSplitValues,
+        valueCount: plan.values.valueCount,
+        byteLength: plan.values.decodedByteLength
+      })
+    : addValuesToGraph(graph, inputHandle, valueInput, plan.values, id, dictionaries);
   return Object.freeze({mode: 'gpu' as const, plan, values, repetitionLevels, definitionLevels});
 }
 
@@ -305,6 +412,34 @@ function addValuesToGraph<Parameters>(
         byteLength: plan.decodedByteLength
       });
     }
+    case 'empty-byte-array':
+      return Object.freeze({
+        layout: 'byte-array' as const,
+        values: input,
+        lengths: createTransientResultView(graph, `${id}-lengths`, 0),
+        offsets: createTransientResultView(graph, `${id}-offsets`, 0),
+        valueCount: 0,
+        byteLength: 0
+      });
+    case 'rle-boolean': {
+      const values = createTransientResultView(graph, `${id}-values`, plan.valueCount);
+      new GPUParquetRleBitPackedDecoder({
+        id: `${id}-rle-boolean`,
+        input,
+        runDescriptors: createUploadView(graph, inputHandle, plan.runDescriptors),
+        output: values,
+        encodedByteLength: input.length * 4,
+        valueCount: plan.valueCount,
+        runCount: plan.runPlan.runCount,
+        bitWidth: 1
+      }).addToGraph(graph);
+      return Object.freeze({
+        layout: 'uint32' as const,
+        values,
+        valueCount: plan.valueCount,
+        byteLength: plan.decodedByteLength
+      });
+    }
     case 'plain-byte-array': {
       const values = createTransientPackedBytes(
         graph,
@@ -392,6 +527,62 @@ function addValuesToGraph<Parameters>(
       return Object.freeze({
         layout: 'byte-array' as const,
         values: createUploadView(graph, inputHandle, plan.payload),
+        lengths,
+        offsets,
+        valueCount: plan.valueCount,
+        byteLength: plan.decodedByteLength
+      });
+    }
+    case 'delta-byte-array': {
+      const prefixLengths = createTransientResultView(
+        graph,
+        `${id}-prefix-lengths`,
+        plan.valueCount
+      );
+      const suffixLengths = createTransientResultView(
+        graph,
+        `${id}-suffix-lengths`,
+        plan.valueCount
+      );
+      const lengths = createTransientResultView(graph, `${id}-lengths`, plan.valueCount);
+      const offsets = createTransientResultView(graph, `${id}-offsets`, plan.valueCount);
+      const values = createTransientPackedBytes(
+        graph,
+        `${id}-values`,
+        plan.decodedByteLength,
+        Buffer.STORAGE | Buffer.COPY_SRC
+      );
+      new GPUParquetDeltaByteArrayDecoder({
+        id: `${id}-delta-byte-array`,
+        input,
+        prefixMiniBlockDescriptors: createUploadView(
+          graph,
+          inputHandle,
+          plan.prefixMiniBlockDescriptors
+        ),
+        suffixMiniBlockDescriptors: createUploadView(
+          graph,
+          inputHandle,
+          plan.suffixMiniBlockDescriptors
+        ),
+        prefixLengths,
+        suffixLengths,
+        valueLengths: lengths,
+        valueOffsets: offsets,
+        output: values,
+        encodedByteLength: input.length * 4,
+        suffixDataByteOffset: plan.deltaPlan.suffixDataByteOffset,
+        suffixDataByteLength: plan.deltaPlan.suffixDataByteLength,
+        outputByteCapacity: plan.decodedByteLength,
+        valueCount: plan.valueCount,
+        prefixDescriptorCount: plan.deltaPlan.prefixLengthPlan.descriptorCount,
+        suffixDescriptorCount: plan.deltaPlan.suffixLengthPlan.descriptorCount,
+        firstPrefixLength: plan.deltaPlan.prefixLengthPlan.firstValue,
+        firstSuffixLength: plan.deltaPlan.suffixLengthPlan.firstValue
+      }).addToGraph(graph);
+      return Object.freeze({
+        layout: 'byte-array' as const,
+        values,
         lengths,
         offsets,
         valueCount: plan.valueCount,

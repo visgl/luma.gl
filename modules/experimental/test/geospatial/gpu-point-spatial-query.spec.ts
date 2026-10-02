@@ -582,16 +582,18 @@ function createQueryFixture(device: Device, props: QueryFixtureProps): QueryFixt
       'uint32',
       1
     );
-    new GPUGridIndex({
-      id: `${props.id}-index`,
-      positions,
-      gridSize: props.gridSize,
-      bounds: props.indexBounds,
-      cellOffsets,
-      objectIds: rowIndices,
-      count: indexCount,
-      overflow: indexOverflow
-    }).addToGraph(graph);
+    graph.add(
+      new GPUGridIndex({
+        id: `${props.id}-index`,
+        positions,
+        gridSize: props.gridSize,
+        bounds: props.indexBounds,
+        cellOffsets,
+        objectIds: rowIndices,
+        count: indexCount,
+        overflow: indexOverflow
+      })
+    );
     index = {
       gridSize: props.gridSize,
       bounds: props.indexBounds,
