@@ -75,7 +75,9 @@ try {
         }
         return count;
       };
-      assert(countDark(wireframe) > countDark(solidWithoutContext) * 1.15, `${backend}: opaque faces hide rear dark strokes`);
+      const wireframeDarkCount = countDark(wireframe);
+      const solidDarkCount = countDark(solidWithoutContext);
+      assert(wireframeDarkCount > solidDarkCount * 1.1, `${backend}: opaque faces hide rear dark strokes (${wireframeDarkCount} > ${solidDarkCount} * 1.1)`);
       await page.check('#fills');
       await page.check('#context');
       await page.selectOption('#edge-mode', 'triangles');

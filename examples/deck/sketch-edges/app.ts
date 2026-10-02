@@ -15,7 +15,10 @@ import {makeBuildings, makeEdges, ORIGIN} from './building-data';
 type GroundTone = 'light' | 'dark';
 
 export function createSketchScene(parent: HTMLDivElement, options: DeckExampleDeviceOptions = {}) {
-  const features = makeBuildings();
+  const features = makeBuildings().map(feature => {
+    const tone = (feature.color[0] + feature.color[1] + feature.color[2]) / 3;
+    return {...feature, color: [tone * 0.96, tone * 0.94, tone * 0.9] as [number, number, number]};
+  });
   const districtFeatures = makeCityFeatures().filter(feature => feature.kind !== 'building');
   let groundTone: GroundTone = 'light';
   let surroundings = makeSurroundings(groundTone);
@@ -37,11 +40,11 @@ export function createSketchScene(parent: HTMLDivElement, options: DeckExampleDe
   };
   let segments: Buffer | null = null;
   let style: SketchStrokeProps = {
-    width: 2.4,
-    jitter: 0.12,
-    grain: 0.78,
-    variation: 0.4,
-    extension: 4
+    width: 3.1,
+    jitter: 0.1,
+    grain: 0.9,
+    variation: 0.45,
+    extension: 5
   };
   let edgesVisible = true;
   let fillsVisible = true;
@@ -98,6 +101,24 @@ export function createSketchScene(parent: HTMLDivElement, options: DeckExampleDe
           coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
           coordinateOrigin: ORIGIN
         }),
+        edgesVisible &&
+          segments &&
+          new SketchEdgeLayer({
+            id: 'sketch-edge-grain-pass',
+            segments,
+            segmentCount: edgeData.length / 8,
+            data: features,
+            color: [48, 44, 40, 52],
+            style: {
+              ...style,
+              width: (style.width ?? 3) * 0.68,
+              offset: 0.65,
+              extension: 0
+            },
+            visible: edgesVisible,
+            coordinateOrigin: ORIGIN,
+            pickable: false
+          }),
         edgesVisible &&
           segments &&
           new SketchEdgeLayer({
