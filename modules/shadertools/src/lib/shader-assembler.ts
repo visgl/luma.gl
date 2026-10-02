@@ -10,13 +10,13 @@ import {
   assembleWGSLSource,
   assembleGLSLShaderPair
 } from './shader-assembly/assemble-shaders';
-import type {ShaderHook} from './shader-assembly/shader-hooks';
 import {
   getShaderBindingDebugRowsFromWGSL,
   type ShaderBindingDebugRow
 } from './shader-assembly/wgsl-binding-debug';
 import {preprocess} from './preprocessor/preprocessor';
 import {scanWGSLInterface} from './shader-assembly/wgsl-interface-scan';
+import type {ShaderHook, ShaderHookOptions} from './shader-assembly/shader-hooks';
 import {assert} from './utils/assert';
 import type {ShaderLayout} from '@luma.gl/core';
 
@@ -90,10 +90,18 @@ export abstract class ShaderAssembler {
   /**
    * Register a shader hook
    * @param hook Stage-prefixed hook signature, such as `vs:OFFSET_POSITION(inout vec4 position)`.
-   * @param opts Optional hook metadata such as always-on header and footer source.
+   * @param options Optional hook metadata such as always-on header and footer source.
    */
-  addShaderHook(hook: string, opts?: Omit<ShaderHook, 'hook' | 'signature'>): void {
-    this._hookFunctions.push(opts ? {...opts, hook} : hook);
+  addShaderHook(hook: string, options?: ShaderHookOptions): void {
+    this._hookFunctions.push(options ? {...options, hook} : hook);
+  }
+
+  /**
+   * Remove all registered shader hooks, for example before re-registering hooks for a new
+   * application configuration. Default modules are not affected.
+   */
+  resetShaderHooks(): void {
+    this._hookFunctions.length = 0;
   }
 
   /**
