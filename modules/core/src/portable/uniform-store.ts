@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {CompositeShaderType} from '../shadertypes/shader-types/shader-types';
 import type {CompositeUniformValue} from '../adapter/types/uniforms';
@@ -172,6 +172,8 @@ export class UniformStore<
         byteLength
       });
       this.uniformBuffers.set(uniformBufferName, uniformBuffer);
+      // Prior data reads may have cleared the dirty flag before this buffer existed.
+      this.uniformBlocks.get(uniformBufferName)?.setNeedsRedraw('managed buffer initialized');
     }
     // this.updateUniformBuffers();
     // @ts-ignore
