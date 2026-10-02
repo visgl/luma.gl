@@ -33,10 +33,10 @@ export function createSketchScene(parent: HTMLDivElement, options: DeckExampleDe
   };
   let segments: Buffer | null = null;
   let style: SketchStrokeProps = {
-    width: 2.2,
-    jitter: 0.85,
-    grain: 0.6,
-    variation: 0.65,
+    width: 2.4,
+    jitter: 0.12,
+    grain: 0.78,
+    variation: 0.4,
     extension: 4
   };
   let edgesVisible = true;
@@ -97,10 +97,29 @@ export function createSketchScene(parent: HTMLDivElement, options: DeckExampleDe
         edgesVisible &&
           segments &&
           new SketchEdgeLayer({
+            id: 'sketch-edge-understroke',
+            segments,
+            segmentCount: edgeData.length / 8,
+            data: features,
+            color: [177, 169, 154, 92],
+            style: {
+              ...style,
+              width: (style.width ?? 2.4) + 1.4,
+              grain: 0,
+              jitter: (style.jitter ?? 0.12) * 0.25
+            },
+            visible: edgesVisible,
+            coordinateOrigin: ORIGIN,
+            pickable: false
+          }),
+        edgesVisible &&
+          segments &&
+          new SketchEdgeLayer({
             id: 'sketch-edges',
             segments,
             segmentCount: edgeData.length / 8,
             data: features,
+            color: [48, 44, 40, 238],
             style,
             visible: edgesVisible,
             coordinateOrigin: ORIGIN,
