@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {ArrowPathLayer, ArrowPolygonLayer, ArrowTextLayer} from '@deck.gl-community/arrow-layers';
-import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
+import {makeGPUVectorFromArrow, makeArrowFixedSizeListVector} from '@luma.gl/arrow';
 import type {Model} from '@luma.gl/engine';
 import {NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
@@ -12,6 +12,28 @@ import {
   convertArrowLayerColorVector,
   readArrowLayerGPUVector
 } from '../../src/layers/arrow-layer-input';
+import {assertLayerArrowVectorFormat} from '../../src/layers/arrow-gpu-layer-utils';
+
+it('Arrow GPU layer adapters reject columns whose storage does not match the GPU format', () => {
+  const float32Positions = makeArrowFixedSizeListVector(
+    new arrow.Float32(),
+    2,
+    new Float32Array([1, 2])
+  );
+  const float64Positions = makeArrowFixedSizeListVector(
+    new arrow.Float64(),
+    2,
+    new Float64Array([1, 2])
+  );
+
+  expect(() =>
+    assertLayerArrowVectorFormat(float32Positions, 'float32x2', 'positions')
+  ).not.toThrow();
+  expect(() => assertLayerArrowVectorFormat(float64Positions, 'float32x2', 'positions')).toThrow(
+    'FixedSizeList<Float32>[2]'
+  );
+  void 0;
+});
 
 it('Arrow deck layers do not use AttributeManager for Arrow GPU vectors', () => {
   const layers = [

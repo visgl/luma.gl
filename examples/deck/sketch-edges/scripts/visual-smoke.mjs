@@ -38,6 +38,9 @@ try {
       await page.goto(`${process.env.SKETCH_EXAMPLE_URL || server.resolvedUrls.local[0]}?backend=${backend}`);
       await page.waitForFunction(() => document.body.dataset.ready === 'true', undefined, {timeout: 60_000});
       await page.waitForTimeout(500);
+      assert.equal(await page.isChecked('#fills'), false, `${backend}: building faces are off by default`);
+      await page.check('#fills');
+      await page.waitForTimeout(150);
       const pencil = PNG.sync.read(await page.screenshot({path: join(tmpdir(), `sketch-edges-${backend}.png`)}));
       if (process.env.SKETCH_THUMBNAIL && backend === 'webgpu') {
         await page.screenshot({path: process.env.SKETCH_THUMBNAIL, type: 'jpeg', quality: 90});
@@ -75,7 +78,9 @@ try {
         }
         return count;
       };
-      assert(countDark(wireframe) > countDark(solidWithoutContext) * 1.15, `${backend}: opaque faces hide rear dark strokes`);
+      const wireframeDarkCount = countDark(wireframe);
+      const solidDarkCount = countDark(solidWithoutContext);
+      assert(wireframeDarkCount > solidDarkCount * 1.1, `${backend}: opaque faces hide rear dark strokes (${wireframeDarkCount} > ${solidDarkCount} * 1.1)`);
       await page.check('#fills');
       await page.check('#context');
       await page.selectOption('#edge-mode', 'triangles');

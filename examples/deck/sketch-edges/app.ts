@@ -6,15 +6,22 @@ import {COORDINATE_SYSTEM, Deck, MapView} from '@deck.gl/core';
 import {SketchEdgeLayer} from '@deck.gl-community/gpu-layers';
 import type {Buffer} from '@luma.gl/core';
 import type {MakeEdgeGeometryOptions} from '@luma.gl/engine';
-import {makeCityFeatures} from '../river-district-data';
+import {makeCityFeatures, type CityFeature} from '../river-district-data';
 import type {SketchStrokeProps} from '@luma.gl/shadertools';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
 import {BuildingMeshLayer} from './building-layer';
 import {makeBuildings, makeEdges, ORIGIN} from './building-data';
 
+type GroundTone = 'light' | 'dark';
+
 export function createSketchScene(parent: HTMLDivElement, options: DeckExampleDeviceOptions = {}) {
-  const features = makeBuildings();
-  const surroundings = makeCityFeatures().filter(feature => feature.kind !== 'building');
+  const features = makeBuildings().map(feature => {
+    const tone = (feature.color[0] + feature.color[1] + feature.color[2]) / 3;
+    return {...feature, color: [tone * 0.96, tone * 0.94, tone * 0.9] as [number, number, number]};
+  });
+  const districtFeatures = makeCityFeatures().filter(feature => feature.kind !== 'building');
+  let groundTone: GroundTone = 'light';
+  let surroundings = makeSurroundings(groundTone);
   let edgeOptions: MakeEdgeGeometryOptions = {angleThreshold: 30};
   let edgeData = makeEdges(features, edgeOptions);
   let resolveReady: () => void;
@@ -33,14 +40,14 @@ export function createSketchScene(parent: HTMLDivElement, options: DeckExampleDe
   };
   let segments: Buffer | null = null;
   let style: SketchStrokeProps = {
-    width: 2.2,
-    jitter: 0.85,
-    grain: 0.6,
-    variation: 0.65,
-    extension: 4
+    width: 3.1,
+    jitter: 0.65,
+    grain: 0.9,
+    variation: 0.45,
+    extension: 5
   };
   let edgesVisible = true;
-  let fillsVisible = true;
+  let fillsVisible = false;
   let contextVisible = true;
   const deck = new Deck({
     parent,
@@ -90,6 +97,7 @@ export function createSketchScene(parent: HTMLDivElement, options: DeckExampleDe
           features,
           data: features,
           pickable: true,
+          opacity: 0.34,
           visible: fillsVisible,
           coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
           coordinateOrigin: ORIGIN
@@ -101,6 +109,7 @@ export function createSketchScene(parent: HTMLDivElement, options: DeckExampleDe
             segments,
             segmentCount: edgeData.length / 8,
             data: features,
+            color: [48, 44, 40, 255],
             style,
             visible: edgesVisible,
             coordinateOrigin: ORIGIN,
@@ -135,6 +144,12 @@ export function createSketchScene(parent: HTMLDivElement, options: DeckExampleDe
       contextVisible = visible;
       updateLayers();
     },
+    setGroundTone(nextGroundTone: GroundTone) {
+      if (groundTone === nextGroundTone) return;
+      groundTone = nextGroundTone;
+      surroundings = makeSurroundings(groundTone);
+      updateLayers();
+    },
     setEdgesVisible(visible: boolean) {
       edgesVisible = visible;
       updateLayers();
@@ -154,4 +169,12 @@ export function createSketchScene(parent: HTMLDivElement, options: DeckExampleDe
       segments = null;
     }
   };
+
+  function makeSurroundings(tone: GroundTone): CityFeature[] {
+    const groundColor: [number, number, number] =
+      tone === 'light' ? [0.78, 0.77, 0.73] : [0.17, 0.23, 0.27];
+    return districtFeatures.map(feature =>
+      feature.kind === 'ground' ? {...feature, color: groundColor} : feature
+    );
+  }
 }
