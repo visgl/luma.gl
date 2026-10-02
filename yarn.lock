@@ -2697,6 +2697,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@deck.gl-community/arrow-layers@workspace:modules/deck-arrow-layers"
   dependencies:
+    "@deck.gl-community/gpu-layers": "npm:10.0.0-alpha.2"
     "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
     "@luma.gl/arrow": "npm:10.0.0-alpha.2"
     "@luma.gl/core": "npm:10.0.0-alpha.2"
@@ -2717,7 +2718,9 @@ __metadata:
     "@luma.gl/core": "npm:10.0.0-alpha.2"
     "@luma.gl/engine": "npm:10.0.0-alpha.2"
     "@luma.gl/experimental": "npm:10.0.0-alpha.2"
+    "@luma.gl/gpgpu": "npm:10.0.0-alpha.2"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.2"
+    "@luma.gl/text": "npm:10.0.0-alpha.2"
     "@math.gl/core": "npm:^4.1.0"
   languageName: unknown
   linkType: soft
