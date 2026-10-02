@@ -1,0 +1,102 @@
+<!doctype html>
+<head>
+  <!-- luma-example-support -->
+  <meta name="luma-example-id" content="experimental/volumetric-fire-forge" />
+  <meta name="luma-example-backends" content="webgpu" />
+  <meta name="luma-example-mobile" content="reduced" />
+  <meta name="luma-example-mobile-profile" content="simulation" />
+  <script data-luma-example-support-promise>
+    window.lumaExampleSupportPromise = new Promise(resolve => {
+      window.addEventListener('luma-example-support-ready', event => resolve(event.detail), {
+        once: true
+      });
+    });
+  </script>
+  <script type="module" data-luma-example-support-bootstrap>
+    import {installStandaloneExampleSupport} from '../../example-support.ts';
+    const exampleSupport = installStandaloneExampleSupport();
+    window.dispatchEvent(
+      new CustomEvent('luma-example-support-ready', {detail: exampleSupport})
+    );
+  </script>
+  <!-- /luma-example-support -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Volumetric Fire Forge</title>
+  <style>
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #050201; }
+    canvas { display: block; width: 100vw !important; height: 100vh !important; }
+    #webgpu-message {
+      box-sizing: border-box;
+      display: grid;
+      place-content: center;
+      width: min(34rem, calc(100% - 3rem));
+      min-height: 100%;
+      margin: auto;
+      color: #ffe0b2;
+      font: 500 1rem/1.6 system-ui, sans-serif;
+      text-align: center;
+    }
+    #webgpu-message[hidden] { display: none; }
+    #webgpu-message strong { color: #fff4e5; font-size: 1.2rem; }
+  </style>
+</head>
+<script type="module" data-luma-example-application>
+  const exampleSupport = await window.lumaExampleSupportPromise;
+  if (exampleSupport.supported) {
+    const {luma} = await import('@luma.gl/core');
+    const {makeAnimationLoop} = await import('@luma.gl/engine');
+    const {webgpuAdapter} = await import('@luma.gl/webgpu');
+    const {default: AnimationLoopTemplate} = await import('./app.ts');
+
+    const supportsHighDynamicRange =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(dynamic-range: high)').matches;
+
+    async function start() {
+      const message = document.getElementById('webgpu-message');
+      if (!navigator.gpu) {
+        message.hidden = false;
+        return;
+      }
+
+      try {
+        let device;
+        try {
+          device = await luma.createDevice({
+            id: 'volumetric-fire-forge',
+            adapters: [webgpuAdapter],
+            createCanvasContext: supportsHighDynamicRange
+              ? {colorFormat: 'rgba16float', colorSpace: 'display-p3', toneMapping: 'extended'}
+              : true
+          });
+        } catch (error) {
+          if (!supportsHighDynamicRange) {
+            throw error;
+          }
+          device = await luma.createDevice({
+            id: 'volumetric-fire-forge-sdr-fallback',
+            adapters: [webgpuAdapter],
+            createCanvasContext: true
+          });
+        }
+
+        const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {device});
+        animationLoop.start();
+      } catch (error) {
+        console.error(error);
+        message.hidden = false;
+      }
+    }
+
+    start();
+  }
+</script>
+<body>
+  <main id="webgpu-message" hidden>
+    <p>
+      <strong>Volumetric Fire Forge requires WebGPU.</strong><br />
+      Open this example in a current WebGPU-capable browser.
+    </p>
+  </main>
+</body>

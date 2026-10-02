@@ -1,0 +1,242 @@
+#usda 1.0
+(
+    defaultPrim = "PorcelainAtelier"
+    doc = "A cinematic composition of detailed, public-domain Utah and Fancy OpenUSD teapots."
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "PorcelainAtelier"
+{
+    def Scope "Materials"
+    {
+        def Material "MidnightPorcelain"
+        {
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.045, 0.12, 0.32)
+                float inputs:metallic = 0.62
+                float inputs:roughness = 0.085
+            }
+        }
+
+        def Material "RoseGold"
+        {
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (1, 0.38, 0.2)
+                float inputs:metallic = 0.87
+                float inputs:roughness = 0.075
+            }
+        }
+
+        def Material "JadePorcelain"
+        {
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.09, 0.73, 0.57)
+                float inputs:metallic = 0.34
+                float inputs:roughness = 0.1
+            }
+        }
+
+        def Material "Obsidian"
+        {
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.065, 0.08, 0.14)
+                float inputs:metallic = 0.92
+                float inputs:roughness = 0.16
+            }
+        }
+
+        def Material "ChampagneGold"
+        {
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (1, 0.72, 0.29)
+                float inputs:metallic = 0.94
+                float inputs:roughness = 0.09
+            }
+        }
+
+        def Material "TurquoiseNeon"
+        {
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.055, 0.6, 1)
+                color3f inputs:emissiveColor = (0.14, 0.75, 1)
+                float inputs:roughness = 0.08
+            }
+        }
+
+        def Material "AmberNeon"
+        {
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (1, 0.38, 0.09)
+                color3f inputs:emissiveColor = (1, 0.34, 0.075)
+                float inputs:roughness = 0.08
+            }
+        }
+    }
+
+    def Xform "FancyCenterpiece" (
+        prepend references = @./teapots/FancyTeapot.usd@</FancyTeapot>
+    )
+    {
+        double3 xformOp:translate = (0, 1.02, -1.2)
+        double3 xformOp:rotateXYZ = (0, -22, 0)
+        double3 xformOp:scale = (13, 13, 13)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+
+        over "Geometry"
+        {
+            rel material:binding = </PorcelainAtelier/Materials/MidnightPorcelain>
+        }
+    }
+
+    def Xform "RoseGoldUtah" (
+        prepend references = @./teapots/UtahTeapot.usd@
+    )
+    {
+        double3 xformOp:translate = (-5.5, 0.62, 2.2)
+        double3 xformOp:rotateXYZ = (0, 34, 0)
+        double3 xformOp:scale = (9.8, 9.8, 9.8)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+
+        over "Geometry"
+        {
+            rel material:binding = </PorcelainAtelier/Materials/RoseGold>
+        }
+    }
+
+    def Xform "JadeUtah" (
+        prepend references = @./teapots/UtahTeapot.usd@
+    )
+    {
+        double3 xformOp:translate = (5.5, 0.62, 2.2)
+        double3 xformOp:rotateXYZ = (0, -34, 0)
+        double3 xformOp:scale = (9.8, 9.8, 9.8)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+
+        over "Geometry"
+        {
+            rel material:binding = </PorcelainAtelier/Materials/JadePorcelain>
+        }
+    }
+
+    def Cylinder "CentralPedestal"
+    {
+        double radius = 3.45
+        double height = 1.0
+        uniform token axis = "Y"
+        rel material:binding = </PorcelainAtelier/Materials/Obsidian>
+        double3 xformOp:translate = (0, 0.5, -1.2)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Cylinder "CentralGoldRim"
+    {
+        double radius = 3.52
+        double height = 0.075
+        uniform token axis = "Y"
+        rel material:binding = </PorcelainAtelier/Materials/ChampagneGold>
+        double3 xformOp:translate = (0, 0.99, -1.2)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Cylinder "LeftPedestal"
+    {
+        double radius = 2.35
+        double height = 0.58
+        uniform token axis = "Y"
+        rel material:binding = </PorcelainAtelier/Materials/Obsidian>
+        double3 xformOp:translate = (-5.5, 0.3, 2.2)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Cylinder "RightPedestal"
+    {
+        double radius = 2.35
+        double height = 0.58
+        uniform token axis = "Y"
+        rel material:binding = </PorcelainAtelier/Materials/Obsidian>
+        double3 xformOp:translate = (5.5, 0.3, 2.2)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Cylinder "LeftGoldRim"
+    {
+        double radius = 2.4
+        double height = 0.055
+        uniform token axis = "Y"
+        rel material:binding = </PorcelainAtelier/Materials/ChampagneGold>
+        double3 xformOp:translate = (-5.5, 0.59, 2.2)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Cylinder "RightGoldRim"
+    {
+        double radius = 2.4
+        double height = 0.055
+        uniform token axis = "Y"
+        rel material:binding = </PorcelainAtelier/Materials/ChampagneGold>
+        double3 xformOp:translate = (5.5, 0.59, 2.2)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def PointInstancer "GoldHalo"
+    {
+        point3f[] positions = [(-6.4, 4.3, -4.2), (-5.9, 5.8, -4.2), (-4.9, 7.05, -4.2), (-3.45, 7.95, -4.2), (-1.75, 8.48, -4.2), (0, 8.65, -4.2), (1.75, 8.48, -4.2), (3.45, 7.95, -4.2), (4.9, 7.05, -4.2), (5.9, 5.8, -4.2), (6.4, 4.3, -4.2)]
+        int[] protoIndices = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        rel prototypes = </PorcelainAtelier/GoldHalo/GoldOrb>
+
+        def Sphere "GoldOrb"
+        {
+            double radius = 0.18
+            rel material:binding = </PorcelainAtelier/Materials/ChampagneGold>
+        }
+    }
+
+    def PointInstancer "TurquoiseHalo"
+    {
+        point3f[] positions = [(-5.8, 4.4, -3.9), (-5.3, 5.7, -3.9), (-4.3, 6.7, -3.9), (-3, 7.45, -3.9), (-1.5, 7.85, -3.9), (0, 8, -3.9), (1.5, 7.85, -3.9), (3, 7.45, -3.9), (4.3, 6.7, -3.9), (5.3, 5.7, -3.9), (5.8, 4.4, -3.9)]
+        int[] protoIndices = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        rel prototypes = </PorcelainAtelier/TurquoiseHalo/NeonOrb>
+
+        def Sphere "NeonOrb"
+        {
+            double radius = 0.095
+            rel material:binding = </PorcelainAtelier/Materials/TurquoiseNeon>
+        }
+    }
+
+    def PointInstancer "AmberRunway"
+    {
+        point3f[] positions = [(-7.5, 0.12, 5.9), (-6, 0.12, 5.9), (-4.5, 0.12, 5.9), (-3, 0.12, 5.9), (-1.5, 0.12, 5.9), (0, 0.12, 5.9), (1.5, 0.12, 5.9), (3, 0.12, 5.9), (4.5, 0.12, 5.9), (6, 0.12, 5.9), (7.5, 0.12, 5.9)]
+        int[] protoIndices = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        rel prototypes = </PorcelainAtelier/AmberRunway/RunwayOrb>
+
+        def Sphere "RunwayOrb"
+        {
+            double radius = 0.105
+            rel material:binding = </PorcelainAtelier/Materials/AmberNeon>
+        }
+    }
+
+    def DistantLight "AtelierKey"
+    {
+        color3f inputs:color = (1, 0.88, 0.75)
+        float inputs:intensity = 650
+        float3 xformOp:rotateXYZ = (-46, 28, 0)
+        uniform token[] xformOpOrder = ["xformOp:rotateXYZ"]
+    }
+}

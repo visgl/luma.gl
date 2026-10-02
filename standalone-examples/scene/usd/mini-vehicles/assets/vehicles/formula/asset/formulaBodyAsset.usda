@@ -1,0 +1,59 @@
+#usda 1.0
+(
+    defaultPrim = "formula"
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Xform "formula"
+{
+    def "geo" (
+        prepend references = @../geo/formulaGeo.usda@</formula>
+    )
+    {
+        over "_2_redMax" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            rel material:binding = </formula/materials/redMaterial>
+        }
+
+        over "_1_greyMediumMax" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            rel material:binding = </formula/materials/greyMediumMaterial>
+        }
+
+        over "_4_windowMax" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            rel material:binding = </formula/materials/windowMaterial>
+        }
+
+        over "_5_greyLightMax" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            rel material:binding = </formula/materials/greyLightMaterial>
+        }
+    }
+
+    def "materials" (
+        prepend references = [
+            @../../../../materials/lightGrey.usda@</materials>,
+            @../../../../materials/window.usda@</materials>,
+            @../../../../materials/mediumGrey.usda@</materials>,
+            @../../../../materials/red.usda@</materials>
+        ]
+    )
+    {
+    }
+}
+
+
