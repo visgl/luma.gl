@@ -91,6 +91,7 @@ struct CityVertex {
   @builtin(position) position: vec4<f32>,
   @location(0) color: vec3<f32>,
   @location(1) @interpolate(flat) pickingColor: vec3<f32>,
+  @location(2) worldPosition: vec3<f32>,
 };
 @vertex fn vertexMain(
   @location(0) position: vec3<f32>, @location(1) normal: vec3<f32>,
@@ -100,14 +101,28 @@ struct CityVertex {
   output.position = project_position_to_clipspace(position, vec3<f32>(0.0), vec3<f32>(0.0));
   output.color = color * (0.45 + 0.55 * max(dot(normal, normalize(vec3<f32>(-0.5, -0.3, 0.8))), 0.0));
   output.pickingColor = picking_getPickingColorFromIndex(u32(featureIndex));
+  output.worldPosition = position;
   return output;
+}
+fn buildingMottleNoise(coordinate: vec2<f32>) -> f32 {
+  let cell = floor(coordinate);
+  var fraction = fract(coordinate);
+  fraction = fraction * fraction * (vec2<f32>(3.0) - 2.0 * fraction);
+  let first = fract(sin(dot(cell, vec2<f32>(127.1, 311.7))) * 43758.5453);
+  let second = fract(sin(dot(cell + vec2<f32>(1.0, 0.0), vec2<f32>(127.1, 311.7))) * 43758.5453);
+  let third = fract(sin(dot(cell + vec2<f32>(0.0, 1.0), vec2<f32>(127.1, 311.7))) * 43758.5453);
+  let fourth = fract(sin(dot(cell + vec2<f32>(1.0, 1.0), vec2<f32>(127.1, 311.7))) * 43758.5453);
+  return mix(mix(first, second, fraction.x), mix(third, fourth, fraction.x), fraction.y);
 }
 @fragment fn fragmentMain(input: CityVertex) -> @location(0) vec4<f32> {
   if (picking.isActive > 0.5) {
     if (picking_isColorZero(input.pickingColor)) { discard; }
     return vec4<f32>(input.pickingColor, 1.0);
   }
-  var color = input.color;
+  let mottle = buildingMottleNoise(input.worldPosition.xy * 0.12) * 0.55 +
+    buildingMottleNoise(input.worldPosition.xz * 0.12) * 0.25 +
+    buildingMottleNoise(input.worldPosition.yz * 0.12) * 0.2;
+  var color = input.color * (0.84 + mottle * 0.22);
   if (picking.isHighlightActive > 0.5 && distance(input.pickingColor, picking_normalizeColor(picking.highlightedObjectColor)) < 0.00001) {
     color = mix(color, picking.highlightColor.rgb, picking.highlightColor.a);
   }
@@ -121,11 +136,13 @@ in vec3 normal;
 in vec3 color;
 in float featureIndex;
 out vec4 vertexColor;
+out vec3 worldPosition;
 void main() {
   geometry.worldPosition = position;
   geometry.pickingColor = picking_getPickingColorFromIndex(featureIndex);
   gl_Position = project_position_to_clipspace(position, vec3(0.0), vec3(0.0));
   DECKGL_FILTER_GL_POSITION(gl_Position, geometry);
+  worldPosition = position;
   float light = 0.45 + 0.55 * max(dot(normal, normalize(vec3(-0.5, -0.3, 0.8))), 0.0);
   vertexColor = vec4(color * light, layer.opacity);
   DECKGL_FILTER_COLOR(vertexColor, geometry);
@@ -134,9 +151,23 @@ void main() {
 const FRAGMENT_SHADER = /* glsl */ `#version 300 es
 precision highp float;
 in vec4 vertexColor;
+in vec3 worldPosition;
 out vec4 fragColor;
+float buildingMottleNoise(vec2 coordinate) {
+  vec2 cell = floor(coordinate);
+  vec2 fraction = fract(coordinate);
+  fraction = fraction * fraction * (3.0 - 2.0 * fraction);
+  float first = fract(sin(dot(cell, vec2(127.1, 311.7))) * 43758.5453);
+  float second = fract(sin(dot(cell + vec2(1.0, 0.0), vec2(127.1, 311.7))) * 43758.5453);
+  float third = fract(sin(dot(cell + vec2(0.0, 1.0), vec2(127.1, 311.7))) * 43758.5453);
+  float fourth = fract(sin(dot(cell + vec2(1.0, 1.0), vec2(127.1, 311.7))) * 43758.5453);
+  return mix(mix(first, second, fraction.x), mix(third, fourth, fraction.x), fraction.y);
+}
 void main() {
-  fragColor = vertexColor;
+  float mottle = buildingMottleNoise(worldPosition.xy * 0.12) * 0.55 +
+    buildingMottleNoise(worldPosition.xz * 0.12) * 0.25 +
+    buildingMottleNoise(worldPosition.yz * 0.12) * 0.2;
+  fragColor = vec4(vertexColor.rgb * (0.84 + mottle * 0.22), vertexColor.a);
   DECKGL_FILTER_COLOR(fragColor, geometry);
 }
 `;
