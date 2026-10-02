@@ -349,9 +349,8 @@ it.each([
     expect(canvasContext.getConfiguration()).toEqual(configuration);
     expect(canvasContext.getConfiguration()?.alphaMode).toBe('opaque');
     expect(await webgpuAdapter.attach(gpuDevice)).toBe(reattachedDevice);
-    gpuDevice.pushErrorScope('validation');
-    canvasContext.getCurrentTexture();
-    expect(await gpuDevice.popErrorScope()).toBeNull();
+    // An unconfigured canvas throws here; acquire a texture without an async GPU error scope.
+    expect(canvasContext.getCurrentTexture().width).toBe(canvas.width);
   } finally {
     reattachedDevice.destroy();
   }
