@@ -320,3 +320,39 @@ it('WebGPUAdapter#attach routes GPUDevice loss to luma', async () => {
   expect(lostInfo.reason).toBe('destroyed');
   expect(device.isLost).toBe(true);
 });
+
+it.each([
+  false,
+  true
+])('destroying an old wrapper preserves a reattached canvas (configured: %s)', async previouslyConfigured => {
+  const gpuDevice = await requestMaxStorageBufferDevice();
+  const {canvas, canvasContext} = createCanvasContext();
+  if (previouslyConfigured) {
+    canvasContext.configure({
+      device: gpuDevice,
+      format: navigator.gpu.getPreferredCanvasFormat(),
+      alphaMode: 'premultiplied'
+    });
+  }
+  const device = await webgpuAdapter.attach(gpuDevice, {
+    createCanvasContext: {canvas, alphaMode: 'opaque'}
+  });
+  device.destroy();
+  expect(device.canvasContext).toBeNull();
+
+  const reattachedDevice = await webgpuAdapter.attach(gpuDevice, {
+    createCanvasContext: {canvas, alphaMode: 'opaque'}
+  });
+  try {
+    const configuration = canvasContext.getConfiguration();
+    device.destroy();
+    expect(canvasContext.getConfiguration()).toEqual(configuration);
+    expect(canvasContext.getConfiguration()?.alphaMode).toBe('opaque');
+    expect(await webgpuAdapter.attach(gpuDevice)).toBe(reattachedDevice);
+    gpuDevice.pushErrorScope('validation');
+    canvasContext.getCurrentTexture();
+    expect(await gpuDevice.popErrorScope()).toBeNull();
+  } finally {
+    reattachedDevice.destroy();
+  }
+});

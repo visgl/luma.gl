@@ -108,6 +108,7 @@ export class WebGPUDevice extends Device {
   override canvasContext: WebGPUCanvasContext | null = null;
 
   private _isLost: boolean = false;
+  private isDestroyed: boolean = false;
   private _defaultSampler: WebGPUSampler | null = null;
   private _onUncapturedError = (event: Event): void => {
     event.preventDefault();
@@ -188,12 +189,17 @@ export class WebGPUDevice extends Device {
   // this.glslang = glsl && await loadGlslangModule();
 
   destroy(): void {
+    if (this.isDestroyed) {
+      return;
+    }
+    this.isDestroyed = true;
     this._isLost = true;
     this.commandEncoder?.destroy();
     this._defaultSampler?.destroy();
     this._defaultSampler = null;
     // Unconfigures the canvas and releases its attachments, which an attached GPUDevice would keep alive
     this.canvasContext?.destroy();
+    this.canvasContext = null;
     if (devicesByHandle.get(this.handle) === this) {
       devicesByHandle.delete(this.handle);
     }

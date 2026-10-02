@@ -199,6 +199,20 @@ describe('WebGPU device creation lifecycle', () => {
     );
   });
 
+  test('destroy cleans up a lost wrapper exactly once', async () => {
+    const pendingLoss = makeDeferred<GPUDeviceLostInfo>();
+    const nativeDevice = makeNativeDevice(pendingLoss.promise);
+    const device = await new MockWebGPUAdapter([]).attach(nativeDevice.device);
+    pendingLoss.resolve({reason: 'unknown', message: 'Driver reset'} as GPUDeviceLostInfo);
+    await device.lost;
+
+    device.destroy();
+    device.destroy();
+
+    expect(nativeDevice.device.removeEventListener).toHaveBeenCalledTimes(1);
+    expect(nativeDevice.device.destroy).not.toHaveBeenCalled();
+  });
+
   test('attach stops returning a wrapper once its device is lost', async () => {
     const pendingLoss = makeDeferred<GPUDeviceLostInfo>();
     const nativeDevice = makeNativeDevice(pendingLoss.promise);
