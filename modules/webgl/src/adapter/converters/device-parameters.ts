@@ -259,8 +259,8 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
   }
 
   if (
-    parameters.stencilPassOperation &&
-    parameters.stencilFailOperation &&
+    parameters.stencilPassOperation ||
+    parameters.stencilFailOperation ||
     parameters.stencilDepthFailOperation
   ) {
     const dppass = convertStencilOperation('stencilPassOperation', parameters.stencilPassOperation);
@@ -373,7 +373,7 @@ export function convertToCompareFunction(parameter: string, value: GLFunction): 
   });
 }
 
-function convertStencilOperation(parameter: string, value: StencilOperation): GL {
+function convertStencilOperation(parameter: string, value: StencilOperation = 'keep'): GL {
   return map<StencilOperation, GLStencilOp>(parameter, value, {
     keep: GL.KEEP,
     zero: GL.ZERO,
