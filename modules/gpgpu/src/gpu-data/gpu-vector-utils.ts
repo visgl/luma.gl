@@ -61,6 +61,18 @@ export function getGPUDataBuffersForLayout(
   return buffers;
 }
 
+/** Returns the byte offset where each buffer-layout entry's rows start in its GPUData buffer. */
+export function getGPUDataByteOffsetsForLayout(
+  bufferLayout: BufferLayout[],
+  gpuData: Record<string, GPUData>
+): Record<string, number> {
+  const byteOffsets: Record<string, number> = {};
+  for (const layout of bufferLayout) {
+    byteOffsets[layout.name] = gpuData[layout.name]?.byteOffset ?? 0;
+  }
+  return byteOffsets;
+}
+
 /** Returns a required GPU vector from a table by column name. */
 export function getRequiredGPUVector(
   table: GPUVectorCollection,

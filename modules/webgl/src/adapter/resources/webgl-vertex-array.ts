@@ -96,15 +96,18 @@ export class WEBGLVertexArray extends VertexArray {
    * Binds a buffer to one shader attribute location and configures the WebGL pointer state.
    * @param location Shader attribute location.
    * @param attributeBuffer Buffer supplying the attribute data.
+   * @param byteOffset Byte offset added to the attribute's layout offset.
    */
-  setBuffer(location: number, attributeBuffer: Buffer): void {
+  setBuffer(location: number, attributeBuffer: Buffer, byteOffset: number = 0): void {
     const buffer = attributeBuffer as WEBGLBuffer;
     // Sanity check target
     if (buffer.glTarget === GL.ELEMENT_ARRAY_BUFFER) {
       throw new Error('Use .setIndexBuffer()');
     }
 
-    const {size, type, stride, offset, normalized, integer, divisor} = this._getAccessor(location);
+    const accessor = this._getAccessor(location);
+    const {size, type, stride, normalized, integer, divisor} = accessor;
+    const offset = accessor.offset + byteOffset;
 
     this.device.gl.bindVertexArray(this.handle);
     // A non-zero buffer object must be bound to the GL_ARRAY_BUFFER target
@@ -127,6 +130,7 @@ export class WEBGLVertexArray extends VertexArray {
     this.device.gl.vertexAttribDivisor(location, divisor || 0);
 
     this.attributes[location] = buffer;
+    this.attributeByteOffsets[location] = byteOffset;
 
     // Unbind to prevent unintended changes to the VAO.
     this.device.gl.bindVertexArray(null);
