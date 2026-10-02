@@ -80,6 +80,28 @@ export function getRequiredWebGPULimits(
 }
 
 /**
+ * Returns the limits to request for a feature level.
+ * Compatibility devices otherwise receive the low compatibility defaults (for example zero
+ * vertex-stage storage buffers) even when the adapter supports far more.
+ * @param supportedLimits Limits exposed by the selected WebGPU adapter.
+ * @param featureLevel Requested WebGPU feature level.
+ * @param requiredLimits Explicitly requested limits, which override adapter maximums.
+ * @returns Limits to forward through `GPUDeviceDescriptor.requiredLimits`.
+ */
+export function getRequestedWebGPULimits(
+  supportedLimits: GPUSupportedLimits,
+  supportedFeatures: GPUSupportedFeatures,
+  featureLevel: RequestedWebGPUFeatureLevel,
+  requiredLimits: DeviceProps['requiredLimits'] = {}
+): Record<string, number> {
+  const requestsAdapterLimits =
+    featureLevel === 'max' ||
+    (featureLevel === 'best-available' && !supportedFeatures.has(CORE_FEATURES_AND_LIMITS));
+  const adapterLimits = requestsAdapterLimits ? getRequiredWebGPULimits(supportedLimits) : {};
+  return {...adapterLimits, ...requiredLimits};
+}
+
+/**
  * Returns the requested WebGPU feature level, defaulting to the portable core profile.
  * @param props Device creation props.
  * @returns Effective WebGPU feature level to request.
@@ -227,11 +249,12 @@ export class WebGPUAdapter extends Adapter {
       deviceDescriptor.requiredFeatures = requiredFeatures;
     }
 
-    // Explicitly requested limits override the adapter maximums requested by 'max'
-    const requiredLimits = {
-      ...(requestedFeatureLevel === 'max' ? getRequiredWebGPULimits(adapter.limits) : {}),
-      ...props.requiredLimits
-    };
+    const requiredLimits = getRequestedWebGPULimits(
+      adapter.limits,
+      adapter.features,
+      requestedFeatureLevel,
+      props.requiredLimits
+    );
     if (Object.keys(requiredLimits).length > 0) {
       deviceDescriptor.requiredLimits = requiredLimits;
     }

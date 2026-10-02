@@ -6,6 +6,7 @@ import {expect, it} from 'vitest';
 import {
   getEffectiveWebGPUFeatureLevel,
   getRequiredWebGPUFeatures,
+  getRequestedWebGPULimits,
   getRequiredWebGPULimits,
   getWebGPUFeatureLevel,
   getWebGPURequestAdapterOptions
@@ -39,6 +40,54 @@ it('getRequiredWebGPULimits reads non-enumerable supported limits directly', () 
     'storage binding size is still requested'
   ).toBe(2048);
   void 0;
+});
+
+it('getRequestedWebGPULimits keeps compatibility portable and maximizes best-available fallback', () => {
+  const supportedLimits = {
+    maxStorageBuffersInVertexStage: 10,
+    maxStorageBuffersPerShaderStage: 10,
+    maxComputeInvocationsPerWorkgroup: 1024
+  } as unknown as GPUSupportedLimits;
+
+  const coreFeatures = new Set(['core-features-and-limits']) as GPUSupportedFeatures;
+  const compatibilityFeatures = new Set() as GPUSupportedFeatures;
+
+  expect(
+    getRequestedWebGPULimits(supportedLimits, coreFeatures, 'core'),
+    'core keeps the spec default limits'
+  ).toEqual({});
+  expect(
+    getRequestedWebGPULimits(supportedLimits, coreFeatures, 'core', {maxBufferSize: 4096}),
+    'core forwards explicit limits'
+  ).toEqual({maxBufferSize: 4096});
+  expect(
+    getRequestedWebGPULimits(supportedLimits, compatibilityFeatures, 'compatibility'),
+    'compatibility keeps compatibility default limits'
+  ).toEqual({});
+
+  const expectedAdapterLimits = {
+    maxStorageBuffersInVertexStage: 10,
+    maxStorageBuffersPerShaderStage: 10,
+    maxComputeInvocationsPerWorkgroup: 1024
+  };
+  expect(
+    getRequestedWebGPULimits(supportedLimits, coreFeatures, 'max'),
+    'max requests adapter limits'
+  ).toEqual(expectedAdapterLimits);
+  expect(
+    getRequestedWebGPULimits(supportedLimits, compatibilityFeatures, 'best-available'),
+    'best-available requests adapter limits when it must stay compatibility'
+  ).toEqual(expectedAdapterLimits);
+  expect(
+    getRequestedWebGPULimits(supportedLimits, coreFeatures, 'best-available'),
+    'best-available keeps core limits after upgrading'
+  ).toEqual({});
+  expect(
+    getRequestedWebGPULimits(supportedLimits, compatibilityFeatures, 'compatibility', {
+      maxStorageBuffersInVertexStage: 4
+    }).maxStorageBuffersInVertexStage,
+    'explicit limits override profile defaults'
+  ).toBe(4);
 });
 
 it('WebGPUAdapter feature level helpers map luma props to WebGPU requests', () => {

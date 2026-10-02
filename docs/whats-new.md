@@ -21,6 +21,7 @@ Target Release Date: Q3, 2026
 **@luma.gl/core**
 
 - **Targeted WebGPU limits** - `DeviceProps.requiredLimits` requests specific WebGPU device limits, such as `maxStorageBuffersPerShaderStage`, without taking every adapter limit and feature through `featureLevel: 'max'`. A development GPU then enforces the limits the application targets.
+- **WebGPU compatibility fallback limits** - `featureLevel: 'best-available'` requests the adapter's supported limits when a compatibility adapter cannot upgrade to core. Explicit `'compatibility'` mode keeps compatibility default limits as a cross-platform safety net. WebGPU textures also declare `textureBindingViewDimension`, so cube maps can be bound as cube views in compatibility mode.
 
 **@luma.gl/gpgpu**
 

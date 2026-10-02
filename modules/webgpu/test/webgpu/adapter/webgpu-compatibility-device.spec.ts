@@ -6,6 +6,23 @@ import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import type {WebGPUTexture} from '@luma.gl/webgpu';
 
+it('WebGPU best-available fallback requests adapter-supported limits', async () => {
+  const device = await getWebGPUTestDevice('best-available');
+  if (!device || device.info.featureLevel !== 'compatibility') {
+    return;
+  }
+
+  for (const limitName of [
+    'maxStorageBuffersInVertexStage',
+    'maxStorageBuffersPerShaderStage',
+    'maxComputeInvocationsPerWorkgroup'
+  ] as const) {
+    expect(device.handle.limits[limitName], `${limitName} matches the adapter`).toBe(
+      device.adapter.limits[limitName]
+    );
+  }
+});
+
 it('WebGPU compatibility devices bind cube textures as cube views', async () => {
   const device = await getWebGPUTestDevice('compatibility');
   if (!device || device.info.featureLevel !== 'compatibility') {
