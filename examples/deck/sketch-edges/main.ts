@@ -33,6 +33,8 @@ const fills = document.querySelector<HTMLInputElement>('#fills')!;
 fills.addEventListener('change', () => scene.setFillsVisible(fills.checked));
 const context = document.querySelector<HTMLInputElement>('#context')!;
 context.addEventListener('change', () => scene.setContextVisible(context.checked));
+const ground = document.querySelector<HTMLSelectElement>('#ground')!;
+ground.addEventListener('change', () => scene.setGroundTone(ground.value as 'light' | 'dark'));
 const edgeMode = document.querySelector<HTMLSelectElement>('#edge-mode')!;
 edgeMode.addEventListener('change', () => {
   scene.setEdgeOptions({includeCoplanarEdges: edgeMode.value === 'triangles'});
