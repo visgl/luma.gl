@@ -12,14 +12,17 @@ import {
   type PickingInfo,
   type UpdateParameters
 } from '@deck.gl/core';
-import {Buffer, type RenderPass} from '@luma.gl/core';
+import {type Buffer, type RenderPass} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
 import {GPUVectorModel, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
+  createGPUVectorStyleBuffer,
+  getGPUVectorStyleBufferBinding,
   getGPUVectorBuffer,
   getGPUVectorLayerBatches,
   getGPUVectorPickingProvenance,
   makeGPUVectorBufferLayout,
+  resizeGPUVectorStyleBuffer,
   type GPUVectorLayerPickingInfo
 } from './gpu-vector-layer-utils';
 
@@ -158,11 +161,12 @@ export class GPUColumnLayer extends Layer<GPUColumnLayerProps> {
       this.setState({model: null, styleBuffer: null, defaults: []} satisfies GPUColumnLayerState);
       return;
     }
-    const styleBuffer = device.createBuffer({
-      id: `${this.id}-style`,
-      byteLength: 64,
-      usage: Buffer.UNIFORM | Buffer.COPY_DST
-    });
+    const styleBuffer = createGPUVectorStyleBuffer(
+      device,
+      `${this.id}-style`,
+      64,
+      this.props.getPosition.data.length
+    );
     const defaults = [
       device.createBuffer({data: new Uint8Array([0, 0, 0, 255])}),
       device.createBuffer({data: new Float32Array([1])}),
@@ -192,7 +196,7 @@ export class GPUColumnLayer extends Layer<GPUColumnLayerProps> {
           ? makeGPUVectorBufferLayout(elevations, 'elevations')
           : makeConstantLayout('elevations', 'float32')
       ],
-      bindings: {columnStyle: styleBuffer}
+      bindings: {columnStyle: getGPUVectorStyleBufferBinding(styleBuffer, 64)}
     });
     model.userData['boundInputs'] = [
       this.props.getPosition,
@@ -228,8 +232,18 @@ export class GPUColumnLayer extends Layer<GPUColumnLayerProps> {
   }
 
   override draw({renderPass}: {renderPass: RenderPass}): void {
-    const {model, styleBuffer} = this.state as GPUColumnLayerState;
-    if (!model || !styleBuffer) return;
+    const {model} = this.state as GPUColumnLayerState;
+    const {styleBuffer: previousStyleBuffer} = this.state as GPUColumnLayerState;
+    if (!model || !previousStyleBuffer) return;
+    const styleBuffer = resizeGPUVectorStyleBuffer(
+      previousStyleBuffer,
+      64,
+      this.props.getPosition.data.length
+    );
+    if (styleBuffer !== previousStyleBuffer) {
+      this.setState({styleBuffer});
+      model.setBindings({columnStyle: getGPUVectorStyleBufferBinding(styleBuffer, 64)});
+    }
     const colors = isGPUVector(this.props.getFillColor) ? this.props.getFillColor : undefined;
     const radii = isGPUVector(this.props.getRadius) ? this.props.getRadius : undefined;
     const elevations = isGPUVector(this.props.getElevation) ? this.props.getElevation : undefined;
@@ -263,7 +277,9 @@ export class GPUColumnLayer extends Layer<GPUColumnLayerProps> {
       vectors: {positions: this.props.getPosition, colors, radii, elevations},
       onBatch: batch => {
         uints[12] = batch.rowIndexOffset;
-        styleBuffer.write(new Uint8Array(bytes));
+        const binding = getGPUVectorStyleBufferBinding(styleBuffer, 64, batch.batchIndex);
+        styleBuffer.write(new Uint8Array(bytes), binding.offset);
+        model.setBindings({columnStyle: binding});
       }
     });
   }

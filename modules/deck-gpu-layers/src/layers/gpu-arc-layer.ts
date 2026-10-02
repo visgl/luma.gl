@@ -12,14 +12,17 @@ import {
   type PickingInfo,
   type UpdateParameters
 } from '@deck.gl/core';
-import {Buffer, type RenderPass} from '@luma.gl/core';
+import {type Buffer, type RenderPass} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
 import {GPUVectorModel, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
+  createGPUVectorStyleBuffer,
+  getGPUVectorStyleBufferBinding,
   getGPUVectorBuffer,
   getGPUVectorLayerBatches,
   getGPUVectorPickingProvenance,
   makeGPUVectorBufferLayout,
+  resizeGPUVectorStyleBuffer,
   type GPUVectorLayerPickingInfo
 } from './gpu-vector-layer-utils';
 
@@ -171,11 +174,12 @@ export class GPUArcLayer extends Layer<GPUArcLayerProps> {
       this.setState({model: null, styleBuffer: null, defaults: []} satisfies GPUArcLayerState);
       return;
     }
-    const styleBuffer = device.createBuffer({
-      id: `${this.id}-style`,
-      byteLength: 80,
-      usage: Buffer.UNIFORM | Buffer.COPY_DST
-    });
+    const styleBuffer = createGPUVectorStyleBuffer(
+      device,
+      `${this.id}-style`,
+      80,
+      this.props.getSourcePosition.data.length
+    );
     const defaults = [
       device.createBuffer({data: new Uint8Array([0, 0, 0, 255])}),
       device.createBuffer({data: new Uint8Array([0, 0, 0, 255])}),
@@ -213,7 +217,7 @@ export class GPUArcLayer extends Layer<GPUArcLayerProps> {
           ? makeGPUVectorBufferLayout(heights, 'heights')
           : makeConstantLayout('heights', 'float32')
       ],
-      bindings: {arcStyle: styleBuffer}
+      bindings: {arcStyle: getGPUVectorStyleBufferBinding(styleBuffer, 80)}
     });
     model.userData['boundInputs'] = [
       this.props.getSourcePosition,
@@ -254,8 +258,18 @@ export class GPUArcLayer extends Layer<GPUArcLayerProps> {
   }
 
   override draw({renderPass}: {renderPass: RenderPass}): void {
-    const {model, styleBuffer} = this.state as GPUArcLayerState;
-    if (!model || !styleBuffer) return;
+    const {model} = this.state as GPUArcLayerState;
+    const {styleBuffer: previousStyleBuffer} = this.state as GPUArcLayerState;
+    if (!model || !previousStyleBuffer) return;
+    const styleBuffer = resizeGPUVectorStyleBuffer(
+      previousStyleBuffer,
+      80,
+      this.props.getSourcePosition.data.length
+    );
+    if (styleBuffer !== previousStyleBuffer) {
+      this.setState({styleBuffer});
+      model.setBindings({arcStyle: getGPUVectorStyleBufferBinding(styleBuffer, 80)});
+    }
     const sourceColors = isGPUVector(this.props.getSourceColor)
       ? this.props.getSourceColor
       : undefined;
@@ -308,7 +322,9 @@ export class GPUArcLayer extends Layer<GPUArcLayerProps> {
       },
       onBatch: batch => {
         uints[18] = batch.rowIndexOffset;
-        styleBuffer.write(new Uint8Array(bytes));
+        const binding = getGPUVectorStyleBufferBinding(styleBuffer, 80, batch.batchIndex);
+        styleBuffer.write(new Uint8Array(bytes), binding.offset);
+        model.setBindings({arcStyle: binding});
       }
     });
   }

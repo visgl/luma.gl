@@ -89,10 +89,11 @@ precision highp float;
 
 in vec4 vColor;
 in float vVisible;
+in vec3 vTimeWindow;
 out vec4 fragColor;
 
 void main() {
-  if (vVisible < 0.5) discard;
+  if (vVisible < 0.5 || vTimeWindow.x < vTimeWindow.y || vTimeWindow.x > vTimeWindow.z) discard;
   fragColor = vColor;
   DECKGL_FILTER_COLOR(fragColor, geometry);
 }
@@ -131,6 +132,7 @@ in float temporalEnabled;
 
 out vec4 vColor;
 out float vVisible;
+out vec3 vTimeWindow;
 
 vec3 encodeDeckPickingColor(int objectIndex) {
   int colorIndex = objectIndex + 1;
@@ -173,6 +175,11 @@ void main() {
   float endMeasure = segmentEndPositions.w + pathViewOrigins.w;
   vVisible = temporalEnabled < 0.5 ||
     (endMeasure >= currentTime - trailLength && startMeasure <= currentTime) ? 1.0 : 0.0;
+  vTimeWindow = vec3(
+    mix(startMeasure, endMeasure, corner.x),
+    temporalEnabled < 0.5 ? -1e30 : currentTime - trailLength,
+    temporalEnabled < 0.5 ? 1e30 : currentTime
+  );
   geometry.position = gl_Position;
   geometry.pickingColor = encodeDeckPickingColor(int(rowIndices));
   DECKGL_FILTER_GL_POSITION(gl_Position, geometry);
@@ -206,6 +213,7 @@ struct PathVertexOutputs {
   @location(0) color: vec4<f32>,
   @location(1) @interpolate(flat) pickingColor: vec3<f32>,
   @location(2) @interpolate(flat) visible: f32,
+  @location(3) timeWindow: vec3<f32>,
 };
 
 fn unpackPathColor(colorWord: u32) -> vec4<f32> {
@@ -256,12 +264,17 @@ fn vertexMain(inputs: PathVertexInputs, @builtin(vertex_index) vertexIndex: u32)
     inputs.temporalEnabled < 0.5 ||
       (endMeasure >= inputs.currentTime - inputs.trailLength && startMeasure <= inputs.currentTime)
   );
+  outputs.timeWindow = vec3<f32>(
+    mix(startMeasure, endMeasure, corner.x),
+    select(inputs.currentTime - inputs.trailLength, -1e30, inputs.temporalEnabled < 0.5),
+    select(inputs.currentTime, 1e30, inputs.temporalEnabled < 0.5)
+  );
   return outputs;
 }
 
 @fragment
 fn fragmentMain(inputs: PathVertexOutputs) -> @location(0) vec4<f32> {
-  if (inputs.visible < 0.5) { discard; }
+  if (inputs.visible < 0.5 || inputs.timeWindow.x < inputs.timeWindow.y || inputs.timeWindow.x > inputs.timeWindow.z) { discard; }
   return deck_filterColor(inputs.color, inputs.pickingColor);
 }
 `;
@@ -319,7 +332,8 @@ struct PathStorageVertexOutputs {
   @location(0) color: vec4<f32>,
   @location(1) @interpolate(flat) pickingColor: vec3<f32>,
   @location(2) @interpolate(flat) visible: f32,
-  @location(3) trailOpacity: f32,
+  @location(3) timeWindow: vec3<f32>,
+  @location(4) @interpolate(flat) fadeTrail: f32,
 };
 
 fn unpackStoragePathColor(colorWord: u32) -> vec4<f32> {
@@ -414,21 +428,25 @@ fn vertexMain(
     inputs.temporalEnabled < 0.5 ||
       (endMeasure >= inputs.currentTime - inputs.trailLength && startMeasure <= inputs.currentTime)
   );
-  let vertexMeasure = mix(startMeasure, endMeasure, corner.x);
-  outputs.trailOpacity = select(
-    1.0,
-    clamp((vertexMeasure - (inputs.currentTime - inputs.trailLength)) / max(inputs.trailLength, 0.000001), 0.0, 1.0),
-    usesTimestampColumn && inputs.fadeTrail > 0.5
+  outputs.timeWindow = vec3<f32>(
+    mix(startMeasure, endMeasure, corner.x),
+    select(inputs.currentTime - inputs.trailLength, -1e30, inputs.temporalEnabled < 0.5),
+    select(inputs.currentTime, 1e30, inputs.temporalEnabled < 0.5)
   );
+  outputs.fadeTrail = select(0.0, 1.0, usesTimestampColumn && inputs.fadeTrail > 0.5);
   return outputs;
 }
 
 @fragment
 fn fragmentMain(inputs: PathStorageVertexOutputs) -> @location(0) vec4<f32> {
-  if (inputs.visible < 0.5) { discard; }
-  var color = deck_filterColor(inputs.color, inputs.pickingColor);
-  color.a *= inputs.trailOpacity;
-  return color;
+  if (inputs.visible < 0.5 || inputs.timeWindow.x < inputs.timeWindow.y || inputs.timeWindow.x > inputs.timeWindow.z) { discard; }
+  var color = inputs.color;
+  color.a *= select(
+    1.0,
+    clamp((inputs.timeWindow.x - inputs.timeWindow.y) / max(inputs.timeWindow.z - inputs.timeWindow.y, 0.000001), 0.0, 1.0),
+    inputs.fadeTrail > 0.5
+  );
+  return deck_filterColor(color, inputs.pickingColor);
 }
 `;
 

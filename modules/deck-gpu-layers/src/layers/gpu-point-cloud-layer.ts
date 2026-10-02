@@ -12,14 +12,17 @@ import {
   type PickingInfo,
   type UpdateParameters
 } from '@deck.gl/core';
-import {Buffer, type RenderPass} from '@luma.gl/core';
+import {type Buffer, type RenderPass} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
 import {GPUVectorModel, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
+  createGPUVectorStyleBuffer,
+  getGPUVectorStyleBufferBinding,
   getGPUVectorBuffer,
   getGPUVectorLayerBatches,
   getGPUVectorPickingProvenance,
   makeGPUVectorBufferLayout,
+  resizeGPUVectorStyleBuffer,
   type GPUVectorLayerPickingInfo
 } from './gpu-vector-layer-utils';
 
@@ -120,11 +123,12 @@ export class GPUPointCloudLayer extends Layer<GPUPointCloudLayerProps> {
       } satisfies GPUPointCloudLayerState);
       return;
     }
-    const styleBuffer = device.createBuffer({
-      id: `${this.id}-style`,
-      byteLength: 32,
-      usage: Buffer.UNIFORM | Buffer.COPY_DST
-    });
+    const styleBuffer = createGPUVectorStyleBuffer(
+      device,
+      `${this.id}-style`,
+      32,
+      this.props.getPosition.data.length
+    );
     const defaultNormal = device.createBuffer({data: new Float32Array([0, 0, 1])});
     const defaultColor = device.createBuffer({data: new Uint8Array([0, 0, 0, 255])});
     const model = new GPUVectorModel(device, {
@@ -148,7 +152,7 @@ export class GPUPointCloudLayer extends Layer<GPUPointCloudLayerProps> {
           ? makeGPUVectorBufferLayout(colors, 'colors')
           : makeConstantLayout('colors', 'unorm8x4')
       ],
-      bindings: {pointCloudStyle: styleBuffer}
+      bindings: {pointCloudStyle: getGPUVectorStyleBufferBinding(styleBuffer, 32)}
     });
     model.userData['boundInputs'] = [this.props.getPosition, this.props.getNormal, colors];
     this.setState({model, styleBuffer, defaults: [defaultNormal, defaultColor]});
@@ -175,8 +179,18 @@ export class GPUPointCloudLayer extends Layer<GPUPointCloudLayerProps> {
   }
 
   override draw({renderPass}: {renderPass: RenderPass}): void {
-    const {model, styleBuffer} = this.state as GPUPointCloudLayerState;
-    if (!model || !styleBuffer) return;
+    const {model} = this.state as GPUPointCloudLayerState;
+    const {styleBuffer: previousStyleBuffer} = this.state as GPUPointCloudLayerState;
+    if (!model || !previousStyleBuffer) return;
+    const styleBuffer = resizeGPUVectorStyleBuffer(
+      previousStyleBuffer,
+      32,
+      this.props.getPosition.data.length
+    );
+    if (styleBuffer !== previousStyleBuffer) {
+      this.setState({styleBuffer});
+      model.setBindings({pointCloudStyle: getGPUVectorStyleBufferBinding(styleBuffer, 32)});
+    }
     const colors = isGPUVector(this.props.getColor) ? this.props.getColor : undefined;
     const [red, green, blue, alpha = 255] = isColor(this.props.getColor)
       ? this.props.getColor
@@ -190,7 +204,9 @@ export class GPUPointCloudLayer extends Layer<GPUPointCloudLayerProps> {
       vectors: {positions: this.props.getPosition, normals: this.props.getNormal, colors},
       onBatch: batch => {
         uints[7] = batch.rowIndexOffset;
-        styleBuffer.write(new Uint8Array(bytes));
+        const binding = getGPUVectorStyleBufferBinding(styleBuffer, 32, batch.batchIndex);
+        styleBuffer.write(new Uint8Array(bytes), binding.offset);
+        model.setBindings({pointCloudStyle: binding});
       }
     });
   }

@@ -89,7 +89,7 @@ struct VertexOutputs {
   @location(0) color: vec4<f32>,
   @location(1) @interpolate(flat) pickingColor: vec3<f32>,
   @location(2) @interpolate(flat) visible: f32,
-  @location(3) trailOpacity: f32,
+  @location(3) measure: f32,
 };
 
 fn encodePickingColor(rowIndex: u32) -> vec3<f32> {
@@ -159,7 +159,6 @@ fn getCorner(vertexIndex: u32) -> vec2<f32> {
   let temporalEnabled = pathLayerStyle.temporalMode != 0u;
   let visible = !temporalEnabled || (endMeasure >= pathLayerStyle.currentTime - pathLayerStyle.trailLength && startMeasure <= pathLayerStyle.currentTime);
   let vertexMeasure = mix(startMeasure, endMeasure, corner.x);
-  let trailOpacity = select(1.0, clamp((vertexMeasure - (pathLayerStyle.currentTime - pathLayerStyle.trailLength)) / max(pathLayerStyle.trailLength, 0.000001), 0.0, 1.0), useTimestampColumn && pathLayerStyle.fadeTrail != 0u);
   let pickingColor = encodePickingColor(inputs.rowIndex);
   geometry.worldPosition = mix(startWorld.xyz, endWorld.xyz, corner.x);
   geometry.pickingColor = pickingColor;
@@ -168,14 +167,17 @@ fn getCorner(vertexIndex: u32) -> vec2<f32> {
   output.color = color;
   output.pickingColor = pickingColor;
   output.visible = select(0.0, 1.0, visible);
-  output.trailOpacity = trailOpacity;
+  output.measure = vertexMeasure;
   return output;
 }
 
 @fragment fn fragmentMain(input: VertexOutputs) -> @location(0) vec4<f32> {
   if (input.visible < 0.5) { discard; }
+  let trailStart = pathLayerStyle.currentTime - pathLayerStyle.trailLength;
+  if (pathLayerStyle.temporalMode != 0u && (input.measure < trailStart || input.measure > pathLayerStyle.currentTime)) { discard; }
+  let trailOpacity = select(1.0, clamp((input.measure - trailStart) / max(pathLayerStyle.trailLength, 0.000001), 0.0, 1.0), pathLayerStyle.temporalMode == 2u && pathLayerStyle.fadeTrail != 0u);
   if (picking.isActive > 0.5) { return vec4<f32>(input.pickingColor, 1.0); }
-  return vec4<f32>(input.color.rgb, input.color.a * input.trailOpacity * layer.opacity);
+  return vec4<f32>(input.color.rgb, input.color.a * trailOpacity * layer.opacity);
 }`;
 
 /** Deck host for the GPU-only variable-length path model. */

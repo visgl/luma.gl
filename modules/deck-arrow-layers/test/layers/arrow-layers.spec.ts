@@ -11,7 +11,8 @@ import {
   ArrowPointCloudLayer,
   ArrowPolygonLayer,
   ArrowScatterplotLayer,
-  ArrowTextLayer
+  ArrowTextLayer,
+  ArrowTripsLayer
 } from '@deck.gl-community/arrow-layers';
 import {
   ArrowPolygonRenderer,
@@ -25,6 +26,7 @@ import type {Model} from '@luma.gl/engine';
 import {ShaderAssembler} from '@luma.gl/shadertools';
 import {buildBitmapFontAtlas} from '@luma.gl/text';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import * as arrow from 'apache-arrow';
 import {Float32, Table, Uint8, vectorFromArray, type RecordBatch} from 'apache-arrow';
 import {afterAll, vi} from 'vitest';
 import {
@@ -127,6 +129,144 @@ it('GPUVector-first Arrow fixed-width adapters create direct WebGPU models', asy
   }
   void 0;
 });
+
+it('picks the global row from both physical scatterplot chunks', async () => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return;
+  const firstPositions = makeArrowFixedSizeListVector(
+    new Float32(),
+    2,
+    new Float32Array([-100, 0])
+  );
+  const secondPositions = makeArrowFixedSizeListVector(
+    new Float32(),
+    2,
+    new Float32Array([100, 0])
+  );
+  const positions = new arrow.Vector([...firstPositions.data, ...secondPositions.data]);
+  const layer = new ArrowScatterplotLayer({
+    id: 'chunked-scatterplot-picking',
+    data: new Table({positions}),
+    getPosition: 'positions',
+    getRadius: 10,
+    pickable: true
+  });
+  const {deck, parent} = createTestDeck(device);
+  // Keep z=0 inside WebGPU's 0..1 clip-depth range with deck.gl's projection module.
+  deck.setProps({views: new OrthographicView({id: 'main', near: -1000, far: 100})});
+  try {
+    await waitForDeckInitialization(deck);
+    deck.setProps({layers: [layer]});
+    const models = await waitForCompositeModels([layer]);
+    expect(models).toHaveLength(1);
+    await waitForPipeline(models[0]!);
+    deck.redraw(true);
+    for (const [rowIndex, position] of [
+      [-100, 0],
+      [100, 0]
+    ].entries()) {
+      const infos = await pickAtWorldPosition(deck, position);
+      expect(infos.map(info => info.index)).toEqual([rowIndex]);
+      expect((infos[0] as PickingInfo & {gpuVector: unknown}).gpuVector).toEqual({
+        rowIndex,
+        batchIndex: rowIndex,
+        batchRowIndex: 0
+      });
+    }
+  } finally {
+    deck.finalize();
+    parent.remove();
+  }
+});
+
+it('clips temporal path fragments at both ends of the trail window', async () => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return;
+  const pointType = new arrow.FixedSizeList(2, new arrow.Field('xy', new Float32(), false));
+  const pathType = new arrow.List(new arrow.Field('vertices', pointType, false));
+  const timestampType = new arrow.List(new arrow.Field('timestamp', new Float32(), false));
+  const paths = vectorFromArray(
+    [
+      [
+        [-100, 0],
+        [100, 0]
+      ]
+    ],
+    pathType
+  );
+  const timestamps = vectorFromArray([[0, 100]], timestampType);
+  const arrowTimestamps = arrow.makeVector(
+    arrow.makeData({
+      type: new arrow.List(new arrow.Field('timestamp', new arrow.TimeMillisecond(), false)),
+      length: 1,
+      valueOffsets: new Int32Array([0, 2]),
+      child: arrow.makeData({type: new arrow.TimeMillisecond(), data: new Int32Array([0, 100])})
+    })
+  );
+  const pathVector = makeGPUVectorFromArrow(device, paths, {format: 'vertex-list<float32x2>'});
+  const timestampVector = makeGPUVectorFromArrow(device, timestamps, {
+    format: 'vertex-list<float32>'
+  });
+  const {deck, parent} = createTestDeck(device);
+  // Keep z=0 inside WebGPU's 0..1 clip-depth range with deck.gl's projection module.
+  deck.setProps({views: new OrthographicView({id: 'main', near: -1000, far: 100})});
+  try {
+    await waitForDeckInitialization(deck);
+    for (const fadeTrail of [false, true]) {
+      const layers = [
+        new GPUPathLayer({
+          id: `gpu-temporal-clipping-${fadeTrail}`,
+          getPath: pathVector,
+          getTimestamps: timestampVector,
+          getWidth: 10,
+          currentTime: 50,
+          trailLength: 25,
+          fadeTrail,
+          pickable: true
+        }),
+        new ArrowTripsLayer({
+          id: `arrow-temporal-clipping-${fadeTrail}`,
+          data: new Table({paths, timestamps: arrowTimestamps}),
+          paths: 'paths',
+          timestamps: 'timestamps',
+          width: 5,
+          currentTime: 50,
+          trailLength: 25,
+          fadeTrail,
+          pickable: true
+        })
+      ];
+      for (const layer of layers) {
+        deck.setProps({layers: [layer]});
+        const model = await waitForLayerModel(layer);
+        await waitForPipeline(model);
+        deck.redraw(true);
+        // The segment spans times 0..100; only positions -50..0 are in times 25..50.
+        expect((await pickAtWorldPosition(deck, [-75, 0])).length).toBe(0);
+        expect((await pickAtWorldPosition(deck, [-25, 0])).map(info => info.index)).toEqual([0]);
+        expect((await pickAtWorldPosition(deck, [50, 0])).length).toBe(0);
+        deck.setProps({layers: []});
+      }
+    }
+  } finally {
+    deck.finalize();
+    parent.remove();
+    pathVector.destroy();
+    timestampVector.destroy();
+  }
+});
+
+async function pickAtWorldPosition(deck: Deck, position: number[]): Promise<PickingInfo[]> {
+  const [x, y] = deck.getViewports()[0]!.project(position);
+  const options = {x: x! - 2, y: y! - 2, width: 4, height: 4};
+  let infos = await deck.pickObjectsAsync(options);
+  // The first picking draw may create an asynchronous pipeline variant.
+  if (infos.length === 0) {
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    infos = await deck.pickObjectsAsync(options);
+  }
+  return infos;
+}
 
 it('GPUPathLayer renders variable-length GPUVectors without an Arrow dependency', async () => {
   const device = await getWebGPUTestDevice('core');

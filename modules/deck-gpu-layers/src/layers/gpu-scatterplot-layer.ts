@@ -13,14 +13,17 @@ import {
   type PickingInfo,
   type UpdateParameters
 } from '@deck.gl/core';
-import {Buffer, type RenderPass} from '@luma.gl/core';
+import {type Buffer, type RenderPass} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
 import {GPUVectorModel, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
+  createGPUVectorStyleBuffer,
+  getGPUVectorStyleBufferBinding,
   getGPUVectorBuffer,
   getGPUVectorLayerBatches,
   getGPUVectorPickingProvenance,
   makeGPUVectorBufferLayout,
+  resizeGPUVectorStyleBuffer,
   type GPUVectorLayerPickingInfo
 } from './gpu-vector-layer-utils';
 
@@ -121,11 +124,12 @@ export class GPUScatterplotLayer extends Layer<GPUScatterplotLayerProps> {
       this.setState({model: null, styleBuffer: null} satisfies GPUScatterplotLayerState);
       return;
     }
-    const styleBuffer = device.createBuffer({
-      id: `${this.id}-style`,
-      byteLength: 48,
-      usage: Buffer.UNIFORM | Buffer.COPY_DST
-    });
+    const styleBuffer = createGPUVectorStyleBuffer(
+      device,
+      `${this.id}-style`,
+      48,
+      this.props.getPosition.data.length
+    );
     const defaultRadius = device.createBuffer({
       id: `${this.id}-default-radius`,
       data: new Float32Array([1])
@@ -165,7 +169,7 @@ export class GPUScatterplotLayer extends Layer<GPUScatterplotLayerProps> {
               attributes: [{attribute: 'fillColors', format: 'unorm8x4'}]
             }
       ],
-      bindings: {scatterStyle: styleBuffer}
+      bindings: {scatterStyle: getGPUVectorStyleBufferBinding(styleBuffer, 48)}
     });
     model.userData['ownedDefaultBuffers'] = [defaultRadius, defaultColor];
     model.userData['boundInputs'] = [this.props.getPosition, radii, fillColors];
@@ -193,8 +197,18 @@ export class GPUScatterplotLayer extends Layer<GPUScatterplotLayerProps> {
   }
 
   override draw({renderPass}: {renderPass: RenderPass}): void {
-    const {model, styleBuffer} = this.state as GPUScatterplotLayerState;
-    if (!model || !styleBuffer) return;
+    const {model} = this.state as GPUScatterplotLayerState;
+    const {styleBuffer: previousStyleBuffer} = this.state as GPUScatterplotLayerState;
+    if (!model || !previousStyleBuffer) return;
+    const styleBuffer = resizeGPUVectorStyleBuffer(
+      previousStyleBuffer,
+      48,
+      this.props.getPosition.data.length
+    );
+    if (styleBuffer !== previousStyleBuffer) {
+      this.setState({styleBuffer});
+      model.setBindings({scatterStyle: getGPUVectorStyleBufferBinding(styleBuffer, 48)});
+    }
     const radii = isGPUVector(this.props.getRadius) ? this.props.getRadius : undefined;
     const fillColors = isGPUVector(this.props.getFillColor) ? this.props.getFillColor : undefined;
     const [red, green, blue, alpha = 255] = isColor(this.props.getFillColor)
@@ -218,7 +232,9 @@ export class GPUScatterplotLayer extends Layer<GPUScatterplotLayerProps> {
       vectors: {positions: this.props.getPosition, radii, fillColors},
       onBatch: batch => {
         uints[10] = batch.rowIndexOffset;
-        styleBuffer.write(new Uint8Array(bytes));
+        const binding = getGPUVectorStyleBufferBinding(styleBuffer, 48, batch.batchIndex);
+        styleBuffer.write(new Uint8Array(bytes), binding.offset);
+        model.setBindings({scatterStyle: binding});
       }
     });
   }

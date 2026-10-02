@@ -15,10 +15,35 @@ import {
 } from '@deck.gl-community/gpu-layers';
 import type {Buffer, RenderPass, Texture} from '@luma.gl/core';
 import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import {NullDevice} from '@luma.gl/test-utils';
 import {describe, expect, test, vi} from 'vitest';
-import {getGPUVectorLayerBatches} from '../src/layers/gpu-vector-layer-utils';
+import {
+  createGPUVectorStyleBuffer,
+  getGPUVectorLayerBatches,
+  getGPUVectorStyleBufferBinding,
+  resizeGPUVectorStyleBuffer
+} from '../src/layers/gpu-vector-layer-utils';
 
 describe('GPUVector deck layers', () => {
+  test('grows aligned style storage when more chunks are appended', () => {
+    const device = new NullDevice({});
+    device.limits.minUniformBufferOffsetAlignment = 256;
+    const alignment = device.limits.minUniformBufferOffsetAlignment;
+    const byteStride = Math.ceil(48 / alignment) * alignment;
+    const initialBuffer = createGPUVectorStyleBuffer(device, 'batch-style', 48, 2);
+    expect(initialBuffer.byteLength).toBe(byteStride * 2);
+    expect(resizeGPUVectorStyleBuffer(initialBuffer, 48, 2)).toBe(initialBuffer);
+    const resizedBuffer = resizeGPUVectorStyleBuffer(initialBuffer, 48, 3);
+    expect(initialBuffer.destroyed).toBe(true);
+    expect(resizedBuffer.byteLength).toBe(byteStride * 3);
+    expect(getGPUVectorStyleBufferBinding(resizedBuffer, 48, 2)).toEqual({
+      buffer: resizedBuffer,
+      offset: byteStride * 2,
+      size: 48
+    });
+    resizedBuffer.destroy();
+    device.destroy();
+  });
   test('preserve physical chunks and global picking provenance', () => {
     const positions = makeChunkedVector('positions', 'float32x2', [2, 3]);
     const radii = makeChunkedVector('radii', 'float32', [2, 3]);
@@ -110,22 +135,36 @@ describe('GPUVector deck layers', () => {
       getPosition: positions,
       getRadius: radii
     });
-    const rowIndexOffsets: number[] = [];
-    const write = vi.fn((data: Uint8Array) => {
-      rowIndexOffsets.push(new Uint32Array(data.buffer, data.byteOffset, data.byteLength / 4)[10]!);
+    const uniformBytes = new Uint8Array(512);
+    const write = vi.fn((data: Uint8Array, byteOffset: number) => {
+      uniformBytes.set(data, byteOffset);
     });
+    const bindings: Array<{offset: number; size: number}> = [];
+    const setBindings = vi.fn(({scatterStyle}) => bindings.push(scatterStyle));
     const drawBatches = vi.fn((_renderPass, options) => {
       options.onBatch?.({batchIndex: 0, rowIndexOffset: 0, rowCount: 2, data: {}});
       options.onBatch?.({batchIndex: 1, rowIndexOffset: 2, rowCount: 3, data: {}});
       return true;
     });
-    layer.state = {model: {drawBatches}, styleBuffer: {write}} as never;
+    layer.state = {
+      model: {drawBatches, setBindings},
+      styleBuffer: {
+        write,
+        byteLength: 512,
+        device: {limits: {minUniformBufferOffsetAlignment: 256}}
+      }
+    } as never;
 
     layer.draw({renderPass: {} as RenderPass});
 
     expect(drawBatches).toHaveBeenCalledOnce();
     expect(drawBatches.mock.calls[0]![1].vectors).toEqual({positions, radii});
-    expect(rowIndexOffsets).toEqual([0, 2]);
+    expect(bindings.map(binding => binding.offset)).toEqual([0, 256]);
+    expect(bindings.map(binding => binding.size)).toEqual([48, 48]);
+    // Read after every queue write, as the GPU does when the encoded draws execute.
+    expect(
+      bindings.map(binding => new Uint32Array(uniformBytes.buffer, binding.offset, 12)[10])
+    ).toEqual([0, 2]);
   });
 });
 

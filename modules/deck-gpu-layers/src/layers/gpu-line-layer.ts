@@ -12,14 +12,17 @@ import {
   type PickingInfo,
   type UpdateParameters
 } from '@deck.gl/core';
-import {Buffer, type RenderPass} from '@luma.gl/core';
+import {type Buffer, type RenderPass} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
 import {GPUVectorModel, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
+  createGPUVectorStyleBuffer,
+  getGPUVectorStyleBufferBinding,
   getGPUVectorBuffer,
   getGPUVectorLayerBatches,
   getGPUVectorPickingProvenance,
   makeGPUVectorBufferLayout,
+  resizeGPUVectorStyleBuffer,
   type GPUVectorLayerPickingInfo
 } from './gpu-vector-layer-utils';
 
@@ -124,11 +127,12 @@ export class GPULineLayer extends Layer<GPULineLayerProps> {
       this.setState({model: null, styleBuffer: null, defaults: []} satisfies GPULineLayerState);
       return;
     }
-    const styleBuffer = device.createBuffer({
-      id: `${this.id}-style`,
-      byteLength: 48,
-      usage: Buffer.UNIFORM | Buffer.COPY_DST
-    });
+    const styleBuffer = createGPUVectorStyleBuffer(
+      device,
+      `${this.id}-style`,
+      48,
+      this.props.getSourcePosition.data.length
+    );
     const defaultColor = device.createBuffer({
       id: `${this.id}-default-color`,
       data: new Uint8Array([0, 0, 0, 255])
@@ -170,7 +174,7 @@ export class GPULineLayer extends Layer<GPULineLayerProps> {
               attributes: [{attribute: 'widths', format: 'float32'}]
             }
       ],
-      bindings: {lineStyle: styleBuffer}
+      bindings: {lineStyle: getGPUVectorStyleBufferBinding(styleBuffer, 48)}
     });
     model.userData['boundInputs'] = [
       this.props.getSourcePosition,
@@ -205,8 +209,18 @@ export class GPULineLayer extends Layer<GPULineLayerProps> {
     }
   }
   override draw({renderPass}: {renderPass: RenderPass}): void {
-    const {model, styleBuffer} = this.state as GPULineLayerState;
-    if (!model || !styleBuffer) return;
+    const {model} = this.state as GPULineLayerState;
+    const {styleBuffer: previousStyleBuffer} = this.state as GPULineLayerState;
+    if (!model || !previousStyleBuffer) return;
+    const styleBuffer = resizeGPUVectorStyleBuffer(
+      previousStyleBuffer,
+      48,
+      this.props.getSourcePosition.data.length
+    );
+    if (styleBuffer !== previousStyleBuffer) {
+      this.setState({styleBuffer});
+      model.setBindings({lineStyle: getGPUVectorStyleBufferBinding(styleBuffer, 48)});
+    }
     const colors = isGPUVector(this.props.getColor) ? this.props.getColor : undefined;
     const widths = isGPUVector(this.props.getWidth) ? this.props.getWidth : undefined;
     const [red, green, blue, alpha = 255] = isColor(this.props.getColor)
@@ -235,7 +249,9 @@ export class GPULineLayer extends Layer<GPULineLayerProps> {
       },
       onBatch: batch => {
         uints[10] = batch.rowIndexOffset;
-        styleBuffer.write(new Uint8Array(bytes));
+        const binding = getGPUVectorStyleBufferBinding(styleBuffer, 48, batch.batchIndex);
+        styleBuffer.write(new Uint8Array(bytes), binding.offset);
+        model.setBindings({lineStyle: binding});
       }
     });
   }
