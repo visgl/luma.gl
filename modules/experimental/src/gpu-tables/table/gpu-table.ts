@@ -272,6 +272,7 @@ export class GPUTable<T extends GPUTypeMap = GPUTypeMap> {
 
     this.batches.splice(0, this.batches.length, ...nextBatches);
     this.refreshFromBatches();
+    shareBufferOwnershipAcrossBatches(supersededBatches, this.batches);
     for (const batch of supersededBatches) {
       batch.destroy();
     }
@@ -360,7 +361,13 @@ export class GPUTable<T extends GPUTypeMap = GPUTypeMap> {
     return detachedVector;
   }
 
-  /** Removes and returns a half-open range of GPU record batches. */
+  /**
+   * Removes and returns a half-open range of GPU record batches.
+   *
+   * When detached and retained batches view one owned buffer, every such view receives its own
+   * ownership reference, so detached batches, retained batches, and individual batches of either
+   * group can be destroyed in any order. Buffers neither group owns remain caller-owned.
+   */
   detachBatches(options: GPUTableDetachBatchesOptions = {}): GPURecordBatch[] {
     const first = options.first ?? 0;
     const last = options.last ?? this.batches.length;
@@ -378,6 +385,7 @@ export class GPUTable<T extends GPUTypeMap = GPUTypeMap> {
     if (detachedBatches.length === 0) {
       return detachedBatches;
     }
+    shareBufferOwnershipAcrossBatches(detachedBatches, this.batches);
     this.refreshFromBatches();
     return detachedBatches;
   }
@@ -431,6 +439,43 @@ export class GPUTable<T extends GPUTypeMap = GPUTypeMap> {
 
     return true;
   }
+}
+
+/**
+ * Gives every view of a buffer that both batch groups reference its own ownership reference.
+ *
+ * Producers may slice one owned buffer into per-batch views owned by the first view. Splitting
+ * such batches into two groups would otherwise let one group free rows the other still reads.
+ * Afterwards each view releases only its own reference, and the last one destroys the buffer.
+ * Buffers that no view in either group owns are left caller-owned.
+ */
+function shareBufferOwnershipAcrossBatches(
+  firstBatches: readonly GPURecordBatch[],
+  secondBatches: readonly GPURecordBatch[]
+): void {
+  const firstData = getBatchGPUData(firstBatches);
+  const secondData = getBatchGPUData(secondBatches);
+  const secondBuffers = new Set(secondData.map(data => data.buffer));
+  const sharedBuffers = new Set(
+    firstData.map(data => data.buffer).filter(buffer => secondBuffers.has(buffer))
+  );
+  const sharedData = [...firstData, ...secondData].filter(data => sharedBuffers.has(data.buffer));
+  const owners = new Map<GPUData['buffer'], GPUData>();
+  for (const data of sharedData) {
+    if (data.ownsBuffer && !owners.has(data.buffer)) {
+      owners.set(data.buffer, data);
+    }
+  }
+  for (const data of sharedData) {
+    const owner = owners.get(data.buffer);
+    if (owner && !data.ownsBuffer) {
+      owner.retainBufferOwnership(data);
+    }
+  }
+}
+
+function getBatchGPUData(batches: readonly GPURecordBatch[]): GPUData[] {
+  return batches.flatMap(batch => Object.values(batch.gpuData));
 }
 
 function canSynchronizeAggregateVector(aggregateVector: GPUVector, batchData: GPUData[]): boolean {
