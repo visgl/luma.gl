@@ -258,10 +258,10 @@
       "deck/city-scene",
       "deck/flow-particles",
       "deck/point-glow",
+      "deck/sketch-edges",
       "deck/scene-buffers",
       "deck/pattern-fills",
-      "deck/styled-paths",
-      "deck/sketch-edges"
+      "deck/styled-paths"
     ]
   },
   {

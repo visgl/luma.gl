@@ -1,4 +1,4 @@
-# Riverfront effects
+# Riverfront Selection Outline
 
 A WebGPU deck.gl scene with HDR bloom, surface edges, a visible-surface selection outline,
 and normal, depth, selection, and previous-frame views. Click a building to move the outline.
