@@ -104,24 +104,6 @@ export function createSketchScene(parent: HTMLDivElement, options: DeckExampleDe
         edgesVisible &&
           segments &&
           new SketchEdgeLayer({
-            id: 'sketch-edge-grain-pass',
-            segments,
-            segmentCount: edgeData.length / 8,
-            data: features,
-            color: [48, 44, 40, 52],
-            style: {
-              ...style,
-              width: (style.width ?? 3) * 0.68,
-              offset: 0.65,
-              extension: 0
-            },
-            visible: edgesVisible,
-            coordinateOrigin: ORIGIN,
-            pickable: false
-          }),
-        edgesVisible &&
-          segments &&
-          new SketchEdgeLayer({
             id: 'sketch-edges',
             segments,
             segmentCount: edgeData.length / 8,
