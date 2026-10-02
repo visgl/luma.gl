@@ -62,7 +62,7 @@ try {
         timeout: 60_000
       });
       await page.waitForFunction(() => window.weatherScene?.diagnostics.frames > 2);
-      assert.equal(await page.inputValue('#preset'), 'clear', `${backend}: opens without precipitation`);
+      assert.equal(await page.inputValue('#preset'), 'rain', `${backend}: opens with rain enabled`);
       assert(await page.isChecked('#fog-enabled'), `${backend}: opens with independent fog enabled`);
       assert.equal(await page.inputValue('#visibility'), '700', `${backend}: fog is apparent by default`);
       await page.screenshot({path: join(tmpdir(), `weather-default-${backend}.png`)});

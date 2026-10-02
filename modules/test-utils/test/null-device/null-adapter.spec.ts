@@ -52,3 +52,22 @@ test('refreshLostCachedTestDevice recreates a lost cached device', async () => {
   expect(refreshedDevice.id).toBe('fresh-device-1');
   expect(createCount).toBe(1);
 });
+
+test('NullDevice#withParametersWebGL preserves callback results and exceptions', async () => {
+  const {NullDevice} = await import('../../src/index');
+  const device = new NullDevice({});
+  const result = {};
+  const callbackError = new Error('Callback failed');
+  try {
+    for (const parameters of [{}, {nocatch: false}, {nocatch: true}]) {
+      expect(device.withParametersWebGL(parameters, () => result)).toBe(result);
+      expect(() =>
+        device.withParametersWebGL(parameters, () => {
+          throw callbackError;
+        })
+      ).toThrow(callbackError);
+    }
+  } finally {
+    device.destroy();
+  }
+});

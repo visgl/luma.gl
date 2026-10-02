@@ -1,7 +1,7 @@
 # Riverfront weather
 
 A portable WebGPU/WebGL2 example with wind-driven rain, drifting snow, and wispy height fog.
-It opens with fog enabled and no precipitation.
+It opens with rain and fog enabled.
 Run `yarn workspace luma.gl-examples-deck-weather start`; the website route is
 `/examples/deck/weather`.
 
