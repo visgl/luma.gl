@@ -107,7 +107,12 @@ export class Computation {
     }
   }
 
-  static defaultProps: Required<ComputationProps> = {
+  /**
+   * Default props. `shaderAssembler` is unset unless an application configures one; each
+   * `Computation` then resolves the shared WGSL assembler at construction.
+   */
+  static defaultProps: Omit<Required<ComputationProps>, 'shaderAssembler'> &
+    Pick<ComputationProps, 'shaderAssembler'> = {
     ...ComputePipeline.defaultProps,
     id: 'unnamed',
     handle: undefined,
@@ -123,7 +128,7 @@ export class Computation {
 
     pipelineFactory: undefined!,
     shaderFactory: undefined!,
-    shaderAssembler: ShaderAssembler.getDefaultShaderAssembler('wgsl'),
+    shaderAssembler: undefined,
 
     debugShaders: undefined!
   };
@@ -166,7 +171,14 @@ export class Computation {
       throw new Error('Computation is only supported in WebGPU');
     }
 
-    this.props = {...Computation.defaultProps, ...props};
+    this.props = {
+      ...Computation.defaultProps,
+      ...props,
+      shaderAssembler:
+        props.shaderAssembler ??
+        Computation.defaultProps.shaderAssembler ??
+        ShaderAssembler.getDefaultShaderAssembler('wgsl')
+    };
     props = this.props;
     this.id = props.id || uid('model');
     this.device = device;

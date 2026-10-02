@@ -36,7 +36,8 @@ export class BufferTransform {
   readonly model: Model;
   readonly transformFeedback: TransformFeedback;
 
-  static defaultProps: Required<BufferTransformProps> = {
+  static defaultProps: Omit<Required<BufferTransformProps>, 'shaderAssembler'> &
+    Pick<BufferTransformProps, 'shaderAssembler'> = {
     ...Model.defaultProps,
     feedbackBufferMode: 'separate',
     outputs: undefined!,

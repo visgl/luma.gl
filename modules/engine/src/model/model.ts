@@ -205,7 +205,12 @@ export class Model {
     }
   }
 
-  static defaultProps: Required<ModelProps> = {
+  /**
+   * Default props. `shaderAssembler` is unset unless an application configures one; each `Model`
+   * then resolves the shared assembler for its device's shader language at construction.
+   */
+  static defaultProps: Omit<Required<ModelProps>, 'shaderAssembler'> &
+    Pick<ModelProps, 'shaderAssembler'> = {
     ...RenderPipeline.defaultProps,
     source: undefined!,
     vs: null,
@@ -236,7 +241,7 @@ export class Model {
     pipelineFactory: undefined!,
     shaderFactory: undefined!,
     transformFeedback: undefined!,
-    shaderAssembler: ShaderAssembler.getDefaultShaderAssembler('glsl'),
+    shaderAssembler: undefined,
 
     debugShaders: undefined!,
     disableWarnings: undefined!
@@ -354,7 +359,8 @@ export class Model {
       ...props,
       shaderAssembler:
         props.shaderAssembler ??
-        (isShaderAssemblerForLanguage(defaultShaderAssembler, device.info.shadingLanguage)
+        (defaultShaderAssembler &&
+        isShaderAssemblerForLanguage(defaultShaderAssembler, device.info.shadingLanguage)
           ? defaultShaderAssembler
           : ShaderAssembler.getDefaultShaderAssembler(device.info.shadingLanguage))
     };
