@@ -43,9 +43,17 @@ export type CopyExternalImageOptions = {
   aspect?: 'all' | 'stencil-only' | 'depth-only';
   /** Specific color space of image data */
   colorSpace?: 'srgb';
-  /** load as premultiplied alpha  */
+  /**
+   * Whether to premultiply alpha (default false).
+   * On WebGL, this option does not apply to ImageBitmap sources. Supply
+   * `premultiplyAlpha: 'premultiply'` or `'none'` when calling `createImageBitmap()` instead.
+   */
   premultipliedAlpha?: boolean;
-  /** Whether to flip the image vertically */
+  /**
+   * Whether to flip the image vertically (default false).
+   * On WebGL, this option does not apply to ImageBitmap sources. Supply
+   * `imageOrientation: 'flipY'` or `'from-image'` when calling `createImageBitmap()` instead.
+   */
   flipY?: boolean;
 };
 
