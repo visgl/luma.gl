@@ -1,7 +1,0 @@
-{
-  "extends": "../../showcase/billion-point-spatial-atlas/tsconfig.json",
-  "compilerOptions": {
-    "types": ["@webgpu/types", "vite/client"]
-  },
-  "include": ["."]
-}
