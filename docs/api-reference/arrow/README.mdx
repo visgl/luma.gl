@@ -73,7 +73,8 @@ deltas on the GPU before rendering.
   batch boundaries.
 - `makeGPUAnalyticsTableFromArrowTable()` uploads renderer-independent numeric and dictionary
   columns into existing GPU tables while preserving source batches, validity masks, and category
-  metadata for GPU dataframe execution.
+  metadata for GPU dataframe execution. Its `packBatches` option instead writes adjacent source
+  batches into shared per-column buffers for producers that emit many small record batches.
 - `makeArrowTableFromGPUAnalyticsTable()` explicitly reads a GPU analytical result back into Arrow,
   reconstructing nullable numeric/dictionary columns and either preserved per-batch selection or
   explicitly requested global ordering. Combined with

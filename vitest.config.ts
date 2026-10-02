@@ -210,6 +210,9 @@ const vitestConfig = getVitestConfig({
       test: {
         color: 'cyan',
         environment: 'node',
+        // Native GPU tests share the same driver even in isolated pages. Bound concurrency
+        // so machines with many CPU cores do not launch a dozen competing GPU workloads.
+        maxWorkers: 2,
         // GPU devices and presentation resources are intentionally isolated between test files.
         isolate: true,
         fileParallelism: !process.env.CI,
