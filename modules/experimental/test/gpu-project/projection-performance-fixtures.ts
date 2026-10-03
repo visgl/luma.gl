@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Proj4Projection} from '@math.gl/proj4';
+import {Proj4Projection} from '@math.gl/proj4/classic';
 import {planCRSProjection} from '@luma.gl/experimental/gpu-project/crs';
 import type {ProjectionBounds, ProjectionCoordinates} from '@luma.gl/experimental/gpu-project';
 import type {ProjectionProgramBenchmarkOptions} from '@luma.gl/experimental/gpu-project/benchmarks';

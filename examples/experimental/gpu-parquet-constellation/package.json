@@ -10,8 +10,8 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@loaders.gl/core": "~5.0.0-alpha.7",
-    "@loaders.gl/parquet": "~5.0.0-alpha.7",
+    "@loaders.gl/core": "~5.0.0-alpha.8",
+    "@loaders.gl/parquet": "~5.0.0-alpha.8",
     "@luma.gl/core": "10.0.0-alpha.2",
     "@luma.gl/engine": "10.0.0-alpha.2",
     "@luma.gl/gpgpu": "10.0.0-alpha.2",

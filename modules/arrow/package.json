@@ -48,8 +48,8 @@
     "@luma.gl/shadertools": "10.0.0-alpha.2",
     "@luma.gl/splats": "workspace:*",
     "@luma.gl/text": "10.0.0-alpha.2",
-    "@math.gl/geoarrow": "~5.0.0-alpha.9",
-    "@math.gl/types": "~5.0.0-alpha.9"
+    "@math.gl/geoarrow": "~5.0.0-alpha.11",
+    "@math.gl/types": "~5.0.0-alpha.11"
   },
   "devDependencies": {
     "apache-arrow": "^17.0.0"
