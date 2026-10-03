@@ -182,3 +182,19 @@ it('setDeviceParameters#depthClearValue', async () => {
 
   void 0;
 });
+
+it('setDeviceParameters#stencilPassOperation', async () => {
+  const device = await getOrSkipWebGLTestDevice();
+  if (!device) {
+    return;
+  }
+
+  resetGLParameters(device.gl);
+
+  expect(getGLParameter(device, GL.STENCIL_PASS_DEPTH_PASS), 'pass = GL.KEEP').toBe(GL.KEEP);
+
+  setDeviceParameters(device, {stencilPassOperation: 'replace'});
+  expect(getGLParameter(device, GL.STENCIL_PASS_DEPTH_PASS), 'pass = GL.REPLACE').toBe(GL.REPLACE);
+  expect(getGLParameter(device, GL.STENCIL_FAIL), 'fail = GL.KEEP').toBe(GL.KEEP);
+  expect(getGLParameter(device, GL.STENCIL_PASS_DEPTH_FAIL), 'depth fail = GL.KEEP').toBe(GL.KEEP);
+});
