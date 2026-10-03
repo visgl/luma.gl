@@ -176,7 +176,7 @@ it('slang#unified WGSL retains render entries and deduplicates shared declaratio
   expect(reflection.entry.fragment.map(entry => entry.name)).toEqual([
     result.entryPoints.fragmentMain.entryPoint
   ]);
-  expect(result.code.match(/fn _slang_function_tint\(/g)).toHaveLength(1);
+  expect(result.code.match(/fn _slang_function_shade\(/g)).toHaveLength(1);
   expect(result.code.match(/var<uniform>/g)).toHaveLength(1);
   const selected = transpileSlangWGSL(RENDER_SHADER, {entryPoints: ['fragmentMain']});
   expect(new WgslReflect(selected.code).entry.vertex).toHaveLength(0);
