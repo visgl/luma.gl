@@ -60,7 +60,6 @@ export function createRiverfrontAmbientOcclusionScene(
   const ready = Promise.withResolvers<void>();
   const capture = new SceneBufferEffect({
     id: 'ambient-occlusion-buffers',
-    history: true,
     colorFormat: 'rgba16float',
     getLayerOptions: layer =>
       layer instanceof RiverDistrictLayer || layer instanceof WaterSurfaceLayer

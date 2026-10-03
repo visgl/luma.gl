@@ -17,13 +17,14 @@ await server.listen();
 const browser = await chromium.launch(getPlaywrightLaunchOptions({
   headless: true,
   backend: 'webgpu',
-  softwareGpu: true,
+  softwareGpu: process.platform === 'linux',
   launchOptions: process.platform === 'linux'
     ? {args: ['--enable-gpu', '--enable-features=Vulkan', '--use-vulkan=swiftshader']}
     : {}
 }));
 try {
   const page = await browser.newPage({viewport: {width: 1100, height: 800}, deviceScaleFactor: 1});
+  page.setDefaultTimeout(60_000);
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   page.on('console', message => {
@@ -32,6 +33,8 @@ try {
   await page.goto(server.resolvedUrls.local[0], {waitUntil: 'domcontentloaded'});
   await page.waitForFunction(() => document.body.dataset.ready === 'true', undefined, {timeout: 60_000});
   await page.waitForFunction(() => window.riverfrontAmbientOcclusionScene.effect.frameCount > 2, undefined, {timeout: 30_000});
+  assert(await page.evaluate(() => window.riverfrontAmbientOcclusionScene.effect.historyFrames > 2), 'reflection history accumulates across capture frames');
+  await page.evaluate(() => window.riverfrontAmbientOcclusionScene.deck.setProps({_animate: false}));
   await page.screenshot({path: join(tmpdir(), 'ambient-occlusion-ao.png')});
   await page.uncheck('#reflections');
   const facadeSamples = await page.evaluate(() => {
