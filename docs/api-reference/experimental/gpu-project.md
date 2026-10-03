@@ -68,9 +68,14 @@ published results or cross-machine performance guarantees.
 ```ts
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {GPUProjection, compileProjectionPlan} from '@luma.gl/experimental/gpu-project';
-import {Proj4Projection} from '@math.gl/proj4';
+import {Projection} from '@math.gl/proj4';
 
-const projection = new Proj4Projection({
+// Register CRS definitions that are not included by the installed provider.
+Projection.defineProjectionAliases({
+  'EPSG:32610': '+proj=utm +zone=10 +datum=WGS84 +units=m +no_defs'
+});
+
+const projection = new Projection({
   from: 'EPSG:32610',
   to: 'EPSG:3857'
 });
@@ -104,10 +109,11 @@ coordinate system uses meters.
 object with a `project(coordinates)` method can provide the projection. For WGS84-to-Web-Mercator
 applications, `createWebMercatorProjection()` provides a zero-dependency alternative:
 
-With math.gl 5, `Proj4Projection` also accepts compatible CRS definitions from `@math.gl/crs`,
-including PROJJSON objects. Use `checkProj4CRSCompatibility()` when a broader CRS metadata object
-may include unsupported vertical or compound components; CRS metadata by itself does not transform
-coordinates.
+With math.gl 5, `Projection` also accepts compatible CRS definitions from `@math.gl/crs`,
+including PROJJSON objects, and executes them with the TypeScript projection engine. Use
+`planCRSProjection()` when a broader CRS metadata object may include unsupported vertical or
+compound components; it reports structured reasons for unsupported definitions. CRS metadata
+by itself does not transform coordinates.
 
 ```ts
 import {
@@ -335,7 +341,7 @@ if (result.status === 'ready') {
 
 `planCRSProjection` first tries native coordinate-frame lowering for explicit two-dimensional
 geographic/projected PROJJSON objects. Otherwise it fits the entire transformation through the
-public math.gl `Proj4Projection` provider. Named/serialized definitions use the provider path;
+public math.gl `Projection` provider. Named/serialized definitions use the provider path;
 identifiers are not resolved into PROJJSON or downloaded. Explicit 3D, compound, bound, vertical,
 geocentric, and dynamic-frame objects are declined. Providers returning extra coordinate components
 are rejected. Unknown identifiers, unavailable resources, invalid provider output, and exhausted
@@ -730,7 +736,7 @@ the captured reference before warmup and after timing. Reported CPU output/inter
 exclude JavaScript source objects, reference snapshots and provider-internal allocations.
 
 `oracleTimeMilliseconds` remains a one-projection-per-row callback/checksum baseline, not a
-matched multi-consumer workload. The sweeps use `@math.gl/proj4`'s `Proj4Projection.project`, backed
+matched multi-consumer workload. The sweeps use `Proj4Projection.project` from `@math.gl/proj4/classic`, backed
 by **proj4js JavaScript**, with the same finite/domain checks as the GPU workload. They do not
 benchmark the native C++ PROJ library. Provider construction and output allocation are outside
 CPU timing; callback/provider allocations and consumer writes are inside it.
