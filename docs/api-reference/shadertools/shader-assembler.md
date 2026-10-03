@@ -258,6 +258,9 @@ ShaderAssembler.getDefaultShaderAssembler('glsl').addShaderTranspiler(slangTrans
 ShaderAssembler.getDefaultShaderAssembler('wgsl').addShaderTranspiler(slangTranspiler);
 ```
 
+The [Slang Shaders example](/examples/tutorials/slang-shaders) demonstrates this adapter
+with Slang entry points and a reusable source-language palette module on both backends.
+
 Slang remains a practical shader-authoring subset with documented limits.
 The adapter must select supported entry points and follow its resource layout
 rules; registering it does not add full Slang compiler compatibility.

@@ -74,6 +74,7 @@ import support54 from './tutorials/hello-instancing/mobile-support';
 import support55 from './tutorials/shader-modules/mobile-support';
 import support56 from './tutorials/shader-hooks/mobile-support';
 import support57 from './tutorials/shader-plugins/mobile-support';
+import slangShadersSupport from './tutorials/slang-shaders/mobile-support';
 import support58 from './tutorials/transform-feedback/mobile-support';
 import support59 from './tutorials/transform/mobile-support';
 import support60 from './experimental/a-buffer/mobile-support';
@@ -167,6 +168,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'tutorials/shader-modules': support55,
   'tutorials/shader-hooks': support56,
   'tutorials/shader-plugins': support57,
+  'tutorials/slang-shaders': slangShadersSupport,
   'tutorials/transform-feedback': support58,
   'tutorials/transform': support59,
   'experimental/a-buffer': support60,

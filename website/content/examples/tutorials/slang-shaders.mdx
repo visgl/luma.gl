@@ -1,0 +1,20 @@
+---
+title: Slang Shaders
+description: Render Slang shaders and a reusable shader module on WebGL 2 and WebGPU.
+sidebar_custom_props:
+  backends: [webgpu, webgl2]
+  difficulty: tutorial
+  maturity: experimental
+  mobile: full
+  mobileProfile: standard
+  topics: [fundamentals, shaders, modules, rendering]
+---
+
+import {SlangShadersExample} from '@site/src/examples';
+
+<SlangShadersExample />
+
+The application registers the private TypeScript Slang compiler with its own shader
+assembler. Both backends use the same `shader.slang` and reusable `palette.slang` module.
+WebGL 2 receives GLSL ES 300; WebGPU receives one WGSL program with generated entry points.
+See the [Slang API](/docs/api-reference/slang) for compiler limits.
