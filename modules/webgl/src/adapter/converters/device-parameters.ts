@@ -250,10 +250,8 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
   if (parameters.stencilCompare) {
     const mask = parameters.stencilReadMask || 0xffffffff;
     const glValue = convertCompareFunction('depthCompare', parameters.stencilCompare);
-    // TODO - ensure back doesn't overwrite
-    parameters.stencilCompare !== 'always'
-      ? gl.enable(GL.STENCIL_TEST)
-      : gl.disable(GL.STENCIL_TEST);
+    // Even an always-passing stencil test must run to apply stencil operations.
+    gl.enable(GL.STENCIL_TEST);
     gl.stencilFuncSeparate(GL.FRONT, glValue, 0, mask);
     gl.stencilFuncSeparate(GL.BACK, glValue, 0, mask);
   }
