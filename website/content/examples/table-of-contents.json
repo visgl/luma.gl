@@ -258,6 +258,7 @@
       "deck/city-scene",
       "deck/flow-particles",
       "deck/point-glow",
+      "deck/ambient-occlusion",
       "deck/sketch-edges",
       "deck/scene-buffers",
       "deck/pattern-fills",
