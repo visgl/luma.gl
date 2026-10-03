@@ -183,18 +183,67 @@ it('setDeviceParameters#depthClearValue', async () => {
   void 0;
 });
 
-it('setDeviceParameters#stencilPassOperation', async () => {
+it.each([
+  ['stencilPassOperation', GL.KEEP, GL.KEEP, GL.REPLACE],
+  ['stencilFailOperation', GL.REPLACE, GL.KEEP, GL.KEEP],
+  ['stencilDepthFailOperation', GL.KEEP, GL.REPLACE, GL.KEEP]
+] as const)('setDeviceParameters#%s defaults omitted operations on both faces', async (operation, expectedFail, expectedDepthFail, expectedPass) => {
   const device = await getOrSkipWebGLTestDevice();
   if (!device) {
     return;
   }
 
   resetGLParameters(device.gl);
+  try {
+    // Seed all operations so the assertions also check that omitted values reset to keep.
+    setDeviceParameters(device, {
+      stencilPassOperation: 'invert',
+      stencilFailOperation: 'invert',
+      stencilDepthFailOperation: 'invert'
+    });
+    setDeviceParameters(device, {[operation]: 'replace'});
 
-  expect(getGLParameter(device, GL.STENCIL_PASS_DEPTH_PASS), 'pass = GL.KEEP').toBe(GL.KEEP);
+    for (const [fail, depthFail, pass] of [
+      [GL.STENCIL_FAIL, GL.STENCIL_PASS_DEPTH_FAIL, GL.STENCIL_PASS_DEPTH_PASS],
+      [GL.STENCIL_BACK_FAIL, GL.STENCIL_BACK_PASS_DEPTH_FAIL, GL.STENCIL_BACK_PASS_DEPTH_PASS]
+    ] as const) {
+      expect(getGLParameter(device, fail)).toBe(expectedFail);
+      expect(getGLParameter(device, depthFail)).toBe(expectedDepthFail);
+      expect(getGLParameter(device, pass)).toBe(expectedPass);
+    }
+  } finally {
+    resetGLParameters(device.gl);
+  }
+});
 
-  setDeviceParameters(device, {stencilPassOperation: 'replace'});
-  expect(getGLParameter(device, GL.STENCIL_PASS_DEPTH_PASS), 'pass = GL.REPLACE').toBe(GL.REPLACE);
-  expect(getGLParameter(device, GL.STENCIL_FAIL), 'fail = GL.KEEP').toBe(GL.KEEP);
-  expect(getGLParameter(device, GL.STENCIL_PASS_DEPTH_FAIL), 'depth fail = GL.KEEP').toBe(GL.KEEP);
+it('setDeviceParameters#stencilCompare always keeps stencil operations enabled', async () => {
+  const device = await getOrSkipWebGLTestDevice();
+  if (!device) {
+    return;
+  }
+
+  resetGLParameters(device.gl);
+  try {
+    expect(getGLParameter(device, GL.STENCIL_TEST)).toBe(false);
+    setDeviceParameters(device, {stencilCompare: 'always', stencilPassOperation: 'replace'});
+    expect(getGLParameter(device, GL.STENCIL_TEST)).toBe(true);
+    expect(getGLParameter(device, GL.STENCIL_FUNC)).toBe(GL.ALWAYS);
+    expect(getGLParameter(device, GL.STENCIL_BACK_FUNC)).toBe(GL.ALWAYS);
+    expect(getGLParameter(device, GL.STENCIL_PASS_DEPTH_PASS)).toBe(GL.REPLACE);
+    expect(getGLParameter(device, GL.STENCIL_BACK_PASS_DEPTH_PASS)).toBe(GL.REPLACE);
+
+    setDeviceParameters(device, {stencilCompare: 'never'});
+    expect(getGLParameter(device, GL.STENCIL_TEST)).toBe(true);
+    expect(getGLParameter(device, GL.STENCIL_FUNC)).toBe(GL.NEVER);
+    expect(getGLParameter(device, GL.STENCIL_BACK_FUNC)).toBe(GL.NEVER);
+
+    setDeviceParameters(device, {stencilCompare: 'always'});
+    expect(getGLParameter(device, GL.STENCIL_TEST)).toBe(true);
+    expect(getGLParameter(device, GL.STENCIL_FUNC)).toBe(GL.ALWAYS);
+    expect(getGLParameter(device, GL.STENCIL_BACK_FUNC)).toBe(GL.ALWAYS);
+    expect(getGLParameter(device, GL.STENCIL_PASS_DEPTH_PASS)).toBe(GL.REPLACE);
+    expect(getGLParameter(device, GL.STENCIL_BACK_PASS_DEPTH_PASS)).toBe(GL.REPLACE);
+  } finally {
+    resetGLParameters(device.gl);
+  }
 });
