@@ -5140,6 +5140,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@luma.gl/slang@workspace:modules/slang":
+  version: 0.0.0-use.local
+  resolution: "@luma.gl/slang@workspace:modules/slang"
+  languageName: unknown
+  linkType: soft
+
 "@luma.gl/splats@workspace:*, @luma.gl/splats@workspace:modules/splats":
   version: 0.0.0-use.local
   resolution: "@luma.gl/splats@workspace:modules/splats"
