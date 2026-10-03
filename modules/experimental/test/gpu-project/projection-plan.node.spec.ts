@@ -4,7 +4,7 @@
 
 import {readFileSync} from 'node:fs';
 
-import {Proj4Projection} from '@math.gl/proj4';
+import {Proj4Projection} from '@math.gl/proj4/classic';
 import * as experimentalModule from '@luma.gl/experimental';
 import * as projectionModule from '@luma.gl/experimental/gpu-project';
 import type {GraphDataView} from '@luma.gl/gpgpu/gpu-core';

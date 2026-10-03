@@ -5,7 +5,7 @@
 import {readFileSync} from 'node:fs';
 import {build} from 'esbuild';
 import {parsePROJString, type CRSDefinition} from '@math.gl/crs';
-import {Proj4Projection} from '@math.gl/proj4';
+import {Proj4Projection} from '@math.gl/proj4/classic';
 import {describe, expect, it, vi} from 'vitest';
 import {
   planCRSProjection,

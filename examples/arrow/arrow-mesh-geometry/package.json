@@ -18,7 +18,7 @@
     "@luma.gl/shadertools": "10.0.0-alpha.2",
     "@luma.gl/webgl": "10.0.0-alpha.2",
     "@luma.gl/webgpu": "10.0.0-alpha.2",
-    "@math.gl/core": "patch:@math.gl/core@npm%3A5.0.0-alpha.9#~/.yarn/patches/@math.gl-core-npm-5.0.0-alpha.9-2f20ecccc4.patch",
+    "@math.gl/core": "5.0.0-alpha.11",
     "apache-arrow": "^17.0.0"
   },
   "devDependencies": {
