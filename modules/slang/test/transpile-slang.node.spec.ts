@@ -185,3 +185,84 @@ it('slang#unified WGSL retains render entries and deduplicates shared declaratio
     transpileSlangWGSL(RENDER_SHADER, {entryPoints: ['fragmentMain', 'fragmentMain']})
   ).toThrow(SlangTranspileError);
 });
+
+it.each([
+  ['ConstantBuffer', 'ConstantBuffer<Outer> settings;', 'settings.inner.x + settings.value'],
+  ['cbuffer', 'cbuffer Settings { Inner inner; float value; };', 'inner.x + value'],
+  ['uniform', 'uniform Outer settings;', 'settings.inner.x + settings.value']
+])('slang#rejects nested WGSL %s uniform members with a source diagnostic', (_kind, declaration, expression) => {
+  const source = `struct Inner { float x; };
+struct Outer { Inner inner; float value; };
+${declaration}
+[shader("fragment")] float4 main() : SV_Target { return float4(${expression}); }`;
+  let diagnostic: SlangTranspileError | undefined;
+  try {
+    transpileSlang(source, {target: 'wgsl', sourceName: 'nested.slang'});
+  } catch (error) {
+    expect(error).toBeInstanceOf(SlangTranspileError);
+    diagnostic = error as SlangTranspileError;
+  }
+  expect(diagnostic?.diagnostics[0]).toMatchObject({
+    sourceName: 'nested.slang',
+    line: declaration.startsWith('cbuffer') ? 3 : 2,
+    message: expect.stringMatching(/Nested structures.*layout legalization/)
+  });
+  expect(() => transpileSlang(source, {target: 'glsl'})).not.toThrow();
+});
+
+it('slang#preserves nested WGSL local and storage structures', () => {
+  const result = transpileSlang(
+    `
+    struct Inner { float x; };
+    struct Outer { Inner inner; float value; };
+    RWStructuredBuffer<Outer> values;
+    [shader("compute")] [numthreads(1,1,1)] void main() {
+      Outer result;
+      result.inner.x = 1;
+      result.value = 2;
+      values[0] = result;
+    }
+  `,
+    {target: 'wgsl'}
+  );
+  expect(result.code).toContain('var<storage, read_write>');
+  expect(result.code).toContain('_slang_result._slang_inner._slang_x =');
+  expect(new WgslReflect(result.code).entry.compute[0].name).toBe(result.entryPoint);
+});
+
+it.each([
+  '300 es',
+  '450'
+] as const)('slang#GLSL %s texture declarations match their binding convention', glslVersion => {
+  const source = `
+    Texture2D<float4> firstImplicit;
+    [vk::binding(0,0)] Texture2D<float4> attributeTexture;
+    Texture2D<float4> registerTexture : register(t3);
+    Texture2D<float4> secondImplicit;
+    SamplerState textureSampler;
+    [shader("fragment")] float4 main(float2 coordinates : TEXCOORD0) : SV_Target {
+      return firstImplicit.Sample(textureSampler, coordinates)
+        + attributeTexture.Sample(textureSampler, coordinates)
+        + registerTexture.Sample(textureSampler, coordinates)
+        + secondImplicit.Sample(textureSampler, coordinates);
+    }
+  `;
+  const result = transpileSlang(source, {target: 'glsl', glslVersion});
+  expect(result.code).toContain(`#version ${glslVersion}`);
+  const textures = result.reflection.bindings.filter(binding => binding.kind === 'texture');
+  expect(textures.map(binding => binding.binding)).toEqual([1, 0, 3, 2]);
+  for (const texture of textures) {
+    const declaration = `uniform sampler2D ${texture.shaderName};`;
+    expect(texture.sampler).toBe('textureSampler');
+    if (glslVersion === '450') {
+      expect(result.code).toContain(`layout(binding = ${texture.binding}) ${declaration}`);
+    } else {
+      expect(result.code.split('\n')).toContain(declaration);
+      expect(result.code).not.toContain('layout(binding');
+    }
+  }
+  expect(result.reflection.bindings.some(binding => binding.kind === 'sampler')).toBe(false);
+  expect(transpileSlang(source, {target: 'glsl'}).code).toBe(
+    transpileSlang(source, {target: 'glsl', glslVersion: '300 es'}).code
+  );
+});

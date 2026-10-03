@@ -94,6 +94,7 @@ it('shader transpiler#unified WGSL uses generated names for interface scanning a
     ]
   });
   expect(transpile.mock.calls[0][0].source).toBe('foreign helper\nrender program');
+  expect(transpile.mock.calls[0][0].stage).toBeUndefined();
   expect(result.entryPoints).toMatchObject({
     vertex: 'generatedVertex',
     fragment: 'generatedFragment'
@@ -189,4 +190,27 @@ it('shader transpiler#omitted generated entries preserve explicit selection in m
   });
   expect(result.entryPoints.vertex).toBe('generatedVertex');
   expect(result.shaderLayout?.attributes[0]).toMatchObject({location: 2});
+});
+
+it('shader transpiler#compute compilation without a selected source entry preserves compiler defaults', () => {
+  const assembler = new WGSLShaderAssembler();
+  const transpile = vi.fn<ShaderTranspiler['transpile']>(() => ({
+    code: '@compute @workgroup_size(1) fn generatedCompute() {}',
+    entryPoints: {compute: 'generatedCompute'}
+  }));
+  assembler.addShaderTranspiler({name: 'custom', sourceLanguage: 'custom', transpile});
+  const result = assembler.assembleWGSLShader({
+    platformInfo: wgslPlatform,
+    sourceLanguage: 'custom',
+    source: 'compute program',
+    shaderStage: 'compute',
+    scanVertexAttributes: false
+  });
+  expect(transpile.mock.calls[0][0]).toMatchObject({
+    stage: 'compute',
+    entryPoints: {compute: undefined},
+    target: 'wgsl'
+  });
+  expect(result.entryPoints.compute).toBe('generatedCompute');
+  expect(new WgslReflect(result.source).entry.compute[0].name).toBe('generatedCompute');
 });

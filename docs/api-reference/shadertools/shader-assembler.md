@@ -202,7 +202,10 @@ The callback receives `source`, `target`, `stage`, `entryPoints`, and
 `platformInfo`, and returns `{code, entryPoints?}`. `stage` is set for GLSL or
 compute; unified WGSL render compilation leaves it undefined. Returned
 entry-point names are used for WGSL interface scanning and pipeline creation.
-Compiler diagnostics propagate to the caller.
+For direct WGSL compute assembly, set `shaderStage: 'compute'` even if the entry-point
+name is omitted. `Computation` sets this automatically. An explicit `computeEntryPoint`
+also selects compute compilation for compatibility. Omitted names remain undefined so
+the compiler can select its default entry point. Compiler diagnostics propagate to the caller.
 
 Reusable modules can set `{name, sourceLanguage, source}`. Their dependency code
 is combined, once per module name, ahead of the application source before the
@@ -231,6 +234,7 @@ const slangTranspiler: ShaderTranspiler = {
     if (target === 'glsl') {
       return transpileSlang(source, {
         target,
+        glslVersion: '300 es',
         stage,
         entryPoint: stage ? entryPoints[stage] : undefined
       });

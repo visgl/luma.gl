@@ -262,7 +262,7 @@ export class WGSLShaderAssembler extends ShaderAssembler {
       props,
       modules,
       props.source,
-      props.computeEntryPoint ? 'compute' : undefined
+      props.shaderStage ?? (props.computeEntryPoint ? 'compute' : undefined)
     );
     const entryPoints = {
       vertex: translated.entryPoints?.vertex ?? props.vertexEntryPoint,

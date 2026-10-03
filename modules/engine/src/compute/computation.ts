@@ -222,6 +222,7 @@ export class Computation {
       ...this.props,
       modules,
       defines,
+      shaderStage: 'compute',
       computeEntryPoint: this.props.entryPoint,
       scanVertexAttributes: false,
       pluginInjections: resolvedPlugins.injections

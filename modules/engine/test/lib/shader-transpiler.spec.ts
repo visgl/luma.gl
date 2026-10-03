@@ -36,7 +36,10 @@ it('shader transpiler#Model creates a WebGPU render pipeline with generated entr
   }
 });
 
-it('shader transpiler#Computation creates a WebGPU pipeline with the generated compute entry', async () => {
+it.each([
+  undefined,
+  'originalCompute'
+])('shader transpiler#Computation creates a WebGPU pipeline with source entry %s and a generated compute entry', async entryPoint => {
   const device = await getWebGPUTestDevice('core');
   expect(device).not.toBeNull();
   const assembler = new WGSLShaderAssembler();
@@ -45,7 +48,7 @@ it('shader transpiler#Computation creates a WebGPU pipeline with the generated c
     sourceLanguage: 'custom',
     transpile: request => {
       expect(request.stage).toBe('compute');
-      expect(request.entryPoints.compute).toBe('originalCompute');
+      expect(request.entryPoints.compute).toBe(entryPoint);
       return {
         code: '@compute @workgroup_size(1) fn compiledCompute() {}',
         entryPoints: {compute: 'compiledCompute'}
@@ -55,7 +58,7 @@ it('shader transpiler#Computation creates a WebGPU pipeline with the generated c
   const computation = await Computation.createAsync(device!, {
     sourceLanguage: 'custom',
     source: 'application source',
-    entryPoint: 'originalCompute',
+    entryPoint,
     shaderAssembler: assembler
   });
   try {
