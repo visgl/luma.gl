@@ -276,3 +276,12 @@ checkShaderModuleDeprecations(
 
 Checks shader source against the module's deprecation definitions and logs
 matching warnings or removals.
+
+### `sourceLanguage` and source-language modules
+
+When `sourceLanguage` names an application-registered transpiler, `source`
+contains reusable code in that language. The assembler combines it with modules'
+dependencies and the application translation unit before compilation. Set the
+same `sourceLanguage` on the application shader. Native shader code and injections
+continue to use the target GLSL/WGSL language. See
+[application-owned transpilers](./shader-assembler#application-owned-transpilers).
