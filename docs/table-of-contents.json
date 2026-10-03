@@ -805,6 +805,13 @@
       },
       {
         "type": "category",
+        "label": "@luma.gl/slang (Private)",
+        "items": [
+          "api-reference/slang/README"
+        ]
+      },
+      {
+        "type": "category",
         "label": "@luma.gl/shadertools",
         "items": [
           {
