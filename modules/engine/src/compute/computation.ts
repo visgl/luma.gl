@@ -43,6 +43,8 @@ const LOG_DRAW_TIMEOUT = 10000;
 
 export type ComputationProps = Omit<ComputePipelineProps, 'shader'> & {
   source?: string;
+  /** Input language compiled by the application-registered shader assembler transpiler. */
+  sourceLanguage?: string;
 
   /** Shadertools shader modules added to shader code. */
   modules?: ShaderModule[];
@@ -114,6 +116,7 @@ export class Computation {
     userData: {},
 
     source: '',
+    sourceLanguage: undefined!,
     modules: [],
     defines: {},
     plugins: [],
@@ -212,17 +215,20 @@ export class Computation {
     const {
       source,
       getUniforms,
+      entryPoints = {},
       shaderLayout: assembledShaderLayout
     } = shaderAssembler.assembleWGSLShader({
       platformInfo,
       ...this.props,
       modules,
       defines,
+      computeEntryPoint: this.props.entryPoint,
       scanVertexAttributes: false,
       pluginInjections: resolvedPlugins.injections
     });
 
     this.source = source;
+    this.props.entryPoint = entryPoints.compute || this.props.entryPoint;
     // @ts-ignore
     this._getModuleUniforms = getUniforms;
     const inferredShaderLayout =

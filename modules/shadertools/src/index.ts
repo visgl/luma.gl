@@ -219,3 +219,10 @@ export type {
   PrecipitationProps,
   PrecipitationUniforms
 } from './modules/geometry/precipitation/precipitation';
+
+export type {
+  ShaderTranspiler,
+  ShaderTranspileProps,
+  ShaderTranspileResult,
+  ShaderTranspilerEntryPoints
+} from './lib/shader-transpiler/shader-transpiler';
