@@ -4,7 +4,7 @@
 
 import {describe, expect, it, vi} from 'vitest';
 import type {ReadonlyCRSDefinition} from '@math.gl/crs';
-import {Proj4Projection} from '@math.gl/proj4';
+import {Proj4Projection} from '@math.gl/proj4/classic';
 import {
   evaluateProjectionProgram,
   invertProjectionProgram

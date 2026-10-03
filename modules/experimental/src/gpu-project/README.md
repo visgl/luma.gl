@@ -3,7 +3,7 @@
 High-precision, GPU-resident coordinate reprojection for WebGPU command graphs.
 
 `gpu-project` separates projection semantics from projection execution. An application
-supplies any CPU projection provider, including `Proj4Projection` from
+supplies any CPU projection provider, including `Projection` from
 `@math.gl/proj4`. The CPU samples that provider using JavaScript Float64
 arithmetic and compiles adaptive local polynomial patches. A `GPUProjection`
 contributor evaluates those patches over GPU-resident coordinates using fast
@@ -40,15 +40,15 @@ import {
   GPUProjection,
   compileProjectionPlan
 } from '@luma.gl/experimental/gpu-project';
-import {Proj4Projection} from '@math.gl/proj4';
+import {Projection} from '@math.gl/proj4';
 
 // Register any CRS definition that the installed projection provider does not
 // already include.
-Proj4Projection.defineProjectionAliases({
+Projection.defineProjectionAliases({
   'EPSG:32610': '+proj=utm +zone=10 +datum=WGS84 +units=m +no_defs'
 });
 
-const projection = new Proj4Projection({
+const projection = new Projection({
   from: 'EPSG:32610',
   to: 'EPSG:3857'
 });
@@ -75,8 +75,8 @@ device.submit(encoder.finish());
 ```
 
 With math.gl 5, `from` and `to` can also be compatible CRS definitions from `@math.gl/crs`,
-including PROJJSON objects. `@math.gl/proj4` checks whether each definition is executable by
-proj4js; `gpu-project` then samples that provider on the CPU and evaluates the resulting local
+including PROJJSON objects. `@math.gl/proj4` executes them with its TypeScript projection
+engine; `gpu-project` then samples that provider on the CPU and evaluates the resulting local
 approximation on the GPU. CRS metadata alone does not perform a transformation.
 
 `bounds` are `[minimumX, minimumY, maximumX, maximumY]` in the source
@@ -268,7 +268,7 @@ optional `@math.gl/crs` and `@math.gl/proj4` peers to use:
   bounds for the entire pipeline.
 - `planCRSProjection({from, to, bounds?, tolerance})`: lower equivalent explicit PROJJSON frames
   into native double-single axis/unit/affine operations, or fit a bounded transformation through
-  `Proj4Projection`. Native geographic frames support prime-meridian changes; equivalent Transverse
+  `Projection`. Native geographic frames support prime-meridian changes; equivalent Transverse
   Mercator and Pseudo Mercator conversions support false-origin changes without evaluating a
   projection. Datum identity and normalized ellipsoids must match. Set `enforceAxis` to honor
   declared axes, or `allowAdaptive: false` to require native lowering. Only adaptive routes need
