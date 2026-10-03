@@ -112,6 +112,8 @@ Target Release Date: Q3, 2026
 **@luma.gl/splats**
 
 - **Stable RAD camera retargeting** - `SplatRADHierarchyManager` preserves resolved visible rows while reprioritizing retained branches for a changed camera, traverses offscreen ancestors needed for visible descendants, and keeps bounded traversal, page demand, and active-row capacity coherent across rapid camera updates.
+- **Progressive RAD selection** - `selectView()` selects a fresh complete cut; `refineView()` publishes coherent intermediate replacements while reprioritizing retained detail. Generic CPU-only residency and hierarchy data support worker selection with bounded page demand.
+- **Shared-pass splat rendering** - `GPUPagedSplatRenderer.prepare()` encodes compute work before a host pass, and `draw()` presents inside it without clearing, ending, or submitting the borrowed pass.
 
 **@luma.gl/webgpu**
 

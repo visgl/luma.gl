@@ -241,6 +241,10 @@ console.log(renderer.stats.segmentCount, renderer.stats.activeRowCount);
 
 `activeRows` contains original batch-local row indices; omit it to render every row in one source
 page. No source page or GPU column is concatenated, rewritten, or transferred to the renderer.
+For unsplit pages the renderer borrows `activeRows` directly. Keep that array stable until the
+next `setFrontier` call, and resubmit it after changing its contents. Camera-only updates rewrite
+camera uniforms without copying or uploading unchanged row indices. Adding or removing source
+segments can still rebuild the GPU graph; this is not an incremental graph-compilation API.
 Each sparse source segment projects only its selected rows, evaluates degree-one through
 degree-three directional harmonics, and applies GPU semantic include/exclude selections. Source
 bindings, including large harmonic columns, are split into legal device-sized ranges while every
@@ -270,6 +274,33 @@ reports original versus active rows, source/output segment counts, global sort c
 borrowed-source and renderer-owned GPU bytes, and one indirect draw per output segment. The
 caller owns command submission and every source batch; destroy the renderer before releasing
 source pages.
+
+### Drawing inside a host-owned render pass
+
+For composition with a host such as deck.gl, separate compute preparation from drawing:
+
+```ts
+renderer.setProps({modelViewProjectionMatrix, cameraPosition, viewportSize});
+renderer.prepare(commandEncoder); // Projection and sorting; no render pass is opened.
+
+const renderPass = commandEncoder.beginRenderPass({clearColor: [0, 0, 0, 0]});
+// Draw opaque host geometry here if it should occlude splats.
+renderer.draw(renderPass);
+renderPass.end();
+webgpuDevice.submit(commandEncoder.finish());
+```
+
+`prepare(commandEncoder)` returns an encoding only when data, camera, or style changes require
+compute work. Call it before opening the host pass. `draw(renderPass)` draws the prepared frontier
+on every host frame, including frames where `prepare()` returns `undefined`. It never clears,
+ends, or submits the supplied pass. An empty frontier draws nothing, and destroying the renderer
+still leaves caller-owned source pages intact.
+
+The host pass must use compatible canvas color/depth formats and sample count. Splats use their
+prepared camera and viewport; the host owns viewport/scissor configuration. They do not write
+depth, and separate renderer instances do not share a global transparency sort. Standalone callers
+can continue to use `encode(commandEncoder)` to prepare and open the renderer-owned pass together;
+do not use both paths for the same frame.
 
 ## Related pages
 
