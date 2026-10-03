@@ -168,3 +168,25 @@ it('shader transpiler#compute requests and compiler diagnostics retain applicati
     target: 'wgsl'
   });
 });
+
+it('shader transpiler#omitted generated entries preserve explicit selection in multi-entry WGSL', () => {
+  const assembler = new WGSLShaderAssembler();
+  assembler.addShaderTranspiler({
+    name: 'custom',
+    sourceLanguage: 'custom',
+    transpile: () => ({
+      code:
+        wgslCode +
+        '\n@vertex fn otherVertex() -> @builtin(position) vec4<f32> { return vec4<f32>(0.0); }',
+      entryPoints: {vertex: undefined}
+    })
+  });
+  const result = assembler.assembleWGSLShader({
+    platformInfo: wgslPlatform,
+    sourceLanguage: 'custom',
+    source: 'program',
+    vertexEntryPoint: 'generatedVertex'
+  });
+  expect(result.entryPoints.vertex).toBe('generatedVertex');
+  expect(result.shaderLayout?.attributes[0]).toMatchObject({location: 2});
+});

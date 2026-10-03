@@ -265,10 +265,9 @@ export class WGSLShaderAssembler extends ShaderAssembler {
       props.computeEntryPoint ? 'compute' : undefined
     );
     const entryPoints = {
-      vertex: props.vertexEntryPoint,
-      fragment: props.fragmentEntryPoint,
-      compute: props.computeEntryPoint,
-      ...translated.entryPoints
+      vertex: translated.entryPoints?.vertex ?? props.vertexEntryPoint,
+      fragment: translated.entryPoints?.fragment ?? props.fragmentEntryPoint,
+      compute: translated.entryPoints?.compute ?? props.computeEntryPoint
     };
     const defines = WGSLShaderAssembler.getShaderPreprocessorDefines(props, modules);
     const preprocessedApplicationSource =
