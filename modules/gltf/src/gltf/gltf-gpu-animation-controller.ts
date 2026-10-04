@@ -40,7 +40,11 @@ export function canUseGLTFSceneGPUAnimation(
     ) {
       return false;
     }
-    if (node.camera || node.extensions?.['KHR_lights_punctual']) {
+    if (
+      node.camera ||
+      typeof (node as typeof node & {light?: number}).light === 'number' ||
+      node.extensions?.['KHR_lights_punctual']
+    ) {
       cpuNodeIds.add(node.id);
     }
     for (const child of node.children || []) {

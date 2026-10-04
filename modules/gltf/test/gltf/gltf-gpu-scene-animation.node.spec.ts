@@ -377,4 +377,27 @@ describe('GPU pose playback for ordinary glTF scenes', () => {
       device.destroy();
     }
   });
+  test('keeps postprocessed punctual-light hierarchy transforms on the CPU', async () => {
+    const source = await loadFixture();
+    const jointIndex = source.skins![0].joints[1];
+    const lightNode = {id: 'postprocessed-light-node', light: 0};
+    source.nodes.push(lightNode);
+    source.nodes[jointIndex].children = [...(source.nodes[jointIndex].children || []), lightNode];
+    const device = new NullDevice({});
+    const scenegraphs = createScenegraphsFromGLTF(device, source, {gpuAnimation: {}});
+    try {
+      expect(scenegraphs.animationStats).toMatchObject({
+        mode: 'cpu',
+        fallbackReason: 'unsupported-scene'
+      });
+      const initialMatrix = Array.from(scenegraphs.gltfNodeIndexToNodeMap.get(jointIndex)!.matrix);
+      scenegraphs.animator.setTime(500);
+      expect(Array.from(scenegraphs.gltfNodeIndexToNodeMap.get(jointIndex)!.matrix)).not.toEqual(
+        initialMatrix
+      );
+    } finally {
+      scenegraphs.destroy();
+      device.destroy();
+    }
+  });
 });
