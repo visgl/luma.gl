@@ -214,7 +214,12 @@ try {
       }
       const stoppedTime = await page.evaluate(() => window.weatherScene.diagnostics.time);
       await page.evaluate(() => window.weatherScene.setIntensity(0.6));
-      await page.waitForTimeout(250);
+      // Resuming initializes the clock on the first frame; software GPUs may need more than 250 ms for the next frame.
+      await page.waitForFunction(
+        stoppedTime => window.weatherScene.diagnostics.time > stoppedTime,
+        stoppedTime,
+        {timeout: 30_000}
+      );
       assert(await page.evaluate(() => window.weatherScene.diagnostics.time) > stoppedTime,
         `${backend}: restoring particle count resumes animation`);
       await page.uncheck('#playing');

@@ -6,7 +6,7 @@ description: Transpile Slang shader source to GLSL and WGSL using TypeScript.
 # Slang
 
 <div style={{margin: '1rem 0'}}>
-  <img src="/img/standards/slang.svg" alt="Slang" width="224" height="70" />
+  <img className="docs-api-card__logo--on-light" src="/img/standards/slang-light.svg" alt="Slang" width="224" height="70" />
 </div>
 
 This package is private and currently available only in the luma.gl repository.

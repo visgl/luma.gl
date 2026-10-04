@@ -1,6 +1,9 @@
 # @luma.gl/slang
 
-<img src="../../website/static/img/standards/slang.svg" alt="Slang" width="224" height="70" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../../website/static/img/standards/slang.svg" />
+  <img src="../../website/static/img/standards/slang-light.svg" alt="Slang" width="224" height="70" />
+</picture>
 
 This package is private and currently available only in the luma.gl repository.
 

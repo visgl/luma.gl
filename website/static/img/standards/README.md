@@ -6,6 +6,7 @@ all trademark and logo rights.
 
 | Asset | Official source | Attribution and use |
 | --- | --- | --- |
+| `slang-light.svg` | [Official Slang website](https://github.com/shader-slang/shader-slang.github.io/blob/main/images/logo/slang-logo.svg) | Unmodified light-background Slang project logo, presented on a light backing without recoloring the artwork. |
 | `slang.svg` | [Official Slang playground](https://github.com/shader-slang/slang-playground/blob/main/src/assets/slang-logo.svg) | Unmodified Slang project logo; identifies the supported language subset and does not imply upstream compiler compatibility or endorsement. |
 | `anari.svg` | [Khronos ANARI documentation](https://github.com/KhronosGroup/ANARI-Docs/blob/main/images/anari_RGB_Mar20.svg) | ANARI and the ANARI logo are trademarks of The Khronos Group Inc. The luma.gl scene API is ANARI-inspired and is not an ANARI-conformant implementation. |
 | `gltf.svg` | [Khronos glTF External Reference specification](https://github.com/KhronosGroup/glTF-External-Reference/blob/main/specification/figures/glTF.svg) | glTF and the glTF logo are trademarks of The Khronos Group Inc. |
