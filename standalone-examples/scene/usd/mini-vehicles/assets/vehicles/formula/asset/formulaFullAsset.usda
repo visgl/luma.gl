@@ -1,0 +1,65 @@
+#usda 1.0
+(
+    defaultPrim = "formula"
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Xform "formula"
+{
+    def "formula" (
+        prepend references = @./formulaBodyAsset.usda@</formula>
+    )
+    {
+    }
+
+    def "wheel1" (
+        prepend references = @../../../wheels/wheelVariants.usda@</wheelVariant>
+        variants = {
+            string wheels = "wheelRed"
+        }
+    )
+    {
+        matrix4d xformOp:transform:edit4 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (85, 32, 147, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:edit4"]
+    }
+
+    def "wheel2" (
+        prepend references = @../../../wheels/wheelVariants.usda@</wheelVariant>
+        variants = {
+            string wheels = "wheelRed"
+        }
+    )
+    {
+        matrix4d xformOp:transform:edit4 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (85, 32, -113, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:edit4"]
+    }
+
+    def "wheel3" (
+        prepend references = @../../../wheels/wheelVariants.usda@</wheelVariant>
+        variants = {
+            string wheels = "wheelRed"
+        }
+    )
+    {
+        matrix4d xformOp:transform:edit4 = ( (-1, 0, 1.2246468525851679e-16, 0), (0, 1, 0, 0), (-1.2246468525851679e-16, 0, -1, 0), (-85, 32, 147, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:edit4"]
+    }
+
+    def "wheel4" (
+        prepend references = @../../../wheels/wheelVariants.usda@</wheelVariant>
+        variants = {
+            string wheels = "wheelRed"
+        }
+    )
+    {
+        matrix4d xformOp:transform:edit4 = ( (-1, 0, 1.2246468525851679e-16, 0), (0, 1, 0, 0), (-1.2246468525851679e-16, 0, -1, 0), (-85, 32, -113, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:edit4"]
+    }
+}
+
+

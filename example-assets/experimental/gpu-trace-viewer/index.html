@@ -1,0 +1,86 @@
+<!doctype html>
+<head>
+  <!-- luma-example-support -->
+  <meta name="luma-example-id" content="experimental/gpu-trace-viewer" />
+  <meta name="luma-example-backends" content="webgpu" />
+  <meta name="luma-example-mobile" content="reduced" />
+  <meta name="luma-example-mobile-profile" content="large-data" />
+  <script data-luma-example-support-promise>
+    window.lumaExampleSupportPromise = new Promise(resolve => {
+      window.addEventListener('luma-example-support-ready', event => resolve(event.detail), {
+        once: true
+      });
+    });
+  </script>
+  <script type="module" data-luma-example-support-bootstrap>
+    import {installStandaloneExampleSupport} from '../../example-support.ts';
+    const exampleSupport = installStandaloneExampleSupport();
+    window.dispatchEvent(
+      new CustomEvent('luma-example-support-ready', {detail: exampleSupport})
+    );
+  </script>
+  <!-- /luma-example-support -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GPU Hierarchical Trace Viewer</title>
+  <style>
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #030712; }
+    canvas { display: block; width: 100vw !important; height: 100vh !important; }
+    #trace-pick-tooltip {
+      position: fixed;
+      z-index: 2;
+      display: grid;
+      gap: 2px;
+      min-width: 190px;
+      padding: 8px 10px;
+      pointer-events: none;
+      color: #cbd5e1;
+      font: 11px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
+      background: rgb(3 7 18 / 94%);
+      border: 1px solid rgb(148 163 184 / 42%);
+      border-radius: 6px;
+      box-shadow: 0 8px 24px rgb(0 0 0 / 35%);
+    }
+    #trace-pick-tooltip[hidden] { display: none; }
+    #trace-pick-tooltip strong { color: #f8fafc; font-size: 12px; }
+    #trace-pick-tooltip span { white-space: nowrap; }
+    #example-panel-host {
+      position: fixed;
+      z-index: 1;
+      top: 12px;
+      right: 12px;
+      width: min(380px, calc(100vw - 24px)) !important;
+      max-height: calc(100vh - 24px);
+      overflow: auto;
+      box-sizing: border-box;
+      padding: 12px;
+      color: #e5e7eb;
+      background: rgb(3 7 18 / 88%);
+      border: 1px solid rgb(148 163 184 / 30%);
+      border-radius: 8px;
+      backdrop-filter: blur(8px);
+    }
+  </style>
+</head>
+<script type="module" data-luma-example-application>
+  const exampleSupport = await window.lumaExampleSupportPromise;
+  if (exampleSupport.supported) {
+    const {luma} = await import('@luma.gl/core');
+    const {makeAnimationLoop} = await import('@luma.gl/engine');
+    const {webgpuAdapter} = await import('@luma.gl/webgpu');
+    const {default: AnimationLoopTemplate} = await import('./app.ts');
+
+    const forcePortableScan = new URLSearchParams(location.search).get('scan') === 'portable';
+    const device = luma.createDevice({
+      id: 'gpu-trace-viewer',
+      adapters: [webgpuAdapter],
+      createCanvasContext: true,
+      featureLevel: 'max',
+      debugGPUTime: true,
+      _disabledFeatures: forcePortableScan ? {subgroups: true} : undefined
+    });
+    const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {device});
+    animationLoop.start();
+  }
+</script>
+<body><div id="example-panel-host" data-example-panel-host></div></body>
