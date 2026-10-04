@@ -31,7 +31,7 @@ import {getSkyCameraState, SKY_FIELD_OF_VIEW} from '../soft-shadows/sky-camera';
 import {RiverDistrictLayer} from '../river-district-layer';
 import {getRiverfrontSkyLighting} from '../riverfront-sky-lighting';
 
-export type WeatherPreset = 'clear' | 'rain' | 'snow';
+export type WeatherPreset = 'clear' | 'rain' | 'snow' | 'clouds';
 const SURFACE_BOUNDS: [number, number, number, number] = [-700, -900, 700, 900];
 export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleDeviceOptions = {}) {
   const features = makeCityFeatures();
@@ -214,6 +214,8 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
           stars: sun.altitude < 0 ? {brightness: 2} : false,
           clouds: cloudsEnabled && {cover: preset === 'clear' ? 0.25 : 0.65, velocity: [14, 4]},
           atmosphere: {
+            // Blend a little of the muted canvas background into the dark horizon.
+            opacity: 0.78,
             sunIntensity: 10 * getDaylight().intensity,
             haze: preset === 'clear' ? 1 : 2,
             groundColor: features.find(feature => feature.kind === 'ground')!.color
@@ -322,6 +324,7 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
     },
     setPreset(value: WeatherPreset) {
       preset = value;
+      cloudsEnabled = value !== 'clear';
       updateLayers();
     },
     setIntensity(value: number) {

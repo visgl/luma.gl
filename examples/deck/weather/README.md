@@ -11,7 +11,7 @@ obscure celestial bodies; disable Fog to inspect the sky.
 Run `yarn workspace luma.gl-examples-deck-weather start`; the website route is
 `/examples/deck/weather`.
 
-Choose None, Rain, or Snow, then toggle Fog independently. The fog controls retain their values while disabled. Intensity controls the particle count, wind uses metres
+Choose Rain, Snow, Clouds, or Sunny, then toggle Fog independently. Clouds has no precipitation; Sunny disables clouds. The Clouds checkbox can override the selected preset. The fog controls retain their values while disabled. Intensity controls the particle count, wind uses metres
 per second with direction clockwise from north, and visibility sets the fog extinction.
 Pause freezes the clock exactly; reset returns to the seeded initial particle positions.
 With no precipitation, fog and clouds disabled, and surface accumulation disabled, continuous redraws stop. Fog keeps animating only when enabled and both

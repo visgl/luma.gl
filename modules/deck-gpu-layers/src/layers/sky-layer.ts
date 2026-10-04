@@ -10,11 +10,11 @@ import {
 } from '@deck.gl/core';
 import type {NumberArray3} from '@math.gl/core';
 import {getSunPosition, getSkyDirection, skyDirectionToGlobe, type SkyObserver} from '@math.gl/sun';
-import type {CloudProps, GlobeCloudProps, AtmosphereProps} from '@luma.gl/shadertools';
+import type {CloudProps, GlobeCloudProps} from '@luma.gl/shadertools';
 import {SunLayer, type SunLayerProps} from './sun-layer';
 import {MoonLayer, type MoonLayerProps} from './moon-layer';
 import {StarfieldLayer, type StarfieldLayerProps} from './starfield-layer';
-import {AtmosphereLayer} from './atmosphere-layer';
+import {AtmosphereLayer, type AtmosphereLayerProps} from './atmosphere-layer';
 import {CloudLayer} from './cloud-layer';
 import {GlobeCloudLayer} from './globe-cloud-layer';
 import {getSkyObserver} from './sky-coordinates';
@@ -30,7 +30,7 @@ export type SkyLayerProps = LayerProps & {
   stars?: boolean | Partial<StarfieldLayerProps>;
   clouds?: boolean | (CloudProps & GlobeCloudProps);
   /** Existing local scattering sky. Globe views use the application's space background. */
-  atmosphere?: boolean | AtmosphereProps;
+  atmosphere?: boolean | Partial<AtmosphereLayerProps>;
 };
 
 /** One observer and clock for sun, moon, stars, atmosphere and view-appropriate clouds.
