@@ -411,13 +411,8 @@ try {
       await page.evaluate(() => window.cityScene.setTime(8));
       await page.waitForTimeout(100);
       const secondWaterImage = PNG.sync.read(await captureScreenshot());
-      let changedPixels = 0;
-      for (let vertical = 120; vertical < 650; vertical++) {
-        for (let horizontal = 350; horizontal < 950; horizontal++) {
-          const offset = (vertical * firstWaterImage.width + horizontal) * 4;
-          if (Math.abs(firstWaterImage.data[offset] - secondWaterImage.data[offset]) > 3) changedPixels++;
-        }
-      }
+      // Motion can change any color channel, especially at a smaller framebuffer resolution.
+      const changedPixels = countSceneDifferences(firstWaterImage, secondWaterImage);
       assert(changedPixels > 100, `${backend}: time changes water shading (${changedPixels} pixels)`);
       await page.evaluate(() => window.cityScene.setTime(2));
       await page.waitForTimeout(100);
