@@ -150,9 +150,7 @@ export function createRiverfrontSoftShadowScene(
       if (settings.animated && lastFrameTime) {
         settings.hour =
           FIRST_HOUR +
-          ((settings.hour -
-            FIRST_HOUR +
-            (Math.min(now - lastFrameTime, 100) / 1000) * settings.hoursPerSecond) %
+          ((settings.hour - FIRST_HOUR + ((now - lastFrameTime) / 1000) * settings.hoursPerSecond) %
             (LAST_HOUR - FIRST_HOUR));
       }
       if (lastFrameTime && cloudSettings.enabled) {
