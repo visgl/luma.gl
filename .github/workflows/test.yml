@@ -109,6 +109,19 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      - name: Run Deck globe cloud cover visual checks
+        if: ${{ matrix.shard == 1 }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-globe-clouds test:visual
+
+      - name: Upload globe cloud cover screenshots
+        if: ${{ always() && matrix.shard == 1 }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: deck-globe-cloud-cover
+          path: /tmp/globe-cloud-cover-*.png
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Run Deck point glow visual checks
         if: ${{ matrix.shard == 2 }}
         run: xvfb-run -a yarn workspace luma.gl-examples-deck-point-glow test:visual

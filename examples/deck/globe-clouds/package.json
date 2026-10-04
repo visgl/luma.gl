@@ -7,7 +7,8 @@
     "start": "vite",
     "build": "tsc && vite build",
     "build:website": "vite build --mode website --outDir ../../../website/.generated/example-assets/standalone-examples/globe-clouds --emptyOutDir",
-    "test:visual": "node visual-test.mjs"
+    "test:visual": "node visual-test.mjs",
+    "generate:thumbnail": "node visual-test.mjs --thumbnail"
   },
   "dependencies": {
     "@deck.gl-community/gpu-layers": "10.0.0-alpha.2",

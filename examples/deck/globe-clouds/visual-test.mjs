@@ -61,7 +61,7 @@ try {
       await page.waitForFunction(previous => window.globeCloudScene.diagnostics.time > previous + 0.5, before);
       await page.getByLabel('Animate', {exact: true}).uncheck();
       await screenshot();
-      if (backend === 'webgpu') {
+      if (backend === 'webgpu' && process.argv.includes('--thumbnail')) {
         const thumbnailPath = join(root, '../../../website/static/images/examples/deck/globe-clouds.jpg');
         await mkdir(dirname(thumbnailPath), {recursive: true});
         await page.locator('#scene').screenshot({path: thumbnailPath, type: 'jpeg', quality: 90});
