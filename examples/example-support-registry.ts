@@ -11,6 +11,7 @@ import styledPathsSupport from './deck/styled-paths/mobile-support';
 import sceneBuffersSupport from './deck/scene-buffers/mobile-support';
 import ambientOcclusionSupport from './deck/ambient-occlusion/mobile-support';
 import softShadowsSupport from './deck/soft-shadows/mobile-support';
+import depthOfFieldSupport from './deck/depth-of-field/mobile-support';
 import type {ExampleSupportDefinition} from './example-support';
 import citySceneSupport from './deck/city-scene/mobile-support';
 import standaloneSupport0 from './api/texture-compressed/mobile-support';
@@ -112,6 +113,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'deck/scene-buffers': sceneBuffersSupport,
   'deck/ambient-occlusion': ambientOcclusionSupport,
   'deck/soft-shadows': softShadowsSupport,
+  'deck/depth-of-field': depthOfFieldSupport,
   'showcase/gaussian-splat-viewer': support0,
   'showcase/gaussian-splats': support1,
   'showcase/instancing': support2,
