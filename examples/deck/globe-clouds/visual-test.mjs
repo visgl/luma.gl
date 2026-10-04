@@ -19,7 +19,7 @@ await server.listen();
 try {
   for (const backend of ['webgpu', 'webgl']) {
     const browser = await chromium.launch(getPlaywrightLaunchOptions({headless: true, backend,
-      softwareGpu: process.platform === 'linux', launchOptions: process.platform === 'linux' && backend === 'webgpu'
+      softwareGpu: process.platform === 'linux' || process.env.GLOBE_SOFTWARE_GPU === 'true', launchOptions: process.platform === 'linux' && backend === 'webgpu'
         ? {args: ['--enable-gpu', '--enable-features=Vulkan', '--use-vulkan=swiftshader']} : {}}));
     try {
       const page = await browser.newPage({viewport: {width: 1100, height: 800}, deviceScaleFactor: 1});
@@ -66,10 +66,14 @@ try {
         assert(differences(enabled, disabled) > 300, `${body} is visible beside the globe`);
         await page.getByLabel(body === 'sun' ? 'Sun' : 'Moon', {exact: true}).check();
       }
+      // Subpixel stars require the original resolution on SwiftShader WebGL.
+      // Keep this focused visibility assertion at full resolution rather than lowering its threshold.
+      await setVisualTestPixelScale(page, 'globeCloudScene', 1);
       const starry = await screenshot();
       await page.getByLabel('Stars', {exact: true}).uncheck();
       assert(differences(starry, await screenshot()) > 100, 'Catalog stars fill the sky');
       await page.getByLabel('Stars', {exact: true}).check();
+      await setVisualTestPixelScale(page, 'globeCloudScene', process.argv.includes('--thumbnail') ? 1 : undefined);
       await page.getByRole('button', {name: 'Center', exact: true}).click();
       await page.getByLabel('Animate', {exact: true}).check();
       const before = await page.evaluate(() => window.globeCloudScene.diagnostics.time);

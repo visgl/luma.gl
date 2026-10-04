@@ -82,6 +82,9 @@ by default. `scripts/playwright/visual-test-utils.mjs` sets the actual canvas pi
 ratio and verifies its dimensions; screenshots stay in CSS coordinates so image
 regions and assertion thresholds are unchanged. Set `LUMA_VISUAL_TEST_PIXEL_SCALE=1`
 for a full-resolution diagnostic run. Thumbnail generation retains full resolution.
+The focused catalog-star assertion also uses full resolution because SwiftShader
+WebGL can lose subpixel stars at half resolution.
+Set `GLOBE_SOFTWARE_GPU=true` to reproduce the globe smoke test with SwiftShader locally.
 
 Flow correctness runs still exercise all three particle densities on both backends.
 The six 30-frame timing samples are a separate opt-in workload:
