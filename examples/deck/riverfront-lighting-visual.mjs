@@ -13,6 +13,9 @@ import {PNG} from 'pngjs';
 import {getPlaywrightLaunchOptions} from '../../scripts/playwright/get-playwright-launch-options.mjs';
 
 const kind = process.argv[2] || 'fireflies';
+// Smoke assertions use CSS pixels; poster generation retains its original framebuffer quality.
+const deviceScaleFactor = Number(process.env.RIVERFRONT_DEVICE_SCALE ?? (process.argv.includes('--thumbnail') ? 1 : 0.5));
+assert(deviceScaleFactor > 0 && Number.isFinite(deviceScaleFactor));
 assert(['fireflies', 'hdr-night-lighting', 'global-illumination', 'light-shafts'].includes(kind));
 const root = join(dirname(fileURLToPath(import.meta.url)), kind);
 const server = await createServer({
@@ -33,7 +36,8 @@ const browser = await chromium.launch(
   })
 );
 try {
-  const page = await browser.newPage({viewport: {width: 1100, height: 800}, deviceScaleFactor: 1});
+  const page = await browser.newPage({viewport: {width: 1100, height: 800}, deviceScaleFactor});
+  const captureScreenshot = options => page.screenshot({...options, scale: 'css'});
   page.setDefaultTimeout(120_000);
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -56,7 +60,7 @@ try {
       previous => window.riverfrontLighting.diagnostics.frames > previous + 4,
       frameIndex
     );
-    const moving = PNG.sync.read(await page.screenshot());
+    const moving = PNG.sync.read(await captureScreenshot());
     let movingPixels = 0;
     for (let row = 0; row < moving.height; row++)
       for (let column = 340; column < moving.width; column++) {
@@ -79,10 +83,10 @@ try {
   });
   assert.equal(presentation.reported, presentation.format === 'rgba16float' && presentation.mode === 'extended', 'HDR status matches the accepted native canvas');
   if (kind === 'fireflies') {
-    const reflected = PNG.sync.read(await page.screenshot({path: join(tmpdir(), 'riverfront-fireflies-reflected.png')}));
+    const reflected = PNG.sync.read(await captureScreenshot({path: join(tmpdir(), 'riverfront-fireflies-reflected.png')}));
     await page.uncheck('#reflections');
     await page.waitForFunction(() => !window.riverfrontLighting.deck.props._animate);
-    const unreflected = PNG.sync.read(await page.screenshot({path: join(tmpdir(), 'riverfront-fireflies-unreflected.png')}));
+    const unreflected = PNG.sync.read(await captureScreenshot({path: join(tmpdir(), 'riverfront-fireflies-unreflected.png')}));
     let reflectionPixels = 0;
     for (let row = 0; row < reflected.height; row++)
       for (let column = 340; column < reflected.width; column++) {
@@ -96,10 +100,10 @@ try {
     await page.waitForFunction(() => !window.riverfrontLighting.deck.props._animate);
   }
   if (kind === 'fireflies') {
-    const bloomed = PNG.sync.read(await page.screenshot());
+    const bloomed = PNG.sync.read(await captureScreenshot());
     await page.uncheck('#bloom');
     await page.waitForFunction(() => !window.riverfrontLighting.deck.props._animate);
-    const unbloomed = PNG.sync.read(await page.screenshot());
+    const unbloomed = PNG.sync.read(await captureScreenshot());
     let bloomPixels = 0;
     for (let row = 0; row < bloomed.height; row++)
       for (let column = 340; column < bloomed.width; column++) {
@@ -117,10 +121,10 @@ try {
   if (kind === 'fireflies') {
     await page.selectOption('#species', 'genji-hotaru');
     await page.waitForFunction(() => !window.riverfrontLighting.deck.props._animate);
-    const hotaru = PNG.sync.read(await page.screenshot());
+    const hotaru = PNG.sync.read(await captureScreenshot());
     await page.selectOption('#species', 'photinus-scintillans');
     await page.waitForFunction(() => !window.riverfrontLighting.deck.props._animate);
-    const amber = PNG.sync.read(await page.screenshot());
+    const amber = PNG.sync.read(await captureScreenshot());
     let colorPixels = 0;
     for (let row = 0; row < hotaru.height; row++)
       for (let column = 340; column < hotaru.width; column++) {
@@ -138,15 +142,15 @@ try {
     const posterPath = join(root, '../../../website/static/images/examples/deck', `${kind}.jpg`);
     await mkdir(dirname(posterPath), {recursive: true});
     const hiddenControls = await page.addStyleTag({content: 'aside {visibility: hidden;}'});
-    await page.screenshot({path: posterPath, type: 'jpeg', quality: 90});
+    await captureScreenshot({path: posterPath, type: 'jpeg', quality: 90});
     await hiddenControls.evaluate(element => element.remove());
   }
   const screenshotPath = join(tmpdir(), `riverfront-${kind}.png`);
-  const enabled = PNG.sync.read(await page.screenshot({path: screenshotPath}));
+  const enabled = PNG.sync.read(await captureScreenshot({path: screenshotPath}));
   if (kind === 'hdr-night-lighting') await page.uncheck('#bloom');
   else await page.uncheck('#enabled');
   await page.waitForFunction(() => !window.riverfrontLighting.deck.props._animate);
-  const disabled = PNG.sync.read(await page.screenshot());
+  const disabled = PNG.sync.read(await captureScreenshot());
   let changed = 0;
   let totalDifference = 0;
   for (let row = 0; row < enabled.height; row++) {

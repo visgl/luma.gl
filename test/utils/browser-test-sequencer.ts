@@ -7,20 +7,38 @@ import {BaseSequencer, type TestSpecification} from 'vitest/node';
 
 const DEFAULT_BROWSER_TEST_WEIGHT = 3;
 
-// Coarse weights from SwiftShader CI timings. Most browser files spend about three seconds on
-// page setup and execution; these known outliers need explicit weights so Vitest does not place
-// several of them in the same shard. Update only when CI timings materially change.
-const SLOW_BROWSER_TEST_WEIGHTS: Readonly<Record<string, number>> = {
-  'modules/experimental/test/gpu-raster/gpu-raster-tile-halo-parity.spec.ts': 14,
-  'modules/text/test/text-2d/convert-arrow-text-vectors.spec.ts': 14,
-  'modules/arrow-layers/test/gpu-graph-deck.spec.ts': 10,
-  'modules/experimental/test/geospatial/geospatial-projection-distance.spec.ts': 9,
-  'test/examples/gpu-dataframe-analysis.spec.ts': 9,
-  'modules/arrow/test/arrow/arrow-path-model.spec.ts': 9,
-  'modules/experimental/test/gpu-graph/gpu-graph-core-number.spec.ts': 9,
-  'modules/experimental/test/gpu-dataframe/gpu-global-aggregation.spec.ts': 9,
-  'modules/arrow/test/arrow/dggs-gpu-polygons.spec.ts': 8,
-  'modules/experimental/test/gpu-graph/gpu-graph-modularity-optimization.spec.ts': 8
+// Rounded setup and execution times from SwiftShader CI run 37225736435 (2026-10-04).
+// Include page/import overhead: GPU test-body durations alone underweight Arrow and Deck specs.
+// Keep the current source paths here when suites move between packages.
+export const SLOW_BROWSER_TEST_WEIGHTS: Readonly<Record<string, number>> = {
+  'modules/arrow/test/arrow/arrow-path-model.spec.ts': 15,
+  'modules/arrow/test/arrow/dggs-gpu-polygons.spec.ts': 12,
+  'modules/deck-arrow-layers/test/gpu-graph-deck.spec.ts': 15,
+  'modules/deck-arrow-layers/test/layers/arrow-layers.spec.ts': 10,
+  'modules/deck-gpu-layers/test/scene-buffer-effect.spec.ts': 7,
+  'modules/experimental/test/geospatial/geospatial-projection-distance.spec.ts': 10,
+  'modules/experimental/test/gpu-dataframe/gpu-sort.spec.ts': 7,
+  'modules/experimental/test/gpu-raster/gpu-raster-cross-tile-components-pipeline.spec.ts': 10,
+  'modules/experimental/test/gpu-raster/gpu-raster-cross-tile-components.spec.ts': 7,
+  'modules/experimental/test/gpu-raster/gpu-raster-region-measurements-pipeline.spec.ts': 7,
+  'modules/experimental/test/gpu-raster/gpu-raster-tile-halo-parity.spec.ts': 9,
+  'modules/gpgpu/test/gpu-core/gpu-batch-conformance.spec.ts': 14,
+  'modules/gpgpu/test/gpu-core/gpu-byte-range-gather-batching.spec.ts': 8,
+  'modules/gpgpu/test/gpu-core/gpu-completion-batching.spec.ts': 11,
+  'modules/gpgpu/test/gpu-core/gpu-dense-batching.spec.ts': 29,
+  'modules/gpgpu/test/gpu-core/gpu-finite-difference-batching.spec.ts': 9,
+  'modules/gpgpu/test/gpu-core/gpu-hash-batching.spec.ts': 8,
+  'modules/gpgpu/test/gpu-core/gpu-reduction-mask.spec.ts': 8,
+  'modules/gpgpu/test/gpu-core/gpu-sort.spec.ts': 12,
+  'modules/gpgpu/test/gpu-core/gpu-spatial-batching.spec.ts': 12,
+  'modules/gpgpu/test/gpu-core/gpu-transform-batching.spec.ts': 7,
+  'modules/gpgpu/test/gpu-graph/gpu-graph-explorer.spec.ts': 8,
+  'modules/gpgpu/test/gpu-graph/gpu-graph-modularity-optimization.spec.ts': 7,
+  'modules/gpgpu/test/gpu-graph/gpu-graph-spatial-force-layout.spec.ts': 9,
+  'modules/gpgpu/test/gpu-vector-search/gpu-ivf-flat-index.spec.ts': 7,
+  'modules/text/test/text-2d/convert-arrow-text-vectors.spec.ts': 11,
+  'test/examples/gpu-dataframe-analysis.spec.ts': 13,
+  'test/examples/gpu-dataframe-derived-columns.spec.ts': 9
 };
 
 type WeightedTestSpecification = {
