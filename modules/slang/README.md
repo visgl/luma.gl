@@ -1,11 +1,21 @@
 # @luma.gl/slang
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../../website/static/img/standards/slang.svg" />
-  <img src="../../website/static/img/standards/slang-light.svg" alt="Slang" width="224" height="70" />
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/visgl/luma.gl/master/website/static/img/standards/slang.svg" />
+  <img src="https://raw.githubusercontent.com/visgl/luma.gl/master/website/static/img/standards/slang-light.svg" alt="Slang" width="224" height="70" />
 </picture>
 
-This package is private and currently available only in the luma.gl repository.
+> **Experimental · Available from luma.gl v10.** APIs and the supported language subset may change
+> between releases. This package is not available in v9.
+
+Install the same v10 or later version as the rest of your luma.gl packages:
+
+```sh
+yarn add @luma.gl/slang
+```
+
+For prereleases, select the same prerelease version explicitly. See the
+[Slang documentation](https://luma.gl/docs/api-reference/slang) for a live example and the API guide.
 
 A synchronous, dependency-free TypeScript transpiler from Slang shader source to GLSL and WGSL.
 It runs in browsers and Node.js, without a native compiler or WebAssembly runtime.

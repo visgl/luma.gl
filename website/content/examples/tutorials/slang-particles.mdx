@@ -7,10 +7,16 @@ sidebar_custom_props:
   maturity: experimental
   mobile: reduced
   mobileProfile: simulation
-  topics: [shaders, compute, simulation, rendering]
+  topics: [slang, shaders, compute, simulation, rendering]
 ---
 
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {SlangParticlesExample} from '@site/src/examples';
+
+<DocumentationBadges>
+  <DocumentationBadge tone="experimental">Experimental</DocumentationBadge>
+  <DocumentationBadge tone="version">Since v10</DocumentationBadge>
+</DocumentationBadges>
 
 <SlangParticlesExample />
 
@@ -19,7 +25,7 @@ and cohesion, or pause and reset. Phones use 8,192 particles.
 
 One `particles.slang` source supplies the compute, vertex and fragment entry points. Workgroups share
 64 positions and use an integer atomic to count moving particles. Compute writes the next buffer;
-rendering reads it directly, without CPU readback. The application imports and registers the private
+rendering reads it directly, without CPU readback. The application imports and registers the experimental
 Slang compiler and uses its reflection helpers for resource layouts and uniform packing.
 
 WebGPU is required. The simulation test compares several steps with an independent CPU reference.

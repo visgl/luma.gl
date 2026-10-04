@@ -217,8 +217,8 @@ Source-language modules should declare their uniforms and resources in their
 source and supply matching binding/uniform metadata and packing where needed.
 Automatic resource-name or uniform-layout translation is not part of this API.
 
-For example, an application with access to the private Slang package can register
-an adapter (these imports belong to the application):
+For example, an application using the experimental `@luma.gl/slang` package (available from v10)
+can register an adapter. These imports belong to the application:
 
 ```typescript
 import {transpileSlang, transpileSlangWGSL} from '@luma.gl/slang';

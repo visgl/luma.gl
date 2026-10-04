@@ -7,10 +7,16 @@ sidebar_custom_props:
   maturity: experimental
   mobile: full
   mobileProfile: standard
-  topics: [fundamentals, shaders, modules, rendering]
+  topics: [slang, fundamentals, shaders, modules, rendering]
 ---
 
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {SlangShadersExample} from '@site/src/examples';
+
+<DocumentationBadges>
+  <DocumentationBadge tone="experimental">Experimental</DocumentationBadge>
+  <DocumentationBadge tone="version">Since v10</DocumentationBadge>
+</DocumentationBadges>
 
 <SlangShadersExample />
 
@@ -19,7 +25,7 @@ iridescent lighting, and a floor reflection. Try the material, twist, and exposu
 controls, or pause to inspect the surfaces. No mesh is uploaded: the fragment shader
 traces camera rays through a signed-distance field.
 
-The application registers the private TypeScript Slang compiler with its own shader
+The application registers the experimental TypeScript Slang compiler with its own shader
 assembler. Both backends use the same `shader.slang`, reusable `geometry.slang`
 distance-field module, and `palette.slang` material module. Animation and camera
 parameters share a flat uniform buffer; the application uses compiler reflection to
