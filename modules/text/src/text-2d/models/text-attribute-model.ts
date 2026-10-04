@@ -4,7 +4,7 @@
 
 import {type Buffer, type Device, type RenderPass} from '@luma.gl/core';
 import type {DynamicTexture, ModelProps} from '@luma.gl/engine';
-import {getGPUDataBuffersForLayout} from '@luma.gl/gpgpu/gpu-data';
+import {getGPUDataBuffersForLayout, getGPUDataByteOffsetsForLayout} from '@luma.gl/gpgpu/gpu-data';
 import {GPUTableModel, type GPUTableModelProps} from '@luma.gl/experimental/gpu-tables';
 import type {TextGlyphLayout} from '../model-utils/gpu-text-types';
 import {EXPANDED_GLYPH_VERTEX_DATA} from '../model-utils/text-shaders';
@@ -106,10 +106,13 @@ export class TextAttributeModel extends GPUTableModel {
         const gpuTable = attributeState.modelProps.table!;
         for (const [batchIndex, renderBatch] of attributeState.renderBatches.entries()) {
           const gpuBatch = gpuTable.batches[batchIndex]!;
-          this.setAttributes({
-            ...getGPUDataBuffersForLayout(gpuBatch.bufferLayout, gpuBatch.gpuData),
-            [EXPANDED_GLYPH_VERTEX_DATA]: renderBatch.expandedGlyphVertexData
-          });
+          this.setAttributes(
+            {
+              ...getGPUDataBuffersForLayout(gpuBatch.bufferLayout, gpuBatch.gpuData),
+              [EXPANDED_GLYPH_VERTEX_DATA]: renderBatch.expandedGlyphVertexData
+            },
+            {byteOffsets: getGPUDataByteOffsetsForLayout(gpuBatch.bufferLayout, gpuBatch.gpuData)}
+          );
           this.setInstanceCount(renderBatch.glyphCount);
           drawSuccess = super.draw(renderPass) && drawSuccess;
         }
@@ -117,12 +120,19 @@ export class TextAttributeModel extends GPUTableModel {
     } finally {
       const gpuTable = this.attributeState.modelProps.table;
       const firstGpuBatch = gpuTable?.batches[0];
-      this.setAttributes({
-        ...(firstGpuBatch
-          ? getGPUDataBuffersForLayout(firstGpuBatch.bufferLayout, firstGpuBatch.gpuData)
-          : {}),
-        [EXPANDED_GLYPH_VERTEX_DATA]: this.attributeState.expandedGlyphVertexData
-      });
+      this.setAttributes(
+        {
+          ...(firstGpuBatch
+            ? getGPUDataBuffersForLayout(firstGpuBatch.bufferLayout, firstGpuBatch.gpuData)
+            : {}),
+          [EXPANDED_GLYPH_VERTEX_DATA]: this.attributeState.expandedGlyphVertexData
+        },
+        {
+          byteOffsets: firstGpuBatch
+            ? getGPUDataByteOffsetsForLayout(firstGpuBatch.bufferLayout, firstGpuBatch.gpuData)
+            : {}
+        }
+      );
       this.setInstanceCount(
         this.attributeStates.reduce(
           (glyphCount, attributeState) => glyphCount + attributeState.glyphLayout.glyphCount,

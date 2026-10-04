@@ -57,18 +57,18 @@ const EXAMPLE_PANEL_STYLE = `
 [${EXAMPLE_SETTINGS_PANEL_ATTRIBUTE}] [data-setting-row-for] input[type='number'],
 [${EXAMPLE_SETTINGS_PANEL_ATTRIBUTE}] [data-setting-row-for] input[type='text'],
 [id^='settings-panel-input-'][role='listbox'] > button[role='option'] {
-  font-size: 15px !important;
+  font-size: 11px !important;
 }
 [${EXAMPLE_SETTINGS_PANEL_ATTRIBUTE}][${EXAMPLE_SETTINGS_SECTIONS_ATTRIBUTE}='accordion']
 button[aria-expanded]:not([aria-haspopup='listbox']) {
   margin-top: 4px !important;
-  padding: 10px 11px !important;
-  border-radius: 8px !important;
+  padding: 8px !important;
+  border-radius: 7px !important;
   background: rgba(70, 104, 159, 0.08) !important;
 }
 [${EXAMPLE_SETTINGS_PANEL_ATTRIBUTE}][${EXAMPLE_SETTINGS_SECTIONS_ATTRIBUTE}='accordion']
 button[aria-expanded]:not([aria-haspopup='listbox']) > span:first-child > span:first-child {
-  font-size: 13px !important;
+  font-size: 11px !important;
   letter-spacing: 0.01em;
 }
 `;

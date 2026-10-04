@@ -43,6 +43,7 @@ function makeNativeDevice(lost: Promise<GPUDeviceLostInfo>) {
       lost,
       queue: {},
       addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
       createCommandEncoder: vi.fn(() => commandEncoder),
       destroy: vi.fn()
     } as unknown as GPUDevice,
@@ -86,6 +87,62 @@ describe('WebGPU device creation lifecycle', () => {
     const device = await adapter.create({} as DeviceProps);
 
     expect(nativeAdapter.requestDevice).toHaveBeenCalledWith({});
+    device.destroy();
+  });
+
+  test('forwards custom requiredLimits to requestDevice()', async () => {
+    const pendingLoss = makeDeferred<GPUDeviceLostInfo>();
+    const nativeDevice = makeNativeDevice(pendingLoss.promise);
+    const nativeAdapter = makeNativeAdapter(nativeDevice.device);
+    nativeAdapter.adapter.limits = {
+      maxStorageBufferBindingSize: 1024 * 1024 * 1024,
+      maxBufferSize: 2 * 1024 * 1024 * 1024
+    } as GPUSupportedLimits;
+
+    const adapter = new MockWebGPUAdapter([nativeAdapter.adapter]);
+    const device = await adapter.create({
+      requiredLimits: {
+        maxStorageBufferBindingSize: 256 * 1024 * 1024,
+        maxBufferSize: 512 * 1024 * 1024
+      }
+    });
+
+    expect(nativeAdapter.requestDevice).toHaveBeenCalledWith({
+      requiredLimits: {
+        maxStorageBufferBindingSize: 256 * 1024 * 1024,
+        maxBufferSize: 512 * 1024 * 1024
+      }
+    });
+    device.destroy();
+  });
+
+  test('requiredLimits merges with featureLevel max', async () => {
+    const pendingLoss = makeDeferred<GPUDeviceLostInfo>();
+    const nativeDevice = makeNativeDevice(pendingLoss.promise);
+    const nativeAdapter = makeNativeAdapter(nativeDevice.device);
+    nativeAdapter.adapter.limits = {
+      maxBufferSize: 2 * 1024 * 1024 * 1024,
+      maxStorageBufferBindingSize: 1024 * 1024 * 1024,
+      maxComputeWorkgroupsPerDimension: 65535
+    } as GPUSupportedLimits;
+
+    const adapter = new MockWebGPUAdapter([nativeAdapter.adapter]);
+    const device = await adapter.create({
+      featureLevel: 'max',
+      requiredLimits: {
+        maxBufferSize: 512 * 1024 * 1024
+      }
+    });
+
+    expect(nativeAdapter.requestDevice).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requiredLimits: expect.objectContaining({
+          maxBufferSize: 512 * 1024 * 1024,
+          maxStorageBufferBindingSize: 1024 * 1024 * 1024,
+          maxComputeWorkgroupsPerDimension: 65535
+        })
+      })
+    );
     device.destroy();
   });
 
@@ -181,4 +238,145 @@ describe('WebGPU device creation lifecycle', () => {
 
     await expect(getWebGPUAdapterInfo({} as GPUAdapter)).resolves.toEqual({});
   });
+
+  test('attach does not destroy an application-owned device', async () => {
+    const pendingLoss = makeDeferred<GPUDeviceLostInfo>();
+    const nativeDevice = makeNativeDevice(pendingLoss.promise);
+    const adapter = new MockWebGPUAdapter([]);
+
+    const device = await adapter.attach(nativeDevice.device);
+    device.destroy();
+
+    expect(adapter.requests).toHaveLength(0);
+    expect(nativeDevice.device.destroy).not.toHaveBeenCalled();
+    expect(nativeDevice.device.removeEventListener).toHaveBeenCalledWith(
+      'uncapturederror',
+      expect.any(Function)
+    );
+  });
+
+  test('destroy cleans up a lost wrapper exactly once', async () => {
+    const pendingLoss = makeDeferred<GPUDeviceLostInfo>();
+    const nativeDevice = makeNativeDevice(pendingLoss.promise);
+    const device = await new MockWebGPUAdapter([]).attach(nativeDevice.device);
+    pendingLoss.resolve({reason: 'unknown', message: 'Driver reset'} as GPUDeviceLostInfo);
+    await device.lost;
+
+    device.destroy();
+    device.destroy();
+
+    expect(nativeDevice.device.removeEventListener).toHaveBeenCalledTimes(1);
+    expect(nativeDevice.device.destroy).not.toHaveBeenCalled();
+  });
+
+  test('attach stops returning a wrapper once its device is lost', async () => {
+    const pendingLoss = makeDeferred<GPUDeviceLostInfo>();
+    const nativeDevice = makeNativeDevice(pendingLoss.promise);
+    const adapter = new MockWebGPUAdapter([]);
+
+    const device = await adapter.attach(nativeDevice.device);
+    pendingLoss.resolve({reason: 'unknown', message: 'Driver reset'} as GPUDeviceLostInfo);
+    await device.lost;
+
+    await expect(adapter.attach(nativeDevice.device)).rejects.toMatchObject({
+      message: expect.stringContaining('already lost')
+    });
+    device.destroy();
+  });
+
+  test('attach rejects an already lost device without destroying it', async () => {
+    const lostDevice = makeNativeDevice(
+      Promise.resolve({reason: 'unknown', message: 'Driver reset'} as GPUDeviceLostInfo)
+    );
+    const adapter = new MockWebGPUAdapter([]);
+
+    await expect(adapter.attach(lostDevice.device)).rejects.toMatchObject({
+      message: expect.stringContaining('already lost')
+    });
+    expect(lostDevice.device.destroy).not.toHaveBeenCalled();
+  });
+
+  test('create destroys the device it requested', async () => {
+    const pendingLoss = makeDeferred<GPUDeviceLostInfo>();
+    const nativeDevice = makeNativeDevice(pendingLoss.promise);
+    const nativeAdapter = makeNativeAdapter(nativeDevice.device);
+
+    const device = await new MockWebGPUAdapter([nativeAdapter.adapter]).create({});
+    device.destroy();
+
+    expect(nativeDevice.device.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  test('attach returns the existing wrapper until it is destroyed', async () => {
+    const pendingLoss = makeDeferred<GPUDeviceLostInfo>();
+    const nativeDevice = makeNativeDevice(pendingLoss.promise);
+    const adapter = new MockWebGPUAdapter([]);
+
+    const device = await adapter.attach(nativeDevice.device);
+    await expect(adapter.attach(nativeDevice.device)).resolves.toBe(device);
+    expect(nativeDevice.device.addEventListener).toHaveBeenCalledTimes(1);
+
+    device.destroy();
+    const reattachedDevice = await adapter.attach(nativeDevice.device);
+    expect(reattachedDevice).not.toBe(device);
+    reattachedDevice.destroy();
+  });
+
+  test('attach returns the device created by luma for its handle', async () => {
+    const pendingLoss = makeDeferred<GPUDeviceLostInfo>();
+    const nativeDevice = makeNativeDevice(pendingLoss.promise);
+    const nativeAdapter = makeNativeAdapter(nativeDevice.device);
+    const adapter = new MockWebGPUAdapter([nativeAdapter.adapter]);
+
+    const device = await adapter.create({} as DeviceProps);
+    await expect(adapter.attach(device.handle)).resolves.toBe(device);
+    device.destroy();
+  });
+
+  test.each([
+    {featureLevel: undefined, hasCoreFeature: false, expected: 'compatibility'},
+    {featureLevel: undefined, hasCoreFeature: true, expected: 'core'},
+    {featureLevel: 'core', hasCoreFeature: false, expected: 'core'},
+    {featureLevel: 'compatibility', hasCoreFeature: true, expected: 'core'},
+    {featureLevel: 'best-available', hasCoreFeature: false, expected: 'compatibility'},
+    {featureLevel: 'max', hasCoreFeature: false, expected: 'compatibility'},
+    {featureLevel: 'max', hasCoreFeature: true, expected: 'core'}
+  ] as const)('attach reports featureLevel $expected for requested $featureLevel (core feature: $hasCoreFeature)', async ({
+    featureLevel,
+    hasCoreFeature,
+    expected
+  }) => {
+    const pendingLoss = makeDeferred<GPUDeviceLostInfo>();
+    const nativeDevice = makeNativeDevice(pendingLoss.promise);
+    Object.assign(nativeDevice.device, {
+      features: new Set(hasCoreFeature ? ['core-features-and-limits'] : [])
+    });
+
+    const device = await new MockWebGPUAdapter([]).attach(nativeDevice.device, {featureLevel});
+
+    expect(device.info.featureLevel).toBe(expected);
+    device.destroy();
+  });
+});
+
+test.each([
+  false,
+  true
+])('concurrent attach reuses one wrapper across adapters: %s', async separateAdapters => {
+  const pendingLoss = makeDeferred<GPUDeviceLostInfo>();
+  const nativeDevice = makeNativeDevice(pendingLoss.promise);
+  const adapter = new MockWebGPUAdapter([]);
+  const otherAdapter = separateAdapters ? new MockWebGPUAdapter([]) : adapter;
+  const devices = await Promise.all([
+    adapter.attach(nativeDevice.device),
+    otherAdapter.attach(nativeDevice.device)
+  ]);
+  try {
+    expect(devices[0]).toBe(devices[1]);
+    expect(nativeDevice.device.addEventListener).toHaveBeenCalledTimes(1);
+  } finally {
+    for (const device of new Set(devices)) device.destroy();
+  }
+  expect(nativeDevice.device.removeEventListener).toHaveBeenCalledTimes(1);
+  expect(nativeDevice.device.destroy).not.toHaveBeenCalled();
 });

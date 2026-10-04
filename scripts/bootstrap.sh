@@ -13,12 +13,13 @@ if [ ! -s "$NVM_DIR/nvm.sh" ]; then
 fi
 
 # shellcheck disable=SC1090
-. "$NVM_DIR/nvm.sh"
+# Do not let nvm select its global default before the repository's .nvmrc is read.
+. "$NVM_DIR/nvm.sh" --no-use
 
 cd "$REPO_ROOT"
 
 nvm install
-nvm use
+nvm use --delete-prefix
 
 corepack enable
 corepack yarn install

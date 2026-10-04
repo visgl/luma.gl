@@ -15,6 +15,13 @@ This repo uses `@vis.gl/dev-tools` for shared Vitest wiring and keeps repository
   - `yarn playwright:install`
 - The test commands use `@vis.gl/dev-tools`.
 - Repository-specific Vitest configuration lives in `vitest.config.ts`.
+- Vitest, the Playwright provider, and Istanbul coverage are pinned to 5.0.2, following
+  [loaders.gl #4072](https://github.com/visgl/loaders.gl/pull/4072). The browser package
+  resolutions align the Vitest 4 dependencies still declared by `@vis.gl/dev-tools`;
+  remove them after upgrading to native Vitest 5 support
+  ([dev-tools #59](https://github.com/visgl/dev-tools/pull/59)).
+- CI merges LCOV coverage directly, so the explicit blob-report paths used by loaders.gl
+  are unnecessary here.
 - Repository-specific Playwright utilities live under `scripts/playwright/`.
 - Playwright aliases and defaults live in `.ocularrc.js`.
 

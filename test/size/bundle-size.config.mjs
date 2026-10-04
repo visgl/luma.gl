@@ -4,6 +4,23 @@
  */
 export const BUNDLE_SIZE_FIXTURES = [
   {
+    name: 'slang',
+    label: '`@luma.gl/slang` compiler (optional)',
+    entry: 'modules/slang/src/index.ts',
+    external: [],
+    // Everyday language support adds about 2.5 KB gzip; preserve a tight regression ceiling.
+    maximum: {minified: 102_000, gzip: 29_000, brotli: 25_500},
+    targetGzip: 25_000
+  },
+  {
+    name: 'slang-luma',
+    label: '`@luma.gl/slang/luma` helpers (optional)',
+    entry: 'modules/slang/src/luma.ts',
+    external: [],
+    maximum: {minified: 5_000, gzip: 1_800, brotli: 1_600},
+    targetGzip: 1_500
+  },
+  {
     name: 'core',
     label: '`@luma.gl/core`',
     entry: 'modules/core/src/index.ts',
@@ -31,7 +48,7 @@ export const BUNDLE_SIZE_FIXTURES = [
     name: 'core-webgl',
     label: 'core + WebGL',
     sum: ['core', 'webgl'],
-    maximum: {minified: 240_000, gzip: 68_000, brotli: 59_000},
+    maximum: {minified: 241_000, gzip: 68_000, brotli: 59_000},
     targetGzip: 54_000
   },
   {

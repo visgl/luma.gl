@@ -1,0 +1,43 @@
+---
+title: Slang Shaders
+description: Explore an animated ray-marched sculpture written in Slang on WebGL 2 and WebGPU.
+sidebar_custom_props:
+  backends: [webgpu, webgl2]
+  difficulty: tutorial
+  maturity: experimental
+  mobile: full
+  mobileProfile: standard
+  topics: [slang, fundamentals, shaders, modules, rendering]
+---
+
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
+import {SlangShadersExample} from '@site/src/examples';
+
+<DocumentationBadges>
+  <DocumentationBadge tone="experimental">Experimental</DocumentationBadge>
+  <DocumentationBadge tone="version">Since v10</DocumentationBadge>
+</DocumentationBadges>
+
+<SlangShadersExample />
+
+Drag to orbit an animated sculpture with three deforming rings, a glowing core,
+iridescent lighting, and a floor reflection. Try the material, twist, and exposure
+controls and native grain, or pause to inspect the surfaces. No mesh is uploaded: the fragment shader
+traces camera rays through a signed-distance field.
+
+Select **Show shaders** to compare the Slang source and the generated code side by side.
+Choose a Slang source, the native grain shader, or the imported `valueNoise` module on the left. The right pane
+shows the actual assembled WGSL program on WebGPU, or the vertex and fragment GLSL ES 300
+shaders on WebGL 2, plus the native grain pass. Close the viewer or press Escape to return to the scene.
+
+The application registers the experimental TypeScript Slang compiler with its own shader
+assembler. Both backends use the same `shader.slang`, reusable `geometry.slang`
+distance-field module, and `palette.slang` material module. Animation and camera
+parameters share a flat uniform buffer; the application uses compiler reflection to
+bind its resource by the generated name.
+WebGL 2 receives GLSL ES 300; WebGPU receives one WGSL program with generated entry points.
+The example also imports the existing `valueNoise` ShaderModule from `@luma.gl/shadertools`.
+Slang renders into a texture; a native WGSL or GLSL pass reads it and calls `valueNoise_noise`
+to add grain. Set **Native grain** to zero to see the original image. This demonstrates a shared
+texture boundary, while direct calls from Slang into native modules remain unsupported.
+See the [Slang API](/docs/api-reference/slang) for compiler limits.

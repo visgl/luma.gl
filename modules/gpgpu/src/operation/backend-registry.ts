@@ -15,7 +15,7 @@ export type BackendModule = Record<string, unknown>;
  * Registry for operation backends keyed by luma.gl device type.
  *
  * The CPU backend is available by default. WebGL and WebGPU backends are loaded lazily
- * with dynamic imports when a requested handler has not been registered.
+ * with dynamic imports when a requested handler has not been registered for those device types.
  */
 export class BackendRegistry {
   private _modules: {[deviceType: string]: BackendModule | Promise<BackendModule>} = {

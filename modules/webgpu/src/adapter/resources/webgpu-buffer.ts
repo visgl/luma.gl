@@ -21,7 +21,9 @@ export class WebGPUBuffer extends Buffer {
     super(device, props);
     this.device = device;
 
-    this.byteLength = props.byteLength || props.data?.byteLength || 0;
+    const dataByteOffset = props.byteOffset ?? 0;
+    // Like WebGL, data is stored at `byteOffset`, and the default length covers offset plus data
+    this.byteLength = props.byteLength || (props.data ? dataByteOffset + props.data.byteLength : 0);
     this.paddedByteLength = Math.ceil(this.byteLength / 4) * 4;
     const mappedAtCreation = Boolean(this.props.onMapped || props.data);
 
@@ -54,9 +56,10 @@ export class WebGPUBuffer extends Buffer {
       try {
         const arrayBuffer = this.handle.getMappedRange();
         if (props.data) {
-          const typedArray = props.data;
-          // @ts-expect-error
-          new typedArray.constructor(arrayBuffer).set(typedArray);
+          const sourceData = ArrayBuffer.isView(props.data)
+            ? new Uint8Array(props.data.buffer, props.data.byteOffset, props.data.byteLength)
+            : new Uint8Array(props.data);
+          new Uint8Array(arrayBuffer, dataByteOffset, sourceData.byteLength).set(sourceData);
         } else {
           props.onMapped?.(arrayBuffer, 'mapped');
         }
@@ -191,20 +194,21 @@ export class WebGPUBuffer extends Buffer {
     // Unless the application created and supplied a mappable buffer, a staging buffer is needed
     const isMappable = (this.usage & Buffer.MAP_READ) !== 0;
     const mappableBuffer: WebGPUBuffer | null = !isMappable
-      ? this._getMappableBuffer(Buffer.MAP_READ | Buffer.COPY_DST, 0, this.paddedByteLength)
+      ? this._getMappableBuffer(Buffer.MAP_READ | Buffer.COPY_DST, 0, mappedByteLength)
       : null;
 
     const readBuffer = mappableBuffer || this;
+    const readByteOffset = mappableBuffer ? 0 : mappedByteOffset;
 
     // Map the temp buffer and read the data.
     this.device.pushErrorScope('validation');
     try {
       await this.device.handle.queue.onSubmittedWorkDone();
       if (mappableBuffer) {
-        mappableBuffer._copyBuffer(this, mappedByteOffset, mappedByteLength);
+        mappableBuffer._copyBuffer(this, mappedByteOffset, mappedByteLength, 0);
       }
-      await readBuffer.handle.mapAsync(GPUMapMode.READ, mappedByteOffset, mappedByteLength);
-      const arrayBuffer = readBuffer.handle.getMappedRange(mappedByteOffset, mappedByteLength);
+      await readBuffer.handle.mapAsync(GPUMapMode.READ, readByteOffset, mappedByteLength);
+      const arrayBuffer = readBuffer.handle.getMappedRange(readByteOffset, mappedByteLength);
       const mappedRange =
         lifetime === 'mapped'
           ? arrayBuffer
@@ -246,7 +250,8 @@ export class WebGPUBuffer extends Buffer {
   protected _copyBuffer(
     sourceBuffer: WebGPUBuffer,
     byteOffset: number = 0,
-    byteLength: number = this.byteLength
+    byteLength: number = this.byteLength,
+    destinationByteOffset: number = byteOffset
   ) {
     // Now do a GPU-side copy into the temp buffer we can actually read.
     // TODO - we are spinning up an independent command queue here, what does this mean
@@ -256,7 +261,7 @@ export class WebGPUBuffer extends Buffer {
       sourceBuffer.handle,
       byteOffset,
       this.handle,
-      byteOffset,
+      destinationByteOffset,
       byteLength
     );
     this.device.handle.queue.submit([commandEncoder.finish()]);

@@ -429,3 +429,63 @@ For execution methods and routing details, see
 [`ShaderPassRenderer`](/docs/api-reference/engine/passes/shader-pass-renderer).
 The current built-in effect catalog is under
 [Shader Pass Catalog](/docs/api-reference/shadertools/shader-passes/image-processing).
+
+### Analytic height fog
+
+`createVolumetricFogCompositeShaderPass({mode: 'height'})` selects an analytic, single-pass
+height-fog mode in WebGPU or WebGL2. The factory's default remains the existing stylized
+screen-space fog and its history graph. The analytic mode uses `heightFogFunctions`, the same
+extinction calculation used by the `heightFog` material shader module, and allocates no history.
+
+```ts
+const fog = createVolumetricFogCompositeShaderPass({mode: 'height'});
+const renderer = new ShaderPassRenderer(device, {shaderPasses: [fog]});
+renderer.resize([width, height]);
+renderer.renderToScreen({
+  sourceTexture: sceneColor,
+  bindings: {depthTexture: sceneDepth},
+  uniforms: {
+    heightFogPass: {
+      inverseViewProjectionMatrix,
+      cameraPosition,
+      upDirection: [0, 0, 1],
+      clipDepthRange: device.type === 'webgl' ? [-1, 1] : [0, 1],
+      color: [0.53, 0.61, 0.67],
+      density: 0.001,
+      baseHeight: 0,
+      heightFalloff: 0.01,
+      backgroundDepth: 1,
+      backgroundDistance: 0
+    }
+  }
+});
+```
+
+Supply the inverse matrix that produced the depth buffer, including any projection jitter.
+It must reconstruct positions in the same local metre-space frame as `cameraPosition`.
+`clipDepthRange` maps sampled depth zero/one into that matrix's clip-space Z, and must match
+its actual convention, including when a custom projection differs from backend defaults.
+`upDirection` is a unit vector; use `[0, 1, 0]` for Y-up scenes. Density and height falloff
+use inverse metres. Color inputs and fog tint are linear RGB; apply fog before tone mapping.
+
+The default `backgroundDistance: 0` leaves clear-depth pixels unchanged. Set a positive metre
+distance to fog a sky/background along its viewing ray, including an infinite far projection.
+Set `backgroundDepth: 0` for a reverse-Z depth clear. Output alpha is preserved, so transparent
+background pixels remain transparent; put the intended sky color in the source if it must be
+fogged. The pass has no temporal history to invalidate when cameras or fog parameters change.
+
+Run this pass on opaque color/depth before drawing transparent precipitation; otherwise a
+transparent foreground fragment would receive fog based on the opaque depth behind it.
+Transparent materials should use `heightFog` themselves. The analytic medium has a constant
+tint and a flat up axis; it does not include light scattering, shadowed fog, curved globe
+atmospheres, or automatic geographic-to-metre conversion. The input depth can come from any
+opaque renderer, including terrain, without modifying its material shaders.
+
+Set `variation` (0–1), `wispScale` (metres), `velocity` (metres per second), and `time`
+(seconds) for drifting fog banks. Both the pass and material use the same world-space density
+field and twelve-segment ray approximation, with no noise texture or history. Keep their parameters
+and coordinate frames consistent. Set `evolutionSpeed` above zero to deform the wisps internally as time advances. Zero
+variation uses the original analytic integral; zero velocity and evolution leave static wisps. Small wisps across very long rays can be undersampled.
+
+Visualization City's Height Fog section offers both modes. Riverfront Weather uses the same
+calculation directly in its building and precipitation materials.

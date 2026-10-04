@@ -166,10 +166,15 @@ const vitestConfig = getVitestConfig({
   },
   overrides: {
     // Keep deck.gl in Vite's source graph so it shares this repository's luma.gl runtime.
-    ssr: {noExternal: ['@deck.gl/core']},
+    ssr: {noExternal: ['@deck.gl/core', '@deck.gl/layers']},
     // loaders.gl's optional writer peer must remain importable without installing its 33 MB CLI.
     // Disabling discovery keeps Vite from restarting a CI shard when it first encounters zod.
-    optimizeDeps: {exclude: ['@deck.gl/core'], noDiscovery: true}
+    optimizeDeps: {
+      exclude: ['@deck.gl/core', '@deck.gl/layers'],
+      // Stock layers remain in the source graph; only their CommonJS triangulator is bundled.
+      include: ['@deck.gl/layers > earcut'],
+      noDiscovery: true
+    }
   },
   projects: {
     node: {
