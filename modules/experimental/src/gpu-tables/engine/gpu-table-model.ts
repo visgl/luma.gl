@@ -15,7 +15,7 @@ import {GPUTableShaderBindings} from './gpu-table-shader-bindings';
 import type {GPURecordBatch} from '../table/gpu-record-batch';
 import {GPU_TABLE_INDEX_COLUMN_NAME} from '../table/gpu-schema';
 import {GPUTable} from '../table/gpu-table';
-import {getGPUDataBuffersForLayout} from '@luma.gl/gpgpu/gpu-data';
+import {getGPUDataBuffersForLayout, getGPUDataByteOffsetsForLayout} from '@luma.gl/gpgpu/gpu-data';
 
 /** Controls which Model draw count mirrors the current GPU table row count. */
 export type GPUTableModelCount = 'instance' | 'vertex' | 'none';
@@ -31,7 +31,7 @@ export type GPUTableModelProps = ModelProps & {
 };
 
 export type GPUTableModelDrawBatchesOptions = {
-  /** Called immediately before drawing each preserved GPU record batch. */
+  /** Called immediately before drawing each non-empty preserved GPU record batch. */
   onBatch?: (batch: GPURecordBatch, batchIndex: number) => void;
 };
 
@@ -56,6 +56,7 @@ type GPUTableModelConstructorState = {
   modelProps: ModelProps;
   state: GPUTableModelState;
   shaderBindings?: GPUTableShaderBindings;
+  tableAttributeByteOffsets?: Record<string, number>;
 };
 
 type GPUTableDrawSource = GPUTable | GPURecordBatch;
@@ -87,14 +88,19 @@ export class GPUTableModel extends Model {
 
   /** Creates a model whose table-backed attributes and bindings can be rebound by batch. */
   constructor(device: Device, props: GPUTableModelProps) {
-    const {table, modelProps, state, shaderBindings} = getGPUTableModelConstructorState(
-      device,
-      props
-    );
+    const {table, modelProps, state, shaderBindings, tableAttributeByteOffsets} =
+      getGPUTableModelConstructorState(device, props);
     super(device, modelProps);
     this.table = table;
     this.tableState = state;
     this.tableShaderBindings = shaderBindings;
+    if (
+      modelProps.attributes &&
+      Object.values(tableAttributeByteOffsets ?? {}).some(byteOffset => byteOffset !== 0)
+    ) {
+      // Model binds constructor attributes at offset 0; rebind table chunks at their row offsets.
+      this.setAttributes(modelProps.attributes, {byteOffsets: tableAttributeByteOffsets});
+    }
     this.captureExplicitDrawState();
     if (table) {
       this.setTableDrawState(table);
@@ -129,6 +135,8 @@ export class GPUTableModel extends Model {
   /**
    * Draws each preserved GPU record batch by rebinding batch-local buffers.
    *
+   * Batches with zero rows are skipped, because their empty storage chunks would produce
+   * zero-size bindings that WebGPU rejects. The table and its batches are not modified.
    * The table-level attributes and bindings are restored before returning.
    */
   drawBatches(renderPass: RenderPass, options: GPUTableModelDrawBatchesOptions = {}): boolean {
@@ -149,14 +157,23 @@ export class GPUTableModel extends Model {
     this.drawingTableBatches = true;
     try {
       for (const [batchIndex, batch] of table.batches.entries()) {
+        if (batch.numRows === 0) {
+          continue;
+        }
         const preparedBatch = this.tableShaderBindings?.batches[batchIndex];
         if (this.tableShaderBindings && !preparedBatch) {
           throw new Error('GPUTableModel.drawBatches() is missing prepared batch bindings');
         }
-        this.setAttributes({
-          ...this.tableState.explicitAttributes,
-          ...(preparedBatch?.attributes ?? getGPUTableDrawAttributes(batch))
-        });
+        this.setAttributes(
+          {
+            ...this.tableState.explicitAttributes,
+            ...(preparedBatch?.attributes ?? getGPUTableDrawAttributes(batch))
+          },
+          {
+            byteOffsets:
+              preparedBatch?.attributeByteOffsets ?? getGPUTableDrawAttributeByteOffsets(batch)
+          }
+        );
         this.setBindings({
           ...this.tableState.explicitBindings,
           ...(preparedBatch?.bindings ??
@@ -171,10 +188,17 @@ export class GPUTableModel extends Model {
       }
     } finally {
       this.drawingTableBatches = false;
-      this.setAttributes({
-        ...this.tableState.explicitAttributes,
-        ...(this.tableShaderBindings?.batches[0]?.attributes ?? getGPUTableDrawAttributes(table))
-      });
+      this.setAttributes(
+        {
+          ...this.tableState.explicitAttributes,
+          ...(this.tableShaderBindings?.batches[0]?.attributes ?? getGPUTableDrawAttributes(table))
+        },
+        {
+          byteOffsets:
+            this.tableShaderBindings?.batches[0]?.attributeByteOffsets ??
+            getGPUTableDrawAttributeByteOffsets(table)
+        }
+      );
       this.setBindings({
         ...this.tableState.explicitBindings,
         ...(this.tableShaderBindings?.batches[0]?.bindings ??
@@ -212,6 +236,9 @@ export class GPUTableModel extends Model {
     const tableBufferLayout = this.tableShaderBindings?.bufferLayout ?? nextTable.bufferLayout;
     const tableAttributes =
       this.tableShaderBindings?.batches[0]?.attributes ?? getGPUTableDrawAttributes(nextTable);
+    const tableAttributeByteOffsets =
+      this.tableShaderBindings?.batches[0]?.attributeByteOffsets ??
+      getGPUTableDrawAttributeByteOffsets(nextTable);
     const tableBindings =
       this.tableShaderBindings?.batches[0]?.bindings ??
       getGPUTableDrawBindings(nextTable, this.tableState.tableBindingNames);
@@ -233,10 +260,13 @@ export class GPUTableModel extends Model {
       'binding'
     );
     this.setBufferLayout([...this.tableState.explicitBufferLayout, ...tableBufferLayout]);
-    this.setAttributes({
-      ...this.tableState.explicitAttributes,
-      ...tableAttributes
-    });
+    this.setAttributes(
+      {
+        ...this.tableState.explicitAttributes,
+        ...tableAttributes
+      },
+      {byteOffsets: tableAttributeByteOffsets}
+    );
     this.setBindings({
       ...this.tableState.explicitBindings,
       ...tableBindings
@@ -400,6 +430,8 @@ function getGPUTableModelConstructorState(
   const tableBufferLayout = shaderBindings?.bufferLayout ?? table.bufferLayout;
   const tableAttributes =
     shaderBindings?.batches[0]?.attributes ?? getGPUTableDrawAttributes(table);
+  const tableAttributeByteOffsets =
+    shaderBindings?.batches[0]?.attributeByteOffsets ?? getGPUTableDrawAttributeByteOffsets(table);
   const tableBindings =
     shaderBindings?.batches[0]?.bindings ?? getGPUTableDrawBindings(table, tableBindingNames);
 
@@ -418,6 +450,7 @@ function getGPUTableModelConstructorState(
   return {
     table,
     shaderBindings,
+    tableAttributeByteOffsets,
     state: {
       explicitAttributes,
       explicitBindings,
@@ -480,6 +513,14 @@ function getGPUTableDrawAttributes(
     return {};
   }
   return getGPUDataBuffersForLayout(attributeSource.bufferLayout, attributeSource.gpuData);
+}
+
+function getGPUTableDrawAttributeByteOffsets(source: GPUTableDrawSource): Record<string, number> {
+  const attributeSource = source instanceof GPUTable ? source.batches[0] : source;
+  if (!attributeSource) {
+    return {};
+  }
+  return getGPUDataByteOffsetsForLayout(attributeSource.bufferLayout, attributeSource.gpuData);
 }
 
 function getBufferLayoutNames(bufferLayout: BufferLayout[]): string[] {

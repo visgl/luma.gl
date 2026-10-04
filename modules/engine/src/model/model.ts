@@ -325,7 +325,7 @@ export class Model {
   private _dynamicIndexBufferSource: {source: DynamicBuffer; generation: number} | null = null;
   private _dynamicAttributeBufferSources: Record<
     number,
-    {source: DynamicBuffer; generation: number}
+    {source: DynamicBuffer; generation: number; byteOffset: number}
   > = {};
   private _colorAttachmentFormats: (TextureFormatColor | null)[] | undefined;
   private _depthStencilAttachmentFormat: TextureFormatDepthStencil | undefined;
@@ -887,9 +887,14 @@ export class Model {
 
   /**
    * Sets attributes (buffers)
+   * @param options.byteOffsets Optional byte offsets, keyed by buffer name, where each buffer's
+   * vertex data starts. Buffers without an entry are bound at offset 0.
    * @note Overrides any attributes previously set with the same name
    */
-  setAttributes(buffers: Record<string, ModelBuffer>, options?: {disableWarnings?: boolean}): void {
+  setAttributes(
+    buffers: Record<string, ModelBuffer>,
+    options?: {disableWarnings?: boolean; byteOffsets?: Record<string, number>}
+  ): void {
     this._drawBlockedReason = false;
     const disableWarnings = options?.disableWarnings ?? this.props.disableWarnings;
     if (buffers['indices']) {
@@ -937,11 +942,13 @@ export class Model {
             continue; // eslint-disable-line no-continue
           }
 
-          this.vertexArray.setBuffer(bufferSlot, resolvedBuffer);
+          const byteOffset = options?.byteOffsets?.[bufferName] ?? 0;
+          this.vertexArray.setBuffer(bufferSlot, resolvedBuffer, byteOffset);
           if (buffer instanceof DynamicBuffer) {
             this._dynamicAttributeBufferSources[bufferSlot] = {
               source: buffer,
-              generation: buffer.generation
+              generation: buffer.generation,
+              byteOffset
             };
           } else {
             delete this._dynamicAttributeBufferSources[bufferSlot];
@@ -1347,7 +1354,7 @@ export class Model {
 
     for (const [locationKey, entry] of Object.entries(this._dynamicAttributeBufferSources)) {
       if (entry.generation !== entry.source.generation) {
-        this.vertexArray.setBuffer(Number(locationKey), entry.source.buffer);
+        this.vertexArray.setBuffer(Number(locationKey), entry.source.buffer, entry.byteOffset);
         entry.generation = entry.source.generation;
         this.setNeedsRedraw('dynamic attribute buffer');
       }

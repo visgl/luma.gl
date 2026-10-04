@@ -31,7 +31,7 @@ const model = new Model(device, {
 });
 
 for (const batch of prepared.batches) {
-  model.setAttributes(batch.attributes);
+  model.setAttributes(batch.attributes, {byteOffsets: batch.attributeByteOffsets});
   model.setBindings(batch.bindings);
   model.setConstantAttributes(prepared.constantAttributes);
   model.draw(renderPass);
@@ -72,12 +72,16 @@ object lifetime. Use `updateBindings()` to replace only the table.
 type GPUTableShaderBindingBatch = {
   attributes: Record<string, Buffer | DynamicBuffer>;
   attributeBuffers: Array<Buffer | DynamicBuffer>;
+  attributeByteOffsets: Record<string, number>;
   bindings: Record<string, Binding>;
 };
 ```
 
 `attributeBuffers` follows `bufferLayout` order. `attributes` exposes the same
-resources by logical layout name.
+resources by logical layout name. `attributeByteOffsets` uses the same names and holds
+each chunk's `GPUData.byteOffset`, so chunks that are views into a shared buffer are
+read from their first row. Pass it to `Model.setAttributes()`. Batches keep one shared
+`bufferLayout`, so different offsets do not create different pipelines.
 
 ## updateBindings(table)
 
