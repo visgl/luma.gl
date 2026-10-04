@@ -25,7 +25,7 @@ export function createRiverfrontSoftShadowScene(
   const settings: ShadowSettings = {
     hour: DEFAULT_HOUR,
     animated: true,
-    hoursPerSecond: 0.08,
+    hoursPerSecond: 0.8,
     enabled: true,
     softness: 0.018,
     quality: 'balanced'
