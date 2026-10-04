@@ -379,8 +379,10 @@ function showStandaloneStatus(state: 'failed' | 'unsupported', message: string):
 function installStandaloneMobileStyles(): void {
   const style = document.createElement('style');
   style.textContent = `
-    @media (pointer: coarse), (max-width: 700px), (max-height: 500px) {
+    @media (pointer: coarse) {
       button, select, input[type='button'], input[type='range'], [role='button'] { min-height: 44px; }
+    }
+    @media (pointer: coarse), (max-width: 700px), (max-height: 500px) {
       [data-panel], [class*='panel'], [class*='controls'] {
         max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
         overflow-y: auto;

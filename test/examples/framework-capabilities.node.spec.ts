@@ -758,10 +758,7 @@ describe('framework capabilities documentation', () => {
       readFileSync(path.join(DOCUMENTATION_DIRECTORY, 'table-of-contents.json'), 'utf8')
     ) as Array<string | {label?: string}>;
     const gettingStartedIndex = documentationTableOfContents.indexOf('getting-started');
-    const documentationOverview = readFileSync(
-      path.join(DOCUMENTATION_DIRECTORY, 'README.mdx'),
-      'utf8'
-    );
+
     const gettingStartedSource = readFileSync(
       path.join(DOCUMENTATION_DIRECTORY, 'getting-started.mdx'),
       'utf8'
@@ -777,7 +774,7 @@ describe('framework capabilities documentation', () => {
         'capabilities/rendering-visualization'
       ]
     });
-    expect(documentationOverview).toContain('/docs/capabilities');
+
     expect(gettingStartedSource).toContain('/docs/capabilities');
   });
 

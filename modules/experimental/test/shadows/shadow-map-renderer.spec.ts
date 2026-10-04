@@ -5,7 +5,7 @@
 import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {Matrix4, radians} from '@math.gl/core';
-import {ShadowMapRenderer} from '../../src/shadows/shadow-map-renderer';
+import {ShadowMapRenderer, type ShadowCamera} from '../../src/shadows/shadow-map-renderer';
 import {
   getDirectionalCascadeViews,
   getPointShadowViews,
@@ -63,7 +63,23 @@ it('directional cascades are stable under sub-texel camera movement', () => {
     })
   };
   const second = getDirectionalCascadeViews(movedCamera, light, splits, 4, 1024);
+  const webGPUCamera: ShadowCamera = {
+    ...CAMERA,
+    projectionMatrix: new Matrix4([
+      1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 1
+    ]).multiplyRight(CAMERA.projectionMatrix),
+    clipDepth: 'zero-to-one'
+  };
+  const webGPUViews = getDirectionalCascadeViews(webGPUCamera, light, splits, 4, 1024);
+
   for (let cascadeIndex = 0; cascadeIndex < 4; cascadeIndex++) {
+    expectWebGPUClipDepth(first[cascadeIndex].camera);
+    for (let elementIndex = 0; elementIndex < 16; elementIndex++) {
+      expect(
+        webGPUViews[cascadeIndex].viewProjectionMatrix[elementIndex],
+        'input clip conventions fit equivalent cascades'
+      ).toBeCloseTo(first[cascadeIndex].viewProjectionMatrix[elementIndex], 6);
+    }
     const firstMatrix = first[cascadeIndex].viewProjectionMatrix;
     const secondMatrix = second[cascadeIndex].viewProjectionMatrix;
     expect(
@@ -91,6 +107,7 @@ it('spot and point shadow cameras cover their complete light volumes', () => {
     strength: 1
   });
   expect(spot.camera.far, 'spot projection reaches range').toBe(30);
+  expectWebGPUClipDepth(spot.camera);
 
   const pointViews = getPointShadowViews({
     position: [0, 4, 0],
@@ -103,6 +120,7 @@ it('spot and point shadow cameras cover their complete light volumes', () => {
     strength: 1
   });
   expect(pointViews.length, 'point shadow has six canonical faces').toBe(6);
+  for (const view of pointViews) expectWebGPUClipDepth(view.camera);
   expect(
     new Set(pointViews.map(view => Array.from(view.viewProjectionMatrix).join(','))).size,
     'all face orientations are distinct'
@@ -183,3 +201,15 @@ it('ShadowMapRenderer reuses, reconstructs and destroys resources', async () => 
   device.submit();
   void 0;
 });
+
+function expectWebGPUClipDepth(camera: ShadowCamera): void {
+  const projection = new Matrix4(camera.projectionMatrix);
+  expect(
+    projection.transformAsPoint([0, 0, -camera.near])[2],
+    'near plane maps to WebGPU depth zero'
+  ).toBeCloseTo(0, 6);
+  expect(
+    projection.transformAsPoint([0, 0, -camera.far])[2],
+    'far plane maps to WebGPU depth one'
+  ).toBeCloseTo(1, 6);
+}

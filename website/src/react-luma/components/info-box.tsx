@@ -1,3 +1,4 @@
+import '../../../../examples/example-infobox.css';
 import React, {CSSProperties, FC, useEffect, useRef, useState} from 'react';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import CodeBlock from '@theme/CodeBlock';
@@ -21,80 +22,12 @@ const INFO_BOX_KEYBOARD_RESIZE_STEP = 10;
 const INFO_BOX_LARGE_KEYBOARD_RESIZE_STEP = 30;
 const INFO_BOX_BASE_STYLE: CSSProperties = {
   boxSizing: 'border-box',
-  borderRadius: 'var(--luma-example-radius, 14px)',
   width: 420,
   minWidth: 0,
   maxWidth: '100%',
   overflow: 'hidden',
-  padding: '13px 15px',
   zIndex: 10
 };
-const INFO_BOX_APPEARANCE_STYLES: Record<InfoBoxAppearance, CSSProperties> = {
-  cinematic: {
-    backdropFilter: `var(--luma-example-backdrop, ${EXAMPLE_THEME_TOKENS.cinematic.backdrop})`,
-    background:
-      'radial-gradient(ellipse at 12% 0%, rgba(56, 189, 248, 0.08), transparent 42%), linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(5, 12, 24, 0.91))',
-    border: `1px solid var(--luma-example-border, ${EXAMPLE_THEME_TOKENS.cinematic.border})`,
-    boxShadow: `var(--luma-example-shadow, ${EXAMPLE_THEME_TOKENS.cinematic.shadow})`,
-    color: `var(--luma-example-text, ${EXAMPLE_THEME_TOKENS.cinematic.text})`,
-    colorScheme: 'dark',
-    WebkitBackdropFilter: `var(--luma-example-backdrop, ${EXAMPLE_THEME_TOKENS.cinematic.backdrop})`
-  },
-  light: {
-    backgroundColor: 'rgba(255, 255, 255, 0.96)',
-    border: `1px solid var(--luma-example-border, ${EXAMPLE_THEME_TOKENS.light.border})`,
-    boxShadow: `var(--luma-example-shadow, ${EXAMPLE_THEME_TOKENS.light.shadow})`,
-    color: `var(--luma-example-text, ${EXAMPLE_THEME_TOKENS.light.text})`,
-    colorScheme: 'light'
-  }
-};
-const INFO_BOX_CHROME_STYLE = `
-[data-info-box-appearance] [data-luma-example-chrome-action] {
-  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
-}
-[data-info-box-appearance] [data-luma-example-chrome-action]:hover,
-[data-info-box-appearance] [data-luma-example-chrome-action]:focus-visible {
-  border-color: var(--luma-example-accent) !important;
-  color: var(--luma-example-accent) !important;
-}
-[data-info-box-appearance] [data-luma-example-chrome-action]:focus-visible {
-  outline: 2px solid var(--luma-example-accent);
-  outline-offset: 2px;
-}
-[data-luma-example-source] .theme-code-block,
-[data-luma-example-source] .theme-code-block pre,
-[data-luma-example-source] .theme-code-block code {
-  background: var(--luma-example-surface) !important;
-  color: var(--luma-example-text) !important;
-}
-[data-luma-example-source] .theme-code-block {
-  margin: 0 !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-}
-[data-luma-example-source] .theme-code-block pre {
-  margin: 0 !important;
-  padding: 14px !important;
-}
-[data-info-box-appearance='cinematic'] [data-luma-example-source] .token.comment {
-  color: var(--luma-example-text-muted) !important;
-}
-[data-info-box-appearance='cinematic'] [data-luma-example-info-content] pre {
-  background: var(--luma-example-surface) !important;
-  color: var(--luma-example-text) !important;
-}
-[data-info-box-appearance='cinematic'] [data-luma-example-info-content] :not(pre) > code {
-  background: var(--luma-example-surface-raised) !important;
-  border: 1px solid var(--luma-example-border) !important;
-  color: var(--luma-example-text) !important;
-}
-@media (prefers-reduced-motion: reduce) {
-  [data-info-box-appearance] [data-luma-example-chrome-action] {
-    transition: none;
-  }
-}
-`;
 
 let isInfoBoxCollapsedByDefault = true;
 
@@ -430,11 +363,11 @@ function InfoBoxView(props: InfoBoxViewProps) {
   return (
     <div
       ref={setInfoBoxElement}
+      className="luma-example-infobox"
       data-info-box-appearance={appearance}
       data-luma-info-box-collapsed={isCollapsed ? 'true' : 'false'}
       style={{
         ...INFO_BOX_BASE_STYLE,
-        ...INFO_BOX_APPEARANCE_STYLES[appearance],
         ...props.style,
         display: 'flex',
         flexDirection: 'column',
@@ -445,7 +378,6 @@ function InfoBoxView(props: InfoBoxViewProps) {
         maxHeight: isCollapsed ? undefined : infoBoxSizeBounds?.maxHeight
       }}
     >
-      <style>{INFO_BOX_CHROME_STYLE}</style>
       <div
         data-luma-example-info-header=""
         style={{
@@ -489,8 +421,8 @@ function InfoBoxView(props: InfoBoxViewProps) {
                 data-luma-example-title=""
                 style={{
                   color: 'inherit',
-                  fontSize: 17,
-                  fontWeight: 720,
+                  fontSize: 22,
+                  fontWeight: 600,
                   letterSpacing: '-0.022em',
                   lineHeight: 1.3,
                   marginTop: 0,

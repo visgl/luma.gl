@@ -8,6 +8,7 @@ const repoRoot = fileURLToPath(new URL('..', import.meta.url));
 const examplesRoot = join(repoRoot, 'examples');
 const tscPath = join(repoRoot, 'node_modules', '.bin', 'tsc');
 const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
+  'deck/city-scene',
   'api/blending',
   'api/multi-canvas',
   'api/render-bundles',
@@ -27,8 +28,20 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'experimental/deferred-rendering',
   'experimental/gpu-frustum-culling',
   'experimental/gpu-trace-viewer',
+  'deck/sketch-edges',
+  'deck/scene-buffers',
+  'deck/soft-shadows',
+  'deck/depth-of-field',
   'deck/luspatial-taxi',
   'deck/gpu-culled-trace',
+  'deck/pattern-fills',
+  'deck/point-glow',
+  'deck/globe-clouds',
+  'deck/fireflies',
+  'deck/hdr-night-lighting',
+  'deck/global-illumination',
+  'deck/light-shafts',
+  'deck/styled-paths',
   'experimental/gpu-sort',
   'experimental/spectral-caustics',
   'experimental/volumetric-fire-forge',
@@ -58,12 +71,20 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'tutorials/hello-two-cubes',
   'tutorials/shader-hooks',
   'tutorials/shader-modules',
+  'tutorials/slang-shaders',
+  'tutorials/slang-particles',
   'tutorials/transform',
   'tutorials/transform-feedback'
 ]);
 
-const PACKAGE_FREE_EXAMPLE_WORKSPACES = new Set(['showcase/raster-lab']);
+const PACKAGE_FREE_EXAMPLE_WORKSPACES = new Set(['showcase/raster-lab','tutorials/slang-particles']);
 const NATIVE_TYPESCRIPT_CONFIG_WORKSPACES = new Set([
+  'deck/globe-clouds',
+  'deck/fireflies',
+  'deck/hdr-night-lighting',
+  'deck/global-illumination',
+  'deck/light-shafts',
+  'deck/city-scene',
   'api/multi-canvas',
   'experimental/fp64',
   'showcase/scene',

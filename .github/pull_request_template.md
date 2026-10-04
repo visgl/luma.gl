@@ -3,6 +3,8 @@
 For #
 <!-- For other PRs without open issue -->
 #### Background
+#### Rationale
+<!-- Explain why this change is needed and why this approach was chosen -->
 <!-- For all the PRs -->
 #### Change List
 -

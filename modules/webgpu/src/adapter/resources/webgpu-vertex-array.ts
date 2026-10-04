@@ -51,13 +51,14 @@ export class WebGPUVertexArray extends VertexArray {
   }
 
   /** Sets the buffer stored in one logical vertex-array slot. */
-  setBuffer(bufferSlot: number, buffer: Buffer): void {
+  setBuffer(bufferSlot: number, buffer: Buffer, byteOffset: number = 0): void {
     // Sanity check target
     // if (buffer.glUsage === GL.ELEMENT_ARRAY_BUFFER) {
     //   throw new Error('Use setIndexBuffer');
     // }
 
     this.attributes[bufferSlot] = buffer;
+    this.attributeByteOffsets[bufferSlot] = byteOffset;
   }
 
   override getBufferSlot(bufferName: string): number | null {
@@ -112,16 +113,18 @@ export class WebGPUVertexArray extends VertexArray {
         this.logicalBufferSlots[resolvedSlot.bufferName] ?? resolvedSlot.shaderSlot;
       const webgpuBuffer = this.attributes[logicalBufferSlot] as WebGPUBuffer;
       if (webgpuBuffer?.handle) {
+        const bindingOffset =
+          resolvedSlot.bindingOffset + this.attributeByteOffsets[logicalBufferSlot];
         log.info(
           3,
           `setting vertex buffer ${resolvedSlot.shaderSlot}`,
           webgpuBuffer?.handle,
-          resolvedSlot.bindingOffset
+          bindingOffset
         )();
         webgpuRenderPass.handle.setVertexBuffer(
           resolvedSlot.shaderSlot,
           webgpuBuffer?.handle,
-          resolvedSlot.bindingOffset
+          bindingOffset
         );
       }
     }

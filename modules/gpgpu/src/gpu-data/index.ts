@@ -47,6 +47,7 @@ export {
 } from './gpu-vector-model';
 export {
   getGPUDataBuffersForLayout,
+  getGPUDataByteOffsetsForLayout,
   getGPUVectorBuffer,
   getGPUVectorBuffersForLayout,
   getGPUVectorData,

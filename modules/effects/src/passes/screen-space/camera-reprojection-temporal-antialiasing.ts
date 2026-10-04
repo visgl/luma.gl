@@ -6,6 +6,7 @@ import type {Texture} from '@luma.gl/core';
 import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 import type {NumberArray16} from '@math.gl/core';
 import {copyPass} from './copy-pass';
+import {temporalHelpers} from './screen-space-shader-helpers';
 
 /** Uniforms needed to reproject a static-world pixel into the previous camera frame. */
 export type CameraReprojectionTAAUniforms = {
@@ -43,6 +44,7 @@ const IDENTITY_MATRIX: NumberArray16 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0
 export const cameraReprojectionTaaResolve = {
   name: 'cameraReprojectionTaaResolve',
   source: /* wgsl */ `\
+${temporalHelpers}
 const CAMERA_REPROJECTION_TAA_EPSILON: f32 = 0.00001;
 
 struct CameraReprojectionTaaResolveUniforms {
@@ -71,12 +73,7 @@ fn cameraReprojectionTaaResolve_previousFrameCoordinate(
     return vec4f(0.0);
   }
 
-  let currentClip = vec4f(
-    unjitteredCoordinate.x * 2.0 - 1.0,
-    1.0 - unjitteredCoordinate.y * 2.0,
-    depth,
-    1.0
-  );
+  let currentClip = temporal_getClipPosition(unjitteredCoordinate, depth);
   let worldPositionHomogeneous =
     cameraReprojectionTaaResolve.inverseViewProjectionMatrix * currentClip;
   if (abs(worldPositionHomogeneous.w) <= CAMERA_REPROJECTION_TAA_EPSILON) {
@@ -86,24 +83,8 @@ fn cameraReprojectionTaaResolve_previousFrameCoordinate(
   let worldPosition = worldPositionHomogeneous.xyz / worldPositionHomogeneous.w;
   let previousClip =
     cameraReprojectionTaaResolve.previousViewProjectionMatrix * vec4f(worldPosition, 1.0);
-  if (previousClip.w <= CAMERA_REPROJECTION_TAA_EPSILON) {
-    return vec4f(0.0);
-  }
-
-  let previousNormalizedDeviceCoordinate = previousClip.xyz / previousClip.w;
-  let previousCoordinate =
-    previousNormalizedDeviceCoordinate.xy * vec2f(0.5, -0.5) +
-    vec2f(0.5) +
-    cameraReprojectionTaaResolve.previousJitter;
-  let expectedPreviousDepth = previousNormalizedDeviceCoordinate.z;
-  let validCoordinate = all(previousCoordinate >= vec2f(0.0)) &&
-    all(previousCoordinate <= vec2f(1.0));
-  let validDepthRange = expectedPreviousDepth >= 0.0 && expectedPreviousDepth <= 1.0;
-  return vec4f(
-    previousCoordinate,
-    expectedPreviousDepth,
-    select(0.0, 1.0, validCoordinate && validDepthRange)
-  );
+  return temporal_getPreviousFrame(previousClip,
+    cameraReprojectionTaaResolve.previousJitter, CAMERA_REPROJECTION_TAA_EPSILON);
 }
 
 fn cameraReprojectionTaaResolve_sampleColor(
@@ -126,48 +107,18 @@ fn cameraReprojectionTaaResolve_sampleColor(
     return currentColor;
   }
 
-  let sourceTexel = 1.0 / vec2f(textureDimensions(sourceTexture));
-  var minimumColor = currentColor.rgb;
-  var maximumColor = currentColor.rgb;
-  for (var sampleY: i32 = -1; sampleY <= 1; sampleY++) {
-    for (var sampleX: i32 = -1; sampleX <= 1; sampleX++) {
-      let sampleCoordinate = clamp(
-        texCoord + vec2f(f32(sampleX), f32(sampleY)) * sourceTexel,
-        vec2f(0.0),
-        vec2f(1.0)
-      );
-      let sampleColor = textureSampleLevel(
-        sourceTexture,
-        sourceTextureSampler,
-        sampleCoordinate,
-        0
-      ).rgb;
-      minimumColor = min(minimumColor, sampleColor);
-      maximumColor = max(maximumColor, sampleColor);
-    }
-  }
-
-  let historyDimensions = textureDimensions(historyTexture);
-  let historyPosition = previousFrame.xy * vec2f(historyDimensions) - vec2f(0.5);
-  let baseHistoryCoordinate = vec2i(floor(historyPosition));
-  let historyFraction = fract(historyPosition);
+  let bounds = temporal_getColorBounds(sourceTexture, sourceTextureSampler, texCoord, currentColor);
+  let footprint = temporal_getHistoryFootprint(previousFrame.xy, textureDimensions(historyTexture));
   var accumulatedHistoryColor = vec3f(0.0);
   var accumulatedHistoryWeight = 0.0;
   for (var tapY: i32 = 0; tapY <= 1; tapY++) {
     for (var tapX: i32 = 0; tapX <= 1; tapX++) {
-      let historyCoordinate = clamp(
-        baseHistoryCoordinate + vec2i(tapX, tapY),
-        vec2i(0),
-        vec2i(historyDimensions) - vec2i(1)
-      );
-      let tapDepth = textureLoad(previousDepthTexture, historyCoordinate, 0).r;
+      let tap = temporal_getHistoryTap(footprint, vec2i(tapX, tapY));
+      let tapDepth = textureLoad(previousDepthTexture, tap.coordinate, 0).r;
       let validTapDepth =
         abs(tapDepth - previousFrame.z) <= cameraReprojectionTaaResolve.depthThreshold;
-      let horizontalWeight = select(1.0 - historyFraction.x, historyFraction.x, tapX == 1);
-      let verticalWeight = select(1.0 - historyFraction.y, historyFraction.y, tapY == 1);
-      let tapWeight = select(0.0, horizontalWeight * verticalWeight, validTapDepth);
-      accumulatedHistoryColor += textureLoad(historyTexture, historyCoordinate, 0).rgb *
-        tapWeight;
+      let tapWeight = select(0.0, tap.weight, validTapDepth);
+      accumulatedHistoryColor += textureLoad(historyTexture, tap.coordinate, 0).rgb * tapWeight;
       accumulatedHistoryWeight += tapWeight;
     }
   }
@@ -177,7 +128,7 @@ fn cameraReprojectionTaaResolve_sampleColor(
   }
 
   let historyColor = accumulatedHistoryColor / accumulatedHistoryWeight;
-  let clampedHistoryColor = clamp(historyColor, minimumColor, maximumColor);
+  let clampedHistoryColor = clamp(historyColor, bounds.minimum.rgb, bounds.maximum.rgb);
   let resolvedColor = mix(
     currentColor.rgb,
     clampedHistoryColor,

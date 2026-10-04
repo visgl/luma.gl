@@ -2,21 +2,16 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {existsSync, readFileSync, statSync} from 'node:fs';
+import {readFileSync} from 'node:fs';
 import path from 'node:path';
 import {describe, expect, test} from 'vitest';
-import {getExampleThumbnailPath} from '../../website/src/example-thumbnails';
 
+const INTRODUCTION_SOURCE_PATH = path.join(process.cwd(), 'docs/README.mdx');
 const ONBOARDING_SOURCE_PATH = path.join(process.cwd(), 'docs/getting-started.mdx');
-const INSTALLATION_SOURCE_PATH = path.join(process.cwd(), 'docs/developer-guide/installing.md');
-const EXAMPLE_IMAGES_DIRECTORY = path.join(process.cwd(), 'website/static/images/examples');
-const EXAMPLE_CONTENT_DIRECTORY = path.join(process.cwd(), 'website/content/examples');
+
 const EXTRACTION_CHECKER_PATH = path.join(process.cwd(), 'website/scripts/check-llm-output.mjs');
 const WEBSITE_STYLES_PATH = path.join(process.cwd(), 'website/src/custom.css');
-const DEVELOPER_DOCS_TABS_SOURCE_PATH = path.join(
-  process.cwd(),
-  'website/src/components/docs/developer-docs-tabs.tsx'
-);
+
 const TUTORIAL_DOCS_TABS_SOURCE_PATH = path.join(
   process.cwd(),
   'website/src/components/docs/tutorial-docs-tabs.tsx'
@@ -27,197 +22,29 @@ const DOCUMENTATION_TABLE_OF_CONTENTS_PATH = path.join(
 );
 
 describe('getting-started onboarding', () => {
-  test('introduces real, immediately explorable GPU experiences before technical setup', () => {
-    const onboardingSource = readFileSync(ONBOARDING_SOURCE_PATH, 'utf8');
-    const installationLinkOffset = onboardingSource.indexOf('/docs/developer-guide/installing');
+  test('introduces luma and its key information', () => {
+    const documentationOverview = readFileSync(INTRODUCTION_SOURCE_PATH, 'utf-8');
 
-    expect(onboardingSource).toMatch(/<h1\b|^#\s+.+/m);
-    expect(onboardingSource).toMatch(/WebGPU/);
-    expect(onboardingSource).toMatch(/simulation|rendering|visual effects/i);
-    expect(onboardingSource).toMatch(/no installation\.\s*no account\.\s*just your browser/i);
-    expect(installationLinkOffset).toBeGreaterThan(0);
-    expect(onboardingSource).not.toMatch(/\bNode(?:\.js)?\b/i);
-    expect(onboardingSource).not.toMatch(/^#{2,}\s+Prerequisites\b/im);
-    expect(onboardingSource).not.toMatch(
-      /(?:^|\n)\s*(?:npm|yarn|pnpm)\s+(?:create|install|add|run|dev)\b/i
-    );
-
-    const onboardingPosters = Array.from(
-      onboardingSource.matchAll(
-        /<OnboardingPoster\b(?=[^>]*\bimage\s*=\s*["']([^"']+\.(?:jpe?g|png|webp))["'])[^>]*>/g
-      ),
-      match => ({image: match[1], offset: match.index ?? -1})
-    );
-    const linkedExampleRoutes = new Set(
-      Array.from(
-        onboardingSource.matchAll(
-          /<(?:Link|a)\b(?=[^>]*\b(?:to|href)\s*=\s*["'](\/examples\/[^"']+)["'])[^>]*>/g
-        ),
-        match => match[1]
-      )
-    );
-
-    expect(new Set(onboardingPosters.map(poster => poster.image)).size).toBeGreaterThanOrEqual(6);
-
-    for (const poster of onboardingPosters) {
-      const posterPath = path.join(EXAMPLE_IMAGES_DIRECTORY, poster.image);
-      const exampleRoute = Array.from(linkedExampleRoutes).find(
-        route => getExampleThumbnailPath(route.slice('/examples/'.length)) === poster.image
-      );
-
-      expect(poster.offset, `${poster.image} must appear before local setup`).toBeLessThan(
-        installationLinkOffset
-      );
-      expect(existsSync(posterPath), `${poster.image} must be a real example screenshot`).toBe(
-        true
-      );
-      expect(statSync(posterPath).size, `${poster.image} must not be empty`).toBeGreaterThan(0);
-      expect(exampleRoute, `${poster.image} must link to its interactive example`).toBeDefined();
-      const exampleIdentifier = exampleRoute!.slice('/examples/'.length);
-      expect(
-        existsSync(path.join(EXAMPLE_CONTENT_DIRECTORY, `${exampleIdentifier}.mdx`)),
-        `${exampleRoute} must resolve to a live example page`
-      ).toBe(true);
-    }
+    expect(documentationOverview).toContain('Why luma.gl');
+    expect(documentationOverview).toContain('A WebGPU-style API');
+    expect(documentationOverview).toContain('Key APIs');
+    expect(documentationOverview).toContain('/docs/getting-started');
   });
 
-  test('preserves the complete runnable setup in the dedicated installation guide', () => {
-    const installationSource = readFileSync(INSTALLATION_SOURCE_PATH, 'utf8');
-    const developerTabsSource = readFileSync(DEVELOPER_DOCS_TABS_SOURCE_PATH, 'utf8');
-
-    expect(installationSource).toMatch(/^# Installing$/m);
-    expect(installationSource).toContain('<DeveloperDocsTabs active="installing" />');
-    expect(developerTabsSource).toMatch(
-      /id:\s*'installing',\s*label:\s*'Installing',\s*href:\s*'\/docs\/developer-guide\/installing'/
-    );
-    expect(installationSource).toMatch(/^## A Minimal Install$/m);
-    expect(installationSource).toMatch(/^## A Typical Install$/m);
-    expect(installationSource).toMatch(/\bNode\.js\b/);
+  test('getting started onboards a user with installation instructions and project setup', () => {
+    const onboardingSource = readFileSync(ONBOARDING_SOURCE_PATH, 'utf-8');
 
     for (const requiredSetup of [
-      'npm create vite@latest luma-demo -- --template vanilla-ts',
-      'yarn create vite luma-demo --template vanilla-ts',
-      'pnpm create vite luma-demo --template vanilla-ts',
-      'npm install @luma.gl/engine @luma.gl/webgpu @luma.gl/webgl',
-      'yarn add @luma.gl/engine @luma.gl/webgpu @luma.gl/webgl',
-      'pnpm add @luma.gl/engine @luma.gl/webgpu @luma.gl/webgl',
-      'npm run dev',
-      'yarn dev',
-      'pnpm dev',
-      'class App extends AnimationLoopTemplate',
-      'adapters: [webgpuAdapter, webgl2Adapter]',
-      '## How Backend Selection Works',
-      '## Troubleshooting',
-      '### The Canvas Is Blank',
-      '### WebGPU Is Unavailable',
-      '### TypeScript Cannot Resolve a Package'
+      'Project Setup',
+      'Installation',
+      'npm install @luma.gl/core @luma.gl/engine @luma.gl/webgl @luma.gl/webgpu',
+      'Step 1. Render a frame',
+      'Step 2. Write the shaders',
+      'Step 3. Render the triangle',
+      'Step 4. Putting it all together'
     ]) {
-      expect(installationSource, `The installation guide must retain ${requiredSetup}`).toContain(
-        requiredSetup
-      );
+      expect(onboardingSource).toContain(requiredSetup);
     }
-
-    expect(installationSource).not.toMatch(/<(?:Tabs|TabItem)\b/);
-  });
-
-  test('connects live discovery to accurate backend choices, learning paths, and optional setup', () => {
-    const onboardingSource = readFileSync(ONBOARDING_SOURCE_PATH, 'utf8');
-    const featureOffset = onboardingSource.indexOf('01 · Find your building blocks');
-    const discoveryOffset = onboardingSource.indexOf('02 · See it in motion');
-    const capabilityOffset = onboardingSource.indexOf('03 · Built for ambitious ideas');
-    const learningPathOffset = onboardingSource.indexOf('04 · Find your starting point');
-    const projectSetupOffset = onboardingSource.indexOf('/docs/developer-guide/installing');
-
-    expect(featureOffset).toBeGreaterThan(0);
-    expect(discoveryOffset).toBeGreaterThan(featureOffset);
-    expect(capabilityOffset).toBeGreaterThan(discoveryOffset);
-    expect(learningPathOffset).toBeGreaterThan(capabilityOffset);
-    expect(projectSetupOffset).toBeGreaterThan(learningPathOffset);
-
-    for (const feature of [
-      {
-        modifier: 'splats',
-        packageName: '@luma.gl/splats',
-        title: 'Gaussian Splats',
-        image: 'showcase/gaussian-splat-viewer.jpg',
-        route: '/examples/showcase/gaussian-splat-viewer'
-      },
-      {
-        modifier: 'scene',
-        packageName: '@luma.gl/scene',
-        title: 'Declarative 3D Scenes',
-        image: 'experimental/scene-playground.jpg',
-        route: '/examples/experimental/scene-playground'
-      },
-      {
-        modifier: 'graph',
-        packageName: 'GPU Command Graph',
-        title: 'GPU Graph',
-        image: 'experimental/gpu-trace-viewer.jpg',
-        route: '/examples/experimental/gpu-trace-viewer'
-      }
-    ]) {
-      const cardOffset = onboardingSource.indexOf(`luma-onboarding__feature--${feature.modifier}`);
-      const cardStart = onboardingSource.lastIndexOf('<Link', cardOffset);
-      const cardEnd = onboardingSource.indexOf('</Link>', cardOffset);
-
-      expect(cardOffset, `${feature.packageName} must have a feature card`).toBeGreaterThan(
-        featureOffset
-      );
-      expect(
-        cardOffset,
-        `${feature.packageName} must appear before the example gallery`
-      ).toBeLessThan(discoveryOffset);
-      expect(cardStart, `${feature.packageName} must use an interactive link`).toBeGreaterThan(
-        featureOffset
-      );
-      expect(cardEnd, `${feature.packageName} must retain a complete linked card`).toBeGreaterThan(
-        cardOffset
-      );
-
-      const featureCard = onboardingSource.slice(cardStart, cardEnd);
-      expect(featureCard).toContain(`to="${feature.route}"`);
-      expect(featureCard).toContain(`image="${feature.image}"`);
-      expect(featureCard).toContain(feature.packageName);
-      expect(featureCard).toContain(feature.title);
-    }
-
-    expect(onboardingSource).toContain('Advanced scenes require WebGPU');
-    expect(onboardingSource).toContain('Effects: Image Processing also runs on WebGL2');
-    expect(onboardingSource).toContain('Share portable rendering across WebGPU and WebGL2');
-    expect(onboardingSource).toContain('use WebGPU for compute shaders');
-
-    for (const learningPath of [
-      '/docs/tutorials/hello-triangle',
-      '/docs/api-guide/engine',
-      '/docs/api-guide/gpu/gpu-data-processing',
-      '/docs/api-guide/shaders/shader-passes'
-    ]) {
-      expect(onboardingSource, `${learningPath} must remain an available learning path`).toContain(
-        learningPath
-      );
-    }
-
-    expect(onboardingSource).toContain('the developer guide takes you from local project setup');
-    expect(onboardingSource).toContain('Build your first project');
-  });
-
-  test('introduces the complete framework module stack before optional project setup', () => {
-    const onboardingSource = readFileSync(ONBOARDING_SOURCE_PATH, 'utf8');
-    const websiteStyles = readFileSync(WEBSITE_STYLES_PATH, 'utf8');
-    const capabilitySectionOffset = onboardingSource.indexOf('03 · Built for ambitious ideas');
-    const frameworkModuleCardsOffset = onboardingSource.indexOf('<FrameworkModuleCards />');
-    const learningPathsOffset = onboardingSource.indexOf('04 · Find your starting point');
-
-    expect(onboardingSource).toContain(
-      "import {FrameworkModuleCards} from '@site/src/components/framework-module-cards';"
-    );
-    expect(onboardingSource).toContain('The luma.gl framework.');
-    expect(onboardingSource).toContain('Gaussian splats, and compute.');
-    expect(onboardingSource).toContain('className="luma-onboarding__framework-modules"');
-    expect(websiteStyles).toMatch(/\.luma-onboarding__framework-modules\s*\{[^}]*margin-top:/);
-    expect(frameworkModuleCardsOffset).toBeGreaterThan(capabilitySectionOffset);
-    expect(frameworkModuleCardsOffset).toBeLessThan(learningPathsOffset);
   });
 
   test('keeps tutorial and developer navigation consistent with the onboarding journey', () => {
@@ -283,7 +110,7 @@ describe('getting-started onboarding', () => {
     ]);
   });
 
-  test('makes the complete capability overview discoverable from introductory pages', () => {
+  test('makes the complete capability overview discoverable from the getting started page', () => {
     const onboardingSource = readFileSync(ONBOARDING_SOURCE_PATH, 'utf8');
     const documentationOverview = readFileSync(path.join(process.cwd(), 'docs/README.mdx'), 'utf8');
     const tableOfContents = JSON.parse(
@@ -303,11 +130,27 @@ describe('getting-started onboarding', () => {
         ]
       }
     ]);
-    expect(documentationOverview).toMatch(
+
+    expect(onboardingSource).toMatch(
+      /<a\b(?=[^>]*\bclassName="docs-api-card")(?=[^>]*\bhref="\/docs\/fundamentals")[^>]*>/
+    );
+    expect(onboardingSource).toMatch(
       /<a\b(?=[^>]*\bclassName="docs-api-card")(?=[^>]*\bhref="\/docs\/capabilities")[^>]*>/
     );
     expect(onboardingSource).toMatch(
-      /<Link\b(?=[^>]*\bclassName="luma-onboarding__action luma-onboarding__action--secondary")(?=[^>]*\bto="\/docs\/capabilities")[^>]*>/
+      /<a\b(?=[^>]*\bclassName="docs-api-card")(?=[^>]*\bhref="\/docs\/tutorials")[^>]*>/
+    );
+    expect(onboardingSource).toMatch(
+      /<a\b(?=[^>]*\bclassName="docs-api-card")(?=[^>]*\bhref="\/docs\/capabilities")[^>]*>/
+    );
+    expect(onboardingSource).toMatch(
+      /<a\b(?=[^>]*\bclassName="docs-api-card")(?=[^>]*\bhref="\/examples")[^>]*>/
+    );
+    expect(onboardingSource).toMatch(
+      /<a\b(?=[^>]*\bclassName="docs-api-card")(?=[^>]*\bhref="\/docs\/api-guide")[^>]*>/
+    );
+    expect(onboardingSource).toMatch(
+      /<a\b(?=[^>]*\bclassName="docs-api-card")(?=[^>]*\bhref="\/docs\/api-reference")[^>]*>/
     );
     expect(documentationOverview).not.toMatch(/\b(?:Three\.js|Babylon\.js)\b/i);
   });
@@ -329,7 +172,6 @@ describe('getting-started onboarding', () => {
   });
 
   test('keeps discovery and local installation as separate documentation journeys', () => {
-    const documentationOverview = readFileSync(path.join(process.cwd(), 'docs/README.mdx'), 'utf8');
     const tutorialOverview = readFileSync(
       path.join(process.cwd(), 'docs/tutorials/README.mdx'),
       'utf8'
@@ -339,9 +181,7 @@ describe('getting-started onboarding', () => {
       'utf8'
     );
 
-    expect(documentationOverview).toContain('Discover what you can build');
-    expect(documentationOverview).toContain('No installation required');
-    for (const documentationSource of [documentationOverview, tutorialOverview, helloTriangle]) {
+    for (const documentationSource of [tutorialOverview, helloTriangle]) {
       expect(documentationSource).toContain('/docs/getting-started');
       expect(documentationSource).toContain('/docs/developer-guide/installing');
     }

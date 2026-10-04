@@ -5,11 +5,30 @@
 import type {Texture} from '@luma.gl/core';
 import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 import type {NumberArray16} from '@math.gl/core';
+import {temporalHelpers} from './screen-space-shader-helpers';
+import {
+  ssrCameraTemporal,
+  ssrCameraDepthHistoryCopy,
+  ssrNormalHistoryCopy
+} from './ssr-camera-temporal';
+
+export type SSRQuality = 'fast' | 'balanced' | 'detailed';
+
+/** Relative workload presets. Actual frame cost depends on scene, viewport, and device. */
+export const SSR_QUALITY_PRESETS = {
+  fast: {resolutionScale: 0.25, sampleCount: 32, maxRadius: 3, historyWeight: 0.9},
+  balanced: {resolutionScale: 0.5, sampleCount: 96, maxRadius: 2, historyWeight: 0.8},
+  detailed: {resolutionScale: 1, sampleCount: 96, maxRadius: 2, historyWeight: 0.8}
+} as const;
 
 /** Construction options for temporally stabilized screen-space reflections. */
 export type SSRCompositeShaderPassOptions = {
   /** Fractional ray-tracing, history, and denoising resolution. Defaults to full resolution. */
   resolutionScale?: number;
+  /** Optional workload preset. Omission preserves the original pass defaults. */
+  quality?: SSRQuality;
+  /** Camera history supports static geometry without motion vectors. Defaults to velocity. */
+  reprojection?: 'velocity' | 'camera';
 };
 
 type SSRTraceUniforms = {
@@ -264,6 +283,7 @@ fn ssrTrace_sampleColor(
 export const ssrTemporal = {
   name: 'ssrTemporal',
   source: /* wgsl */ `\
+${temporalHelpers}
 struct SSRTemporalUniforms {
   inverseProjectionMatrix: mat4x4f,
   historyWeight: f32,
@@ -279,12 +299,6 @@ struct SSRTemporalUniforms {
 @group(0) @binding(auto) var depthTextureSampler: sampler;
 @group(0) @binding(auto) var previousDepthTexture: texture_2d<f32>;
 @group(0) @binding(auto) var previousDepthTextureSampler: sampler;
-
-fn ssrTemporal_reconstructViewDepth(texCoord: vec2f, depth: f32) -> f32 {
-  let clip = vec4f(texCoord.x * 2.0 - 1.0, 1.0 - texCoord.y * 2.0, depth, 1.0);
-  let viewPosition = ssrTemporal.inverseProjectionMatrix * clip;
-  return abs(viewPosition.z / max(abs(viewPosition.w), 0.00001));
-}
 
 fn ssrTemporal_sampleColor(
   sourceTexture: texture_2d<f32>,
@@ -309,32 +323,15 @@ fn ssrTemporal_sampleColor(
     clampedPreviousCoord,
     0
   ).r;
-  let currentViewDepth = ssrTemporal_reconstructViewDepth(texCoord, currentDepth);
-  let previousViewDepth = ssrTemporal_reconstructViewDepth(clampedPreviousCoord, previousDepth);
+  let currentViewDepth = temporal_getViewDepth(texCoord, currentDepth, ssrTemporal.inverseProjectionMatrix, 0.00001);
+  let previousViewDepth = temporal_getViewDepth(clampedPreviousCoord, previousDepth, ssrTemporal.inverseProjectionMatrix, 0.00001);
   let relativeDepthDifference = abs(previousViewDepth - currentViewDepth) /
     max(currentViewDepth, 0.0001);
   let validDepth = relativeDepthDifference < ssrTemporal.depthThreshold;
 
-  let texel = 1.0 / vec2f(textureDimensions(sourceTexture));
-  var minimumReflection = current;
-  var maximumReflection = current;
-  for (var sampleY: i32 = -1; sampleY <= 1; sampleY++) {
-    for (var sampleX: i32 = -1; sampleX <= 1; sampleX++) {
-      let sampleCoord = clamp(
-        texCoord + vec2f(f32(sampleX), f32(sampleY)) * texel,
-        vec2f(0.0),
-        vec2f(1.0)
-      );
-      let neighborhoodReflection = textureSampleLevel(
-        sourceTexture,
-        sourceTextureSampler,
-        sampleCoord,
-        0
-      );
-      minimumReflection = min(minimumReflection, neighborhoodReflection);
-      maximumReflection = max(maximumReflection, neighborhoodReflection);
-    }
-  }
+  let bounds = temporal_getColorBounds(sourceTexture, sourceTextureSampler, texCoord, current);
+  let minimumReflection = bounds.minimum;
+  let maximumReflection = bounds.maximum;
 
   let historyReflection = textureSampleLevel(
     historyTexture,
@@ -653,13 +650,22 @@ fn ssrComposite_sampleColor(
   SSRCompositeBindings
 >;
 
+type SSRRenderTarget = 'ssrRaw' | 'ssrHistory' | 'ssrHistoryDepth' | 'ssrScratch' | 'ssrReflection';
+
 /** Creates a roughness-aware, temporally stabilized screen-space reflection pipeline. */
 export function createSSRCompositeShaderPass(
+  options: SSRCompositeShaderPassOptions & {reprojection: 'camera'}
+): CompositeShaderPass<SSRRenderTarget | 'ssrHistoryNormal'>;
+export function createSSRCompositeShaderPass(
+  options?: SSRCompositeShaderPassOptions
+): CompositeShaderPass<SSRRenderTarget>;
+export function createSSRCompositeShaderPass(
   options: SSRCompositeShaderPassOptions = {}
-): CompositeShaderPass<
-  'ssrRaw' | 'ssrHistory' | 'ssrHistoryDepth' | 'ssrScratch' | 'ssrReflection'
-> {
-  const scale = options.resolutionScale ?? 1;
+): CompositeShaderPass {
+  const quality = options.quality ? SSR_QUALITY_PRESETS[options.quality] : undefined;
+  const scale = options.resolutionScale ?? quality?.resolutionScale ?? 1;
+  const cameraHistory = options.reprojection === 'camera';
+  const spatialUniforms: Record<string, number> = quality ? {maxRadius: quality.maxRadius} : {};
   return {
     name: 'ssrCompositeShaderPass',
     renderTargets: {
@@ -670,12 +676,27 @@ export function createSSRCompositeShaderPass(
         lifetime: 'history',
         initialize: {clearColor: [0, 0, 0, 0]}
       },
-      ssrHistoryDepth: {
-        scale: [scale, scale],
-        format: 'rgba16float',
-        lifetime: 'history',
-        initialize: {clearColor: [1, 0, 0, 1]}
-      },
+      ssrHistoryDepth: cameraHistory
+        ? {
+            format: 'rgba8unorm',
+            lifetime: 'history',
+            initialize: {clearColor: [1, 1, 1, 1]}
+          }
+        : {
+            scale: [scale, scale],
+            format: 'rgba16float',
+            lifetime: 'history',
+            initialize: {clearColor: [1, 0, 0, 1]}
+          },
+      ...(cameraHistory
+        ? {
+            ssrHistoryNormal: {
+              format: 'rgba8unorm',
+              lifetime: 'history',
+              initialize: {clearColor: [0.5, 0.5, 1, 1]}
+            }
+          }
+        : {}),
       ssrScratch: {scale: [scale, scale], format: 'rgba16float'},
       ssrReflection: {scale: [scale, scale], format: 'rgba16float'}
     },
@@ -683,33 +704,45 @@ export function createSSRCompositeShaderPass(
       {
         shaderPass: ssrTrace,
         inputs: {sourceTexture: 'previous'},
-        output: 'ssrRaw'
+        output: 'ssrRaw',
+        uniforms: quality ? {sampleCount: quality.sampleCount} : undefined
       },
       {
-        shaderPass: ssrTemporal,
+        shaderPass: cameraHistory ? ssrCameraTemporal : ssrTemporal,
         inputs: {
           sourceTexture: 'ssrRaw',
           historyTexture: 'ssrHistory',
-          previousDepthTexture: 'ssrHistoryDepth'
+          previousDepthTexture: 'ssrHistoryDepth',
+          ...(cameraHistory ? {previousNormalTexture: 'ssrHistoryNormal'} : {})
         },
-        output: 'ssrHistory'
+        output: 'ssrHistory',
+        uniforms: quality ? {historyWeight: quality.historyWeight} : undefined
       },
       {
-        shaderPass: ssrDepthHistoryCopy,
+        shaderPass: cameraHistory ? ssrCameraDepthHistoryCopy : ssrDepthHistoryCopy,
         inputs: {sourceTexture: 'previous'},
         output: 'ssrHistoryDepth'
       },
+      ...(cameraHistory
+        ? [
+            {
+              shaderPass: ssrNormalHistoryCopy,
+              inputs: {sourceTexture: 'previous'},
+              output: 'ssrHistoryNormal'
+            }
+          ]
+        : []),
       {
         shaderPass: ssrSpatial,
         inputs: {sourceTexture: 'ssrHistory'},
         output: 'ssrScratch',
-        uniforms: {direction: [1, 0]}
+        uniforms: {...spatialUniforms, direction: [1, 0]}
       },
       {
         shaderPass: ssrSpatial,
         inputs: {sourceTexture: 'ssrScratch'},
         output: 'ssrReflection',
-        uniforms: {direction: [0, 1]}
+        uniforms: {...spatialUniforms, direction: [0, 1]}
       },
       {
         shaderPass: ssrComposite,

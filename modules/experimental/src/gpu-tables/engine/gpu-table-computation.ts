@@ -59,7 +59,12 @@ export class GPUTableComputation extends Computation {
     this.batchState = batchState;
   }
 
-  /** Dispatches once per vector batch, rebinding storage ranges before each dispatch. */
+  /**
+   * Dispatches once per vector batch, rebinding storage ranges before each dispatch.
+   *
+   * Batches that bind an empty input chunk are skipped, because WebGPU rejects zero-size
+   * storage bindings. Their output chunks are left in place, so batch boundaries are preserved.
+   */
   dispatchBatches(
     computePass: ComputePass,
     getWorkgroupCount: number | ((batch: GPUTableComputationBatch) => number),
@@ -67,6 +72,9 @@ export class GPUTableComputation extends Computation {
     z?: number
   ): void {
     for (let batchIndex = 0; batchIndex < this.batchState.batchCount; batchIndex++) {
+      if (this.batchState.emptyBatches[batchIndex]) {
+        continue;
+      }
       const batch = {
         batchIndex,
         numRows: this.batchState.batchRowCounts[batchIndex]
@@ -88,6 +96,8 @@ export class GPUTableComputation extends Computation {
 type GPUTableComputationBatchState = {
   batchCount: number;
   batchRowCounts: number[];
+  /** Whether each batch binds at least one zero-row input chunk. */
+  emptyBatches: boolean[];
 };
 
 function getGPUTableComputationBatchState(
@@ -96,11 +106,15 @@ function getGPUTableComputationBatchState(
   const batchedVectorEntries = Object.entries(inputVectors).filter(([, vector]) =>
     requiresBatchBinding(vector)
   );
+  const hasEmptyDirectVector = Object.values(inputVectors).some(
+    vector => !requiresBatchBinding(vector) && vector.length === 0
+  );
   if (batchedVectorEntries.length === 0) {
     const firstVector = Object.values(inputVectors)[0];
     return {
       batchCount: 1,
-      batchRowCounts: [firstVector?.length ?? 0]
+      batchRowCounts: [firstVector?.length ?? 0],
+      emptyBatches: [hasEmptyDirectVector]
     };
   }
 
@@ -123,7 +137,11 @@ function getGPUTableComputationBatchState(
     });
   }
 
-  return {batchCount, batchRowCounts};
+  return {
+    batchCount,
+    batchRowCounts,
+    emptyBatches: batchRowCounts.map(rowCount => hasEmptyDirectVector || rowCount === 0)
+  };
 }
 
 function requiresBatchBinding(vector: GPUVector): boolean {

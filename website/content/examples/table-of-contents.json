@@ -174,7 +174,10 @@
   {
     "type": "category",
     "label": "Integrations",
-    "items": ["integrations/external-context", "integrations/react-strict-mode"]
+    "items": [
+      "integrations/external-context",
+      "integrations/react-strict-mode"
+    ]
   },
   {
     "type": "category",
@@ -191,6 +194,8 @@
       "tutorials/shader-modules",
       "tutorials/shader-hooks",
       "tutorials/shader-plugins",
+      "tutorials/slang-shaders",
+      "tutorials/slang-particles",
       "tutorials/transform-feedback",
       "tutorials/transform"
     ]
@@ -245,6 +250,28 @@
       "deck/arrow-path-layer",
       "deck/arrow-polygon-layer",
       "deck/arrow-text-layer"
+    ]
+  },
+  {
+    "type": "category",
+    "label": "Visual Effects - deck.gl v10",
+    "items": [
+      "deck/weather",
+      "deck/globe-clouds",
+      "deck/city-scene",
+      "deck/flow-particles",
+      "deck/point-glow",
+      "deck/fireflies",
+      "deck/hdr-night-lighting",
+      "deck/global-illumination",
+      "deck/light-shafts",
+      "deck/ambient-occlusion",
+      "deck/soft-shadows",
+      "deck/depth-of-field",
+      "deck/sketch-edges",
+      "deck/scene-buffers",
+      "deck/pattern-fills",
+      "deck/styled-paths"
     ]
   },
   {

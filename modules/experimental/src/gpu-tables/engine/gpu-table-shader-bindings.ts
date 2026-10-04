@@ -42,8 +42,12 @@ export type GPUTableShaderBindingsProps = {
 
 /** Draw-ready table resources for one preserved GPU record batch. */
 export type GPUTableShaderBindingBatch = {
+  /** Source row count; skip zero-row batches before binding their storage ranges. */
+  numRows: number;
   attributes: Record<string, GPUBuffer>;
   attributeBuffers: GPUBuffer[];
+  /** Byte offset where each attribute buffer's rows start, keyed like `attributes`. */
+  attributeByteOffsets: Record<string, number>;
   bindings: Record<string, Binding>;
 };
 
@@ -252,16 +256,20 @@ function prepareBindings(
   );
   const batches = table.batches.map(batch => {
     const attributes: Record<string, GPUBuffer> = {};
+    const attributeByteOffsets: Record<string, number> = {};
     for (const layout of varyingLayouts) {
       const data = batch.gpuData[layout.name];
       if (!data) {
         throw new Error(`GPUTableShaderBindings batch is missing GPUData "${layout.name}"`);
       }
+      // Chunks may be views into a shared buffer, so rows start at the chunk byteOffset.
       attributes[layout.name] = data.buffer;
+      attributeByteOffsets[layout.name] = data.byteOffset;
     }
     for (const layout of constantLayouts) {
       const buffer = constantAttributeBuffers[layout.name];
       attributes[layout.name] = buffer;
+      attributeByteOffsets[layout.name] = 0;
     }
     const attributeBuffers = bufferLayout.map(layout => attributes[layout.name]);
 
@@ -284,7 +292,7 @@ function prepareBindings(
     if (rowMultiplierBinding) {
       bindings['gpuTableColumns'] = rowMultiplierBinding;
     }
-    return {attributes, attributeBuffers, bindings};
+    return {numRows: batch.numRows, attributes, attributeBuffers, attributeByteOffsets, bindings};
   });
 
   return {
