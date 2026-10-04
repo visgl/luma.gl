@@ -202,27 +202,34 @@ try {
         const coverageImage = PNG.sync.read(await captureScreenshot({path: join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), 'city-scene-reflection-coverage.png')}));
         await page.selectOption('#reflection-view', '0');
         const combinedImage = PNG.sync.read(await captureScreenshot());
-        const waterSamples = await page.evaluate(async () => {
+        const sampleColumns = await page.evaluate(() => {
           const deck = window.cityScene.deck;
           const viewport = deck.getViewports()[0];
-          const samples = [];
+          const columns = [];
           for (const longitudeOffset of [-0.0003, 0, 0.0003]) {
+            const samples = [];
             for (let latitudeIndex = -8; latitudeIndex <= 8; latitudeIndex++) {
               const [horizontal, vertical] = viewport.project([-74.006 + longitudeOffset, 40.7128 + latitudeIndex * 0.0004]);
               if (horizontal < 350 || horizontal >= 950 || vertical < 120 || vertical >= 650) continue;
-              const picked = await deck.pickObjectAsync({x: horizontal, y: vertical});
-              if (picked?.object?.kind === 'water') samples.push([Math.floor(horizontal), Math.floor(vertical)]);
+              samples.push([Math.floor(horizontal), Math.floor(vertical)]);
             }
+            columns.push(samples);
           }
-          return samples;
+          return columns;
         });
         let fallbackSamples = 0;
-        for (const [horizontal, vertical] of waterSamples) {
-          const offset = (vertical * coverageImage.width + horizontal) * 4;
-          // Exact zero-confidence debug color: this ray has no reliable screen-space contribution.
-          if (coverageImage.data[offset] !== 11 || coverageImage.data[offset + 1] !== 20 || coverageImage.data[offset + 2] !== 56) continue;
-          fallbackSamples++;
-          for (const channel of [0, 1, 2]) assert(Math.abs(combinedImage.data[offset + channel] - fallbackImage.data[offset + channel]) <= 3, 'unresolved water reflections retain the material fallback');
+        for (const samples of sampleColumns) {
+          for (const [horizontal, vertical] of samples) {
+            const offset = (vertical * coverageImage.width + horizontal) * 4;
+            // Exact zero-confidence debug color: this ray has no reliable screen-space contribution.
+            if (coverageImage.data[offset] !== 11 || coverageImage.data[offset + 1] !== 20 || coverageImage.data[offset + 2] !== 56) continue;
+            // Filter confidence on the CPU before paying for a GPU picking pass.
+            const isWater = await page.evaluate(async ([x, y]) => (await window.cityScene.deck.pickObjectAsync({x, y}))?.object?.kind === 'water', [horizontal, vertical]);
+            if (!isWater) continue;
+            fallbackSamples++;
+            for (const channel of [0, 1, 2]) assert(Math.abs(combinedImage.data[offset + channel] - fallbackImage.data[offset + channel]) <= 3, 'unresolved water reflections retain the material fallback');
+            break; // One verified water sample per spatially separated column.
+          }
         }
         assert(fallbackSamples > 0, 'sample visible water with zero screen-space reflection confidence');
         assert(countSceneDifferences(fallbackImage, combinedImage) > 100, 'scene reflections contribute beyond the sky material fallback');

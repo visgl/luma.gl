@@ -74,3 +74,25 @@ This repo uses `@vis.gl/dev-tools` for shared Vitest wiring and keeps repository
   - `docs/developer/dev-tools/browser-debug.md`
   - `vitest.config.ts`
   - `.ocularrc.js`
+
+## Example visual test workload
+
+Flow, weather, globe clouds, and the fog smoke test render at half the CSS pixel size
+by default. `scripts/playwright/visual-test-utils.mjs` sets the actual canvas pixel
+ratio and verifies its dimensions; screenshots stay in CSS coordinates so image
+regions and assertion thresholds are unchanged. Set `LUMA_VISUAL_TEST_PIXEL_SCALE=1`
+for a full-resolution diagnostic run. Thumbnail generation retains full resolution.
+The focused catalog-star assertion also uses full resolution because SwiftShader
+WebGL can lose subpixel stars at half resolution.
+Set `GLOBE_SOFTWARE_GPU=true` to reproduce the globe smoke test with SwiftShader locally.
+
+Flow correctness runs still exercise all three particle densities on both backends.
+The six 30-frame timing samples are a separate opt-in workload:
+
+```bash
+yarn workspace luma.gl-examples-deck-flow-particles benchmark
+```
+
+`FLOW_RUN_TIMING=true` also enables these samples directly; the existing
+`FLOW_SKIP_TIMING` override takes precedence. PR visual tests do not collect timing
+samples because they have no performance assertions.
