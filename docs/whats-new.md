@@ -676,4 +676,6 @@ The experimental deck.gl GPU layers add optional camera/object motion capture an
 `SceneShaderPassEffect`, which connects shared HDR color, depth, normals and velocity to existing
 luma.gl shader-pass graphs. Riverfront fireflies, HDR night lighting, global illumination and light
 shafts demonstrate this shared infrastructure on WebGPU. `FireflyLayer` and the reusable `firefly`
-shader module also support WebGL2.
+shader module also support WebGL2. Fireflies adds calm-water emitter reflections and adjustable
+bloom; Fireflies and HDR night lighting request extended-range, floating-point canvas output on
+HDR-capable displays, with an SDR presentation fallback.

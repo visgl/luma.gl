@@ -4,9 +4,11 @@
 
 import {COORDINATE_SYSTEM, Deck, MapView} from '@deck.gl/core';
 import {Buffer} from '@luma.gl/core';
+import {WebGPUDevice} from '@luma.gl/webgpu';
 import {
   FireflyLayer,
   GlowPointLayer,
+  WaterSurfaceLayer,
   SceneBufferEffect,
   SceneShaderPassEffect,
   type SceneShaderPassContext
@@ -21,7 +23,8 @@ import {
 import type {ShaderPass, LightingProps, PointLight} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 import {RiverDistrictLayer} from './river-district-layer';
-import {CITY_ORIGIN, makeCityFeatures} from './river-district-data';
+import {CITY_ORIGIN, makeCityFeatures, makeCityMesh} from './river-district-data';
+import {RiverFireflyReflectionLayer} from './fireflies/river-reflection-layer';
 import {RIVERFRONT_VIEW_LIMITS} from './riverfront-view';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from './deck-example-device';
 
@@ -47,6 +50,7 @@ export function createRiverfrontLightingScene(
     animate: true,
     enabled: true,
     bloom: kind === 'fireflies' || kind === 'hdr-night-lighting',
+    bloomStrength: kind === 'fireflies' ? 1.1 : 0.65,
     autoExposure: true,
     exposure: kind === 'fireflies' ? 1.6 : 1,
     intensity: 1,
@@ -54,15 +58,36 @@ export function createRiverfrontLightingScene(
     speed: 0.6,
     radiance: kind === 'hdr-night-lighting' ? 4 : 8,
     density: 0.0008,
+    reflections: true,
+    ripples: 0,
     debugMode: 0
   };
-  const diagnostics = {frames: 0, time: 0, deltaTime: 0, backend: '', error: '', finalized: false};
+  const diagnostics = {
+    frames: 0,
+    time: 0,
+    deltaTime: 0,
+    backend: '',
+    highDynamicRange: false,
+    error: '',
+    finalized: false
+  };
   const ready = Promise.withResolvers<void>();
   let lastTimestamp = 0;
   let settlingFrames = 24;
   let points: Buffer | undefined;
+  let waterPositions: Buffer | undefined;
   const storageBindings: Record<string, Buffer> = {};
   const features = makeCityFeatures();
+  const waterFeatures = features.filter(feature => feature.kind === 'water');
+  const dryFeatures =
+    kind === 'fireflies' ? features.filter(feature => feature.kind !== 'water') : features;
+  const river = waterFeatures[0];
+  const surfaceBounds: [number, number, number, number] = [
+    river.center[0] - river.size[0] / 2,
+    river.center[1] - river.size[1] / 2,
+    river.center[0] + river.size[0] / 2,
+    river.center[1] + river.size[1] / 2
+  ];
   if (kind === 'global-illumination') {
     let buildingIndex = 0;
     for (const feature of features) {
@@ -99,7 +124,7 @@ export function createRiverfrontLightingScene(
     clearColor: [0.004, 0.009, 0.022, 1],
     getTime: () => diagnostics.time,
     getLayerOptions: layer =>
-      layer instanceof RiverDistrictLayer
+      layer instanceof RiverDistrictLayer || layer instanceof WaterSurfaceLayer
         ? {mode: 'opaque', surfaceBuffer: true}
         : layer instanceof GlowPointLayer
           ? {mode: 'transparent', motionBuffer: true}
@@ -120,9 +145,9 @@ export function createRiverfrontLightingScene(
         ? [
             createBloomCompositeShaderPass({
               quality: 'medium',
-              radius: 4,
-              threshold: 1,
-              intensity: 0.4,
+              radius: 8,
+              threshold: kind === 'fireflies' ? 0.55 : 1,
+              intensity: settings.bloomStrength,
               downsample: 'render',
               temporalStability: 0.65,
               temporalReprojection: true
@@ -137,9 +162,24 @@ export function createRiverfrontLightingScene(
     ],
     getSceneOptions: makeSceneOptions
   });
+  const deckDeviceProps = getDeckExampleProps(options);
+  const requestHighDynamicRange =
+    (kind === 'fireflies' || kind === 'hdr-night-lighting') &&
+    window.matchMedia('(dynamic-range: high)').matches;
   const deck = new Deck({
     parent,
-    ...getDeckExampleProps(options),
+    ...deckDeviceProps,
+    deviceProps: {
+      ...deckDeviceProps.deviceProps,
+      createCanvasContext: requestHighDynamicRange
+        ? {
+            colorFormat: 'rgba16float',
+            colorSpace: 'display-p3',
+            toneMapping: 'extended',
+            alphaMode: 'opaque'
+          }
+        : {alphaMode: 'opaque'}
+    },
     views: new MapView({id: 'riverfront', controller: true}),
     initialViewState,
     layers: [],
@@ -147,16 +187,27 @@ export function createRiverfrontLightingScene(
     _animate: true,
     onDeviceInitialized: device => {
       diagnostics.backend = device.type;
+      const configuration =
+        device instanceof WebGPUDevice ? device.canvasContext?.handle.getConfiguration() : null;
+      diagnostics.highDynamicRange =
+        configuration?.format === 'rgba16float' && configuration.toneMapping?.mode === 'extended';
+      if (kind === 'fireflies') {
+        const mesh = makeCityMesh(waterFeatures);
+        const vertices = new Float32Array((mesh.length / 10) * 3);
+        for (let index = 0; index < mesh.length / 10; index++)
+          vertices.set(mesh.subarray(index * 10, index * 10 + 3), index * 3);
+        waterPositions = device.createBuffer({id: 'firefly-water-positions', data: vertices});
+      }
       const rows: number[] = [];
       if (kind === 'fireflies') {
         for (let index = 0; index < 320; index++) {
           const side = index % 2 ? 1 : -1;
-          const longitudeOffset = side * (85 + ((index * 37) % 170));
+          const longitudeOffset = side * (45 + ((index * 37) % 55));
           const latitudeOffset = ((index * 127) % 1000) - 500;
           rows.push(
             longitudeOffset,
             latitudeOffset,
-            5 + ((index * 17) % 35),
+            8 + ((index * 17) % 28),
             0.7,
             1,
             0.12,
@@ -216,8 +267,8 @@ export function createRiverfrontLightingScene(
       layers: [
         new RiverDistrictLayer({
           id: 'riverfront-city',
-          features,
-          data: features,
+          features: dryFeatures,
+          data: dryFeatures,
           pickable: true,
           coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
           coordinateOrigin: CITY_ORIGIN,
@@ -255,6 +306,50 @@ export function createRiverfrontLightingScene(
                   ]
           })
         }),
+        waterPositions && kind === 'fireflies'
+          ? new WaterSurfaceLayer({
+              id: 'firefly-river-water',
+              positions: waterPositions,
+              vertexCount: 6,
+              coordinateOrigin: CITY_ORIGIN,
+              style: 'river',
+              flowDirection: [0, 1],
+              time: () => diagnostics.time,
+              material: {
+                baseColor: [0.02, 0.08, 0.12],
+                fresnelColor: [0.07, 0.16, 0.2],
+                skyZenithColor: [0.02, 0.04, 0.08],
+                skyUpDirection: [0, 0, 1],
+                normalStrength: settings.ripples,
+                waveASpeed: 1.1,
+                waveBSpeed: -0.7,
+                specularIntensity: 0.025,
+                opacity: 1
+              }
+            })
+          : null,
+        points && kind === 'fireflies' && settings.enabled && settings.reflections
+          ? new RiverFireflyReflectionLayer({
+              id: 'riverfront-firefly-reflections',
+              points,
+              pointCount: 320,
+              coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+              coordinateOrigin: CITY_ORIGIN,
+              time: () => diagnostics.time,
+              animation: {enabled: 1, speed: settings.speed},
+              radiusPixels: 6,
+              opacity: 0.55,
+              surfaceHeight: river.center[2],
+              surfaceBounds,
+              surfaceRipples: settings.ripples,
+              style: {
+                coreRadius: 0.05,
+                coreIntensity: 0.8,
+                haloIntensity: 4 * settings.intensity,
+                falloff: 8
+              }
+            })
+          : null,
         points && kind === 'fireflies'
           ? new FireflyLayer({
               id: 'riverfront-fireflies',
@@ -308,7 +403,9 @@ export function createRiverfrontLightingScene(
     return {
       bindings: storageBindings,
       uniforms: {
-        bloomComposite: {intensity: settings.bloom ? 0.4 * settings.intensity : 0},
+        bloomComposite: {
+          intensity: settings.bloom ? settings.bloomStrength : 0
+        },
         hdrAutoExposureAdapt: {
           enabled: settings.autoExposure ? 1 : 0,
           deltaTime: diagnostics.deltaTime,
@@ -316,7 +413,10 @@ export function createRiverfrontLightingScene(
           maximumExposure: 4
         },
         hdrAutoExposureApply: {enabled: settings.autoExposure ? 1 : 0},
-        toneMapping: {exposure: settings.exposure},
+        toneMapping: {
+          exposure: settings.exposure,
+          maximumLuminance: diagnostics.highDynamicRange ? 3 : 1
+        },
         ssgiTrace: {
           projectionMatrix: camera.projectionMatrix,
           inverseProjectionMatrix: camera.inverseProjectionMatrix,
@@ -391,7 +491,14 @@ export function createRiverfrontLightingScene(
         capture.resetHistory();
         effect.resetHistory();
       }
-      if (name === 'radiance' || name === 'intensity' || name === 'speed' || name === 'enabled')
+      if (
+        name === 'radiance' ||
+        name === 'intensity' ||
+        name === 'speed' ||
+        name === 'enabled' ||
+        name === 'reflections' ||
+        name === 'ripples'
+      )
         updateLayers();
       requestFrames();
     },
@@ -412,6 +519,7 @@ export function createRiverfrontLightingScene(
       diagnostics.finalized = true;
       deck.finalize();
       points?.destroy();
+      waterPositions?.destroy();
       for (const buffer of Object.values(storageBindings)) buffer.destroy();
     }
   };

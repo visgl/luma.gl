@@ -72,6 +72,50 @@ try {
   if (kind === 'hdr-night-lighting') await page.uncheck('#autoExposure');
   await page.uncheck('#animate');
   await page.waitForFunction(() => !window.riverfrontLighting.deck.props._animate);
+  const presentation = await page.evaluate(() => {
+    const configuration = document.querySelector('canvas').getContext('webgpu').getConfiguration();
+    return {format: configuration.format, mode: configuration.toneMapping.mode,
+      reported: window.riverfrontLighting.diagnostics.highDynamicRange};
+  });
+  assert.equal(presentation.reported, presentation.format === 'rgba16float' && presentation.mode === 'extended', 'HDR status matches the accepted native canvas');
+  if (kind === 'fireflies') {
+    await page.screenshot({path: join(tmpdir(), 'riverfront-fireflies-reflected.png')});
+    const reflected = PNG.sync.read(await page.screenshot());
+    await page.uncheck('#reflections');
+    await page.waitForFunction(() => !window.riverfrontLighting.deck.props._animate);
+    const unreflected = PNG.sync.read(await page.screenshot());
+    await page.screenshot({path: join(tmpdir(), 'riverfront-fireflies-unreflected.png')});
+    let reflectionPixels = 0;
+    for (let row = 0; row < reflected.height; row++)
+      for (let column = 340; column < reflected.width; column++) {
+        const offset = (row * reflected.width + column) * 4;
+        if (reflected.data[offset + 1] - unreflected.data[offset + 1] > 8 &&
+            unreflected.data[offset + 2] > unreflected.data[offset]) reflectionPixels++;
+      }
+    assert(reflectionPixels > 50, `water contains distinct glowing reflections (${reflectionPixels} pixels)`);
+    console.log(`fireflies: ${reflectionPixels} visibly reflected water pixels`);
+    await page.check('#reflections');
+    await page.waitForFunction(() => !window.riverfrontLighting.deck.props._animate);
+  }
+  if (kind === 'fireflies') {
+    const bloomed = PNG.sync.read(await page.screenshot());
+    await page.uncheck('#bloom');
+    await page.waitForFunction(() => !window.riverfrontLighting.deck.props._animate);
+    const unbloomed = PNG.sync.read(await page.screenshot());
+    let bloomPixels = 0;
+    for (let row = 0; row < bloomed.height; row++)
+      for (let column = 340; column < bloomed.width; column++) {
+        const offset = (row * bloomed.width + column) * 4;
+        if (bloomed.data[offset + 1] - unbloomed.data[offset + 1] > 6) bloomPixels++;
+      }
+    assert(bloomPixels > 100, `bloom spreads beyond the source glow (${bloomPixels} pixels)`);
+    console.log(`fireflies: ${bloomPixels} visibly bloomed pixels`);
+    await page.check('#bloom');
+    await page.evaluate(() => window.riverfrontLighting.setSetting('ripples', 0.15));
+    await page.waitForFunction(() => !window.riverfrontLighting.deck.props._animate);
+    await page.evaluate(() => window.riverfrontLighting.setSetting('ripples', 0));
+    await page.waitForFunction(() => !window.riverfrontLighting.deck.props._animate);
+  }
   if (process.argv.includes('--thumbnail')) {
     const posterPath = join(root, '../../../website/static/images/examples/deck', `${kind}.jpg`);
     await mkdir(dirname(posterPath), {recursive: true});

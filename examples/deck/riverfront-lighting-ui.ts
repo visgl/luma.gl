@@ -22,13 +22,22 @@ export function startRiverfrontLightingExample(kind: RiverfrontLightingKind): vo
   document
     .querySelector<HTMLButtonElement>('#center')!
     .addEventListener('click', () => scene.center());
-  for (const name of ['animate', 'enabled', 'bloom', 'autoExposure'] as const) {
+  for (const name of ['animate', 'enabled', 'bloom', 'autoExposure', 'reflections'] as const) {
     document.querySelector<HTMLInputElement>(`#${name}`)?.addEventListener('change', event => {
       const target = event.currentTarget;
       if (target instanceof HTMLInputElement) scene.setSetting(name, target.checked);
     });
   }
-  for (const name of ['intensity', 'exposure', 'radius', 'speed', 'radiance', 'density'] as const) {
+  for (const name of [
+    'intensity',
+    'exposure',
+    'radius',
+    'speed',
+    'radiance',
+    'density',
+    'bloomStrength',
+    'ripples'
+  ] as const) {
     const input = document.querySelector<HTMLInputElement>(`#${name}`);
     if (!input) continue;
     input.value = String(scene.settings[name]);
@@ -40,7 +49,7 @@ export function startRiverfrontLightingExample(kind: RiverfrontLightingKind): vo
   });
   scene.ready
     .then(() => {
-      status.value = 'One shared HDR capture · depth · normals · motion';
+      status.value = `${scene.diagnostics.highDynamicRange ? 'HDR display output' : 'SDR display output'} · shared depth, normals and motion`;
       document.body.dataset['ready'] = 'true';
     })
     .catch(error => {
