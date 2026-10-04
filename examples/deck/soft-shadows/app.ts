@@ -28,7 +28,12 @@ export function createRiverfrontSoftShadowScene(
     quality: 'balanced'
   };
   const diagnostics = {frames: 0, backend: '', error: '', finalized: false};
-  const ready = Promise.withResolvers<void>();
+  let resolveReady: () => void;
+  let rejectReady: (error: Error) => void;
+  const ready = new Promise<void>((resolve, reject) => {
+    resolveReady = resolve;
+    rejectReady = reject;
+  });
   const shadowEffect = new RiverfrontShadowEffect(features, settings);
   let lastFrameTime = 0;
   const deck = new Deck({
@@ -58,7 +63,7 @@ export function createRiverfrontSoftShadowScene(
     onDeviceInitialized: device => {
       diagnostics.backend = device.type;
     },
-    onLoad: () => ready.resolve(),
+    onLoad: () => resolveReady(),
     onBeforeRender: () => {
       const now = performance.now();
       if (settings.animated && lastFrameTime) {
@@ -77,7 +82,7 @@ export function createRiverfrontSoftShadowScene(
     },
     onError: error => {
       diagnostics.error ||= error.message;
-      ready.reject(error);
+      rejectReady(error);
     },
     getTooltip: info => info.object?.name ?? null
   });
@@ -86,7 +91,7 @@ export function createRiverfrontSoftShadowScene(
     settings,
     shadowEffect,
     diagnostics,
-    ready: ready.promise,
+    ready,
     get sun() {
       return getRiverfrontSun(settings.hour);
     },
