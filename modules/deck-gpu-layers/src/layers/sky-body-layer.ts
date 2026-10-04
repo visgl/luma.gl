@@ -6,6 +6,7 @@ import {
   Layer,
   picking,
   _GlobeViewport,
+  type DefaultProps,
   type LayerContext,
   type LayerProps,
   type Viewport
@@ -24,7 +25,7 @@ export type SkyBodyLayerProps = LayerProps & {
   timestamp?: number | Date;
   /** Defaults to coordinateOrigin, or the viewport location when no origin is supplied. */
   observer?: SkyObserver;
-  /** Disk radius in CSS pixels. Astronomy and angular-size calculations are caller-owned. */
+  /** Reference disk radius in CSS pixels; MoonLayer can scale it with lunar distance. */
   radiusPixels?: number;
   color?: [number, number, number, number];
 };
@@ -68,7 +69,7 @@ const skyBody = {
 /** Shared far-plane billboard. The view translation never affects celestial directions. */
 export class SkyBodyLayer<Props extends SkyBodyLayerProps> extends Layer<Props> {
   static override layerName = 'SkyBodyLayer';
-  static override defaultProps = {
+  static override defaultProps: DefaultProps<SkyBodyLayerProps> = {
     direction: undefined,
     timestamp: undefined,
     observer: undefined,
@@ -92,6 +93,9 @@ export class SkyBodyLayer<Props extends SkyBodyLayerProps> extends Layer<Props> 
   }
   protected getBodyDirection(): Readonly<NumberArray3> {
     return this.props.direction ?? [0, 1, 0.15];
+  }
+  protected getBodyRadius(): number {
+    return this.props.radiusPixels ?? 0;
   }
   protected getBodyColor(): NumberArray3 {
     const color = this.props.color ?? [255, 235, 170, 255];
@@ -148,7 +152,8 @@ export class SkyBodyLayer<Props extends SkyBodyLayerProps> extends Layer<Props> 
       this.props.coordinateOrigin,
       this.getObserver()
     );
-    if (!center || !this.props.radiusPixels) return;
+    const radiusPixels = this.getBodyRadius();
+    if (!center || !radiusPixels) return;
     const settings = this.getBodySettings();
     const extent = settings.moon ? 1 : 3;
     const viewport = this.context.viewport;
@@ -158,8 +163,8 @@ export class SkyBodyLayer<Props extends SkyBodyLayerProps> extends Layer<Props> 
         center,
         color: [...this.getBodyColor(), (color[3] / 255) * this.props.opacity],
         offset: [
-          (2 * this.props.radiusPixels * extent) / viewport.width,
-          (2 * this.props.radiusPixels * extent) / viewport.height
+          (2 * radiusPixels * extent) / viewport.width,
+          (2 * radiusPixels * extent) / viewport.height
         ],
         moon: settings.moon,
         phase: settings.phase,

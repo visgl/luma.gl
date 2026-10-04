@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {_GlobeViewport} from '@deck.gl/core';
+import {_GlobeViewport, type DefaultProps} from '@deck.gl/core';
 import type {NumberArray3} from '@math.gl/core';
 import {getSunPosition, getSkyDirection, getSunLight} from '@math.gl/sun';
 import {SkyBodyLayer, type SkyBodyLayerProps} from './sky-body-layer';
@@ -16,7 +16,7 @@ export type SunLayerProps = SkyBodyLayerProps & {
 /** Astronomy-positioned HDR solar disk, automatically projected in map and globe views. */
 export class SunLayer extends SkyBodyLayer<SunLayerProps> {
   static override layerName = 'SunLayer';
-  static override defaultProps = {
+  static override defaultProps: DefaultProps<SunLayerProps> = {
     ...SkyBodyLayer.defaultProps,
     color: {type: 'color', value: null, optional: true},
     radiance: {type: 'number', value: 8, min: 0},

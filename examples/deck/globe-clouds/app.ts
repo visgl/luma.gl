@@ -125,7 +125,7 @@ export function createGlobeCloudScene(
           observer,
           time: diagnostics.time,
           atmosphere: false,
-          sun: settings.sun && {radiusPixels: 14, radiance: 8},
+          sun: settings.sun && {radiusPixels: 14, radiance: 8, color: [255, 220, 18, 255]},
           moon: settings.moon && {radiusPixels: 18},
           stars: settings.stars && {brightness: 2},
           clouds: settings.clouds && {

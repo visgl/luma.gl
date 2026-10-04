@@ -16,7 +16,8 @@
     "@luma.gl/engine": "10.0.0-alpha.2",
     "@luma.gl/shadertools": "10.0.0-alpha.2",
     "@luma.gl/webgl": "10.0.0-alpha.2",
-    "@luma.gl/webgpu": "10.0.0-alpha.2"
+    "@luma.gl/webgpu": "10.0.0-alpha.2",
+    "@math.gl/sun": "5.0.0-alpha.12"
   },
   "devDependencies": {
     "playwright": "^1.58.0",

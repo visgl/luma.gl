@@ -16,6 +16,7 @@ export default defineConfig(({mode}) => ({
       '@luma.gl/experimental': `${__dirname}/../../../modules/experimental/src`,
       '@luma.gl/text': `${__dirname}/../../../modules/text/src`,
       '@luma.gl/core': `${__dirname}/../../../modules/core/src`,
+      '@luma.gl/effects': `${__dirname}/../../../modules/effects/src`,
       '@luma.gl/engine': `${__dirname}/../../../modules/engine/src`,
       '@luma.gl/gpgpu': `${__dirname}/../../../modules/gpgpu/src`,
       '@luma.gl/shadertools': `${__dirname}/../../../modules/shadertools/src`,

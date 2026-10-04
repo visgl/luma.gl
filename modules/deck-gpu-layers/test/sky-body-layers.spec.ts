@@ -197,6 +197,19 @@ test.each(['webgpu', 'webgl'] as const)(
       const moon = (phase: number) =>
         new MoonLayer({id: 'moon-test', direction: DIRECTION, radiusPixels: 14, phase});
       const full = await readFrame([moon(0.5)]);
+      const nearbyMoon = await readFrame([
+        moon(0.5).clone({timestamp: Date.UTC(2026, 0, 1), scaleWithDistance: true})
+      ]);
+      const distantMoon = await readFrame([
+        moon(0.5).clone({timestamp: Date.UTC(2026, 0, 15), scaleWithDistance: true})
+      ]);
+      expect(energy(nearbyMoon), 'nearby Moon has a larger visible disk').toBeGreaterThan(
+        energy(distantMoon) * 1.15
+      );
+      expect(
+        energy(await readFrame([moon(0.5).clone({timestamp: Date.UTC(2026, 0, 1)})])),
+        'manual lunar placement keeps the configured radius'
+      ).toBe(energy(full));
       const waxing = await readFrame([moon(0.25)]);
       const waning = await readFrame([moon(0.75)]);
       const newMoon = await readFrame([moon(0)]);

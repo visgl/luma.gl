@@ -8,6 +8,7 @@ import {
   type LayerProps,
   type UpdateParameters
 } from '@deck.gl/core';
+import type {NumberArray3} from '@math.gl/core';
 import {getSunPosition, getSkyDirection, skyDirectionToGlobe, type SkyObserver} from '@math.gl/sun';
 import type {CloudProps, GlobeCloudProps, AtmosphereProps} from '@luma.gl/shadertools';
 import {SunLayer, type SunLayerProps} from './sun-layer';
@@ -60,9 +61,9 @@ export class SkyLayer extends CompositeLayer<SkyLayerProps> {
     );
     const timestamp = this.props.timestamp ?? Date.now();
     const position = getSunPosition(timestamp, observer.latitude, observer.longitude);
-    const direction =
+    const direction: NumberArray3 =
       typeof sun === 'object' && sun.direction
-        ? sun.direction
+        ? [...sun.direction]
         : getSkyDirection(position.altitude, position.azimuth);
     const globe = this.context.viewport instanceof _GlobeViewport;
     const sunDirection = globe ? skyDirectionToGlobe(direction, observer) : direction;

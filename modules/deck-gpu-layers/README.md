@@ -466,10 +466,9 @@ history isolation. Tone mapping and output transfer remain explicit steps in the
 
 `SunLayer` and `MoonLayer` draw camera-relative disks at sky distance. They follow camera
 rotation, remain stationary when the map pans or zooms, and sit behind foreground geometry.
-They work on WebGPU and WebGL2, in perspective flat-map and orbit views. Directions use local
-east, north, up on a map; orbit scenes use their world axes. Orthographic views and bodies
-whose centers are below the horizon do not render. Globe-view tangent-frame conversion is
-not currently supported.
+They work on WebGPU and WebGL2 in perspective map, orbit, and globe views. Directions use
+local east, north, up on a map and are converted to global axes on a globe. Orthographic
+views do not render celestial disks; flat-map views hide bodies below the local horizon.
 
 ```ts
 new SunLayer({
@@ -496,10 +495,11 @@ phase shading, and a faint dark-side contribution: `phase` is 0 for new, 0.25 fo
 0.5 for full, and 0.75 for last quarter. `limbAngle` rotates the phase pattern counterclockwise
 from the screen's rightward axis, in radians.
 
-Applications supply their own astronomical positions and moon phase. The layers add no
-astronomy dependency, do not illuminate geometry or cast shadows, do not write depth, and do
-not participate in picking. Draw them before transparent scene layers. The Riverfront soft
-shadows example demonstrates `@math.gl/sun` for solar lighting and SunCalc for lunar inputs.
+The layers use `@math.gl/sun` for automatic position and lunar phase when supplied with an
+observer and timestamp. Explicit directions and phase values remain supported. They do not
+illuminate geometry or cast shadows, write depth, or participate in picking. Draw them before
+transparent scene layers. Riverfront soft shadows and weather share math.gl astronomy with
+their scene lighting; the weather example also uses `getSunLight` for direct and diffuse light.
 
 ## Clouds in the sky
 
@@ -608,7 +608,11 @@ nonzero, otherwise the active map/globe location. All astronomy angles are radia
 Solar `radiance` is linear and can exceed one; retain it with a floating-point scene
 color target and tone mapping or extended-range presentation. An ordinary canvas
 clamps highlights. Disk sizes are intentionally configurable in pixels, rather than
-physically scaled apparent angular diameters.
+physically scaled apparent angular diameters. Automatic Moon placement also varies its
+pixel radius with math.gl lunar distance, relative to the mean Earth–Moon distance of
+384,400 km. Set `scaleWithDistance: false` for a fixed radius. Explicit manual directions
+keep a fixed radius unless `scaleWithDistance: true` is supplied; screen position and
+horizon proximity do not change the size.
 
 `StarfieldLayer` defaults to math.gl's BSC5 catalog and sidereal/precession rotation.
 Optional `data` uses `getStarLayerData(..., {coordinates: 'equatorial'})` from
