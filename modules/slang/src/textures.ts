@@ -3,12 +3,12 @@
 
 import type {SlangType, Variable} from './ast';
 import {SlangTranspileError} from './diagnostics';
-import type {SlangTextureLayout} from './types';
+import type {SlangStorageTextureFormat, SlangTextureLayout} from './types';
 
 export function isSlangTexture(type: SlangType): boolean {
   return /^(RW|W)?Texture(2D|2DArray|Cube|3D)$/.test(type.name);
 }
-const FORMATS: Record<string, {wgsl: string; scalar: string}> = {
+const FORMATS: Record<string, {wgsl: SlangStorageTextureFormat; scalar: string}> = {
   rgba8: {wgsl: 'rgba8unorm', scalar: 'float'},
   rgba8_snorm: {wgsl: 'rgba8snorm', scalar: 'float'},
   rgba16f: {wgsl: 'rgba16float', scalar: 'float'},

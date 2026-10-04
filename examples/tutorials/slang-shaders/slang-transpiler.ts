@@ -2,21 +2,31 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {transpileSlang, transpileSlangWGSL, type SlangReflection} from '@luma.gl/slang';
+import {transpileSlang, transpileSlangWGSL} from '@luma.gl/slang';
+import {
+  getSlangBindingNames,
+  getSlangUniformBufferLayouts,
+  type SlangCompiledShader,
+  type SlangUniformBufferLayout
+} from '@luma.gl/slang/luma';
 import type {ShaderTranspiler} from '@luma.gl/shadertools';
 
 /** Compiler imports and resource-name translation belong to this application. */
-export function createSlangTranspiler(): ShaderTranspiler & {bindingNames: Record<string, string>} {
+export function createSlangTranspiler(): ShaderTranspiler & {
+  bindingNames: Record<string, string>;
+  uniformBufferLayouts: Record<string, SlangUniformBufferLayout>;
+} {
   const bindingNames: Record<string, string> = {};
-  function collectBindingNames(reflection: SlangReflection): void {
-    for (const binding of reflection.bindings) {
-      bindingNames[binding.name] = binding.blockName ?? binding.shaderName;
-    }
+  const uniformBufferLayouts: Record<string, SlangUniformBufferLayout> = {};
+  function collectReflection(shader: SlangCompiledShader): void {
+    Object.assign(bindingNames, getSlangBindingNames(shader));
+    Object.assign(uniformBufferLayouts, getSlangUniformBufferLayouts(shader));
   }
   return {
     name: 'slang',
     sourceLanguage: 'slang',
     bindingNames,
+    uniformBufferLayouts,
     transpile({source, target, stage, entryPoints}) {
       if (target === 'glsl') {
         const result = transpileSlang(source, {
@@ -25,7 +35,7 @@ export function createSlangTranspiler(): ShaderTranspiler & {bindingNames: Recor
           stage,
           entryPoint: stage ? entryPoints[stage] : undefined
         });
-        collectBindingNames(result.reflection);
+        collectReflection(result);
         return result;
       }
       const selected = Object.values(entryPoints).filter((entryPoint): entryPoint is string =>
@@ -34,9 +44,7 @@ export function createSlangTranspiler(): ShaderTranspiler & {bindingNames: Recor
       const result = transpileSlangWGSL(source, {
         entryPoints: selected.length ? selected : undefined
       });
-      for (const entry of Object.values(result.entryPoints)) {
-        collectBindingNames(entry.reflection);
-      }
+      collectReflection(result);
       return {
         code: result.code,
         entryPoints: Object.fromEntries(

@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer} from '@luma.gl/core';
+import {packSlangUniforms, type SlangTypeLayout} from '@luma.gl/slang';
 import {AnimationLoopTemplate, type AnimationProps, Model} from '@luma.gl/engine';
 import {GLSLShaderAssembler, WGSLShaderAssembler, type ShaderModule} from '@luma.gl/shadertools';
 import {createSlangTranspiler} from './slang-transpiler';
@@ -27,7 +28,7 @@ export default class SlangShadersExample extends AnimationLoopTemplate {
 
   readonly model: Model;
   readonly uniformBuffer: Buffer;
-  private readonly uniformData = new Float32Array(8);
+  private readonly sceneLayout: SlangTypeLayout;
   private controls: HTMLDivElement | null = null;
   private canvas: HTMLCanvasElement | null = null;
   private previousTime = 0;
@@ -49,11 +50,6 @@ export default class SlangShadersExample extends AnimationLoopTemplate {
     // The application imports and registers its compiler on its own assembler.
     const slangTranspiler = createSlangTranspiler();
     shaderAssembler.addShaderTranspiler(slangTranspiler);
-    this.uniformBuffer = device.createBuffer({
-      id: 'slang-scene-uniforms',
-      usage: Buffer.UNIFORM | Buffer.COPY_DST,
-      byteLength: this.uniformData.byteLength
-    });
     this.model = new Model(device, {
       id: 'slang-orbital-sculpture',
       shaderAssembler,
@@ -67,8 +63,15 @@ export default class SlangShadersExample extends AnimationLoopTemplate {
       topology: 'triangle-list',
       vertexCount: 3
     });
-    // Shader assembly has populated the adapter's resource-name reflection.
-    this.model.setBindings({[slangTranspiler.bindingNames.scene]: this.uniformBuffer});
+    // Shader assembly populated reflection, including the buffer's exact host layout.
+    const scene = slangTranspiler.uniformBufferLayouts.scene;
+    this.sceneLayout = scene.layout;
+    this.uniformBuffer = device.createBuffer({
+      id: 'slang-scene-uniforms',
+      usage: Buffer.UNIFORM | Buffer.COPY_DST,
+      byteLength: scene.byteLength
+    });
+    this.model.setBindings({[scene.name]: this.uniformBuffer});
     this.updateScene(0, 1);
   }
 
@@ -131,19 +134,14 @@ export default class SlangShadersExample extends AnimationLoopTemplate {
     host.append(this.controls);
   }
 
-  /** Update a shared flat uniform buffer without coupling the framework to Slang. */
+  /** Pack named values using compiler reflection instead of handwritten offsets. */
   updateScene(time: number, aspect: number): void {
-    this.uniformData.set([
-      time,
-      aspect,
-      this.twist,
-      this.palette,
-      this.yaw,
-      this.pitch,
-      this.exposure,
-      0
-    ]);
-    this.uniformBuffer.write(this.uniformData);
+    this.uniformBuffer.write(
+      packSlangUniforms(this.sceneLayout, {
+        animation: [time, aspect, this.twist, this.palette],
+        camera: [this.yaw, this.pitch, this.exposure, 0]
+      })
+    );
   }
 
   override onRender({device, time, aspect}: AnimationProps): void {

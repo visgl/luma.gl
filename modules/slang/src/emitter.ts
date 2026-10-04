@@ -30,7 +30,13 @@ import type {
   SlangTranspileResult
 } from './types';
 
-type Symbol = {type: SlangType; code: string; writable: boolean; uniformType?: SlangType};
+type Symbol = {
+  type: SlangType;
+  code: string;
+  writable: boolean;
+  uniformType?: SlangType;
+  resourceName?: string;
+};
 type InterfaceLeaf = {
   variable: Variable;
   path: string[];
@@ -158,6 +164,7 @@ export class SlangEmitter {
   private hasComparisonCalls = false;
   private ordinaryTextures = new Set<string>();
   private usedTextures = new Set<string>();
+  private usedResources = new Set<string>();
   private comparisonTexturesResolved = false;
 
   constructor(
@@ -378,6 +385,8 @@ export class SlangEmitter {
     for (const scope of [...this.scopes].reverse()) {
       const symbol = scope.get(name);
       if (symbol) {
+        if (this.currentFunction && symbol.resourceName)
+          this.usedResources.add(symbol.resourceName);
         return symbol;
       }
     }
@@ -1773,11 +1782,13 @@ export class SlangEmitter {
         ? this.getLayout(valueType!, storage ? 'storage' : 'uniform', variable.location)
         : undefined;
     this.addSymbol(variable, name, access === 'read_write' || access === 'write');
+    this.scopes[0].get(variable.name)!.resourceName = variable.name;
     if (this.isWGSL && !storage && !texture && !sampler)
       this.scopes[0].get(variable.name)!.uniformType = valueType;
     if (variable.modifiers.includes('cbuffer')) {
       for (const field of this.structures.get(valueType!.name)!.fields) {
         this.addSymbol(field, `${name}.${this.getName(field.name)}`, false);
+        this.scopes[0].get(field.name)!.resourceName = variable.name;
         if (this.isWGSL) this.scopes[0].get(field.name)!.uniformType = field.type;
       }
     }
@@ -1787,6 +1798,15 @@ export class SlangEmitter {
       ...binding,
       kind: storage ? 'storage' : texture ? 'texture' : sampler ? 'sampler' : 'uniform',
       access,
+      visibility: 0,
+      ...(sampler
+        ? {
+            samplerType:
+              variable.type.name === 'SamplerComparisonState'
+                ? ('comparison' as const)
+                : ('filtering' as const)
+          }
+        : {}),
       ...(valueLayout && (this.isWGSL || storage || variable.type.name === 'ConstantBuffer')
         ? {layout: valueLayout}
         : {}),
@@ -1890,6 +1910,7 @@ export class SlangEmitter {
     const reflection: SlangInterfaceVariable = {
       name: path.join('.'),
       semantic: variable.semantic,
+      shaderName: `_slang_${direction}_${(direction === 'in' ? this.inputs : this.outputs).length}`,
       type: variable.type.name
     };
     if (builtin) {
@@ -2374,6 +2395,11 @@ export class SlangEmitter {
           (binding.kind !== 'texture' || this.usedTextures.has(binding.shaderName))
       );
     }
+    for (const binding of this.reflection.bindings) {
+      binding.visibility = this.usedResources.has(binding.name)
+        ? {vertex: 1, fragment: 2, compute: 4}[this.stage]
+        : 0;
+    }
     const declarations = [
       header,
       ...structures,
@@ -2389,6 +2415,7 @@ export class SlangEmitter {
         this.options.sourceName || 'shader.slang'
       ),
       target: this.options.target,
+      ...(!this.isWGSL ? {glslVersion: this.glslVersion} : {}),
       entryPoint: this.isWGSL ? `_slang_entry_${this.entry.name}` : 'main',
       stage: this.stage,
       reflection: this.reflection

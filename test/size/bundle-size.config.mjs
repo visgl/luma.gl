@@ -4,6 +4,22 @@
  */
 export const BUNDLE_SIZE_FIXTURES = [
   {
+    name: 'slang',
+    label: '`@luma.gl/slang` compiler (optional)',
+    entry: 'modules/slang/src/index.ts',
+    external: [],
+    maximum: {minified: 75_000, gzip: 21_000, brotli: 19_000},
+    targetGzip: 20_500
+  },
+  {
+    name: 'slang-luma',
+    label: '`@luma.gl/slang/luma` helpers (optional)',
+    entry: 'modules/slang/src/luma.ts',
+    external: [],
+    maximum: {minified: 5_000, gzip: 1_800, brotli: 1_600},
+    targetGzip: 1_500
+  },
+  {
     name: 'core',
     label: '`@luma.gl/core`',
     entry: 'modules/core/src/index.ts',
