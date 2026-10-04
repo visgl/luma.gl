@@ -11,7 +11,7 @@ import SlangShadersExample from '../../examples/tutorials/slang-shaders/app';
 it.each([
   'webgl2',
   'webgpu'
-] as const)('Slang Shaders example renders its palette module on %s', async backend => {
+] as const)('Slang Shaders example animates its distance-field and material modules on %s', async backend => {
   const device =
     backend === 'webgl2' ? await getWebGLTestDevice() : await getWebGPUTestDevice('core');
   expect(device).not.toBeNull();
@@ -36,7 +36,7 @@ it.each([
       device!.submit();
       expect(drawn).toBe(true);
     });
-    const options = {x: 32, y: 32, width: 1, height: 1};
+    const options = {x: 0, y: 0, width: 64, height: 64};
     const buffer = device!.createBuffer({
       byteLength: texture.computeMemoryLayout(options).byteLength,
       usage: Buffer.COPY_DST | Buffer.MAP_READ
@@ -44,20 +44,40 @@ it.each([
     try {
       texture.readBuffer(options, buffer);
       const pixels = new Uint8Array(await buffer.readAsync());
-      expect(pixels[0]).toBeGreaterThan(70);
-      expect(pixels[1]).toBeGreaterThan(30);
-      expect(pixels[2]).toBeGreaterThan(40);
-      expect(pixels[3]).toBe(255);
+      const centerOffset = (32 * 64 + 32) * 4;
+      expect(pixels[centerOffset]).toBeGreaterThan(70);
+      expect(pixels[centerOffset + 1]).toBeGreaterThan(30);
+      expect(pixels[centerOffset + 2]).toBeGreaterThan(40);
+      expect(pixels[centerOffset + 3]).toBe(255);
+      // Advancing the shared ConstantBuffer changes the rendered geometry and material.
+      application.updateScene(4, 1);
+      const animatedPass = device!.beginRenderPass({framebuffer});
+      application.model.draw(animatedPass);
+      animatedPass.end();
+      device!.submit();
+      texture.readBuffer(options, buffer);
+      const animatedPixels = new Uint8Array(await buffer.readAsync());
+      let changedPixels = 0;
+      for (let offset = 0; offset < pixels.length; offset += 4) {
+        const difference =
+          Math.abs(pixels[offset] - animatedPixels[offset]) +
+          Math.abs(pixels[offset + 1] - animatedPixels[offset + 1]) +
+          Math.abs(pixels[offset + 2] - animatedPixels[offset + 2]);
+        if (difference > 20) changedPixels++;
+      }
+      expect(changedPixels).toBeGreaterThan(200);
     } finally {
       buffer.destroy();
     }
     if (backend === 'webgl2') {
       expect(application.model.vs).toContain('#version 300 es');
       expect(application.model.fs).toContain('_slang_function_getPaletteColor');
+      expect(application.model.fs).toContain('_slang_function_getSculptureDistance');
     } else {
       expect(application.model.props.vertexEntryPoint).toBe('_slang_entry_vertexMain');
       expect(application.model.props.fragmentEntryPoint).toBe('_slang_entry_fragmentMain');
       expect(application.model.source).toContain('_slang_function_getPaletteColor');
+      expect(application.model.source).toContain('_slang_function_getSculptureDistance');
     }
   } finally {
     application.onFinalize();

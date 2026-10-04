@@ -259,7 +259,8 @@ ShaderAssembler.getDefaultShaderAssembler('wgsl').addShaderTranspiler(slangTrans
 ```
 
 The [Slang Shaders example](/examples/tutorials/slang-shaders) demonstrates this adapter
-with Slang entry points and a reusable source-language palette module on both backends.
+with animated ray-marched geometry, lighting, and a floor reflection. Its reusable Slang
+distance-field and material modules run on both backends, with camera and material controls.
 
 Slang remains a practical shader-authoring subset with documented limits.
 The adapter must select supported entry points and follow its resource layout
