@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/text",
-  "version": "10.0.0-alpha.2",
+  "version": "10.0.0-alpha.3",
   "private": true,
   "description": "2D and 3D text utilities for luma.gl",
   "license": "MIT",
@@ -52,9 +52,9 @@
     "@luma.gl/engine": "10.0.0-alpha.2"
   },
   "dependencies": {
-    "@luma.gl/core": "10.0.0-alpha.2",
-    "@luma.gl/experimental": "10.0.0-alpha.2",
-    "@luma.gl/gpgpu": "10.0.0-alpha.2",
+    "@luma.gl/core": "10.0.0-alpha.3",
+    "@luma.gl/experimental": "10.0.0-alpha.3",
+    "@luma.gl/gpgpu": "10.0.0-alpha.3",
     "@mapbox/tiny-sdf": "^2.0.7",
     "@math.gl/core": "5.0.0-alpha.12",
     "@math.gl/polygon": "~5.0.0-alpha.12"

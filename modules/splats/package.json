@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/splats",
-  "version": "10.0.0-alpha.2",
+  "version": "10.0.0-alpha.3",
   "private": true,
   "description": "Gaussian splat rendering utilities for luma.gl",
   "license": "MIT",
@@ -33,10 +33,10 @@
   ],
   "sideEffects": false,
   "dependencies": {
-    "@luma.gl/core": "10.0.0-alpha.2",
-    "@luma.gl/engine": "10.0.0-alpha.2",
-    "@luma.gl/experimental": "10.0.0-alpha.2",
-    "@luma.gl/gpgpu": "10.0.0-alpha.2",
-    "@luma.gl/shadertools": "10.0.0-alpha.2"
+    "@luma.gl/core": "10.0.0-alpha.3",
+    "@luma.gl/engine": "10.0.0-alpha.3",
+    "@luma.gl/experimental": "10.0.0-alpha.3",
+    "@luma.gl/gpgpu": "10.0.0-alpha.3",
+    "@luma.gl/shadertools": "10.0.0-alpha.3"
   }
 }
