@@ -79,12 +79,10 @@ try {
   });
   assert.equal(presentation.reported, presentation.format === 'rgba16float' && presentation.mode === 'extended', 'HDR status matches the accepted native canvas');
   if (kind === 'fireflies') {
-    await page.screenshot({path: join(tmpdir(), 'riverfront-fireflies-reflected.png')});
-    const reflected = PNG.sync.read(await page.screenshot());
+    const reflected = PNG.sync.read(await page.screenshot({path: join(tmpdir(), 'riverfront-fireflies-reflected.png')}));
     await page.uncheck('#reflections');
     await page.waitForFunction(() => !window.riverfrontLighting.deck.props._animate);
-    const unreflected = PNG.sync.read(await page.screenshot());
-    await page.screenshot({path: join(tmpdir(), 'riverfront-fireflies-unreflected.png')});
+    const unreflected = PNG.sync.read(await page.screenshot({path: join(tmpdir(), 'riverfront-fireflies-unreflected.png')}));
     let reflectionPixels = 0;
     for (let row = 0; row < reflected.height; row++)
       for (let column = 340; column < reflected.width; column++) {
@@ -144,8 +142,7 @@ try {
     await hiddenControls.evaluate(element => element.remove());
   }
   const screenshotPath = join(tmpdir(), `riverfront-${kind}.png`);
-  await page.screenshot({path: screenshotPath});
-  const enabled = PNG.sync.read(await page.screenshot());
+  const enabled = PNG.sync.read(await page.screenshot({path: screenshotPath}));
   if (kind === 'hdr-night-lighting') await page.uncheck('#bloom');
   else await page.uncheck('#enabled');
   await page.waitForFunction(() => !window.riverfrontLighting.deck.props._animate);
