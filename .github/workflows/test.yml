@@ -18,8 +18,9 @@ jobs:
   browser_coverage:
     name: Browser coverage (${{ matrix.shard }}/3)
     runs-on: ubuntu-22.04
-    # Shards 1 and 2 run longer visual and headless coverage workloads.
-    timeout-minutes: ${{ matrix.shard < 3 && 25 || 15 }}
+    # Shard 1 also converges full-resolution SSR on SwiftShader before headless coverage.
+    # Keep room for both workloads; shard 2 has the remaining Riverfront visual checks.
+    timeout-minutes: ${{ matrix.shard == 1 && 35 || matrix.shard == 2 && 25 || 15 }}
     strategy:
       fail-fast: false
       matrix:
