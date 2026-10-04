@@ -7,6 +7,8 @@ import {packSlangUniforms, type SlangTypeLayout} from '@luma.gl/slang';
 import {AnimationLoopTemplate, type AnimationProps, Model} from '@luma.gl/engine';
 import {GLSLShaderAssembler, WGSLShaderAssembler, type ShaderModule} from '@luma.gl/shadertools';
 import {createSlangTranspiler} from './slang-transpiler';
+import {createShaderViewer} from './shader-viewer';
+import {FilmGrainPass} from './film-grain';
 import shaderSource from './shader.slang?raw';
 import paletteSource from './palette.slang?raw';
 import geometrySource from './geometry.slang?raw';
@@ -24,12 +26,14 @@ const distanceField: ShaderModule = {
 
 export default class SlangShadersExample extends AnimationLoopTemplate {
   static info =
-    `<h3>Slang: Orbital sculpture</h3><p>Animated distance fields, iridescent lighting, and a floor reflection, written once in Slang. Drag to orbit. The application registers its compiler; reusable Slang modules supply the geometry and material.</p>`;
+    `<h3>Slang: Orbital sculpture</h3><p>Animated distance fields, iridescent lighting, and a floor reflection, written once in Slang. Drag to orbit or open the shader viewer to compare Slang with the generated code. The application registers its compiler; reusable Slang modules supply the geometry and material. An imported native valueNoise module adds adjustable film grain in a second pass.</p>`;
 
   readonly model: Model;
+  readonly filmGrainPass: FilmGrainPass;
   readonly uniformBuffer: Buffer;
   private readonly sceneLayout: SlangTypeLayout;
   private controls: HTMLDivElement | null = null;
+  private shaderViewer: ReturnType<typeof createShaderViewer> | null = null;
   private canvas: HTMLCanvasElement | null = null;
   private previousTime = 0;
   private elapsedTime = 0;
@@ -37,6 +41,7 @@ export default class SlangShadersExample extends AnimationLoopTemplate {
   private twist = 0.35;
   private palette = 0;
   private exposure = 1.3;
+  private grain = 0.035;
   private yaw = 0.45;
   private pitch = 0.28;
   private pointerPosition: [number, number] | null = null;
@@ -73,6 +78,7 @@ export default class SlangShadersExample extends AnimationLoopTemplate {
     });
     this.model.setBindings({[scene.name]: this.uniformBuffer});
     this.updateScene(0, 1);
+    this.filmGrainPass = new FilmGrainPass(device);
   }
 
   override async onInitialize({device}: AnimationProps): Promise<void> {
@@ -108,7 +114,9 @@ export default class SlangShadersExample extends AnimationLoopTemplate {
         .slang-sculpture-controls footer { display:flex; justify-content:space-between;
           align-items:center; margin-top:16px; color:#8da2b7; font-size:11px; }
         @media(max-width:600px) { .slang-sculpture-controls { left:12px; bottom:12px;
-          padding:12px 16px; width:250px; } .slang-sculpture-controls p { margin-bottom:8px; } }
+          padding:12px 16px; width:250px; } .slang-sculpture-controls p { margin-bottom:8px; }
+          .slang-sculpture-controls label { gap:8px; }
+          .slang-sculpture-controls input { width:130px; } }
       </style>
       <span class="eyebrow">SLANG / ${device.info.type === 'webgpu' ? 'WEBGPU' : 'WEBGL 2'}</span>
       <h2>Orbital sculpture</h2>
@@ -117,7 +125,9 @@ export default class SlangShadersExample extends AnimationLoopTemplate {
         <option value="1">Ember</option><option value="2">Glacier</option></select></label>
       <label>Twist <input aria-label="Twist" type="range" min="0" max="0.75" step="0.01" value="0.35"></label>
       <label>Exposure <input aria-label="Exposure" type="range" min="0.5" max="2.5" step="0.05" value="1.3"></label>
-      <footer><span>96 ray steps · no mesh</span><button type="button">Pause</button></footer>`;
+      <label>Native grain <input aria-label="Native grain" type="range" min="0" max="0.15" step="0.005" value="0.035"></label>
+      <footer><button type="button" aria-expanded="false" data-action="shaders">Show shaders</button>
+        <button type="button" data-action="pause">Pause</button></footer>`;
     this.controls.querySelector('select')!.addEventListener('change', event => {
       this.palette = Number((event.target as HTMLSelectElement).value);
     });
@@ -127,11 +137,36 @@ export default class SlangShadersExample extends AnimationLoopTemplate {
     this.controls.querySelector('[aria-label="Exposure"]')!.addEventListener('input', event => {
       this.exposure = Number((event.target as HTMLInputElement).value);
     });
-    this.controls.querySelector('button')!.addEventListener('click', event => {
+    this.controls.querySelector('[aria-label="Native grain"]')!.addEventListener('input', event => {
+      this.grain = Number((event.target as HTMLInputElement).value);
+    });
+    this.controls.querySelector('[data-action="pause"]')!.addEventListener('click', event => {
       this.paused = !this.paused;
       (event.target as HTMLButtonElement).textContent = this.paused ? 'Play' : 'Pause';
     });
     host.append(this.controls);
+    this.shaderViewer = createShaderViewer(
+      host,
+      [
+        {name: 'shader.slang', code: shaderSource},
+        {name: 'geometry.slang', code: geometrySource},
+        {name: 'palette.slang', code: paletteSource},
+        ...this.filmGrainPass.getSourceFiles()
+      ],
+      device.info.shadingLanguage === 'wgsl'
+        ? [
+            {name: 'WGSL · Slang sculpture', code: this.model.source},
+            {name: 'WGSL · native grain', code: this.filmGrainPass.model.source}
+          ]
+        : [
+            {name: 'GLSL ES 300 · vertex', code: this.model.vs},
+            {name: 'GLSL ES 300 · fragment', code: this.model.fs},
+            {name: 'GLSL ES 300 · grain vertex', code: this.filmGrainPass.model.vs},
+            {name: 'GLSL ES 300 · grain fragment', code: this.filmGrainPass.model.fs}
+          ]
+    );
+    const showShaders = this.controls.querySelector<HTMLButtonElement>('[data-action="shaders"]')!;
+    showShaders.addEventListener('click', () => this.shaderViewer?.open(showShaders));
   }
 
   /** Pack named values using compiler reflection instead of handwritten offsets. */
@@ -144,13 +179,11 @@ export default class SlangShadersExample extends AnimationLoopTemplate {
     );
   }
 
-  override onRender({device, time, aspect}: AnimationProps): void {
+  override onRender({time, aspect, width, height}: AnimationProps): void {
     if (!this.paused) this.elapsedTime += Math.min(time - this.previousTime, 100) / 1000;
     this.previousTime = time;
     this.updateScene(this.elapsedTime, aspect);
-    const renderPass = device.beginRenderPass({clearColor: [0.01, 0.02, 0.04, 1]});
-    this.model.draw(renderPass);
-    renderPass.end();
+    this.filmGrainPass.draw(this.model, width, height, this.elapsedTime, this.grain);
   }
 
   override onFinalize(): void {
@@ -158,7 +191,9 @@ export default class SlangShadersExample extends AnimationLoopTemplate {
     this.canvas?.removeEventListener('pointermove', this.handlePointerMove);
     this.canvas?.removeEventListener('pointerup', this.handlePointerUp);
     this.canvas?.removeEventListener('pointercancel', this.handlePointerUp);
+    this.shaderViewer?.destroy();
     this.controls?.remove();
+    this.filmGrainPass.destroy();
     this.model.destroy();
     this.uniformBuffer.destroy();
   }
