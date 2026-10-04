@@ -49,6 +49,13 @@ try {
     () => document.body.dataset.ready === 'true' || document.body.dataset.ready === 'error'
   );
   assert.equal(await page.evaluate(() => document.body.dataset.ready), 'true', errors.join('\n'));
+  // Chromium's native resize observer can ignore the emulated device scale.
+  await page.evaluate(scale => window.riverfrontLighting.deck.setProps({useDevicePixels: scale}), deviceScaleFactor);
+  await page.waitForFunction(scale => {
+    const canvas = document.querySelector('canvas');
+    return canvas.width === Math.floor(canvas.clientWidth * scale) &&
+      canvas.height === Math.floor(canvas.clientHeight * scale);
+  }, deviceScaleFactor);
   await page.waitForFunction(() => window.riverfrontLighting.diagnostics.frames > 4);
   if (kind === 'fireflies') {
     await page.evaluate(() => {

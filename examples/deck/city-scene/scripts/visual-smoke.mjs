@@ -43,6 +43,13 @@ try {
       await page.goto(`${process.env.CITY_SCENE_URL || url}?backend=${backend}`);
       await page.waitForFunction(() => document.body.dataset.ready === 'true', undefined, {timeout: 60_000});
       await page.waitForFunction(() => window.cityScene?.diagnostics.frames > 0);
+      // Chromium's native resize observer can ignore the emulated device scale.
+      await page.evaluate(scale => window.cityScene.deck.setProps({useDevicePixels: scale}), deviceScaleFactor);
+      await page.waitForFunction(scale => {
+        const canvas = document.querySelector('canvas');
+        return canvas.width === Math.floor(canvas.clientWidth * scale) &&
+          canvas.height === Math.floor(canvas.clientHeight * scale);
+      }, deviceScaleFactor);
       assert.equal(await page.evaluate(() => window.cityScene.diagnostics.backend), backend);
       assert.deepEqual(
         await page.evaluate(() =>
