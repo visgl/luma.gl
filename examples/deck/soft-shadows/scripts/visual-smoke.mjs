@@ -84,15 +84,41 @@ try {
   await page.setViewportSize({width: 900, height: 650});
   await page.waitForTimeout(200);
   assert.equal(await page.evaluate(() => window.riverfrontSoftShadowScene.diagnostics.error), '');
+  await page.mouse.move(700, 400);
+  await page.mouse.down({button: 'right'});
+  await page.mouse.move(700, 140, {steps: 12});
+  await page.mouse.up({button: 'right'});
+  await page.waitForFunction(() => window.riverfrontSoftShadowScene.viewState.pitch > 90);
+  const getCameraHeight = () => {
+    const viewport = window.riverfrontSoftShadowScene.deck.getViewports()[0];
+    return viewport.cameraPosition[2] / viewport.getDistanceScales().unitsPerMeter[2];
+  };
+  assert(await page.evaluate(getCameraHeight) >= 19.99, 'real orbit interaction keeps the eye above ground');
+  await page.mouse.wheel(0, -200);
+  await page.setViewportSize({width: 1000, height: 800});
+  await page.waitForTimeout(200);
+  assert(await page.evaluate(getCameraHeight) >= 19.99, 'zoom and resize keep the eye above ground');
+  await page.locator('#hour').fill('12.5');
+  await page.click('#look-sun');
+  await page.waitForTimeout(200);
+  assert.equal(await page.evaluate(() => window.riverfrontSoftShadowScene.settings.hour), 12.5, 'look at sun preserves the current daylight time');
+  assert(await page.evaluate(() => window.riverfrontSoftShadowScene.viewState.pitch > 150), 'camera can look high into the sky');
+  const sunCenter = await page.evaluate(() => window.riverfrontSoftShadowScene.deck.layerManager.getLayers()
+    .find(layer => layer.id === 'riverfront-sun').state.model.shaderInputs.getUniformValues().skyBody.center);
+  assert(Math.abs(sunCenter[0]) < 0.1 && Math.abs(sunCenter[1]) < 0.2, 'high-altitude sun is centered in the viewport');
   await page.click('#look-moon');
   await page.waitForTimeout(200);
   assert(await page.evaluate(() => window.riverfrontSoftShadowScene.moon.direction[2] > 0), 'look at moon chooses an above-horizon moon');
+  const moonCenter = await page.evaluate(() => window.riverfrontSoftShadowScene.deck.layerManager.getLayers()
+    .find(layer => layer.id === 'riverfront-moon').state.model.shaderInputs.getUniformValues().skyBody.center);
+  assert(Math.abs(moonCenter[0]) < 0.1 && Math.abs(moonCenter[1]) < 0.2, 'moon is centered in the viewport');
+  await page.locator('#hour').fill('6.5');
   await page.click('#look-sun');
   await page.locator('#cloud-cover').fill('0.4');
   await page.locator('#wind-speed').fill('18');
   await page.check('#clouds');
   await page.waitForTimeout(200);
-  await page.screenshot({path: join(tmpdir(), 'riverfront-sun-clouds.png')});
+  await page.screenshot({path: join(tmpdir(), 'riverfront-sky-horizon.png')});
   if (process.env.SHADOW_THUMBNAIL) await page.screenshot({path: process.env.SHADOW_THUMBNAIL, type: 'jpeg', quality: 85});
   assert.deepEqual(errors, [], 'no browser or GPU errors');
   await page.evaluate(() => window.riverfrontSoftShadowScene.finalize());

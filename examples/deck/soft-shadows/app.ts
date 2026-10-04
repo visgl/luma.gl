@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {COORDINATE_SYSTEM, Deck, MapView} from '@deck.gl/core';
+import {COORDINATE_SYSTEM, Deck, MapView, type MapViewState} from '@deck.gl/core';
 import {SunLayer, MoonLayer, CloudLayer} from '@deck.gl-community/gpu-layers';
 import {getMoonPosition, getMoonIllumination} from 'suncalc';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
@@ -10,6 +10,7 @@ import {CITY_ORIGIN, makeCityFeatures} from '../river-district-data';
 import {RiverfrontShadowEffect, type ShadowSettings} from './shadow-effect';
 import {ShadowDistrictLayer} from './shadow-layer';
 import {DEFAULT_HOUR, FIRST_HOUR, LAST_HOUR, getRiverfrontSun} from './sun';
+import {getSkyCameraState, SKY_FIELD_OF_VIEW} from './sky-camera';
 
 export function createRiverfrontSoftShadowScene(
   parent: HTMLDivElement,
@@ -105,16 +106,12 @@ export function createRiverfrontSoftShadowScene(
     ];
   }
   let lastFrameTime = 0;
-  const deck = new Deck({
-    parent,
-    ...getDeckExampleProps(options),
-    views: new MapView({id: 'riverfront-shadows', fovy: 50, controller: true}),
-    initialViewState: {
+  let viewState: MapViewState = getSkyCameraState(
+    {
       longitude: CITY_ORIGIN[0],
       latitude: CITY_ORIGIN[1],
       zoom: 15,
       pitch: 80,
-      maxPitch: 85,
       bearing:
         (Math.atan2(
           getRiverfrontSun(DEFAULT_HOUR).direction[0],
@@ -123,6 +120,22 @@ export function createRiverfrontSoftShadowScene(
           180) /
           Math.PI -
         12
+    },
+    parent.clientWidth,
+    parent.clientHeight
+  );
+  const deck = new Deck<MapView>({
+    parent,
+    ...getDeckExampleProps(options),
+    views: new MapView({id: 'riverfront-shadows', fovy: SKY_FIELD_OF_VIEW, controller: true}),
+    viewState,
+    onViewStateChange: ({viewState: nextViewState}) => {
+      viewState = getSkyCameraState(nextViewState, parent.clientWidth, parent.clientHeight);
+      deck.setProps({viewState});
+    },
+    onResize: ({width, height}) => {
+      viewState = getSkyCameraState(viewState, width, height);
+      deck.setProps({viewState});
     },
     effects: [shadowEffect],
     layers: getLayers(),
@@ -161,6 +174,9 @@ export function createRiverfrontSoftShadowScene(
     deck,
     settings,
     sky,
+    get viewState() {
+      return viewState;
+    },
     cloudSettings,
     shadowEffect,
     diagnostics,
@@ -191,9 +207,9 @@ export function createRiverfrontSoftShadowScene(
       deck.setProps({layers: getLayers()});
     },
     lookAtSkyBody(body: 'sun' | 'moon'): void {
-      // Choose a low, visible body so the flat-map camera can include sky and buildings.
-      let hour = DEFAULT_HOUR;
-      if (body === 'moon') {
+      let hour = settings.hour;
+      if (body === 'sun' && getRiverfrontSun(hour).direction[2] <= 0) hour = DEFAULT_HOUR;
+      if (body === 'moon' && getMoon(hour).direction[2] <= 0) {
         hour =
           Array.from({length: 48}, (_, index) => index / 2).find(value => {
             const altitude = (getMoon(value).altitude * 180) / Math.PI;
@@ -204,18 +220,18 @@ export function createRiverfrontSoftShadowScene(
       settings.animated = false;
       lastFrameTime = 0;
       const direction = body === 'sun' ? getRiverfrontSun(hour).direction : getMoon(hour).direction;
-      deck.setProps({
-        _animate: shouldAnimate(),
-        layers: getLayers(),
-        initialViewState: {
+      viewState = getSkyCameraState(
+        {
           longitude: CITY_ORIGIN[0],
           latitude: CITY_ORIGIN[1],
           zoom: 15,
-          pitch: 80,
-          maxPitch: 85,
-          bearing: (Math.atan2(direction[0], direction[1]) * 180) / Math.PI - 12
-        }
-      });
+          pitch: 90 + (Math.asin(direction[2]) * 180) / Math.PI,
+          bearing: (Math.atan2(direction[0], direction[1]) * 180) / Math.PI
+        },
+        parent.clientWidth,
+        parent.clientHeight
+      );
+      deck.setProps({_animate: shouldAnimate(), layers: getLayers(), viewState});
       deck.redraw('sky body view');
     },
     get sun() {
