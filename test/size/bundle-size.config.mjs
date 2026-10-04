@@ -8,8 +8,8 @@ export const BUNDLE_SIZE_FIXTURES = [
     label: '`@luma.gl/slang` compiler (optional)',
     entry: 'modules/slang/src/index.ts',
     external: [],
-    maximum: {minified: 75_000, gzip: 21_000, brotli: 19_000},
-    targetGzip: 20_500
+    maximum: {minified: 94_000, gzip: 26_500, brotli: 23_500},
+    targetGzip: 25_000
   },
   {
     name: 'slang-luma',

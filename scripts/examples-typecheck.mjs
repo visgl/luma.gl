@@ -67,11 +67,12 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'tutorials/shader-hooks',
   'tutorials/shader-modules',
   'tutorials/slang-shaders',
+  'tutorials/slang-particles',
   'tutorials/transform',
   'tutorials/transform-feedback'
 ]);
 
-const PACKAGE_FREE_EXAMPLE_WORKSPACES = new Set(['showcase/raster-lab']);
+const PACKAGE_FREE_EXAMPLE_WORKSPACES = new Set(['showcase/raster-lab','tutorials/slang-particles']);
 const NATIVE_TYPESCRIPT_CONFIG_WORKSPACES = new Set([
   'deck/city-scene',
   'api/multi-canvas',

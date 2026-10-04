@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {isSlangResource} from './resources';
+
 import type {
   Attribute,
   Expression,
@@ -226,22 +228,7 @@ export class SlangParser {
   }
   private parseType(): SlangType {
     const name = this.identifier();
-    if (
-      !this.isType(name.text) &&
-      ![
-        'ConstantBuffer',
-        'StructuredBuffer',
-        'RWStructuredBuffer',
-        'Texture2D',
-        'Texture2DArray',
-        'TextureCube',
-        'Texture3D',
-        'RWTexture2D',
-        'WTexture2D',
-        'SamplerComparisonState',
-        'SamplerState'
-      ].includes(name.text)
-    ) {
+    if (!this.isType(name.text) && !isSlangResource({name: name.text})) {
       this.fail(`Unsupported type or declaration ${name.text}`, name);
     }
     const type: SlangType = {name: name.text};

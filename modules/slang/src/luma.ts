@@ -21,16 +21,18 @@ export type SlangShaderLayout = {
   attributes: {name: string; location: number; type: SlangAttributeType}[];
   bindings: (SlangBindingLocation &
     (
-      | {type: 'uniform' | 'storage' | 'read-only-storage'; minBindingSize: number}
+      | {type: 'uniform'; minBindingSize: number}
+      | {type: 'storage' | 'read-only-storage'; minBindingSize: number}
       | {
           type: 'texture';
-          viewDimension: '2d' | '2d-array' | 'cube' | '3d';
+          multisampled?: boolean;
+          viewDimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
           sampleType: 'float' | 'unfilterable-float' | 'sint' | 'uint' | 'depth';
         }
       | {type: 'sampler'; samplerType: 'filtering' | 'non-filtering' | 'comparison'}
       | {
           type: 'storage';
-          viewDimension: '2d' | '2d-array' | 'cube' | '3d';
+          viewDimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
           format: SlangStorageTextureFormat;
           access: 'write-only' | 'read-write';
         }
@@ -166,6 +168,7 @@ export function getSlangShaderLayout(
         ...location,
         type: 'texture',
         viewDimension: binding.texture!.dimension,
+        ...(binding.texture!.multisampled ? {multisampled: true} : {}),
         sampleType:
           binding.texture!.sampleType === 'float'
             ? (options.textureSampleTypes?.[binding.name] ?? 'float')
