@@ -723,7 +723,7 @@ export class SlangEmitter {
   private createTemporary(): string {
     let name: string;
     do {
-      name = `_slang_temporary_${this.temporaryIndex++}`;
+      name = `_slang_t${this.temporaryIndex++}`;
     } while (this.reservedNames.has(name));
     return name;
   }

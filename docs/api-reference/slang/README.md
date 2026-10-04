@@ -39,6 +39,9 @@ yarn add @luma.gl/slang
 Orbit an animated ray-marched sculpture, change its material and twist, or pause to inspect it.
 One Slang shader contains both render entry points and uses reusable Slang distance-field and
 material modules. The application supplies compiler registration and uniform packing on both backends.
+Select **Show shaders** to compare the main source and reusable modules with the generated WGSL
+or GLSL ES 300 code used by the active renderer. **Native grain** controls a second pass that
+imports the existing `valueNoise` shader module and reads the Slang-rendered texture.
 
 <SlangShadersExample embedded embeddedHeight={480} showStats={false} />
 
@@ -104,6 +107,13 @@ The separate [`@luma.gl/slang/luma` helpers](/docs/api-reference/slang/reflectio
 reflection into luma shader layouts, resource names, uniform-buffer layouts and device requirements.
 Applications still create resources, request device features, bind textures and samplers, and check limits.
 Registering the transpiler does not install those helpers in the framework.
+
+A Slang application can include target-native `ShaderModule` code: WGSL on WebGPU, or GLSL
+on WebGL 2. Native code is assembled after Slang compilation. The compiler does not see its
+function or uniform declarations, so direct calls from Slang into native modules are not yet
+supported. A shared typed declaration contract is planned; generated internal names are not a
+public interoperability API. WGSL-only modules cannot run on WebGL, and GLSL-only modules
+cannot run on WebGPU.
 
 ## Compatibility and limits
 
