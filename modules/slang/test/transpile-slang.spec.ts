@@ -138,3 +138,22 @@ it('slang#unified WGSL render source validates both entries in one shader module
     }
   });
 });
+
+it.each([
+  ['ConstantBuffer<Settings> settings;', 'settings.scale + settings.bias'],
+  ['cbuffer Settings { float scale; float bias; };', 'scale + bias'],
+  ['uniform Settings settings;', 'settings.scale + settings.bias']
+])('slang#flat WGSL uniforms validate for %s', async (declaration, expression) => {
+  const device = await getWebGPUTestDevice('core');
+  expect(device).not.toBeNull();
+  const source = `${declaration.startsWith('cbuffer') ? '' : 'struct Settings { float scale; float bias; };'}
+    ${declaration}
+    [shader("fragment")] float4 main() : SV_Target { return float4(${expression}); }`;
+  const result = transpileSlang(source, {target: 'wgsl'});
+  const module = device!.handle.createShaderModule({code: result.code});
+  const information = await module.getCompilationInfo();
+  expect(
+    information.messages.filter(message => message.type === 'error'),
+    result.code
+  ).toEqual([]);
+});

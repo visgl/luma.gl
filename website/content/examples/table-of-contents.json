@@ -194,6 +194,7 @@
       "tutorials/shader-modules",
       "tutorials/shader-hooks",
       "tutorials/shader-plugins",
+      "tutorials/slang-shaders",
       "tutorials/transform-feedback",
       "tutorials/transform"
     ]

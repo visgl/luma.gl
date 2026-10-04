@@ -54,6 +54,9 @@ Use the returned entry-point name instead of assuming the source name is preserv
 
 `SlangTranspileError.diagnostics` provides the source name, message, offset, line, and column.
 Destination-device shader compilation remains necessary to check all typing, layout, and GPU limits.
+WGSL rejects nested struct-valued uniform members until uniform layout legalization is supported.
+Flat root uniform structs and nested local/storage structs remain supported. GLSL ES 300 texture
+bindings are application-managed; explicit GLSL 450 output emits assigned texture binding qualifiers.
 
 See the [package documentation](https://github.com/visgl/luma.gl/blob/master/modules/slang/README.md)
 for the complete supported-language list, resource conventions, matrix packing rules, and target
