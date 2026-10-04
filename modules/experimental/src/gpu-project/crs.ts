@@ -4,7 +4,7 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuProj.
 
 import {parsePROJString, type PROJStringAst, type ReadonlyCRSDefinition} from '@math.gl/crs';
-import {Projection, type Proj4CRSDefinition} from '@math.gl/proj4';
+import {Projection} from '@math.gl/projection';
 import {compileProjectionPlan} from './projection-plan';
 import {
   compileProjectionProgram,
@@ -208,7 +208,7 @@ function planCRSProjectionResult(options: PlanCRSProjectionOptions): ProjectionP
       ]
     };
   }
-  const providerDefinitions: Proj4CRSDefinition[] = [];
+  const providerDefinitions: ReadonlyCRSDefinition[] = [];
   try {
     for (const definition of [options.from, options.to]) {
       const normalized = normalizeCRSProviderDefinition(definition);
@@ -363,7 +363,7 @@ function applyFailurePolicy(
 
 function isTwoDimensionalCRS(
   definition: Exclude<ReadonlyCRSDefinition, string>
-): definition is Exclude<Proj4CRSDefinition, string> {
+): definition is Exclude<ReadonlyCRSDefinition, string> {
   switch (definition.type) {
     case 'GeographicCRS':
     case 'GeodeticCRS':

@@ -13,7 +13,7 @@
     "@luma.gl/experimental": "10.0.0-alpha.2",
     "@luma.gl/webgl": "10.0.0-alpha.2",
     "@luma.gl/webgpu": "10.0.0-alpha.2",
-    "@math.gl/core": "5.0.0-alpha.11",
+    "@math.gl/core": "5.0.0-alpha.12",
     "mediabunny": "^1.50.8"
   },
   "devDependencies": {

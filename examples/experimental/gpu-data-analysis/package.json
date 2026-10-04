@@ -9,8 +9,8 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@loaders.gl/core": "~5.0.0-alpha.8",
-    "@loaders.gl/sql": "~5.0.0-alpha.8",
+    "@loaders.gl/core": "~5.0.0-alpha.9",
+    "@loaders.gl/sql": "~5.0.0-alpha.9",
     "@luma.gl/arrow": "10.0.0-alpha.2",
     "@luma.gl/core": "10.0.0-alpha.2",
     "@luma.gl/engine": "10.0.0-alpha.2",

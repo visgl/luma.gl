@@ -13,7 +13,7 @@ without requiring native GPU `f64` arithmetic. A JavaScript projection provider 
 coordinate-reference-system semantics; adaptive local polynomial patches provide the GPU execution
 strategy.
 
-That separation supports the wide range of coordinate systems handled by `@math.gl/proj4` without
+That separation supports the wide range of coordinate systems handled by `@math.gl/projection` without
 reimplementing every projection, datum, or coordinate-reference-system definition in WGSL.
 
 ## When to use it
@@ -68,7 +68,7 @@ published results or cross-machine performance guarantees.
 ```ts
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {GPUProjection, compileProjectionPlan} from '@luma.gl/experimental/gpu-project';
-import {Projection} from '@math.gl/proj4';
+import {Projection} from '@math.gl/projection';
 
 // Register CRS definitions that are not included by the installed provider.
 Projection.defineProjectionAliases({
@@ -105,7 +105,7 @@ Bounds are `[minimumX, minimumY, maximumX, maximumY]` in the source coordinate s
 expressed in destination units: `0.01` requests one centimeter of sampled accuracy when the target
 coordinate system uses meters.
 
-`@math.gl/proj4` is optional and is not a dependency of `@luma.gl/experimental`. Any function or
+`@math.gl/projection` is optional and is not a dependency of `@luma.gl/experimental`. Any function or
 object with a `project(coordinates)` method can provide the projection. For WGS84-to-Web-Mercator
 applications, `createWebMercatorProjection()` provides a zero-dependency alternative:
 
@@ -311,7 +311,7 @@ coordinates or a latitude-first axis without explicitly rearranging/converting t
 
 ## Optional math.gl CRS planner
 
-Install `@math.gl/crs` and `@math.gl/proj4` 5.x separately and import the CPU planner from
+Install `@math.gl/crs` and `@math.gl/projection` 5.x separately and import the CPU planner from
 `@luma.gl/experimental/gpu-project/crs`. These optional peers are not loaded by the GPU execution
 entry point. Planning allocates no GPU resources and returns either
 `{status: 'ready', strategy, program, compiled, reasons}` or `{status: 'unsupported', reasons}`.
@@ -736,7 +736,7 @@ the captured reference before warmup and after timing. Reported CPU output/inter
 exclude JavaScript source objects, reference snapshots and provider-internal allocations.
 
 `oracleTimeMilliseconds` remains a one-projection-per-row callback/checksum baseline, not a
-matched multi-consumer workload. The sweeps use `Proj4Projection.project` from `@math.gl/proj4/classic`, backed
+matched multi-consumer workload. The sweeps use `Projection.project` from `@math.gl/projection`, backed
 by **proj4js JavaScript**, with the same finite/domain checks as the GPU workload. They do not
 benchmark the native C++ PROJ library. Provider construction and output allocation are outside
 CPU timing; callback/provider allocations and consumer writes are inside it.
