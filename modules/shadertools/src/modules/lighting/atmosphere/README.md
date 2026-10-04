@@ -10,7 +10,8 @@ extends 100 km above it. This is a local tangent-frame renderer, rather than a g
 to geometry, preserving alpha. Set `enabled` to zero to leave geometry untouched.
 `atmosphere_getScattering` returns linear radiance and RGB transmittance for applications with
 their own HDR compositor. `sunIntensity`, `rayleigh`, `haze` and `exposure` control illumination,
-molecular scattering, aerosol scattering, and display exposure respectively. A nonzero
+molecular scattering, aerosol scattering, and display exposure respectively. `groundColor`
+sets an approximate diffuse ground boundary beneath the horizon. A nonzero
 `sunDirection` is required. Incremental uniform updates preserve previous values.
 
 The fixed integration uses twelve view samples and four sunlight samples. Planet occlusion

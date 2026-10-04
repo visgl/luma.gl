@@ -19,9 +19,14 @@ for (const backend of ['webgpu', 'webgl'] as const) {
       expect(day.every(Number.isFinite)).toBe(true);
       expect(day[2]).toBeGreaterThan(day[0]);
       expect(day[2]).toBeGreaterThan(0.02);
+      expect(day[20], 'ground beneath the horizon receives sunlight').toBeGreaterThan(0.02);
       sky.model.shaderInputs.setProps({atmosphere: {sunDirection: [0, 0, -1]}});
       const night = await sky.read();
       expect(night[2]).toBeLessThan(day[2] * 0.1);
+      sky.model.shaderInputs.setProps({atmosphere: {enabled: 0, sunDirection: [0, 0.6, 0.8]}});
+      const disabledSky = await sky.read();
+      expect(disabledSky[0]).toBe(0);
+      expect(disabledSky[20]).toBe(0);
       aerial.model.shaderInputs.setProps({atmosphere: {sunIntensity: 0, haze: 3}});
       const extinction = await aerial.read();
       expect(extinction.every(Number.isFinite)).toBe(true);
@@ -86,10 +91,11 @@ for (const backend of ['webgpu', 'webgl'] as const) {
     }
   });
 }
-const SKY_WGSL = `@fragment fn fragmentMain() -> @location(0) vec4f {
-  return vec4f(atmosphere_getSkyColor(vec3f(0.0, 0.0, 20.0), vec3f(0.0, 0.0, 1.0)), 1.0);
+const SKY_WGSL = `@fragment fn fragmentMain(@builtin(position) fragment: vec4f) -> @location(0) vec4f {
+  let direction = vec3f(0.0, 0.0, select(1.0, -1.0, fragment.x >= 3.0));
+  return vec4f(atmosphere_getSkyColor(vec3f(0.0, 0.0, 20.0), direction), 1.0);
 }`;
-const SKY_GLSL = `void main() {fragmentColor = vec4(atmosphere_getSkyColor(vec3(0.0, 0.0, 20.0), vec3(0.0, 0.0, 1.0)), 1.0);}`;
+const SKY_GLSL = `void main() {fragmentColor = vec4(atmosphere_getSkyColor(vec3(0.0, 0.0, 20.0), vec3(0.0, 0.0, gl_FragCoord.x >= 3.0 ? -1.0 : 1.0)), 1.0);}`;
 const AERIAL_WGSL = `@fragment fn fragmentMain(@builtin(position) fragment: vec4f) -> @location(0) vec4f {
   return atmosphere_getColor(vec4f(1.0, 1.0, 1.0, 0.4), vec3f(fragment.x * 2000.0, 0.0, 20.0), vec3f(0.0, 0.0, 20.0));
 }`;

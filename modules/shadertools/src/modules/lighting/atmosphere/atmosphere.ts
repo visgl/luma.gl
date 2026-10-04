@@ -15,6 +15,8 @@ export type AtmosphereUniforms = {
   /** Planet radius in metres. Positions use a local tangent frame, with z = altitude. */
   planetRadius: number;
   exposure: number;
+  /** Diffuse ground boundary beneath the horizon, in linear RGB. */
+  groundColor: [number, number, number];
 };
 export type AtmosphereProps = Partial<AtmosphereUniforms>;
 const DEFAULT_UNIFORMS: AtmosphereUniforms = {
@@ -24,7 +26,8 @@ const DEFAULT_UNIFORMS: AtmosphereUniforms = {
   haze: 1,
   rayleigh: 1,
   planetRadius: 6371000,
-  exposure: 1
+  exposure: 1,
+  groundColor: [0.18, 0.17, 0.14]
 };
 
 /** Single-scattering Rayleigh/Mie sky and aerial perspective. Distances are metres.
@@ -39,7 +42,8 @@ export const atmosphere = {
     haze: 'f32',
     rayleigh: 'f32',
     planetRadius: 'f32',
-    exposure: 'f32'
+    exposure: 'f32',
+    groundColor: 'vec3<f32>'
   },
   defaultUniforms: DEFAULT_UNIFORMS,
   getUniforms(props = {}, previousUniforms = DEFAULT_UNIFORMS) {
@@ -54,6 +58,7 @@ layout(std140) uniform atmosphereUniforms {
   float rayleigh;
   float planetRadius;
   float exposure;
+  vec3 groundColor;
 } atmosphere;
 struct AtmosphereSample {
   vec3 radiance;
@@ -114,7 +119,19 @@ AtmosphereSample atmosphere_getScattering(vec3 camera, vec3 direction, float dis
   return result;
 }
 vec3 atmosphere_getSkyColor(vec3 camera, vec3 direction) {
+  if (atmosphere.enabled < 0.5) return vec3(0.0);
   AtmosphereSample scatteringSample = atmosphere_getScattering(camera, normalize(direction), 1000000.0);
+  vec3 origin = vec3(camera.xy, atmosphere.planetRadius + max(camera.z, 1.0));
+  vec3 sunlight = normalize(atmosphere.sunDirection);
+  float groundDistance = atmosphere_intersectSphere(origin, normalize(direction), atmosphere.planetRadius).x;
+  if (groundDistance > 0.0 && sunlight.z > 0.0) {
+    // Approximate direct irradiance at the ground boundary, attenuated on its way to the eye.
+    float elevation = max(sunlight.z, 0.02);
+    vec3 extinction = vec3(0.0000058, 0.0000135, 0.0000331) * max(atmosphere.rayleigh, 0.0) * 8000.0
+      + vec3(0.000021) * max(atmosphere.haze, 0.0) * 1200.0;
+    scatteringSample.radiance += atmosphere.groundColor * atmosphere.sunIntensity * sunlight.z / 3.141593
+      * exp(-extinction / elevation) * scatteringSample.transmittance;
+  }
   return vec3(1.0) - exp(-scatteringSample.radiance * atmosphere.exposure);
 }
 vec4 atmosphere_getColor(vec4 color, vec3 position, vec3 camera) {
@@ -135,6 +152,7 @@ struct atmosphereUniforms {
   rayleigh: f32,
   planetRadius: f32,
   exposure: f32,
+  groundColor: vec3f,
 };
 @group(3) @binding(auto) var<uniform> atmosphere: atmosphereUniforms;
 struct AtmosphereSample { radiance: vec3f,
@@ -199,7 +217,19 @@ fn atmosphere_getScattering(camera: vec3f,
 }
 fn atmosphere_getSkyColor(camera: vec3f,
   direction: vec3f) -> vec3f {
+  if (atmosphere.enabled < 0.5) { return vec3f(0.0); }
   var scatteringSample: AtmosphereSample = atmosphere_getScattering(camera, normalize(direction), 1000000.0);
+  let origin = vec3f(camera.xy, atmosphere.planetRadius + max(camera.z, 1.0));
+  let sunlight = normalize(atmosphere.sunDirection);
+  let groundDistance = atmosphere_intersectSphere(origin, normalize(direction), atmosphere.planetRadius).x;
+  if (groundDistance > 0.0 && sunlight.z > 0.0) {
+    // Approximate direct irradiance at the ground boundary, attenuated on its way to the eye.
+    let elevation = max(sunlight.z, 0.02);
+    let extinction = vec3f(0.0000058, 0.0000135, 0.0000331) * max(atmosphere.rayleigh, 0.0) * 8000.0
+      + vec3f(0.000021) * max(atmosphere.haze, 0.0) * 1200.0;
+    scatteringSample.radiance += atmosphere.groundColor * atmosphere.sunIntensity * sunlight.z / 3.141593
+      * exp(-extinction / elevation) * scatteringSample.transmittance;
+  }
   return vec3f(1.0) - exp(-scatteringSample.radiance * atmosphere.exposure);
 }
 fn atmosphere_getColor(color: vec4f,

@@ -64,7 +64,8 @@ export class AtmosphereLayer extends Layer<AtmosphereLayerProps> {
         haze: this.props.haze,
         rayleigh: this.props.rayleigh,
         planetRadius: this.props.planetRadius,
-        exposure: this.props.exposure
+        exposure: this.props.exposure,
+        groundColor: this.props.groundColor
       },
       skyView: {
         ...getSkyViewUniforms(viewport, this.props.coordinateOrigin),
