@@ -214,7 +214,7 @@ it('slang#storage texture writes execute on WebGPU', async () => {
   const handle = device!.handle;
   const source =
     '[format("rgba8")] WTexture2D<float4> outputImage; [shader("compute")] [numthreads(1,1,1)] void main() { outputImage[int2(0,0)] = float4(1,0.5,0,1); }';
-  const result = transpileSlang(source, {...options, target: 'wgsl'});
+  const result = transpileSlang(source, {target: 'wgsl'});
   const module = handle.createShaderModule({code: result.code});
   expect(
     (await module.getCompilationInfo()).messages.filter(message => message.type === 'error'),
