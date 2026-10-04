@@ -140,7 +140,8 @@ export function createRiverfrontLightingScene(
   const dryFeatures =
     kind === 'fireflies' ? features.filter(feature => feature.kind !== 'water') : features;
   // Low eye position exposes sky gaps between buildings for the depth-driven shafts.
-  const shaftSource: [number, number, number] = [-40, 560, 220];
+  // Let the skyline partially occlude the emitter so the starting view reveals beams.
+  const shaftSource: [number, number, number] = [-270, 560, 110];
   const initialCamera = {
     ...RIVERFRONT_VIEW_LIMITS,
     longitude: CITY_ORIGIN[0],
