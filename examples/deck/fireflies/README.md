@@ -1,6 +1,6 @@
 # Riverfront fireflies
 
-GPU wandering and independent bioluminescence over calm, reflective river water. Multiscale bloom has an independent strength control; optional ripples start at zero.
+GPU wandering and independent bioluminescence over calm, reflective river water. Emitters and their reflections share a warm yellow-green RGB approximation of *Photinus pyralis* flashes (reported peak emission around 558–568 nm: https://doi.org/10.1186/s12862-018-1251-9). This is a display approximation, not a spectral simulation. Multiscale bloom has an independent strength control; optional ripples start at zero.
 
 Run `yarn workspace luma.gl-examples-deck-fireflies start`. The website route is `/examples/deck/fireflies`.
 

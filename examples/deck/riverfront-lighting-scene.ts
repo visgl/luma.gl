@@ -208,9 +208,10 @@ export function createRiverfrontLightingScene(
             longitudeOffset,
             latitudeOffset,
             8 + ((index * 17) % 28),
-            0.7,
+            // Warm yellow-green approximation of Photinus pyralis bioluminescence.
+            0.85,
             1,
-            0.12,
+            0.025,
             1,
             index
           );

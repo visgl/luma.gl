@@ -18,16 +18,14 @@ test('motion capture reprojects the camera without full history and resets on cu
   parent.style.width = '64px';
   parent.style.height = '64px';
   document.body.append(parent);
-  // This spec has its own browser page. Borrow the established test device instead of opening
-  // another native adapter/device pair, which can lose its Dawn instance on software runners.
-  const canvas = device.getCanvasContext().canvas;
-  const previousParent = canvas instanceof HTMLCanvasElement ? canvas.parentElement : null;
-  const previousStyle = canvas instanceof HTMLCanvasElement ? canvas.style.cssText : '';
-  if (canvas instanceof HTMLCanvasElement) {
-    parent.append(canvas);
-    canvas.style.width = '64px';
-    canvas.style.height = '64px';
-  }
+  // Capture is independent of canvas presentation. A real offscreen target keeps software
+  // WebGPU runners from requesting an unsupported compositor swapchain during Deck's draw.
+  const framebuffer = device.createFramebuffer({
+    width: 64,
+    height: 64,
+    colorAttachments: ['rgba8unorm'],
+    depthStencilAttachment: 'depth24plus'
+  });
   let time = 2;
   const effect = new SceneBufferEffect({
     motionVectors: true,
@@ -41,6 +39,7 @@ test('motion capture reprojects the camera without full history and resets on cu
     width: 64,
     height: 64,
     useDevicePixels: false,
+    _framebuffer: framebuffer,
     views: new OrthographicView({id: 'main'}),
     initialViewState: {target: [0, 0], zoom: 0},
     layers: [new CaptureTestLayer({id: 'motion-surface'})],
@@ -82,6 +81,7 @@ test('motion capture reprojects the camera without full history and resets on cu
     const reset = await readCapture(device, effect, 'main', [32, 32], true);
     expect(reset[0]).toBeCloseTo(0, 5);
     const velocityTexture = effect.getFrame('main')!.buffer.velocityTexture;
+    framebuffer.resize({width: 80, height: 48});
     deck.setProps({width: 80, height: 48});
     await waitUntil(
       () => effect.getFrame('main')?.buffer.width === 80,
@@ -97,10 +97,7 @@ test('motion capture reprojects the camera without full history and resets on cu
     expect(errors).toEqual([]);
   } finally {
     deck.finalize();
-    if (canvas instanceof HTMLCanvasElement) {
-      canvas.style.cssText = previousStyle;
-      previousParent?.append(canvas);
-    }
+    framebuffer.destroy();
     parent.remove();
   }
 });
