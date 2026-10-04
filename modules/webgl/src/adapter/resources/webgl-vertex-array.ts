@@ -77,19 +77,20 @@ export class WEBGLVertexArray extends VertexArray {
    * @param elementBuffer
    */
   setIndexBuffer(indexBuffer: Buffer | null): void {
+    const webglContext = this.device.gl;
     const buffer = indexBuffer as WEBGLBuffer;
     // Explicitly allow `null` to support clearing the index buffer
     if (buffer && buffer.glTarget !== GL.ELEMENT_ARRAY_BUFFER) {
       throw new Error('Use .setBuffer()');
     }
     // In WebGL The GL.ELEMENT_ARRAY_BUFFER_BINDING is stored on the VertexArrayObject
-    this.device.gl.bindVertexArray(this.handle);
-    this.device.gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, buffer ? buffer.handle : null);
+    webglContext.bindVertexArray(this.handle);
+    webglContext.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, buffer ? buffer.handle : null);
 
     this.indexBuffer = buffer;
 
     // Unbind to prevent unintended changes to the VAO.
-    this.device.gl.bindVertexArray(null);
+    webglContext.bindVertexArray(null);
   }
 
   /**
@@ -99,41 +100,47 @@ export class WEBGLVertexArray extends VertexArray {
    * @param byteOffset Byte offset added to the attribute's layout offset.
    */
   setBuffer(location: number, attributeBuffer: Buffer, byteOffset: number = 0): void {
+    const webglContext = this.device.gl;
     const buffer = attributeBuffer as WEBGLBuffer;
     // Sanity check target
     if (buffer.glTarget === GL.ELEMENT_ARRAY_BUFFER) {
       throw new Error('Use .setIndexBuffer()');
     }
 
-    const accessor = this._getAccessor(location);
-    const {size, type, stride, normalized, integer, divisor} = accessor;
-    const offset = accessor.offset + byteOffset;
+    const {size, type, stride, offset, normalized, integer, divisor} = this._getAccessor(location);
 
-    this.device.gl.bindVertexArray(this.handle);
+    webglContext.bindVertexArray(this.handle);
     // A non-zero buffer object must be bound to the GL_ARRAY_BUFFER target
-    this.device.gl.bindBuffer(GL.ARRAY_BUFFER, buffer.handle);
+    webglContext.bindBuffer(GL.ARRAY_BUFFER, buffer.handle);
 
     // WebGL2 supports *integer* data formats, i.e. GPU will see integer values
     if (integer) {
-      this.device.gl.vertexAttribIPointer(location, size, type, stride, offset);
+      webglContext.vertexAttribIPointer(location, size, type, stride, offset + byteOffset);
     } else {
       // Attaches ARRAY_BUFFER with specified buffer format to location
-      this.device.gl.vertexAttribPointer(location, size, type, normalized, stride, offset);
+      webglContext.vertexAttribPointer(
+        location,
+        size,
+        type,
+        normalized,
+        stride,
+        offset + byteOffset
+      );
     }
     // Clear binding - keeping it may cause [.WebGL-0x12804417100]
     // GL_INVALID_OPERATION: A transform feedback buffer that would be written to is also bound to a non-transform-feedback target
-    this.device.gl.bindBuffer(GL.ARRAY_BUFFER, null);
+    webglContext.bindBuffer(GL.ARRAY_BUFFER, null);
 
     // Mark as non-constant
-    this.device.gl.enableVertexAttribArray(location);
+    webglContext.enableVertexAttribArray(location);
     // Set the step mode 0=vertex, 1=instance
-    this.device.gl.vertexAttribDivisor(location, divisor || 0);
+    webglContext.vertexAttribDivisor(location, divisor || 0);
 
     this.attributes[location] = buffer;
     this.attributeByteOffsets[location] = byteOffset;
 
     // Unbind to prevent unintended changes to the VAO.
-    this.device.gl.bindVertexArray(null);
+    webglContext.bindVertexArray(null);
   }
 
   /**
@@ -225,19 +232,20 @@ export class WEBGLVertexArray extends VertexArray {
    * TODO - convert classic arrays based on known type?
    */
   protected _enable(location: number, enable = true): void {
+    const webglContext = this.device.gl;
     // Attribute 0 cannot be disabled in most desktop OpenGL based browsers...
     const canDisableAttributeZero = WEBGLVertexArray.isConstantAttributeZeroSupported(this.device);
     const canDisableAttribute = canDisableAttributeZero || location !== 0;
 
     if (enable || canDisableAttribute) {
       location = Number(location);
-      this.device.gl.bindVertexArray(this.handle);
+      webglContext.bindVertexArray(this.handle);
       if (enable) {
-        this.device.gl.enableVertexAttribArray(location);
+        webglContext.enableVertexAttribArray(location);
       } else {
-        this.device.gl.disableVertexAttribArray(location);
+        webglContext.disableVertexAttribArray(location);
       }
-      this.device.gl.bindVertexArray(null);
+      webglContext.bindVertexArray(null);
     }
   }
 
