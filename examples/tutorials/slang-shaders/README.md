@@ -23,7 +23,7 @@ to prefer WebGPU. The website tutorial also offers backend tabs.
   reusable lighting and material module. Both use `sourceLanguage: 'slang'`.
 - A flat `ConstantBuffer<SceneUniforms>` carries animation and camera controls. Its two
   `float4` fields share the same byte layout in WGSL and GLSL std140.
-- `slang-transpiler.ts` imports the private compiler, uses reflection for resource names,
+- `slang-transpiler.ts` imports the experimental compiler, uses reflection for resource names,
   and supplies the application-owned callback: GLSL ES 300 for WebGL 2 and unified WGSL
   with generated entry-point names for WebGPU.
 - `app.ts` registers the callback on a local assembler and renders through `Model`.
@@ -31,5 +31,5 @@ to prefer WebGPU. The website tutorial also offers backend tabs.
 
 The bounded 96-step ray marcher prioritizes interactive performance over exact geometry.
 High twist can soften small surface details; reflection doubles ray work on floor pixels.
-This is a repository example because the Slang package is private. See the
+The compiler is an experimental package available from luma.gl v10. See the
 [compiler limits](../../../modules/slang/README.md) for the supported authoring subset.

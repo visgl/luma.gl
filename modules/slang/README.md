@@ -1,11 +1,21 @@
 # @luma.gl/slang
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../../website/static/img/standards/slang.svg" />
-  <img src="../../website/static/img/standards/slang-light.svg" alt="Slang" width="224" height="70" />
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/visgl/luma.gl/master/website/static/img/standards/slang.svg" />
+  <img src="https://raw.githubusercontent.com/visgl/luma.gl/master/website/static/img/standards/slang-light.svg" alt="Slang" width="224" height="70" />
 </picture>
 
-This package is private and currently available only in the luma.gl repository.
+> **Experimental · Available from luma.gl v10.** APIs and the supported language subset may change
+> between releases. This package is not available in v9.
+
+Install the same v10 or later version as the rest of your luma.gl packages:
+
+```sh
+yarn add @luma.gl/slang
+```
+
+For prereleases, select the same prerelease version explicitly. See the
+[Slang documentation](https://luma.gl/docs/api-reference/slang) for a live example and the API guide.
 
 A synchronous, dependency-free TypeScript transpiler from Slang shader source to GLSL and WGSL.
 It runs in browsers and Node.js, without a native compiler or WebAssembly runtime.
@@ -207,37 +217,7 @@ generated wrappers/helper lines may map to their associated declaration.
 The language follows the [Slang language guide](https://shader-slang.org/slang/user-guide/)
 and [WGSL target mapping](https://shader-slang.org/slang/user-guide/wgsl-target-specific).
 
-## Development
-
-From the repository root:
-
-```sh
-yarn test-node --no-coverage modules/slang
-yarn test-headless --no-coverage modules/slang
-yarn build
-yarn lint fix
-```
-
-The GPU tests compile and link a WebGL shader pair, validate WGSL render shaders, and execute
-WGSL compute shaders with readback assertions for evaluation order, output parameters, aggregate
-initialization, matrix multiplication, and shared uniform packing. Everyday-language fixtures also
-compare switch fallthrough, do/while continuations, inferred locals, numeric promotion, matrix
-constructors and constructor side effects against upstream-generated WGSL. Texture tests verify sampling on
-both backends and storage writes on WebGPU.
-
-Committed differential fixtures come from official Slang **2026.19** and run without a native compiler.
-They compare execution results and uniform offsets/strides. To regenerate them using that compiler:
-
-```sh
-SLANGC=/path/to/slangc node scripts/slang/generate-reference.mjs
-```
-
-The reference uniform fixture uses numeric `uint` flags because that upstream version emits
-non-host-shareable WGSL bool uniform fields. Its numeric ABI and results are compared using the same
-packed bytes; separate GPU tests cover this transpiler's bool legalization. These fixtures verify
-specific supported cases, not full Slang compatibility.
-
-### Unified WGSL render programs
+## Unified WGSL programs
 
 Use `transpileSlangWGSL(source, options?)` to emit multiple entry points in one WGSL shader
 module. By default it selects all `[shader(...)]` functions; `entryPoints` can select a list
@@ -272,7 +252,12 @@ Shared bindings combine visibility without modifying source reflection. Reflecti
 Usage includes resolved reachable helper overloads and respects local variable shadowing; it does
 not perform constant-condition elimination.
 
+The example assumes an existing WebGPU `device`, a compute `source` declaring a
+`ConstantBuffer<Settings> settings`, and `values` matching that buffer. Bind any remaining
+resources before dispatch.
+
 ```typescript
+import {Buffer} from '@luma.gl/core';
 import {transpileSlang, packSlangUniforms} from '@luma.gl/slang';
 import {
   getSlangShaderLayout,
@@ -321,7 +306,6 @@ The [Slang sculpture example](https://github.com/visgl/luma.gl/tree/master/examp
 keeps compiler registration application-owned and uses reflection to allocate and pack its shared
 uniform buffer on WebGPU and WebGL 2.
 
-
 ## Compute-to-render example and bundle size
 
 The [Slang particle vortex](https://github.com/visgl/luma.gl/tree/master/examples/tutorials/slang-particles)
@@ -330,6 +314,37 @@ ping-pong particle simulation, whose output is rendered directly with no CPU rea
 owns compiler registration and uses reflection for layouts, bindings and uniform packing. It selects
 `omitUnusedResources` so native interface scanners see only the resources for each pipeline.
 
-The compiler remains private and has no runtime dependencies. It is an optional import and does not
-increase core/engine/shadertools bundles. Bundle-size tests guard the compiler and separate luma helpers;
-the compute/texture extensions add approximately 5 KB gzip, for a compiler around 26 KB gzip.
+The experimental compiler has no runtime dependencies. It is an optional import and does not
+increase core/engine/shadertools bundles. Bundle-size tests guard the compiler (about 28 KB gzip)
+and separate luma helpers (about 1.4 KB gzip).
+
+## Development
+
+From the repository root:
+
+```sh
+yarn test-node --no-coverage modules/slang
+yarn test-headless --no-coverage modules/slang
+yarn build
+yarn lint fix
+```
+
+The GPU tests compile and link a WebGL shader pair, validate WGSL render shaders, and execute
+WGSL compute shaders with readback assertions for evaluation order, output parameters, aggregate
+initialization, matrix multiplication, and shared uniform packing. Everyday-language fixtures also
+compare switch fallthrough, do/while continuations, inferred locals, numeric promotion, matrix
+constructors and constructor side effects against upstream-generated WGSL. Texture tests verify sampling on
+both backends and storage writes on WebGPU.
+
+Committed differential fixtures come from official Slang **2026.19** and run without a native compiler.
+They compare execution results and uniform offsets/strides. To regenerate them using that compiler:
+
+```sh
+SLANGC=/path/to/slangc node scripts/slang/generate-reference.mjs
+```
+
+The reference uniform fixture uses numeric `uint` flags because that upstream version emits
+non-host-shareable WGSL bool uniform fields. Its numeric ABI and results are compared using the same
+packed bytes; separate GPU tests cover this transpiler's bool legalization. These fixtures verify
+specific supported cases, not full Slang compatibility.
+
