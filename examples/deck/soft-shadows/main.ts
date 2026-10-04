@@ -49,7 +49,10 @@ hourInput.addEventListener('input', () => {
 for (const [id, setter] of [
   ['animated', scene.setAnimated],
   ['shadows', scene.setShadows],
-  ['clouds', scene.setClouds]
+  ['clouds', scene.setClouds],
+  ['cloud-shadows', scene.setCloudShadows],
+  ['cloud-animated', scene.setCloudAnimated],
+  ['atmosphere', scene.setAtmosphere]
 ] as const) {
   const input = document.querySelector<HTMLInputElement>(`#${id}`)!;
   input.addEventListener('change', () => setter(input.checked));
@@ -59,7 +62,8 @@ for (const [id, setter] of [
   ['speed', scene.setSpeed],
   ['cloud-cover', scene.setCloudCover],
   ['wind-speed', scene.setWindSpeed],
-  ['wind-direction', scene.setWindDirection]
+  ['wind-direction', scene.setWindDirection],
+  ['haze', scene.setHaze]
 ] as const) {
   const input = document.querySelector<HTMLInputElement>(`#${id}`)!;
   input.addEventListener('input', () => setter(Number(input.value)));

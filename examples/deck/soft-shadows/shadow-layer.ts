@@ -14,7 +14,15 @@ import {
 import type {Buffer, RenderPass} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {shadow} from '@luma.gl/experimental';
-import {lambertMaterial, type ShaderModule} from '@luma.gl/shadertools';
+import {
+  lambertMaterial,
+  clouds,
+  atmosphere,
+  type CloudProps,
+  type AtmosphereProps,
+  type ShaderModule
+} from '@luma.gl/shadertools';
+import {getMeterOffsetPosition} from '@deck.gl-community/gpu-layers';
 import {makeCityMesh, type CityFeature} from '../river-district-data';
 import {RiverfrontShadowEffect} from './shadow-effect';
 import {getRiverfrontSun} from './sun';
@@ -22,13 +30,21 @@ import {getRiverfrontSun} from './sun';
 type ShadowDistrictLayerProps = LayerProps & {
   features: readonly CityFeature[];
   shadowEffect: RiverfrontShadowEffect;
+  clouds: () => CloudProps;
+  atmosphere: () => AtmosphereProps;
 };
 
 const receiverUniforms = {
   name: 'riverfrontReceiver',
-  uniformTypes: {viewMatrix: 'mat4x4<f32>'},
-  vs: `layout(std140) uniform riverfrontReceiverUniforms { mat4 viewMatrix; } riverfrontReceiver;`,
-  source: `struct RiverfrontReceiverUniforms { viewMatrix: mat4x4f };
+  uniformTypes: {viewMatrix: 'mat4x4<f32>', cameraPosition: 'vec3<f32>'},
+  vs: `layout(std140) uniform riverfrontReceiverUniforms { mat4 viewMatrix;
+vec3 cameraPosition; } riverfrontReceiver;`,
+  fs: `layout(std140) uniform riverfrontReceiverUniforms {
+    mat4 viewMatrix;
+    vec3 cameraPosition;
+  } riverfrontReceiver;`,
+  source: `struct RiverfrontReceiverUniforms { viewMatrix: mat4x4f,
+cameraPosition: vec3f };
 @group(3) @binding(auto) var<uniform> riverfrontReceiver: RiverfrontReceiverUniforms;`
 } as const satisfies ShaderModule;
 
@@ -54,7 +70,15 @@ export class ShadowDistrictLayer extends Layer<ShadowDistrictLayerProps> {
           source: SOURCE,
           vs: VERTEX_SHADER,
           fs: FRAGMENT_SHADER,
-          modules: [project32, picking, lambertMaterial, shadow, receiverUniforms]
+          modules: [
+            project32,
+            picking,
+            lambertMaterial,
+            shadow,
+            clouds,
+            atmosphere,
+            receiverUniforms
+          ]
         }),
         id: `${this.id}-mesh`,
         topology: 'triangle-list',
@@ -91,7 +115,16 @@ export class ShadowDistrictLayer extends Layer<ShadowDistrictLayerProps> {
     const sun = getRiverfrontSun(effect.settings.hour);
     this.state.model?.shaderInputs.setProps({
       shadow: effect.shadowProps,
-      riverfrontReceiver: {viewMatrix: effect.viewMatrix},
+      clouds: {...clouds.defaultUniforms, ...this.props.clouds()},
+      atmosphere: {...atmosphere.defaultUniforms, ...this.props.atmosphere()},
+      riverfrontReceiver: {
+        viewMatrix: effect.viewMatrix,
+        cameraPosition: getMeterOffsetPosition(
+          this.context.viewport,
+          this.props.coordinateOrigin,
+          this.context.viewport.cameraPosition
+        )
+      },
       lambertMaterial: {ambient: 0.3, diffuse: 0.85},
       lighting: {
         enabled: true,
@@ -154,12 +187,12 @@ struct CityVertex {
   let normal = normalize(input.normal);
   let ambient = lambertMaterial.ambient * input.color * lighting.ambientColor;
   let lit = lighting_getLightColor2(input.color, vec3f(0.0), input.worldPosition, normal);
-  let visibility = shadow_getDirectionalFactor(input.worldPosition, normal, input.viewDepth);
+  let visibility = shadow_getDirectionalFactor(input.worldPosition, normal, input.viewDepth) * clouds_getTransmittance(input.worldPosition);
   var color = ambient + (lit - ambient) * visibility;
   if (picking.isHighlightActive > 0.5 && distance(input.pickingColor, picking_normalizeColor(picking.highlightedObjectColor)) < 0.00001) {
     color = mix(color, picking.highlightColor.rgb, picking.highlightColor.a);
   }
-  return vec4f(color, layer.opacity);
+  return atmosphere_getColor(vec4f(color, layer.opacity), input.worldPosition, riverfrontReceiver.cameraPosition);
 }
 `;
 
@@ -197,7 +230,7 @@ void main() {
   vec3 normal = normalize(surfaceNormal);
   vec3 ambient = material.ambient * surfaceColor * lighting.ambientColor;
   vec3 lit = lighting_getLightColor(surfaceColor, vec3(0.0), worldPosition, normal);
-  float visibility = shadow_getDirectionalFactor(worldPosition, normal, viewDepth);
-  fragColor = vec4(ambient + (lit - ambient) * visibility, layer.opacity);
+  float visibility = shadow_getDirectionalFactor(worldPosition, normal, viewDepth) * clouds_getTransmittance(worldPosition);
+  fragColor = atmosphere_getColor(vec4(ambient + (lit - ambient) * visibility, layer.opacity), worldPosition, riverfrontReceiver.cameraPosition);
   DECKGL_FILTER_COLOR(fragColor, geometry);
 }`;

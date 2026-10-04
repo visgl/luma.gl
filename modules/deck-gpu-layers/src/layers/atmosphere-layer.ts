@@ -5,30 +5,17 @@
 import {Layer, picking, _GlobeViewport, type LayerContext, type LayerProps} from '@deck.gl/core';
 import type {RenderPass} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import {clouds, type CloudProps} from '@luma.gl/shadertools';
+import {atmosphere, type AtmosphereProps} from '@luma.gl/shadertools';
 import {skyView, getSkyViewUniforms, SKY_VERTEX_SOURCE, SKY_VERTEX_SHADER} from './sky-view';
-export {getSkyViewUniforms as getCloudViewUniforms} from './sky-view';
 
-export type CloudLayerProps = LayerProps & CloudProps;
+export type AtmosphereLayerProps = LayerProps & AtmosphereProps;
 
-/** Animated sky clouds for flat-map perspective views. Place after celestial layers and before
- * opaque scene layers. The cloud slab remains at far depth and never writes the depth buffer.
- * Cloud uniforms use local metres relative to coordinateOrigin; globe views are not supported.
+/** Flat-map perspective sky. Draw before celestial bodies, clouds and opaque geometry.
+ * Uses metre-space east/north/up rays and does not write depth or participate in picking.
  */
-export class CloudLayer extends Layer<CloudLayerProps> {
-  static override layerName = 'CloudLayer';
-  static override defaultProps = {
-    cover: {type: 'number', value: 0.45, min: 0, max: 1},
-    altitude: {type: 'number', value: 1000},
-    thickness: {type: 'number', value: 1200, min: 1},
-    scale: {type: 'number', value: 1400, min: 1},
-    density: {type: 'number', value: 0.005, min: 0},
-    time: {type: 'number', value: 0},
-    velocity: [14, 4],
-    sunDirection: [0, 0.8, 0.6],
-    sunColor: [1, 0.95, 0.85],
-    pickable: false
-  };
+export class AtmosphereLayer extends Layer<AtmosphereLayerProps> {
+  static override layerName = 'AtmosphereLayer';
+  static override defaultProps = {...atmosphere.defaultUniforms, pickable: false};
   declare state: {model: Model};
   override getAttributeManager() {
     return null;
@@ -38,11 +25,11 @@ export class CloudLayer extends Layer<CloudLayerProps> {
       model: new Model(device, {
         ...this.getShaders({
           source: SOURCE,
-          vs: VERTEX_SHADER,
+          vs: SKY_VERTEX_SHADER,
           fs: FRAGMENT_SHADER,
-          modules: [picking, clouds, skyView]
+          modules: [picking, atmosphere, skyView]
         }),
-        id: `${this.id}-clouds`,
+        id: `${this.id}-atmosphere`,
         topology: 'triangle-list',
         vertexCount: 3,
         parameters: {
@@ -66,20 +53,18 @@ export class CloudLayer extends Layer<CloudLayerProps> {
     if (
       viewport instanceof _GlobeViewport ||
       viewport.projectionMatrix[15] !== 0 ||
-      !this.props.cover
+      !this.props.enabled
     )
       return;
     this.state.model.shaderInputs.setProps({
-      clouds: {
-        cover: this.props.cover,
-        altitude: this.props.altitude,
-        thickness: this.props.thickness,
-        scale: this.props.scale,
-        density: this.props.density,
-        time: this.props.time,
-        velocity: this.props.velocity,
+      atmosphere: {
+        enabled: this.props.enabled,
         sunDirection: this.props.sunDirection,
-        sunColor: this.props.sunColor
+        sunIntensity: this.props.sunIntensity,
+        haze: this.props.haze,
+        rayleigh: this.props.rayleigh,
+        planetRadius: this.props.planetRadius,
+        exposure: this.props.exposure
       },
       skyView: {
         ...getSkyViewUniforms(viewport, this.props.coordinateOrigin),
@@ -93,19 +78,17 @@ export class CloudLayer extends Layer<CloudLayerProps> {
     super.finalizeState(context);
   }
 }
-
 const SOURCE =
   SKY_VERTEX_SOURCE +
   /* wgsl */ `
 @fragment fn fragmentMain(input: SkyViewVertex) -> @location(0) vec4f {
   if (picking.isActive > 0.5) { discard; }
-  return clouds_getColor(skyView.camera, normalize(input.direction)) * skyView.opacity;
+  return vec4f(atmosphere_getSkyColor(skyView.camera, normalize(input.direction)) * skyView.opacity, skyView.opacity);
 }`;
-const VERTEX_SHADER = SKY_VERTEX_SHADER;
 const FRAGMENT_SHADER = /* glsl */ `#version 300 es
 precision highp float;
 in vec3 direction; out vec4 fragColor;
 void main() {
   if (picking.isActive > 0.5) discard;
-  fragColor = clouds_getColor(skyView.camera, normalize(direction)) * skyView.opacity;
+  fragColor = vec4(atmosphere_getSkyColor(skyView.camera, normalize(direction)) * skyView.opacity, skyView.opacity);
 }`;

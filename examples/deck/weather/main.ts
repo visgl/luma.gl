@@ -34,6 +34,22 @@ fogEnabled.addEventListener('change', () => {
     document.querySelector<HTMLInputElement>(`#${identifier}`)!.disabled = !fogEnabled.checked;
   }
 });
+for (const [identifier, setter] of [
+  ['surface-enabled', scene.setSurfaceEnabled],
+  ['accumulate', scene.setAccumulation]
+] as const) {
+  const input = document.querySelector<HTMLInputElement>(`#${identifier}`)!;
+  input.addEventListener('change', () => setter(input.checked));
+}
+document.querySelector('#scene')!.addEventListener('weather-frame', () => {
+  for (const [identifier, value] of [
+    ['wetness', scene.surfaceSettings.wetness],
+    ['snow-cover', scene.surfaceSettings.snow]
+  ] as const) {
+    const input = document.querySelector<HTMLInputElement>(`#${identifier}`)!;
+    if (document.activeElement !== input) input.value = String(value);
+  }
+});
 const playing = document.querySelector<HTMLInputElement>('#playing')!;
 playing.addEventListener('change', () => scene.setPlaying(playing.checked));
 for (const [identifier, setter] of [
@@ -42,7 +58,10 @@ for (const [identifier, setter] of [
   ['wind-direction', scene.setWindDirection],
   ['visibility', scene.setVisibility],
   ['fog-variation', scene.setFogVariation],
-  ['fog-speed', scene.setFogSpeed]
+  ['fog-speed', scene.setFogSpeed],
+  ['wetness', scene.setWetness],
+  ['snow-cover', scene.setSnowCover],
+  ['puddles', scene.setPuddles]
 ] as const) {
   const input = document.querySelector<HTMLInputElement>(`#${identifier}`)!;
   input.addEventListener('input', () => setter(Number(input.value)));

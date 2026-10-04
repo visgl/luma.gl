@@ -8,9 +8,9 @@ Run `yarn workspace luma.gl-examples-deck-weather start`; the website route is
 Choose None, Rain, or Snow, then toggle Fog independently. The fog controls retain their values while disabled. Intensity controls the particle count, wind uses metres
 per second with direction clockwise from north, and visibility sets the fog extinction.
 Pause freezes the clock exactly; reset returns to the seeded initial particle positions.
-With no precipitation and fog disabled, continuous redraws stop. Fog keeps animating only when enabled and both
+With no precipitation, fog disabled and surface accumulation disabled, continuous redraws stop. Fog keeps animating only when enabled and both
 Fog variation and Fog drift are nonzero. Zero variation restores uniform fog; zero drift
-keeps static wisps. Animate pauses both fog and precipitation. Changing a setting or moving the camera still redraws the scene.
+keeps static wisps. Animate pauses fog, precipitation and surface accumulation. Changing a setting or moving the camera still redraws the scene.
 Camera movement remains available while paused. The scene uses map projection; scroll over the scene to zoom. The visual tests also exercise
 globe projection through the scene API. Both use a local east/north/up metre frame for fog and particle sizing. The clock pauses while the document is hidden. Visible rendering uses elapsed time, so slower frame rates do not slow the weather.
 
@@ -18,8 +18,16 @@ globe projection through the scene API. Both use a local east/north/up metre fra
 those modules to Deck projection and depth. Its particle volume follows the view's ground
 center while particles in the overlap retain their world positions. The vertical band is
 0–450 metres; this example is intended for neighborhood-scale views. A CSS sky color sits
-behind the transparent canvas. Clouds, precipitation splashes, surface accumulation, and
-lighting changes are separate effects and are not simulated here.
+behind the transparent canvas. Clouds and precipitation splashes are separate effects.
+
+The reusable `surfaceWeather` module darkens wet surfaces, adds patchy puddle highlights and
+places snow on upward-facing ground and roofs. Water is explicitly masked out; this example
+does not calculate shelter under bridges or snow depth. The Accumulate toggle integrates
+rainfall/snowfall and drying/melting using an exact, frame-rate-independent helper. Surface
+state persists across weather changes; wetness, snow cover and puddle sliders allow manual
+inspection. Surface weather can be disabled without losing its stored values. Reset clears
+wetness and snow. The simple Lambert adapter approximates sky highlights; it does not reflect
+buildings. PBR adapters can reuse the same albedo and roughness helpers.
 
 Opaque geometry writes depth before precipitation. A conservative, example-owned 256×384
 `r32float` height map excludes particles below roofs and covered bridges. This field costs

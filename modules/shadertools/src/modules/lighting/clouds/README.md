@@ -12,7 +12,13 @@ points toward the sun; `sunColor` is linear RGB. The direction must be nonzero.
 
 A fixed 64-sample march integrates density through the slab, with approximate local sunlight
 attenuation and a forward-scattering highlight. The horizon fades at long distances. There
-are no cloud shadow maps, temporal accumulation, or atmospheric multiple scattering. The
+are no cloud shadow maps, temporal accumulation, or atmospheric multiple scattering.
+`clouds_getTransmittance(position)` integrates sunlight extinction through that same density
+field with sixteen midpoint samples. Multiply direct sunlight by this factor, preserving
+ambient illumination. It returns one for clear/zero-density clouds and sun elevation at or
+below approximately 1.1 degrees. Sky and receivers must share the origin, dimensions, time and wind.
+The light march caps at 40 km, limiting cost and low-sun precision. It does not create
+shadow-map resources or implement terrain/volume shadowing. The
 caller supplies world-space camera rays, composites over the sky, and arranges foreground
 occlusion. `CloudLayer` in the deck.gl adapter provides this integration for perspective
 flat-map views. Cloud render cost scales with visible sky area.

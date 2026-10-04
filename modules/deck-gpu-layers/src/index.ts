@@ -55,3 +55,5 @@ export {SunLayer, type SunLayerProps} from './layers/sun-layer';
 export {MoonLayer, type MoonLayerProps} from './layers/moon-layer';
 
 export {CloudLayer, type CloudLayerProps} from './layers/cloud-layer';
+
+export {AtmosphereLayer, type AtmosphereLayerProps} from './layers/atmosphere-layer';
