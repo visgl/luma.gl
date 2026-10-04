@@ -53,7 +53,7 @@ for (const target of ['glsl', 'wgsl'] as const) {
     it('preserves rectangular matrix dimensions and row-major constructor values', () => {
       const result = transpileSlang(MATRIX_SHADER, {target});
       expect(result.code).toContain(target === 'wgsl' ? 'mat2x3<f32>' : 'mat2x3');
-      expect(result.code).toContain('_slang_transform)');
+      expect(result.code).toContain('_slang_transform');
     });
     it('handles mutable parameters, cbuffer aliases, arrays and scopes', () => {
       const source = `
@@ -112,21 +112,17 @@ for (const target of ['glsl', 'wgsl'] as const) {
   });
 }
 
-it('slang#rejects unsupported WGSL semantics rather than eagerly evaluating conditional branches', () => {
-  expect(() =>
-    transpileSlang(
-      '[shader("fragment")] float4 main() : SV_Target { return float4(true ? 1.0 : 0.0); }',
-      {target: 'wgsl'}
-    )
-  ).toThrow(/control-flow lowering/);
-});
-it('slang#rejects unsupported uniform packing and WebGL storage', () => {
-  expect(() =>
-    transpileSlang(
-      'uniform float values[2]; [shader("fragment")] float4 main() : SV_Target { return float4(values[0]); }',
-      {target: 'wgsl'}
-    )
-  ).toThrow(/layout legalization/);
+it('slang#lowers WGSL conditionals and uniform arrays while preserving WebGL limits', () => {
+  const conditional = transpileSlang(
+    '[shader("fragment")] float4 main() : SV_Target { return float4(true ? 1.0 : 0.0); }',
+    {target: 'wgsl'}
+  );
+  expect(conditional.code).toContain('if (true)');
+  const arrays = transpileSlang(
+    'uniform float values[2]; [shader("fragment")] float4 main() : SV_Target { return float4(values[0]); }',
+    {target: 'wgsl'}
+  );
+  expect(arrays.reflection.bindings[0].layout).toMatchObject({size: 32, arrayStride: 16});
   expect(() => transpileSlang(COMPUTE_SHADER, {target: 'glsl', glslVersion: '300 es'})).toThrow(
     /require GLSL 450/
   );
@@ -190,23 +186,18 @@ it.each([
   ['ConstantBuffer', 'ConstantBuffer<Outer> settings;', 'settings.inner.x + settings.value'],
   ['cbuffer', 'cbuffer Settings { Inner inner; float value; };', 'inner.x + value'],
   ['uniform', 'uniform Outer settings;', 'settings.inner.x + settings.value']
-])('slang#rejects nested WGSL %s uniform members with a source diagnostic', (_kind, declaration, expression) => {
+])('slang#legalizes nested WGSL %s uniform members', (_kind, declaration, expression) => {
   const source = `struct Inner { float x; };
 struct Outer { Inner inner; float value; };
 ${declaration}
 [shader("fragment")] float4 main() : SV_Target { return float4(${expression}); }`;
-  let diagnostic: SlangTranspileError | undefined;
-  try {
-    transpileSlang(source, {target: 'wgsl', sourceName: 'nested.slang'});
-  } catch (error) {
-    expect(error).toBeInstanceOf(SlangTranspileError);
-    diagnostic = error as SlangTranspileError;
-  }
-  expect(diagnostic?.diagnostics[0]).toMatchObject({
-    sourceName: 'nested.slang',
-    line: declaration.startsWith('cbuffer') ? 3 : 2,
-    message: expect.stringMatching(/Nested structures.*layout legalization/)
+  const result = transpileSlang(source, {target: 'wgsl', sourceName: 'nested.slang'});
+  expect(result.reflection.bindings[0].layout?.members?.[0]).toMatchObject({
+    name: 'inner',
+    size: 16,
+    alignment: 16
   });
+  expect(new WgslReflect(result.code).uniforms[0].size).toBe(32);
   expect(() => transpileSlang(source, {target: 'glsl'})).not.toThrow();
 });
 

@@ -45,6 +45,7 @@ export type Expression = SourceLocation &
     | {kind: 'member'; object: Expression; member: string}
     | {kind: 'index'; object: Expression; index: Expression}
     | {kind: 'conditional'; condition: Expression; consequent: Expression; alternate: Expression}
+    | {kind: 'initializer'; elements: Expression[]}
     | {kind: 'cast'; type: SlangType; operand: Expression}
   );
 export type Statement = SourceLocation &

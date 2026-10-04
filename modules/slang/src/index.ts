@@ -9,9 +9,14 @@ import type {
   SlangWGSLProgramOptions,
   SlangWGSLProgramResult
 } from './types';
+import {mapSlangSource} from './source-map';
 import {SlangTranspileError} from './diagnostics';
 
 export type {
+  SlangTextureLayout,
+  SlangTypeLayout,
+  SlangUniformValue,
+  SlangSourceMapEntry,
   SlangTarget,
   SlangShaderStage,
   SlangTranspileOptions,
@@ -23,6 +28,8 @@ export type {
   SlangWGSLProgramResult
 } from './types';
 export type {SlangDiagnostic} from './diagnostics';
+export {packSlangUniforms} from './layout';
+export {mapSlangDiagnostic} from './source-map';
 export {SlangTranspileError} from './diagnostics';
 
 /** Transpile a self-contained Slang shader in TypeScript, without native or WASM dependencies. */
@@ -59,13 +66,29 @@ export function transpileSlangWGSL(
   }
   const declarations = new Set<string>();
   const entries: string[] = [];
+  const emitters = entryPoints.map(
+    entryPoint => new SlangEmitter(program, {...options, target: 'wgsl', entryPoint})
+  );
+  const comparisonTextures = new Set<string>();
+  const ordinaryTextures = new Set<string>();
+  for (const emitter of emitters) {
+    const usage = emitter.discoverTextureUsage();
+    usage.comparison.forEach(texture => comparisonTextures.add(texture));
+    usage.ordinary.forEach(texture => ordinaryTextures.add(texture));
+  }
+  for (const texture of comparisonTextures) {
+    if (!ordinaryTextures.has(texture)) continue;
+    const declaration = program.declarations.find(declaration => declaration.name === texture)!;
+    throw new SlangTranspileError(
+      'A shared texture cannot combine comparison and ordinary sampling across entry points',
+      declaration.location,
+      sourceName
+    );
+  }
   const metadata: SlangWGSLProgramResult['entryPoints'] = {};
-  for (const entryPoint of entryPoints) {
-    const parts = new SlangEmitter(program, {
-      ...options,
-      target: 'wgsl',
-      entryPoint
-    }).emitProgramParts();
+  for (const [index, entryPoint] of entryPoints.entries()) {
+    emitters[index].setComparisonTextures(comparisonTextures);
+    const parts = emitters[index].emitProgramParts();
     parts.declarations.forEach(declaration => declarations.add(declaration));
     // Entry interface types and their local variables must be unique across stages.
     entries.push(
@@ -78,7 +101,7 @@ export function transpileSlangWGSL(
     };
   }
   return {
-    code: [...declarations, ...entries].join('\n\n') + '\n',
+    ...mapSlangSource([...declarations, ...entries].join('\n\n') + '\n', sourceName),
     target: 'wgsl',
     entryPoints: metadata
   };
