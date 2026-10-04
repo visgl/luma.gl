@@ -76,7 +76,12 @@ export function createRiverfrontLightingScene(
     error: '',
     finalized: false
   };
-  const ready = Promise.withResolvers<void>();
+  let resolveReady!: () => void;
+  let rejectReady!: (reason?: unknown) => void;
+  const ready = new Promise<void>((resolve, reject) => {
+    resolveReady = resolve;
+    rejectReady = reject;
+  });
   let lastTimestamp = 0;
   let settlingFrames = 24;
   let points: Buffer | undefined;
@@ -279,7 +284,7 @@ export function createRiverfrontLightingScene(
       }
       updateLayers();
     },
-    onLoad: () => ready.resolve(),
+    onLoad: () => resolveReady(),
     onBeforeRender: () => {
       const timestamp = performance.now();
       diagnostics.deltaTime = lastTimestamp ? Math.min((timestamp - lastTimestamp) / 1000, 0.1) : 0;
@@ -296,7 +301,7 @@ export function createRiverfrontLightingScene(
     },
     onError: error => {
       diagnostics.error ||= error.message;
-      ready.reject(error);
+      rejectReady(error);
     },
     getTooltip: info => info.object?.name ?? null
   });
@@ -566,7 +571,7 @@ export function createRiverfrontLightingScene(
     effect,
     settings,
     diagnostics,
-    ready: ready.promise,
+    ready,
     kind,
     setSetting<Name extends keyof typeof settings>(
       name: Name,
