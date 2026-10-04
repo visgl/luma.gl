@@ -21,12 +21,9 @@ import {SlangShadersExample} from '@site/src/examples';
 TypeScript. It runs in browsers and Node.js without runtime dependencies, a native compiler or
 WebAssembly. The compiler is optional: applications import and register it themselves.
 
-:::caution Experimental API
-
-Available from luma.gl v10. APIs and the supported language subset may change between releases.
-This is a practical shader-authoring subset, not the upstream Slang compiler or full language compatibility.
-
-:::
+> **Experimental API.** Available from luma.gl v10. APIs and the supported language subset may
+> change between releases. This package implements a practical shader-authoring subset and does
+> not provide full upstream Slang language compatibility.
 
 ## Install
 
