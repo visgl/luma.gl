@@ -12,6 +12,7 @@ import {
   toneMapping
 } from '@luma.gl/effects';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
+import {RIVERFRONT_VIEW_LIMITS} from '../riverfront-view';
 import {CITY_ORIGIN, makeCityFeatures, makeCityMesh} from '../river-district-data';
 import {RiverDistrictLayer} from '../river-district-layer';
 import {
@@ -87,6 +88,7 @@ export function createRiverfrontAmbientOcclusionScene(
     ...deviceProps,
     views: new MapView({id: 'riverfront', controller: true}),
     initialViewState: {
+      ...RIVERFRONT_VIEW_LIMITS,
       longitude: CITY_ORIGIN[0],
       latitude: CITY_ORIGIN[1],
       zoom: 15.9,

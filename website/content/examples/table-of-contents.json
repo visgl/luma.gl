@@ -261,6 +261,7 @@
       "deck/point-glow",
       "deck/ambient-occlusion",
       "deck/soft-shadows",
+      "deck/depth-of-field",
       "deck/sketch-edges",
       "deck/scene-buffers",
       "deck/pattern-fills",

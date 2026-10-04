@@ -9,6 +9,7 @@ import type {MakeEdgeGeometryOptions} from '@luma.gl/engine';
 import {makeCityFeatures, type CityFeature} from '../river-district-data';
 import type {SketchStrokeProps} from '@luma.gl/shadertools';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
+import {RIVERFRONT_VIEW_LIMITS} from '../riverfront-view';
 import {BuildingMeshLayer} from './building-layer';
 import {makeBuildings, makeEdges, ORIGIN} from './building-data';
 
@@ -54,6 +55,7 @@ export function createSketchScene(parent: HTMLDivElement, options: DeckExampleDe
     ...getDeckExampleProps(options),
     views: new MapView({controller: true}),
     initialViewState: {
+      ...RIVERFRONT_VIEW_LIMITS,
       longitude: ORIGIN[0],
       latitude: ORIGIN[1],
       zoom: 15.6,

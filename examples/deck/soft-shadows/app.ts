@@ -4,6 +4,7 @@
 
 import {COORDINATE_SYSTEM, Deck, MapView} from '@deck.gl/core';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
+import {RIVERFRONT_VIEW_LIMITS} from '../riverfront-view';
 import {CITY_ORIGIN, makeCityFeatures} from '../river-district-data';
 import {RiverfrontShadowEffect, type ShadowSettings} from './shadow-effect';
 import {ShadowDistrictLayer} from './shadow-layer';
@@ -41,6 +42,7 @@ export function createRiverfrontSoftShadowScene(
     ...getDeckExampleProps(options),
     views: new MapView({id: 'riverfront-shadows', controller: true}),
     initialViewState: {
+      ...RIVERFRONT_VIEW_LIMITS,
       longitude: CITY_ORIGIN[0],
       latitude: CITY_ORIGIN[1],
       zoom: 15.7,
