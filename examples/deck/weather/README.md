@@ -4,8 +4,8 @@ A portable WebGPU/WebGL2 example with wind-driven rain, drifting snow, and wispy
 It opens with rain and fog enabled at 09:00 EDT on June 21, 2026 in New York.
 The Time control shares one math.gl astronomy timestamp between SunLayer, MoonLayer,
 StarfieldLayer, clouds, atmosphere, and scene lighting. `getSunLight` supplies direct
-and diffuse light color and intensity, including cloud-cover attenuation. Look at sun
-and Look at moon aim the camera above the horizon; if the body has set, the control
+and diffuse light color and intensity, including cloud-cover attenuation. Sun
+and Moon aim the camera above the horizon; if the body has set, the control
 selects a time when it is visible. Center returns to the district view. Dense fog can
 obscure celestial bodies; disable Fog to inspect the sky.
 Run `yarn workspace luma.gl-examples-deck-weather start`; the website route is
