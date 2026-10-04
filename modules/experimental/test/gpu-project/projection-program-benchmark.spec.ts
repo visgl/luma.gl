@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {Proj4Projection} from '@math.gl/proj4/classic';
+import {Projection} from '@math.gl/projection';
 import {planCRSProjection} from '@luma.gl/experimental/gpu-project/crs';
 import {runProjectionProgramBenchmark} from '@luma.gl/experimental/gpu-project/benchmarks';
 import type {ProjectionBounds, ProjectionCoordinates} from '@luma.gl/experimental/gpu-project';
@@ -65,7 +65,7 @@ for (const fixture of fixtures) {
       bounds[1] + (bounds[3] - bounds[1]) * (((index + 1) * 0.6180339887498949) % 1)
     ]);
     coordinates.push([NaN, 0]);
-    const provider = new Proj4Projection({
+    const provider = new Projection({
       from: fixture.inverse ? fixture.serialized : 'EPSG:4326',
       to: fixture.inverse ? 'EPSG:4326' : fixture.serialized
     });

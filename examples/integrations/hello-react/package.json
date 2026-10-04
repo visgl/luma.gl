@@ -12,7 +12,7 @@
     "@luma.gl/engine": "10.0.0-alpha.2",
     "@luma.gl/shadertools": "10.0.0-alpha.2",
     "@luma.gl/webgl": "10.0.0-alpha.2",
-    "@math.gl/core": "5.0.0-alpha.11",
+    "@math.gl/core": "5.0.0-alpha.12",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   },

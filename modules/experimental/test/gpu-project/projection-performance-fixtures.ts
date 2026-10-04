@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Proj4Projection} from '@math.gl/proj4/classic';
+import {Projection} from '@math.gl/projection';
 import {planCRSProjection} from '@luma.gl/experimental/gpu-project/crs';
 import type {ProjectionBounds, ProjectionCoordinates} from '@luma.gl/experimental/gpu-project';
 import type {ProjectionProgramBenchmarkOptions} from '@luma.gl/experimental/gpu-project/benchmarks';
@@ -87,12 +87,12 @@ export function makePerformanceOptions(
   rowCount: number,
   consumerCount: number
 ): ProjectionProgramBenchmarkOptions {
-  const provider = new Proj4Projection({from: 'EPSG:4326', to: fixture.serialized});
+  const provider = new Projection({from: 'EPSG:4326', to: fixture.serialized});
   const bounds = fixture.bounds;
   return {
     coordinates: makePerformanceCoordinates(bounds, rowCount),
     consumerCount,
-    oracleLabel: '@math.gl/proj4 Proj4Projection.project (proj4js)',
+    oracleLabel: '@math.gl/projection Projection.project (proj4js)',
     oracle: position => {
       const valid =
         position.every(Number.isFinite) &&

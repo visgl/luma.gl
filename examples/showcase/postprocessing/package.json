@@ -9,8 +9,8 @@
   },
   "dependencies": {
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e",
-    "@loaders.gl/core": "~5.0.0-alpha.8",
-    "@loaders.gl/gltf": "~5.0.0-alpha.8",
+    "@loaders.gl/core": "~5.0.0-alpha.9",
+    "@loaders.gl/gltf": "~5.0.0-alpha.9",
     "@luma.gl/core": "10.0.0-alpha.2",
     "@luma.gl/effects": "10.0.0-alpha.2",
     "@luma.gl/engine": "10.0.0-alpha.2",
@@ -18,7 +18,7 @@
     "@luma.gl/shadertools": "10.0.0-alpha.2",
     "@luma.gl/webgl": "10.0.0-alpha.2",
     "@luma.gl/webgpu": "10.0.0-alpha.2",
-    "@math.gl/core": "5.0.0-alpha.11"
+    "@math.gl/core": "5.0.0-alpha.12"
   },
   "devDependencies": {
     "typescript": "^6.0.3",
