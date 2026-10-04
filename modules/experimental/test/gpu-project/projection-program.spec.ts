@@ -7,7 +7,7 @@ import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import type {GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {Proj4Projection} from '@math.gl/proj4/classic';
+import {Projection} from '@math.gl/projection';
 import {planCRSProjection, planProjectionPipeline} from '@luma.gl/experimental/gpu-project/crs';
 import {expect, it, vi, type TestContext} from 'vitest';
 import {
@@ -612,7 +612,7 @@ for (const target of [
     const project =
       target === 'native'
         ? (coordinate: number[]) => [1e7 - 2 * coordinate[1], 2e7 - 3 * coordinate[0]]
-        : new Proj4Projection({
+        : new Projection({
             from: 'EPSG:4326',
             to: explicitWebMercator
               ? 'EPSG:3857'
@@ -899,7 +899,7 @@ it('reuses native forward/inverse GPU programs across all UTM zones and hemisphe
           [centralMeridian + 3, 0],
           [centralMeridian + 0.001, south ? -45 : 45]
         ];
-        const oracle = new Proj4Projection({
+        const oracle = new Projection({
           from: 'EPSG:4326',
           to: `+proj=utm +zone=${zone} ${south ? '+south' : ''} +datum=WGS84 +units=m`
         });

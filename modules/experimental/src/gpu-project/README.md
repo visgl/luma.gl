@@ -4,7 +4,7 @@ High-precision, GPU-resident coordinate reprojection for WebGPU command graphs.
 
 `gpu-project` separates projection semantics from projection execution. An application
 supplies any CPU projection provider, including `Projection` from
-`@math.gl/proj4`. The CPU samples that provider using JavaScript Float64
+`@math.gl/projection`. The CPU samples that provider using JavaScript Float64
 arithmetic and compiles adaptive local polynomial patches. A `GPUProjection`
 contributor evaluates those patches over GPU-resident coordinates using fast
 Float32 operations and origin-relative precision.
@@ -40,7 +40,7 @@ import {
   GPUProjection,
   compileProjectionPlan
 } from '@luma.gl/experimental/gpu-project';
-import {Projection} from '@math.gl/proj4';
+import {Projection} from '@math.gl/projection';
 
 // Register any CRS definition that the installed projection provider does not
 // already include.
@@ -75,7 +75,7 @@ device.submit(encoder.finish());
 ```
 
 With math.gl 5, `from` and `to` can also be compatible CRS definitions from `@math.gl/crs`,
-including PROJJSON objects. `@math.gl/proj4` executes them with its TypeScript projection
+including PROJJSON objects. `@math.gl/projection` executes them with its TypeScript projection
 engine; `gpu-project` then samples that provider on the CPU and evaluates the resulting local
 approximation on the GPU. CRS metadata alone does not perform a transformation.
 
@@ -85,7 +85,7 @@ system's units; when the destination is a meter-based CRS, `0.01` requests a
 sampled error of at most one centimeter.
 
 Projection definitions and datum support remain the provider's responsibility.
-`@math.gl/proj4` is optional and is not a dependency of `@luma.gl/experimental`.
+`@math.gl/projection` is optional and is not a dependency of `@luma.gl/experimental`.
 A provider can instead be any object exposing `project(coordinates)` or a
 standalone projection function.
 
@@ -260,7 +260,7 @@ adaptive stage reports unknown composed error because provider sensitivity and p
 are not established. Estimates exclude input/native/output rounding and are never certified bounds.
 
 The optional `@luma.gl/experimental/gpu-project/crs` subpath uses public math.gl 5 APIs. Install its
-optional `@math.gl/crs` and `@math.gl/proj4` peers to use:
+optional `@math.gl/crs` and `@math.gl/projection` peers to use:
 
 - `planProjectionPipeline({pipeline})`: parse a PROJ string or accept math.gl's AST, then lower
   signed 2D axis swaps, horizontal unit conversions, diagonal affine transforms, and stage inversion.

@@ -208,6 +208,6 @@ does not acquire an automatic inverse.
   graduation.
 - `@luma.gl/experimental/gpu-project` owns the evolving program, planners, adaptive compiler,
   projection catalog, and optional math.gl adapters.
-- `@math.gl/crs` and `@math.gl/proj4` remain optional CPU-side definition/resolution/oracle
+- `@math.gl/crs` and `@math.gl/projection` remain optional CPU-side definition/resolution/oracle
   dependencies. They do not enter the low-level GPU execution package.
 - Arrow upload, conversion, and readback remain in `@luma.gl/arrow`.

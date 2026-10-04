@@ -20,7 +20,7 @@
     "@luma.gl/webgl": "10.0.0-alpha.2",
     "@luma.gl/webgpu": "10.0.0-alpha.2",
     "@math.gl/core": "^4.1.0",
-    "@math.gl/sun": "~5.0.0-alpha.11",
+    "@math.gl/sun": "~5.0.0-alpha.12",
     "suncalc": "2.1.0"
   },
   "devDependencies": {
