@@ -18,7 +18,8 @@ import type {GLTFCrowdModelConfiguration, GLTFCrowdModelResources} from './creat
 import {createScenegraphsFromGLTF, type GLTFScenegraphs} from './create-scenegraph-from-gltf';
 import {type GLTFAnimationSelectionOptions, GLTFAnimator} from './gltf-animator';
 import {
-  createGLTFCrowdGPUAnimationLayout,
+  planGLTFCrowdGPUAnimation,
+  type GLTFCrowdGPUAnimationFallbackReason,
   type GLTFCrowdGPUAnimationClip,
   type GLTFCrowdGPUAnimationLayout,
   type GLTFCrowdGPUAnimationOptions,
@@ -95,6 +96,10 @@ export type GLTFCrowdAnimationStats = {
   frameCount: number;
   clipCount: number;
   morphGroupCount: number;
+  /** Conservative GPU atlas byte estimate; CPU staging requires the same amount again. */
+  estimatedByteLength: number;
+  /** Present only when an explicitly requested GPU animation path retained CPU playback. */
+  fallbackReason?: GLTFCrowdGPUAnimationFallbackReason;
 };
 
 /** Initial placement and independent playback controls for one lightweight crowd actor. */
@@ -407,6 +412,8 @@ export class GLTFAnimatedCrowd {
   private readonly lodScreenCoverage: readonly number[];
   private readonly maximumLODLevel: number;
   private readonly lodVertexCounts: readonly number[];
+  private readonly gpuAnimationEstimatedByteLength: number;
+  private readonly gpuAnimationFallbackReason?: GLTFCrowdGPUAnimationFallbackReason;
   private readonly gpuAnimationLayout: GLTFCrowdGPUAnimationLayout | null;
   private readonly gpuAnimationClips: ReadonlyMap<string, GLTFCrowdGPUAnimationClip>;
   private currentLODView: GLTFCrowdLODView | null = null;
@@ -449,27 +456,16 @@ export class GLTFAnimatedCrowd {
           })
         : gltf;
     this.lodSource = authoredLOD ? 'authored' : this.gltf !== gltf ? 'generated' : 'none';
-    const requestedGPUAnimationLayout = gpuAnimation
-      ? createGLTFCrowdGPUAnimationLayout(this.gltf, gpuAnimation)
+    const animationPlan = gpuAnimation
+      ? planGLTFCrowdGPUAnimation(this.gltf, gpuAnimation, device)
       : null;
     const jointsPerInstance = Math.max(
       0,
       ...(this.gltf.skins || []).map(skin => skin.joints.length)
     );
-    const maximumMorphTargetCount = Math.max(
-      0,
-      ...this.gltf.nodes.flatMap(node =>
-        (node.mesh?.primitives || []).map(primitive => primitive.targets?.length || 0)
-      )
-    );
-    const maximumAnimationFrameStride = 4 + jointsPerInstance * 4 + maximumMorphTargetCount;
-    this.gpuAnimationLayout =
-      requestedGPUAnimationLayout &&
-      (device.type === 'webgpu' ||
-        (maximumAnimationFrameStride <= device.limits.maxTextureDimension2D &&
-          requestedGPUAnimationLayout.frameCount <= device.limits.maxTextureDimension2D))
-        ? requestedGPUAnimationLayout
-        : null;
+    this.gpuAnimationLayout = animationPlan?.layout || null;
+    this.gpuAnimationEstimatedByteLength = animationPlan?.estimatedByteLength || 0;
+    this.gpuAnimationFallbackReason = animationPlan?.fallbackReason;
     this.gpuAnimationEnabled = Boolean(this.gpuAnimationLayout);
     this.gpuAnimationClips = new Map(
       (this.gpuAnimationLayout?.clips || []).map(clip => [clip.name, clip])
@@ -551,6 +547,8 @@ export class GLTFAnimatedCrowd {
   get animationStats(): GLTFCrowdAnimationStats {
     return {
       mode: this.gpuAnimationEnabled ? 'gpu' : 'cpu',
+      estimatedByteLength: this.gpuAnimationEstimatedByteLength,
+      ...(this.gpuAnimationFallbackReason ? {fallbackReason: this.gpuAnimationFallbackReason} : {}),
       ...(this.gpuAnimationLayout ? {sampleRate: this.gpuAnimationLayout.sampleRate} : {}),
       frameCount: this.gpuAnimationLayout?.frameCount || 0,
       clipCount: this.gpuAnimationLayout?.clips.length || 0,

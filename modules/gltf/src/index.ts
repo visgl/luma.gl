@@ -41,6 +41,7 @@ export {
   type GLTFCrowdPrimitiveGroup
 } from './gltf/gltf-animated-crowd';
 export {
+  type GLTFCrowdGPUAnimationFallbackReason,
   type GLTFCrowdGPUAnimationClip,
   type GLTFCrowdGPUAnimationLayout,
   type GLTFCrowdGPUAnimationOptions
