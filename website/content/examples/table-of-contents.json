@@ -260,6 +260,7 @@
       "deck/flow-particles",
       "deck/point-glow",
       "deck/ambient-occlusion",
+      "deck/soft-shadows",
       "deck/sketch-edges",
       "deck/scene-buffers",
       "deck/pattern-fills",

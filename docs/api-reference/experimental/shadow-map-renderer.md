@@ -38,6 +38,10 @@ already-open depth-only render pass. When several views are recorded before subm
 independent uniform buffers or models per view; repeatedly rewriting one uniform buffer would make
 all recorded draws observe its final value.
 
+Camera projections default to math.gl's OpenGL `[-1, 1]` depth convention. Set
+`camera.clipDepth: 'zero-to-one'` for an already-converted WebGPU projection. The returned light
+camera matrices always use WebGPU `[0, 1]` depth for both caster rendering and receiver sampling.
+
 ## Shader integration
 
 Add `shadow` to a WebGPU model and apply the returned visibility to each direct-light term:
