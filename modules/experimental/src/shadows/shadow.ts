@@ -317,8 +317,9 @@ fn shadow_getSpotFactor(lightIndex: i32, worldPosition: vec3f, worldNormal: vec3
 }
 
 fn shadow_pointReferenceDepth(majorDistance: f32, nearPlane: f32, farPlane: f32) -> f32 {
-  return (farPlane + nearPlane) / (farPlane - nearPlane) -
-    (2.0 * farPlane * nearPlane) / ((farPlane - nearPlane) * majorDistance);
+  // Match the cube-face projection and stored WebGPU depth in [0, 1].
+  return farPlane / (farPlane - nearPlane) -
+    (farPlane * nearPlane) / ((farPlane - nearPlane) * majorDistance);
 }
 
 fn shadow_pointBasis(direction: vec3f) -> mat2x3f {

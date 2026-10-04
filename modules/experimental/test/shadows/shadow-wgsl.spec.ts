@@ -65,7 +65,11 @@ struct VertexOutput {
   let factor = shadow_getDirectionalFactor(input.worldPosition, normal, 1.0) *
     shadow_getSpotFactor(0, input.worldPosition, normal) *
     shadow_getPointFactor(0, input.worldPosition, normal);
-  return vec4f(vec3f(factor), 1.0);
+  // A receiver just beyond the near plane must remain behind the depth-0.35 blocker.
+  let nearPointFactor = shadow_getPointFactor(0, vec3f(0.2, 3.0, 0.0), normal);
+  let nearDepth = shadow_pointReferenceDepth(0.1, 0.1, 12.0);
+  let farDepth = shadow_pointReferenceDepth(12.0, 0.1, 12.0);
+  return vec4f(nearPointFactor, nearDepth, farDepth, 1.0 + factor * 0.0);
 }`;
 
 it('shadow WGSL assembles and reflects group-2 depth resources', async () => {
@@ -199,6 +203,9 @@ it('ShadowMapRenderer executes caster and receiver draws for every light view', 
   receiverPass.end();
   device.submit();
   const pixel = await readPixels(colorTexture, 1, 1);
+  expect(pixel[0], 'a blocker shadows a receiver near the point light').toBe(0);
+  expect(pixel[1], 'point reference near plane maps to depth zero').toBe(0);
+  expect(pixel[2], 'point reference far plane maps to depth one').toBe(255);
   expect(pixel[3], 'receiver sampled all auxiliary shadow bindings').toBe(255);
 
   framebuffer.destroy();
