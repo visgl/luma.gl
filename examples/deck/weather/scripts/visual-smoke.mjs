@@ -198,7 +198,11 @@ try {
         if (preset !== 'clear') await page.evaluate(() => window.weatherScene.setIntensity(0));
         await page.waitForTimeout(250);
         const idle = await page.evaluate(() => ({...window.weatherScene.diagnostics}));
-        await page.waitForTimeout(250);
+        // A software-GPU frame can outlast 250 ms. Drain actual updates and redraws before asserting idle behavior.
+        await page.waitForFunction(() => {
+          const deck = window.weatherScene.deck;
+          return !deck.layerManager.needsUpdate() && !deck.needsRedraw();
+        }, undefined, {timeout: 30_000});
         const settled = await page.evaluate(() => ({...window.weatherScene.diagnostics}));
         assert(settled.frames - idle.frames <= 1,
           `${backend}: ${preset} disabled precipitation drains one pending frame`);
