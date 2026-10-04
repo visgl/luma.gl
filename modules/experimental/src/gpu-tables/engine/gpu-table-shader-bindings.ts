@@ -42,6 +42,8 @@ export type GPUTableShaderBindingsProps = {
 
 /** Draw-ready table resources for one preserved GPU record batch. */
 export type GPUTableShaderBindingBatch = {
+  /** Source row count; skip zero-row batches before binding their storage ranges. */
+  numRows: number;
   attributes: Record<string, GPUBuffer>;
   attributeBuffers: GPUBuffer[];
   /** Byte offset where each attribute buffer's rows start, keyed like `attributes`. */
@@ -290,7 +292,7 @@ function prepareBindings(
     if (rowMultiplierBinding) {
       bindings['gpuTableColumns'] = rowMultiplierBinding;
     }
-    return {attributes, attributeBuffers, attributeByteOffsets, bindings};
+    return {numRows: batch.numRows, attributes, attributeBuffers, attributeByteOffsets, bindings};
   });
 
   return {

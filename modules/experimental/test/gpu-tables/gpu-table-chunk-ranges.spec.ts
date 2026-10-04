@@ -10,6 +10,7 @@ import {
   type Device,
   type ShaderLayout
 } from '@luma.gl/core';
+import {DynamicBuffer, Model} from '@luma.gl/engine';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
   GPURecordBatch,
@@ -263,16 +264,19 @@ it('GPUTableModel reads vertex attributes from each chunk byteOffset', async ({s
   }
 });
 
-it('GPUTableModel skips empty storage-backed batches and draws the remaining batches', async ({
-  skip
-}) => {
+it.for([
+  false,
+  true
+])('GPUTableModel skips empty storage batches (empty first: %s)', async (emptyFirst, {skip}) => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     skip('WebGPU unavailable');
     return;
   }
   // Each pixel row is (pixelIndex, value). The middle batch has no rows.
-  const batchPixels = [new Float32Array([0, 1]), new Float32Array(0), new Float32Array([1, 2])];
+  const batchPixels = emptyFirst
+    ? [new Float32Array(0), new Float32Array([0, 1]), new Float32Array([1, 2])]
+    : [new Float32Array([0, 1]), new Float32Array(0), new Float32Array([1, 2])];
   const buffers = batchPixels.map(pixels =>
     device.createBuffer({
       usage: Buffer.STORAGE | Buffer.COPY_DST,
@@ -318,6 +322,9 @@ it('GPUTableModel skips empty storage-backed batches and draws the remaining bat
   const drawnBatchIndices: number[] = [];
 
   const renderPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
+  if (emptyFirst) {
+    expect(model.draw(renderPass), 'direct empty draw is a successful no-op').toBe(true);
+  }
   const drawSuccess = model.drawBatches(renderPass, {
     onBatch: (_batch, batchIndex) => drawnBatchIndices.push(batchIndex)
   });
@@ -330,7 +337,7 @@ it('GPUTableModel skips empty storage-backed batches and draws the remaining bat
     'draws the batches before and after the empty batch'
   ).toEqual([1, 2, 0, 0]);
   expect(Boolean(drawSuccess), 'reports a successful batched draw').toBe(true);
-  expect(drawnBatchIndices, 'does not draw the empty batch').toEqual([0, 2]);
+  expect(drawnBatchIndices, 'does not draw the empty batch').toEqual(emptyFirst ? [1, 2] : [0, 2]);
   expect(table.batches.length, 'preserves the empty batch').toBe(3);
 
   framebuffer.destroy();
@@ -398,3 +405,72 @@ async function readPixels(texture: Texture, width: number): Promise<number[]> {
     buffer.destroy();
   }
 }
+
+it('Model preserves interleaved attribute offsets when a DynamicBuffer reallocates', async ({
+  skip
+}) => {
+  const devices = [await getWebGPUTestDevice(), await getWebGLTestDevice()].filter(
+    (device): device is Device => Boolean(device)
+  );
+  if (devices.length === 0) {
+    skip('No GPU test device available');
+    return;
+  }
+  for (const device of devices) {
+    const buffer = new DynamicBuffer(device, {
+      data: new Float32Array([-9, 200, 0, 1, 1, 2, 2, 3]),
+      usage: Buffer.VERTEX | Buffer.COPY_SRC | Buffer.COPY_DST
+    });
+    const model = new Model(device, {
+      ...(device.type === 'webgpu'
+        ? {source: PIXEL_VALUE_WGSL}
+        : {vs: PIXEL_VALUE_VERTEX_SHADER, fs: PIXEL_VALUE_FRAGMENT_SHADER}),
+      shaderLayout: PIXEL_VALUE_SHADER_LAYOUT,
+      bufferLayout: [
+        {
+          name: 'pixels',
+          byteStride: 8,
+          attributes: [
+            {attribute: 'pixelIndex', format: 'float32', byteOffset: 0},
+            {attribute: 'value', format: 'float32', byteOffset: 4}
+          ]
+        }
+      ],
+      topology: 'point-list',
+      vertexCount: 3,
+      colorAttachmentFormats: ['rgba8unorm']
+    });
+    model.setAttributes({pixels: buffer}, {byteOffsets: {pixels: 8}});
+    const originalBuffer = buffer.buffer;
+    buffer.resize({byteLength: buffer.byteLength * 2, preserveData: true});
+    expect(buffer.buffer).not.toBe(originalBuffer);
+    model.predraw(device.commandEncoder);
+    const texture = device.createTexture({
+      width: PIXEL_COUNT,
+      height: 1,
+      format: 'rgba8unorm',
+      usage: Texture.RENDER | Texture.COPY_SRC
+    });
+    const framebuffer = device.createFramebuffer({
+      width: PIXEL_COUNT,
+      height: 1,
+      colorAttachments: [texture]
+    });
+    try {
+      const renderPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
+      expect(model.draw(renderPass), device.type).toBe(true);
+      renderPass.end();
+      device.submit();
+      const pixels = await readPixels(texture, PIXEL_COUNT);
+      expect(
+        Array.from({length: PIXEL_COUNT}, (_, pixelIndex) => pixels[pixelIndex * 4]),
+        device.type
+      ).toEqual([1, 2, 3, 0]);
+    } finally {
+      framebuffer.destroy();
+      texture.destroy();
+      model.destroy();
+      buffer.destroy();
+    }
+  }
+});

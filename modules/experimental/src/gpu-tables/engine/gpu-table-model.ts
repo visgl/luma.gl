@@ -113,6 +113,21 @@ export class GPUTableModel extends Model {
     super.destroy();
   }
 
+  /** Skips a direct draw while an empty prepared storage range is still bound. */
+  override draw(renderPass: RenderPass): boolean {
+    const firstBatch = this.tableShaderBindings?.batches[0];
+    if (
+      firstBatch?.numRows === 0 &&
+      Object.entries(firstBatch.bindings).some(
+        ([name, binding]) =>
+          this.bindings[name] === binding && 'size' in binding && binding.size === 0
+      )
+    ) {
+      return true;
+    }
+    return super.draw(renderPass);
+  }
+
   /** Replaces the bound GPU table when one is supplied. */
   setProps(props: Partial<GPUTableModelProps>): void {
     if (props.table) {
