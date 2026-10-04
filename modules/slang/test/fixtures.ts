@@ -79,3 +79,85 @@ void main() {
   values[4] = float(0xFF);
 }
 `;
+
+export const LANGUAGE_SHADER = `
+struct Pair { float first; float second; };
+[vk::binding(0,0)] RWStructuredBuffer<float> values;
+float adjust(float value) { return value + 1; }
+float2 adjust(float2 value) { return value + 1; }
+float update(inout float value, out float previous) { previous = value; value += 1; return value; }
+bool advance(inout int counter) { counter += 1; return counter < 4; }
+[shader("compute")] [numthreads(1,1,1)] void main() {
+  float items[2] = {2, 3};
+  Pair pair = {4, 5};
+  float previous = 0;
+  float chosen = true ? update(items[0], previous) : update(items[1], previous);
+  values[0] = chosen;
+  values[1] = items[1];
+  values[2] = previous;
+  int counter = 0;
+  bool skipped = false && advance(counter);
+  float accumulated = 0;
+  for (int index = 0; advance(counter); index++) {
+    if (index == 1) { continue; }
+    accumulated += 1;
+  }
+  values[3] = float(counter);
+  values[4] = accumulated;
+  float2 coordinates = {1, 2};
+  coordinates.yx = float2(6, 7);
+  values[5] = coordinates.x;
+  values[6] = adjust(coordinates).y;
+  values[7] = adjust(pair.first);
+  values[8] = lerp(update(items[0], previous), 8.0, 0.5);
+  values[9] = items[0];
+  counter = 0;
+  while (advance(counter)) { if (counter == 2) { continue; } }
+  values[10] = float(counter);
+}
+`;
+export const LANGUAGE_VALUES = [3, 3, 2, 4, 2, 7, 7, 5, 6, 4, 4];
+export const UNIFORM_DECLARATIONS = `
+struct Inner { float scale; bool enabled; float2 offset; };
+struct Settings { float bias; Inner inner; float weights[3]; float2x2 transform; bool flags[2]; };
+[vk::binding(0,0)] ConstantBuffer<Settings> settings;
+`;
+export const UNIFORM_SHADER =
+  UNIFORM_DECLARATIONS +
+  `
+[vk::binding(1,0)] RWStructuredBuffer<float> values;
+[shader("compute")] [numthreads(1,1,1)] void main() {
+  values[0] = settings.bias + settings.inner.scale;
+  values[1] = settings.weights[2];
+  float2 projected = mul(settings.transform, float2(1, 2));
+  values[2] = projected.x;
+  values[3] = projected.y;
+  values[4] = settings.flags[0] && !settings.flags[1] && settings.inner.enabled ? settings.inner.offset.y : 0.0;
+}
+`;
+export const UNIFORM_VALUES = {
+  bias: 1,
+  inner: {scale: 2, enabled: true, offset: [3, 4]},
+  weights: [5, 6, 7],
+  transform: [1, 2, 3, 4],
+  flags: [true, false]
+};
+export const UNIFORM_RESULTS = [3, 7, 5, 11, 4];
+
+export const OUTPUT_RENDER_SHADER = `
+float adjust(inout float value) { value += 1.0; return value > 0.0 ? value : 0.0; }
+[shader("vertex")] void vertexMain(uint identifier : SV_VertexID, out float4 position : SV_Position, out float2 coordinates : TEXCOORD0) {
+  float2 point = float2(-1,-1);
+  if (identifier == 1u) { point = float2(3,-1); }
+  if (identifier == 2u) { point = float2(-1,3); }
+  position = float4(point,0,1);
+  coordinates = point * 0.5 + 0.5;
+  float unused = 0.0;
+  unused = adjust(unused);
+}
+[shader("fragment")] void fragmentMain(float2 coordinates : TEXCOORD0, out float4 color : SV_Target) {
+  float value = 0.0;
+  value = adjust(value);
+  color = float4(coordinates,0.25,value);
+}
+`;

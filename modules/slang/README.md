@@ -30,7 +30,7 @@ const shader = transpileSlang(source, {
 
 ## API
 
-`transpileSlang(source, options)` returns `{code, target, entryPoint, stage, reflection}`.
+`transpileSlang(source, options)` returns `{code, target, entryPoint, stage, reflection, sourceMap}`.
 
 - `target`: `wgsl` or `glsl`.
 - `entryPoint`: source function to compile. Required when multiple functions carry `[shader]`.
@@ -52,18 +52,48 @@ omitted from GLSL reflection.
 Reflection contains flattened `inputs` and `outputs` with original paths, Slang types, semantics,
 and target builtins or locations. `bindings` contains original resource names, shader names,
 groups, binding indices, kind, and access. Compute reflection also includes `workgroupSize`.
-This is binding reflection, not a byte-layout calculator. Use the target language's layout rules
-when packing uniform or storage data.
+Buffer-backed resources include `layout` with field offsets, sizes, alignments, array strides,
+and matrix strides. Member offsets are relative to their containing aggregate. Structured-buffer
+reflection describes one element and supplies `elementStride`; plain GLSL uniform globals have
+no buffer layout. `texture` describes texture dimension, sample type, component count, and storage
+format/access when applicable.
+
+## Packing uniforms and mapping diagnostics
+
+```typescript
+import {packSlangUniforms, mapSlangDiagnostic} from '@luma.gl/slang';
+
+const binding = shader.reflection.bindings.find(binding => binding.kind === 'uniform');
+if (binding?.layout) {
+  const bytes = packSlangUniforms(binding.layout, {
+    material: {color: [1, 0.5, 0.25, 1], enabled: true},
+    weights: [0.25, 0.75]
+  });
+  // Upload bytes to the uniform buffer associated with binding.group/binding.binding.
+}
+const diagnostic = mapSlangDiagnostic(shader.sourceMap, generatedLine, targetCompilerMessage);
+```
+
+Values must match the reflected structure: objects for structs, arrays for arrays, and numeric
+arrays for vectors/matrices. Matrix values are flattened in Slang row order. Bool values are
+stored as 32-bit 0/1 values. Packing is explicit and application-owned; the shader-module plugin
+still requires application registration and introduces no static Slang imports or dependencies.
+
+`sourceMap` maps one-based generated lines to original statement/declaration starts. Use
+`mapSlangDiagnostic` with a destination compiler's line and message. It returns a source diagnostic
+or `undefined` for an unknown line. Columns identify statement starts, not exact expression spans;
+generated wrappers/helper lines may map to their associated declaration.
 
 ## Supported language
 
 - `float`, `int`, `uint`, `bool`, vectors of width 2–4, float matrices from 2x2 through 4x4,
   structures (including nested structures), and fixed-size array declarators.
-- Functions, forward references, calls, scalar casts, vector/structure constructors, and
-  row-ordered scalar matrix constructors. Only functions reachable from the selected entry point
-  are emitted. Recursive functions and overloaded functions are rejected.
+- Functions, forward references, overloads, calls, scalar/vector casts, vector/structure constructors,
+  row-ordered scalar matrix constructors, and aggregate initializer lists with zero-filled omissions. Only functions reachable from the selected entry point
+  are emitted. Recursive functions and overloaded entry points are rejected. Helper and entry-point `out`/`inout`
+  parameters are supported; output arguments require an exact type and writable destination.
 - Variables, constants, static globals, assignments, component access, indexing, arithmetic,
-  comparisons of scalars, logical operators, and common mathematical intrinsics such as `mul`,
+  comparisons of scalars, logical operators, lazy conditional expressions, writable swizzles, and common mathematical intrinsics such as `mul`,
   `lerp`, `saturate`, `dot`, `cross`, `normalize`, `transpose`, derivatives, and trigonometry.
 - Blocks, `if`/`else`, `while`, `for`, `return`, `break`, `continue`, and fragment `discard`.
   Increment/decrement and assignment expressions are supported in statement and loop-update positions.
@@ -74,7 +104,13 @@ when packing uniform or storage data.
   `SV_GroupIndex`. Builtin types and stage/direction are checked.
 - Uniform globals, `cbuffer`, `ConstantBuffer<Struct>`, `StructuredBuffer<T>`,
   `RWStructuredBuffer<T>`, `groupshared`, and `GroupMemoryBarrierWithGroupSync`.
-- `Texture2D<float4>`, `SamplerState`, `Sample`, `SampleLevel`, and `Load`.
+- `Texture2D<T>`, `Texture2DArray<T>`, `TextureCube<T>`, `Texture3D<T>`, `SamplerState`,
+  `Sample`, `SampleLevel`, and `Load` (except cube loads). Elements can be numeric scalars or vectors.
+  Integer textures use `Load`, not filtered sampling. `SamplerComparisonState`, `SampleCmp`, and
+  `SampleCmpLevelZero` provide depth comparison sampling.
+- `WTexture2D<T>` and `RWTexture2D<T>` support indexed storage writes and read/write loads.
+  Declare a matching `[format("rgba8")]` attribute. Supported formats are `rgba8`, `rgba8_snorm`,
+  `rgba16f`, `rgba32f`, `rgba32i`, `rgba32ui`, `r32f`, `r32i`, and `r32ui`.
 - `[vk::binding(binding, group)]` and `register(bN|tN|sN|uN, spaceN)`. Bindings share a single
   namespace as required by WebGPU, so collisions between, for example, `t0` and `s0` require
   explicit distinct bindings. Unannotated resources receive unused bindings in group zero.
@@ -83,23 +119,29 @@ when packing uniform or storage data.
 
 - GLSL structured buffers and compute require `450`. GLSL 450 supports binding group zero.
   WebGL uniforms are located by their generated names; reflected groups/bindings describe the
-  source binding plan. Texture and sampler resources combine into GLSL `sampler2D` uniforms,
+  source binding plan. Texture and sampler resources combine into GLSL sampler uniforms,
   and each texture may use only one sampler. The caller applies the sampler state to that texture.
   GLSL ES 300 keeps sampler bindings application-managed; explicit GLSL 450 output emits each
   texture's assigned `layout(binding = N)`, including automatically assigned bindings.
 - Float matrices are stored transposed relative to their mathematical Slang dimensions so
   matrix indexing retains row semantics. `mul` reverses matrix operands to preserve the result.
   Applications must pack externally supplied matrices using this row-as-column representation.
-- WGSL rejects uniform arrays, bool uniforms, nested struct-valued uniform members, and matrices
-  with two-component stored columns until uniform layout legalization is implemented. Flat root
-  uniform structs remain supported, as do nested structs in local values and storage buffers.
-  Storage bools are rejected on both targets.
-- WGSL rejects conditional (`?:`) expressions, increments used as values, assignments used as
-  values, writes to multiple-component swizzles, and component-wise matrix multiplication.
-  These need additional lowering to preserve evaluation order and side effects.
+- Uniform buffers use a shared std140-compatible layout. WGSL legalizes nested structs, arrays,
+  bools, and matrices through separate uniform representations, preserving ordinary local/storage
+  value types. Storage bools remain unsupported on both targets.
+- WGSL still rejects increments or assignments used as values and component-wise matrix multiplication.
+  Aggregate initializer lists require a declared destination type; passing lists directly to overloaded
+  functions is unsupported. Overload resolution covers the supported scalar/vector numeric conversions.
+- Comparison sampling requires a scalar float texture and a comparison sampler. `SampleCmp` is
+  fragment-only; explicit zero-level comparison outside fragment shaders supports 2D textures.
+  GLSL depth samplers cannot also perform `Load`, and GLSL zero-level comparisons require 2D textures.
+  Array sampling coordinates contain the layer in the final component; loads include a final mip level.
+- Storage textures require GLSL 450 and therefore are unavailable on WebGL. WebGPU read/write storage
+  formats depend on device capabilities, which the application must request. Compound storage-texture
+  assignments and storage-texture elements as `out`/`inout` arguments require explicit load/store steps.
 - Imports/includes/macros, namespaces, generics/interfaces, extensions, methods, autodiff,
-  function overloads, initializer lists, inferred types, `switch`, `do`/`while`, atomics,
-  resource arrays, non-2D textures, and helper/entry `out`/`inout` parameters are not supported.
+  inferred types, `switch`, `do`/`while`, atomics, resource arrays, multisampled textures, and
+  storage textures other than 2D are not supported.
 - This is a transpiler rather than a complete Slang semantic validator. Compile generated source
   on the destination device to validate remaining typing, resource-layout, uniformity, and limits.
 
@@ -118,7 +160,21 @@ yarn lint fix
 ```
 
 The GPU tests compile and link a WebGL shader pair, validate WGSL render shaders, and execute
-WGSL compute shaders with readback assertions for loops and rectangular matrix multiplication.
+WGSL compute shaders with readback assertions for evaluation order, output parameters, aggregate
+initialization, matrix multiplication, and shared uniform packing. Texture tests verify sampling on
+both backends and storage writes on WebGPU.
+
+Committed differential fixtures come from official Slang **2026.19** and run without a native compiler.
+They compare execution results and uniform offsets/strides. To regenerate them using that compiler:
+
+```sh
+SLANGC=/path/to/slangc node scripts/slang/generate-reference.mjs
+```
+
+The reference uniform fixture uses numeric `uint` flags because that upstream version emits
+non-host-shareable WGSL bool uniform fields. Its numeric ABI and results are compared using the same
+packed bytes; separate GPU tests cover this transpiler's bool legalization. These fixtures verify
+specific supported cases, not full Slang compatibility.
 
 ### Unified WGSL render programs
 

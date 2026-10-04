@@ -29,7 +29,12 @@ export type SlangResourceBinding = {
   group: number;
   binding: number;
   kind: 'uniform' | 'storage' | 'texture' | 'sampler';
-  access: 'read' | 'read_write';
+  access: 'read' | 'read_write' | 'write';
+  /** Target buffer layout; uniform buffers use a shared std140-compatible representation. */
+  layout?: SlangTypeLayout;
+  /** Byte stride of a StructuredBuffer element. */
+  elementStride?: number;
+  texture?: SlangTextureLayout;
   /** GLSL block name for uniform/storage buffer binding. */
   blockName?: string;
   /** Source sampler combined with a GLSL texture uniform. */
@@ -43,6 +48,7 @@ export type SlangReflection = {
 };
 export type SlangTranspileResult = {
   code: string;
+  sourceMap: SlangSourceMapEntry[];
   target: SlangTarget;
   entryPoint: string;
   stage: SlangShaderStage;
@@ -58,7 +64,46 @@ export type SlangWGSLProgramOptions = {
 };
 export type SlangWGSLProgramResult = {
   code: string;
+  sourceMap: SlangSourceMapEntry[];
   target: 'wgsl';
   /** Per-source-entry metadata, including generated pipeline entry-point names. */
-  entryPoints: Record<string, Omit<SlangTranspileResult, 'code' | 'target'>>;
+  entryPoints: Record<string, Omit<SlangTranspileResult, 'code' | 'target' | 'sourceMap'>>;
+};
+
+/** Offsets are relative to the containing aggregate. Matrices store Slang rows as target columns. */
+export type SlangTypeLayout = {
+  type: string;
+  name?: string;
+  offset: number;
+  size: number;
+  alignment: number;
+  arrayStride?: number;
+  matrixStride?: number;
+  length?: number;
+  rows?: number;
+  columns?: number;
+  element?: SlangTypeLayout;
+  members?: SlangTypeLayout[];
+};
+export type SlangUniformValue =
+  | number
+  | boolean
+  | ArrayLike<number | boolean>
+  | readonly SlangUniformValue[]
+  | {[name: string]: SlangUniformValue};
+export type SlangSourceMapEntry = {
+  generatedLine: number;
+  sourceName: string;
+  offset: number;
+  line: number;
+  column: number;
+};
+
+export type SlangTextureLayout = {
+  dimension: '2d' | '2d-array' | 'cube' | '3d';
+  sampleType: 'float' | 'sint' | 'uint' | 'depth';
+  components: number;
+  format?: string;
+  glslFormat?: string;
+  access?: 'write' | 'read_write';
 };

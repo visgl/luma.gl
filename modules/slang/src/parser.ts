@@ -233,6 +233,12 @@ export class SlangParser {
         'StructuredBuffer',
         'RWStructuredBuffer',
         'Texture2D',
+        'Texture2DArray',
+        'TextureCube',
+        'Texture3D',
+        'RWTexture2D',
+        'WTexture2D',
+        'SamplerComparisonState',
         'SamplerState'
       ].includes(name.text)
     ) {
@@ -421,6 +427,17 @@ export class SlangParser {
         operand: this.parsePrefix(),
         postfix: false
       };
+    }
+    if (token.text === '{') {
+      const elements: Expression[] = [];
+      if (!this.match('}')) {
+        do {
+          if (this.peek().text === '}') break;
+          elements.push(this.parseExpression());
+        } while (this.match(','));
+        this.expect('}');
+      }
+      return {...token, kind: 'initializer', elements};
     }
     if (token.text === '(') {
       if (this.isType(this.peek().text) && this.peek(1).text === ')') {

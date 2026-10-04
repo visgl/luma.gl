@@ -9,9 +9,14 @@ import type {
   SlangWGSLProgramOptions,
   SlangWGSLProgramResult
 } from './types';
+import {mapSlangSource} from './source-map';
 import {SlangTranspileError} from './diagnostics';
 
 export type {
+  SlangTextureLayout,
+  SlangTypeLayout,
+  SlangUniformValue,
+  SlangSourceMapEntry,
   SlangTarget,
   SlangShaderStage,
   SlangTranspileOptions,
@@ -23,6 +28,8 @@ export type {
   SlangWGSLProgramResult
 } from './types';
 export type {SlangDiagnostic} from './diagnostics';
+export {packSlangUniforms} from './layout';
+export {mapSlangDiagnostic} from './source-map';
 export {SlangTranspileError} from './diagnostics';
 
 /** Transpile a self-contained Slang shader in TypeScript, without native or WASM dependencies. */
@@ -78,7 +85,7 @@ export function transpileSlangWGSL(
     };
   }
   return {
-    code: [...declarations, ...entries].join('\n\n') + '\n',
+    ...mapSlangSource([...declarations, ...entries].join('\n\n') + '\n', sourceName),
     target: 'wgsl',
     entryPoints: metadata
   };
