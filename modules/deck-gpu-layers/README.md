@@ -417,3 +417,72 @@ owned resources; adding it again creates a fresh renderer. Backend support follo
 provided, not just this adapter. The renderer processes one supplied image per frame; an
 application selecting a per-view capture must arrange its own multi-view composition and
 history isolation. Tone mapping and output transfer remain explicit steps in the graph.
+
+## Sun and Moon in the sky
+
+`SunLayer` and `MoonLayer` draw camera-relative disks at sky distance. They follow camera
+rotation, remain stationary when the map pans or zooms, and sit behind foreground geometry.
+They work on WebGPU and WebGL2, in perspective flat-map and orbit views. Directions use local
+east, north, up on a map; orbit scenes use their world axes. Orthographic views and bodies
+whose centers are below the horizon do not render. Globe-view tangent-frame conversion is
+not currently supported.
+
+```ts
+new SunLayer({
+  id: 'sun',
+  coordinateOrigin: [-74, 40.7, 0],
+  direction: towardSun,
+  radiusPixels: 12,
+  haloIntensity: 0.3
+});
+new MoonLayer({
+  id: 'moon',
+  coordinateOrigin: [-74, 40.7, 0],
+  direction: towardMoon,
+  radiusPixels: 16,
+  phase: 0.25,
+  limbAngle: 0
+});
+```
+
+`direction` points **toward** the body, the opposite of an incoming light-ray direction.
+`radiusPixels` specifies disk size in CSS pixels; the solar halo extends to three radii and
+reuses luma.gl's `pointGlow` module. `color` uses 8-bit RGBA. The Moon has a procedural surface,
+phase shading, and a faint dark-side contribution: `phase` is 0 for new, 0.25 for first quarter,
+0.5 for full, and 0.75 for last quarter. `limbAngle` rotates the phase pattern counterclockwise
+from the screen's rightward axis, in radians.
+
+Applications supply their own astronomical positions and moon phase. The layers add no
+astronomy dependency, do not illuminate geometry or cast shadows, do not write depth, and do
+not participate in picking. Draw them before transparent scene layers. The Riverfront soft
+shadows example demonstrates `@math.gl/sun` for solar lighting and SunCalc for lunar inputs.
+
+## Clouds in the sky
+
+`CloudLayer` renders a procedural cloud volume behind flat-map scene geometry on WebGPU and
+WebGL2. Place SunLayer/MoonLayer first, then CloudLayer, then opaque foreground layers. Clouds
+attenuate celestial disks without writing depth or participating in picking. Globe and
+orthographic views are not supported. Positions use local east/north/up metres relative to
+`coordinateOrigin`; the camera can move through the slab.
+
+```ts
+new CloudLayer({
+  id: 'clouds',
+  coordinateOrigin: [-74, 40.7, 0],
+  cover: 0.4,
+  altitude: 1000,
+  thickness: 1200,
+  scale: 1400,
+  time: elapsedSeconds,
+  velocity: [18, 0],
+  sunDirection: towardSun,
+  sunColor: [1, 0.95, 0.85]
+});
+```
+
+`cover` ranges from 0 (clear) to 1 (overcast). `altitude`, `thickness`, and `scale` are metres;
+`density` is inverse metres. `velocity` is east/north metres per second. The application owns
+the elapsed `time` and redraw schedule. Sun direction must be nonzero; sun tint is linear RGB.
+The shared luma.gl `clouds` shader integrates 64 density samples with approximate sunlight
+scattering, and reuses the `valueNoise` module used by height fog. It adds sky clouds rather
+than cloud shadows on buildings or terrain; per-pixel cost increases with sky area.

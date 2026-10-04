@@ -105,7 +105,8 @@ export class RiverfrontShadowEffect implements Effect {
           normalBias: 0.12,
           depthBias: 2,
           depthBiasSlopeScale: 2,
-          strength: this.settings.enabled ? 1 : 0
+          strength:
+            this.settings.enabled && getRiverfrontSun(this.settings.hour).direction[2] > 0 ? 1 : 0
         }
       ],
       drawShadowCasters: view => this.drawCasters(view)

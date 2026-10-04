@@ -15631,6 +15631,7 @@ __metadata:
     "@math.gl/sun": "npm:~5.0.0-alpha.11"
     playwright: "npm:^1.58.0"
     pngjs: "npm:^7.0.0"
+    suncalc: "npm:2.1.0"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.0.0"
   languageName: unknown
@@ -22458,6 +22459,13 @@ __metadata:
   peerDependencies:
     postcss: ^8.4.31
   checksum: 10c0/2dd2bccfd8311ff71492e63a7b8b86c3d7b1fff55d4ba5a2357aff97743e633d351cdc2f5ae3c0057637d00dab4ef5fc5b218a1b370e4585a41df22b5a5128be
+  languageName: node
+  linkType: hard
+
+"suncalc@npm:2.1.0":
+  version: 2.1.0
+  resolution: "suncalc@npm:2.1.0"
+  checksum: 10c0/fc55a7fd0867ce016a5a185da4a940ff25594e7b3a68925a2f774ae7f245970cc0c2095d4de7112d5f85f776a0aabdb849d9e64b41b676bdd1195a7b92cf59fb
   languageName: node
   linkType: hard
 

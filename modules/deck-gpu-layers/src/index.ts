@@ -50,3 +50,8 @@ export {
   type ShaderPassEffectProps,
   type ShaderPassEffectRenderOptions
 } from './effects/shader-pass-effect';
+
+export {SunLayer, type SunLayerProps} from './layers/sun-layer';
+export {MoonLayer, type MoonLayerProps} from './layers/moon-layer';
+
+export {CloudLayer, type CloudLayerProps} from './layers/cloud-layer';

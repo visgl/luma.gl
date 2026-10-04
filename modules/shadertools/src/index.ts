@@ -226,3 +226,6 @@ export type {
   ShaderTranspileResult,
   ShaderTranspilerEntryPoints
 } from './lib/shader-transpiler/shader-transpiler';
+
+export {valueNoise} from './modules/math/value-noise/value-noise';
+export {clouds, type CloudProps, type CloudUniforms} from './modules/lighting/clouds/clouds';

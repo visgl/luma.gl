@@ -6,9 +6,9 @@ import {getSunDirection, getSunPosition} from '@math.gl/sun';
 import type {NumberArray3} from '@math.gl/core';
 import {CITY_ORIGIN} from '../river-district-data';
 
-export const FIRST_HOUR = 6.5;
-export const LAST_HOUR = 19.5;
-export const DEFAULT_HOUR = 8.5;
+export const FIRST_HOUR = 0;
+export const LAST_HOUR = 24;
+export const DEFAULT_HOUR = 6.5;
 // June 21 in New York: EDT is UTC minus four hours. Fix the date for reproducible shadows.
 const MIDNIGHT_UTC = Date.UTC(2026, 5, 21, 4);
 

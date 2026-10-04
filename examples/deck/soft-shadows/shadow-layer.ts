@@ -97,7 +97,7 @@ export class ShadowDistrictLayer extends Layer<ShadowDistrictLayerProps> {
           {
             type: 'directional',
             color: sun.color,
-            intensity: 1,
+            intensity: sun.direction[2] > 0 ? 1 : 0,
             direction: sun.direction.map(value => -value)
           }
         ]
