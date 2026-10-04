@@ -47,7 +47,7 @@ const pickingManager = new PickingManager(device, {
 
   shaderInputs,
 
-  mode: 'auto',
+  mode: device.type === 'webgpu' ? 'index' : 'color',
 
   getTooltip: ({objectIndex}) => (objectIndex === null ? null : `row ${objectIndex}`)
 
@@ -55,16 +55,24 @@ const pickingManager = new PickingManager(device, {
 
 
 
+// Pass the same shaderInputs to the Model constructor.
+
 const pickingPass = pickingManager.beginRenderPass();
 
 model.draw(pickingPass);
 
 pickingPass.end();
 
+// Submit before readback; an AnimationLoop normally submits at the end of its frame.
+
+device.submit();
+
 
 
 const pickInfo = await pickingManager.updatePickInfo(mousePosition);
 ```
+
+For a complete WebGL color-picking example, including model shaders and visible highlighting, see [GPU picking](https://luma.gl/docs/api-reference/shadertools/shader-modules/gpu-picking.md#usage).
 
 ## Types[​](#types "Direct link to Types")
 

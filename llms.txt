@@ -612,7 +612,7 @@ Assemble reusable WGSL and GLSL shader modules, hooks, injections, plugins, unif
 - [fp64 (64-bit Floating Point)](https://luma.gl/docs/api-reference/shadertools/shader-modules/fp64.md): Provides basic 64-bit math support in GPU shaders:
 - [fp64arithmetic](https://luma.gl/docs/api-reference/shadertools/shader-modules/fp64-arithmetic.md): The fp64arithmetic shader module provides the low-level double-single
 - [gouraudMaterial](https://luma.gl/docs/api-reference/shadertools/shader-modules/gouraud-material.md): The gouraudMaterial shader module provides functions to apply Gouraud shading
-- [gpuPicking](https://luma.gl/docs/api-reference/shadertools/shader-modules/gpu-picking.md): From v9.1
+- [GPU picking](https://luma.gl/docs/api-reference/shadertools/shader-modules/gpu-picking.md): GPU picking renders object identities into an offscreen framebuffer, then reads the identity
 - [lambertMaterial](https://luma.gl/docs/api-reference/shadertools/shader-modules/lambert-material.md): This lambertMaterial shader module provides a diffuse-only matte material
 - [lighting](https://luma.gl/docs/api-reference/shadertools/shader-modules/lighting.md): The lighting shader module collects scene lighting into a single uniform block
 - [pbrMaterial](https://luma.gl/docs/api-reference/shadertools/shader-modules/pbr-material.md): Implements Physically Based Shading of a microfacet surface defined by a glTF material.
