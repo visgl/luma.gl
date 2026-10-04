@@ -35,6 +35,7 @@ fogEnabled.addEventListener('change', () => {
   }
 });
 for (const [identifier, setter] of [
+  ['clouds', scene.setClouds],
   ['surface-enabled', scene.setSurfaceEnabled],
   ['accumulate', scene.setAccumulation]
 ] as const) {
@@ -53,6 +54,7 @@ document.querySelector('#scene')!.addEventListener('weather-frame', () => {
 const playing = document.querySelector<HTMLInputElement>('#playing')!;
 playing.addEventListener('change', () => scene.setPlaying(playing.checked));
 for (const [identifier, setter] of [
+  ['hour', scene.setHour],
   ['intensity', scene.setIntensity],
   ['wind-speed', scene.setWindSpeed],
   ['wind-direction', scene.setWindDirection],
@@ -65,6 +67,13 @@ for (const [identifier, setter] of [
 ] as const) {
   const input = document.querySelector<HTMLInputElement>(`#${identifier}`)!;
   input.addEventListener('input', () => setter(Number(input.value)));
+}
+document.querySelector('#center')!.addEventListener('click', () => scene.centerView());
+for (const body of ['sun', 'moon'] as const) {
+  document.querySelector(`#look-${body}`)!.addEventListener('click', () => {
+    scene.lookAtBody(body);
+    document.querySelector<HTMLInputElement>('#hour')!.value = String(scene.diagnostics.hour);
+  });
 }
 document.querySelector('#reset')!.addEventListener('click', () => scene.reset());
 scene.ready

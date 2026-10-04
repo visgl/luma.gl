@@ -101,6 +101,7 @@ try {
         assert.equal(await page.inputValue('#visibility'), '700', `${backend}: fog retains visibility`);
       }
       await page.selectOption('#preset', 'clear');
+      await page.uncheck('#clouds');
       await page.uncheck('#fog-enabled');
       await page.check('#playing');
       await page.waitForTimeout(200);
@@ -363,6 +364,35 @@ try {
       await page.click('#reset');
       assert.equal(await page.evaluate(() => window.weatherScene.surfaceSettings.snow), 0, `${backend}: reset clears snow`);
       assert.equal(await page.evaluate(() => window.weatherScene.surfaceSettings.wetness), 0, `${backend}: reset clears wetness`);
+      // One astronomy clock updates the sky and scene lighting while weather remains paused.
+      await page.uncheck('#fog-enabled');
+      await page.uncheck('#clouds');
+      await page.selectOption('#preset', 'clear');
+      await page.locator('#hour').fill('12');
+      await page.click('#center');
+      await page.waitForTimeout(150);
+      const daylight = PNG.sync.read(await page.screenshot());
+      await page.locator('#hour').fill('22');
+      await page.waitForTimeout(150);
+      assert(changedPixels(daylight, PNG.sync.read(await page.screenshot())) > 10000,
+        `${backend}: astronomy time changes sky and surface lighting`);
+      for (const body of ['sun', 'moon']) {
+        await page.locator('#hour').fill(body === 'sun' ? '9' : '0');
+        await page.click(`#look-${body}`);
+        await page.waitForTimeout(150);
+        const visibleBody = PNG.sync.read(await page.screenshot());
+        await page.evaluate(body => {
+          const deck = window.weatherScene.deck;
+          deck.setProps({layers: deck.props.layers.map(layer =>
+            layer.id === 'weather-sky' ? layer.clone({[body]: false}) : layer)});
+        }, body);
+        await page.waitForTimeout(150);
+        assert(changedPixels(visibleBody, PNG.sync.read(await page.screenshot()), 8) > 100,
+          `${backend}: Look at ${body} reveals the celestial disk`);
+      }
+      await page.click('#center');
+      assert.equal(await page.evaluate(() => window.weatherScene.deck.getViewports()[0].pitch), 74,
+        `${backend}: Center restores the district view`);
       await page.evaluate(() => {
         window.borrowedWeatherSurface = window.weatherScene.surfaceTexture;
         window.weatherScene.deck.setProps({layers: []});

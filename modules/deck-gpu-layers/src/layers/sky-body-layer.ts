@@ -2,16 +2,30 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Layer, picking, type LayerContext, type LayerProps, type Viewport} from '@deck.gl/core';
+import {
+  Layer,
+  picking,
+  _GlobeViewport,
+  type DefaultProps,
+  type LayerContext,
+  type LayerProps,
+  type Viewport
+} from '@deck.gl/core';
 import type {Buffer, RenderPass} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {pointGlow, type ShaderModule} from '@luma.gl/shadertools';
-import {Matrix4, type NumberArray3, type NumberArray4} from '@math.gl/core';
+import {type NumberArray3, type NumberArray4} from '@math.gl/core';
+import type {SkyObserver} from '@math.gl/sun';
+import {getSkyObserver, getSkyProjectionMatrix} from './sky-coordinates';
 
 export type SkyBodyLayerProps = LayerProps & {
   /** Direction toward the body in local east, north, up axes on a flat map. */
-  direction: Readonly<NumberArray3>;
-  /** Disk radius in CSS pixels. Astronomy and angular-size calculations are caller-owned. */
+  direction?: Readonly<NumberArray3>;
+  /** Astronomy time. Supply a changing timestamp to animate the sky. */
+  timestamp?: number | Date;
+  /** Defaults to coordinateOrigin, or the viewport location when no origin is supplied. */
+  observer?: SkyObserver;
+  /** Reference disk radius in CSS pixels; MoonLayer can scale it with lunar distance. */
   radiusPixels?: number;
   color?: [number, number, number, number];
 };
@@ -55,13 +69,38 @@ const skyBody = {
 /** Shared far-plane billboard. The view translation never affects celestial directions. */
 export class SkyBodyLayer<Props extends SkyBodyLayerProps> extends Layer<Props> {
   static override layerName = 'SkyBodyLayer';
-  static override defaultProps = {
-    direction: [0, 1, 0.15],
+  static override defaultProps: DefaultProps<SkyBodyLayerProps> = {
+    direction: undefined,
+    timestamp: undefined,
+    observer: undefined,
     radiusPixels: {type: 'number', value: 12, min: 0},
     color: {type: 'color', value: [255, 235, 170, 255]},
-    pickable: false
+    pickable: false,
+    parameters: {
+      depthCompare: 'less-equal',
+      depthWriteEnabled: false,
+      cullMode: 'none',
+      blend: true,
+      blendColorSrcFactor: 'one',
+      blendColorDstFactor: 'one-minus-src-alpha',
+      blendAlphaSrcFactor: 'one',
+      blendAlphaDstFactor: 'one-minus-src-alpha'
+    }
   };
   declare state: {model: Model; corners: Buffer};
+  protected getObserver(): SkyObserver {
+    return getSkyObserver(this.context.viewport, this.props.observer, this.props.coordinateOrigin);
+  }
+  protected getBodyDirection(): Readonly<NumberArray3> {
+    return this.props.direction ?? [0, 1, 0.15];
+  }
+  protected getBodyRadius(): number {
+    return this.props.radiusPixels ?? 0;
+  }
+  protected getBodyColor(): NumberArray3 {
+    const color = this.props.color ?? [255, 235, 170, 255];
+    return [color[0] / 255, color[1] / 255, color[2] / 255];
+  }
   protected getBodySettings() {
     return {moon: 0, phase: 0.5, limbAngle: 0, halo: 0.3};
   }
@@ -109,26 +148,23 @@ export class SkyBodyLayer<Props extends SkyBodyLayerProps> extends Layer<Props> 
   override draw({renderPass}: {renderPass: RenderPass}): void {
     const center = getSkyBodyClipPosition(
       this.context.viewport,
-      this.props.direction,
-      this.props.coordinateOrigin
+      this.getBodyDirection(),
+      this.props.coordinateOrigin,
+      this.getObserver()
     );
-    if (!center || !this.props.radiusPixels) return;
+    const radiusPixels = this.getBodyRadius();
+    if (!center || !radiusPixels) return;
     const settings = this.getBodySettings();
     const extent = settings.moon ? 1 : 3;
     const viewport = this.context.viewport;
-    const color = this.props.color!;
+    const color = this.props.color ?? [255, 235, 170, 255];
     this.state.model.shaderInputs.setProps({
       skyBody: {
         center,
-        color: [
-          color[0] / 255,
-          color[1] / 255,
-          color[2] / 255,
-          (color[3] / 255) * this.props.opacity
-        ],
+        color: [...this.getBodyColor(), (color[3] / 255) * this.props.opacity],
         offset: [
-          (2 * this.props.radiusPixels * extent) / viewport.width,
-          (2 * this.props.radiusPixels * extent) / viewport.height
+          (2 * radiusPixels * extent) / viewport.width,
+          (2 * radiusPixels * extent) / viewport.height
         ],
         moon: settings.moon,
         phase: settings.phase,
@@ -145,21 +181,22 @@ export class SkyBodyLayer<Props extends SkyBodyLayerProps> extends Layer<Props> 
   }
 }
 
-/** Projects an infinite sky direction through a flat-map/orbit perspective camera. */
+/** Projects an infinite ENU sky direction through either map or globe perspective cameras. */
 export function getSkyBodyClipPosition(
   viewport: Viewport,
   direction: Readonly<NumberArray3>,
-  coordinateOrigin: Readonly<NumberArray3>
+  coordinateOrigin: Readonly<NumberArray3> = [0, 0, 0],
+  observer?: SkyObserver
 ): NumberArray4 | null {
-  if (direction[2] <= 0 || viewport.projectionMatrix[15] !== 0) return null;
-  const units = viewport.getDistanceScales([...coordinateOrigin]).unitsPerMeter;
-  const viewDirection = new Matrix4(viewport.viewMatrix).transform([
-    direction[0] * units[0],
-    direction[1] * units[1],
-    direction[2] * units[2],
-    0
-  ]);
-  const clip = new Matrix4(viewport.projectionMatrix).transform(viewDirection);
+  if (
+    (!(viewport instanceof _GlobeViewport) && direction[2] <= 0) ||
+    viewport.projectionMatrix[15] !== 0
+  )
+    return null;
+  const clip = getSkyProjectionMatrix(
+    viewport,
+    getSkyObserver(viewport, observer, coordinateOrigin)
+  ).transform([direction[0], direction[1], direction[2], 0]);
   if (clip[3] <= 0) return null;
   return [clip[0] / clip[3], clip[1] / clip[3], 1, 1];
 }
