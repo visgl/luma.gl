@@ -11,6 +11,7 @@ import type {
   SlangType,
   Statement,
   Structure,
+  SwitchClause,
   Token,
   Variable
 } from './ast';
@@ -38,6 +39,11 @@ const PRECEDENCE: Record<string, number> = {
   '*=': 1,
   '/=': 1,
   '%=': 1,
+  '&=': 1,
+  '|=': 1,
+  '^=': 1,
+  '<<=': 1,
+  '>>=': 1,
   '||': 3,
   '&&': 4,
   '|': 5,
@@ -49,6 +55,8 @@ const PRECEDENCE: Record<string, number> = {
   '>': 9,
   '<=': 9,
   '>=': 9,
+  '<<': 10,
+  '>>': 10,
   '+': 11,
   '-': 11,
   '*': 12,
@@ -239,6 +247,15 @@ export class SlangParser {
     return type;
   }
   private parseVariable(): Variable {
+    if (['let', 'var'].includes(this.peek().text)) {
+      const immutable = this.take().text === 'let';
+      const name = this.identifier();
+      const type = this.match(':') ? this.parseType() : {name: '$inferred'};
+      const variable = this.finishVariable(type, name, immutable ? ['let'] : [], []);
+      if (!variable.initializer && (immutable || type.name === '$inferred'))
+        this.fail('Inferred variables and let declarations require an initializer', name);
+      return variable;
+    }
     const attributes = this.parseAttributes();
     const modifiers = this.parseModifiers();
     const type = this.parseType();
@@ -339,6 +356,39 @@ export class SlangParser {
       const alternate = this.match('else') ? this.parseStatement() : undefined;
       return {...location, kind: 'if', condition, consequent, alternate};
     }
+    if (this.match('switch')) {
+      this.expect('(');
+      const selector = this.parseExpression();
+      this.expect(')');
+      this.expect('{');
+      const clauses: SwitchClause[] = [];
+      while (!this.match('}')) {
+        const clauseLocation = this.peek();
+        const labels: (Expression | null)[] = [];
+        do {
+          if (this.match('case')) labels.push(this.parseExpression());
+          else if (this.match('default')) labels.push(null);
+          else this.fail('Switch bodies require case or default labels');
+          this.expect(':');
+        } while (['case', 'default'].includes(this.peek().text));
+        const statements: Statement[] = [];
+        while (!['case', 'default', '}'].includes(this.peek().text)) {
+          if (this.peek().kind === 'end') this.fail('Unterminated switch');
+          statements.push(this.parseStatement());
+        }
+        clauses.push({...clauseLocation, labels, statements});
+      }
+      return {...location, kind: 'switch', selector, clauses};
+    }
+    if (this.match('do')) {
+      const body = this.parseStatement();
+      this.expect('while');
+      this.expect('(');
+      const condition = this.parseExpression();
+      this.expect(')');
+      this.expect(';');
+      return {...location, kind: 'do', condition, body};
+    }
     if (this.match('while')) {
       this.expect('(');
       const condition = this.parseExpression();
@@ -369,6 +419,7 @@ export class SlangParser {
   private parseSimpleStatement(): Statement {
     const location = this.peek();
     if (
+      ['let', 'var'].includes(location.text) ||
       MODIFIERS.has(location.text) ||
       (this.isType(location.text) && this.peek(1).kind === 'identifier')
     ) {

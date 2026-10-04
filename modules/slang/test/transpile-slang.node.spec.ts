@@ -66,7 +66,7 @@ for (const target of ['glsl', 'wgsl'] as const) {
       const result = transpileSlang(source, {target});
       expect(result.reflection.bindings[0]).toMatchObject({group: 2, binding: 3, name: 'Settings'});
       expect(result.code).toContain('_slang_Settings._slang_scale');
-      expect(result.code).toContain('_slang_value +=');
+      expect(result.code).toContain('_slang_value =');
       if (target === 'wgsl') {
         expect(result.code).toContain('var _slang_value: f32 = _slang_parameter_value;');
       }

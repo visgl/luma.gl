@@ -48,6 +48,10 @@ export type Expression = SourceLocation &
     | {kind: 'initializer'; elements: Expression[]}
     | {kind: 'cast'; type: SlangType; operand: Expression}
   );
+export type SwitchClause = SourceLocation & {
+  labels: (Expression | null)[];
+  statements: Statement[];
+};
 export type Statement = SourceLocation &
   (
     | {kind: 'block'; statements: Statement[]}
@@ -55,7 +59,8 @@ export type Statement = SourceLocation &
     | {kind: 'expression'; expression: Expression}
     | {kind: 'return'; expression?: Expression}
     | {kind: 'if'; condition: Expression; consequent: Statement; alternate?: Statement}
-    | {kind: 'while'; condition: Expression; body: Statement}
+    | {kind: 'while' | 'do'; condition: Expression; body: Statement}
+    | {kind: 'switch'; selector: Expression; clauses: SwitchClause[]}
     | {
         kind: 'for';
         initializer?: Statement;

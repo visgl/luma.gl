@@ -8,6 +8,8 @@ import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {LANGUAGE_SHADER, UNIFORM_SHADER, MATRIX_SHADER} from '../../modules/slang/test/fixtures.ts';
 
+import {EVERYDAY_SHADER} from '../../modules/slang/test/everyday-fixtures.ts';
+
 // Upstream WGSL currently leaves bools in uniform buffers (not host-shareable).
 // Use the same numeric layout with uint flags for the reference compiler only;
 // the TypeScript compiler's bool legalization is exercised separately on both GPUs.
@@ -24,6 +26,7 @@ try {
   const fixtures = {};
   for (const [name, source, entryPoint] of [
     ['language', LANGUAGE_SHADER, 'main'],
+    ['everyday', EVERYDAY_SHADER, 'main'],
     ['matrix', MATRIX_SHADER, 'computeMain'],
     ['uniforms', numericUniforms, 'main']
   ]) {
