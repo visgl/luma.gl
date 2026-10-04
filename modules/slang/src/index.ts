@@ -13,6 +13,7 @@ import {mapSlangSource} from './source-map';
 import {SlangTranspileError} from './diagnostics';
 
 export type {
+  SlangStorageTextureFormat,
   SlangTextureLayout,
   SlangTypeLayout,
   SlangUniformValue,

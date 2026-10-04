@@ -23,6 +23,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./luma": {
+      "types": "./dist/luma.d.ts",
+      "import": "./dist/luma.js",
+      "require": "./dist/luma.cjs"
     }
   },
   "files": [

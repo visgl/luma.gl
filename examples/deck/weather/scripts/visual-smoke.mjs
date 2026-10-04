@@ -198,7 +198,11 @@ try {
         if (preset !== 'clear') await page.evaluate(() => window.weatherScene.setIntensity(0));
         await page.waitForTimeout(250);
         const idle = await page.evaluate(() => ({...window.weatherScene.diagnostics}));
-        await page.waitForTimeout(250);
+        // A software-GPU frame can outlast 250 ms. Drain actual updates and redraws before asserting idle behavior.
+        await page.waitForFunction(() => {
+          const deck = window.weatherScene.deck;
+          return !deck.layerManager.needsUpdate() && !deck.needsRedraw();
+        }, undefined, {timeout: 30_000});
         const settled = await page.evaluate(() => ({...window.weatherScene.diagnostics}));
         assert(settled.frames - idle.frames <= 1,
           `${backend}: ${preset} disabled precipitation drains one pending frame`);
@@ -214,7 +218,12 @@ try {
       }
       const stoppedTime = await page.evaluate(() => window.weatherScene.diagnostics.time);
       await page.evaluate(() => window.weatherScene.setIntensity(0.6));
-      await page.waitForTimeout(250);
+      // Resuming initializes the clock on the first frame; software GPUs may need more than 250 ms for the next frame.
+      await page.waitForFunction(
+        stoppedTime => window.weatherScene.diagnostics.time > stoppedTime,
+        stoppedTime,
+        {timeout: 30_000}
+      );
       assert(await page.evaluate(() => window.weatherScene.diagnostics.time) > stoppedTime,
         `${backend}: restoring particle count resumes animation`);
       await page.uncheck('#playing');

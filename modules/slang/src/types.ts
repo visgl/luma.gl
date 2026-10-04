@@ -19,6 +19,8 @@ export type SlangTranspileOptions = {
 export type SlangInterfaceVariable = {
   name: string;
   semantic: string;
+  /** Emitted interface field name, for shader-facing attribute layouts. */
+  shaderName: string;
   type: string;
   location?: number;
   builtin?: string;
@@ -30,6 +32,9 @@ export type SlangResourceBinding = {
   binding: number;
   kind: 'uniform' | 'storage' | 'texture' | 'sampler';
   access: 'read' | 'read_write' | 'write';
+  /** WebGPU stage mask: vertex=1, fragment=2, compute=4; zero means unused. */
+  visibility: number;
+  samplerType?: 'filtering' | 'comparison';
   /** Target buffer layout; uniform buffers use a shared std140-compatible representation. */
   layout?: SlangTypeLayout;
   /** Byte stride of a StructuredBuffer element. */
@@ -50,6 +55,8 @@ export type SlangTranspileResult = {
   code: string;
   sourceMap: SlangSourceMapEntry[];
   target: SlangTarget;
+  /** Actual GLSL version, omitted for WGSL. */
+  glslVersion?: '300 es' | '450';
   entryPoint: string;
   stage: SlangShaderStage;
   reflection: SlangReflection;
@@ -103,7 +110,18 @@ export type SlangTextureLayout = {
   dimension: '2d' | '2d-array' | 'cube' | '3d';
   sampleType: 'float' | 'sint' | 'uint' | 'depth';
   components: number;
-  format?: string;
+  format?: SlangStorageTextureFormat;
   glslFormat?: string;
   access?: 'write' | 'read_write';
 };
+
+export type SlangStorageTextureFormat =
+  | 'rgba8unorm'
+  | 'rgba8snorm'
+  | 'rgba16float'
+  | 'rgba32float'
+  | 'rgba32sint'
+  | 'rgba32uint'
+  | 'r32float'
+  | 'r32sint'
+  | 'r32uint';
