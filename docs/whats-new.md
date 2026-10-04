@@ -119,6 +119,14 @@ Target Release Date: Q3, 2026
 
 - **Attach to application-created `GPUDevice`s** - `luma.attachDevice(gpuDevice, {adapters: [webgpuAdapter]})` and `webgpuAdapter.attach(gpuDevice)` wrap an existing WebGPU device, so an application and deck.gl can share one device with the application's requested limits and features. `device.destroy()` leaves the `GPUDevice` usable; the application destroys it.
 
+### Slang compute and textures
+
+The private Slang authoring module now supports integer atomics, byte-address buffers, synchronization
+diagnostics, texture arrays, multisampled loads, explicit gradients, gathers, dimension queries and
+more storage dimensions. The [particle vortex example](/examples/tutorials/slang-particles) simulates
+and renders one shared Slang source. The compiler remains optional and dependency-free; WebGL uses
+GLSL ES 300, with diagnostics for operations that require explicit GLSL 450.
+
 ## Version 9.4
 
 Release Date: September 5, 2026

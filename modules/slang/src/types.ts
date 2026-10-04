@@ -12,6 +12,8 @@ export type SlangTranspileOptions = {
   stage?: SlangShaderStage;
   /** Use 450 for compute shaders and structured buffers. */
   glslVersion?: '300 es' | '450';
+  /** Omit unused resource declarations, useful with automatic pipeline layout scanners. */
+  omitUnusedResources?: boolean;
   sourceName?: string;
   /** Explicit semantic locations, shared by separately compiled vertex and fragment shaders. */
   locations?: Record<string, number>;
@@ -34,6 +36,8 @@ export type SlangResourceBinding = {
   access: 'read' | 'read_write' | 'write';
   /** WebGPU stage mask: vertex=1, fragment=2, compute=4; zero means unused. */
   visibility: number;
+  /** Fixed resource arrays are lowered to individual, contiguous bindings. */
+  resourceArray?: {name: string; index: number; length: number};
   samplerType?: 'filtering' | 'comparison';
   /** Target buffer layout; uniform buffers use a shared std140-compatible representation. */
   layout?: SlangTypeLayout;
@@ -50,6 +54,8 @@ export type SlangReflection = {
   outputs: SlangInterfaceVariable[];
   bindings: SlangResourceBinding[];
   workgroupSize?: [number, number, number];
+  /** Declared workgroup storage in bytes; compare with device limits. */
+  workgroupStorageSize?: number;
 };
 export type SlangTranspileResult = {
   code: string;
@@ -66,6 +72,8 @@ export type SlangTranspileResult = {
 export type SlangWGSLProgramOptions = {
   /** Source function names. Omit to compile every [shader(...)] entry point. */
   entryPoints?: readonly string[];
+  /** Omit unused resource declarations, useful with automatic pipeline layout scanners. */
+  omitUnusedResources?: boolean;
   sourceName?: string;
   locations?: Record<string, number>;
 };
@@ -107,7 +115,8 @@ export type SlangSourceMapEntry = {
 };
 
 export type SlangTextureLayout = {
-  dimension: '2d' | '2d-array' | 'cube' | '3d';
+  dimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
+  multisampled?: boolean;
   sampleType: 'float' | 'sint' | 'uint' | 'depth';
   components: number;
   format?: SlangStorageTextureFormat;

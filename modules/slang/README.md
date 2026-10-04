@@ -42,6 +42,8 @@ const shader = transpileSlang(source, {
   Otherwise a single `[shader]` function or a function called `main` is selected.
 - `stage`: `vertex`, `fragment`, or `compute`. Required without `[shader]`; must agree with it.
 - `glslVersion`: `300 es` (WebGL 2) or `450`. Compute defaults to `450`; rendering defaults to `300 es`.
+- `omitUnusedResources`: omit inactive resource declarations from WGSL, for automatic pipeline
+  scanners. Reflection still includes their source bindings with zero visibility. Defaults to false.
 - `sourceName`: filename used in diagnostics; defaults to `shader.slang`.
 - `locations`: semantic-to-location mapping, case insensitive. Use the same explicit mapping when
   separately authored vertex and fragment sources need to link. Automatic locations are assigned
@@ -56,7 +58,8 @@ omitted from GLSL reflection.
 
 Reflection contains flattened `inputs` and `outputs` with original paths, Slang types, semantics,
 and target builtins or locations. `bindings` contains original resource names, shader names,
-groups, binding indices, kind, and access. Compute reflection also includes `workgroupSize`.
+groups, binding indices, kind, and access. Compute reflection also includes `workgroupSize` and declared `workgroupStorageSize` in bytes
+(WGSL rounds each shared allocation to 16 bytes). Compare these with the device limits.
 Buffer-backed resources include `layout` with field offsets, sizes, alignments, array strides,
 and matrix strides. Member offsets are relative to their containing aggregate. Structured-buffer
 reflection describes one element and supplies `elementStride`; plain GLSL uniform globals have
@@ -109,12 +112,38 @@ generated wrappers/helper lines may map to their associated declaration.
   `SV_Depth`, `SV_Target[N]`, `SV_DispatchThreadID`, `SV_GroupID`, `SV_GroupThreadID`, and
   `SV_GroupIndex`. Builtin types and stage/direction are checked.
 - Uniform globals, `cbuffer`, `ConstantBuffer<Struct>`, `StructuredBuffer<T>`,
-  `RWStructuredBuffer<T>`, `groupshared`, and `GroupMemoryBarrierWithGroupSync`.
-- `Texture2D<T>`, `Texture2DArray<T>`, `TextureCube<T>`, `Texture3D<T>`, `SamplerState`,
-  `Sample`, `SampleLevel`, and `Load` (except cube loads). Elements can be numeric scalars or vectors.
-  Integer textures use `Load`, not filtered sampling. `SamplerComparisonState`, `SampleCmp`, and
+  `RWStructuredBuffer<T>`, `groupshared`, `ByteAddressBuffer` and `RWByteAddressBuffer`.
+  Integer `InterlockedAdd`, `And`, `Or`, `Xor`, `Min`, `Max`, `Exchange`, `CompareExchange` and
+  `CompareStore` operate on groupshared `int`/`uint` scalars/arrays and RW integer buffer elements.
+  Original-value output arguments are supported. WGSL retries weak compare/exchange failures to
+  preserve Slang's strong compare/exchange behavior. Ordinary reads/writes of atomic-backed storage
+  use atomic load/store; compound assignments remain ordinary load/modify/store operations.
+- Byte-address buffers expose `Load`/`Load2`/`Load3`/`Load4`, `Store` variants, `GetDimensions`,
+  and RW `Interlocked` methods. Offsets are bytes and must be four-byte aligned; literal misaligned
+  offsets are diagnosed and the application must align dynamic offsets. `asfloat`, `asint` and
+  `asuint` reinterpret 32-bit scalar/vector bits.
+- `GroupMemoryBarrierWithGroupSync`, `DeviceMemoryBarrierWithGroupSync` and
+  `AllMemoryBarrierWithGroupSync` provide compute synchronization. Barriers, including helper calls
+  that contain them, must be unconditional: conditional/loop barriers, short-circuit barrier calls,
+  and early returns in synchronized functions are diagnosed. This conservative subset avoids a full
+  uniformity-analysis dependency. Non-synchronizing memory barriers are not supported.
+- `Texture1D<T>`, `Texture2D<T>`, `Texture2DArray<T>`, `TextureCube<T>`, `TextureCubeArray<T>`, `Texture3D<T>`, `SamplerState`,
+  `Sample`, `SampleLevel`, `SampleBias`, `SampleGrad`, and `Load` (except cube loads). Elements can be numeric scalars or vectors.
+  Integer textures use `Load` or gathers, not filtered sampling. 1D textures support `SampleLevel`
+  and loads; implicit sampling and gradients on 1D textures are outside the portable subset. `SamplerComparisonState`, `SampleCmp`, and
   `SampleCmpLevelZero` provide depth comparison sampling.
-- `WTexture2D<T>` and `RWTexture2D<T>` support indexed storage writes and read/write loads.
+- `Texture2DMS<T>` supports `Load(int2 coordinates, int sample)` and dimension/sample-count queries.
+  `GetDimensions` supports integer output parameters: dimensions/layers, optional mip plus level count
+  for sampled textures, and sample count for multisampled textures. `Gather`/`GatherRed`/`GatherGreen`/
+  `GatherBlue`/`GatherAlpha` return four selected channel values on 2D/cube textures, including array
+  views; `GatherCmp` compares four depth values. Optional texel offsets and LOD queries are unsupported.
+- Fixed texture and sampler resource arrays (at most 16 elements) become contiguous individual
+  bindings, with names such as `images[0]` and `resourceArray: {name, index, length}` in reflection.
+  Literal sampler indices are supported. Dynamic texture selection dispatches to individual bindings
+  and requires `SampleLevel`, `SampleGrad`, loads, queries or storage writes. Out-of-range dynamic
+  reads return zero and writes/queries do nothing. Dynamic sampler selection is unsupported.
+- `WTexture` and `RWTexture` resources with 1D, 2D, 2DArray and 3D dimensions support indexed storage
+  writes and read/write loads.
   Declare a matching `[format("rgba8")]` attribute. Supported formats are `rgba8`, `rgba8_snorm`,
   `rgba16f`, `rgba32f`, `rgba32i`, `rgba32ui`, `r32f`, `r32i`, and `r32ui`.
 - `[vk::binding(binding, group)]` and `register(bN|tN|sN|uN, spaceN)`. Bindings share a single
@@ -126,7 +155,10 @@ generated wrappers/helper lines may map to their associated declaration.
 - GLSL structured buffers and compute require `450`. GLSL 450 supports binding group zero.
   WebGL uniforms are located by their generated names; reflected groups/bindings describe the
   source binding plan. Texture and sampler resources combine into GLSL sampler uniforms,
-  and each texture may use only one sampler. The caller applies the sampler state to that texture.
+  with a separate generated uniform for each texture/sampler pair. The first source pair retains
+  the texture name; additional pairs use reflected names such as `image#linearSampler` and include
+  the original `sampler`. Pair names/bindings remain stable across separately compiled stages.
+  The caller binds the texture view and sampler state to each reflected uniform.
   Unused GLSL texture declarations are omitted so stages link without conflicting inactive sampler types.
   GLSL ES 300 keeps sampler bindings application-managed; explicit GLSL 450 output emits each
   texture's assigned `layout(binding = N)`, including automatically assigned bindings.
@@ -145,12 +177,14 @@ generated wrappers/helper lines may map to their associated declaration.
   fragment-only; explicit zero-level comparison outside fragment shaders supports 2D textures.
   GLSL depth samplers cannot also perform `Load`, and GLSL zero-level comparisons require 2D textures.
   Array sampling coordinates contain the layer in the final component; loads include a final mip level.
+- 1D/cube-array/multisampled textures and gathers require GLSL 450 and are unavailable on WebGL 2.
+  Mip-count queries require GLSL 450; dimension-only queries and explicit gradients work in ES 300.
 - Storage textures require GLSL 450 and therefore are unavailable on WebGL. WebGPU read/write storage
   formats depend on device capabilities, which the application must request. Compound storage-texture
   assignments and storage-texture elements as `out`/`inout` arguments require explicit load/store steps.
 - Imports/includes/macros, namespaces, generics/interfaces, extensions, methods, autodiff,
-  inferred types, `switch`, `do`/`while`, atomics, resource arrays, multisampled textures, and
-  storage textures other than 2D are not supported.
+  inferred types, `switch`, `do`/`while`, floating-point/struct-member atomics, typed byte-address
+  loads, dynamic sampler arrays, and multisampled array textures are not supported.
 - This is a transpiler rather than a complete Slang semantic validator. Compile generated source
   on the destination device to validate remaining typing, resource-layout, uniformity, and limits.
 
@@ -268,3 +302,16 @@ uniform-buffer layouts. Pass the returned layout explicitly to a native pipeline
 The [Slang sculpture example](https://github.com/visgl/luma.gl/tree/master/examples/tutorials/slang-shaders)
 keeps compiler registration application-owned and uses reflection to allocate and pack its shared
 uniform buffer on WebGPU and WebGL 2.
+
+
+## Compute-to-render example and bundle size
+
+The [Slang particle vortex](https://github.com/visgl/luma.gl/tree/master/examples/tutorials/slang-particles)
+uses one source for compute and rendering. Shared workgroup positions and integer atomics feed a
+ping-pong particle simulation, whose output is rendered directly with no CPU readback. The application
+owns compiler registration and uses reflection for layouts, bindings and uniform packing. It selects
+`omitUnusedResources` so native interface scanners see only the resources for each pipeline.
+
+The compiler remains private and has no runtime dependencies. It is an optional import and does not
+increase core/engine/shadertools bundles. Bundle-size tests guard the compiler and separate luma helpers;
+the compute/texture extensions add approximately 5 KB gzip, for a compiler around 26 KB gzip.

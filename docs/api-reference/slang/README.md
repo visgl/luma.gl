@@ -74,7 +74,30 @@ bindings are application-managed; explicit GLSL 450 output emits assigned textur
 
 See the [package documentation](https://github.com/visgl/luma.gl/blob/master/modules/slang/README.md)
 for the complete supported-language list, resource conventions, matrix packing rules, and target
-limitations. Imports, generics, interfaces, autodiff, resource arrays, and atomics remain unsupported.
+limitations. Imports, generics, interfaces and autodiff remain unsupported.
+
+### Compute and texture authoring
+
+Compute supports integer atomics on shared integer scalars/arrays and RW integer buffers, byte-address
+loads/stores and atomic methods, and unconditional synchronized workgroup/storage barriers. Compare
+`reflection.workgroupSize` and `workgroupStorageSize` with device limits. Conditional/loop barriers and
+early returns in synchronized functions are diagnosed; floating-point and struct-member atomics are
+outside the subset. Byte-address offsets are four-byte aligned, including dynamic application offsets.
+
+Textures support explicit gradients, bias, gathers, dimension/mip/layer/sample-count queries,
+`Texture2DMS` loads, 1D and cube-array sampled views, and 1D/2D/2DArray/3D storage textures. Fixed texture
+and sampler arrays flatten to at most 16 contiguous bindings, with `resourceArray` metadata and source
+names such as `images[0]`. Dynamic texture selection uses individual bindings and explicit sampling
+levels/gradients; sampler-array indices must be integer literals. GLSL reflects each texture/sampler pair
+separately, so applications can bind multiple sampler states to the same texture.
+
+GLSL ES 300 remains the WebGL target. Gathers, 1D/cube-array/multisampled views and mip-count queries
+require explicit GLSL 450; unsupported WebGL operations raise source diagnostics. Dimension-only
+queries and explicit gradients work on WebGL 2. Resources and device capabilities remain app-owned.
+
+Set `omitUnusedResources: true` when native layout inference should see only active WGSL resources.
+Reflection retains inactive source bindings with visibility zero. This option also works with unified
+programs; default output retains all resource declarations.
 
 ### Unified WGSL render programs
 
@@ -159,3 +182,8 @@ uniform-buffer layouts. Pass the returned layout explicitly to a native pipeline
 The [Slang sculpture example](https://github.com/visgl/luma.gl/tree/master/examples/tutorials/slang-shaders)
 keeps compiler registration application-owned and uses reflection to allocate and pack its shared
 uniform buffer on WebGPU and WebGL 2.
+
+
+The [Slang particle example](/examples/tutorials/slang-particles) simulates and renders a particle cloud
+from one Slang source, using shared memory, integer atomics and the application-owned compiler plugin.
+The optional compiler remains dependency-free and guarded by bundle-size tests (about 26 KB gzip).

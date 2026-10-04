@@ -11,13 +11,21 @@ import type {
   Structure,
   Variable
 } from './ast';
+import {
+  ATOMICS,
+  BARRIERS,
+  isByteAddressBuffer,
+  isSlangResource,
+  getExpressionRoot
+} from './resources';
 import {SlangTranspileError} from './diagnostics';
 import {getSlangTypeLayout} from './layout';
 import {
   isSlangTexture,
   getSlangTextureLayout,
   getWGSLTextureType,
-  getGLSLTextureType
+  getGLSLTextureType,
+  getTextureCoordinateWidth
 } from './textures';
 import {UniformEmitter} from './uniform-emitter';
 import {markSlangSource, mapSlangSource} from './source-map';
@@ -36,6 +44,8 @@ type Symbol = {
   writable: boolean;
   uniformType?: SlangType;
   resourceName?: string;
+  atomic?: boolean;
+  shared?: boolean;
 };
 type InterfaceLeaf = {
   variable: Variable;
@@ -164,8 +174,12 @@ export class SlangEmitter {
   private hasComparisonCalls = false;
   private ordinaryTextures = new Set<string>();
   private usedTextures = new Set<string>();
+  private directTextures = new Set<string>();
   private usedResources = new Set<string>();
   private comparisonTexturesResolved = false;
+  private resourceArrays = new Map<string, string[]>();
+  private combinedTextures = new Map<string, {texture: string; sampler: string; code: string}>();
+  private atomicGlobals = new Set<string>();
 
   constructor(
     private program: Program,
@@ -179,9 +193,25 @@ export class SlangEmitter {
       if (
         node.kind === 'call' &&
         node.callee.kind === 'member' &&
-        ['SampleCmp', 'SampleCmpLevelZero'].includes(node.callee.member)
+        ['SampleCmp', 'SampleCmpLevelZero', 'GatherCmp'].includes(node.callee.member)
       )
         this.hasComparisonCalls = true;
+      if (node.kind === 'call') {
+        const name =
+          node.callee.kind === 'identifier'
+            ? node.callee.value
+            : node.callee.kind === 'member'
+              ? node.callee.member
+              : '';
+        if (ATOMICS[name]) {
+          const destination =
+            node.callee.kind === 'member' ? node.callee.object : node.arguments[0];
+          if (destination) {
+            const root = getExpressionRoot(destination);
+            if (root.kind === 'identifier') this.atomicGlobals.add(root.value);
+          }
+        }
+      }
       Object.values(value).forEach(inspectNames);
     };
     inspectNames(program);
@@ -203,7 +233,14 @@ export class SlangEmitter {
             ? {binding: Number(attribute.arguments[0]), group: Number(attribute.arguments[1])}
             : declaration.binding;
         if (binding) {
-          this.reservedBindings.add(`${binding.group}:${binding.binding}`);
+          const length =
+            declaration.type.name === 'array' && isSlangResource(declaration.type.element!)
+              ? declaration.type.length!
+              : 1;
+          if (length > 16)
+            this.fail('Resource arrays are limited to sixteen bindings', declaration.location);
+          for (let index = 0; index < length; index++)
+            this.reservedBindings.add(`${binding.group}:${binding.binding + index}`);
         }
       }
       if (declaration.kind === 'struct') {
@@ -385,6 +422,8 @@ export class SlangEmitter {
     for (const scope of [...this.scopes].reverse()) {
       const symbol = scope.get(name);
       if (symbol) {
+        if (this.currentFunction && symbol.shared && this.stage !== 'compute')
+          this.fail('groupshared requires a compute shader', location);
         if (this.currentFunction && symbol.resourceName)
           this.usedResources.add(symbol.resourceName);
         return symbol;
@@ -523,7 +562,26 @@ export class SlangEmitter {
       case 'call': {
         if (expression.callee.kind === 'member') {
           const resource = this.getExpressionType(expression.callee.object);
+          if (isByteAddressBuffer(resource)) {
+            if (
+              ['GetDimensions', 'Store', 'Store2', 'Store3', 'Store4'].includes(
+                expression.callee.member
+              ) ||
+              ATOMICS[expression.callee.member]
+            )
+              return {name: 'void'};
+            if (/^Load[2-4]?$/.test(expression.callee.member))
+              return {name: 'uint' + expression.callee.member.slice(4)};
+          }
           if (isSlangTexture(resource)) {
+            if (expression.callee.member === 'GetDimensions') return {name: 'void'};
+            if (expression.callee.member.startsWith('Gather'))
+              return {
+                name:
+                  (expression.callee.member === 'GatherCmp'
+                    ? 'float'
+                    : resource.element!.name.replace(/[2-4]$/, '')) + '4'
+              };
             return ['SampleCmp', 'SampleCmpLevelZero'].includes(expression.callee.member)
               ? {name: 'float'}
               : resource.element!;
@@ -549,8 +607,12 @@ export class SlangEmitter {
         if (['all', 'any'].includes(name)) {
           return {name: 'bool'};
         }
-        if (name === 'GroupMemoryBarrierWithGroupSync') {
+        if (BARRIERS[name] || ATOMICS[name]) {
           return {name: 'void'};
+        }
+        if (['asfloat', 'asint', 'asuint'].includes(name)) {
+          const argumentType = this.getExpressionType(expression.arguments[0]);
+          return {name: name.slice(2) + (/[2-4]$/.exec(argumentType.name)?.[0] || '')};
         }
         if (name === 'transpose') {
           const matrix = /^float([2-4])x([2-4])$/.exec(
@@ -879,6 +941,8 @@ export class SlangEmitter {
   private emitExpression(expression: Expression): string {
     const uniform = this.getUniformAccess(expression);
     if (uniform) return this.uniformEmitter.readValue(uniform.type, uniform.code);
+    if (this.isWGSL && this.isAtomicValue(expression))
+      return `atomicLoad(&${this.freezeLvalue(expression)})`;
     switch (expression.kind) {
       case 'initializer':
         this.fail('Initializer lists require a declared value type', expression);
@@ -934,8 +998,27 @@ export class SlangEmitter {
         if (!['int', 'uint'].includes(indexType.name)) {
           this.fail('Index expressions require an integer scalar', expression.index);
         }
+        const root = getExpressionRoot(expression.object);
+        const resourceArray =
+          objectType.element &&
+          isSlangResource(objectType.element) &&
+          root.kind === 'identifier' &&
+          expression.object.kind === 'identifier'
+            ? this.resourceArrays.get(root.value)
+            : undefined;
+        if (resourceArray) {
+          if (expression.index.kind !== 'number')
+            this.fail(
+              'Resource array indexing requires a constant integer in this subset',
+              expression.index
+            );
+          const index = Number(expression.index.value.replace(/u$/i, ''));
+          if (!Number.isInteger(index) || !resourceArray[index])
+            this.fail('Resource array index is outside the declared length', expression.index);
+          return this.findSymbol(resourceArray[index], expression).code;
+        }
         const object = this.emitExpression(expression.object);
-        return `${object}${!this.isWGSL && /StructuredBuffer$/.test(objectType.name) ? '._slang_data' : ''}[${this.emitExpression(expression.index)}]`;
+        return `${object}${!this.isWGSL && /(?:Structured|ByteAddress)Buffer$/.test(objectType.name) ? '._slang_data' : ''}[${this.emitExpression(expression.index)}]`;
       }
       case 'conditional': {
         const type = this.getExpressionType(expression);
@@ -1037,7 +1120,10 @@ export class SlangEmitter {
   }
   private emitCall(expression: Expression & {kind: 'call'}): string {
     const callee = expression.callee;
-    if (callee.kind === 'member') return this.emitTextureCall(expression);
+    if (callee.kind === 'member')
+      return isByteAddressBuffer(this.getExpressionType(callee.object))
+        ? this.emitByteAddressCall(expression)
+        : this.emitTextureCall(expression);
     if (callee.kind !== 'identifier') {
       this.fail('Unsupported function expression', expression);
     }
@@ -1101,6 +1187,42 @@ export class SlangEmitter {
         this.fail('Scalar constructors require one argument', expression);
       }
       return this.emitCast(expression.arguments[0], {name});
+    }
+    if (ATOMICS[name]) return this.emitAtomic(name, expression.arguments, expression);
+    if (BARRIERS[name]) {
+      if (this.stage !== 'compute' || expression.arguments.length)
+        this.fail('Synchronization barriers require a compute shader and no arguments', expression);
+      const barrier = BARRIERS[name];
+      const calls = this.isWGSL
+        ? [
+            barrier !== 'storage' ? 'workgroupBarrier();' : '',
+            barrier !== 'workgroup' ? 'storageBarrier();' : ''
+          ]
+        : [
+            barrier !== 'storage' ? 'memoryBarrierShared();' : '',
+            barrier !== 'workgroup' ? 'memoryBarrierBuffer();' : '',
+            'barrier();'
+          ];
+      this.expressionPrelude.push(...calls.filter(Boolean));
+      return '';
+    }
+    if (['asfloat', 'asint', 'asuint'].includes(name)) {
+      if (expression.arguments.length !== 1)
+        this.fail('Bit casts require one argument', expression);
+      const source = this.getExpressionType(expression.arguments[0]);
+      if (!/^(float|int|uint)([2-4])?$/.test(source.name))
+        this.fail('Bit casts require 32-bit numeric values', expression);
+      const target = this.getExpressionType(expression);
+      const value = this.emitExpression(expression.arguments[0]);
+      if (this.isWGSL) return `bitcast<${this.getTypeName(target)}>(${value})`;
+      const scalar = source.name.replace(/[2-4]$/, '');
+      const targetScalar = target.name.replace(/[2-4]$/, '');
+      if (scalar === targetScalar) return value;
+      return scalar === 'float'
+        ? `${targetScalar === 'uint' ? 'floatBitsToUint' : 'floatBitsToInt'}(${value})`
+        : targetScalar === 'float'
+          ? `${scalar === 'uint' ? 'uintBitsToFloat' : 'intBitsToFloat'}(${value})`
+          : `${this.getTypeName(target)}(${value})`;
     }
     if (!INTRINSICS[name] || !INTRINSICS[name].includes(expression.arguments.length)) {
       this.fail(`Unsupported function or argument count: ${name}`, expression);
@@ -1170,6 +1292,227 @@ export class SlangEmitter {
     }
     return `${mappings[name] || name}(${argumentsList.join(', ')})`;
   }
+  private isAtomicValue(expression: Expression): boolean {
+    if (!['identifier', 'index'].includes(expression.kind)) return false;
+    const root = getExpressionRoot(expression);
+    if (root.kind !== 'identifier' || !this.findSymbol(root.value, root).atomic) return false;
+    return ['int', 'uint'].includes(this.getExpressionType(expression).name);
+  }
+  private writeOutput(expression: Expression, value: string, type: SlangType): void {
+    this.checkWritable(expression);
+    const outputType = this.getExpressionType(expression);
+    if (!['int', 'uint'].includes(outputType.name))
+      this.fail('Resource query outputs require integer scalars', expression);
+    const destination = this.freezeLvalue(expression);
+    this.expressionPrelude.push(
+      this.emitLvalueWrite(
+        expression,
+        destination,
+        this.coerceCode(value, type, outputType, expression)
+      )
+    );
+  }
+  private emitAtomic(name: string, argumentsList: Expression[], location: SourceLocation): string {
+    const compare = name === 'InterlockedCompareExchange' || name === 'InterlockedCompareStore';
+    const store = name === 'InterlockedCompareStore';
+    const required = compare ? 3 : 2;
+    if (argumentsList.length !== required && (store || argumentsList.length !== required + 1))
+      this.fail('Wrong number of atomic arguments', location);
+    const destination = argumentsList[0];
+    this.checkWritable(destination);
+    const type = this.getExpressionType(destination);
+    const root = getExpressionRoot(destination);
+    const symbol = root.kind === 'identifier' ? this.findSymbol(root.value, root) : undefined;
+    if (!symbol?.atomic || !['int', 'uint'].includes(type.name))
+      this.fail('Atomics require a groupshared integer or RW integer buffer element', destination);
+    const reference = this.freezeLvalue(destination);
+    const values = argumentsList
+      .slice(1, required)
+      .map(argument => this.captureValue(this.coerceExpression(argument, type)));
+    const original = argumentsList[required];
+    if (original && !this.matchType(this.getExpressionType(original), type))
+      this.fail('Atomic output must match the destination type', original);
+    if (this.isWGSL && compare) {
+      // WGSL exposes a weak compare/exchange. Retry spurious failures for Slang's strong operation.
+      const result = this.createTemporary();
+      const attempt = this.createTemporary();
+      this.expressionPrelude.push(
+        `var ${result}: ${this.getTypeName(type)};`,
+        `loop {\nlet ${attempt} = atomicCompareExchangeWeak(&${reference}, ${values.join(', ')});\n${result} = ${attempt}.old_value;\nif (${attempt}.exchanged || ${attempt}.old_value != ${values[0]}) { break; }\n}`
+      );
+      if (original) this.writeOutput(original, result, type);
+    } else {
+      const functionName = compare
+        ? 'atomicCompSwap'
+        : !this.isWGSL && name === 'InterlockedExchange'
+          ? 'atomicExchange'
+          : ATOMICS[name];
+      const call = `${functionName}(${this.isWGSL ? '&' : ''}${reference}, ${values.join(', ')})`;
+      if (original) {
+        const result = this.createTemporary();
+        this.expressionPrelude.push(
+          this.isWGSL
+            ? `let ${result} = ${call};`
+            : `${this.getTypeName(type)} ${result} = ${call};`
+        );
+        this.writeOutput(original, result, type);
+      } else this.expressionPrelude.push(`${call};`);
+    }
+    return '';
+  }
+  private emitByteAddressCall(expression: Expression & {kind: 'call'}): string {
+    const callee = expression.callee as Expression & {kind: 'member'};
+    const resourceType = this.getExpressionType(callee.object);
+    const code = this.emitExpression(callee.object);
+    const data = `${code}${this.isWGSL ? '' : '._slang_data'}`;
+    const method = callee.member;
+    if (method === 'GetDimensions') {
+      if (expression.arguments.length !== 1)
+        this.fail('ByteAddressBuffer.GetDimensions requires one output', expression);
+      this.writeOutput(
+        expression.arguments[0],
+        this.isWGSL ? `(arrayLength(&${data}) * 4u)` : `(uint(${data}.length()) * 4u)`,
+        {name: 'uint'}
+      );
+      return '';
+    }
+    const atomic = Boolean(ATOMICS[method]);
+    const load = /^Load([2-4])?$/.exec(method);
+    const store = /^Store([2-4])?$/.exec(method);
+    if (!atomic && !load && !store) this.fail('Unsupported byte-address buffer method', expression);
+    if ((store || atomic) && resourceType.name !== 'RWByteAddressBuffer')
+      this.fail('Byte-address writes require RWByteAddressBuffer', expression);
+    const offset = expression.arguments[0];
+    if (!offset || !['int', 'uint'].includes(this.getExpressionType(offset).name))
+      this.fail('Byte offsets require integer scalars', expression);
+    if (offset.kind === 'number' && Number(offset.value.replace(/u$/i, '')) % 4)
+      this.fail('Byte-address offsets must be aligned to four bytes', offset);
+    const index = this.createTemporary();
+    const offsetCode = this.coerceExpression(offset, {name: 'uint'});
+    this.expressionPrelude.push(
+      this.isWGSL
+        ? `let ${index} = (${offsetCode} >> 2u);`
+        : `uint ${index} = (${offsetCode} >> 2u);`
+    );
+    const indexExpression: Expression = {...offset, kind: 'identifier', value: index};
+    this.scopes[this.scopes.length - 1].set(index, {
+      type: {name: 'uint'},
+      code: index,
+      writable: false
+    });
+    const destination: Expression = {
+      ...expression,
+      kind: 'index',
+      object: callee.object,
+      index: indexExpression
+    };
+    if (atomic)
+      return this.emitAtomic(method, [destination, ...expression.arguments.slice(1)], expression);
+    const width = Number((load || store)![1] || 1);
+    if (expression.arguments.length !== (load ? 1 : 2))
+      this.fail('Wrong number of byte-address arguments', expression);
+    const root = getExpressionRoot(callee.object);
+    const atomicStorage = root.kind === 'identifier' && this.findSymbol(root.value, root).atomic;
+    const accesses = Array.from(
+      {length: width},
+      (_, component) => `${data}[${index}${component ? ` + ${component}u` : ''}]`
+    );
+    if (load) {
+      const values = accesses.map(access =>
+        this.isWGSL && atomicStorage ? `atomicLoad(&${access})` : access
+      );
+      return width === 1
+        ? values[0]
+        : `${this.getTypeName({name: `uint${width}`})}(${values.join(', ')})`;
+    }
+    const value = this.captureTypedValue(
+      this.coerceExpression(expression.arguments[1], {name: `uint${width === 1 ? '' : width}`}),
+      {name: `uint${width === 1 ? '' : width}`}
+    );
+    this.expressionPrelude.push(
+      ...accesses.map((access, component) => {
+        const element = width === 1 ? value : `${value}.${'xyzw'[component]}`;
+        return this.isWGSL && atomicStorage
+          ? `atomicStore(&${access}, ${element});`
+          : `${access} = ${element};`;
+      })
+    );
+    return '';
+  }
+  private validateBarriers(reachable: Set<string>): void {
+    const synchronized = new Set<string>();
+    const visit = (value: unknown, callback: (expression: Expression) => void): void => {
+      if (!value || typeof value !== 'object') return;
+      const node = value as Expression;
+      if (node.kind === 'call') callback(node);
+      Object.values(value).forEach(child => visit(child, callback));
+    };
+    for (const key of reachable)
+      visit(this.functions.get(key)!.body, expression => {
+        if (
+          expression.kind === 'call' &&
+          expression.callee.kind === 'identifier' &&
+          BARRIERS[expression.callee.value]
+        )
+          synchronized.add(key);
+      });
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const key of reachable)
+        if (
+          !synchronized.has(key) &&
+          [...(this.callGraph.get(key) || [])].some(dependency => synchronized.has(dependency))
+        ) {
+          synchronized.add(key);
+          changed = true;
+        }
+    }
+    const synchronizedNames = new Set([...synchronized].map(key => this.functions.get(key)!.name));
+    const containsBarrier = (value: unknown): boolean => {
+      let found = false;
+      visit(value, expression => {
+        if (
+          expression.kind === 'call' &&
+          expression.callee.kind === 'identifier' &&
+          (BARRIERS[expression.callee.value] || synchronizedNames.has(expression.callee.value))
+        )
+          found = true;
+      });
+      return found;
+    };
+    const inspect = (value: unknown): void => {
+      if (!value || typeof value !== 'object') return;
+      const node = value as Statement | Expression;
+      if (['if', 'while', 'for', 'conditional'].includes(node.kind) && containsBarrier(value))
+        this.fail(
+          'Synchronization barriers must occur in unconditional control flow; conditional and loop barriers are outside this subset',
+          node
+        );
+      if (node.kind === 'binary' && ['&&', '||'].includes(node.operator) && containsBarrier(value))
+        this.fail('Synchronization barriers cannot be short-circuited', node);
+      Object.values(value).forEach(inspect);
+    };
+    for (const key of synchronized) {
+      const body = this.functions.get(key)!.body;
+      inspect(body);
+      const statements = body.kind === 'block' ? body.statements : [body];
+      const findReturn = (value: unknown): void => {
+        if (!value || typeof value !== 'object') return;
+        const node = value as Statement;
+        if (node.kind === 'return')
+          this.fail(
+            'Early returns in functions with synchronization barriers are outside this subset',
+            node
+          );
+        Object.values(value).forEach(findReturn);
+      };
+      statements.forEach((statement, index) => {
+        if (index !== statements.length - 1 || statement.kind !== 'return') findReturn(statement);
+      });
+    }
+  }
+
   private getTexture(expression: Expression): {
     code: string;
     layout: SlangTextureLayout;
@@ -1188,37 +1531,115 @@ export class SlangEmitter {
       ? code
       : `(${code}).${'xyzw'.slice(0, layout.components)}`;
   }
-  private emitTextureLoad(texture: Expression, coordinates: Expression, method = false): string {
+  private captureTypedValue(code: string, type: SlangType): string {
+    if (this.isWGSL) return this.captureValue(code);
+    const temporary = this.createTemporary();
+    this.expressionPrelude.push(`${this.getTypeName(type)} ${temporary} = ${code};`);
+    return temporary;
+  }
+  private emitResourceSelection(
+    texture: Expression,
+    resultType: SlangType,
+    emit: (texture: Expression) => string
+  ): string | undefined {
+    if (
+      texture.kind !== 'index' ||
+      texture.object.kind !== 'identifier' ||
+      texture.index.kind === 'number'
+    )
+      return undefined;
+    const resources = this.resourceArrays.get(texture.object.value);
+    if (!resources) return undefined;
+    const indexType = this.getExpressionType(texture.index);
+    if (!['int', 'uint'].includes(indexType.name))
+      this.fail('Resource array indices require integer scalars', texture.index);
+    const index = this.captureTypedValue(this.emitExpression(texture.index), indexType);
+    const result = resultType.name === 'void' ? '' : this.createTemporary();
+    if (result)
+      this.expressionPrelude.push(
+        `${this.isWGSL ? `var ${result}: ${this.getTypeName(resultType)}` : `${this.getTypeName(resultType)} ${result}`} = ${this.getZeroValue(resultType)};`
+      );
+    const cases = resources.map((_, resourceIndex) => {
+      const selected: Expression = {
+        ...texture,
+        index: {...texture.index, kind: 'number', value: String(resourceIndex)}
+      };
+      const branch = this.captureExpression(() => emit(selected));
+      const code = [
+        ...branch.statements,
+        branch.code ? (result ? `${result} = ${branch.code};` : `${branch.code};`) : '',
+        this.isWGSL ? '' : 'break;'
+      ]
+        .filter(Boolean)
+        .join('\n');
+      return `case ${resourceIndex}${indexType.name === 'uint' ? 'u' : ''}: {\n${code}\n}`;
+    });
+    this.expressionPrelude.push(
+      `switch (${index}) {\n${cases.join('\n')}\ndefault: {${this.isWGSL ? '' : 'break;'}}\n}`
+    );
+    return result;
+  }
+  private emitTextureLoad(
+    texture: Expression,
+    coordinates: Expression,
+    method = false,
+    sample?: Expression
+  ): string {
+    const selected = this.emitResourceSelection(
+      texture,
+      this.getExpressionType(texture).element!,
+      resource => this.emitTextureLoad(resource, coordinates, method, sample)
+    );
+    if (selected !== undefined) return selected;
     const {code, layout} = this.getTexture(texture);
+    this.directTextures.add(code);
     if (layout.access === 'write') this.fail('Write-only textures cannot be read', texture);
     if (!this.isWGSL && layout.sampleType === 'depth')
       this.fail(
         'GLSL depth comparison textures cannot also use Load; use a separate non-comparison view',
         texture
       );
-    if (layout.dimension === 'cube')
+    if (layout.dimension.startsWith('cube'))
       this.fail('Cube textures do not support integer Load/index access', texture);
-    const width = layout.dimension === '2d' ? 2 : 3;
+    if (layout.multisampled && (!method || !sample))
+      this.fail('Multisampled Load requires coordinates and a sample index', texture);
+    const width = getTextureCoordinateWidth(layout);
+    const coordinateWidth = width + (method && !layout.format && !layout.multisampled ? 1 : 0);
     const coordinate = this.coerceExpression(coordinates, {
-      name: `int${width + (method && !layout.format ? 1 : 0)}`
+      name: `int${coordinateWidth === 1 ? '' : coordinateWidth}`
     });
-    const temporary = this.isWGSL ? this.createTemporary() : coordinate;
-    if (this.isWGSL) this.expressionPrelude.push(`let ${temporary} = ${coordinate};`);
+    const temporary = this.captureTypedValue(coordinate, {
+      name: `int${coordinateWidth === 1 ? '' : coordinateWidth}`
+    });
     const position =
-      width === 2
-        ? `(${temporary}).xy`
-        : layout.dimension === '2d-array'
-          ? `(${temporary}).xy, (${temporary}).z`
-          : `(${temporary}).xyz`;
-    const mip = layout.format ? '' : method ? `, (${temporary}).${width === 2 ? 'z' : 'w'}` : ', 0';
-    const glslPosition = width === 2 ? `(${temporary}).xy` : `(${temporary}).xyz`;
+      width === 1
+        ? method && !layout.format
+          ? `${temporary}.x`
+          : temporary
+        : width === 2
+          ? `${temporary}.xy`
+          : layout.dimension === '2d-array' && this.isWGSL
+            ? `${temporary}.xy, ${temporary}.z`
+            : `${temporary}.xyz`;
+    const mip = layout.format
+      ? ''
+      : layout.multisampled
+        ? `, ${this.coerceExpression(sample!, {name: 'int'})}`
+        : method
+          ? `, ${temporary}.${'xyzw'[width]}`
+          : ', 0';
     const value = this.isWGSL
       ? `textureLoad(${code}, ${position}${mip})`
-      : `${layout.format ? 'imageLoad' : 'texelFetch'}(${code}, ${glslPosition}${mip})`;
+      : `${layout.format ? 'imageLoad' : 'texelFetch'}(${code}, ${position}${mip})`;
     return this.cropTextureValue(value, layout);
   }
   private emitTextureStore(texture: Expression, coordinates: string, value: string): string {
+    const selected = this.emitResourceSelection(texture, {name: 'void'}, resource =>
+      this.emitTextureStore(resource, coordinates, value)
+    );
+    if (selected !== undefined) return selected;
     const {code, layout, type} = this.getTexture(texture);
+    this.directTextures.add(code);
     if (!layout.format) this.fail('Only storage textures can be written', texture);
     const scalar = type.element!.name.replace(/[2-4]$/, '');
     const zero = scalar === 'float' ? '0.0' : scalar === 'uint' ? '0u' : '0';
@@ -1226,32 +1647,232 @@ export class SlangEmitter {
       layout.components === 4
         ? value
         : `${this.getTypeName({name: `${scalar}4`})}(${value}, ${Array.from({length: 4 - layout.components}, () => zero).join(', ')})`;
-    return `${this.isWGSL ? 'textureStore' : 'imageStore'}(${code}, ${coordinates}, ${stored})`;
+    const coordinate = this.captureValue(coordinates);
+    const position =
+      this.isWGSL && layout.dimension === '2d-array'
+        ? `${coordinate}.xy, ${coordinate}.z`
+        : coordinate;
+    return `${this.isWGSL ? 'textureStore' : 'imageStore'}(${code}, ${position}, ${stored})`;
+  }
+  private emitTextureDimensions(expression: Expression & {kind: 'call'}): string {
+    const callee = expression.callee as Expression & {kind: 'member'};
+    const {code, layout} = this.getTexture(callee.object);
+    this.directTextures.add(code);
+    const width = layout.dimension === '1d' ? 1 : layout.dimension === '3d' ? 3 : 2;
+    const layered = layout.dimension === '2d-array' || layout.dimension === 'cube-array';
+    const outputCount = width + (layered || layout.multisampled ? 1 : 0);
+    const mipQuery =
+      !layout.format && !layout.multisampled && expression.arguments.length === outputCount + 2;
+    if (expression.arguments.length !== outputCount && !mipQuery)
+      this.fail('Unsupported GetDimensions signature', expression);
+    if (mipQuery && !this.isWGSL && this.glslVersion !== '450')
+      this.fail(
+        'Mip-count queries require GLSL 450; WebGL 2 does not expose textureQueryLevels',
+        expression
+      );
+    const mip = mipQuery ? this.coerceExpression(expression.arguments[0], {name: 'int'}) : '0';
+    const dimension = this.createTemporary();
+    const query = this.isWGSL
+      ? `textureDimensions(${code}${layout.format || layout.multisampled ? '' : `, ${mip}`})`
+      : `${layout.format ? 'imageSize' : 'textureSize'}(${code}${layout.format || layout.multisampled ? '' : `, ${mip}`})`;
+    const glslWidth = width + (layered ? 1 : 0);
+    this.expressionPrelude.push(
+      this.isWGSL
+        ? `let ${dimension} = ${query};`
+        : `${glslWidth === 1 ? 'int' : `ivec${glslWidth}`} ${dimension} = ${query};`
+    );
+    const outputs = expression.arguments.slice(mipQuery ? 1 : 0);
+    for (let index = 0; index < width; index++)
+      this.writeOutput(outputs[index], width === 1 ? dimension : `${dimension}.${'xyz'[index]}`, {
+        name: this.isWGSL ? 'uint' : 'int'
+      });
+    if (layered)
+      this.writeOutput(
+        outputs[width],
+        this.isWGSL ? `textureNumLayers(${code})` : `${dimension}.z`,
+        {name: this.isWGSL ? 'uint' : 'int'}
+      );
+    if (layout.multisampled)
+      this.writeOutput(
+        outputs[width],
+        this.isWGSL ? `textureNumSamples(${code})` : `textureSamples(${code})`,
+        {name: this.isWGSL ? 'uint' : 'int'}
+      );
+    if (mipQuery)
+      this.writeOutput(
+        outputs[outputCount],
+        this.isWGSL ? `textureNumLevels(${code})` : `textureQueryLevels(${code})`,
+        {name: this.isWGSL ? 'uint' : 'int'}
+      );
+    return '';
+  }
+  private createResourceName(): string {
+    const name = this.createTemporary();
+    this.reservedNames.add(name);
+    return name;
+  }
+  private prepareCombinedTextures(): void {
+    if (this.isWGSL) return;
+    // Select a stable primary sampler across source entry points, including unused stages.
+    const resourceCodes = (expression: Expression, sampler: boolean): string[] => {
+      if (expression.kind === 'identifier') {
+        const symbol = this.scopes[0].get(expression.value);
+        return symbol && (sampler ? /^Sampler/.test(symbol.type.name) : isSlangTexture(symbol.type))
+          ? [symbol.code]
+          : [];
+      }
+      if (expression.kind === 'index' && expression.object.kind === 'identifier') {
+        const names = this.resourceArrays.get(expression.object.value);
+        if (!names) return [];
+        const index =
+          expression.index.kind === 'number'
+            ? Number(expression.index.value.replace(/u$/i, ''))
+            : undefined;
+        return (index === undefined ? names : names[index] ? [names[index]] : []).map(
+          name => this.scopes[0].get(name)!.code
+        );
+      }
+      return [];
+    };
+    const visit = (value: unknown): void => {
+      if (!value || typeof value !== 'object') return;
+      const node = value as Expression;
+      if (
+        node.kind === 'call' &&
+        node.callee.kind === 'member' &&
+        /^(Sample|Gather)/.test(node.callee.member) &&
+        node.arguments[0]
+      ) {
+        for (const texture of resourceCodes(node.callee.object, false))
+          for (const sampler of resourceCodes(node.arguments[0], true)) {
+            if (!this.sampledTextures.has(texture)) this.sampledTextures.set(texture, sampler);
+            else if (this.sampledTextures.get(texture) !== sampler) {
+              const key = `${texture}:${sampler}`;
+              if (!this.combinedTextures.has(key))
+                this.combinedTextures.set(key, {texture, sampler, code: this.createResourceName()});
+            }
+          }
+      }
+      Object.values(value).forEach(visit);
+    };
+    visit(this.program);
+  }
+  private getCombinedTexture(code: string, sampler: string): string {
+    const previous = this.sampledTextures.get(code);
+    if (!previous || previous === sampler) {
+      this.sampledTextures.set(code, sampler);
+      this.directTextures.add(code);
+      return code;
+    }
+    if (!this.directTextures.has(code)) this.usedTextures.delete(code);
+    const key = `${code}:${sampler}`;
+    if (!this.combinedTextures.has(key))
+      this.combinedTextures.set(key, {texture: code, sampler, code: this.createResourceName()});
+    const combined = this.combinedTextures.get(key)!;
+    this.usedTextures.add(combined.code);
+    return combined.code;
   }
   private emitTextureCall(expression: Expression & {kind: 'call'}): string {
     const callee = expression.callee as Expression & {kind: 'member'};
+    if (
+      callee.object.kind === 'index' &&
+      callee.object.index.kind !== 'number' &&
+      callee.object.object.kind === 'identifier' &&
+      this.resourceArrays.has(callee.object.object.value)
+    ) {
+      if (['Sample', 'SampleBias', 'SampleCmp'].includes(callee.member))
+        this.fail(
+          'Dynamic resource selection requires explicit levels or gradients rather than implicit derivatives',
+          expression
+        );
+      const indexType = this.getExpressionType(callee.object.index);
+      const indexName = this.createTemporary();
+      const indexCode = this.captureTypedValue(this.emitExpression(callee.object.index), indexType);
+      this.scopes[this.scopes.length - 1].set(indexName, {
+        type: indexType,
+        code: indexCode,
+        writable: false
+      });
+      const texture = {
+        ...callee.object,
+        index: {...callee.object.index, kind: 'identifier' as const, value: indexName}
+      };
+      const argumentsList = expression.arguments.map(argument => {
+        if (
+          callee.member === 'GetDimensions' ||
+          /Sampler/.test(this.getExpressionType(argument).name)
+        )
+          return argument;
+        const code = this.captureTypedValue(
+          this.emitExpression(argument),
+          this.getExpressionType(argument)
+        );
+        const name = this.createTemporary();
+        this.scopes[this.scopes.length - 1].set(name, {
+          type: this.getExpressionType(argument),
+          code,
+          writable: false
+        });
+        return {...argument, kind: 'identifier', value: name} as Expression;
+      });
+      return this.emitResourceSelection(texture, this.getExpressionType(expression), resource =>
+        this.emitTextureCall({
+          ...expression,
+          callee: {...callee, object: resource},
+          arguments: argumentsList
+        })
+      )!;
+    }
     const {code, layout} = this.getTexture(callee.object);
+    const method = callee.member;
+    if (method === 'GetDimensions') return this.emitTextureDimensions(expression);
     if (this.discoveringTextureUsage) {
-      if (callee.object.kind === 'identifier') {
-        if (['SampleCmp', 'SampleCmpLevelZero'].includes(callee.member))
-          this.comparisonTextures.add(callee.object.value);
-        else if (['Sample', 'SampleLevel'].includes(callee.member))
-          this.ordinaryTextures.add(callee.object.value);
+      const root = getExpressionRoot(callee.object);
+      if (root.kind === 'identifier') {
+        if (['SampleCmp', 'SampleCmpLevelZero', 'GatherCmp'].includes(method))
+          this.comparisonTextures.add(root.value);
+        else if (/^(Sample|Gather)/.test(method)) this.ordinaryTextures.add(root.value);
       }
       expression.arguments.forEach(argument => this.emitExpression(argument));
       return this.getZeroValue(this.getExpressionType(expression));
     }
-    if (callee.member === 'Load' && expression.arguments.length === 1)
-      return this.emitTextureLoad(callee.object, expression.arguments[0], true);
-    const comparison = ['SampleCmp', 'SampleCmpLevelZero'].includes(callee.member);
+    if (method === 'Load' && expression.arguments.length === (layout.multisampled ? 2 : 1))
+      return this.emitTextureLoad(
+        callee.object,
+        expression.arguments[0],
+        true,
+        expression.arguments[1]
+      );
+    const comparison = ['SampleCmp', 'SampleCmpLevelZero', 'GatherCmp'].includes(method);
+    const gather = /^Gather(Red|Green|Blue|Alpha|Cmp)?$/.test(method);
+    const gradient = method === 'SampleGrad';
+    const count = gradient ? 4 : method === 'Sample' || (gather && !comparison) ? 2 : 3;
     if (
-      !['Sample', 'SampleLevel', 'SampleCmp', 'SampleCmpLevelZero'].includes(callee.member) ||
-      expression.arguments.length !== (callee.member === 'Sample' ? 2 : 3)
+      (!gather &&
+        ![
+          'Sample',
+          'SampleLevel',
+          'SampleBias',
+          'SampleGrad',
+          'SampleCmp',
+          'SampleCmpLevelZero'
+        ].includes(method)) ||
+      expression.arguments.length !== count
     )
       this.fail('Texture method or argument count is unsupported', expression);
-    if (layout.format || layout.sampleType === 'sint' || layout.sampleType === 'uint')
-      this.fail('Integer/storage textures support Load rather than filtered sampling', expression);
-    if (['Sample', 'SampleCmp'].includes(callee.member) && this.stage !== 'fragment')
+    if (
+      layout.format ||
+      layout.multisampled ||
+      (!gather && ['sint', 'uint'].includes(layout.sampleType))
+    )
+      this.fail('This texture supports Load rather than filtered sampling', expression);
+    if (layout.dimension === '1d' && method !== 'SampleLevel')
+      this.fail('1D textures support explicit-level sampling only', expression);
+    if (gather && ['1d', '3d'].includes(layout.dimension))
+      this.fail('Gather requires a 2D or cube texture', expression);
+    if (gather && !this.isWGSL && this.glslVersion !== '450')
+      this.fail('Texture gathers require GLSL 450; they are unavailable in WebGL 2', expression);
+    if (['Sample', 'SampleBias', 'SampleCmp'].includes(method) && this.stage !== 'fragment')
       this.fail('Implicit derivative sampling requires a fragment shader', expression);
     if (comparison !== (layout.sampleType === 'depth'))
       this.fail('Depth textures require comparison sampling or Load', expression);
@@ -1259,47 +1880,66 @@ export class SlangEmitter {
     if (samplerType.name !== (comparison ? 'SamplerComparisonState' : 'SamplerState'))
       this.fail('Texture sampling has the wrong sampler type', expression);
     const sampler = this.emitExpression(expression.arguments[0]);
-    const width = layout.dimension === '2d' ? 2 : 3;
-    const coordinates = this.coerceExpression(expression.arguments[1], {name: `float${width}`});
-    const extra = expression.arguments[2]
-      ? this.coerceExpression(expression.arguments[2], {name: 'float'})
-      : '';
-    if (this.isWGSL) {
-      const temporary = this.createTemporary();
-      this.expressionPrelude.push(`let ${temporary} = ${coordinates};`);
-      const position =
-        layout.dimension === '2d-array' ? `${temporary}.xy, i32(${temporary}.z)` : temporary;
-      const functionName = comparison
-        ? callee.member === 'SampleCmpLevelZero'
-          ? 'textureSampleCompareLevel'
-          : 'textureSampleCompare'
-        : callee.member === 'SampleLevel'
-          ? 'textureSampleLevel'
-          : 'textureSample';
-      return this.cropTextureValue(
-        `${functionName}(${code}, ${sampler}, ${position}${extra ? `, ${extra}` : ''})`,
-        layout
-      );
-    }
-    const previous = this.sampledTextures.get(code);
-    if (previous && previous !== sampler)
-      this.fail('GLSL combined textures require one sampler per texture', expression);
-    this.sampledTextures.set(code, sampler);
-    const position = comparison
-      ? `${layout.dimension === '2d' ? 'vec3' : 'vec4'}(${coordinates}, ${extra})`
-      : coordinates;
-    const level =
-      callee.member === 'SampleLevel'
-        ? `, ${extra}`
-        : callee.member === 'SampleCmpLevelZero'
-          ? ', 0.0'
-          : '';
-    if (comparison && layout.dimension !== '2d' && callee.member === 'SampleCmpLevelZero')
-      this.fail('GLSL supports explicit-level comparison only on 2D textures', expression);
-    return this.cropTextureValue(
-      `${level ? 'textureLod' : 'texture'}(${code}, ${position}${level})`,
-      layout
+    const width = getTextureCoordinateWidth(layout);
+    const coordinates = this.captureValue(
+      this.coerceExpression(expression.arguments[1], {name: `float${width === 1 ? '' : width}`})
     );
+    const layered = layout.dimension === '2d-array' || layout.dimension === 'cube-array';
+    const position =
+      this.isWGSL && layered
+        ? `${coordinates}.${width === 3 ? 'xy' : 'xyz'}, i32(${coordinates}.${width === 3 ? 'z' : 'w'})`
+        : coordinates;
+    let extra = '';
+    if (gradient) {
+      const gradientWidth = width - (layered ? 1 : 0);
+      extra = expression.arguments
+        .slice(2)
+        .map(argument =>
+          this.captureValue(
+            this.coerceExpression(argument, {
+              name: `float${gradientWidth === 1 ? '' : gradientWidth}`
+            })
+          )
+        )
+        .join(', ');
+    } else if (expression.arguments[2])
+      extra = this.captureValue(this.coerceExpression(expression.arguments[2], {name: 'float'}));
+    const component = {Gather: 0, GatherRed: 0, GatherGreen: 1, GatherBlue: 2, GatherAlpha: 3}[
+      method as 'Gather'
+    ];
+    if (this.isWGSL) {
+      const functionName = gather
+        ? comparison
+          ? 'textureGatherCompare'
+          : 'textureGather'
+        : comparison
+          ? method === 'SampleCmpLevelZero'
+            ? 'textureSampleCompareLevel'
+            : 'textureSampleCompare'
+          : {
+              SampleLevel: 'textureSampleLevel',
+              SampleGrad: 'textureSampleGrad',
+              SampleBias: 'textureSampleBias'
+            }[method] || 'textureSample';
+      const value = `${functionName}(${gather && !comparison ? `${component}, ` : ''}${code}, ${sampler}, ${position}${extra ? `, ${extra}` : ''})`;
+      return gather ? value : this.cropTextureValue(value, layout);
+    }
+    const combined = this.getCombinedTexture(code, sampler);
+    if (comparison && method === 'SampleCmpLevelZero' && layout.dimension !== '2d')
+      this.fail('GLSL supports explicit-level comparison only on 2D textures', expression);
+    if (gather)
+      return `textureGather(${combined}, ${coordinates}, ${comparison ? extra : component})`;
+    const glslPosition = comparison
+      ? `${layout.dimension === '2d' ? 'vec3' : 'vec4'}(${coordinates}${layout.dimension === 'cube-array' ? '' : `, ${extra}`})${layout.dimension === 'cube-array' ? `, ${extra}` : ''}`
+      : coordinates;
+    const suffix =
+      method === 'SampleCmpLevelZero' ? ', 0.0' : !comparison && extra ? `, ${extra}` : '';
+    const functionName = gradient
+      ? 'textureGrad'
+      : method === 'SampleLevel' || method === 'SampleCmpLevelZero'
+        ? 'textureLod'
+        : 'texture';
+    return this.cropTextureValue(`${functionName}(${combined}, ${glslPosition}${suffix})`, layout);
   }
   private checkMultiplyArguments(expression: Expression & {kind: 'call'}): void {
     if (expression.arguments.length !== 2) this.fail('mul requires two arguments', expression);
@@ -1366,8 +2006,12 @@ export class SlangEmitter {
       const object = this.freezeLvalue(expression.object);
       const index = this.emitExpression(expression.index);
       const temporary = this.createTemporary();
-      this.expressionPrelude.push(`let ${temporary} = ${index};`);
-      return `${object}[${temporary}]`;
+      this.expressionPrelude.push(
+        this.isWGSL
+          ? `let ${temporary} = ${index};`
+          : `${this.getTypeName(this.getExpressionType(expression.index))} ${temporary} = ${index};`
+      );
+      return `${object}${!this.isWGSL && /Buffer$/.test(this.getExpressionType(expression.object).name) ? '._slang_data' : ''}[${temporary}]`;
     }
     this.fail('Output arguments require writable variables', expression);
   }
@@ -1405,7 +2049,7 @@ export class SlangEmitter {
       const destination = this.freezeLvalue(argument);
       const temporary = this.createTemporary();
       this.expressionPrelude.push(
-        `var ${temporary}: ${this.getTypeName(parameter.type)}${parameter.modifiers.includes('inout') ? ` = ${destination}` : ''};`
+        `var ${temporary}: ${this.getTypeName(parameter.type)}${parameter.modifiers.includes('inout') ? ` = ${this.isAtomicValue(argument) ? `atomicLoad(&${destination})` : destination}` : ''};`
       );
       argumentsList.push(`&${temporary}`);
       copies.push(this.emitLvalueWrite(argument, destination, temporary));
@@ -1417,6 +2061,8 @@ export class SlangEmitter {
     return result;
   }
   private emitLvalueWrite(expression: Expression, destination: string, value: string): string {
+    if (this.isWGSL && this.isAtomicValue(expression))
+      return `atomicStore(&${destination}, ${value});`;
     if (
       this.isWGSL &&
       expression.kind === 'member' &&
@@ -1436,6 +2082,10 @@ export class SlangEmitter {
       const type = this.getExpressionType(expression.operand);
       if (!['float', 'int', 'uint'].includes(type.name))
         this.fail('Increment and decrement require numeric scalars', expression);
+      if (this.isWGSL && this.isAtomicValue(expression.operand)) {
+        const destination = this.freezeLvalue(expression.operand);
+        return `atomicStore(&${destination}, atomicLoad(&${destination}) ${expression.operator === '++' ? '+' : '-'} ${type.name === 'uint' ? '1u' : '1'})`;
+      }
       return `${this.emitExpression(expression.operand)} ${expression.operator === '++' ? '+=' : '-='} ${type.name === 'uint' ? '1u' : type.name === 'float' ? '1.0' : '1'}`;
     }
     if (
@@ -1453,9 +2103,27 @@ export class SlangEmitter {
             'Storage texture compound assignments require an explicit load and store',
             expression
           );
+        let texture = expression.left.object;
+        if (texture.kind === 'index' && texture.index.kind !== 'number') {
+          const indexType = this.getExpressionType(texture.index);
+          const index = this.captureTypedValue(this.emitExpression(texture.index), indexType);
+          const name = this.createTemporary();
+          this.scopes[this.scopes.length - 1].set(name, {
+            type: indexType,
+            code: index,
+            writable: false
+          });
+          texture = {...texture, index: {...texture.index, kind: 'identifier', value: name}};
+        }
         return this.emitTextureStore(
-          expression.left.object,
-          this.coerceExpression(expression.left.index, {name: 'int2'}),
+          texture,
+          this.coerceExpression(expression.left.index, {
+            name: this.getExpressionType(expression.left.object).name.endsWith('1D')
+              ? 'int'
+              : this.getExpressionType(expression.left.object).name.endsWith('2D')
+                ? 'int2'
+                : 'int3'
+          }),
           this.coerceExpression(expression.right, leftType)
         );
       }
@@ -1477,6 +2145,8 @@ export class SlangEmitter {
         );
         return this.emitLvalueWrite(expression.left, destination, temporary).replace(/;$/, '');
       }
+      if (this.isWGSL && this.isAtomicValue(expression.left))
+        return `atomicStore(&${destination}, ${expression.operator === '=' ? value : `(atomicLoad(&${destination}) ${expression.operator.slice(0, -1)} ${value})`})`;
       return `${destination} ${expression.operator} ${value}`;
     }
     if (expression.kind !== 'call') {
@@ -1638,25 +2308,70 @@ export class SlangEmitter {
     if (variable.type.name === 'void') {
       this.fail('Variables cannot have void type', variable.location);
     }
+    if (
+      variable.type.name === 'array' &&
+      variable.type.element &&
+      isSlangResource(variable.type.element)
+    ) {
+      if (!(isSlangTexture(variable.type.element) || /Sampler/.test(variable.type.element.name)))
+        this.fail('Resource arrays support textures and samplers only', variable.location);
+      const length = variable.type.length!;
+      if (length > 16)
+        this.fail('Resource arrays are limited to sixteen bindings', variable.location);
+      const attribute = variable.attributes.find(attribute => attribute.name === 'vk::binding');
+      const explicit = attribute
+        ? {group: Number(attribute.arguments[1]), binding: Number(attribute.arguments[0])}
+        : variable.binding;
+      if (
+        attribute &&
+        (attribute.arguments.length !== 2 ||
+          !attribute.arguments.every(argument => /^\d+$/.test(argument)))
+      )
+        this.fail('vk::binding requires binding and group integer literals', attribute.location);
+      const binding = {...(explicit || {group: 0, binding: 0})};
+      if (!explicit)
+        while (
+          Array.from({length}, (_, index) => binding.binding + index).some(
+            slot =>
+              this.reservedBindings.has(`0:${slot}`) ||
+              this.reflection.bindings.some(
+                resource => resource.group === 0 && resource.binding === slot
+              )
+          )
+        )
+          binding.binding++;
+      const names: string[] = [];
+      const declarations: string[] = [];
+      for (let index = 0; index < length; index++) {
+        let name = `${variable.name}_${index}`;
+        while (this.reservedNames.has(this.getName(name))) name += '_';
+        this.reservedNames.add(this.getName(name));
+        names.push(name);
+        if (this.comparisonTextures.has(variable.name)) this.comparisonTextures.add(name);
+        const code = this.emitGlobal({
+          ...variable,
+          name,
+          type: variable.type.element,
+          attributes: variable.attributes.filter(attribute => attribute.name !== 'vk::binding'),
+          binding: {...binding, binding: binding.binding + index}
+        });
+        declarations.push(code);
+        const resource = this.reflection.bindings[this.reflection.bindings.length - 1];
+        resource.name = `${variable.name}[${index}]`;
+        resource.resourceArray = {name: variable.name, index, length};
+        this.scopes[0].get(name)!.resourceName = resource.name;
+      }
+      this.resourceArrays.set(variable.name, names);
+      this.addSymbol(variable);
+      return declarations.join('\n');
+    }
+
     if (variable.semantic) {
       this.fail('Global variable semantics are not supported', variable.location);
     }
-    const resourceNames = [
-      'ConstantBuffer',
-      'StructuredBuffer',
-      'RWStructuredBuffer',
-      'Texture2D',
-      'Texture2DArray',
-      'TextureCube',
-      'Texture3D',
-      'WTexture2D',
-      'RWTexture2D',
-      'SamplerComparisonState',
-      'SamplerState'
-    ];
     const name = this.getName(variable.name);
     if (
-      !resourceNames.includes(variable.type.name) &&
+      !isSlangResource(variable.type) &&
       (variable.modifiers.includes('static') ||
         variable.modifiers.includes('const') ||
         variable.modifiers.includes('groupshared'))
@@ -1670,8 +2385,12 @@ export class SlangEmitter {
       }
       const shared = variable.modifiers.includes('groupshared');
       const constant = variable.modifiers.includes('const');
-      if (shared && this.stage !== 'compute') {
-        this.fail('groupshared requires a compute shader', variable.location);
+      if (shared) {
+        const layout = this.getLayout(variable.type, 'storage', variable.location);
+        this.reflection.workgroupStorageSize =
+          (this.reflection.workgroupStorageSize || 0) +
+          Math.ceil(layout.size / (this.isWGSL ? 16 : layout.alignment)) *
+            (this.isWGSL ? 16 : layout.alignment);
       }
       if (constant && !variable.initializer) {
         this.fail('Constants require an initializer', variable.location);
@@ -1686,6 +2405,16 @@ export class SlangEmitter {
         this.fail('Global initializers must be constant expressions', variable.location);
       const initializer = initial.code ? ` = ${initial.code}` : '';
       this.addSymbol(variable, name, !constant);
+      const symbol = this.scopes[0].get(variable.name)!;
+      symbol.shared = shared;
+      const element = variable.type.name === 'array' ? variable.type.element! : variable.type;
+      symbol.atomic =
+        shared && this.atomicGlobals.has(variable.name) && ['int', 'uint'].includes(element.name);
+      if (this.isWGSL && symbol.atomic) {
+        const atomicType = `atomic<${this.getTypeName(element)}>`;
+        return `var<workgroup> ${name}: ${variable.type.name === 'array' ? `array<${atomicType}, ${variable.type.length}>` : atomicType};`;
+      }
+
       return `${this.isWGSL ? (shared ? 'var<workgroup> ' : constant ? 'const ' : 'var<private> ') : shared ? 'shared ' : constant ? 'const ' : ''}${this.getDeclaration(variable.type, name, variable.location)}${initializer};`;
     }
     if (variable.initializer) {
@@ -1739,7 +2468,9 @@ export class SlangEmitter {
         variable.location
       );
     }
-    const storage = variable.type.name.endsWith('StructuredBuffer');
+    const byteAddress = isByteAddressBuffer(variable.type);
+    if (byteAddress) variable = {...variable, type: {...variable.type, element: {name: 'uint'}}};
+    const storage = variable.type.name.endsWith('StructuredBuffer') || byteAddress;
     const texture = isSlangTexture(variable.type);
     const sampler = ['SamplerState', 'SamplerComparisonState'].includes(variable.type.name);
     const textureLayout = texture
@@ -1749,10 +2480,21 @@ export class SlangEmitter {
           this.options.sourceName || 'shader.slang'
         )
       : undefined;
+    if (
+      textureLayout &&
+      !this.isWGSL &&
+      this.glslVersion === '300 es' &&
+      (textureLayout.dimension === '1d' ||
+        textureLayout.dimension === 'cube-array' ||
+        textureLayout.multisampled)
+    )
+      this.fail(
+        'This texture dimension requires GLSL 450; it is unavailable in WebGL 2',
+        variable.location
+      );
     if (textureLayout) this.textureLayouts.set(name, textureLayout);
     const access =
-      textureLayout?.access ??
-      (variable.type.name === 'RWStructuredBuffer' ? 'read_write' : 'read');
+      textureLayout?.access ?? (variable.type.name.startsWith('RW') ? 'read_write' : 'read');
     if (!texture && variable.attributes.some(attribute => attribute.name === 'format'))
       this.fail('format requires a storage texture', variable.location);
     if (textureLayout?.format && !this.isWGSL && this.glslVersion !== '450')
@@ -1783,6 +2525,11 @@ export class SlangEmitter {
         : undefined;
     this.addSymbol(variable, name, access === 'read_write' || access === 'write');
     this.scopes[0].get(variable.name)!.resourceName = variable.name;
+    this.scopes[0].get(variable.name)!.atomic =
+      storage &&
+      access === 'read_write' &&
+      this.atomicGlobals.has(variable.name) &&
+      ['int', 'uint'].includes(variable.type.element!.name);
     if (this.isWGSL && !storage && !texture && !sampler)
       this.scopes[0].get(variable.name)!.uniformType = valueType;
     if (variable.modifiers.includes('cbuffer')) {
@@ -1824,7 +2571,7 @@ export class SlangEmitter {
     if (this.isWGSL) {
       const prefix = `@group(${binding.group}) @binding(${binding.binding})`;
       if (storage) {
-        return `${prefix} var<storage, ${access}> ${name}: array<${this.getTypeName(variable.type.element!, variable.location)}>;`;
+        return `${prefix} var<storage, ${access}> ${name}: array<${this.scopes[0].get(variable.name)!.atomic ? `atomic<${this.getTypeName(variable.type.element!, variable.location)}>` : this.getTypeName(variable.type.element!, variable.location)}>;`;
       }
       if (texture || sampler) {
         return `${prefix} var ${name}: ${texture ? getWGSLTextureType(textureLayout!) : variable.type.name === 'SamplerComparisonState' ? 'sampler_comparison' : 'sampler'};`;
@@ -2340,10 +3087,26 @@ export class SlangEmitter {
     }
     const globals = this.program.declarations
       .filter(declaration => declaration.kind === 'variable')
-      .map(declaration => ({
-        code: markSlangSource(this.emitGlobal(declaration), declaration.location),
-        texture: isSlangTexture(declaration.type) ? this.getName(declaration.name) : undefined
-      }));
+      .flatMap(declaration => {
+        const code = this.emitGlobal(declaration);
+        const array = this.resourceArrays.get(declaration.name);
+        if (array)
+          return array.map((name, index) => ({
+            code: markSlangSource(code.split('\n')[index], declaration.location),
+            texture: isSlangTexture(declaration.type.element!) ? this.getName(name) : undefined,
+            resource: `${declaration.name}[${index}]`
+          }));
+        return [
+          {
+            code: markSlangSource(code, declaration.location),
+            texture: isSlangTexture(declaration.type) ? this.getName(declaration.name) : undefined,
+            resource: this.reflection.bindings.some(binding => binding.name === declaration.name)
+              ? declaration.name
+              : undefined
+          }
+        ];
+      });
+    this.prepareCombinedTextures();
     const functions = new Map<string, string>();
     const reachable = new Set<string>();
     const collectFunction = (name: string): void => {
@@ -2355,6 +3118,7 @@ export class SlangEmitter {
       for (const dependency of this.callGraph.get(name) || []) collectFunction(dependency);
     };
     collectFunction(this.functionKeys.get(this.entry)!);
+    this.validateBarriers(reachable);
     const orderedFunctions: string[] = [];
     visited.clear();
     visiting.clear();
@@ -2380,7 +3144,38 @@ export class SlangEmitter {
       ? ''
       : `#version ${this.glslVersion}\n${this.glslVersion === '300 es' ? 'precision highp float;\nprecision highp int;' : ''}`;
     const entry = markSlangSource(this.emitEntry(), this.entry.location);
+    const combinedDeclarations: string[] = [];
     if (!this.isWGSL) {
+      for (const combined of this.combinedTextures.values()) {
+        const original = this.reflection.bindings.find(
+          binding => binding.shaderName === combined.texture
+        )!;
+        const sampler = this.reflection.bindings.find(
+          binding => binding.shaderName === combined.sampler
+        )!;
+        let slot = 0;
+        while (
+          this.reflection.bindings.some(
+            binding => binding.group === 0 && binding.binding === slot
+          ) ||
+          this.reservedBindings.has(`0:${slot}`)
+        )
+          slot++;
+        const name = `${original.name}#${sampler.name}`;
+        this.reflection.bindings.push({
+          ...original,
+          name,
+          shaderName: combined.code,
+          binding: slot,
+          sampler: sampler.name
+        });
+        if (this.usedTextures.has(combined.code)) this.usedResources.add(name);
+        const type = getGLSLTextureType(original.texture!);
+        if (this.usedTextures.has(combined.code))
+          combinedDeclarations.push(
+            `${this.glslVersion === '450' ? `layout(binding = ${slot}) ` : ''}uniform ${this.glslVersion === '300 es' ? 'highp ' : ''}${type} ${combined.code};`
+          );
+      }
       for (const [texture, sampler] of this.sampledTextures) {
         const binding = this.reflection.bindings.find(binding => binding.shaderName === texture);
         if (binding) {
@@ -2405,8 +3200,15 @@ export class SlangEmitter {
       ...structures,
       ...this.uniformEmitter.getDeclarations(),
       ...globals
-        .filter(global => this.isWGSL || !global.texture || this.usedTextures.has(global.texture))
+        .filter(global =>
+          this.isWGSL
+            ? !this.options.omitUnusedResources ||
+              !global.resource ||
+              this.usedResources.has(global.resource)
+            : !global.texture || this.usedTextures.has(global.texture)
+        )
         .map(global => global.code),
+      ...combinedDeclarations,
       ...orderedFunctions
     ].filter(Boolean);
     const result: SlangTranspileResult = {
