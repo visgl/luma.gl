@@ -25,6 +25,7 @@ Target Release Date: Q3, 2026
 
 **@luma.gl/gpgpu**
 
+- **Deterministic grouped sums** - [`GPUGroupAggregation`](/docs/api-reference/experimental/gpu-core/gpu-group-aggregation) `sum` and `mean`, and the GPU dataframe and crossfilter group-bys built on it, now reduce per-workgroup partials in a fixed order instead of contending on float compare-exchange atomics. Results are bitwise-identical from run to run, and few-group sums no longer slow down as rows per group grow.
 - **Incremental GPU execution** - [`GPUIncrementalExecution`](/docs/api-reference/experimental/gpu-core/gpu-incremental-execution) caches explicitly versioned batch partials, preserves borrowed source storage, and submits only changed batch work plus the live merge. The GPU Data Analysis example shows streaming sums, histograms, grouped counts, and unsigned Top-K with reuse instrumentation.
 
 - **Batch-preserving GPU rendering** - `GPUVectorModel` renders chunked vectors without

@@ -504,13 +504,14 @@ export const GPUGRAPH_OPERATION_CONTRACTS = {
   'gpu-group-aggregation': {
     problem: 'Compute stable categorical counts or statistics over all or selected rows.',
     readsWrites: 'Reads dense uint32 keys, optional mask, and values; writes one row per group.',
-    ownership: 'Inputs/output are caller-owned; mean-count scratch is graph-owned transient storage.',
+    ownership:
+      'Inputs/output are caller-owned; sum and mean partial scratch is graph-owned transient storage.',
     output: 'Fixed group rows; invalid keys are ignored and numeric edge cases are explicit.',
-    work: 'Output initialization plus accumulation per nonempty chunk; mean adds division.',
+    work: 'Accumulation per nonempty chunk; sum and mean add one fixed-order combine pass.',
     chunks: 'Matching chunks are preserved and accumulate into one shared output.',
     execution: 'Can sit inside a conditioned branch; it has no custom resumable plan.',
     neighborhood: 'dictionary IDs, values, and mask → GPUGroupAggregation → linked chart or summary.',
-    cost: 'Source rows, group count, and atomic contention in popular groups.',
+    cost: 'Source rows and group count; sum and mean scratch grows with row blocks times groups.',
     mistake: 'Do not confuse fixed group capacity with the number of populated groups.'
   },
   'gpu-ancestor-projection': {

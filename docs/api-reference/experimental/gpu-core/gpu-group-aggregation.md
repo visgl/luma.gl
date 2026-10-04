@@ -70,21 +70,38 @@ drives rendering.
 Keys, masks, and values must have equal logical lengths. Each can be a data view or vector with
 independent chunk boundaries. Lowering intersects boundaries using borrowed views and preserves
 each column's format, byte offset, and stride.
-Every encoding initializes the output once, then each non-empty chunk accumulates into the shared
-group rows without concatenation or repacking. Empty chunks retain their place in the source
-topology but add no accumulation pass.
+Every non-empty chunk accumulates into shared group rows or partials without concatenation or
+repacking. Empty chunks retain their place in the source topology but add no accumulation pass.
 
 Counts with up to 256 groups use workgroup-local atomics before merging into the result; larger
-count outputs and floating-point statistics use global atomics directly. This keeps small, highly
-contended count dictionaries efficient while avoiding unbounded workgroup storage. Large input
-chunks use bounded three-dimensional dispatches rather than assuming every workgroup fits in one
-device dimension.
+count outputs, minimum, and maximum use global atomics directly. Large input chunks use bounded
+three-dimensional dispatches rather than assuming every workgroup fits in one device dimension.
 
-Counts wrap modulo 2^32. Sum and mean use atomic compare-exchange addition, so ordinary `float32`
-rounding applies but accumulation order is not deterministic. Non-finite values are ignored.
-Minimum and maximum use ordered float encodings and preserve the documented `-0`/`+0` ordering.
-Empty sum groups contain positive zero; empty minimum, maximum, and mean groups contain NaN. Mean
-uses one graph-owned transient `uint32` count per group and divides after all chunks accumulate.
+Counts wrap modulo 2^32. Non-finite values are ignored. Minimum and maximum use ordered float
+encodings and preserve the documented `-0`/`+0` ordering. Empty sum groups contain positive zero;
+empty minimum, maximum, and mean groups contain NaN.
+
+### Deterministic sums and means
+
+Sum and mean use no float atomics. They run in two passes:
+
+1. Each workgroup reduces a fixed block of at least 4,096 rows. It stages each 256-row tile in
+   workgroup memory, sorts the tile by group, and adds each group's run with a fixed-shape segmented
+   scan into a per-group accumulator. Each workgroup owns one column of a graph-owned
+   `[rowBlockCount × groupCount]` scratch buffer, plus a partial-count column for mean.
+2. One workgroup per group adds that group's partials in index order and a fixed binary tree, then
+   writes the sum or the mean.
+
+The addition order depends only on the input rows, their chunk boundaries, and the group count.
+The same inputs give bitwise-identical results on every run on the same device. Rounding stays
+within ordinary `float32` pairwise summation error.
+
+Scratch stays near 4 MB per partial array: row blocks grow beyond 4,096 rows when
+`rows × groups` exceeds about one million partials. Accumulators live in workgroup memory while
+they fit in 8 KB: up to 2,048 sum groups or 1,024 mean groups. Larger outputs accumulate directly
+in the workgroup's scratch column, which no other workgroup writes. Outputs are limited to
+16,777,215 groups, and the graph throws during planning when partial scratch would exceed
+`maxStorageBufferBindingSize`.
 
 ## Usage
 
@@ -133,7 +150,7 @@ unmapped values.
 
 ## Performance notes
 
-On subgroup-capable devices, aggregations with at most 16 groups combine lanes carrying the same
-key before issuing count, sum, minimum, maximum, or mean atomics. This targets compact dictionaries
-with high contention. Larger dictionaries and devices without both subgroup capabilities retain
-the existing local-count or direct-global-atomic implementations.
+On subgroup-capable devices, count, minimum, and maximum aggregations with at most 16 groups
+combine lanes carrying the same key before issuing atomics. This targets compact dictionaries with
+high contention. Sum and mean do not use subgroups or global atomics, so their cost does not depend
+on how many rows share a group.
