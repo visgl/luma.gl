@@ -36,6 +36,10 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'deck/gpu-culled-trace',
   'deck/pattern-fills',
   'deck/point-glow',
+  'deck/fireflies',
+  'deck/hdr-night-lighting',
+  'deck/global-illumination',
+  'deck/light-shafts',
   'deck/styled-paths',
   'experimental/gpu-sort',
   'experimental/spectral-caustics',
@@ -74,6 +78,10 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
 
 const PACKAGE_FREE_EXAMPLE_WORKSPACES = new Set(['showcase/raster-lab','tutorials/slang-particles']);
 const NATIVE_TYPESCRIPT_CONFIG_WORKSPACES = new Set([
+  'deck/fireflies',
+  'deck/hdr-night-lighting',
+  'deck/global-illumination',
+  'deck/light-shafts',
   'deck/city-scene',
   'api/multi-canvas',
   'experimental/fp64',

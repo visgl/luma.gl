@@ -15486,6 +15486,26 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-deck-fireflies@workspace:examples/deck/fireflies":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-deck-fireflies@workspace:examples/deck/fireflies"
+  dependencies:
+    "@deck.gl-community/gpu-layers": "npm:10.0.0-alpha.2"
+    "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
+    "@luma.gl/core": "npm:10.0.0-alpha.2"
+    "@luma.gl/effects": "npm:10.0.0-alpha.2"
+    "@luma.gl/engine": "npm:10.0.0-alpha.2"
+    "@luma.gl/shadertools": "npm:10.0.0-alpha.2"
+    "@luma.gl/webgl": "npm:10.0.0-alpha.2"
+    "@luma.gl/webgpu": "npm:10.0.0-alpha.2"
+    "@math.gl/core": "npm:^4.1.0"
+    playwright: "npm:^1.58.0"
+    pngjs: "npm:^7.0.0"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-deck-flow-particles@workspace:examples/deck/flow-particles":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-deck-flow-particles@workspace:examples/deck/flow-particles"
@@ -15498,6 +15518,26 @@ __metadata:
     "@luma.gl/shadertools": "npm:10.0.0-alpha.2"
     "@luma.gl/webgl": "npm:10.0.0-alpha.2"
     "@luma.gl/webgpu": "npm:10.0.0-alpha.2"
+    playwright: "npm:^1.58.0"
+    pngjs: "npm:^7.0.0"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-deck-global-illumination@workspace:examples/deck/global-illumination":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-deck-global-illumination@workspace:examples/deck/global-illumination"
+  dependencies:
+    "@deck.gl-community/gpu-layers": "npm:10.0.0-alpha.2"
+    "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
+    "@luma.gl/core": "npm:10.0.0-alpha.2"
+    "@luma.gl/effects": "npm:10.0.0-alpha.2"
+    "@luma.gl/engine": "npm:10.0.0-alpha.2"
+    "@luma.gl/shadertools": "npm:10.0.0-alpha.2"
+    "@luma.gl/webgl": "npm:10.0.0-alpha.2"
+    "@luma.gl/webgpu": "npm:10.0.0-alpha.2"
+    "@math.gl/core": "npm:^4.1.0"
     playwright: "npm:^1.58.0"
     pngjs: "npm:^7.0.0"
     typescript: "npm:^6.0.3"
@@ -15519,6 +15559,46 @@ __metadata:
     "@luma.gl/text": "npm:10.0.0-alpha.2"
     "@luma.gl/webgpu": "npm:10.0.0-alpha.2"
     apache-arrow: "npm:^17.0.0"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-deck-hdr-night-lighting@workspace:examples/deck/hdr-night-lighting":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-deck-hdr-night-lighting@workspace:examples/deck/hdr-night-lighting"
+  dependencies:
+    "@deck.gl-community/gpu-layers": "npm:10.0.0-alpha.2"
+    "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
+    "@luma.gl/core": "npm:10.0.0-alpha.2"
+    "@luma.gl/effects": "npm:10.0.0-alpha.2"
+    "@luma.gl/engine": "npm:10.0.0-alpha.2"
+    "@luma.gl/shadertools": "npm:10.0.0-alpha.2"
+    "@luma.gl/webgl": "npm:10.0.0-alpha.2"
+    "@luma.gl/webgpu": "npm:10.0.0-alpha.2"
+    "@math.gl/core": "npm:^4.1.0"
+    playwright: "npm:^1.58.0"
+    pngjs: "npm:^7.0.0"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-deck-light-shafts@workspace:examples/deck/light-shafts":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-deck-light-shafts@workspace:examples/deck/light-shafts"
+  dependencies:
+    "@deck.gl-community/gpu-layers": "npm:10.0.0-alpha.2"
+    "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
+    "@luma.gl/core": "npm:10.0.0-alpha.2"
+    "@luma.gl/effects": "npm:10.0.0-alpha.2"
+    "@luma.gl/engine": "npm:10.0.0-alpha.2"
+    "@luma.gl/shadertools": "npm:10.0.0-alpha.2"
+    "@luma.gl/webgl": "npm:10.0.0-alpha.2"
+    "@luma.gl/webgpu": "npm:10.0.0-alpha.2"
+    "@math.gl/core": "npm:^4.1.0"
+    playwright: "npm:^1.58.0"
+    pngjs: "npm:^7.0.0"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.0.0"
   languageName: unknown

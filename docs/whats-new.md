@@ -682,3 +682,14 @@ New `Device.features` that enable new GLSL syntax
 - `shader-noperspective-interpolation-webgl`: GLSL vertex outputs and fragment inputs may be declared with a `noperspective` interpolation qualifier.
 - `shader-conservative-depth-webgl`: GLSL `gl_FragDepth` qualifiers `depth_any` `depth_greater` `depth_less` `depth_unchanged` can enable early depth test optimizations.
 - `shader-clip-cull-distance-webgl`: Enables `gl_ClipDistance[] / gl_CullDistance[]`.
+
+
+### Shared scene lighting examples
+
+The experimental deck.gl GPU layers add optional camera/object motion capture and
+`SceneShaderPassEffect`, which connects shared HDR color, depth, normals and velocity to existing
+luma.gl shader-pass graphs. Riverfront fireflies, HDR night lighting, global illumination and light
+shafts demonstrate this shared infrastructure on WebGPU. `FireflyLayer` and the reusable `firefly`
+shader module also support WebGL2. Fireflies adds calm-water emitter reflections and adjustable
+bloom; Fireflies and HDR night lighting request extended-range, floating-point canvas output on
+HDR-capable displays, with an SDR presentation fallback.

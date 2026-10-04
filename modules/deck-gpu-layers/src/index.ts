@@ -57,3 +57,12 @@ export {MoonLayer, type MoonLayerProps} from './layers/moon-layer';
 export {CloudLayer, type CloudLayerProps} from './layers/cloud-layer';
 
 export {AtmosphereLayer, type AtmosphereLayerProps} from './layers/atmosphere-layer';
+
+export {getSceneBufferCamera, type SceneBufferCamera} from './effects/scene-buffer-camera';
+export {motionBuffer} from './layers/motion-buffer';
+export {
+  SceneShaderPassEffect,
+  type SceneShaderPassEffectProps,
+  type SceneShaderPassContext
+} from './effects/scene-shader-pass-effect';
+export {FireflyLayer} from './layers/firefly-layer';

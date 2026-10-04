@@ -243,3 +243,5 @@ export {
   type SurfaceWeatherState,
   type SurfaceWeatherRates
 } from './modules/lighting/surface-weather/surface-weather';
+
+export {firefly, type FireflyProps, type FireflyUniforms} from './modules/lighting/firefly/firefly';

@@ -397,6 +397,41 @@ jobs:
             exit 1
           fi
 
+  lighting_examples:
+    name: Riverfront lighting (${{ matrix.example }})
+    runs-on: ubuntu-22.04
+    # Fireflies compares emission colors, bloom, reflections and motion on SwiftShader.
+    timeout-minutes: ${{ matrix.example == 'fireflies' && 20 || 15 }}
+    strategy:
+      fail-fast: false
+      matrix:
+        example: [fireflies, hdr-night-lighting, global-illumination, light-shafts]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - name: Setup Node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version-file: '.nvmrc'
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Install dependencies
+        run: yarn install --immutable
+      - name: Build packages
+        run: yarn build
+      - name: Install Chromium
+        run: yarn exec playwright install --with-deps chromium
+      - name: Verify shared lighting examples
+        run: xvfb-run -a node examples/deck/riverfront-lighting-visual.mjs "${{ matrix.example }}"
+      - name: Upload lighting screenshots
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: riverfront-lighting-${{ matrix.example }}
+          path: /tmp/riverfront-${{ matrix.example }}.png
+          if-no-files-found: warn
+          retention-days: 7
+
   examples:
     name: Build, lint, Node tests, examples, and website
     runs-on: ubuntu-22.04

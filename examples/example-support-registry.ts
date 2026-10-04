@@ -6,6 +6,10 @@ import flowParticlesSupport from './deck/flow-particles/mobile-support';
 import sketchSupport from './deck/sketch-edges/mobile-support';
 import weatherSupport from './deck/weather/mobile-support';
 import patternSupport from './deck/pattern-fills/mobile-support';
+import firefliesSupport from './deck/fireflies/mobile-support';
+import hdrNightLightingSupport from './deck/hdr-night-lighting/mobile-support';
+import globalIlluminationSupport from './deck/global-illumination/mobile-support';
+import lightShaftsSupport from './deck/light-shafts/mobile-support';
 import pointGlowSupport from './deck/point-glow/mobile-support';
 import styledPathsSupport from './deck/styled-paths/mobile-support';
 import sceneBuffersSupport from './deck/scene-buffers/mobile-support';
@@ -111,6 +115,10 @@ import support85 from './showcase/spectral-wave-lab/mobile-support';
  * Metadata-only support registry. Importing this file never imports an example application.
  */
 export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDefinition>> = {
+  'deck/fireflies': firefliesSupport,
+  'deck/hdr-night-lighting': hdrNightLightingSupport,
+  'deck/global-illumination': globalIlluminationSupport,
+  'deck/light-shafts': lightShaftsSupport,
   'deck/scene-buffers': sceneBuffersSupport,
   'deck/ambient-occlusion': ambientOcclusionSupport,
   'deck/soft-shadows': softShadowsSupport,
