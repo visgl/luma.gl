@@ -59,7 +59,7 @@ try {
       assert(differences(clouds, night) > 1000, 'Astronomy time moves the day/night terminator');
       await page.getByLabel('UTC hour').fill('13');
       for (const body of ['sun', 'moon']) {
-        await page.getByRole('button', {name: `Look at ${body}`, exact: true}).click();
+        await page.getByRole('button', {name: body === 'sun' ? 'Sun' : 'Moon', exact: true}).click();
         const enabled = await screenshot();
         await page.getByLabel(body === 'sun' ? 'Sun' : 'Moon', {exact: true}).uncheck();
         const disabled = await screenshot();

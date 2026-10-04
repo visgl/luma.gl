@@ -16,6 +16,8 @@ export type StarfieldLayerProps = LayerProps & {
   timestamp?: number | Date;
   observer?: SkyObserver;
   brightness?: number;
+  /** Subtle spectral tint; zero renders neutral stars, one preserves the catalog RGB. */
+  colorStrength?: number;
 };
 let defaultStars: StarLayerDatum[] | undefined;
 function getDefaultStars(): StarLayerDatum[] {
@@ -23,7 +25,8 @@ function getDefaultStars(): StarLayerDatum[] {
     defaultStars = getStarLayerData(getStarPositions(2000), {
       coordinates: 'equatorial',
       distance: 1,
-      radiusScale: 2.5
+      radiusScale: 2,
+      maximumRadiusPixels: 2
     });
   return defaultStars;
 }
@@ -34,7 +37,8 @@ const starfield = {
     localUp: 'vec3<f32>',
     offset: 'vec2<f32>',
     clipHorizon: 'f32',
-    brightness: 'f32'
+    brightness: 'f32',
+    colorStrength: 'f32'
   },
   source: `struct starfieldUniforms {
     projection: mat4x4f,
@@ -42,6 +46,7 @@ const starfield = {
     offset: vec2f,
     clipHorizon: f32,
     brightness: f32,
+    colorStrength: f32,
   }; @group(3) @binding(auto) var<uniform> starfield: starfieldUniforms;`,
   vs: `layout(std140) uniform starfieldUniforms {
     mat4 projection;
@@ -49,6 +54,7 @@ const starfield = {
     vec2 offset;
     float clipHorizon;
     float brightness;
+    float colorStrength;
   } starfield;`
 } as const satisfies ShaderModule;
 
@@ -60,6 +66,7 @@ export class StarfieldLayer extends Layer<StarfieldLayerProps> {
     timestamp: undefined,
     observer: undefined,
     brightness: {type: 'number', value: 1, min: 0},
+    colorStrength: {type: 'number', value: 0.2, min: 0, max: 1},
     pickable: false,
     parameters: {
       depthCompare: 'less-equal',
@@ -159,7 +166,8 @@ export class StarfieldLayer extends Layer<StarfieldLayerProps> {
         localUp: [rotation[2], rotation[5], rotation[8]],
         offset: [2 / viewport.width, 2 / viewport.height],
         clipHorizon: viewport instanceof _GlobeViewport ? 0 : 1,
-        brightness: this.props.brightness! * this.props.opacity
+        brightness: this.props.brightness! * this.props.opacity,
+        colorStrength: this.props.colorStrength!
       }
     });
     this.state.model.draw(renderPass);
@@ -180,7 +188,7 @@ struct StarVertex { @builtin(position) position: vec4f,
   var output: StarVertex;
   output.position = vec4f(clip.xy / max(clip.w, 0.00001) + corner * radius * starfield.offset, 1.0, 1.0);
   output.coordinate = corner;
-  output.color = vec4f(pow(color.rgb, vec3f(2.2)) * starfield.brightness, color.a);
+  output.color = vec4f(mix(vec3f(1.0), pow(color.rgb, vec3f(2.2)), starfield.colorStrength) * starfield.brightness, color.a);
   if (clip.w <= 0.0 || (starfield.clipHorizon > 0.5 && dot(direction, starfield.localUp) <= 0.0)) {
     output.position = vec4f(2.0, 2.0, 1.0, 1.0);
   }
@@ -200,7 +208,7 @@ void main() {
   gl_Position = vec4(clip.xy / max(clip.w, 0.00001) + corner * radius * starfield.offset, 1.0, 1.0);
   if (clip.w <= 0.0 || (starfield.clipHorizon > 0.5 && dot(direction, starfield.localUp) <= 0.0))
     gl_Position = vec4(2.0, 2.0, 1.0, 1.0);
-  coordinate = corner; starColor = vec4(pow(color.rgb, vec3(2.2)) * starfield.brightness, color.a);
+  coordinate = corner; starColor = vec4(mix(vec3(1.0), pow(color.rgb, vec3(2.2)), starfield.colorStrength) * starfield.brightness, color.a);
 }`;
 const FRAGMENT_SHADER = /* glsl */ `#version 300 es
 precision highp float;

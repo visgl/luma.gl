@@ -66,6 +66,7 @@ try {
       await page.waitForFunction(() => window.weatherScene?.diagnostics.frames > 2);
       await setVisualTestPixelScale(page, 'weatherScene', process.env.WEATHER_THUMBNAIL ? 1 : undefined);
       assert.equal(await page.inputValue('#preset'), 'rain', `${backend}: opens with rain enabled`);
+      assert.deepEqual(await page.locator('#preset option').allTextContents(), ['Rain', 'Snow', 'Clouds', 'Sunny'], `${backend}: weather presets`);
       assert(await page.isChecked('#fog-enabled'), `${backend}: opens with independent fog enabled`);
       assert.equal(await page.inputValue('#visibility'), '700', `${backend}: fog is apparent by default`);
       await captureScreenshot({path: join(tmpdir(), `weather-default-${backend}.png`)});
@@ -90,8 +91,10 @@ try {
         `${backend}: slow frames preserve elapsed animation time`);
       await page.uncheck('#playing');
       await page.uncheck('#accumulate');
-      for (const preset of ['clear', 'rain', 'snow']) {
+      for (const preset of ['clear', 'rain', 'snow', 'clouds']) {
         await page.selectOption('#preset', preset);
+        assert.equal(await page.isChecked('#clouds'), preset !== 'clear', `${backend}: ${preset} selects cloud state`);
+        assert.equal(await page.evaluate(() => window.weatherScene.deck.props.layers.find(layer => layer.id === 'weather').props.visible), preset === 'rain' || preset === 'snow', `${backend}: ${preset} selects precipitation`);
         await page.uncheck('#fog-enabled');
         await page.waitForTimeout(150);
         const withoutFog = PNG.sync.read(await captureScreenshot());
@@ -200,6 +203,7 @@ try {
       await page.check('#playing');
       for (const preset of ['clear', 'rain', 'snow']) {
         await page.selectOption('#preset', preset);
+        await page.uncheck('#clouds');
         if (preset !== 'clear') await page.evaluate(() => window.weatherScene.setIntensity(0));
         await page.waitForTimeout(250);
         const idle = await page.evaluate(() => ({...window.weatherScene.diagnostics}));

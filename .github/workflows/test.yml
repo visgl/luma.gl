@@ -223,11 +223,11 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-      - name: Run Deck globe cloud cover visual checks
+      - name: Run Deck globe weather visual checks
         if: ${{ matrix.group == 'city' }}
         run: xvfb-run -a yarn workspace luma.gl-examples-deck-globe-clouds test:visual
 
-      - name: Upload globe cloud cover screenshots
+      - name: Upload globe weather screenshots
         if: ${{ always() && matrix.group == 'city' }}
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
@@ -236,16 +236,16 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-      - name: Run Deck point glow visual checks
+      - name: Run Deck lights and fireflies visual checks
         if: ${{ matrix.group == 'styles' }}
         run: xvfb-run -a yarn workspace luma.gl-examples-deck-point-glow test:visual
 
-      - name: Upload Deck point glow screenshots
+      - name: Upload Deck lights and fireflies screenshots
         if: ${{ always() && matrix.group == 'styles' }}
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: deck-point-glow
-          path: /tmp/point-glow-*.png
+          path: /tmp/riverfront-fireflies*.png
           if-no-files-found: warn
           retention-days: 7
 

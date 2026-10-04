@@ -22,6 +22,8 @@ import {
 } from '@luma.gl/effects';
 import type {ShaderPass, LightingProps, PointLight} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
+import {getRiverfrontSkyLighting} from './riverfront-sky-lighting';
+import {getSkyCameraState, SKY_FIELD_OF_VIEW} from './soft-shadows/sky-camera';
 import {RiverDistrictLayer} from './river-district-layer';
 import {CITY_ORIGIN, makeCityFeatures, makeCityMesh} from './river-district-data';
 import {RiverFireflyReflectionLayer} from './fireflies/river-reflection-layer';
@@ -35,7 +37,7 @@ export type RiverfrontLightingKind =
   | 'global-illumination'
   | 'light-shafts';
 export const RIVERFRONT_LIGHTING_TITLES = {
-  fireflies: 'Riverfront fireflies',
+  fireflies: 'Riverfront lights and fireflies',
   'hdr-night-lighting': 'Riverfront HDR night lighting',
   'global-illumination': 'Riverfront global illumination',
   'light-shafts': 'Riverfront light shafts'
@@ -55,9 +57,10 @@ export function createRiverfrontLightingScene(
     autoExposure: true,
     exposure: kind === 'fireflies' ? 1.6 : 1,
     intensity: 1,
-    radius: 110,
+    radius: kind === 'fireflies' ? 2.5 : 110,
+    lamps: true,
     speed: 0.6,
-    radiance: kind === 'hdr-night-lighting' ? 4 : 8,
+    radiance: kind === 'fireflies' ? 2 : kind === 'hdr-night-lighting' ? 4 : 8,
     density: 0.0008,
     reflections: true,
     species: 'photinus-pyralis',
@@ -73,17 +76,21 @@ export function createRiverfrontLightingScene(
     error: '',
     finalized: false
   };
-  const ready = Promise.withResolvers<void>();
+  let resolveReady!: () => void;
+  let rejectReady!: (reason?: unknown) => void;
+  const ready = new Promise<void>((resolve, reject) => {
+    resolveReady = resolve;
+    rejectReady = reject;
+  });
   let lastTimestamp = 0;
   let settlingFrames = 24;
   let points: Buffer | undefined;
   let pointData = new Float32Array();
   let waterPositions: Buffer | undefined;
+  let lampPoints: Buffer | undefined;
   const storageBindings: Record<string, Buffer> = {};
   const features = makeCityFeatures();
   const waterFeatures = features.filter(feature => feature.kind === 'water');
-  const dryFeatures =
-    kind === 'fireflies' ? features.filter(feature => feature.kind !== 'water') : features;
   const river = waterFeatures[0];
   const surfaceBounds: [number, number, number, number] = [
     river.center[0] - river.size[0] / 2,
@@ -91,6 +98,10 @@ export function createRiverfrontLightingScene(
     river.center[0] + river.size[0] / 2,
     river.center[1] + river.size[1] / 2
   ];
+  if (kind === 'light-shafts') {
+    // Extend the same ground receiver beyond the district so its boundary cannot create a false shaft.
+    features.find(feature => feature.kind === 'ground')!.size = [6000, 6000, 2];
+  }
   if (kind === 'global-illumination') {
     let buildingIndex = 0;
     for (const feature of features) {
@@ -112,15 +123,37 @@ export function createRiverfrontLightingScene(
     [-105, 140, 18, 1, 0.65, 0.18],
     [105, 260, 18, 0.1, 0.75, 0.55]
   ];
-  const shaftSource: [number, number, number] = [-200, 120, 260];
-  const initialViewState = {
+  if (kind === 'fireflies') {
+    lamps.length = 0;
+    for (let index = 0; index < 28; index++) {
+      const position: [number, number, number] = [-87, index * 40 - 540, 8];
+      lamps.push([...position, 1, 0.45, 0.08]);
+      features.push({
+        name: `West bank lamppost ${index + 1}`,
+        kind: 'building',
+        center: [position[0], position[1], 0],
+        size: [0.7, 0.7, position[2]],
+        color: [0.25, 0.27, 0.28]
+      });
+    }
+  }
+  const dryFeatures =
+    kind === 'fireflies' ? features.filter(feature => feature.kind !== 'water') : features;
+  // Low eye position exposes sky gaps between buildings for the depth-driven shafts.
+  // Let the skyline partially occlude the emitter so the starting view reveals beams.
+  const shaftSource: [number, number, number] = [-270, 560, 110];
+  const initialCamera = {
     ...RIVERFRONT_VIEW_LIMITS,
     longitude: CITY_ORIGIN[0],
     latitude: CITY_ORIGIN[1],
     zoom: 16,
-    pitch: kind === 'light-shafts' ? 72 : 58,
-    bearing: -18
+    pitch: kind === 'light-shafts' ? 84 : 58,
+    bearing: kind === 'light-shafts' ? -48 : -18
   };
+  const initialViewState =
+    kind === 'light-shafts'
+      ? getSkyCameraState(initialCamera, parent.clientWidth, parent.clientHeight)
+      : initialCamera;
   const capture = new SceneBufferEffect({
     id: `${kind}-capture`,
     motionVectors: true,
@@ -167,6 +200,7 @@ export function createRiverfrontLightingScene(
   });
   const deckDeviceProps = getDeckExampleProps(options);
   const requestHighDynamicRange =
+    (options.device?.type ?? options.deviceType ?? 'webgpu') === 'webgpu' &&
     (kind === 'fireflies' || kind === 'hdr-night-lighting') &&
     window.matchMedia('(dynamic-range: high)').matches;
   const deck = new Deck({
@@ -183,18 +217,27 @@ export function createRiverfrontLightingScene(
           }
         : {alphaMode: 'opaque'}
     },
-    views: new MapView({id: 'riverfront', controller: true}),
+    views: new MapView({
+      id: 'riverfront',
+      controller: true,
+      ...(kind === 'light-shafts' ? {fovy: SKY_FIELD_OF_VIEW} : {})
+    }),
     initialViewState,
     layers: [],
-    effects: [capture, effect],
+    effects: [],
     _animate: true,
     onDeviceInitialized: device => {
       diagnostics.backend = device.type;
+      if (device.type === 'webgpu') deck.setProps({effects: [capture, effect]});
       const configuration =
         device instanceof WebGPUDevice ? device.canvasContext?.handle.getConfiguration() : null;
       diagnostics.highDynamicRange =
         configuration?.format === 'rgba16float' && configuration.toneMapping?.mode === 'extended';
       if (kind === 'fireflies') {
+        lampPoints = device.createBuffer({
+          id: 'riverfront-lamppost-lights',
+          data: new Float32Array(lamps.flatMap((lamp, index) => [...lamp, 1, index]))
+        });
         const mesh = makeCityMesh(waterFeatures);
         const vertices = new Float32Array((mesh.length / 10) * 3);
         for (let index = 0; index < mesh.length / 10; index++)
@@ -207,8 +250,7 @@ export function createRiverfrontLightingScene(
           FIREFLY_SPECIES.find(candidate => candidate.id === settings.species) ??
           FIREFLY_SPECIES[0];
         for (let index = 0; index < 320; index++) {
-          const side = index % 2 ? 1 : -1;
-          const longitudeOffset = side * (45 + ((index * 37) % 55));
+          const longitudeOffset = 65 + ((index * 37) % 25);
           const latitudeOffset = ((index * 127) % 1000) - 500;
           rows.push(
             longitudeOffset,
@@ -243,7 +285,7 @@ export function createRiverfrontLightingScene(
       }
       updateLayers();
     },
-    onLoad: () => ready.resolve(),
+    onLoad: () => resolveReady(),
     onBeforeRender: () => {
       const timestamp = performance.now();
       diagnostics.deltaTime = lastTimestamp ? Math.min((timestamp - lastTimestamp) / 1000, 0.1) : 0;
@@ -260,7 +302,7 @@ export function createRiverfrontLightingScene(
     },
     onError: error => {
       diagnostics.error ||= error.message;
-      ready.reject(error);
+      rejectReady(error);
     },
     getTooltip: info => info.object?.name ?? null
   });
@@ -280,29 +322,35 @@ export function createRiverfrontLightingScene(
             enabled: true,
             useByteColors: false,
             lights:
-              kind === 'hdr-night-lighting'
+              kind === 'hdr-night-lighting' || kind === 'fireflies'
                 ? [
-                    {type: 'ambient', color: [0.15, 0.25, 0.42], intensity: 0.12},
-                    ...lamps.map(
-                      (lamp): PointLight => ({
-                        type: 'point',
-                        position: [lamp[0], lamp[1], lamp[2]],
-                        color: [lamp[3], lamp[4], lamp[5]],
-                        intensity: settings.radiance * 4,
-                        attenuation: [1, 0, 0.001]
-                      })
-                    )
+                    ...getRiverfrontSkyLighting(22).lights.lights!.filter(
+                      light => light.type === 'ambient' || (light.intensity ?? 1) > 0
+                    ),
+                    ...lamps
+                      .filter((_, index) => kind !== 'fireflies' || index % 9 === 0)
+                      .map(
+                        (lamp): PointLight => ({
+                          type: 'point',
+                          position: [lamp[0], lamp[1], lamp[2]],
+                          color: [lamp[3], lamp[4], lamp[5]],
+                          intensity:
+                            (kind !== 'fireflies' || settings.lamps ? settings.radiance : 0) *
+                            (kind === 'fireflies' ? 2 : 4),
+                          attenuation: [1, 0, 0.001]
+                        })
+                      )
                   ]
                 : [
                     {
                       type: 'ambient',
                       color: [0.38, 0.48, 0.65],
-                      intensity: kind === 'fireflies' ? 0.16 : 0.22
+                      intensity: 0.22
                     },
                     {
                       type: 'directional',
                       color: [1, 0.86, 0.68],
-                      intensity: kind === 'fireflies' ? 0.08 : 1.8,
+                      intensity: 1.8,
                       direction: [0.6, -0.3, -0.8]
                     }
                   ]
@@ -330,6 +378,44 @@ export function createRiverfrontLightingScene(
               }
             })
           : null,
+        lampPoints && settings.lamps && kind === 'fireflies' && settings.reflections
+          ? new RiverFireflyReflectionLayer({
+              id: 'riverfront-lamppost-reflections',
+              points: lampPoints,
+              pointCount: lamps.length,
+              coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+              coordinateOrigin: CITY_ORIGIN,
+              animation: {enabled: 0},
+              radiusPixels: 8,
+              opacity: 0.5,
+              surfaceHeight: river.center[2],
+              surfaceBounds,
+              surfaceRipples: settings.ripples,
+              style: {
+                coreRadius: 0,
+                coreIntensity: settings.radiance,
+                haloIntensity: settings.radiance,
+                falloff: 7
+              }
+            })
+          : null,
+        lampPoints && kind === 'fireflies'
+          ? new GlowPointLayer({
+              id: 'riverfront-lamppost-lights',
+              points: lampPoints,
+              pointCount: lamps.length,
+              coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+              coordinateOrigin: CITY_ORIGIN,
+              visible: settings.lamps,
+              radiusPixels: 8,
+              style: {
+                coreRadius: 0,
+                coreIntensity: settings.radiance,
+                haloIntensity: settings.radiance,
+                falloff: 7
+              }
+            })
+          : null,
         points && kind === 'fireflies' && settings.enabled && settings.reflections
           ? new RiverFireflyReflectionLayer({
               id: 'riverfront-firefly-reflections',
@@ -339,7 +425,7 @@ export function createRiverfrontLightingScene(
               coordinateOrigin: CITY_ORIGIN,
               time: () => diagnostics.time,
               animation: {enabled: 1, speed: settings.speed},
-              radiusPixels: 6,
+              radiusPixels: settings.radius,
               opacity: 0.55,
               surfaceHeight: river.center[2],
               surfaceBounds,
@@ -362,7 +448,7 @@ export function createRiverfrontLightingScene(
               time: () => diagnostics.time,
               animation: {enabled: settings.enabled ? 1 : 0, speed: settings.speed},
               visible: settings.enabled,
-              radiusPixels: 6,
+              radiusPixels: settings.radius,
               style: {
                 coreRadius: 0.05,
                 coreIntensity: 0.8,
@@ -441,11 +527,15 @@ export function createRiverfrontLightingScene(
           inverseViewMatrix: camera.inverseViewMatrix,
           density: settings.enabled ? settings.density : 0,
           heightFalloff: 0,
-          directionalLightDirectionView: [0.2, 0.4, 0.8],
+          directionalLightDirectionView: new Matrix4(camera.viewMatrix)
+            .transform([...shaftSource, 1])
+            .slice(0, 3),
           directionalLightColor: [1, 0.8, 0.45],
-          directionalIntensity: 2,
+          directionalIntensity: settings.radiance / 4,
           pointLightIntensity: 0,
-          godRayIntensity: lightVisible ? settings.intensity * 2 : 0,
+          godRayIntensity: lightVisible ? settings.intensity * 8 : 0,
+          godRaySourceRadius: 0.045,
+          anisotropy: 0.2,
           godRayPosition: lightCoordinate,
           godRaysOnly: 1,
           maxDistance: 850,
@@ -482,7 +572,7 @@ export function createRiverfrontLightingScene(
     effect,
     settings,
     diagnostics,
-    ready: ready.promise,
+    ready,
     kind,
     setSetting<Name extends keyof typeof settings>(
       name: Name,
@@ -503,6 +593,8 @@ export function createRiverfrontLightingScene(
         effect.resetHistory();
       }
       if (
+        name === 'lamps' ||
+        name === 'radius' ||
         name === 'radiance' ||
         name === 'intensity' ||
         name === 'speed' ||
@@ -531,6 +623,7 @@ export function createRiverfrontLightingScene(
       deck.finalize();
       points?.destroy();
       waterPositions?.destroy();
+      lampPoints?.destroy();
       for (const buffer of Object.values(storageBindings)) buffer.destroy();
     }
   };
