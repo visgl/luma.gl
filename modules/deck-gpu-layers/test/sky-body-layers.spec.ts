@@ -9,7 +9,7 @@ import {webgl2Adapter} from '@luma.gl/webgl';
 import {Model} from '@luma.gl/engine';
 import {getTestDevice} from '@luma.gl/test-utils';
 import {expect, test} from 'vitest';
-import {SunLayer, MoonLayer, CloudLayer} from '../src';
+import {SunLayer, MoonLayer, CloudLayer, AtmosphereLayer} from '../src';
 
 const SIZE = 128;
 const DIRECTION = [0, Math.cos(Math.PI / 18), Math.sin(Math.PI / 18)] as const;
@@ -181,7 +181,26 @@ test.each(['webgpu', 'webgl'] as const)(
         .find((layer): layer is CloudLayer => layer instanceof CloudLayer)!;
       const cloudUniformBuffer =
         cloudLayer.state.model._uniformStore.getManagedUniformBuffer('clouds');
+      const atmosphereLayer = new AtmosphereLayer({
+        id: 'atmosphere-test',
+        sunDirection: [0, 0.6, 0.8]
+      });
+      const atmospherePixels = await readFrame([atmosphereLayer]);
+      expect(energy(atmospherePixels), 'atmosphere fills the sky').toBeGreaterThan(1000);
+      expect(deck.pickObject({x: 64, y: 10}), 'sky does not participate in picking').toBeNull();
+      const atmosphericForeground = await readFrame([
+        new OccluderLayer({id: 'foreground'}),
+        atmosphereLayer
+      ]);
+      expect(energy(atmosphericForeground), 'foreground depth occludes atmosphere').toBe(0);
+      expect(atmosphericForeground[2]).toBe(255);
+      const activeAtmosphere = deck
+        .layerManager!.getLayers()
+        .find((layer): layer is AtmosphereLayer => layer instanceof AtmosphereLayer)!;
+      const atmosphereUniformBuffer =
+        activeAtmosphere.state.model._uniformStore.getManagedUniformBuffer('atmosphere');
       deck.finalize();
+      expect(atmosphereUniformBuffer.destroyed).toBe(true);
       expect(cloudUniformBuffer.destroyed).toBe(true);
       expect(lunarCorners.destroyed).toBe(true);
     } finally {

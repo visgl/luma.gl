@@ -3,7 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {COORDINATE_SYSTEM, Deck, MapView, type MapViewState} from '@deck.gl/core';
-import {SunLayer, MoonLayer, CloudLayer} from '@deck.gl-community/gpu-layers';
+import {SunLayer, MoonLayer, CloudLayer, AtmosphereLayer} from '@deck.gl-community/gpu-layers';
+import type {CloudProps, AtmosphereProps} from '@luma.gl/shadertools';
 import {getMoonPosition, getMoonIllumination} from 'suncalc';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
 import {CITY_ORIGIN, makeCityFeatures} from '../river-district-data';
@@ -39,9 +40,18 @@ export function createRiverfrontSoftShadowScene(
   });
   const shadowEffect = new RiverfrontShadowEffect(features, settings);
   const sky = {sun: true, moon: true};
-  const cloudSettings = {enabled: true, cover: 0.4, windSpeed: 18, windDirection: 75, time: 0};
+  const atmosphereSettings = {enabled: true, haze: 1};
+  const cloudSettings = {
+    enabled: true,
+    shadows: true,
+    animated: true,
+    cover: 0.4,
+    windSpeed: 18,
+    windDirection: 75,
+    time: 0
+  };
   function shouldAnimate() {
-    return settings.animated || cloudSettings.enabled;
+    return settings.animated || (cloudSettings.enabled && cloudSettings.animated);
   }
   function getMoon(hour: number) {
     const date = new Date(getRiverfrontSun(hour).timestamp);
@@ -60,10 +70,36 @@ export function createRiverfrontSoftShadowScene(
       (illumination.waxing ? 0 : Math.PI);
     return {direction, phase: illumination.phase, limbAngle, altitude};
   }
+  function getClouds(): CloudProps {
+    const sun = getRiverfrontSun(settings.hour);
+    return {
+      cover: cloudSettings.enabled ? cloudSettings.cover : 0,
+      time: cloudSettings.time,
+      velocity: [
+        Math.sin((cloudSettings.windDirection * Math.PI) / 180) * cloudSettings.windSpeed,
+        Math.cos((cloudSettings.windDirection * Math.PI) / 180) * cloudSettings.windSpeed
+      ],
+      sunDirection: [...sun.direction],
+      sunColor: [sun.color[0] / 255, sun.color[1] / 255, sun.color[2] / 255]
+    };
+  }
+  function getAtmosphere(): AtmosphereProps {
+    return {
+      enabled: atmosphereSettings.enabled ? 1 : 0,
+      sunDirection: [...getRiverfrontSun(settings.hour).direction],
+      haze: atmosphereSettings.haze
+    };
+  }
   function getLayers() {
     const sun = getRiverfrontSun(settings.hour);
     const moon = getMoon(settings.hour);
     return [
+      new AtmosphereLayer({
+        id: 'riverfront-atmosphere',
+        coordinateOrigin: CITY_ORIGIN,
+        ...getAtmosphere(),
+        visible: atmosphereSettings.enabled
+      }),
       new SunLayer({
         id: 'riverfront-sun',
         direction: sun.direction,
@@ -85,20 +121,15 @@ export function createRiverfrontSoftShadowScene(
         id: 'riverfront-clouds',
         coordinateOrigin: CITY_ORIGIN,
         visible: cloudSettings.enabled,
-        cover: cloudSettings.cover,
-        time: cloudSettings.time,
-        velocity: [
-          Math.sin((cloudSettings.windDirection * Math.PI) / 180) * cloudSettings.windSpeed,
-          Math.cos((cloudSettings.windDirection * Math.PI) / 180) * cloudSettings.windSpeed
-        ],
-        sunDirection: [...sun.direction],
-        sunColor: [sun.color[0] / 255, sun.color[1] / 255, sun.color[2] / 255]
+        ...getClouds()
       }),
       new ShadowDistrictLayer({
         id: 'riverfront-shadow-district',
         data: features,
         features,
         shadowEffect,
+        clouds: () => ({...getClouds(), cover: cloudSettings.shadows ? getClouds().cover : 0}),
+        atmosphere: getAtmosphere,
         pickable: true,
         coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
         coordinateOrigin: CITY_ORIGIN
@@ -153,7 +184,7 @@ export function createRiverfrontSoftShadowScene(
           ((settings.hour - FIRST_HOUR + ((now - lastFrameTime) / 1000) * settings.hoursPerSecond) %
             (LAST_HOUR - FIRST_HOUR));
       }
-      if (lastFrameTime && cloudSettings.enabled) {
+      if (lastFrameTime && cloudSettings.enabled && cloudSettings.animated) {
         cloudSettings.time += Math.min(now - lastFrameTime, 1000) / 1000;
       }
       lastFrameTime = now;
@@ -177,6 +208,7 @@ export function createRiverfrontSoftShadowScene(
       return viewState;
     },
     cloudSettings,
+    atmosphereSettings,
     shadowEffect,
     diagnostics,
     ready,
@@ -188,6 +220,32 @@ export function createRiverfrontSoftShadowScene(
       lastFrameTime = 0;
       deck.setProps({_animate: shouldAnimate(), layers: getLayers()});
       deck.redraw('cloud toggle');
+    },
+    setCloudAnimated(enabled: boolean): void {
+      cloudSettings.animated = enabled;
+      lastFrameTime = 0;
+      deck.setProps({_animate: shouldAnimate()});
+      deck.redraw('cloud animation');
+    },
+    setCloudShadows(enabled: boolean): void {
+      cloudSettings.shadows = enabled;
+      deck.redraw('cloud shadows');
+    },
+    setAtmosphere(enabled: boolean): void {
+      atmosphereSettings.enabled = enabled;
+      deck.setProps({layers: getLayers()});
+      deck.redraw('atmosphere');
+    },
+    setHaze(value: number): void {
+      atmosphereSettings.haze = value;
+      deck.setProps({layers: getLayers()});
+      deck.redraw('atmospheric haze');
+    },
+    setCloudTime(value: number): void {
+      cloudSettings.time = value;
+      lastFrameTime = 0;
+      deck.setProps({layers: getLayers()});
+      deck.redraw('cloud time');
     },
     setCloudCover(value: number): void {
       cloudSettings.cover = value;

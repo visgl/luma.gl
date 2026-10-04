@@ -6,7 +6,7 @@
 <body><div id="scene" aria-label="Interactive riverfront weather"></div>
 <aside class="luma-example-infobox luma-example-infobox--overlay"><div class="eyebrow">LUMA.GL + DECK.GL</div><h1>Riverfront weather</h1>
 <section class="control-card"><h2>Scene</h2>
-<label>Renderer<select id="backend"><option value="webgpu">WebGPU</option><option value="webgl">WebGL2</option></select></label>
+<label>Device<select id="backend"><option value="webgpu">WebGPU</option><option value="webgl">WebGL2</option></select></label>
 <label>Weather<select id="preset"><option value="clear">None</option><option value="rain" selected>Rain</option><option value="snow">Snow</option></select></label>
 <label class="toggle">Fog<input id="fog-enabled" type="checkbox" checked /></label>
 <label class="toggle">Animate<input id="playing" type="checkbox" checked /></label></section>
@@ -18,5 +18,12 @@
 <label>Fog variation<input id="fog-variation" type="range" min="0" max="1" step="0.05" value="1" /></label>
 <label>Fog drift (m/s)<input id="fog-speed" type="range" min="0" max="12" step="0.5" value="3" /></label>
 <button id="reset">Reset weather</button></section>
+<section class="control-card"><h2>Surfaces</h2>
+<label class="toggle">Surface weather<input id="surface-enabled" type="checkbox" checked /></label>
+<label class="toggle">Accumulate<input id="accumulate" type="checkbox" checked /></label>
+<label>Wetness<input id="wetness" type="range" min="0" max="1" step="0.01" value="0.35" /></label>
+<label>Snow cover<input id="snow-cover" type="range" min="0" max="1" step="0.01" value="0" /></label>
+<label>Puddles<input id="puddles" type="range" min="0" max="1" step="0.01" value="0.8" /></label>
+</section>
 <div id="status" class="hint" role="status">Wind-driven precipitation and drifting fog.<br />Drag to move · Scroll to zoom<br />Shift + drag to orbit</div></aside>
 <script type="module" src="./main.ts"></script></body></html>

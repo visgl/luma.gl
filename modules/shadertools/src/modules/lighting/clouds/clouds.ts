@@ -40,7 +40,7 @@ const DEFAULT_UNIFORMS: CloudUniforms = {
 
 /** Sixty-four-sample cloud slab with approximate sunlight scattering. Returns premultiplied RGBA.
  * Positions/directions use a local east/north/up frame, with lengths in metres.
- * This shader renders sky clouds; it does not cast shadows onto scene geometry.
+ * Receivers can sample clouds_getTransmittance to attenuate direct sunlight.
  */
 export const clouds = {
   name: 'clouds',
@@ -83,6 +83,23 @@ float clouds_getDensity(vec3 position) {
   float threshold = mix(0.78, 0.18, clamp(clouds.cover, 0.0, 1.0));
   return envelope * smoothstep(threshold, threshold + 0.16, broad * 0.72 + detail * 0.2 + fine * 0.08);
 }
+
+// Beer-Lambert extinction toward the sun through the same density used for sky rendering.
+float clouds_getTransmittance(vec3 position) {
+  if (clouds.cover <= 0.0 || clouds.density <= 0.0) return 1.0;
+  vec3 direction = normalize(clouds.sunDirection);
+  if (direction.z <= 0.02) return 1.0;
+  float start = max((clouds.altitude - position.z) / direction.z, 0.0);
+  float end = min((clouds.altitude + clouds.thickness - position.z) / direction.z, 40000.0);
+  if (end <= start) return 1.0;
+  float stepLength = (end - start) / 16.0;
+  float opticalDepth = 0.0;
+  for (int sampleIndex = 0; sampleIndex < 16; sampleIndex++) {
+    opticalDepth += clouds_getDensity(position + direction * (start + (float(sampleIndex) + 0.5) * stepLength)) * stepLength;
+  }
+  return exp(-opticalDepth * max(clouds.density, 0.0));
+}
+
 vec4 clouds_getColor(vec3 camera, vec3 rayDirection) {
   if (clouds.cover <= 0.0 || clouds.density <= 0.0 || abs(rayDirection.z) < 0.0001) return vec4(0.0);
   float bottom = (clouds.altitude - camera.z) / rayDirection.z;
@@ -136,6 +153,23 @@ fn clouds_getDensity(position: vec3f) -> f32 {
   let threshold = mix(0.78, 0.18, clamp(clouds.cover, 0.0, 1.0));
   return envelope * smoothstep(threshold, threshold + 0.16, broad * 0.72 + detail * 0.2 + fine * 0.08);
 }
+
+// Beer-Lambert extinction toward the sun through the same density used for sky rendering.
+fn clouds_getTransmittance(position: vec3f) -> f32 {
+  if (clouds.cover <= 0.0 || clouds.density <= 0.0) { return 1.0; }
+  var direction: vec3f = normalize(clouds.sunDirection);
+  if (direction.z <= 0.02) { return 1.0; }
+  var start: f32 = max((clouds.altitude - position.z) / direction.z, 0.0);
+  var end: f32 = min((clouds.altitude + clouds.thickness - position.z) / direction.z, 40000.0);
+  if (end <= start) { return 1.0; }
+  var stepLength: f32 = (end - start) / 16.0;
+  var opticalDepth: f32 = 0.0;
+  for (var sampleIndex: i32 = 0; sampleIndex < 16; sampleIndex++) {
+    opticalDepth += clouds_getDensity(position + direction * (start + (f32(sampleIndex) + 0.5) * stepLength)) * stepLength;
+  }
+  return exp(-opticalDepth * max(clouds.density, 0.0));
+}
+
 fn clouds_getColor(camera: vec3f, rayDirection: vec3f) -> vec4f {
   if (clouds.cover <= 0.0 || clouds.density <= 0.0 || abs(rayDirection.z) < 0.0001) { return vec4f(0.0); }
   let bottom = (clouds.altitude - camera.z) / rayDirection.z;

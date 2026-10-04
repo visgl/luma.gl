@@ -4,7 +4,12 @@
 
 import {COORDINATE_SYSTEM, Deck, MapView, _GlobeView, type Viewport} from '@deck.gl/core';
 import type {Device, Texture} from '@luma.gl/core';
-import type {HeightFogProps, PrecipitationProps} from '@luma.gl/shadertools';
+import {
+  integrateSurfaceWeather,
+  type HeightFogProps,
+  type PrecipitationProps,
+  type SurfaceWeatherProps
+} from '@luma.gl/shadertools';
 import {getMeterOffsetPosition, WeatherParticleLayer} from '@deck.gl-community/gpu-layers';
 import {CITY_ORIGIN, makeCityFeatures, type CityFeature} from '../river-district-data';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
@@ -25,6 +30,7 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
   let fogVariation = 1;
   let fogSpeed = 3;
   let playing = true;
+  const surfaceSettings = {enabled: true, accumulate: true, wetness: 0.35, snow: 0, puddles: 0.8};
   let time = 0;
   let fogTime = 0;
   let previousTime = 0;
@@ -73,6 +79,21 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
       if (!document.hidden && isWeatherAnimating() && previousTime) {
         const elapsed = (now - previousTime) / 1000;
         time += elapsed;
+        if (surfaceSettings.enabled && surfaceSettings.accumulate) {
+          Object.assign(
+            surfaceSettings,
+            integrateSurfaceWeather(
+              surfaceSettings,
+              {
+                rainfall: preset === 'rain' ? intensity * 0.12 : 0,
+                snowfall: preset === 'snow' ? intensity * 0.06 : 0,
+                evaporation: preset === 'rain' ? 0.004 : 0.025,
+                snowmelt: preset === 'snow' ? 0.001 : preset === 'rain' ? 0.05 : 0.012
+              },
+              elapsed
+            )
+          );
+        }
         if (fogEnabled && fogVariation > 0) fogTime += elapsed * fogSpeed;
       }
       previousTime = !document.hidden && isWeatherAnimating() ? now : 0;
@@ -80,6 +101,7 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
     },
     onAfterRender: () => {
       diagnostics.frames++;
+      parent.dispatchEvent(new Event('weather-frame'));
     },
     onError: error => {
       diagnostics.error ||= error.message;
@@ -93,7 +115,8 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
     return (
       playing &&
       ((getParticleCount() > 0 && (preset === 'rain' || preset === 'snow')) ||
-        (fogEnabled && fogVariation > 0 && fogSpeed > 0))
+        (fogEnabled && fogVariation > 0 && fogSpeed > 0) ||
+        (surfaceSettings.enabled && surfaceSettings.accumulate))
     );
   }
   function getPrecipitation(viewport: Viewport): PrecipitationProps {
@@ -126,6 +149,13 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
       time: fogTime
     };
   }
+  function getSurfaceWeather(): SurfaceWeatherProps {
+    return {
+      wetness: surfaceSettings.enabled ? surfaceSettings.wetness : 0,
+      snow: surfaceSettings.enabled ? surfaceSettings.snow : 0,
+      puddles: surfaceSettings.puddles
+    };
+  }
   function updateLayers() {
     if (!surfaceTexture) return;
     deck.setProps({
@@ -135,6 +165,7 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
           id: 'district',
           features,
           fog: getFog,
+          surfaceWeather: getSurfaceWeather,
           coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
           coordinateOrigin: CITY_ORIGIN
         }),
@@ -161,6 +192,27 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
     deck,
     ready,
     diagnostics,
+    surfaceSettings,
+    setSurfaceEnabled(value: boolean) {
+      surfaceSettings.enabled = value;
+      updateLayers();
+    },
+    setAccumulation(value: boolean) {
+      surfaceSettings.accumulate = value;
+      updateLayers();
+    },
+    setWetness(value: number) {
+      surfaceSettings.wetness = value;
+      deck.redraw('surface wetness');
+    },
+    setSnowCover(value: number) {
+      surfaceSettings.snow = value;
+      deck.redraw('snow cover');
+    },
+    setPuddles(value: number) {
+      surfaceSettings.puddles = value;
+      deck.redraw('puddles');
+    },
     get surfaceTexture() {
       return surfaceTexture;
     },
@@ -214,6 +266,8 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
       deck.setProps({_animate: isWeatherAnimating()});
     },
     reset() {
+      surfaceSettings.wetness = 0;
+      surfaceSettings.snow = 0;
       time = 0;
       fogTime = 0;
       previousTime = 0;

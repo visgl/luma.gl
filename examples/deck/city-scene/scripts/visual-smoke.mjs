@@ -12,6 +12,9 @@ import {createServer} from 'vite';
 import {getPlaywrightLaunchOptions} from '../../../../scripts/playwright/get-playwright-launch-options.mjs';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
+const softwareGpu = process.env.CITY_SCENE_HARDWARE !== 'true';
+// Full-resolution reflection history can take longer on shared software-rendered CI workers.
+const reflectionIdleTimeout = softwareGpu ? 180_000 : 60_000;
 const server = await createServer({root, logLevel: 'error', server: {host: '127.0.0.1', port: 0}});
 await server.listen();
 const url = server.resolvedUrls?.local[0];
@@ -19,7 +22,7 @@ assert(url);
 try {
   for (const backend of ['webgpu', 'webgl']) {
     const browser = await chromium.launch(getPlaywrightLaunchOptions({
-      headless: true, backend, softwareGpu: process.env.CITY_SCENE_HARDWARE !== 'true',
+      headless: true, backend, softwareGpu,
       // Linux canvas presentation needs the Vulkan compositor and an X display (see #2874).
       launchOptions: process.platform === 'linux' && backend === 'webgpu'
         ? {args: ['--enable-gpu', '--enable-features=Vulkan', '--use-vulkan=swiftshader']}
@@ -27,7 +30,7 @@ try {
     }));
     try {
       const page = await browser.newPage({viewport: {width: 1200, height: 850}});
-      const waitForIdle = () => page.waitForFunction(() => !window.cityScene.deck.props._animate && !window.cityScene.deck.needsRedraw(), undefined, {timeout: 60_000});
+      const waitForIdle = () => page.waitForFunction(() => !window.cityScene.deck.props._animate && !window.cityScene.deck.needsRedraw(), undefined, {timeout: reflectionIdleTimeout});
       const errors = [];
       page.on('pageerror', error => { errors.push(error.message); process.stderr.write(`${error.message}\n`); });
       page.on('console', message => { if (message.type() === 'error') { errors.push(message.text()); process.stderr.write(`${message.text()}\n`); } });

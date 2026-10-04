@@ -86,6 +86,7 @@ try {
       assert(await page.evaluate(() => window.weatherScene.diagnostics.time) - slowFrame.time >= 0.3,
         `${backend}: slow frames preserve elapsed animation time`);
       await page.uncheck('#playing');
+      await page.uncheck('#accumulate');
       for (const preset of ['clear', 'rain', 'snow']) {
         await page.selectOption('#preset', preset);
         await page.uncheck('#fog-enabled');
@@ -330,6 +331,38 @@ try {
         0,
         `${backend}: surface heights suppress covered precipitation`
       );
+      await page.uncheck('#fog-enabled');
+      await page.selectOption('#preset', 'clear');
+      await page.locator('#wetness').fill('0');
+      await page.locator('#snow-cover').fill('0');
+      await page.waitForTimeout(200);
+      const drySurface = PNG.sync.read(await page.screenshot());
+      await page.locator('#wetness').fill('1');
+      await page.waitForTimeout(200);
+      assert(changedPixels(drySurface, PNG.sync.read(await page.screenshot())) > 1000, `${backend}: wetness visibly changes surfaces`);
+      await page.locator('#snow-cover').fill('1');
+      await page.waitForTimeout(200);
+      const snowySurface = PNG.sync.read(await page.screenshot({path: join(tmpdir(), `weather-snow-cover-${backend}.png`)}));
+      assert(changedPixels(drySurface, snowySurface) > 1000, `${backend}: snow visibly covers upward-facing surfaces`);
+      await page.uncheck('#surface-enabled');
+      await page.waitForTimeout(200);
+      assert.equal(changedPixels(drySurface, PNG.sync.read(await page.screenshot())), 0, `${backend}: surface toggle restores dry materials`);
+      await page.check('#surface-enabled');
+      await page.selectOption('#preset', 'snow');
+      await page.locator('#snow-cover').fill('0.1');
+      await page.evaluate(() => window.weatherScene.setIntensity(0.6));
+      await page.check('#accumulate');
+      await page.check('#playing');
+      const accumulationStart = await page.evaluate(() => window.weatherScene.surfaceSettings.snow);
+      await page.waitForFunction(value => window.weatherScene.surfaceSettings.snow > value + 0.01, accumulationStart);
+      await page.uncheck('#playing');
+      await page.waitForTimeout(150);
+      const pausedSurface = await page.evaluate(() => ({...window.weatherScene.surfaceSettings}));
+      await page.waitForTimeout(200);
+      assert.deepEqual(await page.evaluate(() => window.weatherScene.surfaceSettings), pausedSurface, `${backend}: pause freezes accumulation exactly`);
+      await page.click('#reset');
+      assert.equal(await page.evaluate(() => window.weatherScene.surfaceSettings.snow), 0, `${backend}: reset clears snow`);
+      assert.equal(await page.evaluate(() => window.weatherScene.surfaceSettings.wetness), 0, `${backend}: reset clears wetness`);
       await page.evaluate(() => {
         window.borrowedWeatherSurface = window.weatherScene.surfaceTexture;
         window.weatherScene.deck.setProps({layers: []});
