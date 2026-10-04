@@ -41,6 +41,10 @@ const WEBGPU_ONLY_EXAMPLES = new Set([
   'deck/ambient-occlusion',
   'deck/soft-shadows',
   'deck/depth-of-field',
+  'deck/fireflies',
+  'deck/hdr-night-lighting',
+  'deck/global-illumination',
+  'deck/light-shafts',
   'tutorials/slang-particles'
 ]);
 const WEBGL_ONLY_EXAMPLES = new Set([
@@ -116,7 +120,7 @@ describe('live example catalog metadata', () => {
   });
 
   test('provides complete, curated filters for every sidebar example', () => {
-    expect(LIVE_EXAMPLES).toHaveLength(100);
+    expect(LIVE_EXAMPLES).toHaveLength(104);
 
     for (const {id, metadata} of LIVE_EXAMPLES) {
       expect(metadata, `${id} requires sidebar_custom_props`).toBeDefined();
@@ -184,7 +188,7 @@ describe('live example catalog metadata', () => {
     expect(supportPolicy).not.toContain('website/src/examples');
     expect(supportRegistry).not.toMatch(/(?:import|export).*\/app['"]/);
 
-    expect(Object.keys(EXAMPLE_SUPPORT_REGISTRY)).toHaveLength(104);
+    expect(Object.keys(EXAMPLE_SUPPORT_REGISTRY)).toHaveLength(108);
     for (const example of LIVE_EXAMPLES) {
       expect(
         EXAMPLE_SUPPORT_REGISTRY[example.id],
@@ -197,7 +201,7 @@ describe('live example catalog metadata', () => {
     }
 
     const standaloneFiles = findStandaloneHtmlFiles(path.join(process.cwd(), 'examples'));
-    expect(standaloneFiles).toHaveLength(99);
+    expect(standaloneFiles).toHaveLength(103);
     for (const relativeFile of standaloneFiles) {
       const standaloneId = relativeFile.replace(/\/(?:index|playground)\.html$/, match =>
         match === '/index.html' ? '' : '/playground'

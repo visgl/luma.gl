@@ -224,7 +224,7 @@ can also be used by non-Deck renderers.
 
 `SceneBufferEffect` captures participating layers into luma.gl `GBuffer` textures before Deck's
 normal display pass. This WebGPU adapter makes HDR scene color, sampleable opaque depth, encoded
-view normals/roughness, and an optional opaque selection mask available to subsequent effects. It does not
+view normals/roughness, optional motion vectors, and an optional opaque selection mask available to subsequent effects. It does not
 replace Deck's display output or modify the picking pass.
 
 ```ts
@@ -312,8 +312,9 @@ omits per-view clear operations that would nest WebGPU render passes in this Dec
 on the first frame, after allocation resize, or after viewport bounds change. Call
 `sceneBuffers.resetHistory(viewId)` for camera cuts, teleports, discontinuous time changes, or scene
 replacement; omit the ID to reset all views. Camera matrices are copied per frame in Deck's native
-common-space/OpenGL clip convention. They are not motion vectors, and retaining history does not
-perform reprojection or temporal filtering by itself.
+common-space/OpenGL clip convention. Retaining full-buffer history does not perform temporal filtering by itself.
+`historyValid`, `previousViewProjectionMatrix`, `time`, and `previousTime` remain available without
+allocating a second capture; invalidated frames omit the preceding matrix.
 
 All returned textures are borrowed. Do not destroy them or retain them beyond the slot's next reuse.
 Removing a view destroys its targets. Resize replaces its targets. Removing the effect or finalizing
@@ -325,6 +326,49 @@ their scenes. The adapter currently requires WebGPU and explicit layer participa
 The repository's pinned Deck patch also adds depth to the first postprocessing scene target.
 Without it, depth-writing layers are incompatible with that color-only WebGPU target as soon
 as a `postRender` effect is installed. The second fullscreen swap target remains color-only.
+### Motion and shared shader-pass graphs
+
+`motionVectors: true` adds an `rg16float` attachment containing current-minus-previous UV velocity,
+with a top-left texture origin. A depth reconstruction draw computes stationary-surface camera
+motion. Layers declaring `motionBuffer: true` draw object velocity over their visible cores, using
+previous object positions and the caller-owned `getTime()` clock. Transparent halos are deliberately
+excluded: a single velocity texture cannot represent every overlapping transparent contribution.
+The optional attachment adds four bytes per pixel and two draws; it stays unallocated by default.
+
+Custom animated shaders use the exported `motionBuffer` module. Project both object positions with
+the current camera and pass them to `motionBuffer_getVelocity(currentClip, previousPositionClip)`.
+The capture supplies the previous-camera transform and `previousTime`; branch on
+`motionBuffer.enabled` in the fragment shader to output velocity before normal color/picking.
+
+`SceneShaderPassEffect` extends `ShaderPassEffect` to borrow the capture's HDR color, depth, normals,
+and optional velocity. It reuses `ShaderPassRenderer` for graphs, history, resize and presentation.
+Place it after the capture in Deck's effects array. `getSceneOptions({frame, viewport, camera})`
+provides effect-specific uniforms and bindings. The camera helper converts projection/depth to
+WebGPU convention and view distances to metres; `coordinateOrigin` locates local metre positions.
+Physical near/far values assume a perspective viewport. Fullscreen presentation currently supports
+one view. Cuts, resize and viewport replacement invalidate temporal history together.
+
+```ts
+const sceneBuffers = new SceneBufferEffect({
+  motionVectors: true,
+  getTime: () => time,
+  getLayerOptions: layer => ({mode: 'opaque', surfaceBuffer: true})
+});
+const effects = new SceneShaderPassEffect({
+  capture: sceneBuffers,
+  shaderPasses: [createSSGICompositeShaderPass(), toneMapping],
+  getSceneOptions: ({camera}) => ({uniforms: {
+    ssgiTrace: {projectionMatrix: camera.projectionMatrix,
+      inverseProjectionMatrix: camera.inverseProjectionMatrix, radius: 100}
+  }})
+});
+deck.setProps({effects: [sceneBuffers, effects]});
+```
+
+See the fireflies, HDR night lighting, global illumination and light shafts examples for one shared
+capture/clock/fixture composing existing luma.gl bloom, exposure, SSGI and volumetric lighting.
+SSGI and shaft occlusion describe visible screen-space geometry; hidden geometry is not available.
+
 ## WeatherParticleLayer
 
 `WeatherParticleLayer` draws seeded rain or snow in `COORDINATE_SYSTEM.METER_OFFSETS`.
@@ -486,3 +530,13 @@ the elapsed `time` and redraw schedule. Sun direction must be nonzero; sun tint 
 The shared luma.gl `clouds` shader integrates 64 density samples with approximate sunlight
 scattering, and reuses the `valueNoise` module used by height fog. It adds sky clouds rather
 than cloud shadows on buildings or terrain; per-pixel cost increases with sky area.
+
+
+### Fireflies
+
+`FireflyLayer` extends `GlowPointLayer` on WebGPU and WebGL2 with the shared `firefly` shader module.
+The same borrowed eight-float rows carry position, tint, opacity and a deterministic feature seed.
+`time` is a caller-owned clock in seconds; `animation` controls wandering radius in metres, speed,
+and pulse strength. Independent smooth phases avoid synchronized blinking. Ordinary glow points
+keep animation disabled. Fireflies preserve point picking, additive blending and ownership rules,
+and can write animated core motion when opted into a `SceneBufferEffect` capture.

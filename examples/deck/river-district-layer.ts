@@ -18,6 +18,8 @@ import {
   lambertMaterial,
   surfaceWeather,
   type SurfaceWeatherProps,
+  type LightingProps,
+  type LambertMaterialProps,
   type HeightFogProps,
   type ShaderModule
 } from '@luma.gl/shadertools';
@@ -28,6 +30,8 @@ type RiverDistrictLayerProps = LayerProps & {
   features: readonly CityFeature[];
   fog?: HeightFogProps | (() => HeightFogProps);
   roughness?: number;
+  lighting?: LightingProps | (() => LightingProps);
+  material?: LambertMaterialProps;
   surfaceWeather?: SurfaceWeatherProps | (() => SurfaceWeatherProps);
 };
 
@@ -124,14 +128,23 @@ export class RiverDistrictLayer extends Layer<RiverDistrictLayerProps> {
           this.context.viewport.cameraPosition
         )
       },
-      lambertMaterial: {ambient: 0.45, diffuse: 0.55},
-      lighting: {
-        enabled: true,
-        lights: [
-          {type: 'ambient', color: [255, 255, 255], intensity: 1},
-          {type: 'directional', color: [255, 255, 255], intensity: 1, direction: [0.5, 0.3, -0.8]}
-        ]
-      }
+      lambertMaterial: {ambient: 0.45, diffuse: 0.55, ...this.props.material},
+      lighting: this.props.lighting
+        ? typeof this.props.lighting === 'function'
+          ? this.props.lighting()
+          : this.props.lighting
+        : {
+            enabled: true,
+            lights: [
+              {type: 'ambient', color: [255, 255, 255], intensity: 1},
+              {
+                type: 'directional',
+                color: [255, 255, 255],
+                intensity: 1,
+                direction: [0.5, 0.3, -0.8]
+              }
+            ]
+          }
     });
     this.state.model?.draw(renderPass);
   }

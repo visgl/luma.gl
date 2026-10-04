@@ -389,7 +389,8 @@ async function readCapture(
   device: Device,
   effect: SceneBufferEffect,
   id: string,
-  coordinate = [32, 32]
+  coordinate = [32, 32],
+  velocity = false
 ): Promise<Float32Array> {
   const frame = effect.getFrame(id)!;
   const selection = effect.props.selection;
@@ -407,15 +408,21 @@ async function readCapture(
 @group(0) @binding(auto) var normalTexture: texture_2d<f32>;
 @group(0) @binding(auto) var depthTexture: texture_depth_2d;
 ${selection ? '@group(0) @binding(auto) var selectionTexture: texture_2d<f32>;' : ''}
+${velocity ? '@group(0) @binding(auto) var velocityTexture: texture_2d<f32>;' : ''}
 @vertex fn vertexMain(@builtin(vertex_index) index: u32) -> @builtin(position) vec4<f32> {
   let positions = array<vec2<f32>, 3>(vec2<f32>(-1.0, -1.0), vec2<f32>(3.0, -1.0), vec2<f32>(-1.0, 3.0));
   return vec4<f32>(positions[index], 0.0, 1.0);
 }
 @fragment fn fragmentMain() -> @location(0) vec4<f32> {
   let coordinate = vec2<i32>(${coordinate[0]}, ${coordinate[1]});
-  return vec4<f32>(textureLoad(colorTexture, coordinate, 0).r,
+  ${
+    velocity
+      ? 'return vec4f(textureLoad(velocityTexture, coordinate, 0).xy, 0.0, 1.0);'
+      : `return vec4<f32>(textureLoad(colorTexture, coordinate, 0).r,
     textureLoad(normalTexture, coordinate, 0).a, textureLoad(depthTexture, coordinate, 0),
-    ${selection ? 'textureLoad(selectionTexture, coordinate, 0).r' : '0.0'});
+    ${selection ? 'textureLoad(selectionTexture, coordinate, 0).r' : '0.0'});`
+  }
+
 }
 `,
     vertexCount: 3,
@@ -423,6 +430,7 @@ ${selection ? '@group(0) @binding(auto) var selectionTexture: texture_2d<f32>;' 
       colorTexture: frame.buffer.colorTexture,
       normalTexture: frame.buffer.normalRoughnessTexture,
       depthTexture: frame.buffer.depthTexture,
+      ...(velocity ? {velocityTexture: frame.buffer.velocityTexture} : {}),
       ...(selection ? {selectionTexture: frame.buffer.getExtraColorTexture('selection')} : {})
     }
   });
@@ -442,3 +450,78 @@ ${selection ? '@group(0) @binding(auto) var selectionTexture: texture_2d<f32>;' 
     buffer.destroy();
   }
 }
+
+test('motion capture reprojects the camera without full history and resets on cuts', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    context.skip('WebGPU unavailable');
+    return;
+  }
+  const parent = document.createElement('div');
+  parent.style.width = '64px';
+  parent.style.height = '64px';
+  document.body.append(parent);
+  let time = 2;
+  const effect = new SceneBufferEffect({
+    motionVectors: true,
+    getTime: () => time,
+    getLayerOptions: () => ({mode: 'opaque', surfaceBuffer: true})
+  });
+  const errors: string[] = [];
+  const deck = new Deck({
+    parent,
+    device,
+    width: 64,
+    height: 64,
+    useDevicePixels: false,
+    views: new OrthographicView({id: 'main'}),
+    initialViewState: {target: [0, 0], zoom: 0},
+    layers: [new CaptureTestLayer({id: 'motion-surface'})],
+    effects: [effect],
+    onError: error => errors.push(error.message)
+  });
+  try {
+    await waitUntil(() => Boolean(effect.getFrame('main')), errors);
+    deck.setProps({_animate: false});
+    deck.redraw('stationary motion');
+    const first = effect.getFrame('main')!;
+    expect(first.buffer.framebuffer.colorAttachments).toHaveLength(3);
+    expect(first.previousBuffer).toBeUndefined();
+    expect(first.previousViewProjectionMatrix).toBeDefined();
+    const stationary = await readCapture(device, effect, 'main', [32, 32], true);
+    expect(stationary[0]).toBeCloseTo(0, 5);
+    expect(stationary[1]).toBeCloseTo(0, 5);
+    time = 3;
+    deck.setProps({initialViewState: {target: [8, 0], zoom: 0}});
+    deck.redraw('camera motion');
+    const moving = await readCapture(device, effect, 'main', [32, 32], true);
+    // The camera moves right by eight pixels: stationary surfaces move left in texture UV.
+    expect(moving[0]).toBeCloseTo(-8 / 64, 3);
+    expect(moving[1]).toBeCloseTo(0, 5);
+    expect(effect.getFrame('main')!.previousTime).toBe(2);
+    expect(effect.getFrame('main')!.time).toBe(3);
+    effect.resetHistory('main');
+    deck.redraw('camera cut');
+    expect(effect.getFrame('main')!.historyValid).toBe(false);
+    expect(effect.getFrame('main')!.previousViewProjectionMatrix).toBeUndefined();
+    const reset = await readCapture(device, effect, 'main', [32, 32], true);
+    expect(reset[0]).toBeCloseTo(0, 5);
+    const velocityTexture = effect.getFrame('main')!.buffer.velocityTexture;
+    deck.setProps({width: 80, height: 48});
+    await waitUntil(
+      () => effect.getFrame('main')?.buffer.width === 80,
+      errors,
+      () => deck.redraw('motion resize')
+    );
+    expect(velocityTexture.destroyed).toBe(true);
+    expect(effect.getFrame('main')!.historyValid).toBe(false);
+    expect((await readCapture(device, effect, 'main', [40, 24], true))[0]).toBeCloseTo(0, 5);
+    const finalVelocityTexture = effect.getFrame('main')!.buffer.velocityTexture;
+    deck.finalize();
+    expect(finalVelocityTexture.destroyed).toBe(true);
+    expect(errors).toEqual([]);
+  } finally {
+    deck.finalize();
+    parent.remove();
+  }
+});

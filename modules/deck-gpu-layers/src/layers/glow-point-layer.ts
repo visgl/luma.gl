@@ -12,7 +12,15 @@ import {
 } from '@deck.gl/core';
 import type {Buffer, RenderPass} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import {pointGlow, type PointGlowProps, type ShaderModule} from '@luma.gl/shadertools';
+import {
+  pointGlow,
+  firefly,
+  type FireflyProps,
+  type PointGlowProps,
+  type ShaderModule
+} from '@luma.gl/shadertools';
+
+import {motionBuffer} from './motion-buffer';
 
 export type GlowPointLayerProps = LayerProps & {
   /** Borrowed float32 rows: position.xyz, linear tint.rgb, opacity, featureIndex. */
@@ -23,6 +31,9 @@ export type GlowPointLayerProps = LayerProps & {
   /** Picking disk radius in CSS pixels, clamped to the visible outer radius. */
   pickingRadiusPixels?: number;
   style?: PointGlowProps;
+  /** Optional GPU wandering/pulsing, disabled for ordinary point lights. */
+  animation?: FireflyProps;
+  time?: number | (() => number);
 };
 
 const glowPoint = {
@@ -70,6 +81,8 @@ export class GlowPointLayer extends Layer<GlowPointLayerProps> {
     radiusPixels: {type: 'number', value: 18, min: 0},
     pickingRadiusPixels: {type: 'number', value: 5, min: 0},
     style: {},
+    animation: {},
+    time: 0,
     parameters: GLOW_PARAMETERS
   };
   declare state: {model: Model; corners: Buffer};
@@ -91,7 +104,7 @@ export class GlowPointLayer extends Layer<GlowPointLayerProps> {
           source: SOURCE,
           vs: VERTEX_SHADER,
           fs: FRAGMENT_SHADER,
-          modules: [project32, picking, pointGlow, glowPoint]
+          modules: [project32, picking, pointGlow, firefly, motionBuffer, glowPoint]
         }),
         id: `${this.id}-glow`,
         topology: 'triangle-list',
@@ -131,6 +144,11 @@ export class GlowPointLayer extends Layer<GlowPointLayerProps> {
   override draw({renderPass}: {renderPass: RenderPass}): void {
     this.state.model.shaderInputs.setProps({
       pointGlow: this.props.style || {},
+      firefly: {
+        ...firefly.defaultUniforms,
+        ...this.props.animation,
+        time: typeof this.props.time === 'function' ? this.props.time() : (this.props.time ?? 0)
+      },
       glowPoint: {
         radiusPixels: Math.max(0, this.props.radiusPixels!),
         pickingRadiusPixels: Math.max(0, this.props.pickingRadiusPixels!),
@@ -153,18 +171,23 @@ struct GlowVertex {
   @location(1) tint: vec3<f32>,
   @location(2) opacity: f32,
   @location(3) @interpolate(flat) pickingColor: vec3<f32>,
+  @location(4) velocity: vec2f,
 };
 @vertex fn vertexMain(@location(0) corner: vec2<f32>,
   @location(1) position: vec3<f32>, @location(2) tint: vec3<f32>,
   @location(3) opacity: f32, @location(4) featureIndex: f32
 ) -> GlowVertex {
-  let center = project_position_to_clipspace(position, vec3<f32>(0.0), vec3<f32>(0.0));
+  let animatedPosition = firefly_getPosition(position, featureIndex, firefly.time);
+  let center = project_position_to_clipspace(animatedPosition, vec3<f32>(0.0), vec3<f32>(0.0));
+  let previousPosition = firefly_getPosition(position, featureIndex, motionBuffer.previousTime);
+  let previousClip = project_position_to_clipspace(previousPosition, vec3f(0.0), vec3f(0.0));
   let offset = corner * glowPoint.radiusPixels * 2.0 * project.devicePixelRatio / project.viewportSize;
   var output: GlowVertex;
   output.position = vec4<f32>(center.xy + offset * center.w, center.z, center.w);
   output.coordinates = corner;
+  output.velocity = motionBuffer_getVelocity(center, previousClip);
   output.tint = tint;
-  output.opacity = opacity * glowPoint.opacity;
+  output.opacity = opacity * glowPoint.opacity * firefly_getBrightness(featureIndex, firefly.time);
   output.pickingColor = vec3<f32>(0.0);
   if (featureIndex >= 0.0) { output.pickingColor = picking_getPickingColorFromIndex(u32(featureIndex)); }
   return output;
@@ -172,6 +195,10 @@ struct GlowVertex {
 @fragment fn fragmentMain(input: GlowVertex) -> @location(0) vec4<f32> {
   let radiance = pointGlow_getColor(input.coordinates, input.tint) * input.opacity;
   if (input.opacity <= 0.0 || glowPoint.radiusPixels <= 0.0) { discard; }
+  if (motionBuffer.enabled != 0) {
+    if (length(input.coordinates) > 0.35) { discard; }
+    return vec4f(input.velocity, 0.0, 1.0);
+  }
   if (picking.isActive > 0.5) {
     if (glowPoint.pickingRadiusPixels <= 0.0) { discard; }
     let pickingRadius = min(1.0, glowPoint.pickingRadiusPixels / max(glowPoint.radiusPixels, 0.0001));
@@ -194,13 +221,17 @@ in float featureIndex;
 out vec2 coordinates;
 out vec3 vertexTint;
 out float vertexOpacity;
+out vec2 vertexVelocity;
 void main() {
   coordinates = corner;
   vertexTint = tint;
-  vertexOpacity = opacity * glowPoint.opacity;
-  geometry.worldPosition = position;
+  vertexOpacity = opacity * glowPoint.opacity * firefly_getBrightness(featureIndex, firefly.time);
+  vec3 animatedPosition = firefly_getPosition(position, featureIndex, firefly.time);
+  geometry.worldPosition = animatedPosition;
   geometry.pickingColor = picking_getPickingColorFromIndex(featureIndex);
-  gl_Position = project_position_to_clipspace(position, vec3(0.0), vec3(0.0));
+  gl_Position = project_position_to_clipspace(animatedPosition, vec3(0.0), vec3(0.0));
+  vec4 previousClip = project_position_to_clipspace(firefly_getPosition(position, featureIndex, motionBuffer.previousTime), vec3(0.0), vec3(0.0));
+  vertexVelocity = motionBuffer_getVelocity(gl_Position, previousClip);
   gl_Position.xy += coordinates * glowPoint.radiusPixels * 2.0 * project.devicePixelRatio / project.viewportSize * gl_Position.w;
   DECKGL_FILTER_GL_POSITION(gl_Position, geometry);
   vec4 color = vec4(1.0);
@@ -209,13 +240,20 @@ void main() {
 `;
 const FRAGMENT_SHADER = /* glsl */ `#version 300 es
 precision highp float;
+precision highp int;
 in vec2 coordinates;
 in vec3 vertexTint;
 in float vertexOpacity;
+in vec2 vertexVelocity;
 out vec4 fragColor;
 void main() {
   vec3 radiance = pointGlow_getColor(coordinates, vertexTint) * vertexOpacity;
   if (vertexOpacity <= 0.0 || glowPoint.radiusPixels <= 0.0) discard;
+  if (motionBuffer.enabled != 0) {
+    if (length(coordinates) > 0.35) discard;
+    fragColor = vec4(vertexVelocity, 0.0, 1.0);
+    return;
+  }
   if (picking.isActive > 0.5) {
     if (glowPoint.pickingRadiusPixels <= 0.0) discard;
     float pickingRadius = min(1.0, glowPoint.pickingRadiusPixels / max(glowPoint.radiusPixels, 0.0001));
