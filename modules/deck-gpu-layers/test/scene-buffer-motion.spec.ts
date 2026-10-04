@@ -4,14 +4,13 @@
 
 import {Deck, OrthographicView} from '@deck.gl/core';
 import {SceneBufferEffect} from '@deck.gl-community/gpu-layers';
-import {luma} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, test} from 'vitest';
 import {CaptureTestLayer, waitUntil, readCapture} from './scene-buffer-test-utils';
 
 test('motion capture reprojects the camera without full history and resets on cuts', async context => {
-  if (!(await getWebGPUTestDevice())) {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
     context.skip('WebGPU unavailable');
     return;
   }
@@ -19,16 +18,16 @@ test('motion capture reprojects the camera without full history and resets on cu
   parent.style.width = '64px';
   parent.style.height = '64px';
   document.body.append(parent);
-  const canvas = document.createElement('canvas');
-  parent.append(canvas);
-  canvas.style.width = '64px';
-  canvas.style.height = '64px';
-  // Own the canvas and device so history tests have stable dimensions and independent lifetime.
-  const device = await luma.createDevice({
-    type: 'webgpu',
-    adapters: [webgpuAdapter],
-    createCanvasContext: {canvas, width: 64, height: 64, useDevicePixels: false}
-  });
+  // This spec has its own browser page. Borrow the established test device instead of opening
+  // another native adapter/device pair, which can lose its Dawn instance on software runners.
+  const canvas = device.getCanvasContext().canvas;
+  const previousParent = canvas instanceof HTMLCanvasElement ? canvas.parentElement : null;
+  const previousStyle = canvas instanceof HTMLCanvasElement ? canvas.style.cssText : '';
+  if (canvas instanceof HTMLCanvasElement) {
+    parent.append(canvas);
+    canvas.style.width = '64px';
+    canvas.style.height = '64px';
+  }
   let time = 2;
   const effect = new SceneBufferEffect({
     motionVectors: true,
@@ -98,7 +97,10 @@ test('motion capture reprojects the camera without full history and resets on cu
     expect(errors).toEqual([]);
   } finally {
     deck.finalize();
-    device.destroy();
+    if (canvas instanceof HTMLCanvasElement) {
+      canvas.style.cssText = previousStyle;
+      previousParent?.append(canvas);
+    }
     parent.remove();
   }
 });
