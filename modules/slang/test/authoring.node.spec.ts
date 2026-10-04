@@ -231,3 +231,26 @@ it.each([
     'Texture2D<float> image; SamplerState regularSampler; SamplerComparisonState comparisonSampler; [shader("fragment")] float4 main() : SV_Target { return float4(image.Sample(regularSampler,float2(0.5)) + image.SampleCmp(comparisonSampler,float2(0.5),0.5)); }';
   expect(() => transpileSlang(source, {target})).toThrow(/comparison sampling/);
 });
+
+it('slang#compact temporary names avoid source identifiers', () => {
+  const result = transpileSlang(
+    `
+    RWStructuredBuffer<float> values;
+    void adjust(inout float value) { value += 1.0; }
+    [shader("compute")]
+    [numthreads(1, 1, 1)]
+    void computeMain(uint3 thread : SV_DispatchThreadID) {
+      float t0 = 3.0;
+      float value = 4.0;
+      adjust(value);
+      values[thread.x] = t0 + value;
+    }
+  `,
+    {target: 'wgsl'}
+  );
+  expect(result.code).toContain('var _slang_t0: f32 = 3.0;');
+  expect(result.code).toContain('var _slang_t1: f32 = _slang_value;');
+  expect(result.code).toContain('&_slang_t1');
+  expect(result.code).not.toContain('_slang_temporary_');
+  expect(new WgslReflect(result.code).entry.compute[0].name).toBe(result.entryPoint);
+});

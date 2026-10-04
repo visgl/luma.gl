@@ -22,8 +22,13 @@ import {SlangShadersExample} from '@site/src/examples';
 
 Drag to orbit an animated sculpture with three deforming rings, a glowing core,
 iridescent lighting, and a floor reflection. Try the material, twist, and exposure
-controls, or pause to inspect the surfaces. No mesh is uploaded: the fragment shader
+controls and native grain, or pause to inspect the surfaces. No mesh is uploaded: the fragment shader
 traces camera rays through a signed-distance field.
+
+Select **Show shaders** to compare the Slang source and the generated code side by side.
+Choose a Slang source, the native grain shader, or the imported `valueNoise` module on the left. The right pane
+shows the actual assembled WGSL program on WebGPU, or the vertex and fragment GLSL ES 300
+shaders on WebGL 2, plus the native grain pass. Close the viewer or press Escape to return to the scene.
 
 The application registers the experimental TypeScript Slang compiler with its own shader
 assembler. Both backends use the same `shader.slang`, reusable `geometry.slang`
@@ -31,4 +36,8 @@ distance-field module, and `palette.slang` material module. Animation and camera
 parameters share a flat uniform buffer; the application uses compiler reflection to
 bind its resource by the generated name.
 WebGL 2 receives GLSL ES 300; WebGPU receives one WGSL program with generated entry points.
+The example also imports the existing `valueNoise` ShaderModule from `@luma.gl/shadertools`.
+Slang renders into a texture; a native WGSL or GLSL pass reads it and calls `valueNoise_noise`
+to add grain. Set **Native grain** to zero to see the original image. This demonstrates a shared
+texture boundary, while direct calls from Slang into native modules remain unsupported.
 See the [Slang API](/docs/api-reference/slang) for compiler limits.

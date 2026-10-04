@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/slang",
-  "version": "10.0.0-alpha.2",
+  "version": "10.0.0-alpha.3",
   "description": "Experimental TypeScript Slang to GLSL and WGSL transpiler for luma.gl",
   "type": "module",
   "license": "MIT",

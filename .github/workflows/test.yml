@@ -18,9 +18,8 @@ jobs:
   browser_coverage:
     name: Browser coverage (${{ matrix.shard }}/3)
     runs-on: ubuntu-22.04
-    # Shard 1 also converges full-resolution SSR on SwiftShader before headless coverage.
-    # Keep room for both workloads; shard 2 has the remaining Riverfront visual checks.
-    timeout-minutes: ${{ matrix.shard == 1 && 35 || matrix.shard == 2 && 25 || 15 }}
+    # Visual checks run separately so shard weights describe only browser specs.
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -54,7 +53,7 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
-      - name: Save Yarn Berry artifacts before reclaiming disk space
+      - name: Save Yarn Berry artifacts
         if: steps.yarn-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
@@ -71,130 +70,13 @@ jobs:
           key: ${{ runner.os }}-ms-playwright-${{ hashFiles('yarn.lock', 'package.json') }}
 
       - name: Install Playwright Chromium
-        run: yarn playwright:install
-
-      - name: Run Deck pattern fill visual checks
-        if: ${{ matrix.shard == 2 }}
-        run: xvfb-run -a yarn workspace luma.gl-examples-deck-pattern-fills test:visual
-
-      - name: Upload Deck pattern fill screenshots
-        if: ${{ always() && matrix.shard == 2 }}
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
-        with:
-          name: deck-pattern-fills
-          path: /tmp/pattern-fills-*.png
-
-      - name: Run Deck sketch edges visual checks
-        if: ${{ matrix.shard == 2 }}
-        run: xvfb-run -a yarn workspace luma.gl-examples-deck-sketch-edges test:visual
-
-      - name: Upload Deck sketch edge screenshots
-        if: ${{ always() && matrix.shard == 2 }}
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
-        with:
-          name: deck-sketch-edges
-          path: /tmp/sketch-edges-*.png
-      - name: Run Deck city scene visual smoke
-        if: ${{ matrix.shard == 1 }}
-        env:
-          CITY_SCENE_ARTIFACTS: ${{ runner.temp }}
-        run: xvfb-run -a yarn workspace luma.gl-examples-deck-city-scene test:visual
-
-      - name: Upload Deck city scene screenshots
-        if: ${{ always() && matrix.shard == 1 }}
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
-        with:
-          name: deck-city-scene
-          path: ${{ runner.temp }}/city-scene-*.png
-          if-no-files-found: warn
-          retention-days: 7
-
-      - name: Run Deck globe cloud cover visual checks
-        if: ${{ matrix.shard == 1 }}
-        run: xvfb-run -a yarn workspace luma.gl-examples-deck-globe-clouds test:visual
-
-      - name: Upload globe cloud cover screenshots
-        if: ${{ always() && matrix.shard == 1 }}
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
-        with:
-          name: deck-globe-cloud-cover
-          path: /tmp/globe-cloud-cover-*.png
-          if-no-files-found: warn
-          retention-days: 7
-
-      - name: Run Deck point glow visual checks
-        if: ${{ matrix.shard == 2 }}
-        run: xvfb-run -a yarn workspace luma.gl-examples-deck-point-glow test:visual
-
-      - name: Upload Deck point glow screenshots
-        if: ${{ always() && matrix.shard == 2 }}
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
-        with:
-          name: deck-point-glow
-          path: /tmp/point-glow-*.png
-          if-no-files-found: warn
-          retention-days: 7
-
-      - name: Run riverfront routes visual smoke
-        if: ${{ matrix.shard == 2 }}
-        run: xvfb-run -a yarn workspace luma.gl-examples-deck-styled-paths test:visual
-
-      - name: Upload riverfront routes screenshots
-        if: ${{ always() && matrix.shard == 2 }}
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
-        with:
-          name: deck-styled-paths
-          path: /tmp/styled-paths-*.png
-
-      - name: Run riverfront effects visual smoke
-        if: ${{ matrix.shard == 2 }}
-        run: xvfb-run -a yarn workspace luma.gl-examples-deck-scene-buffers test:visual
-
-      - name: Upload riverfront effects screenshots
-        if: ${{ always() && matrix.shard == 2 }}
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
-        with:
-          name: deck-scene-buffers
-          path: /tmp/scene-buffers-*.png
+        run: yarn exec playwright install chromium
 
       - name: Reclaim install cache and report disk usage
         run: |
           rm -rf "${HOME}/.yarn/berry/cache"
           df -h .
           du -sh . "${HOME}/.yarn" "${HOME}/.cache/ms-playwright" "${RUNNER_TEMP}" 2>/dev/null || true
-
-      - name: Test riverfront GPU flow
-        if: ${{ matrix.shard == 2 }}
-        run: xvfb-run -a yarn workspace luma.gl-examples-deck-flow-particles test:visual
-
-      - name: Test riverfront weather
-        if: ${{ matrix.shard == 2 }}
-        run: xvfb-run -a yarn workspace luma.gl-examples-deck-weather test:visual
-
-      - name: Test shared height fog in Visualization City
-        if: ${{ matrix.shard == 2 }}
-        run: xvfb-run -a yarn workspace luma.gl-examples-experimental-advanced-effects test:fog
-
-      # Run the standalone WebGPU smoke before the coverage suite so its SwiftShader device starts
-      # from a clean runner state instead of inheriting resource pressure from prior browser tests.
-      - name: Install Spatial Atlas Playwright Chromium
-        if: ${{ matrix.shard == 3 }}
-        run: yarn workspace luma.gl-examples-showcase-billion-point-spatial-atlas exec playwright install chromium
-
-      - name: Run Billion-Point Spatial Atlas visual smoke
-        if: ${{ matrix.shard == 3 }}
-        env:
-          SPATIAL_ATLAS_SCREENSHOT: ${{ runner.temp }}/billion-point-spatial-atlas.png
-        run: yarn workspace luma.gl-examples-showcase-billion-point-spatial-atlas test:visual
-
-      - name: Upload Billion-Point Spatial Atlas visual smoke screenshot
-        if: ${{ always() && matrix.shard == 3 }}
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
-        with:
-          name: billion-point-spatial-atlas-visual-smoke
-          path: ${{ runner.temp }}/billion-point-spatial-atlas*.png
-          if-no-files-found: warn
-          retention-days: 7
 
       - name: Run headless tests and generate coverage
         env:
@@ -249,6 +131,178 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+  visual_examples:
+    name: Visual examples (${{ matrix.group }})
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [city, styles, effects, atlas]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup Node (with Corepack)
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Enable Corepack / Yarn 4
+        run: |
+          corepack enable
+          corepack prepare yarn@4.13.0 --activate
+          yarn -v
+
+      - name: Restore Yarn Berry artifacts
+        id: yarn-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.yarn/berry/cache
+            .yarn/install-state.gz
+          key: ${{ runner.os }}-yarn4-${{ hashFiles('yarn.lock', '.yarnrc.yml', 'package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn4-
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Save Yarn Berry artifacts
+        if: steps.yarn-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.yarn/berry/cache
+            .yarn/install-state.gz
+          key: ${{ steps.yarn-cache.outputs.cache-primary-key }}
+
+      - name: Cache Playwright Chromium
+        id: playwright-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-ms-playwright-${{ hashFiles('yarn.lock', 'package.json') }}
+
+      - name: Install Playwright Chromium
+        run: yarn exec playwright install chromium
+
+      - name: Run Deck pattern fill visual checks
+        if: ${{ matrix.group == 'styles' }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-pattern-fills test:visual
+
+      - name: Upload Deck pattern fill screenshots
+        if: ${{ always() && matrix.group == 'styles' }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: deck-pattern-fills
+          path: /tmp/pattern-fills-*.png
+
+      - name: Run Deck sketch edges visual checks
+        if: ${{ matrix.group == 'styles' }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-sketch-edges test:visual
+
+      - name: Upload Deck sketch edge screenshots
+        if: ${{ always() && matrix.group == 'styles' }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: deck-sketch-edges
+          path: /tmp/sketch-edges-*.png
+      - name: Run Deck city scene visual smoke
+        if: ${{ matrix.group == 'city' }}
+        env:
+          CITY_SCENE_ARTIFACTS: ${{ runner.temp }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-city-scene test:visual
+
+      - name: Upload Deck city scene screenshots
+        if: ${{ always() && matrix.group == 'city' }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: deck-city-scene
+          path: ${{ runner.temp }}/city-scene-*.png
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Run Deck globe cloud cover visual checks
+        if: ${{ matrix.group == 'city' }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-globe-clouds test:visual
+
+      - name: Upload globe cloud cover screenshots
+        if: ${{ always() && matrix.group == 'city' }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: deck-globe-cloud-cover
+          path: /tmp/globe-cloud-cover-*.png
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Run Deck point glow visual checks
+        if: ${{ matrix.group == 'styles' }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-point-glow test:visual
+
+      - name: Upload Deck point glow screenshots
+        if: ${{ always() && matrix.group == 'styles' }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: deck-point-glow
+          path: /tmp/point-glow-*.png
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Run riverfront routes visual smoke
+        if: ${{ matrix.group == 'styles' }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-styled-paths test:visual
+
+      - name: Upload riverfront routes screenshots
+        if: ${{ always() && matrix.group == 'styles' }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: deck-styled-paths
+          path: /tmp/styled-paths-*.png
+
+      - name: Run riverfront effects visual smoke
+        if: ${{ matrix.group == 'effects' }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-scene-buffers test:visual
+
+      - name: Upload riverfront effects screenshots
+        if: ${{ always() && matrix.group == 'effects' }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: deck-scene-buffers
+          path: /tmp/scene-buffers-*.png
+
+      - name: Test riverfront GPU flow
+        if: ${{ matrix.group == 'effects' }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-flow-particles test:visual
+
+      - name: Test riverfront weather
+        if: ${{ matrix.group == 'effects' }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-deck-weather test:visual
+
+      - name: Test shared height fog in Visualization City
+        if: ${{ matrix.group == 'effects' }}
+        run: xvfb-run -a yarn workspace luma.gl-examples-experimental-advanced-effects test:fog
+
+      # Atlas uses its workspace Playwright version and runs on a dedicated matrix worker.
+      - name: Install Spatial Atlas Playwright Chromium
+        if: ${{ matrix.group == 'atlas' }}
+        run: yarn workspace luma.gl-examples-showcase-billion-point-spatial-atlas exec playwright install chromium
+
+      - name: Run Billion-Point Spatial Atlas visual smoke
+        if: ${{ matrix.group == 'atlas' }}
+        env:
+          SPATIAL_ATLAS_SCREENSHOT: ${{ runner.temp }}/billion-point-spatial-atlas.png
+        run: yarn workspace luma.gl-examples-showcase-billion-point-spatial-atlas test:visual
+
+      - name: Upload Billion-Point Spatial Atlas visual smoke screenshot
+        if: ${{ always() && matrix.group == 'atlas' }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: billion-point-spatial-atlas-visual-smoke
+          path: ${{ runner.temp }}/billion-point-spatial-atlas*.png
+          if-no-files-found: warn
+          retention-days: 7
+
   gltf_reference_evidence:
     name: glTF WebGPU/WebGL2 reference evidence
     # Ubuntu's CPU-backed WebGPU adapter destroys its device when the bump-material PBR command
@@ -290,7 +344,7 @@ jobs:
           key: ${{ runner.os }}-ms-playwright-${{ hashFiles('yarn.lock', 'package.json') }}
 
       - name: Install Playwright Chromium
-        run: yarn playwright:install
+        run: yarn exec playwright install chromium
 
       - name: Test glTF reference tooling
         run: yarn gltf:reference-evidence:test
@@ -355,7 +409,7 @@ jobs:
 
   test:
     name: Aggregate test coverage
-    needs: [browser_coverage, node_coverage]
+    needs: [browser_coverage, node_coverage, visual_examples]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-22.04
     timeout-minutes: 5
@@ -395,14 +449,19 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           file: coverage/lcov.info
 
-      - name: Verify all coverage jobs passed
+      - name: Verify all coverage and visual jobs passed
         if: always()
         env:
           BROWSER_COVERAGE_RESULT: ${{ needs.browser_coverage.result }}
           NODE_COVERAGE_RESULT: ${{ needs.node_coverage.result }}
+          VISUAL_EXAMPLES_RESULT: ${{ needs.visual_examples.result }}
         run: |
           if [ "$BROWSER_COVERAGE_RESULT" != "success" ]; then
             echo "::error::Browser coverage shards finished with status: $BROWSER_COVERAGE_RESULT"
+            exit 1
+          fi
+          if [ "$VISUAL_EXAMPLES_RESULT" != "success" ]; then
+            echo "::error::Visual example jobs finished with status: $VISUAL_EXAMPLES_RESULT"
             exit 1
           fi
           if [ "$NODE_COVERAGE_RESULT" != "success" ]; then
@@ -428,10 +487,26 @@ jobs:
           node-version-file: '.nvmrc'
       - name: Enable Corepack
         run: corepack enable
+      - name: Cache Yarn Berry artifacts
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.yarn/berry/cache
+            .yarn/install-state.gz
+          key: ${{ runner.os }}-yarn4-${{ hashFiles('yarn.lock', '.yarnrc.yml', 'package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn4-
+
       - name: Install dependencies
         run: yarn install --immutable
       - name: Build packages
         run: yarn build
+      - name: Cache Playwright Chromium
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-ms-playwright-${{ hashFiles('yarn.lock', 'package.json') }}
+
       - name: Install Chromium
         run: yarn exec playwright install --with-deps chromium
       - name: Verify shared lighting examples

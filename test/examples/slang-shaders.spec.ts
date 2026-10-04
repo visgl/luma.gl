@@ -11,7 +11,7 @@ import SlangShadersExample from '../../examples/tutorials/slang-shaders/app';
 it.each([
   'webgl2',
   'webgpu'
-] as const)('Slang Shaders example animates its distance-field and material modules on %s', async backend => {
+] as const)('Slang Shaders example animates Slang modules and an imported native noise module on %s', async backend => {
   const device =
     backend === 'webgl2' ? await getWebGLTestDevice() : await getWebGPUTestDevice('core');
   expect(device).not.toBeNull();
@@ -30,9 +30,7 @@ it.each([
   });
   try {
     await vi.waitFor(() => {
-      const renderPass = device!.beginRenderPass({framebuffer, clearColor: [0.04, 0.06, 0.12, 1]});
-      const drawn = application.model.draw(renderPass);
-      renderPass.end();
+      const drawn = application.filmGrainPass.draw(application.model, 64, 64, 0, 0, framebuffer);
       device!.submit();
       expect(drawn).toBe(true);
     });
@@ -51,9 +49,7 @@ it.each([
       expect(pixels[centerOffset + 3]).toBe(255);
       // Advancing the shared ConstantBuffer changes the rendered geometry and material.
       application.updateScene(4, 1);
-      const animatedPass = device!.beginRenderPass({framebuffer});
-      application.model.draw(animatedPass);
-      animatedPass.end();
+      application.filmGrainPass.draw(application.model, 64, 64, 0, 0, framebuffer);
       device!.submit();
       texture.readBuffer(options, buffer);
       const animatedPixels = new Uint8Array(await buffer.readAsync());
@@ -66,6 +62,18 @@ it.each([
         if (difference > 20) changedPixels++;
       }
       expect(changedPixels).toBeGreaterThan(200);
+      // Keep the Slang scene fixed: changing only the native module pass changes the pixels.
+      application.filmGrainPass.draw(application.model, 64, 64, 0, 0.15, framebuffer);
+      device!.submit();
+      texture.readBuffer(options, buffer);
+      const grainPixels = new Uint8Array(await buffer.readAsync());
+      expect(grainPixels).not.toEqual(animatedPixels);
+      // Resizing replaces the sampled target and keeps the native pass bound to the new texture.
+      application.filmGrainPass.draw(application.model, 32, 32, 0, 0.15, framebuffer);
+      expect(application.filmGrainPass.draw(application.model, 64, 64, 0, 0.15, framebuffer)).toBe(
+        true
+      );
+      device!.submit();
     } finally {
       buffer.destroy();
     }
@@ -73,11 +81,15 @@ it.each([
       expect(application.model.vs).toContain('#version 300 es');
       expect(application.model.fs).toContain('_slang_function_getPaletteColor');
       expect(application.model.fs).toContain('_slang_function_getSculptureDistance');
+      expect(application.filmGrainPass.model.fs).toContain('valueNoise_noise(gl_FragCoord.xy');
     } else {
       expect(application.model.props.vertexEntryPoint).toBe('_slang_entry_vertexMain');
       expect(application.model.props.fragmentEntryPoint).toBe('_slang_entry_fragmentMain');
       expect(application.model.source).toContain('_slang_function_getPaletteColor');
       expect(application.model.source).toContain('_slang_function_getSculptureDistance');
+      expect(application.filmGrainPass.model.source).toContain(
+        'valueNoise_noise(input.position.xy'
+      );
     }
   } finally {
     application.onFinalize();
