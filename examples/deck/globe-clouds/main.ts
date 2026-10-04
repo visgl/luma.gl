@@ -25,6 +25,9 @@ const scene = createGlobeCloudScene(document.querySelector<HTMLDivElement>('#sce
 window.globeCloudScene = scene;
 for (const [identifier, setter] of [
   ['clouds', scene.setClouds],
+  ['sun', scene.setSun],
+  ['moon', scene.setMoon],
+  ['stars', scene.setStars],
   ['animate', scene.setAnimate]
 ] as const) {
   const input = document.querySelector<HTMLInputElement>(`#${identifier}`)!;
@@ -42,10 +45,15 @@ for (const [identifier, setter] of [
 document
   .querySelector<HTMLButtonElement>('#center')!
   .addEventListener('click', () => scene.centerView());
+for (const body of ['sun', 'moon'] as const) {
+  document
+    .querySelector<HTMLButtonElement>(`#look-${body}`)!
+    .addEventListener('click', () => scene.lookAtBody(body));
+}
 scene.ready
   .then(() => {
     document.body.dataset['ready'] = 'true';
-    status.value = `Spherical cloud cover · ${scene.diagnostics.backend === 'webgpu' ? 'WebGPU' : 'WebGL2'}`;
+    status.value = `Astronomy sky and cloud cover · ${scene.diagnostics.backend === 'webgpu' ? 'WebGPU' : 'WebGL2'}`;
   })
   .catch(error => {
     document.body.dataset['ready'] = 'error';

@@ -52,10 +52,23 @@ try {
         await screenshot();
       }
       await page.getByRole('button', {name: 'Center', exact: true}).click();
-      await page.getByLabel('Sun longitude').fill('-160');
+      await page.getByLabel('UTC hour').fill('1');
       const night = await screenshot();
-      assert(differences(clouds, night) > 1000, 'Sun longitude moves the day/night terminator');
-      await page.getByLabel('Sun longitude').fill('20');
+      assert(differences(clouds, night) > 1000, 'Astronomy time moves the day/night terminator');
+      await page.getByLabel('UTC hour').fill('13');
+      for (const body of ['sun', 'moon']) {
+        await page.getByRole('button', {name: `Look at ${body}`, exact: true}).click();
+        const enabled = await screenshot();
+        await page.getByLabel(body === 'sun' ? 'Sun' : 'Moon', {exact: true}).uncheck();
+        const disabled = await screenshot();
+        assert(differences(enabled, disabled) > 300, `${body} is visible beside the globe`);
+        await page.getByLabel(body === 'sun' ? 'Sun' : 'Moon', {exact: true}).check();
+      }
+      const starry = await screenshot();
+      await page.getByLabel('Stars', {exact: true}).uncheck();
+      assert(differences(starry, await screenshot()) > 100, 'Catalog stars fill the sky');
+      await page.getByLabel('Stars', {exact: true}).check();
+      await page.getByRole('button', {name: 'Center', exact: true}).click();
       await page.getByLabel('Animate', {exact: true}).check();
       const before = await page.evaluate(() => window.globeCloudScene.diagnostics.time);
       await page.waitForFunction(previous => window.globeCloudScene.diagnostics.time > previous + 0.5, before);

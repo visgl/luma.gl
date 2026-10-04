@@ -7,9 +7,10 @@ import {luma, Buffer, Texture, type RenderPass} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {Model} from '@luma.gl/engine';
+import {fromHalfFloat} from '@luma.gl/shadertools';
 import {getTestDevice} from '@luma.gl/test-utils';
 import {expect, test} from 'vitest';
-import {SunLayer, MoonLayer, CloudLayer, AtmosphereLayer} from '../src';
+import {SunLayer, MoonLayer, CloudLayer, AtmosphereLayer, SkyLayer, StarfieldLayer} from '../src';
 
 const SIZE = 128;
 const DIRECTION = [0, Math.cos(Math.PI / 18), Math.sin(Math.PI / 18)] as const;
@@ -120,7 +121,77 @@ test.each(['webgpu', 'webgl'] as const)(
       }
     }
     try {
+      const energy = (pixels: Uint8Array) =>
+        pixels.reduce((sum, value, index) => (index % 4 === 0 ? sum + value : sum), 0);
       const solar = await readFrame();
+      const highDynamicRangeTexture = device.createTexture({
+        width: SIZE,
+        height: SIZE,
+        format: 'rgba16float',
+        usage: Texture.RENDER | Texture.COPY_SRC
+      });
+      const highDynamicRangeFramebuffer = device.createFramebuffer({
+        width: SIZE,
+        height: SIZE,
+        colorAttachments: [highDynamicRangeTexture],
+        depthStencilAttachment: 'depth24plus'
+      });
+      try {
+        deck.setProps({_framebuffer: highDynamicRangeFramebuffer});
+        await readFrame([sun.clone()]);
+        const layout = highDynamicRangeTexture.computeMemoryLayout();
+        const readback = device.createBuffer({
+          byteLength: layout.byteLength,
+          usage: Buffer.COPY_DST | Buffer.MAP_READ
+        });
+        try {
+          highDynamicRangeTexture.readBuffer({}, readback);
+          device.submit();
+          const bytes = await readback.readAsync();
+          const values = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+          let maximumRadiance = 0;
+          for (let vertical = 0; vertical < SIZE; vertical++) {
+            for (let horizontal = 0; horizontal < SIZE; horizontal++) {
+              const offset = vertical * layout.bytesPerRow + horizontal * layout.bytesPerPixel;
+              for (let channel = 0; channel < 3; channel++) {
+                const radiance = fromHalfFloat(values.getUint16(offset + channel * 2, true));
+                expect(Number.isFinite(radiance)).toBe(true);
+                maximumRadiance = Math.max(maximumRadiance, radiance);
+              }
+            }
+          }
+          expect(maximumRadiance, 'Sun retains HDR radiance above one').toBeGreaterThan(1);
+        } finally {
+          readback.destroy();
+        }
+      } finally {
+        deck.setProps({_framebuffer: framebuffer});
+        highDynamicRangeFramebuffer.destroy();
+        highDynamicRangeTexture.destroy();
+      }
+
+      const composite = new SkyLayer({
+        id: 'composite-sky',
+        timestamp: Date.UTC(2026, 9, 4, 13),
+        sun: false,
+        moon: false,
+        stars: false,
+        clouds: false,
+        atmosphere: false
+      });
+      expect(energy(await readFrame([composite])), 'disabled composite is transparent').toBe(0);
+      expect(
+        energy(await readFrame([composite.clone({stars: {brightness: 8}})])),
+        'catalog stars render on a flat map'
+      ).toBeGreaterThan(0);
+      const starLayer = deck
+        .layerManager!.getLayers()
+        .find((layer): layer is StarfieldLayer => layer instanceof StarfieldLayer)!;
+      const starBuffer = starLayer.state.stars;
+      await readFrame([composite]);
+      expect(starBuffer.destroyed, 'disabled stars release their GPU buffers').toBe(true);
+      await readFrame([sun.clone()]);
+
       expect(Math.max(...solar.filter((_, index) => index % 4 === 0))).toBe(255);
       expect(solar[0], 'quad corners stay transparent').toBe(0);
       const moon = (phase: number) =>
@@ -129,8 +200,7 @@ test.each(['webgpu', 'webgl'] as const)(
       const waxing = await readFrame([moon(0.25)]);
       const waning = await readFrame([moon(0.75)]);
       const newMoon = await readFrame([moon(0)]);
-      const energy = (pixels: Uint8Array) =>
-        pixels.reduce((sum, value, index) => (index % 4 === 0 ? sum + value : sum), 0);
+
       expect(energy(full)).toBeGreaterThan(energy(waxing) * 1.5);
       expect(energy(newMoon)).toBeLessThan(energy(full) * 0.15);
       const sideEnergy = (pixels: Uint8Array, right: boolean) =>

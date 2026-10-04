@@ -3,9 +3,15 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Deck, _GlobeView} from '@deck.gl/core';
-import {GlobeCloudLayer} from '@deck.gl-community/gpu-layers';
+import {SkyLayer} from '@deck.gl-community/gpu-layers';
 import {DynamicTexture, loadImageBitmap} from '@luma.gl/engine';
-import type {NumberArray3} from '@math.gl/core';
+import {
+  createSkyObserver,
+  getSunPosition,
+  getMoonPosition,
+  getSkyDirection,
+  skyDirectionToGlobe
+} from '@math.gl/sun';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
 import {EarthLayer} from './earth-layer';
 import earthImage from '../../showcase/globe/earth.jpg';
@@ -14,24 +20,53 @@ export function createGlobeCloudScene(
   parent: HTMLDivElement,
   options: DeckExampleDeviceOptions = {}
 ) {
-  const settings = {clouds: true, animate: true, cover: 0.45, scale: 900, drift: 1, sunlight: 20};
+  const settings = {
+    clouds: true,
+    animate: true,
+    cover: 0.45,
+    scale: 900,
+    drift: 1,
+    sunlight: 13,
+    sun: true,
+    moon: true,
+    stars: true
+  };
   const diagnostics = {frames: 0, time: 0, backend: '', error: '', finalized: false};
   const ready = Promise.withResolvers<void>();
+  const observer = createSkyObserver({longitude: 20, latitude: 20});
+  const date = Date.UTC(2026, 9, 4);
+  const getTimestamp = () => date + settings.sunlight * 3600000;
   const initialViewState = {
     longitude: 20,
     latitude: 20,
     zoom: 1.4,
     minZoom: -1.5,
-    maxZoom: 5,
+    maxZoom: 8,
+    maxPitch: 120,
     pitch: 0,
     bearing: 0
   };
   let earthTexture: DynamicTexture | undefined;
   let lastTimestamp = 0;
   let initialized = false;
+  const deviceProps = getDeckExampleProps(options);
+  const highDynamicRange =
+    (options.device?.type ?? options.deviceType ?? 'webgpu') === 'webgpu' &&
+    window.matchMedia('(dynamic-range: high)').matches;
   const deck = new Deck({
     parent,
-    ...getDeckExampleProps(options),
+    ...deviceProps,
+    deviceProps: {
+      ...deviceProps.deviceProps,
+      createCanvasContext: highDynamicRange
+        ? {
+            colorFormat: 'rgba16float',
+            colorSpace: 'display-p3',
+            toneMapping: 'extended',
+            alphaMode: 'opaque'
+          }
+        : {alphaMode: 'opaque'}
+    },
     views: new _GlobeView({id: 'globe', controller: true}),
     initialViewState,
     layers: [],
@@ -75,25 +110,30 @@ export function createGlobeCloudScene(
   }
   function updateLayers(): void {
     if (!earthTexture?.isReady || diagnostics.finalized) return;
-    const longitude = (settings.sunlight * Math.PI) / 180;
-    const latitude = (20 * Math.PI) / 180;
-    const sunDirection: NumberArray3 = [
-      Math.sin(longitude) * Math.cos(latitude),
-      -Math.cos(longitude) * Math.cos(latitude),
-      Math.sin(latitude)
-    ];
+    const timestamp = getTimestamp();
+    const position = getSunPosition(timestamp, observer.latitude, observer.longitude);
+    const sunDirection = skyDirectionToGlobe(
+      getSkyDirection(position.altitude, position.azimuth),
+      observer
+    );
     deck.setProps({
       layers: [
         new EarthLayer({id: 'earth', texture: earthTexture.texture, sunDirection}),
-        new GlobeCloudLayer({
-          id: 'clouds',
-          visible: settings.clouds,
-          cover: settings.cover,
+        new SkyLayer({
+          id: 'sky',
+          timestamp,
+          observer,
           time: diagnostics.time,
-          scale: settings.scale * 1000,
-          // Accelerated drift makes global-scale movement visible during an interactive preview.
-          velocity: [22000 * settings.drift, 5000 * settings.drift],
-          sunDirection
+          atmosphere: false,
+          sun: settings.sun && {radiusPixels: 14, radiance: 8},
+          moon: settings.moon && {radiusPixels: 18},
+          stars: settings.stars && {brightness: 2},
+          clouds: settings.clouds && {
+            cover: settings.cover,
+            scale: settings.scale * 1000,
+            // Accelerated drift makes orbital-scale cloud movement visible during a preview.
+            velocity: [22000 * settings.drift, 5000 * settings.drift]
+          }
         })
       ]
     });
@@ -125,6 +165,39 @@ export function createGlobeCloudScene(
     setSunlight(value: number) {
       settings.sunlight = value;
       updateLayers();
+    },
+    setSun(value: boolean) {
+      settings.sun = value;
+      updateLayers();
+    },
+    setMoon(value: boolean) {
+      settings.moon = value;
+      updateLayers();
+    },
+    setStars(value: boolean) {
+      settings.stars = value;
+      updateLayers();
+    },
+    lookAtBody(body: 'sun' | 'moon') {
+      const position =
+        body === 'sun'
+          ? getSunPosition(getTimestamp(), observer.latitude, observer.longitude)
+          : getMoonPosition(getTimestamp(), observer.latitude, observer.longitude);
+      const direction = skyDirectionToGlobe(
+        getSkyDirection(position.altitude, position.azimuth),
+        observer
+      );
+      const longitude = (Math.atan2(direction[0], -direction[1]) * 180) / Math.PI;
+      const latitude = (Math.asin(direction[2]) * 180) / Math.PI;
+      // Keep the planet small and offset the body from its silhouette instead of hiding it behind Earth.
+      deck.setProps({
+        initialViewState: {
+          ...initialViewState,
+          longitude: longitude + 198,
+          latitude: -latitude,
+          zoom: -1.2
+        }
+      });
     },
     centerView() {
       deck.setProps({initialViewState: {...initialViewState}});

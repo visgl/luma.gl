@@ -72,3 +72,6 @@ export {
   getGlobeCloudViewUniforms,
   type GlobeCloudLayerProps
 } from './layers/globe-cloud-layer';
+
+export {SkyLayer, type SkyLayerProps} from './layers/sky-layer';
+export {StarfieldLayer, type StarfieldLayerProps} from './layers/starfield-layer';

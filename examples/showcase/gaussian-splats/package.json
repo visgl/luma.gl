@@ -19,7 +19,7 @@
     "@luma.gl/splats": "workspace:*",
     "@luma.gl/webgl": "10.0.0-alpha.2",
     "@luma.gl/webgpu": "10.0.0-alpha.2",
-    "@math.gl/core": "5.0.0-alpha.11",
+    "@math.gl/core": "5.0.0-alpha.12",
     "preact": "^10.17.0"
   },
   "devDependencies": {

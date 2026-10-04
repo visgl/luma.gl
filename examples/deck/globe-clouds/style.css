@@ -11,3 +11,6 @@ html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background:
   .luma-example-infobox--overlay { top: auto; bottom: 8px; left: 8px; width: calc(100% - 16px); max-height: 290px; }
   .luma-example-infobox .control-card label { grid-template-columns: minmax(0, 1fr) 112px; }
 }
+
+.sky-actions { display: flex; gap: 6px; }
+.sky-actions button { flex: 1; }

@@ -11,7 +11,7 @@ import {
   type ProjectionProgram
 } from '@luma.gl/experimental/gpu-project';
 import {planCRSProjection} from '@luma.gl/experimental/gpu-project/crs';
-import {Proj4Projection} from '@math.gl/proj4/classic';
+import {Projection} from '@math.gl/projection';
 import {geographicCRS, makeTransverseMercatorCRS} from './projection-crs-fixtures';
 
 const program: ProjectionProgram = {
@@ -155,7 +155,7 @@ it.each([
     ...planned.program,
     operations: [{type: 'longitude-wrap', interval: [0, 360]}, ...planned.program.operations]
   };
-  const oracle = new Proj4Projection({from: 'EPSG:4326', to: '+proj=utm +zone=60 +datum=WGS84'});
+  const oracle = new Projection({from: 'EPSG:4326', to: '+proj=utm +zone=60 +datum=WGS84'});
   for (const longitude of [179.25, 179.99, -179.99, -179.25]) {
     const expected = oracle.project([longitude, 0.5]);
     const actual = evaluateProjectionProgram(wrapped, [longitude, 0.5]);

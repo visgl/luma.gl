@@ -571,3 +571,47 @@ functions are reused by the `globeClouds` shader module. A three-dimensional den
 avoids longitude seams and pinching at the poles. This is procedural cover, without observed
 weather data, terrain-aware cloud shadows or temporal reconstruction. The globe example
 accelerates drift to make global motion visible during a short preview.
+
+### Celestial sky composition
+
+`SkyLayer` combines the existing atmosphere renderer, `SunLayer`, `MoonLayer`,
+`StarfieldLayer`, and the cloud layer appropriate to the active view. One observer and
+astronomy timestamp drive every component. The application advances the clock; cloud
+`time` is separate elapsed seconds. The original `AtmosphereLayer` remains available.
+
+```typescript
+import {SkyLayer} from '@deck.gl-community/gpu-layers';
+import {createSkyObserver} from '@math.gl/sun';
+
+const sky = new SkyLayer({
+  id: 'sky',
+  timestamp: Date.now(),
+  observer: createSkyObserver({longitude: -74, latitude: 40.7}),
+  time: elapsedSeconds,
+  sun: {radiance: 8},
+  moon: true,
+  stars: {brightness: 1},
+  clouds: {cover: 0.45}
+});
+```
+
+Draw the sky before opaque scene geometry. Every component is non-pickable and retains
+foreground depth occlusion. `GlobeView` automatically uses spherical clouds and global
+celestial axes; perspective map views use the local sky and cloud slab. The local
+scattering atmosphere is skipped on globe views, which use the application's space
+background. Cloud properties retain each layer's defaults (metres and seconds).
+
+`SunLayer` and `MoonLayer` also accept `timestamp` and `observer` directly. An explicit
+ENU `direction` preserves manual placement; moon `phase` and `limbAngle` override the
+automatic values. If no observer is provided, the layers use `coordinateOrigin` when
+nonzero, otherwise the active map/globe location. All astronomy angles are radians.
+Solar `radiance` is linear and can exceed one; retain it with a floating-point scene
+color target and tone mapping or extended-range presentation. An ordinary canvas
+clamps highlights. Disk sizes are intentionally configurable in pixels, rather than
+physically scaled apparent angular diameters.
+
+`StarfieldLayer` defaults to math.gl's BSC5 catalog and sidereal/precession rotation.
+Optional `data` uses `getStarLayerData(..., {coordinates: 'equatorial'})` from
+`@math.gl/sun/stars`; an empty array renders no stars. The catalog is calculated once
+and reused, and changing the timestamp only changes rotation uniforms. Picking and
+GPU resource ownership follow the same rules as the individual sky layers.
