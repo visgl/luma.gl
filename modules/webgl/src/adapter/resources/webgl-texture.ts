@@ -209,7 +209,12 @@ export class WEBGLTexture extends Texture {
 
     // WebGL cube maps specify faces by overriding target instead of using the z parameter
     const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, z);
-    const glParameters: GLValueParameters = options.flipY ? {[GL.UNPACK_FLIP_Y_WEBGL]: true} : {};
+    // ImageBitmap ignores these flags; set imageOrientation/premultiplyAlpha at bitmap creation.
+    // Always set explicitly - an ambient value left by a previous upload must not leak in
+    const glParameters: GLValueParameters = {
+      [GL.UNPACK_FLIP_Y_WEBGL]: Boolean(options.flipY),
+      [GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL]: Boolean(options.premultipliedAlpha)
+    };
 
     this.gl.bindTexture(this.glTarget, this.handle);
 
@@ -254,7 +259,11 @@ export class WEBGLTexture extends Texture {
       height
     } = options;
     const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, z);
-    const glParameters: GLValueParameters = options.flipY ? {[GL.UNPACK_FLIP_Y_WEBGL]: true} : {};
+    // Always set explicitly - an ambient value left by a previous upload must not leak in
+    const glParameters: GLValueParameters = {
+      [GL.UNPACK_FLIP_Y_WEBGL]: Boolean(options.flipY),
+      [GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL]: Boolean(options.premultipliedAlpha)
+    };
     const gl = this.gl as WebGL2RenderingContext & {
       texElementImage2D?: (
         target: number,

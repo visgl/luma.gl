@@ -65,6 +65,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'tutorials/hello-two-cubes',
   'tutorials/shader-hooks',
   'tutorials/shader-modules',
+  'tutorials/slang-shaders',
   'tutorials/transform',
   'tutorials/transform-feedback'
 ]);

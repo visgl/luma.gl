@@ -1,0 +1,28 @@
+---
+title: Slang Shaders
+description: Explore an animated ray-marched sculpture written in Slang on WebGL 2 and WebGPU.
+sidebar_custom_props:
+  backends: [webgpu, webgl2]
+  difficulty: tutorial
+  maturity: experimental
+  mobile: full
+  mobileProfile: standard
+  topics: [fundamentals, shaders, modules, rendering]
+---
+
+import {SlangShadersExample} from '@site/src/examples';
+
+<SlangShadersExample />
+
+Drag to orbit an animated sculpture with three deforming rings, a glowing core,
+iridescent lighting, and a floor reflection. Try the material, twist, and exposure
+controls, or pause to inspect the surfaces. No mesh is uploaded: the fragment shader
+traces camera rays through a signed-distance field.
+
+The application registers the private TypeScript Slang compiler with its own shader
+assembler. Both backends use the same `shader.slang`, reusable `geometry.slang`
+distance-field module, and `palette.slang` material module. Animation and camera
+parameters share a flat uniform buffer; the application uses compiler reflection to
+bind its resource by the generated name.
+WebGL 2 receives GLSL ES 300; WebGPU receives one WGSL program with generated entry points.
+See the [Slang API](/docs/api-reference/slang) for compiler limits.

@@ -321,6 +321,14 @@ module.exports = {
         sidebar: {autoConfiguration: false}
       }
     ],
+    function slangShaderSources() {
+      return {
+        name: 'slang-shader-sources',
+        configureWebpack() {
+          return {module: {rules: [{test: /\.slang$/, type: 'asset/source'}]}};
+        }
+      };
+    },
     function deckCommunitySourceAliases() {
       return {
         name: 'deck-community-source-aliases',

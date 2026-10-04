@@ -99,6 +99,7 @@ const loadLightingApp = () => import('../../examples/tutorials/lighting/app');
 const loadShaderHooksApp = () => import('../../examples/tutorials/shader-hooks/app');
 const loadShaderPluginsApp = () => import('../../examples/tutorials/shader-plugins/app');
 const loadShaderModulesApp = () => import('../../examples/tutorials/shader-modules/app');
+const loadSlangShadersApp = () => import('../../examples/tutorials/slang-shaders/app');
 const loadTransformFeedbackApp = () => import('../../examples/tutorials/transform-feedback/app');
 const loadTransformApp = () => import('../../examples/tutorials/transform/app');
 
@@ -2628,6 +2629,17 @@ export const ShaderModulesExample: React.FC = props => (
     config={exampleConfig}
     showStats={false}
     stackBlitz
+    {...props}
+  />
+);
+
+export const SlangShadersExample: React.FC = props => (
+  <LumaExample
+    id="slang-shaders"
+    directory="tutorials"
+    loadTemplate={loadSlangShadersApp}
+    config={exampleConfig}
+    showStats={false}
     {...props}
   />
 );
