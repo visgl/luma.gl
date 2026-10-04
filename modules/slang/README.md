@@ -89,7 +89,8 @@ generated wrappers/helper lines may map to their associated declaration.
 - `float`, `int`, `uint`, `bool`, vectors of width 2–4, float matrices from 2x2 through 4x4,
   structures (including nested structures), and fixed-size array declarators.
 - Functions, forward references, overloads, calls, scalar/vector casts, vector/structure constructors,
-  row-ordered scalar matrix constructors, and aggregate initializer lists with zero-filled omissions. Only functions reachable from the selected entry point
+  row-ordered scalar matrix constructors, and aggregate initializer lists with zero-filled omissions.
+  A single scalar in a vector initializer list broadcasts to every component. Only functions reachable from the selected entry point
   are emitted. Recursive functions and overloaded entry points are rejected. Helper and entry-point `out`/`inout`
   parameters are supported; output arguments require an exact type and writable destination.
 - Variables, constants, static globals, assignments, component access, indexing, arithmetic,
@@ -121,6 +122,7 @@ generated wrappers/helper lines may map to their associated declaration.
   WebGL uniforms are located by their generated names; reflected groups/bindings describe the
   source binding plan. Texture and sampler resources combine into GLSL sampler uniforms,
   and each texture may use only one sampler. The caller applies the sampler state to that texture.
+  Unused GLSL texture declarations are omitted so stages link without conflicting inactive sampler types.
   GLSL ES 300 keeps sampler bindings application-managed; explicit GLSL 450 output emits each
   texture's assigned `layout(binding = N)`, including automatically assigned bindings.
 - Float matrices are stored transposed relative to their mathematical Slang dimensions so
@@ -132,7 +134,9 @@ generated wrappers/helper lines may map to their associated declaration.
 - WGSL still rejects increments or assignments used as values and component-wise matrix multiplication.
   Aggregate initializer lists require a declared destination type; passing lists directly to overloaded
   functions is unsupported. Overload resolution covers the supported scalar/vector numeric conversions.
-- Comparison sampling requires a scalar float texture and a comparison sampler. `SampleCmp` is
+- Comparison sampling requires a scalar float texture and a comparison sampler. Texture usage is
+  inferred from the selected entry point and its resolved helpers. A shared texture cannot mix
+  comparison and ordinary sampling, including across unified entry points. `SampleCmp` is
   fragment-only; explicit zero-level comparison outside fragment shaders supports 2D textures.
   GLSL depth samplers cannot also perform `Load`, and GLSL zero-level comparisons require 2D textures.
   Array sampling coordinates contain the layer in the final component; loads include a final mip level.

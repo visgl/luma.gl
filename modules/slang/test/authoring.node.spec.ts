@@ -206,3 +206,28 @@ it.each([
   expect(result.code).toContain('_slang_function_choose__overload_0');
   expect(result.code).not.toContain('_slang_function_choose__overload_1');
 });
+
+it.each([
+  'wgsl',
+  'glsl'
+] as const)('slang#infers comparison textures only from selected overloads and entry points for %s', target => {
+  const source = `Texture2D<float> image; SamplerState regularSampler; SamplerComparisonState comparisonSampler;
+  float sampleImage(float2 coordinates) { return image.Sample(regularSampler,coordinates); }
+  float sampleImage(float3 coordinates) { return image.SampleCmp(comparisonSampler,coordinates.xy,coordinates.z); }
+  [shader("fragment")] float4 regularMain() : SV_Target { return float4(sampleImage(float2(0.5))); }
+  [shader("fragment")] float4 depthMain() : SV_Target { return float4(sampleImage(float3(0.5))); }`;
+  const regular = transpileSlang(source, {target, entryPoint: 'regularMain'});
+  expect(regular.reflection.bindings[0].texture?.sampleType).toBe('float');
+  expect(regular.code).not.toContain('texture_depth');
+  const depth = transpileSlang(source, {target, entryPoint: 'depthMain'});
+  expect(depth.reflection.bindings[0].texture?.sampleType).toBe('depth');
+  expect(() => transpileSlangWGSL(source)).toThrow(/shared texture/);
+});
+it.each([
+  'wgsl',
+  'glsl'
+] as const)('slang#rejects mixed comparison and ordinary sampling among reachable functions for %s', target => {
+  const source =
+    'Texture2D<float> image; SamplerState regularSampler; SamplerComparisonState comparisonSampler; [shader("fragment")] float4 main() : SV_Target { return float4(image.Sample(regularSampler,float2(0.5)) + image.SampleCmp(comparisonSampler,float2(0.5),0.5)); }';
+  expect(() => transpileSlang(source, {target})).toThrow(/comparison sampling/);
+});

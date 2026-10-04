@@ -154,24 +154,30 @@ export class SlangEmitter {
   private sampledTextures = new Map<string, string>();
   private textureLayouts = new Map<string, SlangTextureLayout>();
   private comparisonTextures = new Set<string>();
+  private reservedNames = new Set<string>();
+  private hasComparisonCalls = false;
+  private ordinaryTextures = new Set<string>();
+  private usedTextures = new Set<string>();
+  private comparisonTexturesResolved = false;
 
   constructor(
     private program: Program,
-    private options: SlangTranspileOptions
+    private options: SlangTranspileOptions,
+    private discoveringTextureUsage = false
   ) {
-    const inspectComparisonCalls = (value: unknown): void => {
+    const inspectNames = (value: unknown): void => {
       if (!value || typeof value !== 'object') return;
-      const expression = value as Expression;
+      const node = value as {name?: string} & Expression;
+      if (typeof node.name === 'string') this.reservedNames.add(this.getName(node.name));
       if (
-        expression.kind === 'call' &&
-        expression.callee.kind === 'member' &&
-        ['SampleCmp', 'SampleCmpLevelZero'].includes(expression.callee.member) &&
-        expression.callee.object.kind === 'identifier'
+        node.kind === 'call' &&
+        node.callee.kind === 'member' &&
+        ['SampleCmp', 'SampleCmpLevelZero'].includes(node.callee.member)
       )
-        this.comparisonTextures.add(expression.callee.object.value);
-      Object.values(value).forEach(inspectComparisonCalls);
+        this.hasComparisonCalls = true;
+      Object.values(value).forEach(inspectNames);
     };
-    inspectComparisonCalls(program);
+    inspectNames(program);
     const names = new Set<string>();
     for (const declaration of program.declarations) {
       if (
@@ -649,7 +655,11 @@ export class SlangEmitter {
     );
   }
   private createTemporary(): string {
-    return `_slang_temporary_${this.temporaryIndex++}`;
+    let name: string;
+    do {
+      name = `_slang_temporary_${this.temporaryIndex++}`;
+    } while (this.reservedNames.has(name));
+    return name;
   }
   private captureExpression(emit: () => string): {code: string; statements: string[]} {
     const previous = this.expressionPrelude;
@@ -761,6 +771,13 @@ export class SlangEmitter {
     const structure = this.structures.get(expected.name);
     const vector = /^(float|int|uint|bool)([2-4])$/.exec(expected.name);
     const matrix = /^float([2-4])x([2-4])$/.exec(expected.name);
+    if (
+      vector &&
+      expression.elements.length === 1 &&
+      this.isScalar(this.getExpressionType(expression.elements[0]))
+    ) {
+      return this.coerceExpression(expression.elements[0], expected);
+    }
     const types = structure
       ? structure.fields.map(field => field.type)
       : expected.name === 'array'
@@ -1154,6 +1171,7 @@ export class SlangEmitter {
     const layout = this.textureLayouts.get(code);
     if (!isSlangTexture(type) || !layout)
       this.fail('Texture methods require a declared global texture', expression);
+    this.usedTextures.add(code);
     return {code, layout, type};
   }
   private cropTextureValue(code: string, layout: SlangTextureLayout): string {
@@ -1204,6 +1222,16 @@ export class SlangEmitter {
   private emitTextureCall(expression: Expression & {kind: 'call'}): string {
     const callee = expression.callee as Expression & {kind: 'member'};
     const {code, layout} = this.getTexture(callee.object);
+    if (this.discoveringTextureUsage) {
+      if (callee.object.kind === 'identifier') {
+        if (['SampleCmp', 'SampleCmpLevelZero'].includes(callee.member))
+          this.comparisonTextures.add(callee.object.value);
+        else if (['Sample', 'SampleLevel'].includes(callee.member))
+          this.ordinaryTextures.add(callee.object.value);
+      }
+      expression.arguments.forEach(argument => this.emitExpression(argument));
+      return this.getZeroValue(this.getExpressionType(expression));
+    }
     if (callee.member === 'Load' && expression.arguments.length === 1)
       return this.emitTextureLoad(callee.object, expression.arguments[0], true);
     const comparison = ['SampleCmp', 'SampleCmpLevelZero'].includes(callee.member);
@@ -2239,7 +2267,26 @@ export class SlangEmitter {
       ? `fn ${name}(${parameters.join(', ')})${declaration.type.name === 'void' ? '' : ` -> ${this.getTypeName(declaration.type, declaration.location)}`} ${body}`
       : `${this.getTypeName(declaration.type, declaration.location)} ${name}(${parameters.join(', ')}) ${body}`;
   }
+  discoverTextureUsage(): {comparison: Set<string>; ordinary: Set<string>} {
+    if (!this.hasComparisonCalls) return {comparison: new Set(), ordinary: new Set()};
+    const discovery = new SlangEmitter(this.program, this.options, true);
+    discovery.emitProgramParts();
+    return {comparison: discovery.comparisonTextures, ordinary: discovery.ordinaryTextures};
+  }
+  setComparisonTextures(textures: ReadonlySet<string>): void {
+    this.comparisonTextures = new Set(textures);
+    this.comparisonTexturesResolved = true;
+  }
   emitProgramParts(): {result: SlangTranspileResult; declarations: string[]; entry: string} {
+    if (
+      this.hasComparisonCalls &&
+      !this.discoveringTextureUsage &&
+      !this.comparisonTexturesResolved
+    ) {
+      // Resolve real overloads before choosing texture declarations. Discovery only substitutes
+      // texture expressions; the final pass validates every method against its inferred type.
+      this.comparisonTextures = this.discoverTextureUsage().comparison;
+    }
     this.prepareEntry();
     // Topologically order structures for GLSL, which requires prior type declarations.
     const structures: string[] = [];
@@ -2272,7 +2319,10 @@ export class SlangEmitter {
     }
     const globals = this.program.declarations
       .filter(declaration => declaration.kind === 'variable')
-      .map(declaration => markSlangSource(this.emitGlobal(declaration), declaration.location));
+      .map(declaration => ({
+        code: markSlangSource(this.emitGlobal(declaration), declaration.location),
+        texture: isSlangTexture(declaration.type) ? this.getName(declaration.name) : undefined
+      }));
     const functions = new Map<string, string>();
     const reachable = new Set<string>();
     const collectFunction = (name: string): void => {
@@ -2319,14 +2369,18 @@ export class SlangEmitter {
         }
       }
       this.reflection.bindings = this.reflection.bindings.filter(
-        binding => binding.kind !== 'sampler'
+        binding =>
+          binding.kind !== 'sampler' &&
+          (binding.kind !== 'texture' || this.usedTextures.has(binding.shaderName))
       );
     }
     const declarations = [
       header,
       ...structures,
       ...this.uniformEmitter.getDeclarations(),
-      ...globals,
+      ...globals
+        .filter(global => this.isWGSL || !global.texture || this.usedTextures.has(global.texture))
+        .map(global => global.code),
       ...orderedFunctions
     ].filter(Boolean);
     const result: SlangTranspileResult = {

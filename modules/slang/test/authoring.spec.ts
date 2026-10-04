@@ -599,3 +599,43 @@ it('slang#preserves earlier operand and input argument values before later outpu
   }`;
   await runCompute(source, [9, 27, 2, 4.5]);
 });
+
+it('slang#broadcasts single-element vector lists and avoids temporary name collisions on the GPU', async () => {
+  const source = `RWStructuredBuffer<float> output;
+  [shader("compute")] [numthreads(1,1,1)] void main() {
+    float temporary_0 = 3; float temporary_1 = 4;
+    float4 value = {temporary_0}; int4 integers = {2}; bool4 flags = {true};
+    float4 partial = {1,2};
+    output[0] = value.x; output[1] = value.y; output[2] = value.z; output[3] = value.w;
+    output[4] = float(integers.w); output[5] = float(flags.z); output[6] = temporary_0 + temporary_1;
+    output[7] = partial.z;
+  }`;
+  await runCompute(source, [3, 3, 3, 3, 2, 1, 7, 0]);
+});
+it('slang#WebGL validates broadcasting and ignores unused comparison sampling', async () => {
+  const source = `Texture2D<float> image; SamplerState regularSampler; SamplerComparisonState comparisonSampler;
+  float unused() { return image.SampleCmp(comparisonSampler,float2(0.5),0.5); }
+  [shader("fragment")] float4 main() : SV_Target { float4 value = {1}; return value * image.Sample(regularSampler,float2(0.5)); }`;
+  const device = await getWebGLTestDevice();
+  const context = device.handle;
+  const result = transpileSlang(source, {target: 'glsl'});
+  const shader = context.createShader(context.FRAGMENT_SHADER)!;
+  try {
+    context.shaderSource(shader, result.code);
+    context.compileShader(shader);
+    expect(
+      context.getShaderParameter(shader, context.COMPILE_STATUS),
+      context.getShaderInfoLog(shader) || result.code
+    ).toBe(true);
+  } finally {
+    context.deleteShader(shader);
+  }
+  const webgpu = await getWebGPUTestDevice('core');
+  expect(webgpu).not.toBeNull();
+  const generated = transpileSlang(source, {target: 'wgsl'});
+  const module = webgpu!.handle.createShaderModule({code: generated.code});
+  expect(
+    (await module.getCompilationInfo()).messages.filter(message => message.type === 'error'),
+    generated.code
+  ).toEqual([]);
+});
