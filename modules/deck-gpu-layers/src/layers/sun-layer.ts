@@ -18,6 +18,7 @@ export class SunLayer extends SkyBodyLayer<SunLayerProps> {
   static override layerName = 'SunLayer';
   static override defaultProps = {
     ...SkyBodyLayer.defaultProps,
+    color: {type: 'color', value: null, optional: true},
     radiance: {type: 'number', value: 8, min: 0},
     haloIntensity: {type: 'number', value: 0.3, min: 0}
   };
@@ -37,7 +38,7 @@ export class SunLayer extends SkyBodyLayer<SunLayerProps> {
         ? Math.PI / 2
         : Math.asin(this.getBodyDirection()[2]);
     const light = getSunLight(altitude);
-    const color = this.props.direction ? super.getBodyColor() : light.color;
+    const color = this.props.direction || this.props.color ? super.getBodyColor() : light.color;
     const intensity = this.props.radiance! * (this.props.direction ? 1 : light.intensity);
     return [color[0] * intensity, color[1] * intensity, color[2] * intensity];
   }

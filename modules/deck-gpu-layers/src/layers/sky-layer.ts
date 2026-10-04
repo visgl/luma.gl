@@ -60,7 +60,10 @@ export class SkyLayer extends CompositeLayer<SkyLayerProps> {
     );
     const timestamp = this.props.timestamp ?? Date.now();
     const position = getSunPosition(timestamp, observer.latitude, observer.longitude);
-    const direction = getSkyDirection(position.altitude, position.azimuth);
+    const direction =
+      typeof sun === 'object' && sun.direction
+        ? sun.direction
+        : getSkyDirection(position.altitude, position.azimuth);
     const globe = this.context.viewport instanceof _GlobeViewport;
     const sunDirection = globe ? skyDirectionToGlobe(direction, observer) : direction;
     const shared = {timestamp, observer};

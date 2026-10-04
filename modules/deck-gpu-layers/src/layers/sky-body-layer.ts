@@ -94,7 +94,7 @@ export class SkyBodyLayer<Props extends SkyBodyLayerProps> extends Layer<Props> 
     return this.props.direction ?? [0, 1, 0.15];
   }
   protected getBodyColor(): NumberArray3 {
-    const color = this.props.color!;
+    const color = this.props.color ?? [255, 235, 170, 255];
     return [color[0] / 255, color[1] / 255, color[2] / 255];
   }
   protected getBodySettings() {
@@ -152,7 +152,7 @@ export class SkyBodyLayer<Props extends SkyBodyLayerProps> extends Layer<Props> 
     const settings = this.getBodySettings();
     const extent = settings.moon ? 1 : 3;
     const viewport = this.context.viewport;
-    const color = this.props.color!;
+    const color = this.props.color ?? [255, 235, 170, 255];
     this.state.model.shaderInputs.setProps({
       skyBody: {
         center,
