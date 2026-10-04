@@ -87,19 +87,23 @@ float surfaceWeather_getSnow(vec3 position, vec3 normal, float exposure) {
   return coverage * slope * clamp(exposure, 0.0, 1.0);
 }
 float surfaceWeather_getWetness(vec3 position, vec3 normal, float exposure) {
+  if (surfaceWeather.wetness <= 0.0 || exposure <= 0.0) return 0.0;
   return clamp(surfaceWeather.wetness, 0.0, 1.0) * clamp(exposure, 0.0, 1.0) * (1.0 - surfaceWeather_getSnow(position, normal, exposure));
 }
 float surfaceWeather_getPuddle(vec3 position, vec3 normal, float exposure) {
+  if (surfaceWeather.wetness <= 0.0 || surfaceWeather.puddles <= 0.0 || exposure <= 0.0) return 0.0;
   float variation = valueNoise_noise(position.xy / max(surfaceWeather.scale, 0.01) + vec2(8.3, 2.7));
   return surfaceWeather_getWetness(position, normal, exposure) * clamp(surfaceWeather.puddles, 0.0, 1.0) *
     smoothstep(0.8, 0.98, normalize(normal).z) * smoothstep(0.38, 0.7, variation);
 }
 vec3 surfaceWeather_getAlbedo(vec3 albedo, vec3 position, vec3 normal, float exposure) {
+  if ((surfaceWeather.wetness <= 0.0 && surfaceWeather.snow <= 0.0) || exposure <= 0.0) return albedo;
   float wetness = surfaceWeather_getWetness(position, normal, exposure);
   float snow = surfaceWeather_getSnow(position, normal, exposure);
   return mix(albedo * (1.0 - wetness * 0.38), surfaceWeather.snowColor, snow);
 }
 float surfaceWeather_getRoughness(float roughness, vec3 position, vec3 normal, float exposure) {
+  if ((surfaceWeather.wetness <= 0.0 && surfaceWeather.snow <= 0.0) || exposure <= 0.0) return roughness;
   float wetness = surfaceWeather_getWetness(position, normal, exposure);
   float puddle = surfaceWeather_getPuddle(position, normal, exposure);
   float snow = surfaceWeather_getSnow(position, normal, exposure);
@@ -142,11 +146,13 @@ fn surfaceWeather_getSnow(position: vec3f,
 fn surfaceWeather_getWetness(position: vec3f,
   normal: vec3f,
   exposure: f32) -> f32 {
+  if (surfaceWeather.wetness <= 0.0 || exposure <= 0.0) { return 0.0; }
   return clamp(surfaceWeather.wetness, 0.0, 1.0) * clamp(exposure, 0.0, 1.0) * (1.0 - surfaceWeather_getSnow(position, normal, exposure));
 }
 fn surfaceWeather_getPuddle(position: vec3f,
   normal: vec3f,
   exposure: f32) -> f32 {
+  if (surfaceWeather.wetness <= 0.0 || surfaceWeather.puddles <= 0.0 || exposure <= 0.0) { return 0.0; }
   var variation: f32 = valueNoise_noise(position.xy / max(surfaceWeather.scale, 0.01) + vec2f(8.3, 2.7));
   return surfaceWeather_getWetness(position, normal, exposure) * clamp(surfaceWeather.puddles, 0.0, 1.0) *
     smoothstep(0.8, 0.98, normalize(normal).z) * smoothstep(0.38, 0.7, variation);
@@ -155,6 +161,7 @@ fn surfaceWeather_getAlbedo(albedo: vec3f,
   position: vec3f,
   normal: vec3f,
   exposure: f32) -> vec3f {
+  if ((surfaceWeather.wetness <= 0.0 && surfaceWeather.snow <= 0.0) || exposure <= 0.0) { return albedo; }
   var wetness: f32 = surfaceWeather_getWetness(position, normal, exposure);
   var snow: f32 = surfaceWeather_getSnow(position, normal, exposure);
   return mix(albedo * (1.0 - wetness * 0.38), surfaceWeather.snowColor, snow);
@@ -163,6 +170,7 @@ fn surfaceWeather_getRoughness(roughness: f32,
   position: vec3f,
   normal: vec3f,
   exposure: f32) -> f32 {
+  if ((surfaceWeather.wetness <= 0.0 && surfaceWeather.snow <= 0.0) || exposure <= 0.0) { return roughness; }
   var wetness: f32 = surfaceWeather_getWetness(position, normal, exposure);
   var puddle: f32 = surfaceWeather_getPuddle(position, normal, exposure);
   var snow: f32 = surfaceWeather_getSnow(position, normal, exposure);
