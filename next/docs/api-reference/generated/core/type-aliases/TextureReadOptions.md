@@ -2,7 +2,7 @@
 
 > **TextureReadOptions** = `object`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:118](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L118)
+Defined in: [modules/core/src/adapter/resources/texture.ts:126](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L126)
 
 ## Properties[​](#properties "Direct link to Properties")
 
@@ -10,7 +10,7 @@ Defined in: [modules/core/src/adapter/resources/texture.ts:118](https://github.c
 
 > `optional` **aspect?**: `"all"` | `"stencil-only"` | `"depth-only"`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:134](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L134)
+Defined in: [modules/core/src/adapter/resources/texture.ts:142](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L142)
 
 When reading from depth stencil textures (default 'all')
 
@@ -20,7 +20,7 @@ When reading from depth stencil textures (default 'all')
 
 > `optional` **depthOrArrayLayers?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:130](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L130)
+Defined in: [modules/core/src/adapter/resources/texture.ts:138](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L138)
 
 Number of array layers or depth slices to read. Defaults to 1.
 
@@ -30,7 +30,7 @@ Number of array layers or depth slices to read. Defaults to 1.
 
 > `optional` **height?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:128](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L128)
+Defined in: [modules/core/src/adapter/resources/texture.ts:136](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L136)
 
 Height of the region to read. Defaults to the mip height.
 
@@ -40,7 +40,7 @@ Height of the region to read. Defaults to the mip height.
 
 > `optional` **mipLevel?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:132](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L132)
+Defined in: [modules/core/src/adapter/resources/texture.ts:140](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L140)
 
 Which mip-level to read from (default 0)
 
@@ -50,7 +50,7 @@ Which mip-level to read from (default 0)
 
 > `optional` **width?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:126](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L126)
+Defined in: [modules/core/src/adapter/resources/texture.ts:134](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L134)
 
 Width of the region to read. Defaults to the mip width.
 
@@ -60,7 +60,7 @@ Width of the region to read. Defaults to the mip width.
 
 > `optional` **x?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:120](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L120)
+Defined in: [modules/core/src/adapter/resources/texture.ts:128](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L128)
 
 Start reading from offset x (default 0)
 
@@ -70,7 +70,7 @@ Start reading from offset x (default 0)
 
 > `optional` **y?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:122](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L122)
+Defined in: [modules/core/src/adapter/resources/texture.ts:130](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L130)
 
 Start reading from offset y (default 0)
 
@@ -80,6 +80,6 @@ Start reading from offset y (default 0)
 
 > `optional` **z?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:124](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L124)
+Defined in: [modules/core/src/adapter/resources/texture.ts:132](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L132)
 
 Start reading from layer / depth slice z (default 0)

@@ -16,7 +16,7 @@ The object model is batch-preserving by default:
 * Table-level `gpuVectors` aggregate those batch-local chunks through `GPUVector.data[]`.
 * Table-level `gpuConstants` retain one immutable CPU payload and never appear in batch `gpuData` or the physical `bufferLayout`.
 * `GPUData` is the chunk primitive. It owns or borrows one `Buffer` or `DynamicBuffer`.
-* `GPUTableModel.drawBatches(renderPass)` draws preserved GPU batches by reusing one compatible layout/pipeline and deriving each batch's attribute buffers and reserved `indices` index buffer from its `gpuData`.
+* `GPUTableModel.drawBatches(renderPass)` draws preserved GPU batches by reusing one compatible layout/pipeline and deriving each batch's attribute buffers and reserved `indices` index buffer from its `gpuData`. Batches with zero rows are skipped, because WebGPU rejects zero-size storage bindings. The batches stay in the table.
 
 This means a multi-batch Arrow table stays multi-batch after GPU upload. If the application prefers fewer draw units, it packs explicitly:
 
@@ -240,7 +240,7 @@ const computation = new GPUTableComputation(device, {
 });
 ```
 
-Direct single-buffer vectors bind once. Multi-batch aggregate vectors use `dispatchBatches(computePass, batch => workgroupCount)` so each batch is rebound with the correct storage-buffer range before dispatch.
+Direct single-buffer vectors bind once. Multi-batch aggregate vectors use `dispatchBatches(computePass, batch => workgroupCount)` so each batch is rebound with the correct storage-buffer range before dispatch. Batches with zero rows are skipped, because WebGPU rejects zero-size storage bindings. Their output chunks stay in place, so batch boundaries are preserved.
 
 Relevant public types:
 

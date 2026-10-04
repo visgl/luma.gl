@@ -2,7 +2,7 @@
 
 > **TextureWriteOptions** = `object`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:137](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L137)
+Defined in: [modules/core/src/adapter/resources/texture.ts:145](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L145)
 
 ## Properties[​](#properties "Direct link to Properties")
 
@@ -10,7 +10,7 @@ Defined in: [modules/core/src/adapter/resources/texture.ts:137](https://github.c
 
 > `optional` **aspect?**: `"all"` | `"stencil-only"` | `"depth-only"`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:159](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L159)
+Defined in: [modules/core/src/adapter/resources/texture.ts:167](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L167)
 
 When writing into depth stencil textures (default 'all')
 
@@ -20,7 +20,7 @@ When writing into depth stencil textures (default 'all')
 
 > `optional` **byteOffset?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:139](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L139)
+Defined in: [modules/core/src/adapter/resources/texture.ts:147](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L147)
 
 Offset into the source data or buffer, in bytes.
 
@@ -30,7 +30,7 @@ Offset into the source data or buffer, in bytes.
 
 > `optional` **bytesPerRow?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:141](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L141)
+Defined in: [modules/core/src/adapter/resources/texture.ts:149](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L149)
 
 The stride, in bytes, between successive texel rows in the source data or buffer.
 
@@ -40,7 +40,7 @@ The stride, in bytes, between successive texel rows in the source data or buffer
 
 > `optional` **depthOrArrayLayers?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:155](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L155)
+Defined in: [modules/core/src/adapter/resources/texture.ts:163](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L163)
 
 Number of array layers or depth slices to write. Defaults to 1, or the full mip depth for 3D textures.
 
@@ -50,7 +50,7 @@ Number of array layers or depth slices to write. Defaults to 1, or the full mip 
 
 > `optional` **height?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:153](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L153)
+Defined in: [modules/core/src/adapter/resources/texture.ts:161](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L161)
 
 Height of the region to write. Defaults to the mip height.
 
@@ -60,7 +60,7 @@ Height of the region to write. Defaults to the mip height.
 
 > `optional` **mipLevel?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:157](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L157)
+Defined in: [modules/core/src/adapter/resources/texture.ts:165](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L165)
 
 Which mip-level to write into (default 0)
 
@@ -70,7 +70,7 @@ Which mip-level to write into (default 0)
 
 > `optional` **rowsPerImage?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:143](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L143)
+Defined in: [modules/core/src/adapter/resources/texture.ts:151](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L151)
 
 The number of rows that make up one image when writing multiple layers or slices.
 
@@ -80,7 +80,7 @@ The number of rows that make up one image when writing multiple layers or slices
 
 > `optional` **width?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:151](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L151)
+Defined in: [modules/core/src/adapter/resources/texture.ts:159](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L159)
 
 Width of the region to write. Defaults to the mip width.
 
@@ -90,7 +90,7 @@ Width of the region to write. Defaults to the mip width.
 
 > `optional` **x?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:145](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L145)
+Defined in: [modules/core/src/adapter/resources/texture.ts:153](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L153)
 
 Start writing into offset x (default 0)
 
@@ -100,7 +100,7 @@ Start writing into offset x (default 0)
 
 > `optional` **y?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:147](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L147)
+Defined in: [modules/core/src/adapter/resources/texture.ts:155](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L155)
 
 Start writing into offset y (default 0)
 
@@ -110,6 +110,6 @@ Start writing into offset y (default 0)
 
 > `optional` **z?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:149](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L149)
+Defined in: [modules/core/src/adapter/resources/texture.ts:157](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L157)
 
 Start writing into layer / depth slice z (default 0)

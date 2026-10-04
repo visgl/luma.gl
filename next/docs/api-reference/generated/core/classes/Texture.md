@@ -1,6 +1,6 @@
 # Abstract Class: Texture
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:203](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L203)
+Defined in: [modules/core/src/adapter/resources/texture.ts:211](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L211)
 
 Abstract Texture interface Texture Object <https://gpuweb.github.io/gpuweb/#gputexture>
 
@@ -14,7 +14,7 @@ Abstract Texture interface Texture Object <https://gpuweb.github.io/gpuweb/#gput
 
 > **new Texture**(`device`, `props`, `backendProps?`): `Texture`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:260](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L260)
+Defined in: [modules/core/src/adapter/resources/texture.ts:268](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L268)
 
 Do not use directly. Create with device.createTexture()
 
@@ -48,7 +48,7 @@ Do not use directly. Create with device.createTexture()
 
 > `readonly` **baseDimension**: `"1d"` | `"2d"` | `"3d"`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:223](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L223)
+Defined in: [modules/core/src/adapter/resources/texture.ts:231](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L231)
 
 base dimension of this texture
 
@@ -58,7 +58,7 @@ base dimension of this texture
 
 > `readonly` **byteAlignment**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:237](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L237)
+Defined in: [modules/core/src/adapter/resources/texture.ts:245](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L245)
 
 Rows are multiples of this length, padded with extra bytes if needed
 
@@ -68,7 +68,7 @@ Rows are multiples of this length, padded with extra bytes if needed
 
 > `readonly` **depth**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:231](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L231)
+Defined in: [modules/core/src/adapter/resources/texture.ts:239](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L239)
 
 depth of this texture
 
@@ -106,7 +106,7 @@ The device that this resource is associated with
 
 > `readonly` **dimension**: `"1d"` | `"2d"` | `"2d-array"` | `"cube"` | `"cube-array"` | `"3d"`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:221](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L221)
+Defined in: [modules/core/src/adapter/resources/texture.ts:229](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L229)
 
 dimension of this texture
 
@@ -116,7 +116,7 @@ dimension of this texture
 
 > `readonly` **format**: [`TextureFormat`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureFormat.md)
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:225](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L225)
+Defined in: [modules/core/src/adapter/resources/texture.ts:233](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L233)
 
 format of this texture
 
@@ -140,7 +140,7 @@ The handle for the underlying resource, e.g. WebGL object or WebGPU handle
 
 > `readonly` **height**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:229](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L229)
+Defined in: [modules/core/src/adapter/resources/texture.ts:237](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L237)
 
 height in pixels of this texture
 
@@ -164,7 +164,7 @@ props.id, for debugging.
 
 > `readonly` **isReady**: `boolean` = `true`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:246](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L246)
+Defined in: [modules/core/src/adapter/resources/texture.ts:254](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L254)
 
 isReady is always true. It is provided for type compatibility with DynamicTexture.
 
@@ -174,7 +174,7 @@ isReady is always true. It is provided for type compatibility with DynamicTextur
 
 > `readonly` **mipLevels**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:233](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L233)
+Defined in: [modules/core/src/adapter/resources/texture.ts:241](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L241)
 
 mip levels in this texture
 
@@ -198,7 +198,7 @@ The props that this resource was created with
 
 > `readonly` **ready**: `Promise`<`Texture`>
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:244](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L244)
+Defined in: [modules/core/src/adapter/resources/texture.ts:252](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L252)
 
 The ready promise is always resolved. It is provided for type compatibility with DynamicTexture.
 
@@ -208,7 +208,7 @@ The ready promise is always resolved. It is provided for type compatibility with
 
 > `abstract` **sampler**: [`Sampler`](https://luma.gl/next/docs/api-reference/generated/core/classes/Sampler.md)
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:239](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L239)
+Defined in: [modules/core/src/adapter/resources/texture.ts:247](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L247)
 
 Default sampler for this texture
 
@@ -218,7 +218,7 @@ Default sampler for this texture
 
 > `readonly` **samples**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:235](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L235)
+Defined in: [modules/core/src/adapter/resources/texture.ts:243](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L243)
 
 sample count
 
@@ -228,7 +228,7 @@ sample count
 
 > **updateTimestamp**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:249](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L249)
+Defined in: [modules/core/src/adapter/resources/texture.ts:257](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L257)
 
 "Time" of last update. Monotonically increasing timestamp. TODO move to DynamicTexture?
 
@@ -252,7 +252,7 @@ User data object, reserved for the application
 
 > `abstract` **view**: [`TextureView`](https://luma.gl/next/docs/api-reference/generated/core/classes/TextureView.md)
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:241](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L241)
+Defined in: [modules/core/src/adapter/resources/texture.ts:249](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L249)
 
 Default view for this texture
 
@@ -262,7 +262,7 @@ Default view for this texture
 
 > `readonly` **width**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:227](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L227)
+Defined in: [modules/core/src/adapter/resources/texture.ts:235](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L235)
 
 width in pixels of this texture
 
@@ -272,7 +272,7 @@ width in pixels of this texture
 
 > `static` **COPY\_DST**: `number` = `0x02`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:213](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L213)
+Defined in: [modules/core/src/adapter/resources/texture.ts:221](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L221)
 
 he texture can be used as the destination of a copy or write operation
 
@@ -282,7 +282,7 @@ he texture can be used as the destination of a copy or write operation
 
 > `static` **COPY\_SRC**: `number` = `0x01`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:211](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L211)
+Defined in: [modules/core/src/adapter/resources/texture.ts:219](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L219)
 
 The texture can be used as the source of a copy operation
 
@@ -292,7 +292,7 @@ The texture can be used as the source of a copy operation
 
 > `static` **defaultProps**: `Required`<[`TextureProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureProps.md)>
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:699](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L699)
+Defined in: [modules/core/src/adapter/resources/texture.ts:707](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L707)
 
 Default properties for resource
 
@@ -306,7 +306,7 @@ Default properties for resource
 
 > `static` **RENDER**: `number` = `0x10`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:209](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L209)
+Defined in: [modules/core/src/adapter/resources/texture.ts:217](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L217)
 
 The texture can be used as a color or depth/stencil attachment in a render pass
 
@@ -316,7 +316,7 @@ The texture can be used as a color or depth/stencil attachment in a render pass
 
 > `static` **RENDER\_ATTACHMENT**: `number` = `0x10`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:218](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L218)
+Defined in: [modules/core/src/adapter/resources/texture.ts:226](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L226)
 
 #### Deprecated[​](#deprecated "Direct link to Deprecated")
 
@@ -328,7 +328,7 @@ Use Texture.RENDER
 
 > `static` **SAMPLE**: `number` = `0x04`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:205](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L205)
+Defined in: [modules/core/src/adapter/resources/texture.ts:213](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L213)
 
 The texture can be bound for use as a sampled texture in a shader
 
@@ -338,7 +338,7 @@ The texture can be bound for use as a sampled texture in a shader
 
 > `static` **STORAGE**: `number` = `0x08`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:207](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L207)
+Defined in: [modules/core/src/adapter/resources/texture.ts:215](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L215)
 
 The texture can be bound for use as a storage texture in a shader
 
@@ -348,7 +348,7 @@ The texture can be bound for use as a storage texture in a shader
 
 > `static` **TEXTURE**: `number` = `0x04`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:216](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L216)
+Defined in: [modules/core/src/adapter/resources/texture.ts:224](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L224)
 
 #### Deprecated[​](#deprecated-1 "Direct link to Deprecated")
 
@@ -362,7 +362,7 @@ Use Texture.SAMPLE
 
 > **get** **\[toStringTag]**(): `string`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:251](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L251)
+Defined in: [modules/core/src/adapter/resources/texture.ts:259](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L259)
 
 ##### Returns[​](#returns-1 "Direct link to Returns")
 
@@ -418,7 +418,7 @@ Whether luma.gl created and owns the underlying resource handle.
 
 > **\_initializeData**(`data`): `void`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:452](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L452)
+Defined in: [modules/core/src/adapter/resources/texture.ts:460](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L460)
 
 Initialize texture with supplied props
 
@@ -438,7 +438,7 @@ Initialize texture with supplied props
 
 > **\_normalizeCopyElementImageOptions**(`options_`): `Required`<[`CopyElementImageOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/CopyElementImageOptions.md)>
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:514](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L514)
+Defined in: [modules/core/src/adapter/resources/texture.ts:522](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L522)
 
 #### Parameters[​](#parameters-2 "Direct link to Parameters")
 
@@ -456,7 +456,7 @@ Defined in: [modules/core/src/adapter/resources/texture.ts:514](https://github.c
 
 > **\_normalizeCopyExternalImageOptions**(`options_`): `Required`<[`CopyExternalImageOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/CopyExternalImageOptions.md)>
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:494](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L494)
+Defined in: [modules/core/src/adapter/resources/texture.ts:502](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L502)
 
 #### Parameters[​](#parameters-3 "Direct link to Parameters")
 
@@ -474,7 +474,7 @@ Defined in: [modules/core/src/adapter/resources/texture.ts:494](https://github.c
 
 > **\_normalizeCopyImageDataOptions**(`options_`): `Required`<[`CopyImageDataOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/CopyImageDataOptions.md)>
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:485](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L485)
+Defined in: [modules/core/src/adapter/resources/texture.ts:493](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L493)
 
 #### Parameters[​](#parameters-4 "Direct link to Parameters")
 
@@ -492,7 +492,7 @@ Defined in: [modules/core/src/adapter/resources/texture.ts:485](https://github.c
 
 > **\_normalizeTextureReadOptions**(`options_`): `Required`<[`TextureReadOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureReadOptions.md)>
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:531](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L531)
+Defined in: [modules/core/src/adapter/resources/texture.ts:539](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L539)
 
 #### Parameters[​](#parameters-5 "Direct link to Parameters")
 
@@ -510,7 +510,7 @@ Defined in: [modules/core/src/adapter/resources/texture.ts:531](https://github.c
 
 > **\_normalizeTextureWriteOptions**(`options_`): `Required`<[`TextureWriteOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureWriteOptions.md)>
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:615](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L615)
+Defined in: [modules/core/src/adapter/resources/texture.ts:623](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L623)
 
 #### Parameters[​](#parameters-6 "Direct link to Parameters")
 
@@ -552,7 +552,7 @@ Attaches a resource. Attached resources are auto destroyed when this resource is
 
 > **clone**(`size?`): `Texture`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:306](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L306)
+Defined in: [modules/core/src/adapter/resources/texture.ts:314](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L314)
 
 Create a new texture with the same parameters and optionally a different size
 
@@ -586,7 +586,7 @@ Does not copy contents of the texture
 
 > **computeMemoryLayout**(`options_?`): [`TextureMemoryLayout`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureMemoryLayout.md)
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:345](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L345)
+Defined in: [modules/core/src/adapter/resources/texture.ts:353](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L353)
 
 Calculates the memory layout of the texture, required when reading and writing data.
 
@@ -608,7 +608,7 @@ the backend-aligned linear layout, in particular bytesPerRow which includes any 
 
 > `abstract` **copyElementImage**(`options`): `object`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:322](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L322)
+Defined in: [modules/core/src/adapter/resources/texture.ts:330](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L330)
 
 Copy live DOM element pixels into the texture when supported by the current browser backend.
 
@@ -636,7 +636,7 @@ Copy live DOM element pixels into the texture when supported by the current brow
 
 > `abstract` **copyExternalImage**(`options`): `object`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:319](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L319)
+Defined in: [modules/core/src/adapter/resources/texture.ts:327](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L327)
 
 Copy an image (e.g an ImageBitmap) into the texture
 
@@ -664,7 +664,7 @@ Copy an image (e.g an ImageBitmap) into the texture
 
 > **copyImageData**(`options`): `void`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:333](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L333)
+Defined in: [modules/core/src/adapter/resources/texture.ts:341](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L341)
 
 Copy raw image data (bytes) into the texture.
 
@@ -704,7 +704,7 @@ Use writeData()
 
 > `abstract` **createView**(`props`): [`TextureView`](https://luma.gl/next/docs/api-reference/generated/core/classes/TextureView.md)
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:316](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L316)
+Defined in: [modules/core/src/adapter/resources/texture.ts:324](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L324)
 
 Create a texture view for this texture
 
@@ -828,7 +828,7 @@ Detach an attached resource. The resource will no longer be auto-destroyed when 
 
 > **generateMipmapsWebGL**(): `void`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:429](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L429)
+Defined in: [modules/core/src/adapter/resources/texture.ts:437](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L437)
 
 Generate mipmaps (WebGL only)
 
@@ -862,7 +862,7 @@ returns a map of overridden default props
 
 > **readBuffer**(`options?`, `buffer?`): [`Buffer`](https://luma.gl/next/docs/api-reference/generated/core/classes/Buffer.md)
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:372](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L372)
+Defined in: [modules/core/src/adapter/resources/texture.ts:380](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L380)
 
 Read the contents of a texture into a GPU Buffer.
 
@@ -912,7 +912,7 @@ On WebGL, luma.gl emulates the same logical readback behavior.
 
 > **readDataAsync**(`options?`): `Promise`<`ArrayBuffer`>
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:384](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L384)
+Defined in: [modules/core/src/adapter/resources/texture.ts:392](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L392)
 
 Reads data from a texture into an ArrayBuffer.
 
@@ -946,7 +946,7 @@ Use Texture.readBuffer() with an explicit destination buffer, or DynamicTexture.
 
 > **readDataSyncWebGL**(`options?`): `ArrayBuffer` | `ArrayBufferView`<`ArrayBufferLike`>
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:424](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L424)
+Defined in: [modules/core/src/adapter/resources/texture.ts:432](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L432)
 
 WebGL can read data synchronously.
 
@@ -970,7 +970,7 @@ While it is convenient, the performance penalty is very significant
 
 > **setSampler**(`sampler`): `void`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:311](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L311)
+Defined in: [modules/core/src/adapter/resources/texture.ts:319](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L319)
 
 Set sampler props associated with this texture
 
@@ -1008,7 +1008,7 @@ Compact serialization for assertion diffs and structured debug logs.
 
 > **toString**(): `string`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:255](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L255)
+Defined in: [modules/core/src/adapter/resources/texture.ts:263](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L263)
 
 #### Returns[​](#returns-29 "Direct link to Returns")
 
@@ -1024,7 +1024,7 @@ Defined in: [modules/core/src/adapter/resources/texture.ts:255](https://github.c
 
 > **writeBuffer**(`buffer`, `options?`): `void`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:398](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L398)
+Defined in: [modules/core/src/adapter/resources/texture.ts:406](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L406)
 
 Writes a GPU Buffer into a texture.
 
@@ -1068,7 +1068,7 @@ On WebGL, luma.gl emulates the same destination and layout semantics.
 
 > **writeData**(`data`, `options?`): `void`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:411](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L411)
+Defined in: [modules/core/src/adapter/resources/texture.ts:419](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L419)
 
 Writes an array buffer into a texture.
 

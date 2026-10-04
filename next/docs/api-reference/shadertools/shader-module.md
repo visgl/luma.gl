@@ -305,3 +305,7 @@ checkShaderModuleDeprecations(
 ```
 
 Checks shader source against the module's deprecation definitions and logs matching warnings or removals.
+
+### `sourceLanguage` and source-language modules[​](#sourcelanguage-and-source-language-modules "Direct link to sourcelanguage-and-source-language-modules")
+
+When `sourceLanguage` names an application-registered transpiler, `source` contains reusable code in that language. The assembler combines it with modules' dependencies and the application translation unit before compilation. Set the same `sourceLanguage` on the application shader. Native shader code and injections continue to use the target GLSL/WGSL language. See [application-owned transpilers](https://luma.gl/next/docs/api-reference/shadertools/shader-assembler.md#application-owned-transpilers).

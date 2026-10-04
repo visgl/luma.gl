@@ -54,11 +54,13 @@ vertexArray.setIndexBuffer(location: number, buffer | null): void
 
 Note that the index buffer can be unbound by calling \`vertexArray.setUb
 
-### setBuffer(location: number): void[​](#setbufferlocation-number-void "Direct link to setBuffer(location: number): void")
+### setBuffer(location: number, buffer: Buffer | null, byteOffset?: number): void[​](#setbufferlocation-number-buffer-buffer--null-byteoffset-number-void "Direct link to setBuffer(location: number, buffer: Buffer | null, byteOffset?: number): void")
 
 ```
-vertexArray.setBuffer(location: number, buffer | null): void
+vertexArray.setBuffer(location: number, buffer | null, byteOffset?: number): void
 ```
+
+`byteOffset` (default `0`) is added to every attribute read from the buffer, so vertex data can start inside a shared buffer. The buffer layout and render pipeline are unchanged. WebGPU requires the combined vertex buffer offset to be a multiple of 4 bytes.
 
 ### setConstant(location: number: Float32Array | Int32Array | Uint32Array): void[​](#setconstantlocation-number-float32array--int32array--uint32array-void "Direct link to setConstant(location: number: Float32Array | Int32Array | Uint32Array): void")
 

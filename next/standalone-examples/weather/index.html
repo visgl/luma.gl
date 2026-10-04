@@ -2,27 +2,33 @@
 <!-- SPDX-License-Identifier: MIT -->
 <!-- SPDX-FileCopyrightText: Copyright (c) vis.gl contributors -->
 <html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="icon" href="data:," /><title>Riverfront weather · luma.gl</title>  <script type="module" crossorigin src="/next/standalone-examples/weather/assets/index-BmvR31QN.js"></script>
+<link rel="icon" href="data:," /><title>Riverfront weather · luma.gl</title>  <script type="module" crossorigin src="/next/standalone-examples/weather/assets/index-D-HHP17b.js"></script>
   <link rel="modulepreload" crossorigin href="/next/standalone-examples/weather/assets/shader-type-decoder-DyLPgL-D.js">
   <link rel="modulepreload" crossorigin href="/next/standalone-examples/weather/assets/buffer-layout-utils-DTWE1EXl.js">
-  <link rel="modulepreload" crossorigin href="/next/standalone-examples/weather/assets/fence-CeGEKXB0.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/weather/assets/fence-DbPLgSmp.js">
   <link rel="modulepreload" crossorigin href="/next/standalone-examples/weather/assets/get-attribute-from-layouts-B8ajLWeI.js">
   <link rel="modulepreload" crossorigin href="/next/standalone-examples/weather/assets/array-utils-flat-B03VLymj.js">
-  <link rel="modulepreload" crossorigin href="/next/standalone-examples/weather/assets/webgl-device-DY-kZgRB.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/weather/assets/webgl-device-C7sHKAr6.js">
   <link rel="modulepreload" crossorigin href="/next/standalone-examples/weather/assets/compute-pipeline-BjeSh0HH.js">
-  <link rel="modulepreload" crossorigin href="/next/standalone-examples/weather/assets/arithmetic-expression-BXcqBROH.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/weather/assets/arithmetic-expression-CIRa3iuM.js">
   <link rel="modulepreload" crossorigin href="/next/standalone-examples/weather/assets/external-texture-DT-C7SG4.js">
-  <link rel="modulepreload" crossorigin href="/next/standalone-examples/weather/assets/convert-colors-CBbOPJ0e.js">
-  <link rel="modulepreload" crossorigin href="/next/standalone-examples/weather/assets/interleave-Dx2-BQ-P.js">
-  <link rel="stylesheet" crossorigin href="/next/standalone-examples/weather/assets/index-B8s7fCdC.css">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/weather/assets/convert-colors-B3AFv0cB.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/weather/assets/interleave-4ZEC7G_F.js">
+  <link rel="stylesheet" crossorigin href="/next/standalone-examples/weather/assets/index-CirH_FCf.css">
 </head>
 <body><div id="scene" aria-label="Interactive riverfront weather"></div>
 <aside class="luma-example-infobox luma-example-infobox--overlay"><div class="eyebrow">LUMA.GL + DECK.GL</div><h1>Riverfront weather</h1>
 <section class="control-card"><h2>Scene</h2>
-<label>Renderer<select id="backend"><option value="webgpu">WebGPU</option><option value="webgl">WebGL2</option></select></label>
+<label>Device<select id="backend"><option value="webgpu">WebGPU</option><option value="webgl">WebGL2</option></select></label>
 <label>Weather<select id="preset"><option value="clear">None</option><option value="rain" selected>Rain</option><option value="snow">Snow</option></select></label>
 <label class="toggle">Fog<input id="fog-enabled" type="checkbox" checked /></label>
 <label class="toggle">Animate<input id="playing" type="checkbox" checked /></label></section>
+<section class="control-card"><h2>Sky</h2>
+<label>Time (EDT)<input id="hour" type="range" min="0" max="24" step="0.1" value="9" /></label>
+<label class="toggle">Clouds<input id="clouds" type="checkbox" checked /></label>
+<div class="sky-actions"><button id="look-sun">Look at sun</button><button id="look-moon">Look at moon</button></div>
+<button id="center">Center</button><p class="hint">21 June 2026 · New York<br />Shared astronomy clock, sky and scene lighting.</p>
+</section>
 <section class="control-card"><h2>Atmosphere</h2>
 <label>Weather intensity<input id="intensity" type="range" min="0" max="1" step="0.05" value="0.6" /></label>
 <label>Wind (m/s)<input id="wind-speed" type="range" min="0" max="20" step="0.5" value="6" /></label>
@@ -31,4 +37,11 @@
 <label>Fog variation<input id="fog-variation" type="range" min="0" max="1" step="0.05" value="1" /></label>
 <label>Fog drift (m/s)<input id="fog-speed" type="range" min="0" max="12" step="0.5" value="3" /></label>
 <button id="reset">Reset weather</button></section>
+<section class="control-card"><h2>Surfaces</h2>
+<label class="toggle">Surface weather<input id="surface-enabled" type="checkbox" checked /></label>
+<label class="toggle">Accumulate<input id="accumulate" type="checkbox" checked /></label>
+<label>Wetness<input id="wetness" type="range" min="0" max="1" step="0.01" value="0.35" /></label>
+<label>Snow cover<input id="snow-cover" type="range" min="0" max="1" step="0.01" value="0" /></label>
+<label>Puddles<input id="puddles" type="range" min="0" max="1" step="0.01" value="0.8" /></label>
+</section>
 <div id="status" class="hint" role="status">Wind-driven precipitation and drifting fog.<br />Drag to move · Scroll to zoom<br />Shift + drag to orbit</div></aside></body></html>

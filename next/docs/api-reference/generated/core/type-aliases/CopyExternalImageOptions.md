@@ -42,9 +42,9 @@ Copy depth, number of layers/depth slices(default 1)
 
 > `optional` **flipY?**: `boolean`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:49](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L49)
+Defined in: [modules/core/src/adapter/resources/texture.ts:57](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L57)
 
-Whether to flip the image vertically
+Whether to flip the image vertically (default false). On WebGL, this option does not apply to ImageBitmap sources. Supply `imageOrientation: 'flipY'` or `'from-image'` when calling `createImageBitmap()` instead.
 
 ***
 
@@ -82,9 +82,9 @@ Which mip-level to copy into (default 0)
 
 > `optional` **premultipliedAlpha?**: `boolean`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:47](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L47)
+Defined in: [modules/core/src/adapter/resources/texture.ts:51](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L51)
 
-load as premultiplied alpha
+Whether to premultiply alpha (default false). On WebGL, this option does not apply to ImageBitmap sources. Supply `premultiplyAlpha: 'premultiply'` or `'none'` when calling `createImageBitmap()` instead.
 
 ***
 

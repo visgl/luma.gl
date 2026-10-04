@@ -14,6 +14,7 @@ If you are looking for `Model`, start with [`@luma.gl/engine`](https://luma.gl/n
 | [`@luma.gl/engine`](https://luma.gl/next/docs/api-reference/engine.md)             | Recommended            | A set of WebGPU/WebGL independent core 3D engine style classes built on top of `@luma.gl/core`. |
 | [`@luma.gl/scene`](https://luma.gl/next/docs/api-reference/scene.md)               | Experimental / Private | ANARI-inspired retained scene objects, instanced rendering, lights, materials, and HDR.         |
 | [`@luma.gl/shadertools`](https://luma.gl/next/docs/api-reference/shadertools.md)   | Recommended            | Reusable shader modules, portable shader assembly, and application-defined shader hooks.        |
+| [`@luma.gl/slang`](https://luma.gl/next/docs/api-reference/slang.md)               | Experimental (v10)     | Optional TypeScript transpilation of a documented Slang shader subset to GLSL and WGSL.         |
 | [`@luma.gl/effects`](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md) | Optional               | Composable post-processing effects, screen-space lighting, and reusable shader-pass pipelines.  |
 | [`@luma.gl/gpgpu`](https://luma.gl/next/docs/api-reference/gpgpu.md)               | Optional               | Portable GPU evaluation plus experimental `gpu-data`, `gpu-core`, and `gpu-graph` subpaths.     |
 | [`@luma.gl/arrow`](https://luma.gl/next/docs/api-reference/arrow.md)               | Experimental / Private | Apache Arrow adapters for GPU layouts and GPU table objects from Arrow data.                    |
@@ -31,6 +32,7 @@ If you are looking for `Model`, start with [`@luma.gl/engine`](https://luma.gl/n
 * [`@luma.gl/scene`](https://luma.gl/next/docs/api-reference/scene.md) for experimental, private ANARI-inspired declarative scenes, retained rendering, and instancing.
 * [`@luma.gl/core`](https://luma.gl/next/docs/api-reference/core.md) for `Device`, buffers, textures, shaders, render passes, and `RenderPipeline`.
 * [`@luma.gl/shadertools`](https://luma.gl/next/docs/api-reference/shadertools.md) for shader modules and shader assembly.
+* [`@luma.gl/slang`](https://luma.gl/next/docs/api-reference/slang.md) for experimental Slang shader authoring on WebGL 2 and WebGPU, available from v10.
 * [`@luma.gl/effects`](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md) for reusable image processing, bloom, and supported screen-space effects.
 * [`@luma.gl/gpgpu`](https://luma.gl/next/docs/api-reference/gpgpu.md) for portable GPU evaluation, plus its experimental `gpu-data`, `gpu-core`, and `gpu-graph` subpaths.
 * [GPGPU data](https://luma.gl/next/docs/api-reference/gpgpu/gpu-data.md) for primitive `GPUData`/`GPUVector` APIs, and [Experimental GPU Tables](https://luma.gl/next/docs/api-reference/experimental/gpu-tables.md) for private `GPURecordBatch`/`GPUTable` APIs.

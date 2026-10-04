@@ -231,6 +231,9 @@ Replaces the index buffer.
 
 Sets buffer-valued attributes.
 
+* `options.disableWarnings` suppresses warnings for buffers without a matching layout or attribute.
+* `options.byteOffsets` maps buffer names to the byte offset where their vertex data starts. Buffers without an entry are bound at offset `0`. Use this for views into a shared buffer; the buffer layout and render pipeline do not change.
+
 ### `setConstantAttributes(attributes: Record<string, TypedArray>, options?): void`[​](#setconstantattributesattributes-recordstring-typedarray-options-void "Direct link to setconstantattributesattributes-recordstring-typedarray-options-void")
 
 Sets constant-valued attributes.

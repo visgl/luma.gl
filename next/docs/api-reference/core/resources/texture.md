@@ -352,24 +352,43 @@ copyExternalImage(options: {
 
   premultipliedAlpha?: boolean;
 
+  flipY?: boolean;
+
 }: {width: number; height: number}
 ```
 
-| Parameter             | Type                                       |                                                          |
-| --------------------- | ------------------------------------------ | -------------------------------------------------------- |
-| `image`               | `ExternalImage`                            | Image                                                    |
-| `sourceX?`            | `number`                                   | Copy from image x offset (default 0)                     |
-| `sourceY?`            | `number`                                   | Copy from image y offset (default 0)                     |
-| `width?`              | `number`                                   | Copy area width (default 1)                              |
-| `height?`             | `number`                                   | Copy area height (default 1)                             |
-| `depth?`              | `number`                                   | Copy depth (default 1)                                   |
-| `mipLevel?`           | `number`                                   | Which mip-level to copy into (default 0)                 |
-| `x?`                  | `number`                                   | Start copying into offset x (default 0)                  |
-| `y?`                  | `number`                                   | Start copying into offset y (default 0)                  |
-| `z?`                  | `number`                                   | Start copying from depth layer z (default 0)             |
-| `aspect?`             | `'all' \| 'stencil-only' \| 'depth-only'`; | When copying into depth stencil textures (default 'all') |
-| `colorSpace?`         | `'srgb'`                                   | Specific color space of image data                       |
-| `premultipliedAlpha?` | `boolean`                                  | premultiplied                                            |
+| Parameter             | Type                                       |                                                                                                                                                          |
+| --------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `image`               | `ExternalImage`                            | Image                                                                                                                                                    |
+| `sourceX?`            | `number`                                   | Copy from image x offset (default 0)                                                                                                                     |
+| `sourceY?`            | `number`                                   | Copy from image y offset (default 0)                                                                                                                     |
+| `width?`              | `number`                                   | Copy area width (default 1)                                                                                                                              |
+| `height?`             | `number`                                   | Copy area height (default 1)                                                                                                                             |
+| `depth?`              | `number`                                   | Copy depth (default 1)                                                                                                                                   |
+| `mipLevel?`           | `number`                                   | Which mip-level to copy into (default 0)                                                                                                                 |
+| `x?`                  | `number`                                   | Start copying into offset x (default 0)                                                                                                                  |
+| `y?`                  | `number`                                   | Start copying into offset y (default 0)                                                                                                                  |
+| `z?`                  | `number`                                   | Start copying from depth layer z (default 0)                                                                                                             |
+| `aspect?`             | `'all' \| 'stencil-only' \| 'depth-only'`; | When copying into depth stencil textures (default 'all')                                                                                                 |
+| `colorSpace?`         | `'srgb'`                                   | Specific color space of image data                                                                                                                       |
+| `premultipliedAlpha?` | `boolean`                                  | Whether to premultiply alpha (default `false`). Does not apply to `ImageBitmap` sources on WebGL; set `premultiplyAlpha` during bitmap creation.         |
+| `flipY?`              | `boolean`                                  | Whether to flip the image vertically (default `false`). Does not apply to `ImageBitmap` sources on WebGL; set `imageOrientation` during bitmap creation. |
+
+On WebGL, `flipY` and `premultipliedAlpha` do not apply to `ImageBitmap` sources. These settings must be supplied when creating the bitmap with `createImageBitmap()`:
+
+```
+const imageBitmap = await createImageBitmap(image, {
+
+  imageOrientation: 'flipY', // Use 'from-image' to preserve the source orientation.
+
+  premultiplyAlpha: 'premultiply' // Use 'none' for unpremultiplied alpha.
+
+});
+
+texture.copyExternalImage({image: imageBitmap});
+```
+
+An existing `ImageBitmap` does not expose the options used to create it. Passing upload options cannot override its creation-time orientation or alpha conversion on WebGL.
 
 ### `writeData()`[​](#writedata "Direct link to writedata")
 

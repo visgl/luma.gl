@@ -18,6 +18,7 @@ Target Release Date: Q3, 2026
 **@luma.gl/core**
 
 * **Targeted WebGPU limits** - `DeviceProps.requiredLimits` requests specific WebGPU device limits, such as `maxStorageBuffersPerShaderStage`, without taking every adapter limit and feature through `featureLevel: 'max'`. A development GPU then enforces the limits the application targets.
+* **Vertex buffer byte offsets** - `VertexArray.setBuffer()` accepts an optional `byteOffset`, so vertex data can start inside a shared buffer without changing the buffer layout or render pipeline.
 
 **@luma.gl/gpgpu**
 
@@ -75,6 +76,7 @@ Target Release Date: Q3, 2026
 
 **@luma.gl/engine**
 
+* **Attribute byte offsets** - `Model.setAttributes(buffers, {byteOffsets})` binds each named buffer at the byte offset where its vertex data starts.
 * **Awaitable pipeline creation** - `Computation.createAsync()` and `Model.createAsync()` expose native asynchronous WebGPU pipeline creation for application loading phases, backed by cache-aware asynchronous `Device` and `PipelineFactory` methods.
 * **Pinch-roll orbit controls** - Two-pointer gestures can roll the camera while preserving the existing pan, orbit, and zoom interactions.
 
@@ -85,6 +87,9 @@ Target Release Date: Q3, 2026
 
 **@luma.gl/shadertools**
 
+* **Atmospheric scattering** - The shared GLSL/WGSL `atmosphere` module provides a Rayleigh/Mie sky and metre-space aerial perspective. `AtmosphereLayer` connects the same shader to deck.gl perspective views in [Riverfront soft shadows](https://luma.gl/next/examples/deck/soft-shadows).
+* **Cloud sunlight extinction** - `clouds_getTransmittance` samples the existing animated cloud density to attenuate direct sunlight on buildings and ground, without separate cloud shadow resources.
+* **Surface weather** - The portable `surfaceWeather` material helpers and frame-rate-independent `integrateSurfaceWeather` function provide wetness, puddle highlights and slope-aware snow cover in [Riverfront weather](https://luma.gl/next/examples/deck/weather).
 * **Hybrid fp64 arithmetic** - Double-single WGSL arithmetic can select direct floating-point or integer-controlled operations to balance portability and throughput.
 * **`CompositeShaderPass`** - The structured multi-pass postprocessing API and effect factories use composite-pass naming in place of `ShaderPassPipeline`.
 
@@ -122,6 +127,18 @@ Target Release Date: Q3, 2026
 **@luma.gl/webgpu**
 
 * **Attach to application-created `GPUDevice`s** - `luma.attachDevice(gpuDevice, {adapters: [webgpuAdapter]})` and `webgpuAdapter.attach(gpuDevice)` wrap an existing WebGPU device, so an application and deck.gl can share one device with the application's requested limits and features. `device.destroy()` leaves the `GPUDevice` usable; the application destroys it.
+
+### Experimental Slang package[​](#experimental-slang-package "Direct link to Experimental Slang package")
+
+`@luma.gl/slang` is a public experimental package from v10. It is optional and has no runtime dependencies. The [Slang documentation](https://luma.gl/next/docs/api-reference/slang.md) includes a live sculpture and links to a WebGPU particle simulation; applications own compiler registration and resource bindings.
+
+### Slang everyday language[​](#slang-everyday-language "Direct link to Slang everyday language")
+
+The experimental Slang module adds `switch` with grouped labels and fallthrough, `do`/`while`, inferred mutable `var` and immutable `let` locals, numeric scalar/vector promotion, vector comparisons, integer shifts, floating-point remainder and component-wise matrix arithmetic. Matrix constructors support scalar broadcast, row vectors and matching matrices. GPU tests compare these features with upstream-generated WGSL and exercise GLSL ES 300. The optional compiler still has no runtime dependencies.
+
+### Slang compute and textures[​](#slang-compute-and-textures "Direct link to Slang compute and textures")
+
+The experimental Slang authoring module now supports integer atomics, byte-address buffers, synchronization diagnostics, texture arrays, multisampled loads, explicit gradients, gathers, dimension queries and more storage dimensions. The [particle vortex example](https://luma.gl/next/examples/tutorials/slang-particles) simulates and renders one shared Slang source. The compiler remains optional and dependency-free; WebGL uses GLSL ES 300, with diagnostics for operations that require explicit GLSL 450.
 
 ## Version 9.4[​](#version-94 "Direct link to Version 9.4")
 
@@ -664,3 +681,7 @@ New `Device.features` that enable new GLSL syntax
 * `shader-noperspective-interpolation-webgl`: GLSL vertex outputs and fragment inputs may be declared with a `noperspective` interpolation qualifier.
 * `shader-conservative-depth-webgl`: GLSL `gl_FragDepth` qualifiers `depth_any` `depth_greater` `depth_less` `depth_unchanged` can enable early depth test optimizations.
 * `shader-clip-cull-distance-webgl`: Enables `gl_ClipDistance[] / gl_CullDistance[]`.
+
+### Shared scene lighting examples[​](#shared-scene-lighting-examples "Direct link to Shared scene lighting examples")
+
+The experimental deck.gl GPU layers add optional camera/object motion capture and `SceneShaderPassEffect`, which connects shared HDR color, depth, normals and velocity to existing luma.gl shader-pass graphs. Riverfront fireflies, HDR night lighting, global illumination and light shafts demonstrate this shared infrastructure on WebGPU. `FireflyLayer` and the reusable `firefly` shader module also support WebGL2. Fireflies adds calm-water emitter reflections and adjustable bloom; Fireflies and HDR night lighting request extended-range, floating-point canvas output on HDR-capable displays, with an SDR presentation fallback.

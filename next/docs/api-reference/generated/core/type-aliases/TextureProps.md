@@ -2,7 +2,7 @@
 
 > **TextureProps** = [`ResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ResourceProps.md) & `object`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:172](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L172)
+Defined in: [modules/core/src/adapter/resources/texture.ts:180](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L180)
 
 Texture properties
 

@@ -438,7 +438,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Physically Based Environment Lighting](https://luma.gl/next/docs/api-reference/experimental/pbr-environment.md): PBREnvironmentGenerator converts a caller-provided equirectangular GPU texture into the three
 - [Reflective Material](https://luma.gl/next/docs/api-reference/experimental/reflective-material.md): reflectiveMaterial is a lightweight cross-backend shader module for glossy surfaces. It combines
 - [SceneRenderer](https://luma.gl/next/docs/api-reference/experimental/scene-renderer.md): SceneRenderer renders retained, physically based surface descriptions on WebGPU and WebGL. It
-- [ShadowMapRenderer](https://luma.gl/next/docs/api-reference/experimental/shadow-map-renderer.md): ShadowMapRenderer is an experimental WebGPU-only light-space shadow system. It owns stable
+- [ShadowMapRenderer](https://luma.gl/next/docs/api-reference/experimental/shadow-map-renderer.md): ShadowMapRenderer is an experimental WebGPU and WebGL2 light-space shadow system. It owns stable
 - [SpectralCausticsRenderer](https://luma.gl/next/docs/api-reference/experimental/spectral-caustics-renderer.md): SpectralCausticsRenderer is an experimental WebGPU-only photon-caustics renderer. It captures
 - [SpectralOceanSimulation](https://luma.gl/next/docs/api-reference/experimental/spectral-ocean-simulation.md): Overview
 - [VolumetricFireSimulation](https://luma.gl/next/docs/api-reference/experimental/volumetric-fire-simulation.md): VolumetricFireSimulation is an experimental WebGPU-only dense-grid fire and smoke simulation.
@@ -477,7 +477,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Class: ShaderBlockWriter](https://luma.gl/next/docs/api-reference/generated/core/classes/ShaderBlockWriter.md): Defined in22
 - [Class: ShaderFactory](https://luma.gl/next/docs/api-reference/generated/core/classes/ShaderFactory.md): Defined in13
 - [Abstract Class: SharedRenderPipeline](https://luma.gl/next/docs/api-reference/generated/core/classes/SharedRenderPipeline.md): Defined in22
-- [Abstract Class: Texture](https://luma.gl/next/docs/api-reference/generated/core/classes/Texture.md): Defined in203
+- [Abstract Class: Texture](https://luma.gl/next/docs/api-reference/generated/core/classes/Texture.md): Defined in211
 - [Abstract Class: TextureView](https://luma.gl/next/docs/api-reference/generated/core/classes/TextureView.md): Defined in29
 - [Abstract Class: TransformFeedback](https://luma.gl/next/docs/api-reference/generated/core/classes/TransformFeedback.md): Defined in27
 - [Class: UniformBlock<TUniforms>](https://luma.gl/next/docs/api-reference/generated/core/classes/UniformBlock.md): Defined in18
@@ -771,6 +771,13 @@ Assemble reusable WGSL and GLSL shader modules, hooks, injections, plugins, unif
 - [Zoom Blur](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/zoom-blur.md): Pull image samples toward a chosen focal point to suggest rapid zoom, radial motion, or a
 - [ShaderPlugin](https://luma.gl/next/docs/api-reference/shadertools/shader-plugin.md): ShaderPlugin groups reusable shader assembly contributions that can be
 - [WGSL Support](https://luma.gl/next/docs/api-reference/shadertools/wgsl-support.md): @luma.gl/shadertools supports WGSL shader assembly in addition to GLSL.
+
+#### slang
+
+Experimental Slang shader authoring for WebGL 2 and WebGPU, available from luma.gl v10.
+
+- [Slang](https://luma.gl/next/docs/api-reference/slang.md): Experimental Slang shader authoring for WebGL 2 and WebGPU, available from luma.gl v10.
+- [Slang reflection helpers](https://luma.gl/next/docs/api-reference/slang/reflection.md): Use Slang reflection to create luma.gl shader layouts, bindings and uniform buffers.
 
 #### splats
 
