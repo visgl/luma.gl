@@ -3,9 +3,7 @@
  * SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
  */
 @import '../../example-infobox.css';
-html, body, #scene { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #192a37; }
-.sun-track { position: absolute; top: 12px; left: 290px; right: 24px; max-width: 700px; pointer-events: none; color: #ffffff70; }
-.sun-track svg { width: 100%; overflow: visible; }
-.sun-track text { fill: #d2dee7; font: 10px system-ui, sans-serif; }
-#sun { filter: drop-shadow(0 0 8px #ffd785); }
-@media (max-width: 650px) { .sun-track { top: auto; bottom: 10px; left: 12px; right: 12px; } }
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+#scene { position: absolute; inset: 0; background: linear-gradient(#244863, #7496a5); }
+.sky-actions { display: flex; gap: 8px; padding: 6px 0; }
+.sky-actions button { flex: 1; border: 1px solid #3a4a5c; border-radius: 3px; background: #1d2938; color: #cbd9e4; font: inherit; padding: 7px 4px; cursor: pointer; }

@@ -27,6 +27,7 @@ type ShadowDistrictLayerProps = LayerProps & {
 const receiverUniforms = {
   name: 'riverfrontReceiver',
   uniformTypes: {viewMatrix: 'mat4x4<f32>'},
+  vs: `layout(std140) uniform riverfrontReceiverUniforms { mat4 viewMatrix; } riverfrontReceiver;`,
   source: `struct RiverfrontReceiverUniforms { viewMatrix: mat4x4f };
 @group(3) @binding(auto) var<uniform> riverfrontReceiver: RiverfrontReceiverUniforms;`
 } as const satisfies ShaderModule;
@@ -51,6 +52,8 @@ export class ShadowDistrictLayer extends Layer<ShadowDistrictLayerProps> {
       const model = new Model(this.context.device, {
         ...this.getShaders({
           source: SOURCE,
+          vs: VERTEX_SHADER,
+          fs: FRAGMENT_SHADER,
           modules: [project32, picking, lambertMaterial, shadow, receiverUniforms]
         }),
         id: `${this.id}-mesh`,
@@ -97,7 +100,7 @@ export class ShadowDistrictLayer extends Layer<ShadowDistrictLayerProps> {
           {
             type: 'directional',
             color: sun.color,
-            intensity: 1,
+            intensity: sun.direction[2] > 0 ? 1 : 0,
             direction: sun.direction.map(value => -value)
           }
         ]
@@ -159,3 +162,42 @@ struct CityVertex {
   return vec4f(color, layer.opacity);
 }
 `;
+
+const VERTEX_SHADER = /* glsl */ `#version 300 es
+in vec3 position;
+in vec3 normal;
+in vec3 color;
+in float featureIndex;
+out vec3 surfaceColor;
+out vec3 worldPosition;
+out vec3 surfaceNormal;
+out float viewDepth;
+void main() {
+  geometry.worldPosition = position;
+  geometry.pickingColor = picking_getPickingColorFromIndex(featureIndex);
+  vec4 commonPosition;
+  gl_Position = project_position_to_clipspace(position, vec3(0.0), vec3(0.0), commonPosition);
+  geometry.position = commonPosition;
+  DECKGL_FILTER_GL_POSITION(gl_Position, geometry);
+  vec4 filterColor = vec4(color, 1.0);
+  DECKGL_FILTER_COLOR(filterColor, geometry);
+  surfaceColor = color;
+  worldPosition = position;
+  surfaceNormal = normal;
+  viewDepth = -(riverfrontReceiver.viewMatrix * vec4(position, 1.0)).z;
+}`;
+const FRAGMENT_SHADER = /* glsl */ `#version 300 es
+precision highp float;
+in vec3 surfaceColor;
+in vec3 worldPosition;
+in vec3 surfaceNormal;
+in float viewDepth;
+out vec4 fragColor;
+void main() {
+  vec3 normal = normalize(surfaceNormal);
+  vec3 ambient = material.ambient * surfaceColor * lighting.ambientColor;
+  vec3 lit = lighting_getLightColor(surfaceColor, vec3(0.0), worldPosition, normal);
+  float visibility = shadow_getDirectionalFactor(worldPosition, normal, viewDepth);
+  fragColor = vec4(ambient + (lit - ambient) * visibility, layer.opacity);
+  DECKGL_FILTER_COLOR(fragColor, geometry);
+}`;
