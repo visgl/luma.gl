@@ -26,6 +26,7 @@
   ],
   "sideEffects": false,
   "dependencies": {
+    "@deck.gl-community/gpu-layers": "10.0.0-alpha.2",
     "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch",
     "@luma.gl/arrow": "10.0.0-alpha.2",
     "@luma.gl/core": "10.0.0-alpha.2",

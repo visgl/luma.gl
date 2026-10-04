@@ -11,7 +11,7 @@ import {
   type ProjectionProgram
 } from '@luma.gl/experimental/gpu-project';
 import {planCRSProjection} from '@luma.gl/experimental/gpu-project/crs';
-import {Proj4Projection} from '@math.gl/proj4';
+import {Proj4Projection} from '@math.gl/proj4/classic';
 import {geographicCRS, makeTransverseMercatorCRS} from './projection-crs-fixtures';
 
 const program: ProjectionProgram = {

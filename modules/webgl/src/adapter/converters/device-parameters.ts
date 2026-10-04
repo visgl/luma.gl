@@ -250,17 +250,15 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
   if (parameters.stencilCompare) {
     const mask = parameters.stencilReadMask || 0xffffffff;
     const glValue = convertCompareFunction('depthCompare', parameters.stencilCompare);
-    // TODO - ensure back doesn't overwrite
-    parameters.stencilCompare !== 'always'
-      ? gl.enable(GL.STENCIL_TEST)
-      : gl.disable(GL.STENCIL_TEST);
+    // Even an always-passing stencil test must run to apply stencil operations.
+    gl.enable(GL.STENCIL_TEST);
     gl.stencilFuncSeparate(GL.FRONT, glValue, 0, mask);
     gl.stencilFuncSeparate(GL.BACK, glValue, 0, mask);
   }
 
   if (
-    parameters.stencilPassOperation &&
-    parameters.stencilFailOperation &&
+    parameters.stencilPassOperation ||
+    parameters.stencilFailOperation ||
     parameters.stencilDepthFailOperation
   ) {
     const dppass = convertStencilOperation('stencilPassOperation', parameters.stencilPassOperation);
@@ -373,7 +371,7 @@ export function convertToCompareFunction(parameter: string, value: GLFunction): 
   });
 }
 
-function convertStencilOperation(parameter: string, value: StencilOperation): GL {
+function convertStencilOperation(parameter: string, value: StencilOperation = 'keep'): GL {
   return map<StencilOperation, GLStencilOp>(parameter, value, {
     keep: GL.KEEP,
     zero: GL.ZERO,

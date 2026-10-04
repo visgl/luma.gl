@@ -15,7 +15,7 @@ export type BackendModule = Record<string, unknown>;
  * Registry for operation backends keyed by luma.gl device type.
  *
  * The CPU backend is available by default. WebGL and WebGPU backends are loaded lazily
- * with dynamic imports when no backend has been registered for those device types.
+ * with dynamic imports when a requested handler has not been registered for those device types.
  */
 class BackendRegistry {
   private _modules: {[deviceType: string]: BackendModule | Promise<BackendModule>} = {
@@ -99,7 +99,17 @@ class BackendRegistry {
       }
     }
     const resolvedModule = await module;
-    const operationHandler = resolvedModule[operationName];
+    let operationHandler = resolvedModule[operationName];
+    // A partial registration must not hide the other built-in operations.
+    if (typeof operationHandler !== 'function') {
+      if (deviceType === 'webgl') {
+        const defaultModule: BackendModule = await import('../operations/webgl/index');
+        operationHandler = defaultModule[operationName];
+      } else if (deviceType === 'webgpu') {
+        const defaultModule: BackendModule = await import('../operations/webgpu/index');
+        operationHandler = defaultModule[operationName];
+      }
+    }
     if (typeof operationHandler !== 'function') {
       throw new Error(`${deviceType} backend does not implement ${operationName}`);
     }

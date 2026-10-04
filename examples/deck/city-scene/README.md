@@ -1,4 +1,4 @@
-# River District
+# Riverfront Water
 
 A standalone Deck city scene rendered by the shared river-district mesh layer. The fictional
 district uses deterministic local geometry, so it requires no basemap service or credentials.

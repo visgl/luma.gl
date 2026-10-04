@@ -80,3 +80,7 @@ Optional algorithm entry points keep specialized workflows out of the default ex
   GPU-evaluated local projection patches with Float32 and double-single result modes.
 - `@luma.gl/experimental/gpu-trace` keeps execution-trace scenes, process/thread interactions,
   dependency focus, and timeline picking separate from generic command-graph primitives.
+
+## Flow particles
+
+`FlowParticleSimulation` advects fixed-capacity GPU particles through east/north velocity grids on WebGPU and WebGL2. See the [flow particle contract](src/simulation/README.md) for units, geographic bounds, masks, time-step limits, and texture ownership.

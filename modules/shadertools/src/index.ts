@@ -101,6 +101,11 @@ export {
 } from './lib/color/normalize-byte-colors';
 
 export {sketchStroke, type SketchStrokeProps} from './modules/geometry/sketch-stroke/sketch-stroke';
+export {
+  pathDash,
+  type PathDashProps,
+  type PathDashUniforms
+} from './modules/geometry/path-dash/path-dash';
 
 // math libraries
 export {random} from './modules/math/random/random';
@@ -198,6 +203,17 @@ export {pbrScene, PBR_TONE_MAP_MODE} from './modules/lighting/pbr-material/pbr-s
 export {heightFog} from './modules/lighting/height-fog/height-fog';
 export {heightFogFunctions} from './modules/lighting/height-fog/height-fog-functions';
 export type {HeightFogProps, HeightFogUniforms} from './modules/lighting/height-fog/height-fog';
+export {
+  patternFill,
+  type PatternFillProps,
+  type PatternFillUniforms
+} from './modules/geometry/pattern-fill/pattern-fill';
+export {
+  pointGlow,
+  type PointGlowProps,
+  type PointGlowUniforms
+} from './modules/geometry/point-glow/point-glow';
+
 export {precipitation} from './modules/geometry/precipitation/precipitation';
 export type {
   PrecipitationProps,

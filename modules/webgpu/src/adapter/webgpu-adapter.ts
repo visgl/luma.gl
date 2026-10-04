@@ -166,6 +166,24 @@ export function getEffectiveWebGPUFeatureLevel(
   return requestedFeatureLevel === 'best-available' ? 'compatibility' : requestedFeatureLevel;
 }
 
+/**
+ * Returns the feature level of an application-created WebGPU device.
+ * @param requestedFeatureLevel Feature level the application says it requested.
+ * @param deviceFeatures Features exposed by the attached WebGPU device.
+ * @returns `'core'` when the device exposes `core-features-and-limits` or the application
+ * asserts `'core'` (browsers without compatibility mode never expose the feature),
+ * otherwise `'compatibility'`. `'max'` is not reported because luma did not request the device.
+ */
+export function getAttachedWebGPUFeatureLevel(
+  requestedFeatureLevel: DeviceProps['featureLevel'],
+  deviceFeatures: GPUSupportedFeatures
+): EffectiveWebGPUFeatureLevel {
+  if (requestedFeatureLevel === 'core') {
+    return 'core';
+  }
+  return getEffectiveWebGPUFeatureLevel('compatibility', deviceFeatures);
+}
+
 export class WebGPUAdapter extends Adapter {
   /** type of device's created by this adapter */
   readonly type: WebGPUDevice['type'] = 'webgpu';
@@ -292,8 +310,52 @@ export class WebGPUAdapter extends Adapter {
     }
   }
 
-  async attach(handle: GPUDevice): Promise<WebGPUDevice> {
-    throw new Error('WebGPUAdapter.attach() not implemented');
+  /**
+   * Wraps an application-created GPUDevice, keeping its requested limits and features.
+   * @note `device.destroy()` leaves the GPUDevice alive. Call `GPUDevice.destroy()` to release it.
+   * @note Returns the existing wrapper if the GPUDevice is already attached or luma-created.
+   */
+  async attach(handle: GPUDevice | WebGPUDevice, props: DeviceProps = {}): Promise<WebGPUDevice> {
+    const {WebGPUDevice} = await import('./webgpu-device');
+    if (handle instanceof WebGPUDevice) {
+      return handle;
+    }
+    if (!this.isDeviceHandle(handle)) {
+      throw new Error('Invalid GPUDevice');
+    }
+    const existingDevice = WebGPUDevice.getDeviceFromHandle(handle);
+    if (existingDevice) {
+      return existingDevice;
+    }
+
+    const immediateLoss = await getImmediateDeviceLoss(handle);
+    if (immediateLoss) {
+      throw new Error('WebGPU device is already lost', {cause: immediateLoss});
+    }
+
+    // Another attach may have completed while the loss check yielded. Construction
+    // below is synchronous, so rechecking here gives every caller the same wrapper.
+    const attachedDevice = WebGPUDevice.getDeviceFromHandle(handle);
+    if (attachedDevice) {
+      return attachedDevice;
+    }
+
+    // GPUDevice has no reference to its GPUAdapter, only to the adapter info
+    const adapterInfo = handle.adapterInfo || ({} as GPUAdapterInfo);
+    const featureLevel = getAttachedWebGPUFeatureLevel(props.featureLevel, handle.features);
+    const deviceProps = {...props, featureLevel, _handle: handle};
+    const device = new WebGPUDevice(deviceProps, handle, null, adapterInfo, false);
+
+    const canvasContextProps = WebGPUDevice.getCanvasContextProps(deviceProps);
+    if (canvasContextProps) {
+      try {
+        device.initializeCanvasContext(canvasContextProps);
+      } catch (error) {
+        device.destroy();
+        throw new Error('WebGPU canvas initialization failed', {cause: error});
+      }
+    }
+    return device;
   }
 
   /** Requests a fresh native adapter for every device creation. */

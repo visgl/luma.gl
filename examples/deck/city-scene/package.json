@@ -6,7 +6,7 @@
   "scripts": {
     "start": "vite",
     "build": "tsc && vite build",
-    "build:website": "tsc && vite build --mode website --outDir ../../../website/.generated/example-assets/standalone-examples/city-scene --emptyOutDir",
+    "build:website": "vite build --mode website --outDir ../../../website/.generated/example-assets/standalone-examples/city-scene --emptyOutDir",
     "test:visual": "node scripts/visual-smoke.mjs",
     "benchmark": "node scripts/benchmark.mjs"
   },
@@ -19,7 +19,7 @@
     "@luma.gl/shadertools": "10.0.0-alpha.2",
     "@luma.gl/webgl": "10.0.0-alpha.2",
     "@luma.gl/webgpu": "10.0.0-alpha.2",
-    "@math.gl/core": "^4.1.0"
+    "@math.gl/core": "5.0.0-alpha.11"
   },
   "devDependencies": {
     "playwright": "^1.58.0",

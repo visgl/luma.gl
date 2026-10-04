@@ -10,6 +10,7 @@ import {
   type LayerContext,
   type Effect
 } from '@deck.gl/core';
+import {ScatterplotLayer} from '@deck.gl/layers';
 import {SceneBufferEffect, surfaceBuffer} from '@deck.gl-community/gpu-layers';
 import {Buffer, Texture, type Device, type RenderPass} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
@@ -207,6 +208,162 @@ test.each([
     expect(finalTexture.destroyed).toBe(true);
     expect(effect.getFrame('left')).toBeUndefined();
     expect(errors).toEqual([]);
+  } finally {
+    deck.finalize();
+    parent.remove();
+  }
+});
+
+test('scene capture accepts stock Deck color and depth without inventing normals or selection', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const errors: string[] = [];
+  let stage = 'ordinary stock rendering';
+  let deviceLoss: Awaited<typeof device.lost> | undefined;
+  void device.lost.then(info => {
+    deviceLoss = info;
+  });
+  const parent = document.createElement('div');
+  parent.style.width = '64px';
+  parent.style.height = '64px';
+  document.body.append(parent);
+  type Point = {position: [number, number, number]};
+  const capturedData: Point[] = [{position: [0, 0, 0]}];
+  const excludedData: Point[] = [{position: [18, 0, 0]}];
+  const captured = new ScatterplotLayer<Point>({
+    id: 'stock-captured',
+    data: capturedData,
+    getPosition: point => point.position,
+    radiusUnits: 'pixels',
+    getRadius: 10,
+    getFillColor: [192, 64, 32, 255],
+    antialiasing: false,
+    pickable: true,
+    parameters: {depthCompare: 'less-equal', depthWriteEnabled: true}
+  });
+  const excluded = new ScatterplotLayer<Point>({
+    id: 'stock-excluded',
+    data: excludedData,
+    getPosition: point => point.position,
+    radiusUnits: 'pixels',
+    getRadius: 4,
+    getFillColor: [255, 255, 255, 255],
+    antialiasing: false,
+    pickable: true
+  });
+  const effect = new SceneBufferEffect({
+    selection: true,
+    getLayerOptions: layer =>
+      layer.id === 'stock-excluded'
+        ? null
+        : {
+            mode: layer.id === 'stock-transparent' ? 'transparent' : 'opaque',
+            selected: true
+          }
+  });
+  let frames = 0;
+  const deck = new Deck({
+    parent,
+    device,
+    width: 64,
+    height: 64,
+    useDevicePixels: false,
+    views: new OrthographicView({id: 'stock'}),
+    initialViewState: {target: [0, 0], zoom: 0},
+    layers: [captured, excluded],
+    effects: [],
+    _animate: true,
+    onAfterRender: () => {
+      frames++;
+    },
+    onError: error => {
+      errors.push(error.message);
+    }
+  });
+  try {
+    await waitUntil(
+      () => frames >= 3 && captured.isLoaded,
+      errors,
+      () => deck.redraw('stock scene frame')
+    );
+    expect(device.isLost, 'stock rendering should keep the WebGPU device active').toBe(false);
+    stage = 'captured stock rendering';
+    frames = 0;
+    deck.setProps({effects: [effect]});
+    await waitUntil(
+      () => frames >= 3 && captured.isLoaded && Boolean(effect.getFrame('stock')),
+      errors,
+      () => deck.redraw('stock capture frame')
+    );
+    deck.setProps({_animate: false});
+    deck.redraw('stock capture');
+    stage = 'opaque capture readback';
+    const opaque = await readCapture(device, effect, 'stock');
+    expect(opaque[0]).toBeCloseTo(192 / 255, 3);
+    expect(opaque[1]).toBe(1);
+    expect(opaque[2]).toBeGreaterThan(0);
+    expect(opaque[2]).toBeLessThan(1);
+    expect(opaque[3]).toBe(0);
+    expect(Array.from(await readCapture(device, effect, 'stock', [50, 32]))).toEqual([0, 1, 1, 0]);
+    stage = 'stock picking';
+    const picked = await deck.pickObjectAsync({x: 32, y: 32});
+    expect(picked?.layer?.id).toBe('stock-captured');
+    expect(picked?.index).toBe(0);
+    expect(picked?.object).toBe(capturedData[0]);
+    const excludedPick = await deck.pickObjectAsync({x: 50, y: 32});
+    expect(excludedPick?.layer?.id).toBe('stock-excluded');
+
+    stage = 'transparent capture';
+    const transparent = new ScatterplotLayer<Point>({
+      id: 'stock-transparent',
+      data: capturedData,
+      getPosition: point => point.position,
+      radiusUnits: 'pixels',
+      getRadius: 4,
+      getFillColor: [0, 255, 0, 128],
+      antialiasing: false,
+      parameters: {
+        blend: true,
+        depthWriteEnabled: false,
+        blendColorSrcFactor: 'src-alpha',
+        blendColorDstFactor: 'one-minus-src-alpha',
+        blendAlphaSrcFactor: 'one',
+        blendAlphaDstFactor: 'one-minus-src-alpha'
+      }
+    });
+    deck.setProps({layers: [captured, excluded, transparent]});
+    await waitUntil(
+      () => transparent.isLoaded && transparent.getModels().length > 0,
+      errors,
+      () => deck.redraw('stock transparency')
+    );
+    deck.redraw('stock transparency');
+    const blended = await readCapture(device, effect, 'stock');
+    expect(blended[0]).toBeCloseTo((192 / 255) * (1 - 128 / 255), 3);
+    expect(blended.slice(1)).toEqual(opaque.slice(1));
+    const texture = effect.getFrame('stock')!.buffer.colorTexture;
+    stage = 'capture removal';
+    deck.setProps({effects: []});
+    await waitUntil(
+      () => texture.destroyed,
+      errors,
+      () => deck.redraw('ordinary stock rendering')
+    );
+    expect((await deck.pickObjectAsync({x: 32, y: 32}))?.object).toBe(capturedData[0]);
+    expect(errors).toEqual([]);
+  } catch (error) {
+    if (stage === 'ordinary stock rendering' && device.isLost && device.info.gpu === 'software') {
+      context.skip('The headless software WebGPU device was destroyed during stock Deck rendering');
+    }
+    console.error('Stock scene capture failure', {
+      stage,
+      frames,
+      device: device.info,
+      isLost: device.isLost,
+      deviceLoss,
+      errors
+    });
+    throw error;
   } finally {
     deck.finalize();
     parent.remove();

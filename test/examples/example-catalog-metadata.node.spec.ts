@@ -36,7 +36,9 @@ const WEBGPU_ONLY_EXAMPLES = new Set([
   'api/render-bundles',
   'arrow/arrow-columns',
   'arrow/arrow-dggs-polygons',
-  'deck/gpu-culled-trace'
+  'deck/gpu-culled-trace',
+  'deck/scene-buffers',
+  'deck/ambient-occlusion'
 ]);
 const WEBGL_ONLY_EXAMPLES = new Set([
   'integrations/external-context',
@@ -111,7 +113,7 @@ describe('live example catalog metadata', () => {
   });
 
   test('provides complete, curated filters for every sidebar example', () => {
-    expect(LIVE_EXAMPLES).toHaveLength(89);
+    expect(LIVE_EXAMPLES).toHaveLength(96);
 
     for (const {id, metadata} of LIVE_EXAMPLES) {
       expect(metadata, `${id} requires sidebar_custom_props`).toBeDefined();
@@ -179,7 +181,7 @@ describe('live example catalog metadata', () => {
     expect(supportPolicy).not.toContain('website/src/examples');
     expect(supportRegistry).not.toMatch(/(?:import|export).*\/app['"]/);
 
-    expect(Object.keys(EXAMPLE_SUPPORT_REGISTRY)).toHaveLength(93);
+    expect(Object.keys(EXAMPLE_SUPPORT_REGISTRY)).toHaveLength(100);
     for (const example of LIVE_EXAMPLES) {
       expect(
         EXAMPLE_SUPPORT_REGISTRY[example.id],
@@ -192,7 +194,7 @@ describe('live example catalog metadata', () => {
     }
 
     const standaloneFiles = findStandaloneHtmlFiles(path.join(process.cwd(), 'examples'));
-    expect(standaloneFiles).toHaveLength(88);
+    expect(standaloneFiles).toHaveLength(95);
     for (const relativeFile of standaloneFiles) {
       const standaloneId = relativeFile.replace(/\/(?:index|playground)\.html$/, match =>
         match === '/index.html' ? '' : '/playground'
@@ -259,7 +261,13 @@ describe('live example catalog metadata', () => {
       }
 
       if (
-        categories.some(category => category.includes('v10') || category.startsWith('GPGPU Graph'))
+        categories.some(
+          category =>
+            category.startsWith('Apache Arrow') ||
+            category.startsWith('Arrow Layers') ||
+            category.startsWith('GPU Graph Layers') ||
+            category.startsWith('GPGPU Graph')
+        )
       ) {
         expect(metadata?.difficulty, `${id} is an advanced GPU-data example`).toBe('advanced');
         expect(metadata?.maturity, `${id} demonstrates prerelease v10 APIs`).toBe('experimental');

@@ -1,6 +1,6 @@
 # @deck.gl-community/gpu-layers
 
-Reusable deck.gl layers that consume caller-owned GPU buffers.
+Reusable deck.gl layers for geographic rendering that consume caller-owned GPU buffers.
 
 ## Water surfaces
 
@@ -40,6 +40,48 @@ It provides animated normal shading, not geometry displacement, terrain draping,
 or general LayerExtension support. See `examples/deck/city-scene` for a complete application.
 
 ## Spatial points
+
+## GPUVector layer core
+
+The GPU layer family defines the rendering ABI below Arrow, classic JavaScript, and classic binary
+inputs. It consumes caller-owned GPU data, does not import Apache Arrow, and never destroys input
+vectors.
+
+The fixed-width primitives are `GPUArcLayer`, `GPUColumnLayer`, `GPUGridCellLayer`, `GPUIconLayer`,
+`GPULineLayer`, `GPUPointCloudLayer`, and `GPUScatterplotLayer`. They consume row-aligned
+`GPUVector` objects. Each layer owns one `GPUVectorModel`, which preserves every physical chunk as
+a separate draw call without creating a model or deck child layer per chunk. `GPUBitmapLayer`
+accepts an already loaded `Texture`; a bitmap has no tabular column to convert.
+
+```ts
+import {GPUScatterplotLayer} from '@deck.gl-community/gpu-layers';
+
+const layer = new GPUScatterplotLayer({
+  id: 'points',
+  getPosition: positions, // GPUVector<'float32x2'>
+  getRadius: radii, // number or GPUVector<'float32'>
+  getFillColor: colors // Color or GPUVector<'unorm8x4'>
+});
+```
+
+All non-constant vectors must have identical row counts and physical chunk boundaries. This makes
+streaming and ownership deterministic: adapters append batches explicitly, while the renderer
+neither combines nor repacks them. Picking uses global row indices and attaches physical batch
+provenance as `PickingInfo.gpuVector`.
+
+Variable geometry stays GPU-native as well:
+
+- `GPUPathLayer` consumes `GPUVector<'vertex-list<float32xN>'>` and expands segments on the GPU.
+- `GPUSolidPolygonLayer` consumes tessellated position, row-index, color, and triangle-index
+  GPUVectors prepared by an adapter.
+- `GPUPolygonLayer` composes the solid fill and path outline cores without copying either input.
+- `GPUTextLayer` consumes caller-owned `GPUTextData`, whose chosen strategy owns glyph GPUVectors
+  and atlas metadata.
+
+GeoJSON and GeoArrow are source formats rather than rendering primitives. Their adapters split
+features into these GPU cores. The same rule applies to future classic JavaScript and classic
+binary compatibility: each input family converts or borrows GPUVectors and delegates to the same
+renderer.
 
 `LuSpatialPointLayer` binds caller-owned position and point-ID buffers directly and replays a
 caller-owned `DrawCommandBuffer`. The layer owns only its render model and style-uniform buffer;
@@ -130,6 +172,54 @@ are sampled asynchronously and never gate the GPU-driven render path. Readbacks 
 graph it creates; Deck calls `cleanup`, while applications may call `destroy` when an effect is
 constructed but never adopted.
 
+## Tiled sources
+
+Tiled GPUVector and Arrow adapters are intentionally outside this layer core. They should integrate
+with deck.gl's proposed shared tile layer so cache ownership, refinement, cancellation, and request
+deduplication remain common infrastructure rather than being reimplemented in this package.
+
+## FlowParticleLayer
+
+`FlowParticleLayer` draws `FlowParticleSimulation` state textures as depth-tested streaks.
+Pass `particles` from `simulation.step(...)`, `particleCount`, and the field `bounds`.
+When stepping in `onBeforeRender`, pass `particles: () => currentParticles` so the layer
+reads the current buffers and their time interval together at draw time. Deck prepares
+layer props before that callback; replacing a snapshot there would lag one frame.
+Use `COORDINATE_SYSTEM.METER_OFFSETS` with a coordinate origin for a local metre grid,
+or `COORDINATE_SYSTEM.LNGLAT` for geographic bounds. `widthPixels` is screen-space;
+`trailSeconds` extrapolates the latest motion vector rather than retaining a curved trail.
+Picking returns `{id}` with the stable row-major particle index. The simulation and both
+state textures remain caller-owned. Run the simulation before Deck renders, and finalize
+Deck before destroying the simulation. See the riverfront flow example for integration.
+## Architectural strokes
+
+`SketchEdgeLayer` renders solid or pencil-like independent segments on WebGPU and WebGL2.
+The caller owns an interleaved float32 buffer with eight values per segment:
+`start.xyz, end.xyz, featureIndex, seed`. Use a stable seed for each geometric edge and a row
+index into `data` for picking. Local meter offsets are the default coordinate system.
+
+```ts
+import {SketchEdgeLayer} from '@deck.gl-community/gpu-layers';
+
+const edges = new SketchEdgeLayer({
+  id: 'building-edges',
+  segments,
+  segmentCount,
+  coordinateOrigin: [-74.006, 40.7128, 0],
+  data: buildings,
+  pickable: true,
+  color: [35, 31, 29, 255],
+  style: {width: 2, jitter: 0.7, variation: 0.35, grain: 0.45, extension: 3, sketch: 1}
+});
+```
+
+Width, jitter, and endpoint extension use CSS pixels. Set `sketch: 0` for solid strokes on the
+same geometry. Draw opaque fill layers first to hide rear edges. The layer owns its model and
+quad buffer, and borrows `segments`; the application destroys that buffer after finalizing Deck.
+It does not extract mesh boundaries, join paths, or drape lines over terrain. The
+[Sketch buildings example](../../examples/deck/sketch-edges) demonstrates the controls, picking,
+and hidden-edge rendering. The underlying `sketchStroke` shader in `@luma.gl/shadertools`
+can also be used by non-Deck renderers.
 ## Auxiliary scene buffers
 
 `SceneBufferEffect` captures participating layers into luma.gl `GBuffer` textures before Deck's
@@ -190,6 +280,27 @@ uses `enabled = 0`; the adapter restores that mode and model render parameters a
 passes. Layers without the module may still provide scene color and opaque depth; their normal
 pixels retain the default roughness of 1.
 
+### Layer participation
+
+| Participating layer | Captured color | Opaque depth | Normal/roughness | Selection mask |
+| --- | --- | --- | --- | --- |
+| Opaque custom layer with `surfaceBuffer` | Yes, including HDR values | Yes | Shader-provided | When selected and requested |
+| Opaque stock layer without `surfaceBuffer` | Yes | Yes | Default roughness 1; no surface normal supplied | No |
+| Transparent layer | Blended over opaque color | Preserved | Preserved | Preserved |
+| Nonparticipating layer or external basemap | Absent | Absent | Absent | Absent |
+
+The GPU integration test exercises the unmodified `ScatterplotLayer` from Deck 9.4.0: opaque
+color/depth capture, transparent blending, exclusion, native picking, and removal of the effect.
+It does not establish compatibility with every stock layer or create normals for them. The pinned
+stock WebGPU shaders do not expose a consistent fragment normal/color-extension hook; supplying
+`surfaceBuffer` output currently requires a participating shader implementation.
+
+`SceneBufferEffect` itself leaves ordinary Deck rendering and picking in place. Removing it releases
+its textures and keeps stock-layer picking working. A final effect that replaces the image with
+captured color must explicitly compose any omitted layers or basemap; capture alone cannot include
+a separately rendered map. Create this adapter only on WebGPU, or retain ordinary rendering without
+it on an unsupported backend.
+
 ### Views and history
 
 Each view ID has separate full-canvas targets. `viewportBounds` locates its region in top-origin
@@ -234,3 +345,75 @@ depth. Transparent occluders are not represented by this height field.
 The layer owns its model, corner buffer, and one-texel fallback texture. It never destroys a
 supplied surface texture and performs no CPU particle updates. Particles are decorative and
 are not pickable. See the riverfront weather example for clock, volume, and teardown usage.
+
+## Glow points
+
+`GlowPointLayer` renders depth-tested additive sprites on WebGPU and WebGL2. It borrows a buffer
+of 32-byte float32 rows: position XYZ, linear RGB tint, opacity, and feature index. The layer owns
+its model and its six-corner vertex buffer. Set `pointCount` explicitly, including zero for an
+empty draw. Replace `points` to bind a different caller-owned buffer.
+
+```ts
+import {GlowPointLayer} from '@deck.gl-community/gpu-layers';
+
+const lights = new GlowPointLayer({
+  id: 'lights',
+  points,
+  pointCount,
+  radiusPixels: 18,
+  pickingRadiusPixels: 5,
+  style: {coreRadius: 0.12, coreIntensity: 1, haloIntensity: 0.6, falloff: 5},
+  pickable: true,
+  data: features
+});
+```
+
+Positions use the normal Deck coordinate-system and origin props. Both radii use CSS pixels and
+stay constant with perspective depth. `pickingRadiusPixels` is clamped to the outer radius. The
+buffer's feature index selects `data` entries through Deck's normal picking API; use integer
+indices through `16_777_214`, or a negative index for an unpickable sprite.
+
+The `style` object supplies `PointGlowProps`. Intensity can exceed one for HDR output. Radius and
+style updates reuse geometry. Layer opacity and per-point opacity scale radiance; depth writes
+are disabled, and the default blend state adds RGB while preserving destination alpha. Use an
+opaque presentation surface or an explicit HDR composition pass. The example requests an opaque
+canvas on both backends. Opaque occluders must also participate in Deck's picking pass to prevent
+selection through buildings. The sprite uses its center's depth, so intersecting geometry can clip
+part of its halo. This layer does not illuminate nearby geometry or cast shadows.
+
+See the Riverfront lights website example for both renderers and the shared `pointGlow` module
+for applications that supply their own geometry and composition.
+
+## Shader-pass graphs in Deck
+
+`ShaderPassEffect` adapts the existing luma.gl `ShaderPassRenderer` to Deck's postprocessing
+chain. It owns the renderer and presentation model, resizes intermediate targets with the
+source, resets history on size changes, respects explicit output targets and downstream
+effects, and releases its resources on removal. It does not participate in picking.
+
+```ts
+const composite = new ShaderPassEffect({
+  id: 'scene-composite',
+  shaderPasses: [createBloomCompositeShaderPass({downsample: 'render'}), toneMapping],
+  colorFormat: 'rgba16float',
+  getRenderOptions: options => {
+    const viewport = options.viewports[0];
+    const frame = viewport && capture.getFrame(viewport.id);
+    return frame ? {sourceTexture: frame.buffer.colorTexture} : null;
+  }
+});
+```
+
+Without `getRenderOptions`, the source is Deck's ordinary color input; floating-point
+intermediate targets do not recover highlights already clipped in that input. Supply an
+HDR capture to retain highlight energy. Input textures, framebuffers, and auxiliary bindings
+are borrowed. The callback can also supply uniforms, bindings, and `resetHistory`; returning
+null leaves the incoming frame unchanged. Effects with their own camera state can delegate
+to `render(options, inputs)` instead of implementing presentation again.
+
+`setShaderPasses` replaces the graph and releases its previous resources. `resetHistory`
+invalidates temporal targets without replacing them. Removing the effect releases all its
+owned resources; adding it again creates a fresh renderer. Backend support follows the passes
+provided, not just this adapter. The renderer processes one supplied image per frame; an
+application selecting a per-view capture must arrange its own multi-view composition and
+history isolation. Tone mapping and output transfer remain explicit steps in the graph.

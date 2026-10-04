@@ -252,10 +252,17 @@
   },
   {
     "type": "category",
-    "label": "Visual Effects - deck.gl",
+    "label": "Visual Effects - deck.gl v10",
     "items": [
+      "deck/weather",
       "deck/city-scene",
-      "deck/weather"
+      "deck/flow-particles",
+      "deck/point-glow",
+      "deck/ambient-occlusion",
+      "deck/sketch-edges",
+      "deck/scene-buffers",
+      "deck/pattern-fills",
+      "deck/styled-paths"
     ]
   },
   {

@@ -4,7 +4,7 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuProj.
 
 import {parsePROJString, type PROJStringAst, type ReadonlyCRSDefinition} from '@math.gl/crs';
-import {Proj4Projection, toProj4CRSDefinition} from '@math.gl/proj4';
+import {Projection, type Proj4CRSDefinition} from '@math.gl/proj4';
 import {compileProjectionPlan} from './projection-plan';
 import {
   compileProjectionProgram,
@@ -208,7 +208,7 @@ function planCRSProjectionResult(options: PlanCRSProjectionOptions): ProjectionP
       ]
     };
   }
-  const providerDefinitions: ReadonlyCRSDefinition[] = [];
+  const providerDefinitions: Proj4CRSDefinition[] = [];
   try {
     for (const definition of [options.from, options.to]) {
       const normalized = normalizeCRSProviderDefinition(definition);
@@ -216,6 +216,12 @@ function planCRSProjectionResult(options: PlanCRSProjectionOptions): ProjectionP
         return {status: 'unsupported', reasons: [...reasons, normalized.reason]};
       const reason = getCRSProviderReason(normalized.definition);
       if (reason) return {status: 'unsupported', reasons: [...reasons, reason]};
+      if (
+        typeof normalized.definition !== 'string' &&
+        !isTwoDimensionalCRS(normalized.definition)
+      ) {
+        return unsupported('unsupported-dimensions', 'only 2D CRS definitions are supported');
+      }
       providerDefinitions.push(normalized.definition);
     }
   } catch (error) {
@@ -230,11 +236,11 @@ function planCRSProjectionResult(options: PlanCRSProjectionOptions): ProjectionP
       ]
     };
   }
-  let projection: Proj4Projection;
+  let projection: Projection;
   try {
-    projection = new Proj4Projection({
-      from: toProj4CRSDefinition(providerDefinitions[0]),
-      to: toProj4CRSDefinition(providerDefinitions[1]),
+    projection = new Projection({
+      from: providerDefinitions[0],
+      to: providerDefinitions[1],
       enforceAxis: options.enforceAxis ?? false
     });
   } catch (error) {
@@ -355,7 +361,9 @@ function applyFailurePolicy(
   return result;
 }
 
-function isTwoDimensionalCRS(definition: Exclude<ReadonlyCRSDefinition, string>): boolean {
+function isTwoDimensionalCRS(
+  definition: Exclude<ReadonlyCRSDefinition, string>
+): definition is Exclude<Proj4CRSDefinition, string> {
   switch (definition.type) {
     case 'GeographicCRS':
     case 'GeodeticCRS':
