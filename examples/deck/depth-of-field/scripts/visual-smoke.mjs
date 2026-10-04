@@ -80,6 +80,11 @@ try {
   assert.equal(await page.locator('#automatic').isChecked(), false, 'automatic checkbox follows picking');
   await page.setViewportSize({width: 850, height: 650});
   await page.waitForTimeout(150);
+  await page.mouse.move(700, 600);
+  await page.mouse.down({button: 'right'});
+  await page.mouse.move(700, 40, {steps: 12});
+  await page.mouse.up({button: 'right'});
+  await page.waitForFunction(() => window.riverfrontDepthOfFieldScene.deck.getViewports()[0].pitch > 80);
   assert.equal(await page.evaluate(() => window.riverfrontDepthOfFieldScene.diagnostics.error), '');
   assert.deepEqual(errors, [], 'browser and GPU report no errors');
   await page.evaluate(() => {

@@ -6,6 +6,7 @@ import type {StrokeGeometryOptions} from '@luma.gl/engine';
 import type {PathDashProps} from '@luma.gl/shadertools';
 import {CITY_ORIGIN, makeCityFeatures} from '../river-district-data';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
+import {RIVERFRONT_VIEW_LIMITS} from '../riverfront-view';
 import {BuildingMeshLayer} from './building-layer';
 import {
   StrokeMeshLayer,
@@ -45,6 +46,7 @@ export function createStrokeScene(parent: HTMLDivElement, options: DeckExampleDe
     ...getDeckExampleProps(options),
     views: new MapView({controller: true}),
     initialViewState: {
+      ...RIVERFRONT_VIEW_LIMITS,
       longitude: CITY_ORIGIN[0],
       latitude: CITY_ORIGIN[1],
       zoom: 15.6,

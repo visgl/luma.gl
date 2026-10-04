@@ -8,6 +8,7 @@ import type {HeightFogProps, PrecipitationProps} from '@luma.gl/shadertools';
 import {getMeterOffsetPosition, WeatherParticleLayer} from '@deck.gl-community/gpu-layers';
 import {CITY_ORIGIN, makeCityFeatures, type CityFeature} from '../river-district-data';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
+import {RIVERFRONT_VIEW_LIMITS} from '../riverfront-view';
 import {RiverDistrictLayer} from '../river-district-layer';
 
 export type WeatherPreset = 'clear' | 'rain' | 'snow';
@@ -50,6 +51,7 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
     },
     views: new MapView({controller: true}),
     initialViewState: {
+      ...RIVERFRONT_VIEW_LIMITS,
       longitude: CITY_ORIGIN[0],
       latitude: CITY_ORIGIN[1],
       zoom: 15.6,

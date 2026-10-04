@@ -7,6 +7,7 @@ import {SceneBufferEffect, ShaderPassEffect} from '@deck.gl-community/gpu-layers
 import {dofCompositeShaderPass} from '@luma.gl/effects';
 import {Matrix4} from '@math.gl/core';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
+import {RIVERFRONT_VIEW_LIMITS} from '../riverfront-view';
 import {CITY_ORIGIN, makeCityFeatures, type CityFeature} from '../river-district-data';
 import {RiverDistrictLayer} from '../river-district-layer';
 import {FocusController} from './focus-controller';
@@ -104,6 +105,7 @@ export function createRiverfrontDepthOfFieldScene(
     ...getDeckExampleProps(options),
     views: new MapView({id: 'riverfront', controller: true}),
     initialViewState: {
+      ...RIVERFRONT_VIEW_LIMITS,
       longitude: CITY_ORIGIN[0],
       latitude: CITY_ORIGIN[1],
       zoom: 15.9,

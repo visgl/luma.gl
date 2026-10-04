@@ -5,6 +5,7 @@ import {COORDINATE_SYSTEM, Deck, MapView} from '@deck.gl/core';
 import {SceneBufferEffect} from '@deck.gl-community/gpu-layers';
 import {CITY_ORIGIN, makeCityFeatures, type CityFeature} from '../river-district-data';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
+import {RIVERFRONT_VIEW_LIMITS} from '../riverfront-view';
 import {RiverDistrictLayer} from '../river-district-layer';
 import {BufferPreviewEffect, type BufferPreviewMode} from './buffer-preview-effect';
 
@@ -54,6 +55,7 @@ export function createBufferScene(parent: HTMLDivElement, options: DeckExampleDe
     deviceProps: {...deviceProps.deviceProps, createCanvasContext: {alphaMode: 'opaque'}},
     views: new MapView({id: 'main', controller: true}),
     initialViewState: {
+      ...RIVERFRONT_VIEW_LIMITS,
       longitude: CITY_ORIGIN[0],
       latitude: CITY_ORIGIN[1],
       zoom: 15.6,
