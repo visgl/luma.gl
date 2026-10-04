@@ -23,10 +23,13 @@ import {
   type GLTFCrowdGPUAnimationClip,
   type GLTFCrowdGPUAnimationLayout,
   type GLTFCrowdGPUAnimationOptions,
+  type GLTFGPUAnimationStats,
   getGLTFCrowdGPUAnimationFrames
 } from './gltf-gpu-animation';
 import {generateGLTFLODLevels, getGLTFNodeLODs} from './gltf-lod';
 import {GLTFSkinController} from './gltf-skin';
+import {createGLTFAnimationNodes} from './gltf-animation-nodes';
+import {bakeGLTFGPUAnimationFrames} from './gltf-gpu-animation-controller';
 
 /** Authored or generated screen-space detail selection for independently animated crowd actors. */
 export type GLTFCrowdLODOptions = {
@@ -90,17 +93,7 @@ export type GLTFAnimatedCrowdOptions = ParseGLTFOptions & {
 };
 
 /** Runtime ownership and workload diagnostics for accelerated crowd animation. */
-export type GLTFCrowdAnimationStats = {
-  mode: 'cpu' | 'gpu';
-  sampleRate?: number;
-  frameCount: number;
-  clipCount: number;
-  morphGroupCount: number;
-  /** Conservative GPU atlas byte estimate; CPU staging requires the same amount again. */
-  estimatedByteLength: number;
-  /** Present only when an explicitly requested GPU animation path retained CPU playback. */
-  fallbackReason?: GLTFCrowdGPUAnimationFallbackReason;
-};
+export type GLTFCrowdAnimationStats = GLTFGPUAnimationStats;
 
 /** Initial placement and independent playback controls for one lightweight crowd actor. */
 export type GLTFCrowdActorOptions = {
@@ -158,13 +151,6 @@ export type GLTFCrowdPrimitiveGroup = {
   animationParameters?: Float32Array;
 };
 
-type GLTFCrowdActorNodes = {
-  root: GroupNode;
-  scenes: GroupNode[];
-  nodesByIndex: Map<number, GroupNode>;
-  nodesById: Map<string, GroupNode>;
-};
-
 /** Lightweight independent animation state targeting shared, GPU-instanced glTF primitives. */
 export class GLTFCrowdActor {
   readonly id: string;
@@ -186,7 +172,7 @@ export class GLTFCrowdActor {
   constructor(crowd: GLTFAnimatedCrowd, id: string, options: GLTFCrowdActorOptions = {}) {
     this.crowd = crowd;
     this.id = id;
-    const hierarchy = createActorNodes(crowd.scenegraphs, id);
+    const hierarchy = createGLTFAnimationNodes(crowd.scenegraphs, id);
     this.root = hierarchy.root;
     this.nodesByIndex = hierarchy.nodesByIndex;
     this.nodesById = hierarchy.nodesById;
@@ -850,86 +836,14 @@ export class GLTFAnimatedCrowd {
   }
 
   private bakeGPUAnimationFrames(): void {
-    const layout = this.gpuAnimationLayout;
-    if (!layout) {
+    if (!this.gpuAnimationLayout) {
       return;
     }
-
-    this.suspendedRefreshCount++;
-    const bakingActor = new GLTFCrowdActor(this, '__gltf-gpu-animation-baker__', {playing: false});
-    try {
-      for (const clip of layout.clips) {
-        const animation = bakingActor.animator.selectClip(clip.name);
-        animation.action.setLoop('once', 1);
-        for (let clipFrame = 0; clipFrame < clip.frameCount; clipFrame++) {
-          const time = Math.min(clipFrame / layout.sampleRate, clip.duration);
-          animation.action.setTime(time);
-          bakingActor.animator.update(0);
-          const worldMatrices = collectNodeWorldMatrices(bakingActor.root);
-          bakingActor.updateSkinMatrices(worldMatrices);
-
-          for (const group of this.primitiveGroups) {
-            const modelNode = findCrowdModelNode(
-              this.scenegraphs,
-              group.sourceNodeIndex,
-              group.model
-            );
-            if (!modelNode) {
-              continue;
-            }
-            const resources = modelNode.userData['gltfAnimatedCrowd'] as GLTFCrowdModelResources;
-            const values = resources.animationFrameValues;
-            const frameStride = resources.animationFrameStride;
-            if (!values || !frameStride) {
-              continue;
-            }
-
-            const frameOffset = (clip.frameOffset + clipFrame) * frameStride * 4;
-            const node = bakingActor.getNode(group.nodeIndex);
-            const nodeMatrix = node && worldMatrices.get(node);
-            if (nodeMatrix) {
-              values.set(nodeMatrix, frameOffset);
-            }
-
-            const jointPalette = bakingActor.skins.getBinding(group.nodeIndex)?.jointMatrices;
-            if (jointPalette) {
-              values.set(jointPalette, frameOffset + 16);
-            }
-
-            const weights = node?.userData['morphWeights'];
-            if (Array.isArray(weights)) {
-              for (let targetIndex = 0; targetIndex < resources.morphTargetCount; targetIndex++) {
-                const offset =
-                  frameOffset + (4 + resources.animationJointCount * 4 + targetIndex) * 4;
-                values[offset] = Number(weights[targetIndex] || 0);
-              }
-            }
-          }
-        }
-      }
-    } finally {
-      bakingActor.destroy();
-      this.suspendedRefreshCount--;
-    }
-
-    for (const group of this.primitiveGroups) {
+    const bindings = this.primitiveGroups.flatMap(group => {
       const modelNode = findCrowdModelNode(this.scenegraphs, group.sourceNodeIndex, group.model);
-      if (!modelNode) {
-        continue;
-      }
-      const resources = modelNode.userData['gltfAnimatedCrowd'] as GLTFCrowdModelResources;
-      if (!resources.animationFrames || !resources.animationFrameValues) {
-        continue;
-      }
-      if (resources.animationFrames instanceof Buffer) {
-        resources.animationFrames.write(resources.animationFrameValues);
-      } else {
-        resources.animationFrames.writeData(resources.animationFrameValues, {
-          width: resources.animationFrameStride,
-          height: layout.frameCount
-        });
-      }
-    }
+      return modelNode ? [{nodeIndex: group.nodeIndex, modelNode}] : [];
+    });
+    bakeGLTFGPUAnimationFrames(this.device, this.scenegraphs, this.gpuAnimationLayout, bindings);
   }
 
   private writeGPUAnimationParameters(
@@ -1166,71 +1080,6 @@ export function createGLTFAnimatedCrowd(
   options: GLTFAnimatedCrowdOptions = {}
 ): GLTFAnimatedCrowd {
   return new GLTFAnimatedCrowd(device, gltf, options);
-}
-
-function createActorNodes(scenegraphs: GLTFScenegraphs, id: string): GLTFCrowdActorNodes {
-  const {gltf, gltfNodeIndexToNodeMap} = scenegraphs;
-  const nodesByIndex = new Map<number, GroupNode>();
-  const nodesById = new Map<string, GroupNode>();
-
-  for (let nodeIndex = 0; nodeIndex < gltf.nodes.length; nodeIndex++) {
-    const sourceNode = gltf.nodes[nodeIndex];
-    const sourceRuntimeNode = gltfNodeIndexToNodeMap.get(nodeIndex);
-    if (!sourceRuntimeNode) {
-      continue;
-    }
-    const node = new GroupNode({
-      id: sourceRuntimeNode.id,
-      position: Array.from(sourceRuntimeNode.position),
-      rotation: Array.from(sourceRuntimeNode.rotation),
-      scale: Array.from(sourceRuntimeNode.scale),
-      matrix: Array.from(sourceRuntimeNode.matrix),
-      display: sourceRuntimeNode.display
-    });
-    const morphWeights = sourceRuntimeNode.userData['morphWeights'];
-    if (Array.isArray(morphWeights)) {
-      node.userData['morphWeights'] = [...morphWeights];
-    }
-    nodesByIndex.set(nodeIndex, node);
-    nodesById.set(sourceNode.id, node);
-  }
-
-  for (let nodeIndex = 0; nodeIndex < gltf.nodes.length; nodeIndex++) {
-    const sourceNode = gltf.nodes[nodeIndex];
-    const node = nodesByIndex.get(nodeIndex);
-    if (!node) {
-      continue;
-    }
-    for (const child of sourceNode.children || []) {
-      const childNode = nodesById.get(child.id);
-      if (childNode) {
-        node.add(childNode);
-      }
-    }
-    if (sourceNode.mesh) {
-      const mesh = new GroupNode({id: sourceNode.mesh.name || sourceNode.mesh.id});
-      node.userData['gltfMesh'] = mesh;
-      node.add(mesh);
-    }
-  }
-
-  const scenes = gltf.scenes.map(
-    (scene, sceneIndex) =>
-      new GroupNode({
-        id: `${id}-scene-${sceneIndex}`,
-        children: (scene.nodes || []).flatMap(sourceNode => {
-          const node = nodesById.get(sourceNode.id);
-          return node ? [node] : [];
-        })
-      })
-  );
-
-  return {
-    root: new GroupNode({id: `${id}-root`, children: [...scenes]}),
-    scenes,
-    nodesByIndex,
-    nodesById
-  };
 }
 
 function createPrimitiveGroups(

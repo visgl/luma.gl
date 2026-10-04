@@ -6,7 +6,7 @@ import type {GLTFPostprocessed} from '@loaders.gl/gltf';
 import type {Device} from '@luma.gl/core';
 
 /** Optional one-time animation baking followed by GPU vertex-stage sampling. */
-export type GLTFCrowdGPUAnimationOptions = {
+export type GLTFGPUAnimationOptions = {
   /** Enables GPU sampling without changing the established CPU-animation default. */
   enabled?: boolean;
   /** Number of baked poses per second. Defaults to 30. */
@@ -15,6 +15,22 @@ export type GLTFCrowdGPUAnimationOptions = {
   maxFrames?: number;
   /** Maximum estimated GPU atlas bytes across primitives. Defaults to 64 MiB. */
   maxBytes?: number;
+};
+
+/** Backwards-compatible crowd option name; scenes and crowds use the same baked format. */
+export type GLTFCrowdGPUAnimationOptions = GLTFGPUAnimationOptions;
+
+/** Runtime diagnostics for baked skeletal and morph playback. */
+export type GLTFGPUAnimationStats = {
+  mode: 'cpu' | 'gpu';
+  sampleRate?: number;
+  frameCount: number;
+  clipCount: number;
+  morphGroupCount: number;
+  /** Conservative GPU atlas byte estimate; CPU staging requires the same amount again. */
+  estimatedByteLength: number;
+  /** Present only when an explicitly requested GPU path retained CPU playback. */
+  fallbackReason?: GLTFGPUAnimationFallbackReason;
 };
 
 /** One named clip stored inside a shared frame-address space. */
@@ -33,7 +49,7 @@ export type GLTFCrowdGPUAnimationLayout = {
 };
 
 /** Reason an explicitly requested baked animation path retained CPU playback. */
-export type GLTFCrowdGPUAnimationFallbackReason =
+export type GLTFGPUAnimationFallbackReason =
   | 'disabled'
   | 'no-animations'
   | 'invalid-options'
@@ -41,13 +57,17 @@ export type GLTFCrowdGPUAnimationFallbackReason =
   | 'frame-budget'
   | 'byte-budget'
   | 'texture-limit'
-  | 'buffer-limit';
+  | 'buffer-limit'
+  | 'unsupported-scene';
+
+/** Backwards-compatible crowd diagnostic name. */
+export type GLTFCrowdGPUAnimationFallbackReason = GLTFGPUAnimationFallbackReason;
 
 /** Allocation preflight, before scenegraph construction creates any baked resources. */
 type GLTFCrowdGPUAnimationPlan = {
   layout: GLTFCrowdGPUAnimationLayout | null;
   estimatedByteLength: number;
-  fallbackReason?: GLTFCrowdGPUAnimationFallbackReason;
+  fallbackReason?: GLTFGPUAnimationFallbackReason;
 };
 
 type GLTFCrowdGPUAnimationDevice = Pick<Device, 'type' | 'limits'>;

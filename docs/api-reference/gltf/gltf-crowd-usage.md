@@ -165,6 +165,9 @@ rewritten every frame.
 
 ### Bake clips once and sample them in the vertex shader
 
+Ordinary glTF scenes can also use this baked format through
+[`createScenegraphsFromGLTF()` GPU pose playback](/docs/api-reference/gltf/gltf-animation#move-pose-playback-to-the-gpu).
+
 Pass `gpuAnimation` to trade one-time construction work and a bounded frame atlas for much lower
 per-frame CPU animation work:
 
