@@ -21,6 +21,8 @@ const MAX_POINT_LIGHTS = 4;
 const MAX_CASCADES = 4;
 const POINT_FACE_COUNT = 6;
 const DEFAULT_NEAR_PLANE = 0.1;
+// math.gl projection builders use OpenGL [-1, 1] depth; shadow maps require WebGPU [0, 1].
+const OPENGL_TO_WEBGPU_MATRIX: NumberArray16 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 1];
 const IDENTITY_MATRIX: NumberArray16 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1];
 
 export type PointShadowFace = '+X' | '-X' | '+Y' | '-Y' | '+Z' | '-Z';
@@ -31,6 +33,8 @@ export type ShadowCamera = {
   projectionMatrix: Readonly<Matrix4 | NumberArray16>;
   near: number;
   far: number;
+  /** Input projection depth convention. Defaults to math.gl's OpenGL convention. */
+  clipDepth?: 'negative-one-to-one' | 'zero-to-one';
 };
 
 type ShadowBiasProps = {
@@ -165,7 +169,7 @@ const POINT_FACE_ORIENTATIONS: ReadonlyArray<{
 let nextShadowResourceId = 0;
 
 /**
- * Owns WebGPU depth-array resources and records application-supplied shadow caster draws.
+ * Owns backend-selected depth-array resources and records application-supplied shadow caster draws.
  *
  * The renderer never submits the device command encoder. Applications should pre-create any
  * per-view uniform storage needed by `drawShadowCasters`; one shared mutable uniform buffer cannot
@@ -180,8 +184,8 @@ export class ShadowMapRenderer {
   private destroyed = false;
 
   constructor(device: Device, props: ShadowMapRendererProps = {}) {
-    if (device.type !== 'webgpu') {
-      throw new Error('ShadowMapRenderer requires a WebGPU device.');
+    if (device.type !== 'webgpu' && device.type !== 'webgl') {
+      throw new Error('ShadowMapRenderer requires a WebGPU or WebGL2 device.');
     }
     this.device = device;
     this.inputProps = {...props};
@@ -409,7 +413,10 @@ export function getDirectionalCascadeViews(
   const inverseViewProjection = new Matrix4(camera.projectionMatrix)
     .multiplyRight(camera.viewMatrix)
     .invert();
-  const nearCorners = getNdcPlaneCorners(inverseViewProjection, 0);
+  const nearCorners = getNdcPlaneCorners(
+    inverseViewProjection,
+    camera.clipDepth === 'zero-to-one' ? 0 : -1
+  );
   const farCorners = getNdcPlaneCorners(inverseViewProjection, 1);
   const lightDirection = normalize3(light.direction);
   const views: ComputedShadowView[] = [];
@@ -446,16 +453,24 @@ export function getDirectionalCascadeViews(
     );
     const eye = add3(snappedCenter, scale3(lightDirection, radius + light.casterDistance));
     const viewMatrix = new Matrix4().lookAt({eye, center: snappedCenter, up: lightUp});
-    const projectionMatrix = new Matrix4().ortho({
-      left: -radius,
-      right: radius,
-      bottom: -radius,
-      top: radius,
-      near: 0.01,
-      far: radius * 2 + light.casterDistance
-    });
+    const projectionMatrix = new Matrix4(OPENGL_TO_WEBGPU_MATRIX).multiplyRight(
+      new Matrix4().ortho({
+        left: -radius,
+        right: radius,
+        bottom: -radius,
+        top: radius,
+        near: 0.01,
+        far: radius * 2 + light.casterDistance
+      })
+    );
     views.push({
-      camera: {viewMatrix, projectionMatrix, near: 0.01, far: radius * 2 + light.casterDistance},
+      camera: {
+        viewMatrix,
+        projectionMatrix,
+        near: 0.01,
+        far: radius * 2 + light.casterDistance,
+        clipDepth: 'zero-to-one'
+      },
       viewProjectionMatrix: new Matrix4(projectionMatrix).multiplyRight(viewMatrix)
     });
     cascadeNear = cascadeFar;
@@ -472,34 +487,50 @@ export function getSpotShadowView(light: Required<SpotShadowLight>): ComputedSha
     center: add3(light.position, direction),
     up
   });
-  const projectionMatrix = new Matrix4().perspective({
-    fovy: light.outerConeAngle * 2,
-    aspect: 1,
-    near: light.nearPlane,
-    far: light.range
-  });
+  const projectionMatrix = new Matrix4(OPENGL_TO_WEBGPU_MATRIX).multiplyRight(
+    new Matrix4().perspective({
+      fovy: light.outerConeAngle * 2,
+      aspect: 1,
+      near: light.nearPlane,
+      far: light.range
+    })
+  );
   return {
-    camera: {viewMatrix, projectionMatrix, near: light.nearPlane, far: light.range},
+    camera: {
+      viewMatrix,
+      projectionMatrix,
+      near: light.nearPlane,
+      far: light.range,
+      clipDepth: 'zero-to-one'
+    },
     viewProjectionMatrix: new Matrix4(projectionMatrix).multiplyRight(viewMatrix)
   };
 }
 
 /** Computes the six canonical cameras used by one cube-array point shadow. */
 export function getPointShadowViews(light: Required<PointShadowLight>): ComputedShadowView[] {
-  const projectionMatrix = new Matrix4().perspective({
-    fovy: radians(90),
-    aspect: 1,
-    near: light.nearPlane,
-    far: light.range
-  });
-  return POINT_FACE_ORIENTATIONS.map(orientation => {
+  const projectionMatrix = new Matrix4(OPENGL_TO_WEBGPU_MATRIX).multiplyRight(
+    new Matrix4().perspective({
+      fovy: radians(90),
+      aspect: 1,
+      near: light.nearPlane,
+      far: light.range
+    })
+  );
+  return POINT_FACE_ORIENTATIONS.map((orientation): ComputedShadowView => {
     const viewMatrix = new Matrix4().lookAt({
       eye: light.position,
       center: add3(light.position, orientation.direction),
       up: orientation.up
     });
     return {
-      camera: {viewMatrix, projectionMatrix, near: light.nearPlane, far: light.range},
+      camera: {
+        viewMatrix,
+        projectionMatrix,
+        near: light.nearPlane,
+        far: light.range,
+        clipDepth: 'zero-to-one'
+      },
       viewProjectionMatrix: new Matrix4(projectionMatrix).multiplyRight(viewMatrix)
     };
   });
@@ -589,7 +620,7 @@ function createShadowMapResources(
   const pointTexture = createDepthArrayTexture(
     device,
     'point-shadow-map',
-    'cube-array',
+    device.type === 'webgpu' ? 'cube-array' : '2d-array',
     props.pointMapSize,
     pointLayers,
     nonFilteringSampler
@@ -659,6 +690,7 @@ function createLayerFramebuffers(
   return Array.from({length: layerCount}, (_, layerIndex) => {
     const view = texture.createView({
       id: makeShadowResourceId('shadow-layer-view'),
+      format: texture.format,
       dimension: '2d',
       baseMipLevel: 0,
       mipLevelCount: 1,

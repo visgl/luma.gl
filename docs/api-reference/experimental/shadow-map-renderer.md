@@ -4,9 +4,9 @@ import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-
 
 <ExperimentalDocsTabs active="shadow-map-renderer" />
 
-`ShadowMapRenderer` is an experimental WebGPU-only light-space shadow system. It owns stable
-cascaded directional maps, spot arrays, point-light cube arrays, and the samplers used by the
-`shadow` WGSL module. Applications retain scene traversal and draw their own shadow casters.
+`ShadowMapRenderer` is an experimental WebGPU and WebGL2 light-space shadow system. It owns stable
+cascaded directional maps, spot arrays, point-light maps, and the samplers used by the
+`shadow` WGSL/GLSL module. Applications retain scene traversal and draw their own shadow casters.
 
 ## Usage
 
@@ -38,9 +38,18 @@ already-open depth-only render pass. When several views are recorded before subm
 independent uniform buffers or models per view; repeatedly rewriting one uniform buffer would make
 all recorded draws observe its final value.
 
+Camera projections default to math.gl's OpenGL `[-1, 1]` depth convention. Set
+`camera.clipDepth: 'zero-to-one'` for an already-converted WebGPU projection. The returned light
+camera matrices always use WebGPU `[0, 1]` depth for both caster rendering and receiver sampling.
+
+WebGPU stores point maps as cube arrays and uses comparison samplers. WebGL2 stores the six faces
+per light in a 2D depth array and performs explicit bilinear depth comparisons. Both use the same
+cascade fitting, blocker search, contact-hardening PCSS, and quality settings. In a GLSL caster,
+convert the returned clip position before assigning it: `clip.z = clip.z * 2.0 - clip.w`.
+
 ## Shader integration
 
-Add `shadow` to a WebGPU model and apply the returned visibility to each direct-light term:
+Add `shadow` to a WebGPU or WebGL2 model and apply the returned visibility to each direct-light term:
 
 ```wgsl
 let sunVisibility = shadow_getDirectionalFactor(worldPosition, worldNormal, viewDepth);

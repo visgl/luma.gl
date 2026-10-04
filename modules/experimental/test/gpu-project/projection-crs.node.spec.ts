@@ -5,7 +5,7 @@
 import {readFileSync} from 'node:fs';
 import {build} from 'esbuild';
 import {parsePROJString, type CRSDefinition} from '@math.gl/crs';
-import {Proj4Projection} from '@math.gl/proj4';
+import {Projection} from '@math.gl/projection';
 import {describe, expect, it, vi} from 'vitest';
 import {
   planCRSProjection,
@@ -67,7 +67,7 @@ describe('optional CRS planner', () => {
       readFileSync(new URL('../../package.json', import.meta.url), 'utf8')
     );
     expect(packageJson.exports['./gpu-project/crs'].types).toBe('./dist/gpu-project/crs.d.ts');
-    expect(packageJson.peerDependenciesMeta['@math.gl/proj4'].optional).toBe(true);
+    expect(packageJson.peerDependenciesMeta['@math.gl/projection'].optional).toBe(true);
   });
 
   it('lowers a public math.gl AST with signed axes, unit changes, and inverse affine stages', () => {
@@ -204,7 +204,7 @@ describe('optional CRS planner', () => {
       })
     );
     const coordinate = [-122.4194, 37.7749] as const;
-    const expected = new Proj4Projection({from, to}).project([...coordinate]);
+    const expected = new Projection({from, to}).project([...coordinate]);
     const actual = evaluateProjectionProgram(result.program, coordinate);
     expect(
       Math.hypot(actual.position[0] - expected[0], actual.position[1] - expected[1])
@@ -232,7 +232,7 @@ describe('optional CRS planner', () => {
       })
     );
     const actual = evaluateProjectionProgram(result.program, [37.7749, -122.4194]);
-    const expected = new Proj4Projection({from: 'EPSG:4326', to: 'EPSG:3857'}).project([
+    const expected = new Projection({from: 'EPSG:4326', to: 'EPSG:3857'}).project([
       -122.4194, 37.7749
     ]);
     expect(

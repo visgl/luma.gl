@@ -549,8 +549,9 @@ describe('GPU hierarchical trace viewer', () => {
         densityFrame.byteLength / Uint32Array.BYTES_PER_ELEMENT
       );
       const wideSpanCount = densityCounts[1] + densityCounts[5] + densityCounts[9];
-      expect(wideSpanCount).toBeGreaterThan(0);
-      expect(wideSpanCount).toBeLessThan(state.resources.spanCount);
+      // A one-pixel viewport cannot retain spans at the six-pixel exact-rendering threshold.
+      // The density assertions below verify that those spans still contribute to the overview.
+      expect(wideSpanCount).toBe(0);
       expect(
         state.resources.dependencyChunks.reduce(
           (sum, chunk) => sum + densityCounts[chunk.drawCommandIndex * 4 + 1],

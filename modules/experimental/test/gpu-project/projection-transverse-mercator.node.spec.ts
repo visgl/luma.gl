@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {describe, expect, it} from 'vitest';
-import {Proj4Projection} from '@math.gl/proj4';
+import {Projection} from '@math.gl/projection';
 import {
   compileProjectionPlan,
   compileProjectionProgram,
@@ -42,7 +42,7 @@ describe('sixth-order Transverse Mercator', () => {
         if (result.status !== 'ready') return;
         expect(result.strategy).toBe('native');
         const inverse = invertProjectionProgram(result.program);
-        const provider = new Proj4Projection({
+        const provider = new Projection({
           from: 'EPSG:4326',
           to: `+proj=utm +zone=${zone} ${south ? '+south' : ''} +datum=WGS84 +units=m`
         });
@@ -81,7 +81,7 @@ describe('sixth-order Transverse Mercator', () => {
         }
       ]
     };
-    const provider = new Proj4Projection({
+    const provider = new Projection({
       from: `+proj=longlat +a=6378137 +${inverseFlattening === 0 ? 'b=6378137' : `rf=${inverseFlattening}`}`,
       to: `+proj=tmerc +a=6378137 +${inverseFlattening === 0 ? 'b=6378137 +approx' : `rf=${inverseFlattening}`} +lon_0=0 +lat_0=30 +k_0=1.2 +units=m`
     });
@@ -209,7 +209,7 @@ describe('TM/UTM planner integration', () => {
     if (result.status !== 'ready') return;
     expect(result.strategy).toBe('adaptive');
     expect(result.compiled.metadata.arithmetic).toBe('double-single');
-    const provider = new Proj4Projection({
+    const provider = new Projection({
       from: 'EPSG:4326',
       to: '+proj=utm +zone=10 +datum=WGS84'
     });
@@ -236,7 +236,7 @@ describe('TM/UTM planner integration', () => {
 
   it('composes different UTM zones and Web Mercator without datum shortcuts', () => {
     const source = makeTransverseMercatorCRS(10);
-    const point = new Proj4Projection({
+    const point = new Projection({
       from: 'EPSG:4326',
       to: '+proj=utm +zone=10 +datum=WGS84'
     }).project([-120, 37]);
@@ -249,7 +249,7 @@ describe('TM/UTM planner integration', () => {
       });
       expect(result.status).toBe('ready');
       if (result.status !== 'ready') return;
-      const expected = new Proj4Projection({
+      const expected = new Projection({
         from: 'EPSG:4326',
         to: to.conversion.method.id.code === 9807 ? '+proj=utm +zone=11 +datum=WGS84' : 'EPSG:3857'
       }).project([-120, 37]);
@@ -310,7 +310,7 @@ describe('TM/UTM planner integration', () => {
     });
     expect(result.status).toBe('ready');
     if (result.status !== 'ready') return;
-    const expected = new Proj4Projection({
+    const expected = new Projection({
       from: 'EPSG:4326',
       to: '+proj=tmerc +datum=WGS84 +lon_0=5 +lat_0=20 +k_0=0.9996 +x_0=500000'
     }).project([6, 30]);
@@ -336,7 +336,7 @@ describe('TM/UTM planner integration', () => {
       expect(result.status).toBe('ready');
       expect(inverse.status).toBe('ready');
       if (result.status !== 'ready' || inverse.status !== 'ready') return;
-      const expected = new Proj4Projection({
+      const expected = new Projection({
         from: 'EPSG:4326',
         to: '+proj=utm +zone=56 +south +datum=WGS84'
       }).project([151, -33]);

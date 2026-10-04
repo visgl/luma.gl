@@ -19,6 +19,12 @@ import {scanWGSLInterface} from './shader-assembly/wgsl-interface-scan';
 import type {ShaderHook, ShaderHookOptions} from './shader-assembly/shader-hooks';
 import {assert} from './utils/assert';
 import type {ShaderLayout} from '@luma.gl/core';
+import type {
+  ShaderTranspiler,
+  ShaderTranspileResult,
+  ShaderTranspilerEntryPoints
+} from './shader-transpiler/shader-transpiler';
+import {getShaderModuleDependencies} from './shader-module/shader-module-dependencies';
 
 /**
  * A stateful version of `assembleShaders` that can be used to assemble shaders.
@@ -32,6 +38,8 @@ export abstract class ShaderAssembler {
   } = {};
   /** Shader language accepted by this assembler. */
   abstract readonly shaderLanguage: 'glsl' | 'wgsl';
+  /** Compilers registered by the application, isolated to this assembler. */
+  private readonly _shaderTranspilers = new Map<string, ShaderTranspiler>();
   /** Hook functions */
   protected readonly _hookFunctions: (ShaderHook | string)[] = [];
   /** Shader modules */
@@ -62,6 +70,76 @@ export abstract class ShaderAssembler {
     ShaderAssembler.defaultShaderAssemblers.glsl =
       ShaderAssembler.defaultShaderAssemblers.glsl || new GLSLShaderAssembler();
     return ShaderAssembler.defaultShaderAssemblers.glsl;
+  }
+
+  /** Register or replace the compiler for one input language. */
+  addShaderTranspiler(transpiler: ShaderTranspiler): void {
+    this._shaderTranspilers.set(transpiler.sourceLanguage, transpiler);
+  }
+
+  /** Remove the compiler for one input language. */
+  removeShaderTranspiler(sourceLanguage: string): void {
+    this._shaderTranspilers.delete(sourceLanguage);
+  }
+
+  /** Translate application and reusable module source together before native assembly. */
+  protected _transpileShader(
+    props: AssembleShaderProps,
+    modules: ShaderModule[],
+    source: string | null | undefined,
+    stage?: 'vertex' | 'fragment' | 'compute'
+  ): ShaderTranspileResult & {modules: ShaderModule[]} {
+    const sourceLanguage = props.sourceLanguage || this.shaderLanguage;
+    if (sourceLanguage === this.shaderLanguage) {
+      // Foreign module code requires an application translation unit in the same language.
+      assert(
+        !getShaderModuleDependencies(modules).some(
+          module => module.sourceLanguage && module.sourceLanguage !== this.shaderLanguage
+        )
+      );
+      return {code: source || '', modules};
+    }
+    const transpiler = this._shaderTranspilers.get(sourceLanguage);
+    // The application must register a transpiler before assembling a foreign input language.
+    assert(transpiler);
+    const dependencies = getShaderModuleDependencies(modules);
+    // A translation unit can contain only one foreign source language.
+    assert(
+      !dependencies.some(
+        module =>
+          module.sourceLanguage &&
+          module.sourceLanguage !== sourceLanguage &&
+          module.sourceLanguage !== this.shaderLanguage
+      )
+    );
+    const moduleSource = dependencies
+      .filter(module => module.sourceLanguage === sourceLanguage)
+      .map(module => module.source || '')
+      .join('\n');
+    const entryPoints: ShaderTranspilerEntryPoints = {
+      vertex: props.vertexEntryPoint,
+      fragment: props.fragmentEntryPoint,
+      compute: props.computeEntryPoint
+    };
+    const result =
+      source === undefined || source === null
+        ? {code: ''}
+        : transpiler!.transpile({
+            source: [moduleSource, source].filter(Boolean).join('\n'),
+            target: this.shaderLanguage,
+            stage,
+            entryPoints,
+            platformInfo: props.platformInfo
+          });
+    // Preserve uniform metadata and target-language code without emitting foreign source twice.
+    const nativeModules = dependencies.map(module => ({
+      ...module,
+      dependencies: undefined,
+      ...(module.sourceLanguage === sourceLanguage
+        ? {source: undefined, vs: undefined, fs: undefined}
+        : {})
+    }));
+    return {...result, modules: nativeModules};
   }
 
   /**
@@ -152,13 +230,13 @@ export class GLSLShaderAssembler extends ShaderAssembler {
   } {
     const modules = this._getModuleList(props.modules); // Combine with default modules
     const hookFunctions = this._hookFunctions; // TODO - combine with default hook functions
+    const vertex = this._transpileShader(props, modules, props.vs, 'vertex');
+    const fragment = this._transpileShader(props, modules, props.fs, 'fragment');
     const assembled = assembleGLSLShaderPair({
       ...props,
-      // @ts-expect-error
-      vs: props.vs,
-      // @ts-expect-error
-      fs: props.fs,
-      modules,
+      vs: vertex.code,
+      fs: props.fs == null ? undefined : fragment.code,
+      modules: vertex.modules,
       hookFunctions
     });
 
@@ -184,25 +262,38 @@ export class WGSLShaderAssembler extends ShaderAssembler {
     bindingAssignments: {moduleName: string; name: string; group: number; location: number}[];
     bindingTable: ShaderBindingDebugRow[];
     shaderLayout: ShaderLayout | null;
+    entryPoints: ShaderTranspilerEntryPoints;
   } {
     const modules = this._getModuleList(props.modules); // Combine with default modules
     const hookFunctions = this._hookFunctions; // TODO - combine with default hook functions
+    const translated = this._transpileShader(
+      props,
+      modules,
+      props.source,
+      props.shaderStage ?? (props.computeEntryPoint ? 'compute' : undefined)
+    );
+    const entryPoints = {
+      vertex: translated.entryPoints?.vertex ?? props.vertexEntryPoint,
+      fragment: translated.entryPoints?.fragment ?? props.fragmentEntryPoint,
+      compute: translated.entryPoints?.compute ?? props.computeEntryPoint
+    };
     const defines = WGSLShaderAssembler.getShaderPreprocessorDefines(props, modules);
     const preprocessedApplicationSource =
-      props.platformInfo.shaderLanguage === 'wgsl' && props.source
-        ? preprocess(props.source, {defines})
-        : props.source;
+      props.platformInfo.shaderLanguage === 'wgsl' && translated.code
+        ? preprocess(translated.code, {defines})
+        : translated.code;
     const {
       source: assembledSource,
       getUniforms,
       bindingAssignments
     } = assembleWGSLSource({
       ...props,
-      // @ts-expect-error
       source: preprocessedApplicationSource,
+      vertexEntryPoint: entryPoints.vertex,
+      fragmentEntryPoint: entryPoints.fragment,
       defines,
       _bindingRegistry: this._wgslBindingRegistry,
-      modules,
+      modules: translated.modules,
       hookFunctions
     });
     // WGSL does not have built-in preprocessing support (just compile time constants)
@@ -212,12 +303,13 @@ export class WGSLShaderAssembler extends ShaderAssembler {
         : assembledSource;
     return {
       source: preprocessedSource,
+      entryPoints,
       getUniforms,
       modules,
       bindingAssignments,
       bindingTable: getShaderBindingDebugRowsFromWGSL(preprocessedSource, bindingAssignments),
       shaderLayout: scanWGSLInterface(preprocessedSource, {
-        vertexEntryPoint: props.vertexEntryPoint,
+        vertexEntryPoint: entryPoints.vertex,
         scanVertexAttributes: props.scanVertexAttributes
       })
     };

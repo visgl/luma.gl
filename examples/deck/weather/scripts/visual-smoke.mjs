@@ -62,7 +62,7 @@ try {
         timeout: 60_000
       });
       await page.waitForFunction(() => window.weatherScene?.diagnostics.frames > 2);
-      assert.equal(await page.inputValue('#preset'), 'clear', `${backend}: opens without precipitation`);
+      assert.equal(await page.inputValue('#preset'), 'rain', `${backend}: opens with rain enabled`);
       assert(await page.isChecked('#fog-enabled'), `${backend}: opens with independent fog enabled`);
       assert.equal(await page.inputValue('#visibility'), '700', `${backend}: fog is apparent by default`);
       await page.screenshot({path: join(tmpdir(), `weather-default-${backend}.png`)});
@@ -86,6 +86,7 @@ try {
       assert(await page.evaluate(() => window.weatherScene.diagnostics.time) - slowFrame.time >= 0.3,
         `${backend}: slow frames preserve elapsed animation time`);
       await page.uncheck('#playing');
+      await page.uncheck('#accumulate');
       for (const preset of ['clear', 'rain', 'snow']) {
         await page.selectOption('#preset', preset);
         await page.uncheck('#fog-enabled');
@@ -100,6 +101,7 @@ try {
         assert.equal(await page.inputValue('#visibility'), '700', `${backend}: fog retains visibility`);
       }
       await page.selectOption('#preset', 'clear');
+      await page.uncheck('#clouds');
       await page.uncheck('#fog-enabled');
       await page.check('#playing');
       await page.waitForTimeout(200);
@@ -198,7 +200,11 @@ try {
         if (preset !== 'clear') await page.evaluate(() => window.weatherScene.setIntensity(0));
         await page.waitForTimeout(250);
         const idle = await page.evaluate(() => ({...window.weatherScene.diagnostics}));
-        await page.waitForTimeout(250);
+        // A software-GPU frame can outlast 250 ms. Drain actual updates and redraws before asserting idle behavior.
+        await page.waitForFunction(() => {
+          const deck = window.weatherScene.deck;
+          return !deck.layerManager.needsUpdate() && !deck.needsRedraw();
+        }, undefined, {timeout: 30_000});
         const settled = await page.evaluate(() => ({...window.weatherScene.diagnostics}));
         assert(settled.frames - idle.frames <= 1,
           `${backend}: ${preset} disabled precipitation drains one pending frame`);
@@ -214,7 +220,12 @@ try {
       }
       const stoppedTime = await page.evaluate(() => window.weatherScene.diagnostics.time);
       await page.evaluate(() => window.weatherScene.setIntensity(0.6));
-      await page.waitForTimeout(250);
+      // Resuming initializes the clock on the first frame; software GPUs may need more than 250 ms for the next frame.
+      await page.waitForFunction(
+        stoppedTime => window.weatherScene.diagnostics.time > stoppedTime,
+        stoppedTime,
+        {timeout: 30_000}
+      );
       assert(await page.evaluate(() => window.weatherScene.diagnostics.time) > stoppedTime,
         `${backend}: restoring particle count resumes animation`);
       await page.uncheck('#playing');
@@ -321,6 +332,67 @@ try {
         0,
         `${backend}: surface heights suppress covered precipitation`
       );
+      await page.uncheck('#fog-enabled');
+      await page.selectOption('#preset', 'clear');
+      await page.locator('#wetness').fill('0');
+      await page.locator('#snow-cover').fill('0');
+      await page.waitForTimeout(200);
+      const drySurface = PNG.sync.read(await page.screenshot());
+      await page.locator('#wetness').fill('1');
+      await page.waitForTimeout(200);
+      assert(changedPixels(drySurface, PNG.sync.read(await page.screenshot())) > 1000, `${backend}: wetness visibly changes surfaces`);
+      await page.locator('#snow-cover').fill('1');
+      await page.waitForTimeout(200);
+      const snowySurface = PNG.sync.read(await page.screenshot({path: join(tmpdir(), `weather-snow-cover-${backend}.png`)}));
+      assert(changedPixels(drySurface, snowySurface) > 1000, `${backend}: snow visibly covers upward-facing surfaces`);
+      await page.uncheck('#surface-enabled');
+      await page.waitForTimeout(200);
+      assert.equal(changedPixels(drySurface, PNG.sync.read(await page.screenshot())), 0, `${backend}: surface toggle restores dry materials`);
+      await page.check('#surface-enabled');
+      await page.selectOption('#preset', 'snow');
+      await page.locator('#snow-cover').fill('0.1');
+      await page.evaluate(() => window.weatherScene.setIntensity(0.6));
+      await page.check('#accumulate');
+      await page.check('#playing');
+      const accumulationStart = await page.evaluate(() => window.weatherScene.surfaceSettings.snow);
+      await page.waitForFunction(value => window.weatherScene.surfaceSettings.snow > value + 0.01, accumulationStart);
+      await page.uncheck('#playing');
+      await page.waitForTimeout(150);
+      const pausedSurface = await page.evaluate(() => ({...window.weatherScene.surfaceSettings}));
+      await page.waitForTimeout(200);
+      assert.deepEqual(await page.evaluate(() => window.weatherScene.surfaceSettings), pausedSurface, `${backend}: pause freezes accumulation exactly`);
+      await page.click('#reset');
+      assert.equal(await page.evaluate(() => window.weatherScene.surfaceSettings.snow), 0, `${backend}: reset clears snow`);
+      assert.equal(await page.evaluate(() => window.weatherScene.surfaceSettings.wetness), 0, `${backend}: reset clears wetness`);
+      // One astronomy clock updates the sky and scene lighting while weather remains paused.
+      await page.uncheck('#fog-enabled');
+      await page.uncheck('#clouds');
+      await page.selectOption('#preset', 'clear');
+      await page.locator('#hour').fill('12');
+      await page.click('#center');
+      await page.waitForTimeout(150);
+      const daylight = PNG.sync.read(await page.screenshot());
+      await page.locator('#hour').fill('22');
+      await page.waitForTimeout(150);
+      assert(changedPixels(daylight, PNG.sync.read(await page.screenshot())) > 10000,
+        `${backend}: astronomy time changes sky and surface lighting`);
+      for (const body of ['sun', 'moon']) {
+        await page.locator('#hour').fill(body === 'sun' ? '9' : '0');
+        await page.click(`#look-${body}`);
+        await page.waitForTimeout(150);
+        const visibleBody = PNG.sync.read(await page.screenshot());
+        await page.evaluate(body => {
+          const deck = window.weatherScene.deck;
+          deck.setProps({layers: deck.props.layers.map(layer =>
+            layer.id === 'weather-sky' ? layer.clone({[body]: false}) : layer)});
+        }, body);
+        await page.waitForTimeout(150);
+        assert(changedPixels(visibleBody, PNG.sync.read(await page.screenshot()), 8) > 100,
+          `${backend}: Look at ${body} reveals the celestial disk`);
+      }
+      await page.click('#center');
+      assert.equal(await page.evaluate(() => window.weatherScene.deck.getViewports()[0].pitch), 74,
+        `${backend}: Center restores the district view`);
       await page.evaluate(() => {
         window.borrowedWeatherSurface = window.weatherScene.surfaceTexture;
         window.weatherScene.deck.setProps({layers: []});
