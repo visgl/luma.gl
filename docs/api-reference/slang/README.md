@@ -61,6 +61,13 @@ Destination-device shader compilation remains necessary to check all typing, lay
 Use `mapSlangDiagnostic(result.sourceMap, generatedLine, message)` to map destination compiler
 errors to original statement starts; columns are approximate at statement granularity.
 
+Local `var`/`let` declarations support type inference. `switch` preserves grouped labels and fallthrough,
+and `do`/`while` preserves post-test evaluation through `continue`. Numeric scalar/vector promotions,
+vector comparisons, integer shifts, floating-point remainder and component-wise float matrix arithmetic
+work on both targets. Matrix constructors accept scalar broadcast, row vectors, matching matrices or
+row-ordered elements. Integers are limited to 32 bits, and switch clause locals cannot be shared across
+clauses. See the package documentation for the remaining syntax and validation limits.
+
 Uniform buffers support nested structs, arrays, bools, and matrices using a shared std140-compatible
 layout. `reflection.bindings[].layout` includes relative member offsets, sizes, alignments, and
 array/matrix strides. `packSlangUniforms(layout, values)` produces uploadable bytes from nested
@@ -186,4 +193,4 @@ uniform buffer on WebGPU and WebGL 2.
 
 The [Slang particle example](/examples/tutorials/slang-particles) simulates and renders a particle cloud
 from one Slang source, using shared memory, integer atomics and the application-owned compiler plugin.
-The optional compiler remains dependency-free and guarded by bundle-size tests (about 26 KB gzip).
+The optional compiler remains dependency-free and guarded by bundle-size tests (about 28 KB gzip).

@@ -47,7 +47,7 @@ export function tokenizeSlang(source: string, sourceName: string): Token[] {
     );
     const string = /^"(?:[^"\\\n]|\\.)*"/.exec(remaining);
     const symbol =
-      /^(?:::|\+\+|--|\+=|-=|\*=|\/=|%=|==|!=|<=|>=|&&|\|\||[{}()[\];:,.?+\-*/%!=<>~&|^])/.exec(
+      /^(?:::|<<=|>>=|<<|>>|&=|\|=|\^=|\+\+|--|\+=|-=|\*=|\/=|%=|==|!=|<=|>=|&&|\|\||[{}()[\];:,.?+\-*/%!=<>~&|^])/.exec(
         remaining
       );
     const match = identifier || number || string || symbol;

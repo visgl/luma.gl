@@ -97,14 +97,22 @@ generated wrappers/helper lines may map to their associated declaration.
 - `float`, `int`, `uint`, `bool`, vectors of width 2–4, float matrices from 2x2 through 4x4,
   structures (including nested structures), and fixed-size array declarators.
 - Functions, forward references, overloads, calls, scalar/vector casts, vector/structure constructors,
-  row-ordered scalar matrix constructors, and aggregate initializer lists with zero-filled omissions.
+  matrix constructors from row-ordered scalars, row vectors, a matching matrix, or a scalar broadcast,
+  and aggregate initializer lists with zero-filled omissions. `float2x2` and `float4` can also convert
+  to each other in row order.
   A single scalar in a vector initializer list broadcasts to every component. Only functions reachable from the selected entry point
   are emitted. Recursive functions and overloaded entry points are rejected. Helper and entry-point `out`/`inout`
   parameters are supported; output arguments require an exact type and writable destination.
 - Variables, constants, static globals, assignments, component access, indexing, arithmetic,
-  comparisons of scalars, logical operators, lazy conditional expressions, writable swizzles, and common mathematical intrinsics such as `mul`,
+  scalar/vector comparisons, integer shifts and bitwise operations, floating-point remainder, logical
+  operators, lazy conditional expressions, writable swizzles, and common mathematical intrinsics such as `mul`,
   `lerp`, `saturate`, `dot`, `cross`, `normalize`, `transpose`, derivatives, and trigonometry.
-- Blocks, `if`/`else`, `while`, `for`, `return`, `break`, `continue`, and fragment `discard`.
+- Mutable `var name = expression` and immutable `let name = expression` locals infer their value
+  type. An explicit annotation (`var name : float`, `let name : float = expression`) is also supported.
+  `let` prevents writes but is not a compile-time constant; integer `const` declarations can supply case labels.
+- Blocks, `if`/`else`, `while`, `do`/`while`, `for`, `switch`, `return`, `break`, `continue`, and fragment `discard`.
+  Switches support grouped case labels, a default anywhere, fallthrough and nested loop control.
+  WGSL lowering emits each clause body once and evaluates the selector once.
   Increment/decrement and assignment expressions are supported in statement and loop-update positions.
 - `[shader("vertex"|"fragment"|"compute")]`, `[numthreads(x,y,z)]`, and ordinary entry parameters
   and return values. Structure interfaces are flattened into target entry-point wrappers.
@@ -168,7 +176,15 @@ generated wrappers/helper lines may map to their associated declaration.
 - Uniform buffers use a shared std140-compatible layout. WGSL legalizes nested structs, arrays,
   bools, and matrices through separate uniform representations, preserving ordinary local/storage
   value types. Storage bools remain unsupported on both targets.
-- WGSL still rejects increments or assignments used as values and component-wise matrix multiplication.
+- Both targets preserve component-wise matrix arithmetic; use `mul` for linear algebra. Numeric
+  scalar/vector operands promote to float, then uint, then int, with scalar broadcast and matching
+  aggregate shapes. Matrix scalar broadcast fills every element, including off-diagonal elements.
+  Integer values and case-label arithmetic are limited to 32 bits; large unsuffixed hexadecimal
+  literals infer uint. Decimal literals requiring 64 bits are diagnosed. Case labels support integer
+  literals, integer `const` names, int/uint casts, unary signs/complement and arithmetic/bitwise expressions.
+  Clause-local declarations cannot be referenced from another clause; declare shared locals before the switch.
+  Return-path checking is conservative for loops, and barriers inside switches or loops remain unsupported.
+- WGSL still rejects increments or assignments used as values.
   Aggregate initializer lists require a declared destination type; passing lists directly to overloaded
   functions is unsupported. Overload resolution covers the supported scalar/vector numeric conversions.
 - Comparison sampling requires a scalar float texture and a comparison sampler. Texture usage is
@@ -183,7 +199,7 @@ generated wrappers/helper lines may map to their associated declaration.
   formats depend on device capabilities, which the application must request. Compound storage-texture
   assignments and storage-texture elements as `out`/`inout` arguments require explicit load/store steps.
 - Imports/includes/macros, namespaces, generics/interfaces, extensions, methods, autodiff,
-  inferred types, `switch`, `do`/`while`, floating-point/struct-member atomics, typed byte-address
+  global type inference, `auto`, floating-point/struct-member atomics, typed byte-address
   loads, dynamic sampler arrays, and multisampled array textures are not supported.
 - This is a transpiler rather than a complete Slang semantic validator. Compile generated source
   on the destination device to validate remaining typing, resource-layout, uniformity, and limits.
@@ -204,7 +220,9 @@ yarn lint fix
 
 The GPU tests compile and link a WebGL shader pair, validate WGSL render shaders, and execute
 WGSL compute shaders with readback assertions for evaluation order, output parameters, aggregate
-initialization, matrix multiplication, and shared uniform packing. Texture tests verify sampling on
+initialization, matrix multiplication, and shared uniform packing. Everyday-language fixtures also
+compare switch fallthrough, do/while continuations, inferred locals, numeric promotion, matrix
+constructors and constructor side effects against upstream-generated WGSL. Texture tests verify sampling on
 both backends and storage writes on WebGPU.
 
 Committed differential fixtures come from official Slang **2026.19** and run without a native compiler.

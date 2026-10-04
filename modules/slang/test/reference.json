@@ -100,6 +100,105 @@
         "bindlessSpaceIndex": 1
       }
     },
+    "everyday": {
+      "source": "\nstatic const uint SELECT = 0xFFFFFFFFu >> 1;\nint choose(int selector) {\n  switch(selector) { case 0: case 1: return 3; default: return 7; }\n}\nint selectOnce(inout int calls, int selector) { calls += 1; return selector; }\nint clauses(int selector) {\n  var calls = 0;\n  var total = 0;\n  const int base = 0;\n  switch(selectOnce(calls, selector)) {\n    case base: total += 2;\n    default: total += 4;\n    case 1: total += 8; break;\n    case 2: total = 16; break;\n  }\n  return total + calls * 100;\n}\nfloat control(int selector) {\n  var total : int;\n  total = 0;\n  var count = 0;\n  do {\n    count += 1;\n    switch(selector) {\n      case 0: total += 2;\n      case 1: total += 3; break;\n      default: total += 7; break;\n    }\n    if (count < 2) { continue; }\n    total += 1;\n  } while(count < 3);\n  for(var index = 0; index < 4; index++) {\n    switch(index) {\n      case 0: continue;\n      case 1: total += 4; break;\n      case 2:\n      default: total += 5;\n    }\n  }\n  return total;\n}\nbool check(inout int calls) { calls += 1; return calls < 3; }\nint mandatoryReturn() { do { return 5; } while(false); }\nint postTest() {\n  var calls = 0;\n  var count = 0;\n  do { count += 1; continue; } while(check(calls));\n  return count * 10 + calls;\n}\nfloat4 numeric() {\n  let mixed = int2(1,-2) + float2(0.5,0.5);\n  let unsignedValues = uint2(7,9) + int2(1,2);\n  var mask = 1u;\n  mask <<= 3;\n  mask |= 2u;\n  mask ^= 1u;\n  let compared = all(mixed < float2(2,0));\n  var fraction = -5.5;\n  fraction %= 2.0;\n  return float4(mixed.x, mixed.y, unsignedValues.x + mask, fraction + float(compared));\n}\nfloat2x2 makeMatrix(inout int calls) { calls += 1; return float2x2(1,2,3,4); }\nfloat4 makeVector(inout int calls) { calls += 1; return float4(5,6,7,8); }\nfloat conversions() {\n  var calls = 0;\n  let flattened = float4(makeMatrix(calls));\n  let restored = float2x2(makeVector(calls));\n  let converted = float2(int2(1,2));\n  var condition = false;\n  if(1) { condition = true; }\n  return calls * 10 + flattened.y + restored[1].y + converted.y + float(condition);\n}\nfloat4 matrices() {\n  var broadcast : float2x2 = 2.0;\n  let rows = float2x2(int2(1,2),float2(3,4));\n  let copied = float2x2(rows);\n  var elements = copied * broadcast;\n  elements += 1;\n  elements /= 2;\n  let flattened = float4(elements);\n  let restored = float2x2(flattened);\n  let splatted = float2x2(3.0);\n  return float4(restored[0].x, restored[0].y, restored[1].x, splatted[1].y);\n}\n\nRWStructuredBuffer<float> results;\n[shader(\"compute\")] [numthreads(1,1,1)] void main() {\n  results[0]=control(0); results[1]=control(1); results[2]=control(3);\n  results[3]=clauses(0); results[4]=clauses(1); results[5]=clauses(2); results[6]=clauses(3);\n  results[7]=postTest(); results[8]=choose(1); results[9]=choose(3);\n  let values = numeric();\n  results[10]=values.x; results[11]=values.y; results[12]=values.z; results[13]=values.w;\n  let matrixValues = matrices();\n  switch(uint(2147483647)) { case SELECT: results[18]=255.0; break; default: results[18]=0; }\n  let maximum = 0xFFFFFFFF;\n  results[19]=float(maximum >> 28);\n  results[20]=float((-1u) >> 28);\n  results[21]=float(-2147483648 < 0);\n  results[22]=conversions();\n  results[25]=mandatoryReturn();\n  const int outer = 0;\n  { const int outer = outer + 1; switch(1) { case outer: results[23]=9; break; default: results[23]=0; } }\n  switch(2147483647u) { case -1 / 2u: results[24]=7; break; default: results[24]=0; }\n  results[14]=matrixValues.x; results[15]=matrixValues.y; results[16]=matrixValues.z; results[17]=matrixValues.w;\n}",
+      "entryPoint": "main",
+      "code": "@binding(0) @group(0) var<storage, read_write> results_0 : array<f32>;\n\nfn control_0( selector_0 : i32) -> f32\n{\n    var _S1 : i32;\n    var total_0 : i32 = i32(0);\n    var count_0 : i32 = i32(0);\n    loop\n    {\n        loop\n        {\n            var count_1 : i32 = count_0 + i32(1);\n            _S1 = count_1;\n            switch(selector_0)\n            {\n            case i32(0):\n                {\n                    total_0 = total_0 + i32(2);\n                    total_0 = total_0 + i32(3);\n                }\n            case i32(1):\n                {\n                    total_0 = total_0 + i32(3);\n                }\n            default :\n                {\n                    total_0 = total_0 + i32(7);\n                }\n            }\n            if(count_1 < i32(2))\n            {\n                break;\n            }\n            total_0 = total_0 + i32(1);\n            break;\n        }\n        if(!(_S1 < i32(3)))\n        {\n            break;\n        }\n        count_0 = _S1;\n    }\n    var index_0 : i32 = i32(0);\n    loop\n    {\n        loop\n        {\n            if(index_0 < i32(4))\n            {\n            }\n            else\n            {\n                count_0 = i32(0);\n                break;\n            }\n            switch(index_0)\n            {\n            case i32(0):\n                {\n                    count_0 = i32(1);\n                }\n            case i32(1):\n                {\n                    total_0 = total_0 + i32(4);\n                    count_0 = i32(2);\n                }\n            default :\n                {\n                    total_0 = total_0 + i32(5);\n                    count_0 = i32(2);\n                }\n            }\n            if(count_0 != i32(2))\n            {\n                break;\n            }\n            count_0 = i32(1);\n            break;\n        }\n        if(count_0 != i32(1))\n        {\n            break;\n        }\n        index_0 = index_0 + i32(1);\n    }\n    return f32(total_0);\n}\n\nfn selectOnce_0( calls_0 : ptr<function, i32>,  selector_1 : i32) -> i32\n{\n    (*calls_0) = (*calls_0) + i32(1);\n    return selector_1;\n}\n\nfn clauses_0( selector_2 : i32) -> i32\n{\n    var calls_1 : i32 = i32(0);\n    var total_1 : i32 = i32(0);\n    var _S2 : i32 = selectOnce_0(&(calls_1), selector_2);\n    switch(_S2)\n    {\n    case i32(0):\n        {\n            total_1 = total_1 + i32(2);\n            total_1 = total_1 + i32(4);\n            total_1 = total_1 + i32(8);\n        }\n    default :\n        {\n            total_1 = total_1 + i32(4);\n            total_1 = total_1 + i32(8);\n        }\n    case i32(1):\n        {\n            total_1 = total_1 + i32(8);\n        }\n    case i32(2):\n        {\n            total_1 = i32(16);\n        }\n    }\n    return total_1 + calls_1 * i32(100);\n}\n\nfn check_0( calls_2 : ptr<function, i32>) -> bool\n{\n    var _S3 : i32 = (*calls_2) + i32(1);\n    (*calls_2) = _S3;\n    return _S3 < i32(3);\n}\n\nfn postTest_0() -> i32\n{\n    var _S4 : i32;\n    var calls_3 : i32 = i32(0);\n    var count_2 : i32 = i32(0);\n    loop\n    {\n        var count_3 : i32 = count_2 + i32(1);\n        _S4 = count_3;\n        var _S5 : bool = check_0(&(calls_3));\n        if(!_S5)\n        {\n            break;\n        }\n        count_2 = count_3;\n    }\n    return _S4 * i32(10) + calls_3;\n}\n\nfn choose_0( selector_3 : i32) -> i32\n{\n    switch(selector_3)\n    {\n    case i32(0), i32(1):\n        {\n            return i32(3);\n        }\n    default :\n        {\n            return i32(7);\n        }\n    }\n}\n\nfn numeric_0() -> vec4<f32>\n{\n    var _S6 : vec2<f32> = vec2<f32>(vec2<i32>(i32(1), i32(-2))) + vec2<f32>(0.5f, 0.5f);\n    return vec4<f32>(_S6.x, _S6.y, f32((vec2<u32>(u32(7), u32(9)) + vec2<u32>(vec2<i32>(i32(1), i32(2)))).x + u32(11)), -1.5f + f32((all((_S6 < vec2<f32>(2.0f, 0.0f))))));\n}\n\nfn matrices_0() -> vec4<f32>\n{\n    var broadcast_0 : mat2x2<f32> = mat2x2<f32>(2.0f, 2.0f, 2.0f, 2.0f);\n    var _S7 : mat2x2<f32> = mat2x2<f32>(vec2<f32>(vec2<i32>(i32(1), i32(2))), vec2<f32>(3.0f, 4.0f));\n    var _S8 : mat2x2<f32> = (mat2x2<f32>(_S7[0] * broadcast_0[0], _S7[1] * broadcast_0[1]) + mat2x2<f32>(1.0f, 1.0f, 1.0f, 1.0f)) * 0.5f;\n    var _S9 : vec4<f32> = vec4<f32>(_S8[i32(0)], _S8[i32(1)]);\n    var _S10 : mat2x2<f32>;\n    _S10[i32(0)] = _S9.xy;\n    _S10[i32(1)] = _S9.zw;\n    return vec4<f32>(_S10[i32(0)].x, _S10[i32(0)].y, _S10[i32(1)].x, mat2x2<f32>(3.0f, 3.0f, 3.0f, 3.0f)[i32(1)].y);\n}\n\nfn makeMatrix_0( calls_4 : ptr<function, i32>) -> mat2x2<f32>\n{\n    (*calls_4) = (*calls_4) + i32(1);\n    return mat2x2<f32>(1.0f, 2.0f, 3.0f, 4.0f);\n}\n\nfn makeVector_0( calls_5 : ptr<function, i32>) -> vec4<f32>\n{\n    (*calls_5) = (*calls_5) + i32(1);\n    return vec4<f32>(5.0f, 6.0f, 7.0f, 8.0f);\n}\n\nfn conversions_0() -> f32\n{\n    var calls_6 : i32 = i32(0);\n    var _S11 : mat2x2<f32> = makeMatrix_0(&(calls_6));\n    var _S12 : vec4<f32> = vec4<f32>(_S11[i32(0)], _S11[i32(1)]);\n    var _S13 : vec4<f32> = makeVector_0(&(calls_6));\n    var _S14 : mat2x2<f32>;\n    _S14[i32(0)] = _S13.xy;\n    _S14[i32(1)] = _S13.zw;\n    return f32(calls_6 * i32(10)) + _S12.y + _S14[i32(1)].y + vec2<f32>(vec2<i32>(i32(1), i32(2))).y + 1.0f;\n}\n\nfn mandatoryReturn_0() -> i32\n{\n    return i32(5);\n}\n\n@compute\n@workgroup_size(1, 1, 1)\nfn main()\n{\n    results_0[i32(0)] = control_0(i32(0));\n    results_0[i32(1)] = control_0(i32(1));\n    results_0[i32(2)] = control_0(i32(3));\n    results_0[i32(3)] = f32(clauses_0(i32(0)));\n    results_0[i32(4)] = f32(clauses_0(i32(1)));\n    results_0[i32(5)] = f32(clauses_0(i32(2)));\n    results_0[i32(6)] = f32(clauses_0(i32(3)));\n    results_0[i32(7)] = f32(postTest_0());\n    results_0[i32(8)] = f32(choose_0(i32(1)));\n    results_0[i32(9)] = f32(choose_0(i32(3)));\n    var _S15 : vec4<f32> = numeric_0();\n    results_0[i32(10)] = _S15.x;\n    results_0[i32(11)] = _S15.y;\n    results_0[i32(12)] = _S15.z;\n    results_0[i32(13)] = _S15.w;\n    var _S16 : vec4<f32> = matrices_0();\n    results_0[i32(18)] = 255.0f;\n    results_0[i32(19)] = 15.0f;\n    results_0[i32(20)] = 15.0f;\n    results_0[i32(21)] = 1.0f;\n    results_0[i32(22)] = conversions_0();\n    results_0[i32(25)] = f32(mandatoryReturn_0());\n    results_0[i32(23)] = 9.0f;\n    results_0[i32(24)] = 7.0f;\n    results_0[i32(14)] = _S16.x;\n    results_0[i32(15)] = _S16.y;\n    results_0[i32(16)] = _S16.z;\n    results_0[i32(17)] = _S16.w;\n    return;\n}\n\n",
+      "reflection": {
+        "version": "1.1",
+        "parameters": [
+          {
+            "name": "results",
+            "binding": {
+              "kind": "descriptorTableSlot",
+              "index": 0
+            },
+            "type": {
+              "kind": "resource",
+              "baseShape": "structuredBuffer",
+              "access": "readWrite",
+              "resultType": {
+                "kind": "scalar",
+                "scalarType": "float32",
+                "sizes": [
+                  {
+                    "kind": "uniform",
+                    "value": 4,
+                    "alignment": 4
+                  }
+                ]
+              },
+              "sizes": [
+                {
+                  "kind": "descriptorTableSlot",
+                  "value": 1
+                }
+              ]
+            }
+          }
+        ],
+        "globalScope": {
+          "kind": "none",
+          "parameters": [
+            {
+              "name": "results",
+              "binding": {
+                "kind": "descriptorTableSlot",
+                "index": 0
+              },
+              "type": {
+                "kind": "resource",
+                "baseShape": "structuredBuffer",
+                "access": "readWrite",
+                "resultType": {
+                  "kind": "scalar",
+                  "scalarType": "float32",
+                  "sizes": [
+                    {
+                      "kind": "uniform",
+                      "value": 4,
+                      "alignment": 4
+                    }
+                  ]
+                },
+                "sizes": [
+                  {
+                    "kind": "descriptorTableSlot",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "entryPoints": [
+          {
+            "name": "main",
+            "stage": "compute",
+            "scope": {
+              "kind": "none",
+              "parameters": []
+            },
+            "threadGroupSize": [
+              1,
+              1,
+              1
+            ],
+            "bindings": [
+              {
+                "name": "results",
+                "binding": {
+                  "kind": "descriptorTableSlot",
+                  "index": 0,
+                  "used": 1
+                }
+              }
+            ]
+          }
+        ],
+        "bindlessSpaceIndex": 1
+      }
+    },
     "matrix": {
       "source": "\n[vk::binding(0, 0)] RWStructuredBuffer<float> values;\n[shader(\"compute\")]\n[numthreads(1, 1, 1)]\nvoid computeMain() {\n  float2x3 transform = float2x3(1, 2, 3, 4, 5, 6);\n  float2 projected = mul(transform, float3(1, 2, 3));\n  float3 transposed = mul(float2(1, 2), transform);\n  values[0] = projected.x;\n  values[1] = projected.y;\n  values[2] = transposed.x;\n  values[3] = transposed.y;\n  values[4] = transposed.z;\n}\n",
       "entryPoint": "computeMain",

@@ -122,6 +122,14 @@ Target Release Date: Q3, 2026
 
 - **Attach to application-created `GPUDevice`s** - `luma.attachDevice(gpuDevice, {adapters: [webgpuAdapter]})` and `webgpuAdapter.attach(gpuDevice)` wrap an existing WebGPU device, so an application and deck.gl can share one device with the application's requested limits and features. `device.destroy()` leaves the `GPUDevice` usable; the application destroys it.
 
+### Slang everyday language
+
+The private Slang module adds `switch` with grouped labels and fallthrough, `do`/`while`, inferred
+mutable `var` and immutable `let` locals, numeric scalar/vector promotion, vector comparisons,
+integer shifts, floating-point remainder and component-wise matrix arithmetic. Matrix constructors
+support scalar broadcast, row vectors and matching matrices. GPU tests compare these features with
+upstream-generated WGSL and exercise GLSL ES 300. The optional compiler still has no runtime dependencies.
+
 ### Slang compute and textures
 
 The private Slang authoring module now supports integer atomics, byte-address buffers, synchronization
