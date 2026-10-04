@@ -945,19 +945,21 @@ export class SplatRenderer {
       }
       const evaluatedColorBuffer = this.evaluatedColorBuffers[run.batchIndex];
       const usesEvaluatedColors = this.usesFloatWebGLColors && Boolean(evaluatedColorBuffer);
-      this.model.setAttributes(
-        Object.fromEntries(
-          Object.entries(batch.gpuData).map(([name, data]) => [
-            name,
-            run.attributeBuffers?.[name] ??
-              (name === 'colors' && usesEvaluatedColors && evaluatedColorBuffer
-                ? evaluatedColorBuffer
-                : name === 'opacities'
-                  ? this.getBatchOpacityBuffer(run.batchIndex)
-                  : data.buffer)
-          ])
-        )
-      );
+      const attributes: Record<string, GPUData['buffer']> = {};
+      const byteOffsets: Record<string, number> = {};
+      for (const [name, data] of Object.entries(batch.gpuData)) {
+        const buffer =
+          run.attributeBuffers?.[name] ??
+          (name === 'colors' && usesEvaluatedColors && evaluatedColorBuffer
+            ? evaluatedColorBuffer
+            : name === 'opacities'
+              ? this.getBatchOpacityBuffer(run.batchIndex)
+              : data.buffer);
+        attributes[name] = buffer;
+        // Sorted and evaluated buffers start at zero; source views retain their offset.
+        byteOffsets[name] = buffer === data.buffer ? data.byteOffset : 0;
+      }
+      this.model.setAttributes(attributes, {byteOffsets});
       this.model.setInstanceCount(run.rowIndices.length);
       drawSuccess = this.model.draw(renderPass) && drawSuccess;
     }

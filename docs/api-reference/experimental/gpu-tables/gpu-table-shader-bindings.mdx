@@ -31,6 +31,7 @@ const model = new Model(device, {
 });
 
 for (const batch of prepared.batches) {
+  if (batch.numRows === 0) continue;
   model.setAttributes(batch.attributes, {byteOffsets: batch.attributeByteOffsets});
   model.setBindings(batch.bindings);
   model.setConstantAttributes(prepared.constantAttributes);
@@ -70,12 +71,16 @@ object lifetime. Use `updateBindings()` to replace only the table.
 
 ```ts
 type GPUTableShaderBindingBatch = {
+  numRows: number;
   attributes: Record<string, Buffer | DynamicBuffer>;
   attributeBuffers: Array<Buffer | DynamicBuffer>;
   attributeByteOffsets: Record<string, number>;
   bindings: Record<string, Binding>;
 };
 ```
+
+`numRows` is the source batch row count. Skip zero-row batches before setting bindings,
+because WebGPU rejects zero-size storage ranges.
 
 `attributeBuffers` follows `bufferLayout` order. `attributes` exposes the same
 resources by logical layout name. `attributeByteOffsets` uses the same names and holds

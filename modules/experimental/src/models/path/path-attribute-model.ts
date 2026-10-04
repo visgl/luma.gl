@@ -12,7 +12,7 @@ import {
 import {GPUTableModel, type GPUTableModelProps} from '@luma.gl/experimental/gpu-tables';
 import type {GPUTable} from '@luma.gl/experimental/gpu-tables';
 import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {getGPUDataBuffersForLayout} from '@luma.gl/gpgpu/gpu-data';
+import {getGPUDataBuffersForLayout, getGPUDataByteOffsetsForLayout} from '@luma.gl/gpgpu/gpu-data';
 import {isVertexListGPUVectorFormat, type VertexList} from '@luma.gl/gpgpu/gpu-data';
 import type {GeneratedBufferBatch} from '@luma.gl/experimental/gpu-tables';
 import {type GPUInputSchema, validateGPUInputVectors} from '@luma.gl/experimental/gpu-tables';
@@ -263,23 +263,38 @@ export class PathAttributeModel extends GPUTableModel {
     try {
       for (const [batchIndex, renderBatch] of this.renderBatches.entries()) {
         const tableBatch = tableBatches[batchIndex];
-        this.setAttributes({
-          ...(tableBatch
-            ? getGPUDataBuffersForLayout(tableBatch.bufferLayout, tableBatch.gpuData)
-            : {}),
-          ...getPathAttributeModelBatchAttributes(this.pathShaderLayout, renderBatch)
-        });
+        this.setAttributes(
+          {
+            ...(tableBatch
+              ? getGPUDataBuffersForLayout(tableBatch.bufferLayout, tableBatch.gpuData)
+              : {}),
+            ...getPathAttributeModelBatchAttributes(this.pathShaderLayout, renderBatch)
+          },
+          {
+            byteOffsets: tableBatch
+              ? getGPUDataByteOffsetsForLayout(tableBatch.bufferLayout, tableBatch.gpuData)
+              : {}
+          }
+        );
         this.setInstanceCount(renderBatch.segmentCount);
         drawSuccess = super.draw(renderPass) && drawSuccess;
       }
     } finally {
-      this.setAttributes({
-        ...getPathTableAttributes(this.table),
-        ...getPathAttributeModelAttributes(this.pathShaderLayout, {
-          expandedPathVertexData: this.expandedPathVertexData,
-          pathViewOriginData: this.pathViewOriginData
-        })
-      });
+      const firstBatch = this.table?.batches[0];
+      this.setAttributes(
+        {
+          ...getPathTableAttributes(this.table),
+          ...getPathAttributeModelAttributes(this.pathShaderLayout, {
+            expandedPathVertexData: this.expandedPathVertexData,
+            pathViewOriginData: this.pathViewOriginData
+          })
+        },
+        {
+          byteOffsets: firstBatch
+            ? getGPUDataByteOffsetsForLayout(firstBatch.bufferLayout, firstBatch.gpuData)
+            : {}
+        }
+      );
       this.setInstanceCount(this.segmentLayout.segmentCount);
     }
 
