@@ -9,6 +9,8 @@ import {
   createSkyObserver,
   getSunPosition,
   getMoonPosition,
+  getMoonIllumination,
+  getMoonLight,
   getSkyDirection,
   skyDirectionToGlobe
 } from '@math.gl/sun';
@@ -116,9 +118,27 @@ export function createGlobeCloudScene(
       getSkyDirection(position.altitude, position.azimuth),
       observer
     );
+    const moon = getMoonPosition(timestamp, observer.latitude, observer.longitude);
+    const illumination = getMoonIllumination(timestamp);
+    const moonDirection = skyDirectionToGlobe(
+      getSkyDirection(moon.altitude, moon.azimuth),
+      observer
+    );
+    // Evaluate a zenith reference; each surface normal determines its own lunar horizon.
+    const moonlight = getMoonLight(Math.PI / 2, {
+      phaseAngle: Math.acos(2 * illumination.fraction - 1),
+      distance: moon.distance
+    });
     deck.setProps({
       layers: [
-        new EarthLayer({id: 'earth', texture: earthTexture.texture, sunDirection}),
+        new EarthLayer({
+          id: 'earth',
+          texture: earthTexture.texture,
+          sunDirection,
+          moonDirection,
+          moonColor: [moonlight.color[0] * 0.7, moonlight.color[1] * 0.82, moonlight.color[2]],
+          moonIntensity: moonlight.intensity * 0.18
+        }),
         new SkyLayer({
           id: 'sky',
           timestamp,

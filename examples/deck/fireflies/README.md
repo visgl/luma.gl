@@ -1,11 +1,8 @@
-# Riverfront fireflies
+# Riverfront lights and fireflies
 
-GPU wandering and independent bioluminescence over calm, reflective river water. Emitters and their reflections share a warm yellow-green RGB approximation of *Photinus pyralis* flashes (reported peak emission around 558–568 nm: https://doi.org/10.1186/s12862-018-1251-9). This is a display approximation, not a spectral simulation. Multiscale bloom has an independent strength control; optional ripples start at zero.
+Warm lampposts line the west bank; small animated fireflies wander along the east bank.
+Both reflect in the same calm river-water material used by the water example.
 
-Run `yarn workspace luma.gl-examples-deck-fireflies start`. The website route is `/examples/deck/fireflies`.
-
-Uses the shared `riverfront-lighting-scene.ts` fixture and one `SceneBufferEffect` for scene-linear `rgba16float` color, opaque depth, view normals/roughness and `rg16float` current-minus-previous UV motion. `SceneShaderPassEffect` binds these borrowed textures to existing luma.gl graphs and coordinates history invalidation. Camera motion is reconstructed from depth; firefly cores additionally write object motion. Resize and Center invalidate history, and pause settles a bounded number of frames before becoming idle.
-
-The complete shared-buffer graphs require WebGPU; the Device selector and support metadata expose that requirement. `FireflyLayer` itself supports WebGL2 and WebGPU. Global illumination and shaft occlusion depend on visible screen-space geometry and cannot include hidden or off-screen emitters/occluders. These examples do not add geometric light shadows. The Fireflies example adds planar emitter reflections clipped to the river, using the existing river-water material for optional surface ripples; it does not reflect the rest of the scene. Fireflies and HDR night lighting request floating-point, extended-range display output on HDR-capable displays and otherwise tone-map to SDR.
-
-Species selects a display tint shared by emitters and reflections; it does not simulate species-specific flashing behavior. Options are *Photinus pyralis* (default yellow-green, [558–568 nm](https://doi.org/10.1186/s12862-018-1251-9)), Genji hotaru (*Nipponoluciola cruciata*, formerly *Luciola cruciata*: [yellow-green, about 560 nm](https://www.sciencedirect.com/science/article/abs/pii/S0378111909000584)), *Photuris versicolor* ([green, 552 nm](https://doi.org/10.1016/0022-1910(81)90097-4)), and *Photinus scintillans* ([yellow-orange luciferase emission, 574 nm](https://pmc.ncbi.nlm.nih.gov/articles/PMC6810810/)). These reported peaks guide artistic RGB approximations; color also varies across populations and measurement conditions.
+The two existing example URLs share one implementation. WebGPU adds HDR bloom and
+shared scene-buffer inspection; WebGL2 renders additive sprites and the same planar mirrors.
+Species changes the firefly emission tint without changing the lampposts.

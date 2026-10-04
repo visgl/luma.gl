@@ -42,11 +42,11 @@ export class SkyLayer extends CompositeLayer<SkyLayerProps> {
     timestamp: undefined,
     observer: undefined,
     time: 0,
-    sun: true,
-    moon: true,
-    stars: true,
-    clouds: true,
-    atmosphere: true,
+    sun: {type: 'object', value: true, compare: 1},
+    moon: {type: 'object', value: true, compare: 1},
+    stars: {type: 'object', value: true, compare: 1},
+    clouds: {type: 'object', value: true, compare: 1},
+    atmosphere: {type: 'object', value: true, compare: 1},
     pickable: false
   };
   override shouldUpdateState({changeFlags}: UpdateParameters<this>): boolean {

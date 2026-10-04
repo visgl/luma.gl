@@ -25,7 +25,7 @@ import {
 import {getMeterOffsetPosition} from '@deck.gl-community/gpu-layers';
 import {makeCityMesh, type CityFeature} from '../river-district-data';
 import {RiverfrontShadowEffect} from './shadow-effect';
-import {getRiverfrontSun} from './sun';
+import {getRiverfrontSkyLighting} from '../riverfront-sky-lighting';
 
 type ShadowDistrictLayerProps = LayerProps & {
   features: readonly CityFeature[];
@@ -112,7 +112,7 @@ export class ShadowDistrictLayer extends Layer<ShadowDistrictLayerProps> {
   override draw({renderPass}: {renderPass: RenderPass}): void {
     const effect = this.props.shadowEffect;
     if (!effect.shadowProps) return;
-    const sun = getRiverfrontSun(effect.settings.hour);
+    const skyLighting = getRiverfrontSkyLighting(effect.settings.hour, this.props.clouds().cover);
     this.state.model?.shaderInputs.setProps({
       shadow: effect.shadowProps,
       clouds: {...clouds.defaultUniforms, ...this.props.clouds()},
@@ -126,18 +126,7 @@ export class ShadowDistrictLayer extends Layer<ShadowDistrictLayerProps> {
         )
       },
       lambertMaterial: {ambient: 0.3, diffuse: 0.85},
-      lighting: {
-        enabled: true,
-        lights: [
-          {type: 'ambient', color: [218, 233, 255], intensity: 1},
-          {
-            type: 'directional',
-            color: sun.color,
-            intensity: sun.direction[2] > 0 ? 1 : 0,
-            direction: sun.direction.map(value => -value)
-          }
-        ]
-      }
+      lighting: skyLighting.lights
     });
     this.state.model?.draw(renderPass);
   }

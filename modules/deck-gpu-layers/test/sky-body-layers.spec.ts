@@ -188,6 +188,17 @@ test.each(['webgpu', 'webgl'] as const)(
         .layerManager!.getLayers()
         .find((layer): layer is StarfieldLayer => layer instanceof StarfieldLayer)!;
       const starBuffer = starLayer.state.stars;
+      const neutralStars = await readFrame([
+        composite.clone({stars: {brightness: 8, colorStrength: 0}})
+      ]);
+      const coloredStars = await readFrame([
+        composite.clone({stars: {brightness: 8, colorStrength: 1}})
+      ]);
+      expect(
+        neutralStars.some((value, index) => value !== coloredStars[index]),
+        'spectral tint is adjustable'
+      ).toBe(true);
+      expect(starLayer.state.stars, 'tint updates reuse catalog buffers').toBe(starBuffer);
       await readFrame([composite]);
       expect(starBuffer.destroyed, 'disabled stars release their GPU buffers').toBe(true);
       await readFrame([sun.clone()]);

@@ -19,3 +19,7 @@ the atmosphere restores the previous sky background. Sky layers share one camera
 The local spherical model omits multiple scattering, ozone and cloud shadows inside the atmosphere.
 
 Run `yarn start`, `yarn build`, or `yarn test:visual` in this folder. The website entry is `/examples/deck/soft-shadows`.
+
+At night, moonlight follows lunar position, phase and distance, with an illustrative
+exposure lift for readability. Lunar shadows are deliberately weak and soft. The
+atmosphere ground color uses the same surface color as the district receiver.

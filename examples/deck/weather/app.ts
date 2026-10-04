@@ -25,10 +25,11 @@ import {
 } from '@deck.gl-community/gpu-layers';
 import {CITY_ORIGIN, makeCityFeatures, type CityFeature} from '../river-district-data';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
-import {createSkyObserver, getSunLight, getMoonPosition, getSkyDirection} from '@math.gl/sun';
+import {createSkyObserver, getMoonPosition, getSkyDirection} from '@math.gl/sun';
 import {getRiverfrontSun, DEFAULT_HOUR} from '../soft-shadows/sun';
 import {getSkyCameraState, SKY_FIELD_OF_VIEW} from '../soft-shadows/sky-camera';
 import {RiverDistrictLayer} from '../river-district-layer';
+import {getRiverfrontSkyLighting} from '../riverfront-sky-lighting';
 
 export type WeatherPreset = 'clear' | 'rain' | 'snow';
 const SURFACE_BOUNDS: [number, number, number, number] = [-700, -900, 700, 900];
@@ -185,37 +186,14 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
       puddles: surfaceSettings.puddles
     };
   }
+  function getSkyLighting() {
+    return getRiverfrontSkyLighting(hour, cloudsEnabled ? (preset === 'clear' ? 0.25 : 0.65) : 0);
+  }
   function getDaylight() {
-    return getSunLight(getRiverfrontSun(hour).altitude, {
-      cloudCover: cloudsEnabled ? (preset === 'clear' ? 0.25 : 0.65) : 0
-    });
+    return getSkyLighting().sunlight;
   }
   function getLighting(): LightingProps {
-    const sun = getRiverfrontSun(hour);
-    const light = getDaylight();
-    return {
-      enabled: true,
-      lights: [
-        {
-          type: 'ambient',
-          color:
-            light.diffuse.intensity > 0
-              ? [
-                  light.diffuse.color[0] * 255,
-                  light.diffuse.color[1] * 255,
-                  light.diffuse.color[2] * 255
-                ]
-              : [255, 255, 255],
-          intensity: 0.12 + light.diffuse.intensity * 1.8
-        },
-        {
-          type: 'directional',
-          color: [light.color[0] * 255, light.color[1] * 255, light.color[2] * 255],
-          intensity: light.intensity,
-          direction: [-sun.direction[0], -sun.direction[1], -sun.direction[2]]
-        }
-      ]
-    };
+    return getSkyLighting().lights;
   }
   function updateLayers(redraw = true) {
     if (!surfaceTexture) return;
@@ -238,7 +216,7 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
           atmosphere: {
             sunIntensity: 10 * getDaylight().intensity,
             haze: preset === 'clear' ? 1 : 2,
-            groundColor: getFog().color
+            groundColor: features.find(feature => feature.kind === 'ground')!.color
           }
         }),
         new RiverDistrictLayer({

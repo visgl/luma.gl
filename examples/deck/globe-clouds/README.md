@@ -1,4 +1,4 @@
-# Globe cloud cover
+# Globe weather
 
 A deck.gl GlobeView scene with an animated, ray-marched spherical cloud shell on WebGPU and WebGL2.
 
