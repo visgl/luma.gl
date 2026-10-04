@@ -10,6 +10,7 @@ import {chromium} from 'playwright';
 import {PNG} from 'pngjs';
 import {createServer} from 'vite';
 import {getPlaywrightLaunchOptions} from '../../../../scripts/playwright/get-playwright-launch-options.mjs';
+import {setVisualTestPixelScale, captureVisualTestScreenshot} from '../../../../scripts/playwright/visual-test-utils.mjs';
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const server = await createServer({root, logLevel: 'error', server: {host: '127.0.0.1', port: 0}});
 await server.listen();
@@ -44,6 +45,7 @@ try {
     );
     try {
       const page = await browser.newPage({viewport: {width: 1100, height: 800}});
+      const captureScreenshot = options => captureVisualTestScreenshot(page, options);
       const errors = [];
       page.on('pageerror', error => {
         errors.push(error.message);
@@ -62,14 +64,15 @@ try {
         timeout: 60_000
       });
       await page.waitForFunction(() => window.weatherScene?.diagnostics.frames > 2);
+      await setVisualTestPixelScale(page, 'weatherScene', process.env.WEATHER_THUMBNAIL ? 1 : undefined);
       assert.equal(await page.inputValue('#preset'), 'rain', `${backend}: opens with rain enabled`);
       assert(await page.isChecked('#fog-enabled'), `${backend}: opens with independent fog enabled`);
       assert.equal(await page.inputValue('#visibility'), '700', `${backend}: fog is apparent by default`);
-      await page.screenshot({path: join(tmpdir(), `weather-default-${backend}.png`)});
-      const defaultFogStart = PNG.sync.read(await page.screenshot());
+      await captureScreenshot({path: join(tmpdir(), `weather-default-${backend}.png`)});
+      const defaultFogStart = PNG.sync.read(await captureScreenshot());
       const defaultFogTime = await page.evaluate(() => window.weatherScene.diagnostics.time);
       await page.waitForTimeout(2500);
-      const defaultFogEnd = PNG.sync.read(await page.screenshot({path: join(tmpdir(), `weather-default-moving-${backend}.png`)}));
+      const defaultFogEnd = PNG.sync.read(await captureScreenshot({path: join(tmpdir(), `weather-default-moving-${backend}.png`)}));
       const defaultFogChanges = changedPixels(defaultFogStart, defaultFogEnd, 8);
       const defaultFogElapsed = await page.evaluate(() => window.weatherScene.diagnostics.time) - defaultFogTime;
       console.log(`${backend}: default fog changes ${defaultFogChanges} pixels in ${defaultFogElapsed.toFixed(2)} simulation seconds`);
@@ -91,11 +94,11 @@ try {
         await page.selectOption('#preset', preset);
         await page.uncheck('#fog-enabled');
         await page.waitForTimeout(150);
-        const withoutFog = PNG.sync.read(await page.screenshot());
+        const withoutFog = PNG.sync.read(await captureScreenshot());
         assert(await page.isDisabled('#visibility'), `${backend}: disabled fog dims its controls`);
         await page.check('#fog-enabled');
         await page.waitForTimeout(150);
-        assert(changedPixels(withoutFog, PNG.sync.read(await page.screenshot())) > 10000,
+        assert(changedPixels(withoutFog, PNG.sync.read(await captureScreenshot())) > 10000,
           `${backend}: fog toggles independently with ${preset}`);
         assert.equal(await page.inputValue('#preset'), preset, `${backend}: fog preserves weather choice`);
         assert.equal(await page.inputValue('#visibility'), '700', `${backend}: fog retains visibility`);
@@ -120,35 +123,35 @@ try {
         timeout: 30_000
       });
       assert.equal(await page.evaluate(() => window.weatherScene.diagnostics.error), '', `${backend}: scene initialization`);
-      const moving = PNG.sync.read(await page.screenshot());
+      const moving = PNG.sync.read(await captureScreenshot());
       await page.waitForTimeout(350);
       assert(
-        changedPixels(moving, PNG.sync.read(await page.screenshot())) > 200,
+        changedPixels(moving, PNG.sync.read(await captureScreenshot())) > 200,
         `${backend}: rain moves`
       );
       await page.uncheck('#playing');
       await page.waitForTimeout(150);
       const paused = PNG.sync.read(
-        await page.screenshot({path: join(tmpdir(), `weather-rain-${backend}.png`)})
+        await captureScreenshot({path: join(tmpdir(), `weather-rain-${backend}.png`)})
       );
       await page.waitForTimeout(250);
       assert.equal(
-        changedPixels(paused, PNG.sync.read(await page.screenshot())),
+        changedPixels(paused, PNG.sync.read(await captureScreenshot())),
         0,
         `${backend}: pause freezes precipitation`
       );
       if (process.env.WEATHER_THUMBNAIL && backend === 'webgpu')
-        await page.screenshot({path: process.env.WEATHER_THUMBNAIL, type: 'jpeg', quality: 90});
+        await captureScreenshot({path: process.env.WEATHER_THUMBNAIL, type: 'jpeg', quality: 90});
       await page.selectOption('#preset', 'snow');
       await page.waitForTimeout(150);
       const snow = PNG.sync.read(
-        await page.screenshot({path: join(tmpdir(), `weather-snow-${backend}.png`)})
+        await captureScreenshot({path: join(tmpdir(), `weather-snow-${backend}.png`)})
       );
       assert(changedPixels(paused, snow) > 500, `${backend}: snow differs from rain`);
       await page.check('#playing');
       await page.waitForTimeout(350);
       assert(
-        changedPixels(snow, PNG.sync.read(await page.screenshot())) > 200,
+        changedPixels(snow, PNG.sync.read(await captureScreenshot())) > 200,
         `${backend}: snow drifts`
       );
       await page.uncheck('#playing');
@@ -175,7 +178,7 @@ try {
         });
       });
       await page.waitForTimeout(150);
-      const normalDepth = PNG.sync.read(await page.screenshot());
+      const normalDepth = PNG.sync.read(await captureScreenshot());
       await page.evaluate(() => {
         const scene = window.weatherScene;
         scene.deck.setProps({
@@ -187,7 +190,7 @@ try {
         });
       });
       await page.waitForTimeout(150);
-      const occludedPixels = changedPixels(normalDepth, PNG.sync.read(await page.screenshot({path: join(tmpdir(), `weather-depth-always-${backend}.png`)})));
+      const occludedPixels = changedPixels(normalDepth, PNG.sync.read(await captureScreenshot({path: join(tmpdir(), `weather-depth-always-${backend}.png`)})));
       assert(occludedPixels > 50, `${backend}: opaque scene depth hides snow (${occludedPixels} pixels)`);
       await page.evaluate(() =>
         window.weatherScene.deck.setProps({layers: window.originalWeatherLayers})
@@ -232,13 +235,13 @@ try {
       await page.selectOption('#preset', 'clear');
       await page.evaluate(() => window.weatherScene.setVisibility(5000));
       await page.waitForTimeout(150);
-      const thinFog = PNG.sync.read(await page.screenshot());
+      const thinFog = PNG.sync.read(await captureScreenshot());
       await page.evaluate(() => window.weatherScene.setVisibility(300));
       await page.waitForTimeout(150);
       assert(
         changedPixels(
           thinFog,
-          PNG.sync.read(await page.screenshot({path: join(tmpdir(), `weather-fog-${backend}.png`)}))
+          PNG.sync.read(await captureScreenshot({path: join(tmpdir(), `weather-fog-${backend}.png`)}))
         ) > 10000,
         `${backend}: visibility changes world-space fog`
       );
@@ -250,39 +253,39 @@ try {
         scene.setTime(0);
       });
       await page.waitForTimeout(150);
-      const uniformFog = PNG.sync.read(await page.screenshot());
+      const uniformFog = PNG.sync.read(await captureScreenshot());
       await page.evaluate(() => window.weatherScene.setFogVariation(0.85));
       await page.waitForTimeout(150);
-      const wispyFog = PNG.sync.read(await page.screenshot({path: join(tmpdir(), `weather-wisps-${backend}.png`)}));
+      const wispyFog = PNG.sync.read(await captureScreenshot({path: join(tmpdir(), `weather-wisps-${backend}.png`)}));
       assert(changedPixels(uniformFog, wispyFog) > 1000, `${backend}: fog density varies spatially`);
       await page.evaluate(() => {
         window.fogDistrictModel = window.weatherScene.deck.layerManager.getLayers().find(layer => layer.id === 'district').state.model;
         window.weatherScene.setTime(40);
       });
       await page.waitForTimeout(150);
-      const driftedFog = PNG.sync.read(await page.screenshot({path: join(tmpdir(), `weather-wisps-drifted-${backend}.png`)}));
+      const driftedFog = PNG.sync.read(await captureScreenshot({path: join(tmpdir(), `weather-wisps-drifted-${backend}.png`)}));
       assert(changedPixels(wispyFog, driftedFog) > 1000, `${backend}: wisps advect through the scene`);
       await page.waitForTimeout(200);
-      assert.equal(changedPixels(driftedFog, PNG.sync.read(await page.screenshot())), 0, `${backend}: pause freezes fog`);
+      assert.equal(changedPixels(driftedFog, PNG.sync.read(await captureScreenshot())), 0, `${backend}: pause freezes fog`);
       await page.evaluate(() => window.weatherScene.setTime(0));
       await page.waitForTimeout(150);
-      assert.equal(changedPixels(wispyFog, PNG.sync.read(await page.screenshot())), 0, `${backend}: fog reset is deterministic`);
+      assert.equal(changedPixels(wispyFog, PNG.sync.read(await captureScreenshot())), 0, `${backend}: fog reset is deterministic`);
       // The image must move during playback, not only after an explicit time/slider change.
       await page.evaluate(() => window.weatherScene.setFogSpeed(3));
       await page.waitForTimeout(150);
-      const liveFogStart = PNG.sync.read(await page.screenshot());
+      const liveFogStart = PNG.sync.read(await captureScreenshot());
       await page.check('#playing');
       await page.waitForFunction(() => window.weatherScene.diagnostics.time > 2.5, undefined, {timeout: 30000});
-      const liveFogChanges = changedPixels(liveFogStart, PNG.sync.read(await page.screenshot()), 3);
+      const liveFogChanges = changedPixels(liveFogStart, PNG.sync.read(await captureScreenshot()), 3);
       assert(liveFogChanges > 1000, `${backend}: fog visibly animates over 2.5 seconds (${liveFogChanges} pixels)`);
       assert(await page.evaluate(() => window.weatherScene.deck.props._animate), `${backend}: fog alone schedules animation`);
       assert(await page.evaluate(() => window.fogDistrictModel === window.weatherScene.deck.layerManager.getLayers().find(layer => layer.id === 'district').state.model), `${backend}: fog animation reuses district geometry`);
       await page.uncheck('#playing');
       await page.waitForTimeout(150);
-      const beforeSpeedChange = PNG.sync.read(await page.screenshot());
+      const beforeSpeedChange = PNG.sync.read(await captureScreenshot());
       await page.evaluate(() => window.weatherScene.setFogSpeed(9));
       await page.waitForTimeout(150);
-      assert.equal(changedPixels(beforeSpeedChange, PNG.sync.read(await page.screenshot()), 1), 0, `${backend}: changing drift speed does not jump paused fog`);
+      assert.equal(changedPixels(beforeSpeedChange, PNG.sync.read(await captureScreenshot()), 1), 0, `${backend}: changing drift speed does not jump paused fog`);
       await page.check('#playing');
       await page.evaluate(() => window.weatherScene.setFogSpeed(0));
       await page.waitForTimeout(250);
@@ -294,7 +297,7 @@ try {
       await page.selectOption('#preset', 'snow');
       await page.evaluate(() => window.weatherScene.setVisibility(3000));
       await page.waitForTimeout(200);
-      const globe = PNG.sync.read(await page.screenshot({path: join(tmpdir(), `weather-globe-${backend}.png`)}));
+      const globe = PNG.sync.read(await captureScreenshot({path: join(tmpdir(), `weather-globe-${backend}.png`)}));
       const localCamera = await page.evaluate(() => {
         const layer = window.weatherScene.deck.layerManager.getLayers().find(layer => layer.id === 'weather');
         return Array.from(layer.state.model.shaderInputs.getUniformValues().weatherRender.cameraPosition);
@@ -302,7 +305,7 @@ try {
       assert(localCamera.every(Number.isFinite) && Math.hypot(...localCamera) < 10000, `${backend}: globe camera is local metres`);
       await page.evaluate(() => window.weatherScene.setIntensity(0));
       await page.waitForTimeout(150);
-      assert(changedPixels(globe, PNG.sync.read(await page.screenshot())) > 200, `${backend}: snow remains visible on the globe`);
+      assert(changedPixels(globe, PNG.sync.read(await captureScreenshot())) > 200, `${backend}: snow remains visible on the globe`);
       await page.evaluate(() => window.weatherScene.setIntensity(0.6));
       await page.evaluate(() => window.weatherScene.setProjection('map'));
       await page.selectOption('#preset', 'snow');
@@ -311,7 +314,7 @@ try {
         window.weatherScene.setIntensity(0);
       });
       await page.waitForTimeout(150);
-      const noParticles = PNG.sync.read(await page.screenshot());
+      const noParticles = PNG.sync.read(await captureScreenshot());
       await page.evaluate(() => {
         const scene = window.weatherScene;
         const texture = scene.surfaceTexture;
@@ -328,7 +331,7 @@ try {
       });
       await page.waitForTimeout(150);
       assert.equal(
-        changedPixels(noParticles, PNG.sync.read(await page.screenshot())),
+        changedPixels(noParticles, PNG.sync.read(await captureScreenshot())),
         0,
         `${backend}: surface heights suppress covered precipitation`
       );
@@ -337,17 +340,17 @@ try {
       await page.locator('#wetness').fill('0');
       await page.locator('#snow-cover').fill('0');
       await page.waitForTimeout(200);
-      const drySurface = PNG.sync.read(await page.screenshot());
+      const drySurface = PNG.sync.read(await captureScreenshot());
       await page.locator('#wetness').fill('1');
       await page.waitForTimeout(200);
-      assert(changedPixels(drySurface, PNG.sync.read(await page.screenshot())) > 1000, `${backend}: wetness visibly changes surfaces`);
+      assert(changedPixels(drySurface, PNG.sync.read(await captureScreenshot())) > 1000, `${backend}: wetness visibly changes surfaces`);
       await page.locator('#snow-cover').fill('1');
       await page.waitForTimeout(200);
-      const snowySurface = PNG.sync.read(await page.screenshot({path: join(tmpdir(), `weather-snow-cover-${backend}.png`)}));
+      const snowySurface = PNG.sync.read(await captureScreenshot({path: join(tmpdir(), `weather-snow-cover-${backend}.png`)}));
       assert(changedPixels(drySurface, snowySurface) > 1000, `${backend}: snow visibly covers upward-facing surfaces`);
       await page.uncheck('#surface-enabled');
       await page.waitForTimeout(200);
-      assert.equal(changedPixels(drySurface, PNG.sync.read(await page.screenshot())), 0, `${backend}: surface toggle restores dry materials`);
+      assert.equal(changedPixels(drySurface, PNG.sync.read(await captureScreenshot())), 0, `${backend}: surface toggle restores dry materials`);
       await page.check('#surface-enabled');
       await page.selectOption('#preset', 'snow');
       await page.locator('#snow-cover').fill('0.1');
@@ -371,23 +374,23 @@ try {
       await page.locator('#hour').fill('12');
       await page.click('#center');
       await page.waitForTimeout(150);
-      const daylight = PNG.sync.read(await page.screenshot());
+      const daylight = PNG.sync.read(await captureScreenshot());
       await page.locator('#hour').fill('22');
       await page.waitForTimeout(150);
-      assert(changedPixels(daylight, PNG.sync.read(await page.screenshot())) > 10000,
+      assert(changedPixels(daylight, PNG.sync.read(await captureScreenshot())) > 10000,
         `${backend}: astronomy time changes sky and surface lighting`);
       for (const body of ['sun', 'moon']) {
         await page.locator('#hour').fill(body === 'sun' ? '9' : '0');
         await page.click(`#look-${body}`);
         await page.waitForTimeout(150);
-        const visibleBody = PNG.sync.read(await page.screenshot());
+        const visibleBody = PNG.sync.read(await captureScreenshot());
         await page.evaluate(body => {
           const deck = window.weatherScene.deck;
           deck.setProps({layers: deck.props.layers.map(layer =>
             layer.id === 'weather-sky' ? layer.clone({[body]: false}) : layer)});
         }, body);
         await page.waitForTimeout(150);
-        assert(changedPixels(visibleBody, PNG.sync.read(await page.screenshot()), 8) > 100,
+        assert(changedPixels(visibleBody, PNG.sync.read(await captureScreenshot()), 8) > 100,
           `${backend}: Look at ${body} reveals the celestial disk`);
       }
       await page.click('#center');

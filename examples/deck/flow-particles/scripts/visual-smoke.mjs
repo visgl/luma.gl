@@ -9,6 +9,7 @@ import {chromium} from 'playwright';
 import {PNG} from 'pngjs';
 import {createServer} from 'vite';
 import {getPlaywrightLaunchOptions} from '../../../../scripts/playwright/get-playwright-launch-options.mjs';
+import {setVisualTestPixelScale, captureVisualTestScreenshot} from '../../../../scripts/playwright/visual-test-utils.mjs';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const server = await createServer({root, logLevel: 'error', server: {host: '127.0.0.1', port: 0}});
@@ -41,16 +42,18 @@ try {
         ? {args: ['--enable-gpu', '--enable-features=Vulkan', '--use-vulkan=swiftshader']} : {}}));
     try {
       const page = await browser.newPage({viewport: {width: 1100, height: 800}});
+      const captureScreenshot = options => captureVisualTestScreenshot(page, options);
       const errors = [];
       page.on('pageerror', error => {errors.push(error.message); console.error(error.message);});
       page.on('console', message => {if (message.type() === 'error') {errors.push(message.text()); console.error(message.text());}});
       await page.goto(`${process.env.FLOW_EXAMPLE_URL || server.resolvedUrls.local[0]}?backend=${backend}`);
       await page.waitForFunction(() => document.body.dataset.ready === 'true', undefined, {timeout: 60_000});
+      await setVisualTestPixelScale(page, 'flowScene', process.env.FLOW_THUMBNAIL ? 1 : undefined);
       try {
         await page.waitForFunction(() => window.flowScene?.diagnostics.frames >= 8);
       } catch (error) {
         console.error(await page.evaluate(() => ({diagnostics: window.flowScene?.diagnostics, status: document.querySelector('#status')?.textContent, animate: window.flowScene?.deck.props._animate})));
-        await page.screenshot({path: join(tmpdir(), `flow-failure-${backend}.png`)});
+        await captureScreenshot({path: join(tmpdir(), `flow-failure-${backend}.png`)});
         throw error;
       }
       assert.equal(await page.evaluate(() => window.flowScene.diagnostics.backend), backend, `${backend}: requested backend is active`);
@@ -75,23 +78,23 @@ try {
         return {samples, mismatches};
       });
       assert.deepEqual(frameSynchronization.mismatches, [], `${backend}: rendered state matches this frame's simulation`);
-      const moving = PNG.sync.read(await page.screenshot());
+      const moving = PNG.sync.read(await captureScreenshot());
       await page.waitForTimeout(500);
-      assert(changedPixels(moving, PNG.sync.read(await page.screenshot())) > 200, `${backend}: particles move`);
+      assert(changedPixels(moving, PNG.sync.read(await captureScreenshot())) > 200, `${backend}: particles move`);
       await page.uncheck('#playing');
       await page.waitForTimeout(100);
-      const paused = PNG.sync.read(await page.screenshot({path: join(tmpdir(), `flow-particles-${backend}.png`)}));
+      const paused = PNG.sync.read(await captureScreenshot({path: join(tmpdir(), `flow-particles-${backend}.png`)}));
       await page.waitForTimeout(250);
-      assert.equal(changedPixels(paused, PNG.sync.read(await page.screenshot())), 0, `${backend}: pause freezes particles`);
+      assert.equal(changedPixels(paused, PNG.sync.read(await captureScreenshot())), 0, `${backend}: pause freezes particles`);
       // At the oblique default camera angle, the river must not hide the tail behind its surface.
       await page.evaluate(() => window.flowScene.setTrail(0));
       await page.waitForTimeout(150);
-      const shortTrails = countParticlePixels(PNG.sync.read(await page.screenshot()));
+      const shortTrails = countParticlePixels(PNG.sync.read(await captureScreenshot()));
       await page.evaluate(() => window.flowScene.setTrail(6));
       await page.waitForTimeout(150);
-      const longTrails = countParticlePixels(PNG.sync.read(await page.screenshot()));
+      const longTrails = countParticlePixels(PNG.sync.read(await captureScreenshot()));
       assert(longTrails > shortTrails * 2, `${backend}: long trails remain visible above the river (${longTrails} vs ${shortTrails} pixels)`);
-      if (process.env.FLOW_THUMBNAIL && backend === 'webgpu') await page.screenshot({path: process.env.FLOW_THUMBNAIL, type: 'jpeg', quality: 90});
+      if (process.env.FLOW_THUMBNAIL && backend === 'webgpu') await captureScreenshot({path: process.env.FLOW_THUMBNAIL, type: 'jpeg', quality: 90});
       await page.evaluate(() => {
         window.borrowedFieldTexture = window.flowScene.fieldAtlas.texture;
         window.originalSimulation = window.flowScene.simulation;
@@ -113,13 +116,13 @@ try {
       assert.deepEqual(await page.evaluate(() => ({time: window.flowScene.diagnostics.fieldTime, updates: window.flowScene.diagnostics.fieldUpdates})), pausedField, `${backend}: pause freezes the changing field`);
       await page.click('#reset');
       await page.waitForTimeout(100);
-      const firstReset = PNG.sync.read(await page.screenshot());
+      const firstReset = PNG.sync.read(await captureScreenshot());
       await page.click('#reset');
       await page.waitForTimeout(100);
-      assert.equal(changedPixels(firstReset, PNG.sync.read(await page.screenshot())), 0, `${backend}: reset restores seeded particles and field time`);
+      assert.equal(changedPixels(firstReset, PNG.sync.read(await captureScreenshot())), 0, `${backend}: reset restores seeded particles and field time`);
       assert.equal(await page.evaluate(() => window.flowScene.diagnostics.fieldTime), 0);
       await page.selectOption('#field', 'river');
-      for (const count of process.env.FLOW_SKIP_TIMING ? [] : [2048, 8192, 32768]) {
+      for (const count of process.env.FLOW_RUN_TIMING === 'true' && !process.env.FLOW_SKIP_TIMING ? [2048, 8192, 32768] : []) {
         await page.selectOption('#count', String(count));
         await page.check('#playing');
         const timing = await page.evaluate(async () => {
@@ -138,7 +141,10 @@ try {
       await page.selectOption('#field', 'eddies');
       await page.selectOption('#field', 'missing');
       await page.selectOption('#field', 'river');
-      await page.selectOption('#count', '2048');
+      for (const count of ['8192', '32768', '2048']) {
+        await page.selectOption('#count', count);
+        assert.equal(await page.evaluate(() => window.flowScene.simulation.particleCount), Number(count), `${backend}: density control rebuilds the simulation`);
+      }
       assert.equal(await page.evaluate(() => window.flowScene.fieldAtlas.texture === window.borrowedFieldTexture && !window.borrowedFieldTexture.destroyed), true, `${backend}: field texture survives pattern and density changes`);
       await page.evaluate(async () => {
         const scene = window.flowScene;
@@ -153,7 +159,7 @@ try {
         scene.deck.redraw('controlled particle picking');
       });
       await page.waitForTimeout(200);
-      await page.screenshot({path: join(tmpdir(), `flow-picking-${backend}.png`)});
+      await captureScreenshot({path: join(tmpdir(), `flow-picking-${backend}.png`)});
       const picked = await page.evaluate(async () => {
         const scene = window.flowScene;
         const layer = scene.deck.layerManager.getLayers().find(layer => layer.id === 'particles');

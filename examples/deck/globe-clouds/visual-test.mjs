@@ -11,6 +11,7 @@ import {chromium} from 'playwright';
 import {createServer} from 'vite';
 import {PNG} from 'pngjs';
 import {getPlaywrightLaunchOptions} from '../../../scripts/playwright/get-playwright-launch-options.mjs';
+import {setVisualTestPixelScale, captureVisualTestScreenshot} from '../../../scripts/playwright/visual-test-utils.mjs';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const server = await createServer({root, logLevel: 'error', server: {host: '127.0.0.1', port: 0, watch: null}});
@@ -29,11 +30,12 @@ try {
       await page.goto(`${server.resolvedUrls.local[0]}?backend=${backend}`);
       await page.waitForFunction(() => ['true', 'error'].includes(document.body.dataset.ready));
       assert.equal(await page.evaluate(() => document.body.dataset.ready), 'true', `${await page.locator('#status').textContent()}\n${errors.join('\n')}`);
+      await setVisualTestPixelScale(page, 'globeCloudScene', process.argv.includes('--thumbnail') ? 1 : undefined);
       await page.getByLabel('Animate', {exact: true}).uncheck();
       const screenshot = async () => {
         const frames = await page.evaluate(() => window.globeCloudScene.diagnostics.frames);
         await page.waitForFunction(previous => window.globeCloudScene.diagnostics.frames > previous + 2, frames);
-        return PNG.sync.read(await page.locator('#scene').screenshot());
+        return PNG.sync.read(await captureVisualTestScreenshot(page.locator('#scene')));
       };
       const clouds = await screenshot();
       await page.getByLabel('Clouds', {exact: true}).uncheck();
@@ -77,12 +79,12 @@ try {
       if (backend === 'webgpu' && process.argv.includes('--thumbnail')) {
         const thumbnailPath = join(root, '../../../website/static/images/examples/deck/globe-clouds.jpg');
         await mkdir(dirname(thumbnailPath), {recursive: true});
-        await page.locator('#scene').screenshot({path: thumbnailPath, type: 'jpeg', quality: 90});
+        await captureVisualTestScreenshot(page.locator('#scene'), {path: thumbnailPath, type: 'jpeg', quality: 90});
       }
-      await page.screenshot({path: join(tmpdir(), `globe-cloud-cover-${backend}.png`)});
+      await captureVisualTestScreenshot(page, {path: join(tmpdir(), `globe-cloud-cover-${backend}.png`)});
       await page.setViewportSize({width: 450, height: 680});
       await screenshot();
-      await page.screenshot({path: join(tmpdir(), `globe-cloud-cover-mobile-${backend}.png`)});
+      await captureVisualTestScreenshot(page, {path: join(tmpdir(), `globe-cloud-cover-mobile-${backend}.png`)});
       await page.evaluate(() => window.globeCloudScene.finalize());
       assert.equal(await page.evaluate(() => window.globeCloudScene.diagnostics.finalized), true);
       assert.deepEqual(errors, []);
