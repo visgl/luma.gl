@@ -138,6 +138,13 @@ test.each(['webgpu', 'webgl'] as const)(
         )
       ).toBeGreaterThan(50);
       expect(cloudy[3], 'rays missing the spherical shell remain transparent').toBe(0);
+      deck.setProps({initialViewState: {longitude: 0, latitude: 0, zoom: 10}});
+      const inside = await readFrame([cloud(1)]);
+      expect(
+        energy(inside),
+        'a camera inside the cloud shell retains finite fragment depth'
+      ).toBeGreaterThan(1000);
+      deck.setProps({initialViewState: {longitude: 0, latitude: 0, zoom: -1}});
       const foreground = await readFrame([new OccluderLayer({id: 'foreground'}), cloud(0.55)]);
       expect(energy(foreground), 'nearer geometry hides the cloud shell').toBe(0);
       expect(foreground[2]).toBe(255);

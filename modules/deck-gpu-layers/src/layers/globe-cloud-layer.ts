@@ -154,7 +154,8 @@ struct GlobeCloudFragment { @location(0) color: vec4f, @builtin(frag_depth) dept
   if (color.a < 0.001) { discard; }
   let radius = 1.0 + (clouds.altitude + clouds.thickness) / globeClouds.planetRadius;
   let interval = globeClouds_intersectSphere(skyView.camera, direction, radius);
-  let clip = globeView.viewProjectionMatrix * vec4f(skyView.camera + direction * max(interval.x, 0.0), 1.0);
+  // A camera inside the shell must still project a point in front of its eye.
+  let clip = globeView.viewProjectionMatrix * vec4f(skyView.camera + direction * max(interval.x, 0.000001), 1.0);
   var output: GlobeCloudFragment;
   output.color = color;
   output.depth = clamp(clip.z / clip.w * 0.5 + 0.5, 0.0, 1.0);
@@ -170,6 +171,7 @@ void main() {
   if (fragColor.a < 0.001) discard;
   float radius = 1.0 + (clouds.altitude + clouds.thickness) / globeClouds.planetRadius;
   vec2 interval = globeClouds_intersectSphere(skyView.camera, rayDirection, radius);
-  vec4 clip = globeView.viewProjectionMatrix * vec4(skyView.camera + rayDirection * max(interval.x, 0.0), 1.0);
+  // Avoid projecting the camera itself (clip.w == 0) from inside the shell.
+  vec4 clip = globeView.viewProjectionMatrix * vec4(skyView.camera + rayDirection * max(interval.x, 0.000001), 1.0);
   gl_FragDepth = clamp(clip.z / clip.w * 0.5 + 0.5, 0.0, 1.0);
 }`;
