@@ -102,7 +102,7 @@ export function createRiverfrontLightingScene(
       layer instanceof RiverDistrictLayer
         ? {mode: 'opaque', surfaceBuffer: true}
         : layer instanceof GlowPointLayer
-          ? {mode: 'transparent', motionBuffer: kind === 'fireflies'}
+          ? {mode: 'transparent', motionBuffer: true}
           : null
   });
   const effect = new SceneShaderPassEffect({

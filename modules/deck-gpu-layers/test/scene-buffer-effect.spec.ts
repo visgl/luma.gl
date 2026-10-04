@@ -12,7 +12,8 @@ import {
 } from '@deck.gl/core';
 import {ScatterplotLayer} from '@deck.gl/layers';
 import {SceneBufferEffect, surfaceBuffer} from '@deck.gl-community/gpu-layers';
-import {Buffer, Texture, type Device, type RenderPass} from '@luma.gl/core';
+import {luma, Buffer, Texture, type Device, type RenderPass} from '@luma.gl/core';
+import {webgpuAdapter} from '@luma.gl/webgpu';
 import {Model} from '@luma.gl/engine';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, test} from 'vitest';
@@ -452,8 +453,7 @@ ${velocity ? '@group(0) @binding(auto) var velocityTexture: texture_2d<f32>;' : 
 }
 
 test('motion capture reprojects the camera without full history and resets on cuts', async context => {
-  const device = await getWebGPUTestDevice();
-  if (!device) {
+  if (!(await getWebGPUTestDevice())) {
     context.skip('WebGPU unavailable');
     return;
   }
@@ -461,6 +461,16 @@ test('motion capture reprojects the camera without full history and resets on cu
   parent.style.width = '64px';
   parent.style.height = '64px';
   document.body.append(parent);
+  const canvas = document.createElement('canvas');
+  parent.append(canvas);
+  canvas.style.width = '64px';
+  canvas.style.height = '64px';
+  // Stock-layer coverage can lose the shared software test device; keep this test isolated.
+  const device = await luma.createDevice({
+    type: 'webgpu',
+    adapters: [webgpuAdapter],
+    createCanvasContext: {canvas, width: 64, height: 64, useDevicePixels: false}
+  });
   let time = 2;
   const effect = new SceneBufferEffect({
     motionVectors: true,
@@ -481,9 +491,17 @@ test('motion capture reprojects the camera without full history and resets on cu
     onError: error => errors.push(error.message)
   });
   try {
-    await waitUntil(() => Boolean(effect.getFrame('main')), errors);
+    await waitUntil(
+      () => Boolean(effect.getFrame('main')?.historyValid),
+      errors,
+      () => deck.redraw('initialize motion history')
+    );
     deck.setProps({_animate: false});
-    deck.redraw('stationary motion');
+    await waitUntil(
+      () => Boolean(effect.getFrame('main')?.historyValid),
+      errors,
+      () => deck.redraw('stationary motion')
+    );
     const first = effect.getFrame('main')!;
     expect(first.buffer.framebuffer.colorAttachments).toHaveLength(3);
     expect(first.previousBuffer).toBeUndefined();
@@ -522,6 +540,7 @@ test('motion capture reprojects the camera without full history and resets on cu
     expect(errors).toEqual([]);
   } finally {
     deck.finalize();
+    device.destroy();
     parent.remove();
   }
 });

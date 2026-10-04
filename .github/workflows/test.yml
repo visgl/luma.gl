@@ -398,9 +398,13 @@ jobs:
           fi
 
   lighting_examples:
-    name: Riverfront shared lighting examples
+    name: Riverfront lighting (${{ matrix.example }})
     runs-on: ubuntu-22.04
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        example: [fireflies, hdr-night-lighting, global-illumination, light-shafts]
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -417,16 +421,13 @@ jobs:
       - name: Install Chromium
         run: yarn exec playwright install --with-deps chromium
       - name: Verify shared lighting examples
-        run: |
-          for example in fireflies hdr-night-lighting global-illumination light-shafts; do
-            xvfb-run -a node examples/deck/riverfront-lighting-visual.mjs "$example"
-          done
+        run: xvfb-run -a node examples/deck/riverfront-lighting-visual.mjs "${{ matrix.example }}"
       - name: Upload lighting screenshots
         if: always()
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
-          name: riverfront-lighting
-          path: /tmp/riverfront-*.png
+          name: riverfront-lighting-${{ matrix.example }}
+          path: /tmp/riverfront-${{ matrix.example }}.png
           if-no-files-found: warn
           retention-days: 7
 
