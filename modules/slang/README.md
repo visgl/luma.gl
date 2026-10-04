@@ -85,11 +85,15 @@ when packing uniform or storage data.
   WebGL uniforms are located by their generated names; reflected groups/bindings describe the
   source binding plan. Texture and sampler resources combine into GLSL `sampler2D` uniforms,
   and each texture may use only one sampler. The caller applies the sampler state to that texture.
+  GLSL ES 300 keeps sampler bindings application-managed; explicit GLSL 450 output emits each
+  texture's assigned `layout(binding = N)`, including automatically assigned bindings.
 - Float matrices are stored transposed relative to their mathematical Slang dimensions so
   matrix indexing retains row semantics. `mul` reverses matrix operands to preserve the result.
   Applications must pack externally supplied matrices using this row-as-column representation.
-- WGSL rejects uniform arrays, bool uniforms, and matrices with two-component stored columns
-  until uniform layout legalization is implemented. Storage bools are rejected on both targets.
+- WGSL rejects uniform arrays, bool uniforms, nested struct-valued uniform members, and matrices
+  with two-component stored columns until uniform layout legalization is implemented. Flat root
+  uniform structs remain supported, as do nested structs in local values and storage buffers.
+  Storage bools are rejected on both targets.
 - WGSL rejects conditional (`?:`) expressions, increments used as values, assignments used as
   values, writes to multiple-component swizzles, and component-wise matrix multiplication.
   These need additional lowering to preserve evaluation order and side effects.

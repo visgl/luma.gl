@@ -101,6 +101,8 @@ type AnyShaderLayout = Pick<ShaderLayout | ComputeShaderLayout, 'bindings'>;
 
 export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
   source?: string;
+  /** Input language compiled by the application-registered shader assembler transpiler. */
+  sourceLanguage?: string;
   vs?: string | null;
   fs?: string | null;
 
@@ -208,6 +210,7 @@ export class Model {
   static defaultProps: Required<ModelProps> = {
     ...RenderPipeline.defaultProps,
     source: undefined!,
+    sourceLanguage: undefined!,
     vs: null,
     fs: null,
     id: 'unnamed',
@@ -411,6 +414,7 @@ export class Model {
         source,
         getUniforms,
         bindingTable,
+        entryPoints = {},
         shaderLayout: assembledShaderLayout
       } = shaderAssembler.assembleWGSLShader({
         platformInfo,
@@ -422,6 +426,8 @@ export class Model {
         pluginVaryings: resolvedPlugins.varyings
       });
       this.source = source;
+      this.props.vertexEntryPoint = entryPoints.vertex || this.props.vertexEntryPoint;
+      this.props.fragmentEntryPoint = entryPoints.fragment || this.props.fragmentEntryPoint;
       // @ts-expect-error
       this._getModuleUniforms = getUniforms;
       this._bindingTable = bindingTable;

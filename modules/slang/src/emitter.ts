@@ -1092,7 +1092,8 @@ export class SlangEmitter {
       return '';
     }
     if (texture) {
-      return `uniform sampler2D ${name};`;
+      const layout = this.glslVersion === '450' ? `layout(binding = ${binding.binding}) ` : '';
+      return `${layout}uniform sampler2D ${name};`;
     }
     if (variable.type.name === 'ConstantBuffer') {
       return `layout(std140${this.glslVersion === '450' ? `, binding = ${binding.binding}` : ''}) uniform _slang_buffer_${variable.name} { ${this.getTypeName(valueType!, variable.location)} ${name}; };`;
@@ -1133,6 +1134,12 @@ export class SlangEmitter {
     if (structure && !visited.has(type.name)) {
       visited.add(type.name);
       for (const field of structure.fields) {
+        if (this.structures.has(field.type.name)) {
+          this.fail(
+            'Nested structures in uniforms require WGSL layout legalization and are not yet supported',
+            field.location
+          );
+        }
         this.checkUniformType(field.type, field.location, visited);
       }
     }
