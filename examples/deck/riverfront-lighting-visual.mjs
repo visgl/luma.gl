@@ -116,6 +116,26 @@ try {
     await page.evaluate(() => window.riverfrontLighting.setSetting('ripples', 0));
     await page.waitForFunction(() => !window.riverfrontLighting.deck.props._animate);
   }
+  if (kind === 'fireflies') {
+    await page.selectOption('#species', 'genji-hotaru');
+    await page.waitForFunction(() => !window.riverfrontLighting.deck.props._animate);
+    const hotaru = PNG.sync.read(await page.screenshot());
+    await page.selectOption('#species', 'photinus-scintillans');
+    await page.waitForFunction(() => !window.riverfrontLighting.deck.props._animate);
+    const amber = PNG.sync.read(await page.screenshot());
+    let colorPixels = 0;
+    for (let row = 0; row < hotaru.height; row++)
+      for (let column = 340; column < hotaru.width; column++) {
+        const offset = (row * hotaru.width + column) * 4;
+        const greenBalance = hotaru.data[offset + 1] - hotaru.data[offset];
+        const amberBalance = amber.data[offset + 1] - amber.data[offset];
+        if (greenBalance - amberBalance > 6) colorPixels++;
+      }
+    assert(colorPixels > 100, `species changes the rendered emission tint (${colorPixels} pixels)`);
+    console.log(`fireflies: ${colorPixels} species-tinted pixels; Hotaru selection works while paused`);
+    await page.selectOption('#species', 'photinus-pyralis');
+    await page.waitForFunction(() => !window.riverfrontLighting.deck.props._animate);
+  }
   if (process.argv.includes('--thumbnail')) {
     const posterPath = join(root, '../../../website/static/images/examples/deck', `${kind}.jpg`);
     await mkdir(dirname(posterPath), {recursive: true});

@@ -6,6 +6,7 @@ import {
   createRiverfrontLightingScene,
   type RiverfrontLightingKind
 } from './riverfront-lighting-scene';
+import {FIREFLY_SPECIES} from './fireflies/firefly-species';
 
 declare global {
   interface Window {
@@ -42,6 +43,15 @@ export function startRiverfrontLightingExample(kind: RiverfrontLightingKind): vo
     if (!input) continue;
     input.value = String(scene.settings[name]);
     input.addEventListener('input', () => scene.setSetting(name, Number(input.value)));
+  }
+  const speciesSelector = document.querySelector<HTMLSelectElement>('#species');
+  if (speciesSelector) {
+    for (const species of FIREFLY_SPECIES)
+      speciesSelector.add(new Option(species.label, species.id));
+    speciesSelector.value = scene.settings.species;
+    speciesSelector.addEventListener('change', () =>
+      scene.setSetting('species', speciesSelector.value)
+    );
   }
   document.querySelector<HTMLSelectElement>('#buffer-view')!.addEventListener('change', event => {
     if (event.currentTarget instanceof HTMLSelectElement)

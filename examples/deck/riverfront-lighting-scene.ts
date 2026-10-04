@@ -25,6 +25,7 @@ import {Matrix4} from '@math.gl/core';
 import {RiverDistrictLayer} from './river-district-layer';
 import {CITY_ORIGIN, makeCityFeatures, makeCityMesh} from './river-district-data';
 import {RiverFireflyReflectionLayer} from './fireflies/river-reflection-layer';
+import {FIREFLY_SPECIES} from './fireflies/firefly-species';
 import {RIVERFRONT_VIEW_LIMITS} from './riverfront-view';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from './deck-example-device';
 
@@ -59,6 +60,7 @@ export function createRiverfrontLightingScene(
     radiance: kind === 'hdr-night-lighting' ? 4 : 8,
     density: 0.0008,
     reflections: true,
+    species: 'photinus-pyralis',
     ripples: 0,
     debugMode: 0
   };
@@ -75,6 +77,7 @@ export function createRiverfrontLightingScene(
   let lastTimestamp = 0;
   let settlingFrames = 24;
   let points: Buffer | undefined;
+  let pointData = new Float32Array();
   let waterPositions: Buffer | undefined;
   const storageBindings: Record<string, Buffer> = {};
   const features = makeCityFeatures();
@@ -200,6 +203,9 @@ export function createRiverfrontLightingScene(
       }
       const rows: number[] = [];
       if (kind === 'fireflies') {
+        const species =
+          FIREFLY_SPECIES.find(candidate => candidate.id === settings.species) ??
+          FIREFLY_SPECIES[0];
         for (let index = 0; index < 320; index++) {
           const side = index % 2 ? 1 : -1;
           const longitudeOffset = side * (45 + ((index * 37) % 55));
@@ -208,10 +214,7 @@ export function createRiverfrontLightingScene(
             longitudeOffset,
             latitudeOffset,
             8 + ((index * 17) % 28),
-            // Warm yellow-green approximation of Photinus pyralis bioluminescence.
-            0.85,
-            1,
-            0.025,
+            ...species.color,
             1,
             index
           );
@@ -219,10 +222,8 @@ export function createRiverfrontLightingScene(
       } else if (kind === 'hdr-night-lighting') {
         lamps.forEach((lamp, index) => rows.push(...lamp, 1, index));
       } else if (kind === 'light-shafts') rows.push(...shaftSource, 1, 0.78, 0.36, 1, 0);
-      points = device.createBuffer({
-        id: `${kind}-lights`,
-        data: new Float32Array(rows.length ? rows : [0, 0, 0, 0, 0, 0, 0, 0])
-      });
+      pointData = new Float32Array(rows.length ? rows : [0, 0, 0, 0, 0, 0, 0, 0]);
+      points = device.createBuffer({id: `${kind}-lights`, data: pointData});
       if (kind === 'light-shafts') {
         storageBindings['pointLights'] = device.createBuffer({
           id: 'shafts-empty-point-lights',
@@ -488,6 +489,15 @@ export function createRiverfrontLightingScene(
       value: (typeof settings)[Name]
     ): void {
       Object.assign(settings, {[name]: value});
+      if (name === 'species' && kind === 'fireflies' && points) {
+        const species =
+          FIREFLY_SPECIES.find(candidate => candidate.id === settings.species) ??
+          FIREFLY_SPECIES[0];
+        for (let index = 0; index < pointData.length; index += 8)
+          pointData.set(species.color, index + 3);
+        // Both the emitter and its mirror borrow this buffer, so their colors change together.
+        points.write(pointData);
+      }
       if (name !== 'debugMode' && name !== 'animate') {
         capture.resetHistory();
         effect.resetHistory();

@@ -400,7 +400,8 @@ jobs:
   lighting_examples:
     name: Riverfront lighting (${{ matrix.example }})
     runs-on: ubuntu-22.04
-    timeout-minutes: 15
+    # Fireflies compares emission colors, bloom, reflections and motion on SwiftShader.
+    timeout-minutes: ${{ matrix.example == 'fireflies' && 20 || 15 }}
     strategy:
       fail-fast: false
       matrix:
