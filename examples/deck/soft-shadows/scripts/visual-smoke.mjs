@@ -13,16 +13,19 @@ import {getPlaywrightLaunchOptions} from '../../../../scripts/playwright/get-pla
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const externalUrl = process.env.SHADOW_TEST_URL;
+const backend = process.env.SHADOW_BACKEND === 'webgl' ? 'webgl' : 'webgpu';
 const server = externalUrl ? null : await createServer({root, logLevel: 'error', server: {host: '127.0.0.1', port: 0}});
 await server?.listen();
-const browser = await chromium.launch(getPlaywrightLaunchOptions({headless: true, backend: 'webgpu', softwareGpu: process.platform === 'linux'}));
+const browser = await chromium.launch(getPlaywrightLaunchOptions({headless: true, backend, softwareGpu: process.platform === 'linux'}));
 try {
   const page = await browser.newPage({viewport: {width: 1100, height: 800}, deviceScaleFactor: 1});
   page.setDefaultTimeout(60_000);
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
-  await page.goto(externalUrl || server.resolvedUrls.local[0], {waitUntil: 'domcontentloaded'});
+  const previewUrl = new URL(externalUrl || server.resolvedUrls.local[0]);
+  previewUrl.searchParams.set('backend', backend);
+  await page.goto(previewUrl.href, {waitUntil: 'domcontentloaded'});
   await page.waitForFunction(() => document.body.dataset.ready === 'true');
   await page.waitForFunction(() => window.riverfrontSoftShadowScene.shadowEffect.frameCount > 2);
   const firstHour = await page.evaluate(() => window.riverfrontSoftShadowScene.settings.hour);
@@ -112,6 +115,13 @@ try {
   const moonCenter = await page.evaluate(() => window.riverfrontSoftShadowScene.deck.layerManager.getLayers()
     .find(layer => layer.id === 'riverfront-moon').state.model.shaderInputs.getUniformValues().skyBody.center);
   assert(Math.abs(moonCenter[0]) < 0.1 && Math.abs(moonCenter[1]) < 0.2, 'moon is centered in the viewport');
+  const centeredHour = await page.evaluate(() => window.riverfrontSoftShadowScene.settings.hour);
+  await page.click('#center');
+  assert.equal(await page.evaluate(() => window.riverfrontSoftShadowScene.viewState.pitch), 80, 'Center restores the riverfront camera');
+  assert.equal(await page.evaluate(() => window.riverfrontSoftShadowScene.settings.hour), centeredHour, 'Center preserves time');
+  await page.setViewportSize({width: 633, height: 800});
+  assert(await page.locator('#cloud-cover').evaluate(input => input.getBoundingClientRect().height) <= 24, 'compact desktop keeps slim slider rows');
+  await page.setViewportSize({width: 1000, height: 800});
   await page.locator('#hour').fill('6.5');
   await page.click('#look-sun');
   await page.locator('#cloud-cover').fill('0.4');
@@ -123,7 +133,7 @@ try {
   assert.deepEqual(errors, [], 'no browser or GPU errors');
   await page.evaluate(() => window.riverfrontSoftShadowScene.finalize());
   assert.equal(await page.evaluate(() => window.riverfrontSoftShadowScene.shadowEffect.renderer), null, 'shadow resources cleaned up');
-  console.log(`WebGPU: sun and cloud animation (${cloudPixels} cover pixels, ${movingCloudPixels} moving pixels), ${shadowedPixels} shadow pixels, ${softeningPixels} penumbra pixels, quality, resize, cleanup passed`);
+  console.log(`${backend}: sun and cloud animation (${cloudPixels} cover pixels, ${movingCloudPixels} moving pixels), ${shadowedPixels} shadow pixels, ${softeningPixels} penumbra pixels, quality, resize, cleanup passed`);
 } finally { await browser.close(); await server?.close(); }
 
 function countDifferentPixels(first, second) {

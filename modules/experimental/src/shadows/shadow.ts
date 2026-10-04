@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Sampler, Texture} from '@luma.gl/core';
+import {SHADOW_GLSL} from './shadow-glsl';
 import type {NumberArray3, NumberArray4, NumberArray16} from '@math.gl/core';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import type {
@@ -67,7 +68,7 @@ type ShadowBindings = {
   directionalShadowTexture: Texture;
   spotShadowTexture: Texture;
   pointShadowTexture: Texture;
-  shadowComparisonSampler: Sampler;
+  shadowComparisonSampler?: Sampler;
 };
 
 const DIRECTIONAL_LIGHT_UNIFORM_TYPE = {
@@ -378,10 +379,11 @@ fn shadow_getPointFactor(lightIndex: i32, worldPosition: vec3f, worldNormal: vec
 }
 `;
 
-/** WebGPU shadow sampling module. Applications explicitly apply factors to direct-light terms. */
+/** Backend-aware shadow sampling module. Applications explicitly apply factors to direct-light terms. */
 export const shadow = {
   name: 'shadow',
   source: SHADOW_WGSL,
+  fs: SHADOW_GLSL,
   props: {} as ShadowShaderProps,
   uniforms: {} as ShadowUniforms,
   bindings: {} as ShadowBindings,
@@ -444,7 +446,9 @@ export const shadow = {
       directionalShadowTexture: props.directionalShadowTexture,
       spotShadowTexture: props.spotShadowTexture,
       pointShadowTexture: props.pointShadowTexture,
-      shadowComparisonSampler: props.comparisonSampler
+      ...(props.directionalShadowTexture.device.type === 'webgpu'
+        ? {shadowComparisonSampler: props.comparisonSampler}
+        : {})
     };
   }
 } as const satisfies ShaderModule<ShadowShaderProps, ShadowUniforms, ShadowBindings>;

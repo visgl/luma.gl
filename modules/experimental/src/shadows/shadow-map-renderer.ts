@@ -169,7 +169,7 @@ const POINT_FACE_ORIENTATIONS: ReadonlyArray<{
 let nextShadowResourceId = 0;
 
 /**
- * Owns WebGPU depth-array resources and records application-supplied shadow caster draws.
+ * Owns backend-selected depth-array resources and records application-supplied shadow caster draws.
  *
  * The renderer never submits the device command encoder. Applications should pre-create any
  * per-view uniform storage needed by `drawShadowCasters`; one shared mutable uniform buffer cannot
@@ -184,8 +184,8 @@ export class ShadowMapRenderer {
   private destroyed = false;
 
   constructor(device: Device, props: ShadowMapRendererProps = {}) {
-    if (device.type !== 'webgpu') {
-      throw new Error('ShadowMapRenderer requires a WebGPU device.');
+    if (device.type !== 'webgpu' && device.type !== 'webgl') {
+      throw new Error('ShadowMapRenderer requires a WebGPU or WebGL2 device.');
     }
     this.device = device;
     this.inputProps = {...props};
@@ -620,7 +620,7 @@ function createShadowMapResources(
   const pointTexture = createDepthArrayTexture(
     device,
     'point-shadow-map',
-    'cube-array',
+    device.type === 'webgpu' ? 'cube-array' : '2d-array',
     props.pointMapSize,
     pointLayers,
     nonFilteringSampler
@@ -690,6 +690,7 @@ function createLayerFramebuffers(
   return Array.from({length: layerCount}, (_, layerIndex) => {
     const view = texture.createView({
       id: makeShadowResourceId('shadow-layer-view'),
+      format: texture.format,
       dimension: '2d',
       baseMipLevel: 0,
       mipLevelCount: 1,

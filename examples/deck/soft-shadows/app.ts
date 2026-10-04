@@ -124,6 +124,7 @@ export function createRiverfrontSoftShadowScene(
     parent.clientWidth,
     parent.clientHeight
   );
+  const initialViewState = {...viewState};
   const deck = new Deck<MapView>({
     parent,
     ...getDeckExampleProps(options),
@@ -205,6 +206,11 @@ export function createRiverfrontSoftShadowScene(
     setSkyBody(body: 'sun' | 'moon', visible: boolean): void {
       sky[body] = visible;
       deck.setProps({layers: getLayers()});
+    },
+    centerView(): void {
+      viewState = getSkyCameraState(initialViewState, parent.clientWidth, parent.clientHeight);
+      deck.setProps({viewState});
+      deck.redraw('center riverfront');
     },
     lookAtSkyBody(body: 'sun' | 'moon'): void {
       let hour = settings.hour;

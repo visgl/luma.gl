@@ -4,6 +4,7 @@
 
 import {createRiverfrontSoftShadowScene} from './app';
 import {formatSunHour} from './sun';
+import {resolveDeckExampleDeviceType} from '../deck-example-device';
 
 declare global {
   interface Window {
@@ -15,7 +16,15 @@ const parent = document.querySelector<HTMLDivElement>('#scene')!;
 const status = document.querySelector<HTMLOutputElement>('#status')!;
 const hourInput = document.querySelector<HTMLInputElement>('#hour')!;
 const timeOutput = document.querySelector<HTMLOutputElement>('#time')!;
-const scene = createRiverfrontSoftShadowScene(parent);
+const backend = document.querySelector<HTMLSelectElement>('#backend')!;
+const deviceType = await resolveDeckExampleDeviceType(
+  new URLSearchParams(location.search).get('backend')
+);
+backend.value = deviceType;
+backend.addEventListener('change', () => {
+  location.search = `?backend=${backend.value}`;
+});
+const scene = createRiverfrontSoftShadowScene(parent, {deviceType});
 window.riverfrontSoftShadowScene = scene;
 
 parent.addEventListener('sun-frame', () => {
@@ -55,6 +64,9 @@ for (const [id, setter] of [
   const input = document.querySelector<HTMLInputElement>(`#${id}`)!;
   input.addEventListener('input', () => setter(Number(input.value)));
 }
+document
+  .querySelector<HTMLButtonElement>('#center')!
+  .addEventListener('click', () => scene.centerView());
 for (const body of ['sun', 'moon'] as const) {
   const input = document.querySelector<HTMLInputElement>(`#show-${body}`)!;
   input.addEventListener('change', () => scene.setSkyBody(body, input.checked));

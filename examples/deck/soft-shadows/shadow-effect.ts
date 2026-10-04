@@ -28,6 +28,7 @@ export type ShadowSettings = {
 const casterUniforms = {
   name: 'riverfrontCaster',
   uniformTypes: {viewProjectionMatrix: 'mat4x4<f32>'},
+  vs: `layout(std140) uniform riverfrontCasterUniforms { mat4 viewProjectionMatrix; } riverfrontCaster;`,
   source: `struct RiverfrontCasterUniforms { viewProjectionMatrix: mat4x4f };
 @group(0) @binding(auto) var<uniform> riverfrontCaster: RiverfrontCasterUniforms;`
 } as const satisfies ShaderModule;
@@ -65,6 +66,13 @@ export class RiverfrontShadowEffect implements Effect {
       (_, index) =>
         new Model(device, {
           id: `riverfront-caster-${index}`,
+          vs: `#version 300 es
+in vec3 position;
+void main() {
+  vec4 clip = riverfrontCaster.viewProjectionMatrix * vec4(position, 1.0);
+  gl_Position = vec4(clip.xy, clip.z * 2.0 - clip.w, clip.w);
+}`,
+          fs: '#version 300 es\nprecision highp float; void main() {}',
           source: `@vertex fn vertexMain(@location(0) position: vec3f) -> @builtin(position) vec4f {
   return riverfrontCaster.viewProjectionMatrix * vec4f(position, 1.0);
 }
