@@ -257,6 +257,7 @@
     "label": "Visual Effects - deck.gl v10",
     "items": [
       "deck/weather",
+      "deck/globe-clouds",
       "deck/city-scene",
       "deck/flow-particles",
       "deck/point-glow",

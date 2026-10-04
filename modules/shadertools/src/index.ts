@@ -245,3 +245,9 @@ export {
 } from './modules/lighting/surface-weather/surface-weather';
 
 export {firefly, type FireflyProps, type FireflyUniforms} from './modules/lighting/firefly/firefly';
+
+export {
+  globeClouds,
+  type GlobeCloudProps,
+  type GlobeCloudUniforms
+} from './modules/lighting/globe-clouds/globe-clouds';

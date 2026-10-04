@@ -540,3 +540,34 @@ The same borrowed eight-float rows carry position, tint, opacity and a determini
 and pulse strength. Independent smooth phases avoid synchronized blinking. Ordinary glow points
 keep animation disabled. Fireflies preserve point picking, additive blending and ownership rules,
 and can write animated core motion when opted into a `SceneBufferEffect` capture.
+
+
+### Globe cloud cover
+
+`GlobeCloudLayer` renders the same procedural cloud field as a spherical volume around a
+`GlobeView` planet on WebGPU and WebGL2. Draw opaque globe terrain first, then the cloud
+layer. The shell tests scene depth, clips rays against the planet, and neither writes depth
+nor participates in picking. It skips flat-map and orthographic views.
+
+```ts
+new GlobeCloudLayer({
+  id: 'globe-cloud-cover',
+  planetRadius: 6370972,
+  cover: 0.45,
+  altitude: 12000,
+  thickness: 12000,
+  scale: 900000,
+  density: 0.0001,
+  time: elapsedSeconds,
+  velocity: [14, 4],
+  sunDirection: [0, -1, 0.3]
+});
+```
+
+Cloud altitude, thickness and formation scale are in metres. Velocity controls rotation
+around the globe's Z and X axes in metres per second at the equator; sun direction is a
+normalized globe-centered XYZ vector. The shared `clouds` noise, density and lighting
+functions are reused by the `globeClouds` shader module. A three-dimensional density field
+avoids longitude seams and pinching at the poles. This is procedural cover, without observed
+weather data, terrain-aware cloud shadows or temporal reconstruction. The globe example
+accelerates drift to make global motion visible during a short preview.

@@ -4,6 +4,7 @@
 
 import flowParticlesSupport from './deck/flow-particles/mobile-support';
 import sketchSupport from './deck/sketch-edges/mobile-support';
+import globeCloudsSupport from './deck/globe-clouds/mobile-support';
 import weatherSupport from './deck/weather/mobile-support';
 import patternSupport from './deck/pattern-fills/mobile-support';
 import firefliesSupport from './deck/fireflies/mobile-support';
@@ -219,6 +220,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'experimental/gpu-parquet-constellation': parquetSupport,
   'deck/sketch-edges': sketchSupport,
   'deck/weather': weatherSupport,
+  'deck/globe-clouds': globeCloudsSupport,
   'deck/pattern-fills': patternSupport,
   'deck/point-glow': pointGlowSupport,
   'deck/styled-paths': styledPathsSupport,

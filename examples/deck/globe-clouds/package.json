@@ -1,0 +1,29 @@
+{
+  "name": "luma.gl-examples-deck-globe-clouds",
+  "version": "10.0.0-alpha.2",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "vite",
+    "build": "tsc && vite build",
+    "build:website": "vite build --mode website --outDir ../../../website/.generated/example-assets/standalone-examples/globe-clouds --emptyOutDir",
+    "test:visual": "node visual-test.mjs"
+  },
+  "dependencies": {
+    "@deck.gl-community/gpu-layers": "10.0.0-alpha.2",
+    "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch",
+    "@luma.gl/core": "10.0.0-alpha.2",
+    "@luma.gl/effects": "10.0.0-alpha.2",
+    "@luma.gl/engine": "10.0.0-alpha.2",
+    "@luma.gl/shadertools": "10.0.0-alpha.2",
+    "@luma.gl/webgl": "10.0.0-alpha.2",
+    "@luma.gl/webgpu": "10.0.0-alpha.2",
+    "@math.gl/core": "^4.1.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.58.0",
+    "pngjs": "^7.0.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.0"
+  }
+}

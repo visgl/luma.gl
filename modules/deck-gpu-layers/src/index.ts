@@ -66,3 +66,9 @@ export {
   type SceneShaderPassContext
 } from './effects/scene-shader-pass-effect';
 export {FireflyLayer} from './layers/firefly-layer';
+
+export {
+  GlobeCloudLayer,
+  getGlobeCloudViewUniforms,
+  type GlobeCloudLayerProps
+} from './layers/globe-cloud-layer';
