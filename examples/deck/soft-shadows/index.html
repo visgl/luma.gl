@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- luma-example-support -->
+  <meta name="luma-example-id" content="deck/soft-shadows" />
+  <meta name="luma-example-backends" content="webgpu" />
+  <meta name="luma-example-mobile" content="full" />
+  <meta name="luma-example-mobile-profile" content="standard" />
+  <script type="module" data-luma-example-support-bootstrap>
+    import {installStandaloneExampleSupport} from '../../example-support.ts';
+    const exampleSupport = await installStandaloneExampleSupport();
+    if (!exampleSupport.supported) {
+      document.querySelectorAll('script[type="module"]:not([data-luma-example-support-bootstrap])').forEach(script => script.remove());
+    }
+  </script>
+  <!-- /luma-example-support -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="./style.css" />
+  <title>Riverfront soft shadows · luma.gl</title>
+</head>
+<body>
+  <div id="scene" aria-label="Riverfront with animated sunlight and soft shadows"></div>
+  <aside class="luma-example-infobox luma-example-infobox--overlay">
+    <p class="eyebrow">luma.gl + deck.gl</p>
+    <h1>Riverfront soft shadows</h1>
+    <section class="control-card"><h2>Sunlight</h2>
+      <label>Device<select id="backend" aria-label="Device"><option value="webgpu">WebGPU</option></select></label>
+      <label class="toggle"><input id="animated" type="checkbox" checked /> Animate sun</label>
+      <label>Time of day<input id="hour" type="range" min="6.5" max="19.5" step="0.01" value="8.5" /></label>
+      <output id="time" class="selection">08:30 EDT</output>
+      <label>Sun speed<input id="speed" type="range" min="0.01" max="0.3" step="0.01" value="0.08" /></label>
+    </section>
+    <section class="control-card"><h2>Shadows</h2>
+      <label class="toggle"><input id="shadows" type="checkbox" checked /> Soft shadows</label>
+      <label>Softness<input id="softness" type="range" min="0" max="0.06" step="0.001" value="0.018" /></label>
+      <label>Quality<select id="quality"><option value="low">Low</option><option value="balanced" selected>Balanced</option><option value="cinematic">Cinematic</option></select></label>
+    </section>
+    <output id="status" class="selection" aria-live="polite">Preparing the riverfront…</output>
+    <p class="hint">Drag to move · Scroll to zoom<br />Shift + drag to orbit</p>
+  </aside>
+  <div class="sun-track" aria-label="Sun moves from east to west along its calculated summer path">
+    <svg viewBox="0 0 600 145" role="img" aria-label="Sun path">
+      <path id="sunPath" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="3 6" />
+      <circle id="sun" cx="100" cy="60" r="9" fill="#ffd785" />
+      <text x="28" y="140">East · morning</text><text x="470" y="140">West · evening</text>
+    </svg>
+  </div>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
