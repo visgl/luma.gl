@@ -123,8 +123,10 @@ it('GPUGroupAggregation sums reuse bounded scratch columns for fragmented inputs
   const device = await getWebGPUTestDevice();
   if (!device) return;
 
-  const groupCount = 300_000;
-  const chunkLengths = [700, 1, 4_096, 0, 5_000, 33, 9_000, 2];
+  // 20,000 groups give 52 columns of 4,096-row blocks. The middle chunk fills every column, so
+  // its last blocks and every later chunk add into columns written by earlier passes.
+  const groupCount = 20_000;
+  const chunkLengths = [5_000, 52 * 4_096, 0, 1, 300];
   for (const operation of ['sum', 'mean'] as const) {
     const plan = getGPUGroupSumPlan(
       chunkLengths,
