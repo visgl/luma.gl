@@ -3,11 +3,13 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {ShaderModule, initializeShaderModules} from './shader-module';
+import {assert} from '../utils/assert';
 
 // import type {ShaderModule} from '../shader-module/shader-module';
 
 type AbstractModule = {
   name: string;
+  implements?: string;
   dependencies?: AbstractModule[];
 };
 
@@ -84,6 +86,15 @@ export function getShaderModuleDependencies<T extends AbstractModule>(modules: T
   // Start DFS from each root module
   for (const module of modules) {
     visit(module, []);
+  }
+
+  const interfaceProviders = new Set<string>();
+  for (const module of result) {
+    if (module.implements !== undefined) {
+      // Distinct modules cannot provide the same exclusive shader interface.
+      assert(!interfaceProviders.has(module.implements));
+      interfaceProviders.add(module.implements);
+    }
   }
 
   initializeShaderModules(result);

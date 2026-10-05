@@ -219,3 +219,35 @@ export type {
   PrecipitationProps,
   PrecipitationUniforms
 } from './modules/geometry/precipitation/precipitation';
+
+export type {
+  ShaderTranspiler,
+  ShaderTranspileProps,
+  ShaderTranspileResult,
+  ShaderTranspilerEntryPoints
+} from './lib/shader-transpiler/shader-transpiler';
+
+export {valueNoise} from './modules/math/value-noise/value-noise';
+export {clouds, type CloudProps, type CloudUniforms} from './modules/lighting/clouds/clouds';
+
+export {
+  atmosphere,
+  type AtmosphereProps,
+  type AtmosphereUniforms
+} from './modules/lighting/atmosphere/atmosphere';
+export {
+  surfaceWeather,
+  integrateSurfaceWeather,
+  type SurfaceWeatherProps,
+  type SurfaceWeatherUniforms,
+  type SurfaceWeatherState,
+  type SurfaceWeatherRates
+} from './modules/lighting/surface-weather/surface-weather';
+
+export {firefly, type FireflyProps, type FireflyUniforms} from './modules/lighting/firefly/firefly';
+
+export {
+  globeClouds,
+  type GlobeCloudProps,
+  type GlobeCloudUniforms
+} from './modules/lighting/globe-clouds/globe-clouds';

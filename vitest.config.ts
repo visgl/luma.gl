@@ -63,6 +63,7 @@ const nodeOnlyTestPatterns = [
   'modules/gltf/test/webgl-to-webgpu/**/*.spec.{ts,js}',
   'modules/gpgpu/test/gpu-vector/gpu-data-evaluator-types.spec.{ts,js}',
   'modules/gpgpu/test/operations/arithmetic-operation.spec.{ts,js}',
+  'modules/gpgpu/test/gpu-core/{gpu-scalar,gpu-matvec,gpu-matmul,gpu-elementwise,gpu-coo-to-csr}.spec.{ts,js}',
   'modules/gpgpu/test/utils/{expression,webgpu-dispatch}.spec.{ts,js}',
   'modules/splats/test/{splat-rad-hierarchy,splat-browser-coverage}.spec.{ts,js}',
   'modules/test-utils/test/null-device/**/*.spec.{ts,js}',
@@ -135,10 +136,10 @@ const nodeCoveragePatterns = [
 const browserBenchmarkTestPatterns = [
   'modules/gpgpu/test/gpu-core/gpu-kernel-benchmark.spec.ts',
   'modules/gpgpu/test/gpu-core/gpu-fragmentation-benchmark.spec.ts',
-  'modules/experimental/test/gpu-core/gpu-spatial-query-benchmark.spec.ts',
-  'modules/experimental/test/gpu-core/gpu-workgroup-reduction-benchmark.spec.ts',
-  'modules/experimental/test/gpu-core/gpu-workgroup-scan-benchmark.spec.ts',
-  'modules/experimental/test/gpu-graph/gpu-graph-benchmark.spec.ts',
+  'modules/gpgpu/test/gpu-core/gpu-spatial-query-benchmark.spec.ts',
+  'modules/gpgpu/test/gpu-core/gpu-workgroup-reduction-benchmark.spec.ts',
+  'modules/gpgpu/test/gpu-core/gpu-workgroup-scan-benchmark.spec.ts',
+  'modules/gpgpu/test/gpu-graph/gpu-graph-benchmark.spec.ts',
   'modules/experimental/test/gpu-project/projection-benchmark.spec.ts',
   'modules/experimental/test/gpu-project/projection-performance.spec.ts',
   'modules/experimental/test/gpu-project/projection-program-benchmark.spec.ts'

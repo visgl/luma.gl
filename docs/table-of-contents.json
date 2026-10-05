@@ -805,6 +805,14 @@
       },
       {
         "type": "category",
+        "label": "@luma.gl/slang (Experimental, v10)",
+        "items": [
+          "api-reference/slang/README",
+          "api-reference/slang/reflection"
+        ]
+      },
+      {
+        "type": "category",
         "label": "@luma.gl/shadertools",
         "items": [
           {

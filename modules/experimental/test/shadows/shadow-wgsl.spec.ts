@@ -5,7 +5,7 @@
 import {expect, it} from 'vitest';
 import {Buffer, Texture} from '@luma.gl/core';
 import {Model, ShaderInputs} from '@luma.gl/engine';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice, getWebGLTestDevice} from '@luma.gl/test-utils';
 import {Matrix4, radians} from '@math.gl/core';
 import {WgslReflect} from 'wgsl_reflect';
 import {WGSLShaderAssembler} from '../../../shadertools/src/lib/shader-assembler';
@@ -65,7 +65,11 @@ struct VertexOutput {
   let factor = shadow_getDirectionalFactor(input.worldPosition, normal, 1.0) *
     shadow_getSpotFactor(0, input.worldPosition, normal) *
     shadow_getPointFactor(0, input.worldPosition, normal);
-  return vec4f(vec3f(factor), 1.0);
+  // A receiver just beyond the near plane must remain behind the depth-0.35 blocker.
+  let nearPointFactor = shadow_getPointFactor(0, vec3f(0.2, 3.0, 0.0), normal);
+  let nearDepth = shadow_pointReferenceDepth(0.1, 0.1, 12.0);
+  let farDepth = shadow_pointReferenceDepth(12.0, 0.1, 12.0);
+  return vec4f(nearPointFactor, nearDepth, farDepth, 1.0 + factor * 0.0);
 }`;
 
 it('shadow WGSL assembles and reflects group-2 depth resources', async () => {
@@ -116,99 +120,135 @@ it('contact shadow passes assemble and compile', async () => {
   void 0;
 });
 
-it('ShadowMapRenderer executes caster and receiver draws for every light view', async () => {
-  const device = await getWebGPUTestDevice();
-  if (!device) {
-    void 0;
-    void 0;
-    return;
-  }
-  const renderer = new ShadowMapRenderer(device, {
-    quality: 'low',
-    directionalMapSize: 16,
-    spotMapSize: 16,
-    pointMapSize: 16
-  });
-  const caster = new Model(device, {
-    id: 'shadow-real-caster',
-    source: /* wgsl */ `\
+for (const backend of ['webgpu', 'webgl'] as const) {
+  it(`ShadowMapRenderer executes caster and receiver draws for every light view on ${backend}`, async () => {
+    const device = backend === 'webgpu' ? await getWebGPUTestDevice() : await getWebGLTestDevice();
+    if (!device) {
+      void 0;
+      void 0;
+      return;
+    }
+    const renderer = new ShadowMapRenderer(device, {
+      quality: 'low',
+      directionalMapSize: 16,
+      spotMapSize: 16,
+      pointMapSize: 16
+    });
+    const caster = new Model(device, {
+      id: 'shadow-real-caster',
+      vs: `#version 300 es
+void main() {
+  vec2 positions[3] = vec2[3](vec2(-1.0), vec2(3.0,-1.0), vec2(-1.0,3.0));
+  gl_Position = vec4(positions[gl_VertexID], -0.3, 1.0);
+}`,
+      fs: '#version 300 es\nprecision highp float; void main() {}',
+      source: /* wgsl */ `\
 @vertex fn vertexMain(@builtin(vertex_index) index: u32) -> @builtin(position) vec4f {
   let positions = array<vec2f, 3>(vec2f(-1.0), vec2f(3.0, -1.0), vec2f(-1.0, 3.0));
   return vec4f(positions[index], 0.35, 1.0);
 }
 @fragment fn fragmentMain() {}`,
-    vertexCount: 3,
-    colorAttachmentFormats: [],
-    depthStencilAttachmentFormat: 'depth32float',
-    parameters: {depthWriteEnabled: true, depthCompare: 'less-equal'}
-  });
-  let casterDrawCount = 0;
-  const shaderProps = renderer.render({
-    camera: {
-      viewMatrix: new Matrix4().lookAt({eye: [5, 5, 8], center: [0, 0, 0]}),
-      projectionMatrix: new Matrix4().perspective({
-        fovy: radians(55),
-        aspect: 1,
+      vertexCount: 3,
+      colorAttachmentFormats: [],
+      depthStencilAttachmentFormat: 'depth32float',
+      parameters: {depthWriteEnabled: true, depthCompare: 'less-equal'}
+    });
+    let casterDrawCount = 0;
+    const shaderProps = renderer.render({
+      camera: {
+        viewMatrix: new Matrix4().lookAt({eye: [5, 5, 8], center: [0, 0, 0]}),
+        projectionMatrix: new Matrix4().perspective({
+          fovy: radians(55),
+          aspect: 1,
+          near: 0.1,
+          far: 60
+        }),
         near: 0.1,
         far: 60
-      }),
-      near: 0.1,
-      far: 60
-    },
-    directionalLights: [{direction: [0.4, 0.8, 0.3]}],
-    spotLights: [
-      {
-        position: [0, 8, 0],
-        direction: [0, -1, 0],
-        range: 20,
-        outerConeAngle: 0.4
+      },
+      directionalLights: [{direction: [0.4, 0.8, 0.3]}],
+      spotLights: [
+        {
+          position: [0, 8, 0],
+          direction: [0, -1, 0],
+          range: 20,
+          outerConeAngle: 0.4
+        }
+      ],
+      pointLights: [{position: [0, 3, 0], range: 12}],
+      drawShadowCasters: view => {
+        caster.setParameters(view.rasterParameters);
+        caster.draw(view.renderPass);
+        casterDrawCount++;
       }
-    ],
-    pointLights: [{position: [0, 3, 0], range: 12}],
-    drawShadowCasters: view => {
-      caster.setParameters(view.rasterParameters);
-      caster.draw(view.renderPass);
-      casterDrawCount++;
+    });
+    expect(casterDrawCount, 'draws three cascades, one spot and six point faces').toBe(10);
+
+    const shaderInputs = new ShaderInputs({shadow});
+    shaderInputs.setProps({shadow: shaderProps});
+    const receiver = new Model(device, {
+      id: 'shadow-real-receiver',
+      vs: `#version 300 es
+void main() {
+  vec2 positions[3] = vec2[3](vec2(-1.0), vec2(3.0,-1.0), vec2(-1.0,3.0));
+  gl_Position = vec4(positions[gl_VertexID], 0.0, 1.0);
+}`,
+      fs: `#version 300 es
+precision highp float;
+out vec4 fragColor;
+void main() {
+  vec3 normal = vec3(0.0,1.0,0.0);
+  fragColor = vec4(shadow_getDirectionalFactor(vec3(0.0),normal,1.0),
+    shadow_getSpotFactor(0,vec3(0.0),normal),
+    shadow_getPointFactor(0,vec3(0.2,3.0,0.0),normal),1.0);
+}`,
+      source: SHADOW_RECEIVER_SHADER,
+      modules: [shadow],
+      shaderInputs,
+      vertexCount: 3,
+      colorAttachmentFormats: ['rgba8unorm']
+    });
+    const colorTexture = device.createTexture({
+      width: 1,
+      height: 1,
+      format: 'rgba8unorm',
+      usage: Texture.RENDER | Texture.COPY_SRC
+    });
+    const framebuffer = device.createFramebuffer({
+      width: 1,
+      height: 1,
+      colorAttachments: [colorTexture]
+    });
+    const receiverPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
+    receiver.draw(receiverPass);
+    receiverPass.end();
+    device.submit();
+    const pixel = await readPixels(colorTexture, 1, 1);
+    if (backend === 'webgpu') {
+      expect(pixel[0], 'a blocker shadows a receiver near the point light').toBe(0);
+      expect(pixel[1], 'point reference near plane maps to depth zero').toBe(0);
+      expect(pixel[2], 'point reference far plane maps to depth one').toBe(255);
+    } else {
+      expect(
+        pixel.slice(0, 3),
+        'directional, spot and point receivers sample their depth arrays'
+      ).toEqual([0, 0, 0]);
+      expect(
+        shaderProps.pointShadowTexture.dimension,
+        'WebGL point faces use a supported array'
+      ).toBe('2d-array');
     }
-  });
-  expect(casterDrawCount, 'draws three cascades, one spot and six point faces').toBe(10);
+    expect(pixel[3], 'receiver sampled all auxiliary shadow bindings').toBe(255);
 
-  const shaderInputs = new ShaderInputs({shadow});
-  shaderInputs.setProps({shadow: shaderProps});
-  const receiver = new Model(device, {
-    id: 'shadow-real-receiver',
-    source: SHADOW_RECEIVER_SHADER,
-    modules: [shadow],
-    shaderInputs,
-    vertexCount: 3,
-    colorAttachmentFormats: ['rgba8unorm']
+    framebuffer.destroy();
+    colorTexture.destroy();
+    receiver.destroy();
+    shaderInputs.destroy();
+    caster.destroy();
+    renderer.destroy();
+    void 0;
   });
-  const colorTexture = device.createTexture({
-    width: 1,
-    height: 1,
-    format: 'rgba8unorm',
-    usage: Texture.RENDER | Texture.COPY_SRC
-  });
-  const framebuffer = device.createFramebuffer({
-    width: 1,
-    height: 1,
-    colorAttachments: [colorTexture]
-  });
-  const receiverPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
-  receiver.draw(receiverPass);
-  receiverPass.end();
-  device.submit();
-  const pixel = await readPixels(colorTexture, 1, 1);
-  expect(pixel[3], 'receiver sampled all auxiliary shadow bindings').toBe(255);
-
-  framebuffer.destroy();
-  colorTexture.destroy();
-  receiver.destroy();
-  shaderInputs.destroy();
-  caster.destroy();
-  renderer.destroy();
-  void 0;
-});
+}
 
 async function compileWGSL(source: string, name: string): Promise<void> {
   const device = await getWebGPUTestDevice();

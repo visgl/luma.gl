@@ -4,6 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
+import {GPUData} from '@luma.gl/gpgpu/gpu-data';
 import {
   getSortedSplatIndicesByDepth,
   makeGPUSplatData,
@@ -829,3 +830,39 @@ function makeSplatSource(
 
   return {positions, scales, rotations, colors, opacities, sourceBatchIndex, rowIndexBase};
 }
+
+it('SplatRenderer retains source offsets but resets offsets for sorted replacement buffers', () => {
+  const device = new NullDevice({});
+  const prepared = makeGPUSplatData(device, makeSplatSource([0.2, 0.8], 0, 0));
+  const renderer = new SplatRenderer(device, {
+    data: prepared,
+    viewportSize: [32, 32],
+    sortMode: 'none'
+  });
+  const sharedBuffer = device.createBuffer({data: new Float32Array(9), usage: Buffer.VERTEX});
+  const model = renderer.model!;
+  const batch = renderer.table!.batches[0];
+  const originalData = batch.gpuData.positions;
+  batch.gpuData.positions = new GPUData({
+    buffer: sharedBuffer,
+    format: 'float32x3',
+    length: 2,
+    byteOffset: 12
+  });
+  const renderPass = device.getDefaultRenderPass();
+  try {
+    expect(renderer.draw(renderPass)).toBe(true);
+    expect(model.vertexArray.attributes[0]).toBe(sharedBuffer);
+    expect(model.vertexArray.attributeByteOffsets[0]).toBe(12);
+    renderer.setProps({sortMode: 'global'});
+    expect(renderer.draw(renderPass)).toBe(true);
+    expect(model.vertexArray.attributes[0]).not.toBe(sharedBuffer);
+    expect(model.vertexArray.attributeByteOffsets[0]).toBe(0);
+  } finally {
+    batch.gpuData.positions = originalData;
+    renderer.destroy();
+    prepared.destroy();
+    sharedBuffer.destroy();
+    renderPass.destroy();
+  }
+});

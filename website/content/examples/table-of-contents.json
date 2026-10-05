@@ -194,6 +194,8 @@
       "tutorials/shader-modules",
       "tutorials/shader-hooks",
       "tutorials/shader-plugins",
+      "tutorials/slang-shaders",
+      "tutorials/slang-particles",
       "tutorials/transform-feedback",
       "tutorials/transform"
     ]
@@ -255,9 +257,16 @@
     "label": "Visual Effects - deck.gl v10",
     "items": [
       "deck/weather",
+      "deck/soft-shadows",
+      "deck/globe-clouds",
       "deck/city-scene",
       "deck/flow-particles",
       "deck/point-glow",
+      "deck/hdr-night-lighting",
+      "deck/global-illumination",
+      "deck/light-shafts",
+      "deck/ambient-occlusion",
+      "deck/depth-of-field",
       "deck/sketch-edges",
       "deck/scene-buffers",
       "deck/pattern-fills",

@@ -32,7 +32,7 @@ for (const fixture of performanceFixtures) {
         });
         expect(report.comparison).toBe('equal-error-budget');
         expect(report.consumerCount).toBe(consumerCount);
-        expect(report.cpuProvider).toBe('@math.gl/proj4 Proj4Projection.project (proj4js)');
+        expect(report.cpuProvider).toBe('@math.gl/projection Projection.project (proj4js)');
         expect(report.cpuPaths).toHaveLength(2);
         for (const path of report.cpuPaths) {
           expect(path.validRows).toBe(rowCount + 9);

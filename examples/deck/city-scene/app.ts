@@ -6,6 +6,7 @@ import {COORDINATE_SYSTEM, Deck, MapView, type MapViewState} from '@deck.gl/core
 import {SceneBufferEffect, SketchEdgeLayer, WaterSurfaceLayer} from '@deck.gl-community/gpu-layers';
 import type {Buffer} from '@luma.gl/core';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
+import {RIVERFRONT_VIEW_LIMITS} from '../riverfront-view';
 import {
   CITY_ORIGIN,
   makeCityFeatures,
@@ -88,7 +89,7 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
     parent,
     ...getDeckExampleProps(options),
     views: new MapView({id: 'city', controller: true}),
-    initialViewState: CAMERA_PRESETS.district,
+    initialViewState: {...RIVERFRONT_VIEW_LIMITS, ...CAMERA_PRESETS.district},
     layers: [],
     _animate: true,
     onLoad: () => {
@@ -242,7 +243,10 @@ export function createCityScene(parent: HTMLDivElement, options: DeckExampleDevi
     features,
     setCamera(preset: keyof typeof CAMERA_PRESETS) {
       riverReflectionEffect?.resetHistory();
-      deck.setProps({initialViewState: {...CAMERA_PRESETS[preset]}, _animate: shouldAnimate()});
+      deck.setProps({
+        initialViewState: {...RIVERFRONT_VIEW_LIMITS, ...CAMERA_PRESETS[preset]},
+        _animate: shouldAnimate()
+      });
     },
     setEdgeStyle(style: BuildingEdgeStyle) {
       diagnostics.edgeStyle = style;
