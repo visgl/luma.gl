@@ -85,21 +85,27 @@ empty minimum, maximum, and mean groups contain NaN.
 
 Sum and mean use no float atomics. They run in two passes:
 
-1. Each workgroup reduces a fixed block of at least 4,096 rows. It stages each 256-row tile in
-   workgroup memory, sorts the tile by group, and adds each group's run with a fixed-shape segmented
-   scan into a per-group accumulator. Each workgroup owns one column of a graph-owned
-   `[rowBlockCount × groupCount]` scratch buffer, plus a partial-count column for mean.
-2. One workgroup per group adds that group's partials in index order and a fixed binary tree, then
-   writes the sum or the mean.
+1. Each workgroup reduces a fixed block of rows, at least 4,096 rows or the whole chunk when it is
+   shorter. It stages each 256-row tile in workgroup memory, sorts the tile by group, and adds each
+   group's run with a fixed-shape segmented scan into a per-group accumulator. Each workgroup owns
+   one column of a graph-owned `[columnCount × groupCount]` scratch buffer, plus a partial-count
+   column for mean.
+2. One workgroup per group adds that group's column partials in index order and a fixed binary
+   tree, then writes the sum or the mean.
 
 The addition order depends only on the input rows, their chunk boundaries, and the group count.
-The same inputs give bitwise-identical results on every run on the same device. Rounding stays
-within ordinary `float32` pairwise summation error.
+The same inputs give bitwise-identical results on every run on the same device. This is
+deterministic `float32` accumulation, not pairwise summation: tile totals and partials are also
+added sequentially, so the usual sequential-summation error bound applies and cancellation can
+lose small terms. For example, `2^24`, many `1`s in later tiles, and then `-2^24` can sum to `0`.
 
-Scratch stays near 4 MB per partial array: row blocks grow beyond 4,096 rows when
-`rows × groups` exceeds about one million partials. Accumulators live in workgroup memory while
-they fit in 8 KB: up to 2,048 sum groups or 1,024 mean groups. Larger outputs accumulate directly
-in the workgroup's scratch column, which no other workgroup writes. Outputs are limited to
+Each partial array holds at most about one million values, about 4 MB, regardless of the number
+of chunks. Outputs with more than about one million groups use a single column of `groupCount`
+values. Row blocks grow beyond 4,096 rows until the largest chunk fits the available columns, but
+never grow beyond the largest chunk. Fragmented inputs with more row blocks than columns add later
+row blocks into earlier columns in row order. Accumulators live in workgroup memory while they fit
+in 8 KB: up to 2,048 sum groups or 1,024 mean groups. Larger outputs accumulate directly in the
+workgroup's scratch column, which no other workgroup in the same pass writes. Outputs are limited to
 16,777,215 groups, and the graph throws during planning when partial scratch would exceed
 `maxStorageBufferBindingSize`.
 

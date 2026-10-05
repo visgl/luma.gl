@@ -39,8 +39,10 @@ const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const SUM_TILE_ROW_COUNT = GROUP_AGGREGATION_WORKGROUP_SIZE;
 /** Smallest number of row tiles reduced by one floating-point sum workgroup. */
 const MINIMUM_SUM_TILES_PER_WORKGROUP = 16;
-/** Target number of per-workgroup partials per group statistic before row ranges grow. */
+/** Target number of partials per group statistic before row ranges grow or columns are reused. */
 const TARGET_SUM_PARTIAL_COUNT = 1 << 20;
+/** Largest row-block tile count whose row count stays representable as a WGSL `u32`. */
+const MAXIMUM_SUM_TILES_PER_WORKGROUP = Math.floor(0xffffffff / GROUP_AGGREGATION_WORKGROUP_SIZE);
 /** WebGPU's guaranteed `maxComputeWorkgroupStorageSize`, used when a device reports no limit. */
 const MINIMUM_WORKGROUP_STORAGE_BYTE_LENGTH = 16384;
 /** Workgroup bytes used by the sort keys, staged values, and scan values and counts of one tile. */
@@ -107,8 +109,8 @@ export type GPUGroupAggregationProps = GPUGroupAggregationBaseProps &
  * Sum and mean use a deterministic two-pass reduction without float atomics. Each workgroup reduces
  * a fixed row range into one column of per-group partials in graph-owned scratch, by sorting each
  * 256-row tile by group and running a fixed-shape segmented scan. A second pass sums each group's
- * partials in a fixed tree order. The same inputs, chunking, and device give bitwise-identical
- * results on every run.
+ * partials in a fixed order. The same inputs, chunking, and device give bitwise-identical results
+ * on every run. Additions are ordinary `float32` additions, so cancellation can lose small terms.
  */
 export class GPUGroupAggregation {
   /** Prefix for generated graph node IDs. */
@@ -715,7 +717,8 @@ function addGroupSumNodes<Parameters>(
         accumulateInWorkgroup: plan.accumulateInWorkgroup,
         rowsPerWorkgroup: plan.rowsPerWorkgroup,
         rowBlockCount,
-        rowBlockOffset
+        rowBlockOffset,
+        columnCount: plan.columnCount
       })
     );
     rowBlockOffset += rowBlockCount;
@@ -726,7 +729,7 @@ function addGroupSumNodes<Parameters>(
       partialSums,
       partialCounts,
       output: props.output,
-      rowBlockCount: plan.rowBlockCount
+      columnCount: plan.columnCount
     })
   );
   return nodes;
@@ -738,20 +741,24 @@ export type GPUGroupSumPlan = {
   rowsPerWorkgroup: number;
   /** Total row blocks across every non-empty chunk. */
   rowBlockCount: number;
+  /** Scratch columns; row block `b` accumulates into column `b % columnCount`. */
+  columnCount: number;
   /** Whether group accumulators fit in workgroup memory instead of the scratch column. */
   accumulateInWorkgroup: boolean;
-  /** Partial values per scratch array, `rowBlockCount * groupCount`. */
+  /** Partial values per scratch array, `columnCount * groupCount`. */
   partialCount: number;
 };
 
 /**
- * Sizes row blocks and the accumulator location for deterministic sums. @internal
+ * Sizes row blocks, scratch columns, and the accumulator location for deterministic sums. @internal
  *
- * Row blocks grow beyond the minimum when `rows * groups` would otherwise need more than about one
- * million partials, so scratch stays near 4 MB per array. Group accumulators live in workgroup
- * memory while they fit an 8 KB budget beside the 3 KB row tile, which keeps several workgroups
- * resident per compute unit. Larger outputs accumulate directly in the workgroup's own scratch
- * column, which no other workgroup touches.
+ * Scratch holds at most about one million partials per array, or one column when the group count
+ * alone exceeds that. Row blocks grow beyond the minimum until the largest chunk fits the available
+ * columns, but never beyond the largest chunk. Row blocks beyond the column count, which come from
+ * fragmented inputs, add into earlier columns in row order, so scratch does not grow with the chunk
+ * count. Group accumulators live in workgroup memory while they fit an 8 KB budget beside the 3 KB
+ * row tile, which keeps several workgroups resident per compute unit. Larger outputs accumulate
+ * directly in the workgroup's own scratch column, which no other workgroup in the pass touches.
  */
 export function getGPUGroupSumPlan(
   chunkLengths: readonly number[],
@@ -759,24 +766,36 @@ export function getGPUGroupSumPlan(
   operation: GPUGroupSumOperation,
   maxComputeWorkgroupStorageSize: number
 ): GPUGroupSumPlan {
-  const rowCount = chunkLengths.reduce((total, length) => total + length, 0);
+  const columnCapacity = Math.max(1, Math.floor(TARGET_SUM_PARTIAL_COUNT / groupCount));
+  const largestChunkLength = chunkLengths.reduce((largest, length) => Math.max(largest, length), 0);
+  const largestChunkTileCount = Math.ceil(largestChunkLength / SUM_TILE_ROW_COUNT);
   const tilesPerWorkgroup = Math.max(
-    MINIMUM_SUM_TILES_PER_WORKGROUP,
-    Math.ceil((rowCount * groupCount) / (TARGET_SUM_PARTIAL_COUNT * SUM_TILE_ROW_COUNT))
+    1,
+    Math.min(
+      largestChunkTileCount,
+      MAXIMUM_SUM_TILES_PER_WORKGROUP,
+      Math.max(MINIMUM_SUM_TILES_PER_WORKGROUP, Math.ceil(largestChunkTileCount / columnCapacity))
+    )
   );
   const rowsPerWorkgroup = tilesPerWorkgroup * SUM_TILE_ROW_COUNT;
   const rowBlockCount = chunkLengths.reduce(
     (total, length) => total + Math.ceil(length / rowsPerWorkgroup),
     0
   );
+  // Row blocks of one chunk run concurrently, so each one needs its own column.
+  const columnCount = Math.min(
+    rowBlockCount,
+    Math.max(columnCapacity, Math.ceil(largestChunkLength / rowsPerWorkgroup))
+  );
   const accumulatorByteLength = groupCount * (operation === 'mean' ? 2 : 1) * UINT32_BYTE_LENGTH;
   return {
     rowsPerWorkgroup,
     rowBlockCount,
+    columnCount,
     accumulateInWorkgroup:
       accumulatorByteLength <= MAXIMUM_WORKGROUP_ACCUMULATOR_BYTE_LENGTH &&
       SUM_TILE_WORKGROUP_BYTE_LENGTH + accumulatorByteLength <= maxComputeWorkgroupStorageSize,
-    partialCount: rowBlockCount * groupCount
+    partialCount: columnCount * groupCount
   };
 }
 
@@ -787,7 +806,8 @@ export function getGPUGroupSumPlan(
  * bitonic-sorted, and reduced with a segmented Hillis-Steele scan. The last row of each run adds
  * the run total to the group's accumulator. Each accumulator has one writer per tile, and tiles are
  * separated by barriers, so the addition order is fixed by the input rows alone. Accumulators are
- * workgroup memory, flushed at the end, or the workgroup's own scratch column.
+ * workgroup memory, flushed at the end, or the workgroup's own scratch column. A row block that
+ * reuses a column written by an earlier pass starts from that column's partials.
  */
 function addGroupPartialSumPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
@@ -803,6 +823,7 @@ function addGroupPartialSumPass<Parameters>(
     rowsPerWorkgroup: number;
     rowBlockCount: number;
     rowBlockOffset: number;
+    columnCount: number;
   }
 ): readonly GPUCommandNode<Parameters>[] {
   const dispatchLayout = getGPUGroupAggregationDispatchLayout(
@@ -818,18 +839,17 @@ function addGroupPartialSumPass<Parameters>(
   const maskCondition = props.mask
     ? `selectionMask[${getViewElementOffset(props.mask)}u + index * ${getScalarStride(props.mask)}u] != 0u`
     : 'true';
-  const sumAccumulator = local
-    ? 'localSums[group]'
-    : 'partialSums[PARTIAL_SUMS_OFFSET + columnStart + group]';
-  const countAccumulator = local
-    ? 'localCounts[group]'
-    : 'partialCounts[PARTIAL_COUNTS_OFFSET + columnStart + group]';
+  const partialSum = 'partialSums[PARTIAL_SUMS_OFFSET + columnStart + group]';
+  const partialCount = 'partialCounts[PARTIAL_COUNTS_OFFSET + columnStart + group]';
+  const sumAccumulator = local ? 'localSums[group]' : partialSum;
+  const countAccumulator = local ? 'localCounts[group]' : partialCount;
   const source = /* wgsl */ `
 const ELEMENT_COUNT: u32 = ${props.keys.length}u;
 const GROUP_COUNT: u32 = ${props.groupCount}u;
 const ROWS_PER_WORKGROUP: u32 = ${props.rowsPerWorkgroup}u;
 const ROW_BLOCK_COUNT: u32 = ${props.rowBlockCount}u;
 const ROW_BLOCK_OFFSET: u32 = ${props.rowBlockOffset}u;
+const COLUMN_COUNT: u32 = ${props.columnCount}u;
 const KEYS_OFFSET: u32 = ${getViewElementOffset(props.keys)}u;
 const VALUES_OFFSET: u32 = ${getViewElementOffset(props.values)}u;
 const KEYS_STRIDE: u32 = ${getScalarStride(props.keys)}u;
@@ -857,19 +877,23 @@ ${local && includesCounts ? `var<workgroup> localCounts: array<u32, ${props.grou
 ) {
   let rowBlock = (workgroupId.z * ${dispatchLayout.y}u + workgroupId.y) * ${dispatchLayout.x}u + workgroupId.x;
   if (rowBlock >= ROW_BLOCK_COUNT) { return; }
-  let columnStart = (ROW_BLOCK_OFFSET + rowBlock) * GROUP_COUNT;
+  let globalRowBlock = ROW_BLOCK_OFFSET + rowBlock;
+  let columnStart = (globalRowBlock % COLUMN_COUNT) * GROUP_COUNT;
+  let reusesColumn = globalRowBlock >= COLUMN_COUNT;
   for (var group = lane; group < GROUP_COUNT; group += TILE_ROW_COUNT) {
-    ${sumAccumulator} = 0.0;
-    ${includesCounts ? `${countAccumulator} = 0u;` : ''}
+    ${sumAccumulator} = select(0.0, ${partialSum}, reusesColumn);
+    ${includesCounts ? `${countAccumulator} = select(0u, ${partialCount}, reusesColumn);` : ''}
   }
 
   let rowStart = rowBlock * ROWS_PER_WORKGROUP;
-  let rowEnd = min(rowStart + ROWS_PER_WORKGROUP, ELEMENT_COUNT);
-  for (var tileStart = rowStart; tileStart < rowEnd; tileStart += TILE_ROW_COUNT) {
-    let index = tileStart + lane;
+  let rowLength = min(ROWS_PER_WORKGROUP, ELEMENT_COUNT - rowStart);
+  let tileCount = (rowLength + TILE_ROW_COUNT - 1u) / TILE_ROW_COUNT;
+  for (var tile = 0u; tile < tileCount; tile++) {
+    let rowOffset = tile * TILE_ROW_COUNT + lane;
+    let index = rowStart + rowOffset;
     var sortKey = INVALID_SORT_KEY;
     var value = 0.0;
-    if (index < rowEnd && ${maskCondition}) {
+    if (rowOffset < rowLength && ${maskCondition}) {
       let groupIndex = groupKeys[KEYS_OFFSET + index * KEYS_STRIDE];
       value = inputValues[VALUES_OFFSET + index * VALUES_STRIDE];
       let finiteValue = value == value && abs(value) <= 3.402823466e+38;
@@ -954,9 +978,9 @@ ${
 }
 
 /**
- * Sums each group's row-block partials in a fixed order and writes the sum or mean.
+ * Sums each group's column partials in a fixed order and writes the sum or mean.
  *
- * One workgroup reduces one group at a time: each lane adds a strided subset of row blocks in index
+ * One workgroup reduces one group at a time: each lane adds a strided subset of columns in index
  * order, then a fixed binary tree combines the lanes. Workgroups stride over groups when the group
  * count exceeds one dispatch dimension. Means of groups without accepted rows are NaN.
  */
@@ -967,7 +991,7 @@ function addGroupCombineSumPass<Parameters>(
     partialSums: GraphDataView<'float32'>;
     partialCounts?: GraphDataView<'uint32'>;
     output: GraphDataView<'float32'>;
-    rowBlockCount: number;
+    columnCount: number;
   }
 ): readonly GPUCommandNode<Parameters>[] {
   const groupCount = props.output.length;
@@ -987,7 +1011,7 @@ function addGroupCombineSumPass<Parameters>(
     : 'outputValues[OUTPUT_OFFSET + groupIndex] = bitcast<u32>(reductionSums[0]);';
   const source = /* wgsl */ `
 const GROUP_COUNT: u32 = ${groupCount}u;
-const ROW_BLOCK_COUNT: u32 = ${props.rowBlockCount}u;
+const COLUMN_COUNT: u32 = ${props.columnCount}u;
 const PARTIAL_SUMS_OFFSET: u32 = ${getViewElementOffset(props.partialSums)}u;
 const PARTIAL_COUNTS_OFFSET: u32 = ${props.partialCounts ? getViewElementOffset(props.partialCounts) : 0}u;
 const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.output)}u;
@@ -1006,8 +1030,8 @@ ${includesCounts ? `var<workgroup> reductionCounts: array<u32, ${GROUP_AGGREGATI
   for (var groupIndex = workgroupId.x; groupIndex < GROUP_COUNT; groupIndex += WORKGROUP_COUNT) {
     var sum = 0.0;
     ${includesCounts ? 'var count = 0u;' : ''}
-    for (var rowBlock = lane; rowBlock < ROW_BLOCK_COUNT; rowBlock += WORKGROUP_SIZE) {
-      let partialIndex = rowBlock * GROUP_COUNT + groupIndex;
+    for (var column = lane; column < COLUMN_COUNT; column += WORKGROUP_SIZE) {
+      let partialIndex = column * GROUP_COUNT + groupIndex;
       sum += partialSums[PARTIAL_SUMS_OFFSET + partialIndex];
       ${includesCounts ? 'count += partialCounts[PARTIAL_COUNTS_OFFSET + partialIndex];' : ''}
     }

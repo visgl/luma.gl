@@ -119,6 +119,95 @@ it('GPUGroupAggregation accumulates groups beyond workgroup memory in scratch', 
   }
 });
 
+it('GPUGroupAggregation sums reuse bounded scratch columns for fragmented inputs', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+
+  const groupCount = 300_000;
+  const chunkLengths = [700, 1, 4_096, 0, 5_000, 33, 9_000, 2];
+  for (const operation of ['sum', 'mean'] as const) {
+    const plan = getGPUGroupSumPlan(
+      chunkLengths,
+      groupCount,
+      operation,
+      device.limits.maxComputeWorkgroupStorageSize
+    );
+    expect(
+      plan.columnCount < plan.rowBlockCount,
+      `${operation} reuses scratch columns across chunks`
+    ).toBe(true);
+    expect(plan.partialCount, `${operation} scratch is bounded by the column count`).toBe(
+      plan.columnCount * groupCount
+    );
+  }
+  const keyChunks = chunkLengths.map((length, chunkIndex) =>
+    makeKeys(length, 64, chunkIndex * 100_000)
+  );
+  const valueChunks = chunkLengths.map((length, chunkIndex) =>
+    Float32Array.from({length}, (_, index) => (hashUint32(chunkIndex * 100_000 + index) % 11) - 5)
+  );
+  const maskChunks = chunkLengths.map((length, chunkIndex) =>
+    Uint32Array.from({length}, (_, index) => hashUint32(chunkIndex * 13 + index) % 5)
+  );
+  for (const operation of ['sum', 'mean'] as const) {
+    const input = {keyChunks, valueChunks, maskChunks, groupCount, operation};
+    const first = await runGroupSum(device, input);
+    expectGroupStatistic(
+      first.values,
+      getCPUGroupStatistic(input),
+      operation,
+      `${operation} over fragmented chunks matches the CPU reference`
+    );
+    const second = await runGroupSum(device, input);
+    expect(
+      Array.from(new Uint32Array(second.values.buffer)),
+      `${operation} over reused scratch columns is bitwise deterministic`
+    ).toEqual(Array.from(new Uint32Array(first.values.buffer)));
+  }
+});
+
+it('GPUGroupAggregation sums stay deterministic and bounded under cancellation', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+
+  const groupCount = 16;
+  const tileCount = 64;
+  const rowCount = tileCount * 256;
+  const keys = Uint32Array.from({length: rowCount}, (_, index) =>
+    index % 256 === 0 ? 0 : 1 + (hashUint32(index) % (groupCount - 1))
+  );
+  // Group 0 receives 2^24, one 1 in each middle tile, and -2^24 in the last tile.
+  const values = Float32Array.from({length: rowCount}, (_, index) => {
+    if (index === 0) return 2 ** 24;
+    if (index === (tileCount - 1) * 256) return -(2 ** 24);
+    if (index % 256 === 0) return 1;
+    const hash = hashUint32(index * 5 + 3);
+    return (hash % 2 === 0 ? 2 ** 20 : -(2 ** 20)) + (hash % 1000) / 1000;
+  });
+  for (const operation of ['sum', 'mean'] as const) {
+    const input = {keyChunks: [keys], valueChunks: [values], groupCount, operation};
+    const expected = getCPUGroupStatistic(input);
+    const {counts, absoluteSums} = getCPUGroupMagnitudes(input);
+    const runs = [await runGroupSum(device, input), await runGroupSum(device, input)];
+    for (let groupIndex = 0; groupIndex < groupCount; groupIndex++) {
+      // Any float32 summation order is within (n - 1) * 2^-24 * sum(|x|) of the exact sum.
+      const sumBound = counts[groupIndex] * 2 ** -24 * absoluteSums[groupIndex];
+      const bound =
+        operation === 'sum'
+          ? sumBound
+          : sumBound / counts[groupIndex] + 4e-7 * Math.abs(expected[groupIndex]);
+      expect(
+        Math.abs(runs[0].values[groupIndex] - expected[groupIndex]) <= bound,
+        `${operation} group ${groupIndex} is within the float32 summation bound`
+      ).toBe(true);
+    }
+    expect(
+      Array.from(new Uint32Array(runs[1].values.buffer)),
+      `${operation} with cancellation is bitwise deterministic`
+    ).toEqual(Array.from(new Uint32Array(runs[0].values.buffer)));
+  }
+});
+
 it('GPUGroupAggregation sums keep chunk order, empty inputs, and non-finite values', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) return;
@@ -197,6 +286,22 @@ it('GPUGroupAggregation sum plan bounds scratch and workgroup storage', () => {
   ).toBe(false);
   const chunked = getGPUGroupSumPlan([10, 0, 5000], 2, 'sum', 16_384);
   expect(chunked.rowBlockCount, 'row blocks do not cross chunk boundaries').toBe(3);
+  expect(chunked.columnCount, 'unfragmented inputs give each row block a column').toBe(3);
+
+  const fragmented = getGPUGroupSumPlan(new Array(8193).fill(1), 4096, 'sum', 16_384);
+  expect(fragmented.rowBlockCount, 'each one-row chunk is a row block').toBe(8193);
+  expect(fragmented.partialCount <= 1 << 20, 'fragmented inputs reuse bounded scratch').toBe(true);
+  expect(fragmented.rowsPerWorkgroup, 'row blocks do not exceed the largest chunk').toBe(256);
+
+  const chunkLength = 100_000_000;
+  const huge = getGPUGroupSumPlan(new Array(30).fill(chunkLength), 2_000_000, 'mean', 16_384);
+  expect(
+    huge.rowsPerWorkgroup <= Math.ceil(chunkLength / 256) * 256,
+    'row blocks stay within the largest chunk'
+  ).toBe(true);
+  expect(huge.rowsPerWorkgroup <= 0xffffffff, 'row blocks fit WGSL u32').toBe(true);
+  expect(huge.columnCount, 'outputs above the partial target use one column').toBe(1);
+  expect(huge.partialCount, 'one column holds every group').toBe(2_000_000);
 });
 
 async function runGroupSum(device: Device, input: GroupSumInput): Promise<GroupSumResult> {
@@ -310,6 +415,26 @@ function getCPUGroupStatistic(input: GroupSumInput): Float64Array {
   return input.operation === 'sum'
     ? sums
     : sums.map((sum, groupIndex) => (counts[groupIndex] ? sum / counts[groupIndex] : Number.NaN));
+}
+
+/** Counts accepted rows and sums their absolute values per group for error bounds. */
+function getCPUGroupMagnitudes(input: GroupSumInput): {
+  counts: Float64Array;
+  absoluteSums: Float64Array;
+} {
+  const counts = new Float64Array(input.groupCount);
+  const absoluteSums = new Float64Array(input.groupCount);
+  for (const [chunkIndex, keys] of input.keyChunks.entries()) {
+    const values = input.valueChunks[chunkIndex];
+    for (let rowIndex = 0; rowIndex < keys.length; rowIndex++) {
+      const key = keys[rowIndex];
+      if (key < input.groupCount && Number.isFinite(values[rowIndex])) {
+        counts[key]++;
+        absoluteSums[key] += Math.abs(values[rowIndex]);
+      }
+    }
+  }
+  return {counts, absoluteSums};
 }
 
 /** Creates pseudo-random keys, including some beyond the output range when `range > groups`. */
