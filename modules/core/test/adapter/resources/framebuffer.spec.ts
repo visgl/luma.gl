@@ -130,6 +130,63 @@ it('Framebuffer#clone overrides size', async () => {
   void 0;
 });
 
+it('Framebuffer owns resized and cloned textures while preserving supplied attachments', async () => {
+  for (const device of await getTestDevices()) {
+    for (const attachmentKind of ['format', 'texture', 'view'] as const) {
+      const colorTexture = device.createTexture({width: 2, height: 2});
+      const depthTexture = device.createTexture({width: 2, height: 2, format: 'depth16unorm'});
+      const framebuffer = device.createFramebuffer({
+        width: 2,
+        height: 2,
+        colorAttachments: [
+          attachmentKind === 'format'
+            ? 'rgba8unorm'
+            : attachmentKind === 'texture'
+              ? colorTexture
+              : colorTexture.view
+        ],
+        depthStencilAttachment:
+          attachmentKind === 'format'
+            ? 'depth16unorm'
+            : attachmentKind === 'texture'
+              ? depthTexture
+              : depthTexture.view
+      });
+      const originalColor = framebuffer.colorAttachments[0].texture;
+      const originalDepth = framebuffer.depthStencilAttachment!.texture;
+      const cloned = framebuffer.clone({width: 3, height: 3});
+      const clonedColor = cloned.colorAttachments[0].texture;
+      const clonedDepth = cloned.depthStencilAttachment!.texture;
+      cloned.destroy();
+      expect(clonedColor.destroyed).toBe(true);
+      expect(clonedDepth.destroyed).toBe(true);
+      expect(originalColor.destroyed).toBe(false);
+      expect(originalDepth.destroyed).toBe(false);
+      framebuffer.resize({width: 2, height: 2});
+      expect(framebuffer.colorAttachments[0].texture).toBe(originalColor);
+      for (const size of [4, 8]) {
+        const previousColor = framebuffer.colorAttachments[0].texture;
+        const previousDepth = framebuffer.depthStencilAttachment!.texture;
+        framebuffer.resize({width: size, height: size});
+        const ownsPrevious = size === 8 || attachmentKind === 'format';
+        expect(previousColor.destroyed).toBe(ownsPrevious);
+        expect(previousDepth.destroyed).toBe(ownsPrevious);
+        expect(framebuffer.colorAttachments[0].texture.destroyed).toBe(false);
+        expect(framebuffer.depthStencilAttachment!.texture.destroyed).toBe(false);
+      }
+      const finalColor = framebuffer.colorAttachments[0].texture;
+      const finalDepth = framebuffer.depthStencilAttachment!.texture;
+      framebuffer.destroy();
+      expect(finalColor.destroyed).toBe(true);
+      expect(finalDepth.destroyed).toBe(true);
+      expect(colorTexture.destroyed).toBe(false);
+      expect(depthTexture.destroyed).toBe(false);
+      colorTexture.destroy();
+      depthTexture.destroy();
+    }
+  }
+});
+
 it('WebGLFramebuffer create and resize attachments', async () => {
   for (const testDevice of await getTestDevices()) {
     for (const tc of TEST_CASES) {
