@@ -29,3 +29,26 @@ export function getVisualTestPixelScale() {
 export function captureVisualTestScreenshot(target, options = {}) {
   return target.screenshot({...options, scale: 'css'});
 }
+
+/** Keep one real startup check after the shared adapter decision matrix runs in Node. */
+export async function assertRejectedWebGPUFallback(browser, url, sceneName) {
+  // Startup wiring needs no full-size framebuffer or image comparisons.
+  const page = await browser.newPage({viewport: {width: 320, height: 240}});
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  try {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'gpu', {value: {
+        requestAdapter: async () => {throw new Error('Adapter unavailable');}
+      }});
+    });
+    await page.goto(url);
+    await page.waitForFunction(() => document.body.dataset.ready === 'true', undefined, {timeout: 60_000});
+    assert.equal(await page.evaluate(name => window[name].diagnostics.backend, sceneName), 'webgl', `${sceneName}: rejected adapter falls back to WebGL`);
+    assert.equal(await page.locator('#backend').inputValue(), 'webgl');
+    await page.evaluate(name => window[name].finalize(), sceneName);
+    assert.deepEqual(errors, []);
+  } finally {
+    await page.close();
+  }
+}

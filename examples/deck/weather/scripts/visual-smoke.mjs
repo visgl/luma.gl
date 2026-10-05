@@ -10,7 +10,7 @@ import {chromium} from 'playwright';
 import {PNG} from 'pngjs';
 import {createServer} from 'vite';
 import {getPlaywrightLaunchOptions} from '../../../../scripts/playwright/get-playwright-launch-options.mjs';
-import {setVisualTestPixelScale, captureVisualTestScreenshot} from '../../../../scripts/playwright/visual-test-utils.mjs';
+import {setVisualTestPixelScale, captureVisualTestScreenshot, assertRejectedWebGPUFallback} from '../../../../scripts/playwright/visual-test-utils.mjs';
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const server = await createServer({root, logLevel: 'error', server: {host: '127.0.0.1', port: 0}});
 await server.listen();
@@ -69,8 +69,7 @@ try {
       assert.deepEqual(await page.locator('#preset option').allTextContents(), ['Rain', 'Snow', 'Clouds', 'Sunny'], `${backend}: weather presets`);
       assert(await page.isChecked('#fog-enabled'), `${backend}: opens with independent fog enabled`);
       assert.equal(await page.inputValue('#visibility'), '700', `${backend}: fog is apparent by default`);
-      await captureScreenshot({path: join(tmpdir(), `weather-default-${backend}.png`)});
-      const defaultFogStart = PNG.sync.read(await captureScreenshot());
+      const defaultFogStart = PNG.sync.read(await captureScreenshot({path: join(tmpdir(), `weather-default-${backend}.png`)}));
       const defaultFogTime = await page.evaluate(() => window.weatherScene.diagnostics.time);
       await page.waitForTimeout(2500);
       const defaultFogEnd = PNG.sync.read(await captureScreenshot({path: join(tmpdir(), `weather-default-moving-${backend}.png`)}));
@@ -96,13 +95,17 @@ try {
         assert.equal(await page.isChecked('#clouds'), preset !== 'clear', `${backend}: ${preset} selects cloud state`);
         assert.equal(await page.evaluate(() => window.weatherScene.deck.props.layers.find(layer => layer.id === 'weather').props.visible), preset === 'rain' || preset === 'snow', `${backend}: ${preset} selects precipitation`);
         await page.uncheck('#fog-enabled');
-        await page.waitForTimeout(150);
-        const withoutFog = PNG.sync.read(await captureScreenshot());
+        if (preset === 'rain') await page.waitForTimeout(150);
+        const withoutFog = preset === 'rain' ? PNG.sync.read(await captureScreenshot()) : null;
+        assert.deepEqual(await page.evaluate(() => window.weatherScene.deck.props.layers
+          .filter(layer => ['district', 'weather'].includes(layer.id)).map(layer => layer.props.fog().density)), [0, 0], `${backend}: ${preset} disables fog in scene and precipitation`);
         assert(await page.isDisabled('#visibility'), `${backend}: disabled fog dims its controls`);
         await page.check('#fog-enabled');
-        await page.waitForTimeout(150);
-        assert(changedPixels(withoutFog, PNG.sync.read(await captureScreenshot())) > 10000,
-          `${backend}: fog toggles independently with ${preset}`);
+        if (preset === 'rain') await page.waitForTimeout(150);
+        assert.deepEqual(await page.evaluate(() => window.weatherScene.deck.props.layers
+          .filter(layer => ['district', 'weather'].includes(layer.id)).map(layer => layer.props.fog().density)), [3.912 / 700, 3.912 / 700], `${backend}: ${preset} enables fog in scene and precipitation`);
+        if (withoutFog) assert(changedPixels(withoutFog, PNG.sync.read(await captureScreenshot())) > 10000,
+          `${backend}: fog visibly toggles independently with rain`);
         assert.equal(await page.inputValue('#preset'), preset, `${backend}: fog preserves weather choice`);
         assert.equal(await page.inputValue('#visibility'), '700', `${backend}: fog retains visibility`);
       }
@@ -425,27 +428,8 @@ try {
         `${backend}: rain, snow, fog, pause, depth occlusion, surface masking and cleanup passed`
       );
       if (backend === 'webgl') {
-        for (const unavailable of ['absent', 'null', 'rejected']) {
-          const fallbackPage = await browser.newPage();
-          const fallbackErrors = [];
-          fallbackPage.on('pageerror', error => fallbackErrors.push(error.message));
-          await fallbackPage.addInitScript(mode => {
-            Object.defineProperty(navigator, 'gpu', {value: mode === 'absent' ? undefined : {
-              requestAdapter: async () => {
-                if (mode === 'rejected') throw new Error('Adapter unavailable');
-                return null;
-              }
-            }});
-          }, unavailable);
-          await fallbackPage.goto(process.env.WEATHER_EXAMPLE_URL || server.resolvedUrls.local[0]);
-          await fallbackPage.waitForFunction(() => document.body.dataset.ready === 'true', undefined, {timeout: 60_000});
-          assert.equal(await fallbackPage.evaluate(() => window.weatherScene.diagnostics.backend), 'webgl', `default falls back when WebGPU is ${unavailable}`);
-          assert.equal(await fallbackPage.locator('#backend').inputValue(), 'webgl');
-          await fallbackPage.evaluate(() => window.weatherScene.finalize());
-          assert.deepEqual(fallbackErrors, []);
-          await fallbackPage.close();
-        }
-        console.log('Default backend: absent, null and rejected WebGPU adapter fallback passed');
+        await assertRejectedWebGPUFallback(browser, process.env.WEATHER_EXAMPLE_URL || server.resolvedUrls.local[0], 'weatherScene');
+        console.log('Default backend: rejected WebGPU adapter fallback passed');
       }
     } finally {
       await browser.close();

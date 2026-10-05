@@ -9,7 +9,7 @@ import {chromium} from 'playwright';
 import {PNG} from 'pngjs';
 import {createServer} from 'vite';
 import {getPlaywrightLaunchOptions} from '../../../../scripts/playwright/get-playwright-launch-options.mjs';
-import {setVisualTestPixelScale, captureVisualTestScreenshot} from '../../../../scripts/playwright/visual-test-utils.mjs';
+import {setVisualTestPixelScale, captureVisualTestScreenshot, assertRejectedWebGPUFallback} from '../../../../scripts/playwright/visual-test-utils.mjs';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const server = await createServer({root, logLevel: 'error', server: {host: '127.0.0.1', port: 0}});
@@ -188,27 +188,8 @@ try {
       assert.deepEqual(errors, [], `${backend}: browser/GPU errors`);
       console.log(`${backend}: animation, pause, fields, density, picking, occlusion, ownership and cleanup passed`);
       if (backend === 'webgl') {
-        for (const unavailable of ['absent', 'null', 'rejected']) {
-          const fallbackPage = await browser.newPage();
-          const fallbackErrors = [];
-          fallbackPage.on('pageerror', error => fallbackErrors.push(error.message));
-          await fallbackPage.addInitScript(mode => {
-            Object.defineProperty(navigator, 'gpu', {value: mode === 'absent' ? undefined : {
-              requestAdapter: async () => {
-                if (mode === 'rejected') throw new Error('Adapter unavailable');
-                return null;
-              }
-            }});
-          }, unavailable);
-          await fallbackPage.goto(process.env.FLOW_EXAMPLE_URL || server.resolvedUrls.local[0]);
-          await fallbackPage.waitForFunction(() => document.body.dataset.ready === 'true', undefined, {timeout: 60_000});
-          assert.equal(await fallbackPage.evaluate(() => window.flowScene.diagnostics.backend), 'webgl', `default falls back when WebGPU is ${unavailable}`);
-          assert.equal(await fallbackPage.locator('#backend').inputValue(), 'webgl');
-          await fallbackPage.evaluate(() => window.flowScene.finalize());
-          assert.deepEqual(fallbackErrors, []);
-          await fallbackPage.close();
-        }
-        console.log('Default backend: absent, null and rejected WebGPU adapter fallback passed');
+        await assertRejectedWebGPUFallback(browser, process.env.FLOW_EXAMPLE_URL || server.resolvedUrls.local[0], 'flowScene');
+        console.log('Default backend: rejected WebGPU adapter fallback passed');
       }
 
     } finally {await browser.close();}
