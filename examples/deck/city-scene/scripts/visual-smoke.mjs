@@ -10,13 +10,11 @@ import {chromium} from 'playwright';
 import {PNG} from 'pngjs';
 import {createServer} from 'vite';
 import {getPlaywrightLaunchOptions} from '../../../../scripts/playwright/get-playwright-launch-options.mjs';
+import {setVisualTestPixelScale} from '../../../../scripts/playwright/visual-test-utils.mjs';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const softwareGpu = process.env.CITY_SCENE_HARDWARE !== 'true';
-// Preserve CSS coordinates for controls and picking while rendering one quarter as many pixels.
 // Set CITY_SCENE_DEVICE_SCALE=1 to compare against the original framebuffer resolution.
-const deviceScaleFactor = Number(process.env.CITY_SCENE_DEVICE_SCALE ?? 0.5);
-assert(deviceScaleFactor > 0 && Number.isFinite(deviceScaleFactor));
 // Full-resolution reflection history can take longer on shared software-rendered CI workers.
 const reflectionIdleTimeout = softwareGpu ? 180_000 : 60_000;
 const server = await createServer({root, logLevel: 'error', server: {host: '127.0.0.1', port: 0}});
@@ -25,6 +23,9 @@ const url = server.resolvedUrls?.local[0];
 assert(url);
 try {
   for (const backend of ['webgpu', 'webgl']) {
+    // The SSR phase uses one sixteenth of the original pixels. WebGL water needs half size.
+    const pixelScaleFactor = Number(process.env.CITY_SCENE_DEVICE_SCALE ?? (backend === 'webgpu' ? 0.25 : 0.5));
+    assert(pixelScaleFactor > 0 && Number.isFinite(pixelScaleFactor));
     const browser = await chromium.launch(getPlaywrightLaunchOptions({
       headless: true, backend, softwareGpu,
       // Linux canvas presentation needs the Vulkan compositor and an X display (see #2874).
@@ -33,7 +34,7 @@ try {
         : {}
     }));
     try {
-      const page = await browser.newPage({viewport: {width: 1200, height: 850}, deviceScaleFactor});
+      const page = await browser.newPage({viewport: {width: 1200, height: 850}, deviceScaleFactor: 1});
       // Pixel assertions use CSS coordinates, independent of framebuffer resolution.
       const captureScreenshot = options => page.screenshot({...options, scale: 'css'});
       const waitForIdle = () => page.waitForFunction(() => !window.cityScene.deck.props._animate && !window.cityScene.deck.needsRedraw(), undefined, {timeout: reflectionIdleTimeout});
@@ -43,13 +44,7 @@ try {
       await page.goto(`${process.env.CITY_SCENE_URL || url}?backend=${backend}`);
       await page.waitForFunction(() => document.body.dataset.ready === 'true', undefined, {timeout: 60_000});
       await page.waitForFunction(() => window.cityScene?.diagnostics.frames > 0);
-      // Chromium's native resize observer can ignore the emulated device scale.
-      await page.evaluate(scale => window.cityScene.deck.setProps({useDevicePixels: scale}), deviceScaleFactor);
-      await page.waitForFunction(scale => {
-        const canvas = document.querySelector('canvas');
-        return canvas.width === Math.floor(canvas.clientWidth * scale) &&
-          canvas.height === Math.floor(canvas.clientHeight * scale);
-      }, deviceScaleFactor);
+      await setVisualTestPixelScale(page, 'cityScene', pixelScaleFactor);
       assert.equal(await page.evaluate(() => window.cityScene.diagnostics.backend), backend);
       assert.deepEqual(
         await page.evaluate(() =>
@@ -302,6 +297,9 @@ try {
       await page.mouse.move(990, 710);
       // Test material replay independently of SSR's intentionally stochastic redraw history.
       if (backend === 'webgpu') await page.uncheck('#reflections');
+      // Fine water-normal changes need the previous resolution; keep their thresholds intact.
+      await setVisualTestPixelScale(page, 'cityScene', Math.max(0.5, pixelScaleFactor));
+      await waitForIdle();
       await page.evaluate(() => window.cityScene.setTime(2));
       await page.waitForTimeout(100);
       await page.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur());

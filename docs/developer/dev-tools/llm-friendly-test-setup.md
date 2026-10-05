@@ -102,7 +102,9 @@ picking, and resource ownership. Algorithmic matrices belong in focused tests:
 
 - `ssr-camera-temporal.spec.ts` measures changing-sample history suppression using
   3×3 GPU textures, alongside reprojection rejection checks. City retains scene-level
-  reflection radiance, capture/composition, settling, and history-reset checks.
+  reflection radiance, capture/composition, settling, and history-reset checks. The
+  WebGPU reflection phase uses a quarter-width/height canvas; water and edge detail
+  checks and WebGL retain half size. `CITY_SCENE_DEVICE_SCALE=1` restores full resolution.
 - Weather checks fog density on both scene and precipitation layers for every preset,
   with a representative visual toggle check on each backend. Height-fog GPU fixtures
   independently verify numerical integration and material fog.
