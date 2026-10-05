@@ -96,3 +96,16 @@ yarn workspace luma.gl-examples-deck-flow-particles benchmark
 `FLOW_RUN_TIMING=true` also enables these samples directly; the existing
 `FLOW_SKIP_TIMING` override takes precedence. PR visual tests do not collect timing
 samples because they have no performance assertions.
+
+Example scripts check integration: scene composition, visible effects, UI wiring,
+picking, and resource ownership. Algorithmic matrices belong in focused tests:
+
+- `ssr-camera-temporal.spec.ts` measures changing-sample history suppression using
+  3×3 GPU textures, alongside reprojection rejection checks. City retains scene-level
+  reflection radiance, capture/composition, settling, and history-reset checks.
+- Weather checks fog density on both scene and precipitation layers for every preset,
+  with a representative visual toggle check on each backend. Height-fog GPU fixtures
+  independently verify numerical integration and material fog.
+- `deck-example-device.node.spec.ts` covers explicit selection and available, absent,
+  null, and rejected default adapters. Flow and weather each retain a rejected-adapter
+  startup smoke check, instead of reinitializing their scenes for every shared case.

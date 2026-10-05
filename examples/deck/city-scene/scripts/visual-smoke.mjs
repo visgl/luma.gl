@@ -114,42 +114,8 @@ try {
           }
         }
         assert(reflectedPixels > 1000, `SSR traces visible scene reflections (${reflectedPixels} pixels)`);
-        // Fixed water/camera isolates stochastic ray noise from physical surface animation.
-        await page.evaluate(() => {
-          const effect = window.cityScene.deck.props.effects.find(effect => effect.id === 'city-river-reflections');
-          const renderer = effect.renderer;
-          const render = renderer.renderToTexture.bind(renderer);
-          window.reflectionHistoryWeight = 0;
-          renderer.renderToTexture = options => render({...options, uniforms: {...options.uniforms,
-            ssrCameraTemporal: {...options.uniforms.ssrCameraTemporal, historyWeight: window.reflectionHistoryWeight}
-          }});
-          window.restoreReflectionRenderer = () => {renderer.renderToTexture = render;};
-        });
-        const variation = [];
-        for (const historyWeight of [0, 0.8]) {
-          await page.evaluate(weight => {
-            window.reflectionHistoryWeight = weight;
-            window.cityScene.deck.props.effects.find(effect => effect.id === 'city-river-reflections').resetHistory();
-            for (let frame = 0; frame < 8; frame++) window.cityScene.deck.redraw('warm reflection history');
-          }, historyWeight);
-          await waitForIdle();
-          let previous = PNG.sync.read(await captureScreenshot());
-          let difference = 0;
-          for (let frame = 0; frame < 5; frame++) {
-            await page.evaluate(() => window.cityScene.deck.redraw('sample reflection history'));
-            const current = PNG.sync.read(await captureScreenshot());
-            for (let vertical = 120; vertical < 650; vertical++) for (let horizontal = 350; horizontal < 950; horizontal++) {
-              const offset = (vertical * current.width + horizontal) * 4;
-              for (let channel = 0; channel < 3; channel++) difference += Math.abs(current.data[offset + channel] - previous.data[offset + channel]);
-            }
-            previous = current;
-          }
-          variation.push(difference);
-        }
-        await page.evaluate(() => window.restoreReflectionRenderer());
-        assert(variation[0] > 1000, 'stochastic reflection rays produce measurable variation');
-        assert(variation[1] < variation[0] * 0.8, `SSR history reduces static-scene flicker (${variation.join(' -> ')})`);
-        process.stdout.write(`SSR static-scene variation: ${variation.join(' -> ')}\n`);
+        // Temporal noise suppression is exercised with a 3x3 GPU fixture in
+        // ssr-camera-temporal.spec.ts; keep scene capture/composition coverage here.
 
         // Quality switches replace only postprocessing targets, retaining shared scene capture.
         for (const [quality, scale] of [['fast', 0.25], ['detailed', 1], ['balanced', 0.5]]) {
