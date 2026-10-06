@@ -14,6 +14,130 @@ import {
 } from '../src/gpu-paged-splat-shaders';
 import './gpu-paged-splat-renderer.node.spec';
 
+it.each([
+  [-0.5, 1, true],
+  [0, 0.4, false],
+  [-0.5, 0.4, true]
+])('presents GL clip depth %s against host depth %s', async (clipDepth, hostDepth, visible) => {
+  const devices = await getTestDevices(['webgpu']);
+  expect(devices.length).toBeGreaterThan(0);
+  for (const device of devices) {
+    const source = makeBrowserPagedSplatSource([clipDepth], 0, 0);
+    source.colors.set([255, 0, 0, 255]);
+    const data = makeGPUSplatData(device, source);
+    const renderer = new GPUPagedSplatRenderer(device, {
+      pages: [{id: 'page', data}],
+      viewportSize: [16, 16],
+      kernel2DSize: 0,
+      toneMapping: 'none'
+    });
+    const colorTexture = device.createTexture({
+      format: device.preferredColorFormat,
+      width: 16,
+      height: 16,
+      usage: Texture.RENDER_ATTACHMENT | Texture.COPY_SRC
+    });
+    const framebuffer = device.createFramebuffer({
+      width: 16,
+      height: 16,
+      colorAttachments: [colorTexture],
+      depthStencilAttachment: device.preferredDepthFormat
+    });
+    const layout = colorTexture.computeMemoryLayout({width: 16, height: 16});
+    const readback = device.createBuffer({
+      byteLength: layout.byteLength,
+      usage: Buffer.COPY_DST | Buffer.MAP_READ
+    });
+    try {
+      renderer.prepare(device.commandEncoder);
+      // The host owns both the existing blue color and its WebGPU depth value.
+      const renderPass = device.beginRenderPass({
+        framebuffer,
+        clearColor: [0, 0, 1, 1],
+        clearDepth: hostDepth
+      });
+      renderer.draw(renderPass);
+      renderPass.end();
+      device.submit();
+      colorTexture.readBuffer({width: 16, height: 16}, readback);
+      const pixels = await readback.readAsync();
+      const redChannel = device.preferredColorFormat.startsWith('bgra') ? 2 : 0;
+      const red = pixels[8 * layout.bytesPerRow + 8 * 4 + redChannel];
+      if (visible) {
+        expect(red, 'near splat survives hardware clipping').toBeGreaterThan(200);
+      } else {
+        expect(red, 'host surface occludes splat').toBeLessThan(5);
+      }
+    } finally {
+      readback.destroy();
+      framebuffer.destroy();
+      colorTexture.destroy();
+      renderer.destroy();
+      data.destroy();
+    }
+  }
+});
+
+it('preserves close-depth painter order across camera motion and wide clipping ranges', async () => {
+  const devices = await getTestDevices(['webgpu']);
+  expect(devices.length).toBeGreaterThan(0);
+  for (const device of devices) {
+    // The front row deliberately precedes the back row in source order. Projected
+    // 16-bit depth collapses these distinct surfaces and blends them in reverse.
+    const data = makeGPUSplatData(device, makeBrowserPagedSplatSource([-1, -1.00001, 1], 0, 0));
+    const renderer = new GPUPagedSplatRenderer(device, {
+      pages: [{id: 'page', data}],
+      viewportSize: [16, 16]
+    });
+    const near = 0.002;
+    const far = 100;
+    const depthScale = -(far + near) / (far - near);
+    const depthOffset = (-2 * near * far) / (far - near);
+    try {
+      for (const cameraDepth of [-0.001, 0, 0.001]) {
+        renderer.setProps({
+          modelViewProjectionMatrix: [
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            depthScale,
+            -1,
+            0,
+            0,
+            depthOffset - depthScale * cameraDepth,
+            cameraDepth
+          ]
+        });
+        renderer.prepare(device.commandEncoder);
+        device.submit();
+        const bytes = await renderer.sortedIndexBuffer!.readAsync();
+        const sortedRows = new Uint32Array(bytes.buffer, bytes.byteOffset, 4);
+        expect(Array.from(sortedRows.slice(0, 2)), `camera depth ${cameraDepth}`).toEqual([1, 0]);
+        const commandBytes = await renderer.drawCommands.buffer.readAsync();
+        expect(new Uint32Array(commandBytes.buffer, commandBytes.byteOffset)[5]).toBe(2);
+      }
+      // Orthographic clip Z crosses zero and has no perspective W depth.
+      renderer.setProps({
+        modelViewProjectionMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.5, 0, 0, 0, 0, 1]
+      });
+      renderer.prepare(device.commandEncoder);
+      device.submit();
+      const bytes = await renderer.sortedIndexBuffer!.readAsync();
+      expect(Array.from(new Uint32Array(bytes.buffer, bytes.byteOffset, 3))).toEqual([2, 0, 1]);
+    } finally {
+      renderer.destroy();
+      data.destroy();
+    }
+  }
+});
+
 it('camera-only frames skip unchanged sparse row uploads on real WebGPU', async () => {
   const devices = await getTestDevices(['webgpu']);
   expect(devices.length).toBeGreaterThan(0);

@@ -263,6 +263,10 @@ render pass draws those segments in global depth order using GPU-written indirec
 preserves transparency ordering even when rows from different pages overlap or interleave in
 depth; sorting pages independently would not.
 
+The paged renderer sorts 32-bit linear camera-depth keys instead of quantized projected depth,
+preserving close-surface ordering across wide clipping ranges. Global center-depth sorting remains
+an approximation for intersecting Gaussians; it does not eliminate every LOD or transparency artifact.
+
 On a device with a 128 MiB storage-binding limit, the previous single-record graph supports at
 most 2,796,202 active rows; the paged renderer instead supports up to 33,554,432 simultaneously
 active four-byte global-sort references. Source datasets may be larger because original pages can
@@ -298,7 +302,9 @@ still leaves caller-owned source pages intact.
 
 The host pass must use compatible canvas color/depth formats and sample count. Splats use their
 prepared camera and viewport; the host owns viewport/scissor configuration. They do not write
-depth, and separate renderer instances do not share a global transparency sort. Standalone callers
+depth. Supply an OpenGL-style clip matrix (`-w <= z <= w`); presentation converts its depth to
+WebGPU's `0 <= z <= w` range so opaque host geometry and splats share the same depth test.
+Separate renderer instances do not share a global transparency sort. Standalone callers
 can continue to use `encode(commandEncoder)` to prepare and open the renderer-owned pass together;
 do not use both paths for the same frame.
 

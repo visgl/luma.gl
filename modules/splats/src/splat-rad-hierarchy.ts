@@ -727,7 +727,9 @@ export class SplatRADHierarchyManager<TData extends SplatRADHierarchyData = GPUS
       this.deferredCandidates.clear();
       traversal.refinementProgress.clear();
       traversal.retargetProgress.clear();
-      traversal.retargetQueue = this.makeRetargetQueue(traversal.selectedRows);
+      // Progressive retargeting visits retained branches directly below. Its retarget queue
+      // stays empty, so do not walk every selected leaf's ancestors to build an unused index.
+      traversal.retargetQueue = new SplatRADPriorityQueue<TData>();
       traversal.refinementQueue = new SplatRADPriorityQueue<TData>();
       this.coarseningQueue = new SplatRADPriorityQueue<TData>((first, second) =>
         compareSplatRADCandidates(second, first)
@@ -738,9 +740,11 @@ export class SplatRADHierarchyManager<TData extends SplatRADHierarchyData = GPUS
       this.visibleRowCount = 0;
       this.culledRowCount = 0;
       this.missingRowCount = 0;
+      for (const page of traversal.state.selectedPages.values()) page.priority = 0;
       for (const root of traversal.rootCandidates) this.retargetSelectedBranch(root, traversal);
       // Culling-enabled callers can reveal more retained leaves than the active-row budget.
       // Enforce capacity only after all visibility changes and offscreen releases are accounted for.
+      this.coarsenRetainedGroupsForCapacity(traversal);
       for (const candidate of traversal.selectedRows.values()) {
         if (traversal.state.allocatedRowCount <= this.maximumActiveRows) break;
         this.collapseFrontierForCapacity(candidate, traversal);
@@ -791,6 +795,12 @@ export class SplatRADHierarchyManager<TData extends SplatRADHierarchyData = GPUS
           this.getAngularFoveation(branchCandidate.node, view) *
           this.lodSplatScale;
         if (selected) {
+          const selectedPage = traversal.state.selectedPages.get(
+            branchCandidate.registeredPage.page.id
+          );
+          if (isVisible && selectedPage) {
+            selectedPage.priority = Math.max(selectedPage.priority, branchCandidate.priority);
+          }
           // Dormant children are not display dependencies and may already have been evicted.
           branchCandidate.children = undefined;
           frame.hasVisibleDescendant = this.isRowInFrustum(branchCandidate.node);
@@ -1367,7 +1377,29 @@ export class SplatRADHierarchyManager<TData extends SplatRADHierarchyData = GPUS
     return true;
   }
 
-  /** Coarsens the lowest retained branch needed to keep newly visible rows inside capacity. */
+  /** Reclaims the least valuable complete groups before the offscreen-parent fallback. */
+  private coarsenRetainedGroupsForCapacity(traversal: SplatRADIncrementalTraversal<TData>): void {
+    while (traversal.state.allocatedRowCount > this.maximumActiveRows) {
+      const candidate = this.coarseningQueue.pop();
+      if (!candidate) break;
+      if (
+        !candidate.isVisible ||
+        !candidate.children ||
+        traversal.selectedRows.get(candidate.globalRowIndex) === candidate ||
+        !candidate.children.every(
+          child => traversal.selectedRows.get(child.globalRowIndex) === child
+        ) ||
+        candidate.children.filter(child => child.isVisible).length < 2
+      )
+        continue;
+      // This is a hard budget repair, not an optional quality exchange: even a
+      // high-error parent may be necessary, but less valuable groups yield first.
+      this.collapseFrontierCandidate(candidate, traversal);
+      if (candidate.parent) this.coarseningQueue.push(candidate.parent);
+    }
+  }
+
+  /** Keeps newly visible rows inside capacity when no complete visible group can cover them. */
   private collapseFrontierForCapacity(
     candidate: SplatRADFrontierCandidate<TData>,
     traversal: SplatRADIncrementalTraversal<TData>
@@ -1749,6 +1781,10 @@ export class SplatRADHierarchyManager<TData extends SplatRADHierarchyData = GPUS
     }
     this.fallbackRowCount = 0;
     for (const publishedPage of this.publishedPages.values()) {
+      // Camera-only retargeting updates metadata in place. Rebuilding activeRows
+      // for unchanged membership would turn every pan into another GPU upload.
+      const selectedPage = state.selectedPages.get(publishedPage.entry.id);
+      if (selectedPage) publishedPage.entry.priority = selectedPage.priority;
       this.fallbackRowCount += publishedPage.fallbackRowCount;
       for (const pageId of publishedPage.dependencyPageIds) state.dependencyPageIds.add(pageId);
     }

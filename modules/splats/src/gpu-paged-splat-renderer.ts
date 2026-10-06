@@ -26,12 +26,12 @@ import type {GPUSplatGraphRendererProps} from './gpu-splat-graph-renderer';
 import {
   GPU_SPLAT_GRAPH_FEATURE_UNIFORM_BYTE_LENGTH,
   GPU_SPLAT_GRAPH_UNIFORM_BYTE_LENGTH,
-  GPU_SPLAT_INVALID_DEPTH_KEY,
   GPU_SPLAT_PROJECTED_RECORD_BYTE_LENGTH
 } from './gpu-splat-graph-shaders';
 import {
   GPU_PAGED_SPLAT_FEATURE_SHADER,
   GPU_PAGED_SPLAT_FEATURE_SHADER_LAYOUT,
+  GPU_PAGED_SPLAT_INVALID_DEPTH_KEY,
   GPU_PAGED_SPLAT_PROJECTION_SHADER,
   GPU_PAGED_SPLAT_PROJECTION_SHADER_LAYOUT,
   GPU_PAGED_SPLAT_RENDER_SHADER,
@@ -732,7 +732,7 @@ export class GPUPagedSplatRenderer {
         outputValues: sortedIndices,
         algorithm: 'radix',
         direction: 'ascending',
-        keyBits: 16
+        keyBits: 32
       })
     );
     this.addInversePermutationPass(graph, sortedIndices, inverseIndices);
@@ -809,7 +809,7 @@ export class GPUPagedSplatRenderer {
     const shader = /* wgsl */ `
 const ROW_COUNT: u32 = ${this.globalSortCapacity}u;
 const WORKGROUPS_X: u32 = ${dispatch.x}u;
-const INVALID_DEPTH_KEY: u32 = ${GPU_SPLAT_INVALID_DEPTH_KEY}u;
+const INVALID_DEPTH_KEY: u32 = ${GPU_PAGED_SPLAT_INVALID_DEPTH_KEY}u;
 @group(0) @binding(0) var<storage, read_write> values: array<u32>;
 @group(0) @binding(1) var<storage, read_write> depthKeys: array<u32>;
 @group(0) @binding(2) var<storage, read_write> drawCommands: array<atomic<u32>>;

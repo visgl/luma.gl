@@ -151,8 +151,10 @@ off the render thread and coalesce camera inputs to the latest view.
 
 Retargeting may collapse a branch only after its selected descendants are all outside the current
 frustum. A parent's Gaussian support is not a conservative bound on its descendants, so checking
-the parent alone is not sufficient. Under row pressure, visible complete sibling groups can yield
-capacity only to a visible, small-screen-error parent. Page budgets remain hard limits: if retained
+the parent alone is not sufficient. Optional refinement exchanges replace visible sibling groups
+only with a visible, small-screen-error parent. If a camera change makes the retained selection
+exceed `maximumActiveRows`, the lowest-priority complete visible groups may be coarsened even when
+their parent has high screen-space error to restore the hard cap. Page budgets remain hard limits: if retained
 visible detail occupies the available pages, new refinement may wait rather than discard that
 coverage. `selectView(view, maximumRows)` remains available for an independent, whole-cut rebalance.
 With a row budget it retains the previous frontier until the new cut completes; an initially empty

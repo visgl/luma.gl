@@ -90,6 +90,113 @@ it('publishes changed-camera refinement before the full tree is resolved', () =>
   device.destroy();
 });
 
+it('does not index the retained tree for an unused progressive retarget queue', () => {
+  const device = new NullDevice({});
+  const rowCount = 8_191;
+  const tree = makeRADPage(device, {
+    id: 'progressive-retained-tree',
+    rowIndexBase: 0,
+    positions: new Array(rowCount * 3).fill(0),
+    childCounts: Array.from({length: rowCount}, (_, row) => (row < 4_095 ? 2 : 0)),
+    childStarts: Array.from({length: rowCount}, (_, row) => row * 2 + 1)
+  });
+  const manager = new SplatRADHierarchyManager({pages: [tree], frustumCulling: false});
+  manager.refineView(makeRADView());
+  const originalFrontier = manager.frontier;
+  const makeRetargetQueue = vi.spyOn(
+    manager as unknown as {makeRetargetQueue: (...parameters: unknown[]) => unknown},
+    'makeRetargetQueue'
+  );
+  try {
+    manager.refineView({...makeRADView(), cameraPosition: [0.1, 0, 2]}, 16);
+    expect(
+      makeRetargetQueue,
+      'does not walk every leaf-to-root path for an empty queue'
+    ).not.toHaveBeenCalled();
+    expect(manager.frontier, 'preserves the exact visible cut and source row arrays').toBe(
+      originalFrontier
+    );
+    expect(manager.stats.activeRowCount).toBe(4_096);
+    expect(manager.hasPendingTraversal).toBe(false);
+  } finally {
+    makeRetargetQueue.mockRestore();
+    manager.destroy();
+    tree.data.destroy();
+    device.destroy();
+  }
+});
+
+it('refreshes camera-only page priorities without rebuilding the visible row arrays', () => {
+  const device = new NullDevice({});
+  const page = makeRADPage(device, {id: 'leaf', rowIndexBase: 0, positions: [0, 0, 0]});
+  const onFrontierChange = vi.fn();
+  const manager = new SplatRADHierarchyManager({
+    pages: [page],
+    frustumCulling: false,
+    onFrontierChange
+  });
+  try {
+    manager.refineView(makeRADView());
+    const frontier = manager.frontier;
+    const entry = frontier[0];
+    const activeRows = entry.activeRows;
+    const activeMask = entry.activeMask;
+    const priority = entry.priority;
+    onFrontierChange.mockClear();
+    for (const distance of [20, 2]) {
+      manager.refineView({...makeRADView(), cameraPosition: [0, 0, distance]});
+      expect(manager.frontier).toBe(frontier);
+      expect(manager.frontier[0]).toBe(entry);
+      expect(entry.activeRows).toBe(activeRows);
+      expect(entry.activeMask).toBe(activeMask);
+      expect(entry.priority).toBeCloseTo((priority * 2) / distance);
+      expect(manager.residencyManager.getChunk('leaf')!.priority).toBeCloseTo(entry.priority);
+    }
+    expect(onFrontierChange).not.toHaveBeenCalled();
+  } finally {
+    manager.destroy();
+    page.data.destroy();
+    device.destroy();
+  }
+});
+
+it('coarsens the lowest-priority complete group when a pan reveals excess retained rows', () => {
+  const device = new NullDevice({});
+  const page = makeRADPage(device, {
+    id: 'tree',
+    rowIndexBase: 0,
+    positions: [0, 0, 0, 0.8, 0, 0, 0, 0, 0, 0.1, 0, 0, 0.8, 0, 0, 4, 0, 0],
+    scales: [0.4, 0.4, 0.4, 0.1, 0.1, 0.1, ...new Array(12).fill(0.01)],
+    childCounts: [2, 2, 0, 0, 0, 0],
+    childStarts: [2, 4, 0, 0, 0, 0]
+  });
+  const manager = new SplatRADHierarchyManager({
+    pages: [page],
+    rootRows: [0, 1],
+    maximumScreenSpaceError: 0,
+    maximumActiveRows: 3
+  });
+  try {
+    manager.refineView(makeRADView());
+    expect(getFrontierSourceRows(manager.frontier)).toEqual([[2, 3, 4]]);
+    manager.refineView(
+      {
+        ...makeRADView(),
+        modelViewProjectionMatrix: [0.2, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
+      },
+      1
+    );
+    expect(getFrontierSourceRows(manager.frontier)).toEqual([[1, 2, 3]]);
+    expect(manager.stats.activeRowCount).toBe(3);
+    manager.continueTraversal(100);
+    expect(getFrontierSourceRows(manager.frontier)).toEqual([[1, 2, 3]]);
+  } finally {
+    manager.destroy();
+    page.data.destroy();
+    device.destroy();
+  }
+});
+
 it('retains visible descendants of an offscreen parent and releases only the offscreen branch', () => {
   const device = new NullDevice({});
   const roots = makeRADPage(device, {
