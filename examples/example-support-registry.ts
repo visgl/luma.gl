@@ -2,8 +2,21 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import flowParticlesSupport from './deck/flow-particles/mobile-support';
 import sketchSupport from './deck/sketch-edges/mobile-support';
+import globeCloudsSupport from './deck/globe-clouds/mobile-support';
 import weatherSupport from './deck/weather/mobile-support';
+import patternSupport from './deck/pattern-fills/mobile-support';
+import firefliesSupport from './deck/fireflies/mobile-support';
+import hdrNightLightingSupport from './deck/hdr-night-lighting/mobile-support';
+import globalIlluminationSupport from './deck/global-illumination/mobile-support';
+import lightShaftsSupport from './deck/light-shafts/mobile-support';
+import pointGlowSupport from './deck/point-glow/mobile-support';
+import styledPathsSupport from './deck/styled-paths/mobile-support';
+import sceneBuffersSupport from './deck/scene-buffers/mobile-support';
+import ambientOcclusionSupport from './deck/ambient-occlusion/mobile-support';
+import softShadowsSupport from './deck/soft-shadows/mobile-support';
+import depthOfFieldSupport from './deck/depth-of-field/mobile-support';
 import type {ExampleSupportDefinition} from './example-support';
 import citySceneSupport from './deck/city-scene/mobile-support';
 import standaloneSupport0 from './api/texture-compressed/mobile-support';
@@ -68,6 +81,8 @@ import support54 from './tutorials/hello-instancing/mobile-support';
 import support55 from './tutorials/shader-modules/mobile-support';
 import support56 from './tutorials/shader-hooks/mobile-support';
 import support57 from './tutorials/shader-plugins/mobile-support';
+import slangParticlesSupport from './tutorials/slang-particles/mobile-support';
+import slangShadersSupport from './tutorials/slang-shaders/mobile-support';
 import support58 from './tutorials/transform-feedback/mobile-support';
 import support59 from './tutorials/transform/mobile-support';
 import support60 from './experimental/a-buffer/mobile-support';
@@ -101,6 +116,14 @@ import support85 from './showcase/spectral-wave-lab/mobile-support';
  * Metadata-only support registry. Importing this file never imports an example application.
  */
 export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDefinition>> = {
+  'deck/fireflies': firefliesSupport,
+  'deck/hdr-night-lighting': hdrNightLightingSupport,
+  'deck/global-illumination': globalIlluminationSupport,
+  'deck/light-shafts': lightShaftsSupport,
+  'deck/scene-buffers': sceneBuffersSupport,
+  'deck/ambient-occlusion': ambientOcclusionSupport,
+  'deck/soft-shadows': softShadowsSupport,
+  'deck/depth-of-field': depthOfFieldSupport,
   'showcase/gaussian-splat-viewer': support0,
   'showcase/gaussian-splats': support1,
   'showcase/instancing': support2,
@@ -159,6 +182,8 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'tutorials/shader-modules': support55,
   'tutorials/shader-hooks': support56,
   'tutorials/shader-plugins': support57,
+  'tutorials/slang-shaders': slangShadersSupport,
+  'tutorials/slang-particles': slangParticlesSupport,
   'tutorials/transform-feedback': support58,
   'tutorials/transform': support59,
   'experimental/a-buffer': support60,
@@ -180,6 +205,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'arrow/arrow-particles': support76,
   'arrow/arrow-dggs-polygons': support77,
   'arrow/arrow-columns': support78,
+  'deck/flow-particles': flowParticlesSupport,
   'deck/arrow-path-layer': support79,
   'deck/city-scene': citySceneSupport,
   'deck/arrow-polygon-layer': support80,
@@ -194,6 +220,10 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'experimental/gpu-parquet-constellation': parquetSupport,
   'deck/sketch-edges': sketchSupport,
   'deck/weather': weatherSupport,
+  'deck/globe-clouds': globeCloudsSupport,
+  'deck/pattern-fills': patternSupport,
+  'deck/point-glow': pointGlowSupport,
+  'deck/styled-paths': styledPathsSupport,
   'homepage/instancing': support2
 };
 

@@ -174,8 +174,7 @@ it('WebGLState#withGLParameters', async () => {
         webglDevice.gl,
         {
           clearColor: [0, 1, 0, 1],
-          [GL.BLEND]: true,
-          nocatch: false
+          [GL.BLEND]: true
         },
         () => {
           // Parameters should be updated

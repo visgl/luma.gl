@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {describe, expect, it, vi} from 'vitest';
-import {Proj4Projection} from '@math.gl/proj4';
+import {Projection} from '@math.gl/projection';
 import {
   planCRSProjection,
   planProjectionPipeline,
@@ -24,7 +24,7 @@ function requireReady(result: ReturnType<typeof planCRSProjection>) {
 
 describe('verified PROJJSON provider coverage', () => {
   it('fits projected-to-projected transformations through the same verified mappings', () => {
-    const oracle = new Proj4Projection({
+    const oracle = new Projection({
       from: getConicOracleDefinition('lambert-2sp'),
       to: getConicOracleDefinition('albers')
     });
@@ -62,7 +62,7 @@ describe('verified PROJJSON provider coverage', () => {
       it(`fits custom ${method}/${southern ? 'south' : 'north'} forward and inverse without a registered CRS`, () => {
         const target = makeConicCRS(method, southern);
         const bounds = [-71.7, southern ? -41.9 : 41.7, -71.3, southern ? -41.7 : 41.9] as const;
-        const oracle = new Proj4Projection({
+        const oracle = new Projection({
           from: 'EPSG:4326',
           to: getConicOracleDefinition(method, southern)
         });
@@ -136,7 +136,7 @@ describe('verified PROJJSON provider coverage', () => {
             tolerance: 1e-5
           })
         );
-        const expected = new Proj4Projection({
+        const expected = new Projection({
           from: 'EPSG:4326',
           to: getConicOracleDefinition(method)
         }).project([-71.5, 41.8]);
@@ -185,7 +185,7 @@ describe('verified PROJJSON provider coverage', () => {
         tolerance: 1e-8
       })
     );
-    const expected = new Proj4Projection({
+    const expected = new Projection({
       from: 'EPSG:4326',
       to: getConicOracleDefinition('lambert-2sp')
     }).project([-71.5, 41.8]);
@@ -217,7 +217,7 @@ describe('verified PROJJSON provider coverage', () => {
           tolerance: 1e-5
         })
       );
-      const expected = new Proj4Projection({
+      const expected = new Projection({
         from: 'EPSG:4326',
         to: getConicOracleDefinition('albers')
       }).project([-71.5, 41.8]);
@@ -300,7 +300,7 @@ describe('verified PROJJSON provider coverage', () => {
         )
       }
     ];
-    const project = vi.spyOn(Proj4Projection.prototype, 'project');
+    const project = vi.spyOn(Projection.prototype, 'project');
     try {
       for (const conversion of malformed) {
         expect(
@@ -348,7 +348,7 @@ describe('verified PROJJSON provider coverage', () => {
 
   it('declines zero LCC parallels before sampling an oracle that would substitute defaults', () => {
     const original = makeConicCRS('lambert-2sp');
-    const project = vi.spyOn(Proj4Projection.prototype, 'project');
+    const project = vi.spyOn(Projection.prototype, 'project');
     try {
       for (const code of [8823, 8824]) {
         for (const zero of [0, -0]) {
@@ -401,7 +401,7 @@ describe('verified PROJJSON provider coverage', () => {
       };
       const snapshot = JSON.stringify(target);
       // A nonzero first parallel avoids proj4js's shared lat1 default. Albers preserves lat2=0.
-      const oracle = new Proj4Projection({
+      const oracle = new Projection({
         from: 'EPSG:4326',
         to: '+proj=aea +lat_0=41 +lon_0=-71.5 +lat_1=42 +lat_2=0 +x_0=200000 +y_0=750000 +ellps=WGS84'
       });

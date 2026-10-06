@@ -2,16 +2,31 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Effect, EffectContext, PostRenderOptions, PreRenderOptions} from '@deck.gl/core';
+import type {
+  Effect,
+  EffectContext,
+  PostRenderOptions,
+  PreRenderOptions,
+  Viewport
+} from '@deck.gl/core';
 import type {Device, Framebuffer, Texture} from '@luma.gl/core';
 import {BackgroundTextureModel, ShaderPassRenderer} from '@luma.gl/engine';
+import type {CompositeShaderPass} from '@luma.gl/shadertools';
 import {createSSRCompositeShaderPass, SSR_QUALITY_PRESETS, type SSRQuality} from '@luma.gl/effects';
 import {Matrix4} from '@math.gl/core';
 import type {SceneBufferEffect} from '@deck.gl-community/gpu-layers';
 
+export type RiverReflectionPassUniforms = Record<string, Record<string, unknown>>;
+
+export type RiverReflectionPassOptions = {
+  beforeReflection?: CompositeShaderPass[];
+  afterReflection?: CompositeShaderPass[];
+  getUniforms?: (viewport: Viewport) => RiverReflectionPassUniforms;
+};
+
 /** Final reflection composite consuming the shared capture for this single-view fixture. */
 export class RiverReflectionEffect implements Effect {
-  readonly id = 'city-river-reflections';
+  readonly id: string;
   readonly props = {};
   readonly useInPicking = false;
   frameCount = 0;
@@ -27,7 +42,14 @@ export class RiverReflectionEffect implements Effect {
   private capturedColor: Texture | null = null;
   private presenter: BackgroundTextureModel | null = null;
 
-  constructor(readonly capture: SceneBufferEffect) {}
+  constructor(
+    readonly capture: SceneBufferEffect,
+    id = 'city-river-reflections',
+    private reflectionIntensity = 1.5,
+    private passOptions: RiverReflectionPassOptions = {}
+  ) {
+    this.id = id;
+  }
 
   setup({device}: EffectContext): void {
     this.device = device;
@@ -60,9 +82,18 @@ export class RiverReflectionEffect implements Effect {
     this.stableFrames = 0;
   }
 
+  setReflectionIntensity(value: number): void {
+    this.reflectionIntensity = value;
+    this.resetHistory();
+  }
+
   private createRenderer(device: Device): ShaderPassRenderer {
     return new ShaderPassRenderer(device, {
-      shaderPasses: [createSSRCompositeShaderPass({reprojection: 'camera', quality: this.quality})],
+      shaderPasses: [
+        ...(this.passOptions.beforeReflection ?? []),
+        createSSRCompositeShaderPass({reprojection: 'camera', quality: this.quality}),
+        ...(this.passOptions.afterReflection ?? [])
+      ],
       colorFormat: 'rgba16float',
       flipY: true
     });
@@ -122,10 +153,11 @@ export class RiverReflectionEffect implements Effect {
       sourceTexture: buffer.colorTexture,
       bindings: {depthTexture: buffer.depthTexture, normalTexture: buffer.normalRoughnessTexture},
       uniforms: {
+        ...this.passOptions.getUniforms?.(viewport),
         ssrTrace: {
           projectionMatrix,
           inverseProjectionMatrix,
-          intensity: 1.5,
+          intensity: this.reflectionIntensity,
           maxDistance: 450,
           thickness: 1.5,
           maxRoughness: 0.8,

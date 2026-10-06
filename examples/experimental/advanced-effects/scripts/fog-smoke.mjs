@@ -10,6 +10,7 @@ import {chromium} from 'playwright';
 import {PNG} from 'pngjs';
 import {createServer} from 'vite';
 import {getPlaywrightLaunchOptions} from '../../../../scripts/playwright/get-playwright-launch-options.mjs';
+import {setVisualTestPixelScale, captureVisualTestScreenshot} from '../../../../scripts/playwright/visual-test-utils.mjs';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const server = await createServer({root, logLevel: 'error', server: {host: '127.0.0.1', port: 0, open: false}});
@@ -40,6 +41,7 @@ try {
   page.on('console', message => {if (message.type() === 'error') errors.push(message.text());});
   await page.goto(process.env.CITY_FOG_EXAMPLE_URL || server.resolvedUrls.local[0]);
   await page.getByRole('button', {name: 'Visualization Effects', exact: true}).click({timeout: 60_000});
+  await setVisualTestPixelScale(page, 'visualizationCity');
   async function selectSetting(name, value) {
     await page.locator(`[data-setting-row-for="${name}"] button`).click();
     await page.getByRole('option', {name: value, exact: true}).click();
@@ -49,7 +51,7 @@ try {
   }
   async function screenshot(name) {
     await page.waitForTimeout(300);
-    return PNG.sync.read(await page.screenshot(name ? {path: join(tmpdir(), `city-fog-${name}.png`)} : {}));
+    return PNG.sync.read(await captureVisualTestScreenshot(page, name ? {path: join(tmpdir(), `city-fog-${name}.png`)} : {}));
   }
   await selectSetting('preset', 'Clean');
   await setToggle('animate', false);

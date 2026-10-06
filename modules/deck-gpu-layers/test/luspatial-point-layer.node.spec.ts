@@ -174,7 +174,7 @@ describe('LuSpatialPointLayer rendering', () => {
 });
 
 describe('@deck.gl-community/gpu-layers package boundary', () => {
-  test('depends only on Deck, matrix types, and the generic luma render/indirect-draw APIs', () => {
+  test('depends only on Deck and GPU-native luma rendering APIs', () => {
     const packageJson = JSON.parse(
       readFileSync(new URL('../package.json', import.meta.url), 'utf8')
     ) as {sideEffects?: boolean; dependencies?: Record<string, string>};
@@ -185,8 +185,11 @@ describe('@deck.gl-community/gpu-layers package boundary', () => {
       '@luma.gl/core',
       '@luma.gl/engine',
       '@luma.gl/experimental',
+      '@luma.gl/gpgpu',
       '@luma.gl/shadertools',
-      '@math.gl/core'
+      '@luma.gl/text',
+      '@math.gl/core',
+      '@math.gl/sun'
     ]);
   });
 });

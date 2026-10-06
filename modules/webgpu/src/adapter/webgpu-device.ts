@@ -73,14 +73,24 @@ import {
   getTimestamp
 } from './helpers/cpu-hotspot-profiler';
 
+/** Live luma.gl wrappers, so attaching the same GPUDevice twice returns one wrapper. */
+const devicesByHandle = new WeakMap<GPUDevice, WebGPUDevice>();
+
 /** WebGPU Device implementation */
 export class WebGPUDevice extends Device {
+  /** Returns the live luma.gl device wrapping a GPUDevice, if any. */
+  static getDeviceFromHandle(handle: GPUDevice): WebGPUDevice | null {
+    return devicesByHandle.get(handle) || null;
+  }
+
   /** The underlying WebGPU device */
   readonly handle: GPUDevice;
-  /* The underlying WebGPU adapter */
-  readonly adapter: GPUAdapter;
+  /* The underlying WebGPU adapter, `null` when attached to an external GPUDevice */
+  readonly adapter: GPUAdapter | null;
   /* The underlying WebGPU adapter's info */
   readonly adapterInfo: GPUAdapterInfo;
+  /** Whether `destroy()` destroys `handle`. `false` for GPUDevices passed to `attach()`, which the application owns. */
+  readonly ownsHandle: boolean;
 
   /** type of this device */
   readonly type = 'webgpu';
@@ -98,7 +108,16 @@ export class WebGPUDevice extends Device {
   override canvasContext: WebGPUCanvasContext | null = null;
 
   private _isLost: boolean = false;
+  private isDestroyed: boolean = false;
   private _defaultSampler: WebGPUSampler | null = null;
+  private _onUncapturedError = (event: Event): void => {
+    event.preventDefault();
+    // TODO is this the right way to make sure the error is an Error instance?
+    const errorMessage =
+      event instanceof GPUUncapturedErrorEvent ? event.error.message : 'Unknown WebGPU error';
+    this.reportError(new Error(errorMessage), this)();
+    this.debug();
+  };
   commandEncoder: WebGPUCommandEncoder;
 
   override get [Symbol.toStringTag](): string {
@@ -112,8 +131,9 @@ export class WebGPUDevice extends Device {
   constructor(
     props: DeviceProps,
     device: GPUDevice,
-    adapter: GPUAdapter,
-    adapterInfo: GPUAdapterInfo
+    adapter: GPUAdapter | null,
+    adapterInfo: GPUAdapterInfo,
+    ownsHandle: boolean = true
   ) {
     super({...props, id: props.id || 'webgpu-device'});
     const canvasContextProps = Device._getCanvasContextProps(props);
@@ -123,6 +143,7 @@ export class WebGPUDevice extends Device {
     this.handle = device;
     this.adapter = adapter;
     this.adapterInfo = adapterInfo;
+    this.ownsHandle = ownsHandle;
     const webgpu = navigator.gpu as GPU & {wgslLanguageFeatures?: Iterable<string>};
     this.wgslLanguageFeatures = new Set(webgpu.wgslLanguageFeatures ?? []);
 
@@ -130,19 +151,18 @@ export class WebGPUDevice extends Device {
     this.features = this._getFeatures();
     this.limits = getWebGPUDeviceLimits(this.handle.limits);
 
+    devicesByHandle.set(device, this);
+
     // Listen for uncaptured WebGPU errors
-    device.addEventListener('uncapturederror', (event: Event) => {
-      event.preventDefault();
-      // TODO is this the right way to make sure the error is an Error instance?
-      const errorMessage =
-        event instanceof GPUUncapturedErrorEvent ? event.error.message : 'Unknown WebGPU error';
-      this.reportError(new Error(errorMessage), this)();
-      this.debug();
-    });
+    device.addEventListener('uncapturederror', this._onUncapturedError);
 
     // "Context" loss handling
     this.lost = this.handle.lost.then(lostInfo => {
       this._isLost = true;
+      // A lost GPUDevice cannot be attached again, so stop returning this wrapper for it
+      if (devicesByHandle.get(device) === this) {
+        devicesByHandle.delete(device);
+      }
       return {
         reason: lostInfo.reason === 'destroyed' ? 'destroyed' : 'unknown',
         message: lostInfo.message
@@ -169,11 +189,26 @@ export class WebGPUDevice extends Device {
   // this.glslang = glsl && await loadGlslangModule();
 
   destroy(): void {
+    if (this.isDestroyed) {
+      return;
+    }
+    this.isDestroyed = true;
     this._isLost = true;
     this.commandEncoder?.destroy();
     this._defaultSampler?.destroy();
     this._defaultSampler = null;
-    this.handle.destroy();
+    // Unconfigures the canvas and releases its attachments, which an attached GPUDevice would keep alive
+    this.canvasContext?.destroy();
+    this.canvasContext = null;
+    if (devicesByHandle.get(this.handle) === this) {
+      devicesByHandle.delete(this.handle);
+    }
+    // Attached GPUDevices belong to the application
+    if (this.ownsHandle) {
+      this.handle.destroy();
+    } else {
+      this.handle.removeEventListener('uncapturederror', this._onUncapturedError);
+    }
   }
 
   get isLost(): boolean {
@@ -509,12 +544,12 @@ export class WebGPUDevice extends Device {
     const [driver, driverVersion] = ((this.adapterInfo as any).driver || '').split(' Version ');
 
     // See https://developer.chrome.com/blog/new-in-webgpu-120#adapter_information_updates
-    const vendor = this.adapterInfo.vendor || this.adapter.__brand || 'unknown';
+    const vendor = this.adapterInfo.vendor || this.adapter?.__brand || 'unknown';
     const renderer = driver || '';
     const version = driverVersion || '';
     const fallback = Boolean(
       (this.adapterInfo as any).isFallbackAdapter ??
-        (this.adapter as any).isFallbackAdapter ??
+        (this.adapter as any)?.isFallbackAdapter ??
         false
     );
     const softwareRenderer = /SwiftShader/i.test(

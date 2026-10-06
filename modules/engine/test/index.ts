@@ -49,5 +49,6 @@ import './compute/texture-transform.spec';
 import './compute/computation.spec';
 import './compute/kernel.spec';
 import './passes/shader-pass-renderer.spec';
+import './models/clip-space.spec';
 import './models/background-texture-model.spec';
 import './models/light-models.spec';

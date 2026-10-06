@@ -16,7 +16,7 @@ live interactive example.
 | Color and tone | [Brightness and contrast](./brightness-contrast), [hue and saturation](./hue-saturation), [sepia](./sepia), [vibrance](./vibrance), [tone mapping](./tone-mapping), [HDR auto exposure](./hdr-auto-exposure) | Exposure and grading before the final display transform. |
 | Blur, bloom and focus | [Bloom](./bloom), [Gaussian blur](./gaussian-blur), [triangle blur](./triangle-blur), [tilt shift](./tilt-shift), [zoom blur](./zoom-blur), [depth of field](./depth-of-field), [depth-aware blur](./depth-aware-blur) | Scene-linear lighting and camera effects before tone mapping. |
 | Temporal and antialiasing | [Persistence](./persistence), [FXAA](./fxaa), [temporal antialiasing](./temporal-antialiasing), [camera-reprojection antialiasing](./camera-reprojection-antialiasing), [motion blur](./motion-blur) | Temporal accumulation before lens effects; FXAA near presentation. |
-| Lighting and visibility | [SSAO](./ssao), [GTAO](./gtao), [screen-space global illumination](./screen-space-global-illumination), [screen-space reflections](./screen-space-reflections), [outlines](./outlines) | After scene rendering while depth, normals, and velocity still align. |
+| Lighting and visibility | [SSAO](./ssao), [GTAO](./gtao), [screen-space global illumination](./screen-space-global-illumination), [screen-space reflections](./screen-space-reflections), [outlines](./outlines), [selection outlines](/docs/api-reference/effects#selection-outlines) | After scene rendering while depth, normals, and velocity still align. |
 | Atmosphere | [Volumetric fog](./volumetric-fog), [clustered volumetric lighting](./clustered-volumetric-lighting) | After opaque lighting and visibility; before exposure and bloom. |
 | Stylization and detail | [Color halftone](./color-halftone), [dot screen](./dot-screen), [edge work](./edge-work), [hexagonal pixelation](./hexagonal-pixelate), [ink](./ink), [noise](./noise), [vignette](./vignette), [denoise](./denoise) | Creative finishing or targeted source cleanup. |
 | Warp and lens | [Bulge and pinch](./bulge-pinch), [magnify](./magnify), [swirl](./swirl) | After depth-dependent effects unless auxiliary attachments are transformed too. |
@@ -61,11 +61,12 @@ attachments remain explicit bindings.
 | `sourceTexture` | Every shader pass and pipeline. | Application provides the current scene or image. |
 | `depthTexture` | Depth of field, bilateral blur, occlusion, reflections, temporal reconstruction, motion blur, and atmosphere. | Application retains the scene depth attachment. |
 | `normalTexture` | Normal-aware occlusion, screen-space lighting and reflections, and optional outlines. | Application supplies view-space normals or a compatible G-buffer attachment. |
+| `selectionTexture` | Selection outlines. | Application supplies a visible-surface mask aligned with scene color. |
 | `velocityTexture` | Motion blur and velocity-based temporal reprojection. | Application supplies per-pixel screen-space motion. |
 | History textures | Temporal antialiasing, adaptive exposure, temporal occlusion/reflections, and fog. | Named pipeline targets are owned by `ShaderPassRenderer`; `persistenceEffect` uses an application-owned history texture. |
 
 The image-only adjustments, blur filters, stylization passes, warps, FXAA, and depth of field
-include both WGSL and GLSL implementations for WebGPU and WebGL2. The advanced scene-aware
+include both WGSL and GLSL implementations for WebGPU and WebGL2. Selection outlines also support both backends. The advanced scene-aware
 pipelines documented here use WGSL and target WebGPU. Bloom's portable render path works on both
 backends; fused downsampling and FFT convolution additionally require WebGPU.
 

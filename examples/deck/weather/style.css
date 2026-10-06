@@ -11,3 +11,6 @@ html, body, #scene {
   overflow: hidden;
   background: #879aaa;
 }
+
+.sky-actions {display: flex; gap: 6px;}
+.sky-actions button {flex: 1;}

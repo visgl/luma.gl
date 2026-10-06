@@ -1,4 +1,4 @@
-# River District
+# Riverfront Water
 
 A standalone Deck city scene rendered by the shared river-district mesh layer. The fictional
 district uses deterministic local geometry, so it requires no basemap service or credentials.
@@ -101,3 +101,13 @@ so the website redirect does not discard the renderer query parameter.
 
 `yarn benchmark` measures completed-frame latency and tracked GPU allocations on hardware
 WebGPU. See the [measurement method and hardware-specific budgets](benchmarks/README.md).
+
+Visual smoke checks use a device scale of 0.5 to reduce framebuffer pixels by 75% while retaining
+CSS viewport sizes, picking coordinates, and pixel assertions. Screenshots are normalized to CSS
+pixels. Set `CITY_SCENE_DEVICE_SCALE=1` for the original framebuffer resolution, or combine it with
+`CITY_SCENE_HARDWARE=true` for hardware rendering. Picking and borrowed-buffer checks disable SSR;
+reflection convergence, quality switches, resize, and edge composition still exercise SSR.
+
+The shared Riverfront lighting visual runner uses the same reduced device scale. Set
+`RIVERFRONT_DEVICE_SCALE=1` for full-resolution lighting checks. Its `--thumbnail` mode defaults to
+the original scale of 1 so generated website posters retain their resolution.

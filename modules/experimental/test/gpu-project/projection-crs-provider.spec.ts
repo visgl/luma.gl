@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {Proj4Projection} from '@math.gl/proj4';
+import {Projection} from '@math.gl/projection';
 import {planCRSProjection} from '@luma.gl/experimental/gpu-project/crs';
 import {runProjectionProgramBenchmark} from '@luma.gl/experimental/gpu-project/benchmarks';
 import type {ProjectionCoordinates} from '@luma.gl/experimental/gpu-project';
@@ -26,7 +26,7 @@ for (const method of ['lambert-1sp', 'lambert-2sp', 'albers'] as const) {
           parameters: original.conversion.parameters.map(parameter => ({...parameter, name: ''}))
         }
       };
-      const oracle = new Proj4Projection({from: 'EPSG:4326', to: getConicOracleDefinition(method)});
+      const oracle = new Projection({from: 'EPSG:4326', to: getConicOracleDefinition(method)});
       const coordinates: ProjectionCoordinates[] = inverse
         ? [
             [200000.000001, 837500.000001],

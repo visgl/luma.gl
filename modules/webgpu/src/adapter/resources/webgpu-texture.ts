@@ -58,6 +58,8 @@ export class WebGPUTexture extends Texture {
         },
         usage: this.props.usage || Texture.TEXTURE | Texture.COPY_DST,
         dimension: this.baseDimension,
+        // Compatibility mode only binds views that match this dimension (e.g. cube maps)
+        textureBindingViewDimension: this.dimension,
         format: getWebGPUTextureFormat(this.format),
         mipLevelCount: this.mipLevels,
         sampleCount: this.props.samples
