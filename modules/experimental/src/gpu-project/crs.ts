@@ -5,60 +5,37 @@
 
 import {parsePROJString, type PROJStringAst, type ReadonlyCRSDefinition} from '@math.gl/crs';
 import {Projection} from '@math.gl/projection';
-import {compileProjectionPlan} from './projection-plan';
 import {
-  compileProjectionProgram,
   evaluateProjectionProgram,
   invertProjectionProgram,
-  type CompiledProjection,
-  type ProjectionInputFormat,
   type ProjectionProgram
 } from './projection-program';
-import {lowerProjectionPipeline, type ProjectionPlanningReason} from './projection-pipeline';
+import {lowerProjectionPipeline} from './projection-pipeline';
 import {normalizeCRSProviderDefinition} from './projection-crs-provider';
 import {
   canUseCRSProvider,
   getCRSProviderReason,
   lowerCRSProjection
 } from './projection-crs-lowering';
-import type {
-  CompileProjectionPlanOptions,
-  ProjectionBounds,
-  ProjectionCoordinates,
-  ProjectionPrecision,
-  ProjectionProvider
-} from './types';
+import type {ProjectionBounds, ProjectionProvider} from './types';
 
 export type {ProjectionPlanningReason} from './projection-pipeline';
 
-export type ProjectionPlanningResult =
-  | {
-      status: 'ready';
-      strategy: 'native' | 'adaptive';
-      program: ProjectionProgram;
-      compiled: CompiledProjection;
-      /** Why native lowering was declined when the adaptive backend was selected. */
-      reasons: readonly ProjectionPlanningReason[];
-    }
-  | {status: 'unsupported'; reasons: readonly ProjectionPlanningReason[]};
+export {ProjectionPlanningError} from './projection-planning';
+export type {
+  ProjectionPlanningResult,
+  AdaptiveProjectionOptions
+} from './projection-planning';
 
-type ProjectionOutputOptions = {
-  /** Return structured unsupported results by default, or throw with the same reasons. */
-  onUnsupported?: 'return' | 'throw';
-  precision?: ProjectionPrecision;
-  /** Native nonlinear arithmetic. Default double-single retains bounded adaptive fitting. */
-  projectionArithmetic?: 'double-single' | 'float32';
-  inputFormat?: ProjectionInputFormat;
-  destinationOrigin?: ProjectionCoordinates;
-};
-
-export type AdaptiveProjectionOptions = Pick<
-  CompileProjectionPlanOptions,
-  'bounds' | 'tolerance' | 'degree' | 'maxDepth' | 'maxPatches' | 'sampleCount'
-> & {
-  /** Explicit destination-coordinate domain for a separately fitted inverse. */
-  inverse?: {bounds: ProjectionBounds; tolerance: number};
-};
+import {
+  planAdaptiveProjection,
+  ready,
+  unsupported,
+  applyFailurePolicy,
+  type ProjectionPlanningResult,
+  type AdaptiveProjectionOptions,
+  type ProjectionOutputOptions
+} from './projection-planning';
 
 export type PlanProjectionPipelineOptions = ProjectionOutputOptions & {
   /** Syntax is parsed with the public math.gl 5 parser; no proj4js internals are used. */
@@ -247,118 +224,6 @@ function planCRSProjectionResult(options: PlanCRSProjectionOptions): ProjectionP
     return unsupported('provider-unavailable', error);
   }
   return planAdaptiveProjection(projection, {...options, bounds: options.bounds}, options, reasons);
-}
-
-function planAdaptiveProjection(
-  projection: ProjectionProvider,
-  adaptive: AdaptiveProjectionOptions,
-  output: ProjectionOutputOptions,
-  reasons: readonly ProjectionPlanningReason[]
-): ProjectionPlanningResult {
-  try {
-    const forward =
-      typeof projection === 'function' ? projection : projection.project.bind(projection);
-    const plan = compileProjectionPlan({
-      ...adaptive,
-      projection: coordinates => projectCoordinatePair(forward, coordinates),
-      precision: 'double-single'
-    });
-    let inversePlan;
-    if (adaptive.inverse) {
-      if (typeof projection === 'function' || !projection.unproject) {
-        return unsupported(
-          'provider-unavailable',
-          'inverse fitting requires an unproject provider'
-        );
-      }
-      const inverse = projection.unproject.bind(projection);
-      inversePlan = compileProjectionPlan({
-        ...adaptive,
-        ...adaptive.inverse,
-        projection: coordinates => projectCoordinatePair(inverse, coordinates),
-        precision: 'double-single'
-      });
-    }
-    return ready(
-      {
-        precision: output.precision ?? 'double-single',
-        destinationOrigin: output.destinationOrigin ?? plan.destinationOrigin,
-        operations: [{type: 'adaptive', plan, inversePlan}]
-      },
-      output,
-      'adaptive',
-      reasons
-    );
-  } catch (error) {
-    return {
-      status: 'unsupported',
-      reasons: [
-        ...reasons,
-        {
-          code: 'approximation-failed',
-          message: error instanceof Error ? error.message : String(error)
-        }
-      ]
-    };
-  }
-}
-
-function projectCoordinatePair(
-  project: (coordinates: number[]) => number[],
-  coordinates: number[]
-): number[] {
-  const result = project(coordinates);
-  if (result.length !== 2) {
-    throw new Error('projection provider must return exactly two coordinates');
-  }
-  return result;
-}
-
-function ready(
-  program: ProjectionProgram,
-  options: ProjectionOutputOptions,
-  strategy: 'native' | 'adaptive',
-  reasons: readonly ProjectionPlanningReason[]
-): ProjectionPlanningResult {
-  return {
-    status: 'ready',
-    strategy,
-    program,
-    compiled: compileProjectionProgram(program, {
-      inputFormat: options.inputFormat ?? 'uint32x4'
-    }),
-    reasons
-  };
-}
-
-function unsupported(
-  code: ProjectionPlanningReason['code'],
-  error: unknown
-): ProjectionPlanningResult {
-  return {
-    status: 'unsupported',
-    reasons: [{code, message: error instanceof Error ? error.message : String(error)}]
-  };
-}
-
-/** Optional throwing interface; the same structured reasons are available to callers. */
-export class ProjectionPlanningError extends Error {
-  readonly reasons: readonly ProjectionPlanningReason[];
-
-  constructor(reasons: readonly ProjectionPlanningReason[]) {
-    super(reasons.map(reason => reason.message).join('; '));
-    this.name = 'ProjectionPlanningError';
-    this.reasons = Object.freeze(reasons.map(reason => Object.freeze({...reason})));
-  }
-}
-
-function applyFailurePolicy(
-  result: ProjectionPlanningResult,
-  options: ProjectionOutputOptions
-): ProjectionPlanningResult {
-  if (result.status === 'unsupported' && options.onUnsupported === 'throw')
-    throw new ProjectionPlanningError(result.reasons);
-  return result;
 }
 
 function isTwoDimensionalCRS(
