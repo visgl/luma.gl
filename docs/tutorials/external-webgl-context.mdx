@@ -10,7 +10,7 @@ Add MapLibre GL JS alongside luma.gl:
 npm install @luma.gl/webgl @luma.gl/engine maplibre-gl
 ```
 
-This example uses [CARTO basemaps](https://github.com/CartoDB/basemap-styles) so you do not need an API token, but you can still supply a Mapbox token if you point MapLibre at a Mapbox-hosted style elsewhere in your application.
+This example uses [OpenFreeMap basemaps](https://openfreemap.org/) so you do not need an API token, but you can still supply a Mapbox token if you point MapLibre at a Mapbox-hosted style elsewhere in your application.
 
 ## Attach luma.gl to MapLibre
 
@@ -24,7 +24,7 @@ import {Model} from '@luma.gl/engine'
 
 const map = new maplibregl.Map({
   container: 'map',
-  style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+  style: 'https://tiles.openfreemap.org/styles/positron',
   antialias: true,
   pitch: 60,
   zoom: 12
