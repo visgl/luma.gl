@@ -163,7 +163,8 @@ accepted.
 | P.8a — Representative performance evidence | Extend P.4c with multi-patch domains, row/patch-count and reuse sweeps, and more GPU vendors; include real consumer workloads as P.9a supplies them | Landed P.4c harness; P.9a for consumer measurements | Reproducible accuracy-gated reports separate routing, compilation, buffer memory, and execution costs; distinguish equal-budget comparisons from explicit accuracy/speed trade-offs | Partial in this branch: local sweeps; routing isolation, other vendors and production consumers remain | Medium |
 | P.8b — Indexed patch routing and domain partitioning | Add bounded spatial lookup and explicit partitioning of discontinuous domains while preserving seam validity | P.8a evidence that scanning is a bottleneck | Indexed and scan paths agree at patch boundaries and invalid seams; routing storage/build costs are reported and improve a demonstrated workload without changing the precision contract | Evidence-gated | Large |
 | P.8c — Consumer fusion and cost selection | Use the existing inline interface in real consumers and choose inline/materialized execution from measured costs | P.8a and P.9a; P.8b only for indexed candidates | Thresholds account for row/patch count, reuse, memory, and device capability; both paths pass the same oracle and error budget; no silent precision downgrade or hidden submission | Evidence-gated | Medium |
-| P.9a — Production-shaped consumers | Integrate one preserved-batch table consumer and one inline render/analysis consumer before selecting optimizations | Landed P.2/P.3/P.4 contracts | Both share one program without implicit repacking or adapter casts, preserve ownership/validity/precision, and provide workloads for P.8a | Planned | Medium |
+| P.9a.1 — Provider preparation boundary | Accept caller-prepared synchronous transforms without importing an engine catalogue or requiring the next math.gl version | Landed adaptive compiler and program contracts | Eager and explicitly preloaded math.gl providers share double-single planning, inverse-domain and failure contracts; dependency-free bundle and no-implicit-loading tests pass | Implemented in this branch | Small |
+| P.9a — Production-shaped consumers | Integrate one preserved-batch table consumer and one inline render/analysis consumer before selecting optimizations | Landed P.2/P.3/P.4 contracts and P.9a.1 | Both share one program without implicit repacking or adapter casts, preserve ownership/validity/precision, and provide workloads for P.8a | Planned | Medium |
 | P.9b — Package graduation | Freeze proven APIs and move stable execution pieces across reviewed package boundaries | P.9a and demonstrated ownership/API stability; P.8 optimizations only if justified | Build/test gates pass, migration is documented, and the execution core has no math.gl, proj4js, or Arrow dependency | Planned | Medium |
 
 ## Recommended execution order
@@ -175,7 +176,12 @@ changing the default precision. The [P.8a local sweeps](../benchmarks/gpu-projec
 add 1–256 patches, row-count and consumer-reuse comparisons at an equal double-single error budget.
 Other vendors, isolated routing costs and real consumers remain evidence requirements for P.6/P.8.
 
-1. **Next: P.9a and remaining P.8a evidence.** Consumers do not need automatic routing/fusion to
+1. **Next: P.9a and remaining P.8a evidence.** P.9a.1 establishes a provider-independent
+   `planProjection()` boundary compatible with the pinned math.gl. After upgrading math.gl,
+   align factory injection, spatial-reference metadata and public semantic normalization;
+   retain identifier-based conic support until it is available upstream. Deck integration still
+   needs explicit coordinate normalization, altitude, validity and attribute lifecycle contracts.
+   Consumers do not need automatic routing/fusion to
    start: the dual interface already exists. Local multi-patch/reuse baselines are recorded; add
    consumer and cross-vendor evidence next. Axis-swap fixtures are not production consumers.
 2. **Coverage on demand after P.3c.** Lambert 1SP/2SP and Albers now reuse the double-single adaptive

@@ -6,27 +6,8 @@
 import type {PROJParameter, PROJStringAst} from '@math.gl/crs';
 import {invertProjectionProgram, type ProjectionOperation} from './projection-program';
 
-export type ProjectionPlanningReason = {
-  readonly code:
-    | 'invalid-definition'
-    | 'unsupported-parameter'
-    | 'unsupported-operation'
-    | 'unsupported-arithmetic'
-    | 'unsupported-dimensions'
-    | 'unsupported-coordinate-system'
-    | 'unsupported-datum'
-    | 'unsupported-conversion'
-    | 'datum-transformation-required'
-    | 'bounds-required'
-    | 'unsupported-unit'
-    | 'incompatible-units'
-    | 'crs-requires-provider'
-    | 'provider-unavailable'
-    | 'approximation-failed';
-  readonly step?: number;
-  readonly parameter?: string;
-  readonly message: string;
-};
+import type {ProjectionPlanningReason} from './projection-planning';
+export type {ProjectionPlanningReason} from './projection-planning';
 
 type Unit = {factor: number; dimension: 'linear' | 'angular'};
 

@@ -309,6 +309,59 @@ either explicit native Float32 formulas or the default double-single adaptive pl
 adaptive polynomial across a discontinuity, and do not insert wrapping before projected metre
 coordinates or a latitude-first axis without explicitly rearranging/converting those coordinates.
 
+## Plan a caller-prepared projection
+
+`planProjection()` compiles a caller-owned CPU transform into the same program used by
+`GPUProjectionProgram` and inline WGSL, without importing math.gl or resolving CRS definitions.
+This is the provider boundary for current math.gl projections and future engine-created transforms.
+
+```ts
+import {Projection} from '@math.gl/projection';
+import {planProjection} from '@luma.gl/experimental/gpu-project';
+
+const projection = new Projection({from: 'EPSG:4326', to: 'EPSG:3857'});
+const result = planProjection({
+  projection,
+  bounds: [-122.55, 37.7, -122.35, 37.85],
+  tolerance: 0.001
+});
+if (result.status === 'ready') {
+  // Use result.compiled in GPUProjectionProgram, or result.compiled.getShader() inline.
+  // Retain projection for CPU picking/reference calculations.
+}
+```
+
+The provider may be a synchronous callback, an object with `project` and optional `unproject`,
+or a `SynchronousProjectionProvider` with `projectSync` and optional `unprojectSync`.
+When both pairs exist, the synchronous pair wins in both directions. Methods retain their
+provider receiver. For a lazy transform, await its preparation before planning; this function
+never calls `preload()`, starts imports, awaits callbacks, or retries through an asynchronous method.
+An unprepared provider returns an unsupported result with its error message.
+
+Unlike `planCRSProjection()`, this entry point always fits the supplied transform. It does not
+replace a custom implementation with a native formula or reinterpret its aliases, axes or units.
+Bounds are required and use the provider's input units; tolerance uses its output units.
+Defaults are raw binary64 `uint32x4` input, double-single arithmetic and `float32x4` output.
+The usual `precision`, `inputFormat` and `destinationOrigin` options remain available.
+
+An optional `inverse: {bounds, tolerance}` fits the provider's inverse over an independently
+declared destination domain. It requires the corresponding inverse method; no inverse is guessed.
+Without this option the adaptive program cannot be automatically inverted, even if the CPU
+provider has an inverse method.
+
+This is strictly a two-coordinate contract. Every sample must return exactly two finite values;
+explicitly `lossy: true` providers are declined. Opaque callbacks cannot be inspected for hidden
+height, datum, grid or epoch dependencies: callers must supply a genuine bounded 2D transformation.
+Accepting a provider is not a claim of GPU support for all of that provider's operations.
+Sampled fitting errors are not certified global bounds, and final local-f32 rounding is additional.
+
+The result uses the existing `ready`/`unsupported` union and supports
+`onUnsupported: 'throw'`. `ProjectionPlanningError` is available from both the execution
+entry point and the existing `/crs` entry point. Compilation takes a snapshot of sampled values,
+does not retain the provider for execution, and allocates no GPU resources. Replan explicitly
+after changing the provider's configuration; loading, caching and resource ownership stay with
+the application.
+
 ## Optional math.gl CRS planner
 
 Install `@math.gl/crs` and `@math.gl/projection` 5.x separately and import the CPU planner from
@@ -621,6 +674,7 @@ is unambiguous.
 
 | Export | Responsibility |
 | --- | --- |
+| `planProjection()` | Fits a caller-prepared 2D provider into a compiled adaptive program with structured failure results |
 | `compileProjectionPlan()` | Samples and subdivides a bounded projection into adaptive patches |
 | `GPUProjection` | Adds local Float32 or fp64-backed double-single projection work to a caller-owned command graph |
 | `createWebMercatorProjection()` | Provides a zero-dependency WGS84-to-Web-Mercator provider |

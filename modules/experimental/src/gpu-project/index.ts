@@ -30,6 +30,14 @@ export {
 } from './web-mercator';
 
 export {GPUProjection} from './gpu-projection';
+export {planProjection, ProjectionPlanningError} from './projection-planning';
+export type {
+  PlanProjectionOptions,
+  ProjectionPlanningResult,
+  ProjectionPlanningReason,
+  AdaptiveProjectionOptions,
+  SynchronousProjectionProvider
+} from './projection-planning';
 export {
   CompiledProjection,
   compileProjectionProgram,
