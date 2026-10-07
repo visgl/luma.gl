@@ -42,7 +42,7 @@ export async function initializeExternalWebGLContext(
 
   const maplibreMap = new maplibregl.Map({
     container,
-    style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+    style: 'https://tiles.openfreemap.org/styles/positron',
     center: [-122.43, 37.77],
     pitch: 60,
     zoom: 12.5,
