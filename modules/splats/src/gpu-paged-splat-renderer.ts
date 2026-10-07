@@ -25,12 +25,12 @@ import {
 import type {GPUSplatGraphRendererProps} from './gpu-splat-graph-renderer';
 import {
   GPU_SPLAT_GRAPH_UNIFORM_BYTE_LENGTH,
-  GPU_SPLAT_INVALID_DEPTH_KEY,
   GPU_SPLAT_PROJECTED_RECORD_BYTE_LENGTH
 } from './gpu-splat-graph-shaders';
 import {
   GPU_PAGED_SPLAT_FEATURE_SHADER,
   GPU_PAGED_SPLAT_FEATURE_SHADER_LAYOUT,
+  GPU_PAGED_SPLAT_INVALID_DEPTH_KEY,
   GPU_PAGED_SPLAT_PROJECTION_SHADER,
   GPU_PAGED_SPLAT_PROJECTION_SHADER_LAYOUT,
   GPU_PAGED_SPLAT_RENDER_SHADER,
@@ -149,6 +149,7 @@ type PlannedSourceSegment = {
 };
 
 type SourceSegment = PlannedSourceSegment & {
+  activeRowsDirty: boolean;
   activeRowBuffer: Buffer;
   projectedRecordBuffer: Buffer;
   uniformBuffer: Buffer;
@@ -334,7 +335,11 @@ export class GPUPagedSplatRenderer {
     return this.isDestroyed;
   }
 
-  /** Replaces the active row frontier while retaining all caller-owned source allocations. */
+  /**
+   * Replaces the active row frontier while retaining caller-owned source allocations.
+   * Unsplit active-row arrays are borrowed until the next call; resubmit after changing their
+   * contents. Camera-only updates do not copy or reupload unchanged active-row indirection.
+   */
   setFrontier(pages: readonly GPUPagedSplatPage[]): void {
     if (this.isDestroyed) {
       throw new Error('Cannot update a destroyed paged Gaussian splat renderer');
@@ -394,6 +399,7 @@ export class GPUPagedSplatRenderer {
     if (canReuseGraph) {
       for (let segmentIndex = 0; segmentIndex < this.sourceSegments.length; segmentIndex++) {
         Object.assign(this.sourceSegments[segmentIndex], nextSegments[segmentIndex]);
+        this.sourceSegments[segmentIndex].activeRowsDirty = true;
       }
     } else if (nextSegments.length > 0) {
       this.requiresGraphRebuild = true;
@@ -733,7 +739,7 @@ export class GPUPagedSplatRenderer {
       outputValues: sortedIndices,
       algorithm: 'radix',
       direction: 'ascending',
-      keyBits: 16
+      keyBits: 32
     }).addToGraph(graph);
     this.addInversePermutationPass(graph, sortedIndices, inverseIndices);
 
@@ -787,6 +793,7 @@ export class GPUPagedSplatRenderer {
     );
     return {
       ...planned,
+      activeRowsDirty: true,
       activeRowBuffer,
       projectedRecordBuffer,
       uniformBuffer,
@@ -808,7 +815,7 @@ export class GPUPagedSplatRenderer {
     const shader = /* wgsl */ `
 const ROW_COUNT: u32 = ${this.globalSortCapacity}u;
 const WORKGROUPS_X: u32 = ${dispatch.x}u;
-const INVALID_DEPTH_KEY: u32 = ${GPU_SPLAT_INVALID_DEPTH_KEY}u;
+const INVALID_DEPTH_KEY: u32 = ${GPU_PAGED_SPLAT_INVALID_DEPTH_KEY}u;
 @group(0) @binding(0) var<storage, read_write> values: array<u32>;
 @group(0) @binding(1) var<storage, read_write> depthKeys: array<u32>;
 @group(0) @binding(2) var<storage, read_write> drawCommands: array<atomic<u32>>;
@@ -1173,7 +1180,9 @@ fn main() {
         blendAlphaDstFactor: 'one-minus-src-alpha'
       }
     });
-    if (!this.includeRenderPass) return;
+    if (!this.includeRenderPass) {
+      return;
+    }
     graph.addRenderPass({
       id: 'paged-gaussian-segmented-render',
       resources: [
@@ -1191,20 +1200,7 @@ fn main() {
           clearDepth: 1,
           clearStencil: false
         }),
-        encode: ({renderPass, getBuffer}) => {
-          if (!this.model) {
-            return;
-          }
-          renderPass.setPipeline(this.model.pipeline);
-          renderPass.setVertexArray(this.model.vertexArray);
-          for (const segment of this.outputSegments) {
-            renderPass.setBindings({
-              graphUniforms: getBuffer(firstUniform),
-              projectedRecords: getBuffer(segment.graphProjectedRecords)
-            });
-            this.drawCommands.draw(renderPass, segment.index + 1);
-          }
-        }
+        encode: ({renderPass}) => this.draw(renderPass)
       })
     });
   }
@@ -1289,9 +1285,10 @@ fn main() {
       this.semanticSelectionBuffer?.write(this.semanticSelectionValues);
     }
     for (const segment of this.sourceSegments) {
-      if (segment.activeRows) {
+      if (segment.activeRows && segment.activeRowsDirty) {
         segment.activeRowBuffer.write(segment.activeRows);
       }
+      segment.activeRowsDirty = false;
       const uniformData = new ArrayBuffer(GPU_SPLAT_GRAPH_UNIFORM_BYTE_LENGTH);
       const floatValues = new Float32Array(uniformData);
       const integerValues = new Uint32Array(uniformData);
@@ -1318,7 +1315,7 @@ fn main() {
       integerValues[29] =
         (hasFloatColor ? 1 : 0) | (this.props.lodOpacity ? 2 : 0) | (encodeLinearColor ? 4 : 0);
       integerValues[30] = segment.activeRows ? 1 : 0;
-      integerValues[31] = segment.sourceRowOffset - segment.sourceBindingRowOffset;
+      integerValues[31] = segment.sourceRowOffset;
       segment.uniformBuffer.write(new Uint8Array(uniformData));
 
       const featureData = new ArrayBuffer(GPU_PAGED_SPLAT_FEATURE_UNIFORM_BYTE_LENGTH);
@@ -1404,18 +1401,19 @@ fn main() {
           );
           const capacityRowCount = segmentSourceRowEnd - segmentSourceRowStart;
           const selectedRows = page.activeRows
-            ? Uint32Array.from(
-                Array.from(page.activeRows).filter(
-                  rowIndex => rowIndex >= segmentSourceRowStart && rowIndex < segmentSourceRowEnd
-                ),
-                rowIndex => rowIndex - (usesSourceRanges ? sourceWindowStart : 0)
-              )
+            ? segmentSourceRowStart === 0 && segmentSourceRowEnd === page.data.length
+              ? page.activeRows
+              : page.activeRows
+                  .filter(
+                    rowIndex => rowIndex >= segmentSourceRowStart && rowIndex < segmentSourceRowEnd
+                  )
+                  .map(rowIndex => rowIndex - (usesSourceRanges ? sourceWindowStart : 0))
             : undefined;
           const activeRowCount = selectedRows?.length ?? capacityRowCount;
           plannedSegments.push({
             id: `${page.id}-${pageSegmentIndex++}`,
             page,
-            ...(selectedRows ? {activeRows: selectedRows} : {}),
+            activeRows: selectedRows,
             capacityRowCount,
             activeRowCount,
             sourceRowOffset: usesSourceRanges
