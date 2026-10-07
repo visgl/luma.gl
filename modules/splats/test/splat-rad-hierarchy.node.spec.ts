@@ -137,6 +137,57 @@ it('reuses resident page slots after a lower-priority group coarsens in the same
   }
 });
 
+it('keeps incoming sibling pages reserved while capacity coarsens another group', () => {
+  const device = new NullDevice({});
+  const roots = makeRADPage(device, {
+    id: 'roots',
+    rowIndexBase: 0,
+    positions: [0.8, 0, 0, 0, 0, 0, 0.5, 0, 0],
+    scales: [0.001, 0.001, 0.001, 0.2, 0.2, 0.2, 0.0001, 0.0001, 0.0001],
+    childCounts: [2, 2, 1],
+    childStarts: [4, 8, 16]
+  });
+  const first = makeRADPage(device, {
+    id: 'first',
+    rowIndexBase: 4,
+    positions: [0.8, 0, 0, 0.9, 0, 0]
+  });
+  const second = makeRADPage(device, {
+    id: 'second',
+    rowIndexBase: 8,
+    positions: [0, 0, 0, 0.1, 0, 0],
+    childCounts: [0, 1],
+    childStarts: [0, 12]
+  });
+  const manager = new SplatRADHierarchyManager({
+    pages: [roots, first],
+    rootRows: [0, 1, 2],
+    pageSize: 4,
+    maximumActiveRows: 4,
+    maximumResidentPages: 3,
+    maximumScreenSpaceError: 0
+  });
+  try {
+    manager.refineView(makeRADView());
+    expect(manager.requestedRows).toEqual([8]);
+    manager.registerPage(second);
+    manager.refineView({...makeRADView(), cameraPosition: [0.01, 0, 2]});
+    while (manager.hasPendingTraversal) manager.continueTraversal();
+    expect(getFrontierSourceRows(manager.frontier)).toEqual([
+      [0, 2],
+      [8, 9]
+    ]);
+    expect(
+      manager.requestedRows,
+      'root, replacement and pending detail occupy all three slots'
+    ).toEqual([12]);
+  } finally {
+    manager.destroy();
+    for (const page of [roots, first, second]) page.data.destroy();
+    device.destroy();
+  }
+});
+
 it('traverses and owns CPU-only RAD hierarchy data without GPU fields', () => {
   const positions = new Float32Array([0, 0, 0, -0.1, 0, 0, 0.1, 0, 0]);
   const scales = new Float32Array(9).fill(0.1);

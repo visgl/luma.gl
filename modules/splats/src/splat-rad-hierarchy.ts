@@ -199,6 +199,7 @@ type SplatRADTraversalState<TData extends SplatRADHierarchyData = GPUSplatData> 
   dependencyPageCounts: Map<string, number>;
   inputPageIds: Set<string>;
   requiredPageIndices: Set<number>;
+  requiredPagesDirty: boolean;
   requestedPages: Map<number, SplatRADHierarchyRequest>;
   allocatedRowCount: number;
   refinedRows: Set<number>;
@@ -866,6 +867,7 @@ export class SplatRADHierarchyManager<TData extends SplatRADHierarchyData = GPUS
   }
 
   private resetRequiredPages(state: SplatRADTraversalState<TData>): void {
+    state.requiredPagesDirty = false;
     state.requiredPageIndices.clear();
     for (const rootRow of this.rootRows)
       state.requiredPageIndices.add(Math.floor(rootRow / this.pageSize));
@@ -1025,6 +1027,7 @@ export class SplatRADHierarchyManager<TData extends SplatRADHierarchyData = GPUS
       dependencyPageCounts: new Map(),
       inputPageIds: new Set(),
       requiredPageIndices: new Set(rootRows.map(rowIndex => Math.floor(rowIndex / this.pageSize))),
+      requiredPagesDirty: false,
       requestedPages: new Map(),
       allocatedRowCount: 0,
       refinedRows: new Set(),
@@ -1330,7 +1333,24 @@ export class SplatRADHierarchyManager<TData extends SplatRADHierarchyData = GPUS
     if (!wasSelected) {
       traversal.state.allocatedRowCount += candidate.isVisible ? 1 : 0;
     }
-    this.resetRequiredPages(traversal.state);
+    // Rebuild after this atomic replacement finishes, before the next admission. Rebuilding
+    // here would drop the incoming sibling pages before they enter selectedPages.
+    traversal.state.requiredPagesDirty = true;
+    const children = candidate.children ?? [];
+    if (
+      children.length &&
+      children.every(
+        child =>
+          child.resolvedSubtreeBounds ||
+          !child.registeredPage.page.childCounts?.[child.localRowIndex]
+      )
+    ) {
+      candidate.resolvedSubtreeBounds = children.reduce(
+        (bounds, child) =>
+          mergeSplatRADBounds(bounds, child.resolvedSubtreeBounds ?? child.node.bounds),
+        candidate.node.bounds
+      );
+    }
   }
 
   /** Trades the least valuable complete sibling group for higher-error newly resident detail. */
@@ -1903,7 +1923,7 @@ export class SplatRADHierarchyManager<TData extends SplatRADHierarchyData = GPUS
     // improvements must be visible now even when more refinement remains queued.
     this.deferFrontierUntilComplete = false;
     for (const entry of this.currentFrontier) this.publishedPages.get(entry.id)!.entry = entry;
-    this.resetRequiredPages(state);
+    if (this.maximumResidentPages !== Number.POSITIVE_INFINITY) this.resetRequiredPages(state);
     this.synchronizeRequests(state.requestedPages);
     for (const page of this.sortedPages) {
       page.lastDataRevision = page.page.data.revision;
@@ -2128,6 +2148,7 @@ export class SplatRADHierarchyManager<TData extends SplatRADHierarchyData = GPUS
     reserve = true
   ): boolean {
     if (this.maximumResidentPages === Number.POSITIVE_INFINITY) return true;
+    if (state.requiredPagesDirty) this.resetRequiredPages(state);
     const firstPageIndex = Math.floor(childStart / this.pageSize);
     const lastPageIndex = Math.floor((childStart + childCount - 1) / this.pageSize);
     if (lastPageIndex - firstPageIndex + 1 > this.maximumResidentPages) return false;
