@@ -9,6 +9,10 @@ import {
   type CommandEncoder,
   type Device,
   type RenderPass,
+  type RenderPipeline,
+  type Framebuffer,
+  type TextureFormatColor,
+  type TextureFormatDepthStencil,
   type ShaderLayout
 } from '@luma.gl/core';
 import {Computation, Model} from '@luma.gl/engine';
@@ -238,6 +242,7 @@ export class GPUPagedSplatRenderer {
   private plannedSegments: PlannedSourceSegment[] = [];
   private includeRenderPass = true;
   private model?: Model;
+  private readonly hostPipelines = new Map<string, RenderPipeline>();
   private sortedValuesBuffer?: Buffer;
   private semanticSelectionBuffer?: Buffer;
   private semanticSelectionValues = new Uint32Array(0);
@@ -510,7 +515,33 @@ export class GPUPagedSplatRenderer {
     if (this.isDestroyed || !this.hasPresentedContent || !this.model) {
       return;
     }
-    renderPass.setPipeline(this.model.pipeline);
+    // The indirect draw bypasses Model.draw(), so match the host attachments explicitly.
+    const framebuffer =
+      (renderPass as RenderPass & {framebuffer?: Framebuffer}).framebuffer ??
+      renderPass.props.framebuffer;
+    const colorAttachmentFormats = framebuffer?.colorAttachments.map(attachment =>
+      attachment ? (attachment.texture.format as TextureFormatColor) : null
+    ) ?? [this.device.preferredColorFormat];
+    const depthStencilAttachmentFormat = framebuffer?.depthStencilAttachment?.texture.format as
+      | TextureFormatDepthStencil
+      | undefined;
+    const pipelineKey = `${colorAttachmentFormats.join(',')}/${depthStencilAttachmentFormat ?? ''}`;
+    let pipeline = this.hostPipelines.get(pipelineKey);
+    if (!pipeline) {
+      const parameters = {...this.model.pipeline.props.parameters};
+      if (!depthStencilAttachmentFormat) {
+        delete parameters.depthWriteEnabled;
+        delete parameters.depthCompare;
+      }
+      pipeline = this.model.pipelineFactory.createRenderPipeline({
+        ...this.model.pipeline.props,
+        colorAttachmentFormats,
+        depthStencilAttachmentFormat,
+        parameters
+      });
+      this.hostPipelines.set(pipelineKey, pipeline);
+    }
+    renderPass.setPipeline(pipeline);
     renderPass.setVertexArray(this.model.vertexArray);
     for (const segment of this.outputSegments) {
       renderPass.setBindings({
@@ -1511,6 +1542,12 @@ fn main() {
     this.compiledGraph?.destroy();
     this.compiledGraph = undefined;
     this.lastEncoding = undefined;
+    if (this.model) {
+      for (const pipeline of this.hostPipelines.values()) {
+        this.model.pipelineFactory.release(pipeline);
+      }
+    }
+    this.hostPipelines.clear();
     this.model?.destroy();
     this.model = undefined;
     for (const buffer of this.ownedBuffers) {

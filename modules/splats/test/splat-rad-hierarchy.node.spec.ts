@@ -18,6 +18,125 @@ import {
 
 const IDENTITY_MATRIX = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1] as const;
 
+it('retains unresolved offscreen descendants across progressive camera retargets', () => {
+  const device = new NullDevice({});
+  const root = makeRADPage(device, {
+    id: 'root',
+    rowIndexBase: 0,
+    positions: [10, 0, 0],
+    childCounts: [1],
+    childStarts: [1]
+  });
+  const child = makeRADPage(device, {
+    id: 'child',
+    rowIndexBase: 1,
+    positions: [10, 0, 0],
+    childCounts: [1],
+    childStarts: [2]
+  });
+  const leaf = makeRADPage(device, {id: 'leaf', rowIndexBase: 2, positions: [0, 0, 0]});
+  const manager = new SplatRADHierarchyManager({
+    pages: [root, child],
+    pageSize: 1,
+    maximumScreenSpaceError: 0
+  });
+  try {
+    manager.refineView(makeRADView());
+    expect(manager.requestedRows).toEqual([2]);
+    manager.refineView({...makeRADView(), cameraPosition: [0.01, 0, 2]});
+    expect(manager.requestedRows, 'unknown geometry remains requested').toEqual([2]);
+    manager.registerPage(leaf);
+    while (manager.hasPendingTraversal) manager.continueTraversal();
+    expect(getFrontierSourceRows(manager.frontier)).toEqual([[2]]);
+  } finally {
+    manager.destroy();
+    for (const page of [root, child, leaf]) page.data.destroy();
+    device.destroy();
+  }
+});
+
+it('keeps resolved offscreen subtrees collapsed through motion and reveals them on a pan', () => {
+  const device = new NullDevice({});
+  const page = makeRADPage(device, {
+    id: 'tree',
+    rowIndexBase: 0,
+    positions: [10, 0, 0, 10, 0, 0, 10.1, 0, 0],
+    childCounts: [2, 0, 0],
+    childStarts: [1, 0, 0]
+  });
+  const manager = new SplatRADHierarchyManager({
+    pages: [page],
+    maximumScreenSpaceError: 0,
+    frustumCulling: false
+  });
+  try {
+    manager.selectView({...makeRADView(), modelViewProjectionMatrix: undefined});
+    manager.refineView(makeRADView());
+    expect(getFrontierSourceRows(manager.frontier)).toEqual([[0]]);
+    const coarse = manager.frontier;
+    for (const position of [0.01, 0.02, 0.03]) {
+      manager.refineView({...makeRADView(), cameraPosition: [position, 0, 2]});
+      expect(manager.frontier).toBe(coarse);
+      expect(manager.hasPendingTraversal).toBe(false);
+    }
+    manager.refineView({
+      ...makeRADView(),
+      modelViewProjectionMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -10, 0, 0, 1]
+    });
+    expect(getFrontierSourceRows(manager.frontier)).toEqual([[1, 2]]);
+  } finally {
+    manager.destroy();
+    page.data.destroy();
+    device.destroy();
+  }
+});
+
+it('reuses resident page slots after a lower-priority group coarsens in the same camera cut', () => {
+  const device = new NullDevice({});
+  const roots = makeRADPage(device, {
+    id: 'roots',
+    rowIndexBase: 0,
+    positions: [0.8, 0, 0, 0, 0, 0],
+    scales: [0.001, 0.001, 0.001, 0.1, 0.1, 0.1],
+    childCounts: [2, 2],
+    childStarts: [2, 4]
+  });
+  const first = makeRADPage(device, {
+    id: 'first',
+    rowIndexBase: 2,
+    positions: [0.8, 0, 0, 0.9, 0, 0]
+  });
+  const second = makeRADPage(device, {
+    id: 'second',
+    rowIndexBase: 4,
+    positions: [0, 0, 0, 0.1, 0, 0],
+    childCounts: [0, 1],
+    childStarts: [0, 6]
+  });
+  const manager = new SplatRADHierarchyManager({
+    pages: [roots, first],
+    rootRows: [0, 1],
+    pageSize: 2,
+    maximumActiveRows: 3,
+    maximumResidentPages: 3,
+    maximumScreenSpaceError: 0
+  });
+  try {
+    manager.refineView(makeRADView());
+    expect(manager.requestedRows).toEqual([4]);
+    manager.registerPage(second);
+    while (manager.hasPendingTraversal) manager.continueTraversal();
+    expect(getFrontierSourceRows(manager.frontier)).toEqual([[0], [4, 5]]);
+    expect(manager.requestedRows, 'the released first-child page no longer blocks detail').toEqual([
+      6
+    ]);
+  } finally {
+    manager.destroy();
+    for (const page of [roots, first, second]) page.data.destroy();
+    device.destroy();
+  }
+});
+
 it('traverses and owns CPU-only RAD hierarchy data without GPU fields', () => {
   const positions = new Float32Array([0, 0, 0, -0.1, 0, 0, 0.1, 0, 0]);
   const scales = new Float32Array(9).fill(0.1);

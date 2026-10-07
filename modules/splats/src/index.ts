@@ -47,6 +47,7 @@ export {
   SplatResidencyManager,
   type SplatResidencyBounds,
   type SplatResidencyBudget,
+  type SplatResidencyData,
   type SplatResidencyCallbacks,
   type SplatResidencyChunk,
   type SplatResidencyChunkOptions,

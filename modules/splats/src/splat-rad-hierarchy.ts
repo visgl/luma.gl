@@ -102,7 +102,7 @@ export type SplatRADHierarchyStats = {
   fallbackRowCount: number;
   /** Independently requested, not-yet-resident original source pages. */
   requestedPageCount: number;
-  /** Configured maximum number of simultaneously selected source rows. */
+  /** Configured maximum number of simultaneously rendered source rows. */
   maximumActiveRows: number;
 };
 
@@ -120,7 +120,9 @@ export type SplatRADHierarchyManagerProps<TData extends SplatRADHierarchyData = 
   residencyBudget?: SplatResidencyBudget;
   /** Maximum accepted projected source-row geometric error in physical pixels. */
   maximumScreenSpaceError?: number;
-  /** Maximum simultaneously selected original source rows across every active page. */
+  /** Maximum simultaneously rendered original source rows across every active page.
+   * Culled traversal candidates do not consume this budget. Bound their source-page residency
+   * separately with maximumResidentPages/residencyBudget and slice work with maxTraversalRows. */
   maximumActiveRows?: number;
   /**
    * Whether selection omits rows outside the camera frustum. Defaults to true. Disable for
@@ -221,6 +223,8 @@ type SplatRADFrontierCandidate<TData extends SplatRADHierarchyData = GPUSplatDat
   isSelected?: boolean;
   dependencyPageIds?: string[];
   suppressRefinement?: boolean;
+  /** Conservative bound of a completely resolved offscreen subtree, independent of source pages. */
+  resolvedSubtreeBounds?: SplatResidencyBounds;
 };
 
 type SplatRADRefinementProgress<TData extends SplatRADHierarchyData = GPUSplatData> = {
@@ -763,7 +767,15 @@ export class SplatRADHierarchyManager<TData extends SplatRADHierarchyData = GPUS
   ): boolean {
     const view = this.currentView!;
     // Explicit post-order frames keep deep retained trees off the JavaScript call stack.
-    const stack = [{candidate, childIndex: -1, hasVisibleDescendant: false}];
+    const stack = [
+      {
+        candidate,
+        childIndex: -1,
+        hasVisibleDescendant: false,
+        hasUnknownDescendant: false,
+        bounds: candidate.node.bounds
+      }
+    ];
     while (stack.length) {
       const frame = stack[stack.length - 1];
       const branchCandidate = frame.candidate;
@@ -803,9 +815,17 @@ export class SplatRADHierarchyManager<TData extends SplatRADHierarchyData = GPUS
           }
           // Dormant children are not display dependencies and may already have been evicted.
           branchCandidate.children = undefined;
-          frame.hasVisibleDescendant = this.isRowInFrustum(branchCandidate.node);
+          const childCount =
+            branchCandidate.registeredPage.page.childCounts?.[branchCandidate.localRowIndex] ?? 0;
+          frame.hasUnknownDescendant = childCount > 0 && !branchCandidate.resolvedSubtreeBounds;
+          frame.bounds = branchCandidate.resolvedSubtreeBounds ?? branchCandidate.node.bounds;
+          frame.hasVisibleDescendant = this.isRowInFrustum({
+            ...branchCandidate.node,
+            bounds: frame.bounds
+          });
           if (
-            branchCandidate.registeredPage.page.childCounts?.[branchCandidate.localRowIndex] &&
+            childCount &&
+            (frame.hasVisibleDescendant || frame.hasUnknownDescendant) &&
             (!branchCandidate.isVisible ||
               branchCandidate.priority > this.getRefinementThreshold(branchCandidate))
           ) {
@@ -819,12 +839,15 @@ export class SplatRADHierarchyManager<TData extends SplatRADHierarchyData = GPUS
         stack.push({
           candidate: children[frame.childIndex++],
           childIndex: -1,
-          hasVisibleDescendant: false
+          hasVisibleDescendant: false,
+          hasUnknownDescendant: false,
+          bounds: children[frame.childIndex - 1].node.bounds
         });
         continue;
       }
-      if (!frame.hasVisibleDescendant && children?.length) {
+      if (!frame.hasVisibleDescendant && !frame.hasUnknownDescendant && children?.length) {
         this.collapseFrontierCandidate(branchCandidate, traversal);
+        branchCandidate.resolvedSubtreeBounds = frame.bounds;
         branchCandidate.children = undefined;
         branchCandidate.suppressRefinement = true;
       } else if (
@@ -833,8 +856,11 @@ export class SplatRADHierarchyManager<TData extends SplatRADHierarchyData = GPUS
         this.coarseningQueue.push(branchCandidate);
       }
       stack.pop();
-      if (!stack.length) return frame.hasVisibleDescendant;
-      stack[stack.length - 1].hasVisibleDescendant ||= frame.hasVisibleDescendant;
+      if (!stack.length) return frame.hasVisibleDescendant || frame.hasUnknownDescendant;
+      const parentFrame = stack[stack.length - 1];
+      parentFrame.hasVisibleDescendant ||= frame.hasVisibleDescendant;
+      parentFrame.hasUnknownDescendant ||= frame.hasUnknownDescendant;
+      parentFrame.bounds = mergeSplatRADBounds(parentFrame.bounds, frame.bounds);
     }
     return false;
   }
@@ -853,6 +879,23 @@ export class SplatRADHierarchyManager<TData extends SplatRADHierarchyData = GPUS
       const page = this.pagesById.get(pageId);
       if (page)
         state.requiredPageIndices.add(Math.floor(page.page.data.rowIndexBase / this.pageSize));
+    }
+    const traversal = this.incrementalTraversal;
+    if (traversal?.state === state) {
+      for (const candidate of this.blockedCandidates.values()) {
+        if (traversal.selectedRows.get(candidate.globalRowIndex) !== candidate) continue;
+        const page = candidate.registeredPage.page;
+        this.reserveChildPages(
+          page.childStarts![candidate.localRowIndex],
+          page.childCounts![candidate.localRowIndex],
+          state
+        );
+      }
+      for (const progress of traversal.refinementProgress.values()) {
+        for (const child of progress.childCandidates) {
+          state.requiredPageIndices.add(Math.floor(child.globalRowIndex / this.pageSize));
+        }
+      }
     }
   }
 
@@ -1287,6 +1330,7 @@ export class SplatRADHierarchyManager<TData extends SplatRADHierarchyData = GPUS
     if (!wasSelected) {
       traversal.state.allocatedRowCount += candidate.isVisible ? 1 : 0;
     }
+    this.resetRequiredPages(traversal.state);
   }
 
   /** Trades the least valuable complete sibling group for higher-error newly resident detail. */
@@ -1859,6 +1903,7 @@ export class SplatRADHierarchyManager<TData extends SplatRADHierarchyData = GPUS
     // improvements must be visible now even when more refinement remains queued.
     this.deferFrontierUntilComplete = false;
     for (const entry of this.currentFrontier) this.publishedPages.get(entry.id)!.entry = entry;
+    this.resetRequiredPages(state);
     this.synchronizeRequests(state.requestedPages);
     for (const page of this.sortedPages) {
       page.lastDataRevision = page.page.data.revision;
@@ -2887,6 +2932,25 @@ export function getSplatRADPageBounds<TData extends SplatRADHierarchyData>(
       Math.hypot(positionX - center[0], positionY - center[1], positionZ - center[2]) +
         maximumScale * GAUSSIAN_SUPPORT_RADIUS
     );
+  }
+  return {center, radius};
+}
+
+/** Merges sphere bounds conservatively without retaining evictable source data. */
+function mergeSplatRADBounds(
+  first: SplatResidencyBounds,
+  second: SplatResidencyBounds
+): SplatResidencyBounds {
+  const firstRadius = first.radius ?? 0;
+  const secondRadius = second.radius ?? 0;
+  const distance = Math.hypot(...first.center.map((value, axis) => value - second.center[axis]));
+  if (firstRadius >= distance + secondRadius) return first;
+  if (secondRadius >= distance + firstRadius) return second;
+  const radius = (distance + firstRadius + secondRadius) / 2;
+  const fraction = (radius - firstRadius) / distance;
+  const center: [number, number, number] = [0, 0, 0];
+  for (let axis = 0; axis < 3; axis++) {
+    center[axis] = first.center[axis] + (second.center[axis] - first.center[axis]) * fraction;
   }
   return {center, radius};
 }

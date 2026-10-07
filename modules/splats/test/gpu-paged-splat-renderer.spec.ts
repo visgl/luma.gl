@@ -14,6 +14,75 @@ import {
 } from '../src/gpu-paged-splat-shaders';
 import './gpu-paged-splat-renderer.node.spec';
 
+it('matches borrowed HDR, depth32 and color-only host attachments without clearing them', async () => {
+  const devices = await getTestDevices(['webgpu']);
+  expect(devices.length).toBeGreaterThan(0);
+  for (const device of devices) {
+    const source = makeBrowserPagedSplatSource([0], 0, 0);
+    source.colors.set([255, 0, 0, 255]);
+    const data = makeGPUSplatData(device, source);
+    const renderer = new GPUPagedSplatRenderer(device, {
+      pages: [{id: 'page', data}],
+      viewportSize: [16, 16],
+      kernel2DSize: 0,
+      toneMapping: 'none'
+    });
+    try {
+      renderer.prepare(device.commandEncoder);
+      for (const [colorFormat, depthFormat] of [
+        ['rgba16float', 'depth32float'],
+        ['rgba8unorm', 'depth24plus'],
+        ['rgba8unorm', undefined]
+      ] as const) {
+        const texture = device.createTexture({
+          format: colorFormat,
+          width: 16,
+          height: 16,
+          usage: Texture.RENDER_ATTACHMENT | Texture.COPY_SRC
+        });
+        const framebuffer = device.createFramebuffer({
+          width: 16,
+          height: 16,
+          colorAttachments: [texture],
+          depthStencilAttachment: depthFormat
+        });
+        const layout = texture.computeMemoryLayout({width: 16, height: 16});
+        const readback = device.createBuffer({
+          byteLength: layout.byteLength,
+          usage: Buffer.COPY_DST | Buffer.MAP_READ
+        });
+        try {
+          const renderPass = device.beginRenderPass({
+            framebuffer,
+            clearColor: [0, 0, 1, 1],
+            clearDepth: depthFormat ? 1 : false
+          });
+          renderer.draw(renderPass);
+          renderPass.end();
+          device.submit();
+          texture.readBuffer({width: 16, height: 16}, readback);
+          const pixels = await readback.readAsync();
+          const offset = 8 * layout.bytesPerRow + 8 * (colorFormat === 'rgba16float' ? 8 : 4);
+          const red =
+            colorFormat === 'rgba16float'
+              ? new DataView(pixels.buffer, pixels.byteOffset).getUint16(offset, true)
+              : pixels[offset];
+          expect(red, `${colorFormat}/${depthFormat} presents red splats`).toBeGreaterThan(200);
+          // A corner remains the host's blue clear color, proving draw did not clear it.
+          expect(pixels[colorFormat === 'rgba16float' ? 5 : 2]).toBeGreaterThan(0);
+        } finally {
+          readback.destroy();
+          framebuffer.destroy();
+          texture.destroy();
+        }
+      }
+    } finally {
+      renderer.destroy();
+      data.destroy();
+    }
+  }
+});
+
 it.each([
   [-0.5, 1, true],
   [0, 0.4, false],
