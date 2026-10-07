@@ -74,6 +74,7 @@ export {
   getSplatRADPageBounds,
   type SplatRADHierarchyFrontierEntry,
   type SplatRADHierarchyManagerProps,
+  type SplatRADHierarchyData,
   type SplatRADHierarchyPage,
   type SplatRADHierarchyRequest,
   type SplatRADHierarchyStats

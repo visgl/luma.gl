@@ -8,6 +8,7 @@ import {
   type Binding,
   type CommandEncoder,
   type Device,
+  type RenderPass,
   type ShaderLayout
 } from '@luma.gl/core';
 import {Computation, Model} from '@luma.gl/engine';
@@ -23,7 +24,6 @@ import {
 } from '@luma.gl/gpgpu/gpu-core';
 import type {GPUSplatGraphRendererProps} from './gpu-splat-graph-renderer';
 import {
-  GPU_SPLAT_GRAPH_FEATURE_UNIFORM_BYTE_LENGTH,
   GPU_SPLAT_GRAPH_UNIFORM_BYTE_LENGTH,
   GPU_SPLAT_INVALID_DEPTH_KEY,
   GPU_SPLAT_PROJECTED_RECORD_BYTE_LENGTH
@@ -47,6 +47,7 @@ import {
 
 const WORKGROUP_SIZE = 256;
 const MINIMUM_SEMANTIC_SELECTION_CAPACITY = 64;
+const GPU_PAGED_SPLAT_FEATURE_UNIFORM_BYTE_LENGTH = 64;
 
 /** One intact caller-owned source page and its optional batch-local active-row frontier. */
 export type GPUPagedSplatPage = {
@@ -58,6 +59,14 @@ export type GPUPagedSplatPage = {
   activeRows?: Uint32Array;
   /** Optional source bounds retained for hierarchy and application diagnostics. */
   bounds?: SplatResidencyBounds;
+  /** Per-instance source-to-clip transform. Source columns remain shared and immutable. */
+  modelViewProjectionMatrix?: readonly number[];
+  /** Per-instance camera in source coordinates, preserving directional SH under affine transforms. */
+  cameraPosition?: readonly [number, number, number];
+  /** Per-instance alpha multiplier applied before global ordering. */
+  alphaScale?: number;
+  /** Linear RGB instance tint applied after source-frame SH evaluation. */
+  colorScale?: readonly [number, number, number];
 };
 
 /** Shared camera/style controls plus independently projected page and output segment limits. */
@@ -226,6 +235,7 @@ export class GPUPagedSplatRenderer {
   private readonly outputSegments: OutputSegment[] = [];
   private readonly pageRevisions = new Map<string, number>();
   private plannedSegments: PlannedSourceSegment[] = [];
+  private includeRenderPass = true;
   private model?: Model;
   private sortedValuesBuffer?: Buffer;
   private semanticSelectionBuffer?: Buffer;
@@ -478,14 +488,55 @@ export class GPUPagedSplatRenderer {
 
   /** Encodes sparse projection, exact cross-page ordering, segmented gather, and one render pass. */
   encode(commandEncoder: CommandEncoder): GPUCommandGraphEncoding | undefined {
+    return this.encodeFrame(commandEncoder, true);
+  }
+
+  /**
+   * Prepares globally ordered splats without opening or clearing a render pass.
+   * Call before the host begins its render pass, then call {@link draw} inside that pass.
+   */
+  prepare(commandEncoder: CommandEncoder): GPUCommandGraphEncoding | undefined {
+    return this.encodeFrame(commandEncoder, false);
+  }
+
+  /** Draws prepared splats into a caller-owned pass without clearing, ending, or submitting it. */
+  draw(renderPass: RenderPass): void {
+    if (this.isDestroyed || !this.hasPresentedContent || !this.model) {
+      return;
+    }
+    renderPass.setPipeline(this.model.pipeline);
+    renderPass.setVertexArray(this.model.vertexArray);
+    for (const segment of this.outputSegments) {
+      renderPass.setBindings({
+        graphUniforms: this.sourceSegments[0].uniformBuffer,
+        projectedRecords: segment.projectedRecordBuffer
+      });
+      this.drawCommands.draw(renderPass, segment.index + 1);
+    }
+  }
+
+  private encodeFrame(
+    commandEncoder: CommandEncoder,
+    includeRenderPass: boolean
+  ): GPUCommandGraphEncoding | undefined {
     if (this.isDestroyed) {
       return undefined;
+    }
+    if (this.includeRenderPass !== includeRenderPass) {
+      this.includeRenderPass = includeRenderPass;
+      this.requiresGraphRebuild = true;
+      this.requiresEncoding = true;
     }
     const activeRowCount = this.plannedSegments.reduce(
       (totalRowCount, segment) => totalRowCount + segment.activeRowCount,
       0
     );
     if (activeRowCount === 0) {
+      if (!includeRenderPass) {
+        this.hasPresentedContent = false;
+        this.requiresEncoding = false;
+        return undefined;
+      }
       if (!this.requiresEncoding || !this.hasPresentedContent) {
         return undefined;
       }
@@ -533,6 +584,8 @@ export class GPUPagedSplatRenderer {
       return undefined;
     }
     this.writeSourceUniforms();
+    // The graph's optional presentation pass calls draw() during encoding.
+    this.hasPresentedContent = true;
     this.lastEncoding = this.compiledGraph.encode(commandEncoder, {parameters: undefined});
     this.hasPresentedContent = true;
     this.requiresEncoding = false;
@@ -730,7 +783,7 @@ export class GPUPagedSplatRenderer {
     );
     const featureUniformBuffer = this.createUniformBuffer(
       `paged-gaussian-features-${planned.id}`,
-      GPU_SPLAT_GRAPH_FEATURE_UNIFORM_BYTE_LENGTH
+      GPU_PAGED_SPLAT_FEATURE_UNIFORM_BYTE_LENGTH
     );
     return {
       ...planned,
@@ -1120,6 +1173,7 @@ fn main() {
         blendAlphaDstFactor: 'one-minus-src-alpha'
       }
     });
+    if (!this.includeRenderPass) return;
     graph.addRenderPass({
       id: 'paged-gaussian-segmented-render',
       resources: [
@@ -1241,10 +1295,13 @@ fn main() {
       const uniformData = new ArrayBuffer(GPU_SPLAT_GRAPH_UNIFORM_BYTE_LENGTH);
       const floatValues = new Float32Array(uniformData);
       const integerValues = new Uint32Array(uniformData);
-      floatValues.set(this.props.modelViewProjectionMatrix, 0);
+      floatValues.set(
+        segment.page.modelViewProjectionMatrix ?? this.props.modelViewProjectionMatrix,
+        0
+      );
       floatValues.set(this.props.viewportSize, 16);
       floatValues[18] = this.props.radiusScale;
-      floatValues[19] = this.props.alphaScale;
+      floatValues[19] = this.props.alphaScale * (segment.page.alphaScale ?? 1);
       floatValues[20] = this.props.alphaCutoff;
       floatValues[21] = this.props.screenSizeCutoffPixels;
       floatValues[22] = this.props.gaussianSupportRadius;
@@ -1264,7 +1321,7 @@ fn main() {
       integerValues[31] = segment.sourceRowOffset - segment.sourceBindingRowOffset;
       segment.uniformBuffer.write(new Uint8Array(uniformData));
 
-      const featureData = new ArrayBuffer(GPU_SPLAT_GRAPH_FEATURE_UNIFORM_BYTE_LENGTH);
+      const featureData = new ArrayBuffer(GPU_PAGED_SPLAT_FEATURE_UNIFORM_BYTE_LENGTH);
       const featureFloatValues = new Float32Array(featureData);
       const featureIntegerValues = new Uint32Array(featureData);
       const batch = segment.page.data;
@@ -1272,7 +1329,8 @@ fn main() {
         batch.sphericalHarmonics && this.props.sphericalHarmonicsDegree > 0
           ? Math.min(batch.sphericalHarmonicsDegree, this.props.sphericalHarmonicsDegree)
           : 0;
-      featureFloatValues.set(this.props.cameraPosition, 0);
+      featureFloatValues.set(segment.page.cameraPosition ?? this.props.cameraPosition, 0);
+      featureFloatValues.set(segment.page.colorScale ?? [1, 1, 1], 12);
       featureIntegerValues[3] = degree;
       featureIntegerValues[4] = getSplatSphericalHarmonicCoefficientCount(
         batch.sphericalHarmonicsDegree

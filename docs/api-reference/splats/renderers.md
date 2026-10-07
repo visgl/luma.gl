@@ -276,3 +276,30 @@ source pages.
 - [Gaussian splats overview](/docs/api-reference/splats)
 - [Gaussian Splat Viewer](/examples/showcase/gaussian-splat-viewer)
 - GPU scheduling
+
+
+### Drawing in a host render pass
+
+`GPUPagedSplatRenderer.prepare(commandEncoder)` encodes projection, directional features, global
+ordering and gathered output without beginning, clearing or ending a presentation pass.
+Prepare before the host opens its render pass; call `draw(renderPass)` inside that pass. The host
+owns depth/color attachments and submits its command encoder normally. An empty frontier does
+not clear host color or depth. The existing `encode()` API retains its standalone presentation pass.
+
+```ts
+renderer.prepare(commandEncoder);
+const pass = commandEncoder.beginRenderPass({framebuffer: hostFramebuffer, clearColor: false, clearDepth: false});
+renderer.draw(pass);
+pass.end();
+```
+
+Each `GPUPagedSplatPage` may provide a `modelViewProjectionMatrix`, source-frame `cameraPosition`,
+`alphaScale` and RGB `colorScale`. Repeated page data borrows the same immutable source buffers;
+projection and SH evaluation use each instance's camera and transform. Tint follows source SH
+and HDR evaluation. Page IDs remain unique across instances. Projection matrices use clip depth
+in `[-w, w]`; WebGPU presentation converts it to `[0, w]` while preserving global depth keys.
+
+RAD hierarchy managers accept decoded CPU geometry through `SplatRADHierarchyData`, so traversal
+can run in a worker independently of GPU upload. Retargeting preserves valid coverage during
+motion, and borrowed residency (`ownsData: false`) does not free source columns shared by other
+instance selectors.

@@ -8,10 +8,47 @@ import {
   SplatRenderer,
   SplatResidencyManager,
   type GPUSplatData,
+  type SplatResidencyData,
   type SplatResidencyEvictionReason,
   type SplatSource
 } from '@luma.gl/splats';
 import {NullDevice} from '@luma.gl/test-utils';
+
+it('SplatResidencyManager manages CPU-only allocation metadata without GPU fields', () => {
+  const firstData = makeCPUResidencyData(2, 32, 7, 100);
+  const secondData = makeCPUResidencyData(3, 48, 8, 102);
+  const residencyEvents: SplatResidencyData[][] = [];
+  const manager = new SplatResidencyManager<SplatResidencyData>({
+    maxResidentChunks: 1,
+    ownsData: true,
+    onResidencyChange: batches => residencyEvents.push([...batches])
+  });
+
+  const firstChunk = manager.add(firstData, {priority: 1});
+  expect(firstChunk?.id, 'derives identity from CPU-only source metadata').toBe('7:100');
+  expect(firstChunk?.data, 'retains the exact CPU-only allocation object').toBe(firstData);
+  expect(manager.stats.residentGpuByteLength, 'accounts for generic allocation bytes').toBe(32);
+  expect(manager.stats.residentSplatCount, 'accounts for generic logical rows').toBe(2);
+
+  const secondChunk = manager.add(secondData, {priority: 2});
+  expect(secondChunk?.data, 'admits a higher-priority CPU-only allocation').toBe(secondData);
+  expect(firstData.destroyed, 'destroys manager-owned CPU-only data after eviction').toBe(true);
+  expect(manager.getResidentBatches(), 'returns the generic data type without conversion').toEqual([
+    secondData
+  ]);
+  expect(residencyEvents, 'publishes exact CPU-only residency snapshots').toEqual([
+    [firstData],
+    [],
+    [secondData]
+  ]);
+
+  manager.destroy();
+  expect(secondData.destroyed, 'destroys the final owned CPU-only allocation').toBe(true);
+  expect(
+    residencyEvents[residencyEvents.length - 1],
+    'publishes an empty final CPU-only residency snapshot'
+  ).toEqual([]);
+});
 
 it('SplatResidencyManager preserves independent source batches and exact GPU allocations', () => {
   const device = new NullDevice({});
@@ -738,4 +775,25 @@ function makeSplatResidencySource(
   }
 
   return {positions, scales, rotations, colors, opacities, sourceBatchIndex, rowIndexBase};
+}
+
+function makeCPUResidencyData(
+  length: number,
+  byteLength: number,
+  sourceBatchIndex: number,
+  rowIndexBase: number
+): SplatResidencyData {
+  let destroyed = false;
+  return {
+    length,
+    byteLength,
+    sourceBatchIndex,
+    rowIndexBase,
+    get destroyed() {
+      return destroyed;
+    },
+    destroy() {
+      destroyed = true;
+    }
+  };
 }

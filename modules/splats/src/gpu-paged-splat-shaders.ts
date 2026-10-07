@@ -103,7 +103,7 @@ export const GPU_PAGED_SPLAT_PROJECTION_SHADER = makeCalibratedPagedProjectionSh
 );
 
 /** Sparse source feature evaluation publishes the exact globally visible indirect count. */
-export const GPU_PAGED_SPLAT_FEATURE_SHADER = replacePagedShaderSource(
+const GPU_PAGED_SPLAT_UNTINTED_FEATURE_SHADER = replacePagedShaderSource(
   replacePagedShaderSource(
     replacePagedShaderSource(
       replacePagedShaderSource(
@@ -317,8 +317,26 @@ fn getProjectedRotation(quaternion: vec4<f32>)`
   );
 }
 
+/** Shared source radiance receives each instance tint after directional evaluation. */
+export const GPU_PAGED_SPLAT_FEATURE_SHADER = replacePagedShaderSource(
+  replacePagedShaderSource(
+    GPU_PAGED_SPLAT_UNTINTED_FEATURE_SHADER,
+    '  semanticFilterActive: u32,\n  padding: u32,\n};',
+    '  semanticFilterActive: u32,\n  padding: u32,\n  colorScale: vec3<f32>,\n};'
+  ),
+  '  atomicAdd(&drawCommands[1u], 1u);',
+  '  projectedRecords[projectedRowIndex].color = vec4<f32>(projectedRecords[projectedRowIndex].color.rgb * featureUniforms.colorScale, projectedRecords[projectedRowIndex].color.a);\n  atomicAdd(&drawCommands[1u], 1u);'
+);
+
 /** Preserves Spark's finite circular support and nonlinear opaque hierarchy-parent profile. */
 function makeCalibratedPagedRenderShader(source: string): string {
+  // Cameras use the same [-w, w] depth convention as projection/culling and depth keys.
+  // WebGPU presentation must convert that depth to its [0, w] rasterization range.
+  source = replacePagedShaderSource(
+    source,
+    '    projected.clipCenter.z,',
+    '    (projected.clipCenter.z + projected.clipCenter.w) * 0.5,'
+  );
   let calibratedSource = replacePagedShaderSource(
     source,
     '  output.gaussianCoordinate = corner * graphUniforms.gaussianSupportRadius;',
