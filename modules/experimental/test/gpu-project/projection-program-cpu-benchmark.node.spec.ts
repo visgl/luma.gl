@@ -4,7 +4,10 @@
 
 import {expect, it, vi} from 'vitest';
 import type {ProjectionCoordinates} from '@luma.gl/experimental/gpu-project';
-import {measureProjectionProgramCPU} from '../../src/gpu-project/projection-program-cpu-benchmark';
+import {
+  measureProjectionProgramCPU,
+  type ProjectionProgramCPUVariant
+} from '../../src/gpu-project/projection-program-cpu-benchmark';
 
 it('measures actual repeated projection and shared-result CPU consumers with binary64 outputs', () => {
   const coordinates: ProjectionCoordinates[] = [
@@ -68,4 +71,51 @@ it('rejects changed CPU validity before returning timing', () => {
       measuredIterations: 1
     })
   ).toThrow(/oracle changed/);
+});
+
+function measureRoundedVariant(maximumError?: number, changing = false, valid = true) {
+  const variant: ProjectionProgramCPUVariant = {
+    api: 'rounded',
+    provider: 'independent',
+    maximumError,
+    prepare: () => {
+      let executions = 0;
+      return {
+        scratchByteLength: 0,
+        execute: output => {
+          output.positions.set([1 + 1e-8 * (changing ? ++executions : 1), 2]);
+          output.validity[0] = Number(valid);
+        }
+      };
+    }
+  };
+  return measureProjectionProgramCPU({
+    coordinates: [[1, 2]],
+    oracle: position => ({position, valid: true}),
+    expected: [{position: [1, 2], valid: true}],
+    consumerCount: 1,
+    warmupIterations: 0,
+    measuredIterations: 1,
+    variants: [variant]
+  });
+}
+
+it('accepts a declared CPU rounding budget and reports observed error', () => {
+  const reports = measureRoundedVariant(1e-7);
+  for (const report of reports.filter(report => report.api === 'rounded')) {
+    expect(report.maximumAllowedError).toBe(1e-7);
+    expect(report.maximumObservedError).toBeGreaterThan(0);
+    expect(report.maximumObservedError).toBeLessThan(1e-7);
+  }
+  expect(() => measureRoundedVariant()).toThrow(/consumer output differs/);
+  expect(() => measureRoundedVariant(1e-9)).toThrow(/consumer output differs/);
+});
+
+it('retains exact repeatability and validity checks even within a CPU error budget', () => {
+  expect(() => measureRoundedVariant(1e-7, true)).toThrow(/oracle changed/);
+  expect(() => measureRoundedVariant(1e-7, false, false)).toThrow(/consumer output differs/);
+});
+
+it.each([-1, NaN, Infinity])('rejects an invalid CPU error budget: %s', budget => {
+  expect(() => measureRoundedVariant(budget)).toThrow(/invalid CPU projection error budget/);
 });
