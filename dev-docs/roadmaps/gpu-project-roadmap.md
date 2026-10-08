@@ -23,7 +23,7 @@ binary64 semantics.
 
 ## Current foundation
 
-Reconciled against `master` at `afc7822e348f4cdc97691ca5be647464a9896037` on 2026-10-08.
+Reconciled against `master` at `f87695a430` on 2026-10-08.
 The dependency upgrade in [#3400](https://github.com/visgl/luma.gl/pull/3400) locks
 `@math.gl/crs` and `@math.gl/projection` to `5.0.0-alpha.13`. This assessment uses installed
 package sources and documentation at their published math.gl revision
@@ -37,9 +37,12 @@ coverage, not native formulas. P.8a's local sweeps and matched CPU comparison la
 [#3283](https://github.com/visgl/luma.gl/pull/3283); cross-vendor and real-consumer evidence
 remain outstanding. P.9a.1 landed in [#3399](https://github.com/visgl/luma.gl/pull/3399):
 `planProjection()` accepts caller-prepared eager or explicitly preloaded synchronous providers.
-This change implements P.9a.2, P.3d.1, P.3d.2 and the local P.8a.1 rebaseline. The next
-interoperability tranche is P.9a.3 (chunk-preserving CPU/GPU table consumer), followed by P.9a.4
-(inline rendering/deck adapter). Neither requires a new native projection formula.
+P.9a.2, P.3d.1, P.3d.2 and the local P.8a.1 rebaseline landed in
+[#3401](https://github.com/visgl/luma.gl/pull/3401). This change implements P.9a.3:
+`ProjectionTableTransform` executes batch-atomic CPU projection or creates a `GPUProjectionTable`
+that borrows source batches and materializes derived positions/validity in a caller-owned graph.
+The next interoperability tranche is P.9a.4 (inline rendering/deck adapter), followed by real-consumer
+and cross-vendor measurements in P.8a.2. Neither requires a new native projection formula.
 
 The implemented module samples an arbitrary CPU projection provider, recursively compiles local
 polynomial patches, and evaluates them over chunk-preserving GPU vectors. Inputs may be
@@ -233,9 +236,9 @@ API interchangeability. Evidence, interoperability and new semantic coverage are
 | P.8c — Consumer fusion and cost selection | **Optimization only**: choose existing inline/materialized paths from measured costs | P.8a.2 and P.9a consumers; P.8b.1 only for indexed candidates | Thresholds cover row/patch count, reuse, memory and capabilities; preserve precision, validity and caller-controlled submission | Evidence-gated | Medium |
 | P.9a.1 — Provider preparation boundary | Caller-prepared synchronous transforms without an engine-catalogue import | Adaptive compiler and program contracts | Eager/preloaded providers share double-single, inverse-domain and failure contracts; bundle/no-implicit-loading tests pass | Landed in #3399; alpha.13 migration in #3400 | Complete |
 | P.9a.2 — Engine factory integration | Interoperability: upstream ProjectionEngine/ProjectionInstance types in an optional preparation adapter with explicit sync/async lifecycle | P.9a.1 and alpha.13, both landed | Default/selective/custom/lazy engines use the same prepared-provider path; test no implicit loading, retry, ownership and CPU reference retention; never bypass custom transforms via native lowering | Implemented (this PR) | Complete |
-| P.9a.3 — Chunk-preserving CPU/GPU table consumer | Interoperability: one table workload with explicit CPU/GPU execution and a shared application contract | P.9a.2 and P.3d.2 for metadata inputs | Preserve batches/ownership; reconcile CPU prefix-commit failures with GPU row validity and output encoding explicitly; no hidden repacking/readback | Planned | Medium |
+| P.9a.3 — Chunk-preserving CPU/GPU table consumer | Interoperability: ProjectionTableTransform and GPUProjectionTable expose explicit CPU/GPU execution | P.9a.2 and P.3d.2 for metadata inputs | Preserved/empty batches, offsets, source identity, explicit masks, batch-atomic CPU failures, borrowed inputs, caller submission and explicit output encodings; UTM CPU/hardware regressions | Implemented (this PR) | Complete |
 | P.9a.4 — Inline rendering/deck adapter | Interoperability: CPU transform for picking and the same planned transform in a real render/analysis consumer | P.9a.2; P.3d.2 for coordinate metadata | Specify projected/common-space conversion, origins/units, altitude policy, validity, attributes and invalidation; compare CPU/materialized/inline results and buffer lifecycle | Planned | Medium–large |
-| P.9a — Production-shaped consumers | Tracking umbrella for P.9a.1–P.9a.4, not another implementation tranche | Existing program contracts and explicit adapters | One preserved-batch table consumer and one inline consumer share a transform contract and supply P.8a workloads | Partial: provider boundary landed | — |
+| P.9a — Production-shaped consumers | Tracking umbrella for P.9a.1–P.9a.4, not another implementation tranche | Existing program contracts and explicit adapters | One preserved-batch table consumer and one inline consumer share a transform contract and supply P.8a workloads | Partial: provider and table boundaries implemented; inline consumer remains | — |
 | P.9b — Package graduation | Freeze proven APIs and move stable execution pieces across reviewed package boundaries | P.9a and demonstrated ownership/API stability; P.8 optimizations only if justified | Build/test gates pass, migration is documented, and the execution core has no math.gl, proj4js, or Arrow dependency | Planned | Medium |
 
 ## Recommended execution order
@@ -254,14 +257,16 @@ materialized Albers is nearly tied with GPU. Comparing a fit with
 the same CPU engine validates approximation, not independent algorithm correctness; use
 independently generated PROJ fixtures for semantic/numerical qualification.
 
-1. **Implemented together: P.9a.2, P.3d.1, P.3d.2 and P.8a.1.** Explicit factory preparation,
+1. **Landed together in #3401: P.9a.2, P.3d.1, P.3d.2 and P.8a.1.** Explicit factory preparation,
    retained CPU transforms, public semantic validation, metadata ingestion and CPU/GPU rebaseline
    form the alignment foundation. `planProjection()` stays synchronous and math.gl-independent.
    GPU materialization is not a synchronous CPU `ProjectionInstance`. No native-kernel or
    3D/datum/grid coverage is implied. Bulk failures remain different from GPU row validity;
    benchmark adapters explicitly compact validated rows and propagate coordinate exceptions.
-2. **Next: P.9a.3, then P.9a.4; complete P.8a.2 using those consumers.** Integrate one preserved-batch
-   table workload and one inline render/analysis workload, with explicit CPU/GPU selection.
+2. **P.9a.3 implemented; next P.9a.4, then complete P.8a.2 using those consumers.** The table
+   consumer preserves batches and uses explicit CPU/GPU selection without hidden uploads/readbacks.
+   CPU exceptions abort the current batch rather than exposing a bulk API's partially committed prefix;
+   masked/nonfinite/out-of-domain rows use the GPU-compatible validity contract. Add the inline workload.
    The deck adapter must distinguish CRS projected coordinates from deck common space and give
    altitude an explicit reject/pass-through/transform policy; it cannot imply 3D reprojection.
    No upstream deck API change is assumed necessary until an adapter demonstrates a concrete gap.
