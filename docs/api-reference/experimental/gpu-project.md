@@ -966,6 +966,65 @@ The opt-in fixtures default to 32 rows; ordinary hardware tests retain the failu
 output-frame regressions. Software adapters skip these integer-fp64 GPU checks.
 The benchmark does not automatically select arithmetic or relax application tolerances.
 
+### Production table-consumer benchmarks
+
+`runProjectionTableBenchmark()` from the optional `/gpu-project/benchmarks` entry point compares
+the real `ProjectionTableTransform` CPU adapter with its `GPUProjectionTable` materialization:
+
+```typescript
+const report = await runProjectionTableBenchmark(device, {
+  transform, // a prepared ProjectionTableTransform; preparation is outside this runner
+  provider: '@math.gl/projection 5.0.0-alpha.13 TypeScript',
+  batches: [{positions: new Float64Array([-122.4, 37.8])}],
+  maximumError: 0.001, // destination units, including output encoding/rounding
+  warmupIterations: 2,
+  measuredIterations: 5
+});
+```
+
+The runner snapshots CPU input views, masks and provenance before its first await, preserves
+physical/empty batches and owns all benchmark GPU resources. It requires at least one source row.
+It uses the retained CPU transform as the reference; this tests the GPU approximation and table
+contract, not independent correctness of the provider's projection algorithm.
+
+| Path | Timed interval | Output |
+| --- | --- | --- |
+| CPU | `projectBatches`, including output allocation, domain/mask checks and metadata copies | Absolute binary64 CPU arrays plus validity |
+| `resident` | Graph encoding, submit and fence; already-uploaded input | GPU positions plus validity |
+| `upload-project` | Input/mask writes, encoding, submit and fence | GPU positions plus validity |
+| `round-trip` | Upload/project plus per-batch position/mask readback and absolute binary64 decoding/allocation | CPU arrays plus validity |
+
+Each GPU path reuses allocated resources and its compiled graph. Round-trip includes fresh readback
+staging costs but **excludes one-time setup**, so `roundTripSpeedupOverCPU` is a warmed, repeated-use
+CPU-resident comparison, not a cold end-to-end claim. No speedup is derived from resident timings.
+The GPU's approximate values must meet `maximumError`; decoding into binary64 does not create
+binary64 arithmetic accuracy. Both double-single and origin-relative local-f32 outputs are supported.
+
+The report separates resource preparation/upload enqueue, graph compilation, remaining upload fence
+wait and first use. Provider preparation, fitting and WGSL generation happen before this runner;
+the sweep records that combined preparation separately. Buffer counts include empty-batch padding
+and one parameter buffer per nonempty batch, but exclude driver/pipeline objects and temporary
+readback staging. `cpuOutputByteLength` counts typed-array payloads, not metadata or peak heap usage.
+Plan bounds, degree, patch count, origin, encoding, device and measured error accompany the timings.
+
+Every CPU sample and GPU output before/after each path must pass validity/error checks; round-trip
+samples are also checked individually. Checks occur outside timing. Provider failure, instability,
+nonfinite output, mask mismatch or a nonzero invalid payload rejects the report. Timestamp queries
+are disabled; normal graph pass coalescing is retained. Throughput counts all source rows, including
+masked/invalid ones. Zero-resolution medians produce `null` rates/speedups.
+
+Reproduce the UTM/Albers physical-batch sweep (same cubic double-single plan and 1 mm budget):
+
+```sh
+VITE_LUPROJ_TABLE_ROWS=4096,65536 VITE_LUPROJ_TABLE_BATCH_ROWS=4096,65536 \
+  yarn test-browser-benchmarks --silent=false --reporter=verbose \
+  modules/experimental/test/gpu-project/projection-table-performance.spec.ts
+```
+
+This compares the current production CPU table adapter's reusable scalar API, not the fastest
+possible math.gl API. The separate program benchmark retains flat/bulk CPU baselines. Software
+adapters skip integer-fp64 hardware qualification. No backend-selection threshold is implied.
+
 ### Multi-patch and consumer-reuse sweeps
 
 An additional opt-in suite compares degree-2 and degree-3 adaptive programs at the **same 1 mm

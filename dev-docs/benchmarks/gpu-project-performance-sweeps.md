@@ -1,5 +1,9 @@
 # GPU Project multi-patch, reuse and CPU API measurements
 
+For production table consumers with explicit upload and CPU round-trip timings, see the
+[P.8a.2a table report](gpu-project-table-performance.md). The synthetic consumer measurements
+below remain useful for CPU API and reuse comparisons, but exclude transfers.
+
 ## math.gl alpha.13 rebaseline — 2026-10-08
 
 P.8a.1 adds six CPU API/layout baselines to the same double-single GPU workload. At 65K rows,

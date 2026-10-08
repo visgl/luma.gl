@@ -142,6 +142,7 @@ const browserBenchmarkTestPatterns = [
   'modules/gpgpu/test/gpu-graph/gpu-graph-benchmark.spec.ts',
   'modules/experimental/test/gpu-project/projection-benchmark.spec.ts',
   'modules/experimental/test/gpu-project/projection-performance.spec.ts',
+  'modules/experimental/test/gpu-project/projection-table-performance.spec.ts',
   'modules/experimental/test/gpu-project/projection-program-benchmark.spec.ts'
 ];
 const runBrowserBenchmarks = process.env.LUMA_TEST_BROWSER_BENCHMARKS === 'true';
