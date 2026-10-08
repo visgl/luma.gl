@@ -282,9 +282,12 @@ source pages.
 
 `GPUPagedSplatRenderer.prepare(commandEncoder)` encodes projection, directional features, global
 ordering and gathered output without beginning, clearing or ending a presentation pass.
-Prepare before the host opens its render pass; call `draw(renderPass)` inside that pass. The host
+Prepare before the host opens its render pass; call `draw(renderPass, parameters?)` inside that pass. The host
 owns depth/color attachments and submits its command encoder normally. An empty frontier does
 not clear host color or depth. The existing `encode()` API retains its standalone presentation pass.
+Optional `RenderPipelineParameters` override the splat defaults for that draw. Attachment formats
+and resolved parameters select a cached host pipeline; a subsequent draw without overrides restores
+the defaults. Depth parameters are omitted when the host has no depth attachment.
 
 ```ts
 renderer.prepare(commandEncoder);

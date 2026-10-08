@@ -10,6 +10,7 @@ import {
   type Device,
   type RenderPass,
   type RenderPipeline,
+  type RenderPipelineParameters,
   type Framebuffer,
   type TextureFormatColor,
   type TextureFormatDepthStencil,
@@ -510,8 +511,8 @@ export class GPUPagedSplatRenderer {
     return this.encodeFrame(commandEncoder, false);
   }
 
-  /** Draws prepared splats into a caller-owned pass without clearing, ending, or submitting it. */
-  draw(renderPass: RenderPass): void {
+  /** Draws prepared splats into a caller-owned pass, applying optional host pipeline parameters. */
+  draw(renderPass: RenderPass, parameters?: RenderPipelineParameters): void {
     if (this.isDestroyed || !this.hasPresentedContent || !this.model) {
       return;
     }
@@ -525,19 +526,19 @@ export class GPUPagedSplatRenderer {
     const depthStencilAttachmentFormat = framebuffer?.depthStencilAttachment?.texture.format as
       | TextureFormatDepthStencil
       | undefined;
-    const pipelineKey = `${colorAttachmentFormats.join(',')}/${depthStencilAttachmentFormat ?? ''}`;
+    const resolvedParameters = {...this.model.pipeline.props.parameters, ...parameters};
+    if (!depthStencilAttachmentFormat) {
+      delete resolvedParameters.depthWriteEnabled;
+      delete resolvedParameters.depthCompare;
+    }
+    const pipelineKey = `${colorAttachmentFormats.join(',')}/${depthStencilAttachmentFormat ?? ''}/${JSON.stringify(resolvedParameters)}`;
     let pipeline = this.hostPipelines.get(pipelineKey);
     if (!pipeline) {
-      const parameters = {...this.model.pipeline.props.parameters};
-      if (!depthStencilAttachmentFormat) {
-        delete parameters.depthWriteEnabled;
-        delete parameters.depthCompare;
-      }
       pipeline = this.model.pipelineFactory.createRenderPipeline({
         ...this.model.pipeline.props,
         colorAttachmentFormats,
         depthStencilAttachmentFormat,
-        parameters
+        parameters: resolvedParameters
       });
       this.hostPipelines.set(pipelineKey, pipeline);
     }

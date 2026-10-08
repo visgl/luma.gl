@@ -119,23 +119,26 @@ it.each([
     });
     try {
       renderer.prepare(device.commandEncoder);
-      // The host owns both the existing blue color and its WebGPU depth value.
-      const renderPass = device.beginRenderPass({
-        framebuffer,
-        clearColor: [0, 0, 1, 1],
-        clearDepth: hostDepth
-      });
-      renderer.draw(renderPass);
-      renderPass.end();
-      device.submit();
-      colorTexture.readBuffer({width: 16, height: 16}, readback);
-      const pixels = await readback.readAsync();
-      const redChannel = device.preferredColorFormat.startsWith('bgra') ? 2 : 0;
-      const red = pixels[8 * layout.bytesPerRow + 8 * 4 + redChannel];
-      if (visible) {
-        expect(red, 'near splat survives hardware clipping').toBeGreaterThan(200);
-      } else {
-        expect(red, 'host surface occludes splat').toBeLessThan(5);
+      // Override and then restore depth testing on the same renderer and attachments.
+      for (const parameters of [undefined, {depthCompare: 'always' as const}, undefined]) {
+        // The host owns both the existing blue color and its WebGPU depth value.
+        const renderPass = device.beginRenderPass({
+          framebuffer,
+          clearColor: [0, 0, 1, 1],
+          clearDepth: hostDepth
+        });
+        renderer.draw(renderPass, parameters);
+        renderPass.end();
+        device.submit();
+        colorTexture.readBuffer({width: 16, height: 16}, readback);
+        const pixels = await readback.readAsync();
+        const redChannel = device.preferredColorFormat.startsWith('bgra') ? 2 : 0;
+        const red = pixels[8 * layout.bytesPerRow + 8 * 4 + redChannel];
+        if (visible || parameters) {
+          expect(red, 'near splat survives hardware clipping').toBeGreaterThan(200);
+        } else {
+          expect(red, 'host surface occludes splat').toBeLessThan(5);
+        }
       }
     } finally {
       readback.destroy();

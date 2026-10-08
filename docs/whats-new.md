@@ -11,6 +11,9 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 
 **Highlights**
 
+- **Borrowed splat passes respect host state** - Prepared paged splats accept optional render
+  pipeline parameters, including depth comparison, while retaining the caller's attachments.
+
 - **Data that goes straight to pixels** - Typed, chunked GPU columns can move through analysis,
   text, paths, and rendering without a CPU-side object layer.
 - **Analysis that stays on the GPU** -
