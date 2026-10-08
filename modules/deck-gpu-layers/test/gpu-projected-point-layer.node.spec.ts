@@ -10,7 +10,7 @@ import {
   type PickingInfo
 } from '@deck.gl/core';
 import {GPUProjectedPointLayer} from '@deck.gl-community/gpu-layers';
-import {Buffer} from '@luma.gl/core';
+import {Buffer, type RenderPass} from '@luma.gl/core';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {ProjectionRenderTransform} from '@luma.gl/experimental/gpu-project/crs';
 import {NullDevice} from '@luma.gl/test-utils';
@@ -95,6 +95,24 @@ it('declines geospatial viewports before allocating a projection model', () => {
     expect(() => layer.initializeState(layer.context)).toThrow('Cartesian viewport');
     expect(allocate).not.toHaveBeenCalled();
   } finally {
+    allocate.mockRestore();
+    positions.destroy();
+    validity.destroy();
+    device.destroy();
+  }
+});
+
+it('schedules the deck update lifecycle when an initially empty vector gains chunks', () => {
+  const {device, layer, positions, validity} = makeLayer();
+  layer.state = {model: null, parameters: null, styleBuffer: null};
+  const update = vi.spyOn(layer, 'setNeedsUpdate').mockImplementation(() => {});
+  const allocate = vi.spyOn(device, 'createBuffer');
+  try {
+    layer.draw({renderPass: {} as RenderPass});
+    expect(update).toHaveBeenCalledOnce();
+    expect(allocate).not.toHaveBeenCalled();
+  } finally {
+    update.mockRestore();
     allocate.mockRestore();
     positions.destroy();
     validity.destroy();

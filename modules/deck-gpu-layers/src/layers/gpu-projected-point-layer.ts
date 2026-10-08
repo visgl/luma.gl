@@ -168,6 +168,12 @@ export class GPUProjectedPointLayer extends Layer<GPUProjectedPointLayerProps> {
     this.validateVectors();
     const state = this.state as ProjectedPointState;
     const {model} = state;
+    if (!model && this.props.getPosition.data.length) {
+      // An initially empty appendable vector can gain chunks without a prop identity change.
+      // Build through deck's update lifecycle so its module uniforms are initialized before draw.
+      this.setNeedsUpdate();
+      return;
+    }
     if (!model || !state.styleBuffer) return;
     const styleBuffer = resizeGPUVectorStyleBuffer(
       state.styleBuffer,
