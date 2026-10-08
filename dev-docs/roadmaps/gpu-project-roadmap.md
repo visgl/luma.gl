@@ -23,7 +23,7 @@ binary64 semantics.
 
 ## Current foundation
 
-Reconciled against `master` at `f87695a430` on 2026-10-08.
+Reconciled against `master` at `e40a0ea904` on 2026-10-08.
 The dependency upgrade in [#3400](https://github.com/visgl/luma.gl/pull/3400) locks
 `@math.gl/crs` and `@math.gl/projection` to `5.0.0-alpha.13`. This assessment uses installed
 package sources and documentation at their published math.gl revision
@@ -38,11 +38,15 @@ coverage, not native formulas. P.8a's local sweeps and matched CPU comparison la
 remain outstanding. P.9a.1 landed in [#3399](https://github.com/visgl/luma.gl/pull/3399):
 `planProjection()` accepts caller-prepared eager or explicitly preloaded synchronous providers.
 P.9a.2, P.3d.1, P.3d.2 and the local P.8a.1 rebaseline landed in
-[#3401](https://github.com/visgl/luma.gl/pull/3401). This change implements P.9a.3:
+[#3401](https://github.com/visgl/luma.gl/pull/3401). P.9a.3 landed in
+[#3402](https://github.com/visgl/luma.gl/pull/3402):
 `ProjectionTableTransform` executes batch-atomic CPU projection or creates a `GPUProjectionTable`
 that borrows source batches and materializes derived positions/validity in a caller-owned graph.
-The next interoperability tranche is P.9a.4 (inline rendering/deck adapter), followed by real-consumer
-and cross-vendor measurements in P.8a.2. Neither requires a new native projection formula.
+This change implements the bounded Cartesian consumer in P.9a.4: `ProjectionRenderTransform` and
+`GPUProjectedPointLayer` share the retained CPU transform and adaptive GPU plan, explicit frame
+conversion, invalid-row rejection and borrowed chunk ownership. Altitude and map/globe views are
+rejected, not silently interpreted. Real-consumer/cross-vendor measurements are next in P.8a.2;
+geographic viewport integration is separate P.9a.5 coverage. Neither needs a new native formula.
 
 The implemented module samples an arbitrary CPU projection provider, recursively compiles local
 polynomial patches, and evaluates them over chunk-preserving GPU vectors. Inputs may be
@@ -237,8 +241,9 @@ API interchangeability. Evidence, interoperability and new semantic coverage are
 | P.9a.1 — Provider preparation boundary | Caller-prepared synchronous transforms without an engine-catalogue import | Adaptive compiler and program contracts | Eager/preloaded providers share double-single, inverse-domain and failure contracts; bundle/no-implicit-loading tests pass | Landed in #3399; alpha.13 migration in #3400 | Complete |
 | P.9a.2 — Engine factory integration | Interoperability: upstream ProjectionEngine/ProjectionInstance types in an optional preparation adapter with explicit sync/async lifecycle | P.9a.1 and alpha.13, both landed | Default/selective/custom/lazy engines use the same prepared-provider path; test no implicit loading, retry, ownership and CPU reference retention; never bypass custom transforms via native lowering | Implemented (this PR) | Complete |
 | P.9a.3 — Chunk-preserving CPU/GPU table consumer | Interoperability: ProjectionTableTransform and GPUProjectionTable expose explicit CPU/GPU execution | P.9a.2 and P.3d.2 for metadata inputs | Preserved/empty batches, offsets, source identity, explicit masks, batch-atomic CPU failures, borrowed inputs, caller submission and explicit output encodings; UTM CPU/hardware regressions | Implemented (this PR) | Complete |
-| P.9a.4 — Inline rendering/deck adapter | Interoperability: CPU transform for picking and the same planned transform in a real render/analysis consumer | P.9a.2; P.3d.2 for coordinate metadata | Specify projected/common-space conversion, origins/units, altitude policy, validity, attributes and invalidation; compare CPU/materialized/inline results and buffer lifecycle | Planned | Medium–large |
-| P.9a — Production-shaped consumers | Tracking umbrella for P.9a.1–P.9a.4, not another implementation tranche | Existing program contracts and explicit adapters | One preserved-batch table consumer and one inline consumer share a transform contract and supply P.8a workloads | Partial: provider and table boundaries implemented; inline consumer remains | — |
+| P.9a.4 — Inline rendering/deck adapter | Interoperability: CPU picking and the same planned transform in a real Cartesian point consumer | P.9a.2; P.3d.2 for coordinate metadata | Explicit origin/axes/units before float32 narrowing; masked rows discarded; CPU/materialized/inline comparison and lifecycle regression | Implemented for 2D non-geospatial Cartesian views; altitude/map/globe explicitly rejected | Medium–large |
+| P.9a.5 — Geographic viewport adapter | Coverage/interoperability, **not optimization only**: deck map/globe common-space and altitude contracts | P.9a.4 | Explicit CRS-to-deck mapping, viewport rebasing/invalidation and altitude policy; compare CPU/GPU picking across zoom and seams without implicit inverse guesses | Planned | Medium–large |
+| P.9a — Production-shaped consumers | Tracking umbrella for P.9a.1–P.9a.5, not another implementation tranche | Existing program contracts and explicit adapters | One preserved-batch table consumer and one inline consumer share a transform contract and supply P.8a workloads | Table and bounded Cartesian inline consumers implemented; geographic views remain P.9a.5 | — |
 | P.9b — Package graduation | Freeze proven APIs and move stable execution pieces across reviewed package boundaries | P.9a and demonstrated ownership/API stability; P.8 optimizations only if justified | Build/test gates pass, migration is documented, and the execution core has no math.gl, proj4js, or Arrow dependency | Planned | Medium |
 
 ## Recommended execution order
@@ -263,12 +268,13 @@ independently generated PROJ fixtures for semantic/numerical qualification.
    GPU materialization is not a synchronous CPU `ProjectionInstance`. No native-kernel or
    3D/datum/grid coverage is implied. Bulk failures remain different from GPU row validity;
    benchmark adapters explicitly compact validated rows and propagate coordinate exceptions.
-2. **P.9a.3 implemented; next P.9a.4, then complete P.8a.2 using those consumers.** The table
+2. **P.9a.3 and bounded Cartesian P.9a.4 implemented; next P.8a.2 using those consumers.** The table
    consumer preserves batches and uses explicit CPU/GPU selection without hidden uploads/readbacks.
    CPU exceptions abort the current batch rather than exposing a bulk API's partially committed prefix;
-   masked/nonfinite/out-of-domain rows use the GPU-compatible validity contract. Add the inline workload.
-   The deck adapter must distinguish CRS projected coordinates from deck common space and give
-   altitude an explicit reject/pass-through/transform policy; it cannot imply 3D reprojection.
+   masked/nonfinite/out-of-domain rows use the GPU-compatible validity contract. The inline point
+   layer subtracts destination origins before narrowing, discards invalid rows and supplies retained
+   CPU picking metadata. P.9a.5 must map projected coordinates into geographic deck common space;
+   the current Cartesian adapter rejects map/globe views and altitude rather than implying 3D support.
    No upstream deck API change is assumed necessary until an adapter demonstrates a concrete gap.
    Axis-swap fixtures alone are not production consumers.
 3. **Only then choose optimization-only work:** P.5a.1/P.5a.2, P.8b.1, P.8c or P.6, supported by
