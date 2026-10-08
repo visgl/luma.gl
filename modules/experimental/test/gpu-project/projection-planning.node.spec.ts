@@ -6,7 +6,7 @@ import {build} from 'esbuild';
 import {describe, expect, it, vi} from 'vitest';
 import {
   Projection,
-  ProjectionEngine,
+  ProjectionTransform,
   createProjectionDescriptor,
   mercator
 } from '@math.gl/projection';
@@ -136,8 +136,7 @@ describe('provider-independent projection planning', () => {
       {name: mercator.name, aliases: mercator.aliases},
       load
     );
-    // alpha.12 calls the per-CRS transform ProjectionEngine; newer math.gl calls it ProjectionTransform.
-    const projection = new ProjectionEngine({to: 'EPSG:3857', projections: [descriptor]});
+    const projection = new ProjectionTransform({to: 'EPSG:3857', projections: [descriptor]});
     const request = {projection, bounds: [-0.01, -0.01, 0.01, 0.01] as const, tolerance: 0.001};
     const unavailable = planProjection(request);
     expect(unavailable.status).toBe('unsupported');

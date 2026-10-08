@@ -48,10 +48,10 @@
     "@luma.gl/shadertools": "~10.0.0-alpha.2"
   },
   "dependencies": {
-    "@loaders.gl/core": "~5.0.0-alpha.9",
-    "@loaders.gl/gltf": "~5.0.0-alpha.9",
-    "@loaders.gl/textures": "~5.0.0-alpha.9",
-    "@math.gl/core": "5.0.0-alpha.12"
+    "@loaders.gl/core": "~5.0.0-alpha.10",
+    "@loaders.gl/gltf": "~5.0.0-alpha.10",
+    "@loaders.gl/textures": "~5.0.0-alpha.10",
+    "@math.gl/core": "5.0.0-alpha.13"
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
 }

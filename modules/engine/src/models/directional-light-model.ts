@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Device} from '@luma.gl/core';
-import {ConeGeometry} from '../geometries/cone-geometry';
+import {ConeGeometry} from '../geometry/geometry-primitives';
 import {
   BaseLightModel,
   buildDirectionalLightInstanceData,

@@ -44,8 +44,9 @@
     "@luma.gl/shadertools": "~10.0.0-alpha.2"
   },
   "dependencies": {
-    "@math.gl/core": "5.0.0-alpha.12",
-    "@math.gl/types": "~5.0.0-alpha.12",
+    "@math.gl/core": "5.0.0-alpha.13",
+    "@math.gl/geometry": "~5.0.0-alpha.13",
+    "@math.gl/types": "~5.0.0-alpha.13",
     "@probe.gl/log": "^4.1.1",
     "@probe.gl/stats": "^4.1.1"
   },

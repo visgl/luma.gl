@@ -2,180 +2,53 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {TypedArray} from '@math.gl/core';
-import type {BufferLayout, PrimitiveTopology} from '@luma.gl/core';
+import {Geometry as MathGeometry, type GeometryProps as MathGeometryProps} from '@math.gl/geometry';
+import type {BufferLayout} from '@luma.gl/core';
 import {vertexFormatDecoder} from '@luma.gl/core';
-import {uid} from '../utils/uid';
+import type {GeometryAttribute} from '@math.gl/geometry';
 
-/** CPU-side attribute data accepted by {@link Geometry}. */
-export type GeometryAttributeInput = GeometryAttribute | TypedArray;
+export type {
+  GeometryAttribute,
+  GeometryAttributeInput,
+  GeometryAttributes
+} from '@math.gl/geometry';
 
-/** Properties used to create a {@link Geometry}. */
-export type GeometryProps = {
-  /** Application-provided identifier. */
-  id?: string;
-  /** Determines how vertices are assembled into primitives. */
-  topology: 'point-list' | 'line-list' | 'line-strip' | 'triangle-list' | 'triangle-strip';
-  /** Draw vertex count. Auto-calculated from attributes or indices when omitted. */
-  vertexCount?: number;
-  /** CPU attributes, keyed by caller-provided names such as glTF mesh attribute semantics. */
-  attributes: Record<string, GeometryAttributeInput>;
-  /**
-   * Maps geometry buffers to shader attributes.
-   *
-   * If omitted, the constructor creates one shader-facing buffer layout entry for each attribute.
-   * Explicit buffer layouts are preserved unchanged.
-   */
-  bufferLayout?: BufferLayout[];
-  /** Optional index data. Indices are always stored separately from vertex attributes. */
-  indices?: GeometryAttribute | TypedArray;
-};
+/** Legacy engine geometry properties, including caller-owned shader layout metadata. */
+export type GeometryProps = MathGeometryProps & {bufferLayout?: BufferLayout[]};
 
-/** Attributes returned by {@link Geometry.getAttributes}. */
-export type GeometryAttributes = Record<string, GeometryAttribute | undefined> & {
-  /** Optional index attribute, included when the geometry is indexed. */
-  indices?: GeometryAttribute & {size: 1; value: Uint32Array | Uint16Array};
-};
-
-/** Typed-array backed CPU geometry attribute. */
-export type GeometryAttribute = {
-  /** Number of typed-array elements per vertex. */
-  size?: number;
-  /** Attribute data. */
-  value: TypedArray;
-  /** Additional attribute metadata consumed by geometry utilities. */
-  [key: string]: any;
-};
-
-/**
- * CPU-side geometry container.
- *
- * `Geometry` stores typed-array vertex data, optional index data, and an always-populated
- * `bufferLayout` that describes how its attributes map to shader inputs. CPU attribute names are
- * preserved as supplied; synthesized buffer layouts map supported glTF-style names such as
- * `POSITION` and `TEXCOORD_0` to default shader names such as `positions` and `texCoords`.
- */
-export class Geometry {
-  /** Application-provided or generated identifier. */
-  readonly id: string;
-
-  /** Determines how vertices are assembled into primitives. */
-  readonly topology?: PrimitiveTopology;
-
-  /** Resolved draw vertex count. */
-  readonly vertexCount: number;
-
-  /** Optional index attribute. */
-  readonly indices?: GeometryAttribute;
-
-  /** CPU attributes, keyed by caller-provided source attribute name. */
-  readonly attributes: Record<string, GeometryAttribute | undefined>;
-
-  /** Buffer layout matching the geometry attributes. Always populated. */
+/** Compatibility adapter for math.gl CPU geometry with engine shader layout metadata. */
+export class Geometry extends MathGeometry {
   readonly bufferLayout: BufferLayout[];
 
-  /** Application-owned metadata. */
-  userData: Record<string, unknown> = {};
-
-  /** Creates a CPU geometry and wraps raw typed arrays into attribute records. */
   constructor(props: GeometryProps) {
-    const {attributes = {}, indices = null, vertexCount = null} = props;
-
-    this.id = props.id || uid('geometry');
-    this.topology = props.topology;
-
-    if (indices) {
-      this.indices = ArrayBuffer.isView(indices) ? {value: indices, size: 1} : indices;
+    const attributes: MathGeometryProps['attributes'] = {};
+    const sourceNames = new Map<string, string>();
+    for (const [name, attribute] of Object.entries(props.attributes)) {
+      const shaderName = getGeometryShaderAttributeName(name);
+      const previousName = sourceNames.get(shaderName);
+      if (previousName) delete attributes[previousName];
+      sourceNames.set(shaderName, name);
+      attributes[name] = attribute;
     }
-
-    this.attributes = {};
-
-    for (const [attributeName, attributeValue] of Object.entries(attributes)) {
-      // Wrap "unwrapped" arrays and try to autodetect their type
-      const attribute: GeometryAttribute = ArrayBuffer.isView(attributeValue)
-        ? {value: attributeValue}
-        : attributeValue;
-
-      if (!ArrayBuffer.isView(attribute.value)) {
-        throw new Error(
-          `${this._print(attributeName)}: must be typed array or object with value as typed array`
-        );
-      }
-
-      if ((attributeName === 'POSITION' || attributeName === 'positions') && !attribute.size) {
-        attribute.size = 3;
-      }
-
-      // Move indices to separate field
-      if (attributeName === 'indices') {
-        if (this.indices) {
-          throw new Error('Multiple indices detected');
-        }
-        this.indices = attribute;
-      } else {
-        const shaderAttributeName = getGeometryShaderAttributeName(attributeName);
-        const storedAttributeName = Object.keys(this.attributes).find(
-          name => getGeometryShaderAttributeName(name) === shaderAttributeName
-        );
-        if (storedAttributeName) {
-          delete this.attributes[storedAttributeName];
-        }
-        this.attributes[attributeName] = attribute;
+    const sourceIndices = props.indices;
+    const indices =
+      sourceIndices instanceof Uint8Array
+        ? new Uint16Array(sourceIndices)
+        : sourceIndices &&
+            !ArrayBuffer.isView(sourceIndices) &&
+            sourceIndices.value instanceof Uint8Array
+          ? {...sourceIndices, value: new Uint16Array(sourceIndices.value)}
+          : sourceIndices;
+    super({...props, attributes, indices});
+    // Preserve legacy descriptor identity while math.gl owns normalization and validation.
+    for (const [name, input] of Object.entries(attributes)) {
+      if (!ArrayBuffer.isView(input) && Object.isExtensible(input) && name !== 'indices') {
+        Object.assign(input, this.attributes[name]);
+        this.attributes[name] = input;
       }
     }
-
-    if (this.indices && this.indices['isIndexed'] !== undefined) {
-      this.indices = Object.assign({}, this.indices);
-      delete this.indices['isIndexed'];
-    }
-
-    this.vertexCount = vertexCount || this._calculateVertexCount(this.attributes, this.indices);
     this.bufferLayout =
       props.bufferLayout || getBufferLayoutFromGeometryAttributes(this.attributes);
-  }
-
-  /** Returns the resolved draw vertex count. */
-  getVertexCount(): number {
-    return this.vertexCount;
-  }
-
-  /** Returns all attributes, including `indices` when index data is present. */
-  getAttributes(): GeometryAttributes {
-    return (
-      this.indices ? {indices: this.indices, ...this.attributes} : this.attributes
-    ) as GeometryAttributes;
-  }
-
-  // PRIVATE
-
-  _print(attributeName: string): string {
-    return `Geometry ${this.id} attribute ${attributeName}`;
-  }
-
-  _setAttributes(attributes: Record<string, GeometryAttribute>, indices: any): this {
-    return this;
-  }
-
-  _calculateVertexCount(
-    attributes: Record<string, GeometryAttribute | undefined>,
-    indices?: GeometryAttribute
-  ): number {
-    if (indices) {
-      return indices.value.length;
-    }
-    let vertexCount = Infinity;
-    for (const attribute of Object.values(attributes)) {
-      if (!attribute) {
-        continue; // eslint-disable-line no-continue
-      }
-      const {value, size, constant} = attribute;
-      if (!constant && value && size !== undefined && size >= 1) {
-        vertexCount = Math.min(vertexCount, value.length / size);
-      }
-    }
-
-    // assert(Number.isFinite(vertexCount));
-    return vertexCount;
   }
 }
 
@@ -202,7 +75,7 @@ export function getGeometryShaderAttributeName(attributeName: string): string {
   }
 }
 
-function getBufferLayoutFromGeometryAttributes(
+export function getBufferLayoutFromGeometryAttributes(
   attributes: Record<string, GeometryAttribute | undefined>
 ): BufferLayout[] {
   const bufferLayout: BufferLayout[] = [];
