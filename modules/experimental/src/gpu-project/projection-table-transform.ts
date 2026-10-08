@@ -7,8 +7,7 @@ import type {Device} from '@luma.gl/core';
 import type {GPURecordBatchSourceInfo} from '../gpu-tables';
 import type {PreparedCRSProjectionResult} from './projection-engine';
 import {GPUProjectionTable, type GPUProjectionTableProps} from './gpu-projection-table';
-import {findProjectionPatch} from './projection-plan';
-import type {ProjectionPlan} from './types';
+import type {ProjectionBounds} from './types';
 
 /** One dense source batch. Array views retain their own offsets; no concatenation is performed. */
 export type ProjectionTableBatch = {
@@ -45,7 +44,7 @@ export class ProjectionTableError extends Error {
  * The prepared engine and program must remain unchanged for this consumer's lifetime.
  */
 export class ProjectionTableTransform {
-  private readonly plan: ProjectionPlan;
+  private readonly bounds: ProjectionBounds;
 
   constructor(readonly prepared: Extract<PreparedCRSProjectionResult, {status: 'ready'}>) {
     const operation = prepared.program.operations[0];
@@ -58,7 +57,7 @@ export class ProjectionTableTransform {
         'projection table transforms require a binary64-input prepared adaptive transform'
       );
     }
-    this.plan = operation.plan;
+    this.bounds = operation.plan.bounds;
   }
 
   /**
@@ -82,7 +81,17 @@ export class ProjectionTableTransform {
       if (batch.inputValidity && !batch.inputValidity[rowIndex]) continue;
       coordinate[0] = batch.positions[rowIndex * 2];
       coordinate[1] = batch.positions[rowIndex * 2 + 1];
-      if (findProjectionPatch(this.plan, coordinate) < 0) continue;
+      // Prepared adaptive plans tile the entire finite source rectangle. CPU execution needs
+      // only this domain check, not the GPU's per-patch polynomial routing.
+      if (
+        !Number.isFinite(coordinate[0]) ||
+        !Number.isFinite(coordinate[1]) ||
+        coordinate[0] < this.bounds[0] ||
+        coordinate[1] < this.bounds[1] ||
+        coordinate[0] > this.bounds[2] ||
+        coordinate[1] > this.bounds[3]
+      )
+        continue;
       try {
         projected.fill(NaN);
         this.prepared.projection.projectToSync(coordinate, projected);

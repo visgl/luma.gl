@@ -8,13 +8,49 @@ import {Buffer} from '@luma.gl/core';
 import {GPUData} from '@luma.gl/gpgpu/gpu-data';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {GPURecordBatch, GPUTable} from '@luma.gl/experimental/gpu-tables';
-import {GPUProjectionTable} from '@luma.gl/experimental/gpu-project';
-import {ProjectionTableError} from '@luma.gl/experimental/gpu-project/crs';
+import {GPUProjectionTable, findProjectionPatch} from '@luma.gl/experimental/gpu-project';
+import {
+  ProjectionTableError,
+  ProjectionTableTransform,
+  prepareCRSProjection
+} from '@luma.gl/experimental/gpu-project/crs';
 import {
   makeSourceBatches,
   makeTableTransform,
   uploadSourceTable
 } from './projection-table-fixtures';
+
+it('uses a constant-time CPU domain check matching a multi-patch plan at boundaries', () => {
+  const prepared = prepareCRSProjection({
+    from: 'EPSG:4326',
+    to: 'EPSG:3857',
+    bounds: [-20, -20, 20, 20],
+    degree: 1,
+    tolerance: 5000
+  });
+  if (prepared.status !== 'ready') throw new Error(JSON.stringify(prepared.reasons));
+  const operation = prepared.program.operations[0];
+  if (operation.type !== 'adaptive') throw new Error('expected adaptive plan');
+  const plan = operation.plan;
+  expect(plan.patches.length).toBeGreaterThan(1);
+  const points = [
+    [-20, -20],
+    [20, 20],
+    [0, 0],
+    [-20, 20],
+    [20, -20],
+    [20.0000001, 0],
+    [0, -20.0000001],
+    [Infinity, 0],
+    [NaN, 0]
+  ] as const;
+  const expected = points.map(point => Number(findProjectionPatch(plan, point) >= 0));
+  const search = vi.spyOn(plan.patches, 'findIndex');
+  const transform = new ProjectionTableTransform(prepared);
+  const result = transform.projectBatch({positions: new Float64Array(points.flat())});
+  expect(Array.from(result.validity)).toEqual(expected);
+  expect(search).not.toHaveBeenCalled();
+});
 
 it('preserves CPU batch boundaries, source offsets, validity and binary64 precision', () => {
   const transform = makeTableTransform();
