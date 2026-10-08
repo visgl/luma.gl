@@ -73,7 +73,12 @@ it('GPUGroupAggregation sums fractional floats deterministically within toleranc
     (_, index) => (hashUint32(index * 3 + 1) / 0x100000000) * 2 - 0.5
   );
   for (const operation of ['sum', 'mean'] as const) {
-    const input = {keyChunks: [keys], valueChunks: [values], groupCount: 16, operation};
+    const input = {
+      keyChunks: [keys],
+      valueChunks: [values],
+      groupCount: 16,
+      operation
+    };
     const expected = getCPUGroupStatistic(input);
     const runs = [await runGroupSum(device, input), await runGroupSum(device, input)];
     for (let groupIndex = 0; groupIndex < 16; groupIndex++) {
@@ -108,7 +113,12 @@ it('GPUGroupAggregation accumulates groups beyond workgroup memory in scratch', 
   const keys = makeKeys(rowCount, groupCount + 10);
   const values = Float32Array.from({length: rowCount}, (_, index) => (hashUint32(index) % 9) - 4);
   for (const operation of ['sum', 'mean'] as const) {
-    const input = {keyChunks: [keys], valueChunks: [values], groupCount, operation};
+    const input = {
+      keyChunks: [keys],
+      valueChunks: [values],
+      groupCount,
+      operation
+    };
     const result = await runGroupSum(device, input);
     expectGroupStatistic(
       result.values,
@@ -168,6 +178,125 @@ it('GPUGroupAggregation sums reuse bounded scratch columns for fragmented inputs
   }
 });
 
+it('GPUGroupAggregation sums accept keys, values, and masks chunked independently', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+
+  // Each vector splits the same 70,001 rows at different places, including empty and one-row
+  // chunks, so row blocks must be cut at the union of all three sets of boundaries.
+  const rowCount = 70_001;
+  const flatKeys = makeKeys(rowCount, 40);
+  const flatValues = Float32Array.from(
+    {length: rowCount},
+    (_, index) => (hashUint32(index * 11 + 5) % 15) - 7
+  );
+  const flatMask = Uint32Array.from({length: rowCount}, (_, index) => hashUint32(index + 3) % 3);
+  const keyLengths = [30_000, 0, 40_001];
+  const valueLengths = [1, 12_345, 0, 50_000, 7_655];
+  const maskLengths = [69_999, 1, 1];
+  for (const groupCount of [37, 20_000]) {
+    for (const operation of ['sum', 'mean'] as const) {
+      const input = {
+        keyChunks: rechunk(flatKeys, keyLengths),
+        valueChunks: rechunk(flatValues, valueLengths),
+        maskChunks: rechunk(flatMask, maskLengths),
+        groupCount,
+        operation
+      };
+      const reference = {
+        keyChunks: [flatKeys],
+        valueChunks: [flatValues],
+        maskChunks: [flatMask],
+        groupCount,
+        operation
+      };
+      const result = await runGroupSum(device, input);
+      expectGroupStatistic(
+        result.values,
+        getCPUGroupStatistic(reference),
+        operation,
+        `${operation} over ${groupCount} groups matches the CPU reference with misaligned chunks`
+      );
+      const contiguous = await runGroupSum(device, reference);
+      expectGroupStatistic(
+        result.values,
+        Float64Array.from(contiguous.values),
+        operation,
+        `${operation} over ${groupCount} groups agrees with the same rows in one chunk`
+      );
+      const again = await runGroupSum(device, input);
+      expect(
+        Array.from(new Uint32Array(again.values.buffer)),
+        `${operation} over ${groupCount} groups is bitwise deterministic across misaligned chunks`
+      ).toEqual(Array.from(new Uint32Array(result.values.buffer)));
+    }
+  }
+});
+
+it('GPUGroupAggregation sums re-encode one compiled graph with changed inputs', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+
+  // 20,000 groups force scratch columns to be shared across row blocks and passes, so a second
+  // encode would add onto the first one's partials unless the graph resets them.
+  const groupCount = 20_000;
+  const chunkLengths = [5_000, 52 * 4_096, 1, 300];
+  const makeInput = (seed: number, operation: SumOperation): GroupSumInput => ({
+    keyChunks: chunkLengths.map((length, chunkIndex) =>
+      makeKeys(length, 64, seed + chunkIndex * 100_000)
+    ),
+    valueChunks: chunkLengths.map((length, chunkIndex) =>
+      Float32Array.from(
+        {length},
+        (_, index) => (hashUint32(seed + chunkIndex * 100_000 + index) % 11) - 5
+      )
+    ),
+    maskChunks: chunkLengths.map((length, chunkIndex) =>
+      Uint32Array.from({length}, (_, index) => hashUint32(seed + chunkIndex * 13 + index) % 5)
+    ),
+    groupCount,
+    operation
+  });
+  for (const operation of ['sum', 'mean'] as const) {
+    const inputs = [
+      makeInput(0, operation),
+      makeInput(1_000_003, operation),
+      makeInput(0, operation)
+    ];
+    const session = createGroupSumSession(device, inputs[0]);
+    try {
+      const results: Float32Array[] = [];
+      for (const [encodeIndex, input] of inputs.entries()) {
+        if (encodeIndex > 0) session.write(input);
+        const result = await session.encode();
+        results.push(result.values);
+        expectGroupStatistic(
+          result.values,
+          getCPUGroupStatistic(input),
+          operation,
+          `${operation} encode ${encodeIndex} reflects the inputs written before it`
+        );
+      }
+      expect(
+        Array.from(new Uint32Array(results[2].buffer)),
+        `${operation} re-encoding the original inputs reproduces the first result bitwise`
+      ).toEqual(Array.from(new Uint32Array(results[0].buffer)));
+      expect(
+        Array.from(new Uint32Array(results[1].buffer)),
+        `${operation} changed inputs change the result`
+      ).not.toEqual(Array.from(new Uint32Array(results[0].buffer)));
+      // Encoding twice with no write in between must not accumulate across encodes either.
+      const unchanged = await session.encode();
+      expect(
+        Array.from(new Uint32Array(unchanged.values.buffer)),
+        `${operation} encoding twice without changes is bitwise stable`
+      ).toEqual(Array.from(new Uint32Array(results[2].buffer)));
+    } finally {
+      session.destroy();
+    }
+  }
+});
+
 it('GPUGroupAggregation sums stay deterministic and bounded under cancellation', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) return;
@@ -187,7 +316,12 @@ it('GPUGroupAggregation sums stay deterministic and bounded under cancellation',
     return (hash % 2 === 0 ? 2 ** 20 : -(2 ** 20)) + (hash % 1000) / 1000;
   });
   for (const operation of ['sum', 'mean'] as const) {
-    const input = {keyChunks: [keys], valueChunks: [values], groupCount, operation};
+    const input = {
+      keyChunks: [keys],
+      valueChunks: [values],
+      groupCount,
+      operation
+    };
     const expected = getCPUGroupStatistic(input);
     const {counts, absoluteSums} = getCPUGroupMagnitudes(input);
     const runs = [await runGroupSum(device, input), await runGroupSum(device, input)];
@@ -230,7 +364,13 @@ it('GPUGroupAggregation sums keep chunk order, empty inputs, and non-finite valu
     Uint32Array.from({length}, (_, index) => hashUint32(chunkIndex * 7 + index) % 4)
   );
   for (const operation of ['sum', 'mean'] as const) {
-    const input = {keyChunks, valueChunks, maskChunks, groupCount: 37, operation};
+    const input = {
+      keyChunks,
+      valueChunks,
+      maskChunks,
+      groupCount: 37,
+      operation
+    };
     const result = await runGroupSum(device, input);
     expectGroupStatistic(
       result.values,
@@ -307,13 +447,34 @@ it('GPUGroupAggregation sum plan bounds scratch and workgroup storage', () => {
 });
 
 async function runGroupSum(device: Device, input: GroupSumInput): Promise<GroupSumResult> {
+  const session = createGroupSumSession(device, input);
+  try {
+    return await session.encode();
+  } finally {
+    session.destroy();
+  }
+}
+
+type GroupSumSession = {
+  /** Encodes and submits the compiled graph once, then reads the output back. */
+  encode: () => Promise<GroupSumResult>;
+  /** Overwrites the input buffers in place. Chunk lengths must match the original input. */
+  write: (input: GroupSumInput) => void;
+  destroy: () => void;
+};
+
+/** Compiles one graph over the input and lets a test encode it repeatedly. */
+function createGroupSumSession(device: Device, input: GroupSumInput): GroupSumSession {
   const buffers: Buffer[] = [];
+  const buffersByVector = new Map<string, Buffer[]>();
   const makeVector = <T extends 'uint32' | 'float32'>(
     name: string,
     format: T,
     chunks: (Uint32Array | Float32Array)[]
-  ): GPUVector<T> =>
-    new GPUVector({
+  ): GPUVector<T> => {
+    const vectorBuffers: Buffer[] = [];
+    buffersByVector.set(name, vectorBuffers);
+    return new GPUVector({
       type: 'data',
       name,
       format,
@@ -323,10 +484,17 @@ async function runGroupSum(device: Device, input: GroupSumInput): Promise<GroupS
           usage: Buffer.STORAGE | Buffer.COPY_DST
         });
         buffers.push(buffer);
-        return new GPUData({buffer, format, length: chunk.length, ownsBuffer: false});
+        vectorBuffers.push(buffer);
+        return new GPUData({
+          buffer,
+          format,
+          length: chunk.length,
+          ownsBuffer: false
+        });
       }),
       ownsData: false
     });
+  };
   const keysVector = makeVector('keys', 'uint32', input.keyChunks);
   const valuesVector = makeVector('values', 'float32', input.valueChunks);
   const maskVector = input.maskChunks ? makeVector('mask', 'uint32', input.maskChunks) : undefined;
@@ -337,7 +505,11 @@ async function runGroupSum(device: Device, input: GroupSumInput): Promise<GroupS
   const graph = new GPUCommandGraph(device);
   const output = graph.createDataView(
     graph.importBuffer(
-      {id: 'output', byteLength: outputBuffer.byteLength, usage: outputBuffer.usage},
+      {
+        id: 'output',
+        byteLength: outputBuffer.byteLength,
+        usage: outputBuffer.usage
+      },
       outputBuffer
     ),
     {format: 'float32', length: input.groupCount}
@@ -353,27 +525,70 @@ async function runGroupSum(device: Device, input: GroupSumInput): Promise<GroupS
     })
   );
   const compiled = graph.compile();
-  try {
-    const encoder = device.createCommandEncoder({id: 'group-sum-test'});
-    compiled.encode(encoder, {parameters: undefined});
-    device.submit(encoder.finish());
-    const bytes = await outputBuffer.readAsync();
-    const {nodeOrder, logicalTransientBufferCount} = compiled.stats;
-    return {
-      values: new Float32Array(
-        bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + input.groupCount * 4)
-      ),
-      nodeOrder,
-      logicalTransientBufferCount
-    };
-  } finally {
-    compiled.destroy();
-    keysVector.destroy();
-    valuesVector.destroy();
-    maskVector?.destroy();
-    for (const buffer of buffers) buffer.destroy();
-    outputBuffer.destroy();
+  return {
+    async encode() {
+      const encoder = device.createCommandEncoder({id: 'group-sum-test'});
+      compiled.encode(encoder, {parameters: undefined});
+      device.submit(encoder.finish());
+      const bytes = await outputBuffer.readAsync();
+      const {nodeOrder, logicalTransientBufferCount} = compiled.stats;
+      return {
+        values: new Float32Array(
+          bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + input.groupCount * 4)
+        ),
+        nodeOrder,
+        logicalTransientBufferCount
+      };
+    },
+    write(next) {
+      const writeChunks = (name: string, chunks: (Uint32Array | Float32Array)[] | undefined) => {
+        const vectorBuffers = buffersByVector.get(name);
+        if (!chunks || !vectorBuffers) return;
+        expect(chunks.length, `${name} keeps its chunk count`).toBe(vectorBuffers.length);
+        for (const [chunkIndex, chunk] of chunks.entries()) {
+          if (chunk.length > 0) vectorBuffers[chunkIndex].write(chunk);
+        }
+      };
+      writeChunks('keys', next.keyChunks);
+      writeChunks('values', next.valueChunks);
+      writeChunks('mask', next.maskChunks);
+    },
+    destroy() {
+      compiled.destroy();
+      keysVector.destroy();
+      valuesVector.destroy();
+      maskVector?.destroy();
+      for (const buffer of buffers) buffer.destroy();
+      outputBuffer.destroy();
+    }
+  };
+}
+
+/** Splits one flat array into consecutive chunks of the given lengths. */
+function rechunk<T extends Uint32Array | Float32Array>(array: T, lengths: number[]): T[] {
+  expect(
+    lengths.reduce((sum, length) => sum + length, 0),
+    'chunk lengths cover every row'
+  ).toBe(array.length);
+  let offset = 0;
+  return lengths.map(length => {
+    const chunk = array.slice(offset, offset + length) as T;
+    offset += length;
+    return chunk;
+  });
+}
+
+/** Concatenates chunks so references do not depend on where a vector was split. */
+function flatten<T extends Uint32Array | Float32Array>(chunks: T[]): T {
+  const flat = new (chunks[0].constructor as new (length: number) => T)(
+    chunks.reduce((sum, chunk) => sum + chunk.length, 0)
+  );
+  let offset = 0;
+  for (const chunk of chunks) {
+    flat.set(chunk, offset);
+    offset += chunk.length;
   }
+  return flat;
 }
 
 /**
@@ -402,16 +617,15 @@ function expectGroupStatistic(
 function getCPUGroupStatistic(input: GroupSumInput): Float64Array {
   const sums = new Float64Array(input.groupCount);
   const counts = new Float64Array(input.groupCount);
-  for (const [chunkIndex, keys] of input.keyChunks.entries()) {
-    const values = input.valueChunks[chunkIndex];
-    const mask = input.maskChunks?.[chunkIndex];
-    for (let rowIndex = 0; rowIndex < keys.length; rowIndex++) {
-      const key = keys[rowIndex];
-      const value = values[rowIndex];
-      if (key < input.groupCount && Number.isFinite(value) && (!mask || mask[rowIndex] !== 0)) {
-        sums[key] += value;
-        counts[key]++;
-      }
+  const keys = flatten(input.keyChunks);
+  const values = flatten(input.valueChunks);
+  const mask = input.maskChunks && flatten(input.maskChunks);
+  for (let rowIndex = 0; rowIndex < keys.length; rowIndex++) {
+    const key = keys[rowIndex];
+    const value = values[rowIndex];
+    if (key < input.groupCount && Number.isFinite(value) && (!mask || mask[rowIndex] !== 0)) {
+      sums[key] += value;
+      counts[key]++;
     }
   }
   return input.operation === 'sum'
@@ -426,14 +640,13 @@ function getCPUGroupMagnitudes(input: GroupSumInput): {
 } {
   const counts = new Float64Array(input.groupCount);
   const absoluteSums = new Float64Array(input.groupCount);
-  for (const [chunkIndex, keys] of input.keyChunks.entries()) {
-    const values = input.valueChunks[chunkIndex];
-    for (let rowIndex = 0; rowIndex < keys.length; rowIndex++) {
-      const key = keys[rowIndex];
-      if (key < input.groupCount && Number.isFinite(values[rowIndex])) {
-        counts[key]++;
-        absoluteSums[key] += Math.abs(values[rowIndex]);
-      }
+  const keys = flatten(input.keyChunks);
+  const values = flatten(input.valueChunks);
+  for (let rowIndex = 0; rowIndex < keys.length; rowIndex++) {
+    const key = keys[rowIndex];
+    if (key < input.groupCount && Number.isFinite(values[rowIndex])) {
+      counts[key]++;
+      absoluteSums[key] += Math.abs(values[rowIndex]);
     }
   }
   return {counts, absoluteSums};
