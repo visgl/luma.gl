@@ -19,12 +19,14 @@ it('matches borrowed HDR, depth32 and color-only host attachments without cleari
   expect(devices.length).toBeGreaterThan(0);
   for (const device of devices) {
     const source = makeBrowserPagedSplatSource([0], 0, 0);
+    source.scales.set([0.15, 0.15, 0.1]);
     source.colors.set([255, 0, 0, 255]);
     const data = makeGPUSplatData(device, source);
     const renderer = new GPUPagedSplatRenderer(device, {
       pages: [{id: 'page', data}],
       viewportSize: [16, 16],
       kernel2DSize: 0,
+      alphaScale: 0.5,
       toneMapping: 'none'
     });
     try {
@@ -57,7 +59,12 @@ it('matches borrowed HDR, depth32 and color-only host attachments without cleari
             clearColor: [0, 0, 1, 1],
             clearDepth: depthFormat ? 1 : false
           });
-          renderer.draw(renderPass);
+          renderer.draw(renderPass, {
+            blend: false,
+            depthCompare: 'less-equal',
+            depthBias: 0,
+            stencilReadMask: 0
+          });
           renderPass.end();
           device.submit();
           texture.readBuffer({width: 16, height: 16}, readback);
@@ -68,6 +75,14 @@ it('matches borrowed HDR, depth32 and color-only host attachments without cleari
               ? new DataView(pixels.buffer, pixels.byteOffset).getUint16(offset, true)
               : pixels[offset];
           expect(red, `${colorFormat}/${depthFormat} presents red splats`).toBeGreaterThan(200);
+          const blue =
+            colorFormat === 'rgba16float'
+              ? new DataView(pixels.buffer, pixels.byteOffset).getUint16(offset + 4, true)
+              : pixels[offset + 2];
+          expect(
+            blue,
+            'blend:false replaces host blue instead of inheriting splat blend factors'
+          ).toBe(0);
           // A corner remains the host's blue clear color, proving draw did not clear it.
           expect(pixels[colorFormat === 'rgba16float' ? 5 : 2]).toBeGreaterThan(0);
         } finally {

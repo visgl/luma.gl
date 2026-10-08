@@ -527,9 +527,13 @@ export class GPUPagedSplatRenderer {
       | TextureFormatDepthStencil
       | undefined;
     const resolvedParameters = {...this.model.pipeline.props.parameters, ...parameters};
-    if (!depthStencilAttachmentFormat) {
-      delete resolvedParameters.depthWriteEnabled;
-      delete resolvedParameters.depthCompare;
+    for (const parameter of Object.keys(resolvedParameters) as (keyof RenderPipelineParameters)[]) {
+      if (
+        (!depthStencilAttachmentFormat &&
+          (parameter.startsWith('depth') || parameter.startsWith('stencil'))) ||
+        (parameters?.blend === false && parameter !== 'blend' && parameter.startsWith('blend'))
+      )
+        delete resolvedParameters[parameter];
     }
     const pipelineKey = `${colorAttachmentFormats.join(',')}/${depthStencilAttachmentFormat ?? ''}/${JSON.stringify(resolvedParameters)}`;
     let pipeline = this.hostPipelines.get(pipelineKey);
