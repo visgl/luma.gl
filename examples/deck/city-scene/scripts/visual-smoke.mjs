@@ -10,13 +10,11 @@ import {chromium} from 'playwright';
 import {PNG} from 'pngjs';
 import {createServer} from 'vite';
 import {getPlaywrightLaunchOptions} from '../../../../scripts/playwright/get-playwright-launch-options.mjs';
+import {setVisualTestPixelScale} from '../../../../scripts/playwright/visual-test-utils.mjs';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const softwareGpu = process.env.CITY_SCENE_HARDWARE !== 'true';
-// Preserve CSS coordinates for controls and picking while rendering one quarter as many pixels.
 // Set CITY_SCENE_DEVICE_SCALE=1 to compare against the original framebuffer resolution.
-const deviceScaleFactor = Number(process.env.CITY_SCENE_DEVICE_SCALE ?? 0.5);
-assert(deviceScaleFactor > 0 && Number.isFinite(deviceScaleFactor));
 // Full-resolution reflection history can take longer on shared software-rendered CI workers.
 const reflectionIdleTimeout = softwareGpu ? 180_000 : 60_000;
 const server = await createServer({root, logLevel: 'error', server: {host: '127.0.0.1', port: 0}});
@@ -25,6 +23,9 @@ const url = server.resolvedUrls?.local[0];
 assert(url);
 try {
   for (const backend of ['webgpu', 'webgl']) {
+    // The SSR phase uses one sixteenth of the original pixels. WebGL water needs half size.
+    const pixelScaleFactor = Number(process.env.CITY_SCENE_DEVICE_SCALE ?? (backend === 'webgpu' ? 0.25 : 0.5));
+    assert(pixelScaleFactor > 0 && Number.isFinite(pixelScaleFactor));
     const browser = await chromium.launch(getPlaywrightLaunchOptions({
       headless: true, backend, softwareGpu,
       // Linux canvas presentation needs the Vulkan compositor and an X display (see #2874).
@@ -33,7 +34,7 @@ try {
         : {}
     }));
     try {
-      const page = await browser.newPage({viewport: {width: 1200, height: 850}, deviceScaleFactor});
+      const page = await browser.newPage({viewport: {width: 1200, height: 850}, deviceScaleFactor: 1});
       // Pixel assertions use CSS coordinates, independent of framebuffer resolution.
       const captureScreenshot = options => page.screenshot({...options, scale: 'css'});
       const waitForIdle = () => page.waitForFunction(() => !window.cityScene.deck.props._animate && !window.cityScene.deck.needsRedraw(), undefined, {timeout: reflectionIdleTimeout});
@@ -43,13 +44,7 @@ try {
       await page.goto(`${process.env.CITY_SCENE_URL || url}?backend=${backend}`);
       await page.waitForFunction(() => document.body.dataset.ready === 'true', undefined, {timeout: 60_000});
       await page.waitForFunction(() => window.cityScene?.diagnostics.frames > 0);
-      // Chromium's native resize observer can ignore the emulated device scale.
-      await page.evaluate(scale => window.cityScene.deck.setProps({useDevicePixels: scale}), deviceScaleFactor);
-      await page.waitForFunction(scale => {
-        const canvas = document.querySelector('canvas');
-        return canvas.width === Math.floor(canvas.clientWidth * scale) &&
-          canvas.height === Math.floor(canvas.clientHeight * scale);
-      }, deviceScaleFactor);
+      await setVisualTestPixelScale(page, 'cityScene', pixelScaleFactor);
       assert.equal(await page.evaluate(() => window.cityScene.diagnostics.backend), backend);
       assert.deepEqual(
         await page.evaluate(() =>
@@ -114,42 +109,8 @@ try {
           }
         }
         assert(reflectedPixels > 1000, `SSR traces visible scene reflections (${reflectedPixels} pixels)`);
-        // Fixed water/camera isolates stochastic ray noise from physical surface animation.
-        await page.evaluate(() => {
-          const effect = window.cityScene.deck.props.effects.find(effect => effect.id === 'city-river-reflections');
-          const renderer = effect.renderer;
-          const render = renderer.renderToTexture.bind(renderer);
-          window.reflectionHistoryWeight = 0;
-          renderer.renderToTexture = options => render({...options, uniforms: {...options.uniforms,
-            ssrCameraTemporal: {...options.uniforms.ssrCameraTemporal, historyWeight: window.reflectionHistoryWeight}
-          }});
-          window.restoreReflectionRenderer = () => {renderer.renderToTexture = render;};
-        });
-        const variation = [];
-        for (const historyWeight of [0, 0.8]) {
-          await page.evaluate(weight => {
-            window.reflectionHistoryWeight = weight;
-            window.cityScene.deck.props.effects.find(effect => effect.id === 'city-river-reflections').resetHistory();
-            for (let frame = 0; frame < 8; frame++) window.cityScene.deck.redraw('warm reflection history');
-          }, historyWeight);
-          await waitForIdle();
-          let previous = PNG.sync.read(await captureScreenshot());
-          let difference = 0;
-          for (let frame = 0; frame < 5; frame++) {
-            await page.evaluate(() => window.cityScene.deck.redraw('sample reflection history'));
-            const current = PNG.sync.read(await captureScreenshot());
-            for (let vertical = 120; vertical < 650; vertical++) for (let horizontal = 350; horizontal < 950; horizontal++) {
-              const offset = (vertical * current.width + horizontal) * 4;
-              for (let channel = 0; channel < 3; channel++) difference += Math.abs(current.data[offset + channel] - previous.data[offset + channel]);
-            }
-            previous = current;
-          }
-          variation.push(difference);
-        }
-        await page.evaluate(() => window.restoreReflectionRenderer());
-        assert(variation[0] > 1000, 'stochastic reflection rays produce measurable variation');
-        assert(variation[1] < variation[0] * 0.8, `SSR history reduces static-scene flicker (${variation.join(' -> ')})`);
-        process.stdout.write(`SSR static-scene variation: ${variation.join(' -> ')}\n`);
+        // Temporal noise suppression is exercised with a 3x3 GPU fixture in
+        // ssr-camera-temporal.spec.ts; keep scene capture/composition coverage here.
 
         // Quality switches replace only postprocessing targets, retaining shared scene capture.
         for (const [quality, scale] of [['fast', 0.25], ['detailed', 1], ['balanced', 0.5]]) {
@@ -202,27 +163,34 @@ try {
         const coverageImage = PNG.sync.read(await captureScreenshot({path: join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), 'city-scene-reflection-coverage.png')}));
         await page.selectOption('#reflection-view', '0');
         const combinedImage = PNG.sync.read(await captureScreenshot());
-        const waterSamples = await page.evaluate(async () => {
+        const sampleColumns = await page.evaluate(() => {
           const deck = window.cityScene.deck;
           const viewport = deck.getViewports()[0];
-          const samples = [];
+          const columns = [];
           for (const longitudeOffset of [-0.0003, 0, 0.0003]) {
+            const samples = [];
             for (let latitudeIndex = -8; latitudeIndex <= 8; latitudeIndex++) {
               const [horizontal, vertical] = viewport.project([-74.006 + longitudeOffset, 40.7128 + latitudeIndex * 0.0004]);
               if (horizontal < 350 || horizontal >= 950 || vertical < 120 || vertical >= 650) continue;
-              const picked = await deck.pickObjectAsync({x: horizontal, y: vertical});
-              if (picked?.object?.kind === 'water') samples.push([Math.floor(horizontal), Math.floor(vertical)]);
+              samples.push([Math.floor(horizontal), Math.floor(vertical)]);
             }
+            columns.push(samples);
           }
-          return samples;
+          return columns;
         });
         let fallbackSamples = 0;
-        for (const [horizontal, vertical] of waterSamples) {
-          const offset = (vertical * coverageImage.width + horizontal) * 4;
-          // Exact zero-confidence debug color: this ray has no reliable screen-space contribution.
-          if (coverageImage.data[offset] !== 11 || coverageImage.data[offset + 1] !== 20 || coverageImage.data[offset + 2] !== 56) continue;
-          fallbackSamples++;
-          for (const channel of [0, 1, 2]) assert(Math.abs(combinedImage.data[offset + channel] - fallbackImage.data[offset + channel]) <= 3, 'unresolved water reflections retain the material fallback');
+        for (const samples of sampleColumns) {
+          for (const [horizontal, vertical] of samples) {
+            const offset = (vertical * coverageImage.width + horizontal) * 4;
+            // Exact zero-confidence debug color: this ray has no reliable screen-space contribution.
+            if (coverageImage.data[offset] !== 11 || coverageImage.data[offset + 1] !== 20 || coverageImage.data[offset + 2] !== 56) continue;
+            // Filter confidence on the CPU before paying for a GPU picking pass.
+            const isWater = await page.evaluate(async ([x, y]) => (await window.cityScene.deck.pickObjectAsync({x, y}))?.object?.kind === 'water', [horizontal, vertical]);
+            if (!isWater) continue;
+            fallbackSamples++;
+            for (const channel of [0, 1, 2]) assert(Math.abs(combinedImage.data[offset + channel] - fallbackImage.data[offset + channel]) <= 3, 'unresolved water reflections retain the material fallback');
+            break; // One verified water sample per spatially separated column.
+          }
         }
         assert(fallbackSamples > 0, 'sample visible water with zero screen-space reflection confidence');
         assert(countSceneDifferences(fallbackImage, combinedImage) > 100, 'scene reflections contribute beyond the sky material fallback');
@@ -329,6 +297,9 @@ try {
       await page.mouse.move(990, 710);
       // Test material replay independently of SSR's intentionally stochastic redraw history.
       if (backend === 'webgpu') await page.uncheck('#reflections');
+      // Fine water-normal changes need the previous resolution; keep their thresholds intact.
+      await setVisualTestPixelScale(page, 'cityScene', Math.max(0.5, pixelScaleFactor));
+      await waitForIdle();
       await page.evaluate(() => window.cityScene.setTime(2));
       await page.waitForTimeout(100);
       await page.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur());

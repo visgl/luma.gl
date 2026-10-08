@@ -162,7 +162,7 @@ export function canUseCRSProvider(reason: ProjectionPlanningReason): boolean {
   ].includes(reason.code);
 }
 
-/** The current public provider consumes degrees and one shared projected-coordinate unit. */
+/** The public provider needs canonical identifiers and one shared horizontal-axis unit. */
 export function getCRSProviderReason(
   definition: ReadonlyCRSDefinition
 ): ProjectionPlanningReason | null {
@@ -170,13 +170,6 @@ export function getCRSProviderReason(
   if (definition.type === 'ProjectedCRS') {
     const conversion = definition.conversion;
     const method = getEPSGCode(conversion.method);
-    if (method === 1024 || conversion.method.name === 'Popular Visualisation Pseudo Mercator') {
-      return {
-        code: 'unsupported-conversion',
-        message:
-          'adaptive provider does not preserve Pseudo Mercator PROJJSON spherical formulas; use a supported native pair or an independently verified serialized definition'
-      };
-    }
     if (
       (method !== undefined &&
         ((method !== 9807 && method !== 1024) ||
@@ -198,14 +191,23 @@ export function getCRSProviderReason(
   const factors = definition.coordinate_system?.axis.map(axis =>
     getUnitFactor(axis.unit, projected ? 'LinearUnit' : 'AngularUnit')
   );
+  const baseFactors = projected
+    ? definition.base_crs.coordinate_system?.axis.map(axis =>
+        getUnitFactor(axis.unit, 'AngularUnit')
+      )
+    : factors;
   if (
     !factors ||
-    (projected ? factors[0] !== factors[1] : factors.some(factor => factor !== Math.PI / 180))
+    factors.some(factor => factor === null) ||
+    factors[0] !== factors[1] ||
+    !baseFactors ||
+    baseFactors.some(factor => factor === null) ||
+    baseFactors[0] !== baseFactors[1]
   ) {
     return {
       code: 'unsupported-unit',
       message:
-        'adaptive provider requires geographic degrees or one shared projected-axis unit; native frame changes retain explicit per-axis units'
+        'adaptive provider requires one shared horizontal-axis unit; native frame changes retain explicit per-axis units'
     };
   }
   const geographic = definition.type === 'ProjectedCRS' ? definition.base_crs : definition;

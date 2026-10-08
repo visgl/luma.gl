@@ -617,5 +617,7 @@ horizon proximity do not change the size.
 `StarfieldLayer` defaults to math.gl's BSC5 catalog and sidereal/precession rotation.
 Optional `data` uses `getStarLayerData(..., {coordinates: 'equatorial'})` from
 `@math.gl/sun/stars`; an empty array renders no stars. The catalog is calculated once
-and reused, and changing the timestamp only changes rotation uniforms. Picking and
+and reused, and changing the timestamp only changes rotation uniforms. Catalog stars
+use compact sprites with subtle spectral tint. `colorStrength` defaults to `0.2`;
+set it to `0` for neutral stars or `1` for the original catalog RGB. Picking and
 GPU resource ownership follow the same rules as the individual sky layers.

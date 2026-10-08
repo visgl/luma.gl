@@ -6,6 +6,12 @@ import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
 
 `@luma.gl/engine` exports several ready-made geometry classes. All of them extend [`Geometry`](/docs/api-reference/engine/geometry) and populate standard glTF mesh attribute semantics such as `POSITION`, `NORMAL`, and `TEXCOORD_0`.
 
+The engine exports are compatibility adapters over the tessellators in `@math.gl/geometry`.
+They retain legacy size defaults, plane axis options, and cube face identifiers. New code can
+import primitives directly from `@math.gl/geometry` and pass them to `Model`; use explicit
+sizes and radii because math.gl defaults follow glTF shape conventions. GPU buffer layouts and
+interleaving remain engine responsibilities.
+
 ## Overview
 
 | Class | Notes |

@@ -51,36 +51,43 @@ void main(void) {
 }
 `;
 
-/* eslint-disable indent, no-multi-spaces */
-const POSITIONS = [-1, -1, 1, -1, -1, 1, 1, 1];
+const QUAD_POSITIONS = [-1, -1, 1, -1, -1, 1, 1, 1];
+
+const TRIANGLE_POSITIONS = [-1, -1, 3, -1, -1, 3];
 
 /** Props for ClipSpace */
-export type ClipSpaceProps = Omit<ModelProps, 'vs' | 'vertexCount' | 'geometry'>;
+export type ClipSpaceProps = Omit<ModelProps, 'vs' | 'vertexCount' | 'geometry'> & {
+  /** Fullscreen geometry. Defaults to the two-triangle quad. */
+  geometryType?: 'quad' | 'triangle';
+};
 
 /**
  * A flat geometry that covers the "visible area" that the GPU renders.
  */
 export class ClipSpace extends Model {
   constructor(device: Device, props: ClipSpaceProps) {
-    const TEX_COORDS = POSITIONS.map(coord => (coord === -1 ? 0 : coord));
+    const {geometryType = 'quad', ...modelProps} = props;
+    const positions = geometryType === 'triangle' ? TRIANGLE_POSITIONS : QUAD_POSITIONS;
+    const textureCoordinates = positions.map(position => (position + 1) / 2);
+    const vertexCount = positions.length / 2;
 
     // For WGSL we need to append the supplied fragment shader to the default vertex shader source
-    if (props.source) {
-      props = {...props, source: `${CLIPSPACE_VERTEX_SHADER_WGSL}\n${props.source}`};
+    if (modelProps.source) {
+      modelProps.source = `${CLIPSPACE_VERTEX_SHADER_WGSL}\n${modelProps.source}`;
     }
 
     super(device, {
-      id: props.id || uid('clip-space'),
-      ...props,
+      id: modelProps.id || uid('clip-space'),
+      ...modelProps,
       vs: CLIPSPACE_VERTEX_SHADER,
-      vertexCount: 4,
+      vertexCount,
       geometry: new Geometry({
-        topology: 'triangle-strip',
-        vertexCount: 4,
+        topology: geometryType === 'triangle' ? 'triangle-list' : 'triangle-strip',
+        vertexCount,
         attributes: {
-          clipSpacePositions: {size: 2, value: new Float32Array(POSITIONS)},
-          texCoords: {size: 2, value: new Float32Array(TEX_COORDS)},
-          coordinates: {size: 2, value: new Float32Array(TEX_COORDS)}
+          clipSpacePositions: {size: 2, value: new Float32Array(positions)},
+          texCoords: {size: 2, value: new Float32Array(textureCoordinates)},
+          coordinates: {size: 2, value: new Float32Array(textureCoordinates)}
         }
       })
     });

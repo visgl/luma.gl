@@ -28,6 +28,8 @@ type ClusteredVolumetricTraceUniforms = {
   directionalIntensity: number;
   pointLightIntensity: number;
   godRayIntensity: number;
+  /** Screen-space radius of the luminous source, in normalized viewport coordinates. */
+  godRaySourceRadius: number;
   godRayDensity: number;
   godRayDecay: number;
   godRaySampleCount: number;
@@ -101,6 +103,7 @@ struct ClusteredVolumetricTraceUniforms {
   directionalIntensity: f32,
   pointLightIntensity: f32,
   godRayIntensity: f32,
+  godRaySourceRadius: f32,
   godRayDensity: f32,
   godRayDecay: f32,
   godRaySampleCount: f32,
@@ -229,9 +232,17 @@ fn clusteredVolumetricTrace_godRayVisibility(texCoord: vec2f) -> f32 {
     if (any(sampleCoord < vec2f(0.0)) || any(sampleCoord > vec2f(1.0))) {
       break;
     }
-    let occluderDepth = textureSampleLevel(depthTexture, depthTextureSampler, sampleCoord, 0);
-    let visibility = smoothstep(0.9985, 0.99999, occluderDepth);
-    illumination += visibility * illuminationDecay;
+    let dimensions = textureDimensions(depthTexture);
+    let pixel = clamp(vec2i(sampleCoord * vec2f(dimensions)), vec2i(0), vec2i(dimensions) - vec2i(1));
+    let occluderDepth = textureLoad(depthTexture, pixel, 0);
+    // Perspective depth approaches one on distant opaque geometry. Only cleared
+    // depth is open sky; a fixed near-one threshold leaks shafts through buildings.
+    let visibility = select(0.0, 1.0, occluderDepth >= 1.0);
+    // Integrate a finite emitter rather than treating every open-sky pixel as a sun.
+    let sourceOffset = (sampleCoord - clusteredVolumetricTrace.godRayPosition) /
+      max(clusteredVolumetricTrace.godRaySourceRadius, 0.001);
+    let sourceRadiance = exp(-dot(sourceOffset, sourceOffset));
+    illumination += visibility * sourceRadiance * illuminationDecay;
     totalWeight += illuminationDecay;
     illuminationDecay *= clusteredVolumetricTrace.godRayDecay;
   }
@@ -428,6 +439,7 @@ fn clusteredVolumetricTrace_sampleColor(
     directionalIntensity: 'f32',
     pointLightIntensity: 'f32',
     godRayIntensity: 'f32',
+    godRaySourceRadius: 'f32',
     godRayDensity: 'f32',
     godRayDecay: 'f32',
     godRaySampleCount: 'f32',
@@ -458,6 +470,7 @@ fn clusteredVolumetricTrace_sampleColor(
     directionalIntensity: {value: 2.2, min: 0, softMax: 8},
     pointLightIntensity: {value: 1.8, min: 0, softMax: 6},
     godRayIntensity: {value: 0, min: 0, softMax: 6},
+    godRaySourceRadius: {value: 0.08, min: 0.001, softMax: 0.3},
     godRayDensity: {value: 0.94, min: 0.1, max: 1.2},
     godRayDecay: {value: 0.96, min: 0.7, max: 1},
     godRaySampleCount: {value: 18, min: 3, max: 32},

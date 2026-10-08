@@ -248,6 +248,10 @@ describe('optional CRS planner', () => {
     });
     expect(planCRSProjection({...options, from: 'NOT_A_REGISTERED_CRS'})).toMatchObject({
       status: 'unsupported',
+      reasons: [{code: 'invalid-definition'}]
+    });
+    expect(planCRSProjection({...options, from: '+proj=unregistered +datum=WGS84'})).toMatchObject({
+      status: 'unsupported',
       reasons: [{code: 'provider-unavailable'}]
     });
     expect(

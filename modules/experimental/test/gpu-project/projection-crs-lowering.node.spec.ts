@@ -473,7 +473,6 @@ describe('native PROJJSON frame lowering', () => {
       }
     };
     for (const from of [
-      angular,
       mixed,
       {
         ...geographicCRS,
@@ -488,6 +487,7 @@ describe('native PROJJSON frame lowering', () => {
       expect(result.reasons.at(-1)?.code).toBe('unsupported-unit');
     }
     const ambiguous = {
+      // Per-axis inconsistency remains unsupported; uniform angular units are now supported.
       ...geographicCRS,
       datum: {
         ...geographicCRS.datum,
@@ -497,6 +497,14 @@ describe('native PROJJSON frame lowering', () => {
     expect(planCRSProjection({from: ambiguous, to: ambiguous}).reasons[0].code).toBe(
       'invalid-definition'
     );
+    expect(
+      planCRSProjection({
+        from: angular,
+        to: 'EPSG:3857',
+        bounds: [-0.01, -0.01, 0.01, 0.01],
+        tolerance: 0.001
+      }).status
+    ).toBe('ready');
   });
 
   it('retains reference identifiers and unknown defining fields while accepting property reordering', () => {
