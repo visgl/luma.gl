@@ -13,6 +13,8 @@ export type {PrepareCRSProjectionOptions, PreparedCRSProjectionResult} from './p
 export {createCRSProjectionCPUBenchmarks} from './projection-crs-benchmark';
 export {ProjectionTableTransform, ProjectionTableError} from './projection-table-transform';
 export type {ProjectionTableBatch, ProjectedTableBatch} from './projection-table-transform';
+export {ProjectionRenderTransform} from './projection-render-transform';
+export type {ProjectionRenderFrame, ProjectedRenderPosition} from './projection-render-transform';
 import {
   evaluateProjectionProgram,
   invertProjectionProgram,

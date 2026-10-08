@@ -268,6 +268,70 @@ bounds describe stage coordinates, not necessarily the original input coordinate
 arithmetic rounding and native series truncation; they must not be used as certified global error bounds. `local-f32` output
 still rounds at the final origin-relative output boundary.
 
+## Inline Cartesian rendering and CPU picking
+
+`ProjectionRenderTransform` from the optional `/gpu-project/crs` entry point adapts a ready
+`prepareCRSProjection()` result for inline rendering. `GPUProjectedPointLayer` from
+`@deck.gl-community/gpu-layers` consumes that adapter in a WebGPU **non-geospatial Cartesian**
+viewport, such as `OrthographicView`. No upstream deck API change or materialized coordinate buffer
+is required.
+
+```ts
+import {ProjectionRenderTransform} from '@luma.gl/experimental/gpu-project/crs';
+import {GPUProjectedPointLayer} from '@deck.gl-community/gpu-layers';
+
+// prepared is the same ready result used by ProjectionTableTransform below.
+const transform = new ProjectionRenderTransform(prepared, {
+  origin: [550000, 4190000], // absolute destination coordinates, in destination axis order/units
+  axes: [0, 1],             // render x/y select destination axes AFTER origin subtraction
+  scale: [1, 1]             // signed render units per selected destination unit
+});
+const layer = new GPUProjectedPointLayer({
+  id: 'projected-points',
+  transform,
+  getPosition: positionVector, // GPUVector<'uint32x4'>: raw binary64 pairs, not integer coordinates
+  inputValidity: validityVector, // GPUVector<'uint32'>: nonzero means valid
+  getSourcePosition: rowIndex => cpuCoordinates[rowIndex] ?? null,
+  pickable: true,
+  pointSize: 4,
+  getColor: [32, 128, 255]
+});
+```
+
+The frame is explicit: `common[i] = (destination[axes[i]] - origin[axes[i]]) * scale[i]`.
+Signed scales support unit conversion and axis direction; `axes` supports axis order. There is no
+implicit degree/metre conversion or inference that projected coordinates are deck map common space.
+The adapter snapshots this frame, reuses the prepared adaptive operation and appends double-single
+origin/axis/scale operations. Only the final small local position narrows to float32. Even a prepared
+`local-f32` table transform is recompiled from its plan, not from already narrowed output.
+The prepared provider/plan must remain unchanged throughout its use. The CPU `projectPosition()`
+returns `{source, destination, common}` using the retained provider, or `null` outside the finite source
+domain; in-domain provider failures propagate as `ProjectionTableError`.
+
+Rendering is strictly 2D at common-space z = 0. Three-component CPU inputs are rejected, and the
+layer rejects geospatial viewports, non-Cartesian coordinate systems, nonzero coordinate origins and
+model matrices. Map/globe common-space conversion and altitude/vertical transformations remain
+separate coverage work. This adapter does not infer an inverse from a screen position.
+
+Inputs are borrowed same-device vertex buffers with aligned physical chunks, stable byte strides and
+matching chunk byte offsets; null bitmaps must be converted explicitly into `inputValidity`. Empty
+chunks preserve global row numbering. Invalid/masked/out-of-domain rows are discarded in both color
+and picking passes. RGB picking is limited to 16,777,215 rows per layer. `getSourcePosition()` is called
+only for a picked row; the caller maintains a CPU mirror matching GPU row order, or returns `null`.
+Picking retains deck's `coordinate` and adds `gpuVector` chunk provenance plus `projection` from the
+retained CPU transform. There is no hidden input readback.
+
+Replace the `transform` object when changing the plan, CRS, origin, axes or units. The layer rebuilds
+its owned model/parameter buffer, and picking immediately uses the replacement CPU transform.
+Replacing input vectors or extensions also rebuilds the model; aligned appended chunks and buffer
+content changes can reuse it. Color and point size update per-chunk uniform regions. Callers request
+redraws after changing GPU contents. Finalization destroys only the layer's model, parameters and
+style buffers, never its input vectors.
+
+Hardware tests compare retained CPU, double-single table output and actual inline render/picking for
+UTM points closer than an absolute float32 ULP. This proves the bounded consumer contract, not a
+cross-vendor precision guarantee or a performance advantage. P.8a.2 measures those separately.
+
 ## Batch-preserving CPU/GPU table projection
 
 `ProjectionTableTransform` from `@luma.gl/experimental/gpu-project/crs` uses a ready
