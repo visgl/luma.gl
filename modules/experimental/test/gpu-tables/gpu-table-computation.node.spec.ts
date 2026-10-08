@@ -7,16 +7,24 @@ import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, test} from 'vitest';
 
-test('GPUTableComputation binds fixed-size-list rows without trailing physical padding', async () => {
+// WebGPU's default minStorageBufferOffsetAlignment, which every adapter supports.
+const STORAGE_OFFSET_ALIGNMENT = 256;
+
+test('GPUTableComputation binds fixed-size-list rows without trailing physical padding', async ({
+  skip
+}) => {
   const device = await getWebGPUTestDevice();
-  if (!device) return;
+  if (!device) {
+    skip('WebGPU unavailable');
+    return;
+  }
   const embeddings = new GPUVector({
     type: 'buffer',
     name: 'embeddings',
-    buffer: device.createBuffer({byteLength: 32}),
+    buffer: device.createBuffer({byteLength: STORAGE_OFFSET_ALIGNMENT + 28}),
     format: 'fixed-size-list<float32,3>',
     length: 2,
-    byteOffset: 4,
+    byteOffset: STORAGE_OFFSET_ALIGNMENT,
     byteStride: 16,
     ownsBuffer: true
   });
@@ -24,16 +32,21 @@ test('GPUTableComputation binds fixed-size-list rows without trailing physical p
 
   expect(computation.bindings.embeddings).toEqual({
     buffer: embeddings.data[0].buffer,
-    offset: 4,
+    offset: STORAGE_OFFSET_ALIGNMENT,
     size: 28
   });
 
   embeddings.destroy();
 });
 
-test('GPUTableComputation never truncates padded rows with shorter explicit value spans', async () => {
+test('GPUTableComputation never truncates padded rows with shorter explicit value spans', async ({
+  skip
+}) => {
   const device = await getWebGPUTestDevice();
-  if (!device) return;
+  if (!device) {
+    skip('WebGPU unavailable');
+    return;
+  }
   const limitedData = new GPUData({
     buffer: device.createBuffer({byteLength: 28}),
     format: 'fixed-size-list<float32,3>',
@@ -51,10 +64,10 @@ test('GPUTableComputation never truncates padded rows with shorter explicit valu
   const empty = new GPUVector({
     type: 'buffer',
     name: 'empty',
-    buffer: device.createBuffer({byteLength: 4}),
+    buffer: device.createBuffer({byteLength: STORAGE_OFFSET_ALIGNMENT + 4}),
     format: 'fixed-size-list<float32,3>',
     length: 0,
-    byteOffset: 4,
+    byteOffset: STORAGE_OFFSET_ALIGNMENT,
     ownsBuffer: true
   });
   const limitedComputation = new GPUTableComputation(device, {inputVectors: {limited}});
@@ -67,7 +80,7 @@ test('GPUTableComputation never truncates padded rows with shorter explicit valu
   });
   expect(emptyComputation.bindings.empty).toEqual({
     buffer: empty.data[0].buffer,
-    offset: 4,
+    offset: STORAGE_OFFSET_ALIGNMENT,
     size: 0
   });
 
