@@ -24,14 +24,14 @@ have four. All captures passed; maximum observed error was below 0.30 mm.
 
 | Domain | Maximum batch rows / actual batches | CPU | Resident GPU | Upload/project | Round trip | CPU / round trip |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| UTM local | 4,096 / 17 | 21.2 | 13.2 | 12.7 | 33.7 | 0.63x |
-| UTM local | 65,536 / 2 | 20.6 | 10.5 | 8.5 | 11.2 | 1.84x |
-| UTM regional | 4,096 / 17 | 20.8 | 14.2 | 9.9 | 33.4 | 0.62x |
-| UTM regional | 65,536 / 2 | 21.2 | 9.9 | 7.7 | 10.7 | 1.98x |
-| Albers regional | 4,096 / 17 | 8.7 | 9.5 | 11.1 | 33.0 | 0.26x |
-| Albers regional | 65,536 / 2 | 8.6 | 10.2 | 8.1 | 11.2 | 0.77x |
+| UTM local | 4,096 / 17 | 19.9 | 12.1 | 12.0 | 25.7 | 0.77x |
+| UTM local | 65,536 / 2 | 20.0 | 7.2 | 7.5 | 9.7 | 2.06x |
+| UTM regional | 4,096 / 17 | 19.8 | 11.5 | 9.1 | 22.4 | 0.88x |
+| UTM regional | 65,536 / 2 | 19.8 | 7.3 | 7.3 | 9.5 | 2.08x |
+| Albers regional | 4,096 / 17 | 8.3 | 8.6 | 8.8 | 21.5 | 0.39x |
+| Albers regional | 65,536 / 2 | 7.9 | 6.9 | 7.1 | 9.4 | 0.84x |
 
-At 4,107 total rows, CPU medians range from 0.6–1.4 ms and round trips from 3.0–5.6 ms.
+At 4,107 total rows, CPU medians range from 0.5–1.4 ms and round trips from 1.5–3.1 ms.
 The raw data includes both one- and two-batch cases. Rows within a domain are identical across
 batch sizes; no coordinates are repacked or merged inside the benchmark.
 
@@ -64,7 +64,8 @@ batch sizes; no coordinates are repacked or merged inside the benchmark.
   local UTM or 1,120 for the regional cases. Reported GPU totals are 2,622,584–2,640,920 bytes;
   driver objects, shader binaries, readback staging and CPU validation copies are excluded.
 - Every CPU result is checked; each GPU mode is checked before/after timing and each round-trip
-  sample is checked separately, outside the interval. Invalid rows require zero raw payload and
+  sample is checked separately, outside the interval, including source identity and batch metadata.
+  Invalid rows require zero raw payload and
   mask zero. All allocation/compile/readback/validation failures reject the report and release
   owned buffers. Ordinary tests cover empty batches, masks, offset views, local-f32 decoding,
   source snapshots and failure cleanup; the performance sweep uses double-single only.

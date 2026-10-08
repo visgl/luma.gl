@@ -360,6 +360,16 @@ function validateTableOutput(
     const batch = actual[index];
     if (batch.numRows !== reference.numRows)
       throw new Error('projection table benchmark row mismatch');
+    if (
+      Boolean(batch.sourceInfo) !== Boolean(reference.sourceInfo) ||
+      (['sourceBatchIndex', 'sourceRowIndexOffset', 'sourceRowCount'] as const).some(
+        field => batch.sourceInfo?.[field] !== reference.sourceInfo?.[field]
+      ) ||
+      batch.metadata.size !== reference.metadata.size ||
+      [...reference.metadata].some(([key, value]) => batch.metadata.get(key) !== value)
+    ) {
+      throw new Error(`projection table benchmark provenance mismatch at batch ${index}`);
+    }
     for (let rowIndex = 0; rowIndex < reference.numRows; rowIndex++) {
       // Inspect each raw component outside the timed readback/decode interval. Summing a
       // corrupted double-single pair could otherwise hide a nonzero invalid payload.

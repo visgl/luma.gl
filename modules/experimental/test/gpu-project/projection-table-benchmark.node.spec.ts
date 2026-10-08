@@ -92,6 +92,40 @@ it('propagates CPU provider failure without reporting timings', async () => {
   }
 });
 
+for (const corruption of ['sourceInfo', 'metadata'] as const) {
+  it(`rejects CPU ${corruption} changes even when coordinates agree`, async () => {
+    const device = new NullDevice({});
+    const transform = makeTableTransform();
+    const project = transform.projectBatch.bind(transform);
+    let calls = 0;
+    vi.spyOn(transform, 'projectBatch').mockImplementation(batch => {
+      const output = project(batch);
+      if (++calls > 1) {
+        if (corruption === 'sourceInfo') output.sourceInfo = undefined;
+        else output.metadata.set('source', 'incorrect');
+      }
+      return output;
+    });
+    const allocate = vi.spyOn(device, 'createBuffer');
+    try {
+      await expect(
+        runProjectionTableBenchmark(device, {
+          transform,
+          provider: 'test',
+          batches: [makeSourceBatches()[0]],
+          maximumError: 0.001,
+          warmupIterations: 0,
+          measuredIterations: 1
+        })
+      ).rejects.toThrow(/provenance mismatch/);
+      expect(allocate).not.toHaveBeenCalled();
+    } finally {
+      allocate.mockRestore();
+      device.destroy();
+    }
+  });
+}
+
 it('cleans up partially allocated inputs without altering caller arrays', async () => {
   const device = new NullDevice({});
   const buffer = device.createBuffer({byteLength: 80});

@@ -1008,7 +1008,8 @@ readback staging. `cpuOutputByteLength` counts typed-array payloads, not metadat
 Plan bounds, degree, patch count, origin, encoding, device and measured error accompany the timings.
 
 Every CPU sample and GPU output before/after each path must pass validity/error checks; round-trip
-samples are also checked individually. Checks occur outside timing. Provider failure, instability,
+samples are also checked individually, including source identity and batch metadata. Checks occur
+outside timing. Provider failure, instability,
 nonfinite output, mask mismatch or a nonzero invalid payload rejects the report. Timestamp queries
 are disabled; normal graph pass coalescing is retained. Throughput counts all source rows, including
 masked/invalid ones. Zero-resolution medians produce `null` rates/speedups.

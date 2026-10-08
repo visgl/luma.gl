@@ -88,7 +88,9 @@ for (const corruption of [
   'coordinate',
   'validity',
   'invalid-payload',
-  'readback-failure'
+  'readback-failure',
+  'sourceInfo',
+  'metadata'
 ] as const) {
   it(`rejects ${corruption} and releases benchmark resources`, async context => {
     const device = await getWebGPUTestDevice();
@@ -105,7 +107,11 @@ for (const corruption of [
       const buffer = createBuffer(props);
       buffers.push(buffer);
       const selected = corruption === 'validity' ? 'validity-0' : 'positions-0';
-      if (props.id === `projection-table-benchmark-${selected}`) {
+      if (
+        corruption !== 'sourceInfo' &&
+        corruption !== 'metadata' &&
+        props.id === `projection-table-benchmark-${selected}`
+      ) {
         const read = buffer.readAsync.bind(buffer);
         vi.spyOn(buffer, 'readAsync').mockImplementation(async (...arguments_) => {
           if (corruption === 'readback-failure') throw new Error('readback failed');
@@ -119,10 +125,20 @@ for (const corruption of [
       }
       return buffer;
     });
+    const transform = makeTableTransform();
+    const createTable = transform.createGPUProjectionTable.bind(transform);
+    vi.spyOn(transform, 'createGPUProjectionTable').mockImplementation((...arguments_) => {
+      const table = createTable(...arguments_);
+      const batch = table.table.batches[0];
+      if (corruption === 'sourceInfo' && batch.sourceInfo)
+        batch.sourceInfo.sourceRowIndexOffset += 1;
+      if (corruption === 'metadata') batch.schema.metadata.clear();
+      return table;
+    });
     try {
       await expect(
         runProjectionTableBenchmark(device, {
-          transform: makeTableTransform(),
+          transform,
           batches: makeSourceBatches(),
           provider: 'test',
           maximumError: 0.001,
