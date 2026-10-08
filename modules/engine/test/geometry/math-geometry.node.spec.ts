@@ -7,6 +7,11 @@ import {Geometry as MathGeometry, CubeGeometry as MathCubeGeometry} from '@math.
 import {NullDevice} from '@luma.gl/test-utils';
 import {
   Model,
+  Geometry,
+  IcoSphereGeometry,
+  TruncatedConeGeometry,
+  CylinderGeometry,
+  ConeGeometry,
   CubeGeometry,
   PlaneGeometry,
   SphereGeometry,
@@ -49,6 +54,100 @@ test('direct math.gl geometry keeps last-input-wins shader bindings without CPU 
     new Float32Array([1, 2, 3])
   );
   expect(Object.keys(geometry.attributes)).toEqual(['POSITION', 'positions']);
+});
+
+test('explicit math.gl attribute selection resolves shader aliases in caller order', () => {
+  const geometry = new MathGeometry({
+    topology: 'point-list',
+    attributes: {
+      POSITION: {size: 3, value: new Float32Array([0, 0, 0])},
+      positions: {size: 3, value: new Float32Array([1, 2, 3])}
+    }
+  });
+  for (const attributes of [
+    ['POSITION', 'positions'],
+    ['positions', 'POSITION']
+  ]) {
+    const interleaved = makeInterleavedGeometry(geometry, {attributes});
+    expect(interleaved.bufferLayout[0].attributes).toEqual([
+      {attribute: 'positions', format: 'float32x3', byteOffset: 0}
+    ]);
+    expect(new Float32Array(interleaved.attributes['geometry'].value.buffer)).toEqual(
+      geometry.attributes[attributes[1]].value
+    );
+  }
+});
+
+test('Geometry accepts frozen attribute descriptors without modifying them', () => {
+  const attribute = Object.freeze({size: 3, value: new Float32Array([0, 0, 0])});
+  const geometry = new Geometry({topology: 'point-list', attributes: {POSITION: attribute}});
+  expect(geometry.attributes['POSITION'].value).toBe(attribute.value);
+  expect(geometry.vertexCount).toBe(1);
+  expect(Object.keys(attribute)).toEqual(['size', 'value']);
+});
+
+test('remaining primitive adapters preserve dimensions, subdivisions, caps, and overrides', () => {
+  const sphere = new IcoSphereGeometry({radius: 2, iterations: 1});
+  expect(sphere.vertexCount).toBe(240);
+  const spherePositions = sphere.attributes['POSITION'].value;
+  for (let index = 0; index < spherePositions.length; index += 3) {
+    expect(Math.hypot(...spherePositions.slice(index, index + 3))).toBeCloseTo(2);
+  }
+  for (const verticalAxis of ['x', 'y', 'z'] as const) {
+    for (const Primitive of [TruncatedConeGeometry, CylinderGeometry, ConeGeometry]) {
+      const uncapped = new Primitive({
+        radius: 2,
+        bottomRadius: 2,
+        topRadius: 1,
+        height: 4,
+        nradial: 8,
+        nvertical: 2,
+        verticalAxis,
+        cap: false
+      });
+      const capped = new Primitive({
+        radius: 2,
+        bottomRadius: 2,
+        topRadius: 1,
+        height: 4,
+        nradial: 8,
+        nvertical: 2,
+        verticalAxis,
+        cap: true,
+        topCap: true,
+        bottomCap: true
+      });
+      expect(uncapped.vertexCount).toBe(96);
+      expect(capped.vertexCount).toBeGreaterThan(uncapped.vertexCount);
+      const axisIndex = {x: 0, y: 1, z: 2}[verticalAxis];
+      const positions = uncapped.attributes['POSITION'].value;
+      const heights = Array.from(positions).filter((value, index) => index % 3 === axisIndex);
+      expect(Math.min(...heights)).toBe(-2);
+      expect(Math.max(...heights)).toBe(2);
+      const radii = Array.from({length: positions.length / 3}, (value, vertexIndex) =>
+        Math.hypot(
+          ...Array.from(positions.slice(vertexIndex * 3, vertexIndex * 3 + 3)).filter(
+            (coordinate, index) => index !== axisIndex
+          )
+        )
+      );
+      expect(Math.max(...radii)).toBeCloseTo(2);
+    }
+  }
+  for (const Primitive of [
+    IcoSphereGeometry,
+    TruncatedConeGeometry,
+    CylinderGeometry,
+    ConeGeometry
+  ]) {
+    const source = new Primitive();
+    const attribute = {
+      size: 3,
+      value: new Float32Array(source.attributes['POSITION'].value.length).fill(7)
+    };
+    const overridden = new Primitive({attributes: {POSITION: attribute}});
+    expect(overridden.attributes['POSITION'].value).toBe(attribute.value);
+  }
 });
 
 test('compatibility cubes retain size, semantic face ids, and indexed or expanded uploads', () => {

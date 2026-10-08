@@ -42,7 +42,7 @@ export class Geometry extends MathGeometry {
     super({...props, attributes, indices});
     // Preserve legacy descriptor identity while math.gl owns normalization and validation.
     for (const [name, input] of Object.entries(attributes)) {
-      if (!ArrayBuffer.isView(input) && name !== 'indices') {
+      if (!ArrayBuffer.isView(input) && Object.isExtensible(input) && name !== 'indices') {
         Object.assign(input, this.attributes[name]);
         this.attributes[name] = input;
       }

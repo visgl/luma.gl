@@ -158,12 +158,10 @@ function getInterleavedSourceAttributes(
   geometry: MathGeometry,
   attributeNames?: string[]
 ): Array<[string, GeometryAttribute | undefined]> {
-  if (attributeNames) {
-    return attributeNames.map(attributeName => [attributeName, geometry.attributes[attributeName]]);
-  }
-  const attributes = new Map<string, [string, GeometryAttribute]>();
-  for (const [name, attribute] of Object.entries(geometry.attributes)) {
-    attributes.set(getGeometryShaderAttributeName(name), [name, attribute]);
+  const attributes = new Map<string, [string, GeometryAttribute | undefined]>();
+  const sourceNames = attributeNames || Object.keys(geometry.attributes);
+  for (const name of sourceNames) {
+    attributes.set(getGeometryShaderAttributeName(name), [name, geometry.attributes[name]]);
   }
   return Array.from(attributes.values());
 }
