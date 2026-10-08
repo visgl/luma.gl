@@ -608,7 +608,8 @@ function expectGroupStatistic(
   const mismatches = Array.from(expected).filter((value, groupIndex) =>
     Number.isNaN(value)
       ? !Number.isNaN(actual[groupIndex])
-      : Math.abs(actual[groupIndex] - value) > 4e-7 * Math.max(Math.abs(value), 1e-30)
+      : !Number.isFinite(actual[groupIndex]) ||
+        Math.abs(actual[groupIndex] - value) > 4e-7 * Math.max(Math.abs(value), 1e-30)
   );
   expect(mismatches, message).toEqual([]);
 }
