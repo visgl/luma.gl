@@ -78,6 +78,20 @@ test('explicit math.gl attribute selection resolves shader aliases in caller ord
   }
 });
 
+test('missing selected shader aliases do not erase existing geometry attributes', () => {
+  const geometry = new MathGeometry({
+    topology: 'point-list',
+    attributes: {POSITION: {size: 3, value: new Float32Array([1, 2, 3])}}
+  });
+  const interleaved = makeInterleavedGeometry(geometry, {attributes: ['POSITION', 'positions']});
+  expect(interleaved.bufferLayout[0].attributes).toEqual([
+    {attribute: 'positions', format: 'float32x3', byteOffset: 0}
+  ]);
+  expect(new Float32Array(interleaved.attributes['geometry'].value.buffer)).toEqual(
+    geometry.attributes['POSITION'].value
+  );
+});
+
 test('Geometry accepts frozen attribute descriptors without modifying them', () => {
   const attribute = Object.freeze({size: 3, value: new Float32Array([0, 0, 0])});
   const geometry = new Geometry({topology: 'point-list', attributes: {POSITION: attribute}});
