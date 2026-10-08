@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {describe, expect, it, vi} from 'vitest';
-import {Proj4Projection} from '@math.gl/proj4';
+import {Projection} from '@math.gl/projection';
 import {
   planCRSProjection,
   planProjectionPipeline,
@@ -24,7 +24,7 @@ function requireReady(result: ReturnType<typeof planCRSProjection>) {
 
 describe('verified PROJJSON provider coverage', () => {
   it('fits projected-to-projected transformations through the same verified mappings', () => {
-    const oracle = new Proj4Projection({
+    const oracle = new Projection({
       from: getConicOracleDefinition('lambert-2sp'),
       to: getConicOracleDefinition('albers')
     });
@@ -62,7 +62,7 @@ describe('verified PROJJSON provider coverage', () => {
       it(`fits custom ${method}/${southern ? 'south' : 'north'} forward and inverse without a registered CRS`, () => {
         const target = makeConicCRS(method, southern);
         const bounds = [-71.7, southern ? -41.9 : 41.7, -71.3, southern ? -41.7 : 41.9] as const;
-        const oracle = new Proj4Projection({
+        const oracle = new Projection({
           from: 'EPSG:4326',
           to: getConicOracleDefinition(method, southern)
         });
@@ -136,7 +136,7 @@ describe('verified PROJJSON provider coverage', () => {
             tolerance: 1e-5
           })
         );
-        const expected = new Proj4Projection({
+        const expected = new Projection({
           from: 'EPSG:4326',
           to: getConicOracleDefinition(method)
         }).project([-71.5, 41.8]);
@@ -185,7 +185,7 @@ describe('verified PROJJSON provider coverage', () => {
         tolerance: 1e-8
       })
     );
-    const expected = new Proj4Projection({
+    const expected = new Projection({
       from: 'EPSG:4326',
       to: getConicOracleDefinition('lambert-2sp')
     }).project([-71.5, 41.8]);
@@ -217,7 +217,7 @@ describe('verified PROJJSON provider coverage', () => {
           tolerance: 1e-5
         })
       );
-      const expected = new Proj4Projection({
+      const expected = new Projection({
         from: 'EPSG:4326',
         to: getConicOracleDefinition('albers')
       }).project([-71.5, 41.8]);
@@ -300,7 +300,7 @@ describe('verified PROJJSON provider coverage', () => {
         )
       }
     ];
-    const project = vi.spyOn(Proj4Projection.prototype, 'project');
+    const project = vi.spyOn(Projection.prototype, 'project');
     try {
       for (const conversion of malformed) {
         expect(
@@ -346,47 +346,69 @@ describe('verified PROJJSON provider coverage', () => {
     ).toBe('ready');
   });
 
-  it('declines zero LCC parallels before sampling an oracle that would substitute defaults', () => {
+  it('preserves zero LCC parallels in the TypeScript provider, forward and inverse', () => {
     const original = makeConicCRS('lambert-2sp');
-    const project = vi.spyOn(Proj4Projection.prototype, 'project');
-    try {
-      for (const code of [8823, 8824]) {
-        for (const zero of [0, -0]) {
-          const target = {
-            ...original,
-            conversion: {
-              ...original.conversion,
-              parameters: original.conversion.parameters.map(parameter =>
-                parameter.id.code === code ? {...parameter, value: zero} : parameter
-              )
-            }
-          };
-          for (const inverse of [false, true]) {
-            const options = {
-              from: inverse ? target : geographicCRS,
-              to: inverse ? geographicCRS : target,
-              bounds: [-71.6, 41.7, -71.4, 41.9] as const
-            };
-            expect(planCRSProjection(options)).toMatchObject({
-              status: 'unsupported',
-              reasons: expect.arrayContaining([
-                {code: 'unsupported-parameter', message: expect.any(String)}
-              ])
-            });
-            expect(() => planCRSProjection({...options, onUnsupported: 'throw'})).toThrow(
-              ProjectionPlanningError
-            );
+    for (const code of [8823, 8824]) {
+      for (const zero of [0, -0]) {
+        const target = {
+          ...original,
+          conversion: {
+            ...original.conversion,
+            parameters: original.conversion.parameters.map(parameter =>
+              parameter.id.code === code ? {...parameter, value: zero} : parameter
+            )
           }
-        }
+        };
+        const first =
+          code === 8823
+            ? zero
+            : original.conversion.parameters.find(parameter => parameter.id.code === 8823)!.value;
+        const second =
+          code === 8824
+            ? zero
+            : original.conversion.parameters.find(parameter => parameter.id.code === 8824)!.value;
+        const oracle = new Projection({
+          from: 'EPSG:4326',
+          to: `+proj=lcc +lat_0=41 +lon_0=-71.5 +lat_1=${first} +lat_2=${second} +x_0=200000 +y_0=750000 +ellps=WGS84`
+        });
+        const point = [-71.5, 41.8] as const;
+        const expected = oracle.project([...point]);
+        const result = requireReady(
+          planCRSProjection({
+            from: geographicCRS,
+            to: target,
+            bounds: [-71.6, 41.7, -71.4, 41.9],
+            tolerance: 1e-5,
+            inverse: {
+              bounds: [
+                expected[0] - 1000,
+                expected[1] - 1000,
+                expected[0] + 1000,
+                expected[1] + 1000
+              ],
+              tolerance: 1e-9
+            }
+          })
+        );
+        const actual = evaluateProjectionProgram(result.program, point);
+        expect(actual.valid).toBe(true);
+        expect(
+          Math.hypot(actual.position[0] - expected[0], actual.position[1] - expected[1])
+        ).toBeLessThan(1e-5);
+        const inverse = evaluateProjectionProgram(
+          invertProjectionProgram(result.program),
+          expected
+        );
+        expect(inverse.valid).toBe(true);
+        expect(
+          Math.hypot(inverse.position[0] - point[0], inverse.position[1] - point[1])
+        ).toBeLessThan(1e-9);
       }
-      expect(project).not.toHaveBeenCalled();
-    } finally {
-      project.mockRestore();
     }
   });
 
   for (const zeroParallel of [8823, 8824]) {
-    it(`preserves an Albers zero parallel (${zeroParallel}) using the symmetric provider-safe order`, () => {
+    it(`preserves an Albers zero parallel (${zeroParallel}) without swapping parameters`, () => {
       const original = makeConicCRS('albers');
       const target = {
         ...original,
@@ -400,8 +422,8 @@ describe('verified PROJJSON provider coverage', () => {
         }
       };
       const snapshot = JSON.stringify(target);
-      // A nonzero first parallel avoids proj4js's shared lat1 default. Albers preserves lat2=0.
-      const oracle = new Proj4Projection({
+      // An independently serialized, symmetric parameter order is the reference.
+      const oracle = new Projection({
         from: 'EPSG:4326',
         to: '+proj=aea +lat_0=41 +lon_0=-71.5 +lat_1=42 +lat_2=0 +x_0=200000 +y_0=750000 +ellps=WGS84'
       });

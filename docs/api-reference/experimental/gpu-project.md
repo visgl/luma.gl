@@ -13,7 +13,7 @@ without requiring native GPU `f64` arithmetic. A JavaScript projection provider 
 coordinate-reference-system semantics; adaptive local polynomial patches provide the GPU execution
 strategy.
 
-That separation supports the wide range of coordinate systems handled by `@math.gl/proj4` without
+That separation supports the wide range of coordinate systems handled by `@math.gl/projection` without
 reimplementing every projection, datum, or coordinate-reference-system definition in WGSL.
 
 ## When to use it
@@ -68,9 +68,14 @@ published results or cross-machine performance guarantees.
 ```ts
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {GPUProjection, compileProjectionPlan} from '@luma.gl/experimental/gpu-project';
-import {Proj4Projection} from '@math.gl/proj4';
+import {Projection} from '@math.gl/projection';
 
-const projection = new Proj4Projection({
+// Register CRS definitions that are not included by the installed provider.
+Projection.defineProjectionAliases({
+  'EPSG:32610': '+proj=utm +zone=10 +datum=WGS84 +units=m +no_defs'
+});
+
+const projection = new Projection({
   from: 'EPSG:32610',
   to: 'EPSG:3857'
 });
@@ -100,14 +105,15 @@ Bounds are `[minimumX, minimumY, maximumX, maximumY]` in the source coordinate s
 expressed in destination units: `0.01` requests one centimeter of sampled accuracy when the target
 coordinate system uses meters.
 
-`@math.gl/proj4` is optional and is not a dependency of `@luma.gl/experimental`. Any function or
+`@math.gl/projection` is optional and is not a dependency of `@luma.gl/experimental`. Any function or
 object with a `project(coordinates)` method can provide the projection. For WGS84-to-Web-Mercator
 applications, `createWebMercatorProjection()` provides a zero-dependency alternative:
 
-With math.gl 5, `Proj4Projection` also accepts compatible CRS definitions from `@math.gl/crs`,
-including PROJJSON objects. Use `checkProj4CRSCompatibility()` when a broader CRS metadata object
-may include unsupported vertical or compound components; CRS metadata by itself does not transform
-coordinates.
+With math.gl 5, `Projection` also accepts compatible CRS definitions from `@math.gl/crs`,
+including PROJJSON objects, and executes them with the TypeScript projection engine. Use
+`planCRSProjection()` when a broader CRS metadata object may include unsupported vertical or
+compound components; it reports structured reasons for unsupported definitions. CRS metadata
+by itself does not transform coordinates.
 
 ```ts
 import {
@@ -303,9 +309,62 @@ either explicit native Float32 formulas or the default double-single adaptive pl
 adaptive polynomial across a discontinuity, and do not insert wrapping before projected metre
 coordinates or a latitude-first axis without explicitly rearranging/converting those coordinates.
 
+## Plan a caller-prepared projection
+
+`planProjection()` compiles a caller-owned CPU transform into the same program used by
+`GPUProjectionProgram` and inline WGSL, without importing math.gl or resolving CRS definitions.
+This is the provider boundary for current math.gl projections and future engine-created transforms.
+
+```ts
+import {Projection} from '@math.gl/projection';
+import {planProjection} from '@luma.gl/experimental/gpu-project';
+
+const projection = new Projection({from: 'EPSG:4326', to: 'EPSG:3857'});
+const result = planProjection({
+  projection,
+  bounds: [-122.55, 37.7, -122.35, 37.85],
+  tolerance: 0.001
+});
+if (result.status === 'ready') {
+  // Use result.compiled in GPUProjectionProgram, or result.compiled.getShader() inline.
+  // Retain projection for CPU picking/reference calculations.
+}
+```
+
+The provider may be a synchronous callback, an object with `project` and optional `unproject`,
+or a `SynchronousProjectionProvider` with `projectSync` and optional `unprojectSync`.
+When both pairs exist, the synchronous pair wins in both directions. Methods retain their
+provider receiver. For a lazy transform, await its preparation before planning; this function
+never calls `preload()`, starts imports, awaits callbacks, or retries through an asynchronous method.
+An unprepared provider returns an unsupported result with its error message.
+
+Unlike `planCRSProjection()`, this entry point always fits the supplied transform. It does not
+replace a custom implementation with a native formula or reinterpret its aliases, axes or units.
+Bounds are required and use the provider's input units; tolerance uses its output units.
+Defaults are raw binary64 `uint32x4` input, double-single arithmetic and `float32x4` output.
+The usual `precision`, `inputFormat` and `destinationOrigin` options remain available.
+
+An optional `inverse: {bounds, tolerance}` fits the provider's inverse over an independently
+declared destination domain. It requires the corresponding inverse method; no inverse is guessed.
+Without this option the adaptive program cannot be automatically inverted, even if the CPU
+provider has an inverse method.
+
+This is strictly a two-coordinate contract. Every sample must return exactly two finite values;
+explicitly `lossy: true` providers are declined. Opaque callbacks cannot be inspected for hidden
+height, datum, grid or epoch dependencies: callers must supply a genuine bounded 2D transformation.
+Accepting a provider is not a claim of GPU support for all of that provider's operations.
+Sampled fitting errors are not certified global bounds, and final local-f32 rounding is additional.
+
+The result uses the existing `ready`/`unsupported` union and supports
+`onUnsupported: 'throw'`. `ProjectionPlanningError` is available from both the execution
+entry point and the existing `/crs` entry point. Compilation takes a snapshot of sampled values,
+does not retain the provider for execution, and allocates no GPU resources. Replan explicitly
+after changing the provider's configuration; loading, caching and resource ownership stay with
+the application.
+
 ## Optional math.gl CRS planner
 
-Install `@math.gl/crs` and `@math.gl/proj4` 5.x separately and import the CPU planner from
+Install `@math.gl/crs` and `@math.gl/projection` 5.x separately and import the CPU planner from
 `@luma.gl/experimental/gpu-project/crs`. These optional peers are not loaded by the GPU execution
 entry point. Planning allocates no GPU resources and returns either
 `{status: 'ready', strategy, program, compiled, reasons}` or `{status: 'unsupported', reasons}`.
@@ -335,11 +394,56 @@ if (result.status === 'ready') {
 
 `planCRSProjection` first tries native coordinate-frame lowering for explicit two-dimensional
 geographic/projected PROJJSON objects. Otherwise it fits the entire transformation through the
-public math.gl `Proj4Projection` provider. Named/serialized definitions use the provider path;
+public math.gl `Projection` provider. Named/serialized definitions use the provider path;
 identifiers are not resolved into PROJJSON or downloaded. Explicit 3D, compound, bound, vertical,
 geocentric, and dynamic-frame objects are declined. Providers returning extra coordinate components
 are rejected. Unknown identifiers, unavailable resources, invalid provider output, and exhausted
 patch budgets return structured reasons. `allowAdaptive: false` requires a native plan.
+
+### Engine preparation and spatial-reference metadata
+
+`prepareCRSProjection()` and `prepareCRSProjectionAsync()` accept upstream `ProjectionEngine`
+factories. The synchronous entry point never starts deferred loads; the async entry point awaits
+`engine.createProjectionAsync()` before synchronous fitting. Both require explicit source bounds,
+use the authoritative CPU transform as an opaque oracle, and always produce adaptive plans.
+They never infer native formulas from a custom engine's CRS labels.
+
+```ts
+import {lazyProjectionEngine} from '@math.gl/projection/projections/lazy';
+import {prepareCRSProjectionAsync} from '@luma.gl/experimental/gpu-project/crs';
+
+const prepared = await prepareCRSProjectionAsync({
+  engine: lazyProjectionEngine,
+  from: 'EPSG:4326',
+  to: 'EPSG:3857',
+  bounds: [-1, -1, 1, 1],
+  tolerance: 0.001
+});
+if (prepared.status === 'ready') {
+  const cpuPosition = prepared.projection.projectToSync([0.3, 0.4], new Float64Array(2));
+  // prepared.compiled is the corresponding GPU plan; preparation creates no GPU resources.
+  // prepared.spatialReferences retains immutable original metadata, separate from GPU error.
+}
+```
+
+The default is math.gl's eager `projectionEngine`. Custom alias, reader and datum configurations
+require a matching public `normalization` configuration; the adapter cannot inspect an engine's
+registry. Public normalization validates supported horizontal semantics, not the engine's custom
+algorithm. Retained CPU transforms remain caller-owned. Later mutation of a custom CPU transform
+does not update a previously sampled GPU plan: prepare again when semantics change.
+
+Both preparation methods and `planCRSProjection()` accept `CRSReference` and `SpatialReference`.
+Stored `coordinateOrder` takes precedence over authoritative CRS axes independently of
+`enforceAxis`. Declared units must agree with the executable definition; they do not relabel or
+rescale coordinates. Metadata wrappers use adaptive planning, even for otherwise native pairs.
+Use the preparation methods when the typed result must retain CPU methods and metadata.
+
+Unknown/absent horizontal CRS, non-2D storage, conflicting units/frames, separate vertical CRS,
+coordinate epochs, lossy extraction, grids and nonzero datum shifts are rejected before sampling.
+Raw PROJJSON/WKT dimensional checks remain necessary because normalized metadata can omit height.
+No implicit WGS84 assumption, horizontal extraction, network CRS resolution or grid loading is
+performed; only explicit async preparation may load algorithm modules. Both entry points return structured unsupported results, or throw
+`ProjectionPlanningError` with `onUnsupported: 'throw'` (a rejected promise for async preparation).
 
 ### Native PROJJSON coordinate frames
 
@@ -467,9 +571,10 @@ No global error bound, cuProj precision parity, or performance advantage is clai
 `bounds` is optional for native plans and required for adaptive plans (`bounds-required` if absent).
 Unsupported native conversions retain a bounded provider fallback. Invalid quantities, ambiguous
 parameters, unsupported axes, and dynamic frames are declined rather than silently approximated.
-The current provider assumes geographic degrees and one shared projected-axis unit; explicit
-non-degree geographic axes, mixed projected-axis units, and non-numeric prime-meridian quantities
-are therefore declined **on the adaptive route**, even when native frame changes support them.
+Public math.gl normalization validates horizontal frames, angular/linear units and datum metadata.
+Uniform non-degree geographic units are supported. Mixed per-axis units and non-numeric
+prime-meridian quantities remain declined **on the adaptive route**, even when native frame
+changes support them. Normalization does not replace the identifier/conflict checks below.
 The adaptive frontend additionally verifies Lambert Conic Conformal 1SP (EPSG 9801), Lambert Conic
 Conformal 2SP (9802), and Albers Equal Area (9822). It resolves methods and parameters by their
 EPSG `id`/`ids`, or by canonical EPSG names when identifiers are absent, then creates a provider-only
@@ -484,19 +589,17 @@ inverse domains. Conic parameters must be complete, finite, unique, dimensionall
 nondegenerate. Unsupported variants (such as modified/Belgian/Michigan Lambert methods) are not
 silently treated as ordinary 1SP/2SP. A method with neither a resolvable identifier nor an executable
 name cannot be inferred from the parameter values alone.
-Zero standard parallels in Lambert 2SP PROJJSON are declined because the current provider replaces
-them with defaults. Albers preserves a zero parallel by placing it second in the equivalent,
-symmetric pair before calling the provider.
+Valid zero standard parallels are preserved by math.gl's TypeScript kernels. The former Lambert
+rejection, 1SP tangent-parallel injection and Albers parallel swapping are no longer needed.
 
 Outside these verified mappings, the provider's existing compatibility restrictions remain.
 Serialized definitions remain available for provider-supported projections without a registered
 CRS name. Entirely custom projection functions can use `compileProjectionPlan()` directly, or
 the explicit whole-pipeline `fallback` of `planProjectionPipeline()`. Extra parameters on verified
 methods are rejected instead of reaching a provider that might ignore them.
-Provider-only routes containing explicit Pseudo Mercator PROJJSON are also declined: the current
-provider does not preserve its spherical formula. Supported native Web Mercator pairs instead
-use the binary64 reference described above; verified serialized definitions such as `EPSG:3857`
-remain available through the provider.
+Provider-only routes now preserve explicit Pseudo Mercator PROJJSON's spherical formula and WGS84
+datum semantics. Native Web Mercator pairs retain their bounded binary64 oracle for adaptive
+planning so the established validity domain does not silently expand.
 Serialized definitions retain the provider's coordinate conventions and resolution limitations.
 
 Both `planCRSProjection()` and `planProjectionPipeline()` return structured `unsupported` results
@@ -615,6 +718,7 @@ is unambiguous.
 
 | Export | Responsibility |
 | --- | --- |
+| `planProjection()` | Fits a caller-prepared 2D provider into a compiled adaptive program with structured failure results |
 | `compileProjectionPlan()` | Samples and subdivides a bounded projection into adaptive patches |
 | `GPUProjection` | Adds local Float32 or fp64-backed double-single projection work to a caller-owned command graph |
 | `createWebMercatorProjection()` | Provides a zero-dependency WGS84-to-Web-Mercator provider |
@@ -730,10 +834,32 @@ the captured reference before warmup and after timing. Reported CPU output/inter
 exclude JavaScript source objects, reference snapshots and provider-internal allocations.
 
 `oracleTimeMilliseconds` remains a one-projection-per-row callback/checksum baseline, not a
-matched multi-consumer workload. The sweeps use `@math.gl/proj4`'s `Proj4Projection.project`, backed
-by **proj4js JavaScript**, with the same finite/domain checks as the GPU workload. They do not
-benchmark the native C++ PROJ library. Provider construction and output allocation are outside
-CPU timing; callback/provider allocations and consumer writes are inside it.
+matched multi-consumer workload. Current sweeps use math.gl **5.0.0-alpha.13's TypeScript engine**,
+not a proj4js wrapper or the native C++ PROJ library. Provider construction and output allocation
+are outside CPU execution timing; callback/provider allocations and consumer writes are inside it.
+
+Pass `cpuVariants: createCRSProjectionCPUBenchmarks({projection, provider, isValid})`, importing
+the helper from `/gpu-project/crs`, to compare the retained transform's `projectToSync`,
+`projectFlatSync`, and `ProjectionBuffer` contiguous, strided and column APIs. `provider` should
+include the actual package version. `isValid` must match the oracle's finite/domain predicate.
+All six API/layout baselines run both consumer modes. Their domain checks, batch input packing,
+scatter, zero/validity writes and consumers are timed. Reusable scalar output writes directly;
+flat input is packed into its reusable in-place output. Buffers are reused;
+`preparationTimeMilliseconds` and `scratchByteLength` record adapter preparation/allocation
+separately. Scratch bytes exclude opaque provider/bulk internals and JS objects.
+Coordinate failures propagate: partially committed bulk output never produces a successful report.
+Every path is checked against the independent captured oracle before and after timing.
+CPU variants may declare `maximumError` (absolute Euclidean destination units, default zero),
+also accepted by `createCRSProjectionCPUBenchmarks`. Reports include allowed/observed CPU error.
+Validity and invalid-row zeros remain exact. Timed execution must also reproduce its initial
+validated outputs exactly; an error budget does not permit an unstable provider.
+
+`cpuComparisons` retains API, layout and provider labels for each resident speedup, without assuming bulk
+is fastest. `residentSpeedupOverCPU` retains its original allocating-scalar baseline for backward
+compatibility. Reports also separate caller-measured CPU provider preparation, GPU resource
+allocation/upload enqueue, the remaining upload/compile fence wait, and validation readbacks.
+These overlapping setup phases are not isolated PCIe transfer measurements or an end-to-end
+latency model. Resident speedups exclude them.
 
 Each GPU path reports `encodeAndSynchronizedTimeMilliseconds`, the distribution of per-sample
 CPU encoding plus submission-to-fence time. `residentSpeedupOverCPU` divides the **matching CPU

@@ -75,6 +75,12 @@ export type AssembleShaderOptions = {
   platformInfo: PlatformInfo;
   /** Inject shader id #defines */
   id?: string;
+  /** Input language compiled by a registered ShaderAssembler transpiler. Defaults to the target language. */
+  sourceLanguage?: string;
+  /** Select compute compilation independently of an optional WGSL entry-point name. */
+  shaderStage?: 'compute';
+  /** WGSL compute entry point selected by the compute pipeline. */
+  computeEntryPoint?: string;
   /** Modules to be injected */
   modules?: ShaderModule[];
   /** Boolean or numeric preprocessor defines evaluated before shader assembly. */

@@ -3,19 +3,36 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Deck, OrthographicView, type Layer, type PickingInfo} from '@deck.gl/core';
-import {ArrowPathLayer, ArrowPolygonLayer, ArrowTextLayer} from '@deck.gl-community/arrow-layers';
-import {makeArrowFixedSizeListVector, makeGPUVectorFromArrow} from '@luma.gl/arrow';
+import {
+  ArrowArcLayer,
+  ArrowColumnLayer,
+  ArrowLineLayer,
+  ArrowPathLayer,
+  ArrowPointCloudLayer,
+  ArrowPolygonLayer,
+  ArrowScatterplotLayer,
+  ArrowTextLayer,
+  ArrowTripsLayer
+} from '@deck.gl-community/arrow-layers';
+import {
+  ArrowPolygonRenderer,
+  makeArrowFixedSizeListVector,
+  makeGPUVectorFromArrow
+} from '@luma.gl/arrow';
+import {GPUPathLayer, GPUSolidPolygonLayer} from '@deck.gl-community/gpu-layers';
 import {expect, it} from 'vitest';
 import type {Device} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
 import {ShaderAssembler} from '@luma.gl/shadertools';
 import {buildBitmapFontAtlas} from '@luma.gl/text';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import * as arrow from 'apache-arrow';
 import {
   Field,
   FixedSizeList,
   Float32,
   Table,
+  Uint8,
   Vector,
   vectorFromArray,
   type RecordBatch
@@ -40,6 +57,301 @@ let restoreLegacyDeckShaderAssembler: (() => void) | null = null;
 afterAll(() => {
   restoreLegacyDeckShaderAssembler?.();
   finalizeSharedStorageDeck();
+});
+
+it('GPUVector-first Arrow fixed-width adapters create direct WebGPU models', async () => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device || isSoftwareBackedDevice(device)) {
+    void 0;
+    return;
+  }
+  const positions = makeArrowFixedSizeListVector(
+    new Float32(),
+    2,
+    new Float32Array([-20, -10, 0, 20, 20, -10])
+  );
+  const targets = makeArrowFixedSizeListVector(
+    new Float32(),
+    2,
+    new Float32Array([0, 20, 20, -10, -20, -10])
+  );
+  const positions3 = makeArrowFixedSizeListVector(
+    new Float32(),
+    3,
+    new Float32Array([-20, -10, 0, 0, 20, 2, 20, -10, 4])
+  );
+  const colors = makeArrowFixedSizeListVector(
+    new Uint8(),
+    4,
+    new Uint8Array([255, 80, 40, 255, 40, 180, 255, 255, 120, 255, 80, 255])
+  );
+  const data = new Table({positions, positions3, targets, colors});
+  const scatterplot = new ArrowScatterplotLayer({
+    id: 'gpu-vector-arrow-scatterplot',
+    data,
+    getPosition: 'positions',
+    getRadius: 4,
+    getFillColor: 'colors'
+  });
+  const lines = new ArrowLineLayer({
+    id: 'gpu-vector-arrow-lines',
+    data,
+    getSourcePosition: 'positions',
+    getTargetPosition: 'targets',
+    getColor: 'colors'
+  });
+  const arcs = new ArrowArcLayer({
+    id: 'gpu-vector-arrow-arcs',
+    data,
+    getSourcePosition: 'positions',
+    getTargetPosition: 'targets',
+    getSourceColor: 'colors',
+    getWidth: 2,
+    getHeight: 5
+  });
+  const columns = new ArrowColumnLayer({
+    id: 'gpu-vector-arrow-columns',
+    data,
+    getPosition: 'positions',
+    getFillColor: 'colors',
+    getRadius: 4,
+    getElevation: 5
+  });
+  const pointCloud = new ArrowPointCloudLayer({
+    id: 'gpu-vector-arrow-point-cloud',
+    data,
+    getPosition: 'positions3',
+    getColor: 'colors',
+    pointSize: 4
+  });
+  const {deck, parent} = createTestDeck(device);
+  try {
+    await waitForDeckInitialization(deck);
+    const layers = [scatterplot, lines, arcs, columns, pointCloud];
+    deck.setProps({layers});
+    const models = await waitForCompositeModels(layers);
+    await Promise.all(models.map(waitForPipeline));
+    expect(models.every(model => model.device.type === 'webgpu')).toBe(true);
+  } finally {
+    deck.finalize();
+    parent.remove();
+  }
+  void 0;
+});
+
+it('picks the global row from both physical scatterplot chunks', async context => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device || isSoftwareBackedDevice(device)) {
+    context.skip('Deck picking readback requires a hardware WebGPU device');
+    return;
+  }
+  const firstPositions = makeArrowFixedSizeListVector(
+    new Float32(),
+    2,
+    new Float32Array([-100, 0])
+  );
+  const secondPositions = makeArrowFixedSizeListVector(
+    new Float32(),
+    2,
+    new Float32Array([100, 0])
+  );
+  const positions = new arrow.Vector([...firstPositions.data, ...secondPositions.data]);
+  const layer = new ArrowScatterplotLayer({
+    id: 'chunked-scatterplot-picking',
+    data: new Table({positions}),
+    getPosition: 'positions',
+    getRadius: 10,
+    pickable: true
+  });
+  const {deck, parent} = createTestDeck(device);
+  // Keep z=0 inside WebGPU's 0..1 clip-depth range with deck.gl's projection module.
+  deck.setProps({views: new OrthographicView({id: 'main', near: -1000, far: 100})});
+  try {
+    await waitForDeckInitialization(deck);
+    deck.setProps({layers: [layer]});
+    const models = await waitForCompositeModels([layer]);
+    expect(models).toHaveLength(1);
+    await waitForPipeline(models[0]!);
+    deck.redraw(true);
+    for (const [rowIndex, position] of [
+      [-100, 0],
+      [100, 0]
+    ].entries()) {
+      const infos = await pickAtWorldPosition(deck, position);
+      expect(infos.map(info => info.index)).toEqual([rowIndex]);
+      expect((infos[0] as PickingInfo & {gpuVector: unknown}).gpuVector).toEqual({
+        rowIndex,
+        batchIndex: rowIndex,
+        batchRowIndex: 0
+      });
+    }
+  } finally {
+    deck.finalize();
+    parent.remove();
+  }
+});
+
+it('clips temporal path fragments at both ends of the trail window', async context => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device || isSoftwareBackedDevice(device)) {
+    context.skip('Deck picking readback requires a hardware WebGPU device');
+    return;
+  }
+  const pointType = new arrow.FixedSizeList(2, new arrow.Field('xy', new Float32(), false));
+  const pathType = new arrow.List(new arrow.Field('vertices', pointType, false));
+  const timestampType = new arrow.List(new arrow.Field('timestamp', new Float32(), false));
+  const paths = vectorFromArray(
+    [
+      [
+        [-100, 0],
+        [100, 0]
+      ]
+    ],
+    pathType
+  );
+  const timestamps = vectorFromArray([[0, 100]], timestampType);
+  const arrowTimestamps = arrow.makeVector(
+    arrow.makeData({
+      type: new arrow.List(new arrow.Field('timestamp', new arrow.TimeMillisecond(), false)),
+      length: 1,
+      valueOffsets: new Int32Array([0, 2]),
+      child: arrow.makeData({type: new arrow.TimeMillisecond(), data: new Int32Array([0, 100])})
+    })
+  );
+  const pathVector = makeGPUVectorFromArrow(device, paths, {format: 'vertex-list<float32x2>'});
+  const timestampVector = makeGPUVectorFromArrow(device, timestamps, {
+    format: 'vertex-list<float32>'
+  });
+  const {deck, parent} = createTestDeck(device);
+  // Keep z=0 inside WebGPU's 0..1 clip-depth range with deck.gl's projection module.
+  deck.setProps({views: new OrthographicView({id: 'main', near: -1000, far: 100})});
+  try {
+    await waitForDeckInitialization(deck);
+    for (const fadeTrail of [false, true]) {
+      const layers = [
+        new GPUPathLayer({
+          id: `gpu-temporal-clipping-${fadeTrail}`,
+          getPath: pathVector,
+          getTimestamps: timestampVector,
+          getWidth: 10,
+          currentTime: 50,
+          trailLength: 25,
+          fadeTrail,
+          pickable: true
+        }),
+        new ArrowTripsLayer({
+          id: `arrow-temporal-clipping-${fadeTrail}`,
+          data: new Table({paths, timestamps: arrowTimestamps}),
+          paths: 'paths',
+          timestamps: 'timestamps',
+          width: 5,
+          currentTime: 50,
+          trailLength: 25,
+          fadeTrail,
+          pickable: true
+        })
+      ];
+      for (const layer of layers) {
+        deck.setProps({layers: [layer]});
+        const model = await waitForLayerModel(layer);
+        await waitForPipeline(model);
+        deck.redraw(true);
+        // The segment spans times 0..100; only positions -50..0 are in times 25..50.
+        expect((await pickAtWorldPosition(deck, [-75, 0])).length).toBe(0);
+        expect((await pickAtWorldPosition(deck, [-25, 0])).map(info => info.index)).toEqual([0]);
+        expect((await pickAtWorldPosition(deck, [50, 0])).length).toBe(0);
+        deck.setProps({layers: []});
+      }
+    }
+  } finally {
+    deck.finalize();
+    parent.remove();
+    pathVector.destroy();
+    timestampVector.destroy();
+  }
+});
+
+async function pickAtWorldPosition(deck: Deck, position: number[]): Promise<PickingInfo[]> {
+  const [x, y] = deck.getViewports()[0]!.project(position);
+  const options = {x: x! - 2, y: y! - 2, width: 4, height: 4};
+  let infos = await deck.pickObjectsAsync(options);
+  // The first picking draw may create an asynchronous pipeline variant.
+  if (infos.length === 0) {
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    infos = await deck.pickObjectsAsync(options);
+  }
+  return infos;
+}
+
+it('GPUPathLayer renders variable-length GPUVectors without an Arrow dependency', async () => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device || isSoftwareBackedDevice(device)) {
+    void 0;
+    return;
+  }
+  const source = makeArrowLineSourceData(
+    {pathCount: 3, pointCount: 5, label: 'gpu path core'},
+    'lines',
+    'float32',
+    'row-colors',
+    'none'
+  );
+  const paths = makeGPUVectorFromArrow(device, source.sourceVectors.paths, {
+    name: 'paths',
+    id: 'gpu-path-core-paths',
+    format: 'vertex-list<float32x2>',
+    preserveDataChunks: true
+  });
+  const layer = new GPUPathLayer({id: 'gpu-path-core', getPath: paths, getWidth: 2});
+  const {deck, parent} = createTestDeck(device);
+  try {
+    await waitForDeckInitialization(deck);
+    deck.setProps({layers: [layer]});
+    const model = await waitForLayerModel(layer);
+    await waitForPipeline(model);
+  } finally {
+    deck.finalize();
+    parent.remove();
+    paths.destroy();
+  }
+  void 0;
+});
+
+it('GPUSolidPolygonLayer renders adapter-prepared tessellated GPUVectors', async () => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device || isSoftwareBackedDevice(device)) {
+    void 0;
+    return;
+  }
+  const source = makeArrowPolygonExampleData('10k-stream', 'polygon', 'row-colors');
+  const batch = source.recordBatches[0]!;
+  const prepared = await ArrowPolygonRenderer.convertToGPUVectors(
+    device,
+    {
+      polygons: batch.getChild('polygons')!.slice(0, 3) as never,
+      colors: batch.getChild('colors')!.slice(0, 3) as never
+    },
+    {id: 'gpu-solid-polygon-core', tessellated: source.tessellated}
+  );
+  const layer = new GPUSolidPolygonLayer({
+    id: 'gpu-solid-polygon-core',
+    positions: prepared.positions,
+    rowIndices: prepared.rowIndices,
+    indices: prepared.indices,
+    getFillColor: prepared.colors
+  });
+  const {deck, parent} = createTestDeck(device);
+  try {
+    await waitForDeckInitialization(deck);
+    deck.setProps({layers: [layer]});
+    const model = await waitForLayerModel(layer);
+    await waitForPipeline(model);
+  } finally {
+    deck.finalize();
+    parent.remove();
+    prepared.destroy();
+  }
+  void 0;
 });
 
 it('Arrow deck layers return source row indices from Deck picking', async () => {
@@ -705,6 +1017,21 @@ async function waitForLayerModel(
     await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
   }
   throw new Error(`${layer.id} did not create a draw model`);
+}
+
+async function waitForCompositeModels(layers: Layer[]): Promise<Model[]> {
+  const timeout = Date.now() + TEST_MODEL_TIMEOUT_MILLISECONDS;
+  while (Date.now() < timeout) {
+    const models = layers.flatMap(getLayerModels);
+    if (models.length === layers.length) return models;
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+  }
+  throw new Error('GPUVector Arrow composite layers did not create draw models');
+}
+
+function getLayerModels(layer: Layer): Model[] {
+  const subLayers = (layer as Layer & {getSubLayers?: () => Layer[]}).getSubLayers?.() ?? [];
+  return [...layer.getModels(), ...subLayers.flatMap(getLayerModels)];
 }
 
 async function waitForDrawableLayerModel(

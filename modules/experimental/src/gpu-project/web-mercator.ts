@@ -15,7 +15,7 @@ export const WEB_MERCATOR_MAX_LATITUDE = 85.05112877980659;
  * Creates a dependency-free WGS84 longitude/latitude to EPSG:3857 projection provider.
  *
  * This is primarily a convenient zero-dependency input to {@link compileProjectionPlan}. Other
- * coordinate reference systems are supplied by adapters such as `@math.gl/proj4`.
+ * coordinate reference systems are supplied by adapters such as `@math.gl/projection`.
  */
 export function createWebMercatorProjection(): Exclude<ProjectionProvider, Function> {
   return {

@@ -488,7 +488,9 @@ function createGeometry(
 ): Geometry {
   const attributes: Record<string, GeometryAttribute> = {};
   for (const [attributeName, attribute] of Object.entries(gltfPrimitive.attributes)) {
-    const {components, size, value, normalized} = attribute as GeometryAttribute;
+    const {components, size, value, normalized} = attribute as GeometryAttribute & {
+      components?: number;
+    };
 
     const isMorphAttribute =
       attributeName === 'POSITION' || attributeName === 'NORMAL' || attributeName === 'TANGENT';

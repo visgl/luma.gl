@@ -40,7 +40,7 @@ import {
   getTooltip
 } from './app-ui';
 
-const BASEMAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+const BASEMAP_STYLE = 'https://tiles.openfreemap.org/styles/dark';
 const INITIAL_ZONE_ID = 161;
 const MAX_RESIDENT_POINT_CAPACITY = 10_000_000;
 

@@ -13,6 +13,7 @@ export const DEVICE_DEFAULT_PROPS: Required<DeviceProps> = {
   featureLevel: undefined!,
   optionalFeatures: [],
   xrCompatible: false,
+  requiredLimits: undefined!,
   createCanvasContext: undefined!,
   // WebGL specific
   webgl: {},

@@ -219,6 +219,49 @@ it('GPUTableModel draws preserved batches and restores table-level bindings', ()
   void 0;
 });
 
+it('GPUTableModel binds batch attribute buffers at their chunk byte offsets', () => {
+  const device = new NullDevice({});
+  const sharedBuffer = device.createBuffer({data: new Float32Array(8)});
+  const makeSharedPositionsData = (rowOffset: number, rowCount: number) =>
+    new GPUVector({
+      type: 'buffer',
+      name: 'positions',
+      buffer: sharedBuffer,
+      format: 'float32x2',
+      length: rowCount,
+      byteOffset: rowOffset * Float32Array.BYTES_PER_ELEMENT * 2,
+      stride: 2,
+      byteStride: Float32Array.BYTES_PER_ELEMENT * 2
+    }).data[0];
+  const table = new GPUTable({
+    batches: [
+      new GPURecordBatch({gpuData: {positions: makeSharedPositionsData(1, 1)}}),
+      new GPURecordBatch({gpuData: {positions: makeSharedPositionsData(2, 2)}})
+    ]
+  });
+  const model = makeTableModel(device, table);
+  const renderPass = device.getDefaultRenderPass();
+  const drawByteOffsets: number[] = [];
+  const draw = renderPass.draw.bind(renderPass);
+  renderPass.draw = options => {
+    drawByteOffsets.push(model.vertexArray.attributeByteOffsets[0]);
+    return draw(options);
+  };
+
+  expect(model.vertexArray.attributeByteOffsets[0], 'binds the first chunk offset').toBe(8);
+  expect(Boolean(model.drawBatches(renderPass)), 'draws every preserved batch').toBe(true);
+  expect(drawByteOffsets, 'rebinds each batch at its chunk byte offset').toEqual([8, 16]);
+  expect(
+    model.vertexArray.attributeByteOffsets[0],
+    'restores the table-level chunk offset after batched drawing'
+  ).toBe(8);
+
+  renderPass.destroy();
+  model.destroy();
+  table.destroy();
+  sharedBuffer.destroy();
+});
+
 it('GPUTableModel binds reserved table indices for indexed draws', () => {
   const device = new NullDevice({});
   const indexValues = new Uint32Array([0, 1, 2, 2, 1, 0]);

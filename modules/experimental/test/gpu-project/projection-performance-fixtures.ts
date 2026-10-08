@@ -2,8 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Proj4Projection} from '@math.gl/proj4';
-import {planCRSProjection} from '@luma.gl/experimental/gpu-project/crs';
+import {Projection} from '@math.gl/projection';
+import {
+  planCRSProjection,
+  createCRSProjectionCPUBenchmarks
+} from '@luma.gl/experimental/gpu-project/crs';
 import type {ProjectionBounds, ProjectionCoordinates} from '@luma.gl/experimental/gpu-project';
 import type {ProjectionProgramBenchmarkOptions} from '@luma.gl/experimental/gpu-project/benchmarks';
 import {
@@ -87,19 +90,29 @@ export function makePerformanceOptions(
   rowCount: number,
   consumerCount: number
 ): ProjectionProgramBenchmarkOptions {
-  const provider = new Proj4Projection({from: 'EPSG:4326', to: fixture.serialized});
+  const preparationStart = performance.now();
+  const provider = new Projection({from: 'EPSG:4326', to: fixture.serialized});
+  const cpuProviderPreparationTimeMilliseconds = performance.now() - preparationStart;
   const bounds = fixture.bounds;
+  const isValid = (position: ProjectionCoordinates) =>
+    position.every(Number.isFinite) &&
+    position[0] >= bounds[0] &&
+    position[1] >= bounds[1] &&
+    position[0] <= bounds[2] &&
+    position[1] <= bounds[3];
+  const providerLabel = '@math.gl/projection 5.0.0-alpha.13 TypeScript';
   return {
     coordinates: makePerformanceCoordinates(bounds, rowCount),
     consumerCount,
-    oracleLabel: '@math.gl/proj4 Proj4Projection.project (proj4js)',
+    oracleLabel: providerLabel,
+    cpuProviderPreparationTimeMilliseconds,
+    cpuVariants: createCRSProjectionCPUBenchmarks({
+      projection: provider,
+      provider: providerLabel,
+      isValid
+    }),
     oracle: position => {
-      const valid =
-        position.every(Number.isFinite) &&
-        position[0] >= bounds[0] &&
-        position[1] >= bounds[1] &&
-        position[0] <= bounds[2] &&
-        position[1] <= bounds[3];
+      const valid = isValid(position);
       if (!valid) return {position: [0, 0], valid: false};
       const projected = provider.project([...position]);
       return {position: [projected[0], projected[1]], valid: true};

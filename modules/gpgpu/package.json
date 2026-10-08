@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/gpgpu",
-  "version": "10.0.0-alpha.2",
+  "version": "10.0.0-alpha.3",
   "description": "General-purpose GPU data, computation, and graph algorithms for luma.gl",
   "type": "module",
   "license": "MIT",
@@ -102,14 +102,14 @@
     "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
   },
   "peerDependencies": {
-    "@luma.gl/core": "~9.4.0-alpha.1",
-    "@luma.gl/engine": "~9.4.0-alpha.1",
-    "@luma.gl/shadertools": "~9.4.0-alpha.1",
-    "@luma.gl/webgpu": "~9.4.0-alpha.1"
+    "@luma.gl/core": "~10.0.0-alpha.2",
+    "@luma.gl/engine": "~10.0.0-alpha.2",
+    "@luma.gl/shadertools": "~10.0.0-alpha.2",
+    "@luma.gl/webgpu": "~10.0.0-alpha.2"
   },
   "dependencies": {
-    "@math.gl/core": "patch:@math.gl/core@npm%3A5.0.0-alpha.9#~/.yarn/patches/@math.gl-core-npm-5.0.0-alpha.9-2f20ecccc4.patch",
-    "@math.gl/types": "~5.0.0-alpha.9",
+    "@math.gl/core": "5.0.0-alpha.13",
+    "@math.gl/types": "~5.0.0-alpha.13",
     "@probe.gl/log": "^4.0.8",
     "@probe.gl/stats": "^4.0.8"
   }

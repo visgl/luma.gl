@@ -12,6 +12,16 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ## Upgrading to v10.0
 
+### CPU geometry validation
+
+Engine geometry now delegates CPU storage and tessellation to `@math.gl/geometry`.
+Indices must reference valid vertices across the entire supplied index array, including entries
+after an explicit draw count. Remove invalid unused indices before constructing a geometry.
+Uint8 indices supplied to the engine compatibility adapter are widened to Uint16.
+`TruncatedConeGeometry` defaults to a bottom radius of 1; provide explicit nonzero radii for
+frusta. Primitive tessellation order can change, so derive face metadata from normals rather
+than relying on vertex or index ordering.
+
 **@luma.gl/gpgpu**
 
 ### GPUFFT2D graph lifecycle
@@ -35,6 +45,10 @@ See [GPUFFT2D](./api-reference/experimental/gpu-core/gpu-fft2d) for the migratio
   renamed to `CompositeShaderPass`, `CompositeShaderPassStep`, and
   `CompositeShaderPassComputeOptimization`. Effect factories and values likewise replace their
   `ShaderPassPipeline` suffix with `CompositeShaderPass`.
+
+**@luma.gl/webgpu**
+
+- `WebGPUDevice.adapter` is now typed `GPUAdapter | null`. It is `null` for devices wrapped with `webgpuAdapter.attach()` / `luma.attachDevice()`, because a `GPUDevice` does not reference its `GPUAdapter`. Devices from `luma.createDevice()` still have an adapter; TypeScript code that reads `device.adapter` needs a null check or non-null assertion. Use `device.adapterInfo` for adapter metadata.
 
 **@luma.gl/experimental**
 

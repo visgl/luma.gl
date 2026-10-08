@@ -91,6 +91,13 @@ export {ModelNode} from './scenegraph/model-node';
 // Geometries
 export type {GeometryProps, GeometryAttribute, GeometryAttributeInput} from './geometry/geometry';
 export {Geometry} from './geometry/geometry';
+export {makeEdgeGeometry, makeEdgeGeometryFromGeometries} from './geometry/edge-geometry';
+export type {MakeEdgeGeometryOptions} from './geometry/edge-geometry';
+export {
+  makeStrokeGeometry,
+  type StrokeGeometryOptions,
+  type StrokePosition
+} from './geometry/stroke-geometry';
 export type {MakeInterleavedGeometryOptions} from './geometry/geometry-utils';
 export {makeInterleavedGeometry} from './geometry/geometry-utils';
 export type {
@@ -103,20 +110,20 @@ export type {GPUGeometryProps} from './geometry/gpu-geometry';
 export {GPUGeometry} from './geometry/gpu-geometry';
 
 // Primitives
-export type {ConeGeometryProps} from './geometries/cone-geometry';
-export {ConeGeometry} from './geometries/cone-geometry';
-export type {CubeGeometryProps} from './geometries/cube-geometry';
-export {CubeGeometry} from './geometries/cube-geometry';
-export type {CylinderGeometryProps} from './geometries/cylinder-geometry';
-export {CylinderGeometry} from './geometries/cylinder-geometry';
-export type {IcoSphereGeometryProps} from './geometries/ico-sphere-geometry';
-export {IcoSphereGeometry} from './geometries/ico-sphere-geometry';
-export type {PlaneGeometryProps} from './geometries/plane-geometry';
-export {PlaneGeometry} from './geometries/plane-geometry';
-export type {SphereGeometryProps} from './geometries/sphere-geometry';
-export {SphereGeometry} from './geometries/sphere-geometry';
-export type {TruncatedConeGeometryProps} from './geometries/truncated-cone-geometry';
-export {TruncatedConeGeometry} from './geometries/truncated-cone-geometry';
+export type {ConeGeometryProps} from './geometry/geometry-primitives';
+export {ConeGeometry} from './geometry/geometry-primitives';
+export type {CubeGeometryProps} from './geometry/geometry-primitives';
+export {CubeGeometry} from './geometry/geometry-primitives';
+export type {CylinderGeometryProps} from './geometry/geometry-primitives';
+export {CylinderGeometry} from './geometry/geometry-primitives';
+export type {IcoSphereGeometryProps} from './geometry/geometry-primitives';
+export {IcoSphereGeometry} from './geometry/geometry-primitives';
+export type {PlaneGeometryProps} from './geometry/geometry-primitives';
+export {PlaneGeometry} from './geometry/geometry-primitives';
+export type {SphereGeometryProps} from './geometry/geometry-primitives';
+export {SphereGeometry} from './geometry/geometry-primitives';
+export type {TruncatedConeGeometryProps} from './geometry/geometry-primitives';
+export {TruncatedConeGeometry} from './geometry/geometry-primitives';
 
 export {ShaderInputs} from './shader-inputs';
 export type {ShaderInputBinding, ShaderInputsProps} from './shader-inputs';

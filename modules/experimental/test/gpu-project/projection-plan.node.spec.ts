@@ -4,7 +4,7 @@
 
 import {readFileSync} from 'node:fs';
 
-import {Proj4Projection} from '@math.gl/proj4';
+import {Projection} from '@math.gl/projection';
 import * as experimentalModule from '@luma.gl/experimental';
 import * as projectionModule from '@luma.gl/experimental/gpu-project';
 import type {GraphDataView} from '@luma.gl/gpgpu/gpu-core';
@@ -92,7 +92,7 @@ describe('@luma.gl/experimental/gpu-project package boundary', () => {
       require: './dist/gpu-project/index.cjs',
       types: './dist/gpu-project/index.d.ts'
     });
-    expect(packageJson.dependencies?.['@math.gl/proj4']).toBeUndefined();
+    expect(packageJson.dependencies?.['@math.gl/projection']).toBeUndefined();
     expect(packageJson.dependencies?.proj4).toBeUndefined();
   });
 
@@ -160,8 +160,8 @@ describe('dependency-free Web Mercator projection provider', () => {
 });
 
 describe('CPU projection plan compilation', () => {
-  test('accepts math.gl 5 PROJJSON CRS definitions through Proj4Projection', () => {
-    const wgs84: NonNullable<ConstructorParameters<typeof Proj4Projection>[0]['from']> = {
+  test('accepts math.gl 5 PROJJSON CRS definitions through Projection', () => {
+    const wgs84: NonNullable<ConstructorParameters<typeof Projection>[0]['from']> = {
       type: 'GeographicCRS',
       name: 'WGS 84',
       datum: {
@@ -182,7 +182,7 @@ describe('CPU projection plan compilation', () => {
       },
       id: {authority: 'EPSG', code: 4326}
     };
-    const webMercator: NonNullable<ConstructorParameters<typeof Proj4Projection>[0]['to']> = {
+    const webMercator: NonNullable<ConstructorParameters<typeof Projection>[0]['to']> = {
       type: 'ProjectedCRS',
       name: 'WGS 84 / Pseudo-Mercator',
       base_crs: wgs84,
@@ -206,7 +206,7 @@ describe('CPU projection plan compilation', () => {
       },
       id: {authority: 'EPSG', code: 3857}
     };
-    const projection = new Proj4Projection({from: wgs84, to: webMercator});
+    const projection = new Projection({from: wgs84, to: webMercator});
     const plan = compileProjectionPlan({
       projection,
       bounds: [-122.45, 37.75, -122.4, 37.8],

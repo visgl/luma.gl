@@ -64,3 +64,30 @@ Check the compatibility section on the individual pass page.
 - [`@luma.gl/shadertools`](/docs/api-reference/shadertools)
 - [`ShaderPassRenderer`](/docs/api-reference/engine/passes/shader-pass-renderer)
 - [Experimental deferred rendering](/docs/api-reference/experimental/deferred-scene-renderer)
+
+## Selection outlines
+
+`selectionOutline` draws an outer contour around a caller-provided `selectionTexture`.
+Supply an `r8unorm` mask with selected visible surfaces set to one and other pixels to zero.
+The mask and source must use the same UV orientation. Render the mask against opaque scene
+depth when the outline should respect occlusion.
+
+```ts
+import {selectionOutline} from '@luma.gl/effects';
+import {ShaderPassRenderer} from '@luma.gl/engine';
+
+const renderer = new ShaderPassRenderer(device, {shaderPasses: [selectionOutline]});
+renderer.resize([width, height]);
+const result = renderer.renderToTexture({
+  sourceTexture,
+  bindings: {selectionTexture},
+  uniforms: {selectionOutline: {color: [0.12, 1, 0.7, 0.9], thickness: 2}}
+});
+```
+
+Both WebGPU and WebGL 2 are supported. `thickness` is a radius in mask pixels, clamped to
+0–8; zero disables the contour. A fixed 5×5 neighborhood samples the mask, so large radii
+are approximate and can miss isolated subpixel details. The default radius is 2 pixels.
+`color` is straight RGBA; the source and output use premultiplied alpha. The selected
+interior retains its source color. The renderer borrows the supplied textures and owns its
+intermediate targets; destroy it when finished.

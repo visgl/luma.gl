@@ -65,6 +65,8 @@ const config = {
         'react-strict-mode': '/examples/integrations/react-strict-mode',
         'shader-hooks': '/examples/tutorials/shader-hooks',
         'shader-modules': '/examples/tutorials/shader-modules',
+        'slang-shaders': '/examples/tutorials/slang-shaders',
+        'slang-particles': '/examples/tutorials/slang-particles',
         'texture-3d': '/examples/api/texture-3d',
         'texture-tester': '/examples/api/texture-tester',
         'video-texture': '/examples/api/video-texture',

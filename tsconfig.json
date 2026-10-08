@@ -70,6 +70,8 @@
       "@luma.gl/gpgpu/test/*": ["./modules/gpgpu/test/*"],
       "@luma.gl/scene": ["./modules/scene/src/index.ts"],
       "@luma.gl/scene/*": ["./modules/scene/src/*"],
+      "@luma.gl/slang": ["./modules/slang/src/index.ts"],
+      "@luma.gl/slang/*": ["./modules/slang/src/*"],
       "@luma.gl/shadertools": ["./modules/shadertools/src/index.ts"],
       "@luma.gl/shadertools/*": ["./modules/shadertools/src/*"],
       "@luma.gl/shadertools/test/*": ["./modules/shadertools/test/*"],

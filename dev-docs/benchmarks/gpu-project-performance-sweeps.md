@@ -1,4 +1,78 @@
-# GPU Project multi-patch and reuse measurements — 2026-09-16
+# GPU Project multi-patch, reuse and CPU API measurements
+
+## math.gl alpha.13 rebaseline — 2026-10-08
+
+P.8a.1 adds six CPU API/layout baselines to the same double-single GPU workload. At 65K rows,
+the flat CPU path materially reduces the apparent GPU advantage: four-consumer Albers is nearly
+tied, while the UTM cases retain a roughly 3x resident advantage in materialized mode on this
+device. At 4K rows, the fastest materialized CPU path beats both measured GPU variants in all
+six fixture/reuse cases. These results do not select a backend or change precision defaults.
+
+[Raw schema-v3 JSONL](data/gpu-project-performance-2026-10-08.jsonl) contains all 12 cases,
+distributions, CPU APIs/layouts, memory, setup, per-baseline speedups and device metadata.
+Captured at 15:43:49–15:44:31 UTC from implementation commit `2dd9082aa`, based on master
+`afc7822e3`, with math.gl **5.0.0-alpha.13** (published source revision
+`4c52326098194bd1b290a72a512a328d10565bfd`). The adapter reports Apple `metal-3`, non-fallback,
+and Chromium 151; it does not expose an exact GPU model or driver. This task's build/test jobs
+were not running concurrently with the capture; unrelated workstation activity was not isolated.
+
+### Matched materialized results
+
+Each row has 65,536 regular coordinates, nine valid boundary/seam probes and two invalid rows
+(65,547 total). Times are medians in milliseconds over five samples after two warmups. Both CPU
+and GPU project once and write the same one or four axis-swap consumers. CPU columns show
+allocating scalar versus the fastest measured CPU API, `projectFlatSync`. The GPU column selects
+the faster measured degree for that row; the raw data retains both degrees and inline paths.
+
+| Domain | Consumers | Scalar CPU ms | Flat CPU ms | GPU degree / patches | Resident GPU ms | Flat CPU / GPU |
+| --- | ---: | ---: | ---: | --- | ---: | ---: |
+| UTM local | 1 | 26.2 | 18.0 | 2 / 16 | 7.0 | 2.57x |
+| UTM local | 4 | 27.5 | 18.8 | 2 / 16 | 6.4 | 2.94x |
+| UTM regional | 1 | 27.4 | 17.7 | 3 / 4 | 5.2 | 3.40x |
+| UTM regional | 4 | 26.5 | 18.2 | 3 / 4 | 5.6 | 3.25x |
+| Albers regional | 1 | 14.3 | 6.3 | 3 / 4 | 5.6 | 1.13x |
+| Albers regional | 4 | 14.7 | 5.8 | 3 / 4 | 5.6 | 1.04x |
+
+The Albers four-consumer speedup would look like 2.63x against allocating scalar, versus only
+1.04x against flat CPU. Such a small difference is not a robust GPU win. Bulk flat/strided/column
+APIs were slower than `projectFlatSync` here; fewer allocations do not guarantee lower execution
+time. UTM local also shows that fewer patches alone do not guarantee faster execution: cubic
+evaluation has different arithmetic cost. These sweeps do not isolate routing cost.
+
+### Scope of the refreshed harness
+
+- Six CPU baselines: allocating scalar, reusable `projectToSync`, contiguous in-place
+  `projectFlatSync`, and `ProjectionBuffer` contiguous, stride-3 and column output.
+- The same finite/domain predicate is timed. Reusable scalar writes directly; batch paths pack
+  valid rows into reusable buffers, transform them, then scatter with zero/validity semantics.
+  Input packing, writes and consumers are included. Allocations and engine preparation are
+  separately reported. A coordinate exception aborts the benchmark; prefix-committed bulk
+  output is never reported as successful. Adapter scratch bytes exclude opaque provider internals.
+- Both adaptive degrees fit at 0.5 mm and every GPU row/consumer must pass a 1 mm Euclidean
+  output budget before and after timing. Maximum observed error in this capture was below
+  0.30 mm. CPU output is binary64; GPU arithmetic/output remains double-single, not Float32.
+- The independent serialized oracle shares math.gl's algorithm implementation with the fit;
+  this tests approximation, not independent PROJ algorithm correctness. Error sampling is not a
+  certified global bound.
+- Resident GPU time includes CPU encoding plus submission-to-fence time. GPU resource
+  allocation/upload enqueue, graph compilation, remaining upload/compile fence wait, first use,
+  and validation readbacks are separate. They are not an isolated transfer benchmark, nor an
+  end-to-end speedup claim. Timestamp instrumentation is disabled for production-like pass coalescing.
+- API/degree ordering, JIT/cache state, system load and thermal behavior can affect these five-sample
+  medians. No confidence interval, cross-vendor generalization, or automatic selection threshold
+  is claimed. P.8a.2 real-consumer/cross-vendor work remains open.
+
+Reproduce from the repository root after other task builds/tests finish:
+
+```sh
+VITE_LUPROJ_SWEEP_ROWS=4096,65536 VITE_LUPROJ_SWEEP_CONSUMERS=1,4 \
+  yarn test-browser-benchmarks --silent=false --reporter=verbose \
+  modules/experimental/test/gpu-project/projection-performance.spec.ts
+```
+
+## Historical baseline — 2026-09-16
+
+The following report and its original raw data are preserved with their original versions.
 
 ## Scope and reproducibility
 
@@ -141,8 +215,8 @@ A subsequent isolated capture adds CPU baselines to the same 18-case uninstrumen
 [CPU/GPU JSONL reports](data/gpu-project-cpu-comparison-2026-09-16.jsonl).
 These schema-version-2 records ran from 2026-09-16T22:20:19.224Z to 2026-09-16T22:20:50.842Z
 on the same adapter/browser described above. CPU reference versions were
-`@math.gl/proj4 5.0.0-alpha.5` and `proj4 2.21.0`. This is the JavaScript
-`Proj4Projection.project()` implementation, **not native C++ PROJ**.
+`@math.gl/projection 5.0.0-alpha.5` and `proj4 2.21.0`. This is the JavaScript
+`Projection.project()` implementation, **not native C++ PROJ**.
 
 The oracle wrapper applies the same finite/domain validity checks and calls an already-constructed
 CPU projection. `oracleTimeMilliseconds` measures one callback per source row plus a checksum,

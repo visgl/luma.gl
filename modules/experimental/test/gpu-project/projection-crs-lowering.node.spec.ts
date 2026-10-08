@@ -4,7 +4,7 @@
 
 import {describe, expect, it, vi} from 'vitest';
 import type {ReadonlyCRSDefinition} from '@math.gl/crs';
-import {Proj4Projection} from '@math.gl/proj4';
+import {Projection} from '@math.gl/projection';
 import {
   evaluateProjectionProgram,
   invertProjectionProgram
@@ -48,7 +48,7 @@ describe('native PROJJSON frame lowering', () => {
         ]
       }
     } as const;
-    const project = vi.spyOn(Proj4Projection.prototype, 'project');
+    const project = vi.spyOn(Projection.prototype, 'project');
     try {
       const result = requireNative(
         planCRSProjection({
@@ -226,8 +226,8 @@ describe('native PROJJSON frame lowering', () => {
         };
         const result = requireNative(planCRSProjection({from: source, to: target}));
         const geographic = [zone * 6 - 183 + 1.25, southernHemisphere ? -38 : 38];
-        const position = new Proj4Projection({from: 'EPSG:4326', to: source}).project(geographic);
-        const expected = new Proj4Projection({from: source, to: target}).project(position);
+        const position = new Projection({from: 'EPSG:4326', to: source}).project(geographic);
+        const expected = new Projection({from: source, to: target}).project(position);
         const actual = evaluateProjectionProgram(result.program, [
           position[0],
           position[1]
@@ -473,7 +473,6 @@ describe('native PROJJSON frame lowering', () => {
       }
     };
     for (const from of [
-      angular,
       mixed,
       {
         ...geographicCRS,
@@ -488,6 +487,7 @@ describe('native PROJJSON frame lowering', () => {
       expect(result.reasons.at(-1)?.code).toBe('unsupported-unit');
     }
     const ambiguous = {
+      // Per-axis inconsistency remains unsupported; uniform angular units are now supported.
       ...geographicCRS,
       datum: {
         ...geographicCRS.datum,
@@ -497,6 +497,14 @@ describe('native PROJJSON frame lowering', () => {
     expect(planCRSProjection({from: ambiguous, to: ambiguous}).reasons[0].code).toBe(
       'invalid-definition'
     );
+    expect(
+      planCRSProjection({
+        from: angular,
+        to: 'EPSG:3857',
+        bounds: [-0.01, -0.01, 0.01, 0.01],
+        tolerance: 0.001
+      }).status
+    ).toBe('ready');
   });
 
   it('retains reference identifiers and unknown defining fields while accepting property reordering', () => {

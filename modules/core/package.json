@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/core",
-  "version": "10.0.0-alpha.2",
+  "version": "10.0.0-alpha.3",
   "description": "The luma.gl core Device API",
   "license": "MIT",
   "type": "module",
@@ -40,7 +40,7 @@
     "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
   },
   "dependencies": {
-    "@math.gl/types": "~5.0.0-alpha.9",
+    "@math.gl/types": "~5.0.0-alpha.13",
     "@probe.gl/env": "^4.1.1",
     "@probe.gl/log": "^4.1.1",
     "@probe.gl/stats": "^4.1.1",

@@ -99,19 +99,6 @@ export function normalizeCRSProviderDefinition(
       'invalid-definition',
       'conic latitude, standard parallels or scale are degenerate'
     );
-  if (method === 9801) {
-    // proj4js needs the tangent parallel explicitly; EPSG 9801 defines it by the natural origin.
-    parameters.set(8823, {...PARAMETERS.get(8823)!, value: latitude});
-    parameters.set(8824, {...PARAMETERS.get(8824)!, value: latitude});
-  } else if (method === 9802 && (firstParallel === 0 || secondParallel === 0)) {
-    // proj4js replaces zero lat1 with lat0 and zero LCC lat2 with lat1. Swapping cannot help.
-    return decline('unsupported-parameter', 'provider cannot preserve zero LCC standard parallels');
-  } else if (method === 9822 && firstParallel === 0) {
-    // Albers preserves zero lat2, but the shared provider setup replaces zero lat1 with lat0.
-    // The two parallels are symmetric, so put the nonzero parallel first.
-    parameters.set(8823, {...PARAMETERS.get(8823)!, value: secondParallel});
-    parameters.set(8824, {...PARAMETERS.get(8824)!, value: firstParallel});
-  }
   // Reconstruct in semantic order: the provider visits base CRS before conversion and output axes.
   // CRS registry identifiers must not override the explicit conversion via provider alias shortcuts.
   const {
