@@ -2,20 +2,17 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {VertexFormat} from '@luma.gl/core';
+import type {BufferLayout, VertexFormat} from '@luma.gl/core';
 import {vertexFormatDecoder} from '@luma.gl/core';
 import type {TypedArray} from '@math.gl/core';
+import type {Geometry as MathGeometry} from '@math.gl/geometry';
+export {unpackIndexedGeometry} from '@math.gl/geometry';
 import {Geometry, getGeometryShaderAttributeName, type GeometryAttribute} from './geometry';
 
 type TypedArrayConstructor = {
   new (length: number): TypedArray;
   new (buffer: ArrayBufferLike): TypedArray;
   readonly BYTES_PER_ELEMENT: number;
-};
-
-type GeometryLike = {
-  indices?: GeometryAttribute;
-  attributes: Record<string, GeometryAttribute | undefined>;
 };
 
 /** Options for {@link makeInterleavedGeometry}. */
@@ -45,48 +42,6 @@ type InterleavedAttribute = {
 };
 
 /**
- * Expands indexed geometry attributes into non-indexed attributes.
- *
- * The returned object keeps the original attribute keys and replaces each non-constant attribute
- * with data expanded through the index buffer. The `indices` field is intentionally omitted from
- * the returned geometry-like object.
- */
-export function unpackIndexedGeometry<T extends GeometryLike>(geometry: T): GeometryLike {
-  const {indices, attributes} = geometry;
-  if (!indices) {
-    return geometry;
-  }
-
-  const vertexCount = indices.value.length;
-  const unpackedAttributes: Record<string, GeometryAttribute> = {};
-
-  for (const attributeName in attributes) {
-    const attribute = attributes[attributeName];
-    if (!attribute) {
-      continue; // eslint-disable-line
-    }
-    const {value, size} = attribute;
-    const constant = attribute['constant'];
-    if (constant || !size) {
-      continue; // eslint-disable-line
-    }
-    const ArrayType = value.constructor as TypedArrayConstructor;
-    const unpackedValue = new ArrayType(vertexCount * size);
-    for (let x = 0; x < vertexCount; ++x) {
-      const index = indices.value[x];
-      for (let i = 0; i < size; i++) {
-        unpackedValue[x * size + i] = value[index * size + i];
-      }
-    }
-    unpackedAttributes[attributeName] = {size, value: unpackedValue};
-  }
-
-  return {
-    attributes: Object.assign({}, attributes, unpackedAttributes)
-  };
-}
-
-/**
  * Packs a CPU {@link Geometry} into one interleaved vertex buffer.
  *
  * The returned value is a normal `Geometry` whose `attributes` contains one packed typed array,
@@ -95,7 +50,7 @@ export function unpackIndexedGeometry<T extends GeometryLike>(geometry: T): Geom
  * idempotent and returns the original instance.
  */
 export function makeInterleavedGeometry(
-  geometry: Geometry,
+  geometry: MathGeometry & {bufferLayout?: BufferLayout[]},
   options: MakeInterleavedGeometryOptions = {}
 ): Geometry {
   const bufferName = options.bufferName || 'geometry';
@@ -183,8 +138,11 @@ export function makeInterleavedGeometry(
   });
 }
 
-function isInterleavedGeometry(geometry: Geometry, bufferName: string): boolean {
-  if (geometry.bufferLayout.length !== 1) {
+function isInterleavedGeometry(
+  geometry: MathGeometry & {bufferLayout?: BufferLayout[]},
+  bufferName: string
+): geometry is Geometry {
+  if (geometry.bufferLayout?.length !== 1) {
     return false;
   }
 
@@ -197,13 +155,17 @@ function isInterleavedGeometry(geometry: Geometry, bufferName: string): boolean 
 }
 
 function getInterleavedSourceAttributes(
-  geometry: Geometry,
+  geometry: MathGeometry,
   attributeNames?: string[]
 ): Array<[string, GeometryAttribute | undefined]> {
   if (attributeNames) {
     return attributeNames.map(attributeName => [attributeName, geometry.attributes[attributeName]]);
   }
-  return Object.entries(geometry.attributes);
+  const attributes = new Map<string, [string, GeometryAttribute]>();
+  for (const [name, attribute] of Object.entries(geometry.attributes)) {
+    attributes.set(getGeometryShaderAttributeName(name), [name, attribute]);
+  }
+  return Array.from(attributes.values());
 }
 
 function writeInterleavedAttribute(
@@ -236,19 +198,3 @@ function writeInterleavedAttribute(
 function alignTo(byteOffset: number, alignment: number): number {
   return Math.ceil(byteOffset / alignment) * alignment;
 }
-
-// export function calculateVertexNormals(positions: Float32Array): Uint8Array {
-//   let normals = new Uint8Array(positions.length / 3);
-
-//   for (let i = 0; i < positions.length; i++) {
-//     const vec1 = new Vector3(positions.subarray(i * 3, i + 0, i + 3));
-//     const vec2 = new Vector3(positions.subarray(i + 3, i + 6));
-//     const vec3 = new Vector3(positions.subarray(i + 6, i + 9));
-
-//     const normal = new Vector3(vec1).cross(vec2).normalize();
-//     normals.set(normal[0], i + 4);
-//     normals.set(normal[1], i + 4 + 1);
-//     normals.set(normal[2], i + 2);
-//   }
-//   const normal = new Vector3(vec1).cross(vec2).normalize();
-// }

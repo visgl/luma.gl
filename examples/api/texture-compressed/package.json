@@ -13,7 +13,7 @@
     "@luma.gl/shadertools": "10.0.0-alpha.3",
     "@luma.gl/webgl": "10.0.0-alpha.3",
     "@luma.gl/webgpu": "10.0.0-alpha.3",
-    "@math.gl/core": "5.0.0-alpha.12",
+    "@math.gl/core": "5.0.0-alpha.13",
     "ktx-parse": "^1.1.0"
   },
   "devDependencies": {

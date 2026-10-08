@@ -25,34 +25,12 @@ const BUILT_IN_GEOMETRY_TESTS = [
   {name: 'TruncatedConeGeometry', Geometry: TruncatedConeGeometry}
 ];
 
-it('CubeGeometry exposes stable face indices for indexed and non-indexed cubes', () => {
-  const indexedCube = new CubeGeometry({indices: true});
-  const nonIndexedCube = new CubeGeometry({indices: false});
-
-  expect(indexedCube.attributes.faceIndex, 'indexed cube includes faceIndex').toBeTruthy();
-  expect(
-    indexedCube.attributes.faceIndex?.value,
-    'indexed cube stores one semantic face id per duplicated vertex'
-  ).toEqual(
-    new Uint32Array([0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5])
-  );
-  expect(nonIndexedCube.attributes.faceIndex, 'non-indexed cube includes faceIndex').toBeTruthy();
-  expect(
-    nonIndexedCube.attributes.faceIndex?.value,
-    'non-indexed cube preserves semantic face ids across its vertex block order'
-  ).toEqual(
-    new Uint32Array([
-      3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 2, 2, 2, 2, 2, 2, 5, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0, 1,
-      1, 1, 1, 1, 1
-    ])
-  );
-});
-
 it('makeGPUGeometry interleaves built-in geometry attributes', async () => {
   const device = await getWebGLTestDevice();
 
   for (const {name, Geometry} of BUILT_IN_GEOMETRY_TESTS) {
-    const gpuGeometry = makeGPUGeometry(device, new Geometry());
+    const geometry = new Geometry();
+    const gpuGeometry = makeGPUGeometry(device, geometry);
     const bufferLayout = gpuGeometry.bufferLayout[0];
 
     expect(Object.keys(gpuGeometry.attributes), `${name}: has one vertex buffer`).toEqual([
@@ -64,7 +42,9 @@ it('makeGPUGeometry interleaves built-in geometry attributes', async () => {
       bufferLayout.attributes?.length,
       `${name}: buffer layout maps geometry attributes`
     ).toBeTruthy();
-    expect(gpuGeometry.indices, `${name}: keeps index buffer`).toBeTruthy();
+    expect(Boolean(gpuGeometry.indices), `${name}: preserves indexed storage`).toBe(
+      Boolean(geometry.indices)
+    );
 
     gpuGeometry.destroy();
   }

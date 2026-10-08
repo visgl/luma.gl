@@ -12,6 +12,16 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ## Upgrading to v10.0
 
+### CPU geometry validation
+
+Engine geometry now delegates CPU storage and tessellation to `@math.gl/geometry`.
+Indices must reference valid vertices across the entire supplied index array, including entries
+after an explicit draw count. Remove invalid unused indices before constructing a geometry.
+Uint8 indices supplied to the engine compatibility adapter are widened to Uint16.
+`TruncatedConeGeometry` defaults to a bottom radius of 1; provide explicit nonzero radii for
+frusta. Primitive tessellation order can change, so derive face metadata from normals rather
+than relying on vertex or index ordering.
+
 **@luma.gl/gpgpu**
 
 ### GPUFFT2D graph lifecycle
