@@ -11,6 +11,8 @@ import {prepareProjectionReferences} from './projection-crs-input';
 export {prepareCRSProjection, prepareCRSProjectionAsync} from './projection-engine';
 export type {PrepareCRSProjectionOptions, PreparedCRSProjectionResult} from './projection-engine';
 export {createCRSProjectionCPUBenchmarks} from './projection-crs-benchmark';
+export {ProjectionTableTransform, ProjectionTableError} from './projection-table-transform';
+export type {ProjectionTableBatch, ProjectedTableBatch} from './projection-table-transform';
 import {
   evaluateProjectionProgram,
   invertProjectionProgram,

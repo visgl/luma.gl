@@ -268,6 +268,92 @@ bounds describe stage coordinates, not necessarily the original input coordinate
 arithmetic rounding and native series truncation; they must not be used as certified global error bounds. `local-f32` output
 still rounds at the final origin-relative output boundary.
 
+## Batch-preserving CPU/GPU table projection
+
+`ProjectionTableTransform` from `@luma.gl/experimental/gpu-project/crs` uses a ready
+`prepareCRSProjection()` result for explicit CPU or GPU execution. This first table adapter is
+strictly 2D and requires the default raw-binary64 input format (`uint32x4` on GPU).
+It retains the prepared CPU transform, original spatial references and sampled GPU error metadata.
+Keep the prepared transform and its program unchanged while using the consumer.
+
+```typescript
+import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {
+  prepareCRSProjection,
+  ProjectionTableTransform
+} from '@luma.gl/experimental/gpu-project/crs';
+
+const prepared = prepareCRSProjection({
+  from: 'EPSG:4326',
+  to: '+proj=utm +zone=10 +datum=WGS84',
+  bounds: [-122.5, 37.7, -122.3, 37.9],
+  tolerance: 0.0001
+});
+if (prepared.status !== 'ready') throw new Error('Unsupported projection');
+const transform = new ProjectionTableTransform(prepared);
+
+// CPU choice: each yielded batch owns its new binary64 positions and uint32 validity.
+// cpuBatches is an iterable of {positions: Float64Array, inputValidity?: Uint32Array,
+// sourceInfo?, metadata?}. Each positions array contains tightly packed coordinate pairs.
+for (const output of transform.projectBatches(cpuBatches)) {
+  consumeCPU(output);
+}
+
+// GPU choice: gpuTable is already resident. Upload is a separate application/Arrow-adapter step.
+const projected = transform.createGPUProjectionTable(device, {
+  id: 'utm-table',
+  table: gpuTable,
+  positions: 'coordinates', // packed uint32x4: x-low-word, x-high-word, y-low-word, y-high-word
+  inputValidity: 'selected' // optional packed uint32: zero invalid, nonzero valid
+});
+const graph = new GPUCommandGraph(device);
+projected.addToGraph(graph);
+// projected.table has only positions and validity columns. Add downstream graph consumers here.
+const compiled = graph.compile();
+const encoder = device.createCommandEncoder();
+compiled.encode(encoder, {parameters: undefined});
+device.submit(encoder.finish());
+// When submitted work completes and consumers no longer need these resources:
+// compiled.destroy(); projected.destroy();
+```
+
+`projectBatch()` processes one batch; `projectBatches()` is a lazy synchronous iterator, so callers
+can also process async streams with `for await (...) { transform.projectBatch(batch); }`.
+Neither method concatenates batches. Source arrays (including subarray views), batch identity
+and opaque batch metadata are preserved; output metadata and `sourceInfo` are copied.
+
+Both paths keep row order and write deterministic zero positions with validity `0` for masked,
+nonfinite or out-of-domain input. CPU output uses the retained provider, not the fitted polynomial.
+An in-domain provider exception or nonfinite result throws `ProjectionTableError` with `rowIndex`,
+`sourceInfo` and `cause`. The failing batch is never published; previously yielded batches remain
+committed. Reusable scalar output is intentional: math.gl bulk prefix-commit failures must not
+leak partially written batches or be mistaken for ordinary invalid GPU rows. GPU approximation
+does not call the provider at runtime; it cannot report newly introduced provider failures.
+
+| Path | Positions | Reconstruction for valid rows |
+| --- | --- | --- |
+| CPU | `Float64Array`, `encoding: 'float64-absolute'` | Absolute destination coordinates |
+| GPU default double-single | `GPUVector<'float32x4'>` | `[xHigh + xLow, yHigh + yLow]` |
+| GPU explicit local-f32 | `GPUVector<'float32x2'>` | Add `prepared.compiled.destinationOrigin` |
+
+GPU output contains one owned position buffer and one owned validity buffer per source batch,
+including empty batches. No unrelated source columns are copied into the derived table; use
+`sourceInfo` or matching batch/row offsets to join application attributes. The validity column is
+authoritative: output `nullCount` is not computed via hidden readback. The contributor snapshots
+the current batch topology; create another contributor for subsequently appended batches.
+
+Input chunks are borrowed and must remain alive until submitted work completes. Output aggregate
+vectors borrow their chunks; `projected.destroy()` releases owned output and parameter buffers,
+not the source table or graph. Registration is once-only and does not submit. On registration
+failure, discard the partially constructed graph and destroy the contributor. Readback, repacking,
+backend selection and CPU/GPU precision conversion are always application decisions.
+
+The adapter rejects indexed tables, missing/constant selected columns, nonpacked layouts, native
+null bitmaps and wrong-device/non-storage buffers. A batch declaring null rows requires an explicit
+validity column; convert null bitmaps in a source adapter. Arrow ingestion/readback remains in
+`@luma.gl/arrow`, not GPU Project. `GPUProjectionTable` is also exported from the engine-independent
+`@luma.gl/experimental/gpu-project` entry point for already compiled binary64-input programs.
+
 ## Explicit longitude normalization
 
 `{type: 'longitude-wrap', interval: [minimum, maximum], seamTolerance?}` reduces the first

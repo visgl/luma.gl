@@ -51,6 +51,8 @@ export type {
   ProjectionShader
 } from './projection-program';
 export {GPUProjectionProgram} from './gpu-projection-program';
+export {GPUProjectionTable} from './gpu-projection-table';
+export type {GPUProjectionTableProps, ProjectedGPUTableColumns} from './gpu-projection-table';
 export {getProjectionProgramMetadata} from './projection-metadata';
 export type {
   ProjectionErrorMetadata,
