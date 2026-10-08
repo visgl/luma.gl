@@ -849,8 +849,12 @@ flat input is packed into its reusable in-place output. Buffers are reused;
 separately. Scratch bytes exclude opaque provider/bulk internals and JS objects.
 Coordinate failures propagate: partially committed bulk output never produces a successful report.
 Every path is checked against the independent captured oracle before and after timing.
+CPU variants may declare `maximumError` (absolute Euclidean destination units, default zero),
+also accepted by `createCRSProjectionCPUBenchmarks`. Reports include allowed/observed CPU error.
+Validity and invalid-row zeros remain exact. Timed execution must also reproduce its initial
+validated outputs exactly; an error budget does not permit an unstable provider.
 
-`cpuComparisons` reports resident speedup for each matching CPU API/layout, without assuming bulk
+`cpuComparisons` retains API, layout and provider labels for each resident speedup, without assuming bulk
 is fastest. `residentSpeedupOverCPU` retains its original allocating-scalar baseline for backward
 compatibility. Reports also separate caller-measured CPU provider preparation, GPU resource
 allocation/upload enqueue, the remaining upload/compile fence wait, and validation readbacks.

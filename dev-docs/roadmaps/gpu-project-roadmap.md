@@ -247,9 +247,10 @@ changing the default precision. The [P.8a local sweeps](../benchmarks/gpu-projec
 add 1–256 patches, row-count and consumer-reuse comparisons at an equal double-single error budget.
 Other vendors, isolated routing costs and real consumers remain evidence requirements for P.6/P.8.
 
-Historical CPU reports identify math.gl alpha.5/proj4 2.21.0. Preserve those results and their
-version labels; they are not alpha.13 measurements. The existing matched scalar harness remains
-useful, but is not a comparison against the new bulk/reusable-output paths. Comparing a fit with
+Historical CPU reports identify math.gl alpha.5/proj4 2.21.0. Those results and their version labels
+are preserved. The [2026-10-08 rebaseline](../benchmarks/gpu-project-performance-sweeps.md)
+compares six alpha.13 CPU API/layouts: flat CPU is fastest in the measured 65K-row cases and
+materialized Albers is nearly tied with GPU. Comparing a fit with
 the same CPU engine validates approximation, not independent algorithm correctness; use
 independently generated PROJ fixtures for semantic/numerical qualification.
 

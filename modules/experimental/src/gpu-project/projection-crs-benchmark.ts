@@ -13,6 +13,8 @@ export function createCRSProjectionCPUBenchmarks(options: {
   projection: Pick<ProjectionInstance, 'projectToSync' | 'unprojectToSync' | 'projectFlatSync'>;
   /** Include the actual math.gl version in reproducible measurements. */
   provider: string;
+  /** Optional CPU/reference error budget; default zero preserves exact comparisons. */
+  maximumError?: number;
   /** Same explicit domain predicate as the GPU benchmark's independent oracle. */
   isValid: (coordinate: ProjectionCoordinates) => boolean;
 }): ProjectionProgramCPUVariant[] {
@@ -24,6 +26,7 @@ export function createCRSProjectionCPUBenchmarks(options: {
     'ProjectionBuffer.projectFlatTo(stride=3)'
   ].map(api => ({
     api,
+    maximumError: options.maximumError,
     layout:
       api === 'ProjectionBuffer.projectColumnsTo'
         ? 'columns'

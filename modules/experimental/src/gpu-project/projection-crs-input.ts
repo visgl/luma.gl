@@ -35,6 +35,21 @@ export type ProjectionReference = {
   readonly input: TypeScriptCRSInput;
 };
 
+/** Keep semantic preparation failures distinct from engine construction/loading failures. */
+export function prepareProjectionReferences(
+  inputs: readonly TypeScriptCRSInput[],
+  options?: CRSNormalizationOptions
+): ProjectionReference[] {
+  try {
+    const references = inputs.map(resolveProjectionReference);
+    normalizeProjectionReferences(references, options);
+    return references;
+  } catch (error) {
+    if (error instanceof ProjectionPlanningError) throw error;
+    declineProjection('invalid-definition', error instanceof Error ? error.message : String(error));
+  }
+}
+
 /** Retain immutable source metadata separately from the provider's canonical definition. */
 export function resolveProjectionReference(input: TypeScriptCRSInput): ProjectionReference {
   const reference = createSpatialReference(

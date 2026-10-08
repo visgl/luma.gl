@@ -214,6 +214,19 @@ describe('spatial-reference semantics', () => {
     {coordinateFrame: 'projected'},
     {coordinateFrame: 'geocentric'}
   ];
+  it.each<Partial<SpatialReference>>([
+    {units: ['m', 'm']},
+    {coordinateOrder: ['longitude', 'longitude']},
+    {coordinateFrame: 'projected'}
+  ])('preserves semantic normalization failures instead of reporting an unavailable provider: %j', async metadata => {
+    const engine = {createProjection: vi.fn(), createProjectionAsync: vi.fn()};
+    const from = createSpatialReference({...source, ...metadata});
+    const expected = {status: 'unsupported', reasons: [{code: 'invalid-definition'}]};
+    expect(prepareCRSProjection({...options, from, engine})).toMatchObject(expected);
+    expect(await prepareCRSProjectionAsync({...options, from, engine})).toMatchObject(expected);
+    expect(engine.createProjection).not.toHaveBeenCalled();
+    expect(engine.createProjectionAsync).not.toHaveBeenCalled();
+  });
   it.each(
     invalid
   )('rejects unsupported metadata before constructing or loading an engine: %j', async metadata => {

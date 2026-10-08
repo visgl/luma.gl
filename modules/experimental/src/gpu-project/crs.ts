@@ -7,7 +7,7 @@ import {parsePROJString, type PROJStringAst, type ReadonlyCRSDefinition} from '@
 import {Projection} from '@math.gl/projection';
 import type {TypeScriptCRSInput} from '@math.gl/projection/core';
 import {prepareCRSProjection} from './projection-engine';
-import {normalizeProjectionReferences, resolveProjectionReference} from './projection-crs-input';
+import {prepareProjectionReferences} from './projection-crs-input';
 export {prepareCRSProjection, prepareCRSProjectionAsync} from './projection-engine';
 export type {PrepareCRSProjectionOptions, PreparedCRSProjectionResult} from './projection-engine';
 export {createCRSProjectionCPUBenchmarks} from './projection-crs-benchmark';
@@ -239,10 +239,7 @@ function planCRSDefinitionProjection(
   }
   let projection: Projection;
   try {
-    normalizeProjectionReferences([
-      resolveProjectionReference(options.from),
-      resolveProjectionReference(options.to)
-    ]);
+    prepareProjectionReferences([options.from, options.to]);
     projection = new Projection({
       from: providerDefinitions[0],
       to: providerDefinitions[1],

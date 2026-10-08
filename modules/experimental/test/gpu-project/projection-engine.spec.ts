@@ -59,7 +59,12 @@ it('executes stored-axis metadata consistently on CPU, inline GPU and materializ
       projection: result.projection,
       provider: 'math.gl alpha.13',
       isValid
-    }),
+    }).map(variant => ({
+      ...variant,
+      api: variant.api.startsWith('ProjectionBuffer.projectFlatTo')
+        ? 'ProjectionBuffer.projectFlatTo'
+        : variant.api
+    })),
     variants: [
       {id: 'prepared', createProgram: () => result.program, maximumError: 0.001},
       {id: 'prepared-reuse', createProgram: () => result.program, maximumError: 0.001}
@@ -73,6 +78,18 @@ it('executes stored-axis metadata consistently on CPU, inline GPU and materializ
     expect(path.validRows).toBe(3);
     expect(path.maximumObservedError).toBeLessThan(0.001);
     expect(path.cpuComparisons).toHaveLength(6);
+    expect(path.cpuComparisons).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          api: 'ProjectionBuffer.projectFlatTo',
+          layout: 'interleaved-stride-2'
+        }),
+        expect.objectContaining({
+          api: 'ProjectionBuffer.projectFlatTo',
+          layout: 'interleaved-stride-3'
+        })
+      ])
+    );
     expect(path.validationReadbackTimeMilliseconds).toBeGreaterThanOrEqual(0);
   }
 });

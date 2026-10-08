@@ -7,7 +7,7 @@ import {projectionEngine} from '@math.gl/projection';
 import type {SpatialReference} from '@math.gl/crs';
 import type {CRSNormalizationOptions, TypeScriptCRSInput} from '@math.gl/projection/core';
 import type {ProjectionEngine, ProjectionInstance} from '@math.gl/projection/types';
-import {resolveProjectionReference, normalizeProjectionReferences} from './projection-crs-input';
+import {prepareProjectionReferences} from './projection-crs-input';
 import {
   planProjection,
   ProjectionPlanningError,
@@ -71,12 +71,7 @@ export async function prepareCRSProjectionAsync(
 }
 
 function prepareReferences(options: PrepareCRSProjectionOptions) {
-  const references = [
-    resolveProjectionReference(options.from),
-    resolveProjectionReference(options.to)
-  ];
-  normalizeProjectionReferences(references, options.normalization);
-  return references;
+  return prepareProjectionReferences([options.from, options.to], options.normalization);
 }
 
 function fitProjection(

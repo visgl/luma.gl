@@ -104,7 +104,7 @@ export type ProjectionProgramBenchmarkPathReport = {
   encodeAndSynchronizedTimeMilliseconds: ProjectionBenchmarkDistribution;
   /** Matching CPU mode median / resident GPU encode+fence median. Null below timer resolution. */
   residentSpeedupOverCPU: number | null;
-  cpuComparisons: {api: string; provider: string; residentSpeedup: number | null}[];
+  cpuComparisons: {api: string; layout: string; provider: string; residentSpeedup: number | null}[];
   gpuTimeMilliseconds?: ProjectionBenchmarkDistribution;
 };
 
@@ -515,6 +515,7 @@ async function measurePath(
     );
     const cpuComparisons = cpuPaths.map(path => ({
       api: path.api,
+      layout: path.layout,
       provider: path.provider,
       residentSpeedup:
         encodeAndSynchronizedTimeMilliseconds.median > 0 && path.durationMilliseconds.median > 0

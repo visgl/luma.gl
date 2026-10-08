@@ -17,6 +17,8 @@ export type ProjectionProgramCPUPathReport = {
   provider: string;
   scratchByteLength: number;
   preparationTimeMilliseconds: number;
+  maximumAllowedError: number;
+  maximumObservedError: number;
   mode: 'inline' | 'materialized';
   outputEncoding: 'binary64';
   projectionsPerRow: number;
@@ -35,6 +37,8 @@ type CPUOutput = {positions: Float64Array; validity: Uint32Array};
 export type ProjectionProgramCPUVariant = {
   api: string;
   layout?: string;
+  /** Absolute Euclidean error in destination units. Default zero; validity stays exact. */
+  maximumError?: number;
   provider: string;
   prepare: (coordinates: readonly ProjectionCoordinates[]) => {
     scratchByteLength: number;
@@ -55,6 +59,12 @@ export function measureProjectionProgramCPU(options: {
 }): ProjectionProgramCPUPathReport[] {
   const {coordinates, oracle, expected, consumerCount, warmupIterations, measuredIterations} =
     options;
+  if (
+    options.variants?.some(
+      variant => !Number.isFinite(variant.maximumError ?? 0) || (variant.maximumError ?? 0) < 0
+    )
+  )
+    throw new Error('invalid CPU projection error budget');
   const makeOutput = (): CPUOutput => ({
     positions: new Float64Array(coordinates.length * 2),
     validity: new Uint32Array(coordinates.length)
@@ -66,6 +76,9 @@ export function measureProjectionProgramCPU(options: {
       const outputs = Array.from({length: consumerCount}, makeOutput);
       const intermediate = mode === 'materialized' ? makeOutput() : undefined;
       const preparationTimeMilliseconds = getProjectionBenchmarkTime() - preparationStart;
+      const maximumAllowedError = variant?.maximumError ?? 0;
+      let maximumObservedError = 0;
+      let referenceOutputs: Float64Array[] | undefined;
       const projectRows = (output: CPUOutput, swap: boolean): void => {
         if (batch) {
           batch.execute(output);
@@ -100,17 +113,30 @@ export function measureProjectionProgramCPU(options: {
       };
       const validate = (): number => {
         let checksum = 0;
-        for (const output of outputs) {
+        for (const [outputIndex, output] of outputs.entries()) {
           for (let row = 0; row < coordinates.length; row++) {
             const reference = expected[row];
+            const error = reference.valid
+              ? Math.hypot(
+                  output.positions[2 * row] - reference.position[1],
+                  output.positions[2 * row + 1] - reference.position[0]
+                )
+              : 0;
+            const baseline = referenceOutputs?.[outputIndex];
             if (
               output.validity[row] !== Number(reference.valid) ||
-              output.positions[2 * row] !== (reference.valid ? reference.position[1] : 0) ||
-              output.positions[2 * row + 1] !== (reference.valid ? reference.position[0] : 0)
+              !Number.isFinite(error) ||
+              error > maximumAllowedError ||
+              (!reference.valid &&
+                (output.positions[2 * row] !== 0 || output.positions[2 * row + 1] !== 0)) ||
+              (baseline &&
+                (output.positions[2 * row] !== baseline[2 * row] ||
+                  output.positions[2 * row + 1] !== baseline[2 * row + 1]))
             )
               throw new Error(
                 `CPU ${mode}: oracle changed or consumer output differs at row ${row}`
               );
+            maximumObservedError = Math.max(maximumObservedError, error);
             checksum += output.positions[2 * row] + output.positions[2 * row + 1];
           }
         }
@@ -118,6 +144,7 @@ export function measureProjectionProgramCPU(options: {
       };
       execute();
       validate();
+      referenceOutputs = outputs.map(output => output.positions.slice());
       const samples: number[] = [];
       for (let iteration = -warmupIterations; iteration < measuredIterations; iteration++) {
         const start = getProjectionBenchmarkTime();
@@ -132,6 +159,8 @@ export function measureProjectionProgramCPU(options: {
         provider: variant?.provider ?? options.provider ?? 'caller-supplied oracle',
         scratchByteLength: batch?.scratchByteLength ?? 0,
         preparationTimeMilliseconds,
+        maximumAllowedError,
+        maximumObservedError,
         mode,
         outputEncoding: 'binary64',
         projectionsPerRow: intermediate ? 1 : consumerCount,
