@@ -5,6 +5,12 @@
 
 import {parsePROJString, type PROJStringAst, type ReadonlyCRSDefinition} from '@math.gl/crs';
 import {Projection} from '@math.gl/projection';
+import type {TypeScriptCRSInput} from '@math.gl/projection/core';
+import {prepareCRSProjection} from './projection-engine';
+import {normalizeProjectionReferences, resolveProjectionReference} from './projection-crs-input';
+export {prepareCRSProjection, prepareCRSProjectionAsync} from './projection-engine';
+export type {PrepareCRSProjectionOptions, PreparedCRSProjectionResult} from './projection-engine';
+export {createCRSProjectionCPUBenchmarks} from './projection-crs-benchmark';
 import {
   evaluateProjectionProgram,
   invertProjectionProgram,
@@ -28,6 +34,7 @@ export type {
 } from './projection-planning';
 
 import {
+  ProjectionPlanningError,
   planAdaptiveProjection,
   ready,
   unsupported,
@@ -46,8 +53,8 @@ export type PlanProjectionPipelineOptions = ProjectionOutputOptions & {
 
 export type PlanCRSProjectionOptions = ProjectionOutputOptions &
   Omit<AdaptiveProjectionOptions, 'bounds'> & {
-    from: ReadonlyCRSDefinition;
-    to: ReadonlyCRSDefinition;
+    from: TypeScriptCRSInput;
+    to: TypeScriptCRSInput;
     /** math.gl axis semantics, default false: longitude/easting first. */
     enforceAxis?: boolean;
     /** Required only when the transformation needs adaptive fitting. */
@@ -111,6 +118,24 @@ export function planCRSProjection(options: PlanCRSProjectionOptions): Projection
 }
 
 function planCRSProjectionResult(options: PlanCRSProjectionOptions): ProjectionPlanningResult {
+  if ([options.from, options.to].some(input => typeof input !== 'string' && !('type' in input))) {
+    if (options.allowAdaptive === false)
+      return unsupported(
+        'crs-requires-provider',
+        'stored coordinate metadata requires provider planning'
+      );
+    if (!options.bounds)
+      return unsupported('bounds-required', 'stored coordinate metadata requires explicit bounds');
+    return prepareCRSProjection({...options, bounds: options.bounds});
+  }
+  return planCRSDefinitionProjection(
+    options as PlanCRSProjectionOptions & {from: ReadonlyCRSDefinition; to: ReadonlyCRSDefinition}
+  );
+}
+
+function planCRSDefinitionProjection(
+  options: PlanCRSProjectionOptions & {from: ReadonlyCRSDefinition; to: ReadonlyCRSDefinition}
+): ProjectionPlanningResult {
   // PROJJSON dimensionality is explicit. Never silently extract a horizontal component.
   for (const definition of [options.from, options.to]) {
     if (typeof definition !== 'string' && !isTwoDimensionalCRS(definition)) {
@@ -148,9 +173,8 @@ function planCRSProjectionResult(options: PlanCRSProjectionOptions): ProjectionP
     return {status: 'unsupported', reasons};
   }
   if (lowered.reason.code === 'unsupported-arithmetic') {
-    // The normalized formula is also a binary64 CPU oracle. Keep the default high-precision
-    // path without sending Pseudo Mercator PROJJSON through a provider that treats it as
-    // ellipsoidal Mercator. No float32 operation executes in the fitted GPU program.
+    // The normalized formula is also a binary64 CPU oracle with the native domain guard.
+    // Retain that bounded domain in the high-precision fit; no float32 operation executes.
     const analytic = lowerCRSProjection(
       options.from,
       options.to,
@@ -215,12 +239,18 @@ function planCRSProjectionResult(options: PlanCRSProjectionOptions): ProjectionP
   }
   let projection: Projection;
   try {
+    normalizeProjectionReferences([
+      resolveProjectionReference(options.from),
+      resolveProjectionReference(options.to)
+    ]);
     projection = new Projection({
       from: providerDefinitions[0],
       to: providerDefinitions[1],
       enforceAxis: options.enforceAxis ?? false
     });
   } catch (error) {
+    if (error instanceof ProjectionPlanningError)
+      return {status: 'unsupported', reasons: error.reasons};
     return unsupported('provider-unavailable', error);
   }
   return planAdaptiveProjection(projection, {...options, bounds: options.bounds}, options, reasons);

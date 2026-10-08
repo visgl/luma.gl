@@ -139,7 +139,7 @@ describe('native Web Mercator', () => {
 });
 
 describe('Web Mercator planning', () => {
-  it('fits an independent inverse and rejects unsupported Pseudo Mercator provider routes', () => {
+  it('fits an independent inverse and preserves Pseudo Mercator provider routes', () => {
     const provider = new Projection({from: 'EPSG:4326', to: 'EPSG:3857'});
     const result = planCRSProjection({
       from: geographicCRS,
@@ -162,16 +162,20 @@ describe('Web Mercator planning', () => {
       evaluateProjectionProgram(invertProjectionProgram(result.program), [200000, 0]).valid
     ).toBe(false);
     for (const reverse of [false, true]) {
-      const declined = planCRSProjection({
-        from: reverse ? 'EPSG:32610' : makeWebMercatorCRS(),
-        to: reverse ? makeWebMercatorCRS() : 'EPSG:32610',
+      const planned = planCRSProjection({
+        from: reverse ? 'EPSG:4326' : makeWebMercatorCRS(),
+        to: reverse ? makeWebMercatorCRS() : 'EPSG:4326',
         bounds: [-1, -1, 1, 1],
+        tolerance: reverse ? 0.001 : 1e-8,
         projectionArithmetic: 'float32'
       });
-      expect(declined).toMatchObject({
-        status: 'unsupported',
-        reasons: [{code: 'crs-requires-provider'}, {code: 'unsupported-conversion'}]
-      });
+      expect(planned.status).toBe('ready');
+      if (planned.status !== 'ready') throw new Error(JSON.stringify(planned.reasons));
+      const actual = evaluateProjectionProgram(planned.program, [0.3, 0.4]);
+      const expected = reverse ? provider.project([0.3, 0.4]) : provider.unproject([0.3, 0.4]);
+      expect(
+        Math.hypot(actual.position[0] - expected[0], actual.position[1] - expected[1])
+      ).toBeLessThan(reverse ? 0.001 : 1e-8);
     }
   });
 

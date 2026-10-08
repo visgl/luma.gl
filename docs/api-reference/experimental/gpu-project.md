@@ -400,6 +400,51 @@ geocentric, and dynamic-frame objects are declined. Providers returning extra co
 are rejected. Unknown identifiers, unavailable resources, invalid provider output, and exhausted
 patch budgets return structured reasons. `allowAdaptive: false` requires a native plan.
 
+### Engine preparation and spatial-reference metadata
+
+`prepareCRSProjection()` and `prepareCRSProjectionAsync()` accept upstream `ProjectionEngine`
+factories. The synchronous entry point never starts deferred loads; the async entry point awaits
+`engine.createProjectionAsync()` before synchronous fitting. Both require explicit source bounds,
+use the authoritative CPU transform as an opaque oracle, and always produce adaptive plans.
+They never infer native formulas from a custom engine's CRS labels.
+
+```ts
+import {lazyProjectionEngine} from '@math.gl/projection/projections/lazy';
+import {prepareCRSProjectionAsync} from '@luma.gl/experimental/gpu-project/crs';
+
+const prepared = await prepareCRSProjectionAsync({
+  engine: lazyProjectionEngine,
+  from: 'EPSG:4326',
+  to: 'EPSG:3857',
+  bounds: [-1, -1, 1, 1],
+  tolerance: 0.001
+});
+if (prepared.status === 'ready') {
+  const cpuPosition = prepared.projection.projectToSync([0.3, 0.4], new Float64Array(2));
+  // prepared.compiled is the corresponding GPU plan; preparation creates no GPU resources.
+  // prepared.spatialReferences retains immutable original metadata, separate from GPU error.
+}
+```
+
+The default is math.gl's eager `projectionEngine`. Custom alias, reader and datum configurations
+require a matching public `normalization` configuration; the adapter cannot inspect an engine's
+registry. Public normalization validates supported horizontal semantics, not the engine's custom
+algorithm. Retained CPU transforms remain caller-owned. Later mutation of a custom CPU transform
+does not update a previously sampled GPU plan: prepare again when semantics change.
+
+Both preparation methods and `planCRSProjection()` accept `CRSReference` and `SpatialReference`.
+Stored `coordinateOrder` takes precedence over authoritative CRS axes independently of
+`enforceAxis`. Declared units must agree with the executable definition; they do not relabel or
+rescale coordinates. Metadata wrappers use adaptive planning, even for otherwise native pairs.
+Use the preparation methods when the typed result must retain CPU methods and metadata.
+
+Unknown/absent horizontal CRS, non-2D storage, conflicting units/frames, separate vertical CRS,
+coordinate epochs, lossy extraction, grids and nonzero datum shifts are rejected before sampling.
+Raw PROJJSON/WKT dimensional checks remain necessary because normalized metadata can omit height.
+No implicit WGS84 assumption, horizontal extraction, network CRS resolution or grid loading is
+performed; only explicit async preparation may load algorithm modules. Both entry points return structured unsupported results, or throw
+`ProjectionPlanningError` with `onUnsupported: 'throw'` (a rejected promise for async preparation).
+
 ### Native PROJJSON coordinate frames
 
 Native plans use only double-single axis/affine operations and need no provider sampling or fitting
@@ -526,9 +571,10 @@ No global error bound, cuProj precision parity, or performance advantage is clai
 `bounds` is optional for native plans and required for adaptive plans (`bounds-required` if absent).
 Unsupported native conversions retain a bounded provider fallback. Invalid quantities, ambiguous
 parameters, unsupported axes, and dynamic frames are declined rather than silently approximated.
-The current provider assumes geographic degrees and one shared projected-axis unit; explicit
-non-degree geographic axes, mixed projected-axis units, and non-numeric prime-meridian quantities
-are therefore declined **on the adaptive route**, even when native frame changes support them.
+Public math.gl normalization validates horizontal frames, angular/linear units and datum metadata.
+Uniform non-degree geographic units are supported. Mixed per-axis units and non-numeric
+prime-meridian quantities remain declined **on the adaptive route**, even when native frame
+changes support them. Normalization does not replace the identifier/conflict checks below.
 The adaptive frontend additionally verifies Lambert Conic Conformal 1SP (EPSG 9801), Lambert Conic
 Conformal 2SP (9802), and Albers Equal Area (9822). It resolves methods and parameters by their
 EPSG `id`/`ids`, or by canonical EPSG names when identifiers are absent, then creates a provider-only
@@ -543,19 +589,17 @@ inverse domains. Conic parameters must be complete, finite, unique, dimensionall
 nondegenerate. Unsupported variants (such as modified/Belgian/Michigan Lambert methods) are not
 silently treated as ordinary 1SP/2SP. A method with neither a resolvable identifier nor an executable
 name cannot be inferred from the parameter values alone.
-Zero standard parallels in Lambert 2SP PROJJSON are declined because the current provider replaces
-them with defaults. Albers preserves a zero parallel by placing it second in the equivalent,
-symmetric pair before calling the provider.
+Valid zero standard parallels are preserved by math.gl's TypeScript kernels. The former Lambert
+rejection, 1SP tangent-parallel injection and Albers parallel swapping are no longer needed.
 
 Outside these verified mappings, the provider's existing compatibility restrictions remain.
 Serialized definitions remain available for provider-supported projections without a registered
 CRS name. Entirely custom projection functions can use `compileProjectionPlan()` directly, or
 the explicit whole-pipeline `fallback` of `planProjectionPipeline()`. Extra parameters on verified
 methods are rejected instead of reaching a provider that might ignore them.
-Provider-only routes containing explicit Pseudo Mercator PROJJSON are also declined: the current
-provider does not preserve its spherical formula. Supported native Web Mercator pairs instead
-use the binary64 reference described above; verified serialized definitions such as `EPSG:3857`
-remain available through the provider.
+Provider-only routes now preserve explicit Pseudo Mercator PROJJSON's spherical formula and WGS84
+datum semantics. Native Web Mercator pairs retain their bounded binary64 oracle for adaptive
+planning so the established validity domain does not silently expand.
 Serialized definitions retain the provider's coordinate conventions and resolution limitations.
 
 Both `planCRSProjection()` and `planProjectionPipeline()` return structured `unsupported` results
@@ -790,10 +834,28 @@ the captured reference before warmup and after timing. Reported CPU output/inter
 exclude JavaScript source objects, reference snapshots and provider-internal allocations.
 
 `oracleTimeMilliseconds` remains a one-projection-per-row callback/checksum baseline, not a
-matched multi-consumer workload. The sweeps use `Projection.project` from `@math.gl/projection`, backed
-by **proj4js JavaScript**, with the same finite/domain checks as the GPU workload. They do not
-benchmark the native C++ PROJ library. Provider construction and output allocation are outside
-CPU timing; callback/provider allocations and consumer writes are inside it.
+matched multi-consumer workload. Current sweeps use math.gl **5.0.0-alpha.13's TypeScript engine**,
+not a proj4js wrapper or the native C++ PROJ library. Provider construction and output allocation
+are outside CPU execution timing; callback/provider allocations and consumer writes are inside it.
+
+Pass `cpuVariants: createCRSProjectionCPUBenchmarks({projection, provider, isValid})`, importing
+the helper from `/gpu-project/crs`, to compare the retained transform's `projectToSync`,
+`projectFlatSync`, and `ProjectionBuffer` contiguous, strided and column APIs. `provider` should
+include the actual package version. `isValid` must match the oracle's finite/domain predicate.
+All six API/layout baselines run both consumer modes. Their domain checks, batch input packing,
+scatter, zero/validity writes and consumers are timed. Reusable scalar output writes directly;
+flat input is packed into its reusable in-place output. Buffers are reused;
+`preparationTimeMilliseconds` and `scratchByteLength` record adapter preparation/allocation
+separately. Scratch bytes exclude opaque provider/bulk internals and JS objects.
+Coordinate failures propagate: partially committed bulk output never produces a successful report.
+Every path is checked against the independent captured oracle before and after timing.
+
+`cpuComparisons` reports resident speedup for each matching CPU API/layout, without assuming bulk
+is fastest. `residentSpeedupOverCPU` retains its original allocating-scalar baseline for backward
+compatibility. Reports also separate caller-measured CPU provider preparation, GPU resource
+allocation/upload enqueue, the remaining upload/compile fence wait, and validation readbacks.
+These overlapping setup phases are not isolated PCIe transfer measurements or an end-to-end
+latency model. Resident speedups exclude them.
 
 Each GPU path reports `encodeAndSynchronizedTimeMilliseconds`, the distribution of per-sample
 CPU encoding plus submission-to-fence time. `residentSpeedupOverCPU` divides the **matching CPU

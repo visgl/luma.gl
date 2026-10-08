@@ -12,6 +12,9 @@ Target Release Date: Q3, 2026
   column layouts, and H3 and A5 cell projection add new optional `@luma.gl/gpgpu` workflows.
 - **Table-driven planning** - Experimental dataframes can plan queries from loaders.gl SQL
   expressions and feed batch-preserving GPU evaluation and rendering.
+- **Projection engine alignment** - GPU Project can explicitly prepare math.gl engine factories,
+  retain their CPU transforms, and honor spatial-reference axes and units. Public normalization
+  expands adaptive conic coverage; CPU/GPU benchmarks include reusable, flat and bulk CPU APIs.
 
 **New Modules**
 
