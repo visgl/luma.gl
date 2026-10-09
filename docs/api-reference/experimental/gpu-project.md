@@ -397,7 +397,7 @@ coordinates or a latitude-first axis without explicitly rearranging/converting t
 This is the provider boundary for current math.gl projections and future engine-created transforms.
 
 ```ts
-import {Projection} from '@math.gl/projection';
+import {projectionEngine} from '@math.gl/projection';
 import {planProjection} from '@luma.gl/experimental/gpu-project';
 
 const projection = projectionEngine.createProjection({from: 'EPSG:4326', to: 'EPSG:3857'});
