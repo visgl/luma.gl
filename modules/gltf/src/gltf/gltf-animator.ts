@@ -37,6 +37,8 @@ import {setGLTFMorphWeights} from './morph-targets';
 export type GLTFAnimationClipProps = {
   /** Animation data to evaluate. */
   animation: GLTFAnimation;
+  /** @internal Baked GPU scenes retain CPU tracks only for visibility and scene properties. */
+  evaluateNodeTransforms?: boolean;
   /** Mapping from glTF node ids to scenegraph nodes. */
   gltfNodeIdToNodeMap: Map<string, GroupNode>;
   /** Refreshes runtime punctual lights after a node-visibility channel changes. */
@@ -103,7 +105,20 @@ export class GLTFAnimationClip extends AnimationClipController {
     this.mixer = props.mixer || new AnimationMixer();
     this.clip = new AnimationClip({
       name: this.name,
-      tracks: this.animation.channels.map(channel => this.createAnimationTrack(channel))
+      duration: Math.max(
+        0,
+        ...this.animation.channels.map(
+          channel => channel.sampler.input[channel.sampler.input.length - 1] || 0
+        )
+      ),
+      tracks: this.animation.channels
+        .filter(
+          channel =>
+            props.evaluateNodeTransforms !== false ||
+            channel.type !== 'node' ||
+            channel.path === 'visibility'
+        )
+        .map(channel => this.createAnimationTrack(channel))
     });
     this.action = this.mixer.clipAction(this.clip).play();
   }
@@ -305,6 +320,8 @@ export type GLTFAnimatorProps = {
   onUpdate?: () => void;
   /** Optional initial clip policy; omitted preserves legacy simultaneous playback. */
   autoplay?: 'all' | 'first' | false;
+  /** @internal Disable transform and morph evaluation when baked frames drive the GPU models. */
+  evaluateNodeTransforms?: boolean;
 };
 
 /** Optional transition settings when choosing an imported animation clip. */
@@ -338,6 +355,7 @@ export class GLTFAnimator extends Animator<GLTFAnimationClip> {
           onLightChange: props.onLightChange,
           materials: props.materials,
           mixer,
+          evaluateNodeTransforms: props.evaluateNodeTransforms,
           animation: {name, channels: animation.channels}
         });
       })

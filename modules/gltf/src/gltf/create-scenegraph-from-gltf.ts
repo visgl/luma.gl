@@ -18,6 +18,15 @@ import {
   type GLTFExtensionSupport
 } from './gltf-extension-support';
 import {GLTFMaterialVariants} from './gltf-material-variants';
+import {
+  planGLTFCrowdGPUAnimation,
+  type GLTFGPUAnimationOptions,
+  type GLTFGPUAnimationStats
+} from './gltf-gpu-animation';
+import {
+  canUseGLTFSceneGPUAnimation,
+  GLTFGPUAnimationController
+} from './gltf-gpu-animation-controller';
 
 export type GLTFScenegraphBounds = {
   /** World-space axis-aligned bounds for the scene or model. */
@@ -30,6 +39,12 @@ export type GLTFScenegraphBounds = {
   radius: number;
   /** Suggested orbit distance for a 60-degree field of view camera. */
   recommendedOrbitDistance: number;
+};
+
+/** Options for ordinary CPU or baked GPU glTF scene playback. */
+export type CreateGLTFScenegraphsOptions = ParseGLTFOptions & {
+  /** Opt-in baked transform, skin, and morph sampling on WebGPU and WebGL 2. */
+  gpuAnimation?: GLTFGPUAnimationOptions;
 };
 
 /** Scenegraph bundle returned from a parsed glTF asset. */
@@ -46,6 +61,8 @@ export type GLTFScenegraphs = {
   animator: GLTFAnimator;
   /** Parsed source animations, including supported material and texture-transform pointers. */
   animations: GLTFAnimation[];
+  /** Actual playback path, baked storage estimate, and optional CPU fallback reason. */
+  animationStats: GLTFGPUAnimationStats;
   /** Parsed punctual lights from the asset. */
   lights: Light[];
   /** Extensions reported by the asset and whether luma.gl supports them. */
@@ -76,11 +93,43 @@ export type GLTFScenegraphs = {
 export function createScenegraphsFromGLTF(
   device: Device,
   gltf: GLTFPostprocessed,
-  options?: ParseGLTFOptions
+  options?: CreateGLTFScenegraphsOptions
 ): GLTFScenegraphs {
   if (options?.strictExtensions) {
     assertSupportedGLTFExtensions(gltf, device);
   }
+
+  const animations = parseGLTFAnimations(gltf);
+  const animationPlan = options?.gpuAnimation
+    ? planGLTFCrowdGPUAnimation(gltf, options.gpuAnimation, device)
+    : null;
+  if (
+    animationPlan?.layout &&
+    (!canUseGLTFSceneGPUAnimation(gltf, animations) ||
+      animationPlan.layout.clips.length !== animations.length ||
+      new Set(animations.map(animation => animation.name)).size !== animations.length)
+  ) {
+    animationPlan.layout = null;
+    animationPlan.fallbackReason = 'unsupported-scene';
+  }
+  const layout = animationPlan?.layout;
+  const parseOptions = layout
+    ? {
+        ...options,
+        modelOptions: {
+          ...options?.modelOptions,
+          userData: {
+            ...options?.modelOptions?.userData,
+            gltfAnimatedCrowd: {
+              capacity: 1,
+              sceneAnimation: true,
+              jointsPerInstance: Math.max(0, ...(gltf.skins || []).map(skin => skin.joints.length)),
+              gpuAnimation: layout
+            }
+          }
+        }
+      }
+    : options;
 
   const {
     scenes,
@@ -89,9 +138,7 @@ export function createScenegraphsFromGLTF(
     gltfNodeIdToNodeMap,
     gltfNodeIndexToNodeMap,
     generatedTextures
-  } = parseGLTF(device, gltf, options);
-
-  const animations = parseGLTFAnimations(gltf);
+  } = parseGLTF(device, gltf, parseOptions);
   const sourceLights =
     (gltf as GLTFPostprocessed & {lights?: Record<string, any>[]}).lights ||
     (gltf.extensions?.['KHR_lights_punctual']?.['lights'] as Record<string, any>[] | undefined) ||
@@ -127,7 +174,8 @@ export function createScenegraphsFromGLTF(
     onLightChange: refreshLights,
     animations,
     gltfNodeIdToNodeMap,
-    materials
+    materials,
+    ...(layout ? {autoplay: 'first', evaluateNodeTransforms: false} : {})
   });
   const variants = new GLTFMaterialVariants(gltf, scenes);
   const extensionSupport = getGLTFExtensionSupport(gltf, device);
@@ -177,13 +225,30 @@ export function createScenegraphsFromGLTF(
     generatedTextures.clear();
   };
 
-  return {
+  const morphModels = new Set<ModelNode>();
+  for (const scene of scenes) {
+    scene.preorderTraversal(node => {
+      if (node instanceof ModelNode && node.userData['morphTargets']) {
+        morphModels.add(node);
+      }
+    });
+  }
+  const scenegraphs: GLTFScenegraphs = {
     scenes,
     materials,
     variants,
     cameras,
     animator,
     animations,
+    animationStats: {
+      mode: layout ? 'gpu' : 'cpu',
+      ...(layout ? {sampleRate: layout.sampleRate} : {}),
+      frameCount: layout?.frameCount || 0,
+      clipCount: layout?.clips.length || 0,
+      morphGroupCount: morphModels.size,
+      estimatedByteLength: animationPlan?.estimatedByteLength || 0,
+      ...(animationPlan?.fallbackReason ? {fallbackReason: animationPlan.fallbackReason} : {})
+    },
     lights,
     extensionSupport,
     sceneBounds,
@@ -195,6 +260,16 @@ export function createScenegraphsFromGLTF(
     gltf,
     destroy
   };
+  if (layout) {
+    try {
+      const gpuController = new GLTFGPUAnimationController(device, scenegraphs, layout);
+      animator.setUpdateHandler(() => gpuController.update());
+    } catch (error) {
+      destroy();
+      throw error;
+    }
+  }
+  return scenegraphs;
 }
 
 function getScenegraphBounds(bounds: [number[], number[]] | null): GLTFScenegraphBounds {

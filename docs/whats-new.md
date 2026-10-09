@@ -70,6 +70,10 @@ Target Release Date: Q3, 2026
 
 **@luma.gl/gltf**
 
+- **GPU pose playback for ordinary glTF scenes** - `createScenegraphsFromGLTF()` can opt into
+  baked GPU transform, skeletal, and morph animation. Playback uploads frame selections and blend
+  weights instead of evaluating transform tracks and assembling joint palettes on the CPU each
+  frame. Scenes and crowds share baking, byte budgets, and device-limit diagnostics.
 - **Larger and richer animated meshes** - Skinning supports larger joint palettes and up to eight
   influences per vertex, while ordinary morph-weight animation uploads position, normal, and
   tangent deformation to the GPU.
