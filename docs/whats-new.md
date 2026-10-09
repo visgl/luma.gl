@@ -10,9 +10,14 @@ Version 9.4 expands luma.gl with portable GPU data processing and a broad experi
 
 **Highlights**
 
+* **Borrowed splat passes respect host state** - Prepared paged splats accept optional render pipeline parameters, including depth comparison, while retaining the caller's attachments.
+
 * **Data that goes straight to pixels** - Typed, chunked GPU columns can move through analysis, text, paths, and rendering without a CPU-side object layer.
+
 * **Analysis that stays on the GPU** - [Dataframes](https://luma.gl/docs/api-reference/experimental/gpu-dataframe.md), sorting, aggregation, raster, geospatial, and trace APIs keep intermediate results resident and reusable.
+
 * **Captured and animated worlds** - Stream large Gaussian splat scenes, mix splats with meshes, and animate crowds with shared geometry, GPU sampling, culling, and LOD.
+
 * **Four new experimental modules** - `@luma.gl/text`, `@luma.gl/splats`, `@luma.gl/scene`, and `@luma.gl/experimental` are now published for direct use. These APIs may evolve outside the 9.4 semver contract.
 
 **A clearer GPU data stack**
