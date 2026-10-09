@@ -116,7 +116,7 @@ export class GPUCulledTraceLayer extends Layer<GPUCulledTraceLayerProps> {
 
   override setShaderModuleProps(): void {}
 
-  override initializeState({device}: LayerContext): void {
+  override initializeState({device, shaderAssembler}: LayerContext): void {
     if (device.type !== 'webgpu') throw new Error('GPUCulledTraceLayer requires WebGPU');
     const renderUniforms = device.createBuffer({
       id: `${this.id}-render-uniforms`,
@@ -125,6 +125,7 @@ export class GPUCulledTraceLayer extends Layer<GPUCulledTraceLayerProps> {
     });
     const model = new Model(device, {
       id: `${this.id}-model`,
+      shaderAssembler,
       source: TRACE_LAYER_WGSL,
       topology: 'triangle-list',
       isInstanced: true,

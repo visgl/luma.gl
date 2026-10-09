@@ -23,7 +23,7 @@ The complete source for this example is shown below:
 ```typescript
 import {Buffer, NumberArray, UniformStore} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, makeAnimationLoop} from '@luma.gl/engine';
-import {ShaderAssembler} from '@luma.gl/shadertools';
+import {GLSLShaderAssembler} from '@luma.gl/shadertools';
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 
@@ -93,7 +93,7 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       throw new Error('This demo is only implemented for WebGL2');
     }
 
-    const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler('glsl');
+    const shaderAssembler = new GLSLShaderAssembler();
     shaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
 
     this.positionBuffer = device.createBuffer(new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
@@ -116,7 +116,7 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.model1 = new Model(device, {
       vs,
       fs,
-      shaderAssembler, // Not needed, if not specified uses the default ShaderAssembler
+      shaderAssembler,
       modules: [offsetLeftModule],
       bufferLayout: [{name: 'position', format: 'float32x2'}],
       attributes: {
@@ -131,7 +131,7 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.model2 = new Model(device, {
       vs,
       fs,
-      shaderAssembler, // Not needed, if not specified uses the default ShaderAssembler
+      shaderAssembler,
       modules: [offsetRightModule],
       bufferLayout: [{name: 'position', format: 'float32x2'}],
       vertexCount: 3,
