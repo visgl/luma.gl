@@ -317,33 +317,36 @@ export class WebGPURenderPass extends RenderPass {
       };
       const {depthStencilAttachment} = renderPassDescriptor;
 
-      // DEPTH
-      if (this.props.depthReadOnly) {
-        depthStencilAttachment.depthReadOnly = true;
-      } else if (this.props.clearDepth !== false) {
-        depthStencilAttachment.depthClearValue = this.props.clearDepth;
-      }
-      // STENCIL
-      if (this.props.stencilReadOnly) {
-        depthStencilAttachment.stencilReadOnly = true;
-      } else if (this.props.clearStencil !== false) {
-        depthStencilAttachment.stencilClearValue = this.props.clearStencil;
-      }
-
-      // WebGPU requires load/store ops for exactly the aspects the attachment format has
-      const attachmentFormat = framebuffer.depthStencilAttachment.texture.format;
+      // Use the view format, which can select one aspect of a depth-stencil texture.
+      const attachmentView = framebuffer.depthStencilAttachment;
+      const attachmentFormat = attachmentView.props.format ?? attachmentView.texture.format;
       const attachmentAspects = textureFormatDecoder.getInfo(attachmentFormat).attachment;
-      const hasDepthAspect = attachmentAspects !== 'stencil';
-      if (hasDepthAspect && !this.props.depthReadOnly) {
-        depthStencilAttachment.depthLoadOp = this.props.clearDepth !== false ? 'clear' : 'load';
-        depthStencilAttachment.depthStoreOp = 'store'; // TODO - support 'discard'?
-      }
-
+      const hasDepthAspect = attachmentAspects === 'depth' || attachmentAspects === 'depth-stencil';
       const hasStencilAspect =
         attachmentAspects === 'stencil' || attachmentAspects === 'depth-stencil';
-      if (hasStencilAspect && !this.props.stencilReadOnly) {
-        depthStencilAttachment.stencilLoadOp = this.props.clearStencil !== false ? 'clear' : 'load';
-        depthStencilAttachment.stencilStoreOp = 'store'; // TODO - support 'discard'?
+
+      if (hasDepthAspect) {
+        if (this.props.depthReadOnly) {
+          depthStencilAttachment.depthReadOnly = true;
+        } else {
+          if (this.props.clearDepth !== false) {
+            depthStencilAttachment.depthClearValue = this.props.clearDepth;
+          }
+          depthStencilAttachment.depthLoadOp = this.props.clearDepth !== false ? 'clear' : 'load';
+          depthStencilAttachment.depthStoreOp = 'store';
+        }
+      }
+      if (hasStencilAspect) {
+        if (this.props.stencilReadOnly) {
+          depthStencilAttachment.stencilReadOnly = true;
+        } else {
+          if (this.props.clearStencil !== false) {
+            depthStencilAttachment.stencilClearValue = this.props.clearStencil;
+          }
+          depthStencilAttachment.stencilLoadOp =
+            this.props.clearStencil !== false ? 'clear' : 'load';
+          depthStencilAttachment.stencilStoreOp = 'store';
+        }
       }
     }
 
