@@ -14,6 +14,12 @@ export type {
 
 export {runGPUProjectionBenchmark} from './gpu-projection-benchmark';
 export {runProjectionProgramBenchmark} from './projection-program-benchmark';
+export {runProjectionTableBenchmark} from './projection-table-benchmark';
+export type {
+  ProjectionTableBenchmarkOptions,
+  ProjectionTableBenchmarkMode,
+  ProjectionTableBenchmarkReport
+} from './projection-table-benchmark';
 export type {
   ProjectionProgramCPUPathReport,
   ProjectionProgramCPUVariant
