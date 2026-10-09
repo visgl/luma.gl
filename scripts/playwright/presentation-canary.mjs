@@ -13,7 +13,10 @@ const server = createServer((request, response) => {
   response.writeHead(200, {'Content-Type': 'text/html'});
   response.end('<style>body {margin: 0}</style><canvas width="64" height="64"></canvas>');
 });
-await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+await new Promise((resolve, reject) => {
+  server.once('error', reject);
+  server.listen(0, '127.0.0.1', resolve);
+});
 let browser;
 try {
   browser = await chromium.launch(getPlaywrightLaunchOptions({
@@ -46,12 +49,27 @@ try {
             storeOp: 'store'
           }]}).end();
           device.queue.submit([encoder.finish()]);
-          await device.queue.onSubmittedWorkDone();
+          let timeout;
+          try {
+            await Promise.race([
+              device.queue.onSubmittedWorkDone(),
+              device.lost.then(info => {throw new Error(`WebGPU device lost: ${info.message}`);}),
+              new Promise((resolve, reject) => {
+                timeout = setTimeout(() => reject(new Error('WebGPU submission timed out')), 15_000);
+              })
+            ]);
+          } finally {
+            clearTimeout(timeout);
+          }
         }
         // Allow the submitted canvas frame to reach the compositor before capture.
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       }, backend);
-      const capture = PNG.sync.read(await page.locator('canvas').screenshot());
+      // Capture the canvas region directly, as SnapshotTestRunner does. Element
+      // screenshots wait for layout stability and can stall with software compositing.
+      const capture = PNG.sync.read(await page.screenshot({
+        clip: {x: 0, y: 0, width: 64, height: 64}
+      }));
       assert.equal(capture.width, 64);
       assert.equal(capture.height, 64);
       let redPixelCount = 0;

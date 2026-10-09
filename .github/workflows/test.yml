@@ -80,6 +80,7 @@ jobs:
 
       - name: Check WebGPU and WebGL canvas capture
         if: matrix.shard == 1
+        timeout-minutes: 2
         run: xvfb-run -a yarn test-presentation
 
       - name: Run headless tests and generate coverage
