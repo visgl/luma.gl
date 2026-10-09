@@ -6,6 +6,7 @@
 
 import {setGLParameters, getGLParameters} from '../parameters/unified-parameter-api';
 import {deepArrayEqual} from './deep-array-equal';
+import {GL} from '@luma.gl/constants';
 import {
   GL_PARAMETER_DEFAULTS,
   GL_HOOKED_SETTERS,
@@ -71,6 +72,13 @@ export class WebGLStateTracker {
     this.cache = options?.copyState
       ? getGLParameters(gl)
       : Object.assign({}, GL_PARAMETER_DEFAULTS);
+
+    if (!options?.copyState) {
+      // These defaults depend on the initial canvas size. Read them before getters are hooked
+      // so a matching placeholder cannot suppress the first viewport or scissor update.
+      this.cache[GL.VIEWPORT] = gl.getParameter(GL.VIEWPORT);
+      this.cache[GL.SCISSOR_BOX] = gl.getParameter(GL.SCISSOR_BOX);
+    }
 
     if (this.initialized) {
       throw new Error('WebGLStateTracker');
