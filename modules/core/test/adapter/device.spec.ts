@@ -142,7 +142,15 @@ it('WebGPUDevice#generateMipmapsWebGPU generates a mip chain', async () => {
   void 0;
 });
 
-it('Device debug default helper respects log debug before NODE_ENV', () => {
+it('Device debug default helper resolves URL, log, and NODE_ENV precedence', () => {
+  expect(
+    _getDefaultDebugValue(false, 'production', '?debug'),
+    'URL debug parameter overrides log debug and production NODE_ENV'
+  ).toBe(true);
+  expect(
+    _getDefaultDebugValue(undefined, 'production', '?example=debug'),
+    'URL values named debug do not enable debugging'
+  ).toBe(false);
   expect(
     _getDefaultDebugValue(true, 'production'),
     'log debug true overrides production NODE_ENV'
