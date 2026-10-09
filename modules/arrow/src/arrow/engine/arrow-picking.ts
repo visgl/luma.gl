@@ -20,7 +20,7 @@ import {makeGPUVectorFromArrow} from '../gpu/arrow-gpu-table-adapters';
 
 /** Arrow row identity resolved from a picking pass. */
 export type ArrowPickingInfo = {
-  /** Zero-based source batch index, or `null` when nothing is picked. */
+  /** Zero-based source batch index, or `null` when nothing is picked or the mapping is unavailable. */
   batchIndex: number | null;
   /** Zero-based source row index, or `null` when nothing is picked. */
   rowIndex: number | null;
@@ -165,7 +165,11 @@ export function makeArrowRecordBatchSourceInfo({
   return {sourceBatchIndex, sourceRowIndexOffset, sourceRowCount};
 }
 
-/** Resolves a generic PickingManager result into Arrow source row identity. */
+/**
+ * Resolves a generic PickingManager result into Arrow source row identity.
+ * Without a supplied source, the raw picking batch index is retained. When a supplied source has
+ * no mapping (for example after packing), only the global row index is known.
+ */
 export function resolveArrowPickInfo(
   pickInfo: PickInfo,
   source?: ArrowPickingSource | null
@@ -176,7 +180,7 @@ export function resolveArrowPickInfo(
 
   const sourceInfo = getArrowPickingSourceInfo(source, pickInfo.batchIndex);
   return {
-    batchIndex: sourceInfo?.sourceBatchIndex ?? pickInfo.batchIndex,
+    batchIndex: sourceInfo?.sourceBatchIndex ?? (source ? null : pickInfo.batchIndex),
     rowIndex: pickInfo.objectIndex,
     batchRowIndex: getArrowBatchRowIndex(pickInfo.objectIndex, sourceInfo)
   };

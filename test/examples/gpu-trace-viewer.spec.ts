@@ -541,7 +541,8 @@ describe('GPU hierarchical trace viewer', () => {
       focusOnly!.checked = false;
       focusOnly!.dispatchEvent(new Event('change', {bubbles: true}));
       expect(state.focusOnly).toBe(false);
-      await renderFrame(1);
+      // Keep some spans above the six-pixel exact-rendering threshold in density mode.
+      await renderFrame(64);
       const densityFrame = await state.resources.drawCommands.buffer.readAsync();
       const densityCounts = new Uint32Array(
         densityFrame.buffer,
@@ -549,9 +550,8 @@ describe('GPU hierarchical trace viewer', () => {
         densityFrame.byteLength / Uint32Array.BYTES_PER_ELEMENT
       );
       const wideSpanCount = densityCounts[1] + densityCounts[5] + densityCounts[9];
-      // A one-pixel viewport cannot retain spans at the six-pixel exact-rendering threshold.
-      // The density assertions below verify that those spans still contribute to the overview.
-      expect(wideSpanCount).toBe(0);
+      expect(wideSpanCount).toBeGreaterThan(0);
+      expect(wideSpanCount).toBeLessThan(state.resources.spanCount);
       expect(
         state.resources.dependencyChunks.reduce(
           (sum, chunk) => sum + densityCounts[chunk.drawCommandIndex * 4 + 1],
@@ -575,6 +575,23 @@ describe('GPU hierarchical trace viewer', () => {
       );
       expect(adaptiveDensity.some(value => value > 0)).toBe(true);
       expect(adaptiveDensity.slice(0, TRACE_DENSITY_BIN_COUNT).some(value => value > 0)).toBe(true);
+
+      // At one pixel, every span is below the exact-rendering threshold.
+      await renderFrame(1);
+      const overviewFrame = await state.resources.drawCommands.buffer.readAsync();
+      const overviewCounts = new Uint32Array(
+        overviewFrame.buffer,
+        overviewFrame.byteOffset,
+        overviewFrame.byteLength / Uint32Array.BYTES_PER_ELEMENT
+      );
+      expect(overviewCounts[1] + overviewCounts[5] + overviewCounts[9]).toBe(0);
+      const overviewDensityBytes = await state.resources.densityBins.readAsync();
+      const overviewDensity = new Uint32Array(
+        overviewDensityBytes.buffer,
+        overviewDensityBytes.byteOffset,
+        overviewDensityBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
+      );
+      expect(overviewDensity.some(value => value > 0)).toBe(true);
 
       host.querySelector<HTMLButtonElement>('[data-clear-selection]')!.click();
       expect(state.selectedSpanIndex).toBe(0xffffffff);
