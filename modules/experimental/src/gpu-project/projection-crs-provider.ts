@@ -6,13 +6,7 @@
 import type {ReadonlyCRSDefinition} from '@math.gl/crs';
 import {getUnitFactor} from './projection-crs-lowering';
 import type {ProjectionPlanningReason} from './projection-pipeline';
-
-type Identifier = {readonly authority: string; readonly code: string | number};
-type Identified = {
-  readonly name: string;
-  readonly id?: Identifier;
-  readonly ids?: readonly Identifier[];
-};
+import {resolveCRSIdentifier} from './projection-crs-identifiers';
 type Parameter = {name: string; unit: 'degree' | 'metre' | 'unity'; value: number};
 
 // EPSG method/parameter semantics; provider names are an adapter detail, not CRS identifiers.
@@ -46,7 +40,7 @@ export function normalizeCRSProviderDefinition(
 ): {definition: ReadonlyCRSDefinition} | {reason: ProjectionPlanningReason} {
   if (typeof definition === 'string' || definition.type !== 'ProjectedCRS') return {definition};
   const conversion = definition.conversion;
-  const method = resolveIdentifier(conversion.method, METHODS);
+  const method = resolveCRSIdentifier(conversion.method, METHODS);
   if (![9801, 9802, 9822].includes(method ?? -1)) {
     // Never reinterpret a recognized conic label with an unknown/conflicting EPSG identifier.
     if ([9801, 9802, 9822].includes(METHODS.get(conversion.method.name) ?? -1))
@@ -57,7 +51,7 @@ export function normalizeCRSProviderDefinition(
     method === 9801 ? [8801, 8802, 8805, 8806, 8807] : [8821, 8822, 8823, 8824, 8826, 8827];
   const parameters = new Map<number, Parameter>();
   for (const parameter of conversion.parameters ?? []) {
-    const code = resolveIdentifier(parameter, PARAMETER_NAMES);
+    const code = resolveCRSIdentifier(parameter, PARAMETER_NAMES);
     if (code === undefined || !required.includes(code))
       return decline(
         'unsupported-parameter',
@@ -121,23 +115,6 @@ export function normalizeCRSProviderDefinition(
       coordinate_system: coordinateSystem
     }
   };
-}
-
-function resolveIdentifier(
-  object: Identified,
-  names: ReadonlyMap<string, number>
-): number | undefined {
-  const identifiers = [...(object.id ? [object.id] : []), ...(object.ids ?? [])].filter(
-    identifier => identifier.authority === 'EPSG'
-  );
-  const named = names.get(object.name);
-  if (!identifiers.length) return named;
-  const code = Number(identifiers[0].code);
-  return Number.isSafeInteger(code) &&
-    identifiers.every(identifier => Number(identifier.code) === code) &&
-    (named === undefined || named === code)
-    ? code
-    : undefined;
 }
 
 function decline(

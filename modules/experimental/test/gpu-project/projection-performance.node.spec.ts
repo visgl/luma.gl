@@ -6,6 +6,8 @@ import {expect, it} from 'vitest';
 import {evaluateProjectionProgram} from '@luma.gl/experimental/gpu-project';
 import {
   makePerformanceOptions,
+  makePerformanceCoordinates,
+  makePerformancePositions,
   parsePerformanceSweep,
   performanceFixtures
 } from './projection-performance-fixtures';
@@ -18,6 +20,13 @@ it('parses explicit sweep dimensions without silently dropping invalid values', 
 });
 
 for (const fixture of performanceFixtures) {
+  it(`generates flat ${fixture.id} table positions without changing coordinates or probes`, () => {
+    for (const rowCount of [0, 1, 128, 4096]) {
+      expect(makePerformancePositions(fixture.bounds, rowCount)).toEqual(
+        new Float64Array(makePerformanceCoordinates(fixture.bounds, rowCount).flat())
+      );
+    }
+  });
   it(`provides independently checked multi-patch ${fixture.id} workloads at one error budget`, () => {
     const options = makePerformanceOptions(fixture, 128, 4);
     const patchCounts: number[] = [];

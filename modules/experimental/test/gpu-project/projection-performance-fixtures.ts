@@ -85,6 +85,20 @@ export function makePerformanceCoordinates(
   ];
 }
 
+/** Flat allocation keeps million-row table sweeps from creating millions of temporary arrays. */
+export function makePerformancePositions(bounds: ProjectionBounds, rowCount: number): Float64Array {
+  const [minimumX, minimumY, maximumX, maximumY] = bounds;
+  const probes = makePerformanceCoordinates(bounds, 0);
+  const positions = new Float64Array((rowCount + probes.length) * 2);
+  for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+    positions[rowIndex * 2] = minimumX + (maximumX - minimumX) * ((rowIndex + 0.5) / rowCount);
+    positions[rowIndex * 2 + 1] =
+      minimumY + (maximumY - minimumY) * (((rowIndex + 1) * 0.6180339887498949) % 1);
+  }
+  positions.set(probes.flat(), rowCount * 2);
+  return positions;
+}
+
 export function makePerformanceOptions(
   fixture: (typeof performanceFixtures)[number],
   rowCount: number,

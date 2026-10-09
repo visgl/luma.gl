@@ -71,6 +71,12 @@ for (const precision of ['double-single', 'local-f32'] as const) {
         );
       }
       const roundTrip = report.paths[2].durationMilliseconds.median;
+      const resident = report.paths[0].durationMilliseconds.median;
+      expect(report.residentSpeedupOverCPU).toBe(
+        resident > 0 && report.cpuTimeMilliseconds.median > 0
+          ? report.cpuTimeMilliseconds.median / resident
+          : null
+      );
       expect(report.roundTripSpeedupOverCPU).toBe(
         roundTrip > 0 && report.cpuTimeMilliseconds.median > 0
           ? report.cpuTimeMilliseconds.median / roundTrip

@@ -62,6 +62,11 @@ export type {
 export type {GPUProjectionProgramProps} from './gpu-projection-program';
 export type {LongitudeWrapOperation} from './projection-longitude-wrap';
 export type {
+  ConicOperation,
+  LambertConformalConicOperation,
+  AlbersEqualAreaOperation
+} from './projection-conic';
+export type {
   GPUProjectionDoubleSingleProps,
   GPUProjectionLocalFloat32Props,
   GPUProjectionPatchIds,
