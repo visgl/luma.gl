@@ -358,7 +358,8 @@ export function getTextureFormatCapabilitiesWebGL(
     // @ts-ignore
     blend: supported && formatSupport.blend,
     // @ts-ignore
-    store: supported && formatSupport.store
+    // WebGL has no storage texture bindings, regardless of whether the byte format is supported.
+    store: false
   };
 }
 

@@ -317,7 +317,15 @@ export abstract class Texture extends Resource<TextureProps> {
 
   /** Set sampler props associated with this texture */
   setSampler(sampler: Sampler | SamplerProps): void {
+    const previousSampler = this.sampler;
     this.sampler = sampler instanceof Sampler ? sampler : this.device.createSampler(sampler);
+    // Samplers created from props belong to this texture. Caller-provided samplers are never attached.
+    if (previousSampler && previousSampler !== this.sampler) {
+      this.destroyAttachedResource(previousSampler);
+    }
+    if (!(sampler instanceof Sampler)) {
+      this.attachResource(this.sampler);
+    }
   }
 
   /** Create a texture view for this texture */

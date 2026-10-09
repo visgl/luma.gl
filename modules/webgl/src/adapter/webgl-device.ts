@@ -512,6 +512,7 @@ export class WebGLDevice extends Device {
    */
   override loseDevice(): boolean {
     this._lossWasRequested = true;
+    this._isLost = true;
     let deviceLossTriggered = false;
     const extensions = this.getExtension('WEBGL_lose_context');
     const ext = extensions.WEBGL_lose_context;
