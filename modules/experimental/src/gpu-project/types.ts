@@ -3,6 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuProj.
 
+import type {ProjectionRoutingNode} from './projection-routing';
+
 /** Two coordinates in a source or destination coordinate reference system. */
 export type ProjectionCoordinates = readonly [number, number];
 
@@ -60,9 +62,13 @@ export type ProjectionPatch = {
 
 /** Provider-independent projection program consumed by CPU and GPU evaluators. */
 export type ProjectionPlan = {
+  /** Optional conservative broad-phase index; final patch membership remains unchanged. */
+  readonly routingIndex?: readonly ProjectionRoutingNode[];
+  /** Partitioned plans reject gaps using exact/inward-rounded per-patch bounds before evaluation. */
+  readonly strictDomains?: boolean;
   /** Arithmetic and output precision against which patch acceptance was validated. */
   readonly precision: ProjectionPrecision;
-  /** Inclusive source-coordinate domain covered collectively by the patches. */
+  /** Inclusive source envelope; strict-domain plans cover only the union of their patches. */
   readonly bounds: ProjectionBounds;
   /** Binary64 destination origin shared by float32 GPU output rows. */
   readonly destinationOrigin: ProjectionCoordinates;

@@ -4,6 +4,11 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuProj.
 
 export {runProjectionBenchmark} from './projection-benchmark';
+export {runProjectionRoutingBenchmark} from './projection-routing-benchmark';
+export type {
+  ProjectionRoutingBenchmarkOptions,
+  ProjectionRoutingBenchmarkReport
+} from './projection-routing-benchmark';
 export type {
   ProjectionBenchmarkDistribution,
   ProjectionBenchmarkOptions,
