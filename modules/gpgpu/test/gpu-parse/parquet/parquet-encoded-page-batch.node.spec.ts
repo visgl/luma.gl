@@ -9,7 +9,7 @@ import {ParquetSourceLoader} from '@loaders.gl/parquet/parquet-source-loader';
 import {planGPUParquetEncodedPageBatch} from '@luma.gl/gpgpu/gpu-parse';
 
 it('loaders.gl alpha.10 V1 and V2 pages produce mixed GPU batch plans', async () => {
-  expect(ParquetJSWriter.version, 'uses the requested loaders.gl release').toBe('5.0.0-alpha.10');
+  expect(ParquetJSWriter.version, 'uses the requested loaders.gl release').toBe('5.0.0-alpha.11');
 
   for (const useDataPageV2 of [false, true]) {
     const batch = await makeEncodedPageBatch(useDataPageV2);

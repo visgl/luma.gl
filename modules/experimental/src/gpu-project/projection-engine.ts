@@ -6,7 +6,7 @@
 import {projectionEngine} from '@math.gl/projection';
 import type {SpatialReference} from '@math.gl/crs';
 import type {CRSNormalizationOptions, TypeScriptCRSInput} from '@math.gl/projection/core';
-import type {ProjectionEngine, ProjectionInstance} from '@math.gl/projection/types';
+import type {ProjectionEngine, Projection} from '@math.gl/projection/types';
 import {prepareProjectionReferences} from './projection-crs-input';
 import {
   planProjection,
@@ -77,7 +77,7 @@ function prepareReferences(options: PrepareCRSProjectionOptions) {
 function fitProjection(
   options: PrepareCRSProjectionOptions,
   references: ReturnType<typeof prepareReferences>,
-  projection: ProjectionInstance | ReturnType<ProjectionEngine['createProjection']>
+  projection: Projection
 ): PreparedCRSProjectionResult {
   const result = planProjection({...options, projection});
   return result.status === 'ready'

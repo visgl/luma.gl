@@ -5,7 +5,7 @@
 import {readFileSync} from 'node:fs';
 import {build} from 'esbuild';
 import {parsePROJString, type CRSDefinition} from '@math.gl/crs';
-import {Projection} from '@math.gl/projection';
+import {projectionEngine} from '@math.gl/projection';
 import {describe, expect, it, vi} from 'vitest';
 import {
   planCRSProjection,
@@ -204,7 +204,7 @@ describe('optional CRS planner', () => {
       })
     );
     const coordinate = [-122.4194, 37.7749] as const;
-    const expected = new Projection({from, to}).project([...coordinate]);
+    const expected = projectionEngine.createProjection({from, to}).project([...coordinate]);
     const actual = evaluateProjectionProgram(result.program, coordinate);
     expect(
       Math.hypot(actual.position[0] - expected[0], actual.position[1] - expected[1])
@@ -232,9 +232,9 @@ describe('optional CRS planner', () => {
       })
     );
     const actual = evaluateProjectionProgram(result.program, [37.7749, -122.4194]);
-    const expected = new Projection({from: 'EPSG:4326', to: 'EPSG:3857'}).project([
-      -122.4194, 37.7749
-    ]);
+    const expected = projectionEngine
+      .createProjection({from: 'EPSG:4326', to: 'EPSG:3857'})
+      .project([-122.4194, 37.7749]);
     expect(
       Math.hypot(actual.position[0] - expected[0], actual.position[1] - expected[1])
     ).toBeLessThan(1e-4);

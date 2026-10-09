@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {Projection} from '@math.gl/projection';
+import {projectionEngine} from '@math.gl/projection';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {
   planCRSProjection,
@@ -32,12 +32,15 @@ for (const method of ['lambert-1sp', 'lambert-2sp', 'albers'] as const) {
           device.info.fallback
         )
           context.skip();
-        const provider = new Projection({from: 'EPSG:4326', to: getConicOracleDefinition(method)});
+        const provider = projectionEngine.createProjection({
+          from: 'EPSG:4326',
+          to: getConicOracleDefinition(method)
+        });
         // Both variants are evaluated only on their common domain. Domain-rejection behavior is
         // covered separately: the native geographic footprint is larger than the fitted rectangle.
         const coordinates = makePerformanceCoordinates(domain.bounds, rowCount).slice(0, -2);
         coordinates.push([NaN, 0]);
-        const providerLabel = '@math.gl/projection 5.0.0-alpha.13 TypeScript';
+        const providerLabel = '@math.gl/projection 5.0.0-alpha.15 TypeScript';
         const report = await runProjectionProgramBenchmark(device, {
           coordinates,
           oracleLabel: providerLabel,

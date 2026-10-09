@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {Projection} from '@math.gl/projection';
+import {projectionEngine} from '@math.gl/projection';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {planCRSProjection, planProjectionPipeline} from '@luma.gl/experimental/gpu-project/crs';
 import {runProjectionProgramBenchmark} from '@luma.gl/experimental/gpu-project/benchmarks';
@@ -25,7 +25,7 @@ for (const method of ['lambert-1sp', 'lambert-2sp', 'albers'] as const) {
           device.info.fallback
         )
           context.skip();
-        const provider = new Projection({
+        const provider = projectionEngine.createProjection({
           from: 'EPSG:4326',
           to: getConicOracleDefinition(method, southern)
         });

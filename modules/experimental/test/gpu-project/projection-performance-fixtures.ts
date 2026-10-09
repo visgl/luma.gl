@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Projection} from '@math.gl/projection';
+import {projectionEngine} from '@math.gl/projection';
 import {
   planCRSProjection,
   createCRSProjectionCPUBenchmarks
@@ -105,7 +105,7 @@ export function makePerformanceOptions(
   consumerCount: number
 ): ProjectionProgramBenchmarkOptions {
   const preparationStart = performance.now();
-  const provider = new Projection({from: 'EPSG:4326', to: fixture.serialized});
+  const provider = projectionEngine.createProjection({from: 'EPSG:4326', to: fixture.serialized});
   const cpuProviderPreparationTimeMilliseconds = performance.now() - preparationStart;
   const bounds = fixture.bounds;
   const isValid = (position: ProjectionCoordinates) =>
@@ -114,7 +114,7 @@ export function makePerformanceOptions(
     position[1] >= bounds[1] &&
     position[0] <= bounds[2] &&
     position[1] <= bounds[3];
-  const providerLabel = '@math.gl/projection 5.0.0-alpha.13 TypeScript';
+  const providerLabel = '@math.gl/projection 5.0.0-alpha.15 TypeScript';
   return {
     coordinates: makePerformanceCoordinates(bounds, rowCount),
     consumerCount,

@@ -7,7 +7,7 @@ import {GPUCommandGraph, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import type {GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it} from 'vitest';
-import {Projection} from '@math.gl/projection';
+import {projectionEngine} from '@math.gl/projection';
 import {makeVisualizationFixture} from './projection-visualization-fixtures';
 import {runProjectionRoutingBenchmark} from '@luma.gl/experimental/gpu-project/benchmarks';
 import {
@@ -295,7 +295,7 @@ it('qualifies a curved orthographic inverse partition against an independent sph
   )
     context.skip();
   const fixture = makeVisualizationFixture('ortho', true);
-  const provider = new Projection({from: fixture.from, to: fixture.to});
+  const provider = projectionEngine.createProjection({from: fixture.from, to: fixture.to});
   // A bounded interior disk, not a claim to cover the entire singular horizon footprint.
   const plan = compileProjectionPartition({
     branches: [

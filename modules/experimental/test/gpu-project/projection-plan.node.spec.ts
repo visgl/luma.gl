@@ -4,7 +4,7 @@
 
 import {readFileSync} from 'node:fs';
 
-import {Projection} from '@math.gl/projection';
+import {projectionEngine} from '@math.gl/projection';
 import * as experimentalModule from '@luma.gl/experimental';
 import * as projectionModule from '@luma.gl/experimental/gpu-project';
 import type {GraphDataView} from '@luma.gl/gpgpu/gpu-core';
@@ -206,7 +206,7 @@ describe('CPU projection plan compilation', () => {
       },
       id: {authority: 'EPSG', code: 3857}
     };
-    const projection = new Projection({from: wgs84, to: webMercator});
+    const projection = projectionEngine.createProjection({from: wgs84, to: webMercator});
     const plan = compileProjectionPlan({
       projection,
       bounds: [-122.45, 37.75, -122.4, 37.8],
