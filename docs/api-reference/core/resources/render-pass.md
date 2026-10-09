@@ -8,28 +8,28 @@ import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
 
 ## Usage
 
-To draw to the screen in luma.gl, simply create a `RenderPass` by calling 
-`device.beginRenderPass()` and start rendering. When done rendering, call 
-`renderPass.end()`  
+To draw to the screen in luma.gl, simply create a `RenderPass` by calling
+`device.beginRenderPass()` and start rendering. When done rendering, call
+`renderPass.end()`
 
 ```typescript
-  // A renderpass without parameters uses the default framebuffer of the device's default CanvasContext 
+  // A renderpass without parameters uses the default framebuffer of the device's default CanvasContext
   const renderPass = device.beginRenderPass();
   model.draw(renderPass);
   renderPass.end();
   device.submit();
 ```
 
-`device.getDefaultCanvasContext().getDefaultFramebuffer()` returns a special framebuffer that lets you render to screen (into the swap chain). This framebuffer is used by default when a `device.beginRenderPass()` is called without providing a `framebuffer`, equivalent to: 
+`device.getDefaultCanvasContext().getCurrentFramebuffer()` returns a special framebuffer that lets you render to screen (into the swap chain). This framebuffer is used by default when a `device.beginRenderPass()` is called without providing a `framebuffer`, equivalent to:
 
 ```typescript
-  const renderPass = device.beginRenderPass({framebuffer: device.getDefaultCanvasContext().getDefaultFramebuffer()});
+  const renderPass = device.beginRenderPass({framebuffer: device.getDefaultCanvasContext().getCurrentFramebuffer()});
   ...
 ```
 
 ### Clearing the screen
 
-`Framebuffer` attachments are cleared by default when a RenderPass starts. More control is provided via the `clearColor` parameter, setting this will clear the attachments to the corresponding color. The default clear color is `[0, 0, 0, 1]`. Clearing can also be disabled by setting `loadOp='load'`.
+`Framebuffer` attachments are cleared by default when a RenderPass starts. More control is provided via the `clearColor` parameter, setting this will clear the attachments to the corresponding color. The default clear color is `[0, 0, 0, 1]`. Set a clear property to boolean `false` to preserve that attachment.
 
 ```typescript
   const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
@@ -55,7 +55,7 @@ Depth and stencil buffers are also cleared to default values:
 `RenderPassProps.parameters.viewport` controls how the rendered graphics is mapped to window pixels / texels (more precisely, the affine transformation of x and y from normalized device coordinates to window coordinates).
 
 If no value for the `viewport` parameter is provided, the following defaults will be applied.
-- If no `framebuffer` is specified, the size of the canvas drawing buffer will be used (`device.getCanvasContext().getDrawingBufferSize()`)
+- If no `framebuffer` is specified, the size of the canvas drawing buffer will be used (`device.getDefaultCanvasContext().getDrawingBufferSize()`)
 - If a framebuffer is specified, the `width` and `height` of the framebuffer will be used.
 
 ## Types
@@ -83,7 +83,7 @@ If no value for the `viewport` parameter is provided, the following defaults wil
 ## Members
 
 - `device`: `Device` - holds a reference to the `Device` that created this `RenderPass`.
-- `handle`: `unknown` - holds the underlying WebGL or WebGPU shader object
+- `handle`: `unknown` - holds the backend render-pass handle
 - `props`: `RenderPassProps` - holds a copy of the `RenderPassProps` used to create this `RenderPass`.
 
 ## Methods
@@ -94,7 +94,7 @@ If no value for the `viewport` parameter is provided, the following defaults wil
 
 ### `end(): void`
 
-Must be called after all draw calls have been completed to guarantee rendering. Frees up any GPU resources associated with this render pass.
+Ends command encoding for the pass. Submit the encoder to execute WebGPU work; ending a pass does not itself submit it. `AnimationLoop` submits the default encoder after `onRender` returns.
 
 ### `setPipeline(pipeline: RenderPipeline): void`
 

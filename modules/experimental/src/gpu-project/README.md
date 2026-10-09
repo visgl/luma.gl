@@ -40,16 +40,10 @@ import {
   GPUProjection,
   compileProjectionPlan
 } from '@luma.gl/experimental/gpu-project';
-import {Projection} from '@math.gl/projection';
+import {projectionEngine} from '@math.gl/projection';
 
-// Register any CRS definition that the installed projection provider does not
-// already include.
-Projection.defineProjectionAliases({
-  'EPSG:32610': '+proj=utm +zone=10 +datum=WGS84 +units=m +no_defs'
-});
-
-const projection = new Projection({
-  from: 'EPSG:32610',
+const projection = projectionEngine.createProjection({
+  from: '+proj=utm +zone=10 +datum=WGS84 +units=m +no_defs',
   to: 'EPSG:3857'
 });
 
@@ -105,6 +99,21 @@ const plan = compileProjectionPlan({
   tolerance: 0.01
 });
 ```
+
+## Reuse a caller-prepared transform
+
+`planProjection({projection, bounds, tolerance})` builds a compiled adaptive program without
+importing math.gl or resolving the provider's CRS again. It accepts existing `project/unproject`
+providers and prepared `projectSync/unprojectSync` transforms; the synchronous pair takes priority.
+Callers prepare lazy transforms themselves. No new math.gl engine API or dependency upgrade is
+required. Defaults preserve raw binary64 input and double-single output.
+
+The result shares the CRS planner's `ready/unsupported` union and optional
+`ProjectionPlanningError`. Inverse fitting requires an explicit inverse domain and method.
+Exactly two finite output coordinates are required, and explicitly lossy transforms are declined.
+No native formula substitutes for the caller's provider. See
+[caller-prepared projection planning](../../../../docs/api-reference/experimental/gpu-project.md#plan-a-caller-prepared-projection)
+for lifecycle, domain and precision details.
 
 ## Preserve coordinate precision
 

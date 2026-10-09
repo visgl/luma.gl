@@ -23,7 +23,7 @@ export function tokenizeSlang(source: string, sourceName: string): Token[] {
   }
   while (offset < source.length) {
     const remaining = source.slice(offset);
-    const location = {offset, line, column};
+    const location = {offset, line, column, sourceName};
     const whitespace = /^\s+/.exec(remaining);
     if (whitespace) {
       advance(whitespace[0]);
@@ -62,6 +62,6 @@ export function tokenizeSlang(source: string, sourceName: string): Token[] {
     tokens.push({...location, kind, text: match[0]});
     advance(match[0]);
   }
-  tokens.push({offset, line, column, text: '', kind: 'end'});
+  tokens.push({offset, line, column, sourceName, text: '', kind: 'end'});
   return tokens;
 }

@@ -83,6 +83,7 @@ renderer.renderToScreen({
 | `pointLightIntensity` | `1.8` | Strength of retained clustered point-light candidates. |
 | `sampleCount` | `10` | View-ray integration samples; supported range is `3` to `20`. |
 | `godRayIntensity` | `0` | Strength of depth-occluded crepuscular light shafts. |
+| `godRaySourceRadius` | `0.08` | Radius of the luminous source in normalized screen coordinates. A finite source produces shafts instead of illuminating the whole sky. |
 | `godRaySampleCount` | `18` | Radial visibility samples when god rays are enabled; maximum is `32`. |
 | `historyWeight` | `0.88` | Contribution from camera- and velocity-reprojected atmospheric history. |
 | `strength` | `0.9` | Final `clusteredVolumetricComposite` contribution. |

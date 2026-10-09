@@ -40,7 +40,8 @@ WebGPU projects, orders, and draws each progressively added batch through a GPU 
 
 ## Limits and compatibility
 
-The graph renderer, GPU ordering, hierarchy traversal, and storage-backed features require WebGPU.
+The graph renderers, GPU ordering, and storage-backed features require WebGPU. RAD hierarchy
+selection and generic residency can run on CPU-only data, including in an application-owned worker.
 Use the prepared SplatRenderer path when WebGL 2 compatibility or caller-provided source ordering
 is required. The package remains an experimental private workspace.
 

@@ -4,7 +4,7 @@ import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-cont
 
 ## Overview
 
-`GPUProgram` is Jarnevon's backend-independent semantic intermediate representation. It is intentionally distinct from `GPUCommandGraph`, which is the WebGPU execution graph.
+`GPUProgram` is luma.gl's backend-independent semantic intermediate representation. It is intentionally distinct from `GPUCommandGraph`, which is the WebGPU execution graph.
 
 <GPUOperationContract operation="gpu-program" />
 

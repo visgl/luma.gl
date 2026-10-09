@@ -56,12 +56,19 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
     const depthStencilAttachment =
       this.depthStencilAttachment && this.depthStencilAttachment.texture.clone(size);
 
-    return this.device.createFramebuffer({
+    const framebuffer = this.device.createFramebuffer({
       ...this.props,
       ...size,
       colorAttachments,
       depthStencilAttachment
     });
+    for (const texture of colorAttachments) {
+      framebuffer.attachResource(texture);
+    }
+    if (depthStencilAttachment) {
+      framebuffer.attachResource(depthStencilAttachment);
+    }
+    return framebuffer;
   }
 
   /**
@@ -151,14 +158,14 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
    * and destroys existing textures if owned
    */
   protected resizeAttachments(width: number, height: number): void {
-    this.colorAttachments.forEach((colorAttachment, i) => {
+    this.colorAttachments.forEach((colorAttachment, index) => {
       const resizedTexture = colorAttachment.texture.clone({
         width,
         height
       });
-      this.destroyAttachedResource(colorAttachment);
-      this.colorAttachments[i] = resizedTexture.view;
-      this.attachResource(resizedTexture.view);
+      this.destroyAttachedResource(colorAttachment.texture);
+      this.colorAttachments[index] = resizedTexture.view;
+      this.attachResource(resizedTexture);
     });
 
     if (this.depthStencilAttachment) {
@@ -166,7 +173,7 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
         width,
         height
       });
-      this.destroyAttachedResource(this.depthStencilAttachment);
+      this.destroyAttachedResource(this.depthStencilAttachment.texture);
       this.depthStencilAttachment = resizedTexture.view;
       this.attachResource(resizedTexture);
     }

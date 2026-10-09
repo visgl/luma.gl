@@ -21,11 +21,13 @@ import {
   type CompiledProjection
 } from './projection-program';
 import {GPUProjectionProgram} from './gpu-projection-program';
+import {getProjectionProgramSignature, getProjectionDeviceSignature} from './projection-execution';
 import type {ProjectionBounds, ProjectionCoordinates, ProjectionDegree} from './types';
 import type {ProjectionProgramMetadata} from './projection-metadata';
 import {executeGPUProjectionBenchmark} from './gpu-projection-benchmark';
 import {
   measureProjectionProgramCPU,
+  type ProjectionProgramCPUVariant,
   type ProjectionProgramCPUPathReport
 } from './projection-program-cpu-benchmark';
 import {
@@ -44,12 +46,20 @@ export type ProjectionProgramBenchmarkVariant = {
 };
 
 export type ProjectionProgramBenchmarkOptions = {
+  /** Versioned caller identity for distribution, update policy and reuse. Required for selection. */
+  workloadKey?: string;
+  /** Browser/driver/runtime identity supplied by the capture runner. Required for selection. */
+  environment?: string;
   /** Shared binary64 source rows. Include boundary/invalid rows explicitly when desired. */
   coordinates: readonly ProjectionCoordinates[];
   /** Independent absolute-coordinate oracle, including expected validity. Never inferred from a variant. */
   oracle: (position: ProjectionCoordinates) => {position: ProjectionCoordinates; valid: boolean};
   /** Descriptive label for the CPU oracle implementation; does not load or select a provider. */
   oracleLabel?: string;
+  /** Additional verified CPU APIs; the legacy speedup remains relative to scalar-allocating. */
+  cpuVariants?: readonly ProjectionProgramCPUVariant[];
+  /** Caller-measured engine/transform construction; excluded from all execution samples. */
+  cpuProviderPreparationTimeMilliseconds?: number;
   variants: readonly ProjectionProgramBenchmarkVariant[];
   /** Independent consumers in one submission. Materialized mode projects once and shares the result. */
   consumerCount?: number;
@@ -60,6 +70,7 @@ export type ProjectionProgramBenchmarkOptions = {
 };
 
 export type ProjectionProgramBenchmarkPathReport = {
+  programSignature: string;
   id: string;
   mode: 'inline' | 'materialized';
   metadata: ProjectionProgramMetadata;
@@ -84,6 +95,12 @@ export type ProjectionProgramBenchmarkPathReport = {
   programCompilationTimeMilliseconds: ProjectionBenchmarkDistribution;
   /** Graph/pipeline construction; driver caches and deferred compilation affect this measurement. */
   graphCompilationTimeMilliseconds: number;
+  /** CPU buffer allocation/upload enqueue and graph construction; not pure transfer time. */
+  resourcePreparationTimeMilliseconds: number;
+  /** Remaining upload/compilation fence wait, after graph compilation. */
+  uploadDrainTimeMilliseconds: number;
+  /** Output reads from both validation passes, excluding CPU validation arithmetic. */
+  validationReadbackTimeMilliseconds: number;
   /** First synchronized use, including any deferred driver work; not a cold-cache guarantee. */
   firstUseTimeMilliseconds: number;
   cpuEncodeTimeMilliseconds: ProjectionBenchmarkDistribution;
@@ -93,10 +110,14 @@ export type ProjectionProgramBenchmarkPathReport = {
   encodeAndSynchronizedTimeMilliseconds: ProjectionBenchmarkDistribution;
   /** Matching CPU mode median / resident GPU encode+fence median. Null below timer resolution. */
   residentSpeedupOverCPU: number | null;
+  cpuComparisons: {api: string; layout: string; provider: string; residentSpeedup: number | null}[];
   gpuTimeMilliseconds?: ProjectionBenchmarkDistribution;
 };
 
 export type ProjectionProgramBenchmarkReport = {
+  deviceSignature: string;
+  workloadKey?: string;
+  environment?: string;
   device: DeviceInfo;
   inputFormat: 'uint32x4';
   consumer: 'axis-swap';
@@ -110,6 +131,7 @@ export type ProjectionProgramBenchmarkReport = {
   oracleTimeMilliseconds: ProjectionBenchmarkDistribution;
   oracleChecksum: number;
   cpuProvider: string;
+  cpuProviderPreparationTimeMilliseconds?: number;
   cpuPaths: ProjectionProgramCPUPathReport[];
   paths: ProjectionProgramBenchmarkPathReport[];
 };
@@ -170,7 +192,9 @@ export async function runProjectionProgramBenchmark(
     expected,
     consumerCount,
     warmupIterations,
-    measuredIterations
+    measuredIterations,
+    variants: options.cpuVariants,
+    provider: options.oracleLabel
   });
   let firstProjection: CompiledProjection | undefined;
   for (const variant of options.variants) {
@@ -225,7 +249,7 @@ export async function runProjectionProgramBenchmark(
           consumerCount,
           timestampQueries,
           adaptiveStages,
-          cpuPaths.find(path => path.mode === mode)!,
+          cpuPaths.filter(path => path.mode === mode),
           warmupIterations,
           measuredIterations,
           summarizeProjectionBenchmarkSamples(planningSamples),
@@ -236,6 +260,9 @@ export async function runProjectionProgramBenchmark(
   }
   return {
     device: {...device.info},
+    deviceSignature: getProjectionDeviceSignature(device),
+    workloadKey: options.workloadKey,
+    environment: options.environment,
     inputFormat: 'uint32x4',
     consumer: 'axis-swap',
     consumerCount,
@@ -251,6 +278,7 @@ export async function runProjectionProgramBenchmark(
     oracleTimeMilliseconds: summarizeProjectionBenchmarkSamples(oracleSamples),
     oracleChecksum,
     cpuProvider: options.oracleLabel ?? 'caller-supplied oracle',
+    cpuProviderPreparationTimeMilliseconds: options.cpuProviderPreparationTimeMilliseconds,
     cpuPaths,
     paths
   };
@@ -266,12 +294,13 @@ async function measurePath(
   consumerCount: number,
   timestampQueries: boolean,
   adaptiveStages: ProjectionProgramBenchmarkPathReport['adaptiveStages'],
-  cpuPath: ProjectionProgramCPUPathReport,
+  cpuPaths: ProjectionProgramCPUPathReport[],
   warmupIterations: number,
   measuredIterations: number,
   planningTimeMilliseconds: ProjectionBenchmarkDistribution,
   programCompilationTimeMilliseconds: ProjectionBenchmarkDistribution
 ): Promise<ProjectionProgramBenchmarkPathReport> {
+  const resourcePreparationStart = getProjectionBenchmarkTime();
   const graph = new GPUCommandGraph(device);
   const buffers: Buffer[] = [];
   let contributor: GPUProjectionProgram | undefined;
@@ -391,15 +420,19 @@ async function measurePath(
       }
     }
     const compilationStart = getProjectionBenchmarkTime();
+    const resourcePreparationTimeMilliseconds = compilationStart - resourcePreparationStart;
     compiled = await graph.compileAsync();
     const graphCompilationTimeMilliseconds = getProjectionBenchmarkTime() - compilationStart;
     // Drain uploads/compilation before timing submission-to-fence intervals.
+    const uploadStart = getProjectionBenchmarkTime();
     const uploadFence = device.createFence();
     try {
       await uploadFence.signaled;
     } finally {
       uploadFence.destroy();
     }
+    const uploadDrainTimeMilliseconds = getProjectionBenchmarkTime() - uploadStart;
+    let validationReadbackTimeMilliseconds = 0;
     const firstUse = await executeGPUProjectionBenchmark(
       device,
       compiled,
@@ -408,8 +441,10 @@ async function measurePath(
     const validate = async (): Promise<number> => {
       let maximumError = 0;
       for (const {outputBuffer, validityBuffer} of outputs) {
+        const readbackStart = getProjectionBenchmarkTime();
         const outputBytes = await outputBuffer.readAsync();
         const validityBytes = await validityBuffer.readAsync();
+        validationReadbackTimeMilliseconds += getProjectionBenchmarkTime() - readbackStart;
         const values = new Float32Array(
           outputBytes.buffer,
           outputBytes.byteOffset,
@@ -490,9 +525,19 @@ async function measurePath(
           execution.timing.cpuEncodeTimeMilliseconds + execution.synchronizedTimeMilliseconds
       )
     );
+    const cpuComparisons = cpuPaths.map(path => ({
+      api: path.api,
+      layout: path.layout,
+      provider: path.provider,
+      residentSpeedup:
+        encodeAndSynchronizedTimeMilliseconds.median > 0 && path.durationMilliseconds.median > 0
+          ? path.durationMilliseconds.median / encodeAndSynchronizedTimeMilliseconds.median
+          : null
+    }));
     const parameterByteLength = projection.packParameters().byteLength;
     return {
       id: variant.id,
+      programSignature: getProjectionProgramSignature(projection),
       mode,
       metadata: projection.metadata,
       maximumAllowedError: variant.maximumError,
@@ -509,16 +554,17 @@ async function measurePath(
       planningTimeMilliseconds,
       programCompilationTimeMilliseconds,
       graphCompilationTimeMilliseconds,
+      resourcePreparationTimeMilliseconds,
+      uploadDrainTimeMilliseconds,
+      validationReadbackTimeMilliseconds,
       firstUseTimeMilliseconds: firstUse.synchronizedTimeMilliseconds,
       cpuEncodeTimeMilliseconds: summarizeProjectionBenchmarkSamples(
         executions.map(execution => execution.timing.cpuEncodeTimeMilliseconds)
       ),
       synchronizedTimeMilliseconds,
       encodeAndSynchronizedTimeMilliseconds,
-      residentSpeedupOverCPU:
-        encodeAndSynchronizedTimeMilliseconds.median > 0 && cpuPath.durationMilliseconds.median > 0
-          ? cpuPath.durationMilliseconds.median / encodeAndSynchronizedTimeMilliseconds.median
-          : null,
+      residentSpeedupOverCPU: cpuComparisons[0].residentSpeedup,
+      cpuComparisons,
       synchronizedCoordinatesPerSecond: getProjectionBenchmarkThroughput(
         coordinates.length,
         synchronizedTimeMilliseconds.median

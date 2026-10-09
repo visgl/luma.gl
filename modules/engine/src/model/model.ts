@@ -53,7 +53,7 @@ import {
   ShaderAssembler
 } from '@luma.gl/shadertools';
 
-import type {Geometry} from '../geometry/geometry';
+import type {Geometry} from '@math.gl/geometry';
 import {GPUGeometry, makeGPUGeometry} from '../geometry/gpu-geometry';
 import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
 import {debugFramebuffer} from '../debug/debug-framebuffer';

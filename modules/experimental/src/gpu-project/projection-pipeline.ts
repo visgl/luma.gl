@@ -5,28 +5,10 @@
 
 import type {PROJParameter, PROJStringAst} from '@math.gl/crs';
 import {invertProjectionProgram, type ProjectionOperation} from './projection-program';
+import {getConicParameters, type ConicOperation} from './projection-conic';
 
-export type ProjectionPlanningReason = {
-  readonly code:
-    | 'invalid-definition'
-    | 'unsupported-parameter'
-    | 'unsupported-operation'
-    | 'unsupported-arithmetic'
-    | 'unsupported-dimensions'
-    | 'unsupported-coordinate-system'
-    | 'unsupported-datum'
-    | 'unsupported-conversion'
-    | 'datum-transformation-required'
-    | 'bounds-required'
-    | 'unsupported-unit'
-    | 'incompatible-units'
-    | 'crs-requires-provider'
-    | 'provider-unavailable'
-    | 'approximation-failed';
-  readonly step?: number;
-  readonly parameter?: string;
-  readonly message: string;
-};
+import type {ProjectionPlanningReason} from './projection-planning';
+export type {ProjectionPlanningReason} from './projection-planning';
 
 type Unit = {factor: number; dimension: 'linear' | 'angular'};
 
@@ -102,7 +84,22 @@ export function lowerProjectionPipeline(
                 ? ['proj', 'inv', 'ellps', 'zone', 'south']
                 : method === 'tmerc'
                   ? ['proj', 'inv', 'ellps', 'a', 'rf', 'lon_0', 'lat_0', 'k_0', 'x_0', 'y_0']
-                  : null;
+                  : method === 'lcc' || method === 'aea'
+                    ? [
+                        'proj',
+                        'inv',
+                        'ellps',
+                        'a',
+                        'rf',
+                        'lon_0',
+                        'lat_0',
+                        'lat_1',
+                        'lat_2',
+                        'x_0',
+                        'y_0',
+                        ...(method === 'lcc' ? ['k_0'] : [])
+                      ]
+                    : null;
     if (!supported) {
       return decline(
         'unsupported-operation',
@@ -315,6 +312,70 @@ export function lowerProjectionPipeline(
         },
         {type: 'affine', scale: [1, 1], offset: [easting, northing]}
       );
+    } else if (method === 'lcc' || method === 'aea') {
+      const namedEllipsoid =
+        values.get('ellps') === 'WGS84' && !values.has('a') && !values.has('rf');
+      const numericEllipsoid = !values.has('ellps') && values.has('a') && values.has('rf');
+      if ((!namedEllipsoid && !numericEllipsoid) || !values.has('lat_1') || !values.has('lat_2')) {
+        return decline(
+          'unsupported-parameter',
+          'conics require explicit ellps=WGS84 or a/rf, and both standard parallels',
+          step
+        );
+      }
+      const semiMajorAxis = namedEllipsoid ? 6378137 : getNumber(values.get('a'), NaN);
+      const inverseFlattening = namedEllipsoid ? 298.257223563 : getNumber(values.get('rf'), NaN);
+      const longitude = (getNumber(values.get('lon_0'), 0) * Math.PI) / 180;
+      const easting = getNumber(values.get('x_0'), 0);
+      const northing = getNumber(values.get('y_0'), 0);
+      const shape = {
+        arithmetic: 'float32' as const,
+        semiMajorAxis,
+        semiMinorAxis: semiMajorAxis * (inverseFlattening === 0 ? 1 : 1 - 1 / inverseFlattening),
+        latitudeOrigin: (getNumber(values.get('lat_0'), 0) * Math.PI) / 180,
+        firstStandardParallel: (getNumber(values.get('lat_1'), NaN) * Math.PI) / 180,
+        secondStandardParallel: (getNumber(values.get('lat_2'), NaN) * Math.PI) / 180
+      };
+      const operation: ConicOperation =
+        method === 'lcc'
+          ? {
+              type: 'lambert-conformal-conic',
+              ...shape,
+              scaleFactor: getNumber(values.get('k_0'), 1)
+            }
+          : {type: 'albers-equal-area', ...shape};
+      try {
+        if (
+          ![inverseFlattening, longitude, easting, northing].every(Number.isFinite) ||
+          !(inverseFlattening === 0 || inverseFlattening >= 100)
+        )
+          throw new Error();
+        getConicParameters(operation);
+      } catch {
+        return decline(
+          'invalid-definition',
+          'conic parameters exceed the supported native branch',
+          step
+        );
+      }
+      if (
+        previousUnit &&
+        (previousUnit.dimension !== (inverse ? 'linear' : 'angular') || previousUnit.factor !== 1)
+      ) {
+        return decline('incompatible-units', 'conics consume radians or inverse metres', step);
+      }
+      if (projectionArithmetic !== 'float32')
+        return decline(
+          'unsupported-arithmetic',
+          'native conics require explicit float32 projection arithmetic',
+          step
+        );
+      previousUnit = {dimension: inverse ? 'angular' : 'linear', factor: 1};
+      stage.push({type: 'affine', scale: [1, 1], offset: [-longitude, 0]}, operation, {
+        type: 'affine',
+        scale: [1, 1],
+        offset: [easting, northing]
+      });
     } else {
       const scaleX = getNumber(values.get('s11'), 1);
       const scaleY = getNumber(values.get('s22'), 1);

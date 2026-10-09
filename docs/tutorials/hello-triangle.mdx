@@ -36,7 +36,7 @@ WebGL2 backend consumes GLSL, while the model and render loop are shared.
 2. The animation loop constructs the application with that device.
 3. `onRender` begins a render pass and clears its color attachment.
 4. `model.draw(renderPass)` records the draw.
-5. Ending the pass allows the device to submit and present the frame.
+5. Ending the pass finishes encoding; the animation loop then submits the frame.
 
 <ExampleSource example="tutorials/hello-triangle" />
 
@@ -56,4 +56,6 @@ depth testing, and uniforms.
 
 Want to run the example yourself? The [Installing guide](/docs/developer-guide/installing)
 sets up a local project. For a glimpse of where these building blocks can lead, explore
-the complete scenes and simulations in [Getting Started](/docs/getting-started).
+the [live examples](/examples).
+
+For a complete local triangle program, see [Getting started](/docs/getting-started).

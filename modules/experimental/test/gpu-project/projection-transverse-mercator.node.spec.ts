@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {describe, expect, it} from 'vitest';
-import {Projection} from '@math.gl/projection';
+import {projectionEngine} from '@math.gl/projection';
 import {
   compileProjectionPlan,
   compileProjectionProgram,
@@ -42,7 +42,7 @@ describe('sixth-order Transverse Mercator', () => {
         if (result.status !== 'ready') return;
         expect(result.strategy).toBe('native');
         const inverse = invertProjectionProgram(result.program);
-        const provider = new Projection({
+        const provider = projectionEngine.createProjection({
           from: 'EPSG:4326',
           to: `+proj=utm +zone=${zone} ${south ? '+south' : ''} +datum=WGS84 +units=m`
         });
@@ -81,7 +81,7 @@ describe('sixth-order Transverse Mercator', () => {
         }
       ]
     };
-    const provider = new Projection({
+    const provider = projectionEngine.createProjection({
       from: `+proj=longlat +a=6378137 +${inverseFlattening === 0 ? 'b=6378137' : `rf=${inverseFlattening}`}`,
       to: `+proj=tmerc +a=6378137 +${inverseFlattening === 0 ? 'b=6378137 +approx' : `rf=${inverseFlattening}`} +lon_0=0 +lat_0=30 +k_0=1.2 +units=m`
     });
@@ -209,7 +209,7 @@ describe('TM/UTM planner integration', () => {
     if (result.status !== 'ready') return;
     expect(result.strategy).toBe('adaptive');
     expect(result.compiled.metadata.arithmetic).toBe('double-single');
-    const provider = new Projection({
+    const provider = projectionEngine.createProjection({
       from: 'EPSG:4326',
       to: '+proj=utm +zone=10 +datum=WGS84'
     });
@@ -236,10 +236,12 @@ describe('TM/UTM planner integration', () => {
 
   it('composes different UTM zones and Web Mercator without datum shortcuts', () => {
     const source = makeTransverseMercatorCRS(10);
-    const point = new Projection({
-      from: 'EPSG:4326',
-      to: '+proj=utm +zone=10 +datum=WGS84'
-    }).project([-120, 37]);
+    const point = projectionEngine
+      .createProjection({
+        from: 'EPSG:4326',
+        to: '+proj=utm +zone=10 +datum=WGS84'
+      })
+      .project([-120, 37]);
     for (const to of [makeTransverseMercatorCRS(11), makeWebMercatorCRS()]) {
       const result = planCRSProjection({
         from: source,
@@ -249,10 +251,13 @@ describe('TM/UTM planner integration', () => {
       });
       expect(result.status).toBe('ready');
       if (result.status !== 'ready') return;
-      const expected = new Projection({
-        from: 'EPSG:4326',
-        to: to.conversion.method.id.code === 9807 ? '+proj=utm +zone=11 +datum=WGS84' : 'EPSG:3857'
-      }).project([-120, 37]);
+      const expected = projectionEngine
+        .createProjection({
+          from: 'EPSG:4326',
+          to:
+            to.conversion.method.id.code === 9807 ? '+proj=utm +zone=11 +datum=WGS84' : 'EPSG:3857'
+        })
+        .project([-120, 37]);
       const actual = evaluateProjectionProgram(result.program, [point[0], point[1]]);
       expect(actual.valid).toBe(true);
       expect(
@@ -310,10 +315,12 @@ describe('TM/UTM planner integration', () => {
     });
     expect(result.status).toBe('ready');
     if (result.status !== 'ready') return;
-    const expected = new Projection({
-      from: 'EPSG:4326',
-      to: '+proj=tmerc +datum=WGS84 +lon_0=5 +lat_0=20 +k_0=0.9996 +x_0=500000'
-    }).project([6, 30]);
+    const expected = projectionEngine
+      .createProjection({
+        from: 'EPSG:4326',
+        to: '+proj=tmerc +datum=WGS84 +lon_0=5 +lat_0=20 +k_0=0.9996 +x_0=500000'
+      })
+      .project([6, 30]);
     const actual = evaluateProjectionProgram(result.program, [30, 6]);
     expect(actual.valid).toBe(true);
     expect(actual.position[0]).toBeCloseTo(-expected[1] / 1000, 7);
@@ -336,10 +343,12 @@ describe('TM/UTM planner integration', () => {
       expect(result.status).toBe('ready');
       expect(inverse.status).toBe('ready');
       if (result.status !== 'ready' || inverse.status !== 'ready') return;
-      const expected = new Projection({
-        from: 'EPSG:4326',
-        to: '+proj=utm +zone=56 +south +datum=WGS84'
-      }).project([151, -33]);
+      const expected = projectionEngine
+        .createProjection({
+          from: 'EPSG:4326',
+          to: '+proj=utm +zone=56 +south +datum=WGS84'
+        })
+        .project([151, -33]);
       const actual = evaluateProjectionProgram(result.program, [151, -33]);
       expect(
         Math.hypot(actual.position[0] - expected[0], actual.position[1] - expected[1])

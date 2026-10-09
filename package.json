@@ -56,14 +56,14 @@
   "devDependencies": {
     "@babel/core": "^7.28.3",
     "@babel/preset-env": "^7.28.3",
-    "@loaders.gl/core": "~5.0.0-alpha.9",
-    "@loaders.gl/gltf": "~5.0.0-alpha.9",
-    "@loaders.gl/las": "~5.0.0-alpha.9",
-    "@loaders.gl/parquet": "~5.0.0-alpha.9",
-    "@loaders.gl/polyfills": "~5.0.0-alpha.9",
-    "@math.gl/crs": "~5.0.0-alpha.12",
-    "@math.gl/dggs": "~5.0.0-alpha.12",
-    "@math.gl/projection": "~5.0.0-alpha.12",
+    "@loaders.gl/core": "~5.0.0-alpha.11",
+    "@loaders.gl/gltf": "~5.0.0-alpha.11",
+    "@loaders.gl/las": "~5.0.0-alpha.11",
+    "@loaders.gl/parquet": "~5.0.0-alpha.11",
+    "@loaders.gl/polyfills": "~5.0.0-alpha.11",
+    "@math.gl/crs": "~5.0.0-alpha.15",
+    "@math.gl/dggs": "~5.0.0-alpha.15",
+    "@math.gl/projection": "~5.0.0-alpha.15",
     "@probe.gl/bench": "^4.1.1",
     "@probe.gl/stats": "^4.1.1",
     "@probe.gl/stats-widget": "^4.1.1",
@@ -95,23 +95,23 @@
     "@luma.gl/engine": "workspace:*",
     "@luma.gl/shadertools": "workspace:*",
     "@luma.gl/webgl": "workspace:*",
-    "@loaders.gl/compression": "5.0.0-alpha.8",
-    "@math.gl/sun": "~5.0.0-alpha.12",
-    "@math.gl/web-mercator": "~5.0.0-alpha.12",
+    "@loaders.gl/compression": "5.0.0-alpha.11",
+    "@math.gl/sun": "~5.0.0-alpha.15",
+    "@math.gl/web-mercator": "~5.0.0-alpha.15",
     "@deck.gl/core@npm:9.4.0": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch",
-    "@math.gl/core@npm:^4.1.0": "5.0.0-alpha.12",
+    "@math.gl/core@npm:^4.1.0": "5.0.0-alpha.15",
     "@vitest/browser": "5.0.2",
     "@vitest/browser-playwright": "5.0.2"
   },
   "packageExtensions": {
-    "@loaders.gl/gltf@~5.0.0-alpha.9": {
+    "@loaders.gl/gltf@~5.0.0-alpha.11": {
       "peerDependencies": {
-        "@loaders.gl/core": "~5.0.0-alpha.9"
+        "@loaders.gl/core": "~5.0.0-alpha.11"
       }
     },
-    "@loaders.gl/images@~5.0.0-alpha.9": {
+    "@loaders.gl/images@~5.0.0-alpha.11": {
       "peerDependencies": {
-        "@loaders.gl/core": "~5.0.0-alpha.9"
+        "@loaders.gl/core": "~5.0.0-alpha.11"
       }
     }
   },
@@ -120,7 +120,7 @@
   ],
   "dependencies": {
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e",
-    "@math.gl/types": "~5.0.0-alpha.12",
+    "@math.gl/types": "~5.0.0-alpha.15",
     "@types/offscreencanvas": "^2019.7.3",
     "preact": "^10.17.0"
   },

@@ -45,7 +45,8 @@ const shader = transpileSlang(source, {
 
 ## API
 
-`transpileSlang(source, options)` returns `{code, target, entryPoint, stage, reflection, sourceMap}`.
+`transpileSlang(source, options)` returns `{code, target, entryPoint, stage, reflection, sourceMap}`
+and optional public `exports` metadata.
 
 - `target`: `wgsl` or `glsl`.
 - `entryPoint`: source function to compile. Required when multiple functions carry `[shader]`.
@@ -75,6 +76,72 @@ and matrix strides. Member offsets are relative to their containing aggregate. S
 reflection describes one element and supplies `elementStride`; plain GLSL uniform globals have
 no buffer layout. `texture` describes texture dimension, sample type, component count, and storage
 format/access when applicable.
+
+## Named imports and native shader contracts
+
+Applications supply `modules`, a synchronous `SlangModuleRegistry` mapping exact names to
+Slang strings or native contracts. Both compiler functions accept it. `import math.palette;`
+looks up the literal key `math.palette`; there is no filesystem, network or package resolution.
+Dependencies resolve in source order, once per compilation. Missing modules, cycles and duplicate
+symbols produce diagnostics at the original module name and line. Imports must be at module scope.
+This subset uses one shared namespace, including transitive dependencies; module visibility,
+namespace syntax, quoted paths and upstream access modifiers are not implemented.
+
+A native contract has Slang `declarations` and optional `wgsl`/`glsl` implementations. Imported
+contracts need an implementation for the selected target. Function declarations are prototypes;
+structures and resources are emitted by the compiler, so implementations must not redeclare them.
+`names` optionally maps source declarations to public target names; the default is the source name.
+Adapt an existing `ShaderModule` by supplying its target source in the registry, as the sculpture
+example does with `valueNoise`. Include that native source once, through the registry.
+
+```typescript
+const options = {
+  modules: {
+    palette: 'float getBrightness(float value) { return value * 0.5; }',
+    native: {
+      declarations: 'float applyNative(float value);',
+      imports: 'float brightnessPublic(float value);',
+      wgsl: 'fn applyNative(value: f32) -> f32 { return brightnessPublic(value); }',
+      glsl: 'float applyNative(float value) { return brightnessPublic(value); }'
+    }
+  },
+  exports: {getBrightness: 'brightnessPublic'}
+};
+const shader = transpileSlang(`
+  import palette;
+  import native;
+  [shader("fragment")] float4 main() : SV_Target0 { return float4(applyNative(1)); }
+`, {...options, target: 'wgsl'});
+```
+
+`exports` maps Slang declarations to explicit public target identifiers. Native `imports` contains
+Slang prototypes using those public names. Return types, parameter types and `in`/`out`/`inout`
+directions must match an exported Slang helper. The returned optional `exports` record describes
+public names and source signatures. Public structs keep field names; every struct used by a public
+contract must also be public. Public functions cannot be overloaded. Choose ordinary, distinct
+target identifiers starting with a letter, avoiding target keywords and reserved prefixes.
+Private generated names are implementation details.
+
+Scalar/vector/matrix values, public structs and fixed arrays use the compiler's target value ABI.
+WGSL output parameters use `ptr<function, T>`; GLSL uses `out`/`inout`. Native code can read public
+resources, which retain their bindings and conservative visibility even with `omitUnusedResources`.
+WGSL structured buffers are arrays; public GLSL 450 structured-buffer blocks expose `data[]`.
+GLSL ES 300 textures remain ordinary sampler uniforms with application-managed bindings; standalone
+Slang samplers have no GLSL declaration. Depth/comparison texture usage must be established by a
+Slang sampling call, since opaque native sampling cannot drive texture inference.
+
+Uniform buffer declarations use the shared std140 representation. Numeric flat fields are directly
+accessible by their public names; bools are stored as uints, and arrays/matrices use generated
+uniform wrappers in WGSL. Use reflection for host packing and explicit conversions in native code;
+public value types and uniform storage representations can differ. Public resource arrays are
+unsupported; declare individual resources. Native implementations must be valid for every selected
+stage, or applications must choose stage-appropriate registries in their transpiler callback.
+
+The compiler type-checks Slang calls and declared callback contracts. It does not parse or prove that
+opaque native implementations match those contracts. Compile the resulting code on the destination
+device to validate signatures, stage restrictions, layouts and uniformity. Source maps identify
+registry source by its key, native implementations by `<key>.wgsl`/`<key>.glsl`, and callback contracts
+by `<key>:imports`. Native implementation lines map directly; generated Slang columns remain approximate.
 
 ## Packing uniforms and mapping diagnostics
 
@@ -110,7 +177,7 @@ generated wrappers/helper lines may map to their associated declaration.
   matrix constructors from row-ordered scalars, row vectors, a matching matrix, or a scalar broadcast,
   and aggregate initializer lists with zero-filled omissions. `float2x2` and `float4` can also convert
   to each other in row order.
-  A single scalar in a vector initializer list broadcasts to every component. Only functions reachable from the selected entry point
+  A single scalar in a vector initializer list broadcasts to every component. Functions reachable from the selected entry point and explicit public exports
   are emitted. Recursive functions and overloaded entry points are rejected. Helper and entry-point `out`/`inout`
   parameters are supported; output arguments require an exact type and writable destination.
 - Variables, constants, static globals, assignments, component access, indexing, arithmetic,
@@ -208,7 +275,7 @@ generated wrappers/helper lines may map to their associated declaration.
 - Storage textures require GLSL 450 and therefore are unavailable on WebGL. WebGPU read/write storage
   formats depend on device capabilities, which the application must request. Compound storage-texture
   assignments and storage-texture elements as `out`/`inout` arguments require explicit load/store steps.
-- Imports/includes/macros, namespaces, generics/interfaces, extensions, methods, autodiff,
+- File imports/includes/macros, namespaces, generics/interfaces, extensions, methods, autodiff,
   global type inference, `auto`, floating-point/struct-member atomics, typed byte-address
   loads, dynamic sampler arrays, and multisampled array textures are not supported.
 - This is a transpiler rather than a complete Slang semantic validator. Compile generated source
@@ -224,7 +291,7 @@ module. By default it selects all `[shader(...)]` functions; `entryPoints` can s
 of source function names. Shared structs, resources, and helpers are emitted once. The result
 contains `code` and `entryPoints`, keyed by source function name, with each generated
 `entryPoint`, `stage`, and `reflection`. Pass the generated names to pipeline creation.
-The `sourceName` and `locations` options have the same meaning as for `transpileSlang`.
+The `sourceName`, `locations`, `modules` and `exports` options have the same meaning as for `transpileSlang`.
 
 ## Optional luma reflection helpers
 
@@ -315,7 +382,7 @@ owns compiler registration and uses reflection for layouts, bindings and uniform
 `omitUnusedResources` so native interface scanners see only the resources for each pipeline.
 
 The experimental compiler has no runtime dependencies. It is an optional import and does not
-increase core/engine/shadertools bundles. Bundle-size tests guard the compiler (about 28 KB gzip)
+increase core/engine/shadertools bundles. Bundle-size tests guard the compiler (about 30 KB gzip)
 and separate luma helpers (about 1.4 KB gzip).
 
 ## Development
@@ -334,7 +401,9 @@ WGSL compute shaders with readback assertions for evaluation order, output param
 initialization, matrix multiplication, and shared uniform packing. Everyday-language fixtures also
 compare switch fallthrough, do/while continuations, inferred locals, numeric promotion, matrix
 constructors and constructor side effects against upstream-generated WGSL. Texture tests verify sampling on
-both backends and storage writes on WebGPU.
+both backends and storage writes on WebGPU. Registry fixtures cover dependency deduplication,
+import diagnostics, source maps, native struct/function contracts, output parameters, callbacks and
+native-only resources. The sculpture exercises direct native calls on both backends.
 
 Committed differential fixtures come from official Slang **2026.19** and run without a native compiler.
 They compare execution results and uniform offsets/strides. To regenerate them using that compiler:

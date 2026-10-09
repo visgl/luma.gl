@@ -10,6 +10,15 @@ import {getProjectionShaderFunctions} from './projection-shader';
 import {getProjectionProgramMetadata, type ProjectionProgramMetadata} from './projection-metadata';
 import type {ProjectionCoordinates, ProjectionPlan, ProjectionPrecision} from './types';
 import {
+  evaluateConic,
+  getConicBounds,
+  getConicParameters,
+  getConicStage,
+  CONIC_GEOGRAPHIC_BOUNDS,
+  CONIC_SHADER_FUNCTIONS,
+  type ConicOperation
+} from './projection-conic';
+import {
   evaluateLongitudeWrap,
   getLongitudeWrapParameters,
   getLongitudeWrapStage,
@@ -38,6 +47,7 @@ export type ProjectionOperation =
   | {type: 'affine'; scale: ProjectionCoordinates; offset: ProjectionCoordinates; inverse?: boolean}
   | WebMercatorOperation
   | TransverseMercatorOperation
+  | ConicOperation
   | LongitudeWrapOperation
   | {type: 'adaptive'; plan: ProjectionPlan; inversePlan?: ProjectionPlan};
 
@@ -154,6 +164,8 @@ export function invertProjectionProgram(
         case 'affine':
         case 'web-mercator':
         case 'transverse-mercator':
+        case 'lambert-conformal-conic':
+        case 'albers-equal-area':
           return {...operation, inverse: !operation.inverse};
         case 'adaptive':
           if (!operation.inversePlan) {
@@ -202,18 +214,24 @@ export function evaluateProjectionProgram(
             ];
         break;
       case 'web-mercator':
-      case 'transverse-mercator': {
+      case 'transverse-mercator':
+      case 'lambert-conformal-conic':
+      case 'albers-equal-area': {
         const bounds =
           operation.type === 'web-mercator'
             ? getWebMercatorBounds(operation)
-            : getTransverseMercatorBounds(operation);
+            : operation.type === 'transverse-mercator'
+              ? getTransverseMercatorBounds(operation)
+              : getConicBounds(operation);
         if (position.some((value, axis) => value < bounds[axis] || value > bounds[axis + 2])) {
           return {position: [0, 0], valid: false};
         }
         const projected =
           operation.type === 'web-mercator'
             ? evaluateWebMercator(operation, position)
-            : evaluateTransverseMercator(operation, position);
+            : operation.type === 'transverse-mercator'
+              ? evaluateTransverseMercator(operation, position)
+              : evaluateConic(operation, position);
         if (!projected) return {position: [0, 0], valid: false};
         position = projected;
         break;
@@ -321,6 +339,14 @@ function compileProgram(
           functions.push(TRANSVERSE_MERCATOR_SHADER_FUNCTIONS);
         stages.push(getTransverseMercatorStage(operation, offset));
         break;
+      case 'lambert-conformal-conic':
+      case 'albers-equal-area':
+        for (const value of getConicParameters(operation)) appendNumber(value);
+        appendBounds(getConicBounds(operation));
+        appendBounds(CONIC_GEOGRAPHIC_BOUNDS);
+        if (!functions.includes(CONIC_SHADER_FUNCTIONS)) functions.push(CONIC_SHADER_FUNCTIONS);
+        stages.push(getConicStage(operation, offset));
+        break;
       case 'adaptive': {
         if (operation.plan.precision !== 'double-single' || operation.plan.patches.length === 0) {
           throw new Error('program adaptive stages require double-single projection plans');
@@ -336,6 +362,8 @@ function compileProgram(
           doubleSingle: true,
           doubleSingleInput: !rawInput,
           patchCount: operation.plan.patches.length,
+          routingNodeCount: operation.plan.routingIndex?.length,
+          strictDomains: operation.plan.strictDomains,
           planOffset: offset,
           inputBoundsOffset: boundsOffset
         });

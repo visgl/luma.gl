@@ -2,10 +2,17 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import geometry;
+import palette;
+import filmGrain;
+
+// Public Slang helper called by the native grain implementation.
+float getGrainOffset(float noise, float amount) { return (noise - 0.5) * amount; }
+
 struct SceneUniforms {
   // Two float4 fields have the same alignment in std140 and WGSL.
   float4 animation; // time, aspect ratio, twist, palette
-  float4 camera; // yaw, pitch, exposure, unused
+  float4 camera; // yaw, pitch, exposure, grain amount
 };
 
 ConstantBuffer<SceneUniforms> scene : register(b0);
@@ -89,5 +96,6 @@ float4 fragmentMain(Varyings input) : SV_Target0 {
   color = color * scene.camera.z;
   color = color / (1.0 + color);
   color = pow(color, float3(0.4545, 0.4545, 0.4545));
+  color = applyNativeGrain(color, input.position.xy, time, scene.camera.w);
   return float4(color, 1.0);
 }

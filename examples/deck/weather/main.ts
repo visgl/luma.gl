@@ -24,8 +24,15 @@ backend.addEventListener('change', () => {
 const preset = document.querySelector<HTMLSelectElement>('#preset')!;
 preset.addEventListener('change', () => {
   const value: WeatherPreset =
-    preset.value === 'snow' ? 'snow' : preset.value === 'rain' ? 'rain' : 'clear';
+    preset.value === 'snow'
+      ? 'snow'
+      : preset.value === 'rain'
+        ? 'rain'
+        : preset.value === 'clouds'
+          ? 'clouds'
+          : 'clear';
   scene.setPreset(value);
+  document.querySelector<HTMLInputElement>('#clouds')!.checked = value !== 'clear';
 });
 const fogEnabled = document.querySelector<HTMLInputElement>('#fog-enabled')!;
 fogEnabled.addEventListener('change', () => {

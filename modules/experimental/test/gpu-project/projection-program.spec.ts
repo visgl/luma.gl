@@ -7,7 +7,7 @@ import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import type {GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {Projection} from '@math.gl/projection';
+import {projectionEngine} from '@math.gl/projection';
 import {planCRSProjection, planProjectionPipeline} from '@luma.gl/experimental/gpu-project/crs';
 import {expect, it, vi, type TestContext} from 'vitest';
 import {
@@ -612,7 +612,7 @@ for (const target of [
     const project =
       target === 'native'
         ? (coordinate: number[]) => [1e7 - 2 * coordinate[1], 2e7 - 3 * coordinate[0]]
-        : new Projection({
+        : projectionEngine.createProjection({
             from: 'EPSG:4326',
             to: explicitWebMercator
               ? 'EPSG:3857'
@@ -670,11 +670,15 @@ for (const target of [
   });
 }
 
-for (const {inputFormat, transverse} of formats.flatMap(inputFormat =>
-  [false, true].map(transverse => ({inputFormat, transverse}))
+for (const {inputFormat, family} of formats.flatMap(inputFormat =>
+  (
+    ['web-mercator', 'transverse-mercator', 'lambert-conformal-conic', 'albers-equal-area'] as const
+  ).map(family => ({inputFormat, family}))
 )) {
+  const transverse = family === 'transverse-mercator';
+  const conic = family === 'lambert-conformal-conic' || family === 'albers-equal-area';
   for (const inverse of [false, true]) {
-    it(`executes native ${transverse ? 'Transverse' : 'Web'} Mercator ${inverse ? 'inverse' : 'forward'} with ${inputFormat} identically inline and in a graph`, async context => {
+    it(`executes native ${family} ${inverse ? 'inverse' : 'forward'} with ${inputFormat} identically inline and in a graph`, async context => {
       const device = await getWebGPUTestDevice();
       if (!device) return;
       skipSoftwareDevice(device, context);
@@ -682,17 +686,29 @@ for (const {inputFormat, transverse} of formats.flatMap(inputFormat =>
       const definition: ProjectionProgram = {
         precision: 'double-single',
         operations: [
-          transverse
+          conic
             ? {
-                type: 'transverse-mercator',
+                type: family,
                 arithmetic: 'float32',
                 semiMajorAxis: radius,
                 semiMinorAxis: radius * (1 - 1 / 298.257223563),
-                scaleFactor: 0.9996,
-                latitudeOrigin: 0,
+                latitudeOrigin: 0.4,
+                firstStandardParallel: 0.5,
+                secondStandardParallel: 0.8,
+                scaleFactor: 1,
                 inverse
               }
-            : {type: 'web-mercator', arithmetic: 'float32', radius, inverse}
+            : transverse
+              ? {
+                  type: 'transverse-mercator',
+                  arithmetic: 'float32',
+                  semiMajorAxis: radius,
+                  semiMinorAxis: radius * (1 - 1 / 298.257223563),
+                  scaleFactor: 0.9996,
+                  latitudeOrigin: 0,
+                  inverse
+                }
+              : {type: 'web-mercator', arithmetic: 'float32', radius, inverse}
         ]
       };
       const projection = compileProjectionProgram(definition, {inputFormat});
@@ -702,10 +718,12 @@ for (const {inputFormat, transverse} of formats.flatMap(inputFormat =>
       ];
       const points = [
         ...fractions.map(fraction => {
-          const point: readonly [number, number] = transverse
-            ? [((11.8 * Math.PI) / 180) * fraction, ((84 * Math.PI) / 180) * fraction]
-            : [domain[2] * fraction, domain[3] * fraction];
-          return transverse && inverse
+          const point: readonly [number, number] = conic
+            ? [((80 * Math.PI) / 180) * fraction, ((75 * Math.PI) / 180) * fraction]
+            : transverse
+              ? [((11.8 * Math.PI) / 180) * fraction, ((84 * Math.PI) / 180) * fraction]
+              : [domain[2] * fraction, domain[3] * fraction];
+          return (transverse || conic) && inverse
             ? [...evaluateProjectionProgram(invertProjectionProgram(definition), point).position]
             : [...point];
         }),
@@ -814,11 +832,13 @@ for (const {inputFormat, transverse} of formats.flatMap(inputFormat =>
           for (let axis = 0; axis < 2; axis++) {
             const offset = row * 4 + axis * 2;
             // Device-dependent transcendental rounding, not a portable global accuracy promise.
-            expect(Math.abs(actual[offset] - expected.position[axis])).toBeLessThan(
-              inverse ? 2e-6 : 20
-            );
-            expect(actual[offset + 1]).toBe(0);
-            if (Math.abs(fractions[row]) <= 1e-8) {
+            // Conic opposite-hemisphere stress coordinates can exceed 60 million metres;
+            // this per-axis 32 m gate is separate from the regional 20 m Euclidean benchmark.
+            expect(
+              Math.abs(actual[offset] + actual[offset + 1] - expected.position[axis])
+            ).toBeLessThan(inverse ? 2e-6 : conic ? 32 : 20);
+            if (!conic) expect(actual[offset + 1]).toBe(0);
+            if (!conic && Math.abs(fractions[row]) <= 1e-8) {
               expect(Math.abs(actual[offset] - expected.position[axis])).toBeLessThan(
                 inverse ? 1e-13 : 1e-7
               );
@@ -899,7 +919,7 @@ it('reuses native forward/inverse GPU programs across all UTM zones and hemisphe
           [centralMeridian + 3, 0],
           [centralMeridian + 0.001, south ? -45 : 45]
         ];
-        const oracle = new Projection({
+        const oracle = projectionEngine.createProjection({
           from: 'EPSG:4326',
           to: `+proj=utm +zone=${zone} ${south ? '+south' : ''} +datum=WGS84 +units=m`
         });

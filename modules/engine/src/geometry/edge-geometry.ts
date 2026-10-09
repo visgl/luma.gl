@@ -4,6 +4,7 @@
 
 import {assert} from '@luma.gl/core';
 import type {TypedArray} from '@math.gl/core';
+import type {Geometry as MathGeometry} from '@math.gl/geometry';
 import {Geometry, type GeometryAttribute} from './geometry';
 
 export type MakeEdgeGeometryOptions = {
@@ -22,7 +23,7 @@ type Edge = {start: number; end: number; normal: Position; faceCount: number; cr
 
 /** Extracts boundary, crease, and non-manifold edges from a triangle-list CPU geometry. */
 export function makeEdgeGeometry(
-  geometry: Geometry,
+  geometry: MathGeometry,
   options: MakeEdgeGeometryOptions = {}
 ): Geometry {
   const {angleThreshold = 30, weldTolerance = 0, positionAttribute = 'POSITION'} = options;
@@ -141,7 +142,7 @@ export function makeEdgeGeometry(
 
 /** Classifies adjacent meshes together to suppress coplanar tile seams and duplicate edges. */
 export function makeEdgeGeometryFromGeometries(
-  geometries: readonly Geometry[],
+  geometries: readonly MathGeometry[],
   options: MakeEdgeGeometryOptions = {}
 ): Geometry {
   // A batch needs at least one source to define its position storage type.
@@ -188,7 +189,10 @@ export function makeEdgeGeometryFromGeometries(
   );
 }
 
-function getTrianglePositions(geometry: Geometry, positionAttribute: string): GeometryAttribute {
+function getTrianglePositions(
+  geometry: MathGeometry,
+  positionAttribute: string
+): GeometryAttribute {
   const positions = geometry.attributes[positionAttribute];
   // Edge extraction requires packed xyz positions and complete triangle-list primitives.
   assert(geometry.topology === 'triangle-list' && positions?.size === 3);

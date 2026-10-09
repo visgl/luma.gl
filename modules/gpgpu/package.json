@@ -102,14 +102,14 @@
     "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
   },
   "peerDependencies": {
-    "@luma.gl/core": "~10.0.0-alpha.2",
-    "@luma.gl/engine": "~10.0.0-alpha.2",
-    "@luma.gl/shadertools": "~10.0.0-alpha.2",
-    "@luma.gl/webgpu": "~10.0.0-alpha.2"
+    "@luma.gl/core": "~10.0.0-alpha.3",
+    "@luma.gl/engine": "~10.0.0-alpha.3",
+    "@luma.gl/shadertools": "~10.0.0-alpha.3",
+    "@luma.gl/webgpu": "~10.0.0-alpha.3"
   },
   "dependencies": {
-    "@math.gl/core": "5.0.0-alpha.12",
-    "@math.gl/types": "~5.0.0-alpha.12",
+    "@math.gl/core": "5.0.0-alpha.15",
+    "@math.gl/types": "~5.0.0-alpha.15",
     "@probe.gl/log": "^4.0.8",
     "@probe.gl/stats": "^4.0.8"
   }

@@ -2,8 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Projection} from '@math.gl/projection';
-import {planCRSProjection} from '@luma.gl/experimental/gpu-project/crs';
+import {projectionEngine} from '@math.gl/projection';
+import {
+  planCRSProjection,
+  createCRSProjectionCPUBenchmarks
+} from '@luma.gl/experimental/gpu-project/crs';
 import type {ProjectionBounds, ProjectionCoordinates} from '@luma.gl/experimental/gpu-project';
 import type {ProjectionProgramBenchmarkOptions} from '@luma.gl/experimental/gpu-project/benchmarks';
 import {
@@ -82,24 +85,48 @@ export function makePerformanceCoordinates(
   ];
 }
 
+/** Flat allocation keeps million-row table sweeps from creating millions of temporary arrays. */
+export function makePerformancePositions(bounds: ProjectionBounds, rowCount: number): Float64Array {
+  const [minimumX, minimumY, maximumX, maximumY] = bounds;
+  const probes = makePerformanceCoordinates(bounds, 0);
+  const positions = new Float64Array((rowCount + probes.length) * 2);
+  for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+    positions[rowIndex * 2] = minimumX + (maximumX - minimumX) * ((rowIndex + 0.5) / rowCount);
+    positions[rowIndex * 2 + 1] =
+      minimumY + (maximumY - minimumY) * (((rowIndex + 1) * 0.6180339887498949) % 1);
+  }
+  positions.set(probes.flat(), rowCount * 2);
+  return positions;
+}
+
 export function makePerformanceOptions(
   fixture: (typeof performanceFixtures)[number],
   rowCount: number,
   consumerCount: number
 ): ProjectionProgramBenchmarkOptions {
-  const provider = new Projection({from: 'EPSG:4326', to: fixture.serialized});
+  const preparationStart = performance.now();
+  const provider = projectionEngine.createProjection({from: 'EPSG:4326', to: fixture.serialized});
+  const cpuProviderPreparationTimeMilliseconds = performance.now() - preparationStart;
   const bounds = fixture.bounds;
+  const isValid = (position: ProjectionCoordinates) =>
+    position.every(Number.isFinite) &&
+    position[0] >= bounds[0] &&
+    position[1] >= bounds[1] &&
+    position[0] <= bounds[2] &&
+    position[1] <= bounds[3];
+  const providerLabel = '@math.gl/projection 5.0.0-alpha.15 TypeScript';
   return {
     coordinates: makePerformanceCoordinates(bounds, rowCount),
     consumerCount,
-    oracleLabel: '@math.gl/projection Projection.project (proj4js)',
+    oracleLabel: providerLabel,
+    cpuProviderPreparationTimeMilliseconds,
+    cpuVariants: createCRSProjectionCPUBenchmarks({
+      projection: provider,
+      provider: providerLabel,
+      isValid
+    }),
     oracle: position => {
-      const valid =
-        position.every(Number.isFinite) &&
-        position[0] >= bounds[0] &&
-        position[1] >= bounds[1] &&
-        position[0] <= bounds[2] &&
-        position[1] <= bounds[3];
+      const valid = isValid(position);
       if (!valid) return {position: [0, 0], valid: false};
       const projected = provider.project([...position]);
       return {position: [projected[0], projected[1]], valid: true};

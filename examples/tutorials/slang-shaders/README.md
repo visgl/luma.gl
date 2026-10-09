@@ -9,8 +9,8 @@ Drag to orbit the camera. Change the material, twist, exposure, and native grain
 sculpture. Select **Show shaders** to compare the Slang source with the assembled shaders
 used by the active backend. The source selector includes the main shader and both reusable
 modules. WebGPU shows one WGSL program; WebGL 2 shows separate GLSL ES 300 vertex and
-fragment shaders. The generated selector also includes the native film-grain pass, and the
-source selector includes its shader and the imported `valueNoise` implementation. Close the viewer or press Escape to return to the sculpture. The controls
+fragment shaders. The generated shaders include the native film-grain code; the source selector includes its typed
+Slang contract and `valueNoise` implementation. Close the viewer or press Escape to return to the sculpture. The controls
 also appear in the website tutorial and the inline API example.
 
 From the repository root, run:
@@ -24,23 +24,23 @@ Open the displayed URL. Append `?backend=webgl2` to select WebGL 2 or `?backend=
 to prefer WebGPU. The website tutorial also offers backend tabs.
 
 - `shader.slang` contains both entry points, the ray marcher, and the floor reflection.
-- `geometry.slang` is a reusable distance-field `ShaderModule`; `palette.slang` is a
-  reusable lighting and material module. Both use `sourceLanguage: 'slang'`.
+- `geometry.slang` and `palette.slang` are named distance-field and material libraries.
+  The application supplies their strings to the compiler registry; `shader.slang` imports them.
 - A flat `ConstantBuffer<SceneUniforms>` carries animation and camera controls. Its two
   `float4` fields share the same byte layout in WGSL and GLSL std140.
 - `slang-transpiler.ts` imports the experimental compiler, uses reflection for resource names,
   and supplies the application-owned callback: GLSL ES 300 for WebGL 2 and unified WGSL
   with generated entry-point names for WebGPU.
-- `film-grain.ts` imports `valueNoise` from `@luma.gl/shadertools`. Slang renders into a
-  texture, then a native pass samples that texture and calls `valueNoise_noise` to add adjustable
-  grain. The module supplies both WGSL and GLSL implementations. Set **Native grain** to zero
-  to see the unmodified Slang image; pause and adjust the slider to compare the same scene.
-- `app.ts` registers the callback on a local assembler and renders through `Model`.
-  The framework has no Slang dependency.
+- `film-grain.ts` adapts the existing native `valueNoise` shader module with Slang declarations.
+  `shader.slang` imports `filmGrain` and calls `applyNativeGrain` directly. Its native implementation
+  calls `scaleGrain`, an explicitly exported Slang helper with a checked callback signature.
+  Both WGSL and GLSL implementations are supplied; all rendering happens in one pass.
+- `app.ts` registers the callback and named module registry on a local assembler and renders
+  through `Model`. The framework has no Slang dependency.
 
-This example demonstrates interoperability through an explicit texture boundary. It does not
-use Slang `import` syntax or call native functions directly from Slang; those require the planned
-registry and typed declaration bridge. The compiler remains application-owned.
+Set **Native grain** to zero to see the unmodified image; pause and adjust it to compare the
+same scene. Shared types, bindings and callback names come from explicit contracts; private
+compiler names are not an interoperability API. There are no file imports or implicit loads.
 
 The bounded 96-step ray marcher prioritizes interactive performance over exact geometry.
 High twist can soften small surface details; reflection doubles ray work on floor pixels.

@@ -10,9 +10,11 @@ import {chromium} from 'playwright';
 import {PNG} from 'pngjs';
 import {createServer} from 'vite';
 import {getPlaywrightLaunchOptions} from '../../../../scripts/playwright/get-playwright-launch-options.mjs';
+import {setVisualTestPixelScale} from '../../../../scripts/playwright/visual-test-utils.mjs';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const softwareGpu = process.env.CITY_SCENE_HARDWARE !== 'true';
+// Set CITY_SCENE_DEVICE_SCALE=1 to compare against the original framebuffer resolution.
 // Full-resolution reflection history can take longer on shared software-rendered CI workers.
 const reflectionIdleTimeout = softwareGpu ? 180_000 : 60_000;
 const server = await createServer({root, logLevel: 'error', server: {host: '127.0.0.1', port: 0}});
@@ -21,6 +23,9 @@ const url = server.resolvedUrls?.local[0];
 assert(url);
 try {
   for (const backend of ['webgpu', 'webgl']) {
+    // The SSR phase uses one sixteenth of the original pixels. WebGL water needs half size.
+    const pixelScaleFactor = Number(process.env.CITY_SCENE_DEVICE_SCALE ?? (backend === 'webgpu' ? 0.25 : 0.5));
+    assert(pixelScaleFactor > 0 && Number.isFinite(pixelScaleFactor));
     const browser = await chromium.launch(getPlaywrightLaunchOptions({
       headless: true, backend, softwareGpu,
       // Linux canvas presentation needs the Vulkan compositor and an X display (see #2874).
@@ -29,7 +34,9 @@ try {
         : {}
     }));
     try {
-      const page = await browser.newPage({viewport: {width: 1200, height: 850}});
+      const page = await browser.newPage({viewport: {width: 1200, height: 850}, deviceScaleFactor: 1});
+      // Pixel assertions use CSS coordinates, independent of framebuffer resolution.
+      const captureScreenshot = options => page.screenshot({...options, scale: 'css'});
       const waitForIdle = () => page.waitForFunction(() => !window.cityScene.deck.props._animate && !window.cityScene.deck.needsRedraw(), undefined, {timeout: reflectionIdleTimeout});
       const errors = [];
       page.on('pageerror', error => { errors.push(error.message); process.stderr.write(`${error.message}\n`); });
@@ -37,6 +44,7 @@ try {
       await page.goto(`${process.env.CITY_SCENE_URL || url}?backend=${backend}`);
       await page.waitForFunction(() => document.body.dataset.ready === 'true', undefined, {timeout: 60_000});
       await page.waitForFunction(() => window.cityScene?.diagnostics.frames > 0);
+      await setVisualTestPixelScale(page, 'cityScene', pixelScaleFactor);
       assert.equal(await page.evaluate(() => window.cityScene.diagnostics.backend), backend);
       assert.deepEqual(
         await page.evaluate(() =>
@@ -46,9 +54,9 @@ try {
         `${backend}: river flow follows its north-south footprint axis`
       );
       await page.waitForFunction(() => window.cityScene.diagnostics.timeSeconds > 0);
-      const playingWaterImage = PNG.sync.read(await page.screenshot({path: join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), `city-scene-${backend}-playing.png`)}));
+      const playingWaterImage = PNG.sync.read(await captureScreenshot({path: join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), `city-scene-${backend}-playing.png`)}));
       await page.waitForTimeout(650);
-      const movingWaterImage = PNG.sync.read(await page.screenshot());
+      const movingWaterImage = PNG.sync.read(await captureScreenshot());
       let animatedWaterPixels = 0;
       for (let vertical = 120; vertical < 650; vertical++) {
         for (let horizontal = 350; horizontal < 950; horizontal++) {
@@ -92,7 +100,7 @@ try {
         const settledFrames = await page.evaluate(() => window.cityScene.diagnostics.frames);
         await page.waitForTimeout(150);
         assert.equal(await page.evaluate(() => window.cityScene.diagnostics.frames), settledFrames, 'reset returns to idle after settling');
-        const reflections = PNG.sync.read(await page.screenshot({path: join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), 'city-scene-reflections.png')}));
+        const reflections = PNG.sync.read(await captureScreenshot({path: join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), 'city-scene-reflections.png')}));
         let reflectedPixels = 0;
         for (let vertical = 120; vertical < 650; vertical++) {
           for (let horizontal = 350; horizontal < 950; horizontal++) {
@@ -101,42 +109,8 @@ try {
           }
         }
         assert(reflectedPixels > 1000, `SSR traces visible scene reflections (${reflectedPixels} pixels)`);
-        // Fixed water/camera isolates stochastic ray noise from physical surface animation.
-        await page.evaluate(() => {
-          const effect = window.cityScene.deck.props.effects.find(effect => effect.id === 'city-river-reflections');
-          const renderer = effect.renderer;
-          const render = renderer.renderToTexture.bind(renderer);
-          window.reflectionHistoryWeight = 0;
-          renderer.renderToTexture = options => render({...options, uniforms: {...options.uniforms,
-            ssrCameraTemporal: {...options.uniforms.ssrCameraTemporal, historyWeight: window.reflectionHistoryWeight}
-          }});
-          window.restoreReflectionRenderer = () => {renderer.renderToTexture = render;};
-        });
-        const variation = [];
-        for (const historyWeight of [0, 0.8]) {
-          await page.evaluate(weight => {
-            window.reflectionHistoryWeight = weight;
-            window.cityScene.deck.props.effects.find(effect => effect.id === 'city-river-reflections').resetHistory();
-            for (let frame = 0; frame < 8; frame++) window.cityScene.deck.redraw('warm reflection history');
-          }, historyWeight);
-          await waitForIdle();
-          let previous = PNG.sync.read(await page.screenshot());
-          let difference = 0;
-          for (let frame = 0; frame < 5; frame++) {
-            await page.evaluate(() => window.cityScene.deck.redraw('sample reflection history'));
-            const current = PNG.sync.read(await page.screenshot());
-            for (let vertical = 120; vertical < 650; vertical++) for (let horizontal = 350; horizontal < 950; horizontal++) {
-              const offset = (vertical * current.width + horizontal) * 4;
-              for (let channel = 0; channel < 3; channel++) difference += Math.abs(current.data[offset + channel] - previous.data[offset + channel]);
-            }
-            previous = current;
-          }
-          variation.push(difference);
-        }
-        await page.evaluate(() => window.restoreReflectionRenderer());
-        assert(variation[0] > 1000, 'stochastic reflection rays produce measurable variation');
-        assert(variation[1] < variation[0] * 0.8, `SSR history reduces static-scene flicker (${variation.join(' -> ')})`);
-        process.stdout.write(`SSR static-scene variation: ${variation.join(' -> ')}\n`);
+        // Temporal noise suppression is exercised with a 3x3 GPU fixture in
+        // ssr-camera-temporal.spec.ts; keep scene capture/composition coverage here.
 
         // Quality switches replace only postprocessing targets, retaining shared scene capture.
         for (const [quality, scale] of [['fast', 0.25], ['detailed', 1], ['balanced', 0.5]]) {
@@ -170,7 +144,7 @@ try {
           await page.waitForTimeout(100);
           assert.equal(await page.evaluate(() => window.cityScene.diagnostics.frames), qualityFrames, `${quality}: returns to idle after bounded settling`);
           assert.equal(await page.evaluate(() => window.cityScene.diagnostics.timeSeconds), 2, `${quality}: water time remains frozen`);
-          const qualityImage = PNG.sync.read(await page.screenshot());
+          const qualityImage = PNG.sync.read(await captureScreenshot());
           let litPixels = 0;
           for (let vertical = 120; vertical < 650; vertical++) for (let horizontal = 350; horizontal < 950; horizontal++) {
             const offset = (vertical * qualityImage.width + horizontal) * 4;
@@ -184,32 +158,39 @@ try {
           return window.cityScene.diagnostics.timeSeconds;
         });
         await page.selectOption('#reflection-view', '3');
-        const fallbackImage = PNG.sync.read(await page.screenshot({path: join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), 'city-scene-material-fallback.png')}));
+        const fallbackImage = PNG.sync.read(await captureScreenshot({path: join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), 'city-scene-material-fallback.png')}));
         await page.selectOption('#reflection-view', '2');
-        const coverageImage = PNG.sync.read(await page.screenshot({path: join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), 'city-scene-reflection-coverage.png')}));
+        const coverageImage = PNG.sync.read(await captureScreenshot({path: join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), 'city-scene-reflection-coverage.png')}));
         await page.selectOption('#reflection-view', '0');
-        const combinedImage = PNG.sync.read(await page.screenshot());
-        const waterSamples = await page.evaluate(async () => {
+        const combinedImage = PNG.sync.read(await captureScreenshot());
+        const sampleColumns = await page.evaluate(() => {
           const deck = window.cityScene.deck;
           const viewport = deck.getViewports()[0];
-          const samples = [];
+          const columns = [];
           for (const longitudeOffset of [-0.0003, 0, 0.0003]) {
+            const samples = [];
             for (let latitudeIndex = -8; latitudeIndex <= 8; latitudeIndex++) {
               const [horizontal, vertical] = viewport.project([-74.006 + longitudeOffset, 40.7128 + latitudeIndex * 0.0004]);
               if (horizontal < 350 || horizontal >= 950 || vertical < 120 || vertical >= 650) continue;
-              const picked = await deck.pickObjectAsync({x: horizontal, y: vertical});
-              if (picked?.object?.kind === 'water') samples.push([Math.floor(horizontal), Math.floor(vertical)]);
+              samples.push([Math.floor(horizontal), Math.floor(vertical)]);
             }
+            columns.push(samples);
           }
-          return samples;
+          return columns;
         });
         let fallbackSamples = 0;
-        for (const [horizontal, vertical] of waterSamples) {
-          const offset = (vertical * coverageImage.width + horizontal) * 4;
-          // Exact zero-confidence debug color: this ray has no reliable screen-space contribution.
-          if (coverageImage.data[offset] !== 11 || coverageImage.data[offset + 1] !== 20 || coverageImage.data[offset + 2] !== 56) continue;
-          fallbackSamples++;
-          for (const channel of [0, 1, 2]) assert(Math.abs(combinedImage.data[offset + channel] - fallbackImage.data[offset + channel]) <= 3, 'unresolved water reflections retain the material fallback');
+        for (const samples of sampleColumns) {
+          for (const [horizontal, vertical] of samples) {
+            const offset = (vertical * coverageImage.width + horizontal) * 4;
+            // Exact zero-confidence debug color: this ray has no reliable screen-space contribution.
+            if (coverageImage.data[offset] !== 11 || coverageImage.data[offset + 1] !== 20 || coverageImage.data[offset + 2] !== 56) continue;
+            // Filter confidence on the CPU before paying for a GPU picking pass.
+            const isWater = await page.evaluate(async ([x, y]) => (await window.cityScene.deck.pickObjectAsync({x, y}))?.object?.kind === 'water', [horizontal, vertical]);
+            if (!isWater) continue;
+            fallbackSamples++;
+            for (const channel of [0, 1, 2]) assert(Math.abs(combinedImage.data[offset + channel] - fallbackImage.data[offset + channel]) <= 3, 'unresolved water reflections retain the material fallback');
+            break; // One verified water sample per spatially separated column.
+          }
         }
         assert(fallbackSamples > 0, 'sample visible water with zero screen-space reflection confidence');
         assert(countSceneDifferences(fallbackImage, combinedImage) > 100, 'scene reflections contribute beyond the sky material fallback');
@@ -228,7 +209,7 @@ try {
         await page.waitForTimeout(150);
         assert.equal(await page.evaluate(() => window.reflectionTexture.destroyed), true, 'disabling SSR releases auxiliary textures');
         assert(await page.locator('#reflection-view').isDisabled(), 'disabling SSR disables its debug views');
-        const withoutReflections = PNG.sync.read(await page.screenshot());
+        const withoutReflections = PNG.sync.read(await captureScreenshot());
         assert(countSceneDifferences(fallbackImage, withoutReflections) < 1000, 'material fallback agrees with ordinary rendering when SSR is disabled');
         await page.check('#reflections');
         await page.waitForFunction(() => window.cityScene.deck.props.effects.find(effect => effect.id === 'city-river-reflections')?.capture.getFrame('city'));
@@ -252,10 +233,13 @@ try {
         assert(await page.locator('#reflection-view').isDisabled(), 'WebGL retains sky material and disables SSR views');
         assert(await page.locator('#reflections').isDisabled(), 'WebGL clearly disables the WebGPU reflection pass');
       }
+      // Picking and borrowed-buffer ownership do not consume reflection history.
+      // Reflection composition and convergence were checked above; resize checks re-enable it.
+      if (backend === 'webgpu') await page.uncheck('#reflections');
       await page.selectOption('#camera', 'overhead');
       await page.waitForFunction(() => window.cityScene.deck.getViewports()[0].pitch === 0);
       await waitForIdle();
-      await page.screenshot({path: join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), `city-scene-${backend}-overhead.png`)});
+      await captureScreenshot({path: join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), `city-scene-${backend}-overhead.png`)});
       const picked = await page.evaluate(async () => {
         const position = window.cityScene.getFeatureScreenPosition('East 4.1');
         if (!position) throw new Error('Missing fixture building');
@@ -302,6 +286,7 @@ try {
       await page.check('#buildings');
       await page.selectOption('#camera', 'waterfront');
       await page.waitForFunction(() => window.cityScene.deck.getViewports()[0].pitch === 68);
+      if (backend === 'webgpu') await page.check('#reflections');
       const timeBeforeResize = await page.evaluate(() => window.cityScene.diagnostics.timeSeconds);
       await page.setViewportSize({width: 1000, height: 720});
       await page.waitForFunction(() => window.cityScene.deck.width === 1000);
@@ -312,10 +297,13 @@ try {
       await page.mouse.move(990, 710);
       // Test material replay independently of SSR's intentionally stochastic redraw history.
       if (backend === 'webgpu') await page.uncheck('#reflections');
+      // Fine water-normal changes need the previous resolution; keep their thresholds intact.
+      await setVisualTestPixelScale(page, 'cityScene', Math.max(0.5, pixelScaleFactor));
+      await waitForIdle();
       await page.evaluate(() => window.cityScene.setTime(2));
       await page.waitForTimeout(100);
       await page.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur());
-      const firstWaterImage = PNG.sync.read(await page.screenshot());
+      const firstWaterImage = PNG.sync.read(await captureScreenshot());
       await page.evaluate(() => {
         const deck = window.cityScene.deck;
         const water = deck.props.layers.find(layer => layer?.id === 'river-water');
@@ -324,7 +312,7 @@ try {
         deck.setProps({layers: deck.props.layers.map(layer => layer === water ? water.clone({material: {...water.props.material, skyZenithColor: [1, 0.05, 0.05]}}) : layer)});
       });
       await waitForIdle();
-      const customSkyImage = PNG.sync.read(await page.screenshot());
+      const customSkyImage = PNG.sync.read(await captureScreenshot());
       assert(countSceneDifferences(firstWaterImage, customSkyImage) > 100, `${backend}: custom sky color changes the material fallback`);
       await page.evaluate(() => {
         const deck = window.cityScene.deck;
@@ -332,14 +320,14 @@ try {
         deck.setProps({layers: deck.props.layers.map(layer => layer === water ? water.clone({material: window.waterMaterialBeforeSky}) : layer)});
       });
       await waitForIdle();
-      const restoredSkyImage = PNG.sync.read(await page.screenshot());
+      const restoredSkyImage = PNG.sync.read(await captureScreenshot());
       assert.equal(countSceneDifferences(firstWaterImage, restoredSkyImage), 0, `${backend}: removing the custom sky prop restores default shading`);
       assert(await page.evaluate(() => window.waterModelBeforeSky === window.cityScene.deck.props.layers.find(layer => layer?.id === 'river-water').state.model), `${backend}: sky updates reuse the water model`);
 
       await page.selectOption('#water-preset', 'slate');
       await page.waitForTimeout(100);
       assert.equal(await page.locator('#water-color').inputValue(), '#67747a');
-      const slateWaterImage = PNG.sync.read(await page.screenshot());
+      const slateWaterImage = PNG.sync.read(await captureScreenshot());
       let slateChangedPixels = 0;
       for (let vertical = 120; vertical < 650; vertical++) {
         for (let horizontal = 350; horizontal < 950; horizontal++) {
@@ -359,7 +347,7 @@ try {
         input.dispatchEvent(new Event('input', {bubbles: true}));
       });
       await page.waitForTimeout(100);
-      const coloredWaterImage = PNG.sync.read(await page.screenshot());
+      const coloredWaterImage = PNG.sync.read(await captureScreenshot());
       let colorChangedPixels = 0;
       for (let vertical = 120; vertical < 650; vertical++) {
         for (let horizontal = 350; horizontal < 950; horizontal++) {
@@ -379,7 +367,7 @@ try {
       await page.waitForTimeout(100);
       await page.selectOption('#water-style', 'classic');
       await page.waitForTimeout(100);
-      const classicWaterImage = PNG.sync.read(await page.screenshot());
+      const classicWaterImage = PNG.sync.read(await captureScreenshot());
       let styleChangedPixels = 0;
       for (let vertical = 120; vertical < 650; vertical++) {
         for (let horizontal = 350; horizontal < 950; horizontal++) {
@@ -393,19 +381,14 @@ try {
       await page.waitForTimeout(100);
       await page.evaluate(() => window.cityScene.setTime(8));
       await page.waitForTimeout(100);
-      const secondWaterImage = PNG.sync.read(await page.screenshot());
-      let changedPixels = 0;
-      for (let vertical = 120; vertical < 650; vertical++) {
-        for (let horizontal = 350; horizontal < 950; horizontal++) {
-          const offset = (vertical * firstWaterImage.width + horizontal) * 4;
-          if (Math.abs(firstWaterImage.data[offset] - secondWaterImage.data[offset]) > 3) changedPixels++;
-        }
-      }
+      const secondWaterImage = PNG.sync.read(await captureScreenshot());
+      // Motion can change any color channel, especially at a smaller framebuffer resolution.
+      const changedPixels = countSceneDifferences(firstWaterImage, secondWaterImage);
       assert(changedPixels > 100, `${backend}: time changes water shading (${changedPixels} pixels)`);
       await page.evaluate(() => window.cityScene.setTime(2));
       await page.waitForTimeout(100);
       await page.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur());
-      const repeatedWaterImage = PNG.sync.read(await page.screenshot());
+      const repeatedWaterImage = PNG.sync.read(await captureScreenshot());
       let replayDifferences = 0;
       for (let vertical = 120; vertical < 650; vertical++) {
         for (let horizontal = 350; horizontal < 950; horizontal++) {
@@ -454,10 +437,10 @@ try {
         if (backend === 'webgpu') await page.locator('#reflections').setChecked(reflections);
         await page.selectOption('#edge-style', 'none');
         await waitForIdle();
-        const ordinaryRoof = PNG.sync.read(await page.screenshot());
+        const ordinaryRoof = PNG.sync.read(await captureScreenshot());
         await page.selectOption('#edge-style', 'solid');
         await waitForIdle();
-        const solidRoof = PNG.sync.read(await page.screenshot());
+        const solidRoof = PNG.sync.read(await captureScreenshot());
         assert(changedRoofPixels(ordinaryRoof, solidRoof) > 20, `${backend}: solid edges visible with SSR=${reflections}`);
         await page.evaluate(() => {
           const layer = window.cityScene.deck.props.layers.find(layer => layer?.id === 'city-building-edges');
@@ -467,7 +450,7 @@ try {
         });
         await page.selectOption('#edge-style', 'pencil');
         await waitForIdle();
-        assert(changedRoofPixels(solidRoof, PNG.sync.read(await page.screenshot())) > 20,
+        assert(changedRoofPixels(solidRoof, PNG.sync.read(await captureScreenshot())) > 20,
           `${backend}: pencil grain changes the roof edges with SSR=${reflections}`);
         assert(await page.evaluate(() => {
           const layer = window.cityScene.deck.props.layers.find(layer => layer?.id === 'city-building-edges');
@@ -524,13 +507,13 @@ try {
       await page.selectOption('#camera', 'waterfront');
       await page.waitForFunction(() => window.cityScene.deck.getViewports()[0].pitch === 68);
       await waitForIdle();
-      await page.screenshot({path: join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), `city-scene-${backend}-pencil-waterfront.png`)});
+      await captureScreenshot({path: join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), `city-scene-${backend}-pencil-waterfront.png`)});
       assert(await page.evaluate(() => window.cityScene.deck.props.layers.find(layer => layer?.id === 'city-building-edges').props.segments === window.borrowedCityEdges), 'camera changes preserve world-anchored edge geometry');
       await page.selectOption('#camera', 'district');
       await waitForIdle();
       await page.waitForTimeout(150);
       const screenshotPath = join(process.env.CITY_SCENE_ARTIFACTS ?? tmpdir(), `city-scene-${backend}.png`);
-      const screenshot = PNG.sync.read(await page.screenshot({path: screenshotPath}));
+      const screenshot = PNG.sync.read(await captureScreenshot({path: screenshotPath}));
       const colors = new Set();
       // Inspect the scene to the right of the controls, rather than counting text or UI pixels.
       for (let vertical = 120; vertical < 650; vertical += 3) {

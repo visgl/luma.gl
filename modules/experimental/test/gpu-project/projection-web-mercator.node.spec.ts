@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {describe, expect, it} from 'vitest';
-import {Projection} from '@math.gl/projection';
+import {projectionEngine} from '@math.gl/projection';
 import {
   compileProjectionPlan,
   compileProjectionProgram,
@@ -22,7 +22,7 @@ const program: ProjectionProgram = {
 
 describe('native Web Mercator', () => {
   it('matches the independent provider across the square-world interior in both directions', () => {
-    const provider = new Projection({from: 'EPSG:4326', to: 'EPSG:3857'});
+    const provider = projectionEngine.createProjection({from: 'EPSG:4326', to: 'EPSG:3857'});
     const inverse = invertProjectionProgram(program);
     for (const longitude of [-179.999, -123, -1, 0, 1, 123, 179.999]) {
       for (const latitude of [-85.05, -80, -45, -1e-8, 0, 1e-8, 45, 80, 85.05]) {
@@ -139,8 +139,8 @@ describe('native Web Mercator', () => {
 });
 
 describe('Web Mercator planning', () => {
-  it('fits an independent inverse and rejects unsupported Pseudo Mercator provider routes', () => {
-    const provider = new Projection({from: 'EPSG:4326', to: 'EPSG:3857'});
+  it('fits an independent inverse and preserves Pseudo Mercator provider routes', () => {
+    const provider = projectionEngine.createProjection({from: 'EPSG:4326', to: 'EPSG:3857'});
     const result = planCRSProjection({
       from: geographicCRS,
       to: makeWebMercatorCRS(),
@@ -162,16 +162,20 @@ describe('Web Mercator planning', () => {
       evaluateProjectionProgram(invertProjectionProgram(result.program), [200000, 0]).valid
     ).toBe(false);
     for (const reverse of [false, true]) {
-      const declined = planCRSProjection({
-        from: reverse ? 'EPSG:32610' : makeWebMercatorCRS(),
-        to: reverse ? makeWebMercatorCRS() : 'EPSG:32610',
+      const planned = planCRSProjection({
+        from: reverse ? 'EPSG:4326' : makeWebMercatorCRS(),
+        to: reverse ? makeWebMercatorCRS() : 'EPSG:4326',
         bounds: [-1, -1, 1, 1],
+        tolerance: reverse ? 0.001 : 1e-8,
         projectionArithmetic: 'float32'
       });
-      expect(declined).toMatchObject({
-        status: 'unsupported',
-        reasons: [{code: 'crs-requires-provider'}, {code: 'unsupported-conversion'}]
-      });
+      expect(planned.status).toBe('ready');
+      if (planned.status !== 'ready') throw new Error(JSON.stringify(planned.reasons));
+      const actual = evaluateProjectionProgram(planned.program, [0.3, 0.4]);
+      const expected = reverse ? provider.project([0.3, 0.4]) : provider.unproject([0.3, 0.4]);
+      expect(
+        Math.hypot(actual.position[0] - expected[0], actual.position[1] - expected[1])
+      ).toBeLessThan(reverse ? 0.001 : 1e-8);
     }
   });
 
@@ -189,7 +193,9 @@ describe('Web Mercator planning', () => {
       expect(result.strategy).toBe('adaptive');
       expect(result.compiled.metadata.arithmetic).toBe('double-single');
       expect(result.reasons[0].code).toBe('unsupported-arithmetic');
-      const expected = new Projection({from: 'EPSG:4326', to: 'EPSG:3857'}).project([-122.4, 37.8]);
+      const expected = projectionEngine
+        .createProjection({from: 'EPSG:4326', to: 'EPSG:3857'})
+        .project([-122.4, 37.8]);
       const actual = evaluateProjectionProgram(result.program, [-122.4, 37.8]);
       expect(
         Math.hypot(actual.position[0] - expected[0], actual.position[1] - expected[1])
@@ -224,7 +230,7 @@ describe('Web Mercator planning', () => {
         false
       );
       // Use the verified EPSG definition: the current provider misreads Pseudo Mercator PROJJSON.
-      const provider = new Projection({
+      const provider = projectionEngine.createProjection({
         from: reverse ? 'EPSG:3857' : 'EPSG:4326',
         to: reverse ? 'EPSG:4326' : 'EPSG:3857'
       });

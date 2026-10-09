@@ -30,6 +30,25 @@ export {
 } from './web-mercator';
 
 export {GPUProjection} from './gpu-projection';
+export {selectProjectionExecution} from './projection-execution';
+export type {ProjectionExecutionSelection} from './projection-execution';
+export {indexProjectionPlan} from './projection-routing';
+export type {ProjectionRoutingNode} from './projection-routing';
+export {compileProjectionPartition, clipProjectionSegment} from './projection-partition';
+export type {
+  ProjectionDomainBranch,
+  ProjectionPartitionOptions,
+  ProjectionPartition,
+  ProjectionSegment
+} from './projection-partition';
+export {planProjection, ProjectionPlanningError} from './projection-planning';
+export type {
+  PlanProjectionOptions,
+  ProjectionPlanningResult,
+  ProjectionPlanningReason,
+  AdaptiveProjectionOptions,
+  SynchronousProjectionProvider
+} from './projection-planning';
 export {
   CompiledProjection,
   compileProjectionProgram,
@@ -43,6 +62,8 @@ export type {
   ProjectionShader
 } from './projection-program';
 export {GPUProjectionProgram} from './gpu-projection-program';
+export {GPUProjectionTable} from './gpu-projection-table';
+export type {GPUProjectionTableProps, ProjectedGPUTableColumns} from './gpu-projection-table';
 export {getProjectionProgramMetadata} from './projection-metadata';
 export type {
   ProjectionErrorMetadata,
@@ -51,6 +72,11 @@ export type {
 } from './projection-metadata';
 export type {GPUProjectionProgramProps} from './gpu-projection-program';
 export type {LongitudeWrapOperation} from './projection-longitude-wrap';
+export type {
+  ConicOperation,
+  LambertConformalConicOperation,
+  AlbersEqualAreaOperation
+} from './projection-conic';
 export type {
   GPUProjectionDoubleSingleProps,
   GPUProjectionLocalFloat32Props,

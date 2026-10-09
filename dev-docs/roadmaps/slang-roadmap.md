@@ -2,12 +2,15 @@
 
 Status after the initial v10 experimental publication. Retain the original tranche numbers so
 follow-up work can be tracked against the earlier plan. The compiler remains a practical
-shader-authoring subset, with zero runtime dependencies and an approximately 28 KB gzip baseline.
+shader-authoring subset, with zero runtime dependencies and an approximately 30 KB gzip compiler (2.1 KB above the pre-registry baseline).
 
 ## Completed tranches
 
 | Tranche | Scope | Status |
 | --- | --- | --- |
+| 2a | Application-owned named imports, transitive deduplication and module diagnostics/source maps | Implemented in the module-registry PR |
+| 2b | Typed native WGSL/GLSL contracts, explicit public exports, shared types/resources and two-way calls | Implemented in the module-registry PR |
+| 7a | Registry/native compatibility corpus, GPU execution and mapped target diagnostics | Implemented in the module-registry PR |
 | 1 | Everyday language support: switch, do/while, inferred locals, numeric conversions and matrix constructors | Landed in #3374 |
 | 3 | Reflection-driven luma integration and application-owned resource setup | Landed in #3371 |
 | 4 | Compute atomics, byte-address operations, workgroup/barrier checks and a compute/render example | Landed in #3373 |
@@ -17,29 +20,12 @@ These tranches cover the documented subset, not full upstream Slang compatibilit
 
 ## Remaining tranches
 
-### 2. Reusable shader libraries through a module registry
+### 2. Registry follow-ups
 
-Resolve Slang `import` statements against an application-supplied registry of named source modules.
-Do not support file imports, filesystem access, network loading, or implicit package discovery.
-Applications load their own strings and own the registry and compiler registration.
-
-- Define a small synchronous registry API and deterministic module-name resolution.
-- Track module identity in diagnostics and generated source maps.
-- Diagnose missing modules, import cycles and conflicting declarations at their source locations.
-- Define symbol visibility and naming rules before adding namespace syntax.
-- Share functions and types across render shaders, compute shaders and reusable `ShaderModule` code.
-- Define typed declarations for native shader-module functions and resources. The Slang compiler
-  needs those declarations to check calls; assembly can then supply the matching WGSL or GLSL
-  implementation. Include declared exports for native modules calling Slang helpers, with
-  explicit target names and type contracts in both directions. Do not require applications to
-  call generated internal names.
-- Include each imported dependency once, preserving entry-point selection and reflection.
-
-Acceptance: a shared geometry or material library works on WebGL 2 and WebGPU; nested imports,
-shared dependencies and failure cases have focused coverage. A Slang shader calls the same
-native module contract on both backends, with missing implementations and incompatible types
-reported clearly. The registry performs no I/O and
-adds no runtime dependencies. Measure compiler and generated-shader size before merging.
+The synchronous registry and native bridge are implemented. Modules share a flat namespace;
+file imports, upstream module visibility and namespace syntax remain unsupported. Native
+implementation contracts are checked on the Slang side and validated by the destination compiler.
+Future increments should be justified by real libraries rather than general language parity.
 
 ### 6. Selective language abstractions
 
@@ -58,12 +44,13 @@ Publication, experimental v10 badges, application-owned integration, bundle-size
 documentation examples are complete. The sculpture example now exposes source and the generated
 shaders used by the active backend. Remaining work can ship in smaller increments:
 
-1. **Compatibility corpus:** expand upstream reference and GPU tests across language features,
-   binding layouts, generated diagnostics and backend limits.
-2. **Compilation performance:** measure realistic libraries; define budgets and document worker
+1. **7a compatibility corpus — implemented:** upstream reference tests remain pinned; registry
+   fixtures add both-backend native calls, callbacks, public types/resources and diagnostic maps.
+   Extend this corpus whenever new language or bridge features are added.
+2. **7b compilation performance:** measure realistic libraries; define budgets and document worker
    usage. Add caching only where measurements justify it, with explicit application ownership and
    invalidation rules, especially for registry changes.
-3. **API stability:** settle registry, reflection and source-map contracts, document migration
+3. **7c API stability:** settle registry, reflection and source-map contracts, document migration
    policy, and define evidence required to remove the experimental badge.
 
 Acceptance: reproducible compatibility and performance results, documented budgets and ownership,
@@ -72,5 +59,5 @@ qualify the compiler for graduation.
 
 ## Suggested order
 
-Ship tranche 2 next. Expand tranche 7's compatibility corpus alongside it, then evaluate tranche 6
-against real library needs. Keep performance and bundle-size checks active throughout.
+Measure compilation performance in 7b next, then evaluate tranche 6 against real library needs.
+Settle API contracts in 7c after applications exercise the registry and native bridge. Keep performance and bundle-size checks active throughout.

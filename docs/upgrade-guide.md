@@ -12,6 +12,16 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ## Upgrading to v10.0
 
+### CPU geometry validation
+
+Engine geometry now delegates CPU storage and tessellation to `@math.gl/geometry`.
+Indices must reference valid vertices across the entire supplied index array, including entries
+after an explicit draw count. Remove invalid unused indices before constructing a geometry.
+Uint8 indices supplied to the engine compatibility adapter are widened to Uint16.
+`TruncatedConeGeometry` defaults to a bottom radius of 1; provide explicit nonzero radii for
+frusta. Primitive tessellation order can change, so derive face metadata from normals rather
+than relying on vertex or index ordering.
+
 **@luma.gl/gpgpu**
 
 ### GPUFFT2D graph lifecycle
@@ -95,7 +105,7 @@ See [GPUFFT2D](./api-reference/experimental/gpu-core/gpu-fft2d) for the migratio
 
 ## Upgrading to v9.2
 
-v9.2 brings full WebGPU support. Some additional deprecations and breaking changes have been necessary, but apart from the `Texture` -> `AsyncTexture` split, impact on most applications should be minimal. 
+v9.2 brings full WebGPU support. Some additional deprecations and breaking changes have been necessary, but apart from the `Texture` -> `AsyncTexture` split, impact on most applications should be minimal.
 
 **New VertexFormats**
 - `VertexFormat` Replace `'unorm8-webgl'` with `'unorm8'`.
@@ -111,13 +121,13 @@ v9.2 brings full WebGPU support. Some additional deprecations and breaking chang
 
 **Removal of WebGL uniform support**
 - The transition from uniforms to uniform buffers is complete, and remaining support for non-buffer uniforms has been removed.
-- `core`: `Renderpipeline.setUniformsWebGL()` dropped, use uniform buffer bindings
+- `core`: `RenderPipeline.setUniformsWebGL()` dropped, use uniform buffer bindings
 - `engine`: `Model.setUniformsWebGL()` deprecated, use uniform buffer bindings
 - `shadertools`: WebGL1 shader modules have been removed, use the new modules uniform buffer-based counterparts.
 
 **`CanvasContext` simplifications**
-- `canvasContext.devicePixelWidth` and `canvasContext.devicePixelHeight` are now kept updated to exact device pixel size of underlying canvas. 
-- Instead `canvasContext.setDrawingBufferSize()` to explicitly control drawing buffer size, if not using `CanvasContextProps.autoResize` 
+- `canvasContext.devicePixelWidth` and `canvasContext.devicePixelHeight` are now kept updated to exact device pixel size of underlying canvas.
+- Instead `canvasContext.setDrawingBufferSize()` to explicitly control drawing buffer size, if not using `CanvasContextProps.autoResize`
 - A new `DeviceProps.onResize` callback can be used to react to changes.
 
 **Minor changes**
@@ -129,14 +139,14 @@ v9.1 continues to build out WebGPU support. Some additional deprecations and bre
 
 **Major change: Adapters**
 
-- When initializing luma.gl, applications now import an `Adapter` singleton from the WebGPU and/or the WebGL module, and passes the adapter object(s) to `luma.createDevice()`, `makeAnimationLoop` etc. 
+- When initializing luma.gl, applications now import an `Adapter` singleton from the WebGPU and/or the WebGL module, and passes the adapter object(s) to `luma.createDevice()`, `makeAnimationLoop` etc.
 - `luma.registerDevices()` can be replaced with `luma.registerAdapters()` if global registration is still desired.
 
 **Major change: Texture and AsyncTextures**
 
 - The texture API is being streamlined to work symmetrically across WebGPU and WebGL.
 - `Texture.copyExternalImage()` and `Texture.copyImageData()` replaces `Texture.setImageData()` when initializing texture memory with image data.
-- `Textures` no longer accept promises when setting data (e.g. from `loadImageBitmap(url)`. 
+- `Textures` no longer accept promises when setting data (e.g. from `loadImageBitmap(url)`.
 - Instead, a new `AsyncTexture` class does accept promises and creates actual `Textures` once the promise resolves and data is available.
 - The `Model` class now accepts `AsyncTextures` as bindings and defers rendering until the underlying texture has been created.
 
@@ -155,7 +165,7 @@ v9.1 continues to build out WebGPU support. Some additional deprecations and bre
 | `glsl` shader template string | Removed | `/* glsl */` comment | Enable syntax highlighting in vscode using before shader string |
 | `depth24unorm-stencil8` | Removed | `depth24plus-stencil8` | The `TextureFormat` was dropped from the WebGPU spec |
 | `rgb8unorm-unsized` | Removed | `rgb8unorm` | Drop support for unsized WebGL1 `TextureFormat` |
-| `rgba8unorm-unsized` | Removed | `rgb8aunorm` | Drop support for unsized WebGL1 `TextureFormat` |
+| `rgba8unorm-unsized` | Removed | `rgba8unorm` | Drop support for unsized WebGL1 `TextureFormat` |
 
 [adapters]: /docs/api-reference/core/luma#lumaregisteradapters
 [canvas]: /docs/api-reference/core/canvas-context#canvascontextprops
@@ -187,7 +197,7 @@ luma.gl v9 is a major modernization of the luma.gl API, with many breaking chang
 
 ## Upgrading to v8 and earlier releases
 
-This page only covers luma.gl v9 and later releases. 
+This page only covers luma.gl v9 and later releases.
 For information on upgrading to from v8 and earlier releases, see the [Legacy Upgrade Guide](/docs/legacy/legacy-upgrade-guide).
 
 ## GPU Core composition

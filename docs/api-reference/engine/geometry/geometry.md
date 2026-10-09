@@ -5,7 +5,10 @@ import {DocumentationContract} from '@site/src/components/docs/foundation-docs';
 
 <EngineDocsTabs group="geometry" active="geometry" />
 
-`Geometry` is the CPU-side geometry container used by engine classes.
+`Geometry` is a compatibility adapter over the CPU-side container from `@math.gl/geometry`.
+New code can import `Geometry` directly from `@math.gl/geometry` and pass it to `Model`.
+The math.gl container stores source attributes without shader layout metadata; luma.gl creates
+shader layouts when uploading it.
 It stores typed-array attributes, optional indices, and a `bufferLayout`.
 When a layout is not supplied, `Geometry` creates a one-buffer-per-attribute layout automatically.
 Use `makeInterleavedGeometry()` to pack multiple CPU attributes into one vertex buffer while still

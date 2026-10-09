@@ -14,7 +14,7 @@ import {
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 import {CITY_ORIGIN, makeCityMesh, type CityFeature} from '../river-district-data';
-import {getRiverfrontSun} from './sun';
+import {getRiverfrontSkyLighting} from '../riverfront-sky-lighting';
 
 export type ShadowSettings = {
   hour: number;
@@ -100,21 +100,26 @@ void main() {
     const camera = getShadowCamera(options.viewports[0]);
     this.viewMatrix = camera.viewMatrix;
     this.renderer.setProps({quality: this.settings.quality});
+    const skyLighting = getRiverfrontSkyLighting(this.settings.hour);
+    const sunlight = skyLighting.sun.direction[2] > 0;
     this.shadowProps = this.renderer.render({
       camera,
       directionalLights: [
         {
-          direction: getRiverfrontSun(this.settings.hour).direction,
+          direction: sunlight ? skyLighting.sun.direction : skyLighting.moonDirection,
           shadowDistance: Math.min(camera.far, 2600),
           casterDistance: 450,
-          sourceAngularRadius: this.settings.softness,
+          sourceAngularRadius: Math.max(this.settings.softness, sunlight ? 0 : 0.025),
           cascadeSplitLambda: 0.65,
           cascadeBlendFraction: 0.15,
           normalBias: 0.12,
           depthBias: 2,
           depthBiasSlopeScale: 2,
-          strength:
-            this.settings.enabled && getRiverfrontSun(this.settings.hour).direction[2] > 0 ? 1 : 0
+          strength: this.settings.enabled
+            ? sunlight
+              ? 1
+              : Math.min(0.22, skyLighting.moonIntensity)
+            : 0
         }
       ],
       drawShadowCasters: view => this.drawCasters(view)

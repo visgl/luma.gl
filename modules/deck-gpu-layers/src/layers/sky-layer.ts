@@ -10,11 +10,11 @@ import {
 } from '@deck.gl/core';
 import type {NumberArray3} from '@math.gl/core';
 import {getSunPosition, getSkyDirection, skyDirectionToGlobe, type SkyObserver} from '@math.gl/sun';
-import type {CloudProps, GlobeCloudProps, AtmosphereProps} from '@luma.gl/shadertools';
+import type {CloudProps, GlobeCloudProps} from '@luma.gl/shadertools';
 import {SunLayer, type SunLayerProps} from './sun-layer';
 import {MoonLayer, type MoonLayerProps} from './moon-layer';
 import {StarfieldLayer, type StarfieldLayerProps} from './starfield-layer';
-import {AtmosphereLayer} from './atmosphere-layer';
+import {AtmosphereLayer, type AtmosphereLayerProps} from './atmosphere-layer';
 import {CloudLayer} from './cloud-layer';
 import {GlobeCloudLayer} from './globe-cloud-layer';
 import {getSkyObserver} from './sky-coordinates';
@@ -30,7 +30,7 @@ export type SkyLayerProps = LayerProps & {
   stars?: boolean | Partial<StarfieldLayerProps>;
   clouds?: boolean | (CloudProps & GlobeCloudProps);
   /** Existing local scattering sky. Globe views use the application's space background. */
-  atmosphere?: boolean | AtmosphereProps;
+  atmosphere?: boolean | Partial<AtmosphereLayerProps>;
 };
 
 /** One observer and clock for sun, moon, stars, atmosphere and view-appropriate clouds.
@@ -42,11 +42,11 @@ export class SkyLayer extends CompositeLayer<SkyLayerProps> {
     timestamp: undefined,
     observer: undefined,
     time: 0,
-    sun: true,
-    moon: true,
-    stars: true,
-    clouds: true,
-    atmosphere: true,
+    sun: {type: 'object', value: true, compare: 1},
+    moon: {type: 'object', value: true, compare: 1},
+    stars: {type: 'object', value: true, compare: 1},
+    clouds: {type: 'object', value: true, compare: 1},
+    atmosphere: {type: 'object', value: true, compare: 1},
     pickable: false
   };
   override shouldUpdateState({changeFlags}: UpdateParameters<this>): boolean {

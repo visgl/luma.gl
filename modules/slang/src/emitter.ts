@@ -36,8 +36,10 @@ import {
   returnsValue
 } from './type-checker';
 import {UniformEmitter} from './uniform-emitter';
+import {getSlangParameterDirection, getSlangTypeSignature} from './modules';
 import {markSlangSource, mapSlangSource} from './source-map';
 import type {
+  SlangExport,
   SlangTextureLayout,
   SlangInterfaceVariable,
   SlangReflection,
@@ -275,6 +277,8 @@ export class SlangEmitter {
     }
     const functionNames = new Set(this.overloads.keys());
     for (const [name, overloads] of this.overloads) {
+      if (overloads.length > 1 && program.publicNames?.has(name))
+        this.fail('Public native/exported functions cannot be overloaded', overloads[0].location);
       if (
         overloads.length > 1 &&
         overloads.some(declaration =>
@@ -296,7 +300,8 @@ export class SlangEmitter {
     this.uniformEmitter = new UniformEmitter(
       this.structures,
       type => this.getTypeName(type),
-      type => this.getLayout(type, 'uniform', this.entry.location)
+      type => this.getLayout(type, 'uniform', this.entry.location),
+      (type, name) => this.getFieldName(type, name)
     );
     const candidates = [...this.functions.values()].filter(declaration =>
       declaration.attributes.some(attribute => attribute.name === 'shader')
@@ -315,7 +320,36 @@ export class SlangEmitter {
     if (!selected) {
       this.fail('Select an existing shader entry point', {offset: 0, line: 1, column: 1});
     }
+    if (selected.prototype)
+      this.fail('A native function cannot be a shader entry point', selected.location);
     this.entry = selected;
+    for (const declaration of program.declarations) {
+      if (!program.publicNames?.has(declaration.name)) continue;
+      const types =
+        declaration.kind === 'struct'
+          ? declaration.fields.map(field => field.type)
+          : declaration.kind === 'function'
+            ? [declaration.type, ...declaration.parameters.map(parameter => parameter.type)]
+            : [declaration.type];
+      for (const type of types) {
+        let element = type;
+        while (element.element) element = element.element;
+        if (this.structures.has(element.name) && !program.publicNames.has(element.name))
+          this.fail(
+            `Public contracts require an exported type ${element.name}`,
+            declaration.location
+          );
+      }
+      if (
+        declaration.kind === 'variable' &&
+        declaration.type.name === 'array' &&
+        isSlangResource(declaration.type.element!)
+      )
+        this.fail(
+          'Public resource arrays are unsupported; declare individual resources',
+          declaration.location
+        );
+    }
     const shaderAttribute = selected.attributes.find(attribute => attribute.name === 'shader');
     const declaredStage = shaderAttribute?.arguments[0];
     const stage = options.stage || declaredStage;
@@ -381,10 +415,43 @@ export class SlangEmitter {
     return this.options.target === 'wgsl';
   }
   private fail(message: string, location: SourceLocation): never {
-    throw new SlangTranspileError(message, location, this.options.sourceName);
+    throw new SlangTranspileError(
+      message,
+      location,
+      location.sourceName || this.options.sourceName
+    );
   }
   private getName(name: string): string {
     return `_slang_${name}`;
+  }
+  private getGlobalName(name: string): string {
+    return this.program.publicNames?.get(name) || this.getName(name);
+  }
+  private getFunctionName(declaration: ShaderFunction): string {
+    return (
+      this.program.publicNames?.get(declaration.name) ||
+      `_slang_function_${this.functionKeys.get(declaration)}`
+    );
+  }
+  private getFieldName(type: SlangType, name: string): string {
+    return this.program.publicNames?.has(type.element?.name || type.name)
+      ? name
+      : this.getName(name);
+  }
+  private getMemberPath(type: SlangType, path: string[]): string {
+    return path
+      .map(name => {
+        const code = `.${this.getFieldName(type, name)}`;
+        type = this.structures.get(type.name)!.fields.find(field => field.name === name)!.type;
+        return code;
+      })
+      .join('');
+  }
+  private getBufferMember(expression: Expression): string {
+    const root = getExpressionRoot(expression);
+    return root.kind === 'identifier' && this.program.publicNames?.has(root.value)
+      ? 'data'
+      : '_slang_data';
   }
   private getTypeName(type: SlangType, location: SourceLocation = this.entry.location): string {
     if (type.name === 'void') {
@@ -413,7 +480,7 @@ export class SlangEmitter {
       return this.isWGSL ? `mat${matrix[1]}x${matrix[2]}<f32>` : `mat${matrix[1]}x${matrix[2]}`;
     }
     if (this.structures.has(type.name)) {
-      return `_slang_type_${type.name}`;
+      return this.program.publicNames?.get(type.name) || `_slang_type_${type.name}`;
     }
     this.fail(`Unsupported type ${type.name}`, location);
   }
@@ -717,7 +784,7 @@ export class SlangEmitter {
       this.structures,
       addressSpace,
       location,
-      this.options.sourceName || 'shader.slang'
+      location.sourceName || this.options.sourceName || 'shader.slang'
     );
   }
   private createTemporary(): string {
@@ -928,7 +995,7 @@ export class SlangEmitter {
       if (this.structures.has(object.type.name))
         return {
           type: this.getExpressionType(expression),
-          code: `${object.code}.${this.getName(expression.member)}`
+          code: `${object.code}.${this.getFieldName(object.type, expression.member)}`
         };
       return {
         type: this.getExpressionType(expression),
@@ -1023,7 +1090,7 @@ export class SlangEmitter {
         const objectType = this.getExpressionType(expression.object);
         const structure =
           this.structures.has(objectType.name) || objectType.name === 'ConstantBuffer';
-        return `${this.emitExpression(expression.object)}.${structure ? this.getName(expression.member) : expression.member}`;
+        return `${this.emitExpression(expression.object)}.${structure ? this.getFieldName(objectType, expression.member) : expression.member}`;
       }
       case 'index': {
         const objectType = this.getExpressionType(expression.object);
@@ -1054,7 +1121,7 @@ export class SlangEmitter {
           return this.findSymbol(resourceArray[index], expression).code;
         }
         const object = this.emitExpression(expression.object);
-        return `${object}${!this.isWGSL && /(?:Structured|ByteAddress)Buffer$/.test(objectType.name) ? '._slang_data' : ''}[${this.emitExpression(expression.index)}]`;
+        return `${object}${!this.isWGSL && /(?:Structured|ByteAddress)Buffer$/.test(objectType.name) ? `.${this.getBufferMember(expression.object)}` : ''}[${this.emitExpression(expression.index)}]`;
       }
       case 'conditional': {
         const type = this.getExpressionType(expression);
@@ -1397,7 +1464,7 @@ export class SlangEmitter {
     const callee = expression.callee as Expression & {kind: 'member'};
     const resourceType = this.getExpressionType(callee.object);
     const code = this.emitExpression(callee.object);
-    const data = `${code}${this.isWGSL ? '' : '._slang_data'}`;
+    const data = `${code}${this.isWGSL ? '' : `.${this.getBufferMember(callee.object)}`}`;
     const method = callee.member;
     if (method === 'GetDimensions') {
       if (expression.arguments.length !== 1)
@@ -2077,7 +2144,7 @@ export class SlangEmitter {
   private freezeLvalue(expression: Expression): string {
     if (expression.kind === 'identifier') return this.findSymbol(expression.value, expression).code;
     if (expression.kind === 'member')
-      return `${this.freezeLvalue(expression.object)}.${this.structures.has(this.getExpressionType(expression.object).name) ? this.getName(expression.member) : expression.member}`;
+      return `${this.freezeLvalue(expression.object)}.${this.structures.has(this.getExpressionType(expression.object).name) ? this.getFieldName(this.getExpressionType(expression.object), expression.member) : expression.member}`;
     if (expression.kind === 'index') {
       const object = this.freezeLvalue(expression.object);
       const index = this.emitExpression(expression.index);
@@ -2087,7 +2154,7 @@ export class SlangEmitter {
           ? `let ${temporary} = ${index};`
           : `${this.getTypeName(this.getExpressionType(expression.index))} ${temporary} = ${index};`
       );
-      return `${object}${!this.isWGSL && /Buffer$/.test(this.getExpressionType(expression.object).name) ? '._slang_data' : ''}[${temporary}]`;
+      return `${object}${!this.isWGSL && /Buffer$/.test(this.getExpressionType(expression.object).name) ? `.${this.getBufferMember(expression.object)}` : ''}[${temporary}]`;
     }
     this.fail('Output arguments require writable variables', expression);
   }
@@ -2130,7 +2197,7 @@ export class SlangEmitter {
       argumentsList.push(`&${temporary}`);
       copies.push(this.emitLvalueWrite(argument, destination, temporary));
     }
-    const call = `_slang_function_${this.functionKeys.get(declaration)}(${argumentsList.join(', ')})`;
+    const call = `${this.getFunctionName(declaration)}(${argumentsList.join(', ')})`;
     if (!this.isWGSL) return call;
     const result = declaration.type.name === 'void' ? '' : this.createTemporary();
     this.expressionPrelude.push(result ? `let ${result} = ${call};` : `${call};`, ...copies);
@@ -2448,7 +2515,7 @@ export class SlangEmitter {
   }
   private emitStructure(structure: Structure): string {
     const names = new Set<string>();
-    return `struct _slang_type_${structure.name} {\n${structure.fields
+    return `struct ${this.getTypeName({name: structure.name}, structure.location)} {\n${structure.fields
       .map(field => {
         if (names.has(field.name)) {
           this.fail('Duplicate structure field', field.location);
@@ -2470,7 +2537,7 @@ export class SlangEmitter {
         if (field.type.name === 'void') {
           this.fail('Structure fields cannot have void type', field.location);
         }
-        return `  ${this.getDeclaration(field.type, this.getName(field.name), field.location)}${this.isWGSL ? ',' : ';'}`;
+        return `  ${this.getDeclaration(field.type, this.getFieldName({name: structure.name}, field.name), field.location)}${this.isWGSL ? ',' : ';'}`;
       })
       .join('\n')}\n}${this.isWGSL ? '' : ';'}`;
   }
@@ -2539,7 +2606,7 @@ export class SlangEmitter {
     if (variable.semantic) {
       this.fail('Global variable semantics are not supported', variable.location);
     }
-    const name = this.getName(variable.name);
+    const name = this.getGlobalName(variable.name);
     if (
       !isSlangResource(variable.type) &&
       (variable.modifiers.includes('static') ||
@@ -2652,7 +2719,7 @@ export class SlangEmitter {
       ? getSlangTextureLayout(
           variable,
           this.comparisonTextures.has(variable.name),
-          this.options.sourceName || 'shader.slang'
+          variable.location.sourceName || this.options.sourceName || 'shader.slang'
         )
       : undefined;
     if (
@@ -2709,7 +2776,7 @@ export class SlangEmitter {
       this.scopes[0].get(variable.name)!.uniformType = valueType;
     if (variable.modifiers.includes('cbuffer')) {
       for (const field of this.structures.get(valueType!.name)!.fields) {
-        this.addSymbol(field, `${name}.${this.getName(field.name)}`, false);
+        this.addSymbol(field, `${name}.${this.getFieldName(valueType!, field.name)}`, false);
         this.scopes[0].get(field.name)!.resourceName = variable.name;
         if (this.isWGSL) this.scopes[0].get(field.name)!.uniformType = field.type;
       }
@@ -2757,7 +2824,7 @@ export class SlangEmitter {
       if (this.glslVersion !== '450') {
         this.fail('Structured buffers require GLSL 450', variable.location);
       }
-      return `layout(std430, binding = ${binding.binding}) ${access === 'read' ? 'readonly ' : ''}buffer _slang_buffer_${variable.name} { ${this.getDeclaration(variable.type.element!, '_slang_data', variable.location)}[]; } ${name};`;
+      return `layout(std430, binding = ${binding.binding}) ${access === 'read' ? 'readonly ' : ''}buffer _slang_buffer_${variable.name} { ${this.getDeclaration(variable.type.element!, this.program.publicNames?.has(variable.name) ? 'data' : '_slang_data', variable.location)}[]; } ${name};`;
     }
     if (sampler) {
       return '';
@@ -3055,12 +3122,7 @@ export class SlangEmitter {
         ) {
           value = `uint(${value})`;
         }
-        body.push(
-          `${name}${leaf.path
-            .slice(1)
-            .map(part => `.${this.getName(part)}`)
-            .join('')} = ${value};`
-        );
+        body.push(`${name}${this.getMemberPath(parameter.type, leaf.path.slice(1))} = ${value};`);
       }
       parameters.push(
         this.isWGSL && parameter.modifiers.some(modifier => ['out', 'inout'].includes(modifier))
@@ -3068,7 +3130,7 @@ export class SlangEmitter {
           : name
       );
     }
-    const call = `_slang_function_${this.functionKeys.get(this.entry)}(${parameters.join(', ')})`;
+    const call = `${this.getFunctionName(this.entry)}(${parameters.join(', ')})`;
     if (this.isWGSL && this.outputs.length) body.push('var _slang_output: _slang_output;');
     if (this.entry.type.name === 'void') body.push(`${call};`);
     else
@@ -3079,10 +3141,12 @@ export class SlangEmitter {
       const base = leaf.path[0] === 'result' ? '_slang_result' : `_slang_argument_${leaf.path[0]}`;
       const source =
         base +
-        leaf.path
-          .slice(1)
-          .map(part => `.${this.getName(part)}`)
-          .join('');
+        this.getMemberPath(
+          leaf.path[0] === 'result'
+            ? this.entry.type
+            : this.entry.parameters.find(parameter => parameter.name === leaf.path[0])!.type,
+          leaf.path.slice(1)
+        );
       body.push(
         `${this.isWGSL ? `_slang_output.${leaf.field}` : this.getGLSLInterfaceName(leaf, 'out')} = ${source};`
       );
@@ -3175,6 +3239,17 @@ export class SlangEmitter {
         )
       );
     });
+    if (declaration.prototype) {
+      this.scopes.pop();
+      this.currentFunction = undefined;
+      const module = this.program.nativeModules!.find(module =>
+        module.functions.includes(declaration.name)
+      )!;
+      this.callGraph.set(this.functionKeys.get(declaration)!, new Set(module.imports));
+      return this.isWGSL
+        ? ''
+        : `${this.getTypeName(declaration.type, declaration.location)} ${this.getFunctionName(declaration)}(${parameters.join(', ')});`;
+    }
     const parameterCopies = this.isWGSL
       ? declaration.parameters
           .filter(
@@ -3194,7 +3269,7 @@ export class SlangEmitter {
       this.fail('Non-void functions must return a value on every path', declaration.location);
     this.scopes.pop();
     this.currentFunction = undefined;
-    const name = `_slang_function_${this.functionKeys.get(declaration)}`;
+    const name = this.getFunctionName(declaration);
     return this.isWGSL
       ? `fn ${name}(${parameters.join(', ')})${declaration.type.name === 'void' ? '' : ` -> ${this.getTypeName(declaration.type, declaration.location)}`} ${body}`
       : `${this.getTypeName(declaration.type, declaration.location)} ${name}(${parameters.join(', ')}) ${body}`;
@@ -3263,7 +3338,9 @@ export class SlangEmitter {
         return [
           {
             code: markSlangSource(code, declaration.location),
-            texture: isSlangTexture(declaration.type) ? this.getName(declaration.name) : undefined,
+            texture: isSlangTexture(declaration.type)
+              ? this.getGlobalName(declaration.name)
+              : undefined,
             resource: this.reflection.bindings.some(binding => binding.name === declaration.name)
               ? declaration.name
               : undefined
@@ -3282,6 +3359,15 @@ export class SlangEmitter {
       for (const dependency of this.callGraph.get(name) || []) collectFunction(dependency);
     };
     collectFunction(this.functionKeys.get(this.entry)!);
+    // Opaque native code can call explicit Slang exports and read public resources.
+    for (const [name] of this.program.publicNames || []) {
+      const declaration = this.program.declarations.find(declaration => declaration.name === name)!;
+      if (declaration.kind === 'function') collectFunction(this.functionKeys.get(declaration)!);
+      if (declaration.kind === 'variable') {
+        this.usedResources.add(name);
+        if (isSlangTexture(declaration.type)) this.usedTextures.add(this.getGlobalName(name));
+      }
+    }
     this.validateBarriers(reachable);
     const orderedFunctions: string[] = [];
     visited.clear();
@@ -3359,6 +3445,38 @@ export class SlangEmitter {
         ? {vertex: 1, fragment: 2, compute: 4}[this.stage]
         : 0;
     }
+    const nativeCode = (this.program.nativeModules || []).map(module => {
+      let offset = 0;
+      return module.code
+        .split('\n')
+        .map((line, index) => {
+          const location = {offset, line: index + 1, column: 1, sourceName: module.sourceName};
+          offset += line.length + 1;
+          return markSlangSource(line, location);
+        })
+        .join('\n');
+    });
+    const exports: Record<string, SlangExport> = Object.create(null);
+    for (const [name, shaderName] of this.program.publicNames || []) {
+      const declaration = this.program.declarations.find(declaration => declaration.name === name)!;
+      exports[name] = {
+        shaderName,
+        kind: declaration.kind,
+        type:
+          declaration.kind === 'struct'
+            ? declaration.name
+            : getSlangTypeSignature(declaration.type),
+        ...(declaration.kind === 'function'
+          ? {
+              parameters: declaration.parameters.map(parameter => ({
+                name: parameter.name,
+                type: getSlangTypeSignature(parameter.type),
+                direction: getSlangParameterDirection(parameter)
+              }))
+            }
+          : {})
+      };
+    }
     const declarations = [
       header,
       ...structures,
@@ -3373,7 +3491,8 @@ export class SlangEmitter {
         )
         .map(global => global.code),
       ...combinedDeclarations,
-      ...orderedFunctions
+      ...orderedFunctions,
+      ...nativeCode
     ].filter(Boolean);
     const result: SlangTranspileResult = {
       ...mapSlangSource(
@@ -3381,6 +3500,7 @@ export class SlangEmitter {
         this.options.sourceName || 'shader.slang'
       ),
       target: this.options.target,
+      ...(Object.keys(exports).length ? {exports} : {}),
       ...(!this.isWGSL ? {glslVersion: this.glslVersion} : {}),
       entryPoint: this.isWGSL ? `_slang_entry_${this.entry.name}` : 'main',
       stage: this.stage,

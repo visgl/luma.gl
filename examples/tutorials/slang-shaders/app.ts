@@ -5,31 +5,19 @@
 import {Buffer} from '@luma.gl/core';
 import {packSlangUniforms, type SlangTypeLayout} from '@luma.gl/slang';
 import {AnimationLoopTemplate, type AnimationProps, Model} from '@luma.gl/engine';
-import {GLSLShaderAssembler, WGSLShaderAssembler, type ShaderModule} from '@luma.gl/shadertools';
+import {GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shadertools';
 import {createSlangTranspiler} from './slang-transpiler';
 import {createShaderViewer} from './shader-viewer';
-import {FilmGrainPass} from './film-grain';
+import {filmGrain} from './film-grain';
 import shaderSource from './shader.slang?raw';
 import paletteSource from './palette.slang?raw';
 import geometrySource from './geometry.slang?raw';
 
-const palette: ShaderModule = {
-  name: 'palette',
-  sourceLanguage: 'slang',
-  source: paletteSource
-};
-const distanceField: ShaderModule = {
-  name: 'distanceField',
-  sourceLanguage: 'slang',
-  source: geometrySource
-};
-
 export default class SlangShadersExample extends AnimationLoopTemplate {
   static info =
-    `<h3>Slang: Orbital sculpture</h3><p>Animated distance fields, iridescent lighting, and a floor reflection, written once in Slang. Drag to orbit or open the shader viewer to compare Slang with the generated code. The application registers its compiler; reusable Slang modules supply the geometry and material. An imported native valueNoise module adds adjustable film grain in a second pass.</p>`;
+    `<h3>Slang: Orbital sculpture</h3><p>Animated distance fields, iridescent lighting, and a floor reflection, written once in Slang. Drag to orbit or open the shader viewer to compare Slang with the generated code. The application registers its compiler; named Slang imports supply geometry and material. A typed bridge calls native valueNoise code, which calls a public Slang helper to add adjustable grain.</p>`;
 
   readonly model: Model;
-  readonly filmGrainPass: FilmGrainPass;
   readonly uniformBuffer: Buffer;
   private readonly sceneLayout: SlangTypeLayout;
   private controls: HTMLDivElement | null = null;
@@ -53,7 +41,10 @@ export default class SlangShadersExample extends AnimationLoopTemplate {
         ? new WGSLShaderAssembler()
         : new GLSLShaderAssembler();
     // The application imports and registers its compiler on its own assembler.
-    const slangTranspiler = createSlangTranspiler();
+    const slangTranspiler = createSlangTranspiler({
+      modules: {geometry: geometrySource, palette: paletteSource, filmGrain},
+      exports: {getGrainOffset: 'scaleGrain'}
+    });
     shaderAssembler.addShaderTranspiler(slangTranspiler);
     this.model = new Model(device, {
       id: 'slang-orbital-sculpture',
@@ -64,7 +55,6 @@ export default class SlangShadersExample extends AnimationLoopTemplate {
       fs: shaderSource,
       vertexEntryPoint: 'vertexMain',
       fragmentEntryPoint: 'fragmentMain',
-      modules: [distanceField, palette],
       topology: 'triangle-list',
       vertexCount: 3
     });
@@ -78,7 +68,6 @@ export default class SlangShadersExample extends AnimationLoopTemplate {
     });
     this.model.setBindings({[scene.name]: this.uniformBuffer});
     this.updateScene(0, 1);
-    this.filmGrainPass = new FilmGrainPass(device);
   }
 
   override async onInitialize({device}: AnimationProps): Promise<void> {
@@ -151,18 +140,18 @@ export default class SlangShadersExample extends AnimationLoopTemplate {
         {name: 'shader.slang', code: shaderSource},
         {name: 'geometry.slang', code: geometrySource},
         {name: 'palette.slang', code: paletteSource},
-        ...this.filmGrainPass.getSourceFiles()
+        {name: 'filmGrain · Slang declarations', code: filmGrain.declarations},
+        {name: 'filmGrain · Slang imports', code: filmGrain.imports},
+        {
+          name: 'filmGrain · native implementation',
+          code: device.info.shadingLanguage === 'wgsl' ? filmGrain.wgsl : filmGrain.glsl
+        }
       ],
       device.info.shadingLanguage === 'wgsl'
-        ? [
-            {name: 'WGSL · Slang sculpture', code: this.model.source},
-            {name: 'WGSL · native grain', code: this.filmGrainPass.model.source}
-          ]
+        ? [{name: 'WGSL · sculpture and native grain', code: this.model.source}]
         : [
             {name: 'GLSL ES 300 · vertex', code: this.model.vs},
-            {name: 'GLSL ES 300 · fragment', code: this.model.fs},
-            {name: 'GLSL ES 300 · grain vertex', code: this.filmGrainPass.model.vs},
-            {name: 'GLSL ES 300 · grain fragment', code: this.filmGrainPass.model.fs}
+            {name: 'GLSL ES 300 · fragment', code: this.model.fs}
           ]
     );
     const showShaders = this.controls.querySelector<HTMLButtonElement>('[data-action="shaders"]')!;
@@ -170,20 +159,22 @@ export default class SlangShadersExample extends AnimationLoopTemplate {
   }
 
   /** Pack named values using compiler reflection instead of handwritten offsets. */
-  updateScene(time: number, aspect: number): void {
+  updateScene(time: number, aspect: number, grain = this.grain): void {
     this.uniformBuffer.write(
       packSlangUniforms(this.sceneLayout, {
         animation: [time, aspect, this.twist, this.palette],
-        camera: [this.yaw, this.pitch, this.exposure, 0]
+        camera: [this.yaw, this.pitch, this.exposure, grain]
       })
     );
   }
 
-  override onRender({time, aspect, width, height}: AnimationProps): void {
+  override onRender({device, time, aspect}: AnimationProps): void {
     if (!this.paused) this.elapsedTime += Math.min(time - this.previousTime, 100) / 1000;
     this.previousTime = time;
     this.updateScene(this.elapsedTime, aspect);
-    this.filmGrainPass.draw(this.model, width, height, this.elapsedTime, this.grain);
+    const renderPass = device.beginRenderPass({clearColor: [0.01, 0.02, 0.04, 1]});
+    this.model.draw(renderPass);
+    renderPass.end();
   }
 
   override onFinalize(): void {
@@ -193,7 +184,6 @@ export default class SlangShadersExample extends AnimationLoopTemplate {
     this.canvas?.removeEventListener('pointercancel', this.handlePointerUp);
     this.shaderViewer?.destroy();
     this.controls?.remove();
-    this.filmGrainPass.destroy();
     this.model.destroy();
     this.uniformBuffer.destroy();
   }

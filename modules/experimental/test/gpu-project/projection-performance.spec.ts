@@ -32,8 +32,8 @@ for (const fixture of performanceFixtures) {
         });
         expect(report.comparison).toBe('equal-error-budget');
         expect(report.consumerCount).toBe(consumerCount);
-        expect(report.cpuProvider).toBe('@math.gl/projection Projection.project (proj4js)');
-        expect(report.cpuPaths).toHaveLength(2);
+        expect(report.cpuProvider).toBe('@math.gl/projection 5.0.0-alpha.15 TypeScript');
+        expect(report.cpuPaths).toHaveLength(12);
         for (const path of report.cpuPaths) {
           expect(path.validRows).toBe(rowCount + 9);
           expect(path.projectionsPerRow).toBe(path.mode === 'inline' ? consumerCount : 1);
@@ -70,7 +70,7 @@ for (const fixture of performanceFixtures) {
         );
         if (measured)
           console.info(
-            `PROJECTION_PERFORMANCE_SWEEP ${JSON.stringify({schemaVersion: 2, capturedAt: new Date().toISOString(), browser: navigator.userAgent, fixture: fixture.id, bounds: fixture.bounds, rowCount, report})}`
+            `PROJECTION_PERFORMANCE_SWEEP ${JSON.stringify({schemaVersion: 3, capturedAt: new Date().toISOString(), browser: navigator.userAgent, fixture: fixture.id, bounds: fixture.bounds, rowCount, report})}`
           );
       }, 180000);
     }

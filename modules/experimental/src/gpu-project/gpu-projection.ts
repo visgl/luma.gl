@@ -30,11 +30,7 @@ import type {
   GPUFloat32Positions,
   GPUGeospatialPositions
 } from '../geospatial/types';
-import {
-  packProjectionPlan,
-  PROJECTION_PATCH_WORD_LENGTH,
-  PROJECTION_PLAN_BOUNDS_WORD_LENGTH
-} from './projection-plan';
+import {packProjectionPlan, getProjectionPlanWordLength} from './projection-plan';
 import type {ProjectionPlan, ProjectionPrecision} from './types';
 import {getProjectionShaderSource} from './projection-shader';
 
@@ -147,11 +143,7 @@ export class GPUProjection {
 
     if (this.planBuffer) {
       validatePackedView(this.planBuffer, ['uint32'], `${this.id} plan buffer`);
-      if (
-        this.planBuffer.length <
-        props.plan.patches.length * PROJECTION_PATCH_WORD_LENGTH +
-          PROJECTION_PLAN_BOUNDS_WORD_LENGTH
-      ) {
+      if (this.planBuffer.length < getProjectionPlanWordLength(props.plan)) {
         throw new Error(`${this.id} plan buffer is smaller than its packed projection plan`);
       }
       inputs.push(['plan buffer', this.planBuffer]);
@@ -181,6 +173,12 @@ export class GPUProjection {
     }
     if (plan.patches.length !== this.projectionPlan.patches.length) {
       throw new Error(`${this.id} updated projection plan must retain the same patch count`);
+    }
+    if (
+      Boolean(plan.strictDomains) !== Boolean(this.projectionPlan.strictDomains) ||
+      (plan.routingIndex?.length ?? 0) !== (this.projectionPlan.routingIndex?.length ?? 0)
+    ) {
+      throw new Error('updated projection plan must retain its routing and domain layout');
     }
 
     const packedPlan = packProjectionPlan(plan);
@@ -316,6 +314,8 @@ export class GPUProjection {
       readPosition: inputSource.read('index'),
       elementCount: input.length,
       patchCount: this.projectionPlan.patches.length,
+      routingNodeCount: this.projectionPlan.routingIndex?.length,
+      strictDomains: this.projectionPlan.strictDomains,
       outputOffset: getViewElementOffset(output) / (this.precision === 'double-single' ? 4 : 2),
       planOffset: getViewElementOffset(plan),
       patchIdOffset: patchIds ? getViewElementOffset(patchIds) : undefined,

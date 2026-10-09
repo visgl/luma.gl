@@ -7,6 +7,7 @@ import type {ProjectionInputFormat, ProjectionProgram} from './projection-progra
 import type {ProjectionBounds, ProjectionPrecision} from './types';
 import {getWebMercatorBounds} from './projection-web-mercator';
 import {getTransverseMercatorBounds} from './projection-transverse-mercator';
+import {getConicBounds} from './projection-conic';
 import {getLongitudeWrapParameters} from './projection-longitude-wrap';
 
 /** Estimates exclude input quantization, native series truncation and native/output rounding. */
@@ -27,6 +28,12 @@ export type ProjectionStageMetadata = {
   /** Stage-input envelope (null: finite only); nonlinear inverses also check their footprint. */
   readonly inputBounds: ProjectionBounds | null;
   readonly invertible: boolean;
+  /** Adaptive bounds may be only an envelope; a patch union explicitly excludes gaps. */
+  readonly patchDomain?: {
+    readonly kind: 'rectangle' | 'patch-union';
+    readonly patchCount: number;
+    readonly routing: 'scan' | 'indexed';
+  };
   /** Explicit angular seam policy; normalization always discards the original turn count. */
   readonly longitudeWrap?: {
     readonly interval: readonly [number, number];
@@ -89,11 +96,15 @@ export function getProjectionProgramMetadata(
         break;
       case 'web-mercator':
       case 'transverse-mercator':
+      case 'lambert-conformal-conic':
+      case 'albers-equal-area':
         amplification = null;
         inputBounds = Object.freeze(
           operation.type === 'web-mercator'
             ? getWebMercatorBounds(operation)
-            : getTransverseMercatorBounds(operation)
+            : operation.type === 'transverse-mercator'
+              ? getTransverseMercatorBounds(operation)
+              : getConicBounds(operation)
         );
         // No global derivative/rounding bound is promised for the analytic fast path.
         if (maximum !== 0) maximum = null;
@@ -116,13 +127,27 @@ export function getProjectionProgramMetadata(
       index,
       operation: operation.type,
       arithmetic:
-        operation.type === 'web-mercator' || operation.type === 'transverse-mercator'
+        operation.type === 'web-mercator' ||
+        operation.type === 'transverse-mercator' ||
+        operation.type === 'lambert-conformal-conic' ||
+        operation.type === 'albers-equal-area'
           ? 'float32'
           : 'double-single',
       inputDimensions: 2,
       outputDimensions: 2,
       inputBounds,
       invertible,
+      ...(operation.type === 'adaptive'
+        ? {
+            patchDomain: Object.freeze({
+              kind: operation.plan.strictDomains
+                ? ('patch-union' as const)
+                : ('rectangle' as const),
+              patchCount: operation.plan.patches.length,
+              routing: operation.plan.routingIndex ? ('indexed' as const) : ('scan' as const)
+            })
+          }
+        : {}),
       ...(operation.type === 'longitude-wrap'
         ? {
             longitudeWrap: Object.freeze({

@@ -8,8 +8,8 @@ export const BUNDLE_SIZE_FIXTURES = [
     label: '`@luma.gl/slang` compiler (optional)',
     entry: 'modules/slang/src/index.ts',
     external: [],
-    // Everyday language support adds about 2.5 KB gzip; preserve a tight regression ceiling.
-    maximum: {minified: 102_000, gzip: 29_000, brotli: 25_500},
+    // Named imports and native contracts add 2.1 KB gzip; retain a tight regression ceiling.
+    maximum: {minified: 108_000, gzip: 31_000, brotli: 27_500},
     targetGzip: 25_000
   },
   {

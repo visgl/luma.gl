@@ -12,7 +12,7 @@
     "@luma.gl/engine": "10.0.0-alpha.3",
     "@luma.gl/shadertools": "10.0.0-alpha.3",
     "@luma.gl/webgl": "10.0.0-alpha.3",
-    "@math.gl/core": "5.0.0-alpha.12",
+    "@math.gl/core": "5.0.0-alpha.15",
     "maplibre-gl": "^5.20.0"
   },
   "devDependencies": {
