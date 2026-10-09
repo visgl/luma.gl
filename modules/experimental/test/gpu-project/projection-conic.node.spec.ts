@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {describe, expect, it} from 'vitest';
-import {Projection} from '@math.gl/projection';
+import {projectionEngine} from '@math.gl/projection';
 import {
   compileProjectionProgram,
   evaluateProjectionProgram,
@@ -49,7 +49,7 @@ describe('bounded native conics', () => {
         if (result.status !== 'ready') return;
         expect(result.strategy).toBe('native');
         expect(result.compiled.metadata.arithmetic).toBe('mixed');
-        const provider = new Projection({
+        const provider = projectionEngine.createProjection({
           from: 'EPSG:4326',
           to: getConicOracleDefinition(method, southern)
         });
@@ -82,7 +82,10 @@ describe('bounded native conics', () => {
       if (result.status !== 'ready') return;
       expect(result.strategy).toBe('adaptive');
       expect(result.compiled.metadata.arithmetic).toBe('double-single');
-      const provider = new Projection({from: 'EPSG:4326', to: getConicOracleDefinition(method)});
+      const provider = projectionEngine.createProjection({
+        from: 'EPSG:4326',
+        to: getConicOracleDefinition(method)
+      });
       const expected = provider.project([-71.500000001, 41.800000001]);
       const actual = evaluateProjectionProgram(result.program, [-71.500000001, 41.800000001]);
       expect(
@@ -112,7 +115,7 @@ describe('bounded native conics', () => {
           };
           const program: ProjectionProgram = {precision: 'double-single', operations: [operation]};
           const ellipsoid = sphere ? '+a=6378137 +b=6378137' : '+ellps=WGS84';
-          const provider = new Projection({
+          const provider = projectionEngine.createProjection({
             from: `+proj=longlat ${ellipsoid}`,
             to: `+proj=${type === 'albers-equal-area' ? 'aea' : 'lcc'} ${ellipsoid} +lat_0=23 +lat_1=${parallels[0]} +lat_2=${parallels[1]} ${type === 'lambert-conformal-conic' ? '+k_0=1.2' : ''}`
           });
@@ -162,7 +165,7 @@ describe('bounded native conics', () => {
         false
       );
       // Just outside longitude/latitude limits must not be rounded onto an accepted footprint.
-      const provider = new Projection({
+      const provider = projectionEngine.createProjection({
         from: 'EPSG:4326',
         to: `+proj=${type === 'albers-equal-area' ? 'aea' : 'lcc'} +ellps=WGS84 +lat_0=23 +lat_1=29.5 +lat_2=45.5`
       });
@@ -264,11 +267,11 @@ describe('conic planner boundaries', () => {
           }))
         }
       };
-      const sourceProvider = new Projection({
+      const sourceProvider = projectionEngine.createProjection({
         from: 'EPSG:4326',
         to: getConicOracleDefinition('lambert-2sp')
       });
-      const targetProvider = new Projection({
+      const targetProvider = projectionEngine.createProjection({
         from: 'EPSG:4326',
         to: getConicOracleDefinition(method).replace(/\+lat_1=[^ ]+/, '+lat_1=30')
       });
@@ -306,10 +309,12 @@ describe('conic planner boundaries', () => {
       allowAdaptive: false
     });
     if (native.status !== 'ready') throw new Error(JSON.stringify(native.reasons));
-    const expected = new Projection({
-      from: 'EPSG:4326',
-      to: getConicOracleDefinition('albers')
-    }).project([-71.5, 41.8]);
+    const expected = projectionEngine
+      .createProjection({
+        from: 'EPSG:4326',
+        to: getConicOracleDefinition('albers')
+      })
+      .project([-71.5, 41.8]);
     const actual = evaluateProjectionProgram(native.program, [-73.5, 41.8]);
     expect(
       Math.hypot(actual.position[0] - expected[0], actual.position[1] - expected[1])
@@ -369,10 +374,12 @@ describe('conic planner boundaries', () => {
       });
       expect(result.status).toBe('ready');
       if (result.status !== 'ready') return;
-      const expected = new Projection({
-        from: 'EPSG:4326',
-        to: getConicOracleDefinition(method)
-      }).project([-71.4, 41.8]);
+      const expected = projectionEngine
+        .createProjection({
+          from: 'EPSG:4326',
+          to: getConicOracleDefinition(method)
+        })
+        .project([-71.4, 41.8]);
       const actual = evaluateProjectionProgram(result.program, [41.8, -71.4]);
       expect(actual.position[0]).toBeCloseTo(expected[1] / 0.3048, 6);
       expect(actual.position[1]).toBeCloseTo(expected[0] / 0.3048, 6);
@@ -410,10 +417,12 @@ describe('conic planner boundaries', () => {
       const result = planProjectionPipeline({pipeline, projectionArithmetic: 'float32'});
       expect(result.status).toBe('ready');
       if (result.status !== 'ready') return;
-      const expected = new Projection({
-        from: 'EPSG:4326',
-        to: getConicOracleDefinition(method)
-      }).project([-71.4, 41.8]);
+      const expected = projectionEngine
+        .createProjection({
+          from: 'EPSG:4326',
+          to: getConicOracleDefinition(method)
+        })
+        .project([-71.4, 41.8]);
       const actual = evaluateProjectionProgram(result.program, [-71.4, 41.8]);
       expect(
         Math.hypot(actual.position[0] - expected[0], actual.position[1] - expected[1])

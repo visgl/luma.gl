@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {describe, expect, it, vi} from 'vitest';
-import {Projection} from '@math.gl/projection';
+import {projectionEngine, ProjectionTransform} from '@math.gl/projection';
 import {
   planCRSProjection,
   planProjectionPipeline,
@@ -24,7 +24,7 @@ function requireReady(result: ReturnType<typeof planCRSProjection>) {
 
 describe('verified PROJJSON provider coverage', () => {
   it('fits projected-to-projected transformations through the same verified mappings', () => {
-    const oracle = new Projection({
+    const oracle = projectionEngine.createProjection({
       from: getConicOracleDefinition('lambert-2sp'),
       to: getConicOracleDefinition('albers')
     });
@@ -62,7 +62,7 @@ describe('verified PROJJSON provider coverage', () => {
       it(`fits custom ${method}/${southern ? 'south' : 'north'} forward and inverse without a registered CRS`, () => {
         const target = makeConicCRS(method, southern);
         const bounds = [-71.7, southern ? -41.9 : 41.7, -71.3, southern ? -41.7 : 41.9] as const;
-        const oracle = new Projection({
+        const oracle = projectionEngine.createProjection({
           from: 'EPSG:4326',
           to: getConicOracleDefinition(method, southern)
         });
@@ -136,10 +136,12 @@ describe('verified PROJJSON provider coverage', () => {
             tolerance: 1e-5
           })
         );
-        const expected = new Projection({
-          from: 'EPSG:4326',
-          to: getConicOracleDefinition(method)
-        }).project([-71.5, 41.8]);
+        const expected = projectionEngine
+          .createProjection({
+            from: 'EPSG:4326',
+            to: getConicOracleDefinition(method)
+          })
+          .project([-71.5, 41.8]);
         const actual = evaluateProjectionProgram(result.program, [-71.5, 41.8]);
         expect(
           Math.hypot(actual.position[0] - expected[0], actual.position[1] - expected[1])
@@ -185,10 +187,12 @@ describe('verified PROJJSON provider coverage', () => {
         tolerance: 1e-8
       })
     );
-    const expected = new Projection({
-      from: 'EPSG:4326',
-      to: getConicOracleDefinition('lambert-2sp')
-    }).project([-71.5, 41.8]);
+    const expected = projectionEngine
+      .createProjection({
+        from: 'EPSG:4326',
+        to: getConicOracleDefinition('lambert-2sp')
+      })
+      .project([-71.5, 41.8]);
     const actual = evaluateProjectionProgram(result.program, [-71.5, 41.8]);
     expect(
       Math.hypot(actual.position[0] - expected[0] / 1000, actual.position[1] - expected[1] / 1000)
@@ -217,10 +221,12 @@ describe('verified PROJJSON provider coverage', () => {
           tolerance: 1e-5
         })
       );
-      const expected = new Projection({
-        from: 'EPSG:4326',
-        to: getConicOracleDefinition('albers')
-      }).project([-71.5, 41.8]);
+      const expected = projectionEngine
+        .createProjection({
+          from: 'EPSG:4326',
+          to: getConicOracleDefinition('albers')
+        })
+        .project([-71.5, 41.8]);
       const actual = evaluateProjectionProgram(
         result.program,
         enforceAxis ? [41.8, -71.5] : [-71.5, 41.8]
@@ -300,7 +306,7 @@ describe('verified PROJJSON provider coverage', () => {
         )
       }
     ];
-    const project = vi.spyOn(Projection.prototype, 'project');
+    const project = vi.spyOn(ProjectionTransform.prototype, 'project');
     try {
       for (const conversion of malformed) {
         expect(
@@ -367,7 +373,7 @@ describe('verified PROJJSON provider coverage', () => {
           code === 8824
             ? zero
             : original.conversion.parameters.find(parameter => parameter.id.code === 8824)!.value;
-        const oracle = new Projection({
+        const oracle = projectionEngine.createProjection({
           from: 'EPSG:4326',
           to: `+proj=lcc +lat_0=41 +lon_0=-71.5 +lat_1=${first} +lat_2=${second} +x_0=200000 +y_0=750000 +ellps=WGS84`
         });
@@ -423,7 +429,7 @@ describe('verified PROJJSON provider coverage', () => {
       };
       const snapshot = JSON.stringify(target);
       // An independently serialized, symmetric parameter order is the reference.
-      const oracle = new Projection({
+      const oracle = projectionEngine.createProjection({
         from: 'EPSG:4326',
         to: '+proj=aea +lat_0=41 +lon_0=-71.5 +lat_1=42 +lat_2=0 +x_0=200000 +y_0=750000 +ellps=WGS84'
       });

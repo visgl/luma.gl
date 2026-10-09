@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {Projection} from '@math.gl/projection';
+import {projectionEngine} from '@math.gl/projection';
 import {planProjection, type ProjectionCoordinates} from '@luma.gl/experimental/gpu-project';
 import {runProjectionProgramBenchmark} from '@luma.gl/experimental/gpu-project/benchmarks';
 
@@ -13,7 +13,7 @@ it('executes a caller-prepared math.gl provider inline and in a graph with doubl
   if (!device) return;
   if (device.info.gpu === 'software' || device.info.gpuType === 'cpu' || device.info.fallback)
     context.skip();
-  const projection = new Projection({from: 'EPSG:4326', to: 'EPSG:3857'});
+  const projection = projectionEngine.createProjection({from: 'EPSG:4326', to: 'EPSG:3857'});
   const coordinates: ProjectionCoordinates[] = [
     [-122.400000001, 37.800000001],
     [-122.400000002, 37.800000002],

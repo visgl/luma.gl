@@ -40,16 +40,10 @@ import {
   GPUProjection,
   compileProjectionPlan
 } from '@luma.gl/experimental/gpu-project';
-import {Projection} from '@math.gl/projection';
+import {projectionEngine} from '@math.gl/projection';
 
-// Register any CRS definition that the installed projection provider does not
-// already include.
-Projection.defineProjectionAliases({
-  'EPSG:32610': '+proj=utm +zone=10 +datum=WGS84 +units=m +no_defs'
-});
-
-const projection = new Projection({
-  from: 'EPSG:32610',
+const projection = projectionEngine.createProjection({
+  from: '+proj=utm +zone=10 +datum=WGS84 +units=m +no_defs',
   to: 'EPSG:3857'
 });
 
