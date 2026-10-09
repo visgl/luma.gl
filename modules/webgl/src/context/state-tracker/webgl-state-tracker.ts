@@ -6,7 +6,7 @@
 
 import {setGLParameters, getGLParameters} from '../parameters/unified-parameter-api';
 import {deepArrayEqual} from './deep-array-equal';
-import {GL} from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 import {
   GL_PARAMETER_DEFAULTS,
   GL_HOOKED_SETTERS,
