@@ -27,6 +27,65 @@ it('WebGPURenderPass omits depth operations for read-only depth attachments', ()
   void 0;
 });
 
+it('WebGPURenderPass sets load and store operations for each depth-stencil aspect', () => {
+  const renderPass = makeRenderPass({clearDepth: 1, clearStencil: 0});
+
+  const depthOnly = renderPass.getRenderPassDescriptor(makeFramebuffer('depth24plus'))
+    .depthStencilAttachment!;
+  expect(depthOnly.depthLoadOp, 'depth format clears depth').toBe('clear');
+  expect(depthOnly.stencilLoadOp, 'depth format has no stencil operations').toBeUndefined();
+
+  const depthStencil = renderPass.getRenderPassDescriptor(makeFramebuffer('depth24plus-stencil8'))
+    .depthStencilAttachment!;
+  expect(depthStencil.depthLoadOp, 'depth-stencil format clears depth').toBe('clear');
+  expect(depthStencil.stencilLoadOp, 'depth-stencil format clears stencil').toBe('clear');
+  expect(depthStencil.stencilStoreOp, 'depth-stencil format stores stencil').toBe('store');
+  expect(depthStencil.stencilClearValue, 'stencil clear value zero is forwarded').toBe(0);
+
+  const stencilOnly = renderPass.getRenderPassDescriptor(makeFramebuffer('stencil8'))
+    .depthStencilAttachment!;
+  expect(stencilOnly.depthLoadOp, 'stencil format has no depth operations').toBeUndefined();
+  expect(stencilOnly.stencilLoadOp, 'stencil format clears stencil').toBe('clear');
+});
+
+it('WebGPURenderPass uses the view format and omits read-only stencil operations', () => {
+  const framebuffer = makeFramebuffer('depth24plus-stencil8');
+  framebuffer.depthStencilAttachment.props.format = 'stencil8';
+  const attachment = makeRenderPass({
+    clearDepth: 1,
+    clearStencil: 0,
+    stencilReadOnly: true
+  }).getRenderPassDescriptor(framebuffer).depthStencilAttachment!;
+  expect(attachment.depthLoadOp).toBeUndefined();
+  expect(attachment.depthClearValue).toBeUndefined();
+  expect(attachment.stencilReadOnly).toBe(true);
+  expect(attachment.stencilLoadOp).toBeUndefined();
+  expect(attachment.stencilStoreOp).toBeUndefined();
+  expect(attachment.stencilClearValue).toBeUndefined();
+});
+
+it('WebGPU render passes and bundles preserve zero draw counts', () => {
+  for (const Encoder of [WebGPURenderPass, WebGPURenderBundleEncoder]) {
+    const calls: unknown[][] = [];
+    const encoder = Object.create(Encoder.prototype);
+    Object.assign(encoder, {
+      pipeline: {shaderLayout: {bindings: []}},
+      handle: {
+        draw: (...argumentsList: unknown[]) => calls.push(['draw', ...argumentsList]),
+        drawIndexed: (...argumentsList: unknown[]) => calls.push(['drawIndexed', ...argumentsList])
+      }
+    });
+    encoder.draw({vertexCount: 3, indexCount: 0});
+    encoder.draw({vertexCount: 0, instanceCount: 0});
+    encoder.draw({indexCount: 3, instanceCount: 0, firstIndex: 2});
+    expect(calls).toEqual([
+      ['drawIndexed', 0, 1, undefined, undefined, undefined],
+      ['draw', 0, 0, undefined, undefined],
+      ['drawIndexed', 3, 0, 2, undefined, undefined]
+    ]);
+  }
+});
+
 it('WebGPU indirect draw methods forward native buffers and byte offsets', () => {
   const device = {};
   const nativeBuffer = {};
@@ -111,9 +170,9 @@ function makeRenderPass(props: RenderPassProps): {
   return renderPass;
 }
 
-function makeFramebuffer(): any {
+function makeFramebuffer(depthStencilFormat: string = 'depth24plus'): any {
   return {
     colorAttachments: [],
-    depthStencilAttachment: {handle: {}}
+    depthStencilAttachment: {handle: {}, props: {}, texture: {format: depthStencilFormat}}
   };
 }

@@ -453,6 +453,8 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           file: coverage/lcov.info
+          # Reruns must not upload into a build that a previous attempt closed.
+          build-number: ${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Verify all coverage and visual jobs passed
         if: always()
