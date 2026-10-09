@@ -1044,7 +1044,7 @@ the real `ProjectionTableTransform` CPU adapter with its `GPUProjectionTable` ma
 ```typescript
 const report = await runProjectionTableBenchmark(device, {
   transform, // a prepared ProjectionTableTransform; preparation is outside this runner
-  provider: '@math.gl/projection 5.0.0-alpha.13 TypeScript',
+  provider: '@math.gl/projection 5.0.0-alpha.15 TypeScript',
   batches: [{positions: new Float64Array([-122.4, 37.8])}],
   maximumError: 0.001, // destination units, including output encoding/rounding
   warmupIterations: 2,
