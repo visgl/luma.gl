@@ -15,7 +15,7 @@ const framebuffer = device.createFramebuffer({
   width: 512,
   height: 512,
   colorAttachments: ['rgba8unorm'],
-  depthStencilAttachment: 'depth24plus-stencil8'
+  depthStencilAttachment: 'depth24plus'
 });
 
 const renderPass = device.beginRenderPass({framebuffer});

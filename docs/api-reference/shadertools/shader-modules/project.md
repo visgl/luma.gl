@@ -1,8 +1,10 @@
 # projection
 
-The `projection` shader module shares view and projection matrices across GLSL shaders.
-Import it from `@luma.gl/shadertools` and include it in the model's `modules`.
-The module name used by `ShaderInputs` is `projection`.
+The internal `projection` shader module shares view and projection matrices across GLSL shaders.
+It is not exported by `@luma.gl/shadertools`, and the package exposes no import subpath for it.
+This page describes the source implementation rather than a supported public API.
+Applications should use the projection contract supplied by their rendering pipeline; see
+[Writing portable shaders](/docs/api-guide/shaders/writing-portable-shaders).
 
 ## Props
 
@@ -12,7 +14,7 @@ The module name used by `ShaderInputs` is `projection`.
 | `projectionMatrix` | 4×4 matrix | Identity |
 | `cameraPositionWorld` | Three-component vector | `[0, 0, 0]` |
 
-Pass both matrices together to recompute `viewProjectionMatrix`:
+Internal users pass both matrices together to recompute `viewProjectionMatrix`:
 
 ```ts
 model.shaderInputs.setProps({projection: {viewMatrix, projectionMatrix, cameraPositionWorld}});
