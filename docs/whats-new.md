@@ -15,6 +15,9 @@ Target Release Date: Q3, 2026
 - **Projection engine alignment** - GPU Project can explicitly prepare math.gl engine factories,
   retain their CPU transforms, and honor spatial-reference axes and units. Public normalization
   expands adaptive conic coverage; CPU/GPU benchmarks include reusable, flat and bulk CPU APIs.
+- **Projection domains and routing** - GPU Project adds explicit disconnected-domain and
+  conservative disk partitions, seam-preserving segment clipping, opt-in indexed patch routing,
+  fixed-arithmetic routing benchmarks and measurement-gated inline/materialized selection.
 
 **New Modules**
 

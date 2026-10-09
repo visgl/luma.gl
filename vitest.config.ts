@@ -143,6 +143,7 @@ const browserBenchmarkTestPatterns = [
   'modules/experimental/test/gpu-project/projection-benchmark.spec.ts',
   'modules/experimental/test/gpu-project/projection-performance.spec.ts',
   'modules/experimental/test/gpu-project/projection-conic-performance.spec.ts',
+  'modules/experimental/test/gpu-project/projection-routing-performance.spec.ts',
   'modules/experimental/test/gpu-project/projection-table-performance.spec.ts',
   'modules/experimental/test/gpu-project/projection-program-benchmark.spec.ts'
 ];

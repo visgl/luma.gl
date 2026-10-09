@@ -30,6 +30,17 @@ export {
 } from './web-mercator';
 
 export {GPUProjection} from './gpu-projection';
+export {selectProjectionExecution} from './projection-execution';
+export type {ProjectionExecutionSelection} from './projection-execution';
+export {indexProjectionPlan} from './projection-routing';
+export type {ProjectionRoutingNode} from './projection-routing';
+export {compileProjectionPartition, clipProjectionSegment} from './projection-partition';
+export type {
+  ProjectionDomainBranch,
+  ProjectionPartitionOptions,
+  ProjectionPartition,
+  ProjectionSegment
+} from './projection-partition';
 export {planProjection, ProjectionPlanningError} from './projection-planning';
 export type {
   PlanProjectionOptions,

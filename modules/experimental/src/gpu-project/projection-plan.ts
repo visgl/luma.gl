@@ -13,12 +13,16 @@ import type {
   ProjectionPrecision,
   ProjectionProvider
 } from './types';
+import {packProjectionRouting, PROJECTION_ROUTING_WORD_LENGTH} from './projection-routing';
 
 /** Number of uint32 words occupied by one stable packed GPU projection-patch record. */
 export const PROJECTION_PATCH_WORD_LENGTH = 64;
 
 /** Number of uint32 words occupied by the source-bounds trailer in a packed projection plan. */
 export const PROJECTION_PLAN_BOUNDS_WORD_LENGTH = 12;
+
+/** Binary64, inward double-single and inward Float32 bounds for a partition leaf. */
+export const PROJECTION_DOMAIN_WORD_LENGTH = 20;
 
 const MAXIMUM_COEFFICIENT_COUNT = 10;
 const DEFAULT_TOLERANCE = 0.01;
@@ -164,11 +168,17 @@ export function evaluateProjectionPlan(
  * the patch's destination offset from the plan origin, degree, Float32 coefficient highs,
  * double-single coefficient and scale lows, and reserved padding. The trailer contains four exact
  * binary64 bounds plus four inward-rounded float32 bounds.
+ * Optional strict-domain records and routing nodes follow that unchanged legacy prefix.
  * Updating an imported GPU plan buffer with the result does not require recompiling its graph.
  */
 export function packProjectionPlan(plan: ProjectionPlan): Uint32Array {
   const patchWordLength = plan.patches.length * PROJECTION_PATCH_WORD_LENGTH;
-  const words = new Uint32Array(patchWordLength + PROJECTION_PLAN_BOUNDS_WORD_LENGTH);
+  const routingWords = packProjectionRouting(plan.routingIndex ?? []);
+  const domainWordLength = plan.strictDomains
+    ? plan.patches.length * PROJECTION_DOMAIN_WORD_LENGTH
+    : 0;
+  const words = new Uint32Array(getProjectionPlanWordLength(plan));
+  words.set(routingWords, patchWordLength + PROJECTION_PLAN_BOUNDS_WORD_LENGTH + domainWordLength);
   const dataView = new DataView(words.buffer);
 
   for (const patch of plan.patches) {
@@ -256,6 +266,27 @@ export function packProjectionPlan(plan: ProjectionPlan): Uint32Array {
       patch.sourceScale[1] - Math.fround(patch.sourceScale[1]),
       true
     );
+    if (plan.strictDomains) {
+      const domainOffset =
+        patchWordLength +
+        PROJECTION_PLAN_BOUNDS_WORD_LENGTH +
+        patch.id * PROJECTION_DOMAIN_WORD_LENGTH;
+      patch.bounds.forEach((value, boundIndex) => {
+        const high = Math.fround(value);
+        let low = Math.fround(value - high);
+        if ((boundIndex < 2 && high + low < value) || (boundIndex >= 2 && high + low > value)) {
+          low = getAdjacentFloat32(low, boundIndex < 2 ? 1 : -1);
+        }
+        dataView.setFloat64((domainOffset + boundIndex * 2) * 4, value, true);
+        dataView.setFloat32((domainOffset + 8 + boundIndex * 2) * 4, high, true);
+        dataView.setFloat32((domainOffset + 9 + boundIndex * 2) * 4, low, true);
+        dataView.setFloat32(
+          (domainOffset + 16 + boundIndex) * 4,
+          boundIndex < 2 ? getFloat32Ceiling(value) : getFloat32Floor(value),
+          true
+        );
+      });
+    }
   }
 
   for (let boundIndex = 0; boundIndex < plan.bounds.length; boundIndex++) {
@@ -280,6 +311,16 @@ export function packProjectionPlan(plan: ProjectionPlan): Uint32Array {
   }
 
   return words;
+}
+
+/** @internal Compute storage requirements without packing or allocating a second copy. */
+export function getProjectionPlanWordLength(plan: ProjectionPlan): number {
+  return (
+    plan.patches.length *
+      (PROJECTION_PATCH_WORD_LENGTH + (plan.strictDomains ? PROJECTION_DOMAIN_WORD_LENGTH : 0)) +
+    PROJECTION_PLAN_BOUNDS_WORD_LENGTH +
+    (plan.routingIndex?.length ?? 0) * PROJECTION_ROUTING_WORD_LENGTH
+  );
 }
 
 function getFloat32Ceiling(value: number): number {
