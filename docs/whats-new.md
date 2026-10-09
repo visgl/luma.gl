@@ -87,6 +87,9 @@ Target Release Date: Q3, 2026
   integer-controlled operations to balance portability and throughput.
 - **`CompositeShaderPass`** - The structured multi-pass postprocessing API and effect factories
   use composite-pass naming in place of `ShaderPassPipeline`.
+- **Shader hook validation** - Injections into misspelled or unregistered shader hooks fail with
+  an `Unknown shader hook` error that lists the registered hooks, and
+  `ShaderAssembler.resetShaderHooks()` clears registered hooks without touching assembler internals.
 
 **@luma.gl/arrow (Private)**
 
