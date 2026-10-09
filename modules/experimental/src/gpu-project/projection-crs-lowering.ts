@@ -6,6 +6,8 @@
 import type {PROJJSONCRSByType, ReadonlyCRSDefinition, ReadonlyPROJJSONCRS} from '@math.gl/crs';
 import {invertProjectionProgram, type ProjectionOperation} from './projection-program';
 import type {ProjectionPlanningReason} from './projection-pipeline';
+import {getConicParameters, type ConicOperation} from './projection-conic';
+import {resolveCRSIdentifier} from './projection-crs-identifiers';
 
 type ProjectedCRS = ReadonlyPROJJSONCRS<PROJJSONCRSByType<'ProjectedCRS'>>;
 type HorizontalCRS = ReadonlyPROJJSONCRS<
@@ -25,6 +27,8 @@ type Conversion = {
   scale: number;
   easting: number;
   northing: number;
+  firstParallel?: number;
+  secondParallel?: number;
 };
 type Frame = {
   operations: ProjectionOperation[];
@@ -37,7 +41,20 @@ const PARAMETER_NAMES = new Map([
   ['Longitude of natural origin', 8802],
   ['Scale factor at natural origin', 8805],
   ['False easting', 8806],
-  ['False northing', 8807]
+  ['False northing', 8807],
+  ['Latitude of false origin', 8821],
+  ['Longitude of false origin', 8822],
+  ['Latitude of 1st standard parallel', 8823],
+  ['Latitude of 2nd standard parallel', 8824],
+  ['Easting at false origin', 8826],
+  ['Northing at false origin', 8827]
+]);
+const METHOD_NAMES = new Map([
+  ['Transverse Mercator', 9807],
+  ['Popular Visualisation Pseudo Mercator', 1024],
+  ['Lambert Conic Conformal (1SP)', 9801],
+  ['Lambert Conic Conformal (2SP)', 9802],
+  ['Albers Equal Area', 9822]
 ]);
 
 /** Native coordinate frames and explicitly opted-in projection formulas; no datum transformations. */
@@ -77,7 +94,9 @@ export function lowerCRSProjection(
     source.conversion.latitude === target.conversion.latitude &&
     source.conversion.longitude + source.reference.meridian ===
       target.conversion.longitude + target.reference.meridian &&
-    source.conversion.scale === target.conversion.scale
+    source.conversion.scale === target.conversion.scale &&
+    source.conversion.firstParallel === target.conversion.firstParallel &&
+    source.conversion.secondParallel === target.conversion.secondParallel
   ) {
     translation = [
       target.conversion.easting - source.conversion.easting,
@@ -85,6 +104,14 @@ export function lowerCRSProjection(
     ];
   } else if (supportsNativeConversion(source) && supportsNativeConversion(target)) {
     if (projectionArithmetic !== 'float32') {
+      // Native conics are an opt-in optimization, not a replacement binary64 oracle or a
+      // restriction of existing adaptive coverage to the native local branch.
+      if ([source, target].some(frame => isConicConversion(frame.conversion))) {
+        return decline(
+          'crs-requires-provider',
+          'native conics require explicit float32 arithmetic; retain the provider for double-single'
+        );
+      }
       return decline(
         'unsupported-arithmetic',
         'native projection formulas require explicit float32 arithmetic; use adaptive fitting for double-single'
@@ -123,6 +150,14 @@ export function lowerCRSProjection(
 }
 
 function supportsNativeConversion(frame: Frame): boolean {
+  if (isConicConversion(frame.conversion)) {
+    try {
+      getConicParameters(makeConicOperation(frame));
+      return true;
+    } catch {
+      return false;
+    }
+  }
   return (
     !frame.conversion ||
     frame.conversion.method === 1024 ||
@@ -137,19 +172,40 @@ function lowerProjectionConversion(frame: Frame, inverse: boolean): ProjectionOp
   const operations: ProjectionOperation[] = [
     frame.conversion.method === 1024
       ? {type: 'web-mercator', arithmetic: 'float32', radius: frame.reference.major}
-      : {
-          type: 'transverse-mercator',
-          arithmetic: 'float32',
-          semiMajorAxis: frame.reference.major,
-          semiMinorAxis: frame.reference.minor,
-          scaleFactor: frame.conversion.scale,
-          latitudeOrigin: frame.conversion.latitude
-        },
+      : isConicConversion(frame.conversion)
+        ? makeConicOperation(frame)
+        : {
+            type: 'transverse-mercator',
+            arithmetic: 'float32',
+            semiMajorAxis: frame.reference.major,
+            semiMinorAxis: frame.reference.minor,
+            scaleFactor: frame.conversion.scale,
+            latitudeOrigin: frame.conversion.latitude
+          },
     {type: 'affine', scale: [1, 1], offset: [frame.conversion.easting, frame.conversion.northing]}
   ];
   return inverse
     ? [...invertProjectionProgram({precision: 'double-single', operations}).operations]
     : operations;
+}
+
+function isConicConversion(conversion: Conversion | null): boolean {
+  return Boolean(conversion && [9801, 9802, 9822].includes(conversion.method));
+}
+
+function makeConicOperation(frame: Frame): ConicOperation {
+  const conversion = frame.conversion!;
+  const shape = {
+    arithmetic: 'float32' as const,
+    semiMajorAxis: frame.reference.major,
+    semiMinorAxis: frame.reference.minor,
+    latitudeOrigin: conversion.latitude,
+    firstStandardParallel: conversion.firstParallel!,
+    secondStandardParallel: conversion.secondParallel!
+  };
+  return conversion.method === 9822
+    ? {type: 'albers-equal-area', ...shape}
+    : {type: 'lambert-conformal-conic', ...shape, scaleFactor: conversion.scale};
 }
 
 /** Do not send semantics known to be invalid or lossy through a permissive provider. */
@@ -392,32 +448,30 @@ function normalizeEllipsoid(ellipsoid: Ellipsoid): {major: number; minor: number
 }
 
 function normalizeConversion(conversion: ProjectedCRS['conversion']): Conversion | Decline {
-  const method =
-    getEPSGCode(conversion.method) ??
-    (conversion.method.name === 'Transverse Mercator'
-      ? 9807
-      : conversion.method.name === 'Popular Visualisation Pseudo Mercator'
-        ? 1024
-        : undefined);
-  if (method !== 9807 && method !== 1024) {
+  const method = resolveCRSIdentifier(conversion.method, METHOD_NAMES);
+  if (!method || ![9807, 1024, 9801, 9802, 9822].includes(method)) {
     return decline(
       'unsupported-conversion',
-      'native frame equivalence supports Transverse Mercator and Popular Visualisation Pseudo Mercator'
+      'native frame equivalence requires a known, unambiguous conversion method'
     );
   }
   const parameters = new Map<number, number>();
+  const twoParallels = method === 9802 || method === 9822;
+  const required = twoParallels
+    ? [8821, 8822, 8823, 8824, 8826, 8827]
+    : [8801, 8802, 8806, 8807, ...(method !== 1024 ? [8805] : [])];
   for (const parameter of conversion.parameters ?? []) {
-    const code = getEPSGCode(parameter) ?? PARAMETER_NAMES.get(parameter.name);
-    if (
-      !code ||
-      ![8801, 8802, 8805, 8806, 8807].includes(code) ||
-      (method === 1024 && code === 8805)
-    ) {
+    const code = resolveCRSIdentifier(parameter, PARAMETER_NAMES);
+    if (!code || !required.includes(code)) {
       return decline('unsupported-parameter', 'known conversion includes an unsupported parameter');
     }
     const factor = getUnitFactor(
       parameter.unit,
-      code === 8805 ? 'ScaleUnit' : code < 8805 ? 'AngularUnit' : 'LinearUnit'
+      code === 8805
+        ? 'ScaleUnit'
+        : [8801, 8802, 8821, 8822, 8823, 8824].includes(code)
+          ? 'AngularUnit'
+          : 'LinearUnit'
     );
     const value =
       typeof parameter.value === 'number' && factor !== null ? parameter.value * factor : NaN;
@@ -429,28 +483,45 @@ function normalizeConversion(conversion: ProjectedCRS['conversion']): Conversion
     }
     parameters.set(code, value);
   }
-  if (
-    ![8801, 8802, 8806, 8807, ...(method === 9807 ? [8805] : [])].every(code =>
-      parameters.has(code)
-    )
-  ) {
+  if (!required.every(code => parameters.has(code))) {
     return decline(
       'invalid-definition',
       'conversion is missing required natural-origin parameters'
     );
   }
-  const latitude = parameters.get(8801)!;
+  const latitude = parameters.get(twoParallels ? 8821 : 8801)!;
+  const firstParallel = twoParallels
+    ? parameters.get(8823)!
+    : method === 9801
+      ? latitude
+      : undefined;
+  const secondParallel = twoParallels
+    ? parameters.get(8824)!
+    : method === 9801
+      ? latitude
+      : undefined;
   const scale = parameters.get(8805) ?? 1;
-  if (Math.abs(latitude) >= Math.PI / 2 || scale <= 0 || (method === 1024 && latitude !== 0)) {
+  if (
+    Math.abs(latitude) >= Math.PI / 2 ||
+    scale <= 0 ||
+    (method === 1024 && latitude !== 0) ||
+    (firstParallel !== undefined &&
+      secondParallel !== undefined &&
+      (Math.abs(firstParallel) >= Math.PI / 2 ||
+        Math.abs(secondParallel) >= Math.PI / 2 ||
+        Math.abs(firstParallel + secondParallel) < 1e-10))
+  ) {
     return decline('invalid-definition', 'conversion natural origin or scale is invalid');
   }
   return {
     method,
     latitude,
-    longitude: parameters.get(8802)!,
+    longitude: parameters.get(twoParallels ? 8822 : 8802)!,
     scale,
-    easting: parameters.get(8806)!,
-    northing: parameters.get(8807)!
+    easting: parameters.get(twoParallels ? 8826 : 8806)!,
+    northing: parameters.get(twoParallels ? 8827 : 8807)!,
+    firstParallel,
+    secondParallel
   };
 }
 

@@ -7,6 +7,7 @@ import type {ProjectionInputFormat, ProjectionProgram} from './projection-progra
 import type {ProjectionBounds, ProjectionPrecision} from './types';
 import {getWebMercatorBounds} from './projection-web-mercator';
 import {getTransverseMercatorBounds} from './projection-transverse-mercator';
+import {getConicBounds} from './projection-conic';
 import {getLongitudeWrapParameters} from './projection-longitude-wrap';
 
 /** Estimates exclude input quantization, native series truncation and native/output rounding. */
@@ -89,11 +90,15 @@ export function getProjectionProgramMetadata(
         break;
       case 'web-mercator':
       case 'transverse-mercator':
+      case 'lambert-conformal-conic':
+      case 'albers-equal-area':
         amplification = null;
         inputBounds = Object.freeze(
           operation.type === 'web-mercator'
             ? getWebMercatorBounds(operation)
-            : getTransverseMercatorBounds(operation)
+            : operation.type === 'transverse-mercator'
+              ? getTransverseMercatorBounds(operation)
+              : getConicBounds(operation)
         );
         // No global derivative/rounding bound is promised for the analytic fast path.
         if (maximum !== 0) maximum = null;
@@ -116,7 +121,10 @@ export function getProjectionProgramMetadata(
       index,
       operation: operation.type,
       arithmetic:
-        operation.type === 'web-mercator' || operation.type === 'transverse-mercator'
+        operation.type === 'web-mercator' ||
+        operation.type === 'transverse-mercator' ||
+        operation.type === 'lambert-conformal-conic' ||
+        operation.type === 'albers-equal-area'
           ? 'float32'
           : 'double-single',
       inputDimensions: 2,

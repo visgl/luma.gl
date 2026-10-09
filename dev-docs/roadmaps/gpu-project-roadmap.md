@@ -23,7 +23,7 @@ binary64 semantics.
 
 ## Current foundation
 
-Reconciled against `master` at `e40a0ea90` on 2026-10-08.
+Reconciled against `master` at `ca4f7a9d3` on 2026-10-08 (2026-10-09 UTC).
 The dependency upgrade in [#3400](https://github.com/visgl/luma.gl/pull/3400) locks
 `@math.gl/crs` and `@math.gl/projection` to `5.0.0-alpha.13`. This assessment uses installed
 package sources and documentation at their published math.gl revision
@@ -43,10 +43,13 @@ P.9a.2, P.3d.1, P.3d.2 and the local P.8a.1 rebaseline landed in
 `ProjectionTableTransform` executes batch-atomic CPU projection or creates a `GPUProjectionTable`
 that borrows source batches and materializes derived positions/validity in a caller-owned graph.
 P.9a.4 (inline rendering/deck adapter) is proposed separately in
-[#3403](https://github.com/visgl/luma.gl/pull/3403), not assumed landed here. This change implements
-P.8a.2a independently: production table-consumer CPU/GPU benchmarks with explicit transfer modes
-and row/batch-size sweeps. Inline-render, isolated routing and cross-vendor evidence remain open.
-None requires a new native projection formula.
+[#3403](https://github.com/visgl/luma.gl/pull/3403), not assumed landed here.
+[#3404](https://github.com/visgl/luma.gl/pull/3404) landed P.8a.2a's production table benchmark
+foundation. This change covers **all P.5 items** and extends that benchmark through 4M
+rows, with separate GPU-resident and CPU-round-trip ratios. Native Lambert/Albers are explicit
+Float32 optimizations; high-precision adaptive coverage remains the default. P.5b qualifies bounded
+spherical gnomonic/orthographic domains, not geometry clipping or new native kernels.
+Inline-render, isolated routing and cross-vendor evidence remain open.
 
 The implemented module samples an arbitrary CPU projection provider, recursively compiles local
 polynomial patches, and evaluates them over chunk-preserving GPU vectors. Inputs may be
@@ -225,9 +228,9 @@ API interchangeability. Evidence, interoperability and new semantic coverage are
 | P.4b.1 — Bounded native Transverse Mercator/UTM | Add sixth-order Transverse Mercator/UTM forward and inverse with CRS/pipeline lowering, bounded local-branch validity, and inverse footprint checks | P.4a arithmetic/validity conventions | All 60 WGS84 UTM zones and both hemispheres/directions have CPU-oracle and hardware coverage; all input encodings share inline/graph behavior; no implicit downgrade of double-single requests | Implemented | Complete |
 | P.4b.2 — Explicit angular normalization | Add a named double-single range-reduction operation with declared interval, invalid seam guards and no automatic many-to-one inverse; enable explicit antimeridian-crossing plans | P.4b.1 local-branch contract | CPU and all-input-format hardware seam/branch tests pass; explicit wrapping composes before smooth native/adaptive UTM plans; no implicit wrapping changes existing plans | Implemented | Complete |
 | P.4c — Analytic/adaptive comparison | Compare named native Float32/adaptive double-single programs and an identical inline/materialized consumer against an independent oracle | P.4a/P.4b | Report independent accuracy, parameter/intermediate buffer memory, planning/compilation, first use and synchronized execution on representative hardware; keep output precision fixed and fail invalid results before timing | Implemented | Complete |
-| P.5a.1 — Native Lambert Conformal Conic | **Optimization only**: bounded direct LCC formulas where they improve on adaptive coverage | P.3c/P.3d.1, P.4 conventions and refreshed P.8a evidence | Measure planning, memory or execution wins at stated accuracy budgets; retain independent oracle/GPU domain and precision tests | Conditional | Medium |
-| P.5a.2 — Native Albers Equal Area | **Optimization only**: bounded direct Albers formulas where they improve on adaptive coverage | P.3c/P.3d.1, P.4 conventions and refreshed P.8a evidence | Parameter variants, equal-area properties and inverse domains pass oracle/GPU tests; measured benefits never silently downgrade precision | Conditional | Medium |
-| P.5b — Visualization projection qualification | Coverage/integration: qualify gnomonic/orthographic clipping and inverse domains; native kernels are optional | Prepared providers and two requesting consumers; no dependency on native conic kernels | Demonstrate bounded adaptive coverage or identify a specific gap; justify any direct WGSL kernel separately | Conditional | Medium |
+| P.5a.1 — Native Lambert Conformal Conic | **Optimization only**: bounded direct LCC 1SP/2SP with explicit Float32 selection | P.3c/P.3d.1, P.4 conventions and refreshed P.8a evidence | Oracle/GPU hemispheres, variants, axes/units, guarded inverse footprints; equal-20-m-budget planning/storage/execution evidence with default double-single preserved | Implemented (this PR); local-device evidence | Complete |
+| P.5a.2 — Native Albers Equal Area | **Optimization only**: bounded direct Albers with explicit Float32 selection | P.3c/P.3d.1, P.4 conventions and refreshed P.8a evidence | Parameter variants, equal-area Jacobian and inverse domains pass oracle/GPU tests; measured benefits never silently downgrade precision | Implemented (this PR); local-device evidence | Complete |
+| P.5b — Visualization projection qualification | Coverage/integration: bounded spherical gnomonic/orthographic forward/inverse domains; no new native kernel | Prepared providers, inline consumer and production table adapter | Independent spherical oracle, public horizon/disk guards and CPU/GPU validity tests; identify crossing-geometry/curved-domain gap explicitly as P.8b.2 | Qualified (this PR); geometry clipping deferred explicitly | Complete |
 | P.6 — Analytic high-precision math | **Optimization only**: double-single transcendental functions needed by demonstrated analytic wins | Refreshed P.8a evidence of material adaptive cost at equal accuracy | Beat adaptive double-single in throughput or memory at matching error budgets on representative devices, with validated domains; otherwise defer | Conditional | Very large |
 | P.7a.1 — 3D contract and ECEF | Extend dimensions, encodings, metadata, inline/graph interfaces, and validity to height-preserving cartographic/geocentric conversion | P.2/P.3 contracts and an explicit 3D precision design | Ellipsoid/axis/unit, pole, near-origin, invalid-height, and round-trip fixtures match a PROJ oracle; all three components retain the declared precision without silently dropping height | Planned | Large |
 | P.7a.2 — Static Helmert pipelines | Compose explicit static datum transformations with 3D conversions | P.7a.1 | Translation, rotation convention, scale, forward/inverse, and datum fixtures match PROJ; unsupported operation selection is declined | Planned | Medium |
@@ -235,7 +238,7 @@ API interchangeability. Evidence, interoperability and new semantic coverage are
 | P.8a — Representative performance evidence | Evidence umbrella: landed local sweeps plus refreshed CPU, routing, cross-vendor and consumer measurements | P.4c; P.9a for real workloads | Accuracy-gated reports distinguish equal-budget comparisons from accuracy/speed trade-offs | Partial on master; remaining work split below | Medium |
 | P.8a.1 — alpha.13 CPU/GPU rebaseline | Evidence: scalar, reusable-output, contiguous flat and strided/column CPU APIs against inline/materialized GPU paths | Upgraded math.gl and existing harness; no new kernels required | Separate preparation, fitting/compile, first-use, allocation, upload/readback and resident execution; match domains, validity, accuracy and consumer work; record version/API/layout | Landed in #3401 | Complete |
 | P.8a.2 — Consumer, routing and cross-vendor evidence | Evidence umbrella; implementation slices below | P.8a.1; P.9a.3/P.9a.4 for consumers | Reproducible workloads, transfer boundaries and precision budgets; no extrapolation from one device | Partial | — |
-| P.8a.2a — Table-consumer transfer and batching evidence | Evidence, not optimization: production CPU/GPU table adapters; resident, upload/project and round-trip paths | Landed P.9a.3 | Row/batch-size sweeps, valid/invalid rows, explicit memory/setup and CPU-resident comparison at a fixed error budget | Implemented (this PR); local device only | Complete |
+| P.8a.2a — Table-consumer transfer and batching evidence | Evidence, not optimization: production CPU/GPU table adapters; resident, upload/project and round-trip paths | Landed P.9a.3 | Row/batch-size sweeps through 4M, valid/invalid rows, explicit memory/setup; separate resident-data and CPU-memory comparisons at a fixed error budget | Foundation landed in #3404; large/resident extension in this PR; local device only | Complete |
 | P.8a.2b — Inline-render consumer evidence | Evidence, not optimization: CPU/materialized/inline projection in the render adapter | P.9a.4 (#3403) | Matched output/visibility, updates, picking and reuse; include frame/upload costs | Planned | Medium |
 | P.8a.2c — Routing attribution and cross-vendor qualification | Evidence, not optimization: isolate scan cost at fixed arithmetic and exercise other vendors | Existing harness and available hardware | Report routing/build/storage costs separately; qualify precision on each adapter before timing | Planned | Medium |
 | P.8b.1 — Indexed patch routing | **Optimization only**: replace scanning where measured routing cost warrants it | P.8a.2 routing evidence | Indexed/scan paths agree at boundaries and invalid seams; include routing storage/build costs and measured benefit | Evidence-gated | Medium–large |
@@ -278,7 +281,12 @@ independently generated PROJ fixtures for semantic/numerical qualification.
    altitude an explicit reject/pass-through/transform policy; it cannot imply 3D reprojection.
    No upstream deck API change is assumed necessary until an adapter demonstrates a concrete gap.
    Axis-swap fixtures alone are not production consumers.
-3. **Only then choose optimization-only work:** P.5a.1/P.5a.2, P.8b.1, P.8c or P.6, supported by
+3. **P.5 is covered here; keep remaining optimizations evidence-gated.** The
+   [native conic capture](../benchmarks/gpu-project-conic-performance.md) supports opt-in Float32
+   planning/storage/execution improvements at a 20 m budget. It does not change default precision.
+   P.5b qualifies safe spherical rectangles through inline and table consumers; the public engine
+   already guards hidden hemispheres/outside-disk inverses. Crossing geometry and curved clipping
+   domains remain a specific P.8b.2 gap. P.8b.1, P.8c and P.6 still require appropriate
    refreshed equal-budget evidence. Native conic formulas are not prerequisites for conic coverage.
    Degree/patch-count sweeps do not isolate routing cost, and Float32 timings at looser accuracy
    cannot justify replacing double-single fitting. P.8b.2 is separate coverage work: explicit
@@ -287,7 +295,7 @@ independently generated PROJ fixtures for semantic/numerical qualification.
    temporal pipelines are reference/preparation tools, not implemented GPU capabilities. Validate
    greater-than-Float32 arithmetic in all three components; high/low storage around Float32
    formulas is insufficient. Reuse upstream operation selection/resource identities when needed,
-   without confusing geodetic accuracy with numerical tolerance. Keep P.5b demand-driven and
+   without confusing geodetic accuracy with numerical tolerance. Keep visualization expansion demand-driven and
    graduate stable APIs through P.9b without waiting for every speculative feature.
 
 Across every tranche, unsupported semantics must be declined rather than approximated silently.

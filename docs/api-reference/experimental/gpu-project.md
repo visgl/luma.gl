@@ -652,6 +652,49 @@ double-single adaptive patches, including independently fitted inverse plans. Sa
 is relative to that reference; native series truncation and input/output rounding are additional.
 No global error bound, cuProj precision parity, or performance advantage is claimed.
 
+### Native Lambert Conformal Conic and Albers (optimization only)
+
+`projectionArithmetic: 'float32'` also enables bounded forward/inverse Lambert Conic Conformal
+1SP (EPSG 9801), ordinary 2SP (9802), and Albers Equal Area (9822). These are opt-in optimizations
+of existing adaptive coverage, not prerequisites for unnamed/custom PROJJSON support. Methods
+and parameters use the same unambiguous EPSG name/identifier resolution as the adaptive route.
+Axis order/direction, angular/linear units, prime meridians and false origins remain separate
+frame operations; datum/ellipsoid matching is mandatory.
+
+`LambertConformalConicOperation` has `{type: 'lambert-conformal-conic', arithmetic: 'float32',
+semiMajorAxis, semiMinorAxis, latitudeOrigin, firstStandardParallel, secondStandardParallel,
+scaleFactor, inverse?}`. `AlbersEqualAreaOperation` uses `type: 'albers-equal-area'` and has no
+scale factor. `ConicOperation` is their union. Ellipsoid axes are metres; angular values are
+radians. A Lambert 1SP operation uses coincident parallels at its natural-origin latitude and
+the specified scale; ordinary 2SP uses scale one. Spheres and oblate ellipsoids with `b/a >= 0.99`
+are supported. Origins/parallels must lie within ±80°. Zero individual parallels and exact
+coincident parallels are supported when nondegenerate; distinct parallels less than `1e-7`
+radians apart and cone exponents with magnitude below `0.05` are declined by native compilation.
+CRS planning can instead retain the bounded provider path for those configurations.
+
+The forward domain is **central-meridian-relative longitude ±90°, latitude ±80°**. This is one
+unwrapped branch, not global coverage. There is no implicit wrapping or polar extension. Inverse
+`inputBounds` is only a rectangle; double-single radial and angular-wedge checks additionally
+reject points outside the geographic footprint **before** native Float32 evaluation. The inverse
+deliberately excludes a narrow `2^-20` relative radial-squared/wedge boundary band to prevent
+outside points rounding onto the accepted branch. Thus forward edge points need not be accepted
+by the inverse. Rejected rows and upstream-invalid/nonfinite inputs return zero payload and mask.
+
+These independently implemented ellipsoidal formulas follow the standard
+[Lambert](https://proj.org/en/stable/operations/projections/lcc.html) and
+[Albers](https://proj.org/en/stable/operations/projections/aea.html) definitions. Shape constants
+are prepared in CPU binary64; native GPU transcendental/Newton arithmetic is Float32. Program
+metadata therefore reports `mixed`, even with double-single transport/output. It is **not** a
+high-precision formula implementation, and output origin subtraction cannot recover lost formula
+accuracy. Sampled benchmark budgets are not continuous-domain guarantees.
+
+Without explicit Float32 opt-in, conics retain the **math.gl provider** as the oracle, adaptive
+double-single evaluation, caller bounds/tolerance and separately fitted inverse domains. Unlike
+the TM reference route, native conic bounds do not restrict existing adaptive coverage. Custom
+`ProjectionEngine` preparations are never replaced by these kernels. See the accuracy-gated
+[conic measurements](https://github.com/visgl/luma.gl/blob/master/dev-docs/benchmarks/gpu-project-conic-performance.md)
+for the separate 20-metre optimization comparison; the default precision tests remain sub-mm.
+
 ### Adaptive provider planning
 
 `bounds` is optional for native plans and required for adaptive plans (`bounds-required` if absent).
@@ -669,7 +712,7 @@ absence of a registered CRS code are supported. Localized or empty method/parame
 when their EPSG identifiers resolve; conflicting identifiers or recognized names are rejected.
 The caller's definition is not mutated and no registry lookup or network access is performed.
 
-These are **adaptive coverage additions**, not native GPU formulas: all three families retain
+The **default remains adaptive** even after adding opt-in native optimizations: all three families retain
 double-single fitting/evaluation, explicit bounds, sampled error estimates, and separately fitted
 inverse domains. Conic parameters must be complete, finite, unique, dimensionally consistent, and
 nondegenerate. Unsupported variants (such as modified/Belgian/Michigan Lambert methods) are not
@@ -687,6 +730,29 @@ Provider-only routes now preserve explicit Pseudo Mercator PROJJSON's spherical 
 datum semantics. Native Web Mercator pairs retain their bounded binary64 oracle for adaptive
 planning so the established validity domain does not silently expand.
 Serialized definitions retain the provider's coordinate conventions and resolution limitations.
+
+### Gnomonic and orthographic visualization domains
+
+P.5b qualifies the public math.gl engine's **spherical** `gnom` and `ortho` definitions through
+bounded double-single adaptive programs, inline consumers and batch-preserving CPU/GPU tables.
+No direct WGSL kernel or ellipsoidal-geodetic equivalence is claimed. The public engine guards
+the hidden hemisphere before invoking its legacy kernels: gnomonic rejects the horizon itself;
+orthographic permits its forward boundary but rejects inverse points outside the disk. Unsafe
+fitting requests return structured unsupported results rather than usable-looking coordinates.
+
+The qualified examples use a 6,371,000-metre sphere, center `(0°, 0°)`, forward bounds
+`[-10, -10, 10, 10]` degrees and inverse bounds `[-1000000, -1000000, 1000000, 1000000]` metres,
+with 1 mm / `1e-8` degree fitting tolerances. Independent spherical formulas check the provider,
+and hardware tests check both consumers, valid boundaries, masks, empty batches and rejected
+horizon/backside/outside-disk probes. Both directions require their own safe fitting rectangles.
+An oblique southern-center fixture `(30°, -45°)` uses forward bounds `[20, -55, 40, -35]` and
+a smaller ±500,000 m inverse rectangle to stay within the same tolerance/patch budget.
+
+This is **point-domain qualification, not line/polygon clipping**. A segment crossing the horizon
+still needs explicit geometric clipping/partitioning. A rectangular inverse envelope is not the
+whole visible disk, and a successfully sampled fit does not certify an arbitrary rectangle or
+custom provider's visibility policy. Curved/disconnected domains and horizon-crossing geometry
+remain P.8b.2 work; selecting a safe interior domain is application-owned.
 
 Both `planCRSProjection()` and `planProjectionPipeline()` return structured `unsupported` results
 by default. Set `onUnsupported: 'throw'` to throw `ProjectionPlanningError` instead; its immutable
@@ -745,6 +811,13 @@ datum parameters, radian-suffixed origins, unsupported scale parameters, and `+o
 Optional `fallback: {projection, bounds, tolerance, ...}`
 supplies a CPU oracle for the **whole** pipeline when lowering is unsupported. Native programs do
 not sample that oracle or use its bounds. Syntax and malformed-parameter errors do not fall back.
+
+Native `lcc`/`aea` stages require explicit `+lat_1` and `+lat_2`, plus either `+ellps=WGS84` or
+`+a`/`+rf` (`rf=0` for a sphere, otherwise at least 100). Optional `+lat_0`/`+lon_0` are decimal
+degrees and `+x_0`/`+y_0` metres. Only `lcc` accepts positive `+k_0`. Inputs are radians, outputs
+metres; `+inv` reverses the full stage including offsets. Float32 arithmetic opt-in and the native
+conic parameter/domain limits above apply. Missing parallels are declined, not supplied as PROJ
+defaults; modified Lambert methods, datum operations and extra parameters are not inferred.
 The planner never assumes proj4js implements arbitrary PROJ pipelines.
 
 With the same Float32 arithmetic opt-in, `utm` accepts `+ellps=WGS84`, an integer `+zone=1..60`,
@@ -996,7 +1069,9 @@ contract, not independent correctness of the provider's projection algorithm.
 
 Each GPU path reuses allocated resources and its compiled graph. Round-trip includes fresh readback
 staging costs but **excludes one-time setup**, so `roundTripSpeedupOverCPU` is a warmed, repeated-use
-CPU-resident comparison, not a cold end-to-end claim. No speedup is derived from resident timings.
+CPU-resident comparison, not a cold end-to-end claim. `residentSpeedupOverCPU` separately reports
+CPU median / resident encode-submit-fence median for the scenario where **both inputs and outputs
+stay on GPU**. It excludes transfers/setup and is neither kernel-only nor CPU-memory end-to-end timing.
 The GPU's approximate values must meet `maximumError`; decoding into binary64 does not create
 binary64 arithmetic accuracy. Both double-single and origin-relative local-f32 outputs are supported.
 
@@ -1025,6 +1100,12 @@ VITE_LUPROJ_TABLE_ROWS=4096,65536 VITE_LUPROJ_TABLE_BATCH_ROWS=4096,65536 \
 This compares the current production CPU table adapter's reusable scalar API, not the fastest
 possible math.gl API. The separate program benchmark retains flat/bulk CPU baselines. Software
 adapters skip integer-fp64 hardware qualification. No backend-selection threshold is implied.
+
+Set `VITE_LUPROJ_TABLE_LARGE=true` for a 4K, 16K, 64K, 256K, 1M and 4M requested-row sweep with
+65,536-row physical batches. Each case adds eleven probes; explicit row/batch environment settings
+override this preset. The flat generator avoids allocating millions of coordinate tuples. The
+schema-v2 report and [large-sweep evidence](https://github.com/visgl/luma.gl/blob/master/dev-docs/benchmarks/gpu-project-table-performance.md)
+distinguish sampled resident crossovers from round-trip near ties and record memory costs.
 
 ### Multi-patch and consumer-reuse sweeps
 

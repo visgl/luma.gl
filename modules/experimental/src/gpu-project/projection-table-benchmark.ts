@@ -69,6 +69,9 @@ export type ProjectionTableBenchmarkReport = {
     /** Includes masked/invalid source rows, which still incur dispatch and storage costs. */
     sourceRowsPerSecond: number | null;
   }[];
+  /** CPU median / resident encode-submit-fence median. Both GPU input and output stay resident.
+   * Excludes transfers and setup; not a CPU-memory-to-CPU-memory comparison or kernel-only time. */
+  residentSpeedupOverCPU: number | null;
   /** CPU-resident output comparison only; GPU values remain approximate within maximumError. */
   roundTripSpeedupOverCPU: number | null;
 };
@@ -245,6 +248,7 @@ export async function runProjectionTableBenchmark(
     const parameters =
       options.transform.prepared.compiled.packParameters().byteLength * dispatchCount;
     const roundTrip = paths[2].durationMilliseconds.median;
+    const resident = paths[0].durationMilliseconds.median;
     const operation = options.transform.prepared.program.operations[0];
     // ProjectionTableTransform accepts exactly one adaptive operation.
     if (operation.type !== 'adaptive') throw new Error('invalid table transform');
@@ -281,6 +285,10 @@ export async function runProjectionTableBenchmark(
       uploadDrainTimeMilliseconds,
       firstUseTimeMilliseconds,
       paths,
+      residentSpeedupOverCPU:
+        resident > 0 && cpuTimeMilliseconds.median > 0
+          ? cpuTimeMilliseconds.median / resident
+          : null,
       roundTripSpeedupOverCPU:
         roundTrip > 0 && cpuTimeMilliseconds.median > 0
           ? cpuTimeMilliseconds.median / roundTrip

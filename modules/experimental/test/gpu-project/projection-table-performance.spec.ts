@@ -11,14 +11,21 @@ import {
 } from '@luma.gl/experimental/gpu-project/crs';
 import {runProjectionTableBenchmark} from '@luma.gl/experimental/gpu-project/benchmarks';
 import {
-  makePerformanceCoordinates,
+  makePerformancePositions,
   parsePerformanceSweep,
   performanceFixtures
 } from './projection-performance-fixtures';
 
-const rowCounts = parsePerformanceSweep(import.meta.env.VITE_LUPROJ_TABLE_ROWS, [32]);
-const batchSizes = parsePerformanceSweep(import.meta.env.VITE_LUPROJ_TABLE_BATCH_ROWS, [16, 1024]);
-const measured = import.meta.env.VITE_LUPROJ_TABLE_ROWS !== undefined;
+const largeSweep = import.meta.env.VITE_LUPROJ_TABLE_LARGE === 'true';
+const rowCounts = parsePerformanceSweep(
+  import.meta.env.VITE_LUPROJ_TABLE_ROWS,
+  largeSweep ? [4096, 16384, 65536, 262144, 1048576, 4194304] : [32]
+);
+const batchSizes = parsePerformanceSweep(
+  import.meta.env.VITE_LUPROJ_TABLE_BATCH_ROWS,
+  largeSweep ? [65536] : [16, 1024]
+);
+const measured = largeSweep || import.meta.env.VITE_LUPROJ_TABLE_ROWS !== undefined;
 
 for (const fixture of performanceFixtures) {
   for (const rowCount of rowCounts) {
@@ -43,9 +50,7 @@ for (const fixture of performanceFixtures) {
         });
         if (prepared.status !== 'ready') throw new Error(JSON.stringify(prepared.reasons));
         const preparationTimeMilliseconds = performance.now() - preparationStart;
-        const positions = new Float64Array(
-          makePerformanceCoordinates(fixture.bounds, rowCount).flat()
-        );
+        const positions = makePerformancePositions(fixture.bounds, rowCount);
         const batches: ProjectionTableBatch[] = [];
         for (let offset = 0; offset < positions.length / 2; offset += batchSize) {
           const batchPositions = positions.subarray(offset * 2, (offset + batchSize) * 2);
@@ -71,9 +76,15 @@ for (const fixture of performanceFixtures) {
         expect(report.validRows).toBe(rowCount + 9);
         expect(report.dispatchCount).toBe(Math.ceil((rowCount + 11) / batchSize));
         expect(report.maximumObservedError).toBeLessThanOrEqual(0.001);
+        const residentMedian = report.paths[0].durationMilliseconds.median;
+        expect(report.residentSpeedupOverCPU).toBe(
+          residentMedian > 0 && report.cpuTimeMilliseconds.median > 0
+            ? report.cpuTimeMilliseconds.median / residentMedian
+            : null
+        );
         if (measured)
           console.info(
-            `PROJECTION_TABLE_PERFORMANCE ${JSON.stringify({schemaVersion: 1, capturedAt: new Date().toISOString(), browser: navigator.userAgent, fixture: fixture.id, rowCount, batchSize, preparationTimeMilliseconds, report})}`
+            `PROJECTION_TABLE_PERFORMANCE ${JSON.stringify({schemaVersion: 2, capturedAt: new Date().toISOString(), browser: navigator.userAgent, fixture: fixture.id, rowCount, batchSize, preparationTimeMilliseconds, report})}`
           );
       }, 180000);
     }

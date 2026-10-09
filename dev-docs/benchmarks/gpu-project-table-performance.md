@@ -1,11 +1,13 @@
 # Production projection table measurements
 
-## Result: physical batching can reverse the CPU/GPU comparison
+## Result: batching and residency change the observed crossover
 
 P.8a.2a measures the production `ProjectionTableTransform` / `GPUProjectionTable` adapters.
 At 65K source rows on this Apple adapter, UTM's warmed CPU round trip is faster on GPU with
 two physical batches, but slower with seventeen. Albers remains faster on the CPU table adapter.
-All 4K-row cases favor CPU. This is evidence about the current adapters, not a backend selector,
+All 4K-row cases favor CPU. The added 4K–4M sweep finds resident-GPU wins earlier than
+CPU-memory round trips for Albers; its largest round trips remain near ties. This is evidence
+about the current adapters, not a backend selector,
 an optimized readback implementation, or a comparison with the fastest possible math.gl API.
 
 [Raw schema-v1 JSONL](data/gpu-project-table-performance-2026-10-08.jsonl) preserves all 12
@@ -54,7 +56,10 @@ batch sizes; no coordinates are repacked or merged inside the benchmark.
 - `roundTripSpeedupOverCPU` compares CPU-resident outputs after reused-resource execution. GPU
   values are approximate within the budget; binary64 decoding does not grant binary64 arithmetic.
   This metric includes recurring transfers/staging but excludes one-time allocation/compilation.
-  Resident and upload/project return GPU-resident output and do not get CPU speedup claims.
+  `residentSpeedupOverCPU` is a **different residency scenario**: CPU median divided by resident
+  encode/submit/fence median, assuming the application already holds the inputs on GPU and keeps
+  the outputs there. It excludes transfers, setup and validation readbacks. It is neither a pure
+  kernel timing nor a CPU-memory end-to-end speedup. Upload/project has no CPU ratio.
 - Engine preparation, fitting and WGSL generation are measured together before the runner.
   Resource creation plus initial upload enqueue, graph compilation, remaining queue drain and
   first use are separate. The queue drain can include asynchronous pipeline work; neither it nor
@@ -88,3 +93,37 @@ qualification skips software/fallback adapters. Repeat on additional hardware be
 defaults. P.8a.2b (inline-render consumer) and P.8a.2c (isolated routing and cross-vendor evidence)
 remain open. Any batching/readback optimization must be explicit and preserve source ownership
 and physical batch boundaries; this PR changes no production execution policy.
+
+## Larger resident-data sweep
+
+[Raw schema-v2 JSONL](data/gpu-project-table-large-2026-10-08.jsonl) adds 18 cases on the same
+2026-10-08 hardware/software configuration. Requested counts are 4,096, 16,384, 65,536, 262,144,
+1,048,576 and 4,194,304, each plus eleven probes. Maximum batch size stays **65,536** (one through
+65 physical batches); no implicit repacking. Data is allocated flat, avoiding millions of tuple
+objects. All results passed the same 1 mm budget, with maximum observed error below 0.30 mm.
+
+| Domain | First sampled resident win | First sampled round-trip win | 4M CPU / resident / round trip (ms) | 4M resident / round-trip speedup |
+| --- | ---: | ---: | ---: | ---: |
+| UTM local | 65K | 65K | 1477.9 / 443.9 / 562.3 | 3.33x / 2.63x |
+| UTM regional | 16K | 16K | 1319.0 / 417.7 / 535.1 | 3.16x / 2.46x |
+| Albers regional | 256K | 1M, near tie | 549.5 / 403.3 / 529.8 | 1.36x / 1.04x |
+
+These are discrete observations, **not estimated thresholds or stable universal crossovers**.
+For example, Albers at 65K is essentially tied resident (0.99x); at 256K it is 1.30x resident
+but 0.97x round trip. Its 1M/4M round-trip ratios of 1.02x/1.04x are too close to one to claim a
+robust advantage from a single five-sample run. Local UTM's 16K resident median is noisier than
+its separately measured upload median; do not derive transfer cost by subtracting them.
+Absolute times vary between this and the earlier capture. CPU baselines remain the production
+reusable-output scalar table API, not a claim against the fastest flat/bulk CPU API.
+
+At 4M, accounted GPU buffers total 167,795,480–167,845,400 bytes, excluding driver allocations,
+staging and CPU copies. Keep sufficient host/GPU memory available and run without concurrent
+builds/tests:
+
+```sh
+VITE_LUPROJ_TABLE_LARGE=true yarn test-browser-benchmarks --silent=false --reporter=verbose \
+  modules/experimental/test/gpu-project/projection-table-performance.spec.ts
+```
+
+Explicit `VITE_LUPROJ_TABLE_ROWS` and `VITE_LUPROJ_TABLE_BATCH_ROWS` override the large preset.
+Schema v1 records above remain historical evidence; schema v2 includes the resident ratio.
