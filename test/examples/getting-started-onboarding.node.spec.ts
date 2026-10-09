@@ -35,16 +35,16 @@ describe('getting-started onboarding', () => {
     const onboardingSource = readFileSync(ONBOARDING_SOURCE_PATH, 'utf-8');
 
     for (const requiredSetup of [
-      'Project Setup',
-      'Installation',
+      '## Create a project',
+      'cd luma-demo',
       'npm install @luma.gl/core @luma.gl/engine @luma.gl/webgl @luma.gl/webgpu',
-      'Step 1. Render a frame',
-      'Step 2. Write the shaders',
-      'Step 3. Render the triangle',
-      'Step 4. Putting it all together'
+      '## Render the triangle',
+      '## Follow the frame',
+      '## Troubleshoot'
     ]) {
       expect(onboardingSource).toContain(requiredSetup);
     }
+    expect(onboardingSource.match(/class AppAnimationLoopTemplate/g)).toHaveLength(1);
   });
 
   test('keeps tutorial and developer navigation consistent with the onboarding journey', () => {

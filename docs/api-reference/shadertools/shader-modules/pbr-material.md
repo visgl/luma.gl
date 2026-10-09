@@ -6,7 +6,7 @@ import {ShaderModuleDocsTabs} from '@site/src/components/docs/shader-module-docs
 
 Implements Physically Based Shading of a microfacet surface defined by a glTF material.
 
-Lighting is expected to be defined by the `lights` module.
+Lighting is expected to be defined by the `lighting` module.
 
 ## Bind Group Convention
 

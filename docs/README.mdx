@@ -10,7 +10,7 @@ import {
 } from "@site/src/components/docs/documentation-badges";
 
 # Introduction
-Luma.gl is a TypeScript toolkit for high-performance GPU rendering and compute on the web.
+luma.gl is a TypeScript toolkit for high-performance GPU rendering and compute on the web.
 It provides one application-facing API with pluggable WebGPU and WebGL2 backends,
 plus higher-level building blocks for models, animation, shader composition, and GPU data processing.
 
@@ -23,16 +23,12 @@ plus higher-level building blocks for models, animation, shader composition, and
 
 ## A WebGPU-style API
 
-The luma.gl v9 API design launched in 2023 stays fairly close to the WebGPU API,
-just as the earlier luma.gl v8 API followed the WebGL 2 API. The idea is to let users
-build their knowledge of WebGPU and the luma.gl API in tandem, rather than asking them
-to learn an abstraction and perhaps never get to work directly with WebGPU.
-
-For more about our api design philosophy checkout our [Design Philosophy](/docs/api-guide/background/api-design)
+Core follows WebGPU resource and command concepts while supporting a WebGL 2 backend.
+See [Design philosophy](/docs/api-guide/background/api-design) for the design goals.
 
 ## Three Key APIs
 
-### 1. Core Api
+### 1. Core API
 
 The Core API exposes low level GPU resources such as devices, buffers, textures, shaders, bindings, pipelines, and
 render or compute passes. `@luma.gl/webgpu` and `@luma.gl/webgl` provide the concrete
@@ -48,6 +44,6 @@ and GPU transformation helpers. It is the recommended starting point for applica
 Shadertools assembles WGSL and GLSL from reusable shader modules and application-defined
 hooks. It is used by luma.gl, deck.gl, and custom renderers.
 
-## Whats Next?
+## Next steps
 
 Ready for your first `Hello Triangle`? Proceed to [Getting Started](/docs/getting-started).

@@ -1,52 +1,38 @@
-# project
+# projection
 
-A basic projection module.
+The `projection` shader module shares view and projection matrices across GLSL shaders.
+Import it from `@luma.gl/shadertools` and include it in the model's `modules`.
+The module name used by `ShaderInputs` is `projection`.
 
-Makes it easy to ensure a set of shaders all use the same uniforms when
-calculating positions.
+## Props
 
-## Parameters
+| Property | Type | Initial value |
+| --- | --- | --- |
+| `viewMatrix` | 4×4 matrix | Identity |
+| `projectionMatrix` | 4×4 matrix | Identity |
+| `cameraPositionWorld` | Three-component vector | `[0, 0, 0]` |
 
-`getUniforms` take the following parameters when the `picking` module is
-included.
+Pass both matrices together to recompute `viewProjectionMatrix`:
 
-- `projection` (Array[16], false) -
-- `view` (Array[16], identity) -
-
-## Vertex Shader Functions
-
-### `vec4 project_toClipspace(vec4 point)`
-
-The most frequently used project operation.
-
-- `point` (`vec3`) - Projects a point to clipspace
-
-Example:
-
-```
-// A "minimal" vertex shader
-void main(void) {
-  gl_Position = project_toClipspace(position);
-}
+```ts
+model.shaderInputs.setProps({projection: {viewMatrix, projectionMatrix, cameraPositionWorld}});
 ```
 
-## Fragment Shader Functions
+## Vertex shader functions
 
-The same functions that are available to the vertex shader are also available
-to the fragment shader. This is intended to support e.g. lighting calculations
-in the fragment shader.
+- `project_world_to_clipspace(vec3 position)` applies the view-projection matrix.
+- `project_view_to_clipspace(vec3 position)` applies the projection matrix.
+- `project_model_to_clipspace_Model(vec3 position, mat4 modelMatrix)` applies model and view-projection transforms.
+- `project_to_clipspace(vec3 position)` applies the view-projection matrix.
+- `project_setPosition(vec4 position)` and `project_setNormal(vec3 normal)` publish world-space varyings.
 
-## Remove
+## Fragment shader functions
 
-// camera and object matrices
-uniform mat4 viewMatrix;
-uniform mat4 viewInverseMatrix;
-uniform mat4 projectionMatrix;
-uniform mat4 viewProjectionMatrix;
+`project_getPosition_World()` and `project_getNormal_World()` read the varyings published
+by the vertex shader.
 
-// objectMatrix * viewMatrix = worldMatrix
-uniform mat4 worldMatrix;
-uniform mat4 worldInverseMatrix;
-uniform mat4 worldInverseTransposeMatrix;
-uniform mat4 objectMatrix;
-uniform vec3 cameraPosition;
+## Compatibility
+
+This module supplies GLSL source. For portable WGSL/GLSL projection, use the projection
+contract supplied by your rendering pipeline. See
+[Writing portable shaders](/docs/api-guide/shaders/writing-portable-shaders).

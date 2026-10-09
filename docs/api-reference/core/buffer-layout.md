@@ -49,7 +49,7 @@ Note that this introduces a buffer name that is different from attribute names. 
   ],
 ```
 
-In the above case case a new buffer name `particles` is defined and `setAttributes({particles: Buffer})`
+In the above case a new buffer name `particles` is defined and `setAttributes({particles: Buffer})`
 calls will recognize that name and bind the provided buffer to all the interleaved attributes.
 
 ## `BufferLayout` Fields

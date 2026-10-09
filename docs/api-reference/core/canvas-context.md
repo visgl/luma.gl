@@ -9,7 +9,7 @@ import {MultiCanvasExample} from '@site/src/examples';
 
 A `CanvasContext` holds a connection between a GPU `Device` and canvas, (either an HTML `<canvas />` element, aka `HTMLCanvasELement`, or an `OffscreenCanvas`).
 
-- A `CanvasContext` enables the application to do GPU render into a canvas. 
+- A `CanvasContext` enables the application to do GPU render into a canvas.
 - The `CanvasContext` acts as a source of `Framebuffer`s with special `Texture` color attachments that are copied to the screen at the end of a `RenderPass`.
 - It handles canvas resizing, making sure the returned `Framebuffer`s correspond to the current size of the canvas.
 - It also provides support for device pixel ratios (mapping between device pixels and CSS pixels)
@@ -20,7 +20,7 @@ A `CanvasContext` holds a connection between a GPU `Device` and canvas, (either 
 While an `OffscreenCanvas` only has one size, `HTMLCanvasElements` effectively has three different sizes:
 - The *CSS size*, being the size in "logical units" of the canvas
 - The *device pixel size*, being the exact number of "screen pixels" covered by the canvas
-- The *drawing buffer size*, representing the "hidden" system texture created to render into the canvas. 
+- The *drawing buffer size*, representing the "hidden" system texture created to render into the canvas.
 
 
 Notes:
@@ -141,7 +141,7 @@ const renderPass = device.beginRenderPass({
 });
 ```
 
-On high-DPI screens, the number of pixels in a canvas can be a multiple of the "CSS size" reported by HTMLCanvasElement. Because of this, luma.gl allows the resolution of the textures returned by `canvasContext.getFramebuffer` to be controlled. The `CanvasContextProps.useDevicePixels` prop if set to `true`, multiples the canvas HTML size with the system device pixel ratio. This prop can also a custom ratio (`number`), as well. This allows setting the target texture size to higher or lower resolutions that indicated by an HMTLCanvasElements CSS width and height, to ensure that screen renderings use the maximum resolution of the device (at the cost of using more GPU memory).
+On high-DPI screens, the number of pixels in a canvas can be a multiple of the "CSS size" reported by HTMLCanvasElement. Because of this, luma.gl allows the resolution of the textures returned by `canvasContext.getFramebuffer` to be controlled. The `CanvasContextProps.useDevicePixels` prop if set to `true`, multiples the canvas HTML size with the system device pixel ratio. This prop can also a custom ratio (`number`), as well. This allows setting the target texture size to higher or lower resolutions that indicated by an HTMLCanvasElementElements CSS width and height, to ensure that screen renderings use the maximum resolution of the device (at the cost of using more GPU memory).
 
 ```typescript
 const newCanvasContext = device.createCanvasContext({canvas: ..., useDevicePixels: true});
@@ -190,7 +190,7 @@ Controls how `CanvasContext` derives tracked device-pixel size for HTML canvases
 
 ## Fields
 
-### `canvas: HMTLCanvas | OffscreenCanvas`
+### `canvas: HTMLCanvasElement | OffscreenCanvas`
 
 ### `initialized: Promise<void>`
 
@@ -234,7 +234,7 @@ _Note: For an `OffscreenCanvas` this function always returns the same value as `
 
 ### `setDrawingBufferSize(size [number, number]): void`
 
-Resize the drawing surface. Usually called after the window has been resized. 
+Resize the drawing surface. Usually called after the window has been resized.
 
 ```typescript
 canvasContext.setDrawingBufferSize([width: number, height: number]});
