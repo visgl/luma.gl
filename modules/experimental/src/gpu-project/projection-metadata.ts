@@ -28,6 +28,12 @@ export type ProjectionStageMetadata = {
   /** Stage-input envelope (null: finite only); nonlinear inverses also check their footprint. */
   readonly inputBounds: ProjectionBounds | null;
   readonly invertible: boolean;
+  /** Adaptive bounds may be only an envelope; a patch union explicitly excludes gaps. */
+  readonly patchDomain?: {
+    readonly kind: 'rectangle' | 'patch-union';
+    readonly patchCount: number;
+    readonly routing: 'scan' | 'indexed';
+  };
   /** Explicit angular seam policy; normalization always discards the original turn count. */
   readonly longitudeWrap?: {
     readonly interval: readonly [number, number];
@@ -131,6 +137,17 @@ export function getProjectionProgramMetadata(
       outputDimensions: 2,
       inputBounds,
       invertible,
+      ...(operation.type === 'adaptive'
+        ? {
+            patchDomain: Object.freeze({
+              kind: operation.plan.strictDomains
+                ? ('patch-union' as const)
+                : ('rectangle' as const),
+              patchCount: operation.plan.patches.length,
+              routing: operation.plan.routingIndex ? ('indexed' as const) : ('scan' as const)
+            })
+          }
+        : {}),
       ...(operation.type === 'longitude-wrap'
         ? {
             longitudeWrap: Object.freeze({

@@ -751,8 +751,10 @@ a smaller ±500,000 m inverse rectangle to stay within the same tolerance/patch 
 This is **point-domain qualification, not line/polygon clipping**. A segment crossing the horizon
 still needs explicit geometric clipping/partitioning. A rectangular inverse envelope is not the
 whole visible disk, and a successfully sampled fit does not certify an arbitrary rectangle or
-custom provider's visibility policy. Curved/disconnected domains and horizon-crossing geometry
-remain P.8b.2 work; selecting a safe interior domain is application-owned.
+custom provider's visibility policy. Explicit rectangular/circular source domains
+can now use `compileProjectionPartition` for conservative interior cells and
+`clipProjectionSegment` for source-coordinate edges. Exact curved clipping and polygon topology
+reconstruction remain application-owned.
 
 Both `planCRSProjection()` and `planProjectionPipeline()` return structured `unsupported` results
 by default. Set `onUnsupported: 'throw'` to throw `ProjectionPlanningError` instead; its immutable
@@ -1128,10 +1130,96 @@ for a quick correctness check. Set `VITE_LUPROJ_SWEEP_GPU_TIMING=true` for a **s
 run. Reports prefixed `PROJECTION_PERFORMANCE_SWEEP` contain the complete JSON distributions,
 device description, patch counts, accuracy and memory results.
 
-Patch lookup currently scans linearly. Changing polynomial degree changes both patch count and
+Patch lookup scans linearly by default. Changing polynomial degree changes both patch count and
 evaluation cost: these measurements do not isolate routing time or prove an indexed lookup wins.
 The axis-swap consumers remain synthetic; production consumers and other GPU vendors are still
 required before selecting optimizations.
+
+## Indexed routing and explicit domain partitions
+
+`indexProjectionPlan(plan)` returns a plan sharing the same coefficients with a conservative
+stackless routing index. The GPU broad phase only prunes candidate ranges; it retains the original
+patch predicate and canonical first-match order. Both `GPUProjection` and compiled programs use
+the index. Scan remains the default. This is **optimization only**, not a precision mode. The index
+adds storage after the existing patch/bounds ABI; old unindexed plans are unchanged. Replacing an
+indexed plan requires the same index layout, patch count and strict-domain mode; numeric bounds
+and coefficients may change by constructing a fresh index. Never retain an index while replacing
+its patches manually. Large global origins can weaken Float32 broad-phase pruning without
+weakening the double-single evaluator.
+
+```typescript
+import {
+  compileProjectionPartition,
+  indexProjectionPlan,
+  compileProjectionProgram,
+  clipProjectionSegment
+} from '@luma.gl/experimental/gpu-project';
+
+const partition = compileProjectionPartition({
+  branches: [
+    {id: 'west', bounds: [-179, -60, -1, 60], projection: westProvider},
+    {id: 'east', bounds: [1, -60, 179, 60], projection: eastProvider}
+  ],
+  tolerance: 0.001,
+  maxPatches: 4096
+});
+const projection = compileProjectionProgram({
+  precision: 'double-single',
+  operations: [{type: 'adaptive', plan: indexProjectionPlan(partition.plan)}]
+}, {inputFormat: 'uint32x4'});
+const pieces = clipProjectionSegment(partition.plan, [-10, 0], [10, 0]);
+// Pieces stop at -1 and resume at +1: nothing connects across the rejected gap.
+```
+
+The caller supplies each branch's provider and valid source envelope; branch envelopes must be
+disjoint including their boundaries. This deliberately requires an explicit rejected seam. The
+compiler does not infer branches from a CRS name or catalog bounding box. Per-patch exact raw64
+or inward-rounded double-single/Float32 bounds prevent the normal two-ULP patch seam tolerance
+from widening gaps. Input quantization still applies: use raw binary64 if rounding an input to
+Float32 or double-single would move it across a seam. All rejected GPU rows have zero payload/mask.
+
+Each branch can add `disk: {center: [x, y], radius, inset?}`. Only cells whose farthest corner is
+strictly inside the disk minus the inset are fitted. A numerical safety inset is always applied;
+the effective inset is the maximum of the requested inset, `radius * 1e-10`, and sixteen binary64
+epsilons at the center's coordinate magnitude. `domainDepth` (default 5) limits curved-boundary
+subdivision; `maxDomainCells` (default 8192) limits all visits; `maxPatches` limits accepted fitted
+patches across all branches. The result reports branch patch ranges, visited cells and unresolved
+boundary-cell count. Unresolved cells stay invalid, even if some points in them are geometrically
+inside the disk. This is conservative coverage, not exact curved clipping. Exhausted resource
+budgets or branches with no accepted cells throw rather than returning partial success.
+
+Partitions fit in double-single; their combined local-Float32 error estimate is unknown (`Infinity`).
+Program metadata marks the input envelope as a `patch-union`, not a fully valid rectangle. Build
+inverse partitions independently in destination coordinates, with their own disjoint domains and
+providers, and pass the result as `inversePlan`. No inverse is inferred from forward patches.
+`clipProjectionSegment` clips straight source-coordinate segments, resolving shared cell edges to
+the canonical patch. It does not unwrap longitudes, densify projected curves, rebuild polygons,
+upload data or submit commands. Those operations remain caller-owned.
+
+## Fixed-arithmetic routing measurements and execution selection
+
+The optional `gpu-project/benchmarks` entry point exports `runProjectionRoutingBenchmark(device,
+options)`. Supply one double-single plan, coordinates, independent oracle and explicit error budget.
+It uses identical coefficients for scan/index full-program qualification, then times lookup-only
+shaders and verifies their selected IDs agree before/after measurement. Reports include index
+construction, packing, storage, pipeline compilation, CPU encoding, submit-to-fence time and optional
+GPU timestamps. Lookup-only timings include dispatch/output writes, not polynomial arithmetic.
+Never subtract independently measured medians to infer a latency breakdown.
+
+`selectProjectionExecution({report, projection, device, environment, workloadKey, consumer,
+coordinateCount, consumerCount, maximumError, maximumBufferByteLength})` selects only a matching
+previously measured inline or materialized path. The report must have at least two warmups and five
+uninstrumented samples. Precision, parameters, row count, reuse, device/environment, workload key,
+error budget and allocation budget must match. Overlapping observed timing ranges prefer the
+lower-memory path; these ranges are not confidence intervals. No matching qualification returns
+`{status: 'unqualified', reason}`. Selection does not allocate, submit, alter precision or take buffer
+ownership. The caller explicitly uses the returned mode with the existing consumer APIs.
+
+The current report consumer is `axis-swap`: it cannot qualify real rendering. Change the versioned
+`workloadKey` whenever coordinate distribution, update policy or reuse changes. Numeric program
+updates automatically invalidate the cache signature. There is no interpolation across devices,
+row/patch counts or consumers, no universal crossover threshold, and no default routing change.
+Real-render qualification awaits the rendering adapter; external vendor captures remain pending.
 
 See [WebGPU Geospatial Kernels](/docs/api-reference/experimental/geospatial),
 [GPU spatial query benchmarks](/docs/api-reference/experimental/gpu-core/gpu-spatial-query-benchmark),

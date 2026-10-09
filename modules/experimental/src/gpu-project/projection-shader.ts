@@ -4,7 +4,12 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuProj.
 
 import {GEOSPATIAL_WORKGROUP_SIZE, RAW_POINT_WGSL} from '../geospatial/geospatial-utils';
-import {PROJECTION_PATCH_WORD_LENGTH} from './projection-plan';
+import {
+  PROJECTION_PATCH_WORD_LENGTH,
+  PROJECTION_PLAN_BOUNDS_WORD_LENGTH,
+  PROJECTION_DOMAIN_WORD_LENGTH
+} from './projection-plan';
+import {PROJECTION_ROUTING_WORD_LENGTH} from './projection-routing';
 
 export function getProjectionShaderSource(options: {
   precise: boolean;
@@ -18,6 +23,8 @@ export function getProjectionShaderSource(options: {
   patchIdOffset?: number;
   validityOffset?: number;
   invocationIndexSource: string;
+  routingNodeCount?: number;
+  strictDomains?: boolean;
 }): string {
   const {doubleSingle, patchIdOffset, validityOffset} = options;
   return `
@@ -53,10 +60,44 @@ export function getProjectionShaderFunctions(options: {
   planOffset: number;
   doubleSingleInput?: boolean;
   inputBoundsOffset?: number;
+  routingNodeCount?: number;
+  strictDomains?: boolean;
 }): string {
   const {precise, doubleSingle, patchCount, planOffset, doubleSingleInput, inputBoundsOffset} =
     options;
   const positionType = precise ? 'RawPoint' : doubleSingleInput ? 'vec4f' : 'vec2f';
+  const routingNodeCount = options.routingNodeCount ?? 0;
+  const domainOffset =
+    planOffset + patchCount * PROJECTION_PATCH_WORD_LENGTH + PROJECTION_PLAN_BOUNDS_WORD_LENGTH;
+  const routingOffset =
+    domainOffset + (options.strictDomains ? patchCount * PROJECTION_DOMAIN_WORD_LENGTH : 0);
+  const routingPosition = precise
+    ? 'vec2f(sub_fp64u32_to_f32(position.x, vec2u(0u)), sub_fp64u32_to_f32(position.y, vec2u(0u)))'
+    : doubleSingleInput
+      ? 'vec2f(position.x + position.y, position.z + position.w)'
+      : 'position';
+  const strictContains = !options.strictDomains
+    ? ''
+    : `
+  let domainOffset = ${domainOffset}u + patchIndex * ${PROJECTION_DOMAIN_WORD_LENGTH}u;
+  for (var boundIndex = 0u; boundIndex < 4u; boundIndex += 1u) {
+    ${
+      precise
+        ? `let offset = domainOffset + boundIndex * 2u;
+    let bound = vec2u(projectionPlans[offset + 1u], projectionPlans[offset]);
+    let coordinate = select(position.x, position.y, (boundIndex & 1u) != 0u);
+    let comparison = compareFiniteBinary64(coordinate, bound);`
+        : doubleSingleInput
+          ? `let offset = domainOffset + 8u + boundIndex * 2u;
+    let bound = vec2f(bitcast<f32>(projectionPlans[offset]), bitcast<f32>(projectionPlans[offset + 1u]));
+    let coordinate = select(position.xy, position.zw, (boundIndex & 1u) != 0u);
+    let comparison = compare_fp64(coordinate, bound);`
+          : `let bound = bitcast<f32>(projectionPlans[domainOffset + 16u + boundIndex]);
+    let coordinate = position[boundIndex & 1u];
+    let comparison = select(select(0, 1, coordinate > bound), -1, coordinate < bound);`
+    }
+    if ((boundIndex < 2u && comparison < 0) || (boundIndex >= 2u && comparison > 0)) { return false; }
+  }`;
   const sourceOffset = doubleSingleInput
     ? `let offset = projectionSourceOffsetFP64(position, patchIndex);
   return vec2f(offset.x.x + offset.x.y, offset.y.x + offset.y.y);`
@@ -310,6 +351,7 @@ fn normalizeProjectionPosition(position: ${positionType}, patchIndex: u32) -> ve
 }
 
 fn projectionPatchContains(position: ${positionType}, patchIndex: u32) -> bool {
+  ${strictContains}
   let normalized = normalizeProjectionPosition(position, patchIndex);
   let minimum = vec2f(
     bitcast<f32>(projectionPlanWord(patchIndex, 8u)),
@@ -324,10 +366,33 @@ fn projectionPatchContains(position: ${positionType}, patchIndex: u32) -> bool {
 }
 
 fn findProjectionPatch(position: ${positionType}) -> u32 {
+  ${
+    routingNodeCount
+      ? `let routingPosition = ${routingPosition};
+  var nodeIndex = 0u;
+  // Bound traversal even for malformed caller-owned storage. A valid traversal visits each
+  // node at most once; corrupt escape links must not cause an unbounded GPU loop.
+  for (var visitIndex = 0u; visitIndex < ${routingNodeCount}u; visitIndex += 1u) {
+    if (nodeIndex >= ${routingNodeCount}u) { break; }
+    let offset = ${routingOffset}u + nodeIndex * ${PROJECTION_ROUTING_WORD_LENGTH}u;
+    let minimum = vec2f(bitcast<f32>(projectionPlans[offset]), bitcast<f32>(projectionPlans[offset + 1u]));
+    let maximum = vec2f(bitcast<f32>(projectionPlans[offset + 2u]), bitcast<f32>(projectionPlans[offset + 3u]));
+    if (any(routingPosition < minimum) || any(routingPosition > maximum)) {
+      nodeIndex = projectionPlans[offset + 4u];
+    } else {
+      for (var patchIndex = projectionPlans[offset + 5u]; patchIndex < projectionPlans[offset + 6u]; patchIndex += 1u) {
+        if (projectionPatchContains(position, patchIndex)) { return patchIndex; }
+      }
+      nodeIndex += 1u;
+    }
+  }`
+      : `
   for (var patchIndex: u32 = 0u; patchIndex < PATCH_COUNT; patchIndex += 1u) {
     if (projectionPatchContains(position, patchIndex)) {
       return patchIndex;
     }
+  }
+  `
   }
   return INVALID_PATCH;
 }

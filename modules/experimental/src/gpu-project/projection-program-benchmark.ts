@@ -21,6 +21,7 @@ import {
   type CompiledProjection
 } from './projection-program';
 import {GPUProjectionProgram} from './gpu-projection-program';
+import {getProjectionProgramSignature, getProjectionDeviceSignature} from './projection-execution';
 import type {ProjectionBounds, ProjectionCoordinates, ProjectionDegree} from './types';
 import type {ProjectionProgramMetadata} from './projection-metadata';
 import {executeGPUProjectionBenchmark} from './gpu-projection-benchmark';
@@ -45,6 +46,10 @@ export type ProjectionProgramBenchmarkVariant = {
 };
 
 export type ProjectionProgramBenchmarkOptions = {
+  /** Versioned caller identity for distribution, update policy and reuse. Required for selection. */
+  workloadKey?: string;
+  /** Browser/driver/runtime identity supplied by the capture runner. Required for selection. */
+  environment?: string;
   /** Shared binary64 source rows. Include boundary/invalid rows explicitly when desired. */
   coordinates: readonly ProjectionCoordinates[];
   /** Independent absolute-coordinate oracle, including expected validity. Never inferred from a variant. */
@@ -65,6 +70,7 @@ export type ProjectionProgramBenchmarkOptions = {
 };
 
 export type ProjectionProgramBenchmarkPathReport = {
+  programSignature: string;
   id: string;
   mode: 'inline' | 'materialized';
   metadata: ProjectionProgramMetadata;
@@ -109,6 +115,9 @@ export type ProjectionProgramBenchmarkPathReport = {
 };
 
 export type ProjectionProgramBenchmarkReport = {
+  deviceSignature: string;
+  workloadKey?: string;
+  environment?: string;
   device: DeviceInfo;
   inputFormat: 'uint32x4';
   consumer: 'axis-swap';
@@ -251,6 +260,9 @@ export async function runProjectionProgramBenchmark(
   }
   return {
     device: {...device.info},
+    deviceSignature: getProjectionDeviceSignature(device),
+    workloadKey: options.workloadKey,
+    environment: options.environment,
     inputFormat: 'uint32x4',
     consumer: 'axis-swap',
     consumerCount,
@@ -525,6 +537,7 @@ async function measurePath(
     const parameterByteLength = projection.packParameters().byteLength;
     return {
       id: variant.id,
+      programSignature: getProjectionProgramSignature(projection),
       mode,
       metadata: projection.metadata,
       maximumAllowedError: variant.maximumError,

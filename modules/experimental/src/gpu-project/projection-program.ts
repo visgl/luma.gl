@@ -362,6 +362,8 @@ function compileProgram(
           doubleSingle: true,
           doubleSingleInput: !rawInput,
           patchCount: operation.plan.patches.length,
+          routingNodeCount: operation.plan.routingIndex?.length,
+          strictDomains: operation.plan.strictDomains,
           planOffset: offset,
           inputBoundsOffset: boundsOffset
         });
