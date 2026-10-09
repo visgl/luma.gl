@@ -27,7 +27,9 @@ try {
     const page = await browser.newPage({viewport: {width: 64, height: 64}, deviceScaleFactor: 1});
     try {
       await page.goto(`http://127.0.0.1:${server.address().port}`);
-      await page.evaluate(async backend => {
+      let evaluationTimeout;
+      try {
+        await Promise.race([page.evaluate(async backend => {
         const canvas = document.querySelector('canvas');
         if (backend === 'webgl2') {
           const context = canvas.getContext('webgl2', {preserveDrawingBuffer: true});
@@ -64,7 +66,14 @@ try {
         }
         // Allow the submitted canvas frame to reach the compositor before capture.
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-      }, backend);
+        }, backend), new Promise((resolve, reject) => {
+          evaluationTimeout = setTimeout(() => reject(new Error(
+            `${backend} presentation timed out waiting for GPU submission or compositor frames`
+          )), 20_000);
+        })]);
+      } finally {
+        clearTimeout(evaluationTimeout);
+      }
       // Capture the canvas region directly, as SnapshotTestRunner does. Element
       // screenshots wait for layout stability and can stall with software compositing.
       const capture = PNG.sync.read(await page.screenshot({
