@@ -78,6 +78,11 @@ jobs:
           df -h .
           du -sh . "${HOME}/.yarn" "${HOME}/.cache/ms-playwright" "${RUNNER_TEMP}" 2>/dev/null || true
 
+      - name: Check WebGPU and WebGL canvas capture
+        if: matrix.shard == 1
+        timeout-minutes: 2
+        run: xvfb-run -a yarn test-presentation
+
       - name: Run headless tests and generate coverage
         env:
           # Include browser process failures alongside WebGPU test assertions.

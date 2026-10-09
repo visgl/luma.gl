@@ -111,3 +111,21 @@ picking, and resource ownership. Algorithmic matrices belong in focused tests:
 - `deck-example-device.node.spec.ts` covers explicit selection and available, absent,
   null, and rejected default adapters. Flow and weather each retain a rejected-adapter
   startup smoke check, instead of reinitializing their scenes for every shared case.
+
+## Presentation capture canary
+
+Run `yarn test-presentation` to clear WebGPU and WebGL2 canvases red and verify
+the captured PNG pixels. This checks the browser compositor independently of
+rendering code and golden images. Missing GPU support or blank captures fail
+with an infrastructure diagnostic instead of passing as skipped tests.
+
+On Linux, run `xvfb-run -a yarn test-presentation`. The software GPU launch
+helper retains ANGLE SwiftShader for WebGL and adds `--enable-gpu`, Vulkan
+compositing, and Vulkan SwiftShader for WebGPU. An X display is required for
+headless canvas capture. CI runs this check in the first browser coverage shard.
+Other platforms retain their existing launch configuration.
+
+Use offscreen texture readback for numeric GPU correctness assertions and this
+small presentation check for canvas capture. The legacy `test/render/` suite
+remains excluded: reviving its goldens and choosing backend-specific tolerances
+is separate work. See [issue #2874](https://github.com/visgl/luma.gl/issues/2874).

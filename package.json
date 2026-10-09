@@ -36,6 +36,7 @@
     "test-node-coverage": "LUMA_TEST_NODE_COVERAGE=true ocular-test node --coverage.enabled --coverage.provider=istanbul --coverage.reporter=lcovonly --coverage.reportsDirectory=coverage-node",
     "test-browser": "ocular-test browser",
     "test-browser-benchmarks": "LUMA_TEST_BROWSER_BENCHMARKS=true ocular-test headless --no-coverage",
+    "test-presentation": "node scripts/playwright/presentation-canary.mjs",
     "test-headless": "ocular-test headless",
     "test-coverage": "ocular-test headless --coverage",
     "test-geospatial-package": "node ./scripts/verify-experimental-geospatial-package.mjs",
