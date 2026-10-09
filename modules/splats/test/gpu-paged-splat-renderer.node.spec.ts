@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {expect, it} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {WgslReflect} from 'wgsl_reflect';
 import {makeGPUSplatData, type SplatSource} from '@luma.gl/splats';
 import {NullDevice} from '@luma.gl/test-utils';
@@ -400,3 +400,37 @@ function makePagedSplatSource(
   }
   return {positions, scales, rotations, colors, opacities, rowIndexBase, sourceBatchIndex};
 }
+
+it('an empty host frontier neither clears nor ends a caller-owned presentation pass', () => {
+  const device = makePagedWebGPUNullDevice();
+  const page = makeGPUSplatData(device, makePagedSplatSource([0.4], 0, 0));
+  const renderer = new GPUPagedSplatRenderer(device, {pages: []});
+  const encoder = device.createCommandEncoder();
+  const begin = vi.spyOn(encoder, 'beginRenderPass');
+  const encoding = renderer.prepare(encoder);
+  expect(encoding).toBeUndefined();
+  expect(begin).not.toHaveBeenCalled();
+  const pass = encoder.beginRenderPass({clearColor: false, clearDepth: false});
+  const end = vi.spyOn(pass, 'end');
+  renderer.draw(pass);
+  expect(end).not.toHaveBeenCalled();
+  pass.end();
+  renderer.setFrontier([]);
+  begin.mockClear();
+  renderer.prepare(encoder);
+  expect(begin).not.toHaveBeenCalled();
+  renderer.destroy();
+  expect(page.destroyed).toBe(false);
+  page.destroy();
+  device.destroy();
+});
+
+it('instance tint occupies aligned feature padding and WebGPU presentation remaps clip depth', () => {
+  const features = new WgslReflect(GPU_PAGED_SPLAT_FEATURE_SHADER);
+  const uniforms = features.uniforms.find(uniform => uniform.name === 'featureUniforms');
+  expect(uniforms?.size).toBe(64);
+  expect(uniforms?.members?.find(member => member.name === 'colorScale')?.offset).toBe(48);
+  expect(GPU_PAGED_SPLAT_RENDER_SHADER).toContain(
+    '(projected.clipCenter.z + projected.clipCenter.w) * 0.5'
+  );
+});

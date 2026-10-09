@@ -47,6 +47,7 @@ export {
   SplatResidencyManager,
   type SplatResidencyBounds,
   type SplatResidencyBudget,
+  type SplatResidencyData,
   type SplatResidencyCallbacks,
   type SplatResidencyChunk,
   type SplatResidencyChunkOptions,
@@ -74,6 +75,7 @@ export {
   getSplatRADPageBounds,
   type SplatRADHierarchyFrontierEntry,
   type SplatRADHierarchyManagerProps,
+  type SplatRADHierarchyData,
   type SplatRADHierarchyPage,
   type SplatRADHierarchyRequest,
   type SplatRADHierarchyStats

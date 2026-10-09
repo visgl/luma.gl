@@ -11,6 +11,9 @@ import {
   GPU_SPLAT_RENDER_SHADER
 } from './gpu-splat-graph-shaders';
 
+/** Sentinel sorted after every finite paged depth key. */
+export const GPU_PAGED_SPLAT_INVALID_DEPTH_KEY = 0xffffffff;
+
 /** Sparse source projection retains every original column within eight storage bindings. */
 export const GPU_PAGED_SPLAT_PROJECTION_SHADER_LAYOUT = {
   attributes: [],
@@ -99,17 +102,20 @@ const GPU_PAGED_SPLAT_SPARSE_PROJECTION_SHADER = replacePagedShaderSource(
 
 /** Analytic perspective covariance and compensated filtering preserve Spark RAD appearance. */
 export const GPU_PAGED_SPLAT_PROJECTION_SHADER = makeCalibratedPagedProjectionShader(
-  GPU_PAGED_SPLAT_SPARSE_PROJECTION_SHADER
+  makePagedDepthShader(GPU_PAGED_SPLAT_SPARSE_PROJECTION_SHADER)
 );
 
 /** Sparse source feature evaluation publishes the exact globally visible indirect count. */
-export const GPU_PAGED_SPLAT_FEATURE_SHADER = replacePagedShaderSource(
+const GPU_PAGED_SPLAT_UNTINTED_FEATURE_SHADER = replacePagedShaderSource(
   replacePagedShaderSource(
     replacePagedShaderSource(
       replacePagedShaderSource(
         replacePagedShaderSource(
           replacePagedShaderSource(
-            GPU_SPLAT_FEATURE_SHADER,
+            GPU_SPLAT_FEATURE_SHADER.replace(
+              'const INVALID_FEATURE_DEPTH_KEY: u32 = 65535u;',
+              `const INVALID_FEATURE_DEPTH_KEY: u32 = ${GPU_PAGED_SPLAT_INVALID_DEPTH_KEY}u;`
+            ),
             '  isFloatColor: u32,\n};',
             PAGED_UNIFORM_FIELDS
           ),
@@ -177,6 +183,30 @@ const GPU_PAGED_SPLAT_ORDERED_RENDER_SHADER = replacePagedShaderSource(
 export const GPU_PAGED_SPLAT_RENDER_SHADER = makeCalibratedPagedRenderShader(
   GPU_PAGED_SPLAT_ORDERED_RENDER_SHADER
 );
+
+/** Sorts finite linear camera depths without projection-dependent quantization. */
+function makePagedDepthShader(source: string): string {
+  const depthSource = replacePagedShaderSource(
+    source,
+    'const INVALID_DEPTH_KEY: u32 = 65535u;\nconst MAXIMUM_VALID_DEPTH_KEY: u32 = 65534u;',
+    `const INVALID_DEPTH_KEY: u32 = ${GPU_PAGED_SPLAT_INVALID_DEPTH_KEY}u;`
+  );
+  return replacePagedShaderSource(
+    depthSource,
+    `  let normalizedDepth = clamp(clipCenter.z / clipCenter.w * 0.5 + 0.5, 0.0, 1.0);
+  let quantizedDepth = u32(round(normalizedDepth * f32(MAXIMUM_VALID_DEPTH_KEY)));
+  depthKeys[graphUniforms.batchOffset + projectedRowIndex] = MAXIMUM_VALID_DEPTH_KEY - quantizedDepth;`,
+    `  // Perspective W is linear camera depth. Dividing Z by W compresses distant
+  // surfaces into ties, especially with a close near plane. Orthographic Z is
+  // already linear and may be negative, so preserve signed floating-point order.
+  let matrix = graphUniforms.modelViewProjectionMatrix;
+  let isPerspective = any(vec3<f32>(matrix[0].w, matrix[1].w, matrix[2].w) != vec3<f32>(0.0));
+  let depth = select(clipCenter.z, clipCenter.w, isPerspective);
+  let depthBits = bitcast<u32>(depth);
+  let orderedDepth = select(depthBits ^ 0x80000000u, ~depthBits, (depthBits & 0x80000000u) != 0u);
+  depthKeys[graphUniforms.batchOffset + projectedRowIndex] = ~orderedDepth;`
+  );
+}
 
 /** Applies the exact homogeneous-coordinate projection Jacobian without extra source bindings. */
 function makeCalibratedPagedProjectionShader(source: string): string {
@@ -317,8 +347,26 @@ fn getProjectedRotation(quaternion: vec4<f32>)`
   );
 }
 
+/** Shared source radiance receives each instance tint after directional evaluation. */
+export const GPU_PAGED_SPLAT_FEATURE_SHADER = replacePagedShaderSource(
+  replacePagedShaderSource(
+    GPU_PAGED_SPLAT_UNTINTED_FEATURE_SHADER,
+    '  semanticFilterActive: u32,\n  padding: u32,\n};',
+    '  semanticFilterActive: u32,\n  padding: u32,\n  colorScale: vec3<f32>,\n};'
+  ),
+  '  atomicAdd(&drawCommands[1u], 1u);',
+  '  projectedRecords[projectedRowIndex].color = vec4<f32>(projectedRecords[projectedRowIndex].color.rgb * featureUniforms.colorScale, projectedRecords[projectedRowIndex].color.a);\n  atomicAdd(&drawCommands[1u], 1u);'
+);
+
 /** Preserves Spark's finite circular support and nonlinear opaque hierarchy-parent profile. */
 function makeCalibratedPagedRenderShader(source: string): string {
+  // Cameras use the same [-w, w] depth convention as projection/culling and depth keys.
+  // WebGPU presentation must convert that depth to its [0, w] rasterization range.
+  source = replacePagedShaderSource(
+    source,
+    '    projected.clipCenter.z,',
+    '    (projected.clipCenter.z + projected.clipCenter.w) * 0.5,'
+  );
   let calibratedSource = replacePagedShaderSource(
     source,
     '  output.gaussianCoordinate = corner * graphUniforms.gaussianSupportRadius;',

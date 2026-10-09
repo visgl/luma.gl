@@ -8,6 +8,12 @@ import {
   type Binding,
   type CommandEncoder,
   type Device,
+  type RenderPass,
+  type RenderPipeline,
+  type RenderPipelineParameters,
+  type Framebuffer,
+  type TextureFormatColor,
+  type TextureFormatDepthStencil,
   type ShaderLayout
 } from '@luma.gl/core';
 import {Computation, Model} from '@luma.gl/engine';
@@ -23,14 +29,13 @@ import {
 } from '@luma.gl/gpgpu/gpu-core';
 import type {GPUSplatGraphRendererProps} from './gpu-splat-graph-renderer';
 import {
-  GPU_SPLAT_GRAPH_FEATURE_UNIFORM_BYTE_LENGTH,
   GPU_SPLAT_GRAPH_UNIFORM_BYTE_LENGTH,
-  GPU_SPLAT_INVALID_DEPTH_KEY,
   GPU_SPLAT_PROJECTED_RECORD_BYTE_LENGTH
 } from './gpu-splat-graph-shaders';
 import {
   GPU_PAGED_SPLAT_FEATURE_SHADER,
   GPU_PAGED_SPLAT_FEATURE_SHADER_LAYOUT,
+  GPU_PAGED_SPLAT_INVALID_DEPTH_KEY,
   GPU_PAGED_SPLAT_PROJECTION_SHADER,
   GPU_PAGED_SPLAT_PROJECTION_SHADER_LAYOUT,
   GPU_PAGED_SPLAT_RENDER_SHADER,
@@ -47,6 +52,7 @@ import {
 
 const WORKGROUP_SIZE = 256;
 const MINIMUM_SEMANTIC_SELECTION_CAPACITY = 64;
+const GPU_PAGED_SPLAT_FEATURE_UNIFORM_BYTE_LENGTH = 64;
 
 /** One intact caller-owned source page and its optional batch-local active-row frontier. */
 export type GPUPagedSplatPage = {
@@ -58,6 +64,14 @@ export type GPUPagedSplatPage = {
   activeRows?: Uint32Array;
   /** Optional source bounds retained for hierarchy and application diagnostics. */
   bounds?: SplatResidencyBounds;
+  /** Per-instance source-to-clip transform. Source columns remain shared and immutable. */
+  modelViewProjectionMatrix?: readonly number[];
+  /** Per-instance camera in source coordinates, preserving directional SH under affine transforms. */
+  cameraPosition?: readonly [number, number, number];
+  /** Per-instance alpha multiplier applied before global ordering. */
+  alphaScale?: number;
+  /** Linear RGB instance tint applied after source-frame SH evaluation. */
+  colorScale?: readonly [number, number, number];
 };
 
 /** Shared camera/style controls plus independently projected page and output segment limits. */
@@ -140,6 +154,7 @@ type PlannedSourceSegment = {
 };
 
 type SourceSegment = PlannedSourceSegment & {
+  activeRowsDirty: boolean;
   activeRowBuffer: Buffer;
   projectedRecordBuffer: Buffer;
   uniformBuffer: Buffer;
@@ -226,7 +241,9 @@ export class GPUPagedSplatRenderer {
   private readonly outputSegments: OutputSegment[] = [];
   private readonly pageRevisions = new Map<string, number>();
   private plannedSegments: PlannedSourceSegment[] = [];
+  private includeRenderPass = true;
   private model?: Model;
+  private readonly hostPipelines = new Map<string, RenderPipeline>();
   private sortedValuesBuffer?: Buffer;
   private semanticSelectionBuffer?: Buffer;
   private semanticSelectionValues = new Uint32Array(0);
@@ -324,7 +341,11 @@ export class GPUPagedSplatRenderer {
     return this.isDestroyed;
   }
 
-  /** Replaces the active row frontier while retaining all caller-owned source allocations. */
+  /**
+   * Replaces the active row frontier while retaining caller-owned source allocations.
+   * Unsplit active-row arrays are borrowed until the next call; resubmit after changing their
+   * contents. Camera-only updates do not copy or reupload unchanged active-row indirection.
+   */
   setFrontier(pages: readonly GPUPagedSplatPage[]): void {
     if (this.isDestroyed) {
       throw new Error('Cannot update a destroyed paged Gaussian splat renderer');
@@ -384,6 +405,7 @@ export class GPUPagedSplatRenderer {
     if (canReuseGraph) {
       for (let segmentIndex = 0; segmentIndex < this.sourceSegments.length; segmentIndex++) {
         Object.assign(this.sourceSegments[segmentIndex], nextSegments[segmentIndex]);
+        this.sourceSegments[segmentIndex].activeRowsDirty = true;
       }
     } else if (nextSegments.length > 0) {
       this.requiresGraphRebuild = true;
@@ -478,14 +500,85 @@ export class GPUPagedSplatRenderer {
 
   /** Encodes sparse projection, exact cross-page ordering, segmented gather, and one render pass. */
   encode(commandEncoder: CommandEncoder): GPUCommandGraphEncoding | undefined {
+    return this.encodeFrame(commandEncoder, true);
+  }
+
+  /**
+   * Prepares globally ordered splats without opening or clearing a render pass.
+   * Call before the host begins its render pass, then call {@link draw} inside that pass.
+   */
+  prepare(commandEncoder: CommandEncoder): GPUCommandGraphEncoding | undefined {
+    return this.encodeFrame(commandEncoder, false);
+  }
+
+  /** Draws prepared splats into a caller-owned pass, applying optional host pipeline parameters. */
+  draw(renderPass: RenderPass, parameters?: RenderPipelineParameters): void {
+    if (this.isDestroyed || !this.hasPresentedContent || !this.model) {
+      return;
+    }
+    // The indirect draw bypasses Model.draw(), so match the host attachments explicitly.
+    const framebuffer =
+      (renderPass as RenderPass & {framebuffer?: Framebuffer}).framebuffer ??
+      renderPass.props.framebuffer;
+    const colorAttachmentFormats = framebuffer?.colorAttachments.map(attachment =>
+      attachment ? (attachment.texture.format as TextureFormatColor) : null
+    ) ?? [this.device.preferredColorFormat];
+    const depthStencilAttachmentFormat = framebuffer?.depthStencilAttachment?.texture.format as
+      | TextureFormatDepthStencil
+      | undefined;
+    const resolvedParameters = {...this.model.pipeline.props.parameters, ...parameters};
+    for (const parameter of Object.keys(resolvedParameters) as (keyof RenderPipelineParameters)[]) {
+      if (
+        (!depthStencilAttachmentFormat &&
+          (parameter.startsWith('depth') || parameter.startsWith('stencil'))) ||
+        (parameters?.blend === false && parameter !== 'blend' && parameter.startsWith('blend'))
+      )
+        delete resolvedParameters[parameter];
+    }
+    const pipelineKey = `${colorAttachmentFormats.join(',')}/${depthStencilAttachmentFormat ?? ''}/${JSON.stringify(resolvedParameters)}`;
+    let pipeline = this.hostPipelines.get(pipelineKey);
+    if (!pipeline) {
+      pipeline = this.model.pipelineFactory.createRenderPipeline({
+        ...this.model.pipeline.props,
+        colorAttachmentFormats,
+        depthStencilAttachmentFormat,
+        parameters: resolvedParameters
+      });
+      this.hostPipelines.set(pipelineKey, pipeline);
+    }
+    renderPass.setPipeline(pipeline);
+    renderPass.setVertexArray(this.model.vertexArray);
+    for (const segment of this.outputSegments) {
+      renderPass.setBindings({
+        graphUniforms: this.sourceSegments[0].uniformBuffer,
+        projectedRecords: segment.projectedRecordBuffer
+      });
+      this.drawCommands.draw(renderPass, segment.index + 1);
+    }
+  }
+
+  private encodeFrame(
+    commandEncoder: CommandEncoder,
+    includeRenderPass: boolean
+  ): GPUCommandGraphEncoding | undefined {
     if (this.isDestroyed) {
       return undefined;
+    }
+    if (this.includeRenderPass !== includeRenderPass) {
+      this.includeRenderPass = includeRenderPass;
+      this.requiresGraphRebuild = true;
+      this.requiresEncoding = true;
     }
     const activeRowCount = this.plannedSegments.reduce(
       (totalRowCount, segment) => totalRowCount + segment.activeRowCount,
       0
     );
     if (activeRowCount === 0) {
+      if (!includeRenderPass) {
+        this.hasPresentedContent = false;
+        this.requiresEncoding = false;
+        return undefined;
+      }
       if (!this.requiresEncoding || !this.hasPresentedContent) {
         return undefined;
       }
@@ -533,6 +626,8 @@ export class GPUPagedSplatRenderer {
       return undefined;
     }
     this.writeSourceUniforms();
+    // The graph's optional presentation pass calls draw() during encoding.
+    this.hasPresentedContent = true;
     this.lastEncoding = this.compiledGraph.encode(commandEncoder, {parameters: undefined});
     this.hasPresentedContent = true;
     this.requiresEncoding = false;
@@ -680,7 +775,7 @@ export class GPUPagedSplatRenderer {
       outputValues: sortedIndices,
       algorithm: 'radix',
       direction: 'ascending',
-      keyBits: 16
+      keyBits: 32
     }).addToGraph(graph);
     this.addInversePermutationPass(graph, sortedIndices, inverseIndices);
 
@@ -730,10 +825,11 @@ export class GPUPagedSplatRenderer {
     );
     const featureUniformBuffer = this.createUniformBuffer(
       `paged-gaussian-features-${planned.id}`,
-      GPU_SPLAT_GRAPH_FEATURE_UNIFORM_BYTE_LENGTH
+      GPU_PAGED_SPLAT_FEATURE_UNIFORM_BYTE_LENGTH
     );
     return {
       ...planned,
+      activeRowsDirty: true,
       activeRowBuffer,
       projectedRecordBuffer,
       uniformBuffer,
@@ -755,7 +851,7 @@ export class GPUPagedSplatRenderer {
     const shader = /* wgsl */ `
 const ROW_COUNT: u32 = ${this.globalSortCapacity}u;
 const WORKGROUPS_X: u32 = ${dispatch.x}u;
-const INVALID_DEPTH_KEY: u32 = ${GPU_SPLAT_INVALID_DEPTH_KEY}u;
+const INVALID_DEPTH_KEY: u32 = ${GPU_PAGED_SPLAT_INVALID_DEPTH_KEY}u;
 @group(0) @binding(0) var<storage, read_write> values: array<u32>;
 @group(0) @binding(1) var<storage, read_write> depthKeys: array<u32>;
 @group(0) @binding(2) var<storage, read_write> drawCommands: array<atomic<u32>>;
@@ -1120,6 +1216,9 @@ fn main() {
         blendAlphaDstFactor: 'one-minus-src-alpha'
       }
     });
+    if (!this.includeRenderPass) {
+      return;
+    }
     graph.addRenderPass({
       id: 'paged-gaussian-segmented-render',
       resources: [
@@ -1137,20 +1236,7 @@ fn main() {
           clearDepth: 1,
           clearStencil: false
         }),
-        encode: ({renderPass, getBuffer}) => {
-          if (!this.model) {
-            return;
-          }
-          renderPass.setPipeline(this.model.pipeline);
-          renderPass.setVertexArray(this.model.vertexArray);
-          for (const segment of this.outputSegments) {
-            renderPass.setBindings({
-              graphUniforms: getBuffer(firstUniform),
-              projectedRecords: getBuffer(segment.graphProjectedRecords)
-            });
-            this.drawCommands.draw(renderPass, segment.index + 1);
-          }
-        }
+        encode: ({renderPass}) => this.draw(renderPass)
       })
     });
   }
@@ -1235,16 +1321,20 @@ fn main() {
       this.semanticSelectionBuffer?.write(this.semanticSelectionValues);
     }
     for (const segment of this.sourceSegments) {
-      if (segment.activeRows) {
+      if (segment.activeRows && segment.activeRowsDirty) {
         segment.activeRowBuffer.write(segment.activeRows);
       }
+      segment.activeRowsDirty = false;
       const uniformData = new ArrayBuffer(GPU_SPLAT_GRAPH_UNIFORM_BYTE_LENGTH);
       const floatValues = new Float32Array(uniformData);
       const integerValues = new Uint32Array(uniformData);
-      floatValues.set(this.props.modelViewProjectionMatrix, 0);
+      floatValues.set(
+        segment.page.modelViewProjectionMatrix ?? this.props.modelViewProjectionMatrix,
+        0
+      );
       floatValues.set(this.props.viewportSize, 16);
       floatValues[18] = this.props.radiusScale;
-      floatValues[19] = this.props.alphaScale;
+      floatValues[19] = this.props.alphaScale * (segment.page.alphaScale ?? 1);
       floatValues[20] = this.props.alphaCutoff;
       floatValues[21] = this.props.screenSizeCutoffPixels;
       floatValues[22] = this.props.gaussianSupportRadius;
@@ -1261,10 +1351,10 @@ fn main() {
       integerValues[29] =
         (hasFloatColor ? 1 : 0) | (this.props.lodOpacity ? 2 : 0) | (encodeLinearColor ? 4 : 0);
       integerValues[30] = segment.activeRows ? 1 : 0;
-      integerValues[31] = segment.sourceRowOffset - segment.sourceBindingRowOffset;
+      integerValues[31] = segment.sourceRowOffset;
       segment.uniformBuffer.write(new Uint8Array(uniformData));
 
-      const featureData = new ArrayBuffer(GPU_SPLAT_GRAPH_FEATURE_UNIFORM_BYTE_LENGTH);
+      const featureData = new ArrayBuffer(GPU_PAGED_SPLAT_FEATURE_UNIFORM_BYTE_LENGTH);
       const featureFloatValues = new Float32Array(featureData);
       const featureIntegerValues = new Uint32Array(featureData);
       const batch = segment.page.data;
@@ -1272,7 +1362,8 @@ fn main() {
         batch.sphericalHarmonics && this.props.sphericalHarmonicsDegree > 0
           ? Math.min(batch.sphericalHarmonicsDegree, this.props.sphericalHarmonicsDegree)
           : 0;
-      featureFloatValues.set(this.props.cameraPosition, 0);
+      featureFloatValues.set(segment.page.cameraPosition ?? this.props.cameraPosition, 0);
+      featureFloatValues.set(segment.page.colorScale ?? [1, 1, 1], 12);
       featureIntegerValues[3] = degree;
       featureIntegerValues[4] = getSplatSphericalHarmonicCoefficientCount(
         batch.sphericalHarmonicsDegree
@@ -1346,18 +1437,19 @@ fn main() {
           );
           const capacityRowCount = segmentSourceRowEnd - segmentSourceRowStart;
           const selectedRows = page.activeRows
-            ? Uint32Array.from(
-                Array.from(page.activeRows).filter(
-                  rowIndex => rowIndex >= segmentSourceRowStart && rowIndex < segmentSourceRowEnd
-                ),
-                rowIndex => rowIndex - (usesSourceRanges ? sourceWindowStart : 0)
-              )
+            ? segmentSourceRowStart === 0 && segmentSourceRowEnd === page.data.length
+              ? page.activeRows
+              : page.activeRows
+                  .filter(
+                    rowIndex => rowIndex >= segmentSourceRowStart && rowIndex < segmentSourceRowEnd
+                  )
+                  .map(rowIndex => rowIndex - (usesSourceRanges ? sourceWindowStart : 0))
             : undefined;
           const activeRowCount = selectedRows?.length ?? capacityRowCount;
           plannedSegments.push({
             id: `${page.id}-${pageSegmentIndex++}`,
             page,
-            ...(selectedRows ? {activeRows: selectedRows} : {}),
+            activeRows: selectedRows,
             capacityRowCount,
             activeRowCount,
             sourceRowOffset: usesSourceRanges
@@ -1455,6 +1547,12 @@ fn main() {
     this.compiledGraph?.destroy();
     this.compiledGraph = undefined;
     this.lastEncoding = undefined;
+    if (this.model) {
+      for (const pipeline of this.hostPipelines.values()) {
+        this.model.pipelineFactory.release(pipeline);
+      }
+    }
+    this.hostPipelines.clear();
     this.model?.destroy();
     this.model = undefined;
     for (const buffer of this.ownedBuffers) {
