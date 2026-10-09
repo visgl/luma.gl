@@ -47,7 +47,7 @@ const nodeOnlyTestPatterns = [
   'modules/engine/test/shader-inputs.spec.{ts,js}',
   'modules/text/test/text-2d/{text-layout,arrow-text,text-utils}.spec.{ts,js}',
   'modules/text/test/text-3d/**/*.spec.{ts,js}',
-  'modules/tables/test/table/{gpu-table-model,generated-buffer-batches,table-buffer-planner}.spec.{ts,js}',
+  'modules/experimental/test/gpu-tables/{gpu-table-model,generated-buffer-batches,table-buffer-planner}.spec.{ts,js}',
   'modules/webgpu/test/adapter/helpers/get-vertex-buffer-layout.spec.{ts,js}',
   'modules/webgpu/test/adapter/resources/webgpu-render-pass.spec.{ts,js}',
   'modules/webgpu/test/wgsl/**/*.spec.{ts,js}',
