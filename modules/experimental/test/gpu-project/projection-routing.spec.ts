@@ -23,15 +23,28 @@ import {
   type ProjectionPlan
 } from '@luma.gl/experimental/gpu-project';
 import {executeGPUProjectionBenchmark} from '../../src/gpu-project/gpu-projection-benchmark';
+import {getProjectionShaderFunctions} from '../../src/gpu-project/projection-shader';
+import {
+  addGeospatialPass,
+  getGeospatialDispatchLayout
+} from '../../src/geospatial/geospatial-utils';
 import {
   packProjectionPlan,
   PROJECTION_PATCH_WORD_LENGTH,
   PROJECTION_PLAN_BOUNDS_WORD_LENGTH
 } from '../../src/gpu-project/projection-plan';
 
-it('rejects malformed borrowed index leaf ranges without unbounded GPU scans', async context => {
+it('rejects malformed borrowed index leaf ranges with raw binary64 inputs on hardware', async context => {
   const device = await getWebGPUTestDevice();
-  if (!device) context.skip();
+  // SwiftShader overflows SPIR-V IDs while compiling this full raw-binary64/DS evaluator.
+  // The smaller lookup-only regression below still exercises the same range guards in CI.
+  if (
+    !device ||
+    device.info.gpu === 'software' ||
+    device.info.gpuType === 'cpu' ||
+    device.info.fallback
+  )
+    context.skip();
   const fitted = compileProjectionPlan({
     projection: position => position,
     bounds: [-1, -1, 1, 1],
@@ -56,6 +69,76 @@ it('rejects malformed borrowed index leaf ranges without unbounded GPU scans', a
     const result = await project(device, plan, [[0, 0]], 'uint32x4', true, words);
     expect([...result.validity]).toEqual([0]);
     expect([...result.output]).toEqual([0, 0, 0, 0]);
+  }
+}, 30000);
+
+it('bounds malformed borrowed leaf scans in the portable lookup-only shader', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) context.skip();
+  const fitted = compileProjectionPlan({
+    projection: position => position,
+    bounds: [-1, -1, 1, 1],
+    tolerance: 1e-6
+  });
+  const plan = indexProjectionPlan({
+    ...fitted,
+    patches: Array.from({length: 8}, (_value, id) => ({...fitted.patches[0], id}))
+  });
+  const words = packProjectionPlan(plan);
+  const graph = new GPUCommandGraph(device);
+  const storage = device.createBuffer({
+    byteLength: 256 + words.byteLength,
+    usage: Buffer.STORAGE | Buffer.COPY_DST
+  });
+  const result = device.createBuffer({byteLength: 4, usage: Buffer.STORAGE | Buffer.COPY_SRC});
+  const projectionPlans = graph.createDataView(
+    graph.importBuffer({id: 'plan', byteLength: storage.byteLength, usage: storage.usage}, storage),
+    {format: 'uint32', length: words.length, byteOffset: 256}
+  );
+  const output = graph.createDataView(
+    graph.importBuffer({id: 'output', byteLength: result.byteLength, usage: result.usage}, result),
+    {format: 'uint32', length: 1}
+  );
+  let compiled: ReturnType<typeof graph.compile> | undefined;
+  try {
+    addGeospatialPass(graph, {
+      id: 'borrowed-routing-guards',
+      precise: false,
+      dispatchLayout: getGeospatialDispatchLayout(
+        1,
+        device.limits.maxComputeWorkgroupsPerDimension
+      ),
+      bindings: {projectionPlans, output},
+      resources: [
+        {buffer: projectionPlans, usage: 'storage-read'},
+        {buffer: output, usage: 'storage-write'}
+      ],
+      source: `${getProjectionShaderFunctions({precise: false, doubleSingle: false, patchCount: 8, planOffset: 0, routingNodeCount: plan.routingIndex!.length})}
+@group(0) @binding(auto) var<storage, read_write> output: array<u32>;
+@compute @workgroup_size(1) fn main() { output[0] = findProjectionPatch(vec2f(0.0)); }`
+    });
+    compiled = await graph.compileAsync();
+    const offset = 8 * PROJECTION_PATCH_WORD_LENGTH + PROJECTION_PLAN_BOUNDS_WORD_LENGTH;
+    // Include valid internal/leaf ranges to ensure a shader that always rejects cannot pass.
+    for (const [firstPatch, patchEnd, expected] of [
+      [0, 0, 0],
+      [0, 4, 0],
+      [8, 0xffffffff, 0xffffffff],
+      [1, 0, 0xffffffff],
+      [0, 9, 0xffffffff],
+      [0, 5, 0xffffffff]
+    ]) {
+      words[offset + 5] = firstPatch;
+      words[offset + 6] = patchEnd;
+      storage.write(words, 256);
+      await executeGPUProjectionBenchmark(device, compiled, 'borrowed-routing-guards');
+      const bytes = await result.readAsync();
+      expect(new Uint32Array(bytes.buffer, bytes.byteOffset, 1)[0]).toBe(expected);
+    }
+  } finally {
+    compiled?.destroy();
+    storage.destroy();
+    result.destroy();
   }
 }, 30000);
 

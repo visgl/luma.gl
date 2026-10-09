@@ -68,6 +68,10 @@ independently against CPU domains before comparing GPU IDs. Aborted/debug and pr
 are not performance evidence. The multi-workgroup regression exercises this failure mode.
 A separate borrowed-buffer GPU regression rejects out-of-bounds, reversed and oversized leaf
 ranges, including a stored end of `0xffffffff`, before scanning any patch.
+The full raw-binary64 regression requires hardware: SwiftShader overflowed SPIR-V IDs during
+compilation in CI. A smaller lookup-only regression exercises the identical range guards on
+software adapters too, including valid ranges so unconditional rejection cannot pass. Software
+coverage is not high-precision or performance qualification.
 
 Lookup-only time includes dispatch and ID output writes; it is not a pure algorithmic instruction
 cost. Resident full-program time excludes uploads and readback, assuming data remains on GPU.
