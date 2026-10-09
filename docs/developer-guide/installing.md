@@ -66,6 +66,8 @@ class App extends AnimationLoopTemplate {
     });
     renderPass.end();
   }
+
+  override onFinalize(): void {}
 }
 
 makeAnimationLoop(App, {
@@ -98,9 +100,10 @@ pass each frame, and presents the result to the page.
 
 ## How Backend Selection Works
 
-The application supplies both adapters in preference order. A WebGPU-capable browser
-uses `webgpuAdapter`; other supported browsers fall back to `webgl2Adapter`. Application
-code continues to use the same luma.gl `Device`, resource, and render-pass APIs.
+`type: 'best-available'` selects a supported WebGPU adapter before WebGL 2, regardless
+of adapter array order. It does not retry WebGL after a selected WebGPU adapter fails to
+create a device; handle that rejection in application code. Portable application code uses
+the same `Device`, resource, and render-pass APIs with backend-appropriate shaders.
 
 Use only `webgpuAdapter` when your application depends on compute shaders, storage
 textures, or another WebGPU-only feature. The documentation marks backend-specific
@@ -156,7 +159,7 @@ const device = await luma.createDevice({
 ```
 
 To support both backends, install `@luma.gl/webgl` as well and supply the adapters in
-preference order:
+the adapter list:
 
 ```typescript
 import {luma} from '@luma.gl/core';

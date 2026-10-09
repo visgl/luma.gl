@@ -150,7 +150,7 @@ luma.gl v9 upgrades tooling and packaging to latest JavaScript ecosystem standar
 
 **`@luma.gl/core`**
 
-- The core module is no longer an umbrella module that simply re-exports exports from other modules.
+- The core module is no longer an umbrella module that simply re-exports symbols from other modules.
 - It now provides the abstract luma.gl `Device` API (for which `@luma.gl/webgpu` and `@luma.gl/webgl` provide backends).
 
 **`@luma.gl/engine`**

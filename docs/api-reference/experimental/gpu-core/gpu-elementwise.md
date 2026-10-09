@@ -64,7 +64,7 @@ y = [4,5,6]
 2*x+y = [6,9,12]
 ```
 
-AXPY is therefore a special case of MADD where one multiplicand is a scalar broadcast across the vector. Jarnevon should expose the general MADD primitive rather than requiring a separate core operation for every BLAS naming pattern. First-class GPU scalars/broadcasting will allow AXPY to map directly onto MADD.
+AXPY is therefore a special case of MADD where one multiplicand is a scalar broadcast across the vector. luma.gl should expose the general MADD primitive rather than requiring a separate core operation for every BLAS naming pattern. First-class GPU scalars/broadcasting will allow AXPY to map directly onto MADD.
 
 ## Contract
 

@@ -35,16 +35,18 @@ older, widely deployed compatibility path. luma.gl supports both through the sam
 so applications can adopt WebGPU without giving up WebGL reach where it still matters.
 
 For most applications, register both backends and let luma.gl choose the best available device.
-luma.gl prefers WebGPU when the browser can create a WebGPU device, then falls back to WebGL.
+`best-available` selects supported WebGPU before WebGL 2, independently of adapter array
+order. If the selected adapter fails during device creation, the promise rejects; applications
+that want to retry with WebGL 2 must do so explicitly.
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import {webglAdapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/webgl';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 
 const device = await luma.createDevice({
   type: 'best-available',
-  adapters: [webgpuAdapter, webglAdapter],
+  adapters: [webgpuAdapter, webgl2Adapter],
   createCanvasContext: true
 });
 ```

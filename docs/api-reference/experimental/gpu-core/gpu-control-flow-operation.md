@@ -54,23 +54,26 @@ GPU loops always carry `maximumIterations`. This provides a finite static bound 
 A `GPUOperationPredicate` records semantic intent:
 
 ```ts
-{
-  id: 'pcg-converged',
-  source: 'gpu',
+const active = program.scalar('active', 'uint32');
+const predicate = {
+  id: 'pcg-active',
+  source: 'gpu' as const,
+  value: active,
   expression: 'residualSquared > toleranceSquared'
-}
+};
 ```
 
-It intentionally does not contain an indirect-dispatch buffer or workgroup count. Those are properties of a concrete lowering, not of the mathematical program.
+`value` identifies GPU-produced uint32 state; `expression` is diagnostic text, not executable
+shader source. The predicate intentionally does not contain an indirect-dispatch buffer or workgroup count. Those are properties of a concrete lowering, not of the mathematical program.
 
 ## Lowering
 
-The first IR supports two lowering classes:
+The IR supports explicit lowering choices (or `auto` to let the compiler select):
 
 - `unroll`: duplicate a bounded body into command nodes;
 - `dynamic-gpu`: preserve a GPU predicate and let an operation-aware compiler select a GPU-resident realization.
 
-Dynamic lowering is deliberately not faked in this PR. WebGPU indirect conditions operate on concrete dispatch commands, and different child operations have different dispatch geometry. The following compiler tranche will map structured predicates to each lowered node correctly.
+WebGPU dynamic lowering uses GPU-written indirect dispatch arguments to gate each compute node. Contributors must declare exact dispatch geometry. See [WebGPU runtime control](/docs/api-reference/experimental/gpu-core/webgpu-runtime-control) for the execution contract.
 
 This separation is important:
 

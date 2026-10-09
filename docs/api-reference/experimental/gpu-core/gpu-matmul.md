@@ -120,7 +120,7 @@ MatVec is frequently memory-bandwidth dominated. GEMM has much greater arithmeti
 
 A fixed 16×16 tile is a portable baseline, not a universal optimum. Performance depends on tile dimensions, per-thread output blocking, vectorized loads, workgroup-memory behavior, register pressure, matrix shape and GPU architecture.
 
-This makes GEMM a strong target for Jarnevon autotuning:
+This makes GEMM a strong target for luma.gl autotuning:
 
 ```text
 matrix shape + device limits

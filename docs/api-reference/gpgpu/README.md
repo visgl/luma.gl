@@ -63,7 +63,7 @@ Interleaving two buffers together
 
 ```ts
 import {luma} from '@luma.gl/core';
-import {webglAdapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/webgl';
 import {GPUDataEvaluator, add, interleave} from '@luma.gl/gpgpu';
 
 const inputA = GPUDataEvaluator.fromArray(new Float32Array([0, 0, 0, 1, 0, 0]), {size: 3});
@@ -78,7 +78,7 @@ const outputAlt = interleave(inputA, add(inputB, GPUDataEvaluator.fromConstant(1
 
 const device = await luma.createDevice({
   type: 'webgl',
-  adapters: [webglAdapter]
+  adapters: [webgl2Adapter]
 });
 
 const outputVector = await output.evaluate(device);
