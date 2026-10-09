@@ -71,13 +71,17 @@ Releases the backend framebuffer and owned attachments. Borrowed attachments rem
 ### `clone(size?: {width: number; height: number}): Framebuffer`
 
 Creates a framebuffer with new attachment textures, optionally at a new size. Attachment
-contents are not copied. Destroy the previous framebuffer when it is no longer needed.
+contents are not copied. The cloned textures are passed as caller-supplied attachments, so
+the new framebuffer borrows them. Destroy its attachment textures separately when finished,
+as well as the framebuffer. For automatic attachment cleanup, create a new framebuffer
+from format strings instead.
 
 ### `resize(size?: {width: number; height: number} | [number, number]): void`
 
 Deprecated; prefer `clone()`. Replaces attachments when dimensions change, discarding their
-contents. With no argument, recreates attachments at the current size. Replacement textures
-are framebuffer-owned; borrowed originals remain the caller's responsibility.
+contents. With no argument, recreates attachments at the current size. Borrowed originals
+remain the caller's responsibility. Prefer creating a new framebuffer from format strings
+when predictable attachment ownership is required.
 
 Do not resize a canvas-owned framebuffer directly.
 
