@@ -57,7 +57,7 @@ export class GPUVectorEvaluator {
   readonly id?: string;
 
   private _gpuVector?: GPUVector;
-  private readonly _ownsGPUDataEvaluators: boolean;
+  private _ownsGPUDataEvaluators: boolean;
   private _destroyed = false;
 
   /**
@@ -76,7 +76,7 @@ export class GPUVectorEvaluator {
       throw new Error(`GPUVectorEvaluator.fromGPUVector() requires GPUData for "${vector.name}"`);
     }
 
-    return new GPUVectorEvaluator({
+    const evaluator = new GPUVectorEvaluator({
       id: vector.name,
       gpuDataEvaluators: vector.data.map(data =>
         GPUDataEvaluator.fromGPUData(data, {id: vector.name})
@@ -84,6 +84,8 @@ export class GPUVectorEvaluator {
       gpuVector: vector,
       format: vector.format
     });
+    evaluator._ownsGPUDataEvaluators = true;
+    return evaluator;
   }
 
   /**
@@ -118,7 +120,10 @@ export class GPUVectorEvaluator {
     this.id = id;
     this.gpuDataEvaluators = gpuDataEvaluators;
     this.format = format ?? gpuDataEvaluators[0].format;
-    this.length = gpuDataEvaluators.reduce((length, evaluator) => length + evaluator.length, 0);
+    this.length = gpuDataEvaluators.reduce(
+      (length, evaluator) => length + getGPUDataEvaluatorLogicalLength(evaluator),
+      0
+    );
     this._gpuVector = gpuVector;
     this._ownsGPUDataEvaluators = !gpuVector;
   }
@@ -145,7 +150,7 @@ export class GPUVectorEvaluator {
   mapGPUData(transform: GPUVectorEvaluatorMapGPUDataTransform): GPUVectorEvaluator {
     return GPUVectorEvaluator.fromGPUDataEvaluators(
       this.gpuDataEvaluators.map((evaluator, chunkIndex) => transform(evaluator, chunkIndex)),
-      {id: this.id}
+      {id: this.id, format: this.format}
     );
   }
 
@@ -248,11 +253,16 @@ function validateMatchingGPUDataEvaluators(gpuDataEvaluators: readonly GPUDataEv
       evaluator.type !== firstEvaluator.type ||
       evaluator.size !== firstEvaluator.size ||
       evaluator.normalized !== firstEvaluator.normalized ||
-      evaluator.format !== firstEvaluator.format
+      evaluator.format !== firstEvaluator.format ||
+      evaluator.segmentedFormat !== firstEvaluator.segmentedFormat
     ) {
       throw new Error('GPUVectorEvaluator requires matching GPUData evaluator layouts');
     }
   }
+}
+
+function getGPUDataEvaluatorLogicalLength(evaluator: GPUDataEvaluator): number {
+  return evaluator.startIndices ? evaluator.startIndices.length - 1 : evaluator.length;
 }
 
 function getSingleGPUVectorData(vector: GPUVector) {

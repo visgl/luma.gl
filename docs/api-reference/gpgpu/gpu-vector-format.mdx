@@ -60,11 +60,14 @@ Variable-length vertex-aligned vectors wrap a fixed element format:
 
 `vertex-list<format>` means each logical row owns a variable-length sequence of
 per-vertex element values. The format inside the angle brackets describes one
-flattened element. Offset buffers, row ranges, closed-path flags, text glyph
-maps, and similar topology metadata are adapter-owned.
+flattened element. Producers provide chunk-local row boundaries through
+[`GPUData.valueOffsets`](/docs/api-reference/gpgpu/gpu-data#variable-length-and-segmented-data).
+Closed-path flags, text glyph maps, and similar domain-specific topology remain
+producer-owned metadata.
 
 Variable-length non-vertex values use `value-list<format>`. For example,
-`value-list<uint8>` stores flattened UTF-8 bytes with producer-owned row offsets.
+`value-list<uint8>` stores flattened UTF-8 bytes with the same chunk-local
+`valueOffsets` contract.
 
 Fixed-size storage values keep their logical row width in the format itself:
 
