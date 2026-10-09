@@ -68,15 +68,10 @@ published results or cross-machine performance guarantees.
 ```ts
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {GPUProjection, compileProjectionPlan} from '@luma.gl/experimental/gpu-project';
-import {Projection} from '@math.gl/projection';
+import {projectionEngine} from '@math.gl/projection';
 
-// Register CRS definitions that are not included by the installed provider.
-Projection.defineProjectionAliases({
-  'EPSG:32610': '+proj=utm +zone=10 +datum=WGS84 +units=m +no_defs'
-});
-
-const projection = new Projection({
-  from: 'EPSG:32610',
+const projection = projectionEngine.createProjection({
+  from: '+proj=utm +zone=10 +datum=WGS84 +units=m +no_defs',
   to: 'EPSG:3857'
 });
 
@@ -109,7 +104,7 @@ coordinate system uses meters.
 object with a `project(coordinates)` method can provide the projection. For WGS84-to-Web-Mercator
 applications, `createWebMercatorProjection()` provides a zero-dependency alternative:
 
-With math.gl 5, `Projection` also accepts compatible CRS definitions from `@math.gl/crs`,
+With math.gl 5, `projectionEngine.createProjection()` also accepts compatible CRS definitions from `@math.gl/crs`,
 including PROJJSON objects, and executes them with the TypeScript projection engine. Use
 `planCRSProjection()` when a broader CRS metadata object may include unsupported vertical or
 compound components; it reports structured reasons for unsupported definitions. CRS metadata
@@ -402,10 +397,10 @@ coordinates or a latitude-first axis without explicitly rearranging/converting t
 This is the provider boundary for current math.gl projections and future engine-created transforms.
 
 ```ts
-import {Projection} from '@math.gl/projection';
+import {projectionEngine} from '@math.gl/projection';
 import {planProjection} from '@luma.gl/experimental/gpu-project';
 
-const projection = new Projection({from: 'EPSG:4326', to: 'EPSG:3857'});
+const projection = projectionEngine.createProjection({from: 'EPSG:4326', to: 'EPSG:3857'});
 const result = planProjection({
   projection,
   bounds: [-122.55, 37.7, -122.35, 37.85],
@@ -1049,7 +1044,7 @@ the real `ProjectionTableTransform` CPU adapter with its `GPUProjectionTable` ma
 ```typescript
 const report = await runProjectionTableBenchmark(device, {
   transform, // a prepared ProjectionTableTransform; preparation is outside this runner
-  provider: '@math.gl/projection 5.0.0-alpha.13 TypeScript',
+  provider: '@math.gl/projection 5.0.0-alpha.15 TypeScript',
   batches: [{positions: new Float64Array([-122.4, 37.8])}],
   maximumError: 0.001, // destination units, including output encoding/rounding
   warmupIterations: 2,

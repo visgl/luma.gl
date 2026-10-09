@@ -4,7 +4,7 @@
 
 import {describe, expect, it, vi} from 'vitest';
 import type {ReadonlyCRSDefinition} from '@math.gl/crs';
-import {Projection} from '@math.gl/projection';
+import {projectionEngine, ProjectionTransform} from '@math.gl/projection';
 import {
   evaluateProjectionProgram,
   invertProjectionProgram
@@ -48,7 +48,7 @@ describe('native PROJJSON frame lowering', () => {
         ]
       }
     } as const;
-    const project = vi.spyOn(Projection.prototype, 'project');
+    const project = vi.spyOn(ProjectionTransform.prototype, 'project');
     try {
       const result = requireNative(
         planCRSProjection({
@@ -226,8 +226,12 @@ describe('native PROJJSON frame lowering', () => {
         };
         const result = requireNative(planCRSProjection({from: source, to: target}));
         const geographic = [zone * 6 - 183 + 1.25, southernHemisphere ? -38 : 38];
-        const position = new Projection({from: 'EPSG:4326', to: source}).project(geographic);
-        const expected = new Projection({from: source, to: target}).project(position);
+        const position = projectionEngine
+          .createProjection({from: 'EPSG:4326', to: source})
+          .project(geographic);
+        const expected = projectionEngine
+          .createProjection({from: source, to: target})
+          .project(position);
         const actual = evaluateProjectionProgram(result.program, [
           position[0],
           position[1]

@@ -5,7 +5,7 @@
 import {build} from 'esbuild';
 import {describe, expect, it, vi} from 'vitest';
 import {
-  Projection,
+  projectionEngine,
   ProjectionTransform,
   createProjectionDescriptor,
   mercator
@@ -114,7 +114,7 @@ describe('provider-independent projection planning', () => {
   });
 
   it('accepts the pinned math.gl convenience projection without resolving its CRS again', () => {
-    const projection = new Projection({from: 'EPSG:4326', to: 'EPSG:3857'});
+    const projection = projectionEngine.createProjection({from: 'EPSG:4326', to: 'EPSG:3857'});
     const result = requireReady(
       planProjection({
         projection,

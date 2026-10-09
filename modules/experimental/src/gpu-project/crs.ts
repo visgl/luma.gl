@@ -4,7 +4,8 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuProj.
 
 import {parsePROJString, type PROJStringAst, type ReadonlyCRSDefinition} from '@math.gl/crs';
-import {Projection} from '@math.gl/projection';
+import {projectionEngine} from '@math.gl/projection';
+import type {Projection} from '@math.gl/projection/types';
 import type {TypeScriptCRSInput} from '@math.gl/projection/core';
 import {prepareCRSProjection} from './projection-engine';
 import {prepareProjectionReferences} from './projection-crs-input';
@@ -242,7 +243,7 @@ function planCRSDefinitionProjection(
   let projection: Projection;
   try {
     prepareProjectionReferences([options.from, options.to]);
-    projection = new Projection({
+    projection = projectionEngine.createProjection({
       from: providerDefinitions[0],
       to: providerDefinitions[1],
       enforceAxis: options.enforceAxis ?? false

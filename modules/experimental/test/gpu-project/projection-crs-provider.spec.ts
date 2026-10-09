@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {Projection} from '@math.gl/projection';
+import {projectionEngine} from '@math.gl/projection';
 import {planCRSProjection} from '@luma.gl/experimental/gpu-project/crs';
 import {runProjectionProgramBenchmark} from '@luma.gl/experimental/gpu-project/benchmarks';
 import type {ProjectionCoordinates} from '@luma.gl/experimental/gpu-project';
@@ -38,7 +38,7 @@ for (const method of ['lambert-1sp', 'lambert-2sp', 'albers'] as const) {
                 new RegExp(`\\+lat_${zeroParallel === 8823 ? 1 : 2}=[^ ]+`),
                 `+lat_${zeroParallel === 8823 ? 1 : 2}=0`
               );
-        const oracle = new Projection({from: 'EPSG:4326', to: serialized});
+        const oracle = projectionEngine.createProjection({from: 'EPSG:4326', to: serialized});
         const coordinates: ProjectionCoordinates[] = inverse
           ? [
               [200000.000001, 837500.000001],

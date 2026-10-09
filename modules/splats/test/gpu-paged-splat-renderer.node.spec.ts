@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {expect, it} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {WgslReflect} from 'wgsl_reflect';
 import {makeGPUSplatData, type SplatSource} from '@luma.gl/splats';
 import {NullDevice} from '@luma.gl/test-utils';
@@ -370,6 +370,37 @@ it('GPUPagedSplatRenderer retains directional SH, semantic controls, and HDR sou
   ).toBe(false);
   sourcePage.destroy();
   void 0;
+});
+
+it('empty external preparation never opens or clears a caller render pass', () => {
+  const device = makePagedWebGPUNullDevice();
+  const renderer = new GPUPagedSplatRenderer(device);
+  const encoder = device.commandEncoder;
+  const beginRenderPass = vi.spyOn(encoder, 'beginRenderPass');
+  expect(renderer.prepare(encoder)).toBeUndefined();
+  expect(beginRenderPass).not.toHaveBeenCalled();
+  const renderPass = device.beginRenderPass({clearColor: false});
+  const end = vi.spyOn(renderPass, 'end');
+  renderer.draw(renderPass);
+  renderer.draw(renderPass);
+  expect(end).not.toHaveBeenCalled();
+  renderer.destroy();
+  renderer.draw(renderPass);
+  expect(end).not.toHaveBeenCalled();
+  renderPass.end();
+  device.destroy();
+});
+
+it('unsplit source selections borrow typed row indices without copying', () => {
+  const device = makePagedWebGPUNullDevice();
+  const data = makeGPUSplatData(device, makePagedSplatSource([0.1, 0.3, 0.8], 0, 0));
+  const activeRows = new Uint32Array([2, 0]);
+  const renderer = new GPUPagedSplatRenderer(device, {pages: [{id: 'page', data, activeRows}]});
+  const planned = renderer['plannedSegments'][0];
+  expect(planned.activeRows).toBe(activeRows);
+  renderer.destroy();
+  data.destroy();
+  device.destroy();
 });
 
 function makePagedWebGPUNullDevice(): NullDevice {

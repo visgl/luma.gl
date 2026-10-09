@@ -4,13 +4,13 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuProj.
 
 import {ProjectionBuffer} from '@math.gl/projection/bulk';
-import type {ProjectionInstance} from '@math.gl/projection/types';
+import type {Projection} from '@math.gl/projection/types';
 import type {ProjectionCoordinates} from './types';
 import type {ProjectionProgramCPUVariant} from './projection-program-cpu-benchmark';
 
 /** Allocation-aware binary64 baselines for a retained, already prepared CPU transform. */
 export function createCRSProjectionCPUBenchmarks(options: {
-  projection: Pick<ProjectionInstance, 'projectToSync' | 'unprojectToSync' | 'projectFlatSync'>;
+  projection: Pick<Projection, 'projectToSync' | 'unprojectToSync' | 'projectFlatSync'>;
   /** Include the actual math.gl version in reproducible measurements. */
   provider: string;
   /** Optional CPU/reference error budget; default zero preserves exact comparisons. */

@@ -57,9 +57,9 @@ To sample the result in a later pass, supply a caller-owned texture created with
 finished. Sampler filters control subsequent sampling; they do not make a texture renderable.
 Check format support through the device before choosing optional render-target formats.
 
-For a new size, create another framebuffer from format strings and destroy the old one.
-`framebuffer.clone({width, height})` also creates new attachments without copying contents,
-but those textures require separate cleanup; see [Framebuffer ownership](/docs/api-reference/core/resources/framebuffer#methods-and-ownership).
+For a new size, use `framebuffer.clone({width, height})` and destroy the old framebuffer.
+The clone owns its new attachment textures and does not copy their contents; see
+[Framebuffer ownership](/docs/api-reference/core/resources/framebuffer#methods-and-ownership).
 Canvas framebuffer sizing is managed by its canvas context.
 
 ## Clear or preserve attachments
