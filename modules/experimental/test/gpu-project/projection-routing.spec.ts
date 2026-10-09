@@ -23,6 +23,41 @@ import {
   type ProjectionPlan
 } from '@luma.gl/experimental/gpu-project';
 import {executeGPUProjectionBenchmark} from '../../src/gpu-project/gpu-projection-benchmark';
+import {
+  packProjectionPlan,
+  PROJECTION_PATCH_WORD_LENGTH,
+  PROJECTION_PLAN_BOUNDS_WORD_LENGTH
+} from '../../src/gpu-project/projection-plan';
+
+it('rejects malformed borrowed index leaf ranges without unbounded GPU scans', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) context.skip();
+  const fitted = compileProjectionPlan({
+    projection: position => position,
+    bounds: [-1, -1, 1, 1],
+    precision: 'double-single',
+    tolerance: 1e-6
+  });
+  const plan = indexProjectionPlan({
+    ...fitted,
+    patches: Array.from({length: 8}, (_value, id) => ({...fitted.patches[0], id}))
+  });
+  const offset =
+    plan.patches.length * PROJECTION_PATCH_WORD_LENGTH + PROJECTION_PLAN_BOUNDS_WORD_LENGTH;
+  for (const [firstPatch, patchEnd] of [
+    [8, 0xffffffff],
+    [1, 0],
+    [0, 9],
+    [0, 5]
+  ]) {
+    const words = packProjectionPlan(plan);
+    words[offset + 5] = firstPatch;
+    words[offset + 6] = patchEnd;
+    const result = await project(device, plan, [[0, 0]], 'uint32x4', true, words);
+    expect([...result.validity]).toEqual([0]);
+    expect([...result.output]).toEqual([0, 0, 0, 0]);
+  }
+}, 30000);
 
 it('bounds lookup-only traversal for multi-workgroup inputs and matches every scan ID', async context => {
   const device = await getWebGPUTestDevice();
@@ -214,14 +249,16 @@ async function project(
   plan: ProjectionPlan,
   coordinates: ProjectionCoordinates[],
   inputFormat: ProjectionInputFormat,
-  legacy = false
+  legacy = false,
+  planWords?: Uint32Array
 ): Promise<{output: Uint32Array; validity: Uint32Array}> {
   const graph = new GPUCommandGraph(device);
   const buffers: Buffer[] = [];
   const makeView = <Format extends GPUVectorFormat>(
     id: string,
     format: Format,
-    data: Uint32Array | Float32Array
+    data: Uint32Array | Float32Array,
+    length = coordinates.length
   ): GraphDataView<Format> => {
     const buffer = device.createBuffer({
       byteLength: 256 + data.byteLength,
@@ -231,7 +268,7 @@ async function project(
     buffers.push(buffer);
     return graph.createDataView(
       graph.importBuffer({id, byteLength: buffer.byteLength, usage: buffer.usage}, buffer),
-      {format, length: coordinates.length, byteOffset: 256}
+      {format, length, byteOffset: 256}
     );
   };
   const raw = new Float64Array(coordinates.flat());
@@ -255,11 +292,15 @@ async function project(
   );
   const output = makeView('output', 'float32x4', new Float32Array(coordinates.length * 4));
   const validity = makeView('validity', 'uint32', new Uint32Array(coordinates.length));
+  const planBuffer = planWords
+    ? makeView('plan', 'uint32', planWords, planWords.length)
+    : undefined;
   const contributor =
     legacy && positions.format !== 'float32x4'
       ? new GPUProjection({
           positions: positions as GraphDataView<'float32x2' | 'uint32x4'>,
           plan,
+          planBuffer,
           output,
           validity,
           precision: 'double-single'

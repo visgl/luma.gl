@@ -9,7 +9,7 @@ import {
   PROJECTION_PLAN_BOUNDS_WORD_LENGTH,
   PROJECTION_DOMAIN_WORD_LENGTH
 } from './projection-plan';
-import {PROJECTION_ROUTING_WORD_LENGTH} from './projection-routing';
+import {PROJECTION_ROUTING_LEAF_SIZE, PROJECTION_ROUTING_WORD_LENGTH} from './projection-routing';
 
 export function getProjectionShaderSource(options: {
   precise: boolean;
@@ -380,7 +380,16 @@ fn findProjectionPatch(position: ${positionType}) -> u32 {
     if (any(routingPosition < minimum) || any(routingPosition > maximum)) {
       nodeIndex = projectionPlans[offset + 4u];
     } else {
-      for (var patchIndex = projectionPlans[offset + 5u]; patchIndex < projectionPlans[offset + 6u]; patchIndex += 1u) {
+      let firstPatch = projectionPlans[offset + 5u];
+      let storedPatchEnd = projectionPlans[offset + 6u];
+      // Reject malformed borrowed storage before scanning. Internal nodes have empty ranges;
+      // valid leaves never exceed the builder's fixed capacity.
+      if (firstPatch >= PATCH_COUNT || storedPatchEnd < firstPatch ||
+          storedPatchEnd > PATCH_COUNT || storedPatchEnd - firstPatch > ${PROJECTION_ROUTING_LEAF_SIZE}u) {
+        return INVALID_PATCH;
+      }
+      let patchEnd = min(storedPatchEnd, PATCH_COUNT);
+      for (var patchIndex = firstPatch; patchIndex < patchEnd; patchIndex += 1u) {
         if (projectionPatchContains(position, patchIndex)) { return patchIndex; }
       }
       nodeIndex += 1u;

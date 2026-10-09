@@ -5,7 +5,7 @@
 
 import type {ProjectionBounds, ProjectionPlan} from './types';
 
-/** Stackless, depth-first nodes. Leaf ranges preserve canonical first-match patch order. */
+/** Stackless, depth-first nodes. Leaves contain at most four canonical, first-match patches. */
 export type ProjectionRoutingNode = {
   readonly bounds: ProjectionBounds;
   readonly escape: number;
@@ -14,6 +14,7 @@ export type ProjectionRoutingNode = {
 };
 
 export const PROJECTION_ROUTING_WORD_LENGTH = 8;
+export const PROJECTION_ROUTING_LEAF_SIZE = 4;
 
 /**
  * Builds an optional broad-phase index without refitting or changing any coefficients.
@@ -47,7 +48,7 @@ export function indexProjectionPlan(plan: ProjectionPlan): ProjectionPlan {
         );
       }
     }
-    const leaf = patchEnd - firstPatch <= 4;
+    const leaf = patchEnd - firstPatch <= PROJECTION_ROUTING_LEAF_SIZE;
     nodes.push({
       bounds,
       escape: 0,

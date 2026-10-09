@@ -12,7 +12,7 @@ sweep remain the production table evidence; this report does not replace those m
 [Separate timestamp JSONL](data/gpu-project-routing-timestamps-2026-10-08.jsonl) contains four
 passing 65K/single-consumer cases. UTC capture timestamps are 2026-10-09. The code is based on
 master `e1772a57c` plus this P.8 working-tree implementation, recorded as
-`e1772a57c-p8-independent-gates`. Hardware: Apple `metal-3`, non-fallback, Chromium 151,
+`136b31e32-p8-leaf-range-hardening` (refreshed after review). Hardware: Apple `metal-3`, non-fallback, Chromium 151,
 math.gl 5.0.0-alpha.13 for the geographic oracle. Exact GPU model/driver are redacted. No other
 build/test from this task ran concurrently; unrelated workstation load and thermal state were
 not controlled.
@@ -21,27 +21,27 @@ At 65,536 requested rows (65,547 including probes), medians in milliseconds:
 
 | Fixture | Consumers | Lookup scan / index | Full inline scan / index | Full materialized scan / index |
 | --- | ---: | ---: | ---: | ---: |
-| utm-regional | 1 | 5.9 / 0.8 | 11.0 / 4.9 | 12.2 / 5.0 |
-| utm-regional | 4 | 6.0 / 0.9 | 42.3 / 17.9 | 11.3 / 5.0 |
-| albers-regional | 1 | 5.9 / 0.9 | 12.1 / 4.8 | 12.1 / 5.2 |
-| albers-regional | 4 | 5.7 / 0.8 | 44.6 / 18.3 | 11.2 / 5.5 |
+| utm-regional | 1 | 6.4 / 1.4 | 11.0 / 4.7 | 11.0 / 4.7 |
+| utm-regional | 4 | 5.7 / 0.8 | 42.2 / 18.0 | 11.1 / 4.8 |
+| albers-regional | 1 | 5.7 / 0.9 | 10.9 / 4.6 | 10.7 / 4.7 |
+| albers-regional | 4 | 5.7 / 0.8 | 41.4 / 17.5 | 10.9 / 4.7 |
 
 Both geographic fits have 256 quadratic patches. Index storage adds 4,064 bytes to 65,584 bytes
 of packed plan storage (about 6.2%); full-program headers are reported separately. CPU index
-construction in these four cases was 0.1–0.5 ms. Largest observed geographic errors were about
+construction in these four cases was 0.1–0.6 ms. Largest observed geographic errors were about
 0.214 mm for UTM and 0.160 mm for Albers, below the common 1 mm budget. Each lookup path
 independently accepted 65,545 rows and rejected the two invalid probes; patch checksums match.
 
 This is a useful opt-in win for these many-patch workloads, not a new default. The 16-patch stress
-case did **not** show a consistent win: its 65K/single-consumer inline time increased from
-5.0 to 6.7 ms, while the 400-patch case improved from 16.8 to 5.4 ms. Compare scan/index **within**
+case did **not** show a consistent win: its 65K/single-consumer materialized time increased from
+4.2 to 5.1 ms (inline: 5.2 / 5.0 ms), while the 400-patch inline case improved from 16.5 to 7.6 ms. Compare scan/index **within**
 each budget, not between the two stress fits. Common cubic geographic plans can have far fewer
 patches than these quadratic fits and need their own evidence. Setup/driver compilation can
 outweigh execution savings for short-lived workloads; distributions and setup costs remain in
 the raw data. Five ordered measurements are not enough to infer a universal crossover.
 
-In the separate instrumented capture, median lookup GPU timestamps were 8.13 / 0.99 ms
-(scan/index) for UTM and 7.35 / 0.73 ms for Albers. These are kernel/pass measurements from a
+In the separate instrumented capture, median lookup GPU timestamps were 5.37 / 0.50 ms
+(scan/index) for both UTM and Albers. These are kernel/pass measurements from a
 different run, not components to subtract from the resident medians above.
 
 ### Measurement contract
@@ -63,9 +63,11 @@ Reports separate:
 
 Development captures exposed a lookup-only binding-order bug: both routes could agree while
 rejecting valid inputs, and corrupt index reads could stall an unbounded traversal. The binding
-order is corrected, traversal is explicitly bounded, and lookup validity/membership is now checked
+order is corrected, traversal and leaf scans are explicitly bounded, and lookup validity/membership is now checked
 independently against CPU domains before comparing GPU IDs. Aborted/debug and pre-gate captures
 are not performance evidence. The multi-workgroup regression exercises this failure mode.
+A separate borrowed-buffer GPU regression rejects out-of-bounds, reversed and oversized leaf
+ranges, including a stored end of `0xffffffff`, before scanning any patch.
 
 Lookup-only time includes dispatch and ID output writes; it is not a pure algorithmic instruction
 cost. Resident full-program time excludes uploads and readback, assuming data remains on GPU.
