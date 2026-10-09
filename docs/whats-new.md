@@ -33,6 +33,7 @@ Target Release Date: Q3, 2026
 
 - **Incremental GPU execution** - [`GPUIncrementalExecution`](/docs/api-reference/experimental/gpu-core/gpu-incremental-execution) caches explicitly versioned batch partials, preserves borrowed source storage, and submits only changed batch work plus the live merge. The GPU Data Analysis example shows streaming sums, histograms, grouped counts, and unsigned Top-K with reuse instrumentation.
 
+- **Shared GPUData buffer references** - `GPUData.retainBufferOwnership()` gives several views of one buffer independent ownership references. `GPUTable.detachBatches()` and `packBatches()` use it so batches that view one shared allocation can be split and destroyed in any order.
 - **Batch-preserving GPU rendering** - `GPUVectorModel` renders chunked vectors without
   concatenating their source batches.
 - **Fixed-size-list GPU columns** - First-class `fixed-size-list<float32,768>` formats describe arbitrary fixed-width storage rows without inventing unsupported vertex formats; vectors retain logical table-row counts, flattened element counts, preserved batches, and caller-owned storage.
