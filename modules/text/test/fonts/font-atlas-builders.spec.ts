@@ -106,7 +106,7 @@ it('SDF glyph frames contain the full distance field without changing layout', (
   }
   const characterSet = 'Hgjy_|.';
   const bitmapAtlas = buildBitmapFontAtlas({fontFamily: 'sans-serif', characterSet});
-  const sdfAtlas = buildSdfFontAtlas({fontFamily: 'sans-serif', characterSet, buffer: 9});
+  const sdfAtlas = buildSdfFontAtlas({fontFamily: 'sans-serif', characterSet});
   const canvas = sdfAtlas.pages[0] as HTMLCanvasElement | OffscreenCanvas;
   const context = canvas.getContext('2d')!;
   for (const character of characterSet) {
@@ -128,4 +128,23 @@ it('SDF glyph frames contain the full distance field without changing layout', (
     expect(frame.layoutOffsetY).toBe(bitmapFrame.layoutOffsetY! - 9);
     expect(frame.anchorY).toBe(bitmapFrame.anchorY + 9);
   }
+});
+
+it('SDF padding preserves larger caller buffers and caps oversized distance fields', () => {
+  if (!isBrowser()) {
+    return;
+  }
+  const bitmapAtlas = buildBitmapFontAtlas({fontFamily: 'sans-serif', characterSet: 'H'});
+  const paddedAtlas = buildSdfFontAtlas({fontFamily: 'sans-serif', characterSet: 'H', buffer: 20});
+  expect(paddedAtlas.mapping.H.width).toBe(bitmapAtlas.mapping.H.width + 40);
+  expect(paddedAtlas.mapping.H.layoutOffsetX).toBe(-20);
+  const largeRadiusAtlas = buildSdfFontAtlas({
+    fontFamily: 'sans-serif',
+    characterSet: 'H',
+    radius: 1400
+  });
+  const frame = largeRadiusAtlas.mapping.H;
+  expect(frame.x + frame.width).toBeLessThanOrEqual(largeRadiusAtlas.width);
+  expect(frame.anchorX).toBeGreaterThan(0);
+  expect(frame.anchorX).toBeLessThan(frame.width);
 });
