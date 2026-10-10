@@ -256,13 +256,15 @@ describe('getClassicFP64Defines', () => {
       LUMA_FP64_CODE_ELIMINATION_WORKAROUND: true
     });
     expect(getClassicFP64Defines('amd')).toEqual({LUMA_FP64_INTEGER_ARITHMETIC: false});
-    for (const gpu of ['intel', 'unknown']) {
-      expect(getClassicFP64Defines(gpu), gpu).toEqual({
-        LUMA_FP64_INTEGER_ARITHMETIC: false,
-        LUMA_FP64_CODE_ELIMINATION_WORKAROUND: true,
-        LUMA_FP64_HIGH_BITS_OVERFLOW_WORKAROUND: true
-      });
-    }
+    expect(getClassicFP64Defines('intel')).toEqual({
+      LUMA_FP64_INTEGER_ARITHMETIC: false,
+      LUMA_FP64_CODE_ELIMINATION_WORKAROUND: true,
+      LUMA_FP64_HIGH_BITS_OVERFLOW_WORKAROUND: true
+    });
+    expect(getClassicFP64Defines('unknown')).toEqual({
+      LUMA_FP64_INTEGER_ARITHMETIC: false,
+      LUMA_FP64_CODE_ELIMINATION_WORKAROUND: true
+    });
   });
 });
 
