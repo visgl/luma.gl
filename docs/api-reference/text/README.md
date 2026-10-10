@@ -28,8 +28,10 @@ The subpath has no luma.gl, loaders.gl, or GPU module imports. Existing imports 
 - `buildSdfFontAtlas()` uses the same measurement and packing path, but rasterizes glyphs as signed
   distance fields and records the required threshold and smoothing settings.
 
-Glyph frames include the rasterized padding while layout advances and baselines remain
-unchanged, so outlines can use the full distance field.
+SDF atlases reserve at least `ceil(radius * (1 - cutoff))` pixels around glyphs (9 pixels
+with the defaults), capped to fit the atlas width. Larger caller-provided `buffer` values
+are preserved. Glyph frames include the rasterized padding while layout advances and
+baselines remain unchanged, so outlines can use the full distance field.
 
 Both builders cache identical inputs and incrementally add newly requested characters.
 

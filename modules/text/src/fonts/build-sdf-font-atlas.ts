@@ -6,6 +6,7 @@
 import TinySDF from '@mapbox/tiny-sdf';
 import {
   buildBrowserFontAtlas,
+  MAX_CANVAS_WIDTH,
   resolveBrowserFontAtlasSettings,
   type BrowserFontAtlasSettings,
   type BrowserFontRenderer
@@ -39,6 +40,10 @@ const DEFAULT_SDF_FONT_ATLAS_SETTINGS: Required<
 export function buildSdfFontAtlas(props: SdfFontAtlasSettings = {}): FontAtlas {
   const {cutoff, radius, smoothing} = {...DEFAULT_SDF_FONT_ATLAS_SETTINGS, ...props};
   const settings = resolveBrowserFontAtlasSettings(props);
+  // deck.gl#10780: reserve the full exterior distance field in both packing and rasterization.
+  const fieldPadding = Math.ceil(radius * (1 - cutoff));
+  const maxPadding = Math.floor(MAX_CANVAS_WIDTH / 2 - settings.fontSize);
+  settings.buffer = Math.max(settings.buffer, Math.min(fieldPadding, maxPadding));
   const {fontFamily, fontWeight, fontSize, buffer} = settings;
   return buildBrowserFontAtlas({
     settings,
