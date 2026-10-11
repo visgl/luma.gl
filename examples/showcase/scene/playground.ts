@@ -4,6 +4,7 @@ import {
   type ANARIRendererSubtype,
   type ANARIVector3
 } from '@luma.gl/scene';
+import {SelectionOutline} from '@luma.gl/experimental';
 import {ANARISceneSchema} from '@luma.gl/scene/schemas';
 import {AnimationLoopTemplate, OrbitControls, type AnimationProps} from '@luma.gl/engine';
 import {PLAYGROUND_PRESETS} from './playground-presets';
@@ -34,6 +35,8 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
   private readonly orbitControls: OrbitControls;
   private importRequest = 0;
   private pickRequest = 0;
+  private readonly selectionOutline?: SelectionOutline;
+  private selectedPlacementId: string | null = null;
   private pointerStart: {x: number; y: number} | null = null;
   private animationScrubbing = false;
   private editorCollapsed = false;
@@ -42,6 +45,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     super();
 
     this.anari = new ANARIDevice(device);
+    if (device.type === 'webgpu') this.selectionOutline = new SelectionOutline(device);
     this.deferredRendererAvailable = device.type === 'webgpu';
     this.editor = new ANARISceneEditor(
       getRequiredElement('scene-editor', HTMLTextAreaElement),
@@ -66,7 +70,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     setElementText('backend-label', `${device.type.toUpperCase()} · ${dynamicRange}`);
   }
 
-  override onRender({width, height, time}: AnimationProps): void {
+  override onRender({device, width, height, time}: AnimationProps): void {
     const scene = this.scene;
     if (!scene) {
       return;
@@ -92,6 +96,31 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     scene.frame.getParameter('camera')?.setParameters({position, direction}).commitParameters();
 
     const statistics = scene.frame.render();
+    if (this.selectionOutline && this.selectedPlacementId && this.rendererSubtype === 'raytrace') {
+      device.submit();
+      const channels = scene.frame.captureChannels();
+      if (channels) {
+        try {
+          const selectedIdentifier =
+            channels.identifiers.findIndex(
+              identity => identity.placementId === this.selectedPlacementId
+            ) + 1;
+          const renderPass = device.beginRenderPass({
+            clearColor: false,
+            clearDepth: false,
+            clearStencil: false
+          });
+          this.selectionOutline.draw(renderPass, {
+            identifierTexture: channels.identifierTexture,
+            selectedIdentifier
+          });
+          renderPass.end();
+          device.submit();
+        } finally {
+          channels.destroy();
+        }
+      }
+    }
     if (elapsedSeconds - this.lastStatisticsUpdate > 0.25) {
       setElementText('scene-instance-count', statistics.instanceCount.toLocaleString());
       setElementText('scene-draw-count', statistics.drawCount.toLocaleString());
@@ -126,6 +155,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     this.orbitControls.destroy();
     this.editor.dispose();
     this.scene?.destroy();
+    this.selectionOutline?.destroy();
     this.anari.destroy();
   }
 
@@ -370,12 +400,13 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       }
       const previousScene = this.scene;
       this.scene = nextScene;
+      this.selectedPlacementId = null;
       previousScene?.destroy();
       this.resetCamera(nextScene);
       this.updateAnimationControls(nextScene);
       setElementText(
         'scene-selection',
-        this.rendererSubtype === 'raytrace' ? 'Click a mark to inspect it' : ''
+        this.rendererSubtype === 'raytrace' ? 'Click a mark to inspect and outline it' : ''
       );
       setElementText('scene-title', nextScene.name);
       setElementText('scene-description', nextScene.description);
@@ -415,6 +446,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       ) {
         return;
       }
+      this.selectedPlacementId = hit?.placementId ?? null;
       const identifier = hit?.instance ? scene.instanceIdentifiers.get(hit.instance) : undefined;
       setElementText(
         'scene-selection',
