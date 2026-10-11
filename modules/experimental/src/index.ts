@@ -29,6 +29,7 @@ export type {
 export {getSceneAlphaMode, SceneRenderer} from './engine/scene-renderer';
 export {DeferredSceneRenderer, supportsDeferredScene} from './engine/deferred-scene-renderer';
 export type {
+  RayTracingScenePickResult,
   RayTracingScenePrimitive,
   RayTracingSceneRenderOptions
 } from './engine/ray-tracing-scene-renderer';

@@ -247,6 +247,17 @@ export type ANARIRendererParameters = {
   fogDensity?: number;
 };
 
+/** Retained objects and world-space hit information from a submitted ray-traced frame. */
+export type ANARIPickResult = {
+  surface: ANARISurface;
+  instance?: ANARIInstance;
+  placementId: string;
+  position: ANARIVector3;
+  normal: ANARIVector3;
+  /** Distance from the primary ray origin (the near plane for orthographic cameras). */
+  distance: number;
+};
+
 export type ANARIFrameParameters = {
   world: ANARIWorld;
   camera: ANARICamera;

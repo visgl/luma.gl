@@ -33,6 +33,8 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
   private readonly canvas: HTMLCanvasElement;
   private readonly orbitControls: OrbitControls;
   private importRequest = 0;
+  private pickRequest = 0;
+  private pointerStart: {x: number; y: number} | null = null;
   private animationScrubbing = false;
   private editorCollapsed = false;
 
@@ -209,6 +211,21 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       }
     });
 
+    this.canvas.addEventListener('pointerdown', event => {
+      if (!event.isPrimary || event.button !== 0) return;
+      this.pointerStart = {x: event.clientX, y: event.clientY};
+    });
+    this.canvas.addEventListener('pointerup', event => {
+      const start = this.pointerStart;
+      this.pointerStart = null;
+      if (start && Math.hypot(event.clientX - start.x, event.clientY - start.y) < 5) {
+        void this.pickScene(event.clientX, event.clientY);
+      }
+    });
+    this.canvas.addEventListener('pointercancel', () => {
+      this.pointerStart = null;
+    });
+
     const rendererSelector = getRequiredElement('renderer-selector', HTMLSelectElement);
     const deferredOption = rendererSelector.querySelector<HTMLOptionElement>(
       'option[value="deferred"]'
@@ -356,6 +373,10 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       previousScene?.destroy();
       this.resetCamera(nextScene);
       this.updateAnimationControls(nextScene);
+      setElementText(
+        'scene-selection',
+        this.rendererSubtype === 'raytrace' ? 'Click a mark to inspect it' : ''
+      );
       setElementText('scene-title', nextScene.name);
       setElementText('scene-description', nextScene.description);
       setElementText('editor-feedback', 'Scene committed');
@@ -368,6 +389,44 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       setElementText('scene-error', message);
       document.getElementById('scene-error')?.classList.add('visible');
       document.getElementById('editor-status')?.classList.add('invalid');
+    }
+  }
+
+  private async pickScene(clientX: number, clientY: number): Promise<void> {
+    const scene = this.scene;
+    if (!scene || this.rendererSubtype !== 'raytrace') {
+      return;
+    }
+    const size = scene.frame.getParameter('size');
+    const bounds = this.canvas.getBoundingClientRect();
+    if (!size || bounds.width === 0 || bounds.height === 0) {
+      return;
+    }
+    const request = ++this.pickRequest;
+    try {
+      const hit = await scene.frame.pick(
+        ((clientX - bounds.left) * size[0]) / bounds.width,
+        ((clientY - bounds.top) * size[1]) / bounds.height
+      );
+      if (
+        this.scene !== scene ||
+        request !== this.pickRequest ||
+        this.rendererSubtype !== 'raytrace'
+      ) {
+        return;
+      }
+      const identifier = hit?.instance ? scene.instanceIdentifiers.get(hit.instance) : undefined;
+      setElementText(
+        'scene-selection',
+        hit ? `Selected: ${identifier || hit.surface.id}` : 'No mark selected'
+      );
+    } catch (error) {
+      if (this.scene === scene && request === this.pickRequest) {
+        setElementText(
+          'scene-selection',
+          error instanceof Error ? error.message : 'Picking failed'
+        );
+      }
     }
   }
 

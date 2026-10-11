@@ -368,3 +368,17 @@ it('ANARI triangle geometries render packed RGB vertex colors', () => {
   device.destroy();
   void 0;
 });
+
+it('ANARI frame picking returns no hit before rendering or on unsupported runtimes', async () => {
+  const device = new ANARIDevice(new NullDevice({}));
+  const frame = device.newFrame({
+    world: device.newWorld(),
+    camera: device.newCamera('perspective'),
+    renderer: device.newRenderer('default')
+  });
+  expect(await frame.pick(0, 0)).toBe(null);
+  frame.render();
+  expect(await frame.pick(0, 0)).toBe(null);
+  frame.destroy();
+  device.destroy();
+});

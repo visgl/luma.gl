@@ -318,6 +318,47 @@ graphicsDevice.submit();
 
 If required world, camera, or renderer parameters are absent from committed frame state, the implementation returns zero-valued statistics without rendering.
 
+### `pick(x, y)`
+
+```ts
+frame.render();
+graphicsDevice.submit();
+const hit = await frame.pick(x, y);
+if (hit) {
+  console.log(hit.surface, hit.instance, hit.position, hit.normal);
+}
+```
+
+The built-in WebGPU `raytrace` renderer traces one centered camera ray at the requested
+output pixel. Coordinates use the frame's drawing-buffer size, with the origin at the
+top left; convert CSS pointer coordinates before calling. Picking uses full output
+resolution even when rendering uses reduced resolution or sparse temporal sampling.
+Submit the rendered frame before picking. The query submits its own command buffer and
+reads back only 32 bytes; it does not flush pending application commands.
+
+```ts
+type ANARIPickResult = {
+  surface: ANARISurface;
+  instance?: ANARIInstance;
+  placementId: string;
+  position: ANARIVector3;
+  normal: ANARIVector3;
+  distance: number;
+};
+```
+
+`surface` and optional `instance` are the original retained objects. `placementId`
+identifies their placement and stays stable when the world is reordered. Position and
+normal are in world space; distance is measured from the camera ray origin, which is
+on the near plane for orthographic cameras. Queries capture identity mappings before
+asynchronous readback, so later scene edits cannot reassign a pending result.
+
+Background, out-of-bounds or non-finite coordinates, unrendered/destroyed frames, and
+built-in raster renderers return `null`. Intersections use the ray renderer's opaque
+geometry semantics; alpha and transmission do not change which surface is selected.
+Full-frame ID/depth/normal outputs, selection outlines, and raster/ray composition
+remain follow-up work.
+
 ### `statistics`
 
 ```ts

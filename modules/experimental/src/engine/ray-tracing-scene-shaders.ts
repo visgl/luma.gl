@@ -216,8 +216,7 @@ fn makeRandom(seed: u32) -> f32 {
   return f32(value) / 4294967295.0;
 }
 
-fn makeCameraRayAtOffset(pixel: vec2<u32>, offset: vec2<f32>) -> Ray {
-  let coordinates = (vec2<f32>(pixel) + offset) / vec2<f32>(uniforms.dimensions.xy);
+fn makeCameraRayAtCoordinates(coordinates: vec2<f32>) -> Ray {
   let clipCoordinates = vec2<f32>(coordinates.x * 2.0 - 1.0, 1.0 - coordinates.y * 2.0);
   let farPoint = uniforms.inverseViewProjection * vec4<f32>(clipCoordinates, 1.0, 1.0);
   let farPosition = farPoint.xyz / farPoint.w;
@@ -227,6 +226,12 @@ fn makeCameraRayAtOffset(pixel: vec2<u32>, offset: vec2<f32>) -> Ray {
     origin = nearPoint.xyz / nearPoint.w;
   }
   return Ray(origin, normalize(farPosition - origin));
+}
+
+fn makeCameraRayAtOffset(pixel: vec2<u32>, offset: vec2<f32>) -> Ray {
+  return makeCameraRayAtCoordinates(
+    (vec2<f32>(pixel) + offset) / vec2<f32>(uniforms.dimensions.xy)
+  );
 }
 
 fn makeRadianceSampleOffset(pixel: vec2<u32>, sampleIndex: u32) -> vec2<f32> {
@@ -1072,6 +1077,32 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
   );
   textureStore(outputImage, vec2<i32>(pixel), vec4<f32>(color, totalSampleCount));
   textureStore(outputMetadata, vec2<i32>(pixel), metadata);
+}
+`;
+
+/** On-demand full-resolution picking reuses the exact primary-ray traversal. */
+export const RAY_TRACING_PICK_SHADER = /* wgsl */ `
+${RAY_TRACING_SCENE_SHADER}
+
+struct RayPickResult {
+  positionDistance: vec4<f32>,
+  normal: vec3<f32>,
+  primitiveIdentifier: u32,
+};
+
+@group(0) @binding(13) var<storage, read_write> pickResult: RayPickResult;
+@group(0) @binding(14) var<uniform> pickCoordinates: vec4<f32>;
+
+@compute @workgroup_size(1)
+fn pick() {
+  let ray = makeCameraRayAtCoordinates(pickCoordinates.xy);
+  let hit = intersectScene(ray, RAY_INFINITY);
+  pickResult.primitiveIdentifier = 0u;
+  if (hit.distance < RAY_INFINITY) {
+    pickResult.positionDistance = vec4<f32>(ray.origin + ray.direction * hit.distance, hit.distance);
+    pickResult.normal = hit.normal;
+    pickResult.primitiveIdentifier = hit.primitiveIndex + 1u;
+  }
 }
 `;
 

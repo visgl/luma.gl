@@ -36,6 +36,7 @@ import type {
   ANARIMaterialSubtype,
   ANARIObjectInfo,
   ANARIObjectType,
+  ANARIPickResult,
   ANARIRendererParameters,
   ANARIRendererSubtype,
   ANARISamplerParameters,
@@ -269,6 +270,14 @@ export class ANARIDevice {
       this.renderingRuntimes.set(runtimeFactory, renderingRuntime);
     }
     return renderingRuntime.render(frame);
+  }
+
+  /** Returns no hit when this renderer has no picking implementation or has not rendered. */
+  pickFrame(frame: ANARIFrame, x: number, y: number): Promise<ANARIPickResult | null> {
+    const rendererSubtype = frame.getParameter('renderer')?.subtype ?? 'default';
+    const runtimeFactory = this.rendererRuntimeFactories.get(rendererSubtype);
+    const runtime = runtimeFactory ? this.renderingRuntimes.get(runtimeFactory) : undefined;
+    return runtime?.pick?.(frame, x, y) ?? Promise.resolve(null);
   }
 
   destroyFrame(frame: ANARIFrame): void {
