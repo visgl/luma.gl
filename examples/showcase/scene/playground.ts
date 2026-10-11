@@ -14,6 +14,7 @@ import {
   createANARIJSONScene
 } from './playground-scene';
 import {ANARISceneEditor} from './scene-editor';
+import {getPlaygroundRendererSubtype, makePlaygroundRenderer} from './playground-renderer';
 import {exportANARIJSONSceneToGLTF, exportANARIJSONSceneToUSD} from './scene-export';
 import {loadSceneFile, loadSceneSample, SCENE_SAMPLES} from './usd-samples';
 
@@ -289,10 +290,10 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
           return;
         }
         const sceneDescription: ANARIJSONScene = validatedScene.data;
-        sceneDescription.renderer = {
-          ...sceneDescription.renderer,
-          '@@type': selector.value as ANARIRendererSubtype
-        };
+        sceneDescription.renderer = makePlaygroundRenderer(
+          sceneDescription.renderer,
+          selector.value as ANARIRendererSubtype
+        );
         this.editor.value = formatSceneJSON(sceneDescription);
         this.updateEditorMetadata();
         this.applyEditorScene();
@@ -401,7 +402,10 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       }
       this.editor.clearIssues();
       const sceneDescription: ANARIJSONScene = validatedScene.data;
-      const rendererSubtype = sceneDescription.renderer?.['@@type'] ?? 'default';
+      const rendererSubtype = getPlaygroundRendererSubtype(
+        sceneDescription.renderer,
+        this.deferredRendererAvailable
+      );
       const nextScene = createANARIJSONScene(this.anari, sceneDescription);
       this.rendererSubtype = rendererSubtype;
       getRequiredElement('renderer-selector', HTMLSelectElement).value = rendererSubtype;
