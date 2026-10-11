@@ -4,11 +4,13 @@
 
 import type {Device} from '@luma.gl/core';
 import type {ANARIFrame} from './anari-objects';
-import type {ANARIFrameStatistics} from './anari-types';
+import type {ANARIFrameStatistics, ANARIPickResult} from './anari-types';
 
 /** Backend contract used by ANARI renderer subtypes. */
 export interface ANARIRendererRuntime {
   render(frame: ANARIFrame): ANARIFrameStatistics;
+  /** Optional primary-ray picking for a previously submitted frame. */
+  pick?(frame: ANARIFrame, x: number, y: number): Promise<ANARIPickResult | null>;
   destroyFrame(frame: ANARIFrame): void;
   destroy(): void;
 }

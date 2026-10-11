@@ -59,6 +59,10 @@ The showcase implementation lives in `examples/showcase/scene/app.ts`; the playg
 Package-level tests demonstrate staged parameters, animated lights, shared-surface batching,
 zero-copy arrays, and rendering on available graphics backends.
 
+The JSON playground supports click-to-inspect selection with the WebGPU ray-tracing renderer.
+Applications can use [`frame.pick(x, y)`](/docs/api-reference/scene/anari-rendering#pickx-y)
+to retrieve retained surface/instance identities and world-space hit information.
+
 ## Current limitations
 
 The current package is a focused proof of concept, not a complete ANARI implementation:
@@ -70,7 +74,7 @@ The current package is a focused proof of concept, not a complete ANARI implemen
 - Group-attached lights are not transformed by their owning instance.
 - The `deferred` renderer is WebGPU-only and does not yet include clustered lighting, screen-space effects, bloom, or temporal velocity history.
 - The WebGPU-only `raytrace` renderer builds Morton-sorted object/instance TLAS and per-mesh triangle BLAS hierarchies on the GPU and supports scalar metallic/roughness direct lighting; hardware ray tracing, SAH/Karras hierarchy topology, skeletal/morph deformation, material textures, alpha/transmission, advanced PBR extensions, indirect bounces, and denoising are unsupported.
-- Visibility, picking, volumes, clipping planes, raster shadow maps, and asynchronous frame mapping are not implemented; direct shadow rays are available only in the `raytrace` renderer.
+- Visibility, raster picking, volumes, clipping planes, raster shadow maps, and asynchronous frame mapping are not implemented; direct shadow rays are available only in the `raytrace` renderer.
 - Experimental OpenUSD import does not support binary USDC crates or complete USD composition semantics.
 - Imported glTF skin attributes require an application-supplied retained joint palette; automatic
   skin-palette binding in the showcase importer and animated glTF export are not yet implemented.

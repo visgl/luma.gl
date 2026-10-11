@@ -29,7 +29,7 @@ and application interaction remain outside the renderer's responsibilities.
 | Tranche | Scope | Acceptance gate / status |
 | --- | --- | --- |
 | M0: reproducible baseline | Shared raster/ray chart scenes, fixed camera/data, stable datum identities, sampling controls, capture and measurements. | Started: JSON playground Chart Baseline contains six cuboids, six spheres, six cylinders, and a floor. Capture automation, explicit sampling seeds, GPU memory measurement, and hardware baselines remain planned. |
-| M1: interactive composition | Stable object-ID outputs, picking, depth/normal channels, outlines, and raster/ray depth composition. | Planned: select an animated mark while raster labels remain crisp and correctly occluded. Pull this work forward from T5. |
+| M1: interactive composition | Stable object-ID outputs, picking, depth/normal channels, outlines, and raster/ray depth composition. | Started with M1a: on-demand integer ray picking, retained placement identity, world-space hit position/normal/distance, and playground click inspection. Full-frame channels, outlines, and raster/ray depth composition remain planned; the complete gate is selecting an animated mark while raster labels remain crisp and correctly occluded. |
 | M2: indirect transport | Diffuse bounces, emissive illumination, explicit light sampling, bounce budgets, accumulation invalidation and convergence controls. | Planned: reproducible color bleeding and emissive illumination. Separate transport from the current T3. |
 | M3: material parity | Material textures, reflective transport, dielectric transmission, IOR/attenuation, and distinct alpha behavior. | Planned: matte, textured, metal, glossy, and overlapping glass marks. |
 | M4: responsive quality | Guided denoising, disocclusion rejection, motion history, interactive/still presets, and optional GPU timestamps. | Planned: motion stays responsive and stopping converges without persistent ghosts. |
@@ -47,7 +47,7 @@ path, so pixel equality is not the acceptance criterion.
 
 `chart-baseline.ts` also exports `makeChartBaseline(rendererSubtype)` for future capture
 and benchmark harnesses. IDs combine mark type and source datum identifier. These are
-retained scene identities, not implemented GPU picking IDs.
+retained scene identities. The ray renderer's on-demand picking query resolves its integer hit ID back to the retained surface and instance; the playground displays the authored instance ID.
 
 Measure interaction latency, scene-update cost, time to a defined image-quality threshold,
 and peak GPU memory on named hardware before setting numeric budgets. Record canvas size,

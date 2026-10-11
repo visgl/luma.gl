@@ -30,7 +30,8 @@ import {
   getRayTracingScenePresentationShader,
   RAY_TRACING_BOUNDS_SHADER,
   RAY_TRACING_HISTORY_CARRY_SHADER,
-  RAY_TRACING_SCENE_SHADER
+  RAY_TRACING_SCENE_SHADER,
+  RAY_TRACING_PICK_SHADER
 } from './ray-tracing-scene-shaders';
 import type {
   RayTracingGraphStageStatistics,
@@ -484,6 +485,19 @@ export type RayTracingSceneRenderOptions = SceneRenderOptions & {
   shadowSamplesPerFrame?: number;
 };
 
+/** Stable retained placement identity and a world-space primary-ray hit. */
+export type RayTracingScenePickResult = {
+  surfaceId: string;
+  /** Adapter-provided instanceIds entry, or a surface/transform-index fallback. */
+  placementId: string;
+  position: readonly [number, number, number];
+  normal: readonly [number, number, number];
+  /** Distance from the primary ray origin; orthographic rays originate on the near plane. */
+  distance: number;
+};
+
+type RayTracingPickIdentity = Pick<RayTracingScenePickResult, 'surfaceId' | 'placementId'>;
+
 type RayTracingScene = {
   primitives: Float32Array;
   triangles: Float32Array;
@@ -517,6 +531,7 @@ type RayTracingPrimitiveData = {
   triangleCount: number;
   previousTransforms: Map<string, Matrix4>;
   placements: Map<string, RayTracingPrimitivePlacement>;
+  pickIdentities: readonly RayTracingPickIdentity[];
 };
 
 type RayTracingPrimitivePlacement = {
@@ -597,6 +612,7 @@ type RayTracingFrameResources = {
   retainedSurfaces: readonly SceneSurface[];
   previousTransforms: Map<string, Matrix4>;
   primitivePlacements: Map<string, RayTracingPrimitivePlacement>;
+  pickIdentities: readonly RayTracingPickIdentity[];
   pendingPreviousTransformInstanceIds: Set<string>;
   previousTransformsNeedCommit: boolean;
   previousViewProjection: Matrix4;
@@ -639,6 +655,7 @@ export class RayTracingSceneRenderer {
   private readonly device: Device;
   private readonly frames = new Map<string, RayTracingFrameResources>();
   private readonly geometryCache = new Map<string, CompiledRayGeometry>();
+  private pickComputation?: Computation;
 
   constructor(device: Device) {
     if (device.type !== 'webgpu') {
@@ -813,6 +830,7 @@ export class RayTracingSceneRenderer {
           resources.primitiveBuffer.write(primitiveData.primitives);
           resources.previousTransforms = primitiveData.previousTransforms;
           resources.primitivePlacements = primitiveData.placements;
+          resources.pickIdentities = primitiveData.pickIdentities;
           resources.retainedSurfaces = options.surfaces;
           const updatedPrimitivePlacements = primitiveData.placements;
           resources.pendingPreviousTransformInstanceIds = new Set(
@@ -1015,6 +1033,101 @@ export class RayTracingSceneRenderer {
     return statistics as SceneRenderStatistics;
   }
 
+  /**
+   * Picks the last submitted frame at a top-left-origin display pixel.
+   * Submit render() before calling this method. The query submits its own command buffer;
+   * it does not submit any pending application-owned render commands.
+   */
+  async pick(
+    frameIdentifier: string,
+    x: number,
+    y: number
+  ): Promise<RayTracingScenePickResult | null> {
+    const resources = this.frames.get(frameIdentifier);
+    if (
+      !resources ||
+      !Number.isFinite(x) ||
+      !Number.isFinite(y) ||
+      x < 0 ||
+      y < 0 ||
+      x >= resources.displayWidth ||
+      y >= resources.displayHeight
+    ) {
+      return null;
+    }
+    const identities = resources.pickIdentities;
+    const coordinates = this.device.createBuffer({
+      usage: Buffer.UNIFORM | Buffer.COPY_DST,
+      data: new Float32Array([
+        (Math.floor(x) + 0.5) / resources.displayWidth,
+        (Math.floor(y) + 0.5) / resources.displayHeight,
+        0,
+        0
+      ])
+    });
+    const result = this.device.createBuffer({
+      usage: Buffer.STORAGE | Buffer.COPY_SRC,
+      byteLength: 32
+    });
+    const commandEncoder = this.device.createCommandEncoder();
+    let commandBuffer: ReturnType<typeof commandEncoder.finish> | undefined;
+    try {
+      this.pickComputation ??= new Computation(this.device, {
+        id: 'ray-scene-picking',
+        source: RAY_TRACING_PICK_SHADER,
+        entryPoint: 'pick',
+        shaderLayout: {
+          bindings: [
+            {name: 'uniforms', type: 'uniform', group: 0, location: 0},
+            {name: 'primitives', type: 'read-only-storage', group: 0, location: 1},
+            {name: 'triangles', type: 'read-only-storage', group: 0, location: 2},
+            {name: 'nodeMinima', type: 'read-only-storage', group: 0, location: 4},
+            {name: 'nodeMaxima', type: 'read-only-storage', group: 0, location: 5},
+            {name: 'leafPrimitiveIds', type: 'read-only-storage', group: 0, location: 6},
+            {name: 'blasNodes', type: 'read-only-storage', group: 0, location: 7},
+            {name: 'blasTriangleIds', type: 'read-only-storage', group: 0, location: 8},
+            {name: 'pickResult', type: 'storage', group: 0, location: 13},
+            {name: 'pickCoordinates', type: 'uniform', group: 0, location: 14}
+          ]
+        }
+      });
+      this.pickComputation.setBindings({
+        uniforms: resources.uniformBuffer,
+        primitives: resources.primitiveBuffer,
+        triangles: resources.triangleBuffer,
+        nodeMinima: resources.nodeMinimaBuffer,
+        nodeMaxima: resources.nodeMaximaBuffer,
+        leafPrimitiveIds: resources.sortedPrimitiveIdsBuffer,
+        blasNodes: resources.blasNodesBuffer,
+        blasTriangleIds: resources.blasTriangleIdsBuffer,
+        pickResult: result,
+        pickCoordinates: coordinates
+      });
+      const computePass = commandEncoder.beginComputePass();
+      this.pickComputation.dispatch(computePass, 1);
+      computePass.end();
+      commandBuffer = commandEncoder.finish();
+      this.device.submit(commandBuffer);
+      const bytes = await result.readAsync();
+      const values = new Float32Array(bytes.buffer, bytes.byteOffset, 8);
+      const primitiveIdentifier = new Uint32Array(bytes.buffer, bytes.byteOffset, 8)[7];
+      const identity = identities[primitiveIdentifier - 1];
+      return identity
+        ? {
+            ...identity,
+            position: [values[0], values[1], values[2]],
+            distance: values[3],
+            normal: [values[4], values[5], values[6]]
+          }
+        : null;
+    } finally {
+      commandBuffer?.destroy();
+      commandEncoder.destroy();
+      coordinates.destroy();
+      result.destroy();
+    }
+  }
+
   destroyFrame(frameIdentifier: string): void {
     const resources = this.frames.get(frameIdentifier);
     if (!resources) {
@@ -1046,6 +1159,8 @@ export class RayTracingSceneRenderer {
     for (const frameIdentifier of Array.from(this.frames.keys())) {
       this.destroyFrame(frameIdentifier);
     }
+    this.pickComputation?.destroy();
+    this.pickComputation = undefined;
   }
 
   private createFrameResources(props: {
@@ -1256,6 +1371,7 @@ export class RayTracingSceneRenderer {
       retainedSurfaces: props.surfaces,
       previousTransforms: props.primitiveData.previousTransforms,
       primitivePlacements: props.primitiveData.placements,
+      pickIdentities: props.primitiveData.pickIdentities,
       pendingPreviousTransformInstanceIds: new Set(),
       previousTransformsNeedCommit: false,
       previousViewProjection: new Matrix4(props.viewProjection),
@@ -3165,6 +3281,7 @@ function makePrimitiveData(
   const primitiveValues = new Float32Array(Math.max(primitiveCount, 1) * PRIMITIVE_FLOAT_COUNT);
   const nextPreviousTransforms = new Map<string, Matrix4>();
   const placements = new Map<string, RayTracingPrimitivePlacement>();
+  const pickIdentities: RayTracingPickIdentity[] = [];
   let primitiveIndex = 0;
   let triangleCount = 0;
 
@@ -3219,6 +3336,10 @@ function makePrimitiveData(
         primitiveIndex,
         placementIdentifier
       });
+      pickIdentities.push({
+        surfaceId: surface.id,
+        placementId: instanceIds?.[transformIndex] ?? placementIdentifier
+      });
       primitiveIndex++;
       triangleCount += geometryLayout?.triangleCount ?? 0;
     }
@@ -3229,7 +3350,8 @@ function makePrimitiveData(
     primitiveCount,
     triangleCount,
     previousTransforms: nextPreviousTransforms,
-    placements
+    placements,
+    pickIdentities
   };
 }
 

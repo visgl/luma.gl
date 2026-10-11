@@ -10,6 +10,7 @@ import type {
   ANARICameraSubtype,
   ANARIFrameParameters,
   ANARIFrameStatistics,
+  ANARIPickResult,
   ANARIGeometryParameters,
   ANARIGeometrySubtype,
   ANARIGroupParameters,
@@ -218,6 +219,11 @@ export class ANARIFrame extends ANARIObject<ANARIFrameParameters> {
   render(): ANARIFrameStatistics {
     this.statistics = this.device.renderFrame(this);
     return this.statistics;
+  }
+
+  /** Picks a top-left-origin display pixel after rendering and submitting the frame. */
+  pick(x: number, y: number): Promise<ANARIPickResult | null> {
+    return this.device.pickFrame(this, x, y);
   }
 
   destroy(): void {
