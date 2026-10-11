@@ -18,7 +18,7 @@ import type {
   ANARIWorld
 } from './anari-objects';
 
-/** Caller-owned full-resolution primary-hit GPU snapshot. Call destroy() to release it. */
+/** Caller-owned full-resolution primary-hit GPU snapshot. Submit final GPU use before destroy(). */
 export type ANARIFrameChannels = {
   /** Texel identifier index + 1 resolves to this retained placement; zero denotes a miss. */
   identifiers: readonly {surface: ANARISurface; instance?: ANARIInstance; placementId: string}[];

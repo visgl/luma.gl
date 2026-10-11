@@ -369,7 +369,8 @@ const channels = frame.captureChannels();
 if (channels) {
   // Bind the textures to a GPU effect or use Texture.readBuffer() for explicit readback.
   // Identifier texel value n > 0 resolves to channels.identifiers[n - 1].
-  // Release the snapshot after encoding its final GPU use.
+  // Release the snapshot after submitting its final GPU use.
+  graphicsDevice.submit();
   channels.destroy();
 }
 ```
@@ -392,7 +393,8 @@ commands. Render and submit the scene before capturing it.
 Identifiers are local to each snapshot: retain its identity table with its textures.
 Placement IDs remain stable when scene extraction reorders packed primitives. Snapshots
 are independent of subsequent renders, resizing, and frame destruction; the application
-must release them while the graphics device is still alive. Each capture allocates
+must submit commands using the textures before releasing them, while the graphics device
+is still alive. Each capture allocates
 24 bytes per output pixel and performs an additional full-frame traversal, so capture
 only when needed. Float textures require unfilterable texture bindings; identifiers
 require unsigned integer bindings. All three support texture sampling and explicit

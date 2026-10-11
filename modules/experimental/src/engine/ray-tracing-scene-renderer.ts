@@ -506,7 +506,7 @@ export type RayTracingSceneChannels = {
   distanceTexture: Texture;
   /** rgba32float world-space normal; alpha is one for a hit and zero for a miss. */
   normalTexture: Texture;
-  /** Release all three textures when the snapshot is no longer needed. */
+  /** Release all three textures after submitting their final GPU use. */
   destroy(): void;
 };
 
