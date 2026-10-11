@@ -7,12 +7,16 @@ import {RayTracingSceneRenderer, type RayTracingScenePrimitive} from '@luma.gl/e
 import type {ANARIFrame} from './anari-objects';
 import type {ANARIRendererRuntime} from './anari-renderer-runtime';
 import {ANARISceneAdapter} from './anari-scene-adapter';
-import type {ANARIFrameStatistics} from './anari-types';
+import type {ANARIFrameStatistics, ANARIPickResult, ANARIFrameChannels} from './anari-types';
 
 /** Adapts retained ANARI objects into the reusable shared ray-tracing scene renderer. */
 export class ANARIRayTracingRuntime implements ANARIRendererRuntime {
   private readonly adapter = new ANARISceneAdapter();
   private readonly renderer: RayTracingSceneRenderer;
+  private readonly framePlacements = new Map<
+    string,
+    ReturnType<ANARISceneAdapter['getPickPlacements']>
+  >();
 
   constructor(device: Device) {
     this.renderer = new RayTracingSceneRenderer(device);
@@ -29,6 +33,7 @@ export class ANARIRayTracingRuntime implements ANARIRendererRuntime {
 
     const primitives: Readonly<Record<string, RayTracingScenePrimitive>> =
       this.adapter.getAnalyticPrimitives(world);
+    this.framePlacements.set(frame.id, this.adapter.getPickPlacements(world));
     return this.renderer.render({
       ...options,
       primitives,
@@ -46,11 +51,51 @@ export class ANARIRayTracingRuntime implements ANARIRendererRuntime {
     });
   }
 
+  async pick(frame: ANARIFrame, x: number, y: number): Promise<ANARIPickResult | null> {
+    // Capture the last rendered frame's object mapping before asynchronous readback.
+    const placements = this.framePlacements.get(frame.id);
+    if (!placements) {
+      return null;
+    }
+    const hit = await this.renderer.pick(frame.id, x, y);
+    const placement = hit ? placements.get(hit.placementId) : undefined;
+    return hit && placement
+      ? {
+          surface: placement.surface,
+          ...(placement.instance ? {instance: placement.instance} : {}),
+          placementId: hit.placementId,
+          position: hit.position,
+          normal: hit.normal,
+          distance: hit.distance
+        }
+      : null;
+  }
+
+  captureChannels(frame: ANARIFrame): ANARIFrameChannels | null {
+    const placements = this.framePlacements.get(frame.id);
+    if (!placements) return null;
+    const channels = this.renderer.captureChannels(frame.id);
+    if (!channels) return null;
+    return {
+      ...channels,
+      identifiers: channels.identifiers.map(identity => {
+        const placement = placements.get(identity.placementId)!;
+        return {
+          surface: placement.surface,
+          ...(placement.instance ? {instance: placement.instance} : {}),
+          placementId: identity.placementId
+        };
+      })
+    };
+  }
+
   destroyFrame(frame: ANARIFrame): void {
+    this.framePlacements.delete(frame.id);
     this.renderer.destroyFrame(frame.id);
   }
 
   destroy(): void {
+    this.framePlacements.clear();
     this.renderer.destroy();
     this.adapter.destroy();
   }

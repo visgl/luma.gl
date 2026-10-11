@@ -318,6 +318,104 @@ graphicsDevice.submit();
 
 If required world, camera, or renderer parameters are absent from committed frame state, the implementation returns zero-valued statistics without rendering.
 
+### `pick(x, y)`
+
+```ts
+frame.render();
+graphicsDevice.submit();
+const hit = await frame.pick(x, y);
+if (hit) {
+  console.log(hit.surface, hit.instance, hit.position, hit.normal);
+}
+```
+
+The built-in WebGPU `raytrace` renderer traces one centered camera ray at the requested
+output pixel. Coordinates use the frame's drawing-buffer size, with the origin at the
+top left; convert CSS pointer coordinates before calling. Picking uses full output
+resolution even when rendering uses reduced resolution or sparse temporal sampling.
+Submit the rendered frame before picking. The query submits its own command buffer and
+reads back only 32 bytes; it does not flush pending application commands.
+
+```ts
+type ANARIPickResult = {
+  surface: ANARISurface;
+  instance?: ANARIInstance;
+  placementId: string;
+  position: ANARIVector3;
+  normal: ANARIVector3;
+  distance: number;
+};
+```
+
+`surface` and optional `instance` are the original retained objects. `placementId`
+identifies their placement and stays stable when the world is reordered. Position and
+normal are in world space; distance is measured from the camera ray origin, which is
+on the near plane for orthographic cameras. Queries capture identity mappings before
+asynchronous readback, so later scene edits cannot reassign a pending result.
+
+Picking uses the runtime that last rendered the frame, even if a different renderer
+has since been committed. Background, out-of-bounds or non-finite coordinates,
+unrendered/destroyed frames, and frames last rendered by a built-in raster renderer
+return `null`. Intersections use the ray renderer's opaque
+geometry semantics; alpha and transmission do not change which surface is selected.
+The experimental `SelectionOutline` overlay draws visible selected placement boundaries.
+Projected-depth transfer for raster overlays is available through `DepthTextureCopy`.
+
+### `captureChannels()`
+
+```ts
+frame.render();
+graphicsDevice.submit();
+const channels = frame.captureChannels();
+if (channels) {
+  // Bind the textures to a GPU effect or use Texture.readBuffer() for explicit readback.
+  // Identifier texel value n > 0 resolves to channels.identifiers[n - 1].
+  // Release the snapshot after submitting its final GPU use.
+  graphicsDevice.submit();
+  channels.destroy();
+}
+```
+
+The built-in WebGPU `raytrace` runtime traces one centered primary ray for every output
+pixel and returns a caller-owned GPU snapshot. Its size matches the drawing-buffer frame
+size, independently of resolution scaling, jitter, progressive accumulation, or sparse
+sampling. Texture coordinates use a top-left origin, matching `pick()`. The capture
+submits its own command buffer, performs no CPU readback, and does not flush application
+commands. Render and submit the scene before capturing it.
+
+| Property | Format / meaning |
+| --- | --- |
+| `identifierTexture` | `r32uint`: exact integer placement identifier; zero denotes background. |
+| `distanceTexture` | `r32float`: distance from the camera ray origin in world units; zero denotes background. Orthographic origins lie on the near plane. This is not projected device depth. |
+| `normalTexture` | `rgba32float`: world-space normal in xyz, hit validity in alpha. Background is all zero. |
+| `projectedDepthTexture` | `r32float`: projected WebGPU depth in zero-to-one range, from the last rendered camera; background is one. |
+| `identifiers` | Array mapping nonzero texel value `n` to index `n - 1`, containing the original `surface`, optional `instance`, and stable `placementId`. |
+| `destroy()` | Releases all four snapshot textures. |
+
+Identifiers are local to each snapshot: retain its identity table with its textures.
+Placement IDs remain stable when scene extraction reorders packed primitives. Snapshots
+are independent of subsequent renders, resizing, and frame destruction; the application
+must submit commands using the textures before releasing them, while the graphics device
+is still alive. Each capture allocates
+28 bytes per output pixel and performs an additional full-frame traversal, so capture
+only when needed. Float textures require unfilterable texture bindings; identifiers
+require unsigned integer bindings. All four support texture sampling and explicit
+texture-to-buffer copies.
+
+Like picking, capture uses the runtime that last rendered the frame. Unrendered or
+destroyed frames and frames last rendered by the built-in raster runtime return `null`.
+Channels use opaque intersection semantics; alpha/transmission remains separate work.
+Use [`DepthTextureCopy`](/docs/api-reference/experimental/depth-texture-copy) to transfer
+`projectedDepthTexture` into a color-preserving render pass with a depth attachment before
+drawing raster overlays with matching camera and viewport conventions.
+
+### Selection outlines
+
+Use [`SelectionOutline`](/docs/api-reference/experimental/selection-outline) to draw an
+inward border over a selected visible placement. Resolve a `pick()` placement ID against
+the current snapshot identity table, rather than reusing an integer ID from an older
+snapshot. The JSON playground performs this lookup each frame while a mark is selected.
+
 ### `statistics`
 
 ```ts

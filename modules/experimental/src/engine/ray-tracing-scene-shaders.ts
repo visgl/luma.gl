@@ -216,8 +216,7 @@ fn makeRandom(seed: u32) -> f32 {
   return f32(value) / 4294967295.0;
 }
 
-fn makeCameraRayAtOffset(pixel: vec2<u32>, offset: vec2<f32>) -> Ray {
-  let coordinates = (vec2<f32>(pixel) + offset) / vec2<f32>(uniforms.dimensions.xy);
+fn makeCameraRayAtCoordinates(coordinates: vec2<f32>) -> Ray {
   let clipCoordinates = vec2<f32>(coordinates.x * 2.0 - 1.0, 1.0 - coordinates.y * 2.0);
   let farPoint = uniforms.inverseViewProjection * vec4<f32>(clipCoordinates, 1.0, 1.0);
   let farPosition = farPoint.xyz / farPoint.w;
@@ -227,6 +226,12 @@ fn makeCameraRayAtOffset(pixel: vec2<u32>, offset: vec2<f32>) -> Ray {
     origin = nearPoint.xyz / nearPoint.w;
   }
   return Ray(origin, normalize(farPosition - origin));
+}
+
+fn makeCameraRayAtOffset(pixel: vec2<u32>, offset: vec2<f32>) -> Ray {
+  return makeCameraRayAtCoordinates(
+    (vec2<f32>(pixel) + offset) / vec2<f32>(uniforms.dimensions.xy)
+  );
 }
 
 fn makeRadianceSampleOffset(pixel: vec2<u32>, sampleIndex: u32) -> vec2<f32> {
@@ -1072,6 +1077,70 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
   );
   textureStore(outputImage, vec2<i32>(pixel), vec4<f32>(color, totalSampleCount));
   textureStore(outputMetadata, vec2<i32>(pixel), metadata);
+}
+`;
+
+/** On-demand full-resolution picking reuses the exact primary-ray traversal. */
+export const RAY_TRACING_PICK_SHADER = /* wgsl */ `
+${RAY_TRACING_SCENE_SHADER}
+
+struct RayPickResult {
+  positionDistance: vec4<f32>,
+  normal: vec3<f32>,
+  primitiveIdentifier: u32,
+};
+
+@group(0) @binding(13) var<storage, read_write> pickResult: RayPickResult;
+@group(0) @binding(14) var<uniform> pickCoordinates: vec4<f32>;
+
+@compute @workgroup_size(1)
+fn pick() {
+  let ray = makeCameraRayAtCoordinates(pickCoordinates.xy);
+  let hit = intersectScene(ray, RAY_INFINITY);
+  pickResult.primitiveIdentifier = 0u;
+  if (hit.distance < RAY_INFINITY) {
+    pickResult.positionDistance = vec4<f32>(ray.origin + ray.direction * hit.distance, hit.distance);
+    pickResult.normal = hit.normal;
+    pickResult.primitiveIdentifier = hit.primitiveIndex + 1u;
+  }
+}
+`;
+
+/** Full display-resolution primary-hit channels, independent of temporal radiance history. */
+export const RAY_TRACING_CHANNEL_SHADER = /* wgsl */ `
+${RAY_TRACING_SCENE_SHADER}
+
+@group(0) @binding(13) var identifierImage: texture_storage_2d<r32uint, write>;
+@group(0) @binding(14) var distanceImage: texture_storage_2d<r32float, write>;
+@group(0) @binding(15) var normalImage: texture_storage_2d<rgba32float, write>;
+@group(0) @binding(16) var projectedDepthImage: texture_storage_2d<r32float, write>;
+@group(0) @binding(17) var<uniform> channelViewProjection: mat4x4<f32>;
+
+@compute @workgroup_size(8, 8)
+fn captureChannels(@builtin(global_invocation_id) invocation: vec3<u32>) {
+  let dimensions = textureDimensions(identifierImage);
+  if (any(invocation.xy >= dimensions)) { return; }
+  let pixel = vec2<i32>(invocation.xy);
+  let coordinates = (vec2<f32>(invocation.xy) + vec2<f32>(0.5)) / vec2<f32>(dimensions);
+  let ray = makeCameraRayAtCoordinates(coordinates);
+  let hit = intersectScene(ray, RAY_INFINITY);
+  var identifier = 0u;
+  var distance = 0.0;
+  var normal = vec4<f32>(0.0);
+  var projectedDepth = 1.0;
+  if (hit.distance < RAY_INFINITY) {
+    identifier = hit.primitiveIndex + 1u;
+    distance = hit.distance;
+    normal = vec4<f32>(hit.normal, 1.0);
+    let position = ray.origin + ray.direction * hit.distance;
+    let clipPosition = channelViewProjection * vec4<f32>(position, 1.0);
+    // Camera matrices use OpenGL clip depth; WebGPU attachments use zero to one.
+    projectedDepth = clamp(clipPosition.z / clipPosition.w * 0.5 + 0.5, 0.0, 1.0);
+  }
+  textureStore(projectedDepthImage, pixel, vec4<f32>(projectedDepth));
+  textureStore(identifierImage, pixel, vec4<u32>(identifier));
+  textureStore(distanceImage, pixel, vec4<f32>(distance));
+  textureStore(normalImage, pixel, normal);
 }
 `;
 

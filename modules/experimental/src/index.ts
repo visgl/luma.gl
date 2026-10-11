@@ -27,8 +27,11 @@ export type {
   SceneSurface
 } from './engine/scene-renderer';
 export {getSceneAlphaMode, SceneRenderer} from './engine/scene-renderer';
+export {SelectionOutline, type SelectionOutlineOptions} from './rendering/selection-outline';
 export {DeferredSceneRenderer, supportsDeferredScene} from './engine/deferred-scene-renderer';
 export type {
+  RayTracingScenePickResult,
+  RayTracingSceneChannels,
   RayTracingScenePrimitive,
   RayTracingSceneRenderOptions
 } from './engine/ray-tracing-scene-renderer';
@@ -293,3 +296,5 @@ export * from './webxr/index';
 export {GPUGridIndex, GraphVectorView} from '@luma.gl/gpgpu/gpu-core';
 
 export * from './simulation/index';
+
+export {DepthTextureCopy} from './rendering/depth-texture-copy';
