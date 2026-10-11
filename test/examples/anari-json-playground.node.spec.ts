@@ -1,3 +1,8 @@
+import {ANARISceneSchema} from '@luma.gl/scene/schemas';
+import {
+  getPlaygroundRendererSubtype,
+  makePlaygroundRenderer
+} from '../../examples/showcase/scene/playground-renderer';
 import {expect, it} from 'vitest';
 import {ANARIDevice, ANARIGroup} from '@luma.gl/scene';
 import {NullDevice} from '@luma.gl/test-utils';
@@ -103,4 +108,39 @@ it('ANARI JSON scene references fail with actionable errors', () => {
 
   device.destroy();
   void 0;
+});
+
+it('playground renderer switches keep shared settings and remove unsupported settings', () => {
+  const scene = structuredClone(PLAYGROUND_PRESETS[3].scene);
+  for (const subtype of [
+    'default',
+    'deferred',
+    'debugNormals',
+    'debugDepth',
+    'raytrace'
+  ] as const) {
+    const renderer = makePlaygroundRenderer(scene.renderer, subtype);
+    expect(ANARISceneSchema.safeParse({...scene, renderer}).success).toBe(true);
+    expect(renderer.background).toEqual(scene.renderer?.background);
+    expect(renderer['@@type']).toBe(subtype);
+    expect(renderer.samplesPerPixel).toBe(
+      subtype === 'raytrace' ? scene.renderer?.samplesPerPixel : undefined
+    );
+    expect(renderer.resolutionScale).toBe(
+      subtype === 'raytrace' ? scene.renderer?.resolutionScale : undefined
+    );
+  }
+});
+
+it('playground rejects unsupported JSON renderers before creating a WebGL scene', () => {
+  for (const subtype of ['raytrace', 'deferred'] as const) {
+    expect(() => getPlaygroundRendererSubtype({'@@type': subtype}, false)).toThrow(
+      'requires WebGPU'
+    );
+    expect(getPlaygroundRendererSubtype({'@@type': subtype}, true)).toBe(subtype);
+  }
+  for (const subtype of ['default', 'debugNormals', 'debugDepth'] as const) {
+    expect(getPlaygroundRendererSubtype({'@@type': subtype}, false)).toBe(subtype);
+  }
+  expect(getPlaygroundRendererSubtype(undefined, false)).toBe('default');
 });

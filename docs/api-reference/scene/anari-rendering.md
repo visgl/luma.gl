@@ -358,7 +358,8 @@ has since been committed. Background, out-of-bounds or non-finite coordinates,
 unrendered/destroyed frames, and frames last rendered by a built-in raster renderer
 return `null`. Intersections use the ray renderer's opaque
 geometry semantics; alpha and transmission do not change which surface is selected.
-Selection outlines and raster/ray composition remain follow-up work.
+The experimental `SelectionOutline` overlay draws visible selected placement boundaries.
+Raster/ray composition remains follow-up work.
 
 ### `captureChannels()`
 
@@ -404,6 +405,13 @@ Like picking, capture uses the runtime that last rendered the frame. Unrendered 
 destroyed frames and frames last rendered by the built-in raster runtime return `null`.
 Channels use opaque intersection semantics; alpha/transmission and device-depth
 conversion for raster composition remain separate capabilities.
+
+### Selection outlines
+
+Use [`SelectionOutline`](/docs/api-reference/experimental/selection-outline) to draw an
+inward border over a selected visible placement. Resolve a `pick()` placement ID against
+the current snapshot identity table, rather than reusing an integer ID from an older
+snapshot. The JSON playground performs this lookup each frame while a mark is selected.
 
 ### `statistics`
 

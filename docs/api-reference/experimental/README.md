@@ -71,6 +71,7 @@ stable Engine models and Shadertools passes.
 | [DeferredSceneRenderer](/docs/api-reference/experimental/deferred-scene-renderer) | G-buffer-based opaque lighting with forward fallbacks for unsupported materials. |
 | [PBR environments](/docs/api-reference/experimental/pbr-environment) | Diffuse irradiance, prefiltered specular cubemaps, and BRDF lookup textures. |
 | [GBuffer](/docs/api-reference/experimental/g-buffer) | Standard scene color, normal, roughness, velocity, and depth attachments. |
+| [Selection outlines](/docs/api-reference/experimental/selection-outline) | Visible placement boundaries from exact integer ID textures. |
 | [Deferred lighting](/docs/api-reference/experimental/deferred-lighting) | Fullscreen lighting from G-buffer material targets. |
 | [Clustered lighting](/docs/api-reference/experimental/clustered-lighting) | Compute-binned local lights for deferred shading. |
 | [Shadow maps](/docs/api-reference/experimental/shadow-map-renderer) | Cascaded, spot-array, and point cube-array shadows with PCSS filtering. |

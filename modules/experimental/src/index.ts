@@ -27,6 +27,7 @@ export type {
   SceneSurface
 } from './engine/scene-renderer';
 export {getSceneAlphaMode, SceneRenderer} from './engine/scene-renderer';
+export {SelectionOutline, type SelectionOutlineOptions} from './rendering/selection-outline';
 export {DeferredSceneRenderer, supportsDeferredScene} from './engine/deferred-scene-renderer';
 export type {
   RayTracingScenePickResult,

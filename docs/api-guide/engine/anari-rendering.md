@@ -61,7 +61,8 @@ zero-copy arrays, and rendering on available graphics backends.
 
 The JSON playground supports click-to-inspect selection with the WebGPU ray-tracing renderer.
 Applications can use [`frame.pick(x, y)`](/docs/api-reference/scene/anari-rendering#pickx-y)
-to retrieve retained surface/instance identities and world-space hit information.
+to retrieve retained surface/instance identities and world-space hit information. Selected
+marks also receive an inward outline that follows animation and camera movement.
 
 ## Primary-hit GPU channels
 
@@ -72,7 +73,8 @@ snapshots and must be released with `channels.destroy()`. They perform an additi
 primary-ray traversal without CPU readback. See the
 [frame channel reference](/docs/api-reference/scene/anari-rendering#capturechannels)
 for formats, ownership, and coordinate conventions. Ray distance is not projected
-device depth; selection outlines and raster/ray depth composition remain planned.
+device depth. The experimental `SelectionOutline` overlay consumes exact ID snapshots
+for visible selection boundaries; raster/ray depth composition remains planned.
 
 ## Current limitations
 
