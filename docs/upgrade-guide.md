@@ -32,6 +32,14 @@ Uint8 indices supplied to the engine compatibility adapter are widened to Uint16
 frusta. Primitive tessellation order can change, so derive face metadata from normals rather
 than relying on vertex or index ordering.
 
+### Shader module uniform updates
+
+`Model` now writes only the shader modules whose uniforms changed since its last draw.
+`ShaderInputs.setProps()` detects changes by comparing values, so update uniforms through
+`setProps()`. Changing values in place in the object returned by
+`ShaderInputs.getUniformValues()`, or in the arrays of the previous uniforms passed to a
+module's `getUniforms()`, no longer reaches the GPU.
+
 **@luma.gl/gpgpu**
 
 ### GPUFFT2D graph lifecycle

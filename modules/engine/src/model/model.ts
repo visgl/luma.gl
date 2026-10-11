@@ -318,6 +318,8 @@ export class Model {
   material: Material | null = null;
   // @ts-expect-error Assigned in function called by constructor
   _uniformStore: UniformStore;
+  /** Revisions of the shader input modules last written to `_uniformStore` */
+  private _uniformRevisions: Record<string, number> = {};
 
   _attributeInfos: Record<string, AttributeInfo> = {};
   _gpuGeometry: GPUGeometry | null = null;
@@ -823,6 +825,7 @@ export class Model {
   setShaderInputs(shaderInputs: ShaderInputs): void {
     this.shaderInputs = shaderInputs;
     this._uniformStore = new UniformStore(this.device, this.shaderInputs.modules);
+    this._uniformRevisions = {};
     // Create uniform buffer bindings for all modules that actually have uniforms
     for (const [moduleName, module] of Object.entries(this.shaderInputs.modules)) {
       if (shaderModuleHasUniforms(module) && !this.material?.ownsModule(moduleName)) {
@@ -847,7 +850,10 @@ export class Model {
    * subsequent draw commands.
    */
   updateShaderInputs(commandEncoder?: CommandEncoder): void {
-    this._uniformStore.setUniforms(this.shaderInputs.getUniformValues(), commandEncoder);
+    this._uniformStore.setUniforms(
+      this.shaderInputs.getChangedUniformValues(this._uniformRevisions),
+      commandEncoder
+    );
     this.setBindings(this._getNonMaterialBindings(this.shaderInputs.getBindingValues()));
     // TODO - this is already tracked through buffer/texture update times?
     this.setNeedsRedraw('shaderInputs');

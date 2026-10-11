@@ -438,3 +438,108 @@ it('ShaderInputs#lighting array-of-struct uniforms', () => {
 
   void 0;
 });
+
+const plainModule = {
+  name: 'plain',
+  uniformTypes: {color: 'vec4<f32>', scale: 'f32'},
+  defaultUniforms: {color: [0, 0, 0, 0], scale: 1}
+} as any;
+
+it('ShaderInputs#setProps keeps unchanged module uniforms', () => {
+  const shaderInputs = new ShaderInputs<{plain: {color: number[]; scale: number}}>({
+    plain: plainModule
+  });
+  const revision = shaderInputs.moduleUniformRevisions.plain;
+  shaderInputs.setProps({plain: {color: [1, 0, 1, 1]}});
+  const uniforms = shaderInputs.moduleUniforms.plain;
+  expect(shaderInputs.moduleUniformRevisions.plain, 'change bumps revision').toBe(revision + 1);
+
+  shaderInputs.setProps({plain: {color: new Float32Array([1, 0, 1, 1]) as any}});
+  shaderInputs.setProps({plain: {color: [1, 0, 1, 1], scale: undefined}});
+  shaderInputs.setProps({plain: {scale: 1}});
+  expect(shaderInputs.moduleUniforms.plain, 'equal values keep the uniforms').toBe(uniforms);
+  expect(shaderInputs.moduleUniformRevisions.plain, 'equal values keep revision').toBe(
+    revision + 1
+  );
+
+  shaderInputs.setProps({plain: {color: [1, 0, 1, 0.5]}});
+  expect(shaderInputs.moduleUniforms.plain, 'change replaces the uniforms').not.toBe(uniforms);
+  expect(shaderInputs.moduleUniforms.plain).toEqual({color: [1, 0, 1, 0.5], scale: 1});
+  expect(uniforms, 'previous uniforms are not modified').toEqual({color: [1, 0, 1, 1], scale: 1});
+  expect(shaderInputs.moduleUniformRevisions.plain).toBe(revision + 2);
+});
+
+it('ShaderInputs#setProps treats a stored value passed back as changed', () => {
+  const shaderInputs = new ShaderInputs<{plain: {color: number[]; scale: number}}>({
+    plain: plainModule
+  });
+  shaderInputs.setProps({plain: {color: [1, 0, 1, 1]}});
+  const revision = shaderInputs.moduleUniformRevisions.plain;
+  const stored = shaderInputs.moduleUniforms.plain['color'] as number[];
+  stored[3] = 0.25;
+  shaderInputs.setProps({plain: {color: stored}});
+  expect(shaderInputs.moduleUniformRevisions.plain).toBe(revision + 1);
+  expect(shaderInputs.moduleUniforms.plain['color']).toEqual([1, 0, 1, 0.25]);
+});
+
+it('ShaderInputs#setProps compares composite uniforms field by field', () => {
+  const shaderInputs = new ShaderInputs<{lighting: LightingProps}>({lighting});
+  shaderInputs.setProps({
+    lighting: {lights: [{type: 'point', color: [255, 0, 0], position: [1, 2, 3]}]}
+  });
+  const uniforms = shaderInputs.moduleUniforms.lighting;
+  shaderInputs.setProps({
+    lighting: {lights: [{type: 'point', color: [255, 0, 0], position: [1, 2, 3]}]}
+  });
+  expect(shaderInputs.moduleUniforms.lighting, 'equal lights keep the uniforms').toBe(uniforms);
+
+  shaderInputs.setProps({
+    lighting: {lights: [{type: 'point', color: [255, 0, 0], position: [1, 2, 4]}]}
+  });
+  expect(shaderInputs.moduleUniforms.lighting, 'moved light replaces the uniforms').not.toBe(
+    uniforms
+  );
+});
+
+it('ShaderInputs#getChangedUniformValues returns modules changed since the last call', () => {
+  const shaderInputs = new ShaderInputs<{
+    picking: typeof picking.props;
+    plain: {color: number[]; scale: number};
+  }>({picking, plain: plainModule});
+  const consumerA: Record<string, number> = {};
+  const consumerB: Record<string, number> = {};
+
+  expect(Object.keys(shaderInputs.getChangedUniformValues(consumerA)).sort()).toEqual([
+    'picking',
+    'plain'
+  ]);
+  expect(shaderInputs.getChangedUniformValues(consumerA), 'nothing changed').toEqual({});
+
+  shaderInputs.setProps({plain: {color: [1, 0, 1, 1]}, picking: {}});
+  expect(shaderInputs.getChangedUniformValues(consumerA)).toEqual({
+    plain: shaderInputs.moduleUniforms.plain
+  });
+  expect(shaderInputs.getChangedUniformValues(consumerA)).toEqual({});
+  expect(
+    Object.keys(shaderInputs.getChangedUniformValues(consumerB)).sort(),
+    'each consumer keeps its own revisions'
+  ).toEqual(['picking', 'plain']);
+});
+
+it('ShaderInputs#setProps sees changes getUniforms makes to the previous uniforms', () => {
+  const mutatingModule = {
+    name: 'mutating',
+    uniformTypes: {scale: 'f32'},
+    defaultUniforms: {scale: 1},
+    getUniforms: (props: {scale?: number}, previous: Record<string, number>) => {
+      previous['scale'] = props.scale ?? previous['scale'];
+      return previous;
+    }
+  } as any;
+  const shaderInputs = new ShaderInputs<{mutating: {scale: number}}>({mutating: mutatingModule});
+  const consumer: Record<string, number> = {};
+  shaderInputs.getChangedUniformValues(consumer);
+
+  shaderInputs.setProps({mutating: {scale: 2}});
+  expect(shaderInputs.getChangedUniformValues(consumer)).toEqual({mutating: {scale: 2}});
+});

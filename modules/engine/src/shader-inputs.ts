@@ -54,6 +54,8 @@ export class ShaderInputs<
 
   /** Stores the uniform values for each module */
   moduleUniforms: Record<keyof ShaderPropsT, Record<string, ShaderModuleUniformValue>>;
+  /** Incremented whenever a module's uniform values change */
+  moduleUniformRevisions: Record<keyof ShaderPropsT, number>;
   /** Stores resource bindings for each module. */
   moduleBindings: Record<keyof ShaderPropsT, Record<string, ShaderInputBinding>>;
   /** Stores shader resource bindings that are not owned by a shader module. */
@@ -92,6 +94,7 @@ export class ShaderInputs<
       Record<string, ShaderModuleUniformValue>
     >;
     this.moduleBindings = {} as Record<keyof ShaderPropsT, Record<string, ShaderInputBinding>>;
+    this.moduleUniformRevisions = {} as Record<keyof ShaderPropsT, number>;
 
     // Initialize the modules
     for (const [name, module] of Object.entries(modules)) {
@@ -131,18 +134,25 @@ export class ShaderInputs<
       } else {
         const oldUniforms = this.moduleUniforms[moduleName];
         const oldBindings = this.moduleBindings[moduleName];
+        // `getUniforms` gets a copy of the previous uniforms, so that changes it makes to them
+        // are seen as changes when they are merged
         const uniformsAndBindings =
-          module.getUniforms?.(moduleProps, oldUniforms) || (moduleProps as any);
+          module.getUniforms?.(moduleProps, {...oldUniforms}) || (moduleProps as any);
 
         const {uniforms, bindings} = splitUniformsAndBindings(
           uniformsAndBindings,
           module.uniformTypes as Readonly<Record<string, CompositeShaderType>>
         );
-        this.moduleUniforms[moduleName] = mergeModuleUniforms(
+        const mergedUniforms = mergeModuleUniforms(
           oldUniforms as Record<string, ShaderModuleUniformValue>,
           uniforms,
           module.uniformTypes as Readonly<Record<string, CompositeShaderType>>
         );
+        if (mergedUniforms !== oldUniforms) {
+          this.moduleUniforms[moduleName] = mergedUniforms;
+          this.moduleUniformRevisions[moduleName] =
+            (this.moduleUniformRevisions[moduleName] || 0) + 1;
+        }
         this.moduleBindings[moduleName] = {...oldBindings, ...bindings};
         // this.moduleUniformsChanged ||= moduleName;
       }
@@ -179,6 +189,27 @@ export class ShaderInputs<
     Record<keyof ShaderPropsT, Record<string, ShaderModuleUniformValue>>
   > {
     return this.moduleUniforms;
+  }
+
+  /**
+   * Get the uniform values of the modules whose uniforms changed since the last call
+   * with the same revision record.
+   * @param consumedRevisions Module revisions already consumed by the caller, updated in place.
+   */
+  getChangedUniformValues(
+    consumedRevisions: Record<string, number>
+  ): Partial<Record<keyof ShaderPropsT, Record<string, ShaderModuleUniformValue>>> {
+    const changedUniforms: Partial<
+      Record<keyof ShaderPropsT, Record<string, ShaderModuleUniformValue>>
+    > = {};
+    for (const moduleName of Object.keys(this.moduleUniforms) as (keyof ShaderPropsT)[]) {
+      const revision = this.moduleUniformRevisions[moduleName];
+      if (consumedRevisions[moduleName as string] !== revision) {
+        consumedRevisions[moduleName as string] = revision;
+        changedUniforms[moduleName] = this.moduleUniforms[moduleName];
+      }
+    }
+    return changedUniforms;
   }
 
   /** Merges concrete and deferred bindings for the shader from the registered modules. */
@@ -228,22 +259,94 @@ export class ShaderInputs<
       (module.defaultUniforms || {}) as Record<string, ShaderModuleUniformValue>,
       module.uniformTypes as Readonly<Record<string, CompositeShaderType>>
     );
+    this.moduleUniformRevisions[moduleName] = (this.moduleUniformRevisions[moduleName] || 0) + 1;
     this.moduleBindings[moduleName] = {};
   }
 }
 
+/**
+ * Merges new uniform values into a module's current values.
+ * @returns `currentUniforms` itself if no value changes, otherwise a new object
+ */
 function mergeModuleUniforms(
   currentUniforms: Record<string, ShaderModuleUniformValue> = {},
   nextUniforms: Record<string, ShaderModuleUniformValue> = {},
   uniformTypes: Readonly<Record<string, CompositeShaderType>> = {}
 ): Record<string, ShaderModuleUniformValue> {
-  const mergedUniforms = {...currentUniforms};
-  for (const [key, value] of Object.entries(nextUniforms)) {
-    if (value !== undefined) {
+  let mergedUniforms: Record<string, ShaderModuleUniformValue> | null = null;
+  for (const key in nextUniforms) {
+    const value = nextUniforms[key];
+    if (value !== undefined && !isModuleUniformValueEqual(currentUniforms[key], value)) {
+      mergedUniforms ||= {...currentUniforms};
       mergedUniforms[key] = mergeModuleUniformValue(currentUniforms[key], value, uniformTypes[key]);
     }
   }
-  return mergedUniforms;
+  return mergedUniforms || currentUniforms;
+}
+
+/**
+ * Tests if merging `nextValue` into `currentValue` would leave it unchanged.
+ * `undefined` entries of `nextValue` keep the current value, as in `mergeModuleUniformValue`.
+ * An object or array that is the stored value itself counts as changed, since it may have been
+ * modified in place.
+ */
+function isModuleUniformValueEqual(
+  currentValue: ShaderModuleUniformValue | undefined,
+  nextValue: ShaderModuleUniformValue
+): boolean {
+  if (currentValue === nextValue) {
+    return typeof nextValue !== 'object' || nextValue === null;
+  }
+  if (typeof nextValue !== 'object' || nextValue === null) {
+    return false;
+  }
+  if (typeof currentValue !== 'object' || currentValue === null) {
+    return false;
+  }
+
+  if (isPackedUniformArrayValue(nextValue)) {
+    if (!isPackedUniformArrayValue(currentValue)) {
+      return false;
+    }
+    const nextArray = nextValue as ArrayLike<number>;
+    const currentArray = currentValue as ArrayLike<number>;
+    if (nextArray.length !== currentArray.length) {
+      return false;
+    }
+    for (let index = 0; index < nextArray.length; index++) {
+      if (nextArray[index] !== currentArray[index]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  if (Array.isArray(nextValue)) {
+    if (!Array.isArray(currentValue) || isPackedUniformArrayValue(currentValue)) {
+      return false;
+    }
+    for (let index = 0; index < nextValue.length; index++) {
+      const elementValue = nextValue[index];
+      if (
+        elementValue !== undefined &&
+        !isModuleUniformValueEqual(currentValue[index], elementValue)
+      ) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  if (!isPlainUniformObject(nextValue) || !isPlainUniformObject(currentValue)) {
+    return false;
+  }
+  for (const key in nextValue) {
+    const fieldValue = nextValue[key];
+    if (fieldValue !== undefined && !isModuleUniformValueEqual(currentValue[key], fieldValue)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function mergeModuleUniformValue(
