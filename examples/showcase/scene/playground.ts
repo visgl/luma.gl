@@ -341,10 +341,15 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
         rendererSubtype: this.rendererSubtype
       });
       if (isTemporalAntialiasingRenderer(this.rendererSubtype)) {
-        nextScene.frame
-          .getParameter('renderer')
-          ?.setParameters(this.getTemporalAntialiasingParameters())
-          .commitParameters();
+        const renderer = nextScene.frame.getParameter('renderer');
+        const parameterName =
+          this.rendererSubtype === 'raytrace' ? 'temporalReprojection' : 'temporalAntialiasing';
+        this.temporalAntialiasingEnabled =
+          renderer?.getParameter(parameterName) ?? this.temporalAntialiasingEnabled;
+        const toggle = getRequiredElement('temporal-aa-toggle', HTMLButtonElement);
+        toggle.classList.toggle('active', this.temporalAntialiasingEnabled);
+        toggle.setAttribute('aria-pressed', String(this.temporalAntialiasingEnabled));
+        renderer?.setParameters(this.getTemporalAntialiasingParameters()).commitParameters();
       }
       const previousScene = this.scene;
       this.scene = nextScene;
@@ -369,8 +374,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
   private getTemporalAntialiasingParameters(): ANARIRendererParameters {
     return this.rendererSubtype === 'raytrace'
       ? {
-          temporalReprojection: this.temporalAntialiasingEnabled,
-          progressive: this.temporalAntialiasingEnabled
+          temporalReprojection: this.temporalAntialiasingEnabled
         }
       : {temporalAntialiasing: this.temporalAntialiasingEnabled};
   }

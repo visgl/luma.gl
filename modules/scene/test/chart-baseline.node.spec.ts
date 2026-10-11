@@ -19,6 +19,8 @@ it('chart baseline preserves data identities and scene inputs across renderers',
   expect(rasterRenderer?.exposure).toBe(rayRenderer?.exposure);
   expect(rayRenderer?.adaptiveResolution).toBe(false);
   expect(rayRenderer?.resolutionScale).toBe(1);
+  expect(rayRenderer?.temporalReprojection).toBe(false);
+  expect(rayRenderer?.progressive).toBe(true);
 
   const instances = rayScene.instances || [];
   expect(new Set(instances.map(instance => instance['@@id'])).size).toBe(instances.length);
