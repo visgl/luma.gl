@@ -236,12 +236,10 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       switch (binding.type) {
         case 'uniform':
           // Set buffer
-          const {name} = binding;
-          const location = gl.getUniformBlockIndex(this.handle, name);
-          if ((location as GL) === GL.INVALID_INDEX) {
-            throw new Error(`Invalid uniform block name ${name}`);
-          }
-          gl.uniformBlockBinding(this.handle, location, uniformBufferIndex);
+          (this.sharedRenderPipeline as WEBGLSharedRenderPipeline)._setUniformBlockBinding(
+            binding.name,
+            uniformBufferIndex
+          );
           if (value instanceof WEBGLBuffer) {
             gl.bindBufferBase(GL.UNIFORM_BUFFER, uniformBufferIndex, value.handle);
           } else {

@@ -101,6 +101,90 @@ async function waitForLinkStatus(renderPipeline: {
   return renderPipeline.linkStatus;
 }
 
+it('WEBGLRenderPipeline assigns uniform block binding points only when they change', async () => {
+  const device = await getWebGLTestDevice();
+  const {gl} = device;
+
+  const vs = device.createShader({stage: 'vertex', source: VS_THREE_UBOS});
+  const fs = device.createShader({stage: 'fragment', source: FS_THREE_UBOS});
+  const renderPipeline = device.createRenderPipeline({vs, fs, topology: 'triangle-list'});
+  const linkStatus = await waitForLinkStatus(renderPipeline);
+  expect(linkStatus, 'render pipeline linked successfully').toBe('success');
+  if (linkStatus !== 'success') {
+    renderPipeline.destroy();
+    vs.destroy();
+    fs.destroy();
+    return;
+  }
+
+  const buffers = [1, 2, 3].map(value =>
+    device.createBuffer({usage: Buffer.UNIFORM, data: new Float32Array([value, 0, 0, 0])})
+  );
+  const bindings = {BlockA: buffers[0], BlockB: buffers[1], BlockC: buffers[2]};
+  const vertexArray = device.createVertexArray({
+    shaderLayout: renderPipeline.shaderLayout,
+    bufferLayout: renderPipeline.bufferLayout
+  });
+
+  const calls: string[] = [];
+  const getUniformBlockIndex = gl.getUniformBlockIndex;
+  const uniformBlockBinding = gl.uniformBlockBinding;
+  gl.getUniformBlockIndex = (program, name) => {
+    calls.push(`index ${name}`);
+    return getUniformBlockIndex.call(gl, program, name);
+  };
+  gl.uniformBlockBinding = (program, index, bindingPoint) => {
+    calls.push(`binding ${index} ${bindingPoint}`);
+    uniformBlockBinding.call(gl, program, index, bindingPoint);
+  };
+
+  try {
+    const draw = () => {
+      const renderPass = new WEBGLRenderPass(device, {});
+      renderPass.setPipeline(renderPipeline);
+      renderPass.setBindings(bindings);
+      renderPass.setVertexArray(vertexArray);
+      expect(renderPass.draw({vertexCount: 3}), 'draw succeeded').toBe(true);
+      renderPass.end();
+    };
+
+    draw();
+    expect(
+      calls.filter(call => call.startsWith('index')),
+      'block indices looked up'
+    ).toHaveLength(3);
+    calls.length = 0;
+    draw();
+    expect(calls, 'unchanged binding points are not assigned again').toEqual([]);
+
+    renderPipeline.shaderLayout.bindings = [...renderPipeline.shaderLayout.bindings].reverse();
+    draw();
+    expect(
+      calls.filter(call => call.startsWith('index')),
+      'block indices are cached'
+    ).toEqual([]);
+    for (const [bindingPoint, binding] of renderPipeline.shaderLayout.bindings.entries()) {
+      const blockIndex = getUniformBlockIndex.call(gl, renderPipeline.handle, binding.name);
+      expect(
+        gl.getActiveUniformBlockParameter(
+          renderPipeline.handle,
+          blockIndex,
+          GL.UNIFORM_BLOCK_BINDING
+        ),
+        `${binding.name} follows the reordered layout`
+      ).toBe(bindingPoint);
+    }
+  } finally {
+    gl.getUniformBlockIndex = getUniformBlockIndex;
+    gl.uniformBlockBinding = uniformBlockBinding;
+    vertexArray.destroy();
+    for (const buffer of buffers) buffer.destroy();
+    renderPipeline.destroy();
+    vs.destroy();
+    fs.destroy();
+  }
+});
+
 it('WEBGLRenderPipeline#uniformBlockBinding applies block indices in the correct argument position', async () => {
   const device = await getWebGLTestDevice();
   const {gl} = device;

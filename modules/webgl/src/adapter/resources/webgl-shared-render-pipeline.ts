@@ -17,6 +17,10 @@ export class WEBGLSharedRenderPipeline extends SharedRenderPipeline {
   readonly vs: WEBGLShader;
   readonly fs: WEBGLShader;
   linkStatus: 'pending' | 'success' | 'error' = 'pending';
+  /** Uniform block indices in the linked program, by block name */
+  private _uniformBlockIndices = new Map<string, number>();
+  /** Uniform buffer binding point last assigned to each uniform block index */
+  private _uniformBlockBindingPoints: number[] = [];
 
   constructor(
     device: WebGLDevice,
@@ -53,6 +57,26 @@ export class WEBGLSharedRenderPipeline extends SharedRenderPipeline {
     // @ts-expect-error
     this.handle.destroyed = true;
     this.destroyResource();
+  }
+
+  /**
+   * Assigns a uniform buffer binding point to a uniform block of the linked program.
+   * The block index is looked up once, and the assignment is skipped if it is unchanged.
+   */
+  _setUniformBlockBinding(blockName: string, bindingPoint: number): void {
+    const {gl} = this.device;
+    let blockIndex = this._uniformBlockIndices.get(blockName);
+    if (blockIndex === undefined) {
+      blockIndex = gl.getUniformBlockIndex(this.handle, blockName);
+      if ((blockIndex as GL) === GL.INVALID_INDEX) {
+        throw new Error(`Invalid uniform block name ${blockName}`);
+      }
+      this._uniformBlockIndices.set(blockName, blockIndex);
+    }
+    if (this._uniformBlockBindingPoints[blockIndex] !== bindingPoint) {
+      gl.uniformBlockBinding(this.handle, blockIndex, bindingPoint);
+      this._uniformBlockBindingPoints[blockIndex] = bindingPoint;
+    }
   }
 
   protected async _linkShaders() {
