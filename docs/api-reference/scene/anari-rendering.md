@@ -358,8 +358,50 @@ has since been committed. Background, out-of-bounds or non-finite coordinates,
 unrendered/destroyed frames, and frames last rendered by a built-in raster renderer
 return `null`. Intersections use the ray renderer's opaque
 geometry semantics; alpha and transmission do not change which surface is selected.
-Full-frame ID/depth/normal outputs, selection outlines, and raster/ray composition
-remain follow-up work.
+Selection outlines and raster/ray composition remain follow-up work.
+
+### `captureChannels()`
+
+```ts
+frame.render();
+graphicsDevice.submit();
+const channels = frame.captureChannels();
+if (channels) {
+  // Bind the textures to a GPU effect or use Texture.readBuffer() for explicit readback.
+  // Identifier texel value n > 0 resolves to channels.identifiers[n - 1].
+  // Release the snapshot after encoding its final GPU use.
+  channels.destroy();
+}
+```
+
+The built-in WebGPU `raytrace` runtime traces one centered primary ray for every output
+pixel and returns a caller-owned GPU snapshot. Its size matches the drawing-buffer frame
+size, independently of resolution scaling, jitter, progressive accumulation, or sparse
+sampling. Texture coordinates use a top-left origin, matching `pick()`. The capture
+submits its own command buffer, performs no CPU readback, and does not flush application
+commands. Render and submit the scene before capturing it.
+
+| Property | Format / meaning |
+| --- | --- |
+| `identifierTexture` | `r32uint`: exact integer placement identifier; zero denotes background. |
+| `distanceTexture` | `r32float`: distance from the camera ray origin in world units; zero denotes background. Orthographic origins lie on the near plane. This is not projected device depth. |
+| `normalTexture` | `rgba32float`: world-space normal in xyz, hit validity in alpha. Background is all zero. |
+| `identifiers` | Array mapping nonzero texel value `n` to index `n - 1`, containing the original `surface`, optional `instance`, and stable `placementId`. |
+| `destroy()` | Releases all three snapshot textures. |
+
+Identifiers are local to each snapshot: retain its identity table with its textures.
+Placement IDs remain stable when scene extraction reorders packed primitives. Snapshots
+are independent of subsequent renders, resizing, and frame destruction; the application
+must release them while the graphics device is still alive. Each capture allocates
+24 bytes per output pixel and performs an additional full-frame traversal, so capture
+only when needed. Float textures require unfilterable texture bindings; identifiers
+require unsigned integer bindings. All three support texture sampling and explicit
+texture-to-buffer copies.
+
+Like picking, capture uses the runtime that last rendered the frame. Unrendered or
+destroyed frames and frames last rendered by the built-in raster runtime return `null`.
+Channels use opaque intersection semantics; alpha/transmission and device-depth
+conversion for raster composition remain separate capabilities.
 
 ### `statistics`
 

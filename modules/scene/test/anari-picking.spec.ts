@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {Buffer, type Texture} from '@luma.gl/core';
 import {ANARIDevice} from '@luma.gl/scene';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';
 import {expect, it, vi} from 'vitest';
 
-it('ray picking resolves nearest retained objects independently of rendering resolution', async () => {
+it('ray channels and picking resolve nearest retained objects at full display resolution', async () => {
   if (!webgpuAdapter.isSupported()) return;
   const {graphicsDevice, destroyGraphicsResources} = await makePickingTestDevice();
   const device = new ANARIDevice(graphicsDevice);
@@ -38,6 +39,7 @@ it('ray picking resolves nearest retained objects independently of rendering res
     camera: device.newCamera('perspective', {position: [0, 0, 5], fovy: Math.PI / 2})
   });
   try {
+    expect(frame.captureChannels()).toBe(null);
     expect(await frame.pick(32, 32)).toBe(null);
     frame.render();
     graphicsDevice.submit();
@@ -58,6 +60,32 @@ it('ray picking resolves nearest retained objects independently of rendering res
     expect(await frame.pick(-1, 32)).toBe(null);
     expect(await frame.pick(64, 32)).toBe(null);
     expect(await frame.pick(NaN, 32)).toBe(null);
+
+    const snapshot = frame.captureChannels()!;
+    try {
+      expect(snapshot.identifierTexture.width).toBe(64);
+      expect(snapshot.identifierTexture.height).toBe(64);
+      const identifierBytes = await readChannelPixel(snapshot.identifierTexture, 32, 32);
+      const identifier = new Uint32Array(identifierBytes.buffer)[0];
+      expect(snapshot.identifiers[identifier - 1].instance).toBe(front);
+      const distanceBytes = await readChannelPixel(snapshot.distanceTexture, 32, 32);
+      expect(new Float32Array(distanceBytes.buffer)[0]).toBeCloseTo(sphereHit!.distance, 5);
+      const normalBytes = await readChannelPixel(snapshot.normalTexture, 32, 32);
+      const normal = new Float32Array(normalBytes.buffer);
+      expect(Array.from(normal.slice(0, 3))).toEqual(sphereHit!.normal);
+      expect(normal[3]).toBe(1);
+      for (const texture of [
+        snapshot.identifierTexture,
+        snapshot.distanceTexture,
+        snapshot.normalTexture
+      ]) {
+        expect(Array.from(await readChannelPixel(texture, 0, 0)).every(value => value === 0)).toBe(
+          true
+        );
+      }
+    } finally {
+      snapshot.destroy();
+    }
 
     const originalPlacementId = sphereHit?.placementId;
     const pendingHit = frame.pick(32, 32);
@@ -85,7 +113,7 @@ it('ray picking resolves nearest retained objects independently of rendering res
   expect(await frame.pick(32, 32)).toBe(null);
 }, 120000);
 
-it('ray picking follows orthographic cameras and resized display pixels', async () => {
+it('ray channels and picking follow orthographic cameras and resized display pixels', async () => {
   if (!webgpuAdapter.isSupported()) return;
   const {graphicsDevice, destroyGraphicsResources} = await makePickingTestDevice();
   const device = new ANARIDevice(graphicsDevice);
@@ -102,6 +130,7 @@ it('ray picking follows orthographic cameras and resized display pixels', async 
   try {
     frame.render();
     graphicsDevice.submit();
+    const snapshot = frame.captureChannels()!;
     const originalHit = await frame.pick(16, 16);
     expect(originalHit?.surface).toBe(surface);
     const originalWorld = frame.getParameter('world');
@@ -113,6 +142,23 @@ it('ray picking follows orthographic cameras and resized display pixels', async 
     frame.render();
     graphicsDevice.submit();
     const resizedHit = await frame.pick(32, 24);
+    const resizedSnapshot = frame.captureChannels()!;
+    try {
+      expect(resizedSnapshot.identifierTexture.width).toBe(64);
+      expect(resizedSnapshot.identifierTexture.height).toBe(48);
+      expect(snapshot.identifierTexture.width).toBe(32);
+      const originalIdentifier = new Uint32Array(
+        (await readChannelPixel(snapshot.identifierTexture, 16, 16)).buffer
+      )[0];
+      expect(snapshot.identifiers[originalIdentifier - 1].surface).toBe(surface);
+      const distance = new Float32Array(
+        (await readChannelPixel(resizedSnapshot.distanceTexture, 32, 24)).buffer
+      )[0];
+      expect(distance).toBeCloseTo(resizedHit!.distance, 5);
+    } finally {
+      snapshot.destroy();
+      resizedSnapshot.destroy();
+    }
     expect(resizedHit?.placementId).toBe(originalHit?.placementId);
     expect(resizedHit?.position[2]).toBeGreaterThan(0.5);
     expect(await frame.pick(0, 0)).toBe(null);
@@ -125,6 +171,7 @@ it('ray picking follows orthographic cameras and resized display pixels', async 
     frame.render();
     graphicsDevice.submit();
     frame.setParameter('renderer', rayRenderer).commitParameters();
+    expect(frame.captureChannels()).toBe(null);
     // The displayed raster frame must not expose the previous ray scene's hit.
     expect(await frame.pick(32, 24)).toBe(null);
   } finally {
@@ -158,6 +205,20 @@ it('ray picking preserves integer identity beyond temporal guide encoding limits
     frame.render();
     graphicsDevice.submit();
     expect((await frame.pick(8, 8))?.instance).toBe(selectedInstance);
+    const snapshot = frame.captureChannels()!;
+    try {
+      const identifier = new Uint32Array(
+        (await readChannelPixel(snapshot.identifierTexture, 8, 8)).buffer
+      )[0];
+      expect(identifier).toBeGreaterThan(2048);
+      expect(snapshot.identifiers[identifier - 1].instance).toBe(selectedInstance);
+      frame.destroy();
+      expect(
+        new Uint32Array((await readChannelPixel(snapshot.identifierTexture, 8, 8)).buffer)[0]
+      ).toBe(identifier);
+    } finally {
+      snapshot.destroy();
+    }
   } finally {
     frame.destroy();
     device.destroy();
@@ -189,4 +250,19 @@ async function makePickingTestDevice() {
       graphicsDevice.destroy();
     }
   };
+}
+
+async function readChannelPixel(texture: Texture, x: number, y: number): Promise<Uint8Array> {
+  const options = {x, y, width: 1, height: 1};
+  const layout = texture.computeMemoryLayout(options);
+  const buffer = texture.device.createBuffer({
+    byteLength: layout.byteLength,
+    usage: Buffer.COPY_DST | Buffer.COPY_SRC
+  });
+  try {
+    texture.readBuffer(options, buffer);
+    return await buffer.readAsync();
+  } finally {
+    buffer.destroy();
+  }
 }

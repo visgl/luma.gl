@@ -7,7 +7,7 @@ import {RayTracingSceneRenderer, type RayTracingScenePrimitive} from '@luma.gl/e
 import type {ANARIFrame} from './anari-objects';
 import type {ANARIRendererRuntime} from './anari-renderer-runtime';
 import {ANARISceneAdapter} from './anari-scene-adapter';
-import type {ANARIFrameStatistics, ANARIPickResult} from './anari-types';
+import type {ANARIFrameStatistics, ANARIPickResult, ANARIFrameChannels} from './anari-types';
 
 /** Adapts retained ANARI objects into the reusable shared ray-tracing scene renderer. */
 export class ANARIRayTracingRuntime implements ANARIRendererRuntime {
@@ -69,6 +69,24 @@ export class ANARIRayTracingRuntime implements ANARIRendererRuntime {
           distance: hit.distance
         }
       : null;
+  }
+
+  captureChannels(frame: ANARIFrame): ANARIFrameChannels | null {
+    const placements = this.framePlacements.get(frame.id);
+    if (!placements) return null;
+    const channels = this.renderer.captureChannels(frame.id);
+    if (!channels) return null;
+    return {
+      ...channels,
+      identifiers: channels.identifiers.map(identity => {
+        const placement = placements.get(identity.placementId)!;
+        return {
+          surface: placement.surface,
+          ...(placement.instance ? {instance: placement.instance} : {}),
+          placementId: identity.placementId
+        };
+      })
+    };
   }
 
   destroyFrame(frame: ANARIFrame): void {

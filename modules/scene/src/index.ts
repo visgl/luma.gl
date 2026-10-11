@@ -26,6 +26,7 @@ export type {
   ANARICameraSubtype,
   ANARIFrameParameters,
   ANARIFrameStatistics,
+  ANARIFrameChannels,
   ANARIGeometryParameters,
   ANARIGeometrySubtype,
   ANARIGroupParameters,

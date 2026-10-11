@@ -376,6 +376,7 @@ it('ANARI frame picking returns no hit before rendering or on unsupported runtim
     camera: device.newCamera('perspective'),
     renderer: device.newRenderer('default')
   });
+  expect(frame.captureChannels()).toBe(null);
   expect(await frame.pick(0, 0)).toBe(null);
   frame.render();
   expect(await frame.pick(0, 0)).toBe(null);
@@ -419,5 +420,47 @@ it('ANARI picking follows the last rendered runtime and clears replaced backends
   await frame.pick(0, 0);
   expect(pickCount).toBe(3);
   frame.destroy();
+  device.destroy();
+});
+
+it('ANARI channels dispatch to the last rendered backend and clear destroyed frames', () => {
+  const device = new ANARIDevice(new NullDevice({}));
+  let captureCount = 0;
+  const runtimeFactory: ANARIRendererRuntimeFactory = () => ({
+    render: () => ({surfaceCount: 0, instanceCount: 0, drawCount: 0, triangleCount: 0}),
+    captureChannels: () => {
+      captureCount++;
+      return null;
+    },
+    destroyFrame: () => {},
+    destroy: () => {}
+  });
+  device.registerRenderer('channels', runtimeFactory);
+  const renderer = device.newRenderer('channels');
+  const frame = device.newFrame({
+    world: device.newWorld(),
+    camera: device.newCamera('perspective'),
+    renderer
+  });
+  frame.captureChannels();
+  expect(captureCount).toBe(0);
+  frame.render();
+  frame.setParameter('renderer', device.newRenderer('default')).commitParameters();
+  frame.captureChannels();
+  expect(captureCount).toBe(1);
+  frame.render();
+  frame.setParameter('renderer', renderer).commitParameters();
+  frame.captureChannels();
+  expect(captureCount).toBe(1);
+  frame.render();
+  device.registerRenderer('channels', () => runtimeFactory(device.device));
+  frame.captureChannels();
+  expect(captureCount).toBe(1);
+  frame.render();
+  frame.captureChannels();
+  expect(captureCount).toBe(2);
+  frame.destroy();
+  frame.captureChannels();
+  expect(captureCount).toBe(2);
   device.destroy();
 });

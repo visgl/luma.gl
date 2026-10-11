@@ -1106,6 +1106,36 @@ fn pick() {
 }
 `;
 
+/** Full display-resolution primary-hit channels, independent of temporal radiance history. */
+export const RAY_TRACING_CHANNEL_SHADER = /* wgsl */ `
+${RAY_TRACING_SCENE_SHADER}
+
+@group(0) @binding(13) var identifierImage: texture_storage_2d<r32uint, write>;
+@group(0) @binding(14) var distanceImage: texture_storage_2d<r32float, write>;
+@group(0) @binding(15) var normalImage: texture_storage_2d<rgba32float, write>;
+
+@compute @workgroup_size(8, 8)
+fn captureChannels(@builtin(global_invocation_id) invocation: vec3<u32>) {
+  let dimensions = textureDimensions(identifierImage);
+  if (any(invocation.xy >= dimensions)) { return; }
+  let pixel = vec2<i32>(invocation.xy);
+  let coordinates = (vec2<f32>(invocation.xy) + vec2<f32>(0.5)) / vec2<f32>(dimensions);
+  let ray = makeCameraRayAtCoordinates(coordinates);
+  let hit = intersectScene(ray, RAY_INFINITY);
+  var identifier = 0u;
+  var distance = 0.0;
+  var normal = vec4<f32>(0.0);
+  if (hit.distance < RAY_INFINITY) {
+    identifier = hit.primitiveIndex + 1u;
+    distance = hit.distance;
+    normal = vec4<f32>(hit.normal, 1.0);
+  }
+  textureStore(identifierImage, pixel, vec4<u32>(identifier));
+  textureStore(distanceImage, pixel, vec4<f32>(distance));
+  textureStore(normalImage, pixel, normal);
+}
+`;
+
 /** Compile-time presentation controls shared with the canonical forward PBR renderer. */
 export type RayTracingPresentationOptions = {
   /** Zero disables tone mapping; one selects Reinhard, two Khronos Neutral, three ACES. */

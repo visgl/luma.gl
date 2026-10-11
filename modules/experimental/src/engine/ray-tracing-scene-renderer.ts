@@ -31,7 +31,8 @@ import {
   RAY_TRACING_BOUNDS_SHADER,
   RAY_TRACING_HISTORY_CARRY_SHADER,
   RAY_TRACING_SCENE_SHADER,
-  RAY_TRACING_PICK_SHADER
+  RAY_TRACING_PICK_SHADER,
+  RAY_TRACING_CHANNEL_SHADER
 } from './ray-tracing-scene-shaders';
 import type {
   RayTracingGraphStageStatistics,
@@ -496,6 +497,19 @@ export type RayTracingScenePickResult = {
   distance: number;
 };
 
+/** Caller-owned GPU snapshot. Identifier zero and zero-valued channels denote a miss. */
+export type RayTracingSceneChannels = {
+  /** Exact uint32 identifiers; identifiers[index] describes texel value index + 1. */
+  identifiers: readonly Pick<RayTracingScenePickResult, 'surfaceId' | 'placementId'>[];
+  identifierTexture: Texture;
+  /** r32float ray-origin distance, not projected device depth. */
+  distanceTexture: Texture;
+  /** rgba32float world-space normal; alpha is one for a hit and zero for a miss. */
+  normalTexture: Texture;
+  /** Release all three textures when the snapshot is no longer needed. */
+  destroy(): void;
+};
+
 type RayTracingPickIdentity = Pick<RayTracingScenePickResult, 'surfaceId' | 'placementId'>;
 
 type RayTracingScene = {
@@ -656,6 +670,7 @@ export class RayTracingSceneRenderer {
   private readonly frames = new Map<string, RayTracingFrameResources>();
   private readonly geometryCache = new Map<string, CompiledRayGeometry>();
   private pickComputation?: Computation;
+  private channelComputation?: Computation;
 
   constructor(device: Device) {
     if (device.type !== 'webgpu') {
@@ -1128,6 +1143,109 @@ export class RayTracingSceneRenderer {
     }
   }
 
+  /**
+   * Captures the last submitted frame into caller-owned full-resolution GPU textures.
+   * Submit render() first. This submits only its own commands and performs no CPU readback.
+   * Snapshots remain valid across subsequent renders and frame destruction.
+   */
+  captureChannels(frameIdentifier: string): RayTracingSceneChannels | null {
+    const resources = this.frames.get(frameIdentifier);
+    if (!resources) return null;
+    const createTexture = (format: 'r32uint' | 'r32float' | 'rgba32float') =>
+      this.device.createTexture({
+        width: resources.displayWidth,
+        height: resources.displayHeight,
+        format,
+        usage: Texture.STORAGE | Texture.SAMPLE | Texture.COPY_SRC
+      });
+    const textures: Texture[] = [];
+    const commandEncoder = this.device.createCommandEncoder();
+    try {
+      const identifierTexture = createTexture('r32uint');
+      textures.push(identifierTexture);
+      const distanceTexture = createTexture('r32float');
+      textures.push(distanceTexture);
+      const normalTexture = createTexture('rgba32float');
+      textures.push(normalTexture);
+      this.channelComputation ??= new Computation(this.device, {
+        id: 'ray-scene-channels',
+        source: RAY_TRACING_CHANNEL_SHADER,
+        entryPoint: 'captureChannels',
+        shaderLayout: {
+          bindings: [
+            {name: 'uniforms', type: 'uniform', group: 0, location: 0},
+            {name: 'primitives', type: 'read-only-storage', group: 0, location: 1},
+            {name: 'triangles', type: 'read-only-storage', group: 0, location: 2},
+            {name: 'nodeMinima', type: 'read-only-storage', group: 0, location: 4},
+            {name: 'nodeMaxima', type: 'read-only-storage', group: 0, location: 5},
+            {name: 'leafPrimitiveIds', type: 'read-only-storage', group: 0, location: 6},
+            {name: 'blasNodes', type: 'read-only-storage', group: 0, location: 7},
+            {name: 'blasTriangleIds', type: 'read-only-storage', group: 0, location: 8},
+            {
+              name: 'identifierImage',
+              type: 'storage',
+              group: 0,
+              location: 13,
+              access: 'write-only',
+              format: 'r32uint'
+            },
+            {
+              name: 'distanceImage',
+              type: 'storage',
+              group: 0,
+              location: 14,
+              access: 'write-only',
+              format: 'r32float'
+            },
+            {
+              name: 'normalImage',
+              type: 'storage',
+              group: 0,
+              location: 15,
+              access: 'write-only',
+              format: 'rgba32float'
+            }
+          ]
+        }
+      });
+      this.channelComputation.setBindings({
+        uniforms: resources.uniformBuffer,
+        primitives: resources.primitiveBuffer,
+        triangles: resources.triangleBuffer,
+        nodeMinima: resources.nodeMinimaBuffer,
+        nodeMaxima: resources.nodeMaximaBuffer,
+        leafPrimitiveIds: resources.sortedPrimitiveIdsBuffer,
+        blasNodes: resources.blasNodesBuffer,
+        blasTriangleIds: resources.blasTriangleIdsBuffer,
+        identifierImage: identifierTexture,
+        distanceImage: distanceTexture,
+        normalImage: normalTexture
+      });
+      const computePass = commandEncoder.beginComputePass();
+      this.channelComputation.dispatch(
+        computePass,
+        Math.ceil(resources.displayWidth / 8),
+        Math.ceil(resources.displayHeight / 8)
+      );
+      computePass.end();
+      this.device.submit(commandEncoder.finish());
+      return {
+        identifiers: resources.pickIdentities.slice(),
+        identifierTexture,
+        distanceTexture,
+        normalTexture,
+        destroy: () => {
+          for (const texture of textures) texture.destroy();
+        }
+      };
+    } catch (error) {
+      for (const texture of textures) texture.destroy();
+      throw error;
+    } finally {
+      commandEncoder.destroy();
+    }
+  }
+
   destroyFrame(frameIdentifier: string): void {
     const resources = this.frames.get(frameIdentifier);
     if (!resources) {
@@ -1161,6 +1279,8 @@ export class RayTracingSceneRenderer {
     }
     this.pickComputation?.destroy();
     this.pickComputation = undefined;
+    this.channelComputation?.destroy();
+    this.channelComputation = undefined;
   }
 
   private createFrameResources(props: {

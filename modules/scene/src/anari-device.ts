@@ -26,6 +26,7 @@ import type {
   ANARICameraSubtype,
   ANARIFrameParameters,
   ANARIFrameStatistics,
+  ANARIFrameChannels,
   ANARIGeometryParameters,
   ANARIGeometrySubtype,
   ANARIGroupParameters,
@@ -285,6 +286,10 @@ export class ANARIDevice {
   pickFrame(frame: ANARIFrame, x: number, y: number): Promise<ANARIPickResult | null> {
     const runtime = this.frameRenderingRuntimes.get(frame.id);
     return runtime?.pick?.(frame, x, y) ?? Promise.resolve(null);
+  }
+
+  captureFrameChannels(frame: ANARIFrame): ANARIFrameChannels | null {
+    return this.frameRenderingRuntimes.get(frame.id)?.captureChannels?.(frame) ?? null;
   }
 
   destroyFrame(frame: ANARIFrame): void {

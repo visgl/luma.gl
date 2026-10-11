@@ -3,13 +3,14 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {describe, expect, test} from 'vitest';
-import {WgslReflect} from 'wgsl_reflect';
+import {ResourceType, WgslReflect} from 'wgsl_reflect';
 import {
   getRayTracingScenePresentationShader,
   RAY_TRACING_BOUNDS_SHADER,
   RAY_TRACING_HISTORY_CARRY_SHADER,
   RAY_TRACING_SCENE_SHADER,
-  RAY_TRACING_PICK_SHADER
+  RAY_TRACING_PICK_SHADER,
+  RAY_TRACING_CHANNEL_SHADER
 } from '../../src/engine/ray-tracing-scene-shaders';
 
 describe('graph-accelerated ray tracing shaders', () => {
@@ -749,4 +750,21 @@ test('ray picking uses integer hit identifiers within WebGPU CORE storage limits
   const result = reflection.storage.find(resource => resource.name === 'pickResult');
   expect(result?.size).toBe(32);
   expect(result?.members?.find(member => member.name === 'primitiveIdentifier')?.offset).toBe(28);
+});
+
+test('full-frame channels fit CORE buffer and storage texture limits', () => {
+  const reflection = new WgslReflect(RAY_TRACING_CHANNEL_SHADER);
+  const entry = reflection.entry.compute.find(entry => entry.name === 'captureChannels');
+  expect(entry).toBeDefined();
+  const resources = entry?.resources || [];
+  expect(resources.filter(resource => resource.resourceType === ResourceType.Storage)).toHaveLength(
+    7
+  );
+  expect(
+    resources.filter(resource => resource.resourceType === ResourceType.StorageTexture)
+  ).toHaveLength(3);
+  expect(resources.some(resource => resource.name === 'lights')).toBe(false);
+  expect(resources.map(resource => resource.name)).toEqual(
+    expect.arrayContaining(['identifierImage', 'distanceImage', 'normalImage'])
+  );
 });
