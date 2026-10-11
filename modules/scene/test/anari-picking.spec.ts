@@ -119,6 +119,17 @@ it('ray picking follows orthographic cameras and resized display pixels', async 
     expect(resizedHit?.placementId).toBe(originalHit?.placementId);
     expect(resizedHit?.position[2]).toBeGreaterThan(0.5);
     expect(await frame.pick(0, 0)).toBe(null);
+
+    const rayRenderer = frame.getParameter('renderer');
+    const rasterWorld = device.newWorld();
+    frame
+      .setParameters({world: rasterWorld, renderer: device.newRenderer('default')})
+      .commitParameters();
+    frame.render();
+    graphicsDevice.submit();
+    frame.setParameter('renderer', rayRenderer).commitParameters();
+    // The displayed raster frame must not expose the previous ray scene's hit.
+    expect(await frame.pick(32, 24)).toBe(null);
   } finally {
     frame.destroy();
     device.destroy();

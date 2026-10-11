@@ -97,6 +97,7 @@ export class ANARIDevice {
     ANARIRendererRuntimeFactory
   >();
   private readonly renderingRuntimes = new Map<ANARIRendererRuntimeFactory, ANARIRendererRuntime>();
+  private readonly frameRenderingRuntimes = new Map<string, ANARIRendererRuntime>();
   private readonly sceneCommits: ANARISceneCommit[] = [];
   private sceneCommitRevision = 0;
 
@@ -181,7 +182,13 @@ export class ANARIDevice {
       previousRuntimeFactory !== runtimeFactory &&
       !Array.from(this.rendererRuntimeFactories.values()).includes(previousRuntimeFactory)
     ) {
-      this.renderingRuntimes.get(previousRuntimeFactory)?.destroy();
+      const previousRuntime = this.renderingRuntimes.get(previousRuntimeFactory);
+      for (const [frameIdentifier, runtime] of this.frameRenderingRuntimes) {
+        if (runtime === previousRuntime) {
+          this.frameRenderingRuntimes.delete(frameIdentifier);
+        }
+      }
+      previousRuntime?.destroy();
       this.renderingRuntimes.delete(previousRuntimeFactory);
     }
 
@@ -269,18 +276,19 @@ export class ANARIDevice {
       renderingRuntime = runtimeFactory(this.device);
       this.renderingRuntimes.set(runtimeFactory, renderingRuntime);
     }
-    return renderingRuntime.render(frame);
+    const statistics = renderingRuntime.render(frame);
+    this.frameRenderingRuntimes.set(frame.id, renderingRuntime);
+    return statistics;
   }
 
   /** Returns no hit when this renderer has no picking implementation or has not rendered. */
   pickFrame(frame: ANARIFrame, x: number, y: number): Promise<ANARIPickResult | null> {
-    const rendererSubtype = frame.getParameter('renderer')?.subtype ?? 'default';
-    const runtimeFactory = this.rendererRuntimeFactories.get(rendererSubtype);
-    const runtime = runtimeFactory ? this.renderingRuntimes.get(runtimeFactory) : undefined;
+    const runtime = this.frameRenderingRuntimes.get(frame.id);
     return runtime?.pick?.(frame, x, y) ?? Promise.resolve(null);
   }
 
   destroyFrame(frame: ANARIFrame): void {
+    this.frameRenderingRuntimes.delete(frame.id);
     for (const renderingRuntime of this.renderingRuntimes.values()) {
       renderingRuntime.destroyFrame(frame);
     }
@@ -290,6 +298,7 @@ export class ANARIDevice {
     for (const renderingRuntime of this.renderingRuntimes.values()) {
       renderingRuntime.destroy();
     }
+    this.frameRenderingRuntimes.clear();
     this.renderingRuntimes.clear();
     this.sceneCommits.length = 0;
   }

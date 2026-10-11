@@ -203,7 +203,8 @@ export class WebGPUBuffer extends Buffer {
     // Map the temp buffer and read the data.
     this.device.pushErrorScope('validation');
     try {
-      await this.device.handle.queue.onSubmittedWorkDone();
+      // Queue ordering places the copy after prior submissions; mapAsync waits for
+      // this buffer's GPU use without a redundant queue-wide completion callback.
       if (mappableBuffer) {
         mappableBuffer._copyBuffer(this, mappedByteOffset, mappedByteLength, 0);
       }

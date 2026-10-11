@@ -353,8 +353,10 @@ normal are in world space; distance is measured from the camera ray origin, whic
 on the near plane for orthographic cameras. Queries capture identity mappings before
 asynchronous readback, so later scene edits cannot reassign a pending result.
 
-Background, out-of-bounds or non-finite coordinates, unrendered/destroyed frames, and
-built-in raster renderers return `null`. Intersections use the ray renderer's opaque
+Picking uses the runtime that last rendered the frame, even if a different renderer
+has since been committed. Background, out-of-bounds or non-finite coordinates,
+unrendered/destroyed frames, and frames last rendered by a built-in raster renderer
+return `null`. Intersections use the ray renderer's opaque
 geometry semantics; alpha and transmission do not change which surface is selected.
 Full-frame ID/depth/normal outputs, selection outlines, and raster/ray composition
 remain follow-up work.
