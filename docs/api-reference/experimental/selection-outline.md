@@ -64,5 +64,6 @@ The JSON playground captures current channels only while a ray-traced mark is se
 Selection is retained as a placement ID and re-resolved against each snapshot, so packed
 integer reordering does not select a different object. Capturing channels adds a full
 primary-ray traversal and allocates 28 bytes per output pixel; the outline adds one
-fullscreen draw with bounded texture lookups. Raster ID production and projected-depth
-composition remain separate work.
+fullscreen draw with bounded texture lookups. Use
+[`DepthTextureCopy`](./depth-texture-copy.md) with the snapshot's projected depth for raster
+overlay occlusion. Raster ID production remains separate work.

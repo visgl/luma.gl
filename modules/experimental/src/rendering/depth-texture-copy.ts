@@ -6,7 +6,7 @@ import {Model} from '@luma.gl/engine';
 
 export const DEPTH_TEXTURE_COPY_SHADER = /* wgsl */ `
 @group(0) @binding(0) var depthImage: texture_2d<f32>;
-@group(0) @binding(1) var<uniform> viewportOrigin: vec2<i32>;
+@group(0) @binding(1) var<uniform> viewportOrigin: vec4<i32>;
 
 @vertex
 fn vertexMain(@builtin(vertex_index) index: u32) -> @builtin(position) vec4<f32> {
@@ -16,7 +16,7 @@ fn vertexMain(@builtin(vertex_index) index: u32) -> @builtin(position) vec4<f32>
 
 @fragment
 fn fragmentMain(@builtin(position) position: vec4<f32>) -> @builtin(frag_depth) f32 {
-  let pixel = vec2<i32>(position.xy) - viewportOrigin;
+  let pixel = vec2<i32>(position.xy) - viewportOrigin.xy;
   if (any(pixel < vec2<i32>(0)) || any(pixel >= vec2<i32>(textureDimensions(depthImage)))) {
     discard;
     return 1.0;
@@ -33,7 +33,7 @@ export class DepthTextureCopy {
   constructor(device: Device) {
     // Fragment depth writes require WebGPU in this helper.
     assert(device.type === 'webgpu');
-    this.uniforms = device.createBuffer({byteLength: 8, usage: Buffer.UNIFORM | Buffer.COPY_DST});
+    this.uniforms = device.createBuffer({byteLength: 16, usage: Buffer.UNIFORM | Buffer.COPY_DST});
     this.model = new Model(device, {
       id: 'depth-texture-copy',
       source: DEPTH_TEXTURE_COPY_SHADER,
@@ -69,7 +69,12 @@ export class DepthTextureCopy {
       renderPass.props.framebuffer ?? renderPass.device.getCanvasContext().getCurrentFramebuffer();
     // The destination must have a depth attachment.
     assert(framebuffer.depthStencilAttachment);
-    this.uniforms.write(new Int32Array(options.viewportOrigin ?? [0, 0]));
+    this.model.setParameters({
+      depthCompare: 'always',
+      depthWriteEnabled: true,
+      ...(framebuffer.colorAttachments.length > 0 ? {colorMask: 0} : {})
+    });
+    this.uniforms.write(new Int32Array([...(options.viewportOrigin ?? [0, 0]), 0, 0]));
     this.model.setBindings({depthImage: options.depthTexture, viewportOrigin: this.uniforms});
     return this.model.draw(renderPass);
   }

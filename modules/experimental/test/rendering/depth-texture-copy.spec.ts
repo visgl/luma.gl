@@ -5,7 +5,7 @@ import {Buffer, Texture} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {DepthTextureCopy} from '@luma.gl/experimental';
 import {webgpuAdapter} from '@luma.gl/webgpu';
-import {expect, it} from 'vitest';
+import {expect, it, vi} from 'vitest';
 
 it('projected depth preserves color and occludes later raster overlays at viewport offsets', async () => {
   if (!webgpuAdapter.isSupported()) return;
@@ -13,6 +13,11 @@ it('projected depth preserves color and occludes later raster overlays at viewpo
     featureLevel: 'core',
     createCanvasContext: {canvas: new OffscreenCanvas(8, 8)},
     debug: true
+  });
+  const errors: Error[] = [];
+  const reportError = vi.spyOn(device, 'reportError').mockImplementation(error => {
+    errors.push(error);
+    return () => {};
   });
   const depthTexture = device.createTexture({
     width: 4,
@@ -35,6 +40,12 @@ it('projected depth preserves color and occludes later raster overlays at viewpo
     height: 8,
     colorAttachments: [colorTexture],
     depthStencilAttachment: 'depth32float'
+  });
+  const depthOnlyFramebuffer = device.createFramebuffer({
+    width: 8,
+    height: 8,
+    colorAttachments: [],
+    depthStencilAttachment: framebuffer.depthStencilAttachment
   });
   const copy = new DepthTextureCopy(device);
   const overlay = new Model(device, {
@@ -76,6 +87,12 @@ it('projected depth preserves color and occludes later raster overlays at viewpo
     device.submit();
     const preserved = await readImage();
     expect(pixel(preserved, 3, 3)).toEqual([255, 0, 0, 255]);
+    // Reuse the same helper with a depth-only target sharing the destination attachment.
+    pass = device.beginRenderPass({framebuffer: depthOnlyFramebuffer, clearDepth: 1});
+    pass.setParameters({viewport: [2, 2, 4, 4]});
+    copy.draw(pass, {depthTexture, viewportOrigin: [2, 2]});
+    pass.end();
+    device.submit();
     pass = device.beginRenderPass({
       framebuffer,
       clearColor: false,
@@ -91,14 +108,17 @@ it('projected depth preserves color and occludes later raster overlays at viewpo
     expect(pixel(pixels, 4, 3)).toEqual([0, 255, 0, 255]);
     expect(pixel(pixels, 2, 2)).toEqual([0, 255, 0, 255]);
     expect(pixel(pixels, 1, 3)).toEqual([255, 0, 0, 255]);
+    expect(errors).toEqual([]);
     copy.destroy();
     expect(depthTexture.destroyed).toBe(false);
   } finally {
     overlay.destroy();
     copy.destroy();
+    depthOnlyFramebuffer.destroy();
     framebuffer.destroy();
     colorTexture.destroy();
     depthTexture.destroy();
+    reportError.mockRestore();
     device.destroy();
   }
 }, 120000);
