@@ -276,8 +276,25 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     rendererSelector.addEventListener('change', event => {
       const selector = event.currentTarget;
       if (selector instanceof HTMLSelectElement) {
-        this.rendererSubtype = selector.value as ANARIRendererSubtype;
-        temporalAntialiasingToggle.hidden = !isTemporalAntialiasingRenderer(this.rendererSubtype);
+        let parsedScene: unknown;
+        try {
+          parsedScene = JSON.parse(this.editor.value);
+        } catch {
+          this.applyEditorScene();
+          return;
+        }
+        const validatedScene = ANARISceneSchema.safeParse(parsedScene);
+        if (!validatedScene.success) {
+          this.applyEditorScene();
+          return;
+        }
+        const sceneDescription: ANARIJSONScene = validatedScene.data;
+        sceneDescription.renderer = {
+          ...sceneDescription.renderer,
+          '@@type': selector.value as ANARIRendererSubtype
+        };
+        this.editor.value = formatSceneJSON(sceneDescription);
+        this.updateEditorMetadata();
         this.applyEditorScene();
       }
     });
@@ -384,9 +401,12 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       }
       this.editor.clearIssues();
       const sceneDescription: ANARIJSONScene = validatedScene.data;
-      const nextScene = createANARIJSONScene(this.anari, sceneDescription, {
-        rendererSubtype: this.rendererSubtype
-      });
+      const rendererSubtype = sceneDescription.renderer?.['@@type'] ?? 'default';
+      const nextScene = createANARIJSONScene(this.anari, sceneDescription);
+      this.rendererSubtype = rendererSubtype;
+      getRequiredElement('renderer-selector', HTMLSelectElement).value = rendererSubtype;
+      getRequiredElement('temporal-aa-toggle', HTMLButtonElement).hidden =
+        !isTemporalAntialiasingRenderer(rendererSubtype);
       if (isTemporalAntialiasingRenderer(this.rendererSubtype)) {
         const renderer = nextScene.frame.getParameter('renderer');
         const parameterName =
