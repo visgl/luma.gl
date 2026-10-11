@@ -18,6 +18,18 @@ import type {
   ANARIWorld
 } from './anari-objects';
 
+/** Caller-owned full-resolution primary-hit GPU snapshot. Submit final GPU use before destroy(). */
+export type ANARIFrameChannels = {
+  /** Texel identifier index + 1 resolves to this retained placement; zero denotes a miss. */
+  identifiers: readonly {surface: ANARISurface; instance?: ANARIInstance; placementId: string}[];
+  identifierTexture: Texture;
+  /** Ray-origin distance in world units, not projected device depth; zero denotes a miss. */
+  distanceTexture: Texture;
+  /** World-space xyz normal with hit validity in alpha. Misses are all zero. */
+  normalTexture: Texture;
+  destroy(): void;
+};
+
 export type ANARIObjectType =
   | 'array'
   | 'camera'

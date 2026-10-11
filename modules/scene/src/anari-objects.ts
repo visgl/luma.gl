@@ -10,6 +10,7 @@ import type {
   ANARICameraSubtype,
   ANARIFrameParameters,
   ANARIFrameStatistics,
+  ANARIFrameChannels,
   ANARIPickResult,
   ANARIGeometryParameters,
   ANARIGeometrySubtype,
@@ -219,6 +220,11 @@ export class ANARIFrame extends ANARIObject<ANARIFrameParameters> {
   render(): ANARIFrameStatistics {
     this.statistics = this.device.renderFrame(this);
     return this.statistics;
+  }
+
+  /** Captures caller-owned GPU channels after rendering and submitting this frame. */
+  captureChannels(): ANARIFrameChannels | null {
+    return this.device.captureFrameChannels(this);
   }
 
   /** Picks a top-left-origin display pixel after rendering and submitting the frame. */

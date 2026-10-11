@@ -63,6 +63,17 @@ The JSON playground supports click-to-inspect selection with the WebGPU ray-trac
 Applications can use [`frame.pick(x, y)`](/docs/api-reference/scene/anari-rendering#pickx-y)
 to retrieve retained surface/instance identities and world-space hit information.
 
+## Primary-hit GPU channels
+
+After rendering and submitting a ray-traced frame, `frame.captureChannels()` returns
+full-output-resolution integer-ID, ray-distance, and world-normal textures, together
+with a retained placement identity table. Captures are independent caller-owned
+snapshots and must be released with `channels.destroy()`. They perform an additional
+primary-ray traversal without CPU readback. See the
+[frame channel reference](/docs/api-reference/scene/anari-rendering#capturechannels)
+for formats, ownership, and coordinate conventions. Ray distance is not projected
+device depth; selection outlines and raster/ray depth composition remain planned.
+
 ## Current limitations
 
 The current package is a focused proof of concept, not a complete ANARI implementation:
