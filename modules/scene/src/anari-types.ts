@@ -27,6 +27,8 @@ export type ANARIFrameChannels = {
   distanceTexture: Texture;
   /** World-space xyz normal with hit validity in alpha. Misses are all zero. */
   normalTexture: Texture;
+  /** Projected depth in WebGPU zero-to-one range; background is one. */
+  projectedDepthTexture: Texture;
   destroy(): void;
 };
 

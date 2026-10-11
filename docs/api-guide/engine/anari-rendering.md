@@ -74,7 +74,9 @@ primary-ray traversal without CPU readback. See the
 [frame channel reference](/docs/api-reference/scene/anari-rendering#capturechannels)
 for formats, ownership, and coordinate conventions. Ray distance is not projected
 device depth. The experimental `SelectionOutline` overlay consumes exact ID snapshots
-for visible selection boundaries; raster/ray depth composition remains planned.
+for visible selection boundaries. `projectedDepthTexture` and
+[`DepthTextureCopy`](/docs/api-reference/experimental/depth-texture-copy) support
+depth-tested raster overlays with matching camera and viewport conventions.
 
 ## Current limitations
 

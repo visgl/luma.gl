@@ -296,3 +296,5 @@ export * from './webxr/index';
 export {GPUGridIndex, GraphVectorView} from '@luma.gl/gpgpu/gpu-core';
 
 export * from './simulation/index';
+
+export {DepthTextureCopy} from './rendering/depth-texture-copy';
