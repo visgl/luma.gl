@@ -667,6 +667,7 @@
                 "items": [
                   "api-reference/experimental/scene-renderer",
                   "api-reference/experimental/deferred-scene-renderer",
+                  "api-reference/experimental/selection-outline",
                   "api-reference/experimental/pbr-environment"
                 ]
               },
