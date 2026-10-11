@@ -120,7 +120,8 @@ adding a primary traversal and 28 bytes per output pixel of snapshot storage.
 The **Ray quality** selector is available over the preview, including when the editor
 is hidden. **Interactive** enables adaptive resolution and temporal reprojection;
 **Still / capture** chooses full resolution, four primary samples per frame, and fixed
-quality. A moving scene will not converge as a still scene would. For application-owned
+quality. Quality changes retain the inspected camera and selection; the disabled
+**Scene settings** entry reports custom JSON parameters. A moving scene will not converge as a still scene would. For application-owned
 controls, use [`getRayTracingQualityPreset`](/docs/api-reference/experimental/ray-tracing-quality-presets).
 
 For a repeatable baseline capture, start the scene example and run:

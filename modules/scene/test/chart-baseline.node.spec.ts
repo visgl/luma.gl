@@ -5,6 +5,7 @@ import {getRayTracingQualityPreset} from '@luma.gl/experimental';
 import {ANARIDevice} from '@luma.gl/scene';
 import {NullDevice} from '@luma.gl/test-utils';
 import {createANARIJSONScene} from '../../../examples/showcase/scene/playground-scene';
+import {applyPlaygroundQualityPreset} from '../../../examples/showcase/scene/playground-renderer';
 import {getChartLabelPositions} from '../../../examples/showcase/scene/chart-labels';
 
 import {ANARISceneSchema} from '@luma.gl/scene/schemas';
@@ -82,6 +83,39 @@ it('animated chart labels follow retained placements with projected WebGPU depth
       expect(depth).toBeGreaterThan(0);
       expect(depth).toBeLessThan(1);
     }
+  } finally {
+    scene.destroy();
+    device.destroy();
+  }
+});
+
+it('quality changes retain the inspected camera, world and placement identities', () => {
+  const device = new ANARIDevice(new NullDevice({}));
+  const scene = createANARIJSONScene(device, makeChartMotionScene());
+  try {
+    const camera = scene.frame.getParameter('camera')!;
+    camera.setParameter('position', [2, 3, 4]).commitParameters();
+    const world = scene.frame.getParameter('world');
+    const identities = Array.from(scene.instanceIdentifiers);
+    const renderer = scene.frame.getParameter('renderer')!;
+    renderer.setParameters({samplingSeed: 17, exposure: 2}).commitParameters();
+    for (const preset of ['interactive', 'still'] as const) {
+      applyPlaygroundQualityPreset(device, scene.frame, preset);
+      expect(scene.frame.getParameter('camera')).toBe(camera);
+      expect(camera.getParameter('position')).toEqual([2, 3, 4]);
+      expect(scene.frame.getParameter('world')).toBe(world);
+      expect(Array.from(scene.instanceIdentifiers)).toEqual(identities);
+      expect(scene.frame.getParameter('renderer')).toBe(renderer);
+      expect(renderer.getParameter('samplingSeed')).toBe(17);
+      expect(renderer.getParameter('exposure')).toBe(2);
+    }
+    scene.frame
+      .setParameter('renderer', device.newRenderer('default', {exposure: 3}))
+      .commitParameters();
+    applyPlaygroundQualityPreset(device, scene.frame, 'still');
+    expect(scene.frame.getParameter('camera')).toBe(camera);
+    expect(scene.frame.getParameter('world')).toBe(world);
+    expect(scene.frame.getParameter('renderer')?.getParameter('exposure')).toBe(3);
   } finally {
     scene.destroy();
     device.destroy();

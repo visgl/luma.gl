@@ -19,7 +19,11 @@ import {
   createANARIJSONScene
 } from './playground-scene';
 import {ANARISceneEditor} from './scene-editor';
-import {getPlaygroundRendererSubtype, makePlaygroundRenderer} from './playground-renderer';
+import {
+  applyPlaygroundQualityPreset,
+  getPlaygroundRendererSubtype,
+  makePlaygroundRenderer
+} from './playground-renderer';
 import {exportANARIJSONSceneToGLTF, exportANARIJSONSceneToUSD} from './scene-export';
 import {loadSceneFile, loadSceneSample, SCENE_SAMPLES} from './usd-samples';
 
@@ -428,7 +432,20 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       };
       this.editor.value = formatSceneJSON(sceneDescription);
       this.updateEditorMetadata();
-      this.applyEditorScene();
+      if (!this.scene) {
+        this.applyEditorScene();
+        return;
+      }
+      applyPlaygroundQualityPreset(this.anari, this.scene.frame, preset);
+      this.rendererSubtype = 'raytrace';
+      this.temporalAntialiasingEnabled = preset === 'interactive';
+      const toggle = getRequiredElement('temporal-aa-toggle', HTMLButtonElement);
+      toggle.hidden = false;
+      toggle.classList.toggle('active', this.temporalAntialiasingEnabled);
+      toggle.setAttribute('aria-pressed', String(this.temporalAntialiasingEnabled));
+      getRequiredElement('renderer-selector', HTMLSelectElement).value = 'raytrace';
+      getRequiredElement('quality-selector', HTMLSelectElement).value = preset;
+      if (this.captureFrameLimit) this.renderedFrameCount = 0;
     } catch {
       this.applyEditorScene();
     }
