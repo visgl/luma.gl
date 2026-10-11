@@ -105,7 +105,7 @@ const nodeWrapperSourcePatterns = [
   'modules/shadertools/test/lib/preprocessor/preprocessor.spec.{ts,js}',
   'modules/shadertools/test/modules/lighting/{gouraud-material,lambert-material,lights,phong-material}.spec.{ts,js}',
   'modules/splats/test/{splat-browser-coverage,splat-rad-hierarchy}.spec.{ts,js}',
-  'modules/tables/test/table/gpu-table-model.spec.{ts,js}',
+  'modules/experimental/test/gpu-tables/gpu-table-model.spec.{ts,js}',
   'modules/webgl/test/adapter/helpers/{parse-shader-compiler-log,webgl-topology-utils}.spec.{ts,js}'
 ];
 const nodeCoverageIncludePatterns = [
