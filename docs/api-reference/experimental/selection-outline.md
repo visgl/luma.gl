@@ -63,6 +63,6 @@ borrowed ID texture. Submit the final use before destroying either resource.
 The JSON playground captures current channels only while a ray-traced mark is selected.
 Selection is retained as a placement ID and re-resolved against each snapshot, so packed
 integer reordering does not select a different object. Capturing channels adds a full
-primary-ray traversal and allocates 24 bytes per output pixel; the outline adds one
+primary-ray traversal and allocates 28 bytes per output pixel; the outline adds one
 fullscreen draw with bounded texture lookups. Raster ID production and projected-depth
 composition remain separate work.

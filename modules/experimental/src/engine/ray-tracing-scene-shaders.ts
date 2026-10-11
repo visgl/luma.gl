@@ -1113,6 +1113,8 @@ ${RAY_TRACING_SCENE_SHADER}
 @group(0) @binding(13) var identifierImage: texture_storage_2d<r32uint, write>;
 @group(0) @binding(14) var distanceImage: texture_storage_2d<r32float, write>;
 @group(0) @binding(15) var normalImage: texture_storage_2d<rgba32float, write>;
+@group(0) @binding(16) var projectedDepthImage: texture_storage_2d<r32float, write>;
+@group(0) @binding(17) var<uniform> channelViewProjection: mat4x4<f32>;
 
 @compute @workgroup_size(8, 8)
 fn captureChannels(@builtin(global_invocation_id) invocation: vec3<u32>) {
@@ -1125,11 +1127,17 @@ fn captureChannels(@builtin(global_invocation_id) invocation: vec3<u32>) {
   var identifier = 0u;
   var distance = 0.0;
   var normal = vec4<f32>(0.0);
+  var projectedDepth = 1.0;
   if (hit.distance < RAY_INFINITY) {
     identifier = hit.primitiveIndex + 1u;
     distance = hit.distance;
     normal = vec4<f32>(hit.normal, 1.0);
+    let position = ray.origin + ray.direction * hit.distance;
+    let clipPosition = channelViewProjection * vec4<f32>(position, 1.0);
+    // Camera matrices use OpenGL clip depth; WebGPU attachments use zero to one.
+    projectedDepth = clamp(clipPosition.z / clipPosition.w * 0.5 + 0.5, 0.0, 1.0);
   }
+  textureStore(projectedDepthImage, pixel, vec4<f32>(projectedDepth));
   textureStore(identifierImage, pixel, vec4<u32>(identifier));
   textureStore(distanceImage, pixel, vec4<f32>(distance));
   textureStore(normalImage, pixel, normal);

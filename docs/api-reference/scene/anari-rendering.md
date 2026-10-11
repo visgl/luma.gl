@@ -359,7 +359,7 @@ unrendered/destroyed frames, and frames last rendered by a built-in raster rende
 return `null`. Intersections use the ray renderer's opaque
 geometry semantics; alpha and transmission do not change which surface is selected.
 The experimental `SelectionOutline` overlay draws visible selected placement boundaries.
-Raster/ray composition remains follow-up work.
+Projected-depth transfer for raster overlays is available through `DepthTextureCopy`.
 
 ### `captureChannels()`
 
@@ -388,23 +388,26 @@ commands. Render and submit the scene before capturing it.
 | `identifierTexture` | `r32uint`: exact integer placement identifier; zero denotes background. |
 | `distanceTexture` | `r32float`: distance from the camera ray origin in world units; zero denotes background. Orthographic origins lie on the near plane. This is not projected device depth. |
 | `normalTexture` | `rgba32float`: world-space normal in xyz, hit validity in alpha. Background is all zero. |
+| `projectedDepthTexture` | `r32float`: projected WebGPU depth in zero-to-one range, from the last rendered camera; background is one. |
 | `identifiers` | Array mapping nonzero texel value `n` to index `n - 1`, containing the original `surface`, optional `instance`, and stable `placementId`. |
-| `destroy()` | Releases all three snapshot textures. |
+| `destroy()` | Releases all four snapshot textures. |
 
 Identifiers are local to each snapshot: retain its identity table with its textures.
 Placement IDs remain stable when scene extraction reorders packed primitives. Snapshots
 are independent of subsequent renders, resizing, and frame destruction; the application
 must submit commands using the textures before releasing them, while the graphics device
 is still alive. Each capture allocates
-24 bytes per output pixel and performs an additional full-frame traversal, so capture
+28 bytes per output pixel and performs an additional full-frame traversal, so capture
 only when needed. Float textures require unfilterable texture bindings; identifiers
-require unsigned integer bindings. All three support texture sampling and explicit
+require unsigned integer bindings. All four support texture sampling and explicit
 texture-to-buffer copies.
 
 Like picking, capture uses the runtime that last rendered the frame. Unrendered or
 destroyed frames and frames last rendered by the built-in raster runtime return `null`.
-Channels use opaque intersection semantics; alpha/transmission and device-depth
-conversion for raster composition remain separate capabilities.
+Channels use opaque intersection semantics; alpha/transmission remains separate work.
+Use [`DepthTextureCopy`](/docs/api-reference/experimental/depth-texture-copy) to transfer
+`projectedDepthTexture` into a color-preserving render pass with a depth attachment before
+drawing raster overlays with matching camera and viewport conventions.
 
 ### Selection outlines
 

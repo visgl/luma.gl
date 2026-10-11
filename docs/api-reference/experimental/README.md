@@ -120,3 +120,5 @@ specific rather than universal performance claims.
 - [Engine API](/docs/api-reference/engine)
 - [Shadertools API](/docs/api-reference/shadertools)
 - [Effects API](/docs/api-reference/effects)
+
+[`DepthTextureCopy`](./depth-texture-copy.md) transfers projected ray depth to a render attachment for raster overlays.

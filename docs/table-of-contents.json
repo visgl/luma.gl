@@ -668,6 +668,7 @@
                   "api-reference/experimental/scene-renderer",
                   "api-reference/experimental/deferred-scene-renderer",
                   "api-reference/experimental/selection-outline",
+          "api-reference/experimental/depth-texture-copy",
                   "api-reference/experimental/pbr-environment"
                 ]
               },

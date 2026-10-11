@@ -74,6 +74,17 @@ it('ray channels and picking resolve nearest retained objects at full display re
       const normal = new Float32Array(normalBytes.buffer);
       expect(Array.from(normal.slice(0, 3))).toEqual(sphereHit!.normal);
       expect(normal[3]).toBe(1);
+      const projectedDepth = new Float32Array(
+        (await readChannelPixel(snapshot.projectedDepthTexture, 32, 32)).buffer
+      )[0];
+      const viewProjection = new Matrix4()
+        .perspective({fovy: Math.PI / 2, aspect: 1, near: 0.05, far: 500})
+        .multiplyRight(new Matrix4().lookAt({eye: [0, 0, 5], center: [0, 0, 4], up: [0, 1, 0]}));
+      const clipPosition = viewProjection.transform([...sphereHit!.position, 1]);
+      expect(projectedDepth).toBeCloseTo((clipPosition[2] / clipPosition[3]) * 0.5 + 0.5, 6);
+      expect(
+        new Float32Array((await readChannelPixel(snapshot.projectedDepthTexture, 0, 0)).buffer)[0]
+      ).toBe(1);
       for (const texture of [
         snapshot.identifierTexture,
         snapshot.distanceTexture,
@@ -138,6 +149,10 @@ it('ray channels and picking follow orthographic cameras and resized display pix
     // Committing a replacement without rendering still queries the last rendered frame.
     expect((await frame.pick(16, 16))?.surface).toBe(surface);
     frame.setParameter('world', originalWorld).commitParameters();
+    frame
+      .getParameter('camera')!
+      .setParameters({position: [0, 0, 8], near: 0.1, far: 100})
+      .commitParameters();
     frame.setParameter('size', [64, 48]).commitParameters();
     frame.render();
     graphicsDevice.submit();
@@ -155,6 +170,14 @@ it('ray channels and picking follow orthographic cameras and resized display pix
         (await readChannelPixel(resizedSnapshot.distanceTexture, 32, 24)).buffer
       )[0];
       expect(distance).toBeCloseTo(resizedHit!.distance, 5);
+      const depth = new Float32Array(
+        (await readChannelPixel(resizedSnapshot.projectedDepthTexture, 32, 24)).buffer
+      )[0];
+      expect(depth).toBeCloseTo((8 - resizedHit!.position[2] - 0.1) / (100 - 0.1), 6);
+      const savedDepth = new Float32Array(
+        (await readChannelPixel(snapshot.projectedDepthTexture, 16, 16)).buffer
+      )[0];
+      expect(savedDepth).toBeCloseTo((5 - originalHit!.position[2] - 0.05) / (500 - 0.05), 6);
     } finally {
       snapshot.destroy();
       resizedSnapshot.destroy();

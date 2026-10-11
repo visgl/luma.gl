@@ -497,7 +497,7 @@ export type RayTracingScenePickResult = {
   distance: number;
 };
 
-/** Caller-owned GPU snapshot. Identifier zero and zero-valued channels denote a miss. */
+/** Caller-owned GPU snapshot. Identifier zero denotes a miss. */
 export type RayTracingSceneChannels = {
   /** Exact uint32 identifiers; identifiers[index] describes texel value index + 1. */
   identifiers: readonly Pick<RayTracingScenePickResult, 'surfaceId' | 'placementId'>[];
@@ -506,7 +506,9 @@ export type RayTracingSceneChannels = {
   distanceTexture: Texture;
   /** rgba32float world-space normal; alpha is one for a hit and zero for a miss. */
   normalTexture: Texture;
-  /** Release all three textures after submitting their final GPU use. */
+  /** r32float projected depth in WebGPU zero-to-one range; one denotes background. */
+  projectedDepthTexture: Texture;
+  /** Release all four textures after submitting their final GPU use. */
   destroy(): void;
 };
 
@@ -1160,13 +1162,21 @@ export class RayTracingSceneRenderer {
       });
     const textures: Texture[] = [];
     const commandEncoder = this.device.createCommandEncoder();
+    let projectionBuffer: Buffer | undefined;
     try {
+      // render() stores its current projection here after encoding temporal reprojection.
+      projectionBuffer = this.device.createBuffer({
+        data: new Float32Array(resources.previousViewProjection),
+        usage: Buffer.UNIFORM
+      });
       const identifierTexture = createTexture('r32uint');
       textures.push(identifierTexture);
       const distanceTexture = createTexture('r32float');
       textures.push(distanceTexture);
       const normalTexture = createTexture('rgba32float');
       textures.push(normalTexture);
+      const projectedDepthTexture = createTexture('r32float');
+      textures.push(projectedDepthTexture);
       this.channelComputation ??= new Computation(this.device, {
         id: 'ray-scene-channels',
         source: RAY_TRACING_CHANNEL_SHADER,
@@ -1204,7 +1214,16 @@ export class RayTracingSceneRenderer {
               location: 15,
               access: 'write-only',
               format: 'rgba32float'
-            }
+            },
+            {
+              name: 'projectedDepthImage',
+              type: 'storage',
+              group: 0,
+              location: 16,
+              access: 'write-only',
+              format: 'r32float'
+            },
+            {name: 'channelViewProjection', type: 'uniform', group: 0, location: 17}
           ]
         }
       });
@@ -1219,7 +1238,9 @@ export class RayTracingSceneRenderer {
         blasTriangleIds: resources.blasTriangleIdsBuffer,
         identifierImage: identifierTexture,
         distanceImage: distanceTexture,
-        normalImage: normalTexture
+        normalImage: normalTexture,
+        projectedDepthImage: projectedDepthTexture,
+        channelViewProjection: projectionBuffer
       });
       const computePass = commandEncoder.beginComputePass();
       this.channelComputation.dispatch(
@@ -1234,6 +1255,7 @@ export class RayTracingSceneRenderer {
         identifierTexture,
         distanceTexture,
         normalTexture,
+        projectedDepthTexture,
         destroy: () => {
           for (const texture of textures) texture.destroy();
         }
@@ -1242,6 +1264,7 @@ export class RayTracingSceneRenderer {
       for (const texture of textures) texture.destroy();
       throw error;
     } finally {
+      projectionBuffer?.destroy();
       commandEncoder.destroy();
     }
   }
