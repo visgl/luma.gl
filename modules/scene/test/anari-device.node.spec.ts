@@ -368,3 +368,99 @@ it('ANARI triangle geometries render packed RGB vertex colors', () => {
   device.destroy();
   void 0;
 });
+
+it('ANARI frame picking returns no hit before rendering or on unsupported runtimes', async () => {
+  const device = new ANARIDevice(new NullDevice({}));
+  const frame = device.newFrame({
+    world: device.newWorld(),
+    camera: device.newCamera('perspective'),
+    renderer: device.newRenderer('default')
+  });
+  expect(frame.captureChannels()).toBe(null);
+  expect(await frame.pick(0, 0)).toBe(null);
+  frame.render();
+  expect(await frame.pick(0, 0)).toBe(null);
+  frame.destroy();
+  device.destroy();
+});
+
+it('ANARI picking follows the last rendered runtime and clears replaced backends', async () => {
+  const device = new ANARIDevice(new NullDevice({}));
+  let pickCount = 0;
+  const runtimeFactory: ANARIRendererRuntimeFactory = () => ({
+    render: () => ({surfaceCount: 0, instanceCount: 0, drawCount: 0, triangleCount: 0}),
+    pick: async () => {
+      pickCount++;
+      return null;
+    },
+    destroyFrame: () => {},
+    destroy: () => {}
+  });
+  device.registerRenderer('pickable', runtimeFactory);
+  const renderer = device.newRenderer('pickable');
+  const frame = device.newFrame({
+    world: device.newWorld(),
+    camera: device.newCamera('perspective'),
+    renderer
+  });
+  frame.render();
+  await frame.pick(0, 0);
+  expect(pickCount).toBe(1);
+  frame.setParameter('renderer', device.newRenderer('default')).commitParameters();
+  await frame.pick(0, 0);
+  expect(pickCount).toBe(2);
+  frame.render();
+  frame.setParameter('renderer', renderer).commitParameters();
+  await frame.pick(0, 0);
+  expect(pickCount).toBe(2);
+  frame.render();
+  await frame.pick(0, 0);
+  expect(pickCount).toBe(3);
+  device.registerRenderer('pickable', () => runtimeFactory(device.device));
+  await frame.pick(0, 0);
+  expect(pickCount).toBe(3);
+  frame.destroy();
+  device.destroy();
+});
+
+it('ANARI channels dispatch to the last rendered backend and clear destroyed frames', () => {
+  const device = new ANARIDevice(new NullDevice({}));
+  let captureCount = 0;
+  const runtimeFactory: ANARIRendererRuntimeFactory = () => ({
+    render: () => ({surfaceCount: 0, instanceCount: 0, drawCount: 0, triangleCount: 0}),
+    captureChannels: () => {
+      captureCount++;
+      return null;
+    },
+    destroyFrame: () => {},
+    destroy: () => {}
+  });
+  device.registerRenderer('channels', runtimeFactory);
+  const renderer = device.newRenderer('channels');
+  const frame = device.newFrame({
+    world: device.newWorld(),
+    camera: device.newCamera('perspective'),
+    renderer
+  });
+  frame.captureChannels();
+  expect(captureCount).toBe(0);
+  frame.render();
+  frame.setParameter('renderer', device.newRenderer('default')).commitParameters();
+  frame.captureChannels();
+  expect(captureCount).toBe(1);
+  frame.render();
+  frame.setParameter('renderer', renderer).commitParameters();
+  frame.captureChannels();
+  expect(captureCount).toBe(1);
+  frame.render();
+  device.registerRenderer('channels', () => runtimeFactory(device.device));
+  frame.captureChannels();
+  expect(captureCount).toBe(1);
+  frame.render();
+  frame.captureChannels();
+  expect(captureCount).toBe(2);
+  frame.destroy();
+  frame.captureChannels();
+  expect(captureCount).toBe(2);
+  device.destroy();
+});

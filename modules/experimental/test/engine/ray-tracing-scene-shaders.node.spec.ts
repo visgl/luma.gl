@@ -3,12 +3,14 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {describe, expect, test} from 'vitest';
-import {WgslReflect} from 'wgsl_reflect';
+import {ResourceType, WgslReflect} from 'wgsl_reflect';
 import {
   getRayTracingScenePresentationShader,
   RAY_TRACING_BOUNDS_SHADER,
   RAY_TRACING_HISTORY_CARRY_SHADER,
-  RAY_TRACING_SCENE_SHADER
+  RAY_TRACING_SCENE_SHADER,
+  RAY_TRACING_PICK_SHADER,
+  RAY_TRACING_CHANNEL_SHADER
 } from '../../src/engine/ray-tracing-scene-shaders';
 
 describe('graph-accelerated ray tracing shaders', () => {
@@ -551,7 +553,7 @@ describe('graph-accelerated ray tracing shaders', () => {
       'let historicalSample = getHistoricalRaySample(pixel, guideRay, guideHit, color)'
     );
 
-    const functionStart = RAY_TRACING_SCENE_SHADER.indexOf('fn makeCameraRayAtOffset(');
+    const functionStart = RAY_TRACING_SCENE_SHADER.indexOf('fn makeCameraRayAtCoordinates(');
     const functionEnd = RAY_TRACING_SCENE_SHADER.indexOf('\nfn ', functionStart + 1);
     const cameraRaySource = RAY_TRACING_SCENE_SHADER.slice(functionStart, functionEnd);
     const orthographicBranch = cameraRaySource.indexOf('if (uniforms.cameraPosition.w > 0.5)');
@@ -735,4 +737,40 @@ describe('graph-accelerated ray tracing shaders', () => {
       );
     }
   });
+});
+
+test('ray picking uses integer hit identifiers within WebGPU CORE storage limits', () => {
+  const reflection = new WgslReflect(RAY_TRACING_PICK_SHADER);
+  const pickingEntry = reflection.entry.compute.find(entry => entry.name === 'pick');
+  expect(pickingEntry).toBeDefined();
+  const resources = pickingEntry?.resources || [];
+  const storageResources = resources.filter(resource => reflection.storage.includes(resource));
+  expect(storageResources).toHaveLength(8);
+  expect(resources.some(resource => resource.name === 'lights')).toBe(false);
+  const result = reflection.storage.find(resource => resource.name === 'pickResult');
+  expect(result?.size).toBe(32);
+  expect(result?.members?.find(member => member.name === 'primitiveIdentifier')?.offset).toBe(28);
+});
+
+test('full-frame channels fit CORE buffer and storage texture limits', () => {
+  const reflection = new WgslReflect(RAY_TRACING_CHANNEL_SHADER);
+  const entry = reflection.entry.compute.find(entry => entry.name === 'captureChannels');
+  expect(entry).toBeDefined();
+  const resources = entry?.resources || [];
+  expect(resources.filter(resource => resource.resourceType === ResourceType.Storage)).toHaveLength(
+    7
+  );
+  expect(
+    resources.filter(resource => resource.resourceType === ResourceType.StorageTexture)
+  ).toHaveLength(4);
+  expect(resources.some(resource => resource.name === 'lights')).toBe(false);
+  expect(resources.map(resource => resource.name)).toEqual(
+    expect.arrayContaining([
+      'identifierImage',
+      'distanceImage',
+      'normalImage',
+      'projectedDepthImage',
+      'channelViewProjection'
+    ])
+  );
 });

@@ -71,7 +71,17 @@ export class WEBGLCommandBuffer extends CommandBuffer {
     this.device = device;
   }
 
-  _executeCommands(commands: Command[] = this.commands) {
+  /**
+   * Executes the queued commands and empties the queue, so each command runs exactly once.
+   * Called before WebGL work that executes immediately (render passes, buffer writes) to keep command order.
+   */
+  flushCommands(): void {
+    const commands = this.commands;
+    this.commands = [];
+    this._executeCommands(commands);
+  }
+
+  _executeCommands(commands: Command[]): void {
     for (const command of commands) {
       switch (command.name) {
         case 'copy-buffer-to-buffer':

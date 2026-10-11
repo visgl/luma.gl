@@ -12,6 +12,16 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ## Upgrading to v10.0
 
+### Render pass draw offsets and counts
+
+Indexed WebGL draws now use `firstIndex` in index elements. Replace uses of
+`firstVertex` as an indexed byte offset with `firstIndex: byteOffset / indexByteSize`.
+`firstVertex` only applies to non-indexed draws. WebGL now rejects `indexCount`
+unless the selected vertex array has an index buffer; attribute-less non-indexed
+draws should use `vertexCount`.
+WebGPU render passes and render bundles now honor explicit zero draw and instance
+counts instead of drawing an implicit instance.
+
 ### CPU geometry validation
 
 Engine geometry now delegates CPU storage and tessellation to `@math.gl/geometry`.

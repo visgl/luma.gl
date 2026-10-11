@@ -401,7 +401,7 @@ export class WebGLDevice extends Device {
     }
 
     try {
-      commandBuffer._executeCommands();
+      commandBuffer.flushCommands();
 
       if (submittedCommandEncoder) {
         submittedCommandEncoder
@@ -417,11 +417,14 @@ export class WebGLDevice extends Device {
   }
 
   override writeBufferViaCommandEncoder(
-    _commandEncoder: CommandEncoder,
+    commandEncoder: CommandEncoder,
     destinationBuffer: Buffer,
     data: ArrayBufferLike | ArrayBufferView | SharedArrayBuffer,
     byteOffset: number = 0
   ): void {
+    // WebGL writes execute immediately. Run earlier queued copies first so
+    // this write keeps its position in the command stream.
+    (commandEncoder as WEBGLCommandEncoder).commandBuffer.flushCommands();
     destinationBuffer.write(data, byteOffset);
   }
 

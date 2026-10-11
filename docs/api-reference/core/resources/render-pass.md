@@ -118,6 +118,11 @@ draw counts and offsets such as `vertexCount`, `indexCount`,
 
 For indexed draws, `indexCount` takes precedence. When it is omitted, the active
 backend may use `vertexCount` as the indexed draw count for compatibility.
+`firstIndex` is measured in index elements; `firstVertex` applies to non-indexed
+draws. WebGL requires an index buffer when `indexCount` is supplied. A vertex array
+can be omitted for attribute-less non-indexed draws. WebGL requires
+`isInstanced: true` to use `instanceCount`; WebGPU infers instancing from the count.
+`baseVertex` and `firstInstance` are supported only on WebGPU.
 
 ```ts
 renderPass.setPipeline(pipeline);

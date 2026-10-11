@@ -77,6 +77,7 @@ type CachedSceneSurface = {
 type CachedWorldScene = {
   world: ANARIWorld;
   surfaces: SceneSurface[];
+  pickPlacements: ReadonlyMap<string, SurfacePlacement>;
   surfaceEntries: CachedSceneSurface[];
   lights: Light[];
   analyticPrimitives: Record<string, CachedAnalyticPrimitive>;
@@ -351,6 +352,11 @@ export class ANARISceneAdapter {
     return cachedWorld.analyticPrimitives;
   }
 
+  /** Snapshot of retained objects associated with the last extracted placement identities. */
+  getPickPlacements(world: ANARIWorld): ReadonlyMap<string, SurfacePlacement> {
+    return this.worlds.get(world)?.pickPlacements ?? new Map();
+  }
+
   destroy(): void {
     this.geometries.clear();
     this.materials.clear();
@@ -361,6 +367,7 @@ export class ANARISceneAdapter {
     const cachedWorld: CachedWorldScene = {
       world,
       surfaces: [],
+      pickPlacements: new Map(),
       surfaceEntries: [],
       lights: [],
       analyticPrimitives: {},
@@ -483,7 +490,11 @@ export class ANARISceneAdapter {
 
   private makeSceneSurfaces(cachedWorld: CachedWorldScene): SceneSurface[] {
     const placementsBySurface = new Map<ANARISurface, SurfacePlacement[]>();
-    for (const placement of collectSurfacePlacements(cachedWorld.world, cachedWorld)) {
+    const surfacePlacements = collectSurfacePlacements(cachedWorld.world, cachedWorld);
+    cachedWorld.pickPlacements = new Map(
+      surfacePlacements.map(placement => [placement.instanceId, placement])
+    );
+    for (const placement of surfacePlacements) {
       const placements = placementsBySurface.get(placement.surface) || [];
       placements.push(placement);
       placementsBySurface.set(placement.surface, placements);

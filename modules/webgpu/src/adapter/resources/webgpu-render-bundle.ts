@@ -171,18 +171,18 @@ export class WebGPURenderBundleEncoder extends RenderBundleEncoder {
     }
 
     this.vertexArray?.bindBeforeRender(this);
-    if (options.indexCount) {
+    if (options.indexCount !== undefined) {
       this.handle.drawIndexed(
         options.indexCount,
-        options.instanceCount,
+        options.instanceCount ?? 1,
         options.firstIndex,
         options.baseVertex,
         options.firstInstance
       );
     } else {
       this.handle.draw(
-        options.vertexCount || 0,
-        options.instanceCount || 1,
+        options.vertexCount ?? 0,
+        options.instanceCount ?? 1,
         options.firstVertex,
         options.firstInstance
       );
