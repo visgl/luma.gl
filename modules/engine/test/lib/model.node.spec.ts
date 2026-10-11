@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import type {Device} from '@luma.gl/core';
+import {PipelineFactory, ShaderFactory, type Device} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {GLSLShaderAssembler, WGSLShaderAssembler, type ShaderAssembler} from '@luma.gl/shadertools';
 import {NullDevice} from '@luma.gl/test-utils';
@@ -313,3 +313,33 @@ function makeWebGPUDevice(): Device {
 
   return webgpuDevice;
 }
+
+it('Model releases references when invalidation returns the same cached pipeline', () => {
+  const device = new NullDevice({
+    _cachePipelines: true,
+    _destroyPipelines: true,
+    _destroyShaders: true
+  });
+  const model = new Model(device, {
+    vs: GLSL_VERTEX_SOURCE,
+    fs: GLSL_FRAGMENT_SOURCE,
+    topology: 'triangle-list',
+    pipelineFactory: new PipelineFactory(device),
+    shaderFactory: new ShaderFactory(device)
+  });
+  const pipeline = model.pipeline;
+  try {
+    model.setTopology('point-list');
+    model.setTopology('triangle-list');
+    model._updatePipeline();
+    expect(model.pipeline).toBe(pipeline);
+    expect(pipeline.destroyed).toBe(false);
+    model.destroy();
+    expect(pipeline.destroyed).toBe(true);
+    expect(pipeline.vs?.destroyed).toBe(true);
+    expect(pipeline.fs?.destroyed).toBe(true);
+  } finally {
+    model.destroy();
+    device.destroy();
+  }
+});
