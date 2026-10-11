@@ -2,15 +2,18 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {ANARIDevice} from '@luma.gl/scene';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {webgpuAdapter} from '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';
 import {expect, it} from 'vitest';
 
 it('ray picking resolves nearest retained objects independently of rendering resolution', async () => {
-  const graphicsDevice = await getWebGPUTestDevice('core');
-  if (!graphicsDevice) {
-    return;
-  }
+  if (!webgpuAdapter.isSupported()) return;
+  // Own the device and canvas for the entire asynchronous readback lifetime.
+  const graphicsDevice = await webgpuAdapter.create({
+    featureLevel: 'core',
+    createCanvasContext: {canvas: new OffscreenCanvas(64, 64)},
+    debug: true
+  });
   const device = new ANARIDevice(graphicsDevice);
   const material = device.newMaterial('matte', {color: [0.8, 0.4, 0.2]});
   const sphere = device.newSurface({
@@ -82,15 +85,19 @@ it('ray picking resolves nearest retained objects independently of rendering res
   } finally {
     frame.destroy();
     device.destroy();
+    graphicsDevice.destroy();
   }
   expect(await frame.pick(32, 32)).toBe(null);
 }, 120000);
 
 it('ray picking follows orthographic cameras and resized display pixels', async () => {
-  const graphicsDevice = await getWebGPUTestDevice('core');
-  if (!graphicsDevice) {
-    return;
-  }
+  if (!webgpuAdapter.isSupported()) return;
+  // Own the device and canvas for the entire asynchronous readback lifetime.
+  const graphicsDevice = await webgpuAdapter.create({
+    featureLevel: 'core',
+    createCanvasContext: {canvas: new OffscreenCanvas(64, 64)},
+    debug: true
+  });
   const device = new ANARIDevice(graphicsDevice);
   const surface = device.newSurface({
     geometry: device.newGeometry('sphere', {radius: 0.6}),
@@ -133,14 +140,18 @@ it('ray picking follows orthographic cameras and resized display pixels', async 
   } finally {
     frame.destroy();
     device.destroy();
+    graphicsDevice.destroy();
   }
 }, 120000);
 
 it('ray picking preserves integer identity beyond temporal guide encoding limits', async () => {
-  const graphicsDevice = await getWebGPUTestDevice('core');
-  if (!graphicsDevice) {
-    return;
-  }
+  if (!webgpuAdapter.isSupported()) return;
+  // Own the device and canvas for the entire asynchronous readback lifetime.
+  const graphicsDevice = await webgpuAdapter.create({
+    featureLevel: 'core',
+    createCanvasContext: {canvas: new OffscreenCanvas(64, 64)},
+    debug: true
+  });
   const device = new ANARIDevice(graphicsDevice);
   const surface = device.newSurface({
     geometry: device.newGeometry('sphere', {radius: 0.5, segments: 8}),
@@ -165,5 +176,6 @@ it('ray picking preserves integer identity beyond temporal guide encoding limits
   } finally {
     frame.destroy();
     device.destroy();
+    graphicsDevice.destroy();
   }
 }, 120000);
