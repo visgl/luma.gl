@@ -4,10 +4,10 @@ import {NullDevice} from '@luma.gl/test-utils';
 import {PLAYGROUND_PRESETS} from '../../examples/showcase/scene/playground-presets';
 import {createANARIJSONScene} from '../../examples/showcase/scene/playground-scene';
 
-it('ANARI JSON presets reproduce the complete Observatory scenes', () => {
+it('ANARI JSON presets reproduce the complete showcase scenes', () => {
   const device = new ANARIDevice(new NullDevice({}));
-  const expectedInstanceCounts = [312, 429, 318];
-  const expectedLightCounts = [3, 5, 5];
+  const expectedInstanceCounts = [312, 429, 318, 19];
+  const expectedLightCounts = [3, 5, 5, 1];
 
   for (const [presetIndex, preset] of PLAYGROUND_PRESETS.entries()) {
     const scene = createANARIJSONScene(device, preset.scene);
