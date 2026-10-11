@@ -208,6 +208,50 @@ it('WebGLStateTracker#intercept gl calls', async () => {
   void 0;
 });
 
+it('WebGLStateTracker#tracks buffer bindings by target', async () => {
+  const device = await devicePromise;
+  const {gl} = device;
+  const state = WebGLStateTracker.get(gl);
+
+  resetGLParameters(gl);
+
+  const bindingParameters = [
+    [gl.ARRAY_BUFFER, gl.ARRAY_BUFFER_BINDING],
+    [gl.COPY_READ_BUFFER, gl.COPY_READ_BUFFER_BINDING],
+    [gl.COPY_WRITE_BUFFER, gl.COPY_WRITE_BUFFER_BINDING],
+    [gl.PIXEL_PACK_BUFFER, gl.PIXEL_PACK_BUFFER_BINDING],
+    [gl.PIXEL_UNPACK_BUFFER, gl.PIXEL_UNPACK_BUFFER_BINDING]
+  ];
+  const buffers = bindingParameters.map(() => gl.createBuffer());
+
+  device.pushState();
+  for (const [index, [target, bindingParameter]] of bindingParameters.entries()) {
+    gl.bindBuffer(target, buffers[index]);
+    expect(state.cache[bindingParameter], `binding of target ${target} is tracked`).toBe(
+      buffers[index]
+    );
+  }
+  for (const [index, [, bindingParameter]] of bindingParameters.entries()) {
+    expect(gl.getParameter(bindingParameter), `binding ${bindingParameter} is current`).toBe(
+      buffers[index]
+    );
+  }
+
+  const uniformBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.UNIFORM_BUFFER, uniformBuffer);
+  expect(state.cache[gl.UNIFORM_BUFFER_BINDING], 'uniform buffer binding is not tracked').toBe(
+    undefined
+  );
+  gl.bindBuffer(gl.UNIFORM_BUFFER, null);
+  device.popState();
+
+  for (const [, bindingParameter] of bindingParameters) {
+    expect(gl.getParameter(bindingParameter), `binding ${bindingParameter} is restored`).toBe(null);
+  }
+
+  for (const buffer of [...buffers, uniformBuffer]) gl.deleteBuffer(buffer);
+});
+
 it('WebGLStateTracker#not cached parameters', async () => {
   const device = await devicePromise;
   const {gl} = device;
