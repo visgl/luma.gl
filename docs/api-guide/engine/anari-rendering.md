@@ -105,3 +105,39 @@ For exact supported parameters and defaults, continue to the [`@luma.gl/scene` A
 - [Engine programming](/docs/api-guide/engine)
 - [How luma.gl fits together](/docs/api-guide/luma-layers)
 - [Experimental renderers](/docs/api-reference/experimental)
+
+
+### Chart motion and capture
+
+In the JSON playground, choose **Chart Motion** on WebGPU and click an animated mark.
+Six raster labels follow retained point instances. The playground copies current ray
+projected depth before drawing labels, so other chart marks can occlude their glyphs.
+Selection remains attached to the retained placement as it moves. Labels and outlines
+are composited after radiance presentation and do not enter temporal history. This
+example captures full-resolution hit channels each frame while labels are visible,
+adding a primary traversal and 28 bytes per output pixel of snapshot storage.
+
+The **Ray quality** selector is available over the preview, including when the editor
+is hidden. **Interactive** enables adaptive resolution and temporal reprojection;
+**Still / capture** chooses full resolution, four primary samples per frame, and fixed
+quality. A moving scene will not converge as a still scene would. For application-owned
+controls, use [`getRayTracingQualityPreset`](/docs/api-reference/experimental/ray-tracing-quality-presets).
+
+For a repeatable baseline capture, start the scene example and run:
+
+```bash
+yarn workspace luma.gl-examples-showcase-scene start --host 127.0.0.1 --port 5180
+node scripts/playwright/chart-baseline-capture.mjs --seed 17 --frames 8 --output /tmp/chart-ray
+node scripts/playwright/chart-baseline-capture.mjs --renderer default --frames 8 --output /tmp/chart-raster
+node scripts/playwright/chart-baseline-capture.mjs --motion --frames 8 --output /tmp/chart-motion
+```
+
+The harness writes `chart.png` and `metadata.json`, including scene JSON, drawing-buffer
+size, renderer settings, seed, frame count, browser version, and an optional `--hardware`
+label. `--software-gpu` uses the repository's software GPU launch configuration; Linux
+headless presentation requires an X display. Capture uses a fixed viewport, pixel ratio
+one, and exactly N submitted scene frames. Motion captures use frame-index time at 60 Hz;
+ordinary interactive rendering uses elapsed time. Keep captures on the same backend and
+hardware when comparing pixels. Reported elapsed time includes startup and capture;
+existing frame telemetry is CPU timing, not GPU timestamps. GPU memory measurement and
+hardware convergence baselines remain follow-up work.

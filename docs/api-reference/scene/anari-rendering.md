@@ -512,3 +512,12 @@ type ANARIRendererSubtype =
 ```
 
 All parameter interfaces, object classes, subtype aliases, object metadata, and frame statistics are exported from `@luma.gl/scene`.
+
+
+### Sampling and quality
+
+`raytrace` accepts `samplingSeed` (uint32, default zero) for deterministic primary-ray
+sample rotations. A changed seed resets accumulation; centered picking and hit channels
+are unaffected. Use the same seed and frame count on the same backend for comparisons.
+[`getRayTracingQualityPreset`](/docs/api-reference/experimental/ray-tracing-quality-presets)
+returns explicit interactive/still renderer settings without modifying exposure or seed.

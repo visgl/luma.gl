@@ -122,3 +122,5 @@ specific rather than universal performance claims.
 - [Effects API](/docs/api-reference/effects)
 
 [`DepthTextureCopy`](./depth-texture-copy.md) transfers projected ray depth to a render attachment for raster overlays.
+
+[`getRayTracingQualityPreset`](./ray-tracing-quality-presets.md) supplies interactive and still settings without changing camera or sampling seed.

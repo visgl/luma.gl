@@ -15,6 +15,7 @@ struct RayTracingUniforms {
   temporal: vec4<f32>,
   previousViewProjection: mat4x4<f32>,
   previousCameraPosition: vec4<f32>,
+  sampling: vec4<u32>,
 };
 
 struct RayPrimitive {
@@ -237,8 +238,8 @@ fn makeCameraRayAtOffset(pixel: vec2<u32>, offset: vec2<f32>) -> Ray {
 fn makeRadianceSampleOffset(pixel: vec2<u32>, sampleIndex: u32) -> vec2<f32> {
   let pixelIndex = pixel.y * uniforms.dimensions.x + pixel.x;
   let pixelRotation = vec2<f32>(
-    makeRandom(pixelIndex * 1973u + 17u),
-    makeRandom(pixelIndex * 26699u + 101u)
+    makeRandom((pixelIndex * 1973u + 17u) ^ uniforms.sampling.x),
+    makeRandom((pixelIndex * 26699u + 101u) ^ uniforms.sampling.x)
   );
   let sequenceIndex = uniforms.acceleration.w * 16u + sampleIndex;
   let lowDiscrepancyOffset = vec2<f32>(

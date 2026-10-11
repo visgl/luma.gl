@@ -241,6 +241,8 @@ export type ANARIRendererParameters = {
   /** Explicit output transfer; omitted values follow the render-target format. */
   outputColorSpace?: 'linear' | 'srgb';
   samplesPerPixel?: number;
+  /** Uint32 primary-ray sampling seed. Changing it resets accumulation. */
+  samplingSeed?: number;
   maxBounces?: number;
   progressive?: boolean;
   shadows?: boolean;

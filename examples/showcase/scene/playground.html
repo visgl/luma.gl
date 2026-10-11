@@ -2,6 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#090b13" />
     <title>ANARI · Full-Scene JSON Lab</title>
@@ -608,6 +609,13 @@
           <canvas id="playground-canvas" class="preview-canvas"></canvas>
           <div class="preview-heading">
             <div class="section-label">LIVE PREVIEW</div>
+            <label style="pointer-events: auto">Ray quality
+              <select id="quality-selector" class="renderer-selector" aria-label="Ray quality">
+                <option value="custom">Scene settings</option>
+                <option value="interactive">Interactive</option>
+                <option value="still">Still / capture</option>
+              </select>
+            </label>
             <h1 id="scene-title" class="scene-title"></h1>
             <div id="scene-description" class="scene-description"></div>
             <div id="scene-selection" class="scene-description" role="status" aria-live="polite"></div>
