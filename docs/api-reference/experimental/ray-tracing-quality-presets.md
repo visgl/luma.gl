@@ -131,7 +131,9 @@ Lambertian secondary paths. `pbr` enables opaque metallic/roughness secondary
 reflections when `maxBounces` is nonzero. Both modes use the same bounded 0–8
 secondary bounce budget, primary sampling seed, retained identities, and history.
 Changing modes resets accumulation; secondary material, light and transform changes
-also reset it, including when primary-hit temporal reprojection is enabled.
+also reset it, including when primary-hit temporal reprojection is enabled. Camera
+changes reset active PBR accumulation too: primary-hit reprojection alone cannot
+validate view-dependent reflection. Unchanged cameras continue accumulating normally.
 
 The PBR path samples a cosine diffuse/GGX normal-distribution mixture and evaluates
 both lobes against the combined directional probability density. Metallic surfaces

@@ -3389,10 +3389,11 @@ function getRenderRevision(
   options: RayTracingSceneRenderOptions,
   inverseViewProjection: Matrix4
 ): string {
-  // Scene adapters may recommit an unchanged camera every animation tick. Temporal mode keeps
-  // ordinary camera motion out of this reset key and rejects incompatible history in the shader.
+  // Primary-hit reprojection cannot validate view-dependent secondary reflections.
+  // Keep ordinary diffuse camera reprojection, but reset reflective paths on camera changes.
+  const reflectiveTransport = options.transportMode === 'pbr' && (options.maxBounces ?? 0) > 0;
   const cameraRevision =
-    (options.temporalReprojection ?? true)
+    (options.temporalReprojection ?? true) && !reflectiveTransport
       ? undefined
       : [Array.from(inverseViewProjection), Array.from(options.camera.position)];
   return JSON.stringify([

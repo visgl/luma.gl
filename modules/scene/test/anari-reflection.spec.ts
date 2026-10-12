@@ -156,6 +156,11 @@ it('opaque PBR paths reflect emissive geometry with roughness, tint and fresh se
       expect(pick).not.toBeNull();
       expect(frame.render().rayTracing?.accumulatedSamples).toBe(2);
       graphics.submit();
+      camera.setParameter('position', [0.01, 0, 3]).commitParameters();
+      expect(frame.render().rayTracing?.accumulatedSamples).toBe(1);
+      graphics.submit();
+      expect(frame.render().rayTracing?.accumulatedSamples).toBe(2);
+      graphics.submit();
       renderer.setParameter('transportMode', 'diffuse').commitParameters();
       expect(frame.render().rayTracing?.accumulatedSamples).toBe(1);
       graphics.submit();
