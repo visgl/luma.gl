@@ -14,6 +14,7 @@ import {
 import type {Device} from '@luma.gl/core';
 import {
   addFP64UniformUse,
+  addGeospatialPass,
   getClassicFP64Defines,
   getPlatformFP64Arithmetic,
   validateDisjointGeospatialViews
@@ -182,6 +183,52 @@ function makeDynamicBuffer(buffer: Buffer): DynamicBuffer {
   Object.defineProperty(dynamicBuffer, '_buffer', {value: buffer});
   return dynamicBuffer;
 }
+
+describe('addGeospatialPass', () => {
+  const addPass = (
+    fp64Profile: 'full' | 'predicate-f32' | 'predicate-raw' | undefined,
+    fp64Arithmetic: 'integer' | 'classic' | 'platform' | undefined
+  ): number => {
+    let passes = 0;
+    const graph = {addComputePass: () => passes++} as unknown as Parameters<
+      typeof addGeospatialPass
+    >[0];
+    addGeospatialPass(graph, {
+      id: 'pass',
+      source: '',
+      resources: [],
+      bindings: {},
+      dispatchLayout: {x: 1, y: 1, z: 1},
+      precise: true,
+      fp64Profile,
+      fp64Arithmetic
+    });
+    return passes;
+  };
+
+  it('rejects classic and platform arithmetic with the predicate profiles', () => {
+    for (const fp64Profile of ['predicate-f32', 'predicate-raw'] as const) {
+      for (const fp64Arithmetic of ['classic', 'platform'] as const) {
+        expect(() => addPass(fp64Profile, fp64Arithmetic), fp64Profile).toThrow(
+          `geospatial fp64Profile '${fp64Profile}' requires fp64Arithmetic 'integer', not '${fp64Arithmetic}'`
+        );
+      }
+    }
+  });
+
+  it('accepts integer arithmetic with every profile and any arithmetic with the full profile', () => {
+    for (const fp64Profile of ['predicate-f32', 'predicate-raw'] as const) {
+      for (const fp64Arithmetic of ['integer', undefined] as const) {
+        expect(addPass(fp64Profile, fp64Arithmetic), fp64Profile).toBe(1);
+      }
+    }
+    for (const fp64Profile of ['full', undefined] as const) {
+      for (const fp64Arithmetic of ['integer', 'classic', 'platform', undefined] as const) {
+        expect(addPass(fp64Profile, fp64Arithmetic), fp64Arithmetic).toBe(1);
+      }
+    }
+  });
+});
 
 describe('getPlatformFP64Arithmetic', () => {
   const device = (info: Partial<Device['info']>) =>

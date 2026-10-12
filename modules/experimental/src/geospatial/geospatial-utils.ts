@@ -53,8 +53,9 @@ export type GeospatialFP64Arithmetic = 'integer' | 'classic' | 'platform';
  * Metal reassociates the floating-point transforms classic double-single arithmetic relies on,
  * so Metal keeps the integer-controlled implementation. D3D12 inlines every function call into
  * DXIL, where the integer-controlled shaders grow too large to compile in practical time, so
- * D3D12 and Vulkan use classic double-single. Whenever the backend cannot be established, the
- * integer-controlled implementation is kept: it is correct everywhere, only slow to compile.
+ * D3D11, D3D12 and Vulkan use classic double-single. Browsers rarely report the backend; then a
+ * host known not to be Apple selects classic, and an Apple or unidentified host keeps the
+ * integer-controlled implementation: it is correct everywhere, only slow to compile.
  */
 export function getPlatformFP64Arithmetic(device: Device): 'integer' | 'classic' {
   const {type, gpu, gpuType, gpuBackend, fallback} = device.info;
@@ -404,12 +405,27 @@ export function addGeospatialPass<Parameters>(
     dispatchLayout: GeospatialDispatchLayout;
     precise?: boolean;
     fp64Profile?: GeospatialFP64Profile;
-    /** fp64 arithmetic for precise kernels. Default `integer`. */
+    /**
+     * fp64 arithmetic for precise kernels. Default `integer`. The predicate profiles support only
+     * `integer`.
+     */
     fp64Arithmetic?: GeospatialFP64Arithmetic;
   }
 ): void {
   if (!props.precise && props.fp64Profile !== undefined) {
     throw new Error('geospatial fp64 profiles require precise arithmetic');
+  }
+  // The predicate profiles omit fp64 helpers that classic arithmetic calls, so the assembled WGSL
+  // would not compile. 'platform' is rejected too: it selects classic arithmetic on some devices.
+  if (
+    props.fp64Profile !== undefined &&
+    props.fp64Profile !== 'full' &&
+    props.fp64Arithmetic !== undefined &&
+    props.fp64Arithmetic !== 'integer'
+  ) {
+    throw new Error(
+      `geospatial fp64Profile '${props.fp64Profile}' requires fp64Arithmetic 'integer', not '${props.fp64Arithmetic}'`
+    );
   }
   graph.addComputePass({
     id: props.id,
