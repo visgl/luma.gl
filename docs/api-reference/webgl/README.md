@@ -48,3 +48,9 @@ const gpuDevice: WebGL2RenderingContext = webglDevice.handle;
 const buffer = device.createBuffer(...);
 const gpuBuffer: WebGLBuffer = buffer.handle;
 ```
+
+luma.gl owns the uniform block binding points of the programs behind its render
+pipelines, and skips assignments that it knows are unchanged. If application code
+changes them through `renderPipeline.handle`, call
+`renderPipeline.invalidateUniformBlockBindings()` afterwards. See
+[WebGL uniform block binding points](/docs/api-reference/core/resources/render-pipeline#webgl-uniform-block-binding-points).

@@ -117,6 +117,35 @@ This compatibility adapter forwards to the supplied render pass. Prefer
 WebGPU maps pass bindings to native bind groups. WebGL emulates the same
 pass-owned state using uniform-buffer and texture-unit bindings at draw time.
 
+### WebGL uniform block binding points
+
+On WebGL, luma.gl owns the uniform block binding points of the `WebGLProgram`
+behind a render pipeline (`renderPipeline.handle`). At draw time it assigns each
+uniform block the binding point of its position in `shaderLayout.bindings`, and
+it skips the `gl.uniformBlockBinding()` call when the block already has the
+binding point that luma.gl last assigned to it. luma.gl tracks these assignments
+per program, so render pipelines that share one program (for example through
+`PipelineFactory`) each get their own binding points, even when they order
+their bindings differently.
+
+luma.gl does not read binding points back from the program. Application code
+that calls `gl.uniformBlockBinding()` on `renderPipeline.handle` must then call
+`renderPipeline.invalidateUniformBlockBindings()`, so that the next draw assigns
+every uniform block again:
+
+```ts
+import type {WebGLDevice, WEBGLRenderPipeline} from '@luma.gl/webgl';
+
+const webglPipeline = renderPipeline as WEBGLRenderPipeline;
+const gl = (device as WebGLDevice).gl;
+gl.uniformBlockBinding(webglPipeline.handle, blockIndex, 7);
+// ... raw WebGL draws ...
+webglPipeline.invalidateUniformBlockBindings();
+```
+
+The invalidation applies to the program, so it covers every render pipeline
+that shares it.
+
 ## Related Pages
 
 - [Bind Groups and Bindings Guide](/docs/api-guide/gpu/gpu-bindings)

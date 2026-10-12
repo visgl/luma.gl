@@ -63,6 +63,10 @@ See [GPUFFT2D](./api-reference/experimental/gpu-core/gpu-fft2d) for the migratio
   `CompositeShaderPassComputeOptimization`. Effect factories and values likewise replace their
   `ShaderPassPipeline` suffix with `CompositeShaderPass`.
 
+**@luma.gl/webgl**
+
+- luma.gl now owns the uniform block binding points of the `WebGLProgram` behind a render pipeline, and a draw assigns a binding point only when it differs from the one luma.gl last assigned. Previously every draw assigned every binding point again, which also undid changes that application code made through `renderPipeline.handle`. Code that calls `gl.uniformBlockBinding()` on a luma.gl program must now call `renderPipeline.invalidateUniformBlockBindings()` afterwards. See [WebGL uniform block binding points](/docs/api-reference/core/resources/render-pipeline#webgl-uniform-block-binding-points).
+
 **@luma.gl/webgpu**
 
 - `WebGPUDevice.adapter` is now typed `GPUAdapter | null`. It is `null` for devices wrapped with `webgpuAdapter.attach()` / `luma.attachDevice()`, because a `GPUDevice` does not reference its `GPUAdapter`. Devices from `luma.createDevice()` still have an adapter; TypeScript code that reads `device.adapter` needs a null check or non-null assertion. Use `device.adapterInfo` for adapter metadata.
