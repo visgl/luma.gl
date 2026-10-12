@@ -50,6 +50,8 @@ url.searchParams.set('history', String(history));
 url.searchParams.set('view', values.view);
 url.searchParams.set('captureFrames', String(frames));
 url.searchParams.set('editor', 'hidden');
+// Decode before any output is written, including when output aliases the reference.
+const referenceImage = values.reference ? PNG.sync.read(await readFile(resolve(values.reference))) : undefined;
 const browser = await chromium.launch(getPlaywrightLaunchOptions({backend: 'webgpu', softwareGpu: values['software-gpu']}));
 try {
   const page = await browser.newPage({viewport: {width, height}, deviceScaleFactor: 1});
@@ -74,7 +76,7 @@ try {
   const output = resolve(values.output);
   await mkdir(output, {recursive: true});
   const capture = await page.locator('#playground-canvas').screenshot({path: `${output}/chart.png`, timeout: 60000});
-  const comparison = values.reference ? {reference: resolve(values.reference), ...compareChartImages(PNG.sync.read(capture), PNG.sync.read(await readFile(resolve(values.reference))))} : undefined;
+  const comparison = referenceImage ? {reference: resolve(values.reference), ...compareChartImages(PNG.sync.read(capture), referenceImage)} : undefined;
   if (errors.length || metadata.sceneError) throw new Error(JSON.stringify({errors, sceneError: metadata.sceneError}));
   await writeFile(`${output}/metadata.json`, JSON.stringify({...metadata, comparison, seed, frames, viewport: [width, height],
     hardware: values.hardware, browser: browser.version(), elapsedMilliseconds: performance.now() - started,
