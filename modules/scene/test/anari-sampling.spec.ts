@@ -82,6 +82,27 @@ it('primary sampling seeds reproduce pixels and invalidate progressive history',
       graphics.submit();
       expect(frame.render().rayTracing?.accumulatedSamples).toBe(2);
       graphics.submit();
+      const beforeMemory = frame.render().rayTracing?.memory;
+      graphics.submit();
+      expect(beforeMemory?.historyTextureBytes).toBe(32 * 32 * 32);
+      expect(beforeMemory?.totalBytes).toBe(
+        beforeMemory!.sceneBufferBytes +
+          beforeMemory!.historyTextureBytes +
+          beforeMemory!.graphTransientBytes
+      );
+      renderer.setParameter('denoiseRadius', 1).commitParameters();
+      const filtered = frame.render().rayTracing;
+      graphics.submit();
+      expect(filtered?.accumulatedSamples).toBe(4);
+      expect(filtered?.memory).toEqual(beforeMemory);
+      renderer
+        .setParameters({historySampleLimit: 1, samplesPerPixel: 16, denoiseRadius: 2})
+        .commitParameters();
+      expect(frame.render().rayTracing?.accumulatedSamples).toBe(1);
+      graphics.submit();
+      expect(frame.render().rayTracing?.accumulatedSamples).toBe(1);
+      graphics.submit();
+      expect((await readColor()).byteLength).toBeGreaterThan(0);
       renderer.setParameter('samplingSeed', 18).commitParameters();
       expect(frame.render().rayTracing?.accumulatedSamples).toBe(1);
       graphics.submit();

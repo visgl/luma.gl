@@ -204,7 +204,9 @@ const RAY_INFINITY = 1.0e20;
 const PI = 3.141592653589793;
 const BVH_STACK_CAPACITY = 32u;
 const BLAS_STACK_CAPACITY = 32u;
-const MAXIMUM_HISTORY_SAMPLES = 64.0;
+fn getHistorySampleLimit() -> f32 {
+  return f32(clamp(select(64u, uniforms.sampling.z, uniforms.sampling.z > 0u), 1u, 256u));
+}
 const MINIMUM_HISTORY_NORMAL_ALIGNMENT = 0.75;
 const MAXIMUM_HISTORY_RELATIVE_DEPTH_DIFFERENCE = 0.06;
 const MAXIMUM_EXACT_HISTORY_PRIMITIVE_INDEX = 2047u;
@@ -913,7 +915,7 @@ fn loadHistoricalRaySample(
   }
   return HistoricalRaySample(
     historicalColor.rgb,
-    min(historicalColor.a, MAXIMUM_HISTORY_SAMPLES),
+    min(historicalColor.a, getHistorySampleLimit()),
     true
   );
 }
@@ -1026,7 +1028,7 @@ fn getHistoricalRaySample(
   );
   return HistoricalRaySample(
     clampHistoricalRayColor(nearestHistoryPixel, historicalColor / totalWeight, currentColor),
-    min(historicalSampleCount / totalWeight, MAXIMUM_HISTORY_SAMPLES),
+    min(historicalSampleCount / totalWeight, getHistorySampleLimit()),
     true
   );
 }
@@ -1092,13 +1094,13 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
 
   var color = accumulatedColor / f32(sampleCount) * uniforms.settings.x;
   let historicalSample = getHistoricalRaySample(pixel, guideRay, guideHit, color);
-  var totalSampleCount = f32(sampleCount);
+  var totalSampleCount = min(f32(sampleCount), getHistorySampleLimit());
   if (historicalSample.valid) {
     totalSampleCount = min(
       historicalSample.sampleCount + f32(sampleCount),
-      MAXIMUM_HISTORY_SAMPLES
+      getHistorySampleLimit()
     );
-    let currentWeight = f32(sampleCount) / totalSampleCount;
+    let currentWeight = min(f32(sampleCount) / totalSampleCount, 1.0);
     color = mix(historicalSample.color, color, currentWeight);
   }
   let guideHitPosition = guideRay.origin +
@@ -1187,6 +1189,7 @@ export type RayTracingPresentationOptions = {
   toneMapMode: number;
   /** Zero preserves linear color; one applies the exact sRGB transfer function. */
   outputEncoding: number;
+  denoiseRadius?: 0 | 1 | 2;
 };
 
 /** Resolves retained ray radiance with attachment-aware, canonical PBR color management. */
@@ -1196,8 +1199,47 @@ export function getRayTracingScenePresentationShader(
   const toneMapMode = typeof options === 'boolean' ? (options ? 0 : 2) : options.toneMapMode;
   const outputEncoding = typeof options === 'boolean' ? (options ? 0 : 1) : options.outputEncoding;
 
+  const denoiseRadius = typeof options === 'boolean' ? 0 : (options.denoiseRadius ?? 0);
+
   return /* wgsl */ `
 @group(0) @binding(0) var image: texture_2d<f32>;
+${
+  denoiseRadius
+    ? `@group(0) @binding(1) var metadata: texture_2d<f32>;
+fn decodeGuidanceNormal(encoded: vec2<f32>) -> vec3<f32> {
+  var normal = vec3<f32>(encoded, 1.0 - abs(encoded.x) - abs(encoded.y));
+  let fold = clamp(-normal.z, 0.0, 1.0);
+  normal.x += select(-fold, fold, normal.x < 0.0);
+  normal.y += select(-fold, fold, normal.y < 0.0);
+  return normalize(normal);
+}
+fn loadGuidedColor(pixel: vec2<i32>) -> vec3<f32> {
+  let center = textureLoad(metadata, pixel, 0);
+  let centerColor = textureLoad(image, pixel, 0).rgb;
+  if (center.a <= 0.0 || center.a >= 65504.0) { return centerColor; }
+  let normal = decodeGuidanceNormal(center.xy);
+  var color = vec3<f32>(0.0);
+  var totalWeight = 0.0;
+  let maximumPixel = vec2<i32>(textureDimensions(image)) - vec2<i32>(1);
+  for (var vertical = -${denoiseRadius}; vertical <= ${denoiseRadius}; vertical++) {
+    for (var horizontal = -${denoiseRadius}; horizontal <= ${denoiseRadius}; horizontal++) {
+      let offset = vec2<i32>(horizontal, vertical);
+      let neighborPixel = pixel + offset;
+      if (any(neighborPixel < vec2<i32>(0)) || any(neighborPixel > maximumPixel)) { continue; }
+      let neighbor = textureLoad(metadata, neighborPixel, 0);
+      let normalAgreement = dot(normal, decodeGuidanceNormal(neighbor.xy));
+      let depthDifference = abs(center.z - neighbor.z) / max(center.z, 0.0001);
+      if (neighbor.a != center.a || normalAgreement < 0.9 || depthDifference > 0.02) { continue; }
+      let weight = exp(-0.5 * f32(dot(offset, offset))) * pow(max(normalAgreement, 0.0), 16.0)
+        * exp(-100.0 * depthDifference);
+      color += textureLoad(image, neighborPixel, 0).rgb * weight;
+      totalWeight += weight;
+    }
+  }
+  return color / max(totalWeight, 0.0001);
+}`
+    : ''
+}
 
 struct PresentationVertexOutput {
   @builtin(position) position: vec4<f32>,
@@ -1229,10 +1271,10 @@ fn sampleRayTracingImage(textureCoordinates: vec2<f32>) -> vec3<f32> {
   let firstPixel = vec2<i32>(floor(samplePosition));
   let secondPixel = min(firstPixel + vec2<i32>(1), maximumPixel);
   let fraction = fract(samplePosition);
-  let topLeft = textureLoad(image, firstPixel, 0).rgb;
-  let topRight = textureLoad(image, vec2<i32>(secondPixel.x, firstPixel.y), 0).rgb;
-  let bottomLeft = textureLoad(image, vec2<i32>(firstPixel.x, secondPixel.y), 0).rgb;
-  let bottomRight = textureLoad(image, secondPixel, 0).rgb;
+  let topLeft = ${denoiseRadius ? 'loadGuidedColor(firstPixel)' : 'textureLoad(image, firstPixel, 0).rgb'};
+  let topRight = ${denoiseRadius ? 'loadGuidedColor(vec2<i32>(secondPixel.x, firstPixel.y))' : 'textureLoad(image, vec2<i32>(secondPixel.x, firstPixel.y), 0).rgb'};
+  let bottomLeft = ${denoiseRadius ? 'loadGuidedColor(vec2<i32>(firstPixel.x, secondPixel.y))' : 'textureLoad(image, vec2<i32>(firstPixel.x, secondPixel.y), 0).rgb'};
+  let bottomRight = ${denoiseRadius ? 'loadGuidedColor(secondPixel)' : 'textureLoad(image, secondPixel, 0).rgb'};
   return mix(mix(topLeft, topRight, fraction.x), mix(bottomLeft, bottomRight, fraction.x), fraction.y);
 }
 

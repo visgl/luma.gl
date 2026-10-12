@@ -8,6 +8,9 @@ Target Release Date: Q3, 2026
 
 **General**
 
+- **Ray-tracing quality controls** - Opt-in guided spatial denoising, configurable history sample
+  limits, and logical owned GPU allocation statistics are available in the renderer and scene playground.
+
 - **GPU-native columnar parsing and indexing** - Composable Parquet parsing, chunk-preserving nested
   column layouts, and H3 and A5 cell projection add new optional `@luma.gl/gpgpu` workflows.
 - **Table-driven planning** - Experimental dataframes can plan queries from loaders.gl SQL

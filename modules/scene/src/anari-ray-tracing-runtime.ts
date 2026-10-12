@@ -40,6 +40,8 @@ export class ANARIRayTracingRuntime implements ANARIRendererRuntime {
       cameraProjection: camera.subtype,
       samplesPerPixel: renderer.getParameter('samplesPerPixel'),
       samplingSeed: renderer.getParameter('samplingSeed'),
+      historySampleLimit: renderer.getParameter('historySampleLimit'),
+      denoiseRadius: renderer.getParameter('denoiseRadius'),
       maxBounces: renderer.getParameter('maxBounces'),
       progressive: renderer.getParameter('progressive'),
       shadows: renderer.getParameter('shadows'),
