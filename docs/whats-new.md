@@ -716,3 +716,10 @@ shafts demonstrate this shared infrastructure on WebGPU. `FireflyLayer` and the 
 shader module also support WebGL2. Fireflies adds calm-water emitter reflections and adjustable
 bloom; Fireflies and HDR night lighting request extended-range, floating-point canvas output on
 HDR-capable displays, with an SDR presentation fallback.
+
+### Retained chart shapes
+
+ANARI scenes support capped `hexPrism` marks and full or open partial `torus`
+meshes. The engine exports `TorusGeometry` over shared math.gl tessellation.
+The Chart Shapes playground preset and `--shapes` capture option use the same
+geometry and datum identities across raster and ray rendering.

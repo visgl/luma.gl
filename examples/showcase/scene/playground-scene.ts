@@ -216,7 +216,9 @@ const GEOMETRY_SUBTYPES: readonly ANARIGeometrySubtype[] = [
   'sphere',
   'cylinder',
   'cone',
-  'quad'
+  'quad',
+  'hexPrism',
+  'torus'
 ];
 const MATERIAL_SUBTYPES: readonly ANARIMaterialSubtype[] = ['matte', 'physicallyBased'];
 const LIGHT_SUBTYPES: readonly ANARILightSubtype[] = ['ambient', 'directional', 'point', 'spot'];

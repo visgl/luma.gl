@@ -72,6 +72,7 @@
   },
   "dependencies": {
     "@math.gl/core": "5.0.0-alpha.15",
+    "@math.gl/geometry": "~5.0.0-alpha.15",
     "zod": "^4.4.3"
   }
 }

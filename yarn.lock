@@ -5124,6 +5124,7 @@ __metadata:
   resolution: "@luma.gl/scene@workspace:modules/scene"
   dependencies:
     "@math.gl/core": "npm:5.0.0-alpha.15"
+    "@math.gl/geometry": "npm:~5.0.0-alpha.15"
     zod: "npm:^4.4.3"
   peerDependencies:
     "@luma.gl/core": 10.0.0-alpha.3

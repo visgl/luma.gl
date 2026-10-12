@@ -23,6 +23,7 @@ const {values} = parseArgs({options: {
   motion: {type: 'boolean', default: false},
   diffuse: {type: 'boolean', default: false},
   materials: {type: 'boolean', default: false},
+  shapes: {type: 'boolean', default: false},
   transport: {type: 'string'},
   bounces: {type: 'string'},
   'software-gpu': {type: 'boolean', default: false}
@@ -47,7 +48,7 @@ if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) throw new Error('s
 if (!Number.isInteger(width) || !Number.isInteger(height) || width < 320 || height < 320) throw new Error('viewport dimensions must be integers of at least 320 pixels');
 if (!['default', 'raytrace'].includes(values.renderer)) throw new Error('renderer must be default or raytrace');
 const url = new URL(values.url);
-url.searchParams.set('preset', values.materials ? 'chart-materials' : values.diffuse ? 'chart-diffuse' : values.motion ? 'chart-motion' : 'chart');
+url.searchParams.set('preset', values.shapes ? 'chart-shapes' : values.materials ? 'chart-materials' : values.diffuse ? 'chart-diffuse' : values.motion ? 'chart-motion' : 'chart');
 url.searchParams.set('renderer', values.renderer);
 url.searchParams.set('quality', 'still');
 url.searchParams.set('seed', String(seed));

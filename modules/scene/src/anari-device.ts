@@ -50,7 +50,7 @@ const OBJECT_SUBTYPES: Record<Exclude<ANARIObjectType, 'renderer'>, readonly str
   array: ['array1D'],
   camera: ['perspective', 'orthographic'],
   frame: ['default'],
-  geometry: ['triangle', 'sphere', 'cylinder', 'cone', 'quad'],
+  geometry: ['triangle', 'sphere', 'cylinder', 'cone', 'quad', 'hexPrism', 'torus'],
   group: ['default'],
   instance: ['transform'],
   light: ['ambient', 'directional', 'point', 'spot'],

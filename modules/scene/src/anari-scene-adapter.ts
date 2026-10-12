@@ -8,7 +8,8 @@ import {
   CylinderGeometry,
   Geometry,
   PlaneGeometry,
-  SphereGeometry
+  SphereGeometry,
+  TorusGeometry
 } from '@luma.gl/engine';
 import type {
   SceneCamera,
@@ -23,6 +24,7 @@ import {
   pbrMaterial
 } from '@luma.gl/shadertools';
 import {Matrix4, type NumberArray9} from '@math.gl/core';
+import {unpackIndexedGeometry} from '@math.gl/geometry';
 import {
   ANARIArray,
   type ANARICamera,
@@ -1020,6 +1022,27 @@ function makeEngineGeometry(geometry: ANARIGeometry): Geometry {
         nlong: segments * 2
       });
       break;
+    case 'hexPrism': {
+      const mesh = unpackIndexedGeometry(
+        new CylinderGeometry({
+          radius: parameters.radius ?? 1,
+          height: parameters.height ?? 1,
+          nradial: 6,
+          nvertical: 1,
+          topCap: true,
+          bottomCap: true
+        })
+      );
+      const positions = mesh.attributes['POSITION']!.value;
+      sourceGeometry = new Geometry({
+        topology: 'triangle-list',
+        attributes: {
+          ...mesh.attributes,
+          NORMAL: {size: 3, value: makeVertexNormals(new Float32Array(positions))}
+        }
+      });
+      break;
+    }
     case 'cylinder':
       sourceGeometry = new CylinderGeometry({
         radius: parameters.radius ?? 1,
@@ -1028,6 +1051,15 @@ function makeEngineGeometry(geometry: ANARIGeometry): Geometry {
         nvertical: 1,
         topCap: true,
         bottomCap: true
+      });
+      break;
+    case 'torus':
+      sourceGeometry = new TorusGeometry({
+        majorRadius: parameters.majorRadius,
+        minorRadius: parameters.minorRadius,
+        majorSegments: parameters.majorSegments,
+        minorSegments: parameters.minorSegments,
+        arc: parameters.arc
       });
       break;
     case 'cone':

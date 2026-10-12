@@ -3,7 +3,8 @@ import {
   makeChartBaseline,
   makeChartMotionScene,
   makeChartDiffuseScene,
-  makeChartMaterialsScene
+  makeChartMaterialsScene,
+  makeChartShapesScene
 } from './chart-baseline';
 import type {
   ANARIJSONScene,
@@ -25,7 +26,8 @@ export const PLAYGROUND_PRESETS: readonly PlaygroundPreset[] = [
   {label: 'Chart Baseline', scene: makeChartBaseline('raytrace')},
   {label: 'Chart Motion', scene: makeChartMotionScene()},
   {label: 'Chart Diffuse', scene: makeChartDiffuseScene()},
-  {label: 'Chart Materials', scene: makeChartMaterialsScene()}
+  {label: 'Chart Materials', scene: makeChartMaterialsScene()},
+  {label: 'Chart Shapes', scene: makeChartShapesScene()}
 ];
 
 function makeChromaticAtlas(): ANARIJSONScene {

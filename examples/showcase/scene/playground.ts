@@ -99,13 +99,16 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
             ? 5
             : preset === 'chart-materials'
               ? 6
-              : 0
+              : preset === 'chart-shapes'
+                ? 7
+                : 0
     );
     if (
       preset === 'chart' ||
       preset === 'chart-motion' ||
       preset === 'chart-diffuse' ||
-      preset === 'chart-materials'
+      preset === 'chart-materials' ||
+      preset === 'chart-shapes'
     ) {
       const sceneDescription: ANARIJSONScene = ANARISceneSchema.parse(
         JSON.parse(this.editor.value)

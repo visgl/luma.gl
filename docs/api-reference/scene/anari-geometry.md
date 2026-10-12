@@ -97,7 +97,7 @@ new ANARIGeometry(
 );
 
 newGeometry(
-  subtype: 'triangle' | 'sphere' | 'cylinder' | 'cone' | 'quad',
+  subtype: 'triangle' | 'sphere' | 'cylinder' | 'cone' | 'quad' | 'hexPrism' | 'torus',
   parameters?: ANARIGeometryParameters
 ): ANARIGeometry;
 ```
@@ -123,6 +123,11 @@ type ANARIGeometryParameters = {
   height?: number;
   width?: number;
   segments?: number;
+  majorRadius?: number;
+  minorRadius?: number;
+  majorSegments?: number;
+  minorSegments?: number;
+  arc?: number;
 };
 ```
 
@@ -295,3 +300,31 @@ The renderer tracks committed geometry versions and recreates cached luma.gl geo
 structural parameters change. Updates containing only new `morphWeights` retain the existing
 geometry and update its vertex data in place. Reuse immutable geometry and surface objects whenever
 possible; repeatedly changing tessellation or instance counts reallocates GPU resources.
+
+### Mesh-backed chart shapes
+
+`hexPrism` is a capped six-sided prism centered at the origin along Y. Its radius
+is the circumradius (default `1`), height defaults to `1`, and side normals are
+flat. `torus` is a ring around Y: `majorRadius` defaults to `1`, `minorRadius`
+to `0.3`, `majorSegments` to `48`, and `minorSegments` to `24`. The minor radius
+must be less than the major radius. `arc` is a positive sweep in radians up to
+`2 * Math.PI` (the default). Partial sweeps have open ends, starting at +X and
+sweeping toward −Z. They are surfaces, not closed solids.
+
+Both shapes use shared math.gl tessellation for raster and ray rendering. They
+retain the same placement IDs for picking, snapshots and selection outlines.
+These are luma.gl subtypes; no ANARI KHR extension is advertised for them.
+Dimension changes take effect after `commitParameters()` and rebuild the mesh.
+
+```ts
+const segment = anariDevice.newGeometry('torus', {
+  majorRadius: 1,
+  minorRadius: 0.2,
+  arc: Math.PI * 1.5
+});
+```
+
+Choose **Chart Shapes** in the JSON playground, or use
+`playground.html?preset=chart-shapes&renderer=raytrace`. Switch to `renderer=default`
+for the same raster scene. Click a visible mark in ray mode to inspect its datum
+identity and selection outline.

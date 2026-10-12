@@ -232,3 +232,32 @@ export function makeChartMaterialsScene(): ANARIJSONScene {
   ];
   return scene;
 }
+
+/** Three mesh-backed shape families sharing raster and ray placements and identities. */
+export function makeChartShapesScene(
+  rendererSubtype: ANARIRendererSubtype = 'raytrace'
+): ANARIJSONScene {
+  const scene = makeChartBaseline(rendererSubtype);
+  scene.name = 'CHART SHAPES';
+  scene.description = '18 identified marks · hexagonal prisms, tori, and open torus segments';
+  scene.geometries = {
+    ...scene.geometries,
+    bar: {'@@type': 'hexPrism', radius: 0.5, height: 1},
+    point: {
+      '@@type': 'torus',
+      majorRadius: 0.35,
+      minorRadius: 0.12,
+      majorSegments: 32,
+      minorSegments: 12
+    },
+    column: {
+      '@@type': 'torus',
+      majorRadius: 0.45,
+      minorRadius: 0.15,
+      majorSegments: 32,
+      minorSegments: 12,
+      arc: Math.PI * 1.5
+    }
+  };
+  return scene;
+}
