@@ -54,12 +54,7 @@ Resolved shader modules, including module dependencies.
 
 ### `moduleUniforms`
 
-Per-module uniform values. A module's uniforms object is replaced, not modified,
-when `setProps()` changes one of its values, and is kept when nothing changes.
-
-### `moduleUniformRevisions`
-
-Per-module revision numbers, incremented whenever the module's uniform values change.
+Per-module uniform values.
 
 ### `moduleBindings`
 
@@ -102,14 +97,6 @@ known when the `ShaderInputs` instance is created; subsequent `setProps()`,
 
 Returns the current uniform values grouped by module.
 
-### `getChangedUniformValues(consumedRevisions): Partial<Record<string, Record<string, UniformValue>>>`
-
-Returns the uniform values of the modules whose revision differs from the one in
-`consumedRevisions`, and records their current revisions in `consumedRevisions`.
-Each consumer keeps its own record (`Model` keeps one per uniform store), so that
-consumers sharing a `ShaderInputs` instance each see every change. An empty record
-returns all modules.
-
 ### `getBindingValues(): Record<string, Binding | TextureBindingSource>`
 
 Merges all module bindings into a single binding map suitable for a `Model` or `Computation`, including engine texture binding sources such as `DynamicTexture` and `VideoTexture`.
@@ -121,10 +108,6 @@ Returns a table-like object that is useful with `console.table()` or luma loggin
 ## Remarks
 
 - `ShaderInputs` does not upload GPU buffers by itself. Engine classes use it together with an internal `UniformStore`.
-- `setProps()` compares new values with the stored ones, so that unchanged modules
-  are not written again by `Model`. Update uniform values through `setProps()`:
-  values changed in place in the objects returned by `getUniformValues()` or
-  passed to a module's `getUniforms()` are not detected.
 - Unknown module names are ignored and warn by default unless `disableWarnings` is enabled.
 - Composite uniform values stay nested in `ShaderInputs`, while `UniformStore`
   and `ShaderBlockWriter` flatten them internally for packing.
