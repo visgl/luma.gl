@@ -26,8 +26,8 @@ try {
       headless: true,
       softwareGpu: process.platform === 'linux'
     }));
-    const page = await browser.newPage({viewport: {width: 64, height: 64}, deviceScaleFactor: 1});
     try {
+      const page = await browser.newPage({viewport: {width: 64, height: 64}, deviceScaleFactor: 1});
       await page.goto(`http://127.0.0.1:${server.address().port}`);
       let evaluationTimeout;
       try {
