@@ -147,7 +147,7 @@ export async function* exportRayTracingImage(
         const layout = color.computeMemoryLayout(readOptions);
         buffer = device.createBuffer({
           byteLength: layout.byteLength,
-          usage: Buffer.COPY_DST | Buffer.COPY_SRC
+          usage: Buffer.COPY_DST | Buffer.MAP_READ
         });
         color.readBuffer(readOptions, buffer);
         const bytes = await buffer.readAsync();
