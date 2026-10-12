@@ -13,11 +13,16 @@ const {values} = parseArgs({options: {
   renderer: {type: 'string', default: 'raytrace'},
   frames: {type: 'string', default: '8'}, seed: {type: 'string', default: '0'},
   width: {type: 'string', default: '960'}, height: {type: 'string', default: '720'},
+  denoise: {type: 'string', default: '0'}, history: {type: 'string', default: '64'},
   hardware: {type: 'string', default: 'unspecified'},
   motion: {type: 'boolean', default: false},
   diffuse: {type: 'boolean', default: false},
   'software-gpu': {type: 'boolean', default: false}
 }});
+const denoise = Number(values.denoise);
+const history = Number(values.history);
+if (![0, 1, 2].includes(denoise)) throw new Error('denoise must be 0, 1 or 2');
+if (!Number.isInteger(history) || history < 1 || history > 256) throw new Error('history must be an integer between 1 and 256');
 const frames = Number(values.frames);
 const seed = Number(values.seed);
 const width = Number(values.width);
@@ -31,6 +36,8 @@ url.searchParams.set('preset', values.diffuse ? 'chart-diffuse' : values.motion 
 url.searchParams.set('renderer', values.renderer);
 url.searchParams.set('quality', 'still');
 url.searchParams.set('seed', String(seed));
+url.searchParams.set('denoise', String(denoise));
+url.searchParams.set('history', String(history));
 url.searchParams.set('captureFrames', String(frames));
 url.searchParams.set('editor', 'hidden');
 const browser = await chromium.launch(getPlaywrightLaunchOptions({backend: 'webgpu', softwareGpu: values['software-gpu']}));
@@ -50,6 +57,7 @@ try {
       scene: JSON.parse(document.querySelector('#scene-editor').value),
       rayResolution: document.querySelector('#scene-ray-tracing-resolution').textContent,
       rayFrame: document.querySelector('#scene-ray-tracing-frame').textContent,
+      ownedMemory: document.querySelector('#scene-ray-memory').textContent,
       sceneError: document.querySelector('#scene-error').textContent};
   });
   await page.addStyleTag({content: '.preview-heading, .preview-statistics, .preview-hint {visibility: hidden !important}'});
@@ -59,6 +67,6 @@ try {
   if (errors.length || metadata.sceneError) throw new Error(JSON.stringify({errors, sceneError: metadata.sceneError}));
   await writeFile(`${output}/metadata.json`, JSON.stringify({...metadata, seed, frames, viewport: [width, height],
     hardware: values.hardware, browser: browser.version(), elapsedMilliseconds: performance.now() - started,
-    note: 'Elapsed time includes startup and screenshot; telemetry is CPU frame timing, not GPU timestamps. Memory and convergence benchmarks remain separate.'}, null, 2));
+    note: 'Elapsed time includes startup and screenshot; telemetry is CPU frame timing, not GPU timestamps. Owned memory is a logical allocation estimate, not measured VRAM; hardware convergence benchmarks remain separate.'}, null, 2));
   console.log(output);
 } finally { await browser.close(); }

@@ -243,6 +243,10 @@ export type ANARIRendererParameters = {
   samplesPerPixel?: number;
   /** Uint32 primary and diffuse sampling seed. Changing it resets accumulation. */
   samplingSeed?: number;
+  /** Maximum retained samples per pixel, from 1 to 256; defaults to 64. */
+  historySampleLimit?: number;
+  /** Presentation-only guided filter radius in internal pixels; defaults to zero. */
+  denoiseRadius?: 0 | 1 | 2;
   /** Secondary diffuse bounce budget, clamped to 0–8; defaults to zero. */
   maxBounces?: number;
   progressive?: boolean;
@@ -310,6 +314,14 @@ export type ANARIFrameStatistics = {
     sampledPixelCoverage: number;
     frameTimeMilliseconds: number;
     accumulatedSamples: number;
+    /** Logical owned allocations; excludes caller targets and driver/pipeline overhead. */
+    memory?: {
+      sceneBufferBytes: number;
+      historyTextureBytes: number;
+      graphTransientBytes: number;
+      totalBytes: number;
+    };
+
     graph?: ANARIRayTracingGraphStatistics;
   };
 };

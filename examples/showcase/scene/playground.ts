@@ -96,6 +96,16 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       const renderer = parameters.get('renderer') === 'default' ? 'default' : 'raytrace';
       sceneDescription.renderer = makePlaygroundRenderer(sceneDescription.renderer, renderer);
       if (renderer === 'raytrace') {
+        const denoiseRadius = Number(parameters.get('denoise') ?? 0);
+        if (denoiseRadius === 0 || denoiseRadius === 1 || denoiseRadius === 2)
+          sceneDescription.renderer.denoiseRadius = denoiseRadius;
+        const historySampleLimit = Number(parameters.get('history') ?? 64);
+        if (
+          Number.isInteger(historySampleLimit) &&
+          historySampleLimit >= 1 &&
+          historySampleLimit <= 256
+        )
+          sceneDescription.renderer.historySampleLimit = historySampleLimit;
         const seed = Number(parameters.get('seed') ?? 0);
         if (Number.isInteger(seed) && seed >= 0 && seed <= 0xffffffff)
           sceneDescription.renderer.samplingSeed = seed;
@@ -192,6 +202,13 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       if (frameTelemetry) {
         frameTelemetry.hidden = !rayTracing;
       }
+      const memoryTelemetry = document.getElementById('scene-ray-memory-statistic');
+      if (memoryTelemetry) memoryTelemetry.hidden = !rayTracing?.memory;
+      if (rayTracing?.memory)
+        setElementText(
+          'scene-ray-memory',
+          `${(rayTracing.memory.totalBytes / 1048576).toFixed(2)} MiB`
+        );
       if (rayTracing) {
         setElementText(
           'scene-ray-tracing-resolution',
@@ -242,6 +259,43 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       )
         this.applyQualityPreset(selector.value);
     });
+    for (const identifier of ['denoise-selector', 'history-limit']) {
+      const control = document.getElementById(identifier);
+      control?.addEventListener('change', () => {
+        const denoiseRadius = Number(
+          getRequiredElement('denoise-selector', HTMLSelectElement).value
+        );
+        const historySampleLimit = Number(
+          getRequiredElement('history-limit', HTMLInputElement).value
+        );
+        if (
+          !(denoiseRadius === 0 || denoiseRadius === 1 || denoiseRadius === 2) ||
+          !Number.isInteger(historySampleLimit) ||
+          historySampleLimit < 1 ||
+          historySampleLimit > 256
+        )
+          return;
+        try {
+          const description: ANARIJSONScene = ANARISceneSchema.parse(JSON.parse(this.editor.value));
+          description.renderer = {
+            ...makePlaygroundRenderer(description.renderer, 'raytrace'),
+            denoiseRadius,
+            historySampleLimit
+          };
+          this.editor.value = formatSceneJSON(description);
+          if (this.rendererSubtype !== 'raytrace' || !this.scene) this.applyEditorScene();
+          else {
+            this.scene.frame
+              .getParameter('renderer')
+              ?.setParameters({denoiseRadius, historySampleLimit})
+              .commitParameters();
+            this.updateEditorMetadata();
+          }
+        } catch {
+          this.applyEditorScene();
+        }
+      });
+    }
     const presetList = getRequiredElement('preset-list', HTMLDivElement);
     for (const [presetIndex, preset] of PLAYGROUND_PRESETS.entries()) {
       const button = document.createElement('button');
@@ -514,6 +568,12 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
             ([parameterName, parameterValue]) => name === parameterName && value === parameterValue
           )
         )
+      );
+      getRequiredElement('denoise-selector', HTMLSelectElement).value = String(
+        sceneDescription.renderer?.denoiseRadius ?? 0
+      );
+      getRequiredElement('history-limit', HTMLInputElement).value = String(
+        sceneDescription.renderer?.historySampleLimit ?? 64
       );
       getRequiredElement('quality-selector', HTMLSelectElement).value =
         rendererSubtype === 'raytrace' ? (quality ?? 'custom') : 'custom';

@@ -468,6 +468,10 @@ export type RayTracingSceneRenderOptions = SceneRenderOptions & {
   samplesPerPixel?: number;
   /** Uint32 seed for primary and diffuse sampling; defaults to zero. */
   samplingSeed?: number;
+  /** Maximum retained samples per pixel, from 1 to 256; defaults to 64. */
+  historySampleLimit?: number;
+  /** Presentation-only guided filter radius in internal pixels; defaults to zero. */
+  denoiseRadius?: 0 | 1 | 2;
   /** Number of secondary diffuse bounces, clamped to 0–8; defaults to zero. */
   maxBounces?: number;
   /** Accumulates primary-ray samples across unchanged committed frames. */
@@ -581,6 +585,7 @@ type RayTracingPresentationOptions = {
   depthStencilFormat?: TextureFormatDepthStencil;
   toneMapMode: number;
   outputEncoding: number;
+  denoiseRadius: 0 | 1 | 2;
 };
 
 type RayTracingFrameResources = {
@@ -666,6 +671,7 @@ type RayTracingStatistics = {
   frameTimeMilliseconds: number;
   accumulatedSamples: number;
   graph: RayTracingGraphStatistics;
+  memory: NonNullable<NonNullable<SceneRenderStatistics['rayTracing']>['memory']>;
 };
 
 /** Shared WebGPU software ray tracer consuming the canonical retained-scene contract. */
@@ -1043,8 +1049,12 @@ export class RayTracingSceneRenderer {
         frameTimeMilliseconds:
           resources.averageFrameTimeMilliseconds ?? resources.targetFrameTimeMilliseconds,
         accumulatedSamples: progressive
-          ? Math.min(resources.accumulatedFrameCount * samplesPerPixel, MAXIMUM_HISTORY_SAMPLES)
+          ? Math.min(
+              resources.accumulatedFrameCount * samplesPerPixel,
+              getHistorySampleLimit(options)
+            )
           : samplesPerPixel,
+        memory: getRayTracingMemoryStatistics(resources),
         graph: makeRayTracingGraphStatistics({
           topology: topologyEncodingStats,
           acceleration: accelerationEncodingStats,
@@ -3046,13 +3056,19 @@ export class RayTracingSceneRenderer {
 
     graph.addRenderPass({
       id: `${props.frameIdentifier}-present-ray-tracing`,
-      resources: [{texture: outputView, usage: 'sampled'}],
+      resources: [
+        {texture: outputView, usage: 'sampled'},
+        ...(props.presentation.denoiseRadius
+          ? [{texture: outputMetadataView, usage: 'sampled' as const}]
+          : [])
+      ],
       compile: ({device}) => {
         const model = new Model(device, {
           id: `${props.frameIdentifier}-ray-tracing-presentation`,
           source: getRayTracingScenePresentationShader({
             toneMapMode: props.presentation.toneMapMode,
-            outputEncoding: props.presentation.outputEncoding
+            outputEncoding: props.presentation.outputEncoding,
+            denoiseRadius: props.presentation.denoiseRadius
           }),
           vertexCount: 3,
           colorAttachmentFormats: [props.presentation.colorFormat],
@@ -3068,7 +3084,18 @@ export class RayTracingSceneRenderer {
                 group: 0,
                 location: 0,
                 sampleType: 'unfilterable-float'
-              }
+              },
+              ...(props.presentation.denoiseRadius
+                ? [
+                    {
+                      name: 'metadata',
+                      type: 'texture' as const,
+                      group: 0,
+                      location: 1,
+                      sampleType: 'unfilterable-float' as const
+                    }
+                  ]
+                : [])
             ]
           },
           parameters: {
@@ -3082,7 +3109,12 @@ export class RayTracingSceneRenderer {
             ...(parameters.framebuffer ? {framebuffer: parameters.framebuffer} : {})
           }),
           encode: ({renderPass, getTextureView}) => {
-            model.setBindings({image: getTextureView(outputView)});
+            model.setBindings({
+              image: getTextureView(outputView),
+              ...(props.presentation.denoiseRadius
+                ? {metadata: getTextureView(outputMetadataView)}
+                : {})
+            });
             model.draw(renderPass);
           },
           destroy: () => model.destroy()
@@ -3127,6 +3159,7 @@ function getRayTracingPresentationOptions(
 
   return {
     colorFormat,
+    denoiseRadius: options.denoiseRadius ?? 0,
     ...(depthStencilFormat ? {depthStencilFormat} : {}),
     toneMapMode:
       options.toneMapMode ??
@@ -3145,7 +3178,8 @@ function areRayTracingPresentationOptionsEqual(
     first.colorFormat === second.colorFormat &&
     first.depthStencilFormat === second.depthStencilFormat &&
     first.toneMapMode === second.toneMapMode &&
-    first.outputEncoding === second.outputEncoding
+    first.outputEncoding === second.outputEncoding &&
+    first.denoiseRadius === second.denoiseRadius
   );
 }
 
@@ -3361,6 +3395,7 @@ function getRenderRevision(
     options.fogDensity,
     options.samplesPerPixel,
     options.samplingSeed,
+    options.historySampleLimit,
     options.maxBounces,
     options.progressive,
     options.shadows,
@@ -3708,6 +3743,7 @@ function makeUniformData(props: {
   data.set(props.previousViewProjection, 48);
   data.set(props.previousCameraPosition, 64);
   data[67] = (props.options.progressive ?? true) ? 1 : 0;
+  unsignedData[70] = getHistorySampleLimit(props.options);
   unsignedData[68] = props.options.samplingSeed ?? 0;
   unsignedData[69] = Math.min(8, Math.max(0, Math.floor(props.options.maxBounces ?? 0)));
   return data;
@@ -3997,4 +4033,45 @@ function isCameraCut(
 
 function getTimestampMilliseconds(): number {
   return globalThis.performance?.now() ?? Date.now();
+}
+
+function getHistorySampleLimit(options: RayTracingSceneRenderOptions): number {
+  return Math.min(
+    256,
+    Math.max(1, Math.floor(options.historySampleLimit ?? MAXIMUM_HISTORY_SAMPLES))
+  );
+}
+
+function getRayTracingMemoryStatistics(
+  resources: RayTracingFrameResources
+): RayTracingStatistics['memory'] {
+  const sceneBufferBytes = [
+    resources.uniformBuffer,
+    resources.primitiveBuffer,
+    resources.triangleBuffer,
+    resources.lightBuffer,
+    resources.nodeMinimaBuffer,
+    resources.nodeMaximaBuffer,
+    resources.nodeChildrenBuffer,
+    resources.leafIdsBuffer,
+    resources.sortedPrimitiveIdsBuffer,
+    resources.blasNodesBuffer,
+    resources.blasTriangleIdsBuffer,
+    resources.bvhCountBuffer,
+    resources.bvhOverflowBuffer
+  ].reduce((total, buffer) => total + buffer.byteLength, 0);
+  // Two double-buffered rgba16float histories, eight bytes per pixel per texture.
+  const historyTextureBytes = resources.internalWidth * resources.internalHeight * 32;
+  const graphTransientBytes = [
+    resources.topologyGraph,
+    resources.accelerationGraph,
+    resources.refitGraph,
+    resources.traceGraph
+  ].reduce((total, graph) => total + graph.stats.physicalTransientResourceBytes, 0);
+  return {
+    sceneBufferBytes,
+    historyTextureBytes,
+    graphTransientBytes,
+    totalBytes: sceneBufferBytes + historyTextureBytes + graphTransientBytes
+  };
 }

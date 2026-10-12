@@ -616,6 +616,14 @@
                 <option value="still">Still / capture</option>
               </select>
             </label>
+            <label style="pointer-events: auto">Denoise
+              <select id="denoise-selector" class="renderer-selector" aria-label="Denoise">
+                <option value="0">Off</option><option value="1">Radius 1</option><option value="2">Radius 2</option>
+              </select>
+            </label>
+            <label style="pointer-events: auto">History samples
+              <input id="history-limit" type="number" min="1" max="256" value="64" aria-label="History samples" style="width: 5em">
+            </label>
             <h1 id="scene-title" class="scene-title"></h1>
             <div id="scene-description" class="scene-description"></div>
             <div id="scene-selection" class="scene-description" role="status" aria-live="polite"></div>
@@ -662,6 +670,10 @@
               <div id="scene-ray-tracing-frame-statistic" hidden>
                 <div class="statistic-label">RAY FRAME</div>
                 <div id="scene-ray-tracing-frame" class="statistic-value">—</div>
+              </div>
+              <div id="scene-ray-memory-statistic" hidden>
+                <div class="statistic-label">OWNED GPU MEMORY</div>
+                <div id="scene-ray-memory" class="statistic-value">—</div>
               </div>
             </div>
           </div>

@@ -775,3 +775,16 @@ test('full-frame channels fit CORE buffer and storage texture limits', () => {
     ])
   );
 });
+
+test('guided presentation adds only a sampled metadata binding', () => {
+  for (const denoiseRadius of [1, 2] as const) {
+    const reflection = new WgslReflect(
+      getRayTracingScenePresentationShader({toneMapMode: 0, outputEncoding: 0, denoiseRadius})
+    );
+    expect(reflection.textures.map(({name, binding}) => ({name, binding}))).toEqual([
+      {name: 'image', binding: 0},
+      {name: 'metadata', binding: 1}
+    ]);
+    expect(reflection.storage).toEqual([]);
+  }
+});

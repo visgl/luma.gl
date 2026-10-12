@@ -195,6 +195,14 @@ export type SceneRenderStatistics = {
     sampledPixelCoverage: number;
     frameTimeMilliseconds: number;
     accumulatedSamples: number;
+    /** Logical owned allocations; excludes caller targets and driver/pipeline overhead. */
+    memory?: {
+      sceneBufferBytes: number;
+      historyTextureBytes: number;
+      graphTransientBytes: number;
+      totalBytes: number;
+    };
+
     /** Optional synchronous graph-stage diagnostics; never submits, waits, or reads back. */
     graph?: RayTracingGraphStatistics;
   };
