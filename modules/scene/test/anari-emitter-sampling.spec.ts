@@ -140,6 +140,12 @@ it('explicit emissive connections preserve energy, reject masked occluders and t
     expect(lit.mean[0] / lit.mean[1]).toBeCloseTo(4, 3);
     expect(lit.mean[2]).toBe(0);
     expect((await render()).pixels).toEqual(lit.pixels);
+    renderer.setParameters({fogDensity: 0.5, fogColor: [0, 0, 0]}).commitParameters();
+    const fogged = await render();
+    expect(fogged.mean[0] / lit.mean[0]).toBeCloseTo(Math.exp(-1.5), 2);
+    renderer.setParameter('fogColor', [0.1, 0.2, 0.3]).commitParameters();
+    expect((await render()).mean[2]).toBeCloseTo(0.3 * (1 - Math.exp(-1.5)), 2);
+    renderer.setParameter('fogDensity', 0).commitParameters();
     expect((await frame.pick(8, 8))?.surface).toBe(receiver);
     occluderMaterial.setParameter('baseColor', [0, 0, 0, 1]).commitParameters();
     expect((await render()).mean[0]).toBeLessThan(0.0001);

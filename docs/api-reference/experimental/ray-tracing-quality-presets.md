@@ -175,7 +175,9 @@ Emission is treated as two-sided, matching existing ray emission gathering.
 
 This is off by default and works with both `diffuse` and `pbr` transport.
 Connections are shadow rays, so direct emissive lighting also works with
-`maxBounces: 0`. Analytic point/directional/spot lighting is unchanged. Explicit
+`maxBounces: 0`. Analytic point/directional/spot lighting is unchanged. Emitter contributions
+follow the same per-hit distance-fog attenuation, with the fog background mixed
+once by the shared direct-light path. Explicit
 connections replace secondary emission gathering to avoid counting the same
 light twice; primary camera-visible emission is retained. The model has no
 delta mirrors (roughness has a `0.04` lower bound). MIS and power-weighted light

@@ -1203,7 +1203,8 @@ fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32) -> vec3<f32> 
   var response = clamp(receiver.baseColor.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) * 0.96 *
     (1.0 - clamp(receiver.emissive.w, 0.0, 1.0)) * normalLight / PI;
   if (uniforms.sampling.w > 0u) { response = evaluatePBRResponse(ray, hit, direction); }
-  return response * emitter.emissive.rgb * abs(dot(lightNormal, -direction)) * inverseAreaDensity / distanceSquared;
+  let visibility = exp(-max(uniforms.fog.w, 0.0) * hit.distance);
+  return response * emitter.emissive.rgb * abs(dot(lightNormal, -direction)) * inverseAreaDensity / distanceSquared * visibility;
 }
 
 // Explicit connections replace secondary emission gathering to avoid double counting.
