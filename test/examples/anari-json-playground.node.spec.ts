@@ -11,8 +11,8 @@ import {createANARIJSONScene} from '../../examples/showcase/scene/playground-sce
 
 it('ANARI JSON presets reproduce the complete showcase scenes', () => {
   const device = new ANARIDevice(new NullDevice({}));
-  const expectedInstanceCounts = [312, 429, 318, 19, 19, 19];
-  const expectedLightCounts = [3, 5, 5, 1, 1, 1];
+  const expectedInstanceCounts = [312, 429, 318, 19, 19, 19, 19];
+  const expectedLightCounts = [3, 5, 5, 1, 1, 1, 1];
 
   for (const [presetIndex, preset] of PLAYGROUND_PRESETS.entries()) {
     const scene = createANARIJSONScene(device, preset.scene);

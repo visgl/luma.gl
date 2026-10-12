@@ -133,17 +133,21 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
           debugView === 'history'
         )
           sceneDescription.renderer.debugView = debugView;
-        const denoiseRadius = Number(parameters.get('denoise') ?? 0);
+        const denoiseRadius = Number(
+          parameters.get('denoise') ?? sceneDescription.renderer.denoiseRadius ?? 0
+        );
         if (denoiseRadius === 0 || denoiseRadius === 1 || denoiseRadius === 2)
           sceneDescription.renderer.denoiseRadius = denoiseRadius;
-        const historySampleLimit = Number(parameters.get('history') ?? 64);
+        const historySampleLimit = Number(
+          parameters.get('history') ?? sceneDescription.renderer.historySampleLimit ?? 64
+        );
         if (
           Number.isInteger(historySampleLimit) &&
           historySampleLimit >= 1 &&
           historySampleLimit <= 256
         )
           sceneDescription.renderer.historySampleLimit = historySampleLimit;
-        const seed = Number(parameters.get('seed') ?? 0);
+        const seed = Number(parameters.get('seed') ?? sceneDescription.renderer.samplingSeed ?? 0);
         if (Number.isInteger(seed) && seed >= 0 && seed <= 0xffffffff)
           sceneDescription.renderer.samplingSeed = seed;
         if (parameters.get('quality') === 'still')
