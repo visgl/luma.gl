@@ -176,7 +176,7 @@ Replaces the buffer layout and marks the pipeline dirty.
 Updates pipeline parameters. On WebGPU, where parameters are part of the render
 pipeline, this marks the pipeline dirty when the parameters change. On WebGL the
 model keeps its pipeline and passes its parameters to each draw call, so
-`model.pipeline.props.parameters` keeps the parameters the pipeline was created with.
+`model.pipeline.props.parameters` keeps the parameters the retained pipeline was created with.
 
 ### `setInstanceCount(instanceCount: number): void`
 

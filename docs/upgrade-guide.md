@@ -26,8 +26,8 @@ counts instead of drawing an implicit instance.
 
 On WebGL, `Model.setParameters()` no longer replaces `model.pipeline`. `Model.draw()` passes
 the model's current parameters to every draw call, as before. Code that draws
-`model.pipeline` directly without passing `parameters` gets the parameters the model was
-created with; pass `model.parameters` to the draw call instead.
+`model.pipeline` directly without passing `parameters` gets the parameters the retained
+pipeline was created with; pass `model.parameters` to the draw call instead.
 
 ### CPU geometry validation
 
