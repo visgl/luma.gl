@@ -23,7 +23,7 @@ it('guided presentation reduces noise while preserving identity, normal and dept
         [horizontal < 4 ? (horizontal + vertical) % 2 : 0, horizontal < 4 ? 0 : 1, 0, 1],
         offset
       );
-      guidance.set([0, 0, 1, horizontal < 4 ? 1 : 2], offset);
+      guidance.set([0.5, 0.5, 1, horizontal < 4 ? 1 : 2], offset);
     }
   }
   const image = device.createTexture({width: 8, height: 8, format: 'rgba32float', data: radiance});
@@ -83,10 +83,10 @@ it('guided presentation reduces noise while preserving identity, normal and dept
     expect(pixel(filtered, 4, 2)).toEqual([0, 255, 0]);
     // Same identity, but a discontinuous normal or depth must remain isolated.
     for (const discontinuity of [
-      [1, 0, 1, 1],
-      [0, 0, 10, 1],
-      [0, 0, 1, 0],
-      [0, 0, 1, 65504]
+      [1, 0.5, 1, 1],
+      [0.5, 0.5, 10, 1],
+      [0.5, 0.5, 1, 0],
+      [0.5, 0.5, 1, 65504]
     ]) {
       guidance.set(discontinuity, (2 * 8 + 2) * 4);
       metadata.writeData(guidance);

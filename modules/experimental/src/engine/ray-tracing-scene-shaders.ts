@@ -1207,7 +1207,8 @@ ${
   denoiseRadius
     ? `@group(0) @binding(1) var metadata: texture_2d<f32>;
 fn decodeGuidanceNormal(encoded: vec2<f32>) -> vec3<f32> {
-  var normal = vec3<f32>(encoded, 1.0 - abs(encoded.x) - abs(encoded.y));
+  let signedNormal = encoded * 2.0 - vec2<f32>(1.0);
+  var normal = vec3<f32>(signedNormal, 1.0 - abs(signedNormal.x) - abs(signedNormal.y));
   let fold = clamp(-normal.z, 0.0, 1.0);
   normal.x += select(-fold, fold, normal.x < 0.0);
   normal.y += select(-fold, fold, normal.y < 0.0);

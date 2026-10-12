@@ -66,6 +66,38 @@ it('primary sampling seeds reproduce pixels and invalidate progressive history',
     }
   };
   try {
+    const renderSequence = async (progressive: boolean, samplesPerPixel: number) => {
+      const renderer = device.newRenderer('raytrace', {
+        samplingSeed: 17,
+        samplesPerPixel,
+        historySampleLimit: 1,
+        resolutionScale: 1,
+        adaptiveResolution: false,
+        temporalReprojection: true,
+        progressive,
+        background: [0, 0, 0, 1]
+      });
+      const frame = device.newFrame({world, camera, renderer, size: [32, 32]});
+      const pixels: Uint8Array[] = [];
+      try {
+        for (let frameIndex = 0; frameIndex < 4; frameIndex++) {
+          frame.render();
+          graphics.submit();
+          pixels.push(await readColor());
+        }
+        return pixels;
+      } finally {
+        frame.destroy();
+      }
+    };
+    // The non-progressive reference advances the identical random sequence through
+    // temporal mode but never consumes history. A saturated one-sample budget must
+    // match its current frame, both at and below samplesPerPixel.
+    for (const samplesPerPixel of [1, 16]) {
+      const reference = await renderSequence(false, samplesPerPixel);
+      expect(reference[1]).not.toEqual(reference[0]);
+      expect(await renderSequence(true, samplesPerPixel)).toEqual(reference);
+    }
     const first = await render(17);
     expect(await render(17)).toEqual(first);
     expect(await render(0xffffffff)).not.toEqual(first);
@@ -102,7 +134,7 @@ it('primary sampling seeds reproduce pixels and invalidate progressive history',
       graphics.submit();
       expect(frame.render().rayTracing?.accumulatedSamples).toBe(1);
       graphics.submit();
-      expect((await readColor()).byteLength).toBeGreaterThan(0);
+      expect(Array.from(await readColor()).some(value => value > 0)).toBe(true);
       renderer.setParameter('samplingSeed', 18).commitParameters();
       expect(frame.render().rayTracing?.accumulatedSamples).toBe(1);
       graphics.submit();

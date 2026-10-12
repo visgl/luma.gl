@@ -275,20 +275,24 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
           historySampleLimit > 256
         )
           return;
-        const description: ANARIJSONScene = ANARISceneSchema.parse(JSON.parse(this.editor.value));
-        description.renderer = {
-          ...makePlaygroundRenderer(description.renderer, 'raytrace'),
-          denoiseRadius,
-          historySampleLimit
-        };
-        this.editor.value = formatSceneJSON(description);
-        if (this.rendererSubtype !== 'raytrace' || !this.scene) this.applyEditorScene();
-        else {
-          this.scene.frame
-            .getParameter('renderer')
-            ?.setParameters({denoiseRadius, historySampleLimit})
-            .commitParameters();
-          this.updateEditorMetadata();
+        try {
+          const description: ANARIJSONScene = ANARISceneSchema.parse(JSON.parse(this.editor.value));
+          description.renderer = {
+            ...makePlaygroundRenderer(description.renderer, 'raytrace'),
+            denoiseRadius,
+            historySampleLimit
+          };
+          this.editor.value = formatSceneJSON(description);
+          if (this.rendererSubtype !== 'raytrace' || !this.scene) this.applyEditorScene();
+          else {
+            this.scene.frame
+              .getParameter('renderer')
+              ?.setParameters({denoiseRadius, historySampleLimit})
+              .commitParameters();
+            this.updateEditorMetadata();
+          }
+        } catch {
+          this.applyEditorScene();
         }
       });
     }
