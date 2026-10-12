@@ -741,6 +741,10 @@ export class RayTracingSceneRenderer {
       const primitiveChanged = resources.primitiveRevision !== primitiveRevision;
       const transformChanged = resources.transformRevision !== transformRevision;
       const lightsChanged = resources.lightRevision !== lightRevision;
+      // Primary-hit reprojection cannot validate illumination from secondary surfaces.
+      if ((options.maxBounces ?? 0) > 0 && (primitiveChanged || lightsChanged)) {
+        resources.historyNeedsReset = true;
+      }
       const sparseTransformInstanceIds = getSparseTransformInstanceIds(
         options,
         resources,

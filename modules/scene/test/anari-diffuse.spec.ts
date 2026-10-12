@@ -39,11 +39,18 @@ it('diffuse transport receives emissive light with bounded, seeded paths and fre
   });
   // The camera and matte receiver sit inside an emissive sphere: every secondary ray
   // reaches the emitter, making the incident-light assertion independent of noise.
+  const light = device.newLight('directional', {direction: [0, 0, -1], irradiance: 0});
+  const emitterInstance = device.newInstance({
+    group: device.newGroup({
+      surface: [
+        device.newSurface({geometry: device.newGeometry('sphere', {radius: 10}), material: emitter})
+      ]
+    })
+  });
   const world = device.newWorld({
-    surface: [
-      device.newSurface({geometry: device.newGeometry('sphere', {radius: 0.9}), material}),
-      device.newSurface({geometry: device.newGeometry('sphere', {radius: 10}), material: emitter})
-    ]
+    surface: [device.newSurface({geometry: device.newGeometry('sphere', {radius: 0.9}), material})],
+    instance: [emitterInstance],
+    light: [light]
   });
   const camera = device.newCamera('perspective', {position: [0, 0, 3], fovy: Math.PI / 3});
   const readColor = async () => {
@@ -133,6 +140,21 @@ it('diffuse transport receives emissive light with bounded, seeded paths and fre
       graphics.submit();
       expect((await readColor())[centerOffset]).toBeGreaterThan(50);
       expect((await readColor())[centerOffset + 1]).toBe(0);
+      renderer.setParameter('temporalReprojection', true).commitParameters();
+      frame.render();
+      graphics.submit();
+      expect(frame.render().rayTracing?.accumulatedSamples).toBe(2);
+      graphics.submit();
+      light.setParameter('irradiance', 0.1).commitParameters();
+      expect(frame.render().rayTracing?.accumulatedSamples).toBe(1);
+      graphics.submit();
+      expect(frame.render().rayTracing?.accumulatedSamples).toBe(2);
+      graphics.submit();
+      emitterInstance
+        .setParameter('transform', [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1])
+        .commitParameters();
+      expect(frame.render().rayTracing?.accumulatedSamples).toBe(1);
+      graphics.submit();
     } finally {
       frame.destroy();
     }

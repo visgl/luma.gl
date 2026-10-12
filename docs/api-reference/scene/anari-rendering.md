@@ -244,7 +244,11 @@ environment light. Ambient lights and fog retain the existing per-hit approximat
 
 `samplingSeed` controls primary and diffuse paths. Pixel, frame, sample, and bounce indices
 separate samples; unchanged progressive frames converge through the existing bounded history.
-Seed, bounce-budget, camera, geometry, material, and light changes invalidate accumulation.
+Seed and bounce-budget changes invalidate accumulation. With diffuse bounces enabled,
+geometry, placement, material and light changes reset history even when temporal reprojection
+is enabled: primary-hit metadata cannot validate indirect illumination. Camera movement resets
+history when temporal reprojection is disabled; otherwise it uses the existing primary-hit
+reprojection and camera-cut rejection.
 Use a stationary scene, full resolution, disabled adaptive resolution and temporal reprojection,
 and multiple progressive frames for comparison. Small emitters can converge slowly because
 this first implementation does not importance-sample emissive surfaces. Explicit emitter
