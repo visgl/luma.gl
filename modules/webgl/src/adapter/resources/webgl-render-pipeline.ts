@@ -236,10 +236,10 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       switch (binding.type) {
         case 'uniform':
           // Set buffer
-          (this.sharedRenderPipeline as WEBGLSharedRenderPipeline)._setUniformBlockBinding(
-            binding.name,
-            uniformBufferIndex
-          );
+          const blockIndex = (
+            this.sharedRenderPipeline as WEBGLSharedRenderPipeline
+          )._getUniformBlockIndex(binding.name);
+          gl.uniformBlockBinding(this.handle, blockIndex, uniformBufferIndex);
           if (value instanceof WEBGLBuffer) {
             gl.bindBufferBase(GL.UNIFORM_BUFFER, uniformBufferIndex, value.handle);
           } else {
