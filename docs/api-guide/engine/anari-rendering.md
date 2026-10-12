@@ -168,3 +168,14 @@ enables the opaque reflective path; `diffuse` remains the default. The same
 Bounces controls for comparison, or pass `--materials --transport pbr --bounces 3`
 to the capture harness. See the [quality reference](/docs/api-reference/experimental/ray-tracing-quality-presets)
 for probability weighting, roughness bounds, and remaining material limitations.
+
+### Bounded ray image export
+
+The lower-level experimental scene renderer exposes
+[`exportRayTracingImage`](/docs/api-reference/experimental/scene-renderer#tiled-ray-image-export)
+for fixed-camera RGBA8 tile export. Tiles share global sample coordinates and
+include clipped spatial/history halos, so guided filtering and progressive
+clamping agree at tile seams. The API keeps readback bounded to one tile,
+preserves the authored exposure, and cleans up on completion or cancellation.
+Applications provide full-image camera matrices and their own image encoder.
+This export API is separate from JSON playground scene-file export.

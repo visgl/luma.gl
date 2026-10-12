@@ -454,3 +454,63 @@ Releases all renderer-owned frame resources.
 - [`GBuffer`](/docs/api-reference/experimental/g-buffer) documents the deferred attachment model.
 - [`@luma.gl/gltf`](/docs/api-reference/gltf) owns glTF parsing, material interpretation,
   environment-image loading, and animation decoding.
+
+## Tiled ray image export
+
+`exportRayTracingImage(device, scene, options)` is an async iterator over tightly
+packed RGBA8 tiles. It submits its own rendering and readback commands. Submit
+pending application commands before starting export, and keep the scene,
+camera, lighting and exposure fixed until iteration finishes. The `scene`
+argument uses `RayTracingSceneRenderOptions`; its camera projection must describe
+the complete output image, including its aspect ratio.
+
+```ts
+import {exportRayTracingImage} from '@luma.gl/experimental';
+
+for await (const tile of exportRayTracingImage(device, sceneOptions, {
+  width: 4096,
+  height: 3072,
+  tileSize: 512,
+  frames: 8,
+  signal: abortController.signal
+})) {
+  // Consume tile.data at (tile.x, tile.y), e.g. in an application-owned encoder.
+  // Rows are top to bottom, with tile.width * 4 bytes per row and no GPU padding.
+}
+```
+
+`width`, `height` and `tileSize` are positive integers; full-image pixel count
+must fit uint32 indexing. `tileSize` defaults to `512`, and `frames` defaults to
+`1` (maximum `256`). Each tile uses the same explicit frame sequence and global
+pixel seeds. The exporter forces full resolution, progressive accumulation,
+color presentation and disabled adaptive resolution/temporal reprojection.
+Other transport and sampling settings come from the scene. Exposure and tone
+mapping are never adjusted per tile. Output encoding follows `outputColorSpace`
+(default sRGB); output bytes are always RGBA8 rather than linear HDR floats.
+
+The render halo is `denoiseRadius + frames - 1`: guided filtering reads spatial
+neighbors, and progressive history color clamping adds one dependency radius per
+additional frame. Halos are clipped to the full-image boundary; only tile
+interiors are copied back. Interior tile size plus both halos must fit
+`device.limits.maxTextureDimension2D`. The renderer retains one export frame,
+and only one padded target/readback allocation is active at a time. Full-image
+assembly and file encoding are application-owned memory costs.
+
+Breaking out of `for await`, calling iterator `return()`, or aborting releases
+export-owned GPU resources. Cancellation is checked between tiles/frames and
+after readback; it does not interrupt work already submitted to the GPU.
+Scene geometries and the device remain caller-owned.
+
+`iterateRayTracingImageTiles(width, height, tileSize, halo = 0)` exposes the lazy
+row-major tile plan. Each result contains interior `x`, `y`, `width`, `height`
+and padded `renderX`, `renderY`, `renderWidth`, `renderHeight`. Halo must be an
+integer from `0` to `257`.
+
+For custom offscreen pipelines, `RayTracingSceneRenderOptions.imageRegion` is
+`{offset: [x, y], fullSize: [width, height]}` in top-left full-image pixels. Its
+local target extent must lie within the full image. This mode forces full
+resolution and disables adaptive resolution and temporal reprojection.
+`samplingFrameIndex` optionally chooses the uint32 sampling sequence frame,
+independent of retained scheduling. Region changes reset accumulation; changing
+only the explicit sample frame advances sampling without clearing history.
+Default rendering omits both options and retains its existing behavior.

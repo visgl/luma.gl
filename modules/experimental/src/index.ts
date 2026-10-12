@@ -30,6 +30,7 @@ export {getSceneAlphaMode, SceneRenderer} from './engine/scene-renderer';
 export {SelectionOutline, type SelectionOutlineOptions} from './rendering/selection-outline';
 export {DeferredSceneRenderer, supportsDeferredScene} from './engine/deferred-scene-renderer';
 export type {
+  RayTracingImageRegion,
   RayTracingScenePickResult,
   RayTracingSceneChannels,
   RayTracingScenePrimitive,
@@ -309,3 +310,13 @@ export {
   type RayTracingQualityPreset,
   type RayTracingQualitySettings
 } from './engine/ray-tracing-quality-presets';
+
+export {
+  exportRayTracingImage,
+  iterateRayTracingImageTiles
+} from './engine/ray-tracing-image-export';
+export type {
+  RayTracingImageExportOptions,
+  RayTracingImageTile,
+  RayTracingImageTileRegion
+} from './engine/ray-tracing-image-export';
