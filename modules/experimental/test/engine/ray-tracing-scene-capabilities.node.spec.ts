@@ -16,7 +16,13 @@ it('reports implemented software tracing separately from planned material transp
   });
   expect(capabilities.materialTextures).toBe(false);
   expect(capabilities.alphaModes).toEqual(['OPAQUE']);
-  expect(capabilities.debugViews).toEqual(['color', 'normal', 'distance', 'identity', 'history']);
+  expect(capabilities.debugViews).toEqual([
+    'color',
+    'normal',
+    'cameraDistance',
+    'identity',
+    'history'
+  ]);
   expect(getRayTracingSceneCapabilities({type: 'webgl'}).supported).toBe(false);
   expect(getRayTracingSceneCapabilities({type: 'null'}).supported).toBe(false);
 });

@@ -104,7 +104,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
         if (
           debugView === 'color' ||
           debugView === 'normal' ||
-          debugView === 'distance' ||
+          debugView === 'cameraDistance' ||
           debugView === 'identity' ||
           debugView === 'history'
         )
@@ -280,7 +280,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
           !(
             debugView === 'color' ||
             debugView === 'normal' ||
-            debugView === 'distance' ||
+            debugView === 'cameraDistance' ||
             debugView === 'identity' ||
             debugView === 'history'
           )

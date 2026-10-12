@@ -3,7 +3,7 @@
 
 import type {Device} from '@luma.gl/core';
 
-export type RayTracingDebugView = 'color' | 'normal' | 'distance' | 'identity' | 'history';
+export type RayTracingDebugView = 'color' | 'normal' | 'cameraDistance' | 'identity' | 'history';
 
 /** Implementation support, independent of per-scene allocation and capacity limits. */
 export function getRayTracingSceneCapabilities(device: Pick<Device, 'type'>) {
@@ -23,7 +23,7 @@ export function getRayTracingSceneCapabilities(device: Pick<Device, 'type'>) {
       explicitEmitterSampling: false as const
     },
     guidedSpatialDenoising: true as const,
-    debugViews: ['color', 'normal', 'distance', 'identity', 'history'] as const,
+    debugViews: ['color', 'normal', 'cameraDistance', 'identity', 'history'] as const,
     gpuStageTiming: false as const
   };
 }

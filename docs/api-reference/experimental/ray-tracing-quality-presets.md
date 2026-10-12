@@ -69,14 +69,16 @@ telemetry. For a deterministic diffuse example, open
 
 ## Primary-hit debug views
 
-`debugView` selects `color` (default), `normal`, `distance`, `identity`, or `history`.
+`debugView` selects `color` (default), `normal`, `cameraDistance`, `identity`, or `history`.
 Changing the view rebuilds presentation without resetting unfiltered accumulation.
 Diagnostics bypass denoising, tone mapping and shader output transfer functions;
 the attachment's own sRGB conversion, if any, still applies.
 
 - `normal`: centered primary-hit world normals mapped from `[-1, 1]` into RGB `[0, 1]`.
-- `distance`: grayscale world-space ray distance compressed as `distance / (1 + distance)`;
-  this is not projected device depth.
+- `cameraDistance`: grayscale world-space camera-eye distance compressed as
+  `distance / (1 + distance)`. It comes from temporal guidance and can vary laterally
+  across a constant-depth plane in orthographic views. It is neither projected device
+  depth nor ray-origin distance; use the exact distance channel for the latter.
 - `identity`: deterministic colors for primitive identifiers in retained internal guidance.
   Background is black; identifiers beyond the exact half-float range are magenta.
   Use full-resolution integer channel snapshots for exact IDs and picking.

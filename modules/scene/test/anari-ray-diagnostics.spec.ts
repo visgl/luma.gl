@@ -38,7 +38,7 @@ it('ray debug presentation decodes stored hit metadata and bypasses tone mapping
     usage: Buffer.COPY_DST | Buffer.COPY_SRC
   });
   try {
-    for (const debugView of ['normal', 'distance', 'identity', 'history'] as const) {
+    for (const debugView of ['normal', 'cameraDistance', 'identity', 'history'] as const) {
       const model = new Model(device, {
         source: getRayTracingScenePresentationShader({
           toneMapMode: 3,
@@ -81,7 +81,7 @@ it('ray debug presentation decodes stored hit metadata and bypasses tone mapping
         if (debugView === 'normal') {
           expect(first).toEqual([128, 128, 255]);
           expect(Array.from(pixels.slice(12, 15))).toEqual([255, 128, 128]);
-        } else if (debugView === 'distance') {
+        } else if (debugView === 'cameraDistance') {
           expect(first).toEqual([128, 128, 128]);
           expect(pixels[8]).toBeGreaterThan(pixels[0]);
         } else if (debugView === 'identity') {

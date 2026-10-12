@@ -248,7 +248,7 @@ export type ANARIRendererParameters = {
   /** Presentation-only guided filter radius in internal pixels; defaults to zero. */
   denoiseRadius?: 0 | 1 | 2;
   /** Presentation-only primary-hit diagnostics for ray tracing. */
-  debugView?: 'color' | 'normal' | 'distance' | 'identity' | 'history';
+  debugView?: 'color' | 'normal' | 'cameraDistance' | 'identity' | 'history';
   /** Secondary diffuse bounce budget, clamped to 0–8; defaults to zero. */
   maxBounces?: number;
   progressive?: boolean;

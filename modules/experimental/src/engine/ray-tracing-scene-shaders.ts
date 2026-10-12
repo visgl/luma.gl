@@ -1359,7 +1359,7 @@ function getRayTracingDebugFragmentShader(debugView: RayTracingDebugView): strin
     case 'normal':
       return `${guidanceShader}
         return vec4<f32>(decodeGuidanceNormal(guidance.xy) * 0.5 + vec3<f32>(0.5), 1.0);`;
-    case 'distance':
+    case 'cameraDistance':
       return `${guidanceShader}
         return vec4<f32>(vec3<f32>(guidance.z / (1.0 + guidance.z)), 1.0);`;
     case 'identity':

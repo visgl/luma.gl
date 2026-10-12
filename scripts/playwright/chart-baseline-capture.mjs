@@ -26,7 +26,7 @@ const {values} = parseArgs({options: {
 }});
 const maximumRootMeanSquaredError = values['maximum-rmse'] === undefined ? undefined : Number(values['maximum-rmse']);
 if (maximumRootMeanSquaredError !== undefined && (!values.reference || !Number.isFinite(maximumRootMeanSquaredError) || maximumRootMeanSquaredError < 0 || maximumRootMeanSquaredError > 1)) throw new Error('maximum-rmse requires a reference and a finite value between 0 and 1');
-if (!['color', 'normal', 'distance', 'identity', 'history'].includes(values.view)) throw new Error('Unknown ray debug view');
+if (!['color', 'normal', 'cameraDistance', 'identity', 'history'].includes(values.view)) throw new Error('Unknown ray debug view');
 if (values.renderer !== 'raytrace' && values.view !== 'color') throw new Error('Debug views require raytrace');
 const denoise = Number(values.denoise);
 const history = Number(values.history);
