@@ -129,7 +129,7 @@ type ANARIRendererParameters = {
 | `toneMapMode` | Target-dependent | `0` disables tone mapping, `1` selects Reinhard, `2` selects Khronos PBR Neutral, and `3` selects ACES. Floating-point targets default to `0`; normalized targets default to `2`. |
 | `outputColorSpace` | Target-dependent | Explicitly selects `'linear'` or `'srgb'` output. Floating-point and hardware-sRGB targets default to linear output; other normalized targets default to software sRGB encoding. |
 | `samplesPerPixel` | `1` | Primary-ray samples per frame in the `raytrace` renderer. |
-| `maxBounces` | Not applied | Reserved ray-tracing bounce limit; the current implementation evaluates direct lighting only. |
+| `maxBounces` | `0` | Secondary diffuse bounce budget, clamped to 0–8. Zero preserves direct lighting. Changing it resets accumulation. |
 | `progressive` | `true` | Accumulate ray-traced samples across unchanged frames. |
 | `shadows` | `true` | Trace hard shadow rays toward direct lights in the `raytrace` renderer. |
 | `resolutionScale` | `0.5` | Initial ray-tracing width and height as a fraction of the display resolution. |
@@ -235,8 +235,20 @@ The Morton-sorted TLAS accelerates object and instance selection, while intersec
 GPU-built Morton-sorted triangle BLASes. Hardware ray tracing and SAH/Karras hierarchy topology are
 not implemented. Skeletal skinning, morph-target displacement, material textures, alpha/
 transmission, and advanced PBR material extensions remain on the forward/deferred renderer paths.
-Indirect multi-bounce path tracing, denoising, and volumes are also unsupported. `maxBounces` is
-accepted for forward compatibility but does not enable indirect bounces.
+Diffuse secondary transport is opt-in through `maxBounces` (0–8). Each bounce samples a
+cosine-weighted hemisphere and gathers emission and existing direct lighting at the next hit,
+so matte surfaces receive color bleeding and emissive illumination. The scalar diffuse
+throughput is base color × 0.96 × (1 − metallic); reflective and transmissive paths are not
+sampled. Misses contribute no indirect radiance: `background` is a display color, not an
+environment light. Ambient lights and fog retain the existing per-hit approximations.
+
+`samplingSeed` controls primary and diffuse paths. Pixel, frame, sample, and bounce indices
+separate samples; unchanged progressive frames converge through the existing bounded history.
+Seed, bounce-budget, camera, geometry, material, and light changes invalidate accumulation.
+Use a stationary scene, full resolution, disabled adaptive resolution and temporal reprojection,
+and multiple progressive frames for comparison. Small emitters can converge slowly because
+this first implementation does not importance-sample emissive surfaces. Explicit emitter
+sampling, specular/transmissive transport, denoising, and volumes remain planned.
 
 For the rationale behind the TLAS/BLAS split, Morton ordering, refit policy, megakernel execution,
 and temporal reconstruction policy, see
@@ -516,7 +528,7 @@ All parameter interfaces, object classes, subtype aliases, object metadata, and 
 
 ### Sampling and quality
 
-`raytrace` accepts `samplingSeed` (uint32, default zero) for deterministic primary-ray
+`raytrace` accepts `samplingSeed` (uint32, default zero) for deterministic primary and diffuse
 sample rotations. A changed seed resets accumulation; centered picking and hit channels
 are unaffected. Use the same seed and frame count on the same backend for comparisons.
 [`getRayTracingQualityPreset`](/docs/api-reference/experimental/ray-tracing-quality-presets)
