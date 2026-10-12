@@ -18,6 +18,7 @@ struct RayTracingUniforms {
   previousViewProjection: mat4x4<f32>,
   previousCameraPosition: vec4<f32>,
   sampling: vec4<u32>,
+  imageRegion: vec4<u32>,
 };
 
 struct RayPrimitive {
@@ -221,7 +222,7 @@ fn makeRandom(seed: u32) -> f32 {
   return f32(value) / 4294967295.0;
 }
 
-fn makeCameraRayAtCoordinates(coordinates: vec2<f32>) -> Ray {
+fn makeCameraRayAtFullCoordinates(coordinates: vec2<f32>) -> Ray {
   let clipCoordinates = vec2<f32>(coordinates.x * 2.0 - 1.0, 1.0 - coordinates.y * 2.0);
   let farPoint = uniforms.inverseViewProjection * vec4<f32>(clipCoordinates, 1.0, 1.0);
   let farPosition = farPoint.xyz / farPoint.w;
@@ -233,14 +234,34 @@ fn makeCameraRayAtCoordinates(coordinates: vec2<f32>) -> Ray {
   return Ray(origin, normalize(farPosition - origin));
 }
 
+fn makeCameraRayAtCoordinates(coordinates: vec2<f32>) -> Ray {
+  if (uniforms.imageRegion.z > 0u) {
+    return makeCameraRayAtFullCoordinates((coordinates * vec2<f32>(uniforms.displayPhase.xy)
+      + vec2<f32>(uniforms.imageRegion.xy)) / vec2<f32>(uniforms.imageRegion.zw));
+  }
+  return makeCameraRayAtFullCoordinates(coordinates);
+}
+
 fn makeCameraRayAtOffset(pixel: vec2<u32>, offset: vec2<f32>) -> Ray {
-  return makeCameraRayAtCoordinates(
+  if (uniforms.imageRegion.z > 0u) {
+    return makeCameraRayAtFullCoordinates((vec2<f32>(pixel + uniforms.imageRegion.xy) + offset)
+      / vec2<f32>(uniforms.imageRegion.zw));
+  }
+  return makeCameraRayAtFullCoordinates(
     (vec2<f32>(pixel) + offset) / vec2<f32>(uniforms.dimensions.xy)
   );
 }
 
+fn getSamplingPixelIndex(pixel: vec2<u32>) -> u32 {
+  if (uniforms.imageRegion.z > 0u) {
+    let fullPixel = pixel + uniforms.imageRegion.xy;
+    return fullPixel.y * uniforms.imageRegion.z + fullPixel.x;
+  }
+  return pixel.y * uniforms.dimensions.x + pixel.x;
+}
+
 fn makeRadianceSampleOffset(pixel: vec2<u32>, sampleIndex: u32) -> vec2<f32> {
-  let pixelIndex = pixel.y * uniforms.dimensions.x + pixel.x;
+  let pixelIndex = getSamplingPixelIndex(pixel);
   let pixelRotation = vec2<f32>(
     makeRandom((pixelIndex * 1973u + 17u) ^ uniforms.sampling.x),
     makeRandom((pixelIndex * 26699u + 101u) ^ uniforms.sampling.x)
@@ -1106,7 +1127,7 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
   var hit = primaryHit;
   var radiance = evaluateDirectLighting(ray, hit);
   var throughput = vec3<f32>(1.0);
-  let pixelIndex = pixel.y * uniforms.dimensions.x + pixel.x;
+  let pixelIndex = getSamplingPixelIndex(pixel);
   let sequenceIndex = uniforms.acceleration.w * 16u + sampleIndex;
   let pathSeed = uniforms.sampling.x ^ (pixelIndex * 1973u) ^ (sequenceIndex * 26699u);
   for (var bounceIndex = 0u; bounceIndex < min(uniforms.sampling.y, 8u); bounceIndex++) {
@@ -1129,7 +1150,7 @@ fn evaluateDiffuseTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32
   var hit = primaryHit;
   var radiance = evaluateDirectLighting(ray, hit);
   var throughput = vec3<f32>(1.0);
-  let pixelIndex = pixel.y * uniforms.dimensions.x + pixel.x;
+  let pixelIndex = getSamplingPixelIndex(pixel);
   let sequenceIndex = uniforms.acceleration.w * 16u + sampleIndex;
   let pathSeed = uniforms.sampling.x ^ (pixelIndex * 1973u) ^ (sequenceIndex * 26699u);
   for (var bounceIndex = 0u; bounceIndex < min(uniforms.sampling.y, 8u); bounceIndex++) {

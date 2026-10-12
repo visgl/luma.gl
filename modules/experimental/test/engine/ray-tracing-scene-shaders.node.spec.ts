@@ -21,7 +21,7 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(reflection.uniforms.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'uniforms', binding: 0}
     ]);
-    expect(reflection.uniforms[0].size).toBe(288);
+    expect(reflection.uniforms[0].size).toBe(304);
     expect(reflection.uniforms[0].members?.map(({name, offset}) => ({name, offset}))).toEqual([
       {name: 'inverseViewProjection', offset: 0},
       {name: 'cameraPosition', offset: 64},
@@ -34,7 +34,8 @@ describe('graph-accelerated ray tracing shaders', () => {
       {name: 'temporal', offset: 176},
       {name: 'previousViewProjection', offset: 192},
       {name: 'previousCameraPosition', offset: 256},
-      {name: 'sampling', offset: 272}
+      {name: 'sampling', offset: 272},
+      {name: 'imageRegion', offset: 288}
     ]);
     expect(reflection.storage.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'primitives', binding: 1},
@@ -66,7 +67,7 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(reflection.uniforms.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'uniforms', binding: 0}
     ]);
-    expect(reflection.uniforms[0].size).toBe(288);
+    expect(reflection.uniforms[0].size).toBe(304);
     expect(reflection.textures.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'historyImage', binding: 1},
       {name: 'historyMetadata', binding: 2}
@@ -124,7 +125,7 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(reflection.uniforms.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'uniforms', binding: 0}
     ]);
-    expect(reflection.uniforms[0].size).toBe(288);
+    expect(reflection.uniforms[0].size).toBe(304);
     expect(storageBuffers.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'primitives', binding: 1},
       {name: 'triangles', binding: 2},
@@ -554,7 +555,7 @@ describe('graph-accelerated ray tracing shaders', () => {
       'let historicalSample = getHistoricalRaySample(pixel, guideRay, guideHit, color)'
     );
 
-    const functionStart = RAY_TRACING_SCENE_SHADER.indexOf('fn makeCameraRayAtCoordinates(');
+    const functionStart = RAY_TRACING_SCENE_SHADER.indexOf('fn makeCameraRayAtFullCoordinates(');
     const functionEnd = RAY_TRACING_SCENE_SHADER.indexOf('\nfn ', functionStart + 1);
     const cameraRaySource = RAY_TRACING_SCENE_SHADER.slice(functionStart, functionEnd);
     const orthographicBranch = cameraRaySource.indexOf('if (uniforms.cameraPosition.w > 0.5)');

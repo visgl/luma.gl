@@ -4,6 +4,7 @@
 
 import type {RayTracingDebugView} from './ray-tracing-scene-capabilities';
 import {
+  assert,
   Buffer,
   type Device,
   type Framebuffer,
@@ -47,7 +48,7 @@ const PRIMITIVE_FLOAT_COUNT = 68;
 const TRIANGLE_FLOAT_COUNT = 24;
 const BLAS_NODE_FLOAT_COUNT = 8;
 const LIGHT_FLOAT_COUNT = 16;
-const UNIFORM_FLOAT_COUNT = 72;
+const UNIFORM_FLOAT_COUNT = 76;
 const DEFAULT_RESOLUTION_SCALE = 0.5;
 const DEFAULT_MINIMUM_RESOLUTION_SCALE = 0.25;
 const DEFAULT_TARGET_FRAME_TIME_MILLISECONDS = 33.3;
@@ -469,6 +470,10 @@ export type RayTracingSceneRenderOptions = SceneRenderOptions & {
   samplesPerPixel?: number;
   /** Uint32 seed for primary and secondary sampling; defaults to zero. */
   samplingSeed?: number;
+  /** Full-image pixel coordinates for a full-resolution cropped render. */
+  imageRegion?: RayTracingImageRegion;
+  /** Explicit uint32 sample sequence frame, independent of retained render scheduling. */
+  samplingFrameIndex?: number;
   /** Maximum retained samples per pixel, from 1 to 256; defaults to 64. */
   historySampleLimit?: number;
   /** Presentation-only guided filter radius in internal pixels; defaults to zero. */
@@ -495,6 +500,12 @@ export type RayTracingSceneRenderOptions = SceneRenderOptions & {
   temporalReprojection?: boolean;
   /** Maximum non-ambient shadowed light samples traced per pixel in one frame. */
   shadowSamplesPerFrame?: number;
+};
+
+/** Top-left crop origin and full-image dimensions; camera matrices describe the full image. */
+export type RayTracingImageRegion = {
+  offset: readonly [number, number];
+  fullSize: readonly [number, number];
 };
 
 /** Stable retained placement identity and a world-space primary-ray hit. */
@@ -697,6 +708,31 @@ export class RayTracingSceneRenderer {
 
   render(options: RayTracingSceneRenderOptions): SceneRenderStatistics {
     const [displayWidth, displayHeight] = getRayTracingDisplaySize(this.device, options);
+    if (options.imageRegion) {
+      const {offset, fullSize} = options.imageRegion;
+      // A crop must lie inside an integer full-image pixel grid; uint32 seeds index that grid.
+      assert(
+        [...offset, ...fullSize].every(Number.isInteger) &&
+          offset.every(value => value >= 0) &&
+          fullSize.every(value => value > 0) &&
+          fullSize[0] * fullSize[1] <= 0xffffffff &&
+          offset[0] + displayWidth <= fullSize[0] &&
+          offset[1] + displayHeight <= fullSize[1]
+      );
+      options = {
+        ...options,
+        resolutionScale: 1,
+        adaptiveResolution: false,
+        temporalReprojection: false
+      };
+    }
+    // Explicit sampling frames must fit the shader's uint32 sequence counter.
+    assert(
+      options.samplingFrameIndex === undefined ||
+        (Number.isInteger(options.samplingFrameIndex) &&
+          options.samplingFrameIndex >= 0 &&
+          options.samplingFrameIndex <= 0xffffffff)
+    );
     const presentation = getRayTracingPresentationOptions(this.device, options);
     const lights = options.lights ?? [];
     const quality = getQualityOptions(options);
@@ -3405,6 +3441,7 @@ function getRenderRevision(
     options.fogDensity,
     options.samplesPerPixel,
     options.samplingSeed,
+    options.imageRegion,
     options.historySampleLimit,
     options.maxBounces,
     options.transportMode,
@@ -3742,7 +3779,7 @@ function makeUniformData(props: {
   unsignedData[36] = props.leafCapacity - 1;
   unsignedData[37] = props.leafCapacity;
   unsignedData[38] = props.primitiveCapacity;
-  unsignedData[39] = props.frameIndex;
+  unsignedData[39] = props.options.samplingFrameIndex ?? props.frameIndex;
   unsignedData[40] = props.displayWidth;
   unsignedData[41] = props.displayHeight;
   unsignedData[42] = props.phaseIndex;
@@ -3758,6 +3795,10 @@ function makeUniformData(props: {
   unsignedData[70] = getHistorySampleLimit(props.options);
   unsignedData[68] = props.options.samplingSeed ?? 0;
   unsignedData[69] = Math.min(8, Math.max(0, Math.floor(props.options.maxBounces ?? 0)));
+  if (props.options.imageRegion) {
+    unsignedData.set(props.options.imageRegion.offset, 72);
+    unsignedData.set(props.options.imageRegion.fullSize, 74);
+  }
   return data;
 }
 

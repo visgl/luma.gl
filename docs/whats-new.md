@@ -723,3 +723,11 @@ ANARI scenes support capped `hexPrism` marks and full or open partial `torus`
 meshes. The engine exports `TorusGeometry` over shared math.gl tessellation.
 The Chart Shapes playground preset and `--shapes` capture option use the same
 geometry and datum identities across raster and ray rendering.
+
+### Bounded ray image export
+
+`@luma.gl/experimental` adds `exportRayTracingImage` and
+`iterateRayTracingImageTiles` for streamed RGBA8 output. Full-image coordinates
+and explicit sampling-frame indices keep seeded ray paths stable across tiles.
+Clipped filter/history halos preserve progressive and denoised image seams;
+per-tile readback and cancellation keep export-owned allocations bounded.
