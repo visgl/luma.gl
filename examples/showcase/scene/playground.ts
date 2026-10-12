@@ -101,14 +101,17 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
               ? 6
               : preset === 'chart-shapes'
                 ? 7
-                : 0
+                : preset === 'chart-lighting'
+                  ? 8
+                  : 0
     );
     if (
       preset === 'chart' ||
       preset === 'chart-motion' ||
       preset === 'chart-diffuse' ||
       preset === 'chart-materials' ||
-      preset === 'chart-shapes'
+      preset === 'chart-shapes' ||
+      preset === 'chart-lighting'
     ) {
       const sceneDescription: ANARIJSONScene = ANARISceneSchema.parse(
         JSON.parse(this.editor.value)
@@ -136,6 +139,9 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
           debugView === 'history'
         )
           sceneDescription.renderer.debugView = debugView;
+        const emitterOverride = parameters.get('emitters');
+        if (emitterOverride === 'on' || emitterOverride === 'off')
+          sceneDescription.renderer.emitterSampling = emitterOverride === 'on';
         const denoiseRadius = Number(
           parameters.get('denoise') ?? sceneDescription.renderer.denoiseRadius ?? 0
         );
@@ -308,7 +314,8 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       'history-limit',
       'ray-view-selector',
       'transport-selector',
-      'bounce-limit'
+      'bounce-limit',
+      'emitter-sampling'
     ]) {
       const control = document.getElementById(identifier);
       if (control instanceof HTMLSelectElement || control instanceof HTMLInputElement)
@@ -316,6 +323,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       control?.addEventListener('change', () => {
         const transportMode = getRequiredElement('transport-selector', HTMLSelectElement).value;
         const maxBounces = Number(getRequiredElement('bounce-limit', HTMLInputElement).value);
+        const emitterSampling = getRequiredElement('emitter-sampling', HTMLInputElement).checked;
         if (
           !(transportMode === 'diffuse' || transportMode === 'pbr') ||
           !Number.isInteger(maxBounces) ||
@@ -354,6 +362,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
             denoiseRadius,
             debugView,
             transportMode,
+            emitterSampling,
             maxBounces,
             historySampleLimit
           };
@@ -367,6 +376,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
                 historySampleLimit,
                 debugView,
                 transportMode,
+                emitterSampling,
                 maxBounces
               })
               .commitParameters();
@@ -652,6 +662,8 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       );
       getRequiredElement('transport-selector', HTMLSelectElement).value =
         sceneDescription.renderer?.transportMode ?? 'diffuse';
+      getRequiredElement('emitter-sampling', HTMLInputElement).checked =
+        sceneDescription.renderer?.emitterSampling ?? false;
       getRequiredElement('bounce-limit', HTMLInputElement).value = String(
         sceneDescription.renderer?.maxBounces ?? 0
       );

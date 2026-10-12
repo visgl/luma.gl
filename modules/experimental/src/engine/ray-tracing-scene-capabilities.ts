@@ -14,14 +14,15 @@ export function getRayTracingSceneCapabilities(device: Pick<Device, 'type'>) {
     analyticPrimitives: ['sphere'] as const,
     meshTopology: 'triangle-list' as const,
     materialTextures: false as const,
-    alphaModes: ['OPAQUE'] as const,
+    alphaModes: ['OPAQUE', 'MASK'] as const,
+    scalarAlphaMask: true as const,
     scalarMetallicRoughness: true as const,
     transport: {
       maximumDiffuseBounces: 8,
       modes: ['diffuse', 'pbr'] as const,
       specular: true as const,
       transmission: false as const,
-      explicitEmitterSampling: false as const
+      explicitEmitterSampling: true as const
     },
     guidedSpatialDenoising: true as const,
     debugViews: ['color', 'normal', 'cameraDistance', 'identity', 'history'] as const,

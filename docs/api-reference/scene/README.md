@@ -132,7 +132,7 @@ separately loads the retained JSON validation helpers.
 | Object type | Supported subtypes |
 | --- | --- |
 | Array | `array1D` |
-| Geometry | `triangle`, `sphere`, `cylinder`, `cone`, `quad`, `hexPrism`, `torus` |
+| Geometry | `triangle`, `sphere`, `cylinder`, `cone`, `quad`, `hexPrism`, `torus`, `ring` |
 | Material | `matte`, `physicallyBased` |
 | Sampler | `image2D` |
 | Surface | `default` |

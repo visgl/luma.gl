@@ -231,3 +231,5 @@ import {DynamicTexture, type DynamicTextureProps} from './dynamic-texture/dynami
 export const AsyncTexture = DynamicTexture;
 /** @deprecated use DynamicTextureProps */
 export type AsyncTextureProps = DynamicTextureProps;
+
+export {RingGeometry, type RingGeometryProps} from './geometry/ring-geometry';

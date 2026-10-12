@@ -9,7 +9,8 @@ import {
   Geometry,
   PlaneGeometry,
   SphereGeometry,
-  TorusGeometry
+  TorusGeometry,
+  RingGeometry
 } from '@luma.gl/engine';
 import type {
   SceneCamera,
@@ -1051,6 +1052,16 @@ function makeEngineGeometry(geometry: ANARIGeometry): Geometry {
         nvertical: 1,
         topCap: true,
         bottomCap: true
+      });
+      break;
+    case 'ring':
+      sourceGeometry = new RingGeometry({
+        innerRadius: parameters.innerRadius,
+        outerRadius: parameters.outerRadius,
+        height: parameters.height,
+        segments: parameters.segments,
+        startAngle: parameters.startAngle,
+        angle: parameters.angle
       });
       break;
     case 'torus':

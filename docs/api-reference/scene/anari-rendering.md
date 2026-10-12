@@ -233,7 +233,7 @@ build graph.
 
 The Morton-sorted TLAS accelerates object and instance selection, while intersected meshes traverse
 GPU-built Morton-sorted triangle BLASes. Hardware ray tracing and SAH/Karras hierarchy topology are
-not implemented. Skeletal skinning, morph-target displacement, material textures, alpha/
+not implemented. Skeletal skinning, morph-target displacement, material textures, alpha blending/
 transmission, and advanced PBR material extensions remain on the forward/deferred renderer paths.
 Diffuse secondary transport is opt-in through `maxBounces` (0–8). Each bounce samples a
 cosine-weighted hemisphere and gathers emission and existing direct lighting at the next hit,
@@ -250,9 +250,9 @@ is enabled: primary-hit metadata cannot validate indirect illumination. Camera m
 history when temporal reprojection is disabled; otherwise it uses the existing primary-hit
 reprojection and camera-cut rejection.
 Use a stationary scene, full resolution, disabled adaptive resolution and temporal reprojection,
-and multiple progressive frames for comparison. Small emitters can converge slowly because
-this first implementation does not importance-sample emissive surfaces. Explicit emitter
-sampling, specular/transmissive transport, denoising, and volumes remain planned.
+and multiple progressive frames for comparison. Small emitters can converge slowly under the default BSDF-only emission gathering.
+Opt-in explicit emitter sampling, opaque GGX transport and spatial denoising are available;
+MIS, transmissive transport, advanced temporal denoising and volumes remain planned.
 
 For the rationale behind the TLAS/BLAS split, Morton ordering, refit policy, megakernel execution,
 and temporal reconstruction policy, see
@@ -373,7 +373,7 @@ Picking uses the runtime that last rendered the frame, even if a different rende
 has since been committed. Background, out-of-bounds or non-finite coordinates,
 unrendered/destroyed frames, and frames last rendered by a built-in raster renderer
 return `null`. Intersections use the ray renderer's opaque
-geometry semantics; alpha and transmission do not change which surface is selected.
+geometry semantics. Scalar alpha masks exclude below-cutoff surfaces; alpha blending and transmission remain unsupported.
 The experimental `SelectionOutline` overlay draws visible selected placement boundaries.
 Projected-depth transfer for raster overlays is available through `DepthTextureCopy`.
 
@@ -420,7 +420,7 @@ texture-to-buffer copies.
 
 Like picking, capture uses the runtime that last rendered the frame. Unrendered or
 destroyed frames and frames last rendered by the built-in raster runtime return `null`.
-Channels use opaque intersection semantics; alpha/transmission remains separate work.
+Channels use scalar alpha-mask intersection semantics. Texture alpha, blending and transmission remain separate work.
 Use [`DepthTextureCopy`](/docs/api-reference/experimental/depth-texture-copy) to transfer
 `projectedDepthTexture` into a color-preserving render pass with a depth attachment before
 drawing raster overlays with matching camera and viewport conventions.
@@ -514,7 +514,7 @@ type ANARIVector3 = readonly [number, number, number];
 type ANARIVector4 = readonly [number, number, number, number];
 type ANARIMatrix4 = readonly number[];
 
-type ANARIGeometrySubtype = 'triangle' | 'sphere' | 'cylinder' | 'cone' | 'quad' | 'hexPrism' | 'torus';
+type ANARIGeometrySubtype = 'triangle' | 'sphere' | 'cylinder' | 'cone' | 'quad' | 'hexPrism' | 'torus' | 'ring';
 type ANARIMaterialSubtype = 'matte' | 'physicallyBased';
 type ANARILightSubtype = 'ambient' | 'directional' | 'point' | 'spot';
 type ANARICameraSubtype = 'perspective' | 'orthographic';
@@ -537,3 +537,13 @@ sample rotations. A changed seed resets accumulation; centered picking and hit c
 are unaffected. Use the same seed and frame count on the same backend for comparisons.
 [`getRayTracingQualityPreset`](/docs/api-reference/experimental/ray-tracing-quality-presets)
 returns explicit interactive/still renderer settings without modifying exposure or seed.
+
+### Emissive lighting and scalar alpha masks
+
+`emitterSampling: true` enables explicit emissive-geometry connections with
+both diffuse and PBR transport, including at zero material bounces. It defaults
+to false. Scalar `alphaMode: 'mask'` compares committed opacity against
+`alphaCutoff` for color, secondary/shadow rays, picking and channels. Masked
+emitters are excluded from the sampling table. See the
+[ray quality reference](/docs/api-reference/experimental/ray-tracing-quality-presets#explicit-emissive-lighting-and-scalar-masks)
+for sampling semantics and current limitations.

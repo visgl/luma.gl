@@ -101,3 +101,12 @@ The defaults above apply except that `arc` defaults to `2 * Math.PI`. The ring
 lies around Y, starts at +X and sweeps toward −Z. Partial sweeps have open ends.
 Radii must be positive, the minor radius must be smaller than the major radius,
 and each segment count must be an integer of at least three.
+
+### `RingGeometry`
+
+`RingGeometry` constructs a closed annular prism or capped ring segment by
+assembling shared math.gl lathe/plane meshes. Props are `innerRadius` (`0.5`),
+`outerRadius` (`1`), `height` (`0.2`), `segments` (`48`), `startAngle` (`0`) and
+`angle` (`2 * Math.PI`). Zero inner radius creates a disk. Partial sweeps include
+both radial caps; cap/wall corners have hard normals. The source mesh retains
+indexed glTF attribute semantics and caller-provided attribute overrides.

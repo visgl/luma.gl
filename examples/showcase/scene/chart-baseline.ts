@@ -261,3 +261,61 @@ export function makeChartShapesScene(
   };
   return scene;
 }
+
+/** Emissive panel/points illuminate annular marks; a scalar mask fixture stays invisible. */
+export function makeChartLightingScene(): ANARIJSONScene {
+  const scene = makeChartBaseline('raytrace');
+  scene.name = 'CHART LIGHTING';
+  scene.description = 'Annular marks · sampled emissive lighting · alpha-mask visibility';
+  const maskGeometry = scene.geometries.bar;
+  scene.geometries.bar = {
+    '@@type': 'ring',
+    innerRadius: 0.5,
+    outerRadius: 1,
+    height: 1,
+    segments: 32,
+    angle: Math.PI * 1.5
+  };
+  scene.geometries.column = {'@@type': 'hexPrism', radius: 0.3, height: 1};
+  scene.geometries.panel = {'@@type': 'quad', width: 4, height: 3};
+  scene.geometries.mask = maskGeometry;
+  scene.materials.orange = {
+    '@@type': 'physicallyBased',
+    baseColor: [0.9, 0.3, 0.08],
+    emissive: [1, 0.15, 0.02],
+    emissiveStrength: 3
+  };
+  scene.materials.panel = {
+    '@@type': 'physicallyBased',
+    baseColor: [0, 0, 0],
+    emissive: [1, 0.9, 0.7],
+    emissiveStrength: 2,
+    doubleSided: true
+  };
+  scene.materials.mask = {
+    '@@type': 'physicallyBased',
+    baseColor: [0.1, 1, 0.1, 0],
+    alphaMode: 'mask',
+    alphaCutoff: 0.5
+  };
+  scene.surfaces.panel = {geometry: 'panel', material: 'panel'};
+  scene.surfaces.mask = {geometry: 'mask', material: 'mask'};
+  scene.instances!.push(
+    {'@@id': 'emitter-panel', surface: 'panel', position: [0, 5, 0]},
+    {'@@id': 'masked-card', surface: 'mask', position: [0, 1.5, 2], scale: [2, 2, 0.3]}
+  );
+  scene.renderer = {
+    ...scene.renderer!,
+    emitterSampling: true,
+    transportMode: 'pbr',
+    maxBounces: 1,
+    samplesPerPixel: 4,
+    samplingSeed: 17,
+    denoiseRadius: 1,
+    ambientRadiance: 0
+  };
+  scene.lights = [
+    {'@@id': 'key', '@@type': 'directional', direction: [-0.5, -1, -0.5], irradiance: 0.5}
+  ];
+  return scene;
+}

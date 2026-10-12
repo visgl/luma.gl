@@ -731,3 +731,12 @@ geometry and datum identities across raster and ray rendering.
 and explicit sampling-frame indices keep seeded ray paths stable across tiles.
 Clipped filter/history halos preserve progressive and denoised image seams;
 per-tile readback and cancellation keep export-owned allocations bounded.
+
+### Emissive chart lighting, masks and ring segments
+
+Ray renderers add opt-in `emitterSampling` for explicit connections to emissive
+triangles and transformed analytic spheres. Scalar alpha masks now control
+ray color, shadows, picking and channels. `RingGeometry` and ANARI `ring`
+geometry add closed annular prisms and capped segments using shared math.gl
+tessellation. The Chart Lighting preset combines these features with retained
+selection identities and an emissive-lighting preview toggle.
