@@ -110,7 +110,8 @@ export class UniformStore<
     uniforms: Partial<{[group in keyof TPropGroups]: Partial<TPropGroups[group]>}>,
     commandEncoder?: CommandEncoder
   ): void {
-    for (const [blockName, uniformValues] of Object.entries(uniforms)) {
+    for (const blockName in uniforms) {
+      const uniformValues = uniforms[blockName];
       const uniformBufferName = blockName as keyof TPropGroups;
       const shaderBlockWriter = this.shaderBlockWriters.get(uniformBufferName);
       const flattenedUniforms = shaderBlockWriter?.getFlatUniformValues(
@@ -144,7 +145,8 @@ export class UniformStore<
   getUniformBufferData(uniformBufferName: keyof TPropGroups): Uint8Array {
     const uniformValues = this.uniformBlocks.get(uniformBufferName)?.getAllUniforms() || {};
     const shaderBlockWriter = this.shaderBlockWriters.get(uniformBufferName);
-    return shaderBlockWriter?.getData(uniformValues) || new Uint8Array(0);
+    // The uniform block holds values that are already flattened
+    return shaderBlockWriter?.getFlatData(uniformValues) || new Uint8Array(0);
   }
 
   /**

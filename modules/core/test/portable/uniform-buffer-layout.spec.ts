@@ -145,6 +145,53 @@ it('array of structs layout', () => {
   void 0;
 });
 
+it('ShaderBlockWriter flattens and serializes repeated values consistently', () => {
+  const {writer} = makeLayoutWriter({
+    weights: ['f32', 3],
+    lights: [{position: 'vec3<f32>', intensity: 'f32'}, 2]
+  } as const);
+
+  const firstValues = {
+    weights: [1, 2, 3],
+    lights: [{position: [1, 2, 3], intensity: 0.5}]
+  };
+  const secondValues = {
+    weights: [4, 5],
+    lights: [undefined, {position: [4, 5, 6], intensity: 1}]
+  };
+
+  expect(writer.getFlatUniformValues(firstValues), 'first values flatten to leaf paths').toEqual({
+    'weights[0]': 1,
+    'weights[1]': 2,
+    'weights[2]': 3,
+    'lights[0].position': [1, 2, 3],
+    'lights[0].intensity': 0.5
+  });
+  const secondFlatValues = writer.getFlatUniformValues(secondValues);
+  expect(secondFlatValues, 'later values reuse leaf paths without mixing values').toEqual({
+    'weights[0]': 4,
+    'weights[1]': 5,
+    'lights[1].position': [4, 5, 6],
+    'lights[1].intensity': 1
+  });
+
+  const firstData = Array.from(writer.getData(firstValues));
+  expect(
+    Array.from(writer.getFlatData(writer.getFlatUniformValues(firstValues))),
+    'flat values serialize like nested values'
+  ).toEqual(firstData);
+
+  const secondData = Array.from(writer.getFlatData(secondFlatValues));
+  expect(secondData, 'flat values serialize like nested values').toEqual(
+    Array.from(writer.getData(secondValues))
+  );
+  const secondView = new Float32Array(new Uint8Array(secondData).buffer);
+  expect(Array.from(secondView.slice(0, 12)), 'leaves of earlier data are cleared').toEqual([
+    4, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0
+  ]);
+  expect(Array.from(secondView.slice(16, 20)), 'second light is written').toEqual([4, 5, 6, 1]);
+});
+
 it('partial nested updates preserve unspecified leaves', () => {
   const uniformStore = new UniformStore({type: 'webgl'} as any, {
     lighting: {

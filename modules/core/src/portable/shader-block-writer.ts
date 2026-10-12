@@ -22,6 +22,10 @@ import {
 export class ShaderBlockWriter {
   /** Layout metadata used to flatten and serialize values. */
   readonly layout: ShaderBlockLayout;
+  /** Names of array elements by parent name, so that flattening does not build them again. */
+  private readonly _elementNames = new Map<string, string[]>();
+  /** Names of struct fields by parent name, so that flattening does not build them again. */
+  private readonly _fieldNames = new Map<string, Record<string, string>>();
 
   /**
    * Creates a writer for a precomputed shader-block layout.
@@ -56,7 +60,8 @@ export class ShaderBlockWriter {
   ): Record<string, UniformValue> {
     const flattenedUniformValues: Record<string, UniformValue> = {};
 
-    for (const [name, value] of Object.entries(uniformValues)) {
+    for (const name in uniformValues) {
+      const value = uniformValues[name];
       const uniformType = this.layout.uniformTypes[name];
       if (uniformType) {
         this._flattenCompositeValue(flattenedUniformValues, name, uniformType, value);
@@ -75,18 +80,22 @@ export class ShaderBlockWriter {
    * is the exact packed size of the block.
    */
   getData(uniformValues: Readonly<Record<string, CompositeUniformValue>>): Uint8Array {
-    const buffer = getScratchArrayBuffer(this.layout.byteLength);
-    new Uint8Array(buffer, 0, this.layout.byteLength).fill(0);
-    const typedArrays = {
-      i32: new Int32Array(buffer),
-      u32: new Uint32Array(buffer),
-      f32: new Float32Array(buffer),
-      f16: new Uint16Array(buffer)
-    };
+    return this.getFlatData(this.getFlatUniformValues(uniformValues));
+  }
 
-    const flattenedUniformValues = this.getFlatUniformValues(uniformValues);
-    for (const [name, value] of Object.entries(flattenedUniformValues)) {
-      this._writeLeafValue(typedArrays, name, value);
+  /**
+   * Serializes values that are already flattened by {@link getFlatUniformValues}, such as the
+   * values held by a {@link UniformBlock}.
+   *
+   * The returned view length matches {@link ShaderBlockLayout.byteLength}.
+   */
+  getFlatData(flattenedUniformValues: Readonly<Record<string, UniformValue>>): Uint8Array {
+    const buffer = getScratchArrayBuffer(this.layout.byteLength);
+    const typedArrays = getScratchTypedArrays(buffer);
+    typedArrays.u8.fill(0, 0, this.layout.byteLength);
+
+    for (const name in flattenedUniformValues) {
+      this._writeLeafValue(typedArrays, name, flattenedUniformValues[name]);
     }
 
     return new Uint8Array(buffer, 0, this.layout.byteLength);
@@ -136,7 +145,7 @@ export class ShaderBlockWriter {
 
         this._flattenCompositeValue(
           flattenedUniformValues,
-          `${baseName}[${index}]`,
+          this._getElementName(baseName, index),
           elementType,
           elementValue
         );
@@ -145,12 +154,13 @@ export class ShaderBlockWriter {
     }
 
     if (isCompositeShaderTypeStruct(uniformType) && isCompositeUniformObject(value)) {
-      for (const [key, subValue] of Object.entries(value)) {
+      for (const key in value) {
+        const subValue = value[key];
         if (subValue === undefined) {
           continue;
         }
 
-        const nestedName = `${baseName}.${key}`;
+        const nestedName = this._getFieldName(baseName, key);
         this._flattenCompositeValue(flattenedUniformValues, nestedName, uniformType[key], subValue);
       }
       return;
@@ -179,16 +189,47 @@ export class ShaderBlockWriter {
         break;
       }
 
+      const elementName = this._getElementName(baseName, index);
       if (packedElementLength === 1) {
-        flattenedUniformValues[`${baseName}[${index}]`] = Number(numericValue[start]);
+        flattenedUniformValues[elementName] = Number(numericValue[start]);
       } else {
-        flattenedUniformValues[`${baseName}[${index}]`] = sliceNumericArray(
+        flattenedUniformValues[elementName] = sliceNumericArray(
           value,
           start,
           start + packedElementLength
         ) as UniformValue;
       }
     }
+  }
+
+  /** Returns `${baseName}[${index}]`, built once per name. */
+  private _getElementName(baseName: string, index: number): string {
+    let names = this._elementNames.get(baseName);
+    if (!names) {
+      names = [];
+      this._elementNames.set(baseName, names);
+    }
+    let name = names[index];
+    if (!name) {
+      name = `${baseName}[${index}]`;
+      names[index] = name;
+    }
+    return name;
+  }
+
+  /** Returns `${baseName}.${key}`, built once per name. */
+  private _getFieldName(baseName: string, key: string): string {
+    let names = this._fieldNames.get(baseName);
+    if (!names) {
+      names = {};
+      this._fieldNames.set(baseName, names);
+    }
+    let name = names[key];
+    if (!name) {
+      name = `${baseName}.${key}`;
+      names[key] = name;
+    }
+    return name;
   }
 
   /**
@@ -230,6 +271,30 @@ export class ShaderBlockWriter {
       }
     }
   }
+}
+
+type ScratchTypedArrays = {
+  u8: Uint8Array;
+  i32: Int32Array;
+  u32: Uint32Array;
+  f32: Float32Array;
+  f16: Uint16Array;
+};
+
+let scratchTypedArrays: ScratchTypedArrays | null = null;
+
+/** Returns typed-array views of the scratch buffer, created again only when the buffer changes. */
+function getScratchTypedArrays(buffer: ArrayBuffer): ScratchTypedArrays {
+  if (scratchTypedArrays?.u8.buffer !== buffer) {
+    scratchTypedArrays = {
+      u8: new Uint8Array(buffer),
+      i32: new Int32Array(buffer),
+      u32: new Uint32Array(buffer),
+      f32: new Float32Array(buffer),
+      f16: new Uint16Array(buffer)
+    };
+  }
+  return scratchTypedArrays;
 }
 
 /**

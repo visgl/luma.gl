@@ -184,8 +184,8 @@ export class ShaderInputs<
   /** Merges concrete and deferred bindings for the shader from the registered modules. */
   getBindingValues(): Record<string, ShaderInputBinding> {
     const bindings = {} as Record<string, ShaderInputBinding>;
-    for (const moduleBindings of Object.values(this.moduleBindings)) {
-      Object.assign(bindings, moduleBindings);
+    for (const moduleName in this.moduleBindings) {
+      Object.assign(bindings, this.moduleBindings[moduleName]);
     }
     Object.assign(bindings, this.directBindings);
     return bindings;
@@ -238,7 +238,8 @@ function mergeModuleUniforms(
   uniformTypes: Readonly<Record<string, CompositeShaderType>> = {}
 ): Record<string, ShaderModuleUniformValue> {
   const mergedUniforms = {...currentUniforms};
-  for (const [key, value] of Object.entries(nextUniforms)) {
+  for (const key in nextUniforms) {
+    const value = nextUniforms[key];
     if (value !== undefined) {
       mergedUniforms[key] = mergeModuleUniformValue(currentUniforms[key], value, uniformTypes[key]);
     }
@@ -260,16 +261,15 @@ function mergeModuleUniformValue(
       return cloneModuleUniformValue(nextValue);
     }
 
-    const currentArray: Array<ShaderModuleUniformValue | undefined> =
+    const mergedArray: Array<ShaderModuleUniformValue | undefined> =
       Array.isArray(currentValue) && !isPackedUniformArrayValue(currentValue)
         ? [...currentValue]
         : [];
-    const mergedArray = currentArray.slice();
     for (let index = 0; index < nextValue.length; index++) {
       const elementValue = nextValue[index];
       if (elementValue !== undefined) {
         mergedArray[index] = mergeModuleUniformValue(
-          currentArray[index],
+          mergedArray[index],
           elementValue,
           uniformType[0] as CompositeShaderType
         );
@@ -285,7 +285,8 @@ function mergeModuleUniformValue(
   const uniformStruct = uniformType as Record<string, CompositeShaderType>;
   const currentObject = isPlainUniformObject(currentValue) ? currentValue : {};
   const mergedObject: Record<string, ShaderModuleUniformValue | undefined> = {...currentObject};
-  for (const [key, value] of Object.entries(nextValue)) {
+  for (const key in nextValue) {
+    const value = nextValue[key];
     if (value !== undefined) {
       mergedObject[key] = mergeModuleUniformValue(currentObject[key], value, uniformStruct[key]);
     }
@@ -310,12 +311,13 @@ function cloneModuleUniformValue(value: ShaderModuleUniformValue): ShaderModuleU
   }
 
   if (isPlainUniformObject(value)) {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, nestedValue]) => [
-        key,
-        nestedValue === undefined ? undefined : cloneModuleUniformValue(nestedValue)
-      ])
-    ) as ShaderModuleUniformValue;
+    const clonedObject: Record<string, ShaderModuleUniformValue | undefined> = {};
+    for (const key in value) {
+      const nestedValue = value[key];
+      clonedObject[key] =
+        nestedValue === undefined ? undefined : cloneModuleUniformValue(nestedValue);
+    }
+    return clonedObject as ShaderModuleUniformValue;
   }
 
   return value;
