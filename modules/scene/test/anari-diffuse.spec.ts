@@ -158,6 +158,47 @@ it('diffuse transport receives emissive light with bounded, seeded paths and fre
     } finally {
       frame.destroy();
     }
+    // All primary rays hit the same unlit receiver. A small off-axis emitter makes
+    // secondary directions observable without primary edge jitter changing pixels.
+    light.setParameter('irradiance', 0).commitParameters();
+    camera.setParameter('fovy', 0.000001).commitParameters();
+    emitterInstance
+      .setParameter('transform', [0.1, 0, 0, 0, 0, 0.1, 0, 0, 0, 0, 0.1, 0, 1.5, 0, 1, 1])
+      .commitParameters();
+    const unlit = await render(0);
+    expect(unlit.filter((value, index) => index % 4 === 0).some(value => value > 0)).toBe(false);
+    const seeded = await render(1, 17);
+    expect(seeded).not.toEqual(unlit);
+    expect(await render(1, 17)).toEqual(seeded);
+    expect(await render(1, 18)).not.toEqual(seeded);
+    const progressiveRenderer = device.newRenderer('raytrace', {
+      ambientRadiance: 0,
+      toneMapMode: 0,
+      exposure: 0.1,
+      maxBounces: 1,
+      samplingSeed: 17,
+      resolutionScale: 1,
+      adaptiveResolution: false,
+      temporalReprojection: false,
+      progressive: true,
+      background: [0, 0, 0, 1]
+    });
+    const progressiveFrame = device.newFrame({
+      world,
+      camera,
+      renderer: progressiveRenderer,
+      size: [32, 32]
+    });
+    try {
+      progressiveFrame.render();
+      graphics.submit();
+      const firstSample = await readColor();
+      progressiveFrame.render();
+      graphics.submit();
+      expect(await readColor()).not.toEqual(firstSample);
+    } finally {
+      progressiveFrame.destroy();
+    }
   } finally {
     device.destroy();
     presentation.mockRestore();
