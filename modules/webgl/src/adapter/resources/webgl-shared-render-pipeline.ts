@@ -17,6 +17,8 @@ export class WEBGLSharedRenderPipeline extends SharedRenderPipeline {
   readonly vs: WEBGLShader;
   readonly fs: WEBGLShader;
   linkStatus: 'pending' | 'success' | 'error' = 'pending';
+  /** Uniform block indices in the linked program, by block name. Fixed once the program is linked. */
+  private _uniformBlockIndices = new Map<string, number>();
 
   constructor(
     device: WebGLDevice,
@@ -53,6 +55,19 @@ export class WEBGLSharedRenderPipeline extends SharedRenderPipeline {
     // @ts-expect-error
     this.handle.destroyed = true;
     this.destroyResource();
+  }
+
+  /** Returns the index of a uniform block in the linked program, looking it up once per name. */
+  _getUniformBlockIndex(blockName: string): number {
+    let blockIndex = this._uniformBlockIndices.get(blockName);
+    if (blockIndex === undefined) {
+      blockIndex = this.device.gl.getUniformBlockIndex(this.handle, blockName);
+      if ((blockIndex as GL) === GL.INVALID_INDEX) {
+        throw new Error(`Invalid uniform block name ${blockName}`);
+      }
+      this._uniformBlockIndices.set(blockName, blockIndex);
+    }
+    return blockIndex;
   }
 
   protected async _linkShaders() {
