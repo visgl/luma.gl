@@ -45,6 +45,7 @@ export function makeChartBaseline(
             temporalReprojection: false,
             shadowSamplesPerFrame: 0,
             samplesPerPixel: 1,
+            samplingSeed: 0,
             progressive: true,
             shadows: true
           }
@@ -143,4 +144,20 @@ function makeCuboidPositions(): number[] {
     }
   }
   return positions;
+}
+
+/** The interaction acceptance scene shares baseline data and retained identities. */
+export function makeChartMotionScene(): ANARIJSONScene {
+  const scene = makeChartBaseline('raytrace');
+  scene.name = 'CHART MOTION';
+  scene.description = 'Click an animated mark · raster labels use ray-traced depth';
+  scene.instances = scene.instances?.map((instance, index) =>
+    instance['@@id'].startsWith('point-')
+      ? {
+          ...instance,
+          animation: {'@@type': 'bob', amplitude: 0.45, speed: 1, phase: index * 0.7}
+        }
+      : instance
+  );
+  return scene;
 }

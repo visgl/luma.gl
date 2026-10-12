@@ -46,7 +46,7 @@ const PRIMITIVE_FLOAT_COUNT = 68;
 const TRIANGLE_FLOAT_COUNT = 24;
 const BLAS_NODE_FLOAT_COUNT = 8;
 const LIGHT_FLOAT_COUNT = 16;
-const UNIFORM_FLOAT_COUNT = 68;
+const UNIFORM_FLOAT_COUNT = 72;
 const DEFAULT_RESOLUTION_SCALE = 0.5;
 const DEFAULT_MINIMUM_RESOLUTION_SCALE = 0.25;
 const DEFAULT_TARGET_FRAME_TIME_MILLISECONDS = 33.3;
@@ -466,6 +466,8 @@ export type RayTracingSceneRenderOptions = SceneRenderOptions & {
   cameraProjection?: 'perspective' | 'orthographic';
   /** Number of primary-ray samples per pixel in one encoded frame. */
   samplesPerPixel?: number;
+  /** Uint32 seed for primary-ray sampling; defaults to zero. */
+  samplingSeed?: number;
   /** Reserved future path-tracing bounce budget. */
   maxBounces?: number;
   /** Accumulates primary-ray samples across unchanged committed frames. */
@@ -3354,6 +3356,7 @@ function getRenderRevision(
     options.fogColor,
     options.fogDensity,
     options.samplesPerPixel,
+    options.samplingSeed,
     options.maxBounces,
     options.progressive,
     options.shadows,
@@ -3701,6 +3704,7 @@ function makeUniformData(props: {
   data.set(props.previousViewProjection, 48);
   data.set(props.previousCameraPosition, 64);
   data[67] = (props.options.progressive ?? true) ? 1 : 0;
+  unsignedData[68] = props.options.samplingSeed ?? 0;
   return data;
 }
 

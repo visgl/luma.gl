@@ -300,6 +300,7 @@ const rendererProperties = {
 const raytraceRendererProperties = {
   ...rendererProperties,
   samplesPerPixel: z.number().int().positive().optional(),
+  samplingSeed: z.number().int().min(0).max(0xffffffff).optional(),
   maxBounces: z.number().int().nonnegative().optional(),
   progressive: z.boolean().optional(),
   shadows: z.boolean().optional(),
