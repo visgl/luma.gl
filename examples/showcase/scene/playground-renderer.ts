@@ -39,6 +39,8 @@ export function applyPlaygroundQualityPreset(
   if (renderer?.subtype === 'raytrace') {
     renderer.setParameters(settings).commitParameters();
   } else {
+    // Release the previous runtime's per-frame targets while preserving the retained frame.
+    device.destroyFrame(frame);
     frame
       .setParameter(
         'renderer',

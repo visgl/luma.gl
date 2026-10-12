@@ -9,7 +9,7 @@ import {applyPlaygroundQualityPreset} from '../../../examples/showcase/scene/pla
 import {getChartLabelPositions} from '../../../examples/showcase/scene/chart-labels';
 
 import {ANARISceneSchema} from '@luma.gl/scene/schemas';
-import {expect, it} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {
   CHART_BASELINE_DATA,
   makeChartBaseline,
@@ -112,7 +112,10 @@ it('quality changes retain the inspected camera, world and placement identities'
     scene.frame
       .setParameter('renderer', device.newRenderer('default', {exposure: 3}))
       .commitParameters();
+    const cleanup = vi.spyOn(device, 'destroyFrame');
     applyPlaygroundQualityPreset(device, scene.frame, 'still');
+    expect(cleanup).toHaveBeenCalledWith(scene.frame);
+    cleanup.mockRestore();
     expect(scene.frame.getParameter('camera')).toBe(camera);
     expect(scene.frame.getParameter('world')).toBe(world);
     expect(scene.frame.getParameter('renderer')?.getParameter('exposure')).toBe(3);
