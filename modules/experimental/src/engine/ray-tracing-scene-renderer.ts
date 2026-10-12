@@ -46,7 +46,7 @@ const PRIMITIVE_FLOAT_COUNT = 68;
 const TRIANGLE_FLOAT_COUNT = 24;
 const BLAS_NODE_FLOAT_COUNT = 8;
 const LIGHT_FLOAT_COUNT = 16;
-const UNIFORM_FLOAT_COUNT = 68;
+const UNIFORM_FLOAT_COUNT = 72;
 const DEFAULT_RESOLUTION_SCALE = 0.5;
 const DEFAULT_MINIMUM_RESOLUTION_SCALE = 0.25;
 const DEFAULT_TARGET_FRAME_TIME_MILLISECONDS = 33.3;
@@ -466,7 +466,9 @@ export type RayTracingSceneRenderOptions = SceneRenderOptions & {
   cameraProjection?: 'perspective' | 'orthographic';
   /** Number of primary-ray samples per pixel in one encoded frame. */
   samplesPerPixel?: number;
-  /** Reserved future path-tracing bounce budget. */
+  /** Uint32 seed for primary and diffuse sampling; defaults to zero. */
+  samplingSeed?: number;
+  /** Number of secondary diffuse bounces, clamped to 0–8; defaults to zero. */
   maxBounces?: number;
   /** Accumulates primary-ray samples across unchanged committed frames. */
   progressive?: boolean;
@@ -497,7 +499,7 @@ export type RayTracingScenePickResult = {
   distance: number;
 };
 
-/** Caller-owned GPU snapshot. Identifier zero and zero-valued channels denote a miss. */
+/** Caller-owned GPU snapshot. Identifier zero denotes a miss. */
 export type RayTracingSceneChannels = {
   /** Exact uint32 identifiers; identifiers[index] describes texel value index + 1. */
   identifiers: readonly Pick<RayTracingScenePickResult, 'surfaceId' | 'placementId'>[];
@@ -506,7 +508,9 @@ export type RayTracingSceneChannels = {
   distanceTexture: Texture;
   /** rgba32float world-space normal; alpha is one for a hit and zero for a miss. */
   normalTexture: Texture;
-  /** Release all three textures after submitting their final GPU use. */
+  /** r32float projected depth in WebGPU zero-to-one range; one denotes background. */
+  projectedDepthTexture: Texture;
+  /** Release all four textures after submitting their final GPU use. */
   destroy(): void;
 };
 
@@ -737,6 +741,10 @@ export class RayTracingSceneRenderer {
       const primitiveChanged = resources.primitiveRevision !== primitiveRevision;
       const transformChanged = resources.transformRevision !== transformRevision;
       const lightsChanged = resources.lightRevision !== lightRevision;
+      // Primary-hit reprojection cannot validate illumination from secondary surfaces.
+      if ((options.maxBounces ?? 0) > 0 && (primitiveChanged || lightsChanged)) {
+        resources.historyNeedsReset = true;
+      }
       const sparseTransformInstanceIds = getSparseTransformInstanceIds(
         options,
         resources,
@@ -1160,13 +1168,21 @@ export class RayTracingSceneRenderer {
       });
     const textures: Texture[] = [];
     const commandEncoder = this.device.createCommandEncoder();
+    let projectionBuffer: Buffer | undefined;
     try {
+      // render() stores its current projection here after encoding temporal reprojection.
+      projectionBuffer = this.device.createBuffer({
+        data: new Float32Array(resources.previousViewProjection),
+        usage: Buffer.UNIFORM
+      });
       const identifierTexture = createTexture('r32uint');
       textures.push(identifierTexture);
       const distanceTexture = createTexture('r32float');
       textures.push(distanceTexture);
       const normalTexture = createTexture('rgba32float');
       textures.push(normalTexture);
+      const projectedDepthTexture = createTexture('r32float');
+      textures.push(projectedDepthTexture);
       this.channelComputation ??= new Computation(this.device, {
         id: 'ray-scene-channels',
         source: RAY_TRACING_CHANNEL_SHADER,
@@ -1204,7 +1220,16 @@ export class RayTracingSceneRenderer {
               location: 15,
               access: 'write-only',
               format: 'rgba32float'
-            }
+            },
+            {
+              name: 'projectedDepthImage',
+              type: 'storage',
+              group: 0,
+              location: 16,
+              access: 'write-only',
+              format: 'r32float'
+            },
+            {name: 'channelViewProjection', type: 'uniform', group: 0, location: 17}
           ]
         }
       });
@@ -1219,7 +1244,9 @@ export class RayTracingSceneRenderer {
         blasTriangleIds: resources.blasTriangleIdsBuffer,
         identifierImage: identifierTexture,
         distanceImage: distanceTexture,
-        normalImage: normalTexture
+        normalImage: normalTexture,
+        projectedDepthImage: projectedDepthTexture,
+        channelViewProjection: projectionBuffer
       });
       const computePass = commandEncoder.beginComputePass();
       this.channelComputation.dispatch(
@@ -1234,6 +1261,7 @@ export class RayTracingSceneRenderer {
         identifierTexture,
         distanceTexture,
         normalTexture,
+        projectedDepthTexture,
         destroy: () => {
           for (const texture of textures) texture.destroy();
         }
@@ -1242,6 +1270,7 @@ export class RayTracingSceneRenderer {
       for (const texture of textures) texture.destroy();
       throw error;
     } finally {
+      projectionBuffer?.destroy();
       commandEncoder.destroy();
     }
   }
@@ -3331,6 +3360,7 @@ function getRenderRevision(
     options.fogColor,
     options.fogDensity,
     options.samplesPerPixel,
+    options.samplingSeed,
     options.maxBounces,
     options.progressive,
     options.shadows,
@@ -3678,6 +3708,8 @@ function makeUniformData(props: {
   data.set(props.previousViewProjection, 48);
   data.set(props.previousCameraPosition, 64);
   data[67] = (props.options.progressive ?? true) ? 1 : 0;
+  unsignedData[68] = props.options.samplingSeed ?? 0;
+  unsignedData[69] = Math.min(8, Math.max(0, Math.floor(props.options.maxBounces ?? 0)));
   return data;
 }
 

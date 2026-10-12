@@ -45,6 +45,7 @@ export function makeChartBaseline(
             temporalReprojection: false,
             shadowSamplesPerFrame: 0,
             samplesPerPixel: 1,
+            samplingSeed: 0,
             progressive: true,
             shadows: true
           }
@@ -143,4 +144,44 @@ function makeCuboidPositions(): number[] {
     }
   }
   return positions;
+}
+
+/** The interaction acceptance scene shares baseline data and retained identities. */
+export function makeChartMotionScene(): ANARIJSONScene {
+  const scene = makeChartBaseline('raytrace');
+  scene.name = 'CHART MOTION';
+  scene.description = 'Click an animated mark · raster labels use ray-traced depth';
+  scene.instances = scene.instances?.map((instance, index) =>
+    instance['@@id'].startsWith('point-')
+      ? {
+          ...instance,
+          animation: {'@@type': 'bob', amplitude: 0.45, speed: 1, phase: index * 0.7}
+        }
+      : instance
+  );
+  return scene;
+}
+
+/** Static emissive marks illuminate the matte floor through diffuse secondary rays. */
+export function makeChartDiffuseScene(): ANARIJSONScene {
+  const scene = makeChartBaseline('raytrace');
+  scene.name = 'CHART DIFFUSE';
+  scene.description = 'Emissive marks light the floor · set maxBounces to 0 to compare';
+  scene.renderer = {...scene.renderer!, maxBounces: 2, samplesPerPixel: 4, samplingSeed: 17};
+  scene.materials!.orange = {
+    '@@type': 'physicallyBased',
+    baseColor: [0.9, 0.3, 0.08],
+    emissive: [4, 0.4, 0.05],
+    roughness: 1
+  };
+  scene.materials!.blue = {
+    '@@type': 'physicallyBased',
+    baseColor: [0.12, 0.42, 0.8],
+    emissive: [0.02, 0.15, 1],
+    roughness: 1
+  };
+  scene.lights = [
+    {'@@id': 'key', '@@type': 'directional', direction: [-0.5, -1, -0.5], irradiance: 0.25}
+  ];
+  return scene;
 }

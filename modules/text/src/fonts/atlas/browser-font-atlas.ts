@@ -59,7 +59,7 @@ const DEFAULT_BROWSER_FONT_ATLAS_SETTINGS: ResolvedBrowserFontAtlasSettings = {
   fontSize: 64,
   buffer: 4
 };
-const MAX_CANVAS_WIDTH = 1024;
+export const MAX_CANVAS_WIDTH = 1024;
 const DEFAULT_ASCENT = 0.9;
 const DEFAULT_DESCENT = 0.3;
 const CACHE_LIMIT = 3;

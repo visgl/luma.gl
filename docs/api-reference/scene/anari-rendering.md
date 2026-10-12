@@ -129,7 +129,7 @@ type ANARIRendererParameters = {
 | `toneMapMode` | Target-dependent | `0` disables tone mapping, `1` selects Reinhard, `2` selects Khronos PBR Neutral, and `3` selects ACES. Floating-point targets default to `0`; normalized targets default to `2`. |
 | `outputColorSpace` | Target-dependent | Explicitly selects `'linear'` or `'srgb'` output. Floating-point and hardware-sRGB targets default to linear output; other normalized targets default to software sRGB encoding. |
 | `samplesPerPixel` | `1` | Primary-ray samples per frame in the `raytrace` renderer. |
-| `maxBounces` | Not applied | Reserved ray-tracing bounce limit; the current implementation evaluates direct lighting only. |
+| `maxBounces` | `0` | Secondary diffuse bounce budget, clamped to 0–8. Zero preserves direct lighting. Changing it resets accumulation. |
 | `progressive` | `true` | Accumulate ray-traced samples across unchanged frames. |
 | `shadows` | `true` | Trace hard shadow rays toward direct lights in the `raytrace` renderer. |
 | `resolutionScale` | `0.5` | Initial ray-tracing width and height as a fraction of the display resolution. |
@@ -235,8 +235,24 @@ The Morton-sorted TLAS accelerates object and instance selection, while intersec
 GPU-built Morton-sorted triangle BLASes. Hardware ray tracing and SAH/Karras hierarchy topology are
 not implemented. Skeletal skinning, morph-target displacement, material textures, alpha/
 transmission, and advanced PBR material extensions remain on the forward/deferred renderer paths.
-Indirect multi-bounce path tracing, denoising, and volumes are also unsupported. `maxBounces` is
-accepted for forward compatibility but does not enable indirect bounces.
+Diffuse secondary transport is opt-in through `maxBounces` (0–8). Each bounce samples a
+cosine-weighted hemisphere and gathers emission and existing direct lighting at the next hit,
+so matte surfaces receive color bleeding and emissive illumination. The scalar diffuse
+throughput is base color × 0.96 × (1 − metallic); reflective and transmissive paths are not
+sampled. Misses contribute no indirect radiance: `background` is a display color, not an
+environment light. Ambient lights and fog retain the existing per-hit approximations.
+
+`samplingSeed` controls primary and diffuse paths. Pixel, frame, sample, and bounce indices
+separate samples; unchanged progressive frames converge through the existing bounded history.
+Seed and bounce-budget changes invalidate accumulation. With diffuse bounces enabled,
+geometry, placement, material and light changes reset history even when temporal reprojection
+is enabled: primary-hit metadata cannot validate indirect illumination. Camera movement resets
+history when temporal reprojection is disabled; otherwise it uses the existing primary-hit
+reprojection and camera-cut rejection.
+Use a stationary scene, full resolution, disabled adaptive resolution and temporal reprojection,
+and multiple progressive frames for comparison. Small emitters can converge slowly because
+this first implementation does not importance-sample emissive surfaces. Explicit emitter
+sampling, specular/transmissive transport, denoising, and volumes remain planned.
 
 For the rationale behind the TLAS/BLAS split, Morton ordering, refit policy, megakernel execution,
 and temporal reconstruction policy, see
@@ -358,7 +374,8 @@ has since been committed. Background, out-of-bounds or non-finite coordinates,
 unrendered/destroyed frames, and frames last rendered by a built-in raster renderer
 return `null`. Intersections use the ray renderer's opaque
 geometry semantics; alpha and transmission do not change which surface is selected.
-Selection outlines and raster/ray composition remain follow-up work.
+The experimental `SelectionOutline` overlay draws visible selected placement boundaries.
+Projected-depth transfer for raster overlays is available through `DepthTextureCopy`.
 
 ### `captureChannels()`
 
@@ -387,23 +404,33 @@ commands. Render and submit the scene before capturing it.
 | `identifierTexture` | `r32uint`: exact integer placement identifier; zero denotes background. |
 | `distanceTexture` | `r32float`: distance from the camera ray origin in world units; zero denotes background. Orthographic origins lie on the near plane. This is not projected device depth. |
 | `normalTexture` | `rgba32float`: world-space normal in xyz, hit validity in alpha. Background is all zero. |
+| `projectedDepthTexture` | `r32float`: projected WebGPU depth in zero-to-one range, from the last rendered camera; background is one. |
 | `identifiers` | Array mapping nonzero texel value `n` to index `n - 1`, containing the original `surface`, optional `instance`, and stable `placementId`. |
-| `destroy()` | Releases all three snapshot textures. |
+| `destroy()` | Releases all four snapshot textures. |
 
 Identifiers are local to each snapshot: retain its identity table with its textures.
 Placement IDs remain stable when scene extraction reorders packed primitives. Snapshots
 are independent of subsequent renders, resizing, and frame destruction; the application
 must submit commands using the textures before releasing them, while the graphics device
 is still alive. Each capture allocates
-24 bytes per output pixel and performs an additional full-frame traversal, so capture
+28 bytes per output pixel and performs an additional full-frame traversal, so capture
 only when needed. Float textures require unfilterable texture bindings; identifiers
-require unsigned integer bindings. All three support texture sampling and explicit
+require unsigned integer bindings. All four support texture sampling and explicit
 texture-to-buffer copies.
 
 Like picking, capture uses the runtime that last rendered the frame. Unrendered or
 destroyed frames and frames last rendered by the built-in raster runtime return `null`.
-Channels use opaque intersection semantics; alpha/transmission and device-depth
-conversion for raster composition remain separate capabilities.
+Channels use opaque intersection semantics; alpha/transmission remains separate work.
+Use [`DepthTextureCopy`](/docs/api-reference/experimental/depth-texture-copy) to transfer
+`projectedDepthTexture` into a color-preserving render pass with a depth attachment before
+drawing raster overlays with matching camera and viewport conventions.
+
+### Selection outlines
+
+Use [`SelectionOutline`](/docs/api-reference/experimental/selection-outline) to draw an
+inward border over a selected visible placement. Resolve a `pick()` placement ID against
+the current snapshot identity table, rather than reusing an integer ID from an older
+snapshot. The JSON playground performs this lookup each frame while a mark is selected.
 
 ### `statistics`
 
@@ -501,3 +528,12 @@ type ANARIRendererSubtype =
 ```
 
 All parameter interfaces, object classes, subtype aliases, object metadata, and frame statistics are exported from `@luma.gl/scene`.
+
+
+### Sampling and quality
+
+`raytrace` accepts `samplingSeed` (uint32, default zero) for deterministic primary and diffuse
+sample rotations. A changed seed resets accumulation; centered picking and hit channels
+are unaffected. Use the same seed and frame count on the same backend for comparisons.
+[`getRayTracingQualityPreset`](/docs/api-reference/experimental/ray-tracing-quality-presets)
+returns explicit interactive/still renderer settings without modifying exposure or seed.

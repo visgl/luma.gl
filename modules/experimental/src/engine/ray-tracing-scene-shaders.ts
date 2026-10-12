@@ -15,6 +15,7 @@ struct RayTracingUniforms {
   temporal: vec4<f32>,
   previousViewProjection: mat4x4<f32>,
   previousCameraPosition: vec4<f32>,
+  sampling: vec4<u32>,
 };
 
 struct RayPrimitive {
@@ -237,8 +238,8 @@ fn makeCameraRayAtOffset(pixel: vec2<u32>, offset: vec2<f32>) -> Ray {
 fn makeRadianceSampleOffset(pixel: vec2<u32>, sampleIndex: u32) -> vec2<f32> {
   let pixelIndex = pixel.y * uniforms.dimensions.x + pixel.x;
   let pixelRotation = vec2<f32>(
-    makeRandom(pixelIndex * 1973u + 17u),
-    makeRandom(pixelIndex * 26699u + 101u)
+    makeRandom((pixelIndex * 1973u + 17u) ^ uniforms.sampling.x),
+    makeRandom((pixelIndex * 26699u + 101u) ^ uniforms.sampling.x)
   );
   let sequenceIndex = uniforms.acceleration.w * 16u + sampleIndex;
   let lowDiscrepancyOffset = vec2<f32>(
@@ -1030,6 +1031,42 @@ fn getHistoricalRaySample(
   );
 }
 
+// Cosine-weighted Lambertian transport. The BRDF cosine and sampling PDF cancel.
+fn evaluateDiffuseTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, sampleIndex: u32) -> vec3<f32> {
+  var ray = primaryRay;
+  var hit = primaryHit;
+  var radiance = evaluateDirectLighting(ray, hit);
+  var throughput = vec3<f32>(1.0);
+  let pixelIndex = pixel.y * uniforms.dimensions.x + pixel.x;
+  let sequenceIndex = uniforms.acceleration.w * 16u + sampleIndex;
+  let pathSeed = uniforms.sampling.x ^ (pixelIndex * 1973u) ^ (sequenceIndex * 26699u);
+  for (var bounceIndex = 0u; bounceIndex < min(uniforms.sampling.y, 8u); bounceIndex++) {
+    let primitive = primitives[hit.primitiveIndex];
+    throughput *= clamp(primitive.baseColor.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) *
+      0.96 * (1.0 - clamp(primitive.emissive.w, 0.0, 1.0));
+    if (max(throughput.r, max(throughput.g, throughput.b)) <= 0.0) {
+      break;
+    }
+    let normal = select(hit.normal, -hit.normal, dot(hit.normal, ray.direction) > 0.0);
+    let reference = select(vec3<f32>(0.0, 0.0, 1.0), vec3<f32>(0.0, 1.0, 0.0), abs(normal.z) > 0.999);
+    let tangent = normalize(cross(reference, normal));
+    let bitangent = cross(normal, tangent);
+    let radialSample = makeRandom(pathSeed ^ (bounceIndex * 104729u + 17u));
+    let angle = 2.0 * PI * makeRandom(pathSeed ^ (bounceIndex * 130363u + 101u));
+    let radius = sqrt(radialSample);
+    let direction = tangent * (radius * cos(angle)) + bitangent * (radius * sin(angle)) +
+      normal * sqrt(max(1.0 - radialSample, 0.0));
+    let position = ray.origin + ray.direction * hit.distance;
+    ray = Ray(position + normal * 0.002, normalize(direction));
+    hit = intersectScene(ray, RAY_INFINITY);
+    if (hit.distance >= RAY_INFINITY) {
+      break;
+    }
+    radiance += throughput * evaluateDirectLighting(ray, hit);
+  }
+  return radiance;
+}
+
 @compute @workgroup_size(8, 8, 1)
 fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
   let phaseCount = max(uniforms.displayPhase.w, 1u);
@@ -1048,7 +1085,7 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
     let hit = intersectScene(ray, RAY_INFINITY);
     var color = uniforms.background.rgb;
     if (hit.distance < RAY_INFINITY) {
-      color = evaluateDirectLighting(ray, hit);
+      color = evaluateDiffuseTransport(ray, hit, pixel, sampleIndex);
     }
     accumulatedColor += color;
   }
@@ -1113,6 +1150,8 @@ ${RAY_TRACING_SCENE_SHADER}
 @group(0) @binding(13) var identifierImage: texture_storage_2d<r32uint, write>;
 @group(0) @binding(14) var distanceImage: texture_storage_2d<r32float, write>;
 @group(0) @binding(15) var normalImage: texture_storage_2d<rgba32float, write>;
+@group(0) @binding(16) var projectedDepthImage: texture_storage_2d<r32float, write>;
+@group(0) @binding(17) var<uniform> channelViewProjection: mat4x4<f32>;
 
 @compute @workgroup_size(8, 8)
 fn captureChannels(@builtin(global_invocation_id) invocation: vec3<u32>) {
@@ -1125,11 +1164,17 @@ fn captureChannels(@builtin(global_invocation_id) invocation: vec3<u32>) {
   var identifier = 0u;
   var distance = 0.0;
   var normal = vec4<f32>(0.0);
+  var projectedDepth = 1.0;
   if (hit.distance < RAY_INFINITY) {
     identifier = hit.primitiveIndex + 1u;
     distance = hit.distance;
     normal = vec4<f32>(hit.normal, 1.0);
+    let position = ray.origin + ray.direction * hit.distance;
+    let clipPosition = channelViewProjection * vec4<f32>(position, 1.0);
+    // Camera matrices use OpenGL clip depth; WebGPU attachments use zero to one.
+    projectedDepth = clamp(clipPosition.z / clipPosition.w * 0.5 + 0.5, 0.0, 1.0);
   }
+  textureStore(projectedDepthImage, pixel, vec4<f32>(projectedDepth));
   textureStore(identifierImage, pixel, vec4<u32>(identifier));
   textureStore(distanceImage, pixel, vec4<f32>(distance));
   textureStore(normalImage, pixel, normal);

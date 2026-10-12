@@ -268,9 +268,9 @@ while every TLAS or BLAS construction pass stays within the default WebGPU CORE 
 storage buffers without elevated device features. The hierarchy topology is not SAH-optimized or a
 Karras-style LBVH. This is software ray tracing, not hardware ray tracing or full path tracing.
 Skeletal skinning, morph-target deformation, material textures, alpha/transmission, more advanced
-PBR material extensions, indirect bounces, denoising, and volume objects remain unsupported by
+PBR material extensions, specular/transmissive bounces, denoising, and volume objects remain unsupported by
 this renderer.
-`maxBounces` is reserved for future multi-bounce transport.
+`maxBounces` enables 0–8 secondary diffuse bounces; the default is zero. Emissive surfaces can illuminate matte receivers through these paths.
 
 ## Understand staging and commits
 

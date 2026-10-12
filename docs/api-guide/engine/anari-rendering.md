@@ -61,7 +61,8 @@ zero-copy arrays, and rendering on available graphics backends.
 
 The JSON playground supports click-to-inspect selection with the WebGPU ray-tracing renderer.
 Applications can use [`frame.pick(x, y)`](/docs/api-reference/scene/anari-rendering#pickx-y)
-to retrieve retained surface/instance identities and world-space hit information.
+to retrieve retained surface/instance identities and world-space hit information. Selected
+marks also receive an inward outline that follows animation and camera movement.
 
 ## Primary-hit GPU channels
 
@@ -72,7 +73,10 @@ snapshots and must be released with `channels.destroy()`. They perform an additi
 primary-ray traversal without CPU readback. See the
 [frame channel reference](/docs/api-reference/scene/anari-rendering#capturechannels)
 for formats, ownership, and coordinate conventions. Ray distance is not projected
-device depth; selection outlines and raster/ray depth composition remain planned.
+device depth. The experimental `SelectionOutline` overlay consumes exact ID snapshots
+for visible selection boundaries. `projectedDepthTexture` and
+[`DepthTextureCopy`](/docs/api-reference/experimental/depth-texture-copy) support
+depth-tested raster overlays with matching camera and viewport conventions.
 
 ## Current limitations
 
@@ -84,7 +88,7 @@ The current package is a focused proof of concept, not a complete ANARI implemen
 - Automatically generated triangle normals assume non-indexed triangle-list positions.
 - Group-attached lights are not transformed by their owning instance.
 - The `deferred` renderer is WebGPU-only and does not yet include clustered lighting, screen-space effects, bloom, or temporal velocity history.
-- The WebGPU-only `raytrace` renderer builds Morton-sorted object/instance TLAS and per-mesh triangle BLAS hierarchies on the GPU and supports scalar metallic/roughness direct lighting; hardware ray tracing, SAH/Karras hierarchy topology, skeletal/morph deformation, material textures, alpha/transmission, advanced PBR extensions, indirect bounces, and denoising are unsupported.
+- The WebGPU-only `raytrace` renderer builds Morton-sorted object/instance TLAS and per-mesh triangle BLAS hierarchies on the GPU and supports scalar metallic/roughness direct lighting and optional bounded diffuse bounces; hardware ray tracing, SAH/Karras hierarchy topology, skeletal/morph deformation, material textures, alpha/transmission, advanced PBR extensions, specular/transmissive bounces, and denoising are unsupported.
 - Visibility, raster picking, volumes, clipping planes, raster shadow maps, and asynchronous frame mapping are not implemented; direct shadow rays are available only in the `raytrace` renderer.
 - Experimental OpenUSD import does not support binary USDC crates or complete USD composition semantics.
 - Imported glTF skin attributes require an application-supplied retained joint palette; automatic
@@ -101,3 +105,55 @@ For exact supported parameters and defaults, continue to the [`@luma.gl/scene` A
 - [Engine programming](/docs/api-guide/engine)
 - [How luma.gl fits together](/docs/api-guide/luma-layers)
 - [Experimental renderers](/docs/api-reference/experimental)
+
+
+### Chart motion and capture
+
+In the JSON playground, choose **Chart Motion** on WebGPU and click an animated mark.
+Six raster labels follow retained point instances. The playground copies current ray
+projected depth before drawing labels, so other chart marks can occlude their glyphs.
+Selection remains attached to the retained placement as it moves. Labels and outlines
+are composited after radiance presentation and do not enter temporal history. This
+example captures full-resolution hit channels each frame while labels are visible,
+adding a primary traversal and 28 bytes per output pixel of snapshot storage.
+
+The **Ray quality** selector is available over the preview, including when the editor
+is hidden. **Interactive** enables adaptive resolution and temporal reprojection;
+**Still / capture** chooses full resolution, four primary samples per frame, and fixed
+quality. Quality changes retain the inspected camera and selection; the disabled
+**Scene settings** entry reports custom JSON parameters. A moving scene will not converge as a still scene would. For application-owned
+controls, use [`getRayTracingQualityPreset`](/docs/api-reference/experimental/ray-tracing-quality-presets).
+
+For a repeatable baseline capture, start the scene example and run:
+
+```bash
+yarn workspace luma.gl-examples-showcase-scene start --host 127.0.0.1 --port 5180
+node scripts/playwright/chart-baseline-capture.mjs --seed 17 --frames 8 --output /tmp/chart-ray
+node scripts/playwright/chart-baseline-capture.mjs --renderer default --frames 8 --output /tmp/chart-raster
+node scripts/playwright/chart-baseline-capture.mjs --motion --frames 8 --output /tmp/chart-motion
+```
+
+The harness writes `chart.png` and `metadata.json`, including scene JSON, drawing-buffer
+size, renderer settings, seed, frame count, browser version, and an optional `--hardware`
+label. `--software-gpu` uses the repository's software GPU launch configuration; Linux
+headless presentation requires an X display. Capture uses a fixed viewport, pixel ratio
+one, and exactly N submitted scene frames. Motion captures use frame-index time at 60 Hz;
+ordinary interactive rendering uses elapsed time. Keep captures on the same backend and
+hardware when comparing pixels. Reported elapsed time includes startup and capture;
+existing frame telemetry is CPU timing, not GPU timestamps. GPU memory measurement and
+hardware convergence baselines remain follow-up work.
+
+### Compare diffuse transport
+
+Choose **Chart Diffuse** in the JSON playground on WebGPU. It retains the baseline marks and
+camera, adds emissive materials, and requests `maxBounces: 2` with seed 17. Set `maxBounces`
+to `0` in the editor to compare direct-only lighting. Let the stationary scene accumulate
+frames; small emissive marks need many samples. Interactive/still quality presets preserve
+the bounce budget. This is diffuse transport, with no specular or glass paths or emissive
+importance sampling yet.
+
+Capture a fixed frame count with:
+
+```bash
+node scripts/playwright/chart-baseline-capture.mjs --diffuse --frames 32 --seed 17 --output /tmp/chart-diffuse
+```

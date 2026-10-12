@@ -4,6 +4,12 @@ import {
   type ANARIRendererSubtype,
   type ANARIVector3
 } from '@luma.gl/scene';
+import {
+  DepthTextureCopy,
+  SelectionOutline,
+  getRayTracingQualityPreset
+} from '@luma.gl/experimental';
+import {ChartLabels} from './chart-labels';
 import {ANARISceneSchema} from '@luma.gl/scene/schemas';
 import {AnimationLoopTemplate, OrbitControls, type AnimationProps} from '@luma.gl/engine';
 import {PLAYGROUND_PRESETS} from './playground-presets';
@@ -13,6 +19,11 @@ import {
   createANARIJSONScene
 } from './playground-scene';
 import {ANARISceneEditor} from './scene-editor';
+import {
+  applyPlaygroundQualityPreset,
+  getPlaygroundRendererSubtype,
+  makePlaygroundRenderer
+} from './playground-renderer';
 import {exportANARIJSONSceneToGLTF, exportANARIJSONSceneToUSD} from './scene-export';
 import {loadSceneFile, loadSceneSample, SCENE_SAMPLES} from './usd-samples';
 
@@ -34,6 +45,12 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
   private readonly orbitControls: OrbitControls;
   private importRequest = 0;
   private pickRequest = 0;
+  private readonly selectionOutline?: SelectionOutline;
+  private readonly depthCopy?: DepthTextureCopy;
+  private readonly chartLabels?: ChartLabels;
+  private renderedFrameCount = 0;
+  private captureFrameLimit = 0;
+  private selectedPlacementId: string | null = null;
   private pointerStart: {x: number; y: number} | null = null;
   private animationScrubbing = false;
   private editorCollapsed = false;
@@ -42,6 +59,11 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     super();
 
     this.anari = new ANARIDevice(device);
+    if (device.type === 'webgpu') {
+      this.selectionOutline = new SelectionOutline(device);
+      this.depthCopy = new DepthTextureCopy(device);
+      this.chartLabels = new ChartLabels(device);
+    }
     this.deferredRendererAvailable = device.type === 'webgpu';
     this.editor = new ANARISceneEditor(
       getRequiredElement('scene-editor', HTMLTextAreaElement),
@@ -60,19 +82,45 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     });
 
     this.initializeControls();
-    this.selectPreset(0);
+    const parameters = new URLSearchParams(window.location.search);
+    if (parameters.get('editor') === 'hidden')
+      getRequiredElement('editor-toggle', HTMLButtonElement).click();
+    const preset = parameters.get('preset');
+    this.selectPreset(
+      preset === 'chart' ? 3 : preset === 'chart-motion' ? 4 : preset === 'chart-diffuse' ? 5 : 0
+    );
+    if (preset === 'chart' || preset === 'chart-motion' || preset === 'chart-diffuse') {
+      const sceneDescription: ANARIJSONScene = ANARISceneSchema.parse(
+        JSON.parse(this.editor.value)
+      );
+      const renderer = parameters.get('renderer') === 'default' ? 'default' : 'raytrace';
+      sceneDescription.renderer = makePlaygroundRenderer(sceneDescription.renderer, renderer);
+      if (renderer === 'raytrace') {
+        const seed = Number(parameters.get('seed') ?? 0);
+        if (Number.isInteger(seed) && seed >= 0 && seed <= 0xffffffff)
+          sceneDescription.renderer.samplingSeed = seed;
+        if (parameters.get('quality') === 'still')
+          Object.assign(sceneDescription.renderer, getRayTracingQualityPreset('still'));
+      }
+      const frameLimit = Number(parameters.get('captureFrames') ?? 0);
+      if (Number.isInteger(frameLimit) && frameLimit > 0 && frameLimit <= 256)
+        this.captureFrameLimit = frameLimit;
+      this.editor.value = formatSceneJSON(sceneDescription);
+      this.applyEditorScene();
+    }
 
     const dynamicRange = device.preferredColorFormat === 'rgba16float' ? 'HDR · DISPLAY P3' : 'SDR';
     setElementText('backend-label', `${device.type.toUpperCase()} · ${dynamicRange}`);
   }
 
-  override onRender({width, height, time}: AnimationProps): void {
+  override onRender({device, width, height, time}: AnimationProps): void {
     const scene = this.scene;
+    if (this.captureFrameLimit && this.renderedFrameCount >= this.captureFrameLimit) return;
     if (!scene) {
       return;
     }
 
-    const elapsedSeconds = time * 0.001;
+    const elapsedSeconds = this.captureFrameLimit ? this.renderedFrameCount / 60 : time * 0.001;
     scene.update(elapsedSeconds);
     this.updateAnimationTime(scene);
 
@@ -92,7 +140,46 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     scene.frame.getParameter('camera')?.setParameters({position, direction}).commitParameters();
 
     const statistics = scene.frame.render();
-    if (elapsedSeconds - this.lastStatisticsUpdate > 0.25) {
+    const showChartLabels = scene.name === 'CHART MOTION' && Boolean(this.chartLabels);
+    if (
+      this.selectionOutline &&
+      (this.selectedPlacementId || showChartLabels) &&
+      this.rendererSubtype === 'raytrace'
+    ) {
+      device.submit();
+      const channels = scene.frame.captureChannels();
+      if (channels) {
+        try {
+          const selectedIdentifier =
+            channels.identifiers.findIndex(
+              identity => identity.placementId === this.selectedPlacementId
+            ) + 1;
+          const renderPass = device.beginRenderPass({
+            clearColor: false,
+            clearDepth: showChartLabels ? 1 : false,
+            clearStencil: false
+          });
+          if (showChartLabels) {
+            this.depthCopy?.draw(renderPass, {depthTexture: channels.projectedDepthTexture});
+          }
+          this.selectionOutline.draw(renderPass, {
+            identifierTexture: channels.identifierTexture,
+            selectedIdentifier
+          });
+          if (showChartLabels) this.chartLabels?.draw(renderPass, scene, width, height);
+          renderPass.end();
+          device.submit();
+        } finally {
+          channels.destroy();
+        }
+      }
+    }
+    this.renderedFrameCount++;
+    this.canvas.dataset['renderedFrames'] = String(this.renderedFrameCount);
+    if (
+      elapsedSeconds - this.lastStatisticsUpdate > 0.25 ||
+      this.renderedFrameCount === this.captureFrameLimit
+    ) {
       setElementText('scene-instance-count', statistics.instanceCount.toLocaleString());
       setElementText('scene-draw-count', statistics.drawCount.toLocaleString());
       setElementText('scene-triangle-count', statistics.triangleCount.toLocaleString());
@@ -126,6 +213,9 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     this.orbitControls.destroy();
     this.editor.dispose();
     this.scene?.destroy();
+    this.selectionOutline?.destroy();
+    this.depthCopy?.destroy();
+    this.chartLabels?.destroy();
     this.anari.destroy();
   }
 
@@ -142,6 +232,16 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       editorToggle.textContent = this.editorCollapsed ? 'SHOW EDITOR' : 'HIDE EDITOR';
     });
 
+    getRequiredElement('quality-selector', HTMLSelectElement).disabled =
+      !this.deferredRendererAvailable;
+    getRequiredElement('quality-selector', HTMLSelectElement).addEventListener('change', event => {
+      const selector = event.currentTarget;
+      if (
+        selector instanceof HTMLSelectElement &&
+        (selector.value === 'interactive' || selector.value === 'still')
+      )
+        this.applyQualityPreset(selector.value);
+    });
     const presetList = getRequiredElement('preset-list', HTMLDivElement);
     for (const [presetIndex, preset] of PLAYGROUND_PRESETS.entries()) {
       const button = document.createElement('button');
@@ -246,8 +346,25 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     rendererSelector.addEventListener('change', event => {
       const selector = event.currentTarget;
       if (selector instanceof HTMLSelectElement) {
-        this.rendererSubtype = selector.value as ANARIRendererSubtype;
-        temporalAntialiasingToggle.hidden = !isTemporalAntialiasingRenderer(this.rendererSubtype);
+        let parsedScene: unknown;
+        try {
+          parsedScene = JSON.parse(this.editor.value);
+        } catch {
+          this.applyEditorScene();
+          return;
+        }
+        const validatedScene = ANARISceneSchema.safeParse(parsedScene);
+        if (!validatedScene.success) {
+          this.applyEditorScene();
+          return;
+        }
+        const sceneDescription: ANARIJSONScene = validatedScene.data;
+        sceneDescription.renderer = makePlaygroundRenderer(
+          sceneDescription.renderer,
+          selector.value as ANARIRendererSubtype
+        );
+        this.editor.value = formatSceneJSON(sceneDescription);
+        this.updateEditorMetadata();
         this.applyEditorScene();
       }
     });
@@ -306,6 +423,36 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     });
   }
 
+  private applyQualityPreset(preset: 'interactive' | 'still'): void {
+    try {
+      const sceneDescription: ANARIJSONScene = ANARISceneSchema.parse(
+        JSON.parse(this.editor.value)
+      );
+      sceneDescription.renderer = {
+        ...makePlaygroundRenderer(sceneDescription.renderer, 'raytrace'),
+        ...getRayTracingQualityPreset(preset)
+      };
+      this.editor.value = formatSceneJSON(sceneDescription);
+      this.updateEditorMetadata();
+      if (!this.scene) {
+        this.applyEditorScene();
+        return;
+      }
+      applyPlaygroundQualityPreset(this.anari, this.scene.frame, preset);
+      this.rendererSubtype = 'raytrace';
+      this.temporalAntialiasingEnabled = preset === 'interactive';
+      const toggle = getRequiredElement('temporal-aa-toggle', HTMLButtonElement);
+      toggle.hidden = false;
+      toggle.classList.toggle('active', this.temporalAntialiasingEnabled);
+      toggle.setAttribute('aria-pressed', String(this.temporalAntialiasingEnabled));
+      getRequiredElement('renderer-selector', HTMLSelectElement).value = 'raytrace';
+      getRequiredElement('quality-selector', HTMLSelectElement).value = preset;
+      if (this.captureFrameLimit) this.renderedFrameCount = 0;
+    } catch {
+      this.applyEditorScene();
+    }
+  }
+
   private selectPreset(presetIndex: number): void {
     const preset = PLAYGROUND_PRESETS[presetIndex];
     this.activePresetIndex = presetIndex;
@@ -354,9 +501,24 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       }
       this.editor.clearIssues();
       const sceneDescription: ANARIJSONScene = validatedScene.data;
-      const nextScene = createANARIJSONScene(this.anari, sceneDescription, {
-        rendererSubtype: this.rendererSubtype
-      });
+      const rendererSubtype = getPlaygroundRendererSubtype(
+        sceneDescription.renderer,
+        this.deferredRendererAvailable
+      );
+      const nextScene = createANARIJSONScene(this.anari, sceneDescription);
+      this.rendererSubtype = rendererSubtype;
+      getRequiredElement('renderer-selector', HTMLSelectElement).value = rendererSubtype;
+      const quality = (['interactive', 'still'] as const).find(preset =>
+        Object.entries(getRayTracingQualityPreset(preset)).every(([name, value]) =>
+          Object.entries(sceneDescription.renderer ?? {}).some(
+            ([parameterName, parameterValue]) => name === parameterName && value === parameterValue
+          )
+        )
+      );
+      getRequiredElement('quality-selector', HTMLSelectElement).value =
+        rendererSubtype === 'raytrace' ? (quality ?? 'custom') : 'custom';
+      getRequiredElement('temporal-aa-toggle', HTMLButtonElement).hidden =
+        !isTemporalAntialiasingRenderer(rendererSubtype);
       if (isTemporalAntialiasingRenderer(this.rendererSubtype)) {
         const renderer = nextScene.frame.getParameter('renderer');
         const parameterName =
@@ -370,12 +532,14 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       }
       const previousScene = this.scene;
       this.scene = nextScene;
+      this.renderedFrameCount = 0;
+      this.selectedPlacementId = null;
       previousScene?.destroy();
       this.resetCamera(nextScene);
       this.updateAnimationControls(nextScene);
       setElementText(
         'scene-selection',
-        this.rendererSubtype === 'raytrace' ? 'Click a mark to inspect it' : ''
+        this.rendererSubtype === 'raytrace' ? 'Click a mark to inspect and outline it' : ''
       );
       setElementText('scene-title', nextScene.name);
       setElementText('scene-description', nextScene.description);
@@ -415,6 +579,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       ) {
         return;
       }
+      this.selectedPlacementId = hit?.placementId ?? null;
       const identifier = hit?.instance ? scene.instanceIdentifiers.get(hit.instance) : undefined;
       setElementText(
         'scene-selection',

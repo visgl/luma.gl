@@ -27,6 +27,8 @@ export type ANARIFrameChannels = {
   distanceTexture: Texture;
   /** World-space xyz normal with hit validity in alpha. Misses are all zero. */
   normalTexture: Texture;
+  /** Projected depth in WebGPU zero-to-one range; background is one. */
+  projectedDepthTexture: Texture;
   destroy(): void;
 };
 
@@ -239,6 +241,9 @@ export type ANARIRendererParameters = {
   /** Explicit output transfer; omitted values follow the render-target format. */
   outputColorSpace?: 'linear' | 'srgb';
   samplesPerPixel?: number;
+  /** Uint32 primary and diffuse sampling seed. Changing it resets accumulation. */
+  samplingSeed?: number;
+  /** Secondary diffuse bounce budget, clamped to 0–8; defaults to zero. */
   maxBounces?: number;
   progressive?: boolean;
   shadows?: boolean;

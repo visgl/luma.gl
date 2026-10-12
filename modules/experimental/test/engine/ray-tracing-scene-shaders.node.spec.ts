@@ -21,7 +21,7 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(reflection.uniforms.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'uniforms', binding: 0}
     ]);
-    expect(reflection.uniforms[0].size).toBe(272);
+    expect(reflection.uniforms[0].size).toBe(288);
     expect(reflection.uniforms[0].members?.map(({name, offset}) => ({name, offset}))).toEqual([
       {name: 'inverseViewProjection', offset: 0},
       {name: 'cameraPosition', offset: 64},
@@ -33,7 +33,8 @@ describe('graph-accelerated ray tracing shaders', () => {
       {name: 'displayPhase', offset: 160},
       {name: 'temporal', offset: 176},
       {name: 'previousViewProjection', offset: 192},
-      {name: 'previousCameraPosition', offset: 256}
+      {name: 'previousCameraPosition', offset: 256},
+      {name: 'sampling', offset: 272}
     ]);
     expect(reflection.storage.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'primitives', binding: 1},
@@ -65,7 +66,7 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(reflection.uniforms.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'uniforms', binding: 0}
     ]);
-    expect(reflection.uniforms[0].size).toBe(272);
+    expect(reflection.uniforms[0].size).toBe(288);
     expect(reflection.textures.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'historyImage', binding: 1},
       {name: 'historyMetadata', binding: 2}
@@ -123,7 +124,7 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(reflection.uniforms.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'uniforms', binding: 0}
     ]);
-    expect(reflection.uniforms[0].size).toBe(272);
+    expect(reflection.uniforms[0].size).toBe(288);
     expect(storageBuffers.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'primitives', binding: 1},
       {name: 'triangles', binding: 2},
@@ -762,9 +763,15 @@ test('full-frame channels fit CORE buffer and storage texture limits', () => {
   );
   expect(
     resources.filter(resource => resource.resourceType === ResourceType.StorageTexture)
-  ).toHaveLength(3);
+  ).toHaveLength(4);
   expect(resources.some(resource => resource.name === 'lights')).toBe(false);
   expect(resources.map(resource => resource.name)).toEqual(
-    expect.arrayContaining(['identifierImage', 'distanceImage', 'normalImage'])
+    expect.arrayContaining([
+      'identifierImage',
+      'distanceImage',
+      'normalImage',
+      'projectedDepthImage',
+      'channelViewProjection'
+    ])
   );
 });
