@@ -17,13 +17,15 @@ await new Promise((resolve, reject) => {
   server.once('error', reject);
   server.listen(0, '127.0.0.1', resolve);
 });
-let browser;
 try {
-  browser = await chromium.launch(getPlaywrightLaunchOptions({
-    headless: true,
-    softwareGpu: process.platform === 'linux'
-  }));
   for (const backend of ['webgl2', 'webgpu']) {
+    // Keep ANGLE and Vulkan compositor settings specific to each backend.
+    // Sharing a process mixes the WebGL --use-gl override with WebGPU capture.
+    const browser = await chromium.launch(getPlaywrightLaunchOptions({
+      backend,
+      headless: true,
+      softwareGpu: process.platform === 'linux'
+    }));
     const page = await browser.newPage({viewport: {width: 64, height: 64}, deviceScaleFactor: 1});
     try {
       await page.goto(`http://127.0.0.1:${server.address().port}`);
@@ -90,10 +92,9 @@ try {
         `${backend} canvas capture is broken (${redPixelCount}/4096 red pixels). On Linux use xvfb-run with Vulkan compositing.`);
       console.log(`${backend}: captured ${redPixelCount} red pixels`);
     } finally {
-      await page.close();
+      await browser.close();
     }
   }
 } finally {
-  await browser?.close();
   await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
 }
