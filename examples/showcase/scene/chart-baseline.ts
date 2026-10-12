@@ -300,10 +300,11 @@ export function makeChartLightingScene(): ANARIJSONScene {
   };
   scene.surfaces.panel = {geometry: 'panel', material: 'panel'};
   scene.surfaces.mask = {geometry: 'mask', material: 'mask'};
-  scene.instances!.push(
+  scene.instances = [
+    ...(scene.instances ?? []),
     {'@@id': 'emitter-panel', surface: 'panel', position: [0, 5, 0]},
     {'@@id': 'masked-card', surface: 'mask', position: [0, 1.5, 2], scale: [2, 2, 0.3]}
-  );
+  ];
   scene.renderer = {
     ...scene.renderer!,
     emitterSampling: true,
