@@ -1035,6 +1035,94 @@ fn getHistoricalRaySample(
   );
 }
 
+
+struct RayMaterialSample {
+  direction: vec3<f32>,
+  weight: vec3<f32>,
+};
+
+// Sample a cosine/GGX-NDF mixture, then evaluate both lobes with the combined PDF.
+// Specular half-vector density D(N.H)*(N.H) becomes direction density / (4*V.H).
+fn samplePBRMaterial(ray: Ray, hit: RayHit, randomSeed: u32) -> RayMaterialSample {
+  let primitive = primitives[hit.primitiveIndex];
+  let baseColor = clamp(primitive.baseColor.rgb, vec3<f32>(0.0), vec3<f32>(1.0));
+  let metallic = clamp(primitive.emissive.w, 0.0, 1.0);
+  let roughness = clamp(primitive.properties.x, 0.04, 1.0);
+  let alphaRoughness = roughness * roughness;
+  let alphaSquared = alphaRoughness * alphaRoughness;
+  let normal = select(hit.normal, -hit.normal, dot(hit.normal, ray.direction) > 0.0);
+  let viewDirection = -ray.direction;
+  let normalView = clamp(dot(normal, viewDirection), 0.001, 1.0);
+  let reference = select(vec3<f32>(0.0, 0.0, 1.0), vec3<f32>(0.0, 1.0, 0.0), abs(normal.z) > 0.999);
+  let tangent = normalize(cross(reference, normal));
+  let bitangent = cross(normal, tangent);
+  let radialSample = makeRandom(randomSeed ^ 17u);
+  let angle = 2.0 * PI * makeRandom(randomSeed ^ 101u);
+  let specularProbability = mix(0.25, 1.0, metallic);
+  var direction: vec3<f32>;
+  if (specularProbability >= 1.0 || makeRandom(randomSeed ^ 263u) < specularProbability) {
+    let normalHalf = sqrt((1.0 - radialSample) /
+      ((1.0 - radialSample) + alphaSquared * radialSample));
+    let tangentHalf = sqrt(max(1.0 - normalHalf * normalHalf, 0.0));
+    let halfDirection = tangent * (tangentHalf * cos(angle)) +
+      bitangent * (tangentHalf * sin(angle)) + normal * normalHalf;
+    direction = normalize(reflect(ray.direction, halfDirection));
+  } else {
+    let radius = sqrt(radialSample);
+    direction = normalize(tangent * (radius * cos(angle)) + bitangent * (radius * sin(angle)) +
+      normal * sqrt(max(1.0 - radialSample, 0.0)));
+  }
+  let normalLight = dot(normal, direction);
+  if (normalLight <= 0.0) {
+    return RayMaterialSample(direction, vec3<f32>(0.0));
+  }
+  let halfDirection = normalize(viewDirection + direction);
+  let normalHalf = max(dot(normal, halfDirection), 0.0);
+  let viewHalf = max(dot(viewDirection, halfDirection), 0.000001);
+  let normalHalfSquared = normalHalf * normalHalf;
+  let distributionDenominator = (1.0 - normalHalfSquared) + alphaSquared * normalHalfSquared;
+  let distribution = alphaSquared / (PI * distributionDenominator * distributionDenominator);
+  let specularDensity = distribution * normalHalf / (4.0 * viewHalf);
+  let sampleDensity = specularProbability * specularDensity +
+    (1.0 - specularProbability) * normalLight / PI;
+  if (sampleDensity <= 0.0) {
+    return RayMaterialSample(direction, vec3<f32>(0.0));
+  }
+  let reflectance = mix(vec3<f32>(0.04), baseColor, metallic);
+  let grazingReflectance = vec3<f32>(clamp(max(reflectance.r, max(reflectance.g, reflectance.b)) * 25.0, 0.0, 1.0));
+  let fresnel = reflectance + (grazingReflectance - reflectance) * pow(clamp(1.0 - viewHalf, 0.0, 1.0), 5.0);
+  let lightVisibility = 2.0 * normalLight / (normalLight + sqrt(alphaSquared +
+    (1.0 - alphaSquared) * normalLight * normalLight));
+  let viewVisibility = 2.0 * normalView / (normalView + sqrt(alphaSquared +
+    (1.0 - alphaSquared) * normalView * normalView));
+  // Match the scalar direct-light BRDF; cancel N.L before dividing by the PDF.
+  let diffuse = (vec3<f32>(1.0) - fresnel) * baseColor * 0.96 * (1.0 - metallic) * normalLight / PI;
+  let specular = fresnel * lightVisibility * viewVisibility * distribution / (4.0 * normalView);
+  return RayMaterialSample(direction, (diffuse + specular) / sampleDensity);
+}
+
+fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, sampleIndex: u32) -> vec3<f32> {
+  var ray = primaryRay;
+  var hit = primaryHit;
+  var radiance = evaluateDirectLighting(ray, hit);
+  var throughput = vec3<f32>(1.0);
+  let pixelIndex = pixel.y * uniforms.dimensions.x + pixel.x;
+  let sequenceIndex = uniforms.acceleration.w * 16u + sampleIndex;
+  let pathSeed = uniforms.sampling.x ^ (pixelIndex * 1973u) ^ (sequenceIndex * 26699u);
+  for (var bounceIndex = 0u; bounceIndex < min(uniforms.sampling.y, 8u); bounceIndex++) {
+    let sample = samplePBRMaterial(ray, hit, pathSeed ^ (bounceIndex * 104729u));
+    throughput *= sample.weight;
+    if (max(throughput.r, max(throughput.g, throughput.b)) <= 0.0) { break; }
+    let normal = select(hit.normal, -hit.normal, dot(hit.normal, ray.direction) > 0.0);
+    let position = ray.origin + ray.direction * hit.distance;
+    ray = Ray(position + normal * 0.002, sample.direction);
+    hit = intersectScene(ray, RAY_INFINITY);
+    if (hit.distance >= RAY_INFINITY) { break; }
+    radiance += throughput * evaluateDirectLighting(ray, hit);
+  }
+  return radiance;
+}
+
 // Cosine-weighted Lambertian transport. The BRDF cosine and sampling PDF cancel.
 fn evaluateDiffuseTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, sampleIndex: u32) -> vec3<f32> {
   var ray = primaryRay;
@@ -1089,7 +1177,11 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
     let hit = intersectScene(ray, RAY_INFINITY);
     var color = uniforms.background.rgb;
     if (hit.distance < RAY_INFINITY) {
-      color = evaluateDiffuseTransport(ray, hit, pixel, sampleIndex);
+      if (uniforms.sampling.w > 0u) {
+        color = evaluatePBRTransport(ray, hit, pixel, sampleIndex);
+      } else {
+        color = evaluateDiffuseTransport(ray, hit, pixel, sampleIndex);
+      }
     }
     accumulatedColor += color;
   }

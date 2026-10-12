@@ -91,15 +91,39 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       getRequiredElement('editor-toggle', HTMLButtonElement).click();
     const preset = parameters.get('preset');
     this.selectPreset(
-      preset === 'chart' ? 3 : preset === 'chart-motion' ? 4 : preset === 'chart-diffuse' ? 5 : 0
+      preset === 'chart'
+        ? 3
+        : preset === 'chart-motion'
+          ? 4
+          : preset === 'chart-diffuse'
+            ? 5
+            : preset === 'chart-materials'
+              ? 6
+              : 0
     );
-    if (preset === 'chart' || preset === 'chart-motion' || preset === 'chart-diffuse') {
+    if (
+      preset === 'chart' ||
+      preset === 'chart-motion' ||
+      preset === 'chart-diffuse' ||
+      preset === 'chart-materials'
+    ) {
       const sceneDescription: ANARIJSONScene = ANARISceneSchema.parse(
         JSON.parse(this.editor.value)
       );
       const renderer = parameters.get('renderer') === 'default' ? 'default' : 'raytrace';
       sceneDescription.renderer = makePlaygroundRenderer(sceneDescription.renderer, renderer);
       if (renderer === 'raytrace') {
+        const transportMode = parameters.get('transport');
+        if (transportMode === 'diffuse' || transportMode === 'pbr')
+          sceneDescription.renderer.transportMode = transportMode;
+        const maxBounces = Number(parameters.get('bounces'));
+        if (
+          parameters.has('bounces') &&
+          Number.isInteger(maxBounces) &&
+          maxBounces >= 0 &&
+          maxBounces <= 8
+        )
+          sceneDescription.renderer.maxBounces = maxBounces;
         const debugView = parameters.get('view');
         if (
           debugView === 'color' ||
@@ -272,9 +296,24 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       )
         this.applyQualityPreset(selector.value);
     });
-    for (const identifier of ['denoise-selector', 'history-limit', 'ray-view-selector']) {
+    for (const identifier of [
+      'denoise-selector',
+      'history-limit',
+      'ray-view-selector',
+      'transport-selector',
+      'bounce-limit'
+    ]) {
       const control = document.getElementById(identifier);
       control?.addEventListener('change', () => {
+        const transportMode = getRequiredElement('transport-selector', HTMLSelectElement).value;
+        const maxBounces = Number(getRequiredElement('bounce-limit', HTMLInputElement).value);
+        if (
+          !(transportMode === 'diffuse' || transportMode === 'pbr') ||
+          !Number.isInteger(maxBounces) ||
+          maxBounces < 0 ||
+          maxBounces > 8
+        )
+          return;
         const debugView = getRequiredElement('ray-view-selector', HTMLSelectElement).value;
         if (
           !(
@@ -305,6 +344,8 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
             ...makePlaygroundRenderer(description.renderer, 'raytrace'),
             denoiseRadius,
             debugView,
+            transportMode,
+            maxBounces,
             historySampleLimit
           };
           this.editor.value = formatSceneJSON(description);
@@ -312,7 +353,13 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
           else {
             this.scene.frame
               .getParameter('renderer')
-              ?.setParameters({denoiseRadius, historySampleLimit, debugView})
+              ?.setParameters({
+                denoiseRadius,
+                historySampleLimit,
+                debugView,
+                transportMode,
+                maxBounces
+              })
               .commitParameters();
             this.updateEditorMetadata();
           }
@@ -593,6 +640,11 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
             ([parameterName, parameterValue]) => name === parameterName && value === parameterValue
           )
         )
+      );
+      getRequiredElement('transport-selector', HTMLSelectElement).value =
+        sceneDescription.renderer?.transportMode ?? 'diffuse';
+      getRequiredElement('bounce-limit', HTMLInputElement).value = String(
+        sceneDescription.renderer?.maxBounces ?? 0
       );
       getRequiredElement('ray-view-selector', HTMLSelectElement).value =
         sceneDescription.renderer?.debugView ?? 'color';

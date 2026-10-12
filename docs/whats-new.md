@@ -8,6 +8,10 @@ Target Release Date: Q3, 2026
 
 **General**
 
+- **Opaque reflective ray transport** - Opt-in bounded GGX metallic/roughness secondary paths
+  add colored and glossy reflections. Chart Materials demonstrates a retained roughness sweep
+  with transport and bounce controls. The default diffuse mode is unchanged.
+
 - **Ray-tracing diagnostics** - Implementation capability reports, primary-hit debug views, and
   reference-image error metrics make ray-traced scene captures easier to inspect and compare.
 

@@ -1,5 +1,10 @@
 import type {ANARIVector3} from '@luma.gl/scene';
-import {makeChartBaseline, makeChartMotionScene, makeChartDiffuseScene} from './chart-baseline';
+import {
+  makeChartBaseline,
+  makeChartMotionScene,
+  makeChartDiffuseScene,
+  makeChartMaterialsScene
+} from './chart-baseline';
 import type {
   ANARIJSONScene,
   JSONInstanceDeclaration,
@@ -19,7 +24,8 @@ export const PLAYGROUND_PRESETS: readonly PlaygroundPreset[] = [
   {label: 'Celestial Engine', scene: makeCelestialEngine()},
   {label: 'Chart Baseline', scene: makeChartBaseline('raytrace')},
   {label: 'Chart Motion', scene: makeChartMotionScene()},
-  {label: 'Chart Diffuse', scene: makeChartDiffuseScene()}
+  {label: 'Chart Diffuse', scene: makeChartDiffuseScene()},
+  {label: 'Chart Materials', scene: makeChartMaterialsScene()}
 ];
 
 function makeChromaticAtlas(): ANARIJSONScene {

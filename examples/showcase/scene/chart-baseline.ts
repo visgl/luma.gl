@@ -185,3 +185,50 @@ export function makeChartDiffuseScene(): ANARIJSONScene {
   ];
   return scene;
 }
+
+/** Fixed roughness sweep: matte bars, emissive points, metallic columns and floor. */
+export function makeChartMaterialsScene(): ANARIJSONScene {
+  const scene = makeChartBaseline('raytrace');
+  scene.name = 'CHART MATERIALS';
+  scene.description = 'Metal columns sweep roughness · emissive marks reflect in the glossy floor';
+  scene.renderer = {
+    ...scene.renderer!,
+    transportMode: 'pbr',
+    maxBounces: 3,
+    samplesPerPixel: 4,
+    samplingSeed: 17,
+    denoiseRadius: 1,
+    ambientRadiance: 0
+  };
+  scene.materials!.blue = {'@@type': 'physicallyBased', baseColor: [0.12, 0.42, 0.8], roughness: 1};
+  scene.materials!.orange = {
+    '@@type': 'physicallyBased',
+    baseColor: [0.9, 0.3, 0.08],
+    emissive: [3, 0.6, 0.08],
+    roughness: 1
+  };
+  scene.materials!.floor = {
+    '@@type': 'physicallyBased',
+    baseColor: [0.7, 0.75, 0.8],
+    metallic: 1,
+    roughness: 0.12
+  };
+  const roughnessValues = [0.04, 0.12, 0.25, 0.45, 0.7, 1];
+  for (const [datumIndex, datum] of CHART_BASELINE_DATA.entries()) {
+    const identifier = `column-${datum.identifier}`;
+    scene.materials![identifier] = {
+      '@@type': 'physicallyBased',
+      baseColor: [0.95, 0.65, 0.2],
+      metallic: 1,
+      roughness: roughnessValues[datumIndex]
+    };
+    scene.surfaces![identifier] = {geometry: 'column', material: identifier};
+  }
+  scene.instances = scene.instances?.map(instance =>
+    instance['@@id'].startsWith('column-') ? {...instance, surface: instance['@@id']} : instance
+  );
+  scene.lights = [
+    {'@@id': 'key', '@@type': 'directional', direction: [-0.5, -1, -0.5], irradiance: 0.5}
+  ];
+  return scene;
+}

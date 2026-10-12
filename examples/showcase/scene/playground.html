@@ -616,6 +616,14 @@
                 <option value="still">Still / capture</option>
               </select>
             </label>
+            <label style="pointer-events: auto">Transport
+              <select id="transport-selector" class="renderer-selector" aria-label="Transport">
+                <option value="diffuse">Diffuse</option><option value="pbr">Opaque PBR</option>
+              </select>
+            </label>
+            <label style="pointer-events: auto">Bounces
+              <input id="bounce-limit" type="number" min="0" max="8" value="0" aria-label="Bounces" style="width: 4em">
+            </label>
             <label style="pointer-events: auto">Ray view
               <select id="ray-view-selector" class="renderer-selector" aria-label="Ray view">
                 <option value="color">Color</option><option value="normal">Normals</option>
