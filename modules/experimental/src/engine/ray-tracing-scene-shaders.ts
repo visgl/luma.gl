@@ -1031,6 +1031,42 @@ fn getHistoricalRaySample(
   );
 }
 
+// Cosine-weighted Lambertian transport. The BRDF cosine and sampling PDF cancel.
+fn evaluateDiffuseTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, sampleIndex: u32) -> vec3<f32> {
+  var ray = primaryRay;
+  var hit = primaryHit;
+  var radiance = evaluateDirectLighting(ray, hit);
+  var throughput = vec3<f32>(1.0);
+  let pixelIndex = pixel.y * uniforms.dimensions.x + pixel.x;
+  let sequenceIndex = uniforms.acceleration.w * 16u + sampleIndex;
+  let pathSeed = uniforms.sampling.x ^ (pixelIndex * 1973u) ^ (sequenceIndex * 26699u);
+  for (var bounceIndex = 0u; bounceIndex < min(uniforms.sampling.y, 8u); bounceIndex++) {
+    let primitive = primitives[hit.primitiveIndex];
+    throughput *= clamp(primitive.baseColor.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) *
+      0.96 * (1.0 - clamp(primitive.emissive.w, 0.0, 1.0));
+    if (max(throughput.r, max(throughput.g, throughput.b)) <= 0.0) {
+      break;
+    }
+    let normal = select(hit.normal, -hit.normal, dot(hit.normal, ray.direction) > 0.0);
+    let reference = select(vec3<f32>(0.0, 0.0, 1.0), vec3<f32>(0.0, 1.0, 0.0), abs(normal.z) > 0.999);
+    let tangent = normalize(cross(reference, normal));
+    let bitangent = cross(normal, tangent);
+    let radialSample = makeRandom(pathSeed ^ (bounceIndex * 104729u + 17u));
+    let angle = 2.0 * PI * makeRandom(pathSeed ^ (bounceIndex * 130363u + 101u));
+    let radius = sqrt(radialSample);
+    let direction = tangent * (radius * cos(angle)) + bitangent * (radius * sin(angle)) +
+      normal * sqrt(max(1.0 - radialSample, 0.0));
+    let position = ray.origin + ray.direction * hit.distance;
+    ray = Ray(position + normal * 0.002, normalize(direction));
+    hit = intersectScene(ray, RAY_INFINITY);
+    if (hit.distance >= RAY_INFINITY) {
+      break;
+    }
+    radiance += throughput * evaluateDirectLighting(ray, hit);
+  }
+  return radiance;
+}
+
 @compute @workgroup_size(8, 8, 1)
 fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
   let phaseCount = max(uniforms.displayPhase.w, 1u);
@@ -1049,7 +1085,7 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
     let hit = intersectScene(ray, RAY_INFINITY);
     var color = uniforms.background.rgb;
     if (hit.distance < RAY_INFINITY) {
-      color = evaluateDirectLighting(ray, hit);
+      color = evaluateDiffuseTransport(ray, hit, pixel, sampleIndex);
     }
     accumulatedColor += color;
   }

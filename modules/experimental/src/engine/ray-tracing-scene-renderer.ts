@@ -466,9 +466,9 @@ export type RayTracingSceneRenderOptions = SceneRenderOptions & {
   cameraProjection?: 'perspective' | 'orthographic';
   /** Number of primary-ray samples per pixel in one encoded frame. */
   samplesPerPixel?: number;
-  /** Uint32 seed for primary-ray sampling; defaults to zero. */
+  /** Uint32 seed for primary and diffuse sampling; defaults to zero. */
   samplingSeed?: number;
-  /** Reserved future path-tracing bounce budget. */
+  /** Number of secondary diffuse bounces, clamped to 0–8; defaults to zero. */
   maxBounces?: number;
   /** Accumulates primary-ray samples across unchanged committed frames. */
   progressive?: boolean;
@@ -741,6 +741,10 @@ export class RayTracingSceneRenderer {
       const primitiveChanged = resources.primitiveRevision !== primitiveRevision;
       const transformChanged = resources.transformRevision !== transformRevision;
       const lightsChanged = resources.lightRevision !== lightRevision;
+      // Primary-hit reprojection cannot validate illumination from secondary surfaces.
+      if ((options.maxBounces ?? 0) > 0 && (primitiveChanged || lightsChanged)) {
+        resources.historyNeedsReset = true;
+      }
       const sparseTransformInstanceIds = getSparseTransformInstanceIds(
         options,
         resources,
@@ -3705,6 +3709,7 @@ function makeUniformData(props: {
   data.set(props.previousCameraPosition, 64);
   data[67] = (props.options.progressive ?? true) ? 1 : 0;
   unsignedData[68] = props.options.samplingSeed ?? 0;
+  unsignedData[69] = Math.min(8, Math.max(0, Math.floor(props.options.maxBounces ?? 0)));
   return data;
 }
 

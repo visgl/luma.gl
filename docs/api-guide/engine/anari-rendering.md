@@ -88,7 +88,7 @@ The current package is a focused proof of concept, not a complete ANARI implemen
 - Automatically generated triangle normals assume non-indexed triangle-list positions.
 - Group-attached lights are not transformed by their owning instance.
 - The `deferred` renderer is WebGPU-only and does not yet include clustered lighting, screen-space effects, bloom, or temporal velocity history.
-- The WebGPU-only `raytrace` renderer builds Morton-sorted object/instance TLAS and per-mesh triangle BLAS hierarchies on the GPU and supports scalar metallic/roughness direct lighting; hardware ray tracing, SAH/Karras hierarchy topology, skeletal/morph deformation, material textures, alpha/transmission, advanced PBR extensions, indirect bounces, and denoising are unsupported.
+- The WebGPU-only `raytrace` renderer builds Morton-sorted object/instance TLAS and per-mesh triangle BLAS hierarchies on the GPU and supports scalar metallic/roughness direct lighting and optional bounded diffuse bounces; hardware ray tracing, SAH/Karras hierarchy topology, skeletal/morph deformation, material textures, alpha/transmission, advanced PBR extensions, specular/transmissive bounces, and denoising are unsupported.
 - Visibility, raster picking, volumes, clipping planes, raster shadow maps, and asynchronous frame mapping are not implemented; direct shadow rays are available only in the `raytrace` renderer.
 - Experimental OpenUSD import does not support binary USDC crates or complete USD composition semantics.
 - Imported glTF skin attributes require an application-supplied retained joint palette; automatic
@@ -142,3 +142,18 @@ ordinary interactive rendering uses elapsed time. Keep captures on the same back
 hardware when comparing pixels. Reported elapsed time includes startup and capture;
 existing frame telemetry is CPU timing, not GPU timestamps. GPU memory measurement and
 hardware convergence baselines remain follow-up work.
+
+### Compare diffuse transport
+
+Choose **Chart Diffuse** in the JSON playground on WebGPU. It retains the baseline marks and
+camera, adds emissive materials, and requests `maxBounces: 2` with seed 17. Set `maxBounces`
+to `0` in the editor to compare direct-only lighting. Let the stationary scene accumulate
+frames; small emissive marks need many samples. Interactive/still quality presets preserve
+the bounce budget. This is diffuse transport, with no specular or glass paths or emissive
+importance sampling yet.
+
+Capture a fixed frame count with:
+
+```bash
+node scripts/playwright/chart-baseline-capture.mjs --diffuse --frames 32 --seed 17 --output /tmp/chart-diffuse
+```

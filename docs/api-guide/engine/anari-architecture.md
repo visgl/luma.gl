@@ -179,7 +179,8 @@ forward raster boundary adapts that vector to its shader module's outgoing conve
 mutating shared scene lights. Multiple retained ambient lights are also combined consistently
 across forward, deferred, and ray-traced rendering. This closes direct-light and scalar-material
 gaps, but does not add material textures, alpha masking, transmission, image-based lighting, or
-indirect bounces to the ray tracer.
+specular/transmissive bounces to the ray tracer. Opt-in diffuse transport samples cosine-weighted
+secondary rays and reuses this direct-light evaluator at each hit.
 
 #### Graph-stage diagnostics
 
@@ -241,7 +242,7 @@ current renderer.
 | Execution | Direct-light megakernel, hard shadow rays, coalesced graph passes, per-stage node/pass/CPU counters | Wavefront queues, compaction, multi-bounce transport, GPU-stage timings |
 | Sampling | Half-resolution default, adaptive scales, interleaved phases, rotating shadow-light samples | Variance-driven adaptive sampling and reservoir-based many-light reuse |
 | Reconstruction | Motion-aware temporal reprojection, rejection, neighborhood clamp, manual HDR upscale | SVGF-class denoising, stronger edge-aware upscaling, reactive masks |
-| Shading and presentation | Analytic spheres, mesh triangles, scalar metallic/roughness GGX, directional-light parity, target-aware HDR/SDR tone mapping and offscreen output | Full PBR texture parity, alpha/transmission, deformation, indirect bounces |
+| Shading and presentation | Analytic spheres, mesh triangles, scalar metallic/roughness GGX, directional-light parity, target-aware HDR/SDR tone mapping and offscreen output | Full PBR texture parity, alpha/transmission, deformation, specular/transmissive bounces |
 
 ### Cache invalidation
 

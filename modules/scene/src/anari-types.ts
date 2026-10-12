@@ -241,8 +241,9 @@ export type ANARIRendererParameters = {
   /** Explicit output transfer; omitted values follow the render-target format. */
   outputColorSpace?: 'linear' | 'srgb';
   samplesPerPixel?: number;
-  /** Uint32 primary-ray sampling seed. Changing it resets accumulation. */
+  /** Uint32 primary and diffuse sampling seed. Changing it resets accumulation. */
   samplingSeed?: number;
+  /** Secondary diffuse bounce budget, clamped to 0–8; defaults to zero. */
   maxBounces?: number;
   progressive?: boolean;
   shadows?: boolean;

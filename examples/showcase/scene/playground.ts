@@ -86,8 +86,10 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     if (parameters.get('editor') === 'hidden')
       getRequiredElement('editor-toggle', HTMLButtonElement).click();
     const preset = parameters.get('preset');
-    this.selectPreset(preset === 'chart' ? 3 : preset === 'chart-motion' ? 4 : 0);
-    if (preset === 'chart' || preset === 'chart-motion') {
+    this.selectPreset(
+      preset === 'chart' ? 3 : preset === 'chart-motion' ? 4 : preset === 'chart-diffuse' ? 5 : 0
+    );
+    if (preset === 'chart' || preset === 'chart-motion' || preset === 'chart-diffuse') {
       const sceneDescription: ANARIJSONScene = ANARISceneSchema.parse(
         JSON.parse(this.editor.value)
       );

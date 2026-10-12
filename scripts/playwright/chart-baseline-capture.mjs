@@ -15,6 +15,7 @@ const {values} = parseArgs({options: {
   width: {type: 'string', default: '960'}, height: {type: 'string', default: '720'},
   hardware: {type: 'string', default: 'unspecified'},
   motion: {type: 'boolean', default: false},
+  diffuse: {type: 'boolean', default: false},
   'software-gpu': {type: 'boolean', default: false}
 }});
 const frames = Number(values.frames);
@@ -26,7 +27,7 @@ if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) throw new Error('s
 if (!Number.isInteger(width) || !Number.isInteger(height) || width < 320 || height < 320) throw new Error('viewport dimensions must be integers of at least 320 pixels');
 if (!['default', 'raytrace'].includes(values.renderer)) throw new Error('renderer must be default or raytrace');
 const url = new URL(values.url);
-url.searchParams.set('preset', values.motion ? 'chart-motion' : 'chart');
+url.searchParams.set('preset', values.diffuse ? 'chart-diffuse' : values.motion ? 'chart-motion' : 'chart');
 url.searchParams.set('renderer', values.renderer);
 url.searchParams.set('quality', 'still');
 url.searchParams.set('seed', String(seed));
