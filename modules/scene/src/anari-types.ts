@@ -46,7 +46,14 @@ export type ANARIObjectType =
   | 'surface'
   | 'world';
 
-export type ANARIGeometrySubtype = 'triangle' | 'sphere' | 'cylinder' | 'cone' | 'quad';
+export type ANARIGeometrySubtype =
+  | 'triangle'
+  | 'sphere'
+  | 'cylinder'
+  | 'cone'
+  | 'quad'
+  | 'hexPrism'
+  | 'torus';
 export type ANARIMaterialSubtype = 'matte' | 'physicallyBased';
 export type ANARISamplerSubtype = 'image2D';
 export type ANARILightSubtype = 'ambient' | 'directional' | 'point' | 'spot';
@@ -107,6 +114,12 @@ export type ANARIGeometryParameters = {
   height?: number;
   width?: number;
   segments?: number;
+  majorRadius?: number;
+  minorRadius?: number;
+  majorSegments?: number;
+  minorSegments?: number;
+  /** Torus sweep in radians; partial sweeps have open ends. */
+  arc?: number;
 };
 
 export type ANARIMaterialParameters = {

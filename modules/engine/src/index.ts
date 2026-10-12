@@ -116,6 +116,8 @@ export type {CubeGeometryProps} from './geometry/geometry-primitives';
 export {CubeGeometry} from './geometry/geometry-primitives';
 export type {CylinderGeometryProps} from './geometry/geometry-primitives';
 export {CylinderGeometry} from './geometry/geometry-primitives';
+export {TorusGeometry} from './geometry/geometry-primitives';
+export type {TorusGeometryProps} from './geometry/geometry-primitives';
 export type {IcoSphereGeometryProps} from './geometry/geometry-primitives';
 export {IcoSphereGeometry} from './geometry/geometry-primitives';
 export type {PlaneGeometryProps} from './geometry/geometry-primitives';

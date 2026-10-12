@@ -514,7 +514,7 @@ type ANARIVector3 = readonly [number, number, number];
 type ANARIVector4 = readonly [number, number, number, number];
 type ANARIMatrix4 = readonly number[];
 
-type ANARIGeometrySubtype = 'triangle' | 'sphere' | 'cylinder' | 'cone' | 'quad';
+type ANARIGeometrySubtype = 'triangle' | 'sphere' | 'cylinder' | 'cone' | 'quad' | 'hexPrism' | 'torus';
 type ANARIMaterialSubtype = 'matte' | 'physicallyBased';
 type ANARILightSubtype = 'ambient' | 'directional' | 'point' | 'spot';
 type ANARICameraSubtype = 'perspective' | 'orthographic';

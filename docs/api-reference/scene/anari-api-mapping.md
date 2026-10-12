@@ -165,7 +165,7 @@ The array retains the original JavaScript object. `array.length` counts scalar J
 
 ```ts
 anariDevice.getObjectSubtypes('geometry');
-// ['triangle', 'sphere', 'cylinder', 'cone', 'quad']
+// ['triangle', 'sphere', 'cylinder', 'cone', 'quad', 'hexPrism', 'torus']
 
 anariDevice.getObjectInfo('material');
 // {type: 'material', subtypes: [...], extensions: [...]}

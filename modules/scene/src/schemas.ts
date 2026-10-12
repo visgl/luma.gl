@@ -91,6 +91,24 @@ export const ANARIGeometrySchema = z
       segments: z.number().int().min(3).optional()
     }),
     z.strictObject({
+      '@@type': z.literal('hexPrism'),
+      radius: positiveNumberSchema.optional(),
+      height: positiveNumberSchema.optional()
+    }),
+    z
+      .strictObject({
+        '@@type': z.literal('torus'),
+        majorRadius: positiveNumberSchema.optional(),
+        minorRadius: positiveNumberSchema.optional(),
+        majorSegments: z.number().int().min(3).optional(),
+        minorSegments: z.number().int().min(3).optional(),
+        arc: positiveNumberSchema.max(Math.PI * 2).optional()
+      })
+      .refine(parameters => (parameters.minorRadius ?? 0.3) < (parameters.majorRadius ?? 1), {
+        path: ['minorRadius'],
+        message: 'minorRadius must be smaller than majorRadius'
+      }),
+    z.strictObject({
       '@@type': z.literal('quad'),
       width: positiveNumberSchema.optional(),
       height: positiveNumberSchema.optional()

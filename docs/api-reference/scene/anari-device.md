@@ -151,7 +151,7 @@ Returns supported subtypes for an object category:
 
 ```ts
 anariDevice.getObjectSubtypes('geometry');
-// ['triangle', 'sphere', 'cylinder', 'cone', 'quad']
+// ['triangle', 'sphere', 'cylinder', 'cone', 'quad', 'hexPrism', 'torus']
 
 anariDevice.getObjectSubtypes('renderer');
 // ['default', 'deferred', 'debugNormals', 'debugDepth', 'raytrace']
