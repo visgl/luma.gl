@@ -308,6 +308,8 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       'bounce-limit'
     ]) {
       const control = document.getElementById(identifier);
+      if (control instanceof HTMLSelectElement || control instanceof HTMLInputElement)
+        control.disabled = !this.deferredRendererAvailable;
       control?.addEventListener('change', () => {
         const transportMode = getRequiredElement('transport-selector', HTMLSelectElement).value;
         const maxBounces = Number(getRequiredElement('bounce-limit', HTMLInputElement).value);
