@@ -788,3 +788,17 @@ test('guided presentation adds only a sampled metadata binding', () => {
     expect(reflection.storage).toEqual([]);
   }
 });
+
+test('primary-hit diagnostics keep presentation within sampled-texture bindings', () => {
+  for (const debugView of ['normal', 'cameraDistance', 'identity', 'history'] as const) {
+    const reflection = new WgslReflect(
+      getRayTracingScenePresentationShader({toneMapMode: 2, outputEncoding: 1, debugView})
+    );
+    expect(reflection.textures.map(({name, binding}) => ({name, binding}))).toEqual([
+      {name: 'image', binding: 0},
+      {name: 'metadata', binding: 1}
+    ]);
+    expect(reflection.storage).toEqual([]);
+    expect(reflection.uniforms).toEqual([]);
+  }
+});

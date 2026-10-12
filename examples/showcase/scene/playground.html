@@ -616,6 +616,13 @@
                 <option value="still">Still / capture</option>
               </select>
             </label>
+            <label style="pointer-events: auto">Ray view
+              <select id="ray-view-selector" class="renderer-selector" aria-label="Ray view">
+                <option value="color">Color</option><option value="normal">Normals</option>
+                <option value="cameraDistance">Camera distance</option><option value="identity">Identity</option>
+                <option value="history">History confidence</option>
+              </select>
+            </label>
             <label style="pointer-events: auto">Denoise
               <select id="denoise-selector" class="renderer-selector" aria-label="Denoise">
                 <option value="0">Off</option><option value="1">Radius 1</option><option value="2">Radius 2</option>

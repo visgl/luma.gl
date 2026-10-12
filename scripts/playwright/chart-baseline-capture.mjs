@@ -1,16 +1,21 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {mkdir, writeFile} from 'node:fs/promises';
+import {mkdir, readFile, writeFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {parseArgs} from 'node:util';
 import {chromium} from 'playwright';
+import {PNG} from 'pngjs';
+import {compareChartImages} from './chart-image-metrics.mjs';
 import {getPlaywrightLaunchOptions} from './get-playwright-launch-options.mjs';
 
 const {values} = parseArgs({options: {
   url: {type: 'string', default: 'http://127.0.0.1:5180/playground.html'},
   output: {type: 'string', default: '/tmp/luma-chart-capture'},
   renderer: {type: 'string', default: 'raytrace'},
+  reference: {type: 'string'},
+  'maximum-rmse': {type: 'string'},
+  view: {type: 'string', default: 'color'},
   frames: {type: 'string', default: '8'}, seed: {type: 'string', default: '0'},
   width: {type: 'string', default: '960'}, height: {type: 'string', default: '720'},
   denoise: {type: 'string', default: '0'}, history: {type: 'string', default: '64'},
@@ -19,6 +24,10 @@ const {values} = parseArgs({options: {
   diffuse: {type: 'boolean', default: false},
   'software-gpu': {type: 'boolean', default: false}
 }});
+const maximumRootMeanSquaredError = values['maximum-rmse'] === undefined ? undefined : Number(values['maximum-rmse']);
+if (maximumRootMeanSquaredError !== undefined && (!values.reference || !Number.isFinite(maximumRootMeanSquaredError) || maximumRootMeanSquaredError < 0 || maximumRootMeanSquaredError > 1)) throw new Error('maximum-rmse requires a reference and a finite value between 0 and 1');
+if (!['color', 'normal', 'cameraDistance', 'identity', 'history'].includes(values.view)) throw new Error('Unknown ray debug view');
+if (values.renderer !== 'raytrace' && values.view !== 'color') throw new Error('Debug views require raytrace');
 const denoise = Number(values.denoise);
 const history = Number(values.history);
 if (![0, 1, 2].includes(denoise)) throw new Error('denoise must be 0, 1 or 2');
@@ -38,8 +47,11 @@ url.searchParams.set('quality', 'still');
 url.searchParams.set('seed', String(seed));
 url.searchParams.set('denoise', String(denoise));
 url.searchParams.set('history', String(history));
+url.searchParams.set('view', values.view);
 url.searchParams.set('captureFrames', String(frames));
 url.searchParams.set('editor', 'hidden');
+// Decode before any output is written, including when output aliases the reference.
+const referenceImage = values.reference ? PNG.sync.read(await readFile(resolve(values.reference))) : undefined;
 const browser = await chromium.launch(getPlaywrightLaunchOptions({backend: 'webgpu', softwareGpu: values['software-gpu']}));
 try {
   const page = await browser.newPage({viewport: {width, height}, deviceScaleFactor: 1});
@@ -52,7 +64,7 @@ try {
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const metadata = await page.evaluate(() => {
     const canvas = document.querySelector('#playground-canvas');
-    return {drawingBuffer: [canvas.width, canvas.height], renderedFrames: Number(canvas.dataset.renderedFrames),
+    return {rayTracingCapabilities: JSON.parse(canvas.dataset.rayTracingCapabilities ?? 'null'), drawingBuffer: [canvas.width, canvas.height], renderedFrames: Number(canvas.dataset.renderedFrames),
       backend: document.querySelector('#backend-label').textContent,
       scene: JSON.parse(document.querySelector('#scene-editor').value),
       rayResolution: document.querySelector('#scene-ray-tracing-resolution').textContent,
@@ -63,10 +75,12 @@ try {
   await page.addStyleTag({content: '.preview-heading, .preview-statistics, .preview-hint {visibility: hidden !important}'});
   const output = resolve(values.output);
   await mkdir(output, {recursive: true});
-  await page.locator('#playground-canvas').screenshot({path: `${output}/chart.png`, timeout: 60000});
+  const capture = await page.locator('#playground-canvas').screenshot({path: `${output}/chart.png`, timeout: 60000});
+  const comparison = referenceImage ? {reference: resolve(values.reference), ...compareChartImages(PNG.sync.read(capture), referenceImage)} : undefined;
   if (errors.length || metadata.sceneError) throw new Error(JSON.stringify({errors, sceneError: metadata.sceneError}));
-  await writeFile(`${output}/metadata.json`, JSON.stringify({...metadata, seed, frames, viewport: [width, height],
+  await writeFile(`${output}/metadata.json`, JSON.stringify({...metadata, comparison, seed, frames, viewport: [width, height],
     hardware: values.hardware, browser: browser.version(), elapsedMilliseconds: performance.now() - started,
     note: 'Elapsed time includes startup and screenshot; telemetry is CPU frame timing, not GPU timestamps. Owned memory is a logical allocation estimate, not measured VRAM; hardware convergence benchmarks remain separate.'}, null, 2));
   console.log(output);
+  if (comparison && maximumRootMeanSquaredError !== undefined && comparison.rootMeanSquaredError > maximumRootMeanSquaredError) throw new Error(`Display RGB RMSE ${comparison.rootMeanSquaredError} exceeds ${maximumRootMeanSquaredError}`);
 } finally { await browser.close(); }

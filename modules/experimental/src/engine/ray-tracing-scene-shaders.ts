@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {RayTracingDebugView} from './ray-tracing-scene-capabilities';
+
 const RAY_TRACING_SCENE_TYPES = /* wgsl */ `
 struct RayTracingUniforms {
   inverseViewProjection: mat4x4<f32>,
@@ -1190,6 +1192,7 @@ export type RayTracingPresentationOptions = {
   /** Zero preserves linear color; one applies the exact sRGB transfer function. */
   outputEncoding: number;
   denoiseRadius?: 0 | 1 | 2;
+  debugView?: RayTracingDebugView;
 };
 
 /** Resolves retained ray radiance with attachment-aware, canonical PBR color management. */
@@ -1200,11 +1203,13 @@ export function getRayTracingScenePresentationShader(
   const outputEncoding = typeof options === 'boolean' ? (options ? 0 : 1) : options.outputEncoding;
 
   const denoiseRadius = typeof options === 'boolean' ? 0 : (options.denoiseRadius ?? 0);
+  const debugView = typeof options === 'boolean' ? 'color' : (options.debugView ?? 'color');
+  const useMetadata = denoiseRadius > 0 || debugView !== 'color';
 
   return /* wgsl */ `
 @group(0) @binding(0) var image: texture_2d<f32>;
 ${
-  denoiseRadius
+  useMetadata
     ? `@group(0) @binding(1) var metadata: texture_2d<f32>;
 fn decodeGuidanceNormal(encoded: vec2<f32>) -> vec3<f32> {
   let signedNormal = encoded * 2.0 - vec2<f32>(1.0);
@@ -1312,6 +1317,9 @@ fn toneMapRayTracingKhronosPBRNeutral(inputColor: vec3<f32>) -> vec3<f32> {
 
 @fragment
 fn fragmentMain(@location(0) textureCoordinates: vec2<f32>) -> @location(0) vec4<f32> {
+  ${
+    debugView === 'color'
+      ? `
   let radiance = sampleRayTracingImage(textureCoordinates);
   var color = max(radiance, vec3<f32>(0.0));
   if (${toneMapMode} == 1) {
@@ -1329,6 +1337,38 @@ fn fragmentMain(@location(0) textureCoordinates: vec2<f32>) -> @location(0) vec4
     return vec4<f32>(color, 1.0);
   }
   return vec4<f32>(encodeRayTracingLinearSRGB(color), 1.0);
+  `
+      : getRayTracingDebugFragmentShader(debugView)
+  }
 }
 `;
+}
+
+function getRayTracingDebugFragmentShader(debugView: RayTracingDebugView): string {
+  const pixelShader = `let pixel = clamp(vec2<i32>(textureCoordinates * vec2<f32>(textureDimensions(image))),
+    vec2<i32>(0), vec2<i32>(textureDimensions(image)) - vec2<i32>(1));`;
+  if (debugView === 'history') {
+    return `${pixelShader}
+      let confidence = log2(1.0 + textureLoad(image, pixel, 0).a) / log2(257.0);
+      return vec4<f32>(vec3<f32>(clamp(confidence, 0.0, 1.0)), 1.0);`;
+  }
+  const guidanceShader = `${pixelShader}
+    let guidance = textureLoad(metadata, pixel, 0);
+    if (guidance.a <= 0.0) { return vec4<f32>(0.0, 0.0, 0.0, 1.0); }`;
+  switch (debugView) {
+    case 'normal':
+      return `${guidanceShader}
+        return vec4<f32>(decodeGuidanceNormal(guidance.xy) * 0.5 + vec3<f32>(0.5), 1.0);`;
+    case 'cameraDistance':
+      return `${guidanceShader}
+        return vec4<f32>(vec3<f32>(guidance.z / (1.0 + guidance.z)), 1.0);`;
+    case 'identity':
+      return `${guidanceShader}
+        if (guidance.a >= 65504.0) { return vec4<f32>(1.0, 0.0, 1.0, 1.0); }
+        let identifier = u32(guidance.a);
+        let hashed = identifier * 747796405u + 2891336453u;
+        return vec4<f32>(vec3<f32>(f32(hashed & 255u), f32((hashed >> 8u) & 255u), f32((hashed >> 16u) & 255u)) / 255.0, 1.0);`;
+    default:
+      return '';
+  }
 }

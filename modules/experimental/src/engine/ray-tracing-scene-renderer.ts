@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {RayTracingDebugView} from './ray-tracing-scene-capabilities';
 import {
   Buffer,
   type Device,
@@ -472,6 +473,8 @@ export type RayTracingSceneRenderOptions = SceneRenderOptions & {
   historySampleLimit?: number;
   /** Presentation-only guided filter radius in internal pixels; defaults to zero. */
   denoiseRadius?: 0 | 1 | 2;
+  /** Presentation-only primary-hit diagnostics; defaults to color. */
+  debugView?: RayTracingDebugView;
   /** Number of secondary diffuse bounces, clamped to 0–8; defaults to zero. */
   maxBounces?: number;
   /** Accumulates primary-ray samples across unchanged committed frames. */
@@ -586,6 +589,7 @@ type RayTracingPresentationOptions = {
   toneMapMode: number;
   outputEncoding: number;
   denoiseRadius: 0 | 1 | 2;
+  debugView: RayTracingDebugView;
 };
 
 type RayTracingFrameResources = {
@@ -3058,7 +3062,7 @@ export class RayTracingSceneRenderer {
       id: `${props.frameIdentifier}-present-ray-tracing`,
       resources: [
         {texture: outputView, usage: 'sampled'},
-        ...(props.presentation.denoiseRadius
+        ...(props.presentation.denoiseRadius || props.presentation.debugView !== 'color'
           ? [{texture: outputMetadataView, usage: 'sampled' as const}]
           : [])
       ],
@@ -3068,7 +3072,8 @@ export class RayTracingSceneRenderer {
           source: getRayTracingScenePresentationShader({
             toneMapMode: props.presentation.toneMapMode,
             outputEncoding: props.presentation.outputEncoding,
-            denoiseRadius: props.presentation.denoiseRadius
+            denoiseRadius: props.presentation.denoiseRadius,
+            debugView: props.presentation.debugView
           }),
           vertexCount: 3,
           colorAttachmentFormats: [props.presentation.colorFormat],
@@ -3085,7 +3090,7 @@ export class RayTracingSceneRenderer {
                 location: 0,
                 sampleType: 'unfilterable-float'
               },
-              ...(props.presentation.denoiseRadius
+              ...(props.presentation.denoiseRadius || props.presentation.debugView !== 'color'
                 ? [
                     {
                       name: 'metadata',
@@ -3111,7 +3116,7 @@ export class RayTracingSceneRenderer {
           encode: ({renderPass, getTextureView}) => {
             model.setBindings({
               image: getTextureView(outputView),
-              ...(props.presentation.denoiseRadius
+              ...(props.presentation.denoiseRadius || props.presentation.debugView !== 'color'
                 ? {metadata: getTextureView(outputMetadataView)}
                 : {})
             });
@@ -3160,6 +3165,7 @@ function getRayTracingPresentationOptions(
   return {
     colorFormat,
     denoiseRadius: options.denoiseRadius ?? 0,
+    debugView: options.debugView ?? 'color',
     ...(depthStencilFormat ? {depthStencilFormat} : {}),
     toneMapMode:
       options.toneMapMode ??
@@ -3179,7 +3185,8 @@ function areRayTracingPresentationOptionsEqual(
     first.depthStencilFormat === second.depthStencilFormat &&
     first.toneMapMode === second.toneMapMode &&
     first.outputEncoding === second.outputEncoding &&
-    first.denoiseRadius === second.denoiseRadius
+    first.denoiseRadius === second.denoiseRadius &&
+    first.debugView === second.debugView
   );
 }
 

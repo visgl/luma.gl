@@ -66,3 +66,59 @@ peak memory. No GPU readback or synchronization is required.
 The scene playground has Denoise and History samples controls plus owned allocation
 telemetry. For a deterministic diffuse example, open
 `playground.html?preset=chart-diffuse&renderer=raytrace&quality=still&denoise=1&history=64&seed=17`.
+
+## Primary-hit debug views
+
+`debugView` selects `color` (default), `normal`, `cameraDistance`, `identity`, or `history`.
+Changing the view rebuilds presentation without resetting unfiltered accumulation.
+Diagnostics bypass denoising, tone mapping and shader output transfer functions;
+the attachment's own sRGB conversion, if any, still applies.
+
+- `normal`: centered primary-hit world normals mapped from `[-1, 1]` into RGB `[0, 1]`.
+- `cameraDistance`: grayscale world-space camera-eye distance compressed as
+  `distance / (1 + distance)`. It comes from temporal guidance and can vary laterally
+  across a constant-depth plane in orthographic views. It is neither projected device
+  depth nor ray-origin distance; use the exact distance channel for the latter.
+- `identity`: deterministic colors for primitive identifiers in retained internal guidance.
+  Background is black; identifiers beyond the exact half-float range are magenta.
+  Use full-resolution integer channel snapshots for exact IDs and picking.
+- `history`: grayscale `log2(1 + samples) / log2(257)`, exposing retained confidence
+  up to the maximum 256-sample budget, including background pixels.
+
+Guidance views use nearest internal pixels, so reduced-resolution diagnostics do
+not imply full-output-resolution channels. The playground's Ray view selector and
+capture harness `--view` option expose these modes.
+
+## Implementation capabilities
+
+`getRayTracingSceneCapabilities(device)` is exported by `@luma.gl/experimental`
+and `@luma.gl/scene/raytrace`. It reports WebGPU compute support without constructing
+a renderer or allocating GPU resources. The report describes implementation support,
+not per-scene capacity, resource-limit validation, or an active renderer's settings.
+Check `supported` before interpreting the implementation features for a device.
+
+Analytic spheres and triangle-list meshes, scalar metallic/roughness direct lighting,
+bounded diffuse transport, guided spatial denoising, and debug views are supported.
+Material textures, non-opaque alpha modes, specular/transmissive secondary transport,
+explicit emitter sampling, hardware ray tracing, and GPU-stage timestamps are not
+implemented. Other geometric shapes use shared tessellated triangle meshes.
+
+## Reference-image error measurements
+
+The deterministic capture harness accepts `--reference /absolute/path/chart.png`.
+It writes normalized display-RGB mean absolute error, RMSE, maximum channel error,
+and PSNR into `metadata.json`. Exact equality uses `null` for infinite PSNR.
+Alpha is ignored because chart captures are opaque. Dimensions must match.
+
+```bash
+node scripts/playwright/chart-baseline-capture.mjs --diffuse --frames 64 --seed 17 --output /tmp/chart-reference
+node scripts/playwright/chart-baseline-capture.mjs --diffuse --frames 8 --seed 17 --reference /tmp/chart-reference/chart.png --maximum-rmse 0.05 --output /tmp/chart-candidate
+```
+
+`--maximum-rmse` is optional and fails the command when the measured RMSE exceeds
+that normalized threshold, after saving the candidate image and metadata. The caller
+must choose a reference with the same scene, camera, viewport, color management,
+backend and hardware. Matching dimensions alone does not establish scene equivalence.
+These are errors in the displayed image, not linear-radiance errors or a guarantee
+that a high-frame capture is converged. Elapsed capture time includes startup and
+screenshot overhead; named-hardware convergence measurements remain a separate gate.
