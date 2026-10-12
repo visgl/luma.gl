@@ -100,13 +100,17 @@ export function getClassicFP64Defines(gpu: string): Record<string, boolean> {
       return {LUMA_FP64_INTEGER_ARITHMETIC: false, LUMA_FP64_CODE_ELIMINATION_WORKAROUND: true};
     case 'amd':
       return {LUMA_FP64_INTEGER_ARITHMETIC: false};
-    default:
-      // Intel and unidentified GPUs get both workarounds, as in the GLSL platform defines.
+    case 'intel':
+      // Intel gets both workarounds, as in the GLSL platform defines.
       return {
         LUMA_FP64_INTEGER_ARITHMETIC: false,
         LUMA_FP64_CODE_ELIMINATION_WORKAROUND: true,
         LUMA_FP64_HIGH_BITS_OVERFLOW_WORKAROUND: true
       };
+    default:
+      // Unidentified GPUs (e.g. Firefox WebGPU, which reports no vendor) skip the high-bits
+      // workaround: its re-split costs about 2^-36 relative precision in every product.
+      return {LUMA_FP64_INTEGER_ARITHMETIC: false, LUMA_FP64_CODE_ELIMINATION_WORKAROUND: true};
   }
 }
 
