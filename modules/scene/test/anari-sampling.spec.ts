@@ -127,6 +127,12 @@ it('primary sampling seeds reproduce pixels and invalidate progressive history',
       graphics.submit();
       expect(filtered?.accumulatedSamples).toBe(4);
       expect(filtered?.memory).toEqual(beforeMemory);
+      renderer.setParameter('debugView', 'normal').commitParameters();
+      expect(frame.render().rayTracing?.accumulatedSamples).toBe(5);
+      graphics.submit();
+      renderer.setParameter('debugView', 'color').commitParameters();
+      expect(frame.render().rayTracing?.accumulatedSamples).toBe(6);
+      graphics.submit();
       renderer
         .setParameters({historySampleLimit: 1, samplesPerPixel: 16, denoiseRadius: 2})
         .commitParameters();

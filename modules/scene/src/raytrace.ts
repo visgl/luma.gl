@@ -6,4 +6,9 @@ export type {
   RayTracingScenePrimitive,
   RayTracingSceneRenderOptions
 } from '@luma.gl/experimental';
-export {RayTracingSceneRenderer} from '@luma.gl/experimental';
+export {
+  RayTracingSceneRenderer,
+  getRayTracingSceneCapabilities,
+  type RayTracingSceneCapabilities,
+  type RayTracingDebugView
+} from '@luma.gl/experimental';

@@ -36,6 +36,11 @@ export type {
   RayTracingSceneRenderOptions
 } from './engine/ray-tracing-scene-renderer';
 export {RayTracingSceneRenderer} from './engine/ray-tracing-scene-renderer';
+export {
+  getRayTracingSceneCapabilities,
+  type RayTracingSceneCapabilities,
+  type RayTracingDebugView
+} from './engine/ray-tracing-scene-capabilities';
 export type {PreparePBREnvironmentOptions} from './engine/pbr-environment';
 export {
   PBREnvironmentGenerator,

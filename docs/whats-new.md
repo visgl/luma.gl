@@ -8,6 +8,9 @@ Target Release Date: Q3, 2026
 
 **General**
 
+- **Ray-tracing diagnostics** - Implementation capability reports, primary-hit debug views, and
+  reference-image error metrics make ray-traced scene captures easier to inspect and compare.
+
 - **Ray-tracing quality controls** - Opt-in guided spatial denoising, configurable history sample
   limits, and logical owned GPU allocation statistics are available in the renderer and scene playground.
 

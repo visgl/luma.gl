@@ -473,3 +473,13 @@ it('ray quality schema accepts bounded controls and rejects invalid budgets', ()
     false
   );
 });
+
+it('debug views are ray-only renderer settings with known names', () => {
+  for (const debugView of ['color', 'normal', 'distance', 'identity', 'history']) {
+    expect(ANARIRendererSchema.safeParse({'@@type': 'raytrace', debugView}).success).toBe(true);
+    expect(ANARIRendererSchema.safeParse({'@@type': 'default', debugView}).success).toBe(false);
+  }
+  expect(
+    ANARIRendererSchema.safeParse({'@@type': 'raytrace', debugView: 'unrecognized'}).success
+  ).toBe(false);
+});

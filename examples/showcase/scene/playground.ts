@@ -7,7 +7,8 @@ import {
 import {
   DepthTextureCopy,
   SelectionOutline,
-  getRayTracingQualityPreset
+  getRayTracingQualityPreset,
+  getRayTracingSceneCapabilities
 } from '@luma.gl/experimental';
 import {ChartLabels} from './chart-labels';
 import {ANARISceneSchema} from '@luma.gl/scene/schemas';
@@ -70,6 +71,9 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       getRequiredElement('scene-monaco-editor', HTMLDivElement)
     );
     this.canvas = getRequiredElement('playground-canvas', HTMLCanvasElement);
+    this.canvas.dataset.rayTracingCapabilities = JSON.stringify(
+      getRayTracingSceneCapabilities(device)
+    );
     this.orbitControls = new OrbitControls(this.canvas, {
       distance: 20,
       pitch: 0.2,
@@ -96,6 +100,15 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       const renderer = parameters.get('renderer') === 'default' ? 'default' : 'raytrace';
       sceneDescription.renderer = makePlaygroundRenderer(sceneDescription.renderer, renderer);
       if (renderer === 'raytrace') {
+        const debugView = parameters.get('view');
+        if (
+          debugView === 'color' ||
+          debugView === 'normal' ||
+          debugView === 'distance' ||
+          debugView === 'identity' ||
+          debugView === 'history'
+        )
+          sceneDescription.renderer.debugView = debugView;
         const denoiseRadius = Number(parameters.get('denoise') ?? 0);
         if (denoiseRadius === 0 || denoiseRadius === 1 || denoiseRadius === 2)
           sceneDescription.renderer.denoiseRadius = denoiseRadius;
@@ -259,9 +272,20 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       )
         this.applyQualityPreset(selector.value);
     });
-    for (const identifier of ['denoise-selector', 'history-limit']) {
+    for (const identifier of ['denoise-selector', 'history-limit', 'ray-view-selector']) {
       const control = document.getElementById(identifier);
       control?.addEventListener('change', () => {
+        const debugView = getRequiredElement('ray-view-selector', HTMLSelectElement).value;
+        if (
+          !(
+            debugView === 'color' ||
+            debugView === 'normal' ||
+            debugView === 'distance' ||
+            debugView === 'identity' ||
+            debugView === 'history'
+          )
+        )
+          return;
         const denoiseRadius = Number(
           getRequiredElement('denoise-selector', HTMLSelectElement).value
         );
@@ -280,6 +304,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
           description.renderer = {
             ...makePlaygroundRenderer(description.renderer, 'raytrace'),
             denoiseRadius,
+            debugView,
             historySampleLimit
           };
           this.editor.value = formatSceneJSON(description);
@@ -287,7 +312,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
           else {
             this.scene.frame
               .getParameter('renderer')
-              ?.setParameters({denoiseRadius, historySampleLimit})
+              ?.setParameters({denoiseRadius, historySampleLimit, debugView})
               .commitParameters();
             this.updateEditorMetadata();
           }
@@ -569,6 +594,8 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
           )
         )
       );
+      getRequiredElement('ray-view-selector', HTMLSelectElement).value =
+        sceneDescription.renderer?.debugView ?? 'color';
       getRequiredElement('denoise-selector', HTMLSelectElement).value = String(
         sceneDescription.renderer?.denoiseRadius ?? 0
       );
