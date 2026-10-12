@@ -98,8 +98,8 @@ not per-scene capacity, resource-limit validation, or an active renderer's setti
 Check `supported` before interpreting the implementation features for a device.
 
 Analytic spheres and triangle-list meshes, scalar metallic/roughness direct lighting,
-bounded diffuse transport, guided spatial denoising, and debug views are supported.
-Material textures, non-opaque alpha modes, specular/transmissive secondary transport,
+bounded diffuse and opt-in opaque GGX reflective transport, guided spatial denoising, and debug views are supported.
+Material textures, non-opaque alpha modes, transmissive secondary transport,
 explicit emitter sampling, hardware ray tracing, and GPU-stage timestamps are not
 implemented. Other geometric shapes use shared tessellated triangle meshes.
 
@@ -122,3 +122,42 @@ backend and hardware. Matching dimensions alone does not establish scene equival
 These are errors in the displayed image, not linear-radiance errors or a guarantee
 that a high-frame capture is converged. Elapsed capture time includes startup and
 screenshot overhead; named-hardware convergence measurements remain a separate gate.
+
+
+## Opaque reflective transport
+
+`transportMode: 'diffuse' | 'pbr'` defaults to `diffuse`, preserving the earlier
+Lambertian secondary paths. `pbr` enables opaque metallic/roughness secondary
+reflections when `maxBounces` is nonzero. Both modes use the same bounded 0–8
+secondary bounce budget, primary sampling seed, retained identities, and history.
+Changing modes resets accumulation; secondary material, light and transform changes
+also reset it, including when primary-hit temporal reprojection is enabled. Camera
+changes reset active PBR accumulation too: primary-hit reprojection alone cannot
+validate view-dependent reflection. Unchanged cameras continue accumulating normally.
+
+The PBR path samples a cosine diffuse/GGX normal-distribution mixture and evaluates
+both lobes against the combined directional probability density. Metallic surfaces
+have colored specular reflection; dielectric surfaces retain a diffuse lobe and
+4% normal-incidence specular reflectance. Schlick Fresnel and Smith masking use the
+existing scalar direct-light material model. Roughness is clamped to `[0.04, 1]`;
+zero roughness uses the lower bound rather than an ideal delta mirror. The model
+uses single-scattering GGX without multiscattering compensation. See the
+[glTF BRDF model](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#appendix-b-brdf-implementation)
+for the material terms.
+
+Secondary rays gather emission and explicit directional/point/spot lighting at
+hits. A miss contributes zero: the background remains a primary display color,
+not an environment light. There is no texture sampling, alpha/transmission,
+IOR/attenuation, environment-map transport, or explicit emitter sampling. Small
+emitters and rough reflections may require more samples; this is bounded opaque
+transport, not a complete path tracer or a glass renderer.
+
+Choose **Chart Materials** in the playground for matte bars, emissive points,
+a metallic floor and a six-column roughness sweep using the same data/camera and
+instance IDs as Chart Baseline. Transport and Bounces controls update retained
+renderer settings. For reproducible captures:
+
+```bash
+node scripts/playwright/chart-baseline-capture.mjs --materials --transport pbr --bounces 3 --frames 32 --seed 17 --output /tmp/chart-materials
+node scripts/playwright/chart-baseline-capture.mjs --materials --transport diffuse --bounces 3 --frames 32 --seed 17 --output /tmp/chart-materials-diffuse
+```

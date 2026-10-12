@@ -10,7 +10,8 @@ it('reports implemented software tracing separately from planned material transp
   expect(capabilities.hardwareRayTracing).toBe(false);
   expect(capabilities.transport).toEqual({
     maximumDiffuseBounces: 8,
-    specular: false,
+    modes: ['diffuse', 'pbr'],
+    specular: true,
     transmission: false,
     explicitEmitterSampling: false
   });

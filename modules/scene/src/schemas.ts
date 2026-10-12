@@ -304,6 +304,7 @@ const raytraceRendererProperties = {
   historySampleLimit: z.number().int().min(1).max(256).optional(),
   denoiseRadius: z.union([z.literal(0), z.literal(1), z.literal(2)]).optional(),
   debugView: z.enum(['color', 'normal', 'cameraDistance', 'identity', 'history']).optional(),
+  transportMode: z.enum(['diffuse', 'pbr']).optional(),
   maxBounces: z.number().int().nonnegative().optional(),
   progressive: z.boolean().optional(),
   shadows: z.boolean().optional(),

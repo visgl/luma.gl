@@ -13,7 +13,8 @@ import {expect, it, vi} from 'vitest';
 import {
   CHART_BASELINE_DATA,
   makeChartBaseline,
-  makeChartMotionScene
+  makeChartMotionScene,
+  makeChartMaterialsScene
 } from '../../../examples/showcase/scene/chart-baseline';
 
 it('chart baseline preserves data identities and scene inputs across renderers', () => {
@@ -122,5 +123,28 @@ it('quality changes retain the inspected camera, world and placement identities'
   } finally {
     scene.destroy();
     device.destroy();
+  }
+});
+
+it('material acceptance scene preserves data and offers a monotonic roughness sweep', () => {
+  const baseline = makeChartBaseline('raytrace');
+  const materials = makeChartMaterialsScene();
+  expect(ANARISceneSchema.safeParse(materials).success).toBe(true);
+  expect(materials.camera).toEqual(baseline.camera);
+  expect(materials.instances?.map(instance => instance['@@id'])).toEqual(
+    baseline.instances?.map(instance => instance['@@id'])
+  );
+  expect(materials.renderer?.transportMode).toBe('pbr');
+  expect(materials.renderer?.maxBounces).toBe(3);
+  expect(
+    CHART_BASELINE_DATA.map(datum => materials.materials?.[`column-${datum.identifier}`]?.roughness)
+  ).toEqual([0.04, 0.12, 0.25, 0.45, 0.7, 1]);
+  for (const datum of CHART_BASELINE_DATA) {
+    const identifier = `column-${datum.identifier}`;
+    expect(materials.instances?.find(instance => instance['@@id'] === identifier)?.surface).toBe(
+      identifier
+    );
+    expect(materials.surfaces?.[identifier]?.material).toBe(identifier);
+    expect(materials.materials?.[identifier]?.metallic).toBe(1);
   }
 });

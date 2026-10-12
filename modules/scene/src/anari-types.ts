@@ -241,7 +241,7 @@ export type ANARIRendererParameters = {
   /** Explicit output transfer; omitted values follow the render-target format. */
   outputColorSpace?: 'linear' | 'srgb';
   samplesPerPixel?: number;
-  /** Uint32 primary and diffuse sampling seed. Changing it resets accumulation. */
+  /** Uint32 primary and secondary sampling seed. Changing it resets accumulation. */
   samplingSeed?: number;
   /** Maximum retained samples per pixel, from 1 to 256; defaults to 64. */
   historySampleLimit?: number;
@@ -249,7 +249,9 @@ export type ANARIRendererParameters = {
   denoiseRadius?: 0 | 1 | 2;
   /** Presentation-only primary-hit diagnostics for ray tracing. */
   debugView?: 'color' | 'normal' | 'cameraDistance' | 'identity' | 'history';
-  /** Secondary diffuse bounce budget, clamped to 0–8; defaults to zero. */
+  /** Defaults to diffuse; pbr enables opaque metallic/roughness secondary reflections. */
+  transportMode?: 'diffuse' | 'pbr';
+  /** Secondary bounce budget, clamped to 0–8; defaults to zero. */
   maxBounces?: number;
   progressive?: boolean;
   shadows?: boolean;

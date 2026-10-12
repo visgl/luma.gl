@@ -483,3 +483,13 @@ it('debug views are ray-only renderer settings with known names', () => {
     ANARIRendererSchema.safeParse({'@@type': 'raytrace', debugView: 'unrecognized'}).success
   ).toBe(false);
 });
+
+it('transport modes are opt-in ray settings with bounded names', () => {
+  for (const transportMode of ['diffuse', 'pbr']) {
+    expect(ANARIRendererSchema.safeParse({'@@type': 'raytrace', transportMode}).success).toBe(true);
+    expect(ANARIRendererSchema.safeParse({'@@type': 'default', transportMode}).success).toBe(false);
+  }
+  expect(
+    ANARIRendererSchema.safeParse({'@@type': 'raytrace', transportMode: 'glass'}).success
+  ).toBe(false);
+});

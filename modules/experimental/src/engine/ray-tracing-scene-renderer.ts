@@ -467,7 +467,7 @@ export type RayTracingSceneRenderOptions = SceneRenderOptions & {
   cameraProjection?: 'perspective' | 'orthographic';
   /** Number of primary-ray samples per pixel in one encoded frame. */
   samplesPerPixel?: number;
-  /** Uint32 seed for primary and diffuse sampling; defaults to zero. */
+  /** Uint32 seed for primary and secondary sampling; defaults to zero. */
   samplingSeed?: number;
   /** Maximum retained samples per pixel, from 1 to 256; defaults to 64. */
   historySampleLimit?: number;
@@ -475,7 +475,9 @@ export type RayTracingSceneRenderOptions = SceneRenderOptions & {
   denoiseRadius?: 0 | 1 | 2;
   /** Presentation-only primary-hit diagnostics; defaults to color. */
   debugView?: RayTracingDebugView;
-  /** Number of secondary diffuse bounces, clamped to 0–8; defaults to zero. */
+  /** Diffuse legacy transport or opt-in opaque metallic/roughness transport. */
+  transportMode?: 'diffuse' | 'pbr';
+  /** Number of secondary bounces, clamped to 0–8; defaults to zero. */
   maxBounces?: number;
   /** Accumulates primary-ray samples across unchanged committed frames. */
   progressive?: boolean;
@@ -3387,10 +3389,11 @@ function getRenderRevision(
   options: RayTracingSceneRenderOptions,
   inverseViewProjection: Matrix4
 ): string {
-  // Scene adapters may recommit an unchanged camera every animation tick. Temporal mode keeps
-  // ordinary camera motion out of this reset key and rejects incompatible history in the shader.
+  // Primary-hit reprojection cannot validate view-dependent secondary reflections.
+  // Keep ordinary diffuse camera reprojection, but reset reflective paths on camera changes.
+  const reflectiveTransport = options.transportMode === 'pbr' && (options.maxBounces ?? 0) > 0;
   const cameraRevision =
-    (options.temporalReprojection ?? true)
+    (options.temporalReprojection ?? true) && !reflectiveTransport
       ? undefined
       : [Array.from(inverseViewProjection), Array.from(options.camera.position)];
   return JSON.stringify([
@@ -3404,6 +3407,7 @@ function getRenderRevision(
     options.samplingSeed,
     options.historySampleLimit,
     options.maxBounces,
+    options.transportMode,
     options.progressive,
     options.shadows,
     options.temporalReprojection,
@@ -3750,6 +3754,7 @@ function makeUniformData(props: {
   data.set(props.previousViewProjection, 48);
   data.set(props.previousCameraPosition, 64);
   data[67] = (props.options.progressive ?? true) ? 1 : 0;
+  unsignedData[71] = Number(props.options.transportMode === 'pbr');
   unsignedData[70] = getHistorySampleLimit(props.options);
   unsignedData[68] = props.options.samplingSeed ?? 0;
   unsignedData[69] = Math.min(8, Math.max(0, Math.floor(props.options.maxBounces ?? 0)));

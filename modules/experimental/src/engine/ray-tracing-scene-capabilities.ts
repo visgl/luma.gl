@@ -18,7 +18,8 @@ export function getRayTracingSceneCapabilities(device: Pick<Device, 'type'>) {
     scalarMetallicRoughness: true as const,
     transport: {
       maximumDiffuseBounces: 8,
-      specular: false as const,
+      modes: ['diffuse', 'pbr'] as const,
+      specular: true as const,
       transmission: false as const,
       explicitEmitterSampling: false as const
     },

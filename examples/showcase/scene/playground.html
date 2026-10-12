@@ -35,6 +35,7 @@
 
       .shell {
         display: grid;
+        grid-template-columns: minmax(0, 1fr);
         grid-template-rows: 69px 64px minmax(0, 1fr);
         width: 100%;
         height: 100%;
@@ -121,6 +122,8 @@
       }
 
       .preset-list {
+        min-width: 0;
+        overflow-x: auto;
         flex: 1;
         gap: 7px;
         margin-left: 8px;
@@ -160,6 +163,7 @@
       }
 
       .preset-button {
+        flex: none;
         padding: 8px 10px;
         font-size: 11px;
       }
@@ -371,7 +375,25 @@
 
       .preview-heading {
         top: 24px;
+        right: 26px;
         left: 26px;
+      }
+
+      .ray-controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 12px;
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 11px;
+        pointer-events: auto;
+      }
+
+      .ray-controls label {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
       }
 
       .scene-title {
@@ -609,12 +631,21 @@
           <canvas id="playground-canvas" class="preview-canvas"></canvas>
           <div class="preview-heading">
             <div class="section-label">LIVE PREVIEW</div>
+            <div class="ray-controls">
             <label style="pointer-events: auto">Ray quality
               <select id="quality-selector" class="renderer-selector" aria-label="Ray quality">
                 <option value="custom" disabled selected>Scene settings</option>
                 <option value="interactive">Interactive</option>
                 <option value="still">Still / capture</option>
               </select>
+            </label>
+            <label style="pointer-events: auto">Transport
+              <select id="transport-selector" class="renderer-selector" aria-label="Transport">
+                <option value="diffuse">Diffuse</option><option value="pbr">Opaque PBR</option>
+              </select>
+            </label>
+            <label style="pointer-events: auto">Bounces
+              <input id="bounce-limit" type="number" min="0" max="8" value="0" aria-label="Bounces" style="width: 4em">
             </label>
             <label style="pointer-events: auto">Ray view
               <select id="ray-view-selector" class="renderer-selector" aria-label="Ray view">
@@ -631,6 +662,7 @@
             <label style="pointer-events: auto">History samples
               <input id="history-limit" type="number" min="1" max="256" value="64" aria-label="History samples" style="width: 5em">
             </label>
+            </div>
             <h1 id="scene-title" class="scene-title"></h1>
             <div id="scene-description" class="scene-description"></div>
             <div id="scene-selection" class="scene-description" role="status" aria-live="polite"></div>

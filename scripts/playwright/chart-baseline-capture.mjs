@@ -22,12 +22,18 @@ const {values} = parseArgs({options: {
   hardware: {type: 'string', default: 'unspecified'},
   motion: {type: 'boolean', default: false},
   diffuse: {type: 'boolean', default: false},
+  materials: {type: 'boolean', default: false},
+  transport: {type: 'string'},
+  bounces: {type: 'string'},
   'software-gpu': {type: 'boolean', default: false}
 }});
 const maximumRootMeanSquaredError = values['maximum-rmse'] === undefined ? undefined : Number(values['maximum-rmse']);
 if (maximumRootMeanSquaredError !== undefined && (!values.reference || !Number.isFinite(maximumRootMeanSquaredError) || maximumRootMeanSquaredError < 0 || maximumRootMeanSquaredError > 1)) throw new Error('maximum-rmse requires a reference and a finite value between 0 and 1');
 if (!['color', 'normal', 'cameraDistance', 'identity', 'history'].includes(values.view)) throw new Error('Unknown ray debug view');
 if (values.renderer !== 'raytrace' && values.view !== 'color') throw new Error('Debug views require raytrace');
+if (values.transport !== undefined && !['diffuse', 'pbr'].includes(values.transport)) throw new Error('transport must be diffuse or pbr');
+if (values.bounces !== undefined && (!Number.isInteger(Number(values.bounces)) || Number(values.bounces) < 0 || Number(values.bounces) > 8)) throw new Error('bounces must be an integer between 0 and 8');
+if (values.renderer !== 'raytrace' && (values.transport !== undefined || values.bounces !== undefined)) throw new Error('Transport overrides require raytrace');
 const denoise = Number(values.denoise);
 const history = Number(values.history);
 if (![0, 1, 2].includes(denoise)) throw new Error('denoise must be 0, 1 or 2');
@@ -41,13 +47,15 @@ if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) throw new Error('s
 if (!Number.isInteger(width) || !Number.isInteger(height) || width < 320 || height < 320) throw new Error('viewport dimensions must be integers of at least 320 pixels');
 if (!['default', 'raytrace'].includes(values.renderer)) throw new Error('renderer must be default or raytrace');
 const url = new URL(values.url);
-url.searchParams.set('preset', values.diffuse ? 'chart-diffuse' : values.motion ? 'chart-motion' : 'chart');
+url.searchParams.set('preset', values.materials ? 'chart-materials' : values.diffuse ? 'chart-diffuse' : values.motion ? 'chart-motion' : 'chart');
 url.searchParams.set('renderer', values.renderer);
 url.searchParams.set('quality', 'still');
 url.searchParams.set('seed', String(seed));
 url.searchParams.set('denoise', String(denoise));
 url.searchParams.set('history', String(history));
 url.searchParams.set('view', values.view);
+if (values.transport !== undefined) url.searchParams.set('transport', values.transport);
+if (values.bounces !== undefined) url.searchParams.set('bounces', values.bounces);
 url.searchParams.set('captureFrames', String(frames));
 url.searchParams.set('editor', 'hidden');
 // Decode before any output is written, including when output aliases the reference.

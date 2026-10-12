@@ -88,7 +88,7 @@ The current package is a focused proof of concept, not a complete ANARI implemen
 - Automatically generated triangle normals assume non-indexed triangle-list positions.
 - Group-attached lights are not transformed by their owning instance.
 - The `deferred` renderer is WebGPU-only and does not yet include clustered lighting, screen-space effects, bloom, or temporal velocity history.
-- The WebGPU-only `raytrace` renderer builds Morton-sorted object/instance TLAS and per-mesh triangle BLAS hierarchies on the GPU and supports scalar metallic/roughness direct lighting and optional bounded diffuse bounces; hardware ray tracing, SAH/Karras hierarchy topology, skeletal/morph deformation, material textures, alpha/transmission, advanced PBR extensions, specular/transmissive bounces, and denoising are unsupported.
+- The WebGPU-only `raytrace` renderer builds Morton-sorted object/instance TLAS and per-mesh triangle BLAS hierarchies on the GPU and supports scalar metallic/roughness direct lighting, optional bounded diffuse or opaque GGX reflective bounces, and guided spatial presentation filtering. Hardware ray tracing, SAH/Karras hierarchy topology, skeletal/morph deformation, material textures, alpha/transmission, advanced PBR extensions, transmissive bounces, and advanced temporal denoising are unsupported.
 - Visibility, raster picking, volumes, clipping planes, raster shadow maps, and asynchronous frame mapping are not implemented; direct shadow rays are available only in the `raytrace` renderer.
 - Experimental OpenUSD import does not support binary USDC crates or complete USD composition semantics.
 - Imported glTF skin attributes require an application-supplied retained joint palette; automatic
@@ -149,11 +149,22 @@ Choose **Chart Diffuse** in the JSON playground on WebGPU. It retains the baseli
 camera, adds emissive materials, and requests `maxBounces: 2` with seed 17. Set `maxBounces`
 to `0` in the editor to compare direct-only lighting. Let the stationary scene accumulate
 frames; small emissive marks need many samples. Interactive/still quality presets preserve
-the bounce budget. This is diffuse transport, with no specular or glass paths or emissive
-importance sampling yet.
+the bounce budget. This preset uses diffuse transport; the opt-in `pbr` mode below adds
+opaque reflection. Glass paths and emissive importance sampling remain unimplemented.
 
 Capture a fixed frame count with:
 
 ```bash
 node scripts/playwright/chart-baseline-capture.mjs --diffuse --frames 32 --seed 17 --output /tmp/chart-diffuse
 ```
+
+
+### Compare opaque material transport
+
+Choose **Chart Materials** to compare matte bars, metallic columns with increasing
+roughness, and emissive marks reflected in a glossy floor. `transportMode: 'pbr'`
+enables the opaque reflective path; `diffuse` remains the default. The same
+`maxBounces` budget and `samplingSeed` control both modes. Use the Transport and
+Bounces controls for comparison, or pass `--materials --transport pbr --bounces 3`
+to the capture harness. See the [quality reference](/docs/api-reference/experimental/ray-tracing-quality-presets)
+for probability weighting, roughness bounds, and remaining material limitations.
