@@ -108,6 +108,20 @@ export const ANARIGeometrySchema = z
         path: ['minorRadius'],
         message: 'minorRadius must be smaller than majorRadius'
       }),
+    z
+      .strictObject({
+        '@@type': z.literal('ring'),
+        innerRadius: nonnegativeNumberSchema.optional(),
+        outerRadius: positiveNumberSchema.optional(),
+        height: positiveNumberSchema.optional(),
+        segments: z.number().int().min(3).optional(),
+        startAngle: numberSchema.optional(),
+        angle: positiveNumberSchema.max(Math.PI * 2).optional()
+      })
+      .refine(parameters => (parameters.innerRadius ?? 0.5) < (parameters.outerRadius ?? 1), {
+        path: ['innerRadius'],
+        message: 'innerRadius must be smaller than outerRadius'
+      }),
     z.strictObject({
       '@@type': z.literal('quad'),
       width: positiveNumberSchema.optional(),
@@ -323,6 +337,7 @@ const raytraceRendererProperties = {
   denoiseRadius: z.union([z.literal(0), z.literal(1), z.literal(2)]).optional(),
   debugView: z.enum(['color', 'normal', 'cameraDistance', 'identity', 'history']).optional(),
   transportMode: z.enum(['diffuse', 'pbr']).optional(),
+  emitterSampling: z.boolean().optional(),
   maxBounces: z.number().int().nonnegative().optional(),
   progressive: z.boolean().optional(),
   shadows: z.boolean().optional(),

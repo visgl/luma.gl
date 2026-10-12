@@ -97,7 +97,7 @@ new ANARIGeometry(
 );
 
 newGeometry(
-  subtype: 'triangle' | 'sphere' | 'cylinder' | 'cone' | 'quad' | 'hexPrism' | 'torus',
+  subtype: 'triangle' | 'sphere' | 'cylinder' | 'cone' | 'quad' | 'hexPrism' | 'torus' | 'ring',
   parameters?: ANARIGeometryParameters
 ): ANARIGeometry;
 ```
@@ -328,3 +328,21 @@ Choose **Chart Shapes** in the JSON playground, or use
 `playground.html?preset=chart-shapes&renderer=raytrace`. Switch to `renderer=default`
 for the same raster scene. Click a visible mark in ray mode to inspect its datum
 identity and selection outline.
+
+### Annular prisms and ring segments
+
+`ring` constructs a closed annular prism around Y from shared math.gl lathe and
+plane tessellation. `innerRadius` defaults to `0.5` (zero creates a disk),
+`outerRadius` to `1`, `height` to `0.2`, and `segments` to `48`. The outer radius
+must exceed the nonnegative inner radius. `startAngle` defaults to zero and
+`angle` to `2 * Math.PI`; a partial sweep includes both radial caps. Angles are
+radians, starting at +X and sweeping toward −Z. Walls and caps retain distinct
+normals and `POSITION`/`NORMAL`/`TEXCOORD_0` semantics. Dimension changes rebuild
+the mesh after commit. The engine exports the same adapter as `RingGeometry`.
+
+```ts
+const segment = anariDevice.newGeometry('ring', {
+  innerRadius: 0.5, outerRadius: 1, height: 0.4,
+  startAngle: 0.2, angle: Math.PI * 1.5
+});
+```

@@ -99,9 +99,9 @@ Check `supported` before interpreting the implementation features for a device.
 
 Analytic spheres and triangle-list meshes, scalar metallic/roughness direct lighting,
 bounded diffuse and opt-in opaque GGX reflective transport, guided spatial denoising, and debug views are supported.
-Material textures, non-opaque alpha modes, transmissive secondary transport,
-explicit emitter sampling, hardware ray tracing, and GPU-stage timestamps are not
-implemented. Other geometric shapes use shared tessellated triangle meshes.
+Scalar `MASK` visibility and opt-in explicit emitter sampling are supported.
+Material textures, alpha blending, transmissive secondary transport, hardware
+ray tracing and GPU-stage timestamps are not implemented. Other geometric shapes use shared tessellated triangle meshes.
 
 ## Reference-image error measurements
 
@@ -147,8 +147,8 @@ for the material terms.
 
 Secondary rays gather emission and explicit directional/point/spot lighting at
 hits. A miss contributes zero: the background remains a primary display color,
-not an environment light. There is no texture sampling, alpha/transmission,
-IOR/attenuation, environment-map transport, or explicit emitter sampling. Small
+not an environment light. There is no texture sampling, alpha blending/transmission,
+IOR/attenuation or environment-map transport. Explicit emitter sampling is an opt-in control described below. Small
 emitters and rough reflections may require more samples; this is bounded opaque
 transport, not a complete path tracer or a glass renderer.
 
@@ -161,3 +161,46 @@ renderer settings. For reproducible captures:
 node scripts/playwright/chart-baseline-capture.mjs --materials --transport pbr --bounces 3 --frames 32 --seed 17 --output /tmp/chart-materials
 node scripts/playwright/chart-baseline-capture.mjs --materials --transport diffuse --bounces 3 --frames 32 --seed 17 --output /tmp/chart-materials-diffuse
 ```
+
+## Explicit emissive lighting and scalar masks
+
+Set `emitterSampling: true` on a ray renderer to sample one emissive primitive
+and one point on its surface at each material hit. Triangles use uniform
+triangle selection and barycentric area sampling; analytic spheres use local
+area sampling with the affine surface-area Jacobian. The area-to-direction
+weight includes emitter selection, triangle selection, projected emitter area,
+and squared distance, following the
+[area-light sampling formulation](https://www.pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources).
+Emission is treated as two-sided, matching existing ray emission gathering.
+
+This is off by default and works with both `diffuse` and `pbr` transport.
+Connections are shadow rays, so direct emissive lighting also works with
+`maxBounces: 0`. Analytic point/directional/spot lighting is unchanged. Emitter contributions
+follow the same per-hit distance-fog attenuation, with the fog background mixed
+once by the shared direct-light path. Explicit
+connections replace secondary emission gathering to avoid counting the same
+light twice; primary camera-visible emission is retained. The model has no
+delta mirrors (roughness has a `0.04` lower bound). MIS and power-weighted light
+selection are not implemented; nearly mirror-like materials can still converge
+slowly. More primary samples/frames improve sampling of small emitters.
+
+Emitter records share the existing light buffer, preserving the CORE eight
+storage-buffer traversal contract. Material, emitter visibility, emitter
+transform and emitter geometry changes reset radiance history, including at
+zero material bounces. PBR camera changes reset explicit-light accumulation.
+The sampling seed and global tiled-export coordinates remain authoritative.
+
+Ray materials with `alphaMode: 'MASK'` use scalar base-color alpha and
+`alphaCutoff` (default `0.5`). Below-cutoff geometry is invisible to primary,
+secondary and shadow rays, picking and channel snapshots, and is excluded from
+explicit emitter sampling. Equality to the cutoff is visible. `OPAQUE` remains
+visible regardless of scalar alpha. Texture alpha and `BLEND` compositing are
+unsupported by the ray renderer.
+
+Choose **Chart Lighting**, or open
+`playground.html?preset=chart-lighting&renderer=raytrace`. The **Emissive lighting**
+checkbox toggles sampling on the retained renderer. The scene combines closed
+annular marks, emissive points/panel and a masked fixture. Captures accept
+`--lighting --emitters on|off`; comparisons must preserve the same camera,
+seed, frames and color settings. Raster rendering shares geometry/masks but
+does not compute illumination from emissive surfaces.

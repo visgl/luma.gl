@@ -13,10 +13,10 @@ it('reports implemented software tracing separately from planned material transp
     modes: ['diffuse', 'pbr'],
     specular: true,
     transmission: false,
-    explicitEmitterSampling: false
+    explicitEmitterSampling: true
   });
   expect(capabilities.materialTextures).toBe(false);
-  expect(capabilities.alphaModes).toEqual(['OPAQUE']);
+  expect(capabilities.alphaModes).toEqual(['OPAQUE', 'MASK']);
   expect(capabilities.debugViews).toEqual([
     'color',
     'normal',

@@ -57,8 +57,7 @@ it('tiled seeded transport matches full-frame output across odd edges, denoise s
           id: 'blue',
           uniforms: {
             baseColorFactor: [0.2, 0.5, 0.8, 1],
-            roughnessFactor: 0.35,
-            metallicFactor: 0.3
+            metallicRoughnessValues: [0.3, 0.35]
           }
         },
         transforms: [new Matrix4()]
@@ -77,7 +76,7 @@ it('tiled seeded transport matches full-frame output across odd edges, denoise s
         geometry: triangle,
         material: {
           id: 'matte',
-          uniforms: {baseColorFactor: [0.6, 0.6, 0.6, 1], roughnessFactor: 0.7, metallicFactor: 0}
+          uniforms: {baseColorFactor: [0.6, 0.6, 0.6, 1], metallicRoughnessValues: [0, 0.7]}
         },
         transforms: [new Matrix4()]
       }
@@ -91,6 +90,7 @@ it('tiled seeded transport matches full-frame output across odd edges, denoise s
     samplesPerPixel: 4,
     samplingSeed: 17,
     maxBounces: 2,
+    emitterSampling: true,
     shadowSamplesPerFrame: 0,
     resolutionScale: 1,
     adaptiveResolution: false,

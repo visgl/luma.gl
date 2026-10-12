@@ -218,7 +218,8 @@ const GEOMETRY_SUBTYPES: readonly ANARIGeometrySubtype[] = [
   'cone',
   'quad',
   'hexPrism',
-  'torus'
+  'torus',
+  'ring'
 ];
 const MATERIAL_SUBTYPES: readonly ANARIMaterialSubtype[] = ['matte', 'physicallyBased'];
 const LIGHT_SUBTYPES: readonly ANARILightSubtype[] = ['ambient', 'directional', 'point', 'spot'];

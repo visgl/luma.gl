@@ -24,7 +24,9 @@ const {values} = parseArgs({options: {
   diffuse: {type: 'boolean', default: false},
   materials: {type: 'boolean', default: false},
   shapes: {type: 'boolean', default: false},
+  lighting: {type: 'boolean', default: false},
   transport: {type: 'string'},
+  emitters: {type: 'string'},
   bounces: {type: 'string'},
   'software-gpu': {type: 'boolean', default: false}
 }});
@@ -35,6 +37,8 @@ if (values.renderer !== 'raytrace' && values.view !== 'color') throw new Error('
 if (values.transport !== undefined && !['diffuse', 'pbr'].includes(values.transport)) throw new Error('transport must be diffuse or pbr');
 if (values.bounces !== undefined && (!Number.isInteger(Number(values.bounces)) || Number(values.bounces) < 0 || Number(values.bounces) > 8)) throw new Error('bounces must be an integer between 0 and 8');
 if (values.renderer !== 'raytrace' && (values.transport !== undefined || values.bounces !== undefined)) throw new Error('Transport overrides require raytrace');
+if (values.emitters !== undefined && !['on', 'off'].includes(values.emitters)) throw new Error('emitters must be on or off');
+if (values.renderer !== 'raytrace' && values.emitters !== undefined) throw new Error('Emitter overrides require raytrace');
 const denoise = Number(values.denoise);
 const history = Number(values.history);
 if (![0, 1, 2].includes(denoise)) throw new Error('denoise must be 0, 1 or 2');
@@ -48,7 +52,7 @@ if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) throw new Error('s
 if (!Number.isInteger(width) || !Number.isInteger(height) || width < 320 || height < 320) throw new Error('viewport dimensions must be integers of at least 320 pixels');
 if (!['default', 'raytrace'].includes(values.renderer)) throw new Error('renderer must be default or raytrace');
 const url = new URL(values.url);
-url.searchParams.set('preset', values.shapes ? 'chart-shapes' : values.materials ? 'chart-materials' : values.diffuse ? 'chart-diffuse' : values.motion ? 'chart-motion' : 'chart');
+url.searchParams.set('preset', values.lighting ? 'chart-lighting' : values.shapes ? 'chart-shapes' : values.materials ? 'chart-materials' : values.diffuse ? 'chart-diffuse' : values.motion ? 'chart-motion' : 'chart');
 url.searchParams.set('renderer', values.renderer);
 url.searchParams.set('quality', 'still');
 url.searchParams.set('seed', String(seed));
@@ -56,6 +60,7 @@ url.searchParams.set('denoise', String(denoise));
 url.searchParams.set('history', String(history));
 url.searchParams.set('view', values.view);
 if (values.transport !== undefined) url.searchParams.set('transport', values.transport);
+if (values.emitters !== undefined) url.searchParams.set('emitters', values.emitters);
 if (values.bounces !== undefined) url.searchParams.set('bounces', values.bounces);
 url.searchParams.set('captureFrames', String(frames));
 url.searchParams.set('editor', 'hidden');

@@ -53,7 +53,8 @@ export type ANARIGeometrySubtype =
   | 'cone'
   | 'quad'
   | 'hexPrism'
-  | 'torus';
+  | 'torus'
+  | 'ring';
 export type ANARIMaterialSubtype = 'matte' | 'physicallyBased';
 export type ANARISamplerSubtype = 'image2D';
 export type ANARILightSubtype = 'ambient' | 'directional' | 'point' | 'spot';
@@ -114,6 +115,10 @@ export type ANARIGeometryParameters = {
   height?: number;
   width?: number;
   segments?: number;
+  innerRadius?: number;
+  outerRadius?: number;
+  startAngle?: number;
+  angle?: number;
   majorRadius?: number;
   minorRadius?: number;
   majorSegments?: number;
@@ -264,6 +269,8 @@ export type ANARIRendererParameters = {
   debugView?: 'color' | 'normal' | 'cameraDistance' | 'identity' | 'history';
   /** Defaults to diffuse; pbr enables opaque metallic/roughness secondary reflections. */
   transportMode?: 'diffuse' | 'pbr';
+  /** Explicit emissive geometry connections for ray lighting. */
+  emitterSampling?: boolean;
   /** Secondary bounce budget, clamped to 0–8; defaults to zero. */
   maxBounces?: number;
   progressive?: boolean;

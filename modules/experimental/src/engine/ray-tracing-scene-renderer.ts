@@ -44,11 +44,11 @@ import type {
   SceneSurface
 } from './scene-renderer';
 
-const PRIMITIVE_FLOAT_COUNT = 68;
+const PRIMITIVE_FLOAT_COUNT = 72;
 const TRIANGLE_FLOAT_COUNT = 24;
 const BLAS_NODE_FLOAT_COUNT = 8;
 const LIGHT_FLOAT_COUNT = 16;
-const UNIFORM_FLOAT_COUNT = 76;
+const UNIFORM_FLOAT_COUNT = 80;
 const DEFAULT_RESOLUTION_SCALE = 0.5;
 const DEFAULT_MINIMUM_RESOLUTION_SCALE = 0.25;
 const DEFAULT_TARGET_FRAME_TIME_MILLISECONDS = 33.3;
@@ -484,6 +484,8 @@ export type RayTracingSceneRenderOptions = SceneRenderOptions & {
   transportMode?: 'diffuse' | 'pbr';
   /** Number of secondary bounces, clamped to 0–8; defaults to zero. */
   maxBounces?: number;
+  /** Samples emissive geometry explicitly; defaults to false. */
+  emitterSampling?: boolean;
   /** Accumulates primary-ray samples across unchanged committed frames. */
   progressive?: boolean;
   /** Traces direct-light shadow rays when enabled. */
@@ -542,6 +544,7 @@ type RayTracingScene = {
   lights: Float32Array;
   primitiveCount: number;
   lightCount: number;
+  emitterPrimitiveIndices: readonly number[];
   triangleCount: number;
 };
 
@@ -667,6 +670,7 @@ type RayTracingFrameResources = {
   primitiveCapacity: number;
   leafCapacity: number;
   lightCount: number;
+  emitterPrimitiveIndices: readonly number[];
   triangleCount: number;
 };
 
@@ -759,7 +763,12 @@ export class RayTracingSceneRenderer {
         topology.geometryLayouts,
         new Map()
       );
-      const scene = makeRayTracingScene(primitiveData, topology.triangles, lights);
+      const scene = makeRayTracingScene(
+        primitiveData,
+        topology.triangles,
+        lights,
+        options.emitterSampling ?? false
+      );
       resources = this.createFrameResources({
         frameIdentifier: options.id,
         displayWidth,
@@ -790,7 +799,10 @@ export class RayTracingSceneRenderer {
       const transformChanged = resources.transformRevision !== transformRevision;
       const lightsChanged = resources.lightRevision !== lightRevision;
       // Primary-hit reprojection cannot validate illumination from secondary surfaces.
-      if ((options.maxBounces ?? 0) > 0 && (primitiveChanged || lightsChanged)) {
+      if (
+        ((options.maxBounces ?? 0) > 0 || options.emitterSampling) &&
+        (primitiveChanged || lightsChanged)
+      ) {
         resources.historyNeedsReset = true;
       }
       const sparseTransformInstanceIds = getSparseTransformInstanceIds(
@@ -836,8 +848,14 @@ export class RayTracingSceneRenderer {
           resources.previousTransforms
         );
       }
-      if (lightsChanged) {
-        lightData = makeLightData(lights);
+      const emitterPrimitiveIndices = primitiveData
+        ? getEmissivePrimitiveIndices(primitiveData.primitives)
+        : resources.emitterPrimitiveIndices;
+      if (
+        lightsChanged ||
+        (options.emitterSampling && (primitiveChanged || topologyChanged) && primitiveData)
+      ) {
+        lightData = makeLightData(lights, options.emitterSampling ? emitterPrimitiveIndices : []);
       }
 
       if (
@@ -858,7 +876,12 @@ export class RayTracingSceneRenderer {
           topology.geometryLayouts,
           resources.previousTransforms
         );
-        const scene = makeRayTracingScene(primitiveData, topology.triangles, lights);
+        const scene = makeRayTracingScene(
+          primitiveData,
+          topology.triangles,
+          lights,
+          options.emitterSampling ?? false
+        );
         const previousTransformsNeedCommit =
           resources.previousTransformsNeedCommit || transformChanged;
         this.destroyFrame(options.id);
@@ -902,6 +925,7 @@ export class RayTracingSceneRenderer {
           resources.previousTransforms = primitiveData.previousTransforms;
           resources.primitivePlacements = primitiveData.placements;
           resources.pickIdentities = primitiveData.pickIdentities;
+          resources.emitterPrimitiveIndices = emitterPrimitiveIndices;
           resources.retainedSurfaces = options.surfaces;
           const updatedPrimitivePlacements = primitiveData.placements;
           resources.pendingPreviousTransformInstanceIds = new Set(
@@ -935,6 +959,7 @@ export class RayTracingSceneRenderer {
           const lightCountChanged = resources.lightCount !== lights.length;
           resources.lightBuffer.write(lightData);
           resources.lightCount = lights.length;
+          resources.emitterPrimitiveIndices = emitterPrimitiveIndices;
           if (lightCountChanged || !(options.temporalReprojection ?? true)) {
             resources.historyNeedsReset = true;
           }
@@ -1024,6 +1049,7 @@ export class RayTracingSceneRenderer {
         primitiveCapacity: resources.primitiveCapacity,
         leafCapacity: resources.leafCapacity,
         lightCount: resources.lightCount,
+        emitterCount: options.emitterSampling ? resources.emitterPrimitiveIndices.length : 0,
         directLightCount: lights.reduce(
           (directLightCount, light) => directLightCount + Number(light.type !== 'ambient'),
           0
@@ -1587,6 +1613,7 @@ export class RayTracingSceneRenderer {
       primitiveCapacity,
       leafCapacity,
       lightCount: scene.lightCount,
+      emitterPrimitiveIndices: scene.emitterPrimitiveIndices,
       triangleCount: scene.triangleCount
     };
   }
@@ -3416,9 +3443,9 @@ function getTransformRevision(options: RayTracingSceneRenderOptions): string {
 
 function getLightRevision(options: RayTracingSceneRenderOptions, lights: readonly Light[]): string {
   if (options.sceneRevisions) {
-    return `${options.sceneRevisions.identity}:${options.sceneRevisions.lights}`;
+    return `${options.sceneRevisions.identity}:${options.sceneRevisions.lights}:${options.emitterSampling ?? false}`;
   }
-  return JSON.stringify(lights);
+  return JSON.stringify([lights, options.emitterSampling]);
 }
 
 function getRenderRevision(
@@ -3427,7 +3454,9 @@ function getRenderRevision(
 ): string {
   // Primary-hit reprojection cannot validate view-dependent secondary reflections.
   // Keep ordinary diffuse camera reprojection, but reset reflective paths on camera changes.
-  const reflectiveTransport = options.transportMode === 'pbr' && (options.maxBounces ?? 0) > 0;
+  const reflectiveTransport =
+    options.transportMode === 'pbr' &&
+    ((options.maxBounces ?? 0) > 0 || options.emitterSampling === true);
   const cameraRevision =
     (options.temporalReprojection ?? true) && !reflectiveTransport
       ? undefined
@@ -3445,6 +3474,7 @@ function getRenderRevision(
     options.historySampleLimit,
     options.maxBounces,
     options.transportMode,
+    options.emitterSampling,
     options.progressive,
     options.shadows,
     options.temporalReprojection,
@@ -3561,6 +3591,8 @@ function makePrimitiveData(
       primitiveValues[primitiveOffset + 50] = geometryLayout?.blasInternalNodeCount ?? 0;
       primitiveValues[primitiveOffset + 51] = geometryLayout?.blasLeafCapacity ?? 0;
       primitiveValues.set(previousTransform, primitiveOffset + 52);
+      primitiveValues[primitiveOffset + 68] =
+        surface.material.alphaMode === 'MASK' ? (materialUniforms?.alphaCutoff ?? 0.5) : -1;
       nextPreviousTransforms.set(placementIdentifier, new Matrix4(transform));
       placements.set(instanceIds?.[transformIndex] ?? placementIdentifier, {
         surface,
@@ -3591,12 +3623,15 @@ function makePrimitiveData(
 function makeRayTracingScene(
   primitiveData: RayTracingPrimitiveData,
   triangles: Float32Array,
-  lights: readonly Light[]
+  lights: readonly Light[],
+  emitterSampling: boolean
 ): RayTracingScene {
+  const emitterPrimitiveIndices = getEmissivePrimitiveIndices(primitiveData.primitives);
   return {
     primitives: primitiveData.primitives,
     triangles,
-    lights: makeLightData(lights),
+    lights: makeLightData(lights, emitterSampling ? emitterPrimitiveIndices : []),
+    emitterPrimitiveIndices,
     primitiveCount: primitiveData.primitiveCount,
     lightCount: lights.length,
     triangleCount: primitiveData.triangleCount
@@ -3688,7 +3723,26 @@ function getGeometryBounds(geometry: Geometry): readonly [number, number, number
   return [center[0], center[1], center[2], Math.sqrt(radiusSquared) + 0.0001];
 }
 
-function makeLightData(lights: readonly Light[]): Float32Array {
+function getEmissivePrimitiveIndices(primitives: Float32Array): number[] {
+  const indices: number[] = [];
+  for (let offset = 0; offset < primitives.length; offset += PRIMITIVE_FLOAT_COUNT) {
+    const visible =
+      primitives[offset + 68] < 0 || primitives[offset + 35] >= primitives[offset + 68];
+    if (
+      visible &&
+      (primitives[offset + 41] > 0 || primitives[offset + 43] > 0) &&
+      Math.max(primitives[offset + 36], primitives[offset + 37], primitives[offset + 38]) > 0
+    ) {
+      indices.push(offset / PRIMITIVE_FLOAT_COUNT);
+    }
+  }
+  return indices;
+}
+
+function makeLightData(
+  lights: readonly Light[],
+  emitterPrimitiveIndices: readonly number[]
+): Float32Array {
   const values: number[] = [];
   for (const light of lights) {
     const color = light.color ?? [1, 1, 1];
@@ -3730,6 +3784,9 @@ function makeLightData(lights: readonly Light[]): Float32Array {
       outerCone
     );
   }
+  for (const primitiveIndex of emitterPrimitiveIndices) {
+    values.push(primitiveIndex, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0);
+  }
   return makeStorageData(values, LIGHT_FLOAT_COUNT);
 }
 
@@ -3754,6 +3811,7 @@ function makeUniformData(props: {
   leafCapacity: number;
   lightCount: number;
   directLightCount: number;
+  emitterCount: number;
   accumulatedFrameCount: number;
   frameIndex: number;
 }): Float32Array {
@@ -3791,6 +3849,8 @@ function makeUniformData(props: {
   data.set(props.previousViewProjection, 48);
   data.set(props.previousCameraPosition, 64);
   data[67] = (props.options.progressive ?? true) ? 1 : 0;
+  unsignedData[76] = props.emitterCount;
+  unsignedData[77] = Number(props.options.emitterSampling ?? false);
   unsignedData[71] = Number(props.options.transportMode === 'pbr');
   unsignedData[70] = getHistorySampleLimit(props.options);
   unsignedData[68] = props.options.samplingSeed ?? 0;
