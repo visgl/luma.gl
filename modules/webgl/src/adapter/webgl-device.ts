@@ -321,11 +321,13 @@ export class WebGLDevice extends Device {
   }
 
   createBuffer(props: BufferProps | ArrayBuffer | ArrayBufferView): WEBGLBuffer {
+    this._assertContextAvailable();
     const newProps = this._normalizeBufferProps(props);
     return new WEBGLBuffer(this, newProps);
   }
 
   createTexture(props: TextureProps): WEBGLTexture {
+    this._assertContextAvailable();
     return new WEBGLTexture(this, props);
   }
 
@@ -334,11 +336,20 @@ export class WebGLDevice extends Device {
   }
 
   createSampler(props: SamplerProps): WEBGLSampler {
+    this._assertContextAvailable();
     return new WEBGLSampler(this, props);
   }
 
   createShader(props: ShaderProps): WEBGLShader {
+    this._assertContextAvailable();
     return new WEBGLShader(this, props);
+  }
+
+  private _assertContextAvailable(): void {
+    // Reject allocation before resource constructors register an unusable resource.
+    if (this.gl.isContextLost()) {
+      throw new Error('WebGL context is lost');
+    }
   }
 
   createFramebuffer(props: FramebufferProps): WEBGLFramebuffer {
