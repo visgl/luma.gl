@@ -770,13 +770,18 @@ export class Model {
 
   /**
    * Set GPU parameters.
-   * @note Can trigger a pipeline rebuild / pipeline cache fetch.
+   * @note Can trigger a pipeline rebuild / pipeline cache fetch on WebGPU.
+   * On WebGL, parameters are applied at each draw call, so the pipeline is kept.
    * @param parameters
    */
   setParameters(parameters: RenderPipelineParameters) {
     if (!deepEqual(parameters, this.parameters, 2)) {
       this.parameters = parameters;
-      this._setPipelineNeedsUpdate('parameters');
+      if (this.device.type === 'webgl') {
+        this.setNeedsRedraw('parameters');
+      } else {
+        this._setPipelineNeedsUpdate('parameters');
+      }
     }
   }
 
