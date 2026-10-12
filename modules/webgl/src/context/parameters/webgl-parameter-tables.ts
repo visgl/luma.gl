@@ -398,6 +398,15 @@ export const GL_COMPOSITE_PARAMETER_SETTERS = {
 
 type UpdateFunc = (params: Record<string, any>) => void;
 
+/** Binding parameter tracked for each buffer target that is cached */
+const BUFFER_BINDING_PARAMETERS: Record<number, GL> = {
+  [GL.ARRAY_BUFFER]: GL.ARRAY_BUFFER_BINDING,
+  [GL.COPY_READ_BUFFER]: GL.COPY_READ_BUFFER_BINDING,
+  [GL.COPY_WRITE_BUFFER]: GL.COPY_WRITE_BUFFER_BINDING,
+  [GL.PIXEL_PACK_BUFFER]: GL.PIXEL_PACK_BUFFER_BINDING,
+  [GL.PIXEL_UNPACK_BUFFER]: GL.PIXEL_UNPACK_BUFFER_BINDING
+};
+
 // Setter functions intercepted for cache updates
 export const GL_HOOKED_SETTERS = {
   // GENERIC SETTERS
@@ -453,13 +462,7 @@ export const GL_HOOKED_SETTERS = {
     }
   },
   bindBuffer: (update: UpdateFunc, target, buffer) => {
-    const pname = {
-      [GL.ARRAY_BUFFER]: [GL.ARRAY_BUFFER_BINDING],
-      [GL.COPY_READ_BUFFER]: [GL.COPY_READ_BUFFER_BINDING],
-      [GL.COPY_WRITE_BUFFER]: [GL.COPY_WRITE_BUFFER_BINDING],
-      [GL.PIXEL_PACK_BUFFER]: [GL.PIXEL_PACK_BUFFER_BINDING],
-      [GL.PIXEL_UNPACK_BUFFER]: [GL.PIXEL_UNPACK_BUFFER_BINDING]
-    }[target];
+    const pname = BUFFER_BINDING_PARAMETERS[target];
 
     if (pname) {
       return update({[pname]: buffer});
