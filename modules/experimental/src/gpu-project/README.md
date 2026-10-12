@@ -229,10 +229,14 @@ const inverse = compileProjectionProgram(invertProjectionProgram(program), {
 ```
 
 Axis/unit/affine/adaptive intermediates use double-single arithmetic. `GPUProjectionProgram` and
-`GPUProjection` choose it per device: classic double-single on D3D12 and Vulkan, where it is
-known, and integer-controlled arithmetic on Metal, which may reassociate the classic error-free
-transforms, and whenever the backend cannot be established. Integer-controlled programs are much
-larger after inlining and can take minutes to compile on D3D12. Inputs
+`GPUProjection` choose its implementation per device. WebGL, Apple GPUs, software (CPU) adapters
+and fallback adapters keep integer-controlled arithmetic. Otherwise the reported backend decides:
+Metal, which may reassociate the classic error-free transforms, keeps integer-controlled
+arithmetic, and D3D11, D3D12 and Vulkan use classic double-single. Browsers rarely report the
+backend, so then the host operating system decides: a host known not to be Apple (Windows, Linux,
+Android, ChromeOS) uses classic double-single, and an Apple or unidentified host keeps
+integer-controlled arithmetic. Integer-controlled programs are much larger after inlining and can
+take minutes to compile on D3D12. Inputs
 can be `float32x2`, raw binary64 `uint32x4`, or absolute double-single `float32x4`. `double-single`
 output is `[xHigh, xLow, yHigh, yLow]`. For `local-f32`, the final result is translated by the
 program's binary64 `destinationOrigin` (default `[0, 0]`) before rounding to `float32x2`.

@@ -234,8 +234,9 @@ declaration order in the consumer's shader layout.
 
 The returned `modules` and `defines` select integer-controlled double-single arithmetic, which needs
 no uniforms and is correct on every backend. `GPUProjectionProgram` and `GPUProjection` instead
-choose classic double-single on D3D12 and Vulkan, where integer-controlled shaders are slow to
-compile. A consumer can opt into the same with `getShader({fp64Arithmetic: 'classic'})`, which
+choose classic double-single on a reported D3D11, D3D12 or Vulkan backend, and on a host known not
+to be Apple when the backend is not reported, because integer-controlled shaders are slow to compile
+on D3D12. A consumer can opt into the same with `getShader({fp64Arithmetic: 'classic'})`, which
 returns the full `fp64arithmetic` module and its workaround defines. The consumer must then bind
 the module's uniform block and upload its `ONE` and `SPLIT` values (for example with
 `computation.updateShaderInputs()`) before dispatching; with zero values the low limbs are lost.
