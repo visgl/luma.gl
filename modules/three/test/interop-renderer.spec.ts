@@ -96,8 +96,15 @@ test('shared luma compute buffer renders through upstream Three without vertex t
     await recreated.init();
     const recreatedScene = createComputeScene(device, recreated);
     recreated.setSize(96, 80, false);
+    // Headless SwiftShader does not support canvas swap-chain presentation.
+    target.setSize(96, 80);
+    recreated.setRenderTarget(target);
     recreatedScene.update(1);
     recreated.render(recreatedScene.scene, recreatedScene.camera);
+    const recreatedPixels = await recreated.readRenderTargetPixelsAsync(target, 0, 0, 96, 80);
+    // Upstream WebGPU readback can include 256-byte row padding.
+    expect(recreatedPixels.length).toBeGreaterThanOrEqual(96 * 80 * 4);
+    expect(new Set(recreatedPixels).size).toBeGreaterThan(5);
     recreatedScene.dispose();
     recreated.dispose();
     await nativeDevice.queue.onSubmittedWorkDone();

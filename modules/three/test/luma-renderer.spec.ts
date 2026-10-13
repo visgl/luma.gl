@@ -115,7 +115,8 @@ test('WebGPU: upstream TSL render parity, updates, compute and borrowed device l
     expect((await renderer.readRenderTargetPixelsAsync(target, 0, 0, 32, 48)).length).toBe(
       32 * 48 * 4
     );
-    renderer.setRenderTarget(null);
+    // SwiftShader headless runners cannot allocate onscreen swap-chain surfaces.
+    // Keep pixel/resize/recreation checks offscreen; live smoke tests cover presentation.
     renderer.setSize(80, 48, false);
     renderer.render(scene.scene, scene.camera);
     expect(canvas.width).toBe(80);
@@ -130,6 +131,7 @@ test('WebGPU: upstream TSL render parity, updates, compute and borrowed device l
     const recreated = new LumaRenderer({device});
     await recreated.init();
     recreated.setSize(32, 32, false);
+    recreated.setRenderTarget(target);
     recreated.render(scene.scene, scene.camera);
     recreated.dispose();
     await nativeDevice.queue.onSubmittedWorkDone();

@@ -66,7 +66,9 @@ The browser acceptance test compares an indexed, textured mesh against upstream
 Three.js at a fixed phase with a maximum per-channel difference of two bytes.
 It exercises TSL vertex displacement and uniform updates, depth occlusion,
 offscreen targets, canvas resize, compute storage-buffer writes, byte-range
-readback and disposal/recreation. It also spies on luma GPU entry points.
+readback and disposal/recreation. It also spies on luma GPU entry points. Headless parity fixtures use offscreen
+render targets: the CI SwiftShader runner cannot allocate onscreen swap-chain
+surfaces. Live example smoke checks exercise canvas presentation, resize and recreation.
 
 The glTF acceptance test loads the existing Khronos Lantern asset with its original
 `MeshStandardMaterial`, base-color, metallic/roughness, normal and emissive textures.
