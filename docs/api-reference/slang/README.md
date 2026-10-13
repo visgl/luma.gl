@@ -8,6 +8,16 @@ import {SlangShadersExample} from '@site/src/examples';
 
 # Slang
 
+**Status: Exploration**
+
+:::caution Exploratory and unconfirmed
+
+This module is still exploratory and unconfirmed. Its APIs, supported features,
+and integration approach may change. The examples and tests demonstrate selected
+scenarios; they do not establish general compatibility or production readiness.
+
+:::
+
 <DocumentationBadges>
   <DocumentationBadge tone="experimental">Experimental</DocumentationBadge>
   <DocumentationBadge tone="version">Since v10</DocumentationBadge>

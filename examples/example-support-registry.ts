@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import flowParticlesSupport from './deck/flow-particles/mobile-support';
+import threeSupport from './experimental/three/mobile-support';
 import sketchSupport from './deck/sketch-edges/mobile-support';
 import globeCloudsSupport from './deck/globe-clouds/mobile-support';
 import weatherSupport from './deck/weather/mobile-support';
@@ -170,6 +171,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'api/video-texture': support43,
   'api/render-bundles': support44,
   'integrations/external-context': support45,
+  'experimental/three': threeSupport,
   'integrations/react-strict-mode': support46,
   'tutorials/hello-triangle': support47,
   'tutorials/hello-triangle-geometry': support48,

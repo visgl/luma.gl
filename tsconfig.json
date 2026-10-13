@@ -79,6 +79,8 @@
       "@luma.gl/splats/*": ["./modules/splats/src/*"],
       "@luma.gl/splats/test/*": ["./modules/splats/test/*"],
       "@luma.gl/text": ["./modules/text/src/index.ts"],
+      "@luma.gl/three": ["./modules/three/src/index.ts"],
+      "@luma.gl/three/*": ["./modules/three/src/*"],
       "@luma.gl/text/*": ["./modules/text/src/*"],
       "@luma.gl/text/test/*": ["./modules/text/test/*"],
       "@luma.gl/test-utils": ["./modules/test-utils/src/index.ts"],

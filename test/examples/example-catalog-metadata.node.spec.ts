@@ -56,6 +56,16 @@ const LIVE_EXAMPLES = readLiveExamples();
 const requireCommonJSModule = createRequire(import.meta.url);
 
 describe('live example catalog metadata', () => {
+  test('keeps the private Three prototype in the experimental catalog with both backends', () => {
+    const example = LIVE_EXAMPLES.find(({id}) => id === 'experimental/three');
+    expect(example?.categories).toContain('Experimental');
+    expect(example?.metadata?.maturity).toBe('experimental');
+    expect(example?.metadata?.backends).toEqual(['webgpu', 'webgl2']);
+    const packageDefinition = JSON.parse(
+      readFileSync(path.join(process.cwd(), 'modules/three/package.json'), 'utf8')
+    );
+    expect(packageDefinition.private).toBe(true);
+  });
   test('discovers Triangle Geometry immediately after Hello Triangle with a real thumbnail', () => {
     const tutorialExamples = LIVE_EXAMPLES.filter(({categories}) => categories[0] === 'Tutorials');
     const helloTriangleIndex = tutorialExamples.findIndex(
@@ -119,7 +129,7 @@ describe('live example catalog metadata', () => {
   });
 
   test('provides complete, curated filters for every sidebar example', () => {
-    expect(LIVE_EXAMPLES).toHaveLength(104);
+    expect(LIVE_EXAMPLES).toHaveLength(105);
 
     for (const {id, metadata} of LIVE_EXAMPLES) {
       expect(metadata, `${id} requires sidebar_custom_props`).toBeDefined();
@@ -187,7 +197,7 @@ describe('live example catalog metadata', () => {
     expect(supportPolicy).not.toContain('website/src/examples');
     expect(supportRegistry).not.toMatch(/(?:import|export).*\/app['"]/);
 
-    expect(Object.keys(EXAMPLE_SUPPORT_REGISTRY)).toHaveLength(109);
+    expect(Object.keys(EXAMPLE_SUPPORT_REGISTRY)).toHaveLength(110);
     for (const example of LIVE_EXAMPLES) {
       expect(
         EXAMPLE_SUPPORT_REGISTRY[example.id],
@@ -200,7 +210,7 @@ describe('live example catalog metadata', () => {
     }
 
     const standaloneFiles = findStandaloneHtmlFiles(path.join(process.cwd(), 'examples'));
-    expect(standaloneFiles).toHaveLength(104);
+    expect(standaloneFiles).toHaveLength(105);
     for (const relativeFile of standaloneFiles) {
       const standaloneId = relativeFile.replace(/\/(?:index|playground)\.html$/, match =>
         match === '/index.html' ? '' : '/playground'

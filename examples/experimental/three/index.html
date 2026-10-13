@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Three.js through luma.gl</title>
+    <style>
+      body {font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 24px; color: #24303c; background: #f4f6f8;}
+      h1 {font-size: 24px; margin-bottom: 8px;}
+      p {line-height: 1.5;}
+      button, select, input {font: inherit;}
+      .controls {display: flex; flex-wrap: wrap; gap: 10px; align-items: center; max-width: 1068px; padding: 16px; background: #fff; border: 1px solid #e1e6eb; border-radius: 14px; box-shadow: 0 4px 18px #24303c08;}
+      .controls label {display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: #526170;}
+      .controls button, .controls select {min-height: 36px; padding: 7px 12px; border: 1px solid #dce3ea; border-radius: 8px; background: #f8fafc; color: #24303c; font-size: 13px; transition: background 120ms, border-color 120ms;}
+      .controls select {max-width: 100%; cursor: pointer;}
+      .controls button {cursor: pointer; font-weight: 500;}
+      .controls button:hover:not(:disabled), .controls select:hover:not(:disabled) {background: #eef4f9; border-color: #a6b9ca;}
+      .controls input {width: 15px; height: 15px; margin: 0; accent-color: #167a90; cursor: pointer;}
+      .controls :focus-visible {outline: 2px solid #167a90; outline-offset: 3px;}
+      .controls :disabled {opacity: 0.4; cursor: default;}
+      .controls label:has(:disabled) {color: #98a3ad;}
+      #status {max-width: 1100px; font-size: 13px; color: #526170;}
+      @media (max-width: 640px) {body {margin: 16px;} .controls {padding: 12px;} .controls label:has(select) {width: 100%;} .controls select {flex: 1; min-width: 0;} .comparison {grid-template-columns: minmax(0, 1fr);}}
+      .comparison {display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; max-width: 1100px;}
+      .comparison h2 {font-size: 18px; margin: 0 0 10px;}
+      canvas {display: block; width: 100%; height: auto; border-radius: 8px; touch-action: none;}
+      .attribution {font-size: 12px; color: #596773;}
+    </style>
+  </head>
+  <body>
+    <h1>Three.js through luma.gl</h1>
+    <p>The same scene on two devices, with synchronized orbit, pan and zoom controls.</p>
+    <div class="controls">
+      <label>Backend <select id="backend"><option value="webgpu">WebGPU</option><option value="webgl">WebGL2</option></select></label>
+      <label>Scene <select id="scene"><option value="gltf">Lantern glTF / PBR</option><option value="morph">Animated morph cube</option><option value="skin">Skinned robot</option><option value="instances">Animated instances</option><option value="materials">Physical material gallery</option><option value="transmission">Glass / transmission</option><option value="objects">Mixed Three / luma objects</option><option value="deck-lantern">Lantern courtyard inside deck.gl / PBR</option><option value="deck">Three meshes inside deck.gl</option><option value="interop">Shared buffer / luma compute</option><option value="tsl">TSL cube / compute</option></select></label>
+      <label><input id="lighting" type="checkbox" checked>Directional light</label>
+      <label><input id="environment" type="checkbox" checked>Environment</label>
+      <label><input id="shadows" type="checkbox" checked>Shadows</label>
+      <label><input id="deck-context" type="checkbox" checked disabled>Deck surroundings</label>
+      <button id="reverse-order">Reverse deck layer order</button><button id="pause">Pause deck animation</button>
+      <button id="resize">Change resolution</button><button id="recreate">Dispose and recreate</button>
+    </div>
+    <p id="status">Initializing…</p>
+    <div class="comparison">
+      <section><h2 id="luma-heading">luma.gl</h2><canvas id="luma-canvas" width="512" height="512"></canvas></section>
+      <section><h2 id="three-heading">Three.js</h2><canvas id="three-canvas" width="512" height="512"></canvas></section>
+    </div>
+    <p class="attribution">CC0 assets: Lantern by sbtron and Frank Galligan; Animated Morph Cube by Microsoft; Robot Expressive by Tomás Laulhé, facial morph targets and glTF conversion by Don McCurdy.</p>
+    <script type="module" src="./app.ts"></script>
+  </body>
+</html>
