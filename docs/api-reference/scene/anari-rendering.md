@@ -94,6 +94,50 @@ newRenderer(
 
 Omitting the subtype selects `default`.
 
+### Renderer feature comparison
+
+This table describes the built-in `@luma.gl/scene` runtimes. **Fallback** means that
+`deferred` renders the whole scene through the shared forward renderer when it cannot
+represent the scene in its G-buffer. It does not mean that the deferred lighting pass
+implements that feature. Registered custom renderers define their own support.
+
+| Feature | `default` | `deferred` | `raytrace` | `debugNormals` / `debugDepth` |
+| --- | --- | --- | --- | --- |
+| Backend | WebGPU, WebGL 2 | WebGPU | WebGPU compute; no hardware ray tracing | WebGPU, WebGL 2 |
+| Perspective and orthographic cameras | Yes | Yes | Yes | Yes |
+| Retained meshes and instancing | Yes | Yes | Triangle meshes; analytic spheres | Yes |
+| Matte and scalar metallic-roughness materials | Yes | Yes | Yes; diffuse or opaque GGX transport | Diagnostic output |
+| Material image maps | Canonical PBR maps and UV transforms | Base color, normal, metallic-roughness, emissive, occlusion; advanced materials use fallback | No | Shared raster surface inputs; diagnostic output |
+| Alpha masking | Scalar and texture alpha | Scalar and texture alpha | Scalar alpha only, including shadows and queries | Shared raster mask behavior |
+| Alpha blending | Yes; sorted forward draws | Fallback | No | Shared raster blend behavior |
+| Transmission and advanced PBR extensions | Yes; supported extensions and captured opaque-scene transmission | Fallback | No | Diagnostic output, not physical transport |
+| Skeletal skinning and morph targets | Yes | Yes through shared raster geometry | No | Yes through shared raster geometry |
+| Ambient, directional and point lights | Yes | Yes; one directional and up to 64 point lights, otherwise fallback | Yes | No lighting; normals or depth |
+| Spot lights | Yes | Fallback | Yes | No lighting |
+| Caller-provided image-based lighting | Yes | Fallback | No; background is not an environment light | No lighting |
+| Emissive surface appearance | Yes | Yes | Yes | Diagnostic output |
+| Emissive geometry illuminates other surfaces | No | No | Opt-in `emitterSampling`; also secondary emission gathering | No |
+| Ray-traced direct-light shadows | No | No | Yes | No |
+| Indirect diffuse and specular transport | No | No | Opt-in diffuse or opaque PBR bounces, up to 8; no MIS | No |
+| Progressive sampling and adaptive ray resolution | No | No | Yes | No |
+| Temporal antialiasing / history | Raster temporal AA on WebGPU | Raster temporal AA | Progressive history and primary-hit reprojection; indirect/PBR changes can reset history | No temporal AA |
+| Guided spatial denoising | No | No | Yes, optional | No |
+| Fog | Yes | Yes | Per-hit approximation | Diagnostic output |
+| Bloom | Yes, optional | Yes through shared scene runtime | No | Disabled |
+| HDR output | Compatible floating-point targets | Compatible floating-point targets | Compatible floating-point targets | Compatible targets; diagnostic values |
+| `frame.pick()` and `captureChannels()` | No | No, including fallback | Yes; output-resolution identity, distance, normals and projected depth | No |
+
+Backend availability does not guarantee every device, texture format, imported asset, or
+material extension is supported. The ray runtime exposes
+`getRayTracingSceneCapabilities(device)` from `@luma.gl/experimental` for implementation
+support; it does not report per-scene capacity or allocations. Frame query support belongs
+to the runtime that last rendered the frame.
+
+Progressive accumulation does not automatically stop rendering at the history sample limit.
+Applications control scheduling. The Chart Lighting playground demonstrates bounded idle
+refinement and stopping at the limit; it retains half resolution rather than automatically
+switching to full resolution when idle.
+
 ### Renderer parameters
 
 ```ts
@@ -170,7 +214,7 @@ const renderer = anariDevice.newRenderer('deferred', {
 });
 ```
 
-`deferred` is a WebGPU-only alternate renderer that writes committed ANARI surfaces into a shared `GBuffer`, then resolves opaque PBR lighting with the experimental `deferredLighting` shader pass. It currently supports base color, normal, metallic-roughness, emissive, and occlusion maps, plus ambient, directional, point, and spot lights. Spot lights are mapped onto deferred point lights in this first implementation.
+`deferred` is a WebGPU-only alternate renderer that writes committed ANARI surfaces into a shared `GBuffer`, then resolves opaque PBR lighting with the experimental `deferredLighting` shader pass. It currently supports base color, normal, metallic-roughness, emissive, and occlusion maps, plus ambient, directional, point, and spot lights. Scenes containing spot lights use the shared forward fallback so their cone attenuation is preserved.
 
 Its compact G-buffer uses four color attachments: HDR scene color (`rgba16float`), normal and
 roughness (`rgba8unorm`), base color and metallic (`rgba8unorm`), and HDR emissive color with
@@ -234,12 +278,12 @@ build graph.
 The Morton-sorted TLAS accelerates object and instance selection, while intersected meshes traverse
 GPU-built Morton-sorted triangle BLASes. Hardware ray tracing and SAH/Karras hierarchy topology are
 not implemented. Skeletal skinning, morph-target displacement, material textures, alpha blending/
-transmission, and advanced PBR material extensions remain on the forward/deferred renderer paths.
+transmission, and advanced PBR material extensions require raster rendering; deferred uses its forward fallback for unsupported materials.
 Diffuse secondary transport is opt-in through `maxBounces` (0–8). Each bounce samples a
 cosine-weighted hemisphere and gathers emission and existing direct lighting at the next hit,
 so matte surfaces receive color bleeding and emissive illumination. The scalar diffuse
-throughput is base color × 0.96 × (1 − metallic); reflective and transmissive paths are not
-sampled. Misses contribute no indirect radiance: `background` is a display color, not an
+throughput in `transportMode: 'diffuse'` is base color × 0.96 × (1 − metallic).
+`transportMode: 'pbr'` additionally samples opaque GGX reflection; transmission is not sampled. Misses contribute no indirect radiance: `background` is a display color, not an
 environment light. Ambient lights and fog retain the existing per-hit approximations.
 
 `samplingSeed` controls primary and diffuse paths. Pixel, frame, sample, and bounce indices

@@ -164,16 +164,6 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
         const seed = Number(parameters.get('seed') ?? sceneDescription.renderer.samplingSeed ?? 0);
         if (Number.isInteger(seed) && seed >= 0 && seed <= 0xffffffff)
           sceneDescription.renderer.samplingSeed = seed;
-        if (
-          preset === 'chart-lighting' &&
-          !parameters.has('captureFrames') &&
-          parameters.get('quality') !== 'still'
-        )
-          Object.assign(sceneDescription.renderer, getRayTracingQualityPreset('interactive'), {
-            adaptiveResolution: false,
-            historySampleLimit: parameters.has('history') ? historySampleLimit : 256,
-            denoiseRadius: parameters.has('denoise') ? denoiseRadius : 2
-          });
         if (parameters.get('quality') === 'still')
           Object.assign(sceneDescription.renderer, getRayTracingQualityPreset('still'));
       }
@@ -226,7 +216,8 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
         width,
         height,
         this.editor.value,
-        this.selectedPlacementId
+        this.selectedPlacementId,
+        this.temporalAntialiasingEnabled
       ]);
       if (this.refinementScene !== scene || this.refinementSignature !== signature) {
         this.refinementScene = scene;
@@ -654,7 +645,25 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     const preset = PLAYGROUND_PRESETS[presetIndex];
     this.activePresetIndex = presetIndex;
     getRequiredElement('usd-scene-selector', HTMLSelectElement).value = '';
-    this.editor.value = formatSceneJSON(preset.scene);
+    const parameters = new URLSearchParams(window.location.search);
+    const sceneDescription: ANARIJSONScene = {
+      ...preset.scene,
+      renderer: preset.scene.renderer ? {...preset.scene.renderer} : undefined
+    };
+    if (
+      presetIndex === 8 &&
+      !parameters.has('captureFrames') &&
+      parameters.get('quality') !== 'still'
+    ) {
+      sceneDescription.renderer = {
+        ...makePlaygroundRenderer(preset.scene.renderer, 'raytrace'),
+        ...getRayTracingQualityPreset('interactive'),
+        adaptiveResolution: false,
+        historySampleLimit: 256,
+        denoiseRadius: 2
+      };
+    }
+    this.editor.value = formatSceneJSON(sceneDescription);
     this.updateEditorMetadata();
     for (const button of document.querySelectorAll<HTMLButtonElement>('[data-preset]')) {
       button.classList.toggle('active', button.dataset['preset'] === String(presetIndex));
