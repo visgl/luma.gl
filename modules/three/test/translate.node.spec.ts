@@ -273,6 +273,14 @@ test('interleaved attributes share readback and release their source buffer once
   backend.updateAttribute(position);
   expect(resources[0].write).toHaveBeenCalledWith(data.array);
   backend.destroyAttribute(normal);
+  backend.destroyAttribute(normal);
+  expect(resources[0].destroy).not.toHaveBeenCalled();
+  data.array[0] = 8;
+  backend.updateAttribute(position);
+  expect(Array.from(new Float32Array(await backend.getArrayBufferAsync(position)))).toEqual(
+    Array.from(data.array)
+  );
+  backend.createAttribute(position);
   backend.destroyAttribute(position);
   expect(backend.has(data)).toBe(false);
   expect(resources[0].destroy).toHaveBeenCalledTimes(1);

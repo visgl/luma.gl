@@ -211,8 +211,10 @@ export class LumaBackend extends Backend {
     if (state.buffer) {
       if ((state.buffer.usage & usage) !== usage)
         throw new Error('LumaBackend: attribute buffer usage cannot change');
+      state.attributes.add(attribute);
       return;
     }
+    state.attributes = new Set([attribute]);
     const array = source.array;
     state.buffer = this.own(
       this.device.createBuffer({
@@ -252,7 +254,10 @@ export class LumaBackend extends Backend {
   }
   destroyAttribute(attribute: ThreeInternal): void {
     const source = this.getAttributeSource(attribute);
-    this.release(this.get(source).buffer);
+    if (!this.has(source)) return;
+    const state = this.get(source);
+    if (!state.attributes.delete(attribute) || state.attributes.size) return;
+    this.release(state.buffer);
     this.delete(source);
   }
   createUniformBuffer(binding: ThreeInternal): void {
