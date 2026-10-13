@@ -1,15 +1,34 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Matrix4} from '@math.gl/core';
+import {Matrix4, type NumericArray} from '@math.gl/core';
+import type {SceneSurface} from './scene-renderer';
 import type {RayTracingSceneRenderOptions} from './ray-tracing-scene-renderer';
+
+export type EmitterAreaCache = Map<
+  string,
+  {
+    geometry: SceneSurface['geometry'];
+    geometryVersion: number | undefined;
+    positions: ArrayLike<number> | undefined;
+    indices: ArrayLike<number> | undefined;
+    transform: number[];
+    sphereRadius: number;
+    area: number;
+  }
+>;
 
 /** Selection probabilities only; the shader retains the exact conditional surface PDF. */
 export function makeEmitterDistribution(
   indices: readonly number[],
-  options?: Pick<RayTracingSceneRenderOptions, 'surfaces' | 'primitives' | 'emitterSelection'>
+  options?: Pick<RayTracingSceneRenderOptions, 'surfaces' | 'primitives' | 'emitterSelection'>,
+  areaCache: EmitterAreaCache = new Map()
 ): {probability: number; cumulative: number}[] {
-  if (!indices.length) return [];
+  if (!indices.length) {
+    areaCache.clear();
+    return [];
+  }
+  const activeKeys = new Set<string>();
   const weights = new Map<number, number>();
   if (options?.emitterSelection === 'power') {
     let primitiveIndex = 0;
@@ -21,58 +40,25 @@ export function makeEmitterDistribution(
         0,
         (emission[0] * 0.2126 + emission[1] * 0.7152 + emission[2] * 0.0722) * strength
       );
-      for (const transform of surface.transforms) {
+      for (const [transformIndex, transform] of surface.transforms.entries()) {
         if (emitters.has(primitiveIndex)) {
           const primitive = options.primitives?.[surface.id];
-          let area = 0;
-          if (primitive?.type === 'sphere') {
-            // Six-point quadrature is a power proxy for affine spheres, not the surface PDF.
-            // The sampled local-normal Jacobian in the shader remains exact.
-            const inverse = new Matrix4(transform).invert();
-            const determinant = Math.abs(new Matrix4(transform).determinant());
-            const normalLengths = [0, 1, 2].map(axis =>
-              Math.hypot(inverse[axis], inverse[axis + 4], inverse[axis + 8])
-            );
-            area =
-              (4 *
-                Math.PI *
-                primitive.radius ** 2 *
-                determinant *
-                (normalLengths[0] + normalLengths[1] + normalLengths[2])) /
-              3;
-          } else {
-            const positions = surface.geometry.attributes['POSITION']?.value;
-            const triangleIndices = surface.geometry.indices?.value;
-            if (positions) {
-              const count = triangleIndices?.length ?? positions.length / 3;
-              const matrix = new Matrix4(transform);
-              for (let triangle = 0; triangle + 2 < count; triangle += 3) {
-                const vertices = [0, 1, 2].map(vertex => {
-                  const positionIndex =
-                    (triangleIndices?.[triangle + vertex] ?? triangle + vertex) * 3;
-                  return matrix.transformAsPoint([
-                    positions[positionIndex],
-                    positions[positionIndex + 1],
-                    positions[positionIndex + 2]
-                  ]);
-                });
-                const firstEdge = vertices[1].map((value, axis) => value - vertices[0][axis]);
-                const secondEdge = vertices[2].map((value, axis) => value - vertices[0][axis]);
-                area +=
-                  Math.hypot(
-                    firstEdge[1] * secondEdge[2] - firstEdge[2] * secondEdge[1],
-                    firstEdge[2] * secondEdge[0] - firstEdge[0] * secondEdge[2],
-                    firstEdge[0] * secondEdge[1] - firstEdge[1] * secondEdge[0]
-                  ) / 2;
-              }
-            }
-          }
+          const key = `${surface.id}:${transformIndex}`;
+          activeKeys.add(key);
+          const area = getEmitterArea(
+            surface,
+            transform,
+            primitive?.type === 'sphere' ? primitive.radius : 0,
+            key,
+            areaCache
+          );
           weights.set(primitiveIndex, Number.isFinite(area * luminance) ? area * luminance : 0);
         }
         primitiveIndex++;
       }
     }
   }
+  for (const key of areaCache.keys()) if (!activeKeys.has(key)) areaCache.delete(key);
   const maximumWeight = indices.reduce(
     (maximum, index) => Math.max(maximum, weights.get(index) ?? 0),
     0
@@ -94,4 +80,78 @@ export function makeEmitterDistribution(
     previousCumulative = uploadedCumulative;
     return {probability: uploadedProbability, cumulative: uploadedCumulative};
   });
+}
+
+function getEmitterArea(
+  surface: SceneSurface,
+  transform: Readonly<NumericArray>,
+  sphereRadius: number,
+  key: string,
+  cache: EmitterAreaCache
+): number {
+  const positions = surface.geometry.attributes['POSITION']?.value;
+  const indices = surface.geometry.indices?.value;
+  const previous = cache.get(key);
+  if (
+    previous &&
+    previous.geometry === surface.geometry &&
+    previous.geometryVersion === surface.geometryVersion &&
+    previous.positions === positions &&
+    previous.indices === indices &&
+    previous.sphereRadius === sphereRadius &&
+    previous.transform.every((value, index) => value === transform[index])
+  )
+    return previous.area;
+  let area = 0;
+  if (sphereRadius > 0) {
+    // Six-direction quadrature is a power proxy, not the conditional surface PDF.
+    const matrix = new Matrix4(transform);
+    const inverse = matrix.clone().invert();
+    const normalLength =
+      Math.hypot(inverse[0], inverse[4], inverse[8]) +
+      Math.hypot(inverse[1], inverse[5], inverse[9]) +
+      Math.hypot(inverse[2], inverse[6], inverse[10]);
+    area = (4 * Math.PI * sphereRadius ** 2 * Math.abs(matrix.determinant()) * normalLength) / 3;
+  } else if (positions) {
+    const count = indices?.length ?? positions.length / 3;
+    for (let triangleIndex = 0; triangleIndex + 2 < count; triangleIndex += 3) {
+      const firstIndex = (indices?.[triangleIndex] ?? triangleIndex) * 3;
+      const secondIndex = (indices?.[triangleIndex + 1] ?? triangleIndex + 1) * 3;
+      const thirdIndex = (indices?.[triangleIndex + 2] ?? triangleIndex + 2) * 3;
+      const firstEdgeX = positions[secondIndex] - positions[firstIndex];
+      const firstEdgeY = positions[secondIndex + 1] - positions[firstIndex + 1];
+      const firstEdgeZ = positions[secondIndex + 2] - positions[firstIndex + 2];
+      const secondEdgeX = positions[thirdIndex] - positions[firstIndex];
+      const secondEdgeY = positions[thirdIndex + 1] - positions[firstIndex + 1];
+      const secondEdgeZ = positions[thirdIndex + 2] - positions[firstIndex + 2];
+      const firstWorldX =
+        transform[0] * firstEdgeX + transform[4] * firstEdgeY + transform[8] * firstEdgeZ;
+      const firstWorldY =
+        transform[1] * firstEdgeX + transform[5] * firstEdgeY + transform[9] * firstEdgeZ;
+      const firstWorldZ =
+        transform[2] * firstEdgeX + transform[6] * firstEdgeY + transform[10] * firstEdgeZ;
+      const secondWorldX =
+        transform[0] * secondEdgeX + transform[4] * secondEdgeY + transform[8] * secondEdgeZ;
+      const secondWorldY =
+        transform[1] * secondEdgeX + transform[5] * secondEdgeY + transform[9] * secondEdgeZ;
+      const secondWorldZ =
+        transform[2] * secondEdgeX + transform[6] * secondEdgeY + transform[10] * secondEdgeZ;
+      area +=
+        Math.hypot(
+          firstWorldY * secondWorldZ - firstWorldZ * secondWorldY,
+          firstWorldZ * secondWorldX - firstWorldX * secondWorldZ,
+          firstWorldX * secondWorldY - firstWorldY * secondWorldX
+        ) / 2;
+    }
+  }
+  cache.set(key, {
+    geometry: surface.geometry,
+    geometryVersion: surface.geometryVersion,
+    positions,
+    indices,
+    transform: Array.from(transform),
+    sphereRadius,
+    area
+  });
+  return area;
 }

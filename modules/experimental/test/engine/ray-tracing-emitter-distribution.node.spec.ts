@@ -4,7 +4,10 @@
 import {Geometry} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
 import {expect, it} from 'vitest';
-import {makeEmitterDistribution} from '../../src/engine/ray-tracing-emitter-distribution';
+import {
+  makeEmitterDistribution,
+  type EmitterAreaCache
+} from '../../src/engine/ray-tracing-emitter-distribution';
 import type {SceneSurface} from '../../src/engine/scene-renderer';
 
 const geometry = new Geometry({
@@ -94,4 +97,60 @@ it('keeps large float32 CDFs monotone and probabilities equal to uploaded interv
     previous = entry.cumulative;
   }
   expect(previous).toBe(1);
+});
+
+it('protects dim intervals near one in a concentrated power distribution', () => {
+  const transforms = Array.from({length: 100000}, (_, index) =>
+    index === 0 ? new Matrix4().scale(100000) : new Matrix4()
+  );
+  const distribution = makeEmitterDistribution(
+    transforms.map((_, index) => index),
+    {surfaces: [{...surface, transforms}], emitterSelection: 'power'}
+  );
+  expect(distribution[0].probability).toBeGreaterThan(0.95);
+  let previous = 0;
+  for (const entry of distribution) {
+    expect(entry.probability).toBeGreaterThan(0);
+    expect(entry.probability).toBe(entry.cumulative - previous);
+    expect(entry.cumulative).toBeLessThanOrEqual(1);
+    previous = entry.cumulative;
+  }
+  expect(previous).toBe(1);
+});
+
+it('reuses areas for unchanged emitters, invalidates geometry/transforms and prunes removed placements', () => {
+  const cache: EmitterAreaCache = new Map();
+  const settings = {surfaces: [surface], emitterSelection: 'power' as const};
+  makeEmitterDistribution([0, 1], settings, cache);
+  const original = cache.get('light:0');
+  makeEmitterDistribution(
+    [0, 1],
+    {
+      ...settings,
+      surfaces: [{...surface, material: {id: 'changed', uniforms: {emissiveFactor: [2, 1, 1]}}}]
+    },
+    cache
+  );
+  expect(cache.get('light:0')).toBe(original);
+  makeEmitterDistribution(
+    [0, 1],
+    {
+      ...settings,
+      surfaces: [{...surface, transforms: [new Matrix4().scale(2), surface.transforms[1]]}]
+    },
+    cache
+  );
+  expect(cache.get('light:0')).not.toBe(original);
+  expect(cache.get('light:0')?.area).toBe(2);
+  const transformed = cache.get('light:0');
+  makeEmitterDistribution(
+    [0, 1],
+    {...settings, surfaces: [{...surface, geometryVersion: 1}]},
+    cache
+  );
+  expect(cache.get('light:0')).not.toBe(transformed);
+  makeEmitterDistribution([1], settings, cache);
+  expect(cache.has('light:0')).toBe(false);
+  makeEmitterDistribution([], settings, cache);
+  expect(cache.size).toBe(0);
 });

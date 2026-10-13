@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {makeEmitterDistribution} from './ray-tracing-emitter-distribution';
+import {makeEmitterDistribution, type EmitterAreaCache} from './ray-tracing-emitter-distribution';
 import type {RayTracingDebugView} from './ray-tracing-scene-capabilities';
 import {
   assert,
@@ -702,6 +702,7 @@ type RayTracingStatistics = {
 export class RayTracingSceneRenderer {
   private readonly device: Device;
   private readonly frames = new Map<string, RayTracingFrameResources>();
+  private readonly emitterAreaCaches = new Map<string, EmitterAreaCache>();
   private readonly geometryCache = new Map<string, CompiledRayGeometry>();
   private pickComputation?: Computation;
   private channelComputation?: Computation;
@@ -771,7 +772,8 @@ export class RayTracingSceneRenderer {
         topology.triangles,
         lights,
         options.emitterSampling ?? false,
-        options
+        options,
+        this.getEmitterAreaCache(options.id)
       );
       resources = this.createFrameResources({
         frameIdentifier: options.id,
@@ -859,7 +861,8 @@ export class RayTracingSceneRenderer {
         lightData = makeLightData(
           lights,
           options.emitterSampling ? emitterPrimitiveIndices : [],
-          options
+          options,
+          this.getEmitterAreaCache(options.id)
         );
       }
 
@@ -886,7 +889,8 @@ export class RayTracingSceneRenderer {
           topology.triangles,
           lights,
           options.emitterSampling ?? false,
-          options
+          options,
+          this.getEmitterAreaCache(options.id)
         );
         const previousTransformsNeedCommit =
           resources.previousTransformsNeedCommit || transformChanged;
@@ -1359,7 +1363,17 @@ export class RayTracingSceneRenderer {
     }
   }
 
+  private getEmitterAreaCache(frameIdentifier: string): EmitterAreaCache {
+    let cache = this.emitterAreaCaches.get(frameIdentifier);
+    if (!cache) {
+      cache = new Map();
+      this.emitterAreaCaches.set(frameIdentifier, cache);
+    }
+    return cache;
+  }
+
   destroyFrame(frameIdentifier: string): void {
+    this.emitterAreaCaches.delete(frameIdentifier);
     const resources = this.frames.get(frameIdentifier);
     if (!resources) {
       return;
@@ -1390,6 +1404,7 @@ export class RayTracingSceneRenderer {
     for (const frameIdentifier of Array.from(this.frames.keys())) {
       this.destroyFrame(frameIdentifier);
     }
+    this.emitterAreaCaches.clear();
     this.pickComputation?.destroy();
     this.pickComputation = undefined;
     this.channelComputation?.destroy();
@@ -3632,13 +3647,19 @@ function makeRayTracingScene(
   triangles: Float32Array,
   lights: readonly Light[],
   emitterSampling: boolean,
-  options: RayTracingSceneRenderOptions
+  options: RayTracingSceneRenderOptions,
+  areaCache: EmitterAreaCache
 ): RayTracingScene {
   const emitterPrimitiveIndices = getEmissivePrimitiveIndices(primitiveData.primitives);
   return {
     primitives: primitiveData.primitives,
     triangles,
-    lights: makeLightData(lights, emitterSampling ? emitterPrimitiveIndices : [], options),
+    lights: makeLightData(
+      lights,
+      emitterSampling ? emitterPrimitiveIndices : [],
+      options,
+      areaCache
+    ),
     emitterPrimitiveIndices,
     primitiveCount: primitiveData.primitiveCount,
     lightCount: lights.length,
@@ -3750,7 +3771,8 @@ function getEmissivePrimitiveIndices(primitives: Float32Array): number[] {
 function makeLightData(
   lights: readonly Light[],
   emitterPrimitiveIndices: readonly number[],
-  options: RayTracingSceneRenderOptions
+  options: RayTracingSceneRenderOptions,
+  areaCache: EmitterAreaCache
 ): Float32Array {
   const values: number[] = [];
   for (const light of lights) {
@@ -3793,7 +3815,7 @@ function makeLightData(
       outerCone
     );
   }
-  const distribution = makeEmitterDistribution(emitterPrimitiveIndices, options);
+  const distribution = makeEmitterDistribution(emitterPrimitiveIndices, options, areaCache);
   for (const [index, primitiveIndex] of emitterPrimitiveIndices.entries()) {
     values.push(
       primitiveIndex,
