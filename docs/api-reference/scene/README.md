@@ -148,6 +148,9 @@ Query the actual subtype list with `anariDevice.getObjectSubtypes(type)` instead
 
 ## Compatibility
 
+For support by renderer subtype, including deferred forward fallback and ray-tracing limitations,
+see the [renderer feature comparison](/docs/api-reference/scene/anari-rendering#renderer-feature-comparison).
+
 | Capability | WebGPU | WebGL 2 |
 | --- | --- | --- |
 | Retained scene objects and instanced surfaces | Supported | Supported |
