@@ -115,7 +115,7 @@ async function recreate() {
   const useWebGL = backendSelection.value === 'webgl';
   if (useWebGL && ['objects', 'interop', 'deck', 'deck-lantern'].includes(sceneSelection.value))
     sceneSelection.value = 'gltf';
-  for (const sceneKind of ['objects', 'interop', 'deck'])
+  for (const sceneKind of ['objects', 'interop', 'deck', 'deck-lantern'])
     sceneSelection.querySelector<HTMLOptionElement>(`option[value="${sceneKind}"]`)!.disabled =
       useWebGL;
   sceneSelection.disabled = true;
@@ -249,8 +249,10 @@ async function recreate() {
     backendSelection.disabled = false;
     for (const button of document.querySelectorAll('button')) button.disabled = false;
     for (const selector of ['#reverse-order', '#pause'])
-      document.querySelector<HTMLButtonElement>(selector)!.disabled =
-        sceneSelection.value !== 'deck';
+      document.querySelector<HTMLButtonElement>(selector)!.disabled = ![
+        'deck',
+        'deck-lantern'
+      ].includes(sceneSelection.value);
   }
 }
 sceneSelection.addEventListener('change', () => void recreate());
