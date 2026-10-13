@@ -149,6 +149,8 @@ type ANARIRendererParameters = {
   outputColorSpace?: 'linear' | 'srgb';
   samplesPerPixel?: number;
   maxBounces?: number;
+  emitterSampling?: boolean;
+  emitterSelection?: 'uniform' | 'power';
   progressive?: boolean;
   shadows?: boolean;
   resolutionScale?: number;
@@ -174,6 +176,8 @@ type ANARIRendererParameters = {
 | `outputColorSpace` | Target-dependent | Explicitly selects `'linear'` or `'srgb'` output. Floating-point and hardware-sRGB targets default to linear output; other normalized targets default to software sRGB encoding. |
 | `samplesPerPixel` | `1` | Primary-ray samples per frame in the `raytrace` renderer. |
 | `maxBounces` | `0` | Secondary diffuse bounce budget, clamped to 0–8. Zero preserves direct lighting. Changing it resets accumulation. |
+| `emitterSampling` | `false` | Sample emissive geometry with direct shadow-tested connections. |
+| `emitterSelection` | `'uniform'` | Select emitters uniformly or by `'power'` (area × luminance), with PDF compensation. |
 | `progressive` | `true` | Accumulate ray-traced samples across unchanged frames. |
 | `shadows` | `true` | Trace hard shadow rays toward direct lights in the `raytrace` renderer. |
 | `resolutionScale` | `0.5` | Initial ray-tracing width and height as a fraction of the display resolution. |

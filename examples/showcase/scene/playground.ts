@@ -131,14 +131,6 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
         const emitterSelection = parameters.get('emitterSelection');
         if (emitterSelection === 'uniform' || emitterSelection === 'power')
           sceneDescription.renderer.emitterSelection = emitterSelection;
-        const resolutionScale = Number(parameters.get('resolution'));
-        if ([0.25, 0.5, 0.75, 1].includes(resolutionScale)) {
-          Object.assign(sceneDescription.renderer, {
-            resolutionScale,
-            minimumResolutionScale: resolutionScale,
-            adaptiveResolution: false
-          });
-        }
         const transportMode = parameters.get('transport');
         if (transportMode === 'diffuse' || transportMode === 'pbr')
           sceneDescription.renderer.transportMode = transportMode;
@@ -181,6 +173,14 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
           sceneDescription.renderer.samplingSeed = seed;
         if (parameters.get('quality') === 'still')
           Object.assign(sceneDescription.renderer, getRayTracingQualityPreset('still'));
+        const resolutionScale = Number(parameters.get('resolution'));
+        if ([0.25, 0.5, 0.75, 1].includes(resolutionScale)) {
+          Object.assign(sceneDescription.renderer, {
+            resolutionScale,
+            minimumResolutionScale: resolutionScale,
+            adaptiveResolution: false
+          });
+        }
       }
       const frameLimit = Number(parameters.get('captureFrames') ?? 0);
       if (Number.isInteger(frameLimit) && frameLimit > 0 && frameLimit <= 256)

@@ -27,6 +27,8 @@ const {values} = parseArgs({options: {
   lighting: {type: 'boolean', default: false},
   transport: {type: 'string'},
   emitters: {type: 'string'},
+  'emitter-selection': {type: 'string'},
+  resolution: {type: 'string'},
   bounces: {type: 'string'},
   'software-gpu': {type: 'boolean', default: false}
 }});
@@ -39,6 +41,9 @@ if (values.bounces !== undefined && (!Number.isInteger(Number(values.bounces)) |
 if (values.renderer !== 'raytrace' && (values.transport !== undefined || values.bounces !== undefined)) throw new Error('Transport overrides require raytrace');
 if (values.emitters !== undefined && !['on', 'off'].includes(values.emitters)) throw new Error('emitters must be on or off');
 if (values.renderer !== 'raytrace' && values.emitters !== undefined) throw new Error('Emitter overrides require raytrace');
+if (values['emitter-selection'] !== undefined && !['uniform', 'power'].includes(values['emitter-selection'])) throw new Error('emitter-selection must be uniform or power');
+if (values.resolution !== undefined && ![0.25, 0.5, 0.75, 1].includes(Number(values.resolution))) throw new Error('resolution must be 0.25, 0.5, 0.75 or 1');
+if (values.renderer !== 'raytrace' && (values['emitter-selection'] !== undefined || values.resolution !== undefined)) throw new Error('Ray quality overrides require raytrace');
 const denoise = Number(values.denoise);
 const history = Number(values.history);
 if (![0, 1, 2].includes(denoise)) throw new Error('denoise must be 0, 1 or 2');
@@ -61,6 +66,8 @@ url.searchParams.set('history', String(history));
 url.searchParams.set('view', values.view);
 if (values.transport !== undefined) url.searchParams.set('transport', values.transport);
 if (values.emitters !== undefined) url.searchParams.set('emitters', values.emitters);
+if (values['emitter-selection'] !== undefined) url.searchParams.set('emitterSelection', values['emitter-selection']);
+if (values.resolution !== undefined) url.searchParams.set('resolution', values.resolution);
 if (values.bounces !== undefined) url.searchParams.set('bounces', values.bounces);
 url.searchParams.set('captureFrames', String(frames));
 url.searchParams.set('editor', 'hidden');

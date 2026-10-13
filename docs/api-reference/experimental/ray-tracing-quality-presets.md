@@ -196,7 +196,8 @@ uniform selection. Triangles within a selected mesh remain uniformly selected.
 Power selection can reduce variance for uneven emitter powers, but does not account for
 receiver distance or visibility and is not MIS. It does not guarantee faster convergence
 for every scene. Selection changes reset history. Changed emitter transforms/materials
-rebuild the distribution without adding storage buffers.
+rebuild the distribution without adding storage buffers. Unchanged emitter areas are cached,
+so moving non-emissive objects does not repeat mesh-area traversal.
 
 Emitter records share the existing light buffer, preserving the CORE eight
 storage-buffer traversal contract. Material, emitter visibility, emitter
@@ -232,3 +233,8 @@ so stationary refinement keeps a stable pixel grid. **Ray quality** can replace
 this explicit choice with the interactive or still preset. **Emitter selection**
 compares uniform and power sampling. The live Chart Lighting preset uses power
 selection; explicit frame captures retain the authored uniform default.
+
+Validated URL overrides accept `renderer=deferred`, `resolution=0.25` and
+`emitterSelection=power`. The capture harness accepts `--emitter-selection uniform|power`
+and `--resolution 0.25|0.5|0.75|1`; an explicit resolution overrides the still preset.
+Preserve seed, sample count, transport and exposure when comparing distributions.
