@@ -55,6 +55,11 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
   private pointerStart: {x: number; y: number} | null = null;
   private animationScrubbing = false;
   private editorCollapsed = false;
+  private refinementScene: ANARIJSONSceneHandle | null = null;
+  private refinementSignature = '';
+  private refinementChangedTime = 0;
+  private refinementRenderTime = 0;
+  private refinementSamples = 0;
 
   constructor({device}: AnimationProps) {
     super();
@@ -159,6 +164,16 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
         const seed = Number(parameters.get('seed') ?? sceneDescription.renderer.samplingSeed ?? 0);
         if (Number.isInteger(seed) && seed >= 0 && seed <= 0xffffffff)
           sceneDescription.renderer.samplingSeed = seed;
+        if (
+          preset === 'chart-lighting' &&
+          !parameters.has('captureFrames') &&
+          parameters.get('quality') !== 'still'
+        )
+          Object.assign(sceneDescription.renderer, getRayTracingQualityPreset('interactive'), {
+            adaptiveResolution: false,
+            historySampleLimit: parameters.has('history') ? historySampleLimit : 256,
+            denoiseRadius: parameters.has('denoise') ? denoiseRadius : 2
+          });
         if (parameters.get('quality') === 'still')
           Object.assign(sceneDescription.renderer, getRayTracingQualityPreset('still'));
       }
@@ -199,7 +214,42 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     ];
     scene.frame.getParameter('camera')?.setParameters({position, direction}).commitParameters();
 
+    // Bound stationary refinement in the static lighting demonstration.
+    if (
+      scene.name === 'CHART LIGHTING' &&
+      this.rendererSubtype === 'raytrace' &&
+      !this.captureFrameLimit
+    ) {
+      const signature = JSON.stringify([
+        position,
+        direction,
+        width,
+        height,
+        this.editor.value,
+        this.selectedPlacementId
+      ]);
+      if (this.refinementScene !== scene || this.refinementSignature !== signature) {
+        this.refinementScene = scene;
+        this.refinementSignature = signature;
+        this.refinementChangedTime = time;
+        this.refinementSamples = 0;
+      }
+      const renderer = scene.frame.getParameter('renderer');
+      const historyLimit = renderer?.getParameter('historySampleLimit') ?? 64;
+      const stationary = time - this.refinementChangedTime > 250;
+      if (
+        stationary &&
+        (this.refinementSamples >= historyLimit || time - this.refinementRenderTime < 250)
+      )
+        return;
+      this.refinementRenderTime = time;
+      // Resolution oscillation discards history; fixed resolution lets noise settle.
+      if (renderer?.getParameter('adaptiveResolution')) {
+        renderer.setParameters({adaptiveResolution: false}).commitParameters();
+      }
+    }
     const statistics = scene.frame.render();
+    this.refinementSamples = statistics.rayTracing?.accumulatedSamples ?? 0;
     const showChartLabels = scene.name === 'CHART MOTION' && Boolean(this.chartLabels);
     if (
       this.selectionOutline &&
@@ -238,7 +288,9 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     this.canvas.dataset['renderedFrames'] = String(this.renderedFrameCount);
     if (
       elapsedSeconds - this.lastStatisticsUpdate > 0.25 ||
-      this.renderedFrameCount === this.captureFrameLimit
+      this.renderedFrameCount === this.captureFrameLimit ||
+      this.refinementSamples >=
+        (scene.frame.getParameter('renderer')?.getParameter('historySampleLimit') ?? 64)
     ) {
       setElementText('scene-instance-count', statistics.instanceCount.toLocaleString());
       setElementText('scene-draw-count', statistics.drawCount.toLocaleString());

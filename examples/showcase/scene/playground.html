@@ -383,10 +383,16 @@
         display: flex;
         flex-wrap: wrap;
         align-items: center;
-        gap: 6px 12px;
+        gap: 6px 10px;
         margin-top: 8px;
+        padding: 8px 10px;
+        width: fit-content;
+        max-width: 100%;
+        border: 1px solid rgba(191, 203, 247, 0.1);
+        border-radius: 8px;
+        background: rgba(13, 16, 26, 0.88);
         color: var(--muted);
-        font-size: 11px;
+        font-size: 10px;
         pointer-events: auto;
       }
 
@@ -394,6 +400,33 @@
         display: inline-flex;
         align-items: center;
         gap: 4px;
+      }
+
+      .ray-controls select,
+      .ray-controls input[type="number"] {
+        box-sizing: border-box;
+        height: 24px;
+        padding: 2px 6px;
+        border: 1px solid rgba(191, 203, 247, 0.14);
+        border-radius: 4px;
+        background: #141824;
+        color: #dfe4f5;
+        font: inherit;
+        line-height: 18px;
+        color-scheme: dark;
+      }
+
+      .ray-controls input[type="checkbox"] {
+        width: 12px;
+        height: 12px;
+        margin: 0;
+        accent-color: #ad98ff;
+      }
+
+      .ray-controls select:focus-visible,
+      .ray-controls input:focus-visible {
+        outline: 2px solid #ad98ff;
+        outline-offset: 2px;
       }
 
       .scene-title {
