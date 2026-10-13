@@ -3900,6 +3900,7 @@ function makeUniformData(props: {
   data[67] = (props.options.progressive ?? true) ? 1 : 0;
   unsignedData[76] = props.emitterCount;
   unsignedData[77] = Number(props.options.emitterSampling ?? false);
+  unsignedData[78] = Number(props.options.emitterSelection === 'power');
   unsignedData[71] = Number(props.options.transportMode === 'pbr');
   unsignedData[70] = getHistorySampleLimit(props.options);
   unsignedData[68] = props.options.samplingSeed ?? 0;

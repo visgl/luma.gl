@@ -1153,20 +1153,23 @@ fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32) -> vec3<f32> 
   let emitterCount = uniforms.emitters.x;
   if (uniforms.emitters.y == 0u || emitterCount == 0u) { return vec3<f32>(0.0); }
   let emitterSample = makeRandom(randomSeed ^ 701u);
-  var lower = 0u;
-  var upper = emitterCount;
-  while (lower < upper) {
-    let middle = lower + (upper - lower) / 2u;
-    if (emitterSample < lights[uniforms.dimensions.w + middle].colorIntensity.z) {
-      upper = middle;
-    } else {
-      lower = middle + 1u;
+  var emitterIndex = min(u32(emitterSample * f32(emitterCount)), emitterCount - 1u);
+  var inverseSelectionProbability = f32(emitterCount);
+  if (uniforms.emitters.z == 1u) {
+    var lower = 0u;
+    var upper = emitterCount;
+    while (lower < upper) {
+      let middle = lower + (upper - lower) / 2u;
+      if (emitterSample < lights[uniforms.dimensions.w + middle].colorIntensity.z) {
+        upper = middle;
+      } else {
+        lower = middle + 1u;
+      }
     }
+    emitterIndex = min(lower, emitterCount - 1u);
+    inverseSelectionProbability = 1.0 / lights[uniforms.dimensions.w + emitterIndex].colorIntensity.y;
   }
-  let emitterIndex = min(lower, emitterCount - 1u);
-  let emitterRecord = lights[uniforms.dimensions.w + emitterIndex].colorIntensity;
-  let primitiveIndex = u32(emitterRecord.x);
-  let inverseSelectionProbability = 1.0 / emitterRecord.y;
+  let primitiveIndex = u32(lights[uniforms.dimensions.w + emitterIndex].colorIntensity.x);
   let emitter = primitives[primitiveIndex];
   var lightPosition: vec3<f32>;
   var lightNormal: vec3<f32>;
