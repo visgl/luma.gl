@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {COORDINATE_SYSTEM} from '@deck.gl/core';
-import {ColumnLayer, PolygonLayer, ScatterplotLayer} from '@deck.gl/layers';
+import {PolygonLayer, ScatterplotLayer} from '@deck.gl/layers';
 import {ThreeSceneLayer} from '@luma.gl/three/deck';
 import type {ThreeSceneAdapter} from '@luma.gl/three/objects';
 import {
@@ -204,16 +204,24 @@ export function createDeckLanternLayers(
           parameters,
           getPolygonOffset: () => [0, 0]
         }),
-        new ColumnLayer<Station>({
+        new PolygonLayer<Station>({
           id: 'courtyard-data-stations',
           data: fixture.stations.map(station => ({...station})),
           coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
-          getPosition: station => station.position,
+          getPolygon: station =>
+            Array.from({length: 6}, (_, index): Position => {
+              const angle = (index / 6) * Math.PI * 2;
+              return [
+                station.position[0] + Math.cos(angle) * 0.16,
+                station.position[1] + Math.sin(angle) * 0.16,
+                station.position[2]
+              ];
+            }),
           getElevation: station => station.elevation,
           getFillColor: station => station.color,
-          diskResolution: 6,
-          radius: 0.16,
-          material: false,
+          stroked: false,
+          // Match the flat Three reference with ambient-only native deck shading.
+          material: {ambient: 1, diffuse: 0, shininess: 0, specularColor: [0, 0, 0]},
           extruded: true,
           parameters,
           pickable: true,

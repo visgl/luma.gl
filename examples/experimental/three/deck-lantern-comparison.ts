@@ -27,16 +27,28 @@ export async function createDeckLanternComparison(
   if (!(canvas instanceof HTMLCanvasElement))
     throw new Error('Deck comparison requires an HTML canvas');
   const adapter = new ThreeSceneAdapter({device});
-  await adapter.init();
   const reference = new WebGPURenderer({
     canvas: referenceCanvas,
     antialias: false,
     outputBufferType: HalfFloatType
   });
-  await reference.init();
-  reference.setSize(width, width, false);
-  const scene = await createDeckLanternScene(adapter.renderer);
-  const referenceScene = await createDeckLanternScene(reference);
+  async function prepareScenes() {
+    let scene: Awaited<ReturnType<typeof createDeckLanternScene>> | undefined;
+    try {
+      await adapter.init();
+      await reference.init();
+      reference.setSize(width, width, false);
+      scene = await createDeckLanternScene(adapter.renderer);
+      const referenceScene = await createDeckLanternScene(reference);
+      return {scene, referenceScene};
+    } catch (error) {
+      scene?.dispose();
+      reference.dispose();
+      adapter.dispose();
+      throw error;
+    }
+  }
+  const {scene, referenceScene} = await prepareScenes();
   referenceScene.scene.add(referenceScene.referenceContext);
   const controlsCamera = new PerspectiveCamera(45, 1, 0.1, 1000);
   controlsCamera.up.set(0, 0, 1);
