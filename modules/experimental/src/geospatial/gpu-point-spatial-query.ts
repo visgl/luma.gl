@@ -733,7 +733,7 @@ function makeExactPredicate(query: GPUPointSpatialQuery): string {
       ...axes.map(axis => `abs(delta${axis}.x)`)
     ]);
     const scaledDeltas = axes
-      .map(axis => `let scaledDelta${axis} = fp64_scale_fp64_integer(delta${axis}, scaleExponent);`)
+      .map(axis => `let scaledDelta${axis} = fp64_scale_fp64(delta${axis}, scaleExponent);`)
       .join('\n  ');
     const squaredDeltaDeclarations = axes
       .map(axis => `let squaredDelta${axis} = mul_fp64(scaledDelta${axis}, scaledDelta${axis});`)
@@ -758,7 +758,7 @@ function makeExactPredicate(query: GPUPointSpatialQuery): string {
   let scaleExponent = select(126, 127 - i32(exponentBits >> 23u), exponentBits != 0u);
   ${scaledDeltas}
   ${squaredDeltaDeclarations}
-  let scaledRadius = fp64_scale_fp64_integer(vec2f(radius, 0.0), scaleExponent);
+  let scaledRadius = fp64_scale_fp64(vec2f(radius, 0.0), scaleExponent);
   let squaredDistance = ${squaredDistance};
   let squaredRadius = mul_fp64(scaledRadius, scaledRadius);
   let radiusComparison = compare_fp64(squaredDistance, squaredRadius);

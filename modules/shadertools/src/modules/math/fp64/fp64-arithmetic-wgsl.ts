@@ -894,5 +894,31 @@ fn compare_fp64(a: vec2f, b: vec2f) -> i32 {
   }
   return fp64_compare_f32_bits(aLowBits, bLowBits);
 }
+
+// Scale by 2^exponent under either arithmetic. The classic path repacks each limb with
+// integer operations and no floating-point arithmetic, so hardware that flushes subnormal
+// results cannot zero a subnormal limb. Its result has the value of the integer path's,
+// which also renormalizes the limbs; that renormalization would flush them here.
+fn fp64_scale_fp64(value: vec2f, exponent: i32) -> vec2f {
+#ifdef LUMA_FP64_INTEGER_ARITHMETIC
+  return fp64_scale_fp64_integer(value, exponent);
+#else
+  let high = fp64_decode_raw_f32_bits(bitcast<u32>(value.x));
+  let low = fp64_decode_raw_f32_bits(bitcast<u32>(value.y));
+  var scaledHigh = value.x;
+  if (!(high.isZero || high.isInf || high.isNan)) {
+    scaledHigh = bitcast<f32>(
+      fp64_make_f32_bits_from_u64(high.sign, vec2u(0u, high.significand), high.baseExponent + exponent)
+    );
+  }
+  var scaledLow = value.y;
+  if (!(low.isZero || low.isInf || low.isNan)) {
+    scaledLow = bitcast<f32>(
+      fp64_make_f32_bits_from_u64(low.sign, vec2u(0u, low.significand), low.baseExponent + exponent)
+    );
+  }
+  return vec2f(scaledHigh, scaledLow);
+#endif
+}
 #endif
 `;
