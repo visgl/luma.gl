@@ -338,6 +338,7 @@ const raytraceRendererProperties = {
   debugView: z.enum(['color', 'normal', 'cameraDistance', 'identity', 'history']).optional(),
   transportMode: z.enum(['diffuse', 'pbr']).optional(),
   emitterSampling: z.boolean().optional(),
+  emitterSelection: z.enum(['uniform', 'power']).optional(),
   maxBounces: z.number().int().nonnegative().optional(),
   progressive: z.boolean().optional(),
   shadows: z.boolean().optional(),

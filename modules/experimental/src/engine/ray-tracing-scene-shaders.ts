@@ -1147,12 +1147,28 @@ fn evaluatePBRResponse(ray: Ray, hit: RayHit, direction: vec3<f32>) -> vec3<f32>
   return diffuse + specular;
 }
 
-// Uniform emitter/triangle selection and area sampling. Visibility rejects far sides of spheres.
+// CDF emitter selection, uniform triangle selection and conditional area sampling. Visibility rejects far sides of spheres.
 // The sphere Jacobian supports nonuniform scales and general affine instance transforms.
 fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32) -> vec3<f32> {
   let emitterCount = uniforms.emitters.x;
   if (uniforms.emitters.y == 0u || emitterCount == 0u) { return vec3<f32>(0.0); }
-  let emitterIndex = min(u32(makeRandom(randomSeed ^ 701u) * f32(emitterCount)), emitterCount - 1u);
+  let emitterSample = makeRandom(randomSeed ^ 701u);
+  var emitterIndex = min(u32(emitterSample * f32(emitterCount)), emitterCount - 1u);
+  var inverseSelectionProbability = f32(emitterCount);
+  if (uniforms.emitters.z == 1u) {
+    var lower = 0u;
+    var upper = emitterCount;
+    while (lower < upper) {
+      let middle = lower + (upper - lower) / 2u;
+      if (emitterSample < lights[uniforms.dimensions.w + middle].colorIntensity.z) {
+        upper = middle;
+      } else {
+        lower = middle + 1u;
+      }
+    }
+    emitterIndex = min(lower, emitterCount - 1u);
+    inverseSelectionProbability = 1.0 / lights[uniforms.dimensions.w + emitterIndex].colorIntensity.y;
+  }
   let primitiveIndex = u32(lights[uniforms.dimensions.w + emitterIndex].colorIntensity.x);
   let emitter = primitives[primitiveIndex];
   var lightPosition: vec3<f32>;
@@ -1170,7 +1186,7 @@ fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32) -> vec3<f32> 
     lightNormal = normalize(transformedNormal);
     let linearTransform = mat3x3<f32>(emitter.transform[0].xyz, emitter.transform[1].xyz, emitter.transform[2].xyz);
     inverseAreaDensity = 4.0 * PI * emitter.properties.y * emitter.properties.y *
-      abs(determinant(linearTransform)) * length(transformedNormal) * f32(emitterCount);
+      abs(determinant(linearTransform)) * length(transformedNormal) * inverseSelectionProbability;
   } else {
     let triangleCount = u32(emitter.properties.w);
     if (triangleCount == 0u) { return vec3<f32>(0.0); }
@@ -1185,7 +1201,7 @@ fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32) -> vec3<f32> 
     let twiceArea = length(areaNormal);
     if (twiceArea <= 0.00000001) { return vec3<f32>(0.0); }
     lightNormal = areaNormal / twiceArea;
-    inverseAreaDensity = 0.5 * twiceArea * f32(triangleCount) * f32(emitterCount);
+    inverseAreaDensity = 0.5 * twiceArea * f32(triangleCount) * inverseSelectionProbability;
   }
   let position = ray.origin + ray.direction * hit.distance;
   let normal = select(hit.normal, -hit.normal, dot(hit.normal, ray.direction) > 0.0);

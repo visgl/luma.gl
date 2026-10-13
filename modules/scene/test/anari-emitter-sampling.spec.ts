@@ -140,6 +140,26 @@ it('explicit emissive connections preserve energy, reject masked occluders and t
     expect(lit.mean[0] / lit.mean[1]).toBeCloseTo(4, 3);
     expect(lit.mean[2]).toBe(0);
     expect((await render()).pixels).toEqual(lit.pixels);
+    renderer.setParameter('emitterSelection', 'power').commitParameters();
+    expect((await render()).pixels).toEqual(lit.pixels);
+    const smallEmitter = device.newInstance({
+      group: device.newGroup({surface: [emitter]}),
+      transform: new Matrix4().translate([-0.5, 0, 2]).scale(0.2)
+    });
+    world.setParameter('instance', [lightInstance, smallEmitter]).commitParameters();
+    renderer.setParameters({progressive: true, historySampleLimit: 256}).commitParameters();
+    let powerMean = 0;
+    for (let sampleFrame = 0; sampleFrame < 16; sampleFrame++) powerMean = (await render()).mean[0];
+    renderer.setParameter('emitterSelection', 'uniform').commitParameters();
+    const reset = await render();
+    expect(reset.statistics.rayTracing?.accumulatedSamples).toBe(16);
+    let uniformMean = reset.mean[0];
+    for (let sampleFrame = 1; sampleFrame < 16; sampleFrame++)
+      uniformMean = (await render()).mean[0];
+    expect(powerMean / uniformMean).toBeGreaterThan(0.8);
+    expect(powerMean / uniformMean).toBeLessThan(1.2);
+    world.setParameter('instance', [lightInstance]).commitParameters();
+    renderer.setParameters({progressive: false, emitterSelection: 'power'}).commitParameters();
     renderer.setParameters({fogDensity: 0.5, fogColor: [0, 0, 0]}).commitParameters();
     const fogged = await render();
     expect(fogged.mean[0] / lit.mean[0]).toBeCloseTo(Math.exp(-1.5), 2);

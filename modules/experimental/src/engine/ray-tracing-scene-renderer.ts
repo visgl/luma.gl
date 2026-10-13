@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {makeEmitterDistribution, type EmitterAreaCache} from './ray-tracing-emitter-distribution';
 import type {RayTracingDebugView} from './ray-tracing-scene-capabilities';
 import {
   assert,
@@ -486,6 +487,8 @@ export type RayTracingSceneRenderOptions = SceneRenderOptions & {
   maxBounces?: number;
   /** Samples emissive geometry explicitly; defaults to false. */
   emitterSampling?: boolean;
+  /** Emitter selection distribution; defaults to uniform. Power uses area × luminance. */
+  emitterSelection?: 'uniform' | 'power';
   /** Accumulates primary-ray samples across unchanged committed frames. */
   progressive?: boolean;
   /** Traces direct-light shadow rays when enabled. */
@@ -699,6 +702,7 @@ type RayTracingStatistics = {
 export class RayTracingSceneRenderer {
   private readonly device: Device;
   private readonly frames = new Map<string, RayTracingFrameResources>();
+  private readonly emitterAreaCaches = new Map<string, EmitterAreaCache>();
   private readonly geometryCache = new Map<string, CompiledRayGeometry>();
   private pickComputation?: Computation;
   private channelComputation?: Computation;
@@ -767,7 +771,9 @@ export class RayTracingSceneRenderer {
         primitiveData,
         topology.triangles,
         lights,
-        options.emitterSampling ?? false
+        options.emitterSampling ?? false,
+        options,
+        this.getEmitterAreaCache(options.id)
       );
       resources = this.createFrameResources({
         frameIdentifier: options.id,
@@ -851,11 +857,13 @@ export class RayTracingSceneRenderer {
       const emitterPrimitiveIndices = primitiveData
         ? getEmissivePrimitiveIndices(primitiveData.primitives)
         : resources.emitterPrimitiveIndices;
-      if (
-        lightsChanged ||
-        (options.emitterSampling && (primitiveChanged || topologyChanged) && primitiveData)
-      ) {
-        lightData = makeLightData(lights, options.emitterSampling ? emitterPrimitiveIndices : []);
+      if (lightsChanged || (options.emitterSampling && (primitiveChanged || topologyChanged))) {
+        lightData = makeLightData(
+          lights,
+          options.emitterSampling ? emitterPrimitiveIndices : [],
+          options,
+          this.getEmitterAreaCache(options.id)
+        );
       }
 
       if (
@@ -880,7 +888,9 @@ export class RayTracingSceneRenderer {
           primitiveData,
           topology.triangles,
           lights,
-          options.emitterSampling ?? false
+          options.emitterSampling ?? false,
+          options,
+          this.getEmitterAreaCache(options.id)
         );
         const previousTransformsNeedCommit =
           resources.previousTransformsNeedCommit || transformChanged;
@@ -1353,7 +1363,17 @@ export class RayTracingSceneRenderer {
     }
   }
 
+  private getEmitterAreaCache(frameIdentifier: string): EmitterAreaCache {
+    let cache = this.emitterAreaCaches.get(frameIdentifier);
+    if (!cache) {
+      cache = new Map();
+      this.emitterAreaCaches.set(frameIdentifier, cache);
+    }
+    return cache;
+  }
+
   destroyFrame(frameIdentifier: string): void {
+    this.emitterAreaCaches.delete(frameIdentifier);
     const resources = this.frames.get(frameIdentifier);
     if (!resources) {
       return;
@@ -1384,6 +1404,7 @@ export class RayTracingSceneRenderer {
     for (const frameIdentifier of Array.from(this.frames.keys())) {
       this.destroyFrame(frameIdentifier);
     }
+    this.emitterAreaCaches.clear();
     this.pickComputation?.destroy();
     this.pickComputation = undefined;
     this.channelComputation?.destroy();
@@ -3443,9 +3464,9 @@ function getTransformRevision(options: RayTracingSceneRenderOptions): string {
 
 function getLightRevision(options: RayTracingSceneRenderOptions, lights: readonly Light[]): string {
   if (options.sceneRevisions) {
-    return `${options.sceneRevisions.identity}:${options.sceneRevisions.lights}:${options.emitterSampling ?? false}`;
+    return `${options.sceneRevisions.identity}:${options.sceneRevisions.lights}:${options.emitterSampling ?? false}:${options.emitterSelection ?? 'uniform'}`;
   }
-  return JSON.stringify([lights, options.emitterSampling]);
+  return JSON.stringify([lights, options.emitterSampling, options.emitterSelection]);
 }
 
 function getRenderRevision(
@@ -3475,6 +3496,7 @@ function getRenderRevision(
     options.maxBounces,
     options.transportMode,
     options.emitterSampling,
+    options.emitterSelection,
     options.progressive,
     options.shadows,
     options.temporalReprojection,
@@ -3624,13 +3646,20 @@ function makeRayTracingScene(
   primitiveData: RayTracingPrimitiveData,
   triangles: Float32Array,
   lights: readonly Light[],
-  emitterSampling: boolean
+  emitterSampling: boolean,
+  options: RayTracingSceneRenderOptions,
+  areaCache: EmitterAreaCache
 ): RayTracingScene {
   const emitterPrimitiveIndices = getEmissivePrimitiveIndices(primitiveData.primitives);
   return {
     primitives: primitiveData.primitives,
     triangles,
-    lights: makeLightData(lights, emitterSampling ? emitterPrimitiveIndices : []),
+    lights: makeLightData(
+      lights,
+      emitterSampling ? emitterPrimitiveIndices : [],
+      options,
+      areaCache
+    ),
     emitterPrimitiveIndices,
     primitiveCount: primitiveData.primitiveCount,
     lightCount: lights.length,
@@ -3741,7 +3770,9 @@ function getEmissivePrimitiveIndices(primitives: Float32Array): number[] {
 
 function makeLightData(
   lights: readonly Light[],
-  emitterPrimitiveIndices: readonly number[]
+  emitterPrimitiveIndices: readonly number[],
+  options: RayTracingSceneRenderOptions,
+  areaCache: EmitterAreaCache
 ): Float32Array {
   const values: number[] = [];
   for (const light of lights) {
@@ -3784,8 +3815,26 @@ function makeLightData(
       outerCone
     );
   }
-  for (const primitiveIndex of emitterPrimitiveIndices) {
-    values.push(primitiveIndex, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0);
+  const distribution = makeEmitterDistribution(emitterPrimitiveIndices, options, areaCache);
+  for (const [index, primitiveIndex] of emitterPrimitiveIndices.entries()) {
+    values.push(
+      primitiveIndex,
+      distribution[index].probability,
+      distribution[index].cumulative,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      4,
+      0,
+      0,
+      0,
+      0
+    );
   }
   return makeStorageData(values, LIGHT_FLOAT_COUNT);
 }
@@ -3851,6 +3900,7 @@ function makeUniformData(props: {
   data[67] = (props.options.progressive ?? true) ? 1 : 0;
   unsignedData[76] = props.emitterCount;
   unsignedData[77] = Number(props.options.emitterSampling ?? false);
+  unsignedData[78] = Number(props.options.emitterSelection === 'power');
   unsignedData[71] = Number(props.options.transportMode === 'pbr');
   unsignedData[70] = getHistorySampleLimit(props.options);
   unsignedData[68] = props.options.samplingSeed ?? 0;
