@@ -180,9 +180,23 @@ follow the same per-hit distance-fog attenuation, with the fog background mixed
 once by the shared direct-light path. Explicit
 connections replace secondary emission gathering to avoid counting the same
 light twice; primary camera-visible emission is retained. The model has no
-delta mirrors (roughness has a `0.04` lower bound). MIS and power-weighted light
-selection are not implemented; nearly mirror-like materials can still converge
+delta mirrors (roughness has a `0.04` lower bound). MIS is not implemented; nearly mirror-like materials can still converge
 slowly. More primary samples/frames improve sampling of small emitters.
+
+`emitterSelection: 'uniform'` is the default. Opt-in `'power'` weights each emitter
+placement by world-space area times emitted luminance. Mesh area is summed from transformed
+triangles; affine sphere area uses a six-direction quadrature proxy. This proxy only
+chooses the emitter: the shader still evaluates the exact conditional area density,
+including the affine sphere Jacobian, and divides by the uploaded selection probability.
+A small uniform mixture keeps dim emitters selectable; the mixture grows for large
+emitter lists to protect float32 CDF intervals. CDF probabilities match their uploaded
+float32 intervals, and the last interval ends at one. Degenerate zero-power lists use
+uniform selection. Triangles within a selected mesh remain uniformly selected.
+
+Power selection can reduce variance for uneven emitter powers, but does not account for
+receiver distance or visibility and is not MIS. It does not guarantee faster convergence
+for every scene. Selection changes reset history. Changed emitter transforms/materials
+rebuild the distribution without adding storage buffers.
 
 Emitter records share the existing light buffer, preserving the CORE eight
 storage-buffer traversal contract. Material, emitter visibility, emitter
@@ -204,3 +218,17 @@ annular marks, emissive points/panel and a masked fixture. Captures accept
 `--lighting --emitters on|off`; comparisons must preserve the same camera,
 seed, frames and color settings. Raster rendering shares geometry/masks but
 does not compute illumination from emissive surfaces.
+
+### Preview comparison controls
+
+The JSON playground exposes **Renderer** in the preview toolbar, including when the
+editor is hidden. Choose Forward, Deferred, Ray tracing, Normals or Depth. Deferred
+and ray tracing require WebGPU. Ray-only controls are disabled for raster renderers;
+ray settings are restored when returning to Ray tracing.
+
+**Resolution** selects 25%, 50%, 75% or 100% of each drawing-buffer dimension.
+The choice disables adaptive resolution and sets its minimum to the same value,
+so stationary refinement keeps a stable pixel grid. **Ray quality** can replace
+this explicit choice with the interactive or still preset. **Emitter selection**
+compares uniform and power sampling. The live Chart Lighting preset uses power
+selection; explicit frame captures retain the authored uniform default.

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {makeEmitterDistribution} from './ray-tracing-emitter-distribution';
 import type {RayTracingDebugView} from './ray-tracing-scene-capabilities';
 import {
   assert,
@@ -486,6 +487,8 @@ export type RayTracingSceneRenderOptions = SceneRenderOptions & {
   maxBounces?: number;
   /** Samples emissive geometry explicitly; defaults to false. */
   emitterSampling?: boolean;
+  /** Emitter selection distribution; defaults to uniform. Power uses area × luminance. */
+  emitterSelection?: 'uniform' | 'power';
   /** Accumulates primary-ray samples across unchanged committed frames. */
   progressive?: boolean;
   /** Traces direct-light shadow rays when enabled. */
@@ -767,7 +770,8 @@ export class RayTracingSceneRenderer {
         primitiveData,
         topology.triangles,
         lights,
-        options.emitterSampling ?? false
+        options.emitterSampling ?? false,
+        options
       );
       resources = this.createFrameResources({
         frameIdentifier: options.id,
@@ -851,11 +855,12 @@ export class RayTracingSceneRenderer {
       const emitterPrimitiveIndices = primitiveData
         ? getEmissivePrimitiveIndices(primitiveData.primitives)
         : resources.emitterPrimitiveIndices;
-      if (
-        lightsChanged ||
-        (options.emitterSampling && (primitiveChanged || topologyChanged) && primitiveData)
-      ) {
-        lightData = makeLightData(lights, options.emitterSampling ? emitterPrimitiveIndices : []);
+      if (lightsChanged || (options.emitterSampling && (primitiveChanged || topologyChanged))) {
+        lightData = makeLightData(
+          lights,
+          options.emitterSampling ? emitterPrimitiveIndices : [],
+          options
+        );
       }
 
       if (
@@ -880,7 +885,8 @@ export class RayTracingSceneRenderer {
           primitiveData,
           topology.triangles,
           lights,
-          options.emitterSampling ?? false
+          options.emitterSampling ?? false,
+          options
         );
         const previousTransformsNeedCommit =
           resources.previousTransformsNeedCommit || transformChanged;
@@ -3443,9 +3449,9 @@ function getTransformRevision(options: RayTracingSceneRenderOptions): string {
 
 function getLightRevision(options: RayTracingSceneRenderOptions, lights: readonly Light[]): string {
   if (options.sceneRevisions) {
-    return `${options.sceneRevisions.identity}:${options.sceneRevisions.lights}:${options.emitterSampling ?? false}`;
+    return `${options.sceneRevisions.identity}:${options.sceneRevisions.lights}:${options.emitterSampling ?? false}:${options.emitterSelection ?? 'uniform'}`;
   }
-  return JSON.stringify([lights, options.emitterSampling]);
+  return JSON.stringify([lights, options.emitterSampling, options.emitterSelection]);
 }
 
 function getRenderRevision(
@@ -3475,6 +3481,7 @@ function getRenderRevision(
     options.maxBounces,
     options.transportMode,
     options.emitterSampling,
+    options.emitterSelection,
     options.progressive,
     options.shadows,
     options.temporalReprojection,
@@ -3624,13 +3631,14 @@ function makeRayTracingScene(
   primitiveData: RayTracingPrimitiveData,
   triangles: Float32Array,
   lights: readonly Light[],
-  emitterSampling: boolean
+  emitterSampling: boolean,
+  options: RayTracingSceneRenderOptions
 ): RayTracingScene {
   const emitterPrimitiveIndices = getEmissivePrimitiveIndices(primitiveData.primitives);
   return {
     primitives: primitiveData.primitives,
     triangles,
-    lights: makeLightData(lights, emitterSampling ? emitterPrimitiveIndices : []),
+    lights: makeLightData(lights, emitterSampling ? emitterPrimitiveIndices : [], options),
     emitterPrimitiveIndices,
     primitiveCount: primitiveData.primitiveCount,
     lightCount: lights.length,
@@ -3741,7 +3749,8 @@ function getEmissivePrimitiveIndices(primitives: Float32Array): number[] {
 
 function makeLightData(
   lights: readonly Light[],
-  emitterPrimitiveIndices: readonly number[]
+  emitterPrimitiveIndices: readonly number[],
+  options: RayTracingSceneRenderOptions
 ): Float32Array {
   const values: number[] = [];
   for (const light of lights) {
@@ -3784,8 +3793,26 @@ function makeLightData(
       outerCone
     );
   }
-  for (const primitiveIndex of emitterPrimitiveIndices) {
-    values.push(primitiveIndex, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0);
+  const distribution = makeEmitterDistribution(emitterPrimitiveIndices, options);
+  for (const [index, primitiveIndex] of emitterPrimitiveIndices.entries()) {
+    values.push(
+      primitiveIndex,
+      distribution[index].probability,
+      distribution[index].cumulative,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      4,
+      0,
+      0,
+      0,
+      0
+    );
   }
   return makeStorageData(values, LIGHT_FLOAT_COUNT);
 }

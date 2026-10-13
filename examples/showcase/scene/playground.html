@@ -626,16 +626,6 @@
               <button id="export-gltf" class="tool-button">GLTF ↓</button>
               <button id="export-glb" class="tool-button">GLB ↓</button>
               <button id="export-usd" class="tool-button">USD ↓</button>
-              <label class="renderer-control">
-                <span>RENDERER</span>
-                <select id="renderer-selector" class="renderer-selector" aria-label="Renderer">
-                  <option value="default">Default</option>
-                  <option value="deferred">Deferred</option>
-                  <option value="raytrace">Ray tracing</option>
-                  <option value="debugNormals">Normals</option>
-                  <option value="debugDepth">Depth</option>
-                </select>
-              </label>
               <button
                 id="temporal-aa-toggle"
                 class="tool-button active"
@@ -665,6 +655,25 @@
           <div class="preview-heading">
             <div class="section-label">LIVE PREVIEW</div>
             <div class="ray-controls">
+              <label >
+                <span>Renderer</span>
+                <select id="renderer-selector" class="renderer-selector" aria-label="Renderer">
+                  <option value="default">Forward</option>
+                  <option value="deferred">Deferred</option>
+                  <option value="raytrace">Ray tracing</option>
+                  <option value="debugNormals">Normals</option>
+                  <option value="debugDepth">Depth</option>
+                </select>
+              </label>
+            <label>Resolution
+              <select id="resolution-selector" class="renderer-selector" aria-label="Ray resolution">
+                <option value="0.25">25%</option>
+                <option value="0.5">50%</option>
+                <option value="0.75">75%</option>
+                <option value="1">100%</option>
+                <option value="custom" disabled>Custom</option>
+              </select>
+            </label>
             <label style="pointer-events: auto">Ray quality
               <select id="quality-selector" class="renderer-selector" aria-label="Ray quality">
                 <option value="custom" disabled selected>Scene settings</option>
@@ -679,6 +688,12 @@
             </label>
             <label style="pointer-events: auto">Emissive lighting
               <input id="emitter-sampling" type="checkbox" aria-label="Emissive lighting">
+            </label>
+            <label>Emitter selection
+              <select id="emitter-selection" class="renderer-selector" aria-label="Emitter selection">
+                <option value="uniform">Uniform</option>
+                <option value="power">Power</option>
+              </select>
             </label>
             <label style="pointer-events: auto">Bounces
               <input id="bounce-limit" type="number" min="0" max="8" value="0" aria-label="Bounces" style="width: 4em">

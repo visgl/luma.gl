@@ -590,4 +590,5 @@ to false. Scalar `alphaMode: 'mask'` compares committed opacity against
 `alphaCutoff` for color, secondary/shadow rays, picking and channels. Masked
 emitters are excluded from the sampling table. See the
 [ray quality reference](/docs/api-reference/experimental/ray-tracing-quality-presets#explicit-emissive-lighting-and-scalar-masks)
-for sampling semantics and current limitations.
+for sampling semantics and current limitations. `emitterSelection: 'power'` enables
+area/luminance-weighted emitter selection; uniform selection remains the default.

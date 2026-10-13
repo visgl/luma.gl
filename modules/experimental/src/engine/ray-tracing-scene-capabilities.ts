@@ -22,7 +22,8 @@ export function getRayTracingSceneCapabilities(device: Pick<Device, 'type'>) {
       modes: ['diffuse', 'pbr'] as const,
       specular: true as const,
       transmission: false as const,
-      explicitEmitterSampling: true as const
+      explicitEmitterSampling: true as const,
+      emitterSelection: ['uniform', 'power'] as const
     },
     guidedSpatialDenoising: true as const,
     debugViews: ['color', 'normal', 'cameraDistance', 'identity', 'history'] as const,

@@ -271,6 +271,8 @@ export type ANARIRendererParameters = {
   transportMode?: 'diffuse' | 'pbr';
   /** Explicit emissive geometry connections for ray lighting. */
   emitterSampling?: boolean;
+  /** Emitter selection distribution; defaults to uniform. Power uses area × luminance. */
+  emitterSelection?: 'uniform' | 'power';
   /** Secondary bounce budget, clamped to 0–8; defaults to zero. */
   maxBounces?: number;
   progressive?: boolean;
