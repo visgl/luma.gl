@@ -221,7 +221,8 @@
         "type": "doc",
         "id": "experimental/webxr-kaleidoscope",
         "label": "WebXR: Immersive Prism Portal"
-      }
+      },
+      "experimental/three"
     ]
   },
   {
