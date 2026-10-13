@@ -3,7 +3,15 @@
 
 import {expect, test, vi} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
-import {MeshBasicNodeMaterial, LessEqualCompare, Compatibility, LinearFilter} from 'three/webgpu';
+import {
+  MeshBasicNodeMaterial,
+  LessEqualCompare,
+  Compatibility,
+  LinearFilter,
+  InterleavedBuffer,
+  InterleavedBufferAttribute,
+  Uint16BufferAttribute
+} from 'three/webgpu';
 import {translateBinding, translateMaterial, translateVertexFormat} from '../src/translate';
 import {LumaBackend} from '../src/luma-backend';
 import {LumaRenderer} from '../src';
@@ -66,6 +74,7 @@ function makeBackend() {
     destroy: ReturnType<typeof vi.fn>;
     write: ReturnType<typeof vi.fn>;
     byteLength: number;
+    readAsync: ReturnType<typeof vi.fn>;
   }> = [];
   const device = {
     type: 'webgpu',
@@ -84,6 +93,10 @@ function makeBackend() {
       const resource = {
         destroy: vi.fn(),
         write: vi.fn(),
+        readAsync: vi.fn(
+          async (offset: number, byteLength: number) =>
+            new Uint8Array(properties.data.buffer, properties.data.byteOffset + offset, byteLength)
+        ),
         byteLength: properties.byteLength,
         usage: properties.usage
       };
@@ -227,4 +240,50 @@ test('shadow depth comparison uses a comparison sampler and depth binding', () =
     )
   ).toMatchObject({type: 'texture', sampleType: 'depth'});
   backend.dispose();
+});
+
+test('odd uint16 index updates pad only the source view and clear its update ranges', () => {
+  const {backend, resources} = makeBackend();
+  const values = new Uint16Array([99, 0, 1, 2, 88]);
+  const attribute = new Uint16BufferAttribute(values.subarray(1, 4), 1);
+  // Preserve a nonzero byteOffset; the typed constructor copies its input.
+  attribute.array = values.subarray(1, 4);
+  backend.createIndexAttribute(attribute);
+  attribute.array.set([2, 1, 0]);
+  attribute.addUpdateRange(0, 3);
+  backend.updateAttribute(attribute);
+  expect(resources[0].write).toHaveBeenCalledWith(new Uint8Array([2, 0, 1, 0, 0, 0, 0, 0]));
+  expect(attribute.updateRanges).toEqual([]);
+  backend.dispose();
+});
+
+test('interleaved attributes share readback and release their source buffer once', async () => {
+  const {backend, device, resources} = makeBackend();
+  const data = new InterleavedBuffer(new Float32Array([1, 2, 3, 0, 1, 0, 4, 5, 6, 0, 1, 0]), 6);
+  const position = new InterleavedBufferAttribute(data, 3, 0);
+  const normal = new InterleavedBufferAttribute(data, 3, 3);
+  backend.createAttribute(position);
+  backend.createAttribute(normal);
+  expect(device.createBuffer).toHaveBeenCalledTimes(1);
+  const full = await backend.getArrayBufferAsync(position);
+  expect(Array.from(new Float32Array(full))).toEqual(Array.from(data.array));
+  const ranged = await backend.getArrayBufferAsync(normal, new ArrayBuffer(12), 12, 12);
+  expect(Array.from(new Float32Array(ranged))).toEqual([0, 1, 0]);
+  data.array[0] = 7;
+  backend.updateAttribute(position);
+  expect(resources[0].write).toHaveBeenCalledWith(data.array);
+  backend.destroyAttribute(normal);
+  backend.destroyAttribute(normal);
+  expect(resources[0].destroy).not.toHaveBeenCalled();
+  data.array[0] = 8;
+  backend.updateAttribute(position);
+  expect(Array.from(new Float32Array(await backend.getArrayBufferAsync(position)))).toEqual(
+    Array.from(data.array)
+  );
+  backend.createAttribute(position);
+  backend.destroyAttribute(position);
+  expect(backend.has(data)).toBe(false);
+  expect(resources[0].destroy).toHaveBeenCalledTimes(1);
+  backend.dispose();
+  expect(resources[0].destroy).toHaveBeenCalledTimes(1);
 });
