@@ -6,7 +6,7 @@ title: Three.js adapter prototype
 
 **Status: Exploration**
 
-:::caution Exploratory and unconfirmed
+:::caution[Exploratory and unconfirmed]
 
 This module is still exploratory and unconfirmed. Its APIs, supported features,
 and integration approach may change. The examples and tests demonstrate selected
