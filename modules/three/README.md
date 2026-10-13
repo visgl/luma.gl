@@ -117,6 +117,11 @@ and non-indexed draws, normal alpha blending, single-sample render targets,
 2D R/RG/RGBA byte and floating-point textures, data-array textures for morph targets,
 ordinary skinning, instanced matrix/color attributes, generated mipmaps and mipmap samplers,
 depth-free PMREM passes, directional PCF shadows, packed uniform buffers, and TSL compute storage buffers.
+Interleaved attributes share one source GPU buffer. Attribute readback returns the
+packed source array (or requested byte range), and geometry disposal releases that
+buffer once. WebGL binds each attribute location from the shared buffer; WebGPU
+binds the buffer slot containing all of its attributes.
+
 Nested shadow renders suspend the parent pass, submit the shadow map, and resume
 the parent with its attachments and viewport preserved. Shadow depth textures use
 less-equal comparison samplers. The example's shadow toggle sets shadow intensity

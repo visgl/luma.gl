@@ -30,7 +30,7 @@ function createFixture() {
     destroyed: false,
     destroy: vi.fn()
   } as unknown as Buffer;
-  return {device, renderer, backend, buffer};
+  return {device, renderer, backend, buffer, data};
 }
 
 test('bridge borrows buffers, delegates ordinary attributes and restores backend hooks', () => {
@@ -83,4 +83,30 @@ test('bridge rejects mismatched devices and incompatible buffer metadata', () =>
   );
   bridge.createAttribute(buffer, 3, 3);
   bridge.dispose();
+});
+
+test('geometry churn releases live cache entries and preserves surviving borrowed attributes', () => {
+  const {device, renderer, backend, buffer, data} = createFixture();
+  const bridge = new ThreeBufferBridge(device, renderer);
+  const surviving = bridge.createAttribute(buffer, 3, 3);
+  backend.createAttribute(surviving);
+  for (let index = 0; index < 100; index++) {
+    const attribute = bridge.createAttribute(buffer, 3, 3);
+    backend.createAttribute(attribute);
+    backend.destroyAttribute(attribute);
+  }
+  expect(data.size).toBe(1);
+  expect(() => bridge.dispose()).toThrow('Dispose rendered geometries');
+  backend.destroyAttribute(surviving);
+  backend.createAttribute(surviving);
+  expect(backend.get(surviving).buffer).toBe(buffer.handle);
+  backend.destroyAttribute(surviving);
+  const getAttribute = vi.spyOn(backend, 'get');
+  backend.delete.mockClear();
+  bridge.dispose();
+  // Already-disposed and never-rendered attributes must not be revived in backend caches.
+  expect(getAttribute).not.toHaveBeenCalled();
+  expect(backend.delete).not.toHaveBeenCalled();
+  expect(data.size).toBe(0);
+  expect(buffer.destroy).not.toHaveBeenCalled();
 });

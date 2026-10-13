@@ -19,7 +19,8 @@ type AttributeBackend = {
 /** Borrows luma vertex buffers into an initialized upstream Three WebGPU renderer. */
 export class ThreeBufferBridge {
   private readonly backend: AttributeBackend;
-  private readonly attributes = new Map<BufferAttribute, Buffer>();
+  private readonly attributes = new WeakMap<BufferAttribute, Buffer>();
+  private readonly renderedAttributes = new Set<BufferAttribute>();
   private readonly originalCreateAttribute: AttributeBackend['createAttribute'];
   private readonly originalUpdateAttribute: AttributeBackend['updateAttribute'];
   private readonly originalDestroyAttribute: AttributeBackend['destroyAttribute'];
@@ -46,6 +47,7 @@ export class ThreeBufferBridge {
       if (buffer) {
         if (buffer.destroyed) throw new Error('Borrowed vertex buffer was destroyed');
         backend.get(attribute).buffer = buffer.handle as GPUBuffer;
+        this.renderedAttributes.add(attribute);
       } else this.originalCreateAttribute.call(backend, attribute);
     };
     backend.updateAttribute = attribute => {
@@ -54,8 +56,10 @@ export class ThreeBufferBridge {
       this.originalUpdateAttribute.call(backend, attribute);
     };
     backend.destroyAttribute = attribute => {
-      if (this.attributes.has(attribute)) backend.delete(attribute);
-      else this.originalDestroyAttribute.call(backend, attribute);
+      if (this.attributes.has(attribute)) {
+        backend.delete(attribute);
+        this.renderedAttributes.delete(attribute);
+      } else this.originalDestroyAttribute.call(backend, attribute);
     };
   }
 
@@ -79,13 +83,8 @@ export class ThreeBufferBridge {
   /** Dispose geometries first so Three can forget its borrowed attribute caches. */
   dispose(): void {
     if (this.disposed) return;
-    // Unrendered attributes never entered Three's geometry caches.
-    for (const attribute of this.attributes.keys()) {
-      if (this.backend.get(attribute).buffer)
-        throw new Error('Dispose rendered geometries before disposing ThreeBufferBridge');
-      this.backend.delete(attribute);
-    }
-    this.attributes.clear();
+    if (this.renderedAttributes.size)
+      throw new Error('Dispose rendered geometries before disposing ThreeBufferBridge');
     this.backend.createAttribute = this.originalCreateAttribute;
     this.backend.updateAttribute = this.originalUpdateAttribute;
     this.backend.destroyAttribute = this.originalDestroyAttribute;

@@ -202,8 +202,11 @@ export class LumaBackend extends Backend {
     this.release(this.get(program).shader);
     this.delete(program);
   }
+  private getAttributeSource(attribute: ThreeInternal): ThreeInternal {
+    return attribute.isInterleavedBufferAttribute ? attribute.data : attribute;
+  }
   private createBuffer(attribute: ThreeInternal, usage: number): void {
-    const source = attribute.isInterleavedBufferAttribute ? attribute.data : attribute;
+    const source = this.getAttributeSource(attribute);
     const state = this.get(source);
     if (state.buffer) {
       if ((state.buffer.usage & usage) !== usage)
@@ -234,16 +237,23 @@ export class LumaBackend extends Backend {
     this.createBuffer(attribute, Buffer.STORAGE | Buffer.VERTEX);
   }
   updateAttribute(attribute: ThreeInternal): void {
-    const source = attribute.isInterleavedBufferAttribute ? attribute.data : attribute;
+    const source = this.getAttributeSource(attribute);
     const buffer = this.get(source).buffer as Buffer;
     if (source.array.byteLength > buffer.byteLength)
       throw new Error('LumaBackend: buffer resizing requires a new attribute');
-    buffer.write(source.array);
+    if (!this.isWebGLBackend && source.array.byteLength % 4) {
+      const padded = new Uint8Array(Math.ceil(source.array.byteLength / 4) * 4);
+      padded.set(
+        new Uint8Array(source.array.buffer, source.array.byteOffset, source.array.byteLength)
+      );
+      buffer.write(padded);
+    } else buffer.write(source.array);
     source.clearUpdateRanges();
   }
   destroyAttribute(attribute: ThreeInternal): void {
-    this.release(this.get(attribute).buffer);
-    this.delete(attribute);
+    const source = this.getAttributeSource(attribute);
+    this.release(this.get(source).buffer);
+    this.delete(source);
   }
   createUniformBuffer(binding: ThreeInternal): void {
     this.get(binding).buffer = this.own(
@@ -269,10 +279,11 @@ export class LumaBackend extends Backend {
     count = -1
   ): Promise<ArrayBuffer> {
     this.device.submit();
-    const array = attribute.array;
+    const source = this.getAttributeSource(attribute);
+    const array = source.array;
     if (target && !(target instanceof ArrayBuffer))
       throw new Error('LumaBackend: ReadbackBuffer targets are not supported');
-    const bytes = await (this.get(attribute).buffer as Buffer).readAsync(
+    const bytes = await (this.get(source).buffer as Buffer).readAsync(
       offset,
       count < 0 ? array.byteLength - offset : count
     );
@@ -675,7 +686,7 @@ export class LumaBackend extends Backend {
     }));
     attributes.forEach((attribute: ThreeInternal, location: number) => {
       const node = nodeAttributes[location];
-      const source = attribute.isInterleavedBufferAttribute ? attribute.data : attribute;
+      const source = this.getAttributeSource(attribute);
       const bufferIndex = buffers.indexOf(source);
       const bytes = source.array.BYTES_PER_ELEMENT;
       const layout = bufferLayout[bufferIndex];
@@ -746,11 +757,26 @@ export class LumaBackend extends Backend {
       );
       state.pipeline = pipeline;
     }
-    renderObject
-      .getVertexBuffers()
-      .forEach((attribute: ThreeInternal, index: number) =>
-        state.vertexArray.setBuffer(index, this.get(attribute).buffer)
-      );
+    if (this.isWebGLBackend) {
+      // WebGL binds per attribute location; WebGPU binds per vertex-buffer slot.
+      const nodes = renderObject.getNodeBuilderState().nodeAttributes;
+      renderObject.getAttributes().forEach((attribute: ThreeInternal, index: number) => {
+        const location = pipeline.shaderLayout.attributes.find(
+          (declaration: ThreeInternal) => declaration.name === nodes[index].name
+        )?.location;
+        if (location !== undefined)
+          state.vertexArray.setBuffer(
+            location,
+            this.get(this.getAttributeSource(attribute)).buffer
+          );
+      });
+    } else {
+      renderObject
+        .getVertexBuffers()
+        .forEach((attribute: ThreeInternal, index: number) =>
+          state.vertexArray.setBuffer(index, this.get(attribute).buffer)
+        );
+    }
     const index = renderObject.getIndex();
     state.vertexArray.setIndexBuffer(index ? this.get(index).buffer : null);
     const pass = this.renderPass!;
