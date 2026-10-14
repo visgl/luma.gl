@@ -371,3 +371,21 @@ work each frame; this is a compatibility exploration, not a performance guarante
 Transmission, lazy PMREM, postprocessing, picking occlusion and nested passes during
 the borrowed draw are unsupported. Native deck objects neither cast nor receive the
 Three shadow map. The basic `ThreeMeshLayer` remains a separate, smaller integration.
+
+## Geographic deck exploration
+
+The **Geographic Lanterns + picking** scene uses a local east/north/up meter frame
+anchored at longitude/latitude/altitude. `ThreeSceneLayer` accepts
+`COORDINATE_SYSTEM.METER_OFFSETS` and `coordinateOrigin`; pass the same origin to
+`synchronizeThreeCamera(camera, viewport, coordinateSystem, coordinateOrigin)`
+before preparation. This bounded Mercator tangent frame supports object altitude,
+scale and heading; large extents and globe projection remain unsupported.
+
+`pickThreeObject` performs CPU triangle raycasting, including nearest supplied
+occluders and clipping. The demo provides Three equivalents of native deck
+buildings to return stable IDs and synchronize selection highlights. It does not
+make Three scenes pickable in deck's GPU picking pass. Alpha-test holes, GPU-only
+deformation, material visibility and arbitrary native-layer occlusion require
+further integration. Tests compare rendered output and selected output against
+upstream Three and verify that layer removal/reinsertion preserves borrowed data
+and the device.
