@@ -14,6 +14,7 @@ import {MixedObjectRenderer} from './mixed-object-renderer';
 import {createComputeScene} from './compute-scene';
 import {createDeckComparison} from './deck-comparison';
 import {createDeckLanternComparison} from './deck-lantern-comparison';
+import {createGeographicComparison} from './geographic-comparison';
 
 let deckComparison: Awaited<ReturnType<typeof createDeckComparison>> | undefined;
 
@@ -113,9 +114,12 @@ async function recreate() {
   if (busy) return;
   busy = true;
   const useWebGL = backendSelection.value === 'webgl';
-  if (useWebGL && ['objects', 'interop', 'deck', 'deck-lantern'].includes(sceneSelection.value))
+  if (
+    useWebGL &&
+    ['objects', 'interop', 'deck', 'deck-lantern', 'deck-geographic'].includes(sceneSelection.value)
+  )
     sceneSelection.value = 'gltf';
-  for (const sceneKind of ['objects', 'interop', 'deck', 'deck-lantern'])
+  for (const sceneKind of ['objects', 'interop', 'deck', 'deck-lantern', 'deck-geographic'])
     sceneSelection.querySelector<HTMLOptionElement>(`option[value="${sceneKind}"]`)!.disabled =
       useWebGL;
   sceneSelection.disabled = true;
@@ -123,7 +127,9 @@ async function recreate() {
   for (const button of document.querySelectorAll('button')) button.disabled = true;
   status.textContent = 'Preparing both renderers…';
   for (const control of [lighting, environment, shadows])
-    control.disabled = ['objects', 'tsl', 'interop', 'deck'].includes(sceneSelection.value);
+    control.disabled = ['objects', 'tsl', 'interop', 'deck', 'deck-geographic'].includes(
+      sceneSelection.value
+    );
   try {
     deckComparison?.dispose();
     deckComparison = undefined;
@@ -150,26 +156,32 @@ async function recreate() {
       createCanvasContext: {canvas: canvases[0], autoResize: false}
     });
     deckContext.disabled = sceneSelection.value !== 'deck-lantern';
-    if (sceneSelection.value === 'deck' || sceneSelection.value === 'deck-lantern') {
+    if (['deck', 'deck-lantern', 'deck-geographic'].includes(sceneSelection.value)) {
       const onError = (error: Error) => {
         status.textContent = String(error);
       };
       deckComparison =
-        sceneSelection.value === 'deck-lantern'
-          ? await createDeckLanternComparison(device, canvases[1], width, onError, () => ({
-              lighting: lighting.checked,
-              environment: environment.checked,
-              shadows: shadows.checked,
-              context: deckContext.checked
-            }))
-          : await createDeckComparison(device, canvases[1], width, onError);
+        sceneSelection.value === 'deck-geographic'
+          ? await createGeographicComparison(device, canvases[1], width, onError, id => {
+              status.textContent = id ? `Selected: ${id}` : 'No object selected';
+            })
+          : sceneSelection.value === 'deck-lantern'
+            ? await createDeckLanternComparison(device, canvases[1], width, onError, () => ({
+                lighting: lighting.checked,
+                environment: environment.checked,
+                shadows: shadows.checked,
+                context: deckContext.checked
+              }))
+            : await createDeckComparison(device, canvases[1], width, onError);
       document.querySelector('#luma-heading')!.textContent =
         'deck.gl + Three meshes / one device and depth buffer';
       document.querySelector('#three-heading')!.textContent = 'Upstream Three reference';
       status.textContent =
-        sceneSelection.value === 'deck-lantern'
-          ? 'Lantern glTF / MeshStandardMaterial, environment and PCF shadows inside a native deck courtyard. Shared device/depth; synchronized cameras. Hover a data column.'
-          : 'Three cube + native deck ScatterplotLayer in one render pass. Drag either view; cameras synchronize. The disk moves behind and in front of the cube.';
+        sceneSelection.value === 'deck-geographic'
+          ? 'Local meter Lanterns at a geographic origin. Drag/zoom the left map to control both views; click either view to select. Toggle Lantern models removes/reinserts the layer. Buildings share depth.'
+          : sceneSelection.value === 'deck-lantern'
+            ? 'Lantern glTF / MeshStandardMaterial, environment and PCF shadows inside a native deck courtyard. Shared device/depth; synchronized cameras. Hover a data column.'
+            : 'Three cube + native deck ScatterplotLayer in one render pass. Drag either view; cameras synchronize. The disk moves behind and in front of the cube.';
       return;
     }
     const lumaRenderer =
@@ -248,10 +260,13 @@ async function recreate() {
     sceneSelection.disabled = false;
     backendSelection.disabled = false;
     for (const button of document.querySelectorAll('button')) button.disabled = false;
+    document.querySelector('#pause')!.textContent =
+      sceneSelection.value === 'deck-geographic' ? 'Toggle Lantern models' : 'Pause deck animation';
     for (const selector of ['#reverse-order', '#pause'])
       document.querySelector<HTMLButtonElement>(selector)!.disabled = ![
         'deck',
-        'deck-lantern'
+        'deck-lantern',
+        'deck-geographic'
       ].includes(sceneSelection.value);
   }
 }

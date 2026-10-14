@@ -3,6 +3,7 @@
 
 import {
   COORDINATE_SYSTEM,
+  _GlobeViewport,
   Layer,
   type LayerContext,
   type LayerProps,
@@ -14,6 +15,8 @@ import {
   type Scene,
   Matrix4,
   Vector3,
+  Raycaster,
+  type Object3D,
   WebGLCoordinateSystem,
   WebGPUCoordinateSystem
 } from 'three/webgpu';
@@ -24,15 +27,28 @@ const depthConversion = new Matrix4().set(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.5, 0.5
 /** Three strips camera scale; absorb deck's common-space transform into projection. */
 export function synchronizeThreeCamera(
   camera: Camera,
-  viewport: Pick<Viewport, 'viewMatrix' | 'projectionMatrix' | 'isGeospatial'>,
-  coordinateSystem: Camera['coordinateSystem'] = WebGLCoordinateSystem
+  viewport: Pick<Viewport, 'viewMatrix' | 'projectionMatrix' | 'isGeospatial'> &
+    Partial<Pick<Viewport, 'projectPosition' | 'getDistanceScales'>>,
+  coordinateSystem: Camera['coordinateSystem'] = WebGLCoordinateSystem,
+  coordinateOrigin?: [number, number, number]
 ): void {
-  if (viewport.isGeospatial)
-    throw new Error('ThreeMeshLayer currently requires a Cartesian viewport');
+  if (coordinateOrigin && !viewport.isGeospatial)
+    throw new Error('A local meter origin requires a geographic Mercator viewport');
+  const viewMatrix = new Matrix4().fromArray(viewport.viewMatrix);
+  if (viewport.isGeospatial) {
+    if (viewport instanceof _GlobeViewport)
+      throw new Error('Geographic Three scenes require Mercator projection');
+    if (!coordinateOrigin || !viewport.projectPosition || !viewport.getDistanceScales)
+      throw new Error('Geographic Three scenes require a local meter coordinate origin');
+    const origin = viewport.projectPosition(coordinateOrigin);
+    const scale = viewport.getDistanceScales(coordinateOrigin).unitsPerMeter;
+    viewMatrix.multiply(new Matrix4().makeTranslation(...origin));
+    viewMatrix.scale(new Vector3(...scale));
+  }
   camera.matrixAutoUpdate = false;
   camera.matrixWorldAutoUpdate = false;
   camera.coordinateSystem = coordinateSystem;
-  camera.matrixWorldInverse.fromArray(viewport.viewMatrix);
+  camera.matrixWorldInverse.copy(viewMatrix);
   camera.matrixWorld.copy(camera.matrixWorldInverse).invert();
   camera.matrixWorld.decompose(camera.position, camera.quaternion, new Vector3());
   camera.quaternion.normalize();
@@ -42,7 +58,7 @@ export function synchronizeThreeCamera(
   camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
   camera.projectionMatrix
     .fromArray(viewport.projectionMatrix)
-    .multiply(new Matrix4().fromArray(viewport.viewMatrix))
+    .multiply(viewMatrix)
     .multiply(camera.matrixWorld);
   if (coordinateSystem === WebGPUCoordinateSystem)
     camera.projectionMatrix.premultiply(depthConversion);
@@ -157,16 +173,49 @@ export class ThreeSceneLayer extends Layer<ThreeSceneLayerProps> {
       this.props.extensions.length ||
       this.props.modelMatrix ||
       Object.keys(this.props.parameters || {}).length ||
-      this.props.coordinateOrigin.some(value => value !== 0) ||
-      this.props.coordinateSystem !== COORDINATE_SYSTEM.CARTESIAN
+      (this.props.coordinateSystem !== COORDINATE_SYSTEM.METER_OFFSETS &&
+        (this.props.coordinateOrigin.some(value => value !== 0) ||
+          this.props.coordinateSystem !== COORDINATE_SYSTEM.CARTESIAN))
     )
       throw new Error(
-        "ThreeSceneLayer requires a prepared adapter on deck's device and a non-pickable Cartesian scene"
+        "ThreeSceneLayer requires a prepared adapter on deck's device and a non-pickable Cartesian or local meter scene"
       );
   }
   override draw({renderPass}: {renderPass: RenderPass}): void {
-    synchronizeThreeCamera(this.props.camera, this.context.viewport, WebGPUCoordinateSystem);
+    synchronizeThreeCamera(
+      this.props.camera,
+      this.context.viewport,
+      WebGPUCoordinateSystem,
+      this.props.coordinateSystem === COORDINATE_SYSTEM.METER_OFFSETS
+        ? [
+            this.props.coordinateOrigin[0],
+            this.props.coordinateOrigin[1],
+            this.props.coordinateOrigin[2] ?? 0
+          ]
+        : undefined
+    );
     this.props.adapter.draw(this.props.scene, this.props.camera, renderPass);
   }
   // Adapter/source ownership belongs to the caller; removing this layer preserves both.
+}
+
+/** CPU triangle picking in the synchronized local frame; include occluders in roots. */
+export function pickThreeObject(
+  camera: Camera,
+  normalizedPosition: [number, number],
+  roots: Object3D[]
+) {
+  for (const root of roots) root.updateWorldMatrix(true, true);
+  const near = new Vector3(
+    ...normalizedPosition,
+    camera.coordinateSystem === WebGPUCoordinateSystem ? 0 : -1
+  ).unproject(camera);
+  const far = new Vector3(...normalizedPosition, 1).unproject(camera);
+  const raycaster = new Raycaster(near, far.clone().sub(near).normalize(), 0, near.distanceTo(far));
+  const intersections = raycaster.intersectObjects(roots, true);
+  return intersections.find(intersection => {
+    for (let object: Object3D | null = intersection.object; object; object = object.parent)
+      if (!object.visible) return false;
+    return true;
+  });
 }
