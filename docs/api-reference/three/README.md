@@ -217,3 +217,7 @@ Native deck buildings retain their GPU picking support.
 the caller's adapter, source geometry and device. Reverse layer order checks shared
 depth. Resolution and recreation controls resize or release the owned resources.
 The geographic fixture keeps lighting and environment settings fixed.
+
+Buildings act as occluders for CPU selection; only Lantern instances receive
+selection IDs and highlights. Their bases are normalized from geometry bounds
+before applying instance scale, so placement altitude describes the model base.

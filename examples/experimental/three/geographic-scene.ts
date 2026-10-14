@@ -7,6 +7,7 @@ import {ThreeSceneLayer} from '@luma.gl/three/deck';
 import type {ThreeSceneAdapter} from '@luma.gl/three/objects';
 import {
   BoxGeometry,
+  Box3,
   Color,
   Group,
   Mesh,
@@ -43,8 +44,9 @@ export async function createGeographicScene(renderer: Renderer) {
           : child.material.clone();
       }
     });
-    // Lantern source is Y-up with its base at -1.4. Geographic frame is east/north/up.
-    model.position.y += 1.4;
+    // Normalize the actual cloned bounds, including any source/pedestal offsets.
+    model.position.y -= new Box3().setFromObject(model).min.y;
+    // Lantern source is Y-up; geographic placement is east/north/up.
     root.add(model);
     root.rotation.x = Math.PI / 2;
     // Apply heading about the geographic up axis through an outer placement group.
@@ -67,7 +69,7 @@ export async function createGeographicScene(renderer: Renderer) {
       new MeshBasicMaterial({color: 0x426375})
     );
     mesh.position.set(building.position[0], building.position[1], building.height / 2);
-    mesh.userData['geographicId'] = building.id;
+    mesh.name = building.id;
     referenceContext.add(mesh);
   }
   const emissiveColors = new Map<MeshStandardMaterial, Color>();

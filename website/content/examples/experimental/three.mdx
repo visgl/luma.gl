@@ -64,3 +64,7 @@ both views; click either pane for a stable selection ID and matching highlight.
 Toggle the model layer, reverse draw order, resize, or dispose/recreate the scene.
 Picking uses CPU triangle raycasting with explicit building occluders; general
 deck GPU picking of Three meshes and large geographic extents remain deferred.
+
+Buildings act as occluders for CPU selection; only Lantern instances receive
+selection IDs and highlights. Their bases are normalized from geometry bounds
+before applying instance scale, so placement altitude describes the model base.

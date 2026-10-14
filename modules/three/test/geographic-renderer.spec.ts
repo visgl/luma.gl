@@ -9,6 +9,7 @@ import {ThreeSceneAdapter} from '../src/objects';
 import {synchronizeThreeCamera, pickThreeObject} from '../src/deck';
 import {
   HalfFloatType,
+  Box3,
   Mesh,
   MeshStandardMaterial,
   RenderTarget,
@@ -19,7 +20,8 @@ import {
 import {
   createGeographicLayers,
   createGeographicScene,
-  GEOGRAPHIC_ORIGIN
+  GEOGRAPHIC_ORIGIN,
+  GEOGRAPHIC_OBJECTS
 } from '../../../examples/experimental/three/geographic-scene';
 
 test('Geographic Lantern placement, picking, selection and shared depth match upstream Three', async context => {
@@ -43,6 +45,13 @@ test('Geographic Lantern placement, picking, selection and shared depth match up
   const scene = await createGeographicScene(adapter.renderer);
   const referenceScene = await createGeographicScene(reference);
   referenceScene.scene.add(referenceScene.referenceContext);
+  for (const fixture of [scene, referenceScene])
+    fixture.models.forEach((model, index) => {
+      expect(new Box3().setFromObject(model).min.z).toBeCloseTo(
+        GEOGRAPHIC_OBJECTS[index].position[2],
+        6
+      );
+    });
   const color = device.createTexture({
     width: 128,
     height: 128,
@@ -188,7 +197,8 @@ test('Geographic Lantern placement, picking, selection and shared depth match up
             break;
           }
       }
-    expect(Array.from(selectedIds).some(id => id.startsWith('lantern-'))).toBe(true);
+    expect(selectedIds.size).toBeGreaterThan(0);
+    expect(Array.from(selectedIds).every(id => id.startsWith('lantern-'))).toBe(true);
     const selectedId = Array.from(selectedIds).find(id => id.startsWith('lantern-'))!;
     scene.select(selectedId);
     referenceScene.select(selectedId);

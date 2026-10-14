@@ -389,3 +389,7 @@ deformation, material visibility and arbitrary native-layer occlusion require
 further integration. Tests compare rendered output and selected output against
 upstream Three and verify that layer removal/reinsertion preserves borrowed data
 and the device.
+
+Buildings act as occluders for CPU selection; only Lantern instances receive
+selection IDs and highlights. Their bases are normalized from geometry bounds
+before applying instance scale, so placement altitude describes the model base.
