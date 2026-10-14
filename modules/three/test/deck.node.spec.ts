@@ -141,3 +141,14 @@ test('geographic camera explicitly rejects globe projection', () => {
     )
   ).toThrow('Mercator');
 });
+
+test('local meter origin explicitly rejects Cartesian viewports', () => {
+  expect(() =>
+    synchronizeThreeCamera(
+      new Camera(),
+      new OrbitViewport({width: 128, height: 128}),
+      WebGPUCoordinateSystem,
+      [0, 0, 0]
+    )
+  ).toThrow('Mercator');
+});

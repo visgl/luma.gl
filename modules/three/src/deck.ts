@@ -32,6 +32,8 @@ export function synchronizeThreeCamera(
   coordinateSystem: Camera['coordinateSystem'] = WebGLCoordinateSystem,
   coordinateOrigin?: [number, number, number]
 ): void {
+  if (coordinateOrigin && !viewport.isGeospatial)
+    throw new Error('A local meter origin requires a geographic Mercator viewport');
   const viewMatrix = new Matrix4().fromArray(viewport.viewMatrix);
   if (viewport.isGeospatial) {
     if (viewport instanceof _GlobeViewport)
@@ -188,7 +190,7 @@ export class ThreeSceneLayer extends Layer<ThreeSceneLayerProps> {
         ? [
             this.props.coordinateOrigin[0],
             this.props.coordinateOrigin[1],
-            this.props.coordinateOrigin[2] || 0
+            this.props.coordinateOrigin[2] ?? 0
           ]
         : undefined
     );
