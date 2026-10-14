@@ -16787,6 +16787,7 @@ __metadata:
     "@luma.gl/webgl": "npm:10.0.0-alpha.4"
     "@luma.gl/webgpu": "npm:10.0.0-alpha.4"
     "@types/three": "npm:0.185.0"
+    mjolnir.js: "npm:^3.1.1"
     three: "npm:0.185.1"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.0.0"

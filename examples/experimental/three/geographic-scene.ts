@@ -9,6 +9,8 @@ import {
   BoxGeometry,
   Box3,
   Color,
+  CanvasTexture,
+  SRGBColorSpace,
   Group,
   Mesh,
   MeshBasicMaterial,
@@ -34,6 +36,21 @@ export async function createGeographicScene(renderer: Renderer) {
   const source = content.children.find(object => object instanceof Group)!;
   content.remove(source);
   fixture.ground.visible = false;
+  // Mapped nameplates preserve the Lantern asset's original PBR maps and UVs.
+  const labelCanvas = document.createElement('canvas');
+  labelCanvas.width = 512;
+  labelCanvas.height = 128;
+  const labelContext = labelCanvas.getContext('2d')!;
+  labelContext.fillStyle = '#f5f0da';
+  labelContext.fillRect(0, 0, 512, 128);
+  labelContext.fillStyle = '#12313d';
+  labelContext.font = 'bold 86px sans-serif';
+  labelContext.textAlign = 'center';
+  labelContext.textBaseline = 'middle';
+  labelContext.fillText('THREE.js', 256, 68);
+  const labelTexture = new CanvasTexture(labelCanvas);
+  labelTexture.colorSpace = SRGBColorSpace;
+  const labelGeometry = new BoxGeometry(2.4, 0.6, 0.6);
   const models = GEOGRAPHIC_OBJECTS.map(object => {
     const root = new Group();
     const model = source.clone(true);
@@ -48,6 +65,16 @@ export async function createGeographicScene(renderer: Renderer) {
     model.position.y -= new Box3().setFromObject(model).min.y;
     // Lantern source is Y-up; geographic placement is east/north/up.
     root.add(model);
+    const label = new Mesh(
+      labelGeometry,
+      new MeshStandardMaterial({
+        map: labelTexture,
+        roughness: 0.65,
+        metalness: 0
+      })
+    );
+    label.position.set(0, 0.4, 0);
+    root.add(label);
     root.rotation.x = Math.PI / 2;
     // Apply heading about the geographic up axis through an outer placement group.
     const placement = new Group();
@@ -118,6 +145,8 @@ export async function createGeographicScene(renderer: Renderer) {
           child.material.dispose();
         }
       });
+      labelTexture.dispose();
+      labelGeometry.dispose();
       fixture.dispose();
     }
   };
