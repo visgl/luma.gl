@@ -1320,7 +1320,43 @@ it('Texture#copyExternalImage uploads image data on both backends', async () => 
   void 0;
 });
 
-it('WebGPUTexture#copyExternalImage honors flipY on native and CPU uploads', async () => {
+it('WebGPUTexture#copyExternalImage forwards flipY to native uploads', async () => {
+  const device = await getWebGPUTestDevice();
+  const texture = device.createTexture({
+    width: 1,
+    height: 1,
+    format: 'rgba8unorm',
+    usage: Texture.COPY_DST | Texture.RENDER
+  });
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 1;
+  const queue = (device as Device & {handle: GPUDevice}).handle.queue;
+  const queuePrototype = Object.getPrototypeOf(queue) as GPUQueue;
+  const descriptor = Object.getOwnPropertyDescriptor(queuePrototype, 'copyExternalImageToTexture');
+  const gpuType = device.info.gpuType;
+  const flipYValues: Array<boolean | undefined> = [];
+
+  // Avoid issuing the unstable native upload on software adapters while checking its descriptor.
+  Object.defineProperty(queuePrototype, 'copyExternalImageToTexture', {
+    configurable: true,
+    value: (source: {flipY?: boolean}) => flipYValues.push(source.flipY)
+  });
+  device.info.gpuType = 'unknown';
+  try {
+    for (const flipY of [false, true]) texture.copyExternalImage({image: canvas, flipY});
+    expect(flipYValues).toEqual([false, true]);
+  } finally {
+    device.info.gpuType = gpuType;
+    if (descriptor) {
+      Object.defineProperty(queuePrototype, 'copyExternalImageToTexture', descriptor);
+    } else {
+      Reflect.deleteProperty(queuePrototype, 'copyExternalImageToTexture');
+    }
+    texture.destroy();
+  }
+});
+
+it('WebGPUTexture#copyExternalImage honors flipY on the real adapter and CPU fallback', async () => {
   const device = await getWebGPUTestDevice();
   const texture = device.createTexture({
     width: 1,
