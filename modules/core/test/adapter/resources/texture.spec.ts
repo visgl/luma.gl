@@ -1320,6 +1320,45 @@ it('Texture#copyExternalImage uploads image data on both backends', async () => 
   void 0;
 });
 
+it('WebGPUTexture#copyExternalImage honors flipY on native and CPU uploads', async () => {
+  const device = await getWebGPUTestDevice();
+  const texture = device.createTexture({
+    width: 1,
+    height: 2,
+    format: 'rgba8unorm',
+    usage: Texture.COPY_DST | Texture.COPY_SRC | Texture.RENDER
+  });
+  const canvas = document.createElement('canvas');
+  canvas.width = 1;
+  canvas.height = 2;
+  canvas
+    .getContext('2d')!
+    .putImageData(
+      new ImageData(new Uint8ClampedArray([255, 0, 0, 255, 0, 0, 255, 255]), 1, 2),
+      0,
+      0
+    );
+  const gpuType = device.info.gpuType;
+  try {
+    // Exercise the real adapter path, then explicitly cover the software fallback.
+    for (const adapterType of [gpuType, 'cpu'] as const) {
+      device.info.gpuType = adapterType;
+      for (const flipY of [false, true]) {
+        texture.copyExternalImage({image: canvas, flipY});
+        const pixels = await readTexturePixels(texture, {width: 1, height: 2});
+        expect(pixels).toEqual(
+          new Uint8Array(
+            flipY ? [0, 0, 255, 255, 255, 0, 0, 255] : [255, 0, 0, 255, 0, 0, 255, 255]
+          )
+        );
+      }
+    }
+  } finally {
+    device.info.gpuType = gpuType;
+    texture.destroy();
+  }
+});
+
 it('WebGPUTexture#copyExternalImage falls back to a CPU upload', async () => {
   const device = await getWebGPUTestDevice();
   const texture = device.createTexture({

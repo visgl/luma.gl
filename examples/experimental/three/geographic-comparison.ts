@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Deck, MapView, type MapViewState} from '@deck.gl/core';
+import {Deck, MapController, MapView, WebMercatorViewport, type MapViewState} from '@deck.gl/core';
+import {Timeline} from '@luma.gl/engine';
+import {EventManager, Pan, Pinch} from 'mjolnir.js';
 import type {Device} from '@luma.gl/core';
 import {pickThreeObject, synchronizeThreeCamera} from '@luma.gl/three/deck';
 import {ThreeSceneAdapter} from '@luma.gl/three/objects';
@@ -26,6 +28,49 @@ export async function createGeographicComparison(
   let scene: Awaited<ReturnType<typeof createGeographicScene>> | undefined;
   let referenceScene: Awaited<ReturnType<typeof createGeographicScene>> | undefined;
   let deck: Deck<MapView> | undefined;
+  let referenceController: MapController | undefined;
+  let eventManager: EventManager | undefined;
+  const timeline = new Timeline();
+  let transitionFrame = 0;
+  let transitioning = false;
+  const resizeObserver = new ResizeObserver(() => updateController());
+  let viewState: MapViewState = {
+    longitude: GEOGRAPHIC_ORIGIN[0],
+    latitude: GEOGRAPHIC_ORIGIN[1],
+    zoom: 18.8 + Math.log2(width / 512),
+    pitch: 55,
+    bearing: -25
+  };
+  function updateController() {
+    const bounds = referenceCanvas.getBoundingClientRect();
+    timeline.setTime(performance.now());
+    referenceController?.setProps({
+      ...viewState,
+      position: viewState.position
+        ? [viewState.position[0], viewState.position[1], viewState.position[2]]
+        : undefined,
+      id: 'reference',
+      x: 0,
+      y: 0,
+      width: bounds.width,
+      height: bounds.height,
+      doubleClickZoom: false,
+      doubleClickDragZoom: false,
+      multiTouchDrag: 'rotate'
+    });
+  }
+  function updateViewState(next: MapViewState) {
+    viewState = next;
+    deck?.setProps({viewState});
+    updateController();
+  }
+  function updateTransition(time: number) {
+    transitionFrame = 0;
+    timeline.setTime(time);
+    referenceController?.updateTransition();
+    if (transitioning && !disposed && !transitionFrame)
+      transitionFrame = requestAnimationFrame(updateTransition);
+  }
   let disposed = false;
   let reverseOrder = false;
   let showModels = true;
@@ -47,11 +92,24 @@ export async function createGeographicComparison(
     deck?.redraw('selection');
   }
   let pointerOrigin: [number, number] | undefined;
+  let pointerMoved = false;
   const handlePointerDown = (event: PointerEvent) => {
     pointerOrigin = [event.clientX, event.clientY];
+    pointerMoved = !event.isPrimary;
+  };
+  const handlePointerMove = (event: PointerEvent) => {
+    if (
+      pointerOrigin &&
+      Math.hypot(event.clientX - pointerOrigin[0], event.clientY - pointerOrigin[1]) > 4
+    )
+      pointerMoved = true;
+  };
+  const handlePointerCancel = () => {
+    pointerMoved = true;
   };
   const handleClick = (event: MouseEvent) => {
     if (!(event.currentTarget instanceof HTMLCanvasElement)) return;
+    if (pointerMoved) return;
     if (
       pointerOrigin &&
       Math.hypot(event.clientX - pointerOrigin[0], event.clientY - pointerOrigin[1]) > 4
@@ -70,13 +128,33 @@ export async function createGeographicComparison(
     scene = await createGeographicScene(adapter.renderer);
     referenceScene = await createGeographicScene(reference);
     referenceScene.scene.add(referenceScene.referenceContext);
-    let viewState: MapViewState = {
-      longitude: GEOGRAPHIC_ORIGIN[0],
-      latitude: GEOGRAPHIC_ORIGIN[1],
-      zoom: 18.8 + Math.log2(width / 512),
-      pitch: 55,
-      bearing: -25
-    };
+    eventManager = new EventManager(referenceCanvas, {
+      touchAction: 'none',
+      recognizers: [
+        {recognizer: new Pan({event: 'multipan', threshold: 10, pointers: 2})},
+        {recognizer: new Pinch(), requireFailure: ['multipan']},
+        {
+          recognizer: new Pan({threshold: 1}),
+          recognizeWith: ['pinch'],
+          requireFailure: ['multipan']
+        }
+      ]
+    });
+    referenceController = new MapController({
+      timeline,
+      eventManager,
+      makeViewport: properties => new WebMercatorViewport(properties),
+      onViewStateChange: ({viewState: next}) => updateViewState(next),
+      onStateChange: state => {
+        if (state.isDragging) pointerMoved = true;
+        transitioning = Boolean(state.inTransition);
+        if (transitioning && !transitionFrame) {
+          transitionFrame = requestAnimationFrame(updateTransition);
+        }
+      }
+    });
+    updateController();
+    resizeObserver.observe(referenceCanvas);
     await new Promise<void>((resolve, reject) => {
       deck = new Deck<MapView>({
         device,
@@ -87,7 +165,7 @@ export async function createGeographicComparison(
         useDevicePixels: false,
         views: new MapView(),
         viewState,
-        controller: true,
+        controller: {doubleClickZoom: false, doubleClickDragZoom: false, multiTouchDrag: 'rotate'},
         layers: createGeographicLayers(scene!, adapter),
         onLoad: resolve,
         onError: error => {
@@ -95,8 +173,7 @@ export async function createGeographicComparison(
           reject(error);
         },
         onViewStateChange: ({viewState: next}) => {
-          viewState = next;
-          deck!.setProps({viewState});
+          updateViewState(next);
         },
         onBeforeRender: () => {
           const viewport = deck!.getViewports()[0];
@@ -123,12 +200,18 @@ export async function createGeographicComparison(
         }
       });
     });
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointercancel', handlePointerCancel);
     canvas.addEventListener('pointerdown', handlePointerDown);
     referenceCanvas.addEventListener('pointerdown', handlePointerDown);
     canvas.addEventListener('click', handleClick);
     referenceCanvas.addEventListener('click', handleClick);
   } catch (error) {
     disposed = true;
+    resizeObserver.disconnect();
+    cancelAnimationFrame(transitionFrame);
+    referenceController?.finalize();
+    eventManager?.destroy();
     deck?.finalize();
     reference.dispose();
     adapter.dispose();
@@ -138,6 +221,7 @@ export async function createGeographicComparison(
   }
   return {
     setSize(size: number) {
+      updateController();
       device.getDefaultCanvasContext().setDrawingBufferSize(size, size);
       reference.setSize(size, size, false);
       deck!.setProps({});
@@ -166,6 +250,12 @@ export async function createGeographicComparison(
     dispose() {
       if (disposed) return;
       disposed = true;
+      resizeObserver.disconnect();
+      cancelAnimationFrame(transitionFrame);
+      referenceController?.finalize();
+      eventManager?.destroy();
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointercancel', handlePointerCancel);
       canvas.removeEventListener('pointerdown', handlePointerDown);
       referenceCanvas.removeEventListener('pointerdown', handlePointerDown);
       canvas.removeEventListener('click', handleClick);

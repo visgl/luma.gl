@@ -150,7 +150,7 @@ export class WebGPUTexture extends Texture {
         {
           source: options.image,
           origin: [options.sourceX, options.sourceY],
-          flipY: false // options.flipY
+          flipY: options.flipY
         },
         // destination: GPUImageCopyTextureTagged
         {
@@ -561,6 +561,17 @@ function getExternalImageData(
       );
     }
     const data = context.getImageData(0, 0, options.width, options.height).data;
+    if (options.flipY) {
+      const bytesPerRow = options.width * 4;
+      const row = new Uint8ClampedArray(bytesPerRow);
+      for (let top = 0, bottom = options.height - 1; top < bottom; top++, bottom--) {
+        const topOffset = top * bytesPerRow;
+        const bottomOffset = bottom * bytesPerRow;
+        row.set(data.subarray(topOffset, topOffset + bytesPerRow));
+        data.copyWithin(topOffset, bottomOffset, bottomOffset + bytesPerRow);
+        data.set(row, bottomOffset);
+      }
+    }
     if (options.premultipliedAlpha) {
       premultiplyAlpha(data);
     }

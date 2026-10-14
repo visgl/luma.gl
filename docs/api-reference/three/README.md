@@ -192,8 +192,15 @@ Select **Geographic Lanterns + picking** to render three Lantern instances aroun
 a San Francisco longitude/latitude anchor. Their east/north/up offsets, altitudes,
 scales and headings are expressed in meters. Native deck buildings and ground
 share the WebGPU device and depth attachment. The upstream pane renders matching
-geometry using the same geographic camera transform. Drag or zoom the left map
-to control both views; click either pane to select and highlight a stable object ID.
+geometry using the same geographic camera transform. Drag or zoom either map
+to control both views; Shift-drag changes bearing/pitch, and two-finger gestures
+zoom or rotate. Click either pane to select and highlight a stable object ID.
+A public `MapController` and `mjolnir.js` event manager on the reference canvas
+share the same controlled `MapViewState` as deck, without another deck device.
+Each Lantern carries a canvas-textured THREE.js nameplate in both render paths.
+The nameplates use standard materials; the Lantern asset keeps its original PBR
+textures, so the material comparison remains meaningful. Nameplate hits select
+their parent Lantern, and the label texture is released with the fixture.
 
 For bounded local scenes, set `ThreeSceneLayer` to
 `COORDINATE_SYSTEM.METER_OFFSETS` with a three-component `coordinateOrigin`.
