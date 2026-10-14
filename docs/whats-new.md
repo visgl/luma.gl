@@ -73,6 +73,9 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 - **[Shared keyframe animation](/docs/api-guide/engine/animation)** - `AnimationMixer`, `AnimationClip`, `AnimationTrack`, and `AnimationAction` provide reusable bindings, weighted clip blending, crossfades, playback speed, seeking, and once, repeat, or ping-pong looping.
 - **glTF-compatible interpolation** - Shared samplers evaluate `STEP`, `LINEAR`, and `CUBICSPLINE` tracks, including normalized quaternion interpolation, without depending on glTF-specific scene classes.
 - **[Portable morph-target deformation](/docs/api-reference/engine/animation/morph-targets)** - `applyMorphTargets()` and `updateMorphTargetBuffers()` blend position, normal, and tangent targets into existing interleaved GPU buffers while preserving immutable source geometry and tangent handedness.
+- **Fewer WebGL pipeline rebuilds** - On WebGL, `Model.setParameters()` keeps the model's
+  pipeline and applies the parameters at each draw, so models drawn in several passes with
+  different parameters, such as a picking pass, no longer rebuild their pipeline (since v9.4.3).
 
 **@luma.gl/gltf**
 
