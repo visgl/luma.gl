@@ -59,12 +59,15 @@ export class ShaderBlockWriter {
     const flattenedUniformValues: Record<string, UniformValue> = {};
 
     for (const name in uniformValues) {
-      const value = uniformValues[name];
-      const uniformType = this.layout.uniformTypes[name];
-      if (uniformType) {
-        this._flattenCompositeValue(flattenedUniformValues, name, uniformType, value);
-      } else if (this.layout.fields[name]) {
-        flattenedUniformValues[name] = value as UniformValue;
+      // Like Object.entries(), skip inherited properties
+      if (Object.hasOwn(uniformValues, name)) {
+        const value = uniformValues[name];
+        const uniformType = this.layout.uniformTypes[name];
+        if (uniformType) {
+          this._flattenCompositeValue(flattenedUniformValues, name, uniformType, value);
+        } else if (this.layout.fields[name]) {
+          flattenedUniformValues[name] = value as UniformValue;
+        }
       }
     }
 
@@ -88,24 +91,23 @@ export class ShaderBlockWriter {
    * The returned view length matches {@link ShaderBlockLayout.byteLength}.
    */
   getFlatData(flattenedUniformValues: Readonly<Record<string, UniformValue>>): Uint8Array {
-    const buffer = getScratchArrayBuffer(this.layout.byteLength);
-    if (scratchTypedArrays?.u8.buffer !== buffer) {
+    const {byteLength} = this.layout;
+    const buffer = getScratchArrayBuffer(byteLength);
+    if (scratchTypedArrays?.f32.buffer !== buffer) {
       scratchTypedArrays = {
-        u8: new Uint8Array(buffer),
         i32: new Int32Array(buffer),
         u32: new Uint32Array(buffer),
         f32: new Float32Array(buffer),
         f16: new Uint16Array(buffer)
       };
     }
-    const typedArrays = scratchTypedArrays;
-    typedArrays.u8.fill(0, 0, this.layout.byteLength);
+    const data = new Uint8Array(buffer, 0, byteLength).fill(0);
 
     for (const name in flattenedUniformValues) {
-      this._writeLeafValue(typedArrays, name, flattenedUniformValues[name]);
+      this._writeLeafValue(scratchTypedArrays, name, flattenedUniformValues[name]);
     }
 
-    return new Uint8Array(buffer, 0, this.layout.byteLength);
+    return data;
   }
 
   /**
@@ -162,13 +164,16 @@ export class ShaderBlockWriter {
 
     if (isCompositeShaderTypeStruct(uniformType) && isCompositeUniformObject(value)) {
       for (const key in value) {
-        const subValue = value[key];
-        if (subValue === undefined) {
-          continue;
+        // Like Object.entries(), skip inherited properties
+        const subValue = Object.hasOwn(value, key) ? value[key] : undefined;
+        if (subValue !== undefined) {
+          this._flattenCompositeValue(
+            flattenedUniformValues,
+            this._getLeafName(baseName, key),
+            uniformType[key],
+            subValue
+          );
         }
-
-        const nestedName = this._getLeafName(baseName, key);
-        this._flattenCompositeValue(flattenedUniformValues, nestedName, uniformType[key], subValue);
       }
       return;
     }
@@ -216,15 +221,11 @@ export class ShaderBlockWriter {
   private _getLeafName(baseName: string, key: string | number): string {
     let names = this._leafNames.get(baseName);
     if (!names) {
-      names = {};
+      names = Object.create(null) as Record<string | number, string>;
       this._leafNames.set(baseName, names);
     }
-    let name = names[key];
-    if (!name) {
-      name = typeof key === 'number' ? `${baseName}[${key}]` : `${baseName}.${key}`;
-      names[key] = name;
-    }
-    return name;
+    names[key] ||= typeof key === 'number' ? `${baseName}[${key}]` : `${baseName}.${key}`;
+    return names[key];
   }
 
   /**
@@ -269,7 +270,7 @@ export class ShaderBlockWriter {
 }
 
 /** Typed-array views of the scratch buffer, created again only when the buffer changes. */
-let scratchTypedArrays: Record<'u8' | 'i32' | 'u32' | 'f32' | 'f16', any> | null = null;
+let scratchTypedArrays: Record<'i32' | 'u32' | 'f32' | 'f16', any> | null = null;
 
 /**
  * Type guard for nested uniform objects.

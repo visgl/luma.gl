@@ -111,15 +111,16 @@ export class UniformStore<
     commandEncoder?: CommandEncoder
   ): void {
     for (const blockName in uniforms) {
-      const uniformValues = uniforms[blockName];
-      const uniformBufferName = blockName as keyof TPropGroups;
-      const shaderBlockWriter = this.shaderBlockWriters.get(uniformBufferName);
-      const flattenedUniforms = shaderBlockWriter?.getFlatUniformValues(
-        (uniformValues || {}) as Record<string, CompositeUniformValue>
-      );
-      this.uniformBlocks.get(uniformBufferName)?.setUniforms(flattenedUniforms || {});
-      // We leverage logging in updateUniformBuffers(), even though slightly less efficient
-      // this.updateUniformBuffer(blockName);
+      // Like Object.entries(), skip inherited properties
+      if (Object.hasOwn(uniforms, blockName)) {
+        const shaderBlockWriter = this.shaderBlockWriters.get(blockName);
+        const flattenedUniforms = shaderBlockWriter?.getFlatUniformValues(
+          (uniforms[blockName] || {}) as Record<string, CompositeUniformValue>
+        );
+        this.uniformBlocks.get(blockName)?.setUniforms(flattenedUniforms || {});
+        // We leverage logging in updateUniformBuffers(), even though slightly less efficient
+        // this.updateUniformBuffer(blockName);
+      }
     }
 
     this.updateUniformBuffers(commandEncoder);

@@ -239,7 +239,8 @@ function mergeModuleUniforms(
 ): Record<string, ShaderModuleUniformValue> {
   const mergedUniforms = {...currentUniforms};
   for (const key in nextUniforms) {
-    const value = nextUniforms[key];
+    // Like Object.entries(), skip inherited properties
+    const value = Object.hasOwn(nextUniforms, key) ? nextUniforms[key] : undefined;
     if (value !== undefined) {
       mergedUniforms[key] = mergeModuleUniformValue(currentUniforms[key], value, uniformTypes[key]);
     }
@@ -286,7 +287,8 @@ function mergeModuleUniformValue(
   const currentObject = isPlainUniformObject(currentValue) ? currentValue : {};
   const mergedObject: Record<string, ShaderModuleUniformValue | undefined> = {...currentObject};
   for (const key in nextValue) {
-    const value = nextValue[key];
+    // Like Object.entries(), skip inherited properties
+    const value = Object.hasOwn(nextValue, key) ? nextValue[key] : undefined;
     if (value !== undefined) {
       mergedObject[key] = mergeModuleUniformValue(currentObject[key], value, uniformStruct[key]);
     }
@@ -313,6 +315,10 @@ function cloneModuleUniformValue(value: ShaderModuleUniformValue): ShaderModuleU
   if (isPlainUniformObject(value)) {
     const clonedObject: Record<string, ShaderModuleUniformValue | undefined> = {};
     for (const key in value) {
+      // Like Object.entries(), skip inherited properties
+      if (!Object.hasOwn(value, key)) {
+        continue;
+      }
       const nestedValue = value[key];
       clonedObject[key] =
         nestedValue === undefined ? undefined : cloneModuleUniformValue(nestedValue);

@@ -53,10 +53,12 @@ export class UniformBlock<
   /** Set a map of uniforms */
   setUniforms(uniforms: Partial<TUniforms>): void {
     for (const key in uniforms) {
-      const value = uniforms[key] as UniformValue;
-      const changed = this._setUniform(key, value);
-      if (changed && !this.needsRedraw) {
-        this.setNeedsRedraw(`${this.name}.${key}=${value}`);
+      // Like Object.entries(), skip inherited properties
+      if (Object.hasOwn(uniforms, key)) {
+        const value = uniforms[key] as UniformValue;
+        if (this._setUniform(key, value) && !this.needsRedraw) {
+          this.setNeedsRedraw(`${this.name}.${key}=${value}`);
+        }
       }
     }
   }

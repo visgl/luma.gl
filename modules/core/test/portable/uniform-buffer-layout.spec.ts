@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {makeShaderBlockLayout, ShaderBlockWriter, UniformStore} from '../../src';
+import {makeShaderBlockLayout, ShaderBlockWriter, UniformBlock, UniformStore} from '../../src';
 
 function almostEqual(a: number, b: number, eps = 1e-3): boolean {
   return Math.abs(a - b) <= eps;
@@ -552,4 +552,92 @@ it('ShaderBlockLayout matches original deck project std140 packing', () => {
   }
 
   void 0;
+});
+
+it('ShaderBlockWriter writes struct fields named like Object.prototype members', () => {
+  const {writer} = makeLayoutWriter({
+    material: {
+      constructor: 'f32',
+      toString: 'f32',
+      valueOf: 'f32',
+      hasOwnProperty: 'f32'
+    }
+  } as const);
+  const values = {
+    material: {constructor: 1, toString: 2, valueOf: 3, hasOwnProperty: 4}
+  };
+
+  expect(writer.getFlatUniformValues(values), 'fields flatten to their own paths').toEqual({
+    'material.constructor': 1,
+    'material.toString': 2,
+    'material.valueOf': 3,
+    'material.hasOwnProperty': 4
+  });
+  const view = new Float32Array(writer.getData(values).slice().buffer);
+  expect(Array.from(view.slice(0, 4)), 'every field is written').toEqual([1, 2, 3, 4]);
+});
+
+/** Returns `own` with an inherited enumerable `name` that throws when read. */
+function withInheritedGetter(name: string, own: object): any {
+  const prototype = Object.defineProperty({}, name, {
+    enumerable: true,
+    get() {
+      throw new Error(`inherited ${name} was read`);
+    }
+  });
+  return Object.assign(Object.create(prototype), own);
+}
+
+it('ShaderBlockWriter ignores inherited enumerable fields', () => {
+  const {writer} = makeLayoutWriter({
+    scale: 'f32',
+    light: {position: 'vec3<f32>', intensity: 'f32'}
+  } as const);
+  const light = Object.assign(Object.create({intensity: 7}), {
+    position: [1, 2, 3]
+  });
+
+  expect(
+    writer.getFlatUniformValues({light}),
+    'only own struct fields are flattened, as Object.entries() did'
+  ).toEqual({'light.position': [1, 2, 3]});
+  expect(
+    writer.getFlatUniformValues(Object.assign(Object.create({scale: 2}), {light: {intensity: 1}})),
+    'only own uniforms are flattened, as Object.entries() did'
+  ).toEqual({'light.intensity': 1});
+  expect(
+    writer.getFlatUniformValues(
+      withInheritedGetter('scale', {
+        light: withInheritedGetter('intensity', {position: [1, 2, 3]})
+      })
+    ),
+    'inherited fields are not read'
+  ).toEqual({'light.position': [1, 2, 3]});
+});
+
+it('UniformBlock and UniformStore ignore inherited enumerable values', () => {
+  const uniformBlock = new UniformBlock<{scale: number; offset: number}>();
+  uniformBlock.setUniforms(Object.assign(Object.create({scale: 2}), {offset: 1}));
+  expect(uniformBlock.getAllUniforms(), 'only own uniforms are set').toEqual({
+    offset: 1
+  });
+  let reads = 0;
+  const uniforms = withInheritedGetter('scale', {});
+  Object.defineProperty(uniforms, 'offset', {
+    enumerable: true,
+    get: () => 10 + ++reads
+  });
+  uniformBlock.needsRedraw = false;
+  uniformBlock.setUniforms(uniforms);
+  expect(reads, 'an own value is read once, and an inherited one not at all').toBe(1);
+
+  const uniformStore = new UniformStore({type: 'webgl'} as any, {
+    lighting: {
+      uniformTypes: {intensity: 'f32'},
+      defaultUniforms: {intensity: 0.5}
+    }
+  });
+  uniformStore.setUniforms(withInheritedGetter('lighting', {}));
+  const view = new Float32Array(uniformStore.getUniformBufferData('lighting').slice().buffer);
+  expect(view[0], 'an inherited block is not set').toBe(0.5);
 });
