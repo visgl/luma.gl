@@ -189,7 +189,7 @@ Replaces the buffer layout and marks the pipeline dirty.
 
 ### `setParameters(parameters: RenderPipelineParameters): void`[​](#setparametersparameters-renderpipelineparameters-void "Direct link to setparametersparameters-renderpipelineparameters-void")
 
-Updates pipeline parameters and marks the pipeline dirty when needed.
+Updates pipeline parameters. On WebGPU, where parameters are part of the render pipeline, this marks the pipeline dirty when the parameters change. On WebGL the model keeps its pipeline and passes its parameters to each draw call, so `model.pipeline.props.parameters` keeps the parameters the retained pipeline was created with.
 
 ### `setInstanceCount(instanceCount: number): void`[​](#setinstancecountinstancecount-number-void "Direct link to setinstancecountinstancecount-number-void")
 

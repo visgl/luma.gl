@@ -21,6 +21,7 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 * `BufferTransform.run()` now creates its render pass with `discard: true` by default, avoiding unnecessary attachment stores for transform-feedback-only workloads. Applications that attach a framebuffer and consume rasterized fragment output must pass `discard: false` to `run()`.
 * `Model.predraw(commandEncoder)` now requires an explicit command encoder. Call it with the encoder that will be submitted when ordered pre-draw uploads must be shared across multiple draws or viewports. Normal `Model.draw(renderPass)` calls continue to perform their own pre-draw work.
 * `makeGPUGeometry()` now interleaves CPU geometry attributes into a single vertex buffer by default. Callers that require separate attribute buffers should create those buffers and construct `GPUGeometry` explicitly with the corresponding `bufferLayout`.
+* On WebGL, `Model.setParameters()` no longer replaces `model.pipeline` (since v9.4.3). `Model.draw()` passes the model's current parameters to every draw call, as before. Code that draws `model.pipeline` directly without passing `parameters` gets the parameters the retained pipeline was created with; pass `model.parameters` to the draw call instead.
 
 **@luma.gl/webgl**
 
