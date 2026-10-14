@@ -178,11 +178,11 @@ The final draw never clears, ends or submits the borrowed pass. Layer removal do
 not dispose the adapter: the application owns its lifetime and calls `dispose()`
 when finished. Source objects and the device remain borrowed.
 
-This path currently targets single-sample Cartesian views and display-encoded sRGB
-output with no tone mapping. It uses pinned Three r185 context/output hooks to apply
+This path targets single-sample Cartesian or bounded local-meter Mercator views
+and display-encoded sRGB output with no tone mapping. It uses pinned Three r185 context/output hooks to apply
 color conversion inline, avoiding a second main-color output pass. Preparation adds
 work each frame; this is a compatibility exploration, not a performance guarantee.
-Transmission, lazy PMREM, postprocessing, picking occlusion and nested passes during
+Transmission, lazy PMREM, postprocessing, GPU picking and nested passes during
 the borrowed draw are unsupported. Native deck objects neither cast nor receive the
 Three shadow map. The basic `ThreeMeshLayer` remains a separate, smaller integration.
 
