@@ -66,7 +66,7 @@ export function createComputeScene(device?: Device, renderer?: WebGPURenderer) {
   geometry.instanceCount = INSTANCE_COUNT;
   const phase = uniform(0);
   const material = new MeshBasicNodeMaterial({color: '#32b6dc', side: DoubleSide});
-  const instanceOffset = attribute('instanceOffset', 'vec3');
+  const instanceOffset = attribute<'vec3'>('instanceOffset', 'vec3');
   material.positionNode = positionLocal.add(instanceOffset);
   let bridge: ThreeBufferBridge | undefined;
   const positions = device?.createBuffer({
