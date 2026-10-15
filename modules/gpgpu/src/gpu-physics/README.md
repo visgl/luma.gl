@@ -138,8 +138,10 @@ reproducibility and glTF physics adapters remain outside this sphere module.
 `planes` accepts up to 32 static rectangles or infinite planes. It overrides the
 legacy `plane` property; an empty array disables all surfaces. Each plane can
 specify a `center`, `normal`, `halfExtents`, `restitution`, `staticFriction`,
-`dynamicFriction`, and `rollingResistance`. Omitted material values inherit the
-world material. A center overrides offset. The first half extent follows the
+`dynamicFriction`, `rollingResistance`, and `spinningResistance`. Omitted material values inherit the
+world material. Spinning resistance defaults to zero and adds angular deceleration
+about the contact normal of `coefficient * normalGravity / radius`; the pool cloth
+uses it to dissipate residual side spin. A center overrides offset. The first half extent follows the
 same deterministic tangent basis as the original plane: normalize `[normal.z,
 0, -normal.x]` when `abs(normal.y) < 0.9`, otherwise normalize `[0, -normal.z,
 normal.y]`. The second tangent is `cross(normal, firstTangent)`.

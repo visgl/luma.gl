@@ -275,6 +275,7 @@ fn main(@builtin(global_invocation_id) invocation: vec3u) {
   var grounded = false;
   var supportNormal = vec3f(0.0, 0.0, 1.0);
   var rollingResistance = 0.0;
+  var spinningResistance = 0.0;
   var supportWeight = -1e30;
   for (var planeIndex = 0u; planeIndex < u32(settings.resting.w); planeIndex++) {
     let plane = settings.planes[planeIndex];
@@ -282,7 +283,7 @@ fn main(@builtin(global_invocation_id) invocation: vec3u) {
       dot(sphere.xyz, plane.normal.xyz) - plane.normal.w >= 0.0) {
       grounded = true;
       let weight = dot(plane.normal.xyz, -settings.gravity.xyz);
-      if (weight > supportWeight) {supportWeight = weight; supportNormal = plane.normal.xyz; rollingResistance = plane.material.w;}
+      if (weight > supportWeight) {supportWeight = weight; supportNormal = plane.normal.xyz; rollingResistance = plane.material.w; spinningResistance = plane.center.w;}
     }
   }
   var supported = grounded;
@@ -297,6 +298,9 @@ fn main(@builtin(global_invocation_id) invocation: vec3u) {
     let damping = max(0.0, 1.0 - rollingResistance * max(supportWeight, 0.0) * settings.material.x / max(speed, 0.000001));
     velocity = vec4f(normalVelocity + tangentVelocity * damping, velocity.w);
     angular = vec4f(angular.xyz * damping, angular.w);
+    let spin = dot(angular.xyz, supportNormal);
+    let spinLoss = spinningResistance * max(supportWeight, 0.0) * settings.material.x / sphere.w;
+    angular = vec4f(angular.xyz - supportNormal * sign(spin) * min(abs(spin), spinLoss), angular.w);
   }
   if (supported && length(velocity.xyz) < settings.resting.y && length(angular.xyz) < settings.resting.z) {
     sleep.x += settings.material.x;

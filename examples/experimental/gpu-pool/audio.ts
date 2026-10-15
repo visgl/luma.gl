@@ -38,7 +38,7 @@ export class PoolAudio {
   }
 
   playCue(strength: number): void {
-    this.playImpact(780, 0.45 + strength * 0.45, 0.055, -0.1);
+    this.playImpact(330, 0.5 + strength * 0.45, 0.045, -0.1);
   }
 
   playPocket(): void {
@@ -76,9 +76,9 @@ export class PoolAudio {
       if (!nearRail && !nearBall) continue;
       this.lastContact.set(body.index, now);
       this.playImpact(
-        nearBall ? 1250 : 260,
+        nearBall ? 470 : 180,
         Math.min(0.8, 0.12 + change * 0.1),
-        nearBall ? 0.035 : 0.075,
+        nearBall ? 0.045 : 0.065,
         body.position[0] / 7
       );
       if (++contacts >= 4) break;
@@ -95,36 +95,47 @@ export class PoolAudio {
     if (!this.enabled || !context || context.state !== 'running' || !this.output || !this.noise)
       return;
     const now = context.currentTime;
-    const envelope = context.createGain();
-    envelope.gain.setValueAtTime(0.0001, now);
-    envelope.gain.exponentialRampToValueAtTime(strength, now + 0.002);
-    envelope.gain.exponentialRampToValueAtTime(0.0001, now + duration);
     const stereo = context.createStereoPanner();
     stereo.pan.value = Math.max(-1, Math.min(1, pan));
-    envelope.connect(stereo).connect(this.output);
-    const tone = context.createOscillator();
-    tone.type = 'sine';
-    tone.frequency.setValueAtTime(frequency, now);
-    tone.frequency.exponentialRampToValueAtTime(frequency * 0.55, now + duration);
-    tone.connect(envelope);
+    stereo.connect(this.output);
+    const variation = 0.96 + Math.random() * 0.08;
+    // Short, damped, inharmonic modes give the clack a body without a ringing pitch sweep.
+    for (const [ratio, amplitude, decay] of [
+      [0.45, 0.55, 1],
+      [1, 0.6, 0.65],
+      [1.73, 0.2, 0.35]
+    ]) {
+      const tone = context.createOscillator();
+      tone.type = 'sine';
+      tone.frequency.value = frequency * ratio * variation;
+      const envelope = context.createGain();
+      envelope.gain.setValueAtTime(0.0001, now);
+      envelope.gain.exponentialRampToValueAtTime(strength * amplitude, now + 0.0007);
+      envelope.gain.exponentialRampToValueAtTime(0.0001, now + duration * decay);
+      tone.connect(envelope).connect(stereo);
+      tone.start(now);
+      tone.stop(now + duration);
+      tone.onended = () => {
+        tone.disconnect();
+        envelope.disconnect();
+      };
+    }
+    // A broad, low-passed impulse supplies the hard contact edge; it decays before it can hiss.
     const noise = context.createBufferSource();
     noise.buffer = this.noise;
     const filter = context.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.value = frequency * 2;
-    filter.Q.value = 0.7;
-    const noiseGain = context.createGain();
-    noiseGain.gain.value = 0.3;
-    noise.connect(filter).connect(noiseGain).connect(envelope);
-    tone.start(now);
+    filter.type = 'lowpass';
+    filter.frequency.value = Math.min(2600, frequency * 5);
+    filter.Q.value = 0.5;
+    const envelope = context.createGain();
+    envelope.gain.setValueAtTime(strength * 1.7, now);
+    envelope.gain.exponentialRampToValueAtTime(0.0001, now + 0.012);
+    noise.connect(filter).connect(envelope).connect(stereo);
     noise.start(now);
-    tone.stop(now + duration);
-    noise.stop(now + duration);
-    tone.onended = () => {
-      tone.disconnect();
+    noise.stop(now + duration + 0.005);
+    noise.onended = () => {
       noise.disconnect();
       filter.disconnect();
-      noiseGain.disconnect();
       envelope.disconnect();
       stereo.disconnect();
     };

@@ -591,3 +591,22 @@ it('GPUSphereWorld throw switches independently gate linear and angular contact 
     expect(results[1]).toBeLessThan(results[0] - 0.02);
   }
 });
+
+it('GPUSphereWorld cloth spinning resistance dissipates side spin', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const target = await makeWorld(device, [0, 0, 0.5, 0.5], [0, 0, 0, 1], {
+    gravity: [0, 0, -9.81],
+    plane: {spinningResistance: 0.5},
+    restitution: 0
+  });
+  try {
+    target.world.applyAngularImpulse(0, [0, 0, 1]);
+    target.step(120);
+    const [state] = await target.world.readState();
+    expect(state.angularVelocity[2]).toBeCloseTo(0.19, 3);
+    expect(state.position).toEqual([0, 0, 0.5]);
+  } finally {
+    target.destroy();
+  }
+});

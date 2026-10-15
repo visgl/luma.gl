@@ -38,6 +38,8 @@ export type GPUSpherePlane = {
   staticFriction?: number;
   dynamicFriction?: number;
   rollingResistance?: number;
+  /** Additional resistance to rotation around the contact normal. */
+  spinningResistance?: number;
 };
 
 /** Live values. Update once before submitting the next batch of graph encodings. */
@@ -308,7 +310,8 @@ export class GPUSphereWorld {
         plane.restitution ?? next.restitution,
         plane.staticFriction ?? next.staticFriction,
         plane.dynamicFriction ?? next.dynamicFriction,
-        plane.rollingResistance ?? next.rollingResistance
+        plane.rollingResistance ?? next.rollingResistance,
+        plane.spinningResistance ?? 0
       ];
       if (
         ![
@@ -345,7 +348,8 @@ export class GPUSphereWorld {
         plane.restitution ?? values.restitution,
         plane.staticFriction ?? values.staticFriction,
         plane.dynamicFriction ?? values.dynamicFriction,
-        plane.rollingResistance ?? values.rollingResistance
+        plane.rollingResistance ?? values.rollingResistance,
+        plane.spinningResistance ?? 0
       ])
     ];
     const previousValues = flatten(previous);
@@ -861,7 +865,7 @@ export class GPUSphereWorld {
           ...forward,
           plane.halfExtents?.[1] ?? 1e10,
           ...center,
-          0,
+          plane.spinningResistance ?? 0,
           plane.restitution ?? parameters.restitution,
           plane.staticFriction ?? parameters.staticFriction,
           plane.dynamicFriction ?? parameters.dynamicFriction,

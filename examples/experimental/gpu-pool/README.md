@@ -27,7 +27,9 @@ be muted with **Sound off**. No audio assets are downloaded. Contact sounds are
 inferred from sampled changes in ball velocities and are cosmetic.
 
 Select a point on the cue-ball diagram for top, back or side spin; **Center**
-restores a central strike. Contact points are limited to 80% of the radius.
+restores a central strike. The dashed miscue guide marks the selectable limit at 80% of the radius;
+contact points clamp to this ring. Miscue slips are not simulated. Cloth spinning resistance
+dissipates residual side spin so shots can settle.
 **Cut Induced Throw** and **Spin Induced Throw** independently include linear and
 angular contact-slip contributions to sphere friction. Both start enabled; a
 highlighted button means enabled. This is an experimental teaching control, not
@@ -36,7 +38,7 @@ a calibrated billiards model.
 ## Prototype limits
 
 - WebGPU required; no textures, models or other network assets.
-- Fixed 1/240-second steps, 12 solver iterations, maximum shot speed 12 table units/s.
+- Fixed 1/240-second steps, 12 solver iterations, maximum initial shot speed 12 table units/s.
 - A frame processes at most 12 steps. Under load, simulation slows rather than
   increasing the timestep. Hidden-tab time is not replayed on return.
 - Discrete collisions; continuous collision detection is a later tranche; spin/throw behavior uses an experimental Coulomb approximation. No claim of tournament-grade billiards accuracy.

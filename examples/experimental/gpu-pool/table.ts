@@ -20,14 +20,15 @@ export const TABLE_PLANES: GPUSpherePlane[] = [
     restitution: 0,
     staticFriction: 0.25,
     dynamicFriction: 0.18,
-    rollingResistance: 0.035
+    rollingResistance: 0.035,
+    spinningResistance: 0.3
   },
   ...[-1, 1].flatMap((side): GPUSpherePlane[] => [
     ...[-1, 1].map(
       (half): GPUSpherePlane => ({
         normal: [0, -side, 0],
-        center: [half * 3.05, side * 3, 0.2],
-        halfExtents: [0.5, 2.5],
+        center: [half * 3, side * 3, 0.2],
+        halfExtents: [0.5, 2.6],
         restitution: 0.8,
         staticFriction: 0.12,
         dynamicFriction: 0.08,
@@ -37,7 +38,7 @@ export const TABLE_PLANES: GPUSpherePlane[] = [
     {
       normal: [-side, 0, 0],
       center: [side * 6, 0, 0.2],
-      halfExtents: [0.5, 2.45],
+      halfExtents: [0.5, 2.6],
       restitution: 0.8,
       staticFriction: 0.12,
       dynamicFriction: 0.08,
