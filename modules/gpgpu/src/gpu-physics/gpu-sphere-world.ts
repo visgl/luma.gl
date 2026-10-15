@@ -226,7 +226,11 @@ export class GPUSphereWorld {
 
   /** Change gravity/material/plane without recompiling. Gravity changes wake sleeping bodies. */
   update(parameters: GPUSphereWorldParameters): void {
-    const next = {...this.parameters, ...parameters};
+    const next = {
+      ...this.parameters,
+      ...parameters,
+      plane: {...this.parameters.plane, ...parameters.plane}
+    };
     const normal = next.plane.normal ?? [0, 0, 1];
     if (
       ![

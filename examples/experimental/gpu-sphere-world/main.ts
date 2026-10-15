@@ -10,6 +10,12 @@ import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/gpgpu/gpu-
 import {GPUSphereWorld, decodeGPUSphereWorldDiagnostics} from '@luma.gl/gpgpu/gpu-physics';
 import {PerspectiveCamera, Vector3, Quaternion} from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {
+  advanceSphereClock,
+  createSphereBenchmark,
+  recordSphereBenchmarkSample,
+  type SphereBenchmark
+} from './benchmark';
 
 function getElement<ElementType extends HTMLElement = HTMLElement>(selector: string): ElementType {
   // index.html declares every control before loading this entry module.
@@ -284,8 +290,7 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
   let frameMilliseconds = 0;
   let encodeMilliseconds = 0;
   let samplingPromise: Promise<void> = Promise.resolve();
-  type Benchmark = {warmup: number; frames: number[]; encoding: number[]; gpu: number[]};
-  let benchmark: Benchmark | undefined;
+  let benchmark: SphereBenchmark | undefined;
   let lastReport: object | undefined;
   const percentile = (values: number[], fraction: number): number => {
     const sorted = [...values].sort((first, second) => first - second);
@@ -351,7 +356,9 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
     controls.enabled = false;
     for (const identifier of ['body-count', 'reset', 'pause', 'benchmark'])
       getElement<HTMLButtonElement>('#' + identifier).disabled = true;
-    benchmark = {warmup: 30, frames: [], encoding: [], gpu: []};
+    benchmark = createSphereBenchmark();
+    lastReport = undefined;
+    getElement<HTMLButtonElement>('#download-report').disabled = true;
   };
   getElement('#download-report').onclick = () => {
     if (!lastReport) return;
@@ -374,10 +381,10 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
       previous = now;
       updatePlatform();
       encodeMilliseconds = 0;
-      if (!paused && !loading) {
-        accumulator += elapsed * speed;
-        const steps = benchmark ? 1 : Math.min(8, Math.floor(accumulator * 120));
-        if (!benchmark) accumulator -= steps / 120;
+      if (!paused && !loading && !benchmark?.finishing) {
+        const clock = advanceSphereClock(accumulator, elapsed, speed, Boolean(benchmark));
+        const steps = clock.steps;
+        accumulator = clock.accumulator;
         for (let step = 0; step < steps; step++) {
           const sample = step === 0 && now - lastSample >= 500 && !sampling;
           const querySet =
@@ -398,14 +405,21 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
             lastSample = now;
             sampling = true;
             const target = resources;
+            const submittedBenchmark = benchmark;
+            const measured = submittedBenchmark?.warmup === 0;
             samplingPromise = (async () => {
               try {
                 const diagnostics = decodeGPUSphereWorldDiagnostics(
                   new Uint32Array((await target.world.diagnostics!.readAsync()).buffer)
                 );
                 const timing = querySet ? await encoding.readTimings() : undefined;
-                if (timing?.gpuTimeMilliseconds !== undefined)
-                  benchmark?.gpu.push(timing.gpuTimeMilliseconds);
+                recordSphereBenchmarkSample(
+                  submittedBenchmark,
+                  benchmark,
+                  measured,
+                  diagnostics,
+                  timing?.gpuTimeMilliseconds
+                );
                 const memory =
                   target.graph.stats.physicalTransientResourceBytes + target.count * 80 + 144;
                 getElement('#metrics').textContent =
@@ -419,12 +433,14 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
                 sampling = false;
               }
             })().catch(error => {
+              if (submittedBenchmark && submittedBenchmark === benchmark)
+                submittedBenchmark.samplingErrors++;
               status.value = String(error);
             });
           }
         }
       }
-      if (benchmark) {
+      if (benchmark && !benchmark.finishing) {
         if (benchmark.warmup > 0) benchmark.warmup--;
         else {
           benchmark.frames.push(frameMilliseconds);
@@ -433,27 +449,48 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
         getElement('#benchmark-status').textContent =
           `Benchmark ${benchmark.frames.length}/300 frames`;
         if (benchmark.frames.length >= 300) {
-          lastReport = {
-            bodyCount: resources.count,
-            date: new Date().toISOString(),
-            adapter: device.info,
-            timeStep: resources.world.timeStep,
-            iterations: resources.world.iterations,
-            maximumContacts: resources.world.maximumContacts,
-            frameMedianMilliseconds: percentile(benchmark.frames, 0.5),
-            frameP95Milliseconds: percentile(benchmark.frames, 0.95),
-            encodeMedianMilliseconds: percentile(benchmark.encoding, 0.5),
-            gpuMedianMilliseconds: benchmark.gpu.length ? percentile(benchmark.gpu, 0.5) : null,
-            notes:
-              '30 warmup + 300 frames; one fixed simulation step per frame; frame duration includes display pacing.'
-          };
-          getElement('#benchmark-status').textContent =
-            `300 frames · frame median ${percentile(benchmark.frames, 0.5).toFixed(1)} ms · p95 ${percentile(benchmark.frames, 0.95).toFixed(1)} ms · encode median ${percentile(benchmark.encoding, 0.5).toFixed(2)} ms · GPU median ${benchmark.gpu.length ? percentile(benchmark.gpu, 0.5).toFixed(2) : 'unavailable'} ms`;
-          getElement<HTMLButtonElement>('#download-report').disabled = false;
-          benchmark = undefined;
-          controls.enabled = true;
-          for (const identifier of ['body-count', 'reset', 'pause', 'benchmark'])
-            getElement<HTMLButtonElement>('#' + identifier).disabled = false;
+          benchmark.finishing = true;
+          const completedBenchmark = benchmark;
+          // Finish after the last in-flight readback so its timing and validity reach the report.
+          void samplingPromise.then(() => {
+            if (benchmark !== completedBenchmark) return;
+            lastReport = {
+              bodyCount: resources.count,
+              date: new Date().toISOString(),
+              adapter: device.info,
+              timeStep: resources.world.timeStep,
+              iterations: resources.world.iterations,
+              maximumContacts: resources.world.maximumContacts,
+              frameMedianMilliseconds: percentile(completedBenchmark.frames, 0.5),
+              frameP95Milliseconds: percentile(completedBenchmark.frames, 0.95),
+              encodeMedianMilliseconds: percentile(completedBenchmark.encoding, 0.5),
+              gpuMedianMilliseconds: completedBenchmark.gpu.length
+                ? percentile(completedBenchmark.gpu, 0.5)
+                : null,
+              diagnosticSamples: completedBenchmark.diagnosticSamples,
+              maximumDroppedContacts: completedBenchmark.maximumDroppedContacts,
+              maximumInvalidBodies: completedBenchmark.maximumInvalidBodies,
+              samplingErrors: completedBenchmark.samplingErrors,
+              valid:
+                completedBenchmark.diagnosticSamples > 0 &&
+                completedBenchmark.maximumDroppedContacts === 0 &&
+                completedBenchmark.maximumInvalidBodies === 0 &&
+                completedBenchmark.samplingErrors === 0,
+              diagnosticCoverage:
+                'Sampled during warmup and measurement; not an every-step guarantee.',
+              notes:
+                '30 warmup + 300 frames; one fixed simulation step per frame; frame duration includes display pacing.'
+            };
+            getElement('#benchmark-status').textContent =
+              `${completedBenchmark.maximumDroppedContacts || completedBenchmark.maximumInvalidBodies || completedBenchmark.samplingErrors || !completedBenchmark.diagnosticSamples ? 'INVALID · ' : ''}300 frames · frame median ${percentile(completedBenchmark.frames, 0.5).toFixed(1)} ms · p95 ${percentile(completedBenchmark.frames, 0.95).toFixed(1)} ms · encode median ${percentile(completedBenchmark.encoding, 0.5).toFixed(2)} ms · GPU median ${completedBenchmark.gpu.length ? percentile(completedBenchmark.gpu, 0.5).toFixed(2) : 'unavailable'} ms`;
+            getElement<HTMLButtonElement>('#download-report').disabled = false;
+            benchmark = undefined;
+            controls.enabled = true;
+            for (const identifier of ['body-count', 'reset', 'pause', 'benchmark'])
+              getElement<HTMLButtonElement>('#' + identifier).disabled = false;
+            accumulator = 0;
+            previous = performance.now();
+          });
         }
       }
       const view = new Matrix4().lookAt({

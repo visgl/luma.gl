@@ -213,6 +213,7 @@ fn main(@builtin(global_invocation_id) invocation: vec3u) {
       let neighbor = positions[other]; let neighborVelocity = velocities[other];
       let delta = sphere.xyz - neighbor.xyz; let distance = length(delta);
       let normal = getContactNormal(delta, index, other);
+      if (distance > sphere.w + neighbor.w) { continue; }
       if (distance > sphere.w + neighbor.w + settings.solver.z) { continue; }
       let inverseMass = velocity.w + max(neighborVelocity.w, 0.0);
       let degree = max(1u, max(offsets[index + 1u] - offsets[index], offsets[other + 1u] - offsets[other]));

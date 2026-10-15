@@ -434,3 +434,53 @@ it('GPUSphereWorld validates capacities, materials, aliases and borrowed buffer 
     velocities.destroy();
   }
 });
+
+it('GPUSphereWorld skin does not stop a pair before impact', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const target = await makeWorld(
+    device,
+    [-0.507, 0, 1, 0.5, 0.507, 0, 1, 0.5],
+    [0.5, 0, 0, 1, -0.5, 0, 0, 1],
+    {
+      restitution: 1,
+      restitutionThreshold: 0,
+      contactSkin: 0.01,
+      staticFriction: 0,
+      dynamicFriction: 0
+    }
+  );
+  try {
+    target.step();
+    expect((await target.read()).velocities[0]).toBeCloseTo(0.5, 5);
+    target.step(2);
+    const result = await target.read();
+    expect(result.velocities[0]).toBeCloseTo(-0.5, 4);
+    expect(result.velocities[4]).toBeCloseTo(0.5, 4);
+  } finally {
+    target.destroy();
+  }
+});
+
+it('GPUSphereWorld partial plane updates retain normal and finite extents', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const target = await makeWorld(
+    device,
+    [0, 0.2, 0.5, 0.25, 2, 0.2, 0.5, 0.25],
+    [0, 0, 0, 1, 0, 0, 0, 1],
+    {
+      plane: {normal: [0, 1, 0], halfExtents: [1, 1]},
+      iterations: 1
+    }
+  );
+  try {
+    target.world.update({plane: {offset: 0.1}});
+    target.step();
+    const result = await target.read();
+    expect(result.positions[1]).toBeCloseTo(0.35, 5);
+    expect(result.positions[5]).toBeCloseTo(0.2, 5);
+  } finally {
+    target.destroy();
+  }
+});

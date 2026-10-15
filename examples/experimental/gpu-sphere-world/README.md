@@ -36,3 +36,10 @@ Compare reports on the same browser, viewport, power state and hardware. The 10k
 preset is a workload to measure, not a promise of 60 fps on every adapter. Sparse
 candidate-count scaling, dense contact overflow and numerical behavior are also
 covered by automated WebGPU tests; see the module's README for solver limits.
+
+Reports also include sampled maximum dropped-contact/invalid-body counts,
+diagnostic sample counts, sampling failures and an explicit `valid` flag. These
+are sampled observations, not an every-step guarantee. Warmup samples contribute
+to workload validity but never to the GPU median. Each asynchronous result belongs
+to the run and phase in which it was submitted; report finalization waits for the
+last pending result. Benchmark time never accumulates as a playback backlog.
