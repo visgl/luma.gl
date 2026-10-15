@@ -67,10 +67,16 @@ export class GPUSphereWorld {
     if (!(this.timeStep > 0) || !Number.isFinite(this.timeStep)) {
       throw new Error('GPUSphereWorld timeStep must be finite and positive');
     }
-    if (![...this.gravity, this.floor, this.restitution, this.friction].every(Number.isFinite) ||
-        this.restitution < 0 || this.restitution > 1 ||
-        this.friction < 0 || this.friction > 1) {
-      throw new Error('GPUSphereWorld requires finite gravity and floor, and contact coefficients in [0,1]');
+    if (
+      ![...this.gravity, this.floor, this.restitution, this.friction].every(Number.isFinite) ||
+      this.restitution < 0 ||
+      this.restitution > 1 ||
+      this.friction < 0 ||
+      this.friction > 1
+    ) {
+      throw new Error(
+        'GPUSphereWorld requires finite gravity and floor, and contact coefficients in [0,1]'
+      );
     }
     if (this.positions === this.velocities) {
       throw new Error('GPUSphereWorld positions and velocities must not alias');
@@ -90,15 +96,25 @@ export class GPUSphereWorld {
       throw new Error('GPUSphereWorld count exceeds single-dimension compute dispatch limit');
     }
     const positions = graph.createDataView(
-      graph.importBuffer({
-        id: `${this.id}-positions`, byteLength: this.count * 16, usage: Buffer.STORAGE
-      }, this.positions),
+      graph.importBuffer(
+        {
+          id: `${this.id}-positions`,
+          byteLength: this.count * 16,
+          usage: Buffer.STORAGE
+        },
+        this.positions
+      ),
       {format: 'float32x4', length: this.count}
     );
     const velocities = graph.createDataView(
-      graph.importBuffer({
-        id: `${this.id}-velocities`, byteLength: this.count * 16, usage: Buffer.STORAGE
-      }, this.velocities),
+      graph.importBuffer(
+        {
+          id: `${this.id}-velocities`,
+          byteLength: this.count * 16,
+          usage: Buffer.STORAGE
+        },
+        this.velocities
+      ),
       {format: 'float32x4', length: this.count}
     );
     const source = /* wgsl */ `
@@ -143,11 +159,14 @@ fn main(@builtin(global_invocation_id) invocation: vec3u) {
         ],
         compile: ({device}) => {
           const computation = new Computation(device, {
-            id, source,
-            shaderLayout: {bindings: [
-              {name: 'positions', type: 'storage', group: 0, location: 0},
-              {name: 'velocities', type: 'storage', group: 0, location: 1}
-            ]}
+            id,
+            source,
+            shaderLayout: {
+              bindings: [
+                {name: 'positions', type: 'storage', group: 0, location: 0},
+                {name: 'velocities', type: 'storage', group: 0, location: 1}
+              ]
+            }
           });
           return {
             encode: ({computePass, getBuffer}) => {
