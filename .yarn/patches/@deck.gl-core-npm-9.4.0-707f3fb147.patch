@@ -38,7 +38,7 @@ index 51968e3..3e41d12 100644
      }
      _getUpdatedState(newProps) {
 diff --git a/dist/index.cjs b/dist/index.cjs
-index 966d28d..a4dba2a 100644
+index 966d28d..94b1e5c 100644
 --- a/dist/index.cjs
 +++ b/dist/index.cjs
 @@ -1,3 +1,7 @@
@@ -181,7 +181,37 @@ index 966d28d..a4dba2a 100644
            colorAttachments: [texture]
          }));
        });
-@@ -7280,7 +7287,11 @@ var DeckPicker = class {
+@@ -6862,8 +6869,13 @@ var DeckPicker = class {
+     const pixelRatio = canvasContext.cssToDeviceRatio();
+     const pickableLayers = this._getPickable(layers);
+     if (!pickableLayers || viewports.length === 0) {
++      // Canvas leave has no viewport, but must still clear the previous hover.
++      const infos = processPickInfo({
++        pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++        lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++      });
+       return {
+-        result: [],
++        result: Array.from(infos.values()).filter(info => info.layer),
+         emptyInfo: getEmptyPickingInfo({ viewports, x, y, pixelRatio })
+       };
+     }
+@@ -6979,8 +6991,13 @@ var DeckPicker = class {
+     const pixelRatio = canvasContext.cssToDeviceRatio();
+     const pickableLayers = this._getPickable(layers);
+     if (!pickableLayers || viewports.length === 0) {
++      // Canvas leave has no viewport, but must still clear the previous hover.
++      const infos = processPickInfo({
++        pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++        lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++      });
+       return {
+-        result: [],
++        result: Array.from(infos.values()).filter(info => info.layer),
+         emptyInfo: getEmptyPickingInfo({ viewports, x, y, pixelRatio })
+       };
+     }
+@@ -7280,7 +7297,11 @@ var DeckPicker = class {
        usage: import_core14.Buffer.COPY_DST | import_core14.Buffer.MAP_READ
      });
      try {
@@ -194,7 +224,7 @@ index 966d28d..a4dba2a 100644
        const readData = await readBuffer.readAsync(0, layout.byteLength);
        const bytesPerElement = ArrayType.BYTES_PER_ELEMENT;
        if (layout.bytesPerRow % bytesPerElement !== 0) {
-@@ -7294,7 +7305,9 @@ var DeckPicker = class {
+@@ -7294,7 +7315,9 @@ var DeckPicker = class {
        }
        const packed = new ArrayType(width * height * 4);
        for (let row = 0; row < height; row++) {
@@ -205,7 +235,16 @@ index 966d28d..a4dba2a 100644
          packed.set(source3.subarray(sourceStart, sourceStart + packedRowLength), row * packedRowLength);
        }
        return packed;
-@@ -13611,9 +13624,9 @@ var GlobeViewport = class extends viewport_default {
+@@ -8540,7 +8563,7 @@ var Deck = class {
+     if (!this.widgetManager) {
+       return;
+     }
+-    this.cursorState.isHovering = result.length > 0;
++    this.cursorState.isHovering = result.some(info => info.picked);
+     let pickedInfo = emptyInfo;
+     let handled = false;
+     for (const info of result) {
+@@ -13611,9 +13634,9 @@ var GlobeViewport = class extends viewport_default {
        1
      ]);
      const radius = ((targetZ || 0) / EARTH_RADIUS + 1) * GLOBE_RADIUS;
@@ -218,7 +257,7 @@ index 966d28d..a4dba2a 100644
      const triangleAreaSquared = (4 * rayStartDistanceSquared * rayEndDistanceSquared - (rayLengthSquared - rayStartDistanceSquared - rayEndDistanceSquared) ** 2) / 16;
      const distanceToCenterSquared = 4 * triangleAreaSquared / rayLengthSquared;
      return {
-@@ -13656,7 +13669,7 @@ var GlobeViewport = class extends viewport_default {
+@@ -13656,7 +13679,7 @@ var GlobeViewport = class extends viewport_default {
        const rayStartToClosestApproach = Math.sqrt(rayStartDistanceSquared - distanceToCenterSquared);
        const closestApproachToIntersection = Math.sqrt(Math.max(0, radius * radius - distanceToCenterSquared));
        const intersectionRatio = (rayStartToClosestApproach - closestApproachToIntersection) / Math.sqrt(rayLengthSquared);
@@ -227,7 +266,7 @@ index 966d28d..a4dba2a 100644
      }
      const [X, Y, Z] = this.unprojectPosition(coord);
      if (Number.isFinite(z)) {
-@@ -13674,7 +13687,7 @@ var GlobeViewport = class extends viewport_default {
+@@ -13674,7 +13697,7 @@ var GlobeViewport = class extends viewport_default {
    }
    unprojectPosition(xyz) {
      const [x, y, z] = xyz;
@@ -236,7 +275,7 @@ index 966d28d..a4dba2a 100644
      const phi = Math.asin(z / D);
      const lambda = Math.atan2(x, -y);
      const lng = lambda * RADIANS_TO_DEGREES;
-@@ -13739,8 +13752,8 @@ function zoomAdjust(latitude, clampToPoles) {
+@@ -13739,8 +13762,8 @@ function zoomAdjust(latitude, clampToPoles) {
    return Math.log2(scaleAdjust);
  }
  function transformVector(matrix, vector) {
@@ -247,7 +286,7 @@ index 966d28d..a4dba2a 100644
    return result;
  }
  
-@@ -13907,8 +13920,8 @@ var OrthographicViewport = class extends viewport_default {
+@@ -13907,8 +13930,8 @@ var OrthographicViewport = class extends viewport_default {
    panByPosition(coords, pixel, startPixel) {
      const fromLocation = (0, import_web_mercator10.pixelsToWorld)(pixel, this.pixelUnprojectionMatrix);
      const toLocation = this.projectFlat(coords);
@@ -258,7 +297,7 @@ index 966d28d..a4dba2a 100644
      return { target: this.unprojectFlat(newCenter) };
    }
  };
-@@ -13921,12 +13934,14 @@ var import_core25 = require("@math.gl/core");
+@@ -13921,12 +13944,14 @@ var import_core25 = require("@math.gl/core");
  var FirstPersonViewport = class extends viewport_default {
    constructor(props) {
      const { longitude, latitude, modelMatrix, bearing = 0, pitch = 0, up = [0, 0, 1] } = props;
@@ -275,7 +314,7 @@ index 966d28d..a4dba2a 100644
      const center = modelMatrix ? new import_core25.Matrix4(modelMatrix).transformAsVector(dir) : dir;
      const zoom = Number.isFinite(latitude) ? (0, import_web_mercator11.getMeterZoom)({ latitude }) : 0;
      const scale = Math.pow(2, zoom);
-@@ -14025,10 +14040,14 @@ var FirstPersonState = class _FirstPersonState extends ViewState {
+@@ -14025,10 +14050,14 @@ var FirstPersonState = class _FirstPersonState extends ViewState {
      const { width, height, bearing, pitch } = this.getViewportProps();
      const deltaScaleX = PAN_SPEED * (pos[0] - startPanPos[0]) / width;
      const deltaScaleY = PAN_SPEED * (pos[1] - startPanPos[1]) / height;
@@ -294,7 +333,7 @@ index 966d28d..a4dba2a 100644
      return this._getUpdatedState({
        position: new import_core26.Vector3(startPanPosition).add(xDirection.scale(deltaScaleX)).add(yDirection.scale(deltaScaleY))
      });
-@@ -14192,11 +14211,13 @@ var FirstPersonState = class _FirstPersonState extends ViewState {
+@@ -14192,11 +14221,13 @@ var FirstPersonState = class _FirstPersonState extends ViewState {
      });
    }
    getDirection(use2D = false) {
@@ -310,7 +349,7 @@ index 966d28d..a4dba2a 100644
      return direction;
    }
    _getUpdatedState(newProps) {
-@@ -15111,7 +15132,7 @@ var Globe = class _Globe {
+@@ -15111,7 +15142,7 @@ var Globe = class _Globe {
    /** Bearing (degrees) from a camera up vector at a given lng/lat */
    static bearing(upVector, lng, lat) {
      const { N, E } = _Globe.tangentBasis(lng, lat);
@@ -319,7 +358,7 @@ index 966d28d..a4dba2a 100644
    }
    /** Camera frame for panning at a given position/bearing */
    static cameraFrame(lng, lat, bearing) {
-@@ -15125,8 +15146,8 @@ var Globe = class _Globe {
+@@ -15125,8 +15156,8 @@ var Globe = class _Globe {
      return {
        position,
        up,
@@ -330,7 +369,7 @@ index 966d28d..a4dba2a 100644
        longitude: lng,
        latitude: lat,
        bearing
-@@ -15136,18 +15157,18 @@ var Globe = class _Globe {
+@@ -15136,18 +15167,18 @@ var Globe = class _Globe {
    static angularDistance(a, b) {
      const pa = _Globe.toPosition(a.longitude, a.latitude);
      const pb = _Globe.toPosition(b.longitude, b.latitude);
@@ -352,7 +391,7 @@ index 966d28d..a4dba2a 100644
    }
    /**
     * Rotate a camera frame by horizontal/vertical angles (radians).
-@@ -15179,19 +15200,19 @@ var Globe = class _Globe {
+@@ -15179,19 +15210,19 @@ var Globe = class _Globe {
    static rotateFrameToMatch(frame, currentCoordinates, targetCoordinates, strength = 1) {
      const currentPosition = _Globe.toPosition(...currentCoordinates);
      const targetPosition = _Globe.toPosition(...targetCoordinates);
@@ -380,10 +419,40 @@ index 966d28d..a4dba2a 100644
      const position = _Globe.rotate(frame.position, rotationAxis, angle);
      const up = _Globe.rotate(frame.up, rotationAxis, angle);
 diff --git a/dist/lib/deck-picker.js b/dist/lib/deck-picker.js
-index b1f8227..f287d3a 100644
+index b1f8227..0a1f20c 100644
 --- a/dist/lib/deck-picker.js
 +++ b/dist/lib/deck-picker.js
-@@ -597,7 +597,11 @@ export default class DeckPicker {
+@@ -133,8 +133,13 @@ export default class DeckPicker {
+         const pixelRatio = canvasContext.cssToDeviceRatio();
+         const pickableLayers = this._getPickable(layers);
+         if (!pickableLayers || viewports.length === 0) {
++            // Canvas leave has no viewport, but must still clear the previous hover.
++            const infos = processPickInfo({
++                pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++                lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++            });
+             return {
+-                result: [],
++                result: Array.from(infos.values()).filter(info => info.layer),
+                 emptyInfo: getEmptyPickingInfo({ viewports, x, y, pixelRatio })
+             };
+         }
+@@ -263,8 +268,13 @@ export default class DeckPicker {
+         const pixelRatio = canvasContext.cssToDeviceRatio();
+         const pickableLayers = this._getPickable(layers);
+         if (!pickableLayers || viewports.length === 0) {
++            // Canvas leave has no viewport, but must still clear the previous hover.
++            const infos = processPickInfo({
++                pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++                lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++            });
+             return {
+-                result: [],
++                result: Array.from(infos.values()).filter(info => info.layer),
+                 emptyInfo: getEmptyPickingInfo({ viewports, x, y, pixelRatio })
+             };
+         }
+@@ -597,7 +607,11 @@ export default class DeckPicker {
              usage: Buffer.COPY_DST | Buffer.MAP_READ
          });
          try {
@@ -396,7 +465,7 @@ index b1f8227..f287d3a 100644
              const readData = await readBuffer.readAsync(0, layout.byteLength);
              const bytesPerElement = ArrayType.BYTES_PER_ELEMENT;
              if (layout.bytesPerRow % bytesPerElement !== 0) {
-@@ -613,7 +617,9 @@ export default class DeckPicker {
+@@ -613,7 +627,9 @@ export default class DeckPicker {
              }
              const packed = new ArrayType(width * height * 4);
              for (let row = 0; row < height; row++) {
@@ -631,7 +700,7 @@ index 51968e3..3e41d12 100644
      }
      _getUpdatedState(newProps) {
 diff --git a/dist.webgl-only/index.cjs b/dist.webgl-only/index.cjs
-index 545b829..a1f62f9 100644
+index 545b829..3c1faab 100644
 --- a/dist.webgl-only/index.cjs
 +++ b/dist.webgl-only/index.cjs
 @@ -1,3 +1,7 @@
@@ -758,7 +827,37 @@ index 545b829..a1f62f9 100644
            colorAttachments: [texture]
          }));
        });
-@@ -6806,7 +6814,11 @@ var DeckPicker = class {
+@@ -6388,8 +6396,13 @@ var DeckPicker = class {
+     const pixelRatio = canvasContext.cssToDeviceRatio();
+     const pickableLayers = this._getPickable(layers);
+     if (!pickableLayers || viewports.length === 0) {
++      // Canvas leave has no viewport, but must still clear the previous hover.
++      const infos = processPickInfo({
++        pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++        lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++      });
+       return {
+-        result: [],
++        result: Array.from(infos.values()).filter(info => info.layer),
+         emptyInfo: getEmptyPickingInfo({ viewports, x, y, pixelRatio })
+       };
+     }
+@@ -6505,8 +6518,13 @@ var DeckPicker = class {
+     const pixelRatio = canvasContext.cssToDeviceRatio();
+     const pickableLayers = this._getPickable(layers);
+     if (!pickableLayers || viewports.length === 0) {
++      // Canvas leave has no viewport, but must still clear the previous hover.
++      const infos = processPickInfo({
++        pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++        lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++      });
+       return {
+-        result: [],
++        result: Array.from(infos.values()).filter(info => info.layer),
+         emptyInfo: getEmptyPickingInfo({ viewports, x, y, pixelRatio })
+       };
+     }
+@@ -6806,7 +6824,11 @@ var DeckPicker = class {
        usage: import_core14.Buffer.COPY_DST | import_core14.Buffer.MAP_READ
      });
      try {
@@ -771,7 +870,7 @@ index 545b829..a1f62f9 100644
        const readData = await readBuffer.readAsync(0, layout.byteLength);
        const bytesPerElement = ArrayType.BYTES_PER_ELEMENT;
        if (layout.bytesPerRow % bytesPerElement !== 0) {
-@@ -6820,7 +6832,9 @@ var DeckPicker = class {
+@@ -6820,7 +6842,9 @@ var DeckPicker = class {
        }
        const packed = new ArrayType(width * height * 4);
        for (let row = 0; row < height; row++) {
@@ -782,7 +881,16 @@ index 545b829..a1f62f9 100644
          packed.set(source3.subarray(sourceStart, sourceStart + packedRowLength), row * packedRowLength);
        }
        return packed;
-@@ -12873,9 +12887,9 @@ var GlobeViewport = class extends viewport_default {
+@@ -8066,7 +8090,7 @@ var Deck = class {
+     if (!this.widgetManager) {
+       return;
+     }
+-    this.cursorState.isHovering = result.length > 0;
++    this.cursorState.isHovering = result.some(info => info.picked);
+     let pickedInfo = emptyInfo;
+     let handled = false;
+     for (const info of result) {
+@@ -12873,9 +12897,9 @@ var GlobeViewport = class extends viewport_default {
        1
      ]);
      const radius = ((targetZ || 0) / EARTH_RADIUS + 1) * GLOBE_RADIUS;
@@ -795,7 +903,7 @@ index 545b829..a1f62f9 100644
      const triangleAreaSquared = (4 * rayStartDistanceSquared * rayEndDistanceSquared - (rayLengthSquared - rayStartDistanceSquared - rayEndDistanceSquared) ** 2) / 16;
      const distanceToCenterSquared = 4 * triangleAreaSquared / rayLengthSquared;
      return {
-@@ -12918,7 +12932,7 @@ var GlobeViewport = class extends viewport_default {
+@@ -12918,7 +12942,7 @@ var GlobeViewport = class extends viewport_default {
        const rayStartToClosestApproach = Math.sqrt(rayStartDistanceSquared - distanceToCenterSquared);
        const closestApproachToIntersection = Math.sqrt(Math.max(0, radius * radius - distanceToCenterSquared));
        const intersectionRatio = (rayStartToClosestApproach - closestApproachToIntersection) / Math.sqrt(rayLengthSquared);
@@ -804,7 +912,7 @@ index 545b829..a1f62f9 100644
      }
      const [X, Y, Z] = this.unprojectPosition(coord);
      if (Number.isFinite(z)) {
-@@ -12936,7 +12950,7 @@ var GlobeViewport = class extends viewport_default {
+@@ -12936,7 +12960,7 @@ var GlobeViewport = class extends viewport_default {
    }
    unprojectPosition(xyz) {
      const [x, y, z] = xyz;
@@ -813,7 +921,7 @@ index 545b829..a1f62f9 100644
      const phi = Math.asin(z / D);
      const lambda = Math.atan2(x, -y);
      const lng = lambda * RADIANS_TO_DEGREES;
-@@ -13001,8 +13015,8 @@ function zoomAdjust(latitude, clampToPoles) {
+@@ -13001,8 +13025,8 @@ function zoomAdjust(latitude, clampToPoles) {
    return Math.log2(scaleAdjust);
  }
  function transformVector(matrix, vector) {
@@ -824,7 +932,7 @@ index 545b829..a1f62f9 100644
    return result;
  }
  
-@@ -13169,8 +13183,8 @@ var OrthographicViewport = class extends viewport_default {
+@@ -13169,8 +13193,8 @@ var OrthographicViewport = class extends viewport_default {
    panByPosition(coords, pixel, startPixel) {
      const fromLocation = (0, import_web_mercator10.pixelsToWorld)(pixel, this.pixelUnprojectionMatrix);
      const toLocation = this.projectFlat(coords);
@@ -835,7 +943,7 @@ index 545b829..a1f62f9 100644
      return { target: this.unprojectFlat(newCenter) };
    }
  };
-@@ -13183,12 +13197,14 @@ var import_core25 = require("@math.gl/core");
+@@ -13183,12 +13207,14 @@ var import_core25 = require("@math.gl/core");
  var FirstPersonViewport = class extends viewport_default {
    constructor(props) {
      const { longitude, latitude, modelMatrix, bearing = 0, pitch = 0, up = [0, 0, 1] } = props;
@@ -852,7 +960,7 @@ index 545b829..a1f62f9 100644
      const center = modelMatrix ? new import_core25.Matrix4(modelMatrix).transformAsVector(dir) : dir;
      const zoom = Number.isFinite(latitude) ? (0, import_web_mercator11.getMeterZoom)({ latitude }) : 0;
      const scale = Math.pow(2, zoom);
-@@ -13287,10 +13303,14 @@ var FirstPersonState = class _FirstPersonState extends ViewState {
+@@ -13287,10 +13313,14 @@ var FirstPersonState = class _FirstPersonState extends ViewState {
      const { width, height, bearing, pitch } = this.getViewportProps();
      const deltaScaleX = PAN_SPEED * (pos[0] - startPanPos[0]) / width;
      const deltaScaleY = PAN_SPEED * (pos[1] - startPanPos[1]) / height;
@@ -871,7 +979,7 @@ index 545b829..a1f62f9 100644
      return this._getUpdatedState({
        position: new import_core26.Vector3(startPanPosition).add(xDirection.scale(deltaScaleX)).add(yDirection.scale(deltaScaleY))
      });
-@@ -13454,11 +13474,13 @@ var FirstPersonState = class _FirstPersonState extends ViewState {
+@@ -13454,11 +13484,13 @@ var FirstPersonState = class _FirstPersonState extends ViewState {
      });
    }
    getDirection(use2D = false) {
@@ -887,7 +995,7 @@ index 545b829..a1f62f9 100644
      return direction;
    }
    _getUpdatedState(newProps) {
-@@ -14373,7 +14395,7 @@ var Globe = class _Globe {
+@@ -14373,7 +14405,7 @@ var Globe = class _Globe {
    /** Bearing (degrees) from a camera up vector at a given lng/lat */
    static bearing(upVector, lng, lat) {
      const { N, E } = _Globe.tangentBasis(lng, lat);
@@ -896,7 +1004,7 @@ index 545b829..a1f62f9 100644
    }
    /** Camera frame for panning at a given position/bearing */
    static cameraFrame(lng, lat, bearing) {
-@@ -14387,8 +14409,8 @@ var Globe = class _Globe {
+@@ -14387,8 +14419,8 @@ var Globe = class _Globe {
      return {
        position,
        up,
@@ -907,7 +1015,7 @@ index 545b829..a1f62f9 100644
        longitude: lng,
        latitude: lat,
        bearing
-@@ -14398,18 +14420,18 @@ var Globe = class _Globe {
+@@ -14398,18 +14430,18 @@ var Globe = class _Globe {
    static angularDistance(a, b) {
      const pa = _Globe.toPosition(a.longitude, a.latitude);
      const pb = _Globe.toPosition(b.longitude, b.latitude);
@@ -929,7 +1037,7 @@ index 545b829..a1f62f9 100644
    }
    /**
     * Rotate a camera frame by horizontal/vertical angles (radians).
-@@ -14441,19 +14463,19 @@ var Globe = class _Globe {
+@@ -14441,19 +14473,19 @@ var Globe = class _Globe {
    static rotateFrameToMatch(frame, currentCoordinates, targetCoordinates, strength = 1) {
      const currentPosition = _Globe.toPosition(...currentCoordinates);
      const targetPosition = _Globe.toPosition(...targetCoordinates);
@@ -957,10 +1065,40 @@ index 545b829..a1f62f9 100644
      const position = _Globe.rotate(frame.position, rotationAxis, angle);
      const up = _Globe.rotate(frame.up, rotationAxis, angle);
 diff --git a/dist.webgl-only/lib/deck-picker.js b/dist.webgl-only/lib/deck-picker.js
-index b1f8227..f287d3a 100644
+index b1f8227..0a1f20c 100644
 --- a/dist.webgl-only/lib/deck-picker.js
 +++ b/dist.webgl-only/lib/deck-picker.js
-@@ -597,7 +597,11 @@ export default class DeckPicker {
+@@ -133,8 +133,13 @@ export default class DeckPicker {
+         const pixelRatio = canvasContext.cssToDeviceRatio();
+         const pickableLayers = this._getPickable(layers);
+         if (!pickableLayers || viewports.length === 0) {
++            // Canvas leave has no viewport, but must still clear the previous hover.
++            const infos = processPickInfo({
++                pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++                lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++            });
+             return {
+-                result: [],
++                result: Array.from(infos.values()).filter(info => info.layer),
+                 emptyInfo: getEmptyPickingInfo({ viewports, x, y, pixelRatio })
+             };
+         }
+@@ -263,8 +268,13 @@ export default class DeckPicker {
+         const pixelRatio = canvasContext.cssToDeviceRatio();
+         const pickableLayers = this._getPickable(layers);
+         if (!pickableLayers || viewports.length === 0) {
++            // Canvas leave has no viewport, but must still clear the previous hover.
++            const infos = processPickInfo({
++                pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++                lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++            });
+             return {
+-                result: [],
++                result: Array.from(infos.values()).filter(info => info.layer),
+                 emptyInfo: getEmptyPickingInfo({ viewports, x, y, pixelRatio })
+             };
+         }
+@@ -597,7 +607,11 @@ export default class DeckPicker {
              usage: Buffer.COPY_DST | Buffer.MAP_READ
          });
          try {
@@ -973,7 +1111,7 @@ index b1f8227..f287d3a 100644
              const readData = await readBuffer.readAsync(0, layout.byteLength);
              const bytesPerElement = ArrayType.BYTES_PER_ELEMENT;
              if (layout.bytesPerRow % bytesPerElement !== 0) {
-@@ -613,7 +617,9 @@ export default class DeckPicker {
+@@ -613,7 +627,9 @@ export default class DeckPicker {
              }
              const packed = new ArrayType(width * height * 4);
              for (let row = 0; row < height; row++) {
@@ -1188,10 +1326,40 @@ index bc7d9a6..a3c62e2 100644
    }
  
 diff --git a/src/lib/deck-picker.ts b/src/lib/deck-picker.ts
-index bbd4daa..084ceee 100644
+index bbd4daa..6435463 100644
 --- a/src/lib/deck-picker.ts
 +++ b/src/lib/deck-picker.ts
-@@ -901,7 +901,11 @@ export default class DeckPicker {
+@@ -252,8 +252,13 @@ export default class DeckPicker {
+     const pickableLayers = this._getPickable(layers);
+ 
+     if (!pickableLayers || viewports.length === 0) {
++      // Canvas leave has no viewport, but must still clear the previous hover.
++      const infos = processPickInfo({
++        pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++        lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++      });
+       return {
+-        result: [],
++        result: Array.from(infos.values()).filter(info => info.layer),
+         emptyInfo: getEmptyPickingInfo({viewports, x, y, pixelRatio})
+       };
+     }
+@@ -418,8 +423,13 @@ export default class DeckPicker {
+     const pickableLayers = this._getPickable(layers);
+ 
+     if (!pickableLayers || viewports.length === 0) {
++      // Canvas leave has no viewport, but must still clear the previous hover.
++      const infos = processPickInfo({
++        pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++        lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++      });
+       return {
+-        result: [],
++        result: Array.from(infos.values()).filter(info => info.layer),
+         emptyInfo: getEmptyPickingInfo({viewports, x, y, pixelRatio})
+       };
+     }
+@@ -901,7 +911,11 @@ export default class DeckPicker {
      });
  
      try {
@@ -1204,7 +1372,7 @@ index bbd4daa..084ceee 100644
        const readData = await readBuffer.readAsync(0, layout.byteLength);
        const bytesPerElement = ArrayType.BYTES_PER_ELEMENT;
        if (layout.bytesPerRow % bytesPerElement !== 0) {
-@@ -926,7 +930,9 @@ export default class DeckPicker {
+@@ -926,7 +940,9 @@ export default class DeckPicker {
        const packed = new ArrayType(width * height * 4);
  
        for (let row = 0; row < height; row++) {
@@ -1400,3 +1568,42 @@ index 457b479..6fdc433 100644
  
  export type WebMercatorViewportOptions = {
    /** Name of the viewport */
+diff --git a/dist.webgl-only/lib/deck.js b/dist.webgl-only/lib/deck.js
+index 7b81a2a..8eae9bf 100644
+--- a/dist.webgl-only/lib/deck.js
++++ b/dist.webgl-only/lib/deck.js
+@@ -641,7 +641,7 @@ class Deck {
+         if (!this.widgetManager) {
+             return;
+         }
+-        this.cursorState.isHovering = result.length > 0;
++        this.cursorState.isHovering = result.some(info => info.picked);
+         let pickedInfo = emptyInfo;
+         let handled = false;
+         for (const info of result) {
+diff --git a/dist/lib/deck.js b/dist/lib/deck.js
+index 7b81a2a..8eae9bf 100644
+--- a/dist/lib/deck.js
++++ b/dist/lib/deck.js
+@@ -641,7 +641,7 @@ class Deck {
+         if (!this.widgetManager) {
+             return;
+         }
+-        this.cursorState.isHovering = result.length > 0;
++        this.cursorState.isHovering = result.some(info => info.picked);
+         let pickedInfo = emptyInfo;
+         let handled = false;
+         for (const info of result) {
+diff --git a/src/lib/deck.ts b/src/lib/deck.ts
+index de03bcf..324e61c 100644
+--- a/src/lib/deck.ts
++++ b/src/lib/deck.ts
+@@ -980,7 +980,7 @@ export default class Deck<ViewsT extends ViewOrViews = null> {
+       return;
+     }
+ 
+-    this.cursorState.isHovering = result.length > 0;
++    this.cursorState.isHovering = result.some(info => info.picked);
+ 
+     let pickedInfo = emptyInfo;
+     let handled = false;

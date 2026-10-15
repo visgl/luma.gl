@@ -12,12 +12,23 @@ import {
   PointLight,
   SpotLight,
   type LightShadow,
+  type NodeBuilder,
   Vector4,
   NodeMaterial,
   type Object3D,
   type Scene
 } from 'three/webgpu';
-import {Fn, If, Discard, renderOutput, uniform, vec4, context as createContext} from 'three/tsl';
+import {
+  Fn,
+  If,
+  Discard,
+  renderOutput,
+  uniform,
+  vec4,
+  mix,
+  max,
+  context as createContext
+} from 'three/tsl';
 import {LumaRenderer} from './luma-renderer';
 import {LumaBackend} from './luma-backend';
 
@@ -43,6 +54,30 @@ export class ThreeSceneAdapter {
   private disposed = false;
   private readonly pickingContext = createContext();
   private readonly pickingColor = uniform(new Vector4());
+  private readonly highlightingContext = createContext();
+  private readonly highlightColor = uniform(new Vector4());
+  private readonly getHighlightedOutput = (output: ReturnType<typeof vec4>, builder: NodeBuilder) =>
+    Fn(() => {
+      const color = renderOutput(output, NoToneMapping, SRGBColorSpace);
+      // Match deck: composite byte-space highlight color over the final display color.
+      const alpha = this.highlightColor.a.add(color.a.mul(this.highlightColor.a.oneMinus()));
+      const ratio = this.highlightColor.a.div(max(alpha, 0.00001));
+      // Three converts premultiplied materials back to premultiplied display-space RGB.
+      // Tint straight RGB, then restore the representation expected by the blend pipeline.
+      const sourceColor = builder.material?.premultipliedAlpha
+        ? color.rgb.div(max(color.a, 0.00001))
+        : color.rgb;
+      const tintedColor = mix(sourceColor, this.highlightColor.rgb, ratio);
+      const result = vec4(
+        builder.material?.premultipliedAlpha ? tintedColor.mul(alpha) : tintedColor,
+        alpha
+      );
+      // Zero-alpha surfaces and unselected materials keep their original color/depth behavior.
+      return output.a
+        .greaterThan(0)
+        .and(this.highlightColor.a.greaterThan(0))
+        .select(result, color);
+    })();
   private readonly getPickingOutput = (output: ReturnType<typeof vec4>) =>
     Fn(() => {
       // Standard material alpha testing ran upstream; discard fully transparent coverage too.
@@ -56,6 +91,7 @@ export class ThreeSceneAdapter {
     this.renderer = new SceneRenderer({device});
     this.backend = this.renderer.backend as LumaBackend;
     this.pickingColor.onObjectUpdate(() => this.pickingColor.value);
+    this.highlightColor.onObjectUpdate(() => this.highlightColor.value);
     const rendererContext = this.renderer.contextNode.value as Record<string, unknown>;
     rendererContext['getOutput'] = (output: ReturnType<typeof vec4>) =>
       this.renderer.getRenderTarget() === null
@@ -85,6 +121,16 @@ export class ThreeSceneAdapter {
     this.renderScene(scene, camera, pass);
   }
 
+  /** Composite display-space RGBA highlights without changing source materials. */
+  drawHighlighted(
+    scene: Scene,
+    camera: Camera,
+    pass: RenderPass,
+    getColor: ThreePickingColorAccessor
+  ): void {
+    this.renderScene(scene, camera, pass, undefined, undefined, getColor);
+  }
+
   /** Draw exact ID colors through the same vertex/material coverage as the visible scene. */
   drawPicking(
     scene: Scene,
@@ -101,7 +147,8 @@ export class ThreeSceneAdapter {
     camera: Camera,
     pass: RenderPass,
     getColor?: ThreePickingColorAccessor,
-    parameters?: RenderPipelineParameters
+    parameters?: RenderPipelineParameters,
+    getHighlightColor?: ThreePickingColorAccessor
   ): void {
     if (this.disposed || this.preparedScene !== scene)
       throw new Error('Prepare the scene before drawing in a caller pass');
@@ -120,25 +167,29 @@ export class ThreeSceneAdapter {
     });
     const renderObject = this.renderer.getRenderObjectFunction();
     const contextNode = this.renderer.contextNode;
-    if (getColor) {
-      this.pickingContext.value = {
+    const colorContext = getColor ? this.pickingContext : this.highlightingContext;
+    if (getColor || getHighlightColor) {
+      colorContext.value = {
         ...(contextNode.value as Record<string, unknown>),
-        getOutput: this.getPickingOutput
+        getOutput: getColor ? this.getPickingOutput : this.getHighlightedOutput
       };
-      this.renderer.contextNode = this.pickingContext;
+      this.renderer.contextNode = colorContext;
       this.renderer.setRenderObjectFunction((...parameters) => {
         const [object, , , , material] = parameters;
-        const color = getColor?.(object);
-        if (!color) return;
+        const color = getColor ? getColor(object) : getHighlightColor?.(object);
+        if (getColor && !color) return;
         if (material instanceof NodeMaterial && material.fragmentNode)
-          throw new Error('Three scene picking does not support custom fragmentNode materials');
-        this.pickingColor.value.fromArray(color);
-        // Keep normal and picking render-object caches separate without cloning materials.
-        parameters[8] = `three-picking:${parameters[8] || ''}`;
+          throw new Error(
+            'Three scene picking and highlighting do not support custom fragmentNode materials'
+          );
+        if (getColor) this.pickingColor.value.fromArray(color!);
+        else this.highlightColor.value.fromArray(color || [0, 0, 0, 0]);
+        // Isolate output variants without cloning materials.
+        parameters[8] = `three-${getColor ? 'picking' : 'highlighting'}:${parameters[8] || ''}`;
         // IDs need one double-sided coverage pass, not transparent back/front shading passes.
         // Three's two-pass back-side cache uses a shared pass ID; avoid recreating it on hover.
         const forceSinglePass = material.forceSinglePass;
-        material.forceSinglePass = true;
+        if (getColor) material.forceSinglePass = true;
         try {
           if (renderObject) renderObject.call(this.renderer, ...parameters);
           else this.renderer.renderObject(...parameters);
@@ -156,6 +207,7 @@ export class ThreeSceneAdapter {
     } finally {
       this.renderer.contextNode = contextNode;
       getColor = undefined;
+      getHighlightColor = undefined;
       this.renderer.setRenderObjectFunction(renderObject);
       for (const {shadow, autoUpdate, needsUpdate} of shadows) {
         shadow.autoUpdate = autoUpdate;

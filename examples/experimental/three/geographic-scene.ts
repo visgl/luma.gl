@@ -175,6 +175,8 @@ export function createGeographicLayers(
     camera: fixture.camera,
     adapter,
     pickable: true,
+    autoHighlight: true,
+    highlightColor: [255, 190, 70, 110],
     pickingObjects: fixture.models.map(model => ({
       id: String(model.userData['geographicId']),
       object: model
@@ -221,6 +223,8 @@ export function createGeographicLayers(
     extruded: true,
     stroked: false,
     pickable: true,
+    autoHighlight: true,
+    highlightColor: [255, 190, 70, 110],
     parameters: {depthWriteEnabled: true, depthCompare: 'less-equal'},
     getPolygonOffset: () => [0, 0]
   });
