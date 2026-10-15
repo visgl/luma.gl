@@ -24,6 +24,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'arrow/arrow-polygons',
   'experimental/fluid-foundry',
   'experimental/fp64',
+  'experimental/three',
   'experimental/advanced-effects',
   'experimental/deferred-rendering',
   'experimental/gpu-frustum-culling',
@@ -87,6 +88,7 @@ const NATIVE_TYPESCRIPT_CONFIG_WORKSPACES = new Set([
   'deck/city-scene',
   'api/multi-canvas',
   'experimental/fp64',
+  'experimental/three',
   'showcase/scene',
   'showcase/raster-lab',
   'showcase/spectral-wave-lab'

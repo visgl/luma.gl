@@ -31,6 +31,25 @@ The module also includes an object adapter for caller-owned luma render passes
 and a thin GPU-buffer bridge into upstream Three rendering. The bridge is the
 compute interoperability path; it does not require replacing Three's backend.
 
+## Choose an integration
+
+All paths are experimental and tested against Three **0.185.1**; the deck entry
+point additionally requires this workspace's patched deck **9.4.0** and luma **10**.
+The package is private. These are tested combinations, not a broad version range.
+
+| Application needs | Entry point | Rendering and ownership contract |
+| --- | --- | --- |
+| luma compute feeding an existing Three scene | `@luma.gl/three/interop` | Upstream `WebGPURenderer` renders; caller owns the shared WebGPU device and buffers. |
+| Three materials/TSL rendered through luma resources | `@luma.gl/three/backend` | `LumaRenderer` manages and submits its passes; caller owns the device. WebGPU and WebGL2 graphics; WebGPU compute only. |
+| Simple meshes mixed into a luma pass | `@luma.gl/three/objects` → `ThreeMeshAdapter` | Caller owns the pass and submission; WebGPU, untextured basic materials. |
+| Prepared PBR scene mixed into a luma pass | `@luma.gl/three/objects` → `ThreeSceneAdapter` | Prepare before the pass; draw borrows the pass; caller owns the adapter and source scene. |
+| Three objects mixed with deck layers | `@luma.gl/three/deck` | WebGPU, single-sample deck pass; simple Cartesian meshes or prepared scenes in Cartesian/local Mercator coordinates. |
+
+For every path, choose one owner for camera state, animation time and redraws.
+Sharing a device does not combine render loops or automatically schedule work.
+Keep source objects and borrowed buffers alive until their consumers are disposed.
+The compute bridge does not provide deck picking or make CPU raycasting see GPU data.
+
 ## Run the prototype
 
 From the repository root:
@@ -242,11 +261,13 @@ before constructing the bridge. Both engines then use the same native device and
 
 ```ts
 import {Buffer} from '@luma.gl/core';
-import {ThreeBufferBridge} from '@luma.gl/three/interop';
+import {getThreeBufferBridgeSupport, ThreeBufferBridge} from '@luma.gl/three/interop';
 import {WebGPURenderer} from 'three/webgpu';
 
 const renderer = new WebGPURenderer({canvas, device: device.handle});
 await renderer.init();
+const support = getThreeBufferBridgeSupport(device, renderer);
+if (!support.supported) throw new Error(support.reason);
 const bridge = new ThreeBufferBridge(device, renderer);
 const positions = device.createBuffer({
   byteLength: vertexCount * 12,
@@ -265,27 +286,53 @@ device.destroy();
 ```
 
 Select **Shared buffer / luma compute** in the split-screen example. The left
-pane computes 4,225 wave vertices through luma and renders them through upstream
-Three; the right pane renders the same wave using upstream TSL vertex displacement.
-Both panes use upstream rendering, with synchronized camera and phase. There is no
-vertex readback, CPU regeneration, or vertex upload on the compute side. A small
-phase uniform is written each frame. The shared buffer has only STORAGE and VERTEX
-usage, without COPY_SRC, COPY_DST or mapping flags.
+pane computes 4,225 wave vertices, 24,576 triangle indices and offsets for three
+instances through luma. Upstream Three renders the borrowed buffers directly;
+the right pane uses equivalent CPU topology/offsets and upstream TSL displacement.
+Only a phase uniform is written each frame. Geometry buffers have STORAGE plus
+VERTEX or INDEX usage, without COPY_SRC, COPY_DST or mapping flags. Browser tests
+compare three phases, verify buffer identity and absence of geometry uploads, and
+exercise resize, disposal and recreation. Separate GPU tests cover both index widths.
 
-This bridge is pinned to Three 0.185.1's private backend attribute methods/cache.
-It supports ordinary Float32 vertex attributes with one to four components, one
-bridge per renderer, and caller-owned buffers. Index, interleaved and storage-node
-attributes, textures, automatic bounds, CPU raycasting and deck.gl integration are
-not covered. The CPU attribute array is metadata only; do not set `needsUpdate`
-or change its usage/layout. Compute-driven bounds must be supplied independently,
-or frustum culling disabled as in this example. Dispose geometries before the
-bridge, then release buffers after all consumers have finished. Replacing a buffer
-requires a new attribute/geometry lifecycle; there is no implicit resize or swap.
+`getThreeBufferBridgeSupport(device, renderer)` checks revision, device identity,
+initialization, backend hooks and an existing bridge without mutating either engine.
+It returns `{supported: true}` or `{supported: false, reason}`. The constructor uses
+the same check before installing any hooks. A successful probe is an attachment
+check for this pinned integration, not general material or renderer conformance.
 
-Browser verification compares pixels at three phases, checks that no vertex writes
-or mapping occur, and exercises geometry disposal and renderer recreation on the
-same device. Pixel readback is confined to tests. A public upstream borrowed-buffer
-API would eliminate the private hooks; no luma core API extension was needed here.
+| Method | GPU layout | Required usage |
+| --- | --- | --- |
+| `createAttribute(buffer, itemSize, count)` | Packed Float32, 1–4 components per vertex | VERTEX |
+| `createInstancedAttribute(buffer, itemSize, count)` | Packed Float32, 1–4 components per instance, one element per instance | VERTEX |
+| `createIndexAttribute(buffer, count)` | Packed indices from `buffer.indexType` (`uint16` or `uint32`); count is number of indices | INDEX |
+
+Add STORAGE when compute writes a buffer. Supply `indexType: 'uint16'` or
+`indexType: 'uint32'` when creating an empty luma index buffer. These methods borrow the whole buffer
+from byte offset zero; they do not convert, upload or pad its elements. In particular,
+uint16 indices stay uint16, bypassing Three's ordinary CPU upload conversion.
+
+```ts
+geometry.setIndex(bridge.createIndexAttribute(indices, indexCount));
+geometry.setAttribute('instanceOffset', bridge.createInstancedAttribute(offsets, 3, instanceCount));
+// Use InstancedBufferGeometry and set geometry.instanceCount explicitly.
+// The material must consume instanceOffset, e.g. through a TSL attribute node.
+```
+
+The bridge is pinned to Three 0.185.1's private backend attribute methods/cache.
+Interleaved and storage-node attributes, textures, automatic bounds, CPU raycasting
+and deck integration remain unsupported. The CPU arrays are metadata only: do not
+set `needsUpdate`, mutate their layout/usage, or compute bounds/normals from them.
+Wireframe and other CPU topology processing cannot use borrowed index metadata.
+Supply conservative bounds independently, or disable frustum culling as the example does.
+
+Submit luma compute before Three renders. To replace or resize a borrowed buffer,
+dispose its consuming geometries, create new attributes/geometries, then release the
+old buffer after all queued work completes. Never destroy a buffer while a consumer
+can still use it. Dispose geometries before the bridge; the bridge restores backend
+hooks and never destroys caller buffers. Dispose the renderer before destroying the
+shared device. Device loss requires recreating the device, renderers, bridge and data;
+there is no automatic recovery. A public upstream borrowed-buffer API would remove
+the private hooks; no new luma core API was needed for this subset.
 
 ## Three meshes in a deck.gl scene
 
