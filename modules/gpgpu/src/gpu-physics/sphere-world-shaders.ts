@@ -264,7 +264,12 @@ fn main(@builtin(global_invocation_id) invocation: vec3u) {
   if (index >= BODY_COUNT) { return; }
   let sphere = positions[index]; var velocity = velocities[index];
   var angular = angularVelocities[index]; var sleep = sleepStates[index];
-  if (velocity.w <= 0.0 || !isValidSphere(sphere)) { return; }
+  var orientation = orientations[index];
+  if (dot(orientation, orientation) < 0.000001) { orientation = vec4f(0.0, 0.0, 0.0, 1.0); }
+  if (velocity.w <= 0.0 || !isValidSphere(sphere)) {
+    orientations[index] = normalize(orientation);
+    return;
+  }
   let grounded = length(getFloorDelta(sphere.xyz)) <= sphere.w + settings.solver.z &&
     dot(sphere.xyz, settings.normal.xyz) - settings.normal.w >= 0.0;
   // Only fixed-plane support can authorize sleep. Dynamic contact cycles are not
@@ -284,8 +289,6 @@ fn main(@builtin(global_invocation_id) invocation: vec3u) {
     velocity = vec4f(0.0, 0.0, 0.0, velocity.w); angular = vec4f(0.0);
     atomicAdd(&diagnostics[4], 1u);
   } else { atomicAdd(&diagnostics[3], 1u); }
-  var orientation = orientations[index];
-  if (dot(orientation, orientation) < 0.000001) { orientation = vec4f(0.0, 0.0, 0.0, 1.0); }
   let derivative = vec4f(orientation.w * angular.xyz + cross(angular.xyz, orientation.xyz), -dot(angular.xyz, orientation.xyz));
   orientations[index] = normalize(orientation + derivative * (0.5 * settings.material.x));
   velocities[index] = velocity; angularVelocities[index] = angular; sleepStates[index] = sleep;

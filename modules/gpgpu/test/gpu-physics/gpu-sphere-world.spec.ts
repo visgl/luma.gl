@@ -173,6 +173,7 @@ it('GPUSphereWorld keeps static bodies fixed and resolves coincident centers wit
     fixture.step();
     const result = await fixture.read();
     expect(Array.from(result.positions.slice(0, 4))).toEqual([0, 0, 2, 0.5]);
+    expect(Array.from(result.orientations.slice(0, 4))).toEqual([0, 0, 0, 1]);
     expect(Math.abs(result.positions[4])).toBeGreaterThan(0.999);
     expect(Array.from(result.positions).every(Number.isFinite)).toBe(true);
   } finally {
