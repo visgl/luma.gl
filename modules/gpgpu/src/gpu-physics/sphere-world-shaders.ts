@@ -214,7 +214,6 @@ fn main(@builtin(global_invocation_id) invocation: vec3u) {
       let delta = sphere.xyz - neighbor.xyz; let distance = length(delta);
       let normal = getContactNormal(delta, index, other);
       if (distance > sphere.w + neighbor.w) { continue; }
-      if (distance > sphere.w + neighbor.w + settings.solver.z) { continue; }
       let inverseMass = velocity.w + max(neighborVelocity.w, 0.0);
       let degree = max(1u, max(offsets[index + 1u] - offsets[index], offsets[other + 1u] - offsets[other]));
       let relaxation = 1.0 / f32(degree);
@@ -230,7 +229,7 @@ fn main(@builtin(global_invocation_id) invocation: vec3u) {
     let floorDelta = getFloorDelta(point);
     let floorDistance = length(floorDelta);
     let signedHeight = dot(point, settings.normal.xyz) - settings.normal.w;
-    if (signedHeight > -sphere.w && floorDistance <= sphere.w + settings.solver.z) {
+    if (signedHeight > -sphere.w && floorDistance <= sphere.w) {
       let outsideEdge = length(floorDelta - settings.normal.xyz * signedHeight) > 0.000001;
       let useClosestPoint = signedHeight > 0.0 || outsideEdge;
       let normal = select(settings.normal.xyz, floorDelta / max(floorDistance, 0.000001), useClosestPoint);
