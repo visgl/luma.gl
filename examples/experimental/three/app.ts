@@ -178,7 +178,7 @@ async function recreate() {
       document.querySelector('#three-heading')!.textContent = 'Upstream Three reference';
       status.textContent =
         sceneSelection.value === 'deck-geographic'
-          ? 'Local meter Lanterns at a geographic origin. Drag/zoom either map to control both views; Shift-drag rotates/tilts; click either view to select. Toggle Lantern models removes/reinserts the layer. Buildings share depth. THREE.js nameplates use the same texture in both renderers.'
+          ? 'Local meter Lanterns at a geographic origin. Drag/zoom either map to control both views; Shift-drag rotates/tilts; hover the deck view for IDs; click either view to select a Lantern or native building through deck GPU picking. Toggle Lantern models removes/reinserts the layer. Buildings share depth. THREE.js nameplates use the same texture in both renderers.'
           : sceneSelection.value === 'deck-lantern'
             ? 'Lantern glTF / MeshStandardMaterial, environment and PCF shadows inside a native deck courtyard. Shared device/depth; synchronized cameras. Hover a data column.'
             : 'Three cube + native deck ScatterplotLayer in one render pass. Drag either view; cameras synchronize. The disk moves behind and in front of the cube.';

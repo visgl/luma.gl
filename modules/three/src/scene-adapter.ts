@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Device, RenderPass} from '@luma.gl/core';
+import type {Device, RenderPass, RenderPipelineParameters} from '@luma.gl/core';
 import {
   HalfFloatType,
   NoToneMapping,
@@ -12,12 +12,18 @@ import {
   PointLight,
   SpotLight,
   type LightShadow,
-  type Node,
+  Vector4,
+  NodeMaterial,
+  type Object3D,
   type Scene
 } from 'three/webgpu';
-import {renderOutput} from 'three/tsl';
+import {Fn, If, Discard, renderOutput, uniform, vec4, context as createContext} from 'three/tsl';
 import {LumaRenderer} from './luma-renderer';
 import {LumaBackend} from './luma-backend';
+
+/** Null omits a disabled object; zero RGBA draws an unselectable depth occluder. */
+export type ThreePickingColor = readonly [number, number, number, number];
+export type ThreePickingColorAccessor = (object: Object3D) => ThreePickingColor | null;
 
 // Three r185 normally converts color in a separate framebuffer/output pass.
 // Caller-pass rendering instead uses its upstream TSL renderOutput node inline.
@@ -35,14 +41,23 @@ export class ThreeSceneAdapter {
   private readonly preparationTarget = new RenderTarget(16, 16, {type: HalfFloatType});
   private preparedScene?: Scene;
   private disposed = false;
+  private readonly pickingContext = createContext();
+  private readonly pickingColor = uniform(new Vector4());
+  private readonly getPickingOutput = (output: ReturnType<typeof vec4>) =>
+    Fn(() => {
+      // Standard material alpha testing ran upstream; discard fully transparent coverage too.
+      If(output.a.lessThanEqual(0), () => Discard());
+      return this.pickingColor;
+    })();
 
   constructor({device}: {device: Device}) {
     if (device.type !== 'webgpu') throw new Error('ThreeSceneAdapter requires WebGPU');
     this.device = device;
     this.renderer = new SceneRenderer({device});
     this.backend = this.renderer.backend as LumaBackend;
-    const context = this.renderer.contextNode.value as Record<string, unknown>;
-    context['getOutput'] = (output: Node) =>
+    this.pickingColor.onObjectUpdate(() => this.pickingColor.value);
+    const rendererContext = this.renderer.contextNode.value as Record<string, unknown>;
+    rendererContext['getOutput'] = (output: ReturnType<typeof vec4>) =>
       this.renderer.getRenderTarget() === null
         ? renderOutput(output, NoToneMapping, SRGBColorSpace)
         : output;
@@ -67,6 +82,27 @@ export class ThreeSceneAdapter {
 
   /** Draw the prepared scene with existing lights/materials into the caller's pass. */
   draw(scene: Scene, camera: Camera, pass: RenderPass): void {
+    this.renderScene(scene, camera, pass);
+  }
+
+  /** Draw exact ID colors through the same vertex/material coverage as the visible scene. */
+  drawPicking(
+    scene: Scene,
+    camera: Camera,
+    pass: RenderPass,
+    getColor: ThreePickingColorAccessor,
+    parameters?: RenderPipelineParameters
+  ): void {
+    this.renderScene(scene, camera, pass, getColor, parameters);
+  }
+
+  private renderScene(
+    scene: Scene,
+    camera: Camera,
+    pass: RenderPass,
+    getColor?: ThreePickingColorAccessor,
+    parameters?: RenderPipelineParameters
+  ): void {
     if (this.disposed || this.preparedScene !== scene)
       throw new Error('Prepare the scene before drawing in a caller pass');
     const shadows: {shadow: LightShadow; autoUpdate: boolean; needsUpdate: boolean}[] = [];
@@ -82,9 +118,45 @@ export class ThreeSceneAdapter {
         shadow.needsUpdate = false;
       }
     });
+    const renderObject = this.renderer.getRenderObjectFunction();
+    const contextNode = this.renderer.contextNode;
+    if (getColor) {
+      this.pickingContext.value = {
+        ...(contextNode.value as Record<string, unknown>),
+        getOutput: this.getPickingOutput
+      };
+      this.renderer.contextNode = this.pickingContext;
+      this.renderer.setRenderObjectFunction((...parameters) => {
+        const [object, , , , material] = parameters;
+        const color = getColor?.(object);
+        if (!color) return;
+        if (material instanceof NodeMaterial && material.fragmentNode)
+          throw new Error('Three scene picking does not support custom fragmentNode materials');
+        this.pickingColor.value.fromArray(color);
+        // Keep normal and picking render-object caches separate without cloning materials.
+        parameters[8] = `three-picking:${parameters[8] || ''}`;
+        // IDs need one double-sided coverage pass, not transparent back/front shading passes.
+        // Three's two-pass back-side cache uses a shared pass ID; avoid recreating it on hover.
+        const forceSinglePass = material.forceSinglePass;
+        material.forceSinglePass = true;
+        try {
+          if (renderObject) renderObject.call(this.renderer, ...parameters);
+          else this.renderer.renderObject(...parameters);
+        } finally {
+          material.forceSinglePass = forceSinglePass;
+        }
+      });
+    }
     try {
-      this.backend.withRenderPass(pass, () => this.renderer.render(scene, camera));
+      this.backend.withRenderPass(
+        pass,
+        () => this.renderer.render(scene, camera),
+        getColor ? {blend: false, depthWriteEnabled: true, ...parameters} : undefined
+      );
     } finally {
+      this.renderer.contextNode = contextNode;
+      getColor = undefined;
+      this.renderer.setRenderObjectFunction(renderObject);
       for (const {shadow, autoUpdate, needsUpdate} of shadows) {
         shadow.autoUpdate = autoUpdate;
         shadow.needsUpdate = needsUpdate;

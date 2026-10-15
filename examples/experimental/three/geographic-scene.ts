@@ -89,6 +89,7 @@ export async function createGeographicScene(renderer: Renderer) {
   const referenceContext = new Group();
   const ground = new Mesh(new BoxGeometry(70, 50, 0.1), new MeshBasicMaterial({color: 0x233540}));
   ground.position.z = -0.05;
+  ground.name = 'ground';
   referenceContext.add(ground);
   for (const building of buildings) {
     const mesh = new Mesh(
@@ -110,7 +111,15 @@ export async function createGeographicScene(renderer: Renderer) {
       }
     });
   let disposed = false;
+  let selectedId: string | undefined;
   function select(id?: string) {
+    selectedId = id;
+    referenceContext.traverse(child => {
+      if (child instanceof Mesh && child.material instanceof MeshBasicMaterial)
+        child.material.color.setHex(
+          child.name === id ? 0xa38c39 : child.name === 'ground' ? 0x233540 : 0x426375
+        );
+    });
     models.forEach(model =>
       model.traverse(child => {
         if (child instanceof Mesh) {
@@ -128,6 +137,9 @@ export async function createGeographicScene(renderer: Renderer) {
     ...fixture,
     models,
     referenceContext,
+    get selectedId() {
+      return selectedId;
+    },
     select,
     dispose() {
       if (disposed) return;
@@ -162,6 +174,11 @@ export function createGeographicLayers(
     scene: fixture.scene,
     camera: fixture.camera,
     adapter,
+    pickable: true,
+    pickingObjects: fixture.models.map(model => ({
+      id: String(model.userData['geographicId']),
+      object: model
+    })),
     coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
     coordinateOrigin: GEOGRAPHIC_ORIGIN
   });
@@ -193,7 +210,13 @@ export function createGeographicLayers(
       ]
     ],
     getElevation: building => building.height,
-    getFillColor: building => (building.id === 'ground' ? [35, 53, 64, 255] : [66, 99, 117, 255]),
+    getFillColor: building =>
+      fixture.selectedId === building.id
+        ? [163, 140, 57, 255]
+        : building.id === 'ground'
+          ? [35, 53, 64, 255]
+          : [66, 99, 117, 255],
+    updateTriggers: {getFillColor: fixture.selectedId},
     material: {ambient: 1, diffuse: 0, shininess: 0, specularColor: [0, 0, 0]},
     extruded: true,
     stroked: false,

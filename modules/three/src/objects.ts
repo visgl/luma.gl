@@ -310,3 +310,5 @@ export class ThreeMeshAdapter {
 }
 
 export {ThreeSceneAdapter} from './scene-adapter';
+
+export type {ThreePickingColor, ThreePickingColorAccessor} from './scene-adapter';
