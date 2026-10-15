@@ -9,6 +9,7 @@ import {synchronizeThreeCamera} from '@luma.gl/three/deck';
 import {ThreeSceneAdapter} from '@luma.gl/three/objects';
 import {HalfFloatType, WebGPURenderer, WebGPUCoordinateSystem} from 'three/webgpu';
 import {createGeographicLayers, createGeographicScene, GEOGRAPHIC_ORIGIN} from './geographic-scene';
+import {createSceneSelection} from './scene-selection';
 
 export async function createGeographicComparison(
   device: Device,
@@ -17,8 +18,10 @@ export async function createGeographicComparison(
   onError: (error: Error) => void,
   onSelect: (id?: string) => void
 ) {
-  const canvas = device.getDefaultCanvasContext().canvas;
-  if (!(canvas instanceof HTMLCanvasElement)) throw new Error('Geographic demo requires a canvas');
+  const deviceCanvas = device.getDefaultCanvasContext().canvas;
+  if (!(deviceCanvas instanceof HTMLCanvasElement))
+    throw new Error('Geographic demo requires a canvas');
+  const canvas = deviceCanvas;
   const adapter = new ThreeSceneAdapter({device});
   const reference = new WebGPURenderer({
     canvas: referenceCanvas,
@@ -74,7 +77,6 @@ export async function createGeographicComparison(
   let disposed = false;
   let reverseOrder = false;
   let showModels = true;
-  let selectionRequest = 0;
   function updateLayers() {
     const layers = createGeographicLayers(scene!, adapter, reverseOrder);
     deck?.setProps({
@@ -89,21 +91,19 @@ export async function createGeographicComparison(
     onSelect(id);
     updateLayers();
   }
-  async function selectAt(position: [number, number]) {
-    if (!deck) return;
-    const request = ++selectionRequest;
-    const bounds = canvas.getBoundingClientRect();
-    try {
+  const selection = createSceneSelection({
+    select: selectObject,
+    onError,
+    pick: async position => {
+      if (!deck) return undefined;
+      const bounds = canvas.getBoundingClientRect();
       const info = await deck.pickObjectAsync({
         x: ((position[0] + 1) * bounds.width) / 2,
         y: ((1 - position[1]) * bounds.height) / 2
       });
-      if (!disposed && request === selectionRequest) selectObject(info?.object?.id);
-    } catch (error) {
-      if (!disposed && request === selectionRequest)
-        onError(error instanceof Error ? error : new Error(String(error)));
+      return info?.object?.id;
     }
-  }
+  });
   let pointerOrigin: [number, number] | undefined;
   let pointerMoved = false;
   const handlePointerDown = (event: PointerEvent) => {
@@ -129,7 +129,7 @@ export async function createGeographicComparison(
     )
       return;
     const bounds = event.currentTarget.getBoundingClientRect();
-    void selectAt([
+    void selection.selectAt([
       ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
       1 - ((event.clientY - bounds.top) / bounds.height) * 2
     ]);
@@ -183,8 +183,7 @@ export async function createGeographicComparison(
         onLoad: resolve,
         onClick: info => {
           if (!pointerMoved) {
-            selectionRequest++;
-            selectObject(info.object?.id);
+            selection.select(info.object?.id);
           }
         },
         getCursor: ({isDragging, isHovering}) =>
@@ -229,6 +228,7 @@ export async function createGeographicComparison(
     referenceCanvas.addEventListener('click', handleClick);
   } catch (error) {
     disposed = true;
+    selection.dispose();
     resizeObserver.disconnect();
     cancelAnimationFrame(transitionFrame);
     referenceController?.finalize();
@@ -252,7 +252,7 @@ export async function createGeographicComparison(
       updateLayers();
     },
     pause() {
-      selectionRequest++;
+      selection.invalidate();
       // Exercise layer removal/reinsertion with caller-owned scene and adapter intact.
       showModels = !showModels;
       scene!.models.forEach(model => {
@@ -266,6 +266,7 @@ export async function createGeographicComparison(
     dispose() {
       if (disposed) return;
       disposed = true;
+      selection.dispose();
       resizeObserver.disconnect();
       cancelAnimationFrame(transitionFrame);
       referenceController?.finalize();

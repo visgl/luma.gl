@@ -135,8 +135,16 @@ export class ThreeSceneAdapter {
         this.pickingColor.value.fromArray(color);
         // Keep normal and picking render-object caches separate without cloning materials.
         parameters[8] = `three-picking:${parameters[8] || ''}`;
-        if (renderObject) renderObject.call(this.renderer, ...parameters);
-        else this.renderer.renderObject(...parameters);
+        // IDs need one double-sided coverage pass, not transparent back/front shading passes.
+        // Three's two-pass back-side cache uses a shared pass ID; avoid recreating it on hover.
+        const forceSinglePass = material.forceSinglePass;
+        material.forceSinglePass = true;
+        try {
+          if (renderObject) renderObject.call(this.renderer, ...parameters);
+          else this.renderer.renderObject(...parameters);
+        } finally {
+          material.forceSinglePass = forceSinglePass;
+        }
       });
     }
     try {

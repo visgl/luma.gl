@@ -15,6 +15,7 @@ import {
   MeshBasicMaterial,
   MeshBasicNodeMaterial,
   DataTexture,
+  DoubleSide,
   NearestFilter,
   WebGPUCoordinateSystem
 } from 'three/webgpu';
@@ -48,6 +49,7 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
     map: alphaTexture,
     alphaTest: 0.5,
     transparent: true,
+    side: DoubleSide,
     opacity: 0.75
   });
   deformedMaterial.positionNode = positionLocal.add(vec3(0.5, 0, 0));
@@ -76,6 +78,7 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
   const errors: string[] = [];
   const nativeDevice = device.handle as GPUDevice;
   nativeDevice.addEventListener('uncapturederror', event => errors.push(event.error.message));
+  const createPipeline = vi.spyOn(device, 'createRenderPipeline');
   const submit = vi.spyOn(device, 'submit');
   const beginPass = vi.spyOn(device, 'beginRenderPass');
   const originalDrawPicking = adapter.drawPicking.bind(adapter);
@@ -201,6 +204,15 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
     expect(new Set(objects.map(info => info.object.id))).toEqual(
       new Set(['native-square', 'alpha-root', 42])
     );
+    await redraw();
+    await pick([1.7, 0, 1]);
+    const pipelines = createPipeline.mock.calls.length;
+    for (let frame = 0; frame < 3; frame++) {
+      await redraw();
+      expect((await pick([1.7, 0, 1]))?.object.id).toBe(42);
+    }
+    expect(createPipeline.mock.calls.length).toBe(pipelines);
+    expect(deformedMaterial.forceSinglePass).toBe(false);
     const renderObject = adapter.renderer.getRenderObjectFunction();
     const contextNode = adapter.renderer.contextNode;
     const rejectedPass = device.beginRenderPass({
