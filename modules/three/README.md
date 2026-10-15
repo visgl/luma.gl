@@ -31,6 +31,25 @@ The module also includes an object adapter for caller-owned luma render passes
 and a thin GPU-buffer bridge into upstream Three rendering. The bridge is the
 compute interoperability path; it does not require replacing Three's backend.
 
+## Choose an integration
+
+All paths are experimental and tested against Three **0.185.1**; the deck entry
+point additionally requires this workspace's patched deck **9.4.0** and luma **10**.
+The package is private. These are tested combinations, not a broad version range.
+
+| Application needs | Entry point | Rendering and ownership contract |
+| --- | --- | --- |
+| luma compute feeding an existing Three scene | `@luma.gl/three/interop` | Upstream `WebGPURenderer` renders; caller owns the shared WebGPU device and buffers. |
+| Three materials/TSL rendered through luma resources | `@luma.gl/three/backend` | `LumaRenderer` manages and submits its passes; caller owns the device. WebGPU and WebGL2 graphics; WebGPU compute only. |
+| Simple meshes mixed into a luma pass | `@luma.gl/three/objects` → `ThreeMeshAdapter` | Caller owns the pass and submission; WebGPU, untextured basic materials. |
+| Prepared PBR scene mixed into a luma pass | `@luma.gl/three/objects` → `ThreeSceneAdapter` | Prepare before the pass; draw borrows the pass; caller owns the adapter and source scene. |
+| Three objects mixed with deck layers | `@luma.gl/three/deck` | WebGPU, single-sample deck pass; simple Cartesian meshes or prepared scenes in Cartesian/local Mercator coordinates. |
+
+For every path, choose one owner for camera state, animation time and redraws.
+Sharing a device does not combine render loops or automatically schedule work.
+Keep source objects and borrowed buffers alive until their consumers are disposed.
+The compute bridge does not provide deck picking or make CPU raycasting see GPU data.
+
 ## Run the prototype
 
 From the repository root:
@@ -242,11 +261,13 @@ before constructing the bridge. Both engines then use the same native device and
 
 ```ts
 import {Buffer} from '@luma.gl/core';
-import {ThreeBufferBridge} from '@luma.gl/three/interop';
+import {getThreeBufferBridgeSupport, ThreeBufferBridge} from '@luma.gl/three/interop';
 import {WebGPURenderer} from 'three/webgpu';
 
 const renderer = new WebGPURenderer({canvas, device: device.handle});
 await renderer.init();
+const support = getThreeBufferBridgeSupport(device, renderer);
+if (!support.supported) throw new Error(support.reason);
 const bridge = new ThreeBufferBridge(device, renderer);
 const positions = device.createBuffer({
   byteLength: vertexCount * 12,
@@ -265,27 +286,53 @@ device.destroy();
 ```
 
 Select **Shared buffer / luma compute** in the split-screen example. The left
-pane computes 4,225 wave vertices through luma and renders them through upstream
-Three; the right pane renders the same wave using upstream TSL vertex displacement.
-Both panes use upstream rendering, with synchronized camera and phase. There is no
-vertex readback, CPU regeneration, or vertex upload on the compute side. A small
-phase uniform is written each frame. The shared buffer has only STORAGE and VERTEX
-usage, without COPY_SRC, COPY_DST or mapping flags.
+pane computes 4,225 wave vertices, 24,576 triangle indices and offsets for three
+instances through luma. Upstream Three renders the borrowed buffers directly;
+the right pane uses equivalent CPU topology/offsets and upstream TSL displacement.
+Only a phase uniform is written each frame. Geometry buffers have STORAGE plus
+VERTEX or INDEX usage, without COPY_SRC, COPY_DST or mapping flags. Browser tests
+compare three phases, verify buffer identity and absence of geometry uploads, and
+exercise resize, disposal and recreation. Separate GPU tests cover both index widths.
 
-This bridge is pinned to Three 0.185.1's private backend attribute methods/cache.
-It supports ordinary Float32 vertex attributes with one to four components, one
-bridge per renderer, and caller-owned buffers. Index, interleaved and storage-node
-attributes, textures, automatic bounds, CPU raycasting and deck.gl integration are
-not covered. The CPU attribute array is metadata only; do not set `needsUpdate`
-or change its usage/layout. Compute-driven bounds must be supplied independently,
-or frustum culling disabled as in this example. Dispose geometries before the
-bridge, then release buffers after all consumers have finished. Replacing a buffer
-requires a new attribute/geometry lifecycle; there is no implicit resize or swap.
+`getThreeBufferBridgeSupport(device, renderer)` checks revision, device identity,
+initialization, backend hooks and an existing bridge without mutating either engine.
+It returns `{supported: true}` or `{supported: false, reason}`. The constructor uses
+the same check before installing any hooks. A successful probe is an attachment
+check for this pinned integration, not general material or renderer conformance.
 
-Browser verification compares pixels at three phases, checks that no vertex writes
-or mapping occur, and exercises geometry disposal and renderer recreation on the
-same device. Pixel readback is confined to tests. A public upstream borrowed-buffer
-API would eliminate the private hooks; no luma core API extension was needed here.
+| Method | GPU layout | Required usage |
+| --- | --- | --- |
+| `createAttribute(buffer, itemSize, count)` | Packed Float32, 1–4 components per vertex | VERTEX |
+| `createInstancedAttribute(buffer, itemSize, count)` | Packed Float32, 1–4 components per instance, one element per instance | VERTEX |
+| `createIndexAttribute(buffer, count)` | Packed indices from `buffer.indexType` (`uint16` or `uint32`); count is number of indices | INDEX |
+
+Add STORAGE when compute writes a buffer. Supply `indexType: 'uint16'` or
+`indexType: 'uint32'` when creating an empty luma index buffer. These methods borrow the whole buffer
+from byte offset zero; they do not convert, upload or pad its elements. In particular,
+uint16 indices stay uint16, bypassing Three's ordinary CPU upload conversion.
+
+```ts
+geometry.setIndex(bridge.createIndexAttribute(indices, indexCount));
+geometry.setAttribute('instanceOffset', bridge.createInstancedAttribute(offsets, 3, instanceCount));
+// Use InstancedBufferGeometry and set geometry.instanceCount explicitly.
+// The material must consume instanceOffset, e.g. through a TSL attribute node.
+```
+
+The bridge is pinned to Three 0.185.1's private backend attribute methods/cache.
+Interleaved and storage-node attributes, textures, automatic bounds, CPU raycasting
+and deck integration remain unsupported. The CPU arrays are metadata only: do not
+set `needsUpdate`, mutate their layout/usage, or compute bounds/normals from them.
+Wireframe and other CPU topology processing cannot use borrowed index metadata.
+Supply conservative bounds independently, or disable frustum culling as the example does.
+
+Submit luma compute before Three renders. To replace or resize a borrowed buffer,
+dispose its consuming geometries, create new attributes/geometries, then release the
+old buffer after all queued work completes. Never destroy a buffer while a consumer
+can still use it. Dispose geometries before the bridge; the bridge restores backend
+hooks and never destroys caller buffers. Dispose the renderer before destroying the
+shared device. Device loss requires recreating the device, renderers, bridge and data;
+there is no automatic recovery. A public upstream borrowed-buffer API would remove
+the private hooks; no new luma core API was needed for this subset.
 
 ## Three meshes in a deck.gl scene
 
@@ -368,9 +415,186 @@ This path targets single-sample Cartesian or bounded local-meter Mercator views
 and display-encoded sRGB output with no tone mapping. It uses pinned Three r185 context/output hooks to apply
 color conversion inline, avoiding a second main-color output pass. Preparation adds
 work each frame; this is a compatibility exploration, not a performance guarantee.
-Transmission, lazy PMREM, postprocessing, GPU picking and nested passes during
+Transmission, lazy PMREM, postprocessing and nested passes during
 the borrowed draw are unsupported. Native deck objects neither cast nor receive the
 Three shadow map. The basic `ThreeMeshLayer` remains a separate, smaller integration.
+
+### Layer placement with `modelMatrix`
+
+`ThreeSceneLayer.modelMatrix` places the whole scene without editing its roots,
+geometry, materials or lights. Supply a column-major, orientation-preserving affine
+matrix: translation, rotation, positive scale, nonuniform scale and shear are supported.
+Reflections, singular matrices and projective transforms are rejected. Lighting and
+shadow maps continue to use the scene's original coordinate frame. This is scene
+placement, not a change to the scene's internal lighting or physical units.
+
+For Cartesian layers the matrix maps scene coordinates into deck coordinates. With
+`METER_OFFSETS`, it maps scene coordinates into local east/north/up meters **before**
+`coordinateOrigin` is projected into Mercator common space. The same placement applies
+to visible rendering, highlighting, ID picking and `unproject3D` surface coordinates.
+Those picked coordinates remain in deck's world/geographic frame, rather than the
+source scene frame. Native layers keep their own placement and share depth normally.
+
+Pass the same matrix to camera synchronization before preparation, especially for
+camera-dependent TSL nodes and shadow preparation:
+
+```ts
+const modelMatrix = new Matrix4()
+  .makeTranslation(12, -7, 3)
+  .multiply(new Matrix4().makeRotationZ(Math.PI / 6))
+  .elements;
+// In onBeforeRender, before deck opens its render pass:
+synchronizeThreeCamera(camera, viewport, WebGPUCoordinateSystem, origin, modelMatrix);
+adapter.prepare(scene, camera);
+// Supply the same origin and placement to the layer:
+const layer = new ThreeSceneLayer({
+  id: 'placed-models', adapter, scene, camera, modelMatrix,
+  coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+  coordinateOrigin: origin
+});
+```
+
+Create a new matrix value when placement changes so deck requests a redraw. Removing
+`modelMatrix` restores the original placement. The basic `ThreeMeshLayer` still uses
+its separate source-transform contract.
+
+## Unified GPU picking for prepared scenes
+
+Set `ThreeSceneLayer.pickable` and provide `pickingObjects`, an immutable array of
+`{id: string | number, object: Object3D}` records. Each object is a selectable root;
+rendered descendants resolve to the nearest listed ancestor. Roots and IDs must
+be unique. `info.object` is the original record, so `info.object.id` is the application
+identity and `info.object.object` is its Three root. `info.index` is the current array
+index; preserve application IDs when reordering entries or replacing loaded roots.
+Create a new array when membership changes. Unlisted scene geometry writes depth
+with a zero picking color, so it still occludes objects behind it.
+
+```ts
+const layer = new ThreeSceneLayer({
+  id: 'models', adapter, scene, camera,
+  pickable: true,
+  pickingObjects: [{id: 'vehicle-17', object: vehicleRoot}],
+  onHover: info => showTooltip(info.object?.id),
+  onClick: info => selectObject(info.object?.id)
+});
+const hit = await deck.pickObjectAsync({x, y});
+const visibleObjects = await deck.pickObjectsAsync({x, y, width, height});
+```
+
+Both queries and deck's hover/click callbacks use the same GPU picking pass as native
+deck layers. ID output bypasses tone mapping and color encoding. It uses the original
+material's alpha-test coverage and vertex processing, including supported skinning,
+morphs and TSL position nodes. Fully transparent fragments are discarded; partially
+transparent surfaces are treated as selectable coverage and write picking depth.
+Native deck geometry and Three geometry occlude each other through the shared pick
+depth attachment, independent of layer order when their normal depth tests apply.
+Only layers included by deck's picking filter participate; non-pickable native layers
+still follow deck's usual exclusion rules. Keep this scene layer pickable if its
+unlisted geometry should act as a picking occluder.
+
+Prepare the scene before picking, just as before its visible draw. Changing scene
+objects or animation requires requesting a deck redraw so preparation runs again.
+Picking uses the active viewport's synchronized camera, including local Mercator
+origins. It never opens, clears, ends or submits deck's pass, or takes ownership of
+source materials, geometries, scene roots or the device.
+
+This version returns root-level IDs. Individual instance IDs, custom
+`fragmentNode` materials, transmission and nested rendering remain unsupported.
+`ThreeMeshLayer` still has its separate non-pickable basic-material contract. The compute buffer bridge into upstream `WebGPURenderer` is independent
+of this prepared-scene path.
+
+Low-level callers may use `adapter.drawPicking(scene, camera, pass, getColor,
+parameters?)`. The accessor returns normalized RGBA or `null` to omit an object;
+zero RGBA draws an unselectable occluder. Use a linear `rgba8unorm` attachment for
+byte IDs. Optional pipeline parameters let the caller supply its own layer encoding;
+`ThreeSceneLayer` uses deck's alpha blend constant. Normal and picking draws restore
+renderer hooks, shadow-update flags and pass-local pipeline state after errors.
+
+Browser acceptance tests mix Three roots and native polygons, reverse layer order,
+check alpha holes and TSL-deformed vertices, replace/reorder roots while preserving
+IDs, and query visible objects in a rectangle. Normal PBR/geographic comparison
+tests continue to check color parity and caller ownership.
+
+
+### Surface coordinates with depth picking
+
+Use `deck.pickObjectAsync({x, y, unproject3D: true})` to obtain a Three hit's
+`info.coordinate` on its rendered surface instead of the viewport's default plane:
+
+```ts
+const hit = await deck.pickObjectAsync({x, y, unproject3D: true});
+if (hit?.layer?.id === 'models' && hit.coordinate) {
+  placeMarker(hit.coordinate);
+}
+```
+
+Cartesian viewports return world XYZ in their coordinate units; Mercator viewports return longitude,
+latitude and absolute altitude in meters, including a local-meter layer's coordinate
+origin. These are world coordinates in the viewport's projection, rather than mesh-local positions.
+Depth comes from the same compiled vertex path as picking, including supported TSL
+deformation, skinning and morphs. Alpha-test holes and zero-alpha fragments retain
+their picking coverage. ID selection still uses the shared Three/native depth pass;
+a second pass reconstructs the selected Three layer's surface.
+
+Depth is stored in a floating-point target without blending, tone mapping or color
+conversion. It is sampled at a device pixel, so returned coordinates have pixel
+quantization and float32 depth precision; a nonzero picking radius can sample a
+nearby pixel. Do not treat the result as an exact CPU triangle intersection. deck
+owns float-target capability checks and fallback behavior. Native layers retain their
+own depth-picking support; this implementation adds the Three path.
+
+Low-level callers may use `adapter.drawPickingDepth(scene, camera, pass, getColor)`
+with an `rgba32float` color target and shared depth attachment. The accessor follows
+`drawPicking`: `null` skips a disabled object; unlisted geometry still writes depth.
+The output is `[clipDepth, 0, 0, 1]`, with clip depth in deck's `[-1, 1]` convention.
+Preparation, pass lifecycle and source ownership remain caller-controlled.
+
+The geographic example queries Three surface depth on clicks in either pane and
+shows longitude, latitude and altitude. Native building clicks keep ordinary ID
+selection. Delayed coordinate results are invalidated by newer selections, model
+removal and disposal, using the same selection coordinator as ordinary picking.
+
+### Hover and controlled highlighting
+
+`ThreeSceneLayer` supports deck's `autoHighlight`, `highlightColor` and
+`highlightedObjectIndex` props for the same roots listed in `pickingObjects`:
+
+```ts
+new ThreeSceneLayer({
+  id: 'models', adapter, scene, camera,
+  pickable: true,
+  pickingObjects,
+  autoHighlight: true,
+  highlightColor: info => info.object?.id === 'vehicle-17'
+    ? [255, 190, 70, 128] : [80, 180, 255, 128]
+});
+// Controlled selection: use the current array index; -1 suppresses hover highlighting.
+const selected = layer.clone({highlightedObjectIndex: selectedIndex});
+```
+
+Mouse leave clears automatic highlighting. An integer `highlightedObjectIndex`
+overrides hover; use `null` to return control to hover. Controlled indices are
+positional, so recompute them from your application ID after replacing/reordering
+`pickingObjects`. A constant RGB color defaults to alpha 255; RGBA alpha controls
+source-over tint strength. A color accessor is evaluated by deck on hover, as for
+native layers; use a constant color for controlled selection.
+
+The tint is composited over the final display color, after Three's color conversion.
+Premultiplied-alpha materials are converted to straight RGB for the tint and back
+to premultiplied RGB for their existing blend pipeline.
+All rendered descendants of the selected root share it; a nested listed root has
+its own identity. Shared materials and source colors/emissive values remain unchanged.
+Alpha-test holes and fully transparent fragments retain their coverage, normal depth
+and blending still apply, and picking always writes the original IDs. Unselected
+roots and unlisted geometry receive no tint. No additional render pass is opened.
+The separate highlighting shader context preserves normal PBR output when disabled.
+Custom `fragmentNode` materials are unsupported while highlighting is active.
+
+At the lower-level adapter boundary, `drawHighlighted(scene, camera, pass, getColor)`
+accepts normalized display-space RGBA per rendered object; return `null` for no tint.
+It borrows the pass and source scene with the same preparation and ownership rules
+as `draw`. The geographic example enables hover tinting for Lantern roots and native
+buildings in the deck pane; click selection remains synchronized across both panes.
 
 ## Geographic deck exploration
 
@@ -381,15 +605,17 @@ anchored at longitude/latitude/altitude. `ThreeSceneLayer` accepts
 before preparation. This bounded Mercator tangent frame supports object altitude,
 scale and heading; large extents and globe projection remain unsupported.
 
-`pickThreeObject` performs CPU triangle raycasting, including nearest supplied
-occluders and clipping. The demo provides Three equivalents of native deck
-buildings to return stable IDs and synchronize selection highlights. It does not
-make Three scenes pickable in deck's GPU picking pass. Alpha-test holes, GPU-only
-deformation, material visibility and arbitrary native-layer occlusion require
-further integration. Tests compare rendered output and selected output against
-upstream Three and verify that layer removal/reinsertion preserves borrowed data
-and the device.
+The demo uses deck GPU picking for Lantern roots and native buildings. Hovering the
+deck pane shows object IDs; clicking either pane queries the same deck scene and
+synchronizes selection highlights. The reference pane still renders Three building
+and ground equivalents for visual parity, but picking does not require CPU occluder
+copies. Async reference clicks ignore results superseded by a newer selection,
+model toggle or disposal. Layer removal/reinsertion preserves borrowed source data.
 
-Buildings act as occluders for CPU selection; only Lantern instances receive
-selection IDs and highlights. Their bases are normalized from geometry bounds
-before applying instance scale, so placement altitude describes the model base.
+`pickThreeObject` remains an independent CPU triangle-ray helper. It can find the
+nearest supplied visible triangle within camera clipping planes, but does not model
+material alpha coverage or arbitrary native deck occlusion. Use GPU picking for the
+composed scene.
+
+Lantern bases are normalized from geometry bounds before applying instance scale,
+so placement altitude describes the model base.

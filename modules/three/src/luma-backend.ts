@@ -11,6 +11,7 @@ import {
   type RenderPass,
   type ComputePass,
   type TextureFormatColor,
+  type RenderPipelineParameters,
   type AttributeShaderType
 } from '@luma.gl/core';
 import {
@@ -58,6 +59,7 @@ export class LumaBackend extends Backend {
   private readonly resources = new Set<{destroy(): void}>();
   private renderPass: RenderPass | null = null;
   private borrowedPass: RenderPass | null = null;
+  private borrowedParameters?: RenderPipelineParameters;
   private renderContext: ThreeInternal | null = null;
   private readonly renderContextStack: ThreeInternal[] = [];
   private computePass: ComputePass | null = null;
@@ -123,7 +125,11 @@ export class LumaBackend extends Backend {
     if (resource && this.resources.delete(resource)) resource.destroy();
   }
   /** Record final scene draws only; never clear, end or submit the caller's pass. */
-  withRenderPass(pass: RenderPass, render: () => void): void {
+  withRenderPass(
+    pass: RenderPass,
+    render: () => void,
+    parameters?: RenderPipelineParameters
+  ): void {
     const framebuffer = pass.props.framebuffer;
     if (
       this.borrowedPass ||
@@ -141,12 +147,14 @@ export class LumaBackend extends Backend {
         'LumaBackend: expected an idle backend and a compatible single-sample caller pass'
       );
     this.borrowedPass = pass;
+    this.borrowedParameters = parameters;
     try {
       render();
     } finally {
       this.renderPass = null;
       this.renderContext = null;
       this.borrowedPass = null;
+      this.borrowedParameters = undefined;
     }
   }
   dispose(): void {
@@ -646,7 +654,7 @@ export class LumaBackend extends Backend {
       delete parameters.depthCompare;
     }
     return {
-      parameters,
+      parameters: {...parameters, ...this.borrowedParameters},
       formats: this.borrowedPass
         ? this.borrowedPass.props.framebuffer!.colorAttachments.map(
             attachment => attachment.texture.format

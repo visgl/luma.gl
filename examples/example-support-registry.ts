@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import gltfInteractivitySupport from './deck/gltf-interactivity/mobile-support';
 import flowParticlesSupport from './deck/flow-particles/mobile-support';
 import threeSupport from './experimental/three/mobile-support';
 import sphereWorldSupport from './experimental/gpu-sphere-world/mobile-support';
@@ -209,6 +210,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'arrow/arrow-particles': support76,
   'arrow/arrow-dggs-polygons': support77,
   'arrow/arrow-columns': support78,
+  'deck/gltf-interactivity': gltfInteractivitySupport,
   'deck/flow-particles': flowParticlesSupport,
   'deck/arrow-path-layer': support79,
   'deck/city-scene': citySceneSupport,
