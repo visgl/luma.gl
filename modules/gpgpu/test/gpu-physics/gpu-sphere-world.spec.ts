@@ -464,6 +464,23 @@ it('GPUSphereWorld body commands apply impulses once with mass and point torque'
   }
 });
 
+it('GPUSphereWorld small-body impulses preserve solid-sphere inertia', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const target = await makeWorld(device, [0, 0, 0, 0.0005], [0, 0, 0, 1]);
+  try {
+    target.world.applyAngularImpulse(0, [0, 0, 0.0000001]);
+    let states = await target.world.readState();
+    expect(states[0].angularVelocity[2]).toBeCloseTo(1, 5);
+    target.world.applyImpulse(0, [0.0002, 0, 0], [0, 0.0005, 0]);
+    states = await target.world.readState();
+    expect(states[0].angularVelocity[2]).toBeCloseTo(0, 5);
+    expect(states[0].velocity[0]).toBeCloseTo(0.0002, 7);
+  } finally {
+    target.destroy();
+  }
+});
+
 it('GPUSphereWorld disabled bodies do not collide and can be restored and woken', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) return;

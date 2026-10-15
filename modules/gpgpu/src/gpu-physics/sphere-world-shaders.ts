@@ -329,14 +329,15 @@ struct Command {control: vec4f, value: vec4f, point: vec4f, orientation: vec4f, 
 @compute @workgroup_size(1) fn main() {
   let index = u32(command.control.x); let operation = u32(command.control.y);
   var sphere = positions[index]; var velocity = velocities[index]; var angular = angularVelocities[index];
-  let inverseInertia = 2.5 * velocity.w / max(sphere.w * sphere.w, 0.000001);
   if (operation == 1u && sphere.w > 0.0 && velocity.w > 0.0) {
+    let inverseInertia = 2.5 * velocity.w / (sphere.w * sphere.w);
     velocity = vec4f(velocity.xyz + command.value.xyz * velocity.w, velocity.w);
     if (command.control.z > 0.0) {
       angular = vec4f(angular.xyz + cross(command.point.xyz - sphere.xyz, command.value.xyz) * inverseInertia, angular.w);
     }
   }
   if (operation == 2u && sphere.w > 0.0 && velocity.w > 0.0) {
+    let inverseInertia = 2.5 * velocity.w / (sphere.w * sphere.w);
     angular = vec4f(angular.xyz + command.value.xyz * inverseInertia, angular.w);
   }
   if (operation == 4u) {
