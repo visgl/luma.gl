@@ -5,7 +5,6 @@
 import {Deck, OrbitView, COORDINATE_SYSTEM} from '@deck.gl/core';
 import {ScenegraphLayer} from '@deck.gl/mesh-layers';
 import {GLTFInteractivity} from '@luma.gl/gltf';
-import {getGLTFInteractivity} from '@loaders.gl/gltf';
 import {getDeckExampleProps} from '../deck-example-device';
 
 const ASSET_URL =
@@ -31,23 +30,24 @@ let deck: Deck;
  */
 function makeDemoGraph(scale: number) {
   return {
-    graphs: [{
-      types: [{signature: 'float3'}, {signature: 'bool'}],
-      declarations: [
-        {op: 'event/onStart'},
-        {op: 'flow/branch'},
-        {op: 'pointer/set'}
-      ],
-      nodes: [
-        {declaration: 0, flows: {out: {node: 1}}},
-        {declaration: 1,
-          values: {condition: {type: 1, value: [true]}},
-          flows: {true: {node: 2}}},
-        {declaration: 2,
-          configuration: {pointer: {value: [`/nodes/${activeNodeIndex}/scale`]}, type: {value: [0]}},
-          values: {value: {type: 0, value: [scale, scale, scale]}}}
-      ]
-    }]
+    graphs: [
+      {
+        types: [{signature: 'float3'}, {signature: 'bool'}],
+        declarations: [{op: 'event/onStart'}, {op: 'flow/branch'}, {op: 'pointer/set'}],
+        nodes: [
+          {declaration: 0, flows: {out: {node: 1}}},
+          {declaration: 1, values: {condition: {type: 1, value: [true]}}, flows: {true: {node: 2}}},
+          {
+            declaration: 2,
+            configuration: {
+              pointer: {value: [`/nodes/${activeNodeIndex}/scale`]},
+              type: {value: [0]}
+            },
+            values: {value: {type: 0, value: [scale, scale, scale]}}
+          }
+        ]
+      }
+    ]
   };
 }
 
@@ -62,7 +62,8 @@ function runDemo(scale: number): void {
       },
       set(pointer, value) {
         if (pointer !== `/nodes/${activeNodeIndex}/scale` || value.length !== 3) return false;
-        if (!value.every(component => typeof component === 'number' && Number.isFinite(component))) return false;
+        if (!value.every(component => typeof component === 'number' && Number.isFinite(component)))
+          return false;
         sourceNode.setScale(value as number[]);
         sourceNode.updateMatrix();
         deck.redraw('KHR_interactivity pointer/set');
@@ -98,12 +99,14 @@ deck = new Deck({
       getScene: (data: any) => {
         if (!data?.scenes?.length) return null as any;
         sceneData = data;
-        const original = getGLTFInteractivity(data.gltf as any);
+        const original = data.gltf?.extensions?.['KHR_interactivity'];
         const sourceGraph = original?.graphs[original.graph ?? 0];
         sourceOperationCount = sourceGraph?.nodes?.length ?? 0;
         const entries = [...data.gltfNodeIndexToNodeMap.entries()] as Array<[number, any]>;
-        activeNodeIndex = entries.find(([index]) => Boolean(data.gltf?.nodes?.[index]?.mesh))?.[0] ??
-          entries[0]?.[0] ?? -1;
+        activeNodeIndex =
+          entries.find(([index]) => Boolean(data.gltf?.nodes?.[index]?.mesh))?.[0] ??
+          entries[0]?.[0] ??
+          -1;
         queueMicrotask(() => {
           try {
             if (!original) throw new Error('The source asset has no KHR_interactivity extension');
@@ -133,6 +136,10 @@ toggle.addEventListener('click', () => {
 });
 reset.addEventListener('click', () => {
   enlarged = false;
-  try { runDemo(1); } catch (error) { status.value = String(error); }
+  try {
+    runDemo(1);
+  } catch (error) {
+    status.value = String(error);
+  }
 });
 window.addEventListener('pagehide', () => deck.finalize());

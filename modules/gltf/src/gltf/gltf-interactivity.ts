@@ -2,12 +2,29 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {
-  GLTF_KHR_interactivity,
-  GLTFInteractivityGraph,
-  GLTFInteractivityNode,
-  GLTFInteractivityValue
-} from '@loaders.gl/gltf';
+// Describe the interpreter's input locally until loaders.gl publishes its interactivity types.
+type GLTFInteractivityValue = {
+  type?: number;
+  value?: unknown[];
+  node?: number;
+  socket?: string;
+};
+type GLTFInteractivityNode = {
+  declaration: number;
+  configuration?: Record<string, {value: unknown[]}>;
+  values?: Record<string, GLTFInteractivityValue>;
+  flows?: Record<string, {node: number; socket?: string}>;
+};
+type GLTFInteractivityGraph = {
+  types?: {signature: string}[];
+  variables?: {type?: number; value?: unknown[]}[];
+  declarations?: {op: string; extension?: string}[];
+  nodes?: GLTFInteractivityNode[];
+};
+type GLTFInteractivityExtension = {
+  graph?: number;
+  graphs: GLTFInteractivityGraph[];
+};
 
 export type GLTFInteractivityValueType = unknown[];
 export type GLTFInteractivityPropertyAdapter = {
@@ -22,13 +39,33 @@ export type GLTFInteractivityOptions = {
 };
 
 const VALUE_OPS = new Set([
-  'variable/get', 'pointer/get', 'math/add', 'math/sub', 'math/mul', 'math/div',
-  'math/rem', 'math/min', 'math/max', 'math/eq', 'math/lt', 'math/le',
-  'math/gt', 'math/ge', 'math/select', 'math/switch', 'math/neg', 'math/abs'
+  'variable/get',
+  'pointer/get',
+  'math/add',
+  'math/sub',
+  'math/mul',
+  'math/div',
+  'math/rem',
+  'math/min',
+  'math/max',
+  'math/eq',
+  'math/lt',
+  'math/le',
+  'math/gt',
+  'math/ge',
+  'math/select',
+  'math/switch',
+  'math/neg',
+  'math/abs'
 ]);
 const FLOW_OPS = new Set([
-  'event/onStart', 'event/onTick', 'flow/sequence', 'flow/branch', 'flow/switch',
-  'variable/set', 'pointer/set'
+  'event/onStart',
+  'event/onTick',
+  'flow/sequence',
+  'flow/branch',
+  'flow/switch',
+  'variable/set',
+  'pointer/set'
 ]);
 function copy(value: unknown[]): unknown[] {
   return value.slice();
@@ -52,7 +89,7 @@ function number(value: unknown[]): number {
  * A renderer supplies the glTF Asset Object Model through the property adapter.
  */
 export class GLTFInteractivity {
-  readonly extension: GLTF_KHR_interactivity;
+  readonly extension: GLTFInteractivityExtension;
   readonly graph: GLTFInteractivityGraph;
   readonly variables: unknown[][];
   readonly properties?: GLTFInteractivityPropertyAdapter;
@@ -62,7 +99,7 @@ export class GLTFInteractivity {
   private lastTick: number | undefined;
   private readonly eventOutputs = new Map<number, Record<string, unknown[]>>();
 
-  constructor(extension: GLTF_KHR_interactivity, options: GLTFInteractivityOptions = {}) {
+  constructor(extension: GLTFInteractivityExtension, options: GLTFInteractivityOptions = {}) {
     this.extension = extension;
     const graphIndex = options.graph ?? extension.graph ?? 0;
     const graph = extension.graphs[graphIndex];
@@ -102,7 +139,8 @@ export class GLTFInteractivity {
     const node = graph.nodes?.[nodeIndex];
     if (!node) throw new Error(`KHR_interactivity: node index ${nodeIndex} is out of range`);
     const declaration = graph.declarations?.[node.declaration];
-    if (!declaration) throw new Error(`KHR_interactivity: declaration index ${node.declaration} is out of range`);
+    if (!declaration)
+      throw new Error(`KHR_interactivity: declaration index ${node.declaration} is out of range`);
     return declaration.extension ? `${declaration.extension}:${declaration.op}` : declaration.op;
   }
 
@@ -166,37 +204,63 @@ export class GLTFInteractivity {
         const value = this.properties?.get(this.pointer(index, visiting));
         return socket === 'isValid' ? [value !== undefined] : copy(value ?? [0]);
       }
-      if (socket !== 'value') throw new Error(`KHR_interactivity: unsupported output socket ${socket}`);
+      if (socket !== 'value')
+        throw new Error(`KHR_interactivity: unsupported output socket ${socket}`);
       const a = () => this.input(index, 'a', visiting);
       const b = () => this.input(index, 'b', visiting);
       const binary = (fn: (x: number, y: number) => number): unknown[] => {
         const x = a().map(Number);
         const y = b().map(Number);
-        if (x.length !== y.length) throw new Error('KHR_interactivity: mismatched component lengths');
+        if (x.length !== y.length)
+          throw new Error('KHR_interactivity: mismatched component lengths');
         return x.map((v, i) => fn(v, y[i]));
       };
       switch (op) {
-        case 'math/add': return binary((x, y) => x + y);
-        case 'math/sub': return binary((x, y) => x - y);
-        case 'math/mul': return binary((x, y) => x * y);
-        case 'math/div': return binary((x, y) => x / y);
-        case 'math/rem': return binary((x, y) => x % y);
-        case 'math/min': return binary(Math.min);
-        case 'math/max': return binary(Math.max);
-        case 'math/neg': return a().map(x => -Number(x));
-        case 'math/abs': return a().map(x => Math.abs(Number(x)));
-        case 'math/eq': return [JSON.stringify(a()) === JSON.stringify(b())];
-        case 'math/lt': return [number(a()) < number(b())];
-        case 'math/le': return [number(a()) <= number(b())];
-        case 'math/gt': return [number(a()) > number(b())];
-        case 'math/ge': return [number(a()) >= number(b())];
-        case 'math/select': return this.input(index, Boolean(scalar(this.input(index, 'condition', visiting))) ? 'a' : 'b', visiting);
+        case 'math/add':
+          return binary((x, y) => x + y);
+        case 'math/sub':
+          return binary((x, y) => x - y);
+        case 'math/mul':
+          return binary((x, y) => x * y);
+        case 'math/div':
+          return binary((x, y) => x / y);
+        case 'math/rem':
+          return binary((x, y) => x % y);
+        case 'math/min':
+          return binary(Math.min);
+        case 'math/max':
+          return binary(Math.max);
+        case 'math/neg':
+          return a().map(x => -Number(x));
+        case 'math/abs':
+          return a().map(x => Math.abs(Number(x)));
+        case 'math/eq':
+          return [JSON.stringify(a()) === JSON.stringify(b())];
+        case 'math/lt':
+          return [number(a()) < number(b())];
+        case 'math/le':
+          return [number(a()) <= number(b())];
+        case 'math/gt':
+          return [number(a()) > number(b())];
+        case 'math/ge':
+          return [number(a()) >= number(b())];
+        case 'math/select':
+          return this.input(
+            index,
+            Boolean(scalar(this.input(index, 'condition', visiting))) ? 'a' : 'b',
+            visiting
+          );
         case 'math/switch': {
           const selection = number(this.input(index, 'selection', visiting));
           const cases = this.config(node, 'cases');
-          return this.input(index, cases.includes(selection) ? String(selection) : 'default', visiting);
+          return this.input(
+            index,
+            cases.includes(selection) ? String(selection) : 'default',
+            visiting
+          );
         }
-        default: throw new Error(`KHR_interactivity: ${op} is not a value operation`);
+        default:
+          throw new Error(`KHR_interactivity: ${op} is not a value operation`);
       }
     } finally {
       visiting.delete(index);
@@ -210,7 +274,8 @@ export class GLTFInteractivity {
       if (++steps > this.maxSteps) throw new Error('KHR_interactivity: flow step limit exceeded');
       const node = this.graph.nodes![index];
       const operation = this.op(index);
-      if (inputSocket !== 'in') throw new Error(`KHR_interactivity: unsupported input flow ${inputSocket}`);
+      if (inputSocket !== 'in')
+        throw new Error(`KHR_interactivity: unsupported input flow ${inputSocket}`);
       const visiting = new Set<number>();
       const follow = (socket: string): void => {
         const target = node.flows?.[socket];
@@ -245,7 +310,8 @@ export class GLTFInteractivity {
           follow(this.properties?.set(pointer, value) ? 'out' : 'err');
           break;
         }
-        default: throw new Error(`KHR_interactivity: ${operation} is not an executable flow operation`);
+        default:
+          throw new Error(`KHR_interactivity: ${operation} is not an executable flow operation`);
       }
     };
     const nodes = this.graph.nodes ?? [];

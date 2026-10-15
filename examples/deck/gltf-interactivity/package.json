@@ -11,9 +11,9 @@
     "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch",
     "@deck.gl/mesh-layers": "9.4.0",
     "@loaders.gl/gltf": "~5.0.0-alpha.11",
-    "@luma.gl/gltf": "10.0.0-alpha.4",
     "@luma.gl/core": "10.0.0-alpha.4",
     "@luma.gl/engine": "10.0.0-alpha.4",
+    "@luma.gl/gltf": "10.0.0-alpha.4",
     "@luma.gl/webgl": "10.0.0-alpha.4",
     "@luma.gl/webgpu": "10.0.0-alpha.4"
   },
