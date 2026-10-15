@@ -87,6 +87,11 @@
       "types": "./dist/gpu-a5/index.d.ts",
       "import": "./dist/gpu-a5/index.js",
       "require": "./dist/gpu-a5/index.cjs"
+    },
+    "./gpu-physics": {
+      "types": "./dist/gpu-physics/index.d.ts",
+      "import": "./dist/gpu-physics/index.js",
+      "require": "./dist/gpu-physics/index.cjs"
     }
   },
   "files": [

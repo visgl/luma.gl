@@ -95,6 +95,9 @@ export class GPUSphereWorld {
     if (workgroups > limit) {
       throw new Error('GPUSphereWorld count exceeds single-dimension compute dispatch limit');
     }
+    if (this.count * 16 > graph.device.limits.maxStorageBufferBindingSize) {
+      throw new Error('GPUSphereWorld state exceeds maxStorageBufferBindingSize');
+    }
     const positions = graph.createDataView(
       graph.importBuffer(
         {
