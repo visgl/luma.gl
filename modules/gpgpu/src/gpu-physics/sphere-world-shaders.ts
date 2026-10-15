@@ -15,7 +15,7 @@ const CELL_SIZE = ${maximumRadius * 2 + contactSkin};
 const MAXIMUM_RADIUS = ${maximumRadius};
 const MAXIMUM_CONTACTS = ${maximumContacts}u;
 const INVALID_KEY = 0xffffffffu;
-struct Plane {normal: vec4f, right: vec4f, forward: vec4f, center: vec4f, material: vec4f};
+struct Plane {normal: vec4f, right: vec4f, forward: vec4f, center: vec4f, material: vec4f, response: vec4f};
 struct Settings {
   gravity: vec4f,
   normal: vec4f,
@@ -237,16 +237,34 @@ fn main(@builtin(global_invocation_id) invocation: vec3u) {
       let floorDistance = length(floorDelta);
       let signedHeight = dot(point, plane.normal.xyz) - plane.normal.w;
       if (signedHeight > -sphere.w && floorDistance <= sphere.w) {
-        let normal = select(plane.normal.xyz, floorDelta / max(floorDistance, 0.000001), signedHeight > 0.0);
+        let rectangleNormal = select(plane.normal.xyz, floorDelta / max(floorDistance, 0.000001), signedHeight > 0.0);
         let penetration = select(sphere.w - signedHeight, sphere.w - floorDistance, signedHeight > 0.0);
-        point += normal * max(penetration, 0.0);
-        let relative = linearVelocity + cross(angularVelocity, -normal * sphere.w);
+        point += rectangleNormal * max(penetration, 0.0);
+        // An optional raised cushion nose couples follow/draw into the normal rebound.
+        // Collision detection still uses the rectangle; this is a rigid impulse approximation.
+        let upward = -settings.gravity.xyz + rectangleNormal * dot(settings.gravity.xyz, rectangleNormal);
+        let height = select(0.0, plane.response.x, length(upward) > 0.000001);
+        let normal = rectangleNormal * sqrt(1.0 - height * height) -
+          upward / max(length(upward), 0.000001) * height;
+        let arm = -normal * sphere.w;
+        let relative = linearVelocity + cross(angularVelocity, arm);
         let closing = dot(relative, normal);
-        let bounce = select(0.0, -plane.material.x * closing, closing < -settings.solver.y);
-        let normalImpulse = max((bounce - closing) / velocity.w, 0.0);
-        let tangentImpulse = getFrictionImpulse(relative, normal, normalImpulse, 3.5 * velocity.w, plane.material.y, plane.material.z);
-        linearVelocity += (normal * normalImpulse + tangentImpulse) * velocity.w;
-        angularVelocity += cross(-normal * sphere.w, tangentImpulse) * inverseInertia;
+        let restitution = plane.material.x / (1.0 + plane.response.y * max(-closing, 0.0));
+        let bounce = select(0.0, -restitution * closing, closing < -settings.solver.y);
+        let normalArm = cross(arm, normal);
+        let normalMass = velocity.w + inverseInertia * dot(normalArm, normalArm);
+        let normalImpulse = max((bounce - closing) / normalMass, 0.0);
+        linearVelocity += normal * normalImpulse * velocity.w;
+        angularVelocity += normalArm * normalImpulse * inverseInertia;
+        // Friction uses the post-impact contact velocity and its directional effective mass.
+        let surfaceVelocity = linearVelocity + cross(angularVelocity, arm);
+        let tangent = surfaceVelocity - normal * dot(surfaceVelocity, normal);
+        let tangentDirection = tangent / max(length(tangent), 0.000001);
+        let tangentArm = cross(arm, tangentDirection);
+        let tangentMass = velocity.w + inverseInertia * dot(tangentArm, tangentArm);
+        let tangentImpulse = getFrictionImpulse(surfaceVelocity, normal, normalImpulse, tangentMass, plane.material.y, plane.material.z);
+        linearVelocity += tangentImpulse * velocity.w;
+        angularVelocity += cross(arm, tangentImpulse) * inverseInertia;
       }
     }
   }
@@ -294,10 +312,17 @@ fn main(@builtin(global_invocation_id) invocation: vec3u) {
   if (grounded) {
     let normalVelocity = supportNormal * dot(velocity.xyz, supportNormal);
     let tangentVelocity = velocity.xyz - normalVelocity;
-    let speed = max(length(tangentVelocity), length(angular.xyz) * sphere.w);
-    let damping = max(0.0, 1.0 - rollingResistance * max(supportWeight, 0.0) * settings.material.x / max(speed, 0.000001));
-    velocity = vec4f(normalVelocity + tangentVelocity * damping, velocity.w);
-    angular = vec4f(angular.xyz * damping, angular.w);
+    let normalSpin = supportNormal * dot(angular.xyz, supportNormal);
+    let rollingAngular = angular.xyz - normalSpin;
+    let slip = tangentVelocity + cross(rollingAngular, -supportNormal * sphere.w);
+    // Sliding friction already exchanges translation and spin in the contact solver.
+    // Apply rolling resistance only after reaching no-slip, without damping sidespin.
+    if (length(slip) <= 0.0001) {
+      let speed = length(tangentVelocity);
+      let damping = max(0.0, 1.0 - rollingResistance * max(supportWeight, 0.0) * settings.material.x / max(speed, 0.000001));
+      velocity = vec4f(normalVelocity + tangentVelocity * damping, velocity.w);
+      angular = vec4f(normalSpin + rollingAngular * damping, angular.w);
+    }
     let spin = dot(angular.xyz, supportNormal);
     let spinLoss = spinningResistance * max(supportWeight, 0.0) * settings.material.x / sphere.w;
     angular = vec4f(angular.xyz - supportNormal * sign(spin) * min(abs(spin), spinLoss), angular.w);

@@ -627,3 +627,103 @@ it('GPUSphereWorld cloth spinning resistance dissipates side spin', async () => 
     target.destroy();
   }
 });
+
+it('GPUSphereWorld cloth turns retained topspin into follow and backspin into draw', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const results: number[] = [];
+  for (const spin of [-8, 0, 8]) {
+    const target = await makeWorld(
+      device,
+      [0, 0, 0.5, 0.5, 0.99, 0, 0.5, 0.5],
+      [4, 0, 0, 1, 0, 0, 0, 1],
+      {
+        gravity: [0, 0, -9.81],
+        timeStep: 1 / 240,
+        restitution: 1,
+        staticFriction: 0,
+        dynamicFriction: 0,
+        plane: {restitution: 0, staticFriction: 0.25, dynamicFriction: 0.2},
+        contactSkin: 0.001
+      }
+    );
+    try {
+      target.world.applyAngularImpulse(0, [0, spin * 0.1, 0]);
+      target.step(120);
+      const states = await target.world.readState();
+      results.push(states[0].velocity[0]);
+      expect(states[1].position[0]).toBeGreaterThan(1.5);
+    } finally {
+      target.destroy();
+    }
+  }
+  expect(results[0]).toBeLessThan(-0.5);
+  expect(Math.abs(results[1])).toBeLessThan(0.1);
+  expect(results[2]).toBeGreaterThan(0.5);
+});
+
+it('GPUSphereWorld rolling resistance preserves independent sidespin', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const target = await makeWorld(device, [0, 0, 0.5, 0.5], [1, 0, 0, 1], {
+    gravity: [0, 0, -9.81],
+    plane: {restitution: 0, staticFriction: 0.25, dynamicFriction: 0.2, rollingResistance: 0.1}
+  });
+  try {
+    target.world.applyAngularImpulse(0, [0, 0.2, 1]);
+    target.step(30);
+    const [state] = await target.world.readState();
+    expect(state.velocity[0]).toBeLessThan(0.9);
+    expect(state.angularVelocity[1] * state.radius).toBeCloseTo(state.velocity[0], 4);
+    expect(state.angularVelocity[2]).toBeCloseTo(10, 4);
+  } finally {
+    target.destroy();
+  }
+});
+
+it('GPUSphereWorld cushions exchange spin and dissipate more rebound pace at high speed', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  async function rebound(speed: number, topSpin: number, sideSpin: number, height: number) {
+    const target = await makeWorld(device, [-0.499, 0, 1, 0.5], [speed, 0, 0, 1], {
+      gravity: [0, 0, -9.81],
+      timeStep: 1 / 240,
+      iterations: 1,
+      planes: [
+        {
+          normal: [-1, 0, 0],
+          restitution: 0.9,
+          restitutionVelocityScale: 0.05,
+          contactHeightRatio: height,
+          staticFriction: 0.2,
+          dynamicFriction: 0.15
+        }
+      ]
+    });
+    try {
+      target.world.applyAngularImpulse(0, [0, topSpin * 0.1, sideSpin * 0.1]);
+      target.step();
+      return (await target.world.readState())[0];
+    } finally {
+      target.destroy();
+    }
+  }
+  const slow = await rebound(2, 0, 0, 0);
+  const fast = await rebound(8, 0, 0, 0);
+  expect(-slow.velocity[0] / 2).toBeCloseTo(0.9 / 1.1, 4);
+  expect(-fast.velocity[0] / 8).toBeCloseTo(0.9 / 1.4, 4);
+  const left = await rebound(4, 0, -8, 0.35);
+  const right = await rebound(4, 0, 8, 0.35);
+  expect(left.velocity[1] * right.velocity[1]).toBeLessThan(0);
+  expect(left.velocity[1]).toBeCloseTo(-right.velocity[1], 4);
+  const follow = await rebound(4, 8, 0, 0.35);
+  const draw = await rebound(4, -8, 0, 0.35);
+  expect(Math.abs(follow.velocity[0] - draw.velocity[0])).toBeGreaterThan(0.2);
+  for (const state of [left, right, follow, draw]) {
+    const energy =
+      0.5 * state.velocity.reduce((sum, value) => sum + value * value, 0) +
+      0.05 * state.angularVelocity.reduce((sum, value) => sum + value * value, 0);
+    expect(energy).toBeLessThan(11.21);
+    expect(state.velocity[0]).toBeLessThan(0);
+  }
+});

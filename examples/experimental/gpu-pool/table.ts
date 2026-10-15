@@ -29,9 +29,11 @@ export const TABLE_PLANES: GPUSpherePlane[] = [
         normal: [0, -side, 0],
         center: [half * 3, side * 3, 0.2],
         halfExtents: [0.5, 2.6],
-        restitution: 0.8,
-        staticFriction: 0.12,
-        dynamicFriction: 0.08,
+        restitution: 0.88,
+        restitutionVelocityScale: 0.035,
+        contactHeightRatio: 0.35,
+        staticFriction: 0.22,
+        dynamicFriction: 0.16,
         rollingResistance: 0
       })
     ),
@@ -39,9 +41,11 @@ export const TABLE_PLANES: GPUSpherePlane[] = [
       normal: [-side, 0, 0],
       center: [side * 6, 0, 0.2],
       halfExtents: [0.5, 2.6],
-      restitution: 0.8,
-      staticFriction: 0.12,
-      dynamicFriction: 0.08,
+      restitution: 0.88,
+      restitutionVelocityScale: 0.035,
+      contactHeightRatio: 0.35,
+      staticFriction: 0.22,
+      dynamicFriction: 0.16,
       rollingResistance: 0
     }
   ])

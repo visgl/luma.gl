@@ -51,3 +51,23 @@ a calibrated billiards model.
 GPU tests cover impulses, mass/inertia, sleeping/waking, disabling/restoring,
 finite cushions, corner rebounds, and contact-skin regression. Node tests cover
 the rack, pocket filtering, scratch placement and shot completion.
+
+## Spin practice
+
+Choose **Follow shot**, **Draw shot**, or **Cushion spin** from **Practice**. Each
+sets up a repeatable shot, power and contact point; **Reset shot** restores it.
+Adjust the cue contact or power to compare the result. The footer reports cue-ball
+sliding/rolling state, pace in table units per second, and sidespin in radians per
+second. **Full rack** restores normal play.
+
+Cloth sliding friction converts retained topspin into follow and backspin into
+draw after the object-ball collision. Rolling resistance starts at no-slip and
+sidespin decays independently. Cushions apply impulses at a raised contact,
+exchanging spin with rebound motion; their restitution falls with impact speed.
+These are qualitative practice effects, not measured tournament-table calibration.
+The approach distinguishes the cloth motion regimes described in
+[pooltool's physics notes](https://ekiefl.github.io/2020/04/24/pooltool-theory/).
+
+GPU regressions compare draw, stun and follow; verify no-slip rolling preserves
+independent sidespin; compare left/right cushion spin and soft/hard rebound
+fractions; and bound post-impact energy.

@@ -182,3 +182,28 @@ relative surface velocity drives the existing Coulomb model. Disabling either
 is an educational isolation of that contribution, not a calibrated billiards
 material law. Plane friction is unaffected. The pool contact diagram chooses an
 off-center world-space impulse point to produce top, back and side spin.
+
+### Cloth spin and cushions
+
+Cloth Coulomb friction exchanges linear and angular momentum while a body slides.
+After contact slip reaches zero, rolling resistance slows its translation and
+rolling rotation together. It does not damp independent rotation about the
+support normal; use `spinningResistance` for that component. Retained topspin
+therefore drives follow after a ball collision, and retained backspin drives draw.
+
+Planes optionally accept `contactHeightRatio` (zero by default, less than one).
+This moves the impulse contact above the sphere center in the direction opposite
+gravity projected onto the plane. The contact lever has length equal to the sphere
+radius. The contact normal points from the raised nose toward the center; friction uses
+the post-normal-impulse surface velocity and directional effective mass. This
+allows cushion response to exchange both sidespin and follow/draw spin.
+
+`restitutionVelocityScale` defaults to zero. When positive, effective restitution
+is `restitution / (1 + restitutionVelocityScale * normalContactSpeed)`, giving
+harder impacts a smaller retained rebound fraction. The scale has units of inverse
+speed. Both parameters are live and wake sleeping bodies when changed.
+
+The raised contact is an optional rigid-impulse approximation: rectangle collision
+geometry remains unchanged. It is not a deformable cushion or a calibrated Han or
+Mathavan billiards model. Pool uses a height ratio of 0.35 and speed scale of 0.035
+in its table units. Defaults retain centered contacts and constant restitution.

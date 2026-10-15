@@ -31,6 +31,7 @@ const shoot = element<HTMLButtonElement>('shoot');
 const reset = element<HTMLButtonElement>('reset');
 const power = element<HTMLInputElement>('power');
 const angle = element<HTMLInputElement>('angle');
+const practice = element<HTMLSelectElement>('practice');
 const aimLine = document.querySelector<SVGLineElement>('#aim-line')!;
 const cueStick = document.querySelector<SVGGElement>('#cue-stick')!;
 const audio = new PoolAudio();
@@ -83,6 +84,7 @@ try {
   let states: GPUSphereBodyState[] = await world.readState();
   let phase: 'aiming' | 'striking' | 'rolling' | 'complete' = 'aiming';
   let shotCount = 0;
+  let objectBallCount = 15;
   let scratch = false;
   let settledSince = 0;
   let strikeStart = 0;
@@ -106,11 +108,12 @@ try {
     for (const identifier of ['center-spin', 'cut-throw', 'spin-throw'])
       element<HTMLButtonElement>(identifier).disabled = phase !== 'aiming';
     element('contact-ball').setAttribute('aria-disabled', String(phase !== 'aiming'));
-    element('score').textContent = `${potted.size} / 15`;
+    element('pot-count').hidden = objectBallCount === 0;
+    element('score').textContent = `${potted.size} / ${objectBallCount}`;
     element('shots').textContent = `${shotCount} ${shotCount === 1 ? 'shot' : 'shots'}`;
     element('potted-balls').textContent = potted.size
       ? `Potted: ${[...potted].sort((first, second) => first - second).join(' · ')}`
-      : 'All balls on the table';
+      : 'All practice balls on the table';
   }
   function setAim(radians: number) {
     direction = Math.atan2(Math.sin(radians), Math.cos(radians));
@@ -124,7 +127,7 @@ try {
     element('contact-marker').style.left = `${50 + contactPoint[0] * 50}%`;
     element('contact-marker').style.top = `${50 - contactPoint[1] * 50}%`;
     const labels = [
-      contactPoint[1] > 0.08 ? 'Top' : contactPoint[1] < -0.08 ? 'Back' : '',
+      contactPoint[1] > 0.08 ? 'Follow' : contactPoint[1] < -0.08 ? 'Draw' : '',
       contactPoint[0] > 0.08 ? 'Right' : contactPoint[0] < -0.08 ? 'Left' : ''
     ].filter(Boolean);
     const label = labels.length ? labels.join(' + ') + ' spin' : 'Center hit';
@@ -241,21 +244,33 @@ try {
       setAim(direction + ((event.key === 'ArrowLeft' ? 1 : -1) * Math.PI) / 180);
     }
   };
-  reset.onclick = async () => {
+  async function resetTable() {
     reset.disabled = true;
+    practice.disabled = true;
     generation++;
     phase = 'striking';
     updateControls();
     try {
       if (snapshot) await snapshot;
       const rack = makeRack();
+      const mode = practice.value;
+      objectBallCount = mode === 'rack' ? 15 : mode === 'cushion' ? 0 : 1;
+      if (mode !== 'rack') {
+        rack.set(
+          mode === 'cushion'
+            ? [2, -1, BALL_RADIUS, BALL_RADIUS]
+            : [-2, 0, BALL_RADIUS, BALL_RADIUS],
+          0
+        );
+        rack.set([0, 0, BALL_RADIUS, BALL_RADIUS], 4);
+      }
       for (let index = 0; index < 16; index++) {
         world.teleportBody(
           index,
           [rack[index * 4], rack[index * 4 + 1], rack[index * 4 + 2]],
           [Math.SQRT1_2, 0, 0, Math.SQRT1_2]
         );
-        world.setBodyEnabled(index, true);
+        world.setBodyEnabled(index, index <= objectBallCount);
       }
       states = await world.readState();
       shotCount = 0;
@@ -263,23 +278,48 @@ try {
       scratch = false;
       settledSince = 0;
       accumulator = 0;
-      setAim(0);
-      setContactPoint(0, 0);
+      setAim(mode === 'cushion' ? Math.PI / 9 : 0);
+      setContactPoint(
+        mode === 'cushion' ? 0.65 : 0,
+        mode === 'follow' ? 0.65 : mode === 'draw' ? -0.65 : 0
+      );
+      power.value = mode === 'rack' ? '85' : '60';
+      element('power-value').textContent = power.value + '%';
+      power.style.setProperty('--power', power.value + '%');
+      reset.textContent = mode === 'rack' ? 'New rack' : 'Reset shot';
+      element('cue-motion').textContent = '';
       phase = 'aiming';
-      status.value = 'Ready for the break.';
+      status.value =
+        mode === 'rack'
+          ? 'Ready for the break.'
+          : mode === 'cushion'
+            ? 'Compare left and right spin, then try a softer or firmer shot.'
+            : 'Shoot straight at the object ball. Watch the cue ball after contact.';
       updateControls();
     } catch (error) {
       failure = error instanceof Error ? error : new Error(String(error));
     } finally {
       reset.disabled = false;
+      practice.disabled = false;
     }
-  };
+  }
+  reset.onclick = () => void resetTable();
+  practice.onchange = () => void resetTable();
   async function sampleState(now: number, sampleGeneration: number) {
     const next = await world.readState();
     if (!alive || sampleGeneration !== generation) return;
     const previousStates = states;
     states = next;
     if (phase !== 'rolling') return;
+    const cue = states[0];
+    const pace = Math.hypot(cue.velocity[0], cue.velocity[1]);
+    const slip = Math.hypot(
+      cue.velocity[0] - BALL_RADIUS * cue.angularVelocity[1],
+      cue.velocity[1] + BALL_RADIUS * cue.angularVelocity[0]
+    );
+    element('cue-motion').textContent = cue.enabled
+      ? `Cue ball: ${pace < 0.035 ? (Math.hypot(...cue.angularVelocity) > 0.15 ? 'spinning' : 'resting') : slip > 0.03 ? 'sliding' : 'rolling'} · pace ${pace.toFixed(1)} · sidespin ${Math.abs(cue.angularVelocity[2]).toFixed(1)} rad/s`
+      : '';
     audio.playContacts(previousStates, states, now);
     const captured = new Set(
       POCKETS.flatMap(center => getSphereTriggerBodies(states, center, POCKET_RADIUS)).map(
@@ -325,7 +365,7 @@ try {
           states[0].enabled = true;
           scratch = false;
         }
-        phase = potted.size === 15 ? 'complete' : 'aiming';
+        phase = objectBallCount > 0 && potted.size === objectBallCount ? 'complete' : 'aiming';
         status.value =
           phase === 'complete'
             ? `Table cleared in ${shotCount} shots. Nicely done.`

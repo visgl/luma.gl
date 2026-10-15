@@ -40,6 +40,12 @@ export type GPUSpherePlane = {
   rollingResistance?: number;
   /** Additional resistance to rotation around the contact normal. */
   spinningResistance?: number;
+  /** Cushion contact height above the center, as a fraction of radius (0 <= value < 1).
+   * Uses the direction opposite gravity projected onto the plane. Defaults to zero.
+   */
+  contactHeightRatio?: number;
+  /** Restitution becomes restitution / (1 + scale * normal impact speed). Default zero. */
+  restitutionVelocityScale?: number;
 };
 
 /** Live values. Update once before submitting the next batch of graph encodings. */
@@ -311,7 +317,9 @@ export class GPUSphereWorld {
         plane.staticFriction ?? next.staticFriction,
         plane.dynamicFriction ?? next.dynamicFriction,
         plane.rollingResistance ?? next.rollingResistance,
-        plane.spinningResistance ?? 0
+        plane.spinningResistance ?? 0,
+        plane.contactHeightRatio ?? 0,
+        plane.restitutionVelocityScale ?? 0
       ];
       if (
         ![
@@ -325,6 +333,7 @@ export class GPUSphereWorld {
         plane.halfExtents?.some(value => value <= 0) ||
         material.some(value => value < 0) ||
         material[0] > 1 ||
+        material[5] >= 1 ||
         material[2] > material[1]
       )
         throw new Error('Invalid sphere plane material or geometry');
@@ -349,7 +358,9 @@ export class GPUSphereWorld {
         plane.staticFriction ?? values.staticFriction,
         plane.dynamicFriction ?? values.dynamicFriction,
         plane.rollingResistance ?? values.rollingResistance,
-        plane.spinningResistance ?? 0
+        plane.spinningResistance ?? 0,
+        plane.contactHeightRatio ?? 0,
+        plane.restitutionVelocityScale ?? 0
       ])
     ];
     const previousValues = flatten(previous);
@@ -394,7 +405,7 @@ export class GPUSphereWorld {
       this.ownedBuffers.push(buffer);
       return buffer;
     };
-    this.settings = allocate('settings', 128 + 32 * 80, true);
+    this.settings = allocate('settings', 128 + 32 * 96, true);
     this.orientations ??= allocate('orientations', this.count * 16);
     this.angularVelocities ??= allocate('angular-velocities', this.count * 16);
     this.sleepStates ??= allocate('sleep-states', this.count * 16);
@@ -416,7 +427,7 @@ export class GPUSphereWorld {
         ),
         {format: 'float32x4', length}
       );
-    const settings = importView('settings', this.settings, 8 + 32 * 5, true);
+    const settings = importView('settings', this.settings, 8 + 32 * 6, true);
     const state: StateViews = {
       positions: importView('positions', this.positions, this.count),
       velocities: importView('velocities', this.velocities, this.count),
@@ -815,7 +826,7 @@ export class GPUSphereWorld {
       normal[2] * right[0] - normal[0] * right[2],
       normal[0] * right[1] - normal[1] * right[0]
     ];
-    const data = new Float32Array(32 + 32 * 20);
+    const data = new Float32Array(32 + 32 * 24);
     data.set([
       ...parameters.gravity,
       this.wakeRevision,
@@ -869,9 +880,13 @@ export class GPUSphereWorld {
           plane.restitution ?? parameters.restitution,
           plane.staticFriction ?? parameters.staticFriction,
           plane.dynamicFriction ?? parameters.dynamicFriction,
-          plane.rollingResistance ?? parameters.rollingResistance
+          plane.rollingResistance ?? parameters.rollingResistance,
+          plane.contactHeightRatio ?? 0,
+          plane.restitutionVelocityScale ?? 0,
+          0,
+          0
         ],
-        32 + index * 20
+        32 + index * 24
       );
     }
     this.settings.write(data);
