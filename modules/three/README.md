@@ -419,6 +419,45 @@ Transmission, lazy PMREM, postprocessing and nested passes during
 the borrowed draw are unsupported. Native deck objects neither cast nor receive the
 Three shadow map. The basic `ThreeMeshLayer` remains a separate, smaller integration.
 
+### Layer placement with `modelMatrix`
+
+`ThreeSceneLayer.modelMatrix` places the whole scene without editing its roots,
+geometry, materials or lights. Supply a column-major, orientation-preserving affine
+matrix: translation, rotation, positive scale, nonuniform scale and shear are supported.
+Reflections, singular matrices and projective transforms are rejected. Lighting and
+shadow maps continue to use the scene's original coordinate frame. This is scene
+placement, not a change to the scene's internal lighting or physical units.
+
+For Cartesian layers the matrix maps scene coordinates into deck coordinates. With
+`METER_OFFSETS`, it maps scene coordinates into local east/north/up meters **before**
+`coordinateOrigin` is projected into Mercator common space. The same placement applies
+to visible rendering, highlighting, ID picking and `unproject3D` surface coordinates.
+Those picked coordinates remain in deck's world/geographic frame, rather than the
+source scene frame. Native layers keep their own placement and share depth normally.
+
+Pass the same matrix to camera synchronization before preparation, especially for
+camera-dependent TSL nodes and shadow preparation:
+
+```ts
+const modelMatrix = new Matrix4()
+  .makeTranslation(12, -7, 3)
+  .multiply(new Matrix4().makeRotationZ(Math.PI / 6))
+  .elements;
+// In onBeforeRender, before deck opens its render pass:
+synchronizeThreeCamera(camera, viewport, WebGPUCoordinateSystem, origin, modelMatrix);
+adapter.prepare(scene, camera);
+// Supply the same origin and placement to the layer:
+const layer = new ThreeSceneLayer({
+  id: 'placed-models', adapter, scene, camera, modelMatrix,
+  coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
+  coordinateOrigin: origin
+});
+```
+
+Create a new matrix value when placement changes so deck requests a redraw. Removing
+`modelMatrix` restores the original placement. The basic `ThreeMeshLayer` still uses
+its separate source-transform contract.
+
 ## Unified GPU picking for prepared scenes
 
 Set `ThreeSceneLayer.pickable` and provide `pickingObjects`, an immutable array of

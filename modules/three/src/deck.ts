@@ -48,7 +48,8 @@ export function synchronizeThreeCamera(
   viewport: Pick<Viewport, 'viewMatrix' | 'projectionMatrix' | 'isGeospatial'> &
     Partial<Pick<Viewport, 'projectPosition' | 'getDistanceScales'>>,
   coordinateSystem: Camera['coordinateSystem'] = WebGLCoordinateSystem,
-  coordinateOrigin?: [number, number, number]
+  coordinateOrigin?: [number, number, number],
+  modelMatrix?: ArrayLike<number> | null
 ): void {
   if (coordinateOrigin && !viewport.isGeospatial)
     throw new Error('A local meter origin requires a geographic Mercator viewport');
@@ -62,6 +63,22 @@ export function synchronizeThreeCamera(
     const scale = viewport.getDistanceScales(coordinateOrigin).unitsPerMeter;
     viewMatrix.multiply(new Matrix4().makeTranslation(...origin));
     viewMatrix.scale(new Vector3(...scale));
+  }
+  if (modelMatrix) {
+    const placement = new Matrix4().fromArray(modelMatrix);
+    const elements = placement.elements;
+    // Reflections reverse front-face winding; projective and singular placements are unsupported.
+    if (
+      elements[3] !== 0 ||
+      elements[7] !== 0 ||
+      elements[11] !== 0 ||
+      elements[15] !== 1 ||
+      !(placement.determinant() > 0)
+    )
+      throw new Error(
+        'Three scene modelMatrix requires an orientation-preserving affine transform'
+      );
+    viewMatrix.multiply(placement);
   }
   camera.matrixAutoUpdate = false;
   camera.matrixWorldAutoUpdate = false;
@@ -205,7 +222,6 @@ export class ThreeSceneLayer extends Layer<ThreeSceneLayerProps> {
       this.context.device !== this.props.adapter.device ||
       this.props.opacity !== 1 ||
       this.props.extensions.length ||
-      this.props.modelMatrix ||
       Object.keys(this.props.parameters || {}).length ||
       (this.props.coordinateSystem !== COORDINATE_SYSTEM.METER_OFFSETS &&
         (this.props.coordinateOrigin.some(value => value !== 0) ||
@@ -279,7 +295,8 @@ export class ThreeSceneLayer extends Layer<ThreeSceneLayerProps> {
             this.props.coordinateOrigin[1],
             this.props.coordinateOrigin[2] ?? 0
           ]
-        : undefined
+        : undefined,
+      this.props.modelMatrix
     );
     if (picking?.isActive) {
       const getColor = (object: Object3D): ThreePickingColor | null => {
