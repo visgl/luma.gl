@@ -38,8 +38,12 @@ struct Vertex {@builtin(position) position: vec4f, @location(0) point: vec2f};
    if (distance < 0.47) {color = vec3f(0.17,0.12,0.07);}
    if (distance < 0.39) {color = vec3f(0.016,0.025,0.022);}
  }
- // Inlaid rail diamonds.
- if (abs(absolute.y - 3.46) < 0.045 && abs(fract((point.x + 0.75) / 1.5) - 0.5) < 0.025 && absolute.x < 5.5) {color = vec3f(0.68,0.60,0.42);}
+ // Inlaid diamond sights: six per long rail (clear of the side pocket), three per short rail.
+ let longSight = abs(fract((point.x + 0.75) / 1.5) - 0.5) * 1.5;
+ let shortSight = abs(fract((point.y + 0.75) / 1.5) - 0.5) * 1.5;
+ let longDiamond = longSight / 0.065 + abs(absolute.y - 3.46) / 0.055 < 1.0 && absolute.x > 0.75 && absolute.x < 5.5;
+ let shortDiamond = shortSight / 0.065 + abs(absolute.x - 6.46) / 0.055 < 1.0 && absolute.y < 2.25;
+ if (longDiamond || shortDiamond) {color = vec3f(0.78,0.70,0.50);}
  return vec4f(color, 1);
 }`;
 const SPHERES =
