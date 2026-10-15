@@ -31,6 +31,10 @@ Target Release Date: Q3, 2026
 
 **Experimental Three.js integration**
 
+- **Deck overlays for Three apps** - Add native deck layers to an existing Three renderer
+  through `@luma.gl/three/overlay`. Three retains its camera, controls and frame loop;
+  the separate transparent canvas follows perspective/orthographic cameras and pixel ratio.
+
 - **Scene placement in deck.gl** - `ThreeSceneLayer.modelMatrix` supports affine placement
   in Cartesian coordinates and local Mercator meters without changing source transforms.
   Visible rendering, highlights, object IDs and surface depth picking share that placement.
