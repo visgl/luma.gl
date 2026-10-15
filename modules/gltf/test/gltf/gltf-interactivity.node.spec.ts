@@ -99,16 +99,19 @@ describe('GLTFInteractivity', () => {
     const runtime = new GLTFInteractivity({
       graphs: [
         {
-          declarations: [{op: 'math/and'}],
+          declarations: [{op: 'math/and'}, {op: 'variable/get'}],
           nodes: [
             {declaration: 0, values: {a: {value: [true]}, b: {value: [false]}}},
-            {declaration: 0, values: {a: {value: [6]}, b: {value: [3]}}}
+            {declaration: 0, values: {a: {value: [6]}, b: {value: [3]}}},
+            {declaration: 0, values: {a: {value: [false]}, b: {node: 3, socket: 'value'}}},
+            {declaration: 1, configuration: {variable: {value: [0]}}}
           ]
         }
       ]
     });
     expect(runtime.evaluate(0)).toEqual([false]);
     expect(runtime.evaluate(1)).toEqual([2]);
+    expect(() => runtime.evaluate(2)).toThrow(/invalid variable index/);
   });
 
   it('formats diagnostics and sends custom events before continuing flow', () => {
