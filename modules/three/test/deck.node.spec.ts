@@ -163,12 +163,14 @@ test('local meter origin explicitly rejects Cartesian viewports', () => {
 test('scene picking maps descendant hits to application IDs and safely disables roots', () => {
   const device = {type: 'webgpu'};
   const draw = vi.fn();
+  const drawPickingDepth = vi.fn();
   const drawHighlighted = vi.fn<import('../src/objects').ThreeSceneAdapter['drawHighlighted']>();
   const drawPicking = vi.fn<import('../src/objects').ThreeSceneAdapter['drawPicking']>();
   const adapter = {
     device,
     draw,
     drawHighlighted,
+    drawPickingDepth,
     drawPicking
   } as unknown as import('../src/objects').ThreeSceneAdapter;
   const first = new Group();
@@ -225,12 +227,17 @@ test('scene picking maps descendant hits to application IDs and safely disables 
   layer.draw({renderPass: pass});
   expect(draw).toHaveBeenCalledTimes(2);
 
-  expect(() =>
-    layer.draw({
-      renderPass: pass,
-      shaderModuleProps: {picking: {isActive: true, isAttribute: true}}
-    })
-  ).toThrow('unproject3D');
+  layer.draw({
+    renderPass: pass,
+    shaderModuleProps: {picking: {isActive: true, isAttribute: true}}
+  });
+  expect(drawPickingDepth).toHaveBeenCalledWith(
+    layer.props.scene,
+    layer.props.camera,
+    pass,
+    expect.any(Function)
+  );
+  expect(drawPickingDepth.mock.calls[0][3](child)).toEqual([1 / 255, 0, 0, 1]);
   const reordered = layer.clone({pickingObjects: [entries[1], entries[0]]});
   reordered.context = layer.context;
   reordered.state = layer.state;

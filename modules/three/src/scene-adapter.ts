@@ -27,6 +27,7 @@ import {
   vec4,
   mix,
   max,
+  modelViewProjection,
   context as createContext
 } from 'three/tsl';
 import {LumaRenderer} from './luma-renderer';
@@ -53,6 +54,7 @@ export class ThreeSceneAdapter {
   private preparedScene?: Scene;
   private disposed = false;
   private readonly pickingContext = createContext();
+  private readonly pickingDepthContext = createContext();
   private readonly pickingColor = uniform(new Vector4());
   private readonly highlightingContext = createContext();
   private readonly highlightColor = uniform(new Vector4());
@@ -83,6 +85,16 @@ export class ThreeSceneAdapter {
       // Standard material alpha testing ran upstream; discard fully transparent coverage too.
       If(output.a.lessThanEqual(0), () => Discard());
       return this.pickingColor;
+    })();
+
+  private readonly getPickingDepthOutput = (output: ReturnType<typeof vec4>) =>
+    Fn(() => {
+      If(output.a.lessThanEqual(0), () => Discard());
+      // The synchronized camera writes WebGPU [0, 1] clip depth. deck unprojects [-1, 1].
+      // Three's declaration erases this varying's documented vec4 type.
+      const clipPosition = modelViewProjection as ReturnType<typeof vec4>;
+      const depth = clipPosition.z.div(clipPosition.w).mul(2).sub(1);
+      return vec4(depth, 0, 0, 1);
     })();
 
   constructor({device}: {device: Device}) {
@@ -128,7 +140,7 @@ export class ThreeSceneAdapter {
     pass: RenderPass,
     getColor: ThreePickingColorAccessor
   ): void {
-    this.renderScene(scene, camera, pass, undefined, undefined, getColor);
+    this.renderScene(scene, camera, pass, {getHighlightColor: getColor});
   }
 
   /** Draw exact ID colors through the same vertex/material coverage as the visible scene. */
@@ -139,16 +151,34 @@ export class ThreeSceneAdapter {
     getColor: ThreePickingColorAccessor,
     parameters?: RenderPipelineParameters
   ): void {
-    this.renderScene(scene, camera, pass, getColor, parameters);
+    this.renderScene(scene, camera, pass, {getColor, parameters});
+  }
+
+  /** Draw normalized clip depth into deck's floating-point picking target. */
+  drawPickingDepth(
+    scene: Scene,
+    camera: Camera,
+    pass: RenderPass,
+    getColor: ThreePickingColorAccessor
+  ): void {
+    this.renderScene(scene, camera, pass, {getColor, pickDepth: true});
   }
 
   private renderScene(
     scene: Scene,
     camera: Camera,
     pass: RenderPass,
-    getColor?: ThreePickingColorAccessor,
-    parameters?: RenderPipelineParameters,
-    getHighlightColor?: ThreePickingColorAccessor
+    {
+      getColor,
+      parameters,
+      getHighlightColor,
+      pickDepth = false
+    }: {
+      getColor?: ThreePickingColorAccessor;
+      parameters?: RenderPipelineParameters;
+      getHighlightColor?: ThreePickingColorAccessor;
+      pickDepth?: boolean;
+    } = {}
   ): void {
     if (this.disposed || this.preparedScene !== scene)
       throw new Error('Prepare the scene before drawing in a caller pass');
@@ -167,11 +197,19 @@ export class ThreeSceneAdapter {
     });
     const renderObject = this.renderer.getRenderObjectFunction();
     const contextNode = this.renderer.contextNode;
-    const colorContext = getColor ? this.pickingContext : this.highlightingContext;
+    const colorContext = getColor
+      ? pickDepth
+        ? this.pickingDepthContext
+        : this.pickingContext
+      : this.highlightingContext;
     if (getColor || getHighlightColor) {
       colorContext.value = {
         ...(contextNode.value as Record<string, unknown>),
-        getOutput: getColor ? this.getPickingOutput : this.getHighlightedOutput
+        getOutput: getColor
+          ? pickDepth
+            ? this.getPickingDepthOutput
+            : this.getPickingOutput
+          : this.getHighlightedOutput
       };
       this.renderer.contextNode = colorContext;
       this.renderer.setRenderObjectFunction((...parameters) => {
@@ -185,7 +223,7 @@ export class ThreeSceneAdapter {
         if (getColor) this.pickingColor.value.fromArray(color!);
         else this.highlightColor.value.fromArray(color || [0, 0, 0, 0]);
         // Isolate output variants without cloning materials.
-        parameters[8] = `three-${getColor ? 'picking' : 'highlighting'}:${parameters[8] || ''}`;
+        parameters[8] = `three-${getColor ? (pickDepth ? 'depth' : 'picking') : 'highlighting'}:${parameters[8] || ''}`;
         // IDs need one double-sided coverage pass, not transparent back/front shading passes.
         // Three's two-pass back-side cache uses a shared pass ID; avoid recreating it on hover.
         const forceSinglePass = material.forceSinglePass;

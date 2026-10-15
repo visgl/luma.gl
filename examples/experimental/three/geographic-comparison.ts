@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Deck, MapController, MapView, WebMercatorViewport, type MapViewState} from '@deck.gl/core';
+import {
+  Deck,
+  MapController,
+  MapView,
+  WebMercatorViewport,
+  type MapViewState,
+  type PickingInfo
+} from '@deck.gl/core';
 import {Timeline} from '@luma.gl/engine';
 import {EventManager, Pan, Pinch} from 'mjolnir.js';
 import type {Device} from '@luma.gl/core';
@@ -16,7 +23,7 @@ export async function createGeographicComparison(
   referenceCanvas: HTMLCanvasElement,
   width: number,
   onError: (error: Error) => void,
-  onSelect: (id?: string) => void
+  onSelect: (id?: string, coordinate?: number[]) => void
 ) {
   const deviceCanvas = device.getDefaultCanvasContext().canvas;
   if (!(deviceCanvas instanceof HTMLCanvasElement))
@@ -83,12 +90,12 @@ export async function createGeographicComparison(
       layers: showModels ? layers : layers.filter(layer => layer.id !== 'geographic-lanterns')
     });
   }
-  function selectObject(value: unknown) {
+  function selectObject(info: PickingInfo | null | undefined) {
     if (!scene || !referenceScene || disposed) return;
-    const id = typeof value === 'string' ? value : undefined;
+    const id = typeof info?.object?.id === 'string' ? info.object.id : undefined;
     scene.select(id);
     referenceScene.select(id);
-    onSelect(id);
+    onSelect(id, info?.layer?.id === 'geographic-lanterns' ? info.coordinate : undefined);
     updateLayers();
   }
   const selection = createSceneSelection({
@@ -97,11 +104,17 @@ export async function createGeographicComparison(
     pick: async position => {
       if (!deck) return undefined;
       const bounds = canvas.getBoundingClientRect();
-      const info = await deck.pickObjectAsync({
+      const point = {
         x: ((position[0] + 1) * bounds.width) / 2,
         y: ((1 - position[1]) * bounds.height) / 2
-      });
-      return info?.object?.id;
+      };
+      const info = await deck.pickObjectAsync(point);
+      if (disposed) return undefined;
+      // Depth reconstruction is implemented by ThreeSceneLayer. Native WGSL layers keep
+      // their ordinary picking path; don't infer a surface altitude from their ID shader.
+      return info?.layer?.id === 'geographic-lanterns'
+        ? deck.pickObjectAsync({...point, unproject3D: true})
+        : info;
     }
   });
   let pointerOrigin: [number, number] | undefined;
@@ -183,7 +196,13 @@ export async function createGeographicComparison(
         onLoad: resolve,
         onClick: info => {
           if (!pointerMoved) {
-            selection.select(info.object?.id);
+            if (info.layer?.id === 'geographic-lanterns') {
+              const bounds = canvas.getBoundingClientRect();
+              void selection.selectAt([
+                (2 * info.x) / bounds.width - 1,
+                1 - (2 * info.y) / bounds.height
+              ]);
+            } else selection.select(info);
           }
         },
         getCursor: ({isDragging, isHovering}) =>

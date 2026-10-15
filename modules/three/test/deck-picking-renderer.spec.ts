@@ -52,7 +52,7 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
     side: DoubleSide,
     opacity: 0.75
   });
-  deformedMaterial.positionNode = positionLocal.add(vec3(0.5, 0, 0));
+  deformedMaterial.positionNode = positionLocal.add(vec3(0.5, 0, 0.25));
   const left = new Group();
   left.position.set(-1, 0, 1);
   left.add(new Mesh(geometry, material));
@@ -98,6 +98,22 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
   const createPipeline = vi.spyOn(device, 'createRenderPipeline');
   const submit = vi.spyOn(device, 'submit');
   const beginPass = vi.spyOn(device, 'beginRenderPass');
+  const originalDrawPickingDepth = adapter.drawPickingDepth.bind(adapter);
+  const drawPickingDepth = vi
+    .spyOn(adapter, 'drawPickingDepth')
+    .mockImplementation((...parameters) => {
+      const end = vi.spyOn(parameters[2], 'end');
+      const submissions = submit.mock.calls.length;
+      const passes = beginPass.mock.calls.length;
+      try {
+        return originalDrawPickingDepth(...parameters);
+      } finally {
+        expect(end).not.toHaveBeenCalled();
+        expect(submit.mock.calls.length).toBe(submissions);
+        expect(beginPass.mock.calls.length).toBe(passes);
+        end.mockRestore();
+      }
+    });
   const originalDrawPicking = adapter.drawPicking.bind(adapter);
   vi.spyOn(adapter, 'drawPicking').mockImplementation((...parameters) => {
     const pass = parameters[2];
@@ -117,6 +133,8 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
   let deck: Deck<OrbitView> | undefined;
   let nativeHeight = 0;
   let reverse = false;
+  let orthographic = true;
+  let rotation = 0;
   let highlightedObjectIndex: number | null = null;
   let autoHighlight = false;
   let highlightColor: number[] | ((info: import('@deck.gl/core').PickingInfo) => number[]) = [
@@ -167,12 +185,23 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
   }
   async function redraw() {
     await new Promise<void>((resolve, reject) =>
-      deck!.setProps({layers: createLayers(), onAfterRender: resolve, onError: reject})
+      deck!.setProps({
+        layers: createLayers(),
+        views: new OrbitView({orbitAxis: 'Y', orthographic}),
+        viewState: {
+          target: [0, 0, 0],
+          zoom: rotation ? 4 : 5,
+          rotationX: rotation,
+          rotationOrbit: rotation
+        },
+        onAfterRender: resolve,
+        onError: reject
+      })
     );
   }
-  async function pick(position: [number, number, number]) {
+  async function pick(position: [number, number, number], unproject3D = false) {
     const projected = deck!.getViewports()[0].project(position);
-    return deck!.pickObjectAsync({x: projected[0], y: projected[1]});
+    return deck!.pickObjectAsync({x: projected[0], y: projected[1], unproject3D});
   }
   try {
     await adapter.init();
@@ -211,9 +240,56 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
       expect(deformedHit?.layer?.id).toBe('three');
       expect(deformedHit?.object).toBe(entries[1]);
       expect(deformedHit?.index).toBe(1);
+      expect(device.isTextureFormatRenderable('rgba32float')).toBe(true);
+      const depthHit = await pick([-0.8, 0, 1], true);
+      expect(drawPickingDepth).toHaveBeenCalled();
+      expect(depthHit?.object).toBe(entries[0]);
+      expect(depthHit?.coordinate?.[0]).toBeCloseTo(-0.8, 3);
+      expect(depthHit?.coordinate?.[1]).toBeCloseTo(0, 3);
+      expect(depthHit?.coordinate?.[2]).toBeCloseTo(1, 3);
+      const deformedDepthHit = await pick([1.7, 0, 1.25], true);
+      expect(deformedDepthHit?.object).toBe(entries[1]);
+      expect(deformedDepthHit?.coordinate?.[2]).toBeCloseTo(1.25, 3);
       expect(await pick([0, 1, 1])).toBeNull();
     }
     // Highlight the final display color, retain alpha holes, and leave other roots untouched.
+    for (const useOrthographic of [false, true]) {
+      orthographic = useOrthographic;
+      rotation = 25;
+      await redraw();
+      for (const [position, altitude, identity] of [
+        [[-0.8, 0, 1], 1, 'alpha-root'],
+        [[1.7, 0, 1.25], 1.25, 42]
+      ] as const) {
+        const projected = deck!.getViewports()[0].project([...position]);
+        const hit = await deck!.pickObjectAsync({
+          x: Math.floor(projected[0]) + 0.5,
+          y: Math.floor(projected[1]) + 0.5,
+          unproject3D: true
+        });
+        expect(hit?.object.id).toBe(identity);
+        // deck samples a device pixel but unprojects the requested CSS position.
+        // Use the sampled pixel's ray to account for this subpixel quantization.
+        const viewport = deck!.getViewports()[0];
+        const sampledPixel = hit!.devicePixel!;
+        const sampleX = sampledPixel[0] + 0.5;
+        const sampleY = 128 - sampledPixel[1] - 0.5;
+        const near = viewport.unproject([sampleX, sampleY, -1]);
+        const far = viewport.unproject([sampleX, sampleY, 1]);
+        const fraction = (altitude - near[2]) / (far[2] - near[2]);
+        const point = near.map((value, index) => value + (far[index] - value) * fraction);
+        const depth = viewport.project(point)[2];
+        const expected = viewport.unproject([
+          Math.floor(projected[0]) + 0.5,
+          Math.floor(projected[1]) + 0.5,
+          depth
+        ]);
+        expected.forEach((value, index) => expect(hit!.coordinate![index]).toBeCloseTo(value, 3));
+      }
+    }
+    orthographic = true;
+    rotation = 0;
+    await redraw();
     // Even zero-alpha unselected surfaces retain their original depth-writing behavior.
     reverse = false;
     await redraw();
@@ -378,7 +454,7 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
     const pipelines = createPipeline.mock.calls.length;
     for (let frame = 0; frame < 3; frame++) {
       await redraw();
-      expect((await pick([1.7, 0, 1]))?.object.id).toBe(42);
+      expect((await pick([1.7, 0, 1.25], true))?.object.id).toBe(42);
     }
     expect(createPipeline.mock.calls.length).toBe(pipelines);
     expect(deformedMaterial.forceSinglePass).toBe(false);

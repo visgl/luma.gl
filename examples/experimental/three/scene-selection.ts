@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-/** Coordinate delayed reference picks with immediate deck clicks and scene lifecycle. */
-export function createSceneSelection({
+/** Coordinate delayed surface picks with immediate deck clicks and scene lifecycle. */
+export function createSceneSelection<Value>({
   pick,
   select,
   onError
 }: {
-  pick: (position: [number, number]) => Promise<unknown>;
-  select: (value: unknown) => void;
+  pick: (position: [number, number]) => Promise<Value>;
+  select: (value: Value) => void;
   onError: (error: Error) => void;
 }) {
   let request = 0;
   let disposed = false;
   return {
-    select(value: unknown): void {
+    select(value: Value): void {
       if (disposed) return;
       request++;
       select(value);

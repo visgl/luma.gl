@@ -459,7 +459,7 @@ Picking uses the active viewport's synchronized camera, including local Mercator
 origins. It never opens, clears, ends or submits deck's pass, or takes ownership of
 source materials, geometries, scene roots or the device.
 
-This version returns root-level IDs. Individual instance IDs, `unproject3D`, custom
+This version returns root-level IDs. Individual instance IDs, custom
 `fragmentNode` materials, transmission and nested rendering remain unsupported.
 `ThreeMeshLayer` still has its separate non-pickable basic-material contract. The compute buffer bridge into upstream `WebGPURenderer` is independent
 of this prepared-scene path.
@@ -476,6 +476,44 @@ check alpha holes and TSL-deformed vertices, replace/reorder roots while preserv
 IDs, and query visible objects in a rectangle. Normal PBR/geographic comparison
 tests continue to check color parity and caller ownership.
 
+
+### Surface coordinates with depth picking
+
+Use `deck.pickObjectAsync({x, y, unproject3D: true})` to obtain a Three hit's
+`info.coordinate` on its rendered surface instead of the viewport's default plane:
+
+```ts
+const hit = await deck.pickObjectAsync({x, y, unproject3D: true});
+if (hit?.layer?.id === 'models' && hit.coordinate) {
+  placeMarker(hit.coordinate);
+}
+```
+
+Cartesian viewports return viewport-space XYZ; Mercator viewports return longitude,
+latitude and absolute altitude in meters, including a local-meter layer's coordinate
+origin. Coordinates are viewport coordinates, rather than a mesh's local position.
+Depth comes from the same compiled vertex path as picking, including supported TSL
+deformation, skinning and morphs. Alpha-test holes and zero-alpha fragments retain
+their picking coverage. ID selection still uses the shared Three/native depth pass;
+a second pass reconstructs the selected Three layer's surface.
+
+Depth is stored in a floating-point target without blending, tone mapping or color
+conversion. It is sampled at a device pixel, so returned coordinates have pixel
+quantization and float32 depth precision; a nonzero picking radius can sample a
+nearby pixel. Do not treat the result as an exact CPU triangle intersection. deck
+owns float-target capability checks and fallback behavior. Native layers retain their
+own depth-picking support; this implementation adds the Three path.
+
+Low-level callers may use `adapter.drawPickingDepth(scene, camera, pass, getColor)`
+with an `rgba32float` color target and shared depth attachment. The accessor follows
+`drawPicking`: `null` skips a disabled object; unlisted geometry still writes depth.
+The output is `[clipDepth, 0, 0, 1]`, with clip depth in deck's `[-1, 1]` convention.
+Preparation, pass lifecycle and source ownership remain caller-controlled.
+
+The geographic example queries Three surface depth on clicks in either pane and
+shows longitude, latitude and altitude. Native building clicks keep ordinary ID
+selection. Delayed coordinate results are invalidated by newer selections, model
+removal and disposal, using the same selection coordinator as ordinary picking.
 
 ### Hover and controlled highlighting
 
