@@ -33,6 +33,8 @@ const power = element<HTMLInputElement>('power');
 const angle = element<HTMLInputElement>('angle');
 const practice = element<HTMLSelectElement>('practice');
 const aimLine = document.querySelector<SVGLineElement>('#aim-line')!;
+const cueTrail = document.querySelector<SVGPolylineElement>('#cue-trail')!;
+const recentCueTrail = document.querySelector<SVGPolylineElement>('#cue-trail-recent')!;
 const cueStick = document.querySelector<SVGGElement>('#cue-stick')!;
 const audio = new PoolAudio();
 
@@ -101,6 +103,7 @@ try {
   let alive = true;
   let animation = 0;
   const potted = new Set<number>();
+  const cueTrailPoints: [number, number][] = [];
   function updateControls() {
     shoot.disabled = phase !== 'aiming';
     power.disabled = phase !== 'aiming';
@@ -221,6 +224,8 @@ try {
   function startShot() {
     if (phase !== 'aiming') return;
     audio.unlock();
+    cueTrailPoints.length = 0;
+    cueTrailPoints.push([states[0].position[0], states[0].position[1]]);
     phase = 'striking';
     strikeStart = performance.now();
     updateControls();
@@ -275,6 +280,7 @@ try {
       states = await world.readState();
       shotCount = 0;
       potted.clear();
+      cueTrailPoints.length = 0;
       scratch = false;
       settledSince = 0;
       accumulator = 0;
@@ -312,6 +318,16 @@ try {
     states = next;
     if (phase !== 'rolling') return;
     const cue = states[0];
+    if (cue.enabled && !scratch) {
+      const previousPoint = cueTrailPoints[cueTrailPoints.length - 1];
+      if (
+        !previousPoint ||
+        Math.hypot(cue.position[0] - previousPoint[0], cue.position[1] - previousPoint[1]) >= 0.015
+      ) {
+        cueTrailPoints.push([cue.position[0], cue.position[1]]);
+        if (cueTrailPoints.length > 1200) cueTrailPoints.shift();
+      }
+    }
     const pace = Math.hypot(cue.velocity[0], cue.velocity[1]);
     const slip = Math.hypot(
       cue.velocity[0] - BALL_RADIUS * cue.angularVelocity[1],
@@ -436,7 +452,14 @@ try {
             });
         }
       }
-      renderer.draw(getExtent());
+      const extent = getExtent();
+      renderer.draw(extent);
+      const trailScreenPoints = cueTrailPoints.map(
+        point =>
+          `${((point[0] / extent[0] + 1) * canvas.clientWidth) / 2},${((1 - point[1] / extent[1]) * canvas.clientHeight) / 2}`
+      );
+      cueTrail.setAttribute('points', trailScreenPoints.join(' '));
+      recentCueTrail.setAttribute('points', trailScreenPoints.slice(-12).join(' '));
       const showCue = (phase === 'aiming' || phase === 'striking') && !reset.disabled;
       cueStick.style.display = showCue ? '' : 'none';
       aimLine.style.display = showCue ? '' : 'none';

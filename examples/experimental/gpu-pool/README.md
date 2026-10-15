@@ -56,7 +56,10 @@ the rack, pocket filtering, scratch placement and shot completion.
 
 Choose **Follow shot**, **Draw shot**, or **Cushion spin** from **Practice**. Each
 sets up a repeatable shot, power and contact point; **Reset shot** restores it.
-Adjust the cue contact or power to compare the result. The footer reports cue-ball
+Adjust the cue contact or power to compare the result. A gold cue-ball trail records
+the shot, with a brighter recent section showing its direction. The trail remains
+after the shot and clears on the next shot or reset; scratch recovery never draws
+a teleport line. Up to 1,200 sampled positions are retained. The footer reports cue-ball
 sliding/rolling state, pace in table units per second, and sidespin in radians per
 second. **Full rack** restores normal play.
 
