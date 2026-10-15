@@ -220,7 +220,7 @@ async function recreate() {
       sceneSelection.value === 'interop' ? 'Upstream Three / TSL reference' : 'Three.js';
     status.textContent =
       sceneSelection.value === 'interop'
-        ? '4,225 GPU-generated vertices. One shared device and buffer on the left; no vertex readback or re-upload. Both views render with upstream Three.js.'
+        ? 'Three wave instances share GPU-generated vertices, triangle indices and instance offsets. One device on the left; no geometry readback or re-upload. Both views render with upstream Three.js.'
         : sceneSelection.value === 'objects'
           ? 'One luma pass: adapted Three cube + native luma triangle. Shared depth, synchronized camera. Lighting controls apply to PBR scenes.'
           : sceneSelection.value !== 'tsl'
