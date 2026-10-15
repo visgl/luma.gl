@@ -8,6 +8,8 @@ import {Buffer, Texture, luma} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 import {
   Camera,
+  Matrix4,
+  Vector3,
   Scene,
   Group,
   Mesh,
@@ -135,6 +137,7 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
   let reverse = false;
   let orthographic = true;
   let rotation = 0;
+  let modelMatrix: number[] | undefined;
   let highlightedObjectIndex: number | null = null;
   let autoHighlight = false;
   let highlightColor: number[] | ((info: import('@deck.gl/core').PickingInfo) => number[]) = [
@@ -163,6 +166,7 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
       camera,
       pickable: true,
       pickingObjects: entries,
+      modelMatrix,
       highlightedObjectIndex,
       autoHighlight,
       highlightColor
@@ -222,7 +226,13 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
         onLoad: resolve,
         onError: reject,
         onBeforeRender: () => {
-          synchronizeThreeCamera(camera, deck!.getViewports()[0], WebGPUCoordinateSystem);
+          synchronizeThreeCamera(
+            camera,
+            deck!.getViewports()[0],
+            WebGPUCoordinateSystem,
+            undefined,
+            modelMatrix
+          );
           adapter.prepare(scene, camera);
         }
       });
@@ -252,6 +262,71 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
       expect(deformedDepthHit?.coordinate?.[2]).toBeCloseTo(1.25, 3);
       expect(await pick([0, 1, 1])).toBeNull();
     }
+    // Layer placement affects visible color, IDs, highlights and the sampled surface together.
+    // Compare depth against a ray/plane intersection in the unchanged source scene frame.
+    const sourceMatrices = [scene, left, right, descendant].map(object =>
+      object.matrixWorld.clone()
+    );
+    const placements = [
+      new Matrix4()
+        .makeTranslation(0.2, -0.1, 0.3)
+        .multiply(new Matrix4().makeRotationZ(0.2))
+        .multiply(new Matrix4().makeScale(0.8, 1.1, 1.2)),
+      new Matrix4()
+        .makeTranslation(-0.1, 0.2, 0.2)
+        .multiply(new Matrix4().makeRotationX(0.15))
+        .multiply(new Matrix4().makeScale(0.9, 0.8, 1.1))
+    ];
+    for (const placement of placements) {
+      modelMatrix = placement.elements;
+      const inversePlacement = placement.clone().invert();
+      for (const order of [false, true]) {
+        reverse = order;
+        highlightedObjectIndex = 0;
+        await redraw();
+        const point = new Vector3(-0.8, 0, 1).applyMatrix4(placement);
+        const position: [number, number, number] = [point.x, point.y, point.z];
+        expect(await pixel(position)).toEqual([255, 127, 127, 255]);
+        const hit = await pick(position, true);
+        expect(hit?.object).toBe(entries[0]);
+        const viewport = deck!.getViewports()[0];
+        const sampledPixel = hit!.devicePixel!;
+        const sampleX = sampledPixel[0] + 0.5;
+        const sampleY = 128 - sampledPixel[1] - 0.5;
+        const near = new Vector3()
+          .fromArray(viewport.unproject([sampleX, sampleY, -1]))
+          .applyMatrix4(inversePlacement);
+        const far = new Vector3()
+          .fromArray(viewport.unproject([sampleX, sampleY, 1]))
+          .applyMatrix4(inversePlacement);
+        const intersection = near
+          .clone()
+          .lerp(far, (1 - near.z) / (far.z - near.z))
+          .applyMatrix4(placement);
+        const projected = viewport.project(position);
+        const expected = viewport.unproject([
+          projected[0],
+          projected[1],
+          viewport.project(intersection.toArray())[2]
+        ]);
+        expected.forEach((value, index) => expect(hit!.coordinate![index]).toBeCloseTo(value, 3));
+        const hole = new Vector3(-1.2, 0, 1).applyMatrix4(placement);
+        expect((await pick([hole.x, hole.y, hole.z]))?.object.id).toBe('native-square');
+        // Raising native geometry still occludes the placed Three surface in either order.
+        nativeHeight = 2;
+        await redraw();
+        expect((await pick(position))?.object.id).toBe('native-square');
+        nativeHeight = 0;
+      }
+    }
+    modelMatrix = undefined;
+    highlightedObjectIndex = null;
+    await redraw();
+    expect(await pixel([-0.8, 0, 1])).toEqual([255, 255, 255, 255]);
+    expect((await pick([-0.8, 0, 1]))?.object).toBe(entries[0]);
+    [scene, left, right, descendant].forEach((object, index) =>
+      expect(object.matrixWorld.elements).toEqual(sourceMatrices[index].elements)
+    );
     // Highlight the final display color, retain alpha holes, and leave other roots untouched.
     for (const useOrthographic of [false, true]) {
       orthographic = useOrthographic;
