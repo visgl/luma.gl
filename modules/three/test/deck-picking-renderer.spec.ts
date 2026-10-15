@@ -187,6 +187,7 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
         views: new OrbitView({orbitAxis: 'Y', orthographic: true}),
         viewState: {target: [0, 0, 0], zoom: 5, rotationX: 0, rotationOrbit: 0},
         controller: false,
+        getCursor: ({isHovering}) => (isHovering ? 'pointer' : 'default'),
         _framebuffer: framebuffer,
         layers: createLayers(),
         onLoad: resolve,
@@ -277,18 +278,61 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
     // Exercise deck's own hover/accessor path on the managed layer, including mouse leave.
     highlightedObjectIndex = null;
     autoHighlight = true;
-    const getHighlightColor = vi.fn(() => [255, 0, 0, 255]);
+    const getHighlightColor = vi.fn<(pickingInfo: import('@deck.gl/core').PickingInfo) => number[]>(
+      () => [255, 0, 0, 255]
+    );
     highlightColor = getHighlightColor;
     await redraw();
     const hit = (await pick([-0.8, 0, 1]))!;
-    hit.color = hit.layer!.encodePickingColor(hit.index);
-    hit.layer!.updateAutoHighlight(hit);
+    const projected = deck!.getViewports()[0].project([-0.8, 0, 1]);
+    const bounds = canvas.getBoundingClientRect();
+    canvas.dispatchEvent(
+      new MouseEvent('mousemove', {
+        clientX: bounds.left + projected[0],
+        clientY: bounds.top + projected[1],
+        bubbles: true
+      })
+    );
+    await vi.waitFor(() => expect(getHighlightColor).toHaveBeenCalled(), {timeout: 5000});
+    expect(getHighlightColor.mock.calls[0][0].object).toBe(entries[0]);
     await redraw();
-    expect(getHighlightColor).toHaveBeenCalledWith(hit);
     expect(await pixel([-0.8, 0, 1])).toEqual([255, 0, 0, 255]);
-    hit.layer!.updateAutoHighlight({...hit, picked: false, index: -1, object: undefined});
+    const hoveredLayer = (await pick([-0.8, 0, 1]))!.layer as ThreeSceneLayer;
+    canvas.dispatchEvent(new MouseEvent('mouseleave', {clientX: -1, clientY: -1}));
+    await vi.waitFor(() => expect(hoveredLayer.state.highlightedObjectColor).toBeNull(), {
+      timeout: 5000
+    });
     await redraw();
     expect(await pixel([-0.8, 0, 1])).toEqual([255, 255, 255, 255]);
+    expect(getComputedStyle(canvas).cursor).toBe('default');
+    // Native layers use the same leave cleanup, including their empty picking callback.
+    const onNativeHover = vi.fn();
+    deck!.setProps({onHover: onNativeHover});
+    const nativePosition = deck!.getViewports()[0].project([-1.2, 0, 1]);
+    canvas.dispatchEvent(
+      new MouseEvent('mousemove', {
+        clientX: bounds.left + nativePosition[0],
+        clientY: bounds.top + nativePosition[1],
+        bubbles: true
+      })
+    );
+    await vi.waitFor(
+      () =>
+        expect(onNativeHover).toHaveBeenCalledWith(
+          expect.objectContaining({
+            picked: true,
+            object: expect.objectContaining({id: 'native-square'})
+          }),
+          expect.anything()
+        ),
+      {timeout: 5000}
+    );
+    canvas.dispatchEvent(new MouseEvent('mouseleave', {clientX: -1, clientY: -1}));
+    await vi.waitFor(() => expect(onNativeHover.mock.lastCall?.[0].picked).toBe(false), {
+      timeout: 5000
+    });
+    await redraw();
+    expect(getComputedStyle(canvas).cursor).toBe('default');
     // A controlled negative index suppresses automatic highlighting.
     highlightedObjectIndex = -1;
     await redraw();
