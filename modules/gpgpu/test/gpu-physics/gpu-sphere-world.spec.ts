@@ -828,3 +828,31 @@ it('GPUSphereWorld floor contact skin does not bounce spheres before contact', a
     fixture.destroy();
   }
 }, 60000);
+
+it('GPUSphereWorld explicit plane centers wake bodies when replacing offset placement', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  for (const multiplePlanes of [false, true]) {
+    const plane = {normal: [0, 0, 2] as const, offset: 1};
+    const fixture = await makeWorld(device, [0, 0, 1.5, 0.5], [0, 0, 0, 1], {
+      gravity: [0, 0, -9.81],
+      plane,
+      ...(multiplePlanes ? {planes: [plane]} : {}),
+      restitution: 0,
+      sleepAfter: 0.05
+    });
+    try {
+      fixture.step(12);
+      expect((await fixture.read()).diagnostics.sleepingBodies).toBe(1);
+      const movedPlane = {...plane, center: [0, 0, 0] as const};
+      fixture.world.update(multiplePlanes ? {planes: [movedPlane]} : {plane: movedPlane});
+      fixture.step();
+      const result = await fixture.read();
+      expect(result.velocities[2]).toBeLessThan(0);
+      expect(result.positions[2]).toBeLessThan(1.5);
+      expect(result.diagnostics.sleepingBodies).toBe(0);
+    } finally {
+      fixture.destroy();
+    }
+  }
+}, 60000);

@@ -358,7 +358,7 @@ export class GPUSphereWorld {
       Number(values.spinInducedThrow),
       ...(values.planes ?? [values.plane]).flatMap(plane => [
         ...(plane.normal ?? [0, 0, 1]),
-        ...(plane.center ?? [0, 0, 0]),
+        ...getPlaneCenter(plane),
         plane.offset ?? 0,
         ...(plane.halfExtents ?? [1e10, 1e10]),
         plane.restitution ?? values.restitution,
@@ -873,7 +873,7 @@ export class GPUSphereWorld {
         normal[2] * right[0] - normal[0] * right[2],
         normal[0] * right[1] - normal[1] * right[0]
       ];
-      const center = plane.center ?? normal.map(value => value * (plane.offset ?? 0));
+      const center = getPlaneCenter(plane);
       data.set(
         [
           ...normal,
@@ -898,4 +898,12 @@ export class GPUSphereWorld {
     }
     this.settings.write(data);
   }
+}
+
+/** Keep wake comparisons and GPU plane placement on the same normalized geometry. */
+function getPlaneCenter(plane: GPUSpherePlane): Vector3 {
+  if (plane.center) return plane.center;
+  const normal = plane.normal ?? [0, 0, 1];
+  const scale = (plane.offset ?? 0) / Math.hypot(...normal);
+  return [normal[0] * scale, normal[1] * scale, normal[2] * scale];
 }
