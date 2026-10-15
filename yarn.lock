@@ -16047,6 +16047,21 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-experimental-gpu-sphere-world@workspace:examples/experimental/gpu-sphere-world":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-experimental-gpu-sphere-world@workspace:examples/experimental/gpu-sphere-world"
+  dependencies:
+    "@luma.gl/core": "npm:10.0.0-alpha.4"
+    "@luma.gl/engine": "npm:10.0.0-alpha.4"
+    "@luma.gl/webgpu": "npm:10.0.0-alpha.4"
+    "@math.gl/core": "npm:5.0.0-alpha.15"
+    "@types/three": "npm:0.185.0"
+    three: "npm:0.185.1"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-experimental-gpu-trace-viewer@workspace:examples/experimental/gpu-trace-viewer":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-experimental-gpu-trace-viewer@workspace:examples/experimental/gpu-trace-viewer"
