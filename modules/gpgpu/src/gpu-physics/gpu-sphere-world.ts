@@ -185,7 +185,10 @@ export class GPUSphereWorld {
           props.dynamicFriction ?? (props.friction === undefined ? 0.35 : 1 - props.friction)
         ),
       dynamicFriction:
-        props.dynamicFriction ?? (props.friction === undefined ? 0.35 : 1 - props.friction),
+        props.dynamicFriction ??
+        (props.friction === undefined
+          ? Math.min(0.35, props.staticFriction ?? 0.5)
+          : 1 - props.friction),
       rollingResistance: props.rollingResistance ?? 0.025,
       sleepAfter: props.sleepAfter ?? 0.75,
       sleepLinearSpeed: props.sleepLinearSpeed ?? 0.025,
@@ -554,9 +557,7 @@ export class GPUSphereWorld {
         bind('angularVelocities', state.angularVelocities, 3, 'write'),
         bind('orientations', orientations, 4, 'write'),
         bind('sleepStates', sleepStates, 5, 'write'),
-        bind('offsets', offsets, 6),
-        bind('contacts', contacts, 7),
-        bind('diagnostics', diagnostics, 8, 'write')
+        bind('diagnostics', diagnostics, 6, 'write')
       ]);
     }
     this.added = true;

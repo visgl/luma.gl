@@ -14,7 +14,9 @@ platform. The initial view is calibrated to level. Drag sensitivity defaults to
 0.25; releasing within 3 degrees optionally snaps level. Double-click or Level
 restores the initial view; Reset restores sphere positions, velocities, orientations
 and sleep state. The bubble level shows direction and angle. Static/dynamic contact
-friction, rolling resistance and sleeping bring the balls to rest.
+friction, rolling resistance and sleeping bring the balls to rest. Sleeping is
+limited to direct fixed-plane support; stacked bodies stay active so removing
+their support cannot leave a floating cluster.
 
 ## Benchmark
 
