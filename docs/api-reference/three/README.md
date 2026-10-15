@@ -281,9 +281,9 @@ if (hit?.layer?.id === 'models' && hit.coordinate) {
 }
 ```
 
-Cartesian viewports return viewport-space XYZ; Mercator viewports return longitude,
+Cartesian viewports return world XYZ in their coordinate units; Mercator viewports return longitude,
 latitude and absolute altitude in meters, including a local-meter layer's coordinate
-origin. Coordinates are viewport coordinates, rather than a mesh's local position.
+origin. These are world coordinates in the viewport's projection, rather than mesh-local positions.
 Depth comes from the same compiled vertex path as picking, including supported TSL
 deformation, skinning and morphs. Alpha-test holes and zero-alpha fragments retain
 their picking coverage. ID selection still uses the shared Three/native depth pass;

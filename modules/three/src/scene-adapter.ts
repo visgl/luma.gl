@@ -27,7 +27,7 @@ import {
   vec4,
   mix,
   max,
-  modelViewProjection,
+  clipSpace,
   context as createContext
 } from 'three/tsl';
 import {LumaRenderer} from './luma-renderer';
@@ -91,9 +91,7 @@ export class ThreeSceneAdapter {
     Fn(() => {
       If(output.a.lessThanEqual(0), () => Discard());
       // The synchronized camera writes WebGPU [0, 1] clip depth. deck unprojects [-1, 1].
-      // Three's declaration erases this varying's documented vec4 type.
-      const clipPosition = modelViewProjection as ReturnType<typeof vec4>;
-      const depth = clipPosition.z.div(clipPosition.w).mul(2).sub(1);
+      const depth = clipSpace.z.div(clipSpace.w).mul(2).sub(1);
       return vec4(depth, 0, 0, 1);
     })();
 

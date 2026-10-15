@@ -19,7 +19,7 @@ import {
   NearestFilter,
   WebGPUCoordinateSystem
 } from 'three/webgpu';
-import {positionLocal, vec3, vec4} from 'three/tsl';
+import {Fn, cameraProjectionMatrix, positionView, positionLocal, vec3, vec4} from 'three/tsl';
 import {ThreeSceneAdapter} from '../src/objects';
 import {ThreeSceneLayer, synchronizeThreeCamera, type ThreeScenePickingObject} from '../src/deck';
 
@@ -290,6 +290,27 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
     orthographic = true;
     rotation = 0;
     await redraw();
+    // A custom vertex node can change clip depth independently of positionView.
+    const originalPosition = deck!.getViewports()[0].project([1.7, 0, 1.25]);
+    const targetDepth = deck!.getViewports()[0].project([1.7, 0, 1.5])[2];
+    const clipDepthOffset = (targetDepth - originalPosition[2]) / 2;
+    deformedMaterial.vertexNode = Fn(() => {
+      const projectedPosition = cameraProjectionMatrix.mul(vec4(positionView, 1));
+      return projectedPosition.add(vec4(0, 0, projectedPosition.w.mul(clipDepthOffset), 0));
+    })();
+    deformedMaterial.needsUpdate = true;
+    await redraw();
+    const customDepthHit = await pick([1.7, 0, 1.25], true);
+    const customExpected = deck!
+      .getViewports()[0]
+      .unproject([originalPosition[0], originalPosition[1], targetDepth]);
+    expect(customDepthHit?.object).toBe(entries[1]);
+    customExpected.forEach((value, index) =>
+      expect(customDepthHit!.coordinate![index]).toBeCloseTo(value, 3)
+    );
+    deformedMaterial.vertexNode = null;
+    deformedMaterial.needsUpdate = true;
+    await redraw();
     // Even zero-alpha unselected surfaces retain their original depth-writing behavior.
     reverse = false;
     await redraw();
@@ -450,7 +471,7 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
       new Set(['native-square', 'alpha-root', 42])
     );
     await redraw();
-    await pick([1.7, 0, 1]);
+    await pick([1.7, 0, 1.25], true);
     const pipelines = createPipeline.mock.calls.length;
     for (let frame = 0; frame < 3; frame++) {
       await redraw();
@@ -471,6 +492,9 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
       adapter.drawPicking(scene, camera, rejectedPass, () => [1 / 255, 0, 0, 1])
     ).toThrow('fragmentNode');
     expect(() => adapter.drawHighlighted(scene, camera, rejectedPass, () => [1, 0, 0, 1])).toThrow(
+      'fragmentNode'
+    );
+    expect(() => adapter.drawPickingDepth(scene, camera, rejectedPass, () => [1, 0, 0, 1])).toThrow(
       'fragmentNode'
     );
     expect(endRejectedPass).not.toHaveBeenCalled();
