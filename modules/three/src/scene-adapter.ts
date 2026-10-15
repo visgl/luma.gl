@@ -12,6 +12,7 @@ import {
   PointLight,
   SpotLight,
   type LightShadow,
+  type NodeBuilder,
   Vector4,
   NodeMaterial,
   type Object3D,
@@ -55,16 +56,27 @@ export class ThreeSceneAdapter {
   private readonly pickingColor = uniform(new Vector4());
   private readonly highlightingContext = createContext();
   private readonly highlightColor = uniform(new Vector4());
-  private readonly getHighlightedOutput = (output: ReturnType<typeof vec4>) =>
+  private readonly getHighlightedOutput = (output: ReturnType<typeof vec4>, builder: NodeBuilder) =>
     Fn(() => {
       const color = renderOutput(output, NoToneMapping, SRGBColorSpace);
       // Match deck: composite byte-space highlight color over the final display color.
       const alpha = this.highlightColor.a.add(color.a.mul(this.highlightColor.a.oneMinus()));
       const ratio = this.highlightColor.a.div(max(alpha, 0.00001));
-      // Zero-alpha surfaces keep their color and depth writes, selected or not.
+      // Three converts premultiplied materials back to premultiplied display-space RGB.
+      // Tint straight RGB, then restore the representation expected by the blend pipeline.
+      const sourceColor = builder.material?.premultipliedAlpha
+        ? color.rgb.div(max(color.a, 0.00001))
+        : color.rgb;
+      const tintedColor = mix(sourceColor, this.highlightColor.rgb, ratio);
+      const result = vec4(
+        builder.material?.premultipliedAlpha ? tintedColor.mul(alpha) : tintedColor,
+        alpha
+      );
+      // Zero-alpha surfaces and unselected materials keep their original color/depth behavior.
       return output.a
         .greaterThan(0)
-        .select(vec4(mix(color.rgb, this.highlightColor.rgb, ratio), alpha), color);
+        .and(this.highlightColor.a.greaterThan(0))
+        .select(result, color);
     })();
   private readonly getPickingOutput = (output: ReturnType<typeof vec4>) =>
     Fn(() => {

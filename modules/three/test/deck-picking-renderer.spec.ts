@@ -71,7 +71,15 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
   const transparentMaterial = new MeshBasicMaterial({transparent: true, opacity: 0});
   const transparentOccluderMesh = new Mesh(geometry, transparentMaterial);
   transparentOccluderMesh.position.set(0, -1, 1);
-  scene.add(left, right, occluder, transparentOccluderMesh);
+  const premultipliedMaterial = new MeshBasicMaterial({
+    color: 0x0000ff,
+    transparent: true,
+    opacity: 0.5,
+    premultipliedAlpha: true
+  });
+  const premultipliedMesh = new Mesh(geometry, premultipliedMaterial);
+  premultipliedMesh.position.set(1, -1, 1);
+  scene.add(left, right, occluder, transparentOccluderMesh, premultipliedMesh);
   const color = device.createTexture({
     width: 128,
     height: 128,
@@ -221,6 +229,7 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
     highlightedObjectIndex = null;
     reverse = true;
     await redraw();
+    const baselinePremultiplied = await pixel([1, -1, 1]);
     const baselineRight = await pixel([1.7, 0, 1]);
     const baselineOccluder = await pixel([0, 1, 1]);
     highlightedObjectIndex = 0;
@@ -230,6 +239,7 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
     expect(await pixel([-0.8, -1, 1])).toEqual([255, 255, 255, 255]);
     expect(await pixel([-1.2, 0, 1])).toEqual([0, 255, 0, 255]);
     expect(await pixel([1.7, 0, 1])).toEqual(baselineRight);
+    expect(await pixel([1, -1, 1])).toEqual(baselinePremultiplied);
     expect(await pixel([0, 1, 1])).toEqual(baselineOccluder);
     expect((await pick([-0.8, 0, 1]))?.object).toBe(entries[0]);
     // A zero alpha tint restores the normal image; RGB defaults to an opaque tint.
@@ -240,6 +250,21 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
     highlightedObjectIndex = 1;
     await redraw();
     expect(await pixel([1.7, 0, 1])).toEqual([0, 0, 255, 255]);
+    entries = [...entries, {id: 'premultiplied-root', object: premultipliedMesh}];
+    highlightedObjectIndex = 2;
+    highlightColor = [255, 0, 0, 128];
+    await redraw();
+    const premultipliedPixel = await pixel([1, -1, 1]);
+    // Half-alpha red over half-alpha blue, then over the green native polygon.
+    [128, 64, 64, 255].forEach((value, channel) =>
+      expect(Math.abs(premultipliedPixel[channel] - value)).toBeLessThanOrEqual(1)
+    );
+    expect(premultipliedMaterial.premultipliedAlpha).toBe(true);
+    expect(premultipliedMaterial.opacity).toBe(0.5);
+    entries = entries.slice(0, 2);
+    highlightColor = [0, 0, 255];
+    highlightedObjectIndex = 1;
+    await redraw();
     const highlightedPipelines = createPipeline.mock.calls.length;
     for (const index of [0, 1, 0, 1]) {
       highlightedObjectIndex = index;
@@ -354,6 +379,7 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
     deformedMaterial.dispose();
     occluderMaterial.dispose();
     transparentMaterial.dispose();
+    premultipliedMaterial.dispose();
     alphaTexture.dispose();
     readback.destroy();
     framebuffer.destroy();

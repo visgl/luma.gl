@@ -295,6 +295,8 @@ source-over tint strength. A color accessor is evaluated by deck on hover, as fo
 native layers; use a constant color for controlled selection.
 
 The tint is composited over the final display color, after Three's color conversion.
+Premultiplied-alpha materials are converted to straight RGB for the tint and back
+to premultiplied RGB for their existing blend pipeline.
 All rendered descendants of the selected root share it; a nested listed root has
 its own identity. Shared materials and source colors/emissive values remain unchanged.
 Alpha-test holes and fully transparent fragments retain their coverage, normal depth
