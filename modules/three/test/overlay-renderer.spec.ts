@@ -12,6 +12,7 @@ import {
   MeshBasicMaterial,
   OrthographicCamera,
   PerspectiveCamera,
+  RenderTarget,
   Scene,
   Vector3,
   WebGLRenderer
@@ -38,7 +39,13 @@ for (const backend of ['webgl', 'webgpu']) {
       backend === 'webgpu'
         ? new WebGPURenderer({canvas, device: nativeDevice, antialias: false})
         : new WebGLRenderer({canvas, antialias: false});
-    if (renderer instanceof WebGPURenderer) await renderer.init();
+    const hostRenderTarget = nativeDevice ? new RenderTarget(240, 160) : undefined;
+    if (renderer instanceof WebGPURenderer) {
+      await renderer.init();
+      // SwiftShader in CI cannot present WebGPU swap-chain textures. Keep the real host
+      // renderer and GPU commands, using the same offscreen path as other Three GPU tests.
+      renderer.setRenderTarget(hostRenderTarget!);
+    }
     renderer.setSize(240, 160, false);
     const perspective = new PerspectiveCamera(50, 1.5, 0.1, 100);
     perspective.position.set(0, 0, 6);
@@ -51,6 +58,10 @@ for (const backend of ['webgl', 'webgpu']) {
     scene.add(new Mesh(geometry, material));
     if (renderer instanceof WebGPURenderer) await renderer.compileAsync(scene, perspective);
     renderer.render(scene, perspective);
+    if (renderer instanceof WebGPURenderer && hostRenderTarget) {
+      const hostPixel = await renderer.readRenderTargetPixelsAsync(hostRenderTarget, 120, 80, 1, 1);
+      expect(Array.from(hostPixel).slice(0, 4)).toEqual([0, 255, 0, 255]);
+    }
     const hostContext = renderer instanceof WebGLRenderer ? renderer.getContext() : undefined;
     const hostProgram = hostContext?.getParameter(hostContext.CURRENT_PROGRAM);
     const disposeHost = vi.spyOn(renderer, 'dispose');
@@ -269,6 +280,7 @@ for (const backend of ['webgl', 'webgpu']) {
       controls.dispose();
       geometry.dispose();
       material.dispose();
+      hostRenderTarget?.dispose();
       renderer.dispose();
       nativeDevice?.destroy();
       container.remove();
