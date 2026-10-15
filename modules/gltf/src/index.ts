@@ -128,3 +128,5 @@ export type {
   GLTFLightAnimationChannel,
   GLTFLightAnimationProperty
 } from './gltf/animations/animations';
+
+export {GLTFInteractivity} from './gltf/gltf-interactivity';

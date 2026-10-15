@@ -237,8 +237,10 @@ fn main(@builtin(global_invocation_id) invocation: vec3u) {
       let floorDistance = length(floorDelta);
       let signedHeight = dot(point, plane.normal.xyz) - plane.normal.w;
       if (signedHeight > -sphere.w && floorDistance <= sphere.w) {
-        let rectangleNormal = select(plane.normal.xyz, floorDelta / max(floorDistance, 0.000001), signedHeight > 0.0);
-        let penetration = select(sphere.w - signedHeight, sphere.w - floorDistance, signedHeight > 0.0);
+        let outsideEdge = length(floorDelta - plane.normal.xyz * signedHeight) > 0.000001;
+        let useClosestPoint = signedHeight > 0.0 || outsideEdge;
+        let rectangleNormal = select(plane.normal.xyz, floorDelta / max(floorDistance, 0.000001), useClosestPoint);
+        let penetration = select(sphere.w - signedHeight, sphere.w - floorDistance, useClosestPoint);
         point += rectangleNormal * max(penetration, 0.0);
         // An optional raised cushion nose couples follow/draw into the normal rebound.
         // Collision detection still uses the rectangle; this is a rigid impulse approximation.
@@ -280,9 +282,7 @@ export const FINALIZE_SPHERES = /* wgsl */ `
 @group(0) @binding(3) var<storage, read_write> angularVelocities: array<vec4f>;
 @group(0) @binding(4) var<storage, read_write> orientations: array<vec4f>;
 @group(0) @binding(5) var<storage, read_write> sleepStates: array<vec4f>;
-@group(0) @binding(6) var<storage, read> offsets: array<u32>;
-@group(0) @binding(7) var<storage, read> contacts: array<vec2u>;
-@group(0) @binding(8) var<storage, read_write> diagnostics: array<atomic<u32>>;
+@group(0) @binding(6) var<storage, read_write> diagnostics: array<atomic<u32>>;
 @compute @workgroup_size(64)
 fn main(@builtin(global_invocation_id) invocation: vec3u) {
   let index = invocation.x;
@@ -304,11 +304,8 @@ fn main(@builtin(global_invocation_id) invocation: vec3u) {
       if (weight > supportWeight) {supportWeight = weight; supportNormal = plane.normal.xyz; rollingResistance = plane.material.w; spinningResistance = plane.center.w;}
     }
   }
-  var supported = grounded;
-  for (var cursor = offsets[index]; cursor < offsets[index + 1u]; cursor++) {
-    let neighbor = positions[contacts[cursor].x];
-    supported = supported || distance(sphere.xyz, neighbor.xyz) <= sphere.w + neighbor.w + settings.solver.z;
-  }
+  // Only fixed-plane support can authorize sleep. Dynamic contact cycles are not
+  // evidence of support: an airborne pair must keep integrating gravity.
   if (grounded) {
     let normalVelocity = supportNormal * dot(velocity.xyz, supportNormal);
     let tangentVelocity = velocity.xyz - normalVelocity;
@@ -327,7 +324,7 @@ fn main(@builtin(global_invocation_id) invocation: vec3u) {
     let spinLoss = spinningResistance * max(supportWeight, 0.0) * settings.material.x / sphere.w;
     angular = vec4f(angular.xyz - supportNormal * sign(spin) * min(abs(spin), spinLoss), angular.w);
   }
-  if (supported && length(velocity.xyz) < settings.resting.y && length(angular.xyz) < settings.resting.z) {
+  if (grounded && length(velocity.xyz) < settings.resting.y && length(angular.xyz) < settings.resting.z) {
     sleep.x += settings.material.x;
   } else { sleep.x = 0.0; }
   if (settings.solver.x > 0.0 && sleep.x >= settings.solver.x) {

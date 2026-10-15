@@ -6,10 +6,12 @@ import {Deck, MapView, type MapViewState} from '@deck.gl/core';
 import {Buffer, Texture, luma} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 import {ThreeSceneAdapter} from '../src/objects';
-import {synchronizeThreeCamera, pickThreeObject} from '../src/deck';
+import {ThreeSceneLayer, synchronizeThreeCamera, pickThreeObject} from '../src/deck';
 import {
   HalfFloatType,
   Box3,
+  Matrix4,
+  Vector3,
   Mesh,
   MeshStandardMaterial,
   RenderTarget,
@@ -88,6 +90,7 @@ test('Geographic Lantern placement, picking, selection and shared depth match up
       geometryDispose = vi.spyOn(object.geometry, 'dispose');
   });
   let deck: Deck<MapView> | undefined;
+  let modelMatrix: number[] | undefined;
   try {
     let borrowedEnd: ReturnType<typeof vi.spyOn> | undefined;
     let submissionCount = 0;
@@ -116,7 +119,13 @@ test('Geographic Lantern placement, picking, selection and shared depth match up
         onError: reject,
         onBeforeRender: () => {
           const viewport = deck!.getViewports()[0];
-          synchronizeThreeCamera(scene.camera, viewport, WebGPUCoordinateSystem, GEOGRAPHIC_ORIGIN);
+          synchronizeThreeCamera(
+            scene.camera,
+            viewport,
+            WebGPUCoordinateSystem,
+            GEOGRAPHIC_ORIGIN,
+            modelMatrix
+          );
           adapter.prepare(scene.scene, scene.camera);
           beginPass.mockClear();
           submissionCount = submit.mock.calls.length;
@@ -183,23 +192,51 @@ test('Geographic Lantern placement, picking, selection and shared depth match up
     }
 
     const viewport = deck!.getViewports()[0];
-    const selectedIds = new Set<string>();
-    for (let vertical = 8; vertical < 128; vertical += 1)
-      for (let horizontal = 8; horizontal < 128; horizontal += 1) {
-        const intersection = pickThreeObject(
-          scene.camera,
-          [horizontal / 64 - 1, 1 - vertical / 64],
-          [scene.scene, scene.referenceContext]
-        );
-        for (let object = intersection?.object; object; object = object.parent || undefined)
-          if (object.userData['geographicId']) {
-            selectedIds.add(object.userData['geographicId']);
-            break;
-          }
-      }
-    expect(selectedIds.size).toBeGreaterThan(0);
-    expect(Array.from(selectedIds).every(id => id.startsWith('lantern-'))).toBe(true);
-    const selectedId = Array.from(selectedIds).find(id => id.startsWith('lantern-'))!;
+    const picked = await deck!.pickObjectsAsync({x: 8, y: 8, width: 120, height: 120});
+    const lanternHits = picked.filter(info => info.layer?.id === 'geographic-lanterns');
+    expect(lanternHits.length).toBeGreaterThan(0);
+    for (const hit of lanternHits) {
+      expect(GEOGRAPHIC_OBJECTS.some(object => object.id === hit.object.id)).toBe(true);
+      expect(scene.models.includes(hit.object.object)).toBe(true);
+    }
+    expect(picked.some(info => info.layer?.id === 'geographic-buildings')).toBe(true);
+    // Query the center nameplate in local meters, then verify geographic surface reconstruction.
+    const commonOrigin = viewport.projectPosition(GEOGRAPHIC_ORIGIN);
+    const units = viewport.getDistanceScales(GEOGRAPHIC_ORIGIN).unitsPerMeter;
+    const nameplate = viewport.unprojectPosition(
+      commonOrigin.map((value, index) => value + [0, 0, 3.6][index] * units[index])
+    );
+    const projected = viewport.project(nameplate);
+    const surface = await deck!.pickObjectAsync({
+      x: Math.floor(projected[0]) + 0.5,
+      y: Math.floor(projected[1]) + 0.5,
+      unproject3D: true
+    });
+    expect(surface?.object.id).toBe('lantern-center');
+    expect(surface?.coordinate).toHaveLength(3);
+    const sampledPixel = surface!.devicePixel!;
+    const intersection = pickThreeObject(
+      scene.camera,
+      [(2 * (sampledPixel[0] + 0.5)) / 128 - 1, (2 * (sampledPixel[1] + 0.5)) / 128 - 1],
+      [scene.scene]
+    );
+    expect(intersection).toBeDefined();
+    const geographicPoint = viewport.unprojectPosition(
+      commonOrigin.map(
+        (value, index) => value + intersection!.point.getComponent(index) * units[index]
+      )
+    );
+    const expected = viewport.unproject([
+      Math.floor(projected[0]) + 0.5,
+      Math.floor(projected[1]) + 0.5,
+      viewport.project(geographicPoint)[2]
+    ]);
+    expect(surface!.coordinate![0]).toBeCloseTo(expected[0], 6);
+    expect(surface!.coordinate![1]).toBeCloseTo(expected[1], 6);
+    expect(surface!.coordinate![2]).toBeCloseTo(expected[2], 2);
+    expect(surface!.coordinate![2]).toBeGreaterThan(2);
+    expect(surface!.coordinate![2]).toBeLessThan(5);
+    const selectedId = String(lanternHits[0].object.id);
     scene.select(selectedId);
     referenceScene.select(selectedId);
     await new Promise<void>((resolve, reject) =>
@@ -231,6 +268,54 @@ test('Geographic Lantern placement, picking, selection and shared depth match up
       if (index % 4 !== 3)
         selectedDifference += Math.abs(selectedPixels[index] - selectedReference[index]);
     expect(selectedDifference / (128 * 128 * 3)).toBeLessThan(1);
+    // Place only the Three layer in local meters; native geographic geometry stays fixed.
+    const placement = new Matrix4()
+      .makeTranslation(4, -3, 6)
+      .multiply(new Matrix4().makeRotationZ(0.2))
+      .multiply(new Matrix4().makeScale(1.2, 0.9, 1.1));
+    modelMatrix = placement.elements;
+    await new Promise<void>((resolve, reject) =>
+      deck!.setProps({
+        layers: createGeographicLayers(scene, adapter).map(layer =>
+          layer instanceof ThreeSceneLayer ? layer.clone({modelMatrix}) : layer
+        ),
+        onAfterRender: resolve,
+        onError: reject
+      })
+    );
+    const placedLabel = new Vector3(0, 0, 3.6).applyMatrix4(placement);
+    const placedGeographic = viewport.unprojectPosition(
+      commonOrigin.map((value, index) => value + placedLabel.getComponent(index) * units[index])
+    );
+    const placedPixel = viewport.project(placedGeographic);
+    const placedSurface = await deck!.pickObjectAsync({
+      x: placedPixel[0],
+      y: placedPixel[1],
+      unproject3D: true
+    });
+    expect(placedSurface?.object.id).toBe('lantern-center');
+    const placedSample = placedSurface!.devicePixel!;
+    const placedIntersection = pickThreeObject(
+      scene.camera,
+      [(2 * (placedSample[0] + 0.5)) / 128 - 1, (2 * (placedSample[1] + 0.5)) / 128 - 1],
+      [scene.scene]
+    );
+    expect(placedIntersection).toBeDefined();
+    const placedPoint = placedIntersection!.point.clone().applyMatrix4(placement);
+    const placedWorld = viewport.unprojectPosition(
+      commonOrigin.map((value, index) => value + placedPoint.getComponent(index) * units[index])
+    );
+    const placedExpected = viewport.unproject([
+      placedPixel[0],
+      placedPixel[1],
+      viewport.project(placedWorld)[2]
+    ]);
+    expect(placedSurface!.coordinate![0]).toBeCloseTo(placedExpected[0], 6);
+    expect(placedSurface!.coordinate![1]).toBeCloseTo(placedExpected[1], 6);
+    expect(placedSurface!.coordinate![2]).toBeCloseTo(placedExpected[2], 2);
+    expect(placedSurface!.coordinate![2]).toBeGreaterThan(7);
+    modelMatrix = undefined;
+
     await new Promise<void>((resolve, reject) =>
       deck!.setProps({
         layers: createGeographicLayers(scene, adapter).filter(

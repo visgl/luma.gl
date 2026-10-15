@@ -237,7 +237,10 @@ export class GPUSphereWorld {
           props.dynamicFriction ?? (props.friction === undefined ? 0.35 : 1 - props.friction)
         ),
       dynamicFriction:
-        props.dynamicFriction ?? (props.friction === undefined ? 0.35 : 1 - props.friction),
+        props.dynamicFriction ??
+        (props.friction === undefined
+          ? Math.min(0.35, props.staticFriction ?? 0.5)
+          : 1 - props.friction),
       rollingResistance: props.rollingResistance ?? 0.025,
       sleepAfter: props.sleepAfter ?? 0.75,
       sleepLinearSpeed: props.sleepLinearSpeed ?? 0.025,
@@ -280,7 +283,11 @@ export class GPUSphereWorld {
 
   /** Change gravity/material/plane without recompiling. Gravity changes wake sleeping bodies. */
   update(parameters: GPUSphereWorldParameters): void {
-    const next = {...this.parameters, ...parameters};
+    const next = {
+      ...this.parameters,
+      ...parameters,
+      plane: {...this.parameters.plane, ...parameters.plane}
+    };
     const normal = next.plane.normal ?? [0, 0, 1];
     if (
       ![
@@ -391,11 +398,13 @@ export class GPUSphereWorld {
   /** Adds one world to one graph. Scratch belongs to the graph; omitted state belongs to this world. */
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
     if (this.added) throw new Error('Sphere world has already been added to a graph');
+    if (Math.ceil(this.count / 64) > graph.device.limits.maxComputeWorkgroupsPerDimension)
+      throw new Error('Sphere world exceeds device dispatch limits');
     if (
-      Math.ceil(this.count / 64) > graph.device.limits.maxComputeWorkgroupsPerDimension ||
-      this.count * this.maximumContacts * 8 > graph.device.limits.maxStorageBufferBindingSize
+      Math.max(this.count * 16, this.count * this.maximumContacts * 8, 32) >
+      graph.device.limits.maxStorageBufferBindingSize
     )
-      throw new Error('Sphere world exceeds device limits');
+      throw new Error('Sphere world exceeds maxStorageBufferBindingSize');
     const allocate = (id: string, byteLength: number, uniform = false): Buffer => {
       const buffer = graph.device.createBuffer({
         id: `${this.id}-${id}`,
@@ -659,9 +668,7 @@ export class GPUSphereWorld {
         bind('angularVelocities', state.angularVelocities, 3, 'write'),
         bind('orientations', orientations, 4, 'write'),
         bind('sleepStates', sleepStates, 5, 'write'),
-        bind('offsets', offsets, 6),
-        bind('contacts', contacts, 7),
-        bind('diagnostics', diagnostics, 8, 'write')
+        bind('diagnostics', diagnostics, 6, 'write')
       ]);
     }
     this.commandSettings = allocate('body-command', 80, true);

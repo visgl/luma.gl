@@ -727,3 +727,79 @@ it('GPUSphereWorld cushions exchange spin and dissipate more rebound pace at hig
     expect(state.velocity[0]).toBeLessThan(0);
   }
 });
+
+it('GPUSphereWorld partial plane updates retain normal and finite extents', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const target = await makeWorld(
+    device,
+    [0, 0.2, 0.5, 0.25, 2, 0.2, 0.5, 0.25],
+    [0, 0, 0, 1, 0, 0, 0, 1],
+    {
+      plane: {normal: [0, 1, 0], halfExtents: [1, 1]},
+      iterations: 1
+    }
+  );
+  try {
+    target.world.update({plane: {offset: 0.1}});
+    target.step();
+    const result = await target.read();
+    expect(result.positions[1]).toBeCloseTo(0.35, 5);
+    expect(result.positions[5]).toBeCloseTo(0.2, 5);
+  } finally {
+    target.destroy();
+  }
+});
+
+it('GPUSphereWorld wakes an unsupported sleeping stack instead of floating', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const fixture = await makeWorld(
+    device,
+    [0, 0, 0.5, 0.5, 0, 0, 1.5, 0.5, 0, 0, 2.5, 0.5],
+    [0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1],
+    {gravity: [0, 0, -9.81], plane: {}, restitution: 0, iterations: 16, sleepAfter: 0.05}
+  );
+  try {
+    fixture.step();
+    const initial = await fixture.read();
+    // Preserve the current wake revision while simulating an already sleeping stack.
+    for (let index = 0; index < 3; index++) initial.sleep[index * 4] = 1;
+    fixture.world.sleepStates!.write(initial.sleep);
+    fixture.velocities.write(new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1]));
+    fixture.positions.write(new Float32Array([5, 0, 0.5, 0.5, 0, 0, 1.5, 0.5, 0, 0, 2.5, 0.5]));
+    fixture.step(8);
+    const result = await fixture.read();
+    expect(result.positions[6]).toBeLessThan(1.49);
+    expect(result.positions[10]).toBeLessThan(2.49);
+    expect(result.velocities[6]).toBeLessThan(-0.1);
+    expect(result.velocities[10]).toBeLessThan(-0.1);
+    expect(result.diagnostics.sleepingBodies).toBe(1);
+  } finally {
+    fixture.destroy();
+  }
+}, 60000);
+
+it('GPUSphereWorld below-plane edge contacts push outward while interior penetration recovers', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const fixture = await makeWorld(
+    device,
+    [1.3, 0, -0.1, 0.5, 0, 0, -0.1, 0.5],
+    [0, 0, 0, 1, 0, 0, 0, 1],
+    {
+      plane: {halfExtents: [1, 1]},
+      iterations: 1,
+      staticFriction: 0
+    }
+  );
+  try {
+    fixture.step();
+    const result = await fixture.read();
+    expect(result.positions[0]).toBeGreaterThan(1.3);
+    expect(result.positions[2]).toBeLessThan(-0.1);
+    expect(result.positions[6]).toBeCloseTo(0.5, 5);
+  } finally {
+    fixture.destroy();
+  }
+}, 60000);

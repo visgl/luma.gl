@@ -14,7 +14,9 @@ platform. The initial view is calibrated to level. Drag sensitivity defaults to
 0.25; releasing within 3 degrees optionally snaps level. Double-click or Level
 restores the initial view; Reset restores sphere positions, velocities, orientations
 and sleep state. The bubble level shows direction and angle. Static/dynamic contact
-friction, rolling resistance and sleeping bring the balls to rest.
+friction, rolling resistance and sleeping bring the balls to rest. Sleeping is
+limited to direct fixed-plane support; stacked bodies stay active so removing
+their support cannot leave a floating cluster.
 
 ## Benchmark
 
@@ -36,3 +38,10 @@ Compare reports on the same browser, viewport, power state and hardware. The 10k
 preset is a workload to measure, not a promise of 60 fps on every adapter. Sparse
 candidate-count scaling, dense contact overflow and numerical behavior are also
 covered by automated WebGPU tests; see the module's README for solver limits.
+
+Reports also include sampled maximum dropped-contact/invalid-body counts,
+diagnostic sample counts, sampling failures and an explicit `valid` flag. These
+are sampled observations, not an every-step guarantee. Warmup samples contribute
+to workload validity but never to the GPU median. Each asynchronous result belongs
+to the run and phase in which it was submitted; report finalization waits for the
+last pending result. Benchmark time never accumulates as a playback backlog.

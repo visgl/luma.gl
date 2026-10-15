@@ -29,6 +29,12 @@ Target Release Date: Q3, 2026
   conservative disk partitions, seam-preserving segment clipping, opt-in indexed patch routing,
   fixed-arithmetic routing benchmarks and measurement-gated inline/materialized selection.
 
+**Experimental Three.js integration**
+
+- **Scene placement in deck.gl** - `ThreeSceneLayer.modelMatrix` supports affine placement
+  in Cartesian coordinates and local Mercator meters without changing source transforms.
+  Visible rendering, highlights, object IDs and surface depth picking share that placement.
+
 **New Modules**
 
 - **`@luma.gl/arrow` (currently private)** - Arrow adapters and renderers are being prepared for

@@ -290,6 +290,12 @@ export function applyParametersToRenderPipelineDescriptor(
   // Apply defaults
   Object.assign(pipelineDescriptor, {...DEFAULT_PIPELINE_DESCRIPTOR, ...pipelineDescriptor});
   setParameters(pipelineDescriptor, parameters);
+  // Factor setters create blend state; explicit disabling must win regardless of key order.
+  if (parameters.blend === false) {
+    for (const target of pipelineDescriptor.fragment?.targets || []) {
+      if (target) delete target.blend;
+    }
+  }
 }
 
 // Apply any supplied parameters
