@@ -8,6 +8,8 @@ Target Release Date: Q3, 2026
 
 **General**
 
+- **Public package** - `@luma.gl/text` is included in npm releases, including its CPU font atlas builders under `@luma.gl/text/fonts`.
+
 - **Opaque reflective ray transport** - Opt-in bounded GGX metallic/roughness secondary paths
   add colored and glossy reflections. Chart Materials demonstrates a retained roughness sweep
   with transport and bounce controls. The default diffuse mode is unchanged.
