@@ -23,6 +23,11 @@ import {getThreeDeckOverlaySupport, ThreeDeckOverlay} from '../src/overlay';
 for (const backend of ['webgl', 'webgpu']) {
   test(`deck overlay attaches to an initialized Three ${backend} app`, async context => {
     if (backend === 'webgpu' && !navigator.gpu) return context.skip('WebGPU unavailable');
+    const nativeDevice =
+      backend === 'webgpu'
+        ? await (await navigator.gpu.requestAdapter())?.requestDevice()
+        : undefined;
+    if (backend === 'webgpu' && !nativeDevice) return context.skip('WebGPU adapter unavailable');
     const container = document.createElement('div');
     Object.assign(container.style, {position: 'relative', width: '240px', height: '160px'});
     const canvas = document.createElement('canvas');
@@ -31,7 +36,7 @@ for (const backend of ['webgl', 'webgpu']) {
     document.body.append(container);
     const renderer =
       backend === 'webgpu'
-        ? new WebGPURenderer({canvas, antialias: false})
+        ? new WebGPURenderer({canvas, device: nativeDevice, antialias: false})
         : new WebGLRenderer({canvas, antialias: false});
     if (renderer instanceof WebGPURenderer) await renderer.init();
     renderer.setSize(240, 160, false);
@@ -259,10 +264,13 @@ for (const backend of ['webgl', 'webgpu']) {
         expect(hostContext.getParameter(hostContext.CURRENT_PROGRAM)).toBe(hostProgram);
     } finally {
       overlay?.dispose();
+      // Finish host GPU work before disposing Three and releasing its validation scopes.
+      await nativeDevice?.queue.onSubmittedWorkDone();
       controls.dispose();
       geometry.dispose();
       material.dispose();
       renderer.dispose();
+      nativeDevice?.destroy();
       container.remove();
       vi.restoreAllMocks();
     }
