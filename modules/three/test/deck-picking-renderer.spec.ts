@@ -15,6 +15,7 @@ import {
   Mesh,
   PlaneGeometry,
   MeshBasicMaterial,
+  MeshStandardMaterial,
   MeshBasicNodeMaterial,
   DataTexture,
   DoubleSide,
@@ -45,6 +46,12 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
   const secondMesh = new Mesh(geometry, secondMaterial);
   secondMesh.position.set(-0.8, 0, 1.5);
   secondScene.add(secondMesh);
+  const brokenMaterial = new MeshStandardMaterial({wireframe: true});
+  const brokenScene = new Scene();
+  const brokenMesh = new Mesh(geometry, brokenMaterial);
+  brokenMesh.frustumCulled = false;
+  brokenScene.add(brokenMesh);
+  let failedAdapter: ThreeSceneAdapter | undefined;
   const secondEntry = {id: 'second-scene', object: secondMesh};
   let secondSceneEnabled = false;
   let secondHighlight: number | null = null;
@@ -308,26 +315,39 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
       expect((await pick([-0.8, 0, 1.5]))?.object.id).toBe('native-square');
       nativeHeight = 0;
     }
-    // A failed preparation invalidates only that scene and preserves the caller's target.
-    const originalTarget = adapter.renderer.getRenderTarget();
-    const render = vi.spyOn(adapter.renderer, 'render').mockImplementationOnce(() => {
-      throw new Error('preparation failure');
-    });
-    expect(() => adapter.prepare(scene, camera)).toThrow('preparation failure');
-    render.mockRestore();
-    expect(adapter.renderer.getRenderTarget()).toBe(originalTarget);
+    // A real backend failure after beginRender poisons Three's private render stack.
+    // Reject every use of that adapter, but leave the shared device and healthy adapter usable.
+    failedAdapter = new ThreeSceneAdapter({device});
+    await failedAdapter.init();
+    failedAdapter.prepare(scene, camera);
+    failedAdapter.prepare(secondScene, secondCamera);
+    const originalTarget = failedAdapter.renderer.getRenderTarget();
+    const beginFailedRender = vi.spyOn(failedAdapter.renderer.backend, 'beginRender');
+    const finishFailedRender = vi.spyOn(failedAdapter.renderer.backend, 'finishRender');
+    expect(() => failedAdapter!.prepare(brokenScene, camera)).toThrow('only triangle meshes');
+    expect(beginFailedRender).toHaveBeenCalled();
+    expect(finishFailedRender).toHaveBeenCalled();
+    expect(failedAdapter.renderer.getRenderTarget()).toBe(originalTarget);
+    expect(() => failedAdapter!.prepare(scene, camera)).toThrow('Create a new ThreeSceneAdapter');
     const recoveryPass = device.beginRenderPass({
       framebuffer,
       clearColor: [0, 0, 0, 0],
       clearDepth: 1
     });
     const endRecoveryPass = vi.spyOn(recoveryPass, 'end');
-    expect(() => adapter.draw(scene, camera, recoveryPass)).toThrow('Prepare the scene');
+    expect(() => failedAdapter!.draw(scene, camera, recoveryPass)).toThrow(
+      'Create a new ThreeSceneAdapter'
+    );
+    expect(() => failedAdapter!.draw(secondScene, secondCamera, recoveryPass)).toThrow(
+      'Create a new ThreeSceneAdapter'
+    );
     expect(() => adapter.draw(new Scene(), camera, recoveryPass)).toThrow('Prepare the scene');
     adapter.draw(secondScene, secondCamera, recoveryPass);
     expect(endRecoveryPass).not.toHaveBeenCalled();
     recoveryPass.end();
     device.submit();
+    failedAdapter.dispose();
+    failedAdapter = undefined;
     secondSceneEnabled = false;
     await redraw();
     expect(disposeGeometry).not.toHaveBeenCalled();
@@ -668,6 +688,8 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
   } finally {
     deck?.finalize();
     adapter.dispose();
+    failedAdapter?.dispose();
+    brokenMaterial.dispose();
     geometry.dispose();
     material.dispose();
     deformedMaterial.dispose();

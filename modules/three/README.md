@@ -444,11 +444,14 @@ shared adapter. Readiness does not keep removed scenes alive; the application st
 owns source resources and must dispose them when appropriate. Dispose the adapter
 only after all its layers have been removed. Calls are sequential, not reentrant.
 
-A failed preparation invalidates that scene's readiness and restores the previous
-render target, while other successfully prepared scenes remain drawable. Reprepare
-the failed scene before drawing it again. Never-prepared scenes are rejected. As
-before, readiness is not automatic change tracking: prepare again after changing
-animation, textures, lights or shadow state, and request a deck redraw.
+If preparation throws, the adapter rejects all later preparation and drawing,
+including scenes prepared successfully earlier. Three does not unwind its private
+render stack after every backend exception. The adapter closes/submits its owned
+preparation work and restores the previous render target, but its renderer must not
+be reused. Remove its layers, dispose the adapter and create a new adapter using the
+same borrowed source scenes and device. Never-prepared scenes are also rejected.
+Readiness is not automatic change tracking: prepare again after changing animation,
+textures, lights or shadow state, and request a deck redraw.
 
 ### Layer placement with `modelMatrix`
 

@@ -54,6 +54,7 @@ export class ThreeSceneAdapter {
   // Readiness must not keep borrowed scenes alive after their layers are removed.
   private readonly preparedScenes = new WeakSet<Scene>();
   private disposed = false;
+  private preparationFailed = false;
   private readonly pickingContext = createContext();
   private readonly pickingDepthContext = createContext();
   private readonly pickingColor = uniform(new Vector4());
@@ -115,17 +116,31 @@ export class ThreeSceneAdapter {
 
   /** Before the caller opens its pass: upload textures, generate PMREM/shadow maps. */
   prepare(scene: Scene, camera: Camera): void {
-    if (this.disposed || !this.renderer.initialized)
+    this.assertUsable();
+    if (!this.renderer.initialized)
       throw new Error('Initialize ThreeSceneAdapter before preparing');
     const target = this.renderer.getRenderTarget();
     this.preparedScenes.delete(scene);
     try {
-      this.renderer.setRenderTarget(this.preparationTarget);
-      this.renderer.render(scene, camera);
-    } finally {
-      this.renderer.setRenderTarget(target);
+      try {
+        this.renderer.setRenderTarget(this.preparationTarget);
+        this.renderer.render(scene, camera);
+      } finally {
+        this.renderer.setRenderTarget(target);
+      }
+      this.preparedScenes.add(scene);
+    } catch (error) {
+      // Three does not unwind its render stack after exceptions. Never reuse that renderer.
+      this.preparationFailed = true;
+      // Close/submit owned preparation work before its resources can be disposed.
+      this.backend.finishRender();
+      throw error;
     }
-    this.preparedScenes.add(scene);
+  }
+
+  private assertUsable(): void {
+    if (this.disposed || this.preparationFailed)
+      throw new Error('Create a new ThreeSceneAdapter after disposal or preparation failure');
   }
 
   /** Draw the prepared scene with existing lights/materials into the caller's pass. */
@@ -180,7 +195,8 @@ export class ThreeSceneAdapter {
       pickDepth?: boolean;
     } = {}
   ): void {
-    if (this.disposed || !this.preparedScenes.has(scene))
+    this.assertUsable();
+    if (!this.preparedScenes.has(scene))
       throw new Error('Prepare the scene before drawing in a caller pass');
     const shadows: {shadow: LightShadow; autoUpdate: boolean; needsUpdate: boolean}[] = [];
     scene.traverse(object => {
