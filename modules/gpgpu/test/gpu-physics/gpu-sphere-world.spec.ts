@@ -804,3 +804,27 @@ it('GPUSphereWorld below-plane edge contacts push outward while interior penetra
     fixture.destroy();
   }
 }, 60000);
+
+it('GPUSphereWorld floor contact skin does not bounce spheres before contact', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const fixture = await makeWorld(device, [0, 0, 0.507, 0.5], [0, 0, -0.5, 1], {
+    plane: {},
+    restitution: 1,
+    restitutionThreshold: 0,
+    staticFriction: 0,
+    iterations: 1
+  });
+  try {
+    fixture.step();
+    const approaching = await fixture.read();
+    expect(approaching.positions[2]).toBeGreaterThan(0.5);
+    expect(approaching.velocities[2]).toBeCloseTo(-0.5, 5);
+    fixture.step();
+    const touching = await fixture.read();
+    expect(touching.positions[2]).toBeCloseTo(0.5, 5);
+    expect(touching.velocities[2]).toBeCloseTo(0.5, 5);
+  } finally {
+    fixture.destroy();
+  }
+}, 60000);
