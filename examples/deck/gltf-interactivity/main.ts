@@ -21,7 +21,8 @@ let enlarged = false;
 let lastError = '';
 let sourceOperationCount = 0;
 let activeNodeIndex = -1;
-let deck: Deck;
+let deck: Deck<OrbitView>;
+let deviceType = 'initializing';
 
 /**
  * The official test asset uses operations outside the currently supported interpreter subset.
@@ -77,11 +78,14 @@ Source graph operations: ${sourceOperationCount}
 Demo operation: event/onStart → flow/branch → pointer/set
 Source node: ${activeNodeIndex}
 Scale: ${scale.toFixed(2)}
-Backend: ${deck?.device?.type ?? 'initializing'}`;
+Backend: ${deviceType}`;
 }
 
 deck = new Deck({
   parent,
+  onDeviceInitialized: device => {
+    deviceType = device.type;
+  },
   ...getDeckExampleProps({deviceType: 'webgl'}),
   views: new OrbitView({id: 'orbit', controller: true, orbitAxis: 'Z'}),
   initialViewState: {target: [0, 0, 0], rotationX: 20, rotationOrbit: -25, zoom: 0},
