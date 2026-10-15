@@ -31,6 +31,10 @@ Target Release Date: Q3, 2026
 
 **Experimental Three.js integration**
 
+- **Shared prepared scenes** - Multiple `ThreeSceneLayer` instances can share one
+  adapter while retaining independent picking and highlighting. Preparation failures
+  invalidate only the affected scene; borrowed scenes are not retained by readiness tracking.
+
 - **Scene placement in deck.gl** - `ThreeSceneLayer.modelMatrix` supports affine placement
   in Cartesian coordinates and local Mercator meters without changing source transforms.
   Visible rendering, highlights, object IDs and surface depth picking share that placement.

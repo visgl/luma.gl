@@ -51,7 +51,8 @@ export class ThreeSceneAdapter {
   readonly device: Device;
   private readonly backend: LumaBackend;
   private readonly preparationTarget = new RenderTarget(16, 16, {type: HalfFloatType});
-  private preparedScene?: Scene;
+  // Readiness must not keep borrowed scenes alive after their layers are removed.
+  private readonly preparedScenes = new WeakSet<Scene>();
   private disposed = false;
   private readonly pickingContext = createContext();
   private readonly pickingDepthContext = createContext();
@@ -117,13 +118,14 @@ export class ThreeSceneAdapter {
     if (this.disposed || !this.renderer.initialized)
       throw new Error('Initialize ThreeSceneAdapter before preparing');
     const target = this.renderer.getRenderTarget();
+    this.preparedScenes.delete(scene);
     try {
       this.renderer.setRenderTarget(this.preparationTarget);
       this.renderer.render(scene, camera);
-      this.preparedScene = scene;
     } finally {
       this.renderer.setRenderTarget(target);
     }
+    this.preparedScenes.add(scene);
   }
 
   /** Draw the prepared scene with existing lights/materials into the caller's pass. */
@@ -178,7 +180,7 @@ export class ThreeSceneAdapter {
       pickDepth?: boolean;
     } = {}
   ): void {
-    if (this.disposed || this.preparedScene !== scene)
+    if (this.disposed || !this.preparedScenes.has(scene))
       throw new Error('Prepare the scene before drawing in a caller pass');
     const shadows: {shadow: LightShadow; autoUpdate: boolean; needsUpdate: boolean}[] = [];
     scene.traverse(object => {

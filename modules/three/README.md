@@ -419,6 +419,37 @@ Transmission, lazy PMREM, postprocessing and nested passes during
 the borrowed draw are unsupported. Native deck objects neither cast nor receive the
 Three shadow map. The basic `ThreeMeshLayer` remains a separate, smaller integration.
 
+### Sharing one adapter across scene layers
+
+Multiple `ThreeSceneLayer` instances can share a `ThreeSceneAdapter` and device.
+Give each scene its own camera and prepare **every scene** in `onBeforeRender`,
+before deck opens its pass. Synchronize each camera with its layer's viewport,
+coordinate origin and `modelMatrix` before preparation. Preparing a later scene
+preserves readiness of earlier scenes; each draw and pick synchronizes its own camera.
+
+```ts
+// onBeforeRender, with scenes already loaded and adapter initialized:
+for (const {scene, camera} of scenes) {
+  synchronizeThreeCamera(camera, viewport, WebGPUCoordinateSystem);
+  adapter.prepare(scene, camera);
+}
+const layers = scenes.map(({id, scene, camera, pickingObjects}) =>
+  new ThreeSceneLayer({id, adapter, scene, camera, pickable: true, pickingObjects})
+);
+```
+
+Layers share the caller's color/depth attachments while retaining independent picking
+registries and highlight state. Removing one layer does not dispose its scene or the
+shared adapter. Readiness does not keep removed scenes alive; the application still
+owns source resources and must dispose them when appropriate. Dispose the adapter
+only after all its layers have been removed. Calls are sequential, not reentrant.
+
+A failed preparation invalidates that scene's readiness and restores the previous
+render target, while other successfully prepared scenes remain drawable. Reprepare
+the failed scene before drawing it again. Never-prepared scenes are rejected. As
+before, readiness is not automatic change tracking: prepare again after changing
+animation, textures, lights or shadow state, and request a deck redraw.
+
 ### Layer placement with `modelMatrix`
 
 `ThreeSceneLayer.modelMatrix` places the whole scene without editing its roots,
