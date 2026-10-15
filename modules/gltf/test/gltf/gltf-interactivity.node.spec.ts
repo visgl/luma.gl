@@ -94,4 +94,72 @@ describe('GLTFInteractivity', () => {
     );
     expect(() => runtime.start()).toThrow(/step limit/);
   });
+
+  it('evaluates boolean and integer AND without short-circuiting inputs', () => {
+    const runtime = new GLTFInteractivity({
+      graphs: [
+        {
+          declarations: [{op: 'math/and'}],
+          nodes: [
+            {declaration: 0, values: {a: {value: [true]}, b: {value: [false]}}},
+            {declaration: 0, values: {a: {value: [6]}, b: {value: [3]}}}
+          ]
+        }
+      ]
+    });
+    expect(runtime.evaluate(0)).toEqual([false]);
+    expect(runtime.evaluate(1)).toEqual([2]);
+  });
+
+  it('formats diagnostics and sends custom events before continuing flow', () => {
+    const messages: string[] = [];
+    const runtime = new GLTFInteractivity(
+      {
+        graphs: [
+          {
+            events: [{id: 'test/onSuccess', values: {passed: {type: 0}}}],
+            types: [{signature: 'bool'}],
+            declarations: [{op: 'event/onStart'}, {op: 'debug/log'}, {op: 'event/send'}],
+            nodes: [
+              {declaration: 0, flows: {out: {node: 1}}},
+              {
+                declaration: 1,
+                configuration: {
+                  message: {value: ['Result {{ok}}: {value}']},
+                  severity: {value: [2]}
+                },
+                values: {value: {value: [true]}},
+                flows: {out: {node: 2}}
+              },
+              {
+                declaration: 2,
+                configuration: {event: {value: [0]}},
+                values: {passed: {value: [true]}}
+              }
+            ]
+          }
+        ]
+      },
+      {
+        onLog: (message, severity) => messages.push(`${severity}: ${message}`),
+        onEvent: (eventId, values) => messages.push(`${eventId}: ${JSON.stringify(values)}`)
+      }
+    );
+    runtime.start();
+    expect(messages).toEqual(['2: Result {ok}: [true]', 'test/onSuccess: {"passed":[true]}']);
+  });
+
+  it('rejects invalid custom event indices before graph execution', () => {
+    expect(
+      () =>
+        new GLTFInteractivity({
+          graphs: [
+            {
+              declarations: [{op: 'event/send'}],
+              nodes: [{declaration: 0, configuration: {event: {value: [-1]}}}]
+            }
+          ]
+        })
+    ).toThrow(/invalid custom event index/);
+  });
 });
