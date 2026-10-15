@@ -318,7 +318,7 @@ export class GLTFInteractivity {
     for (let index = 0; index < nodes.length; index++) {
       if (this.op(index) === op) {
         this.eventOutputs.set(index, outputs);
-        const target = nodes[index].flows?.out;
+        const target = nodes[index].flows?.['out'];
         if (target) execute(target.node, target.socket ?? 'in');
       }
     }

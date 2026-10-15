@@ -28,7 +28,7 @@ let deck: Deck;
  * Construct a separate, standards-shaped demo graph and apply its pointer/set to the SAME
  * source glTF node rendered by ScenegraphLayer. Do not rewrite or misrepresent the source graph.
  */
-function makeDemoGraph(scale: number) {
+function makeDemoGraph(scale: number): ConstructorParameters<typeof GLTFInteractivity>[0] {
   return {
     graphs: [
       {
