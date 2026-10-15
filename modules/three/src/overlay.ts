@@ -11,7 +11,7 @@ import {
 } from '@deck.gl/core';
 import {luma, log, type Device} from '@luma.gl/core';
 import {webgl2Adapter} from '@luma.gl/webgl';
-import {Matrix4, WebGPUCoordinateSystem, type Camera} from 'three';
+import {Matrix4, Vector3, WebGPUCoordinateSystem, type Camera, type Vector3Like} from 'three';
 
 /** The overlay only reads public canvas and pixel-ratio state from the host renderer. */
 export type ThreeDeckOverlayHost = {
@@ -23,6 +23,8 @@ export type ThreeDeckOverlayProps = {
   renderer: ThreeDeckOverlayHost;
   /** Positioned container filled by the host canvas; the overlay is appended above it. */
   container: HTMLDivElement;
+  /** Borrowed reference point for pixel-sized symbols, usually OrbitControls.target. */
+  target?: Vector3Like;
   layers?: DeckProps['layers'];
   onError?: (error: Error) => void;
 };
@@ -53,7 +55,8 @@ export function getThreeDeckOverlaySupport({
 export function makeDeckViewportFromThreeCamera(
   camera: Camera,
   width: number,
-  height: number
+  height: number,
+  target: Vector3Like = {x: 0, y: 0, z: 0}
 ): Viewport {
   const projection = camera.projectionMatrix.clone();
   // deck uses OpenGL clip depth even when its rendering backend is WebGPU.
@@ -63,7 +66,16 @@ export function makeDeckViewportFromThreeCamera(
   if (camera.reversedDepth) {
     projection.premultiply(new Matrix4().makeScale(1, 1, -1));
   }
+  // deck calibrates pixel units at a reference depth, with perspective scaling elsewhere.
+  const targetDepth = -new Vector3().copy(target).applyMatrix4(camera.matrixWorldInverse).z;
+  const focalDistance = targetDepth > 0 ? targetDepth : 1;
+  const referenceProjectionWeight =
+    -projection.elements[11] * focalDistance + projection.elements[15];
+  // Normalize homogeneous scale so the reference plane has clip w = 1, as in deck's
+  // own viewports. NDC and clipping stay identical, while billboard layers agree on pixels.
+  projection.multiplyScalar(1 / referenceProjectionWeight);
   return new Viewport({
+    focalDistance,
     id: 'three-camera',
     width,
     height,
@@ -75,6 +87,7 @@ export function makeDeckViewportFromThreeCamera(
 
 type ThreeCameraViewState = Pick<OrbitViewState, 'transitionDuration'> & {
   zoom?: number;
+  focalDistance?: number;
   viewMatrix?: number[];
   projectionMatrix?: number[];
 };
@@ -118,7 +131,8 @@ export class ThreeDeckOverlay {
   private constructor(
     private readonly renderer: ThreeDeckOverlayHost,
     private readonly deck: HostDrivenDeck,
-    canvas: HTMLCanvasElement
+    canvas: HTMLCanvasElement,
+    private readonly target?: Vector3Like
   ) {
     this.canvas = canvas;
   }
@@ -178,7 +192,7 @@ export class ThreeDeckOverlay {
         });
       });
       initializing = false;
-      return new ThreeDeckOverlay(props.renderer, deck!, canvas);
+      return new ThreeDeckOverlay(props.renderer, deck!, canvas, props.target);
     } catch (error) {
       deck?.finalize();
       device?.destroy();
@@ -207,9 +221,10 @@ export class ThreeDeckOverlay {
     const canvasContext = this.deck.getCanvasContext()!;
     canvasContext.cssWidth = width;
     canvasContext.cssHeight = height;
-    const viewport = makeDeckViewportFromThreeCamera(camera, width, height);
+    const viewport = makeDeckViewportFromThreeCamera(camera, width, height, this.target);
     const viewState: ThreeCameraViewState = {
       zoom: viewport.zoom,
+      focalDistance: viewport.focalDistance,
       viewMatrix: Array.from(viewport.viewMatrix),
       projectionMatrix: Array.from(viewport.projectionMatrix)
     };

@@ -40,7 +40,10 @@ const perspective = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
 const orthographic = new THREE.OrthographicCamera(-4, 4, 4, -4, 0.1, 100);
 perspective.position.set(5, 4, 6);
 let camera: THREE.PerspectiveCamera | THREE.OrthographicCamera = perspective;
-const controls = new OrbitControls(camera, canvas);
+const controls = new OrbitControls<THREE.PerspectiveCamera | THREE.OrthographicCamera>(
+  camera,
+  canvas
+);
 controls.target.set(0, 0.5, 0);
 controls.enableDamping = true;
 controls.update();
@@ -78,14 +81,10 @@ function createLayers() {
       ]
     : [];
 }
-let overlay = await ThreeDeckOverlay.create({
-  renderer,
-  container,
-  layers: createLayers(),
-  onError: reportError
-});
+let overlay: ThreeDeckOverlay | undefined;
+let disposed = false;
 function reportError(error: Error) {
-  status.textContent = error.message;
+  status.textContent = `Overlay unavailable: ${error.message}. Three keeps running.`;
 }
 function resize() {
   const width = container.clientWidth;
@@ -112,41 +111,60 @@ resolution.onchange = () => {
   renderer.setPixelRatio(Number(resolution.value));
   resize();
 };
-showOverlay.onchange = () => overlay.setProps({layers: createLayers()});
-recreate.onclick = async () => {
+showOverlay.onchange = () => overlay?.setProps({layers: createLayers()});
+async function attachOverlay(recreated = false) {
   recreate.disabled = true;
-  overlay.dispose();
+  overlay?.dispose();
+  overlay = undefined;
   try {
-    overlay = await ThreeDeckOverlay.create({
+    const nextOverlay = await ThreeDeckOverlay.create({
       renderer,
       container,
+      target: controls.target,
       layers: createLayers(),
       onError: reportError
     });
-    status.textContent =
-      'Overlay recreated; the Three renderer, scene and controls are still running.';
+    // The application may have closed while the separate device was initializing.
+    if (disposed) {
+      nextOverlay.dispose();
+      return;
+    }
+    overlay = nextOverlay;
+    status.textContent = recreated
+      ? 'Overlay recreated; the Three renderer, scene and controls are still running.'
+      : `${useWebGPU ? 'WebGPU' : 'WebGL'} Three renderer with a separate deck overlay. Drag to orbit; scroll to zoom.`;
   } catch (error) {
     reportError(error instanceof Error ? error : new Error(String(error)));
   } finally {
-    recreate.disabled = false;
+    if (!disposed) recreate.disabled = false;
   }
+}
+recreate.onclick = () => {
+  void attachOverlay(true);
 };
 let frame = 0;
 function render(time: number) {
   if (animate.checked) mesh.rotation.y = time * 0.0003;
   controls.update();
   renderer.render(scene, camera);
-  overlay.render(camera, time);
+  try {
+    overlay?.render(camera, time);
+  } catch (error) {
+    overlay?.dispose();
+    overlay = undefined;
+    reportError(error instanceof Error ? error : new Error(String(error)));
+  }
   frame = requestAnimationFrame(render);
 }
 frame = requestAnimationFrame(render);
-status.textContent = `${useWebGPU ? 'WebGPU' : 'WebGL'} Three renderer with a separate deck overlay. Drag to orbit; scroll to zoom.`;
+status.textContent = 'Three is running; attaching deck layers…';
 window.addEventListener(
   'pagehide',
   () => {
+    disposed = true;
     cancelAnimationFrame(frame);
     observer.disconnect();
-    overlay.dispose();
+    overlay?.dispose();
     controls.dispose();
     geometry.dispose();
     material.dispose();
@@ -155,3 +173,6 @@ window.addEventListener(
   },
   {once: true}
 );
+
+// The native frame loop is already running; an optional overlay failure cannot stop it.
+void attachOverlay();

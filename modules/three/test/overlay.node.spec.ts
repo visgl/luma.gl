@@ -63,3 +63,22 @@ for (const orthographic of [false, true]) {
     }
   }
 }
+
+test('pixel units are calibrated at the borrowed Three target without moving the camera', () => {
+  const camera = new PerspectiveCamera(60, 2, 0.1, 100);
+  camera.position.z = 10;
+  camera.updateWorldMatrix(true, false);
+  const target = new Vector3(0, 0, 0);
+  const first = makeDeckViewportFromThreeCamera(camera, 400, 200, target);
+  expect(first.focalDistance).toBe(10);
+  expect(first.scale).toBeCloseTo((100 * camera.projectionMatrix.elements[5]) / 10, 10);
+  target.z = -10;
+  const second = makeDeckViewportFromThreeCamera(camera, 400, 200, target);
+  expect(second.focalDistance).toBe(20);
+  expect(second.scale).toBeCloseTo(first.scale / 2, 10);
+  second
+    .project([1, 2, 3])
+    .forEach((value, index) => expect(value).toBeCloseTo(first.project([1, 2, 3])[index], 10));
+  expect(camera.position.z).toBe(10);
+  expect(target.z).toBe(-10);
+});

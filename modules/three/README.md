@@ -24,6 +24,7 @@ if (!support.supported) throw new Error(support.reason);
 const overlay = await ThreeDeckOverlay.create({
   renderer,
   container,
+  target: controls.target, // Borrowed; follows pan/zoom without changing the camera.
   layers: [new ScatterplotLayer({
     id: 'observations',
     coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
@@ -65,11 +66,17 @@ function render(time) {
 - **Camera:** perspective and orthographic cameras use a snapshot of the host's current
   view/projection matrices, including camera parents, zoom and view offsets. The host
   updates camera matrices; the overlay never writes the camera pose or projection.
-  WebGPU and reversed clip depth are converted to deck's convention. This is one full
+  Pixel-sized symbols are calibrated at `target` (the world origin by default), with
+  perspective scaling away from that depth. Pass the borrowed `controls.target` vector
+  to keep that reference aligned with orbit/pan controls. A target behind the camera
+  uses a reference depth of one world unit.
+  WebGPU and reversed clip depth are converted to deck's convention. Projection's
+  homogeneous scale is normalized for deck's pixel units without changing screen
+  positions or clipping. This is one full
   canvas camera, not XR, stereo, scissor views or geographic projection.
 - **Coordinates:** use `COORDINATE_SYSTEM.CARTESIAN`. Layer positions use the same XYZ axes
   and units as the Three world. The helper `makeDeckViewportFromThreeCamera(camera,
-  width, height)` exposes the same immutable matrix snapshot for applications needing
+  width, height, target?)` exposes the same immutable matrix snapshot for applications needing
   projection/unprojection; dimensions are CSS pixels.
 - **Size:** every host frame reads the host canvas's CSS size and renderer pixel ratio.
   The application remains responsible for resizing Three and updating its camera's

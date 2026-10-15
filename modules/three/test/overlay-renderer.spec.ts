@@ -55,13 +55,16 @@ for (const backend of ['webgl', 'webgpu']) {
     const drawDeck = vi.spyOn(Deck.prototype, '_drawLayers');
     const errors: Error[] = [];
     const point: [number, number, number] = [0.2, 0.25, 0];
-    const layers = () => [
+    const layers = (opacity = 1) => [
       new ScatterplotLayer({
         id: 'host-points',
+        opacity,
+        transitions: {opacity: 1000},
         coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
         data: [point],
         getPosition: position => position,
         radiusUnits: 'pixels',
+        billboard: true,
         getRadius: 8,
         getFillColor: [0, 0, 255]
       }),
@@ -78,6 +81,7 @@ for (const backend of ['webgl', 'webgpu']) {
         ],
         getPath: record => record.path,
         widthUnits: 'pixels',
+        billboard: true,
         getWidth: 12,
         getColor: [255, 0, 0]
       })
@@ -140,10 +144,25 @@ for (const backend of ['webgl', 'webgpu']) {
           overlay.render(camera, 1000);
           expect(overlay.canvas.width).toBe(width * pixelRatio);
           expect(overlay.canvas.height).toBe(height * pixelRatio);
+          const hostBounds = canvas.getBoundingClientRect();
+          const overlayBounds = overlay.canvas.getBoundingClientRect();
+          for (const dimension of ['x', 'y', 'width', 'height'] as const) {
+            expect(overlayBounds[dimension]).toBe(hostBounds[dimension]);
+          }
+          expect(
+            document.elementFromPoint(hostBounds.x + width / 2, hostBounds.y + height / 2)
+          ).toBe(canvas);
           const normalized = new Vector3(...point).project(camera);
           expect(
             readPixel([
               ((normalized.x + 1) * width * pixelRatio) / 2,
+              ((normalized.y + 1) * height * pixelRatio) / 2
+            ])
+          ).toEqual([0, 0, 255, 255]);
+          // Pixel units must remain useful with a perspective camera far from the origin.
+          expect(
+            readPixel([
+              ((normalized.x + 1) * width * pixelRatio) / 2 + 5 * pixelRatio,
               ((normalized.y + 1) * height * pixelRatio) / 2
             ])
           ).toEqual([0, 0, 255, 255]);
@@ -154,6 +173,12 @@ for (const backend of ['webgl', 'webgpu']) {
               ((pathPosition.y + 1) * height * pixelRatio) / 2
             ])
           ).toEqual([255, 0, 0, 255]);
+          expect(
+            readPixel([
+              ((pathPosition.x + 1) * width * pixelRatio) / 2,
+              ((pathPosition.y + 1) * height * pixelRatio) / 2 + 10 * pixelRatio
+            ])
+          ).toEqual([0, 0, 0, 0]);
           expect(readPixel([1, 1])).toEqual([0, 0, 0, 0]);
           expect(camera.matrixWorld.toArray()).toEqual(cameraMatrix);
         }
@@ -163,6 +188,25 @@ for (const backend of ['webgl', 'webgpu']) {
       expect(initialLayers[0].context.timeline.getTime()).toBe(500);
       overlay.render(perspective, 1500);
       expect(initialLayers[0].context.timeline.getTime()).toBe(500);
+      overlay.setProps({layers: layers(0)});
+      overlay.render(orthographic, 2000);
+      const transitionPosition = new Vector3(...point).project(orthographic);
+      const readTransitionPixel = () =>
+        readPixel([
+          ((transitionPosition.x + 1) * overlay.canvas.width) / 2,
+          ((transitionPosition.y + 1) * overlay.canvas.height) / 2
+        ]);
+      expect(readTransitionPixel()).toEqual([0, 0, 255, 255]);
+      overlay.render(orthographic, 2500);
+      const middlePixel = readTransitionPixel();
+      expect(middlePixel[2]).toBeGreaterThan(0);
+      expect(middlePixel[2]).toBeLessThan(255);
+      expect(middlePixel[3]).toBe(middlePixel[2]);
+      await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+      overlay.render(orthographic, 2500);
+      expect(readTransitionPixel()).toEqual(middlePixel);
+      overlay.render(orthographic, 3000);
+      expect(readTransitionPixel()).toEqual([0, 0, 0, 0]);
       const frames = drawDeck.mock.calls.length;
       await new Promise<void>(resolve =>
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
@@ -207,6 +251,9 @@ for (const backend of ['webgl', 'webgpu']) {
       container.style.display = 'block';
       renderer.render(scene, perspective);
       overlay.render(perspective);
+      expect(overlay.canvas.getBoundingClientRect().toJSON()).toEqual(
+        canvas.getBoundingClientRect().toJSON()
+      );
       expect(errors).toEqual([]);
       if (hostContext)
         expect(hostContext.getParameter(hostContext.CURRENT_PROGRAM)).toBe(hostProgram);
