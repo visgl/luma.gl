@@ -187,9 +187,8 @@ export async function createGeographicComparison(
             selectObject(info.object?.id);
           }
         },
-        onHover: info => {
-          canvas.style.cursor = info.picked ? 'pointer' : 'grab';
-        },
+        getCursor: ({isDragging, isHovering}) =>
+          isDragging ? 'grabbing' : isHovering ? 'pointer' : 'grab',
         getTooltip: info => (typeof info.object?.id === 'string' ? info.object.id : null),
         onError: error => {
           onError(error);
