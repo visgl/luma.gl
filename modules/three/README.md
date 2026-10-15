@@ -459,11 +459,9 @@ Picking uses the active viewport's synchronized camera, including local Mercator
 origins. It never opens, clears, ends or submits deck's pass, or takes ownership of
 source materials, geometries, scene roots or the device.
 
-This first version returns root-level IDs. Individual instance IDs, automatic
-highlighting (`autoHighlight`), `unproject3D`, custom `fragmentNode` materials,
-transmission and nested rendering remain unsupported. Use callbacks to implement
-highlighting. `ThreeMeshLayer` still has its separate non-pickable basic-material
-contract. The compute buffer bridge into upstream `WebGPURenderer` is independent
+This version returns root-level IDs. Individual instance IDs, `unproject3D`, custom
+`fragmentNode` materials, transmission and nested rendering remain unsupported.
+`ThreeMeshLayer` still has its separate non-pickable basic-material contract. The compute buffer bridge into upstream `WebGPURenderer` is independent
 of this prepared-scene path.
 
 Low-level callers may use `adapter.drawPicking(scene, camera, pass, getColor,
@@ -477,6 +475,47 @@ Browser acceptance tests mix Three roots and native polygons, reverse layer orde
 check alpha holes and TSL-deformed vertices, replace/reorder roots while preserving
 IDs, and query visible objects in a rectangle. Normal PBR/geographic comparison
 tests continue to check color parity and caller ownership.
+
+
+### Hover and controlled highlighting
+
+`ThreeSceneLayer` supports deck's `autoHighlight`, `highlightColor` and
+`highlightedObjectIndex` props for the same roots listed in `pickingObjects`:
+
+```ts
+new ThreeSceneLayer({
+  id: 'models', adapter, scene, camera,
+  pickable: true,
+  pickingObjects,
+  autoHighlight: true,
+  highlightColor: info => info.object?.id === 'vehicle-17'
+    ? [255, 190, 70, 128] : [80, 180, 255, 128]
+});
+// Controlled selection: use the current array index; -1 suppresses hover highlighting.
+const selected = layer.clone({highlightedObjectIndex: selectedIndex});
+```
+
+Mouse leave clears automatic highlighting. An integer `highlightedObjectIndex`
+overrides hover; use `null` to return control to hover. Controlled indices are
+positional, so recompute them from your application ID after replacing/reordering
+`pickingObjects`. A constant RGB color defaults to alpha 255; RGBA alpha controls
+source-over tint strength. A color accessor is evaluated by deck on hover, as for
+native layers; use a constant color for controlled selection.
+
+The tint is composited over the final display color, after Three's color conversion.
+All rendered descendants of the selected root share it; a nested listed root has
+its own identity. Shared materials and source colors/emissive values remain unchanged.
+Alpha-test holes and fully transparent fragments retain their coverage, normal depth
+and blending still apply, and picking always writes the original IDs. Unselected
+roots and unlisted geometry receive no tint. No additional render pass is opened.
+The separate highlighting shader context preserves normal PBR output when disabled.
+Custom `fragmentNode` materials are unsupported while highlighting is active.
+
+At the lower-level adapter boundary, `drawHighlighted(scene, camera, pass, getColor)`
+accepts normalized display-space RGBA per rendered object; return `null` for no tint.
+It borrows the pass and source scene with the same preparation and ownership rules
+as `draw`. The geographic example enables hover tinting for Lantern roots and native
+buildings in the deck pane; click selection remains synchronized across both panes.
 
 ## Geographic deck exploration
 

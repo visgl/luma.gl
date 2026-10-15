@@ -163,10 +163,12 @@ test('local meter origin explicitly rejects Cartesian viewports', () => {
 test('scene picking maps descendant hits to application IDs and safely disables roots', () => {
   const device = {type: 'webgpu'};
   const draw = vi.fn();
+  const drawHighlighted = vi.fn<import('../src/objects').ThreeSceneAdapter['drawHighlighted']>();
   const drawPicking = vi.fn<import('../src/objects').ThreeSceneAdapter['drawPicking']>();
   const adapter = {
     device,
     draw,
+    drawHighlighted,
     drawPicking
   } as unknown as import('../src/objects').ThreeSceneAdapter;
   const first = new Group();
@@ -207,6 +209,22 @@ test('scene picking maps descendant hits to application IDs and safely disables 
   expect(layer.getPickingInfo({info, mode: 'query', sourceLayer: null}).object).toBe(entries[1]);
   layer.draw({renderPass: pass});
   expect(draw).toHaveBeenCalledWith(layer.props.scene, layer.props.camera, pass);
+  layer.setShaderModuleProps({
+    picking: {highlightedObjectColor: [1, 0, 0], highlightColor: [80, 160, 240, 128]}
+  });
+  layer.draw({renderPass: pass});
+  const highlight = drawHighlighted.mock.calls[0][3];
+  expect(highlight(child)).toEqual([80 / 255, 160 / 255, 240 / 255, 128 / 255]);
+  expect(highlight(second)).toBeNull();
+  expect(highlight(new Group())).toBeNull();
+  // Partial module updates from a picking pass must preserve the hover state.
+  layer.setShaderModuleProps({picking: {isActive: true}});
+  layer.draw({renderPass: pass, shaderModuleProps: {picking: {isActive: true}}});
+  expect(drawHighlighted).toHaveBeenCalledTimes(1);
+  layer.setShaderModuleProps({picking: {highlightedObjectColor: null}});
+  layer.draw({renderPass: pass});
+  expect(draw).toHaveBeenCalledTimes(2);
+
   expect(() =>
     layer.draw({
       renderPass: pass,

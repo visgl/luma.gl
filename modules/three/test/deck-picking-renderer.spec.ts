@@ -4,7 +4,7 @@
 import {expect, test, vi} from 'vitest';
 import {Deck, OrbitView} from '@deck.gl/core';
 import {PolygonLayer} from '@deck.gl/layers';
-import {Texture, luma} from '@luma.gl/core';
+import {Buffer, Texture, luma} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 import {
   Camera,
@@ -56,6 +56,12 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
   const left = new Group();
   left.position.set(-1, 0, 1);
   left.add(new Mesh(geometry, material));
+  const descendant = new Mesh(geometry, material);
+  descendant.position.y = 1;
+  left.add(descendant);
+  const sharedMaterialOccluder = new Mesh(geometry, material);
+  sharedMaterialOccluder.position.set(-1, -1, 1);
+  scene.add(sharedMaterialOccluder);
   let right = new Group();
   right.position.set(1, 0, 1);
   right.add(new Mesh(geometry, deformedMaterial));
@@ -100,6 +106,22 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
   let deck: Deck<OrbitView> | undefined;
   let nativeHeight = 0;
   let reverse = false;
+  let highlightedObjectIndex: number | null = null;
+  let autoHighlight = false;
+  let highlightColor: number[] | ((info: import('@deck.gl/core').PickingInfo) => number[]) = [
+    255, 0, 0, 128
+  ];
+  const readback = device.createBuffer({
+    byteLength: 128 * 128 * 4,
+    usage: Buffer.COPY_DST | Buffer.COPY_SRC
+  });
+  async function pixel(position: [number, number, number]) {
+    color.readBuffer({}, readback);
+    const pixels = await readback.readAsync();
+    const projected = deck!.getViewports()[0].project(position);
+    const offset = (Math.floor(projected[1]) * 128 + Math.floor(projected[0])) * 4;
+    return Array.from(pixels.slice(offset, offset + 4));
+  }
   let entries: ThreeScenePickingObject[] = [
     {id: 'alpha-root', object: left},
     {id: 42, object: right}
@@ -111,7 +133,10 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
       scene,
       camera,
       pickable: true,
-      pickingObjects: entries
+      pickingObjects: entries,
+      highlightedObjectIndex,
+      autoHighlight,
+      highlightColor
     });
     const native = new PolygonLayer({
       id: 'native',
@@ -176,9 +201,65 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
       expect(deformedHit?.index).toBe(1);
       expect(await pick([0, 1, 1])).toBeNull();
     }
+    // Highlight the final display color, retain alpha holes, and leave other roots untouched.
+    const baselineRight = await pixel([1.7, 0, 1]);
+    const baselineOccluder = await pixel([0, 1, 1]);
+    highlightedObjectIndex = 0;
+    await redraw();
+    expect(await pixel([-0.8, 0, 1])).toEqual([255, 127, 127, 255]);
+    expect(await pixel([-0.8, 1, 1])).toEqual([255, 127, 127, 255]);
+    expect(await pixel([-0.8, -1, 1])).toEqual([255, 255, 255, 255]);
+    expect(await pixel([-1.2, 0, 1])).toEqual([0, 255, 0, 255]);
+    expect(await pixel([1.7, 0, 1])).toEqual(baselineRight);
+    expect(await pixel([0, 1, 1])).toEqual(baselineOccluder);
+    expect((await pick([-0.8, 0, 1]))?.object).toBe(entries[0]);
+    // A zero alpha tint restores the normal image; RGB defaults to an opaque tint.
+    highlightColor = [255, 0, 0, 0];
+    await redraw();
+    expect(await pixel([-0.8, 0, 1])).toEqual([255, 255, 255, 255]);
+    highlightColor = [0, 0, 255];
+    highlightedObjectIndex = 1;
+    await redraw();
+    expect(await pixel([1.7, 0, 1])).toEqual([0, 0, 255, 255]);
+    const highlightedPipelines = createPipeline.mock.calls.length;
+    for (const index of [0, 1, 0, 1]) {
+      highlightedObjectIndex = index;
+      await redraw();
+      expect((await pick(index ? [1.7, 0, 1] : [-0.8, 0, 1]))?.index).toBe(index);
+    }
+    expect(createPipeline.mock.calls.length).toBe(highlightedPipelines);
+    expect(material.color.getHex()).toBe(0xffffff);
+    expect(deformedMaterial.opacity).toBe(0.75);
+    // Exercise deck's own hover/accessor path on the managed layer, including mouse leave.
+    highlightedObjectIndex = null;
+    autoHighlight = true;
+    const getHighlightColor = vi.fn(() => [255, 0, 0, 255]);
+    highlightColor = getHighlightColor;
+    await redraw();
+    const hit = (await pick([-0.8, 0, 1]))!;
+    hit.color = hit.layer!.encodePickingColor(hit.index);
+    hit.layer!.updateAutoHighlight(hit);
+    await redraw();
+    expect(getHighlightColor).toHaveBeenCalledWith(hit);
+    expect(await pixel([-0.8, 0, 1])).toEqual([255, 0, 0, 255]);
+    hit.layer!.updateAutoHighlight({...hit, picked: false, index: -1, object: undefined});
+    await redraw();
+    expect(await pixel([-0.8, 0, 1])).toEqual([255, 255, 255, 255]);
+    // A controlled negative index suppresses automatic highlighting.
+    highlightedObjectIndex = -1;
+    await redraw();
+    (await pick([-0.8, 0, 1]))!.layer!.updateAutoHighlight(hit);
+    await redraw();
+    expect(await pixel([-0.8, 0, 1])).toEqual([255, 255, 255, 255]);
+    autoHighlight = false;
+    highlightedObjectIndex = null;
+    highlightColor = [255, 0, 0, 128];
     nativeHeight = 2;
+    highlightedObjectIndex = 0;
     await redraw();
     expect((await pick([-0.8, 0, 1]))?.object.id).toBe('native-square');
+    expect(await pixel([-0.8, 0, 1])).toEqual([0, 255, 0, 255]);
+    highlightedObjectIndex = null;
     nativeHeight = 0;
     left.visible = false;
     occluder.visible = false;
@@ -225,6 +306,9 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
     expect(() =>
       adapter.drawPicking(scene, camera, rejectedPass, () => [1 / 255, 0, 0, 1])
     ).toThrow('fragmentNode');
+    expect(() => adapter.drawHighlighted(scene, camera, rejectedPass, () => [1, 0, 0, 1])).toThrow(
+      'fragmentNode'
+    );
     expect(endRejectedPass).not.toHaveBeenCalled();
     expect(adapter.renderer.getRenderObjectFunction()).toBe(renderObject);
     expect(adapter.renderer.contextNode).toBe(contextNode);
@@ -233,6 +317,11 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
     deformedMaterial.fragmentNode = null;
     await redraw();
     expect((await pick([1.7, 0, 1]))?.object.id).toBe(42);
+    highlightedObjectIndex = 0;
+    highlightColor = [0, 0, 255, 255];
+    await redraw();
+    expect(await pixel([1.7, 0, 1])).toEqual([0, 0, 255, 255]);
+    expect(await pixel([-0.8, 0, 1])).toEqual([255, 255, 255, 255]);
     deck!.finalize();
     deck = undefined;
     expect(disposeGeometry).not.toHaveBeenCalled();
@@ -246,6 +335,7 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
     deformedMaterial.dispose();
     occluderMaterial.dispose();
     alphaTexture.dispose();
+    readback.destroy();
     framebuffer.destroy();
     color.destroy();
     device.destroy();

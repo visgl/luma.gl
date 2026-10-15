@@ -183,7 +183,12 @@ export class ThreeSceneLayer extends Layer<ThreeSceneLayerProps> {
     coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
     pickingObjects: {type: 'object', value: [], compare: false}
   };
-  declare state: {pickingIndices: Map<Object3D, number>; disabledPickingIndices: Set<number>};
+  declare state: {
+    pickingIndices: Map<Object3D, number>;
+    disabledPickingIndices: Set<number>;
+    highlightedObjectColor?: ArrayLike<number> | null;
+    highlightColor?: ArrayLike<number>;
+  };
   override getAttributeManager() {
     return null;
   }
@@ -193,7 +198,6 @@ export class ThreeSceneLayer extends Layer<ThreeSceneLayerProps> {
   override updateState(): void {
     if (
       this.context.device !== this.props.adapter.device ||
-      this.props.autoHighlight ||
       this.props.opacity !== 1 ||
       this.props.extensions.length ||
       this.props.modelMatrix ||
@@ -203,7 +207,7 @@ export class ThreeSceneLayer extends Layer<ThreeSceneLayerProps> {
           this.props.coordinateSystem !== COORDINATE_SYSTEM.CARTESIAN))
     )
       throw new Error(
-        "ThreeSceneLayer requires a prepared adapter on deck's device and a Cartesian or local meter scene without automatic highlighting"
+        "ThreeSceneLayer requires a prepared adapter on deck's device and a Cartesian or local meter scene"
       );
     const pickingIndices = new Map<Object3D, number>();
     const identities = new Set<string | number>();
@@ -214,6 +218,29 @@ export class ThreeSceneLayer extends Layer<ThreeSceneLayerProps> {
       pickingIndices.set(entry.object, index);
     });
     this.setState({pickingIndices});
+  }
+
+  override setShaderModuleProps(
+    ...moduleProps: Parameters<Layer<ThreeSceneLayerProps>['setShaderModuleProps']>
+  ): void {
+    super.setShaderModuleProps(...moduleProps);
+    // deck owns hover/controlled precedence and accessor evaluation, even without a luma Model.
+    for (const properties of moduleProps) {
+      const picking = properties['picking'] as
+        | Pick<ThreeSceneLayer['state'], 'highlightColor' | 'highlightedObjectColor'>
+        | undefined;
+      if (picking?.highlightedObjectColor !== undefined)
+        this.state.highlightedObjectColor = picking.highlightedObjectColor;
+      if (picking?.highlightColor !== undefined) this.state.highlightColor = picking.highlightColor;
+    }
+  }
+
+  private getPickingIndex(object: Object3D): number | undefined {
+    for (let root: Object3D | null = object; root; root = root.parent) {
+      const index = this.state.pickingIndices.get(root);
+      if (index !== undefined) return index;
+    }
+    return undefined;
   }
 
   override getPickingInfo({info}: GetPickingInfoParams): ThreeScenePickingInfo {
@@ -257,11 +284,7 @@ export class ThreeSceneLayer extends Layer<ThreeSceneLayerProps> {
         this.props.camera,
         renderPass,
         object => {
-          let index: number | undefined;
-          for (let root: Object3D | null = object; root; root = root.parent) {
-            index = this.state.pickingIndices.get(root);
-            if (index !== undefined) break;
-          }
+          const index = this.getPickingIndex(object);
           // Unlisted scene geometry remains a depth occluder in deck's shared pick pass.
           if (index === undefined) return [0, 0, 0, 0];
           if (this.state.disabledPickingIndices.has(index)) return null;
@@ -269,6 +292,19 @@ export class ThreeSceneLayer extends Layer<ThreeSceneLayerProps> {
           return [color[0] / 255, color[1] / 255, color[2] / 255, 1];
         },
         PICKING_PARAMETERS
+      );
+    } else if (this.state.highlightedObjectColor && this.state.highlightColor) {
+      const encodedIndex = this.state.highlightedObjectColor;
+      const index = encodedIndex[0] + encodedIndex[1] * 256 + encodedIndex[2] * 65536 - 1;
+      const color = this.state.highlightColor;
+      const highlight: [number, number, number, number] = [
+        color[0] / 255,
+        color[1] / 255,
+        color[2] / 255,
+        (color[3] ?? 255) / 255
+      ];
+      this.props.adapter.drawHighlighted(this.props.scene, this.props.camera, renderPass, object =>
+        this.getPickingIndex(object) === index ? highlight : null
       );
     } else this.props.adapter.draw(this.props.scene, this.props.camera, renderPass);
   }
