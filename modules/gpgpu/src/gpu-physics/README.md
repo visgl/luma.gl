@@ -132,3 +132,51 @@ live wake-up, stack convergence, repeatability, ownership and a 10k sparse scene
 Boxes, capsules, arbitrary collision meshes, joints, continuous collision detection,
 broad-phase acceleration for pathological dense cells, cross-device bitwise
 reproducibility and glTF physics adapters remain outside this sphere module.
+
+## Interactive body controls and surfaces
+
+`planes` accepts up to 32 static rectangles or infinite planes. It overrides the
+legacy `plane` property; an empty array disables all surfaces. Each plane can
+specify a `center`, `normal`, `halfExtents`, `restitution`, `staticFriction`,
+`dynamicFriction`, and `rollingResistance`. Omitted material values inherit the
+world material. A center overrides offset. The first half extent follows the
+same deterministic tangent basis as the original plane: normalize `[normal.z,
+0, -normal.x]` when `abs(normal.y) < 0.9`, otherwise normalize `[0, -normal.z,
+normal.y]`. The second tangent is `cross(normal, firstTangent)`.
+
+After `addToGraph`, body controls submit ordered GPU commands immediately:
+
+```ts
+world.applyImpulse(0, [2, 0, 0]);
+world.applyImpulse(0, [2, 0, 0], [0, 0.1, 0]); // world-space application point
+world.applyAngularImpulse(0, [0, 0, 0.1]);
+world.wakeBody(0);
+world.teleportBody(0, [-3, 0, 0.18]); // clears velocities and resets orientation
+world.setBodyEnabled(0, false);
+```
+
+Submit any already-encoded simulation commands before calling these methods.
+Each impulse executes once, independently of graph substeps. Static and disabled
+bodies ignore impulses. Teleport preserves radius, mass and enabled state;
+optional orientation is normalized. Enabling/disabling clears velocities and
+wakes the body. Disabled bodies use a negative radius in the GPU position buffer,
+retain their mass, and are omitted from integration, contacts and diagnostics.
+Renderers should hide negative-radius bodies.
+
+`await world.readState()` explicitly reads a small-scene snapshot of positions,
+velocities, angular velocities, orientations and sleeping/enabled state. Caller
+buffers must have `COPY_SRC` usage to use this helper. Snapshot radii are positive.
+`getSphereTriggerBodies(snapshot, center, radius)` returns enabled bodies whose
+centers lie within a spherical trigger. It performs no readback and does not
+mutate the simulation. Pocket logic and scoring remain example responsibilities.
+See `examples/experimental/gpu-pool` for a complete consumer.
+
+### Experimental throw controls
+
+`cutInducedThrow` and `spinInducedThrow` default to true. These select whether
+linear relative velocity and angular contact-point velocity, respectively,
+contribute to sphere–sphere tangential friction. With both enabled, the complete
+relative surface velocity drives the existing Coulomb model. Disabling either
+is an educational isolation of that contribution, not a calibrated billiards
+material law. Plane friction is unaffected. The pool contact diagram chooses an
+off-center world-space impulse point to produce top, back and side spin.

@@ -434,3 +434,160 @@ it('GPUSphereWorld validates capacities, materials, aliases and borrowed buffer 
     velocities.destroy();
   }
 });
+
+it('GPUSphereWorld body commands apply impulses once with mass and point torque', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const target = await makeWorld(device, [2, 3, 4, 0.5, 5, 3, 4, 0.5], [0, 0, 0, 0.5, 0, 0, 0, 0], {
+    substeps: 3
+  });
+  try {
+    target.world.applyImpulse(0, [2, 0, 0], [2, 3.5, 4]);
+    target.world.applyAngularImpulse(0, [0, 0, 0.2]);
+    target.world.applyImpulse(1, [10, 0, 0]);
+    let states = await target.world.readState();
+    expect(states[0].velocity).toEqual([1, 0, 0]);
+    expect(states[0].angularVelocity[2]).toBeCloseTo(-4, 5);
+    expect(states[1].velocity).toEqual([0, 0, 0]);
+    target.step(2);
+    states = await target.world.readState();
+    expect(states[0].velocity[0]).toBeCloseTo(1, 5);
+    expect(states[0].position[0]).toBeCloseTo(2.05, 4);
+    target.world.teleportBody(0, [0, 0, 5], [0, 0, 2, 2]);
+    states = await target.world.readState();
+    expect(states[0].position).toEqual([0, 0, 5]);
+    expect(states[0].velocity).toEqual([0, 0, 0]);
+    expect(states[0].angularVelocity).toEqual([0, 0, 0]);
+    expect(Math.hypot(...states[0].orientation)).toBeCloseTo(1, 5);
+  } finally {
+    target.destroy();
+  }
+});
+
+it('GPUSphereWorld disabled bodies do not collide and can be restored and woken', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const target = await makeWorld(
+    device,
+    [0, 0, 0.5, 0.5, 0.8, 0, 0.5, 0.5],
+    [0, 0, 0, 1, 0, 0, 0, 1],
+    {plane: {}, gravity: [0, 0, -9.81], sleepAfter: 0.05}
+  );
+  try {
+    target.world.setBodyEnabled(1, false);
+    target.world.applyImpulse(1, [1, 0, 0]);
+    target.step(30);
+    let states = await target.world.readState();
+    expect(states[0].position[0]).toBe(0);
+    expect(states[0].sleeping).toBe(true);
+    expect(states[1].enabled).toBe(false);
+    expect(states[1].radius).toBe(0.5);
+    expect(states[1].velocity).toEqual([0, 0, 0]);
+    expect((await target.read()).diagnostics.invalidBodies).toBe(0);
+    target.world.wakeBody(0);
+    expect((await target.world.readState())[0].sleeping).toBe(false);
+    target.world.setBodyEnabled(1, true);
+    target.step();
+    states = await target.world.readState();
+    expect(states[1].enabled).toBe(true);
+    expect(states[0].position[0]).toBeLessThan(0);
+  } finally {
+    target.destroy();
+  }
+});
+
+it('GPUSphereWorld finite cushions use their own material and leave pocket gaps', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const target = await makeWorld(
+    device,
+    [0, 0.7, 1, 0.25, 2, 0.7, 1, 0.25],
+    [0, 12, 0, 1, 0, 12, 0, 1],
+    {
+      restitution: 0,
+      staticFriction: 0,
+      dynamicFriction: 0,
+      planes: [{normal: [0, -1, 0], center: [0, 1, 1], halfExtents: [0.5, 0.8], restitution: 0.75}]
+    }
+  );
+  try {
+    target.step(12);
+    const states = await target.world.readState();
+    expect(states[0].velocity[1]).toBeCloseTo(-9, 4);
+    expect(states[0].position[1]).toBeLessThan(0.75);
+    expect(states[1].velocity[1]).toBeCloseTo(12, 4);
+    expect(states[1].position[1]).toBeGreaterThan(0.8);
+  } finally {
+    target.destroy();
+  }
+});
+
+it('GPUSphereWorld corner contacts rebound on both axes and resolve below-plane starts', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const target = await makeWorld(device, [0.8, 0.8, -0.1, 0.25], [2, 2, 0, 1], {
+    iterations: 1,
+    staticFriction: 0,
+    dynamicFriction: 0,
+    restitution: 1,
+    planes: [{}, {normal: [-1, 0, 0], center: [1, 0, 0]}, {normal: [0, -1, 0], center: [0, 1, 0]}]
+  });
+  try {
+    target.step();
+    const [state] = await target.world.readState();
+    expect(state.position).toEqual([0.75, 0.75, 0.25]);
+    expect(state.velocity).toEqual([-2, -2, 0]);
+  } finally {
+    target.destroy();
+  }
+});
+
+it('GPUSphereWorld skin does not stop a pair before impact', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const target = await makeWorld(
+    device,
+    [-0.507, 0, 1, 0.5, 0.507, 0, 1, 0.5],
+    [0.5, 0, 0, 1, -0.5, 0, 0, 1],
+    {
+      restitution: 1,
+      restitutionThreshold: 0,
+      contactSkin: 0.01,
+      staticFriction: 0,
+      dynamicFriction: 0
+    }
+  );
+  try {
+    target.step();
+    expect((await target.world.readState())[0].velocity[0]).toBeCloseTo(0.5, 5);
+    target.step(2);
+    expect((await target.world.readState())[0].velocity[0]).toBeCloseTo(-0.5, 5);
+  } finally {
+    target.destroy();
+  }
+});
+
+it('GPUSphereWorld throw switches independently gate linear and angular contact slip', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  for (const spin of [false, true]) {
+    const results: number[] = [];
+    for (const enabled of [false, true]) {
+      const target = await makeWorld(
+        device,
+        [-0.49, spin ? 0 : -0.005, 1, 0.5, 0.49, 0, 1, 0.5],
+        [1, spin ? 0 : 0.6, 0, 1, -1, 0, 0, 1],
+        {cutInducedThrow: spin ? false : enabled, spinInducedThrow: spin ? enabled : false}
+      );
+      try {
+        if (spin) target.world.applyAngularImpulse(0, [0, 0, 0.2]);
+        target.step();
+        results.push((await target.world.readState())[0].velocity[1]);
+      } finally {
+        target.destroy();
+      }
+    }
+    expect(results[0]).toBeCloseTo(spin ? 0 : 0.6, 4);
+    expect(results[1]).toBeLessThan(results[0] - 0.02);
+  }
+});

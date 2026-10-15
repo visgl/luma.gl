@@ -15,6 +15,7 @@ const CELL_SIZE = ${maximumRadius * 2 + contactSkin};
 const MAXIMUM_RADIUS = ${maximumRadius};
 const MAXIMUM_CONTACTS = ${maximumContacts}u;
 const INVALID_KEY = 0xffffffffu;
+struct Plane {normal: vec4f, right: vec4f, forward: vec4f, center: vec4f, material: vec4f};
 struct Settings {
   gravity: vec4f,
   normal: vec4f,
@@ -23,6 +24,8 @@ struct Settings {
   material: vec4f,
   resting: vec4f,
   solver: vec4f,
+  contactEffects: vec4f,
+  planes: array<Plane, 32>,
 };
 @group(0) @binding(0) var<uniform> settings: Settings;
 fn getCell(point: vec3f) -> vec3i { return vec3i(floor(point / CELL_SIZE)); }
@@ -35,11 +38,11 @@ fn isValidSphere(sphere: vec4f) -> bool {
   return sphere.w > 0.0 && sphere.w <= MAXIMUM_RADIUS &&
     all(abs(sphere.xyz) < vec3f(CELL_SIZE * 100000000.0));
 }
-fn getFloorDelta(point: vec3f) -> vec3f {
-  let relative = point - settings.normal.xyz * settings.normal.w;
-  let horizontal = clamp(dot(relative, settings.right.xyz), -settings.right.w, settings.right.w);
-  let vertical = clamp(dot(relative, settings.forward.xyz), -settings.forward.w, settings.forward.w);
-  return relative - settings.right.xyz * horizontal - settings.forward.xyz * vertical;
+fn getPlaneDelta(point: vec3f, plane: Plane) -> vec3f {
+  let relative = point - plane.center.xyz;
+  let horizontal = clamp(dot(relative, plane.right.xyz), -plane.right.w, plane.right.w);
+  let vertical = clamp(dot(relative, plane.forward.xyz), -plane.forward.w, plane.forward.w);
+  return relative - plane.right.xyz * horizontal - plane.forward.xyz * vertical;
 }
 fn getContactNormal(delta: vec3f, first: u32, second: u32) -> vec3f {
   let distance = length(delta);
@@ -91,7 +94,7 @@ fn main(@builtin(global_invocation_id) invocation: vec3u) {
   let sphere = positions[index];
   var key = INVALID_KEY;
   if (isValidSphere(sphere)) { key = hashCell(getCell(sphere.xyz)); }
-  else { atomicAdd(&diagnostics[1], 1u); }
+  else if (sphere.w >= 0.0 || !isValidSphere(vec4f(sphere.xyz, -sphere.w))) { atomicAdd(&diagnostics[1], 1u); }
   keys[index] = key; values[index] = index;
 }
 `;
@@ -189,13 +192,13 @@ export const SOLVE_SPHERE_CONTACTS = /* wgsl */ `
 @group(0) @binding(6) var<storage, read_write> outputPositions: array<vec4f>;
 @group(0) @binding(7) var<storage, read_write> outputVelocities: array<vec4f>;
 @group(0) @binding(8) var<storage, read_write> outputAngularVelocities: array<vec4f>;
-fn getFrictionImpulse(relative: vec3f, normal: vec3f, normalImpulse: f32, denominator: f32) -> vec3f {
+fn getFrictionImpulse(relative: vec3f, normal: vec3f, normalImpulse: f32, denominator: f32, staticFriction: f32, dynamicFriction: f32) -> vec3f {
   let tangent = relative - normal * dot(relative, normal);
   let speed = length(tangent);
   if (speed < 0.000001 || normalImpulse <= 0.0) { return vec3f(0.0); }
   let stoppingImpulse = speed / denominator;
-  let limit = select(settings.material.w * normalImpulse, stoppingImpulse,
-    stoppingImpulse <= settings.material.z * normalImpulse);
+  let limit = select(dynamicFriction * normalImpulse, stoppingImpulse,
+    stoppingImpulse <= staticFriction * normalImpulse);
   return -tangent * min(stoppingImpulse, limit) / speed;
 }
 @compute @workgroup_size(64)
@@ -213,32 +216,38 @@ fn main(@builtin(global_invocation_id) invocation: vec3u) {
       let neighbor = positions[other]; let neighborVelocity = velocities[other];
       let delta = sphere.xyz - neighbor.xyz; let distance = length(delta);
       let normal = getContactNormal(delta, index, other);
-      if (distance > sphere.w + neighbor.w + settings.solver.z) { continue; }
+      if (distance > sphere.w + neighbor.w) { continue; }
       let inverseMass = velocity.w + max(neighborVelocity.w, 0.0);
       let degree = max(1u, max(offsets[index + 1u] - offsets[index], offsets[other + 1u] - offsets[other]));
       let relaxation = 1.0 / f32(degree);
       let penetration = max(sphere.w + neighbor.w - distance - settings.solver.z * 0.1, 0.0);
       point += normal * penetration * velocity.w / inverseMass * settings.solver.w * relaxation;
-      let relative = velocity.xyz + cross(angular.xyz, -normal * sphere.w) -
-        neighborVelocity.xyz - cross(angularVelocities[other].xyz, normal * neighbor.w);
+      let linearRelative = velocity.xyz - neighborVelocity.xyz;
+      let angularRelative = cross(angular.xyz, -normal * sphere.w) - cross(angularVelocities[other].xyz, normal * neighbor.w);
+      let relative = linearRelative + angularRelative;
+      let frictionRelative = linearRelative * settings.contactEffects.x + angularRelative * settings.contactEffects.y;
       let normalImpulse = max((bitcast<f32>(contact.y) - dot(relative, normal)) / inverseMass, 0.0);
-      let tangentImpulse = getFrictionImpulse(relative, normal, normalImpulse, 3.5 * inverseMass);
+      let tangentImpulse = getFrictionImpulse(frictionRelative, normal, normalImpulse, 3.5 * inverseMass, settings.material.z, settings.material.w);
       linearVelocity += (normal * normalImpulse + tangentImpulse) * velocity.w * relaxation;
       angularVelocity += cross(-normal * sphere.w, tangentImpulse) * inverseInertia * relaxation;
     }
-    let floorDelta = getFloorDelta(point);
-    let floorDistance = length(floorDelta);
-    let signedHeight = dot(point, settings.normal.xyz) - settings.normal.w;
-    if (signedHeight > -sphere.w && floorDistance <= sphere.w + settings.solver.z) {
-      let normal = select(settings.normal.xyz, floorDelta / max(floorDistance, 0.000001), signedHeight > 0.0);
-      point += normal * max(sphere.w - floorDistance, 0.0);
-      let relative = linearVelocity + cross(angularVelocity, -normal * sphere.w);
-      let closing = dot(relative, normal);
-      let bounce = select(0.0, -settings.material.y * closing, closing < -settings.solver.y);
-      let normalImpulse = max((bounce - closing) / velocity.w, 0.0);
-      let tangentImpulse = getFrictionImpulse(relative, normal, normalImpulse, 3.5 * velocity.w);
-      linearVelocity += (normal * normalImpulse + tangentImpulse) * velocity.w;
-      angularVelocity += cross(-normal * sphere.w, tangentImpulse) * inverseInertia;
+    for (var planeIndex = 0u; planeIndex < u32(settings.resting.w); planeIndex++) {
+      let plane = settings.planes[planeIndex];
+      let floorDelta = getPlaneDelta(point, plane);
+      let floorDistance = length(floorDelta);
+      let signedHeight = dot(point, plane.normal.xyz) - plane.normal.w;
+      if (signedHeight > -sphere.w && floorDistance <= sphere.w) {
+        let normal = select(plane.normal.xyz, floorDelta / max(floorDistance, 0.000001), signedHeight > 0.0);
+        let penetration = select(sphere.w - signedHeight, sphere.w - floorDistance, signedHeight > 0.0);
+        point += normal * max(penetration, 0.0);
+        let relative = linearVelocity + cross(angularVelocity, -normal * sphere.w);
+        let closing = dot(relative, normal);
+        let bounce = select(0.0, -plane.material.x * closing, closing < -settings.solver.y);
+        let normalImpulse = max((bounce - closing) / velocity.w, 0.0);
+        let tangentImpulse = getFrictionImpulse(relative, normal, normalImpulse, 3.5 * velocity.w, plane.material.y, plane.material.z);
+        linearVelocity += (normal * normalImpulse + tangentImpulse) * velocity.w;
+        angularVelocity += cross(-normal * sphere.w, tangentImpulse) * inverseInertia;
+      }
     }
   }
   outputPositions[index] = vec4f(point, sphere.w);
@@ -263,18 +272,29 @@ fn main(@builtin(global_invocation_id) invocation: vec3u) {
   let sphere = positions[index]; var velocity = velocities[index];
   var angular = angularVelocities[index]; var sleep = sleepStates[index];
   if (velocity.w <= 0.0 || !isValidSphere(sphere)) { return; }
-  let grounded = length(getFloorDelta(sphere.xyz)) <= sphere.w + settings.solver.z &&
-    dot(sphere.xyz, settings.normal.xyz) - settings.normal.w >= 0.0;
+  var grounded = false;
+  var supportNormal = vec3f(0.0, 0.0, 1.0);
+  var rollingResistance = 0.0;
+  var supportWeight = -1e30;
+  for (var planeIndex = 0u; planeIndex < u32(settings.resting.w); planeIndex++) {
+    let plane = settings.planes[planeIndex];
+    if (length(getPlaneDelta(sphere.xyz, plane)) <= sphere.w + settings.solver.z &&
+      dot(sphere.xyz, plane.normal.xyz) - plane.normal.w >= 0.0) {
+      grounded = true;
+      let weight = dot(plane.normal.xyz, -settings.gravity.xyz);
+      if (weight > supportWeight) {supportWeight = weight; supportNormal = plane.normal.xyz; rollingResistance = plane.material.w;}
+    }
+  }
   var supported = grounded;
   for (var cursor = offsets[index]; cursor < offsets[index + 1u]; cursor++) {
     let neighbor = positions[contacts[cursor].x];
     supported = supported || distance(sphere.xyz, neighbor.xyz) <= sphere.w + neighbor.w + settings.solver.z;
   }
   if (grounded) {
-    let normalVelocity = settings.normal.xyz * dot(velocity.xyz, settings.normal.xyz);
+    let normalVelocity = supportNormal * dot(velocity.xyz, supportNormal);
     let tangentVelocity = velocity.xyz - normalVelocity;
     let speed = max(length(tangentVelocity), length(angular.xyz) * sphere.w);
-    let damping = max(0.0, 1.0 - settings.resting.x * length(settings.gravity.xyz) * settings.material.x / max(speed, 0.000001));
+    let damping = max(0.0, 1.0 - rollingResistance * max(supportWeight, 0.0) * settings.material.x / max(speed, 0.000001));
     velocity = vec4f(normalVelocity + tangentVelocity * damping, velocity.w);
     angular = vec4f(angular.xyz * damping, angular.w);
   }
@@ -290,5 +310,37 @@ fn main(@builtin(global_invocation_id) invocation: vec3u) {
   let derivative = vec4f(orientation.w * angular.xyz + cross(angular.xyz, orientation.xyz), -dot(angular.xyz, orientation.xyz));
   orientations[index] = normalize(orientation + derivative * (0.5 * settings.material.x));
   velocities[index] = velocity; angularVelocities[index] = angular; sleepStates[index] = sleep;
+}
+`;
+
+/** Commands submit independently of simulation steps, so each impulse executes exactly once. */
+export const CONTROL_SPHERE = /* wgsl */ `
+struct Command {control: vec4f, value: vec4f, point: vec4f, orientation: vec4f, reserved: vec4f};
+@group(0) @binding(0) var<uniform> command: Command;
+@group(0) @binding(1) var<storage, read_write> positions: array<vec4f>;
+@group(0) @binding(2) var<storage, read_write> velocities: array<vec4f>;
+@group(0) @binding(3) var<storage, read_write> angularVelocities: array<vec4f>;
+@group(0) @binding(4) var<storage, read_write> orientations: array<vec4f>;
+@group(0) @binding(5) var<storage, read_write> sleepStates: array<vec4f>;
+@compute @workgroup_size(1) fn main() {
+  let index = u32(command.control.x); let operation = u32(command.control.y);
+  var sphere = positions[index]; var velocity = velocities[index]; var angular = angularVelocities[index];
+  let inverseInertia = 2.5 * velocity.w / max(sphere.w * sphere.w, 0.000001);
+  if (operation == 1u && sphere.w > 0.0 && velocity.w > 0.0) {
+    velocity = vec4f(velocity.xyz + command.value.xyz * velocity.w, velocity.w);
+    if (command.control.z > 0.0) {
+      angular = vec4f(angular.xyz + cross(command.point.xyz - sphere.xyz, command.value.xyz) * inverseInertia, angular.w);
+    }
+  }
+  if (operation == 2u && sphere.w > 0.0 && velocity.w > 0.0) {
+    angular = vec4f(angular.xyz + command.value.xyz * inverseInertia, angular.w);
+  }
+  if (operation == 4u) {
+    sphere = vec4f(command.value.xyz, sphere.w); orientations[index] = normalize(command.orientation);
+  }
+  if (operation == 5u) {sphere.w = abs(sphere.w) * command.value.x;}
+  if (operation == 4u || operation == 5u) {velocity = vec4f(0.0, 0.0, 0.0, velocity.w); angular = vec4f(0.0);}
+  positions[index] = sphere; velocities[index] = velocity; angularVelocities[index] = angular;
+  sleepStates[index] = vec4f(0.0);
 }
 `;

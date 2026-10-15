@@ -16030,6 +16030,20 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-experimental-gpu-pool@workspace:examples/experimental/gpu-pool":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-experimental-gpu-pool@workspace:examples/experimental/gpu-pool"
+  dependencies:
+    "@luma.gl/core": "npm:10.0.0-alpha.4"
+    "@luma.gl/engine": "npm:10.0.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:10.0.0-alpha.4"
+    "@luma.gl/shadertools": "npm:10.0.0-alpha.4"
+    "@luma.gl/webgpu": "npm:10.0.0-alpha.4"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-experimental-gpu-sort@workspace:examples/experimental/gpu-sort":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-experimental-gpu-sort@workspace:examples/experimental/gpu-sort"

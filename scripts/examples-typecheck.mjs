@@ -28,6 +28,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'experimental/deferred-rendering',
   'experimental/gpu-frustum-culling',
   'experimental/gpu-sphere-world',
+  'experimental/gpu-pool',
   'experimental/gpu-trace-viewer',
   'deck/sketch-edges',
   'deck/scene-buffers',
@@ -81,6 +82,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
 const PACKAGE_FREE_EXAMPLE_WORKSPACES = new Set(['showcase/raster-lab','tutorials/slang-particles']);
 const NATIVE_TYPESCRIPT_CONFIG_WORKSPACES = new Set([
   'experimental/gpu-sphere-world',
+  'experimental/gpu-pool',
   'deck/globe-clouds',
   'deck/fireflies',
   'deck/hdr-night-lighting',

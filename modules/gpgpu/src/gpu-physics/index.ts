@@ -4,6 +4,8 @@
 
 export {
   GPUSphereWorld,
+  getSphereTriggerBodies,
+  type GPUSphereBodyState,
   decodeGPUSphereWorldDiagnostics,
   type GPUSphereWorldDiagnostics,
   type GPUSphereWorldParameters,

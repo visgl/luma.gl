@@ -20,7 +20,8 @@ import {
   ASSIGN_SPHERE_CELLS,
   getSphereContactShader,
   SOLVE_SPHERE_CONTACTS,
-  FINALIZE_SPHERES
+  FINALIZE_SPHERES,
+  CONTROL_SPHERE
 } from './sphere-world-shaders';
 
 type Vector3 = readonly [number, number, number];
@@ -31,12 +32,20 @@ export type GPUSpherePlane = {
   /** Signed distance along the normalized normal. */
   offset?: number;
   halfExtents?: readonly [number, number];
+  /** Rectangle center; defaults to normal * offset. */
+  center?: Vector3;
+  restitution?: number;
+  staticFriction?: number;
+  dynamicFriction?: number;
+  rollingResistance?: number;
 };
 
 /** Live values. Update once before submitting the next batch of graph encodings. */
 export type GPUSphereWorldParameters = {
   gravity?: Vector3;
   plane?: GPUSpherePlane;
+  /** Up to 32 static surfaces. Overrides plane; [] removes all surfaces. */
+  planes?: readonly GPUSpherePlane[];
   restitution?: number;
   staticFriction?: number;
   dynamicFriction?: number;
@@ -45,6 +54,9 @@ export type GPUSphereWorldParameters = {
   sleepLinearSpeed?: number;
   sleepAngularSpeed?: number;
   restitutionThreshold?: number;
+  /** Experimental throw controls: include linear or angular surface slip in sphere friction. */
+  cutInducedThrow?: boolean;
+  spinInducedThrow?: boolean;
 };
 
 export type GPUSphereWorldProps = GPUSphereWorldParameters & {
@@ -100,6 +112,32 @@ export function decodeGPUSphereWorldDiagnostics(data: Uint32Array): GPUSphereWor
   };
 }
 
+/** CPU snapshot for interaction; disabled bodies have positive radius here and negative radius in the GPU buffer. */
+export type GPUSphereBodyState = {
+  index: number;
+  position: [number, number, number];
+  radius: number;
+  enabled: boolean;
+  velocity: [number, number, number];
+  inverseMass: number;
+  angularVelocity: [number, number, number];
+  orientation: [number, number, number, number];
+  sleeping: boolean;
+};
+
+/** Return enabled bodies whose centers are inside a spherical trigger. No implicit GPU readback. */
+export function getSphereTriggerBodies(
+  states: readonly GPUSphereBodyState[],
+  center: Vector3,
+  radius: number
+): GPUSphereBodyState[] {
+  return states.filter(
+    body =>
+      body.enabled &&
+      Math.hypot(...body.position.map((value, axis) => value - center[axis])) <= radius
+  );
+}
+
 type StateViews = {
   positions: GraphDataView<'float32x4'>;
   velocities: GraphDataView<'float32x4'>;
@@ -129,8 +167,13 @@ export class GPUSphereWorld {
   readonly maximumContacts: number;
   readonly contactSkin: number;
   readonly broadPhase: 'grid' | 'all-pairs';
-  private parameters: Required<Omit<GPUSphereWorldParameters, 'plane'>> & {plane: GPUSpherePlane};
+  private parameters: Required<Omit<GPUSphereWorldParameters, 'plane' | 'planes'>> & {
+    plane: GPUSpherePlane;
+    planes?: readonly GPUSpherePlane[];
+  };
   private settings?: Buffer;
+  private commandSettings?: Buffer;
+  private bodyControl?: Computation;
   private ownedBuffers: Buffer[] = [];
   private added = false;
   private wakeRevision = 1;
@@ -177,6 +220,7 @@ export class GPUSphereWorld {
     this.parameters = {
       gravity: props.gravity ?? [0, 0, -9.81],
       plane: props.plane ?? {offset: props.floor ?? 0},
+      planes: props.planes,
       restitution: props.restitution ?? 0.45,
       staticFriction:
         props.staticFriction ??
@@ -190,7 +234,9 @@ export class GPUSphereWorld {
       sleepAfter: props.sleepAfter ?? 0.75,
       sleepLinearSpeed: props.sleepLinearSpeed ?? 0.025,
       sleepAngularSpeed: props.sleepAngularSpeed ?? 0.05,
-      restitutionThreshold: props.restitutionThreshold ?? 0.5
+      restitutionThreshold: props.restitutionThreshold ?? 0.5,
+      cutInducedThrow: props.cutInducedThrow ?? true,
+      spinInducedThrow: props.spinInducedThrow ?? true
     };
     this.update({});
     const buffers = [
@@ -254,6 +300,32 @@ export class GPUSphereWorld {
     }
     if (next.restitution > 1 || next.dynamicFriction > next.staticFriction)
       throw new Error('Invalid sphere friction or restitution');
+    const planes = next.planes ?? [next.plane];
+    if (planes.length > 32) throw new Error('Too many sphere planes');
+    for (const plane of planes) {
+      const normal = plane.normal ?? [0, 0, 1];
+      const material = [
+        plane.restitution ?? next.restitution,
+        plane.staticFriction ?? next.staticFriction,
+        plane.dynamicFriction ?? next.dynamicFriction,
+        plane.rollingResistance ?? next.rollingResistance
+      ];
+      if (
+        ![
+          ...normal,
+          ...(plane.center ?? [0, 0, 0]),
+          plane.offset ?? 0,
+          ...(plane.halfExtents ?? [1, 1]),
+          ...material
+        ].every(Number.isFinite) ||
+        Math.hypot(...normal) < 0.000001 ||
+        plane.halfExtents?.some(value => value <= 0) ||
+        material.some(value => value < 0) ||
+        material[0] > 1 ||
+        material[2] > material[1]
+      )
+        throw new Error('Invalid sphere plane material or geometry');
+    }
     const previous = this.parameters;
     const flatten = (values: typeof next): number[] => [
       ...values.gravity,
@@ -262,16 +334,38 @@ export class GPUSphereWorld {
       ...(values.plane.halfExtents ?? [1e10, 1e10]),
       values.staticFriction,
       values.dynamicFriction,
-      values.rollingResistance
+      values.rollingResistance,
+      Number(values.cutInducedThrow),
+      Number(values.spinInducedThrow),
+      ...(values.planes ?? [values.plane]).flatMap(plane => [
+        ...(plane.normal ?? [0, 0, 1]),
+        ...(plane.center ?? [0, 0, 0]),
+        plane.offset ?? 0,
+        ...(plane.halfExtents ?? [1e10, 1e10]),
+        plane.restitution ?? values.restitution,
+        plane.staticFriction ?? values.staticFriction,
+        plane.dynamicFriction ?? values.dynamicFriction,
+        plane.rollingResistance ?? values.rollingResistance
+      ])
     ];
     const previousValues = flatten(previous);
-    if (flatten(next).some((value, index) => Math.abs(value - previousValues[index]) > 0.00001))
+    if (
+      flatten(next).length !== previousValues.length ||
+      flatten(next).some((value, index) => Math.abs(value - previousValues[index]) > 0.00001)
+    )
       this.wakeRevision = (this.wakeRevision % 16_000_000) + 1;
     this.parameters = {
       ...next,
       gravity: [...next.gravity],
+      planes: next.planes?.map(plane => ({
+        ...plane,
+        normal: plane.normal ? [...plane.normal] : undefined,
+        center: plane.center ? [...plane.center] : undefined,
+        halfExtents: plane.halfExtents ? [...plane.halfExtents] : undefined
+      })),
       plane: {
         ...next.plane,
+        center: next.plane.center ? [...next.plane.center] : undefined,
         normal: [...normal],
         halfExtents: next.plane.halfExtents ? [...next.plane.halfExtents] : undefined
       }
@@ -296,7 +390,7 @@ export class GPUSphereWorld {
       this.ownedBuffers.push(buffer);
       return buffer;
     };
-    this.settings = allocate('settings', 112, true);
+    this.settings = allocate('settings', 128 + 32 * 80, true);
     this.orientations ??= allocate('orientations', this.count * 16);
     this.angularVelocities ??= allocate('angular-velocities', this.count * 16);
     this.sleepStates ??= allocate('sleep-states', this.count * 16);
@@ -318,7 +412,7 @@ export class GPUSphereWorld {
         ),
         {format: 'float32x4', length}
       );
-    const settings = importView('settings', this.settings, 7, true);
+    const settings = importView('settings', this.settings, 8 + 32 * 5, true);
     const state: StateViews = {
       positions: importView('positions', this.positions, this.count),
       velocities: importView('velocities', this.velocities, this.count),
@@ -555,12 +649,149 @@ export class GPUSphereWorld {
         bind('diagnostics', diagnostics, 8, 'write')
       ]);
     }
+    this.commandSettings = allocate('body-command', 80, true);
+    this.bodyControl = new Computation(graph.device, {
+      id: `${this.id}-body-control`,
+      source: CONTROL_SPHERE,
+      bindings: {
+        command: this.commandSettings,
+        positions: this.positions,
+        velocities: this.velocities,
+        angularVelocities: this.angularVelocities,
+        orientations: this.orientations,
+        sleepStates: this.sleepStates
+      },
+      shaderLayout: {
+        bindings: [
+          {name: 'command', type: 'uniform', group: 0, location: 0},
+          ...['positions', 'velocities', 'angularVelocities', 'orientations', 'sleepStates'].map(
+            (name, index): BindingDeclaration => ({
+              name,
+              type: 'storage',
+              group: 0,
+              location: index + 1
+            })
+          )
+        ]
+      }
+    });
     this.added = true;
     this.writeSettings();
   }
 
+  /** Submit a world-space impulse, optionally at a world-space point, and wake the body. */
+  applyImpulse(index: number, impulse: Vector3, point?: Vector3): void {
+    this.submitBodyCommand(index, 1, impulse, point ?? [0, 0, 0], point ? 1 : 0);
+  }
+
+  /** Submit a world-space angular impulse (torque integrated over time). */
+  applyAngularImpulse(index: number, impulse: Vector3): void {
+    this.submitBodyCommand(index, 2, impulse);
+  }
+
+  wakeBody(index: number): void {
+    this.submitBodyCommand(index, 3);
+  }
+
+  /** Move a body, clear its velocities, set its orientation and wake it. Preserves enabled state. */
+  teleportBody(
+    index: number,
+    position: Vector3,
+    orientation: readonly [number, number, number, number] = [0, 0, 0, 1]
+  ): void {
+    if (!orientation.every(Number.isFinite) || Math.hypot(...orientation) < 0.000001)
+      throw new Error('Invalid sphere orientation');
+    this.submitBodyCommand(index, 4, position, [0, 0, 0], 0, orientation);
+  }
+
+  /** Disabled bodies retain radius/mass but do not integrate or collide. Clears velocities. */
+  setBodyEnabled(index: number, enabled: boolean): void {
+    this.submitBodyCommand(index, 5, [enabled ? 1 : -1, 0, 0]);
+  }
+
+  /** Explicit small-scene snapshot. Queue copies together before awaiting the GPU. */
+  async readState(): Promise<GPUSphereBodyState[]> {
+    if (!this.bodyControl) throw new Error('Add sphere world to a graph first');
+    const buffers = [
+      this.positions,
+      this.velocities,
+      this.angularVelocities!,
+      this.orientations!,
+      this.sleepStates!
+    ];
+    const sleepAfter = this.parameters.sleepAfter;
+    const data = await Promise.all(
+      buffers.map(
+        async buffer => new Float32Array((await buffer.readAsync(0, this.count * 16)).buffer)
+      )
+    );
+    const vector = (values: Float32Array, offset: number): [number, number, number] => [
+      values[offset],
+      values[offset + 1],
+      values[offset + 2]
+    ];
+    return Array.from({length: this.count}, (_, index) => {
+      const offset = index * 4;
+      return {
+        index,
+        position: vector(data[0], offset),
+        radius: Math.abs(data[0][offset + 3]),
+        enabled: data[0][offset + 3] > 0,
+        velocity: vector(data[1], offset),
+        inverseMass: data[1][offset + 3],
+        angularVelocity: vector(data[2], offset),
+        orientation: [...vector(data[3], offset), data[3][offset + 3]],
+        sleeping: sleepAfter > 0 && data[4][offset] >= sleepAfter
+      };
+    });
+  }
+
+  private submitBodyCommand(
+    index: number,
+    operation: number,
+    value: Vector3 = [0, 0, 0],
+    point: Vector3 = [0, 0, 0],
+    atPoint = 0,
+    orientation: readonly number[] = [0, 0, 0, 1]
+  ): void {
+    if (!this.bodyControl || !this.commandSettings)
+      throw new Error('Add sphere world to a graph first');
+    if (
+      !Number.isInteger(index) ||
+      index < 0 ||
+      index >= this.count ||
+      ![...value, ...point].every(Number.isFinite)
+    )
+      throw new Error('Invalid sphere body command');
+    this.commandSettings.write(
+      new Float32Array([
+        index,
+        operation,
+        atPoint,
+        0,
+        ...value,
+        0,
+        ...point,
+        0,
+        ...orientation,
+        0,
+        0,
+        0,
+        0
+      ])
+    );
+    const device = this.positions.device;
+    const encoder = device.createCommandEncoder();
+    const pass = encoder.beginComputePass();
+    this.bodyControl.dispatch(pass, 1, 1, 1);
+    pass.end();
+    device.submit(encoder.finish());
+  }
+
   /** Destroy the compiled graph first. Never destroys caller-supplied state. */
   destroy(): void {
+    this.bodyControl?.destroy();
+    this.bodyControl = undefined;
     for (const buffer of this.ownedBuffers) buffer.destroy();
     this.ownedBuffers = [];
   }
@@ -580,29 +811,65 @@ export class GPUSphereWorld {
       normal[2] * right[0] - normal[0] * right[2],
       normal[0] * right[1] - normal[1] * right[0]
     ];
-    this.settings.write(
-      new Float32Array([
-        ...parameters.gravity,
-        this.wakeRevision,
-        ...normal,
-        parameters.plane.offset ?? 0,
-        ...right,
-        parameters.plane.halfExtents?.[0] ?? 1e10,
-        ...forward,
-        parameters.plane.halfExtents?.[1] ?? 1e10,
-        this.timeStep,
-        parameters.restitution,
-        parameters.staticFriction,
-        parameters.dynamicFriction,
-        parameters.rollingResistance,
-        parameters.sleepLinearSpeed,
-        parameters.sleepAngularSpeed,
-        0,
-        parameters.sleepAfter,
-        parameters.restitutionThreshold,
-        this.contactSkin,
-        0.8
-      ])
-    );
+    const data = new Float32Array(32 + 32 * 20);
+    data.set([
+      ...parameters.gravity,
+      this.wakeRevision,
+      ...normal,
+      parameters.plane.offset ?? 0,
+      ...right,
+      parameters.plane.halfExtents?.[0] ?? 1e10,
+      ...forward,
+      parameters.plane.halfExtents?.[1] ?? 1e10,
+      this.timeStep,
+      parameters.restitution,
+      parameters.staticFriction,
+      parameters.dynamicFriction,
+      parameters.rollingResistance,
+      parameters.sleepLinearSpeed,
+      parameters.sleepAngularSpeed,
+      (parameters.planes ?? [parameters.plane]).length,
+      parameters.sleepAfter,
+      parameters.restitutionThreshold,
+      this.contactSkin,
+      0.8,
+      Number(parameters.cutInducedThrow),
+      Number(parameters.spinInducedThrow),
+      0,
+      0
+    ]);
+    for (const [index, plane] of (parameters.planes ?? [parameters.plane]).entries()) {
+      const source = plane.normal ?? [0, 0, 1];
+      const length = Math.hypot(...source);
+      const normal = source.map(value => value / length);
+      const right =
+        Math.abs(normal[1]) < 0.9 ? [normal[2], 0, -normal[0]] : [0, -normal[2], normal[1]];
+      const rightLength = Math.hypot(...right);
+      for (let axis = 0; axis < 3; axis++) right[axis] /= rightLength;
+      const forward = [
+        normal[1] * right[2] - normal[2] * right[1],
+        normal[2] * right[0] - normal[0] * right[2],
+        normal[0] * right[1] - normal[1] * right[0]
+      ];
+      const center = plane.center ?? normal.map(value => value * (plane.offset ?? 0));
+      data.set(
+        [
+          ...normal,
+          center.reduce((sum, value, axis) => sum + value * normal[axis], 0),
+          ...right,
+          plane.halfExtents?.[0] ?? 1e10,
+          ...forward,
+          plane.halfExtents?.[1] ?? 1e10,
+          ...center,
+          0,
+          plane.restitution ?? parameters.restitution,
+          plane.staticFriction ?? parameters.staticFriction,
+          plane.dynamicFriction ?? parameters.dynamicFriction,
+          plane.rollingResistance ?? parameters.rollingResistance
+        ],
+        32 + index * 20
+      );
+    }
+    this.settings.write(data);
   }
 }
