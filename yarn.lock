@@ -5201,7 +5201,7 @@ __metadata:
     "@math.gl/core": "npm:5.0.0-alpha.15"
     "@math.gl/polygon": "npm:~5.0.0-alpha.15"
   peerDependencies:
-    "@luma.gl/engine": 10.0.0-alpha.3
+    "@luma.gl/engine": ~10.0.0-alpha.3
   languageName: unknown
   linkType: soft
 

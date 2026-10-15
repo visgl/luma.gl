@@ -45,10 +45,15 @@ export type BrowserFontRenderer = {
   };
 };
 
-type BrowserFontAtlasBuildOptions = {
+/** Options for packing a browser font with an optional custom glyph renderer. */
+export type BrowserFontAtlasBuildOptions = {
+  /** Resolved font and packing settings. */
   settings: ResolvedBrowserFontAtlasSettings;
-  cacheKey: string;
+  /** Shared cache identity. Omit to build an uncached custom atlas. */
+  cacheKey?: string;
+  /** Sampling parameters attached to the atlas. */
   renderSettings: FontAtlasRenderSettings;
+  /** Creates a custom glyph renderer, with access to browser font measurement. */
   createRenderer?: (defaultMeasure: BrowserFontRenderer['measure']) => BrowserFontRenderer;
 };
 
@@ -84,6 +89,9 @@ export function resolveBrowserFontAtlasSettings(
 /** Packs and rasterizes a browser font using a source-specific glyph renderer. */
 export function buildBrowserFontAtlas(options: BrowserFontAtlasBuildOptions): FontAtlas {
   const {settings, cacheKey, renderSettings} = options;
+  if (cacheKey === undefined) {
+    return buildGeneratedFontAtlas(options, new Set(settings.characterSet));
+  }
   const characterSet = getNewCharacters(cacheKey, settings.characterSet);
   const cachedFontAtlas = cache.get(cacheKey);
   if (cachedFontAtlas && characterSet.size === 0) {
