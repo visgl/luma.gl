@@ -1,13 +1,18 @@
+// luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
-import {luma, Buffer, type Parameters, type ShaderLayout} from '@luma.gl/core';
-import {Model, Computation} from '@luma.gl/engine';
+
+import {luma, Buffer, type Parameters} from '@luma.gl/core';
+import {Model} from '@luma.gl/engine';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';
+import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {GPUSphereWorld, decodeGPUSphereWorldDiagnostics} from '@luma.gl/gpgpu/gpu-physics';
 import {PerspectiveCamera, Vector3, Quaternion} from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+
 function getElement<ElementType extends HTMLElement = HTMLElement>(selector: string): ElementType {
-  // All controls are declared by this example's index.html before the entry script runs.
+  // index.html declares every control before loading this entry module.
   return document.querySelector<ElementType>(selector)!;
 }
 const status = getElement<HTMLOutputElement>('#status');
@@ -18,52 +23,98 @@ try {
       gpuError = error;
     },
     adapters: [webgpuAdapter],
+    optionalFeatures: ['timestamp-query'],
     createCanvasContext: {canvas: 'spheres', autoResize: true}
   });
-  const count = 64;
-  const positions = device.createBuffer({
-    byteLength: count * 16,
-    usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC
-  });
-  const velocities = device.createBuffer({
-    byteLength: count * 16,
-    usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC
-  });
-  const camera = device.createBuffer({
-    byteLength: 96,
-    usage: Buffer.UNIFORM | Buffer.COPY_DST
-  });
-  function reset() {
-    const positionData = new Float32Array(count * 4);
-    const velocityData = new Float32Array(count * 4);
-    for (let index = 0; index < count; index++) {
+  getElement('#adapter-info').textContent =
+    `${device.info.vendor} · ${device.info.gpuArchitecture} · ${device.info.featureLevel}`;
+  const camera = device.createBuffer({byteLength: 96, usage: Buffer.UNIFORM | Buffer.COPY_DST});
+  type Resources = {
+    count: number;
+    halfExtent: number;
+    positions: Buffer;
+    velocities: Buffer;
+    orientations: Buffer;
+    world: GPUSphereWorld;
+    graph: CompiledGPUCommandGraph<void>;
+  };
+  function resetSpheres(target: Resources): void {
+    const positionData = new Float32Array(target.count * 4);
+    const velocityData = new Float32Array(target.count * 4);
+    const orientationData = new Float32Array(target.count * 4);
+    const layerCount = target.count >= 1024 ? 4 : 1;
+    const columns = Math.ceil(Math.sqrt(target.count / layerCount));
+    for (let index = 0; index < target.count; index++) {
+      const layer = Math.floor(index / (columns * columns));
+      const radius = 0.32 + (index % 4) * 0.02;
       positionData.set(
         [
-          ((index % 8) - 3.5) * 1.2,
-          (Math.floor(index / 8) - 3.5) * 1.2,
-          3 + (index % 11) * 0.65,
-          0.38
+          ((index % columns) - (columns - 1) / 2) * 0.84,
+          ((Math.floor(index / columns) % columns) - (columns - 1) / 2) * 0.84,
+          2 + layer * 0.9 + (index % 7) * 0.08,
+          radius
         ],
         index * 4
       );
-      velocityData.set([0, 0, 0, 1], index * 4);
+      velocityData[index * 4 + 3] = 1;
+      // Vary initial band axes so neighboring spheres are visually distinguishable.
+      const angle = index * 0.37;
+      orientationData.set([Math.sin(angle / 2), 0, 0, Math.cos(angle / 2)], index * 4);
     }
-    positions.write(positionData);
-    velocities.write(velocityData);
+    target.positions.write(positionData);
+    target.velocities.write(velocityData);
+    target.orientations.write(orientationData);
+    target.world.angularVelocities!.write(new Float32Array(target.count * 4));
+    target.world.sleepStates!.write(new Float32Array(target.count * 4));
   }
-  reset();
-  const temporaryPositions = device.createBuffer({
-    byteLength: count * 16,
-    usage: Buffer.STORAGE
-  });
-  const temporaryVelocities = device.createBuffer({
-    byteLength: count * 16,
-    usage: Buffer.STORAGE
-  });
-  const platform = device.createBuffer({
-    byteLength: 64,
-    usage: Buffer.UNIFORM | Buffer.COPY_DST
-  });
+  async function createResources(count: number): Promise<Resources> {
+    const createBuffer = () =>
+      device.createBuffer({
+        byteLength: count * 16,
+        usage: Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST
+      });
+    const positions = createBuffer();
+    const velocities = createBuffer();
+    const orientations = createBuffer();
+    const columns = Math.ceil(Math.sqrt(count / (count >= 1024 ? 4 : 1)));
+    const halfExtent = Math.max(6, columns * 0.44 + 1);
+    const definition = new GPUCommandGraph<void>(device);
+    const world = new GPUSphereWorld({
+      count,
+      positions,
+      velocities,
+      orientations,
+      maximumRadius: 0.4,
+      maximumContacts: 32,
+      iterations: 8,
+      restitution: 0.62,
+      staticFriction: 0.5,
+      dynamicFriction: 0.35,
+      rollingResistance: 0.08,
+      plane: {halfExtents: [halfExtent, halfExtent]}
+    });
+    world.addToGraph(definition);
+    try {
+      const graph = await definition.compileAsync();
+      const result = {count, halfExtent, positions, velocities, orientations, world, graph};
+      resetSpheres(result);
+      return result;
+    } catch (error) {
+      world.destroy();
+      positions.destroy();
+      velocities.destroy();
+      orientations.destroy();
+      throw error;
+    }
+  }
+  function destroyResources(target: Resources): void {
+    target.graph.destroy();
+    target.world.destroy();
+    target.positions.destroy();
+    target.velocities.destroy();
+    target.orientations.destroy();
+  }
+  let resources = await createResources(64);
   const orbitCamera = new PerspectiveCamera(45, 1, 0.1, 100);
   orbitCamera.up.set(0, 0, 1);
   orbitCamera.position.set(0, -22, 26);
@@ -75,11 +126,8 @@ try {
   controls.enableDamping = true;
   controls.dampingFactor = 0.1;
   controls.update();
-  const initialDirection = orbitCamera.position.clone().sub(controls.target).normalize();
-  const gravityRotation = new Quaternion().setFromUnitVectors(
-    initialDirection,
-    new Vector3(0, 0, 1)
-  );
+  let initialDirection = orbitCamera.position.clone().sub(controls.target).normalize();
+  let gravityRotation = new Quaternion().setFromUnitVectors(initialDirection, new Vector3(0, 0, 1));
   const initialPolar = controls.getPolarAngle();
   const initialAzimuth = controls.getAzimuthalAngle();
   controls.minPolarAngle = Math.max(0.1, initialPolar - 0.6);
@@ -116,9 +164,7 @@ try {
       angle = 0;
     }
     const gravity = direction.applyQuaternion(gravityRotation).multiplyScalar(-9.81);
-    platform.write(
-      new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, gravity.x, gravity.y, gravity.z, 0])
-    );
+    resources.world.update({gravity: [gravity.x, gravity.y, gravity.z]});
     getElement('#tilt-value').textContent = Math.round((angle * 180) / Math.PI) + '°';
     const angleDegrees = (angle * 180) / Math.PI;
     const isLevel = angleDegrees < 0.5;
@@ -141,200 +187,59 @@ try {
         : `Platform tilted ${angleDegrees.toFixed(1)} degrees; bubble points uphill`
     );
   }
+
   updatePlatform();
-  const platformDeclaration = `struct Platform { right:vec4f, forward:vec4f, normal:vec4f, gravity:vec4f }; @group(0) @binding(4) var<uniform> platform:Platform;`;
-  const simulationBindings: ShaderLayout['bindings'] = [
-    {
-      name: 'inputPositions',
-      type: 'read-only-storage',
-      group: 0,
-      location: 0
-    },
-    {
-      name: 'inputVelocities',
-      type: 'read-only-storage',
-      group: 0,
-      location: 1
-    },
-    {name: 'outputPositions', type: 'storage', group: 0, location: 2},
-    {name: 'outputVelocities', type: 'storage', group: 0, location: 3},
-    {name: 'platform', type: 'uniform', group: 0, location: 4}
-  ];
-  const stateDeclaration =
-    platformDeclaration +
-    `
-@group(0) @binding(0) var<storage,read> inputPositions:array<vec4f>;
-@group(0) @binding(1) var<storage,read> inputVelocities:array<vec4f>;
-@group(0) @binding(2) var<storage,read_write> outputPositions:array<vec4f>;
-@group(0) @binding(3) var<storage,read_write> outputVelocities:array<vec4f>;
-`;
-  const integrate = new Computation(device, {
-    id: 'sphere-integrate',
-    shaderLayout: {bindings: simulationBindings},
-    source:
-      stateDeclaration +
-      `
-@compute @workgroup_size(64) fn main(@builtin(global_invocation_id) invocation:vec3u){
- let index=invocation.x;if(index>=64u){return;}
- let sphere=inputPositions[index];var velocity=inputVelocities[index].xyz+platform.gravity.xyz/120.0;
- // Coulomb floor friction opposes tangential motion and holds shallow slopes at rest.
- let normal=platform.normal.xyz;let height=dot(sphere.xyz,normal);
- if(abs(dot(sphere.xyz,platform.right.xyz))<6 && abs(dot(sphere.xyz,platform.forward.xyz))<6 && height>=0 && height<=sphere.w+0.01){
-  let tangent=velocity-normal*dot(velocity,normal);let speed=length(tangent);
-  let frictionStep=0.2*max(-dot(platform.gravity.xyz,normal),0.0)/120.0;
-  if(speed>0.000001){velocity-=tangent*min(1.0,frictionStep/speed);}
- }
- outputVelocities[index]=vec4f(velocity,1);outputPositions[index]=vec4f(sphere.xyz+velocity/120.0,sphere.w);
-}`
-  });
-  const collide = new Computation(device, {
-    id: 'sphere-contacts',
-    shaderLayout: {bindings: simulationBindings},
-    source:
-      stateDeclaration +
-      `
-@compute @workgroup_size(64) fn main(@builtin(global_invocation_id) invocation:vec3u){
- let index=invocation.x;if(index>=64u){return;}
- let sphere=inputPositions[index];var point=sphere.xyz;var velocity=inputVelocities[index].xyz;
- var correction=vec3f(0);var impulse=vec3f(0);
- for(var other=0u;other<64u;other++){
-  if(other==index){continue;}
-  let neighbor=inputPositions[other];let delta=sphere.xyz-neighbor.xyz;let distance=length(delta);let diameter=sphere.w+neighbor.w;
-  if(distance<diameter && distance>0.00001){
-   let normal=delta/distance;correction+=normal*max(diameter-distance-0.001,0.0)*0.5;
-   let closing=dot(inputVelocities[index].xyz-inputVelocities[other].xyz,normal);
-   if(closing<0){impulse-=normal*closing*0.84;}
-  }
- }
- point+=correction;velocity+=impulse;
- let normal=platform.normal.xyz;
- if(abs(dot(point,platform.right.xyz))<6 && abs(dot(point,platform.forward.xyz))<6){
-  let height=dot(point,normal);
-  // Only the upper surface catches a sphere; fallen spheres cannot teleport back.
-  if(height<sphere.w && height> -sphere.w*2){
-   point+=normal*(sphere.w-height);let closing=dot(velocity,normal);
-   if(closing<0){velocity-=normal*closing*1.62;velocity*=0.997;}
-  }
- }
- outputPositions[index]=vec4f(point,sphere.w);outputVelocities[index]=vec4f(velocity,1);
-}`
-  });
-  function dispatch(
-    computation: Computation,
-    inputPositions: Buffer,
-    inputVelocities: Buffer,
-    outputPositions: Buffer,
-    outputVelocities: Buffer
-  ) {
-    computation.setBindings({
-      inputPositions,
-      inputVelocities,
-      outputPositions,
-      outputVelocities,
-      platform
-    });
-    const pass = device.beginComputePass({});
-    computation.dispatch(pass, 1);
-    pass.end();
-  }
-  function step() {
-    dispatch(integrate, positions, velocities, temporaryPositions, temporaryVelocities);
-    dispatch(collide, temporaryPositions, temporaryVelocities, positions, velocities);
-    dispatch(collide, positions, velocities, temporaryPositions, temporaryVelocities);
-    dispatch(collide, temporaryPositions, temporaryVelocities, positions, velocities);
-  }
-  // Check the actual GPU contact pass with isolated, deterministic cases.
-  const checkPositions = new Float32Array(count * 4);
-  const checkVelocities = new Float32Array(count * 4);
-  for (let index = 0; index < count; index++) {
-    checkPositions.set([100 + index * 3, 100, 20, 0.38], index * 4);
-    checkVelocities[index * 4 + 3] = 1;
-  }
-  checkPositions.set([-0.3, 0, 20, 0.38], 0);
-  checkPositions.set([0.3, 0, 20, 0.38], 4);
-  checkVelocities.set([1, 0, 0, 1], 0);
-  checkVelocities.set([-1, 0, 0, 1], 4);
-  checkPositions.set([7, 0, 0.1, 0.38], 8);
-  checkVelocities.set([0, 0, -2, 1], 8);
-  checkPositions.set([0, 0, 0.1, 0.38], 12);
-  checkVelocities.set([0, 0, -2, 1], 12);
-  positions.write(checkPositions);
-  velocities.write(checkVelocities);
-  dispatch(collide, positions, velocities, temporaryPositions, temporaryVelocities);
-  device.submit();
-  // Copy the results through the writable state buffers for portable readback.
-  dispatch(collide, temporaryPositions, temporaryVelocities, positions, velocities);
-  device.submit();
-  const checkedPositions = new Float32Array((await positions.readAsync()).buffer);
-  const checkedVelocities = new Float32Array((await velocities.readAsync()).buffer);
-  if (
-    !(
-      checkedPositions[4] - checkedPositions[0] > 0.75 &&
-      checkedVelocities[0] < 0 &&
-      checkedVelocities[4] > 0
-    )
-  )
-    throw new Error('Sphere collision check failed');
-  if (!(Math.abs(checkedPositions[10] - 0.1) < 0.001 && checkedVelocities[10] < 0))
-    throw new Error('Platform edge check failed');
-  if (!(Math.abs(checkedPositions[14] - 0.38) < 0.001 && checkedVelocities[14] > 0))
-    throw new Error('Floor bounce check failed');
-  // Grounded low-speed bodies stop; airborne bodies retain lateral velocity.
-  checkPositions.set([3, 3, 0.38, 0.38], 16);
-  checkVelocities.set([0.01, 0, 0, 1], 16);
-  checkPositions.set([3, 3, 20, 0.38], 20);
-  checkVelocities.set([0.01, 0, 0, 1], 20);
-  checkPositions.set([-3, 3, 0.38, 0.38], 24);
-  checkVelocities.set([1, 0, 0, 1], 24);
-  positions.write(checkPositions);
-  velocities.write(checkVelocities);
-  dispatch(integrate, positions, velocities, temporaryPositions, temporaryVelocities);
-  dispatch(collide, temporaryPositions, temporaryVelocities, positions, velocities);
-  device.submit();
-  const frictionVelocities = new Float32Array((await velocities.readAsync()).buffer);
-  if (
-    !(
-      Math.abs(frictionVelocities[16]) < 0.000001 &&
-      Math.abs(frictionVelocities[20] - 0.01) < 0.000001 &&
-      frictionVelocities[24] > 0.98 &&
-      frictionVelocities[24] < 0.99
-    )
-  ) {
-    throw new Error('Ground friction check failed');
-  }
-  reset();
-  const shared = `struct Camera { matrix: mat4x4f, right: vec4f, up: vec4f }; @group(0) @binding(0) var<uniform> camera: Camera;`;
+  const shared = `struct Camera {matrix: mat4x4f, right: vec4f, up: vec4f}; @group(0) @binding(0) var<uniform> camera: Camera;`;
   const sphereSource =
     shared +
     `
-@group(0) @binding(1) var<storage,read> positions:array<vec4f>;
-struct Output { @builtin(position) position:vec4f, @location(0) uv:vec2f, @location(1) color:vec3f };
-@vertex fn vertexMain(@builtin(vertex_index) vertexIndex:u32,@builtin(instance_index) instanceIndex:u32)->Output {
- let corners=array<vec2f,6>(vec2f(-1,-1),vec2f(1,-1),vec2f(-1,1),vec2f(-1,1),vec2f(1,-1),vec2f(1,1));
- let corner=corners[vertexIndex];let sphere=positions[instanceIndex];
- var output:Output;
- output.position=camera.matrix*vec4f(sphere.xyz+sphere.w*(camera.right.xyz*corner.x+camera.up.xyz*corner.y),1);
- output.uv=corner;output.color=vec3f(0.25+0.65*fract(f32(instanceIndex)*0.173),0.52+0.3*fract(f32(instanceIndex)*0.37),0.9);
+@group(0) @binding(1) var<storage, read> positions: array<vec4f>;
+@group(0) @binding(2) var<storage, read> orientations: array<vec4f>;
+struct VertexOutput {
+ @builtin(position) position: vec4f,
+ @location(0) corner: vec2f,
+ @location(1) color: vec3f,
+ @location(2) @interpolate(flat) orientation: vec4f,
+ @location(3) @interpolate(flat) sphere: vec4f,
+};
+@vertex fn vertexMain(@builtin(vertex_index) vertexIndex: u32, @builtin(instance_index) instanceIndex: u32) -> VertexOutput {
+ let corners = array<vec2f, 6>(vec2f(-1,-1),vec2f(1,-1),vec2f(-1,1),vec2f(-1,1),vec2f(1,-1),vec2f(1,1));
+ let corner = corners[vertexIndex]; let sphere = positions[instanceIndex];
+ var output: VertexOutput;
+ output.position = camera.matrix * vec4f(sphere.xyz + sphere.w * (camera.right.xyz * corner.x + camera.up.xyz * corner.y), 1);
+ output.corner = corner; output.sphere = sphere; output.orientation = orientations[instanceIndex];
+ output.color = vec3f(0.45 + 0.35 * fract(f32(instanceIndex) * 0.173), 0.65 + 0.25 * fract(f32(instanceIndex) * 0.37), 0.95);
  return output;
 }
-@fragment fn fragmentMain(input:Output)->@location(0)vec4f {
- let squared=dot(input.uv,input.uv);if(squared>1){discard;}
- let normal=vec3f(input.uv,sqrt(1-squared));
- let light=0.23+0.77*max(dot(normal,normalize(vec3f(-0.5,0.65,1))),0);
- return vec4f(input.color*light,1);
+struct FragmentOutput {@location(0) color: vec4f, @builtin(frag_depth) depth: f32};
+@fragment fn fragmentMain(input: VertexOutput) -> FragmentOutput {
+ let squared = dot(input.corner, input.corner); if (squared > 1) {discard;}
+ let cameraNormal = vec3f(input.corner, sqrt(max(0.0, 1.0 - squared)));
+ let normal = camera.right.xyz * cameraNormal.x + camera.up.xyz * cameraNormal.y + cross(camera.right.xyz, camera.up.xyz) * cameraNormal.z;
+ let conjugate = -input.orientation.xyz;
+ let localNormal = normal + 2.0 * cross(conjugate, cross(conjugate, normal) + input.orientation.w * normal);
+ // One great-circle band, anchored to the simulated body rather than the camera.
+ let bandDistance = abs(localNormal.z);
+ let edgeWidth = max(fwidth(bandDistance), 0.003);
+ let band = 1.0 - smoothstep(0.13 - edgeWidth, 0.13 + edgeWidth, bandDistance);
+ let base = mix(input.color, vec3f(0.025, 0.055, 0.085), band);
+ let light = 0.25 + 0.75 * max(dot(normal, normalize(vec3f(-0.4, -0.5, 1))), 0);
+ let surface = camera.matrix * vec4f(input.sphere.xyz + normal * input.sphere.w, 1);
+ var output: FragmentOutput; output.color = vec4f(base * light, 1); output.depth = surface.z / surface.w;
+ return output;
 }`;
   const floorSource =
     shared +
-    platformDeclaration +
     `
-struct Output { @builtin(position) position:vec4f, @location(0) point:vec2f };
-@vertex fn vertexMain(@builtin(vertex_index) vertexIndex:u32)->Output {
- let corners=array<vec2f,6>(vec2f(-6,-6),vec2f(6,-6),vec2f(-6,6),vec2f(-6,6),vec2f(6,-6),vec2f(6,6));
- var output:Output;output.point=corners[vertexIndex];output.position=camera.matrix*vec4f(platform.right.xyz*output.point.x+platform.forward.xyz*output.point.y,1);return output;
+struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec2f};
+@vertex fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
+ let corners = array<vec2f,6>(vec2f(-1,-1),vec2f(1,-1),vec2f(-1,1),vec2f(-1,1),vec2f(1,-1),vec2f(1,1));
+ var output: VertexOutput; output.point = corners[vertexIndex] * camera.right.w;
+ output.position = camera.matrix * vec4f(output.point, 0, 1); return output;
 }
-@fragment fn fragmentMain(input:Output)->@location(0)vec4f {
- let line=min(abs(fract(input.point.x+0.5)-0.5),abs(fract(input.point.y+0.5)-0.5));
- return vec4f(select(vec3f(0.16,0.22,0.29),vec3f(0.3,0.39,0.46),line<0.025),1);
+@fragment fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
+ let line = min(abs(fract(input.point.x + 0.5) - 0.5), abs(fract(input.point.y + 0.5) - 0.5));
+ return vec4f(select(vec3f(0.16,0.22,0.29), vec3f(0.3,0.39,0.46), line < 0.025), 1);
 }`;
   const parameters: Parameters = {
     depthWriteEnabled: true,
@@ -342,23 +247,18 @@ struct Output { @builtin(position) position:vec4f, @location(0) point:vec2f };
     depthFormat: 'depth24plus'
   };
   const spheres = new Model(device, {
-    id: 'sphere-billboards',
+    id: 'rotating-spheres',
     source: sphereSource,
     vertexCount: 6,
-    instanceCount: count,
+    instanceCount: resources.count,
     parameters,
-    bindings: {camera, positions},
+    bindings: {camera, positions: resources.positions, orientations: resources.orientations},
     shaderLayout: {
       attributes: [],
       bindings: [
         {name: 'camera', type: 'uniform', group: 0, location: 0},
-        {
-          name: 'positions',
-          type: 'read-only-storage',
-          group: 0,
-          location: 1,
-          visibility: 1
-        }
+        {name: 'positions', type: 'read-only-storage', group: 0, location: 1, visibility: 1},
+        {name: 'orientations', type: 'read-only-storage', group: 0, location: 2, visibility: 1}
       ]
     }
   });
@@ -367,34 +267,48 @@ struct Output { @builtin(position) position:vec4f, @location(0) point:vec2f };
     source: floorSource,
     vertexCount: 6,
     parameters,
-    bindings: {camera, platform},
+    bindings: {camera},
     shaderLayout: {
       attributes: [],
-      bindings: [
-        {name: 'camera', type: 'uniform', group: 0, location: 0},
-        {
-          name: 'platform',
-          type: 'uniform',
-          group: 0,
-          location: 4,
-          visibility: 1
-        }
-      ]
+      bindings: [{name: 'camera', type: 'uniform', group: 0, location: 0}]
     }
   });
   let paused = false;
+  let loading = false;
   let previous = performance.now();
   let accumulator = 0;
-  let frames = 0;
+  let speed = 1.5;
+  let sampling = false;
+  let lastSample = 0;
+  let lastFrame = performance.now();
+  let frameMilliseconds = 0;
+  let encodeMilliseconds = 0;
+  let samplingPromise: Promise<void> = Promise.resolve();
+  type Benchmark = {warmup: number; frames: number[]; encoding: number[]; gpu: number[]};
+  let benchmark: Benchmark | undefined;
+  let lastReport: object | undefined;
+  const percentile = (values: number[], fraction: number): number => {
+    const sorted = [...values].sort((first, second) => first - second);
+    return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * fraction))] ?? 0;
+  };
+  function resetView(): void {
+    orbitCamera.position.set(0, -resources.halfExtent * 3.6, resources.halfExtent * 4.3 + 2);
+    controls.target.set(0, 0, 2);
+    controls.update();
+    controls.saveState();
+    initialDirection = orbitCamera.position.clone().sub(controls.target).normalize();
+    gravityRotation = new Quaternion().setFromUnitVectors(initialDirection, new Vector3(0, 0, 1));
+    levelView();
+    updatePlatform();
+  }
   getElement('#pause').onclick = () => {
     paused = !paused;
     getElement('#pause').textContent = paused ? 'Resume' : 'Pause';
   };
   getElement('#reset').onclick = () => {
-    reset();
+    resetSpheres(resources);
     accumulator = 0;
   };
-  let speed = 1.5;
   getElement('#speed').oninput = () => {
     speed = Number(getElement<HTMLInputElement>('#speed').value);
     getElement('#speed-value').textContent = speed.toFixed(1) + '×';
@@ -405,22 +319,142 @@ struct Output { @builtin(position) position:vec4f, @location(0) point:vec2f };
   };
   getElement('#level').onclick = levelView;
   getElement('#spheres').addEventListener('dblclick', levelView);
-  status.value = `${count} spheres · GPU collisions · 120 Hz`;
-  function frame(now: number) {
+  getElement('#body-count').onchange = async () => {
+    if (loading || benchmark) return;
+    loading = true;
+    status.value = 'Compiling sphere world…';
+    try {
+      const next = await createResources(
+        Number(getElement<HTMLSelectElement>('#body-count').value)
+      );
+      await samplingPromise;
+      const old = resources;
+      resources = next;
+      spheres.setBindings({positions: next.positions, orientations: next.orientations});
+      spheres.setInstanceCount(next.count);
+      destroyResources(old);
+      resetView();
+      accumulator = 0;
+    } catch (error) {
+      status.value = String(error);
+    } finally {
+      loading = false;
+    }
+  };
+  getElement('#benchmark').onclick = () => {
+    if (loading || benchmark) return;
+    resetView();
+    resetSpheres(resources);
+    accumulator = 0;
+    paused = false;
+    getElement('#pause').textContent = 'Pause';
+    controls.enabled = false;
+    for (const identifier of ['body-count', 'reset', 'pause', 'benchmark'])
+      getElement<HTMLButtonElement>('#' + identifier).disabled = true;
+    benchmark = {warmup: 30, frames: [], encoding: [], gpu: []};
+  };
+  getElement('#download-report').onclick = () => {
+    if (!lastReport) return;
+    const url = URL.createObjectURL(
+      new Blob([JSON.stringify(lastReport, null, 2)], {type: 'application/json'})
+    );
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'sphere-world-benchmark.json';
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+  resetView();
+  function renderFrame(now: number): void {
     try {
       if (gpuError) throw gpuError;
+      frameMilliseconds = now - lastFrame;
+      lastFrame = now;
       const elapsed = Math.min((now - previous) / 1000, 0.1);
       previous = now;
       updatePlatform();
-      if (!paused) {
+      encodeMilliseconds = 0;
+      if (!paused && !loading) {
         accumulator += elapsed * speed;
-        let steps = 0;
-        while (accumulator >= 1 / 120 && steps < 36) {
-          step();
-          accumulator -= 1 / 120;
-          steps++;
+        const steps = benchmark ? 1 : Math.min(8, Math.floor(accumulator * 120));
+        if (!benchmark) accumulator -= steps / 120;
+        for (let step = 0; step < steps; step++) {
+          const sample = step === 0 && now - lastSample >= 500 && !sampling;
+          const querySet =
+            sample && device.features.has('timestamp-query')
+              ? device.createQuerySet({
+                  type: 'timestamp',
+                  count: resources.graph.stats.nodeOrder.length * 2
+                })
+              : null;
+          const encoder = device.createCommandEncoder({timeProfilingQuerySet: querySet});
+          const encoding = resources.graph.encode(encoder, {
+            parameters: undefined,
+            coalesceComputePasses: !querySet
+          });
+          encodeMilliseconds += encoding.stats.cpuEncodeTimeMilliseconds;
+          device.submit(encoder.finish());
+          if (sample) {
+            lastSample = now;
+            sampling = true;
+            const target = resources;
+            samplingPromise = (async () => {
+              try {
+                const diagnostics = decodeGPUSphereWorldDiagnostics(
+                  new Uint32Array((await target.world.diagnostics!.readAsync()).buffer)
+                );
+                const timing = querySet ? await encoding.readTimings() : undefined;
+                if (timing?.gpuTimeMilliseconds !== undefined)
+                  benchmark?.gpu.push(timing.gpuTimeMilliseconds);
+                const memory =
+                  target.graph.stats.physicalTransientResourceBytes + target.count * 80 + 144;
+                getElement('#metrics').textContent =
+                  `${(1000 / Math.max(frameMilliseconds, 1)).toFixed(0)} fps · frame ${frameMilliseconds.toFixed(1)} ms · encode ${encodeMilliseconds.toFixed(2)} ms · GPU ${timing?.gpuTimeMilliseconds?.toFixed(2) ?? 'unavailable'} ms\n${diagnostics.contacts} contacts · ${diagnostics.candidateTests} candidates\n${diagnostics.sleepingBodies} sleeping · ${diagnostics.droppedContacts} dropped · ${diagnostics.invalidBodies} invalid\nPhysics buffers ${(memory / 1048576).toFixed(2)} MiB`;
+                status.value =
+                  diagnostics.droppedContacts || diagnostics.invalidBodies
+                    ? 'Capacity exceeded: inspect dropped/invalid counters'
+                    : `${target.count.toLocaleString()} spheres · grid broad phase · WebGPU`;
+              } finally {
+                querySet?.destroy();
+                sampling = false;
+              }
+            })().catch(error => {
+              status.value = String(error);
+            });
+          }
         }
-        if (steps) device.submit();
+      }
+      if (benchmark) {
+        if (benchmark.warmup > 0) benchmark.warmup--;
+        else {
+          benchmark.frames.push(frameMilliseconds);
+          benchmark.encoding.push(encodeMilliseconds);
+        }
+        getElement('#benchmark-status').textContent =
+          `Benchmark ${benchmark.frames.length}/300 frames`;
+        if (benchmark.frames.length >= 300) {
+          lastReport = {
+            bodyCount: resources.count,
+            date: new Date().toISOString(),
+            adapter: device.info,
+            timeStep: resources.world.timeStep,
+            iterations: resources.world.iterations,
+            maximumContacts: resources.world.maximumContacts,
+            frameMedianMilliseconds: percentile(benchmark.frames, 0.5),
+            frameP95Milliseconds: percentile(benchmark.frames, 0.95),
+            encodeMedianMilliseconds: percentile(benchmark.encoding, 0.5),
+            gpuMedianMilliseconds: benchmark.gpu.length ? percentile(benchmark.gpu, 0.5) : null,
+            notes:
+              '30 warmup + 300 frames; one fixed simulation step per frame; frame duration includes display pacing.'
+          };
+          getElement('#benchmark-status').textContent =
+            `300 frames · frame median ${percentile(benchmark.frames, 0.5).toFixed(1)} ms · p95 ${percentile(benchmark.frames, 0.95).toFixed(1)} ms · encode median ${percentile(benchmark.encoding, 0.5).toFixed(2)} ms · GPU median ${benchmark.gpu.length ? percentile(benchmark.gpu, 0.5).toFixed(2) : 'unavailable'} ms`;
+          getElement<HTMLButtonElement>('#download-report').disabled = false;
+          benchmark = undefined;
+          controls.enabled = true;
+          for (const identifier of ['body-count', 'reset', 'pause', 'benchmark'])
+            getElement<HTMLButtonElement>('#' + identifier).disabled = false;
+        }
       }
       const view = new Matrix4().lookAt({
         eye: orbitCamera.position.toArray(),
@@ -432,31 +466,39 @@ struct Output { @builtin(position) position:vec4f, @location(0) point:vec2f };
           fovy: Math.PI / 4,
           aspect: device.canvasContext!.getAspect(),
           near: 0.1,
-          far: 100
+          far: 1000
         })
         .multiplyRight(view);
       const cameraData = new Float32Array(24);
       cameraData.set(matrix);
-      cameraData.set([view[0], view[4], view[8], 0], 16);
+      cameraData.set([view[0], view[4], view[8], resources.halfExtent], 16);
       cameraData.set([view[1], view[5], view[9], 0], 20);
       camera.write(cameraData);
-      const pass = device.beginRenderPass({
-        clearColor: [0.04, 0.065, 0.1, 1],
-        clearDepth: 1
-      });
+      const pass = device.beginRenderPass({clearColor: [0.04, 0.065, 0.1, 1], clearDepth: 1});
       floor.draw(pass);
       spheres.draw(pass);
       pass.end();
       device.submit();
-      frames++;
-      if (frames % 60 === 0)
-        status.value = `${count} spheres · WebGPU · ${paused ? 'Paused' : speed.toFixed(1) + '× speed · sphere collisions · checks passed'}`;
-      requestAnimationFrame(frame);
+      requestAnimationFrame(renderFrame);
     } catch (error) {
       status.value = String(error);
     }
   }
-  requestAnimationFrame(frame);
+  requestAnimationFrame(renderFrame);
+  window.addEventListener(
+    'pagehide',
+    () => {
+      void samplingPromise.finally(() => {
+        destroyResources(resources);
+        camera.destroy();
+        spheres.destroy();
+        floor.destroy();
+        controls.dispose();
+        device.destroy();
+      });
+    },
+    {once: true}
+  );
 } catch (error) {
   status.value = String(error);
 }
