@@ -289,11 +289,13 @@ export class GPUSphereWorld {
   /** Adds one world to one graph. Scratch belongs to the graph; omitted state belongs to this world. */
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
     if (this.added) throw new Error('Sphere world has already been added to a graph');
+    if (Math.ceil(this.count / 64) > graph.device.limits.maxComputeWorkgroupsPerDimension)
+      throw new Error('Sphere world exceeds device dispatch limits');
     if (
-      Math.ceil(this.count / 64) > graph.device.limits.maxComputeWorkgroupsPerDimension ||
-      this.count * this.maximumContacts * 8 > graph.device.limits.maxStorageBufferBindingSize
+      Math.max(this.count * 16, this.count * this.maximumContacts * 8, 32) >
+      graph.device.limits.maxStorageBufferBindingSize
     )
-      throw new Error('Sphere world exceeds device limits');
+      throw new Error('Sphere world exceeds maxStorageBufferBindingSize');
     const allocate = (id: string, byteLength: number, uniform = false): Buffer => {
       const buffer = graph.device.createBuffer({
         id: `${this.id}-${id}`,
