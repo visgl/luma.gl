@@ -4,7 +4,7 @@
 import {expect, test, vi} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {BufferAttribute, type WebGPURenderer} from 'three/webgpu';
-import {ThreeBufferBridge} from '../src/interop';
+import {getThreeBufferBridgeSupport, ThreeBufferBridge} from '../src/interop';
 
 function createFixture() {
   const device = {type: 'webgpu', handle: {}} as unknown as Device;
@@ -18,6 +18,7 @@ function createFixture() {
     },
     delete: vi.fn((attribute: BufferAttribute) => data.delete(attribute)),
     createAttribute: vi.fn(),
+    createIndexAttribute: vi.fn(),
     updateAttribute: vi.fn(),
     destroyAttribute: vi.fn()
   };
@@ -36,6 +37,7 @@ function createFixture() {
 test('bridge borrows buffers, delegates ordinary attributes and restores backend hooks', () => {
   const {device, renderer, backend, buffer} = createFixture();
   const originalCreate = backend.createAttribute;
+  const originalCreateIndex = backend.createIndexAttribute;
   const originalUpdate = backend.updateAttribute;
   const originalDestroy = backend.destroyAttribute;
   const bridge = new ThreeBufferBridge(device, renderer);
@@ -47,9 +49,11 @@ test('bridge borrows buffers, delegates ordinary attributes and restores backend
   expect(() => bridge.dispose()).toThrow('Dispose rendered geometries');
   const ordinary = new BufferAttribute(new Float32Array(3), 3);
   backend.createAttribute(ordinary);
+  backend.createIndexAttribute(ordinary);
   backend.updateAttribute(ordinary);
   backend.destroyAttribute(ordinary);
   expect(originalCreate).toHaveBeenCalledWith(ordinary);
+  expect(originalCreateIndex).toHaveBeenCalledWith(ordinary);
   expect(originalUpdate).toHaveBeenCalledWith(ordinary);
   expect(originalDestroy).toHaveBeenCalledWith(ordinary);
   backend.destroyAttribute(attribute);
@@ -61,6 +65,7 @@ test('bridge borrows buffers, delegates ordinary attributes and restores backend
   bridge.dispose();
   bridge.dispose();
   expect(backend.createAttribute).toBe(originalCreate);
+  expect(backend.createIndexAttribute).toBe(originalCreateIndex);
   expect(backend.updateAttribute).toBe(originalUpdate);
   expect(backend.destroyAttribute).toBe(originalDestroy);
   expect(() => bridge.createAttribute(buffer, 3, 3)).toThrow('live buffer');
@@ -108,5 +113,78 @@ test('geometry churn releases live cache entries and preserves surviving borrowe
   expect(getAttribute).not.toHaveBeenCalled();
   expect(backend.delete).not.toHaveBeenCalled();
   expect(data.size).toBe(0);
+  expect(buffer.destroy).not.toHaveBeenCalled();
+});
+
+test('support probing diagnoses incompatible backends without installing hooks', () => {
+  const {device, renderer, backend} = createFixture();
+  const originalCreate = backend.createAttribute;
+  expect(getThreeBufferBridgeSupport(device, renderer)).toEqual({supported: true});
+  Object.defineProperty(backend, 'device', {value: undefined, writable: true});
+  expect(getThreeBufferBridgeSupport(device, renderer)).toEqual({
+    supported: false,
+    reason: 'Initialize the Three renderer before attaching'
+  });
+  expect(() => new ThreeBufferBridge(device, renderer)).toThrow('Initialize');
+  backend.device = device.handle;
+  Object.defineProperty(backend, 'createIndexAttribute', {value: undefined, configurable: true});
+  expect(getThreeBufferBridgeSupport(device, renderer)).toEqual({
+    supported: false,
+    reason: 'Unsupported Three attribute backend'
+  });
+  expect(() => new ThreeBufferBridge(device, renderer)).toThrow('Unsupported');
+  expect(backend.createAttribute).toBe(originalCreate);
+  expect('borrowedBufferBridge' in backend).toBe(false);
+});
+
+test.each([
+  'uint16',
+  'uint32'
+] as const)('bridge borrows %s indices without converting their layout', format => {
+  const {device, renderer, backend, buffer} = createFixture();
+  const indexBuffer = {
+    ...buffer,
+    indexType: format,
+    usage: Buffer.INDEX | Buffer.STORAGE
+  } as Buffer;
+  const bridge = new ThreeBufferBridge(device, renderer);
+  const attribute = bridge.createIndexAttribute(indexBuffer, 3);
+  expect(attribute.itemSize).toBe(1);
+  expect(attribute.count).toBe(3);
+  expect(attribute.array).toBeInstanceOf(format === 'uint16' ? Uint16Array : Uint32Array);
+  backend.createIndexAttribute(attribute);
+  expect(backend.get(attribute).buffer).toBe(indexBuffer.handle);
+  expect(() => backend.createAttribute(attribute)).toThrow('usage');
+  expect(() => backend.updateAttribute(attribute)).toThrow('CPU needsUpdate');
+  expect(() => bridge.dispose()).toThrow('Dispose rendered geometries');
+  backend.destroyAttribute(attribute);
+  expect(indexBuffer.destroy).not.toHaveBeenCalled();
+  expect(() => bridge.createIndexAttribute({...buffer, indexType: format} as Buffer, 3)).toThrow(
+    'usage'
+  );
+  expect(() => bridge.createIndexAttribute(indexBuffer, 100)).toThrow('covering');
+  bridge.dispose();
+});
+
+test('bridge borrows instance attributes and validates their complete element count', () => {
+  const {device, renderer, backend, buffer} = createFixture();
+  const bridge = new ThreeBufferBridge(device, renderer);
+  const attribute = bridge.createInstancedAttribute(buffer, 3, 3);
+  expect(attribute.isInstancedBufferAttribute).toBe(true);
+  expect(attribute.meshPerAttribute).toBe(1);
+  expect(attribute.count).toBe(3);
+  backend.createAttribute(attribute);
+  expect(backend.get(attribute).buffer).toBe(buffer.handle);
+  expect(() => bridge.createIndexAttribute(buffer, 3)).toThrow('index metadata');
+  expect(() => bridge.createInstancedAttribute(buffer, 3, 4)).toThrow('covering');
+  expect(() => bridge.createInstancedAttribute(buffer, 3, 0.5)).toThrow('covering');
+  expect(() =>
+    bridge.createIndexAttribute(
+      {...buffer, indexType: 'uint32', usage: Buffer.INDEX} as Buffer,
+      NaN
+    )
+  ).toThrow('covering');
+  backend.destroyAttribute(attribute);
+  bridge.dispose();
   expect(buffer.destroy).not.toHaveBeenCalled();
 });

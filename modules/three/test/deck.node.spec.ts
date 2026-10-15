@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {expect, test} from 'vitest';
+import {expect, test, vi} from 'vitest';
 import {OrbitViewport, WebMercatorViewport, _GlobeViewport, type LayerContext} from '@deck.gl/core';
 import {
   Camera,
+  Group,
+  Scene,
   Matrix4,
   Vector4,
   Vector3,
@@ -14,7 +16,12 @@ import {
   OrthographicCamera,
   WebGPUCoordinateSystem
 } from 'three/webgpu';
-import {ThreeMeshLayer, synchronizeThreeCamera, pickThreeObject} from '../src/deck';
+import {
+  ThreeMeshLayer,
+  ThreeSceneLayer,
+  synchronizeThreeCamera,
+  pickThreeObject
+} from '../src/deck';
 
 for (const orthographic of [false, true]) {
   test(`deck camera preserves scaled view, target and clip depth (${orthographic ? 'orthographic' : 'perspective'})`, () => {
@@ -151,4 +158,204 @@ test('local meter origin explicitly rejects Cartesian viewports', () => {
       [0, 0, 0]
     )
   ).toThrow('Mercator');
+});
+
+test('scene picking maps descendant hits to application IDs and safely disables roots', () => {
+  const device = {type: 'webgpu'};
+  const draw = vi.fn();
+  const drawPickingDepth = vi.fn();
+  const drawHighlighted = vi.fn<import('../src/objects').ThreeSceneAdapter['drawHighlighted']>();
+  const drawPicking = vi.fn<import('../src/objects').ThreeSceneAdapter['drawPicking']>();
+  const adapter = {
+    device,
+    draw,
+    drawHighlighted,
+    drawPickingDepth,
+    drawPicking
+  } as unknown as import('../src/objects').ThreeSceneAdapter;
+  const first = new Group();
+  const second = new Group();
+  const child = new Group();
+  first.add(child);
+  const entries = [
+    {id: 'first', object: first},
+    {id: 'second', object: second}
+  ];
+  const layer = new ThreeSceneLayer({
+    id: 'pick-scene',
+    adapter,
+    scene: new Scene(),
+    camera: new Camera(),
+    pickable: true,
+    pickingObjects: entries
+  });
+  layer.context = {
+    device,
+    viewport: new OrbitViewport({width: 128, height: 128})
+  } as unknown as LayerContext;
+  layer.state = {pickingIndices: new Map(), disabledPickingIndices: new Set()};
+  layer.initializeState();
+  layer.updateState();
+  const pass = {} as import('@luma.gl/core').RenderPass;
+  layer.draw({renderPass: pass, shaderModuleProps: {picking: {isActive: true}}});
+  const getColor = drawPicking.mock
+    .calls[0][3] as import('../src/objects').ThreePickingColorAccessor;
+  expect(getColor(child)).toEqual([1 / 255, 0, 0, 1]);
+  expect(getColor(second)).toEqual([2 / 255, 0, 0, 1]);
+  expect(getColor(new Group())).toEqual([0, 0, 0, 0]);
+  layer.disablePickingIndex(0);
+  expect(getColor(child)).toBeNull();
+  layer.restorePickingColors();
+  expect(getColor(child)).toEqual([1 / 255, 0, 0, 1]);
+  const info = {color: null, layer, index: 1, picked: true, x: 0, y: 0, pixelRatio: 1};
+  expect(layer.getPickingInfo({info, mode: 'query', sourceLayer: null}).object).toBe(entries[1]);
+  layer.draw({renderPass: pass});
+  expect(draw).toHaveBeenCalledWith(layer.props.scene, layer.props.camera, pass);
+  layer.setShaderModuleProps({
+    picking: {highlightedObjectColor: [1, 0, 0], highlightColor: [80, 160, 240, 128]}
+  });
+  layer.draw({renderPass: pass});
+  const highlight = drawHighlighted.mock.calls[0][3];
+  expect(highlight(child)).toEqual([80 / 255, 160 / 255, 240 / 255, 128 / 255]);
+  expect(highlight(second)).toBeNull();
+  expect(highlight(new Group())).toBeNull();
+  // Partial module updates from a picking pass must preserve the hover state.
+  layer.setShaderModuleProps({picking: {isActive: true}});
+  layer.draw({renderPass: pass, shaderModuleProps: {picking: {isActive: true}}});
+  expect(drawHighlighted).toHaveBeenCalledTimes(1);
+  layer.setShaderModuleProps({picking: {highlightedObjectColor: null}});
+  layer.draw({renderPass: pass});
+  expect(draw).toHaveBeenCalledTimes(2);
+
+  layer.draw({
+    renderPass: pass,
+    shaderModuleProps: {picking: {isActive: true, isAttribute: true}}
+  });
+  expect(drawPickingDepth).toHaveBeenCalledWith(
+    layer.props.scene,
+    layer.props.camera,
+    pass,
+    expect.any(Function)
+  );
+  expect(drawPickingDepth.mock.calls[0][3](child)).toEqual([1 / 255, 0, 0, 1]);
+  const reordered = layer.clone({pickingObjects: [entries[1], entries[0]]});
+  reordered.context = layer.context;
+  reordered.state = layer.state;
+  reordered.updateState();
+  expect(
+    reordered.getPickingInfo({info: {...info, index: 0}, mode: 'query', sourceLayer: null}).object
+      ?.id
+  ).toBe('second');
+  const duplicate = layer.clone({pickingObjects: [entries[0], {id: 'first', object: second}]});
+  duplicate.context = layer.context;
+  duplicate.state = layer.state;
+  expect(() => duplicate.updateState()).toThrow('unique');
+});
+
+for (const geographic of [false, true]) {
+  test(`scene placement composes after the local origin (${geographic ? 'Mercator' : 'Cartesian'})`, () => {
+    const origin: [number, number, number] = [-122.4194, 37.7749, 120];
+    const viewport = geographic
+      ? new WebMercatorViewport({
+          width: 256,
+          height: 128,
+          longitude: origin[0],
+          latitude: origin[1],
+          zoom: 19,
+          pitch: 55,
+          bearing: 31
+        })
+      : new OrbitViewport({
+          width: 256,
+          height: 128,
+          target: [2, 3, -1],
+          zoom: 4,
+          rotationX: 30,
+          rotationOrbit: 20
+        });
+    // Translation, rotation, nonuniform scale and shear exercise the full affine placement.
+    const placement = new Matrix4()
+      .makeTranslation(12, -7, 3)
+      .multiply(new Matrix4().makeRotationZ(0.4))
+      .multiply(new Matrix4().makeScale(2, 0.7, 1.5))
+      .multiply(new Matrix4().makeShear(0.1, 0, 0, 0.2, 0, 0));
+    const originalElements = [...placement.elements];
+    const local = new Vector3(0.4, -0.3, 0.8);
+    const placed = local.clone().applyMatrix4(placement);
+    const common = geographic
+      ? placed
+          .clone()
+          .multiply(new Vector3(...viewport.getDistanceScales(origin).unitsPerMeter))
+          .add(new Vector3(...viewport.projectPosition(origin)))
+      : placed;
+    const expected = new Vector4(...common.toArray(), 1).applyMatrix4(
+      new Matrix4().fromArray(viewport.viewProjectionMatrix)
+    );
+    const camera = new Camera();
+    for (const coordinateSystem of [WebGPUCoordinateSystem, camera.coordinateSystem]) {
+      synchronizeThreeCamera(
+        camera,
+        viewport,
+        coordinateSystem,
+        geographic ? origin : undefined,
+        placement.elements
+      );
+      camera.updateWorldMatrix(true, false);
+      const actual = new Vector4(...local.toArray(), 1)
+        .applyMatrix4(camera.matrixWorldInverse)
+        .applyMatrix4(camera.projectionMatrix);
+      expect(actual.x / actual.w).toBeCloseTo(expected.x / expected.w, 8);
+      expect(actual.y / actual.w).toBeCloseTo(expected.y / expected.w, 8);
+      expect(actual.z / actual.w).toBeCloseTo(
+        coordinateSystem === WebGPUCoordinateSystem
+          ? (expected.z / expected.w + 1) / 2
+          : expected.z / expected.w,
+        8
+      );
+      const unprojected = new Vector3(
+        actual.x / actual.w,
+        actual.y / actual.w,
+        actual.z / actual.w
+      ).unproject(camera);
+      expect(unprojected.distanceTo(local)).toBeLessThan(0.00001);
+    }
+    expect(placement.elements).toEqual(originalElements);
+    synchronizeThreeCamera(
+      camera,
+      viewport,
+      WebGPUCoordinateSystem,
+      geographic ? origin : undefined
+    );
+    const unplacedCamera = new Camera();
+    synchronizeThreeCamera(
+      unplacedCamera,
+      viewport,
+      WebGPUCoordinateSystem,
+      geographic ? origin : undefined
+    );
+    expect(camera.projectionMatrix.elements).toEqual(unplacedCamera.projectionMatrix.elements);
+    expect(camera.matrixWorld.elements).toEqual(unplacedCamera.matrixWorld.elements);
+  });
+}
+
+test('scene placement rejects reflected, singular and projective matrices before changing the camera', () => {
+  const viewport = new OrbitViewport({width: 128, height: 128});
+  const camera = new Camera();
+  for (const placement of [
+    new Matrix4().makeScale(-1, 1, 1),
+    new Matrix4().makeScale(0, 1, 1),
+    new Matrix4().makePerspective(-1, 1, 1, -1, 1, 10)
+  ]) {
+    const original = camera.matrixWorld.clone();
+    expect(() =>
+      synchronizeThreeCamera(
+        camera,
+        viewport,
+        WebGPUCoordinateSystem,
+        undefined,
+        placement.elements
+      )
+    ).toThrow('orientation-preserving affine');
+    expect(camera.matrixWorld).toEqual(original);
+  }
 });
