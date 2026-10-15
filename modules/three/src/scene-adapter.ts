@@ -57,12 +57,14 @@ export class ThreeSceneAdapter {
   private readonly highlightColor = uniform(new Vector4());
   private readonly getHighlightedOutput = (output: ReturnType<typeof vec4>) =>
     Fn(() => {
-      If(output.a.lessThanEqual(0), () => Discard());
       const color = renderOutput(output, NoToneMapping, SRGBColorSpace);
       // Match deck: composite byte-space highlight color over the final display color.
       const alpha = this.highlightColor.a.add(color.a.mul(this.highlightColor.a.oneMinus()));
       const ratio = this.highlightColor.a.div(max(alpha, 0.00001));
-      return vec4(mix(color.rgb, this.highlightColor.rgb, ratio), alpha);
+      // Zero-alpha surfaces keep their color and depth writes, selected or not.
+      return output.a
+        .greaterThan(0)
+        .select(vec4(mix(color.rgb, this.highlightColor.rgb, ratio), alpha), color);
     })();
   private readonly getPickingOutput = (output: ReturnType<typeof vec4>) =>
     Fn(() => {

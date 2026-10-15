@@ -68,7 +68,10 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
   const occluderMaterial = new MeshBasicMaterial();
   const occluder = new Mesh(geometry, occluderMaterial);
   occluder.position.set(0, 1, 1);
-  scene.add(left, right, occluder);
+  const transparentMaterial = new MeshBasicMaterial({transparent: true, opacity: 0});
+  const transparentOccluderMesh = new Mesh(geometry, transparentMaterial);
+  transparentOccluderMesh.position.set(0, -1, 1);
+  scene.add(left, right, occluder, transparentOccluderMesh);
   const color = device.createTexture({
     width: 128,
     height: 128,
@@ -202,6 +205,22 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
       expect(await pick([0, 1, 1])).toBeNull();
     }
     // Highlight the final display color, retain alpha holes, and leave other roots untouched.
+    // Even zero-alpha unselected surfaces retain their original depth-writing behavior.
+    reverse = false;
+    await redraw();
+    const transparentOccluder = await pixel([0, -1, 1]);
+    expect(transparentOccluder).not.toEqual([0, 255, 0, 255]);
+    highlightedObjectIndex = 0;
+    await redraw();
+    expect(await pixel([0, -1, 1])).toEqual(transparentOccluder);
+    entries = [...entries, {id: 'transparent-root', object: transparentOccluderMesh}];
+    highlightedObjectIndex = 2;
+    await redraw();
+    expect(await pixel([0, -1, 1])).toEqual(transparentOccluder);
+    entries = entries.slice(0, 2);
+    highlightedObjectIndex = null;
+    reverse = true;
+    await redraw();
     const baselineRight = await pixel([1.7, 0, 1]);
     const baselineOccluder = await pixel([0, 1, 1]);
     highlightedObjectIndex = 0;
@@ -334,6 +353,7 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
     material.dispose();
     deformedMaterial.dispose();
     occluderMaterial.dispose();
+    transparentMaterial.dispose();
     alphaTexture.dispose();
     readback.destroy();
     framebuffer.destroy();
