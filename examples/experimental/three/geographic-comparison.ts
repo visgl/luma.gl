@@ -5,7 +5,7 @@ import {Deck, MapController, MapView, WebMercatorViewport, type MapViewState} fr
 import {Timeline} from '@luma.gl/engine';
 import {EventManager, Pan, Pinch} from 'mjolnir.js';
 import type {Device} from '@luma.gl/core';
-import {pickThreeObject, synchronizeThreeCamera} from '@luma.gl/three/deck';
+import {synchronizeThreeCamera} from '@luma.gl/three/deck';
 import {ThreeSceneAdapter} from '@luma.gl/three/objects';
 import {HalfFloatType, WebGPURenderer, WebGPUCoordinateSystem} from 'three/webgpu';
 import {createGeographicLayers, createGeographicScene, GEOGRAPHIC_ORIGIN} from './geographic-scene';
@@ -74,22 +74,35 @@ export async function createGeographicComparison(
   let disposed = false;
   let reverseOrder = false;
   let showModels = true;
-  function selectAt(position: [number, number]) {
-    if (!scene || !referenceScene) return;
-    const intersection = pickThreeObject(scene.camera, position, [
-      scene.scene,
-      scene.referenceContext
-    ]);
-    let id: string | undefined;
-    for (let object = intersection?.object; object; object = object.parent || undefined)
-      if (object.userData['geographicId']) {
-        id = object.userData['geographicId'];
-        break;
-      }
+  let selectionRequest = 0;
+  function updateLayers() {
+    const layers = createGeographicLayers(scene!, adapter, reverseOrder);
+    deck?.setProps({
+      layers: showModels ? layers : layers.filter(layer => layer.id !== 'geographic-lanterns')
+    });
+  }
+  function selectObject(value: unknown) {
+    if (!scene || !referenceScene || disposed) return;
+    const id = typeof value === 'string' ? value : undefined;
     scene.select(id);
     referenceScene.select(id);
     onSelect(id);
-    deck?.redraw('selection');
+    updateLayers();
+  }
+  async function selectAt(position: [number, number]) {
+    if (!deck) return;
+    const request = ++selectionRequest;
+    const bounds = canvas.getBoundingClientRect();
+    try {
+      const info = await deck.pickObjectAsync({
+        x: ((position[0] + 1) * bounds.width) / 2,
+        y: ((1 - position[1]) * bounds.height) / 2
+      });
+      if (!disposed && request === selectionRequest) selectObject(info?.object?.id);
+    } catch (error) {
+      if (!disposed && request === selectionRequest)
+        onError(error instanceof Error ? error : new Error(String(error)));
+    }
   }
   let pointerOrigin: [number, number] | undefined;
   let pointerMoved = false;
@@ -116,7 +129,7 @@ export async function createGeographicComparison(
     )
       return;
     const bounds = event.currentTarget.getBoundingClientRect();
-    selectAt([
+    void selectAt([
       ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
       1 - ((event.clientY - bounds.top) / bounds.height) * 2
     ]);
@@ -168,6 +181,16 @@ export async function createGeographicComparison(
         controller: {doubleClickZoom: false, doubleClickDragZoom: false, multiTouchDrag: 'rotate'},
         layers: createGeographicLayers(scene!, adapter),
         onLoad: resolve,
+        onClick: info => {
+          if (!pointerMoved) {
+            selectionRequest++;
+            selectObject(info.object?.id);
+          }
+        },
+        onHover: info => {
+          canvas.style.cursor = info.picked ? 'pointer' : 'grab';
+        },
+        getTooltip: info => (typeof info.object?.id === 'string' ? info.object.id : null),
         onError: error => {
           onError(error);
           reject(error);
@@ -204,7 +227,6 @@ export async function createGeographicComparison(
     window.addEventListener('pointercancel', handlePointerCancel);
     canvas.addEventListener('pointerdown', handlePointerDown);
     referenceCanvas.addEventListener('pointerdown', handlePointerDown);
-    canvas.addEventListener('click', handleClick);
     referenceCanvas.addEventListener('click', handleClick);
   } catch (error) {
     disposed = true;
@@ -228,12 +250,10 @@ export async function createGeographicComparison(
     },
     reverseOrder() {
       reverseOrder = !reverseOrder;
-      const layers = createGeographicLayers(scene!, adapter, reverseOrder);
-      deck!.setProps({
-        layers: showModels ? layers : layers.filter(layer => layer.id !== 'geographic-lanterns')
-      });
+      updateLayers();
     },
     pause() {
+      selectionRequest++;
       // Exercise layer removal/reinsertion with caller-owned scene and adapter intact.
       showModels = !showModels;
       scene!.models.forEach(model => {
@@ -242,10 +262,7 @@ export async function createGeographicComparison(
       referenceScene!.models.forEach(model => {
         model.visible = showModels;
       });
-      const layers = createGeographicLayers(scene!, adapter, reverseOrder);
-      deck!.setProps({
-        layers: showModels ? layers : layers.filter(layer => layer.id !== 'geographic-lanterns')
-      });
+      updateLayers();
     },
     dispose() {
       if (disposed) return;
@@ -258,7 +275,6 @@ export async function createGeographicComparison(
       window.removeEventListener('pointercancel', handlePointerCancel);
       canvas.removeEventListener('pointerdown', handlePointerDown);
       referenceCanvas.removeEventListener('pointerdown', handlePointerDown);
-      canvas.removeEventListener('click', handleClick);
       referenceCanvas.removeEventListener('click', handleClick);
       deck!.finalize();
       reference.dispose();

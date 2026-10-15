@@ -415,9 +415,68 @@ This path targets single-sample Cartesian or bounded local-meter Mercator views
 and display-encoded sRGB output with no tone mapping. It uses pinned Three r185 context/output hooks to apply
 color conversion inline, avoiding a second main-color output pass. Preparation adds
 work each frame; this is a compatibility exploration, not a performance guarantee.
-Transmission, lazy PMREM, postprocessing, GPU picking and nested passes during
+Transmission, lazy PMREM, postprocessing and nested passes during
 the borrowed draw are unsupported. Native deck objects neither cast nor receive the
 Three shadow map. The basic `ThreeMeshLayer` remains a separate, smaller integration.
+
+## Unified GPU picking for prepared scenes
+
+Set `ThreeSceneLayer.pickable` and provide `pickingObjects`, an immutable array of
+`{id: string | number, object: Object3D}` records. Each object is a selectable root;
+rendered descendants resolve to the nearest listed ancestor. Roots and IDs must
+be unique. `info.object` is the original record, so `info.object.id` is the application
+identity and `info.object.object` is its Three root. `info.index` is the current array
+index; preserve application IDs when reordering entries or replacing loaded roots.
+Create a new array when membership changes. Unlisted scene geometry writes depth
+with a zero picking color, so it still occludes objects behind it.
+
+```ts
+const layer = new ThreeSceneLayer({
+  id: 'models', adapter, scene, camera,
+  pickable: true,
+  pickingObjects: [{id: 'vehicle-17', object: vehicleRoot}],
+  onHover: info => showTooltip(info.object?.id),
+  onClick: info => selectObject(info.object?.id)
+});
+const hit = await deck.pickObjectAsync({x, y});
+const visibleObjects = await deck.pickObjectsAsync({x, y, width, height});
+```
+
+Both queries and deck's hover/click callbacks use the same GPU picking pass as native
+deck layers. ID output bypasses tone mapping and color encoding. It uses the original
+material's alpha-test coverage and vertex processing, including supported skinning,
+morphs and TSL position nodes. Fully transparent fragments are discarded; partially
+transparent surfaces are treated as selectable coverage and write picking depth.
+Native deck geometry and Three geometry occlude each other through the shared pick
+depth attachment, independent of layer order when their normal depth tests apply.
+Only layers included by deck's picking filter participate; non-pickable native layers
+still follow deck's usual exclusion rules. Keep this scene layer pickable if its
+unlisted geometry should act as a picking occluder.
+
+Prepare the scene before picking, just as before its visible draw. Changing scene
+objects or animation requires requesting a deck redraw so preparation runs again.
+Picking uses the active viewport's synchronized camera, including local Mercator
+origins. It never opens, clears, ends or submits deck's pass, or takes ownership of
+source materials, geometries, scene roots or the device.
+
+This first version returns root-level IDs. Individual instance IDs, automatic
+highlighting (`autoHighlight`), `unproject3D`, custom `fragmentNode` materials,
+transmission and nested rendering remain unsupported. Use callbacks to implement
+highlighting. `ThreeMeshLayer` still has its separate non-pickable basic-material
+contract. The compute buffer bridge into upstream `WebGPURenderer` is independent
+of this prepared-scene path.
+
+Low-level callers may use `adapter.drawPicking(scene, camera, pass, getColor,
+parameters?)`. The accessor returns normalized RGBA or `null` to omit an object;
+zero RGBA draws an unselectable occluder. Use a linear `rgba8unorm` attachment for
+byte IDs. Optional pipeline parameters let the caller supply its own layer encoding;
+`ThreeSceneLayer` uses deck's alpha blend constant. Normal and picking draws restore
+renderer hooks, shadow-update flags and pass-local pipeline state after errors.
+
+Browser acceptance tests mix Three roots and native polygons, reverse layer order,
+check alpha holes and TSL-deformed vertices, replace/reorder roots while preserving
+IDs, and query visible objects in a rectangle. Normal PBR/geographic comparison
+tests continue to check color parity and caller ownership.
 
 ## Geographic deck exploration
 
@@ -428,15 +487,17 @@ anchored at longitude/latitude/altitude. `ThreeSceneLayer` accepts
 before preparation. This bounded Mercator tangent frame supports object altitude,
 scale and heading; large extents and globe projection remain unsupported.
 
-`pickThreeObject` performs CPU triangle raycasting, including nearest supplied
-occluders and clipping. The demo provides Three equivalents of native deck
-buildings to return stable IDs and synchronize selection highlights. It does not
-make Three scenes pickable in deck's GPU picking pass. Alpha-test holes, GPU-only
-deformation, material visibility and arbitrary native-layer occlusion require
-further integration. Tests compare rendered output and selected output against
-upstream Three and verify that layer removal/reinsertion preserves borrowed data
-and the device.
+The demo uses deck GPU picking for Lantern roots and native buildings. Hovering the
+deck pane shows object IDs; clicking either pane queries the same deck scene and
+synchronizes selection highlights. The reference pane still renders Three building
+and ground equivalents for visual parity, but picking does not require CPU occluder
+copies. Async reference clicks ignore results superseded by a newer selection,
+model toggle or disposal. Layer removal/reinsertion preserves borrowed source data.
 
-Buildings act as occluders for CPU selection; only Lantern instances receive
-selection IDs and highlights. Their bases are normalized from geometry bounds
-before applying instance scale, so placement altitude describes the model base.
+`pickThreeObject` remains an independent CPU triangle-ray helper. It can find the
+nearest supplied visible triangle within camera clipping planes, but does not model
+material alpha coverage or arbitrary native deck occlusion. Use GPU picking for the
+composed scene.
+
+Lantern bases are normalized from geometry bounds before applying instance scale,
+so placement altitude describes the model base.

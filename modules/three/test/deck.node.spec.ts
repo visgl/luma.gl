@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {expect, test} from 'vitest';
+import {expect, test, vi} from 'vitest';
 import {OrbitViewport, WebMercatorViewport, _GlobeViewport, type LayerContext} from '@deck.gl/core';
 import {
   Camera,
+  Group,
+  Scene,
   Matrix4,
   Vector4,
   Vector3,
@@ -14,7 +16,12 @@ import {
   OrthographicCamera,
   WebGPUCoordinateSystem
 } from 'three/webgpu';
-import {ThreeMeshLayer, synchronizeThreeCamera, pickThreeObject} from '../src/deck';
+import {
+  ThreeMeshLayer,
+  ThreeSceneLayer,
+  synchronizeThreeCamera,
+  pickThreeObject
+} from '../src/deck';
 
 for (const orthographic of [false, true]) {
   test(`deck camera preserves scaled view, target and clip depth (${orthographic ? 'orthographic' : 'perspective'})`, () => {
@@ -151,4 +158,71 @@ test('local meter origin explicitly rejects Cartesian viewports', () => {
       [0, 0, 0]
     )
   ).toThrow('Mercator');
+});
+
+test('scene picking maps descendant hits to application IDs and safely disables roots', () => {
+  const device = {type: 'webgpu'};
+  const draw = vi.fn();
+  const drawPicking = vi.fn<import('../src/objects').ThreeSceneAdapter['drawPicking']>();
+  const adapter = {
+    device,
+    draw,
+    drawPicking
+  } as unknown as import('../src/objects').ThreeSceneAdapter;
+  const first = new Group();
+  const second = new Group();
+  const child = new Group();
+  first.add(child);
+  const entries = [
+    {id: 'first', object: first},
+    {id: 'second', object: second}
+  ];
+  const layer = new ThreeSceneLayer({
+    id: 'pick-scene',
+    adapter,
+    scene: new Scene(),
+    camera: new Camera(),
+    pickable: true,
+    pickingObjects: entries
+  });
+  layer.context = {
+    device,
+    viewport: new OrbitViewport({width: 128, height: 128})
+  } as unknown as LayerContext;
+  layer.state = {pickingIndices: new Map(), disabledPickingIndices: new Set()};
+  layer.initializeState();
+  layer.updateState();
+  const pass = {} as import('@luma.gl/core').RenderPass;
+  layer.draw({renderPass: pass, shaderModuleProps: {picking: {isActive: true}}});
+  const getColor = drawPicking.mock
+    .calls[0][3] as import('../src/objects').ThreePickingColorAccessor;
+  expect(getColor(child)).toEqual([1 / 255, 0, 0, 1]);
+  expect(getColor(second)).toEqual([2 / 255, 0, 0, 1]);
+  expect(getColor(new Group())).toEqual([0, 0, 0, 0]);
+  layer.disablePickingIndex(0);
+  expect(getColor(child)).toBeNull();
+  layer.restorePickingColors();
+  expect(getColor(child)).toEqual([1 / 255, 0, 0, 1]);
+  const info = {color: null, layer, index: 1, picked: true, x: 0, y: 0, pixelRatio: 1};
+  expect(layer.getPickingInfo({info, mode: 'query', sourceLayer: null}).object).toBe(entries[1]);
+  layer.draw({renderPass: pass});
+  expect(draw).toHaveBeenCalledWith(layer.props.scene, layer.props.camera, pass);
+  expect(() =>
+    layer.draw({
+      renderPass: pass,
+      shaderModuleProps: {picking: {isActive: true, isAttribute: true}}
+    })
+  ).toThrow('unproject3D');
+  const reordered = layer.clone({pickingObjects: [entries[1], entries[0]]});
+  reordered.context = layer.context;
+  reordered.state = layer.state;
+  reordered.updateState();
+  expect(
+    reordered.getPickingInfo({info: {...info, index: 0}, mode: 'query', sourceLayer: null}).object
+      ?.id
+  ).toBe('second');
+  const duplicate = layer.clone({pickingObjects: [entries[0], {id: 'first', object: second}]});
+  duplicate.context = layer.context;
+  duplicate.state = layer.state;
+  expect(() => duplicate.updateState()).toThrow('unique');
 });

@@ -7,9 +7,11 @@ import {
   Layer,
   type LayerContext,
   type LayerProps,
+  type GetPickingInfoParams,
+  type PickingInfo,
   type Viewport
 } from '@deck.gl/core';
-import {type RenderPass} from '@luma.gl/core';
+import {type RenderPass, type RenderPipelineParameters} from '@luma.gl/core';
 import {
   Camera,
   type Scene,
@@ -21,6 +23,17 @@ import {
   WebGPUCoordinateSystem
 } from 'three/webgpu';
 import {ThreeMeshAdapter, ThreeSceneAdapter, type ThreeMeshAdapterProps} from './objects';
+
+// deck encodes the layer in alpha using the caller pass's blend constant.
+const PICKING_PARAMETERS: RenderPipelineParameters = {
+  blend: true,
+  blendColorOperation: 'add',
+  blendColorSrcFactor: 'one',
+  blendColorDstFactor: 'zero',
+  blendAlphaOperation: 'add',
+  blendAlphaSrcFactor: 'constant',
+  blendAlphaDstFactor: 'zero'
+};
 
 const depthConversion = new Matrix4().set(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.5, 0.5, 0, 0, 0, 1);
 
@@ -151,24 +164,36 @@ export class ThreeMeshLayer extends Layer<ThreeMeshLayerProps> {
   }
 }
 
+/** Application identity and the Three root selected by any rendered descendant. */
+export type ThreeScenePickingObject = {id: string | number; object: Object3D};
+export type ThreeScenePickingInfo = PickingInfo<ThreeScenePickingObject>;
+
 export type ThreeSceneLayerProps = LayerProps & {
   adapter: ThreeSceneAdapter;
   scene: Scene;
   camera: Camera;
+  /** Immutable membership list. Use object.id for identity; info.index is positional. */
+  pickingObjects?: readonly ThreeScenePickingObject[];
 };
 
 /** Draw a prepared upstream-compiled PBR scene without replacing deck's pass. */
 export class ThreeSceneLayer extends Layer<ThreeSceneLayerProps> {
   static override layerName = 'ThreeSceneLayer';
-  static override defaultProps = {coordinateSystem: COORDINATE_SYSTEM.CARTESIAN};
+  static override defaultProps = {
+    coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
+    pickingObjects: {type: 'object', value: [], compare: false}
+  };
+  declare state: {pickingIndices: Map<Object3D, number>; disabledPickingIndices: Set<number>};
   override getAttributeManager() {
     return null;
   }
-  override initializeState(): void {}
+  override initializeState(): void {
+    this.setState({pickingIndices: new Map(), disabledPickingIndices: new Set()});
+  }
   override updateState(): void {
     if (
       this.context.device !== this.props.adapter.device ||
-      this.props.pickable ||
+      this.props.autoHighlight ||
       this.props.opacity !== 1 ||
       this.props.extensions.length ||
       this.props.modelMatrix ||
@@ -178,10 +203,42 @@ export class ThreeSceneLayer extends Layer<ThreeSceneLayerProps> {
           this.props.coordinateSystem !== COORDINATE_SYSTEM.CARTESIAN))
     )
       throw new Error(
-        "ThreeSceneLayer requires a prepared adapter on deck's device and a non-pickable Cartesian or local meter scene"
+        "ThreeSceneLayer requires a prepared adapter on deck's device and a Cartesian or local meter scene without automatic highlighting"
       );
+    const pickingIndices = new Map<Object3D, number>();
+    const identities = new Set<string | number>();
+    (this.props.pickingObjects || []).forEach((entry, index) => {
+      if (identities.has(entry.id) || pickingIndices.has(entry.object))
+        throw new Error('ThreeSceneLayer picking roots and IDs must be unique');
+      identities.add(entry.id);
+      pickingIndices.set(entry.object, index);
+    });
+    this.setState({pickingIndices});
   }
-  override draw({renderPass}: {renderPass: RenderPass}): void {
+
+  override getPickingInfo({info}: GetPickingInfoParams): ThreeScenePickingInfo {
+    info.object = info.index >= 0 ? this.props.pickingObjects?.[info.index] : undefined;
+    return info;
+  }
+
+  override disablePickingIndex(index: number): void {
+    this.state.disabledPickingIndices.add(index);
+  }
+
+  override restorePickingColors(): void {
+    this.state.disabledPickingIndices.clear();
+  }
+
+  override draw({
+    renderPass,
+    shaderModuleProps
+  }: {
+    renderPass: RenderPass;
+    shaderModuleProps?: {picking?: {isActive?: boolean | number; isAttribute?: boolean | number}};
+  }): void {
+    const picking = shaderModuleProps?.picking;
+    if (picking?.isActive && picking.isAttribute)
+      throw new Error('ThreeSceneLayer picking does not support unproject3D');
     synchronizeThreeCamera(
       this.props.camera,
       this.context.viewport,
@@ -194,7 +251,26 @@ export class ThreeSceneLayer extends Layer<ThreeSceneLayerProps> {
           ]
         : undefined
     );
-    this.props.adapter.draw(this.props.scene, this.props.camera, renderPass);
+    if (picking?.isActive) {
+      this.props.adapter.drawPicking(
+        this.props.scene,
+        this.props.camera,
+        renderPass,
+        object => {
+          let index: number | undefined;
+          for (let root: Object3D | null = object; root; root = root.parent) {
+            index = this.state.pickingIndices.get(root);
+            if (index !== undefined) break;
+          }
+          // Unlisted scene geometry remains a depth occluder in deck's shared pick pass.
+          if (index === undefined) return [0, 0, 0, 0];
+          if (this.state.disabledPickingIndices.has(index)) return null;
+          const color = this.encodePickingColor(index);
+          return [color[0] / 255, color[1] / 255, color[2] / 255, 1];
+        },
+        PICKING_PARAMETERS
+      );
+    } else this.props.adapter.draw(this.props.scene, this.props.camera, renderPass);
   }
   // Adapter/source ownership belongs to the caller; removing this layer preserves both.
 }

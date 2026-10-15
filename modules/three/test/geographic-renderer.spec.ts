@@ -6,7 +6,7 @@ import {Deck, MapView, type MapViewState} from '@deck.gl/core';
 import {Buffer, Texture, luma} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 import {ThreeSceneAdapter} from '../src/objects';
-import {synchronizeThreeCamera, pickThreeObject} from '../src/deck';
+import {synchronizeThreeCamera} from '../src/deck';
 import {
   HalfFloatType,
   Box3,
@@ -183,23 +183,15 @@ test('Geographic Lantern placement, picking, selection and shared depth match up
     }
 
     const viewport = deck!.getViewports()[0];
-    const selectedIds = new Set<string>();
-    for (let vertical = 8; vertical < 128; vertical += 1)
-      for (let horizontal = 8; horizontal < 128; horizontal += 1) {
-        const intersection = pickThreeObject(
-          scene.camera,
-          [horizontal / 64 - 1, 1 - vertical / 64],
-          [scene.scene, scene.referenceContext]
-        );
-        for (let object = intersection?.object; object; object = object.parent || undefined)
-          if (object.userData['geographicId']) {
-            selectedIds.add(object.userData['geographicId']);
-            break;
-          }
-      }
-    expect(selectedIds.size).toBeGreaterThan(0);
-    expect(Array.from(selectedIds).every(id => id.startsWith('lantern-'))).toBe(true);
-    const selectedId = Array.from(selectedIds).find(id => id.startsWith('lantern-'))!;
+    const picked = await deck!.pickObjectsAsync({x: 8, y: 8, width: 120, height: 120});
+    const lanternHits = picked.filter(info => info.layer?.id === 'geographic-lanterns');
+    expect(lanternHits.length).toBeGreaterThan(0);
+    for (const hit of lanternHits) {
+      expect(GEOGRAPHIC_OBJECTS.some(object => object.id === hit.object.id)).toBe(true);
+      expect(scene.models.includes(hit.object.object)).toBe(true);
+    }
+    expect(picked.some(info => info.layer?.id === 'geographic-buildings')).toBe(true);
+    const selectedId = String(lanternHits[0].object.id);
     scene.select(selectedId);
     referenceScene.select(selectedId);
     await new Promise<void>((resolve, reject) =>
