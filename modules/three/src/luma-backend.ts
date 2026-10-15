@@ -60,6 +60,9 @@ export class LumaBackend extends Backend {
   private renderPass: RenderPass | null = null;
   private borrowedPass: RenderPass | null = null;
   private borrowedParameters?: RenderPipelineParameters;
+  private readonly borrowedRenderCounts = new WeakMap<object, number>();
+  private borrowedRenderIndex = 0;
+  private borrowedRenderVersion = 0;
   private renderContext: ThreeInternal | null = null;
   private readonly renderContextStack: ThreeInternal[] = [];
   private computePass: ComputePass | null = null;
@@ -146,6 +149,11 @@ export class LumaBackend extends Backend {
       throw new Error(
         'LumaBackend: expected an idle backend and a compatible single-sample caller pass'
       );
+    // Keep slots distinct across all passes queued on the default encoder before submission.
+    const uniformScope = this.device.commandEncoder || pass;
+    this.borrowedRenderIndex = this.borrowedRenderCounts.get(uniformScope) || 0;
+    this.borrowedRenderCounts.set(uniformScope, this.borrowedRenderIndex + 1);
+    this.borrowedRenderVersion++;
     this.borrowedPass = pass;
     this.borrowedParameters = parameters;
     try {
@@ -278,8 +286,38 @@ export class LumaBackend extends Backend {
     );
   }
   destroyUniformBuffer(binding: ThreeInternal): void {
-    this.release(this.get(binding).buffer);
+    const state = this.get(binding);
+    this.release(state.buffer);
+    for (const snapshot of state.borrowedUniforms || []) {
+      if (snapshot) this.release(snapshot.buffer);
+    }
     this.delete(binding);
+  }
+  private getUniformBuffer(binding: ThreeInternal): Buffer {
+    const state = this.get(binding);
+    if (!this.borrowedPass || this.isWebGLBackend) return state.buffer;
+    // Uniform writes precede submission of all queued passes. Keep earlier draws from
+    // reading the last camera/material values written by a later scene.
+    state.borrowedUniforms ||= [];
+    const snapshots = state.borrowedUniforms;
+    let snapshot = snapshots[this.borrowedRenderIndex];
+    if (!snapshot) {
+      snapshot = {
+        buffer: this.own(
+          this.device.createBuffer({
+            byteLength: binding.byteLength,
+            usage: Buffer.UNIFORM | Buffer.COPY_DST,
+            data: binding.buffer
+          })
+        ),
+        version: this.borrowedRenderVersion
+      };
+      snapshots[this.borrowedRenderIndex] = snapshot;
+    } else if (snapshot.version !== this.borrowedRenderVersion) {
+      snapshot.buffer.write(binding.buffer);
+      snapshot.version = this.borrowedRenderVersion;
+    }
+    return snapshot.buffer;
   }
   updateBinding(binding: ThreeInternal): void {
     this.get(binding).buffer.write(binding.buffer);
@@ -342,7 +380,7 @@ export class LumaBackend extends Backend {
             ? this.get(binding.texture).texture
             : binding.isSampler
               ? this.get(binding).sampler
-              : this.get(binding).buffer;
+              : this.getUniformBuffer(binding);
       });
       result[groupIndex] = values;
     });

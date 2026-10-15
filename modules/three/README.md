@@ -439,7 +439,11 @@ const layers = scenes.map(({id, scene, camera, pickingObjects}) =>
 ```
 
 Layers share the caller's color/depth attachments while retaining independent picking
-registries and highlight state. Removing one layer does not dispose its scene or the
+registries and highlight state. The adapter owns and reuses uniform snapshots for each
+draw slot before submission, so later scene/camera updates cannot overwrite uniforms
+used by earlier draws, including across queued passes. This path uses the device's
+default command encoder; custom command encoders are outside this integration.
+Snapshots retain peak queued draw-slot capacity until disposal. Removing one layer does not dispose its scene or the
 shared adapter. Readiness does not keep removed scenes alive; the application still
 owns source resources and must dispose them when appropriate. Dispose the adapter
 only after all its layers have been removed. Calls are sequential, not reentrant.

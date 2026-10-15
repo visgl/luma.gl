@@ -53,6 +53,8 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
   brokenScene.add(brokenMesh);
   let failedAdapter: ThreeSceneAdapter | undefined;
   const secondEntry = {id: 'second-scene', object: secondMesh};
+  const secondModelMatrix = new Matrix4().makeTranslation(0.1, 0.15, 0.25).elements;
+  const secondPosition: [number, number, number] = [-0.7, 0.15, 1.75];
   let secondSceneEnabled = false;
   let secondHighlight: number | null = null;
   const alphaTexture = new DataTexture(
@@ -114,6 +116,11 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
   const nativeDevice = device.handle as GPUDevice;
   nativeDevice.addEventListener('uncapturederror', event => errors.push(event.error.message));
   const createPipeline = vi.spyOn(device, 'createRenderPipeline');
+  const createBuffer = vi.spyOn(device, 'createBuffer');
+  const countUniformBuffers = () =>
+    createBuffer.mock.calls.filter(([properties]) =>
+      Boolean((properties.usage || 0) & Buffer.UNIFORM)
+    ).length;
   const submit = vi.spyOn(device, 'submit');
   const beginPass = vi.spyOn(device, 'beginRenderPass');
   const originalDrawPickingDepth = adapter.drawPickingDepth.bind(adapter);
@@ -203,6 +210,7 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
     });
     const second = new ThreeSceneLayer({
       id: 'second-three',
+      modelMatrix: secondModelMatrix,
       adapter,
       scene: secondScene,
       camera: secondCamera,
@@ -262,7 +270,13 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
           );
           adapter.prepare(scene, camera);
           if (secondSceneEnabled) {
-            synchronizeThreeCamera(secondCamera, deck!.getViewports()[0], WebGPUCoordinateSystem);
+            synchronizeThreeCamera(
+              secondCamera,
+              deck!.getViewports()[0],
+              WebGPUCoordinateSystem,
+              undefined,
+              secondModelMatrix
+            );
             adapter.prepare(secondScene, secondCamera);
           }
         }
@@ -298,23 +312,46 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
     for (const order of [false, true]) {
       reverse = order;
       await redraw();
-      expect(await pixel([-0.8, 0, 1.5])).toEqual([0, 0, 255, 255]);
-      const secondHit = await pick([-0.8, 0, 1.5], true);
+      expect(await pixel(secondPosition)).toEqual([0, 0, 255, 255]);
+      const secondHit = await pick(secondPosition, true);
       expect(secondHit?.layer?.id).toBe('second-three');
       expect(secondHit?.index).toBe(0);
       expect(secondHit?.object).toBe(secondEntry);
-      expect(secondHit?.coordinate?.[2]).toBeCloseTo(1.5, 3);
+      expect(secondHit?.coordinate?.[2]).toBeCloseTo(1.75, 3);
+      // This strip lies outside the source plane, but inside its placed position.
+      expect(await pixel([-0.35, 0.15, 1.75])).toEqual([0, 0, 255, 255]);
+      expect((await pick([-0.35, 0.15, 1.75]))?.object).toBe(secondEntry);
       expect((await pick([1.7, 0, 1.25]))?.object).toBe(entries[1]);
       secondHighlight = 0;
       await redraw();
-      expect(await pixel([-0.8, 0, 1.5])).toEqual([255, 0, 0, 255]);
+      expect(await pixel(secondPosition)).toEqual([255, 0, 0, 255]);
       expect(await pixel([-0.8, 1, 1])).toEqual([255, 255, 255, 255]);
       secondHighlight = null;
       nativeHeight = 2;
       await redraw();
-      expect((await pick([-0.8, 0, 1.5]))?.object.id).toBe('native-square');
+      expect((await pick(secondPosition))?.object.id).toBe('native-square');
       nativeHeight = 0;
     }
+    // Separate passes may be queued before a single caller submission too.
+    const queuedSubmissions = submit.mock.calls.length;
+    const firstQueuedPass = device.beginRenderPass({
+      framebuffer,
+      clearColor: [0, 0, 0, 0],
+      clearDepth: 1
+    });
+    adapter.draw(scene, camera, firstQueuedPass);
+    firstQueuedPass.end();
+    const secondQueuedPass = device.beginRenderPass({
+      framebuffer,
+      clearColor: false,
+      clearDepth: false
+    });
+    adapter.draw(secondScene, secondCamera, secondQueuedPass);
+    secondQueuedPass.end();
+    expect(submit.mock.calls.length).toBe(queuedSubmissions);
+    device.submit();
+    expect(await pixel([-0.65, -0.3, 1])).toEqual([255, 255, 255, 255]);
+    expect(await pixel([-0.35, 0.15, 1.75])).toEqual([0, 0, 255, 255]);
     // A real backend failure after beginRender poisons Three's private render stack.
     // Reject every use of that adapter, but leave the shared device and healthy adapter usable.
     failedAdapter = new ThreeSceneAdapter({device});
@@ -354,7 +391,7 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
     expect((await pick([-0.8, 0, 1]))?.object).toBe(entries[0]);
     secondSceneEnabled = true;
     await redraw();
-    expect((await pick([-0.8, 0, 1.5]))?.object).toBe(secondEntry);
+    expect((await pick(secondPosition))?.object).toBe(secondEntry);
     secondSceneEnabled = false;
     await redraw();
     // Layer placement affects visible color, IDs, highlights and the sampled surface together.
@@ -643,11 +680,13 @@ test('Three scene GPU picking shares deck IDs and depth, preserves alpha holes a
     await redraw();
     await pick([1.7, 0, 1.25], true);
     const pipelines = createPipeline.mock.calls.length;
+    const uniformBuffers = countUniformBuffers();
     for (let frame = 0; frame < 3; frame++) {
       await redraw();
       expect((await pick([1.7, 0, 1.25], true))?.object.id).toBe(42);
     }
     expect(createPipeline.mock.calls.length).toBe(pipelines);
+    expect(countUniformBuffers()).toBe(uniformBuffers);
     expect(deformedMaterial.forceSinglePass).toBe(false);
     const renderObject = adapter.renderer.getRenderObjectFunction();
     const contextNode = adapter.renderer.contextNode;
