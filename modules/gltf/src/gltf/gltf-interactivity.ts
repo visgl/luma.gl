@@ -190,7 +190,7 @@ export class GLTFInteractivity {
         case 'math/le': return [number(a()) <= number(b())];
         case 'math/gt': return [number(a()) > number(b())];
         case 'math/ge': return [number(a()) >= number(b())];
-        case 'math/select': return this.input(index, number(this.input(index, 'condition', visiting)) ? 'a' : 'b', visiting);
+        case 'math/select': return this.input(index, Boolean(scalar(this.input(index, 'condition', visiting))) ? 'a' : 'b', visiting);
         case 'math/switch': {
           const selection = number(this.input(index, 'selection', visiting));
           const cases = this.config(node, 'cases');
