@@ -165,4 +165,63 @@ describe('GLTFInteractivity', () => {
         })
     ).toThrow(/invalid custom event index/);
   });
+
+  it('fills omitted event inputs with fresh declared and type-default values', () => {
+    const notifications: Record<string, unknown[]>[] = [];
+    const extension: ConstructorParameters<typeof GLTFInteractivity>[0] = {
+      graphs: [
+        {
+          types: [
+            {signature: 'bool'},
+            {signature: 'int'},
+            {signature: 'float3'},
+            {signature: 'ref'}
+          ],
+          events: [
+            {
+              id: 'test/defaults',
+              values: {
+                passed: {type: 0, value: [true]},
+                count: {type: 1, value: [3]},
+                direction: {type: 2},
+                reference: {type: 3}
+              }
+            }
+          ],
+          declarations: [{op: 'event/onStart'}, {op: 'event/send'}],
+          nodes: [
+            {declaration: 0, flows: {out: {node: 1}}},
+            {declaration: 1, configuration: {event: {value: [0]}}, flows: {out: {node: 2}}},
+            {
+              declaration: 1,
+              configuration: {event: {value: [0]}},
+              values: {passed: {value: [false]}, count: {value: [11]}}
+            }
+          ]
+        }
+      ]
+    };
+    new GLTFInteractivity(extension, {
+      onEvent: (_eventId, values) => notifications.push(values)
+    }).start();
+    expect(notifications).toEqual([
+      {passed: [true], count: [3], direction: [NaN, NaN, NaN], reference: [null]},
+      {passed: [false], count: [11], direction: [NaN, NaN, NaN], reference: [null]}
+    ]);
+    notifications[0].passed[0] = false;
+    expect(extension.graphs[0].events?.[0].values?.['passed'].value).toEqual([true]);
+  });
+
+  it('uses a declared type default for an explicit input without a value', () => {
+    const runtime = new GLTFInteractivity({
+      graphs: [
+        {
+          types: [{signature: 'bool'}],
+          declarations: [{op: 'math/and'}],
+          nodes: [{declaration: 0, values: {a: {type: 0}, b: {value: [true]}}}]
+        }
+      ]
+    });
+    expect(runtime.evaluate(0)).toEqual([false]);
+  });
 });

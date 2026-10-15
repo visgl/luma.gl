@@ -91,6 +91,17 @@ function number(value: unknown[]): number {
   return n;
 }
 
+function getTypeDefaultValue(signature: string | undefined): unknown[] {
+  if (signature === 'bool') return [false];
+  if (signature === 'int') return [0];
+  if (signature === 'ref') return [null];
+  const dimensions = signature?.match(/^float(?:([234])(?:x([234]))?)?$/);
+  if (dimensions && (!dimensions[2] || dimensions[1] === dimensions[2])) {
+    return Array(Number(dimensions[1] ?? 1) * Number(dimensions[2] ?? 1)).fill(NaN);
+  }
+  throw new Error('KHR_interactivity: unsupported default value type');
+}
+
 /**
  * Deterministic, GPU-independent interpreter for a defined subset of KHR_interactivity.
  * Unsupported operations fail during construction; no graph is silently partially executed.
@@ -182,7 +193,11 @@ export class GLTFInteractivity {
       if (!value.socket) throw new Error('KHR_interactivity: connected input missing socket');
       return this.evaluate(value.node, value.socket, visiting);
     }
-    if (!value.value) throw new Error('KHR_interactivity: input has no value');
+    if (!value.value) {
+      return getTypeDefaultValue(
+        value.type === undefined ? undefined : this.graph.types?.[value.type]?.signature
+      );
+    }
     return copy(components(value.value));
   }
 
@@ -333,7 +348,14 @@ export class GLTFInteractivity {
           const eventIndex = number(this.config(node, 'event'));
           const event = this.graph.events![eventIndex];
           const values = Object.fromEntries(
-            Object.keys(node.values ?? {}).map(name => [name, this.input(index, name, visiting)])
+            Object.entries(event.values ?? {}).map(([name, declaration]) => [
+              name,
+              node.values?.[name]
+                ? this.input(index, name, visiting)
+                : declaration.value
+                  ? copy(declaration.value)
+                  : getTypeDefaultValue(this.graph.types?.[declaration.type]?.signature)
+            ])
           );
           this.onEvent?.(event.id, values);
           follow('out');
