@@ -289,7 +289,12 @@ fn main(@builtin(global_invocation_id) invocation: vec3u) {
   if (index >= BODY_COUNT) { return; }
   let sphere = positions[index]; var velocity = velocities[index];
   var angular = angularVelocities[index]; var sleep = sleepStates[index];
-  if (velocity.w <= 0.0 || !isValidSphere(sphere)) { return; }
+  var orientation = orientations[index];
+  if (dot(orientation, orientation) < 0.000001) { orientation = vec4f(0.0, 0.0, 0.0, 1.0); }
+  if (velocity.w <= 0.0 || !isValidSphere(sphere)) {
+    orientations[index] = normalize(orientation);
+    return;
+  }
   var grounded = false;
   var supportNormal = vec3f(0.0, 0.0, 1.0);
   var rollingResistance = 0.0;
@@ -304,6 +309,7 @@ fn main(@builtin(global_invocation_id) invocation: vec3u) {
       if (weight > supportWeight) {supportWeight = weight; supportNormal = plane.normal.xyz; rollingResistance = plane.material.w; spinningResistance = plane.center.w;}
     }
   }
+
   // Only fixed-plane support can authorize sleep. Dynamic contact cycles are not
   // evidence of support: an airborne pair must keep integrating gravity.
   if (grounded) {
@@ -331,8 +337,6 @@ fn main(@builtin(global_invocation_id) invocation: vec3u) {
     velocity = vec4f(0.0, 0.0, 0.0, velocity.w); angular = vec4f(0.0);
     atomicAdd(&diagnostics[4], 1u);
   } else { atomicAdd(&diagnostics[3], 1u); }
-  var orientation = orientations[index];
-  if (dot(orientation, orientation) < 0.000001) { orientation = vec4f(0.0, 0.0, 0.0, 1.0); }
   let derivative = vec4f(orientation.w * angular.xyz + cross(angular.xyz, orientation.xyz), -dot(angular.xyz, orientation.xyz));
   orientations[index] = normalize(orientation + derivative * (0.5 * settings.material.x));
   velocities[index] = velocity; angularVelocities[index] = angular; sleepStates[index] = sleep;
