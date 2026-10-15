@@ -6,7 +6,7 @@ import {Deck, MapView, type MapViewState} from '@deck.gl/core';
 import {Buffer, Texture, luma} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 import {ThreeSceneAdapter} from '../src/objects';
-import {synchronizeThreeCamera} from '../src/deck';
+import {synchronizeThreeCamera, pickThreeObject} from '../src/deck';
 import {
   HalfFloatType,
   Box3,
@@ -191,6 +191,42 @@ test('Geographic Lantern placement, picking, selection and shared depth match up
       expect(scene.models.includes(hit.object.object)).toBe(true);
     }
     expect(picked.some(info => info.layer?.id === 'geographic-buildings')).toBe(true);
+    // Query the center nameplate in local meters, then verify geographic surface reconstruction.
+    const commonOrigin = viewport.projectPosition(GEOGRAPHIC_ORIGIN);
+    const units = viewport.getDistanceScales(GEOGRAPHIC_ORIGIN).unitsPerMeter;
+    const nameplate = viewport.unprojectPosition(
+      commonOrigin.map((value, index) => value + [0, 0, 3.6][index] * units[index])
+    );
+    const projected = viewport.project(nameplate);
+    const surface = await deck!.pickObjectAsync({
+      x: Math.floor(projected[0]) + 0.5,
+      y: Math.floor(projected[1]) + 0.5,
+      unproject3D: true
+    });
+    expect(surface?.object.id).toBe('lantern-center');
+    expect(surface?.coordinate).toHaveLength(3);
+    const sampledPixel = surface!.devicePixel!;
+    const intersection = pickThreeObject(
+      scene.camera,
+      [(2 * (sampledPixel[0] + 0.5)) / 128 - 1, (2 * (sampledPixel[1] + 0.5)) / 128 - 1],
+      [scene.scene]
+    );
+    expect(intersection).toBeDefined();
+    const geographicPoint = viewport.unprojectPosition(
+      commonOrigin.map(
+        (value, index) => value + intersection!.point.getComponent(index) * units[index]
+      )
+    );
+    const expected = viewport.unproject([
+      Math.floor(projected[0]) + 0.5,
+      Math.floor(projected[1]) + 0.5,
+      viewport.project(geographicPoint)[2]
+    ]);
+    expect(surface!.coordinate![0]).toBeCloseTo(expected[0], 6);
+    expect(surface!.coordinate![1]).toBeCloseTo(expected[1], 6);
+    expect(surface!.coordinate![2]).toBeCloseTo(expected[2], 2);
+    expect(surface!.coordinate![2]).toBeGreaterThan(2);
+    expect(surface!.coordinate![2]).toBeLessThan(5);
     const selectedId = String(lanternHits[0].object.id);
     scene.select(selectedId);
     referenceScene.select(selectedId);

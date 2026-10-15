@@ -22,7 +22,12 @@ import {
   WebGLCoordinateSystem,
   WebGPUCoordinateSystem
 } from 'three/webgpu';
-import {ThreeMeshAdapter, ThreeSceneAdapter, type ThreeMeshAdapterProps} from './objects';
+import {
+  ThreeMeshAdapter,
+  ThreeSceneAdapter,
+  type ThreeMeshAdapterProps,
+  type ThreePickingColor
+} from './objects';
 
 // deck encodes the layer in alpha using the caller pass's blend constant.
 const PICKING_PARAMETERS: RenderPipelineParameters = {
@@ -264,8 +269,6 @@ export class ThreeSceneLayer extends Layer<ThreeSceneLayerProps> {
     shaderModuleProps?: {picking?: {isActive?: boolean | number; isAttribute?: boolean | number}};
   }): void {
     const picking = shaderModuleProps?.picking;
-    if (picking?.isActive && picking.isAttribute)
-      throw new Error('ThreeSceneLayer picking does not support unproject3D');
     synchronizeThreeCamera(
       this.props.camera,
       this.context.viewport,
@@ -279,20 +282,30 @@ export class ThreeSceneLayer extends Layer<ThreeSceneLayerProps> {
         : undefined
     );
     if (picking?.isActive) {
-      this.props.adapter.drawPicking(
-        this.props.scene,
-        this.props.camera,
-        renderPass,
-        object => {
-          const index = this.getPickingIndex(object);
-          // Unlisted scene geometry remains a depth occluder in deck's shared pick pass.
-          if (index === undefined) return [0, 0, 0, 0];
-          if (this.state.disabledPickingIndices.has(index)) return null;
-          const color = this.encodePickingColor(index);
-          return [color[0] / 255, color[1] / 255, color[2] / 255, 1];
-        },
-        PICKING_PARAMETERS
-      );
+      const getColor = (object: Object3D): ThreePickingColor | null => {
+        const index = this.getPickingIndex(object);
+        // Unlisted scene geometry remains a depth occluder in deck's shared pick pass.
+        if (index === undefined) return [0, 0, 0, 0];
+        if (this.state.disabledPickingIndices.has(index)) return null;
+        const color = this.encodePickingColor(index);
+        return [color[0] / 255, color[1] / 255, color[2] / 255, 1];
+      };
+      if (picking.isAttribute) {
+        this.props.adapter.drawPickingDepth(
+          this.props.scene,
+          this.props.camera,
+          renderPass,
+          getColor
+        );
+      } else {
+        this.props.adapter.drawPicking(
+          this.props.scene,
+          this.props.camera,
+          renderPass,
+          getColor,
+          PICKING_PARAMETERS
+        );
+      }
     } else if (this.state.highlightedObjectColor && this.state.highlightColor) {
       const encodedIndex = this.state.highlightedObjectColor;
       const index = encodedIndex[0] + encodedIndex[1] * 256 + encodedIndex[2] * 65536 - 1;
