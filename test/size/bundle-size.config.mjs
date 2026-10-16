@@ -25,7 +25,8 @@ export const BUNDLE_SIZE_FIXTURES = [
     label: '`@luma.gl/core`',
     entry: 'modules/core/src/index.ts',
     external: [],
-    maximum: {minified: 101_000, gzip: 28_500, brotli: 25_000},
+    // Includes device-creation error reporting added on master (#3147).
+    maximum: {minified: 101_250, gzip: 28_500, brotli: 25_000},
     targetGzip: 24_000
   },
   {
