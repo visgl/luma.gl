@@ -162,7 +162,7 @@ const launchArguments = [
   // Use the same software Vulkan driver for WebGL, WebGPU, and presentation on Linux CI.
   ...(process.env.CI && process.platform === 'linux'
     ? [
-        '--use-angle=vulkan',
+        '--use-angle=swiftshader',
         '--use-vulkan=swiftshader',
         '--use-webgpu-adapter=swiftshader',
         '--enable-features=Vulkan',
