@@ -399,6 +399,7 @@ async function measurePath(
           id: `inline-consumer-${index}`,
           dispatchLayout,
           precise: true,
+          fp64Arithmetic: 'platform',
           bindings: {[shader.bindingName]: parameters, positions, output, validity},
           resources: [
             {buffer: parameters, usage: 'storage-read'},

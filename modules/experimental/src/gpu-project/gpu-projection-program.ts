@@ -156,6 +156,7 @@ export class GPUProjectionProgram {
         resources,
         dispatchLayout,
         precise: true,
+        fp64Arithmetic: 'platform',
         source: `
 ${shader.source}
 @group(0) @binding(auto) var<storage, read> positions: array<${shader.inputType}>;

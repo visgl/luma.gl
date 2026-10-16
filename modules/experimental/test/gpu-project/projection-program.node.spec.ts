@@ -6,9 +6,11 @@ import {describe, expect, it, vi} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {NullDevice} from '@luma.gl/test-utils';
+import {WGSLShaderAssembler, type PlatformInfo} from '@luma.gl/shadertools';
 import {
   compileProjectionPlan,
   compileProjectionProgram,
+  indexProjectionPlan,
   evaluateProjectionProgram,
   invertProjectionProgram,
   GPUProjectionProgram,
@@ -152,6 +154,85 @@ describe('projection programs', () => {
     expect(
       first.isCompatible(compileProjectionProgram(nativeProgram, {inputFormat: 'uint32x4'}))
     ).toBe(false);
+  });
+
+  it('keeps integer-controlled arithmetic for inline consumers of getShader()', () => {
+    const shader = compileProjectionProgram(nativeProgram).getShader();
+    expect(shader.defines).toEqual({LUMA_FP64_INTEGER_ARITHMETIC: true});
+    expect(shader.modules.map(module => module.name)).toEqual(['fp64arithmetic']);
+    // Inline consumers need no fp64 uniforms.
+    expect(shader.modules[0].uniformTypes).toBeUndefined();
+    const platformInfo: PlatformInfo = {
+      type: 'webgpu',
+      gpu: 'nvidia',
+      shaderLanguage: 'wgsl',
+      shaderLanguageVersion: 300,
+      features: new Set()
+    };
+    const assembled = new WGSLShaderAssembler().assembleWGSLShader({
+      platformInfo,
+      source: shader.source,
+      modules: shader.modules,
+      defines: shader.defines
+    }).source;
+    expect(assembled).toContain('fn fp64_accumulate_f32_integer');
+  });
+
+  it('calls each heavy fp64 helper from one site in adaptive stages', () => {
+    const plan = compileProjectionPlan({
+      projection: position => [
+        2 * position[0] + 100 + position[1] ** 2 * 0.01,
+        3 * position[1] + 200
+      ],
+      bounds: [-1, -1, 1, 1],
+      degree: 2,
+      precision: 'double-single',
+      tolerance: 1e-6
+    });
+    const routedPlan = indexProjectionPlan(
+      compileProjectionPlan({
+        projection: position => [Math.sin(position[0]), Math.cos(position[1])],
+        bounds: [-2, -2, 2, 2],
+        precision: 'double-single',
+        degree: 2,
+        tolerance: 0.001
+      })
+    );
+    expect(routedPlan.routingIndex!.length).toBeGreaterThan(1);
+    for (const [label, stagePlan] of [
+      ['scan', plan],
+      ['routed', routedPlan]
+    ] as const) {
+      const program: ProjectionProgram = {
+        precision: 'double-single',
+        operations: [{type: 'adaptive', plan: stagePlan}]
+      };
+      for (const inputFormat of ['uint32x4', 'float32x4', 'float32x2'] as const) {
+        const name = `${label}/${inputFormat}`;
+        const source = compileProjectionProgram(program, {inputFormat}).getShader().source;
+        // Count call sites across the whole stage, excluding the function definitions.
+        const count = (callee: string) =>
+          (source.match(new RegExp(`\\b${callee}\\(`, 'g'))?.length ?? 0) -
+          (source.match(new RegExp(`\\bfn ${callee}\\(`, 'g'))?.length ?? 0);
+        expect(count('projection_projection_stage0_projectionPatchContains'), name).toBe(1);
+        const projectStart = source.indexOf('fn projection_projection_stage0_project(');
+        const project = source.slice(projectStart, source.indexOf('\n}', projectStart));
+        const countInProject = (pattern: RegExp) => project.match(pattern)?.length ?? 0;
+        expect(countInProject(/div_fp64\(/g), name).toBe(1);
+        expect(countInProject(/sum_fp64\(/g), name).toBe(1);
+        expect(countInProject(/evaluateProjectionPolynomialFP64\(/g), name).toBe(1);
+        expect(
+          countInProject(/sub_fp64u32_to_fp64\(|projectionDestinationOriginFP64\(/g),
+          name
+        ).toBe(1);
+        // Helpers that project() no longer calls are not emitted.
+        expect(source, name).not.toContain('normalizeProjectionPositionFP64');
+        if (inputFormat === 'uint32x4') {
+          expect(source, name).not.toContain('projectionSourceOffsetFP64');
+          expect(source, name).not.toContain('projectionDestinationOriginFP64');
+        }
+      }
+    }
   });
 
   it('snapshots parameters and supports independent shader namespaces and buffer offsets', () => {

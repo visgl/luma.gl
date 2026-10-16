@@ -329,7 +329,8 @@ export class GPUProjection {
       resources,
       bindings,
       dispatchLayout,
-      precise: inputSource.precise || this.precision === 'double-single'
+      precise: inputSource.precise || this.precision === 'double-single',
+      fp64Arithmetic: 'platform'
     });
   }
 

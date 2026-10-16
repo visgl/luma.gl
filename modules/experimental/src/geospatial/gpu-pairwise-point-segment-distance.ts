@@ -156,7 +156,8 @@ fn main(
           outputDistances: output
         },
         dispatchLayout,
-        precise
+        precise,
+        fp64Arithmetic: 'platform'
       });
     }
   }

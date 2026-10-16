@@ -100,6 +100,7 @@ for (const inputFormat of ['float32x2', 'float32x4', 'uint32x4'] as const) {
       id: 'wrap-inline',
       dispatchLayout,
       precise: true,
+      fp64Arithmetic: 'platform',
       bindings: {
         [shader.bindingName]: parameters,
         positions,
