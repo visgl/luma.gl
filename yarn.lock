@@ -4720,7 +4720,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@luma.gl/constants@npm:^9.0.0, @luma.gl/constants@workspace:modules/constants":
+"@luma.gl/constants@workspace:*, @luma.gl/constants@workspace:modules/constants":
   version: 0.0.0-use.local
   resolution: "@luma.gl/constants@workspace:modules/constants"
   languageName: unknown
@@ -4738,14 +4738,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@luma.gl/effects@npm:9.4.2, @luma.gl/effects@workspace:modules/effects":
+"@luma.gl/effects@workspace:*, @luma.gl/effects@workspace:modules/effects":
   version: 0.0.0-use.local
   resolution: "@luma.gl/effects@workspace:modules/effects"
   dependencies:
     "@math.gl/core": "npm:^4.1.0"
     "@math.gl/types": "npm:^4.1.0"
   peerDependencies:
-    "@luma.gl/shadertools": ~9.4.0
+    "@luma.gl/shadertools": ~9.4.0 || ~9.4.3-beta.1
   languageName: unknown
   linkType: soft
 
@@ -4758,26 +4758,26 @@ __metadata:
     "@probe.gl/log": "npm:^4.1.1"
     "@probe.gl/stats": "npm:^4.1.1"
   peerDependencies:
-    "@luma.gl/core": ~9.4.0
-    "@luma.gl/shadertools": ~9.4.0
+    "@luma.gl/core": ~9.4.0 || ~9.4.3-beta.1
+    "@luma.gl/shadertools": ~9.4.0 || ~9.4.3-beta.1
   languageName: unknown
   linkType: soft
 
-"@luma.gl/experimental@npm:9.4.2, @luma.gl/experimental@workspace:modules/experimental":
+"@luma.gl/experimental@workspace:*, @luma.gl/experimental@workspace:modules/experimental":
   version: 0.0.0-use.local
   resolution: "@luma.gl/experimental@workspace:modules/experimental"
   dependencies:
-    "@luma.gl/gpgpu": "npm:9.4.2"
+    "@luma.gl/gpgpu": "npm:9.4.3-beta.1"
     "@math.gl/core": "npm:^4.1.0"
     "@math.gl/types": "npm:^4.1.0"
   peerDependencies:
-    "@luma.gl/core": ~9.4.0
-    "@luma.gl/engine": ~9.4.0
-    "@luma.gl/shadertools": ~9.4.0
+    "@luma.gl/core": ~9.4.0 || ~9.4.3-beta.1
+    "@luma.gl/engine": ~9.4.0 || ~9.4.3-beta.1
+    "@luma.gl/shadertools": ~9.4.0 || ~9.4.3-beta.1
   languageName: unknown
   linkType: soft
 
-"@luma.gl/gltf@npm:9.4.2, @luma.gl/gltf@workspace:modules/gltf":
+"@luma.gl/gltf@workspace:*, @luma.gl/gltf@workspace:modules/gltf":
   version: 0.0.0-use.local
   resolution: "@luma.gl/gltf@workspace:modules/gltf"
   dependencies:
@@ -4786,13 +4786,13 @@ __metadata:
     "@loaders.gl/textures": "npm:~4.5.2"
     "@math.gl/core": "npm:^4.1.0"
   peerDependencies:
-    "@luma.gl/core": ~9.4.0
-    "@luma.gl/engine": ~9.4.0
-    "@luma.gl/shadertools": ~9.4.0
+    "@luma.gl/core": ~9.4.0 || ~9.4.3-beta.1
+    "@luma.gl/engine": ~9.4.0 || ~9.4.3-beta.1
+    "@luma.gl/shadertools": ~9.4.0 || ~9.4.3-beta.1
   languageName: unknown
   linkType: soft
 
-"@luma.gl/gpgpu@npm:9.4.2, @luma.gl/gpgpu@workspace:modules/gpgpu":
+"@luma.gl/gpgpu@workspace:*, @luma.gl/gpgpu@workspace:modules/gpgpu":
   version: 0.0.0-use.local
   resolution: "@luma.gl/gpgpu@workspace:modules/gpgpu"
   dependencies:
@@ -4801,26 +4801,26 @@ __metadata:
     "@probe.gl/log": "npm:^4.0.8"
     "@probe.gl/stats": "npm:^4.0.8"
   peerDependencies:
-    "@luma.gl/core": ~9.4.0
-    "@luma.gl/engine": ~9.4.0
-    "@luma.gl/shadertools": ~9.4.0
-    "@luma.gl/webgpu": ~9.4.0
+    "@luma.gl/core": ~9.4.0 || ~9.4.3-beta.1
+    "@luma.gl/engine": ~9.4.0 || ~9.4.3-beta.1
+    "@luma.gl/shadertools": ~9.4.0 || ~9.4.3-beta.1
+    "@luma.gl/webgpu": ~9.4.0 || ~9.4.3-beta.1
   languageName: unknown
   linkType: soft
 
-"@luma.gl/scene@npm:9.4.2, @luma.gl/scene@workspace:modules/scene":
+"@luma.gl/scene@workspace:*, @luma.gl/scene@workspace:modules/scene":
   version: 0.0.0-use.local
   resolution: "@luma.gl/scene@workspace:modules/scene"
   dependencies:
     "@math.gl/core": "npm:^4.1.0"
     zod: "npm:^4.4.3"
   peerDependencies:
-    "@luma.gl/core": ~9.4.0
-    "@luma.gl/effects": ~9.4.0
-    "@luma.gl/engine": ~9.4.0
-    "@luma.gl/experimental": ~9.4.0
-    "@luma.gl/gltf": ~9.4.0
-    "@luma.gl/shadertools": ~9.4.0
+    "@luma.gl/core": ~9.4.0 || ~9.4.3-beta.1
+    "@luma.gl/effects": ~9.4.0 || ~9.4.3-beta.1
+    "@luma.gl/engine": ~9.4.0 || ~9.4.3-beta.1
+    "@luma.gl/experimental": ~9.4.0 || ~9.4.3-beta.1
+    "@luma.gl/gltf": ~9.4.0 || ~9.4.3-beta.1
+    "@luma.gl/shadertools": ~9.4.0 || ~9.4.3-beta.1
   peerDependenciesMeta:
     "@luma.gl/gltf":
       optional: true
@@ -4834,19 +4834,19 @@ __metadata:
     "@math.gl/core": "npm:^4.1.0"
     "@math.gl/types": "npm:^4.1.0"
   peerDependencies:
-    "@luma.gl/core": ~9.4.0
+    "@luma.gl/core": ~9.4.0 || ~9.4.3-beta.1
   languageName: unknown
   linkType: soft
 
-"@luma.gl/splats@npm:9.4.2, @luma.gl/splats@workspace:modules/splats":
+"@luma.gl/splats@workspace:*, @luma.gl/splats@workspace:modules/splats":
   version: 0.0.0-use.local
   resolution: "@luma.gl/splats@workspace:modules/splats"
   dependencies:
-    "@luma.gl/core": "npm:9.4.2"
-    "@luma.gl/engine": "npm:9.4.2"
-    "@luma.gl/experimental": "npm:9.4.2"
-    "@luma.gl/gpgpu": "npm:9.4.2"
-    "@luma.gl/shadertools": "npm:9.4.2"
+    "@luma.gl/core": "npm:9.4.3-beta.1"
+    "@luma.gl/engine": "npm:9.4.3-beta.1"
+    "@luma.gl/experimental": "npm:9.4.3-beta.1"
+    "@luma.gl/gpgpu": "npm:9.4.3-beta.1"
+    "@luma.gl/shadertools": "npm:9.4.3-beta.1"
   languageName: unknown
   linkType: soft
 
@@ -4857,26 +4857,26 @@ __metadata:
     "@probe.gl/env": "npm:^4.1.1"
     "@probe.gl/stats": "npm:^4.1.1"
   peerDependencies:
-    "@luma.gl/core": ~9.4.0
-    "@luma.gl/engine": ~9.4.0
-    "@luma.gl/shadertools": ~9.4.0
-    "@luma.gl/webgl": ~9.4.0
-    "@luma.gl/webgpu": ~9.4.0
+    "@luma.gl/core": ~9.4.0 || ~9.4.3-beta.1
+    "@luma.gl/engine": ~9.4.0 || ~9.4.3-beta.1
+    "@luma.gl/shadertools": ~9.4.0 || ~9.4.3-beta.1
+    "@luma.gl/webgl": ~9.4.0 || ~9.4.3-beta.1
+    "@luma.gl/webgpu": ~9.4.0 || ~9.4.3-beta.1
   languageName: unknown
   linkType: soft
 
-"@luma.gl/text@npm:9.4.2, @luma.gl/text@workspace:modules/text":
+"@luma.gl/text@workspace:*, @luma.gl/text@workspace:modules/text":
   version: 0.0.0-use.local
   resolution: "@luma.gl/text@workspace:modules/text"
   dependencies:
-    "@luma.gl/core": "npm:9.4.2"
-    "@luma.gl/experimental": "npm:9.4.2"
-    "@luma.gl/gpgpu": "npm:9.4.2"
+    "@luma.gl/core": "npm:9.4.3-beta.1"
+    "@luma.gl/experimental": "npm:9.4.3-beta.1"
+    "@luma.gl/gpgpu": "npm:9.4.3-beta.1"
     "@mapbox/tiny-sdf": "npm:^2.0.7"
     "@math.gl/core": "npm:^4.1.0"
     "@math.gl/polygon": "npm:^4.1.0"
   peerDependencies:
-    "@luma.gl/engine": ~9.4.0
+    "@luma.gl/engine": ~9.4.0 || ~9.4.3-beta.1
   languageName: unknown
   linkType: soft
 
@@ -4887,19 +4887,19 @@ __metadata:
     "@math.gl/types": "npm:^4.1.0"
     "@probe.gl/env": "npm:^4.1.1"
   peerDependencies:
-    "@luma.gl/core": ~9.4.0
+    "@luma.gl/core": ~9.4.0 || ~9.4.3-beta.1
   languageName: unknown
   linkType: soft
 
-"@luma.gl/webgpu@npm:9.4.2, @luma.gl/webgpu@workspace:modules/webgpu":
+"@luma.gl/webgpu@workspace:*, @luma.gl/webgpu@workspace:modules/webgpu":
   version: 0.0.0-use.local
   resolution: "@luma.gl/webgpu@workspace:modules/webgpu"
   dependencies:
     "@probe.gl/env": "npm:^4.1.1"
     "@webgpu/types": "npm:^0.1.69"
   peerDependencies:
-    "@luma.gl/core": ~9.4.0
-    "@luma.gl/shadertools": ~9.4.0
+    "@luma.gl/core": ~9.4.0 || ~9.4.3-beta.1
+    "@luma.gl/shadertools": ~9.4.0 || ~9.4.3-beta.1
   languageName: unknown
   linkType: soft
 
