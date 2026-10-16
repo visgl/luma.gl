@@ -286,7 +286,7 @@ function prepareBindings(
       }
       const data = batch.gpuData[input.columnName];
       if (data) {
-        bindings[storageBindingName] = getGPUDataBinding(data);
+        bindings[storageBindingName] = getGPUDataBinding(device, data);
       }
     }
     if (rowMultiplierBinding) {
@@ -537,7 +537,10 @@ function getShaderAttributeBufferLayout(
   };
 }
 
-function getGPUDataBinding(data: GPUData): Binding {
+function getGPUDataBinding(device: Device, data: GPUData): Binding {
+  // WebGPU storage bindings must start at a multiple of minStorageBufferOffsetAlignment.
+  // Views that start inside a shared buffer need a binding that starts at an aligned offset.
+  assert(data.byteOffset % Math.max(device.limits.minStorageBufferOffsetAlignment || 1, 1) === 0);
   const fixedSizeListByteLength =
     data.format && isFixedSizeListGPUVectorFormat(data.format)
       ? data.length === 0
