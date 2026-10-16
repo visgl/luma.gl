@@ -181,7 +181,8 @@ export {SwapBuffers} from './compute/swap';
 export {SwapFramebuffers} from './compute/swap';
 
 export type {ComputationProps} from './compute/computation';
-export {Computation, getPlatformInfo} from './compute/computation';
+export {Computation} from './compute/computation';
+export {getPlatformInfo} from './utils/get-platform-info';
 export type {
   KernelProps,
   KernelDispatchOptions,

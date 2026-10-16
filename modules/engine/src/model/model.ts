@@ -22,7 +22,6 @@ import {
   type ShaderLayout,
   type AttributeShaderType,
   Device,
-  DeviceFeature,
   Buffer,
   ExternalTexture,
   Texture,
@@ -43,7 +42,6 @@ import type {
   ShaderBindingDebugRow,
   ShaderModule,
   ShaderPlugin,
-  PlatformInfo,
   GLSLShaderAssembler,
   WGSLShaderAssembler
 } from '@luma.gl/shadertools';
@@ -67,6 +65,7 @@ import {
   mergeShaderModuleBindingsIntoLayout,
   shaderModuleHasUniforms
 } from '../utils/shader-module-utils';
+import {getPlatformInfo} from '../utils/get-platform-info';
 import {uid} from '../utils/uid';
 import {ShaderInputs} from '../shader-inputs';
 import {
@@ -1498,17 +1497,4 @@ function asDepthStencilAttachmentFormat(
 
 function isDepthStencilAttachmentFormat(format: string): format is TextureFormatDepthStencil {
   return DEPTH_STENCIL_ATTACHMENT_FORMATS.includes(format as TextureFormatDepthStencil);
-}
-
-/** Create a shadertools platform info from the Device */
-export function getPlatformInfo(device: Device): PlatformInfo {
-  return {
-    type: device.type,
-    shaderLanguage: device.info.shadingLanguage,
-    shaderLanguageVersion: device.info.shadingLanguageVersion as 100 | 300,
-    gpu: device.info.gpu,
-    limits: device.limits as unknown as Record<string, number | undefined>,
-    // HACK - we pretend that the DeviceFeatures is a Set, it has a similar API
-    features: device.features as unknown as Set<DeviceFeature>
-  };
 }
