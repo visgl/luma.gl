@@ -31,6 +31,11 @@ Target Release Date: Q3, 2026
 
 **Experimental Three.js integration**
 
+- **Shared depth in Three apps** - `@luma.gl/three/interleaved` adds native deck layers
+  to an existing Three WebGL2 canvas and depth buffer. Opaque geometry correctly
+  occludes across both libraries while Three retains its renderer, controls and frame
+  loop. The example compares shared depth with a separate transparent overlay.
+
 - **Deck overlays for Three apps** - Add native deck layers to an existing Three renderer
   through `@luma.gl/three/overlay`. Three retains its camera, controls and frame loop;
   the separate transparent canvas follows perspective/orthographic cameras and pixel ratio.

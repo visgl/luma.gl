@@ -25,15 +25,16 @@
       <h1>Deck layers in a Three.js app</h1>
       <p>Three owns the scene, camera, controls and animation. Deck adds the amber route and observations.</p>
       <div class="controls">
+        <label>Composition <select id="composition"><option value="shared">Shared depth</option><option value="overlay">Always above</option></select></label>
         <label>Camera <select id="projection"><option value="perspective">Perspective</option><option value="orthographic">Orthographic</option></select></label>
         <label>Resolution <select id="resolution"><option value="1">1×</option><option value="2">2×</option></select></label>
         <label><input id="animate" type="checkbox" checked>Animate cube</label>
         <label><input id="show-overlay" type="checkbox" checked>Deck layers</label>
-        <button id="recreate">Recreate overlay</button>
+        <button id="recreate">Recreate deck</button>
       </div>
       <div id="scene"><canvas id="three-canvas"></canvas></div>
       <p id="status">Initializing…</p>
-      <p>The transparent overlay always appears above Three objects. Shared depth and combined picking are later tranches.</p>
+      <p id="composition-note">Shared depth lets the cube and route occlude each other. Combined picking and transparent-object sorting are later work.</p>
       <p>Host renderer: <a href="?renderer=webgl">WebGL</a> · <a href="?renderer=webgpu">WebGPU</a> · <a href="./index.html">Other Three integrations</a></p>
     </main>
     <script type="module" src="./host-overlay.ts"></script>
