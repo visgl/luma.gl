@@ -13,7 +13,7 @@ import {
   type RenderPipeline,
   type RenderPipelineProps
 } from '@luma.gl/core';
-import {webgl2Adapter, type WebGLDevice} from '@luma.gl/webgl';
+import {webgl2Adapter, type WebGLDevice} from '@luma.gl/core/webgl';
 
 const vsSource = /* glsl */ `\
 in vec4 positions;

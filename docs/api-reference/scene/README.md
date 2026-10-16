@@ -72,8 +72,7 @@ yarn install
 ```
 
 Another workspace inside the same checkout can depend on it through
-`"@luma.gl/scene": "workspace:*"`. It cannot currently be installed from npm. Add `@luma.gl/webgl`
-to the consuming workspace if a WebGL 2 fallback is required.
+`"@luma.gl/scene": "workspace:*"`. It cannot currently be installed from npm. Import `webgl2Adapter` from `@luma.gl/core/webgl` if a WebGL 2 fallback is required.
 
 ## Object model
 

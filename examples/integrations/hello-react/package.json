@@ -11,7 +11,6 @@
     "@luma.gl/core": "10.0.0-alpha.4",
     "@luma.gl/engine": "10.0.0-alpha.4",
     "@luma.gl/shadertools": "10.0.0-alpha.4",
-    "@luma.gl/webgl": "10.0.0-alpha.4",
     "@math.gl/core": "5.0.0-alpha.15",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"

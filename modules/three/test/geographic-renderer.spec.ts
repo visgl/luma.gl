@@ -4,7 +4,7 @@
 import {expect, test, vi} from 'vitest';
 import {Deck, MapView, type MapViewState} from '@deck.gl/core';
 import {Buffer, Texture, luma} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {ThreeSceneAdapter} from '../src/objects';
 import {ThreeSceneLayer, synchronizeThreeCamera, pickThreeObject} from '../src/deck';
 import {

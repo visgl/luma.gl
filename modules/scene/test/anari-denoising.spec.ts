@@ -3,7 +3,7 @@
 
 import {Buffer, Texture} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {expect, it, vi} from 'vitest';
 import {getRayTracingScenePresentationShader} from '../../experimental/src/engine/ray-tracing-scene-shaders';
 

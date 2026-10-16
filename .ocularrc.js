@@ -92,9 +92,9 @@ const config = {
 
   entry: {
     size: 'test/size/import-nothing.js',
-    'modules/webgl/test/context/create-context.spec.ts':
-      'modules/webgl/test/context/create-browser-context.spec.ts',
-    'modules/webgl/test/context/create-context.spec.ts-browser': 'test/index.html'
+    'modules/core/test/webgl/context/create-context.spec.ts':
+      'modules/core/test/webgl/context/create-browser-context.spec.ts',
+    'modules/core/test/webgl/context/create-context.spec.ts-browser': 'test/index.html'
   }
 };
 

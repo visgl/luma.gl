@@ -15,8 +15,8 @@ const CAPABILITIES_DETAIL_PATHS = [
 const EXAMPLE_CONTENT_DIRECTORY = path.join(process.cwd(), 'website/content/examples');
 const FRAMEWORK_PACKAGE_NAMES = [
   '@luma.gl/core',
-  '@luma.gl/webgpu',
-  '@luma.gl/webgl',
+  '@luma.gl/core/webgpu',
+  '@luma.gl/core/webgl',
   '@luma.gl/engine',
   '@luma.gl/shadertools',
   '@luma.gl/effects',
@@ -550,7 +550,7 @@ describe('framework capabilities documentation', () => {
       ['webgl', 'WebGL', 'WebGPU'],
       ['webgpu', 'WebGPU', 'WebGL']
     ]) {
-      const moduleRow = moduleRows.find(row => row[0].includes(`@luma.gl/${packageName}`));
+      const moduleRow = moduleRows.find(row => row[0].includes(`@luma.gl/core/${packageName}`));
 
       expect(moduleRow, `The API reference must list the ${packageName} adapter`).toBeDefined();
       expect(moduleRow![2]).toContain(`${expectedBackend} API`);

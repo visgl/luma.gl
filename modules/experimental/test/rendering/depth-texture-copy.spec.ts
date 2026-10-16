@@ -4,7 +4,7 @@
 import {Buffer, Texture} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {DepthTextureCopy} from '@luma.gl/experimental';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {expect, it, vi} from 'vitest';
 
 it('projected depth preserves color and occludes later raster overlays at viewport offsets', async () => {

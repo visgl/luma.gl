@@ -34,7 +34,7 @@ npm install @luma.gl/gltf @loaders.gl/core @loaders.gl/gltf
 ```
 
 A rendering application also needs a configured `Device` from `@luma.gl/core`, backed by
-`@luma.gl/webgl` or `@luma.gl/webgpu`.
+`@luma.gl/core/webgl` or `@luma.gl/core/webgpu`.
 
 ## Load and animate an asset
 

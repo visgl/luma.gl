@@ -15,9 +15,9 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 
 | Module                                | Usage       | Description                                                                                     |
 | ------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------- |
-| [`@luma.gl/core`][core] | Required | The "Abstract" `Device` API (implemented by both the `webgpu` and `webgl` modules). |
-| [`@luma.gl/webgl`][webgl] | Required \* | `Device` adapter implemented using the WebGL API. Enables creation of WebGL resources. |
-| [`@luma.gl/webgpu`][webgpu] | Required \* | `Device` adapter implemented using the WebGPU API. Enables creation of WebGPU resources. |
+| [`@luma.gl/core`][core] | Required | The portable `Device` API, shader types, and WebGPU and WebGL2 implementations. |
+| [`@luma.gl/core/webgl`][webgl] | Core subpath | `Device` adapter implemented using the WebGL API. Enables creation of WebGL resources. |
+| [`@luma.gl/core/webgpu`][webgpu] | Core subpath | `Device` adapter implemented using the WebGPU API. Enables creation of WebGPU resources. |
 | [`@luma.gl/engine`][engine] | Recommended | A set of WebGPU/WebGL independent core 3D engine style classes built on top of `@luma.gl/core`. |
 | [`@luma.gl/scene`][anari] | Experimental / Private | ANARI-inspired retained scene objects, instanced rendering, lights, materials, and HDR. |
 | [`@luma.gl/shadertools`][shadertools] | Recommended | Reusable shader modules, portable shader assembly, and application-defined shader hooks. |
@@ -31,7 +31,7 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 | [`@luma.gl/gltf`][gltf] | Optional | Standards-first glTF assets, physical materials, character animation, and lossless interchange. |
 | [`@luma.gl/test-utils`][test-utils] | Optional | Test setups, in particular support for rendering and comparing images. |
 
-\* At least one backend, either WebGL or WebGPU, must be installed to enable GPU resource creation.
+Select at least one adapter from the core backend subpaths when creating a device.
 
 ## Start Here
 
@@ -47,8 +47,8 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 - [`@luma.gl/splats`][splats] for experimental Gaussian splat rendering and caller-owned prepared GPU data.
 - [`@luma.gl/experimental`][experimental] for incubating v10 APIs, including experimental WebXR frame, view, and raw camera helpers.
 - [`@luma.gl/gltf`][gltf] for standards-first glTF assets, physical materials, character animation, native extensions, and source-faithful `.gltf`/`.glb` interchange.
-- [`@luma.gl/webgl`][webgl] and [`@luma.gl/webgpu`][webgpu] for backend adapters used by `@luma.gl/core`.
-- [`@luma.gl/webgl/constants`](/docs/api-reference/webgl/constants) when you need raw numeric WebGL enums.
+- [`@luma.gl/core/webgl`][webgl] and [`@luma.gl/core/webgpu`][webgpu] for backend adapters used by `@luma.gl/core`.
+- [`@luma.gl/core/webgl-constants`](/docs/api-reference/webgl/constants) when you need raw numeric WebGL enums.
 
 [webgl]: /docs/api-reference/webgl
 [webgpu]: /docs/api-reference/webgpu

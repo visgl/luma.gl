@@ -3,7 +3,7 @@
 
 import {Buffer, Texture} from '@luma.gl/core';
 import {ANARIDevice} from '@luma.gl/scene';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {expect, it, vi} from 'vitest';
 
 it('two opaque reflections reach hidden emission and analytic lighting at the reflected surface', async () => {

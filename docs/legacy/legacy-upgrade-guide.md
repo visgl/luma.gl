@@ -56,7 +56,7 @@ new Texture2D({
 
 |                                                                                                                                                                                                  | Available in         |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------- |
-| Query, VertexArrayObject, VertexArray, UniformBufferLayout, Shader, VertexShader, FragmentShader, clearBuffer, clearBuffer, copyToDataUrl, copyToImage, blit, setPathPrefix, loadFile, loadImage | @luma.gl/webgl       |
+| Query, VertexArrayObject, VertexArray, UniformBufferLayout, Shader, VertexShader, FragmentShader, clearBuffer, clearBuffer, copyToDataUrl, copyToImage, blit, setPathPrefix, loadFile, loadImage | @luma.gl/core/webgl       |
 | resizeGLContext                                                                                                                                                                                  | @luma.gl/gltools     |
 | combineInjects, lights, getQualifierDetails, getPassthroughFS, typeToChannelSuffix, typeToChannelCount, convertToVec4                                                                            | @luma.gl/shadertools |
 

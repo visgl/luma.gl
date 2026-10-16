@@ -3,7 +3,7 @@
 
 import {expect, test} from 'vitest';
 import {luma} from '@luma.gl/core';
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 import {WebGPURenderer, RenderTarget, UnsignedByteType, LinearSRGBColorSpace} from 'three/webgpu';
 import {LumaRenderer} from '../src';
 import {createScene} from '../../../examples/experimental/three/scene';

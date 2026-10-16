@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {isBrowser} from '@probe.gl/env';
-import {CanvasObserver} from '../../src/adapter/canvas-observer';
+import {CanvasObserver} from '../../src/api/adapter/canvas-observer';
 
 type ObserverGlobals = {
   ResizeObserver: typeof globalThis.ResizeObserver;

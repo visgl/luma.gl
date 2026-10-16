@@ -111,7 +111,7 @@ canvas when creating the device:
 
 ```ts
 import {luma} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
 const supportsHighDynamicRange =
   typeof window !== 'undefined' && window.matchMedia('(dynamic-range: high)').matches;

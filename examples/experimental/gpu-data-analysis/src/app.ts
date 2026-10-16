@@ -24,7 +24,7 @@ import {
 import {planGPUDataFrameQuery} from '@luma.gl/experimental/gpu-sql';
 import {type GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/experimental/gpu-tables';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import * as arrow from 'apache-arrow';
 import {
   runGPUDataFrameBenchmark,

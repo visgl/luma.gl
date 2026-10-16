@@ -22,8 +22,8 @@
       "@luma.gl/gpgpu/*": ["../../../modules/gpgpu/src/*"],
       "@luma.gl/shadertools": ["../../../modules/shadertools/src/index.ts"],
       "@luma.gl/shadertools/*": ["../../../modules/shadertools/src/*"],
-      "@luma.gl/webgpu": ["../../../modules/webgpu/src/index.ts"],
-      "@luma.gl/webgpu/*": ["../../../modules/webgpu/src/*"]
+      "@luma.gl/core/webgpu": ["../../../modules/core/src/webgpu/index.ts"],
+      "@luma.gl/core/webgpu/*": ["../../../modules/core/src/webgpu/*"]
     }
   },
   "include": ["."]

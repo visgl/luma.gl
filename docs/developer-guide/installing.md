@@ -31,7 +31,7 @@ to WebGL2.
 ```bash
 npm create vite@latest luma-demo -- --template vanilla-ts
 cd luma-demo
-npm install @luma.gl/engine @luma.gl/webgpu @luma.gl/webgl
+npm install @luma.gl/engine @luma.gl/core
 ```
 
 **yarn**
@@ -39,7 +39,7 @@ npm install @luma.gl/engine @luma.gl/webgpu @luma.gl/webgl
 ```bash
 yarn create vite luma-demo --template vanilla-ts
 cd luma-demo
-yarn add @luma.gl/engine @luma.gl/webgpu @luma.gl/webgl
+yarn add @luma.gl/engine @luma.gl/core
 ```
 
 **pnpm**
@@ -47,7 +47,7 @@ yarn add @luma.gl/engine @luma.gl/webgpu @luma.gl/webgl
 ```bash
 pnpm create vite luma-demo --template vanilla-ts
 cd luma-demo
-pnpm add @luma.gl/engine @luma.gl/webgpu @luma.gl/webgl
+pnpm add @luma.gl/engine @luma.gl/core
 ```
 
 ### Render a Frame
@@ -56,8 +56,8 @@ Replace `src/main.ts` with:
 
 ```typescript
 import {AnimationLoopTemplate, type AnimationProps, makeAnimationLoop} from '@luma.gl/engine';
-import {webgpuAdapter} from '@luma.gl/webgpu';
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
 class App extends AnimationLoopTemplate {
   override onRender({device}: AnimationProps): void {
@@ -124,8 +124,8 @@ the selected device in your browser developer tools.
 
 ### TypeScript Cannot Resolve a Package
 
-Install all three packages shown above. `@luma.gl/engine` provides `AnimationLoop` and
-`Model`; `@luma.gl/webgpu` and `@luma.gl/webgl` provide the concrete device adapters.
+Install both packages shown above. `@luma.gl/engine` provides `AnimationLoop` and
+`Model`; core includes the device adapters at `@luma.gl/core/webgpu` and `@luma.gl/core/webgl`.
 
 ## Next Step
 
@@ -141,15 +141,15 @@ provides higher-level layers, cameras, and interaction.
 
 For lower-level applications, `@luma.gl/core` provides portable GPU devices, buffers,
 textures, and rendering resources. Pair it with at least one backend adapter:
-`@luma.gl/webgpu` for WebGPU or `@luma.gl/webgl` for WebGL2.
+`@luma.gl/core/webgpu` for WebGPU or `@luma.gl/core/webgl` for WebGL2.
 
 ```bash
-yarn add @luma.gl/core @luma.gl/webgpu
+yarn add @luma.gl/core
 ```
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
 const device = await luma.createDevice({
   type: 'webgpu',
@@ -158,13 +158,12 @@ const device = await luma.createDevice({
 });
 ```
 
-To support both backends, install `@luma.gl/webgl` as well and supply the adapters in
-the adapter list:
+To support both backends, import both adapters from core and supply them in the adapter list:
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
 const device = await luma.createDevice({
   type: 'best-available',
@@ -178,11 +177,11 @@ const device = await luma.createDevice({
 - `@luma.gl/core` provides portable devices, GPU resources, and rendering primitives.
 - `@luma.gl/engine` adds models, animation loops, geometry, and higher-level rendering
   tools.
-- `@luma.gl/webgpu` and `@luma.gl/webgl` provide the WebGPU and WebGL2 backends.
+- `@luma.gl/core/webgpu` and `@luma.gl/core/webgl` provide the WebGPU and WebGL2 backends.
 - `@luma.gl/shadertools` assembles reusable shader modules, hooks, and effects.
 
 ```bash
-yarn add @luma.gl/core @luma.gl/engine @luma.gl/webgpu @luma.gl/webgl @luma.gl/shadertools
+yarn add @luma.gl/core @luma.gl/engine @luma.gl/shadertools
 ```
 
 Explore the [module catalog](/docs/api-reference) to choose the packages that match

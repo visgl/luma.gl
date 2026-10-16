@@ -5,7 +5,7 @@ import {expect, test, vi} from 'vitest';
 import {Deck, OrbitView} from '@deck.gl/core';
 import {PolygonLayer} from '@deck.gl/layers';
 import {Buffer, Texture, luma} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {
   Camera,
   Matrix4,

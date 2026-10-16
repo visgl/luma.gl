@@ -9,8 +9,8 @@ import {getTestDevices, getWebGPUTestDevice, getWebGLTestDevice} from '@luma.gl/
 
 import {TypedArray} from '@math.gl/types';
 import {Buffer, Device} from '@luma.gl/core';
-import {webgl2Adapter} from '@luma.gl/webgl';
-import {GL} from '@luma.gl/webgl/constants';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
+import {GL} from '@luma.gl/core/webgl-constants';
 
 const DEVICE_TYPES = ['webgpu', 'webgl', 'null'] as const;
 

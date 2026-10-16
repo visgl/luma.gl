@@ -4,7 +4,7 @@
 
 import {Buffer, Texture, type Device} from '@luma.gl/core';
 import {SelectionOutline} from '@luma.gl/experimental';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {expect, it} from 'vitest';
 
 it('selection outlines preserve interior, background and occluders with exact uint32 IDs', async () => {

@@ -4,7 +4,7 @@
 // GPUCommandGraph -> borrowed GPU buffers -> upstream Three.js WebGPURenderer.
 // Three 0.185.1 is intentionally pinned: the bridge uses private renderer hooks.
 import {Buffer, luma, log} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {ThreeBufferBridge, getThreeBufferBridgeSupport} from '@luma.gl/three/interop';

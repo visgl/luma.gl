@@ -37,7 +37,7 @@ describe('getting-started onboarding', () => {
     for (const requiredSetup of [
       '## Create a project',
       'cd luma-demo',
-      'npm install @luma.gl/core @luma.gl/engine @luma.gl/webgl @luma.gl/webgpu',
+      'npm install @luma.gl/core @luma.gl/engine',
       '## Render the triangle',
       '## Follow the frame',
       '## Troubleshoot'

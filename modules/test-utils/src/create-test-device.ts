@@ -4,8 +4,8 @@
 
 import type {Device, CanvasContextProps, DeviceProps} from '@luma.gl/core';
 import {luma, log} from '@luma.gl/core';
-import {webgl2Adapter, WebGLDevice} from '@luma.gl/webgl';
-import {webgpuAdapter, WebGPUDevice} from '@luma.gl/webgpu';
+import {webgl2Adapter, WebGLDevice} from '@luma.gl/core/webgl';
+import {webgpuAdapter, WebGPUDevice} from '@luma.gl/core/webgpu';
 import {nullAdapter} from './null-device/null-adapter';
 import {NullDevice} from './null-device/null-device';
 

@@ -19,8 +19,8 @@ export default defineConfig(({mode}) => ({
       '@luma.gl/gpgpu': `${__dirname}/../../../modules/gpgpu/src`,
       '@luma.gl/text': `${__dirname}/../../../modules/text/src`,
       '@luma.gl/shadertools': `${__dirname}/../../../modules/shadertools/src`,
-      '@luma.gl/webgl': `${__dirname}/../../../modules/webgl/src`,
-      '@luma.gl/webgpu': `${__dirname}/../../../modules/webgpu/src`
+      '@luma.gl/core/webgl': `${__dirname}/../../../modules/core/src/webgl`,
+      '@luma.gl/core/webgpu': `${__dirname}/../../../modules/core/src/webgpu`
     }
   },
   optimizeDeps: {exclude: ['@deck.gl/core'], noDiscovery: true}

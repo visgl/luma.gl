@@ -65,7 +65,7 @@ The following example assumes the page contains a `<canvas></canvas>` element:
 ```ts
 import {ANARIDevice} from '@luma.gl/scene';
 import {luma} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {Matrix4} from '@math.gl/core';
 
 const canvas = document.querySelector('canvas');

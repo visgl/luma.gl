@@ -16,7 +16,7 @@ You need basic TypeScript knowledge and a browser supporting at least one backen
 ```bash
 npm create vite@latest luma-demo -- --template vanilla-ts
 cd luma-demo
-npm install @luma.gl/core @luma.gl/engine @luma.gl/webgl @luma.gl/webgpu
+npm install @luma.gl/core @luma.gl/engine
 ```
 
 Use matching versions of the luma.gl packages. See [Installing](/docs/developer-guide/installing)
@@ -29,8 +29,8 @@ Replace `src/main.ts` with:
 ```ts
 import {luma} from '@luma.gl/core';
 import {AnimationLoopTemplate, type AnimationProps, makeAnimationLoop, Model} from '@luma.gl/engine';
-import {webgpuAdapter} from '@luma.gl/webgpu';
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 const VS_GLSL = /* glsl */ `#version 300 es
 
   const vec2 pos[3] = vec2[3](vec2(0.0, 0.5), vec2(-0.5, -0.5), vec2(0.5, -0.5));

@@ -16,7 +16,7 @@ import {
 import {Stats, Stat} from '@probe.gl/stats';
 import {isBrowser} from '@probe.gl/env';
 
-import {resetGLParameters} from '@luma.gl/webgl';
+import {resetGLParameters} from '@luma.gl/core/webgl';
 // import {default as Query} from '../classic/query';
 // import {ClassicFramebuffer} from '../classic/framebuffer';
 

@@ -26,14 +26,14 @@
   "scripts": {
     "bootstrap": "bash ./scripts/bootstrap.sh",
     "start": "open https://luma.gl/docs/getting-started",
-    "build": "ocular-clean && (cd modules/constants && yarn pre-build) && ocular-build",
+    "build": "ocular-clean && yarn build-webgl-constants && ocular-build && node scripts/build-core-cjs.mjs",
     "bundle-size": "node ./scripts/bundle-size.mjs",
     "lint": "ocular-lint",
     "publish-beta": "ocular-publish version-only-beta",
     "publish-prod": "ocular-publish version-only-prod",
     "test": "yarn test-node && yarn test-headless",
-    "test-node": "ocular-test node",
-    "test-node-coverage": "LUMA_TEST_NODE_COVERAGE=true ocular-test node --coverage.enabled --coverage.provider=istanbul --coverage.reporter=lcovonly --coverage.reportsDirectory=coverage-node",
+    "test-node": "yarn build-webgl-constants && ocular-test node",
+    "test-node-coverage": "yarn build-webgl-constants && LUMA_TEST_NODE_COVERAGE=true ocular-test node --coverage.enabled --coverage.provider=istanbul --coverage.reporter=lcovonly --coverage.reportsDirectory=coverage-node",
     "test-browser": "ocular-test browser",
     "test-browser-benchmarks": "LUMA_TEST_BROWSER_BENCHMARKS=true ocular-test headless --no-coverage",
     "test-presentation": "node scripts/playwright/presentation-canary.mjs",
@@ -52,7 +52,8 @@
     "gltf:reference-evidence": "node ./scripts/gltf-reference/capture-reference-evidence.mjs",
     "gltf:reference-evidence:test": "node --test ./scripts/gltf-reference/*.test.mjs ./scripts/playwright/*.test.mjs",
     "playwright:install": "playwright install chromium webkit",
-    "metrics": "./scripts/metrics.sh && ocular-metrics"
+    "metrics": "./scripts/metrics.sh && ocular-metrics",
+    "build-webgl-constants": "esbuild modules/core/src/webgl-constants/index.ts --bundle --format=cjs --outfile=modules/core/dist/webgl-constants/index.cjs"
   },
   "devDependencies": {
     "@babel/core": "^7.28.3",
@@ -62,6 +63,7 @@
     "@loaders.gl/las": "~5.0.0-alpha.11",
     "@loaders.gl/parquet": "~5.0.0-alpha.11",
     "@loaders.gl/polyfills": "~5.0.0-alpha.11",
+    "@luma.gl/ts-transform-inline-webgl-constants": "workspace:*",
     "@math.gl/crs": "~5.0.0-alpha.15",
     "@math.gl/dggs": "~5.0.0-alpha.15",
     "@math.gl/projection": "~5.0.0-alpha.15",
@@ -95,14 +97,14 @@
     "@luma.gl/core": "workspace:*",
     "@luma.gl/engine": "workspace:*",
     "@luma.gl/shadertools": "workspace:*",
-    "@luma.gl/webgl": "workspace:*",
     "@loaders.gl/compression": "5.0.0-alpha.11",
     "@math.gl/sun": "~5.0.0-alpha.15",
     "@math.gl/web-mercator": "~5.0.0-alpha.15",
     "@deck.gl/core@npm:9.4.0": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch",
     "@math.gl/core@npm:^4.1.0": "5.0.0-alpha.15",
     "@vitest/browser": "5.0.2",
-    "@vitest/browser-playwright": "5.0.2"
+    "@vitest/browser-playwright": "5.0.2",
+    "@luma.gl/webgl": "workspace:modules/core"
   },
   "packageExtensions": {
     "@loaders.gl/gltf@~5.0.0-alpha.11": {
