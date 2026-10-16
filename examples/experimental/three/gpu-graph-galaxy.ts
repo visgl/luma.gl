@@ -50,15 +50,19 @@ fn main(@builtin(global_invocation_id) invocationId: vec3u) {
   // A quarter of the stars form a thick ellipsoidal bulge, rather than a flat disk.
   if (particleIndex % 4u == 0u) {
     let bulgeRadius = 2.4 * pow(getRandomValue(seed), 0.75) * parameters.radius;
-    let azimuth = getRandomValue(seed + 1u) * 6.2831853 + parameters.time * 0.12;
+    let azimuth = getRandomValue(seed + 1u) * 6.2831853;
+    // Rotate an elongated bulge so the central population has visible motion.
+    let rotationAngle = parameters.time * 0.65;
     let verticalDirection = getRandomValue(seed + 2u) * 2.0 - 1.0;
     let planarDirection = sqrt(max(0.0, 1.0 - verticalDirection * verticalDirection));
+    let localPosition = vec2f(cos(azimuth), sin(azimuth) * 0.64) * planarDirection;
     position = vec3f(
-      cos(azimuth) * planarDirection,
-      verticalDirection * 0.72,
-      sin(azimuth) * planarDirection
+      localPosition.x * cos(rotationAngle) - localPosition.y * sin(rotationAngle),
+      verticalDirection * 0.55,
+      localPosition.x * sin(rotationAngle) + localPosition.y * cos(rotationAngle)
     ) * bulgeRadius;
-    starColor = mix(vec3f(1.0, 0.035, 0.008), vec3f(1.0, 0.18, 0.035), getRandomValue(seed + 3u));
+    // Mix gold, yellow and warm-white stars instead of tinting the entire core red.
+    starColor = mix(vec3f(1.0, 0.48, 0.12), vec3f(1.0, 0.92, 0.68), getRandomValue(seed + 3u));
     brightness = 0.04 + 0.28 * pow(getRandomValue(seed + 4u), 4.0);
   } else {
     let radialFraction = sqrt(getRandomValue(seed));
@@ -74,7 +78,7 @@ fn main(@builtin(global_invocation_id) invocationId: vec3u) {
       sin(rotationAngle) * radialDistance
     );
     let coreWeight = 1.0 - smoothstep(0.1, 0.5, radialFraction);
-    starColor = mix(vec3f(0.32, 0.5, 1.0), vec3f(1.0, 0.2, 0.045), coreWeight);
+    starColor = mix(vec3f(0.32, 0.5, 1.0), vec3f(1.0, 0.76, 0.35), coreWeight);
     brightness = 0.025 + 0.22 * pow(getRandomValue(seed + 3u), 3.0);
   }
   // A range of luminosities keeps additive blending from washing the warm core white.
