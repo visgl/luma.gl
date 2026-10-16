@@ -575,14 +575,16 @@ it('GPUGroupAggregation preserves aligned vector chunks', async () => {
   expect(mean.values, 'weighted groups combine aligned selected chunks').toEqual([3, 7]);
   expect(
     mean.nodeOrder,
-    'weighted vector aggregation initializes and finalizes once around non-empty chunks'
+    'weighted vector aggregation reduces non-empty chunks, then combines partials once'
   ).toEqual([
-    'gpu-group-aggregation-initialize',
     'gpu-group-aggregation-chunk-0-mean',
     'gpu-group-aggregation-chunk-1-mean',
     'gpu-group-aggregation-finalize'
   ]);
-  expect(mean.logicalTransientBufferCount, 'mean owns one transient group-count buffer').toBe(1);
+  expect(
+    mean.logicalTransientBufferCount,
+    'mean owns transient partial-sum and partial-count buffers'
+  ).toBe(2);
 });
 
 it('GPUGridBinning handles literal/GPU bounds, boundaries, and both atomic paths', async () => {

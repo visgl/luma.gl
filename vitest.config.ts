@@ -136,6 +136,7 @@ const nodeCoveragePatterns = [
 const browserBenchmarkTestPatterns = [
   'modules/gpgpu/test/gpu-core/gpu-kernel-benchmark.spec.ts',
   'modules/gpgpu/test/gpu-core/gpu-fragmentation-benchmark.spec.ts',
+  'modules/gpgpu/test/gpu-core/gpu-group-aggregation-benchmark.spec.ts',
   'modules/gpgpu/test/gpu-core/gpu-spatial-query-benchmark.spec.ts',
   'modules/gpgpu/test/gpu-core/gpu-workgroup-reduction-benchmark.spec.ts',
   'modules/gpgpu/test/gpu-core/gpu-workgroup-scan-benchmark.spec.ts',
