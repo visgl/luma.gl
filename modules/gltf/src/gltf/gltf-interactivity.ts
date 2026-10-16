@@ -17,6 +17,7 @@ type GLTFInteractivityNode = {
 };
 type GLTFInteractivityGraph = {
   types?: {signature: string}[];
+  events?: {id: string; values?: Record<string, {type: number; value?: unknown[]}>}[];
   variables?: {type?: number; value?: unknown[]}[];
   declarations?: {op: string; extension?: string}[];
   nodes?: GLTFInteractivityNode[];
@@ -33,6 +34,10 @@ export type GLTFInteractivityPropertyAdapter = {
 };
 export type GLTFInteractivityOptions = {
   graph?: number;
+  /** Receives custom events sent by the graph to its host. */
+  onEvent?: (eventId: string, values: Record<string, unknown[]>) => void;
+  /** Receives formatted graph diagnostics and their severity. */
+  onLog?: (message: string, severity: number) => void;
   properties?: GLTFInteractivityPropertyAdapter;
   /** Maximum flow activations per dispatch, protecting against unbounded cycles. */
   maxSteps?: number;
@@ -41,6 +46,7 @@ export type GLTFInteractivityOptions = {
 const VALUE_OPS = new Set([
   'variable/get',
   'pointer/get',
+  'math/and',
   'math/add',
   'math/sub',
   'math/mul',
@@ -61,6 +67,8 @@ const VALUE_OPS = new Set([
 const FLOW_OPS = new Set([
   'event/onStart',
   'event/onTick',
+  'event/send',
+  'debug/log',
   'flow/sequence',
   'flow/branch',
   'flow/switch',
@@ -83,6 +91,17 @@ function number(value: unknown[]): number {
   return n;
 }
 
+function getTypeDefaultValue(signature: string | undefined): unknown[] {
+  if (signature === 'bool') return [false];
+  if (signature === 'int') return [0];
+  if (signature === 'ref') return [null];
+  const dimensions = signature?.match(/^float(?:([234])(?:x([234]))?)?$/);
+  if (dimensions && (!dimensions[2] || dimensions[1] === dimensions[2])) {
+    return Array(Number(dimensions[1] ?? 1) * Number(dimensions[2] ?? 1)).fill(NaN);
+  }
+  throw new Error('KHR_interactivity: unsupported default value type');
+}
+
 /**
  * Deterministic, GPU-independent interpreter for a defined subset of KHR_interactivity.
  * Unsupported operations fail during construction; no graph is silently partially executed.
@@ -94,6 +113,8 @@ export class GLTFInteractivity {
   readonly variables: unknown[][];
   readonly properties?: GLTFInteractivityPropertyAdapter;
   readonly maxSteps: number;
+  private readonly onEvent: GLTFInteractivityOptions['onEvent'];
+  private readonly onLog: GLTFInteractivityOptions['onLog'];
   private started = false;
   private startTime = 0;
   private lastTick: number | undefined;
@@ -106,6 +127,8 @@ export class GLTFInteractivity {
     if (!graph) throw new Error(`KHR_interactivity: graph ${graphIndex} does not exist`);
     this.graph = graph;
     this.properties = options.properties;
+    this.onEvent = options.onEvent;
+    this.onLog = options.onLog;
     this.maxSteps = options.maxSteps ?? 10000;
     if (!Number.isSafeInteger(this.maxSteps) || this.maxSteps < 1) {
       throw new Error('KHR_interactivity: maxSteps must be a positive safe integer');
@@ -115,6 +138,12 @@ export class GLTFInteractivity {
       const op = this.getOperation(graphIndex, index);
       if (!VALUE_OPS.has(op) && !FLOW_OPS.has(op)) {
         throw new Error(`KHR_interactivity: unsupported operation ${op}`);
+      }
+      if (op === 'event/send') {
+        const eventIndex = number(this.config(node, 'event'));
+        if (!Number.isInteger(eventIndex) || !graph.events?.[eventIndex]) {
+          throw new Error('KHR_interactivity: invalid custom event index');
+        }
       }
       for (const target of Object.values(node.flows ?? {})) {
         if (!Number.isInteger(target.node) || !(graph.nodes ?? [])[target.node]) {
@@ -164,7 +193,11 @@ export class GLTFInteractivity {
       if (!value.socket) throw new Error('KHR_interactivity: connected input missing socket');
       return this.evaluate(value.node, value.socket, visiting);
     }
-    if (!value.value) throw new Error('KHR_interactivity: input has no value');
+    if (!value.value) {
+      return getTypeDefaultValue(
+        value.type === undefined ? undefined : this.graph.types?.[value.type]?.signature
+      );
+    }
     return copy(components(value.value));
   }
 
@@ -216,6 +249,13 @@ export class GLTFInteractivity {
         return x.map((v, i) => fn(v, y[i]));
       };
       switch (op) {
+        case 'math/and': {
+          const left = scalar(a());
+          const right = scalar(b());
+          if (typeof left === 'boolean' && typeof right === 'boolean') return [left && right];
+          if (typeof left === 'number' && typeof right === 'number') return [left & right];
+          throw new Error('KHR_interactivity: incompatible AND arguments');
+        }
         case 'math/add':
           return binary((x, y) => x + y);
         case 'math/sub':
@@ -301,6 +341,48 @@ export class GLTFInteractivity {
             if (!this.variables[id]) throw new Error('KHR_interactivity: invalid variable index');
             this.variables[id] = copy(values[i]);
           });
+          follow('out');
+          break;
+        }
+        case 'event/send': {
+          const eventIndex = number(this.config(node, 'event'));
+          const event = this.graph.events![eventIndex];
+          const values = Object.fromEntries(
+            Object.entries(event.values ?? {}).map(([name, declaration]) => [
+              name,
+              node.values?.[name]
+                ? this.input(index, name, visiting)
+                : declaration.value
+                  ? copy(declaration.value)
+                  : getTypeDefaultValue(this.graph.types?.[declaration.type]?.signature)
+            ])
+          );
+          this.onEvent?.(event.id, values);
+          follow('out');
+          break;
+        }
+        case 'debug/log': {
+          const severity = node.configuration?.['severity']?.value[0];
+          const template = node.configuration?.['message']?.value[0];
+          const tokens =
+            typeof template === 'string' ? template.match(/\{\{|\}\}|\{[^{}]+\}|[^{}]+/g) : null;
+          const validTemplate =
+            typeof template === 'string' && (tokens ?? []).join('') === template;
+          const message = validTemplate
+            ? (tokens ?? [])
+                .map(token => {
+                  if (token === '{{') return '{';
+                  if (token === '}}') return '}';
+                  if (token.startsWith('{'))
+                    return JSON.stringify(this.input(index, token.slice(1, -1), visiting));
+                  return token;
+                })
+                .join('')
+            : '';
+          this.onLog?.(
+            message,
+            typeof severity === 'number' && severity === (severity | 0) ? severity : 0
+          );
           follow('out');
           break;
         }
