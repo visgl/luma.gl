@@ -86,10 +86,20 @@
     "@docusaurus/plugin-content-docs": "^3.10.2",
     "@docusaurus/preset-classic": "^3.10.2",
     "cheerio": "1.0.0-rc.9",
+    "@luma.gl/constants": "workspace:*",
     "@luma.gl/core": "workspace:*",
+    "@luma.gl/effects": "workspace:*",
     "@luma.gl/engine": "workspace:*",
+    "@luma.gl/experimental": "workspace:*",
+    "@luma.gl/gltf": "workspace:*",
+    "@luma.gl/gpgpu": "workspace:*",
+    "@luma.gl/scene": "workspace:*",
     "@luma.gl/shadertools": "workspace:*",
-    "@luma.gl/webgl": "workspace:*"
+    "@luma.gl/splats": "workspace:*",
+    "@luma.gl/test-utils": "workspace:*",
+    "@luma.gl/text": "workspace:*",
+    "@luma.gl/webgl": "workspace:*",
+    "@luma.gl/webgpu": "workspace:*"
   },
   "packageExtensions": {
     "@loaders.gl/gltf@*": {
