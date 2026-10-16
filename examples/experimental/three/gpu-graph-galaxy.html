@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GPU Graph × Three.js — Galactic Vortex</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#02030b;color:#e8f7ff;font:14px system-ui}
+canvas{display:block;width:100%;height:100%}#hud{position:absolute;top:24px;left:28px;max-width:390px;padding:22px;background:#050a1bd9;border:1px solid #31506a;border-radius:14px;backdrop-filter:blur(12px)}
+h1{margin:0 0 8px;font-size:25px;letter-spacing:-.5px}p{line-height:1.5;color:#b5d3e7}
+label{display:flex;align-items:center;gap:10px;margin:12px 0}input{flex:1;accent-color:#51dcff}
+#status{color:#80e6ff;font:12px monospace}#viewport{position:fixed;inset:0}
+</style></head><body><div id="viewport"></div><section id="hud">
+<h1>Galactic Vortex</h1><p>65,536 GPU-simulated particles. A luma.gl command graph writes positions and colors directly into buffers borrowed by upstream Three.js. No per-frame geometry readback or upload.</p>
+<label>Rotation <input id="speed" type="range" min="0" max="3" step=".05" value="1"/></label>
+<label>Radius <input id="radius" type="range" min=".3" max="2" step=".05" value="1"/></label>
+<label><input id="pause" type="checkbox" style="flex:none"/> Pause</label>
+<div id="status">Initializing shared WebGPU device…</div></section>
+<script type="module" src="./gpu-graph-galaxy.ts"></script></body></html>
