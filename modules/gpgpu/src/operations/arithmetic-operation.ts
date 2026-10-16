@@ -45,6 +45,9 @@ export class ArithmeticOperation extends Operation<ArithmeticOperationInputs> {
     const firstInput = evaluatorArgs.find(
       (arg): arg is GPUDataEvaluator => arg instanceof GPUDataEvaluator
     );
+    const segmentedInput = evaluatorArgs.find(
+      (arg): arg is GPUDataEvaluator => arg instanceof GPUDataEvaluator && Boolean(arg.startIndices)
+    );
     this.output = new GPUDataEvaluator({
       isConstant,
       type,
@@ -53,6 +56,8 @@ export class ArithmeticOperation extends Operation<ArithmeticOperationInputs> {
       format: firstInput
         ? getCompatibleGPUDataEvaluatorFormat(firstInput, type, size, firstInput.normalized)
         : undefined,
+      startIndices: segmentedInput?.startIndices,
+      segmentedFormat: segmentedInput?.segmentedFormat,
       source: this
     });
   }
