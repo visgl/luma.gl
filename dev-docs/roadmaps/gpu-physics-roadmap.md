@@ -157,3 +157,8 @@ foundations across the five tranches, not completion of every exit criterion.
 Measured billiards calibration, dynamic non-spherical bodies, persistent manifolds,
 warm starting and broad-phase CCD for large worlds remain open. No external
 measurement dataset is bundled or claimed.
+
+Measured sparse/rack/pile evidence and an explicit 10,000-body frame-budget limit
+are now recorded in the [performance report](../benchmarks/gpu-physics-performance.md).
+The measured sparse scene reached approximately 24.43 ms of GPU simulation per step
+on the tested Apple adapter; large-world fixed timesteps do not imply 120 Hz playback.

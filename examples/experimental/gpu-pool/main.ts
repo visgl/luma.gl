@@ -252,7 +252,11 @@ try {
     setAim(Math.atan2(point[1] - states[0].position[1], point[0] - states[0].position[0]));
   }
   canvas.onpointerdown = event => {
-    if (event.button !== 0 || phase !== 'aiming' || chargeStart !== null) return;
+    if (chargeStart !== null) {
+      event.preventDefault();
+      return;
+    }
+    if (event.button !== 0 || phase !== 'aiming') return;
     canvas.focus();
     aimPointer = event.pointerId;
     canvas.setPointerCapture(event.pointerId);
@@ -313,12 +317,16 @@ try {
       }
     }
   };
-  shoot.onkeyup = event => {
-    if (event.code === 'Space' || event.code === 'Enter') {
-      event.preventDefault();
-      if (chargeKeyboard === event.code) releaseCharge();
-    }
-  };
+  window.addEventListener(
+    'keyup',
+    event => {
+      if (chargeKeyboard === event.code) {
+        event.preventDefault();
+        releaseCharge();
+      }
+    },
+    {signal: inputEvents.signal}
+  );
   // Assistive activation has no physical hold; retain a single-action shot at selected power.
   shoot.onclick = event => {
     if (event.detail === 0 && chargeStart === null) startShot();
