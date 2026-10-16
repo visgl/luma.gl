@@ -25,7 +25,7 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 | [`@luma.gl/effects`][effects] | Optional | Composable post-processing effects, screen-space lighting, and reusable shader-pass pipelines. |
 | [`@luma.gl/gpgpu`][gpgpu] | Optional | Portable GPU evaluation plus experimental `gpu-data`, `gpu-core`, and `gpu-graph` subpaths. |
 | [`@luma.gl/arrow`][arrow] | Experimental / Private | Apache Arrow adapters for GPU layouts and GPU table objects from Arrow data. |
-| [`@luma.gl/text`][text] | Experimental / Private | `TextRenderer` facade and caller-owned GPU text data. |
+| [`@luma.gl/text`][text] | Experimental | `TextRenderer` facade and caller-owned GPU text data. |
 | [`@luma.gl/splats`][splats] | Experimental / Private | Gaussian splat rendering and caller-owned prepared GPU splat data. |
 | [`@luma.gl/experimental`][experimental] | Experimental / Private | Incubating APIs, including `gpu-tables`, rendering `models`, WebXR, and GPU analytics. |
 | [`@luma.gl/gltf`][gltf] | Optional | Standards-first glTF assets, physical materials, character animation, and lossless interchange. |

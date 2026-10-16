@@ -557,7 +557,10 @@ describe('framework capabilities documentation', () => {
       expect(moduleRow![2]).not.toContain(`${otherBackend} API`);
     }
 
-    for (const packageName of ['scene', 'arrow', 'experimental', 'splats', 'text']) {
+    const textRow = moduleRows.find(row => row[0].includes('@luma.gl/text'));
+    expect(textRow?.[1]).toBe('Experimental');
+
+    for (const packageName of ['scene', 'arrow', 'experimental', 'splats']) {
       const moduleRow = moduleRows.find(row => row[0].includes(`@luma.gl/${packageName}`));
 
       expect(moduleRow, `The API reference must list @luma.gl/${packageName}`).toBeDefined();

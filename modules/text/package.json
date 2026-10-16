@@ -1,7 +1,9 @@
 {
   "name": "@luma.gl/text",
   "version": "10.0.0-alpha.4",
-  "private": true,
+  "publishConfig": {
+    "access": "public"
+  },
   "description": "2D and 3D text utilities for luma.gl",
   "license": "MIT",
   "type": "module",
@@ -49,7 +51,7 @@
   ],
   "sideEffects": false,
   "peerDependencies": {
-    "@luma.gl/engine": "10.0.0-alpha.3"
+    "@luma.gl/engine": "~10.0.0-alpha.3"
   },
   "dependencies": {
     "@luma.gl/core": "10.0.0-alpha.4",
