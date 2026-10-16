@@ -23,6 +23,8 @@ import {
   FINALIZE_SPHERES,
   CONTROL_SPHERE
 } from './sphere-world-shaders';
+import {getSweepShader, getEventShader} from './sphere-world-events';
+import {decodeSphereEvents, type GPUSphereEventBatch, type GPUSphereTrigger} from './sphere-events';
 
 type Vector3 = readonly [number, number, number];
 
@@ -82,12 +84,21 @@ export type GPUSphereWorldProps = GPUSphereWorldParameters & {
   sleepStates?: Buffer;
   /** Eight uint32 counters; see GPUSphereWorldDiagnostics. */
   diagnostics?: Buffer;
+  /** Bounded global time-of-impact steps; small scenes only (at most 256 bodies). */
+  continuous?: boolean;
+  maximumImpactSteps?: number;
+  /** Persistent event ring capacity; zero disables events. */
+  eventCapacity?: number;
+  /** Spherical center-crossing triggers; capture disables the body on the GPU. */
+  triggers?: readonly GPUSphereTrigger[];
   timeStep?: number;
   substeps?: number;
   iterations?: number;
   maximumRadius?: number;
   maximumContacts?: number;
   contactSkin?: number;
+  /** Per-body candidate budget; zero retains unbounded reference traversal. */
+  maximumCandidateTests?: number;
   /** All-pairs is a bounded numerical reference, limited to 256 bodies. */
   broadPhase?: 'grid' | 'all-pairs';
   /** Legacy horizontal-plane offset. Prefer plane.offset. */
@@ -96,7 +107,7 @@ export type GPUSphereWorldProps = GPUSphereWorldParameters & {
   friction?: number;
 };
 
-/** Last substep's counters. Contacts/candidateTests count directed body neighbors. */
+/** Last substep's counters. Contacts count directed neighbors; candidates count inspected entries. */
 export type GPUSphereWorldDiagnostics = {
   droppedContacts: number;
   invalidBodies: number;
@@ -105,6 +116,8 @@ export type GPUSphereWorldDiagnostics = {
   sleepingBodies: number;
   candidateTests: number;
   maximumContacts: number;
+  exhaustedImpactSteps: number;
+  exhaustedCandidateBodies: number;
 };
 
 /** Decode a sampled diagnostics readback; the simulation itself requires no CPU readback. */
@@ -116,7 +129,9 @@ export function decodeGPUSphereWorldDiagnostics(data: Uint32Array): GPUSphereWor
     awakeBodies: data[3],
     sleepingBodies: data[4],
     candidateTests: data[5],
-    maximumContacts: data[6]
+    maximumContacts: data[6],
+    exhaustedImpactSteps: data[7] & 1,
+    exhaustedCandidateBodies: data[7] >>> 1
   };
 }
 
@@ -174,11 +189,19 @@ export class GPUSphereWorld {
   readonly maximumRadius: number;
   readonly maximumContacts: number;
   readonly contactSkin: number;
+  readonly maximumCandidateTests: number;
   readonly broadPhase: 'grid' | 'all-pairs';
   private parameters: Required<Omit<GPUSphereWorldParameters, 'plane' | 'planes'>> & {
     plane: GPUSpherePlane;
     planes?: readonly GPUSpherePlane[];
   };
+  readonly continuous: boolean;
+  readonly maximumImpactSteps: number;
+  readonly eventCapacity: number;
+  readonly triggers: readonly GPUSphereTrigger[];
+  events?: Buffer;
+  private eventCursor = 0;
+  private eventRead?: Promise<GPUSphereEventBatch>;
   private settings?: Buffer;
   private commandSettings?: Buffer;
   private bodyControl?: Computation;
@@ -201,7 +224,36 @@ export class GPUSphereWorld {
     this.maximumRadius = props.maximumRadius ?? 1;
     this.maximumContacts = props.maximumContacts ?? 32;
     this.contactSkin = props.contactSkin ?? this.maximumRadius * 0.01;
+    this.maximumCandidateTests = props.maximumCandidateTests ?? 0;
+    if (
+      !Number.isInteger(this.maximumCandidateTests) ||
+      this.maximumCandidateTests < 0 ||
+      this.maximumCandidateTests > 1000000
+    )
+      throw new Error('Invalid sphere candidate budget');
     this.broadPhase = props.broadPhase ?? 'grid';
+    this.continuous = props.continuous ?? false;
+    this.maximumImpactSteps = props.maximumImpactSteps ?? 4;
+    this.eventCapacity = props.eventCapacity ?? 0;
+    this.triggers = props.triggers ?? [];
+    if (
+      ((this.continuous || this.eventCapacity > 0) && this.count > 256) ||
+      !Number.isInteger(this.maximumImpactSteps) ||
+      this.maximumImpactSteps < 1 ||
+      this.maximumImpactSteps > 16 ||
+      !Number.isInteger(this.eventCapacity) ||
+      this.eventCapacity < 0 ||
+      this.eventCapacity > 65536 ||
+      (this.eventCapacity > 0 && (this.eventCapacity & (this.eventCapacity - 1)) !== 0) ||
+      this.triggers.length > 32 ||
+      (this.triggers.length > 0 && !this.eventCapacity) ||
+      this.triggers.some(
+        trigger =>
+          ![...trigger.center, trigger.radius].every(Number.isFinite) || trigger.radius <= 0
+      )
+    ) {
+      throw new Error('Invalid sphere sweep or event capacity');
+    }
     for (const [value, maximum] of [
       [this.count, 1_000_000],
       [this.substeps, 64],
@@ -401,8 +453,13 @@ export class GPUSphereWorld {
     if (Math.ceil(this.count / 64) > graph.device.limits.maxComputeWorkgroupsPerDimension)
       throw new Error('Sphere world exceeds device dispatch limits');
     if (
-      Math.max(this.count * 16, this.count * this.maximumContacts * 8, 32) >
-      graph.device.limits.maxStorageBufferBindingSize
+      Math.max(
+        this.count * 16,
+        this.count * this.maximumContacts * 8,
+        32,
+        this.eventCapacity ? 16 + this.eventCapacity * 32 : 0,
+        this.eventCapacity ? this.count * (this.count + 32) * 4 : 0
+      ) > graph.device.limits.maxStorageBufferBindingSize
     )
       throw new Error('Sphere world exceeds maxStorageBufferBindingSize');
     const allocate = (id: string, byteLength: number, uniform = false): Buffer => {
@@ -488,11 +545,65 @@ export class GPUSphereWorld {
       'uint32x2',
       this.count * this.maximumContacts
     );
+    const clockBuffer = graph.device.createBuffer({
+      id: `${this.id}-clock`,
+      byteLength: 16,
+      usage: Buffer.UNIFORM | Buffer.STORAGE | Buffer.COPY_DST
+    });
+    this.ownedBuffers.push(clockBuffer);
+    const clock = graph.createDataView(
+      graph.importBuffer(
+        {id: `${this.id}-clock`, byteLength: 16, usage: Buffer.STORAGE | Buffer.UNIFORM},
+        clockBuffer
+      ),
+      {format: 'float32x4', length: 1}
+    );
+    const previousPositions = createTransientView(
+      graph,
+      `${this.id}-previous-positions`,
+      'float32x4',
+      this.count
+    );
+    const previousVelocities = createTransientView(
+      graph,
+      `${this.id}-previous-velocities`,
+      'float32x4',
+      this.count
+    );
+    let eventView: GraphDataView | undefined;
+    let contactStates: GraphDataView | undefined;
+    if (this.eventCapacity) {
+      const contactBuffer = allocate('contact-states', this.count * (this.count + 32) * 4);
+      contactStates = graph.createDataView(
+        graph.importBuffer(
+          {
+            id: `${this.id}-contact-states`,
+            byteLength: contactBuffer.byteLength,
+            usage: Buffer.STORAGE
+          },
+          contactBuffer
+        ),
+        {format: 'uint32', length: this.count * (this.count + 32)}
+      );
+      this.events = allocate('events', 16 + this.eventCapacity * 32);
+      eventView = graph.createDataView(
+        graph.importBuffer(
+          {
+            id: `${this.id}-events`,
+            byteLength: this.events.byteLength,
+            usage: Buffer.STORAGE
+          },
+          this.events
+        ),
+        {format: 'uint32', length: this.events.byteLength / 4}
+      );
+    }
     const header = getSphereWorldShaderHeader(
       this.count,
       this.maximumRadius,
       this.maximumContacts,
-      this.contactSkin
+      this.contactSkin,
+      this.maximumCandidateTests
     );
     const bind = (
       name: string,
@@ -507,8 +618,13 @@ export class GPUSphereWorld {
       workgroups = Math.ceil(this.count / 64),
       usesSettings = true
     ): void => {
+      const usesClock = usesSettings && /\bclock\./.test(source);
       const allBindings = usesSettings
-        ? [bind('settings', settings, 0, 'uniform'), ...bindings]
+        ? [
+            ...(/\bsettings\./.test(source) ? [bind('settings', settings, 0, 'uniform')] : []),
+            ...(usesClock ? [bind('clock', clock, 9, 'uniform')] : []),
+            ...bindings
+          ]
         : bindings;
       const resources: GraphBufferUse[] = allBindings.map(binding => ({
         buffer: binding.view,
@@ -528,7 +644,14 @@ export class GPUSphereWorld {
             : {...base, type: binding.access === 'read' ? 'read-only-storage' : 'storage'};
         })
       };
-      const props = {id: `${this.id}-${name}`, source: header + source, shaderLayout};
+      const props = {
+        id: `${this.id}-${name}`,
+        source:
+          (usesClock
+            ? header
+            : header.replace('@group(0) @binding(9) var<uniform> clock: Clock;', '')) + source,
+        shaderLayout
+      };
       const createExecutable = (
         computation: Computation
       ): GPUCommandGraphComputeExecutable<Parameters> => ({
@@ -558,89 +681,141 @@ export class GPUSphereWorld {
         1,
         false
       );
-      addPass(`${prefix}-integrate`, INTEGRATE_SPHERES, [
-        bind('positions', state.positions, 1),
-        bind('velocities', state.velocities, 2),
-        bind('angularVelocities', state.angularVelocities, 3),
-        bind('sleepStates', sleepStates, 4, 'write'),
-        bind('predictedPositions', scratch.positions, 5, 'write'),
-        bind('predictedVelocities', scratch.velocities, 6, 'write'),
-        bind('predictedAngularVelocities', scratch.angularVelocities, 7, 'write')
-      ]);
       addPass(
-        `${prefix}-cells`,
-        ASSIGN_SPHERE_CELLS,
-        [
-          bind('positions', scratch.positions, 1),
-          bind('keys', keys, 2, 'write'),
-          bind('values', values, 3, 'write'),
-          bind('diagnostics', diagnostics, 4, 'write')
-        ],
-        Math.ceil(this.count / 64),
-        false
-      );
-      if (this.broadPhase === 'grid')
-        addGPUCommandNodes(
-          graph,
-          new GPUSort({
-            id: `${this.id}-${prefix}-sort`,
-            keys,
-            values,
-            outputKeys: sortedKeys,
-            outputValues: sortedBodies
-          }).getCommandNodes(graph)
-        );
-      const commonContacts = [
-        bind('positions', scratch.positions, 1),
-        bind('velocities', scratch.velocities, 2),
-        ...(this.broadPhase === 'grid'
-          ? [bind('sortedKeys', sortedKeys, 3), bind('sortedBodies', sortedBodies, 4)]
-          : []),
-        bind('diagnostics', diagnostics, 8, 'write')
-      ];
-      addPass(`${prefix}-count`, getSphereContactShader('count', this.broadPhase === 'all-pairs'), [
-        ...commonContacts,
-        bind('counts', counts, 5, 'write')
-      ]);
-      addGPUCommandNodes(
-        graph,
-        new GPUScan({
-          id: `${this.id}-${prefix}-scan`,
-          input: counts,
-          output: offsets
-        }).getCommandNodes(graph)
-      );
-      addPass(
-        `${prefix}-sentinel`,
-        '@group(0) @binding(1) var<storage, read> counts: array<u32>; @group(0) @binding(2) var<storage, read_write> offsets: array<u32>; @compute @workgroup_size(1) fn main() {offsets[BODY_COUNT] = offsets[BODY_COUNT - 1u] + counts[BODY_COUNT - 1u];}',
-        [bind('counts', counts, 1), bind('offsets', offsets, 2, 'write')],
+        `${prefix}-begin`,
+        `
+@group(0) @binding(1) var<storage, read_write> outputClock: Clock;
+@compute @workgroup_size(1) fn main() {
+ outputClock = Clock(settings.material.x, settings.material.x, outputClock.step + 1u, 0u);
+}`,
+        [bind('settings', settings, 0, 'uniform'), bind('outputClock', clock, 1, 'write')],
         1,
         false
       );
-      addPass(`${prefix}-emit`, getSphereContactShader('emit', this.broadPhase === 'all-pairs'), [
-        ...commonContacts,
-        bind('offsets', offsets, 6),
-        bind('contacts', contacts, 7, 'write')
-      ]);
-      const iterations = this.iterations;
-      for (let iteration = 0; iteration < iterations; iteration++) {
-        const input = iteration % 2 === 0 ? scratch : state;
-        const output = iteration % 2 === 0 ? state : scratch;
-        addPass(`${prefix}-solve-${iteration}`, SOLVE_SPHERE_CONTACTS, [
-          bind('positions', input.positions, 1),
-          bind('velocities', input.velocities, 2),
-          bind('angularVelocities', input.angularVelocities, 3),
-          bind('offsets', offsets, 4),
-          bind('contacts', contacts, 5),
-          bind('outputPositions', output.positions, 6, 'write'),
-          bind('outputVelocities', output.velocities, 7, 'write'),
-          bind('outputAngularVelocities', output.angularVelocities, 8, 'write')
+      for (
+        let impactStep = 0;
+        impactStep < (this.continuous ? this.maximumImpactSteps : 1);
+        impactStep++
+      ) {
+        const impactPrefix = `${prefix}-impact-${impactStep}`;
+        if (this.continuous)
+          addPass(
+            `${impactPrefix}-sweep`,
+            getSweepShader(),
+            [
+              bind('positions', state.positions, 1),
+              bind('velocities', state.velocities, 2),
+              bind('settings', settings, 0, 'uniform'),
+              bind('outputClock', clock, 3, 'write')
+            ],
+            1,
+            false
+          );
+        if (eventView)
+          addPass(
+            `${impactPrefix}-remember`,
+            `
+@group(0) @binding(1) var<storage, read> positions: array<vec4f>;
+@group(0) @binding(2) var<storage, read> velocities: array<vec4f>;
+@group(0) @binding(3) var<storage, read_write> previousPositions: array<vec4f>;
+@group(0) @binding(4) var<storage, read_write> previousVelocities: array<vec4f>;
+@compute @workgroup_size(64) fn main(@builtin(global_invocation_id) invocation: vec3u) {
+ let index = invocation.x; if(index >= BODY_COUNT) {return;}
+ previousPositions[index] = positions[index]; previousVelocities[index] = velocities[index];
+}`,
+            [
+              bind('positions', state.positions, 1),
+              bind('velocities', state.velocities, 2),
+              bind('previousPositions', previousPositions, 3, 'write'),
+              bind('previousVelocities', previousVelocities, 4, 'write')
+            ],
+            Math.ceil(this.count / 64),
+            false
+          );
+        addPass(`${impactPrefix}-integrate`, INTEGRATE_SPHERES, [
+          bind('positions', state.positions, 1),
+          bind('velocities', state.velocities, 2),
+          bind('angularVelocities', state.angularVelocities, 3),
+          bind('sleepStates', sleepStates, 4, 'write'),
+          bind('predictedPositions', scratch.positions, 5, 'write'),
+          bind('predictedVelocities', scratch.velocities, 6, 'write'),
+          bind('predictedAngularVelocities', scratch.angularVelocities, 7, 'write')
         ]);
-      }
-      if (iterations % 2 === 0)
         addPass(
-          `${prefix}-publish`,
-          `
+          `${impactPrefix}-cells`,
+          ASSIGN_SPHERE_CELLS,
+          [
+            bind('positions', scratch.positions, 1),
+            bind('keys', keys, 2, 'write'),
+            bind('values', values, 3, 'write'),
+            bind('diagnostics', diagnostics, 4, 'write')
+          ],
+          Math.ceil(this.count / 64),
+          false
+        );
+        if (this.broadPhase === 'grid')
+          addGPUCommandNodes(
+            graph,
+            new GPUSort({
+              id: `${this.id}-${impactPrefix}-sort`,
+              keys,
+              values,
+              outputKeys: sortedKeys,
+              outputValues: sortedBodies
+            }).getCommandNodes(graph)
+          );
+        const commonContacts = [
+          bind('positions', scratch.positions, 1),
+          bind('velocities', scratch.velocities, 2),
+          ...(this.broadPhase === 'grid'
+            ? [bind('sortedKeys', sortedKeys, 3), bind('sortedBodies', sortedBodies, 4)]
+            : []),
+          bind('diagnostics', diagnostics, 8, 'write')
+        ];
+        addPass(
+          `${impactPrefix}-count`,
+          getSphereContactShader('count', this.broadPhase === 'all-pairs'),
+          [...commonContacts, bind('counts', counts, 5, 'write')]
+        );
+        addGPUCommandNodes(
+          graph,
+          new GPUScan({
+            id: `${this.id}-${impactPrefix}-scan`,
+            input: counts,
+            output: offsets
+          }).getCommandNodes(graph)
+        );
+        addPass(
+          `${impactPrefix}-sentinel`,
+          '@group(0) @binding(1) var<storage, read> counts: array<u32>; @group(0) @binding(2) var<storage, read_write> offsets: array<u32>; @compute @workgroup_size(1) fn main() {offsets[BODY_COUNT] = offsets[BODY_COUNT - 1u] + counts[BODY_COUNT - 1u];}',
+          [bind('counts', counts, 1), bind('offsets', offsets, 2, 'write')],
+          1,
+          false
+        );
+        addPass(
+          `${impactPrefix}-emit`,
+          getSphereContactShader('emit', this.broadPhase === 'all-pairs'),
+          [...commonContacts, bind('offsets', offsets, 6), bind('contacts', contacts, 7, 'write')]
+        );
+        const iterations = this.iterations;
+        for (let iteration = 0; iteration < iterations; iteration++) {
+          const input = iteration % 2 === 0 ? scratch : state;
+          const output = iteration % 2 === 0 ? state : scratch;
+          addPass(`${impactPrefix}-solve-${iteration}`, SOLVE_SPHERE_CONTACTS, [
+            bind('positions', input.positions, 1),
+            bind('velocities', input.velocities, 2),
+            bind('angularVelocities', input.angularVelocities, 3),
+            bind('offsets', offsets, 4),
+            bind('contacts', contacts, 5),
+            bind('outputPositions', output.positions, 6, 'write'),
+            bind('outputVelocities', output.velocities, 7, 'write'),
+            bind('outputAngularVelocities', output.angularVelocities, 8, 'write')
+          ]);
+        }
+        if (iterations % 2 === 0)
+          addPass(
+            `${impactPrefix}-publish`,
+            `
 @group(0) @binding(1) var<storage, read> positions: array<vec4f>;
 @group(0) @binding(2) var<storage, read> velocities: array<vec4f>;
 @group(0) @binding(3) var<storage, read> angularVelocities: array<vec4f>;
@@ -651,25 +826,70 @@ export class GPUSphereWorld {
  let index = invocation.x; if(index >= BODY_COUNT) {return;}
  outputPositions[index] = positions[index]; outputVelocities[index] = velocities[index]; outputAngularVelocities[index] = angularVelocities[index];
 }`,
-          [
-            bind('positions', scratch.positions, 1),
-            bind('velocities', scratch.velocities, 2),
-            bind('angularVelocities', scratch.angularVelocities, 3),
-            bind('outputPositions', state.positions, 4, 'write'),
-            bind('outputVelocities', state.velocities, 5, 'write'),
-            bind('outputAngularVelocities', state.angularVelocities, 6, 'write')
-          ],
-          Math.ceil(this.count / 64),
-          false
+            [
+              bind('positions', scratch.positions, 1),
+              bind('velocities', scratch.velocities, 2),
+              bind('angularVelocities', scratch.angularVelocities, 3),
+              bind('outputPositions', state.positions, 4, 'write'),
+              bind('outputVelocities', state.velocities, 5, 'write'),
+              bind('outputAngularVelocities', state.angularVelocities, 6, 'write')
+            ],
+            Math.ceil(this.count / 64),
+            false
+          );
+        if (eventView)
+          addPass(
+            `${impactPrefix}-events`,
+            getEventShader(this.eventCapacity, this.triggers),
+            [
+              bind('positions', state.positions, 1, 'write'),
+              ...(this.triggers.some(trigger => trigger.capture)
+                ? [bind('velocities', state.velocities, 2, 'write')]
+                : []),
+              bind('previousPositions', previousPositions, 3),
+              bind('previousVelocities', previousVelocities, 4),
+              bind('offsets', offsets, 5),
+              bind('contacts', contacts, 6),
+              bind('events', eventView, 7, 'write'),
+              bind('contactStates', contactStates!, 8, 'write')
+            ],
+            1
+          );
+        addPass(
+          `${impactPrefix}-state-counts`,
+          `
+@group(0) @binding(1) var<storage, read_write> diagnostics: array<atomic<u32>>;
+@compute @workgroup_size(1) fn main() {
+ if(clock.timeStep > 0.0) {atomicStore(&diagnostics[3], 0u); atomicStore(&diagnostics[4], 0u);}
+}`,
+          [bind('diagnostics', diagnostics, 1, 'write')],
+          1
         );
-      addPass(`${prefix}-finalize`, FINALIZE_SPHERES, [
-        bind('positions', state.positions, 1),
-        bind('velocities', state.velocities, 2, 'write'),
-        bind('angularVelocities', state.angularVelocities, 3, 'write'),
-        bind('orientations', orientations, 4, 'write'),
-        bind('sleepStates', sleepStates, 5, 'write'),
-        bind('diagnostics', diagnostics, 6, 'write')
-      ]);
+        addPass(`${impactPrefix}-finalize`, FINALIZE_SPHERES, [
+          bind('positions', state.positions, 1),
+          bind('velocities', state.velocities, 2, 'write'),
+          bind('angularVelocities', state.angularVelocities, 3, 'write'),
+          bind('orientations', orientations, 4, 'write'),
+          bind('sleepStates', sleepStates, 5, 'write'),
+          bind('diagnostics', diagnostics, 6, 'write')
+        ]);
+      }
+      if (this.continuous)
+        addPass(
+          `${prefix}-budget`,
+          `
+@group(0) @binding(1) var<storage, read_write> diagnostics: array<atomic<u32>>;
+${eventView ? '@group(0) @binding(2) var<storage, read_write> events: array<atomic<u32>>;' : ''}
+@compute @workgroup_size(1) fn main() {if(clock.remaining > 0.0) {
+ atomicOr(&diagnostics[7], 1u); ${eventView ? 'atomicAdd(&events[1], 1u);' : ''}
+}}
+`,
+          [
+            bind('diagnostics', diagnostics, 1, 'write'),
+            ...(eventView ? [bind('events', eventView, 2, 'write')] : [])
+          ],
+          1
+        );
     }
     this.commandSettings = allocate('body-command', 80, true);
     this.bodyControl = new Computation(graph.device, {
@@ -808,6 +1028,25 @@ export class GPUSphereWorld {
     this.bodyControl.dispatch(pass, 1, 1, 1);
     pass.end();
     device.submit(encoder.finish());
+  }
+
+  /** Snapshot the ring once; concurrent readers share a cursor and one readback. */
+  readEvents(): Promise<GPUSphereEventBatch> {
+    if (!this.events) throw new Error('Sphere events are disabled');
+    this.eventRead ??= this.events
+      .readAsync()
+      .then(bytes => {
+        const batch = decodeSphereEvents(
+          new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4),
+          this.eventCursor
+        );
+        this.eventCursor = batch.sequence;
+        return batch;
+      })
+      .finally(() => {
+        this.eventRead = undefined;
+      });
+    return this.eventRead;
   }
 
   /** Destroy the compiled graph first. Never destroys caller-supplied state. */

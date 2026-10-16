@@ -1,7 +1,7 @@
 # GPU Pool
 
 A free-practice pool table built on `@luma.gl/gpgpu/gpu-physics`. Sixteen balls,
-cloth and six finite cushions are simulated on WebGPU. Rendering consumes the
+cloth, finite cushions and beveled pocket jaws are simulated on WebGPU. Rendering consumes the
 position and orientation buffers directly; stripes rotate with the balls.
 
 ```sh
@@ -23,8 +23,7 @@ are applied once, including when several simulation steps share an encoder.
 
 The cue has a tapered wooden shaft, patterned wrap, inlays, ferrule and chalked tip.
 Synthesized cue, ball, cushion and pocket sounds start after a user gesture and can
-be muted with **Sound off**. No audio assets are downloaded. Contact sounds are
-inferred from sampled changes in ball velocities and are cosmetic.
+be muted with **Sound off**. No audio assets are downloaded. Contact sounds consume GPU impact events and are cosmetic.
 
 Select a point on the cue-ball diagram for top, back or side spin; **Center**
 restores a central strike. The dashed miscue guide marks the selectable limit at 80% of the radius;
@@ -41,9 +40,9 @@ a calibrated billiards model.
 - Fixed 1/240-second steps, 12 solver iterations, maximum initial shot speed 12 table units/s.
 - A frame processes at most 12 steps. Under load, simulation slows rather than
   increasing the timestep. Hidden-tab time is not replayed on return.
-- Discrete collisions; continuous collision detection is a later tranche; spin/throw behavior uses an experimental Coulomb approximation. No claim of tournament-grade billiards accuracy.
-- Pocket checks use sampled center-in-sphere triggers. These are suitable for the
-  bounded speeds here, not a general continuous trigger system.
+- Bounded time-of-impact collision steps; exhausted budgets discard remaining time; spin/throw behavior uses an experimental Coulomb approximation. No claim of tournament-grade billiards accuracy.
+- Pocket checks use per-segment GPU center-crossing triggers. These are spherical
+  regions, not a general pocket mesh or curved-trajectory trigger system.
 - Free practice, not eight-ball rules: no players, turns or fouls beyond scratches.
 
 ## Verification
@@ -74,3 +73,26 @@ The approach distinguishes the cloth motion regimes described in
 GPU regressions compare draw, stun and follow; verify no-slip rolling preserves
 independent sidespin; compare left/right cushion spin and soft/hard rebound
 fractions; and bound post-impact energy.
+
+## Continuous events follow-up
+
+Pool enables bounded GPU time-of-impact steps and an all-pairs reference contact
+path for its 16 bodies. Pocket crossings and capture run per simulation segment;
+collision sound uses GPU contact events and the cue trail consumes compact GPU
+samples. The 30 Hz snapshots no longer decide normal pockets or infer clacks from
+velocity differences. A 4,096-record persistent ring tolerates delayed consumers;
+overflow is surfaced as an error. Beveled jaw rectangles guide pocket-mouth contact.
+The impact budget remains finite; see module diagnostics and the physics roadmap
+for convergence and calibration limits.
+
+Hold **Shoot** to charge from zero; release to fire. Power fills over 1.6 seconds,
+holds at full for 0.35 seconds, then restarts from zero while held. Space/Enter on
+the focused Shoot button use the same hold/release interaction. Escape cancels a
+charge or the cue's pending strike before the impulse is applied. Losing pointer
+capture or window focus cancels charging. The right-side power slider still allows
+manual selection for a table-click shot.
+
+**New Rack** always restores a full rack from any practice setup. **Reset Shot**
+replays the selected spin setup. Clearing a full rack automatically places another
+after the shot settles and a short celebration pause; single-ball practice stays
+available for comparison until reset.

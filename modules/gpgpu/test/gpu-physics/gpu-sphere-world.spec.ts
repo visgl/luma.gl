@@ -856,3 +856,334 @@ it('GPUSphereWorld explicit plane centers wake bodies when replacing offset plac
     }
   }
 }, 60000);
+
+it('continuous spheres exchange momentum without tunnelling and retain remaining step time', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const fixture = await makeWorld(
+    device,
+    [-1, 0, 1, 0.1, 1, 0, 1, 0.1],
+    [200, 0, 0, 1, -200, 0, 0, 1],
+    {
+      continuous: true,
+      timeStep: 0.02,
+      maximumRadius: 0.1,
+      broadPhase: 'all-pairs',
+      restitution: 1,
+      staticFriction: 0,
+      dynamicFriction: 0,
+      eventCapacity: 64
+    }
+  );
+  try {
+    fixture.step();
+    const state = await fixture.read();
+    expect(state.positions[0]).toBeLessThan(-1);
+    expect(state.positions[4]).toBeGreaterThan(1);
+    expect(state.velocities[0]).toBeCloseTo(-200, 1);
+    expect(state.velocities[4]).toBeCloseTo(200, 1);
+    expect(state.diagnostics.exhaustedImpactSteps).toBe(0);
+    expect(state.diagnostics.awakeBodies).toBe(2);
+    const events = await fixture.world.readEvents();
+    expect(events.events.filter(event => event.kind === 'sphere-impact')).toHaveLength(1);
+    expect((await fixture.world.readEvents()).events).toHaveLength(0);
+  } finally {
+    fixture.destroy();
+  }
+});
+
+it('continuous finite cushion catches a fast sphere, while a distant edge stays open', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const fixture = await makeWorld(
+    device,
+    [0, 0, 0, 0.1, 0, 3, 0, 0.1],
+    [100, 0, 0, 1, 100, 0, 0, 1],
+    {
+      continuous: true,
+      timeStep: 0.02,
+      maximumRadius: 0.1,
+      restitutionThreshold: 0,
+      planes: [
+        {
+          normal: [-1, 0, 0],
+          center: [1, 0, 0],
+          halfExtents: [1, 1],
+          restitution: 1,
+          staticFriction: 0,
+          dynamicFriction: 0
+        }
+      ]
+    }
+  );
+  try {
+    fixture.step();
+    const state = await fixture.read();
+    expect(state.velocities[0]).toBeCloseTo(-100, 1);
+    expect(state.positions[0]).toBeLessThan(0.9);
+    expect(state.positions[4]).toBeCloseTo(2, 3);
+    expect(state.diagnostics.exhaustedImpactSteps).toBe(0);
+  } finally {
+    fixture.destroy();
+  }
+});
+
+it('GPU pocket crossing captures between snapshots and persists events across many encodings', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const fixture = await makeWorld(device, [-1, 0, 1, 0.1], [100, 0, 0, 1], {
+    timeStep: 0.02,
+    eventCapacity: 64,
+    triggers: [{center: [0, 0, 1], radius: 0.2, capture: true}]
+  });
+  try {
+    fixture.step(8);
+    const bodies = await fixture.world.readState();
+    expect(bodies[0].enabled).toBe(false);
+    const events = await fixture.world.readEvents();
+    expect(events.events.filter(event => event.kind === 'trigger')).toHaveLength(1);
+    expect(events.events.find(event => event.kind === 'trigger')).toMatchObject({
+      body: 0,
+      target: 0,
+      step: 1
+    });
+  } finally {
+    fixture.destroy();
+  }
+});
+
+it('continuous collision budget exhaustion is visible, and floor support does not stall time', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const impact = await makeWorld(
+    device,
+    [-1, 0, 1, 0.1, 1, 0, 1, 0.1],
+    [200, 0, 0, 1, -200, 0, 0, 1],
+    {continuous: true, maximumImpactSteps: 1, timeStep: 0.02}
+  );
+  const floor = await makeWorld(device, [0, 0, 0.1, 0.1], [1, 0, 0, 1], {
+    continuous: true,
+    gravity: [0, 0, -9.81],
+    plane: {},
+    staticFriction: 0,
+    dynamicFriction: 0
+  });
+  try {
+    impact.step();
+    floor.step();
+    expect((await impact.read()).diagnostics.exhaustedImpactSteps).toBe(1);
+    const state = await floor.read();
+    expect(state.positions[0]).toBeCloseTo(floor.world.timeStep, 4);
+    expect(state.diagnostics.exhaustedImpactSteps).toBe(0);
+  } finally {
+    impact.destroy();
+    floor.destroy();
+  }
+});
+
+it('candidate budget bounds dense traversal and reports an incomplete solve', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const fixture = await makeWorld(
+    device,
+    [0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1],
+    new Array(3).fill([0, 0, 0, 1]).flat(),
+    {maximumCandidateTests: 1, broadPhase: 'all-pairs'}
+  );
+  try {
+    fixture.step();
+    const state = await fixture.read();
+    expect(state.diagnostics.candidateTests).toBe(3);
+    expect(state.diagnostics.exhaustedCandidateBodies).toBe(3);
+  } finally {
+    fixture.destroy();
+  }
+});
+
+it('static box surfaces rebound spheres and support a resting body', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const {makeSphereBoxPlanes} = await import('../../src/gpu-physics');
+  const fixture = await makeWorld(
+    device,
+    [0, 0, 2, 0.2, -2, 0, 0, 0.2],
+    [0, 0, 0, 1, 100, 0, 0, 1],
+    {
+      continuous: true,
+      timeStep: 0.02,
+      gravity: [0, 0, -9.81],
+      planes: makeSphereBoxPlanes({
+        center: [0, 0, 0],
+        halfExtents: [1, 1, 1],
+        material: {restitution: 0.5}
+      })
+    }
+  );
+  try {
+    fixture.step(30);
+    const state = await fixture.read();
+    expect(state.positions[2]).toBeGreaterThanOrEqual(1.19);
+    expect(state.positions[4]).toBeLessThan(-1.19);
+    expect(state.velocities[4]).toBeLessThan(0);
+  } finally {
+    fixture.destroy();
+  }
+});
+
+it('GPU cloth transition and sidespin decay match the analytic material fixture', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const {getSphereClothReference} = await import('../../src/gpu-physics');
+  const fixture = await makeWorld(device, [0, 0, 0.1, 0.1], [1.4, 0, 0, 1], {
+    timeStep: 1 / 480,
+    gravity: [0, 0, -9.81],
+    planes: [
+      {
+        staticFriction: 0.2,
+        dynamicFriction: 0.2,
+        restitution: 0,
+        rollingResistance: 0,
+        spinningResistance: 0.02
+      }
+    ]
+  });
+  const reference = getSphereClothReference({
+    speed: 1.4,
+    rollingAngularSpeed: 0,
+    sidespin: 10,
+    radius: 0.1,
+    gravity: 9.81,
+    slidingFriction: 0.2,
+    rollingResistance: 0.01,
+    spinningResistance: 0.02
+  });
+  try {
+    fixture.world.angularVelocities!.write(new Float32Array([0, 0, 10, 0]));
+    fixture.step(120);
+    const state = await fixture.read();
+    expect(state.velocities[0]).toBeCloseTo(reference.rollingSpeed, 2);
+    expect(state.angular[1] * 0.1).toBeCloseTo(reference.rollingSpeed, 2);
+    expect(state.angular[2]).toBeCloseTo(10 * (1 - 0.25 / reference.sidespinStopTime), 2);
+  } finally {
+    fixture.destroy();
+  }
+});
+
+it('continuous nudges retain tiny and grazing contacts instead of skipping the contact window', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  for (const offset of [0, 1.9998e-6]) {
+    const fixture = await makeWorld(
+      device,
+      [-0.001, offset, 0, 1e-6, 0, 0, 0, 1e-6],
+      [1, 0, 0, 1, 0, 0, 0, 0],
+      {
+        continuous: true,
+        maximumRadius: 1e-6,
+        broadPhase: 'all-pairs',
+        timeStep: 0.02,
+        restitution: 1,
+        restitutionThreshold: 0,
+        staticFriction: 0,
+        dynamicFriction: 0
+      }
+    );
+    try {
+      fixture.step();
+      const state = await fixture.read();
+      if (offset === 0) expect(state.velocities[0]).toBeLessThan(-0.99);
+      else expect(state.velocities[1]).toBeGreaterThan(0.001);
+      expect(Math.hypot(...state.velocities.slice(0, 3))).toBeLessThanOrEqual(1.01);
+      expect(state.diagnostics.exhaustedImpactSteps).toBe(0);
+    } finally {
+      fixture.destroy();
+    }
+  }
+});
+
+it('resting sphere support advances the entire clock and reports each body once', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const fixture = await makeWorld(
+    device,
+    [0, 0, 2, 1, 0, 0, 0, 1, 10, 0, 5, 1],
+    [0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1],
+    {
+      continuous: true,
+      timeStep: 0.02,
+      gravity: [0, 0, -9.81],
+      broadPhase: 'all-pairs'
+    }
+  );
+  try {
+    fixture.step();
+    const state = await fixture.read();
+    expect(state.positions[8]).toBeCloseTo(10.02, 4);
+    expect(state.diagnostics.exhaustedImpactSteps).toBe(0);
+    expect(state.diagnostics.awakeBodies).toBe(2);
+  } finally {
+    fixture.destroy();
+  }
+});
+
+it('candidate traversal budget also bounds static-only dense cells', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const fixture = await makeWorld(
+    device,
+    [0, 0, 1, 1, 0.1, 0, 1, 1, 0.2, 0, 1, 1],
+    new Array(12).fill(0),
+    {maximumCandidateTests: 1}
+  );
+  try {
+    fixture.step();
+    const state = await fixture.read();
+    expect(state.diagnostics.candidateTests).toBe(3);
+    expect(state.diagnostics.exhaustedCandidateBodies).toBe(3);
+    expect(state.diagnostics.contacts).toBe(0);
+  } finally {
+    fixture.destroy();
+  }
+});
+
+it('impact budget exhaustion remains visible in events after later healthy steps', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const fixture = await makeWorld(
+    device,
+    [-1, 0, 1, 0.1, 1, 0, 1, 0.1],
+    [200, 0, 0, 1, -200, 0, 0, 1],
+    {continuous: true, maximumImpactSteps: 1, timeStep: 0.02, eventCapacity: 64}
+  );
+  try {
+    fixture.step();
+    fixture.world.teleportBody(0, [-10, 0, 1]);
+    fixture.world.teleportBody(1, [10, 0, 1]);
+    fixture.step(3);
+    expect((await fixture.read()).diagnostics.exhaustedImpactSteps).toBe(0);
+    expect((await fixture.world.readEvents()).exhaustedImpactSteps).toBe(1);
+  } finally {
+    fixture.destroy();
+  }
+});
+
+it('GPU triggers preserve small radii and short-segment crossings', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const center: [number, number, number] = [-1.23456789e-6, 0, 1];
+  const fixture = await makeWorld(device, [center[0] - 1e-6, 5e-11, 1, 1e-6], [0.0002, 0, 0, 1], {
+    maximumRadius: 1e-6,
+    timeStep: 0.01,
+    eventCapacity: 64,
+    triggers: [{center, radius: 1e-10, capture: true}]
+  });
+  try {
+    fixture.step();
+    expect((await fixture.world.readState())[0].enabled).toBe(false);
+    expect(
+      (await fixture.world.readEvents()).events.filter(event => event.kind === 'trigger')
+    ).toHaveLength(1);
+  } finally {
+    fixture.destroy();
+  }
+});

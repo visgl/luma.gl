@@ -51,6 +51,41 @@ export const TABLE_PLANES: GPUSpherePlane[] = [
   ])
 ];
 
+// Bevel the rail ends into the pocket mouths. The rectangular cloth and pocket
+// triggers remain separate from these static jaw collision surfaces.
+for (const horizontalSide of [-1, 1]) {
+  for (const verticalSide of [-1, 1]) {
+    for (const alongLongRail of [true, false]) {
+      TABLE_PLANES.push({
+        normal: alongLongRail
+          ? [horizontalSide * 0.6, -verticalSide, 0]
+          : [-horizontalSide, verticalSide * 0.6, 0],
+        center: alongLongRail
+          ? [horizontalSide * 5.725, verticalSide * 3.075, 0.2]
+          : [horizontalSide * 6.075, verticalSide * 2.725, 0.2],
+        halfExtents: [0.5, 0.146],
+        restitution: 0.8,
+        staticFriction: 0.22,
+        dynamicFriction: 0.16,
+        rollingResistance: 0,
+        contactHeightRatio: 0.35,
+        restitutionVelocityScale: 0.035
+      });
+    }
+    TABLE_PLANES.push({
+      normal: [-horizontalSide * 0.8, -verticalSide * 0.6, 0],
+      center: [horizontalSide * 0.325, verticalSide * 3.1, 0.2],
+      halfExtents: [0.5, 0.125],
+      restitution: 0.8,
+      staticFriction: 0.22,
+      dynamicFriction: 0.16,
+      rollingResistance: 0,
+      contactHeightRatio: 0.35,
+      restitutionVelocityScale: 0.035
+    });
+  }
+}
+
 export function makeRack(): Float32Array {
   const positions = new Float32Array(16 * 4);
   positions.set([-3, 0, BALL_RADIUS, BALL_RADIUS]);
