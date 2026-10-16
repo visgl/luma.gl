@@ -4,7 +4,6 @@
 
 import {Deck, type DeckProps, type View} from '@deck.gl/core';
 import type {Device} from '@luma.gl/core';
-import {installLegacyDeckShaderAssemblerCompatibility} from './deck-example-device';
 
 /** Construction options for the minimal Deck extensions exercised by the Arrow examples. */
 export type ArrowDeckProps<ViewsT extends View | View[]> = {
@@ -22,24 +21,12 @@ export class ArrowDeck<ViewsT extends View | View[]> extends Deck<ViewsT> {
   private readonly finalizeCallback: (() => void) | undefined;
   private isArrowDeckFinalized = false;
 
-  constructor({
-    onLoad,
-    onBeforeRender,
-    onFinalize,
-    onDeviceInitialized,
-    ...deckProps
-  }: ArrowDeckProps<ViewsT>) {
+  constructor({onLoad, onBeforeRender, onFinalize, ...deckProps}: ArrowDeckProps<ViewsT>) {
     let runOnLoad: (() => void) | null = null;
     let runBeforeRender: NonNullable<DeckProps<ViewsT>['onBeforeRender']> | null = null;
-    let restoreShaderAssembler: (() => void) | null = null;
     let didLoad = false;
     super({
       ...deckProps,
-      onDeviceInitialized: initializedDevice => {
-        restoreShaderAssembler?.();
-        onDeviceInitialized?.(initializedDevice);
-        restoreShaderAssembler = installLegacyDeckShaderAssemblerCompatibility(initializedDevice);
-      },
       onLoad: () => {
         didLoad = true;
         runOnLoad?.();
@@ -52,11 +39,7 @@ export class ArrowDeck<ViewsT extends View | View[]> extends Deck<ViewsT> {
       onLoad?.({deck: this, device: this.device});
     };
     runBeforeRender = context => onBeforeRender?.({...context, deck: this});
-    this.finalizeCallback = () => {
-      restoreShaderAssembler?.();
-      restoreShaderAssembler = null;
-      onFinalize?.();
-    };
+    this.finalizeCallback = onFinalize;
     if (didLoad) queueMicrotask(runOnLoad);
   }
 

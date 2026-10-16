@@ -69,7 +69,7 @@ renderPass.end();
 | `debugShaders?` | `'never' \| 'errors' \| 'warnings' \| 'always'` | Debug shader output policy. |
 | `pipelineFactory?` | `PipelineFactory` | Factory from `@luma.gl/core` used to create cached pipelines. |
 | `shaderFactory?` | `ShaderFactory` | Factory from `@luma.gl/core` used to create cached shaders. |
-| `shaderAssembler?` | `ShaderAssembler` | Shader assembler override. |
+| `shaderAssembler?` | `ShaderAssembler` | Shader assembler override. Falls back to `Model.defaultProps.shaderAssembler` when it matches the device's shader language, then to the shared assembler for that language. |
 
 `ModelProps` also includes the standard [`RenderPipelineProps`](/docs/api-reference/core/resources/render-pipeline), except that `bindings`, `vs`, and `fs` are specialized for engine usage.
 
