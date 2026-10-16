@@ -42,7 +42,7 @@ test('static box faces have outward normals and the correct tangent extents', ()
     halfExtents: [4, 3],
     restitution: 0.7
   });
-  expect(faces[2].halfExtents).toEqual([2, 4]);
+  expect(faces[2].halfExtents).toEqual([4, 2]);
   expect(faces[4].halfExtents).toEqual([2, 3]);
   expect(() => makeSphereBoxPlanes({center: [0, 0, 0], halfExtents: [1, 0, 1]})).toThrow();
 });

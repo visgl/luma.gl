@@ -27,8 +27,8 @@ export function makeSphereBoxPlanes(box: GPUSphereBox): GPUSpherePlane[] {
       const center: [number, number, number] = [...box.center];
       center[axis] += side * box.halfExtents[axis];
       // Match GPUSphereWorld's deterministic tangent frame for each normal.
-      const firstAxis = axis === 0 ? 2 : 0;
-      const secondAxis = axis === 2 ? 1 : axis === 1 ? 2 : 1;
+      const firstAxis = axis === 2 ? 0 : 2;
+      const secondAxis = axis === 1 ? 0 : 1;
       surfaces.push({
         ...box.material,
         normal,

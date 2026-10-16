@@ -618,10 +618,11 @@ export class GPUSphereWorld {
       workgroups = Math.ceil(this.count / 64),
       usesSettings = true
     ): void => {
+      const usesClock = usesSettings && /\bclock\./.test(source);
       const allBindings = usesSettings
         ? [
-            bind('settings', settings, 0, 'uniform'),
-            bind('clock', clock, 9, 'uniform'),
+            ...(/\bsettings\./.test(source) ? [bind('settings', settings, 0, 'uniform')] : []),
+            ...(usesClock ? [bind('clock', clock, 9, 'uniform')] : []),
             ...bindings
           ]
         : bindings;
@@ -646,7 +647,7 @@ export class GPUSphereWorld {
       const props = {
         id: `${this.id}-${name}`,
         source:
-          (usesSettings
+          (usesClock
             ? header
             : header.replace('@group(0) @binding(9) var<uniform> clock: Clock;', '')) + source,
         shaderLayout
@@ -705,8 +706,7 @@ export class GPUSphereWorld {
               bind('positions', state.positions, 1),
               bind('velocities', state.velocities, 2),
               bind('settings', settings, 0, 'uniform'),
-              bind('outputClock', clock, 3, 'write'),
-              bind('diagnostics', diagnostics, 4, 'write')
+              bind('outputClock', clock, 3, 'write')
             ],
             1,
             false
@@ -843,7 +843,9 @@ export class GPUSphereWorld {
             getEventShader(this.eventCapacity, this.triggers),
             [
               bind('positions', state.positions, 1, 'write'),
-              bind('velocities', state.velocities, 2, 'write'),
+              ...(this.triggers.some(trigger => trigger.capture)
+                ? [bind('velocities', state.velocities, 2, 'write')]
+                : []),
               bind('previousPositions', previousPositions, 3),
               bind('previousVelocities', previousVelocities, 4),
               bind('offsets', offsets, 5),

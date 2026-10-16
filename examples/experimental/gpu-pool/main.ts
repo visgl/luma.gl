@@ -297,10 +297,12 @@ try {
     }
   };
   shoot.onkeydown = event => {
-    if ((event.code === 'Space' || event.code === 'Enter') && !event.repeat) {
+    if (event.code === 'Space' || event.code === 'Enter') {
       event.preventDefault();
-      chargeKeyboard = true;
-      beginCharge();
+      if (!event.repeat) {
+        chargeKeyboard = true;
+        beginCharge();
+      }
     }
   };
   shoot.onkeyup = event => {

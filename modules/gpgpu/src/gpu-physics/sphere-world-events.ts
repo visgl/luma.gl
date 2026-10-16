@@ -10,7 +10,6 @@ export function getSweepShader(): string {
 @group(0) @binding(1) var<storage, read> positions: array<vec4f>;
 @group(0) @binding(2) var<storage, read> velocities: array<vec4f>;
 @group(0) @binding(3) var<storage, read_write> outputClock: Clock;
-@group(0) @binding(4) var<storage, read_write> diagnostics: array<atomic<u32>>;
 fn sphereTime(delta: vec3f, velocity: vec3f, radius: f32, limit: f32) -> f32 {
  let squaredSpeed = dot(velocity, velocity);
  let closing = dot(delta, velocity);
@@ -34,6 +33,7 @@ fn segmentTime(point: vec3f, velocity: vec3f, start: vec3f, end: vec3f, radius: 
 }
 @compute @workgroup_size(1) fn main() {
  let remaining = outputClock.remaining;
+ if(remaining <= 0.0) {outputClock.timeStep = 0.0; return;}
  var time = remaining;
  for(var first = 0u; first < BODY_COUNT; first++) {
   let sphere = positions[first];
@@ -104,19 +104,19 @@ export function getEventShader(capacity: number, triggers: readonly GPUSphereTri
 @group(0) @binding(6) var<storage, read> contacts: array<vec2u>;
 @group(0) @binding(7) var<storage, read_write> events: array<atomic<u32>>;
 @group(0) @binding(8) var<storage, read_write> contactStates: array<u32>;
-fn isContactBegin(body: u32, target: u32) -> bool {
- let offset = body * (BODY_COUNT + 32u) + target;
+fn isContactBegin(body: u32, counterpart: u32) -> bool {
+ let offset = body * (BODY_COUNT + 32u) + counterpart;
  let previous = contactStates[offset];
  contactStates[offset] = clock.step;
  return previous == 0u || (previous != clock.step && previous != clock.step - 1u);
 }
-fn emit(body: u32, kind: u32, target: u32, point: vec3f, speed: f32) {
+fn emit(body: u32, kind: u32, counterpart: u32, point: vec3f, speed: f32) {
  let sequence = atomicAdd(&events[0], 1u);
  let offset = 4u + (sequence % ${capacity}u) * 8u;
  atomicStore(&events[offset], sequence);
  atomicStore(&events[offset + 1u], clock.step);
  atomicStore(&events[offset + 2u], (kind << 24u) | body);
- atomicStore(&events[offset + 3u], target);
+ atomicStore(&events[offset + 3u], counterpart);
  atomicStore(&events[offset + 4u], bitcast<u32>(point.x));
  atomicStore(&events[offset + 5u], bitcast<u32>(point.y));
  atomicStore(&events[offset + 6u], bitcast<u32>(point.z));
