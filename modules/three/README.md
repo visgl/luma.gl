@@ -2,7 +2,102 @@
 
 **Status: Exploration**
 
-Private experimental adapter for Three.js **0.185.1**. It retains Three.js objects,
+Private experimental integrations tested with Three.js **0.185.1**. Existing Three
+applications can add deck overlays or luma compute while keeping their renderer.
+
+## Deck layers in an existing Three app
+
+`@luma.gl/three/overlay` adds a transparent deck canvas to a running Three application.
+The application keeps its renderer, scene, camera, controls and frame loop. It works
+with an already initialized upstream `WebGLRenderer` or `WebGPURenderer`; no shared
+device, renderer replacement or Three backend hooks are needed. The overlay currently
+uses its own WebGL2 device, even when the host uses WebGPU.
+
+```ts
+import {COORDINATE_SYSTEM} from '@deck.gl/core';
+import {ScatterplotLayer} from '@deck.gl/layers';
+import {ThreeDeckOverlay, getThreeDeckOverlaySupport} from '@luma.gl/three/overlay';
+
+// renderer and its controls already exist. Its canvas fills this positioned container.
+const support = getThreeDeckOverlaySupport({renderer, container});
+if (!support.supported) throw new Error(support.reason);
+const overlay = await ThreeDeckOverlay.create({
+  renderer,
+  container,
+  target: controls.target, // Borrowed; follows pan/zoom without changing the camera.
+  layers: [new ScatterplotLayer({
+    id: 'observations',
+    coordinateSystem: COORDINATE_SYSTEM.CARTESIAN,
+    data: [[0, 1, 0]],
+    getPosition: position => position,
+    radiusUnits: 'pixels',
+    getRadius: 8,
+    getFillColor: [255, 190, 70]
+  })]
+});
+
+// Add one call to the application's existing frame function.
+function render(time) {
+  controls.update();
+  renderer.render(scene, camera);
+  overlay.render(camera, time);
+}
+// The application continues to schedule render through its existing loop.
+// Update layers with overlay.setProps({layers: nextLayers}).
+// Detach without disposing the host renderer, scene or controls:
+// overlay.dispose();
+```
+
+### Host contract
+
+- **Attachment:** `container` is a positioned HTML div and the host canvas is its direct
+  child. The host canvas must fill it, without margins, borders or an independent CSS
+  transform. The overlay appends and owns a transparent canvas with `pointer-events: none`.
+  It does not wrap, reparent or modify the host canvas. The support probe only checks
+  DOM attachment prerequisites; device creation can still fail asynchronously.
+- **Scheduling:** `create()` initializes deck and stops its animation scheduler before
+  its first frame. Only `render(camera, time?)` advances and draws deck. Call it after
+  the Three render on each host frame, including frames needed for asynchronous data
+  or deck transitions. For an application that renders on demand, explicitly request a
+  host frame after changing layers or loading their data. No second animation loop or
+  replacement of `renderer.setAnimationLoop` is installed. A supplied timestamp is in
+  milliseconds and drives deck's timeline relative to the first frame; repeating it
+  holds transitions at the same time. Omit it to use `performance.now()` consistently.
+- **Camera:** perspective and orthographic cameras use a snapshot of the host's current
+  view/projection matrices, including camera parents, zoom and view offsets. The host
+  updates camera matrices; the overlay never writes the camera pose or projection.
+  Pixel-sized symbols are calibrated at `target` (the world origin by default), with
+  perspective scaling away from that depth. Pass the borrowed `controls.target` vector
+  to keep that reference aligned with orbit/pan controls. A target behind the camera
+  uses a reference depth of one world unit.
+  WebGPU and reversed clip depth are converted to deck's convention. Projection's
+  homogeneous scale is normalized for deck's pixel units without changing screen
+  positions or clipping. This is one full
+  canvas camera, not XR, stereo, scissor views or geographic projection.
+- **Coordinates:** use `COORDINATE_SYSTEM.CARTESIAN`. Layer positions use the same XYZ axes
+  and units as the Three world. The helper `makeDeckViewportFromThreeCamera(camera,
+  width, height, target?)` exposes the same immutable matrix snapshot for applications needing
+  projection/unprojection; dimensions are CSS pixels.
+- **Size:** every host frame reads the host canvas's CSS size and renderer pixel ratio.
+  The application remains responsible for resizing Three and updating its camera's
+  projection. A zero-sized host hides the overlay until a later visible frame.
+- **Ownership:** the overlay owns its deck instance, separate device, GPU resources,
+  canvas and listeners. `dispose()` is idempotent; subsequent `render`/`setProps` calls
+  do nothing. Recreate an overlay to attach again. Host resources remain application-owned.
+- **Composition:** browser alpha compositing places deck above the Three image. There
+  is no shared depth, lighting, postprocessing, GPU resource sharing, or combined picking.
+  Pointer events remain with Three controls; automatic deck hover/click handlers are
+  not routed through the host canvas in this tranche.
+
+Open **Add deck layers to an existing Three.js app** from the Three example. It uses
+an ordinary Three cube, lights, grid and OrbitControls, with native deck paths and
+scatterplots above them. Switch perspective/orthographic cameras, pixel ratio, layer
+visibility, host WebGL/WebGPU rendering, and recreate the overlay while Three keeps
+running. The example's frame function shows the integration boundary directly.
+
+## Rendering Three scenes through luma
+
+The optional renderer backend retains Three.js objects,
 renderer orchestration and the upstream TSL compiler, while creating buffers,
 textures, shaders, pipelines and passes through a borrowed luma.gl WebGPU or WebGL2 device.
 
@@ -33,12 +128,13 @@ compute interoperability path; it does not require replacing Three's backend.
 
 ## Choose an integration
 
-All paths are experimental and tested against Three **0.185.1**; the deck entry
-point additionally requires this workspace's patched deck **9.4.0** and luma **10**.
+All paths are experimental and tested against Three **0.185.1**; the deck
+and overlay entry points additionally require this workspace's patched deck **9.4.0** and luma **10**.
 The package is private. These are tested combinations, not a broad version range.
 
 | Application needs | Entry point | Rendering and ownership contract |
 | --- | --- | --- |
+| Deck layers added to an existing Three app | `@luma.gl/three/overlay` | Three owns the frame loop and camera; a separate transparent WebGL2 canvas draws above the host. |
 | luma compute feeding an existing Three scene | `@luma.gl/three/interop` | Upstream `WebGPURenderer` renders; caller owns the shared WebGPU device and buffers. |
 | Three materials/TSL rendered through luma resources | `@luma.gl/three/backend` | `LumaRenderer` manages and submits its passes; caller owns the device. WebGPU and WebGL2 graphics; WebGPU compute only. |
 | Simple meshes mixed into a luma pass | `@luma.gl/three/objects` → `ThreeMeshAdapter` | Caller owns the pass and submission; WebGPU, untextured basic materials. |

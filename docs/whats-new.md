@@ -33,6 +33,10 @@ Target Release Date: Q3, 2026
 
 **Experimental Three.js integration**
 
+- **Deck overlays for Three apps** - Add native deck layers to an existing Three renderer
+  through `@luma.gl/three/overlay`. Three retains its camera, controls and frame loop;
+  the separate transparent canvas follows perspective/orthographic cameras and pixel ratio.
+
 - **Shared prepared scenes** - Multiple `ThreeSceneLayer` instances can share one
   adapter while retaining independent picking and highlighting. Readiness tracking does
   not retain borrowed scenes; failed preparation requires disposing and recreating the adapter.

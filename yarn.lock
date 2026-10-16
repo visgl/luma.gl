@@ -5471,6 +5471,7 @@ __metadata:
   dependencies:
     "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
     "@luma.gl/core": "npm:10.0.0-alpha.4"
+    "@luma.gl/webgl": "npm:10.0.0-alpha.4"
     "@types/three": "npm:0.185.0"
     three: "npm:0.185.1"
   peerDependencies:

@@ -33,11 +33,17 @@
       "types": "./dist/deck.d.ts",
       "import": "./dist/deck.js",
       "require": "./dist/deck.cjs"
+    },
+    "./overlay": {
+      "types": "./dist/overlay.d.ts",
+      "import": "./dist/overlay.js",
+      "require": "./dist/overlay.cjs"
     }
   },
   "sideEffects": false,
   "dependencies": {
-    "@luma.gl/core": "10.0.0-alpha.4"
+    "@luma.gl/core": "10.0.0-alpha.4",
+    "@luma.gl/webgl": "10.0.0-alpha.4"
   },
   "peerDependencies": {
     "@deck.gl/core": "9.4.0",

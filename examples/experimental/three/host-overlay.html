@@ -1,0 +1,41 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: Copyright (c) vis.gl contributors -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deck layers in a Three.js app</title>
+    <style>
+      body {margin: 24px; font: 15px system-ui, sans-serif; color: #24303c; background: #f5f7fa;}
+      main {max-width: 1100px; margin: auto;}
+      h1 {font-size: 28px; margin-bottom: 8px;}
+      p {line-height: 1.5;}
+      .controls {display: flex; flex-wrap: wrap; gap: 18px; align-items: center; padding: 16px 0;}
+      label {display: flex; gap: 8px; align-items: center;}
+      select, button {font: inherit; padding: 7px 10px; border: 1px solid #b4c3cf; border-radius: 6px; background: white;}
+      #scene {position: relative; width: 100%; height: min(65vh, 640px); min-height: 240px; overflow: hidden; border-radius: 12px;}
+      #three-canvas {display: block; width: 100%; height: 100%; touch-action: none;}
+      a {color: #126c90;}
+      #status {min-height: 1.5em;}
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Deck layers in a Three.js app</h1>
+      <p>Three owns the scene, camera, controls and animation. Deck adds the amber route and observations.</p>
+      <div class="controls">
+        <label>Camera <select id="projection"><option value="perspective">Perspective</option><option value="orthographic">Orthographic</option></select></label>
+        <label>Resolution <select id="resolution"><option value="1">1×</option><option value="2">2×</option></select></label>
+        <label><input id="animate" type="checkbox" checked>Animate cube</label>
+        <label><input id="show-overlay" type="checkbox" checked>Deck layers</label>
+        <button id="recreate">Recreate overlay</button>
+      </div>
+      <div id="scene"><canvas id="three-canvas"></canvas></div>
+      <p id="status">Initializing…</p>
+      <p>The transparent overlay always appears above Three objects. Shared depth and combined picking are later tranches.</p>
+      <p>Host renderer: <a href="?renderer=webgl">WebGL</a> · <a href="?renderer=webgpu">WebGPU</a> · <a href="./index.html">Other Three integrations</a></p>
+    </main>
+    <script type="module" src="./host-overlay.ts"></script>
+  </body>
+</html>
