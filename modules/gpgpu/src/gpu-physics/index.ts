@@ -12,3 +12,16 @@ export {
   type GPUSpherePlane,
   type GPUSphereWorldProps
 } from './gpu-sphere-world';
+
+export {
+  decodeSphereEvents,
+  type GPUSphereEvent,
+  type GPUSphereEventBatch,
+  type GPUSphereTrigger
+} from './sphere-events';
+export {makeSphereBoxPlanes, getBodyInertia, type GPUSphereBox} from './sphere-shapes';
+export {
+  getSphereClothReference,
+  getSphereCushionRestitution,
+  type SphereClothReference
+} from './sphere-calibration';

@@ -5,11 +5,7 @@
 import {luma, Buffer} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
-import {
-  GPUSphereWorld,
-  getSphereTriggerBodies,
-  type GPUSphereBodyState
-} from '@luma.gl/gpgpu/gpu-physics';
+import {GPUSphereWorld, type GPUSphereBodyState} from '@luma.gl/gpgpu/gpu-physics';
 import {
   BALL_RADIUS,
   POCKET_RADIUS,
@@ -21,6 +17,7 @@ import {
 } from './table';
 import {createPoolRenderer} from './render';
 import {PoolAudio} from './audio';
+import {getShotCharge, shouldRackBalls} from './shot-controls';
 
 function element<ElementType extends HTMLElement>(identifier: string): ElementType {
   return document.querySelector<ElementType>('#' + identifier)!;
@@ -61,6 +58,11 @@ try {
   const orientations = createBuffer(orientationData);
   const world = new GPUSphereWorld({
     count: 16,
+    continuous: true,
+    maximumImpactSteps: 4,
+    broadPhase: 'all-pairs',
+    eventCapacity: 4096,
+    triggers: POCKETS.map(center => ({center, radius: POCKET_RADIUS, capture: true})),
     positions,
     velocities,
     orientations,
@@ -102,11 +104,51 @@ try {
   let generation = 0;
   let alive = true;
   let animation = 0;
+  let chargeStart: number | null = null;
+  let chargePointer: number | null = null;
+  let aimPointer: number | null = null;
+  let chargeKeyboard = false;
+  let rackAt = 0;
+  const inputEvents = new AbortController();
+  function setPower(value: number) {
+    power.value = String(Math.round(value));
+    element('power-value').textContent = power.value + '%';
+    power.style.setProperty('--power', power.value + '%');
+  }
+  function cancelCharge() {
+    chargeStart = null;
+    chargeKeyboard = false;
+    const pointer = chargePointer;
+    chargePointer = null;
+    if (pointer !== null && shoot.hasPointerCapture(pointer)) shoot.releasePointerCapture(pointer);
+    shoot.textContent = 'Shoot';
+    shoot.setAttribute('aria-pressed', 'false');
+  }
+  function beginCharge() {
+    if (phase !== 'aiming' || chargeStart !== null) return;
+    audio.unlock();
+    chargeStart = performance.now();
+    setPower(0);
+    shoot.textContent = 'Release to shoot';
+    shoot.setAttribute('aria-pressed', 'true');
+    status.value = 'Charging — release to shoot · Esc to cancel';
+    updateControls();
+  }
+  function releaseCharge() {
+    if (chargeStart === null) return;
+    setPower(getShotCharge(performance.now() - chargeStart));
+    cancelCharge();
+    if (Number(power.value) > 0) startShot();
+    else {
+      status.value = 'Shot cancelled.';
+      updateControls();
+    }
+  }
   const potted = new Set<number>();
   const cueTrailPoints: [number, number][] = [];
   function updateControls() {
     shoot.disabled = phase !== 'aiming';
-    power.disabled = phase !== 'aiming';
+    power.disabled = phase !== 'aiming' || chargeStart !== null;
     angle.disabled = phase !== 'aiming';
     for (const identifier of ['center-spin', 'cut-throw', 'spin-throw'])
       element<HTMLButtonElement>(identifier).disabled = phase !== 'aiming';
@@ -205,12 +247,14 @@ try {
   canvas.onpointerdown = event => {
     if (event.button !== 0 || phase !== 'aiming') return;
     canvas.focus();
+    aimPointer = event.pointerId;
     canvas.setPointerCapture(event.pointerId);
     aimAt(event);
     audio.unlock();
   };
   canvas.onpointerup = event => {
     if (event.button !== 0 || !canvas.hasPointerCapture(event.pointerId)) return;
+    aimPointer = null;
     canvas.releasePointerCapture(event.pointerId);
     aimAt(event);
     startShot();
@@ -231,7 +275,73 @@ try {
     updateControls();
     status.value = 'Taking the shot…';
   }
-  shoot.onclick = startShot;
+  shoot.onpointerdown = event => {
+    if (event.button !== 0 || phase !== 'aiming' || chargeStart !== null) return;
+    event.preventDefault();
+    shoot.focus();
+    chargePointer = event.pointerId;
+    shoot.setPointerCapture(event.pointerId);
+    beginCharge();
+  };
+  shoot.onpointerup = event => {
+    if (event.pointerId === chargePointer) {
+      event.preventDefault();
+      releaseCharge();
+    }
+  };
+  shoot.onpointercancel = shoot.onlostpointercapture = () => {
+    if (chargeStart !== null) {
+      cancelCharge();
+      setPower(0);
+      updateControls();
+    }
+  };
+  shoot.onkeydown = event => {
+    if ((event.code === 'Space' || event.code === 'Enter') && !event.repeat) {
+      event.preventDefault();
+      chargeKeyboard = true;
+      beginCharge();
+    }
+  };
+  shoot.onkeyup = event => {
+    if (event.code === 'Space' || event.code === 'Enter') {
+      event.preventDefault();
+      if (chargeKeyboard) releaseCharge();
+    }
+  };
+  // Assistive activation has no physical hold; retain a single-action shot at selected power.
+  shoot.onclick = event => {
+    if (event.detail === 0 && chargeStart === null) startShot();
+  };
+  window.addEventListener(
+    'keydown',
+    event => {
+      if (event.key !== 'Escape' || reset.disabled) return;
+      if (chargeStart !== null || aimPointer !== null || phase === 'striking') {
+        if (aimPointer !== null && canvas.hasPointerCapture(aimPointer))
+          canvas.releasePointerCapture(aimPointer);
+        aimPointer = null;
+        event.preventDefault();
+        cancelCharge();
+        setPower(0);
+        phase = 'aiming';
+        status.value = 'Shot cancelled — ready to aim.';
+        updateControls();
+      }
+    },
+    {signal: inputEvents.signal}
+  );
+  window.addEventListener(
+    'blur',
+    () => {
+      if (chargeStart !== null) {
+        cancelCharge();
+        setPower(0);
+        updateControls();
+      }
+    },
+    {signal: inputEvents.signal}
+  );
   element<HTMLButtonElement>('sound').onclick = () => {
     audio.enabled = !audio.enabled;
     if (audio.enabled) audio.unlock();
@@ -250,13 +360,18 @@ try {
     }
   };
   async function resetTable() {
+    if (reset.disabled) return;
     reset.disabled = true;
+    element<HTMLButtonElement>('reset-shot').disabled = true;
     practice.disabled = true;
     generation++;
+    cancelCharge();
+    rackAt = 0;
     phase = 'striking';
     updateControls();
     try {
       if (snapshot) await snapshot;
+      await world.readEvents();
       const rack = makeRack();
       const mode = practice.value;
       objectBallCount = mode === 'rack' ? 15 : mode === 'cushion' ? 0 : 1;
@@ -292,7 +407,7 @@ try {
       power.value = mode === 'rack' ? '85' : '60';
       element('power-value').textContent = power.value + '%';
       power.style.setProperty('--power', power.value + '%');
-      reset.textContent = mode === 'rack' ? 'New rack' : 'Reset shot';
+      element<HTMLButtonElement>('reset-shot').hidden = mode === 'rack';
       element('cue-motion').textContent = '';
       phase = 'aiming';
       status.value =
@@ -306,28 +421,31 @@ try {
       failure = error instanceof Error ? error : new Error(String(error));
     } finally {
       reset.disabled = false;
+      element<HTMLButtonElement>('reset-shot').disabled = false;
       practice.disabled = false;
     }
   }
-  reset.onclick = () => void resetTable();
+  reset.onclick = () => {
+    practice.value = 'rack';
+    void resetTable();
+  };
+  element('reset-shot').onclick = () => void resetTable();
   practice.onchange = () => void resetTable();
   async function sampleState(now: number, sampleGeneration: number) {
+    const events = await world.readEvents();
     const next = await world.readState();
     if (!alive || sampleGeneration !== generation) return;
-    const previousStates = states;
     states = next;
     if (phase !== 'rolling') return;
     const cue = states[0];
-    if (cue.enabled && !scratch) {
-      const previousPoint = cueTrailPoints[cueTrailPoints.length - 1];
-      if (
-        !previousPoint ||
-        Math.hypot(cue.position[0] - previousPoint[0], cue.position[1] - previousPoint[1]) >= 0.015
-      ) {
-        cueTrailPoints.push([cue.position[0], cue.position[1]]);
-        if (cueTrailPoints.length > 1200) cueTrailPoints.shift();
+    if (!scratch) {
+      for (const event of events.events) {
+        if (event.kind === 'trail') cueTrailPoints.push([event.position[0], event.position[1]]);
       }
+      if (cueTrailPoints.length > 1200) cueTrailPoints.splice(0, cueTrailPoints.length - 1200);
     }
+    if (events.dropped)
+      throw new Error(`Physics event overflow: ${events.dropped}; reload to reset the table.`);
     const pace = Math.hypot(cue.velocity[0], cue.velocity[1]);
     const slip = Math.hypot(
       cue.velocity[0] - BALL_RADIUS * cue.angularVelocity[1],
@@ -336,16 +454,14 @@ try {
     element('cue-motion').textContent = cue.enabled
       ? `Cue ball: ${pace < 0.035 ? (Math.hypot(...cue.angularVelocity) > 0.15 ? 'spinning' : 'resting') : slip > 0.03 ? 'sliding' : 'rolling'} · pace ${pace.toFixed(1)} · sidespin ${Math.abs(cue.angularVelocity[2]).toFixed(1)} rad/s`
       : '';
-    audio.playContacts(previousStates, states, now);
+    audio.playEvents(events.events, now);
     const captured = new Set(
-      POCKETS.flatMap(center => getSphereTriggerBodies(states, center, POCKET_RADIUS)).map(
-        body => body.index
-      )
+      events.events.filter(event => event.kind === 'trigger').map(event => event.body)
     );
     for (const body of states) {
-      // Recover escaped balls too: a discrete prototype must never leave a shot stuck forever.
+      // Recover escaped balls too; normal pockets are captured during GPU simulation steps.
       if (
-        !body.enabled ||
+        (!body.enabled && !captured.has(body.index)) ||
         (!captured.has(body.index) &&
           body.position[2] > -1 &&
           Math.abs(body.position[0]) < 6.8 &&
@@ -382,9 +498,11 @@ try {
           scratch = false;
         }
         phase = objectBallCount > 0 && potted.size === objectBallCount ? 'complete' : 'aiming';
+        if (shouldRackBalls(practice.value, potted.size, objectBallCount))
+          rackAt = performance.now() + 1200;
         status.value =
           phase === 'complete'
-            ? `Table cleared in ${shotCount} shots. Nicely done.`
+            ? `Table cleared in ${shotCount} shots.${rackAt ? ' New rack in a moment…' : ' Nicely done.'}`
             : 'Shot complete. Line up the next one.';
         updateControls();
       }
@@ -410,6 +528,11 @@ try {
     if (!alive) return;
     try {
       if (failure) throw failure;
+      if (chargeStart !== null) setPower(getShotCharge(now - chargeStart));
+      if (rackAt && now >= rackAt && !reset.disabled) {
+        rackAt = 0;
+        void resetTable();
+      }
       const elapsed = Math.min((now - previous) / 1000, 0.05);
       previous = now;
       if (phase === 'striking' && !reset.disabled && now - strikeStart >= 180) {
@@ -495,6 +618,8 @@ try {
     'pagehide',
     () => {
       alive = false;
+      inputEvents.abort();
+      cancelCharge();
       cancelAnimationFrame(animation);
       void Promise.resolve(snapshot).finally(() => {
         audio.destroy();

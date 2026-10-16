@@ -10,6 +10,7 @@ export type SphereBenchmark = {
   diagnosticSamples: number;
   maximumDroppedContacts: number;
   maximumInvalidBodies: number;
+  maximumExhaustedCandidateBodies: number;
   samplingErrors: number;
   finishing: boolean;
 };
@@ -23,6 +24,7 @@ export function createSphereBenchmark(): SphereBenchmark {
     diagnosticSamples: 0,
     maximumDroppedContacts: 0,
     maximumInvalidBodies: 0,
+    maximumExhaustedCandidateBodies: 0,
     samplingErrors: 0,
     finishing: false
   };
@@ -46,7 +48,7 @@ export function recordSphereBenchmarkSample(
   submittedRun: SphereBenchmark | undefined,
   currentRun: SphereBenchmark | undefined,
   measured: boolean,
-  diagnostics: {droppedContacts: number; invalidBodies: number},
+  diagnostics: {droppedContacts: number; invalidBodies: number; exhaustedCandidateBodies?: number},
   gpuMilliseconds?: number
 ): void {
   if (!submittedRun || submittedRun !== currentRun) return;
@@ -58,6 +60,10 @@ export function recordSphereBenchmarkSample(
   submittedRun.maximumInvalidBodies = Math.max(
     submittedRun.maximumInvalidBodies,
     diagnostics.invalidBodies
+  );
+  submittedRun.maximumExhaustedCandidateBodies = Math.max(
+    submittedRun.maximumExhaustedCandidateBodies,
+    diagnostics.exhaustedCandidateBodies ?? 0
   );
   if (measured && gpuMilliseconds !== undefined) submittedRun.gpu.push(gpuMilliseconds);
 }

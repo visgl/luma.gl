@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUSphereBodyState} from '@luma.gl/gpgpu/gpu-physics';
+import type {GPUSphereEvent} from '@luma.gl/gpgpu/gpu-physics';
 
 /** Small, asset-free contact sounds. Audio is optional and never controls game state. */
 export class PoolAudio {
@@ -45,43 +45,22 @@ export class PoolAudio {
     this.playImpact(140, 0.5, 0.16, 0);
   }
 
-  playContacts(
-    previous: readonly GPUSphereBodyState[],
-    next: readonly GPUSphereBodyState[],
-    now: number
-  ): void {
+  playEvents(events: readonly GPUSphereEvent[], now: number): void {
     if (!this.enabled) return;
     let contacts = 0;
-    for (const body of next) {
-      const before = previous[body.index];
-      if (
-        !body.enabled ||
-        !before?.enabled ||
-        now - (this.lastContact.get(body.index) ?? -1000) < 80
-      )
-        continue;
-      const change = Math.hypot(
-        body.velocity[0] - before.velocity[0],
-        body.velocity[1] - before.velocity[1]
-      );
-      if (change < 0.18) continue;
-      const nearRail = Math.abs(body.position[0]) > 5.55 || Math.abs(body.position[1]) > 2.55;
-      const nearBall = next.some(
-        other =>
-          other.enabled &&
-          other.index !== body.index &&
-          Math.hypot(body.position[0] - other.position[0], body.position[1] - other.position[1]) <
-            body.radius + other.radius + 0.35
-      );
-      if (!nearRail && !nearBall) continue;
-      this.lastContact.set(body.index, now);
+    for (const event of events) {
+      if (event.kind !== 'sphere-impact' && event.kind !== 'plane-impact') continue;
+      const key = event.body * 1024 + event.target + (event.kind === 'plane-impact' ? 512 : 0);
+      if (event.speed < 0.18 || now - (this.lastContact.get(key) ?? -1000) < 60) continue;
+      this.lastContact.set(key, now);
+      const sphere = event.kind === 'sphere-impact';
       this.playImpact(
-        nearBall ? 470 : 180,
-        Math.min(0.8, 0.12 + change * 0.1),
-        nearBall ? 0.045 : 0.065,
-        body.position[0] / 7
+        sphere ? 470 : 180,
+        Math.min(0.8, 0.12 + event.speed * 0.1),
+        sphere ? 0.045 : 0.065,
+        event.position[0] / 7
       );
-      if (++contacts >= 4) break;
+      if (++contacts >= 8) break;
     }
   }
 

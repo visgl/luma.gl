@@ -48,16 +48,25 @@ try {
     const positionData = new Float32Array(target.count * 4);
     const velocityData = new Float32Array(target.count * 4);
     const orientationData = new Float32Array(target.count * 4);
-    const layerCount = target.count >= 1024 ? 4 : 1;
+    const scene = getElement<HTMLSelectElement>('#scene').value;
+    const layerCount =
+      scene === 'pile'
+        ? Math.ceil(Math.cbrt(target.count))
+        : scene === 'rack'
+          ? 1
+          : target.count >= 1024
+            ? 4
+            : 1;
     const columns = Math.ceil(Math.sqrt(target.count / layerCount));
+    const spacing = scene === 'pile' ? 0.65 : 0.84;
     for (let index = 0; index < target.count; index++) {
       const layer = Math.floor(index / (columns * columns));
       const radius = 0.32 + (index % 4) * 0.02;
       positionData.set(
         [
-          ((index % columns) - (columns - 1) / 2) * 0.84,
-          ((Math.floor(index / columns) % columns) - (columns - 1) / 2) * 0.84,
-          2 + layer * 0.9 + (index % 7) * 0.08,
+          ((index % columns) - (columns - 1) / 2) * spacing,
+          ((Math.floor(index / columns) % columns) - (columns - 1) / 2) * spacing,
+          scene === 'rack' ? radius : 2 + layer * spacing + (index % 7) * 0.08,
           radius
         ],
         index * 4
@@ -92,6 +101,7 @@ try {
       orientations,
       maximumRadius: 0.4,
       maximumContacts: 32,
+      maximumCandidateTests: 512,
       iterations: 8,
       restitution: 0.62,
       staticFriction: 0.5,
@@ -324,6 +334,12 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
   };
   getElement('#level').onclick = levelView;
   getElement('#spheres').addEventListener('dblclick', levelView);
+  getElement('#scene').onchange = () => {
+    if (!loading && !benchmark) {
+      resetSpheres(resources);
+      accumulator = 0;
+    }
+  };
   getElement('#body-count').onchange = async () => {
     if (loading || benchmark) return;
     loading = true;
@@ -354,7 +370,7 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
     paused = false;
     getElement('#pause').textContent = 'Pause';
     controls.enabled = false;
-    for (const identifier of ['body-count', 'reset', 'pause', 'benchmark'])
+    for (const identifier of ['body-count', 'scene', 'reset', 'pause', 'benchmark'])
       getElement<HTMLButtonElement>('#' + identifier).disabled = true;
     benchmark = createSphereBenchmark();
     lastReport = undefined;
@@ -423,9 +439,12 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
                 const memory =
                   target.graph.stats.physicalTransientResourceBytes + target.count * 80 + 144;
                 getElement('#metrics').textContent =
-                  `${(1000 / Math.max(frameMilliseconds, 1)).toFixed(0)} fps · frame ${frameMilliseconds.toFixed(1)} ms · encode ${encodeMilliseconds.toFixed(2)} ms · GPU ${timing?.gpuTimeMilliseconds?.toFixed(2) ?? 'unavailable'} ms\n${diagnostics.contacts} contacts · ${diagnostics.candidateTests} candidates\n${diagnostics.sleepingBodies} sleeping · ${diagnostics.droppedContacts} dropped · ${diagnostics.invalidBodies} invalid\nPhysics buffers ${(memory / 1048576).toFixed(2)} MiB`;
+                  `${(1000 / Math.max(frameMilliseconds, 1)).toFixed(0)} fps · frame ${frameMilliseconds.toFixed(1)} ms · encode ${encodeMilliseconds.toFixed(2)} ms · GPU ${timing?.gpuTimeMilliseconds?.toFixed(2) ?? 'unavailable'} ms\n${diagnostics.contacts} contacts · ${diagnostics.candidateTests} candidates\n${diagnostics.exhaustedCandidateBodies} candidate budgets exhausted · ${diagnostics.sleepingBodies} sleeping · ${diagnostics.droppedContacts} dropped · ${diagnostics.invalidBodies} invalid\nPhysics buffers ${(memory / 1048576).toFixed(2)} MiB`;
                 status.value =
-                  diagnostics.droppedContacts || diagnostics.invalidBodies
+                  diagnostics.droppedContacts ||
+                  diagnostics.invalidBodies ||
+                  diagnostics.exhaustedCandidateBodies ||
+                  diagnostics.exhaustedImpactSteps
                     ? 'Capacity exceeded: inspect dropped/invalid counters'
                     : `${target.count.toLocaleString()} spheres · grid broad phase · WebGPU`;
               } finally {
@@ -467,11 +486,15 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
               gpuMedianMilliseconds: completedBenchmark.gpu.length
                 ? percentile(completedBenchmark.gpu, 0.5)
                 : null,
+              scenario: getElement<HTMLSelectElement>('#scene').value,
+              maximumCandidateTests: resources.world.maximumCandidateTests,
+              maximumExhaustedCandidateBodies: completedBenchmark.maximumExhaustedCandidateBodies,
               diagnosticSamples: completedBenchmark.diagnosticSamples,
               maximumDroppedContacts: completedBenchmark.maximumDroppedContacts,
               maximumInvalidBodies: completedBenchmark.maximumInvalidBodies,
               samplingErrors: completedBenchmark.samplingErrors,
               valid:
+                completedBenchmark.maximumExhaustedCandidateBodies === 0 &&
                 completedBenchmark.diagnosticSamples > 0 &&
                 completedBenchmark.maximumDroppedContacts === 0 &&
                 completedBenchmark.maximumInvalidBodies === 0 &&
@@ -482,11 +505,11 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
                 '30 warmup + 300 frames; one fixed simulation step per frame; frame duration includes display pacing.'
             };
             getElement('#benchmark-status').textContent =
-              `${completedBenchmark.maximumDroppedContacts || completedBenchmark.maximumInvalidBodies || completedBenchmark.samplingErrors || !completedBenchmark.diagnosticSamples ? 'INVALID · ' : ''}300 frames · frame median ${percentile(completedBenchmark.frames, 0.5).toFixed(1)} ms · p95 ${percentile(completedBenchmark.frames, 0.95).toFixed(1)} ms · encode median ${percentile(completedBenchmark.encoding, 0.5).toFixed(2)} ms · GPU median ${completedBenchmark.gpu.length ? percentile(completedBenchmark.gpu, 0.5).toFixed(2) : 'unavailable'} ms`;
+              `${completedBenchmark.maximumExhaustedCandidateBodies || completedBenchmark.maximumDroppedContacts || completedBenchmark.maximumInvalidBodies || completedBenchmark.samplingErrors || !completedBenchmark.diagnosticSamples ? 'INVALID · ' : ''}300 frames · frame median ${percentile(completedBenchmark.frames, 0.5).toFixed(1)} ms · p95 ${percentile(completedBenchmark.frames, 0.95).toFixed(1)} ms · encode median ${percentile(completedBenchmark.encoding, 0.5).toFixed(2)} ms · GPU median ${completedBenchmark.gpu.length ? percentile(completedBenchmark.gpu, 0.5).toFixed(2) : 'unavailable'} ms`;
             getElement<HTMLButtonElement>('#download-report').disabled = false;
             benchmark = undefined;
             controls.enabled = true;
-            for (const identifier of ['body-count', 'reset', 'pause', 'benchmark'])
+            for (const identifier of ['body-count', 'scene', 'reset', 'pause', 'benchmark'])
               getElement<HTMLButtonElement>('#' + identifier).disabled = false;
             accumulator = 0;
             previous = performance.now();

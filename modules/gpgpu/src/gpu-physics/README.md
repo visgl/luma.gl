@@ -65,8 +65,8 @@ must be resolved by increasing capacity, reducing density, or rejecting that sce
 The bounded `all-pairs` mode is limited to 256 bodies and exists as a test reference.
 
 Contacts are rebuilt once per substep; large solver corrections can introduce new
-contacts on the next substep. There is no continuous collision detection: use small
-steps for fast or small bodies. The module checks dispatch and storage capacities
+contacts on the next substep. The default mode is discrete; use small steps for fast or small bodies, or opt
+into the bounded continuous small-world mode described below. The module checks dispatch and storage capacities
 before declaring the graph and requires eight storage bindings per compute stage.
 
 ## State and ownership
@@ -113,7 +113,7 @@ inputs remain accepted; `friction` is converted to a dynamic coefficient of
 The optional diagnostics buffer contains eight uint32 words. Its first seven words
 are: dropped directed contacts, invalid bodies, emitted directed contacts, awake
 dynamic bodies, sleeping dynamic bodies, candidate tests, and maximum required
-contacts per body. The final word is reserved. Counters describe the last substep. Dropped-contact and candidate counters saturate at uint32 maximum instead of wrapping.
+contacts per body. The final word reports impact and candidate budget exhaustion (see below). Counters describe the last substep. Dropped-contact and candidate counters saturate at uint32 maximum instead of wrapping.
 Use `decodeGPUSphereWorldDiagnostics(new Uint32Array(readback.buffer))` to decode a
 sample. Reading diagnostics is explicit and never required by the simulation.
 
@@ -129,7 +129,7 @@ GPU all-pairs path; check unequal-mass momentum/energy, static bodies, coinciden
 centers, finite edges, torque/no-slip rolling, quaternion normalization, sleeping,
 live wake-up, stack convergence, repeatability, ownership and a 10k sparse scene.
 
-Boxes, capsules, arbitrary collision meshes, joints, continuous collision detection,
+Boxes, capsules, arbitrary collision meshes, joints, large-world continuous collision detection,
 broad-phase acceleration for pathological dense cells, cross-device bitwise
 reproducibility and glTF physics adapters remain outside this sphere module.
 
@@ -207,3 +207,88 @@ The raised contact is an optional rigid-impulse approximation: rectangle collisi
 geometry remains unchanged. It is not a deformable cushion or a calibrated Han or
 Mathavan billiards model. Pool uses a height ratio of 0.35 and speed scale of 0.035
 in its table units. Defaults retain centered contacts and constant restitution.
+
+## Continuous small-world mode
+
+Set `continuous: true` for up to 256 bodies. A GPU sweep finds the earliest
+sphere–sphere or sphere–rectangle impact, including swept edge capsules and corner
+spheres. Every body advances by the same interval before the existing contact
+solver runs. Up to `maximumImpactSteps` intervals (default 4, maximum 16) consume a
+fixed step. If the budget runs out, the remaining time is discarded and
+`exhaustedImpactSteps` is set in diagnostics. Rendering must not hide this condition.
+Resting plane support does not consume an impact interval by itself.
+
+Sweeps use constant velocity with a conservative gravity estimate for the remaining
+interval. They are not an exact accelerated-trajectory solver. Use small fixed
+steps with gravity and compare convergence. Simultaneous contacts use the existing
+Jacobi solver and its bounded neighbor list. Dense racks may require more impact
+steps or smaller fixed steps. The default discrete grid path remains available;
+small-world sweeps deliberately use bounded all-pairs work rather than pretending
+the existing grid supports arbitrary swept motion.
+
+`maximumCandidateTests` optionally bounds each body's contact-discovery traversal.
+Zero retains unbounded traversal. `exhaustedCandidateBodies` reports bodies that
+reached the budget; their contact set may be incomplete even with zero
+`droppedContacts`. The eighth diagnostics word packs impact exhaustion in bit 0
+and candidate exhaustion count in bits 1–31. Reject incomplete results or increase
+the budget. With continuous mode, contact/candidate counters accumulate over impact
+intervals in the last substep.
+
+## GPU events and triggers
+
+Set `eventCapacity` to a power of two (up to 65,536) to allocate a persistent ring
+of 32-byte event records, plus a 16-byte header. Events are supported for up to
+256 bodies. A bounded serial GPU pass gives deterministic append ordering without
+races when several events wrap the ring during one dispatch. Readback is optional:
+
+```ts
+const batch = await world.readEvents();
+for (const event of batch.events) {
+  // kind: sphere-impact, plane-impact, trigger, or trail
+  // phase: begin or impact; body, target, step, position, speed
+}
+// Never silently ignore batch.dropped: those overwritten events cannot be recovered.
+```
+
+Concurrent reads share one pending snapshot and consumption cursor. Events persist
+across graph encodings; overflow is computed from the uint32 sequence difference.
+Consume at least once per 2^32 appended events. Destroy the graph and finish pending
+readbacks before destroying the world. Contact begin is tracked across fixed steps;
+impact events carry pre-contact closing speed, not a calibrated impulse magnitude.
+Body 0 emits compact trail samples during simulation steps. Trigger/trail events
+are independent of CPU snapshot frequency.
+
+`triggers: [{center, radius, capture: true}]` declares up to 32 spherical
+center-crossing regions. Each integration segment is tested on the GPU. Capture
+makes the radius negative and zeroes linear velocity immediately, preventing later
+steps from moving a potted ball. Non-capturing triggers emit on entry. Trigger
+identifiers are array indices; pocket rules, scoring and scratches remain consumer
+policy. The pool example uses these events for pockets, collision sound and trails;
+its snapshots only support UI and shot settling. Event overflow stops the example
+visibly instead of silently losing a pocket outcome.
+
+## Shape and calibration foundations
+
+`makeSphereBoxPlanes({center, halfExtents, material})` adds static axis-aligned box
+surfaces using the existing finite-rectangle narrow phase and sweep. It consumes
+six of the world's 32 surfaces; bodies must start outside the box. Corners use
+closest points on the faces. Dynamic boxes, capsules, persistent manifolds and
+constraints remain unimplemented. `getBodyInertia` supplies analytic principal
+inertia for solid spheres and boxes; the sphere solver still uses isotropic sphere
+inertia. These APIs establish a static shape composition boundary without claiming
+general rigid-body support.
+
+`getSphereClothReference` predicts ideal sliding-to-rolling transition, subsequent
+rolling distance and independent sidespin decay. `getSphereCushionRestitution`
+exposes the current pace law. Inputs must use consistent units and positive radius,
+gravity and resistance coefficients. Zero coefficients describe an infinite decay
+time where the numerator is positive. The numerical fixtures use metres/seconds
+and uniform solid spheres, with analytic tolerances. They are not empirical table
+calibration. Pool keeps its illustrative table units and adds beveled jaw surfaces;
+jump, swerve, cue elevation and actual miscues remain outside its model.
+
+The sphere example offers sparse, dense-pile and rack scenarios. Benchmark exports
+include scenario, candidate budget and exhaustion diagnostics; exhausted runs are
+invalid performance/correctness evidence. Frame time, encoding time and optional
+GPU time remain separate. Measurements depend on the adapter and must be captured
+on the target device rather than inferred from body count.
