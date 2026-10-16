@@ -10,7 +10,7 @@ import {WebGLDocsTabs} from '@site/src/components/docs/webgl-docs-tabs';
 </DocumentationBadges>
 
 :::info
-In luma.gl versions earlier than v9.3, these exports were provided by `@luma.gl/core/webgl-constants`. Use `@luma.gl/core/webgl-constants` going forward.
+Before v9.3, these exports were provided by `@luma.gl/constants`; v9.3 and v9.4 used `@luma.gl/webgl/constants`. Starting in v10, use `@luma.gl/core/webgl-constants`.
 :::
 
 Use this entry point when you need the raw numeric WebGL enums that luma.gl still uses internally for WebGL interop.

@@ -7,7 +7,7 @@ const alias = {
   '@luma.gl/gltf': `${__dirname}/../../../modules/gltf/src`,
   '@luma.gl/shadertools': `${__dirname}/../../../modules/shadertools/src`,
   '@luma.gl/test-utils': `${__dirname}/../../../modules/test-utils/src`,
-  '@luma.gl/core/webgl-constants': `${__dirname}/../../../modules/core/src/webgl/constants`,
+  '@luma.gl/core/webgl-constants': `${__dirname}/../../../modules/core/src/webgl-constants`,
   '@luma.gl/core/webgl': `${__dirname}/../../../modules/core/src/webgl`
 };
 

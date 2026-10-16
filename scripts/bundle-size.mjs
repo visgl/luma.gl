@@ -25,6 +25,22 @@ const sourceAliasesPlugin = {
   }
 };
 
+// Backend fixtures measure their own contribution; the combined fixtures add core
+// separately. Core is now reached through relative imports inside one package.
+const externalCorePlugin = {
+  name: 'external-portable-core',
+  setup(build) {
+    build.onResolve({filter: /^\./}, resolveArguments => {
+      const resolvedPath = resolve(resolveArguments.resolveDir, resolveArguments.path);
+      const coreEntry = resolve(SOURCE_ENTRIES['@luma.gl/core']);
+      if (resolvedPath === coreEntry || `${resolvedPath}.ts` === coreEntry) {
+        return {path: '@luma.gl/core', external: true};
+      }
+      return undefined;
+    });
+  }
+};
+
 const measuredResults = [];
 for (const fixture of BUNDLE_SIZE_FIXTURES.filter(fixture => fixture.entry)) {
   measuredResults.push(await measureFixture(fixture));
@@ -74,7 +90,10 @@ async function measureFixture(fixture) {
     logLevel: 'silent',
     minify: true,
     platform: 'browser',
-    plugins: fixture.sourceAliases ? [sourceAliasesPlugin] : [],
+    plugins: [
+      ...(fixture.sourceAliases ? [sourceAliasesPlugin] : []),
+      ...(fixture.external.includes('@luma.gl/core') ? [externalCorePlugin] : [])
+    ],
     target: ['chrome110', 'firefox110', 'safari15'],
     treeShaking: true,
     write: false

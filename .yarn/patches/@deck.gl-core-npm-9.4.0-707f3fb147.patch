@@ -141,7 +141,37 @@ diff --git a/dist/index.cjs b/dist/index.cjs
            colorAttachments: [texture]
          }));
        });
-@@ -7280,7 +7287,11 @@
+@@ -6862,8 +6869,13 @@
+     const pixelRatio = canvasContext.cssToDeviceRatio();
+     const pickableLayers = this._getPickable(layers);
+     if (!pickableLayers || viewports.length === 0) {
++      // Canvas leave has no viewport, but must still clear the previous hover.
++      const infos = processPickInfo({
++        pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++        lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++      });
+       return {
+-        result: [],
++        result: Array.from(infos.values()).filter(info => info.layer),
+         emptyInfo: getEmptyPickingInfo({ viewports, x, y, pixelRatio })
+       };
+     }
+@@ -6979,8 +6991,13 @@
+     const pixelRatio = canvasContext.cssToDeviceRatio();
+     const pickableLayers = this._getPickable(layers);
+     if (!pickableLayers || viewports.length === 0) {
++      // Canvas leave has no viewport, but must still clear the previous hover.
++      const infos = processPickInfo({
++        pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++        lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++      });
+       return {
+-        result: [],
++        result: Array.from(infos.values()).filter(info => info.layer),
+         emptyInfo: getEmptyPickingInfo({ viewports, x, y, pixelRatio })
+       };
+     }
+@@ -7280,7 +7297,11 @@
        usage: import_core14.Buffer.COPY_DST | import_core14.Buffer.MAP_READ
      });
      try {
@@ -154,7 +184,7 @@ diff --git a/dist/index.cjs b/dist/index.cjs
        const readData = await readBuffer.readAsync(0, layout.byteLength);
        const bytesPerElement = ArrayType.BYTES_PER_ELEMENT;
        if (layout.bytesPerRow % bytesPerElement !== 0) {
-@@ -7294,7 +7305,9 @@
+@@ -7294,7 +7315,9 @@
        }
        const packed = new ArrayType(width * height * 4);
        for (let row = 0; row < height; row++) {
@@ -165,7 +195,7 @@ diff --git a/dist/index.cjs b/dist/index.cjs
          packed.set(source3.subarray(sourceStart, sourceStart + packedRowLength), row * packedRowLength);
        }
        return packed;
-@@ -7960,8 +7973,8 @@
+@@ -7960,8 +7983,8 @@
  
  // dist/lib/deck.js
  var import_core15 = require("@luma.gl/core");
@@ -176,7 +206,16 @@ diff --git a/dist/index.cjs b/dist/index.cjs
  var import_engine3 = require("@luma.gl/engine");
  var import_engine4 = require("@luma.gl/engine");
  var import_stats2 = require("@probe.gl/stats");
-@@ -10342,7 +10355,7 @@
+@@ -8540,7 +8563,7 @@
+     if (!this.widgetManager) {
+       return;
+     }
+-    this.cursorState.isHovering = result.length > 0;
++    this.cursorState.isHovering = result.some(info => info.picked);
+     let pickedInfo = emptyInfo;
+     let handled = false;
+     for (const info of result) {
+@@ -10342,7 +10365,7 @@
  // dist/transitions/gpu-interpolation-transition.js
  var import_engine5 = require("@luma.gl/engine");
  var import_shadertools5 = require("@luma.gl/shadertools");
@@ -185,7 +224,7 @@ diff --git a/dist/index.cjs b/dist/index.cjs
  
  // dist/utils/array-utils.js
  function padArrayChunk(options) {
-@@ -10409,7 +10422,7 @@
+@@ -10409,7 +10432,7 @@
  }
  
  // dist/transitions/gpu-transition-utils.js
@@ -194,7 +233,7 @@ diff --git a/dist/index.cjs b/dist/index.cjs
  function cloneAttribute(attribute) {
    const { device, settings, value } = attribute;
    const newAttribute = new Attribute(device, settings);
-@@ -11276,7 +11289,7 @@
+@@ -11276,7 +11299,7 @@
  
  // dist/lib/layer.js
  var import_core20 = require("@luma.gl/core");
@@ -203,7 +242,7 @@ diff --git a/dist/index.cjs b/dist/index.cjs
  
  // dist/transitions/cpu-interpolation-transition.js
  var import_core18 = require("@math.gl/core");
-@@ -13611,9 +13624,9 @@
+@@ -13611,9 +13634,9 @@
        1
      ]);
      const radius = ((targetZ || 0) / EARTH_RADIUS + 1) * GLOBE_RADIUS;
@@ -216,7 +255,7 @@ diff --git a/dist/index.cjs b/dist/index.cjs
      const triangleAreaSquared = (4 * rayStartDistanceSquared * rayEndDistanceSquared - (rayLengthSquared - rayStartDistanceSquared - rayEndDistanceSquared) ** 2) / 16;
      const distanceToCenterSquared = 4 * triangleAreaSquared / rayLengthSquared;
      return {
-@@ -13656,7 +13669,7 @@
+@@ -13656,7 +13679,7 @@
        const rayStartToClosestApproach = Math.sqrt(rayStartDistanceSquared - distanceToCenterSquared);
        const closestApproachToIntersection = Math.sqrt(Math.max(0, radius * radius - distanceToCenterSquared));
        const intersectionRatio = (rayStartToClosestApproach - closestApproachToIntersection) / Math.sqrt(rayLengthSquared);
@@ -225,7 +264,7 @@ diff --git a/dist/index.cjs b/dist/index.cjs
      }
      const [X, Y, Z] = this.unprojectPosition(coord);
      if (Number.isFinite(z)) {
-@@ -13674,7 +13687,7 @@
+@@ -13674,7 +13697,7 @@
    }
    unprojectPosition(xyz) {
      const [x, y, z] = xyz;
@@ -234,7 +273,7 @@ diff --git a/dist/index.cjs b/dist/index.cjs
      const phi = Math.asin(z / D);
      const lambda = Math.atan2(x, -y);
      const lng = lambda * RADIANS_TO_DEGREES;
-@@ -13739,8 +13752,8 @@
+@@ -13739,8 +13762,8 @@
    return Math.log2(scaleAdjust);
  }
  function transformVector(matrix, vector) {
@@ -245,7 +284,7 @@ diff --git a/dist/index.cjs b/dist/index.cjs
    return result;
  }
  
-@@ -13907,8 +13920,8 @@
+@@ -13907,8 +13930,8 @@
    panByPosition(coords, pixel, startPixel) {
      const fromLocation = (0, import_web_mercator10.pixelsToWorld)(pixel, this.pixelUnprojectionMatrix);
      const toLocation = this.projectFlat(coords);
@@ -256,7 +295,7 @@ diff --git a/dist/index.cjs b/dist/index.cjs
      return { target: this.unprojectFlat(newCenter) };
    }
  };
-@@ -13921,12 +13934,14 @@
+@@ -13921,12 +13944,14 @@
  var FirstPersonViewport = class extends viewport_default {
    constructor(props) {
      const { longitude, latitude, modelMatrix, bearing = 0, pitch = 0, up = [0, 0, 1] } = props;
@@ -273,7 +312,7 @@ diff --git a/dist/index.cjs b/dist/index.cjs
      const center = modelMatrix ? new import_core25.Matrix4(modelMatrix).transformAsVector(dir) : dir;
      const zoom = Number.isFinite(latitude) ? (0, import_web_mercator11.getMeterZoom)({ latitude }) : 0;
      const scale = Math.pow(2, zoom);
-@@ -14025,10 +14040,14 @@
+@@ -14025,10 +14050,14 @@
      const { width, height, bearing, pitch } = this.getViewportProps();
      const deltaScaleX = PAN_SPEED * (pos[0] - startPanPos[0]) / width;
      const deltaScaleY = PAN_SPEED * (pos[1] - startPanPos[1]) / height;
@@ -292,7 +331,7 @@ diff --git a/dist/index.cjs b/dist/index.cjs
      return this._getUpdatedState({
        position: new import_core26.Vector3(startPanPosition).add(xDirection.scale(deltaScaleX)).add(yDirection.scale(deltaScaleY))
      });
-@@ -14192,11 +14211,13 @@
+@@ -14192,11 +14221,13 @@
      });
    }
    getDirection(use2D = false) {
@@ -308,7 +347,7 @@ diff --git a/dist/index.cjs b/dist/index.cjs
      return direction;
    }
    _getUpdatedState(newProps) {
-@@ -15111,7 +15132,7 @@
+@@ -15111,7 +15142,7 @@
    /** Bearing (degrees) from a camera up vector at a given lng/lat */
    static bearing(upVector, lng, lat) {
      const { N, E } = _Globe.tangentBasis(lng, lat);
@@ -317,7 +356,7 @@ diff --git a/dist/index.cjs b/dist/index.cjs
    }
    /** Camera frame for panning at a given position/bearing */
    static cameraFrame(lng, lat, bearing) {
-@@ -15125,8 +15146,8 @@
+@@ -15125,8 +15156,8 @@
      return {
        position,
        up,
@@ -328,7 +367,7 @@ diff --git a/dist/index.cjs b/dist/index.cjs
        longitude: lng,
        latitude: lat,
        bearing
-@@ -15136,18 +15157,18 @@
+@@ -15136,18 +15167,18 @@
    static angularDistance(a, b) {
      const pa = _Globe.toPosition(a.longitude, a.latitude);
      const pb = _Globe.toPosition(b.longitude, b.latitude);
@@ -350,7 +389,7 @@ diff --git a/dist/index.cjs b/dist/index.cjs
    }
    /**
     * Rotate a camera frame by horizontal/vertical angles (radians).
-@@ -15179,19 +15200,19 @@
+@@ -15179,19 +15210,19 @@
    static rotateFrameToMatch(frame, currentCoordinates, targetCoordinates, strength = 1) {
      const currentPosition = _Globe.toPosition(...currentCoordinates);
      const targetPosition = _Globe.toPosition(...targetCoordinates);
@@ -508,6 +547,15 @@ diff --git a/dist/lib/deck.js b/dist/lib/deck.js
  import { Timeline } from '@luma.gl/engine';
  import { AnimationLoop } from '@luma.gl/engine';
  import { Stats } from '@probe.gl/stats';
+@@ -641,7 +641,7 @@
+         if (!this.widgetManager) {
+             return;
+         }
+-        this.cursorState.isHovering = result.length > 0;
++        this.cursorState.isHovering = result.some(info => info.picked);
+         let pickedInfo = emptyInfo;
+         let handled = false;
+         for (const info of result) {
 diff --git a/dist/lib/deck-renderer.js b/dist/lib/deck-renderer.js
 --- a/dist/lib/deck-renderer.js
 +++ b/dist/lib/deck-renderer.js
@@ -523,7 +571,37 @@ diff --git a/dist/lib/deck-renderer.js b/dist/lib/deck-renderer.js
 diff --git a/dist/lib/deck-picker.js b/dist/lib/deck-picker.js
 --- a/dist/lib/deck-picker.js
 +++ b/dist/lib/deck-picker.js
-@@ -597,7 +597,11 @@
+@@ -133,8 +133,13 @@
+         const pixelRatio = canvasContext.cssToDeviceRatio();
+         const pickableLayers = this._getPickable(layers);
+         if (!pickableLayers || viewports.length === 0) {
++            // Canvas leave has no viewport, but must still clear the previous hover.
++            const infos = processPickInfo({
++                pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++                lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++            });
+             return {
+-                result: [],
++                result: Array.from(infos.values()).filter(info => info.layer),
+                 emptyInfo: getEmptyPickingInfo({ viewports, x, y, pixelRatio })
+             };
+         }
+@@ -263,8 +268,13 @@
+         const pixelRatio = canvasContext.cssToDeviceRatio();
+         const pickableLayers = this._getPickable(layers);
+         if (!pickableLayers || viewports.length === 0) {
++            // Canvas leave has no viewport, but must still clear the previous hover.
++            const infos = processPickInfo({
++                pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++                lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++            });
+             return {
+-                result: [],
++                result: Array.from(infos.values()).filter(info => info.layer),
+                 emptyInfo: getEmptyPickingInfo({ viewports, x, y, pixelRatio })
+             };
+         }
+@@ -597,7 +607,11 @@
              usage: Buffer.COPY_DST | Buffer.MAP_READ
          });
          try {
@@ -536,7 +614,7 @@ diff --git a/dist/lib/deck-picker.js b/dist/lib/deck-picker.js
              const readData = await readBuffer.readAsync(0, layout.byteLength);
              const bytesPerElement = ArrayType.BYTES_PER_ELEMENT;
              if (layout.bytesPerRow % bytesPerElement !== 0) {
-@@ -613,7 +617,9 @@
+@@ -613,7 +627,9 @@
              }
              const packed = new ArrayType(width * height * 4);
              for (let row = 0; row < height; row++) {
@@ -793,7 +871,37 @@ diff --git a/dist.webgl-only/index.cjs b/dist.webgl-only/index.cjs
            colorAttachments: [texture]
          }));
        });
-@@ -6806,7 +6814,11 @@
+@@ -6388,8 +6396,13 @@
+     const pixelRatio = canvasContext.cssToDeviceRatio();
+     const pickableLayers = this._getPickable(layers);
+     if (!pickableLayers || viewports.length === 0) {
++      // Canvas leave has no viewport, but must still clear the previous hover.
++      const infos = processPickInfo({
++        pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++        lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++      });
+       return {
+-        result: [],
++        result: Array.from(infos.values()).filter(info => info.layer),
+         emptyInfo: getEmptyPickingInfo({ viewports, x, y, pixelRatio })
+       };
+     }
+@@ -6505,8 +6518,13 @@
+     const pixelRatio = canvasContext.cssToDeviceRatio();
+     const pickableLayers = this._getPickable(layers);
+     if (!pickableLayers || viewports.length === 0) {
++      // Canvas leave has no viewport, but must still clear the previous hover.
++      const infos = processPickInfo({
++        pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++        lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++      });
+       return {
+-        result: [],
++        result: Array.from(infos.values()).filter(info => info.layer),
+         emptyInfo: getEmptyPickingInfo({ viewports, x, y, pixelRatio })
+       };
+     }
+@@ -6806,7 +6824,11 @@
        usage: import_core14.Buffer.COPY_DST | import_core14.Buffer.MAP_READ
      });
      try {
@@ -806,7 +914,7 @@ diff --git a/dist.webgl-only/index.cjs b/dist.webgl-only/index.cjs
        const readData = await readBuffer.readAsync(0, layout.byteLength);
        const bytesPerElement = ArrayType.BYTES_PER_ELEMENT;
        if (layout.bytesPerRow % bytesPerElement !== 0) {
-@@ -6820,7 +6832,9 @@
+@@ -6820,7 +6842,9 @@
        }
        const packed = new ArrayType(width * height * 4);
        for (let row = 0; row < height; row++) {
@@ -817,7 +925,7 @@ diff --git a/dist.webgl-only/index.cjs b/dist.webgl-only/index.cjs
          packed.set(source3.subarray(sourceStart, sourceStart + packedRowLength), row * packedRowLength);
        }
        return packed;
-@@ -7486,8 +7500,8 @@
+@@ -7486,8 +7510,8 @@
  
  // dist/lib/deck.js
  var import_core15 = require("@luma.gl/core");
@@ -828,7 +936,16 @@ diff --git a/dist.webgl-only/index.cjs b/dist.webgl-only/index.cjs
  var import_engine3 = require("@luma.gl/engine");
  var import_engine4 = require("@luma.gl/engine");
  var import_stats2 = require("@probe.gl/stats");
-@@ -9639,7 +9653,7 @@
+@@ -8066,7 +8090,7 @@
+     if (!this.widgetManager) {
+       return;
+     }
+-    this.cursorState.isHovering = result.length > 0;
++    this.cursorState.isHovering = result.some(info => info.picked);
+     let pickedInfo = emptyInfo;
+     let handled = false;
+     for (const info of result) {
+@@ -9639,7 +9663,7 @@
  // dist/transitions/gpu-interpolation-transition.js
  var import_engine5 = require("@luma.gl/engine");
  var import_shadertools5 = require("@luma.gl/shadertools");
@@ -837,7 +954,7 @@ diff --git a/dist.webgl-only/index.cjs b/dist.webgl-only/index.cjs
  
  // dist/utils/array-utils.js
  function padArrayChunk(options) {
-@@ -9706,7 +9720,7 @@
+@@ -9706,7 +9730,7 @@
  }
  
  // dist/transitions/gpu-transition-utils.js
@@ -846,7 +963,7 @@ diff --git a/dist.webgl-only/index.cjs b/dist.webgl-only/index.cjs
  function cloneAttribute(attribute) {
    const { device, settings, value } = attribute;
    const newAttribute = new Attribute(device, settings);
-@@ -10570,7 +10584,7 @@
+@@ -10570,7 +10594,7 @@
  
  // dist/lib/layer.js
  var import_core20 = require("@luma.gl/core");
@@ -855,7 +972,7 @@ diff --git a/dist.webgl-only/index.cjs b/dist.webgl-only/index.cjs
  
  // dist/transitions/cpu-interpolation-transition.js
  var import_core18 = require("@math.gl/core");
-@@ -12873,9 +12887,9 @@
+@@ -12873,9 +12897,9 @@
        1
      ]);
      const radius = ((targetZ || 0) / EARTH_RADIUS + 1) * GLOBE_RADIUS;
@@ -868,7 +985,7 @@ diff --git a/dist.webgl-only/index.cjs b/dist.webgl-only/index.cjs
      const triangleAreaSquared = (4 * rayStartDistanceSquared * rayEndDistanceSquared - (rayLengthSquared - rayStartDistanceSquared - rayEndDistanceSquared) ** 2) / 16;
      const distanceToCenterSquared = 4 * triangleAreaSquared / rayLengthSquared;
      return {
-@@ -12918,7 +12932,7 @@
+@@ -12918,7 +12942,7 @@
        const rayStartToClosestApproach = Math.sqrt(rayStartDistanceSquared - distanceToCenterSquared);
        const closestApproachToIntersection = Math.sqrt(Math.max(0, radius * radius - distanceToCenterSquared));
        const intersectionRatio = (rayStartToClosestApproach - closestApproachToIntersection) / Math.sqrt(rayLengthSquared);
@@ -877,7 +994,7 @@ diff --git a/dist.webgl-only/index.cjs b/dist.webgl-only/index.cjs
      }
      const [X, Y, Z] = this.unprojectPosition(coord);
      if (Number.isFinite(z)) {
-@@ -12936,7 +12950,7 @@
+@@ -12936,7 +12960,7 @@
    }
    unprojectPosition(xyz) {
      const [x, y, z] = xyz;
@@ -886,7 +1003,7 @@ diff --git a/dist.webgl-only/index.cjs b/dist.webgl-only/index.cjs
      const phi = Math.asin(z / D);
      const lambda = Math.atan2(x, -y);
      const lng = lambda * RADIANS_TO_DEGREES;
-@@ -13001,8 +13015,8 @@
+@@ -13001,8 +13025,8 @@
    return Math.log2(scaleAdjust);
  }
  function transformVector(matrix, vector) {
@@ -897,7 +1014,7 @@ diff --git a/dist.webgl-only/index.cjs b/dist.webgl-only/index.cjs
    return result;
  }
  
-@@ -13169,8 +13183,8 @@
+@@ -13169,8 +13193,8 @@
    panByPosition(coords, pixel, startPixel) {
      const fromLocation = (0, import_web_mercator10.pixelsToWorld)(pixel, this.pixelUnprojectionMatrix);
      const toLocation = this.projectFlat(coords);
@@ -908,7 +1025,7 @@ diff --git a/dist.webgl-only/index.cjs b/dist.webgl-only/index.cjs
      return { target: this.unprojectFlat(newCenter) };
    }
  };
-@@ -13183,12 +13197,14 @@
+@@ -13183,12 +13207,14 @@
  var FirstPersonViewport = class extends viewport_default {
    constructor(props) {
      const { longitude, latitude, modelMatrix, bearing = 0, pitch = 0, up = [0, 0, 1] } = props;
@@ -925,7 +1042,7 @@ diff --git a/dist.webgl-only/index.cjs b/dist.webgl-only/index.cjs
      const center = modelMatrix ? new import_core25.Matrix4(modelMatrix).transformAsVector(dir) : dir;
      const zoom = Number.isFinite(latitude) ? (0, import_web_mercator11.getMeterZoom)({ latitude }) : 0;
      const scale = Math.pow(2, zoom);
-@@ -13287,10 +13303,14 @@
+@@ -13287,10 +13313,14 @@
      const { width, height, bearing, pitch } = this.getViewportProps();
      const deltaScaleX = PAN_SPEED * (pos[0] - startPanPos[0]) / width;
      const deltaScaleY = PAN_SPEED * (pos[1] - startPanPos[1]) / height;
@@ -944,7 +1061,7 @@ diff --git a/dist.webgl-only/index.cjs b/dist.webgl-only/index.cjs
      return this._getUpdatedState({
        position: new import_core26.Vector3(startPanPosition).add(xDirection.scale(deltaScaleX)).add(yDirection.scale(deltaScaleY))
      });
-@@ -13454,11 +13474,13 @@
+@@ -13454,11 +13484,13 @@
      });
    }
    getDirection(use2D = false) {
@@ -960,7 +1077,7 @@ diff --git a/dist.webgl-only/index.cjs b/dist.webgl-only/index.cjs
      return direction;
    }
    _getUpdatedState(newProps) {
-@@ -14373,7 +14395,7 @@
+@@ -14373,7 +14405,7 @@
    /** Bearing (degrees) from a camera up vector at a given lng/lat */
    static bearing(upVector, lng, lat) {
      const { N, E } = _Globe.tangentBasis(lng, lat);
@@ -969,7 +1086,7 @@ diff --git a/dist.webgl-only/index.cjs b/dist.webgl-only/index.cjs
    }
    /** Camera frame for panning at a given position/bearing */
    static cameraFrame(lng, lat, bearing) {
-@@ -14387,8 +14409,8 @@
+@@ -14387,8 +14419,8 @@
      return {
        position,
        up,
@@ -980,7 +1097,7 @@ diff --git a/dist.webgl-only/index.cjs b/dist.webgl-only/index.cjs
        longitude: lng,
        latitude: lat,
        bearing
-@@ -14398,18 +14420,18 @@
+@@ -14398,18 +14430,18 @@
    static angularDistance(a, b) {
      const pa = _Globe.toPosition(a.longitude, a.latitude);
      const pb = _Globe.toPosition(b.longitude, b.latitude);
@@ -1002,7 +1119,7 @@ diff --git a/dist.webgl-only/index.cjs b/dist.webgl-only/index.cjs
    }
    /**
     * Rotate a camera frame by horizontal/vertical angles (radians).
-@@ -14441,19 +14463,19 @@
+@@ -14441,19 +14473,19 @@
    static rotateFrameToMatch(frame, currentCoordinates, targetCoordinates, strength = 1) {
      const currentPosition = _Globe.toPosition(...currentCoordinates);
      const targetPosition = _Globe.toPosition(...targetCoordinates);
@@ -1160,6 +1277,15 @@ diff --git a/dist.webgl-only/lib/deck.js b/dist.webgl-only/lib/deck.js
  import { Timeline } from '@luma.gl/engine';
  import { AnimationLoop } from '@luma.gl/engine';
  import { Stats } from '@probe.gl/stats';
+@@ -641,7 +641,7 @@
+         if (!this.widgetManager) {
+             return;
+         }
+-        this.cursorState.isHovering = result.length > 0;
++        this.cursorState.isHovering = result.some(info => info.picked);
+         let pickedInfo = emptyInfo;
+         let handled = false;
+         for (const info of result) {
 diff --git a/dist.webgl-only/lib/deck-renderer.js b/dist.webgl-only/lib/deck-renderer.js
 --- a/dist.webgl-only/lib/deck-renderer.js
 +++ b/dist.webgl-only/lib/deck-renderer.js
@@ -1175,7 +1301,37 @@ diff --git a/dist.webgl-only/lib/deck-renderer.js b/dist.webgl-only/lib/deck-ren
 diff --git a/dist.webgl-only/lib/deck-picker.js b/dist.webgl-only/lib/deck-picker.js
 --- a/dist.webgl-only/lib/deck-picker.js
 +++ b/dist.webgl-only/lib/deck-picker.js
-@@ -597,7 +597,11 @@
+@@ -133,8 +133,13 @@
+         const pixelRatio = canvasContext.cssToDeviceRatio();
+         const pickableLayers = this._getPickable(layers);
+         if (!pickableLayers || viewports.length === 0) {
++            // Canvas leave has no viewport, but must still clear the previous hover.
++            const infos = processPickInfo({
++                pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++                lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++            });
+             return {
+-                result: [],
++                result: Array.from(infos.values()).filter(info => info.layer),
+                 emptyInfo: getEmptyPickingInfo({ viewports, x, y, pixelRatio })
+             };
+         }
+@@ -263,8 +268,13 @@
+         const pixelRatio = canvasContext.cssToDeviceRatio();
+         const pickableLayers = this._getPickable(layers);
+         if (!pickableLayers || viewports.length === 0) {
++            // Canvas leave has no viewport, but must still clear the previous hover.
++            const infos = processPickInfo({
++                pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++                lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++            });
+             return {
+-                result: [],
++                result: Array.from(infos.values()).filter(info => info.layer),
+                 emptyInfo: getEmptyPickingInfo({ viewports, x, y, pixelRatio })
+             };
+         }
+@@ -597,7 +607,11 @@
              usage: Buffer.COPY_DST | Buffer.MAP_READ
          });
          try {
@@ -1188,7 +1344,7 @@ diff --git a/dist.webgl-only/lib/deck-picker.js b/dist.webgl-only/lib/deck-picke
              const readData = await readBuffer.readAsync(0, layout.byteLength);
              const bytesPerElement = ArrayType.BYTES_PER_ELEMENT;
              if (layout.bytesPerRow % bytesPerElement !== 0) {
-@@ -613,7 +617,9 @@
+@@ -613,7 +627,9 @@
              }
              const packed = new ArrayType(width * height * 4);
              for (let row = 0; row < height; row++) {
@@ -1429,7 +1585,37 @@ diff --git a/src/lib/deck-renderer.ts b/src/lib/deck-renderer.ts
 diff --git a/src/lib/deck-picker.ts b/src/lib/deck-picker.ts
 --- a/src/lib/deck-picker.ts
 +++ b/src/lib/deck-picker.ts
-@@ -901,7 +901,11 @@
+@@ -252,8 +252,13 @@
+     const pickableLayers = this._getPickable(layers);
+ 
+     if (!pickableLayers || viewports.length === 0) {
++      // Canvas leave has no viewport, but must still clear the previous hover.
++      const infos = processPickInfo({
++        pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++        lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++      });
+       return {
+-        result: [],
++        result: Array.from(infos.values()).filter(info => info.layer),
+         emptyInfo: getEmptyPickingInfo({viewports, x, y, pixelRatio})
+       };
+     }
+@@ -418,8 +423,13 @@
+     const pickableLayers = this._getPickable(layers);
+ 
+     if (!pickableLayers || viewports.length === 0) {
++      // Canvas leave has no viewport, but must still clear the previous hover.
++      const infos = processPickInfo({
++        pickInfo: {pickedColor: null, pickedObjectIndex: -1},
++        lastPickedInfo: this.lastPickedInfo, mode, layers, viewports, x, y, pixelRatio
++      });
+       return {
+-        result: [],
++        result: Array.from(infos.values()).filter(info => info.layer),
+         emptyInfo: getEmptyPickingInfo({viewports, x, y, pixelRatio})
+       };
+     }
+@@ -901,7 +911,11 @@
      });
  
      try {
@@ -1442,7 +1628,7 @@ diff --git a/src/lib/deck-picker.ts b/src/lib/deck-picker.ts
        const readData = await readBuffer.readAsync(0, layout.byteLength);
        const bytesPerElement = ArrayType.BYTES_PER_ELEMENT;
        if (layout.bytesPerRow % bytesPerElement !== 0) {
-@@ -926,7 +930,9 @@
+@@ -926,7 +940,9 @@
        const packed = new ArrayType(width * height * 4);
  
        for (let row = 0; row < height; row++) {
@@ -1479,6 +1665,15 @@ diff --git a/src/lib/deck.ts b/src/lib/deck.ts
  import {Timeline} from '@luma.gl/engine';
  import {AnimationLoop} from '@luma.gl/engine';
  import type {
+@@ -980,7 +980,7 @@
+       return;
+     }
+ 
+-    this.cursorState.isHovering = result.length > 0;
++    this.cursorState.isHovering = result.some(info => info.picked);
+ 
+     let pickedInfo = emptyInfo;
+     let handled = false;
 diff --git a/src/transitions/gpu-transition-utils.ts b/src/transitions/gpu-transition-utils.ts
 --- a/src/transitions/gpu-transition-utils.ts
 +++ b/src/transitions/gpu-transition-utils.ts
