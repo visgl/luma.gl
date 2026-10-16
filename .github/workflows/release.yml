@@ -139,7 +139,7 @@ jobs:
           du -sh . "${HOME}/.yarn" "${HOME}/.cache/ms-playwright" "${RUNNER_TEMP}" 2>/dev/null || true
 
       - name: Run headless tests
-        run: yarn test-headless --shard=${{ matrix.shard }}/3
+        run: DEBUG=pw:browser yarn test-headless --shard=${{ matrix.shard }}/3 --reporter=verbose
 
   release:
     name: Post GitHub release and publish to NPM
