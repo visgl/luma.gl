@@ -2,4 +2,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-export {GPUSphereWorld, type GPUSphereWorldProps} from './gpu-sphere-world';
+export {
+  GPUSphereWorld,
+  getSphereTriggerBodies,
+  type GPUSphereBodyState,
+  decodeGPUSphereWorldDiagnostics,
+  type GPUSphereWorldDiagnostics,
+  type GPUSphereWorldParameters,
+  type GPUSpherePlane,
+  type GPUSphereWorldProps
+} from './gpu-sphere-world';

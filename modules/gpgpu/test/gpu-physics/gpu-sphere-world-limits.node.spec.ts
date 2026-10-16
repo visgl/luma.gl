@@ -23,8 +23,11 @@ test('GPUSphereWorld rejects oversized storage before adding graph resources', (
   const graph = new GPUCommandGraph(device);
   const importBuffer = vi.spyOn(graph, 'importBuffer');
   try {
-    const world = new GPUSphereWorld({count: 2, positions, velocities});
-    expect(() => world.addToGraph(graph)).toThrow(/maxStorageBufferBindingSize/);
+    for (const maximumContacts of [1, 32]) {
+      const world = new GPUSphereWorld({count: 2, positions, velocities, maximumContacts});
+      expect(() => world.addToGraph(graph)).toThrow(/maxStorageBufferBindingSize/);
+      world.destroy();
+    }
     expect(importBuffer).not.toHaveBeenCalled();
   } finally {
     importBuffer.mockRestore();

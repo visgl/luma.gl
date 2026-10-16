@@ -141,7 +141,7 @@
     }
     
 
-    </style>
+    aside{max-height:calc(100vh - 58px);overflow-y:auto}#metrics{white-space:pre-line;line-height:1.5}select{float:right}#benchmark-status:empty{display:none}</style>
   </head>
   <body>
     <canvas id="spheres">
@@ -156,6 +156,7 @@
     </section>
     <aside>
     <h1>GPU Sphere World</h1>
+<label>Spheres <select id="body-count" aria-label="Sphere count"><option value="64">64</option><option value="1024">1,024</option><option value="10000">10,000</option></select></label>
     <p>Drag the scene to tilt the view and send the spheres rolling.</p>
     <button id="pause">Pause</button> <button id="reset">Reset</button>
     <div class="controls">
@@ -171,8 +172,9 @@
     </label>
     <button id="level">Level</button>
     </div>
-    <output id="status">Starting WebGPU…</output>
-    <p style="font-size:12px">Double-click the scene to level the plane. Floor friction brings rolling spheres to rest. Reset brings the spheres back.</p>
+    <button id="benchmark">Benchmark</button> <button id="download-report" disabled>Save report</button><p id="adapter-info"></p><p id="benchmark-status"></p><output id="metrics"></output>
+<output id="status">Starting WebGPU…</output>
+    <p style="font-size:12px">Double-click to level. The single band follows each sphere’s rotation. Friction and rolling resistance bring the balls to rest.</p>
     </aside>
     <script type="module" src="/main.ts">
     </script>
