@@ -38,12 +38,12 @@ keeps bundle and compatibility choices explicit.
 Install Core and the WebGPU adapter:
 
 ```sh
-yarn add @luma.gl/core @luma.gl/webgpu
+yarn add @luma.gl/core
 ```
 
 ```ts
 import {luma} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
 const device = await luma.createDevice({
   type: 'webgpu',
@@ -61,13 +61,13 @@ WebGPU-only capability.
 Register both adapters when the application has WebGPU and WebGL 2 implementations:
 
 ```sh
-yarn add @luma.gl/core @luma.gl/webgpu @luma.gl/webgl
+yarn add @luma.gl/core
 ```
 
 ```ts
 import {luma} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
 const device = await luma.createDevice({
   type: 'best-available',

@@ -1,7 +1,7 @@
 import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {WebGLDocsTabs} from '@site/src/components/docs/webgl-docs-tabs';
 
-# `@luma.gl/webgl/constants`
+# `@luma.gl/core/webgl-constants`
 
 <WebGLDocsTabs active="constants" />
 
@@ -10,14 +10,14 @@ import {WebGLDocsTabs} from '@site/src/components/docs/webgl-docs-tabs';
 </DocumentationBadges>
 
 :::info
-In luma.gl versions earlier than v9.3, these exports were provided by `@luma.gl/constants`. Use `@luma.gl/webgl/constants` going forward.
+In luma.gl versions earlier than v9.3, these exports were provided by `@luma.gl/core/webgl-constants`. Use `@luma.gl/core/webgl-constants` going forward.
 :::
 
 Use this entry point when you need the raw numeric WebGL enums that luma.gl still uses internally for WebGL interop.
 
 ```typescript
-import {GL} from '@luma.gl/webgl/constants';
-import type {GLParameters, GLSamplerParameters} from '@luma.gl/webgl/constants';
+import {GL} from '@luma.gl/core/webgl-constants';
+import type {GLParameters, GLSamplerParameters} from '@luma.gl/core/webgl-constants';
 ```
 
 ## Exports

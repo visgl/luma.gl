@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {luma, Buffer} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPUSphereWorld,

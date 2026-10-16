@@ -81,8 +81,8 @@ This is based on the porting strategy used to port [deck.gl](https://deck.gl), w
 
 ### Step 1: Update Imports
 
-- Change imports from `@luma.gl/gltools` to `@luma.gl/webgl`.
-- Change imports from `@luma.gl/core` to `@luma.gl/webgl`.
+- Change imports from `@luma.gl/gltools` to `@luma.gl/core/webgl`.
+- Change imports from `@luma.gl/core` to `@luma.gl/core/webgl`.
 
 ### Step 2: Replace WebGLRenderingContext with Device
 
@@ -99,7 +99,7 @@ be a messy part of WebGL applications.
 
 Recommended changes:
 
-- Gradually reduce the number of imports `@luma.gl/constants` and start adopting string constants.
+- Gradually reduce the number of imports `@luma.gl/core/webgl-constants` and start adopting string constants.
 
 ## Upgrading GPU Parameters
 
@@ -127,7 +127,7 @@ This page primarily contains a reference list of API changes. To facilitate port
 
 Going forward, luma.gl will focus on leveraging the capabilities WebGPU, while maintaining a high-quality, compatible WebGL2 backend. To accelerate this roadmap, luma.gl v9 is dropping WebGL 1 support.
 
-- **WebGL1** is no longer supported. The `@luma.gl/webgl` backend now always creates a **WebGL2 context**.
+- **WebGL1** is no longer supported. The `@luma.gl/core/webgl` backend now always creates a **WebGL2 context**.
 - **GLSL 1.00** is no longer supported. GLSL shaders need to be ported to **GLSL 3.00**.
 - **headless-gl** integration for Node.js is no longer supported (as it only supported WebGL 1).
 ### Non-API changes
@@ -142,26 +142,26 @@ luma.gl v9 upgrades tooling and packaging to latest JavaScript ecosystem standar
 | **Module**           | v8 Description                                  | v9 Replacement                                                                                                                    |
 | -------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `@luma.gl/core`      | The core module was re-exporting other modules. | Replace direct use of WebGL classes with `@luma.gl/core` device API. import directly from `@luma.gl/shadertools`.                 |
-| `@luma.gl/webgl`     | Exported WebGL classes meant for direct usage.  | Now exports the WebGL backend for the `@luma.gl/core` module. `@luma.gl/webgl-legacy` now offers the legacy luma.gl v8 WebGL API. |
-| `@luma.gl/constants` | Exported numeric OpenGL constants.              | Do not use. The luma.gl v9 API uses strictly typed WebGPU-style strings instead of numeric constants.                             |
-| `@luma.gl/gltools`   | Contained WebGL context functionality.          | Removed. WebGL context is now handled by the  `@luma.gl/webgl` `WebGLDevice` and  `@luma.gl/core` `CanvasContext` classes.        |
+| `@luma.gl/core/webgl`     | Exported WebGL classes meant for direct usage.  | Now exports the WebGL backend for the `@luma.gl/core` module. `@luma.gl/webgl-legacy` now offers the legacy luma.gl v8 WebGL API. |
+| `@luma.gl/core/webgl-constants` | Exported numeric OpenGL constants.              | Do not use. The luma.gl v9 API uses strictly typed WebGPU-style strings instead of numeric constants.                             |
+| `@luma.gl/gltools`   | Contained WebGL context functionality.          | Removed. WebGL context is now handled by the  `@luma.gl/core/webgl` `WebGLDevice` and  `@luma.gl/core` `CanvasContext` classes.        |
 
 ## Core Modules
 
 **`@luma.gl/core`**
 
 - The core module is no longer an umbrella module that simply re-exports symbols from other modules.
-- It now provides the abstract luma.gl `Device` API (for which `@luma.gl/webgpu` and `@luma.gl/webgl` provide backends).
+- It now provides the abstract luma.gl `Device` API (for which `@luma.gl/core/webgpu` and `@luma.gl/core/webgl` provide backends).
 
 **`@luma.gl/engine`**
 
 - The engine module is largely unchanged in that it provides the same classes as before.
 
-**`@luma.gl/webgl`**
+**`@luma.gl/core/webgl`**
 
 - While the webgl module still contains the WebGL 2 classes, these classes can no longer be imported directly. Instead the application should use `Device` create methods (`device.createBuffer()`, `device.createTexture()` etc to create these objects in a portable way).
 
-**`@luma.gl/constants`** (INTERNAL)
+**`@luma.gl/core/webgl-constants`** (INTERNAL)
 
 - The constant module remains but is now considered an internal luma.gl module, and is no longer intended to be imported by applications.
 - In the external API, all WebGL-style numeric constants (`GL.` constants) have been replaced with strictly typed WebGPU style string constants.
@@ -195,7 +195,7 @@ The debug module has been removed. Debug functionality is now built-in (and dyna
 | Methods                         |
 | `animationLoop.isContextLost()` | `device.lost`, `device.isLost()`         |                                                                          |
 
-### `luma.gl/core` / `@luma.gl/webgl`
+### `luma.gl/core` / `@luma.gl/core/webgl`
 
 The core module was re-exporting the webgl classes.
 
@@ -240,11 +240,11 @@ The v8 luma.gl API was designed to allow apps to work directly with the `WebGLRe
 | `hasFeature(gl, ...)`              | `device.features.has(...)`            | See feature constant mapping below                             |
 
 
-### `@luma.gl/constants`
+### `@luma.gl/core/webgl-constants`
 
 | v8 Prop or Method                   | v9 Replacement                        | Comment                                                             |
 | ----------------------------------- | ------------------------------------- | ------------------------------------------------------------------- |
-| `import GL from @luma.gl/constants` | `import {GL} from @luma.gl/constants` | Changed to use a *named export* ( => ) for ES module compatibility. |
+| `import GL from @luma.gl/core/webgl-constants` | `import {GL} from @luma.gl/core/webgl-constants` | Changed to use a *named export* ( => ) for ES module compatibility. |
 
 ### `@luma.gl/debug`**
 

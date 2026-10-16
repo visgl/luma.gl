@@ -3,7 +3,7 @@
 
 import {expect, test, vi} from 'vitest';
 import {luma, Buffer, Texture} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {WebGPURenderer, RenderTarget, UnsignedByteType, LinearSRGBColorSpace} from 'three/webgpu';
 import {createObjectScene} from '../../../examples/experimental/three/object-scene';
 import {MixedObjectRenderer} from '../../../examples/experimental/three/mixed-object-renderer';

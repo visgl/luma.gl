@@ -4,8 +4,8 @@
 
 import {luma, type Device} from '@luma.gl/core';
 import {cleanEvaluate, type GPUDataEvaluator} from '@luma.gl/gpgpu';
-import {webgl2Adapter} from '@luma.gl/webgl';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {makeShowcaseData} from './arrow-data';
 import {evaluateExpression} from './expression';
 import {

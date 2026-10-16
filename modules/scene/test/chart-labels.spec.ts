@@ -4,7 +4,7 @@
 import {Buffer, Texture} from '@luma.gl/core';
 import {DepthTextureCopy} from '@luma.gl/experimental';
 import {ANARIDevice} from '@luma.gl/scene';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {expect, it, vi} from 'vitest';
 import {makeChartMotionScene} from '../../../examples/showcase/scene/chart-baseline';
 import {ChartLabels, getChartLabelPositions} from '../../../examples/showcase/scene/chart-labels';

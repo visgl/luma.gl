@@ -4,7 +4,7 @@
 import {type DeckProps, Viewport} from '@deck.gl/core';
 import {HostDrivenDeck, ThreeCameraView, type ThreeCameraViewState} from './host-driven-deck';
 import {luma, log, type Device} from '@luma.gl/core';
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 import {Matrix4, Vector3, WebGPUCoordinateSystem, type Camera, type Vector3Like} from 'three';
 
 /** The overlay only reads public canvas and pixel-ratio state from the host renderer. */

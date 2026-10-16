@@ -16,7 +16,7 @@ luma.gl applications with a complete GPU API.
 The `@luma.gl/core` module defines abstract API interfaces such as `Device`, `Buffer` etc and is not usable on its own. 
 
 One or more GPU backend modules must be imported from a corresponding 
-GPU API backend module (`@luma.gl/webgl` and/or `@luma.gl/webgpu`) and then registered with luma.gl.
+GPU API backend module (`@luma.gl/core/webgl` and/or `@luma.gl/core/webgpu`) and then registered with luma.gl.
 
 ## Usage
 
@@ -24,7 +24,7 @@ Create a WebGL 2 context (throws if WebGL2 not supported)
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
 const webgpuDevice = luma.createDevice({type: 'webgl', adapters: [webgl2Adapter], createCanvasContext: true});
 ```
@@ -43,7 +43,7 @@ Register the WebGL backend, then create a WebGL2 context, auto creating a canvas
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 luma.registerAdapters([webgl2Adapter]);
 const webglDevice = luma.createDevice({type: 'webgl', createCanvasContext: {canvas: ...}});
 ```
@@ -54,8 +54,8 @@ that can work in both WebGL and WebGPU environments
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import {webgl2Adapter} from '@luma.gl/webgl';
-import {webgpuDevice} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
+import {webgpuDevice} from '@luma.gl/core/webgl';
 luma.registerAdapters([webgl2Adapter, webgpuDevice]);
 const device = luma.createDevice({type: 'best-available', createCanvasContext: {canvas: ...}});
 ```
@@ -66,15 +66,15 @@ Install device modules and register adapters to access backends
 
 ```sh
 yarn add @luma.gl/core
-yarn add @luma.gl/webgl
-yarn add @luma.gl/webgpu
+yarn add @luma.gl/core
+yarn add @luma.gl/core
 ```
 
 To create a WebGPU device:
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
 luma.registerAdapters([webgpuAdapter]);
 const device = await luma.createDevice({type: 'webgpu', createCanvasContext: ...});
@@ -84,8 +84,8 @@ Pre-register devices
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import {webgl2Adapter} from '@luma.gl/webgl';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
 luma.registerAdapters([webgl2Adapter, webgpuAdapter]);
 const webgpuDevice = luma.createDevice({type: 'best-available', createCanvasContext: ...});

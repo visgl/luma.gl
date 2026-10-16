@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {luma, type Device} from '@luma.gl/core';
-import {webgpuAdapter, WebGPUDevice} from '@luma.gl/webgpu';
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgpuAdapter, WebGPUDevice} from '@luma.gl/core/webgpu';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 import {LumaRenderer} from '@luma.gl/three/backend';
 import {WebGPURenderer, UnsignedByteType, HalfFloatType, type Renderer} from 'three/webgpu';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';

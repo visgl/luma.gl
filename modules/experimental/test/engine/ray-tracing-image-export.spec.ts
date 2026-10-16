@@ -8,7 +8,7 @@ import {
   RayTracingSceneRenderer,
   type RayTracingSceneRenderOptions
 } from '@luma.gl/experimental';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {Matrix4} from '@math.gl/core';
 import {expect, it, vi} from 'vitest';
 

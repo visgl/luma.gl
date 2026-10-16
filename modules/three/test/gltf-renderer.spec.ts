@@ -3,8 +3,8 @@
 
 import {expect, test} from 'vitest';
 import {luma} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 import {WebGPURenderer, RenderTarget, UnsignedByteType, LinearSRGBColorSpace} from 'three/webgpu';
 import {LumaRenderer} from '../src';
 import {createGLTFScene} from '../../../examples/experimental/three/gltf-scene';

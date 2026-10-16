@@ -8,11 +8,11 @@ import {BUNDLE_SIZE_FIXTURES} from '../test/size/bundle-size.config.mjs';
 
 const SOURCE_ENTRIES = {
   '@luma.gl/core': 'modules/core/src/index.ts',
-  '@luma.gl/webgl': 'modules/webgl/src/index.ts',
-  '@luma.gl/webgpu': 'modules/webgpu/src/index.ts'
+  '@luma.gl/core/webgl': 'modules/core/src/webgl/index.ts',
+  '@luma.gl/core/webgpu': 'modules/core/src/webgpu/index.ts'
 };
 
-const SOURCE_PACKAGE_PATTERN = /^@luma\.gl\/(core|webgl|webgpu)$/;
+const SOURCE_PACKAGE_PATTERN = /^@luma\.gl\/core(?:\/(?:webgl|webgpu))?$/;
 const BYTE_FORMATTER = new Intl.NumberFormat('en-US');
 
 const outputDirectory = parseOutputDirectory(process.argv.slice(2));

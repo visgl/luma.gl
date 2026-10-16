@@ -160,7 +160,7 @@ Target Release Date: Q3, 2026
 - **Progressive RAD selection** - `selectView()` selects a fresh complete cut; `refineView()` publishes coherent intermediate replacements while reprioritizing retained detail. Generic CPU-only residency and hierarchy data support worker selection with bounded page demand.
 - **Shared-pass splat rendering** - `GPUPagedSplatRenderer.prepare()` encodes compute work before a host pass, and `draw()` presents inside it without clearing, ending, or submitting the borrowed pass.
 
-**@luma.gl/webgpu**
+**@luma.gl/core/webgpu**
 
 - **Attach to application-created `GPUDevice`s** - `luma.attachDevice(gpuDevice, {adapters: [webgpuAdapter]})` and `webgpuAdapter.attach(gpuDevice)` wrap an existing WebGPU device, so an application and deck.gl can share one device with the application's requested limits and features. `device.destroy()` leaves the `GPUDevice` usable; the application destroys it.
 
@@ -376,9 +376,9 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 - **HTML-in-Canvas feature detection** - `device.features.has('html-in-canvas')` and `isHTMLInCanvasSupported()` report whether the active browser and backend expose the experimental DOM-to-texture rasterization path. The high-level `HTMLTexture` wrapper is available from `@luma.gl/experimental`.
 - **GPU data and buffer-layout utilities** - New exported helpers decode GPU data types, select native or emulated Float16 arrays, and resolve logical attributes over shared or composite buffer layouts.
 
-**@luma.gl/webgl**
+**@luma.gl/core/webgl**
 
-- **Optional WebGL debugging** - WebGLDeveloperTools and Spector integration are registered through `@luma.gl/webgl/debug`, keeping debug-only code out of normal adapter application bundles.
+- **Optional WebGL debugging** - WebGLDeveloperTools and Spector integration are registered through `@luma.gl/core/webgl/debug`, keeping debug-only code out of normal adapter application bundles.
 
 **@luma.gl/engine**
 
@@ -394,7 +394,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 - **Model layout updates** - `Model.setBufferLayout()` is idempotent, and explicit WGSL attribute layouts are merged with inferred bindings to support shader metadata without manually declaring uniform bindings.
 - **`ShaderInputs.addModules()`** - `ShaderInputs` can register shader modules and dependencies after construction, and it can carry deferred texture and buffer bindings until draw time.
 
-**@luma.gl/webgpu**
+**@luma.gl/core/webgpu**
 
 - **Lightweight WGSL interface scanning** - `getShaderLayoutFromWGSL()` recognizes vertex inputs, buffer bindings, comparison and named depth samplers, storage textures, and external textures without shipping the full `wgsl_reflect` parser in the default WebGPU bundle.
 - **WGSL external textures** - Scanned `texture_external` declarations produce external-texture bindings for native video sampling.
@@ -461,12 +461,12 @@ Release Date: March 31, 2026
 - **Compressed mip uploads** are now validated and uploaded through `DynamicTexture`, including block-size-aware mip truncation.
 - **Mip-level format metadata** now accepts both `textureFormat` and `format` on texture data objects during the transition to loaders.gl `TextureLevel` naming.
 
-**@luma.gl/webgpu**
+**@luma.gl/core/webgpu**
 
 - **compressed texture** support (but note that WebGPU is stricter than WebGL and requires block-aligned textures).
 - **texture readback** improvements
 
-**@luma.gl/webgl**
+**@luma.gl/core/webgl**
 
 - **RenderPipeline optimization** - Compatible WebGL render pipelines now share linked `WebGLProgram`s, reducing pipeline creation overhead while preserving per-pipeline defaults.
 
@@ -567,7 +567,7 @@ Enhanced WebGPU support.
 
 - [`Adapter`](/docs/api-reference/core/adapter)
   - New class for singleton objects representing pluggable GPU backends.
-  - Singleton `Adapter` objects are exported by the `@luma.gl/webgpu` and `@luma.gl/webgl` modules.
+  - Singleton `Adapter` objects are exported by the `@luma.gl/core/webgpu` and `@luma.gl/core/webgl` modules.
 - [`luma`](/docs/api-reference/core/luma)
   - Now relies on `Adapter` instances to define which GPU backends are available.
   - Adapter can be supplied during device creation, avoiding the need for global registration of GPU backends.
@@ -610,7 +610,7 @@ Enhanced WebGPU support.
 - `getShaderModuleUniforms(module: ShaderModule, ...)` New function
 - `getShaderModuleDependencies(module: ShaderModule)` New function
 
-**@luma.gl/webgl**
+**@luma.gl/core/webgl**
 
 - `webglAdapter`
   - New object representing the WebGL backend
@@ -621,7 +621,7 @@ Enhanced WebGPU support.
 - `RenderPass`
   - Now supports framebuffers with multiple color attachments.
 
-**@luma.gl/webgpu**
+**@luma.gl/core/webgpu**
 
 - `webgpuAdapter` New object representing the WebGPU backend
 - Numerous under-the-hood improvements and bug fixes
@@ -641,8 +641,8 @@ luma.gl v9 is a major release that adds experimental WebGPU support to the luma.
 The biggest change is that the core API is now portable (no longer WebGL-specific), and plug-in backends are provided for WebGL 2 and WebGPU:
 
 - **Portable GPU API**: `@luma.gl/core` now provides a portable GPU resource management API.
-- **WebGL bindings**: `@luma.gl/webgl` now provides a WebGL backend for the core API.
-- **WebGPU bindings**: `@luma.gl/webgpu` provides a new experimental WebGPU backend for the core API.
+- **WebGL bindings**: `@luma.gl/core/webgl` now provides a WebGL backend for the core API.
+- **WebGPU bindings**: `@luma.gl/core/webgpu` provides a new experimental WebGPU backend for the core API.
 
 ### WebGL Support
 
@@ -662,8 +662,8 @@ On the upside this means that all features requiring WebGL 2 are now available a
 | **`@luma.gl/engine`**      | Light API updates | Classic luma.gl engine classes ()`Model`, `AnimationLoop` etc), which work portably on both WebGPU and WebGL 2. |
 | **`@luma.gl/gltf`**        | Renamed module    | New module that exports the glTF classes (moved from `@luma.gl/experimental`).                                  |
 | **`@luma.gl/shadertools`** | Light API updates | The shader assembler API and the shader module library.                                                         |
-| **`@luma.gl/webgl`**       | WebGL backend     | Optional "GPU backend module". Importing this module enables the application to create WebGL 2 `Device`s.       |
-| **`@luma.gl/webgpu`**      | WebGPU backend    | Experimental "GPU backend module". Importing this module enables the application to create WebGPU `Device`s.    |
+| **`@luma.gl/core/webgl`**       | WebGL backend     | Optional "GPU backend module". Importing this module enables the application to create WebGL 2 `Device`s.       |
+| **`@luma.gl/core/webgpu`**      | WebGPU backend    | Experimental "GPU backend module". Importing this module enables the application to create WebGPU `Device`s.    |
 
 ### General improvements
 
@@ -697,7 +697,7 @@ On the upside this means that all features requiring WebGL 2 are now available a
 - New `CompilerMessage` type and `formatCompilerLog` function for portable shader log handling.
 - Shader assembly now supports WGSL and single shader source (compute or single vertex+fragment WGSL shaders)
 
-**`@luma.gl/webgl`**
+**`@luma.gl/core/webgl`**
 
 - The new bindings API now supports WebGL 2 Uniform Buffers.
 

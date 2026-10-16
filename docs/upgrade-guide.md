@@ -12,6 +12,22 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ## Upgrading to v10.0
 
+### Device backend package consolidation
+
+`@luma.gl/webgl`, `@luma.gl/webgpu`, and `@luma.gl/constants` have been removed.
+Remove them from application dependencies and import their APIs from `@luma.gl/core`.
+Backend entry points are available at `@luma.gl/core/webgl` and `@luma.gl/core/webgpu`.
+Import WebGL constants and types from `@luma.gl/core/webgl-constants`, and optional
+debugging helpers from `@luma.gl/core/webgl/debug`.
+
+```typescript
+import {luma} from '@luma.gl/core';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
+import {GL} from '@luma.gl/core/webgl-constants';
+```
+
+
 ### Render pass draw offsets and counts
 
 Indexed WebGL draws now use `firstIndex` in index elements. Replace uses of
@@ -63,7 +79,7 @@ See [GPUFFT2D](./api-reference/experimental/gpu-core/gpu-fft2d) for the migratio
   `CompositeShaderPassComputeOptimization`. Effect factories and values likewise replace their
   `ShaderPassPipeline` suffix with `CompositeShaderPass`.
 
-**@luma.gl/webgpu**
+**@luma.gl/core/webgpu**
 
 - `WebGPUDevice.adapter` is now typed `GPUAdapter | null`. It is `null` for devices wrapped with `webgpuAdapter.attach()` / `luma.attachDevice()`, because a `GPUDevice` does not reference its `GPUAdapter`. Devices from `luma.createDevice()` still have an adapter; TypeScript code that reads `device.adapter` needs a null check or non-null assertion. Use `device.adapterInfo` for adapter metadata.
 
@@ -89,11 +105,11 @@ See [GPUFFT2D](./api-reference/experimental/gpu-core/gpu-fft2d) for the migratio
 - `Model.predraw(commandEncoder)` now requires an explicit command encoder. Call it with the encoder that will be submitted when ordered pre-draw uploads must be shared across multiple draws or viewports. Normal `Model.draw(renderPass)` calls continue to perform their own pre-draw work.
 - `makeGPUGeometry()` now interleaves CPU geometry attributes into a single vertex buffer by default. Callers that require separate attribute buffers should create those buffers and construct `GPUGeometry` explicitly with the corresponding `bufferLayout`.
 
-**@luma.gl/webgl**
+**@luma.gl/core/webgl**
 
-- WebGLDeveloperTools and Spector integration now require `import '@luma.gl/webgl/debug'` before enabling `debugWebGL` or `debugSpectorJS`. This keeps debug-only code and the full GL enum out of normal adapter application bundles.
+- WebGLDeveloperTools and Spector integration now require `import '@luma.gl/core/webgl/debug'` before enabling `debugWebGL` or `debugSpectorJS`. This keeps debug-only code and the full GL enum out of normal adapter application bundles.
 
-**@luma.gl/webgpu**
+**@luma.gl/core/webgpu**
 
 - `getShaderLayoutFromWGSL()` now uses lightweight interface scanning and returns `null` when WGSL is ambiguous or outside the supported subset. Raw render and compute pipelines must provide an explicit `shaderLayout` in that case. Uniform-buffer member reflection is no longer included in the returned layout.
 
@@ -203,7 +219,7 @@ v9.1 continues to build out WebGPU support. Some additional deprecations and bre
 
 New module. All postprocessing effects that were previously in `@luma.gl/shadertools` are now exported from `@luma.gl/effects`.
 
-**@luma.gl/webgl**
+**@luma.gl/core/webgl**
 
 - `WebGLDeviceContext` - Note that luma.gl v9.1 and onwards set `DeviceProps.webgl.preserveDrawingBuffers` to `true` by default. This can be disabled for some (potential) memory savings and a (potential) minor performance boost on resource limited devices, such as mobile phones, at the cost of not being able to take screenshots or rendering to the screen without clearing it.
 

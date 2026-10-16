@@ -9,10 +9,19 @@ import {
   DocumentationBadges,
 } from "@site/src/components/docs/documentation-badges";
 
+import {DocumentationModuleCards} from "@site/src/components/docs/module-cards";
+
 # Introduction
 luma.gl is a TypeScript toolkit for high-performance GPU rendering and compute on the web.
 It provides one application-facing API with pluggable WebGPU and WebGL2 backends,
 plus higher-level building blocks for models, animation, shader composition, and GPU data processing.
+
+## Modules
+
+Start with `@luma.gl/core` and `@luma.gl/engine`, then add the modules your application needs.
+WebGPU and WebGL2 adapters are included in core and imported through their own entry points.
+
+<DocumentationModuleCards />
 
 ## Why luma.gl?
 
@@ -31,7 +40,7 @@ See [Design philosophy](/docs/api-guide/background/api-design) for the design go
 ### 1. Core API
 
 The Core API exposes low level GPU resources such as devices, buffers, textures, shaders, bindings, pipelines, and
-render or compute passes. `@luma.gl/webgpu` and `@luma.gl/webgl` provide the concrete
+render or compute passes. `@luma.gl/core/webgpu` and `@luma.gl/core/webgl` provide the concrete
 backends.
 
 ### 2. Engine API

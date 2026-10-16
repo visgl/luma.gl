@@ -5,7 +5,7 @@ import {expect, test, vi} from 'vitest';
 import {COORDINATE_SYSTEM} from '@deck.gl/core';
 import {ScatterplotLayer, PathLayer} from '@deck.gl/layers';
 import {luma} from '@luma.gl/core';
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 import {AnimationLoop} from '@luma.gl/engine';
 import {
   BoxGeometry,

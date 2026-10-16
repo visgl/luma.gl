@@ -46,7 +46,7 @@ Other in-repository workspaces can depend on the private package through:
 }
 ```
 
-At least one luma.gl backend is required. Use `@luma.gl/webgpu` for modern browsers and optional HDR presentation, and add `@luma.gl/webgl` when a WebGL 2 fallback is important.
+At least one luma.gl backend is required. Use `@luma.gl/core/webgpu` for modern browsers and optional HDR presentation, and add `@luma.gl/core/webgl` when a WebGL 2 fallback is important.
 
 ## Create a graphics device
 
@@ -55,8 +55,8 @@ Start with an ordinary luma.gl `Device` and wrap it in `ANARIDevice`:
 ```ts
 import {ANARIDevice} from '@luma.gl/scene';
 import {luma} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
 const canvas = document.querySelector('canvas');
 
@@ -83,8 +83,8 @@ The following complete scene adds a metallic sphere, floor, directional light, a
 ```ts
 import {ANARIDevice} from '@luma.gl/scene';
 import {luma} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 import {Matrix4} from '@math.gl/core';
 
 const canvas = document.querySelector('canvas');
@@ -605,8 +605,8 @@ HDR requires all three pieces:
 
 ```ts
 import {luma} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
 const supportsHighDynamicRange = window.matchMedia('(dynamic-range: high)').matches;
 

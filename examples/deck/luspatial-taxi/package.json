@@ -15,7 +15,6 @@
     "@luma.gl/engine": "10.0.0-alpha.4",
     "@luma.gl/experimental": "10.0.0-alpha.4",
     "@luma.gl/shadertools": "10.0.0-alpha.4",
-    "@luma.gl/webgpu": "10.0.0-alpha.4",
     "maplibre-gl": "^5.20.0"
   },
   "devDependencies": {

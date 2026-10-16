@@ -48,7 +48,7 @@ and HDR presentation.
 The core luma.gl API is designed to expose the capabilities of the GPU and shader programming to web applications.
 It is a portable API, in the sense that the `@luma.gl/core` module provides an abstract API for writing application code
 that works with both WebGPU and/or WebGL depending on which adapter modules are installed
-(`@luma.gl/webgl` and/or `@luma.gl/webgpu`).
+(`@luma.gl/core/webgl` and/or `@luma.gl/core/webgpu`).
 
 Core responsibilities for any GPU library are to enable applications to perform:
 

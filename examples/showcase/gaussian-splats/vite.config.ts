@@ -12,9 +12,9 @@ const alias = {
   '@luma.gl/shadertools': `${__dirname}/../../../modules/shadertools/src`,
   '@luma.gl/splats': `${__dirname}/../../../modules/splats/src`,
   '@luma.gl/gpgpu': `${__dirname}/../../../modules/gpgpu/src`,
-  '@luma.gl/webgl/constants': `${__dirname}/../../../modules/webgl/src/constants`,
-  '@luma.gl/webgl': `${__dirname}/../../../modules/webgl/src`,
-  '@luma.gl/webgpu': `${__dirname}/../../../modules/webgpu/src`
+  '@luma.gl/core/webgl-constants': `${__dirname}/../../../modules/core/src/webgl/constants`,
+  '@luma.gl/core/webgl': `${__dirname}/../../../modules/core/src/webgl`,
+  '@luma.gl/core/webgpu': `${__dirname}/../../../modules/core/src/webgpu`
 };
 
 export default defineConfig({

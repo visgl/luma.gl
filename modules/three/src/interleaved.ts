@@ -3,7 +3,7 @@
 
 import {type DeckProps} from '@deck.gl/core';
 import {luma, log, assert} from '@luma.gl/core';
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 import {type Camera, type Vector3Like, Vector2, Vector4, WebGLRenderer} from 'three';
 import {HostDrivenDeck, ThreeCameraView} from './host-driven-deck';
 import {makeDeckViewportFromThreeCamera} from './overlay';

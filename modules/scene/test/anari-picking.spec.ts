@@ -3,7 +3,7 @@
 
 import {Buffer, type Texture} from '@luma.gl/core';
 import {ANARIDevice} from '@luma.gl/scene';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {Matrix4} from '@math.gl/core';
 import {expect, it, vi} from 'vitest';
 

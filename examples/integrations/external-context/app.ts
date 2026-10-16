@@ -5,8 +5,8 @@ import {Matrix4} from '@math.gl/core';
 import {UniformStore} from '@luma.gl/core';
 import type {Buffer} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import type {WebGLDevice} from '@luma.gl/webgl';
-import {webgl2Adapter} from '@luma.gl/webgl';
+import type {WebGLDevice} from '@luma.gl/core/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
 const {POSITIONS, COLORS, WGSL_SHADER, VS_GLSL, FS_GLSL} = getShaderSources();
 

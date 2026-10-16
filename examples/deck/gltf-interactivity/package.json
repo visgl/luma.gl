@@ -16,9 +16,7 @@
     "@loaders.gl/gltf": "~5.0.0-alpha.11",
     "@luma.gl/core": "10.0.0-alpha.4",
     "@luma.gl/engine": "10.0.0-alpha.4",
-    "@luma.gl/gltf": "10.0.0-alpha.4",
-    "@luma.gl/webgl": "10.0.0-alpha.4",
-    "@luma.gl/webgpu": "10.0.0-alpha.4"
+    "@luma.gl/gltf": "10.0.0-alpha.4"
   },
   "devDependencies": {
     "typescript": "^6.0.3",

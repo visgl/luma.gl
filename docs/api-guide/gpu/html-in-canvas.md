@@ -83,7 +83,7 @@ texture is placed in a scene, synchronized with picking, or composed into UI pan
 That split keeps the portable GPU API focused:
 
 - `@luma.gl/core` exposes capability detection through `DeviceFeature`.
-- `@luma.gl/webgl` and `@luma.gl/webgpu` decide whether the active backend has the required
+- `@luma.gl/core/webgl` and `@luma.gl/core/webgpu` decide whether the active backend has the required
   DOM-to-texture copy method.
 - `@luma.gl/experimental` owns the `HTMLTexture` copied texture binding source while the browser
   API is still experimental.

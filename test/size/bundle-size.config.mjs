@@ -30,16 +30,16 @@ export const BUNDLE_SIZE_FIXTURES = [
   },
   {
     name: 'webgl',
-    label: '`@luma.gl/webgl` backend',
-    entry: 'modules/webgl/src/index.ts',
+    label: '`@luma.gl/core/webgl` backend',
+    entry: 'modules/core/src/webgl/index.ts',
     external: ['@luma.gl/core'],
     maximum: {minified: 140_000, gzip: 39_500, brotli: 34_000},
     targetGzip: 30_000
   },
   {
     name: 'webgpu',
-    label: '`@luma.gl/webgpu` backend',
-    entry: 'modules/webgpu/src/index.ts',
+    label: '`@luma.gl/core/webgpu` backend',
+    entry: 'modules/core/src/webgpu/index.ts',
     external: ['@luma.gl/core'],
     maximum: {minified: 280_000, gzip: 58_000, brotli: 49_000},
     targetGzip: 22_000

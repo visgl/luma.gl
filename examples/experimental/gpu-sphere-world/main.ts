@@ -4,7 +4,7 @@
 
 import {luma, Buffer, type Parameters} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {Matrix4} from '@math.gl/core';
 import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {GPUSphereWorld, decodeGPUSphereWorldDiagnostics} from '@luma.gl/gpgpu/gpu-physics';

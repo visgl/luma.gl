@@ -15,25 +15,25 @@ Return to the [capabilities overview](/docs/capabilities) for GPU data and compu
 | Feature | Status | Backend | Package | Details |
 | --- | --- | --- | --- | --- |
 | Unified GPU device API | Available | WebGPU + WebGL2 | `@luma.gl/core` | Access adapters, devices, resources, commands, features, and limits through one model. |
-| Backend adapters | Available | WebGPU + WebGL2 | `@luma.gl/webgpu` and `@luma.gl/webgl` | Select the native WebGPU adapter or the WebGL2 compatibility adapter. |
+| Backend adapters | Available | WebGPU + WebGL2 | `@luma.gl/core/webgpu` and `@luma.gl/core/webgl` | Select the native WebGPU adapter or the WebGL2 compatibility adapter. |
 | Feature and limit discovery | Available | WebGPU + WebGL2 | `@luma.gl/core` | Inspect device capabilities before enabling optional functionality. |
 | GPU buffers | Available | WebGPU + WebGL2 | `@luma.gl/core` | Create vertex, index, uniform, and compatible readback buffers. |
-| GPU storage buffers | Available | WebGPU | `@luma.gl/webgpu` | Bind supported read-only or writable storage buffers to WebGPU shaders. |
+| GPU storage buffers | Available | WebGPU | `@luma.gl/core/webgpu` | Bind supported read-only or writable storage buffers to WebGPU shaders. |
 | Typed texture resources | Available | WebGPU + WebGL2 | `@luma.gl/core` | Allocate compatible 2D, array, cubemap, and three-dimensional texture resources. |
 | Texture views and samplers | Available | WebGPU + WebGL2 | `@luma.gl/core` | Describe texture views, filtering, wrapping, and supported anisotropic sampling. |
 | Compressed textures | Evolving | WebGPU + WebGL2 | `@luma.gl/core` | Use BC, ETC2, or ASTC formats when supported by the selected device. |
-| Native external textures | Available | WebGPU | `@luma.gl/webgpu` | Bind compatible browser-owned external image resources without a WebGL fallback. |
+| Native external textures | Available | WebGPU | `@luma.gl/core/webgpu` | Bind compatible browser-owned external image resources without a WebGL fallback. |
 | Video texture uploads | Available | WebGPU + WebGL2 | `@luma.gl/engine` | Update compatible GPU textures from supported browser video sources. |
 | Framebuffers and attachments | Available | WebGPU + WebGL2 | `@luma.gl/core` | Manage color, depth, stencil, and supported multiple-render-target attachments. |
 | Render pipelines | Available | WebGPU + WebGL2 | `@luma.gl/core` | Configure shader bindings, vertex layouts, depth, stencil, and blend state. |
-| Compute shaders and passes | Available | WebGPU | `@luma.gl/webgpu` | Encode compute pipelines, dispatches, and WebGPU storage-resource workflows. |
+| Compute shaders and passes | Available | WebGPU | `@luma.gl/core/webgpu` | Encode compute pipelines, dispatches, and WebGPU storage-resource workflows. |
 | Indexed and indirect draws | Evolving | WebGPU + WebGL2 | `@luma.gl/core` | Indexed drawing is portable; GPU-generated indirect drawing requires WebGPU. |
-| Render bundles | Evolving | WebGPU | `@luma.gl/webgpu` | Reuse compatible recorded render commands. |
-| Transform feedback | Available | WebGL2 | `@luma.gl/webgl` | Support established WebGL transform-feedback workflows. |
+| Render bundles | Evolving | WebGPU | `@luma.gl/core/webgpu` | Reuse compatible recorded render commands. |
+| Transform feedback | Available | WebGL2 | `@luma.gl/core/webgl` | Support established WebGL transform-feedback workflows. |
 | Occlusion and timing queries | Evolving | WebGPU + WebGL2 | `@luma.gl/core` | Use supported query types only when the selected backend advertises them. |
-| Multisample resolve | Available | WebGPU | `@luma.gl/webgpu` | Resolve supported multisampled render attachments. |
+| Multisample resolve | Available | WebGPU | `@luma.gl/core/webgpu` | Resolve supported multisampled render attachments. |
 | Canvas sizing and pixel ratio | Available | WebGPU + WebGL2 | `@luma.gl/core` | Manage browser canvas configuration, resize, and high-DPI presentation. |
-| Extended color and HDR | Evolving | WebGPU | `@luma.gl/webgpu` | Present compatible floating-point or display-P3 output when browser and display support it. |
+| Extended color and HDR | Evolving | WebGPU | `@luma.gl/core/webgpu` | Present compatible floating-point or display-P3 output when browser and display support it. |
 
 ### Engine, geometry, and interaction
 

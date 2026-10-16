@@ -725,7 +725,7 @@
       },
       {
         "type": "category",
-        "label": "@luma.gl/constants",
+        "label": "@luma.gl/core/webgl-constants",
         "items": [
           "api-reference/constants/README"
         ]
@@ -984,7 +984,7 @@
       },
       {
         "type": "category",
-        "label": "@luma.gl/webgl",
+        "label": "@luma.gl/core/webgl",
         "items": [
           "api-reference/webgl/README",
           "api-reference/webgl/constants"
@@ -992,7 +992,7 @@
       },
       {
         "type": "category",
-        "label": "@luma.gl/webgpu",
+        "label": "@luma.gl/core/webgpu",
         "items": [
           "api-reference/webgpu/README",
           "api-reference/webgpu/optional-features"

@@ -19,9 +19,9 @@ higher-level engine or shader APIs. This configuration consists of:
 
 - [`@luma.gl/core`](/docs/api-reference/core), which defines the portable `Device` and resource
   APIs;
-- [`@luma.gl/webgpu`](/docs/api-reference/webgpu), which implements the portable subset using
+- [`@luma.gl/core/webgpu`](/docs/api-reference/webgpu), which implements the portable subset using
   WebGPU; and
-- [`@luma.gl/webgl`](/docs/api-reference/webgl), which implements the portable subset using WebGL
+- [`@luma.gl/core/webgl`](/docs/api-reference/webgl), which implements the portable subset using WebGL
   2.
 
 The backends share a common API where practical, but they do not have identical capabilities. For
@@ -31,8 +31,8 @@ For example, an application can prefer WebGPU and fall back to WebGL:
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import {webgl2Adapter} from '@luma.gl/webgl';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
 const device = await luma.createDevice({
   type: 'best-available',
@@ -42,7 +42,7 @@ const device = await luma.createDevice({
 ```
 
 Import only the adapter or adapters the application can use. A WebGPU-only application should not
-import `@luma.gl/webgl`, and a WebGL-only application should not import `@luma.gl/webgpu`.
+import `@luma.gl/core/webgl`, and a WebGL-only application should not import `@luma.gl/core/webgpu`.
 See [Installing](/docs/developer-guide/installing#a-minimal-install) for package setup and
 [WebGPU versus WebGL](/docs/api-guide/background/webgpu-vs-webgl) for backend selection guidance.
 
@@ -231,11 +231,11 @@ package specifiers:
 ```typescript
 async function loadAdapter(type: 'webgpu' | 'webgl') {
   if (type === 'webgpu') {
-    const {webgpuAdapter} = await import('@luma.gl/webgpu');
+    const {webgpuAdapter} = await import('@luma.gl/core/webgpu');
     return webgpuAdapter;
   }
 
-  const {webgl2Adapter} = await import('@luma.gl/webgl');
+  const {webgl2Adapter} = await import('@luma.gl/core/webgl');
   return webgl2Adapter;
 }
 ```

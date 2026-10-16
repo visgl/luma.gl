@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {arrayEqual} from '../../src/utils/array-equal';
+import {arrayEqual} from '../../src/api/utils/array-equal';
 
 it('arrayEqual compares small number arrays by value', () => {
   expect(
