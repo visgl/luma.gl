@@ -153,10 +153,14 @@ it('VideoTexture resolves native WebGPU external bindings from browser VideoFram
     return;
   }
 
-  const canvas = document.createElement('canvas');
-  canvas.width = 1;
-  canvas.height = 1;
-  const frame = new VideoFrame(canvas, {timestamp: 1});
+  // Explicit pixel storage also exercises native import on software Vulkan adapters,
+  // without requiring a GPU-backed canvas image to cross graphics backends.
+  const frame = new VideoFrame(new Uint8Array([255, 0, 0, 255]), {
+    format: 'RGBA',
+    codedWidth: 1,
+    codedHeight: 1,
+    timestamp: 1
+  });
   const device = await getWebGPUTestDevice();
   const videoTexture = new VideoTexture(device, {source: frame});
 
