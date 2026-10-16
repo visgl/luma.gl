@@ -215,6 +215,47 @@ it('ShaderAssembler#hooks', () => {
   void 0;
 });
 
+it('ShaderAssembler#hooks preserves last-registration-wins behavior', () => {
+  const shaderAssembler = new GLSLShaderAssembler();
+  shaderAssembler.addShaderHook('vs:REPLACED_HOOK(inout vec4 position)', {
+    header: 'position.x = 1.0;\n'
+  });
+  shaderAssembler.addShaderHook('vs:REPLACED_HOOK(inout vec4 position)', {
+    header: 'position.x = 2.0;\n'
+  });
+
+  const assembled = shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs});
+
+  expect(assembled.vs).not.toContain('position.x = 1.0;');
+  expect(assembled.vs).toContain('position.x = 2.0;');
+  expect(assembled.vs.match(/void REPLACED_HOOK/g)).toHaveLength(1);
+  void 0;
+});
+
+it('ShaderAssembler#resetShaderHooks removes registered hooks', () => {
+  const shaderAssembler = new GLSLShaderAssembler();
+  shaderAssembler.addShaderHook('vs:RESET_HOOK(inout vec4 position)');
+  const inject = {'vs:RESET_HOOK': 'position.x += 1.0;'};
+
+  expect(shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs, inject}).vs).toContain(
+    'void RESET_HOOK'
+  );
+
+  shaderAssembler.resetShaderHooks();
+  expect(shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs}).vs).not.toContain(
+    'void RESET_HOOK'
+  );
+  expect(() => shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs, inject})).toThrow(
+    'Unknown shader hook vs:RESET_HOOK (registered: none)'
+  );
+
+  shaderAssembler.addShaderHook('vs:RESET_HOOK(inout vec4 position)');
+  expect(shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs, inject}).vs).toContain(
+    'position.x += 1.0;'
+  );
+  void 0;
+});
+
 it('ShaderAssembler#defaultModules', () => {
   const shaderAssembler = new GLSLShaderAssembler();
 
