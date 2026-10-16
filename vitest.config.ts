@@ -159,7 +159,17 @@ const browserExcludePatterns = [
 const launchArguments = [
   '--enable-unsafe-webgpu',
   '--ignore-gpu-blocklist',
-  ...(process.env.CI ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] : [])
+  // Use the same software Vulkan driver for WebGL, WebGPU, and presentation on Linux CI.
+  ...(process.env.CI && process.platform === 'linux'
+    ? [
+        '--use-angle=vulkan',
+        '--use-vulkan=swiftshader',
+        '--use-webgpu-adapter=swiftshader',
+        '--enable-features=Vulkan',
+        '--disable-vulkan-surface',
+        '--enable-unsafe-swiftshader'
+      ]
+    : [])
 ];
 
 const vitestConfig = getVitestConfig({
