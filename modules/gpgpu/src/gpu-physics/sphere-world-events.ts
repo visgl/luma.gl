@@ -99,10 +99,12 @@ export function getEventShader(capacity: number, triggers: readonly GPUSphereTri
     .map(
       (trigger, index) => `
   {
-   let center = vec3f(${trigger.center.map(value => `${Number(value).toFixed(9)}`).join(', ')});
+   let center = vec3f(${trigger.center.map(value => value.toExponential(8)).join(', ')});
    let delta = sphere.xyz - before.xyz;
-   let fraction = clamp(dot(center - before.xyz, delta) / max(dot(delta, delta), 0.0000001), 0.0, 1.0);
-   if(distance(before.xyz + delta * fraction, center) <= ${trigger.radius.toFixed(9)} ${trigger.capture ? '' : `&& distance(before.xyz, center) > ${trigger.radius.toFixed(9)}`}) {
+   let squaredTravel = dot(delta, delta);
+   var fraction = 0.0;
+   if(squaredTravel > 0.0) {fraction = clamp(dot(center - before.xyz, delta) / squaredTravel, 0.0, 1.0);}
+   if(distance(before.xyz + delta * fraction, center) <= ${trigger.radius.toExponential(8)} ${trigger.capture ? '' : `&& distance(before.xyz, center) > ${trigger.radius.toExponential(8)}`}) {
     emit(index | 0x800000u, 2u, ${index}u, sphere.xyz, 0.0);
     ${trigger.capture ? 'positions[index].w = -sphere.w; velocities[index] = vec4f(0.0, 0.0, 0.0, velocities[index].w);' : ''}
    }

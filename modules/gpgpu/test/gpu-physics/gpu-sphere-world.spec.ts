@@ -1166,3 +1166,24 @@ it('impact budget exhaustion remains visible in events after later healthy steps
     fixture.destroy();
   }
 });
+
+it('GPU triggers preserve small radii and short-segment crossings', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const center: [number, number, number] = [-1.23456789e-6, 0, 1];
+  const fixture = await makeWorld(device, [center[0] - 1e-6, 5e-11, 1, 1e-6], [0.0002, 0, 0, 1], {
+    maximumRadius: 1e-6,
+    timeStep: 0.01,
+    eventCapacity: 64,
+    triggers: [{center, radius: 1e-10, capture: true}]
+  });
+  try {
+    fixture.step();
+    expect((await fixture.world.readState())[0].enabled).toBe(false);
+    expect(
+      (await fixture.world.readEvents()).events.filter(event => event.kind === 'trigger')
+    ).toHaveLength(1);
+  } finally {
+    fixture.destroy();
+  }
+});
