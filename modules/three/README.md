@@ -419,6 +419,44 @@ Transmission, lazy PMREM, postprocessing and nested passes during
 the borrowed draw are unsupported. Native deck objects neither cast nor receive the
 Three shadow map. The basic `ThreeMeshLayer` remains a separate, smaller integration.
 
+### Sharing one adapter across scene layers
+
+Multiple `ThreeSceneLayer` instances can share a `ThreeSceneAdapter` and device.
+Give each scene its own camera and prepare **every scene** in `onBeforeRender`,
+before deck opens its pass. Synchronize each camera with its layer's viewport,
+coordinate origin and `modelMatrix` before preparation. Preparing a later scene
+preserves readiness of earlier scenes; each draw and pick synchronizes its own camera.
+
+```ts
+// onBeforeRender, with scenes already loaded and adapter initialized:
+for (const {scene, camera} of scenes) {
+  synchronizeThreeCamera(camera, viewport, WebGPUCoordinateSystem);
+  adapter.prepare(scene, camera);
+}
+const layers = scenes.map(({id, scene, camera, pickingObjects}) =>
+  new ThreeSceneLayer({id, adapter, scene, camera, pickable: true, pickingObjects})
+);
+```
+
+Layers share the caller's color/depth attachments while retaining independent picking
+registries and highlight state. The adapter owns and reuses uniform snapshots for each
+draw slot before submission, so later scene/camera updates cannot overwrite uniforms
+used by earlier draws, including across queued passes. This path uses the device's
+default command encoder; custom command encoders are outside this integration.
+Snapshots retain peak queued draw-slot capacity until disposal. Removing one layer does not dispose its scene or the
+shared adapter. Readiness does not keep removed scenes alive; the application still
+owns source resources and must dispose them when appropriate. Dispose the adapter
+only after all its layers have been removed. Calls are sequential, not reentrant.
+
+If preparation throws, the adapter rejects all later preparation and drawing,
+including scenes prepared successfully earlier. Three does not unwind its private
+render stack after every backend exception. The adapter closes/submits its owned
+preparation work and restores the previous render target, but its renderer must not
+be reused. Remove its layers, dispose the adapter and create a new adapter using the
+same borrowed source scenes and device. Never-prepared scenes are also rejected.
+Readiness is not automatic change tracking: prepare again after changing animation,
+textures, lights or shadow state, and request a deck redraw.
+
 ### Layer placement with `modelMatrix`
 
 `ThreeSceneLayer.modelMatrix` places the whole scene without editing its roots,

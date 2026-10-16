@@ -31,6 +31,10 @@ Target Release Date: Q3, 2026
 
 **Experimental Three.js integration**
 
+- **Shared prepared scenes** - Multiple `ThreeSceneLayer` instances can share one
+  adapter while retaining independent picking and highlighting. Readiness tracking does
+  not retain borrowed scenes; failed preparation requires disposing and recreating the adapter.
+
 - **Scene placement in deck.gl** - `ThreeSceneLayer.modelMatrix` supports affine placement
   in Cartesian coordinates and local Mercator meters without changing source transforms.
   Visible rendering, highlights, object IDs and surface depth picking share that placement.
@@ -46,6 +50,9 @@ Target Release Date: Q3, 2026
 - **Vertex buffer byte offsets** - `VertexArray.setBuffer()` accepts an optional `byteOffset`, so vertex data can start inside a shared buffer without changing the buffer layout or render pipeline.
 
 **@luma.gl/gpgpu**
+
+- **Experimental GPU sphere physics** - `@luma.gl/gpgpu/gpu-physics` adds grid-based bounded contacts, inverse-mass Jacobi solving, solid-sphere angular dynamics, friction, sleeping and live finite-plane/gravity settings. The standalone sphere-world sandbox renders quaternion-driven cue-ball bands and benchmarks up to 10,000 GPU-resident bodies with explicit capacity diagnostics.
+- **GPU pool prototype** - Sphere physics now supports linear/angular impulses, body teleport/wake/enable controls, multiple finite surfaces with individual materials, and explicit interaction snapshots. The standalone pool example adds aiming, power, cushions, six pockets, scratch recovery, and shot completion. Spin practice adds follow/draw setups, separate sliding/rolling/spinning resistance, and raised cushion contacts with speed-dependent restitution.
 
 - **Incremental GPU execution** - [`GPUIncrementalExecution`](/docs/api-reference/experimental/gpu-core/gpu-incremental-execution) caches explicitly versioned batch partials, preserves borrowed source storage, and submits only changed batch work plus the live merge. The GPU Data Analysis example shows streaming sums, histograms, grouped counts, and unsigned Top-K with reuse instrumentation.
 

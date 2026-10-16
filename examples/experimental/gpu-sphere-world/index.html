@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>GPU Sphere World</title>
+    <style>
+    html,body {
+      height:100%;
+      margin:0;
+      background:#101927;
+      color:#182436;
+      font:12px system-ui
+    }
+    canvas {
+      width:100%;
+      height:100%;
+      display:block
+    }
+    aside {
+      position:absolute;
+      top:16px;
+      left:16px;
+      width:210px;
+      padding:12px;
+      border-radius:12px;
+      background:#edf2f7ee;
+      border:1px solid #aebdcf
+    }
+    h1 {
+      font-size:18px;
+      margin:0 0 8px
+    }
+    p {
+      line-height:1.5
+    }
+    button {
+      padding:9px 14px;
+      border:1px solid #acb9c8;
+      border-radius:6px;
+      background:white;
+      color:#182436;
+      cursor:pointer
+    }
+    output {
+      display:block;
+      margin-top:10px;
+      font-size:12px
+    }
+    label {
+      display:block;
+      margin:10px 0
+    }
+    label span {
+      float:right;
+      font-variant-numeric:tabular-nums
+    }
+    input {
+      display:block;
+      width:100%;
+      margin:8px 0;
+      accent-color:#316cca
+    }
+    .controls {
+      margin-top:16px
+    }
+    .checkbox input {
+      display:inline;
+      width:auto;
+      margin-right:6px
+    }
+    canvas {
+      touch-action:none;
+      cursor:grab
+    }
+    canvas:active {
+      cursor:grabbing
+    }
+    .level-indicator {
+      position:absolute;
+      top:16px;
+      right:16px;
+      width:108px;
+      padding:12px;
+      background:#edf2f7f2;
+      border:1px solid #aebdcf;
+      border-radius:12px;
+      text-align:center;
+      pointer-events:none
+    }
+    .level-dial {
+      position:relative;
+      width:80px;
+      height:80px;
+      margin:8px auto;
+      border:1px solid #9cabbc;
+      border-radius:50%;
+      background:radial-gradient(circle,transparent 0 19px,#bdcbd755 20px 21px,transparent 22px),linear-gradient(transparent 49%,#9cabbc 49% 51%,transparent 51%),linear-gradient(90deg,transparent 49%,#9cabbc 49% 51%,transparent 51%);
+      overflow:hidden
+    }
+    .level-dial:before {
+      content:'';
+      position:absolute;
+      left:30px;
+      top:30px;
+      width:18px;
+      height:18px;
+      border:1px solid #42816c;
+      border-radius:50%;
+      background:#42816c18
+    }
+    .level-bubble {
+      position:absolute;
+      left:34px;
+      top:34px;
+      width:12px;
+      height:12px;
+      border-radius:50%;
+      background:#248065;
+      box-shadow:0 0 0 2px #fff,0 2px 5px #18243644
+    }
+    .level-indicator[data-level='false'] .level-bubble {
+      background:#b77719
+    }
+    .level-indicator strong {
+      font-size:14px;
+      font-variant-numeric:tabular-nums
+    }
+    .level-indicator small {
+      display:block;
+      margin-top:4px;
+      color:#526477
+    }
+    @media(max-width:600px) {
+      .level-indicator {
+      right:12px;
+      width:92px;
+      padding:8px
+    }
+    
+    }
+    
+
+    aside{max-height:calc(100vh - 58px);overflow-y:auto}#metrics{white-space:pre-line;line-height:1.5}select{float:right}#benchmark-status:empty{display:none}</style>
+  </head>
+  <body>
+    <canvas id="spheres">
+    </canvas>
+    <section class="level-indicator" id="level-indicator" data-level="true" aria-label="Platform level indicator">
+    <strong id="level-state">Level · 0°</strong>
+    <div class="level-dial" role="img" aria-label="Bubble centered: platform level" id="level-dial">
+    <span class="level-bubble" id="level-bubble">
+    </span>
+    </div>
+    <small>Centered = level</small>
+    </section>
+    <aside>
+    <h1>GPU Sphere World</h1>
+<label>Spheres <select id="body-count" aria-label="Sphere count"><option value="64">64</option><option value="1024">1,024</option><option value="10000">10,000</option></select></label>
+    <p>Drag the scene to tilt the view and send the spheres rolling.</p>
+    <button id="pause">Pause</button> <button id="reset">Reset</button>
+    <div class="controls">
+    <p>View tilt <strong id="tilt-value">0°</strong>
+    </p>
+    <label>Drag sensitivity <span id="sensitivity-value">0.25</span>
+    <input id="sensitivity" aria-label="Drag sensitivity" type="range" min="0.1" max="1" step="0.05" value="0.25">
+    </label>
+    <label class="checkbox">
+    <input id="snap" type="checkbox" checked> Snap level within 3°</label>
+    <label>Speed <span id="speed-value">1.5×</span>
+    <input id="speed" aria-label="Speed" type="range" min="0.5" max="3" step="0.1" value="1.5">
+    </label>
+    <button id="level">Level</button>
+    </div>
+    <button id="benchmark">Benchmark</button> <button id="download-report" disabled>Save report</button><p id="adapter-info"></p><p id="benchmark-status"></p><output id="metrics"></output>
+<output id="status">Starting WebGPU…</output>
+    <p style="font-size:12px">Double-click to level. The single band follows each sphere’s rotation. Friction and rolling resistance bring the balls to rest.</p>
+    </aside>
+    <script type="module" src="/main.ts">
+    </script>
+    
+
+  </body>
+</html>

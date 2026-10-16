@@ -1,20 +1,21 @@
 # KHR_interactivity + deck.gl ScenegraphLayer
 
-This private deck.gl example uses the **real Khronos** `flow/branch` conformance GLB, which
-declares `KHR_interactivity`. It renders that asset with the upstream ScenegraphLayer and
-demonstrates the luma.gl interpreter on an intentionally small **replacement demo graph**,
-not the complete conformance graph.
+This private example renders the Khronos `flow/branch` GLB and executes its authored
+42-node behavior graph with `GLTFInteractivity`.
 
-The Khronos graph includes `debug/log` and other operations not yet implemented. The
-interpreter rejects unsupported operations rather than pretending to execute them. The
-original extension is retained for inspection and reported in the UI. The demo graph
-exercises `event/onStart` → `flow/branch` → `pointer/set` to scale a source glTF node.
-It uses a scenegraph property adapter to map glTF node indices onto luma.gl GroupNodes.
+Click **Run checks** or click the model to run the graph. Its branches update source-node
+translations to bring the textured pass/fail icons forward. Four successful checks emit
+`test/onSuccess`. Click the model again or **Reset** to restore the original scene. The
+collapsible information panel displays graph diagnostics and the final custom event.
 
-Run `yarn start` in this directory. The asset is served from Khronos GitHub; internet
-access and CORS are required. The sample is **not** a Khronos conformance claim.
+The loader preserves `KHR_texture_transform` for luma's PBR material renderer instead of
+baking the atlas into UV sets beyond the renderer's two supported UV channels. The scene
+retains its icon materials, alpha masks, atlas offsets, and atlas scales. Small atlas
+glyphs are hidden and replaced by dark, pixel-sized billboard labels on lighter plates
+so the conditions remain readable in a narrow window.
+
+Run `yarn start` in this directory. The asset is served from Khronos GitHub and requires
+internet access. This example exercises one authored graph; it is not a Khronos conformance
+claim or an implementation of every interactivity operation.
 
 Source: https://github.com/KhronosGroup/glTF-Test-Assets-Interactivity/tree/main/Tests/Interactivity/flow/branch
-
-Future work: full operation coverage, pointer templates, event/onHover and onSelect,
-asset-authored behavior execution, and tests under both backends.
