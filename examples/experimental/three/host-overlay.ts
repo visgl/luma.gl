@@ -141,6 +141,8 @@ async function attachOverlay(recreated = false) {
       nextOverlay.dispose();
       return;
     }
+    // Apply checkbox changes made while the deck device was initializing.
+    nextOverlay.setProps({layers: createLayers()});
     overlay = nextOverlay;
     compositionNote.textContent = sharedDepth
       ? 'Shared depth: the cube hides the rear route, while the front route hides the cube. Orbit to inspect both sides.'
