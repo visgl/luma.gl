@@ -58,12 +58,12 @@
   ],
   "sideEffects": false,
   "peerDependencies": {
-    "@luma.gl/core": "10.0.0-alpha.3",
-    "@luma.gl/effects": "10.0.0-alpha.3",
-    "@luma.gl/engine": "10.0.0-alpha.3",
-    "@luma.gl/experimental": "10.0.0-alpha.3",
-    "@luma.gl/gltf": "10.0.0-alpha.3",
-    "@luma.gl/shadertools": "10.0.0-alpha.3"
+    "@luma.gl/core": "10.0.0-alpha.5",
+    "@luma.gl/effects": "10.0.0-alpha.5",
+    "@luma.gl/engine": "10.0.0-alpha.5",
+    "@luma.gl/experimental": "10.0.0-alpha.5",
+    "@luma.gl/gltf": "10.0.0-alpha.5",
+    "@luma.gl/shadertools": "10.0.0-alpha.5"
   },
   "peerDependenciesMeta": {
     "@luma.gl/gltf": {
