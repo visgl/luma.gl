@@ -142,3 +142,28 @@ renderers and streams to share one atlas upload without hidden caches or ambiguo
 Direct specialized model construction is intentionally unstable. Import the models and forced
 strategy preparation contracts from `@luma.gl/text/experimental` only in benchmarks and
 diagnostic tools.
+
+## Custom browser font atlases
+
+`@luma.gl/text/fonts` exports `buildBrowserFontAtlas`, `resolveBrowserFontAtlasSettings`,
+and the `BrowserFontRenderer` type for integrations that supply their own glyph images.
+The renderer measures glyphs and font-wide metrics and returns `ImageData` for each glyph.
+Omitting `cacheKey` builds an independent atlas; callers that opt into shared caching must
+provide a key that uniquely identifies the renderer and all rasterization settings.
+
+```ts
+import {buildBrowserFontAtlas, resolveBrowserFontAtlasSettings} from '@luma.gl/text/fonts';
+
+const atlas = buildBrowserFontAtlas({
+  settings: resolveBrowserFontAtlasSettings({characterSet: 'Hello'}),
+  renderSettings: {mode: 'bitmap', threshold: 0, smoothing: 0},
+  createRenderer: defaultMeasure => ({
+    measure: defaultMeasure,
+    draw: character => drawCustomGlyph(character)
+  })
+});
+```
+
+`setFontAtlasCacheLimit(limit)` resets the shared browser-font atlas cache and sets its
+capacity. The default and minimum capacity are three atlases. Set it once during application
+initialization; changing it clears existing cache entries. Uncached custom atlases are unaffected.
