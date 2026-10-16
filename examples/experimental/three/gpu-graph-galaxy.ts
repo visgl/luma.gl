@@ -47,9 +47,9 @@ fn main(@builtin(global_invocation_id) invocationId: vec3u) {
   var starColor: vec3f;
   var brightness: f32;
 
-  // A quarter of the stars form a thick ellipsoidal bulge, rather than a flat disk.
-  if (particleIndex % 4u == 0u) {
-    let bulgeRadius = 2.4 * pow(getRandomValue(seed), 0.75) * parameters.radius;
+  // A sixth of the stars form a thick ellipsoidal bulge, rather than a flat disk.
+  if (particleIndex % 6u == 0u) {
+    let bulgeRadius = 1.8 * pow(getRandomValue(seed), 0.75) * parameters.radius;
     let azimuth = getRandomValue(seed + 1u) * 6.2831853;
     // Rotate an elongated bulge so the central population has visible motion.
     let rotationAngle = parameters.time * 0.65;
@@ -63,12 +63,12 @@ fn main(@builtin(global_invocation_id) invocationId: vec3u) {
     ) * bulgeRadius;
     // Mix gold, yellow and warm-white stars instead of tinting the entire core red.
     starColor = mix(vec3f(1.0, 0.48, 0.12), vec3f(1.0, 0.92, 0.68), getRandomValue(seed + 3u));
-    brightness = 0.04 + 0.28 * pow(getRandomValue(seed + 4u), 4.0);
+    brightness = 0.08 + 0.4 * pow(getRandomValue(seed + 4u), 4.0);
   } else {
     let radialFraction = sqrt(getRandomValue(seed));
     let spiralArmAngle = f32(particleIndex % 5u) * 1.25663706;
     let angularJitter = (getRandomValue(seed + 1u) - 0.5) * (0.2 + radialFraction * 0.65);
-    let rotationAngle = spiralArmAngle + radialFraction * 15.0
+    let rotationAngle = spiralArmAngle + radialFraction * 10.5
       + parameters.time * (0.2 + 0.6 / (0.3 + radialFraction)) + angularJitter;
     let radialDistance = (0.25 + 9.0 * radialFraction) * parameters.radius;
     let verticalSpread = 0.06 + radialFraction * radialFraction * 0.4;
@@ -78,8 +78,8 @@ fn main(@builtin(global_invocation_id) invocationId: vec3u) {
       sin(rotationAngle) * radialDistance
     );
     let coreWeight = 1.0 - smoothstep(0.1, 0.5, radialFraction);
-    starColor = mix(vec3f(0.32, 0.5, 1.0), vec3f(1.0, 0.76, 0.35), coreWeight);
-    brightness = 0.025 + 0.22 * pow(getRandomValue(seed + 3u), 3.0);
+    starColor = mix(mix(vec3f(0.38, 0.32, 1.0), vec3f(0.26, 0.7, 1.0), getRandomValue(seed + 5u)), vec3f(1.0, 0.76, 0.35), coreWeight);
+    brightness = 0.18 + 0.65 * pow(getRandomValue(seed + 3u), 3.0);
   }
   // A range of luminosities keeps additive blending from washing the warm core white.
   let color = starColor * brightness;
