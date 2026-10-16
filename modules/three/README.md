@@ -3,9 +3,61 @@
 **Status: Exploration**
 
 Private experimental integrations tested with Three.js **0.185.1**. Existing Three
-applications can add deck overlays or luma compute while keeping their renderer.
+applications can add deck layers or luma compute while keeping their renderer.
 
 ## Deck layers in an existing Three app
+
+### Shared depth on a Three WebGL canvas
+
+`@luma.gl/three/interleaved` draws native deck layers into the existing Three
+WebGL2 canvas. Both renderers use the same color and depth buffers: opaque Three
+objects hide deck geometry behind them, and deck geometry writes depth for later
+Three draws. Three keeps its renderer, camera, controls, canvas sizing and frame loop.
+
+```ts
+import {ThreeDeckInterleaved, getThreeDeckInterleavedSupport} from '@luma.gl/three/interleaved';
+
+const support = getThreeDeckInterleavedSupport(renderer);
+if (!support.supported) throw new Error(support.reason);
+const deckScene = await ThreeDeckInterleaved.create({
+  renderer, // Existing upstream THREE.WebGLRenderer.
+  target: controls.target,
+  layers // Native deck layers with COORDINATE_SYSTEM.CARTESIAN.
+});
+
+function render(time) {
+  controls.update();
+  renderer.render(scene, camera); // Opaque Three content establishes depth.
+  deckScene.render(camera, time); // Preserve color/depth and add deck geometry.
+}
+// Update with deckScene.setProps({layers}); detach with deckScene.dispose().
+```
+
+- The support probe requires a depth-enabled native `WebGLRenderer`, standard depth
+  mapping, the default canvas framebuffer, and one full-canvas viewport. It rejects
+  logarithmic/reversed depth, render targets, scissor rendering and active XR.
+  Native WebGPU hosts use the separate overlay below; stock deck layers currently
+  need a WebGL2 context for this shared-depth path.
+- The adapter borrows the context and its luma device wrapper. It never clears host
+  color/depth, resizes the native canvas, disposes the host device, or schedules frames.
+  Each call resets Three's GL cache before and after deck work. Deck receives explicit
+  depth and blend parameters, rather than relying on initialization state. Layer-level
+  parameters can still override them, for example to turn off depth writes for transparency.
+- The host performs canvas resizing and camera updates before drawing. The adapter
+  follows actual drawing-buffer dimensions, including pixel-ratio changes, without
+  assigning canvas dimensions after Three has rendered. No CSS layout or keyboard/
+  pointer handlers are claimed; existing OrbitControls continue to own input.
+- Later Three draws can use deck depth if they preserve the buffers (`renderer.autoClear
+  = false`). Restore the host's clear policy for the next frame. Transparent objects
+  across the two libraries are not globally sorted, and shared postprocessing, render
+  targets, automatic deck picking and context-loss recovery are outside this tranche.
+- The camera/coordinate/timestamp contract below also applies. `dispose()` is idempotent
+  and finalizes deck resources only. Recreate the integration to attach again.
+
+The Three example defaults to **Shared depth** on WebGL and includes an **Always above**
+comparison. Its route crosses the cube, making the difference visible while orbiting.
+
+### Separate transparent canvas
 
 `@luma.gl/three/overlay` adds a transparent deck canvas to a running Three application.
 The application keeps its renderer, scene, camera, controls and frame loop. It works
@@ -91,7 +143,7 @@ function render(time) {
 
 Open **Add deck layers to an existing Three.js app** from the Three example. It uses
 an ordinary Three cube, lights, grid and OrbitControls, with native deck paths and
-scatterplots above them. Switch perspective/orthographic cameras, pixel ratio, layer
+scatterplots. Compare shared depth with the separate overlay, and switch perspective/orthographic cameras, pixel ratio, layer
 visibility, host WebGL/WebGPU rendering, and recreate the overlay while Three keeps
 running. The example's frame function shows the integration boundary directly.
 

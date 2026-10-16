@@ -7,12 +7,15 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {COORDINATE_SYSTEM} from '@deck.gl/core';
 import {PathLayer, ScatterplotLayer} from '@deck.gl/layers';
 import {ThreeDeckOverlay} from '@luma.gl/three/overlay';
+import {ThreeDeckInterleaved} from '@luma.gl/three/interleaved';
 
 const container = document.querySelector<HTMLDivElement>('#scene')!;
 const canvas = document.querySelector<HTMLCanvasElement>('#three-canvas')!;
 const status = document.querySelector<HTMLElement>('#status')!;
 const projection = document.querySelector<HTMLSelectElement>('#projection')!;
 const resolution = document.querySelector<HTMLSelectElement>('#resolution')!;
+const composition = document.querySelector<HTMLSelectElement>('#composition')!;
+const compositionNote = document.querySelector<HTMLElement>('#composition-note')!;
 const animate = document.querySelector<HTMLInputElement>('#animate')!;
 const showOverlay = document.querySelector<HTMLInputElement>('#show-overlay')!;
 const recreate = document.querySelector<HTMLButtonElement>('#recreate')!;
@@ -22,7 +25,11 @@ const useWebGPU = new URLSearchParams(location.search).get('renderer') === 'webg
 const renderer = useWebGPU
   ? new WebGPURenderer({canvas, antialias: true})
   : new THREE.WebGLRenderer({canvas, antialias: true});
-if (renderer instanceof WebGPURenderer) await renderer.init();
+if (renderer instanceof WebGPURenderer) {
+  await renderer.init();
+  composition.value = 'overlay';
+  composition.options[0].disabled = true;
+}
 renderer.setPixelRatio(Number(resolution.value));
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#172536');
@@ -48,12 +55,12 @@ controls.target.set(0, 0.5, 0);
 controls.enableDamping = true;
 controls.update();
 
+// The route crosses the cube: its rear segment disappears behind opaque Three geometry.
 const points: [number, number, number][] = [
-  [-2, 0.2, -1],
-  [-1, 1.8, 0],
-  [0, 2.5, 0],
-  [1.5, 1.4, 0.5],
-  [2.5, 0.2, 1]
+  [-2, 0.8, -1],
+  [-0.5, 0.8, -1],
+  [0.5, 0.8, 1],
+  [2, 0.8, 1]
 ];
 function createLayers() {
   return showOverlay.checked
@@ -81,10 +88,10 @@ function createLayers() {
       ]
     : [];
 }
-let overlay: ThreeDeckOverlay | undefined;
+let overlay: ThreeDeckOverlay | ThreeDeckInterleaved | undefined;
 let disposed = false;
 function reportError(error: Error) {
-  status.textContent = `Overlay unavailable: ${error.message}. Three keeps running.`;
+  status.textContent = `Deck unavailable: ${error.message}. Three keeps running.`;
 }
 function resize() {
   const width = container.clientWidth;
@@ -114,16 +121,21 @@ resolution.onchange = () => {
 showOverlay.onchange = () => overlay?.setProps({layers: createLayers()});
 async function attachOverlay(recreated = false) {
   recreate.disabled = true;
+  composition.disabled = true;
   overlay?.dispose();
   overlay = undefined;
   try {
-    const nextOverlay = await ThreeDeckOverlay.create({
+    const props = {
       renderer,
       container,
       target: controls.target,
       layers: createLayers(),
       onError: reportError
-    });
+    };
+    const sharedDepth = composition.value === 'shared' && renderer instanceof THREE.WebGLRenderer;
+    const nextOverlay = sharedDepth
+      ? await ThreeDeckInterleaved.create({...props, renderer})
+      : await ThreeDeckOverlay.create(props);
     // The application may have closed while the separate device was initializing.
     if (disposed) {
       nextOverlay.dispose();
@@ -132,17 +144,26 @@ async function attachOverlay(recreated = false) {
     // Apply checkbox changes made while the deck device was initializing.
     nextOverlay.setProps({layers: createLayers()});
     overlay = nextOverlay;
+    compositionNote.textContent = sharedDepth
+      ? 'Shared depth: the cube hides the rear route, while the front route hides the cube. Orbit to inspect both sides.'
+      : 'Always above: a separate transparent canvas aligns with the world but does not share depth. WebGPU hosts currently use this mode.';
     status.textContent = recreated
-      ? 'Overlay recreated; the Three renderer, scene and controls are still running.'
-      : `${useWebGPU ? 'WebGPU' : 'WebGL'} Three renderer with a separate deck overlay. Drag to orbit; scroll to zoom.`;
+      ? 'Deck recreated; the Three renderer, scene and controls are still running.'
+      : `${useWebGPU ? 'WebGPU' : 'WebGL'} Three renderer with ${sharedDepth ? 'shared depth' : 'a separate deck overlay'}. Drag to orbit; scroll to zoom.`;
   } catch (error) {
     reportError(error instanceof Error ? error : new Error(String(error)));
   } finally {
-    if (!disposed) recreate.disabled = false;
+    if (!disposed) {
+      recreate.disabled = false;
+      composition.disabled = false;
+    }
   }
 }
 recreate.onclick = () => {
   void attachOverlay(true);
+};
+composition.onchange = () => {
+  void attachOverlay();
 };
 let frame = 0;
 function render(time: number) {

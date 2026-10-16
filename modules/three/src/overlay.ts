@@ -1,14 +1,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {
-  Deck,
-  View,
-  OrbitController,
-  Viewport,
-  type DeckProps,
-  type OrbitViewState
-} from '@deck.gl/core';
+import {type DeckProps, Viewport} from '@deck.gl/core';
+import {HostDrivenDeck, ThreeCameraView, type ThreeCameraViewState} from './host-driven-deck';
 import {luma, log, type Device} from '@luma.gl/core';
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {Matrix4, Vector3, WebGPUCoordinateSystem, type Camera, type Vector3Like} from 'three';
@@ -83,44 +77,6 @@ export function makeDeckViewportFromThreeCamera(
     projectionMatrix: projection.toArray(),
     zoom: Math.log2((Math.max(1, height) * Math.abs(projection.elements[5])) / 2)
   });
-}
-
-type ThreeCameraViewState = Pick<OrbitViewState, 'transitionDuration'> & {
-  zoom?: number;
-  focalDistance?: number;
-  viewMatrix?: number[];
-  projectionMatrix?: number[];
-};
-
-// The host supplies matrices directly; no controller or orbit-angle reconstruction is needed.
-class ThreeCameraView extends View<ThreeCameraViewState> {
-  getViewportType() {
-    return Viewport;
-  }
-
-  get ControllerType() {
-    return OrbitController;
-  }
-}
-
-/** Localize the pinned deck scheduling hook; every frame still runs deck's normal lifecycle. */
-class HostDrivenDeck extends Deck<ThreeCameraView> {
-  private startTime: number | undefined;
-  stopScheduling(): void {
-    this.animationLoop?.stop();
-    this.animationLoop?.timeline?.pause();
-  }
-
-  dispose(): void {
-    this.finalize();
-    this.device?.destroy();
-  }
-
-  renderFrame(time = performance.now()): void {
-    this.startTime ??= time;
-    this.animationLoop?.timeline?.setTime(time - this.startTime);
-    this.animationLoop?.redraw(time);
-  }
 }
 
 /** Transparent deck canvas driven explicitly by an existing Three application's frame loop. */

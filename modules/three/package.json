@@ -38,6 +38,11 @@
       "types": "./dist/overlay.d.ts",
       "import": "./dist/overlay.js",
       "require": "./dist/overlay.cjs"
+    },
+    "./interleaved": {
+      "types": "./dist/interleaved.d.ts",
+      "import": "./dist/interleaved.js",
+      "require": "./dist/interleaved.cjs"
     }
   },
   "sideEffects": false,
