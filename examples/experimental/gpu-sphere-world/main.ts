@@ -135,6 +135,12 @@ try {
     target.orientations.destroy();
   }
   let resources = await createResources(64);
+  function restoreSceneControls(): void {
+    getElement<HTMLSelectElement>('#scene').value = resources.scene;
+    getElement<HTMLSelectElement>('#body-count').value = String(resources.count);
+    getElement<HTMLSelectElement>('#scene').disabled = false;
+    getElement<HTMLSelectElement>('#body-count').disabled = false;
+  }
   const orbitCamera = new PerspectiveCamera(45, 1, 0.1, 100);
   orbitCamera.up.set(0, 0, 1);
   orbitCamera.position.set(0, -22, 26);
@@ -361,10 +367,7 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
     } catch (error) {
       status.value = String(error);
     } finally {
-      getElement<HTMLSelectElement>('#scene').value = resources.scene;
-      getElement<HTMLSelectElement>('#body-count').value = String(resources.count);
-      getElement<HTMLSelectElement>('#scene').disabled = false;
-      getElement<HTMLSelectElement>('#body-count').disabled = false;
+      restoreSceneControls();
       loading = false;
     }
   };
@@ -550,6 +553,7 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
       status.value = String(error);
     }
   }
+  restoreSceneControls();
   requestAnimationFrame(renderFrame);
   window.addEventListener(
     'pagehide',
