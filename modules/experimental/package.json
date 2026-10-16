@@ -1,7 +1,7 @@
 {
   "name": "@luma.gl/experimental",
   "description": "luma.gl experimental features",
-  "version": "10.0.0-alpha.4",
+  "version": "10.0.0-alpha.5",
   "license": "MIT",
   "type": "module",
   "publishConfig": {
@@ -117,7 +117,7 @@
   "dependencies": {
     "@loaders.gl/core": "~5.0.0-alpha.11",
     "@loaders.gl/sql": "~5.0.0-alpha.11",
-    "@luma.gl/gpgpu": "10.0.0-alpha.4",
+    "@luma.gl/gpgpu": "10.0.0-alpha.5",
     "@math.gl/core": "5.0.0-alpha.15",
     "@math.gl/types": "~5.0.0-alpha.15"
   },

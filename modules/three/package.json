@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/three",
-  "version": "10.0.0-alpha.4",
+  "version": "10.0.0-alpha.5",
   "private": true,
   "description": "Experimental Three.js rendering and GPU interoperability for luma.gl",
   "license": "MIT",
@@ -37,7 +37,7 @@
   },
   "sideEffects": false,
   "dependencies": {
-    "@luma.gl/core": "10.0.0-alpha.4"
+    "@luma.gl/core": "10.0.0-alpha.5"
   },
   "peerDependencies": {
     "@deck.gl/core": "9.4.0",
