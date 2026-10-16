@@ -112,7 +112,7 @@ inputs remain accepted; `friction` is converted to a dynamic coefficient of
 
 The optional diagnostics buffer contains eight uint32 words. Its first seven words
 are: dropped directed contacts, invalid bodies, emitted directed contacts, awake
-dynamic bodies, sleeping dynamic bodies, candidate tests, and maximum required
+dynamic bodies, sleeping dynamic bodies, inspected candidate entries (including self/rejected entries), and maximum required
 contacts per body. The final word reports impact and candidate budget exhaustion (see below). Counters describe the last substep. Dropped-contact and candidate counters saturate at uint32 maximum instead of wrapping.
 Use `decodeGPUSphereWorldDiagnostics(new Uint32Array(readback.buffer))` to decode a
 sample. Reading diagnostics is explicit and never required by the simulation.
@@ -230,14 +230,14 @@ the existing grid supports arbitrary swept motion.
 Zero retains unbounded traversal. `exhaustedCandidateBodies` reports bodies that
 reached the budget; their contact set may be incomplete even with zero
 `droppedContacts`. The eighth diagnostics word packs impact exhaustion in bit 0
-and candidate exhaustion count in bits 1–31. Reject incomplete results or increase
+and candidate exhaustion count in bits 1–31. Awake/sleeping counts describe only the final active interval. Reject incomplete results or increase
 the budget. With continuous mode, contact/candidate counters accumulate over impact
 intervals in the last substep.
 
 ## GPU events and triggers
 
 Set `eventCapacity` to a power of two (up to 65,536) to allocate a persistent ring
-of 32-byte event records, plus a 16-byte header. Events are supported for up to
+of 32-byte event records, plus a 16-byte header. The header retains a cumulative impact-exhaustion counter, exposed as `batch.exhaustedImpactSteps`, so a brief discarded interval cannot disappear between samples. Events are supported for up to
 256 bodies. A bounded serial GPU pass gives deterministic append ordering without
 races when several events wrap the ring during one dispatch. Readback is optional:
 

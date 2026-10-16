@@ -107,7 +107,7 @@ export type GPUSphereWorldProps = GPUSphereWorldParameters & {
   friction?: number;
 };
 
-/** Last substep's counters. Contacts/candidateTests count directed body neighbors. */
+/** Last substep's counters. Contacts count directed neighbors; candidates count inspected entries. */
 export type GPUSphereWorldDiagnostics = {
   droppedContacts: number;
   invalidBodies: number;
@@ -855,6 +855,16 @@ export class GPUSphereWorld {
             ],
             1
           );
+        addPass(
+          `${impactPrefix}-state-counts`,
+          `
+@group(0) @binding(1) var<storage, read_write> diagnostics: array<atomic<u32>>;
+@compute @workgroup_size(1) fn main() {
+ if(clock.timeStep > 0.0) {atomicStore(&diagnostics[3], 0u); atomicStore(&diagnostics[4], 0u);}
+}`,
+          [bind('diagnostics', diagnostics, 1, 'write')],
+          1
+        );
         addPass(`${impactPrefix}-finalize`, FINALIZE_SPHERES, [
           bind('positions', state.positions, 1),
           bind('velocities', state.velocities, 2, 'write'),
@@ -869,9 +879,15 @@ export class GPUSphereWorld {
           `${prefix}-budget`,
           `
 @group(0) @binding(1) var<storage, read_write> diagnostics: array<atomic<u32>>;
-@compute @workgroup_size(1) fn main() {if(clock.remaining > 0.0000001) {atomicOr(&diagnostics[7], 1u);}}
+${eventView ? '@group(0) @binding(2) var<storage, read_write> events: array<atomic<u32>>;' : ''}
+@compute @workgroup_size(1) fn main() {if(clock.remaining > 0.0) {
+ atomicOr(&diagnostics[7], 1u); ${eventView ? 'atomicAdd(&events[1], 1u);' : ''}
+}}
 `,
-          [bind('diagnostics', diagnostics, 1, 'write')],
+          [
+            bind('diagnostics', diagnostics, 1, 'write'),
+            ...(eventView ? [bind('events', eventView, 2, 'write')] : [])
+          ],
           1
         );
     }

@@ -40,3 +40,24 @@ test('cushion reference keeps pace-dependent retained energy bounded', () => {
     getSphereCushionRestitution(0.88, 0.035, 1)
   );
 });
+
+test('zero motion with zero resistance returns zero, while non-decaying motion is infinite', () => {
+  const material = {
+    radius: 1,
+    gravity: 0,
+    slidingFriction: 0,
+    rollingResistance: 0,
+    spinningResistance: 0
+  };
+  expect(
+    getSphereClothReference({...material, speed: 0, rollingAngularSpeed: 0, sidespin: 0})
+  ).toEqual({slidingTime: 0, rollingSpeed: 0, rollingDistance: 0, sidespinStopTime: 0});
+  expect(
+    getSphereClothReference({...material, speed: 1, rollingAngularSpeed: 0, sidespin: 1})
+  ).toEqual({
+    slidingTime: Infinity,
+    rollingSpeed: 1,
+    rollingDistance: Infinity,
+    sidespinStopTime: Infinity
+  });
+});

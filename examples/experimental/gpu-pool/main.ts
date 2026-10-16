@@ -5,7 +5,11 @@
 import {luma, Buffer} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
-import {GPUSphereWorld, type GPUSphereBodyState} from '@luma.gl/gpgpu/gpu-physics';
+import {
+  GPUSphereWorld,
+  decodeGPUSphereWorldDiagnostics,
+  type GPUSphereBodyState
+} from '@luma.gl/gpgpu/gpu-physics';
 import {
   BALL_RADIUS,
   POCKET_RADIUS,
@@ -107,7 +111,10 @@ try {
   let chargeStart: number | null = null;
   let chargePointer: number | null = null;
   let aimPointer: number | null = null;
-  let chargeKeyboard = false;
+  let chargeKeyboard: 'Space' | 'Enter' | null = null;
+  let finishingShot = false;
+  let impactBudgetReached = false;
+  let impactBudgetSequence = 0;
   let rackAt = 0;
   const inputEvents = new AbortController();
   function setPower(value: number) {
@@ -117,7 +124,7 @@ try {
   }
   function cancelCharge() {
     chargeStart = null;
-    chargeKeyboard = false;
+    chargeKeyboard = null;
     const pointer = chargePointer;
     chargePointer = null;
     if (pointer !== null && shoot.hasPointerCapture(pointer)) shoot.releasePointerCapture(pointer);
@@ -245,7 +252,7 @@ try {
     setAim(Math.atan2(point[1] - states[0].position[1], point[0] - states[0].position[0]));
   }
   canvas.onpointerdown = event => {
-    if (event.button !== 0 || phase !== 'aiming') return;
+    if (event.button !== 0 || phase !== 'aiming' || chargeStart !== null) return;
     canvas.focus();
     aimPointer = event.pointerId;
     canvas.setPointerCapture(event.pointerId);
@@ -266,7 +273,8 @@ try {
   };
   angle.oninput = () => setAim((Number(angle.value) * Math.PI) / 180);
   function startShot() {
-    if (phase !== 'aiming') return;
+    if (phase !== 'aiming' || chargeStart !== null) return;
+    impactBudgetReached = false;
     audio.unlock();
     cueTrailPoints.length = 0;
     cueTrailPoints.push([states[0].position[0], states[0].position[1]]);
@@ -299,8 +307,8 @@ try {
   shoot.onkeydown = event => {
     if (event.code === 'Space' || event.code === 'Enter') {
       event.preventDefault();
-      if (!event.repeat) {
-        chargeKeyboard = true;
+      if (!event.repeat && phase === 'aiming' && chargeStart === null) {
+        chargeKeyboard = event.code;
         beginCharge();
       }
     }
@@ -308,7 +316,7 @@ try {
   shoot.onkeyup = event => {
     if (event.code === 'Space' || event.code === 'Enter') {
       event.preventDefault();
-      if (chargeKeyboard) releaseCharge();
+      if (chargeKeyboard === event.code) releaseCharge();
     }
   };
   // Assistive activation has no physical hold; retain a single-action shot at selected power.
@@ -373,7 +381,7 @@ try {
     updateControls();
     try {
       if (snapshot) await snapshot;
-      await world.readEvents();
+      impactBudgetSequence = (await world.readEvents()).exhaustedImpactSteps;
       const rack = makeRack();
       const mode = practice.value;
       objectBallCount = mode === 'rack' ? 15 : mode === 'cushion' ? 0 : 1;
@@ -434,11 +442,22 @@ try {
   element('reset-shot').onclick = () => void resetTable();
   practice.onchange = () => void resetTable();
   async function sampleState(now: number, sampleGeneration: number) {
-    const events = await world.readEvents();
-    const next = await world.readState();
+    // Enqueue all copies in the same JavaScript turn, before another frame can submit.
+    const [events, next, diagnosticBytes] = await Promise.all([
+      world.readEvents(),
+      world.readState(),
+      world.diagnostics!.readAsync()
+    ]);
     if (!alive || sampleGeneration !== generation) return;
     states = next;
     if (phase !== 'rolling') return;
+    const diagnostics = decodeGPUSphereWorldDiagnostics(
+      new Uint32Array(diagnosticBytes.buffer, diagnosticBytes.byteOffset, 8)
+    );
+    impactBudgetReached ||=
+      Boolean(diagnostics.exhaustedImpactSteps) ||
+      events.exhaustedImpactSteps !== impactBudgetSequence;
+    impactBudgetSequence = events.exhaustedImpactSteps;
     const cue = states[0];
     if (!scratch) {
       for (const event of events.events) {
@@ -456,6 +475,9 @@ try {
     element('cue-motion').textContent = cue.enabled
       ? `Cue ball: ${pace < 0.035 ? (Math.hypot(...cue.angularVelocity) > 0.15 ? 'spinning' : 'resting') : slip > 0.03 ? 'sliding' : 'rolling'} · pace ${pace.toFixed(1)} · sidespin ${Math.abs(cue.angularVelocity[2]).toFixed(1)} rad/s`
       : '';
+    if (impactBudgetReached)
+      element('cue-motion').textContent +=
+        ' · Impact budget reached; remaining time was discarded. Try lower power.';
     audio.playEvents(events.events, now);
     const captured = new Set(
       events.events.filter(event => event.kind === 'trigger').map(event => event.body)
@@ -485,6 +507,17 @@ try {
     if (now - shotStart > 300 && isShotSettled(states)) {
       settledSince ||= now;
       if (now - settledSince >= 350) {
+        if (!finishingShot) {
+          // Stop new submissions only while confirming shot completion. Drain all queued
+          // capture events before leaving rolling, including a capture after the first copy.
+          finishingShot = true;
+          try {
+            await sampleState(performance.now(), sampleGeneration);
+          } finally {
+            finishingShot = false;
+          }
+          return;
+        }
         if (scratch) {
           const point = findCuePosition(states);
           if (!point) {
@@ -559,7 +592,7 @@ try {
         updateControls();
         status.value = 'Balls in motion…';
       }
-      if (phase === 'rolling') {
+      if (phase === 'rolling' && !finishingShot) {
         accumulator = Math.min(accumulator + elapsed, 12 / 240);
         const steps = Math.floor(accumulator * 240);
         accumulator -= steps / 240;

@@ -91,7 +91,10 @@ try {
     const positions = createBuffer();
     const velocities = createBuffer();
     const orientations = createBuffer();
-    const columns = Math.ceil(Math.sqrt(count / (count >= 1024 ? 4 : 1)));
+    const scene = getElement<HTMLSelectElement>('#scene').value;
+    const layerCount =
+      scene === 'pile' ? Math.ceil(Math.cbrt(count)) : scene === 'rack' ? 1 : count >= 1024 ? 4 : 1;
+    const columns = Math.ceil(Math.sqrt(count / layerCount));
     const halfExtent = Math.max(6, columns * 0.44 + 1);
     const definition = new GPUCommandGraph<void>(device);
     const world = new GPUSphereWorld({
@@ -334,12 +337,8 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
   };
   getElement('#level').onclick = levelView;
   getElement('#spheres').addEventListener('dblclick', levelView);
-  getElement('#scene').onchange = () => {
-    if (!loading && !benchmark) {
-      resetSpheres(resources);
-      accumulator = 0;
-    }
-  };
+  getElement('#scene').onchange = () =>
+    getElement('#body-count').dispatchEvent(new Event('change'));
   getElement('#body-count').onchange = async () => {
     if (loading || benchmark) return;
     loading = true;

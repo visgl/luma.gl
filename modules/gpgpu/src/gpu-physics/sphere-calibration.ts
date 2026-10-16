@@ -34,13 +34,14 @@ export function getSphereClothReference(parameters: {
     spinningResistance
   } = parameters;
   const slip = speed - radius * rollingAngularSpeed;
-  const slidingTime = Math.abs(slip) / (3.5 * slidingFriction * gravity);
-  const rollingSpeed = speed - slip / 3.5;
+  const slidingTime = slip === 0 ? 0 : Math.abs(slip) / (3.5 * slidingFriction * gravity);
+  const rollingSpeed = slidingTime === Infinity ? speed : speed - slip / 3.5;
   return {
     slidingTime,
     rollingSpeed,
-    rollingDistance: rollingSpeed ** 2 / (2 * rollingResistance * gravity),
-    sidespinStopTime: (Math.abs(sidespin) * radius) / (spinningResistance * gravity)
+    rollingDistance: rollingSpeed === 0 ? 0 : rollingSpeed ** 2 / (2 * rollingResistance * gravity),
+    sidespinStopTime:
+      sidespin === 0 ? 0 : (Math.abs(sidespin) * radius) / (spinningResistance * gravity)
   };
 }
 

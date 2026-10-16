@@ -50,7 +50,7 @@ fn getPlaneDelta(point: vec3f, plane: Plane) -> vec3f {
 }
 fn getContactNormal(delta: vec3f, first: u32, second: u32) -> vec3f {
   let distance = length(delta);
-  if (distance > 0.000001) { return delta / distance; }
+  if (distance > 0.0) { return delta / distance; }
   return vec3f(select(-1.0, 1.0, first < second), 0.0, 0.0);
 }
 `;
@@ -141,13 +141,13 @@ fn main(@builtin(global_invocation_id) invocation: vec3u) {
         ${allPairs ? '' : 'if (sortedKeys[cursor] != key) { break; }'}
         let other = ${allPairs ? 'cursor' : 'sortedBodies[cursor]'};
         cursor++;
+        if(MAXIMUM_CANDIDATES > 0u && candidateCount >= MAXIMUM_CANDIDATES) {break;}
+        candidateCount++;
         if (other == index) { continue; }
         let neighbor = positions[other];
         ${allPairs ? '' : 'if (any(getCell(neighbor.xyz) != neighborCell)) { continue; }'}
         if (!isValidSphere(neighbor)) { continue; }
         if (velocities[index].w <= 0.0 && velocities[other].w <= 0.0) { continue; }
-        if(MAXIMUM_CANDIDATES > 0u && candidateCount >= MAXIMUM_CANDIDATES) {break;}
-        candidateCount++;
         let delta = sphere.xyz - neighbor.xyz;
         let radius = sphere.w + neighbor.w;
         if (dot(delta, delta) > (radius + settings.solver.z) * (radius + settings.solver.z)) { continue; }
@@ -294,6 +294,7 @@ export const FINALIZE_SPHERES = /* wgsl */ `
 fn main(@builtin(global_invocation_id) invocation: vec3u) {
   let index = invocation.x;
   if (index >= BODY_COUNT) { return; }
+  if(clock.timeStep <= 0.0) {return;}
   let sphere = positions[index]; var velocity = velocities[index];
   var angular = angularVelocities[index]; var sleep = sleepStates[index];
   var orientation = orientations[index];

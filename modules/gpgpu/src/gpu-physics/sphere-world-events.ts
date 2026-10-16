@@ -14,11 +14,17 @@ fn sphereTime(delta: vec3f, velocity: vec3f, radius: f32, limit: f32) -> f32 {
  let squaredSpeed = dot(velocity, velocity);
  let closing = dot(delta, velocity);
  let separation = dot(delta, delta) - radius * radius;
- if(closing >= -0.000001 || squaredSpeed < 0.0000001) {return limit;}
- if(separation <= 0.0) {return 0.0;}
- let discriminant = closing * closing - squaredSpeed * separation;
- if(discriminant < 0.0) {return limit;}
- return min(limit, max(0.0, (-closing - sqrt(discriminant)) / squaredSpeed));
+ if(closing >= 0.0 || squaredSpeed <= 0.0) {return limit;}
+ let nudge = min(settings.material.x * 0.0001, radius * 0.001 / sqrt(squaredSpeed));
+ if(separation <= 0.0) {return min(limit, nudge);}
+ // Closest approach avoids subtracting two large nearly equal quadratic terms
+ // when a very small sphere grazes a collider after travelling a long distance.
+ let closestTime = -closing / squaredSpeed;
+ let closestPoint = delta + velocity * closestTime;
+ let radialSquared = radius * radius - dot(closestPoint, closestPoint);
+ if(radialSquared <= 0.0) {return limit;}
+ let halfWidth = sqrt(radialSquared / squaredSpeed);
+ return min(limit, max(0.0, closestTime - halfWidth) + min(nudge, halfWidth * 0.5));
 }
 fn segmentTime(point: vec3f, velocity: vec3f, start: vec3f, end: vec3f, radius: f32, limit: f32) -> f32 {
  let axis = end - start; let squaredLength = dot(axis, axis);
@@ -43,7 +49,15 @@ fn segmentTime(point: vec3f, velocity: vec3f, start: vec3f, end: vec3f, radius: 
    let neighbor = positions[second];
    if(first == second || !isValidSphere(neighbor)) {continue;}
    let otherVelocity = select(vec3f(0.0), velocities[second].xyz + settings.gravity.xyz * remaining, velocities[second].w > 0.0);
-   time = sphereTime(sphere.xyz - neighbor.xyz, velocity - otherVelocity, sphere.w + neighbor.w, time);
+   let delta = sphere.xyz - neighbor.xyz;
+   let radius = sphere.w + neighbor.w;
+   let normal = getContactNormal(delta, first, second);
+   let actualOther = select(vec3f(0.0), velocities[second].xyz, velocities[second].w > 0.0);
+   let actualClosing = dot(velocities[first].xyz - actualOther, normal);
+   // A touching pair already at rest must not repeatedly stop the whole world's clock
+   // just because gravity was included in the conservative sweep velocity.
+   if(length(delta) <= radius + settings.solver.z && actualClosing >= -radius * 0.00001 / settings.material.x && length(settings.gravity.xyz) * remaining * remaining < radius * 0.25) {continue;}
+   time = sphereTime(delta, velocity - otherVelocity, radius, time);
   }
   for(var planeIndex = 0u; planeIndex < u32(settings.resting.w); planeIndex++) {
    let plane = settings.planes[planeIndex];
@@ -51,13 +65,14 @@ fn segmentTime(point: vec3f, velocity: vec3f, start: vec3f, end: vec3f, radius: 
    let closing = dot(velocity, plane.normal.xyz);
    if(height < -sphere.w) {continue;}
    // Supported resting contacts are resolved by the discrete solver, without stalling time.
-   if(abs(height - sphere.w) <= settings.solver.z && dot(velocities[first].xyz, plane.normal.xyz) >= -0.00001) {continue;}
+   if(abs(height - sphere.w) <= settings.solver.z && dot(velocities[first].xyz, plane.normal.xyz) >= -sphere.w * 0.00001 / settings.material.x && length(settings.gravity.xyz) * remaining * remaining < sphere.w * 0.25) {continue;}
    if(closing < -0.000001) {
     let candidate = max(0.0, (sphere.w - height) / closing);
     let point = sphere.xyz + velocity * candidate;
     let relative = point - plane.center.xyz;
     if(abs(dot(relative, plane.right.xyz)) <= plane.right.w && abs(dot(relative, plane.forward.xyz)) <= plane.forward.w) {
-     time = min(time, candidate);
+     let nudge = min(settings.material.x * 0.0001, sphere.w * 0.001 / max(length(velocity), 0.0000001));
+     time = min(time, candidate + nudge);
     }
    }
    // Four swept edge capsules also cover corner spheres. Infinite planes skip this work.
@@ -72,9 +87,8 @@ fn segmentTime(point: vec3f, velocity: vec3f, start: vec3f, end: vec3f, radius: 
    }
   }
  }
- // A tiny bounded advance creates a contact for the discrete narrow phase at the root.
- // Resting contacts under gravity should consume a full step, not exhaust the impact budget.
- let progress = min(remaining, max(time + 0.0000001, settings.material.x * 0.0001));
+ // Each root already includes a scale- and contact-window-bounded nudge.
+ let progress = min(remaining, time);
  outputClock = Clock(progress, max(0.0, remaining - progress), outputClock.step, 0u);
 }
 `;
