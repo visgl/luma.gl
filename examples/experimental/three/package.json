@@ -18,7 +18,8 @@
     "@luma.gl/webgl": "10.0.0-alpha.4",
     "@luma.gl/webgpu": "10.0.0-alpha.4",
     "mjolnir.js": "^3.1.1",
-    "three": "0.185.1"
+    "three": "0.185.1",
+    "@luma.gl/gpgpu": "10.0.0-alpha.4"
   },
   "devDependencies": {
     "@types/three": "0.185.0",
