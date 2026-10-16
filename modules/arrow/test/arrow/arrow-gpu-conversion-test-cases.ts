@@ -16,7 +16,9 @@ import {
 } from '@luma.gl/arrow';
 import {backendRegistry} from '@luma.gl/gpgpu';
 import * as cpuBackend from '@luma.gl/gpgpu/operations/cpu';
-import {getWebGPUTestDevice, NullDevice} from '@luma.gl/test-utils';
+import {luma} from '@luma.gl/core';
+import {NullDevice} from '@luma.gl/test-utils';
+import {webgpuAdapter} from '@luma.gl/webgpu';
 import * as arrow from 'apache-arrow';
 
 backendRegistry.add('null', cpuBackend);
@@ -165,7 +167,10 @@ test('convertArrowToGPUVector lowers Boolean and Float64 chunks with nulls', asy
 });
 
 test('convertArrowToGPUVector uploads Float64 unchanged and splits it with GPGPU', async t => {
-  const device = await getWebGPUTestDevice();
+  // This buffer-only conversion needs no presentation canvas or swap chain.
+  const device = await luma
+    .createDevice({type: 'webgpu', adapters: [webgpuAdapter], featureLevel: 'max', debug: true})
+    .catch(() => null);
   if (!device) {
     t.comment('Skipping Arrow Float64 GPGPU conversion test without WebGPU');
     t.end();
