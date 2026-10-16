@@ -30,6 +30,7 @@ export class HostDrivenDeck extends Deck<ThreeCameraView> {
   }
 
   disableInteractions(): void {
+    this.animationLoop?._stopEventHandling();
     this.eventManager?.destroy();
     this.eventManager = null;
     this.eventManagers = {};

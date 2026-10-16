@@ -143,6 +143,7 @@ export class AnimationLoop {
   destroy(): void {
     this.stop();
     this._setDisplay(null);
+    this._stopEventHandling();
     this.device?._disableDebugGPUTime();
   }
 
@@ -627,9 +628,15 @@ export class AnimationLoop {
 
   _startEventHandling() {
     if (this.canvas) {
-      this.canvas.addEventListener('mousemove', this._onMousemove.bind(this));
-      this.canvas.addEventListener('mouseleave', this._onMouseleave.bind(this));
+      this.canvas.addEventListener('mousemove', this._onMousemove);
+      this.canvas.addEventListener('mouseleave', this._onMouseleave);
     }
+  }
+
+  _stopEventHandling(): void {
+    // These callbacks are bound once in the constructor so removal releases the loop.
+    this.canvas?.removeEventListener('mousemove', this._onMousemove);
+    this.canvas?.removeEventListener('mouseleave', this._onMouseleave);
   }
 
   _onMousemove(event: Event) {

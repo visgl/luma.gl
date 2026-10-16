@@ -86,6 +86,8 @@ test('native Three and deck share depth in both drawing orders and survive recre
   const disposeHost = vi.spyOn(renderer, 'dispose');
   const scheduleHost = vi.spyOn(renderer, 'setAnimationLoop');
   const scheduleDeck = vi.spyOn(AnimationLoop.prototype, '_requestAnimationFrame');
+  const moveMouse = vi.spyOn(AnimationLoop.prototype, '_onMousemove');
+  const leaveMouse = vi.spyOn(AnimationLoop.prototype, '_onMouseleave');
   try {
     renderer.render(scene, perspective);
     expect(getThreeDeckInterleavedSupport(renderer)).toEqual({
@@ -151,6 +153,10 @@ test('native Three and deck share depth in both drawing orders and survive recre
     integration.dispose();
     renderer.render(scene, perspective);
     expect(readCenter()).toEqual([0, 255, 0, 255]);
+    canvas.dispatchEvent(new MouseEvent('mousemove'));
+    canvas.dispatchEvent(new MouseEvent('mouseleave'));
+    expect(moveMouse).not.toHaveBeenCalled();
+    expect(leaveMouse).not.toHaveBeenCalled();
     expect(errors).toEqual([]);
   } finally {
     integration?.dispose();
