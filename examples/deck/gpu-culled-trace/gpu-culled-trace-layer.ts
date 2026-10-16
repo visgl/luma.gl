@@ -129,7 +129,9 @@ export class GPUCulledTraceLayer extends Layer<GPUCulledTraceLayerProps> {
       topology: 'triangle-list',
       isInstanced: true,
       vertexCount: 6,
-      instanceCount: 0,
+      // The GPU culling graph writes the visible span count into this record's instanceCount.
+      indirectBuffer: this.props.drawCommands.buffer,
+      indirectOffset: this.props.drawCommands.getCommandByteOffset(0),
       bufferLayout: [],
       bindings: {
         spans: this.props.spans,
@@ -159,9 +161,7 @@ export class GPUCulledTraceLayer extends Layer<GPUCulledTraceLayerProps> {
     renderUniforms.write(
       new Float32Array([shaderModuleProps?.picking?.isActive ?? 0, this.props.opacity ?? 1, 0, 0])
     );
-    model.setInstanceCount(0);
     model.draw(renderPass);
-    this.props.drawCommands.draw(renderPass, 0);
   }
 
   override getPickingInfo({info}: {info: PickingInfo}): PickingInfo {
