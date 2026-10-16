@@ -183,14 +183,7 @@ fn compareFiniteBinary64(firstBits: vec2u, secondBits: vec2u) -> i32 {
       bitcast<f32>(projectionPlanWord(patchIndex, 11u))
     ))
   );`
-    : precise
-      ? `let originX = vec2u(projectionPlanWord(patchIndex, 1u), projectionPlanWord(patchIndex, 0u));
-  let originY = vec2u(projectionPlanWord(patchIndex, 3u), projectionPlanWord(patchIndex, 2u));
-  return ProjectionPointFP64(
-    sub_fp64u32_to_fp64(position.x, originX),
-    sub_fp64u32_to_fp64(position.y, originY)
-  );`
-      : `let sourceOriginX = vec2f(
+    : `let sourceOriginX = vec2f(
     bitcast<f32>(projectionPlanWord(patchIndex, 13u)),
     bitcast<f32>(projectionPlanWord(patchIndex, 10u))
   );
@@ -205,32 +198,18 @@ fn compareFiniteBinary64(firstBits: vec2u, secondBits: vec2u) -> i32 {
   const doubleSingleFunctions = doubleSingle
     ? `struct ProjectionPointFP64 { x: vec2f, y: vec2f }
 
-fn projectionSourceOffsetFP64(
+${
+  // Precise programs convert raw binary64 offsets inline in project(), through one call site.
+  precise
+    ? ''
+    : `fn projectionSourceOffsetFP64(
   position: ${positionType},
   patchIndex: u32
 ) -> ProjectionPointFP64 {
   ${doubleSingleSourceOffset}
 }
-
-fn normalizeProjectionPositionFP64(
-  position: ${positionType},
-  patchIndex: u32
-) -> ProjectionPointFP64 {
-  let sourceOffset = projectionSourceOffsetFP64(position, patchIndex);
-  let sourceScaleX = vec2f(
-    bitcast<f32>(projectionPlanWord(patchIndex, 4u)),
-    bitcast<f32>(projectionPlanWord(patchIndex, 60u))
-  );
-  let sourceScaleY = vec2f(
-    bitcast<f32>(projectionPlanWord(patchIndex, 5u)),
-    bitcast<f32>(projectionPlanWord(patchIndex, 61u))
-  );
-  return ProjectionPointFP64(
-    div_fp64(sourceOffset.x, sourceScaleX),
-    div_fp64(sourceOffset.y, sourceScaleY)
-  );
+`
 }
-
 fn projectionCoefficientFP64(
   patchIndex: u32,
   highOffset: u32,
@@ -273,7 +252,10 @@ fn evaluateProjectionPolynomialFP64(
   let yLinear = projectionMultiplyAddFP64(normalized.y, yQuadratic, yLinearX);
   let xContribution = projectionMultiplyAddFP64(normalized.x, xLinear, coefficient0);
   return projectionMultiplyAddFP64(normalized.y, yLinear, xContribution);
-}
+}${
+        precise
+          ? ''
+          : `
 
 fn projectionDestinationOriginFP64(patchIndex: u32, wordOffset: u32) -> vec2f {
   let value = vec2u(
@@ -282,22 +264,69 @@ fn projectionDestinationOriginFP64(patchIndex: u32, wordOffset: u32) -> vec2f {
   );
   return sub_fp64u32_to_fp64(value, vec2u(0u));
 }`
+      }`
     : '';
+  // `selectProjectionPatch` holds the only containment call site; see its definition.
+  const patchSelection = `let patchIndex = selectProjectionPatch(position, assignedPatch);
+  if (patchIndex == INVALID_PATCH) {
+    return invalid;
+  }`;
+  // D3D12 inlines every call into DXIL, so each heavy fp64 helper is called from one site, in
+  // loops over the axes, rather than once per axis. The operations and their order are unchanged.
+  const doubleSingleOffsets = precise
+    ? `// Source offsets and destination origins share one raw binary64 conversion call site.
+  var rawValues = array<vec2u, 4>(
+    position.x,
+    position.y,
+    vec2u(projectionPlanWord(patchIndex, 17u), projectionPlanWord(patchIndex, 16u)),
+    vec2u(projectionPlanWord(patchIndex, 19u), projectionPlanWord(patchIndex, 18u))
+  );
+  var rawOrigins = array<vec2u, 4>(
+    vec2u(projectionPlanWord(patchIndex, 1u), projectionPlanWord(patchIndex, 0u)),
+    vec2u(projectionPlanWord(patchIndex, 3u), projectionPlanWord(patchIndex, 2u)),
+    vec2u(0u),
+    vec2u(0u)
+  );
+  var converted: array<vec2f, 4>;
+  for (var index = 0u; index < 4u; index += 1u) {
+    converted[index] = sub_fp64u32_to_fp64(rawValues[index], rawOrigins[index]);
+  }`
+    : `let sourceOffset = projectionSourceOffsetFP64(position, patchIndex);
+  var converted: array<vec2f, 4>;
+  converted[0] = sourceOffset.x;
+  converted[1] = sourceOffset.y;
+  for (var axis = 0u; axis < 2u; axis += 1u) {
+    converted[2u + axis] = projectionDestinationOriginFP64(patchIndex, 16u + 2u * axis);
+  }`;
   const writeResult = doubleSingle
-    ? `let normalizedFP64 = normalizeProjectionPositionFP64(position, patchIndex);
-  let projectedX = sum_fp64(
-    projectionDestinationOriginFP64(patchIndex, 16u),
-    evaluateProjectionPolynomialFP64(patchIndex, 20u, 40u, normalizedFP64)
+    ? `${doubleSingleOffsets}
+  var sourceScales = array<vec2f, 2>(
+    vec2f(
+      bitcast<f32>(projectionPlanWord(patchIndex, 4u)),
+      bitcast<f32>(projectionPlanWord(patchIndex, 60u))
+    ),
+    vec2f(
+      bitcast<f32>(projectionPlanWord(patchIndex, 5u)),
+      bitcast<f32>(projectionPlanWord(patchIndex, 61u))
+    )
   );
-  let projectedY = sum_fp64(
-    projectionDestinationOriginFP64(patchIndex, 18u),
-    evaluateProjectionPolynomialFP64(patchIndex, 30u, 50u, normalizedFP64)
-  );
+  var normalizedAxes: array<vec2f, 2>;
+  for (var axis = 0u; axis < 2u; axis += 1u) {
+    normalizedAxes[axis] = div_fp64(converted[axis], sourceScales[axis]);
+  }
+  let normalizedFP64 = ProjectionPointFP64(normalizedAxes[0], normalizedAxes[1]);
+  var projectedAxes: array<vec2f, 2>;
+  for (var axis = 0u; axis < 2u; axis += 1u) {
+    projectedAxes[axis] = sum_fp64(
+      converted[2u + axis],
+      evaluateProjectionPolynomialFP64(patchIndex, 20u + 10u * axis, 40u + 10u * axis, normalizedFP64)
+    );
+  }
   let projected = vec4f(
-    projectedX.x,
-    projectedX.y,
-    projectedY.x,
-    projectedY.y
+    projectedAxes[0].x,
+    projectedAxes[0].y,
+    projectedAxes[1].x,
+    projectedAxes[1].y
   );`
     : `let normalized = normalizeProjectionPosition(position, patchIndex);
   let destinationOffset = vec2f(
@@ -365,22 +394,36 @@ fn projectionPatchContains(position: ${positionType}, patchIndex: u32) -> bool {
     all(normalized <= maximum + boundaryTolerance);
 }
 
-fn findProjectionPatch(position: ${positionType}) -> u32 {
+// Returns the first patch containing the position: the assigned patch when one is given,
+// otherwise the first match in search order. Every candidate goes through the one
+// projectionPatchContains call site below, because D3D12 inlines each call site into DXIL.
+fn selectProjectionPatch(position: ${positionType}, assignedPatch: u32) -> u32 {
+  let searching = assignedPatch == INVALID_PATCH;
   ${
     routingNodeCount
-      ? `let routingPosition = ${routingPosition};
+      ? `var routingPosition = vec2f(0.0);
+  if (searching) { routingPosition = ${routingPosition}; }
   var nodeIndex = 0u;
   // Bound traversal even for malformed caller-owned storage. A valid traversal visits each
-  // node at most once; corrupt escape links must not cause an unbounded GPU loop.
-  for (var visitIndex = 0u; visitIndex < ${routingNodeCount}u; visitIndex += 1u) {
-    if (nodeIndex >= ${routingNodeCount}u) { break; }
-    let offset = ${routingOffset}u + nodeIndex * ${PROJECTION_ROUTING_WORD_LENGTH}u;
-    let minimum = vec2f(bitcast<f32>(projectionPlans[offset]), bitcast<f32>(projectionPlans[offset + 1u]));
-    let maximum = vec2f(bitcast<f32>(projectionPlans[offset + 2u]), bitcast<f32>(projectionPlans[offset + 3u]));
-    if (any(routingPosition < minimum) || any(routingPosition > maximum)) {
-      nodeIndex = projectionPlans[offset + 4u];
+  // node at most once; corrupt escape links must not cause an unbounded GPU loop. An assigned
+  // patch uses the first visit as a one-patch range.
+  for (var visitIndex = 0u; visitIndex <= ${routingNodeCount}u; visitIndex += 1u) {
+    var firstPatch = 0u;
+    var patchEnd = 0u;
+    if (!searching) {
+      if (visitIndex > 0u) { break; }
+      firstPatch = assignedPatch;
+      patchEnd = select(assignedPatch, assignedPatch + 1u, assignedPatch < PATCH_COUNT);
     } else {
-      let firstPatch = projectionPlans[offset + 5u];
+      if (visitIndex >= ${routingNodeCount}u || nodeIndex >= ${routingNodeCount}u) { break; }
+      let offset = ${routingOffset}u + nodeIndex * ${PROJECTION_ROUTING_WORD_LENGTH}u;
+      let minimum = vec2f(bitcast<f32>(projectionPlans[offset]), bitcast<f32>(projectionPlans[offset + 1u]));
+      let maximum = vec2f(bitcast<f32>(projectionPlans[offset + 2u]), bitcast<f32>(projectionPlans[offset + 3u]));
+      if (any(routingPosition < minimum) || any(routingPosition > maximum)) {
+        nodeIndex = projectionPlans[offset + 4u];
+        continue;
+      }
+      firstPatch = projectionPlans[offset + 5u];
       let storedPatchEnd = projectionPlans[offset + 6u];
       // Reject malformed borrowed storage before scanning. Internal nodes have empty ranges;
       // valid leaves never exceed the builder's fixed capacity.
@@ -388,22 +431,27 @@ fn findProjectionPatch(position: ${positionType}) -> u32 {
           storedPatchEnd > PATCH_COUNT || storedPatchEnd - firstPatch > ${PROJECTION_ROUTING_LEAF_SIZE}u) {
         return INVALID_PATCH;
       }
-      let patchEnd = min(storedPatchEnd, PATCH_COUNT);
-      for (var patchIndex = firstPatch; patchIndex < patchEnd; patchIndex += 1u) {
-        if (projectionPatchContains(position, patchIndex)) { return patchIndex; }
-      }
+      patchEnd = min(storedPatchEnd, PATCH_COUNT);
       nodeIndex += 1u;
     }
-  }`
-      : `
-  for (var patchIndex: u32 = 0u; patchIndex < PATCH_COUNT; patchIndex += 1u) {
-    if (projectionPatchContains(position, patchIndex)) {
-      return patchIndex;
+    for (var patchIndex = firstPatch; patchIndex < patchEnd; patchIndex += 1u) {
+      if (projectionPatchContains(position, patchIndex)) { return patchIndex; }
     }
-  }
-  `
+  }`
+      : `let firstCandidate = select(assignedPatch, 0u, searching);
+  let candidateCount = select(1u, PATCH_COUNT, searching);
+  for (var candidateOffset = 0u; candidateOffset < candidateCount; candidateOffset += 1u) {
+    let candidate = firstCandidate + candidateOffset;
+    if (candidate < PATCH_COUNT && projectionPatchContains(position, candidate)) {
+      return candidate;
+    }
+  }`
   }
   return INVALID_PATCH;
+}
+
+fn findProjectionPatch(position: ${positionType}) -> u32 {
+  return selectProjectionPatch(position, INVALID_PATCH);
 }
 
 fn evaluateProjectionPolynomial(
@@ -440,11 +488,7 @@ ${doubleSingleFunctions}
 fn project(position: ${positionType}, assignedPatch: u32) -> ProjectionResult {
   let invalid = ProjectionResult(${doubleSingle ? 'vec4f(0.0)' : 'vec2f(0.0)'}, 0u);
   if (!(${finitePosition}) || !projectionPlanContains(position)) { return invalid; }
-  var patchIndex = assignedPatch;
-  if (patchIndex == INVALID_PATCH) { patchIndex = findProjectionPatch(position); }
-  if (patchIndex >= PATCH_COUNT || !projectionPatchContains(position, patchIndex)) {
-    return invalid;
-  }
+  ${patchSelection}
   ${writeResult}
   if (!all((bitcast<${doubleSingle ? 'vec4u' : 'vec2u'}>(projected) &
     ${doubleSingle ? 'vec4u' : 'vec2u'}(0x7f800000u)) != ${doubleSingle ? 'vec4u' : 'vec2u'}(0x7f800000u))) {

@@ -3,8 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuProj.
 
-import type {ShaderModule} from '@luma.gl/shadertools';
-import {GEOSPATIAL_INTEGER_FP64_ARITHMETIC_MODULE} from '../geospatial/geospatial-utils';
+import {fp64arithmetic, type ShaderModule} from '@luma.gl/shadertools';
+import {
+  GEOSPATIAL_INTEGER_FP64_ARITHMETIC_MODULE,
+  getClassicFP64Defines
+} from '../geospatial/geospatial-utils';
 import {evaluateProjectionPlan, findProjectionPatch, packProjectionPlan} from './projection-plan';
 import {getProjectionShaderFunctions} from './projection-shader';
 import {getProjectionProgramMetadata, type ProjectionProgramMetadata} from './projection-metadata';
@@ -97,7 +100,18 @@ export class CompiledProjection {
   }
 
   /** Namespace permits several independent transformations in one consumer shader. */
-  getShader(options: {namespace?: string; parameterOffset?: number} = {}): ProjectionShader {
+  getShader(
+    options: {
+      namespace?: string;
+      parameterOffset?: number;
+      /**
+       * fp64 arithmetic for the returned modules and defines. Default `integer`, which needs no
+       * uniforms. `classic` uses the full fp64arithmetic module: the consumer must bind its
+       * uniform block and upload `ONE` and `SPLIT` before dispatching.
+       */
+      fp64Arithmetic?: 'integer' | 'classic';
+    } = {}
+  ): ProjectionShader {
     const namespace = options.namespace ?? 'projection';
     const parameterOffset = options.parameterOffset ?? 0;
     if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(namespace) || namespace.includes('__')) {
@@ -115,8 +129,17 @@ export class CompiledProjection {
       source: this.shaderSource.replace(/PROGRAM|PARAMETER_OFFSET/g, token =>
         token === 'PROGRAM' ? prefix : `${parameterOffset}u`
       ),
-      modules: [GEOSPATIAL_INTEGER_FP64_ARITHMETIC_MODULE],
-      defines: {LUMA_FP64_INTEGER_ARITHMETIC: true},
+      // Integer-controlled arithmetic needs no uniforms. Classic double-single uses the full
+      // module, whose uniforms the consumer binds, and every fp64 workaround define.
+      modules: [
+        options.fp64Arithmetic === 'classic'
+          ? (fp64arithmetic as ShaderModule)
+          : (GEOSPATIAL_INTEGER_FP64_ARITHMETIC_MODULE as ShaderModule)
+      ],
+      defines:
+        options.fp64Arithmetic === 'classic'
+          ? getClassicFP64Defines('unknown')
+          : {LUMA_FP64_INTEGER_ARITHMETIC: true},
       entryPoint: `${prefix}_project`,
       bindingName: `${prefix}_parameters`,
       inputType:

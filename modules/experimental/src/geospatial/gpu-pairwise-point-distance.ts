@@ -132,7 +132,8 @@ fn main(
         ],
         bindings: {leftPositions: left, rightPositions: right, outputDistances: output},
         dispatchLayout,
-        precise
+        precise,
+        fp64Arithmetic: 'platform'
       });
     }
   }

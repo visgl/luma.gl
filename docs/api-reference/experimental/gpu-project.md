@@ -232,6 +232,16 @@ entry point or intermediate output buffer. `parameterOffset` is in Uint32 words 
 bound buffer range; namespaces allow multiple programs in one shader. Match `@binding(auto)`
 declaration order in the consumer's shader layout.
 
+The returned `modules` and `defines` select integer-controlled double-single arithmetic, which needs
+no uniforms and is correct on every backend. `GPUProjectionProgram` and `GPUProjection` instead
+choose classic double-single on a reported D3D11, D3D12 or Vulkan backend, and on a host known not
+to be Apple when the backend is not reported, because integer-controlled shaders are slow to compile
+on D3D12. A consumer can opt into the same with `getShader({fp64Arithmetic: 'classic'})`, which
+returns the full `fp64arithmetic` module and its workaround defines. The consumer must then bind
+the module's uniform block and upload its `ONE` and `SPLIT` values (for example with
+`computation.updateShaderInputs()`) before dispatching; with zero values the low limbs are lost.
+Keep integer-controlled arithmetic on Metal, which may reassociate the classic transforms.
+
 Zero input validity, non-finite intermediates, and rejected domains produce zero output and validity.
 The graph contributor preserves source chunks, including empty chunks, and owns only its parameter
 buffer. Input, output, and validity columns remain caller-owned.
