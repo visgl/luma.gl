@@ -11,7 +11,7 @@ export default defineConfig(({mode}) => ({
       : './',
   resolve: {
     alias: Object.fromEntries(
-      ['core', 'engine', 'three', 'webgl', 'webgpu', 'shadertools'].map(name => [
+      ['core', 'engine', 'gpgpu', 'three', 'webgl', 'webgpu', 'shadertools'].map(name => [
         `@luma.gl/${name}`,
         fileURLToPath(new URL(`../../../modules/${name}/src`, import.meta.url))
       ])

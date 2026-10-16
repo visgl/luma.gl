@@ -13,13 +13,13 @@
     "@deck.gl/layers": "9.4.0",
     "@luma.gl/core": "10.0.0-alpha.4",
     "@luma.gl/engine": "10.0.0-alpha.4",
+    "@luma.gl/gpgpu": "10.0.0-alpha.4",
     "@luma.gl/shadertools": "10.0.0-alpha.4",
     "@luma.gl/three": "workspace:*",
     "@luma.gl/webgl": "10.0.0-alpha.4",
     "@luma.gl/webgpu": "10.0.0-alpha.4",
     "mjolnir.js": "^3.1.1",
-    "three": "0.185.1",
-    "@luma.gl/gpgpu": "10.0.0-alpha.4"
+    "three": "0.185.1"
   },
   "devDependencies": {
     "@types/three": "0.185.0",
