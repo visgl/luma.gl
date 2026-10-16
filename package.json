@@ -72,8 +72,8 @@
     "@types/node": "22.15.2",
     "@vis.gl/dev-tools": "^2.0.0-beta.1",
     "@vis.gl/ts-plugins": "^2.0.0-beta.1",
-    "@vitest/browser-playwright": "5.0.2",
-    "@vitest/coverage-istanbul": "5.0.2",
+    "@vitest/browser-playwright": "5.0.5",
+    "@vitest/coverage-istanbul": "5.0.5",
     "a5-js": "^0.8.0",
     "esbuild": "^0.28.1",
     "h3-js": "^4.4.0",
@@ -82,7 +82,7 @@
     "pre-commit": "^1.2.2",
     "texture-compressor": "^1.0.2",
     "vite": "^8.0.0",
-    "vitest": "5.0.2",
+    "vitest": "5.0.5",
     "wgsl_reflect": "1.2.3",
     "yaml": "^2.8.1"
   },
@@ -101,8 +101,8 @@
     "@math.gl/web-mercator": "~5.0.0-alpha.15",
     "@deck.gl/core@npm:9.4.0": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch",
     "@math.gl/core@npm:^4.1.0": "5.0.0-alpha.15",
-    "@vitest/browser": "5.0.2",
-    "@vitest/browser-playwright": "5.0.2"
+    "@vitest/browser": "5.0.5",
+    "@vitest/browser-playwright": "5.0.5"
   },
   "packageExtensions": {
     "@loaders.gl/gltf@~5.0.0-alpha.11": {
