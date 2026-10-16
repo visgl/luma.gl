@@ -7,6 +7,7 @@
 - Publish the experimental, Arrow, text, and splat packages so downstream examples can use npm dependencies.
 - Add GPU sphere dynamics, contact constraints, and pool simulation helpers.
 - Preserve WebGL pipelines when only dynamic parameters change and reject resource creation after context loss.
+- Avoid a circular WebGL barrel import when bundling package consumers.
 
 ### v10.0.0-alpha.4
 

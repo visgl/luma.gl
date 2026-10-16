@@ -6,7 +6,7 @@ import type {PrimitiveTopology, ShaderLayout, TransformFeedbackProps} from '@lum
 import {log, TransformFeedback, Buffer, BufferRange} from '@luma.gl/core';
 import {GL} from '@luma.gl/webgl/constants';
 import {WebGLDevice} from '../webgl-device';
-import {WEBGLBuffer} from '../../index';
+import {WEBGLBuffer} from './webgl-buffer';
 import {getGLPrimitive} from '../helpers/webgl-topology-utils';
 
 export class WEBGLTransformFeedback extends TransformFeedback {
