@@ -8,6 +8,8 @@ Target Release Date: Q3, 2026
 
 **General**
 
+- **Public package** - `@luma.gl/text` is included in npm releases, including its CPU font atlas builders under `@luma.gl/text/fonts`.
+
 - **Opaque reflective ray transport** - Opt-in bounded GGX metallic/roughness secondary paths
   add colored and glossy reflections. Chart Materials demonstrates a retained roughness sweep
   with transport and bounce controls. The default diffuse mode is unchanged.
@@ -30,6 +32,10 @@ Target Release Date: Q3, 2026
   fixed-arithmetic routing benchmarks and measurement-gated inline/materialized selection.
 
 **Experimental Three.js integration**
+
+- **Deck overlays for Three apps** - Add native deck layers to an existing Three renderer
+  through `@luma.gl/three/overlay`. Three retains its camera, controls and frame loop;
+  the separate transparent canvas follows perspective/orthographic cameras and pixel ratio.
 
 - **Shared prepared scenes** - Multiple `ThreeSceneLayer` instances can share one
   adapter while retaining independent picking and highlighting. Readiness tracking does

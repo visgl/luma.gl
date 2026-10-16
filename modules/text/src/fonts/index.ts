@@ -42,3 +42,13 @@ export {
   type TextKerning,
   type TextKerningPair
 } from './atlas/text-utils';
+
+export {
+  buildBrowserFontAtlas,
+  resolveBrowserFontAtlasSettings,
+  setFontAtlasCacheLimit,
+  type BrowserFontAtlasBuildOptions,
+  type BrowserFontAtlasSettings,
+  type ResolvedBrowserFontAtlasSettings,
+  type BrowserFontRenderer
+} from './atlas/browser-font-atlas';

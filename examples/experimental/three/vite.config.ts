@@ -9,6 +9,15 @@ export default defineConfig(({mode}) => ({
     mode === 'website'
       ? `${(process.env['WEBSITE_BASE_URL'] || '/').replace(/\/?$/, '/')}standalone-examples/three/`
       : './',
+  build: {
+    rollupOptions: {
+      input: {
+        index: fileURLToPath(new URL('./index.html', import.meta.url)),
+        'gpu-graph-galaxy': fileURLToPath(new URL('./gpu-graph-galaxy.html', import.meta.url)),
+        'host-overlay': fileURLToPath(new URL('./host-overlay.html', import.meta.url))
+      }
+    }
+  },
   resolve: {
     alias: Object.fromEntries(
       ['core', 'engine', 'gpgpu', 'three', 'webgl', 'webgpu', 'shadertools'].map(name => [

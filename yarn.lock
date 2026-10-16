@@ -5461,7 +5461,7 @@ __metadata:
     "@math.gl/core": "npm:5.0.0-alpha.15"
     "@math.gl/polygon": "npm:~5.0.0-alpha.15"
   peerDependencies:
-    "@luma.gl/engine": 10.0.0-alpha.3
+    "@luma.gl/engine": ~10.0.0-alpha.3
   languageName: unknown
   linkType: soft
 
@@ -5471,6 +5471,7 @@ __metadata:
   dependencies:
     "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
     "@luma.gl/core": "npm:10.0.0-alpha.4"
+    "@luma.gl/webgl": "npm:10.0.0-alpha.4"
     "@types/three": "npm:0.185.0"
     three: "npm:0.185.1"
   peerDependencies:
