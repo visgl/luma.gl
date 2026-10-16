@@ -9,6 +9,7 @@ explicitly experimental subpaths that are not re-exported from the root:
   and basic buffer/layout helpers;
 - `@luma.gl/gpgpu/gpu-core` for WebGPU command graphs, execution planning, inspection, autotuning,
   and generic algorithms;
+- `@luma.gl/gpgpu/gpu-physics` for GPU-resident sphere contacts, angular dynamics, sleeping and finite planes;
 - `@luma.gl/gpgpu/gpu-graph` for graph data structures, topology, analytics, and layouts, plus the
   optional `@luma.gl/gpgpu/gpu-graph/benchmarks` entry point;
 - `@luma.gl/gpgpu/gpu-dggs` for the shared split-uint64 cell projection primitive, plus the optional
