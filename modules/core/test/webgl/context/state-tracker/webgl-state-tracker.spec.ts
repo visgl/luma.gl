@@ -222,7 +222,25 @@ it('WebGLStateTracker#tracks buffer bindings by target', async () => {
     [gl.PIXEL_PACK_BUFFER, gl.PIXEL_PACK_BUFFER_BINDING],
     [gl.PIXEL_UNPACK_BUFFER, gl.PIXEL_UNPACK_BUFFER_BINDING]
   ];
+  // Each target starts with its own buffer, so restoring one target's binding onto another fails
+  const initialBuffers = bindingParameters.map(() => gl.createBuffer());
   const buffers = bindingParameters.map(() => gl.createBuffer());
+
+  // While tracking is enabled, getParameter() answers from the cache. Disable it to read the
+  // bindings WebGL actually holds, then restore the previous setting.
+  const getActualParameter = (pname: number) => {
+    const enabled = state.enable;
+    state.enable = false;
+    try {
+      return gl.getParameter(pname);
+    } finally {
+      state.enable = enabled;
+    }
+  };
+
+  for (const [index, [target]] of bindingParameters.entries()) {
+    gl.bindBuffer(target, initialBuffers[index]);
+  }
 
   device.pushState();
   for (const [index, [target, bindingParameter]] of bindingParameters.entries()) {
@@ -235,6 +253,10 @@ it('WebGLStateTracker#tracks buffer bindings by target', async () => {
     expect(gl.getParameter(bindingParameter), `binding ${bindingParameter} is current`).toBe(
       buffers[index]
     );
+    expect(
+      getActualParameter(bindingParameter),
+      `binding ${bindingParameter} is bound in WebGL`
+    ).toBe(buffers[index]);
   }
 
   const uniformBuffer = gl.createBuffer();
@@ -245,11 +267,18 @@ it('WebGLStateTracker#tracks buffer bindings by target', async () => {
   gl.bindBuffer(gl.UNIFORM_BUFFER, null);
   device.popState();
 
-  for (const [, bindingParameter] of bindingParameters) {
-    expect(gl.getParameter(bindingParameter), `binding ${bindingParameter} is restored`).toBe(null);
+  for (const [index, [target, bindingParameter]] of bindingParameters.entries()) {
+    expect(gl.getParameter(bindingParameter), `binding ${bindingParameter} is restored`).toBe(
+      initialBuffers[index]
+    );
+    expect(
+      getActualParameter(bindingParameter),
+      `binding ${bindingParameter} is restored in WebGL`
+    ).toBe(initialBuffers[index]);
+    gl.bindBuffer(target, null);
   }
 
-  for (const buffer of [...buffers, uniformBuffer]) gl.deleteBuffer(buffer);
+  for (const buffer of [...initialBuffers, ...buffers, uniformBuffer]) gl.deleteBuffer(buffer);
 });
 
 it('WebGLStateTracker#not cached parameters', async () => {
