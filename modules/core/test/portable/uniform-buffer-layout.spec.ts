@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {makeShaderBlockLayout, ShaderBlockWriter, UniformStore} from '../../src';
+import {makeShaderBlockLayout, ShaderBlockWriter, UniformBlock, UniformStore} from '../../src';
 
 function almostEqual(a: number, b: number, eps = 1e-3): boolean {
   return Math.abs(a - b) <= eps;
@@ -143,6 +143,53 @@ it('array of structs layout', () => {
   expect(view[7], 'lights[1].intensity reuses vec3 tail slot').toBe(1.0);
 
   void 0;
+});
+
+it('ShaderBlockWriter flattens and serializes repeated values consistently', () => {
+  const {writer} = makeLayoutWriter({
+    weights: ['f32', 3],
+    lights: [{position: 'vec3<f32>', intensity: 'f32'}, 2]
+  } as const);
+
+  const firstValues = {
+    weights: [1, 2, 3],
+    lights: [{position: [1, 2, 3], intensity: 0.5}]
+  };
+  const secondValues = {
+    weights: [4, 5],
+    lights: [undefined, {position: [4, 5, 6], intensity: 1}]
+  };
+
+  expect(writer.getFlatUniformValues(firstValues), 'first values flatten to leaf paths').toEqual({
+    'weights[0]': 1,
+    'weights[1]': 2,
+    'weights[2]': 3,
+    'lights[0].position': [1, 2, 3],
+    'lights[0].intensity': 0.5
+  });
+  const secondFlatValues = writer.getFlatUniformValues(secondValues);
+  expect(secondFlatValues, 'later values reuse leaf paths without mixing values').toEqual({
+    'weights[0]': 4,
+    'weights[1]': 5,
+    'lights[1].position': [4, 5, 6],
+    'lights[1].intensity': 1
+  });
+
+  const firstData = Array.from(writer.getData(firstValues));
+  expect(
+    Array.from(writer.getFlatData(writer.getFlatUniformValues(firstValues))),
+    'flat values serialize like nested values'
+  ).toEqual(firstData);
+
+  const secondData = Array.from(writer.getFlatData(secondFlatValues));
+  expect(secondData, 'flat values serialize like nested values').toEqual(
+    Array.from(writer.getData(secondValues))
+  );
+  const secondView = new Float32Array(new Uint8Array(secondData).buffer);
+  expect(Array.from(secondView.slice(0, 12)), 'leaves of earlier data are cleared').toEqual([
+    4, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0
+  ]);
+  expect(Array.from(secondView.slice(16, 20)), 'second light is written').toEqual([4, 5, 6, 1]);
 });
 
 it('partial nested updates preserve unspecified leaves', () => {
@@ -505,4 +552,92 @@ it('ShaderBlockLayout matches original deck project std140 packing', () => {
   }
 
   void 0;
+});
+
+it('ShaderBlockWriter writes struct fields named like Object.prototype members', () => {
+  const {writer} = makeLayoutWriter({
+    material: {
+      constructor: 'f32',
+      toString: 'f32',
+      valueOf: 'f32',
+      hasOwnProperty: 'f32'
+    }
+  } as const);
+  const values = {
+    material: {constructor: 1, toString: 2, valueOf: 3, hasOwnProperty: 4}
+  };
+
+  expect(writer.getFlatUniformValues(values), 'fields flatten to their own paths').toEqual({
+    'material.constructor': 1,
+    'material.toString': 2,
+    'material.valueOf': 3,
+    'material.hasOwnProperty': 4
+  });
+  const view = new Float32Array(writer.getData(values).slice().buffer);
+  expect(Array.from(view.slice(0, 4)), 'every field is written').toEqual([1, 2, 3, 4]);
+});
+
+/** Returns `own` with an inherited enumerable `name` that throws when read. */
+function withInheritedGetter(name: string, own: object): any {
+  const prototype = Object.defineProperty({}, name, {
+    enumerable: true,
+    get() {
+      throw new Error(`inherited ${name} was read`);
+    }
+  });
+  return Object.assign(Object.create(prototype), own);
+}
+
+it('ShaderBlockWriter ignores inherited enumerable fields', () => {
+  const {writer} = makeLayoutWriter({
+    scale: 'f32',
+    light: {position: 'vec3<f32>', intensity: 'f32'}
+  } as const);
+  const light = Object.assign(Object.create({intensity: 7}), {
+    position: [1, 2, 3]
+  });
+
+  expect(
+    writer.getFlatUniformValues({light}),
+    'only own struct fields are flattened, as Object.entries() did'
+  ).toEqual({'light.position': [1, 2, 3]});
+  expect(
+    writer.getFlatUniformValues(Object.assign(Object.create({scale: 2}), {light: {intensity: 1}})),
+    'only own uniforms are flattened, as Object.entries() did'
+  ).toEqual({'light.intensity': 1});
+  expect(
+    writer.getFlatUniformValues(
+      withInheritedGetter('scale', {
+        light: withInheritedGetter('intensity', {position: [1, 2, 3]})
+      })
+    ),
+    'inherited fields are not read'
+  ).toEqual({'light.position': [1, 2, 3]});
+});
+
+it('UniformBlock and UniformStore ignore inherited enumerable values', () => {
+  const uniformBlock = new UniformBlock<{scale: number; offset: number}>();
+  uniformBlock.setUniforms(Object.assign(Object.create({scale: 2}), {offset: 1}));
+  expect(uniformBlock.getAllUniforms(), 'only own uniforms are set').toEqual({
+    offset: 1
+  });
+  let reads = 0;
+  const uniforms = withInheritedGetter('scale', {});
+  Object.defineProperty(uniforms, 'offset', {
+    enumerable: true,
+    get: () => 10 + ++reads
+  });
+  uniformBlock.needsRedraw = false;
+  uniformBlock.setUniforms(uniforms);
+  expect(reads, 'an own value is read once, and an inherited one not at all').toBe(1);
+
+  const uniformStore = new UniformStore({type: 'webgl'} as any, {
+    lighting: {
+      uniformTypes: {intensity: 'f32'},
+      defaultUniforms: {intensity: 0.5}
+    }
+  });
+  uniformStore.setUniforms(withInheritedGetter('lighting', {}));
+  const view = new Float32Array(uniformStore.getUniformBufferData('lighting').slice().buffer);
+  expect(view[0], 'an inherited block is not set').toBe(0.5);
 });

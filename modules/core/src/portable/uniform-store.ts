@@ -110,15 +110,17 @@ export class UniformStore<
     uniforms: Partial<{[group in keyof TPropGroups]: Partial<TPropGroups[group]>}>,
     commandEncoder?: CommandEncoder
   ): void {
-    for (const [blockName, uniformValues] of Object.entries(uniforms)) {
-      const uniformBufferName = blockName as keyof TPropGroups;
-      const shaderBlockWriter = this.shaderBlockWriters.get(uniformBufferName);
-      const flattenedUniforms = shaderBlockWriter?.getFlatUniformValues(
-        (uniformValues || {}) as Record<string, CompositeUniformValue>
-      );
-      this.uniformBlocks.get(uniformBufferName)?.setUniforms(flattenedUniforms || {});
-      // We leverage logging in updateUniformBuffers(), even though slightly less efficient
-      // this.updateUniformBuffer(blockName);
+    for (const blockName in uniforms) {
+      // Like Object.entries(), skip inherited properties
+      if (Object.hasOwn(uniforms, blockName)) {
+        const shaderBlockWriter = this.shaderBlockWriters.get(blockName);
+        const flattenedUniforms = shaderBlockWriter?.getFlatUniformValues(
+          (uniforms[blockName] || {}) as Record<string, CompositeUniformValue>
+        );
+        this.uniformBlocks.get(blockName)?.setUniforms(flattenedUniforms || {});
+        // We leverage logging in updateUniformBuffers(), even though slightly less efficient
+        // this.updateUniformBuffer(blockName);
+      }
     }
 
     this.updateUniformBuffers(commandEncoder);
@@ -144,7 +146,8 @@ export class UniformStore<
   getUniformBufferData(uniformBufferName: keyof TPropGroups): Uint8Array {
     const uniformValues = this.uniformBlocks.get(uniformBufferName)?.getAllUniforms() || {};
     const shaderBlockWriter = this.shaderBlockWriters.get(uniformBufferName);
-    return shaderBlockWriter?.getData(uniformValues) || new Uint8Array(0);
+    // The uniform block holds values that are already flattened
+    return shaderBlockWriter?.getFlatData(uniformValues) || new Uint8Array(0);
   }
 
   /**

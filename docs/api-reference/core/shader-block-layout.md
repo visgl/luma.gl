@@ -102,6 +102,10 @@ Flattens nested struct and fixed-size array values into leaf-path uniforms.
 
 Returns serialized block data ready to upload into a GPU buffer.
 
+### `getFlatData(flattenedUniformValues): Uint8Array`
+
+Like `getData()`, for values that are already flattened by `getFlatUniformValues()`.
+
 ## Remarks
 
 - WebGL uniform buffers should use `layout(std140)` in GLSL to match host-side

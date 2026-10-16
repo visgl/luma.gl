@@ -178,6 +178,58 @@ it('Model#draw skips zero-instance submissions', async () => {
   void 0;
 });
 
+it('Model#updateShaderInputs writes uniform values changed in place', async () => {
+  const device = await getNullTestDevice();
+  const shaderInputs = new ShaderInputs<{
+    appTransform: {scale: number; offset: [number, number]};
+  }>({
+    appTransform: {
+      name: 'appTransform',
+      uniformTypes: {scale: 'f32', offset: 'vec2<f32>'},
+      defaultUniforms: {scale: 1, offset: [0, 0]},
+      dependencies: []
+    } as any
+  });
+  const model = new Model(device, {
+    id: 'in-place-uniforms-test',
+    vs: DUMMY_VS,
+    fs: DUMMY_FS,
+    shaderInputs
+  });
+  const uniformBuffer = model._uniformStore.getManagedUniformBuffer('appTransform');
+  const writes: number[][] = [];
+  const write = uniformBuffer.write.bind(uniformBuffer);
+  uniformBuffer.write = (data, byteOffset) => {
+    const bytes = data as Uint8Array;
+    writes.push(Array.from(new Float32Array(bytes.buffer, bytes.byteOffset, 4)));
+    write(data, byteOffset);
+  };
+
+  model.updateShaderInputs();
+  expect(writes.pop(), 'initial values are written').toEqual([1, 0, 0, 0]);
+
+  const uniforms = shaderInputs.getUniformValues().appTransform as {
+    scale: number;
+    offset: number[];
+  };
+  uniforms.scale = 2;
+  model.updateShaderInputs();
+  expect(writes.pop(), 'scalar changed in place is written').toEqual([2, 0, 0, 0]);
+
+  uniforms.offset[1] = 3;
+  model.updateShaderInputs();
+  expect(writes.pop(), 'array element changed in place is written').toEqual([2, 0, 0, 3]);
+
+  uniforms.offset[0] = 4;
+  model.updateShaderInputs();
+  expect(writes.pop(), 'array changed in place again is written').toEqual([2, 0, 4, 3]);
+
+  model.updateShaderInputs();
+  expect(writes.length, 'unchanged values are not written again').toBe(0);
+
+  model.destroy();
+});
+
 it('Model#multiple delete', async () => {
   const webglDevice = await getWebGLTestDevice();
 

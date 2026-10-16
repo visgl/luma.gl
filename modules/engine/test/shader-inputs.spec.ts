@@ -438,3 +438,62 @@ it('ShaderInputs#lighting array-of-struct uniforms', () => {
 
   void 0;
 });
+
+/** Returns `own` with an inherited enumerable `name` that throws when read. */
+function withInheritedGetter(name: string, own: object): any {
+  const prototype = Object.defineProperty({}, name, {
+    enumerable: true,
+    get() {
+      throw new Error(`inherited ${name} was read`);
+    }
+  });
+  return Object.assign(Object.create(prototype), own);
+}
+
+it('ShaderInputs#partial struct updates ignore inherited fields', () => {
+  const composite: ShaderModule<any, any> = {
+    name: 'composite',
+    uniformTypes: {light: {position: 'vec3<f32>', intensity: 'f32'}},
+    defaultUniforms: {light: {position: [0, 0, 0], intensity: 0.5}},
+    getUniforms: props => props
+  };
+  const shaderInputs = new ShaderInputs<{composite: any}>({composite});
+
+  const light = Object.assign(Object.create({intensity: 0}), {
+    position: [1, 2, 3]
+  });
+  shaderInputs.setProps({composite: {light}});
+
+  expect(
+    shaderInputs.moduleUniforms.composite['light'],
+    'an inherited field does not overwrite the saved value'
+  ).toEqual({position: [1, 2, 3], intensity: 0.5});
+
+  const extra = withInheritedGetter('inherited', {own: 2});
+  shaderInputs.setProps({composite: {light: {extra}}});
+  expect(
+    (shaderInputs.moduleUniforms.composite['light'] as any).extra,
+    'a cloned value keeps only own fields'
+  ).toEqual({own: 2});
+
+  shaderInputs.setProps({
+    composite: {light: withInheritedGetter('intensity', {position: [7, 8, 9]})}
+  });
+  expect(
+    (shaderInputs.moduleUniforms.composite['light'] as any).position,
+    'an inherited field is not read'
+  ).toEqual([7, 8, 9]);
+
+  const defaults = new ShaderInputs<{composite: any}>({
+    composite: {
+      ...composite,
+      defaultUniforms: withInheritedGetter('scale', {light: {intensity: 1}})
+    }
+  });
+  expect(
+    Object.keys(defaults.moduleUniforms.composite),
+    'only own default uniforms are kept'
+  ).toEqual(['light']);
+
+  void 0;
+});
