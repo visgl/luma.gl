@@ -79,7 +79,7 @@ console.table(
 | No pixels despite a nonzero actor count. | Configure every model's projection and camera inputs, end the render pass, and submit the device. |
 | Adding actors fails at a fixed count. | Recreate the crowd with a larger `capacity`, subject to device storage or texture limits. |
 | Individual actor changes make large crowds slow. | Prefer `addActors()`, `removeActors()`, and one crowd-level `update()` per frame. |
-| Baked clips fall back to CPU playback. | Increase `gpuAnimation.maxFrames` or reduce the clip set or sampling rate. |
+| Baked clips fall back to CPU playback. | Inspect `crowd.animationStats.fallbackReason` and `estimatedByteLength`; adjust `gpuAnimation.maxFrames`, `maxBytes`, or the sampling rate. Device limits still apply. |
 | The LOD sample never changes mesh. | Configure `lod`, enable it, supply `setLODView()`, and move actors across the authored coverage thresholds. |
 | Several draws appear with Auto LOD enabled. | Expected: each occupied source-primitive/detail bucket submits one instanced draw. |
 | An actor disappears at a great distance. | Actors below the lowest coverage threshold are culled; increase detail bias or lower the threshold. |

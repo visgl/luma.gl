@@ -500,6 +500,8 @@ export type CreateGLTFMaterialOptions = {
 /** Internal shared primitive configuration supplied by the glTF crowd adapter. */
 export type GLTFCrowdModelConfiguration = {
   capacity: number;
+  /** Single-scene playback keeps CPU bind transforms and applies baked motion relative to them. */
+  sceneAnimation?: boolean;
   jointsPerInstance: number;
   gpuAnimation?: GLTFCrowdGPUAnimationLayout;
 };

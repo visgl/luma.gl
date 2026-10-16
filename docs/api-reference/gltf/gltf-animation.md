@@ -56,6 +56,51 @@ scenegraphs.animator.update(deltaSeconds);
 Unlike calling the underlying `mixer.update()` manually, `animator.update()` also refreshes the
 automatically managed glTF skin bindings after every animation frame.
 
+### Move pose playback to the GPU
+
+Ordinary scenes can opt into the same baked GPU pose format used by crowds:
+
+```ts
+const scenegraphs = createScenegraphsFromGLTF(device, gltf, {
+  gpuAnimation: {
+    sampleRate: 30,
+    maxFrames: 8192,
+    maxBytes: 64 * 1024 * 1024
+  }
+});
+
+scenegraphs.animator.update(deltaSeconds);
+console.log(scenegraphs.animationStats.mode); // 'gpu' or a CPU fallback
+```
+
+During construction, a private CPU hierarchy evaluates each clip once to bake mesh motion,
+mesh-local joint palettes, and morph weights. During playback, the vertex shader samples and
+interpolates those poses, blends an optional crossfade, applies morph deltas, and skins vertices.
+The CPU advances playback clocks and uploads eight floats per primitive; it does not evaluate
+transform or morph tracks, traverse the skeleton to assemble palettes, or upload palettes each
+frame. WebGPU reads storage buffers; WebGL 2 reads float textures. Existing scene traversal and
+model drawing remain the rendering interface, including authored bind transforms and application
+placement of scene roots.
+
+GPU mode starts with the first clip. `animator.selectClip()`, `setTime()`, and `update()` retain
+their usual units and support one selected clip plus one crossfade action. Call `animator.update(0)`
+after directly seeking an action to refresh GPU frame selections. Material factors, texture
+transforms, camera projections, light properties, and visibility channels continue to evaluate on
+the CPU with the same playback clocks.
+
+CPU node transforms, joint palettes, morph weights, and bounds remain at their authored bind state
+in GPU mode. Use the default CPU path when attachments, picking, or other application code needs
+live CPU poses. Bake rate controls memory and accuracy: matrices and weights are interpolated
+between baked poses, which can differ from the original keyframe interpolation between samples.
+
+Scenes with animated transforms that affect cameras or lights, authored
+`EXT_mesh_gpu_instancing`, singular bind transforms, omitted source clips, or duplicate clip names
+retain CPU playback and report `fallbackReason: 'unsupported-scene'`. Budget and device-limit
+fallbacks use the same [diagnostics as crowds](/docs/api-reference/gltf/gltf-crowd-usage).
+The 64 MiB default bounds GPU atlases; equally sized CPU staging arrays are additional memory.
+The existing `GLTFCrowdGPUAnimationOptions` name remains supported; `GLTFGPUAnimationOptions`
+and `GLTFGPUAnimationStats` describe the shared scene and crowd configuration and diagnostics.
+
 ### Select and crossfade clips
 
 ```ts

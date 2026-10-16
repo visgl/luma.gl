@@ -119,6 +119,7 @@ bundle contains:
 | `cameras` | Runtime camera projections updated by supported animation pointers. |
 | `animator` | A `GLTFAnimator` backed by the shared engine animation mixer. |
 | `animations` | Decoded source clips, including supported animation-pointer channels. |
+| `animationStats` | CPU/GPU playback mode, baked storage estimate, and optional fallback reason. |
 | `skins` | Automatically updated source skin bindings and reusable joint palettes. |
 | `lights` | World-space directional, point, and spot lights from `KHR_lights_punctual`. |
 | `extensionSupport` | A map describing support for extensions reported by the asset. |
@@ -128,6 +129,10 @@ bundle contains:
 | `gltfMeshIdToNodeMap` | Source-mesh lookup table. |
 | `gltf` | The original postprocessed glTF document. |
 | `destroy()` | Idempotently releases scene-owned models, materials, buffers, and textures. |
+
+`CreateGLTFScenegraphsOptions.gpuAnimation` enables optional baked GPU transform, skeletal,
+and morph playback on both backends. See [GPU pose playback](/docs/api-reference/gltf/gltf-animation#move-pose-playback-to-the-gpu)
+for CPU/GPU responsibilities, clip controls, and fallback boundaries.
 
 Each bounds object contains `bounds`, `center`, `size`, `radius`, and
 `recommendedOrbitDistance`.

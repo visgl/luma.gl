@@ -12,6 +12,7 @@ import {createGLTFAnimatedCrowd} from '@luma.gl/gltf';
 import {NullDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {describe, expect, test, vi} from 'vitest';
+import {planGLTFCrowdGPUAnimation} from '../../src/gltf/gltf-gpu-animation';
 
 async function loadFixture(
   name: 'SimpleSkin.gltf' | 'AnimatedMorphCube.glb' | 'SimpleSkinLOD.gltf'
@@ -50,7 +51,12 @@ describe('GPU-resident independently animated glTF crowds', () => {
         Array.from(group.morphWeights!.subarray(4, 6))
       );
       expect(Array.from(await geometry.readAsync())).toEqual(initialGeometry);
-      expect(crowd.animationStats).toMatchObject({mode: 'cpu', morphGroupCount: 1});
+      expect(crowd.animationStats).toMatchObject({
+        mode: 'cpu',
+        morphGroupCount: 1,
+        estimatedByteLength: 0
+      });
+      expect(crowd.animationStats.fallbackReason).toBeUndefined();
     } finally {
       crowd.destroy();
       device.destroy();
@@ -223,7 +229,7 @@ describe('GPU-resident independently animated glTF crowds', () => {
 
     try {
       expect(crowd.gpuAnimationEnabled).toBe(false);
-      expect(crowd.animationStats.mode).toBe('cpu');
+      expect(crowd.animationStats).toMatchObject({mode: 'cpu', fallbackReason: 'frame-budget'});
       expect(crowd.primitiveGroups[0].skinJointMatrices).toBeInstanceOf(Texture);
     } finally {
       crowd.destroy();
@@ -242,11 +248,173 @@ describe('GPU-resident independently animated glTF crowds', () => {
 
     try {
       expect(crowd.gpuAnimationEnabled).toBe(false);
-      expect(crowd.animationStats.mode).toBe('cpu');
+      expect(crowd.animationStats).toMatchObject({mode: 'cpu', fallbackReason: 'texture-limit'});
       expect(crowd.primitiveGroups[0].skinJointMatrices).toBeInstanceOf(Texture);
     } finally {
       crowd.destroy();
       device.destroy();
     }
+  });
+
+  test('rejects an over-budget bake before atlas allocation and keeps CPU animation working', async () => {
+    const source = await loadFixture('SimpleSkin.gltf');
+    const plan = planGLTFCrowdGPUAnimation(source, {sampleRate: 12});
+    const device = new NullDevice({});
+    const createTexture = vi.spyOn(device, 'createTexture');
+    const crowd = createGLTFAnimatedCrowd(device, source, {
+      capacity: 2,
+      gpuAnimation: {sampleRate: 12, maxBytes: plan.estimatedByteLength - 1}
+    });
+
+    try {
+      expect(crowd.animationStats).toMatchObject({
+        mode: 'cpu',
+        fallbackReason: 'byte-budget',
+        estimatedByteLength: plan.estimatedByteLength
+      });
+      expect(
+        createTexture.mock.calls.some(([props]) => props.id?.endsWith('-crowd-animation-frames'))
+      ).toBe(false);
+      expect(crowd.primitiveGroups[0].animationFrames).toBeUndefined();
+      const actor = crowd.addActor({phase: 0.1});
+      const updateSkin = vi.spyOn(actor, 'updateSkinMatrices');
+      const initialTime = actor.time;
+      crowd.update(0.1);
+      expect(actor.time).toBeGreaterThan(initialTime);
+      expect(updateSkin).toHaveBeenCalled();
+    } finally {
+      crowd.destroy();
+      createTexture.mockRestore();
+      device.destroy();
+    }
+  });
+
+  test('accepts a bake at the byte budget and reports its atlas size', async () => {
+    const source = await loadFixture('SimpleSkin.gltf');
+    const plan = planGLTFCrowdGPUAnimation(source, {sampleRate: 12});
+    const device = new NullDevice({});
+    const crowd = createGLTFAnimatedCrowd(device, source, {
+      gpuAnimation: {sampleRate: 12, maxBytes: plan.estimatedByteLength}
+    });
+    try {
+      const atlas = crowd.primitiveGroups[0].animationFrames;
+      expect(atlas).toBeInstanceOf(Texture);
+      if (atlas instanceof Texture) {
+        expect(plan.estimatedByteLength).toBe(atlas.width * atlas.height * 16);
+      }
+      expect(crowd.animationStats).toMatchObject({
+        mode: 'gpu',
+        estimatedByteLength: plan.estimatedByteLength
+      });
+      expect(crowd.animationStats.fallbackReason).toBeUndefined();
+    } finally {
+      crowd.destroy();
+      device.destroy();
+    }
+  });
+
+  test('budgets every primitive, morph column, and independently posed mesh reference', async () => {
+    const source = await loadFixture('SimpleSkin.gltf');
+    const original = planGLTFCrowdGPUAnimation(source, {sampleRate: 12});
+    const mesh = source.meshes[0];
+    const primitive = mesh.primitives[0];
+    const expandedMesh = {...mesh, primitives: [primitive, {...primitive, targets: [{}, {}]}]};
+    const meshNode = source.nodes.find(node => node.mesh)!;
+    const expandedSource = {
+      ...source,
+      meshes: [expandedMesh],
+      nodes: [
+        {...meshNode, mesh: expandedMesh},
+        {...meshNode, mesh: expandedMesh}
+      ]
+    };
+    const expanded = planGLTFCrowdGPUAnimation(expandedSource, {sampleRate: 12});
+    const extraMorphBytes = original.layout!.frameCount * 2 * 16;
+    expect(expanded.estimatedByteLength).toBe(
+      (original.estimatedByteLength * 2 + extraMorphBytes) * 2
+    );
+    expect(
+      planGLTFCrowdGPUAnimation(expandedSource, {
+        sampleRate: 12,
+        maxBytes: expanded.estimatedByteLength - 1
+      }).fallbackReason
+    ).toBe('byte-budget');
+  });
+
+  test('enforces the default byte budget across all primitives', async () => {
+    const source = await loadFixture('SimpleSkin.gltf');
+    const mesh = source.meshes[0];
+    const expandedMesh = {...mesh, primitives: new Array(200).fill(mesh.primitives[0])};
+    const expandedSource = {...source, meshes: [expandedMesh]};
+    const plan = planGLTFCrowdGPUAnimation(expandedSource, {sampleRate: 1000});
+    expect(plan.estimatedByteLength).toBeGreaterThan(64 * 1024 * 1024);
+    expect(plan.fallbackReason).toBe('byte-budget');
+    expect(
+      planGLTFCrowdGPUAnimation(expandedSource, {
+        sampleRate: 1000,
+        maxBytes: plan.estimatedByteLength
+      }).layout
+    ).not.toBeNull();
+  });
+
+  test('applies the frame budget to the combined clip set', async () => {
+    const source = await loadFixture('SimpleSkin.gltf');
+    const plan = planGLTFCrowdGPUAnimation(source, {sampleRate: 12});
+    const expandedSource = {...source, animations: [...source.animations!, ...source.animations!]};
+    expect(
+      planGLTFCrowdGPUAnimation(expandedSource, {
+        sampleRate: 12,
+        maxFrames: plan.layout!.frameCount
+      }).fallbackReason
+    ).toBe('frame-budget');
+  });
+
+  test.each([
+    'maxBufferSize',
+    'maxStorageBufferBindingSize'
+  ] as const)('checks WebGPU %s before baking', async limit => {
+    const source = await loadFixture('SimpleSkin.gltf');
+    const plan = planGLTFCrowdGPUAnimation(source, {sampleRate: 12});
+    const device = new NullDevice({});
+    try {
+      const limits = device.limits;
+      limits.maxBufferSize = plan.estimatedByteLength;
+      limits.maxStorageBufferBindingSize = plan.estimatedByteLength;
+      const target = {type: 'webgpu' as const, limits};
+      expect(planGLTFCrowdGPUAnimation(source, {sampleRate: 12}, target).layout).not.toBeNull();
+      limits[limit]--;
+      expect(planGLTFCrowdGPUAnimation(source, {sampleRate: 12}, target).fallbackReason).toBe(
+        'buffer-limit'
+      );
+    } finally {
+      device.destroy();
+    }
+  });
+
+  test.each([
+    {sampleRate: Number.NaN},
+    {sampleRate: 0},
+    {sampleRate: Number.POSITIVE_INFINITY},
+    {maxFrames: -1},
+    {maxFrames: 0},
+    {maxFrames: 1.5},
+    {maxBytes: 0},
+    {maxBytes: -1},
+    {maxBytes: Number.POSITIVE_INFINITY},
+    {maxBytes: 1.5}
+  ])('reports invalid bake options %j', async options => {
+    const source = await loadFixture('SimpleSkin.gltf');
+    expect(planGLTFCrowdGPUAnimation(source, options).fallbackReason).toBe('invalid-options');
+  });
+
+  test('distinguishes disabled baking, absent clips, and malformed sample times', async () => {
+    const source = await loadFixture('SimpleSkin.gltf');
+    expect(planGLTFCrowdGPUAnimation(source, {enabled: false}).fallbackReason).toBe('disabled');
+    expect(planGLTFCrowdGPUAnimation({...source, animations: []}, {}).fallbackReason).toBe(
+      'no-animations'
+    );
+    const input = source.animations![0].samplers[0].input;
+    source.accessors[input].value![0] = Number.NaN;
+    expect(planGLTFCrowdGPUAnimation(source, {}).fallbackReason).toBe('invalid-animation');
   });
 });

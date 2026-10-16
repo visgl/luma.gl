@@ -165,6 +165,9 @@ rewritten every frame.
 
 ### Bake clips once and sample them in the vertex shader
 
+Ordinary glTF scenes can also use this baked format through
+[`createScenegraphsFromGLTF()` GPU pose playback](/docs/api-reference/gltf/gltf-animation#move-pose-playback-to-the-gpu).
+
 Pass `gpuAnimation` to trade one-time construction work and a bounded frame atlas for much lower
 per-frame CPU animation work:
 
@@ -173,12 +176,13 @@ const crowd = createGLTFAnimatedCrowd(device, gltf, {
   capacity: 256,
   gpuAnimation: {
     sampleRate: 30,
-    maxFrames: 8192
+    maxFrames: 8192,
+    maxBytes: 64 * 1024 * 1024
   }
 });
 
 console.log(crowd.animationStats);
-// {mode: 'gpu', sampleRate: 30, frameCount, clipCount, morphGroupCount}
+// {mode: 'gpu', sampleRate: 30, frameCount, clipCount, morphGroupCount, estimatedByteLength}
 ```
 
 The constructor evaluates every clip at the requested rate once, storing authored node matrices,
@@ -189,7 +193,23 @@ blends an optional second action, applies independent morph deltas, and skins th
 
 WebGPU uses read-only storage buffers; WebGL 2 uses nearest-sampled `rgba32float` textures with
 `texelFetch()`. If requested clips exceed `maxFrames`, the crowd retains the ordinary CPU playback
-path instead of allocating an unbounded atlas. `gpuAnimation` is opt-in because the actor's private
+path instead of allocating an unbounded atlas. `maxBytes` defaults to 64 MiB and bounds the
+estimated combined GPU atlas bytes, including joint matrices, morph columns, primitive copies,
+and all prepared LOD meshes. The estimate conservatively counts each mesh reference separately,
+so shared rigid meshes can use less memory than reported. CPU staging arrays require the same
+amount of memory again; geometry, textures, and other crowd buffers are outside this budget.
+Each atlas is also checked against WebGPU buffer allocation and storage-binding limits or
+WebGL 2 texture dimensions before allocation. Raising a budget cannot override device limits.
+
+`crowd.animationStats.estimatedByteLength` reports the preflight estimate, including when a valid
+frame layout exceeds a byte or device limit. It is zero when baking was not requested or stopped
+before memory estimation. `fallbackReason` is absent during GPU playback and ordinary default CPU
+playback; an explicitly requested bake that stays on the CPU reports `disabled`, `no-animations`,
+`invalid-options`, `invalid-animation`, `frame-budget`, `byte-budget`, `texture-limit`, or
+`buffer-limit`. Budget values must be positive safe integers; the sample rate must be positive
+and finite.
+
+`gpuAnimation` is opt-in because the actor's private
 CPU nodes remain at their authored bind state while baked sampling is active; inspect `actor.time`,
 actions, and `crowd.animationStats`, not animated node matrices, in that mode.
 
