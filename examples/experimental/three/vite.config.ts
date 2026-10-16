@@ -13,13 +13,14 @@ export default defineConfig(({mode}) => ({
     rollupOptions: {
       input: {
         index: fileURLToPath(new URL('./index.html', import.meta.url)),
+        'gpu-graph-galaxy': fileURLToPath(new URL('./gpu-graph-galaxy.html', import.meta.url)),
         'host-overlay': fileURLToPath(new URL('./host-overlay.html', import.meta.url))
       }
     }
   },
   resolve: {
     alias: Object.fromEntries(
-      ['core', 'engine', 'three', 'webgl', 'webgpu', 'shadertools'].map(name => [
+      ['core', 'engine', 'gpgpu', 'three', 'webgl', 'webgpu', 'shadertools'].map(name => [
         `@luma.gl/${name}`,
         fileURLToPath(new URL(`../../../modules/${name}/src`, import.meta.url))
       ])
