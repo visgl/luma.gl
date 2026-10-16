@@ -36,6 +36,7 @@ try {
     `${device.info.vendor} · ${device.info.gpuArchitecture} · ${device.info.featureLevel}`;
   const camera = device.createBuffer({byteLength: 96, usage: Buffer.UNIFORM | Buffer.COPY_DST});
   type Resources = {
+    scene: string;
     count: number;
     halfExtent: number;
     positions: Buffer;
@@ -48,7 +49,7 @@ try {
     const positionData = new Float32Array(target.count * 4);
     const velocityData = new Float32Array(target.count * 4);
     const orientationData = new Float32Array(target.count * 4);
-    const scene = getElement<HTMLSelectElement>('#scene').value;
+    const scene = target.scene;
     const layerCount =
       scene === 'pile'
         ? Math.ceil(Math.cbrt(target.count))
@@ -115,7 +116,7 @@ try {
     world.addToGraph(definition);
     try {
       const graph = await definition.compileAsync();
-      const result = {count, halfExtent, positions, velocities, orientations, world, graph};
+      const result = {scene, count, halfExtent, positions, velocities, orientations, world, graph};
       resetSpheres(result);
       return result;
     } catch (error) {
@@ -342,6 +343,8 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
   getElement('#body-count').onchange = async () => {
     if (loading || benchmark) return;
     loading = true;
+    getElement<HTMLSelectElement>('#scene').disabled = true;
+    getElement<HTMLSelectElement>('#body-count').disabled = true;
     status.value = 'Compiling sphere world…';
     try {
       const next = await createResources(
@@ -358,6 +361,10 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
     } catch (error) {
       status.value = String(error);
     } finally {
+      getElement<HTMLSelectElement>('#scene').value = resources.scene;
+      getElement<HTMLSelectElement>('#body-count').value = String(resources.count);
+      getElement<HTMLSelectElement>('#scene').disabled = false;
+      getElement<HTMLSelectElement>('#body-count').disabled = false;
       loading = false;
     }
   };
@@ -485,7 +492,7 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
               gpuMedianMilliseconds: completedBenchmark.gpu.length
                 ? percentile(completedBenchmark.gpu, 0.5)
                 : null,
-              scenario: getElement<HTMLSelectElement>('#scene').value,
+              scenario: resources.scene,
               maximumCandidateTests: resources.world.maximumCandidateTests,
               maximumExhaustedCandidateBodies: completedBenchmark.maximumExhaustedCandidateBodies,
               diagnosticSamples: completedBenchmark.diagnosticSamples,
