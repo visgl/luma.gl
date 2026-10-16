@@ -97,10 +97,10 @@ it throws immediately instead of waiting.
 ## BackendRegistry
 
 The `backendRegistry` dispatches lazy operations to the backend module for the
-evaluation device. The CPU backend is available by default. If no backend has
-been registered for a `webgl` or `webgpu` device, `@luma.gl/gpgpu`
-automatically loads the matching backend with a dynamic import, so built-in
-backend registration is not required.
+evaluation device. The CPU backend is available by default. When a requested handler has not been registered for a `webgl` or `webgpu`
+device, asynchronous lookup loads the matching built-in backend with a dynamic
+import. Registered handlers take precedence over these defaults, so registering
+a subset does not disable other built-in operations.
 
 ```ts
 const outputVector = await output.evaluate(device);
@@ -134,8 +134,9 @@ cleanEvaluateSync(device, packed);
 
 The same endpoints export individual backend operation handlers. Applications
 can combine those handlers with their own custom operation handlers, or register
-only the handlers they need. When registering a subset, only those operations can
-be evaluated for that device type:
+only the handlers they need. Synchronous evaluation requires the requested
+handler to be registered or already loaded; asynchronous evaluation can load
+missing built-in handlers:
 
 ```ts
 import {backendRegistry} from '@luma.gl/gpgpu';

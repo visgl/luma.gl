@@ -31,7 +31,7 @@
     "lint": "ocular-lint",
     "publish-beta": "ocular-publish version-only-beta",
     "publish-prod": "ocular-publish version-only-prod",
-    "test": "yarn test-node && yarn test-headless",
+    "test": "yarn test-node && yarn test-headless --no-file-parallelism --shard=1/3 && yarn test-headless --no-file-parallelism --shard=2/3 && yarn test-headless --no-file-parallelism --shard=3/3",
     "test-node": "ocular-test node",
     "test-node-coverage": "LUMA_TEST_NODE_COVERAGE=true ocular-test node --coverage.enabled --coverage.provider=istanbul --coverage.reporter=lcovonly --coverage.reportsDirectory=coverage-node",
     "test-browser": "ocular-test browser",
