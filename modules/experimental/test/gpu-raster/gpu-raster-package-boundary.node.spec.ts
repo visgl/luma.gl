@@ -20,7 +20,7 @@ describe('@luma.gl/experimental/gpu-raster package boundary', () => {
     };
 
     expect(packageJson.name).toBe('@luma.gl/experimental');
-    expect(packageJson.private).toBe(true);
+    expect(packageJson.private).not.toBe(true);
     expect(packageJson.sideEffects).toBe(false);
     expect(packageJson.exports?.['./gpu-raster']).toEqual({
       import: './dist/gpu-raster/index.js',
