@@ -19,7 +19,13 @@ import * as models from '@luma.gl/experimental/models';
 import * as gpuTrace from '@luma.gl/experimental/gpu-trace';
 import {describe, expect, test} from 'vitest';
 
-const GPGPU_MODULES = ['gpu-data', 'gpu-core', 'gpu-graph', 'gpu-vector-search'] as const;
+const GPGPU_MODULES = [
+  'gpu-data',
+  'gpu-core',
+  'gpu-graph',
+  'gpu-physics',
+  'gpu-vector-search'
+] as const;
 const EXPERIMENTAL_MODULES = [
   'gpu-tables',
   'models',
@@ -94,6 +100,7 @@ describe('experimental GPU module naming', () => {
       '@luma.gl/gpgpu/gpu-data',
       '@luma.gl/gpgpu/gpu-core',
       '@luma.gl/gpgpu/gpu-graph',
+      '@luma.gl/gpgpu/gpu-physics',
       '@luma.gl/gpgpu/gpu-graph/benchmarks',
       '@luma.gl/gpgpu/gpu-vector-search',
       '@luma.gl/experimental/gpu-tables',

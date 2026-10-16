@@ -41,6 +41,7 @@ const config = {
         cubemap: '/examples/api/cubemap',
         fp64: '/examples/experimental/fp64',
         three: '/examples/experimental/three',
+        'sphere-world': '/examples/experimental/gpu-sphere-world',
         'webxr-kaleidoscope': '/examples/experimental/webxr-kaleidoscope',
         'external-context': '/examples/integrations/external-context',
         'arrow-text-2d': '/examples/arrow/arrow-text-2d',
