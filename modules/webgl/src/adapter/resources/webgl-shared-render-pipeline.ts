@@ -19,6 +19,12 @@ export class WEBGLSharedRenderPipeline extends SharedRenderPipeline {
   linkStatus: 'pending' | 'success' | 'error' = 'pending';
   /** Uniform block indices in the linked program, by block name. Fixed once the program is linked. */
   private _uniformBlockIndices = new Map<string, number>();
+  /**
+   * Binding point that luma.gl last assigned to each uniform block of the program, by block index.
+   * Held per program rather than per pipeline, so that pipelines sharing this program see each
+   * other's assignments. Cleared by `WEBGLRenderPipeline.invalidateUniformBlockBindings()`.
+   */
+  _uniformBlockBindings: number[] = [];
 
   constructor(
     device: WebGLDevice,
@@ -57,17 +63,25 @@ export class WEBGLSharedRenderPipeline extends SharedRenderPipeline {
     this.destroyResource();
   }
 
-  /** Returns the index of a uniform block in the linked program, looking it up once per name. */
-  _getUniformBlockIndex(blockName: string): number {
+  /**
+   * Assigns a uniform buffer binding point to a uniform block of the program, looking up the
+   * block index once per name. The assignment is skipped when luma.gl already assigned the same
+   * binding point to the block.
+   */
+  _setUniformBlockBinding(blockName: string, bindingPoint: number): void {
+    const {gl} = this.device;
     let blockIndex = this._uniformBlockIndices.get(blockName);
     if (blockIndex === undefined) {
-      blockIndex = this.device.gl.getUniformBlockIndex(this.handle, blockName);
+      blockIndex = gl.getUniformBlockIndex(this.handle, blockName);
       if ((blockIndex as GL) === GL.INVALID_INDEX) {
         throw new Error(`Invalid uniform block name ${blockName}`);
       }
       this._uniformBlockIndices.set(blockName, blockIndex);
     }
-    return blockIndex;
+    if (this._uniformBlockBindings[blockIndex] !== bindingPoint) {
+      gl.uniformBlockBinding(this.handle, blockIndex, bindingPoint);
+      this._uniformBlockBindings[blockIndex] = bindingPoint;
+    }
   }
 
   protected async _linkShaders() {

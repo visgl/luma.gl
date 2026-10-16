@@ -149,6 +149,18 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     }
   }
 
+  /**
+   * Tells luma.gl that application code changed uniform block binding points of this pipeline's
+   * program through `handle` (e.g. with `gl.uniformBlockBinding()`).
+   *
+   * luma.gl owns the uniform block binding points of the programs it draws with, and assigns a
+   * binding point only when it differs from the one luma.gl last assigned. After this call, the
+   * next draw with any pipeline that shares the program assigns every uniform block again.
+   */
+  invalidateUniformBlockBindings(): void {
+    (this.sharedRenderPipeline as WEBGLSharedRenderPipeline)._uniformBlockBindings = [];
+  }
+
   /** @todo needed for portable model
    * @note The WebGL API is offers many ways to draw things
    * This function unifies those ways into a single call using common parameters with sane defaults
@@ -236,10 +248,10 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       switch (binding.type) {
         case 'uniform':
           // Set buffer
-          const blockIndex = (
-            this.sharedRenderPipeline as WEBGLSharedRenderPipeline
-          )._getUniformBlockIndex(binding.name);
-          gl.uniformBlockBinding(this.handle, blockIndex, uniformBufferIndex);
+          (this.sharedRenderPipeline as WEBGLSharedRenderPipeline)._setUniformBlockBinding(
+            binding.name,
+            uniformBufferIndex
+          );
           if (value instanceof WEBGLBuffer) {
             gl.bindBufferBase(GL.UNIFORM_BUFFER, uniformBufferIndex, value.handle);
           } else {
