@@ -129,6 +129,8 @@ async function attachOverlay(recreated = false) {
       nextOverlay.dispose();
       return;
     }
+    // Apply checkbox changes made while the deck device was initializing.
+    nextOverlay.setProps({layers: createLayers()});
     overlay = nextOverlay;
     status.textContent = recreated
       ? 'Overlay recreated; the Three renderer, scene and controls are still running.'
