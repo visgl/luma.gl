@@ -53,6 +53,7 @@ import support21 from './v10/gpgpu/mobile-support';
 import support22 from './experimental/gpu-frustum-culling/mobile-support';
 import parquetSupport from './experimental/gpu-parquet-constellation/mobile-support';
 import support23 from './experimental/gpu-trace-viewer/mobile-support';
+import timeSeriesSupport from './experimental/gpu-timeseries/mobile-support';
 import support24 from './experimental/gpu-graph-explorer/mobile-support';
 import support25 from './experimental/gpu-trace-scene/mobile-support';
 import support26 from './experimental/gpu-scene-graph/mobile-support';
@@ -155,6 +156,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'experimental/gpu-frustum-culling': support22,
   'experimental/gpu-trace-viewer': support23,
   'experimental/gpu-graph-explorer': support24,
+  'experimental/gpu-timeseries': timeSeriesSupport,
   'experimental/gpu-trace-scene': support25,
   'experimental/gpu-scene-graph': support26,
   'showcase/vector-field-lab': support27,
