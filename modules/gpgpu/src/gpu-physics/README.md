@@ -272,7 +272,7 @@ visibly instead of silently losing a pocket outcome.
 `makeSphereBoxPlanes({center, halfExtents, material})` adds static axis-aligned box
 surfaces using the existing finite-rectangle narrow phase and sweep. It consumes
 six of the world's 32 surfaces; bodies must start outside the box. Corners use
-closest points on the faces. Dynamic boxes, capsules and joints remain unimplemented. Sphere contact manifolds contain one normal/contact point; optional persistence is described below. `getBodyInertia` supplies analytic principal
+closest points on the faces. Dynamic boxes are available in the separate bounded rigid-body path below; capsules and joints remain unimplemented. Sphere contact manifolds contain one normal/contact point; optional persistence is described below. `getBodyInertia` supplies analytic principal
 inertia for solid spheres and boxes; the sphere solver still uses isotropic sphere
 inertia. These APIs establish a static shape composition boundary without claiming
 general rigid-body support.
@@ -334,3 +334,51 @@ See [the calibration protocol](../../../../dev-docs/benchmarks/gpu-physics-calib
 for equations, units, fixtures, limitations, and the report command. The bundled
 fixture is synthetic, not a digitized experiment. No measured table fit is applied
 to the illustrative pool table automatically.
+
+## Oriented rigid bodies
+
+`GPURigidBodyWorld` is a separate experimental reference path for up to 128 dynamic
+and static spheres/boxes. It preserves structure-of-arrays position, orientation,
+linear-velocity and angular-velocity buffers for direct rendering. Bodies specify a
+shape, transform, mass (zero for static), friction and restitution. Solid-shape principal
+inertia is transformed into world space when applying impulses.
+
+```typescript
+const world = new GPURigidBodyWorld({
+  bodies: [
+    {shape: {type: 'box', halfExtents: [8, 8, 0.5]}, position: [0, 0, -0.5], mass: 0},
+    {shape: {type: 'box', halfExtents: [0.5, 0.5, 0.5]}, position: [0, 0, 2]}
+  ],
+  timeStep: 1 / 120,
+  iterations: 20
+});
+world.addToGraph(definition);
+const graph = await definition.compileAsync();
+// Encode graph into each fixed simulation step as with GPUSphereWorld.
+world.applyImpulse(1, [2, 0, 0], [0, 0.4, 2]);
+```
+
+A four-operation graph integrates forces, generates contacts, solves impulses and
+finishes transforms/sleeping. Box pairs use 15 separating axes, clipped face polygons
+with up to four retained contacts, and closest supporting edges for edge contacts.
+Sphere/box contacts use the closest point in box-local coordinates. Stable body-pair
+slots retain normal/tangential impulses; nearby aligned contact points warm start the
+next step. Restitution is captured on new impacts, with accumulated nonnegative normal
+impulses and Coulomb-bounded tangential impulses.
+
+Connected dynamic components sleep together. Static surfaces do not join independent
+stacks into one island. External impulses conservatively wake all components and clear
+the contact cache. After direct state-buffer writes, call `wake()` before the next step.
+Only mutate state between submissions; queued graph encodings do not capture snapshots
+of caller writes. Impulses submit immediately and precede subsequent graph submissions.
+
+This bounded path uses quadratic pair storage (288 bytes per directed pair) and an
+ordered GPU sequential solve. It is a correctness foundation, not a scalable general
+rigid-body engine. It is discrete, has no swept box CCD, and uses first-order rotation
+integration while preserving world angular momentum. Fast motion, extreme mass ratios and very slender shapes
+need smaller timesteps and additional validation. The sphere grid path remains the
+large-world implementation. General convex shapes, joints and glTF binding are deferred.
+
+All rigid-world buffers are owned by the world, even when exposed for rendering. Destroy
+rendering bindings and the compiled graph, complete outstanding readbacks, then destroy
+the world. `destroy()` is idempotent. `readState()` is optional and never gates simulation.
