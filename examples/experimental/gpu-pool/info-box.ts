@@ -58,7 +58,10 @@ export function createPoolInfoBox(graph: CompiledGPUCommandGraph<void>) {
             inspectorPanel = new GPUCommandGraphInspectorPanel(
               root.querySelector<HTMLElement>('[data-pool-graph-inspector]')!,
               {
-                graphLabels: {[graph.id]: 'Pool physics'}
+                graphLabels: {[graph.id]: 'Pool physics'},
+                nodeLabels: Object.fromEntries(
+                  graph.stats.nodeOrder.map(id => [id, formatPoolNodeLabel(id)])
+                )
               }
             );
             inspectorPanel.update(inspector.getSnapshot(), graph.id);
@@ -131,4 +134,16 @@ export function createPoolInfoBox(graph: CompiledGPUCommandGraph<void>) {
       return timingRead;
     }
   };
+}
+
+function formatPoolNodeLabel(id: string): string {
+  const shortName = id.replace(/^gpu-sphere-world-step-\d+-/, '');
+  const impact = /^impact-(\d+)-(.+)$/.exec(shortName);
+  const operation = impact ? impact[2] : shortName;
+  const label = operation.replaceAll('-', ' ');
+  return (
+    label.charAt(0).toUpperCase() +
+    label.slice(1) +
+    (impact ? ' · impact ' + (Number(impact[1]) + 1) : '')
+  );
 }
