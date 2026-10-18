@@ -399,6 +399,7 @@ export function addGeospatialPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: {
     id: string;
+    operation?: string;
     source: string;
     resources: GraphBufferUse[];
     bindings: Record<string, GraphDataView>;
@@ -429,6 +430,7 @@ export function addGeospatialPass<Parameters>(
   }
   graph.addComputePass({
     id: props.id,
+    ...(props.operation ? {workload: {operation: props.operation}} : {}),
     resources: props.resources,
     compile: ({device}) => {
       const classic =

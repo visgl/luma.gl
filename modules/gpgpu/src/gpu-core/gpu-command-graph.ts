@@ -58,6 +58,7 @@ import type {
   GPUCommandGraphEncodingStats,
   GPUCommandGraphNode,
   GPUCommandGraphNodeEncodingStats,
+  GPUCommandGraphNodeTiming,
   GPUCommandGraphNodePreflight,
   GPUCommandGraphNodePublication,
   GPUCommandGraphPreflightReport,
@@ -485,6 +486,7 @@ type CachedFramebuffer = {
 
 type GPUCommandGraphNodeTimestamp = {
   querySet: QuerySet;
+  snapshot?: ReturnType<CommandEncoder['captureTimestampQuerySet']>;
   beginIndex: number;
   endIndex: number;
 };
@@ -563,7 +565,9 @@ export class GPUCommandGraphEncoding {
     cpuEncodeTimeMilliseconds: number,
     computePassCount = nodes.filter(
       node => node.stats.type === 'compute' && node.stats.condition?.outcome !== 'skipped'
-    ).length
+    ).length,
+    cpuEncodeStartTimeMilliseconds?: number,
+    cpuEncodeEndTimeMilliseconds?: number
   ) {
     this.nodes = nodes;
     this.canReadGPUTimings = nodes.some(node => node.timestamp !== undefined);
@@ -571,6 +575,8 @@ export class GPUCommandGraphEncoding {
     const computeNodeCount = executedNodes.filter(node => node.stats.type === 'compute').length;
     this.stats = {
       cpuEncodeTimeMilliseconds,
+      cpuEncodeStartTimeMilliseconds,
+      cpuEncodeEndTimeMilliseconds,
       nodeCount: executedNodes.length,
       skippedNodeCount: nodes.length - executedNodes.length,
       computePassCount,
@@ -587,21 +593,52 @@ export class GPUCommandGraphEncoding {
    * does not expose standalone timestamp writes.
    */
   async readTimings(): Promise<GPUCommandGraphTimingReport> {
-    const nodes = await Promise.all(
-      this.nodes.map(async ({stats, timestamp}) => ({
-        ...stats,
-        ...(timestamp
-          ? {
-              gpuTimeMilliseconds: await timestamp.querySet.readTimestampDuration(
-                timestamp.beginIndex,
-                timestamp.endIndex
-              )
-            }
-          : {})
-      }))
+    const nodes: GPUCommandGraphNodeTiming[] = await Promise.all(
+      this.nodes.map(async ({stats, timestamp}) => {
+        if (!timestamp) {
+          return {...stats};
+        }
+        const {querySet, snapshot, beginIndex, endIndex} = timestamp;
+        if (querySet.device.type !== 'webgpu') {
+          return {
+            ...stats,
+            gpuTimeMilliseconds: await querySet.readTimestampDuration(beginIndex, endIndex)
+          };
+        }
+        const results = await (snapshot ?? querySet).readResults({
+          firstQuery: beginIndex,
+          queryCount: endIndex - beginIndex + 1
+        });
+        const startTime = results[0];
+        const endTime = results[results.length - 1];
+        return {
+          ...stats,
+          gpuStartTimeMilliseconds: Number(startTime) / 1e6,
+          gpuEndTimeMilliseconds: Number(endTime) / 1e6,
+          gpuTimeMilliseconds: Number(endTime - startTime) / 1e6
+        };
+      })
     );
     const timestampedNodes = nodes.filter(node => node.gpuTimeMilliseconds !== undefined);
+    const spans = nodes.filter(node => node.gpuStartTimeMilliseconds !== undefined);
+    const correlations = this.nodes.flatMap(node =>
+      node.timestamp?.snapshot?.clockCorrelation ? [node.timestamp.snapshot.clockCorrelation] : []
+    );
+    const clockCorrelation = correlations.sort(
+      (first, second) => first.uncertaintyMilliseconds - second.uncertaintyMilliseconds
+    )[0];
     return {
+      ...(clockCorrelation ? {clockCorrelation} : {}),
+      cpuEncodeStartTimeMilliseconds: this.stats.cpuEncodeStartTimeMilliseconds,
+      cpuEncodeEndTimeMilliseconds: this.stats.cpuEncodeEndTimeMilliseconds,
+      ...(spans.length > 0
+        ? {
+            gpuStartTimeMilliseconds: Math.min(
+              ...spans.map(node => node.gpuStartTimeMilliseconds!)
+            ),
+            gpuEndTimeMilliseconds: Math.max(...spans.map(node => node.gpuEndTimeMilliseconds!))
+          }
+        : {}),
       cpuEncodeTimeMilliseconds: this.stats.cpuEncodeTimeMilliseconds,
       ...(timestampedNodes.length > 0
         ? {
@@ -1617,11 +1654,15 @@ export class CompiledGPUCommandGraph<Parameters = void> {
             );
           }
           if (!shouldExecute) {
+            const nodeEndTime = getTimestampMilliseconds();
             encodedNodes.push({
               stats: {
                 id: node.id,
+                operation: node.workload?.operation,
                 type: node.type,
-                cpuEncodeTimeMilliseconds: getTimestampMilliseconds() - nodeStartTime,
+                cpuEncodeStartTimeMilliseconds: nodeStartTime,
+                cpuEncodeEndTimeMilliseconds: nodeEndTime,
+                cpuEncodeTimeMilliseconds: nodeEndTime - nodeStartTime,
                 hasGPUTimestamps: false,
                 condition: {id: node.condition.id, source: 'cpu', outcome: 'skipped'}
               }
@@ -1637,7 +1678,7 @@ export class CompiledGPUCommandGraph<Parameters = void> {
               computePassCount++;
             }
             const computePass = activeComputePass;
-            timestamp = getPassTimestamp(computePass);
+            timestamp = getPassTimestamp(computePass, commandEncoder);
             if (timestamp) {
               coalesceComputePasses = false;
             }
@@ -1692,7 +1733,7 @@ export class CompiledGPUCommandGraph<Parameters = void> {
               ...(framebuffer ? {framebuffer} : {}),
               ...(resolveTargets ? {resolveTargets} : {})
             });
-            timestamp = getPassTimestamp(renderPass);
+            timestamp = getPassTimestamp(renderPass, commandEncoder);
             renderPass.pushDebugGroup(node.id);
             try {
               renderExecutable.encode({...baseContext, renderPass});
@@ -1707,11 +1748,15 @@ export class CompiledGPUCommandGraph<Parameters = void> {
             (executable as GPUCommandGraphCopyExecutable<Parameters>).encode(baseContext);
             break;
         }
+        const nodeEndTime = getTimestampMilliseconds();
         encodedNodes.push({
           stats: {
             id: node.id,
+            operation: node.workload?.operation,
             type: node.type,
-            cpuEncodeTimeMilliseconds: getTimestampMilliseconds() - nodeStartTime,
+            cpuEncodeStartTimeMilliseconds: nodeStartTime,
+            cpuEncodeEndTimeMilliseconds: nodeEndTime,
+            cpuEncodeTimeMilliseconds: nodeEndTime - nodeStartTime,
             hasGPUTimestamps: timestamp !== undefined,
             ...(node.condition
               ? {
@@ -1732,10 +1777,13 @@ export class CompiledGPUCommandGraph<Parameters = void> {
     } finally {
       endActiveComputePass();
     }
+    const encodingEndTime = getTimestampMilliseconds();
     return new GPUCommandGraphEncoding(
       encodedNodes,
-      getTimestampMilliseconds() - encodingStartTime,
-      computePassCount
+      encodingEndTime - encodingStartTime,
+      computePassCount,
+      encodingStartTime,
+      encodingEndTime
     );
   }
 
@@ -2030,7 +2078,8 @@ function validateEncodingFrameId(
 
 /** Returns a portable timestamp pair recorded by one render or compute pass. */
 function getPassTimestamp(
-  pass: ComputePass | RenderPass
+  pass: ComputePass | RenderPass,
+  commandEncoder: CommandEncoder
 ): GPUCommandGraphNodeTimestamp | undefined {
   const {timestampQuerySet, beginTimestampIndex, endTimestampIndex} = pass.props;
   return timestampQuerySet &&
@@ -2038,7 +2087,15 @@ function getPassTimestamp(
     Number.isSafeInteger(endTimestampIndex) &&
     beginTimestampIndex >= 0 &&
     endTimestampIndex > beginTimestampIndex
-    ? {querySet: timestampQuerySet, beginIndex: beginTimestampIndex, endIndex: endTimestampIndex}
+    ? {
+        querySet: timestampQuerySet,
+        snapshot:
+          timestampQuerySet.device.type === 'webgpu'
+            ? commandEncoder.captureTimestampQuerySet(timestampQuerySet)
+            : undefined,
+        beginIndex: beginTimestampIndex,
+        endIndex: endTimestampIndex
+      }
     : undefined;
 }
 

@@ -91,7 +91,11 @@ export type {ComputePassProps} from './adapter/resources/compute-pass';
 
 export {ComputePass} from './adapter/resources/compute-pass';
 
-export type {CommandEncoderProps} from './adapter/resources/command-encoder';
+export type {
+  CommandEncoderProps,
+  GPUClockCorrelation,
+  TimestampQuerySnapshot
+} from './adapter/resources/command-encoder';
 
 export {CommandEncoder} from './adapter/resources/command-encoder';
 

@@ -1133,3 +1133,42 @@ function testBlit(t: Test, device: Device) {
   t.end();
 }
 /* eslint-disable max-statements */
+
+it('WebGPU timestamp snapshots retain submission identity across delayed reads and query reuse', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device || !device.features.has('timestamp-query')) return;
+  const querySet = device.createQuerySet({type: 'timestamp', count: 2});
+  const shader = device.createShader({source: '@compute @workgroup_size(1) fn main() {}'});
+  const pipeline = device.createComputePipeline({shader});
+  try {
+    const firstEncoder = device.createCommandEncoder({timeProfilingQuerySet: querySet});
+    const firstPass = firstEncoder.beginComputePass();
+    firstPass.setPipeline(pipeline);
+    firstPass.dispatch(1);
+    firstPass.end();
+    const firstSnapshot = firstEncoder.captureTimestampQuerySet(querySet);
+    device.submit(firstEncoder.finish());
+    const firstRead = firstSnapshot.readResults();
+    // Reuse the exact slots and then read the older snapshot again.
+    const secondEncoder = device.createCommandEncoder({timeProfilingQuerySet: querySet});
+    const secondPass = secondEncoder.beginComputePass();
+    secondPass.setPipeline(pipeline);
+    secondPass.dispatch(1);
+    secondPass.end();
+    const secondSnapshot = secondEncoder.captureTimestampQuerySet(querySet);
+    device.submit(secondEncoder.finish());
+    const secondResults = await secondSnapshot.readResults();
+    const firstResults = await firstRead;
+    expect(await firstSnapshot.readResults()).toEqual(firstResults);
+    expect(secondResults[0]).toBeGreaterThanOrEqual(firstResults[1]);
+    expect(
+      firstSnapshot.clockCorrelation?.method,
+      `timestamps: ${firstResults.map(String).join(', ')}`
+    ).toBe('submission');
+    expect(secondSnapshot.clockCorrelation?.uncertaintyMilliseconds).toBeGreaterThanOrEqual(0);
+  } finally {
+    querySet.destroy();
+    pipeline.destroy();
+    shader.destroy();
+  }
+});

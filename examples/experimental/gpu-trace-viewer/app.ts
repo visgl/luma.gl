@@ -67,6 +67,7 @@ import {
   makeHtmlCustomPanel
 } from '../../example-panels';
 import {GPUCommandGraphInspectorPanel} from '../../gpu-command-graph-inspector-panel';
+import {GPUTracePanel} from '../../gpu-trace-panel';
 import {
   getTraceAllocationStats,
   getTraceCapacityContract,
@@ -585,6 +586,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
   readonly viewUniformBuffer: Buffer;
   readonly panels: ExamplePanelManager;
   readonly graphInspector = new GPUCommandGraphInspector({maxSamples: 90});
+  readonly gpuTracePanel = new GPUTracePanel();
   private readonly graphAutotuner: GPUCommandGraphAutotuner;
   readonly capacityOptions: number[];
   readonly dependencyCapacityOptions: number[];
@@ -1011,6 +1013,9 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     });
     this.encodeTimeMilliseconds = encoding.stats.cpuEncodeTimeMilliseconds;
     this.frameIndex++;
+    if (this.frameIndex === 1 || this.frameIndex % 60 === 0) {
+      this.gpuTracePanel.update(encoding.stats, resources.compiled.id);
+    }
     if (
       (this.graphGPUTimingSampleCount === 0 || this.frameIndex % 60 === 0) &&
       encoding.canReadGPUTimings &&
@@ -4988,7 +4993,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
               this.inspectorPanel = null;
             };
           }
-        })
+        }),
+        this.gpuTracePanel.panel
       ]
     });
   }
@@ -6617,6 +6623,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       }
       void observation.recordGPUTimings(encoding).then(timingReport => {
         if (this.graphObservation === observation) {
+          if (timingReport) this.gpuTracePanel.update(timingReport, observation.graph.id);
           if (
             timingReport &&
             observation.graph.preflight &&

@@ -12,6 +12,21 @@ import type {RenderPass, RenderPassProps} from './render-pass';
 import type {ComputePass, ComputePassProps} from './compute-pass';
 import type {CommandBuffer} from './command-buffer';
 
+/** Approximate CPU = GPU + offset mapping, scoped to one device and recent submissions.
+ * Uncertainty describes submission/callback latency, not hardware timestamp quantization. */
+export type GPUClockCorrelation = {
+  offsetMilliseconds: number;
+  uncertaintyMilliseconds: number;
+  sampledAtCpuTimeMilliseconds: number;
+  method: 'submission';
+};
+
+/** Results belonging to this encoder, even when its query set is reused by later encoders. */
+export type TimestampQuerySnapshot = {
+  readResults(options?: {firstQuery?: number; queryCount?: number}): Promise<bigint[]>;
+  readonly clockCorrelation?: GPUClockCorrelation;
+};
+
 // WEBGPU COMMAND ENCODER OPERATIONS
 
 export type CopyBufferToBufferOptions = {
@@ -215,7 +230,7 @@ export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
     }
 
     const queryCount = pairCount * 2;
-    const results = await this._timeProfilingQuerySet.readResults({
+    const results = await this.captureTimestampQuerySet(this._timeProfilingQuerySet).readResults({
       firstQuery: 0,
       queryCount
     });
@@ -226,6 +241,11 @@ export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
     }
 
     this._gpuTimeMs = Number(totalDurationNanoseconds) / 1e6;
+  }
+
+  /** Capture this encoding's timestamp results. WebGPU snapshots are resolved before reuse. */
+  captureTimestampQuerySet(querySet: QuerySet): TimestampQuerySnapshot {
+    return {readResults: options => querySet.readResults(options)};
   }
 
   /** Returns the number of query slots consumed by automatic pass profiling on this encoder. */
