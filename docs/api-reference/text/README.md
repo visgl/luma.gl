@@ -82,6 +82,14 @@ Missing glyphs have zero advance. Loader/decoder-only use works in Node and adds
 Local ideograph fallback, shaping, style selection, tile readiness, placement and GPU lifetime
 remain consumer responsibilities. No MapLibre local-font substitution policy is imposed.
 
+### Try glyph loading in Text Space Crawl
+
+Run `yarn workspace luma.gl-examples-text-space-crawl start`, then choose **Server glyph SDF atlas**
+in the Rendering control, or append `?textRendering=glyphs` to the example URL. It loads Noto Sans Regular
+ranges from OpenFreeMap (network access required), packs them with `buildGlyphFontAtlas`, and draws
+them through the same `AtlasTextRenderer` used by the other atlas modes. Switch away and back to
+exercise the shared loader cache. No API key is required; the existing MSDF mode remains the default.
+
 ## Public Architecture
 
 | Responsibility | Public APIs |
