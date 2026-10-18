@@ -64,7 +64,9 @@ and there is no silent candidate truncation.
 ## Ownership and batching
 
 Inputs and outputs are non-owning `GraphDataView`s with support for nonzero byte offsets. Output
-buffers must be separate from input buffers, and writable outputs cannot overlap. The caller owns
+buffers must be separate from input buffers. Writable output storage bindings must remain disjoint
+after their start offsets are rounded down to 256-byte alignment; disjoint logical views alone are
+not sufficient. Use separate buffers or leave sufficient aligned space between output views. The caller owns
 allocation, graph compilation, encoding, submission, rendering and optional readback. Destroying
 compiled kernels does not destroy imported buffers.
 

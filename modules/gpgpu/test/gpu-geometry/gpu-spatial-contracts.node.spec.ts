@@ -148,3 +148,18 @@ it('validates additive octree depth, bounds, capacities, formats, and graph owne
     graph.add(new GPUPointCloudOctree({...props, pointIndices: makeFixture().view('uint32', 4)}))
   ).toThrow();
 });
+
+it('rejects overlapping aligned writable bindings while allowing aligned shared outputs', () => {
+  const {graph, view} = makeFixture();
+  const positions = view('float32x3', 2);
+  const shared = graph.importBuffer({id: 'shared-outputs', byteLength: 264, usage: Buffer.STORAGE});
+  const counts = graph.createDataView(shared, {format: 'uint32', length: 2});
+  const mask = graph.createDataView(shared, {format: 'uint32', length: 2, byteOffset: 8});
+  expect(() =>
+    graph.add(new GPUPointCloudRadiusFilter({positions, counts, mask, radius: 1}))
+  ).toThrow();
+  const alignedMask = graph.createDataView(shared, {format: 'uint32', length: 2, byteOffset: 256});
+  expect(() =>
+    graph.add(new GPUPointCloudRadiusFilter({positions, counts, mask: alignedMask, radius: 1}))
+  ).not.toThrow();
+});

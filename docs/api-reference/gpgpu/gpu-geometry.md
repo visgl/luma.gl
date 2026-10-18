@@ -33,7 +33,8 @@ const compiled = graph.compile();
 
 Positions and normals are packed `GraphDataView<'float32x3'>`; indices, offsets, adjacency and pin
 flags are packed `GraphDataView<'uint32'>`. Nonzero byte offsets are supported. Every operation
-borrows its inputs and outputs. Output buffers must be separate from input buffers. Operations do
+borrows its inputs and outputs. Output buffers must be separate from input buffers. Multiple writable output bindings must also
+remain disjoint after their start offsets are rounded down to 256-byte alignment. Operations do
 not submit work, read results back, or destroy caller buffers. Destroy the compiled graph to release
 its kernels, and separately destroy your buffers.
 

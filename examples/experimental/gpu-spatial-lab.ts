@@ -166,12 +166,12 @@ ${mode === 'pointcloud' ? '<label class="toggle">Voxel grid on input<input data-
         onRender: root => {
           this.countElement = root.querySelector('[data-counts]');
           if (this.countElement) this.countElement.textContent = this.countText;
-          const radiusControl = root.querySelector<HTMLInputElement>('[data-control]');
-          if (radiusControl && mode === 'pointcloud')
-            radiusControl.value = String(this.neighborRadius);
-          const radiusLabel = root.querySelector('[data-value]');
-          if (radiusLabel && mode === 'pointcloud')
-            radiusLabel.textContent = String(this.neighborRadius);
+          const processingValue =
+            mode === 'geometry' ? this.smoothingIterations : this.neighborRadius;
+          const processingControl = root.querySelector<HTMLInputElement>('[data-control]');
+          if (processingControl) processingControl.value = String(processingValue);
+          const processingLabel = root.querySelector('[data-value]');
+          if (processingLabel) processingLabel.textContent = String(processingValue);
           const gridControl = root.querySelector<HTMLInputElement>('[data-grid-size]');
           if (gridControl) gridControl.value = String(this.gridSize);
           const gridLabel = root.querySelector('[data-grid-value]');
