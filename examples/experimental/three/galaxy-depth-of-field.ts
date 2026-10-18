@@ -3,7 +3,7 @@
 
 import {type Device, type Texture, type TextureFormat} from '@luma.gl/core';
 import {ShaderPassRenderer} from '@luma.gl/engine';
-import {dofCompositeShaderPass} from '@luma.gl/effects';
+import {bokehDof} from '@luma.gl/effects';
 import {ExternalTexture, type Texture as ThreeTexture, type WebGPURenderer} from 'three/webgpu';
 
 // The example pins Three r185. Keep its private native-texture lookup at this adapter boundary.
@@ -27,9 +27,7 @@ export class GalaxyDepthOfField {
     this.output.flipY = false;
     this.passes = new ShaderPassRenderer(device, {
       // Keep HDR starlight through the existing pass's scratch target as well.
-      shaderPasses: [
-        {...dofCompositeShaderPass, renderTargets: {blurScratch: {format: 'rgba16float'}}}
-      ],
+      shaderPasses: [bokehDof],
       colorFormat: 'rgba16float',
       flipY: true
     });
@@ -58,7 +56,7 @@ export class GalaxyDepthOfField {
       sourceTexture: this.source!,
       bindings: {depthTexture: this.depth!},
       uniforms: {
-        dof: {
+        bokehDof: {
           depthRange,
           focusDistance,
           blurCoefficient: aperture * 24,
