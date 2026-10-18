@@ -10,6 +10,10 @@ import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 const MODES: {name: string; defines: Record<string, boolean>}[] = [
   {
+    name: 'classic',
+    defines: {LUMA_FP64_INTEGER_ARITHMETIC: false, LUMA_FP64_HYBRID_ARITHMETIC: false}
+  },
+  {
     name: 'hybrid',
     defines: {LUMA_FP64_INTEGER_ARITHMETIC: false, LUMA_FP64_HYBRID_ARITHMETIC: true}
   },
@@ -62,7 +66,13 @@ for (const mode of MODES) {
   for (const operation of FUNCTIONS) {
     it(`fp64 WGSL ${operation.name} (${mode.name})`, async ({skip}) => {
       const device = await getWebGPUTestDevice();
-      if (!device || isSoftwareBackedDevice(device)) return skip();
+      if (
+        !device ||
+        isSoftwareBackedDevice(device) ||
+        isUnsupportedClassicDevice(device, mode.name)
+      ) {
+        return skip();
+      }
       const values = await compute(
         device,
         operation.inputs,
@@ -85,9 +95,55 @@ for (const mode of MODES) {
     }, 120000);
   }
 
-  it(`fp64 WGSL Mercator retains latitude differences (${mode.name})`, async ({skip}) => {
+  it(`fp64 WGSL exponential boundaries (${mode.name})`, async ({skip}) => {
     const device = await getWebGPUTestDevice();
     if (!device || isSoftwareBackedDevice(device)) return skip();
+    const inputs = [
+      88,
+      88.72283,
+      88.72285,
+      -87,
+      -90,
+      -103,
+      -103.97207,
+      -103.97209,
+      NaN,
+      Infinity,
+      -Infinity
+    ];
+    const values = await compute(
+      device,
+      inputs,
+      inputs.length,
+      'resultData[index] = exp_fp64(inputData[index]);',
+      mode.defines
+    );
+    for (const index of [0, 1, 3]) {
+      expect(Math.abs(values[index] / Math.exp(inputs[index]) - 1)).toBeLessThan(3e-6);
+    }
+    // Compare subnormal results in units of the smallest f32, without an absolute
+    // tolerance floor that would also accept zero for every subnormal result.
+    for (const index of [4, 5, 6]) {
+      const expected = Math.fround(Math.exp(inputs[index]));
+      expect(values[index], `exp(${inputs[index]})`).toBeGreaterThan(0);
+      expect(Math.abs(values[index] - expected)).toBeLessThanOrEqual(2 ** -149);
+    }
+    expect(values[2]).toBe(Infinity);
+    expect(values[7]).toBe(0);
+    expect(values[8]).toBeNaN();
+    expect(values[9]).toBe(Infinity);
+    expect(values[10]).toBe(0);
+  }, 120000);
+
+  it(`fp64 WGSL Mercator retains latitude differences (${mode.name})`, async ({skip}) => {
+    const device = await getWebGPUTestDevice();
+    if (
+      !device ||
+      isSoftwareBackedDevice(device) ||
+      isUnsupportedClassicDevice(device, mode.name)
+    ) {
+      return skip();
+    }
     const latitudes = [
       -85.0511287798, -45, -1e-8, 0, 1e-8, 37.75153705839, 37.75153706839, 85.0511287798, 89.99
     ];
@@ -115,7 +171,13 @@ for (const mode of MODES) {
 
   it(`fp64 WGSL matrix ordering and cancellation (${mode.name})`, async ({skip}) => {
     const device = await getWebGPUTestDevice();
-    if (!device || isSoftwareBackedDevice(device)) return skip();
+    if (
+      !device ||
+      isSoftwareBackedDevice(device) ||
+      isUnsupportedClassicDevice(device, mode.name)
+    ) {
+      return skip();
+    }
     const matrix = [1, 0, 0, -10000000, 0, 2, 0, -20000000, 0, 0, 3, -30000000, 4, 5, 6, 1];
     const vector = [10000000.125, 10000000.25, 10000000.5, 1];
     const values = await compute(
@@ -152,6 +214,13 @@ it('fp64 WGSL logarithm domain', async ({skip}) => {
   expect(values.slice(0, 3).every(Number.isNaN)).toBe(true);
   expect(values[3]).toBe(Infinity);
 }, 120000);
+
+// Apple/Metal does not preserve the floating-point residuals required by classic
+// arithmetic. The module defaults to integer arithmetic there; exercise classic
+// numerical precision on other hardware without weakening its error bounds.
+function isUnsupportedClassicDevice(device: Device, mode: string): boolean {
+  return mode === 'classic' && device.info.gpu.toLowerCase() === 'apple';
+}
 
 // Match the existing arithmetic specs: native fp64 helper expansion is prohibitively slow
 // in software compute pipelines. Keep numerical coverage on hardware and validate WGSL
