@@ -272,8 +272,7 @@ visibly instead of silently losing a pocket outcome.
 `makeSphereBoxPlanes({center, halfExtents, material})` adds static axis-aligned box
 surfaces using the existing finite-rectangle narrow phase and sweep. It consumes
 six of the world's 32 surfaces; bodies must start outside the box. Corners use
-closest points on the faces. Dynamic boxes, capsules, persistent manifolds and
-constraints remain unimplemented. `getBodyInertia` supplies analytic principal
+closest points on the faces. Dynamic boxes are available in the separate bounded rigid-body path below; capsules and joints remain unimplemented. Sphere contact manifolds contain one normal/contact point; optional persistence is described below. `getBodyInertia` supplies analytic principal
 inertia for solid spheres and boxes; the sphere solver still uses isotropic sphere
 inertia. These APIs establish a static shape composition boundary without claiming
 general rigid-body support.
@@ -292,3 +291,94 @@ include scenario, candidate budget and exhaustion diagnostics; exhausted runs ar
 invalid performance/correctness evidence. Frame time, encoding time and optional
 GPU time remain separate. Measurements depend on the adapter and must be captured
 on the target device rather than inferred from body count.
+
+
+## Persistent contact constraints
+
+`warmStarting: true` enables accumulated normal and vector tangential impulses for
+sphere pairs and static surfaces. The default solver remains unchanged. The cache
+is limited to 256 bodies and stores 48 bytes per directed sphere/surface pair
+(`count * (count + 32)` entries); scratch contacts additionally reserve 32 surface
+slots per body. This is a small-world stability option, not a scalable broad phase.
+
+Pair keys are body identifiers, independent of CSR slot ordering. Sphere manifolds
+have one contact normal; surfaces use their plane index and closest-point normal.
+Only immediately preceding fixed-step contacts with aligned normals are reused.
+New restitution impacts start cold. Cached impulses scale down for shorter impact
+intervals; subsequent intervals initialize fresh constraints. Accumulation permits
+negative impulse increments to release an earlier constraint, while total normal
+impulse stays nonnegative and total tangent impulse stays in the friction cone.
+
+Commands and `update()` invalidate the cache. After writing directly to borrowed
+state buffers, call `world.clearContactCache()` before submitting more graph work.
+Cached resources belong to the world; destroy the compiled graph first. This does
+not add dynamic shape manifolds or joints. Numerical tests compare a low-iteration
+supported chain with the default solver and verify SI cloth/spin behaviour in both
+modes. Warm starting remains opt-in pending wider adapter and dense-pile evidence.
+
+The event header also retains cumulative discarded simulation seconds as
+`batch.discardedSimulationTime` (float32, distinct from wall-clock time). Difference
+successive samples to quantify collision-budget loss. Pool reports per-shot loss.
+
+## Reproducible calibration
+
+`fitSphereCalibration(dataset)` fits sliding friction, rolling resistance,
+sidespin resistance, and the two-parameter cushion pace law from SI observations.
+Datasets carry `provenance.source` and `provenance.kind` (`measured` or `analytic`).
+The result retains provenance and reports RMS residuals for each fit. A fit is not
+an automatic certification: compare residuals against acquisition uncertainty and
+validate held-out shot trajectories, especially spin-sensitive cushion angles.
+All channels require informative observations; non-passive cushion fits are rejected.
+
+See [the calibration protocol](../../../../dev-docs/benchmarks/gpu-physics-calibration.md)
+for equations, units, fixtures, limitations, and the report command. The bundled
+fixture is synthetic, not a digitized experiment. No measured table fit is applied
+to the illustrative pool table automatically.
+
+## Oriented rigid bodies
+
+`GPURigidBodyWorld` is a separate experimental reference path for up to 128 dynamic
+and static spheres/boxes. It preserves structure-of-arrays position, orientation,
+linear-velocity and angular-velocity buffers for direct rendering. Bodies specify a
+shape, transform, mass (zero for static), friction and restitution. Solid-shape principal
+inertia is transformed into world space when applying impulses.
+
+```typescript
+const world = new GPURigidBodyWorld({
+  bodies: [
+    {shape: {type: 'box', halfExtents: [8, 8, 0.5]}, position: [0, 0, -0.5], mass: 0},
+    {shape: {type: 'box', halfExtents: [0.5, 0.5, 0.5]}, position: [0, 0, 2]}
+  ],
+  timeStep: 1 / 120,
+  iterations: 20
+});
+world.addToGraph(definition);
+const graph = await definition.compileAsync();
+// Encode graph into each fixed simulation step as with GPUSphereWorld.
+world.applyImpulse(1, [2, 0, 0], [0, 0.4, 2]);
+```
+
+A four-operation graph integrates forces, generates contacts, solves impulses and
+finishes transforms/sleeping. Box pairs use 15 separating axes, clipped face polygons
+with up to four retained contacts, and closest supporting edges for edge contacts.
+Sphere/box contacts use the closest point in box-local coordinates. Stable body-pair
+slots retain normal/tangential impulses; nearby aligned contact points warm start the
+next step. Restitution is captured on new impacts, with accumulated nonnegative normal
+impulses and Coulomb-bounded tangential impulses.
+
+Connected dynamic components sleep together. Static surfaces do not join independent
+stacks into one island. External impulses conservatively wake all components and clear
+the contact cache. After direct state-buffer writes, call `wake()` before the next step.
+Only mutate state between submissions; queued graph encodings do not capture snapshots
+of caller writes. Impulses submit immediately and precede subsequent graph submissions.
+
+This bounded path uses quadratic pair storage (288 bytes per directed pair) and an
+ordered GPU sequential solve. It is a correctness foundation, not a scalable general
+rigid-body engine. It is discrete, has no swept box CCD, and uses first-order rotation
+integration while preserving world angular momentum. Fast motion, extreme mass ratios and very slender shapes
+need smaller timesteps and additional validation. The sphere grid path remains the
+large-world implementation. General convex shapes, joints and glTF binding are deferred.
+
+All rigid-world buffers are owned by the world, even when exposed for rendering. Destroy
+rendering bindings and the compiled graph, complete outstanding readbacks, then destroy
+the world. `destroy()` is idempotent. `readState()` is optional and never gates simulation.

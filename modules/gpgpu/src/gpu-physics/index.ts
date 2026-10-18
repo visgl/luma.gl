@@ -25,3 +25,16 @@ export {
   getSphereCushionRestitution,
   type SphereClothReference
 } from './sphere-calibration';
+export {
+  fitSphereCalibration,
+  type SphereCalibrationDataset,
+  type SphereCalibrationResult
+} from './sphere-calibration';
+
+export {
+  GPURigidBodyWorld,
+  type GPURigidBody,
+  type GPURigidBodyShape,
+  type GPURigidBodyState,
+  type GPURigidBodyWorldProps
+} from './gpu-rigid-body-world';

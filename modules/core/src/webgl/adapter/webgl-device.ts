@@ -46,11 +46,11 @@ import {WebGLDeviceFeatures} from './device-helpers/webgl-device-features';
 import {WebGLDeviceLimits} from './device-helpers/webgl-device-limits';
 import {WebGLCanvasContext} from './webgl-canvas-context';
 import {WebGLPresentationContext} from './webgl-presentation-context';
-import type {Spector} from '../context/debug/spector-types';
+import type {Spector} from '../../webgl-debug/spector-types';
 import {
   initializeRegisteredSpectorJS,
   makeRegisteredDebugContext
-} from '../context/debug/debug-hooks';
+} from '../context/helpers/debug-hooks';
 import {getTextureFormatCapabilitiesWebGL} from './converters/webgl-texture-table';
 import {uid} from '../utils/uid';
 

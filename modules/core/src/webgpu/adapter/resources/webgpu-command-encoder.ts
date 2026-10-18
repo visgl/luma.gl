@@ -17,10 +17,13 @@ import {WebGPURenderPass} from './webgpu-render-pass';
 import {WebGPUComputePass} from './webgpu-compute-pass';
 import {WebGPUTexture} from './webgpu-texture';
 import {WebGPUQuerySet} from './webgpu-query-set';
+import {WebGPUTimestampSnapshot} from './webgpu-timestamp-snapshot';
 
 export class WebGPUCommandEncoder extends CommandEncoder {
   readonly device: WebGPUDevice;
   readonly handle: GPUCommandEncoder;
+  private _timestampSnapshotsTransferred = false;
+  private _timestampSnapshots = new Map<WebGPUQuerySet, WebGPUTimestampSnapshot>();
   private _transientUploadBuffers: WebGPUBuffer[] = [];
 
   constructor(device: WebGPUDevice, props: CommandEncoderProps = {}) {
@@ -42,11 +45,15 @@ export class WebGPUCommandEncoder extends CommandEncoder {
       uploadBuffer.destroy();
     }
     this._transientUploadBuffers = [];
+    if (!this._timestampSnapshotsTransferred) {
+      for (const snapshot of this._timestampSnapshots.values()) snapshot.destroy();
+    }
     this.destroyResource();
   }
 
   finish(): WebGPUCommandBuffer {
     this.device.pushErrorScope('validation');
+    for (const snapshot of this._timestampSnapshots.values()) snapshot.encodeResolve(this.handle);
     const commandBuffer = new WebGPUCommandBuffer(this, {
       id: this.id,
       userData: this.userData
@@ -77,19 +84,65 @@ export class WebGPUCommandEncoder extends CommandEncoder {
    * @todo need to support a "Framebuffer" equivalent (aka preconfigured RenderPassDescriptors?).
    */
   beginRenderPass(props: RenderPassProps = {}): WebGPURenderPass {
-    return new WebGPURenderPass(
+    const pass = new WebGPURenderPass(
       this.device,
       this._applyTimeProfilingToPassProps(props),
       this.handle
     );
+    this.trackTimestampPass(pass.props);
+    return pass;
   }
 
   beginComputePass(props: ComputePassProps = {}): WebGPUComputePass {
-    return new WebGPUComputePass(
+    const pass = new WebGPUComputePass(
       this.device,
       this._applyTimeProfilingToPassProps(props),
       this.handle
     );
+    this.trackTimestampPass(pass.props);
+    return pass;
+  }
+
+  override captureTimestampQuerySet(querySet: WebGPUQuerySet): WebGPUTimestampSnapshot {
+    let snapshot = this._timestampSnapshots.get(querySet);
+    if (!snapshot) {
+      snapshot = new WebGPUTimestampSnapshot(this.device, querySet);
+      this._timestampSnapshots.set(querySet, snapshot);
+    }
+    return snapshot;
+  }
+
+  /** Transfer ownership to the command buffer; keep references for profiler reads. */
+  takeTimestampSnapshots(): WebGPUTimestampSnapshot[] {
+    const snapshots = Array.from(this._timestampSnapshots.values());
+    // finish() destroys the encoder, but readback consumers retain the snapshots themselves.
+    this._timestampSnapshotsTransferred = true;
+    return snapshots;
+  }
+
+  private trackTimestampPass(props: RenderPassProps | ComputePassProps): void {
+    if (
+      props.timestampQuerySet &&
+      props.beginTimestampIndex !== undefined &&
+      props.endTimestampIndex !== undefined
+    ) {
+      const snapshot = this.captureTimestampQuerySet(props.timestampQuerySet as WebGPUQuerySet);
+      snapshot.addPair(props.beginTimestampIndex, props.endTimestampIndex);
+      if (props.timestampQuerySet === this.getTimeProfilingQuerySet())
+        this._profilingSnapshot = snapshot;
+    }
+  }
+
+  private _profilingSnapshot: WebGPUTimestampSnapshot | undefined;
+
+  override async resolveTimeProfilingQuerySet(): Promise<void> {
+    if (!this._profilingSnapshot) return;
+    const results = await this._profilingSnapshot.readResults();
+    let duration = 0n;
+    for (let index = 0; index < this.getTimeProfilingSlotCount(); index += 2) {
+      duration += results[index + 1] - results[index];
+    }
+    this._gpuTimeMs = Number(duration) / 1e6;
   }
 
   // beginRenderPass(GPURenderPassDescriptor descriptor): GPURenderPassEncoder;

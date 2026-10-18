@@ -1,6 +1,6 @@
 # GPU Physics Roadmap
 
-Updated: October 16, 2026
+Updated: October 18, 2026
 
 ## Goal and current status
 
@@ -154,11 +154,46 @@ The follow-up adds an opt-in, bounded small-world sweep path, persistent GPU eve
 ring, step-local pocket capture, event-driven pool sound/trails, candidate traversal
 budgets, analytic material fixtures and static box surface composition. These are
 foundations across the five tranches, not completion of every exit criterion.
-Measured billiards calibration, dynamic non-spherical bodies, persistent manifolds,
-warm starting and broad-phase CCD for large worlds remain open. No external
+Later tranches below add warm starting and bounded dynamic boxes with persistent manifolds.
+Measured billiards calibration and broad-phase CCD for large worlds remain open. No external
 measurement dataset is bundled or claimed.
 
 Measured sparse/rack/pile evidence and an explicit 10,000-body frame-budget limit
 are now recorded in the [performance report](../benchmarks/gpu-physics-performance.md).
 The measured sparse scene reached approximately 24.43 ms of GPU simulation per step
 on the tested Apple adapter; large-world fixed timesteps do not imply 120 Hz playback.
+
+
+## Tranches 6–8: reliability, calibration and persistent contacts
+
+The #3460 foundations have landed. The next implementation adds:
+
+| Tranche | Implementation | Remaining evidence |
+| --- | --- | --- |
+| 6 — collision reliability | Simultaneous-impact momentum/energy regressions, repeated finite-cushion rebounds, timestep comparison, persistent discarded-time accounting and per-shot pool reporting | Wider shot-speed/radius/adapter matrices; budgets still discard unprocessed time explicitly |
+| 7 — calibration | SI dataset/provenance schema, cloth and cushion least-squares fitting, residual reports, reproducible CLI fixture and GPU follow/draw/spin/pace tolerances | Measured table datasets and held-out throw/cushion-angle validation; pool remains illustrative |
+| 8 — persistent contacts | Opt-in sphere and surface identity cache, accumulated normal/tangent constraints, friction-cone limits, timestep-scaled warm impulses and automatic command/material invalidation | Wider dense-pile and adapter evidence before making this the module default |
+
+See [calibration and stability protocol](../benchmarks/gpu-physics-calibration.md).
+Tranches 12–13 below add bounded dynamic box manifolds and rotated inertia tensors.
+Large-world swept broad phases remain later work. Do not interpret the analytic fixture as empirical calibration.
+
+## Large-count showcase and tranches 12–13
+
+The `gpu-sphere-scale` example starts at 10,000 spheres and offers 25,000/50,000
+stress settings. It retains grid discovery, contact/candidate diagnostics, direct
+GPU rendering and benchmark exports. Interactive playback caps catch-up work and
+reports the actual simulation-time/wall-time ratio. Selectable capacity is not a
+performance or dense-scene correctness guarantee.
+
+Tranche 12 adds `GPURigidBodyWorld`, with explicit sphere/box shape and material
+metadata, oriented transforms, rotated solid-body inertia and off-center impulses.
+Tranche 13 adds 15-axis box SAT, clipped face manifolds, supporting-edge contacts,
+persistent accumulated friction constraints and connected-component sleeping/waking.
+The new `gpu-rigid-body-world` example includes stacks, mixed shapes and impacts.
+
+This is a separate, bounded reference path: at most 128 bodies, quadratic pair
+storage and an ordered GPU solver. It does not replace the scalable sphere solver.
+Large-world sparse manifolds, parallel rigid-body solving, box CCD, joints, general
+convex shapes and glTF synchronization remain later work. Device-specific evidence
+must accompany any performance or supported stacking-depth claim.

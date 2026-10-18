@@ -562,6 +562,7 @@
               }
             ]
           },
+          "api-reference/experimental/gpu-timeseries",
           {
             "type": "category",
             "label": "GPU Graph",

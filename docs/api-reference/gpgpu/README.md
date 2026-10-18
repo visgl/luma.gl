@@ -17,6 +17,7 @@ The `@luma.gl/gpgpu` module performs GPU-based data transformation.
 - [`Custom Operations`](/docs/api-reference/gpgpu/custom-operation)
 - [`GPU Evaluators`](/docs/api-reference/gpgpu/gpu-data-evaluator)
 - [`GPU Data`](/docs/api-reference/gpgpu/gpu-data)
+- [GPU time series](/docs/api-reference/experimental/gpu-timeseries): exact chart envelopes over chunked uniform samples.
 - [`cleanEvaluate`](/docs/api-reference/gpgpu/clean-evaluate)
 
 ## GPU Data Primitives

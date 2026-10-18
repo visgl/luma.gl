@@ -91,7 +91,7 @@ export type {ComputePassProps} from './api/index';
 
 export {ComputePass} from './api/index';
 
-export type {CommandEncoderProps} from './api/index';
+export type {CommandEncoderProps, GPUClockCorrelation, TimestampQuerySnapshot} from './api/index';
 
 export {CommandEncoder} from './api/index';
 

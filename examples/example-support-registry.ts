@@ -9,6 +9,8 @@ import flowParticlesSupport from './deck/flow-particles/mobile-support';
 import threeSupport from './experimental/three/mobile-support';
 import poolSupport from './experimental/gpu-pool/mobile-support';
 import sphereWorldSupport from './experimental/gpu-sphere-world/mobile-support';
+import sphereScaleSupport from './experimental/gpu-sphere-scale/mobile-support';
+import rigidBodyWorldSupport from './experimental/gpu-rigid-body-world/mobile-support';
 import sketchSupport from './deck/sketch-edges/mobile-support';
 import globeCloudsSupport from './deck/globe-clouds/mobile-support';
 import weatherSupport from './deck/weather/mobile-support';
@@ -53,6 +55,7 @@ import support21 from './v10/gpgpu/mobile-support';
 import support22 from './experimental/gpu-frustum-culling/mobile-support';
 import parquetSupport from './experimental/gpu-parquet-constellation/mobile-support';
 import support23 from './experimental/gpu-trace-viewer/mobile-support';
+import timeSeriesSupport from './experimental/gpu-timeseries/mobile-support';
 import support24 from './experimental/gpu-graph-explorer/mobile-support';
 import support25 from './experimental/gpu-trace-scene/mobile-support';
 import support26 from './experimental/gpu-scene-graph/mobile-support';
@@ -157,6 +160,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'experimental/gpu-graph-explorer': support24,
   'experimental/gpu-geometry': geometrySupport,
   'experimental/gpu-pointcloud': pointCloudSupport,
+  'experimental/gpu-timeseries': timeSeriesSupport,
   'experimental/gpu-trace-scene': support25,
   'experimental/gpu-scene-graph': support26,
   'showcase/vector-field-lab': support27,
@@ -181,6 +185,8 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'experimental/three': threeSupport,
   'experimental/gpu-pool': poolSupport,
   'experimental/gpu-sphere-world': sphereWorldSupport,
+  'experimental/gpu-sphere-scale': sphereScaleSupport,
+  'experimental/gpu-rigid-body-world': rigidBodyWorldSupport,
   'integrations/react-strict-mode': support46,
   'tutorials/hello-triangle': support47,
   'tutorials/hello-triangle-geometry': support48,

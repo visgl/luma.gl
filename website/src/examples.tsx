@@ -2675,6 +2675,21 @@ export const TransformExample: React.FC = props => (
   />
 );
 
+const loadGPUTimeSeriesApp = () => import('../../examples/experimental/gpu-timeseries/app');
+
+export const GPUTimeSeriesExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="gpu-timeseries"
+    title="Signal Room"
+    subtitle="Find a service incident hidden in 29 hours of telemetry"
+    directory="experimental"
+    devices={['webgpu']}
+    loadTemplate={loadGPUTimeSeriesApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
 export const GPUGeometryExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="gpu-geometry"
