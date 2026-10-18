@@ -119,24 +119,38 @@ test('snapshot reads reject invalid query windows before submission', async () =
   }
 });
 
-test('scoped profiling restores the caller query set and slot count on success and failure', () => {
+test('scoped profiling restores caller state and snapshot on success and failure', async () => {
   const fixture = createFixture();
   const encoder: WebGPUCommandEncoder = Object.create(WebGPUCommandEncoder.prototype);
-  Object.assign(encoder, {_timeProfilingQuerySet: null, _timeProfilingSlotCount: 8});
+  const readOriginal = vi.fn(async () => [0n, 1n, 2n, 3n, 4n, 5n, 6n, 7n]);
+  const readScoped = vi.fn(async () => [10n, 20n]);
+  Object.assign(encoder, {
+    _timeProfilingQuerySet: null,
+    _timeProfilingSlotCount: 8,
+    _profilingSnapshot: {readResults: readOriginal}
+  });
   expect(
     encoder.withTimeProfilingQuerySet(fixture.querySet, () => {
       expect(encoder.getTimeProfilingQuerySet()).toBe(fixture.querySet);
       expect(encoder.getTimeProfilingSlotCount()).toBe(0);
+      Object.assign(encoder, {_profilingSnapshot: {readResults: readScoped}});
       return 42;
     })
   ).toBe(42);
+  await encoder.resolveTimeProfilingQuerySet();
+  expect(readOriginal).toHaveBeenCalledTimes(1);
+  expect(readScoped).not.toHaveBeenCalled();
   expect(encoder.getTimeProfilingQuerySet()).toBeNull();
   expect(encoder.getTimeProfilingSlotCount()).toBe(8);
   expect(() =>
     encoder.withTimeProfilingQuerySet(fixture.querySet, () => {
+      Object.assign(encoder, {_profilingSnapshot: {readResults: readScoped}});
       throw new Error('encoding failed');
     })
   ).toThrow('encoding failed');
+  await encoder.resolveTimeProfilingQuerySet();
+  expect(readOriginal).toHaveBeenCalledTimes(2);
+  expect(readScoped).not.toHaveBeenCalled();
   expect(encoder.getTimeProfilingQuerySet()).toBeNull();
   expect(encoder.getTimeProfilingSlotCount()).toBe(8);
 });

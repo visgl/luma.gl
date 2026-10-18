@@ -30,6 +30,7 @@ export class WebGPUCommandEncoder extends CommandEncoder {
   override withTimeProfilingQuerySet<Result>(querySet: QuerySet, encode: () => Result): Result {
     const previousQuerySet = this._timeProfilingQuerySet;
     const previousSlotCount = this._timeProfilingSlotCount;
+    const previousSnapshot = this._profilingSnapshot;
     this._timeProfilingQuerySet = querySet;
     this._timeProfilingSlotCount = 0;
     try {
@@ -37,6 +38,7 @@ export class WebGPUCommandEncoder extends CommandEncoder {
     } finally {
       this._timeProfilingQuerySet = previousQuerySet;
       this._timeProfilingSlotCount = previousSlotCount;
+      this._profilingSnapshot = previousSnapshot;
     }
   }
 
