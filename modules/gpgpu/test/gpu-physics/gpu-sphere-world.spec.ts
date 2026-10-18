@@ -1484,3 +1484,33 @@ it('continuous persistent sixteen-ball rack breaks stay bounded as the timestep 
     coarse.reduce((sum, value, index) => sum + Math.abs(value - fine[index]), 0) / coarse.length;
   expect(meanDifference).toBeLessThan(0.03);
 });
+
+it('warm solver captures restitution for a surface contact created by sphere correction', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const fixture = await makeWorld(
+    device,
+    [0, 0, 0.65, 0.5, 0, 0, 1.66, 0.5],
+    [0, 0, -1, 1, 0, 0, -3, 1],
+    {
+      warmStarting: true,
+      timeStep: 0.1,
+      maximumRadius: 0.5,
+      restitution: 0,
+      staticFriction: 0,
+      dynamicFriction: 0,
+      iterations: 16,
+      plane: {offset: 0, restitution: 1, staticFriction: 0, dynamicFriction: 0}
+    }
+  );
+  try {
+    fixture.step();
+    const state = await fixture.read();
+    expect(state.velocities[2]).toBeGreaterThan(0.5);
+    expect(state.velocities[6]).toBeGreaterThan(0.5);
+    expect((state.velocities[2] ** 2 + state.velocities[6] ** 2) / 2).toBeLessThanOrEqual(5.01);
+    expect(state.positions[2]).toBeGreaterThanOrEqual(0.5);
+  } finally {
+    fixture.destroy();
+  }
+});

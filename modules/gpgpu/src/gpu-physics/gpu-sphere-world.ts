@@ -820,7 +820,8 @@ export class GPUSphereWorld {
           `${impactPrefix}-emit`,
           this.warmStarting
             ? makePersistentContactShader(
-                getSphereContactShader('emit', this.broadPhase === 'all-pairs')
+                getSphereContactShader('emit', this.broadPhase === 'all-pairs'),
+                true
               )
             : getSphereContactShader('emit', this.broadPhase === 'all-pairs'),
           [...commonContacts, bind('offsets', offsets, 6), bind('contacts', contacts, 7, 'write')]
