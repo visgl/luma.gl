@@ -62,6 +62,7 @@ test('diagnostics allocate scoped timestamps only for sampled encodings', async 
     diagnostics.encode(graph, commandEncoder, {parameters: undefined});
     expect(profile).toHaveBeenCalledTimes(1);
     expect(createQuerySet).toHaveBeenCalledTimes(1);
+    expect(createQuerySet).toHaveBeenCalledWith({type: 'timestamp', count: 2});
     const querySet = createQuerySet.mock.results[0].value;
     const destroy = vi.spyOn(querySet, 'destroy');
     await new Promise(resolve => setTimeout(resolve, 0));

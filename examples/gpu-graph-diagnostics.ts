@@ -38,7 +38,7 @@ export class GPUGraphDiagnostics {
     const querySet = shouldProfile
       ? commandEncoder.device.createQuerySet({
           type: 'timestamp',
-          count: Math.min(8192, Math.max(2, graph.stats.nodeCount * 2))
+          count: Math.min(8192, Math.max(2, graph.stats.nodeOrder.length * 2))
         })
       : undefined;
     let encoding: GPUCommandGraphEncoding;
