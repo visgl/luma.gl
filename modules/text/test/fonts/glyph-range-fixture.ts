@@ -16,16 +16,27 @@ function encodeField(tag: number, bytes: number[]): number[] {
 }
 
 /** Synthetic glyph range with visible bitmaps and negative bearings; no third-party font data. */
-export function makeGlyphRange(codePoints: number[]): Uint8Array {
+export function makeGlyphRange(
+  codePoints: number[],
+  {
+    width = 1,
+    height = 1,
+    bitmap = Array((width + 6) * (height + 6)).fill(255)
+  }: {
+    width?: number;
+    height?: number;
+    bitmap?: number[];
+  } = {}
+): Uint8Array {
   const glyphs = codePoints.flatMap(codePoint =>
     encodeField(3, [
       8,
       ...encodeVarint(codePoint),
-      ...encodeField(2, Array(49).fill(255)),
+      ...encodeField(2, bitmap),
       24,
-      1,
+      width,
       32,
-      1,
+      height,
       40,
       3,
       48,

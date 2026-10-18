@@ -15,6 +15,16 @@ test('decodes metrics, negative bearings and bitmap bytes without a DOM', () => 
   expect(renderer.measure('B').advance).toBe(0);
 });
 
+test.each([{bitmap: []}, {bitmap: Array(36).fill(0)}])('preserves blank glyph advances with bitmap $bitmap', ({bitmap}) => {
+  const [glyph] = parseGlyphRange(makeGlyphRange([32], {width: 0, height: 0, bitmap}));
+  expect(glyph).toMatchObject({id: 32, width: 0, height: 0, advance: 5});
+  expect(glyph.bitmap).toHaveLength(bitmap.length);
+});
+
+test('rejects incorrectly sized blank glyph bitmaps', () => {
+  expect(parseGlyphRange(makeGlyphRange([32], {width: 0, height: 0, bitmap: [0]}))).toEqual([]);
+});
+
 test.each(
   [[10, 2, 0], [9, 1], [13, 1], [128]].map(bytes => ({bytes}))
 )('rejects truncated protocol buffers $bytes', ({bytes}) => {

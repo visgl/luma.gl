@@ -128,8 +128,9 @@ function readGlyph(bytes: Uint8Array): Glyph | null {
   }
   const bitmap = glyph.bitmap || new Uint8Array(0);
   // A bitmap of any other size cannot be read as a distance field, as in MapLibre's `AlphaImage`.
-  const size = width && height ? (width + 2 * GLYPH_BORDER) * (height + 2 * GLYPH_BORDER) : 0;
-  if (bitmap.length !== size) {
+  const size = (width + 2 * GLYPH_BORDER) * (height + 2 * GLYPH_BORDER);
+  const omittedBlankBitmap = bitmap.length === 0 && (width === 0 || height === 0);
+  if (bitmap.length !== size && !omittedBlankBitmap) {
     return null;
   }
   return {id, bitmap, width, height, left, top, advance};

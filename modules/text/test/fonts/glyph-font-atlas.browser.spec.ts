@@ -120,3 +120,15 @@ test('different bearings retain separate bitmap cells and horizontal layout offs
     expect(frame.advance).toBe(5);
   }
 });
+
+test('border-only spaces retain their advance in the packed atlas', async () => {
+  if (!isBrowser()) return;
+  const loader = new GlyphRangeLoader({
+    url: 'https://example.com/{fontstack}/{range}',
+    fetch: async () =>
+      new Response(makeGlyphRange([32], {width: 0, height: 0, bitmap: Array(36).fill(0)}))
+  });
+  const atlas = await buildGlyphFontAtlas(loader, 'Regular', ' ');
+  expect(atlas.mapping[' '].advance).toBe(5);
+  expect(measureFontAtlasText('  ', atlas).advance).toBe(10);
+});
