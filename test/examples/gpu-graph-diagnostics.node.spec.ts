@@ -42,3 +42,33 @@ test('diagnostics defer reads, sample repeated encodings, and invalidate cleared
     device.destroy();
   }
 });
+
+test('diagnostics allocate scoped timestamps only for sampled encodings', async () => {
+  const device = new NullDevice({});
+  Object.defineProperty(device, 'type', {value: 'webgpu'});
+  vi.spyOn(device.features, 'has').mockReturnValue(true);
+  const graph = new GPUCommandGraph(device, {id: 'sampled-diagnostics'}).compile();
+  const commandEncoder = device.commandEncoder;
+  const profile = vi.fn();
+  commandEncoder.withTimeProfilingQuerySet = (_querySet, encode) => {
+    profile();
+    return encode();
+  };
+  const createQuerySet = vi.spyOn(device, 'createQuerySet');
+  const diagnostics = new GPUGraphDiagnostics();
+  try {
+    diagnostics.encode(graph, commandEncoder, {parameters: undefined});
+    diagnostics.encode(graph, commandEncoder, {parameters: undefined});
+    expect(profile).toHaveBeenCalledTimes(1);
+    expect(createQuerySet).toHaveBeenCalledTimes(1);
+    const querySet = createQuerySet.mock.results[0].value;
+    const destroy = vi.spyOn(querySet, 'destroy');
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(destroy).toHaveBeenCalledTimes(1);
+    expect(commandEncoder.getTimeProfilingQuerySet()).toBeNull();
+  } finally {
+    diagnostics.clear();
+    graph.destroy();
+    device.destroy();
+  }
+});

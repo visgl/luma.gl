@@ -93,7 +93,7 @@ type GraphExplorerAnimationProps = AnimationProps & {
 /** Interactive browser-native graph exploration with no per-frame graph readback. */
 export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeExamplePanelHostHtml();
-  static props = {createFramebuffer: true, debug: true, debugGPUTime: true};
+  static props = {createFramebuffer: true, debug: true};
 
   readonly device: Device;
   graph!: GPUGraph;
@@ -471,29 +471,30 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
     this.writeViewUniforms(width, height);
 
     if (this.analyticsPending) {
-      const encoding = this.analysisGraph.encode(device.commandEncoder, {parameters: undefined});
-      cpuEncodeMilliseconds += encoding.stats.cpuEncodeTimeMilliseconds;
-      this.diagnostics.record(this.analysisGraph, encoding);
-      this.analyticsPending = false;
-    } else if (this.nextAnalysisStage < this.analysisStages.length) {
-      const stage = this.analysisStages[this.nextAnalysisStage++];
-      const encoding = stage.encode(device.commandEncoder, {
+      const encoding = this.diagnostics.encode(this.analysisGraph, device.commandEncoder, {
         parameters: undefined
       });
       cpuEncodeMilliseconds += encoding.stats.cpuEncodeTimeMilliseconds;
-      this.diagnostics.record(stage, encoding);
+      this.analyticsPending = false;
+    } else if (this.nextAnalysisStage < this.analysisStages.length) {
+      const stage = this.analysisStages[this.nextAnalysisStage++];
+      const encoding = this.diagnostics.encode(stage, device.commandEncoder, {
+        parameters: undefined
+      });
+      cpuEncodeMilliseconds += encoding.stats.cpuEncodeTimeMilliseconds;
     }
     if (this.searchGraph && this.searchPending) {
-      const encoding = this.searchGraph.encode(device.commandEncoder, {parameters: undefined});
+      const encoding = this.diagnostics.encode(this.searchGraph, device.commandEncoder, {
+        parameters: undefined
+      });
       cpuEncodeMilliseconds += encoding.stats.cpuEncodeTimeMilliseconds;
-      this.diagnostics.record(this.searchGraph, encoding);
       this.searchPending = false;
     }
 
     const framebuffer = device
       .getDefaultCanvasContext()
       .getCurrentFramebuffer({depthStencilFormat: 'depth24plus'});
-    const frameEncoding = this.frameGraph.encode(device.commandEncoder, {
+    const frameEncoding = this.diagnostics.encode(this.frameGraph, device.commandEncoder, {
       parameters: {width, height},
       frameTextures: {
         [this.frameColorId]: {
@@ -507,7 +508,6 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
       }
     });
     cpuEncodeMilliseconds += frameEncoding.stats.cpuEncodeTimeMilliseconds;
-    this.diagnostics.record(this.frameGraph, frameEncoding);
 
     if (this.pendingPick) {
       const ticket = this.readbackRing.tryAcquire();
@@ -516,12 +516,11 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
         const pointerSession = this.pendingPickSession;
         this.pendingPick = null;
         this.pendingPickSession = null;
-        const encoding = this.pickingGraph.encode(device.commandEncoder, {
+        const encoding = this.diagnostics.encode(this.pickingGraph, device.commandEncoder, {
           parameters: {pixel},
           buffers: {[this.pickingReadbackId]: ticket.buffer}
         });
         cpuEncodeMilliseconds += encoding.stats.cpuEncodeTimeMilliseconds;
-        this.diagnostics.record(this.pickingGraph, encoding);
         ticket.markEncoded({byteLength: 8});
         queueMicrotask(() => void this.readPickedVertex(ticket, pointerSession ?? undefined));
       }

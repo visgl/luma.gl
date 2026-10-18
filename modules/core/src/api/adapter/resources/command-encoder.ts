@@ -213,6 +213,9 @@ export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
     }
   ): void;
 
+  /** WebGPU-only scoped profiling. Use a fresh query set for each scope. */
+  withTimeProfilingQuerySet?<Result>(querySet: QuerySet, encode: () => Result): Result;
+
   /**
    * Reads all resolved timestamp pairs on the current profiler query set and caches the sum
    * as milliseconds on this encoder.

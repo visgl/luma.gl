@@ -2,8 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {CommandEncoder, QuerySet} from '@luma.gl/core';
 import {
   GPUCommandGraphInspector,
+  type CompiledGPUCommandGraph,
+  type GPUCommandGraphEncodeOptions,
   type GPUCommandGraphEncoding,
   type GPUCommandGraphInspectorGraph
 } from '@luma.gl/gpgpu/gpu-core';
@@ -20,7 +23,43 @@ export class GPUGraphDiagnostics {
   private latestEncoding: GPUCommandGraphEncoding | null = null;
   private generation = 0;
 
-  record(graph: GPUCommandGraphInspectorGraph, encoding: GPUCommandGraphEncoding): void {
+  encode<Parameters>(
+    graph: CompiledGPUCommandGraph<Parameters>,
+    commandEncoder: CommandEncoder,
+    options: GPUCommandGraphEncodeOptions<Parameters>
+  ): GPUCommandGraphEncoding {
+    const sampleCount = this.graphs.get(graph.id) === graph ? this.sampleCounts.get(graph.id)! : 0;
+    const shouldProfile =
+      sampleCount % 60 === 0 &&
+      commandEncoder.getTimeProfilingQuerySet() === null &&
+      commandEncoder.device.features.has('timestamp-query') &&
+      commandEncoder.withTimeProfilingQuerySet;
+    const querySet = shouldProfile
+      ? commandEncoder.device.createQuerySet({
+          type: 'timestamp',
+          count: Math.min(8192, Math.max(2, graph.stats.nodeCount * 2))
+        })
+      : undefined;
+    let encoding: GPUCommandGraphEncoding;
+    try {
+      encoding = querySet
+        ? commandEncoder.withTimeProfilingQuerySet!(querySet, () =>
+            graph.encode(commandEncoder, options)
+          )
+        : graph.encode(commandEncoder, options);
+    } catch (error) {
+      querySet?.destroy();
+      throw error;
+    }
+    this.record(graph, encoding, querySet);
+    return encoding;
+  }
+
+  record(
+    graph: GPUCommandGraphInspectorGraph,
+    encoding: GPUCommandGraphEncoding,
+    querySet?: QuerySet
+  ): void {
     if (this.graphs.get(graph.id) !== graph) {
       this.graphs.set(graph.id, graph);
       this.sampleCounts.set(graph.id, 0);
@@ -36,7 +75,10 @@ export class GPUGraphDiagnostics {
     const generation = this.generation;
     // AnimationLoop and Deck submit synchronously after rendering. Read only after that frame.
     queueMicrotask(() => {
-      if (generation !== this.generation || this.graphs.get(graph.id) !== graph) return;
+      if (generation !== this.generation || this.graphs.get(graph.id) !== graph) {
+        querySet?.destroy();
+        return;
+      }
       void this.inspector
         .recordGPUTimings(graph.id, encoding)
         .then(report => {
@@ -46,7 +88,8 @@ export class GPUGraphDiagnostics {
         })
         .catch(() => {
           // Optional timestamps can become unavailable on device loss; retain the CPU sample.
-        });
+        })
+        .finally(() => querySet?.destroy());
     });
   }
 

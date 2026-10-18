@@ -115,7 +115,6 @@ export function createGPUGraphExplorerDeck(
       ? exampleProps.deviceProps
       : {
           ...exampleProps.deviceProps,
-          debugGPUTime: true,
           optionalFeatures: ['timestamp-query']
         },
     views: new OrthographicView({id: 'gpu-graph-orthographic'}),
@@ -161,7 +160,6 @@ export function createGPUGraphExplorerDeck(
     },
     onLoad: ({deck: loadedDeck, device}) => {
       if (device.type !== 'webgpu') throw new Error('GPU Graph deck explorer requires WebGPU');
-      if (!deviceOptions.device) device._enableDebugGPUTime();
       activeDevice = device;
       rebuildGraph(initialDataset, loadedDeck);
     },
@@ -243,7 +241,8 @@ export function createGPUGraphExplorerDeck(
       pointMode,
       maxVisibleEdges,
       addSampledLayoutToGraph: addGraphExplorerSampledLayoutToGraph,
-      onEncoding: (graph, encoding) => diagnostics.record(graph, encoding),
+      encodeGraph: (graph, commandEncoder) =>
+        diagnostics.encode(graph, commandEncoder, {parameters: undefined}),
       onStats: stats => {
         latestStats = stats;
         controls.update();

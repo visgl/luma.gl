@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Effect, EffectContext} from '@deck.gl/core';
-import {Buffer, type Device} from '@luma.gl/core';
+import {Buffer, type Device, type CommandEncoder} from '@luma.gl/core';
 import {
   GPUCommandGraph,
   type CompiledGPUCommandGraph,
@@ -82,8 +82,11 @@ export type GPUGraphDeckEffectOptions = {
   pointMode?: boolean;
   maxVisibleEdges?: number;
   onStats?: (stats: GPUGraphDeckEffectStats) => void;
-  /** Observes encodings before Deck submits; defer timestamp reads until after the frame. */
-  onEncoding?: (graph: CompiledGPUCommandGraph<void>, encoding: GPUCommandGraphEncoding) => void;
+  /** Optional encoding hook for sampled diagnostics; Deck retains ownership of submission. */
+  encodeGraph?: (
+    graph: CompiledGPUCommandGraph<void>,
+    commandEncoder: CommandEncoder
+  ) => GPUCommandGraphEncoding;
   /** Adds an explicitly provided O(E + 4V) contributor without importing application code. */
   addSampledLayoutToGraph?: (
     commandGraph: GPUCommandGraph<void>,
@@ -130,7 +133,7 @@ export class GPUGraphDeckEffect implements Effect {
   private readonly pinned: GPUVector<'uint32'>;
   private readonly reset: GPUVector<'uint32'>;
   private readonly pinnedVertices = new Set<number>();
-  private readonly onEncoding?: GPUGraphDeckEffectOptions['onEncoding'];
+  private readonly encodeGraph: NonNullable<GPUGraphDeckEffectOptions['encodeGraph']>;
   private readonly onStats?: (stats: GPUGraphDeckEffectStats) => void;
   private readonly analysisStages: CompiledGPUCommandGraph<void>[];
   private selectedVertex: number | null = 0;
@@ -152,7 +155,9 @@ export class GPUGraphDeckEffect implements Effect {
     this.device = device;
     this.dataset = dataset;
     this.onStats = options.onStats;
-    this.onEncoding = options.onEncoding;
+    this.encodeGraph =
+      options.encodeGraph ??
+      ((graph, commandEncoder) => graph.encode(commandEncoder, {parameters: undefined}));
     const edgeCount = dataset.sourceChunks.reduce((total, chunk) => total + chunk.length, 0);
     const largestBufferBytes = Math.max(dataset.vertexCount * 8, edgeCount * SCALAR_BYTE_LENGTH);
     if (
@@ -370,23 +375,16 @@ export class GPUGraphDeckEffect implements Effect {
     let advancedAnalysis = false;
     if (this.completedAnalysisStages < this.analysisStages.length) {
       const stage = this.analysisStages[this.completedAnalysisStages];
-      const encoding = stage.encode(this.device.commandEncoder, {
-        parameters: undefined
-      });
-      this.onEncoding?.(stage, encoding);
+      const encoding = this.encodeGraph(stage, this.device.commandEncoder);
       this.analysisEncodeMilliseconds += encoding.stats.cpuEncodeTimeMilliseconds;
       this.completedAnalysisStages++;
       advancedAnalysis = true;
     }
     if (this.searchGraph && this.searchPending && this.completedAnalysisStages > 0) {
-      const searchEncoding = this.searchGraph.encode(this.device.commandEncoder, {
-        parameters: undefined
-      });
-      this.onEncoding?.(this.searchGraph, searchEncoding);
+      this.encodeGraph(this.searchGraph, this.device.commandEncoder);
       this.searchPending = false;
     }
-    const encoding = this.frameGraph.encode(this.device.commandEncoder, {parameters: undefined});
-    this.onEncoding?.(this.frameGraph, encoding);
+    const encoding = this.encodeGraph(this.frameGraph, this.device.commandEncoder);
     this.frameCount++;
     const frameTime = performance.now();
     if (this.previousFrameTime > 0 && frameTime > this.previousFrameTime) {

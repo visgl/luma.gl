@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {afterEach, expect, test, vi} from 'vitest';
+import {WebGPUCommandEncoder} from '../../../../src/webgpu/adapter/resources/webgpu-command-encoder';
 import {WebGPUTimestampSnapshot} from '../../../../src/webgpu/adapter/resources/webgpu-timestamp-snapshot';
 import {GPUClockCorrelator} from '../../../../src/webgpu/adapter/helpers/gpu-clock-correlator';
 import type {WebGPUDevice} from '../../../../src/webgpu/adapter/webgpu-device';
@@ -116,4 +117,26 @@ test('snapshot reads reject invalid query windows before submission', async () =
   } finally {
     snapshot.destroy();
   }
+});
+
+test('scoped profiling restores the caller query set and slot count on success and failure', () => {
+  const fixture = createFixture();
+  const encoder: WebGPUCommandEncoder = Object.create(WebGPUCommandEncoder.prototype);
+  Object.assign(encoder, {_timeProfilingQuerySet: null, _timeProfilingSlotCount: 8});
+  expect(
+    encoder.withTimeProfilingQuerySet(fixture.querySet, () => {
+      expect(encoder.getTimeProfilingQuerySet()).toBe(fixture.querySet);
+      expect(encoder.getTimeProfilingSlotCount()).toBe(0);
+      return 42;
+    })
+  ).toBe(42);
+  expect(encoder.getTimeProfilingQuerySet()).toBeNull();
+  expect(encoder.getTimeProfilingSlotCount()).toBe(8);
+  expect(() =>
+    encoder.withTimeProfilingQuerySet(fixture.querySet, () => {
+      throw new Error('encoding failed');
+    })
+  ).toThrow('encoding failed');
+  expect(encoder.getTimeProfilingQuerySet()).toBeNull();
+  expect(encoder.getTimeProfilingSlotCount()).toBe(8);
 });

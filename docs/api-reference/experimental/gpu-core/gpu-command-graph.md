@@ -883,3 +883,11 @@ valid bounds or GPU endpoints are unavailable; WebGL remains duration-only.
 The reusable GPU Trace panel offers **Combined timeline (estimated)** when correlation is available.
 Both lanes then share one origin and scale, and the panel displays alignment uncertainty. Separate
 CPU/GPU timelines remain the default. No extra `ClockSync` graph operation is required.
+
+
+For sampled WebGPU diagnostics, `commandEncoder.withTimeProfilingQuerySet?.(querySet, encode)`
+scopes automatic pass timestamps to a synchronous encoding callback. Supply a fresh timestamp query
+set for each scope and retain it until submission and timing readback complete. The encoder restores
+the caller's profiling query set and slot count afterward, including when encoding throws. This
+WebGPU-only hook avoids enabling a device-wide profiler for every frame; unsupported encoders can
+encode normally and report CPU spans. The Graph Explorer examples use this path for sampled traces.
