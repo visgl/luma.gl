@@ -231,6 +231,40 @@ it('compiles symmetric filters without a 32-system bitmask limit', () => {
 });
 
 it.each([
+  {systems: ['allowed', 'extra'], include: ['allowed'], collides: true},
+  {systems: [], include: ['allowed'], collides: false},
+  {systems: ['allowed'], include: [], collides: false},
+  {systems: ['other'], include: ['allowed'], collides: false}
+])('include filters use nonempty membership intersection: %j', ({systems, include, collides}) => {
+  const source = makePhysicsDocument([
+    {children: [1, 2]},
+    {
+      extensions: {
+        KHR_physics_rigid_bodies: {motion: {}, collider: {geometry: {shape: 0}, collisionFilter: 0}}
+      }
+    },
+    {
+      extensions: {
+        KHR_physics_rigid_bodies: {motion: {}, collider: {geometry: {shape: 0}, collisionFilter: 1}}
+      }
+    }
+  ]);
+  source.extensions = {
+    ...source.extensions,
+    KHR_physics_rigid_bodies: {
+      collisionFilters: [
+        {collisionSystems: systems},
+        {collisionSystems: ['target'], collideWithSystems: include}
+      ]
+    }
+  };
+  const result = parseGLTFPhysics(source);
+  expect(result.issues).toEqual([]);
+  expect(result.bodies[0].body.colliders?.[0].excludedColliders).toEqual(collides ? [] : [1]);
+  expect(result.bodies[1].body.colliders?.[0].excludedColliders).toEqual(collides ? [] : [0]);
+});
+
+it.each([
   {geometry: {shape: 100}},
   {geometry: {node: 0, convexHull: true}},
   {geometry: {shape: 0}, physicsMaterial: 100},
@@ -346,4 +380,17 @@ it('reports deferred trigger, joint and render-instancing semantics without part
   expect(instanced.issues.some(issue => issue.code === 'unsupported-physics-instancing')).toBe(
     true
   );
+});
+
+it('rejects capacity before compiling quadratic pair exclusions', () => {
+  const nodes = [
+    {children: Array.from({length: 129}, (_, index) => index + 1)},
+    ...Array.from({length: 129}, () => ({
+      extensions: {KHR_physics_rigid_bodies: {motion: {}, collider: {geometry: {shape: 0}}}}
+    }))
+  ];
+  const result = parseGLTFPhysics(makePhysicsDocument(nodes));
+  expect(result.supported).toBe(false);
+  expect(result.issues.some(issue => issue.code === 'capacity-exceeded')).toBe(true);
+  expect(() => createGLTFPhysicsWorld(result)).toThrow();
 });

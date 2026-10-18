@@ -37,6 +37,12 @@ draft's prose assigns infinity semantics to zero mass/principal inertia even tho
 its pinned JSON schema still specifies strictly positive values; this profile follows
 the prose and tests that behavior explicitly.
 
+For filter lists, this profile follows the prose and category-mask implementation
+model: an include list requires at least one matching system; an exclusion list
+rejects any matching system; both directions must permit the pair. An empty include
+list permits nothing, including colliders without systems. The draft's subset
+notation is ambiguous for multi-system membership; these cases have explicit tests.
+
 | Area | Supported profile |
 | --- | --- |
 | Scene selection | `options.scene`, then authored default, then scene zero; only reachable nodes participate |

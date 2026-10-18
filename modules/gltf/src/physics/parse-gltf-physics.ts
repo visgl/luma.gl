@@ -81,7 +81,7 @@ function parseFilter(value: unknown): Filter {
 }
 function allowsFilter(subject: Filter, target: Filter): boolean {
   return (
-    (!target.include || subject.systems.every(system => target.include!.includes(system))) &&
+    (!target.include || subject.systems.some(system => target.include!.includes(system))) &&
     !subject.systems.some(system => target.exclude?.includes(system))
   );
 }
@@ -390,6 +390,15 @@ export function parseGLTFPhysics(
   } catch (error) {
     report('invalid-scene', '/scenes', error);
   }
+  // Reject capacity before constructing the quadratic collider exclusion table.
+  if (result.bodies.length > 128 || result.colliders.length > 128) {
+    report(
+      'capacity-exceeded',
+      '/',
+      'The bounded backend supports at most 128 bodies and 128 colliders'
+    );
+    return result;
+  }
   for (const definition of result.bodies) {
     const colliders = definition.colliderIndices.map(
       colliderIndex => result.colliders[colliderIndex]['collider']
@@ -495,12 +504,6 @@ export function parseGLTFPhysics(
           'Animation/physics ownership binding is tranche 20D; supply kinematic targets explicitly'
         );
     }
-  if (result.bodies.length > 128 || result.colliders.length > 128)
-    report(
-      'capacity-exceeded',
-      '/',
-      'The bounded backend supports at most 128 bodies and 128 colliders'
-    );
   if (!result.bodies.length)
     report('empty-world', '/', 'No supported physics bodies in the selected scene');
   result.supported = result.issues.length === 0;
