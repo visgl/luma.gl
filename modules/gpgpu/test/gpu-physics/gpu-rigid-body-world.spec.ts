@@ -45,8 +45,8 @@ const floor: GPURigidBody = {
   friction: 0.7,
   restitution: 0
 };
-const box = (position: [number, number, number]): GPURigidBody => ({
-  shape: {type: 'box', halfExtents: [0.5, 0.5, 0.5]},
+const box = (position: [number, number, number]) => ({
+  shape: {type: 'box' as const, halfExtents: [0.5, 0.5, 0.5] as const},
   position,
   friction: 0.7,
   restitution: 0
