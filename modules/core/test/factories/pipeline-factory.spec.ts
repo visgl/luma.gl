@@ -6,6 +6,7 @@ import {expect, it} from 'vitest';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 import {
+  Buffer,
   luma,
   PipelineFactory,
   type ComputePipeline,
@@ -22,6 +23,68 @@ void main(void) {
   gl_Position = positions;
 }
 `;
+
+it('PipelineFactory separates compute entry points and override constants with identical layouts', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device?.props._cachePipelines) return;
+  const factory = new PipelineFactory(device);
+  const shader = device.createShader({
+    source: `
+    override amount: u32 = 1u;
+    @group(0) @binding(0) var<storage, read_write> result: array<u32>;
+    @compute @workgroup_size(1) fn first() {result[0] += amount;}
+    @compute @workgroup_size(1) fn second() {result[0] += amount * 10u;}
+  `
+  });
+  const output = device.createBuffer({
+    data: new Uint32Array(1),
+    usage: Buffer.STORAGE | Buffer.COPY_SRC
+  });
+  const layout = {bindings: [{name: 'result', group: 0, location: 0, type: 'storage' as const}]};
+  const first = await factory.createComputePipelineAsync({
+    shader,
+    shaderLayout: layout,
+    entryPoint: 'first',
+    constants: {amount: 2}
+  });
+  const second = factory.createComputePipeline({
+    shader,
+    shaderLayout: layout,
+    entryPoint: 'second',
+    constants: {amount: 2}
+  });
+  const changed = await factory.createComputePipelineAsync({
+    shader,
+    shaderLayout: layout,
+    entryPoint: 'first',
+    constants: {amount: 3}
+  });
+  const repeated = factory.createComputePipeline({
+    shader,
+    shaderLayout: layout,
+    entryPoint: 'first',
+    constants: {amount: 2}
+  });
+  try {
+    expect(first).toBe(repeated);
+    expect(first).not.toBe(second);
+    expect(first).not.toBe(changed);
+    const encoder = device.createCommandEncoder();
+    const pass = encoder.beginComputePass();
+    for (const pipeline of [first, second, changed]) {
+      pipeline.setBindings({result: output});
+      pass.setPipeline(pipeline);
+      pass.dispatch(1);
+    }
+    pass.end();
+    device.submit(encoder.finish());
+    expect(new Uint32Array((await output.readAsync()).buffer)[0]).toBe(25);
+  } finally {
+    for (const pipeline of [first, second, changed, repeated]) factory.release(pipeline);
+    output.destroy();
+    shader.destroy();
+  }
+});
 const fsSource = /* glsl */ `\
 precision highp float;
 

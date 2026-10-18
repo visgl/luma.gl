@@ -52,6 +52,192 @@ const box = (position: [number, number, number]): GPURigidBody => ({
   restitution: 0
 });
 
+it('GPURigidBodyWorld uses authored center of mass and rotated principal inertia', async () => {
+  const fixture = await makeWorld([
+    {
+      ...box([0, 0, 0]),
+      centerOfMass: [0.5, 0, 0],
+      inertiaDiagonal: [1, 2, 3],
+      inertiaOrientation: [0, 0, Math.SQRT1_2, Math.SQRT1_2]
+    }
+  ]);
+  if (!fixture) return;
+  try {
+    expect((await fixture.world.readState())[0].position).toEqual([0.5, 0, 0]);
+    fixture.world.applyImpulse(0, [0, 0, 1], [1.5, 0, 0]);
+    const state = (await fixture.world.readState())[0];
+    expect(state.velocity[2]).toBeCloseTo(1);
+    expect(state.angularVelocity[1]).toBeCloseTo(-1);
+  } finally {
+    fixture.destroy();
+  }
+});
+
+it('GPURigidBodyWorld transfers an offset compound contact into body rotation', async () => {
+  const fixture = await makeWorld([
+    {
+      position: [0, 0, 0],
+      mass: 2,
+      colliders: [
+        {shape: {type: 'sphere', radius: 0.25}, position: [0, -1, 0]},
+        {shape: {type: 'sphere', radius: 0.25}, position: [0, 1, 0]}
+      ]
+    },
+    {shape: {type: 'sphere', radius: 0.25}, position: [-1.5, 1, 0], velocity: [3, 0, 0]}
+  ]);
+  if (!fixture) return;
+  try {
+    const states = await fixture.step(70);
+    expect(fixture.world.colliderCount).toBe(3);
+    expect(states[0].velocity[0]).toBeGreaterThan(0.2);
+    expect(Math.abs(states[0].angularVelocity[2])).toBeGreaterThan(0.2);
+    expect(states[0].velocity[0] * 2 + states[1].velocity[0]).toBeCloseTo(3, 3);
+  } finally {
+    fixture.destroy();
+  }
+});
+
+it('GPURigidBodyWorld kinematic motion pushes dynamic bodies without receiving impulses', async () => {
+  const fixture = await makeWorld([
+    {
+      shape: {type: 'sphere', radius: 0.5},
+      position: [0, 0, 0],
+      velocity: [1, 0, 0],
+      mode: 'kinematic'
+    },
+    {shape: {type: 'sphere', radius: 0.5}, position: [1.05, 0, 0]}
+  ]);
+  if (!fixture) return;
+  try {
+    fixture.world.applyImpulse(0, [-100, 0, 0], [0, 1, 0]);
+    const states = await fixture.step(30);
+    expect(states[0].position[0]).toBeCloseTo(0.25, 4);
+    expect(states[0].velocity[0]).toBeCloseTo(1);
+    expect(states[1].velocity[0]).toBeGreaterThan(0.8);
+  } finally {
+    fixture.destroy();
+  }
+});
+
+it('GPURigidBodyWorld holds exact kinematic node targets with center offsets', async () => {
+  const fixture = await makeWorld([
+    {...box([0, 0, 0]), mode: 'kinematic', centerOfMass: [0.5, 0, 0]}
+  ]);
+  if (!fixture) return;
+  try {
+    fixture.world.setKinematicTarget(0, [1, 0, 0], [0, 0, Math.SQRT1_2, Math.SQRT1_2]);
+    const first = (await fixture.step(1))[0];
+    expect(first.position[0]).toBeCloseTo(1);
+    expect(first.position[1]).toBeCloseTo(0.5);
+    expect(first.orientation[2]).toBeCloseTo(Math.SQRT1_2);
+    expect(Math.hypot(...first.velocity)).toBeGreaterThan(1);
+    const held = (await fixture.step(1))[0];
+    expect(Math.hypot(...held.velocity)).toBeLessThan(0.0001);
+    expect(Math.hypot(...held.angularVelocity)).toBeLessThan(0.0001);
+    expect(held.sleeping).toBe(false);
+  } finally {
+    fixture.destroy();
+  }
+});
+
+it('GPURigidBodyWorld collider exclusions suppress response symmetrically', async () => {
+  const fixture = await makeWorld([
+    {
+      position: [-1, 0, 0],
+      velocity: [2, 0, 0],
+      colliders: [{shape: {type: 'sphere', radius: 0.5}, excludedColliders: [1]}]
+    },
+    {shape: {type: 'sphere', radius: 0.5}, position: [1, 0, 0], velocity: [-2, 0, 0]}
+  ]);
+  if (!fixture) return;
+  try {
+    const states = await fixture.step(90);
+    expect(states[0].position[0]).toBeGreaterThan(0.4);
+    expect(states[1].position[0]).toBeLessThan(-0.4);
+    expect(states[0].velocity[0]).toBeCloseTo(2);
+  } finally {
+    fixture.destroy();
+  }
+});
+
+it('GPURigidBodyWorld follows material combine precedence for restitution', async () => {
+  const fixture = await makeWorld([
+    {
+      position: [-0.6, 0, 0],
+      velocity: [1, 0, 0],
+      colliders: [
+        {
+          shape: {type: 'sphere', radius: 0.5},
+          material: {restitution: 1, restitutionCombine: 'average'}
+        }
+      ]
+    },
+    {
+      position: [0.6, 0, 0],
+      colliders: [
+        {
+          shape: {type: 'sphere', radius: 0.5},
+          material: {restitution: 0, restitutionCombine: 'minimum'}
+        }
+      ]
+    }
+  ]);
+  if (!fixture) return;
+  try {
+    const states = await fixture.step(60);
+    expect(states[0].velocity[0]).toBeCloseTo(0.25, 2);
+    expect(states[1].velocity[0]).toBeCloseTo(0.75, 2);
+  } finally {
+    fixture.destroy();
+  }
+});
+
+it('GPURigidBodyWorld distinguishes static friction from sliding friction', async () => {
+  const material = {staticFriction: 1, dynamicFriction: 0, frictionCombine: 'average' as const};
+  for (const speed of [1, 0.005]) {
+    const fixture = await makeWorld(
+      [
+        {
+          position: [0, 0, -0.5],
+          mode: 'static',
+          colliders: [{shape: {type: 'box', halfExtents: [10, 10, 0.5]}, material}]
+        },
+        {
+          position: [0, 0, 0.5],
+          velocity: [speed, 0, 0],
+          colliders: [{shape: {type: 'box', halfExtents: [0.5, 0.5, 0.5]}, material}]
+        }
+      ],
+      {gravity: [0, 0, -9.81]}
+    );
+    if (!fixture) return;
+    try {
+      const state = (await fixture.step(60))[1];
+      if (speed === 1) expect(state.velocity[0]).toBeGreaterThan(0.9);
+      else expect(Math.abs(state.velocity[0])).toBeLessThan(0.001);
+    } finally {
+      fixture.destroy();
+    }
+  }
+});
+
+it('GPURigidBodyWorld preserves infinite mass and locked principal axes independently', async () => {
+  const fixture = await makeWorld(
+    [{...box([0, 0, 0]), mode: 'dynamic', mass: 0, inertiaDiagonal: [1, 2, 0], gravityFactor: 0}],
+    {gravity: [0, 0, -9.81]}
+  );
+  if (!fixture) return;
+  try {
+    fixture.world.applyImpulse(0, [0, 1, 1], [1, 0, 0]);
+    const state = (await fixture.step(1))[0];
+    expect(Math.hypot(...state.velocity)).toBe(0);
+    expect(state.angularVelocity[1]).toBeCloseTo(-0.5, 3);
+    expect(Math.abs(state.angularVelocity[2])).toBeLessThan(0.0001);
+  } finally {
+    fixture.destroy();
+  }
+});
+
 it('GPURigidBodyWorld applies off-center impulses using rotated principal inertia', async () => {
   const fixture = await makeWorld([
     {

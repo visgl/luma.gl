@@ -88,11 +88,11 @@ try {
     });
     const shapes = device.createBuffer({
       data: new Float32Array(
-        bodies.flatMap(body =>
-          body.shape.type === 'sphere'
-            ? [body.shape.radius, 0, 0, 0]
-            : [...body.shape.halfExtents, 1]
-        )
+        bodies.flatMap(body => {
+          const shape = body.shape;
+          if (!shape) throw new Error('This renderer requires centered shapes');
+          return shape.type === 'sphere' ? [shape.radius, 0, 0, 0] : [...shape.halfExtents, 1];
+        })
       ),
       usage: Buffer.STORAGE
     });

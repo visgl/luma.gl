@@ -5348,7 +5348,11 @@ __metadata:
   peerDependencies:
     "@luma.gl/core": ~10.0.0-alpha.3
     "@luma.gl/engine": ~10.0.0-alpha.3
+    "@luma.gl/gpgpu": ~10.0.0-alpha.3
     "@luma.gl/shadertools": ~10.0.0-alpha.3
+  peerDependenciesMeta:
+    "@luma.gl/gpgpu":
+      optional: true
   languageName: unknown
   linkType: soft
 
