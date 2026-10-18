@@ -14,7 +14,7 @@
     "@luma.gl/engine": "10.0.0-alpha.4",
     "@luma.gl/experimental": "10.0.0-alpha.4",
     "@luma.gl/gpgpu": "10.0.0-alpha.4",
-    "@luma.gl/scene": "10.0.0-alpha.4",
+    "@luma.gl/anari": "10.0.0-alpha.4",
     "@luma.gl/shadertools": "10.0.0-alpha.4"
   },
   "devDependencies": {

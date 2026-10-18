@@ -1,11 +1,11 @@
 import {readFile} from 'node:fs/promises';
-import * as coreANARI from '@luma.gl/scene';
-import {type ANARIAnimationSceneDescription, ANARIDevice} from '@luma.gl/scene';
+import * as coreANARI from '@luma.gl/anari';
+import {type ANARIAnimationSceneDescription, ANARIDevice} from '@luma.gl/anari';
 import {
   makeANARIAnimationClipsFromGLTF,
   makeANARIAnimationDataFromGLTF,
   makeANARIAnimationScene
-} from '@luma.gl/scene/gltf';
+} from '@luma.gl/anari/gltf';
 import {GroupNode} from '@luma.gl/engine';
 import type {GLTFAnimation, GLTFMaterialAnimationProperty, GLTFScenegraphs} from '@luma.gl/gltf';
 import {NullDevice} from '@luma.gl/test-utils';

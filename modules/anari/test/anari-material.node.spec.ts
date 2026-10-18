@@ -1,4 +1,4 @@
-import {ANARIDevice} from '@luma.gl/scene';
+import {ANARIDevice} from '@luma.gl/anari';
 import {NullDevice} from '@luma.gl/test-utils';
 import {expect, it} from 'vitest';
 import {ANARISceneAdapter, makeSceneMaterial} from '../src/anari-scene-adapter';

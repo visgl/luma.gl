@@ -1,7 +1,7 @@
 import {expect, it} from 'vitest';
 import {NullDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
-import {ANARIDevice, type ANARIRendererRuntimeFactory} from '@luma.gl/scene';
+import {ANARIDevice, type ANARIRendererRuntimeFactory} from '@luma.gl/anari';
 import {ANARISceneAdapter} from '../src/anari-scene-adapter';
 
 it('ANARI objects expose committed rather than staged parameters', () => {

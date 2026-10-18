@@ -94,7 +94,7 @@ export async function exportANARIJSONSceneToGLTF(
   const lightExtension = addGLTFLights(scene, nodes);
   const gltf: GLTFExportScene = {
     name: scene.name,
-    generator: '@luma.gl/scene via @luma.gl/gltf',
+    generator: '@luma.gl/anari via @luma.gl/gltf',
     nodes,
     meshes,
     materials,

@@ -16,7 +16,7 @@
     "@luma.gl/engine": "10.0.0-alpha.4",
     "@luma.gl/experimental": "10.0.0-alpha.4",
     "@luma.gl/gltf": "10.0.0-alpha.4",
-    "@luma.gl/scene": "workspace:*",
+    "@luma.gl/anari": "workspace:*",
     "@luma.gl/shadertools": "10.0.0-alpha.4",
     "@math.gl/core": "5.0.0-alpha.15",
     "jsonc-parser": "3.2.0",

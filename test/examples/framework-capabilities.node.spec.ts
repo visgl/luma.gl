@@ -20,7 +20,7 @@ const FRAMEWORK_PACKAGE_NAMES = [
   '@luma.gl/engine',
   '@luma.gl/shadertools',
   '@luma.gl/effects',
-  '@luma.gl/scene',
+  '@luma.gl/anari',
   '@luma.gl/gltf',
   '@luma.gl/splats',
   '@luma.gl/gpgpu',
@@ -340,7 +340,7 @@ describe('framework capabilities documentation', () => {
       {
         feature: 'Scene-level skeletal animation',
         status: 'Experimental',
-        packageName: '@luma.gl/scene',
+        packageName: '@luma.gl/anari',
         implementation: /automatic|joint|palette|skin/i
       }
     ]) {

@@ -34,21 +34,21 @@ ANARI-specific and are not exported.
 
 :::caution[Experimental playground format]
 The JSON format and its optional schema exports are experimental. They are not part of the ANARI C
-specification and can change with the private `@luma.gl/scene` workspace.
+specification and can change with the private `@luma.gl/anari` workspace.
 :::
 
 ### Validate scenes with Zod and JSON Schema
 
-The optional `@luma.gl/scene/schemas` entry point exports separate Zod schemas for geometry,
+The optional `@luma.gl/anari/schemas` entry point exports separate Zod schemas for geometry,
 materials, lights, cameras, renderers, surfaces, groups, instances, animations, and complete
-scenes. Importing ordinary rendering objects from `@luma.gl/scene` does not load Zod:
+scenes. Importing ordinary rendering objects from `@luma.gl/anari` does not load Zod:
 
 ```ts
 import {
   ANARIGeometrySchema,
   ANARISceneSchema,
   ANARI_SCENE_JSON_SCHEMA
-} from '@luma.gl/scene/schemas';
+} from '@luma.gl/anari/schemas';
 
 const geometry = ANARIGeometrySchema.safeParse({
   '@@type': 'sphere',
@@ -324,11 +324,11 @@ deformation additionally requires an application-provided retained `surface.skin
 palette. POSITION, NORMAL, and TANGENT morph targets and animated morph weights play through the
 retained scene automatically.
 
-The optional `@luma.gl/scene/gltf` entry point translates parsed glTF clips and binds their node,
+The optional `@luma.gl/anari/gltf` entry point translates parsed glTF clips and binds their node,
 material, sampler, and morph channels to existing retained objects:
 
 ```ts
-import {makeANARIAnimationScene} from '@luma.gl/scene/gltf';
+import {makeANARIAnimationScene} from '@luma.gl/anari/gltf';
 
 const animation = makeANARIAnimationScene(description, retainedObjects);
 

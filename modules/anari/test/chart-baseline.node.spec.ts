@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {getRayTracingQualityPreset} from '@luma.gl/experimental';
-import {ANARIDevice} from '@luma.gl/scene';
+import {ANARIDevice} from '@luma.gl/anari';
 import {NullDevice} from '@luma.gl/test-utils';
 import {createANARIJSONScene} from '../../../examples/showcase/scene/playground-scene';
 import {applyPlaygroundQualityPreset} from '../../../examples/showcase/scene/playground-renderer';
 import {getChartLabelPositions} from '../../../examples/showcase/scene/chart-labels';
 
-import {ANARISceneSchema} from '@luma.gl/scene/schemas';
+import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 import {expect, it, vi} from 'vitest';
 import {
   CHART_BASELINE_DATA,

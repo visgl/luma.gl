@@ -1,4 +1,4 @@
-import type {ANARIVector3} from '@luma.gl/scene';
+import type {ANARIVector3} from '@luma.gl/anari';
 import {
   makeChartBaseline,
   makeChartMotionScene,

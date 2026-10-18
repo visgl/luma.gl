@@ -1,4 +1,4 @@
-# @luma.gl/scene
+# @luma.gl/anari
 
 <p align="center">
   <a href="https://www.khronos.org/anari/">
@@ -43,27 +43,27 @@ descriptors; it does not define a second BRDF, renderer, or asset loader.
 
 Renderer implementations are also available through focused facade entry points:
 
-- `@luma.gl/scene/forward`
-- `@luma.gl/scene/deferred`
-- `@luma.gl/scene/raytrace`
-- `@luma.gl/scene/raymarch`
+- `@luma.gl/anari/forward`
+- `@luma.gl/anari/deferred`
+- `@luma.gl/anari/raytrace`
+- `@luma.gl/anari/raymarch`
 
 These paths keep application imports stable while the private scene package delegates shader and
 model implementation to shared rendering packages.
 
 ## Private workspace
 
-`@luma.gl/scene` is a private luma.gl workspace and is not published to npm.
+`@luma.gl/anari` is a private luma.gl workspace and is not published to npm.
 
 From a luma.gl checkout, install repository dependencies with `yarn install`. Other repository
-workspaces can declare a dependency on the package with `"@luma.gl/scene": "workspace:*"`.
+workspaces can declare a dependency on the package with `"@luma.gl/anari": "workspace:*"`.
 
 ## Quick start
 
 The following example assumes the page contains a `<canvas></canvas>` element:
 
 ```ts
-import {ANARIDevice} from '@luma.gl/scene';
+import {ANARIDevice} from '@luma.gl/anari';
 import {luma} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {Matrix4} from '@math.gl/core';
@@ -233,11 +233,11 @@ snapshot. Procedural meshes, starfields, and retained instances are baked into g
 USD meshes with materials, textures, camera, and supported lights. ANARI animations and optional
 renderer preset parameters for bloom, fog, and HDR presentation stay in the editable ANARI JSON.
 
-The optional, experimental `@luma.gl/scene/schemas` entry point exports Zod schemas and the
+The optional, experimental `@luma.gl/anari/schemas` entry point exports Zod schemas and the
 generated draft-07 JSON Schema without adding Zod to imports of the core ANARI rendering API:
 
 ```ts
-import {ANARISceneSchema, ANARI_SCENE_JSON_SCHEMA} from '@luma.gl/scene/schemas';
+import {ANARISceneSchema, ANARI_SCENE_JSON_SCHEMA} from '@luma.gl/anari/schemas';
 
 const result = ANARISceneSchema.safeParse(scene);
 ```
@@ -264,11 +264,11 @@ material factors. Per-slot sampler addressing/filtering/mipmap settings, sRGB ve
 space, UV selection, and `KHR_texture_transform` matrices remain intact. `opaque`, `mask`, and
 `blend` materials retain authored cutoff and double-sided settings.
 
-The optional `@luma.gl/scene/gltf` entry point adapts glTF-owned node hierarchies and decoded clips
+The optional `@luma.gl/anari/gltf` entry point adapts glTF-owned node hierarchies and decoded clips
 into editable ANARI JSON without importing a format loader into the core ANARI package:
 
 ```ts
-import {makeANARIAnimationScene} from '@luma.gl/scene/gltf';
+import {makeANARIAnimationScene} from '@luma.gl/anari/gltf';
 
 const animations = makeANARIAnimationScene(scene, {instances, geometries, materials, samplers});
 animations.selectClip('Walk');

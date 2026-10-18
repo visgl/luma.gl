@@ -3,7 +3,7 @@ import {
   type ANARIRendererParameters,
   type ANARIRendererSubtype,
   type ANARIVector3
-} from '@luma.gl/scene';
+} from '@luma.gl/anari';
 import {
   DepthTextureCopy,
   SelectionOutline,
@@ -11,7 +11,7 @@ import {
   getRayTracingSceneCapabilities
 } from '@luma.gl/experimental';
 import {ChartLabels} from './chart-labels';
-import {ANARISceneSchema} from '@luma.gl/scene/schemas';
+import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 import {AnimationLoopTemplate, OrbitControls, type AnimationProps} from '@luma.gl/engine';
 import {PLAYGROUND_PRESETS} from './playground-presets';
 import {

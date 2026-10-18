@@ -1,10 +1,10 @@
-import {ANARISceneSchema} from '@luma.gl/scene/schemas';
+import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 import {
   getPlaygroundRendererSubtype,
   makePlaygroundRenderer
 } from '../../examples/showcase/scene/playground-renderer';
 import {expect, it} from 'vitest';
-import {ANARIDevice, ANARIGroup} from '@luma.gl/scene';
+import {ANARIDevice, ANARIGroup} from '@luma.gl/anari';
 import {NullDevice} from '@luma.gl/test-utils';
 import {PLAYGROUND_PRESETS} from '../../examples/showcase/scene/playground-presets';
 import {createANARIJSONScene} from '../../examples/showcase/scene/playground-scene';

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {ANARIDevice} from '@luma.gl/scene';
-import {ANARISceneSchema} from '@luma.gl/scene/schemas';
+import {ANARIDevice} from '@luma.gl/anari';
+import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 import {NullDevice} from '@luma.gl/test-utils';
 import {expect, it} from 'vitest';
 import {makeChartLightingScene} from '../../../examples/showcase/scene/chart-baseline';

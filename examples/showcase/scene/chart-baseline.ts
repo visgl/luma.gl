@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {ANARIRendererSubtype, ANARIVector3} from '@luma.gl/scene';
+import type {ANARIRendererSubtype, ANARIVector3} from '@luma.gl/anari';
 import type {ANARIJSONScene, JSONInstanceDeclaration} from './playground-scene';
 
 /** Fixed data shared by the raster and ray chart acceptance scenes. */

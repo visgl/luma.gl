@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {ANARIDevice, ANARIFrame, ANARIRendererSubtype} from '@luma.gl/scene';
+import type {ANARIDevice, ANARIFrame, ANARIRendererSubtype} from '@luma.gl/anari';
 import {getRayTracingQualityPreset, type RayTracingQualityPreset} from '@luma.gl/experimental';
-import {ANARIRendererSchema} from '@luma.gl/scene/schemas';
+import {ANARIRendererSchema} from '@luma.gl/anari/schemas';
 import type {JSONRendererDeclaration} from './playground-scene';
 
 export function makePlaygroundRenderer(

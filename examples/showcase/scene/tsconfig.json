@@ -14,9 +14,9 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "paths": {
-      "@luma.gl/scene": ["../../../modules/scene/src/index.ts"],
-      "@luma.gl/scene/gltf": ["../../../modules/scene/src/gltf.ts"],
-      "@luma.gl/scene/schemas": ["../../../modules/scene/src/schemas.ts"]
+      "@luma.gl/anari": ["../../../modules/anari/src/index.ts"],
+      "@luma.gl/anari/gltf": ["../../../modules/anari/src/gltf.ts"],
+      "@luma.gl/anari/schemas": ["../../../modules/anari/src/schemas.ts"]
     },
     "resolveJsonModule": true,
     "isolatedModules": true
