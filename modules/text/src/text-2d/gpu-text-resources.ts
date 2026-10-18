@@ -37,6 +37,8 @@ export class GPUTextResources {
     this.atlasTexture = new DynamicTexture(device, {
       id: `${props.id || 'text'}-atlas`,
       dimension: '2d-array',
+      // Interpolate distance fields between texels when glyphs are scaled or projected.
+      sampler: {minFilter: 'linear', magFilter: 'linear'},
       data: [...props.fontAtlas.pages]
     });
   }

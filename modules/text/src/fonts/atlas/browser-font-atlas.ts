@@ -42,6 +42,8 @@ export type BrowserFontRenderer = {
     data: ImageData;
     left?: number;
     top?: number;
+    /** Explicit horizontal layout offset when bitmap packing is independent of its bearing. */
+    layoutOffsetX?: number;
   };
 };
 
@@ -179,7 +181,7 @@ function drawCharacters(
   for (const character of characterSet) {
     const frame = mapping[character];
     const measuredWidth = frame.width;
-    const {data, left = 0, top = 0} = renderer.draw(character);
+    const {data, left = 0, top = 0, layoutOffsetX} = renderer.draw(character);
     const x = frame.x - left;
     const y = frame.y - top;
     const x0 = Math.max(0, Math.round(x));
@@ -194,7 +196,7 @@ function drawCharacters(
     frame.height = height;
     frame.anchorX += width / 2 - left - measuredWidth / 2;
     frame.anchorY += top;
-    frame.layoutOffsetX = (frame.layoutOffsetX ?? 0) + x0 - x - left;
+    frame.layoutOffsetX = layoutOffsetX ?? (frame.layoutOffsetX ?? 0) + x0 - x - left;
     frame.layoutOffsetY = (frame.layoutOffsetY ?? 0) + y0 - y - top;
   }
 }
