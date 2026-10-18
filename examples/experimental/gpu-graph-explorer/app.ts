@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {TabbedPanel} from '@deck.gl-community/panels';
 import {Buffer, Texture, type Device} from '@luma.gl/core';
 import {AnimationLoopTemplate, Model, type AnimationProps} from '@luma.gl/engine';
 import {
@@ -47,6 +48,7 @@ import {
   type GraphExplorerLayoutMode,
   type GraphExplorerNodeSizeMode
 } from './graph-data';
+import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {addGraphExplorerSampledLayoutToGraph} from './graph-scale-layout';
 import {
   GRAPH_EXPLORER_EDGE_SHADER,
@@ -119,6 +121,7 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
   private readonly viewUniforms: Buffer;
   private readonly readbackRing: GPUReadbackRing;
   private readonly panels: ExamplePanelManager;
+  private readonly diagnostics = new GPUGraphDiagnostics();
   private readonly pointModeOverride: boolean | undefined;
   private readonly maxVisibleEdges: number;
   private seeds!: GPUVector<'uint32'>;
@@ -203,11 +206,18 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
     }
     this.initializeGraph(initialDataset);
     this.panels = new ExamplePanelManager({
-      panel: makeHtmlCustomPanel({
-        id: 'gpu-graph-explorer-controls',
-        title: 'GPU Graph Explorer',
-        html: this.getControlsHtml(),
-        onRender: root => this.attachControls(root)
+      panel: new TabbedPanel({
+        id: 'graph-explorer-panels',
+        panels: [
+          makeHtmlCustomPanel({
+            id: 'gpu-graph-explorer-controls',
+            title: 'GPU Graph Explorer',
+            html: this.getControlsHtml(),
+            onRender: root => this.attachControls(root)
+          }),
+          this.diagnostics.inspectorPanel.panel,
+          this.diagnostics.tracePanel.panel
+        ]
       })
     });
     this.panels.mount();
@@ -461,17 +471,22 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
     this.writeViewUniforms(width, height);
 
     if (this.analyticsPending) {
-      const encoding = this.analysisGraph.encode(device.commandEncoder, {parameters: undefined});
+      const encoding = this.diagnostics.encode(this.analysisGraph, device.commandEncoder, {
+        parameters: undefined
+      });
       cpuEncodeMilliseconds += encoding.stats.cpuEncodeTimeMilliseconds;
       this.analyticsPending = false;
     } else if (this.nextAnalysisStage < this.analysisStages.length) {
-      const encoding = this.analysisStages[this.nextAnalysisStage++].encode(device.commandEncoder, {
+      const stage = this.analysisStages[this.nextAnalysisStage++];
+      const encoding = this.diagnostics.encode(stage, device.commandEncoder, {
         parameters: undefined
       });
       cpuEncodeMilliseconds += encoding.stats.cpuEncodeTimeMilliseconds;
     }
     if (this.searchGraph && this.searchPending) {
-      const encoding = this.searchGraph.encode(device.commandEncoder, {parameters: undefined});
+      const encoding = this.diagnostics.encode(this.searchGraph, device.commandEncoder, {
+        parameters: undefined
+      });
       cpuEncodeMilliseconds += encoding.stats.cpuEncodeTimeMilliseconds;
       this.searchPending = false;
     }
@@ -479,7 +494,7 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
     const framebuffer = device
       .getDefaultCanvasContext()
       .getCurrentFramebuffer({depthStencilFormat: 'depth24plus'});
-    const frameEncoding = this.frameGraph.encode(device.commandEncoder, {
+    const frameEncoding = this.diagnostics.encode(this.frameGraph, device.commandEncoder, {
       parameters: {width, height},
       frameTextures: {
         [this.frameColorId]: {
@@ -501,7 +516,7 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
         const pointerSession = this.pendingPickSession;
         this.pendingPick = null;
         this.pendingPickSession = null;
-        const encoding = this.pickingGraph.encode(device.commandEncoder, {
+        const encoding = this.diagnostics.encode(this.pickingGraph, device.commandEncoder, {
           parameters: {pixel},
           buffers: {[this.pickingReadbackId]: ticket.buffer}
         });
@@ -541,6 +556,7 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
 
   /** Releases graph-owned models and buffers exactly once while preserving the shared UI host. */
   private destroyGraph(): void {
+    this.diagnostics.clear();
     this.analysisGraph.destroy();
     this.frameGraph.destroy();
     this.pickingGraph.destroy();

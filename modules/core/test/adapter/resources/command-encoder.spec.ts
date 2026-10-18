@@ -1144,11 +1144,14 @@ it('WebGPU timestamp snapshots retain submission identity across delayed reads a
   const shader = device.createShader({source: '@compute @workgroup_size(1) fn main() {}'});
   const pipeline = device.createComputePipeline({shader});
   try {
-    const firstEncoder = device.createCommandEncoder({timeProfilingQuerySet: querySet});
-    const firstPass = firstEncoder.beginComputePass();
-    firstPass.setPipeline(pipeline);
-    firstPass.dispatch(1);
-    firstPass.end();
+    const firstEncoder = device.createCommandEncoder();
+    firstEncoder.withTimeProfilingQuerySet(querySet, () => {
+      const firstPass = firstEncoder.beginComputePass();
+      firstPass.setPipeline(pipeline);
+      firstPass.dispatch(1);
+      firstPass.end();
+    });
+    expect(firstEncoder.getTimeProfilingQuerySet()).toBeNull();
     const firstSnapshot = firstEncoder.captureTimestampQuerySet(querySet);
     device.submit(firstEncoder.finish());
     const firstRead = firstSnapshot.readResults();
