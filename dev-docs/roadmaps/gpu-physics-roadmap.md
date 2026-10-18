@@ -1,6 +1,6 @@
 # GPU Physics Roadmap
 
-Updated: October 16, 2026
+Updated: October 17, 2026
 
 ## Goal and current status
 
@@ -162,3 +162,18 @@ Measured sparse/rack/pile evidence and an explicit 10,000-body frame-budget limi
 are now recorded in the [performance report](../benchmarks/gpu-physics-performance.md).
 The measured sparse scene reached approximately 24.43 ms of GPU simulation per step
 on the tested Apple adapter; large-world fixed timesteps do not imply 120 Hz playback.
+
+
+## Tranches 6–8: reliability, calibration and persistent contacts
+
+The #3460 foundations have landed. The next implementation adds:
+
+| Tranche | Implementation | Remaining evidence |
+| --- | --- | --- |
+| 6 — collision reliability | Simultaneous-impact momentum/energy regressions, repeated finite-cushion rebounds, timestep comparison, persistent discarded-time accounting and per-shot pool reporting | Wider shot-speed/radius/adapter matrices; budgets still discard unprocessed time explicitly |
+| 7 — calibration | SI dataset/provenance schema, cloth and cushion least-squares fitting, residual reports, reproducible CLI fixture and GPU follow/draw/spin/pace tolerances | Measured table datasets and held-out throw/cushion-angle validation; pool remains illustrative |
+| 8 — persistent contacts | Opt-in sphere and surface identity cache, accumulated normal/tangent constraints, friction-cone limits, timestep-scaled warm impulses and automatic command/material invalidation | Wider dense-pile and adapter evidence before making this the module default |
+
+See [calibration and stability protocol](../benchmarks/gpu-physics-calibration.md).
+Dynamic shape manifolds, general inertia tensors and large-world swept broad phases
+remain later tranches. Do not interpret the analytic fixture as empirical calibration.

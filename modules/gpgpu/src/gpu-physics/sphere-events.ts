@@ -25,6 +25,8 @@ export type GPUSphereEventBatch = {
   dropped: number;
   /** Cumulative uint32 exhaustion count, retained across samples. */
   exhaustedImpactSteps: number;
+  /** Cumulative discarded simulation seconds when impact budgets are exhausted. */
+  discardedSimulationTime: number;
   events: GPUSphereEvent[];
 };
 
@@ -56,6 +58,7 @@ export function decodeSphereEvents(words: Uint32Array, cursor = 0): GPUSphereEve
     sequence,
     dropped: Math.max(0, available - capacity),
     exhaustedImpactSteps: words[1],
+    discardedSimulationTime: values[2],
     events
   };
 }
