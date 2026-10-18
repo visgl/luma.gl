@@ -486,7 +486,7 @@ type CachedFramebuffer = {
 
 type GPUCommandGraphNodeTimestamp = {
   querySet: QuerySet;
-  snapshot?: ReturnType<CommandEncoder['captureTimestampQuerySet']>;
+  snapshot?: ReturnType<NonNullable<CommandEncoder['captureTimestampQuerySet']>>;
   beginIndex: number;
   endIndex: number;
 };
@@ -2091,7 +2091,7 @@ function getPassTimestamp(
         querySet: timestampQuerySet,
         snapshot:
           timestampQuerySet.device.type === 'webgpu'
-            ? commandEncoder.captureTimestampQuerySet(timestampQuerySet)
+            ? commandEncoder.captureTimestampQuerySet?.(timestampQuerySet)
             : undefined,
         beginIndex: beginTimestampIndex,
         endIndex: endTimestampIndex

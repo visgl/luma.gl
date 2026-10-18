@@ -230,7 +230,7 @@ export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
     }
 
     const queryCount = pairCount * 2;
-    const results = await this.captureTimestampQuerySet(this._timeProfilingQuerySet).readResults({
+    const results = await this._timeProfilingQuerySet.readResults({
       firstQuery: 0,
       queryCount
     });
@@ -243,10 +243,8 @@ export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
     this._gpuTimeMs = Number(totalDurationNanoseconds) / 1e6;
   }
 
-  /** Capture this encoding's timestamp results. WebGPU snapshots are resolved before reuse. */
-  captureTimestampQuerySet(querySet: QuerySet): TimestampQuerySnapshot {
-    return {readResults: options => querySet.readResults(options)};
-  }
+  /** WebGPU-only capture of this encoding's timestamp results, resolved before query reuse. */
+  captureTimestampQuerySet?(querySet: QuerySet): TimestampQuerySnapshot;
 
   /** Returns the number of query slots consumed by automatic pass profiling on this encoder. */
   getTimeProfilingSlotCount(): number {

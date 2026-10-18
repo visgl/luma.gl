@@ -384,14 +384,15 @@ export class LuSpatialGeographicPointQueryEffect implements Effect {
       const commandEncoder = device.createCommandEncoder({id: `${this.id}-index-build`});
       const encoding = this.buildGraphObservation.encode(commandEncoder, {parameters: undefined});
       this.buildEncodingMilliseconds = encoding.stats.cpuEncodeTimeMilliseconds;
-      this.trace = {graphId: this.buildGraph.id, timingReport: encoding.stats};
+      const trace = {graphId: this.buildGraph.id, timingReport: encoding.stats};
+      this.trace = trace;
       device.submit(commandEncoder.finish());
       this.publishStats();
       if (this.diagnosticsEnabled && encoding.canReadGPUTimings) {
         setTimeout(() => {
           if (!this.destroyed) {
             void this.buildGraphObservation.recordGPUTimings(encoding).then(timingReport => {
-              if (!this.destroyed && timingReport) {
+              if (!this.destroyed && this.trace === trace && timingReport) {
                 this.trace = {graphId: this.buildGraph.id, timingReport};
                 this.publishStats();
               }
@@ -513,13 +514,14 @@ export class LuSpatialGeographicPointQueryEffect implements Effect {
       if (this.diagnosticsEnabled) this.scheduleCountSample(80);
     }
     if (this.diagnosticsEnabled && (this.frameIndex === 1 || this.frameIndex % 30 === 0)) {
-      this.trace = {graphId: this.queryGraph.id, timingReport: encoding.stats};
+      const trace = {graphId: this.queryGraph.id, timingReport: encoding.stats};
+      this.trace = trace;
       this.scheduleCountSample(0);
       if (encoding.canReadGPUTimings) {
         setTimeout(() => {
           if (!this.destroyed) {
             void this.queryGraphObservation.recordGPUTimings(encoding).then(timingReport => {
-              if (!this.destroyed && timingReport) {
+              if (!this.destroyed && this.trace === trace && timingReport) {
                 this.trace = {graphId: this.queryGraph.id, timingReport};
                 this.publishStats();
               }

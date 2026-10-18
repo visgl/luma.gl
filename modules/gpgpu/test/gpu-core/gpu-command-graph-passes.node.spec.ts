@@ -304,7 +304,7 @@ describe('GPUCommandGraph compute-pass coalescing', () => {
     vi.spyOn(fixture.timestampQuerySet, 'readResults').mockRejectedValue(
       new Error('Mutable results must not be read')
     );
-    vi.spyOn(fixture.commandEncoder, 'captureTimestampQuerySet').mockReturnValue({
+    fixture.commandEncoder.captureTimestampQuerySet = () => ({
       clockCorrelation,
       readResults: async options => {
         const firstQuery = options?.firstQuery ?? 0;

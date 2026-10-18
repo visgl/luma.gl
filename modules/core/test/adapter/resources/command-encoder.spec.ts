@@ -1159,8 +1159,10 @@ it('WebGPU timestamp snapshots retain submission identity across delayed reads a
     device.submit(secondEncoder.finish());
     const secondResults = await secondSnapshot.readResults();
     const firstResults = await firstRead;
-    expect(await firstSnapshot.readResults()).toEqual(firstResults);
-    expect(secondResults[0]).toBeGreaterThanOrEqual(firstResults[1]);
+    expect((await firstSnapshot.readResults()).map(String)).toEqual(firstResults.map(String));
+    // Submission-local timestamp origins may change; compare durations within each pair only.
+    expect(firstResults[1] >= firstResults[0]).toBe(true);
+    expect(secondResults[1] >= secondResults[0]).toBe(true);
     expect(
       firstSnapshot.clockCorrelation?.method,
       `timestamps: ${firstResults.map(String).join(', ')}`

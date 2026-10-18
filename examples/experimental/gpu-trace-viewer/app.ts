@@ -587,6 +587,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
   readonly panels: ExamplePanelManager;
   readonly graphInspector = new GPUCommandGraphInspector({maxSamples: 90});
   readonly gpuTracePanel = new GPUTracePanel();
+  private latestTraceEncoding: GPUCommandGraphEncoding | null = null;
   private readonly graphAutotuner: GPUCommandGraphAutotuner;
   readonly capacityOptions: number[];
   readonly dependencyCapacityOptions: number[];
@@ -1014,6 +1015,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     this.encodeTimeMilliseconds = encoding.stats.cpuEncodeTimeMilliseconds;
     this.frameIndex++;
     if (this.frameIndex === 1 || this.frameIndex % 60 === 0) {
+      this.latestTraceEncoding = encoding;
       this.gpuTracePanel.update(encoding.stats, resources.compiled.id);
     }
     if (
@@ -6616,6 +6618,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     observation: GPUCommandGraphInspectorObservation<TraceViewParameters>,
     encoding: GPUCommandGraphEncoding
   ): void {
+    this.latestTraceEncoding = encoding;
     const timer = setTimeout(() => {
       this.gpuTimingReadbackTimers.delete(timer);
       if (this.graphObservation !== observation) {
@@ -6623,7 +6626,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       }
       void observation.recordGPUTimings(encoding).then(timingReport => {
         if (this.graphObservation === observation) {
-          if (timingReport) this.gpuTracePanel.update(timingReport, observation.graph.id);
+          if (timingReport && this.latestTraceEncoding === encoding)
+            this.gpuTracePanel.update(timingReport, observation.graph.id);
           if (
             timingReport &&
             observation.graph.preflight &&

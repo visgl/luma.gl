@@ -544,7 +544,6 @@ fn testRow(rowIndex: u32) {
     compile: ({device}) => {
       const computation = new Computation(device, {
         id: `${query.id}-refine`,
-        workload: {operation: 'Query refine'},
         source,
         modules: query.kind === 'radius' ? [GEOSPATIAL_INTEGER_FP64_ARITHMETIC_MODULE] : [],
         defines: query.kind === 'radius' ? {LUMA_FP64_INTEGER_ARITHMETIC: true} : {},

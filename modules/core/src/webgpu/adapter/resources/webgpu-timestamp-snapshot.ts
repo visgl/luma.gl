@@ -60,6 +60,9 @@ export class WebGPUTimestampSnapshot implements TimestampQuerySnapshot {
   async readResults(options?: {firstQuery?: number; queryCount?: number}): Promise<bigint[]> {
     const firstQuery = options?.firstQuery ?? 0;
     const queryCount = options?.queryCount ?? this.querySet.props.count - firstQuery;
+    if (firstQuery < 0 || queryCount < 0 || firstQuery + queryCount > this.querySet.props.count) {
+      throw new Error('Query read range is out of bounds');
+    }
     const results = await this.results;
     return results.slice(firstQuery, firstQuery + queryCount);
   }

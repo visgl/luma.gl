@@ -98,3 +98,22 @@ test('discarded and failed submissions reject reads and release buffers', async 
   await expect(failed.readResults()).rejects.toThrow('device lost');
   expect(fixture.buffers.every(buffer => buffer.destroy.mock.calls.length === 1)).toBe(true);
 });
+
+test('snapshot reads reject invalid query windows before submission', async () => {
+  const fixture = createFixture();
+  const snapshot = new WebGPUTimestampSnapshot(fixture.device, fixture.querySet);
+  try {
+    for (const options of [
+      {firstQuery: -1},
+      {queryCount: -1},
+      {firstQuery: 1, queryCount: 2},
+      {firstQuery: 3, queryCount: 0}
+    ]) {
+      await expect(snapshot.readResults(options)).rejects.toThrow(
+        'Query read range is out of bounds'
+      );
+    }
+  } finally {
+    snapshot.destroy();
+  }
+});

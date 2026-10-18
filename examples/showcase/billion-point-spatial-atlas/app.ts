@@ -304,6 +304,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
   private statsElement: HTMLElement | null = null;
   private graphInspectorElement: HTMLElement | null = null;
   private tracePanel: GPUTracePanelRenderer | null = null;
+  private latestTraceEncoding: GPUCommandGraphEncoding | null = null;
   private latestTrace: {graphId: string; timingReport: GPUCommandGraphTimingReport} | undefined;
   private graphInspectorPanel: GPUCommandGraphInspectorPanel | null = null;
   private readonly compactDropdowns = new Map<HTMLSelectElement, CompactDropdown>();
@@ -969,6 +970,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
       this.postprocessingRenderer.resize([newResources.width, newResources.height]);
       this.graphInspector.clear();
       this.latestTrace = undefined;
+      this.latestTraceEncoding = null;
       this.tracePanel?.update(undefined);
       this.registerAtlasResources(newResources);
       this.graphInspector.recordEncoding(newResources.buildGraph.id, encoding);
@@ -978,6 +980,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
       }
       this.graphInspector.clear();
       this.latestTrace = undefined;
+      this.latestTraceEncoding = null;
       this.tracePanel?.update(undefined);
       if (previousResources) this.registerAtlasResources(previousResources);
       throw error;
@@ -1041,6 +1044,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
 
     this.graphInspector.clear();
     this.latestTrace = undefined;
+    this.latestTraceEncoding = null;
     this.tracePanel?.update(undefined);
     this.registerAtlasResources(resources);
     this.lastQuerySignature = null;
@@ -1712,6 +1716,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
   }
 
   private scheduleGPUTimingReadback(graphId: string, encoding: GPUCommandGraphEncoding): void {
+    this.latestTraceEncoding = encoding;
     const timer = setTimeout(() => {
       this.gpuTimingReadbackTimers.delete(timer);
       if (this.finalized || this.requestedMode !== null) return;
@@ -1740,7 +1745,12 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     encoding: GPUCommandGraphEncoding
   ): Promise<void> {
     const timingReport = await this.graphInspector.recordGPUTimings(graphId, encoding);
-    if (!this.finalized && this.requestedMode === null && timingReport) {
+    if (
+      !this.finalized &&
+      this.requestedMode === null &&
+      this.latestTraceEncoding === encoding &&
+      timingReport
+    ) {
       this.latestTrace = {graphId, timingReport};
       this.tracePanel?.update(timingReport, ATLAS_GRAPH_LABELS[graphId] ?? graphId);
     }
