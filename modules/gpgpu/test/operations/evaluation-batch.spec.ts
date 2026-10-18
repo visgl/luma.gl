@@ -48,6 +48,7 @@ it('evaluation batch records distinct dependent passes and separate outputs befo
     const bytes = await copy.readAsync();
     expect(Array.from(new Float32Array(bytes.buffer, bytes.byteOffset, 4))).toEqual([5, 3, 9, 7]);
     expect(() => batch.submit()).toThrow('submitted');
+    expect(() => batch.cancel()).not.toThrow();
   } finally {
     submit.mockRestore();
     copy.destroy();
@@ -73,6 +74,7 @@ it('cancelling a batch invalidates new views and restores borrowed targets for r
     await batch.evaluate(output);
     batch.cancel();
     expect(submit).not.toHaveBeenCalled();
+    expect(() => batch.cancel()).not.toThrow();
     await expect(batch.evaluate(output)).rejects.toThrow('cancelled');
     const retry = new GPUEvaluationBatch(device);
     const vector = await retry.evaluate(output);

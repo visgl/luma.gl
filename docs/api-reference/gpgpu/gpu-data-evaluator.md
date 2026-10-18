@@ -289,8 +289,9 @@ try {
   // buffers may be appended to batch.commandEncoder before submission.
   batch.submit();
 } catch (error) {
-  // Evaluation errors automatically cancel the batch. For application errors
-  // after successful evaluation, call batch.cancel() instead of submitting.
+  // Evaluation errors already cancel the batch; cancel() also handles errors
+  // in caller-appended commands and is harmless after an earlier cancellation.
+  batch.cancel();
   throw error;
 }
 ```
@@ -309,7 +310,8 @@ change its submission policy, fuse additional shaders, or replace the command-gr
   output buffers remain available for binding to later commands on the same encoder.
 - Successful submission releases these evaluator leases. Queue ordering allows subsequent GPU
   consumers without a CPU wait. Explicit readback still waits for the GPU in the usual way.
-- `cancel()` discards commands and invalidates newly materialized evaluator views, allowing a
+- `cancel()` is harmless after submission or an earlier cancellation. Otherwise it discards
+  commands and invalidates newly materialized evaluator views, allowing a
   fresh evaluation. Existing materializations are preserved. Assigned output targets and layouts
   are restored so a cancelled operation can be retried.
 - Evaluation failure cancels the entire batch, including earlier successful evaluations.

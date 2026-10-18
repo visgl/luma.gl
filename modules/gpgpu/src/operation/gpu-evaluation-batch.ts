@@ -67,8 +67,9 @@ export class GPUEvaluationBatch {
     this.finish(true);
   }
 
-  /** Discards recorded work, invalidates new outputs, and releases retained resources. */
+  /** Discards recorded work and releases resources; harmless after submission or cancellation. */
   cancel(): void {
+    if (this.state !== 'open') return;
     this.assertIdle();
     this.finish(false);
   }
