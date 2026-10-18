@@ -9,10 +9,12 @@ import {runRowComputation} from './common/row-transform';
 export const swizzle: OperationHandler<{x: GPUDataEvaluator; columns: number[]}> = ({
   inputs,
   output,
-  target
+  target,
+  batch
 }) => {
   const {columns} = inputs;
   runRowComputation({
+    batch,
     module: {name: 'swizzle', source: '// swizzle expression handled inline'},
     expression: laneIndex => `x[${columns[laneIndex]}]`,
     inputs: {x: inputs.x},
@@ -21,3 +23,5 @@ export const swizzle: OperationHandler<{x: GPUDataEvaluator; columns: number[]}>
   });
   return {success: true};
 };
+
+swizzle.supportsBatch = true;

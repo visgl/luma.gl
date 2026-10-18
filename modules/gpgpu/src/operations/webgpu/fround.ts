@@ -154,8 +154,14 @@ fn fround(x: array<u32, {X_LEN}>) -> array<f32, {RESULT_LEN}> {
 }
 `;
 
-export const fround: OperationHandler<{x: GPUDataEvaluator}> = ({inputs, output, target}) => {
+export const fround: OperationHandler<{x: GPUDataEvaluator}> = ({
+  inputs,
+  output,
+  target,
+  batch
+}) => {
   runRowComputation({
+    batch,
     module: {name: 'fround', source},
     inputs,
     output,
@@ -164,3 +170,5 @@ export const fround: OperationHandler<{x: GPUDataEvaluator}> = ({inputs, output,
   });
   return {success: true};
 };
+
+fround.supportsBatch = true;

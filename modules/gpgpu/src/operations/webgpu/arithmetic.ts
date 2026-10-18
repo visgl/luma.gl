@@ -33,7 +33,8 @@ fn arithmetic_tan(x: f32) -> f32 {
 export const arithmetic: OperationHandler<ArithmeticOperationInputs> = ({
   inputs,
   output,
-  target
+  target,
+  batch
 }) => {
   const operationType = output.type;
   const scalarType = getWGSLType(operationType);
@@ -41,6 +42,7 @@ export const arithmetic: OperationHandler<ArithmeticOperationInputs> = ({
   const namedInputs = inputs.namedInputs;
 
   runRowComputation({
+    batch,
     module: {name: 'arithmetic', source: arithmeticSource, dependencies: [fp32]},
     inputs: namedInputs,
     output,
@@ -62,3 +64,5 @@ export const arithmetic: OperationHandler<ArithmeticOperationInputs> = ({
   });
   return {success: true};
 };
+
+arithmetic.supportsBatch = true;

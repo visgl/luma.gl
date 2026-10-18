@@ -5,6 +5,7 @@
 import {Buffer, SignedDataType} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {WGSLShaderAssembler, type ShaderModule} from '@luma.gl/shadertools';
+import type {GPUEvaluationBatch} from '../../../operation/gpu-evaluation-batch';
 import {GPUDataEvaluator} from '../../../operation/gpu-data-evaluator';
 import {getWebGPUDispatchLayout, getWebGPUDispatchRowIndex} from './dispatch';
 import {getLiteralValue, getWGSLType, getZeroValue} from './helper';
@@ -15,6 +16,7 @@ const COMPUTATION_RUNS = 'Computation Runs';
 const GPGPU_SHADER_ASSEMBLER = new WGSLShaderAssembler();
 
 export function runRowComputation({
+  batch,
   module,
   elementWise = false,
   expression,
@@ -23,6 +25,7 @@ export function runRowComputation({
   operationType = output.type,
   outputBuffer
 }: {
+  batch?: GPUEvaluationBatch;
   module: ShaderModule;
   elementWise?: boolean;
   expression?: (laneIndex: number) => string;
@@ -95,21 +98,27 @@ ${getComputeBlock(module.name, inputEntries, output, elementWise, expression)}
     }
   });
 
+  if (batch) batch.retain(() => computation.destroy());
+
   const computationBindings: Record<string, Buffer> = Object.fromEntries(
     storageBindings.map(({name, input}) => [name, input.buffer])
   );
   computationBindings['result'] = outputBuffer;
   computation.setBindings(computationBindings);
 
-  const computePass = outputBuffer.device.beginComputePass({});
+  const computePass = batch
+    ? batch.commandEncoder.beginComputePass({})
+    : outputBuffer.device.beginComputePass({});
   outputBuffer.device.statsManager
     .getStats(GPGPU_OPERATION_STATS)
     .get(COMPUTATION_RUNS)
     .incrementCount();
   computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
   computePass.end();
-  outputBuffer.device.submit();
-  computation.destroy();
+  if (!batch) {
+    outputBuffer.device.submit();
+    computation.destroy();
+  }
 }
 
 function getInputBinding(name: string, input: GPUDataEvaluator, index: number): string {

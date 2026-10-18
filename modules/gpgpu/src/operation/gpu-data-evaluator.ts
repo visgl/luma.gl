@@ -23,6 +23,7 @@ import {
 import type {TypedArray, TypedArrayConstructor} from '@math.gl/types';
 import {bufferPool} from '../utils/buffer-pool';
 import type {Operation} from './operation';
+import type {GPUEvaluationBatch} from './gpu-evaluation-batch';
 
 type GPUDataEvaluatorBufferOwnership = 'owned' | 'borrowed';
 
@@ -38,6 +39,8 @@ export type GPUDataEvaluatorTargetBuffer = {
 
 /** Options for materializing one {@link GPUDataEvaluator}. */
 export type GPUDataEvaluatorEvaluateOptions = {
+  /** Execution scope supplied by GPUEvaluationBatch.evaluate(). @internal */
+  batch?: GPUEvaluationBatch;
   /** Name assigned to the materialized single-chunk `GPUVector`. */
   name?: string;
   /** Memory format for the materialized `GPUVector`. Defaults to the evaluator layout. */
@@ -154,6 +157,7 @@ export class GPUDataEvaluator {
   protected _id?: string;
   /** Whether {@link GPUDataEvaluator.destroy} has been called. */
   protected _destroyed: boolean = false;
+  private _evaluationBatch?: GPUEvaluationBatch;
 
   /** CPU buffer, either provided by the user or read back from the GPU. */
   protected _value?: TypedArray;
@@ -406,6 +410,7 @@ export class GPUDataEvaluator {
     byteOffset = 0,
     byteStride = this.stride
   }: GPUDataEvaluatorTargetBuffer): void {
+    this.assertBatchAccess();
     if (this._destroyed) {
       throw new Error(`GPUDataEvaluator ${this} already destroyed`);
     }
@@ -435,13 +440,47 @@ export class GPUDataEvaluator {
     if (this._destroyed) {
       throw new Error(`GPUDataEvaluator ${this} already destroyed`);
     }
+    this.assertBatchAccess(options.batch);
+    if (options.batch) {
+      options.batch.assertEvaluating(device);
+      if (!this._evaluationBatch) {
+        const hadOutput = Boolean(this._gpuVector);
+        const originalLayout = {
+          offset: this._offset,
+          stride: this._stride,
+          byteLength: this._byteLength,
+          ownership: this._bufferOwnership,
+          target: this._targetBuffer
+        };
+        this._evaluationBatch = options.batch;
+        options.batch.retain(submitted => {
+          this._evaluationBatch = undefined;
+          if (!submitted && !hadOutput && this._gpuVector) {
+            if (this._bufferOwnership === 'owned') {
+              bufferPool.recycle(getBufferFromGPUVector(this._gpuVector));
+            }
+            this._gpuVector = undefined;
+          }
+          if (!submitted && !hadOutput) {
+            this._offset = originalLayout.offset;
+            this._stride = originalLayout.stride;
+            this._byteLength = originalLayout.byteLength;
+            this._bufferOwnership = originalLayout.ownership;
+            this._targetBuffer = originalLayout.target;
+          }
+        });
+      }
+    }
     if (this._gpuVector) {
+      if (options.batch && this.buffer.device !== device) {
+        throw new Error('Evaluator buffer belongs to a different device');
+      }
       return this._gpuVector;
     }
 
     let buffer: Buffer;
     if (this.source instanceof GPUDataEvaluator) {
-      const sourceGPUVector = await this.source.evaluate(device);
+      const sourceGPUVector = await this.source.evaluate(device, {batch: options.batch});
       this._gpuVector = this.createGPUVectorView({
         ...options,
         buffer: getBufferFromGPUVector(sourceGPUVector)
@@ -453,8 +492,15 @@ export class GPUDataEvaluator {
     if (this._value) {
       buffer.write(this._value);
     } else {
-      const result = await this.source!.execute(device, buffer);
+      let result;
+      try {
+        result = await this.source!.execute(device, buffer, options.batch);
+      } catch (error) {
+        if (options.batch && this._bufferOwnership === 'owned') bufferPool.recycle(buffer);
+        throw error;
+      }
       if (!result.success) {
+        if (options.batch && this._bufferOwnership === 'owned') bufferPool.recycle(buffer);
         throw result.error || new Error(`${this.source} evaluation failed`);
       }
       if (result.value) {
@@ -467,6 +513,8 @@ export class GPUDataEvaluator {
 
   /** Materializes this evaluator synchronously and returns the requested output format. */
   evaluateSync(device: Device, options: GPUDataEvaluatorEvaluateOptions = {}): GPUVector {
+    if (options.batch) throw new Error('Use batch.evaluate() for deferred submission');
+    this.assertBatchAccess();
     if (this._destroyed) {
       throw new Error(`GPUDataEvaluator ${this} already destroyed`);
     }
@@ -577,6 +625,7 @@ export class GPUDataEvaluator {
    * @returns CPU values for the requested row range.
    */
   async readValue(startRow: number = 0, endRow?: number): Promise<TypedArray> {
+    this.assertBatchAccess();
     const {ValueType} = this;
     const {size, offset, stride, length} = this;
     const width = ValueType.BYTES_PER_ELEMENT * size;
@@ -619,6 +668,7 @@ export class GPUDataEvaluator {
 
   /** Loads the complete backing buffer into the CPU value cache for CPU operation handlers. @internal */
   async ensureCPUValue(): Promise<TypedArray> {
+    this.assertBatchAccess();
     const existingValue = this.value;
     if (existingValue) {
       return existingValue;
@@ -638,11 +688,18 @@ export class GPUDataEvaluator {
 
   /** Loads the complete backing buffer from the already-present CPU value cache or throws. @internal */
   ensureCPUValueSync(): TypedArray {
+    this.assertBatchAccess();
     const existingValue = this.value;
     if (existingValue) {
       return existingValue;
     }
     throw new Error(`${this} CPU value is not available for synchronous evaluation`);
+  }
+
+  private assertBatchAccess(batch?: GPUEvaluationBatch): void {
+    if (this._evaluationBatch && this._evaluationBatch !== batch) {
+      throw new Error('Evaluator is retained by an unsubmitted batch');
+    }
   }
 
   /** Returns the debug id, source description, or class name. */
@@ -652,6 +709,7 @@ export class GPUDataEvaluator {
 
   /** Releases cached GPU storage owned by this evaluator and prevents future evaluation. */
   destroy(): void {
+    this.assertBatchAccess();
     if (this._gpuVector) {
       if (this._bufferOwnership === 'owned') {
         bufferPool.recycle(getBufferFromGPUVector(this._gpuVector));

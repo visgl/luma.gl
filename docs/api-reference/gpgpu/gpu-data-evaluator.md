@@ -247,3 +247,88 @@ Releases cached GPU resources owned through child `GPUDataEvaluator` instances.
   destroyed or recycled by the evaluator.
 - Synchronous evaluation is intended for already-prepared graphs where backend
   registration and any required CPU values are available up front.
+
+## Experimental explicit-submission POC
+
+### Why this is needed
+
+The portable evaluator is a suitable replacement for backend-specific attribute transforms,
+but its WebGPU handlers currently own submission. Separate attribute outputs and chains of
+different operation types can therefore call `device.submit()` repeatedly during one deck.gl
+update. A host renderer cannot record those operations and its consumers together on an
+explicit command encoder or choose a single submission point.
+
+This is a scheduling and integration gap, not an existing GPU ordering bug: sequential queue
+submissions already preserve producer/consumer order. Nor does every nested arithmetic call
+cause a submission: the evaluator already fuses arithmetic expressions. The useful cases are
+multiple outputs and chains crossing operation boundaries, such as arithmetic followed by a
+non-contiguous swizzle and another arithmetic expression. GPU aggregation is another prospective
+consumer, but reduction support is outside this initial POC.
+
+`GPUEvaluationBatch` demonstrates recording those existing row operations without submitting,
+then letting the caller submit once. Tests verify submission count and results; a frame-time
+improvement has not been measured. This draft API is intended to establish the execution and
+resource-lifetime contract before extending every backend handler or integrating deck.gl.
+
+### Example
+
+```ts
+import {GPUDataEvaluator, GPUEvaluationBatch, add, multiply, swizzle} from '@luma.gl/gpgpu';
+
+const source = GPUDataEvaluator.fromArray(new Float32Array([1, 2, 3, 4]), {size: 2});
+const scaled = multiply(source, 2);
+const reordered = swizzle(scaled, [1, 0]);
+const positions = add(reordered, 1);
+const colors = add(source, 10);
+
+const batch = new GPUEvaluationBatch(device);
+try {
+  const positionVector = await batch.evaluate(positions);
+  const colorVector = await batch.evaluate(colors);
+  // No evaluator submission has occurred. Additional commands consuming these
+  // buffers may be appended to batch.commandEncoder before submission.
+  batch.submit();
+} catch (error) {
+  // Evaluation errors automatically cancel the batch. For application errors
+  // after successful evaluation, call batch.cancel() instead of submitting.
+  throw error;
+}
+```
+
+The existing `evaluator.evaluate(device)` API retains its current behavior. This POC does not
+change its submission policy, fuse additional shaders, or replace the command-graph API.
+
+### Submission and lifetime contract
+
+- A batch is WebGPU-only and owns its encoder. Append commands through `commandEncoder`, but
+  call `batch.submit()` to finish and submit it. Do not finish or submit the encoder separately.
+- Await each `batch.evaluate()` before starting another evaluation, submitting, or cancelling.
+  Evaluation finishes CPU encoding; it does not wait for GPU completion.
+- The batch retains participating evaluators and computation resources. Evaluator destruction,
+  readback, and evaluation outside the batch are rejected while the batch is pending. Existing
+  output buffers remain available for binding to later commands on the same encoder.
+- Successful submission releases these evaluator leases. Queue ordering allows subsequent GPU
+  consumers without a CPU wait. Explicit readback still waits for the GPU in the usual way.
+- `cancel()` discards commands and invalidates newly materialized evaluator views, allowing a
+  fresh evaluation. Existing materializations are preserved. Assigned output targets and layouts
+  are restored so a cancelled operation can be retried.
+- Evaluation failure cancels the entire batch, including earlier successful evaluations.
+  Submitted and cancelled batches cannot be reused. Batch submission must not race evaluation.
+- The batch borrows external buffers. The application must keep raw buffers alive and unchanged
+  until submission and must not read pending returned vectors directly. These raw resource
+  operations cannot be intercepted by evaluator leases. CPU input uploads may occur immediately;
+  cancellation discards encoded computation, not queue writes or external application changes.
+
+### Deliberate POC limits
+
+Only single-chunk `GPUDataEvaluator` evaluation and opt-in WebGPU row handlers are supported:
+arithmetic, dot, equalAll, fround, interleave, length, select, and swizzle. CPU fallback,
+`GPUVectorEvaluator`, multi-pass extent, gather, segmentedMap, sequence, color conversion,
+and raw-byte casts are not included. Unsupported handlers fail explicitly rather than internally
+submitting. The existing unbatched API remains available for those operations.
+
+Before promoting this API, extend supported handlers and chunk-preserving vector evaluation,
+measure representative deck.gl frame workloads, and decide whether this execution scope should
+instead lower into the existing GPU command graph. Caller-owned encoders and a coordinated
+submission receipt would also need an explicit lifetime design; a bare `submit: false` flag is
+insufficient.

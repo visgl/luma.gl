@@ -16,8 +16,14 @@ fn row_length(x: array<{TYPE}, {X_LEN}>) -> array<f32, 1> {
 }
 `;
 
-export const length: OperationHandler<{x: GPUDataEvaluator}> = ({inputs, output, target}) => {
+export const length: OperationHandler<{x: GPUDataEvaluator}> = ({
+  inputs,
+  output,
+  target,
+  batch
+}) => {
   runRowComputation({
+    batch,
     module: {name: 'row_length', source},
     inputs,
     output,
@@ -26,3 +32,5 @@ export const length: OperationHandler<{x: GPUDataEvaluator}> = ({inputs, output,
   });
   return {success: true};
 };
+
+length.supportsBatch = true;

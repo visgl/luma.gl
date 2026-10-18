@@ -19,9 +19,11 @@ fn row_dot(x: array<{TYPE}, {X_LEN}>, y: array<{TYPE}, {Y_LEN}>) -> array<f32, 1
 export const dot: OperationHandler<{x: GPUDataEvaluator; y: GPUDataEvaluator}> = ({
   inputs,
   output,
-  target
+  target,
+  batch
 }) => {
   runRowComputation({
+    batch,
     module: {name: 'row_dot', source},
     inputs,
     output,
@@ -30,3 +32,5 @@ export const dot: OperationHandler<{x: GPUDataEvaluator; y: GPUDataEvaluator}> =
   });
   return {success: true};
 };
+
+dot.supportsBatch = true;
