@@ -2674,3 +2674,27 @@ export const TransformExample: React.FC = props => (
     {...props}
   />
 );
+
+export const GPUGeometryExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="gpu-geometry"
+    title="GPU Geometry Surface Lab"
+    directory="experimental"
+    devices={['webgpu']}
+    loadTemplate={() => import('../../examples/experimental/gpu-geometry/app')}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const GPUPointCloudExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="gpu-pointcloud"
+    title="GPU Point Cloud Cleanup Lab"
+    directory="experimental"
+    devices={['webgpu']}
+    loadTemplate={() => import('../../examples/experimental/gpu-pointcloud/app')}
+    config={exampleConfig}
+    {...props}
+  />
+);

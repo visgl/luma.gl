@@ -169,3 +169,8 @@ registering CPU handlers for another device type.
 ## Related Engine APIs
 
 `@luma.gl/gpgpu` uses engine compute helpers internally, but it does not re-export them. Import [`BufferTransform`](/docs/api-reference/engine/compute/buffer-transform), [`TextureTransform`](/docs/api-reference/engine/compute/texture-transform), and [`Computation`](/docs/api-reference/engine/compute/computation) from `@luma.gl/engine` when you need direct access to those lower-level classes.
+
+## Geometry and point clouds
+
+- [GPU Geometry](./gpu-geometry.md): triangle and vertex normals plus adjacency-based mesh smoothing.
+- [GPU Point Cloud](./gpu-pointcloud.md): deterministic voxel sampling and bounded exact radius filtering.

@@ -133,6 +133,8 @@
             "id": "experimental/gpu-parquet-constellation",
             "label": "GPU Parse: Parquet Constellation"
           },
+          "experimental/gpu-geometry",
+          "experimental/gpu-pointcloud",
           "showcase/billion-point-spatial-atlas",
           "experimental/gpt-2"
         ]
