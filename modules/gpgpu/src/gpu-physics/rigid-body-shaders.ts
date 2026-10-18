@@ -233,7 +233,10 @@ fn root(body: u32) -> u32 {var current=body;for(var iteration=0u;iteration<BODY_
   if(velocities[body].w==0.0 || sleepStates[body].y>0.5) {continue;}
   positions[body]=vec4f(positions[body].xyz+velocities[body].xyz*settings.gravity.w,positions[body].w);
   let rotation=orientations[body];let angular=angularVelocities[body].xyz;
-  let momentum=rotate(rotation,local(body,angular)/max(bodies[body].inertia.xyz,vec3f(0.000001)));
+  let inversePrincipalInertia=bodies[body].inertia.xyz;
+  let movableAxes=inversePrincipalInertia>vec3f(0);
+  let principalMomentum=local(body,angular)/select(vec3f(1),inversePrincipalInertia,movableAxes);
+  let momentum=rotate(rotation,select(vec3f(0),principalMomentum,movableAxes));
   let derivative=vec4f(rotation.w*angular+cross(angular,rotation.xyz),-dot(angular,rotation.xyz));
   orientations[body]=normalize(rotation+derivative*(0.5*settings.gravity.w));
   // Preserve world angular momentum as the inertia tensor rotates.

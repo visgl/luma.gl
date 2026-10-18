@@ -431,7 +431,8 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
       infoBox.update(now);
       frameMilliseconds = now - lastFrame;
       lastFrame = now;
-      const elapsed = Math.min((now - previous) / 1000, 0.1);
+      const wallElapsed = (now - previous) / 1000;
+      const elapsed = Math.min(wallElapsed, 0.1);
       previous = now;
       updatePlatform();
       encodeMilliseconds = 0;
@@ -439,7 +440,7 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
         const clock = advanceSphereClock(accumulator, elapsed, speed, Boolean(benchmark));
         const steps = scaleDemo && !benchmark ? Math.min(1, clock.steps) : clock.steps;
         simulatedSeconds += steps / 120;
-        playbackSeconds += elapsed;
+        playbackSeconds += wallElapsed;
         accumulator = clock.accumulator;
         for (let step = 0; step < steps; step++) {
           const sample = step === 0 && now - lastSample >= 500 && !sampling;

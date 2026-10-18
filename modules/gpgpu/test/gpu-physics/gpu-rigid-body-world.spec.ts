@@ -205,6 +205,25 @@ it('GPURigidBodyWorld settled stacks converge across timestep and iteration budg
     expect(Math.abs(results[0][index] - results[1][index])).toBeLessThan(0.025);
 });
 
+it('GPURigidBodyWorld preserves free spin with large principal inertia', async () => {
+  const fixture = await makeWorld([
+    {
+      shape: {type: 'sphere', radius: 10},
+      position: [0, 0, 0],
+      mass: 100000,
+      angularVelocity: [1, 2, 0.5]
+    }
+  ]);
+  if (!fixture) return;
+  try {
+    const state = (await fixture.step(120))[0];
+    for (const [index, value] of [1, 2, 0.5].entries())
+      expect(state.angularVelocity[index]).toBeCloseTo(value, 3);
+  } finally {
+    fixture.destroy();
+  }
+});
+
 it('GPURigidBodyWorld preserves world angular momentum for a freely tumbling asymmetric box', async () => {
   const fixture = await makeWorld(
     [
