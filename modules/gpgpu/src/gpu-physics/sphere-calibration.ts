@@ -110,7 +110,15 @@ export function fitSphereCalibration(dataset: SphereCalibrationDataset): SphereC
       sidespinStopTime
     } = observation;
     if (
-      !Object.values(observation).every(Number.isFinite) ||
+      ![
+        initialSpeed,
+        initialRollingAngularSpeed,
+        slidingTime,
+        rollingSpeed,
+        rollingDistance,
+        initialSidespin,
+        sidespinStopTime
+      ].every(Number.isFinite) ||
       Math.min(initialSpeed, slidingTime, rollingSpeed, rollingDistance, sidespinStopTime) < 0
     ) {
       throw new Error('Invalid cloth observation');
@@ -124,9 +132,11 @@ export function fitSphereCalibration(dataset: SphereCalibrationDataset): SphereC
   }
   const fitOrigin = (samples: readonly [number, number][]): [number, number] => {
     const denominator = samples.reduce((sum, [input]) => sum + input * input, 0);
-    if (!(denominator > 0)) throw new Error('Unidentifiable cloth calibration');
+    if (!(denominator > 0) || !Number.isFinite(denominator))
+      throw new Error('Unidentifiable cloth calibration');
     const coefficient =
       samples.reduce((sum, [input, output]) => sum + input * output, 0) / denominator;
+    if (!Number.isFinite(coefficient)) throw new Error('Unidentifiable cloth calibration');
     const residual = Math.sqrt(
       samples.reduce((sum, [input, output]) => sum + (output - coefficient * input) ** 2, 0) /
         samples.length
@@ -147,14 +157,15 @@ export function fitSphereCalibration(dataset: SphereCalibrationDataset): SphereC
   const meanSpeed = samples.reduce((sum, [speed]) => sum + speed, 0) / samples.length;
   const meanResponse = samples.reduce((sum, [, response]) => sum + response, 0) / samples.length;
   const variance = samples.reduce((sum, [speed]) => sum + (speed - meanSpeed) ** 2, 0);
-  if (!(variance > 0)) throw new Error('Unidentifiable cushion calibration');
+  if (!(variance > 0) || !Number.isFinite(variance))
+    throw new Error('Unidentifiable cushion calibration');
   const slope =
     samples.reduce(
       (sum, [speed, response]) => sum + (speed - meanSpeed) * (response - meanResponse),
       0
     ) / variance;
   const intercept = meanResponse - slope * meanSpeed;
-  if (intercept < 1 - 1e-10 || slope < -1e-10)
+  if (!Number.isFinite(intercept + slope) || intercept < 1 - 1e-10 || slope < -1e-10)
     throw new Error('Cushion observations do not fit a passive pace law');
   const restitution = Math.min(1, 1 / intercept);
   const restitutionVelocityScale = Math.max(0, slope / intercept);

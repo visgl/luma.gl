@@ -180,6 +180,12 @@ export const STORE_SPHERE_CONTACTS = /* wgsl */ `
 @compute @workgroup_size(64)
 fn main(@builtin(global_invocation_id) invocation: vec3u) {
  let index = invocation.x; if(index >= BODY_COUNT || clock.timeStep <= 0.0) {return;}
+ // Expire absent pairs too: a contact from an earlier impact interval is not
+ // evidence of support at the end of this fixed step. Each invocation owns a row.
+ for(var targetIndex = 0u; targetIndex < BODY_COUNT + 32u; targetIndex++) {
+  cache[index * (BODY_COUNT + 32u) + targetIndex].step = 0u;
+  cache[index * (BODY_COUNT + 32u) + targetIndex].tangent.w = 0.0;
+ }
  for(var cursor = offsets[index]; cursor < offsets[index + 1u]; cursor++) {
   let contact = contacts[cursor];
   cache[index * (BODY_COUNT + 32u) + contact.identity.x] = contact;

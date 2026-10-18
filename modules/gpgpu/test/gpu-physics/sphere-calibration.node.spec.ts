@@ -128,6 +128,11 @@ test('committed SI fixture preserves its source and rejects unphysical calibrati
   );
   const result = fitSphereCalibration(dataset);
   expect(result.provenance).toEqual(dataset.provenance);
+  const incomplete = JSON.parse(JSON.stringify(dataset));
+  delete incomplete.cloth[0].initialRollingAngularSpeed;
+  expect(() => fitSphereCalibration(incomplete)).toThrow();
+  const overflowing = {...dataset, gravity: 1e200};
+  expect(() => fitSphereCalibration(overflowing)).toThrow();
   expect(() =>
     fitSphereCalibration({...dataset, provenance: {...dataset.provenance, kind: 'measured-data'}})
   ).toThrow();
