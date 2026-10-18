@@ -213,6 +213,7 @@ describe('GPGPU example catalog navigation', () => {
       'experimental/gpu-frustum-culling',
       'experimental/gpu-trace-viewer',
       'experimental/gpu-graph-explorer',
+      'experimental/gpu-timeseries',
       'experimental/gpu-trace-scene',
       'experimental/gpu-scene-graph',
       'showcase/vector-field-lab',

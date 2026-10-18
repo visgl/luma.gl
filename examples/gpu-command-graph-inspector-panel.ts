@@ -51,8 +51,8 @@ export class GPUCommandGraphInspectorPanel {
         <div class="graph-inspector-picker"><span>Graph</span><div data-graph-inspector-picker-host></div></div>
         <div class="graph-inspector-summary">
           ${makeMetric('encodings', '', 'encoding-count')}
-          ${makeMetric('CPU p50 / p95', '', 'cpu-totals')}
-          ${makeMetric('GPU p50 / p95', '', 'gpu-totals')}
+          ${makeMetric('CPU p50 / p95 (ms)', '', 'cpu-totals')}
+          ${makeMetric('GPU p50 / p95 (ms)', '', 'gpu-totals')}
           ${makeMetric('GPU samples', '', 'gpu-samples')}
         </div>
         <div class="graph-inspector-memory" data-graph-inspector-memory></div>
@@ -60,7 +60,7 @@ export class GPUCommandGraphInspectorPanel {
           <div class="graph-inspector-counter graph-inspector-counter-header"><span>Sampled counter</span><strong>Latest</strong><strong>50/95</strong></div>
           <div class="graph-inspector-counter-rows" data-graph-inspector-counter-rows></div>
         </div>
-        <div class="graph-inspector-node graph-inspector-node-header"><span>Node</span><strong>CPU 50/95</strong><strong>GPU 50/95</strong></div>
+        <div class="graph-inspector-node graph-inspector-node-header"><span>Node</span><strong>CPU 50/95 (ms)</strong><strong>GPU 50/95 (ms)</strong></div>
         <div class="graph-inspector-legend"><span style="color:#508bc9">● Compute</span> · <span style="color:#b16cba">● Draw</span> · <span style="color:#ba873e">● Copy</span></div>
         <div class="graph-inspector-nodes" data-graph-inspector-nodes></div>
       </div>
