@@ -5,7 +5,7 @@
 import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {Computation, ShaderInputs} from '@luma.gl/engine';
-import {fp64, fp64arithmetic, fp64ify} from '@luma.gl/shadertools';
+import {fp64, fp64arithmetic, fp64ify, WGSLShaderAssembler} from '@luma.gl/shadertools';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 const MODES: {name: string; defines: Record<string, boolean>}[] = [
@@ -62,7 +62,7 @@ for (const mode of MODES) {
   for (const operation of FUNCTIONS) {
     it(`fp64 WGSL ${operation.name} (${mode.name})`, async ({skip}) => {
       const device = await getWebGPUTestDevice();
-      if (!device) return skip();
+      if (!device || isSoftwareBackedDevice(device)) return skip();
       const values = await compute(
         device,
         operation.inputs,
@@ -87,7 +87,7 @@ for (const mode of MODES) {
 
   it(`fp64 WGSL Mercator retains latitude differences (${mode.name})`, async ({skip}) => {
     const device = await getWebGPUTestDevice();
-    if (!device) return skip();
+    if (!device || isSoftwareBackedDevice(device)) return skip();
     const latitudes = [
       -85.0511287798, -45, -1e-8, 0, 1e-8, 37.75153705839, 37.75153706839, 85.0511287798, 89.99
     ];
@@ -115,7 +115,7 @@ for (const mode of MODES) {
 
   it(`fp64 WGSL matrix ordering and cancellation (${mode.name})`, async ({skip}) => {
     const device = await getWebGPUTestDevice();
-    if (!device) return skip();
+    if (!device || isSoftwareBackedDevice(device)) return skip();
     const matrix = [1, 0, 0, -10000000, 0, 2, 0, -20000000, 0, 0, 3, -30000000, 4, 5, 6, 1];
     const vector = [10000000.125, 10000000.25, 10000000.5, 1];
     const values = await compute(
@@ -141,7 +141,7 @@ for (const mode of MODES) {
 
 it('fp64 WGSL logarithm domain', async ({skip}) => {
   const device = await getWebGPUTestDevice();
-  if (!device) return skip();
+  if (!device || isSoftwareBackedDevice(device)) return skip();
   const values = await compute(
     device,
     [0, -1, NaN, Infinity],
@@ -151,6 +151,49 @@ it('fp64 WGSL logarithm domain', async ({skip}) => {
   );
   expect(values.slice(0, 3).every(Number.isNaN)).toBe(true);
   expect(values[3]).toBe(Infinity);
+}, 120000);
+
+// Match the existing arithmetic specs: native fp64 helper expansion is prohibitively slow
+// in software compute pipelines. Keep numerical coverage on hardware and validate WGSL
+// module compilation on every adapter without creating a native compute pipeline.
+function isSoftwareBackedDevice(device: Device): boolean {
+  return (
+    device.info.gpu === 'software' || device.info.gpuType === 'cpu' || Boolean(device.info.fallback)
+  );
+}
+
+it('fp64 WGSL projection module compiles on every adapter', async ({skip}) => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return skip();
+  for (const mode of MODES) {
+    const {source} = new WGSLShaderAssembler().assembleWGSLShader({
+      platformInfo: {
+        type: 'webgpu',
+        gpu: device.info.gpu,
+        shaderLanguage: 'wgsl',
+        shaderLanguageVersion: 300,
+        features: new Set()
+      },
+      source: '@compute @workgroup_size(1) fn main() {}',
+      modules: [fp64],
+      defines: mode.defines,
+      shaderStage: 'compute'
+    });
+    const shader = device.createShader({stage: 'compute', source});
+    try {
+      const messages = await (
+        shader as typeof shader & {
+          getCompilationInfo: () => Promise<readonly {message: string; type: string}[]>;
+        }
+      ).getCompilationInfo();
+      expect(
+        messages.filter(message => message.type === 'error'),
+        mode.name
+      ).toEqual([]);
+    } finally {
+      shader.destroy();
+    }
+  }
 }, 120000);
 
 async function compute(
