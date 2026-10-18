@@ -281,12 +281,15 @@ fn root(body: u32) -> u32 {var current=body;for(var iteration=0u;iteration<BODY_
   let inversePrincipalInertia=bodies.bodies[body].inertia.xyz;
   let movableAxes=inversePrincipalInertia>vec3f(0);
   let principal=principalRotation(body);
-  let principalMomentum=rotate(vec4f(-principal.xyz,principal.w),angular)/select(vec3f(1),inversePrincipalInertia,movableAxes);
+  let principalAngular=rotate(vec4f(-principal.xyz,principal.w),angular);
+  let principalMomentum=principalAngular/select(vec3f(1),inversePrincipalInertia,movableAxes);
   let momentum=rotate(principal,select(vec3f(0),principalMomentum,movableAxes));
   let derivative=vec4f(rotation.w*angular+cross(angular,rotation.xyz),-dot(angular,rotation.xyz));
   orientations[body]=normalize(rotation+derivative*(0.5*settings.gravity.w));
   // Preserve world angular momentum as the inertia tensor rotates.
-  angularVelocities[body]=vec4f(inverseInertia(body,momentum),0);
+  // Infinite inertia blocks torque response without erasing prescribed spin.
+  let preservedSpin=rotate(principalRotation(body),select(principalAngular,vec3f(0),movableAxes));
+  angularVelocities[body]=vec4f(inverseInertia(body,momentum)+preservedSpin,0);
   let quiet=length(velocities[body].xyz)<settings.sleep.y && length(angular)<settings.sleep.z;
   sleepStates[body].x=select(0.0,sleepStates[body].x+settings.gravity.w,quiet);
  }

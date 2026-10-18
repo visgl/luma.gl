@@ -238,6 +238,30 @@ it('GPURigidBodyWorld preserves infinite mass and locked principal axes independ
   }
 });
 
+it('GPURigidBodyWorld preserves authored spin on infinite-inertia axes', async () => {
+  for (const body of [
+    {
+      ...box([0, 0, 0]),
+      mode: 'dynamic' as const,
+      inertiaDiagonal: [1, 2, 0] as const,
+      angularVelocity: [0, 0, 2] as const
+    },
+    {...box([0, 0, 0]), mode: 'dynamic' as const, mass: 0, angularVelocity: [1, 2, 0.5] as const}
+  ]) {
+    const fixture = await makeWorld([body]);
+    if (!fixture) return;
+    try {
+      fixture.world.applyImpulse(0, [0, 10, 0], [1, 0, 0]);
+      const state = (await fixture.step(120))[0];
+      for (const [axis, angular] of body.angularVelocity.entries())
+        expect(state.angularVelocity[axis]).toBeCloseTo(angular, 3);
+      expect(state.orientation).not.toEqual([0, 0, 0, 1]);
+    } finally {
+      fixture.destroy();
+    }
+  }
+});
+
 it('GPURigidBodyWorld applies off-center impulses using rotated principal inertia', async () => {
   const fixture = await makeWorld([
     {
