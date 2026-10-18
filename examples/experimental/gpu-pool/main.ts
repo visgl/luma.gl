@@ -20,6 +20,7 @@ import {
   isShotSettled
 } from './table';
 import {createPoolRenderer} from './render';
+import {createPoolInfoBox} from './info-box';
 import {PoolAudio} from './audio';
 import {getShotCharge, shouldRackBalls} from './shot-controls';
 
@@ -43,6 +44,7 @@ try {
   let failure: Error | null = null;
   const device = await luma.createDevice({
     adapters: [webgpuAdapter],
+    optionalFeatures: ['timestamp-query'],
     createCanvasContext: {canvas, autoResize: true},
     onError: error => {
       failure = error;
@@ -89,6 +91,7 @@ try {
   const definition = new GPUCommandGraph<void>(device);
   world.addToGraph(definition);
   const graph = await definition.compileAsync();
+  const infoBox = createPoolInfoBox(graph);
   const renderer = createPoolRenderer(device, positions, orientations);
   let states: GPUSphereBodyState[] = await world.readState();
   let phase: 'aiming' | 'striking' | 'rolling' | 'complete' = 'aiming';
@@ -474,6 +477,10 @@ try {
     impactBudgetSequence = events.exhaustedImpactSteps;
     discardedShotTime += Math.max(0, events.discardedSimulationTime - discardedTimeBaseline);
     discardedTimeBaseline = events.discardedSimulationTime;
+    infoBox.observation.recordCounters({
+      ...diagnostics,
+      discardedSimulationTime: events.discardedSimulationTime
+    });
     const cue = states[0];
     if (!scratch) {
       for (const event of events.events) {
@@ -613,7 +620,10 @@ try {
         const steps = Math.floor(accumulator * 240);
         accumulator -= steps / 240;
         const encoder = device.createCommandEncoder();
-        for (let step = 0; step < steps; step++) graph.encode(encoder, {parameters: undefined});
+        for (let step = 0; step < steps; step++) {
+          if (step === 0 && infoBox.sampleStep(now)) continue;
+          infoBox.observation.encode(encoder, {parameters: undefined});
+        }
         device.submit(encoder.finish());
         if (!snapshot && now - lastSnapshot >= 1000 / 30) {
           lastSnapshot = now;
@@ -628,6 +638,7 @@ try {
       }
       const extent = getExtent();
       renderer.draw(extent);
+      infoBox.update(now);
       const trailScreenPoints = cueTrailPoints.map(
         point =>
           `${((point[0] / extent[0] + 1) * canvas.clientWidth) / 2},${((1 - point[1] / extent[1]) * canvas.clientHeight) / 2}`
@@ -669,10 +680,11 @@ try {
     'pagehide',
     () => {
       alive = false;
+      const infoBoxCleanup = infoBox.destroy();
       inputEvents.abort();
       cancelCharge();
       cancelAnimationFrame(animation);
-      void Promise.resolve(snapshot).finally(() => {
+      void Promise.allSettled([snapshot, infoBoxCleanup]).then(() => {
         audio.destroy();
         renderer.destroy();
         graph.destroy();
