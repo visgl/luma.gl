@@ -341,6 +341,7 @@ fn divideRoundUp(value: u32, divisor: u32) -> u32 {
   };
   addComputationPass(graph, {
     id: `${query.id}-prepare`,
+    operation: 'Query prepare',
     source,
     resources: [
       {buffer: query.query, usage: 'storage-read'},
@@ -514,6 +515,7 @@ fn testRow(rowIndex: u32) {
   };
   graph.addComputePass({
     id: `${query.id}-refine`,
+    workload: {operation: 'Query refine'},
     resources: [
       {buffer: query.positions, usage: 'storage-read'},
       ...(queryValuesBinding === undefined
@@ -631,6 +633,7 @@ ${candidateCountDeclaration}
 }`;
   addComputationPass(graph, {
     id: `${query.id}-finalize`,
+    operation: 'Query finalize',
     source,
     resources: [
       {buffer: resultState, usage: 'storage-read'},
@@ -973,6 +976,7 @@ function addComputationPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: {
     id: string;
+    operation: string;
     source: string;
     resources: GraphBufferUse[];
     bindings: Record<string, GraphDataView>;
@@ -981,6 +985,7 @@ function addComputationPass<Parameters>(
 ): void {
   graph.addComputePass({
     id: props.id,
+    workload: {operation: props.operation},
     resources: props.resources,
     compile: ({device}) => {
       const computation = new Computation(device, {

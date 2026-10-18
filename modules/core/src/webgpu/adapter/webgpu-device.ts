@@ -5,6 +5,7 @@
 // biome-ignore format: preserve layout
 // / <reference types="@webgpu/types" />
 
+import {GPUClockCorrelator} from './helpers/gpu-clock-correlator';
 import type {
   Bindings,
   ComputePipeline,
@@ -380,6 +381,8 @@ export class WebGPUDevice extends Device {
     );
   }
 
+  readonly clockCorrelator = new GPUClockCorrelator();
+
   submit(commandBuffer?: WebGPUCommandBuffer): void {
     let submittedCommandEncoder: WebGPUCommandEncoder | null = null;
     if (!commandBuffer) {
@@ -394,7 +397,14 @@ export class WebGPUDevice extends Device {
     try {
       this.pushErrorScope('validation');
       const queueSubmitStartTime = profiler ? getTimestamp() : 0;
+      const submissionTime = commandBuffer.timestampSnapshots.length ? performance.now() : 0;
       this.handle.queue.submit([commandBuffer.handle]);
+      if (commandBuffer.timestampSnapshots.length) {
+        const completion = this.handle.queue.onSubmittedWorkDone().then(() => performance.now());
+        for (const snapshot of commandBuffer.timestampSnapshots)
+          snapshot.submit(submissionTime, completion);
+        commandBuffer.timestampSnapshots = [];
+      }
       didSubmit = true;
       if (profiler) {
         profiler.queueSubmitCount = (profiler.queueSubmitCount || 0) + 1;
@@ -473,17 +483,6 @@ export class WebGPUDevice extends Device {
     commandBuffer: WebGPUCommandBuffer;
   } {
     const submittedCommandEncoder = this.commandEncoder;
-    if (
-      submittedCommandEncoder.getTimeProfilingSlotCount() > 0 &&
-      submittedCommandEncoder.getTimeProfilingQuerySet() instanceof WebGPUQuerySet
-    ) {
-      const querySet = submittedCommandEncoder.getTimeProfilingQuerySet() as WebGPUQuerySet;
-      querySet._encodeResolveToReadBuffer(submittedCommandEncoder, {
-        firstQuery: 0,
-        queryCount: submittedCommandEncoder.getTimeProfilingSlotCount()
-      });
-    }
-
     const commandBuffer = submittedCommandEncoder.finish();
     this.commandEncoder.destroy();
     this.commandEncoder = this.createCommandEncoder({

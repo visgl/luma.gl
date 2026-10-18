@@ -324,6 +324,7 @@ export class GPUProjection {
     });
 
     addGeospatialPass(graph, {
+      operation: 'Projection',
       id: isGraphVectorView(this.positions) ? `${this.id}-chunk-${chunkIndex}` : this.id,
       source,
       resources,

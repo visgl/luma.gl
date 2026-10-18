@@ -26,6 +26,43 @@ type ComputePassFixture = {
 };
 
 describe('GPUCommandGraphEncoding constructor compatibility', () => {
+  test('keeps duration-only results without inventing GPU endpoints', async () => {
+    const device = new NullDevice({});
+    const querySet = device.createQuerySet({type: 'timestamp', count: 2});
+    vi.spyOn(querySet, 'readTimestampDuration').mockResolvedValue(3);
+    const encoding = new GPUCommandGraphEncoding(
+      [
+        {
+          stats: {
+            id: 'compute',
+            type: 'compute',
+            cpuEncodeTimeMilliseconds: 1,
+            hasGPUTimestamps: true
+          },
+          timestamp: {querySet, beginIndex: 0, endIndex: 1}
+        },
+        {
+          stats: {id: 'copy', type: 'copy', cpuEncodeTimeMilliseconds: 1, hasGPUTimestamps: false}
+        }
+      ],
+      2
+    );
+    try {
+      const report = await encoding.readTimings();
+      expect(report.gpuTimeMilliseconds).toBe(3);
+      expect(report.gpuStartTimeMilliseconds).toBeUndefined();
+      expect(report.gpuEndTimeMilliseconds).toBeUndefined();
+      expect(report.nodes[0].gpuTimeMilliseconds).toBe(3);
+      expect(report.nodes[0].gpuStartTimeMilliseconds).toBeUndefined();
+      expect(report.nodes[0].gpuEndTimeMilliseconds).toBeUndefined();
+      expect(report.nodes[1].gpuTimeMilliseconds).toBeUndefined();
+      expect(report.nodes[1].gpuStartTimeMilliseconds).toBeUndefined();
+    } finally {
+      querySet.destroy();
+      device.destroy();
+    }
+  });
+
   test('preserves two-argument render-only synthetic encodings', () => {
     const encoding = new GPUCommandGraphEncoding(
       [
@@ -257,6 +294,26 @@ describe('GPUCommandGraph compute-pass coalescing', () => {
       type: 'timestamp',
       count: 6
     });
+    const timestamps = [10000000n, 12000000n, 15000000n, 18000000n, 20000000n, 24000000n];
+    const clockCorrelation = {
+      offsetMilliseconds: -5,
+      uncertaintyMilliseconds: 1,
+      sampledAtCpuTimeMilliseconds: 30,
+      method: 'submission' as const
+    };
+    vi.spyOn(fixture.timestampQuerySet, 'readResults').mockRejectedValue(
+      new Error('Mutable results must not be read')
+    );
+    fixture.commandEncoder.captureTimestampQuerySet = () => ({
+      clockCorrelation,
+      readResults: async options => {
+        const firstQuery = options?.firstQuery ?? 0;
+        return timestamps.slice(
+          firstQuery,
+          firstQuery + (options?.queryCount ?? timestamps.length)
+        );
+      }
+    });
     vi.spyOn(fixture.commandEncoder, 'getTimeProfilingQuerySet').mockReturnValue(
       fixture.timestampQuerySet
     );
@@ -274,9 +331,34 @@ describe('GPUCommandGraph compute-pass coalescing', () => {
       expect(encoding.stats.timestampedNodeCount).toBe(3);
       expect(encoding.stats.nodes.every(node => node.hasGPUTimestamps)).toBe(true);
       expect(encoding.canReadGPUTimings).toBe(true);
-      expect((await encoding.readTimings()).nodes.map(node => node.gpuTimeMilliseconds)).toEqual([
-        0, 0, 0
+      const report = await encoding.readTimings();
+      expect(report.clockCorrelation).toBe(clockCorrelation);
+      expect(report.nodes.every(node => node.operation === 'Test operation')).toBe(true);
+      expect(report.nodes.map(node => node.gpuTimeMilliseconds)).toEqual([2, 3, 4]);
+      expect(
+        report.nodes.map(node => [node.gpuStartTimeMilliseconds, node.gpuEndTimeMilliseconds])
+      ).toEqual([
+        [10, 12],
+        [15, 18],
+        [20, 24]
       ]);
+      expect(report.gpuStartTimeMilliseconds).toBe(10);
+      expect(report.gpuEndTimeMilliseconds).toBe(24);
+      expect(report.gpuTimeMilliseconds).toBe(9);
+      expect(report.cpuEncodeEndTimeMilliseconds! - report.cpuEncodeStartTimeMilliseconds!).toBe(
+        report.cpuEncodeTimeMilliseconds
+      );
+      for (const node of report.nodes) {
+        expect(node.cpuEncodeStartTimeMilliseconds).toBeGreaterThanOrEqual(
+          report.cpuEncodeStartTimeMilliseconds!
+        );
+        expect(node.cpuEncodeEndTimeMilliseconds).toBeLessThanOrEqual(
+          report.cpuEncodeEndTimeMilliseconds!
+        );
+        expect(node.cpuEncodeEndTimeMilliseconds! - node.cpuEncodeStartTimeMilliseconds!).toBe(
+          node.cpuEncodeTimeMilliseconds
+        );
+      }
     } finally {
       compiled.destroy();
       destroyComputePassFixture(fixture);
@@ -556,6 +638,7 @@ function addComputeNode(
 ): void {
   fixture.graph.addComputePass({
     id: identifier,
+    workload: {operation: 'Test operation'},
     compile: () => ({
       encode: () => {
         fixture.events.push(`encode:${identifier}`);

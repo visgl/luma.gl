@@ -59,6 +59,8 @@
           device = await luma.createDevice({
             id: 'billion-point-spatial-atlas',
             adapters: [webgpuAdapter],
+            optionalFeatures: ['timestamp-query'],
+            debugGPUTime: true,
             createCanvasContext: supportsHighDynamicRange
               ? {
                   colorFormat: 'rgba16float',
@@ -73,6 +75,8 @@
           device = await luma.createDevice({
             id: 'billion-point-spatial-atlas-sdr-fallback',
             adapters: [webgpuAdapter],
+            optionalFeatures: ['timestamp-query'],
+            debugGPUTime: true,
             createCanvasContext: standardCanvasContext
           });
         }
