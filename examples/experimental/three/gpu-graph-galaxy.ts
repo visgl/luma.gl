@@ -72,18 +72,22 @@ fn main(@builtin(global_invocation_id) invocationId: vec3u) {
   let radialDistance = (0.08 + 9.8 * radialFraction) * parameters.radius;
   let arm = f32(particleIndex % 3u) * 2.0943951;
   let filament = getRandomValue(seed + 6u);
+  let strand = floor(filament * 4.0);
+  let armVariation = sin(arm + 0.8);
   let orbitalAngle = parameters.time * (0.16 + 0.32 / (0.35 + radialFraction));
   // Correlated waves bend entire filaments; fine scatter breaks up their edges.
   let turbulence = sin(radialFraction * 23.0 + arm * 3.0 + parameters.time * 0.12) * 0.16
     + sin(radialFraction * 51.0 + filament * 5.0) * 0.035;
-  var angle = arm + log(1.0 + radialFraction * 8.0) * 3.1 + orbitalAngle + turbulence;
+  var angle = arm + log(1.0 + radialFraction * 8.0) * (2.8 + armVariation * 0.2) + orbitalAngle + turbulence;
   let scatter = getRandomValue(seed + 1u) - 0.5;
-  angle += scatter * (0.18 + 0.95 * filament * filament);
+  // Discrete braided ribbons leave dark channels between the luminous streams.
+  angle += (strand - 1.5) * 0.105 + sin(radialFraction * 14.0 + strand * 1.7) * 0.07;
+  angle += scatter * (0.055 + 0.14 * filament * filament);
   // Sculpt each arm around a raised centerline while retaining a thin underlying disk.
   // Coherent ridges and braided strands give the arms volume without scattering them apart.
   let armEnvelope = smoothstep(0.05, 0.25, radialFraction);
   let ridgePhase = radialFraction * 9.0 + arm + parameters.time * 0.12;
-  let ridgeHeight = sin(ridgePhase) * (0.12 + radialFraction * 0.55) * armEnvelope;
+  let ridgeHeight = sin(ridgePhase) * (0.12 + radialFraction * (0.55 + 0.25 * armVariation)) * armEnvelope;
   let strandPhase = radialFraction * 12.0 + floor(filament * 4.0) * 1.5707963 + arm;
   let strandHeight = sin(strandPhase) * (0.04 + radialFraction * 0.24) * armEnvelope;
   let crossSection = getRandomValue(seed + 2u) * 6.2831853;
@@ -93,18 +97,18 @@ fn main(@builtin(global_invocation_id) invocationId: vec3u) {
   let gold = mix(vec3f(1.0, 0.16, 0.005), vec3f(1.0, 0.52, 0.07), getRandomValue(seed + 3u));
   let cyan = mix(vec3f(0.005, 0.18, 0.5), vec3f(0.04, 0.8, 1.0), getRandomValue(seed + 4u));
   // Warm and cool filaments overlap instead of forming uniform concentric color bands.
-  let coolWeight = smoothstep(0.25, 0.8, radialFraction + sin(angle * 2.0) * 0.18);
+  let coolWeight = smoothstep(0.25, 0.8, radialFraction + sin(arm + strand * 0.7) * 0.23);
   starColor = mix(gold, cyan, coolWeight);
   // A brighter face and dimmer underside make the stream's rounded cross-section readable.
   let strandLight = 0.65 + 0.5 * (0.5 + 0.5 * cos(crossSection - 0.7));
-  brightness = (0.28 + 2.8 * pow(getRandomValue(seed + 5u), 7.0)) * strandLight;
+  brightness = (0.38 + 3.2 * pow(getRandomValue(seed + 5u), 7.0)) * strandLight;
   if (population == 0u || population == 1u) {
     // Soft, oversized sprites trace translucent dust clouds above and below the stars.
     position.x += (getRandomValue(seed + 7u) - 0.5) * radialFraction * 1.2;
     position.z += (getRandomValue(seed + 8u) - 0.5) * radialFraction * 1.2;
     // Dust curls around the same arm centerline rather than forming a separate cloud.
     position.y += sin(strandPhase + crossSection * 0.35) * (0.1 + radialFraction * 0.3);
-    brightness = 0.0025 + 0.0045 * getRandomValue(seed + 5u);
+    brightness = 0.0015 + 0.003 * getRandomValue(seed + 5u);
   } else if (population == 2u) {
     // A loose foreground population supplies depth and a handful of defocused lights.
     angle = getRandomValue(seed + 1u) * 6.2831853 + parameters.time * 0.04;
@@ -113,12 +117,13 @@ fn main(@builtin(global_invocation_id) invocationId: vec3u) {
     brightness = 0.018 + 0.07 * getRandomValue(seed + 5u);
   } else if (population == 3u || population == 4u) {
     // A compact, rotating, luminous bulge anchors the asymmetric spiral ribbons.
-    let coreRadius = pow(getRandomValue(seed), 0.8) * 1.5 * parameters.radius;
-    angle = getRandomValue(seed + 1u) * 6.2831853 + parameters.time * 0.7;
+    let coreRadius = pow(getRandomValue(seed), 0.65) * 1.6 * parameters.radius;
+    angle = coreRadius * 7.0 + f32(particleIndex % 2u) * 3.1415927
+      + (getRandomValue(seed + 1u) - 0.5) * 0.18 + parameters.time * 0.7;
     position = vec3f(cos(angle) * coreRadius,
       (getRandomValue(seed + 2u) - 0.5) * coreRadius * 0.2, sin(angle) * coreRadius * 0.7);
     starColor = mix(vec3f(1.0, 0.38, 0.025), vec3f(1.0, 0.9, 0.52), getRandomValue(seed + 3u));
-    brightness = 0.6 + 2.0 * getRandomValue(seed + 5u);
+    brightness = 0.35 + 1.2 * getRandomValue(seed + 5u);
   } else if (population >= 5u && population <= 7u) {
     // A dim stellar disk connects the bright filaments into a substantial galaxy.
     // These stars fill the gaps without adding another layer of blurry bloom.
@@ -126,7 +131,7 @@ fn main(@builtin(global_invocation_id) invocationId: vec3u) {
     position = vec3f(cos(angle) * radialDistance,
       (getRandomValue(seed + 2u) - 0.5) * (0.06 + radialFraction * 0.16),
       sin(angle) * radialDistance);
-    brightness = 0.1 + 0.35 * getRandomValue(seed + 5u);
+    brightness = 0.035 + 0.12 * getRandomValue(seed + 5u);
   }
   let color = starColor * brightness;
   offsets[particleIndex * 3u] = position.x;
@@ -270,8 +275,8 @@ async function main() {
   const scene = new Scene();
   scene.background = new Color('#010409');
   scene.add(mesh);
-  const camera = new PerspectiveCamera(55, 1, 0.01, 200);
-  camera.position.set(0, 12, 17);
+  const camera = new PerspectiveCamera(50, 1, 0.01, 200);
+  camera.position.set(0, 8.2, 19.2);
   camera.up.set(0.3, 1, 0);
   const controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true;
@@ -316,10 +321,10 @@ async function main() {
   depthScene.add(depthDisk);
   const renderPipeline = new RenderPipeline(renderer);
   const sceneColor = texture(depthOfField.output, screenUV);
-  const glow = bloom(sceneColor, 0.65, 0.35, 0.8);
+  const glow = bloom(sceneColor, 0.45, 0.3, 1.1);
   renderPipeline.outputNode = sceneColor.add(glow);
   renderer.toneMapping = ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  renderer.toneMappingExposure = 1.05;
   const resize = () => {
     const width = container.clientWidth,
       height = container.clientHeight;

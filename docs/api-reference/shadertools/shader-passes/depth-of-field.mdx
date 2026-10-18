@@ -66,3 +66,24 @@ rendering. Keep it before the final tone-map step when preserving HDR highlight 
 - [Tilt Shift](./tilt-shift) approximates selective focus without a depth attachment.
 - [Depth-Aware Blur](./depth-aware-blur) smooths intermediate data while preserving depth edges.
 - [Bloom](./bloom) spreads bright highlights through a separate multiscale optical pipeline.
+
+## Circular aperture bokeh
+
+Use `bokehDof` in `shaderPasses` and supply lens uniforms under `bokehDof` instead of `dof`
+for a single-pass circular aperture. It uses 48 equal-area disk samples, avoiding the rectangular
+highlights produced by separable blur. The same depth binding and public parameters apply.
+The maximum blur diameter is 20 source pixels. Zero aperture preserves sharp detail.
+
+```typescript
+import {bokehDof} from '@luma.gl/effects';
+
+const renderer = new ShaderPassRenderer(device, {
+  shaderPasses: [bokehDof],
+  colorFormat: 'rgba16float'
+});
+```
+
+The normalized gather preserves HDR radiance; choose a floating-point output format and apply
+bloom and tone mapping afterward. This local gather does not scatter foreground silhouettes
+or reconstruct hidden surfaces. Large depth discontinuities can still show halos. It costs
+48 color samples per defocused pixel, so use the separable pipeline when bandwidth is limited.
