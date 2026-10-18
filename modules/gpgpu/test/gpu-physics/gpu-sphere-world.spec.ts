@@ -1430,3 +1430,57 @@ it('warm support sleeps without injecting a cached impulse after a gravity chang
     fixture.destroy();
   }
 });
+
+it('continuous persistent sixteen-ball rack breaks stay bounded as the timestep decreases', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const {makeRack, BALL_RADIUS} = await import('../../../../examples/experimental/gpu-pool/table');
+  const run = async (timeStep: number) => {
+    const positions = makeRack();
+    positions[0] = 1.4;
+    const velocities = new Float32Array(64);
+    for (let index = 0; index < 16; index++) velocities[index * 4 + 3] = 1;
+    velocities[0] = 12;
+    const fixture = await makeWorld(device, Array.from(positions), Array.from(velocities), {
+      timeStep,
+      maximumRadius: BALL_RADIUS,
+      planes: [],
+      restitution: 0.94,
+      staticFriction: 0,
+      dynamicFriction: 0,
+      warmStarting: true,
+      continuous: true,
+      maximumImpactSteps: 16,
+      iterations: 12,
+      broadPhase: 'all-pairs',
+      eventCapacity: 4096
+    });
+    try {
+      fixture.step(Math.round(0.1 / timeStep));
+      const state = await fixture.read();
+      const events = await fixture.world.readEvents();
+      const energy = Array.from({length: 16}, (_, index) => {
+        const offset = index * 4;
+        return (
+          (state.velocities[offset] ** 2 +
+            state.velocities[offset + 1] ** 2 +
+            state.velocities[offset + 2] ** 2) /
+          2
+        );
+      }).reduce((sum, value) => sum + value, 0);
+      expect(energy).toBeLessThanOrEqual(72.01);
+      expect(state.positions.every(Number.isFinite)).toBe(true);
+      expect(events.dropped).toBe(0);
+      expect(events.discardedSimulationTime).toBeLessThan(0.000001);
+      expect(state.diagnostics.droppedContacts).toBe(0);
+      return state.positions;
+    } finally {
+      fixture.destroy();
+    }
+  };
+  const coarse = await run(1 / 240);
+  const fine = await run(1 / 480);
+  const meanDifference =
+    coarse.reduce((sum, value, index) => sum + Math.abs(value - fine[index]), 0) / coarse.length;
+  expect(meanDifference).toBeLessThan(0.03);
+});

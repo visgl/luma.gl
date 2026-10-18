@@ -1,6 +1,6 @@
 # GPU Physics Roadmap
 
-Updated: October 16, 2026
+Updated: October 17, 2026
 
 ## Goal and current status
 

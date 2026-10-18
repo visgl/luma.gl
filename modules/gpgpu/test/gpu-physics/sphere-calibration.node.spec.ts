@@ -128,6 +128,15 @@ test('committed SI fixture preserves its source and rejects unphysical calibrati
   );
   const result = fitSphereCalibration(dataset);
   expect(result.provenance).toEqual(dataset.provenance);
+  expect(() =>
+    fitSphereCalibration({...dataset, provenance: {...dataset.provenance, kind: 'measured-data'}})
+  ).toThrow();
+  expect(() =>
+    fitSphereCalibration({
+      ...dataset,
+      cloth: dataset.cloth.map((observation: object) => ({...observation, rollingSpeed: -1}))
+    })
+  ).toThrow();
   expect(result.slidingFriction).toBeCloseTo(0.2, 10);
   expect(result.residuals.every(value => value < 1e-10)).toBe(true);
   expect(() =>

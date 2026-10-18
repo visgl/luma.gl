@@ -13,7 +13,7 @@ experimental evidence. Record table/cloth, ball size, acquisition method,
 uncertainty, temperature and sample conditions in `provenance.notes`.
 
 For each cloth observation record initial linear speed `v`, initial rolling-axis
-angular speed `w`, slide duration `t`, rolling-transition speed `u`, subsequent
+angular speed `w`, slide duration `t`, nonnegative rolling-transition speed `u`, subsequent
 rolling distance `d`, initial sidespin `s`, and sidespin stopping time `q`.
 The independent least-squares fits through the origin are:
 
@@ -66,6 +66,9 @@ throw-angle dataset is claimed here. Those empirical acceptance checks remain op
   step. Eight 0.025 s steps agree within 0.005 length units, without tunneling.
 - Reducing the impact budget to one reports the unprocessed interval as cumulative
   discarded simulation seconds. Rendering/readback delay does not hide this loss.
+- A sixteen-ball rack break at 240 and 480 Hz bounds energy and mean position
+  differences, with no contact loss, event overflow or discarded simulation time
+  in the frictionless 0.1-second fixture (16 impact intervals, 12 iterations).
 - A supported sphere chain compares two-iteration cold and persistent solvers.
   Persistence must reduce final velocity and compression; teleporting invalidates
   cached support rather than kicking the displaced sphere.

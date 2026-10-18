@@ -89,6 +89,7 @@ export function fitSphereCalibration(dataset: SphereCalibrationDataset): SphereC
   const {radius, gravity, cloth, cushions, provenance} = dataset;
   if (
     !provenance.source.trim() ||
+    !['measured', 'analytic'].includes(provenance.kind) ||
     !(radius > 0) ||
     !(gravity > 0) ||
     !Number.isFinite(radius + gravity) ||
@@ -110,7 +111,7 @@ export function fitSphereCalibration(dataset: SphereCalibrationDataset): SphereC
     } = observation;
     if (
       !Object.values(observation).every(Number.isFinite) ||
-      Math.min(initialSpeed, slidingTime, rollingDistance, sidespinStopTime) < 0
+      Math.min(initialSpeed, slidingTime, rollingSpeed, rollingDistance, sidespinStopTime) < 0
     ) {
       throw new Error('Invalid cloth observation');
     }
