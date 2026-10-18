@@ -73,7 +73,8 @@ dot-only names are rejected because URL parsers normalize them as path segments.
 The map survives cache eviction; treat its shared glyph records and bitmap bytes as read-only.
 Call it again whenever the text or font stack changes, even if geometry is unchanged.
 `createGlyphFontRenderer(glyphs)` adapts a loaded snapshot to the existing custom atlas renderer
-interface, allowing callers to own packing themselves.
+interface, allowing callers to own packing themselves. Its `draw` result carries an explicit
+`layoutOffsetX`: glyph bearings move the drawn text while bitmap cells remain separate.
 
 `buildGlyphFontAtlas(loader, fontStack, characterSet)` waits for loading before packing and needs
 a browser 2D canvas (`HTMLCanvasElement` or `OffscreenCanvas`). Each call creates an independent

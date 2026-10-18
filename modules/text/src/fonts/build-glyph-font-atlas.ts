@@ -34,7 +34,13 @@ export function createGlyphFontRenderer(glyphs: ReadonlyMap<number, Glyph>): Bro
       for (let index = 0; index < glyph.bitmap.length; index++) {
         data.data[4 * index + 3] = glyph.bitmap[index];
       }
-      return {data, left: GLYPH_BORDER - glyph.left, top: GLYPH_BORDER};
+      // Pack the bitmap within its own cell; a bearing changes layout, never atlas placement.
+      return {
+        data,
+        left: GLYPH_BORDER,
+        top: GLYPH_BORDER,
+        layoutOffsetX: glyph.left - GLYPH_BORDER
+      };
     }
   };
 }

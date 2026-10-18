@@ -36,6 +36,30 @@ test('packs server glyph pixels and metrics into independent atlas pages', async
   const renderer = createGlyphFontRenderer(
     new Map(parseGlyphRange(makeGlyphRange([65])).map(glyph => [glyph.id, glyph]))
   );
-  expect(renderer.draw('A').left).toBe(5);
+  expect(renderer.draw('A').layoutOffsetX).toBe(-5);
   expect(renderer.draw('B').data.width).toBe(1);
+});
+
+test('different bearings retain separate bitmap cells and horizontal layout offsets', async () => {
+  if (!isBrowser()) return;
+  const [glyph] = parseGlyphRange(makeGlyphRange([65]));
+  const loader = new GlyphRangeLoader({url: 'https://example.com/{fontstack}/{range}'});
+  vi.spyOn(loader, 'loadGlyphs').mockResolvedValue(
+    new Map([
+      [65, {...glyph, left: 4}],
+      [66, {...glyph, id: 66, left: -2, bitmap: new Uint8Array(49).fill(127)}]
+    ])
+  );
+  const atlas = await buildGlyphFontAtlas(loader, 'Regular', 'AB');
+  const context = (atlas.pages[0] as HTMLCanvasElement).getContext('2d')!;
+  for (const [character, alpha, offset] of [
+    ['A', 255, 1],
+    ['B', 127, -5]
+  ] as const) {
+    const frame = atlas.mapping[character];
+    const pixels = context.getImageData(frame.x, frame.y, frame.width, frame.height).data;
+    expect([...pixels].filter((_, index) => index % 4 === 3)).toEqual(Array(49).fill(alpha));
+    expect(frame.layoutOffsetX).toBe(offset);
+    expect(frame.advance).toBe(5);
+  }
 });
