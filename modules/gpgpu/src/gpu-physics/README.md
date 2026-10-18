@@ -272,8 +272,7 @@ visibly instead of silently losing a pocket outcome.
 `makeSphereBoxPlanes({center, halfExtents, material})` adds static axis-aligned box
 surfaces using the existing finite-rectangle narrow phase and sweep. It consumes
 six of the world's 32 surfaces; bodies must start outside the box. Corners use
-closest points on the faces. Dynamic boxes, capsules, persistent manifolds and
-constraints remain unimplemented. `getBodyInertia` supplies analytic principal
+closest points on the faces. Dynamic boxes, capsules and joints remain unimplemented. Sphere contact manifolds contain one normal/contact point; optional persistence is described below. `getBodyInertia` supplies analytic principal
 inertia for solid spheres and boxes; the sphere solver still uses isotropic sphere
 inertia. These APIs establish a static shape composition boundary without claiming
 general rigid-body support.
@@ -292,3 +291,46 @@ include scenario, candidate budget and exhaustion diagnostics; exhausted runs ar
 invalid performance/correctness evidence. Frame time, encoding time and optional
 GPU time remain separate. Measurements depend on the adapter and must be captured
 on the target device rather than inferred from body count.
+
+
+## Persistent contact constraints
+
+`warmStarting: true` enables accumulated normal and vector tangential impulses for
+sphere pairs and static surfaces. The default solver remains unchanged. The cache
+is limited to 256 bodies and stores 48 bytes per directed sphere/surface pair
+(`count * (count + 32)` entries); scratch contacts additionally reserve 32 surface
+slots per body. This is a small-world stability option, not a scalable broad phase.
+
+Pair keys are body identifiers, independent of CSR slot ordering. Sphere manifolds
+have one contact normal; surfaces use their plane index and closest-point normal.
+Only immediately preceding fixed-step contacts with aligned normals are reused.
+New restitution impacts start cold. Cached impulses scale down for shorter impact
+intervals; subsequent intervals initialize fresh constraints. Accumulation permits
+negative impulse increments to release an earlier constraint, while total normal
+impulse stays nonnegative and total tangent impulse stays in the friction cone.
+
+Commands and `update()` invalidate the cache. After writing directly to borrowed
+state buffers, call `world.clearContactCache()` before submitting more graph work.
+Cached resources belong to the world; destroy the compiled graph first. This does
+not add dynamic shape manifolds or joints. Numerical tests compare a low-iteration
+supported chain with the default solver and verify SI cloth/spin behaviour in both
+modes. Warm starting remains opt-in pending wider adapter and dense-pile evidence.
+
+The event header also retains cumulative discarded simulation seconds as
+`batch.discardedSimulationTime` (float32, distinct from wall-clock time). Difference
+successive samples to quantify collision-budget loss. Pool reports per-shot loss.
+
+## Reproducible calibration
+
+`fitSphereCalibration(dataset)` fits sliding friction, rolling resistance,
+sidespin resistance, and the two-parameter cushion pace law from SI observations.
+Datasets carry `provenance.source` and `provenance.kind` (`measured` or `analytic`).
+The result retains provenance and reports RMS residuals for each fit. A fit is not
+an automatic certification: compare residuals against acquisition uncertainty and
+validate held-out shot trajectories, especially spin-sensitive cushion angles.
+All channels require informative observations; non-passive cushion fits are rejected.
+
+See [the calibration protocol](../../../../dev-docs/benchmarks/gpu-physics-calibration.md)
+for equations, units, fixtures, limitations, and the report command. The bundled
+fixture is synthetic, not a digitized experiment. No measured table fit is applied
+to the illustrative pool table automatically.

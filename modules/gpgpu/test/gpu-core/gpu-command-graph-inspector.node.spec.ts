@@ -453,3 +453,46 @@ function makeTimingReport(
     ]
   };
 }
+
+it('GPUCommandGraphInspector exposes compiled nodes before the first encoding', () => {
+  const inspector = new GPUCommandGraphInspector();
+  const graph: GPUCommandGraphInspectorGraph = {
+    ...makeGraph('idle'),
+    preflight: {
+      nodes: [
+        {
+          id: 'prepare',
+          type: 'compute',
+          commandCount: 1,
+          maximumWorkgroupCount: 1,
+          maximumInvocationCount: 1,
+          readByteLength: 0,
+          writeByteLength: 0
+        }
+      ],
+      annotatedNodeCount: 1,
+      conditionalNodeCount: 0,
+      commandCount: 1,
+      maximumWorkgroupCount: 1,
+      maximumInvocationCount: 1,
+      readByteLength: 0,
+      writeByteLength: 0,
+      largestBufferByteLength: 0,
+      largestStorageBufferBindingByteLength: 0,
+      maxBufferByteLength: 1000,
+      maxStorageBufferBindingByteLength: 1000,
+      fitsDeviceLimits: true
+    }
+  };
+  inspector.registerGraph(graph);
+  const snapshot = inspector.getSnapshot().graphs[0];
+  expect(snapshot.encodingCount).toBe(0);
+  expect(
+    snapshot.nodes.map(node => [node.id, node.type, node.cpu.sampleCount, node.gpu.sampleCount])
+  ).toEqual([['prepare', 'compute', 0, 0]]);
+  inspector.recordEncoding('idle', makeEncoding(1, 0.25, 0.5));
+  expect(inspector.getSnapshot().graphs[0].nodes.map(node => node.id)).toEqual([
+    'prepare',
+    'render'
+  ]);
+});

@@ -91,6 +91,25 @@ ranges from OpenFreeMap (network access required), packs them with `buildGlyphFo
 them through the same `AtlasTextRenderer` used by the other atlas modes. Switch away and back to
 exercise the shared loader cache. No API key is required; the existing MSDF mode remains the default.
 
+### Code provenance and font licenses
+
+The glyph decoder, loader and renderer adapter are adapted from the MIT-licensed
+[deck.gl-community glyph utilities](https://github.com/visgl/deck.gl-community/tree/6bbc250ff951c5376650fc699c36c2f88debc778/modules/basemap-layers/src).
+Their source headers retain the vis.gl contributor copyright and MIT SPDX identifier.
+Tests construct synthetic protocol messages; no third-party font binaries or glyph ranges are bundled.
+
+This path decodes precomputed SDF bitmap bytes and metrics from protocol buffers. It does not parse
+TrueType/OpenType outlines, execute font hinting bytecode, shape text, or generate distance fields.
+It adds no font parser or rasterizer dependency. This describes the implementation scope, not a
+patent clearance or an additional patent grant.
+
+Font data has its own license, separate from the MIT implementation. The example requests Noto Sans
+Regular from OpenFreeMap at runtime; [OpenFreeMap's font notice](https://github.com/hyperknot/openfreemap/blob/main/LICENSE.md#fonts)
+identifies Noto Sans as SIL Open Font License 1.1. The [Noto project license](https://github.com/notofonts/latin-greek-cyrillic/blob/main/OFL.txt)
+provides the font copyright and license terms. Applications that bundle or redistribute fonts or
+derived glyph assets must preserve the applicable font notices and license; the loader does not
+relicense downloaded glyph data as MIT.
+
 ## Public Architecture
 
 | Responsibility | Public APIs |

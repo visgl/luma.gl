@@ -16,6 +16,8 @@ const COMPACT_COUNTER_FORMATTER = new Intl.NumberFormat('en-US', {
 export type GPUCommandGraphInspectorPanelProps = {
   /** Optional human-readable graph names keyed by compiled graph ID. */
   graphLabels?: Readonly<Record<string, string>>;
+  /** Optional operation labels keyed by compiled node ID. */
+  nodeLabels?: Readonly<Record<string, string>>;
   /** Optional human-readable counter names keyed by application-defined counter ID. */
   counterLabels?: Readonly<Record<string, string>>;
 };
@@ -29,6 +31,7 @@ export type GPUCommandGraphInspectorPanelProps = {
 export class GPUCommandGraphInspectorPanel {
   private readonly element: HTMLElement;
   private readonly graphLabels: Readonly<Record<string, string>>;
+  private readonly nodeLabels: Readonly<Record<string, string>>;
   private readonly counterLabels: Readonly<Record<string, string>>;
   private snapshot: GPUCommandGraphInspectorSnapshot = {graphs: []};
   private selectedGraphId: string | null = null;
@@ -39,6 +42,7 @@ export class GPUCommandGraphInspectorPanel {
   constructor(element: HTMLElement, props: GPUCommandGraphInspectorPanelProps = {}) {
     this.element = element;
     this.graphLabels = props.graphLabels ?? {};
+    this.nodeLabels = props.nodeLabels ?? {};
     this.counterLabels = props.counterLabels ?? {};
     this.element.innerHTML = `<div data-gpu-command-graph-inspector>
       <style>${GPU_COMMAND_GRAPH_INSPECTOR_CSS}</style>
@@ -57,6 +61,7 @@ export class GPUCommandGraphInspectorPanel {
           <div class="graph-inspector-counter-rows" data-graph-inspector-counter-rows></div>
         </div>
         <div class="graph-inspector-node graph-inspector-node-header"><span>Node</span><strong>CPU 50/95</strong><strong>GPU 50/95</strong></div>
+        <div class="graph-inspector-legend"><span style="color:#508bc9">● Compute</span> · <span style="color:#b16cba">● Draw</span> · <span style="color:#ba873e">● Copy</span></div>
         <div class="graph-inspector-nodes" data-graph-inspector-nodes></div>
       </div>
     </div>`;
@@ -134,8 +139,8 @@ export class GPUCommandGraphInspectorPanel {
     const gpuSampleCount = graph.totals.gpu.sampleCount;
     const rows = graph.nodes
       .map(
-        node => `<div class="graph-inspector-node" data-full-name="${escapeHtml(node.id)}">
-          <span><i>${escapeHtml(node.group ?? node.type)}</i>${escapeHtml(getShortNodeId(node.id, graph.id))}</span>
+        node => `<div class="graph-inspector-node" data-node-type="${escapeHtml(node.type)}" data-full-name="${escapeHtml(node.id)}">
+          <span><i title="${escapeHtml(node.type === 'render' ? 'draw' : node.type)}" aria-label="${escapeHtml(node.type === 'render' ? 'draw' : node.type)}"></i>${escapeHtml(getOwnLabel(this.nodeLabels, node.id) === node.id ? getShortNodeId(node.id, graph.id) : this.nodeLabels[node.id])}</span>
           <strong>${formatDurationPair(node.cpu)}</strong>
           <strong>${formatDurationPair(node.gpu)}</strong>
         </div>`
@@ -320,12 +325,17 @@ const GPU_COMMAND_GRAPH_INSPECTOR_CSS = /* css */ `
   }
   [data-gpu-command-graph-inspector] .graph-inspector-node i {
     display: inline-block;
-    min-width: 43px;
-    margin-right: 5px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    margin-right: 6px;
+    background: #508bc9;
     color: #729ed4;
     font-style: normal;
     text-transform: uppercase;
   }
+  [data-gpu-command-graph-inspector] [data-node-type="render"] i { background: #b16cba; }
+  [data-gpu-command-graph-inspector] [data-node-type="copy"] i { background: #ba873e; }
   [data-gpu-command-graph-inspector] .graph-inspector-node strong {
     color: #dce8f7;
     font-weight: 600;
@@ -344,6 +354,7 @@ const GPU_COMMAND_GRAPH_INSPECTOR_CSS = /* css */ `
     font-weight: 600;
   }
   [data-gpu-command-graph-inspector] .graph-inspector-nodes { max-height: 154px; overflow: auto; }
+  [data-gpu-command-graph-inspector] .graph-inspector-legend { font: 10px/1.4 system-ui, sans-serif; }
   [data-gpu-command-graph-inspector] .graph-inspector-empty { color: #8192aa; font-size: 9px; }
 `;
 

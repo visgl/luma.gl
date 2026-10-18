@@ -96,3 +96,8 @@ manual selection for a table-click shot.
 replays the selected spin setup. Clearing a full rack automatically places another
 after the shot settles and a short celebration pause; single-ball practice stays
 available for comparison until reset.
+
+The standard luma.gl InfoBox starts collapsed in the top-right corner. Open it for
+About and GPU graph inspector tabs. The inspector shows graph encodings and sampled
+physics diagnostics; GPU timestamp timings are sampled only while its tab is visible,
+when supported by the device.

@@ -4,6 +4,9 @@
 
 import {expect, test, vi} from 'vitest';
 import {isBrowser} from '@probe.gl/env';
+import {ClipSpace} from '@luma.gl/engine';
+import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {GPUTextResources} from '../../src/text-2d/gpu-text-resources';
 import {
   GlyphRangeLoader,
   buildGlyphFontAtlas,
@@ -12,6 +15,60 @@ import {
   measureFontAtlasText
 } from '../../src/fonts';
 import {makeGlyphRange, makeGlyphResponse} from './glyph-range-fixture';
+
+test('GPU glyph atlas interpolates coverage between adjacent texels', async () => {
+  if (!isBrowser()) return;
+  const device = await getWebGLTestDevice();
+  const loader = new GlyphRangeLoader({
+    url: 'https://example.com/{fontstack}/{range}',
+    fetch: async () => makeGlyphResponse([65])
+  });
+  const atlas = await buildGlyphFontAtlas(loader, 'Regular', 'A');
+  const page = document.createElement('canvas');
+  page.width = 2;
+  page.height = 1;
+  page
+    .getContext('2d')!
+    .putImageData(new ImageData(new Uint8ClampedArray([0, 0, 0, 0, 0, 0, 0, 255]), 2, 1), 0, 0);
+  const resources = new GPUTextResources(device, {
+    fontAtlas: {...atlas, pages: [page], width: 2, height: 1}
+  });
+  await resources.atlasTexture.ready;
+  const framebuffer = device.createFramebuffer({
+    width: 1,
+    height: 1,
+    colorAttachments: ['rgba8unorm']
+  });
+  const model = new ClipSpace(device, {
+    fs: `#version 300 es
+precision highp float;
+uniform highp sampler2DArray fontAtlasTexture;
+out vec4 fragmentColor;
+void main() {
+  float alpha = texture(fontAtlasTexture, vec3(0.5, 0.5, 0.0)).a;
+  fragmentColor = vec4(alpha, alpha, alpha, 1.0);
+}`,
+    bindings: {fontAtlasTexture: resources.atlasTexture},
+    parameters: {depthWriteEnabled: false}
+  });
+  try {
+    expect(resources.atlasTexture.sampler.props.minFilter).toBe('linear');
+    expect(resources.atlasTexture.sampler.props.magFilter).toBe('linear');
+    const commandEncoder = device.createCommandEncoder();
+    model.predraw(commandEncoder);
+    const renderPass = commandEncoder.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
+    expect(model.draw(renderPass)).toBe(true);
+    renderPass.end();
+    device.submit(commandEncoder.finish());
+    const pixels = device.readPixelsToArrayWebGL(framebuffer);
+    // Nearest sampling returns 0 or 255. Linear sampling reconstructs the halfway coverage.
+    expect(Math.abs(pixels[0] - 128)).toBeLessThanOrEqual(1);
+  } finally {
+    model.destroy();
+    framebuffer.destroy();
+    resources.destroy();
+  }
+});
 
 test('packs server glyph pixels and metrics into independent atlas pages', async () => {
   if (!isBrowser()) return;
