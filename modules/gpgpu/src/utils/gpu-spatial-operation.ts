@@ -5,7 +5,11 @@
 import {assert} from '@luma.gl/core';
 import type {GPUCommandGraph, GraphDataView} from '../gpu-core/gpu-command-graph';
 import {createChunkNode, validateChunkViews} from '../gpu-core/gpu-chunk-utils';
-import {getViewElementOffset, validatePackedView} from '../gpu-core/graph-data-view-utils';
+import {
+  getViewElementOffset,
+  getViewBindingRange,
+  validatePackedView
+} from '../gpu-core/graph-data-view-utils';
 import {
   getBoundedDispatchLayout,
   getBoundedInvocationIndexSource
@@ -30,6 +34,19 @@ export function getSpatialOperationNodes<Parameters>(
   for (const [, view] of entries)
     validatePackedView(view, ['float32x3', 'uint32', 'float32'], props.id);
   if (!props.length) return [];
+  const outputs = Object.values(props.outputs);
+  for (let first = 0; first < outputs.length; first++) {
+    for (let second = first + 1; second < outputs.length; second++) {
+      if (outputs[first].buffer !== outputs[second].buffer) continue;
+      const firstRange = getViewBindingRange(outputs[first]);
+      const secondRange = getViewBindingRange(outputs[second]);
+      // WebGPU writable bindings must remain disjoint after storage-offset alignment.
+      assert(
+        firstRange.offset + firstRange.size <= secondRange.offset ||
+          secondRange.offset + secondRange.size <= firstRange.offset
+      );
+    }
+  }
   const dispatch = getBoundedDispatchLayout(
     props.id,
     props.length,
@@ -74,9 +91,12 @@ fn min${title}(row: u32, value: u32) { atomicMin(&${name}[${address}], value); }
       dispatch,
       source: `${declarations}
 fn safeNormal(value: vec3f) -> vec3f {
-  let magnitude = length(value);
-  if (!(magnitude > 0.0) || magnitude > 3.402823e38) { return vec3f(0.0); }
-  return value / magnitude;
+  let scale = max(max(abs(value.x), abs(value.y)), abs(value.z));
+  if (!(scale > 0.0) || scale > 3.402823e38) { return vec3f(0.0); }
+  let scaled = value / scale;
+  let magnitude = length(scaled);
+  if (!(magnitude > 0.0)) { return vec3f(0.0); }
+  return scaled / magnitude;
 }
 @compute @workgroup_size(256)
 fn main(@builtin(workgroup_id) workgroupId: vec3u, @builtin(local_invocation_index) localInvocationIndex: u32) {

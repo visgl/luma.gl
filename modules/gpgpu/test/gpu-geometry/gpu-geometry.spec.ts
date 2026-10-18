@@ -138,3 +138,27 @@ it('GPU smoothing preserves pins and isolated vertices across two composed itera
     fixture.destroy();
   }
 });
+
+it('GPU geometry normalizes finite cross products at very large and small scales', async context => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) {
+    context.skip();
+    return;
+  }
+  const fixture = makeSpatialFixture(device);
+  try {
+    const positions = fixture.view(
+      'float32x3',
+      new Float32Array([0, 0, 0, 1e10, 0, 0, 0, 1e10, 0, 0, 0, 0, 1e-10, 0, 0, 0, 1e-10, 0])
+    );
+    const indices = fixture.view('uint32', new Uint32Array([0, 1, 2, 3, 4, 5]));
+    const normals = fixture.view('float32x3', new Float32Array(6));
+    fixture.graph.add(
+      new GPUMeshNormals({positions: positions.view, indices: indices.view, normals: normals.view})
+    );
+    await fixture.run();
+    expect(await readFloats(normals.buffer)).toEqual([0, 0, 1, 0, 0, 1]);
+  } finally {
+    fixture.destroy();
+  }
+});
