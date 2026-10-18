@@ -97,6 +97,10 @@ graph.add(new GPUPointCloudOctree({
 }));
 ```
 
+`status` must use a separate buffer from `nodes` and `pointIndices`: intermediate passes read
+status while writing those outputs. `nodes` and `pointIndices` may share disjoint output storage.
+This requirement is checked when constructing the operation.
+
 The root is a cube from `origin` to `origin + size`, including both faces. Coordinates and extent
 must be representable in float32; nonfinite or out-of-bounds points are rejected and counted.
 `maximumDepth` is 0–10 (default 6), using at most 30 Morton bits. The root is depth zero.

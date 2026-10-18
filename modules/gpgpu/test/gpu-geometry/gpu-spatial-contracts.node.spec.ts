@@ -163,3 +163,24 @@ it('rejects overlapping aligned writable bindings while allowing aligned shared 
     graph.add(new GPUPointCloudRadiusFilter({positions, counts, mask: alignedMask, radius: 1}))
   ).not.toThrow();
 });
+
+it('validates octree status storage before creating graph stages', () => {
+  const {graph, view} = makeFixture();
+  const shared = graph.importBuffer({id: 'octree-shared', byteLength: 528, usage: Buffer.STORAGE});
+  const pointIndices = graph.createDataView(shared, {format: 'uint32', length: 4});
+  const nodes = graph.createDataView(shared, {format: 'uint32', length: 32, byteOffset: 256});
+  const status = graph.createDataView(shared, {format: 'uint32', length: 4, byteOffset: 512});
+  const props = {
+    positions: view('float32x3', 4),
+    pointIndices,
+    nodes,
+    status,
+    origin: [0, 0, 0] as const,
+    size: 1
+  };
+  expect(() => new GPUPointCloudOctree({...props, pointIndices: view('uint32', 4)})).toThrow();
+  expect(() => new GPUPointCloudOctree({...props, nodes: view('uint32', 32)})).toThrow();
+  expect(() =>
+    graph.add(new GPUPointCloudOctree({...props, status: view('uint32', 4)}))
+  ).not.toThrow();
+});

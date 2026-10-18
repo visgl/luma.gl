@@ -30,7 +30,7 @@ export type GPUPointCloudOctreeProps = {
   pointIndices: GraphDataView<'uint32'>;
   /** Packed breadth-first node records. Capacity of positions.length nodes always suffices. */
   nodes: GraphDataView<'uint32'>;
-  /** Four words: required node count, retained point count, rejected point count, overflow flag. */
+  /** Four words: required nodes, retained points, rejected points, overflow. Must use a separate buffer from nodes and pointIndices. */
   status: GraphDataView<'uint32'>;
 };
 
@@ -75,6 +75,11 @@ export class GPUPointCloudOctree {
     assert(props.pointIndices.length >= props.positions.length);
     assert(props.nodes.length % GPU_POINT_CLOUD_OCTREE_NODE_STRIDE === 0);
     assert(props.status.length === 4);
+    // Status is read while nodes and point indices are written, so their buffers must differ.
+    assert(
+      props.status.buffer !== props.nodes.buffer &&
+        props.status.buffer !== props.pointIndices.buffer
+    );
     validatePackedView(props.positions, ['float32x3'], this.id);
     for (const view of [props.pointIndices, props.nodes, props.status])
       validatePackedView(view, ['uint32'], this.id);
