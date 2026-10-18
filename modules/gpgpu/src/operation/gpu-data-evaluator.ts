@@ -472,6 +472,10 @@ export class GPUDataEvaluator {
       }
     }
     if (this._gpuVector) {
+      if (options.batch && this.source instanceof GPUDataEvaluator) {
+        // An existing alias borrows its source allocation; retain the owner too.
+        await this.source.evaluate(device, {batch: options.batch});
+      }
       if (options.batch && this.buffer.device !== device) {
         throw new Error('Evaluator buffer belongs to a different device');
       }

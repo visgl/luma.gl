@@ -129,3 +129,45 @@ it('a batch rejects another batch borrowing its pending output', async ({skip}) 
     input.destroy();
   }
 });
+
+it('a cached alias retains its backing evaluator and survives cancellation', async ({skip}) => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return skip();
+  const input = GPUDataEvaluator.fromArray(new Float32Array([1, 2, 3, 4]), {size: 2});
+  const output = multiply(input, 2);
+  const alias = swizzle(output, [0]);
+  await alias.evaluate(device);
+  const originalBuffer = alias.buffer;
+  const batch = new GPUEvaluationBatch(device);
+  try {
+    await batch.evaluate(alias);
+    expect(() => output.destroy()).toThrow('unsubmitted batch');
+    batch.cancel();
+    expect(alias.buffer).toBe(originalBuffer);
+    expect(Array.from(await alias.readValue())).toEqual([2, 6]);
+  } finally {
+    alias.destroy();
+    output.destroy();
+    input.destroy();
+  }
+});
+
+it('submission and concurrent evaluation cannot race an outstanding encode', async ({skip}) => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return skip();
+  const input = GPUDataEvaluator.fromArray(new Float32Array([1, 2]), {size: 1});
+  const output = multiply(input, 2);
+  const batch = new GPUEvaluationBatch(device);
+  try {
+    const encoding = batch.evaluate(output);
+    expect(() => batch.submit()).toThrow('Await batch evaluation');
+    expect(() => batch.cancel()).toThrow('Await batch evaluation');
+    await expect(batch.evaluate(output)).rejects.toThrow('Await the previous batch evaluation');
+    await encoding;
+    batch.submit();
+    expect(Array.from(await output.readValue())).toEqual([2, 4]);
+  } finally {
+    output.destroy();
+    input.destroy();
+  }
+});
