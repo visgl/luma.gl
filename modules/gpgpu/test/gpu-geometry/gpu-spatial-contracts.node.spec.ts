@@ -7,6 +7,7 @@ import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {GPUMeshNormals, GPUMeshVertexNormals, GPUMeshSmoothing} from '@luma.gl/gpgpu/gpu-geometry';
 import {
+  GPUPointCloudOctree,
   GPUPointCloudVoxelDownsample,
   GPUPointCloudRadiusFilter
 } from '@luma.gl/gpgpu/gpu-pointcloud';
@@ -114,6 +115,38 @@ describe('GPU spatial operation contracts', () => {
     expect(() => new GPUPointCloudRadiusFilter({...props, minimumNeighbors: -1})).toThrow();
     expect(() => new GPUPointCloudRadiusFilter({...props, validity: view('uint32', 1)})).toThrow();
   });
+});
+
+it('validates additive octree depth, bounds, capacities, formats, and graph ownership', () => {
+  const {graph, view} = makeFixture();
+  const props = {
+    positions: view('float32x3', 4),
+    pointIndices: view('uint32', 4),
+    nodes: view('uint32', 32),
+    status: view('uint32', 4),
+    origin: [0, 0, 0] as const,
+    size: 1
+  };
+  for (const patch of [
+    {maximumDepth: -1},
+    {maximumDepth: 11},
+    {nodePointLimit: 0},
+    {samplingLevels: 0},
+    {size: Infinity},
+    {size: 0},
+    {origin: [1e30, 0, 0] as const},
+    {pointIndices: view('uint32', 3)},
+    {nodes: view('uint32', 9)},
+    {status: view('uint32', 3)},
+    {positions: view('float32x3', 4, 16)}
+  ])
+    expect(() => new GPUPointCloudOctree({...props, ...patch})).toThrow();
+  expect(() =>
+    graph.add(new GPUPointCloudOctree({...props, pointIndices: props.status}))
+  ).toThrow();
+  expect(() =>
+    graph.add(new GPUPointCloudOctree({...props, pointIndices: makeFixture().view('uint32', 4)}))
+  ).toThrow();
 });
 
 it('rejects overlapping aligned writable bindings while allowing aligned shared outputs', () => {

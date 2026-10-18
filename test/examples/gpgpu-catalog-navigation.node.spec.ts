@@ -22,6 +22,7 @@ const GENERAL_PURPOSE_GPU_EXAMPLE_IDENTIFIERS = [
   'showcase/raster-lab',
   'experimental/gpu-geometry',
   'experimental/gpu-pointcloud',
+  'experimental/gpu-pointcloud-octree',
   'showcase/billion-point-spatial-atlas',
   'experimental/gpt-2',
   'v10/gpgpu',
@@ -230,6 +231,7 @@ describe('GPGPU example catalog navigation', () => {
       'experimental/gpu-parquet-constellation',
       'experimental/gpu-geometry',
       'experimental/gpu-pointcloud',
+      'experimental/gpu-pointcloud-octree',
       'showcase/billion-point-spatial-atlas',
       'experimental/gpt-2'
     ]);
