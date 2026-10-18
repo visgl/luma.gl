@@ -22,6 +22,7 @@ export class GPUGraphDiagnostics {
   private readonly sampleCounts = new Map<string, number>();
   private latestEncoding: GPUCommandGraphEncoding | null = null;
   private generation = 0;
+  private latestGraphId: string | undefined;
 
   encode<Parameters>(
     graph: CompiledGPUCommandGraph<Parameters>,
@@ -70,6 +71,7 @@ export class GPUGraphDiagnostics {
     this.sampleCounts.set(graph.id, sampleCount + 1);
     if (sampleCount % 60 !== 0) return;
     this.latestEncoding = encoding;
+    this.latestGraphId = graph.id;
     this.inspectorPanel.update(this.inspector.getSnapshot(), graph.id);
     this.tracePanel.update(encoding.stats, graph.id);
     const generation = this.generation;
@@ -83,7 +85,7 @@ export class GPUGraphDiagnostics {
         .recordGPUTimings(graph.id, encoding)
         .then(report => {
           if (generation !== this.generation || this.graphs.get(graph.id) !== graph) return;
-          this.inspectorPanel.update(this.inspector.getSnapshot());
+          this.inspectorPanel.update(this.inspector.getSnapshot(), this.latestGraphId);
           if (report && this.latestEncoding === encoding) this.tracePanel.update(report, graph.id);
         })
         .catch(() => {
@@ -96,6 +98,7 @@ export class GPUGraphDiagnostics {
   clear(): void {
     this.generation++;
     this.latestEncoding = null;
+    this.latestGraphId = undefined;
     this.graphs.clear();
     this.sampleCounts.clear();
     this.inspector.clear();

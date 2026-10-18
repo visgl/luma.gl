@@ -56,6 +56,7 @@ test('diagnostics allocate scoped timestamps only for sampled encodings', async 
   };
   const createQuerySet = vi.spyOn(device, 'createQuerySet');
   const diagnostics = new GPUGraphDiagnostics();
+  const updateInspector = vi.spyOn(diagnostics.inspectorPanel, 'update');
   try {
     diagnostics.encode(graph, commandEncoder, {parameters: undefined});
     diagnostics.encode(graph, commandEncoder, {parameters: undefined});
@@ -65,6 +66,7 @@ test('diagnostics allocate scoped timestamps only for sampled encodings', async 
     const destroy = vi.spyOn(querySet, 'destroy');
     await new Promise(resolve => setTimeout(resolve, 0));
     expect(destroy).toHaveBeenCalledTimes(1);
+    expect(updateInspector.mock.calls.at(-1)?.[1]).toBe(graph.id);
     expect(commandEncoder.getTimeProfilingQuerySet()).toBeNull();
   } finally {
     diagnostics.clear();
