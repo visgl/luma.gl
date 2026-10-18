@@ -270,7 +270,7 @@ export default class OctreeExample extends AnimationLoopTemplate {
     });
   }
 
-  override onRender({device, width, height, time}: AnimationProps) {
+  override onRender({device, canvas, width, height, time}: AnimationProps) {
     if (this.pending) {
       const encoding = this.compiled.encode(device.commandEncoder, {parameters: undefined});
       this.inspector.recordEncoding(this.compiled.id, encoding);
@@ -286,7 +286,8 @@ export default class OctreeExample extends AnimationLoopTemplate {
     }
     this.orbit?.setAutoRotate(this.rotating);
     this.orbit?.update(time);
-    const viewportLeft = width > 760 ? 360 : 0;
+    const canvasWidth = canvas instanceof HTMLCanvasElement ? canvas.clientWidth : width;
+    const viewportLeft = canvasWidth > 760 ? Math.round((360 * width) / canvasWidth) : 0;
     const viewportWidth = width - viewportLeft;
     this.view.write(
       new Float32Array([
