@@ -25,3 +25,8 @@ export {
   getSphereCushionRestitution,
   type SphereClothReference
 } from './sphere-calibration';
+export {
+  fitSphereCalibration,
+  type SphereCalibrationDataset,
+  type SphereCalibrationResult
+} from './sphere-calibration';

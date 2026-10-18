@@ -23,6 +23,14 @@ import {
   FINALIZE_SPHERES,
   CONTROL_SPHERE
 } from './sphere-world-shaders';
+import {
+  PERSISTENT_CONTACT_HEADER,
+  makePersistentContactShader,
+  makeAccumulatedSphereSolver,
+  RESTORE_SPHERE_CONTACTS,
+  WARM_SPHERE_CONTACTS,
+  STORE_SPHERE_CONTACTS
+} from './sphere-persistent-contacts';
 import {getSweepShader, getEventShader} from './sphere-world-events';
 import {decodeSphereEvents, type GPUSphereEventBatch, type GPUSphereTrigger} from './sphere-events';
 
@@ -87,6 +95,8 @@ export type GPUSphereWorldProps = GPUSphereWorldParameters & {
   /** Bounded global time-of-impact steps; small scenes only (at most 256 bodies). */
   continuous?: boolean;
   maximumImpactSteps?: number;
+  /** Accumulated sphere/surface impulses and persistent pair cache; at most 256 bodies. */
+  warmStarting?: boolean;
   /** Persistent event ring capacity; zero disables events. */
   eventCapacity?: number;
   /** Spherical center-crossing triggers; capture disables the body on the GPU. */
@@ -197,6 +207,8 @@ export class GPUSphereWorld {
   };
   readonly continuous: boolean;
   readonly maximumImpactSteps: number;
+  readonly warmStarting: boolean;
+  private contactCache?: Buffer;
   readonly eventCapacity: number;
   readonly triggers: readonly GPUSphereTrigger[];
   events?: Buffer;
@@ -233,11 +245,12 @@ export class GPUSphereWorld {
       throw new Error('Invalid sphere candidate budget');
     this.broadPhase = props.broadPhase ?? 'grid';
     this.continuous = props.continuous ?? false;
+    this.warmStarting = props.warmStarting ?? false;
     this.maximumImpactSteps = props.maximumImpactSteps ?? 4;
     this.eventCapacity = props.eventCapacity ?? 0;
     this.triggers = props.triggers ?? [];
     if (
-      ((this.continuous || this.eventCapacity > 0) && this.count > 256) ||
+      ((this.continuous || this.warmStarting || this.eventCapacity > 0) && this.count > 256) ||
       !Number.isInteger(this.maximumImpactSteps) ||
       this.maximumImpactSteps < 1 ||
       this.maximumImpactSteps > 16 ||
@@ -455,7 +468,9 @@ export class GPUSphereWorld {
     if (
       Math.max(
         this.count * 16,
-        this.count * this.maximumContacts * 8,
+        this.count *
+          (this.warmStarting ? (this.maximumContacts + 32) * 48 : this.maximumContacts * 8),
+        this.warmStarting ? this.count * (this.count + 32) * 48 : 0,
         32,
         this.eventCapacity ? 16 + this.eventCapacity * 32 : 0,
         this.eventCapacity ? this.count * (this.count + 32) * 4 : 0
@@ -543,8 +558,17 @@ export class GPUSphereWorld {
       graph,
       `${this.id}-contacts`,
       'uint32x2',
-      this.count * this.maximumContacts
+      this.count * (this.warmStarting ? (this.maximumContacts + 32) * 6 : this.maximumContacts)
     );
+    let contactCache: GraphDataView | undefined;
+    if (this.warmStarting) {
+      this.contactCache = allocate('contact-cache', this.count * (this.count + 32) * 48);
+      contactCache = importView(
+        'contact-cache',
+        this.contactCache,
+        this.count * (this.count + 32) * 3
+      );
+    }
     const clockBuffer = graph.device.createBuffer({
       id: `${this.id}-clock`,
       byteLength: 16,
@@ -794,23 +818,57 @@ export class GPUSphereWorld {
         );
         addPass(
           `${impactPrefix}-emit`,
-          getSphereContactShader('emit', this.broadPhase === 'all-pairs'),
+          this.warmStarting
+            ? makePersistentContactShader(
+                getSphereContactShader('emit', this.broadPhase === 'all-pairs')
+              )
+            : getSphereContactShader('emit', this.broadPhase === 'all-pairs'),
           [...commonContacts, bind('offsets', offsets, 6), bind('contacts', contacts, 7, 'write')]
         );
+        if (contactCache) {
+          // Later impact intervals initialize constraints without reusing prior-frame impulses.
+          addPass(
+            `${impactPrefix}-restore`,
+            PERSISTENT_CONTACT_HEADER +
+              `const ALLOW_WARM = ${impactStep === 0};` +
+              RESTORE_SPHERE_CONTACTS,
+            [
+              bind('positions', scratch.positions, 1),
+              bind('offsets', offsets, 2),
+              bind('contacts', contacts, 3, 'write'),
+              bind('cache', contactCache, 4),
+              bind('velocities', scratch.velocities, 5),
+              bind('angularVelocities', scratch.angularVelocities, 6)
+            ]
+          );
+          addPass(`${impactPrefix}-warm`, PERSISTENT_CONTACT_HEADER + WARM_SPHERE_CONTACTS, [
+            bind('positions', scratch.positions, 1),
+            bind('velocities', scratch.velocities, 2, 'write'),
+            bind('angularVelocities', scratch.angularVelocities, 3, 'write'),
+            bind('offsets', offsets, 4),
+            bind('contacts', contacts, 5)
+          ]);
+        }
         const iterations = this.iterations;
         for (let iteration = 0; iteration < iterations; iteration++) {
           const input = iteration % 2 === 0 ? scratch : state;
           const output = iteration % 2 === 0 ? state : scratch;
-          addPass(`${impactPrefix}-solve-${iteration}`, SOLVE_SPHERE_CONTACTS, [
-            bind('positions', input.positions, 1),
-            bind('velocities', input.velocities, 2),
-            bind('angularVelocities', input.angularVelocities, 3),
-            bind('offsets', offsets, 4),
-            bind('contacts', contacts, 5),
-            bind('outputPositions', output.positions, 6, 'write'),
-            bind('outputVelocities', output.velocities, 7, 'write'),
-            bind('outputAngularVelocities', output.angularVelocities, 8, 'write')
-          ]);
+          addPass(
+            `${impactPrefix}-solve-${iteration}`,
+            this.warmStarting
+              ? makeAccumulatedSphereSolver(SOLVE_SPHERE_CONTACTS)
+              : SOLVE_SPHERE_CONTACTS,
+            [
+              bind('positions', input.positions, 1),
+              bind('velocities', input.velocities, 2),
+              bind('angularVelocities', input.angularVelocities, 3),
+              bind('offsets', offsets, 4),
+              bind('contacts', contacts, 5, this.warmStarting ? 'write' : 'read'),
+              bind('outputPositions', output.positions, 6, 'write'),
+              bind('outputVelocities', output.velocities, 7, 'write'),
+              bind('outputAngularVelocities', output.angularVelocities, 8, 'write')
+            ]
+          );
         }
         if (iterations % 2 === 0)
           addPass(
@@ -837,10 +895,18 @@ export class GPUSphereWorld {
             Math.ceil(this.count / 64),
             false
           );
+        if (contactCache)
+          addPass(`${impactPrefix}-store`, PERSISTENT_CONTACT_HEADER + STORE_SPHERE_CONTACTS, [
+            bind('offsets', offsets, 1),
+            bind('contacts', contacts, 2),
+            bind('cache', contactCache, 3, 'write')
+          ]);
         if (eventView)
           addPass(
             `${impactPrefix}-events`,
-            getEventShader(this.eventCapacity, this.triggers),
+            this.warmStarting
+              ? makePersistentContactShader(getEventShader(this.eventCapacity, this.triggers))
+              : getEventShader(this.eventCapacity, this.triggers),
             [
               bind('positions', state.positions, 1, 'write'),
               ...(this.triggers.some(trigger => trigger.capture)
@@ -881,7 +947,7 @@ export class GPUSphereWorld {
 @group(0) @binding(1) var<storage, read_write> diagnostics: array<atomic<u32>>;
 ${eventView ? '@group(0) @binding(2) var<storage, read_write> events: array<atomic<u32>>;' : ''}
 @compute @workgroup_size(1) fn main() {if(clock.remaining > 0.0) {
- atomicOr(&diagnostics[7], 1u); ${eventView ? 'atomicAdd(&events[1], 1u);' : ''}
+ atomicOr(&diagnostics[7], 1u); ${eventView ? 'atomicAdd(&events[1], 1u); atomicStore(&events[2], bitcast<u32>(bitcast<f32>(atomicLoad(&events[2])) + clock.remaining));' : ''}
 }}
 `,
           [
@@ -1005,6 +1071,7 @@ ${eventView ? '@group(0) @binding(2) var<storage, read_write> events: array<atom
       ![...value, ...point].every(Number.isFinite)
     )
       throw new Error('Invalid sphere body command');
+    this.clearContactCache();
     this.commandSettings.write(
       new Float32Array([
         index,
@@ -1057,7 +1124,13 @@ ${eventView ? '@group(0) @binding(2) var<storage, read_write> events: array<atom
     this.ownedBuffers = [];
   }
 
+  /** Call after direct writes to caller-owned state. Commands and material updates invalidate automatically. */
+  clearContactCache(): void {
+    if (this.contactCache) this.contactCache.write(new Uint8Array(this.contactCache.byteLength));
+  }
+
   private writeSettings(): void {
+    this.clearContactCache();
     if (!this.settings) return;
     const parameters = this.parameters;
     const source = parameters.plane.normal ?? [0, 0, 1];

@@ -1187,3 +1187,246 @@ it('GPU triggers preserve small radii and short-segment crossings', async () => 
     fixture.destroy();
   }
 });
+
+it('continuous symmetric simultaneous impacts conserve momentum and bound energy', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  for (const timeStep of [1 / 30, 1 / 120]) {
+    const fixture = await makeWorld(
+      device,
+      [-1.2, 0, 0, 0.5, 0, 0, 0, 0.5, 1.2, 0, 0, 0.5],
+      [6, 0, 0, 1, 0, 0, 0, 1, -6, 0, 0, 1],
+      {
+        timeStep,
+        restitution: 1,
+        staticFriction: 0,
+        dynamicFriction: 0,
+        continuous: true,
+        maximumImpactSteps: 16,
+        iterations: 32,
+        eventCapacity: 64
+      }
+    );
+    try {
+      fixture.step(Math.round(0.2 / timeStep));
+      const state = await fixture.read();
+      expect(
+        Math.abs(state.velocities[0] + state.velocities[4] + state.velocities[8])
+      ).toBeLessThan(0.001);
+      const energy = [0, 4, 8].reduce((sum, offset) => sum + state.velocities[offset] ** 2 / 2, 0);
+      expect(energy).toBeLessThanOrEqual(36.01);
+      expect(state.positions[0]).toBeLessThan(-1);
+      expect(state.positions[8]).toBeGreaterThan(1);
+      expect(state.diagnostics.exhaustedImpactSteps).toBe(0);
+    } finally {
+      fixture.destroy();
+    }
+  }
+});
+
+it('continuous repeated thin cushion rebounds converge and report discarded seconds', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const run = async (timeStep: number, steps: number, maximumImpactSteps: number) => {
+    const fixture = await makeWorld(device, [0, 0, 0, 0.1], [30, 0, 0, 1], {
+      timeStep,
+      maximumRadius: 0.1,
+      continuous: true,
+      maximumImpactSteps,
+      eventCapacity: 64,
+      planes: [
+        {
+          normal: [1, 0, 0],
+          offset: -1,
+          halfExtents: [1, 1],
+          restitution: 1,
+          staticFriction: 0,
+          dynamicFriction: 0
+        },
+        {
+          normal: [-1, 0, 0],
+          offset: -1,
+          halfExtents: [1, 1],
+          restitution: 1,
+          staticFriction: 0,
+          dynamicFriction: 0
+        }
+      ]
+    });
+    try {
+      fixture.step(steps);
+      return {state: await fixture.read(), events: await fixture.world.readEvents()};
+    } finally {
+      fixture.destroy();
+    }
+  };
+  const coarse = await run(0.2, 1, 16);
+  const fine = await run(0.025, 8, 16);
+  expect(Math.abs(coarse.state.positions[0])).toBeLessThanOrEqual(0.901);
+  expect(coarse.state.positions[0]).toBeCloseTo(fine.state.positions[0], 2);
+  expect(Math.abs(coarse.state.velocities[0])).toBeCloseTo(30, 3);
+  expect(coarse.events.discardedSimulationTime).toBe(0);
+  const exhausted = await run(0.2, 1, 1);
+  expect(exhausted.events.discardedSimulationTime).toBeGreaterThan(0.16);
+  expect(exhausted.events.discardedSimulationTime).toBeLessThan(0.18);
+});
+
+it('persistent sphere constraints improve a low-iteration supported chain without adding energy', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const run = async (warmStarting: boolean) => {
+    const fixture = await makeWorld(
+      device,
+      [0, 0, 0, 0.5, 1, 0, 0, 0.5, 2, 0, 0, 0.5, 3, 0, 0, 0.5],
+      [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1],
+      {
+        warmStarting,
+        gravity: [-9.81, 0, 0],
+        iterations: 2,
+        restitution: 0,
+        staticFriction: 0,
+        dynamicFriction: 0
+      }
+    );
+    try {
+      fixture.step(240);
+      const state = await fixture.read();
+      // Teleport invalidates stale support impulses before the next graph execution.
+      fixture.world.teleportBody(3, [10, 0, 0]);
+      fixture.step();
+      const moved = await fixture.read();
+      expect(Math.abs(moved.velocities[12])).toBeLessThan(0.2);
+      return state;
+    } finally {
+      fixture.destroy();
+    }
+  };
+  const cold = await run(false);
+  const warm = await run(true);
+  expect(Math.abs(warm.velocities[12])).toBeLessThan(Math.abs(cold.velocities[12]));
+  expect(Math.abs(warm.velocities[12])).toBeLessThan(0.1);
+  expect(warm.positions[12]).toBeGreaterThan(cold.positions[12]);
+  expect(warm.diagnostics.invalidBodies).toBe(0);
+});
+
+it('warm surface contacts reproduce SI follow/draw and sidespin decay references', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const radius = 0.028575;
+  for (const warmStarting of [false, true])
+    for (const spinRatio of [-1, 0, 1]) {
+      const initialSpeed = 1.4;
+      const angular = device.createBuffer({
+        data: new Float32Array([0, (spinRatio * initialSpeed) / radius, 20, 0]),
+        usage: Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST
+      });
+      const fixture = await makeWorld(device, [0, 0, radius, radius], [initialSpeed, 0, 0, 1], {
+        warmStarting,
+        angularVelocities: angular,
+        maximumRadius: radius,
+        timeStep: 1 / 240,
+        gravity: [0, 0, -9.81],
+        iterations: 4,
+        plane: {
+          offset: 0,
+          restitution: 0,
+          staticFriction: 0.2,
+          dynamicFriction: 0.2,
+          rollingResistance: 0,
+          spinningResistance: 0.02
+        }
+      });
+      try {
+        fixture.step(240);
+        const state = await fixture.read();
+        // Uniform solid sphere: rolling speed = v - (v - radius * angularSpeed) / 3.5.
+        expect(state.velocities[0]).toBeCloseTo(
+          initialSpeed - (initialSpeed * (1 - spinRatio)) / 3.5,
+          2
+        );
+        expect(Math.abs(state.velocities[0] - radius * state.angular[1])).toBeLessThan(0.001);
+        expect(state.angular[2]).toBeCloseTo(20 - (0.02 * 9.81) / radius, 2);
+        expect(state.positions[2]).toBeCloseTo(radius, 5);
+      } finally {
+        fixture.destroy();
+        angular.destroy();
+      }
+    }
+});
+
+it('warm continuous cushion contacts preserve pace restitution and reverse sidespin response', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const responses: number[] = [];
+  for (const sidespin of [-10, 10]) {
+    const angular = device.createBuffer({
+      data: new Float32Array([0, 0, sidespin, 0]),
+      usage: Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST
+    });
+    const fixture = await makeWorld(device, [0.2, 0, 0, 0.03], [-2, 0, 0, 1], {
+      warmStarting: true,
+      continuous: true,
+      maximumImpactSteps: 4,
+      eventCapacity: 64,
+      angularVelocities: angular,
+      maximumRadius: 0.03,
+      timeStep: 0.1,
+      plane: {
+        normal: [1, 0, 0],
+        offset: 0,
+        restitution: 0.98,
+        restitutionVelocityScale: 0.035,
+        staticFriction: 0.14,
+        dynamicFriction: 0.14
+      }
+    });
+    try {
+      fixture.step();
+      const state = await fixture.read();
+      expect(state.velocities[0]).toBeCloseTo((2 * 0.98) / 1.07, 3);
+      responses.push(state.velocities[1]);
+      const kinetic =
+        (state.velocities[0] ** 2 + state.velocities[1] ** 2) / 2 +
+        0.2 * 0.03 ** 2 * state.angular[2] ** 2;
+      expect(kinetic).toBeLessThanOrEqual(2 + 0.2 * 0.03 ** 2 * sidespin ** 2 + 0.001);
+      expect(
+        (await fixture.world.readEvents()).events.some(event => event.kind === 'plane-impact')
+      ).toBe(true);
+    } finally {
+      fixture.destroy();
+      angular.destroy();
+    }
+  }
+  expect(responses[0] * responses[1]).toBeLessThan(0);
+  expect(responses[0]).toBeCloseTo(-responses[1], 5);
+});
+
+it('warm support sleeps without injecting a cached impulse after a gravity change', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const fixture = await makeWorld(device, [0, 0, 0.5, 0.5], [0, 0, 0, 1], {
+    warmStarting: true,
+    gravity: [0, 0, -9.81],
+    plane: {offset: 0, restitution: 0},
+    sleepAfter: 0.1,
+    sleepLinearSpeed: 0.05,
+    sleepAngularSpeed: 0.05,
+    iterations: 2
+  });
+  try {
+    fixture.step(120);
+    const resting = await fixture.read();
+    expect(resting.diagnostics.sleepingBodies).toBe(1);
+    expect(resting.velocities[2]).toBe(0);
+    fixture.world.update({gravity: [0, 0, 0]});
+    fixture.step();
+    const changed = await fixture.read();
+    expect(changed.velocities[2]).toBe(0);
+    fixture.world.setBodyEnabled(0, false);
+    fixture.step();
+    const disabled = await fixture.read();
+    expect(disabled.velocities[2]).toBe(0);
+  } finally {
+    fixture.destroy();
+  }
+});

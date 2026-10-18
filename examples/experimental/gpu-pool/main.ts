@@ -63,6 +63,7 @@ try {
   const world = new GPUSphereWorld({
     count: 16,
     continuous: true,
+    warmStarting: true,
     maximumImpactSteps: 4,
     broadPhase: 'all-pairs',
     eventCapacity: 4096,
@@ -115,6 +116,8 @@ try {
   let finishingShot = false;
   let impactBudgetReached = false;
   let impactBudgetSequence = 0;
+  let discardedTimeBaseline = 0;
+  let discardedShotTime = 0;
   let rackAt = 0;
   const inputEvents = new AbortController();
   function setPower(value: number) {
@@ -279,6 +282,7 @@ try {
   function startShot() {
     if (phase !== 'aiming' || chargeStart !== null) return;
     impactBudgetReached = false;
+    discardedShotTime = 0;
     audio.unlock();
     cueTrailPoints.length = 0;
     cueTrailPoints.push([states[0].position[0], states[0].position[1]]);
@@ -389,7 +393,9 @@ try {
     updateControls();
     try {
       if (snapshot) await snapshot;
-      impactBudgetSequence = (await world.readEvents()).exhaustedImpactSteps;
+      const previousEvents = await world.readEvents();
+      impactBudgetSequence = previousEvents.exhaustedImpactSteps;
+      discardedTimeBaseline = previousEvents.discardedSimulationTime;
       const rack = makeRack();
       const mode = practice.value;
       objectBallCount = mode === 'rack' ? 15 : mode === 'cushion' ? 0 : 1;
@@ -466,6 +472,8 @@ try {
       Boolean(diagnostics.exhaustedImpactSteps) ||
       events.exhaustedImpactSteps !== impactBudgetSequence;
     impactBudgetSequence = events.exhaustedImpactSteps;
+    discardedShotTime += Math.max(0, events.discardedSimulationTime - discardedTimeBaseline);
+    discardedTimeBaseline = events.discardedSimulationTime;
     const cue = states[0];
     if (!scratch) {
       for (const event of events.events) {
@@ -485,7 +493,7 @@ try {
       : '';
     if (impactBudgetReached)
       element('cue-motion').textContent +=
-        ' · Impact budget reached; remaining time was discarded. Try lower power.';
+        ` · Impact budget reached; ${(discardedShotTime * 1000).toFixed(2)} ms discarded. Try lower power.`;
     audio.playEvents(events.events, now);
     const captured = new Set(
       events.events.filter(event => event.kind === 'trigger').map(event => event.body)
