@@ -4,7 +4,7 @@
 
 import type {DeviceProps} from '../../../index';
 import {log} from '../../../index';
-import type {Spector} from './spector-types';
+import type {Spector} from '../../../webgl-debug/spector-types';
 
 type DebugContextProps = {
   debugWebGL?: boolean;
@@ -71,6 +71,6 @@ export function initializeRegisteredSpectorJS(props: SpectorProps): Spector | nu
 function warnDebugImportRequired(): void {
   if (!debugImportWarningShown) {
     debugImportWarningShown = true;
-    log.warn('Import @luma.gl/core/webgl/debug before enabling WebGL debugging.')();
+    log.warn('Import @luma.gl/core/webgl-debug before enabling WebGL debugging.')();
   }
 }

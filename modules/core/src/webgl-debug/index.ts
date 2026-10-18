@@ -5,5 +5,5 @@
 export {
   loadWebGLDeveloperTools,
   makeDebugContext
-} from './context/debug/webgl-developer-tools';
-export {loadSpectorJS, initializeSpectorJS} from './context/debug/spector';
+} from './webgl-developer-tools';
+export {loadSpectorJS, initializeSpectorJS} from './spector';

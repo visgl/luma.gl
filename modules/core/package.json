@@ -51,10 +51,10 @@
       "import": "./dist/wgsl-binding-scan.js",
       "require": "./dist/wgsl-binding-scan.cjs"
     },
-    "./webgl/debug": {
-      "types": "./dist/webgl/debug.d.ts",
-      "import": "./dist/webgl/debug.js",
-      "require": "./dist/webgl/debug.cjs"
+    "./webgl-debug": {
+      "types": "./dist/webgl-debug/index.d.ts",
+      "import": "./dist/webgl-debug/index.js",
+      "require": "./dist/webgl-debug/index.cjs"
     }
   },
   "files": [
@@ -64,15 +64,15 @@
     "README.md"
   ],
   "sideEffects": [
-    "./src/webgl/debug.ts",
-    "./src/webgl/context/debug/webgl-developer-tools.ts",
-    "./src/webgl/context/debug/spector.ts",
-    "./dist/webgl/debug.js",
-    "./dist/webgl/context/debug/webgl-developer-tools.js",
-    "./dist/webgl/context/debug/spector.js",
-    "./dist/webgl/debug.cjs",
-    "./dist/webgl/context/debug/webgl-developer-tools.cjs",
-    "./dist/webgl/context/debug/spector.cjs"
+    "./src/webgl-debug/index.ts",
+    "./src/webgl-debug/webgl-developer-tools.ts",
+    "./src/webgl-debug/spector.ts",
+    "./dist/webgl-debug/index.js",
+    "./dist/webgl-debug/webgl-developer-tools.js",
+    "./dist/webgl-debug/spector.js",
+    "./dist/webgl-debug/index.cjs",
+    "./dist/webgl-debug/webgl-developer-tools.cjs",
+    "./dist/webgl-debug/spector.cjs"
   ],
   "scripts": {
     "build-minified-bundle": "ocular-bundle ./bundle.ts --output=dist/dist.min.js",
