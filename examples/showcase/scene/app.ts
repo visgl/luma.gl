@@ -10,7 +10,7 @@ import {
   type ANARISurface,
   type ANARIVector3,
   type ANARIWorld
-} from '@luma.gl/scene';
+} from '@luma.gl/anari';
 import {AnimationLoopTemplate, OrbitControls, type AnimationProps} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
 import {createANARIJSONScene, type ANARIJSONScene} from './playground-scene';

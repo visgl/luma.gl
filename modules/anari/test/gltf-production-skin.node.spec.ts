@@ -5,8 +5,8 @@
 import {readFile} from 'node:fs/promises';
 import {parse} from '@loaders.gl/core';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
-import {ANARIDevice, ANARIGroup, type ANARIInstance, type ANARISurface} from '@luma.gl/scene';
-import {ANARISceneSchema} from '@luma.gl/scene/schemas';
+import {ANARIDevice, ANARIGroup, type ANARIInstance, type ANARISurface} from '@luma.gl/anari';
+import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 import {NullDevice} from '@luma.gl/test-utils';
 import {expect, it} from 'vitest';
 import {makeANARIJSONSceneFromGLTF} from '../../../examples/showcase/scene/gltf-to-anari';

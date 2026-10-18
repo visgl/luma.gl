@@ -340,7 +340,7 @@
       },
       {
         "type": "category",
-        "label": "@luma.gl/scene (Experimental)",
+        "label": "@luma.gl/anari (Experimental)",
         "items": [
           "api-reference/scene/README",
           {

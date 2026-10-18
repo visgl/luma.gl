@@ -1,9 +1,9 @@
 import {readFile} from 'node:fs/promises';
 import {parse} from '@loaders.gl/core';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
-import {ANARIDevice} from '@luma.gl/scene';
-import {makeANARIAnimationScene} from '@luma.gl/scene/gltf';
-import {ANARISceneSchema} from '@luma.gl/scene/schemas';
+import {ANARIDevice} from '@luma.gl/anari';
+import {makeANARIAnimationScene} from '@luma.gl/anari/gltf';
+import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 import {getTextureTransformSlotDefinitions, parseGLTFLights} from '@luma.gl/gltf';
 import {NullDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';

@@ -1,6 +1,6 @@
 import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 
-# @luma.gl/scene
+# @luma.gl/anari
 
 <p>
   <a href="https://www.khronos.org/anari/">
@@ -35,7 +35,7 @@ import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs
   <DocumentationBadge tone="version">From v10</DocumentationBadge>
 </DocumentationBadges>
 
-`@luma.gl/scene` provides a private, experimental, independently developed retained rendering API
+`@luma.gl/anari` provides a private, experimental, independently developed retained rendering API
 built in the spirit of ANARI on top of luma.gl. Applications describe **what** to render as cameras,
 worlds, surfaces, materials, lights, and frames. The implementation decides **how** to compile that
 description into portable WebGPU or WebGL rendering.
@@ -64,7 +64,7 @@ API and supported feature set can change.
 
 ## Private workspace availability
 
-`@luma.gl/scene` is a private, unpublished luma.gl workspace. Install dependencies from a luma.gl
+`@luma.gl/anari` is a private, unpublished luma.gl workspace. Install dependencies from a luma.gl
 checkout:
 
 ```bash
@@ -72,7 +72,7 @@ yarn install
 ```
 
 Another workspace inside the same checkout can depend on it through
-`"@luma.gl/scene": "workspace:*"`. It cannot currently be installed from npm. Import `webgl2Adapter` from `@luma.gl/core/webgl` if a WebGL 2 fallback is required.
+`"@luma.gl/anari": "workspace:*"`. It cannot currently be installed from npm. Import `webgl2Adapter` from `@luma.gl/core/webgl` if a WebGL 2 fallback is required.
 
 ## Object model
 
@@ -109,7 +109,7 @@ import {
   ANARICamera,
   ANARIRenderer,
   ANARIFrame
-} from '@luma.gl/scene';
+} from '@luma.gl/anari';
 ```
 
 The package also exports parameter interfaces, subtype unions, object metadata, frame statistics, and shared vector/matrix aliases. Each reference page documents its related exported types.
@@ -117,9 +117,9 @@ The package also exports parameter interfaces, subtype unions, object metadata, 
 Optional functionality is isolated in separate entry points:
 
 ```ts
-import {ANARIDevice} from '@luma.gl/scene';
-import {makeANARIAnimationScene} from '@luma.gl/scene/gltf';
-import {ANARISceneSchema} from '@luma.gl/scene/schemas';
+import {ANARIDevice} from '@luma.gl/anari';
+import {makeANARIAnimationScene} from '@luma.gl/anari/gltf';
+import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 ```
 
 The core entry point contains neither a glTF file loader nor Zod. The optional `/gltf` adapter
@@ -186,12 +186,12 @@ renderer subtype is selected as frame state outside the renderer-independent sce
 Chromatic Atlas, Crystal Cathedral, and Celestial Engine showcase scenes are available as editable
 JSON presets.
 
-The optional `@luma.gl/scene/gltf` entry point binds source node hierarchies, material and texture
+The optional `@luma.gl/anari/gltf` entry point binds source node hierarchies, material and texture
 tracks, animated morph targets, and imported glTF skeletons to existing retained objects. The
 showcase preserves joint attributes, authored joint nodes, and inverse bind matrices; it creates
 reusable mesh-local palettes automatically and commits each animated retained surface at most once
 per frame. Applications can also provide explicit `skin: {jointMatrices}` surface descriptors.
-The separate `@luma.gl/scene/schemas` entry point exports experimental Zod schemas and generated
+The separate `@luma.gl/anari/schemas` entry point exports experimental Zod schemas and generated
 JSON Schema for editor integration. The scene format is not an official ANARI serialization format.
 See the [schema API reference](/docs/api-reference/scene/anari-schemas) and the
 [JSON scene playground developer guide](/docs/api-guide/engine/anari-json-scenes#explore-the-json-scene-playground)

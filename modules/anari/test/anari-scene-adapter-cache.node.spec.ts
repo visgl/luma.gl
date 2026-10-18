@@ -15,7 +15,7 @@ import {
   type ANARIRenderer,
   type ANARISurface,
   type ANARIWorld
-} from '@luma.gl/scene';
+} from '@luma.gl/anari';
 import {NullDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {describe, expect, test} from 'vitest';

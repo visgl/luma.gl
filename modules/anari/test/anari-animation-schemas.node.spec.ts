@@ -3,7 +3,7 @@ import {
   ANARIGeometrySchema,
   ANARISceneSchema,
   ANARITextureSchema
-} from '@luma.gl/scene/schemas';
+} from '@luma.gl/anari/schemas';
 import {expect, it} from 'vitest';
 import {PLAYGROUND_PRESETS} from '../../../examples/showcase/scene/playground-presets';
 import type {ANARIJSONScene} from '../../../examples/showcase/scene/playground-scene';

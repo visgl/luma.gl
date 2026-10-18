@@ -1,4 +1,4 @@
-import {ANARI_SCENE_JSON_SCHEMA} from '@luma.gl/scene/schemas';
+import {ANARI_SCENE_JSON_SCHEMA} from '@luma.gl/anari/schemas';
 import {findNodeAtLocation, parseTree} from 'jsonc-parser';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import 'monaco-editor/esm/vs/language/json/monaco.contribution';

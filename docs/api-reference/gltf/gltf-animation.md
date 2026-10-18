@@ -204,7 +204,7 @@ format-independent palette through its surface skin descriptor.
 
 The optional ANARI glTF integration also maps retained source skin bindings to the same generic
 joint-palette helper and updates its palettes after each animation frame. It remains an optional
-`@luma.gl/scene/gltf` adapter: the ANARI core does not own a loader, animation mixer, or skinning
+`@luma.gl/anari/gltf` adapter: the ANARI core does not own a loader, animation mixer, or skinning
 shader.
 
 ## Morph targets

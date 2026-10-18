@@ -7,7 +7,7 @@ import {
   StructuredVolumeRenderer,
   type StructuredVolumeRendererPrepareOptions,
   type StructuredVolumeSources
-} from '@luma.gl/scene/raymarch';
+} from '@luma.gl/anari/raymarch';
 import {Matrix4, radians} from '@math.gl/core';
 import type {VectorFieldBuffers} from './vector-field-engine';
 

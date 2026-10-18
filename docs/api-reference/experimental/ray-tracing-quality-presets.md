@@ -92,7 +92,7 @@ capture harness `--view` option expose these modes.
 ## Implementation capabilities
 
 `getRayTracingSceneCapabilities(device)` is exported by `@luma.gl/experimental`
-and `@luma.gl/scene/raytrace`. It reports WebGPU compute support without constructing
+and `@luma.gl/anari/raytrace`. It reports WebGPU compute support without constructing
 a renderer or allocating GPU resources. The report describes implementation support,
 not per-scene capacity, resource-limit validation, or an active renderer's settings.
 Check `supported` before interpreting the implementation features for a device.

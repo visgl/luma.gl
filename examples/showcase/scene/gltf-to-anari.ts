@@ -7,8 +7,8 @@ import type {
   GLTFPostprocessed,
   GLTFTexturePostprocessed
 } from '@loaders.gl/gltf';
-import type {ANARIAnimationNodeDescription, ANARIVector3} from '@luma.gl/scene';
-import {makeANARIAnimationClipsFromGLTF} from '@luma.gl/scene/gltf';
+import type {ANARIAnimationNodeDescription, ANARIVector3} from '@luma.gl/anari';
+import {makeANARIAnimationClipsFromGLTF} from '@luma.gl/anari/gltf';
 import {
   convertGLTFSampler,
   getTextureTransformMatrix,

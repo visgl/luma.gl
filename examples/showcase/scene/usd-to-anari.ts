@@ -1,5 +1,5 @@
 import {Matrix4} from '@math.gl/core';
-import type {ANARIVector3} from '@luma.gl/scene';
+import type {ANARIVector3} from '@luma.gl/anari';
 import type {
   ANARIJSONScene,
   JSONGeometryDeclaration,

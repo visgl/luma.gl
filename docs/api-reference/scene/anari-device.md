@@ -13,7 +13,7 @@ import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs
 ```ts
 import {luma} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
-import {ANARIDevice} from '@luma.gl/scene';
+import {ANARIDevice} from '@luma.gl/anari';
 
 const graphicsDevice = await luma.createDevice({
   adapters: [webgpuAdapter],
