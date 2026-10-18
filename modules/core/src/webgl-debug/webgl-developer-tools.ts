@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {log} from '../../../index';
+import {log} from '../index';
 // Rename constant to prevent inlining. We need the full set of constants for generating debug strings.
-import {GL as GLEnum} from '../../../webgl-constants/webgl-constants';
+import {GL as GLEnum} from '../webgl-constants/webgl-constants';
 import {isBrowser} from '@probe.gl/env';
-import {loadScript} from '../../utils/load-script';
-import {registerWebGLDeveloperTools} from './debug-hooks';
+import {loadScript} from './load-script';
+import {registerWebGLDeveloperTools} from '../webgl/context/helpers/debug-hooks';
 
 const WEBGL_DEBUG_CDN_URL = 'https://unpkg.com/webgl-debug@2.0.1/index.js';
 

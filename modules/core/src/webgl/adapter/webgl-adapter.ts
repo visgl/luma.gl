@@ -8,7 +8,7 @@ import {enforceWebGL2} from '../context/polyfills/polyfill-webgl1-extensions';
 import {
   loadRegisteredSpectorJS,
   loadRegisteredWebGLDeveloperTools
-} from '../context/debug/debug-hooks';
+} from '../context/helpers/debug-hooks';
 
 const LOG_LEVEL = 1;
 
