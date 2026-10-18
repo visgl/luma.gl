@@ -10,8 +10,14 @@ import {getTestDevice} from '@luma.gl/test-utils';
 for (const backend of ['webgpu', 'webgl'] as const) {
   it(`bokeh DOF preserves HDR radiance and zero-aperture detail on ${backend}`, async context => {
     const device = await getTestDevice(backend);
-    if (!device || !device.isTextureFormatRenderable('rgba32float')) return context.skip();
-    const size = 16;
+    if (
+      !device ||
+      !device.isTextureFormatRenderable('rgba32float') ||
+      !device.getTextureFormatCapabilities('rgba32float').filter
+    )
+      return context.skip();
+    const size = 32;
+    const center = size / 2;
     const canvasContext = device.getCanvasContext();
     const previousSize = canvasContext.getDrawingBufferSize();
     canvasContext.setDrawingBufferSize(size, size);
@@ -57,7 +63,7 @@ for (const backend of ['webgpu', 'webgl'] as const) {
       for (let index = 0; index < pixels.length; index++)
         expect(blurred[index]).toBeCloseTo(pixels[index], 4);
       pixels.fill(0);
-      pixels.set([8, 4, 2, 1], (8 * size + 8) * 4);
+      pixels.set([8, 4, 2, 1], (center * size + center) * 4);
       source.writeData(pixels);
       const sharp = await render(0);
       expect(Math.max(...sharp)).toBeCloseTo(8, 4);
@@ -65,6 +71,25 @@ for (const backend of ['webgpu', 'webgl'] as const) {
       const defocused = await render(30);
       expect(Math.max(...defocused)).toBeLessThan(8);
       expect(defocused.filter(value => value > 0).length).toBeGreaterThan(4);
+      // A circular aperture spreads into all quadrants but leaves the square's corners empty.
+      // Use the sharp readback location to accommodate backend texture orientation.
+      const sharpPixel = sharp.indexOf(8) / 4;
+      const focusColumn = sharpPixel % size;
+      const focusRow = Math.floor(sharpPixel / size);
+      const quadrants = new Set<string>();
+      for (let row = 0; row < size; row++) {
+        for (let column = 0; column < size; column++) {
+          const horizontalOffset = column - focusColumn;
+          const verticalOffset = row - focusRow;
+          const red = defocused[(row * size + column) * 4];
+          // Radius ten plus the maximum rounding displacement of a texel-center sample.
+          if (Math.hypot(horizontalOffset, verticalOffset) > 10.75) expect(red).toBe(0);
+          if (red > 0 && Math.abs(horizontalOffset) >= 3 && Math.abs(verticalOffset) >= 3) {
+            quadrants.add(`${Math.sign(horizontalOffset)},${Math.sign(verticalOffset)}`);
+          }
+        }
+      }
+      expect(quadrants.size).toBe(4);
     } finally {
       canvasContext.setDrawingBufferSize(...previousSize);
       renderer.destroy();
