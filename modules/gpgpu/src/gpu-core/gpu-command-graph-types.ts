@@ -7,6 +7,7 @@ import {getGPUVectorChunks, type GPUVectorChunk} from '../gpu-data/gpu-vector-ch
 
 import type {
   Buffer,
+  GPUClockCorrelation,
   CommandEncoder,
   ComputePass,
   Device,
@@ -748,6 +749,12 @@ export type GPUCommandGraphStats = {
 
 /** CPU encoding statistics captured synchronously for one scheduled node. */
 export type GPUCommandGraphNodeEncodingStats = {
+  /** Semantic operation name from the node workload annotation, when available. */
+  operation?: string;
+  /** CPU clock endpoints in milliseconds (performance.now, or Date.now fallback).
+   * Not correlated with GPU timestamps. Optional for externally constructed reports. */
+  cpuEncodeStartTimeMilliseconds?: number;
+  cpuEncodeEndTimeMilliseconds?: number;
   /** Stable graph node identifier. */
   id: string;
   /** Node execution category. */
@@ -767,6 +774,10 @@ export type GPUCommandGraphNodeEncodingStats = {
 
 /** Synchronous statistics for one complete graph encoding. */
 export type GPUCommandGraphEncodingStats = {
+  /** CPU clock endpoints in milliseconds (performance.now, or Date.now fallback).
+   * Not correlated with GPU timestamps. Optional for externally constructed reports. */
+  cpuEncodeStartTimeMilliseconds?: number;
+  cpuEncodeEndTimeMilliseconds?: number;
   /** CPU time spent resolving imports and recording all graph nodes. */
   cpuEncodeTimeMilliseconds: number;
   /** Number of nodes encoded. */
@@ -785,12 +796,28 @@ export type GPUCommandGraphEncodingStats = {
 
 /** CPU and optional GPU duration for one encoded node. */
 export type GPUCommandGraphNodeTiming = GPUCommandGraphNodeEncodingStats & {
+  /** GPU clock endpoints in milliseconds, without CPU or wall-clock correlation.
+   * Absent without timestamp queries or on duration-only backends.
+   * Graph endpoints enclose measured passes only, including gaps between them. */
+  gpuStartTimeMilliseconds?: number;
+  gpuEndTimeMilliseconds?: number;
   /** GPU execution duration, available only after an explicit timing read. */
   gpuTimeMilliseconds?: number;
 };
 
 /** Explicit timing report for one encoded graph. */
 export type GPUCommandGraphTimingReport = {
+  /** Optional approximate GPU-to-CPU alignment from this submission. Raw endpoints are unchanged. */
+  clockCorrelation?: GPUClockCorrelation;
+  /** GPU clock endpoints in milliseconds, without CPU or wall-clock correlation.
+   * Absent without timestamp queries or on duration-only backends.
+   * Graph endpoints enclose measured passes only, including gaps between them. */
+  gpuStartTimeMilliseconds?: number;
+  gpuEndTimeMilliseconds?: number;
+  /** CPU clock endpoints in milliseconds (performance.now, or Date.now fallback).
+   * Not correlated with GPU timestamps. Optional for externally constructed reports. */
+  cpuEncodeStartTimeMilliseconds?: number;
+  cpuEncodeEndTimeMilliseconds?: number;
   /** CPU time spent encoding the graph. */
   cpuEncodeTimeMilliseconds: number;
   /** Sum of available per-node GPU durations. */

@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
 import {defineConfig} from 'vite';
 
 const alias = {
@@ -8,6 +12,7 @@ const alias = {
   '@luma.gl/shadertools': `${__dirname}/../../../modules/shadertools/src`,
   '@luma.gl/gpgpu': `${__dirname}/../../../modules/gpgpu/src`,
   '@luma.gl/test-utils': `${__dirname}/../../../modules/test-utils/src`,
+  '@luma.gl/splats': `${__dirname}/../../../modules/splats/src`,
   '@luma.gl/text': `${__dirname}/../../../modules/text/src`,
   '@luma.gl/core/webgl-constants': `${__dirname}/../../../modules/core/src/webgl-constants`,
   '@luma.gl/core/webgl': `${__dirname}/../../../modules/core/src/webgl`,

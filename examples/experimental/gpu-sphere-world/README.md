@@ -45,3 +45,8 @@ are sampled observations, not an every-step guarantee. Warmup samples contribute
 to workload validity but never to the GPU median. Each asynchronous result belongs
 to the run and phase in which it was submitted; report finalization waits for the
 last pending result. Benchmark time never accumulates as a playback backlog.
+
+The standard luma.gl InfoBox starts collapsed. Open **Controls** for scene, count,
+playback and benchmark settings, or **GPU Graph** for compiled nodes, operation
+timings and diagnostic counters. The inspector reuses existing timing readbacks
+and updates its graph when the scene or sphere count changes.

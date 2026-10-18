@@ -32,7 +32,7 @@ const device = await luma.createDevice({adapters: [webgpuAdapter, webgl2Adapter]
 Backend entry points are also available as `@luma.gl/core/webgl` and
 `@luma.gl/core/webgpu`. WebGL constants and types are available from
 `@luma.gl/core/webgl-constants`, and optional WebGL debugging helpers from
-`@luma.gl/core/webgl/debug`.
+`@luma.gl/core/webgl-debug`.
 
 Source is organized into `src/api` (portable Device API), `src/shadertypes` (shader types and layouts), `src/webgl`, `src/webgpu`,
 and `src/webgl-constants`. Backend implementations import the portable API

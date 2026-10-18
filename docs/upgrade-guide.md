@@ -18,7 +18,8 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 Remove them from application dependencies and import their APIs from `@luma.gl/core`.
 Backend entry points are available at `@luma.gl/core/webgl` and `@luma.gl/core/webgpu`.
 Import WebGL constants and types from `@luma.gl/core/webgl-constants`, and optional
-debugging helpers from `@luma.gl/core/webgl/debug`.
+debugging helpers from `@luma.gl/core/webgl-debug`. Replace the former
+`@luma.gl/core/webgl/debug` import with this dedicated entry point.
 
 ```typescript
 import {luma} from '@luma.gl/core';
@@ -107,7 +108,7 @@ See [GPUFFT2D](./api-reference/experimental/gpu-core/gpu-fft2d) for the migratio
 
 **@luma.gl/core/webgl**
 
-- WebGLDeveloperTools and Spector integration now require `import '@luma.gl/core/webgl/debug'` before enabling `debugWebGL` or `debugSpectorJS`. This keeps debug-only code and the full GL enum out of normal adapter application bundles.
+- WebGLDeveloperTools and Spector integration now require `import '@luma.gl/core/webgl-debug'` before enabling `debugWebGL` or `debugSpectorJS`. This keeps debug-only code and the full GL enum out of normal adapter application bundles.
 
 **@luma.gl/core/webgpu**
 

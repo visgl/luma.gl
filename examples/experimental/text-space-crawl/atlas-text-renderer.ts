@@ -27,7 +27,7 @@ export type AtlasTextRendererProps = {
 type AtlasTextColumns = {
   positions: arrow.FixedSizeList<arrow.Float32>;
   texts: arrow.Utf8;
-  clipRects: arrow.FixedSizeList<arrow.Int16>;
+  clipRects: arrow.FixedSizeList<arrow.Float32>;
   colors: arrow.FixedSizeList<arrow.Uint8>;
 };
 

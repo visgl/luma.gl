@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {log} from '../../../index';
-import {loadScript} from '../../utils/load-script';
-import {getWebGLContextData} from '../helpers/webgl-context-data';
+import {log} from '../index';
+import {loadScript} from './load-script';
+import {getWebGLContextData} from '../webgl/context/helpers/webgl-context-data';
 
 import type {Spector} from './spector-types';
-import {registerSpectorJS} from './debug-hooks';
+import {registerSpectorJS} from '../webgl/context/helpers/debug-hooks';
 
 /** Spector debug initialization options */
 type SpectorProps = {

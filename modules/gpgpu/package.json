@@ -93,6 +93,11 @@
       "import": "./dist/gpu-physics/index.js",
       "require": "./dist/gpu-physics/index.cjs"
     },
+    "./gpu-timeseries": {
+      "types": "./dist/gpu-timeseries/index.d.ts",
+      "import": "./dist/gpu-timeseries/index.js",
+      "require": "./dist/gpu-timeseries/index.cjs"
+    },
     "./gpu-geometry": {
       "types": "./dist/gpu-geometry/index.d.ts",
       "import": "./dist/gpu-geometry/index.js",

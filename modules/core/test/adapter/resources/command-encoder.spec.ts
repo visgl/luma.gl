@@ -1133,3 +1133,49 @@ function testBlit(t: Test, device: Device) {
   t.end();
 }
 /* eslint-disable max-statements */
+
+it('WebGPU timestamp snapshots retain submission identity across delayed reads and query reuse', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device || !device.features.has('timestamp-query')) return;
+  // SwiftShader drops its Dawn instance during mapped readback in CI, as in the copy tests above.
+  // Node snapshots cover association and failure cleanup; hardware verifies submitted timestamps.
+  if (isSoftwareBackedDevice(device)) return;
+  const querySet = device.createQuerySet({type: 'timestamp', count: 2});
+  const shader = device.createShader({source: '@compute @workgroup_size(1) fn main() {}'});
+  const pipeline = device.createComputePipeline({shader});
+  try {
+    const firstEncoder = device.createCommandEncoder({timeProfilingQuerySet: querySet});
+    const firstPass = firstEncoder.beginComputePass();
+    firstPass.setPipeline(pipeline);
+    firstPass.dispatch(1);
+    firstPass.end();
+    const firstSnapshot = firstEncoder.captureTimestampQuerySet(querySet);
+    device.submit(firstEncoder.finish());
+    const firstRead = firstSnapshot.readResults();
+    // Reuse the exact slots and then read the older snapshot again.
+    const secondEncoder = device.createCommandEncoder({timeProfilingQuerySet: querySet});
+    const secondPass = secondEncoder.beginComputePass();
+    secondPass.setPipeline(pipeline);
+    secondPass.dispatch(1);
+    secondPass.end();
+    const secondSnapshot = secondEncoder.captureTimestampQuerySet(querySet);
+    device.submit(secondEncoder.finish());
+    const [firstResults, secondResults] = await Promise.all([
+      firstRead,
+      secondSnapshot.readResults()
+    ]);
+    expect((await firstSnapshot.readResults()).map(String)).toEqual(firstResults.map(String));
+    // Submission-local timestamp origins may change; compare durations within each pair only.
+    expect(firstResults[1] >= firstResults[0]).toBe(true);
+    expect(secondResults[1] >= secondResults[0]).toBe(true);
+    expect(
+      firstSnapshot.clockCorrelation?.method,
+      `timestamps: ${firstResults.map(String).join(', ')}`
+    ).toBe('submission');
+    expect(secondSnapshot.clockCorrelation?.uncertaintyMilliseconds).toBeGreaterThanOrEqual(0);
+  } finally {
+    querySet.destroy();
+    pipeline.destroy();
+    shader.destroy();
+  }
+});

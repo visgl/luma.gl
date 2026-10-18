@@ -10,6 +10,7 @@ import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/gpgpu/gpu-
 import {GPUSphereWorld, decodeGPUSphereWorldDiagnostics} from '@luma.gl/gpgpu/gpu-physics';
 import {PerspectiveCamera, Vector3, Quaternion} from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {createSphereInfoBox} from './info-box';
 import {
   advanceSphereClock,
   createSphereBenchmark,
@@ -22,6 +23,7 @@ function getElement<ElementType extends HTMLElement = HTMLElement>(selector: str
   return document.querySelector<ElementType>(selector)!;
 }
 const status = getElement<HTMLOutputElement>('#status');
+const scaleDemo = document.body.dataset.scaleDemo === 'true';
 try {
   let gpuError: Error | null = null;
   const device = await luma.createDevice({
@@ -134,7 +136,10 @@ try {
     target.velocities.destroy();
     target.orientations.destroy();
   }
-  let resources = await createResources(64);
+  const initialCount = scaleDemo ? 10000 : 64;
+  getElement<HTMLSelectElement>('#body-count').value = String(initialCount);
+  let resources = await createResources(initialCount);
+  const infoBox = createSphereInfoBox(resources.graph, scaleDemo);
   function restoreSceneControls(): void {
     getElement<HTMLSelectElement>('#scene').value = resources.scene;
     getElement<HTMLSelectElement>('#body-count').value = String(resources.count);
@@ -147,7 +152,7 @@ try {
   const controls = new OrbitControls(orbitCamera, getElement('#spheres'));
   controls.target.set(0, 0, 2);
   controls.enablePan = false;
-  controls.enableZoom = false;
+  controls.enableZoom = scaleDemo;
   controls.rotateSpeed = 0.25;
   controls.enableDamping = true;
   controls.dampingFactor = 0.1;
@@ -300,10 +305,17 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
     }
   });
   let paused = false;
+  let alive = true;
+  let animation = 0;
+  let rebuilding: Promise<Resources> | null = null;
   let loading = false;
   let previous = performance.now();
   let accumulator = 0;
-  let speed = 1.5;
+  let speed = scaleDemo ? 1 : 1.5;
+  getElement<HTMLInputElement>('#speed').value = String(speed);
+  getElement('#speed-value').textContent = speed.toFixed(1) + '×';
+  let simulatedSeconds = 0;
+  let playbackSeconds = 0;
   let sampling = false;
   let lastSample = 0;
   let lastFrame = performance.now();
@@ -317,7 +329,13 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
     return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * fraction))] ?? 0;
   };
   function resetView(): void {
-    orbitCamera.position.set(0, -resources.halfExtent * 3.6, resources.halfExtent * 4.3 + 2);
+    orbitCamera.far = Math.max(100, resources.halfExtent * 12);
+    orbitCamera.updateProjectionMatrix();
+    orbitCamera.position.set(
+      0,
+      -resources.halfExtent * (scaleDemo ? 2 : 3.6),
+      resources.halfExtent * (scaleDemo ? 2.4 : 4.3) + 2
+    );
     controls.target.set(0, 0, 2);
     controls.update();
     controls.saveState();
@@ -331,6 +349,8 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
     getElement('#pause').textContent = paused ? 'Resume' : 'Pause';
   };
   getElement('#reset').onclick = () => {
+    simulatedSeconds = 0;
+    playbackSeconds = 0;
     resetSpheres(resources);
     accumulator = 0;
   };
@@ -347,18 +367,24 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
   getElement('#scene').onchange = () =>
     getElement('#body-count').dispatchEvent(new Event('change'));
   getElement('#body-count').onchange = async () => {
-    if (loading || benchmark) return;
+    if (loading || benchmark || !alive) return;
     loading = true;
     getElement<HTMLSelectElement>('#scene').disabled = true;
     getElement<HTMLSelectElement>('#body-count').disabled = true;
     status.value = 'Compiling sphere world…';
     try {
-      const next = await createResources(
-        Number(getElement<HTMLSelectElement>('#body-count').value)
-      );
+      rebuilding = createResources(Number(getElement<HTMLSelectElement>('#body-count').value));
+      const next = await rebuilding;
       await samplingPromise;
+      if (!alive) {
+        destroyResources(next);
+        return;
+      }
       const old = resources;
       resources = next;
+      infoBox.setGraph(next.graph);
+      simulatedSeconds = 0;
+      playbackSeconds = 0;
       spheres.setBindings({positions: next.positions, orientations: next.orientations});
       spheres.setInstanceCount(next.count);
       destroyResources(old);
@@ -367,6 +393,7 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
     } catch (error) {
       status.value = String(error);
     } finally {
+      rebuilding = null;
       restoreSceneControls();
       loading = false;
     }
@@ -398,17 +425,22 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
   };
   resetView();
   function renderFrame(now: number): void {
+    if (!alive) return;
     try {
       if (gpuError) throw gpuError;
+      infoBox.update(now);
       frameMilliseconds = now - lastFrame;
       lastFrame = now;
-      const elapsed = Math.min((now - previous) / 1000, 0.1);
+      const wallElapsed = (now - previous) / 1000;
+      const elapsed = Math.min(wallElapsed, 0.1);
       previous = now;
       updatePlatform();
       encodeMilliseconds = 0;
       if (!paused && !loading && !benchmark?.finishing) {
         const clock = advanceSphereClock(accumulator, elapsed, speed, Boolean(benchmark));
-        const steps = clock.steps;
+        const steps = scaleDemo && !benchmark ? Math.min(1, clock.steps) : clock.steps;
+        simulatedSeconds += steps / 120;
+        playbackSeconds += wallElapsed;
         accumulator = clock.accumulator;
         for (let step = 0; step < steps; step++) {
           const sample = step === 0 && now - lastSample >= 500 && !sampling;
@@ -420,7 +452,7 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
                 })
               : null;
           const encoder = device.createCommandEncoder({timeProfilingQuerySet: querySet});
-          const encoding = resources.graph.encode(encoder, {
+          const encoding = infoBox.observation.encode(encoder, {
             parameters: undefined,
             coalesceComputePasses: !querySet
           });
@@ -430,6 +462,7 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
             lastSample = now;
             sampling = true;
             const target = resources;
+            const observation = infoBox.observation;
             const submittedBenchmark = benchmark;
             const measured = submittedBenchmark?.warmup === 0;
             samplingPromise = (async () => {
@@ -437,7 +470,8 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
                 const diagnostics = decodeGPUSphereWorldDiagnostics(
                   new Uint32Array((await target.world.diagnostics!.readAsync()).buffer)
                 );
-                const timing = querySet ? await encoding.readTimings() : undefined;
+                const timing = querySet ? await observation.recordGPUTimings(encoding) : undefined;
+                observation.recordCounters({...diagnostics});
                 recordSphereBenchmarkSample(
                   submittedBenchmark,
                   benchmark,
@@ -448,7 +482,7 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
                 const memory =
                   target.graph.stats.physicalTransientResourceBytes + target.count * 80 + 144;
                 getElement('#metrics').textContent =
-                  `${(1000 / Math.max(frameMilliseconds, 1)).toFixed(0)} fps · frame ${frameMilliseconds.toFixed(1)} ms · encode ${encodeMilliseconds.toFixed(2)} ms · GPU ${timing?.gpuTimeMilliseconds?.toFixed(2) ?? 'unavailable'} ms\n${diagnostics.contacts} contacts · ${diagnostics.candidateTests} candidates\n${diagnostics.exhaustedCandidateBodies} candidate budgets exhausted · ${diagnostics.sleepingBodies} sleeping · ${diagnostics.droppedContacts} dropped · ${diagnostics.invalidBodies} invalid\nPhysics buffers ${(memory / 1048576).toFixed(2)} MiB`;
+                  `${(1000 / Math.max(frameMilliseconds, 1)).toFixed(0)} fps · frame ${frameMilliseconds.toFixed(1)} ms · encode ${encodeMilliseconds.toFixed(2)} ms · GPU ${timing?.gpuTimeMilliseconds?.toFixed(2) ?? 'unavailable'} ms\n${diagnostics.contacts} contacts · ${diagnostics.candidateTests} candidates\n${diagnostics.exhaustedCandidateBodies} candidate budgets exhausted · ${diagnostics.sleepingBodies} sleeping · ${diagnostics.droppedContacts} dropped · ${diagnostics.invalidBodies} invalid\nPhysics buffers ${(memory / 1048576).toFixed(2)} MiB${scaleDemo ? `\nPlayback ${(simulatedSeconds / Math.max(0.001, playbackSeconds)).toFixed(2)}× real time · capped at one fixed step/frame` : ''}`;
                 status.value =
                   diagnostics.droppedContacts ||
                   diagnostics.invalidBodies ||
@@ -548,17 +582,20 @@ struct VertexOutput {@builtin(position) position: vec4f, @location(0) point: vec
       spheres.draw(pass);
       pass.end();
       device.submit();
-      requestAnimationFrame(renderFrame);
+      animation = requestAnimationFrame(renderFrame);
     } catch (error) {
       status.value = String(error);
     }
   }
   restoreSceneControls();
-  requestAnimationFrame(renderFrame);
+  animation = requestAnimationFrame(renderFrame);
   window.addEventListener(
     'pagehide',
     () => {
-      void samplingPromise.finally(() => {
+      alive = false;
+      cancelAnimationFrame(animation);
+      void Promise.allSettled([samplingPromise, rebuilding]).then(() => {
+        infoBox.destroy();
         destroyResources(resources);
         camera.destroy();
         spheres.destroy();

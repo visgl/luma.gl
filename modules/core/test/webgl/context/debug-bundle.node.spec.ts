@@ -47,7 +47,7 @@ it('WebGL debug tools stay outside the normal adapter bundle', async () => {
 it('explicit WebGL debug imports retain their registration side effects', async () => {
   const buildResult = await esbuild.build({
     stdin: {
-      contents: "import '@luma.gl/core/webgl/debug';",
+      contents: "import '@luma.gl/core/webgl-debug';",
       resolveDir: process.cwd()
     },
     bundle: true,
@@ -57,8 +57,8 @@ it('explicit WebGL debug imports retain their registration side effects', async 
       {
         name: 'webgl-debug-source-alias',
         setup(build: esbuild.PluginBuild): void {
-          build.onResolve({filter: /^@luma\.gl\/core\/webgl\/debug$/}, () => ({
-            path: resolve('modules/core/src/webgl/debug.ts')
+          build.onResolve({filter: /^@luma\.gl\/core\/webgl-debug$/}, () => ({
+            path: resolve('modules/core/src/webgl-debug/index.ts')
           }));
         }
       }

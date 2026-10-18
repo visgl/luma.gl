@@ -242,6 +242,11 @@ export class GPUCommandGraphInspector {
       counters: new Map(),
       nodes: new Map()
     });
+    // Compiled nodes are inspectable before the first simulation step supplies timings.
+    const inspection = this.getGraph(graph.id);
+    for (const node of graph.preflight?.nodes ?? []) {
+      this.getNode(inspection, node);
+    }
   }
 
   /**
