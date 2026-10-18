@@ -44,6 +44,44 @@ Both builders cache identical inputs and incrementally add newly requested chara
 upload, so applications can use Apache Arrow 21.2 view columns while the package remains compatible
 with Apache Arrow 17 runtimes. Binary and `BinaryView` columns are not text inputs.
 
+## Glyph range fonts
+
+`GlyphRangeLoader` reads Mapbox/MapLibre-compatible glyph PBF endpoints without a DOM or GPU.
+`parseGlyphRange(bytes)` is also exported for callers that already own transport. Glyph bitmaps
+include a three-pixel border; width, height, left/top bearings and advances use 24 pixels per em.
+
+```ts
+import {GlyphRangeLoader, buildGlyphFontAtlas} from '@luma.gl/text/fonts';
+
+const glyphs = new GlyphRangeLoader({
+  url: 'https://fonts.example.com/{fontstack}/{range}.pbf',
+  maxRanges: 64,
+  fetchOptions: {credentials: 'omit'}
+});
+const fontAtlas = await buildGlyphFontAtlas(glyphs, 'Noto Sans Regular', 'Hello');
+// Supply fontAtlas to GPUTextResources as for other atlas builders.
+```
+
+Share one loader among consumers of the same endpoint and network policy. Concurrent range loads
+share both fetch and decode; the least recently used completed ranges are evicted beyond
+`maxRanges` (64 by default). In-flight ranges remain until they settle. A failed request rejects
+all its waiters and is removed, so a later call retries. An absent glyph in a valid response is
+omitted. No requests are issued for empty text. Font names are individually URL encoded;
+dot-only names are rejected because URL parsers normalize them as path segments.
+
+`loadGlyphs(fontStack, texts)` returns a snapshot map containing only requested code points.
+The map survives cache eviction; treat its shared glyph records and bitmap bytes as read-only.
+Call it again whenever the text or font stack changes, even if geometry is unchanged.
+`createGlyphFontRenderer(glyphs)` adapts a loaded snapshot to the existing custom atlas renderer
+interface, allowing callers to own packing themselves.
+
+`buildGlyphFontAtlas(loader, fontStack, characterSet)` waits for loading before packing and needs
+a browser 2D canvas (`HTMLCanvasElement` or `OffscreenCanvas`). Each call creates an independent
+atlas page, preserving server advances and bearings, with SDF threshold 0.75 and smoothing 0.1.
+Missing glyphs have zero advance. Loader/decoder-only use works in Node and adds no dependency.
+Local ideograph fallback, shaping, style selection, tile readiness, placement and GPU lifetime
+remain consumer responsibilities. No MapLibre local-font substitution policy is imposed.
+
 ## Public Architecture
 
 | Responsibility | Public APIs |
