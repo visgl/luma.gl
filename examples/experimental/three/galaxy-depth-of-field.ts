@@ -49,6 +49,9 @@ export class GalaxyDepthOfField {
       this.sourceHandle = sourceHandle;
       this.source = this.borrowTexture(sourceHandle);
       this.depth = this.borrowTexture(this.backend.get(depth).texture);
+      // The seed model uses canvas dimensions to preserve source aspect ratio.
+      // Keep this detached context in step with the borrowed scene textures too.
+      this.device.getCanvasContext().setDrawingBufferSize(sourceHandle.width, sourceHandle.height);
       this.passes.resize([sourceHandle.width, sourceHandle.height]);
     }
     const result = this.passes.renderToTexture({
