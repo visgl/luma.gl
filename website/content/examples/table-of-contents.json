@@ -135,6 +135,7 @@
           },
           "experimental/gpu-geometry",
           "experimental/gpu-pointcloud",
+          "experimental/gpu-pointcloud-octree",
           "showcase/billion-point-spatial-atlas",
           "experimental/gpt-2"
         ]

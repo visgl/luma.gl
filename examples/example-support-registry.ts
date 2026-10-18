@@ -5,6 +5,7 @@
 import gltfInteractivitySupport from './deck/gltf-interactivity/mobile-support';
 import geometrySupport from './experimental/gpu-geometry/mobile-support';
 import pointCloudSupport from './experimental/gpu-pointcloud/mobile-support';
+import pointCloudOctreeSupport from './experimental/gpu-pointcloud-octree/mobile-support';
 import flowParticlesSupport from './deck/flow-particles/mobile-support';
 import threeSupport from './experimental/three/mobile-support';
 import poolSupport from './experimental/gpu-pool/mobile-support';
@@ -157,6 +158,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'experimental/gpu-graph-explorer': support24,
   'experimental/gpu-geometry': geometrySupport,
   'experimental/gpu-pointcloud': pointCloudSupport,
+  'experimental/gpu-pointcloud-octree': pointCloudOctreeSupport,
   'experimental/gpu-trace-scene': support25,
   'experimental/gpu-scene-graph': support26,
   'showcase/vector-field-lab': support27,
