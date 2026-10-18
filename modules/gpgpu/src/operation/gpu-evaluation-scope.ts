@@ -15,20 +15,20 @@ import type {GPUDataEvaluator, GPUDataEvaluatorEvaluateOptions} from './gpu-data
  * bound by later commands on this encoder, but must not be read or used elsewhere until
  * submission. Borrowed buffers must remain alive and unchanged until submission.
  */
-export class GPUEvaluationBatch {
+export class GPUEvaluationScope {
   /** Device on which all evaluations and commands are recorded. */
   readonly device: Device;
-  /** Encoder owned by this batch. Append commands, but finish/submit only through the batch. */
+  /** Encoder owned by this scope. Append commands, but finish/submit only through the scope. */
   readonly commandEncoder: CommandEncoder;
 
   private state: 'open' | 'submitted' | 'cancelled' = 'open';
   private evaluating = false;
   private readonly finalizers: ((submitted: boolean) => void)[] = [];
 
-  /** Creates an empty WebGPU batch; construction does not submit GPU work. */
+  /** Creates an empty WebGPU scope; construction does not submit GPU work. */
   constructor(device: Device) {
     if (device.type !== 'webgpu') {
-      throw new Error('GPUEvaluationBatch requires WebGPU');
+      throw new Error('GPUEvaluationScope requires WebGPU');
     }
     this.device = device;
     this.commandEncoder = device.createCommandEncoder();
@@ -37,17 +37,17 @@ export class GPUEvaluationBatch {
   /** Encodes an evaluator and its dependencies without submitting or waiting for GPU completion. */
   async evaluate(
     evaluator: GPUDataEvaluator,
-    options: Omit<GPUDataEvaluatorEvaluateOptions, 'batch'> = {}
+    options: Omit<GPUDataEvaluatorEvaluateOptions, 'scope'> = {}
   ): Promise<GPUVector> {
     this.assertOpen();
     if (this.evaluating) {
-      throw new Error('Await the previous batch evaluation before starting another');
+      throw new Error('Await the previous scope evaluation before starting another');
     }
     this.evaluating = true;
     try {
-      return await evaluator.evaluate(this.device, {...options, batch: this});
+      return await evaluator.evaluate(this.device, {...options, scope: this});
     } catch (error) {
-      // A failed dependency may have partially encoded work. Never submit that batch.
+      // A failed dependency may have partially encoded work. Never submit that scope.
       this.finish(false);
       throw error;
     } finally {
@@ -78,7 +78,7 @@ export class GPUEvaluationBatch {
   assertEvaluating(device: Device): void {
     this.assertOpen();
     if (!this.evaluating || device !== this.device) {
-      throw new Error('Use batch.evaluate() with the batch device');
+      throw new Error('Use scope.evaluate() with the scope device');
     }
   }
 
@@ -90,14 +90,14 @@ export class GPUEvaluationBatch {
 
   private assertOpen(): void {
     if (this.state !== 'open') {
-      throw new Error(`GPUEvaluationBatch is ${this.state}`);
+      throw new Error(`GPUEvaluationScope is ${this.state}`);
     }
   }
 
   private assertIdle(): void {
     this.assertOpen();
     if (this.evaluating) {
-      throw new Error('Await batch evaluation before submitting or cancelling');
+      throw new Error('Await scope evaluation before submitting or cancelling');
     }
   }
 

@@ -11,11 +11,11 @@ export const select: OperationHandler<{
   condition: GPUDataEvaluator;
   whenTrue: GPUDataEvaluator;
   whenFalse: GPUDataEvaluator;
-}> = async ({inputs, output, target, batch}) => {
+}> = async ({inputs, output, target, scope}) => {
   const zeroLiteral = getZeroValue(output.type);
 
   runRowComputation({
-    batch,
+    scope,
     module: {name: 'select', source: '// inline expression select\n'},
     inputs,
     output,
@@ -53,4 +53,4 @@ function getLaneExpression(
   return input.size === 1 ? `${name}[0]` : zeroLiteral;
 }
 
-select.supportsBatch = true;
+select.supportsEvaluationScope = true;

@@ -6,14 +6,14 @@ import type {Device, Buffer} from '@luma.gl/core';
 import type {TypedArray} from '@math.gl/types';
 import {GPUDataEvaluator} from './gpu-data-evaluator';
 import {backendRegistry} from './backend-registry';
-import type {GPUEvaluationBatch} from './gpu-evaluation-batch';
+import type {GPUEvaluationScope} from './gpu-evaluation-scope';
 
 /** Backend implementation for a single lazy GPGPU operation. */
 export type OperationInputs = Record<string, any> | readonly any[];
 
 export type OperationHandler<InputsT extends OperationInputs = any> = ((args: {
   /** Optional explicit WebGPU execution scope. */
-  batch?: GPUEvaluationBatch;
+  scope?: GPUEvaluationScope;
   /** Device selected for execution. */
   device: Device;
   /** Operation inputs. */
@@ -23,8 +23,8 @@ export type OperationHandler<InputsT extends OperationInputs = any> = ((args: {
   /** GPU buffer that receives operation output. */
   target: Buffer;
 }) => OperationHandlerResult | Promise<OperationHandlerResult>) & {
-  /** Whether this handler encodes all work into the supplied batch without submitting. */
-  supportsBatch?: boolean;
+  /** Whether this handler encodes all work into the supplied scope without submitting. */
+  supportsEvaluationScope?: boolean;
 };
 export type OperationHandlerResult = {
   success: boolean;
@@ -64,15 +64,15 @@ export abstract class Operation<InputsT extends OperationInputs = Record<string,
   async execute(
     device: Device,
     target: Buffer,
-    batch?: GPUEvaluationBatch
+    scope?: GPUEvaluationScope
   ): Promise<OperationHandlerResult> {
-    if (!batch) await this._resolveDependencies(device);
+    if (!scope) await this._resolveDependencies(device);
     const handler = await backendRegistry.get(this._getHandlerRegistry(device), this.name);
-    if (batch && (device.type !== 'webgpu' || !handler.supportsBatch)) {
-      throw new Error(`${this.name} does not support batched evaluation`);
+    if (scope && (device.type !== 'webgpu' || !handler.supportsEvaluationScope)) {
+      throw new Error(`${this.name} does not support deferred-submission evaluation`);
     }
-    if (batch) await this._resolveDependencies(device, batch);
-    return await this._executeWithHandler(handler, target, batch);
+    if (scope) await this._resolveDependencies(device, scope);
+    return await this._executeWithHandler(handler, target, scope);
   }
 
   /** Evaluates dependencies synchronously and writes this operation's result into `target`. */
@@ -97,9 +97,9 @@ export abstract class Operation<InputsT extends OperationInputs = Record<string,
     return this.shouldExecuteOnCPU() ? 'cpu' : device.type;
   }
 
-  private async _resolveDependencies(device: Device, batch?: GPUEvaluationBatch): Promise<void> {
+  private async _resolveDependencies(device: Device, scope?: GPUEvaluationScope): Promise<void> {
     for (const dep of this.dependencies) {
-      await dep.evaluate(device, {batch});
+      await dep.evaluate(device, {scope});
     }
     const handlerRegistry = this._getHandlerRegistry(device);
     if (handlerRegistry === 'cpu' || device.type === 'null') {
@@ -124,10 +124,10 @@ export abstract class Operation<InputsT extends OperationInputs = Record<string,
   private _executeWithHandler(
     handler: OperationHandler,
     target: Buffer,
-    batch?: GPUEvaluationBatch
+    scope?: GPUEvaluationScope
   ): OperationHandlerResult | Promise<OperationHandlerResult> {
     return handler({
-      batch,
+      scope,
       device: target.device,
       inputs: this.inputs,
       output: this.output,

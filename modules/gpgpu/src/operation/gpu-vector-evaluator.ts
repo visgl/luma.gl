@@ -160,8 +160,8 @@ export class GPUVectorEvaluator {
     device: Device,
     options: GPUVectorEvaluatorEvaluateOptions = {}
   ): Promise<GPUVector> {
-    if (options.batch)
-      throw new Error('Batched vector evaluation is outside this proof of concept');
+    if (options.scope)
+      throw new Error('Deferred-submission vector evaluation is outside this proof of concept');
     if (this._destroyed) {
       throw new Error(`GPUVectorEvaluator ${this} already destroyed`);
     }
@@ -190,7 +190,7 @@ export class GPUVectorEvaluator {
 
   /** Materializes every chunk evaluator synchronously and returns one chunk-preserving `GPUVector`. */
   evaluateSync(device: Device, options: GPUVectorEvaluatorEvaluateOptions = {}): GPUVector {
-    if (options.batch) throw new Error('Use batch.evaluate() for deferred submission');
+    if (options.scope) throw new Error('Use scope.evaluate() for deferred submission');
     if (this._destroyed) {
       throw new Error(`GPUVectorEvaluator ${this} already destroyed`);
     }

@@ -23,10 +23,10 @@ export const equalAll: OperationHandler<{x: GPUDataEvaluator; y: GPUDataEvaluato
   inputs,
   output,
   target,
-  batch
+  scope
 }) => {
   runRowComputation({
-    batch,
+    scope,
     module: {name: 'equalAll', source},
     inputs,
     output,
@@ -36,4 +36,4 @@ export const equalAll: OperationHandler<{x: GPUDataEvaluator; y: GPUDataEvaluato
   return {success: true};
 };
 
-equalAll.supportsBatch = true;
+equalAll.supportsEvaluationScope = true;

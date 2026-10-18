@@ -34,7 +34,7 @@ export const arithmetic: OperationHandler<ArithmeticOperationInputs> = ({
   inputs,
   output,
   target,
-  batch
+  scope
 }) => {
   const operationType = output.type;
   const scalarType = getWGSLType(operationType);
@@ -42,7 +42,7 @@ export const arithmetic: OperationHandler<ArithmeticOperationInputs> = ({
   const namedInputs = inputs.namedInputs;
 
   runRowComputation({
-    batch,
+    scope,
     module: {name: 'arithmetic', source: arithmeticSource, dependencies: [fp32]},
     inputs: namedInputs,
     output,
@@ -65,4 +65,4 @@ export const arithmetic: OperationHandler<ArithmeticOperationInputs> = ({
   return {success: true};
 };
 
-arithmetic.supportsBatch = true;
+arithmetic.supportsEvaluationScope = true;

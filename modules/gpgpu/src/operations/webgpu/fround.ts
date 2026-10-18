@@ -158,10 +158,10 @@ export const fround: OperationHandler<{x: GPUDataEvaluator}> = ({
   inputs,
   output,
   target,
-  batch
+  scope
 }) => {
   runRowComputation({
-    batch,
+    scope,
     module: {name: 'fround', source},
     inputs,
     output,
@@ -171,4 +171,4 @@ export const fround: OperationHandler<{x: GPUDataEvaluator}> = ({
   return {success: true};
 };
 
-fround.supportsBatch = true;
+fround.supportsEvaluationScope = true;

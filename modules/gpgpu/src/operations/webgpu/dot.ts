@@ -20,10 +20,10 @@ export const dot: OperationHandler<{x: GPUDataEvaluator; y: GPUDataEvaluator}> =
   inputs,
   output,
   target,
-  batch
+  scope
 }) => {
   runRowComputation({
-    batch,
+    scope,
     module: {name: 'row_dot', source},
     inputs,
     output,
@@ -33,4 +33,4 @@ export const dot: OperationHandler<{x: GPUDataEvaluator; y: GPUDataEvaluator}> =
   return {success: true};
 };
 
-dot.supportsBatch = true;
+dot.supportsEvaluationScope = true;

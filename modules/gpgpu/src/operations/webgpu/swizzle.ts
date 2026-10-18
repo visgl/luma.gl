@@ -10,11 +10,11 @@ export const swizzle: OperationHandler<{x: GPUDataEvaluator; columns: number[]}>
   inputs,
   output,
   target,
-  batch
+  scope
 }) => {
   const {columns} = inputs;
   runRowComputation({
-    batch,
+    scope,
     module: {name: 'swizzle', source: '// swizzle expression handled inline'},
     expression: laneIndex => `x[${columns[laneIndex]}]`,
     inputs: {x: inputs.x},
@@ -24,4 +24,4 @@ export const swizzle: OperationHandler<{x: GPUDataEvaluator; columns: number[]}>
   return {success: true};
 };
 
-swizzle.supportsBatch = true;
+swizzle.supportsEvaluationScope = true;

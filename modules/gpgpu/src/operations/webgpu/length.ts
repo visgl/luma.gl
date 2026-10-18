@@ -20,10 +20,10 @@ export const length: OperationHandler<{x: GPUDataEvaluator}> = ({
   inputs,
   output,
   target,
-  batch
+  scope
 }) => {
   runRowComputation({
-    batch,
+    scope,
     module: {name: 'row_length', source},
     inputs,
     output,
@@ -33,4 +33,4 @@ export const length: OperationHandler<{x: GPUDataEvaluator}> = ({
   return {success: true};
 };
 
-length.supportsBatch = true;
+length.supportsEvaluationScope = true;

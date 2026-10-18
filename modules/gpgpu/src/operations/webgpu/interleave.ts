@@ -10,7 +10,7 @@ export const interleave: OperationHandler<GPUDataEvaluator[]> = ({
   inputs,
   output,
   target,
-  batch
+  scope
 }) => {
   const inputEntries: [string, GPUDataEvaluator][] = inputs.map((input, index) => [
     `x${index}`,
@@ -41,7 +41,7 @@ ${assignments}
 `;
 
   runRowComputation({
-    batch,
+    scope,
     module: {name: 'interleave', source},
     inputs,
     output,
@@ -68,4 +68,4 @@ function validateInterleaveBindings(
   }
 }
 
-interleave.supportsBatch = true;
+interleave.supportsEvaluationScope = true;
