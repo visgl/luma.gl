@@ -8,6 +8,8 @@ Target Release Date: Q3, 2026
 
 **General**
 
+- **WGSL fp64 projection math** - The `fp64` shader module now provides double-single transcendental functions and returned-array vector/matrix helpers for geographic projection on WebGPU. See the [supported functions and precision limits](/docs/api-reference/shadertools/shader-modules/fp64#wgsl-projection-functions).
+
 - **Shared glyph loading** - `@luma.gl/text/fonts` decodes glyph PBF ranges, deduplicates and caches font-stack requests, and builds renderer-independent SDF atlases from server glyph metrics.
 
 - **Public package** - `@luma.gl/text` is included in npm releases, including its CPU font atlas builders under `@luma.gl/text/fonts`.
