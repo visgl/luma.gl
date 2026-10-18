@@ -5229,6 +5229,26 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@luma.gl/anari@npm:10.0.0-alpha.4, @luma.gl/anari@workspace:*, @luma.gl/anari@workspace:modules/anari":
+  version: 0.0.0-use.local
+  resolution: "@luma.gl/anari@workspace:modules/anari"
+  dependencies:
+    "@math.gl/core": "npm:5.0.0-alpha.15"
+    "@math.gl/geometry": "npm:~5.0.0-alpha.15"
+    zod: "npm:^4.4.3"
+  peerDependencies:
+    "@luma.gl/core": 10.0.0-alpha.3
+    "@luma.gl/effects": 10.0.0-alpha.3
+    "@luma.gl/engine": 10.0.0-alpha.3
+    "@luma.gl/experimental": 10.0.0-alpha.3
+    "@luma.gl/gltf": 10.0.0-alpha.3
+    "@luma.gl/shadertools": 10.0.0-alpha.3
+  peerDependenciesMeta:
+    "@luma.gl/gltf":
+      optional: true
+  languageName: unknown
+  linkType: soft
+
 "@luma.gl/arrow@npm:10.0.0-alpha.4, @luma.gl/arrow@workspace:*, @luma.gl/arrow@workspace:modules/arrow":
   version: 0.0.0-use.local
   resolution: "@luma.gl/arrow@workspace:modules/arrow"
@@ -5379,26 +5399,6 @@ __metadata:
   checksum: 10c0/e97d94748c771e76ebf2985c9ca5ddebfe78ca5081eaa78b38249eba9fb0186e4b022b67e4f6f8966b6675394e2097cb755ed9ce4172aa8d27f1c106e51ea81d
   languageName: node
   linkType: hard
-
-"@luma.gl/anari@npm:10.0.0-alpha.4, @luma.gl/anari@workspace:*, @luma.gl/anari@workspace:modules/anari":
-  version: 0.0.0-use.local
-  resolution: "@luma.gl/anari@workspace:modules/anari"
-  dependencies:
-    "@math.gl/core": "npm:5.0.0-alpha.15"
-    "@math.gl/geometry": "npm:~5.0.0-alpha.15"
-    zod: "npm:^4.4.3"
-  peerDependencies:
-    "@luma.gl/core": 10.0.0-alpha.3
-    "@luma.gl/effects": 10.0.0-alpha.3
-    "@luma.gl/engine": 10.0.0-alpha.3
-    "@luma.gl/experimental": 10.0.0-alpha.3
-    "@luma.gl/gltf": 10.0.0-alpha.3
-    "@luma.gl/shadertools": 10.0.0-alpha.3
-  peerDependenciesMeta:
-    "@luma.gl/gltf":
-      optional: true
-  languageName: unknown
-  linkType: soft
 
 "@luma.gl/shadertools@workspace:*, @luma.gl/shadertools@workspace:modules/shadertools":
   version: 0.0.0-use.local
@@ -16796,12 +16796,12 @@ __metadata:
   dependencies:
     "@loaders.gl/core": "npm:~5.0.0-alpha.11"
     "@loaders.gl/gltf": "npm:~5.0.0-alpha.11"
+    "@luma.gl/anari": "workspace:*"
     "@luma.gl/core": "npm:10.0.0-alpha.4"
     "@luma.gl/effects": "npm:10.0.0-alpha.4"
     "@luma.gl/engine": "npm:10.0.0-alpha.4"
     "@luma.gl/experimental": "npm:10.0.0-alpha.4"
     "@luma.gl/gltf": "npm:10.0.0-alpha.4"
-    "@luma.gl/anari": "workspace:*"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.4"
     "@math.gl/core": "npm:5.0.0-alpha.15"
     jsonc-parser: "npm:3.2.0"
@@ -16845,12 +16845,12 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-showcase-vector-field-lab@workspace:examples/showcase/vector-field-lab"
   dependencies:
+    "@luma.gl/anari": "npm:10.0.0-alpha.4"
     "@luma.gl/core": "npm:10.0.0-alpha.4"
     "@luma.gl/effects": "npm:10.0.0-alpha.4"
     "@luma.gl/engine": "npm:10.0.0-alpha.4"
     "@luma.gl/experimental": "npm:10.0.0-alpha.4"
     "@luma.gl/gpgpu": "npm:10.0.0-alpha.4"
-    "@luma.gl/anari": "npm:10.0.0-alpha.4"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.4"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.0.0"

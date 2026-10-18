@@ -426,7 +426,7 @@ describe('framework capabilities documentation', () => {
     for (const row of implementedRows) {
       expect(row.status, `${row.feature} lives in a private package`).toBe('Experimental');
       expect(row.backend, `${row.feature} currently requires WebGPU`).toBe('WebGPU');
-      expect(row.packageName).toMatch(/@luma\.gl\/(?:experimental|scene)/);
+      expect(row.packageName).toMatch(/@luma\.gl\/(?:experimental|anari)/);
     }
 
     for (const capability of [
@@ -495,7 +495,7 @@ describe('framework capabilities documentation', () => {
       );
     }
 
-    for (const experimentalPackage of ['scene', 'arrow', 'experimental', 'splats', 'text']) {
+    for (const experimentalPackage of ['anari', 'arrow', 'experimental', 'splats', 'text']) {
       const experimentalRows = capabilityRows.filter(row =>
         row.packageName.includes(`@luma.gl/${experimentalPackage}`)
       );
@@ -560,7 +560,7 @@ describe('framework capabilities documentation', () => {
     const textRow = moduleRows.find(row => row[0].includes('@luma.gl/text'));
     expect(textRow?.[1]).toBe('Experimental');
 
-    for (const packageName of ['scene', 'arrow', 'experimental', 'splats']) {
+    for (const packageName of ['anari', 'arrow', 'experimental', 'splats']) {
       const moduleRow = moduleRows.find(row => row[0].includes(`@luma.gl/${packageName}`));
 
       expect(moduleRow, `The API reference must list @luma.gl/${packageName}`).toBeDefined();
@@ -621,7 +621,7 @@ describe('framework capabilities documentation', () => {
     const ownershipDescription = capabilitiesSource.match(/ownership\s+boundaries[\s\S]*?\n\n/i);
 
     expect(ownershipDescription).not.toBeNull();
-    for (const packageName of ['gltf', 'shadertools', 'engine', 'experimental', 'scene']) {
+    for (const packageName of ['gltf', 'shadertools', 'engine', 'experimental', 'anari']) {
       expect(ownershipDescription![0]).toContain(`@luma.gl/${packageName}`);
     }
 
