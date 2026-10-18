@@ -173,3 +173,24 @@ it('submission and concurrent evaluation cannot race an outstanding encode', asy
     input.destroy();
   }
 });
+
+it('the same workload retains the existing unbatched submission policy', async ({skip}) => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return skip();
+  const input = GPUDataEvaluator.fromArray(new Float32Array([1, 2, 3, 4]), {size: 2});
+  const scaled = multiply(input, 2);
+  const reordered = swizzle(scaled, [1, 0]);
+  const output = add(reordered, 1);
+  const other = add(input, 10);
+  const submit = vi.spyOn(device, 'submit');
+  try {
+    await output.evaluate(device);
+    await other.evaluate(device);
+    expect(submit).toHaveBeenCalledTimes(4);
+    expect(Array.from(await output.readValue())).toEqual([5, 3, 9, 7]);
+    expect(Array.from(await other.readValue())).toEqual([11, 12, 13, 14]);
+  } finally {
+    submit.mockRestore();
+    for (const evaluator of [output, other, reordered, scaled, input]) evaluator.destroy();
+  }
+});
