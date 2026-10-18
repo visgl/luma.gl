@@ -4,7 +4,11 @@
 
 import type {Effect, EffectContext} from '@deck.gl/core';
 import {Buffer, type Device} from '@luma.gl/core';
-import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {
+  GPUCommandGraph,
+  type CompiledGPUCommandGraph,
+  type GPUCommandGraphEncoding
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPUGraph,
   GPUGraphBreadthFirstSearch,
@@ -78,6 +82,8 @@ export type GPUGraphDeckEffectOptions = {
   pointMode?: boolean;
   maxVisibleEdges?: number;
   onStats?: (stats: GPUGraphDeckEffectStats) => void;
+  /** Observes encodings before Deck submits; defer timestamp reads until after the frame. */
+  onEncoding?: (graph: CompiledGPUCommandGraph<void>, encoding: GPUCommandGraphEncoding) => void;
   /** Adds an explicitly provided O(E + 4V) contributor without importing application code. */
   addSampledLayoutToGraph?: (
     commandGraph: GPUCommandGraph<void>,
@@ -124,6 +130,7 @@ export class GPUGraphDeckEffect implements Effect {
   private readonly pinned: GPUVector<'uint32'>;
   private readonly reset: GPUVector<'uint32'>;
   private readonly pinnedVertices = new Set<number>();
+  private readonly onEncoding?: GPUGraphDeckEffectOptions['onEncoding'];
   private readonly onStats?: (stats: GPUGraphDeckEffectStats) => void;
   private readonly analysisStages: CompiledGPUCommandGraph<void>[];
   private selectedVertex: number | null = 0;
@@ -145,6 +152,7 @@ export class GPUGraphDeckEffect implements Effect {
     this.device = device;
     this.dataset = dataset;
     this.onStats = options.onStats;
+    this.onEncoding = options.onEncoding;
     const edgeCount = dataset.sourceChunks.reduce((total, chunk) => total + chunk.length, 0);
     const largestBufferBytes = Math.max(dataset.vertexCount * 8, edgeCount * SCALAR_BYTE_LENGTH);
     if (
@@ -365,15 +373,20 @@ export class GPUGraphDeckEffect implements Effect {
       const encoding = stage.encode(this.device.commandEncoder, {
         parameters: undefined
       });
+      this.onEncoding?.(stage, encoding);
       this.analysisEncodeMilliseconds += encoding.stats.cpuEncodeTimeMilliseconds;
       this.completedAnalysisStages++;
       advancedAnalysis = true;
     }
     if (this.searchGraph && this.searchPending && this.completedAnalysisStages > 0) {
-      this.searchGraph.encode(this.device.commandEncoder, {parameters: undefined});
+      const searchEncoding = this.searchGraph.encode(this.device.commandEncoder, {
+        parameters: undefined
+      });
+      this.onEncoding?.(this.searchGraph, searchEncoding);
       this.searchPending = false;
     }
     const encoding = this.frameGraph.encode(this.device.commandEncoder, {parameters: undefined});
+    this.onEncoding?.(this.frameGraph, encoding);
     this.frameCount++;
     const frameTime = performance.now();
     if (this.previousFrameTime > 0 && frameTime > this.previousFrameTime) {
