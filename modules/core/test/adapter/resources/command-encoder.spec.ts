@@ -1137,6 +1137,9 @@ function testBlit(t: Test, device: Device) {
 it('WebGPU timestamp snapshots retain submission identity across delayed reads and query reuse', async () => {
   const device = await getWebGPUTestDevice();
   if (!device || !device.features.has('timestamp-query')) return;
+  // SwiftShader drops its Dawn instance during mapped readback in CI, as in the copy tests above.
+  // Node snapshots cover association and failure cleanup; hardware verifies submitted timestamps.
+  if (isSoftwareBackedDevice(device)) return;
   const querySet = device.createQuerySet({type: 'timestamp', count: 2});
   const shader = device.createShader({source: '@compute @workgroup_size(1) fn main() {}'});
   const pipeline = device.createComputePipeline({shader});
@@ -1157,8 +1160,10 @@ it('WebGPU timestamp snapshots retain submission identity across delayed reads a
     secondPass.end();
     const secondSnapshot = secondEncoder.captureTimestampQuerySet(querySet);
     device.submit(secondEncoder.finish());
-    const secondResults = await secondSnapshot.readResults();
-    const firstResults = await firstRead;
+    const [firstResults, secondResults] = await Promise.all([
+      firstRead,
+      secondSnapshot.readResults()
+    ]);
     expect((await firstSnapshot.readResults()).map(String)).toEqual(firstResults.map(String));
     // Submission-local timestamp origins may change; compare durations within each pair only.
     expect(firstResults[1] >= firstResults[0]).toBe(true);
