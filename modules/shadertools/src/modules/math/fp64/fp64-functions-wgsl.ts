@@ -12,6 +12,7 @@ const PI_2_FP64 = vec2f(1.5707963705062866, -4.371139006309477e-8);
 const PI_4_FP64 = vec2f(0.7853981852531433, -2.1855695031547384e-8);
 const PI_180_FP64 = vec2f(0.01745329238474369, 1.3519960498364902e-10);
 
+// High/low splits of 1/n!, 1/(2n+1)!, and 1/(2n)! respectively.
 const FP64_EXP_COEFFICIENTS = array<vec2f, 17>(
   vec2f(1.0, 0.0),
   vec2f(1.0, 0.0),
@@ -59,6 +60,7 @@ const FP64_COS_COEFFICIENTS = array<vec2f, 9>(
 fn exp_fp64(value: vec2f) -> vec2f {
   let a = normalize_fp64(value);
   if (is_nan_fp64(a)) { return a; }
+  // WGSL rejects non-finite constant expressions; construct infinity from runtime bits.
   if (a.x > 88.72283905206835) { return vec2f(bitcast<f32>(0x7f800000u | (bitcast<u32>(a.x) & 0x80000000u)), 0.0); }
   if (a.x < -103.9720770839918) { return vec2f(0.0); }
   let exponent = min(127.0, floor(a.x / LOG2_FP64.x + 0.5));
