@@ -15,6 +15,109 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  build_packages:
+    name: Build shared packages
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup Node (with Corepack)
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Enable Corepack / Yarn 4
+        run: |
+          corepack enable
+          corepack prepare yarn@4.13.0 --activate
+          yarn -v
+
+      - name: Cache Yarn Berry artifacts
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.yarn/berry/cache
+            .yarn/install-state.gz
+          key: ${{ runner.os }}-yarn4-${{ hashFiles('yarn.lock', '.yarnrc.yml', 'package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn4-
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Build packages once
+        run: yarn build
+
+      - name: Archive package outputs
+        run: tar -cf "${RUNNER_TEMP}/luma-package-build.tar" modules/*/dist
+
+      - name: Upload package outputs
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: luma-package-build
+          path: ${{ runner.temp }}/luma-package-build.tar
+          compression-level: 1
+          retention-days: 1
+          if-no-files-found: error
+
+  presentation:
+    name: GPU canvas presentation
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup Node (with Corepack)
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Enable Corepack / Yarn 4
+        run: |
+          corepack enable
+          corepack prepare yarn@4.13.0 --activate
+          yarn -v
+
+      - name: Restore Yarn Berry artifacts
+        id: yarn-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.yarn/berry/cache
+            .yarn/install-state.gz
+          key: ${{ runner.os }}-yarn4-${{ hashFiles('yarn.lock', '.yarnrc.yml', 'package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn4-
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Save Yarn Berry artifacts
+        if: steps.yarn-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.yarn/berry/cache
+            .yarn/install-state.gz
+          key: ${{ steps.yarn-cache.outputs.cache-primary-key }}
+
+      - name: Cache Playwright Chromium
+        id: playwright-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-ms-playwright-${{ hashFiles('yarn.lock', 'package.json') }}
+
+      - name: Install Playwright Chromium
+        run: yarn exec playwright install chromium
+
+      - name: Check WebGPU and WebGL canvas capture
+        timeout-minutes: 2
+        run: xvfb-run -a yarn test-presentation
+
   browser_coverage:
     name: Browser coverage (${{ matrix.shard }}/3)
     runs-on: ubuntu-22.04
@@ -77,11 +180,6 @@ jobs:
           rm -rf "${HOME}/.yarn/berry/cache"
           df -h .
           du -sh . "${HOME}/.yarn" "${HOME}/.cache/ms-playwright" "${RUNNER_TEMP}" 2>/dev/null || true
-
-      - name: Check WebGPU and WebGL canvas capture
-        if: matrix.shard == 1
-        timeout-minutes: 2
-        run: xvfb-run -a yarn test-presentation
 
       - name: Run headless tests and generate coverage
         env:
@@ -414,7 +512,7 @@ jobs:
 
   test:
     name: Aggregate test coverage
-    needs: [browser_coverage, node_coverage, visual_examples]
+    needs: [browser_coverage, node_coverage, visual_examples, presentation]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-22.04
     timeout-minutes: 5
@@ -462,7 +560,12 @@ jobs:
           BROWSER_COVERAGE_RESULT: ${{ needs.browser_coverage.result }}
           NODE_COVERAGE_RESULT: ${{ needs.node_coverage.result }}
           VISUAL_EXAMPLES_RESULT: ${{ needs.visual_examples.result }}
+          PRESENTATION_RESULT: ${{ needs.presentation.result }}
         run: |
+          if [ "$PRESENTATION_RESULT" != "success" ]; then
+            echo "::error::GPU presentation finished with status: $PRESENTATION_RESULT"
+            exit 1
+          fi
           if [ "$BROWSER_COVERAGE_RESULT" != "success" ]; then
             echo "::error::Browser coverage shards finished with status: $BROWSER_COVERAGE_RESULT"
             exit 1
@@ -477,6 +580,7 @@ jobs:
           fi
 
   lighting_examples:
+    needs: build_packages
     name: Riverfront lighting (${{ matrix.example }})
     runs-on: ubuntu-22.04
     # Fireflies compares emission colors, bloom, reflections and motion on SwiftShader.
@@ -506,8 +610,14 @@ jobs:
 
       - name: Install dependencies
         run: yarn install --immutable
-      - name: Build packages
-        run: yarn build
+      - name: Download package outputs
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: luma-package-build
+          path: ${{ runner.temp }}
+
+      - name: Restore package outputs
+        run: tar -xf "${RUNNER_TEMP}/luma-package-build.tar"
       - name: Cache Playwright Chromium
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
@@ -528,6 +638,7 @@ jobs:
           retention-days: 7
 
   examples:
+    needs: build_packages
     name: Build, lint, Node tests, examples, and website
     runs-on: ubuntu-22.04
     timeout-minutes: 30
@@ -575,9 +686,14 @@ jobs:
           if-no-files-found: error
           include-hidden-files: true
 
-      - name: Build packages for example type declarations
-        run: |
-          yarn build
+      - name: Download package outputs
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: luma-package-build
+          path: ${{ runner.temp }}
+
+      - name: Restore package outputs
+        run: tar -xf "${RUNNER_TEMP}/luma-package-build.tar"
 
       - name: Verify experimental geospatial package imports
         run: yarn test-geospatial-package

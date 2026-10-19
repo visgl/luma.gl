@@ -3,10 +3,29 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import assert from 'node:assert/strict';
+import {appendFile} from 'node:fs/promises';
+import {performance} from 'node:perf_hooks';
 import {createServer} from 'node:http';
 import {chromium} from 'playwright';
 import {PNG} from 'pngjs';
 import {getPlaywrightLaunchOptions} from './get-playwright-launch-options.mjs';
+
+async function measurePhase(backend, phase, operation) {
+  const started = performance.now();
+  let status = 'failed';
+  try {
+    const result = await operation();
+    status = 'passed';
+    return result;
+  } finally {
+    const milliseconds = Math.round(performance.now() - started);
+    console.log(JSON.stringify({backend, phase, milliseconds, status}));
+    if (process.env.GITHUB_STEP_SUMMARY) {
+      await appendFile(process.env.GITHUB_STEP_SUMMARY,
+        `- ${backend} ${phase}: ${milliseconds} ms (${status})\n`);
+    }
+  }
+}
 
 // WebGPU requires a secure origin; setContent/about:blank cannot exercise it.
 const server = createServer((request, response) => {
@@ -21,17 +40,17 @@ try {
   for (const backend of ['webgl2', 'webgpu']) {
     // Keep ANGLE and Vulkan compositor settings specific to each backend.
     // Sharing a process mixes the WebGL --use-gl override with WebGPU capture.
-    const browser = await chromium.launch(getPlaywrightLaunchOptions({
+    const browser = await measurePhase(backend, 'browser-start', () => chromium.launch(getPlaywrightLaunchOptions({
       backend,
       headless: true,
       softwareGpu: process.platform === 'linux'
-    }));
+    })));
     try {
       const page = await browser.newPage({viewport: {width: 64, height: 64}, deviceScaleFactor: 1});
-      await page.goto(`http://127.0.0.1:${server.address().port}`);
+      await measurePhase(backend, 'navigation', () => page.goto(`http://127.0.0.1:${server.address().port}`));
       let evaluationTimeout;
       try {
-        await Promise.race([page.evaluate(async backend => {
+        await measurePhase(backend, 'gpu-submit-and-present', () => Promise.race([page.evaluate(async backend => {
         const canvas = document.querySelector('canvas');
         if (backend === 'webgl2') {
           const context = canvas.getContext('webgl2', {preserveDrawingBuffer: true});
@@ -72,15 +91,16 @@ try {
           evaluationTimeout = setTimeout(() => reject(new Error(
             `${backend} presentation timed out waiting for GPU submission or compositor frames`
           )), 20_000);
-        })]);
+        })]));
       } finally {
         clearTimeout(evaluationTimeout);
       }
       // Capture the canvas region directly, as SnapshotTestRunner does. Element
       // screenshots wait for layout stability and can stall with software compositing.
-      const capture = PNG.sync.read(await page.screenshot({
+      const screenshot = await measurePhase(backend, 'screenshot', () => page.screenshot({
         clip: {x: 0, y: 0, width: 64, height: 64}
       }));
+      const capture = await measurePhase(backend, 'png-decode', async () => PNG.sync.read(screenshot));
       assert.equal(capture.width, 64);
       assert.equal(capture.height, 64);
       let redPixelCount = 0;

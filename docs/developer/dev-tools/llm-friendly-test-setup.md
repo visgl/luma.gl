@@ -129,3 +129,19 @@ Use offscreen texture readback for numeric GPU correctness assertions and this
 small presentation check for canvas capture. The legacy `test/render/` suite
 remains excluded: reviving its goldens and choosing backend-specific tolerances
 is separate work. See [issue #2874](https://github.com/visgl/luma.gl/issues/2874).
+
+
+### CI presentation and package build costs
+
+The test workflow builds package outputs once and transfers a tar archive from the current
+workflow run to the example and lighting jobs. The archive preserves package paths and file
+permissions; it is not a cache across commits. Coverage and visual jobs that run directly from
+source remain independent. This removes four duplicate package builds, at the cost of artifact
+transfer and waiting for the shared build before starting the consumer jobs.
+
+Canvas presentation runs in its own job. A compositor failure still fails the aggregate required
+check, while browser coverage continues and uploads its results. Retrying a failed presentation
+job no longer requires recollecting a browser shard. The canary reports JSON phase timings and
+writes them to the Actions summary, including the failed phase: browser startup, navigation,
+GPU submission/presentation, screenshot capture, and PNG decoding. This distinguishes a screenshot
+stall from shader or rendering cost without extending timeouts or adding automatic retries.
