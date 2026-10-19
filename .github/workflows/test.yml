@@ -512,7 +512,7 @@ jobs:
 
   test:
     name: Aggregate test coverage
-    needs: [browser_coverage, node_coverage, visual_examples, presentation]
+    needs: [browser_coverage, node_coverage, visual_examples, presentation, build_packages]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-22.04
     timeout-minutes: 5
@@ -561,7 +561,12 @@ jobs:
           NODE_COVERAGE_RESULT: ${{ needs.node_coverage.result }}
           VISUAL_EXAMPLES_RESULT: ${{ needs.visual_examples.result }}
           PRESENTATION_RESULT: ${{ needs.presentation.result }}
+          PACKAGE_BUILD_RESULT: ${{ needs.build_packages.result }}
         run: |
+          if [ "$PACKAGE_BUILD_RESULT" != "success" ]; then
+            echo "::error::Shared package build finished with status: $PACKAGE_BUILD_RESULT"
+            exit 1
+          fi
           if [ "$PRESENTATION_RESULT" != "success" ]; then
             echo "::error::GPU presentation finished with status: $PRESENTATION_RESULT"
             exit 1

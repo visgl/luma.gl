@@ -19,6 +19,10 @@ test('presentation remains a required gate without blocking coverage collection'
 });
 
 test('package consumers restore one authoritative build from this workflow run', () => {
+  assert(workflow.jobs.test.needs.includes('build_packages'));
+  const gate = workflow.jobs.test.steps.find(step => step.name === 'Verify all coverage and visual jobs passed');
+  assert.equal(gate.env.PACKAGE_BUILD_RESULT, '${{ needs.build_packages.result }}');
+  assert(gate.run.includes('"$PACKAGE_BUILD_RESULT" != "success"'));
   const builds = Object.values(workflow.jobs).flatMap(job => job.steps || [])
     .filter(step => /\byarn build\b/.test(step.run || ''));
   assert.equal(builds.length, 1);
