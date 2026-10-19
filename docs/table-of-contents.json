@@ -737,6 +737,8 @@
         "items": [
           "api-reference/gpgpu/README",
           "api-reference/gpgpu/gpu-vector-search",
+          "api-reference/gpgpu/gpu-geometry",
+          "api-reference/gpgpu/gpu-pointcloud",
           {
             "type": "category",
             "label": "GPU Data",

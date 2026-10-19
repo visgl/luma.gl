@@ -20,6 +20,9 @@ const DOCUMENTATION_DIRECTORY = path.join(process.cwd(), 'docs');
 const GENERAL_PURPOSE_GPU_EXAMPLE_IDENTIFIERS = [
   'showcase/million-row-crossfilter',
   'showcase/raster-lab',
+  'experimental/gpu-geometry',
+  'experimental/gpu-pointcloud',
+  'experimental/gpu-pointcloud-octree',
   'showcase/billion-point-spatial-atlas',
   'experimental/gpt-2',
   'v10/gpgpu',
@@ -226,6 +229,9 @@ describe('GPGPU example catalog navigation', () => {
       'showcase/million-row-crossfilter',
       'showcase/raster-lab',
       'experimental/gpu-parquet-constellation',
+      'experimental/gpu-geometry',
+      'experimental/gpu-pointcloud',
+      'experimental/gpu-pointcloud-octree',
       'showcase/billion-point-spatial-atlas',
       'experimental/gpt-2'
     ]);

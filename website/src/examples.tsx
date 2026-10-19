@@ -2689,3 +2689,39 @@ export const GPUTimeSeriesExample: React.FC<WebsiteExampleProps> = props => (
     {...props}
   />
 );
+
+export const GPUGeometryExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="gpu-geometry"
+    title="GPU Geometry Surface Lab"
+    directory="experimental"
+    devices={['webgpu']}
+    loadTemplate={() => import('../../examples/experimental/gpu-geometry/app')}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const GPUPointCloudExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="gpu-pointcloud"
+    title="GPU Point Cloud Cleanup Lab"
+    directory="experimental"
+    devices={['webgpu']}
+    loadTemplate={() => import('../../examples/experimental/gpu-pointcloud/app')}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const GPUPointCloudOctreeExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="gpu-pointcloud-octree"
+    title="Additive Octree · Point Cloud Tiles"
+    directory="experimental"
+    devices={['webgpu']}
+    loadTemplate={() => import('../../examples/experimental/gpu-pointcloud-octree/app')}
+    config={exampleConfig}
+    {...props}
+  />
+);

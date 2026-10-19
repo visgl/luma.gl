@@ -97,6 +97,16 @@
       "types": "./dist/gpu-timeseries/index.d.ts",
       "import": "./dist/gpu-timeseries/index.js",
       "require": "./dist/gpu-timeseries/index.cjs"
+    },
+    "./gpu-geometry": {
+      "types": "./dist/gpu-geometry/index.d.ts",
+      "import": "./dist/gpu-geometry/index.js",
+      "require": "./dist/gpu-geometry/index.cjs"
+    },
+    "./gpu-pointcloud": {
+      "types": "./dist/gpu-pointcloud/index.d.ts",
+      "import": "./dist/gpu-pointcloud/index.js",
+      "require": "./dist/gpu-pointcloud/index.cjs"
     }
   },
   "files": [
