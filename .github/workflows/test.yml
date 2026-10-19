@@ -59,13 +59,14 @@ jobs:
           name: luma-package-build
           path: ${{ runner.temp }}/luma-package-build.tar
           compression-level: 1
-          retention-days: 1
+          retention-days: 35
           if-no-files-found: error
 
   presentation:
     name: GPU canvas presentation
     runs-on: ubuntu-22.04
-    timeout-minutes: 5
+    # Allow cold dependency/browser installs; the canary itself remains bounded to two minutes.
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6

@@ -26,6 +26,8 @@ test('package consumers restore one authoritative build from this workflow run',
   const builds = Object.values(workflow.jobs).flatMap(job => job.steps || [])
     .filter(step => /\byarn build\b/.test(step.run || ''));
   assert.equal(builds.length, 1);
+  const upload = workflow.jobs.build_packages.steps.find(step => step.name === 'Upload package outputs');
+  assert(upload.with['retention-days'] >= 35, 'artifacts must survive the workflow rerun window');
   for (const name of ['examples', 'lighting_examples']) {
     const job = workflow.jobs[name];
     assert.equal(job.needs, 'build_packages');

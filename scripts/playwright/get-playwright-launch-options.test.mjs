@@ -47,7 +47,8 @@ test('getPlaywrightLaunchOptions preserves ANGLE and enables Vulkan presentation
       '--enable-unsafe-swiftshader',
       '--enable-gpu',
       '--enable-features=Vulkan',
-      '--use-vulkan=swiftshader'
+      '--use-vulkan=swiftshader',
+      '--disable-vulkan-surface'
     ]
   });
 });

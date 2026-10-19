@@ -12,6 +12,10 @@ import {getPlaywrightLaunchOptions} from './get-playwright-launch-options.mjs';
 
 async function measurePhase(backend, phase, operation) {
   const started = performance.now();
+  console.log(JSON.stringify({backend, phase, status: 'started'}));
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    await appendFile(process.env.GITHUB_STEP_SUMMARY, `- ${backend} ${phase}: started\n`);
+  }
   let status = 'failed';
   try {
     const result = await operation();

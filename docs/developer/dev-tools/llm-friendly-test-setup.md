@@ -134,7 +134,7 @@ is separate work. See [issue #2874](https://github.com/visgl/luma.gl/issues/2874
 ### CI presentation and package build costs
 
 The test workflow builds package outputs once and transfers a tar archive from the current
-workflow run to the example and lighting jobs. The archive preserves package paths and file
+workflow run to the example and lighting jobs. It is retained for 35 days to support delayed job reruns. The archive preserves package paths and file
 permissions; it is not a cache across commits. Coverage and visual jobs that run directly from
 source remain independent. This removes four duplicate package builds, at the cost of artifact
 transfer and waiting for the shared build before starting the consumer jobs.
@@ -142,6 +142,12 @@ transfer and waiting for the shared build before starting the consumer jobs.
 Canvas presentation runs in its own job. A compositor failure still fails the aggregate required
 check, while browser coverage continues and uploads its results. Retrying a failed presentation
 job no longer requires recollecting a browser shard. The canary reports JSON phase timings and
-writes them to the Actions summary, including the failed phase: browser startup, navigation,
+writes start records and completion records to the Actions summary, including the failed phase: browser startup, navigation,
 GPU submission/presentation, screenshot capture, and PNG decoding. This distinguishes a screenshot
 stall from shader or rendering cost without extending timeouts or adding automatic retries.
+
+Linux software WebGPU launches disable Vulkan surface swapchains for headless capture using
+`--disable-vulkan-surface`, following Chromium's documented headless setup. Pixel assertions
+still verify that the browser compositor captured the canvas; no readback fallback substitutes
+for this presentation check. The canary keeps its original timeout; the job separately allows
+cold dependency and browser installation time.
