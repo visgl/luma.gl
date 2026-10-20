@@ -398,14 +398,14 @@ it('evaluates the numeric conversions and clamp used by Traffic Light', () => {
         declarations: [{op: 'math/clamp'}, {op: 'type/intToFloat'}, {op: 'type/floatToInt'}],
         nodes: [
           {declaration: 0, values: {a: {value: [6]}, b: {value: [0]}, c: {value: [4]}}},
-          {declaration: 1, values: {a: {value: [3]}}},
+          {declaration: 1, values: {a: {value: [3, 16777217, 2147483647, -2147483648]}}},
           {declaration: 2, values: {a: {value: [-2.7, Infinity]}}}
         ]
       }
     ]
   });
   expect(runtime.evaluate(0)).toEqual([4]);
-  expect(runtime.evaluate(1)).toEqual([3]);
+  expect(runtime.evaluate(1)).toEqual([3, 16777217, 2147483647, -2147483648]);
   expect(runtime.evaluate(2)).toEqual([-2, 0]);
 });
 

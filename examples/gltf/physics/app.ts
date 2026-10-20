@@ -200,6 +200,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       replacementWorld = undefined;
       replacementScene = undefined;
       this.accumulator = 0;
+      this.paused = false;
+      const pause = document.querySelector<HTMLButtonElement>('#physics-pause');
+      if (pause) pause.textContent = 'Pause';
       this.bodyModels.clear();
       this.bodyDeltas = description.bodies.map(() => new Matrix4());
       for (const body of description.bodies) {

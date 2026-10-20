@@ -285,7 +285,7 @@ export class GLTFInteractivity {
       };
       switch (op) {
         case 'type/intToFloat':
-          return a().map(value => Math.fround(Number(value)));
+          return a().map(Number);
         case 'type/floatToInt':
           return a().map(value => Number(value) | 0);
         case 'math/clamp': {

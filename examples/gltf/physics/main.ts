@@ -52,8 +52,11 @@ const animationLoop = makeAnimationLoop(App, {
   onAfterRender: () => panels.onRedraw({viewports: [], layers: []})
 });
 void animationLoop.start().catch(error => {
-  const element = document.querySelector('#error');
-  if (element) element.textContent = `WebGPU is required. ${error}`;
+  const element = document.querySelector<HTMLElement>('#startup-error');
+  if (element) {
+    element.textContent = `WebGPU is required. ${error}`;
+    element.hidden = false;
+  }
 });
 window.addEventListener(
   'pagehide',
