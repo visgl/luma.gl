@@ -27,11 +27,6 @@
         "type": "doc",
         "id": "showcase/persistence",
         "label": "Effects: Persistence"
-      },
-      {
-        "type": "doc",
-        "id": "experimental/scene-playground",
-        "label": "Scene Playground"
       }
     ]
   },
@@ -39,10 +34,17 @@
     "type": "category",
     "label": "glTF",
     "items": [
-      "showcase/gltf",
+      "gltf/asset-studio",
       "tutorials/hello-gltf",
       "gltf/physics",
       "deck/gltf-interactivity"
+    ]
+  },
+  {
+    "type": "category",
+    "label": "ANARI",
+    "items": [
+      "anari/scenes"
     ]
   },
   {

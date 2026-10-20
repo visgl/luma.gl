@@ -17,7 +17,7 @@ import {expect, it} from 'vitest';
 
 async function loadSimpleSkin() {
   const asset = await readFile(
-    new URL('../../../../examples/showcase/scene/public/gltf/SimpleSkin.gltf', import.meta.url)
+    new URL('../../../../examples/anari/scenes/public/gltf/SimpleSkin.gltf', import.meta.url)
   );
   return postProcessGLTF(await parse(asset, GLTFLoader, {gltf: {loadImages: false}}));
 }

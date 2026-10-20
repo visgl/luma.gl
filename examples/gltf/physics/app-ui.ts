@@ -18,6 +18,22 @@ export const INFO_HTML = makeExamplePanelHostHtml();
 const CARET =
   '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" role="presentation" focusable="false"><path d="m10 3-5 5 5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
+const SAMPLE_DESCRIPTIONS: Record<string, string> = {
+  Materials_Restitution:
+    '<h3>Restitution · bounce</h3><p>Watch the two balls fall onto the floor. Their materials have different restitution: the basketball rebounds strongly, while the bowling ball loses more energy on impact. Reset to compare their bounces from the same starting positions.</p>',
+  Materials_Friction:
+    '<h3>Friction · sliding</h3><p>The boxes rest on a slope with different friction materials. The slippery soap slides more readily; the high-friction box resists sliding. Reset to replay and compare their motion.</p>',
+  Filtering:
+    '<h3>Filtering · who collides?</h3><p>Blue collides with blue, green collides with green, and both collide with the striped ground. Blue and green deliberately pass through each other: this demonstrates collision filtering, not missing collisions.</p><p>The connected pair forms one rigid body, but its blue and green parts retain separate filters. One part can pass through an obstacle while the matching-color part catches on it. Reset to watch the fall again.</p>',
+  MotionProperties:
+    '<h3>Motion properties · mass and motion</h3><p>The bottom-heavy toy wobbles around its offset center of mass. Four balloons rise under reversed gravity and collide with the ceiling. The wheel can rotate around one axis but cannot translate; its original triangle geometry preserves the holes. The rounded box falls onto the cone without rotating because its inertia locks all rotation axes. Reset to replay.</p>'
+};
+
+export function showSampleDescription(sample: string): void {
+  const element = document.getElementById('physics-description');
+  if (element) element.innerHTML = SAMPLE_DESCRIPTIONS[sample] ?? '';
+}
+
 export function createPhysicsPanels(diagnostics: GPUGraphDiagnostics) {
   const controls = document.createElement('section');
   controls.className = 'physics-controls';
@@ -28,7 +44,7 @@ export function createPhysicsPanels(diagnostics: GPUGraphDiagnostics) {
 <option value="Materials_Restitution">Restitution</option>
 <option value="Materials_Friction">Friction</option>
 <option value="Filtering">Filtering</option>
-<option value="MotionProperties">Motion properties · preview</option>
+<option value="MotionProperties">Motion properties</option>
 </select>
 <button id="physics-next" class="gltf-example-caret gltf-example-caret-next" data-physics-control aria-label="Next sample" title="Next sample">${CARET}</button>
 <button id="physics-pause" data-physics-control>Pause</button>
@@ -39,15 +55,17 @@ export function createPhysicsPanels(diagnostics: GPUGraphDiagnostics) {
   details.className = 'gltf-example-details';
   details.innerHTML = `
 <p>Drag to orbit · Scroll to zoom · Reset to replay.</p>
+<section id="physics-description" aria-live="polite"></section>
 <p>Draft <code>KHR_physics_rigid_bodies</code> and <code>KHR_implicit_shapes</code>.
 WebGPU simulation uses a small CPU pose bridge to the glTF renderer.
 Filtering preserves the authored per-collider systems, including its compound boxes.
-Motion Properties remains a static preview until its other collider types are supported.</p>
+Motion Properties uses analytic tapered primitives, convex hulls and the original nonconvex wheel triangles. This bounded experimental solver does not support general mesh-to-mesh collisions.</p>
 <div id="error" role="status"></div>
 <a href="https://github.com/eoineoineoin/glTF_Physics/tree/9dc61cb3474ff9a51f58d3592f79d5c9e572056a/samples" target="_blank" rel="noreferrer">Upstream samples ↗</a>`;
   controls.hidden = true;
   details.hidden = true;
   document.body.append(controls, details);
+  showSampleDescription('Materials_Restitution');
   const mountContent = (root: HTMLElement, content: HTMLElement) => {
     configurePanelHostElement(root, 'cinematic');
     content.hidden = false;

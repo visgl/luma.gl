@@ -17,10 +17,10 @@ import {
 import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import type {GPURigidBodyWorld, GPURigidBodyState} from '@luma.gl/gpgpu/gpu-physics';
 import type {ScenegraphNode} from '@luma.gl/engine';
-import {INFO_HTML, showError, createPhysicsPanels} from './app-ui';
+import {INFO_HTML, showError, showSampleDescription, createPhysicsPanels} from './app-ui';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {makePhysicsBodyDelta} from './body-transforms';
-import {makeLegacyMeshPositionResolver} from './legacy-mesh-positions';
+import {makeLegacyMeshGeometryResolver} from './legacy-mesh-positions';
 
 const SAMPLE_REVISION = '9dc61cb3474ff9a51f58d3592f79d5c9e572056a';
 const SAMPLE_BASE_URL = `https://raw.githubusercontent.com/eoineoineoin/glTF_Physics/${SAMPLE_REVISION}/samples`;
@@ -29,7 +29,7 @@ const MAX_CAMERA_TILT = 0.6;
 const lightSources = {
   ambientLight: {
     color: [255, 255, 255],
-    intensity: 0.35,
+    intensity: 0.5,
     type: 'ambient'
   },
   directionalLights: [
@@ -160,6 +160,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       document.querySelector<HTMLSelectElement>('#physics-sample')?.value ||
       'Materials_Restitution';
     const modelUrl = `${SAMPLE_BASE_URL}/${sample}/${sample}.glb`;
+    showSampleDescription(sample);
     let replacementWorld: GPURigidBodyWorld | undefined;
     let replacementGraph: CompiledGPUCommandGraph<void> | undefined;
     let replacementScene: ReturnType<typeof createScenegraphsFromGLTF> | undefined;
@@ -172,7 +173,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       const gltf = await load(modelUrl, GLTFLoader);
       if (this.isFinalized) return;
       const description = parseGLTFPhysics(gltf.json, {
-        resolveLegacyMeshPositions: makeLegacyMeshPositionResolver(new GLTFScenegraph(gltf))
+        resolveLegacyMeshGeometry: makeLegacyMeshGeometryResolver(new GLTFScenegraph(gltf))
       });
       if (description.supported) {
         replacementWorld = createGLTFPhysicsWorld(description, {timeStep: 1 / 120, iterations: 16});
@@ -215,7 +216,22 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
       destroyScenegraphs(this.scenegraphsFromGLTF);
       this.scenegraphsFromGLTF = scenegraphsFromGLTF;
-      this.modelLights = scenegraphsFromGLTF.lights;
+      // Authored glTF point/spot intensities need inverse-square distance falloff.
+      this.modelLights = scenegraphsFromGLTF.lights.map(light =>
+        light.type === 'point' || light.type === 'spot'
+          ? {...light, attenuation: [0, 0, 1] as const}
+          : light
+      );
+      if (this.modelLights.length > 0) {
+        // Soft fill keeps the shaded faces readable while preserving authored light falloff.
+        this.modelLights.push(
+          lightSources.ambientLight,
+          ...lightSources.directionalLights.map(light => ({
+            ...light,
+            intensity: light.intensity * 0.3
+          }))
+        );
+      }
 
       const sceneBounds = scenegraphsFromGLTF.sceneBounds[0] || scenegraphsFromGLTF.modelBounds;
       this.center = [...sceneBounds.center];

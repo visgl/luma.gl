@@ -69,7 +69,7 @@ const loadVolumetricFireForgeApp = () => import('../../examples/experimental/vol
 const loadVirtualGeometryCanyonApp = () => import('../../examples/experimental/virtual-geometry-canyon/app');
 const loadShadowMapApp = () => import('../../examples/experimental/shadow-map/app');
 const loadABufferApp = () => import('../../examples/experimental/a-buffer/app');
-const loadGLTFApp = () => import('../../examples/showcase/gltf/app');
+const loadGLTFApp = () => import('../../examples/gltf/asset-studio/app');
 const loadGaussianSplatsApp = () => import('../../examples/showcase/gaussian-splats/app');
 const loadArrowTemporalStarfieldApp = () => import('../../examples/arrow/arrow-temporal-starfield/app');
 const loadArrowTimeColumnsApp = () => import('../../examples/arrow/arrow-time-columns/app');
@@ -842,10 +842,10 @@ export const GLTFExample: React.FC<WebsiteExampleProps> = props => {
 
   return (
     <LumaExample
-      id="gltf"
+      id="asset-studio"
       title="glTF Asset Studio"
       subtitle="Physical materials · animated characters · standards-native glTF"
-      directory="showcase"
+      directory="gltf"
       loadTemplate={loadGLTFApp}
       config={exampleConfig}
       canvasContextProfile="high-dynamic-range"

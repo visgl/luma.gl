@@ -5,8 +5,8 @@ import {
   ANARITextureSchema
 } from '@luma.gl/anari/schemas';
 import {expect, it} from 'vitest';
-import {PLAYGROUND_PRESETS} from '../../../examples/showcase/scene/playground-presets';
-import type {ANARIJSONScene} from '../../../examples/showcase/scene/playground-scene';
+import {PLAYGROUND_PRESETS} from '../../../examples/anari/scenes/playground-presets';
+import type {ANARIJSONScene} from '../../../examples/anari/scenes/playground-scene';
 
 it('ANARI animation schemas preserve optional node hierarchies and keyframe clips', () => {
   const scene: ANARIJSONScene = structuredClone(PLAYGROUND_PRESETS[0].scene);

@@ -6,14 +6,14 @@ import {readFile} from 'node:fs/promises';
 import {parse} from '@loaders.gl/core';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {describe, expect, test} from 'vitest';
-import {makeANARIJSONSceneFromGLTF} from '../../../examples/showcase/scene/gltf-to-anari';
-import {PLAYGROUND_PRESETS} from '../../../examples/showcase/scene/playground-presets';
-import {exportANARIJSONSceneToGLTF} from '../../../examples/showcase/scene/scene-export';
+import {makeANARIJSONSceneFromGLTF} from '../../../examples/anari/scenes/gltf-to-anari';
+import {PLAYGROUND_PRESETS} from '../../../examples/anari/scenes/playground-presets';
+import {exportANARIJSONSceneToGLTF} from '../../../examples/anari/scenes/scene-export';
 
 describe('retained ANARI to glTF animated interchange', () => {
   test('round-trips the real AnimatedMorphCube hierarchy, 127 keyframes, and both targets', async () => {
     const asset = await readFile(
-      new URL('../../../examples/showcase/scene/public/gltf/AnimatedMorphCube.glb', import.meta.url)
+      new URL('../../../examples/anari/scenes/public/gltf/AnimatedMorphCube.glb', import.meta.url)
     );
     const source = postProcessGLTF(await parse(asset, GLTFLoader, {gltf: {loadImages: false}}));
     const scene = await makeANARIJSONSceneFromGLTF(source, 'Animated morph interchange');

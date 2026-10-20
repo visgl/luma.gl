@@ -5,7 +5,7 @@
 import type {ExampleSupportDefinition} from '../../example-support';
 
 const exampleSupport = {
-  id: 'experimental/scene-playground',
+  id: 'anari/scenes',
   mobileMode: 'reduced',
   mobileProfile: 'effects',
   requirements: {backends: ['webgpu', 'webgl2']}

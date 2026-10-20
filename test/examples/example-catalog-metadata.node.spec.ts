@@ -222,8 +222,8 @@ describe('live example catalog metadata', () => {
       const canonicalId =
         new Map([
           ['arrow/arrow-instancing', 'showcase/instancing'],
-          ['showcase/scene', 'experimental/scene-playground'],
-          ['showcase/scene/playground', 'experimental/scene-playground'],
+          ['anari/scenes', 'anari/scenes'],
+          ['anari/scenes/playground', 'anari/scenes'],
           ['tutorials/hello-instanced-cubes', 'tutorials/instanced-cubes'],
           ['tutorials/hello-two-cubes', 'tutorials/two-cubes']
         ]).get(standaloneId) || standaloneId;
@@ -237,8 +237,8 @@ describe('live example catalog metadata', () => {
   test('resolves standalone aliases to the same canonical support definitions', () => {
     const aliases = new Map([
       ['arrow/arrow-instancing/index.html', 'showcase/instancing'],
-      ['showcase/scene/index.html', 'experimental/scene-playground'],
-      ['showcase/scene/playground.html', 'experimental/scene-playground'],
+      ['anari/scenes/index.html', 'anari/scenes'],
+      ['anari/scenes/playground.html', 'anari/scenes'],
       ['tutorials/hello-instanced-cubes/index.html', 'tutorials/instanced-cubes'],
       ['tutorials/hello-two-cubes/index.html', 'tutorials/two-cubes']
     ]);

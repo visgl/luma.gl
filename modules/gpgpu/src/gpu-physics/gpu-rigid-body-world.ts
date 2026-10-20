@@ -14,7 +14,8 @@ import {
   GPUCommandGraph,
   type GPUCommandGraphComputeExecutable
 } from '../gpu-core/gpu-command-graph';
-import {getBodyInertia} from './sphere-shapes';
+import {getRigidBodyShapeProperties} from './rigid-body-shape-properties';
+import {packRigidBodyShapes, areFixedMeshesSeparated} from './rigid-body-geometry';
 import {
   getCompoundBodyInertia,
   normalizeRigidBodyRotation,
@@ -54,7 +55,7 @@ export type GPURigidBodyState = {
 };
 
 /**
- * Experimental bounded sphere/box dynamics with parallel SAT/manifold generation and an
+ * Experimental bounded rigid-body dynamics with parallel SAT/GJK contact generation and an
  * ordered GPU impulse solver. All buffers are world-owned. This reference path is limited
  * to 128 bodies; use GPUSphereWorld for spatially hashed large sphere workloads.
  */
@@ -73,6 +74,7 @@ export class GPURigidBodyWorld {
   private readonly props: GPURigidBodyWorldProps;
   private readonly ownedBuffers: Buffer[] = [];
   private manifolds: Buffer | null = null;
+  private meshTasks: Buffer | null = null;
   private device: Device | null = null;
   private control: Computation | null = null;
   private controlSettings: Buffer | null = null;
@@ -100,7 +102,21 @@ export class GPURigidBodyWorld {
       const shapes: readonly GPURigidBodyCollider[] =
         body.colliders ?? (body.shape ? [{shape: body.shape}] : []);
       for (const collider of shapes) {
-        getBodyInertia(body.mass ?? 1, collider.shape);
+        const properties = getRigidBodyShapeProperties(collider.shape);
+        if (
+          !Number.isFinite(properties.volume) ||
+          !properties.center.every(Number.isFinite) ||
+          !properties.tensor.every(Number.isFinite)
+        )
+          throw new Error('Invalid shape properties');
+        if (
+          body.mode !== 'static' &&
+          body.mass !== 0 &&
+          (!(properties.volume > 0) ||
+            ((collider.shape.type === 'convex-hull' || collider.shape.type === 'triangle-mesh') &&
+              !collider.shape.geometry.closed))
+        )
+          throw new Error('Dynamic meshes require closed positive-volume geometry');
         normalizeRigidBodyRotation(collider.orientation);
         if (!(collider.position ?? []).every(Number.isFinite))
           throw new Error('Invalid collider position');
@@ -162,6 +178,28 @@ export class GPURigidBodyWorld {
       )
         throw new Error('Invalid collider filter');
     this.colliderCount = colliders.length;
+    for (let first = 0; first < colliders.length; first++)
+      for (let second = first + 1; second < colliders.length; second++) {
+        const firstCollider = colliders[first],
+          secondCollider = colliders[second];
+        if (
+          firstCollider.shape.type !== 'triangle-mesh' ||
+          secondCollider.shape.type !== 'triangle-mesh' ||
+          firstCollider.body === secondCollider.body ||
+          firstCollider.excludedColliders?.includes(second) ||
+          secondCollider.excludedColliders?.includes(first)
+        )
+          continue;
+        const firstBody = props.bodies[firstCollider.body],
+          secondBody = props.bodies[secondCollider.body];
+        const staticBody = (body: GPURigidBody) =>
+          (body.mode ?? (body.mass === 0 ? 'static' : 'dynamic')) === 'static';
+        if (
+          !(staticBody(firstBody) && staticBody(secondBody)) &&
+          !areFixedMeshesSeparated(firstCollider, firstBody, secondCollider, secondBody)
+        )
+          throw new Error('Potential mesh/mesh contact is unsupported');
+      }
     this.colliders = structuredClone(colliders);
     this.props = structuredClone(props);
   }
@@ -174,7 +212,11 @@ export class GPURigidBodyWorld {
       const buffer = graph.device.createBuffer({
         id: `${this.id}-${name}`,
         ...(typeof data === 'number' ? {byteLength: data} : {data}),
-        usage: (uniform ? Buffer.UNIFORM : Buffer.STORAGE) | Buffer.COPY_DST | Buffer.COPY_SRC
+        usage:
+          (uniform ? Buffer.UNIFORM : Buffer.STORAGE) |
+          Buffer.COPY_DST |
+          Buffer.COPY_SRC |
+          (name === 'targets' ? Buffer.INDIRECT : 0)
       });
       this.ownedBuffers.push(buffer);
       return buffer;
@@ -184,11 +226,13 @@ export class GPURigidBodyWorld {
     const velocities = new Float32Array(this.count * 4);
     const angular = new Float32Array(this.count * 4);
     // Three vec4s per body; six vec4s per collider, followed by a dense exclusion table.
-    const metadata = new Float32Array(
+    const packed = packRigidBodyShapes(this.colliders);
+    const geometryOffset =
       Math.ceil(
         (this.count * 12 + this.colliderCount * 24 + this.colliderCount * this.colliderCount) / 4
-      ) * 4
-    );
+      ) * 4;
+    const metadata = new Float32Array(geometryOffset + Math.max(4, packed.geometry.length));
+    metadata.set(packed.geometry, geometryOffset);
     for (const [index, body] of this.props.bodies.entries()) {
       const mass = body.mass ?? 1;
       const mode = body.mode ?? (mass === 0 ? 'static' : 'dynamic');
@@ -244,13 +288,10 @@ export class GPURigidBodyWorld {
       const material = collider.material;
       const center: Vector3 = body.centerOfMass ?? [0, 0, 0];
       const offset = (collider.position ?? [0, 0, 0]).map((value, axis) => value - center[axis]);
-      const shape =
-        collider.shape.type === 'sphere'
-          ? [collider.shape.radius, 0, 0, 0]
-          : [...collider.shape.halfExtents, 1];
+      const shape = packed.shapes[index];
       metadata.set(
         [
-          ...shape,
+          ...shape.dimensions,
           ...offset,
           collider.body,
           ...normalizeRigidBodyRotation(collider.orientation),
@@ -260,12 +301,8 @@ export class GPURigidBodyWorld {
           0,
           material?.restitutionCombine ? policies.indexOf(material.restitutionCombine) : 4,
           material?.frictionCombine ? policies.indexOf(material.frictionCombine) : 4,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0
+          ...shape.policies,
+          ...shape.padding
         ],
         this.count * 12 + index * 24
       );
@@ -281,9 +318,13 @@ export class GPURigidBodyWorld {
     this.velocities = allocate('velocities', velocities);
     this.angularVelocities = allocate('angular-velocities', angular);
     this.sleepStates = allocate('sleep', this.count * 16);
-    this.targets = allocate('targets', this.count * 32);
+    this.targets = allocate('targets', this.count * 32 + 16);
     // Four 64-byte contacts followed by a 32-byte aligned manifold header.
     this.manifolds = allocate('manifolds', this.colliderCount * this.colliderCount * 288);
+    const extended = this.colliders.some(
+      collider => collider.shape.type !== 'sphere' && collider.shape.type !== 'box'
+    );
+    if (extended) this.meshTasks = allocate('mesh-tasks', 16 + 65536 * 48);
     const bodies = allocate('bodies', metadata);
     const settings = allocate(
       'settings',
@@ -310,17 +351,21 @@ export class GPURigidBodyWorld {
       bodies,
       manifolds: this.manifolds,
       sleepStates: this.sleepStates,
-      targets: this.targets
+      targets: this.targets,
+      ...(this.meshTasks ? {meshTasks: this.meshTasks} : {})
     };
     const bindings = Object.entries(buffers).map(([name, buffer], location) => ({
       name,
       buffer,
-      location: location === 8 ? 9 : location,
+      location: location >= 8 ? location + 1 : location,
       resource: graph.importBuffer(
         {
           id: `${this.id}-${name}`,
           byteLength: buffer.byteLength,
-          usage: location === 0 ? Buffer.UNIFORM : Buffer.STORAGE
+          usage:
+            location === 0
+              ? Buffer.UNIFORM
+              : Buffer.STORAGE | (name === 'targets' ? Buffer.INDIRECT : 0)
         },
         buffer
       )
@@ -334,16 +379,31 @@ export class GPURigidBodyWorld {
           : {...base, type: name === 'bodies' ? 'read-only-storage' : 'storage'};
       })
     };
-    const source = getRigidBodyShader(this.count, this.props.iterations ?? 16, this.colliderCount);
-    for (const entryPoint of ['integrate', 'collide', 'solve', 'finish']) {
+    const source = getRigidBodyShader(
+      this.count,
+      this.props.iterations ?? 16,
+      this.colliderCount,
+      this.colliders.some(
+        collider => collider.shape.type !== 'sphere' && collider.shape.type !== 'box'
+      )
+    );
+    for (const entryPoint of [
+      'integrate',
+      'collide',
+      ...(extended ? ['meshCollide'] : []),
+      'solve',
+      'finish'
+    ]) {
       const unused =
-        entryPoint === 'integrate'
-          ? ['manifolds']
-          : entryPoint === 'collide'
-            ? ['sleepStates', 'targets']
-            : entryPoint === 'finish'
-              ? ['manifolds']
-              : ['targets'];
+        entryPoint === 'meshCollide'
+          ? ['velocities', 'angularVelocities', 'manifolds', 'sleepStates', 'targets']
+          : entryPoint === 'integrate'
+            ? ['manifolds']
+            : entryPoint === 'collide'
+              ? ['sleepStates', ...(extended ? [] : ['targets'])]
+              : entryPoint === 'finish'
+                ? ['manifolds', 'meshTasks']
+                : ['targets'];
       const activeBindings = bindings.filter(binding => !unused.includes(binding.name));
       const activeLayout: ShaderLayout = {
         attributes: [],
@@ -357,14 +417,23 @@ export class GPURigidBodyWorld {
           for (const binding of activeBindings)
             resolved[binding.name] = getBuffer(binding.resource);
           computation.setBindings(resolved);
-          computation.dispatch(
-            computePass,
-            entryPoint === 'collide'
-              ? Math.ceil((this.colliderCount * this.colliderCount) / 64)
-              : entryPoint === 'integrate'
-                ? Math.ceil(this.count / 64)
-                : 1
-          );
+          if (entryPoint === 'meshCollide') {
+            const targetBinding = bindings.find(binding => binding.name === 'targets')!;
+            computation.dispatchIndirect(
+              computePass,
+              getBuffer(targetBinding.resource),
+              this.count * 32
+            );
+          } else {
+            computation.dispatch(
+              computePass,
+              entryPoint === 'collide'
+                ? Math.ceil((this.colliderCount * this.colliderCount) / 64)
+                : entryPoint === 'integrate'
+                  ? Math.ceil(this.count / 64)
+                  : 1
+            );
+          }
         },
         destroy: () => computation.destroy()
       });
@@ -376,15 +445,25 @@ export class GPURigidBodyWorld {
       };
       graph.addComputePass({
         id: computationProps.id,
-        resources: activeBindings.map(binding => ({
-          buffer: binding.resource,
-          usage:
-            binding.location === 0
-              ? 'uniform'
-              : binding.name === 'bodies'
-                ? 'storage-read'
-                : 'storage-read-write'
-        })),
+        resources: [
+          ...activeBindings.map(binding => ({
+            buffer: binding.resource,
+            usage:
+              binding.location === 0
+                ? ('uniform' as const)
+                : binding.name === 'bodies'
+                  ? ('storage-read' as const)
+                  : ('storage-read-write' as const)
+          })),
+          ...(entryPoint === 'meshCollide'
+            ? [
+                {
+                  buffer: bindings.find(binding => binding.name === 'targets')!.resource,
+                  usage: 'indirect' as const
+                }
+              ]
+            : [])
+        ],
         compile: ({device}) => createExecutable(new Computation(device, computationProps)),
         compileAsync: async ({device}) =>
           createExecutable(await Computation.createAsync(device, computationProps))
@@ -400,7 +479,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
 @group(0) @binding(8) var<uniform> command: Command;
 @compute @workgroup_size(1) fn control() {
  if(command.bodyIndex.y==0u) {applyImpulse(command.bodyIndex.x,command.point.xyz,command.impulse.xyz);}
- else {targets[command.bodyIndex.x].position=vec4f(command.point.xyz,1);targets[command.bodyIndex.x].orientation=command.orientation;}
+ else {targets.entries[command.bodyIndex.x].position=vec4f(command.point.xyz,1);targets.entries[command.bodyIndex.x].orientation=command.orientation;}
  // Wake and invalidate all connected components conservatively after external changes.
  for(var body=0u;body<BODY_COUNT;body++) {sleepStates[body]=vec4f(0);}
  for(var pair=0u;pair<COLLIDER_COUNT*COLLIDER_COUNT;pair++) {manifolds[pair].count=0u;}
@@ -408,12 +487,16 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       entryPoint: 'control',
       shaderLayout: {
         bindings: [
-          ...shaderLayout.bindings!.filter(binding => binding.name !== 'settings'),
+          ...shaderLayout.bindings!.filter(
+            binding => binding.name !== 'settings' && binding.name !== 'meshTasks'
+          ),
           {name: 'command', group: 0, location: 8, type: 'uniform'}
         ]
       },
       bindings: {
-        ...Object.fromEntries(Object.entries(buffers).filter(([name]) => name !== 'settings')),
+        ...Object.fromEntries(
+          Object.entries(buffers).filter(([name]) => name !== 'settings' && name !== 'meshTasks')
+        ),
         command: this.controlSettings
       }
     });
@@ -517,6 +600,23 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
         sleeping: arrays[4][offset + 1] > 0.5
       };
     });
+  }
+
+  /** Optional diagnostics readback; never required to advance simulation. */
+  async readCollisionDiagnostics(): Promise<{
+    unresolvedQueries: number;
+    triangleQueries: number;
+    droppedTriangleQueries: number;
+  }> {
+    if (!this.manifolds || this.destroyed) throw new Error('Rigid-body world is not active');
+    const values = new Uint32Array((await this.manifolds.readAsync()).buffer);
+    let unresolvedQueries = 0;
+    for (let pair = 0; pair < this.colliderCount * this.colliderCount; pair++)
+      unresolvedQueries += values[pair * 72 + 68];
+    const tasks = this.meshTasks
+      ? new Uint32Array((await this.meshTasks.readAsync(0, 16)).buffer)
+      : new Uint32Array(2);
+    return {unresolvedQueries, triangleQueries: tasks[0], droppedTriangleQueries: tasks[1]};
   }
 
   /** Destroy the compiled graph and finish readbacks before destroying its world. */

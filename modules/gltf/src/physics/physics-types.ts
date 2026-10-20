@@ -73,6 +73,11 @@ export type ParseGLTFPhysicsOptions = {
    * Only convex hulls exactly equal to an axis-aligned box are currently supported.
    */
   resolveLegacyMeshPositions?: (meshIndex: number) => ArrayLike<number>;
+  /** Explicit sample-era mesh profile; indices describe triangles, positions are flat XYZs. */
+  resolveLegacyMeshGeometry?: (meshIndex: number) => {
+    positions: ArrayLike<number>;
+    indices: ArrayLike<number>;
+  };
   /** kg/m³ for additive uniform-density primitive mass calculation. Defaults to 1000. */
   density?: number;
 };

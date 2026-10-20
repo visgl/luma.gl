@@ -5,7 +5,7 @@ import {
   type ANARIJSONScene,
   createANARIJSONScene,
   preloadANARIJSONTextures
-} from '../../../examples/showcase/scene/playground-scene';
+} from '../../../examples/anari/scenes/playground-scene';
 
 it('ANARI JSON textures materialize authored samplers and decode color textures exactly once', async () => {
   const originalCreateImageBitmap = globalThis.createImageBitmap;
