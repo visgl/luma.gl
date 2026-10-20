@@ -54,7 +54,7 @@ export class GLTFAudioController {
   private readonly scene: GroupNode;
   private readonly emitters: EmitterBinding[] = [];
   private readonly playing = new Map<AudioBufferSourceNode, GainNode>();
-  private buffers: AudioBuffer[] = [];
+  private buffers = new Map<number, AudioBuffer>();
   private initialization?: Promise<void>;
   private readonly abortController = new AbortController();
   private destroyed = false;
@@ -120,7 +120,7 @@ export class GLTFAudioController {
         if (options.autoplayOnly && !(definition.autoPlay ?? definition.autoplay)) continue;
         const source = this.options.audioContext.createBufferSource();
         const gain = this.options.audioContext.createGain();
-        source.buffer = this.buffers[definition.audio];
+        source.buffer = this.buffers.get(definition.audio)!;
         source.loop = definition.loop ?? false;
         gain.gain.value = definition.gain ?? 1;
         source.connect(gain);
@@ -195,7 +195,7 @@ export class GLTFAudioController {
       emitter.gain.disconnect();
     }
     this.gain.disconnect();
-    this.buffers = [];
+    this.buffers.clear();
   }
 
   private addEmitter(index: number, node?: GroupNode): void {
@@ -235,8 +235,16 @@ export class GLTFAudioController {
 
   private async loadBuffers(): Promise<void> {
     const {scenegraphs, audioContext, baseUrl} = this.options;
+    const audioIndices = new Set(
+      this.emitters.flatMap(emitter =>
+        (emitter.definition.sources || []).map(
+          sourceIndex => this.extension.sources[sourceIndex].audio
+        )
+      )
+    );
     const buffers = await Promise.all(
-      this.extension.audio.map(async definition => {
+      [...audioIndices].map(async audioIndex => {
+        const definition = this.extension.audio[audioIndex];
         let bytes: ArrayBuffer;
         if (definition.bufferView !== undefined) {
           const view = scenegraphs.gltf.bufferViews[definition.bufferView];
@@ -248,10 +256,10 @@ export class GLTFAudioController {
           if (!response.ok) throw new Error(`Audio fetch failed: ${response.status}`);
           bytes = await response.arrayBuffer();
         }
-        return audioContext.decodeAudioData(bytes);
+        return [audioIndex, await audioContext.decodeAudioData(bytes)] as const;
       })
     );
-    if (!this.destroyed) this.buffers = buffers;
+    if (!this.destroyed) this.buffers = new Map(buffers);
   }
 }
 

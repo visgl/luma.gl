@@ -34,7 +34,9 @@ function makeWave(): Uint8Array {
   return bytes;
 }
 
-async function makeScene(options: {legacy?: boolean; embedded?: boolean; global?: boolean} = {}) {
+async function makeScene(
+  options: {legacy?: boolean; embedded?: boolean; global?: boolean; inactiveAudio?: boolean} = {}
+) {
   const wave = makeWave();
   const uri = `data:audio/wav;base64,${btoa(String.fromCharCode(...wave))}`;
   const source = {
@@ -68,6 +70,17 @@ async function makeScene(options: {legacy?: boolean; embedded?: boolean; global?
       }
     }
   };
+  if (options.inactiveAudio) {
+    // Keep the selected payload at a nonzero index, with both inactive and unused clips.
+    const extension = source.extensions.KHR_audio_emitter;
+    extension.audio.unshift({uri: 'inactive-scene.mp3'});
+    extension.audio.push({uri: 'unused.mp3'});
+    extension.sources[0].audio = 1;
+    extension.sources.push({...extension.sources[0], audio: 0});
+    extension.emitters.push({type: 'positional', gain: 1, sources: [1]});
+    source.nodes.push({extensions: {KHR_audio_emitter: {emitter: 1}}});
+    source.scenes.push({nodes: [2]});
+  }
   const gltf = postProcessGLTF(
     await parse(new TextEncoder().encode(JSON.stringify(source)).buffer, GLTFLoader)
   );
@@ -79,6 +92,33 @@ function energy(buffer: AudioBuffer, channel: number): number {
 }
 
 describe('GLTFAudioController browser audio rendering', () => {
+  test('loads only selected-scene audio while preserving original payload indices', async () => {
+    const scenegraphs = await makeScene({inactiveAudio: true});
+    const context = new OfflineAudioContext(2, 4800, 48000);
+    const requests: string[] = [];
+    const audio = new GLTFAudioController({
+      scenegraphs,
+      audioContext: context,
+      baseUrl: 'https://example.com/model.gltf',
+      fetch: async (input, options) => {
+        requests.push(String(input));
+        if (!String(input).startsWith('data:')) throw new Error('Inactive clip is unavailable');
+        return fetch(input, options);
+      }
+    });
+    try {
+      await audio.initialize();
+      await audio.play();
+      audio.update(new Matrix4());
+      expect(requests).toHaveLength(1);
+      const buffer = await context.startRendering();
+      expect(energy(buffer, 0) + energy(buffer, 1)).toBeGreaterThan(0);
+    } finally {
+      audio.destroy();
+      scenegraphs.destroy();
+    }
+  });
+
   test('decodes embedded and external audio; attenuates nested emitters and supports legacy attachments', async () => {
     const results: number[] = [];
     for (const embedded of [false, true]) {
