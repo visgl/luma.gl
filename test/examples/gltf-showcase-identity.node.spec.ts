@@ -11,14 +11,14 @@ describe('glTF module and showcase identity', () => {
     const homepage = readFileSync(path.join(process.cwd(), 'website/src/pages/index.jsx'), 'utf8');
     const featuredExamples = homepage.match(/const\s+FEATURED_EXAMPLES\s*=\s*\[([\s\S]*?)\n\];/);
     const showcase = readFileSync(
-      path.join(process.cwd(), 'website/content/examples/showcase/gltf.mdx'),
+      path.join(process.cwd(), 'website/content/examples/gltf/asset-studio.mdx'),
       'utf8'
     );
 
     expect(featuredExamples).not.toBeNull();
     expect(featuredExamples![1]).toMatch(/title:\s*'glTF Asset Studio'/);
-    expect(featuredExamples![1]).toMatch(/route:\s*'showcase\/gltf'/);
-    expect(featuredExamples![1]).toMatch(/image:\s*'showcase\/gltf\.jpg'/);
+    expect(featuredExamples![1]).toMatch(/route:\s*'gltf\/asset-studio'/);
+    expect(featuredExamples![1]).toMatch(/image:\s*'gltf\/asset-studio\.jpg'/);
     expect(featuredExamples![1]).toMatch(/standards-first glTF/i);
     expect(featuredExamples![1]).toMatch(/backends:\s*\['webgpu',\s*'webgl2'\]/);
     expect(showcase).toMatch(/title:\s*glTF Asset Studio/);

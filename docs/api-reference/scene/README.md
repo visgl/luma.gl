@@ -176,7 +176,7 @@ See [HDR and backend selection](/docs/api-guide/engine/anari-first-scene#hdr-and
 ## Experimental JSON playground
 
 The private package includes a JSON scene playground at
-`examples/showcase/scene/playground.html`. Start it with
+`examples/anari/scenes/playground.html`. Start it with
 `yarn workspace luma.gl-examples-showcase-scene start`, then open `/playground.html` on the
 reported development-server URL. The playground translates deck.gl-inspired `@@type`
 declarations, named ANARI object references, shared retained surfaces, generated torus/crystal/prism

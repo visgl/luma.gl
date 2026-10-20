@@ -42,8 +42,8 @@ import support4 from './showcase/packet-spraying/mobile-support';
 import support5 from './showcase/dof/mobile-support';
 import support6 from './experimental/bloom/mobile-support';
 import support7 from './showcase/persistence/mobile-support';
-import support8 from './showcase/gltf/mobile-support';
-import support9 from './experimental/scene-playground/mobile-support';
+import support8 from './gltf/asset-studio/mobile-support';
+import support9 from './anari/scenes/mobile-support';
 import support10 from './showcase/lightstorm-megacity/mobile-support';
 import support11 from './showcase/llm-network/mobile-support';
 import support12 from './experimental/lucim-volume-lab/mobile-support';
@@ -145,8 +145,8 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'showcase/dof': support5,
   'experimental/bloom': support6,
   'showcase/persistence': support7,
-  'showcase/gltf': support8,
-  'experimental/scene-playground': support9,
+  'gltf/asset-studio': support8,
+  'anari/scenes': support9,
   'showcase/lightstorm-megacity': support10,
   'showcase/llm-network': support11,
   'experimental/lucim-volume-lab': support12,

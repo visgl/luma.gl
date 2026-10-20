@@ -8,7 +8,7 @@ import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 import {parseGLTFLights} from '@luma.gl/gltf';
 import {describe, expect, test} from 'vitest';
-import {makeANARIJSONSceneFromGLTF} from '../../../examples/showcase/scene/gltf-to-anari';
+import {makeANARIJSONSceneFromGLTF} from '../../../examples/anari/scenes/gltf-to-anari';
 
 describe('selected-scene glTF punctual-light ownership', () => {
   test('filters inactive-scene lights without losing selected-scene hierarchy', async () => {

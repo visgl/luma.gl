@@ -6,9 +6,9 @@ import {DepthTextureCopy} from '@luma.gl/experimental';
 import {ANARIDevice} from '@luma.gl/anari';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {expect, it, vi} from 'vitest';
-import {makeChartMotionScene} from '../../../examples/showcase/scene/chart-baseline';
-import {ChartLabels, getChartLabelPositions} from '../../../examples/showcase/scene/chart-labels';
-import {createANARIJSONScene} from '../../../examples/showcase/scene/playground-scene';
+import {makeChartMotionScene} from '../../../examples/anari/scenes/chart-baseline';
+import {ChartLabels, getChartLabelPositions} from '../../../examples/anari/scenes/chart-labels';
+import {createANARIJSONScene} from '../../../examples/anari/scenes/playground-scene';
 
 it('animated chart labels render glyphs, reject occluded fragments and retain moving picks', async () => {
   if (!webgpuAdapter.isSupported()) return;

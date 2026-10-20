@@ -16,7 +16,7 @@ async function loadCrowdFixture(
   fixture: 'SimpleSkin.gltf' | 'AnimatedMorphCube.glb'
 ): Promise<GLTFPostprocessed> {
   const data = await readFile(
-    new URL(`../../../../examples/showcase/scene/public/gltf/${fixture}`, import.meta.url)
+    new URL(`../../../../examples/anari/scenes/public/gltf/${fixture}`, import.meta.url)
   );
   return postProcessGLTF(await parse(data, GLTFLoader, {gltf: {loadImages: false}}));
 }

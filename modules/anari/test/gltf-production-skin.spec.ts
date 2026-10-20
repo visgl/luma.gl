@@ -8,11 +8,11 @@ import {ANARIDevice} from '@luma.gl/anari';
 import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
 import {expect, it} from 'vitest';
-import {makeANARIJSONSceneFromGLTF} from '../../../examples/showcase/scene/gltf-to-anari';
-import {createANARIJSONScene} from '../../../examples/showcase/scene/playground-scene';
+import {makeANARIJSONSceneFromGLTF} from '../../../examples/anari/scenes/gltf-to-anari';
+import {createANARIJSONScene} from '../../../examples/anari/scenes/playground-scene';
 
 it('glTF SimpleSkin renders automatically animated retained joints on WebGL and WebGPU', async () => {
-  const asset = await load('/examples/showcase/scene/public/gltf/SimpleSkin.gltf', GLTFLoader, {
+  const asset = await load('/examples/anari/scenes/public/gltf/SimpleSkin.gltf', GLTFLoader, {
     gltf: {loadImages: false}
   });
   const source = postProcessGLTF(asset);

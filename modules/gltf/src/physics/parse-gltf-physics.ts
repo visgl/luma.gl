@@ -4,6 +4,12 @@
 
 import {Matrix4, Quaternion} from '@math.gl/core';
 import {getMeshBoxBounds} from './mesh-box-shape';
+import {
+  GPURigidBodyWorld,
+  makeConvexHullGeometry,
+  makeTriangleMeshGeometry,
+  getRigidBodyShapeProperties
+} from '@luma.gl/gpgpu/gpu-physics';
 import type {GPURigidBodyMaterial, GPURigidBodyShape} from '@luma.gl/gpgpu/gpu-physics';
 import type {
   GLTFPhysicsDescription,
@@ -139,6 +145,26 @@ function parseShape(value: unknown, scale: readonly number[]): GPURigidBodyShape
       ]
     };
   }
+  if (source['type'] === 'capsule' || source['type'] === 'cylinder') {
+    const type = source['type'];
+    checkFields(source, ['type', type]);
+    const parameters = record(source[type] ?? {});
+    checkFields(parameters, ['height', 'radiusBottom', 'radiusTop']);
+    const absolute = scale.map(Math.abs);
+    if (
+      Math.abs(absolute[0] - absolute[2]) > 1e-5 * Math.max(...absolute) ||
+      (type === 'capsule' && Math.abs(absolute[0] - absolute[1]) > 1e-5 * Math.max(...absolute))
+    )
+      throw new Error('Unsupported nonuniform tapered shape scale');
+    const shape: GPURigidBodyShape = {
+      type,
+      height: scalar(parameters['height'], type === 'capsule' ? 1 : 2) * absolute[1],
+      radiusBottom: scalar(parameters['radiusBottom'], 0.5) * absolute[0],
+      radiusTop: scalar(parameters['radiusTop'], 0.5) * absolute[0]
+    };
+    getRigidBodyShapeProperties(shape);
+    return shape;
+  }
   throw new Error(`Unsupported implicit shape: ${String(source['type'])}`);
 }
 
@@ -260,7 +286,8 @@ export function parseGLTFPhysics(
           throw new Error('Reflected motion frames are unsupported');
         if (
           motion['inertiaDiagonal'] !== undefined &&
-          transform.scale.some(value => Math.abs(value - 1) > 1e-5)
+          Math.max(...transform.scale) - Math.min(...transform.scale) >
+            1e-5 * Math.max(...transform.scale)
         )
           throw new Error('Scaled authored inertia requires a transformed tensor');
         const rotation = new Matrix4().fromQuaternion(transform.rotation);
@@ -318,7 +345,7 @@ export function parseGLTFPhysics(
         const geometry = record(collider['geometry']);
         checkFields(
           geometry,
-          options.resolveLegacyMeshPositions
+          options.resolveLegacyMeshPositions || options.resolveLegacyMeshGeometry
             ? ['shape', 'node', 'convexHull', 'mesh']
             : ['shape', 'node', 'convexHull']
         );
@@ -334,17 +361,51 @@ export function parseGLTFPhysics(
         let shapeIndex: number | undefined;
         let meshIndex: number | undefined;
         let shape: unknown;
+        let meshShape: GPURigidBodyShape | undefined;
         let meshCenter: readonly number[] = [0, 0, 0];
         if (isMesh) {
-          if (geometry['convexHull'] !== true || !options.resolveLegacyMeshPositions)
+          if (
+            !options.resolveLegacyMeshGeometry &&
+            (geometry['convexHull'] !== true || !options.resolveLegacyMeshPositions)
+          )
             throw new Error('Legacy meshes require an explicit convex hull resolver');
           const value = geometry['mesh'];
           if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0)
             throw new Error('Invalid legacy mesh index');
           meshIndex = value;
-          const bounds = getMeshBoxBounds(options.resolveLegacyMeshPositions(meshIndex));
-          meshCenter = bounds.center;
-          shape = {type: 'box', box: {size: bounds.size}};
+          if (options.resolveLegacyMeshGeometry) {
+            const resolved = options.resolveLegacyMeshGeometry(meshIndex);
+            const transform = decomposePhysicsTransform(world);
+            const positions = Array.from(
+              resolved.positions,
+              (value, index) => value * transform.scale[index % 3]
+            );
+            if (geometry['convexHull'] === true) {
+              try {
+                const bounds = getMeshBoxBounds(positions);
+                meshCenter = bounds.center.map((value, index) => value / transform.scale[index]);
+                shape = {
+                  type: 'box',
+                  box: {
+                    size: bounds.size.map(
+                      (value, index) => value / Math.abs(transform.scale[index])
+                    )
+                  }
+                };
+              } catch {
+                meshShape = {type: 'convex-hull', geometry: makeConvexHullGeometry(positions)};
+              }
+            } else if (geometry['convexHull'] === false)
+              meshShape = {
+                type: 'triangle-mesh',
+                geometry: makeTriangleMeshGeometry(positions, resolved.indices)
+              };
+            else throw new Error('Mesh convexHull must be explicit');
+          } else {
+            const bounds = getMeshBoxBounds(options.resolveLegacyMeshPositions!(meshIndex));
+            meshCenter = bounds.center;
+            shape = {type: 'box', box: {size: bounds.size}};
+          }
         } else {
           shapeIndex = index(geometry['shape'], shapes);
           shape = shapes[shapeIndex];
@@ -376,7 +437,7 @@ export function parseGLTFPhysics(
           filterIndex === undefined ? undefined : collisionFilters[filterIndex]
         );
         const normalized = {
-          shape: parseShape(shape, transform.scale),
+          shape: meshShape ?? parseShape(shape, transform.scale),
           position: transformPhysicsVector(inverseRotation, offset),
           orientation: readPhysicsRotation(Array.from(relativeRotation)),
           material: parseMaterial(
@@ -442,11 +503,8 @@ export function parseGLTFPhysics(
       );
       continue;
     }
-    const volumes = colliders.map(({shape}) =>
-      shape['type'] === 'sphere'
-        ? (4 / 3) * Math.PI * shape['radius'] ** 3
-        : 8 * shape.halfExtents[0] * shape.halfExtents[1] * shape.halfExtents[2]
-    );
+    const properties = colliders.map(({shape}) => getRigidBodyShapeProperties(shape));
+    const volumes = properties.map(property => property.volume);
     const volume = volumes.reduce((sum, value) => sum + value, 0);
     if (definition.body['mass'] === undefined)
       definition.body['mass'] = definition.body.mode === 'static' ? 0 : density * volume;
@@ -457,7 +515,15 @@ export function parseGLTFPhysics(
       const center: [number, number, number] = [0, 0, 0];
       for (const [colliderIndex, collider] of colliders.entries())
         for (let axis = 0; axis < 3; axis++)
-          center[axis] += ((collider.position?.[axis] ?? 0) * volumes[colliderIndex]) / volume;
+          center[axis] +=
+            volume > 0
+              ? (((collider.position?.[axis] ?? 0) +
+                  new Matrix4()
+                    .fromQuaternion(readPhysicsRotation(collider.orientation))
+                    .transformAsVector(properties[colliderIndex].center)[axis]) *
+                  volumes[colliderIndex]) /
+                volume
+              : 0;
       definition['centerOfMass'] = center;
       definition.body['centerOfMass'] = center;
     }
@@ -536,6 +602,17 @@ export function parseGLTFPhysics(
     }
   if (!result.bodies.length)
     report('empty-world', '/', 'No supported physics bodies in the selected scene');
+  if (result.issues.length === 0) {
+    try {
+      // Validate backend pair capabilities before advertising a simulatable description.
+      const world = new GPURigidBodyWorld({
+        bodies: result.bodies.map(definition => definition.body)
+      });
+      world.destroy();
+    } catch (error) {
+      report('unsupported-backend-configuration', '/', error);
+    }
+  }
   result.supported = result.issues.length === 0;
   return result;
 }

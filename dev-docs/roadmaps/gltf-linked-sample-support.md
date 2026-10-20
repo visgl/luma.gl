@@ -1,5 +1,9 @@
 # Full support for the linked glTF samples
 
+The [G1–G7 qualification programme](gpu-physics-roadmap.md#active-programme-gltf-physics-qualification-first)
+is now the governing engine roadmap. This document records sample coverage and its
+historical implementation plan; sample completion is not proposal completion.
+
 Scope: the four physics and four interactivity assets currently linked by the example
 selectors. This is asset coverage, not full conformance to either draft extension.
 The audit reads the actual pinned GLB JSON, rather than inferring requirements from
@@ -8,7 +12,10 @@ sample names. Implementation estimates below are planning estimates, not commitm
 Implementation update: inspecting Filtering's actual vertex buffers showed that both
 legacy mesh hulls are exact unit boxes. It now simulates through an explicit legacy
 mesh resolver and exact hull recognition. This completes that asset without general
-convex collision; B remains necessary for arbitrary hulls such as MotionProperties.
+convex collision. The follow-up now implements the Motion Properties geometry path:
+analytic tapered primitives, float32 convex hulls, triangle BVHs, parallel GPU
+triangle queries and bounded GJK/EPA. M1–M5 below record the original acceptance plan;
+the implementation status and remaining generalization limits are summarized here.
 
 ## Pinned sources
 
@@ -24,8 +31,8 @@ convex collision; B remains necessary for arbitrary hulls such as MotionProperti
 | --- | --- | --- |
 | Materials_Restitution | Simulated | Deterministic bounce-height and combine-policy regression tests; visual source comparison |
 | Materials_Friction | Simulated | Validate sliding/sticking on the authored slope and box contact stability, not just successful import |
-| Filtering | GPU simulation: 9 bodies, 10 colliders | Exact box-hull recognition and explicit legacy mesh decoding preserve both compound child colliders and their independent filters; arbitrary non-box hulls remain unsupported |
-| MotionProperties | Static preview | Legacy mesh profile; tapered capsule and cylinder/cone geometry; convex hulls; static and dynamic non-convex meshes; authored COM, negative gravity, and locked inertia integration tests |
+| Filtering | GPU simulation: 9 bodies, 10 colliders | Exact box-hull recognition and explicit legacy mesh decoding preserve both compound child colliders and their independent filters; arbitrary convex hulls now use the extended backend |
+| MotionProperties | GPU simulation: all 10 bodies/colliders | Implemented tapered primitives, convex hulls, original wheel/ceiling triangles, authored COM, negative gravity and inertia locks. General mesh/mesh contacts, CCD and unbounded query capacity remain out of scope |
 | Branch | All 4 checks pass | Run the unmodified graph in automated asset tests, verify success events and original labels |
 | Sequence | All 3 checks pass | Asset tests for authored lexicographic socket order, success events and original labels |
 | Switch | All 12 checks pass | Asset tests for duplicates/default/extra sockets and original labels |
@@ -200,3 +207,127 @@ References: [math.gl culling scope](https://vis.gl/math.gl/docs/modules/culling)
 [analytic glTF shapes](https://vis.gl/math.gl/docs/modules/culling/api-reference/shapes),
 [geometry](https://vis.gl/math.gl/docs/modules/geometry). Estimates above should be
 revisited after profiling hull complexity and inspecting the wheel topology.
+
+## Motion Properties: focused implementation plan
+
+The final gallery sample is achievable, but unlike Filtering it cannot be completed
+through exact box recognition. Audit of the pinned GLB's decoded geometry:
+
+| Part | Authored geometry | Existing dynamics |
+| --- | --- | --- |
+| Wobbling toy | Tapered capsule: radii 0.389 and 0.25, height 0.5498 | Authored COM offset approximately -0.35 on Y |
+| Cone | Tapered cylinder with zero top radius | Static collider |
+| Four balloons | Convex hulls; each render mesh has 592 unique positions and 1,152 triangles | Gravity factor -0.5 |
+| Ceiling | Non-convex mesh, 20 triangles | Static collider |
+| Wheel | Non-convex mesh, 12,288 vertices and 24,576 triangles | Zero mass, inertia diagonal [0, 1, 0], zero gravity |
+| Infinite-inertia box | Convex mesh, 6,146 unique positions and 12,288 triangles | Finite mass, all rotational response locked |
+
+Counts describe the source meshes, not precomputed convex hull complexity. Do not
+assume the balloons are spheres or the rounded box is an exact box. They do not
+qualify for Filtering's exact eight-corner path.
+
+### M1. Geometry contract and wheel feasibility
+
+- Add decoded convex-hull and indexed-triangle descriptors with source provenance,
+  explicit ownership and bounded shape buffers. Keep body state in the existing
+  GPU structure-of-arrays layout and fixed-step graph.
+- Decode the legacy sample profile without confusing mesh indices with node indices.
+  Reuse loader accessor handling, then preprocess shapes once at load time.
+- Prototype convex-versus-wheel contacts early. Prefer a reusable local-space
+  triangle BVH for original non-convex geometry; rigid motion can transform queries
+  without rebuilding the wheel topology every frame.
+- Establish the required contact pair matrix, contact/triangle budgets and performance
+  targets. Assess whether the authored scene actually needs mesh-versus-mesh contact.
+  Do not promise general dynamic concave collision based on convex-versus-mesh alone.
+- Convex decomposition is an alternative only with an explicit approximation contract,
+  geometric error checks and collider-budget checks; filling the wheel's openings with
+  one convex hull is not an acceptable substitute.
+
+Exit: a measured wheel contact prototype and a precise supported pair matrix before
+committing to the whole implementation. This is the main feasibility/risk gate.
+
+### M2. Tapered primitives and mass properties
+
+- Implement WGSL support queries for tapered capsules and cylinders/cones, matching
+  math.gl's existing CPU conventions. Add analytic volume, COM and inertia, including
+  unequal radii and the cone limit; retain the toy's authored COM override.
+- Add GPU narrow-phase/manifold support for the primitive pairs needed by the sample.
+  Reuse the convex path developed alongside M3 where appropriate.
+- Compare CPU and GPU support points and verify the toy's restoring motion against
+  an independent reference. No CPU collision loop or pose-readback dependency.
+
+Exit: the toy wobbles and settles around its shifted COM, and the cone collides with
+supported bodies using its actual geometry.
+
+### M3. Convex meshes and stable contacts
+
+- Construct convex hull topology at load time, upload vertices/faces/adjacency, and
+  compute polyhedral mass properties. Reuse equivalent geometry where verified.
+- Implement bounded GPU convex narrow phase, penetration/contact generation and
+  persistent manifolds with friction/restitution. Preserve primitive fast paths.
+- Benchmark support searches on the rounded box's real hull; source mesh complexity
+  makes a naive full vertex scan per solver query a potential bottleneck.
+- Validate rising balloons, ceiling approaches and locked box rotation. GPU contacts
+  must preserve authored zero inverse-inertia axes and negative gravity factors.
+
+Exit: all convex bodies behave correctly and stay within measured timestep budgets.
+
+### M4. Non-convex mesh contacts
+
+- Complete GPU BVH traversal and triangle contact generation for the ceiling and
+  wheel, with robust face/edge contacts and duplicate-contact reduction.
+- Apply wheel contact impulses through its finite rotational inertia while keeping
+  translation and the other rotation axes locked. Retain the existing impulse solver.
+- Address required mesh-versus-mesh pairs only after the M1 audit; otherwise keep
+  these combinations explicitly unsupported outside this bounded sample profile.
+- Exercise fast impacts, resting contacts and contact-buffer overflow reporting.
+
+Exit: the original ceiling and wheel participate in simulation without omitted
+geometry, silent hull replacement or CPU collision fallback.
+
+### M5. Full-asset acceptance and gallery integration
+
+- Run the unmodified pinned asset with all 10 physics bodies/colliders supported.
+- Verify upward balloons, COM-driven wobbling, the wheel's one permitted rotation
+  axis, the box's locked orientation, and actual ceiling/cone contacts.
+- Add deterministic GPU regressions and an independent reference comparison with
+  stated tolerances; exercise Reset, Pause, selection changes and graph diagnostics.
+- Remove the preview label only when the entire asset is supported. Keep any partial
+  development scenes separate and clearly labelled.
+- Require build, formatting, node/headless tests, example/website builds and green CI.
+
+Recommended implementation order: M1 first; M2 and M3 share the convex-contact
+foundation; M4 follows the wheel prototype; M5 is the release gate. CPU support-query,
+convex-hull and geometric mass-property utilities are candidates for math.gl reuse
+or upstreaming. GPU collision, BVH traversal, contact state and solving remain in
+luma.gl's gpu-physics module. This is several substantial engine PRs, with the wheel
+prototype determining the final scope and estimate.
+
+
+### M1–M5 implementation outcome
+
+- The wheel preserves all 24,576 authored triangles; no hole-filling convex replacement.
+  The ceiling retains its 20 triangles. Conservative fixed-center rotational bounds
+  prove that this pair cannot meet, so no mesh/mesh response is needed by the asset.
+- Hull construction uses filtered exact float32 orientation signs near coplanarity.
+  Meshes retain explicit BVH, closed-surface and unit-density mass metadata.
+- Tapered capsules and cylinders/cones use analytic support and integrated volume,
+  COM and inertia. Compound bodies rotate full tensors and apply parallel-axis shifts.
+- Existing sphere/box SAT remains the fast path. Other convex pairs use bounded
+  GJK/EPA; convex/mesh candidates run in a parallel, indirect GPU operation and merge
+  into four-contact persistent manifolds. Diagnostic readback exposes query limits.
+- Controlled Apple Metal run: 360 fixed steps, all ten bodies finite, balloons reached
+  the ceiling, wheel translation stayed fixed with unlocked-axis rotation, and the
+  rounded box retained its orientation. Sampled diagnostics showed zero dropped or
+  unresolved queries. This behavioral check is not a real-time throughput guarantee.
+- CPU and WebGPU regression tests cover hull topology/mass, near-coplanar hulls,
+  tapered primitives, original mesh openings, inertia locks and backend capability
+  rejection. Full draft conformance, arbitrary dynamic mesh pairs, CCD, general
+  mesh quality repair and scalable rigid-body broad phase remain follow-ups.
+
+- Performance regression fixed: world-space conservative bounds reject the separated
+  rotating wheel/ground pair before the floor's mesh-local AABB can cover the wheel
+  BVH. In the same 360-step harness, sampled triangle work fell from 24,588 to 686
+  and elapsed time fell from 8.68 s to 1.80 s (including readbacks and rendering).
+  The example also permits only one unpublished simulation submission, preventing
+  slow hardware from accumulating seconds of queued physics work.

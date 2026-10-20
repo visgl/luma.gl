@@ -54,3 +54,17 @@ export function makeLegacyMeshPositionResolver(scenegraph: GLTFScenegraph) {
     return result;
   };
 }
+
+export function makeLegacyMeshGeometryResolver(scenegraph: GLTFScenegraph) {
+  const resolve = makeLegacyMeshPositionResolver(scenegraph);
+  return (meshIndex: number) => {
+    if (
+      scenegraph
+        .getMesh(meshIndex)
+        .primitives.some(primitive => primitive.mode !== undefined && primitive.mode !== 4)
+    )
+      throw new Error('Triangle mesh geometry requires triangle primitives');
+    const positions = resolve(meshIndex);
+    return {positions, indices: Array.from({length: positions.length / 3}, (_, index) => index)};
+  };
+}

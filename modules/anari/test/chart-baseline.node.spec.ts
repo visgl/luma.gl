@@ -4,9 +4,9 @@
 import {getRayTracingQualityPreset} from '@luma.gl/experimental';
 import {ANARIDevice} from '@luma.gl/anari';
 import {NullDevice} from '@luma.gl/test-utils';
-import {createANARIJSONScene} from '../../../examples/showcase/scene/playground-scene';
-import {applyPlaygroundQualityPreset} from '../../../examples/showcase/scene/playground-renderer';
-import {getChartLabelPositions} from '../../../examples/showcase/scene/chart-labels';
+import {createANARIJSONScene} from '../../../examples/anari/scenes/playground-scene';
+import {applyPlaygroundQualityPreset} from '../../../examples/anari/scenes/playground-renderer';
+import {getChartLabelPositions} from '../../../examples/anari/scenes/chart-labels';
 
 import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 import {expect, it, vi} from 'vitest';
@@ -15,7 +15,7 @@ import {
   makeChartBaseline,
   makeChartMotionScene,
   makeChartMaterialsScene
-} from '../../../examples/showcase/scene/chart-baseline';
+} from '../../../examples/anari/scenes/chart-baseline';
 
 it('chart baseline preserves data identities and scene inputs across renderers', () => {
   const rasterScene = makeChartBaseline('default');

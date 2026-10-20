@@ -11,12 +11,12 @@ import {ModelNode} from '@luma.gl/engine';
 import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {NullDevice} from '@luma.gl/test-utils';
 import {expect, it} from 'vitest';
-import {makeANARIJSONSceneFromGLTF} from '../../../examples/showcase/scene/gltf-to-anari';
-import {createANARIJSONScene} from '../../../examples/showcase/scene/playground-scene';
+import {makeANARIJSONSceneFromGLTF} from '../../../examples/anari/scenes/gltf-to-anari';
+import {createANARIJSONScene} from '../../../examples/anari/scenes/playground-scene';
 
 async function loadAnimatedMorphCube() {
   const assetData = await readFile(
-    new URL('../../../examples/showcase/scene/public/gltf/AnimatedMorphCube.glb', import.meta.url)
+    new URL('../../../examples/anari/scenes/public/gltf/AnimatedMorphCube.glb', import.meta.url)
   );
   return postProcessGLTF(await parse(assetData, GLTFLoader, {gltf: {loadImages: false}}));
 }

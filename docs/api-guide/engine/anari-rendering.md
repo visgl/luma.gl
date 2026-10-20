@@ -54,8 +54,8 @@ bloom, orbit the camera, and show retained instance and draw-call counts. Select
 open the live JSON scene playground. Add `?backend=webgl` to either page to force the WebGL 2 path;
 the deferred and ray-tracing controls are disabled when WebGPU is unavailable.
 
-The showcase implementation lives in `examples/showcase/scene/app.ts`; the playground lives in
-`examples/showcase/scene/playground.ts`, `playground-scene.ts`, and `playground-presets.ts`.
+The showcase implementation lives in `examples/anari/scenes/app.ts`; the playground lives in
+`examples/anari/scenes/playground.ts`, `playground-scene.ts`, and `playground-presets.ts`.
 Package-level tests demonstrate staged parameters, animated lights, shared-surface batching,
 zero-copy arrays, and rendering on available graphics backends.
 

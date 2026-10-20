@@ -52,7 +52,7 @@ const DOCUMENTATION_MODULES: readonly DocumentationModule[] = [
   {
     name: 'gltf',
     description: 'Load glTF assets, materials, lights, skins, and animations.',
-    image: 'showcase/gltf'
+    image: 'gltf/asset-studio'
   },
   {
     name: 'splats',

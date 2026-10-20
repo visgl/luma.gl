@@ -5,7 +5,7 @@
 import type {ExampleSupportDefinition} from '../../example-support';
 
 const exampleSupport = {
-  id: 'showcase/gltf',
+  id: 'gltf/asset-studio',
   mobileMode: 'reduced',
   mobileProfile: 'large-data',
   requirements: {backends: ['webgpu', 'webgl2']}
