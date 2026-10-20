@@ -49,6 +49,8 @@ const config = {
         'arrow-text-3d': '/examples/arrow/arrow-text-3d',
         'gaussian-splats': '/examples/showcase/gaussian-splats',
         gltf: '/examples/showcase/gltf',
+        'gltf-interactivity': '/examples/deck/gltf-interactivity',
+        'gltf-physics': '/examples/gltf/physics',
         'hello-cube': '/examples/tutorials/hello-cube',
         'hello-instancing': '/examples/tutorials/hello-instancing',
         'hello-triangle-geometry': '/examples/tutorials/hello-triangle-geometry',

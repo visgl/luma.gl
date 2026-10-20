@@ -28,12 +28,21 @@
         "id": "showcase/persistence",
         "label": "Effects: Persistence"
       },
-      "showcase/gltf",
       {
         "type": "doc",
         "id": "experimental/scene-playground",
         "label": "Scene Playground"
       }
+    ]
+  },
+  {
+    "type": "category",
+    "label": "glTF",
+    "items": [
+      "showcase/gltf",
+      "tutorials/hello-gltf",
+      "gltf/physics",
+      "deck/gltf-interactivity"
     ]
   },
   {
@@ -191,7 +200,6 @@
       "tutorials/hello-triangle-geometry",
       "tutorials/hello-cube",
       "tutorials/lighting",
-      "tutorials/hello-gltf",
       "tutorials/two-cubes",
       "tutorials/instanced-cubes",
       "tutorials/hello-instancing",

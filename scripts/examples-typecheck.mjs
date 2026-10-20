@@ -10,6 +10,8 @@ const tscPath = join(repoRoot, 'node_modules', '.bin', 'tsc');
 const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'deck/city-scene',
   'api/blending',
+  'gltf/physics',
+  'deck/gltf-interactivity',
   'api/multi-canvas',
   'api/render-bundles',
   'api/texture-compressed',
@@ -82,6 +84,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
 
 const PACKAGE_FREE_EXAMPLE_WORKSPACES = new Set(['showcase/raster-lab','tutorials/slang-particles']);
 const NATIVE_TYPESCRIPT_CONFIG_WORKSPACES = new Set([
+  'deck/gltf-interactivity',
   'experimental/gpu-sphere-world',
   'experimental/gpu-pool',
   'deck/globe-clouds',

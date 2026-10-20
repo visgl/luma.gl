@@ -225,3 +225,219 @@ describe('GLTFInteractivity', () => {
     expect(runtime.evaluate(0)).toEqual([false]);
   });
 });
+
+it.each([
+  {cases: undefined},
+  {cases: [0.5, 5]},
+  {cases: [-2147483649, 5]},
+  {cases: [2147483648, 5]}
+])('routes flow/switch to default with omitted or invalid cases: $cases', ({cases}) => {
+  const runtime = new GLTFInteractivity({
+    graphs: [
+      {
+        types: [{signature: 'int'}],
+        variables: [{type: 0, value: [0]}],
+        declarations: [{op: 'event/onStart'}, {op: 'flow/switch'}, {op: 'variable/set'}],
+        nodes: [
+          {declaration: 0, flows: {out: {node: 1}}},
+          {
+            declaration: 1,
+            configuration: cases ? {cases: {value: cases}} : undefined,
+            values: {selection: {type: 0, value: [5]}},
+            flows: {default: {node: 2}}
+          },
+          {
+            declaration: 2,
+            configuration: {variables: {value: [0]}},
+            values: {'0': {type: 0, value: [42]}}
+          }
+        ]
+      }
+    ]
+  });
+  runtime.start();
+  expect(runtime.variables[0]).toEqual([42]);
+});
+
+it('uses the math/switch default input when the cases configuration is omitted', () => {
+  const runtime = new GLTFInteractivity({
+    graphs: [
+      {
+        types: [{signature: 'int'}],
+        variables: [{type: 0, value: [0]}],
+        declarations: [{op: 'event/onStart'}, {op: 'variable/set'}, {op: 'math/switch'}],
+        nodes: [
+          {declaration: 0, flows: {out: {node: 1}}},
+          {
+            declaration: 1,
+            configuration: {variables: {value: [0]}},
+            values: {'0': {node: 2, socket: 'value'}}
+          },
+          {
+            declaration: 2,
+            values: {selection: {type: 0, value: [5]}, default: {type: 0, value: [42]}}
+          }
+        ]
+      }
+    ]
+  });
+  runtime.start();
+  expect(runtime.variables[0]).toEqual([42]);
+});
+
+it('dispatches selection only to the selected source node and advances authored delays on ticks', () => {
+  const writes: {pointer: string; value: unknown[]}[] = [];
+  const runtime = new GLTFInteractivity(
+    {
+      graphs: [
+        {
+          types: [{signature: 'float4'}, {signature: 'ref'}, {signature: 'float'}],
+          declarations: [
+            {op: 'event/onSelect', extension: 'KHR_node_selectability'},
+            {op: 'pointer/set'},
+            {op: 'flow/setDelay'}
+          ],
+          nodes: [
+            {declaration: 0, configuration: {nodeIndex: {value: [5]}}, flows: {out: {node: 2}}},
+            {declaration: 0, configuration: {nodeIndex: {value: [10]}}, flows: {out: {node: 4}}},
+            {
+              declaration: 1,
+              configuration: {
+                pointer: {value: ['/materials/{material}/pbrMetallicRoughness/baseColorFactor']}
+              },
+              values: {
+                material: {type: 1, value: ['/materials/3']},
+                value: {type: 0, value: [1, 0, 0, 1]}
+              },
+              flows: {out: {node: 3}}
+            },
+            {declaration: 2, values: {duration: {type: 2, value: [1]}}, flows: {done: {node: 4}}},
+            {
+              declaration: 1,
+              configuration: {
+                pointer: {value: ['/materials/4/pbrMetallicRoughness/baseColorFactor']}
+              },
+              values: {value: {type: 0, value: [0, 1, 0, 1]}}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      properties: {
+        get: () => undefined,
+        set: (pointer, value) => {
+          writes.push({pointer, value});
+          return true;
+        }
+      }
+    }
+  );
+  runtime.tick(10);
+  runtime.selectNode(99);
+  expect(writes).toHaveLength(0);
+  runtime.selectNode(5);
+  expect(writes).toEqual([
+    {pointer: '/materials/3/pbrMetallicRoughness/baseColorFactor', value: [1, 0, 0, 1]}
+  ]);
+  runtime.tick(10.99);
+  expect(writes).toHaveLength(1);
+  runtime.tick(11);
+  expect(writes[1]).toEqual({
+    pointer: '/materials/4/pbrMetallicRoughness/baseColorFactor',
+    value: [0, 1, 0, 1]
+  });
+  runtime.tick(12);
+  expect(writes).toHaveLength(2);
+  runtime.selectNode(10);
+  expect(writes).toHaveLength(3);
+});
+
+it('uses a tick clock for start delays and cancels pending activations', () => {
+  const runtime = new GLTFInteractivity({
+    graphs: [
+      {
+        types: [{signature: 'float'}],
+        variables: [{type: 0, value: [0]}],
+        declarations: [
+          {op: 'event/onStart'},
+          {op: 'flow/setDelay'},
+          {op: 'variable/set'},
+          {op: 'event/onSelect', extension: 'KHR_node_selectability'}
+        ],
+        nodes: [
+          {declaration: 0, flows: {out: {node: 1}}},
+          {declaration: 1, values: {duration: {type: 0, value: [1]}}, flows: {done: {node: 2}}},
+          {
+            declaration: 2,
+            configuration: {variables: {value: [0]}},
+            values: {'0': {type: 0, value: [42]}}
+          },
+          {
+            declaration: 3,
+            configuration: {nodeIndex: {value: [5]}},
+            flows: {out: {node: 1, socket: 'cancel'}}
+          }
+        ]
+      }
+    ]
+  });
+  runtime.start();
+  runtime.tick(100);
+  expect(runtime.variables[0]).toEqual([0]);
+  runtime.selectNode(5);
+  runtime.tick(102);
+  expect(runtime.variables[0]).toEqual([0]);
+  expect(runtime.evaluate(1, 'lastDelay')).toEqual([null]);
+});
+
+it('evaluates the numeric conversions and clamp used by Traffic Light', () => {
+  const runtime = new GLTFInteractivity({
+    graphs: [
+      {
+        declarations: [{op: 'math/clamp'}, {op: 'type/intToFloat'}, {op: 'type/floatToInt'}],
+        nodes: [
+          {declaration: 0, values: {a: {value: [6]}, b: {value: [0]}, c: {value: [4]}}},
+          {declaration: 1, values: {a: {value: [3]}}},
+          {declaration: 2, values: {a: {value: [-2.7, Infinity]}}}
+        ]
+      }
+    ]
+  });
+  expect(runtime.evaluate(0)).toEqual([4]);
+  expect(runtime.evaluate(1)).toEqual([3]);
+  expect(runtime.evaluate(2)).toEqual([-2, 0]);
+});
+
+it('activates elapsed delays in chronological order, once per activation', () => {
+  const messages: string[] = [];
+  const runtime = new GLTFInteractivity(
+    {
+      graphs: [
+        {
+          declarations: [
+            {op: 'event/onStart'},
+            {op: 'flow/sequence'},
+            {op: 'flow/setDelay'},
+            {op: 'debug/log'}
+          ],
+          nodes: [
+            {declaration: 0, flows: {out: {node: 1}}},
+            {declaration: 1, flows: {a: {node: 2}, b: {node: 3}}},
+            {declaration: 2, values: {duration: {value: [2]}}, flows: {done: {node: 4}}},
+            {declaration: 2, values: {duration: {value: [1]}}, flows: {done: {node: 5}}},
+            {declaration: 3, configuration: {message: {value: ['later']}}},
+            {declaration: 3, configuration: {message: {value: ['earlier']}}}
+          ]
+        }
+      ]
+    },
+    {onLog: message => messages.push(message)}
+  );
+  runtime.tick(0);
+  expect(runtime.evaluate(2, 'lastDelay')).not.toEqual(runtime.evaluate(3, 'lastDelay'));
+  runtime.tick(3);
+  expect(messages).toEqual(['earlier', 'later']);
+  runtime.tick(4);
+  expect(messages).toHaveLength(2);
+});
