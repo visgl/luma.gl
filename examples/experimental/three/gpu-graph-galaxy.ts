@@ -44,7 +44,11 @@ import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {bloom} from 'three/addons/tsl/display/BloomNode.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 
-const PARTICLE_COUNT = 98304;
+const DISK_PARTICLE_COUNT = 98304;
+const BULGE_PARTICLE_COUNT = 98304;
+const PARTICLE_COUNT = DISK_PARTICLE_COUNT + BULGE_PARTICLE_COUNT;
+// Match the main disk's 0.2 radians per animation second to an illustrative 250 Ma orbit.
+const MILLION_YEARS_PER_ANIMATION_SECOND = (250 * 0.2) / (2 * Math.PI);
 const PARTICLE_ANIMATION_SHADER = `
 struct SimulationParameters { time: f32, radius: f32, count: f32, padding: f32 };
 @group(0) @binding(0) var<storage, read_write> offsets: array<f32>;
@@ -69,35 +73,35 @@ fn main(@builtin(global_invocation_id) invocationId: vec3u) {
   var starColor: vec3f;
   var brightness: f32;
 
-  let population = particleIndex % 16u;
+  // Added stars fill the warm bulge without taking particles away from the arms or disk.
+  let population = select(particleIndex % 16u, 4u, particleIndex >= ${DISK_PARTICLE_COUNT}u);
   let radialFraction = pow(getRandomValue(seed), 0.65);
   let radialDistance = (0.08 + 9.8 * radialFraction) * parameters.radius;
-  let arm = f32(particleIndex % 2u) * 3.1415927;
+  // Use a separate index from population so every stellar population fills all four arms.
+  let arm = f32((particleIndex / 16u) % 4u) * 1.5707963;
   let filament = getRandomValue(seed + 6u);
   let strand = floor(filament * 4.0);
   let armVariation = sin(arm + 0.8);
-  // Bounded differential motion prevents the arms winding into concentric rings over time.
+  // Preserve arm structure during long sessions instead of winding it into rings.
   let orbitalAngle = parameters.time * 0.2
     + sin(parameters.time * 0.08) * 0.45 * (1.0 - radialFraction);
   // Correlated waves bend entire filaments; fine scatter breaks up their edges.
   let turbulence = sin(radialFraction * 23.0 + arm * 3.0 + parameters.time * 0.12) * 0.16
     + sin(radialFraction * 51.0 + filament * 5.0) * 0.035;
-  var angle = arm + log(1.0 + radialFraction * 8.0) * (2.1 + armVariation * 0.2) + orbitalAngle + turbulence;
+  var angle = arm + log(1.0 + radialFraction * 8.0) * (2.8 + armVariation * 0.2) + orbitalAngle + turbulence;
   let scatter = getRandomValue(seed + 1u) - 0.5;
-  // Fill a continuous ribbon around each ridge instead of drawing four isolated wires.
-  // A narrow luminous crest and a broad dim shoulder leave dark space between arms.
-  let ribbonWidth = 0.11 + radialFraction * 0.12;
-  angle += scatter * ribbonWidth * 2.0
-    + sin(radialFraction * 14.0 + filament * 2.0) * 0.055;
+  // Discrete braided ribbons leave dark channels between the luminous streams.
+  angle += (strand - 1.5) * 0.105 + sin(radialFraction * 14.0 + strand * 1.7) * 0.07;
+  angle += scatter * (0.055 + 0.14 * filament * filament);
   // Sculpt each arm around a raised centerline while retaining a thin underlying disk.
   // Coherent ridges and braided strands give the arms volume without scattering them apart.
   let armEnvelope = smoothstep(0.05, 0.25, radialFraction);
   let ridgePhase = radialFraction * 9.0 + arm + parameters.time * 0.12;
   let ridgeHeight = sin(ridgePhase) * (0.12 + radialFraction * (0.55 + 0.25 * armVariation)) * armEnvelope;
   let strandPhase = radialFraction * 12.0 + floor(filament * 4.0) * 1.5707963 + arm;
-  let strandHeight = sin(strandPhase) * (0.04 + radialFraction * 0.12) * armEnvelope;
+  let strandHeight = sin(strandPhase) * (0.04 + radialFraction * 0.24) * armEnvelope;
   let crossSection = getRandomValue(seed + 2u) * 6.2831853;
-  let thickness = (0.06 + radialFraction * 0.36) * sqrt(1.0 - 4.0 * scatter * scatter);
+  let thickness = (0.035 + radialFraction * 0.24) * (1.0 - abs(scatter));
   let height = ridgeHeight + strandHeight + cos(crossSection) * thickness;
   position = vec3f(cos(angle) * radialDistance, height, sin(angle) * radialDistance);
   let gold = mix(vec3f(1.0, 0.16, 0.005), vec3f(1.0, 0.52, 0.07), getRandomValue(seed + 3u));
@@ -107,19 +111,21 @@ fn main(@builtin(global_invocation_id) invocationId: vec3u) {
   starColor = mix(gold, cyan, coolWeight);
   // A brighter face and dimmer underside make the stream's rounded cross-section readable.
   let strandLight = 0.65 + 0.5 * (0.5 + 0.5 * cos(crossSection - 0.7));
-  let crestLight = exp(-scatter * scatter * 16.0);
-  brightness = (0.3 + 2.8 * pow(getRandomValue(seed + 5u), 7.0)) * strandLight
-    * (0.4 + crestLight * 0.9);
-  // Sparse warm-white knots interrupt the saturated ribbons with local star-forming highlights.
-  starColor = mix(starColor, vec3f(1.0, 0.88, 0.66),
-    pow(getRandomValue(seed + 10u), 18.0) * 0.7);
+  brightness = (0.38 + 3.2 * pow(getRandomValue(seed + 5u), 7.0)) * strandLight;
   if (population == 0u || population == 1u) {
     // Soft, oversized sprites trace translucent dust clouds above and below the stars.
     position.x += (getRandomValue(seed + 7u) - 0.5) * radialFraction * 1.2;
     position.z += (getRandomValue(seed + 8u) - 0.5) * radialFraction * 1.2;
     // Dust curls around the same arm centerline rather than forming a separate cloud.
     position.y += sin(strandPhase + crossSection * 0.35) * (0.1 + radialFraction * 0.3);
-    brightness = (0.003 + 0.007 * getRandomValue(seed + 5u)) * (0.4 + crestLight);
+    brightness = 0.0015 + 0.003 * getRandomValue(seed + 5u);
+    if (population == 0u) {
+      // A continuous luminous disk supports the arm ridges rather than leaving empty gaps.
+      let diskAngle = getRandomValue(seed + 9u) * 6.2831853 + parameters.time * 0.2;
+      position = vec3f(cos(diskAngle) * radialDistance,
+        (getRandomValue(seed + 2u) - 0.5) * 0.18, sin(diskAngle) * radialDistance);
+      brightness = 0.004 * (1.0 - smoothstep(0.65, 1.0, radialFraction));
+    }
   } else if (population == 2u) {
     // A loose foreground population supplies depth and a handful of defocused lights.
     angle = getRandomValue(seed + 1u) * 6.2831853 + parameters.time * 0.04;
@@ -127,29 +133,44 @@ fn main(@builtin(global_invocation_id) invocationId: vec3u) {
       (getRandomValue(seed + 2u) - 0.5) * 4.5, sin(angle) * radialDistance * 1.2);
     brightness = 0.018 + 0.07 * getRandomValue(seed + 5u);
   } else if (population == 3u || population == 4u) {
-    // A compact, rotating, luminous bulge anchors the asymmetric spiral ribbons.
+    // Keep a compact nucleus inside a broader, dimmer warm stellar envelope.
     // Independent azimuths avoid an artificial double spiral through the nucleus.
-    // A centrally concentrated oblate bulge stays visibly rotating through uneven light.
+    // Rotation blends gently into the disk, with a soft outer falloff into the inner arms.
     let coreFraction = pow(getRandomValue(seed), 1.1);
-    // An exponential falloff leaves a sparse halo instead of a sharply clipped rim.
-    let coreRadius = -log(1.0 - coreFraction * 0.985) * 0.55 * parameters.radius;
+    // Retain an exponential nucleus inside a filled, softly fading warm envelope.
+    let isOuterBulge = population == 4u;
+    let normalizedCoreRadius = select(-log(1.0 - coreFraction * 0.985) * 0.55,
+      pow(getRandomValue(seed), 0.3333333) * 2.856, isOuterBulge);
+    // Sample a filled ellipsoid: height and planar radius share the same spherical shell.
+    // This avoids piling tall stars over tiny planar radii into a vertical column.
+    let verticalDirection = getRandomValue(seed + 2u) * 2.0 - 1.0;
+    let planarFraction = select(1.0, sqrt(1.0 - verticalDirection * verticalDirection), isOuterBulge);
+    let coreRadius = normalizedCoreRadius * planarFraction * parameters.radius;
     let coreAngle = getRandomValue(seed + 1u) * 6.2831853;
-    angle = coreAngle + parameters.time * 0.7;
-    position = vec3f(cos(angle) * coreRadius,
-      (getRandomValue(seed + 2u) - 0.5) * sqrt(1.0 - coreFraction) * 0.55 * parameters.radius,
+    // Keep the visual angular-speed difference within ten percent of the main disk.
+    let coreAngularSpeed = 0.2 + 0.02 * (1.0 - smoothstep(0.0, 2.856, normalizedCoreRadius));
+    angle = coreAngle + parameters.time * coreAngularSpeed;
+    let coreHeight = select(verticalDirection * sqrt(1.0 - coreFraction) * 0.275,
+      verticalDirection * normalizedCoreRadius * 0.3168, isOuterBulge);
+    position = vec3f(cos(angle) * coreRadius, coreHeight * parameters.radius,
       sin(angle) * coreRadius);
-    let coreWhite = 1.0 - smoothstep(0.0, 0.85, coreFraction);
+    // Define the white center in world radius so widening the envelope cannot widen it.
+    let coreWhite = (1.0 - smoothstep(0.08, 0.55, normalizedCoreRadius))
+      * select(1.0, 0.25, isOuterBulge);
     starColor = mix(vec3f(1.0, 0.48, 0.06), vec3f(1.0, 0.93, 0.72), coreWhite);
-    brightness = (0.4 + 1.3 * getRandomValue(seed + 5u)) * (1.0 - smoothstep(0.55, 1.0, coreFraction))
+    let coreFade = select(1.0 - smoothstep(0.55, 1.0, coreFraction),
+      1.1 * (1.0 - smoothstep(1.224, 2.856, normalizedCoreRadius)), isOuterBulge);
+    brightness = (0.4 + 1.3 * getRandomValue(seed + 5u)) * coreFade
       * (0.7 + 0.3 * sin(coreAngle * 3.0 + coreFraction * 9.0));
-  } else if (population >= 5u && population <= 7u) {
+  } else if (population >= 5u && population <= 8u) {
     // A dim stellar disk connects the bright filaments into a substantial galaxy.
     // These stars fill the gaps without adding another layer of blurry bloom.
-    angle += (getRandomValue(seed + 9u) - 0.5) * 2.4;
+    angle = getRandomValue(seed + 9u) * 6.2831853 + parameters.time * 0.2;
     position = vec3f(cos(angle) * radialDistance,
       (getRandomValue(seed + 2u) - 0.5) * (0.06 + radialFraction * 0.16),
       sin(angle) * radialDistance);
-    brightness = 0.035 + 0.12 * getRandomValue(seed + 5u);
+    brightness = (0.12 + 0.24 * getRandomValue(seed + 5u))
+      * (1.0 - smoothstep(0.75, 1.0, radialFraction));
   }
   let color = starColor * brightness;
   offsets[particleIndex * 3u] = position.x;
@@ -164,6 +185,7 @@ async function main() {
   if (!navigator.gpu) throw new Error('This showcase requires WebGPU.');
   const container = document.querySelector<HTMLElement>('#viewport')!;
   const status = document.querySelector<HTMLElement>('#status')!;
+  const elapsedTime = document.querySelector<HTMLOutputElement>('#elapsed-time')!;
   const diagnostics = new GPUGraphDiagnostics();
   const infoBox = createGalaxyInfoBox(diagnostics);
   const canvas = document.createElement('canvas');
@@ -257,16 +279,18 @@ async function main() {
   geometry.setAttribute('uv', base.getAttribute('uv'));
   const particleSizes = new Float32Array(PARTICLE_COUNT);
   for (let particleIndex = 0; particleIndex < PARTICLE_COUNT; particleIndex++) {
-    const population = particleIndex % 16;
+    const population = particleIndex >= DISK_PARTICLE_COUNT ? 4 : particleIndex % 16;
     const variation = ((particleIndex * 16807) % 65521) / 65521;
     particleSizes[particleIndex] =
       population < 2
-        ? 1.0 + variation * 1.7
+        ? 0.7 + variation * 1.4
         : population === 2
           ? 0.08 + variation ** 8 * 0.9
-          : population >= 5 && population <= 7
-            ? 0.04 + variation * 0.09
-            : 0.03 + variation ** 4 * 0.095;
+          : population === 4
+            ? 0.05 + variation ** 4 * 0.08
+            : population >= 5 && population <= 8
+              ? 0.07 + variation * 0.12
+              : 0.024 + variation ** 4 * 0.09;
   }
   geometry.setAttribute('instanceSize', new InstancedBufferAttribute(particleSizes, 1));
   geometry.instanceCount = PARTICLE_COUNT;
@@ -359,7 +383,7 @@ async function main() {
   };
   window.addEventListener('resize', resize);
   resize();
-  status.textContent = '98,304 instances · GPU graph → shared buffers → Three.js';
+  status.textContent = `${PARTICLE_COUNT.toLocaleString('en-US')} instances · GPU graph → shared buffers → Three.js`;
   let time = 0,
     previousTimestamp = performance.now(),
     running = true;
@@ -367,17 +391,12 @@ async function main() {
     if (!running) return;
     const deltaTimeSeconds = Math.min((now - previousTimestamp) / 1000, 0.05);
     previousTimestamp = now;
-    const paused = document.querySelector<HTMLInputElement>('#pause')!.checked;
-    if (!paused)
-      time += deltaTimeSeconds * Number(document.querySelector<HTMLInputElement>('#speed')!.value);
-    parameterBuffer.write(
-      new Float32Array([
-        time,
-        Number(document.querySelector<HTMLInputElement>('#radius')!.value),
-        PARTICLE_COUNT,
-        0
-      ])
-    );
+    const paused = infoBox.settings.paused;
+    if (!paused) time += deltaTimeSeconds * infoBox.settings.speed;
+    // The main stellar disk completes one turn per 250 Ma; other motion remains illustrative.
+    const elapsedTimeLabel = `${(time * MILLION_YEARS_PER_ANIMATION_SECOND).toFixed(0)} Ma`;
+    if (elapsedTime.textContent !== elapsedTimeLabel) elapsedTime.textContent = elapsedTimeLabel;
+    parameterBuffer.write(new Float32Array([time, 1, PARTICLE_COUNT, 0]));
     diagnostics.encode(compiled, device.commandEncoder, {parameters: undefined});
     device.submit(); // Same GPU queue; no readback, no intermediate upload.
     controls.update();
@@ -406,7 +425,6 @@ async function main() {
     renderer.render(scene, camera);
     // Preserve additive color while filling only the depth attachment.
     renderer.autoClear = false;
-    depthDisk.scale.setScalar(Number(document.querySelector<HTMLInputElement>('#radius')!.value));
     renderer.render(depthScene, camera);
     renderer.autoClear = true;
     renderer.setRenderTarget(null);
@@ -414,7 +432,7 @@ async function main() {
       sceneTarget.texture,
       sceneTarget.depthTexture!,
       camera.position.distanceTo(controls.target),
-      Number(document.querySelector<HTMLInputElement>('#aperture')!.value),
+      infoBox.settings.aperture,
       [camera.near, camera.far]
     );
     renderPipeline.render();

@@ -186,6 +186,15 @@
   },
   {
     "type": "category",
+    "label": "Three.js",
+    "items": [
+      "three/galactic-vortex",
+      "three/deck-layers",
+      "experimental/three"
+    ]
+  },
+  {
+    "type": "category",
     "label": "Integrations",
     "items": [
       "integrations/external-context",
@@ -233,8 +242,7 @@
         "type": "doc",
         "id": "experimental/webxr-kaleidoscope",
         "label": "WebXR: Immersive Prism Portal"
-      },
-      "experimental/three"
+      }
     ]
   },
   {
