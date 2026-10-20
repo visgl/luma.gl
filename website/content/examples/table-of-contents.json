@@ -37,13 +37,19 @@
   },
   {
     "type": "category",
-    "label": "glTF",
+    "label": "glTF standard features",
     "items": [
       "showcase/gltf",
-      "showcase/gltf-audio",
       "tutorials/hello-gltf",
-      "gltf/physics",
       "deck/gltf-interactivity"
+    ]
+  },
+  {
+    "type": "category",
+    "label": "glTF proposed features",
+    "items": [
+      "showcase/gltf-audio",
+      "gltf/physics"
     ]
   },
   {
