@@ -303,6 +303,9 @@ change its submission policy, fuse additional shaders, or replace the command-gr
 
 - A scope is WebGPU-only and owns its encoder. Append commands through `commandEncoder`, but
   call `scope.submit()` to finish and submit it. Do not finish or submit the encoder separately.
+- Explicit scopes select opted-in WebGPU handlers even for single-row attributes and constants.
+  The ordinary `evaluate(device)` API retains its CPU fast path. GPU-computed constants stay
+  GPU-resident and broadcast from row zero when consumed by later row operations.
 - Await each `scope.evaluate()` before starting another evaluation, submitting, or cancelling.
   Evaluation finishes CPU encoding; it does not wait for GPU completion.
 - The scope retains participating evaluators and computation resources. Evaluator destruction,

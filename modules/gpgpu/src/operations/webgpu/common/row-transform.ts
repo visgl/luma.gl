@@ -41,7 +41,7 @@ export function runRowComputation({
   const inputEntries = getInputEntries(inputs);
   const bindings = inputEntries.map(([name, input]) => ({name, input}));
   const storageBindings = bindings
-    .filter(({input}) => !input.isConstant)
+    .filter(({input}) => !input.isConstant || !input.value)
     .map((binding, index) => ({...binding, index}));
   const castToType = getWGSLType(operationType);
   const outputType = getWGSLType(output.type);
@@ -122,9 +122,6 @@ ${getComputeBlock(module.name, inputEntries, output, elementWise, expression)}
 }
 
 function getInputBinding(name: string, input: GPUDataEvaluator, index: number): string {
-  if (input.isConstant) {
-    return '';
-  }
   const inputType = getWGSLType(input.type);
   return `@group(0) @binding(${index}) var<storage, read> ${name}: array<${inputType}>;`;
 }
@@ -135,7 +132,7 @@ function getInputAccessor(name: string, input: GPUDataEvaluator, asType: SignedD
   const stride = input.stride / input.ValueType.BYTES_PER_ELEMENT;
   const offset = input.offset / input.ValueType.BYTES_PER_ELEMENT;
 
-  if (input.isConstant) {
+  if (input.isConstant && input.value) {
     return `fn read_${name}(_rowIndex: u32) -> array<${type}, ${input.size}> {
   return array<${type}, ${input.size}>(${getConstantValues(input, castToType)});
 }`;
@@ -143,7 +140,7 @@ function getInputAccessor(name: string, input: GPUDataEvaluator, asType: SignedD
 
   return `fn read_${name}(rowIndex: u32) -> array<${type}, ${input.size}> {
   var value: array<${type}, ${input.size}>;
-  let rowOffset = ${offset}u + rowIndex * ${stride}u;
+  let rowOffset = ${offset}u + ${input.isConstant ? '0u' : 'rowIndex'} * ${stride}u;
 ${Array.from({length: input.size}, (_, elementIndex) =>
   castToType
     ? `  value[${elementIndex}] = ${castToType}(${name}[rowOffset + ${elementIndex}u]);`

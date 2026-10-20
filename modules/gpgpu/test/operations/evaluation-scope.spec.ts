@@ -196,3 +196,54 @@ it('the same workload retains the existing immediate-submission submission polic
     for (const evaluator of [output, other, reordered, scaled, input]) evaluator.destroy();
   }
 });
+
+for (const inputKind of ['single-row attribute', 'constant evaluator', 'literal-only'] as const) {
+  it(`an explicit scope uses WebGPU for ${inputKind} operations`, async ({skip}) => {
+    const device = await getWebGPUTestDevice();
+    if (!device) return skip();
+    const input =
+      inputKind === 'single-row attribute'
+        ? GPUDataEvaluator.fromArray(new Float32Array([1, 2]), {size: 2})
+        : GPUDataEvaluator.fromConstant([1, 2]);
+    const scaled = multiply(input, 2);
+    const reordered = swizzle(scaled, [1, 0]);
+    const output = inputKind === 'literal-only' ? add([1, 2], [3, 4]) : add(reordered, 1);
+    const scope = new GPUEvaluationScope(device);
+    const submit = vi.spyOn(device, 'submit');
+    try {
+      await scope.evaluate(output);
+      expect(submit).not.toHaveBeenCalled();
+      scope.submit();
+      expect(submit).toHaveBeenCalledTimes(1);
+      expect(Array.from(await output.readValue())).toEqual(
+        inputKind === 'literal-only' ? [4, 6] : [5, 3]
+      );
+    } finally {
+      scope.cancel();
+      submit.mockRestore();
+      for (const evaluator of [output, reordered, scaled, input]) evaluator.destroy();
+    }
+  });
+}
+
+it('GPU-computed constants broadcast from row zero inside a scope', async ({skip}) => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return skip();
+  const input = GPUDataEvaluator.fromConstant([1, 2]);
+  const scaled = multiply(input, 2);
+  const constant = swizzle(scaled, [1, 0]);
+  const rows = GPUDataEvaluator.fromArray(new Float32Array([10, 20, 30, 40]), {size: 2});
+  const output = add(rows, constant);
+  const scope = new GPUEvaluationScope(device);
+  const submit = vi.spyOn(device, 'submit');
+  try {
+    await scope.evaluate(output);
+    expect(submit).not.toHaveBeenCalled();
+    scope.submit();
+    expect(Array.from(await output.readValue())).toEqual([14, 22, 34, 42]);
+  } finally {
+    scope.cancel();
+    submit.mockRestore();
+    for (const evaluator of [output, rows, constant, scaled, input]) evaluator.destroy();
+  }
+});

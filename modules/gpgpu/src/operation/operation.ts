@@ -67,7 +67,7 @@ export abstract class Operation<InputsT extends OperationInputs = Record<string,
     scope?: GPUEvaluationScope
   ): Promise<OperationHandlerResult> {
     if (!scope) await this._resolveDependencies(device);
-    const handler = await backendRegistry.get(this._getHandlerRegistry(device), this.name);
+    const handler = await backendRegistry.get(this._getHandlerRegistry(device, scope), this.name);
     if (scope && (device.type !== 'webgpu' || !handler.supportsEvaluationScope)) {
       throw new Error(`${this.name} does not support deferred-submission evaluation`);
     }
@@ -93,15 +93,16 @@ export abstract class Operation<InputsT extends OperationInputs = Record<string,
     return this.output.length <= 1 && Array.from(this.dependencies).every(t => Boolean(t.value));
   }
 
-  private _getHandlerRegistry(device: Device): string {
-    return this.shouldExecuteOnCPU() ? 'cpu' : device.type;
+  private _getHandlerRegistry(device: Device, scope?: GPUEvaluationScope): string {
+    // An explicit scope encodes WebGPU work even when the ordinary CPU fast path applies.
+    return !scope && this.shouldExecuteOnCPU() ? 'cpu' : device.type;
   }
 
   private async _resolveDependencies(device: Device, scope?: GPUEvaluationScope): Promise<void> {
     for (const dep of this.dependencies) {
       await dep.evaluate(device, {scope});
     }
-    const handlerRegistry = this._getHandlerRegistry(device);
+    const handlerRegistry = this._getHandlerRegistry(device, scope);
     if (handlerRegistry === 'cpu' || device.type === 'null') {
       for (const dependency of this.dependencies) {
         await dependency.ensureCPUValue();
