@@ -5,7 +5,15 @@
 import {expect, it, vi} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {add, multiply, swizzle, extent, GPUDataEvaluator, GPUEvaluationScope} from '@luma.gl/gpgpu';
+import {
+  add,
+  multiply,
+  swizzle,
+  extent,
+  interleave,
+  GPUDataEvaluator,
+  GPUEvaluationScope
+} from '@luma.gl/gpgpu';
 
 it('evaluation scope records distinct dependent passes and separate outputs before one submission', async ({
   skip
@@ -245,5 +253,24 @@ it('GPU-computed constants broadcast from row zero inside a scope', async ({skip
     scope.cancel();
     submit.mockRestore();
     for (const evaluator of [output, rows, constant, scaled, input]) evaluator.destroy();
+  }
+});
+
+it('interleave binds a GPU-computed constant alongside row data', async ({skip}) => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return skip();
+  const constant = add(1, 1);
+  const rows = GPUDataEvaluator.fromArray(new Float32Array([10, 20]), {size: 1});
+  const output = interleave(rows, constant);
+  const scope = new GPUEvaluationScope(device);
+  try {
+    await scope.evaluate(output);
+    scope.submit();
+    expect(Array.from(await output.readValue())).toEqual([10, 2, 20, 2]);
+  } finally {
+    scope.cancel();
+    output.destroy();
+    rows.destroy();
+    constant.destroy();
   }
 });

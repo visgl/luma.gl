@@ -15,6 +15,11 @@ const GPGPU_OPERATION_STATS = 'GPGPU Operation Counts';
 const COMPUTATION_RUNS = 'Computation Runs';
 const GPGPU_SHADER_ASSEMBLER = new WGSLShaderAssembler();
 
+/** GPU-resident constants require storage; only constants with CPU values can be inlined. */
+export function requiresStorageBinding(input: GPUDataEvaluator): boolean {
+  return !input.isConstant || !input.value;
+}
+
 export function runRowComputation({
   scope,
   module,
@@ -41,7 +46,7 @@ export function runRowComputation({
   const inputEntries = getInputEntries(inputs);
   const bindings = inputEntries.map(([name, input]) => ({name, input}));
   const storageBindings = bindings
-    .filter(({input}) => !input.isConstant || !input.value)
+    .filter(({input}) => requiresStorageBinding(input))
     .map((binding, index) => ({...binding, index}));
   const castToType = getWGSLType(operationType);
   const outputType = getWGSLType(output.type);
@@ -132,7 +137,7 @@ function getInputAccessor(name: string, input: GPUDataEvaluator, asType: SignedD
   const stride = input.stride / input.ValueType.BYTES_PER_ELEMENT;
   const offset = input.offset / input.ValueType.BYTES_PER_ELEMENT;
 
-  if (input.isConstant && input.value) {
+  if (!requiresStorageBinding(input)) {
     return `fn read_${name}(_rowIndex: u32) -> array<${type}, ${input.size}> {
   return array<${type}, ${input.size}>(${getConstantValues(input, castToType)});
 }`;
