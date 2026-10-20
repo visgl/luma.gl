@@ -82,18 +82,20 @@ fn main(@builtin(global_invocation_id) invocationId: vec3u) {
     + sin(radialFraction * 51.0 + filament * 5.0) * 0.035;
   var angle = arm + log(1.0 + radialFraction * 8.0) * (2.8 + armVariation * 0.2) + orbitalAngle + turbulence;
   let scatter = getRandomValue(seed + 1u) - 0.5;
-  // Discrete braided ribbons leave dark channels between the luminous streams.
-  angle += (strand - 1.5) * 0.105 + sin(radialFraction * 14.0 + strand * 1.7) * 0.07;
-  angle += scatter * (0.055 + 0.14 * filament * filament);
+  // Fill a continuous ribbon around each ridge instead of drawing four isolated wires.
+  // A narrow luminous crest and a broad dim shoulder leave dark space between arms.
+  let ribbonWidth = 0.11 + radialFraction * 0.12;
+  angle += scatter * ribbonWidth * 2.0
+    + sin(radialFraction * 14.0 + filament * 2.0) * 0.055;
   // Sculpt each arm around a raised centerline while retaining a thin underlying disk.
   // Coherent ridges and braided strands give the arms volume without scattering them apart.
   let armEnvelope = smoothstep(0.05, 0.25, radialFraction);
   let ridgePhase = radialFraction * 9.0 + arm + parameters.time * 0.12;
   let ridgeHeight = sin(ridgePhase) * (0.12 + radialFraction * (0.55 + 0.25 * armVariation)) * armEnvelope;
   let strandPhase = radialFraction * 12.0 + floor(filament * 4.0) * 1.5707963 + arm;
-  let strandHeight = sin(strandPhase) * (0.04 + radialFraction * 0.24) * armEnvelope;
+  let strandHeight = sin(strandPhase) * (0.04 + radialFraction * 0.12) * armEnvelope;
   let crossSection = getRandomValue(seed + 2u) * 6.2831853;
-  let thickness = (0.035 + radialFraction * 0.24) * (1.0 - abs(scatter));
+  let thickness = (0.06 + radialFraction * 0.36) * sqrt(1.0 - 4.0 * scatter * scatter);
   let height = ridgeHeight + strandHeight + cos(crossSection) * thickness;
   position = vec3f(cos(angle) * radialDistance, height, sin(angle) * radialDistance);
   let gold = mix(vec3f(1.0, 0.16, 0.005), vec3f(1.0, 0.52, 0.07), getRandomValue(seed + 3u));
@@ -103,14 +105,19 @@ fn main(@builtin(global_invocation_id) invocationId: vec3u) {
   starColor = mix(gold, cyan, coolWeight);
   // A brighter face and dimmer underside make the stream's rounded cross-section readable.
   let strandLight = 0.65 + 0.5 * (0.5 + 0.5 * cos(crossSection - 0.7));
-  brightness = (0.38 + 3.2 * pow(getRandomValue(seed + 5u), 7.0)) * strandLight;
+  let crestLight = exp(-scatter * scatter * 16.0);
+  brightness = (0.3 + 2.8 * pow(getRandomValue(seed + 5u), 7.0)) * strandLight
+    * (0.4 + crestLight * 0.9);
+  // Sparse warm-white knots interrupt the saturated ribbons with local star-forming highlights.
+  starColor = mix(starColor, vec3f(1.0, 0.88, 0.66),
+    pow(getRandomValue(seed + 10u), 18.0) * 0.7);
   if (population == 0u || population == 1u) {
     // Soft, oversized sprites trace translucent dust clouds above and below the stars.
     position.x += (getRandomValue(seed + 7u) - 0.5) * radialFraction * 1.2;
     position.z += (getRandomValue(seed + 8u) - 0.5) * radialFraction * 1.2;
     // Dust curls around the same arm centerline rather than forming a separate cloud.
     position.y += sin(strandPhase + crossSection * 0.35) * (0.1 + radialFraction * 0.3);
-    brightness = 0.0015 + 0.003 * getRandomValue(seed + 5u);
+    brightness = (0.003 + 0.007 * getRandomValue(seed + 5u)) * (0.4 + crestLight);
   } else if (population == 2u) {
     // A loose foreground population supplies depth and a handful of defocused lights.
     angle = getRandomValue(seed + 1u) * 6.2831853 + parameters.time * 0.04;
@@ -119,13 +126,18 @@ fn main(@builtin(global_invocation_id) invocationId: vec3u) {
     brightness = 0.018 + 0.07 * getRandomValue(seed + 5u);
   } else if (population == 3u || population == 4u) {
     // A compact, rotating, luminous bulge anchors the asymmetric spiral ribbons.
-    let coreRadius = pow(getRandomValue(seed), 0.65) * 1.6 * parameters.radius;
-    angle = coreRadius * 7.0 + f32(particleIndex % 2u) * 3.1415927
-      + (getRandomValue(seed + 1u) - 0.5) * 0.18 + parameters.time * 0.7;
+    // Independent azimuths avoid an artificial double spiral through the nucleus.
+    // A centrally concentrated oblate bulge stays visibly rotating through uneven light.
+    let coreFraction = pow(getRandomValue(seed), 1.1);
+    let coreRadius = coreFraction * 1.45 * parameters.radius;
+    angle = getRandomValue(seed + 1u) * 6.2831853 + parameters.time * 0.7;
     position = vec3f(cos(angle) * coreRadius,
-      (getRandomValue(seed + 2u) - 0.5) * coreRadius * 0.2, sin(angle) * coreRadius * 0.7);
-    starColor = mix(vec3f(1.0, 0.38, 0.025), vec3f(1.0, 0.9, 0.52), getRandomValue(seed + 3u));
-    brightness = 0.35 + 1.2 * getRandomValue(seed + 5u);
+      (getRandomValue(seed + 2u) - 0.5) * sqrt(1.0 - coreFraction) * 0.55 * parameters.radius,
+      sin(angle) * coreRadius);
+    let coreWhite = 1.0 - smoothstep(0.0, 0.85, coreFraction);
+    starColor = mix(vec3f(1.0, 0.48, 0.06), vec3f(1.0, 0.93, 0.72), coreWhite);
+    brightness = (0.4 + 1.3 * getRandomValue(seed + 5u))
+      * (0.7 + 0.3 * sin(angle * 3.0 + coreFraction * 9.0 - parameters.time * 0.7));
   } else if (population >= 5u && population <= 7u) {
     // A dim stellar disk connects the bright filaments into a substantial galaxy.
     // These stars fill the gaps without adding another layer of blurry bloom.
@@ -245,12 +257,12 @@ async function main() {
     const variation = ((particleIndex * 16807) % 65521) / 65521;
     particleSizes[particleIndex] =
       population < 2
-        ? 0.7 + variation * 1.4
+        ? 1.0 + variation * 1.7
         : population === 2
           ? 0.08 + variation ** 8 * 0.9
           : population >= 5 && population <= 7
             ? 0.04 + variation * 0.09
-            : 0.024 + variation ** 4 * 0.09;
+            : 0.03 + variation ** 4 * 0.095;
   }
   geometry.setAttribute('instanceSize', new InstancedBufferAttribute(particleSizes, 1));
   geometry.instanceCount = PARTICLE_COUNT;
