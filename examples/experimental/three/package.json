@@ -9,6 +9,7 @@
     "build:website": "vite build --mode website --outDir ../../../website/.generated/example-assets/standalone-examples/three --emptyOutDir"
   },
   "dependencies": {
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e",
     "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch",
     "@deck.gl/layers": "9.4.0",
     "@luma.gl/core": "10.0.0-alpha.4",
@@ -18,6 +19,7 @@
     "@luma.gl/shadertools": "10.0.0-alpha.4",
     "@luma.gl/three": "workspace:*",
     "mjolnir.js": "^3.1.1",
+    "preact": "^10.17.0",
     "three": "0.185.1"
   },
   "devDependencies": {

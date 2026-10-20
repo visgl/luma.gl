@@ -30,7 +30,26 @@ export default defineConfig(({mode}) => ({
   },
   optimizeDeps: {
     exclude: ['@deck.gl/core', '@deck.gl/layers'],
-    include: ['@deck.gl/layers > earcut'],
+    // Prebundle the linked entry points together so shared GPU classes retain one identity.
+    // Serving these large barrel exports as individual source modules creates a cold-load waterfall.
+    include: [
+      '@deck.gl/layers > earcut',
+      '@deck.gl-community/panels',
+      'preact',
+      'preact/hooks',
+      '@luma.gl/core',
+      '@luma.gl/core/webgl',
+      '@luma.gl/core/webgpu',
+      '@luma.gl/effects',
+      '@luma.gl/engine',
+      '@luma.gl/gpgpu/gpu-core',
+      '@luma.gl/shadertools',
+      '@luma.gl/three/interop',
+      'three/webgpu',
+      'three/tsl',
+      'three/addons/controls/OrbitControls.js',
+      'three/addons/tsl/display/BloomNode.js'
+    ],
     noDiscovery: true
   },
   server: {host: '127.0.0.1'}

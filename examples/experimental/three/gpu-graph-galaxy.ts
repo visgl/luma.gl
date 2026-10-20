@@ -39,6 +39,8 @@ import {
   vec4
 } from 'three/tsl';
 import {GalaxyDepthOfField} from './galaxy-depth-of-field';
+import {createGalaxyInfoBox} from './galaxy-info-box';
+import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {bloom} from 'three/addons/tsl/display/BloomNode.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 
@@ -146,11 +148,15 @@ async function main() {
   if (!navigator.gpu) throw new Error('This showcase requires WebGPU.');
   const container = document.querySelector<HTMLElement>('#viewport')!;
   const status = document.querySelector<HTMLElement>('#status')!;
+  const diagnostics = new GPUGraphDiagnostics();
+  const infoBox = createGalaxyInfoBox(diagnostics);
   const canvas = document.createElement('canvas');
   container.append(canvas);
+  status.textContent = 'Requesting shared WebGPU device…';
   const device = await luma.createDevice({
     adapters: [webgpuAdapter],
     type: 'webgpu',
+    optionalFeatures: ['timestamp-query'],
     createCanvasContext: {canvas: document.createElement('canvas'), autoResize: false}
   });
   const renderer = new WebGPURenderer({
@@ -158,6 +164,7 @@ async function main() {
     device: device.handle as GPUDevice,
     antialias: true
   });
+  status.textContent = 'Initializing Three renderer…';
   await renderer.init();
   const support = getThreeBufferBridgeSupport(device, renderer);
   if (!support.supported) throw new Error(support.reason);
@@ -224,6 +231,7 @@ async function main() {
       };
     }
   });
+  status.textContent = 'Compiling galaxy animation…';
   const compiled = await graph.compileAsync();
   // Camera-facing quads with analytic falloff read as light, rather than solid polyhedra.
   const base = new PlaneGeometry(1, 1);
@@ -354,7 +362,7 @@ async function main() {
         0
       ])
     );
-    compiled.encode(device.commandEncoder, {parameters: undefined});
+    diagnostics.encode(compiled, device.commandEncoder, {parameters: undefined});
     device.submit(); // Same GPU queue; no readback, no intermediate upload.
     controls.update();
     if (!paused && !cameraInteracting && now >= cameraResumeTime) {
@@ -394,6 +402,7 @@ async function main() {
       [camera.near, camera.far]
     );
     renderPipeline.render();
+    infoBox.update();
     requestAnimationFrame(animate);
   };
   requestAnimationFrame(animate);
@@ -402,6 +411,7 @@ async function main() {
     () => {
       running = false;
       controls.dispose();
+      infoBox.destroy();
       window.removeEventListener('resize', resize);
       renderPipeline.dispose();
       glow.dispose();
