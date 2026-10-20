@@ -1,13 +1,13 @@
-import {ANARISceneSchema} from '@luma.gl/scene/schemas';
+import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 import {
   getPlaygroundRendererSubtype,
   makePlaygroundRenderer
-} from '../../examples/showcase/scene/playground-renderer';
+} from '../../examples/anari/scenes/playground-renderer';
 import {expect, it} from 'vitest';
-import {ANARIDevice, ANARIGroup} from '@luma.gl/scene';
+import {ANARIDevice, ANARIGroup} from '@luma.gl/anari';
 import {NullDevice} from '@luma.gl/test-utils';
-import {PLAYGROUND_PRESETS} from '../../examples/showcase/scene/playground-presets';
-import {createANARIJSONScene} from '../../examples/showcase/scene/playground-scene';
+import {PLAYGROUND_PRESETS} from '../../examples/anari/scenes/playground-presets';
+import {createANARIJSONScene} from '../../examples/anari/scenes/playground-scene';
 
 it('ANARI JSON presets reproduce the complete showcase scenes', () => {
   const device = new ANARIDevice(new NullDevice({}));

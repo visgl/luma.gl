@@ -34,9 +34,9 @@ export type GLTFSceneKind = 'gltf' | 'morph' | 'skin' | 'instances' | 'materials
 /** Shared fixtures for standard materials, deformation and instanced animation. */
 export async function createGLTFScene(renderer: Renderer, kind: GLTFSceneKind = 'gltf') {
   const assetUrls = {
-    gltf: new URL('../../showcase/scene/public/gltf/Lantern.glb', import.meta.url).href,
-    morph: new URL('../../showcase/scene/public/gltf/AnimatedMorphCube.glb', import.meta.url).href,
-    skin: new URL('../../showcase/scene/public/gltf/RobotExpressive.glb', import.meta.url).href
+    gltf: new URL('../../anari/scenes/public/gltf/Lantern.glb', import.meta.url).href,
+    morph: new URL('../../anari/scenes/public/gltf/AnimatedMorphCube.glb', import.meta.url).href,
+    skin: new URL('../../anari/scenes/public/gltf/RobotExpressive.glb', import.meta.url).href
   };
   const gltf =
     kind === 'instances' || kind === 'materials' || kind === 'transmission'

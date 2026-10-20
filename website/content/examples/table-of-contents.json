@@ -27,13 +27,24 @@
         "type": "doc",
         "id": "showcase/persistence",
         "label": "Effects: Persistence"
-      },
-      "showcase/gltf",
-      {
-        "type": "doc",
-        "id": "experimental/scene-playground",
-        "label": "Scene Playground"
       }
+    ]
+  },
+  {
+    "type": "category",
+    "label": "glTF",
+    "items": [
+      "gltf/asset-studio",
+      "tutorials/hello-gltf",
+      "gltf/physics",
+      "deck/gltf-interactivity"
+    ]
+  },
+  {
+    "type": "category",
+    "label": "ANARI",
+    "items": [
+      "anari/scenes"
     ]
   },
   {
@@ -93,6 +104,7 @@
           "experimental/gpu-frustum-culling",
           "experimental/gpu-trace-viewer",
           "experimental/gpu-graph-explorer",
+          "experimental/gpu-timeseries",
           "experimental/gpu-trace-scene",
           "experimental/gpu-scene-graph",
           {
@@ -133,6 +145,9 @@
             "id": "experimental/gpu-parquet-constellation",
             "label": "GPU Parse: Parquet Constellation"
           },
+          "experimental/gpu-geometry",
+          "experimental/gpu-pointcloud",
+          "experimental/gpu-pointcloud-octree",
           "showcase/billion-point-spatial-atlas",
           "experimental/gpt-2"
         ]
@@ -173,6 +188,15 @@
   },
   {
     "type": "category",
+    "label": "Three.js",
+    "items": [
+      "three/galactic-vortex",
+      "three/deck-layers",
+      "experimental/three"
+    ]
+  },
+  {
+    "type": "category",
     "label": "Integrations",
     "items": [
       "integrations/external-context",
@@ -187,7 +211,6 @@
       "tutorials/hello-triangle-geometry",
       "tutorials/hello-cube",
       "tutorials/lighting",
-      "tutorials/hello-gltf",
       "tutorials/two-cubes",
       "tutorials/instanced-cubes",
       "tutorials/hello-instancing",
@@ -221,8 +244,7 @@
         "type": "doc",
         "id": "experimental/webxr-kaleidoscope",
         "label": "WebXR: Immersive Prism Portal"
-      },
-      "experimental/three"
+      }
     ]
   },
   {

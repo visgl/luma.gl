@@ -7,7 +7,8 @@ import type {
   ComputePassProps,
   CopyBufferToTextureOptions,
   CopyTextureToTextureOptions,
-  CopyTextureToBufferOptions
+  CopyTextureToBufferOptions,
+  QuerySet
 } from '../../../index';
 import {CommandEncoder, CommandEncoderProps, Buffer} from '../../../index';
 import {WebGPUDevice} from '../webgpu-device';
@@ -25,6 +26,21 @@ export class WebGPUCommandEncoder extends CommandEncoder {
   private _timestampSnapshotsTransferred = false;
   private _timestampSnapshots = new Map<WebGPUQuerySet, WebGPUTimestampSnapshot>();
   private _transientUploadBuffers: WebGPUBuffer[] = [];
+
+  override withTimeProfilingQuerySet<Result>(querySet: QuerySet, encode: () => Result): Result {
+    const previousQuerySet = this._timeProfilingQuerySet;
+    const previousSlotCount = this._timeProfilingSlotCount;
+    const previousSnapshot = this._profilingSnapshot;
+    this._timeProfilingQuerySet = querySet;
+    this._timeProfilingSlotCount = 0;
+    try {
+      return encode();
+    } finally {
+      this._timeProfilingQuerySet = previousQuerySet;
+      this._timeProfilingSlotCount = previousSlotCount;
+      this._profilingSnapshot = previousSnapshot;
+    }
+  }
 
   constructor(device: WebGPUDevice, props: CommandEncoderProps = {}) {
     super(device, props);

@@ -8,6 +8,8 @@ Target Release Date: Q3, 2026
 
 **General**
 
+- **WGSL fp64 projection math** - The `fp64` shader module now provides double-single transcendental functions and returned-array vector/matrix helpers for geographic projection on WebGPU. See the [supported functions and precision limits](/docs/api-reference/shadertools/shader-modules/fp64#wgsl-projection-functions).
+
 - **Shared glyph loading** - `@luma.gl/text/fonts` decodes glyph PBF ranges, deduplicates and caches font-stack requests, and builds renderer-independent SDF atlases from server glyph metrics.
 
 - **Public package** - `@luma.gl/text` is included in npm releases, including its CPU font atlas builders under `@luma.gl/text/fonts`.
@@ -64,8 +66,11 @@ Target Release Date: Q3, 2026
 
 **@luma.gl/gpgpu**
 
+- **Additive GPU point-cloud octrees** - `GPUPointCloudOctree` builds sparse tile metadata and source-ID ranges without reordering positions. The new point-cloud octree example shows tile bounds, additive detail levels and command-graph diagnostics.
+
 - **Experimental GPU sphere physics** - `@luma.gl/gpgpu/gpu-physics` adds grid-based bounded contacts, inverse-mass Jacobi solving, solid-sphere angular dynamics, friction, sleeping and live finite-plane/gravity settings. The standalone sphere-world sandbox renders quaternion-driven cue-ball bands and benchmarks up to 10,000 GPU-resident bodies with explicit capacity diagnostics.
 - **Oriented GPU rigid bodies** - A bounded sphere/box world adds rotated inertia, clipped contact manifolds, friction and island sleeping, with stack and large-count sphere examples.
+- **glTF physics draft import** - Optional `@luma.gl/gltf/physics` parses a pinned rigid-body/implicit-shape subset with capability reports, compound sphere/box ownership, authored mass/inertia, kinematic targets, collision filters and material policies. GPU scene synchronization and behavior bindings remain separate follow-ups.
 - **Persistent physics contacts and calibration** - Opt-in cached sphere/surface impulses, accumulated friction constraints, discarded simulation-time reporting and provenance-aware SI calibration fitting add reproducible numerical evidence.
 - **Bounded continuous sphere physics** - Optional small-world sphere/rectangle sweeps, persistent contact and pocket-trigger events, explicit impact/candidate budgets, static box surfaces and analytic material fixtures extend the physics module. Pool uses GPU pocket capture and event-driven clacks/trails, adds beveled jaws, hold-to-charge shooting with Escape cancellation, and automatic re-racking.
 - **GPU pool prototype** - Sphere physics now supports linear/angular impulses, body teleport/wake/enable controls, multiple finite surfaces with individual materials, and explicit interaction snapshots. The standalone pool example adds aiming, power, cushions, six pockets, scratch recovery, and shot completion. Spin practice adds follow/draw setups, separate sliding/rolling/spinning resistance, and raised cushion contacts with speed-dependent restitution.
@@ -207,7 +212,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
   geospatial, and trace APIs keep intermediate results resident and reusable.
 - **Captured and animated worlds** - Stream large Gaussian splat scenes, mix splats with meshes,
   and animate crowds with shared geometry, GPU sampling, culling, and LOD.
-- **Four new experimental modules** - `@luma.gl/text`, `@luma.gl/splats`, `@luma.gl/scene`, and
+- **Four new experimental modules** - `@luma.gl/text`, `@luma.gl/splats`, `@luma.gl/anari`, and
   `@luma.gl/experimental` are now published for direct use. These APIs may
   evolve outside the 9.4 semver contract.
 
@@ -249,7 +254,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 - **`@luma.gl/gpgpu`** - New module for lazy `GPUDataEvaluator` operations and chunk-preserving `GPUVectorEvaluator` transforms with CPU/WebGL/WebGPU backends.
 - **`@luma.gl/text`** - GPU-oriented 2D and 3D text rendering and atlas construction.
 - **`@luma.gl/splats`** - Experimental Gaussian splat rendering with caller-owned GPU data and preserved streaming batches.
-- **`@luma.gl/scene`** - Experimental forward, deferred, glTF, ray-marching, and ray-tracing scene
+- **`@luma.gl/anari`** - Experimental forward, deferred, glTF, ray-marching, and ray-tracing scene
   rendering.
 - **`@luma.gl/experimental`** - GPU analytics, simulations, rendering techniques, and WebXR
   helpers, now published for direct use.
@@ -269,12 +274,12 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 - **[Lossless animated asset interchange](/docs/api-reference/gltf/gltf-interchange)** - Format-owned `.gltf` and `.glb` export preserves hierarchy, animation clips, material pointers, skins, inverse bind matrices, morph targets, RGBA colors, joint attributes, material variants, GPU instancing, cameras, and punctual lights.
 - **Punctual lights and source-faithful materials** - Source directional, point, and spot lights retain authored colors, intensity, and cones; generic export round-trips supported materials, all map slots, UV sets, texture transforms, and sampler settings.
 
-**@luma.gl/scene (Experimental)**
+**@luma.gl/anari (Experimental)**
 
 - **[Retained physically based rendering](/docs/api-guide/engine/anari-rendering)** - The ANARI-inspired scene API maps committed handles, staged parameters, instances, cameras, lights, and 17 material texture slots onto shared forward and WebGPU deferred scene renderers, including automatic opaque-scene capture for transmissive materials.
 - **Ray lighting quality controls** - Opt-in power-weighted emissive selection preserves exact conditional sampling PDFs and CORE storage limits. The scene playground exposes explicit ray resolution, renderer switching and emitter-distribution comparisons with retained ray settings.
 - **Pluggable interactive GPU-compute ray tracing** - `ANARIDevice.registerRenderer()` registers lazy custom runtimes, while the WebGPU-only `raytrace` subtype adapts committed scenes to the shared experimental `RayTracingSceneRenderer` for GPU-built object/instance BVHs, adaptive half-resolution rendering, interleaved pixel phases, stable-instance temporal reprojection, bounded rotating shadows, progressive sampling, and upsampled HDR presentation within default WebGPU CORE limits.
-- **[Optional glTF animation integration](/docs/api-reference/scene/anari-animation)** - The isolated `@luma.gl/scene/gltf` entry point binds imported node hierarchies, material and sampler pointers, and morph-weight tracks to retained objects while committing each changed object at most once per frame.
+- **[Optional glTF animation integration](/docs/api-reference/scene/anari-animation)** - The isolated `@luma.gl/anari/gltf` entry point binds imported node hierarchies, material and sampler pointers, and morph-weight tracks to retained objects while committing each changed object at most once per frame.
 - **Source-faithful retained assets** - JSON scenes preserve indexed geometry, both UV sets, tangents, RGBA vertex colors, joint attributes, morph targets, authored samplers, punctual lights, and `OPAQUE`/`MASK`/`BLEND` modes; programmatic renderer parameters can additionally supply caller-owned image-based-lighting textures.
 
 **Experimental rendering and GPU workflows**

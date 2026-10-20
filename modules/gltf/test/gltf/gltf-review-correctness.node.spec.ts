@@ -12,7 +12,7 @@ import {describe, expect, test} from 'vitest';
 
 async function loadFixture(name: 'SimpleSkin.gltf' | 'AnimatedMorphCube.glb') {
   const source = await readFile(
-    new URL(`../../../../examples/showcase/scene/public/gltf/${name}`, import.meta.url)
+    new URL(`../../../../examples/anari/scenes/public/gltf/${name}`, import.meta.url)
   );
   return postProcessGLTF(await parse(source, GLTFLoader, {gltf: {loadImages: false}}));
 }

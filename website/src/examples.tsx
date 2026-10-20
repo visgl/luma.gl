@@ -69,7 +69,7 @@ const loadVolumetricFireForgeApp = () => import('../../examples/experimental/vol
 const loadVirtualGeometryCanyonApp = () => import('../../examples/experimental/virtual-geometry-canyon/app');
 const loadShadowMapApp = () => import('../../examples/experimental/shadow-map/app');
 const loadABufferApp = () => import('../../examples/experimental/a-buffer/app');
-const loadGLTFApp = () => import('../../examples/showcase/gltf/app');
+const loadGLTFApp = () => import('../../examples/gltf/asset-studio/app');
 const loadGaussianSplatsApp = () => import('../../examples/showcase/gaussian-splats/app');
 const loadArrowTemporalStarfieldApp = () => import('../../examples/arrow/arrow-temporal-starfield/app');
 const loadArrowTimeColumnsApp = () => import('../../examples/arrow/arrow-time-columns/app');
@@ -842,10 +842,10 @@ export const GLTFExample: React.FC<WebsiteExampleProps> = props => {
 
   return (
     <LumaExample
-      id="gltf"
+      id="asset-studio"
       title="glTF Asset Studio"
       subtitle="Physical materials · animated characters · standards-native glTF"
-      directory="showcase"
+      directory="gltf"
       loadTemplate={loadGLTFApp}
       config={exampleConfig}
       canvasContextProfile="high-dynamic-range"
@@ -2671,6 +2671,72 @@ export const TransformExample: React.FC = props => (
     showStats={false}
     stackBlitz
     devices={['webgl2']}
+    {...props}
+  />
+);
+
+const loadGPUTimeSeriesApp = () => import('../../examples/experimental/gpu-timeseries/app');
+
+export const GPUTimeSeriesExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="gpu-timeseries"
+    title="Signal Room"
+    subtitle="Find a service incident hidden in 29 hours of telemetry"
+    directory="experimental"
+    devices={['webgpu']}
+    loadTemplate={loadGPUTimeSeriesApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const GPUGeometryExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="gpu-geometry"
+    title="GPU Geometry Surface Lab"
+    directory="experimental"
+    devices={['webgpu']}
+    loadTemplate={() => import('../../examples/experimental/gpu-geometry/app')}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const GPUPointCloudExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="gpu-pointcloud"
+    title="GPU Point Cloud Cleanup Lab"
+    directory="experimental"
+    devices={['webgpu']}
+    loadTemplate={() => import('../../examples/experimental/gpu-pointcloud/app')}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const GPUPointCloudOctreeExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="gpu-pointcloud-octree"
+    title="Additive Octree · Point Cloud Tiles"
+    directory="experimental"
+    devices={['webgpu']}
+    loadTemplate={() => import('../../examples/experimental/gpu-pointcloud-octree/app')}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+const loadGLTFPhysicsApp = () => import('../../examples/gltf/physics/app');
+
+export const GLTFPhysicsExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="physics"
+    title="glTF Physics Extensions"
+    subtitle="Published glTF assets · GPU rigid bodies · draft extensions"
+    directory="gltf"
+    loadTemplate={loadGLTFPhysicsApp}
+    config={exampleConfig}
+    devices={['webgpu']}
     {...props}
   />
 );

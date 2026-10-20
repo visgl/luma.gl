@@ -13,16 +13,42 @@ import {
   Scene,
   PerspectiveCamera,
   Color,
-  IcosahedronGeometry,
+  PlaneGeometry,
+  InstancedBufferAttribute,
+  RenderPipeline,
+  RenderTarget,
+  DepthTexture,
+  CircleGeometry,
+  DoubleSide,
+  HalfFloatType,
+  NoBlending,
+  ACESFilmicToneMapping,
   InstancedBufferGeometry,
   Mesh,
   MeshBasicNodeMaterial,
   AdditiveBlending
 } from 'three/webgpu';
-import {attribute, positionLocal} from 'three/tsl';
+import {
+  attribute,
+  cameraWorldMatrix,
+  exp,
+  positionLocal,
+  screenUV,
+  texture,
+  uv,
+  vec4
+} from 'three/tsl';
+import {GalaxyDepthOfField} from './galaxy-depth-of-field';
+import {createGalaxyInfoBox} from './galaxy-info-box';
+import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
+import {bloom} from 'three/addons/tsl/display/BloomNode.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 
-const PARTICLE_COUNT = 65536;
+const DISK_PARTICLE_COUNT = 98304;
+const BULGE_PARTICLE_COUNT = 98304;
+const PARTICLE_COUNT = DISK_PARTICLE_COUNT + BULGE_PARTICLE_COUNT;
+// Match the main disk's 0.2 radians per animation second to an illustrative 250 Ma orbit.
+const MILLION_YEARS_PER_ANIMATION_SECOND = (250 * 0.2) / (2 * Math.PI);
 const PARTICLE_ANIMATION_SHADER = `
 struct SimulationParameters { time: f32, radius: f32, count: f32, padding: f32 };
 @group(0) @binding(0) var<storage, read_write> offsets: array<f32>;
@@ -47,41 +73,105 @@ fn main(@builtin(global_invocation_id) invocationId: vec3u) {
   var starColor: vec3f;
   var brightness: f32;
 
-  // A sixth of the stars form a thick ellipsoidal bulge, rather than a flat disk.
-  if (particleIndex % 6u == 0u) {
-    let bulgeRadius = 1.8 * pow(getRandomValue(seed), 0.75) * parameters.radius;
-    let azimuth = getRandomValue(seed + 1u) * 6.2831853;
-    // Rotate an elongated bulge so the central population has visible motion.
-    let rotationAngle = parameters.time * 0.65;
+  // Added stars fill the warm bulge without taking particles away from the arms or disk.
+  let population = select(particleIndex % 16u, 4u, particleIndex >= ${DISK_PARTICLE_COUNT}u);
+  let radialFraction = pow(getRandomValue(seed), 0.65);
+  let radialDistance = (0.08 + 9.8 * radialFraction) * parameters.radius;
+  // Use a separate index from population so every stellar population fills all four arms.
+  let arm = f32((particleIndex / 16u) % 4u) * 1.5707963;
+  let filament = getRandomValue(seed + 6u);
+  let strand = floor(filament * 4.0);
+  let armVariation = sin(arm + 0.8);
+  // Preserve arm structure during long sessions instead of winding it into rings.
+  let orbitalAngle = parameters.time * 0.2
+    + sin(parameters.time * 0.08) * 0.45 * (1.0 - radialFraction);
+  // Correlated waves bend entire filaments; fine scatter breaks up their edges.
+  let turbulence = sin(radialFraction * 23.0 + arm * 3.0 + parameters.time * 0.12) * 0.16
+    + sin(radialFraction * 51.0 + filament * 5.0) * 0.035;
+  var angle = arm + log(1.0 + radialFraction * 8.0) * (2.8 + armVariation * 0.2) + orbitalAngle + turbulence;
+  let scatter = getRandomValue(seed + 1u) - 0.5;
+  // Discrete braided ribbons leave dark channels between the luminous streams.
+  angle += (strand - 1.5) * 0.105 + sin(radialFraction * 14.0 + strand * 1.7) * 0.07;
+  angle += scatter * (0.055 + 0.14 * filament * filament);
+  // Sculpt each arm around a raised centerline while retaining a thin underlying disk.
+  // Coherent ridges and braided strands give the arms volume without scattering them apart.
+  let armEnvelope = smoothstep(0.05, 0.25, radialFraction);
+  let ridgePhase = radialFraction * 9.0 + arm + parameters.time * 0.12;
+  let ridgeHeight = sin(ridgePhase) * (0.12 + radialFraction * (0.55 + 0.25 * armVariation)) * armEnvelope;
+  let strandPhase = radialFraction * 12.0 + floor(filament * 4.0) * 1.5707963 + arm;
+  let strandHeight = sin(strandPhase) * (0.04 + radialFraction * 0.24) * armEnvelope;
+  let crossSection = getRandomValue(seed + 2u) * 6.2831853;
+  let thickness = (0.035 + radialFraction * 0.24) * (1.0 - abs(scatter));
+  let height = ridgeHeight + strandHeight + cos(crossSection) * thickness;
+  position = vec3f(cos(angle) * radialDistance, height, sin(angle) * radialDistance);
+  let gold = mix(vec3f(1.0, 0.16, 0.005), vec3f(1.0, 0.52, 0.07), getRandomValue(seed + 3u));
+  let cyan = mix(vec3f(0.005, 0.18, 0.5), vec3f(0.04, 0.8, 1.0), getRandomValue(seed + 4u));
+  // Warm and cool filaments overlap instead of forming uniform concentric color bands.
+  let coolWeight = smoothstep(0.25, 0.8, radialFraction + sin(arm + strand * 0.7) * 0.23);
+  starColor = mix(gold, cyan, coolWeight);
+  // A brighter face and dimmer underside make the stream's rounded cross-section readable.
+  let strandLight = 0.65 + 0.5 * (0.5 + 0.5 * cos(crossSection - 0.7));
+  brightness = (0.38 + 3.2 * pow(getRandomValue(seed + 5u), 7.0)) * strandLight;
+  if (population == 0u || population == 1u) {
+    // Soft, oversized sprites trace translucent dust clouds above and below the stars.
+    position.x += (getRandomValue(seed + 7u) - 0.5) * radialFraction * 1.2;
+    position.z += (getRandomValue(seed + 8u) - 0.5) * radialFraction * 1.2;
+    // Dust curls around the same arm centerline rather than forming a separate cloud.
+    position.y += sin(strandPhase + crossSection * 0.35) * (0.1 + radialFraction * 0.3);
+    brightness = 0.0015 + 0.003 * getRandomValue(seed + 5u);
+    if (population == 0u) {
+      // A continuous luminous disk supports the arm ridges rather than leaving empty gaps.
+      let diskAngle = getRandomValue(seed + 9u) * 6.2831853 + parameters.time * 0.2;
+      position = vec3f(cos(diskAngle) * radialDistance,
+        (getRandomValue(seed + 2u) - 0.5) * 0.18, sin(diskAngle) * radialDistance);
+      brightness = 0.004 * (1.0 - smoothstep(0.65, 1.0, radialFraction));
+    }
+  } else if (population == 2u) {
+    // A loose foreground population supplies depth and a handful of defocused lights.
+    angle = getRandomValue(seed + 1u) * 6.2831853 + parameters.time * 0.04;
+    position = vec3f(cos(angle) * radialDistance * 1.2,
+      (getRandomValue(seed + 2u) - 0.5) * 4.5, sin(angle) * radialDistance * 1.2);
+    brightness = 0.018 + 0.07 * getRandomValue(seed + 5u);
+  } else if (population == 3u || population == 4u) {
+    // Keep a compact nucleus inside a broader, dimmer warm stellar envelope.
+    // Independent azimuths avoid an artificial double spiral through the nucleus.
+    // Rotation blends gently into the disk, with a soft outer falloff into the inner arms.
+    let coreFraction = pow(getRandomValue(seed), 1.1);
+    // Retain an exponential nucleus inside a filled, softly fading warm envelope.
+    let isOuterBulge = population == 4u;
+    let normalizedCoreRadius = select(-log(1.0 - coreFraction * 0.985) * 0.55,
+      pow(getRandomValue(seed), 0.3333333) * 2.856, isOuterBulge);
+    // Sample a filled ellipsoid: height and planar radius share the same spherical shell.
+    // This avoids piling tall stars over tiny planar radii into a vertical column.
     let verticalDirection = getRandomValue(seed + 2u) * 2.0 - 1.0;
-    let planarDirection = sqrt(max(0.0, 1.0 - verticalDirection * verticalDirection));
-    let localPosition = vec2f(cos(azimuth), sin(azimuth) * 0.64) * planarDirection;
-    position = vec3f(
-      localPosition.x * cos(rotationAngle) - localPosition.y * sin(rotationAngle),
-      verticalDirection * 0.55,
-      localPosition.x * sin(rotationAngle) + localPosition.y * cos(rotationAngle)
-    ) * bulgeRadius;
-    // Mix gold, yellow and warm-white stars instead of tinting the entire core red.
-    starColor = mix(vec3f(1.0, 0.48, 0.12), vec3f(1.0, 0.92, 0.68), getRandomValue(seed + 3u));
-    brightness = 0.08 + 0.4 * pow(getRandomValue(seed + 4u), 4.0);
-  } else {
-    let radialFraction = sqrt(getRandomValue(seed));
-    let spiralArmAngle = f32(particleIndex % 5u) * 1.25663706;
-    let angularJitter = (getRandomValue(seed + 1u) - 0.5) * (0.2 + radialFraction * 0.65);
-    let rotationAngle = spiralArmAngle + radialFraction * 10.5
-      + parameters.time * (0.2 + 0.6 / (0.3 + radialFraction)) + angularJitter;
-    let radialDistance = (0.25 + 9.0 * radialFraction) * parameters.radius;
-    let verticalSpread = 0.06 + radialFraction * radialFraction * 0.4;
-    position = vec3f(
-      cos(rotationAngle) * radialDistance,
-      (getRandomValue(seed + 2u) - 0.5) * verticalSpread + sin(rotationAngle * 2.0) * 0.06,
-      sin(rotationAngle) * radialDistance
-    );
-    let coreWeight = 1.0 - smoothstep(0.1, 0.5, radialFraction);
-    starColor = mix(mix(vec3f(0.38, 0.32, 1.0), vec3f(0.26, 0.7, 1.0), getRandomValue(seed + 5u)), vec3f(1.0, 0.76, 0.35), coreWeight);
-    brightness = 0.18 + 0.65 * pow(getRandomValue(seed + 3u), 3.0);
+    let planarFraction = select(1.0, sqrt(1.0 - verticalDirection * verticalDirection), isOuterBulge);
+    let coreRadius = normalizedCoreRadius * planarFraction * parameters.radius;
+    let coreAngle = getRandomValue(seed + 1u) * 6.2831853;
+    // Keep the visual angular-speed difference within ten percent of the main disk.
+    let coreAngularSpeed = 0.2 + 0.02 * (1.0 - smoothstep(0.0, 2.856, normalizedCoreRadius));
+    angle = coreAngle + parameters.time * coreAngularSpeed;
+    let coreHeight = select(verticalDirection * sqrt(1.0 - coreFraction) * 0.275,
+      verticalDirection * normalizedCoreRadius * 0.3168, isOuterBulge);
+    position = vec3f(cos(angle) * coreRadius, coreHeight * parameters.radius,
+      sin(angle) * coreRadius);
+    // Define the white center in world radius so widening the envelope cannot widen it.
+    let coreWhite = (1.0 - smoothstep(0.08, 0.55, normalizedCoreRadius))
+      * select(1.0, 0.25, isOuterBulge);
+    starColor = mix(vec3f(1.0, 0.48, 0.06), vec3f(1.0, 0.93, 0.72), coreWhite);
+    let coreFade = select(1.0 - smoothstep(0.55, 1.0, coreFraction),
+      1.1 * (1.0 - smoothstep(1.224, 2.856, normalizedCoreRadius)), isOuterBulge);
+    brightness = (0.4 + 1.3 * getRandomValue(seed + 5u)) * coreFade
+      * (0.7 + 0.3 * sin(coreAngle * 3.0 + coreFraction * 9.0));
+  } else if (population >= 5u && population <= 8u) {
+    // A dim stellar disk connects the bright filaments into a substantial galaxy.
+    // These stars fill the gaps without adding another layer of blurry bloom.
+    angle = getRandomValue(seed + 9u) * 6.2831853 + parameters.time * 0.2;
+    position = vec3f(cos(angle) * radialDistance,
+      (getRandomValue(seed + 2u) - 0.5) * (0.06 + radialFraction * 0.16),
+      sin(angle) * radialDistance);
+    brightness = (0.12 + 0.24 * getRandomValue(seed + 5u))
+      * (1.0 - smoothstep(0.75, 1.0, radialFraction));
   }
-  // A range of luminosities keeps additive blending from washing the warm core white.
   let color = starColor * brightness;
   offsets[particleIndex * 3u] = position.x;
   offsets[particleIndex * 3u + 1u] = position.y;
@@ -95,14 +185,24 @@ async function main() {
   if (!navigator.gpu) throw new Error('This showcase requires WebGPU.');
   const container = document.querySelector<HTMLElement>('#viewport')!;
   const status = document.querySelector<HTMLElement>('#status')!;
+  const elapsedTime = document.querySelector<HTMLOutputElement>('#elapsed-time')!;
+  const diagnostics = new GPUGraphDiagnostics();
+  const infoBox = createGalaxyInfoBox(diagnostics);
   const canvas = document.createElement('canvas');
   container.append(canvas);
-  const device = await luma.createDevice({adapters: [webgpuAdapter], type: 'webgpu'});
+  status.textContent = 'Requesting shared WebGPU device…';
+  const device = await luma.createDevice({
+    adapters: [webgpuAdapter],
+    type: 'webgpu',
+    optionalFeatures: ['timestamp-query'],
+    createCanvasContext: {canvas: document.createElement('canvas'), autoResize: false}
+  });
   const renderer = new WebGPURenderer({
     canvas,
     device: device.handle as GPUDevice,
     antialias: true
   });
+  status.textContent = 'Initializing Three renderer…';
   await renderer.init();
   const support = getThreeBufferBridgeSupport(device, renderer);
   if (!support.supported) throw new Error(support.reason);
@@ -169,11 +269,30 @@ async function main() {
       };
     }
   });
+  status.textContent = 'Compiling galaxy animation…';
   const compiled = await graph.compileAsync();
-  const base = new IcosahedronGeometry(0.035, 0);
+  // Camera-facing quads with analytic falloff read as light, rather than solid polyhedra.
+  const base = new PlaneGeometry(1, 1);
   const geometry = new InstancedBufferGeometry();
   geometry.index = base.index;
   geometry.setAttribute('position', base.getAttribute('position'));
+  geometry.setAttribute('uv', base.getAttribute('uv'));
+  const particleSizes = new Float32Array(PARTICLE_COUNT);
+  for (let particleIndex = 0; particleIndex < PARTICLE_COUNT; particleIndex++) {
+    const population = particleIndex >= DISK_PARTICLE_COUNT ? 4 : particleIndex % 16;
+    const variation = ((particleIndex * 16807) % 65521) / 65521;
+    particleSizes[particleIndex] =
+      population < 2
+        ? 0.7 + variation * 1.4
+        : population === 2
+          ? 0.08 + variation ** 8 * 0.9
+          : population === 4
+            ? 0.05 + variation ** 4 * 0.08
+            : population >= 5 && population <= 8
+              ? 0.07 + variation * 0.12
+              : 0.024 + variation ** 4 * 0.09;
+  }
+  geometry.setAttribute('instanceSize', new InstancedBufferAttribute(particleSizes, 1));
   geometry.instanceCount = PARTICLE_COUNT;
   geometry.setAttribute(
     'instanceOffset',
@@ -190,29 +309,81 @@ async function main() {
     blending: AdditiveBlending,
     depthWrite: false
   });
-  material.positionNode = positionLocal.add(attribute<'vec3'>('instanceOffset', 'vec3'));
+  const instanceSize = attribute<'float'>('instanceSize', 'float');
+  const spritePosition = positionLocal.mul(instanceSize);
+  material.positionNode = attribute<'vec3'>('instanceOffset', 'vec3').add(
+    cameraWorldMatrix.mul(vec4(spritePosition, 0)).xyz
+  );
+  const squaredRadius = uv().sub(0.5).length().pow(2).mul(4);
+  const spriteOpacity = exp(squaredRadius.mul(-5)).sub(Math.exp(-5)).max(0);
+  material.opacityNode = spriteOpacity;
   material.colorNode = attribute<'vec3'>('instanceColor', 'vec3');
   const mesh = new Mesh(geometry, material);
   mesh.frustumCulled = false;
   const scene = new Scene();
-  scene.background = new Color('#02030b');
+  scene.background = new Color('#010409');
   scene.add(mesh);
-  const camera = new PerspectiveCamera(55, 1, 0.01, 200);
-  camera.position.set(0, 12, 21);
+  const camera = new PerspectiveCamera(50, 1, 0.01, 200);
+  camera.position.set(0, 8.2, 19.2);
+  camera.up.set(0.3, 1, 0);
   const controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true;
-  controls.autoRotate = true;
-  controls.autoRotateSpeed = 0.25;
+  // Keep manual orbit/zoom, but drive the automatic camera in the galaxy's world-space plane.
+  let cameraInteracting = false;
+  let cameraResumeTime = 0;
+  let cameraOrbitTime = 0;
+  controls.addEventListener('start', () => {
+    cameraInteracting = true;
+  });
+  controls.addEventListener('end', () => {
+    cameraInteracting = false;
+    cameraResumeTime = performance.now() + 6000;
+  });
+  const depthOfField = new GalaxyDepthOfField(device, renderer);
+  const sceneTarget = new RenderTarget(1, 1, {type: HalfFloatType});
+  sceneTarget.depthTexture = new DepthTexture(1, 1);
+  // Capture nearest sharp star depth separately; luminous dust must not mask the whole disk.
+  const depthMaterial = material.clone();
+  depthMaterial.transparent = false;
+  depthMaterial.blending = NoBlending;
+  depthMaterial.colorWrite = false;
+  depthMaterial.depthWrite = true;
+  depthMaterial.alphaTest = 0.2;
+  depthMaterial.opacityNode = spriteOpacity.mul(instanceSize.lessThan(0.25).select(1, 0));
+  const depthScene = new Scene();
+  const depthStars = new Mesh(geometry, depthMaterial);
+  depthStars.frustumCulled = false;
+  depthScene.add(depthStars);
+  // The stellar disk supplies continuous depth between sparse additive star sprites.
+  // Otherwise empty pixels read as the far plane and turn every filament into a blur edge.
+  const diskGeometry = new CircleGeometry(10.1, 96);
+  const diskMaterial = new MeshBasicNodeMaterial({
+    colorWrite: false,
+    depthWrite: true,
+    side: DoubleSide
+  });
+  const depthDisk = new Mesh(diskGeometry, diskMaterial);
+  depthDisk.rotation.x = -Math.PI / 2;
+  // Keep the gap-filling depth proxy below the raised and recessed stellar streams.
+  depthDisk.position.y = -1;
+  depthScene.add(depthDisk);
+  const renderPipeline = new RenderPipeline(renderer);
+  const sceneColor = texture(depthOfField.output, screenUV);
+  const glow = bloom(sceneColor, 0.45, 0.3, 1.1);
+  renderPipeline.outputNode = sceneColor.add(glow);
+  renderer.toneMapping = ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
   const resize = () => {
     const width = container.clientWidth,
       height = container.clientHeight;
     renderer.setSize(width, height, false);
+    sceneTarget.setSize(width, height);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
   };
   window.addEventListener('resize', resize);
   resize();
-  status.textContent = '65,536 instances · GPU graph → shared buffers → Three.js';
+  status.textContent = `${PARTICLE_COUNT.toLocaleString('en-US')} instances · GPU graph → shared buffers → Three.js`;
   let time = 0,
     previousTimestamp = performance.now(),
     running = true;
@@ -220,20 +391,52 @@ async function main() {
     if (!running) return;
     const deltaTimeSeconds = Math.min((now - previousTimestamp) / 1000, 0.05);
     previousTimestamp = now;
-    if (!document.querySelector<HTMLInputElement>('#pause')!.checked)
-      time += deltaTimeSeconds * Number(document.querySelector<HTMLInputElement>('#speed')!.value);
-    parameterBuffer.write(
-      new Float32Array([
-        time,
-        Number(document.querySelector<HTMLInputElement>('#radius')!.value),
-        PARTICLE_COUNT,
-        0
-      ])
-    );
-    compiled.encode(device.commandEncoder, {parameters: undefined});
+    const paused = infoBox.settings.paused;
+    if (!paused) time += deltaTimeSeconds * infoBox.settings.speed;
+    // The main stellar disk completes one turn per 250 Ma; other motion remains illustrative.
+    const elapsedTimeLabel = `${(time * MILLION_YEARS_PER_ANIMATION_SECOND).toFixed(0)} Ma`;
+    if (elapsedTime.textContent !== elapsedTimeLabel) elapsedTime.textContent = elapsedTimeLabel;
+    parameterBuffer.write(new Float32Array([time, 1, PARTICLE_COUNT, 0]));
+    diagnostics.encode(compiled, device.commandEncoder, {parameters: undefined});
     device.submit(); // Same GPU queue; no readback, no intermediate upload.
     controls.update();
+    if (!paused && !cameraInteracting && now >= cameraResumeTime) {
+      cameraOrbitTime += deltaTimeSeconds;
+      const offset = camera.position.clone().sub(controls.target);
+      const distance = offset.length();
+      // One revolution takes six minutes; an 80-second cycle moves from 35° to 8° above the disk.
+      const azimuth = Math.atan2(offset.x, offset.z) + (deltaTimeSeconds * Math.PI) / 180;
+      const targetElevation =
+        ((21.5 + 13.5 * Math.cos((cameraOrbitTime * Math.PI) / 40)) * Math.PI) / 180;
+      const currentElevation = Math.asin(Math.max(-1, Math.min(1, offset.y / distance)));
+      // Ease back from a user's chosen elevation rather than snapping after interaction.
+      const elevation =
+        currentElevation +
+        (targetElevation - currentElevation) * (1 - Math.exp(-deltaTimeSeconds * 0.5));
+      const planarDistance = distance * Math.cos(elevation);
+      camera.position.set(
+        controls.target.x + Math.sin(azimuth) * planarDistance,
+        controls.target.y + Math.sin(elevation) * distance,
+        controls.target.z + Math.cos(azimuth) * planarDistance
+      );
+      camera.lookAt(controls.target);
+    }
+    renderer.setRenderTarget(sceneTarget);
     renderer.render(scene, camera);
+    // Preserve additive color while filling only the depth attachment.
+    renderer.autoClear = false;
+    renderer.render(depthScene, camera);
+    renderer.autoClear = true;
+    renderer.setRenderTarget(null);
+    depthOfField.render(
+      sceneTarget.texture,
+      sceneTarget.depthTexture!,
+      camera.position.distanceTo(controls.target),
+      infoBox.settings.aperture,
+      [camera.near, camera.far]
+    );
+    renderPipeline.render();
+    infoBox.update();
     requestAnimationFrame(animate);
   };
   requestAnimationFrame(animate);
@@ -242,6 +445,16 @@ async function main() {
     () => {
       running = false;
       controls.dispose();
+      infoBox.destroy();
+      window.removeEventListener('resize', resize);
+      renderPipeline.dispose();
+      glow.dispose();
+      sceneTarget.dispose();
+      depthMaterial.dispose();
+      diskGeometry.dispose();
+      diskMaterial.dispose();
+      depthOfField.dispose();
+      base.dispose();
       geometry.dispose();
       material.dispose();
       bridge.dispose();

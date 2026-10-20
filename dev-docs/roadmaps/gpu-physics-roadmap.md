@@ -1,13 +1,21 @@
 # GPU Physics Roadmap
 
-Updated: October 18, 2026
+Updated: October 20, 2026
 
 ## Goal and current status
 
-Build reusable WebGPU physics on the GPGPU primitives and command graph, with
-examples that render simulation buffers directly. The current scope is sphere
-dynamics against spheres and static rectangular planes, not a general rigid-body
-engine or a calibrated billiards simulator.
+Build a general, high-performance WebGPU rigid-body module on the GPGPU primitives
+and command graph. The first qualification programme is complete, performant support
+for a pinned glTF physics proposal profile, rather than a collection of asset-specific
+demos. State-of-the-art is an engineering ambition, not a current capability claim:
+conformance, stability, accuracy, latency and throughput must be measured separately.
+
+The scalable sphere path and bounded general-body reference path already exist. The
+Motion Properties follow-up adds analytic tapered primitives, convex hulls and
+convex/triangle-mesh contacts. It is a foundation, not full proposal coverage or the
+production general-body architecture. Four functioning sample files do not establish
+extension conformance. The original tranche history below remains for provenance;
+the G1–G7 programme now governs the next work.
 
 The initial implementation landed in [#3446](https://github.com/visgl/luma.gl/pull/3446).
 The sphere dynamics follow-up and pool example landed together in
@@ -20,6 +28,152 @@ Implementation references on master:
 - [Module API and limitations](../../modules/gpgpu/src/gpu-physics/README.md)
 - [Sphere world example](../../examples/experimental/gpu-sphere-world/)
 - [Pool example and controls](../../examples/experimental/gpu-pool/README.md)
+
+## Active programme: glTF physics qualification first
+
+Target the exact `KHR_physics_rigid_bodies` and `KHR_implicit_shapes` revisions
+recorded in the [adapter profile](../../modules/gltf/src/physics/README.md). Record
+prose/schema discrepancies and the separately versioned legacy sample profile.
+“Complete” means every normative feature in the declared profile has behavioral
+evidence, including its companion interactivity operations; it does not mean support
+for every historical or future draft. Draft migrations require a reviewed matrix diff.
+
+### Architecture and acceptance rules
+
+- `gpu-physics` owns bodies, shapes, mass properties, contacts, constraints, queries,
+  events and integration. The glTF adapter translates document semantics and IDs;
+  simulation kernels must not know asset names or glTF node indices.
+- Reuse shared GPU sort, scan, compaction and command-graph primitives. Share shape
+  and body conventions with the sphere path; retain a small CPU/reference path for
+  correctness comparisons instead of treating quadratic discovery as production.
+- Keep persistent GPU state in explicit buffers suitable for rendering. CPU geometry
+  preprocessing is allowed; advancing physics must not require CPU contact solving,
+  per-body readback or a GPU-to-CPU-to-GPU round trip.
+- Use structure-of-arrays for independently consumed body state. Benchmark packed
+  solver/contact records separately; do not confuse one universal layout with a
+  performance result. Reuse compiled graphs and indirect queues rather than creating
+  one graph operation per body/contact/joint. Fuse only where dependencies permit it.
+- No asset-specific exclusions or immutable-pose exceptions count as completed
+  collision coverage. The current wheel/ceiling proof is explicitly transitional;
+  G2 replaces this restriction with supported general collision semantics.
+- Performance is a gate in every tranche. Record CPU encode time, GPU time per step,
+  frame latency, queue depth, memory, candidate/contact counts and overflows. Never
+  present a multi-step batch duration as a single-pass duration. Slow devices must
+  not accumulate an unbounded submission backlog.
+- Reuse math.gl CPU shape/transform queries for independent references where suitable.
+  Upstream reusable CPU geometry algorithms when their API and tests are mature;
+  GPU work queues, integration and constraint solving belong in gpu-physics.
+
+### G1. Executable contract and scalable execution foundation
+
+Create a field-by-field support matrix and fixtures for implicit shapes, geometry
+references, body ownership, modes, mass/inertia, materials, filters, triggers, joints,
+object-model pointers and physics interactivity operations. Distinguish schema
+acceptance, import, physical behavior and performance. Pin asset revisions, licenses
+and expected outcomes; network availability must not determine unit-test results.
+
+Establish stable body/collider IDs, sparse candidate/contact storage, reusable work
+queues, indirect dispatch and explicit capacity handling. Introduce a size-aware GPU
+broad phase for mixed shapes, while retaining all-pairs discovery as an oracle. Reuse
+sphere sort/scan infrastructure where its assumptions hold. Instrument baseline
+reference devices before optimizing: discrete/integrated desktop GPU and a browser
+software adapter for correctness, followed by a defined mobile qualification target.
+
+Exit: an executable conformance matrix, reproducible benchmark exports, no hidden
+truncation, bounded pending submissions and candidate scaling that is not quadratic
+for sparse mixed-shape scenes. Coverage labels remain partial until G7.
+
+### G2. Complete collision geometry for the declared proposal
+
+Cover all proposal primitives, including finite/infinite and one-/double-sided
+planes, tapered capsules and cylinders/cones. Complete `geometry.node` resolution,
+compound hierarchies, shared shapes, transforms and authored convex-hull semantics.
+Make convex manifolds robust and persistent across feature changes. Implement the
+required convex/mesh and mesh/mesh combinations, including moving nonconvex bodies,
+with topology/degeneracy checks and explicit collision-side semantics. Preserve
+holes; any allowed approximation must be declared and tested, not inferred silently.
+
+Exit: pairwise shape coverage, separation/contact/penetration tests, rotated/scaled
+assets and nonconvex openings pass against independent references. Direct pose changes
+must not invalidate undocumented assumptions. The current fixed-center mesh exception
+is removed. Worst-case traversal, work budgets and overflow recovery are benchmarked.
+
+### G3. Stable dynamics, parallel solving and fast-motion reliability
+
+Complete mass, COM and full-tensor handling, locked/infinite response semantics,
+material combine rules, static/dynamic friction, kinematics and frame-independent
+sleep/wake behavior. Build contact/constraint islands and a parallel solver strategy
+with measured convergence, warm starting and bounded energy/error. Add continuous
+collision handling for the qualified fast-motion envelope and swept trigger queries.
+CCD is an engine quality target even where the proposal leaves integration choices open.
+
+Exit: stacks, mixed mass ratios, offset COM, infinite inertia, moving supports,
+high-speed thin obstacles and timestep convergence meet declared numeric tolerances.
+Contact latency and memory gates must pass with 60 Hz rendering on the selected
+reference scenes; publish physics timings separately from rendering costs.
+
+### G4. Proposal constraints, limits and drives
+
+Implement the proposal's two attachment frames and composable 1D/2D/3D linear and
+angular limits, including radial/conical angular metrics. Cover open-ended bounds,
+hard and soft limits, stiffness/damping, linear/angular drives, position/velocity
+targets, force/acceleration modes and force caps. Honor connected-body collision
+defaults and `enableCollision`. Solve joints and contacts coherently, rather than
+adding independent scene-specific corrections.
+
+Exit: hinge, slider, ball/socket and composed-joint fixtures, chains, motors and
+contact-loaded mechanisms pass error, energy, stability and throughput gates.
+
+### G5. Triggers, queries and physics/interactivity execution
+
+Support individual and compound trigger volumes with per-collider filtering and
+step-ordered enter/exit events. Add GPU ray-segment queries with nearest hit, source
+collider/node identity, hit fraction and normal. Bind proposal-defined
+`rigid_body/applyImpulse`, `rigid_body/applyPointImpulse`, `rigid_body/rayCast`,
+`event/rigid_body_triggerEntered` and `event/rigid_body_triggerExited` to the engine.
+Specify fixed-step/tick ordering, repeated events between ticks and invalid-node
+handling. GPU events remain compact and bounded, with explicit overflow recovery.
+
+Exit: original behavior graphs and synthetic simultaneous-entry/exit/query fixtures
+produce correct payloads and ordering without whole-world readback per operation.
+
+### G6. Complete glTF ownership and GPU render publication
+
+Complete animation-over-physics precedence, object-model property updates, collider
+rebuild policies, instancing where required by the declared profile, shared assets,
+scene selection, visibility semantics and reset/lifecycle behavior. Publish GPU body
+poses and bounds to glTF rendering without the example's CPU pose bridge. Preserve
+source transforms, node origins, COM frames and source provenance through import and
+export. Keep render geometry separate from analytic collision shape declarations.
+
+Exit: animated and interactive assets, independent instances, scene switches, reset,
+resource destruction and export/reimport preserve defined physics behavior, with no
+per-frame synchronization readback in the render path.
+
+### G7. Full-profile qualification and performance release
+
+Close every normative support-matrix row, run all pinned external assets plus adversarial
+fixtures, and publish remaining implementation choices and numeric limits. Separate
+correctness qualification from performance qualification; a test skipped because a
+feature is unavailable does not count as a supported-feature pass. Benchmark sparse
+and dense worlds, mixed sizes, deep stacks, articulated mechanisms, moving meshes,
+fast bodies, triggers and interactive queries. Compare against an independent CPU
+reference with equivalent settings; any external engine comparison must disclose
+hardware, backend, scene, timestep, iterations, tolerances and approximation choices.
+
+Exit: no missing required profile features; no hidden dropped work or forced CPU
+fallback; documented device/capacity envelopes; CI conformance fixtures; and a
+reproducible performance report. Only then describe the adapter as complete for the
+pinned profile. The 128-body reference limit and pose-bridge limitations cannot remain
+as the general production implementation behind that claim.
+
+### After glTF qualification
+
+Pursue broader state-of-the-art goals based on measured gaps: larger heterogeneous
+worlds, stronger articulation and high-mass-ratio solving, more advanced collision
+and stabilization methods, and additional domains such as deformables. These do not
+expand the glTF milestone implicitly. Do not schedule them ahead of missing required
+proposal behavior merely because a new visual demo is easier to show.
 
 ## Landed baseline
 
@@ -45,7 +199,7 @@ toggles isolate linear and angular slip contributions to Coulomb friction. The
 raised cushion contact is a rigid-impulse approximation. Neither is a measured
 billiards material model, and the contact selection ring does not simulate miscues.
 
-## Next tranches
+## Historical next-tranche sequence
 
 The numbering below sequences follow-up work from the landed baseline; it does
 not renumber earlier implementation tranches. Each tranche should ship with
@@ -197,3 +351,21 @@ storage and an ordered GPU solver. It does not replace the scalable sphere solve
 Large-world sparse manifolds, parallel rigid-body solving, box CCD, joints, general
 convex shapes and glTF synchronization remain later work. Device-specific evidence
 must accompany any performance or supported stacking-depth claim.
+
+## Tranches 20A–B: glTF import and body semantics
+
+The optional `@luma.gl/gltf/physics` subpath decodes pinned raw-JSON revisions of
+`KHR_physics_rigid_bodies` and `KHR_implicit_shapes` without GPU allocation. It
+returns source-node/body/collider mappings, preserved source data and explicit
+capability issues; unsupported assets cannot create partial worlds.
+
+The bounded rigid-body path now supports compound spheres/boxes, center offsets,
+authored principal inertia/orientation, additive primitive mass properties,
+kinematic velocity/target motion, per-collider filtering, and distinct static/dynamic
+friction with material combine policies. Limits remain 128 bodies and 128 colliders,
+quadratic pair storage and discrete collision detection.
+
+See the [adapter profile](../../modules/gltf/src/physics/README.md) for draft hashes,
+coordinate/ownership rules, schema discrepancies and unsupported features.
+GPU transform/bounds publication (20C), animation ownership (20D), behavior/event
+bindings (20E), and exporter interoperability (20F) remain separate increments.

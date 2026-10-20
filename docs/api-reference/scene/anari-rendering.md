@@ -96,7 +96,7 @@ Omitting the subtype selects `default`.
 
 ### Renderer feature comparison
 
-This table describes the built-in `@luma.gl/scene` runtimes. **Fallback** means that
+This table describes the built-in `@luma.gl/anari` runtimes. **Fallback** means that
 `deferred` renders the whole scene through the shared forward renderer when it cannot
 represent the scene in its G-buffer. It does not mean that the deferred lighting pass
 implements that feature. Registered custom renderers define their own support.
@@ -575,7 +575,7 @@ type ANARIRendererSubtype =
   | (string & Record<never, never>);
 ```
 
-All parameter interfaces, object classes, subtype aliases, object metadata, and frame statistics are exported from `@luma.gl/scene`.
+All parameter interfaces, object classes, subtype aliases, object metadata, and frame statistics are exported from `@luma.gl/anari`.
 
 
 ### Sampling and quality

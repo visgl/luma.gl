@@ -337,8 +337,8 @@ to the illustrative pool table automatically.
 
 ## Oriented rigid bodies
 
-`GPURigidBodyWorld` is a separate experimental reference path for up to 128 dynamic
-and static spheres/boxes. It preserves structure-of-arrays position, orientation,
+`GPURigidBodyWorld` is a separate experimental reference path for up to 128 bodies
+and 128 total sphere/box colliders. It preserves structure-of-arrays position, orientation,
 linear-velocity and angular-velocity buffers for direct rendering. Bodies specify a
 shape, transform, mass (zero for static), friction and restitution. Solid-shape principal
 inertia is transformed into world space when applying impulses.
@@ -361,7 +361,7 @@ world.applyImpulse(1, [2, 0, 0], [0, 0.4, 2]);
 A four-operation graph integrates forces, generates contacts, solves impulses and
 finishes transforms/sleeping. Box pairs use 15 separating axes, clipped face polygons
 with up to four retained contacts, and closest supporting edges for edge contacts.
-Sphere/box contacts use the closest point in box-local coordinates. Stable body-pair
+Sphere/box contacts use the closest point in box-local coordinates. Stable collider-pair
 slots retain normal/tangential impulses; nearby aligned contact points warm start the
 next step. Restitution is captured on new impacts, with accumulated nonnegative normal
 impulses and Coulomb-bounded tangential impulses.
@@ -377,7 +377,35 @@ ordered GPU sequential solve. It is a correctness foundation, not a scalable gen
 rigid-body engine. It is discrete, has no swept box CCD, and uses first-order rotation
 integration while preserving world angular momentum. Fast motion, extreme mass ratios and very slender shapes
 need smaller timesteps and additional validation. The sphere grid path remains the
-large-world implementation. General convex shapes, joints and glTF binding are deferred.
+large-world implementation. General convex shapes and joints are deferred. The optional
+`@luma.gl/gltf/physics` adapter imports a pinned draft subset; automatic render binding
+and animation/behavior integration remain separate increments.
+
+Bodies may supply either `shape` or `colliders`. Each collider has a local position,
+orientation, material and optional global `excludedColliders` indices. Colliders on
+one body never collide with each other. Separate `mode` values distinguish static,
+dynamic and kinematic bodies; legacy `mass: 0` without a mode still means static.
+Explicit dynamic zero mass means infinite linear mass. `inertiaDiagonal` and
+`inertiaOrientation` define principal inertia in the node frame; zero principal
+values lock impulse response on those axes. Computed compound inertia uses additive
+uniform-density volumes, rotated solid primitive tensors and parallel-axis offsets.
+
+`position` is the node origin and `centerOfMass` is a node-frame offset. GPU position
+buffers and state snapshots store the world center of mass. Collision geometry is
+recentered internally. `gravityFactor` scales only dynamic gravitational acceleration.
+
+Kinematic bodies follow initial velocities or world-space node targets supplied by
+`setKinematicTarget(index, position, orientation)`. Targets are reached in the next
+step and then held, with contact velocities inferred from the movement. Moving
+kinematic contacts wake dynamic islands; kinematics never receive impulses or sleep.
+Target jumps still have discrete collision limits.
+
+Per-collider materials expose `staticFriction`, `dynamicFriction`, `restitution`,
+`frictionCombine` and `restitutionCombine`. Named combine policies use the glTF draft
+precedence: average, minimum, maximum, multiply. Static friction applies below a
+0.01-unit/second tangential slip threshold. Without named policies, legacy worlds
+retain geometric-mean friction and minimum restitution. The glTF adapter chooses
+and documents its draft-profile defaults explicitly.
 
 All rigid-world buffers are owned by the world, even when exposed for rendering. Destroy
 rendering bindings and the compiled graph, complete outstanding readbacks, then destroy

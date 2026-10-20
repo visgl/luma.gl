@@ -9,7 +9,7 @@ description: Render scalar and vector fields from buffers or 3D textures with re
 focused scene renderer entry point:
 
 ```ts
-import {StructuredVolumeRenderer} from '@luma.gl/scene/raymarch';
+import {StructuredVolumeRenderer} from '@luma.gl/anari/raymarch';
 ```
 
 The API is experimental and currently requires WebGPU. The scene entry point is a stable facade;

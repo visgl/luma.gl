@@ -9,11 +9,11 @@ import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {expect, it} from 'vitest';
-import {GLTFAnimationStudio} from '../../examples/showcase/gltf/gltf-animation-studio';
+import {GLTFAnimationStudio} from '../../examples/gltf/asset-studio/gltf-animation-studio';
 
 it('Animation Studio renders expressive robot skinning and facial morphs on WebGL and WebGPU', async () => {
   const source = postProcessGLTF(
-    await load('/examples/showcase/scene/public/gltf/RobotExpressive.glb', GLTFLoader, {
+    await load('/examples/anari/scenes/public/gltf/RobotExpressive.glb', GLTFLoader, {
       gltf: {loadImages: false}
     })
   );

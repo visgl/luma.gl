@@ -10,6 +10,8 @@ const tscPath = join(repoRoot, 'node_modules', '.bin', 'tsc');
 const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'deck/city-scene',
   'api/blending',
+  'gltf/physics',
+  'deck/gltf-interactivity',
   'api/multi-canvas',
   'api/render-bundles',
   'api/texture-compressed',
@@ -54,7 +56,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'integrations/hello-react',
   'experimental/antialiasing',
   'showcase/algebraic-varieties',
-  'showcase/scene',
+  'anari/scenes',
   'showcase/dof',
   'showcase/gaussian-splats',
   'showcase/billion-point-spatial-atlas',
@@ -82,6 +84,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
 
 const PACKAGE_FREE_EXAMPLE_WORKSPACES = new Set(['showcase/raster-lab','tutorials/slang-particles']);
 const NATIVE_TYPESCRIPT_CONFIG_WORKSPACES = new Set([
+  'deck/gltf-interactivity',
   'experimental/gpu-sphere-world',
   'experimental/gpu-pool',
   'deck/globe-clouds',
@@ -93,7 +96,7 @@ const NATIVE_TYPESCRIPT_CONFIG_WORKSPACES = new Set([
   'api/multi-canvas',
   'experimental/fp64',
   'experimental/three',
-  'showcase/scene',
+  'anari/scenes',
   'showcase/raster-lab',
   'showcase/spectral-wave-lab'
 ]);

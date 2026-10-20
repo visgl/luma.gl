@@ -28,6 +28,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./physics": {
+      "types": "./dist/physics/index.d.ts",
+      "import": "./dist/physics/index.js",
+      "require": "./dist/physics/index.cjs"
     }
   },
   "files": [
@@ -45,6 +50,7 @@
   "peerDependencies": {
     "@luma.gl/core": "~10.0.0-alpha.3",
     "@luma.gl/engine": "~10.0.0-alpha.3",
+    "@luma.gl/gpgpu": "~10.0.0-alpha.3",
     "@luma.gl/shadertools": "~10.0.0-alpha.3"
   },
   "dependencies": {
@@ -53,5 +59,10 @@
     "@loaders.gl/textures": "~5.0.0-alpha.11",
     "@math.gl/core": "5.0.0-alpha.15"
   },
-  "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
+  "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e",
+  "peerDependenciesMeta": {
+    "@luma.gl/gpgpu": {
+      "optional": true
+    }
+  }
 }

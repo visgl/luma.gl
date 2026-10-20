@@ -3,8 +3,14 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import gltfInteractivitySupport from './deck/gltf-interactivity/mobile-support';
+import geometrySupport from './experimental/gpu-geometry/mobile-support';
+import pointCloudSupport from './experimental/gpu-pointcloud/mobile-support';
+import pointCloudOctreeSupport from './experimental/gpu-pointcloud-octree/mobile-support';
 import flowParticlesSupport from './deck/flow-particles/mobile-support';
 import threeSupport from './experimental/three/mobile-support';
+import galacticVortexSupport from './three/galactic-vortex/mobile-support';
+import threeDeckLayersSupport from './three/deck-layers/mobile-support';
+import gltfPhysicsSupport from './gltf/physics/mobile-support';
 import poolSupport from './experimental/gpu-pool/mobile-support';
 import sphereWorldSupport from './experimental/gpu-sphere-world/mobile-support';
 import sphereScaleSupport from './experimental/gpu-sphere-scale/mobile-support';
@@ -36,8 +42,8 @@ import support4 from './showcase/packet-spraying/mobile-support';
 import support5 from './showcase/dof/mobile-support';
 import support6 from './experimental/bloom/mobile-support';
 import support7 from './showcase/persistence/mobile-support';
-import support8 from './showcase/gltf/mobile-support';
-import support9 from './experimental/scene-playground/mobile-support';
+import support8 from './gltf/asset-studio/mobile-support';
+import support9 from './anari/scenes/mobile-support';
 import support10 from './showcase/lightstorm-megacity/mobile-support';
 import support11 from './showcase/llm-network/mobile-support';
 import support12 from './experimental/lucim-volume-lab/mobile-support';
@@ -53,6 +59,7 @@ import support21 from './v10/gpgpu/mobile-support';
 import support22 from './experimental/gpu-frustum-culling/mobile-support';
 import parquetSupport from './experimental/gpu-parquet-constellation/mobile-support';
 import support23 from './experimental/gpu-trace-viewer/mobile-support';
+import timeSeriesSupport from './experimental/gpu-timeseries/mobile-support';
 import support24 from './experimental/gpu-graph-explorer/mobile-support';
 import support25 from './experimental/gpu-trace-scene/mobile-support';
 import support26 from './experimental/gpu-scene-graph/mobile-support';
@@ -138,8 +145,8 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'showcase/dof': support5,
   'experimental/bloom': support6,
   'showcase/persistence': support7,
-  'showcase/gltf': support8,
-  'experimental/scene-playground': support9,
+  'gltf/asset-studio': support8,
+  'anari/scenes': support9,
   'showcase/lightstorm-megacity': support10,
   'showcase/llm-network': support11,
   'experimental/lucim-volume-lab': support12,
@@ -155,6 +162,10 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'experimental/gpu-frustum-culling': support22,
   'experimental/gpu-trace-viewer': support23,
   'experimental/gpu-graph-explorer': support24,
+  'experimental/gpu-geometry': geometrySupport,
+  'experimental/gpu-pointcloud': pointCloudSupport,
+  'experimental/gpu-pointcloud-octree': pointCloudOctreeSupport,
+  'experimental/gpu-timeseries': timeSeriesSupport,
   'experimental/gpu-trace-scene': support25,
   'experimental/gpu-scene-graph': support26,
   'showcase/vector-field-lab': support27,
@@ -177,6 +188,9 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'api/render-bundles': support44,
   'integrations/external-context': support45,
   'experimental/three': threeSupport,
+  'three/galactic-vortex': galacticVortexSupport,
+  'three/deck-layers': threeDeckLayersSupport,
+  'gltf/physics': gltfPhysicsSupport,
   'experimental/gpu-pool': poolSupport,
   'experimental/gpu-sphere-world': sphereWorldSupport,
   'experimental/gpu-sphere-scale': sphereScaleSupport,

@@ -10,8 +10,8 @@ const EXAMPLE_DIRECTORY = path.join(REPOSITORY_ROOT, 'examples');
 const SUPPORT_BLOCK_PATTERN = /\n?\s*<!-- luma-example-support -->[\s\S]*?<!-- \/luma-example-support -->\n?/;
 const CATALOG_ALIASES = new Map([
   ['arrow/arrow-instancing', 'showcase/instancing'],
-  ['showcase/scene', 'experimental/scene-playground'],
-  ['showcase/scene/playground', 'experimental/scene-playground'],
+  ['anari/scenes', 'anari/scenes'],
+  ['anari/scenes/playground', 'anari/scenes'],
   ['tutorials/hello-instanced-cubes', 'tutorials/instanced-cubes'],
   ['tutorials/hello-two-cubes', 'tutorials/two-cubes']
 ]);

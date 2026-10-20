@@ -231,5 +231,16 @@ RGBA vertex colors, normalized joint weights, animation pointers, and resource o
 - `@luma.gl/gltf` interprets glTF-specific scene, material, sampler, light, and animation data.
 - `@luma.gl/engine` owns generic scenegraph, animation, and morph-target primitives.
 - `@luma.gl/shadertools` owns the shared PBR, lighting, and skinning shader modules.
-- `@luma.gl/scene/gltf`, when explicitly imported, adapts decoded glTF data to retained ANARI
+- `@luma.gl/anari/gltf`, when explicitly imported, adapts decoded glTF data to retained ANARI
   objects without making the core ANARI entry point a glTF loader.
+
+## Experimental physics import
+
+The optional `@luma.gl/gltf/physics` entry point provides `parseGLTFPhysics(rawJSON)`
+and `createGLTFPhysicsWorld(description)`. Install the optional `@luma.gl/gpgpu` peer
+when using it. The importer implements a pinned sphere/box subset of the unratified
+rigid-body and implicit-shape drafts, with explicit per-asset capability issues.
+It supports compound ownership, authored mass properties, kinematics, material
+policies and filtering. This adapter creates a bounded WebGPU simulation; render
+scenegraph synchronization and automatic animation/behavior integration are later
+increments. Ordinary scenegraph loading does not start physics.
