@@ -17000,6 +17000,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-three@workspace:examples/experimental/three"
   dependencies:
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
     "@deck.gl/layers": "npm:9.4.0"
     "@luma.gl/core": "npm:10.0.0-alpha.4"
@@ -17010,6 +17011,7 @@ __metadata:
     "@luma.gl/three": "workspace:*"
     "@types/three": "npm:0.185.0"
     mjolnir.js: "npm:^3.1.1"
+    preact: "npm:^10.17.0"
     three: "npm:0.185.1"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.0.0"

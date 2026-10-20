@@ -3,16 +3,20 @@
 <title>GPU Graph × Three.js — Galactic Vortex</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#02030b;color:#e8f7ff;font:14px system-ui}
-canvas{display:block;width:100%;height:100%}#hud{position:absolute;bottom:22px;left:24px;max-width:310px;padding:16px;background:#050a1bd9;border:1px solid #31506a;border-radius:14px;backdrop-filter:blur(12px)}
+canvas{display:block;width:100%;height:100%}
+#galaxy-info{position:fixed;inset:16px;z-index:20;pointer-events:none;--menu-background:var(--luma-example-surface);--menu-text:var(--luma-example-text);--button-text:var(--luma-example-text);--menu-border:1px solid var(--luma-example-border);--menu-shadow:var(--luma-example-shadow)}
+#hud{position:static;padding:0;background:transparent;color:#e8f7ff}
+#hud h1{display:none}
+#hud[hidden]{display:none}
 h1{margin:0 0 8px;font-size:21px;letter-spacing:-.5px}p{line-height:1.5;color:#b5d3e7}
-label{display:flex;align-items:center;gap:10px;margin:12px 0}input{flex:1;accent-color:#51dcff}
+#hud label{display:flex;align-items:center;gap:10px;margin:12px 0}#hud input{flex:1;accent-color:#51dcff}
 #status{color:#80e6ff;font:12px monospace}#viewport{position:fixed;inset:0}
-</style></head><body><div id="viewport"></div><section id="hud">
+</style></head><body><div id="viewport"></div><div id="galaxy-info"></div><section id="hud">
 <h1>Galactic Vortex</h1><p>A living spiral of starlight, luminous dust and flowing gold–cyan filaments.</p>
 <label>Rotation <input id="speed" type="range" min="0" max="3" step=".05" value="1"/></label>
 <label>Radius <input id="radius" type="range" min=".3" max="2" step=".05" value="1"/></label>
 <label>Aperture <input id="aperture" type="range" min="0" max="1.5" step=".05" value=".2"/></label>
 <label><input id="pause" type="checkbox" style="flex:none"/> Pause</label>
-<details><summary>GPU architecture</summary><p>A luma.gl command graph animates 98,304 lights in buffers shared with Three.js, without per-frame geometry readback or upload.</p></details>
-<div id="status">Initializing shared WebGPU device…</div></section>
+<details><summary>GPU architecture</summary><p>A luma.gl command graph animates 98,304 lights in buffers shared with Three.js, without per-frame geometry readback or upload. Graph and Trace show the animation pass; Three rendering and postprocessing are submitted separately.</p></details>
+<div id="status">Loading example modules…</div></section>
 <script type="module" src="./gpu-graph-galaxy.ts"></script></body></html>
