@@ -3,24 +3,35 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** Bounded rigid-body reference path. Pair discovery is parallel; impulses are ordered on GPU. */
+import {
+  RIGID_BODY_BOUNDS_SHADER,
+  RIGID_BODY_BOUND_PUBLICATION_SHADER
+} from './rigid-body-bounds-shaders';
 import {RIGID_BODY_CONVEX_SHADER} from './rigid-body-convex-shaders';
+import {
+  getRigidBodyCacheShader,
+  type RigidBodySparseShaderLayout
+} from './rigid-body-cache-shaders';
 export function getRigidBodyShader(
   count: number,
   iterations: number,
   colliderCount = count,
-  extended = false
+  extended = false,
+  sparse?: RigidBodySparseShaderLayout
 ): string {
   return /* wgsl */ `
 const BODY_COUNT: u32 = ${count}u;
 const COLLIDER_COUNT: u32 = ${colliderCount}u;
 const ITERATIONS: u32 = ${iterations}u;
+const PAIR_CAPACITY:u32=${sparse?.maximumPairs ?? colliderCount * colliderCount}u;
 struct Body { inertia: vec4f, inertiaOrientation: vec4f, motion: vec4f }
 struct Collider { shape: vec4f, position: vec4f, orientation: vec4f, material: vec4f, policies: vec4f, padding: vec4f }
-struct Metadata { bodies: array<Body, BODY_COUNT>, colliders: array<Collider, COLLIDER_COUNT>, exclusions: array<f32, COLLIDER_COUNT*COLLIDER_COUNT>, geometry: array<vec4f> }
+struct Metadata { bodies: array<Body, BODY_COUNT>, colliders: array<Collider, COLLIDER_COUNT>, exclusions: array<vec2f, COLLIDER_COUNT>, geometry: array<vec4u> }
 struct Target { position: vec4f, orientation: vec4f }
-struct Targets { entries:array<Target,BODY_COUNT>, dispatch:atomic<u32>, vertical:u32, depth:u32 }
+struct CacheKey { key:atomic<u32>, epoch:u32 }
+struct Targets { entries:array<Target,BODY_COUNT>, dispatch:atomic<u32>, vertical:u32, depth:u32 ${sparse ? ', frame:u32, cacheDropped:atomic<u32>, reserved0:u32, reserved1:u32, reserved2:u32, keys:array<CacheKey,PAIR_CAPACITY>' : ''} }
 struct Contact { point: vec4f, normal: vec4f, impulse: vec4f, tangent: vec4f }
-struct Manifold { contacts: array<Contact, 4>, count: u32, padding: vec3u }
+struct Manifold { contacts: array<Contact, 4>, count: u32, first:u32, second:u32, previousCount:u32, padding: vec3u }
 struct Settings { gravity: vec4f, solver: vec4f, sleep: vec4f }
 @group(0) @binding(0) var<uniform> settings: Settings;
 @group(0) @binding(1) var<storage, read_write> positions: array<vec4f>;
@@ -31,6 +42,14 @@ struct Settings { gravity: vec4f, solver: vec4f, sleep: vec4f }
 @group(0) @binding(6) var<storage, read_write> manifolds: array<Manifold>;
 @group(0) @binding(7) var<storage, read_write> sleepStates: array<vec4f>;
 @group(0) @binding(9) var<storage, read_write> targets: Targets;
+${
+  sparse
+    ? getRigidBodyCacheShader(sparse)
+    : `
+fn getFirstCollider(pair:u32)->u32{return pair/COLLIDER_COUNT;}
+fn getSecondCollider(pair:u32)->u32{return pair%COLLIDER_COUNT;}
+`
+}
 fn rotate(rotation: vec4f, vector: vec3f) -> vec3f {
   return vector + 2.0 * cross(rotation.xyz, cross(rotation.xyz, vector) + rotation.w * vector);
 }
@@ -41,6 +60,15 @@ fn colliderPosition(collider: u32) -> vec3f {let body=colliderBody(collider);ret
 fn colliderRotation(collider: u32) -> vec4f {return multiplyRotation(orientations[colliderBody(collider)],bodies.colliders[collider].orientation);}
 fn colliderLocal(collider: u32, vector: vec3f) -> vec3f {let rotation=colliderRotation(collider);return rotate(vec4f(-rotation.xyz,rotation.w),vector);}
 fn axis(collider: u32, index: u32) -> vec3f {var unit=vec3f(0);unit[index]=1;return rotate(colliderRotation(collider),unit);}
+fn readGeometry(index:u32)->vec4f{return bitcast<vec4f>(bodies.geometry[index]);}
+fn excludes(first:u32,second:u32)->bool {
+ let range=bodies.exclusions[first];let start=u32(range.x);let count=u32(range.y);
+ var lower=0u;var upper=count;
+ loop{if(lower>=upper){break;}let middle=(lower+upper)/2u;let component=start+middle;
+  if(u32(readGeometry(component/4u)[component%4u])<second){lower=middle+1u;}else{upper=middle;}}
+ let component=start+lower;
+ return lower<count && u32(readGeometry(component/4u)[component%4u])==second;
+}
 fn dynamic(body: u32) -> bool {return bodies.bodies[body].motion.x==1.0;}
 fn principalRotation(body: u32) -> vec4f {return multiplyRotation(orientations[body],bodies.bodies[body].inertiaOrientation);}
 fn combineMaterial(first: f32, second: f32, firstPolicy: f32, secondPolicy: f32, friction: bool) -> f32 {
@@ -83,7 +111,7 @@ fn effectiveMass(first: u32, second: u32, point: vec3f, direction: vec3f) -> f32
  cross(inverseInertia(first,cross(firstLever,direction)),firstLever)+cross(inverseInertia(second,cross(secondLever,direction)),secondLever));
 }
 @compute @workgroup_size(64) fn integrate(@builtin(global_invocation_id) invocation: vec3u) {
- ${extended ? 'if(invocation.x==0u){atomicStore(&meshTasks.count,0u);atomicStore(&meshTasks.overflow,0u);atomicStore(&targets.dispatch,0u);targets.vertical=1u;targets.depth=1u;}' : ''}
+ ${extended ? 'if(invocation.x==0u){atomicStore(&meshTasks.count,0u);atomicStore(&meshTasks.overflow,0u);atomicStore(&meshTasks.unresolved,0u);atomicStore(&targets.dispatch,0u);targets.vertical=1u;targets.depth=1u;}' : ''}
  let body=invocation.x; if(body>=BODY_COUNT) {return;}
  // Preserve the envelope used to admit separated mesh pairs, even after direct buffer writes.
  if(bodies.bodies[body].motion.z>0.0){
@@ -128,15 +156,28 @@ fn storeContact(pair: u32, slot: u32, point: vec3f, normal: vec3f, depth: f32, p
  }
  manifolds[pair].contacts[slot]=contact;
 }
+${RIGID_BODY_BOUNDS_SHADER}
+${sparse ? RIGID_BODY_BOUND_PUBLICATION_SHADER : ''}
 ${extended ? RIGID_BODY_CONVEX_SHADER : ''}
 // SAT separates oriented boxes along all six face normals and nine edge cross products.
 @compute @workgroup_size(64) fn collide(@builtin(global_invocation_id) invocation: vec3u) {
- let pair=invocation.x; if(pair>=COLLIDER_COUNT*COLLIDER_COUNT) {return;}
- let first=pair/COLLIDER_COUNT; let second=pair%COLLIDER_COUNT;
- let previous=manifolds[pair]; manifolds[pair].count=0u;
+ ${
+   sparse
+     ? `
+ let candidate=invocation.x;if(candidate>=candidateCount()){return;}
+ let colliders=candidatePair(candidate);let first=colliders.x;let second=colliders.y;
+ if(first>=second||colliderBody(first)==colliderBody(second)||excludes(first,second)||excludes(second,first)||(!dynamic(colliderBody(first))&&!dynamic(colliderBody(second)))){return;}
+ let pair=claimManifold(first,second);if(pair==DELETED_PAIR){return;}
+ `
+     : `
+ let pair=invocation.x; if(pair>=PAIR_CAPACITY) {return;}
+ let first=getFirstCollider(pair); let second=getSecondCollider(pair);
+ `
+ }
+ var previous=manifolds[pair]; ${sparse ? 'previous.count=previous.previousCount;' : ''} manifolds[pair].count=0u;
  ${extended ? 'manifolds[pair].padding=vec3u(0);' : ''}
  let firstBody=colliderBody(first);let secondBody=colliderBody(second);
- if(first>=second || firstBody==secondBody || bodies.exclusions[pair]>0.0 || (!dynamic(firstBody) && !dynamic(secondBody))) {return;}
+ if(first>=second || firstBody==secondBody || (excludes(first,second)||excludes(second,first)) || (!dynamic(firstBody) && !dynamic(secondBody))) {return;}
  ${extended ? 'manifolds[pair].padding=vec3u(0); if(bodies.colliders[first].shape.w>=2.0 || bodies.colliders[second].shape.w>=2.0){collideExtended(pair,first,second,previous);return;}' : ''}
  let difference=colliderPosition(second)-colliderPosition(first);
  let firstSphere=bodies.colliders[first].shape.w==0.0; let secondSphere=bodies.colliders[second].shape.w==0.0;
@@ -239,8 +280,8 @@ fn root(body: u32) -> u32 {var current=body;for(var iteration=0u;iteration<BODY_
  ${extended ? 'collectMeshContacts();' : ''}
  // Connected components include dynamic bodies only: a shared static floor must not join islands.
  for(var body=0u;body<BODY_COUNT;body++) {sleepStates[body].z=f32(body);}
- for(var pair=0u;pair<COLLIDER_COUNT*COLLIDER_COUNT;pair++) {
-  if(manifolds[pair].count==0u) {continue;}let firstCollider=pair/COLLIDER_COUNT;let secondCollider=pair%COLLIDER_COUNT;let first=colliderBody(firstCollider);let second=colliderBody(secondCollider);
+ for(var pair=0u;pair<PAIR_CAPACITY;pair++) {
+  if(manifolds[pair].count==0u) {continue;}let firstCollider=getFirstCollider(pair);let secondCollider=getSecondCollider(pair);let first=colliderBody(firstCollider);let second=colliderBody(secondCollider);
   if(bodies.bodies[first].motion.x==2.0 && length(velocities[first].xyz)+length(angularVelocities[first].xyz)>0.000001 && dynamic(second)) {sleepStates[second].y=0.0;sleepStates[second].x=0.0;}
   if(bodies.bodies[second].motion.x==2.0 && length(velocities[second].xyz)+length(angularVelocities[second].xyz)>0.000001 && dynamic(first)) {sleepStates[first].y=0.0;sleepStates[first].x=0.0;}
   if(dynamic(first) && dynamic(second)) {let firstRoot=root(first);let secondRoot=root(second);sleepStates[max(firstRoot,secondRoot)].z=f32(min(firstRoot,secondRoot));}
@@ -248,8 +289,9 @@ fn root(body: u32) -> u32 {var current=body;for(var iteration=0u;iteration<BODY_
  for(var body=0u;body<BODY_COUNT;body++) {sleepStates[body].w=1.0;}
  for(var body=0u;body<BODY_COUNT;body++) {if(dynamic(body) && sleepStates[body].y<0.5) {sleepStates[root(body)].w=0.0;}}
  for(var body=0u;body<BODY_COUNT;body++) {if(dynamic(body) && sleepStates[root(body)].w<0.5) {if(sleepStates[body].y>0.5) {sleepStates[body].x=0.0;}sleepStates[body].y=0.0;}}
- for(var pair=0u;pair<COLLIDER_COUNT*COLLIDER_COUNT;pair++) {
-  let firstCollider=pair/COLLIDER_COUNT;let secondCollider=pair%COLLIDER_COUNT;let first=colliderBody(firstCollider);let second=colliderBody(secondCollider);
+ for(var pair=0u;pair<PAIR_CAPACITY;pair++) {
+  if(manifolds[pair].count==0u){continue;}
+  let firstCollider=getFirstCollider(pair);let secondCollider=getSecondCollider(pair);let first=colliderBody(firstCollider);let second=colliderBody(secondCollider);
   if((sleepStates[first].y>0.5 || !dynamic(first)) && (sleepStates[second].y>0.5 || !dynamic(second))) {continue;}
   for(var slot=0u;slot<manifolds[pair].count;slot++) {
    let contact=manifolds[pair].contacts[slot];let impulse=contact.normal.xyz*contact.impulse.x+contact.tangent.xyz;
@@ -257,8 +299,8 @@ fn root(body: u32) -> u32 {var current=body;for(var iteration=0u;iteration<BODY_
   }
  }
  for(var iteration=0u;iteration<ITERATIONS;iteration++) {
-  for(var pair=0u;pair<COLLIDER_COUNT*COLLIDER_COUNT;pair++) {
-   let firstCollider=pair/COLLIDER_COUNT;let secondCollider=pair%COLLIDER_COUNT;let first=colliderBody(firstCollider);let second=colliderBody(secondCollider);
+  for(var pair=0u;pair<PAIR_CAPACITY;pair++) {
+   let firstCollider=getFirstCollider(pair);let secondCollider=getSecondCollider(pair);let first=colliderBody(firstCollider);let second=colliderBody(secondCollider);
    if((sleepStates[first].y>0.5 || !dynamic(first)) && (sleepStates[second].y>0.5 || !dynamic(second))) {continue;}
    for(var slot=0u;slot<manifolds[pair].count;slot++) {
     var contact=manifolds[pair].contacts[slot];let point=contact.point.xyz;let normal=contact.normal.xyz;

@@ -337,8 +337,10 @@ to the illustrative pool table automatically.
 
 ## Oriented rigid bodies
 
-`GPURigidBodyWorld` is a separate experimental reference path for up to 128 bodies
-and 128 total sphere/box colliders. It preserves structure-of-arrays position, orientation,
+`GPURigidBodyWorld` provides a bounded all-pairs oracle for up to 128 bodies/colliders,
+and a hierarchical-grid path with sparse persistent manifolds for larger worlds.
+It supports spheres, boxes, tapered capsules/cylinders, convex hulls and bounded
+convex/triangle-mesh contacts. It preserves structure-of-arrays position, orientation,
 linear-velocity and angular-velocity buffers for direct rendering. Bodies specify a
 shape, transform, mass (zero for static), friction and restitution. Solid-shape principal
 inertia is transformed into world space when applying impulses.
@@ -372,12 +374,13 @@ the contact cache. After direct state-buffer writes, call `wake()` before the ne
 Only mutate state between submissions; queued graph encodings do not capture snapshots
 of caller writes. Impulses submit immediately and precede subsequent graph submissions.
 
-This bounded path uses quadratic pair storage (288 bytes per directed pair) and an
-ordered GPU sequential solve. It is a correctness foundation, not a scalable general
+The all-pairs oracle uses quadratic pair storage (288 bytes per directed pair).
+The hierarchical path uses a size-aware hashed grid, shared GPU sort and sparse
+persistent pair slots; both currently use an ordered GPU sequential solve. It is a correctness foundation, not a scalable general
 rigid-body engine. It is discrete, has no swept box CCD, and uses first-order rotation
 integration while preserving world angular momentum. Fast motion, extreme mass ratios and very slender shapes
-need smaller timesteps and additional validation. The sphere grid path remains the
-large-world implementation. General convex shapes and joints are deferred. The optional
+need smaller timesteps and additional validation. The sphere grid path remains the specialized large-sphere implementation. General
+mesh-pair response, joints and rigid-body CCD remain follow-ups. The optional
 `@luma.gl/gltf/physics` adapter imports a pinned draft subset; automatic render binding
 and animation/behavior integration remain separate increments.
 
@@ -410,3 +413,39 @@ and documents its draft-profile defaults explicitly.
 All rigid-world buffers are owned by the world, even when exposed for rendering. Destroy
 rendering bindings and the compiled graph, complete outstanding readbacks, then destroy
 the world. `destroy()` is idempotent. `readState()` is optional and never gates simulation.
+
+
+### Sparse rigid-body discovery
+
+`broadPhase` defaults to `all-pairs` for at most 128 bodies and `hierarchical-grid`
+above that threshold. Select either explicitly for reference comparisons. The sparse
+path accepts at most 65,535 collider IDs, subject to actual device buffer/dispatch
+limits. Body count alone is not a performance guarantee: the ordered solve remains
+a bottleneck for large connected contact sets.
+
+`maximumPairs` sets a power-of-two cache and candidate-output capacity. The default
+is the next power of two above 16 times the collider count (at least 64).
+`maximumCandidateTestsPerCollider` bounds traversal work; its default is 4,096.
+A larger budget increases supported overlap density and memory/work demand. The
+module reports incomplete work instead of silently truncating it or falling back
+to CPU solving. Qualified scenes must report no dropped or incomplete work.
+
+Each collider selects a grid level from its world-space extent, so a large floor does
+not enlarge every small object's cell. Oversized or very remote bounds use a compact
+global list. Queries visit occupied levels, verify hash-cell identity, and suppress
+same-body/static pairs before consuming pair capacity. Explicit per-collider exclusions
+use sorted sparse ranges instead of a quadratic exclusion matrix.
+
+Pair IDs address persistent hash slots, preserving warm-start contacts when sparse
+output order changes. Old slots expire with tombstones to preserve probe chains.
+Hash-probe or cache-capacity failures are reported as dropped manifolds; broad-phase
+output exhaustion is reported separately. Caller-owned
+static geometry is packed once; per-step discovery and solving do not read contacts
+back to the CPU.
+
+`readCollisionDiagnostics()` reads compact counters, not the manifold array. It adds
+`droppedManifolds` and an optional `broadPhase` report to triangle/GJK diagnostics.
+The broad-phase report includes total pair demand, dropped pairs, candidate tests,
+invalid bounds and `incompleteQueries`. Readback is optional and never advances or
+gates physics. Benchmark GPU compute time, encoding time, publication latency and
+memory separately; a multi-step batch duration is not a single-pass timing.

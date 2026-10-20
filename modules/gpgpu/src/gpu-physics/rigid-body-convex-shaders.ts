@@ -5,15 +5,15 @@
 export const RIGID_BODY_CONVEX_SHADER = /* wgsl */ `
 const MESH_TASK_CAPACITY:u32=65536u;
 struct MeshTask { key:vec4u, point:vec4f, normal:vec4f }
-struct MeshTasks { count:atomic<u32>, overflow:atomic<u32>, padding:vec2u, entries:array<MeshTask,65536> }
+struct MeshTasks { count:atomic<u32>, overflow:atomic<u32>, unresolved:atomic<u32>, reserved:u32, entries:array<MeshTask,65536> }
 @group(0) @binding(10) var<storage,read_write> meshTasks:MeshTasks;
 struct SupportVertex { difference: vec3f, first: vec3f, second: vec3f }
 struct Simplex { points: array<SupportVertex,4>, count: u32 }
 struct ConvexHit { point: vec3f, normal: vec3f, depth: f32, status: u32 }
 struct EPAFace { indices: vec3u, normal: vec3f, distance: f32 }
-fn meshVertex(collider:u32, index:u32)->vec3f {return bodies.geometry[u32(bodies.colliders[collider].padding.x)+index].xyz;}
+fn meshVertex(collider:u32, index:u32)->vec3f {return readGeometry(u32(bodies.colliders[collider].padding.x)+index).xyz;}
 fn triangleVertex(collider:u32, triangle:u32, corner:u32)->vec3f {
- let indices=bodies.geometry[u32(bodies.colliders[collider].padding.z)+triangle];
+ let indices=readGeometry(u32(bodies.colliders[collider].padding.z)+triangle);
  return meshVertex(collider,u32(indices[corner]));
 }
 fn localShapeSupport(collider:u32,direction:vec3f,triangle:i32)->vec3f {
@@ -26,10 +26,10 @@ fn localShapeSupport(collider:u32,direction:vec3f,triangle:i32)->vec3f {
  if(shape.w==5.0){let radial=length(direction.xz);let ring=select(vec2f(1,0),direction.xz/max(radial,1e-20),radial>1e-20);let bottom=vec3f(ring.x*shape.x,-shape.z*0.5,ring.y*shape.x);let top=vec3f(ring.x*shape.y,shape.z*0.5,ring.y*shape.y);return select(bottom,top,dot(top,direction)>dot(bottom,direction));}
  let nodeOffset=u32(bodies.colliders[collider].policies.z);let nodeCount=u32(bodies.colliders[collider].policies.w);
  var best=meshVertex(collider,0u);var projection=dot(best,direction);var node=0u;
- loop {if(node>=nodeCount){break;}let lower=bodies.geometry[nodeOffset+node*3u];let upper=bodies.geometry[nodeOffset+node*3u+1u];
+ loop {if(node>=nodeCount){break;}let lower=readGeometry(nodeOffset+node*3u);let upper=readGeometry(nodeOffset+node*3u+1u);
   let bound=dot(select(lower.xyz,upper.xyz,direction>=vec3f(0)),direction);
   if(bound<projection){node=u32(lower.w);continue;}
-  if(upper.w>0.0){let start=u32(bodies.geometry[nodeOffset+node*3u+2u].x);for(var face=0u;face<u32(upper.w);face++){for(var corner=0u;corner<3u;corner++){let candidate=triangleVertex(collider,start+face,corner);let value=dot(candidate,direction);if(value>projection){best=candidate;projection=value;}}}}
+  if(upper.w>0.0){let start=u32(readGeometry(nodeOffset+node*3u+2u).x);for(var face=0u;face<u32(upper.w);face++){for(var corner=0u;corner<3u;corner++){let candidate=triangleVertex(collider,start+face,corner);let value=dot(candidate,direction);if(value>projection){best=candidate;projection=value;}}}}
   node++;
  }
  return best;
@@ -132,21 +132,12 @@ fn convexContact(first:u32,second:u32,firstTriangle:i32,secondTriangle:i32)->Con
  miss.status=2u;return miss;
 }
 fn appendConvexContact(pair:u32,hit:ConvexHit,previous:Manifold,first:u32,second:u32){
- if(hit.status==2u){manifolds[pair].padding.x++;return;}
+ if(hit.status==2u){manifolds[pair].padding.x++;atomicAdd(&meshTasks.unresolved,1u);return;}
  if(hit.status!=1u||hit.depth < -settings.solver.x){return;}
  var slot=manifolds[pair].count;
  for(var index=0u;index<slot;index++){if(distance(manifolds[pair].contacts[index].point.xyz,hit.point)<settings.solver.w&&dot(manifolds[pair].contacts[index].normal.xyz,hit.normal)>0.95){if(hit.depth>manifolds[pair].contacts[index].point.w){storeContact(pair,index,hit.point,hit.normal,hit.depth,previous,first,second);}return;}}
  if(slot>=4u){slot=0u;for(var index=1u;index<4u;index++){if(manifolds[pair].contacts[index].point.w<manifolds[pair].contacts[slot].point.w){slot=index;}}if(hit.depth<=manifolds[pair].contacts[slot].point.w){return;}}
  storeContact(pair,slot,hit.point,hit.normal,hit.depth,previous,first,second);manifolds[pair].count=min(4u,manifolds[pair].count+1u);
-}
-// Cheap conservative world bounds reject separated rotated mesh/large-box pairs
-// before projecting the box into mesh space, where its AABB can cover the whole BVH.
-fn shapeWorldExtent(collider:u32)->vec3f {
- let shape=bodies.colliders[collider].shape;var extent=shape.xyz;
- if(shape.w==0.0){extent=vec3f(shape.x);}
- if(shape.w==4.0){let radius=max(shape.x,shape.y);extent=vec3f(radius,radius+shape.z*0.5,radius);}
- if(shape.w==5.0){let radius=max(shape.x,shape.y);extent=vec3f(radius,shape.z*0.5,radius);}
- return abs(axis(collider,0u))*extent.x+abs(axis(collider,1u))*extent.y+abs(axis(collider,2u))*extent.z;
 }
 fn collideExtended(pair:u32,first:u32,second:u32,previous:Manifold){
  if(any(abs(colliderPosition(second)-colliderPosition(first))>shapeWorldExtent(first)+shapeWorldExtent(second)+vec3f(settings.solver.x))){return;}
@@ -166,9 +157,9 @@ fn collideExtended(pair:u32,first:u32,second:u32,previous:Manifold){
  var candidates=0u;var written=0u;var taskStart=0u;var taskCount=0u;
  for(var traversal=0u;traversal<2u;traversal++){
  var node=0u;
- loop{if(node>=count){break;}let minimum=bodies.geometry[offset+node*3u];let maximum=bodies.geometry[offset+node*3u+1u];
+ loop{if(node>=count){break;}let minimum=readGeometry(offset+node*3u);let maximum=readGeometry(offset+node*3u+1u);
   if(any(maximum.xyz<lower)||any(minimum.xyz>upper)){node=u32(minimum.w);continue;}
-  if(maximum.w>0.0){let start=u32(bodies.geometry[offset+node*3u+2u].x);for(var index=0u;index<u32(maximum.w);index++){
+  if(maximum.w>0.0){let start=u32(readGeometry(offset+node*3u+2u).x);for(var index=0u;index<u32(maximum.w);index++){
    let firstPoint=triangleVertex(mesh,start+index,0u);let secondPoint=triangleVertex(mesh,start+index,1u);let thirdPoint=triangleVertex(mesh,start+index,2u);
    if(any(max(firstPoint,max(secondPoint,thirdPoint))<lower)||any(min(firstPoint,min(secondPoint,thirdPoint))>upper)){continue;}
    if(traversal==0u){candidates++;}
@@ -187,8 +178,8 @@ fn collideExtended(pair:u32,first:u32,second:u32,previous:Manifold){
  meshTasks.entries[index].point=vec4f(hit.point,hit.depth);meshTasks.entries[index].normal=vec4f(hit.normal,f32(hit.status));
 }
 fn collectMeshContacts(){
- for(var pair=0u;pair<COLLIDER_COUNT*COLLIDER_COUNT;pair++){
-  let first=pair/COLLIDER_COUNT;let second=pair%COLLIDER_COUNT;
+ for(var pair=0u;pair<PAIR_CAPACITY;pair++){
+  let first=getFirstCollider(pair);let second=getSecondCollider(pair);
   if(first>=second||(bodies.colliders[first].shape.w!=3.0&&bodies.colliders[second].shape.w!=3.0)){continue;}
   var previous=manifolds[pair];previous.count=previous.padding.x;
   let start=manifolds[pair].padding.y;let count=manifolds[pair].padding.z;
