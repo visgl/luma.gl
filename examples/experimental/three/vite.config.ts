@@ -38,6 +38,7 @@ export default defineConfig(({mode}) => ({
       'preact',
       'preact/hooks',
       '@luma.gl/core',
+      '@luma.gl/core/webgl',
       '@luma.gl/core/webgpu',
       '@luma.gl/effects',
       '@luma.gl/engine',
