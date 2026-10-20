@@ -72,15 +72,17 @@ fn main(@builtin(global_invocation_id) invocationId: vec3u) {
   let population = particleIndex % 16u;
   let radialFraction = pow(getRandomValue(seed), 0.65);
   let radialDistance = (0.08 + 9.8 * radialFraction) * parameters.radius;
-  let arm = f32(particleIndex % 3u) * 2.0943951;
+  let arm = f32(particleIndex % 2u) * 3.1415927;
   let filament = getRandomValue(seed + 6u);
   let strand = floor(filament * 4.0);
   let armVariation = sin(arm + 0.8);
-  let orbitalAngle = parameters.time * (0.16 + 0.32 / (0.35 + radialFraction));
+  // Bounded differential motion prevents the arms winding into concentric rings over time.
+  let orbitalAngle = parameters.time * 0.2
+    + sin(parameters.time * 0.08) * 0.45 * (1.0 - radialFraction);
   // Correlated waves bend entire filaments; fine scatter breaks up their edges.
   let turbulence = sin(radialFraction * 23.0 + arm * 3.0 + parameters.time * 0.12) * 0.16
     + sin(radialFraction * 51.0 + filament * 5.0) * 0.035;
-  var angle = arm + log(1.0 + radialFraction * 8.0) * (2.8 + armVariation * 0.2) + orbitalAngle + turbulence;
+  var angle = arm + log(1.0 + radialFraction * 8.0) * (2.1 + armVariation * 0.2) + orbitalAngle + turbulence;
   let scatter = getRandomValue(seed + 1u) - 0.5;
   // Fill a continuous ribbon around each ridge instead of drawing four isolated wires.
   // A narrow luminous crest and a broad dim shoulder leave dark space between arms.
@@ -129,15 +131,17 @@ fn main(@builtin(global_invocation_id) invocationId: vec3u) {
     // Independent azimuths avoid an artificial double spiral through the nucleus.
     // A centrally concentrated oblate bulge stays visibly rotating through uneven light.
     let coreFraction = pow(getRandomValue(seed), 1.1);
-    let coreRadius = coreFraction * 1.45 * parameters.radius;
-    angle = getRandomValue(seed + 1u) * 6.2831853 + parameters.time * 0.7;
+    // An exponential falloff leaves a sparse halo instead of a sharply clipped rim.
+    let coreRadius = -log(1.0 - coreFraction * 0.985) * 0.55 * parameters.radius;
+    let coreAngle = getRandomValue(seed + 1u) * 6.2831853;
+    angle = coreAngle + parameters.time * 0.7;
     position = vec3f(cos(angle) * coreRadius,
       (getRandomValue(seed + 2u) - 0.5) * sqrt(1.0 - coreFraction) * 0.55 * parameters.radius,
       sin(angle) * coreRadius);
     let coreWhite = 1.0 - smoothstep(0.0, 0.85, coreFraction);
     starColor = mix(vec3f(1.0, 0.48, 0.06), vec3f(1.0, 0.93, 0.72), coreWhite);
-    brightness = (0.4 + 1.3 * getRandomValue(seed + 5u))
-      * (0.7 + 0.3 * sin(angle * 3.0 + coreFraction * 9.0 - parameters.time * 0.7));
+    brightness = (0.4 + 1.3 * getRandomValue(seed + 5u)) * (1.0 - smoothstep(0.55, 1.0, coreFraction))
+      * (0.7 + 0.3 * sin(coreAngle * 3.0 + coreFraction * 9.0));
   } else if (population >= 5u && population <= 7u) {
     // A dim stellar disk connects the bright filaments into a substantial galaxy.
     // These stars fill the gaps without adding another layer of blurry bloom.
