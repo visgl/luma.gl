@@ -68,14 +68,30 @@ try {
           const device = await adapter.requestDevice();
           const context = canvas.getContext('webgpu');
           context.configure({device, format: navigator.gpu.getPreferredCanvasFormat(), alphaMode: 'opaque'});
-          const encoder = device.createCommandEncoder();
-          encoder.beginRenderPass({colorAttachments: [{
-            view: context.getCurrentTexture().createView(),
-            clearValue: {r: 1, g: 0, b: 0, a: 1},
-            loadOp: 'clear',
-            storeOp: 'store'
-          }]}).end();
-          device.queue.submit([encoder.finish()]);
+          function renderFrame() {
+            const encoder = device.createCommandEncoder();
+            encoder.beginRenderPass({colorAttachments: [{
+              view: context.getCurrentTexture().createView(),
+              clearValue: {r: 1, g: 0, b: 0, a: 1},
+              loadOp: 'clear',
+              storeOp: 'store'
+            }]}).end();
+            device.queue.submit([encoder.finish()]);
+          }
+          renderFrame();
+          // Keep the presented texture and device alive until capture, as a real render loop does.
+          // Keep the compositor receiving fresh WebGPU frames while capture is pending.
+          let frameHandle;
+          const animate = () => {
+            renderFrame();
+            frameHandle = requestAnimationFrame(animate);
+          };
+          frameHandle = requestAnimationFrame(animate);
+          globalThis.stopPresentationCanary = () => {
+            cancelAnimationFrame(frameHandle);
+            context.unconfigure();
+            device.destroy();
+          };
           let timeout;
           try {
             await Promise.race([
@@ -104,6 +120,7 @@ try {
       const screenshot = await measurePhase(backend, 'screenshot', () => page.screenshot({
         clip: {x: 0, y: 0, width: 64, height: 64}
       }));
+      await page.evaluate(() => globalThis.stopPresentationCanary?.());
       const capture = await measurePhase(backend, 'png-decode', async () => PNG.sync.read(screenshot));
       assert.equal(capture.width, 64);
       assert.equal(capture.height, 64);

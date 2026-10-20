@@ -117,7 +117,11 @@ jobs:
 
       - name: Check WebGPU and WebGL canvas capture
         timeout-minutes: 2
-        run: xvfb-run -a yarn test-presentation
+        run: |
+          for CAPTURE_ITERATION in 1 2 3; do
+            echo "Presentation repetition ${CAPTURE_ITERATION}/3"
+            xvfb-run -a yarn test-presentation
+          done
 
   browser_coverage:
     name: Browser coverage (${{ matrix.shard }}/3)

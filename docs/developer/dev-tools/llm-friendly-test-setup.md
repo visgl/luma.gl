@@ -146,8 +146,7 @@ writes start records and completion records to the Actions summary, including th
 GPU submission/presentation, screenshot capture, and PNG decoding. This distinguishes a screenshot
 stall from shader or rendering cost without extending timeouts or adding automatic retries.
 
-Linux software WebGPU launches disable Vulkan surface swapchains for headless capture using
-`--disable-vulkan-surface`, following Chromium's documented headless setup. Pixel assertions
-still verify that the browser compositor captured the canvas; no readback fallback substitutes
-for this presentation check. The canary keeps its original timeout; the job separately allows
-cold dependency and browser installation time.
+The WebGPU canary keeps submitting its tiny fixed-color frame until screenshot capture completes,
+then stops the frame loop and releases the device. CI checks three repetitions with fresh browser
+processes per backend so a single lucky capture is insufficient. The screenshot assertions still
+require all 4096 pixels to match; failed captures are not retried or replaced with GPU readback.

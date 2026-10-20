@@ -16,10 +16,7 @@ const LINUX_WEBGPU_SWIFTSHADER_ARGS = [
   '--enable-unsafe-swiftshader',
   '--enable-gpu',
   '--enable-features=Vulkan',
-  '--use-vulkan=swiftshader',
-  // Headless capture must not wait for an X11 Vulkan swapchain. Chromium presents via blit.
-  // https://developer.chrome.com/blog/supercharge-web-ai-testing
-  '--disable-vulkan-surface'
+  '--use-vulkan=swiftshader'
 ];
 const WEBGPU_SWIFTSHADER_ARGS = [
   '--use-webgpu-adapter=swiftshader',
