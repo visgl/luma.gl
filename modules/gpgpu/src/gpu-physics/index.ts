@@ -34,6 +34,8 @@ export {
 export {
   GPURigidBodyWorld,
   type GPURigidBody,
+  type GPURigidBodyCollider,
+  type GPURigidBodyMaterial,
   type GPURigidBodyShape,
   type GPURigidBodyState,
   type GPURigidBodyWorldProps

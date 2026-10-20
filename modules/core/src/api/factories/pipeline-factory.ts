@@ -367,10 +367,12 @@ export class PipelineFactory {
 
   /** Calculate a hash based on all the inputs for a compute pipeline */
   private _hashComputePipeline(props: ComputePipelineProps): string {
-    const {type} = this.device;
+    // This cache is device-local and separate from render pipeline caches.
     const shaderHash = this._getHash(props.shader.source);
-    const shaderLayoutHash = this._getHash(JSON.stringify(props.shaderLayout));
-    return `${type}/C/${shaderHash}SL${shaderLayoutHash}`;
+    const configurationHash = this._getHash(
+      JSON.stringify([props.shaderLayout, props.entryPoint ?? 'main', props.constants])
+    );
+    return `${shaderHash}/${configurationHash}`;
   }
 
   /** Calculate a hash based on all the inputs for a render pipeline */

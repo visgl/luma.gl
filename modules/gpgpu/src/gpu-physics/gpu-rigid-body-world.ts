@@ -15,23 +15,23 @@ import {
   type GPUCommandGraphComputeExecutable
 } from '../gpu-core/gpu-command-graph';
 import {getBodyInertia} from './sphere-shapes';
+import {
+  getCompoundBodyInertia,
+  normalizeRigidBodyRotation,
+  rotateRigidBodyVector,
+  type GPURigidBody,
+  type GPURigidBodyCollider,
+  type GPURigidBodyMaterial
+} from './rigid-body-properties';
+export type {
+  GPURigidBody,
+  GPURigidBodyShape,
+  GPURigidBodyCollider,
+  GPURigidBodyMaterial
+} from './rigid-body-properties';
 import {getRigidBodyShader} from './rigid-body-shaders';
 
 type Vector3 = readonly [number, number, number];
-export type GPURigidBodyShape =
-  | {type: 'sphere'; radius: number}
-  | {type: 'box'; halfExtents: Vector3};
-export type GPURigidBody = {
-  shape: GPURigidBodyShape;
-  position: Vector3;
-  orientation?: readonly [number, number, number, number];
-  velocity?: Vector3;
-  angularVelocity?: Vector3;
-  /** Zero denotes a static collider. Defaults to one. */
-  mass?: number;
-  restitution?: number;
-  friction?: number;
-};
 export type GPURigidBodyWorldProps = {
   id?: string;
   bodies: readonly GPURigidBody[];
@@ -62,11 +62,14 @@ export class GPURigidBodyWorld {
   readonly id: string;
   readonly count: number;
   readonly timeStep: number;
+  readonly colliderCount: number;
   positions: Buffer | null = null;
   orientations: Buffer | null = null;
   velocities: Buffer | null = null;
   angularVelocities: Buffer | null = null;
   sleepStates: Buffer | null = null;
+  private targets: Buffer | null = null;
+  private readonly colliders: readonly (GPURigidBodyCollider & {body: number})[];
   private readonly props: GPURigidBodyWorldProps;
   private readonly ownedBuffers: Buffer[] = [];
   private manifolds: Buffer | null = null;
@@ -90,8 +93,39 @@ export class GPURigidBodyWorld {
       iterations > 64
     )
       throw new Error('Invalid rigid-body capacity or timestep');
-    for (const body of props.bodies) {
-      getBodyInertia(body.mass ?? 1, body.shape);
+    const colliders: (GPURigidBodyCollider & {body: number})[] = [];
+    for (const [bodyIndex, body] of props.bodies.entries()) {
+      if (body.shape ? body.colliders !== undefined : !body.colliders?.length)
+        throw new Error('Supply shape or colliders');
+      const shapes: readonly GPURigidBodyCollider[] =
+        body.colliders ?? (body.shape ? [{shape: body.shape}] : []);
+      for (const collider of shapes) {
+        getBodyInertia(body.mass ?? 1, collider.shape);
+        normalizeRigidBodyRotation(collider.orientation);
+        if (!(collider.position ?? []).every(Number.isFinite))
+          throw new Error('Invalid collider position');
+        const material = collider.material;
+        if (
+          [
+            material?.staticFriction ?? 0.6,
+            material?.dynamicFriction ?? 0.6,
+            material?.restitution ?? 0.1
+          ].some(value => !Number.isFinite(value) || value < 0) ||
+          (material?.restitution ?? 0.1) > 1
+        )
+          throw new Error('Invalid collider material');
+        colliders.push({...collider, body: bodyIndex});
+      }
+      normalizeRigidBodyRotation(body.orientation);
+      normalizeRigidBodyRotation(body.inertiaOrientation);
+      if (body.inertiaOrientation && !body.inertiaDiagonal)
+        throw new Error('Inertia orientation requires diagonal');
+      if (
+        !(body.centerOfMass ?? []).every(Number.isFinite) ||
+        (body.inertiaDiagonal ?? []).some(value => !Number.isFinite(value) || value < 0) ||
+        !Number.isFinite(body.gravityFactor ?? 1)
+      )
+        throw new Error('Invalid mass properties');
       if (
         ![
           ...body.position,
@@ -119,7 +153,17 @@ export class GPURigidBodyWorld {
       ].some(value => !Number.isFinite(value) || value < 0)
     )
       throw new Error('Invalid rigid-body settings');
-    this.props = {...props, bodies: props.bodies.map(body => ({...body}))};
+    if (colliders.length > 128) throw new Error('Rigid-body collider capacity exceeded');
+    for (const collider of colliders)
+      if (
+        collider.excludedColliders?.some(
+          index => !Number.isInteger(index) || index < 0 || index >= colliders.length
+        )
+      )
+        throw new Error('Invalid collider filter');
+    this.colliderCount = colliders.length;
+    this.colliders = structuredClone(colliders);
+    this.props = structuredClone(props);
   }
 
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
@@ -139,50 +183,107 @@ export class GPURigidBodyWorld {
     const orientations = new Float32Array(this.count * 4);
     const velocities = new Float32Array(this.count * 4);
     const angular = new Float32Array(this.count * 4);
-    const metadata = new Float32Array(this.count * 12);
+    // Three vec4s per body; six vec4s per collider, followed by a dense exclusion table.
+    const metadata = new Float32Array(
+      Math.ceil(
+        (this.count * 12 + this.colliderCount * 24 + this.colliderCount * this.colliderCount) / 4
+      ) * 4
+    );
     for (const [index, body] of this.props.bodies.entries()) {
       const mass = body.mass ?? 1;
-      const inertia = getBodyInertia(mass, body.shape);
+      const mode = body.mode ?? (mass === 0 ? 'static' : 'dynamic');
+      const center: Vector3 = body.centerOfMass ?? [0, 0, 0];
+      const quaternion = normalizeRigidBodyRotation(body.orientation);
+      const offset = rotateRigidBodyVector(quaternion, center);
       positions.set(
-        [...body.position, body.shape.type === 'sphere' ? body.shape.radius : 0],
+        [
+          ...body.position.map((value, axis) => value + offset[axis]),
+          body.shape?.type === 'sphere' ? body.shape.radius : 0
+        ],
         index * 4
       );
-      const quaternion = body.orientation ?? [0, 0, 0, 1];
-      const magnitude = Math.hypot(...quaternion);
-      orientations.set(
-        magnitude > 0 ? quaternion.map(value => value / magnitude) : [0, 0, 0, 1],
-        index * 4
-      );
+      orientations.set(quaternion, index * 4);
       velocities.set(
-        [...(mass ? (body.velocity ?? [0, 0, 0]) : [0, 0, 0]), mass ? 1 / mass : 0],
+        [
+          ...(mode === 'static' ? [0, 0, 0] : (body.velocity ?? [0, 0, 0])),
+          mode === 'dynamic' && mass ? 1 / mass : 0
+        ],
         index * 4
       );
-      angular.set(mass ? (body.angularVelocity ?? [0, 0, 0]) : [0, 0, 0], index * 4);
-      metadata.set(
-        body.shape.type === 'sphere'
-          ? [body.shape.radius, 0, 0, 0]
-          : [...body.shape.halfExtents, 1],
-        index * 12
+      angular.set(mode === 'static' ? [0, 0, 0] : (body.angularVelocity ?? [0, 0, 0]), index * 4);
+      const compound = getCompoundBodyInertia(
+        mass,
+        this.colliders.filter(collider => collider.body === index),
+        center
+      );
+      const inertia = body.inertiaDiagonal ?? compound.diagonal;
+      const inertiaRotation = normalizeRigidBodyRotation(
+        body.inertiaOrientation ?? (body.inertiaDiagonal ? undefined : compound.orientation)
       );
       metadata.set(
         [
-          ...inertia.map(value => (value ? 1 / value : 0)),
+          ...inertia.map(value => (mode === 'dynamic' && value ? 1 / value : 0)),
           0,
-          body.restitution ?? 0.1,
-          body.friction ?? 0.6,
+          ...inertiaRotation,
+          mode === 'static' ? 0 : mode === 'dynamic' ? 1 : 2,
+          body.gravityFactor ?? 1,
           0,
           0
         ],
-        index * 12 + 4
+        index * 12
       );
     }
+    const policies: (GPURigidBodyMaterial['frictionCombine'] | undefined)[] = [
+      'average',
+      'minimum',
+      'maximum',
+      'multiply'
+    ];
+    for (const [index, collider] of this.colliders.entries()) {
+      const body = this.props.bodies[collider.body];
+      const material = collider.material;
+      const center: Vector3 = body.centerOfMass ?? [0, 0, 0];
+      const offset = (collider.position ?? [0, 0, 0]).map((value, axis) => value - center[axis]);
+      const shape =
+        collider.shape.type === 'sphere'
+          ? [collider.shape.radius, 0, 0, 0]
+          : [...collider.shape.halfExtents, 1];
+      metadata.set(
+        [
+          ...shape,
+          ...offset,
+          collider.body,
+          ...normalizeRigidBodyRotation(collider.orientation),
+          material?.restitution ?? body.restitution ?? 0.1,
+          material?.staticFriction ?? body.friction ?? 0.6,
+          material?.dynamicFriction ?? body.friction ?? 0.6,
+          0,
+          material?.restitutionCombine ? policies.indexOf(material.restitutionCombine) : 4,
+          material?.frictionCombine ? policies.indexOf(material.frictionCombine) : 4,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        this.count * 12 + index * 24
+      );
+    }
+    const exclusionOffset = this.count * 12 + this.colliderCount * 24;
+    for (const [index, collider] of this.colliders.entries())
+      for (const excluded of collider.excludedColliders ?? []) {
+        metadata[exclusionOffset + index * this.colliderCount + excluded] = 1;
+        metadata[exclusionOffset + excluded * this.colliderCount + index] = 1;
+      }
     this.positions = allocate('positions', positions);
     this.orientations = allocate('orientations', orientations);
     this.velocities = allocate('velocities', velocities);
     this.angularVelocities = allocate('angular-velocities', angular);
     this.sleepStates = allocate('sleep', this.count * 16);
+    this.targets = allocate('targets', this.count * 32);
     // Four 64-byte contacts followed by a 32-byte aligned manifold header.
-    this.manifolds = allocate('manifolds', this.count * this.count * 288);
+    this.manifolds = allocate('manifolds', this.colliderCount * this.colliderCount * 288);
     const bodies = allocate('bodies', metadata);
     const settings = allocate(
       'settings',
@@ -208,12 +309,13 @@ export class GPURigidBodyWorld {
       angularVelocities: this.angularVelocities,
       bodies,
       manifolds: this.manifolds,
-      sleepStates: this.sleepStates
+      sleepStates: this.sleepStates,
+      targets: this.targets
     };
     const bindings = Object.entries(buffers).map(([name, buffer], location) => ({
       name,
       buffer,
-      location,
+      location: location === 8 ? 9 : location,
       resource: graph.importBuffer(
         {
           id: `${this.id}-${name}`,
@@ -232,16 +334,16 @@ export class GPURigidBodyWorld {
           : {...base, type: name === 'bodies' ? 'read-only-storage' : 'storage'};
       })
     };
-    const source = getRigidBodyShader(this.count, this.props.iterations ?? 16);
+    const source = getRigidBodyShader(this.count, this.props.iterations ?? 16, this.colliderCount);
     for (const entryPoint of ['integrate', 'collide', 'solve', 'finish']) {
       const unused =
         entryPoint === 'integrate'
-          ? ['positions', 'manifolds', 'bodies', 'angularVelocities']
+          ? ['manifolds']
           : entryPoint === 'collide'
-            ? ['sleepStates']
+            ? ['sleepStates', 'targets']
             : entryPoint === 'finish'
               ? ['manifolds']
-              : [];
+              : ['targets'];
       const activeBindings = bindings.filter(binding => !unused.includes(binding.name));
       const activeLayout: ShaderLayout = {
         attributes: [],
@@ -258,7 +360,7 @@ export class GPURigidBodyWorld {
           computation.dispatch(
             computePass,
             entryPoint === 'collide'
-              ? Math.ceil((this.count * this.count) / 64)
+              ? Math.ceil((this.colliderCount * this.colliderCount) / 64)
               : entryPoint === 'integrate'
                 ? Math.ceil(this.count / 64)
                 : 1
@@ -288,19 +390,20 @@ export class GPURigidBodyWorld {
           createExecutable(await Computation.createAsync(device, computationProps))
       });
     }
-    this.controlSettings = allocate('control-settings', 48, true);
+    this.controlSettings = allocate('control-settings', 64, true);
     this.control = new Computation(graph.device, {
       id: `${this.id}-impulse`,
       source:
         source +
         /* wgsl */ `
-struct Command { impulse: vec4f, point: vec4f, bodyIndex: vec4u }
+struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: vec4u }
 @group(0) @binding(8) var<uniform> command: Command;
 @compute @workgroup_size(1) fn control() {
- applyImpulse(command.bodyIndex.x,command.point.xyz,command.impulse.xyz);
+ if(command.bodyIndex.y==0u) {applyImpulse(command.bodyIndex.x,command.point.xyz,command.impulse.xyz);}
+ else {targets[command.bodyIndex.x].position=vec4f(command.point.xyz,1);targets[command.bodyIndex.x].orientation=command.orientation;}
  // Wake and invalidate all connected components conservatively after external changes.
  for(var body=0u;body<BODY_COUNT;body++) {sleepStates[body]=vec4f(0);}
- for(var pair=0u;pair<BODY_COUNT*BODY_COUNT;pair++) {manifolds[pair].count=0u;}
+ for(var pair=0u;pair<COLLIDER_COUNT*COLLIDER_COUNT;pair++) {manifolds[pair].count=0u;}
 }`,
       entryPoint: 'control',
       shaderLayout: {
@@ -329,9 +432,42 @@ struct Command { impulse: vec4f, point: vec4f, bodyIndex: vec4u }
       ![...impulse, ...point].every(Number.isFinite)
     )
       throw new Error('Invalid rigid-body impulse');
-    const data = new ArrayBuffer(48);
+    const data = new ArrayBuffer(64);
     new Float32Array(data).set([...impulse, 0, ...point, 0]);
-    new Uint32Array(data)[8] = body;
+    new Uint32Array(data)[12] = body;
+    this.controlSettings.write(new Uint8Array(data));
+    const encoder = this.device.createCommandEncoder();
+    const pass = encoder.beginComputePass();
+    this.control.dispatch(pass, 1);
+    pass.end();
+    this.device.submit(encoder.finish());
+  }
+
+  /** Set a world-space node target for a kinematic body, held until replaced. */
+  setKinematicTarget(
+    body: number,
+    position: Vector3,
+    orientation: readonly [number, number, number, number]
+  ): void {
+    if (
+      !this.control ||
+      !this.controlSettings ||
+      !this.device ||
+      this.destroyed ||
+      !Number.isInteger(body) ||
+      this.props.bodies[body]?.mode !== 'kinematic' ||
+      !position.every(Number.isFinite)
+    )
+      throw new Error('Invalid kinematic target');
+    const rotation = normalizeRigidBodyRotation(orientation);
+    const offset = rotateRigidBodyVector(
+      rotation,
+      this.props.bodies[body].centerOfMass ?? [0, 0, 0]
+    );
+    const data = new ArrayBuffer(64);
+    new Float32Array(data).set([...position.map((value, axis) => value + offset[axis]), 0], 4);
+    new Float32Array(data).set(rotation, 8);
+    new Uint32Array(data).set([body, 1], 12);
     this.controlSettings.write(new Uint8Array(data));
     const encoder = this.device.createCommandEncoder();
     const pass = encoder.beginComputePass();
@@ -344,7 +480,7 @@ struct Command { impulse: vec4f, point: vec4f, bodyIndex: vec4u }
   wake(): void {
     if (this.destroyed) return;
     this.sleepStates?.write(new Float32Array(this.count * 4));
-    this.manifolds?.write(new Uint8Array(this.count * this.count * 288));
+    this.manifolds?.write(new Uint8Array(this.colliderCount * this.colliderCount * 288));
   }
 
   async readState(): Promise<GPURigidBodyState[]> {
