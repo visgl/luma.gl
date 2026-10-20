@@ -141,3 +141,48 @@ it('preserves a nonconvex wheel opening and responds only around its unlocked in
     world.destroy();
   }
 }, 120000);
+
+it('rejects a separated rotating mesh before a large box can cover its local BVH', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const geometry = makeConvexHullGeometry(
+    Array.from({length: 8}, (_, corner) => [
+      corner & 1 ? 0.5 : -0.5,
+      corner & 2 ? 0.5 : -0.5,
+      corner & 4 ? 0.5 : -0.5
+    ]).flat()
+  );
+  const world = new GPURigidBodyWorld({
+    gravity: [0, 0, 0],
+    bodies: [
+      {position: [0, 0, 0], mass: 0, shape: {type: 'box', halfExtents: [5, 0.1, 5]}},
+      {
+        position: [0, 2, 0],
+        mode: 'dynamic',
+        mass: 0,
+        angularVelocity: [0, 0, 3],
+        inertiaDiagonal: [1, 1, 1],
+        shape: {type: 'triangle-mesh', geometry}
+      }
+    ]
+  });
+  const definition = new GPUCommandGraph(device);
+  world.addToGraph(definition);
+  const graph = await definition.compileAsync();
+  try {
+    for (let step = 0; step < 120; step += 10) {
+      const encoder = device.createCommandEncoder();
+      for (let substep = 0; substep < 10; substep++) graph.encode(encoder, {parameters: undefined});
+      device.submit(encoder.finish());
+      await world.readState();
+      expect(await world.readCollisionDiagnostics()).toMatchObject({
+        triangleQueries: 0,
+        unresolvedQueries: 0,
+        droppedTriangleQueries: 0
+      });
+    }
+  } finally {
+    graph.destroy();
+    world.destroy();
+  }
+}, 120000);

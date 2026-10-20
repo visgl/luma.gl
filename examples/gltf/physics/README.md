@@ -10,7 +10,8 @@ copied into this repository. Network access to raw.githubusercontent.com is requ
 Parses raw glTF physics metadata before loaders.gl post-processing, creates a
 `GPURigidBodyWorld`, and renders the original meshes/materials with luma.gl's glTF
 renderer. Uses fixed 1/120-second steps with at most four catch-up steps per frame.
-One asynchronous pose readback can be pending at a time. This small example uses
+One simulation submission and asynchronous pose readback can be pending at a time;
+the example waits for publication before queuing more physics to bound input latency. This small example uses
 an explicit CPU pose bridge; it does not claim GPU-driven glTF transform publication.
 The source asset's scale and child transforms are preserved through body pose deltas.
 

@@ -139,7 +139,17 @@ fn appendConvexContact(pair:u32,hit:ConvexHit,previous:Manifold,first:u32,second
  if(slot>=4u){slot=0u;for(var index=1u;index<4u;index++){if(manifolds[pair].contacts[index].point.w<manifolds[pair].contacts[slot].point.w){slot=index;}}if(hit.depth<=manifolds[pair].contacts[slot].point.w){return;}}
  storeContact(pair,slot,hit.point,hit.normal,hit.depth,previous,first,second);manifolds[pair].count=min(4u,manifolds[pair].count+1u);
 }
+// Cheap conservative world bounds reject separated rotated mesh/large-box pairs
+// before projecting the box into mesh space, where its AABB can cover the whole BVH.
+fn shapeWorldExtent(collider:u32)->vec3f {
+ let shape=bodies.colliders[collider].shape;var extent=shape.xyz;
+ if(shape.w==0.0){extent=vec3f(shape.x);}
+ if(shape.w==4.0){let radius=max(shape.x,shape.y);extent=vec3f(radius,radius+shape.z*0.5,radius);}
+ if(shape.w==5.0){let radius=max(shape.x,shape.y);extent=vec3f(radius,shape.z*0.5,radius);}
+ return abs(axis(collider,0u))*extent.x+abs(axis(collider,1u))*extent.y+abs(axis(collider,2u))*extent.z;
+}
 fn collideExtended(pair:u32,first:u32,second:u32,previous:Manifold){
+ if(any(abs(colliderPosition(second)-colliderPosition(first))>shapeWorldExtent(first)+shapeWorldExtent(second)+vec3f(settings.solver.x))){return;}
  let firstShape=bodies.colliders[first].shape;let secondShape=bodies.colliders[second].shape;
  var firstRadius=length(firstShape.xyz);var secondRadius=length(secondShape.xyz);
  if(firstShape.w==0.0){firstRadius=firstShape.x;}if(secondShape.w==0.0){secondRadius=secondShape.x;}

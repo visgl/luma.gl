@@ -320,3 +320,10 @@ prototype determining the final scope and estimate.
   tapered primitives, original mesh openings, inertia locks and backend capability
   rejection. Full draft conformance, arbitrary dynamic mesh pairs, CCD, general
   mesh quality repair and scalable rigid-body broad phase remain follow-ups.
+
+- Performance regression fixed: world-space conservative bounds reject the separated
+  rotating wheel/ground pair before the floor's mesh-local AABB can cover the wheel
+  BVH. In the same 360-step harness, sampled triangle work fell from 24,588 to 686
+  and elapsed time fell from 8.68 s to 1.80 s (including readbacks and rendering).
+  The example also permits only one unpublished simulation submission, preventing
+  slow hardware from accumulating seconds of queued physics work.

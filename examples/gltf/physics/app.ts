@@ -296,7 +296,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.previousTime = time;
     if (!this.loading && !this.paused && this.graph && this.world) {
       this.accumulator = Math.min(this.accumulator + elapsed, 4 / 120);
-      if (this.accumulator >= 1 / 120) {
+      // Keep at most one simulation submission awaiting publication. A slow GPU must
+      // not accumulate seconds of queued physics while rendering continues.
+      if (this.accumulator >= 1 / 120 && !this.snapshot) {
         const encoder = device.createCommandEncoder();
         while (this.accumulator >= 1 / 120) {
           this.diagnostics.encode(this.graph, encoder, {parameters: undefined});
