@@ -157,8 +157,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
     const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
     const sample =
-      document.querySelector<HTMLSelectElement>('#physics-sample')?.value ||
-      'Materials_Restitution';
+      document.querySelector<HTMLSelectElement>('#physics-sample')?.value || 'MotionProperties';
     const modelUrl = `${SAMPLE_BASE_URL}/${sample}/${sample}.glb`;
     showSampleDescription(sample);
     let replacementWorld: GPURigidBodyWorld | undefined;

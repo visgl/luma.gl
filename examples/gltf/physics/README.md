@@ -29,7 +29,8 @@ conservative bounds prove it cannot meet. Mesh candidates use a 65,536-entry GPU
 `world.readCollisionDiagnostics()` exposes overflow and unresolved GJK/EPA queries.
 Performance depends on hull complexity and triangle overlap; the four catch-up-step
 limit prevents unbounded simulation work when this detailed scene is GPU-bound.
-The standard InfoBox starts collapsed, with a sample selector, wrapping previous/next
+Samples appear in Motion Properties, Restitution, Friction, Filtering order, starting
+with Motion Properties. The standard InfoBox starts collapsed, with a sample selector, wrapping previous/next
 arrows, Pause, and Reset controls.
 Reset reloads the authored scene and simulation. Pause leaves camera controls active.
 

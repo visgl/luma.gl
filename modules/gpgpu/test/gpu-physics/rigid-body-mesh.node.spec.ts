@@ -123,3 +123,42 @@ it('allows open static triangles but rejects their use for dynamic volume integr
       })
   ).toThrow('closed');
 });
+
+it('keeps volume and COM inertia invariant under a large local translation', () => {
+  const translation = [1_000_000, 2_000_000, -3_000_000];
+  const geometry = makeConvexHullGeometry(
+    cube.map((value, index) => value + translation[index % 3])
+  );
+  expect(geometry.closed).toBe(true);
+  expect(geometry.volume).toBeCloseTo(8, 10);
+  expect(geometry.center).toEqual(translation);
+  for (const index of [0, 4, 8]) expect(geometry.tensor[index]).toBeCloseTo(16 / 3, 10);
+  for (const index of [1, 2, 3, 5, 6, 7]) expect(geometry.tensor[index]).toBeCloseTo(0, 10);
+});
+
+it('rejects invalid masses and gravity-driven meshes that cannot remain separated', () => {
+  for (const mass of [NaN, Infinity, -1]) {
+    expect(
+      () =>
+        new GPURigidBodyWorld({
+          bodies: [{position: [0, 0, 0], mass, shape: {type: 'sphere', radius: 1}}]
+        })
+    ).toThrow('mass');
+  }
+  const geometry = makeTriangleMeshGeometry([-1, 0, -1, 1, 0, -1, 0, 0, 1], [0, 1, 2]);
+  expect(
+    () =>
+      new GPURigidBodyWorld({
+        bodies: [
+          {position: [0, 0, 0], mass: 0, shape: {type: 'triangle-mesh', geometry}},
+          {
+            position: [0, 5, 0],
+            mode: 'dynamic',
+            mass: 0,
+            inertiaDiagonal: [0, 1, 0],
+            shape: {type: 'triangle-mesh', geometry}
+          }
+        ]
+      })
+  ).toThrow('mesh/mesh');
+});

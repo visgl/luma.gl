@@ -186,3 +186,46 @@ it('rejects a separated rotating mesh before a large box can cover its local BVH
     world.destroy();
   }
 }, 120000);
+
+it('restores immutable mesh-pair anchors after direct state writes and wake', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const geometry = makeTriangleMeshGeometry([-1, 0, -1, 1, 0, -1, 0, 0, 1], [0, 1, 2]);
+  const world = new GPURigidBodyWorld({
+    bodies: [
+      {position: [0, 0, 0], mass: 0, shape: {type: 'triangle-mesh', geometry}},
+      {
+        position: [0, 5, 0],
+        mode: 'dynamic',
+        mass: 0,
+        gravityFactor: 0,
+        inertiaDiagonal: [0, 1, 0],
+        shape: {type: 'triangle-mesh', geometry}
+      }
+    ]
+  });
+  const definition = new GPUCommandGraph(device);
+  world.addToGraph(definition);
+  const graph = await definition.compileAsync();
+  try {
+    world.positions!.write(new Float32Array([0, 5, 0, 0, 0, 0, 0, 0]));
+    world.orientations!.write(new Float32Array([Math.SQRT1_2, 0, 0, Math.SQRT1_2]));
+    world.velocities!.write(new Float32Array([0, -100, 0, 0]), 16);
+    world.wake();
+    const encoder = device.createCommandEncoder();
+    graph.encode(encoder, {parameters: undefined});
+    device.submit(encoder.finish());
+    const [fixed, rotating] = await world.readState();
+    expect(fixed.position).toEqual([0, 0, 0]);
+    expect(fixed.orientation).toEqual([0, 0, 0, 1]);
+    expect(rotating.position).toEqual([0, 5, 0]);
+    expect(rotating.velocity).toEqual([0, 0, 0]);
+    expect(await world.readCollisionDiagnostics()).toMatchObject({
+      triangleQueries: 0,
+      unresolvedQueries: 0
+    });
+  } finally {
+    graph.destroy();
+    world.destroy();
+  }
+}, 120000);

@@ -230,14 +230,17 @@ export function makeTriangleMeshGeometry(
     }
   }
   const closed = [...edges.values()].every(edge => edge.count === 2 && edge.balance === 0);
+  // Integrate near the geometry, not the scene origin: large local translations
+  // otherwise cancel large tetrahedral moments into an inaccurate COM tensor.
+  const origin: Point = minimum.map((value, axis) => (value + maximum[axis]) / 2) as Point;
   let volume = 0;
   const moment = [0, 0, 0];
   const secondMoment = Array<number>(9).fill(0);
   for (let index = 0; index < triangles.length; index += 3) {
     const corners = [
-      point(triangles[index]),
-      point(triangles[index + 1]),
-      point(triangles[index + 2])
+      subtract(point(triangles[index]), origin),
+      subtract(point(triangles[index + 1]), origin),
+      subtract(point(triangles[index + 2]), origin)
     ];
     const signed = dot(corners[0], cross(corners[1], corners[2])) / 6;
     volume += signed;
@@ -271,7 +274,7 @@ export function makeTriangleMeshGeometry(
     nodes,
     closed,
     volume,
-    center,
+    center: center.map((value, axis) => value + origin[axis]) as Point,
     tensor
   };
 }

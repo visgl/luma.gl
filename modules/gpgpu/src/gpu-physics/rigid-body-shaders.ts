@@ -85,6 +85,12 @@ fn effectiveMass(first: u32, second: u32, point: vec3f, direction: vec3f) -> f32
 @compute @workgroup_size(64) fn integrate(@builtin(global_invocation_id) invocation: vec3u) {
  ${extended ? 'if(invocation.x==0u){atomicStore(&meshTasks.count,0u);atomicStore(&meshTasks.overflow,0u);atomicStore(&targets.dispatch,0u);targets.vertical=1u;targets.depth=1u;}' : ''}
  let body=invocation.x; if(body>=BODY_COUNT) {return;}
+ // Preserve the envelope used to admit separated mesh pairs, even after direct buffer writes.
+ if(bodies.bodies[body].motion.z>0.0){
+  positions[body]=vec4f(targets.entries[body].position.xyz,positions[body].w);
+  velocities[body]=vec4f(0,0,0,velocities[body].w);
+  if(bodies.bodies[body].motion.z>1.5){orientations[body]=targets.entries[body].orientation;}
+ }
  let rotation=orientations[body]; orientations[body]=select(vec4f(0,0,0,1),normalize(rotation),dot(rotation,rotation)>0.000001);
  if(bodies.bodies[body].motion.x==2.0 && targets.entries[body].position.w>0.0) {
   velocities[body]=vec4f((targets.entries[body].position.xyz-positions[body].xyz)/settings.gravity.w,0);

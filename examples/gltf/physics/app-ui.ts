@@ -41,10 +41,10 @@ export function createPhysicsPanels(diagnostics: GPUGraphDiagnostics) {
 <div class="gltf-example-toolbar">
 <button id="physics-previous" class="gltf-example-caret" data-physics-control aria-label="Previous sample" title="Previous sample">${CARET}</button>
 <select id="physics-sample" data-physics-control aria-label="Sample">
+<option value="MotionProperties">Motion properties</option>
 <option value="Materials_Restitution">Restitution</option>
 <option value="Materials_Friction">Friction</option>
 <option value="Filtering">Filtering</option>
-<option value="MotionProperties">Motion properties</option>
 </select>
 <button id="physics-next" class="gltf-example-caret gltf-example-caret-next" data-physics-control aria-label="Next sample" title="Next sample">${CARET}</button>
 <button id="physics-pause" data-physics-control>Pause</button>
@@ -65,7 +65,7 @@ Motion Properties uses analytic tapered primitives, convex hulls and the origina
   controls.hidden = true;
   details.hidden = true;
   document.body.append(controls, details);
-  showSampleDescription('Materials_Restitution');
+  showSampleDescription('MotionProperties');
   const mountContent = (root: HTMLElement, content: HTMLElement) => {
     configurePanelHostElement(root, 'cinematic');
     content.hidden = false;

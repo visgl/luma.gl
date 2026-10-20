@@ -79,6 +79,8 @@ export class GPURigidBodyWorld {
   private control: Computation | null = null;
   private controlSettings: Buffer | null = null;
   private destroyed = false;
+  /** Bodies whose immutable pose envelope is required by a mesh/mesh separation proof. */
+  private readonly anchoredBodies = new Set<number>();
 
   constructor(props: GPURigidBodyWorldProps) {
     this.id = props.id ?? 'gpu-rigid-body-world';
@@ -97,6 +99,8 @@ export class GPURigidBodyWorld {
       throw new Error('Invalid rigid-body capacity or timestep');
     const colliders: (GPURigidBodyCollider & {body: number})[] = [];
     for (const [bodyIndex, body] of props.bodies.entries()) {
+      if (!Number.isFinite(body.mass ?? 1) || (body.mass ?? 1) < 0)
+        throw new Error('Invalid rigid body mass');
       if (body.shape ? body.colliders !== undefined : !body.colliders?.length)
         throw new Error('Supply shape or colliders');
       const shapes: readonly GPURigidBodyCollider[] =
@@ -199,6 +203,10 @@ export class GPURigidBodyWorld {
           !areFixedMeshesSeparated(firstCollider, firstBody, secondCollider, secondBody)
         )
           throw new Error('Potential mesh/mesh contact is unsupported');
+        if (!(staticBody(firstBody) && staticBody(secondBody))) {
+          this.anchoredBodies.add(firstCollider.body);
+          this.anchoredBodies.add(secondCollider.body);
+        }
       }
     this.colliders = structuredClone(colliders);
     this.props = structuredClone(props);
@@ -271,7 +279,7 @@ export class GPURigidBodyWorld {
           ...inertiaRotation,
           mode === 'static' ? 0 : mode === 'dynamic' ? 1 : 2,
           body.gravityFactor ?? 1,
-          0,
+          this.anchoredBodies.has(index) ? (mode === 'static' ? 2 : 1) : 0,
           0
         ],
         index * 12
@@ -319,6 +327,11 @@ export class GPURigidBodyWorld {
     this.angularVelocities = allocate('angular-velocities', angular);
     this.sleepStates = allocate('sleep', this.count * 16);
     this.targets = allocate('targets', this.count * 32 + 16);
+    for (const index of this.anchoredBodies) {
+      // These bodies cannot be kinematic: preserve the construction-time COM envelope.
+      this.targets.write(positions.subarray(index * 4, index * 4 + 4), index * 32);
+      this.targets.write(orientations.subarray(index * 4, index * 4 + 4), index * 32 + 16);
+    }
     // Four 64-byte contacts followed by a 32-byte aligned manifold header.
     this.manifolds = allocate('manifolds', this.colliderCount * this.colliderCount * 288);
     const extended = this.colliders.some(
@@ -559,7 +572,10 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     this.device.submit(encoder.finish());
   }
 
-  /** Clear persistence and wake all bodies after caller writes to the exposed state buffers. */
+  /**
+   * Clear persistence after direct state writes. Bodies participating in a mesh separation
+   * proof have their COM (and static orientation) restored to their immutable anchor next step.
+   */
   wake(): void {
     if (this.destroyed) return;
     this.sleepStates?.write(new Float32Array(this.count * 4));

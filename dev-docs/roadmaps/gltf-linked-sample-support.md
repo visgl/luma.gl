@@ -1,5 +1,9 @@
 # Full support for the linked glTF samples
 
+The [G1–G7 qualification programme](gpu-physics-roadmap.md#active-programme-gltf-physics-qualification-first)
+is now the governing engine roadmap. This document records sample coverage and its
+historical implementation plan; sample completion is not proposal completion.
+
 Scope: the four physics and four interactivity assets currently linked by the example
 selectors. This is asset coverage, not full conformance to either draft extension.
 The audit reads the actual pinned GLB JSON, rather than inferring requirements from

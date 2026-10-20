@@ -63,7 +63,7 @@ export function areFixedMeshesSeparated(
     const mode = body.mode ?? (body.mass === 0 ? 'static' : 'dynamic');
     if (
       mode === 'kinematic' ||
-      (mode === 'dynamic' && body.mass !== 0) ||
+      (mode === 'dynamic' && (body.mass !== 0 || (body.gravityFactor ?? 1) !== 0)) ||
       (body.velocity ?? []).some(value => value !== 0)
     )
       return null;
