@@ -130,3 +130,9 @@ export type {
 } from './gltf/animations/animations';
 
 export {GLTFInteractivity} from './gltf/gltf-interactivity';
+
+export {
+  GLTFAudioController,
+  type GLTFAudioControllerOptions,
+  type GLTFAudioExtension
+} from './gltf/gltf-audio';

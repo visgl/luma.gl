@@ -186,15 +186,15 @@ it('gltf#getRegisteredGLTFExtensions exposes generated support and maturity summ
     summary,
     'summary is derived from the registry rather than copied into documentation'
   ).toEqual({
-    total: 37,
-    supported: 26,
-    bySupportLevel: {'built-in': 20, 'parsed-and-wired': 6, 'loader-only': 4, none: 7},
+    total: 38,
+    supported: 27,
+    bySupportLevel: {'built-in': 20, 'parsed-and-wired': 7, 'loader-only': 4, none: 7},
     byStandardStatus: {
       ratified: 26,
       'release-candidate': 2,
       'multi-vendor': 2,
       vendor: 1,
-      draft: 4,
+      draft: 5,
       archived: 2,
       unknown: 0
     }

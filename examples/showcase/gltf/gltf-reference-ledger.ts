@@ -21,7 +21,7 @@ export type GLTFReferenceFixture = {
   assetLocation: string;
   licenseLocation: string;
   sourceRevision: string;
-  source: 'khronos-sample-assets' | 'luma.gl';
+  source: 'khronos-sample-assets' | 'omi-gltf-extensions' | 'luma.gl';
 };
 
 export type GLTFReferenceLedgerEntry = GLTFRegisteredExtensionSupport & {
@@ -90,7 +90,24 @@ export function getGLTFReferenceLedger(): GLTFReferenceLedger {
     const model = demosByExtension.get(extension.extensionName)?.models[0];
     return {
       ...extension,
-      positiveFixture: model ? getReferenceFixture(model) : undefined
+      positiveFixture:
+        extension.extensionName === 'KHR_audio_emitter'
+          ? {
+              model: {
+                name: 'BoomBoxAudio',
+                label: 'Boom Box spatial audio',
+                fileName: 'boom_box.gltf'
+              },
+              assetLocation:
+                'https://raw.githubusercontent.com/omigroup/gltf-extensions/4f1fe73bff65ed5ca97dace7eb60ffdb64e2e692/extensions/2.0/KHR_audio_emitter/examples/boom_box/boom_box.gltf',
+              licenseLocation:
+                'https://github.com/omigroup/gltf-extensions/blob/4f1fe73bff65ed5ca97dace7eb60ffdb64e2e692/extensions/2.0/KHR_audio_emitter/examples/boom_box/boom_box.gltf',
+              sourceRevision: '4f1fe73bff65ed5ca97dace7eb60ffdb64e2e692',
+              source: 'omi-gltf-extensions' as const
+            }
+          : model
+            ? getReferenceFixture(model)
+            : undefined
     };
   });
   const unsupportedRequiredExtensionNames = extensions

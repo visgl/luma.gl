@@ -64,6 +64,12 @@ const GLTF_EXTENSION_SUPPORT_REGISTRY: Record<string, GLTFExtensionSupportDefini
     comment:
       'The optional physics adapter supports sphere/box colliders; shapes alone do not define rendering or simulation.'
   },
+  KHR_audio_emitter: {
+    supportLevel: 'parsed-and-wired',
+    standardStatus: 'draft',
+    comment:
+      'Opt-in GLTFAudioController provides Web Audio playback; the application owns context activation and listener updates.'
+  },
   KHR_draco_mesh_compression: {
     supportLevel: 'built-in',
     standardStatus: 'ratified',

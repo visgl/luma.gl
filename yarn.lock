@@ -16475,6 +16475,22 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-gltf-audio@workspace:examples/showcase/gltf-audio":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-gltf-audio@workspace:examples/showcase/gltf-audio"
+  dependencies:
+    "@loaders.gl/core": "npm:~5.0.0-alpha.11"
+    "@loaders.gl/gltf": "npm:~5.0.0-alpha.11"
+    "@luma.gl/core": "npm:10.0.0-alpha.4"
+    "@luma.gl/engine": "npm:10.0.0-alpha.4"
+    "@luma.gl/gltf": "npm:10.0.0-alpha.4"
+    "@luma.gl/shadertools": "npm:10.0.0-alpha.4"
+    "@math.gl/core": "npm:5.0.0-alpha.15"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-gltf-physics@workspace:examples/gltf/physics":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-gltf-physics@workspace:examples/gltf/physics"
