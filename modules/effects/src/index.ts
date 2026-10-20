@@ -69,7 +69,7 @@ export type {
   DofProps,
   DofUniforms
 } from './passes/screen-space/dof';
-export {dof, dofCompositeShaderPass} from './passes/screen-space/dof';
+export {dof, bokehDof, dofCompositeShaderPass} from './passes/screen-space/dof';
 export type {
   TriangleBlurProps,
   TriangleBlurUniforms

@@ -20,6 +20,7 @@ type InternalDofUniforms = {
   blurCoefficient?: number;
   pixelsPerMillimeter?: number;
   texelOffset?: [number, number];
+  circularAperture?: number;
 };
 
 /**
@@ -53,6 +54,7 @@ struct dofUniforms {
   blurCoefficient: f32,
   pixelsPerMillimeter: f32,
   texelOffset: vec2<f32>,
+  circularAperture: f32,
 };
 
 @group(0) @binding(auto) var<uniform> dof: dofUniforms;
@@ -92,7 +94,18 @@ fn dof_sampleColor(
 
   var color = vec4f(0.0);
 
-  if (blurRadius > 1.0) {
+  if (blurRadius > 1.0 && dof.circularAperture > 0.5) {
+    // Equal-area golden-angle samples cover a circular lens aperture in one pass.
+    // Normalize the gather so constant HDR radiance is preserved.
+    for (var sampleIndex = 0; sampleIndex < 48; sampleIndex++) {
+      let sampleRadius = sqrt((f32(sampleIndex) + 0.5) / 48.0) * blurRadius * 0.5;
+      let sampleAngle = f32(sampleIndex) * 2.39996323;
+      let sampleCoordinate = clamp(fragmentCoordinate + vec2i(round(
+        vec2f(cos(sampleAngle), sin(sampleAngle)) * sampleRadius)), vec2i(0), maxCoordinate);
+      color += textureLoad(sourceTexture, sampleCoordinate, 0);
+    }
+    color /= 48.0;
+  } else if (blurRadius > 1.0) {
     let halfBlur = blurRadius * 0.5;
     var sampleCount = 0.0;
 
@@ -131,6 +144,7 @@ layout(std140) uniform dofUniforms {
   float blurCoefficient;
   float pixelsPerMillimeter;
   vec2 texelOffset;
+  float circularAperture;
 } dof;
 
 vec4 dof_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoord) {
@@ -161,7 +175,16 @@ vec4 dof_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoord) {
 
   vec4 color = vec4(0.0);
 
-  if (blurRadius > 1.0) {
+  if (blurRadius > 1.0 && dof.circularAperture > 0.5) {
+    for (int sampleIndex = 0; sampleIndex < 48; sampleIndex++) {
+      float sampleRadius = sqrt((float(sampleIndex) + 0.5) / 48.0) * blurRadius * 0.5;
+      float sampleAngle = float(sampleIndex) * 2.39996323;
+      ivec2 sampleCoordinate = clamp(fragmentCoordinate + ivec2(round(
+        vec2(cos(sampleAngle), sin(sampleAngle)) * sampleRadius)), ivec2(0), maxCoordinate);
+      color += texelFetch(sourceTexture, sampleCoordinate, 0);
+    }
+    color /= 48.0;
+  } else if (blurRadius > 1.0) {
     float halfBlur = blurRadius * 0.5;
     float sampleCount = 0.0;
 
@@ -214,14 +237,16 @@ export const dof = {
     focusDistance: 'f32',
     blurCoefficient: 'f32',
     pixelsPerMillimeter: 'f32',
-    texelOffset: 'vec2<f32>'
+    texelOffset: 'vec2<f32>',
+    circularAperture: 'f32'
   },
   propTypes: {
     depthRange: {value: [0.1, 100]},
     focusDistance: {value: 1, min: 0.0001},
     blurCoefficient: {value: 1, min: 0},
     pixelsPerMillimeter: {value: 1, min: 0},
-    texelOffset: {value: [1, 0], private: true}
+    texelOffset: {value: [1, 0], private: true},
+    circularAperture: {value: 0, private: true}
   },
   passes: [{sampler: true}]
 } as const satisfies ShaderPass<DofProps & DofBindings, InternalDofUniforms, DofBindings>;
@@ -245,3 +270,16 @@ export const dofCompositeShaderPass = {
     }
   ]
 } as const satisfies CompositeShaderPass<'blurScratch'>;
+
+/**
+ * Single-pass circular-aperture DOF. Uses the same camera/lens props as `dof`.
+ * The 48-tap normalized disk gather preserves HDR radiance and avoids square bokeh.
+ * Like the separable pass, this is a local gather, not a foreground-scattering solver.
+ */
+export const bokehDof = {
+  ...dof,
+  name: 'bokehDof',
+  source: source.replaceAll('dof', 'bokehDof'),
+  fs: fs.replaceAll('dof', 'bokehDof'),
+  propTypes: {...dof.propTypes, circularAperture: {value: 1, private: true}}
+} as const satisfies ShaderPass<DofProps & DofBindings, InternalDofUniforms, DofBindings>;
