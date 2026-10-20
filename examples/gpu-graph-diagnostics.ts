@@ -16,13 +16,17 @@ import {GPUTracePanel} from './gpu-trace-panel';
 /** Example-owned diagnostics; the renderer remains responsible for queue submission. */
 export class GPUGraphDiagnostics {
   readonly inspectorPanel = new GPUCommandGraphDebugPanel();
-  readonly tracePanel = new GPUTracePanel();
+  readonly tracePanel: GPUTracePanel;
   private readonly inspector = new GPUCommandGraphInspector();
   private readonly graphs = new Map<string, GPUCommandGraphInspectorGraph>();
   private readonly sampleCounts = new Map<string, number>();
   private latestEncoding: GPUCommandGraphEncoding | null = null;
   private generation = 0;
   private latestGraphId: string | undefined;
+
+  constructor(props: {traceTitle?: string} = {}) {
+    this.tracePanel = new GPUTracePanel({title: props.traceTitle});
+  }
 
   encode<Parameters>(
     graph: CompiledGPUCommandGraph<Parameters>,

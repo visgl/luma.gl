@@ -62,7 +62,10 @@ const VALUE_OPS = new Set([
   'math/select',
   'math/switch',
   'math/neg',
-  'math/abs'
+  'math/abs',
+  'math/clamp',
+  'type/intToFloat',
+  'type/floatToInt'
 ]);
 const FLOW_OPS = new Set([
   'event/onStart',
@@ -73,7 +76,9 @@ const FLOW_OPS = new Set([
   'flow/branch',
   'flow/switch',
   'variable/set',
-  'pointer/set'
+  'pointer/set',
+  'flow/setDelay',
+  'KHR_node_selectability:event/onSelect'
 ]);
 function copy(value: unknown[]): unknown[] {
   return value.slice();
@@ -116,6 +121,14 @@ export class GLTFInteractivity {
   private readonly onEvent: GLTFInteractivityOptions['onEvent'];
   private readonly onLog: GLTFInteractivityOptions['onLog'];
   private started = false;
+  private currentTimeSeconds = 0;
+  private nextDelayIdentifier = 0;
+  private pendingDelays: {
+    nodeIndex: number;
+    reference: string;
+    timeSeconds: number;
+    activate: () => void;
+  }[] = [];
   private startTime = 0;
   private lastTick: number | undefined;
   private readonly eventOutputs = new Map<number, Record<string, unknown[]>>();
@@ -186,6 +199,21 @@ export class GLTFInteractivity {
     return components(value);
   }
 
+  private getSwitchCases(node: GLTFInteractivityNode): unknown[] {
+    const cases = node.configuration?.['cases']?.value;
+    // Missing or invalid configuration uses the operation's default empty list.
+    return Array.isArray(cases) &&
+      cases.every(
+        value =>
+          typeof value === 'number' &&
+          Number.isInteger(value) &&
+          value >= -2147483648 &&
+          value <= 2147483647
+      )
+      ? cases
+      : [];
+  }
+
   private input(index: number, name: string, visiting: Set<number>): unknown[] {
     const value: GLTFInteractivityValue | undefined = this.graph.nodes?.[index]?.values?.[name];
     if (!value) throw new Error(`KHR_interactivity: missing input ${name} on node ${index}`);
@@ -210,6 +238,12 @@ export class GLTFInteractivity {
     return template.replace(/\[([^\]]+)\]|\{([^}]+)\}/g, (_match, integerName, refName) => {
       const name = integerName ?? refName;
       const value = scalar(this.input(index, name, visiting));
+      if (
+        refName &&
+        typeof value === 'string' &&
+        /^\/(?:[^/~]|~[01])+(?:\/(?:[^/~]|~[01])+)*$/.test(value)
+      )
+        return value.split('/').at(-1)!;
       if (!Number.isSafeInteger(value) || (value as number) < 0) {
         throw new Error('KHR_interactivity: invalid pointer parameter');
       }
@@ -227,6 +261,7 @@ export class GLTFInteractivity {
       const op = this.op(index);
       const eventValue = this.eventOutputs.get(index)?.[socket];
       if (eventValue) return copy(eventValue);
+      if (op === 'flow/setDelay' && socket === 'lastDelay') return [null];
       if (op === 'variable/get') {
         const id = number(this.config(node, 'variable'));
         const value = this.variables[id];
@@ -249,6 +284,17 @@ export class GLTFInteractivity {
         return x.map((v, i) => fn(v, y[i]));
       };
       switch (op) {
+        case 'type/intToFloat':
+          return a().map(Number);
+        case 'type/floatToInt':
+          return a().map(value => Number(value) | 0);
+        case 'math/clamp': {
+          const lower = b().map(Number);
+          const upper = this.input(index, 'c', visiting).map(Number);
+          return a().map((value, component) =>
+            Math.min(upper[component], Math.max(lower[component], Number(value)))
+          );
+        }
         case 'math/and': {
           const left = scalar(a());
           const right = scalar(b());
@@ -292,7 +338,7 @@ export class GLTFInteractivity {
           );
         case 'math/switch': {
           const selection = number(this.input(index, 'selection', visiting));
-          const cases = this.config(node, 'cases');
+          const cases = this.getSwitchCases(node);
           return this.input(
             index,
             cases.includes(selection) ? String(selection) : 'default',
@@ -308,12 +354,21 @@ export class GLTFInteractivity {
   }
 
   /** Dispatch a lifecycle event, executing connected flows in deterministic depth-first order. */
-  private dispatch(op: string, outputs: Record<string, unknown[]>): void {
+  private dispatch(
+    op: string,
+    outputs: Record<string, unknown[]>,
+    selectedNodeIndex?: number
+  ): void {
     let steps = 0;
     const execute = (index: number, inputSocket: string): void => {
       if (++steps > this.maxSteps) throw new Error('KHR_interactivity: flow step limit exceeded');
       const node = this.graph.nodes![index];
       const operation = this.op(index);
+      if (operation === 'flow/setDelay' && inputSocket === 'cancel') {
+        this.pendingDelays = this.pendingDelays.filter(delay => delay.nodeIndex !== index);
+        this.eventOutputs.set(index, {lastDelay: [null]});
+        return;
+      }
       if (inputSocket !== 'in')
         throw new Error(`KHR_interactivity: unsupported input flow ${inputSocket}`);
       const visiting = new Set<number>();
@@ -322,6 +377,32 @@ export class GLTFInteractivity {
         if (target) execute(target.node, target.socket ?? 'in');
       };
       switch (operation) {
+        case 'flow/setDelay': {
+          const duration = number(this.input(index, 'duration', visiting));
+          const activationTime = this.currentTimeSeconds + duration;
+          if (
+            !Number.isFinite(activationTime) ||
+            !Number.isFinite(duration) ||
+            duration < 0 ||
+            this.pendingDelays.length >= 1024
+          ) {
+            follow('err');
+            break;
+          }
+          const reference = `delay:${++this.nextDelayIdentifier}`;
+          this.eventOutputs.set(index, {lastDelay: [reference]});
+          this.pendingDelays.push({
+            nodeIndex: index,
+            reference,
+            timeSeconds: activationTime,
+            activate: () => {
+              steps = 0;
+              follow('done');
+            }
+          });
+          follow('out');
+          break;
+        }
         case 'flow/sequence':
           for (const key of Object.keys(node.flows ?? {}).sort()) follow(key);
           break;
@@ -330,7 +411,7 @@ export class GLTFInteractivity {
           break;
         case 'flow/switch': {
           const selection = number(this.input(index, 'selection', visiting));
-          const cases = this.config(node, 'cases');
+          const cases = this.getSwitchCases(node);
           follow(cases.includes(selection) ? String(selection) : 'default');
           break;
         }
@@ -398,7 +479,11 @@ export class GLTFInteractivity {
     };
     const nodes = this.graph.nodes ?? [];
     for (let index = 0; index < nodes.length; index++) {
-      if (this.op(index) === op) {
+      if (
+        this.op(index) === op &&
+        (selectedNodeIndex === undefined ||
+          nodes[index].configuration?.['nodeIndex']?.value[0] === selectedNodeIndex)
+      ) {
         this.eventOutputs.set(index, outputs);
         const target = nodes[index].flows?.['out'];
         if (target) execute(target.node, target.socket ?? 'in');
@@ -413,16 +498,45 @@ export class GLTFInteractivity {
     this.dispatch('event/onStart', {event: [null]});
   }
 
+  /** Dispatch selection of one source node; the host owns hit testing and selectability. */
+  selectNode(nodeIndex: number): void {
+    this.start();
+    this.dispatch(
+      'KHR_node_selectability:event/onSelect',
+      {
+        selectedNode: [`/nodes/${nodeIndex}`],
+        selectionRayOrigin: [0, 0, 0],
+        selectionPoint: [0, 0, 0],
+        controllerIndex: [0],
+        event: [null]
+      },
+      nodeIndex
+    );
+  }
+
   /** Tick with elapsed seconds; the first tick has timeSinceStart=0 and delta=NaN. */
   tick(timeSeconds: number): void {
     if (!Number.isFinite(timeSeconds)) throw new Error('KHR_interactivity: invalid tick time');
-    this.start();
     if (this.lastTick !== undefined && timeSeconds < this.lastTick) {
       throw new Error('KHR_interactivity: tick time must be monotonic');
     }
-    if (this.lastTick === undefined) this.startTime = timeSeconds;
+    if (this.lastTick === undefined) {
+      this.startTime = timeSeconds;
+      const clockOffset = timeSeconds - this.currentTimeSeconds;
+      for (const delay of this.pendingDelays) delay.timeSeconds += clockOffset;
+    }
     const delta = this.lastTick === undefined ? NaN : timeSeconds - this.lastTick;
     this.lastTick = timeSeconds;
+    this.currentTimeSeconds = timeSeconds;
+    this.start();
+    const ready = this.pendingDelays
+      .filter(delay => delay.timeSeconds <= timeSeconds)
+      .sort((first, second) => first.timeSeconds - second.timeSeconds);
+    for (const delay of ready) {
+      if (!this.pendingDelays.includes(delay)) continue;
+      this.pendingDelays = this.pendingDelays.filter(candidate => candidate !== delay);
+      delay.activate();
+    }
     this.dispatch('event/onTick', {
       timeSinceStart: [timeSeconds - this.startTime],
       timeSinceLastTick: [delta],

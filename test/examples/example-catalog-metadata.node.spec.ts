@@ -33,6 +33,7 @@ type LiveExample = {
 
 const EXAMPLES_DIRECTORY = path.join(process.cwd(), 'website/content/examples');
 const WEBGPU_ONLY_EXAMPLES = new Set([
+  'gltf/physics',
   'api/render-bundles',
   'arrow/arrow-columns',
   'arrow/arrow-dggs-polygons',
@@ -47,6 +48,7 @@ const WEBGPU_ONLY_EXAMPLES = new Set([
   'tutorials/slang-particles'
 ]);
 const WEBGL_ONLY_EXAMPLES = new Set([
+  'deck/gltf-interactivity',
   'integrations/external-context',
   'integrations/react-strict-mode',
   'tutorials/transform-feedback',
@@ -129,7 +131,7 @@ describe('live example catalog metadata', () => {
   });
 
   test('provides complete, curated filters for every sidebar example', () => {
-    expect(LIVE_EXAMPLES).toHaveLength(109);
+    expect(LIVE_EXAMPLES).toHaveLength(111);
 
     for (const {id, metadata} of LIVE_EXAMPLES) {
       expect(metadata, `${id} requires sidebar_custom_props`).toBeDefined();

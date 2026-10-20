@@ -1,7 +1,10 @@
 import {defineConfig} from 'vite';
 
-export default defineConfig({
-  base: './',
+export default defineConfig(({mode}) => ({
+  base:
+    mode === 'website'
+      ? `${(process.env['WEBSITE_BASE_URL'] || '/').replace(/\/?$/, '/')}standalone-examples/gltf-interactivity/`
+      : './',
   resolve: {
     alias: {
       '@luma.gl/gltf': `${__dirname}/../../../modules/gltf/src`,
@@ -12,5 +15,9 @@ export default defineConfig({
       '@luma.gl/core/webgpu': `${__dirname}/../../../modules/core/src/webgpu`
     }
   },
-  optimizeDeps: {exclude: ['@deck.gl/core'], noDiscovery: true}
-});
+  optimizeDeps: {
+    exclude: ['@deck.gl/core'],
+    include: ['@deck.gl/layers > earcut'],
+    noDiscovery: true
+  }
+}));

@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Matrix4, Quaternion} from '@math.gl/core';
+import {getMeshBoxBounds} from './mesh-box-shape';
 import type {GPURigidBodyMaterial, GPURigidBodyShape} from '@luma.gl/gpgpu/gpu-physics';
 import type {
   GLTFPhysicsDescription,
@@ -315,18 +316,46 @@ export function parseGLTFPhysics(
         const collider = record(extension['collider']);
         checkFields(collider, ['geometry', 'physicsMaterial', 'collisionFilter']);
         const geometry = record(collider['geometry']);
-        checkFields(geometry, ['shape', 'node', 'convexHull']);
-        if (geometry['node'] !== undefined || geometry['shape'] === undefined)
+        checkFields(
+          geometry,
+          options.resolveLegacyMeshPositions
+            ? ['shape', 'node', 'convexHull', 'mesh']
+            : ['shape', 'node', 'convexHull']
+        );
+        const isMesh = geometry['mesh'] !== undefined;
+        if (
+          geometry['node'] !== undefined ||
+          (geometry['shape'] === undefined && !isMesh) ||
+          (geometry['shape'] !== undefined && isMesh)
+        )
           throw new Error('Mesh-derived collision geometry is unsupported');
         if (geometry['convexHull'] !== undefined && typeof geometry['convexHull'] !== 'boolean')
           throw new Error('convexHull must be boolean');
-        const shapeIndex = index(geometry['shape'], shapes);
+        let shapeIndex: number | undefined;
+        let meshIndex: number | undefined;
+        let shape: unknown;
+        let meshCenter: readonly number[] = [0, 0, 0];
+        if (isMesh) {
+          if (geometry['convexHull'] !== true || !options.resolveLegacyMeshPositions)
+            throw new Error('Legacy meshes require an explicit convex hull resolver');
+          const value = geometry['mesh'];
+          if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0)
+            throw new Error('Invalid legacy mesh index');
+          meshIndex = value;
+          const bounds = getMeshBoxBounds(options.resolveLegacyMeshPositions(meshIndex));
+          meshCenter = bounds.center;
+          shape = {type: 'box', box: {size: bounds.size}};
+        } else {
+          shapeIndex = index(geometry['shape'], shapes);
+          shape = shapes[shapeIndex];
+        }
         const transform = decomposePhysicsTransform(world);
         const definition = bodyByNode.get(owner)!;
         const bodyRotation = readPhysicsRotation(definition.body.orientation);
         const inverseRotation = new Matrix4().fromQuaternion(bodyRotation).invert();
         const bodyPosition = definition.body.position;
-        const offset = transform.position.map((value, axis) => value - bodyPosition[axis]);
+        const colliderCenter = Array.from(world.transformAsPoint(meshCenter));
+        const offset = colliderCenter.map((value, axis) => value - bodyPosition[axis]);
         const relativeRotation = new Quaternion([
           -bodyRotation[0],
           -bodyRotation[1],
@@ -347,7 +376,7 @@ export function parseGLTFPhysics(
           filterIndex === undefined ? undefined : collisionFilters[filterIndex]
         );
         const normalized = {
-          shape: parseShape(shapes[shapeIndex], transform.scale),
+          shape: parseShape(shape, transform.scale),
           position: transformPhysicsVector(inverseRotation, offset),
           orientation: readPhysicsRotation(Array.from(relativeRotation)),
           material: parseMaterial(
@@ -362,6 +391,7 @@ export function parseGLTFPhysics(
           bodyIndex: definition.bodyIndex,
           colliderIndex,
           shapeIndex,
+          meshIndex,
           materialIndex,
           filterIndex,
           collider: normalized

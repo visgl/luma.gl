@@ -48,7 +48,9 @@ export type GLTFPhysicsCollider = {
   nodeIndex: number;
   bodyIndex: number;
   colliderIndex: number;
-  shapeIndex: number;
+  shapeIndex?: number;
+  /** Present only for explicitly enabled legacy mesh geometry. */
+  meshIndex?: number;
   materialIndex?: number;
   filterIndex?: number;
   collider: GPURigidBodyCollider;
@@ -67,6 +69,10 @@ export type GLTFPhysicsDescription = {
 };
 export type ParseGLTFPhysicsOptions = {
   scene?: number;
+  /** Opt into legacy geometry.mesh; return decoded, referenced mesh vertices as flat XYZs.
+   * Only convex hulls exactly equal to an axis-aligned box are currently supported.
+   */
+  resolveLegacyMeshPositions?: (meshIndex: number) => ArrayLike<number>;
   /** kg/m³ for additive uniform-density primitive mass calculation. Defaults to 1000. */
   density?: number;
 };

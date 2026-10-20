@@ -2725,3 +2725,18 @@ export const GPUPointCloudOctreeExample: React.FC<WebsiteExampleProps> = props =
     {...props}
   />
 );
+
+const loadGLTFPhysicsApp = () => import('../../examples/gltf/physics/app');
+
+export const GLTFPhysicsExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="physics"
+    title="glTF Physics Extensions"
+    subtitle="Published glTF assets · GPU rigid bodies · draft extensions"
+    directory="gltf"
+    loadTemplate={loadGLTFPhysicsApp}
+    config={exampleConfig}
+    devices={['webgpu']}
+    {...props}
+  />
+);

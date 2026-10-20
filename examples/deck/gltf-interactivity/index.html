@@ -19,39 +19,28 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>KHR_interactivity · luma.gl + deck.gl</title>
+  <link rel="icon" href="data:,">
   <style>
-    html,body {margin:0;width:100%;height:100%;background:#101925;color:#edf4fa;font:14px system-ui}
+    html,body {margin:0;width:100%;height:100%;background:#f1f3f7;color:#111;font:11px/1.45 system-ui}
     #scene {position:absolute;inset:0}
-    #panels {position:absolute;inset:12px;pointer-events:none;z-index:1;
-      --menu-background:#111e2cf2;--menu-text:#edf4fa;--menu-border:1px solid #52718b}
-    #info-content {padding:4px 14px 14px;font:12px/1.5 system-ui}
-    button {padding:8px 10px;cursor:pointer}
-    .controls {display:flex;flex-wrap:wrap;gap:6px}
-    #interaction {position:absolute;bottom:18px;left:50%;transform:translateX(-50%);z-index:2;
-      width:max-content;max-width:calc(100% - 36px);box-sizing:border-box;padding:12px 16px;
-      border:1px solid #52718b;border-radius:12px;background:#e2e8eef5;color:#172230;text-align:center}
-    #interaction .controls {justify-content:center}
-    #result {font-size:12px;margin-top:8px}
-    output {display:block;white-space:pre-wrap;margin-top:10px} a {color:#9bcaff}
+    #scene-help {position:absolute;bottom:18px;left:50%;transform:translateX(-50%);max-width:calc(100% - 32px);padding:8px 12px;border-radius:8px;background:#080f1be8;color:#dce8f7;font:12px/1.4 system-ui;text-align:center;pointer-events:none;z-index:2}
+    #panels {position:absolute;inset:16px;pointer-events:none;z-index:1}
   </style>
 </head>
 <body>
   <div id="scene"></div>
   <div id="panels"></div>
-  <section id="interaction" aria-label="Run authored graph">
-    <div class="controls"><button id="run">Run checks</button><button id="reset">Reset</button></div>
-    <p style="margin:8px 0 0;font-size:12px">Labels: condition → flow</p>
-    <output id="result" aria-live="polite">Loading asset…</output>
-  </section>
-  <div id="info-content" hidden>
-    <p>Official Khronos <code>KHR_interactivity</code> test asset, rendered by deck.gl's ScenegraphLayer.</p>
-    <div class="controls"><button id="fit">Fit model</button></div>
+  <div id="scene-help" role="status">Loading sample…</div>
+  <section id="interaction" hidden></section>
+  <section id="info-content" class="gltf-example-details" hidden>
+    <p>Official Khronos <code>KHR_interactivity</code> assets. Branch, Sequence and Switch are self-running test suites, not toggle controls. Run tests executes all checks; Reset clears the results.</p>
+    <p>Traffic Light: click the blue ring on the left post to play its timed sequence, or the ring on the right post to advance one phase. Reset restores both lights.</p>
+    <button id="fit">Fit model</button>
     <output id="status">Loading asset…</output>
-    <p><small>Run checks executes this asset’s authored 42-node graph. Its branches move the textured
-    checkmarks and report four test results. Click the model to run or reset the checks.</small></p>
-    <a href="https://github.com/KhronosGroup/glTF-Test-Assets-Interactivity/tree/main/Tests/Interactivity/flow/branch">Asset source</a>
     <p>Drag to orbit · Scroll to zoom</p>
-  </div>
+    <a id="asset-source" target="_blank" rel="noreferrer">Asset source ↗</a>
+    <p>Assets © 2025 Khronos Group and Needle · CC BY 4.0.</p>
+  </section>
   <script type="module" src="./main.ts"></script>
 </body>
 </html>
