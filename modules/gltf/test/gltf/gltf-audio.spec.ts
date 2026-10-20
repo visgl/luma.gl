@@ -6,7 +6,11 @@ import {describe, expect, test} from 'vitest';
 import {parse} from '@loaders.gl/core';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {Matrix4} from '@math.gl/core';
-import {GLTFAudioController, createScenegraphsFromGLTF} from '@luma.gl/gltf';
+import {
+  GLTFAudioController,
+  type GLTFAudioExtension,
+  createScenegraphsFromGLTF
+} from '@luma.gl/gltf';
 import {NullDevice} from '@luma.gl/test-utils';
 
 function makeWave(): Uint8Array {
@@ -35,7 +39,13 @@ function makeWave(): Uint8Array {
 }
 
 async function makeScene(
-  options: {legacy?: boolean; embedded?: boolean; global?: boolean; inactiveAudio?: boolean} = {}
+  options: {
+    legacy?: boolean;
+    embedded?: boolean;
+    global?: boolean;
+    inactiveAudio?: boolean;
+    positional?: GLTFAudioExtension['emitters'][number]['positional'];
+  } = {}
 ) {
   const wave = makeWave();
   const uri = `data:audio/wav;base64,${btoa(String.fromCharCode(...wave))}`;
@@ -66,7 +76,14 @@ async function makeScene(
             ...(options.legacy ? {autoplay: true} : {autoPlay: true})
           }
         ],
-        emitters: [{type: options.global ? 'global' : 'positional', gain: 0.5, sources: [0]}]
+        emitters: [
+          {
+            type: options.global ? 'global' : 'positional',
+            gain: 0.5,
+            sources: [0],
+            positional: options.positional
+          }
+        ]
       }
     }
   };
@@ -77,7 +94,7 @@ async function makeScene(
     extension.audio.push({uri: 'unused.mp3'});
     extension.sources[0].audio = 1;
     extension.sources.push({...extension.sources[0], audio: 0});
-    extension.emitters.push({type: 'positional', gain: 1, sources: [1]});
+    extension.emitters.push({type: 'positional', gain: 1, sources: [1], positional: undefined});
     source.nodes.push({extensions: {KHR_audio_emitter: {emitter: 1}}});
     source.scenes.push({nodes: [2]});
   }
@@ -160,6 +177,71 @@ describe('GLTFAudioController browser audio rendering', () => {
       scenegraphs.destroy();
     }
     expect(balances[0] * balances[1]).toBeLessThan(0);
+  });
+
+  test('renders linear and exponential attenuation and clamps finite maximum distances', async () => {
+    for (const distanceModel of ['linear', 'exponential'] as const) {
+      const energies: number[] = [];
+      for (const distance of [2, 4, 8]) {
+        const scenegraphs = await makeScene({
+          positional: {
+            distanceModel,
+            refDistance: 1,
+            maxDistance: 4,
+            rolloffFactor: distanceModel === 'linear' ? 0.5 : 2
+          }
+        });
+        const context = new OfflineAudioContext(2, 4800, 48000);
+        const audio = new GLTFAudioController({
+          scenegraphs,
+          audioContext: context,
+          baseUrl: 'https://example.com/model.gltf'
+        });
+        try {
+          audio.update(new Matrix4().translate([0, 0, distance - 2]));
+          await audio.play();
+          const buffer = await context.startRendering();
+          energies.push(energy(buffer, 0) + energy(buffer, 1));
+        } finally {
+          audio.destroy();
+          scenegraphs.destroy();
+        }
+      }
+      expect(energies[0]).toBeGreaterThan(0);
+      expect(energies[1] / energies[0]).toBeCloseTo(distanceModel === 'linear' ? 0.36 : 0.0625, 2);
+      expect(energies[2] / energies[1]).toBeCloseTo(1, 2);
+    }
+  });
+
+  test('renders sound inside a directional cone and silence outside it', async () => {
+    const energies: number[] = [];
+    for (const listenerDepth of [-4, 0]) {
+      const scenegraphs = await makeScene({
+        positional: {
+          shapeType: 'cone',
+          coneInnerAngle: Math.PI / 3,
+          coneOuterAngle: Math.PI / 2,
+          coneOuterGain: 0
+        }
+      });
+      const context = new OfflineAudioContext(2, 4800, 48000);
+      const audio = new GLTFAudioController({
+        scenegraphs,
+        audioContext: context,
+        baseUrl: 'https://example.com/model.gltf'
+      });
+      try {
+        audio.update(new Matrix4().translate([0, 0, listenerDepth]));
+        await audio.play();
+        const buffer = await context.startRendering();
+        energies.push(energy(buffer, 0) + energy(buffer, 1));
+      } finally {
+        audio.destroy();
+        scenegraphs.destroy();
+      }
+    }
+    expect(energies[0]).toBeGreaterThan(0);
+    expect(energies[1]).toBe(0);
   });
 
   test('stop and destroy prevent pending playback without closing a borrowed context', async () => {
