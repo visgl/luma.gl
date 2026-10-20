@@ -30,6 +30,8 @@ Before implementing a tranche:
    resources against the original document, display attribution, and show actionable load failures.
    If no upstream asset exists, use small authored offline fixtures for tests and document the gap.
 
+See the [source asset audit](gltf-proposed-feature-assets.md) for verified URLs, attribution, compatibility gaps and Git LFS delivery requirements.
+
 ## Tranches and PR order
 
 | Tranche | Proposal | Relative scope | Depends on | Source/sample status |
