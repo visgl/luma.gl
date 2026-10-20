@@ -9,6 +9,59 @@ import {GPURigidBodyWorld} from '@luma.gl/gpgpu/gpu-physics';
 import {parseGLTFPhysics, createGLTFPhysicsWorld} from '../../src/physics';
 import {makePhysicsDocument} from './physics-fixtures';
 
+it('filters imported legacy box hulls on the GPU without blocking other systems', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const positions = Array.from({length: 8}, (_, corner) => [
+    corner & 1 ? 0.5 : -0.5,
+    corner & 2 ? 0.5 : -0.5,
+    corner & 4 ? 0.5 : -0.5
+  ]).flat();
+  for (const filterIndex of [0, 1]) {
+    const document = makePhysicsDocument([
+      {
+        children: [1],
+        extensions: {
+          KHR_physics_rigid_bodies: {
+            collider: {geometry: {shape: 1}, collisionFilter: filterIndex}
+          }
+        }
+      },
+      {
+        translation: [0, 3, 0],
+        extensions: {
+          KHR_physics_rigid_bodies: {
+            motion: {mass: 1},
+            collider: {geometry: {mesh: 0, convexHull: true}, collisionFilter: 1}
+          }
+        }
+      }
+    ]);
+    const description = parseGLTFPhysics(document, {resolveLegacyMeshPositions: () => positions});
+    expect(description.issues).toEqual([]);
+    const world = createGLTFPhysicsWorld(description, {timeStep: 1 / 120, sleepAfter: 0});
+    const definition = new GPUCommandGraph(device);
+    world.addToGraph(definition);
+    const graph = await definition.compileAsync();
+    try {
+      for (let step = 0; step < 160; step += 20) {
+        const encoder = device.createCommandEncoder();
+        for (let substep = 0; substep < 20; substep++)
+          graph.encode(encoder, {parameters: undefined});
+        device.submit(encoder.finish());
+        await world.readState();
+      }
+      const state = await world.readState();
+      // The first filter excludes the falling hull's system. The second accepts it.
+      if (filterIndex === 0) expect(state[1].position[1]).toBeLessThan(-3);
+      else expect(state[1].position[1]).toBeGreaterThan(1.3);
+    } finally {
+      graph.destroy();
+      world.destroy();
+    }
+  }
+});
+
 it('imported compound bodies match independently authored GPU worlds', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) return;

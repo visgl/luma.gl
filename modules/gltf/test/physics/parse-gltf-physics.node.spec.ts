@@ -9,6 +9,122 @@ import {getRegisteredGLTFExtensions} from '../../src';
 import {parseGLTFPhysics, createGLTFPhysicsWorld, GLTF_PHYSICS_DRAFT} from '../../src/physics';
 import {makePhysicsDocument} from './physics-fixtures';
 
+function makeBoxVertices(): number[] {
+  return Array.from({length: 8}, (_, corner) => [
+    corner & 1 ? 3 : 1,
+    corner & 2 ? 4 : 2,
+    corner & 4 ? 5 : 3
+  ]).flat();
+}
+
+it('opts into exact legacy box hulls without aliasing mesh and node references', () => {
+  const source = makePhysicsDocument([
+    {
+      children: [1],
+      translation: [10, 20, 30],
+      extensions: {KHR_physics_rigid_bodies: {motion: {mass: 2}}}
+    },
+    {
+      translation: [1, 0, 0],
+      scale: [2, 3, 4],
+      extensions: {
+        KHR_physics_rigid_bodies: {
+          collider: {geometry: {mesh: 7, convexHull: true}, collisionFilter: 0}
+        }
+      }
+    }
+  ]);
+  const original = structuredClone(source);
+  expect(parseGLTFPhysics(source).supported).toBe(false);
+  const references: number[] = [];
+  const description = parseGLTFPhysics(source, {
+    resolveLegacyMeshPositions: meshIndex => {
+      references.push(meshIndex);
+      return makeBoxVertices();
+    }
+  });
+  expect(description.issues).toEqual([]);
+  expect(references).toEqual([7]);
+  expect(description.colliders[0]).toMatchObject({
+    meshIndex: 7,
+    shapeIndex: undefined,
+    nodeIndex: 1,
+    bodyIndex: 0,
+    collider: {shape: {type: 'box', halfExtents: [2, 3, 4]}, position: [5, 9, 16]}
+  });
+  expect(source).toEqual(original);
+  expect(description.source).toEqual(original);
+  expect(description.bodies[0].body.centerOfMass).toEqual([5, 9, 16]);
+});
+
+it('rejects non-box meshes instead of substituting their bounding boxes', () => {
+  const source = makePhysicsDocument([
+    {extensions: {KHR_physics_rigid_bodies: {collider: {geometry: {mesh: 0, convexHull: true}}}}}
+  ]);
+  for (const positions of [
+    makeBoxVertices().slice(0, -3),
+    [...makeBoxVertices().slice(0, -3), 2, 3, 4],
+    [NaN, ...makeBoxVertices().slice(1)],
+    makeBoxVertices().map((value, index) => (index % 3 === 0 ? 1 : value))
+  ]) {
+    expect(parseGLTFPhysics(source, {resolveLegacyMeshPositions: () => positions}).supported).toBe(
+      false
+    );
+  }
+  expect(
+    parseGLTFPhysics(source, {
+      resolveLegacyMeshPositions: () => [...makeBoxVertices(), 2, 3, 4, ...makeBoxVertices()]
+    }).supported
+  ).toBe(true);
+  for (const geometry of [
+    {mesh: 0, convexHull: false},
+    {mesh: 0, shape: 0, convexHull: true},
+    {node: 0, convexHull: true},
+    {mesh: -1, convexHull: true}
+  ]) {
+    const document = makePhysicsDocument([
+      {extensions: {KHR_physics_rigid_bodies: {collider: {geometry}}}}
+    ]);
+    expect(
+      parseGLTFPhysics(document, {resolveLegacyMeshPositions: makeBoxVertices}).supported
+    ).toBe(false);
+  }
+});
+
+it('keeps legacy compound child filters independent after collider ordering', () => {
+  const source = makePhysicsDocument([
+    {children: [1, 2], extensions: {KHR_physics_rigid_bodies: {motion: {mass: 1}}}},
+    {
+      translation: [0, -1, 0],
+      extensions: {
+        KHR_physics_rigid_bodies: {
+          collider: {geometry: {mesh: 0, convexHull: true}, collisionFilter: 0}
+        }
+      }
+    },
+    {
+      translation: [0, 1, 0],
+      extensions: {
+        KHR_physics_rigid_bodies: {
+          collider: {geometry: {mesh: 0, convexHull: true}, collisionFilter: 1}
+        }
+      }
+    },
+    {
+      extensions: {
+        KHR_physics_rigid_bodies: {collider: {geometry: {shape: 1}, collisionFilter: 1}}
+      }
+    }
+  ]);
+  source.scenes = [{nodes: [0, 3]}];
+  const description = parseGLTFPhysics(source, {resolveLegacyMeshPositions: makeBoxVertices});
+  expect(description.issues).toEqual([]);
+  expect(description.bodies[0].colliderIndices).toEqual([0, 1]);
+  expect(description.colliders[0].collider.excludedColliders).toContain(2);
+  expect(description.colliders[1].collider.excludedColliders).not.toContain(2);
+  expect(description.colliders[2].collider.excludedColliders).toEqual([0]);
+});
+
 it('imports loader-decoded GLB extension data before postprocessing replaces node references', async () => {
   const encoded = new TextEncoder().encode(
     JSON.stringify({...makePhysicsDocument(), asset: {version: '2.0'}})

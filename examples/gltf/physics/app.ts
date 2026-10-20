@@ -5,7 +5,7 @@
 import {AnimationLoopTemplate, AnimationProps, ModelNode, OrbitControls} from '@luma.gl/engine';
 import {Device, log} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
-import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
+import {GLTFLoader, GLTFScenegraph, postProcessGLTF} from '@loaders.gl/gltf';
 import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {Light, LightingProps} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
@@ -20,6 +20,7 @@ import type {ScenegraphNode} from '@luma.gl/engine';
 import {INFO_HTML, showError, createPhysicsPanels} from './app-ui';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {makePhysicsBodyDelta} from './body-transforms';
+import {makeLegacyMeshPositionResolver} from './legacy-mesh-positions';
 
 const SAMPLE_REVISION = '9dc61cb3474ff9a51f58d3592f79d5c9e572056a';
 const SAMPLE_BASE_URL = `https://raw.githubusercontent.com/eoineoineoin/glTF_Physics/${SAMPLE_REVISION}/samples`;
@@ -170,7 +171,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       await this.snapshot;
       const gltf = await load(modelUrl, GLTFLoader);
       if (this.isFinalized) return;
-      const description = parseGLTFPhysics(gltf.json);
+      const description = parseGLTFPhysics(gltf.json, {
+        resolveLegacyMeshPositions: makeLegacyMeshPositionResolver(new GLTFScenegraph(gltf))
+      });
       if (description.supported) {
         replacementWorld = createGLTFPhysicsWorld(description, {timeStep: 1 / 120, iterations: 16});
         const definition = new GPUCommandGraph(this.device);

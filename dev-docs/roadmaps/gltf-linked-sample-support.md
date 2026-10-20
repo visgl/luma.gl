@@ -5,6 +5,11 @@ selectors. This is asset coverage, not full conformance to either draft extensio
 The audit reads the actual pinned GLB JSON, rather than inferring requirements from
 sample names. Implementation estimates below are planning estimates, not commitments.
 
+Implementation update: inspecting Filtering's actual vertex buffers showed that both
+legacy mesh hulls are exact unit boxes. It now simulates through an explicit legacy
+mesh resolver and exact hull recognition. This completes that asset without general
+convex collision; B remains necessary for arbitrary hulls such as MotionProperties.
+
 ## Pinned sources
 
 - [Physics samples](https://github.com/eoineoineoin/glTF_Physics/tree/9dc61cb3474ff9a51f58d3592f79d5c9e572056a/samples), revision `9dc61cb3474ff9a51f58d3592f79d5c9e572056a`.
@@ -19,7 +24,7 @@ sample names. Implementation estimates below are planning estimates, not commitm
 | --- | --- | --- |
 | Materials_Restitution | Simulated | Deterministic bounce-height and combine-policy regression tests; visual source comparison |
 | Materials_Friction | Simulated | Validate sliding/sticking on the authored slope and box contact stability, not just successful import |
-| Filtering | Static preview | Explicit legacy `geometry.mesh` compatibility; indexed mesh decoding; convex hull colliders; compound mass properties; per-collider filter validation |
+| Filtering | GPU simulation: 9 bodies, 10 colliders | Exact box-hull recognition and explicit legacy mesh decoding preserve both compound child colliders and their independent filters; arbitrary non-box hulls remain unsupported |
 | MotionProperties | Static preview | Legacy mesh profile; tapered capsule and cylinder/cone geometry; convex hulls; static and dynamic non-convex meshes; authored COM, negative gravity, and locked inertia integration tests |
 | Branch | All 4 checks pass | Run the unmodified graph in automated asset tests, verify success events and original labels |
 | Sequence | All 3 checks pass | Asset tests for authored lexicographic socket order, success events and original labels |
@@ -63,8 +68,9 @@ remain unchanged. This tranche establishes a stable regression baseline.
 - Verify independent filter membership on compound children, including pairs that
   overlap geometrically but must not receive impulses.
 
-Acceptance: Filtering simulates its original geometry with no proxy boxes or missing
-children. Differential/reference tests cover separation, penetration, contacts,
+Acceptance: non-box convex meshes simulate faithfully, while Filtering continues to
+simulate its original exact box hulls without missing children.
+Differential/reference tests cover separation, penetration, contacts,
 compound inertia and named filter systems. Retain the bounded rigid-body budget;
 this work does not imply a scalable arbitrary-convex engine.
 
@@ -134,7 +140,7 @@ operation families are required just to execute these four selected graphs.
 
 ## Recommended sequence
 
-A → B enables Filtering. B → C → D completes MotionProperties. A → E → F closes
+A validates the now-enabled Filtering sample. B → C → D completes MotionProperties. A → E → F closes
 interactivity fidelity and input integration. F also gates the final physics gallery.
 Keep each tranche as a separately reviewable PR with runnable examples and regression
 evidence. A and E give the fastest visible improvements; B–D are substantial physics

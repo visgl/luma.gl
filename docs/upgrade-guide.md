@@ -12,6 +12,12 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ## Upgrading to v10.0
 
+### glTF physics collider provenance
+
+`GLTFPhysicsCollider.shapeIndex` is now optional. Check it before indexing the
+implicit-shape array; colliders imported through an explicit legacy mesh resolver
+instead identify their source with `meshIndex`.
+
 ### Device backend package consolidation
 
 `@luma.gl/webgl`, `@luma.gl/webgpu`, and `@luma.gl/constants` have been removed.

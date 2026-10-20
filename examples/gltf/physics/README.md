@@ -15,8 +15,11 @@ an explicit CPU pose bridge; it does not claim GPU-driven glTF transform publica
 The source asset's scale and child transforms are preserved through body pose deltas.
 
 The extensions are drafts, and the importer implements a bounded sphere/box subset.
-Filtering and Motion Properties remain static previews with visible diagnostics for
-unsupported mesh and capsule/cylinder colliders; no partial simulation is created.
+Filtering also simulates: its two legacy convex mesh colliders are verified to have
+exact box hulls, then use the GPU box solver with their authored child transforms and
+per-collider filters. This is exact geometry recognition, not bounding-box approximation.
+Motion Properties remains a static preview with diagnostics for its other mesh and
+capsule/cylinder colliders; no partial simulation is created.
 The standard InfoBox starts collapsed, with a sample selector, wrapping previous/next
 arrows, Pause, and Reset controls.
 Reset reloads the authored scene and simulation. Pause leaves camera controls active.

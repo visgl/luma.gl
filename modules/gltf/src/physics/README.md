@@ -32,7 +32,17 @@ glTF physics conformance claim. The description records both commit identifiers:
 
 `KHR_collision_shapes` is not silently treated as an alias. This profile uses
 `collider.geometry.shape`; draft mesh geometry uses `geometry.node` and is reported
-unsupported. It does not accept an older `geometry.mesh` spelling. The physics
+unsupported. By default it does not accept the older `geometry.mesh` spelling. An
+explicit `resolveLegacyMeshPositions` callback enables a separate, bounded legacy
+profile: return decoded referenced XYZ vertices for that mesh index. Only authored
+`convexHull: true` meshes whose hull is exactly an axis-aligned box are accepted.
+All eight exact bounding corners must exist; arbitrary hulls are rejected rather
+than approximated by boxes. Interior vertices and duplicate corners are allowed.
+The loader adapter owns accessor decoding; the importer applies mesh-center offsets,
+node transforms, mass properties and filters. Collider provenance records `meshIndex`
+instead of `shapeIndex` for this path. The source document remains unchanged. This
+supports the published Filtering sample without a general convex collision engine.
+The physics
 draft's prose assigns infinity semantics to zero mass/principal inertia even though
 its pinned JSON schema still specifies strictly positive values; this profile follows
 the prose and tests that behavior explicitly.
@@ -90,7 +100,8 @@ does not enable or disable physics.
 
 ## Explicitly unsupported
 
-Triggers, joints, capsules/cylinders/planes, convex and deforming mesh colliders,
+Triggers, joints, capsules/cylinders/planes, arbitrary convex and deforming mesh colliders
+(outside exact legacy box-hull recognition),
 automatic instanced-body expansion, sheared/singular transforms, nonuniform sphere
 scaling, reflected motion frames, animation-driven physics properties, and unknown
 physics modifier fields/extensions produce capability issues rather than fallback
