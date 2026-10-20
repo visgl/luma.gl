@@ -186,6 +186,12 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'api/render-bundles': support44,
   'integrations/external-context': support45,
   'experimental/three': threeSupport,
+  'three/galactic-vortex': {
+    ...threeSupport,
+    id: 'three/galactic-vortex',
+    requirements: {backends: ['webgpu']}
+  },
+  'three/deck-layers': {...threeSupport, id: 'three/deck-layers'},
   'gltf/physics': gltfPhysicsSupport,
   'experimental/gpu-pool': poolSupport,
   'experimental/gpu-sphere-world': sphereWorldSupport,

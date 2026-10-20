@@ -113,7 +113,7 @@ export class GPUTracePanelRenderer {
         commonStarts.push(report.cpuEncodeStartTimeMilliseconds);
       if (combined && report.cpuEncodeEndTimeMilliseconds !== undefined)
         commonEnds.push(report.cpuEncodeEndTimeMilliseconds);
-      for (const clock of ['cpu', 'gpu'] as const) {
+      for (const clock of ['gpu', 'cpu'] as const) {
         const spans = report.nodes.flatMap(node => {
           const start =
             clock === 'cpu' ? node.cpuEncodeStartTimeMilliseconds : node.gpuStartTimeMilliseconds;

@@ -77,7 +77,7 @@ export class GPUGraphDiagnostics {
     this.latestEncoding = encoding;
     this.latestGraphId = graph.id;
     this.inspectorPanel.update(this.inspector.getSnapshot(), graph.id);
-    this.tracePanel.update(encoding.stats, graph.id);
+    // Keep the previous complete trace visible while this sample awaits GPU timings.
     const generation = this.generation;
     // AnimationLoop and Deck submit synchronously after rendering. Read only after that frame.
     queueMicrotask(() => {
@@ -90,10 +90,14 @@ export class GPUGraphDiagnostics {
         .then(report => {
           if (generation !== this.generation || this.graphs.get(graph.id) !== graph) return;
           this.inspectorPanel.update(this.inspector.getSnapshot(), this.latestGraphId);
-          if (report && this.latestEncoding === encoding) this.tracePanel.update(report, graph.id);
+          if (this.latestEncoding === encoding)
+            this.tracePanel.update(report ?? encoding.stats, graph.id);
         })
         .catch(() => {
-          // Optional timestamps can become unavailable on device loss; retain the CPU sample.
+          // Optional timestamps can become unavailable on device loss; publish the CPU fallback once.
+          if (generation === this.generation && this.latestEncoding === encoding) {
+            this.tracePanel.update(encoding.stats, graph.id);
+          }
         })
         .finally(() => querySet?.destroy());
     });
