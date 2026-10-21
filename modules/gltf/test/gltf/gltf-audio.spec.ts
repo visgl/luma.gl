@@ -262,3 +262,81 @@ describe('GLTFAudioController browser audio rendering', () => {
     scenegraphs.destroy();
   });
 });
+
+test('audio graph replaces bound emitter base routing without duplicating clip playback', async () => {
+  const results: number[] = [];
+  for (const graphGain of [1, 0.25]) {
+    const scenegraphs = await makeScene({global: true});
+    scenegraphs.gltf.extensions = {
+      ...scenegraphs.gltf.extensions,
+      KHR_audio_graph: {
+        graphs: [
+          {
+            nodes: [{kind: 'gain', params: {gain: graphGain}}],
+            connections: [],
+            inputs: [{source: 0, node: 0}],
+            outputs: [{node: 0, emitter: 0}]
+          }
+        ]
+      }
+    };
+    const context = new OfflineAudioContext(2, 4800, 48000);
+    const audio = new GLTFAudioController({
+      scenegraphs,
+      audioContext: context,
+      baseUrl: 'https://example.com/model.gltf'
+    });
+    await audio.play();
+    const rendered = await context.startRendering();
+    results.push(energy(rendered, 0) + energy(rendered, 1));
+    audio.destroy();
+    scenegraphs.destroy();
+  }
+  expect(results[0]).toBeGreaterThan(0);
+  expect(results[1] / results[0]).toBeCloseTo(0.0625);
+});
+
+test('audio graph procedural sources honor asset-clock start and duration without decoding clips', async () => {
+  const scenegraphs = await makeScene({global: true});
+  const extension = scenegraphs.gltf.extensions!['KHR_audio_emitter'] as GLTFAudioExtension;
+  extension.audio = [];
+  extension.sources = [
+    {
+      gain: 1,
+      extensions: {
+        KHR_audio_graph: {
+          oscillator: {type: 'sine', frequency: 440},
+          when: 0.01,
+          duration: 0.02
+        }
+      }
+    }
+  ];
+  scenegraphs.gltf.extensions!['KHR_audio_graph'] = {
+    graphs: [
+      {
+        nodes: [{kind: 'gain', params: {gain: 1}}],
+        connections: [],
+        inputs: [{source: 0, node: 0}],
+        outputs: [{node: 0, emitter: 0}]
+      }
+    ]
+  };
+  const context = new OfflineAudioContext(1, 4800, 48000);
+  const audio = new GLTFAudioController({
+    scenegraphs,
+    audioContext: context,
+    baseUrl: 'https://example.com/model.gltf',
+    fetch: async () => {
+      throw new Error('Procedural source must not fetch');
+    }
+  });
+  await audio.play();
+  const rendered = await context.startRendering();
+  const samples = rendered.getChannelData(0);
+  expect(samples.slice(0, 480).every(value => value === 0)).toBe(true);
+  expect(samples.slice(500, 1400).some(value => Math.abs(value) > 0.1)).toBe(true);
+  expect(samples.slice(1500).every(value => value === 0)).toBe(true);
+  audio.destroy();
+  scenegraphs.destroy();
+});

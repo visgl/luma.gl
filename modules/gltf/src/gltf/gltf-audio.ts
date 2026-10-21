@@ -5,12 +5,37 @@
 import {assert} from '@luma.gl/core';
 import {Matrix4, Vector3} from '@math.gl/core';
 import type {GroupNode} from '@luma.gl/engine';
+import {GLTFAudioGraph, type GLTFAudioGraphDefinition} from './gltf-audio-graph';
 import type {GLTFScenegraphs} from './create-scenegraph-from-gltf';
+
+type GraphSourceProperties = {
+  when?: number;
+  duration?: number;
+  offset?: number;
+  loopStart?: number;
+  loopEnd?: number;
+  channelInterpretation?: ChannelInterpretation;
+  oscillator?: {
+    type: OscillatorType;
+    frequency?: number;
+    detune?: number;
+    pulseWidth?: number;
+    periodicWave?: {real: number[]; imag: number[]};
+  };
+};
 
 /** Draft KHR_audio_emitter definitions. */
 export type GLTFAudioExtension = {
   audio: {uri?: string; bufferView?: number; mimeType?: string}[];
-  sources: {audio: number; gain?: number; loop?: boolean; autoPlay?: boolean; autoplay?: boolean}[];
+  sources: {
+    audio?: number;
+    gain?: number;
+    loop?: boolean;
+    autoPlay?: boolean;
+    autoplay?: boolean;
+    playbackRate?: number;
+    extensions?: {KHR_audio_graph?: GraphSourceProperties};
+  }[];
   emitters: {
     name?: string;
     type: 'global' | 'positional';
@@ -40,6 +65,7 @@ export type GLTFAudioControllerOptions = {
 };
 
 type EmitterBinding = {
+  index: number;
   definition: GLTFAudioExtension['emitters'][number];
   node?: GroupNode;
   gain: GainNode;
@@ -53,12 +79,16 @@ export class GLTFAudioController {
   private readonly options: GLTFAudioControllerOptions;
   private readonly scene: GroupNode;
   private readonly emitters: EmitterBinding[] = [];
-  private readonly playing = new Map<AudioBufferSourceNode, GainNode>();
+  private readonly graphs: GLTFAudioGraph[] = [];
+  private readonly graphSources = new Set<number>();
+  private readonly graphEmitters = new Set<number>();
+  private readonly playing = new Map<AudioScheduledSourceNode, GainNode>();
   private buffers = new Map<number, AudioBuffer>();
   private initialization?: Promise<void>;
   private readonly abortController = new AbortController();
   private destroyed = false;
   private playbackGeneration = 0;
+  private audioClockStart?: number;
 
   constructor(options: GLTFAudioControllerOptions) {
     this.options = options;
@@ -73,6 +103,13 @@ export class GLTFAudioController {
       sources: [],
       emitters: []
     };
+    const graphDefinitions = scenegraphs.gltf.extensions?.['KHR_audio_graph']?.['graphs'] as
+      | GLTFAudioGraphDefinition[]
+      | undefined;
+    for (const graph of graphDefinitions || []) {
+      for (const input of graph.inputs || []) this.graphSources.add(input.source);
+      for (const output of graph.outputs || []) this.graphEmitters.add(output.emitter);
+    }
     this.gain = audioContext.createGain();
     this.gain.connect(audioContext.destination);
     const activeNodes = new Set<GroupNode>();
@@ -91,6 +128,15 @@ export class GLTFAudioController {
       const indices: number[] =
         scenegraphs.gltf.scenes[sceneIndex]?.extensions?.['KHR_audio_emitter']?.emitters || [];
       for (const emitterIndex of indices) this.addEmitter(emitterIndex);
+      for (const definition of graphDefinitions || []) {
+        this.graphs.push(
+          new GLTFAudioGraph(definition, audioContext, this.gain, index =>
+            this.emitters
+              .filter(emitter => emitter.index === index)
+              .map(emitter => emitter.panner || emitter.gain)
+          )
+        );
+      }
     } catch (error) {
       this.destroy();
       throw error;
@@ -114,25 +160,84 @@ export class GLTFAudioController {
     await this.initialize();
     if (this.destroyed || generation !== this.playbackGeneration) return;
     const startTime = this.options.audioContext.currentTime;
+    this.audioClockStart ??= startTime;
     for (const emitter of this.emitters) {
+      if (this.graphEmitters.has(emitter.index)) continue;
       for (const sourceIndex of emitter.definition.sources || []) {
-        const definition = this.extension.sources[sourceIndex];
-        if (options.autoplayOnly && !(definition.autoPlay ?? definition.autoplay)) continue;
-        const source = this.options.audioContext.createBufferSource();
-        const gain = this.options.audioContext.createGain();
-        source.buffer = this.buffers.get(definition.audio)!;
-        source.loop = definition.loop ?? false;
-        gain.gain.value = definition.gain ?? 1;
-        source.connect(gain);
-        gain.connect(emitter.panner || emitter.gain);
-        source.onended = () => {
-          source.disconnect();
-          gain.disconnect();
-          this.playing.delete(source);
-        };
-        this.playing.set(source, gain);
-        source.start(startTime);
+        this.startSource(sourceIndex, startTime, options.autoplayOnly, gain =>
+          gain.connect(emitter.panner || emitter.gain)
+        );
       }
+    }
+    for (const sourceIndex of this.graphSources) {
+      this.startSource(sourceIndex, startTime, options.autoplayOnly, gain => {
+        for (const graph of this.graphs) graph.connectSource(sourceIndex, gain);
+      });
+    }
+  }
+
+  private startSource(
+    sourceIndex: number,
+    startTime: number,
+    autoplayOnly: boolean | undefined,
+    connect: (gain: GainNode) => void
+  ): void {
+    const definition = this.extension.sources[sourceIndex];
+    assert(definition);
+    if (autoplayOnly && !(definition.autoPlay ?? definition.autoplay)) return;
+    const context = this.options.audioContext;
+    const extended = definition.extensions?.KHR_audio_graph;
+    const oscillator = extended?.oscillator;
+    assert(!(definition.audio !== undefined && oscillator));
+    let source: AudioBufferSourceNode | OscillatorNode;
+    if (oscillator) {
+      const node = context.createOscillator();
+      node.frequency.value = oscillator.frequency ?? 440;
+      node.detune.value = oscillator.detune ?? 0;
+      // The initial procedural profile supports the standard square duty cycle.
+      assert(oscillator.pulseWidth === undefined || oscillator.pulseWidth === 0.5);
+      if (oscillator.type === 'custom') {
+        assert(oscillator.periodicWave);
+        node.setPeriodicWave(
+          context.createPeriodicWave(
+            new Float32Array(oscillator.periodicWave.real),
+            new Float32Array(oscillator.periodicWave.imag)
+          )
+        );
+      } else node.type = oscillator.type;
+      source = node;
+    } else {
+      const node = context.createBufferSource();
+      assert(definition.audio !== undefined);
+      node.buffer = this.buffers.get(definition.audio)!;
+      node.loop = definition.loop ?? false;
+      node.loopStart = extended?.loopStart ?? 0;
+      node.loopEnd = extended?.loopEnd ?? 0;
+      node.playbackRate.value = definition.playbackRate ?? 1;
+      source = node;
+    }
+    if (extended?.channelInterpretation)
+      source.channelInterpretation = extended.channelInterpretation;
+    const gain = this.options.audioContext.createGain();
+    gain.gain.value = definition.gain ?? 1;
+    source.connect(gain);
+    connect(gain);
+    source.onended = () => {
+      source.disconnect();
+      gain.disconnect();
+      this.playing.delete(source);
+    };
+    this.playing.set(source, gain);
+    const scheduledTime =
+      extended?.when === undefined
+        ? startTime
+        : Math.max(startTime, this.audioClockStart! + extended.when);
+    if (source instanceof AudioBufferSourceNode) {
+      if (extended?.duration === undefined) source.start(scheduledTime, extended?.offset ?? 0);
+      else source.start(scheduledTime, extended.offset ?? 0, extended.duration);
+    } else {
+      source.start(scheduledTime);
+      if (extended?.duration !== undefined) source.stop(scheduledTime + extended.duration);
     }
   }
 
@@ -194,6 +299,7 @@ export class GLTFAudioController {
       emitter.panner?.disconnect();
       emitter.gain.disconnect();
     }
+    for (const graph of this.graphs) graph.destroy();
     this.gain.disconnect();
     this.buffers.clear();
   }
@@ -208,14 +314,20 @@ export class GLTFAudioController {
       !definition.positional?.shapeType ||
         ['cone', 'omnidirectional'].includes(definition.positional.shapeType)
     );
-    for (const sourceIndex of definition.sources || []) {
+    for (const sourceIndex of this.graphEmitters.has(index) ? [] : definition.sources || []) {
       // Every source must reference an audio payload.
-      assert(this.extension.audio[this.extension.sources[sourceIndex]?.audio]);
+      const source = this.extension.sources[sourceIndex];
+      assert(
+        source &&
+          (source.audio !== undefined
+            ? this.extension.audio[source.audio]
+            : source.extensions?.KHR_audio_graph?.oscillator)
+      );
     }
     const gain = this.options.audioContext.createGain();
     gain.gain.value = definition.gain ?? 1;
     gain.connect(this.gain);
-    const binding: EmitterBinding = {definition, node, gain};
+    const binding: EmitterBinding = {index, definition, node, gain};
     this.emitters.push(binding);
     if (definition.type === 'positional') {
       const panner = this.options.audioContext.createPanner();
@@ -235,29 +347,45 @@ export class GLTFAudioController {
 
   private async loadBuffers(): Promise<void> {
     const {scenegraphs, audioContext, baseUrl} = this.options;
+    const sourceIndices = new Set([
+      ...this.graphSources,
+      ...this.emitters
+        .filter(emitter => !this.graphEmitters.has(emitter.index))
+        .flatMap(emitter => emitter.definition.sources || [])
+    ]);
     const audioIndices = new Set(
-      this.emitters.flatMap(emitter =>
-        (emitter.definition.sources || []).map(
-          sourceIndex => this.extension.sources[sourceIndex].audio
-        )
-      )
+      [...sourceIndices].map(index => {
+        const source = this.extension.sources[index];
+        assert(
+          source &&
+            (source.audio !== undefined
+              ? this.extension.audio[source.audio]
+              : source.extensions?.KHR_audio_graph?.oscillator)
+        );
+        return source.audio;
+      })
     );
     const buffers = await Promise.all(
-      [...audioIndices].map(async audioIndex => {
-        const definition = this.extension.audio[audioIndex];
-        let bytes: ArrayBuffer;
-        if (definition.bufferView !== undefined) {
-          const view = scenegraphs.gltf.bufferViews[definition.bufferView];
-          bytes = new Uint8Array(view.data).buffer;
-        } else {
-          const response = await (this.options.fetch || fetch)(new URL(definition.uri!, baseUrl), {
-            signal: this.abortController.signal
-          });
-          if (!response.ok) throw new Error(`Audio fetch failed: ${response.status}`);
-          bytes = await response.arrayBuffer();
-        }
-        return [audioIndex, await audioContext.decodeAudioData(bytes)] as const;
-      })
+      [...audioIndices]
+        .filter((index): index is number => index !== undefined)
+        .map(async audioIndex => {
+          const definition = this.extension.audio[audioIndex];
+          let bytes: ArrayBuffer;
+          if (definition.bufferView !== undefined) {
+            const view = scenegraphs.gltf.bufferViews[definition.bufferView];
+            bytes = new Uint8Array(view.data).buffer;
+          } else {
+            const response = await (this.options.fetch || fetch)(
+              new URL(definition.uri!, baseUrl),
+              {
+                signal: this.abortController.signal
+              }
+            );
+            if (!response.ok) throw new Error(`Audio fetch failed: ${response.status}`);
+            bytes = await response.arrayBuffer();
+          }
+          return [audioIndex, await audioContext.decodeAudioData(bytes)] as const;
+        })
     );
     if (!this.destroyed) this.buffers = new Map(buffers);
   }
