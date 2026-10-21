@@ -24,7 +24,7 @@ import GLTFCatalogApp, {
   type GLTFCatalogModel,
   type GLTFModelReference
 } from './gltf-catalog-app';
-import {GLTF_DESCRIPTION_HTML} from './app-ui';
+import {getGLTFDescriptionHtml} from './app-ui';
 import {GLTF_EXTENSION_DEMOS, type GLTFExtensionDemo} from './gltf-extension-demos';
 import {GLTF_STUDIO_DEFAULT_VARIANT, type GLTFAnimationStudioState} from './gltf-animation-studio';
 import {GLTF_ANIMATION_STUDIO_ASSETS, getGLTFStudioAsset} from './gltf-studio-assets';
@@ -135,14 +135,18 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
       getAllModelOptions(models),
       this.extensionDemos
     );
-    const selectedModelOption = getInitialModelOption(this.modelOptions, currentModelName);
+    const selectedModelOption = getInitialModelOption(
+      this.modelOptions,
+      currentModelName,
+      this.getDefaultModelName()
+    );
     this.selectedModelValue = encodeModelOption(selectedModelOption);
     this.syncSettingsPanel();
     return () => {};
   }
 
   override getInitialModelReference(currentModelName: string): GLTFModelReference {
-    return getInitialModelOption(this.modelOptions, currentModelName);
+    return getInitialModelOption(this.modelOptions, currentModelName, this.getDefaultModelName());
   }
 
   override drawBackground(renderPass: RenderPass): void {
@@ -235,7 +239,7 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
         makeHtmlCustomPanel({
           id: 'gltf-description',
           title: 'Description',
-          html: GLTF_DESCRIPTION_HTML
+          html: getGLTFDescriptionHtml(this.extensionName)
         }),
         this.settingsPanel.makePanel()
       ]
@@ -477,9 +481,14 @@ function getAvailableExtensionDemos(models: GLTFCatalogModel[]): GLTFExtensionDe
 
 function getInitialModelOption(
   modelOptions: ShowcaseModelMenuOption[],
-  currentModelName: string
+  currentModelName: string,
+  defaultModelName?: string
 ): ShowcaseModelMenuOption {
-  return modelOptions.find(modelOption => modelOption.name === currentModelName) || modelOptions[0];
+  return (
+    modelOptions.find(modelOption => modelOption.name === currentModelName) ||
+    modelOptions.find(modelOption => modelOption.name === defaultModelName) ||
+    modelOptions[0]
+  );
 }
 
 function getAllModelOptions(models: GLTFCatalogModel[]): ShowcaseModelMenuOption[] {

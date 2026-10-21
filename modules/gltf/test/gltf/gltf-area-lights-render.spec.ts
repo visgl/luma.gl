@@ -145,6 +145,10 @@ test.each([
               clearDepth: 1
             });
             for (const node of models) {
+              expect(node.model.material).not.toBeNull();
+              node.model.material!.setProps({
+                pbrMaterial: {metallicRoughnessValues: [metallic, roughness]}
+              });
               node.model.shaderInputs.setProps({
                 lighting: {
                   lights: useLTC ? [area] : [{type: 'ambient', color: [0, 0, 0], intensity: 0}],
@@ -152,7 +156,6 @@ test.each([
                 },
                 ...(ltc ? {bindings: ltc.bindings} : {}),
                 areaLighting: {lights: useLTC ? [] : [area], sampleCount: 256},
-                pbrMaterial: {roughnessFactor: roughness, metallicFactor: metallic},
                 pbrScene: {exposure: 1, toneMapMode: 0, outputEncoding: 0},
                 pbrProjection: {
                   modelMatrix: new Matrix4(),
