@@ -41,7 +41,8 @@ export function collectNodeCollisionGeometry(
       )
         throw new Error('Collision snapshot capacity exceeded');
       const referenced = new Set<number>();
-      for (const index of geometry.indices) {
+      for (let indexOffset = 0; indexOffset < geometry.indices.length; indexOffset++) {
+        const index = geometry.indices[indexOffset];
         if (!Number.isSafeInteger(index) || index < 0 || index >= geometry.positions.length / 3)
           throw new Error('Invalid collision mesh index');
         referenced.add(index);
