@@ -181,6 +181,10 @@ layout(std140) uniform pbrMaterialUniforms {
   mat3 diffuseTransmissionColorUVTransform;
   int multiscatterColorUVSet;
   mat3 multiscatterColorUVTransform;
+  bool lightmapMapEnabled;
+  float lightmapIntensity;
+  int lightmapUVSet;
+  mat3 lightmapUVTransform;
 } pbrMaterial;
 
 // Samplers
@@ -192,6 +196,9 @@ uniform sampler2D pbr_normalSampler;
 #endif
 #ifdef HAS_EMISSIVEMAP
 uniform sampler2D pbr_emissiveSampler;
+#endif
+#ifdef HAS_LIGHTMAP
+uniform sampler2D pbr_lightmapSampler;
 #endif
 #ifdef HAS_METALROUGHNESSMAP
 uniform sampler2D pbr_metallicRoughnessSampler;
@@ -350,6 +357,12 @@ mat3 getTBN(vec2 uv)
   mat3 tbn = pbr_vTBN;
 #endif
 
+#ifdef DOUBLE_SIDED
+#ifdef HAS_NORMALS
+  // Derivative normals already face the viewer; only flip an authored basis.
+  if (!gl_FrontFacing) tbn = mat3(-tbn[0], -tbn[1], -tbn[2]);
+#endif
+#endif
   return tbn;
 }
 
@@ -1042,6 +1055,7 @@ vec4 pbr_filterColor(vec4 vertexColor)
   vec2 normalUV = getMaterialUV(pbrMaterial.normalUVSet, pbrMaterial.normalUVTransform);
   vec2 occlusionUV = getMaterialUV(pbrMaterial.occlusionUVSet, pbrMaterial.occlusionUVTransform);
   vec2 emissiveUV = getMaterialUV(pbrMaterial.emissiveUVSet, pbrMaterial.emissiveUVTransform);
+  vec2 lightmapUV = getMaterialUV(pbrMaterial.lightmapUVSet, pbrMaterial.lightmapUVTransform);
   vec2 specularColorUV = getMaterialUV(
     pbrMaterial.specularColorUVSet,
     pbrMaterial.specularColorUVTransform
@@ -1116,8 +1130,26 @@ vec4 pbr_filterColor(vec4 vertexColor)
 
   float transmission = 0.0;
 
+  vec3 lightmapIrradiance = vec3(0.0);
+#ifdef HAS_LIGHTMAP
+  if (pbrMaterial.lightmapMapEnabled) {
+    lightmapIrradiance = texture(pbr_lightmapSampler, lightmapUV).rgb * pbrMaterial.lightmapIntensity;
+  }
+#endif
+
   if(pbrMaterial.unlit){
     color.rgb = baseColor.rgb;
+#ifdef HAS_LIGHTMAP
+    if (pbrMaterial.lightmapMapEnabled) {
+      color *= lightmapIrradiance / M_PI;
+#ifdef HAS_OCCLUSIONMAP
+      if (pbrMaterial.occlusionMapEnabled) {
+        float ao = texture(pbr_occlusionSampler, occlusionUV).r;
+        color = mix(color, color * ao, pbrMaterial.occlusionStrength);
+      }
+#endif
+    }
+#endif
   }
   else{
     // Metallic and Roughness material properties are packed together
@@ -1235,6 +1267,19 @@ vec4 pbr_filterColor(vec4 vertexColor)
           color += calculateFinalColor(pbrInfo, lighting_getSpotLight(i).color / attenuation);
         }
       }
+      for (int areaIndex = 0; areaIndex < areaLighting_getLightCount(); areaIndex++) {
+#ifdef USE_AREA_LIGHT_LTC
+        color += areaLTC_evaluate(areaIndex, pbr_vPosition, pbrInfo.n, pbrInfo.v, pbrInfo.perceptualRoughness, pbrInfo.diffuseColor, pbrInfo.reflectance0, pbrInfo.reflectance90);
+#else
+        for (int sampleIndex = 0; sampleIndex < areaLighting.sampleCount; sampleIndex++) {
+          PointLight sampleLight = areaLighting_getSample(areaIndex, sampleIndex, pbr_vPosition);
+          if (dot(sampleLight.color, sampleLight.color) > 0.0) {
+            PBRInfo_setPointLight(pbrInfo, sampleLight);
+            color += calculateFinalColor(pbrInfo, sampleLight.color);
+          }
+        }
+#endif
+      }
 #endif
 
 #ifdef USE_IBL
@@ -1242,6 +1287,9 @@ vec4 pbr_filterColor(vec4 vertexColor)
         color += getIBLContribution(pbrInfo, n, reflection);
       }
 #endif
+
+      // The pinned KHR_lightmap draft explicitly defines c_diff = (1 - metallic) * baseColor.
+      color += baseColor.rgb * (1.0 - metallic) * lightmapIrradiance / M_PI;
 
 #ifdef HAS_OCCLUSIONMAP
       if (pbrMaterial.occlusionMapEnabled) {
@@ -1540,6 +1588,39 @@ vec4 pbr_filterColor(vec4 vertexColor)
         );
       }
     }
+      for (int areaIndex = 0; areaIndex < areaLighting_getLightCount(); areaIndex++) {
+#ifdef USE_AREA_LIGHT_LTC
+        // Unsupported fits retain numerical integration rather than silently dropping material lobes.
+        if (anisotropyStrength <= 0.0001 && dot(sheenColor, sheenColor) <= 0.000001 && diffuseTransmission <= 0.0001) {
+        color += areaLTC_evaluate(areaIndex, pbr_vPosition, pbrInfo.n, pbrInfo.v, pbrInfo.perceptualRoughness, pbrInfo.diffuseColor, pbrInfo.reflectance0, pbrInfo.reflectance90);
+        color += clearcoatFactor * areaLTC_specular(areaLighting_getLight(areaIndex), pbr_vPosition, clearcoatNormal, pbrInfo.v, clearcoatRoughness, vec3(0.04), vec3(1.0));
+        } else {
+        for (int sampleIndex = 0; sampleIndex < areaLighting.sampleCount; sampleIndex++) {
+          PointLight sampleLight = areaLighting_getSample(areaIndex, sampleIndex, pbr_vPosition);
+          if (dot(sampleLight.color, sampleLight.color) > 0.0) {
+            PBRInfo_setPointLight(pbrInfo, sampleLight);
+            color += calculateMaterialLightColor(pbrInfo, sampleLight.color, clearcoatNormal,
+              clearcoatFactor, clearcoatRoughness, sheenColor, sheenRoughness, anisotropyTangent, anisotropyStrength);
+            color += calculateDiffuseTransmissionLight(pbrInfo, sampleLight.color,
+              diffuseTransmissionColor, diffuseTransmission, multiscatterColor, thickness);
+          }
+        }
+
+        }
+#else
+        for (int sampleIndex = 0; sampleIndex < areaLighting.sampleCount; sampleIndex++) {
+          PointLight sampleLight = areaLighting_getSample(areaIndex, sampleIndex, pbr_vPosition);
+          if (dot(sampleLight.color, sampleLight.color) > 0.0) {
+            PBRInfo_setPointLight(pbrInfo, sampleLight);
+            color += calculateMaterialLightColor(pbrInfo, sampleLight.color, clearcoatNormal,
+              clearcoatFactor, clearcoatRoughness, sheenColor, sheenRoughness, anisotropyTangent, anisotropyStrength);
+            color += calculateDiffuseTransmissionLight(pbrInfo, sampleLight.color,
+              diffuseTransmissionColor, diffuseTransmission, multiscatterColor, thickness);
+          }
+        }
+
+#endif
+      }
 #endif
 
     // Calculate lighting contribution from image based lighting source (IBL)
@@ -1567,6 +1648,9 @@ vec4 pbr_filterColor(vec4 vertexColor)
       color += sheenColor * pbrMaterial.scaleIBLAmbient.x * (1.0 - sheenRoughness) * 0.25;
     }
 #endif
+
+    color += baseColor.rgb * (1.0 - metallic) * (1.0 - transmission) *
+      (1.0 - diffuseTransmission) * baseLayerEnergy * lightmapIrradiance / M_PI;
 
  // Apply optional PBR terms for additional (optional) shading
 #ifdef HAS_OCCLUSIONMAP

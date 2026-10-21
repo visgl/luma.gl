@@ -64,11 +64,41 @@ const GLTF_EXTENSION_SUPPORT_REGISTRY: Record<string, GLTFExtensionSupportDefini
     comment:
       'The optional physics adapter supports sphere/box colliders; shapes alone do not define rendering or simulation.'
   },
+  EXT_lights_area: {
+    supportLevel: 'loader-only',
+    standardStatus: 'draft',
+    comment:
+      'Opt-in GLTFAreaLightController feeds the shared Light API. PBR supports four rect/disk lights with LTC diffuse, isotropic GGX and clearcoat; disks use a 32-gon and other lobes retain numerical integration. No shadows or indirect light; strict loading does not claim full draft conformance.'
+  },
+  KHR_lightmap: {
+    supportLevel: 'loader-only',
+    standardStatus: 'draft',
+    comment:
+      'Draft irradiance rendering supports UV0/UV1, node overrides and atlas instances through individual draws. Strict required-extension loading does not claim full draft conformance.'
+  },
+  KHR_billboard: {
+    supportLevel: 'loader-only',
+    standardStatus: 'draft',
+    comment:
+      'Optional GLTFBillboardController supports an explicit full-axis profile. Constrained-axis semantics remain ambiguous; strict required-extension loading does not claim full support.'
+  },
   KHR_audio_emitter: {
     supportLevel: 'parsed-and-wired',
     standardStatus: 'draft',
     comment:
       'Opt-in GLTFAudioController provides Web Audio playback; the application owns context activation and listener updates.'
+  },
+  KHR_audio_environment: {
+    supportLevel: 'loader-only',
+    standardStatus: 'draft',
+    comment:
+      'Opt-in listener selection, environment zones, emitter sends and impulse-response or approximate parametric reverb. Doppler, air absorption and listener graph hooks remain unsupported.'
+  },
+  KHR_audio_graph: {
+    supportLevel: 'loader-only',
+    standardStatus: 'draft',
+    comment:
+      'Opt-in GLTFAudioController implements a processing and scheduled-source profile; animation pointers and general pulse-width synthesis remain unsupported.'
   },
   KHR_draco_mesh_compression: {
     supportLevel: 'built-in',

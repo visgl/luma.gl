@@ -49,6 +49,8 @@ export type GLTFAnimationClipProps = {
   onLightChange?: () => void;
   /** Materials aligned with the source glTF materials array. */
   materials?: Material[];
+  /** Primitive material instances indexed by their source material, including inactive variants. */
+  materialInstances?: ReadonlyMap<number, readonly Material[]>;
   /** Optional shared playback mixer for clips belonging to the same scene. */
   mixer?: AnimationMixer;
 };
@@ -65,6 +67,7 @@ export class GLTFAnimationClip extends AnimationClipController {
   private readonly onLightChange?: () => void;
   /** Materials aligned with the source glTF materials array. */
   materials: Material[];
+  private readonly materialInstances: ReadonlyMap<number, readonly Material[]>;
   /** Format-independent engine clip generated from the parsed glTF channels. */
   readonly clip: AnimationClip;
   /** Shared engine animation mixer. */
@@ -87,6 +90,7 @@ export class GLTFAnimationClip extends AnimationClipController {
     this.lightDefinitions = props.lightDefinitions || [];
     this.onLightChange = props.onLightChange;
     this.materials = props.materials || [];
+    this.materialInstances = props.materialInstances || new Map();
     this.animation.name ||= 'unnamed';
     this.name = this.animation.name;
     if (
@@ -164,15 +168,21 @@ export class GLTFAnimationClip extends AnimationClipController {
             ? () => getMaterialAnimationBindingValue(material, channel)
             : undefined,
         setValue: value => {
-          if (channel.type === 'material') {
-            applyMaterialAnimationValue(material, channel, value);
-          } else {
-            applyTextureTransformAnimationValue(
-              material,
-              channel,
-              value,
-              this.materialTextureTransformState
-            );
+          const targets = new Set([
+            material,
+            ...(this.materialInstances.get(channel.targetMaterialIndex) || [])
+          ]);
+          for (const target of targets) {
+            if (channel.type === 'material') {
+              applyMaterialAnimationValue(target, channel, value);
+            } else {
+              applyTextureTransformAnimationValue(
+                target,
+                channel,
+                value,
+                this.materialTextureTransformState
+              );
+            }
           }
         }
       }
@@ -301,6 +311,8 @@ export type GLTFAnimatorProps = {
   gltfNodeIdToNodeMap: Map<string, GroupNode>;
   /** Materials aligned with the source glTF materials array. */
   materials?: Material[];
+  /** Primitive material instances indexed by their source material, including inactive variants. */
+  materialInstances?: ReadonlyMap<number, readonly Material[]>;
   /** Called once after all animation channels have been evaluated. */
   onUpdate?: () => void;
   /** Optional initial clip policy; omitted preserves legacy simultaneous playback. */
@@ -337,6 +349,7 @@ export class GLTFAnimator extends Animator<GLTFAnimationClip> {
           lightDefinitions: props.lightDefinitions,
           onLightChange: props.onLightChange,
           materials: props.materials,
+          materialInstances: props.materialInstances,
           mixer,
           animation: {name, channels: animation.channels}
         });

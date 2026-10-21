@@ -152,7 +152,10 @@ function makeSkinBindings(props: GLTFSkinControllerProps): GLTFSkinBinding[] {
       continue;
     }
 
-    const models = meshNode.children.flatMap(child => (child instanceof ModelNode ? [child] : []));
+    const models: ModelNode[] = [];
+    meshNode.preorderTraversal(child => {
+      if (child instanceof ModelNode) models.push(child);
+    });
     const inverseBindMatrices = sourceSkin.inverseBindMatrices?.value;
     const jointMatrices = new Float32Array(joints.length * 16);
     const usesLargeSkinPalette =

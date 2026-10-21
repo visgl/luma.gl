@@ -24,7 +24,7 @@ import GLTFCatalogApp, {
   type GLTFCatalogModel,
   type GLTFModelReference
 } from './gltf-catalog-app';
-import {GLTF_DESCRIPTION_HTML} from './app-ui';
+import {getGLTFDescriptionHtml} from './app-ui';
 import {GLTF_EXTENSION_DEMOS, type GLTFExtensionDemo} from './gltf-extension-demos';
 import {GLTF_STUDIO_DEFAULT_VARIANT, type GLTFAnimationStudioState} from './gltf-animation-studio';
 import {GLTF_ANIMATION_STUDIO_ASSETS, getGLTFStudioAsset} from './gltf-studio-assets';
@@ -74,8 +74,20 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
   imageBasedLightingEnvironment?: PBREnvironment;
   imageBasedLightingEnvironmentPromise?: Promise<PBREnvironment | undefined>;
 
-  constructor(animationProps: AnimationProps) {
-    super(animationProps);
+  constructor(
+    animationProps: AnimationProps,
+    readonly initialExtension?: string
+  ) {
+    const defaultModels: Readonly<Record<string, string>> = {
+      KHR_materials_clearcoat: 'ClearCoatCarPaint',
+      KHR_materials_sheen: 'GlamVelvetSofa',
+      KHR_materials_iridescence: 'IridescenceSuzanne',
+      KHR_materials_anisotropy: 'AnisotropyBarnLamp'
+    };
+    super(animationProps, {
+      modelStorageKey: `showcase-last-gltf-model-v3${initialExtension ? `-${initialExtension}` : ''}`,
+      defaultModelName: defaultModels[initialExtension || ''] || 'RobotExpressive'
+    });
     const {device} = animationProps;
     this.settingsPanel = new ExampleSettingsPanelManager({
       id: 'gltf-settings',
@@ -100,14 +112,6 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
     canvas.style.background = 'linear-gradient(180deg, #9b9b97 0%, #6f6d64 100%)';
   }
 
-  override getDefaultModelName(): string {
-    return 'RobotExpressive';
-  }
-
-  override getModelStorageKey(): string {
-    return 'showcase-last-gltf-model-v3';
-  }
-
   override getClearColor(): [number, number, number, number] {
     return [0.53, 0.52, 0.49, 1];
   }
@@ -118,24 +122,31 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
       this.extensionDemos.map(extensionDemo => extensionDemo.extensionName)
     );
     const storedExtension = window.localStorage[SHOWCASE_EXTENSION_STORAGE_KEY];
-    this.extensionName = this.isReferenceCapture()
-      ? ALL_EXTENSIONS_FILTER
-      : storedExtension === STUDIO_ASSETS_FILTER || activeExtensionNames.has(storedExtension)
-        ? storedExtension
-        : STUDIO_ASSETS_FILTER;
+    this.extensionName =
+      this.initialExtension && activeExtensionNames.has(this.initialExtension)
+        ? this.initialExtension
+        : this.isReferenceCapture()
+          ? ALL_EXTENSIONS_FILTER
+          : storedExtension === STUDIO_ASSETS_FILTER || activeExtensionNames.has(storedExtension)
+            ? storedExtension
+            : STUDIO_ASSETS_FILTER;
     this.modelOptions = getModelOptionsForExtension(
       this.extensionName,
       getAllModelOptions(models),
       this.extensionDemos
     );
-    const selectedModelOption = getInitialModelOption(this.modelOptions, currentModelName);
+    const selectedModelOption = getInitialModelOption(
+      this.modelOptions,
+      currentModelName,
+      this.getDefaultModelName()
+    );
     this.selectedModelValue = encodeModelOption(selectedModelOption);
     this.syncSettingsPanel();
     return () => {};
   }
 
   override getInitialModelReference(currentModelName: string): GLTFModelReference {
-    return getInitialModelOption(this.modelOptions, currentModelName);
+    return getInitialModelOption(this.modelOptions, currentModelName, this.getDefaultModelName());
   }
 
   override drawBackground(renderPass: RenderPass): void {
@@ -228,7 +239,7 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
         makeHtmlCustomPanel({
           id: 'gltf-description',
           title: 'Description',
-          html: GLTF_DESCRIPTION_HTML
+          html: getGLTFDescriptionHtml(this.extensionName)
         }),
         this.settingsPanel.makePanel()
       ]
@@ -470,9 +481,14 @@ function getAvailableExtensionDemos(models: GLTFCatalogModel[]): GLTFExtensionDe
 
 function getInitialModelOption(
   modelOptions: ShowcaseModelMenuOption[],
-  currentModelName: string
+  currentModelName: string,
+  defaultModelName?: string
 ): ShowcaseModelMenuOption {
-  return modelOptions.find(modelOption => modelOption.name === currentModelName) || modelOptions[0];
+  return (
+    modelOptions.find(modelOption => modelOption.name === currentModelName) ||
+    modelOptions.find(modelOption => modelOption.name === defaultModelName) ||
+    modelOptions[0]
+  );
 }
 
 function getAllModelOptions(models: GLTFCatalogModel[]): ShowcaseModelMenuOption[] {

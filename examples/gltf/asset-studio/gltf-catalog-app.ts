@@ -21,6 +21,7 @@ import {
   type GLTFScenegraphs,
   type PBREnvironment
 } from '@luma.gl/gltf';
+import {mergeGLTFModelCatalog} from './gltf-model-catalog';
 import {Matrix4} from '@math.gl/core';
 import {GLTF_SAMPLE_ASSETS_MODEL_URL} from './gltf-reference-source';
 import {
@@ -244,7 +245,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   referenceInitialDrawCpuMilliseconds?: number;
   referenceRenderStage = '';
 
-  constructor({device}: AnimationProps) {
+  constructor(
+    {device}: AnimationProps,
+    readonly catalogOptions: {modelStorageKey?: string; defaultModelName?: string} = {}
+  ) {
     super();
     this.device = device;
     this.referenceCaptureOptions = getGLTFReferenceCaptureOptions(window.location.search);
@@ -363,7 +367,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   getDefaultModelName(): string {
-    return 'CesiumMan';
+    return this.catalogOptions.defaultModelName || 'CesiumMan';
   }
 
   isReferenceCapture(): boolean {
@@ -371,7 +375,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   getModelStorageKey(): string {
-    return LAST_GLTF_MODEL_STORAGE_KEY;
+    return this.catalogOptions.modelStorageKey || LAST_GLTF_MODEL_STORAGE_KEY;
   }
 
   getClearColor(): [number, number, number, number] {
@@ -851,7 +855,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       ...studioModels,
       ...catalogModels.filter(isAnimatedGLTFCatalogModel)
     ];
-    return Array.from(new Map(orderedModels.map(model => [model.name, model])).values());
+    return mergeGLTFModelCatalog(
+      Array.from(new Map(orderedModels.map(model => [model.name, model])).values()),
+      catalogModels
+    );
   }
 
   async loadGLTF(modelReference: string | GLTFModelReference) {

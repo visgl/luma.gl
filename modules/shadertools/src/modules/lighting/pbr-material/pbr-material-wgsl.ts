@@ -28,6 +28,7 @@ uniform pbrMaterialUniforms {
   float normalScale; // #ifdef HAS_NORMALMAP
 
   bool emissiveMapEnabled;
+  bool lightmapMapEnabled;
   vec3 emissiveFactor; // #ifdef HAS_EMISSIVEMAP
 
   vec2 metallicRoughnessValues;
@@ -74,6 +75,7 @@ uniform pbrMaterialUniforms {
   bool anisotropyMapEnabled;
 
   float emissiveStrength;
+  float lightmapIntensity;
   float dispersion;
   
   // IBL
@@ -96,6 +98,9 @@ uniform sampler2D u_NormalSampler;
 #endif
 #ifdef HAS_EMISSIVEMAP
 uniform sampler2D u_EmissiveSampler;
+#endif
+#ifdef HAS_LIGHTMAP
+uniform sampler2D u_LightmapSampler;
 #endif
 #ifdef HAS_METALROUGHNESSMAP
 uniform sampler2D u_MetallicRoughnessSampler;
@@ -148,6 +153,9 @@ uniform sampler2D u_brdfLUT;
 `;
 
 export const source = /* wgsl */ `\
+#ifdef DOUBLE_SIDED
+var<private> pbr_frontFacing: bool = true;
+#endif
 struct PBRFragmentInputs {
   pbr_vPosition: vec3f,
   pbr_vUV0: vec2f,
@@ -315,6 +323,10 @@ struct pbrMaterialUniforms {
   diffuseTransmissionColorUVTransform: mat3x3f,
   multiscatterColorUVSet: i32,
   multiscatterColorUVTransform: mat3x3f,
+  lightmapMapEnabled: u32,
+  lightmapIntensity: f32,
+  lightmapUVSet: i32,
+  lightmapUVTransform: mat3x3f,
 }
 
 @group(3) @binding(auto) var<uniform> pbrMaterial : pbrMaterialUniforms;
@@ -331,6 +343,10 @@ struct pbrMaterialUniforms {
 #ifdef HAS_EMISSIVEMAP
 @group(3) @binding(auto) var pbr_emissiveSampler: texture_2d<f32>;
 @group(3) @binding(auto) var pbr_emissiveSamplerSampler: sampler;
+#endif
+#ifdef HAS_LIGHTMAP
+@group(3) @binding(auto) var pbr_lightmapSampler: texture_2d<f32>;
+@group(3) @binding(auto) var pbr_lightmapSamplerSampler: sampler;
 #endif
 #ifdef HAS_METALROUGHNESSMAP
 @group(3) @binding(auto) var pbr_metallicRoughnessSampler: texture_2d<f32>;
@@ -492,6 +508,12 @@ fn getTBN(uv: vec2f) -> mat3x3f
   tbn = fragmentInputs.pbr_vTBN;
 #endif
 
+#ifdef DOUBLE_SIDED
+#ifdef HAS_NORMALS
+  // Derivative normals already face the viewer; only flip an authored basis.
+  if (!pbr_frontFacing) { tbn = mat3x3f(-tbn[0], -tbn[1], -tbn[2]); }
+#endif
+#endif
   return tbn;
 }
 
@@ -1253,6 +1275,7 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
   let normalUV = getMaterialUV(pbrMaterial.normalUVSet, pbrMaterial.normalUVTransform);
   let occlusionUV = getMaterialUV(pbrMaterial.occlusionUVSet, pbrMaterial.occlusionUVTransform);
   let emissiveUV = getMaterialUV(pbrMaterial.emissiveUVSet, pbrMaterial.emissiveUVTransform);
+  let lightmapUV = getMaterialUV(pbrMaterial.lightmapUVSet, pbrMaterial.lightmapUVTransform);
   let specularColorUV = getMaterialUV(
     pbrMaterial.specularColorUVSet,
     pbrMaterial.specularColorUVTransform
@@ -1325,8 +1348,26 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
   var color = vec3<f32>(0.0, 0.0, 0.0);
   var transmission = 0.0;
 
+  var lightmapIrradiance = vec3<f32>(0.0);
+  #ifdef HAS_LIGHTMAP
+  if (pbrMaterial.lightmapMapEnabled != 0u) {
+    lightmapIrradiance = textureSample(pbr_lightmapSampler, pbr_lightmapSamplerSampler, lightmapUV).rgb * pbrMaterial.lightmapIntensity;
+  }
+  #endif
+
   if (pbrMaterial.unlit != 0u) {
     color = baseColor.rgb;
+    #ifdef HAS_LIGHTMAP
+    if (pbrMaterial.lightmapMapEnabled != 0u) {
+      color *= lightmapIrradiance / M_PI;
+      #ifdef HAS_OCCLUSIONMAP
+      if (pbrMaterial.occlusionMapEnabled != 0) {
+        let ao = textureSample(pbr_occlusionSampler, pbr_occlusionSamplerSampler, occlusionUV).r;
+        color = mix(color, color * ao, pbrMaterial.occlusionStrength);
+      }
+      #endif
+    }
+    #endif
   } else {
     // Metallic and Roughness material properties are packed together
     // In glTF, these factors can be specified by fixed scalar values
@@ -1451,6 +1492,19 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
           color += calculateFinalColor(pbrInfo, lighting_getSpotLight(i).color / attenuation);
         }
       }
+      for (var areaIndex: i32 = 0; areaIndex < areaLighting_getLightCount(); areaIndex++) {
+#ifdef USE_AREA_LIGHT_LTC
+        color += areaLTC_evaluate(areaIndex, fragmentInputs.pbr_vPosition, pbrInfo.n, pbrInfo.v, pbrInfo.perceptualRoughness, pbrInfo.diffuseColor, pbrInfo.reflectance0, pbrInfo.reflectance90);
+#else
+        for (var sampleIndex: i32 = 0; sampleIndex < areaLighting.sampleCount; sampleIndex++) {
+          let sampleLight = areaLighting_getSample(areaIndex, sampleIndex, fragmentInputs.pbr_vPosition);
+          if (dot(sampleLight.color, sampleLight.color) > 0.0) {
+            PBRInfo_setPointLight(&pbrInfo, sampleLight);
+            color += calculateFinalColor(pbrInfo, sampleLight.color);
+          }
+        }
+#endif
+      }
       #endif
 
       #ifdef USE_IBL
@@ -1458,6 +1512,9 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
         color += getIBLContribution(pbrInfo, n, reflection);
       }
       #endif
+
+      // The pinned KHR_lightmap draft explicitly defines c_diff = (1 - metallic) * baseColor.
+      color += baseColor.rgb * (1.0 - metallic) * lightmapIrradiance / M_PI;
 
       #ifdef HAS_OCCLUSIONMAP
       if (pbrMaterial.occlusionMapEnabled != 0) {
@@ -1821,6 +1878,39 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
         );
       }
     }
+      for (var areaIndex: i32 = 0; areaIndex < areaLighting_getLightCount(); areaIndex++) {
+#ifdef USE_AREA_LIGHT_LTC
+        // Unsupported fits retain numerical integration rather than silently dropping material lobes.
+        if (anisotropyStrength <= 0.0001 && dot(sheenColor, sheenColor) <= 0.000001 && diffuseTransmission <= 0.0001) {
+        color += areaLTC_evaluate(areaIndex, fragmentInputs.pbr_vPosition, pbrInfo.n, pbrInfo.v, pbrInfo.perceptualRoughness, pbrInfo.diffuseColor, pbrInfo.reflectance0, pbrInfo.reflectance90);
+        color += clearcoatFactor * areaLTC_specular(areaLighting_getLight(areaIndex), fragmentInputs.pbr_vPosition, clearcoatNormal, pbrInfo.v, clearcoatRoughness, vec3f(0.04), vec3f(1.0));
+        } else {
+        for (var sampleIndex: i32 = 0; sampleIndex < areaLighting.sampleCount; sampleIndex++) {
+          let sampleLight = areaLighting_getSample(areaIndex, sampleIndex, fragmentInputs.pbr_vPosition);
+          if (dot(sampleLight.color, sampleLight.color) > 0.0) {
+            PBRInfo_setPointLight(&pbrInfo, sampleLight);
+            color += calculateMaterialLightColor(pbrInfo, sampleLight.color, clearcoatNormal,
+              clearcoatFactor, clearcoatRoughness, sheenColor, sheenRoughness, anisotropyTangent, anisotropyStrength);
+            color += calculateDiffuseTransmissionLight(pbrInfo, sampleLight.color,
+              diffuseTransmissionColor, diffuseTransmission, multiscatterColor, thickness);
+          }
+        }
+
+        }
+#else
+        for (var sampleIndex: i32 = 0; sampleIndex < areaLighting.sampleCount; sampleIndex++) {
+          let sampleLight = areaLighting_getSample(areaIndex, sampleIndex, fragmentInputs.pbr_vPosition);
+          if (dot(sampleLight.color, sampleLight.color) > 0.0) {
+            PBRInfo_setPointLight(&pbrInfo, sampleLight);
+            color += calculateMaterialLightColor(pbrInfo, sampleLight.color, clearcoatNormal,
+              clearcoatFactor, clearcoatRoughness, sheenColor, sheenRoughness, anisotropyTangent, anisotropyStrength);
+            color += calculateDiffuseTransmissionLight(pbrInfo, sampleLight.color,
+              diffuseTransmissionColor, diffuseTransmission, multiscatterColor, thickness);
+          }
+        }
+
+#endif
+      }
     #endif
 
     // Calculate lighting contribution from image based lighting source (IBL)
@@ -1848,6 +1938,9 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
       color += sheenColor * pbrMaterial.scaleIBLAmbient.x * (1.0 - sheenRoughness) * 0.25;
     }
     #endif
+
+    color += baseColor.rgb * (1.0 - metallic) * (1.0 - transmission) *
+      (1.0 - diffuseTransmission) * baseLayerEnergy * lightmapIrradiance / M_PI;
 
     // Apply optional PBR terms for additional (optional) shading
     #ifdef HAS_OCCLUSIONMAP
