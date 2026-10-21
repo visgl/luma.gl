@@ -31,3 +31,25 @@ export function getThinWallScatterWeights(
     diffuseReflection: (scatteredTransmission * (1 - anisotropy)) / 2
   };
 }
+
+/** Split volume extinction into scattering and absorption using the pinned draft model. */
+export function getScatterVolumeCoefficients(
+  attenuationColor: readonly number[],
+  attenuationDistance: number,
+  multiscatterColor: readonly number[],
+  strength: number,
+  anisotropy: number
+): {extinction: number[]; scattering: number[]; absorption: number[]} {
+  const extinction = attenuationColor.map(color =>
+    attenuationDistance === Infinity || color === 1 ? 0 : -Math.log(color) / attenuationDistance
+  );
+  const scattering = extinction.map((coefficient, channel) => {
+    const albedo = getSingleScatterAlbedo(multiscatterColor[channel] * strength, anisotropy);
+    // Preserve absorption-only transport exactly, including an opaque color channel.
+    return albedo === 0 ? 0 : coefficient * albedo;
+  });
+  const absorption = extinction.map((coefficient, channel) =>
+    scattering[channel] === coefficient ? 0 : coefficient - scattering[channel]
+  );
+  return {extinction, scattering, absorption};
+}

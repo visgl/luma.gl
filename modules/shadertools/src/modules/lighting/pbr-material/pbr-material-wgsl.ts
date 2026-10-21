@@ -327,6 +327,7 @@ struct pbrMaterialUniforms {
   lightmapIntensity: f32,
   lightmapUVSet: i32,
   lightmapUVTransform: mat3x3f,
+  scatterStrengthFactor: f32,
 }
 
 @group(3) @binding(auto) var<uniform> pbrMaterial : pbrMaterialUniforms;
@@ -1622,6 +1623,28 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
     }
     #endif
 
+    let originalTransmission = transmission;
+    var scatterReflection = 0.0;
+#ifdef HAS_MATERIAL_SCATTER
+    if (thickness <= 0.0) {
+      var strength = clamp(pbrMaterial.scatterStrengthFactor, 0.0, 1.0);
+#ifdef HAS_DIFFUSETRANSMISSIONMAP
+      if (pbrMaterial.diffuseTransmissionMapEnabled != 0) {
+        strength *= textureSample(
+        pbr_diffuseTransmissionSampler,
+        pbr_diffuseTransmissionSamplerSampler,
+        diffuseTransmissionUV
+      ).a;
+      }
+#endif
+      let anisotropy = pbrMaterial.scatterAnisotropy;
+      scatterReflection = originalTransmission * strength * (1.0 - anisotropy) * 0.5;
+      diffuseTransmission = originalTransmission * strength * (1.0 + anisotropy) * 0.5;
+      diffuseTransmissionColor = multiscatterColor;
+      transmission *= 1.0 - strength;
+    }
+#endif
+
     var clearcoatFactor = pbrMaterial.clearcoatFactor;
     var clearcoatRoughness = pbrMaterial.clearcoatRoughnessFactor;
     #ifdef HAS_CLEARCOATMAP
@@ -1738,6 +1761,10 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
     );
     var diffuseColor = baseColor.rgb * (vec3f(1.0) - dielectricSpecularF0);
     diffuseColor *= (1.0 - metallic) * (1.0 - transmission) * (1.0 - diffuseTransmission);
+#ifdef HAS_MATERIAL_SCATTER
+    diffuseColor = (baseColor.rgb * (1.0 - metallic) * (1.0 - originalTransmission) +
+      multiscatterColor * scatterReflection) * (vec3f(1.0) - dielectricSpecularF0);
+#endif
     var specularColor = mix(dielectricSpecularF0, baseColor.rgb, metallic);
 
     let clearcoatViewFresnel = dielectricSchlick(

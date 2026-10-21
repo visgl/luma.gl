@@ -100,6 +100,11 @@ type GLTFMaterialVolumeScatterExtension = {
   scatterAnisotropy?: number;
 };
 
+type GLTFMaterialScatterExtension = GLTFMaterialVolumeScatterExtension & {
+  scatterStrengthFactor?: number;
+  scatterStrengthTexture?: GLTFTexture;
+};
+
 type GLTFMaterialDispersionExtension = {
   dispersion?: number;
 };
@@ -148,6 +153,7 @@ type GLTFMaterialExtensions = {
   KHR_materials_diffuse_transmission?: GLTFMaterialDiffuseTransmissionExtension;
   KHR_materials_volume?: GLTFMaterialVolumeExtension;
   KHR_materials_volume_scatter?: GLTFMaterialVolumeScatterExtension;
+  KHR_materials_scatter?: GLTFMaterialScatterExtension;
   KHR_materials_dispersion?: GLTFMaterialDispersionExtension;
   KHR_materials_clearcoat?: GLTFMaterialClearcoatExtension;
   KHR_materials_sheen?: GLTFMaterialSheenExtension;
@@ -626,6 +632,33 @@ function parseMaterialExtensions(
     gltf,
     attributes
   );
+  const scatter = extensions.KHR_materials_scatter;
+  if (scatter && extensions.KHR_materials_transmission) {
+    // Initial thin-wall profile: volumetric transport requires separate integration.
+    assert(!extensions.KHR_materials_volume?.thicknessFactor);
+    if (scatter.scatterStrengthTexture) {
+      // Scatter excludes diffuse transmission, so its alpha sampler can serve strength without a new slot.
+      parseDiffuseTransmissionExtension(
+        device,
+        {
+          diffuseTransmissionTexture: scatter.scatterStrengthTexture
+        },
+        parsedMaterial,
+        gltf,
+        attributes
+      );
+    }
+    assert(!extensions.KHR_materials_unlit && !extensions.KHR_materials_diffuse_transmission);
+    const strength = scatter.scatterStrengthFactor ?? 0;
+    const anisotropy = scatter.scatterAnisotropy ?? 0;
+    assert(Number.isFinite(strength) && strength >= 0 && strength <= 1);
+    assert(Number.isFinite(anisotropy) && anisotropy > -1 && anisotropy < 1);
+    parsedMaterial.defines['HAS_MATERIAL_SCATTER'] = true;
+    parsedMaterial.uniforms.scatterStrengthFactor = strength;
+    parseVolumeScatterExtension(device, scatter, {}, parsedMaterial, gltf, attributes);
+    parsedMaterial.uniforms.scatterAnisotropy = anisotropy;
+    parsedMaterial.uniforms.multiscatterColorFactor = scatter.multiscatterColorFactor ?? [1, 1, 1];
+  }
   parseDispersionExtension(extensions.KHR_materials_dispersion, parsedMaterial);
   parseClearcoatExtension(
     device,
