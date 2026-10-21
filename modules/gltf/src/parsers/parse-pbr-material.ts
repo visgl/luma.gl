@@ -146,6 +146,7 @@ type GLTFMaterialEmissiveStrengthExtension = {
 type GLTFMaterialExtensions = {
   KHR_lightmap?: {lightmapTexture: GLTFTexture; intensity?: number};
   KHR_materials_unlit?: Record<string, never>;
+  KHR_materials_pbrSpecularGlossiness?: Record<string, unknown>;
   KHR_materials_specular?: GLTFMaterialSpecularExtension;
   KHR_materials_ior?: GLTFMaterialIorExtension;
   EXT_materials_bump?: GLTFMaterialBumpExtension;
@@ -648,7 +649,11 @@ function parseMaterialExtensions(
         attributes
       );
     }
-    assert(!extensions.KHR_materials_unlit && !extensions.KHR_materials_diffuse_transmission);
+    assert(
+      !extensions.KHR_materials_unlit &&
+        !extensions.KHR_materials_diffuse_transmission &&
+        !extensions.KHR_materials_pbrSpecularGlossiness
+    );
     const strength = scatter.scatterStrengthFactor ?? 0;
     const anisotropy = scatter.scatterAnisotropy ?? 0;
     assert(Number.isFinite(strength) && strength >= 0 && strength <= 1);

@@ -137,7 +137,7 @@ describe('live example catalog metadata', () => {
   });
 
   test('provides complete, curated filters for every sidebar example', () => {
-    expect(LIVE_EXAMPLES).toHaveLength(121);
+    expect(LIVE_EXAMPLES).toHaveLength(122);
 
     for (const {id, metadata} of LIVE_EXAMPLES) {
       expect(metadata, `${id} requires sidebar_custom_props`).toBeDefined();

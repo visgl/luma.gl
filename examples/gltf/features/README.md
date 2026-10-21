@@ -22,3 +22,10 @@ scene bundle and feature controllers when replacing a model or finalizing the ap
 The lightmap preset loads the pinned MIT Cornell Box (709 KB). Its baked irradiance is shown without additional runtime lights.
 
 The area-light preset loads The Modern Living Room by Wig42 (CC BY 3.0), with conversion credit to Benedikt Bitterli and Foundation Resources. Geometry and textures stay in the source repository; the viewer routes Git LFS payloads through its media host.
+
+### Scatter diagnostic
+
+Use `?feature=scatter` for an authored three-panel glTF demonstrating the draft
+`KHR_materials_scatter` thin-wall profile under opposing warm and cool directional
+lights. Left to right: backward, balanced, forward scattering. This is an authored
+diagnostic, not an upstream reference asset. Volumetric mode is rejected.

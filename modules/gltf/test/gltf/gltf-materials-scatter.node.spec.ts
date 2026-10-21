@@ -73,3 +73,34 @@ test('scatter thin-wall material parses the draft factors and defaults', () => {
   expect(material.uniforms.multiscatterColorFactor).toEqual([1, 1, 1]);
   expect(material.uniforms.scatterAnisotropy).toBe(0.2);
 });
+
+test('scatter ignores absent transmission and rejects excluded material combinations', () => {
+  const device = new NullDevice({});
+  const parsed = parsePBRMaterial(
+    device,
+    {extensions: {KHR_materials_scatter: {scatterStrengthFactor: 1}}},
+    {},
+    {}
+  );
+  expect(parsed.defines.HAS_MATERIAL_SCATTER).toBeUndefined();
+  for (const exclusion of [
+    'KHR_materials_unlit',
+    'KHR_materials_diffuse_transmission',
+    'KHR_materials_pbrSpecularGlossiness'
+  ]) {
+    expect(() =>
+      parsePBRMaterial(
+        device,
+        {
+          extensions: {
+            KHR_materials_transmission: {transmissionFactor: 1},
+            KHR_materials_scatter: {scatterStrengthFactor: 1},
+            [exclusion]: {}
+          }
+        },
+        {},
+        {}
+      )
+    ).toThrow();
+  }
+});

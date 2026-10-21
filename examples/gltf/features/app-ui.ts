@@ -84,3 +84,5 @@ export function showLoadingSpinner(canvas: HTMLCanvasElement, loading: boolean):
     else animation.pause();
   }
 }
+
+export const SCATTER_INFO_HTML = `<p>Draft KHR_materials_scatter: backward, balanced, and forward scattering under opposing warm and cool lights.</p><p>Authored luma.gl diagnostic. Thin-wall profile; volumetric scattering is not implemented.</p><div id="error"></div>`;

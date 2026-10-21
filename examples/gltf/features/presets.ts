@@ -2,13 +2,16 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {SCATTER_DEMO_URL} from './scatter-demo';
+
 export const AREA_LIGHT_SOURCE_URL =
   'https://raw.githubusercontent.com/mos9527/Foundation-Resources/3c8df40aece172360612d5a01177d91d6b4ab3e6/living-room-3/living-room-3.gltf';
 
 /** Only implemented presets appear here; proposal names alone do not imply support. */
-export type GLTFFeature = 'billboard' | 'lightmap' | 'area-lights';
+export type GLTFFeature = 'billboard' | 'lightmap' | 'area-lights' | 'scatter';
 
 export const GLTF_FEATURE_PRESETS = {
+  scatter: {modelUrl: SCATTER_DEMO_URL, allowLegacyYAxis: false},
   'area-lights': {
     modelUrl: AREA_LIGHT_SOURCE_URL,
     allowLegacyYAxis: false

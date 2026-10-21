@@ -111,3 +111,12 @@ DisplayXR's committed `material_grid.glb`, `transmission_test.glb`, and `diffuse
 inspected through their GLB JSON chunks. None contains `KHR_materials_scatter`; exclude them as
 positive fixtures even though the renderer supports that extension. Continue checking proposal-author
 branches or seek an upstream-authored fixture before promising a source-loaded scattering example.
+
+### Authored thin-wall scatter diagnostic
+
+`examples/gltf/features/scatter-demo.ts` is an original luma.gl diagnostic with
+three actual `KHR_materials_scatter` materials and opposing punctual lights. It
+is selected by the shared `feature="scatter"` preset. This is not a verified
+upstream source-hosted model and does not change the source-asset search result
+above. Its initial renderer profile is thin-wall only; nonzero volume thickness
+is rejected. The gallery thumbnail is an actual luma.gl render of this fixture.

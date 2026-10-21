@@ -24,6 +24,7 @@ import {
   INFO_HTML,
   LIGHTMAP_INFO_HTML,
   AREA_LIGHT_INFO_HTML,
+  SCATTER_INFO_HTML,
   showError,
   showLoadingSpinner
 } from './app-ui';
@@ -62,6 +63,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
   static getInfo(feature: GLTFFeature): string {
+    if (feature === 'scatter') return SCATTER_INFO_HTML;
     return feature === 'area-lights'
       ? AREA_LIGHT_INFO_HTML
       : feature === 'lightmap'
