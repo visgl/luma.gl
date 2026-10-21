@@ -544,3 +544,77 @@ test('source selection isolates drum hits for direct and graph routing', async (
     }
   }
 });
+
+test('viewer listener override preserves authored listener gain and uses the supplied camera pose', async () => {
+  const scenegraphs = await makeScene({global: true});
+  scenegraphs.gltf.extensions ||= {};
+  scenegraphs.gltf.extensions.KHR_audio_environment = {listeners: [{gain: 0.5}]};
+  scenegraphs.gltf.nodes[0].extensions ||= {};
+  scenegraphs.gltf.nodes[0].extensions.KHR_audio_environment = {listener: 0};
+  const context = new OfflineAudioContext(2, 4800, 48000);
+  const audio = new GLTFAudioController({
+    scenegraphs,
+    audioContext: context,
+    baseUrl: 'https://example.com/model.gltf',
+    listenerPose: 'viewer'
+  });
+  await audio.play();
+  audio.update(new Matrix4().translate([4, 3, 2]));
+  expect(context.listener.positionX.value).toBeCloseTo(4);
+  expect(context.listener.positionY.value).toBeCloseTo(3);
+  expect(context.listener.positionZ.value).toBeCloseTo(2);
+  const rendered = await context.startRendering();
+  expect(energy(rendered, 0) + energy(rendered, 1)).toBeGreaterThan(0);
+  audio.destroy();
+  scenegraphs.destroy();
+});
+
+test('non-restarting drum triggers preserve already playing source voices', async () => {
+  const energies: number[] = [];
+  for (const restart of [true, false]) {
+    const scenegraphs = await makeScene({global: true});
+    const context = new OfflineAudioContext(2, 4800, 48000);
+    const audio = new GLTFAudioController({
+      scenegraphs,
+      audioContext: context,
+      baseUrl: 'https://example.com/model.gltf'
+    });
+    await audio.play();
+    await audio.play({sourceIndices: [0], restart});
+    const rendered = await context.startRendering();
+    energies.push(energy(rendered, 0) + energy(rendered, 1));
+    audio.destroy();
+    scenegraphs.destroy();
+  }
+  expect(energies[1] / energies[0]).toBeCloseTo(4, 3);
+});
+
+test('air absorption filters distant emitters and ignores unbounded maximum distance', async () => {
+  const energies: number[] = [];
+  for (const maximumDistance of [10, 0]) {
+    const scenegraphs = await makeScene({
+      positional: {
+        refDistance: 1,
+        maxDistance: maximumDistance,
+        rolloffFactor: 0,
+        extensions: {
+          KHR_audio_environment: {airAbsorption: {enabled: true, cutoffAtMaxDistance: 100}}
+        }
+      }
+    });
+    const context = new OfflineAudioContext(2, 4800, 48000);
+    const audio = new GLTFAudioController({
+      scenegraphs,
+      audioContext: context,
+      baseUrl: 'https://example.com/model.gltf'
+    });
+    await audio.play();
+    audio.update(new Matrix4().translate([0, 0, 8]));
+    const rendered = await context.startRendering();
+    energies.push(energy(rendered, 0) + energy(rendered, 1));
+    audio.destroy();
+    scenegraphs.destroy();
+  }
+  expect(energies[1]).toBeGreaterThan(0);
+  expect(energies[0] / energies[1]).toBeLessThan(0.02);
+});
