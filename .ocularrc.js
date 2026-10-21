@@ -55,6 +55,7 @@ const config = {
         'hello-instancing': '/examples/tutorials/hello-instancing',
         'hello-triangle-geometry': '/examples/tutorials/hello-triangle-geometry',
         'gltf-audio': '/examples/showcase/gltf-audio',
+        'gltf-audio-graph': '/examples/showcase/gltf-audio-graph',
         'hello-gltf': '/examples/tutorials/hello-gltf',
         'hello-triangle': '/examples/tutorials/hello-triangle',
         globe: '/examples/showcase/globe',

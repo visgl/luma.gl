@@ -88,6 +88,12 @@ const GLTF_EXTENSION_SUPPORT_REGISTRY: Record<string, GLTFExtensionSupportDefini
     comment:
       'Opt-in GLTFAudioController provides Web Audio playback; the application owns context activation and listener updates.'
   },
+  KHR_audio_graph: {
+    supportLevel: 'loader-only',
+    standardStatus: 'draft',
+    comment:
+      'Opt-in GLTFAudioController implements a processing and scheduled-source profile; animation pointers and general pulse-width synthesis remain unsupported.'
+  },
   KHR_draco_mesh_compression: {
     supportLevel: 'built-in',
     standardStatus: 'ratified',
