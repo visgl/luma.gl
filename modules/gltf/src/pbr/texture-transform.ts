@@ -10,7 +10,6 @@ export type PBRTextureTransformSlot =
   | 'normal'
   | 'occlusion'
   | 'emissive'
-  | 'lightmap'
   | 'specularColor'
   | 'specularIntensity'
   | 'transmission'
@@ -53,12 +52,6 @@ const IDENTITY_TEXTURE_TRANSFORM: PBRTextureTransform = {
 };
 
 const TEXTURE_TRANSFORM_SLOT_DEFINITIONS: PBRTextureTransformSlotDefinition[] = [
-  createTextureTransformSlotDefinition(
-    'lightmap',
-    'pbr_lightmapSampler',
-    'KHR_lightmap.lightmapTexture',
-    ['extensions', 'KHR_lightmap', 'lightmapTexture']
-  ),
   createTextureTransformSlotDefinition('baseColor', 'pbr_baseColorSampler', 'baseColorTexture', [
     'pbrMetallicRoughness',
     'baseColorTexture'
