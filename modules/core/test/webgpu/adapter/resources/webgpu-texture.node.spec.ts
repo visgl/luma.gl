@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Stats} from '@probe.gl/stats';
+import {Stats} from 'probe.gl/stats';
 import {describe, expect, test, vi} from 'vitest';
 import type {WebGPUDevice} from '../../../../src/webgpu/adapter/webgpu-device';
 import {WebGPUTexture} from '../../../../src/webgpu/adapter/resources/webgpu-texture';

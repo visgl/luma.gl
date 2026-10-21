@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {isBrowser} from '@probe.gl/env';
+import {isBrowser} from 'probe.gl/env';
 import {
   buildBitmapFontAtlas,
   buildBrowserFontAtlas,

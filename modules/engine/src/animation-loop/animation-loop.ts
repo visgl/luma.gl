@@ -9,7 +9,7 @@ import {
 } from './request-animation-frame';
 import {Timeline} from '../animation/timeline';
 import {AnimationProps} from './animation-props';
-import {Stats, Stat} from '@probe.gl/stats';
+import {Stats, Stat} from 'probe.gl/stats';
 
 let statIdCounter = 0;
 const ANIMATION_LOOP_STATS = 'Animation Loop';

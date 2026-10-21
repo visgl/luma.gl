@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {isBrowser} from '@probe.gl/env';
+import {isBrowser} from 'probe.gl/env';
 import type {Device} from './device';
 import type {CanvasContext} from './canvas-context';
 import {CanvasObserver} from './canvas-observer';

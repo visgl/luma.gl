@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Stat, Stats} from '@probe.gl/stats';
+import {Stat, Stats} from 'probe.gl/stats';
 
 const GPU_TIME_AND_MEMORY_STATS = 'GPU Time and Memory';
 const GPU_TIME_AND_MEMORY_STAT_ORDER = [

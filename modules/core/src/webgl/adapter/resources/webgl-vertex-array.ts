@@ -6,7 +6,7 @@ import type {TypedArray, NumericArray} from '@math.gl/types';
 import type {AttributeInfo, Device, Buffer, VertexArrayProps} from '../../../index';
 import {VertexArray, getAttributeInfosFromLayouts, getScratchArray} from '../../../index';
 import {GL} from '../../../webgl-constants/index';
-import {getBrowser} from '@probe.gl/env';
+import {getBrowser} from 'probe.gl/env';
 
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLBuffer} from './webgl-buffer';
