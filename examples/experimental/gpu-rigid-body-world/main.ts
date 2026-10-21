@@ -262,9 +262,13 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
       .readState()
       .then(states => {
         if (target !== resources || !alive) return;
-        const position = states[1].position;
+        const bodyIndex = target.bodies.findIndex(
+          body => (body.mode ?? ((body.mass ?? 1) === 0 ? 'static' : 'dynamic')) === 'dynamic'
+        );
+        if (bodyIndex < 0) return;
+        const position = states[bodyIndex].position;
         target.world.applyImpulse(
-          1,
+          bodyIndex,
           [3, 0, 0],
           [position[0], position[1] + 0.4, position[2] + 0.3]
         );

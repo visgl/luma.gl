@@ -211,3 +211,55 @@ it.for([
   expect(result.diagnostics.complete).toBe(budget === 3);
   expect(result.diagnostics.incompleteMeshQueries).toBe(budget === 1 ? 1 : 0);
 });
+
+it.for([
+  false,
+  true
+])('supports tilted offset mesh contacts in either collider order %s', async (reverse, context) => {
+  const angle = 0.3;
+  const rotation: [number, number, number, number] = [
+    0,
+    Math.sin(angle / 2),
+    0,
+    Math.cos(angle / 2)
+  ];
+  const normal = [Math.sin(angle), 0, Math.cos(angle)];
+  const offset: [number, number, number] = [0.3, 0.2, 0];
+  const bodies: GPURigidBody[] = [
+    {
+      position: [0, 0, 0],
+      mass: 0,
+      colliders: [
+        {
+          position: offset,
+          orientation: rotation,
+          shape: {type: 'triangle-mesh', geometry: floor},
+          material: {restitution: 0}
+        }
+      ]
+    },
+    {
+      position: [offset[0] + normal[0] * 1.5, offset[1], normal[2] * 1.5],
+      orientation: rotation,
+      shape: {type: 'triangle-mesh', geometry: cube},
+      restitution: 0
+    }
+  ];
+  if (reverse) bodies.reverse();
+  const result = await simulate(
+    {
+      bodies,
+      gravity: [-9.81 * normal[0], 0, -9.81 * normal[2]],
+      solver: 'parallel',
+      iterations: 32
+    },
+    240
+  );
+  if (!result) return context.skip('WebGPU is unavailable');
+  const state = result.states[reverse ? 0 : 1];
+  const height = (state.position[0] - offset[0]) * normal[0] + state.position[2] * normal[2];
+  expect(result.diagnostics.complete).toBe(true);
+  expect(height).toBeGreaterThan(0.45);
+  expect(height).toBeLessThan(0.65);
+  expect(Math.hypot(...state.velocity)).toBeLessThan(0.15);
+});
