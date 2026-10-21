@@ -45,9 +45,8 @@ console.log(`Synchronized mobile support metadata for ${htmlFiles.length} standa
 
 function readSupportDefinition(catalogId, standaloneId) {
   const standaloneSidecar = path.join(EXAMPLE_DIRECTORY, standaloneId, 'mobile-support.ts');
-  const sidecarFile = existsSync(standaloneSidecar)
-    ? standaloneSidecar
-    : path.join(EXAMPLE_DIRECTORY, catalogId, 'mobile-support.ts');
+  const catalogSidecar = path.join(EXAMPLE_DIRECTORY, catalogId, 'mobile-support.ts');
+  const sidecarFile = existsSync(catalogSidecar) ? catalogSidecar : standaloneSidecar;
   try {
     const source = readFileSync(sidecarFile, 'utf8');
     const backends = source

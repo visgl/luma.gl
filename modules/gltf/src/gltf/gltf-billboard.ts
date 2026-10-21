@@ -137,12 +137,19 @@ export class GLTFBillboardController {
           scale
         );
         const localUp = new Vector3(binding.definition.up || [0, 1, 0]).multiply(scale);
-        // Collapsed local axes have no facing direction; retain the authored basis in that case.
+        // A flattened scale can collapse axes or make them parallel; retain the authored basis.
+        const hasScaledBasis =
+          localForward.magnitude() > 1e-8 &&
+          localUp.magnitude() > 1e-8 &&
+          new Vector3(localForward)
+            .normalize()
+            .cross(new Vector3(localUp).normalize())
+            .magnitude() > 1e-8;
         const localBasis = makeBasis(
-          localForward.magnitude() > 1e-8
+          hasScaledBasis
             ? localForward
             : new Vector3(binding.definition.viewDirection || [0, 0, 1]),
-          localUp.magnitude() > 1e-8 ? localUp : new Vector3(binding.definition.up || [0, 1, 0])
+          hasScaledBasis ? localUp : new Vector3(binding.definition.up || [0, 1, 0])
         );
         if (binding.definition.scaleWithDistance) {
           const depth = Math.abs(new Vector3(position).transformAsPoint(viewMatrix)[2]);

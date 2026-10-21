@@ -120,6 +120,20 @@ describe('KHR_billboard full-axis profile', () => {
     expect(visible.getScale()[0]).toBeCloseTo(4);
   });
 
+  test('retains a finite facing basis when flattening makes authored axes parallel', () => {
+    const {controller, billboard} = makeController({
+      viewDirection: [1, 0, 1],
+      up: [1, 0, -1]
+    });
+    billboard.scale = new Vector3(1, 1, 0);
+    const entry = controller.getDrawEntries({viewMatrix: view()})[0];
+    expect([...entry.modelMatrix].every(Number.isFinite)).toBe(true);
+    const scales = entry.modelMatrix.getScale();
+    expect(scales[0]).toBeCloseTo(1);
+    expect(scales[1]).toBeCloseTo(1);
+    expect(scales[2]).toBeCloseTo(0);
+  });
+
   test('faces a diagonally authored direction after unequal local scaling', () => {
     const {controller} = makeController({viewDirection: [1, 0, 1]});
     const matrix = controller.getDrawEntries({viewMatrix: view()})[0].modelMatrix;
