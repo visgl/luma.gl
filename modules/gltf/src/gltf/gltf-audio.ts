@@ -60,6 +60,9 @@ export type GLTFAudioExtension = {
       maxDistance?: number;
       refDistance?: number;
       rolloffFactor?: number;
+      extensions?: {
+        KHR_audio_environment?: {airAbsorption?: {enabled?: boolean; cutoffAtMaxDistance?: number}};
+      };
     };
   }[];
 };
@@ -73,6 +76,8 @@ export type GLTFAudioControllerOptions = {
   sceneIndex?: number;
   /** Authored camera node used for environment listener selection. */
   activeCameraNodeIndex?: number;
+  /** Use the application viewer pose while retaining authored listener audio properties. */
+  listenerPose?: 'authored' | 'viewer';
   fetch?: typeof fetch;
 };
 
@@ -82,6 +87,7 @@ type EmitterBinding = {
   node?: GroupNode;
   gain: GainNode;
   panner?: PannerNode;
+  airFilter?: BiquadFilterNode;
 };
 
 /** Optional Web Audio playback for the KHR_audio_emitter draft, independent of the GPU backend. */
@@ -195,14 +201,15 @@ export class GLTFAudioController {
 
   /** Restart sources. Resume the application's AudioContext from a user gesture first. */
   async play(
-    options: {autoplayOnly?: boolean; sourceIndices?: readonly number[]} = {}
+    options: {autoplayOnly?: boolean; sourceIndices?: readonly number[]; restart?: boolean} = {}
   ): Promise<void> {
-    this.stop();
+    if (options.restart !== false) this.stop();
     const generation = this.playbackGeneration;
     await this.initialize();
     if (this.destroyed || generation !== this.playbackGeneration) return;
     const startTime = this.options.audioContext.currentTime;
-    this.audioClockStart = startTime;
+    if (options.restart !== false || this.audioClockStart === undefined)
+      this.audioClockStart = startTime;
     for (const emitter of this.emitters) {
       if (this.graphEmitters.has(emitter.index)) continue;
       for (const sourceIndex of emitter.definition.sources || []) {
@@ -330,7 +337,8 @@ export class GLTFAudioController {
       const listenerDefinition = selected
         ? environmentExtension.listeners?.[selected.index]
         : undefined;
-      if (selected && listenerDefinition) listenerMatrix = selected.matrix;
+      if (selected && listenerDefinition && this.options.listenerPose !== 'viewer')
+        listenerMatrix = selected.matrix;
       this.listenerGain.gain.value = listenerDefinition?.gain ?? 1;
       for (const emitter of this.emitters) {
         if (emitter.panner)
@@ -389,6 +397,23 @@ export class GLTFAudioController {
         const distance = Math.hypot(
           ...position.map((value, index) => value - listenerPosition[index])
         );
+        if (emitter.airFilter) {
+          const positional = emitter.definition.positional!;
+          const fraction = Math.min(
+            1,
+            Math.max(
+              0,
+              (distance - (positional.refDistance ?? 1)) /
+                (positional.maxDistance! - (positional.refDistance ?? 1))
+            )
+          );
+          const cutoff =
+            positional.extensions?.KHR_audio_environment?.airAbsorption?.cutoffAtMaxDistance ??
+            5000;
+          emitter.airFilter.frequency.value = Math.exp(
+            Math.log(20000) + fraction * (Math.log(Math.max(1, cutoff)) - Math.log(20000))
+          );
+        }
         emitter.gain.gain.value =
           (emitter.definition.gain ?? 1) * getDistanceGain(emitter.definition.positional, distance);
       }
@@ -403,6 +428,7 @@ export class GLTFAudioController {
     this.stop();
     for (const emitter of this.emitters) {
       emitter.panner?.disconnect();
+      emitter.airFilter?.disconnect();
       emitter.gain.disconnect();
     }
     for (const graph of this.graphs.values()) graph.destroy();
@@ -455,7 +481,19 @@ export class GLTFAudioController {
         panner.coneOuterAngle = ((positional.coneOuterAngle ?? Math.PI * 2) * 180) / Math.PI;
         panner.coneOuterGain = positional.coneOuterGain ?? 0;
       }
-      panner.connect(gain);
+      const airAbsorption = positional?.extensions?.KHR_audio_environment?.airAbsorption;
+      if (
+        airAbsorption?.enabled &&
+        (positional?.maxDistance ?? 0) > (positional?.refDistance ?? 1)
+      ) {
+        const filter = this.options.audioContext.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.Q.value = Math.SQRT1_2;
+        filter.frequency.value = 20000;
+        binding.airFilter = filter;
+        panner.connect(filter);
+        filter.connect(gain);
+      } else panner.connect(gain);
     }
   }
 

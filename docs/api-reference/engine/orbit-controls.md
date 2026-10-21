@@ -72,6 +72,7 @@ type OrbitControlsProps = {
   enableRotate?: boolean;
   enableZoom?: boolean;
   enablePan?: boolean;
+  panModifier?: 'shift' | 'meta' | 'ctrl' | 'alt';
   panSpeed?: number;
   autoRotate?: boolean;
   autoRotateSpeed?: number;
@@ -96,7 +97,8 @@ type OrbitControlsProps = {
 | `enabled` | `true` | Whether pointer, touch, wheel, and automatic camera interactions are active. |
 | `enableRotate` | `false` | Whether a two-finger twist can rotate the camera up axis. Orbiting remains enabled when this is `false`. |
 | `enableZoom` | `true` | Whether mouse-wheel and two-finger pinch gestures can change the camera distance. |
-| `enablePan` | `false` | Whether Shift-dragging and two-finger touch movement can pan the orbit target. |
+| `enablePan` | `false` | Whether modifier-dragging and two-finger touch movement can pan the orbit target. |
+| `panModifier` | `'shift'` | Mouse pan modifier: `'shift'`, `'meta'` (Command on macOS), `'ctrl'`, or `'alt'`. |
 | `panSpeed` | `0.0018` | Target movement per CSS pixel, scaled by the current camera distance. |
 | `autoRotate` | `false` | Whether `update()` automatically advances the horizontal angle. |
 | `autoRotateSpeed` | `0.1` | Automatic horizontal rotation speed in radians per second. |
@@ -204,7 +206,7 @@ Removes all pointer and wheel listeners, releases active pointer capture, and re
 - Scroll the wheel to zoom. Wheel deltas are bounded before applying exponential zoom so large trackpad or mouse events cannot produce an excessive distance jump.
 - Pinch two touch points apart to zoom in or together to zoom out. Pinch distance respects the same configured bounds as wheel zoom.
 - Set `enableRotate: true` to twist two touch points and roll the camera up axis around the viewing direction. Rotation uses the shortest change in touch angle when the gesture crosses the `-pi`/`pi` boundary. Single-pointer yaw and pitch orbiting remain available regardless of this option.
-- Set `enablePan: true` to pan with Shift-dragging or by moving the midpoint of a two-finger touch gesture.
+- Set `enablePan: true` to pan with Shift-dragging (or `panModifier: 'meta'` for Command-dragging) or by moving the midpoint of a two-finger touch gesture.
 - Pointer capture keeps every active touch or pointer associated with the canvas, even outside its bounds.
 - Releasing one finger resumes one-pointer orbiting without a positional jump; `pointercancel`, disabling controls, and `destroy()` release the relevant captures.
 - The controls compute camera coordinates only; rendering, camera projection, matrix updates, and redraw scheduling remain the application's responsibility.

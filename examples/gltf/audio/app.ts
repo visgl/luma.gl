@@ -10,6 +10,14 @@ import {GLTFAudioController, createScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {Light, LightingProps} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 import {INFO_HTML, GRAPH_INFO_HTML, ENVIRONMENT_INFO_HTML} from './app-ui';
+import {BoxPanelContainer, PanelManager} from '@deck.gl-community/panels';
+import {
+  configurePanelHostElement,
+  makeExampleTabbedPanel,
+  makeHtmlCustomPanel
+} from '../../example-panels';
+import {applyExampleTheme} from '../../example-theme';
+import '../gltf-example-panel.css';
 
 import {GLTF_AUDIO_PRESETS, type GLTFAudioFeature} from './presets';
 
@@ -57,9 +65,29 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   status = document.createElement('span');
   playbackGeneration = 0;
   volume = 0.5;
+  drumTimer?: ReturnType<typeof setInterval>;
+  canvasAudioStarted = false;
+  canvasAudioPending = false;
+  panelHost = document.createElement('aside');
+  panelManager?: PanelManager;
+
+  readonly startCanvasAudio = (): void => {
+    if (this.feature === 'emitter' || this.canvasAudioStarted) return;
+    this.canvasAudioStarted = true;
+    this.audioContext ||= new AudioContext();
+    void this.audioContext.resume().catch(error => {
+      this.status.textContent = String(error);
+    });
+    if (this.scenegraphsFromGLTF) void this.playAudio();
+    else this.canvasAudioPending = true;
+  };
 
   async playAudio(sourceIndex?: number): Promise<void> {
     if (!this.scenegraphsFromGLTF) return;
+    if (this.drumTimer) clearInterval(this.drumTimer);
+    this.drumTimer = undefined;
+    this.canvasAudioStarted = true;
+    this.canvasAudioPending = false;
     const generation = ++this.playbackGeneration;
     try {
       this.audioContext ||= new AudioContext();
@@ -67,18 +95,46 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.audio ||= new GLTFAudioController({
         scenegraphs: this.scenegraphsFromGLTF,
         audioContext: this.audioContext,
+        listenerPose: 'viewer',
         baseUrl: GLTF_AUDIO_PRESETS[this.feature].modelUrl
       });
       this.audio.gain.gain.value = this.volume;
       this.status.textContent = 'Loading audio…';
       await resumed;
       if (this.isFinalized || generation !== this.playbackGeneration) return;
-      await this.audio.play({sourceIndices: sourceIndex === undefined ? undefined : [sourceIndex]});
+      await this.audio.play({
+        sourceIndices:
+          sourceIndex === undefined && this.feature !== 'emitter'
+            ? [0, 5]
+            : sourceIndex === undefined
+              ? undefined
+              : [sourceIndex]
+      });
+      if (
+        sourceIndex === undefined &&
+        this.feature !== 'emitter' &&
+        generation === this.playbackGeneration &&
+        !this.isFinalized
+      ) {
+        let beat = 0;
+        const pattern = [[5], [1, 5], [5], [0, 5], [5], [1, 5], [5], [0, 5]];
+        this.drumTimer = setInterval(() => {
+          if (generation !== this.playbackGeneration || this.isFinalized) return;
+          void this.audio
+            ?.play({sourceIndices: pattern[beat++ % pattern.length], restart: false})
+            .catch(error => {
+              if (this.drumTimer) clearInterval(this.drumTimer);
+              this.status.textContent = String(error);
+            });
+        }, 250);
+      }
       if (!this.isFinalized && generation === this.playbackGeneration)
         this.status.textContent =
           this.feature === 'emitter'
             ? 'Playing — orbit and zoom to hear spatial sound'
-            : 'One-shot triggered — press a drum button to play again';
+            : sourceIndex === undefined
+              ? 'Repeating beat — orbit and zoom to hear spatial sound'
+              : 'One-shot triggered — press a drum button to play again';
     } catch (error) {
       if (!this.isFinalized) this.status.textContent = String(error);
     }
@@ -100,6 +156,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
             : INFO_HTML;
 
     const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
+    canvas.addEventListener('pointerdown', this.startCanvasAudio);
     this.orbitControls = new OrbitControls(canvas, {
       distance: 2,
       yaw: Math.PI / 4,
@@ -108,27 +165,22 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       maxDistance: 40,
       minPitch: -MAX_CAMERA_TILT,
       maxPitch: MAX_CAMERA_TILT,
+      enablePan: true,
+      panModifier: 'meta',
       rotateSpeed: 0.01,
       zoomSpeed: 0.0015
     });
 
-    Object.assign(this.controls.style, {
-      position: 'absolute',
-      top: '12px',
-      left: '12px',
-      zIndex: '2',
-      background: '#18202c',
-      color: '#edf2fa',
-      padding: '12px',
-      borderRadius: '6px',
-      maxWidth: '320px'
-    });
     const playButton = document.createElement('button');
     playButton.textContent = 'Enable / restart audio';
     playButton.onclick = () => void this.playAudio();
     const stopButton = document.createElement('button');
     stopButton.textContent = 'Stop';
     stopButton.onclick = () => {
+      if (this.drumTimer) clearInterval(this.drumTimer);
+      this.drumTimer = undefined;
+      this.canvasAudioStarted = true;
+      this.canvasAudioPending = false;
       this.playbackGeneration++;
       this.audio?.stop();
       this.status.textContent = 'Stopped';
@@ -150,7 +202,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.status.style.display = 'block';
     this.controls.append(playButton, stopButton, volumeLabel, this.status);
     if (feature !== 'emitter') {
-      playButton.textContent = 'Play all once';
+      playButton.textContent = 'Play repeating beat';
       const drumButtons = document.createElement('div');
       for (const [sourceIndex, name] of [
         'Kick',
@@ -169,14 +221,75 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
       this.controls.append(drumButtons);
     }
-    canvas.parentElement?.append(this.controls);
+    const details = document.createElement('section');
+    details.className = 'gltf-example-details';
+    details.innerHTML =
+      feature === 'environment'
+        ? ENVIRONMENT_INFO_HTML
+        : feature === 'graph'
+          ? GRAPH_INFO_HTML
+          : INFO_HTML;
+    if (credits) credits.hidden = true;
+    this.panelHost.className = 'gltf-example-panel';
+    Object.assign(this.panelHost.style, {
+      position: 'absolute',
+      inset: '12px',
+      pointerEvents: 'none',
+      zIndex: '2'
+    });
+    applyExampleTheme(this.panelHost, 'cinematic');
+    canvas.parentElement?.append(this.panelHost);
+    const mountContent = (root: HTMLElement, content: HTMLElement) => {
+      configurePanelHostElement(root, 'cinematic');
+      root.append(content);
+    };
+    const panel = makeExampleTabbedPanel({
+      id: 'audio-tabs',
+      title: '',
+      theme: 'dark',
+      panels: [
+        makeHtmlCustomPanel({
+          id: 'audio-controls',
+          title: 'Controls',
+          html: '',
+          onRender: root => mountContent(root, this.controls)
+        }),
+        makeHtmlCustomPanel({
+          id: 'audio-info',
+          title: 'Info',
+          html: '',
+          onRender: root => mountContent(root, details)
+        })
+      ]
+    });
+    this.panelManager = new PanelManager({parentElement: this.panelHost});
+    this.panelManager.setProps({
+      components: [
+        new BoxPanelContainer({
+          id: 'audio-panel',
+          title: feature === 'emitter' ? 'Spatial Audio' : 'Drum Kit',
+          placement: 'top-left',
+          widthPx: 360,
+          collapsible: true,
+          defaultOpen: true,
+          panel
+        })
+      ]
+    });
     void this.loadGLTF();
   }
 
   onFinalize(): void {
+    if (this.drumTimer) clearInterval(this.drumTimer);
     this.isFinalized = true;
     this.audio?.destroy();
     void this.audioContext?.close();
+    (this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement).removeEventListener(
+      'pointerdown',
+      this.startCanvasAudio
+    );
+    this.panelManager?.finalize();
+    this.panelHost.remove();
     this.controls.remove();
     this.orbitControls.destroy();
 
@@ -228,7 +341,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       });
 
       canvas.style.opacity = '1';
-      this.status.textContent = 'Ready — enable audio, then orbit and zoom';
+      this.status.textContent =
+        this.feature === 'emitter'
+          ? 'Ready — enable audio, then orbit and zoom'
+          : 'Click or drag the canvas to start the beat';
+      if (this.canvasAudioPending) void this.playAudio();
     } catch (error) {
       if (this.isFinalized) {
         return;
@@ -241,6 +358,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onRender({aspect, device, time}: AnimationProps): void {
+    this.panelManager?.onRedraw({viewports: [], layers: []});
     const renderPass = device.beginRenderPass({clearColor: this.getClearColor(), clearDepth: 1});
 
     if (!this.scenegraphsFromGLTF?.scenes?.length) {
@@ -256,9 +374,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const near = Math.max(this.sceneRadius / 1000, 0.01);
     const projectionMatrix = new Matrix4().perspective({fovy: Math.PI / 3, aspect, near, far});
     const cameraPos = this.orbitControls.getEyePosition();
-    cameraPos[1] =
-      this.cameraHeight + (cameraPos[1] - this.cameraHeight) * CAMERA_TILT_HEIGHT_FACTOR;
-    const viewMatrix = new Matrix4().lookAt({eye: cameraPos, center: this.center});
+    const orbitTarget = this.orbitControls.props.target;
+    cameraPos[1] = orbitTarget[1] + (cameraPos[1] - orbitTarget[1]) * CAMERA_TILT_HEIGHT_FACTOR;
+    const viewMatrix = new Matrix4().lookAt({eye: cameraPos, center: orbitTarget});
     this.audio?.update(new Matrix4(viewMatrix).invert());
     const lighting = this.modelLights.length > 0 ? {lights: this.modelLights} : lightSources;
 
