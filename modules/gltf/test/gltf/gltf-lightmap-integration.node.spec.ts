@@ -5,6 +5,7 @@
 import {expect, test, vi} from 'vitest';
 import type {GLTFPostprocessed} from '@loaders.gl/gltf';
 import {ModelNode, type GroupNode} from '@luma.gl/engine';
+import {log} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/test-utils';
 import {createScenegraphsFromGLTF} from '../../src/gltf/create-scenegraph-from-gltf';
 
@@ -214,4 +215,23 @@ test('KHR_lightmap validates UVs after complete node overrides replace unused ma
   bundle.destroy();
   source.nodes[1].extensions = {};
   expect(() => createScenegraphsFromGLTF(new NullDevice({}), source)).toThrow();
+});
+
+test('cached ordinary meshes retain missing UV and normal diagnostics', () => {
+  const source = makeDocument();
+  for (const material of source.materials) {
+    material.extensions = {};
+    material.pbrMetallicRoughness = {baseColorTexture: {index: 0}};
+  }
+  for (const node of source.nodes) node.extensions = {};
+  const warnings = vi.spyOn(log, 'warn').mockImplementation(() => () => {});
+  try {
+    const bundle = createScenegraphsFromGLTF(new NullDevice({}), source);
+    const messages = warnings.mock.calls.map(([message]) => String(message));
+    expect(messages.some(message => message.includes('missing TEXCOORD_0'))).toBe(true);
+    expect(messages.some(message => message.includes('missing NORMAL'))).toBe(true);
+    bundle.destroy();
+  } finally {
+    warnings.mockRestore();
+  }
 });
