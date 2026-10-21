@@ -57,8 +57,18 @@ export class GLTFAreaLightController {
   /** Recompute after animation. Scale controls size uniformly and does not change emitting rotation. */
   getLights(): AreaLight[] {
     const result: AreaLight[] = [];
+    const lightBranches = new Set<GroupNode>();
+    const collectLightBranches = (node: GroupNode): boolean => {
+      let containsLight = this.definitions.has(node);
+      for (const child of node.children) {
+        if (child instanceof GroupNode && collectLightBranches(child)) containsLight = true;
+      }
+      if (containsLight) lightBranches.add(node);
+      return containsLight;
+    };
+    for (const scene of this.scenes) collectLightBranches(scene);
     const visit = (node: GroupNode, parentMatrix: Matrix4, parentRotation: Matrix4): void => {
-      if (!node.display) return;
+      if (!node.display || !lightBranches.has(node)) return;
       const worldMatrix = new Matrix4(parentMatrix).multiplyRight(node.matrix);
       const source = this.sourceNodes.get(node);
       const localRotation = source?.matrix
@@ -115,6 +125,10 @@ function getMatrixRotation(matrix: Matrix4): Matrix4 {
   assert(vertical.magnitude() > 1e-8);
   vertical.normalize();
   const forward = new Vector3(horizontal).cross(vertical).normalize();
+  const authoredForward = new Vector3(matrix[8], matrix[9], matrix[10]);
+  // Reflections must retain the authored emitting side after scale removal.
+  assert(Math.abs(forward.dot(authoredForward)) > 1e-8);
+  if (forward.dot(authoredForward) < 0) forward.negate();
   return new Matrix4([
     horizontal[0],
     horizontal[1],

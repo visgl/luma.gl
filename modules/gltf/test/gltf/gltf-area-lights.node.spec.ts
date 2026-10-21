@@ -53,3 +53,29 @@ test('EXT_lights_area disks ignore rectangle aspect and follow live dimensions',
   light.setMatrixComponents({scale: [1, 1, 1]});
   expect(Math.hypot(...controller.getLights()[0].halfAxisX)).toBeCloseTo(1);
 });
+
+test('matrix reflections preserve the emitting side and unrelated singular nodes are ignored', () => {
+  const reflectedMatrix = [-1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+  const light = new GroupNode({matrix: reflectedMatrix});
+  const unrelated = new GroupNode({matrix: new Array(16).fill(0)});
+  const scene = new GroupNode({children: [light, unrelated]});
+  const gltf = {
+    nodes: [
+      {matrix: reflectedMatrix, extensions: {EXT_lights_area: {light: 0}}},
+      {matrix: new Array(16).fill(0)}
+    ],
+    extensions: {EXT_lights_area: {lights: [{type: 'rect'}]}}
+  } as unknown as GLTFPostprocessed;
+  const controller = new GLTFAreaLightController({
+    gltf,
+    scenes: [scene],
+    gltfNodeIndexToNodeMap: new Map([
+      [0, light],
+      [1, unrelated]
+    ])
+  });
+  const result = controller.getLights();
+  expect(result).toHaveLength(1);
+  expect(result[0].normal[2]).toBeCloseTo(-1);
+  expect(result[0].intensity).toBe(1000);
+});
