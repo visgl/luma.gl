@@ -132,7 +132,7 @@ export function parseGLTF(
   gltf.meshes.forEach((gltfMesh, idx) => {
     const newMesh = createNodeForGLTFMesh(device, gltfMesh, gltf, gltfMaterialIdToMaterialMap, {
       ...combinedOptions,
-      validateAttributes: false
+      validateLightmapAttributes: false
     });
     gltfMeshIdToNodeMap.set(gltfMesh.id, newMesh);
   });
