@@ -5,7 +5,7 @@
 import {log} from '../index';
 // Rename constant to prevent inlining. We need the full set of constants for generating debug strings.
 import {GL as GLEnum} from '../webgl-constants/webgl-constants';
-import {isBrowser} from '@probe.gl/env';
+import {isBrowser} from 'probe.gl/env';
 import {loadScript} from './load-script';
 import {registerWebGLDeveloperTools} from '../webgl/context/helpers/debug-hooks';
 

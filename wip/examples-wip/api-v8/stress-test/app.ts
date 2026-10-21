@@ -5,7 +5,7 @@ import {Model, ModelProps} from '@luma.gl/engine';
 import {clear, withParameters} from '@luma.gl/core/webgl';
 import {GL} from '@luma.gl/core/webgl-constants';
 import {radians} from '@math.gl/core';
-import {StatsWidget} from '@probe.gl/stats-widget';
+import {StatsWidget} from 'probe.gl/stats-widget';
 
 const INFO_HTML = `
 <p>

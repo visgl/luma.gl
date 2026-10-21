@@ -16,7 +16,7 @@ import {
   WGSLShaderAssembler
 } from '@luma.gl/shadertools';
 import type {WebGLDevice} from '@luma.gl/core/webgl';
-import {isBrowser} from '@probe.gl/env';
+import {isBrowser} from 'probe.gl/env';
 
 function getInfo(device: Device): PlatformInfo {
   return {

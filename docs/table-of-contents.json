@@ -795,6 +795,8 @@
           "api-reference/gltf/gltf-materials",
           "api-reference/gltf/gltf-native-extensions",
           "api-reference/gltf/gltf-animation",
+          "api-reference/gltf/gltf-billboard",
+          "api-reference/gltf/gltf-audio",
           {
             "type": "category",
             "label": "Animated crowds",

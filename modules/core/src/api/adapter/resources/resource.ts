@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '../device';
-import type {Stat, Stats} from '@probe.gl/stats';
+import type {Stat, Stats} from 'probe.gl/stats';
 import {uid} from '../../utils/uid';
 
 const CPU_HOTSPOT_PROFILER_MODULE = 'cpu-hotspot-profiler';

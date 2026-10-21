@@ -8,6 +8,7 @@ const repoRoot = fileURLToPath(new URL('..', import.meta.url));
 const examplesRoot = join(repoRoot, 'examples');
 const tscPath = join(repoRoot, 'node_modules', '.bin', 'tsc');
 const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
+  'gltf/features',
   'deck/city-scene',
   'api/blending',
   'gltf/physics',
@@ -55,6 +56,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'experimental/webxr-kaleidoscope',
   'integrations/hello-react',
   'experimental/antialiasing',
+  'gltf/audio',
   'showcase/algebraic-varieties',
   'anari/scenes',
   'showcase/dof',

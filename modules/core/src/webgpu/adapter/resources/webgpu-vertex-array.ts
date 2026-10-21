@@ -4,7 +4,7 @@
 
 import type {Device, Buffer, VertexArrayProps, RenderPass} from '../../../index';
 import {VertexArray, log} from '../../../index';
-import {getBrowser} from '@probe.gl/env';
+import {getBrowser} from 'probe.gl/env';
 
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUBuffer} from './webgpu-buffer';
