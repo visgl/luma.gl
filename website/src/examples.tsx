@@ -94,7 +94,8 @@ const loadHelloCubeApp = () => import('../../examples/tutorials/hello-cube/app')
 const loadTwoCubesApp = () => import('../../examples/tutorials/hello-two-cubes/app');
 const loadInstancedCubesApp = () => import('../../examples/tutorials/hello-instanced-cubes/app');
 const loadHelloInstancingApp = () => import('../../examples/tutorials/hello-instancing/app');
-const loadGLTFAudioApp = () => import('../../examples/showcase/gltf-audio/app');
+import type {GLTFAudioFeature} from '../../examples/gltf/audio/presets';
+const loadGLTFAudioApp = () => import('../../examples/gltf/audio/app');
 const loadHelloGLTFApp = () => import('../../examples/tutorials/hello-gltf/app');
 const loadLightingApp = () => import('../../examples/tutorials/lighting/app');
 const loadShaderHooksApp = () => import('../../examples/tutorials/shader-hooks/app');
@@ -2742,13 +2743,12 @@ export const GLTFPhysicsExample: React.FC<WebsiteExampleProps> = props => (
   />
 );
 
-export const GLTFAudioExample: React.FC = props => (
-  <LumaExample
-    id="gltf-audio"
-    directory="showcase"
-    loadTemplate={loadGLTFAudioApp}
-    config={exampleConfig}
-    showStats={false}
-    {...props}
-  />
-);
+export const GLTFAudioExample: React.FC<WebsiteExampleProps & {feature?: GLTFAudioFeature}> = ({feature = 'emitter', ...props}) => {
+  const loadTemplate = useMemo(() => async () => {
+    const {default: AudioApp} = await loadGLTFAudioApp();
+    return {default: class ConfiguredAudioApp extends AudioApp {
+      constructor(animationProps: AnimationProps) { super(animationProps, feature); }
+    }};
+  }, [feature]);
+  return <LumaExample id="gltf-audio" directory="showcase" sourcePath="examples/gltf/audio/app.ts" loadTemplate={loadTemplate} config={exampleConfig} showStats={false} {...props} />;
+};

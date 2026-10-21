@@ -6,6 +6,7 @@ import type {ExampleSupportDefinition} from '../../example-support';
 
 const exampleSupport = {
   id: 'showcase/gltf-audio',
+  sourceDirectory: 'gltf/audio',
   mobileMode: 'full',
   mobileProfile: 'standard',
   requirements: {backends: ['webgpu', 'webgl2']}

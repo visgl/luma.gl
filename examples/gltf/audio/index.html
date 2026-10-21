@@ -21,7 +21,12 @@
       import {INFO_HTML} from './app-ui.ts';
       document.getElementById('credits').innerHTML = INFO_HTML;
       const type = new URLSearchParams(location.search).get('backend') || 'best-available';
-      const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {
+      const feature = new URLSearchParams(location.search).get('feature') || 'emitter';
+      if (feature !== 'emitter') throw new Error(`Unknown glTF audio feature: ${feature}`);
+      class ConfiguredAudio extends AnimationLoopTemplate {
+        constructor(animationProps) { super(animationProps, feature); }
+      }
+      const animationLoop = makeAnimationLoop(ConfiguredAudio, {
         device: luma.createDevice({type, adapters: [webgpuAdapter, webgl2Adapter], createCanvasContext: true})
       });
       animationLoop.start();

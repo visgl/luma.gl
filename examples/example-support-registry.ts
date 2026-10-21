@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import gltfAudioSupport from './showcase/gltf-audio/mobile-support';
+import gltfAudioSupport from './gltf/audio/mobile-support';
 import gltfInteractivitySupport from './deck/gltf-interactivity/mobile-support';
 import geometrySupport from './experimental/gpu-geometry/mobile-support';
 import pointCloudSupport from './experimental/gpu-pointcloud/mobile-support';

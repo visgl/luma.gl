@@ -214,7 +214,14 @@ describe('live example catalog metadata', () => {
         `${example.id} requires a sidecar`
       ).toBeDefined();
       expect(
-        existsSync(path.join(process.cwd(), 'examples', example.id, 'mobile-support.ts')),
+        existsSync(
+          path.join(
+            process.cwd(),
+            'examples',
+            EXAMPLE_SUPPORT_REGISTRY[example.id].sourceDirectory || example.id,
+            'mobile-support.ts'
+          )
+        ),
         `${example.id} requires a local mobile-support.ts sidecar`
       ).toBe(true);
     }
@@ -226,13 +233,17 @@ describe('live example catalog metadata', () => {
         match === '/index.html' ? '' : '/playground'
       );
       const canonicalId =
+        Object.values(EXAMPLE_SUPPORT_REGISTRY).find(
+          definition => definition.sourceDirectory === standaloneId
+        )?.id ||
         new Map([
           ['arrow/arrow-instancing', 'showcase/instancing'],
           ['anari/scenes', 'anari/scenes'],
           ['anari/scenes/playground', 'anari/scenes'],
           ['tutorials/hello-instanced-cubes', 'tutorials/instanced-cubes'],
           ['tutorials/hello-two-cubes', 'tutorials/two-cubes']
-        ]).get(standaloneId) || standaloneId;
+        ]).get(standaloneId) ||
+        standaloneId;
       expect(
         EXAMPLE_SUPPORT_REGISTRY[canonicalId],
         `${relativeFile} requires a sidecar support definition`

@@ -11,8 +11,8 @@ import {Light, LightingProps} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 import {INFO_HTML} from './app-ui';
 
-const MODEL_URL =
-  'https://raw.githubusercontent.com/omigroup/gltf-extensions/4f1fe73bff65ed5ca97dace7eb60ffdb64e2e692/extensions/2.0/KHR_audio_emitter/examples/boom_box/boom_box.gltf';
+import {GLTF_AUDIO_PRESETS, type GLTFAudioFeature} from './presets';
+
 const MAX_CAMERA_TILT = 0.6;
 const CAMERA_TILT_HEIGHT_FACTOR = 0.35;
 
@@ -65,7 +65,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.audio ||= new GLTFAudioController({
         scenegraphs: this.scenegraphsFromGLTF,
         audioContext: this.audioContext,
-        baseUrl: MODEL_URL
+        baseUrl: GLTF_AUDIO_PRESETS[this.feature].modelUrl
       });
       this.audio.gain.gain.value = this.volume;
       this.status.textContent = 'Loading audio…';
@@ -79,7 +79,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
   }
 
-  constructor({device}: AnimationProps) {
+  constructor(
+    {device}: AnimationProps,
+    readonly feature: GLTFAudioFeature = 'emitter'
+  ) {
     super();
     this.device = device;
 
@@ -157,10 +160,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
 
     try {
-      log.log(0, 'Starting tutorial glTF load', {modelUrl: MODEL_URL})();
+      log.log(0, 'Starting tutorial glTF load', {
+        modelUrl: GLTF_AUDIO_PRESETS[this.feature].modelUrl
+      })();
       canvas.style.opacity = '0.2';
 
-      const gltf = await load(MODEL_URL, GLTFLoader);
+      const gltf = await load(GLTF_AUDIO_PRESETS[this.feature].modelUrl, GLTFLoader);
+      if (this.isFinalized) return;
       const processedGLTF = postProcessGLTF(gltf);
       const scenegraphsFromGLTF = createScenegraphsFromGLTF(this.device, processedGLTF, {
         lights: true,

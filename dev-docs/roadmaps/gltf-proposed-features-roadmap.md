@@ -32,6 +32,37 @@ Before implementing a tranche:
 
 See the [source asset audit](gltf-proposed-feature-assets.md) for verified URLs, attribution, compatibility gaps and Git LFS delivery requirements.
 
+## Shared example implementations
+
+Use a few actual glTF example directories, configured by props. A gallery entry is a focused
+configuration of a shared application, not a reason to copy its loader, camera, render loop, or
+resource cleanup into another directory.
+
+- Keep `examples/gltf/asset-studio` for the general asset explorer.
+- Use `examples/gltf/features` for focused visual examples: billboard, lightmap, area lights,
+  and material scattering as their implementations become available.
+- Use `examples/gltf/audio` for emitter, graph, and environment examples with shared gesture,
+  transport, listener, and context lifecycle handling.
+- Keep `examples/gltf/physics` for its distinct simulation controls. The small introductory
+  tutorial can remain separate.
+
+Expose a typed website component such as `<GLTFFeatureExample feature="billboard" />` and an audio
+counterpart such as `<GLTFAudioExample feature="emitter" />`. The feature selects a preset containing
+its pinned model URL, attribution, explanation, camera defaults, controls, and explicitly supported
+extension profile. The shared application receives that configuration through constructor options;
+use the existing memoized template-loader adapter at the website boundary, without mutable global
+preset state. Standalone pages select the same presets with a query parameter.
+
+Preserve separate gallery pages, titles, thumbnails, and standard/proposed navigation sections.
+Gallery identity and source-directory identity must be independent so source links and standalone
+URLs point to the shared implementation. Dispose each preset's controllers and owned scene bundle
+on replacement or unmount. Feature-specific runtime code stays in the glTF package rather than
+expanding the viewer into a second implementation of the extensions.
+
+Refactor the initial audio and billboard examples into these shared directories as part of the
+open PR series. Subsequent proposal PRs add presets and necessary shared-viewer hooks, not another
+complete example package. Preserve the working audio preview while performing the migration.
+
 ## Tranches and PR order
 
 | Tranche | Proposal | Relative scope | Depends on | Source/sample status |
