@@ -79,7 +79,7 @@ export class GLTFAudioController {
   private readonly options: GLTFAudioControllerOptions;
   private readonly scene: GroupNode;
   private readonly emitters: EmitterBinding[] = [];
-  private readonly graphs: GLTFAudioGraph[] = [];
+  private readonly graphs = new Map<number, GLTFAudioGraph>();
   private readonly graphSources = new Set<number>();
   private readonly graphEmitters = new Set<number>();
   private readonly playing = new Map<AudioScheduledSourceNode, GainNode>();
@@ -106,14 +106,28 @@ export class GLTFAudioController {
     const graphDefinitions = scenegraphs.gltf.extensions?.['KHR_audio_graph']?.['graphs'] as
       | GLTFAudioGraphDefinition[]
       | undefined;
-    for (const graph of graphDefinitions || []) {
-      for (const input of graph.inputs || []) this.graphSources.add(input.source);
-      for (const output of graph.outputs || []) this.graphEmitters.add(output.emitter);
-    }
     this.gain = audioContext.createGain();
     this.gain.connect(audioContext.destination);
     const activeNodes = new Set<GroupNode>();
     this.scene.preorderTraversal(node => activeNodes.add(node as GroupNode));
+    const activeEmitters = new Set<number>(
+      scenegraphs.gltf.scenes[sceneIndex]?.extensions?.['KHR_audio_emitter']?.emitters || []
+    );
+    scenegraphs.gltf.nodes.forEach((node, index) => {
+      const runtimeNode = scenegraphs.gltfNodeIndexToNodeMap.get(index);
+      if (!runtimeNode || !activeNodes.has(runtimeNode)) return;
+      const attachment = node.extensions?.['KHR_audio_emitter'];
+      for (const emitter of attachment?.emitters ??
+        (attachment?.emitter === undefined ? [] : [attachment.emitter]))
+        activeEmitters.add(emitter);
+    });
+    const activeGraphs = new Map<number, GLTFAudioGraphDefinition>();
+    graphDefinitions?.forEach((graph, index) => {
+      if (!graph.outputs?.some(output => activeEmitters.has(output.emitter))) return;
+      activeGraphs.set(index, graph);
+      for (const input of graph.inputs || []) this.graphSources.add(input.source);
+      for (const output of graph.outputs || []) this.graphEmitters.add(output.emitter);
+    });
     try {
       scenegraphs.gltf.nodes.forEach((node, nodeIndex) => {
         const runtimeNode = scenegraphs.gltfNodeIndexToNodeMap.get(nodeIndex);
@@ -128,8 +142,9 @@ export class GLTFAudioController {
       const indices: number[] =
         scenegraphs.gltf.scenes[sceneIndex]?.extensions?.['KHR_audio_emitter']?.emitters || [];
       for (const emitterIndex of indices) this.addEmitter(emitterIndex);
-      for (const definition of graphDefinitions || []) {
-        this.graphs.push(
+      for (const [graphIndex, definition] of activeGraphs) {
+        this.graphs.set(
+          graphIndex,
           new GLTFAudioGraph(definition, audioContext, this.gain, index =>
             this.emitters
               .filter(emitter => emitter.index === index)
@@ -160,7 +175,7 @@ export class GLTFAudioController {
     await this.initialize();
     if (this.destroyed || generation !== this.playbackGeneration) return;
     const startTime = this.options.audioContext.currentTime;
-    this.audioClockStart ??= startTime;
+    this.audioClockStart = startTime;
     for (const emitter of this.emitters) {
       if (this.graphEmitters.has(emitter.index)) continue;
       for (const sourceIndex of emitter.definition.sources || []) {
@@ -171,7 +186,7 @@ export class GLTFAudioController {
     }
     for (const sourceIndex of this.graphSources) {
       this.startSource(sourceIndex, startTime, options.autoplayOnly, gain => {
-        for (const graph of this.graphs) graph.connectSource(sourceIndex, gain);
+        for (const graph of this.graphs.values()) graph.connectSource(sourceIndex, gain);
       });
     }
   }
@@ -179,8 +194,9 @@ export class GLTFAudioController {
   /** Change a graph gain using its authored interpolation and duration. */
   setGraphGain(graphIndex: number, nodeIndex: number, gain: number): void {
     // Graph and node indices follow the authored KHR_audio_graph arrays.
-    assert(!this.destroyed && this.graphs[graphIndex]);
-    this.graphs[graphIndex].setGain(nodeIndex, gain);
+    const graph = this.graphs.get(graphIndex);
+    assert(!this.destroyed && graph);
+    graph.setGain(nodeIndex, gain);
   }
 
   private startSource(
@@ -306,7 +322,7 @@ export class GLTFAudioController {
       emitter.panner?.disconnect();
       emitter.gain.disconnect();
     }
-    for (const graph of this.graphs) graph.destroy();
+    for (const graph of this.graphs.values()) graph.destroy();
     this.gain.disconnect();
     this.buffers.clear();
   }
