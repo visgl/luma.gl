@@ -13,6 +13,8 @@ export function packRigidBodyShapes(colliders: readonly GPURigidBodyCollider[]) 
     const padding = [0, 0, 0, 0];
     let dimensions: number[];
     if (shape.type === 'sphere') dimensions = [shape.radius, 0, 0, 0];
+    else if (shape.type === 'plane')
+      dimensions = [(shape.sizeX ?? 0) / 2, (shape.sizeZ ?? 0) / 2, shape.doubleSided ? 1 : 0, 6];
     else if (shape.type === 'box') dimensions = [...shape.halfExtents, 1];
     else if (shape.type === 'capsule' || shape.type === 'cylinder')
       dimensions = [
@@ -49,7 +51,17 @@ export function packRigidBodyShapes(colliders: readonly GPURigidBodyCollider[]) 
     }
     return {dimensions, policies, padding};
   });
-  return {shapes, geometry};
+  const filters = colliders.map(collider => {
+    const excluded = [...new Set(collider.excludedColliders ?? [])].sort(
+      (first, second) => first - second
+    );
+    const start = geometry.length;
+    for (const index of excluded) geometry.push(index);
+    // Subsequent geometry records retain their vec4 alignment.
+    while (geometry.length % 4) geometry.push(0);
+    return [start, excluded.length] as const;
+  });
+  return {shapes, geometry, filters};
 }
 
 /** Mesh/mesh narrow phase is not implemented. Prove fixed pairs can never meet instead. */

@@ -176,6 +176,7 @@
         "label": "GPGPU Programming",
         "items": [
           "api-guide/gpu/gpgpu",
+          "api-guide/gpu/gpu-physics",
           "api-guide/gpu/gpu-data-processing",
           "api-guide/shaders/gpu-floating-point-precision",
           "api-guide/gpu/gpu-tables",

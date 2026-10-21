@@ -14,70 +14,76 @@ import {
   makeTriangleMeshGeometry
 } from '../../src/gpu-physics/rigid-body-mesh';
 
-it('solves convex hull and tapered primitive contacts against boxes and original triangles on GPU', async () => {
-  const device = await getWebGPUTestDevice();
-  if (!device) return;
-  const geometry = makeConvexHullGeometry(
-    Array.from({length: 8}, (_, corner) => [
-      corner & 1 ? 0.5 : -0.5,
-      corner & 2 ? 0.5 : -0.5,
-      corner & 4 ? 0.5 : -0.5
-    ]).flat()
-  );
-  const shapes: GPURigidBodyShape[] = [
-    {type: 'convex-hull', geometry},
-    {type: 'capsule', height: 0.5, radiusBottom: 0.3, radiusTop: 0.2},
-    {type: 'cylinder', height: 1, radiusBottom: 0.5, radiusTop: 0}
-  ];
-  for (const mesh of [false, true])
-    for (const shape of shapes) {
-      const world = new GPURigidBodyWorld({
-        gravity: [0, -9.81, 0],
-        timeStep: 1 / 120,
-        sleepAfter: 0,
-        bodies: [
-          {
-            position: [0, 0, 0],
-            mass: 0,
-            shape: mesh
-              ? {
-                  type: 'triangle-mesh',
-                  geometry: makeTriangleMeshGeometry(
-                    [-5, 0, -5, -5, 0, 5, 5, 0, 5, 5, 0, -5],
-                    [0, 1, 2, 0, 2, 3]
-                  )
-                }
-              : {type: 'box', halfExtents: [5, 0.1, 5]}
-          },
-          {position: [0, 2, 0], mass: 1, shape, restitution: 0, friction: 0.6}
-        ]
-      });
-      const definition = new GPUCommandGraph(device);
-      world.addToGraph(definition);
-      const graph = await definition.compileAsync();
-      try {
-        for (let step = 0; step < 240; step += 20) {
-          const encoder = device.createCommandEncoder();
-          for (let substep = 0; substep < 20; substep++)
-            graph.encode(encoder, {parameters: undefined});
-          device.submit(encoder.finish());
-          await world.readState();
+it.for(['ordered', 'parallel'] as const)(
+  'solves convex hull and tapered primitive contacts against boxes and original triangles on GPU with %s',
+  async (solver, context) => {
+    const device = await getWebGPUTestDevice();
+    if (!device) return context.skip('WebGPU is unavailable');
+    const geometry = makeConvexHullGeometry(
+      Array.from({length: 8}, (_, corner) => [
+        corner & 1 ? 0.5 : -0.5,
+        corner & 2 ? 0.5 : -0.5,
+        corner & 4 ? 0.5 : -0.5
+      ]).flat()
+    );
+    const shapes: GPURigidBodyShape[] = [
+      {type: 'convex-hull', geometry},
+      {type: 'capsule', height: 0.5, radiusBottom: 0.3, radiusTop: 0.2},
+      {type: 'cylinder', height: 1, radiusBottom: 0.5, radiusTop: 0}
+    ];
+    for (const mesh of [false, true])
+      for (const shape of shapes) {
+        const world = new GPURigidBodyWorld({
+          solver,
+          broadPhase: 'hierarchical-grid',
+          gravity: [0, -9.81, 0],
+          timeStep: 1 / 120,
+          sleepAfter: 0,
+          bodies: [
+            {
+              position: [0, 0, 0],
+              mass: 0,
+              shape: mesh
+                ? {
+                    type: 'triangle-mesh',
+                    geometry: makeTriangleMeshGeometry(
+                      [-5, 0, -5, -5, 0, 5, 5, 0, 5, 5, 0, -5],
+                      [0, 1, 2, 0, 2, 3]
+                    )
+                  }
+                : {type: 'box', halfExtents: [5, 0.1, 5]}
+            },
+            {position: [0, 2, 0], mass: 1, shape, restitution: 0, friction: 0.6}
+          ]
+        });
+        const definition = new GPUCommandGraph(device);
+        world.addToGraph(definition);
+        const graph = await definition.compileAsync();
+        try {
+          for (let step = 0; step < 240; step += 20) {
+            const encoder = device.createCommandEncoder();
+            for (let substep = 0; substep < 20; substep++)
+              graph.encode(encoder, {parameters: undefined});
+            device.submit(encoder.finish());
+            await world.readState();
+          }
+          const state = (await world.readState())[1];
+          expect(state.position.every(Number.isFinite)).toBe(true);
+          expect(state.position[1]).toBeGreaterThan(-0.1);
+          expect(state.position[1]).toBeLessThan(1.2);
+          expect(Math.abs(state.velocity[1])).toBeLessThan(1);
+        } finally {
+          graph.destroy();
+          world.destroy();
         }
-        const state = (await world.readState())[1];
-        expect(state.position.every(Number.isFinite)).toBe(true);
-        expect(state.position[1]).toBeGreaterThan(-0.1);
-        expect(state.position[1]).toBeLessThan(1.2);
-        expect(Math.abs(state.velocity[1])).toBeLessThan(1);
-      } finally {
-        graph.destroy();
-        world.destroy();
       }
-    }
-}, 120000);
+  },
+  120000
+);
 
-it('preserves a nonconvex wheel opening and responds only around its unlocked inertia axis', async () => {
+it('preserves a nonconvex wheel opening and responds only around its unlocked inertia axis', async context => {
   const device = await getWebGPUTestDevice();
-  if (!device) return;
+  if (!device) return context.skip('WebGPU is unavailable');
   const positions: number[] = [],
     indices: number[] = [];
   const segments = 24,
@@ -142,9 +148,9 @@ it('preserves a nonconvex wheel opening and responds only around its unlocked in
   }
 }, 120000);
 
-it('rejects a separated rotating mesh before a large box can cover its local BVH', async () => {
+it('rejects a separated rotating mesh before a large box can cover its local BVH', async context => {
   const device = await getWebGPUTestDevice();
-  if (!device) return;
+  if (!device) return context.skip('WebGPU is unavailable');
   const geometry = makeConvexHullGeometry(
     Array.from({length: 8}, (_, corner) => [
       corner & 1 ? 0.5 : -0.5,
@@ -187,9 +193,9 @@ it('rejects a separated rotating mesh before a large box can cover its local BVH
   }
 }, 120000);
 
-it('restores immutable mesh-pair anchors after direct state writes and wake', async () => {
+it('restores immutable mesh-pair anchors after direct state writes and wake', async context => {
   const device = await getWebGPUTestDevice();
-  if (!device) return;
+  if (!device) return context.skip('WebGPU is unavailable');
   const geometry = makeTriangleMeshGeometry([-1, 0, -1, 1, 0, -1, 0, 0, 1], [0, 1, 2]);
   const world = new GPURigidBodyWorld({
     bodies: [

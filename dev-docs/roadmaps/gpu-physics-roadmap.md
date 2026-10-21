@@ -29,6 +29,22 @@ Implementation references on master:
 - [Sphere world example](../../examples/experimental/gpu-sphere-world/)
 - [Pool example and controls](../../examples/experimental/gpu-pool/README.md)
 
+## Current development checkpoint
+
+The G1–G3 follow-up has executable qualification tooling, hierarchical discovery and
+sparse contact storage, plus node-geometry snapshots, plane support and disabled-collider
+handling. An opt-in parallel solver has focused impact and island sleep/wake tests;
+the ordered solver remains the default. These are partial implementations, not closed
+tranches. General moving mesh/mesh coverage, general-body CCD, stress qualification and
+multi-adapter whole-step performance evidence remain required.
+
+Prioritize closing G1 capacity/measurement gaps, G2 general collision semantics and G3
+solver/CCD qualification before broadening the feature surface. Keep G1–G7 identifiers
+aligned with the machine-readable qualification profile. G8–G12 extend the programme
+toward a competitive general GPU rigid-body library after the glTF milestone.
+
+For the conceptual background, see [GPU physics](../../docs/api-guide/gpu/gpu-physics.md).
+
 ## Active programme: glTF physics qualification first
 
 Target the exact `KHR_physics_rigid_bodies` and `KHR_implicit_shapes` revisions
@@ -167,13 +183,77 @@ reproducible performance report. Only then describe the adapter as complete for 
 pinned profile. The 128-body reference limit and pose-bridge limitations cannot remain
 as the general production implementation behind that claim.
 
-### After glTF qualification
+### Examples beyond glTF
 
-Pursue broader state-of-the-art goals based on measured gaps: larger heterogeneous
-worlds, stronger articulation and high-mass-ratio solving, more advanced collision
-and stabilization methods, and additional domains such as deformables. These do not
-expand the glTF milestone implicitly. Do not schedule them ahead of missing required
-proposal behavior merely because a new visual demo is easier to show.
+Use the standalone [Rigid Body Lab](../../examples/experimental/gpu-rigid-body-world/README.md)
+for procedural stacks, mixed-size discovery, unequal-mass impacts, solver comparison and
+sleep/wake diagnostics. Its GPU render path avoids conflating solver behavior with glTF
+import or scenegraph publication. Keep sphere scale and pool as specialized workloads.
+
+Add a fast-motion lab for G3/G11 CCD, a mechanisms lab for G4/G9 joints and articulations,
+and a batch/scale benchmark for G10 throughput and capacity. Each should expose its
+settings, expected behavior, error/overflow counters and timing scope. Introduce these
+scenes with the corresponding implementation, not placeholder approximations. glTF
+examples remain the interoperability and authored-semantics qualification suite.
+
+### G8. Competitive contact solving and difficult dynamics
+
+Qualify deep stacks, large mass ratios, dense compounds and persistent friction under
+repeatable accuracy budgets. Compare the parallel solver with constraint coloring and
+other scheduling/stabilization strategies before selecting production defaults. Measure
+convergence and energy error alongside timing. Include long-duration regression scenes.
+
+Exit: published quality/performance comparisons against independent engines using
+matched scenes, timestep, approximation and error tolerances; no unsupported SOTA claim
+based solely on body count or a discovery benchmark.
+
+### G9. Articulations and mechanism quality
+
+Extend beyond proposal-joint conformance to demanding connected mechanisms. Evaluate
+reduced-coordinate articulation solving, contact coupling, motors, limits and closed-loop
+handling. Keep generic constraint and articulation APIs distinct where their semantics
+differ. Measure joint drift, actuator response and high-mass-ratio stability.
+
+Exit: chains, robots and contact-loaded mechanisms pass reference trajectories and
+error budgets, including sleep/wake and topology changes within the supported envelope.
+
+### G10. Large worlds and batched simulation
+
+Optimize mixed-size discovery, active-island compaction, mesh work queues and memory
+reuse. Add independent-world batching with explicit world identities and command/event
+isolation. Define coordinate precision, origin shifting and streaming lifecycle contracts.
+
+Exit: separate single-world latency and batched throughput reports across the supported
+adapter matrix, with p50/p95 full-step timings, memory, queue depth and capacity recovery.
+No whole-world host round trip is required to advance or render.
+
+### G11. Advanced collision and material fidelity
+
+Expand the qualified CCD envelope and robust nonconvex handling based on measured gaps.
+Evaluate optional cooked representations such as convex decomposition or distance fields;
+record their approximation explicitly and preserve authored collision semantics by default.
+Add calibrated material models only with independent evidence, including rolling/spinning
+resistance and pace-dependent responses where applications require them.
+
+Exit: adversarial geometry, fast rotation, repeated impacts and material reference cases
+meet documented accuracy and cost budgets without silently dropping work.
+
+### G12. Production library qualification
+
+Stabilize API ownership, mutation and disposal contracts; version cooked assets; provide
+capture/replay and solver diagnostics; define device-loss and capacity-failure behavior.
+Maintain continuous correctness and performance coverage across integrated/discrete GPUs
+and a declared mobile envelope. Publish reproducible benchmarks and known limitations.
+
+Exit: a versioned supported-feature contract, end-to-end rendering integration, release
+regression gates and reproducible competitive evidence. SOTA status is evaluated per
+workload and quality metric, not asserted universally.
+
+### Later research tracks
+
+Deformables, cloth, fluids and differentiable simulation are separate research programmes.
+They should reuse the execution infrastructure, but do not block a strong rigid-body
+release or expand the initial glTF qualification milestone implicitly.
 
 ## Landed baseline
 

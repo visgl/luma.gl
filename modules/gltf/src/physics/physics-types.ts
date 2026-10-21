@@ -10,6 +10,9 @@ export type GLTFPhysicsDocument = {
   scenes?: readonly {nodes?: readonly number[]}[];
   nodes?: readonly {
     name?: string;
+    mesh?: number;
+    skin?: number;
+    weights?: readonly number[];
     children?: readonly number[];
     matrix?: readonly number[];
     translation?: readonly number[];
@@ -51,6 +54,8 @@ export type GLTFPhysicsCollider = {
   shapeIndex?: number;
   /** Present only for explicitly enabled legacy mesh geometry. */
   meshIndex?: number;
+  /** Draft geometry.node reference, distinct from the collider node and legacy mesh index. */
+  geometryNodeIndex?: number;
   materialIndex?: number;
   filterIndex?: number;
   collider: GPURigidBodyCollider;
@@ -69,6 +74,16 @@ export type GLTFPhysicsDescription = {
 };
 export type ParseGLTFPhysicsOptions = {
   scene?: number;
+  /** Decode one node's own mesh at its initial pose in that node's local space.
+   * Include initial skinning and morph weights; the adapter combines child transforms.
+   * Called for off-scene references too. Never return an undeformed mesh for a skinned node.
+   */
+  resolveNodeMeshGeometry?: (nodeIndex: number) =>
+    | {
+        positions: ArrayLike<number>;
+        indices: ArrayLike<number>;
+      }
+    | undefined;
   /** Opt into legacy geometry.mesh; return decoded, referenced mesh vertices as flat XYZs.
    * Only convex hulls exactly equal to an axis-aligned box are currently supported.
    */

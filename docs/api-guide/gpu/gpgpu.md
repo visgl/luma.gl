@@ -54,6 +54,8 @@ intermediate evaluator results.
 
 ## Next steps
 
+- [GPU physics: background and architecture](/docs/api-guide/gpu/gpu-physics)
+
 - [Choosing a GPU data-processing API](/docs/api-guide/gpu/gpu-data-processing)
 - [GPU tables](/docs/api-guide/gpu/gpu-tables)
 - [Tabular data in WGSL](/docs/api-guide/gpu/tabular-data-in-wgsl)

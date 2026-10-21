@@ -42,6 +42,7 @@ const config = {
         fp64: '/examples/experimental/fp64',
         three: '/examples/experimental/three',
         'pool': '/examples/experimental/gpu-pool',
+        'rigid-body-lab': '/examples/experimental/gpu-rigid-body-world',
         'sphere-world': '/examples/experimental/gpu-sphere-world',
         'webxr-kaleidoscope': '/examples/experimental/webxr-kaleidoscope',
         'external-context': '/examples/integrations/external-context',

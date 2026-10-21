@@ -9,6 +9,7 @@ import {
 } from '../../src/gpu-physics/rigid-body-mesh';
 import {getRigidBodyShapeProperties} from '../../src/gpu-physics/rigid-body-shape-properties';
 import {GPURigidBodyWorld} from '../../src/gpu-physics/gpu-rigid-body-world';
+import {packRigidBodyShapes} from '../../src/gpu-physics/rigid-body-geometry';
 const cube = Array.from({length: 8}, (_, corner) => [
   corner & 1 ? 1 : -1,
   corner & 2 ? 1 : -1,
@@ -161,4 +162,16 @@ it('rejects invalid masses and gravity-driven meshes that cannot remain separate
         ]
       })
   ).toThrow('mesh/mesh');
+});
+
+it('packs sparse collider exclusions in sorted unique ranges', () => {
+  const colliders = Array.from({length: 1000}, (_, index) => ({
+    shape: {type: 'sphere' as const, radius: 1},
+    excludedColliders: index === 0 ? [999, 1, 999] : []
+  }));
+  const packed = packRigidBodyShapes(colliders);
+  expect(packed.filters).toHaveLength(1000);
+  expect(packed.filters[0]).toEqual([0, 2]);
+  expect(packed.geometry.slice(0, 2)).toEqual([1, 999]);
+  expect(packed.geometry).toHaveLength(4);
 });

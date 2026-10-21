@@ -52,7 +52,7 @@ const box = (position: [number, number, number]) => ({
   restitution: 0
 });
 
-it('GPURigidBodyWorld uses authored center of mass and rotated principal inertia', async () => {
+it('GPURigidBodyWorld uses authored center of mass and rotated principal inertia', async context => {
   const fixture = await makeWorld([
     {
       ...box([0, 0, 0]),
@@ -61,7 +61,7 @@ it('GPURigidBodyWorld uses authored center of mass and rotated principal inertia
       inertiaOrientation: [0, 0, Math.SQRT1_2, Math.SQRT1_2]
     }
   ]);
-  if (!fixture) return;
+  if (!fixture) return context.skip('WebGPU is unavailable');
   try {
     expect((await fixture.world.readState())[0].position).toEqual([0.5, 0, 0]);
     fixture.world.applyImpulse(0, [0, 0, 1], [1.5, 0, 0]);
@@ -73,7 +73,7 @@ it('GPURigidBodyWorld uses authored center of mass and rotated principal inertia
   }
 });
 
-it('GPURigidBodyWorld transfers an offset compound contact into body rotation', async () => {
+it('GPURigidBodyWorld transfers an offset compound contact into body rotation', async context => {
   const fixture = await makeWorld([
     {
       position: [0, 0, 0],
@@ -85,7 +85,7 @@ it('GPURigidBodyWorld transfers an offset compound contact into body rotation', 
     },
     {shape: {type: 'sphere', radius: 0.25}, position: [-1.5, 1, 0], velocity: [3, 0, 0]}
   ]);
-  if (!fixture) return;
+  if (!fixture) return context.skip('WebGPU is unavailable');
   try {
     const states = await fixture.step(70);
     expect(fixture.world.colliderCount).toBe(3);
@@ -97,7 +97,7 @@ it('GPURigidBodyWorld transfers an offset compound contact into body rotation', 
   }
 });
 
-it('GPURigidBodyWorld kinematic motion pushes dynamic bodies without receiving impulses', async () => {
+it('GPURigidBodyWorld kinematic motion pushes dynamic bodies without receiving impulses', async context => {
   const fixture = await makeWorld([
     {
       shape: {type: 'sphere', radius: 0.5},
@@ -107,7 +107,7 @@ it('GPURigidBodyWorld kinematic motion pushes dynamic bodies without receiving i
     },
     {shape: {type: 'sphere', radius: 0.5}, position: [1.05, 0, 0]}
   ]);
-  if (!fixture) return;
+  if (!fixture) return context.skip('WebGPU is unavailable');
   try {
     fixture.world.applyImpulse(0, [-100, 0, 0], [0, 1, 0]);
     const states = await fixture.step(30);
@@ -119,11 +119,11 @@ it('GPURigidBodyWorld kinematic motion pushes dynamic bodies without receiving i
   }
 });
 
-it('GPURigidBodyWorld holds exact kinematic node targets with center offsets', async () => {
+it('GPURigidBodyWorld holds exact kinematic node targets with center offsets', async context => {
   const fixture = await makeWorld([
     {...box([0, 0, 0]), mode: 'kinematic', centerOfMass: [0.5, 0, 0]}
   ]);
-  if (!fixture) return;
+  if (!fixture) return context.skip('WebGPU is unavailable');
   try {
     fixture.world.setKinematicTarget(0, [1, 0, 0], [0, 0, Math.SQRT1_2, Math.SQRT1_2]);
     const first = (await fixture.step(1))[0];
@@ -140,7 +140,7 @@ it('GPURigidBodyWorld holds exact kinematic node targets with center offsets', a
   }
 });
 
-it('GPURigidBodyWorld collider exclusions suppress response symmetrically', async () => {
+it('GPURigidBodyWorld collider exclusions suppress response symmetrically', async context => {
   const fixture = await makeWorld([
     {
       position: [-1, 0, 0],
@@ -149,7 +149,7 @@ it('GPURigidBodyWorld collider exclusions suppress response symmetrically', asyn
     },
     {shape: {type: 'sphere', radius: 0.5}, position: [1, 0, 0], velocity: [-2, 0, 0]}
   ]);
-  if (!fixture) return;
+  if (!fixture) return context.skip('WebGPU is unavailable');
   try {
     const states = await fixture.step(90);
     expect(states[0].position[0]).toBeGreaterThan(0.4);
@@ -160,7 +160,7 @@ it('GPURigidBodyWorld collider exclusions suppress response symmetrically', asyn
   }
 });
 
-it('GPURigidBodyWorld follows material combine precedence for restitution', async () => {
+it('GPURigidBodyWorld follows material combine precedence for restitution', async context => {
   const fixture = await makeWorld([
     {
       position: [-0.6, 0, 0],
@@ -182,7 +182,7 @@ it('GPURigidBodyWorld follows material combine precedence for restitution', asyn
       ]
     }
   ]);
-  if (!fixture) return;
+  if (!fixture) return context.skip('WebGPU is unavailable');
   try {
     const states = await fixture.step(60);
     expect(states[0].velocity[0]).toBeCloseTo(0.25, 2);
@@ -192,7 +192,7 @@ it('GPURigidBodyWorld follows material combine precedence for restitution', asyn
   }
 });
 
-it('GPURigidBodyWorld distinguishes static friction from sliding friction', async () => {
+it('GPURigidBodyWorld distinguishes static friction from sliding friction', async context => {
   const material = {staticFriction: 1, dynamicFriction: 0, frictionCombine: 'average' as const};
   for (const speed of [1, 0.005]) {
     const fixture = await makeWorld(
@@ -210,7 +210,7 @@ it('GPURigidBodyWorld distinguishes static friction from sliding friction', asyn
       ],
       {gravity: [0, 0, -9.81]}
     );
-    if (!fixture) return;
+    if (!fixture) return context.skip('WebGPU is unavailable');
     try {
       const state = (await fixture.step(60))[1];
       if (speed === 1) expect(state.velocity[0]).toBeGreaterThan(0.9);
@@ -221,12 +221,12 @@ it('GPURigidBodyWorld distinguishes static friction from sliding friction', asyn
   }
 });
 
-it('GPURigidBodyWorld preserves infinite mass and locked principal axes independently', async () => {
+it('GPURigidBodyWorld preserves infinite mass and locked principal axes independently', async context => {
   const fixture = await makeWorld(
     [{...box([0, 0, 0]), mode: 'dynamic', mass: 0, inertiaDiagonal: [1, 2, 0], gravityFactor: 0}],
     {gravity: [0, 0, -9.81]}
   );
-  if (!fixture) return;
+  if (!fixture) return context.skip('WebGPU is unavailable');
   try {
     fixture.world.applyImpulse(0, [0, 1, 1], [1, 0, 0]);
     const state = (await fixture.step(1))[0];
@@ -238,7 +238,7 @@ it('GPURigidBodyWorld preserves infinite mass and locked principal axes independ
   }
 });
 
-it('GPURigidBodyWorld preserves authored spin on infinite-inertia axes', async () => {
+it('GPURigidBodyWorld preserves authored spin on infinite-inertia axes', async context => {
   for (const body of [
     {
       ...box([0, 0, 0]),
@@ -249,7 +249,7 @@ it('GPURigidBodyWorld preserves authored spin on infinite-inertia axes', async (
     {...box([0, 0, 0]), mode: 'dynamic' as const, mass: 0, angularVelocity: [1, 2, 0.5] as const}
   ]) {
     const fixture = await makeWorld([body]);
-    if (!fixture) return;
+    if (!fixture) return context.skip('WebGPU is unavailable');
     try {
       fixture.world.applyImpulse(0, [0, 10, 0], [1, 0, 0]);
       const state = (await fixture.step(120))[0];
@@ -262,7 +262,7 @@ it('GPURigidBodyWorld preserves authored spin on infinite-inertia axes', async (
   }
 });
 
-it('GPURigidBodyWorld applies off-center impulses using rotated principal inertia', async () => {
+it('GPURigidBodyWorld applies off-center impulses using rotated principal inertia', async context => {
   const fixture = await makeWorld([
     {
       ...box([0, 0, 0]),
@@ -271,7 +271,7 @@ it('GPURigidBodyWorld applies off-center impulses using rotated principal inerti
       orientation: [0, 0, Math.SQRT1_2, Math.SQRT1_2]
     }
   ]);
-  if (!fixture) return;
+  if (!fixture) return context.skip('WebGPU is unavailable');
   try {
     await fixture.step(1);
     fixture.world.applyImpulse(0, [2, 0, 0], [0, 0, 0.25]);
@@ -285,7 +285,7 @@ it('GPURigidBodyWorld applies off-center impulses using rotated principal inerti
   }
 });
 
-it('GPURigidBodyWorld resolves sphere impact against an oriented box with angular response', async () => {
+it('GPURigidBodyWorld resolves sphere impact against an oriented box with angular response', async context => {
   const fixture = await makeWorld([
     {...box([0, 0, 0]), mass: 2, orientation: [0, 0, Math.sin(0.15), Math.cos(0.15)]},
     {
@@ -295,7 +295,7 @@ it('GPURigidBodyWorld resolves sphere impact against an oriented box with angula
       restitution: 0.4
     }
   ]);
-  if (!fixture) return;
+  if (!fixture) return context.skip('WebGPU is unavailable');
   try {
     const states = await fixture.step(70);
     expect(states[0].velocity[0]).toBeGreaterThan(0.3);
@@ -308,7 +308,7 @@ it('GPURigidBodyWorld resolves sphere impact against an oriented box with angula
   }
 });
 
-it('GPURigidBodyWorld holds a rotated box stack and sleeps and wakes the connected stack', async () => {
+it('GPURigidBodyWorld holds a rotated box stack and sleeps and wakes the connected stack', async context => {
   const fixture = await makeWorld(
     [
       floor,
@@ -319,7 +319,7 @@ it('GPURigidBodyWorld holds a rotated box stack and sleeps and wakes the connect
     ],
     {gravity: [0, 0, -9.81], iterations: 24, sleepAfter: 0.4}
   );
-  if (!fixture) return;
+  if (!fixture) return context.skip('WebGPU is unavailable');
   try {
     const states = await fixture.step(360);
     for (let index = 1; index < states.length; index++) {
@@ -336,11 +336,11 @@ it('GPURigidBodyWorld holds a rotated box stack and sleeps and wakes the connect
   }
 });
 
-it('GPURigidBodyWorld friction slows a sliding box without changing static colliders', async () => {
+it('GPURigidBodyWorld friction slows a sliding box without changing static colliders', async context => {
   const fixture = await makeWorld([floor, {...box([0, 0, 0.5]), velocity: [1, 0, 0]}], {
     gravity: [0, 0, -9.81]
   });
-  if (!fixture) return;
+  if (!fixture) return context.skip('WebGPU is unavailable');
   try {
     const states = await fixture.step(180);
     expect(Math.abs(states[1].velocity[0])).toBeLessThan(0.05);
@@ -352,7 +352,7 @@ it('GPURigidBodyWorld friction slows a sliding box without changing static colli
   }
 });
 
-it('GPURigidBodyWorld preserves separated rotated boxes and conserves unequal-mass impact momentum', async () => {
+it('GPURigidBodyWorld preserves separated rotated boxes and conserves unequal-mass impact momentum', async context => {
   const fixture = await makeWorld(
     [
       {...box([-1, 0, 0]), mass: 2, velocity: [1, 0, 0], restitution: 1},
@@ -360,7 +360,7 @@ it('GPURigidBodyWorld preserves separated rotated boxes and conserves unequal-ma
     ],
     {restitutionThreshold: 0.01, iterations: 32}
   );
-  if (!fixture) return;
+  if (!fixture) return context.skip('WebGPU is unavailable');
   try {
     const states = await fixture.step(80);
     expect(states[0].velocity[0] * 2 + states[1].velocity[0]).toBeCloseTo(2, 3);
@@ -374,13 +374,13 @@ it('GPURigidBodyWorld preserves separated rotated boxes and conserves unequal-ma
   }
 });
 
-it('GPURigidBodyWorld keeps separated parallel rotated boxes apart without false contacts', async () => {
+it('GPURigidBodyWorld keeps separated parallel rotated boxes apart without false contacts', async context => {
   const orientation = [0, 0, Math.sin(Math.PI / 8), Math.cos(Math.PI / 8)] as const;
   const fixture = await makeWorld([
     {...box([0, 0, 0]), shape: {type: 'box', halfExtents: [2, 0.1, 0.1]}, orientation},
     {...box([-0.3, 0.3, 0]), shape: {type: 'box', halfExtents: [2, 0.1, 0.1]}, orientation}
   ]);
-  if (!fixture) return;
+  if (!fixture) return context.skip('WebGPU is unavailable');
   try {
     const states = await fixture.step(20);
     expect(states[0].position).toEqual([0, 0, 0]);
@@ -391,7 +391,7 @@ it('GPURigidBodyWorld keeps separated parallel rotated boxes apart without false
   }
 });
 
-it('GPURigidBodyWorld settled stacks converge across timestep and iteration budgets', async () => {
+it('GPURigidBodyWorld settled stacks converge across timestep and iteration budgets', async context => {
   const results: number[][] = [];
   for (const [timeStep, iterations] of [
     [1 / 120, 12],
@@ -402,7 +402,7 @@ it('GPURigidBodyWorld settled stacks converge across timestep and iteration budg
       timeStep,
       iterations
     });
-    if (!fixture) return;
+    if (!fixture) return context.skip('WebGPU is unavailable');
     try {
       const states = await fixture.step(Math.round(1.5 / timeStep));
       results.push(states.map(state => state.position[2]));
@@ -415,7 +415,7 @@ it('GPURigidBodyWorld settled stacks converge across timestep and iteration budg
     expect(Math.abs(results[0][index] - results[1][index])).toBeLessThan(0.025);
 });
 
-it('GPURigidBodyWorld preserves free spin with large principal inertia', async () => {
+it('GPURigidBodyWorld preserves free spin with large principal inertia', async context => {
   const fixture = await makeWorld([
     {
       shape: {type: 'sphere', radius: 10},
@@ -424,7 +424,7 @@ it('GPURigidBodyWorld preserves free spin with large principal inertia', async (
       angularVelocity: [1, 2, 0.5]
     }
   ]);
-  if (!fixture) return;
+  if (!fixture) return context.skip('WebGPU is unavailable');
   try {
     const state = (await fixture.step(120))[0];
     for (const [index, value] of [1, 2, 0.5].entries())
@@ -434,7 +434,7 @@ it('GPURigidBodyWorld preserves free spin with large principal inertia', async (
   }
 });
 
-it('GPURigidBodyWorld preserves world angular momentum for a freely tumbling asymmetric box', async () => {
+it('GPURigidBodyWorld preserves world angular momentum for a freely tumbling asymmetric box', async context => {
   const fixture = await makeWorld(
     [
       {
@@ -445,7 +445,7 @@ it('GPURigidBodyWorld preserves world angular momentum for a freely tumbling asy
     ],
     {timeStep: 1 / 240}
   );
-  if (!fixture) return;
+  if (!fixture) return context.skip('WebGPU is unavailable');
   const rotate = (rotation: readonly number[], vector: readonly number[]) => {
     const cross = (first: readonly number[], second: readonly number[]) => [
       first[1] * second[2] - first[2] * second[1],
