@@ -46,3 +46,9 @@ export {
   type GPURigidBodyState,
   type GPURigidBodyWorldProps
 } from './gpu-rigid-body-world';
+
+export {
+  decodeRigidBodySimulationDiagnostics,
+  type GPURigidBodySimulationDiagnostics
+} from './rigid-body-diagnostics';
+export type {GPURigidBodyCapacityInfo} from './rigid-body-capacity';

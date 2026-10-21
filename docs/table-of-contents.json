@@ -176,6 +176,7 @@
         "label": "GPGPU Programming",
         "items": [
           "api-guide/gpu/gpgpu",
+          "api-guide/gpu/gpu-physics",
           "api-guide/gpu/gpu-data-processing",
           "api-guide/shaders/gpu-floating-point-precision",
           "api-guide/gpu/gpu-tables",
@@ -741,6 +742,15 @@
           "api-reference/gpgpu/gpu-pointcloud",
           {
             "type": "category",
+            "label": "GPU Physics",
+            "items": [
+              "api-reference/gpgpu/gpu-physics",
+              "api-reference/gpgpu/gpu-sphere-world",
+              "api-reference/gpgpu/gpu-rigid-body-world"
+            ]
+          },
+          {
+            "type": "category",
             "label": "GPU Data",
             "items": [
               "api-reference/gpgpu/gpu-constant",
@@ -800,6 +810,7 @@
           "api-reference/gltf/gltf-area-lights",
           "api-reference/gltf/gltf-materials-scatter",
           "api-reference/gltf/gltf-audio",
+          "api-reference/gltf/gltf-audio-environment",
           {
             "type": "category",
             "label": "Animated crowds",

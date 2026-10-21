@@ -10,6 +10,8 @@ export type RigidBodyVector = readonly [number, number, number];
 export type RigidBodyRotation = readonly [number, number, number, number];
 export type GPURigidBodyShape =
   | {type: 'sphere'; radius: number}
+  /** Local +Y normal; omitted tangent extents are unbounded. */
+  | {type: 'plane'; sizeX?: number; sizeZ?: number; doubleSided?: boolean}
   | {type: 'box'; halfExtents: RigidBodyVector}
   | {type: 'capsule'; height: number; radiusBottom: number; radiusTop: number}
   | {type: 'cylinder'; height: number; radiusBottom: number; radiusTop: number}

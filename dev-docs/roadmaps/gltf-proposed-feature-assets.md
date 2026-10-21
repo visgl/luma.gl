@@ -112,3 +112,5 @@ The model, textures, and reference images are CC BY 4.0. Geometry and textures: 
 The same branch includes ScatterAnisotropy, ScatterColorAndDensity, and ScatterStrength volumetric fixtures. They are not offered as supported thin-wall models. ScatteringSkull still uses the older diffuse-transmission/volume-scatter extensions and is not evidence of new-scatter support.
 
 The original luma.gl flat-panel diagnostic remains a source fixture but is not offered in the example model selector. The default is now the upstream thin-wall reference. Rendering with direct lighting is not a pixel-equivalence claim against the source environment-lit reference screenshots.
+
+The audio environment preset loads this pinned Drum Kit unchanged. It uses the authored small-room preset through an approximate parametric response. Air absorption and prototype playing-pointer interaction remain explicitly unsupported; the gallery thumbnail is an actual luma.gl render.

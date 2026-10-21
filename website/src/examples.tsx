@@ -2773,8 +2773,9 @@ export const GLTFAudioExample: React.FC<WebsiteExampleProps & {feature?: GLTFAud
   const loadTemplate = useMemo(() => async () => {
     const {default: AudioApp} = await loadGLTFAudioApp();
     return {default: class ConfiguredAudioApp extends AudioApp {
+      static info = feature === 'environment' ? AudioApp.environmentInfo : feature === 'graph' ? AudioApp.graphInfo : AudioApp.info;
       constructor(animationProps: AnimationProps) { super(animationProps, feature); }
     }};
   }, [feature]);
-  return <LumaExample id="gltf-audio" directory="showcase" sourcePath="examples/gltf/audio/app.ts" loadTemplate={loadTemplate} config={exampleConfig} showStats={false} {...props} />;
+  return <LumaExample id={feature === 'environment' ? 'gltf-audio-environment' : feature === 'graph' ? 'gltf-audio-graph' : 'gltf-audio'} directory="showcase" infoBoxAppearance="cinematic" sourcePath="examples/gltf/audio/app.ts" loadTemplate={loadTemplate} config={exampleConfig} showStats={false} {...props} />;
 };
