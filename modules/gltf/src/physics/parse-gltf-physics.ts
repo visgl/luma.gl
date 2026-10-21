@@ -529,6 +529,17 @@ export function parseGLTFPhysics(
     );
     return result;
   }
+  const hasFiltering = filters.some(
+    filter => filter.include !== undefined || (filter.exclude?.length ?? 0) > 0
+  );
+  if (hasFiltering && result.colliders.length > 128) {
+    report(
+      'filtered-capacity-exceeded',
+      '/',
+      'Filtered descriptions currently support at most 128 colliders; large-world GPU filter groups are not implemented'
+    );
+    return result;
+  }
   for (const definition of result.bodies) {
     const colliders = definition.colliderIndices.map(
       colliderIndex => result.colliders[colliderIndex]['collider']
@@ -578,25 +589,20 @@ export function parseGLTFPhysics(
   for (const definition of result.bodies) definition.colliderIndices = [];
   for (const collider of result.colliders)
     result.bodies[collider.bodyIndex].colliderIndices.push(collider.colliderIndex);
-  const hasFiltering = filters.some(
-    filter => filter.include !== undefined || (filter.exclude?.length ?? 0) > 0
-  );
+
+  const exclusions: number[][] = result.colliders.map(() => []);
   for (let first = 0; hasFiltering && first < filters.length; first++)
     for (let second = first + 1; second < filters.length; second++) {
       if (
         !allowsFilter(filters[first], filters[second]) ||
         !allowsFilter(filters[second], filters[first])
       ) {
-        result.colliders[first]['collider'].excludedColliders = [
-          ...(result.colliders[first]['collider'].excludedColliders ?? []),
-          second
-        ];
-        result.colliders[second]['collider'].excludedColliders = [
-          ...(result.colliders[second]['collider'].excludedColliders ?? []),
-          first
-        ];
+        exclusions[first].push(second);
+        exclusions[second].push(first);
       }
     }
+  for (const [colliderIndex, collider] of result.colliders.entries())
+    collider.collider.excludedColliders = exclusions[colliderIndex];
   const relevant = new Set<number>();
   for (const {nodeIndex} of [...result.bodies, ...result.colliders]) {
     let current: number | undefined = nodeIndex;

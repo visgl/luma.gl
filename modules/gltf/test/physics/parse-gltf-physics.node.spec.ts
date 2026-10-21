@@ -635,3 +635,22 @@ it('disables all-zero-scale colliders while retaining geometry-free authored mot
   expect(world.colliderCount).toBe(0);
   world.destroy();
 });
+
+it('rejects large filtered descriptions before expanding quadratic exclusions', () => {
+  const source = makePhysicsDocument([
+    {children: Array.from({length: 129}, (_, index) => index + 1)},
+    ...Array.from({length: 129}, () => ({
+      extensions: {
+        KHR_physics_rigid_bodies: {motion: {}, collider: {geometry: {shape: 0}, collisionFilter: 0}}
+      }
+    }))
+  ]);
+  source.extensions!.KHR_physics_rigid_bodies = {collisionFilters: [{collideWithSystems: []}]};
+  const result = parseGLTFPhysics(source);
+  expect(result.supported).toBe(false);
+  expect(result.issues.some(issue => issue.code === 'filtered-capacity-exceeded')).toBe(true);
+  expect(
+    result.colliders.every(collider => collider.collider.excludedColliders?.length === 0)
+  ).toBe(true);
+  expect(() => createGLTFPhysicsWorld(result)).toThrow();
+});

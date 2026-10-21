@@ -100,6 +100,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const reload = () => {
       void this.loadGLTF();
     };
+    const resetScene = () => {
+      void this.loadGLTF({preserveView: true});
+    };
     const selectNeighbor = (offset: number) => {
       if (!sample || this.loading) return;
       sample.selectedIndex =
@@ -115,13 +118,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       if (pause) pause.textContent = this.paused ? 'Resume' : 'Pause';
     };
     sample?.addEventListener('change', reload);
-    reset?.addEventListener('click', reload);
+    reset?.addEventListener('click', resetScene);
     pause?.addEventListener('click', togglePause);
     this.cleanupControls = () => {
       previous?.removeEventListener('click', selectPrevious);
       next?.removeEventListener('click', selectNext);
       sample?.removeEventListener('change', reload);
-      reset?.removeEventListener('click', reload);
+      reset?.removeEventListener('click', resetScene);
       pause?.removeEventListener('click', togglePause);
     };
     reload();
@@ -146,7 +149,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     return [0.95, 0.95, 0.97, 1];
   }
 
-  async loadGLTF(): Promise<void> {
+  async loadGLTF({preserveView = false}: {preserveView?: boolean} = {}): Promise<void> {
     if (this.loading || this.isFinalized) return;
     this.loading = true;
     this.previousTime = undefined;
@@ -236,19 +239,20 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
 
       const sceneBounds = scenegraphsFromGLTF.sceneBounds[0] || scenegraphsFromGLTF.modelBounds;
-      this.center = [...sceneBounds.center];
       this.sceneRadius = sceneBounds.radius;
-      this.center[1] =
-        (description.bodies.find(body => body.body.mass === 0)?.body.position?.[1] || 0) +
-        Math.min(this.sceneRadius * 0.15, 1.5);
-      this.cameraHeight = this.center[1];
-      this.orbitControls.setProps({
-        target: [this.center[0], this.cameraHeight, this.center[2]],
-        distance: sceneBounds.recommendedOrbitDistance,
-        minDistance: Math.max(this.sceneRadius * 0.08, 0.025),
-        maxDistance: Math.max(this.sceneRadius * 32, 12)
-      });
-
+      if (!preserveView) {
+        this.center = [...sceneBounds.center];
+        this.center[1] =
+          (description.bodies.find(body => body.body.mass === 0)?.body.position?.[1] || 0) +
+          Math.min(this.sceneRadius * 0.15, 1.5);
+        this.cameraHeight = this.center[1];
+        this.orbitControls.setProps({
+          target: [this.center[0], this.cameraHeight, this.center[2]],
+          distance: sceneBounds.recommendedOrbitDistance,
+          minDistance: Math.max(this.sceneRadius * 0.08, 0.025),
+          maxDistance: Math.max(this.sceneRadius * 32, 12)
+        });
+      }
       canvas.style.opacity = '1';
       showError(
         description.supported

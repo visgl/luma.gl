@@ -39,6 +39,7 @@ try {
   controls.target.set(0, 0, 2);
   controls.update();
   const cameraBuffer = device.createBuffer({
+    id: 'rigid-body-camera',
     byteLength: 64,
     usage: Buffer.UNIFORM | Buffer.COPY_DST
   });
@@ -166,14 +167,16 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
         destroy(replacement);
         return;
       }
+      const changedScene = resources.sceneName !== replacement.sceneName;
       diagnostics.clear();
       destroy(resources);
       resources = replacement;
-      camera.position.set(
-        resources.sceneName === 'mixed' ? 24 : 11,
-        resources.sceneName === 'mixed' ? -30 : -16,
-        resources.sceneName === 'mixed' ? 25 : 12
-      );
+      if (changedScene)
+        camera.position.set(
+          resources.sceneName === 'mixed' ? 24 : 11,
+          resources.sceneName === 'mixed' ? -30 : -16,
+          resources.sceneName === 'mixed' ? 25 : 12
+        );
       accumulator = 0;
       elapsedSimulation = 0;
     } catch (error) {

@@ -156,6 +156,6 @@ disabled; geometry-free motions retain their authored body properties.
 
 Descriptions above the reference capacity select the sparse hierarchical backend,
 up to the backend's sixteen-bit body/collider identities. Unfiltered descriptions
-avoid quadratic filter expansion and body-to-collider grouping. Explicit filter
-exclusions still need further scaling work. These additions do not complete G2 or G3;
+avoid quadratic filter expansion and body-to-collider grouping. Descriptions with include/exclude filters retain a 128-collider limit, checked before
+pair expansion. Large-world GPU filter groups remain follow-up work. These additions do not complete G2 or G3;
 see `scripts/physics/qualification-profile.json` for the required behavioral evidence.
