@@ -7,7 +7,7 @@
     <style>
       html, body {width: 100%; height: 100%; margin: 0; overflow: hidden; font-family: sans-serif;}
       canvas {width: 100% !important; height: 100% !important;}
-      #credits {position: absolute; bottom: 0; background: white; z-index: 2; padding: 8px; max-width: 600px; font-size: 12px;}
+      #credits {position: absolute; bottom: 0; background: #18202c; color: #edf2fa; z-index: 2; padding: 8px; max-width: 600px; font-size: 12px;}
     </style>
   </head>
   <body>
@@ -22,7 +22,7 @@
       document.getElementById('credits').innerHTML = INFO_HTML;
       const type = new URLSearchParams(location.search).get('backend') || 'best-available';
       const feature = new URLSearchParams(location.search).get('feature') || 'emitter';
-      if (feature !== 'emitter') throw new Error(`Unknown glTF audio feature: ${feature}`);
+      if (feature !== 'emitter' && feature !== 'graph') throw new Error(`Unknown glTF audio feature: ${feature}`);
       class ConfiguredAudio extends AnimationLoopTemplate {
         constructor(animationProps) { super(animationProps, feature); }
       }

@@ -176,6 +176,13 @@ export class GLTFAudioController {
     }
   }
 
+  /** Change a graph gain using its authored interpolation and duration. */
+  setGraphGain(graphIndex: number, nodeIndex: number, gain: number): void {
+    // Graph and node indices follow the authored KHR_audio_graph arrays.
+    assert(!this.destroyed && this.graphs[graphIndex]);
+    this.graphs[graphIndex].setGain(nodeIndex, gain);
+  }
+
   private startSource(
     sourceIndex: number,
     startTime: number,
