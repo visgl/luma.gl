@@ -23,9 +23,6 @@ The lightmap preset loads the pinned MIT Cornell Box (709 KB). Its baked irradia
 
 The area-light preset loads The Modern Living Room by Wig42 (CC BY 3.0), with conversion credit to Benedikt Bitterli and Foundation Resources. Geometry and textures stay in the source repository; the viewer routes Git LFS payloads through its media host.
 
-### Scatter diagnostic
+### Scatter reference
 
-Use `?feature=scatter` for an authored three-panel glTF demonstrating the draft
-`KHR_materials_scatter` thin-wall profile under opposing warm and cool directional
-lights. Left to right: backward, balanced, forward scattering. This is an authored
-diagnostic, not an upstream reference asset. Volumetric mode is rejected.
+Use `?feature=scatter` for the upstream Scatter Strength Thin-Walled asset, pinned to KhronosGroup/glTF-Sample-Assets revision 24871201ac46cf1c23882eda4562bfb993b88ff0. The Model, Info, and Attributions tabs separate selection, explanation, and CC BY 4.0 credits. This exercises real scalar and secondary-UV textured scatter strength. Volumetric mode is not implemented.

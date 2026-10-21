@@ -370,10 +370,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.center = [...sceneBounds.center];
       this.sceneRadius = sceneBounds.radius;
       this.cameraHeight =
-        this.center[1] + (this.feature === 'lightmap' ? 0 : this.sceneRadius * 0.3);
+        this.center[1] +
+        (this.feature === 'lightmap' || this.feature === 'scatter' ? 0 : this.sceneRadius * 0.3);
       this.orbitControls.setProps({
         target: [this.center[0], this.cameraHeight, this.center[2]],
-        distance: sceneBounds.recommendedOrbitDistance * (this.feature === 'lightmap' ? 2 : 1),
+        distance:
+          sceneBounds.recommendedOrbitDistance *
+          (this.feature === 'lightmap' ? 2 : this.feature === 'scatter' ? 1.65 : 1),
         minDistance: Math.max(this.sceneRadius * 0.08, 0.025),
         maxDistance: Math.max(this.sceneRadius * 32, 12)
       });
