@@ -2786,10 +2786,3 @@ export const SpaceSalvageExample: React.FC = () => {
     <iframe title="Space Salvage" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
   </ExamplePage>;
 };
-
-export const SpaceSalvageExample: React.FC = () => {
-  const source = useBaseUrl('/standalone-examples/space-salvage/index.html');
-  return <ExamplePage style={{background: '#050b18', minHeight: '720px'}}>
-    <iframe title="Space Salvage" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
-  </ExamplePage>;
-};

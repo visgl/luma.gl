@@ -237,7 +237,10 @@ try {
             !recovered.has(selected.body)
           ) {
             const target = mission.states[selected.body];
-            const delta = [ship.position[0] - target.position[0][1] - target.position[1]];
+            const delta: [number, number] = [
+              ship.position[0] - target.position[0],
+              ship.position[1] - target.position[1]
+            ];
             const distance = Math.hypot(...delta);
             // The ray query bounds surface distance; large targets can have centers beyond it.
             if (distance > 1.5) {

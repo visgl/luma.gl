@@ -362,6 +362,10 @@ the material restitution policy, then sweeps the remaining time. This first CCD
 response does not add tangential impact friction or CCD-specific contact-event
 payloads. Ordinary discrete contacts still provide friction and contact events.
 
+Initial penetrations are handled by the discrete solver: CCD skips each initially
+penetrating pair for that step while still sweeping other obstacles. This does not
+guarantee recovery from arbitrary deep overlap.
+
 The GPU rejects the step if the impact or sweep budget is exhausted. Inspect
 `incompleteContinuousBodies` along with `complete` in lifetime diagnostics. Dynamic
 pairs, moving kinematic obstacles, rotating convex shapes and meshes still have

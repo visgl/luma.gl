@@ -472,3 +472,53 @@ it('applies center impulses without torque after GPU motion', async context => {
     world.destroy();
   }
 });
+
+it.for([
+  'box',
+  'sphere'
+] as const)('leaves initial %s overlap to discrete solving without latching rollback', async (shape, context) => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const world = new GPURigidBodyWorld({
+    failurePolicy: 'rollback',
+    continuous: {bodies: [0]},
+    gravity: [0, 0, 0],
+    timeStep: 0.1,
+    bodies: [
+      {
+        position: [0.8, 0, 0],
+        velocity: [10, 0, 0],
+        restitution: 0,
+        shape: {type: 'sphere', radius: 0.5}
+      },
+      {
+        mode: 'static',
+        position: [0, 0, 0],
+        shape: shape === 'box' ? {type: 'box', halfExtents: [1, 1, 1]} : {type: 'sphere', radius: 1}
+      },
+      {
+        mode: 'static',
+        position: [3, 0, 0],
+        restitution: 0,
+        shape: {type: 'box', halfExtents: [0.05, 2, 2]}
+      }
+    ]
+  });
+  const definition = new GPUCommandGraph(device);
+  world.addToGraph(definition);
+  const graph = await definition.compileAsync();
+  try {
+    for (let step = 0; step < 3; step++) {
+      const encoder = device.createCommandEncoder();
+      graph.encode(encoder, {parameters: undefined});
+      device.submit(encoder.finish());
+      const state = (await world.readState())[0];
+      expect(state.position[0]).toBeGreaterThan(0.8);
+      expect(state.position[0]).toBeLessThan(2.451);
+      expect((await world.readSimulationDiagnostics()).complete).toBe(true);
+    }
+  } finally {
+    graph.destroy();
+    world.destroy();
+  }
+});

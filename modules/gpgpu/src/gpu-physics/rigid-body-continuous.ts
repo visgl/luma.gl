@@ -61,6 +61,9 @@ export function addRigidBodyContinuous<Parameters>(
   var nearest=magnitude;var hitCollider=0xffffffffu;var hitNormal=vec3f(0);
   for(var collider=0u;collider<COLLIDER_COUNT;collider++){
    if(bodies.bodies[colliderBody(collider)].motion.x!=0.0||bodies.colliders[collider].material.w!=0.0||excludes(movingCollider,collider)||excludes(collider,movingCollider)){continue;}
+   // Initial penetration belongs to the discrete solver; still sweep other obstacles.
+   let initialOrigin=colliderLocal(collider,continuousPrevious[body].xyz-colliderPosition(collider));
+   if(closestSurface(collider,initialOrigin).distance<radius-1e-5){continue;}
    let origin=colliderLocal(collider,position-colliderPosition(collider));let direction=colliderLocal(collider,motion/magnitude);
    let result=sweepSphere(collider,origin,direction,magnitude,radius);
    if(result.complete==0u){continuousStatus[body].x=1u;return;}
