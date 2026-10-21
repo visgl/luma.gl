@@ -101,6 +101,42 @@ describe('KHR_billboard full-axis profile', () => {
     expect(up[2]).toBeCloseTo(0);
   });
 
+  test('captures a usable depth after the eye plane and preserves winding across it', () => {
+    const {controller} = makeController({scaleWithDistance: true});
+    const eyePlane = new Matrix4().translate([-1, 0, 0]);
+    expect(
+      controller.getDrawEntries({viewMatrix: eyePlane})[0].modelMatrix.getScale()[0]
+    ).toBeCloseTo(2);
+    expect(
+      controller.getDrawEntries({viewMatrix: view()})[0].modelMatrix.getScale()[0]
+    ).toBeCloseTo(2);
+    expect(
+      controller.getDrawEntries({viewMatrix: view([1, 0, 20])})[0].modelMatrix.getScale()[0]
+    ).toBeCloseTo(4);
+    controller.resetCamera();
+    controller.getDrawEntries({viewMatrix: new Matrix4().translate([-1, 0, 10])});
+    const visible = controller.getDrawEntries({viewMatrix: view([1, 0, 20])})[0].modelMatrix;
+    expect(visible.determinant()).toBeGreaterThan(0);
+    expect(visible.getScale()[0]).toBeCloseTo(4);
+  });
+
+  test('faces a diagonally authored direction after unequal local scaling', () => {
+    const {controller} = makeController({viewDirection: [1, 0, 1]});
+    const matrix = controller.getDrawEntries({viewMatrix: view()})[0].modelMatrix;
+    const forward = new Vector3(1, 0, 1).transformAsVector(matrix).normalize();
+    expect(forward[0]).toBeCloseTo(0);
+    expect(forward[2]).toBeCloseTo(1);
+  });
+
+  test('sorts children of an overlay billboard by their completed depth', () => {
+    const {controller, billboard, leaf} = makeController({overlay: true});
+    leaf.setMatrix(new Matrix4().translate([0, 0, 1]));
+    const farther = new ScenegraphNode({matrix: new Matrix4().translate([0, 0, -1])});
+    billboard.add(farther);
+    const entries = controller.getDrawEntries({viewMatrix: view()});
+    expect(entries.map(entry => entry.node)).toEqual([farther, leaf]);
+  });
+
   test('rejects ambiguous constrained-axis profiles and invalid local bases', () => {
     expect(() => makeController({rotationAxis: ['Y']})).toThrow();
     expect(() => makeController({viewDirection: [0, 1, 0], up: [0, 1, 0]})).toThrow();

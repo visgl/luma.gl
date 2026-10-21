@@ -46,11 +46,10 @@ billboard transform; nested billboards calculate their own facing transform. Inv
 omitted. Matrix-authored reflections use the usual determinant-based decomposition, assigning a
 negative scale to X when needed.
 
-`scaleWithDistance` uses view-space depth relative to the first rendering for each named camera.
+`scaleWithDistance` uses view-space depth magnitude relative to the first usable rendering for each named camera.
 Use a distinct `cameraId` for independently rendered cameras. Nodes absent from a traversal lose
 their reference depth. Call `resetCamera(cameraId)` when replacing a camera or detaching and
-reattaching a scene without an intervening traversal. A first frame exactly at the eye plane leaves
-scale unchanged because no finite depth ratio exists.
+reattaching a scene without an intervening traversal. A first frame at the eye plane leaves scale unchanged and defers reference capture until a usable depth is available. Crossing the eye plane does not invert scale.
 
 `destroy()` clears controller-owned bindings and camera caches; GPU models and scene nodes remain
 application-owned. Instance-local billboarding and camera-dependent skin-joint palette updates are

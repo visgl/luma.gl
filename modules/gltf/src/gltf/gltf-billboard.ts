@@ -97,7 +97,7 @@ export class GLTFBillboardController {
       this.cameraDepths.set(cameraId, depths);
     }
     const activeBillboards = new Set<ScenegraphNode>();
-    const entries: (GLTFBillboardDrawEntry & {distance: number})[] = [];
+    const entries: (GLTFBillboardDrawEntry & {distance: number; depth: number})[] = [];
     const visit = (
       node: ScenegraphNode,
       parentMatrix: Matrix4,
@@ -129,20 +129,27 @@ export class GLTFBillboardController {
           up = new Vector3(cameraUp).subtract(new Vector3(forward).scale(cameraUp.dot(forward)));
         up.normalize();
         const worldBasis = makeBasis(forward, up);
-        const localBasis = makeBasis(
-          new Vector3(binding.definition.viewDirection || [0, 0, 1]),
-          new Vector3(binding.definition.up || [0, 1, 0])
-        );
         const scale = binding.matrixAuthored
           ? new Vector3(node.matrix.getScale())
           : new Vector3(node.scale);
         if (binding.matrixAuthored && node.matrix.determinant() < 0) scale[0] = -scale[0];
+        const localForward = new Vector3(binding.definition.viewDirection || [0, 0, 1]).multiply(
+          scale
+        );
+        const localUp = new Vector3(binding.definition.up || [0, 1, 0]).multiply(scale);
+        // Collapsed local axes have no facing direction; retain the authored basis in that case.
+        const localBasis = makeBasis(
+          localForward.magnitude() > 1e-8
+            ? localForward
+            : new Vector3(binding.definition.viewDirection || [0, 0, 1]),
+          localUp.magnitude() > 1e-8 ? localUp : new Vector3(binding.definition.up || [0, 1, 0])
+        );
         if (binding.definition.scaleWithDistance) {
-          const depth = -new Vector3(position).transformAsPoint(viewMatrix)[2];
-          if (!depths!.has(node)) depths!.set(node, depth);
-          const initialDepth = depths!.get(node)!;
-          // A first rendering at the eye plane has no usable reference depth.
-          if (Math.abs(initialDepth) > 1e-8) scale.scale(depth / initialDepth);
+          const depth = Math.abs(new Vector3(position).transformAsPoint(viewMatrix)[2]);
+          if (!depths!.has(node) && depth > 1e-8) depths!.set(node, depth);
+          const initialDepth = depths!.get(node);
+          // Defer reference capture at the eye plane; crossing it must never invert winding.
+          if (initialDepth !== undefined) scale.scale(depth / initialDepth);
         }
         modelMatrix = new Matrix4()
           .translate(position)
@@ -157,7 +164,8 @@ export class GLTFBillboardController {
           node,
           modelMatrix,
           overlay,
-          distance: overlayDistance
+          distance: overlayDistance,
+          depth: -new Vector3(modelMatrix.getTranslation()).transformAsPoint(viewMatrix)[2]
         });
       }
     };
@@ -167,7 +175,7 @@ export class GLTFBillboardController {
     entries.sort(
       (first, second) =>
         Number(first.overlay) - Number(second.overlay) ||
-        (first.overlay ? second.distance - first.distance : 0)
+        (first.overlay ? second.distance - first.distance || second.depth - first.depth : 0)
     );
     return entries;
   }

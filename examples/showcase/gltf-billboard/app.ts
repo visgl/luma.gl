@@ -94,6 +94,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       canvas.style.opacity = '0.2';
 
       const gltf = await load(MODEL_URL, GLTFLoader);
+      if (this.isFinalized) return;
       const processedGLTF = postProcessGLTF(gltf);
       const scenegraphsFromGLTF = createScenegraphsFromGLTF(this.device, processedGLTF, {
         lights: true,
@@ -197,10 +198,5 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 }
 
 function destroyScenegraphs(scenegraphsFromGLTF?: ReturnType<typeof createScenegraphsFromGLTF>) {
-  for (const scene of scenegraphsFromGLTF?.scenes || []) {
-    scene.traverse(node => {
-      const model = (node as Partial<ModelNode>).model;
-      model?.destroy();
-    });
-  }
+  scenegraphsFromGLTF?.destroy();
 }
