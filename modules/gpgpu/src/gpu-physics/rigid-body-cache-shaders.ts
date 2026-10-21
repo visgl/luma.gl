@@ -26,7 +26,7 @@ fn claimManifold(first:u32,second:u32)->u32{
   var reusable=DELETED_PAIR;var observed=DELETED_PAIR;
   for(var probe=0u;probe<min(PAIR_CAPACITY,128u);probe++){
    let slot=(origin+probe)&(PAIR_CAPACITY-1u);let stored=atomicLoad(&targets.keys[slot].key);
-   if(stored==key){targets.keys[slot].epoch=targets.frame;return slot;}
+   if(stored==key){targets.keys[slot].epoch=targets.frame;manifolds[slot].first=first;manifolds[slot].second=second;return slot;}
    if(stored==DELETED_PAIR&&reusable==DELETED_PAIR){reusable=slot;observed=DELETED_PAIR;}
    if(stored==EMPTY_PAIR){if(reusable==DELETED_PAIR){reusable=slot;observed=EMPTY_PAIR;}break;}
   }

@@ -97,6 +97,10 @@ it('sleeps and wakes connected parallel contact islands without joining bodies t
     const awake = await advance(1);
     expect(awake[1].sleeping).toBe(false);
     expect(awake[2].sleeping).toBe(false);
+    const supported = await advance(120);
+    expect(supported[1].position[1]).toBeGreaterThan(0.35);
+    expect(supported[2].position[1]).toBeGreaterThan(0.35);
+    expect((await world.readCollisionDiagnostics()).droppedManifolds).toBe(0);
     // External impulses conservatively wake all components; the next steps must settle independently.
     expect(awake[3].position[0]).toBeCloseTo(settled[3].position[0] + 0.1 / 120, 3);
   } finally {

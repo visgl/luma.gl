@@ -6,6 +6,9 @@ import {Matrix4} from '@math.gl/core';
 import type {GLTFPhysicsDocument, ParseGLTFPhysicsOptions} from './physics-types';
 import {readPhysicsRotation, readPhysicsVector} from './physics-transforms';
 
+export const MAX_COLLISION_SNAPSHOT_VERTICES = 1_000_000;
+export const MAX_COLLISION_SNAPSHOT_INDICES = 3_000_000;
+
 /** Snapshot a reference subtree in its root's local coordinates, including off-scene nodes. */
 export function collectNodeCollisionGeometry(
   document: GLTFPhysicsDocument,
@@ -15,16 +18,16 @@ export function collectNodeCollisionGeometry(
   const nodes = document.nodes ?? [];
   const positions: number[] = [],
     indices: number[] = [];
-  const ancestors = new Set<number>();
+  const visited = new Set<number>();
   const visit = (nodeIndex: number, transform: Matrix4) => {
     if (
       !Number.isSafeInteger(nodeIndex) ||
       nodeIndex < 0 ||
       nodeIndex >= nodes.length ||
-      ancestors.has(nodeIndex)
+      visited.has(nodeIndex)
     )
       throw new Error('Invalid collision geometry subtree');
-    ancestors.add(nodeIndex);
+    visited.add(nodeIndex);
     const node = nodes[nodeIndex];
     const geometry = node.mesh === undefined ? undefined : resolveMesh(nodeIndex);
     if (node.mesh !== undefined && !geometry)
@@ -32,8 +35,23 @@ export function collectNodeCollisionGeometry(
     if (geometry) {
       if (geometry.positions.length % 3 || geometry.indices.length % 3)
         throw new Error('Invalid collision mesh snapshot');
-      const vertexOffset = positions.length / 3;
+      if (
+        geometry.positions.length > MAX_COLLISION_SNAPSHOT_VERTICES * 3 ||
+        indices.length + geometry.indices.length > MAX_COLLISION_SNAPSHOT_INDICES
+      )
+        throw new Error('Collision snapshot capacity exceeded');
+      const referenced = new Set<number>();
+      for (const index of geometry.indices) {
+        if (!Number.isSafeInteger(index) || index < 0 || index >= geometry.positions.length / 3)
+          throw new Error('Invalid collision mesh index');
+        referenced.add(index);
+      }
+      if (positions.length / 3 + referenced.size > MAX_COLLISION_SNAPSHOT_VERTICES)
+        throw new Error('Collision snapshot capacity exceeded');
+      const remapped = new Map<number, number>();
       for (let index = 0; index < geometry.positions.length; index += 3) {
+        if (!referenced.has(index / 3)) continue;
+        remapped.set(index / 3, positions.length / 3);
         const point = transform.transformAsPoint([
           geometry.positions[index],
           geometry.positions[index + 1],
@@ -56,7 +74,7 @@ export function collectNodeCollisionGeometry(
         )
           throw new Error('Invalid collision mesh index');
         if (reflected) [triangle[1], triangle[2]] = [triangle[2], triangle[1]];
-        indices.push(...triangle.map(value => value + vertexOffset));
+        indices.push(...triangle.map(value => remapped.get(value)!));
       }
     }
     for (const childIndex of node.children ?? []) {
@@ -72,7 +90,6 @@ export function collectNodeCollisionGeometry(
             .scale(readPhysicsVector(child.scale, [1, 1, 1]));
       visit(childIndex, transform.clone().multiplyRight(local));
     }
-    ancestors.delete(nodeIndex);
   };
   visit(rootIndex, new Matrix4());
   if (!positions.length) throw new Error('Empty collision geometry subtree');

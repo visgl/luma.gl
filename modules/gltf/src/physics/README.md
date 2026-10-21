@@ -159,3 +159,8 @@ up to the backend's sixteen-bit body/collider identities. Unfiltered description
 avoid quadratic filter expansion and body-to-collider grouping. Descriptions with include/exclude filters retain a 128-collider limit, checked before
 pair expansion. Large-world GPU filter groups remain follow-up work. These additions do not complete G2 or G3;
 see `scripts/physics/qualification-profile.json` for the required behavioral evidence.
+
+Collision snapshots reject repeated subtree references and cap the flattened output
+at one million vertices and three million indices. Accessor counts obey the same
+bounds before allocating decoded arrays. Indexed snapshots discard unused vertices
+before convex-hull cooking, including snapshots supplied by custom resolvers.

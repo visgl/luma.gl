@@ -4,6 +4,10 @@
 
 import {Matrix4} from '@math.gl/core';
 import type {GLTFScenegraph} from '@loaders.gl/gltf';
+import {
+  MAX_COLLISION_SNAPSHOT_VERTICES,
+  MAX_COLLISION_SNAPSHOT_INDICES
+} from './node-collision-geometry';
 import {readPhysicsRotation, readPhysicsVector} from './physics-transforms';
 
 /** Decode the initial mesh pose for geometry.node, before glTF postprocessing mutates indices. */
@@ -110,18 +114,29 @@ export function makeGLTFPhysicsMeshResolver(scenegraph: GLTFScenegraph) {
             vertices[vertex * 3 + axis] = point[axis] / totalWeight;
         }
       }
-      const vertexOffset = positions.length / 3;
-      for (const value of vertices) positions.push(value);
       const primitiveIndices =
         primitive.indices === undefined
           ? Array.from({length: vertices.length / 3}, (_, index) => index)
           : readAccessor(scenegraph, primitive.indices, 'SCALAR');
       if (primitiveIndices.length % 3) throw new Error('Invalid collision triangle index count');
+      const referenced = new Set<number>();
       for (const index of primitiveIndices) {
         if (!Number.isSafeInteger(index) || index < 0 || index >= vertices.length / 3)
           throw new Error('Invalid collision triangle index');
-        indices.push(vertexOffset + index);
+        referenced.add(index);
       }
+      if (
+        positions.length / 3 + referenced.size > MAX_COLLISION_SNAPSHOT_VERTICES ||
+        indices.length + primitiveIndices.length > MAX_COLLISION_SNAPSHOT_INDICES
+      )
+        throw new Error('Collision snapshot capacity exceeded');
+      const remapped = new Map<number, number>();
+      for (let vertex = 0; vertex < vertices.length / 3; vertex++) {
+        if (!referenced.has(vertex)) continue;
+        remapped.set(vertex, positions.length / 3);
+        positions.push(vertices[vertex * 3], vertices[vertex * 3 + 1], vertices[vertex * 3 + 2]);
+      }
+      for (const index of primitiveIndices) indices.push(remapped.get(index)!);
     }
     const result = {positions, indices};
     cache.set(nodeIndex, result);
@@ -136,6 +151,13 @@ function readAccessor(
   expectedType: string
 ): number[] {
   const accessor = scenegraph.getAccessor(accessorIndex);
+  if (
+    !Number.isSafeInteger(accessor.count) ||
+    accessor.count < 0 ||
+    accessor.count >
+      (expectedType === 'SCALAR' ? MAX_COLLISION_SNAPSHOT_INDICES : MAX_COLLISION_SNAPSHOT_VERTICES)
+  )
+    throw new Error('Collision accessor capacity exceeded');
   if (accessor.type !== expectedType) throw new Error('Unexpected collision accessor type');
   const components = {SCALAR: 1, VEC3: 3, VEC4: 4, MAT4: 16}[expectedType];
   if (!components) throw new Error('Unsupported collision accessor type');

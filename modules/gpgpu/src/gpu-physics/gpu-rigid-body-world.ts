@@ -624,7 +624,7 @@ export class GPURigidBodyWorld {
             .filter(binding => !parallelBindings[entryPoint].includes(binding.name))
             .map(binding => binding.name)
         : entryPoint === 'meshCollect'
-          ? ['velocities', 'angularVelocities', 'sleepStates', 'targets', 'parallelState']
+          ? ['orientations', 'sleepStates', 'targets', 'parallelState']
           : entryPoint === 'prepare'
             ? bindings
                 .filter(binding => !['targets', 'manifolds'].includes(binding.name))

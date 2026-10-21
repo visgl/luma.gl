@@ -582,7 +582,7 @@ it('resolves draft geometry.node subtrees and off-scene initial mesh snapshots w
       calls.push(nodeIndex);
       // Decoded snapshots include the initial morph/skin deformation in node-local space.
       return {
-        positions: makeBoxVertices(),
+        positions: [...makeBoxVertices(), 1000, 1000, 1000],
         indices: [
           0, 1, 2, 1, 3, 2, 4, 6, 5, 5, 6, 7, 0, 4, 1, 1, 4, 5, 2, 3, 6, 3, 7, 6, 0, 2, 4, 2, 6, 4,
           1, 5, 3, 3, 5, 7
@@ -653,4 +653,31 @@ it('rejects large filtered descriptions before expanding quadratic exclusions', 
     result.colliders.every(collider => collider.collider.excludedColliders?.length === 0)
   ).toBe(true);
   expect(() => createGLTFPhysicsWorld(result)).toThrow();
+});
+
+it('rejects repeated off-scene geometry children before exponential expansion', () => {
+  const nodes = [
+    {
+      extensions: {
+        KHR_physics_rigid_bodies: {motion: {}, collider: {geometry: {node: 1, convexHull: true}}}
+      }
+    },
+    ...Array.from({length: 30}, (_, index) =>
+      index === 29 ? {mesh: 0} : {children: [index + 2, index + 2]}
+    )
+  ];
+  const source = makePhysicsDocument(nodes);
+  source.scenes = [{nodes: [0]}];
+  let snapshots = 0;
+  const result = parseGLTFPhysics(source, {
+    resolveNodeMeshGeometry: () => {
+      snapshots++;
+      return {positions: [0, 0, 0, 1, 0, 0, 0, 1, 0], indices: [0, 1, 2]};
+    }
+  });
+  expect(result.supported).toBe(false);
+  expect(snapshots).toBe(1);
+  expect(
+    result.issues.some(issue => issue.message.includes('Invalid collision geometry subtree'))
+  ).toBe(true);
 });

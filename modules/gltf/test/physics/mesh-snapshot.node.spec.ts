@@ -4,6 +4,10 @@
 
 import {expect, it} from 'vitest';
 import {GLTFScenegraph} from '@loaders.gl/gltf';
+import {
+  collectNodeCollisionGeometry,
+  MAX_COLLISION_SNAPSHOT_VERTICES
+} from '../../src/physics/node-collision-geometry';
 import {makeGLTFPhysicsMeshResolver} from '../../src/physics/mesh-snapshot';
 
 it('snapshots initial morphs before skinning with sparse deltas and normalized weights', () => {
@@ -54,7 +58,7 @@ it('snapshots initial morphs before skinning with sparse deltas and normalized w
 });
 
 it('reads strided initial positions and triangle indices without copying unrelated attributes', () => {
-  const positions = new Float32Array([1, 2, 3, 99, 4, 5, 6, 99, 7, 8, 9, 99]);
+  const positions = new Float32Array([1, 2, 3, 99, 4, 5, 6, 99, 7, 8, 9, 99, 1000, 1000, 1000, 99]);
   const indices = new Uint16Array([2, 0, 1]);
   const scenegraph = new GLTFScenegraph({
     json: {
@@ -65,7 +69,7 @@ it('reads strided initial positions and triangle indices without copying unrelat
         {buffer: 1, byteLength: indices.byteLength}
       ],
       accessors: [
-        {bufferView: 0, componentType: 5126, type: 'VEC3', count: 3},
+        {bufferView: 0, componentType: 5126, type: 'VEC3', count: 4},
         {bufferView: 1, componentType: 5123, type: 'SCALAR', count: 3}
       ],
       nodes: [{mesh: 0}],
@@ -81,4 +85,13 @@ it('reads strided initial positions and triangle indices without copying unrelat
     positions: [1, 2, 3, 4, 5, 6, 7, 8, 9],
     indices: [2, 0, 1]
   });
+});
+
+it('bounds custom collision snapshot allocation before expanding positions', () => {
+  expect(() =>
+    collectNodeCollisionGeometry({nodes: [{mesh: 0}]}, 0, () => ({
+      positions: Array<number>(MAX_COLLISION_SNAPSHOT_VERTICES * 3 + 3),
+      indices: []
+    }))
+  ).toThrow('Collision snapshot capacity exceeded');
 });
