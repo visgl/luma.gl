@@ -69,6 +69,7 @@ it.for([
   if (!device) return context.skip('WebGPU is unavailable');
   const world = new GPURigidBodyWorld({
     solver,
+    broadPhase: 'hierarchical-grid',
     eventCapacity: 2,
     impactImpulseThreshold: 100,
     gravity: [0, 0, 0],
