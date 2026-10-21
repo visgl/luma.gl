@@ -205,6 +205,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'tutorials/lighting': support50,
   'tutorials/hello-gltf': support51,
   'showcase/gltf-billboard': gltfBillboardSupport,
+  'showcase/gltf-lightmap': {...gltfBillboardSupport, id: 'showcase/gltf-lightmap'},
   'tutorials/two-cubes': support52,
   'tutorials/instanced-cubes': support53,
   'tutorials/hello-instancing': support54,

@@ -29,3 +29,10 @@ function getErrorMessage(error: unknown): string {
 
   return String(error);
 }
+
+export const LIGHTMAP_INFO_HTML = `
+<p>KHR_lightmap draft: baked linear irradiance in a Cornell Box. Drag to orbit.</p>
+<p>Original source asset by Ben Houston, three.js fork, MIT license (709 KB).</p>
+<p><a href="https://github.com/bhouston/three.js/tree/91de5714e5abaf1f7105f4f1c8858bed93171a25/examples/models/gltf/LightmappedCornellBox">Source and attribution</a></p>
+<div id="error" style="color: #b00020; margin-top: 8px;"></div>
+`;

@@ -9,7 +9,7 @@ import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {createScenegraphsFromGLTF, GLTFBillboardController} from '@luma.gl/gltf';
 import {Light, LightingProps} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
-import {INFO_HTML, showError} from './app-ui';
+import {INFO_HTML, LIGHTMAP_INFO_HTML, showError} from './app-ui';
 
 import {GLTF_FEATURE_PRESETS, type GLTFFeature} from './presets';
 
@@ -41,6 +41,10 @@ const lightSources = {
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
+  static getInfo(feature: GLTFFeature): string {
+    return feature === 'lightmap' ? LIGHTMAP_INFO_HTML : INFO_HTML;
+  }
+
   device: Device;
   orbitControls: OrbitControls;
   scenegraphsFromGLTF?: ReturnType<typeof createScenegraphsFromGLTF>;
@@ -61,7 +65,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
     this.orbitControls = new OrbitControls(canvas, {
       distance: 2,
-      yaw: Math.PI / 4,
+      yaw: feature === 'lightmap' ? 0 : Math.PI / 4,
       pitch: 0.18,
       minDistance: 0.05,
       maxDistance: 40,
@@ -125,10 +129,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       const sceneBounds = scenegraphsFromGLTF.sceneBounds[0] || scenegraphsFromGLTF.modelBounds;
       this.center = [...sceneBounds.center];
       this.sceneRadius = sceneBounds.radius;
-      this.cameraHeight = this.center[1] + this.sceneRadius * 0.3;
+      this.cameraHeight =
+        this.center[1] + (this.feature === 'lightmap' ? 0 : this.sceneRadius * 0.3);
       this.orbitControls.setProps({
         target: [this.center[0], this.cameraHeight, this.center[2]],
-        distance: sceneBounds.recommendedOrbitDistance,
+        distance: sceneBounds.recommendedOrbitDistance * (this.feature === 'lightmap' ? 2 : 1),
         minDistance: Math.max(this.sceneRadius * 0.08, 0.025),
         maxDistance: Math.max(this.sceneRadius * 32, 12)
       });
@@ -165,7 +170,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     cameraPos[1] =
       this.cameraHeight + (cameraPos[1] - this.cameraHeight) * CAMERA_TILT_HEIGHT_FACTOR;
     const viewMatrix = new Matrix4().lookAt({eye: cameraPos, center: this.center});
-    const lighting = this.modelLights.length > 0 ? {lights: this.modelLights} : lightSources;
+    const lighting =
+      this.feature === 'lightmap'
+        ? {lights: []}
+        : this.modelLights.length > 0
+          ? {lights: this.modelLights}
+          : lightSources;
 
     for (const {node, modelMatrix, overlay} of this.billboardController!.getDrawEntries({
       viewMatrix
