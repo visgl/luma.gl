@@ -44,7 +44,7 @@ import {GLTF_STUDIO_ASSETS, getGLTFStudioAsset} from './gltf-studio-assets';
 const MODEL_DIRECTORY_URL = GLTF_SAMPLE_ASSETS_MODEL_URL;
 const MODEL_LIST_URL = `${GLTF_SAMPLE_ASSETS_MODEL_URL}/model-index.json`;
 const ROBOT_EXPRESSIVE_MODEL_URL = new URL(
-  '../scene/public/gltf/RobotExpressive.glb',
+  '../../anari/scenes/public/gltf/RobotExpressive.glb',
   import.meta.url
 ).href;
 const SIMPLE_SKIN_LOD_MODEL_URL = new URL(
@@ -56,7 +56,7 @@ const BUMP_MATERIAL_MODEL_URL = new URL(
   import.meta.url
 ).href;
 const LAST_GLTF_MODEL_STORAGE_KEY = 'last-gltf-model';
-const GLTF_OPTIONS_STORAGE_KEY = 'showcase-gltf-options';
+const GLTF_OPTIONS_STORAGE_KEY = 'gltf-asset-studio-options';
 const GLTF_LOADING_STYLE_ID = 'gltf-loading-indicator-style';
 export const GLTF_MODEL_INFO_ID = 'model-info';
 export const GLTF_CROWD_INFO_ID = 'gltf-crowd-info';

@@ -33,6 +33,7 @@ type LiveExample = {
 
 const EXAMPLES_DIRECTORY = path.join(process.cwd(), 'website/content/examples');
 const WEBGPU_ONLY_EXAMPLES = new Set([
+  'three/galactic-vortex',
   'gltf/physics',
   'api/render-bundles',
   'arrow/arrow-columns',
@@ -58,9 +59,14 @@ const LIVE_EXAMPLES = readLiveExamples();
 const requireCommonJSModule = createRequire(import.meta.url);
 
 describe('live example catalog metadata', () => {
-  test('keeps the private Three prototype in the experimental catalog with both backends', () => {
+  test('groups Three integrations while retaining the private prototype metadata', () => {
     const example = LIVE_EXAMPLES.find(({id}) => id === 'experimental/three');
-    expect(example?.categories).toContain('Experimental');
+    expect(example?.categories).toContain('Three.js');
+    expect(
+      LIVE_EXAMPLES.filter(example => example.categories.includes('Three.js')).map(
+        example => example.id
+      )
+    ).toEqual(['three/galactic-vortex', 'three/deck-layers', 'experimental/three']);
     expect(example?.metadata?.maturity).toBe('experimental');
     expect(example?.metadata?.backends).toEqual(['webgpu', 'webgl2']);
     const packageDefinition = JSON.parse(
@@ -131,7 +137,7 @@ describe('live example catalog metadata', () => {
   });
 
   test('provides complete, curated filters for every sidebar example', () => {
-    expect(LIVE_EXAMPLES).toHaveLength(112);
+    expect(LIVE_EXAMPLES).toHaveLength(114);
 
     for (const {id, metadata} of LIVE_EXAMPLES) {
       expect(metadata, `${id} requires sidebar_custom_props`).toBeDefined();
@@ -222,8 +228,8 @@ describe('live example catalog metadata', () => {
       const canonicalId =
         new Map([
           ['arrow/arrow-instancing', 'showcase/instancing'],
-          ['showcase/scene', 'experimental/scene-playground'],
-          ['showcase/scene/playground', 'experimental/scene-playground'],
+          ['anari/scenes', 'anari/scenes'],
+          ['anari/scenes/playground', 'anari/scenes'],
           ['tutorials/hello-instanced-cubes', 'tutorials/instanced-cubes'],
           ['tutorials/hello-two-cubes', 'tutorials/two-cubes']
         ]).get(standaloneId) || standaloneId;
@@ -237,8 +243,8 @@ describe('live example catalog metadata', () => {
   test('resolves standalone aliases to the same canonical support definitions', () => {
     const aliases = new Map([
       ['arrow/arrow-instancing/index.html', 'showcase/instancing'],
-      ['showcase/scene/index.html', 'experimental/scene-playground'],
-      ['showcase/scene/playground.html', 'experimental/scene-playground'],
+      ['anari/scenes/index.html', 'anari/scenes'],
+      ['anari/scenes/playground.html', 'anari/scenes'],
       ['tutorials/hello-instanced-cubes/index.html', 'tutorials/instanced-cubes'],
       ['tutorials/hello-two-cubes/index.html', 'tutorials/two-cubes']
     ]);

@@ -7,7 +7,7 @@ import {
   ANARITextureSchema
 } from '@luma.gl/anari/schemas';
 import {expect, it} from 'vitest';
-import {PLAYGROUND_PRESETS} from '../../../examples/showcase/scene/playground-presets';
+import {PLAYGROUND_PRESETS} from '../../../examples/anari/scenes/playground-presets';
 
 it('ANARI scene schemas validate all complete showcase presets', () => {
   for (const preset of PLAYGROUND_PRESETS) {

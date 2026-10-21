@@ -14,7 +14,7 @@ import {expect, it} from 'vitest';
 import {
   type ANARIJSONScene,
   createANARIJSONScene
-} from '../../../examples/showcase/scene/playground-scene';
+} from '../../../examples/anari/scenes/playground-scene';
 
 it('ANARI keeps optional glTF integration isolated from its root entry point', async () => {
   const packageContents = JSON.parse(

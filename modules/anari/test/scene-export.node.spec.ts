@@ -1,10 +1,10 @@
 import {getTextureTransformSlotDefinitions} from '@luma.gl/gltf';
 import {expect, it} from 'vitest';
-import {PLAYGROUND_PRESETS} from '../../../examples/showcase/scene/playground-presets';
+import {PLAYGROUND_PRESETS} from '../../../examples/anari/scenes/playground-presets';
 import {
   exportANARIJSONSceneToGLTF,
   exportANARIJSONSceneToUSD
-} from '../../../examples/showcase/scene/scene-export';
+} from '../../../examples/anari/scenes/scene-export';
 
 it('ANARI scene exporter writes static glTF scene assets', async () => {
   const scene = structuredClone(PLAYGROUND_PRESETS[1].scene);

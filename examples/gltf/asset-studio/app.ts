@@ -31,7 +31,7 @@ import {GLTF_ANIMATION_STUDIO_ASSETS, getGLTFStudioAsset} from './gltf-studio-as
 
 const PBR_ENVIRONMENT_BASE_URL =
   'https://raw.githubusercontent.com/uber-common/deck.gl-data/master/luma.gl/examples/gltf';
-const SHOWCASE_EXTENSION_STORAGE_KEY = 'showcase-gltf-extension-filter';
+const SHOWCASE_EXTENSION_STORAGE_KEY = 'gltf-asset-studio-extension-filter';
 const ALL_EXTENSIONS_FILTER = 'all';
 const STUDIO_ASSETS_FILTER = 'studio';
 const LOADING_MODEL_VALUE = 'loading-models';

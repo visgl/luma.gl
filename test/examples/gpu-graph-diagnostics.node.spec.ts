@@ -24,7 +24,7 @@ test('diagnostics defer reads, sample repeated encodings, and invalidate cleared
     );
     diagnostics.record(graph, encoding);
     expect(readTimings).not.toHaveBeenCalled();
-    expect(updateTrace).toHaveBeenLastCalledWith(encoding.stats, graph.id);
+    expect(updateTrace).not.toHaveBeenCalled();
     await Promise.resolve();
     expect(readTimings).toHaveBeenCalledTimes(1);
     const nextEncoding = graph.encode(device.commandEncoder, {parameters: undefined});
@@ -69,6 +69,44 @@ test('diagnostics allocate scoped timestamps only for sampled encodings', async 
     expect(destroy).toHaveBeenCalledTimes(1);
     expect(updateInspector.mock.calls.at(-1)?.[1]).toBe(graph.id);
     expect(commandEncoder.getTimeProfilingQuerySet()).toBeNull();
+  } finally {
+    diagnostics.clear();
+    graph.destroy();
+    device.destroy();
+  }
+});
+
+test('diagnostics retain the completed trace while the next sampled GPU read is pending', async () => {
+  const device = new NullDevice({});
+  Object.defineProperty(device, 'type', {value: 'webgpu'});
+  const graph = new GPUCommandGraph(device, {id: 'stable-trace'}).compile();
+  const diagnostics = new GPUGraphDiagnostics();
+  const updateTrace = vi.spyOn(diagnostics.tracePanel, 'update');
+  try {
+    const firstEncoding = graph.encode(device.commandEncoder, {parameters: undefined});
+    vi.spyOn(firstEncoding, 'readTimings').mockResolvedValue(firstEncoding.stats);
+    diagnostics.record(graph, firstEncoding);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(updateTrace).toHaveBeenCalledTimes(1);
+    expect(updateTrace).toHaveBeenLastCalledWith(firstEncoding.stats, graph.id);
+    for (let index = 1; index < 60; index++) {
+      diagnostics.record(graph, graph.encode(device.commandEncoder, {parameters: undefined}));
+    }
+    const nextEncoding = graph.encode(device.commandEncoder, {parameters: undefined});
+    let resolveRead!: (report: typeof nextEncoding.stats) => void;
+    vi.spyOn(nextEncoding, 'readTimings').mockImplementation(
+      () =>
+        new Promise(resolve => {
+          resolveRead = resolve;
+        })
+    );
+    diagnostics.record(graph, nextEncoding);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(updateTrace).toHaveBeenCalledTimes(1);
+    resolveRead(nextEncoding.stats);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(updateTrace).toHaveBeenCalledTimes(2);
+    expect(updateTrace).toHaveBeenLastCalledWith(nextEncoding.stats, graph.id);
   } finally {
     diagnostics.clear();
     graph.destroy();

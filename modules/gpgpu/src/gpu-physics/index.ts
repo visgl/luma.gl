@@ -21,6 +21,12 @@ export {
 } from './sphere-events';
 export {makeSphereBoxPlanes, getBodyInertia, type GPUSphereBox} from './sphere-shapes';
 export {
+  makeConvexHullGeometry,
+  makeTriangleMeshGeometry,
+  type RigidBodyMeshGeometry
+} from './rigid-body-mesh';
+export {getRigidBodyShapeProperties} from './rigid-body-shape-properties';
+export {
   getSphereClothReference,
   getSphereCushionRestitution,
   type SphereClothReference

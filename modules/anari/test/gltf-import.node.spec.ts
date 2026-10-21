@@ -8,7 +8,7 @@ import {getTextureTransformSlotDefinitions, parseGLTFLights} from '@luma.gl/gltf
 import {NullDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {expect, it} from 'vitest';
-import {makeANARIJSONSceneFromGLTF} from '../../../examples/showcase/scene/gltf-to-anari';
+import {makeANARIJSONSceneFromGLTF} from '../../../examples/anari/scenes/gltf-to-anari';
 
 it('glTF importer translates indexed meshes into retained ANARI scenes', async () => {
   const assetData = await readFile(new URL('../../../test/data/box.glb', import.meta.url));
@@ -44,7 +44,7 @@ it('glTF importer translates indexed meshes into retained ANARI scenes', async (
 
 it('glTF importer handles detailed bundled CC0 production assets', async () => {
   const assetData = await readFile(
-    new URL('../../../examples/showcase/scene/public/gltf/Lantern.glb', import.meta.url)
+    new URL('../../../examples/anari/scenes/public/gltf/Lantern.glb', import.meta.url)
   );
   const asset = await parse(assetData, GLTFLoader, {gltf: {loadImages: false}});
   const scene = await makeANARIJSONSceneFromGLTF(postProcessGLTF(asset), 'BRASS LANTERN');
@@ -133,7 +133,7 @@ it('glTF importer preserves animated node hierarchy and source-faithful material
 it('glTF importer retains real KHR_animation_pointer material channels', async () => {
   // Khronos glTF-Sample-Assets AnimatedColorsCube by Ed Mackey, dedicated CC0-1.0.
   const assetData = await readFile(
-    new URL('../../../examples/showcase/scene/public/gltf/AnimatedColorsCube.glb', import.meta.url)
+    new URL('../../../examples/anari/scenes/public/gltf/AnimatedColorsCube.glb', import.meta.url)
   );
   const asset = await parse(assetData, GLTFLoader, {gltf: {loadImages: false}});
   const source = postProcessGLTF(asset);
@@ -190,7 +190,7 @@ it('glTF importer retains real KHR_animation_pointer material channels', async (
 
 it('glTF importer retains secondary texture coordinates and transform UV overrides', async () => {
   const assetData = await readFile(
-    new URL('../../../examples/showcase/scene/public/gltf/Lantern.glb', import.meta.url)
+    new URL('../../../examples/anari/scenes/public/gltf/Lantern.glb', import.meta.url)
   );
   const asset = await parse(assetData, GLTFLoader, {gltf: {loadImages: false}});
   const source = postProcessGLTF(asset);
@@ -254,7 +254,7 @@ it('glTF importer retains secondary texture coordinates and transform UV overrid
 
 it('glTF importer retains all canonical PBR textures, factors, color spaces, and authored samplers', async () => {
   const assetData = await readFile(
-    new URL('../../../examples/showcase/scene/public/gltf/Lantern.glb', import.meta.url)
+    new URL('../../../examples/anari/scenes/public/gltf/Lantern.glb', import.meta.url)
   );
   const source = postProcessGLTF(await parse(assetData, GLTFLoader, {gltf: {loadImages: false}}));
   const primitive = source.meshes

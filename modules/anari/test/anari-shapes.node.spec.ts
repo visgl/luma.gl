@@ -8,7 +8,7 @@ import {NullDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {expect, it} from 'vitest';
 import {ANARISceneAdapter} from '../src/anari-scene-adapter';
-import {makeChartShapesScene} from '../../../examples/showcase/scene/chart-baseline';
+import {makeChartShapesScene} from '../../../examples/anari/scenes/chart-baseline';
 
 it('shape scenes share authored geometry and placement identities across renderers', () => {
   const raster = makeChartShapesScene('default');

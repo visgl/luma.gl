@@ -1,8 +1,8 @@
 import {expect, it} from 'vitest';
 import {parse} from '@loaders.gl/core';
 import {readFile} from 'node:fs/promises';
-import {USDLoader, parseUSD} from '../../../examples/showcase/scene/usd-loader/usd-loader';
-import {makeANARIJSONSceneFromUSD} from '../../../examples/showcase/scene/usd-to-anari';
+import {USDLoader, parseUSD} from '../../../examples/anari/scenes/usd-loader/usd-loader';
+import {makeANARIJSONSceneFromUSD} from '../../../examples/anari/scenes/usd-to-anari';
 
 const TEXT_ENCODER = new TextEncoder();
 
@@ -167,7 +167,7 @@ it('OpenUSD loader reads uncompressed ASCII-root USDZ archives', async () => {
 
 it('OpenUSD importer composes the bundled CC0 sedan and preserves material groups', async () => {
   const assetRoot = new URL(
-    '../../../examples/showcase/scene/public/usd/mini-vehicles/',
+    '../../../examples/anari/scenes/public/usd/mini-vehicles/',
     import.meta.url
   );
   const rootPath = 'assets/vehicles/sedan/asset/sedanFullAsset.usda';
@@ -242,7 +242,7 @@ it('OpenUSD importer composes the bundled CC0 sedan and preserves material group
 });
 
 it('OpenUSD importer composes detailed Fancy and Utah teapot reference geometry', async () => {
-  const assetRoot = new URL('../../../examples/showcase/scene/public/usd/', import.meta.url);
+  const assetRoot = new URL('../../../examples/anari/scenes/public/usd/', import.meta.url);
   const rootPath = 'porcelain-atelier.usda';
   const rootData = await readFile(new URL(rootPath, assetRoot));
   const stage = await parseUSD(
@@ -294,7 +294,7 @@ it('OpenUSD importer composes detailed Fancy and Utah teapot reference geometry'
 });
 
 it('OpenUSD importer stages the detailed attributed Open Chess Set knight', async () => {
-  const assetRoot = new URL('../../../examples/showcase/scene/public/usd/', import.meta.url);
+  const assetRoot = new URL('../../../examples/anari/scenes/public/usd/', import.meta.url);
   const rootPath = 'knights-gambit.usda';
   const rootData = await readFile(new URL(rootPath, assetRoot));
   const stage = await parseUSD(

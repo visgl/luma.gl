@@ -9,12 +9,12 @@ import {ANARIDevice, ANARIGroup, type ANARIInstance, type ANARISurface} from '@l
 import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 import {NullDevice} from '@luma.gl/test-utils';
 import {expect, it} from 'vitest';
-import {makeANARIJSONSceneFromGLTF} from '../../../examples/showcase/scene/gltf-to-anari';
-import {createANARIJSONScene} from '../../../examples/showcase/scene/playground-scene';
+import {makeANARIJSONSceneFromGLTF} from '../../../examples/anari/scenes/gltf-to-anari';
+import {createANARIJSONScene} from '../../../examples/anari/scenes/playground-scene';
 
 async function loadSimpleSkin() {
   const asset = await readFile(
-    new URL('../../../examples/showcase/scene/public/gltf/SimpleSkin.gltf', import.meta.url)
+    new URL('../../../examples/anari/scenes/public/gltf/SimpleSkin.gltf', import.meta.url)
   );
   return postProcessGLTF(await parse(asset, GLTFLoader, {gltf: {loadImages: false}}));
 }

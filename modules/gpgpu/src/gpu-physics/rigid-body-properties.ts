@@ -3,13 +3,18 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Matrix4, Quaternion} from '@math.gl/core';
-import {getBodyInertia} from './sphere-shapes';
+import type {RigidBodyMeshGeometry} from './rigid-body-mesh';
+import {getRigidBodyShapeProperties} from './rigid-body-shape-properties';
 
 export type RigidBodyVector = readonly [number, number, number];
 export type RigidBodyRotation = readonly [number, number, number, number];
 export type GPURigidBodyShape =
   | {type: 'sphere'; radius: number}
-  | {type: 'box'; halfExtents: RigidBodyVector};
+  | {type: 'box'; halfExtents: RigidBodyVector}
+  | {type: 'capsule'; height: number; radiusBottom: number; radiusTop: number}
+  | {type: 'cylinder'; height: number; radiusBottom: number; radiusTop: number}
+  | {type: 'convex-hull'; geometry: RigidBodyMeshGeometry}
+  | {type: 'triangle-mesh'; geometry: RigidBodyMeshGeometry};
 export type GPURigidBodyMaterial = {
   restitution?: number;
   staticFriction?: number;
@@ -76,23 +81,30 @@ export function getCompoundBodyInertia(
   colliders: readonly GPURigidBodyCollider[],
   center: RigidBodyVector
 ): {diagonal: [number, number, number]; orientation: [number, number, number, number]} {
-  const volumes = colliders.map(({shape}) =>
-    shape.type === 'sphere'
-      ? (4 / 3) * Math.PI * shape.radius ** 3
-      : 8 * shape.halfExtents[0] * shape.halfExtents[1] * shape.halfExtents[2]
-  );
+  const properties = colliders.map(({shape}) => getRigidBodyShapeProperties(shape));
+  const volumes = properties.map(property => property.volume);
   const total = volumes.reduce((sum, value) => sum + value, 0);
   const tensor = Array<number>(9).fill(0);
   for (const [index, collider] of colliders.entries()) {
-    const colliderMass = (mass * volumes[index]) / total;
-    const diagonal = getBodyInertia(colliderMass, collider.shape);
+    const colliderMass = total > 0 ? (mass * volumes[index]) / total : 0;
+    const density = volumes[index] > 0 ? colliderMass / volumes[index] : 0;
     const rotation = new Matrix4().fromQuaternion(normalizeRigidBodyRotation(collider.orientation));
-    const offset = (collider.position ?? [0, 0, 0]).map((value, axis) => value - center[axis]);
+    const shapeCenter = rotateRigidBodyVector(
+      normalizeRigidBodyRotation(collider.orientation),
+      properties[index].center
+    );
+    const offset = (collider.position ?? [0, 0, 0]).map(
+      (value, axis) => value + shapeCenter[axis] - center[axis]
+    );
     for (let row = 0; row < 3; row++)
       for (let column = 0; column < 3; column++) {
-        for (let axis = 0; axis < 3; axis++)
-          tensor[row * 3 + column] +=
-            rotation[axis * 4 + row] * diagonal[axis] * rotation[axis * 4 + column];
+        for (let first = 0; first < 3; first++)
+          for (let second = 0; second < 3; second++)
+            tensor[row * 3 + column] +=
+              rotation[first * 4 + row] *
+              properties[index].tensor[first * 3 + second] *
+              density *
+              rotation[second * 4 + column];
         tensor[row * 3 + column] +=
           colliderMass *
           ((row === column ? offset.reduce((sum, value) => sum + value ** 2, 0) : 0) -
