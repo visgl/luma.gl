@@ -1235,6 +1235,15 @@ vec4 pbr_filterColor(vec4 vertexColor)
           color += calculateFinalColor(pbrInfo, lighting_getSpotLight(i).color / attenuation);
         }
       }
+      for (int areaIndex = 0; areaIndex < areaLighting.lightCount; areaIndex++) {
+        for (int sampleIndex = 0; sampleIndex < 16; sampleIndex++) {
+          PointLight sampleLight = areaLighting_getSample(areaIndex, sampleIndex, pbr_vPosition);
+          if (dot(sampleLight.color, sampleLight.color) > 0.0) {
+            PBRInfo_setPointLight(pbrInfo, sampleLight);
+            color += calculateFinalColor(pbrInfo, sampleLight.color);
+          }
+        }
+      }
 #endif
 
 #ifdef USE_IBL
@@ -1540,6 +1549,18 @@ vec4 pbr_filterColor(vec4 vertexColor)
         );
       }
     }
+      for (int areaIndex = 0; areaIndex < areaLighting.lightCount; areaIndex++) {
+        for (int sampleIndex = 0; sampleIndex < 16; sampleIndex++) {
+          PointLight sampleLight = areaLighting_getSample(areaIndex, sampleIndex, pbr_vPosition);
+          if (dot(sampleLight.color, sampleLight.color) > 0.0) {
+            PBRInfo_setPointLight(pbrInfo, sampleLight);
+            color += calculateMaterialLightColor(pbrInfo, sampleLight.color, clearcoatNormal,
+              clearcoatFactor, clearcoatRoughness, sheenColor, sheenRoughness, anisotropyTangent, anisotropyStrength);
+            color += calculateDiffuseTransmissionLight(pbrInfo, sampleLight.color,
+              diffuseTransmissionColor, diffuseTransmission, multiscatterColor, thickness);
+          }
+        }
+      }
 #endif
 
     // Calculate lighting contribution from image based lighting source (IBL)

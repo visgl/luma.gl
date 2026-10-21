@@ -1451,6 +1451,15 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
           color += calculateFinalColor(pbrInfo, lighting_getSpotLight(i).color / attenuation);
         }
       }
+      for (var areaIndex: i32 = 0; areaIndex < areaLighting.lightCount; areaIndex++) {
+        for (var sampleIndex: i32 = 0; sampleIndex < 16; sampleIndex++) {
+          let sampleLight = areaLighting_getSample(areaIndex, sampleIndex, fragmentInputs.pbr_vPosition);
+          if (dot(sampleLight.color, sampleLight.color) > 0.0) {
+            PBRInfo_setPointLight(&pbrInfo, sampleLight);
+            color += calculateFinalColor(pbrInfo, sampleLight.color);
+          }
+        }
+      }
       #endif
 
       #ifdef USE_IBL
@@ -1821,6 +1830,18 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
         );
       }
     }
+      for (var areaIndex: i32 = 0; areaIndex < areaLighting.lightCount; areaIndex++) {
+        for (var sampleIndex: i32 = 0; sampleIndex < 16; sampleIndex++) {
+          let sampleLight = areaLighting_getSample(areaIndex, sampleIndex, fragmentInputs.pbr_vPosition);
+          if (dot(sampleLight.color, sampleLight.color) > 0.0) {
+            PBRInfo_setPointLight(&pbrInfo, sampleLight);
+            color += calculateMaterialLightColor(pbrInfo, sampleLight.color, clearcoatNormal,
+              clearcoatFactor, clearcoatRoughness, sheenColor, sheenRoughness, anisotropyTangent, anisotropyStrength);
+            color += calculateDiffuseTransmissionLight(pbrInfo, sampleLight.color,
+              diffuseTransmissionColor, diffuseTransmission, multiscatterColor, thickness);
+          }
+        }
+      }
     #endif
 
     // Calculate lighting contribution from image based lighting source (IBL)

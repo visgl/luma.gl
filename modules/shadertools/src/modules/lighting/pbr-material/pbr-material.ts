@@ -19,6 +19,7 @@ import type {
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {ibl} from '../ibl/ibl';
 import {lighting} from '../lights/lighting';
+import {areaLighting} from '../area-lighting/area-lighting';
 
 import {fs, vs} from './pbr-material-glsl';
 import {source} from './pbr-material-wgsl';
@@ -336,7 +337,7 @@ export const pbrMaterial = {
     {name: 'pbr_diffuseTransmissionColorSampler', group: 3},
     {name: 'pbr_multiscatterColorSampler', group: 3}
   ],
-  dependencies: [lighting, ibl, pbrProjection],
+  dependencies: [lighting, areaLighting, ibl, pbrProjection],
   source,
   vs,
   fs,

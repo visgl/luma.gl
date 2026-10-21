@@ -251,3 +251,9 @@ export {
   type GlobeCloudProps,
   type GlobeCloudUniforms
 } from './modules/lighting/globe-clouds/globe-clouds';
+
+export {
+  areaLighting,
+  type AreaLight,
+  type AreaLightingProps
+} from './modules/lighting/area-lighting/area-lighting';
