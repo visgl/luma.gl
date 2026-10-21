@@ -357,6 +357,9 @@ mat3 getTBN(vec2 uv)
   mat3 tbn = pbr_vTBN;
 #endif
 
+#ifdef DOUBLE_SIDED
+  if (!gl_FrontFacing) tbn = mat3(-tbn[0], -tbn[1], -tbn[2]);
+#endif
   return tbn;
 }
 

@@ -841,7 +841,15 @@ export const ANARIPlaygroundExample: React.FC = () => {
   );
 };
 
-export const GLTFExample: React.FC<WebsiteExampleProps> = props => {
+export const GLTFExample: React.FC<WebsiteExampleProps & {
+  extension?: 'KHR_materials_clearcoat' | 'KHR_materials_sheen' | 'KHR_materials_iridescence' | 'KHR_materials_anisotropy';
+}> = ({extension, ...props}) => {
+  const loadTemplate = useMemo(() => async () => {
+    const {default: AssetStudioApp} = await loadGLTFApp();
+    return {default: class ConfiguredAssetStudioApp extends AssetStudioApp {
+      constructor(animationProps: AnimationProps) { super(animationProps, extension); }
+    }};
+  }, [extension]);
   const referenceDevice = getGLTFReferenceDeviceSelection();
 
   return (
@@ -850,7 +858,8 @@ export const GLTFExample: React.FC<WebsiteExampleProps> = props => {
       title="glTF Asset Studio"
       subtitle="Physical materials · animated characters · standards-native glTF"
       directory="gltf"
-      loadTemplate={loadGLTFApp}
+      loadTemplate={loadTemplate}
+      infoBoxAppearance="cinematic"
       config={exampleConfig}
       canvasContextProfile="high-dynamic-range"
       devices={referenceDevice ? [referenceDevice] : undefined}
@@ -2753,7 +2762,7 @@ export const GLTFFeatureExample: React.FC<WebsiteExampleProps & {feature: GLTFFe
       constructor(animationProps: AnimationProps) { super(animationProps, feature); }
     }};
   }, [feature]);
-  return <LumaExample id={`gltf-${feature}`} directory="showcase" sourcePath="examples/gltf/features/app.ts" loadTemplate={loadTemplate} config={exampleConfig} showStats={false} {...props} />;
+  return <LumaExample id={`gltf-${feature}`} directory="showcase" sourcePath="examples/gltf/features/app.ts" infoBoxAppearance="cinematic" loadTemplate={loadTemplate} config={exampleConfig} showStats={false} {...props} />;
 };
 
 export const GLTFAudioExample: React.FC<WebsiteExampleProps & {feature?: GLTFAudioFeature}> = ({feature = 'emitter', ...props}) => {

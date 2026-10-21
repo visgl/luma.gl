@@ -74,7 +74,10 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
   imageBasedLightingEnvironment?: PBREnvironment;
   imageBasedLightingEnvironmentPromise?: Promise<PBREnvironment | undefined>;
 
-  constructor(animationProps: AnimationProps) {
+  constructor(
+    animationProps: AnimationProps,
+    readonly initialExtension?: string
+  ) {
     super(animationProps);
     const {device} = animationProps;
     this.settingsPanel = new ExampleSettingsPanelManager({
@@ -101,11 +104,17 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
   }
 
   override getDefaultModelName(): string {
-    return 'RobotExpressive';
+    const defaultModels: Readonly<Record<string, string>> = {
+      KHR_materials_clearcoat: 'ClearCoatCarPaint',
+      KHR_materials_sheen: 'GlamVelvetSofa',
+      KHR_materials_iridescence: 'IridescenceSuzanne',
+      KHR_materials_anisotropy: 'AnisotropyBarnLamp'
+    };
+    return defaultModels[this.initialExtension || ''] || 'RobotExpressive';
   }
 
   override getModelStorageKey(): string {
-    return 'showcase-last-gltf-model-v3';
+    return `showcase-last-gltf-model-v3${this.initialExtension ? `-${this.initialExtension}` : ''}`;
   }
 
   override getClearColor(): [number, number, number, number] {
@@ -118,24 +127,33 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
       this.extensionDemos.map(extensionDemo => extensionDemo.extensionName)
     );
     const storedExtension = window.localStorage[SHOWCASE_EXTENSION_STORAGE_KEY];
-    this.extensionName = this.isReferenceCapture()
-      ? ALL_EXTENSIONS_FILTER
-      : storedExtension === STUDIO_ASSETS_FILTER || activeExtensionNames.has(storedExtension)
-        ? storedExtension
-        : STUDIO_ASSETS_FILTER;
+    this.extensionName =
+      this.initialExtension && activeExtensionNames.has(this.initialExtension)
+        ? this.initialExtension
+        : this.isReferenceCapture()
+          ? ALL_EXTENSIONS_FILTER
+          : storedExtension === STUDIO_ASSETS_FILTER || activeExtensionNames.has(storedExtension)
+            ? storedExtension
+            : STUDIO_ASSETS_FILTER;
     this.modelOptions = getModelOptionsForExtension(
       this.extensionName,
       getAllModelOptions(models),
       this.extensionDemos
     );
-    const selectedModelOption = getInitialModelOption(this.modelOptions, currentModelName);
+    const selectedModelOption = getInitialModelOption(
+      this.modelOptions,
+      this.initialExtension ? this.getDefaultModelName() : currentModelName
+    );
     this.selectedModelValue = encodeModelOption(selectedModelOption);
     this.syncSettingsPanel();
     return () => {};
   }
 
   override getInitialModelReference(currentModelName: string): GLTFModelReference {
-    return getInitialModelOption(this.modelOptions, currentModelName);
+    return getInitialModelOption(
+      this.modelOptions,
+      this.initialExtension ? this.getDefaultModelName() : currentModelName
+    );
   }
 
   override drawBackground(renderPass: RenderPass): void {

@@ -261,7 +261,10 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 }
 
 @fragment
-fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
+fn fragmentMain(inputs: FragmentInputs, @builtin(front_facing) frontFacing: bool) -> @location(0) vec4f {
+#ifdef DOUBLE_SIDED
+  pbr_frontFacing = frontFacing;
+#endif
   fragmentInputs.pbr_vPosition = inputs.pbrPosition;
   fragmentInputs.pbr_vUV0 = inputs.pbrUV0;
   fragmentInputs.pbr_vUV1 = inputs.pbrUV1;

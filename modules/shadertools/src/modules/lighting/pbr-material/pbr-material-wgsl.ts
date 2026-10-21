@@ -153,6 +153,9 @@ uniform sampler2D u_brdfLUT;
 `;
 
 export const source = /* wgsl */ `\
+#ifdef DOUBLE_SIDED
+var<private> pbr_frontFacing: bool = true;
+#endif
 struct PBRFragmentInputs {
   pbr_vPosition: vec3f,
   pbr_vUV0: vec2f,
@@ -505,6 +508,9 @@ fn getTBN(uv: vec2f) -> mat3x3f
   tbn = fragmentInputs.pbr_vTBN;
 #endif
 
+#ifdef DOUBLE_SIDED
+  if (!pbr_frontFacing) { tbn = mat3x3f(-tbn[0], -tbn[1], -tbn[2]); }
+#endif
   return tbn;
 }
 

@@ -13,9 +13,17 @@ import {
 } from '@luma.gl/gltf';
 import {Light, LightingProps, pbrMaterial, pbrScene, skin} from '@luma.gl/shadertools';
 import {Matrix4, Vector3} from '@math.gl/core';
-import {INFO_HTML, LIGHTMAP_INFO_HTML, AREA_LIGHT_INFO_HTML, showError} from './app-ui';
+import {
+  INFO_HTML,
+  LIGHTMAP_INFO_HTML,
+  AREA_LIGHT_INFO_HTML,
+  showError,
+  showLoadingSpinner
+} from './app-ui';
 
 import {GLTF_FEATURE_PRESETS, type GLTFFeature} from './presets';
+
+import {AreaLightOutlines} from './area-light-outlines';
 
 const MAX_CAMERA_TILT = 0.6;
 const CAMERA_TILT_HEIGHT_FACTOR = 0.35;
@@ -59,6 +67,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   modelLights: Light[] = [];
   billboardController?: GLTFBillboardController;
   areaLightController?: GLTFAreaLightController;
+  areaLightOutlines?: AreaLightOutlines;
+  showAreaLights = true;
+  cutawayWalls = true;
+  readonly wallModels = new Set<ModelNode>();
   cameraFieldOfView = Math.PI / 3;
   center = [0, 0, 0];
   cameraHeight = 0;
@@ -73,6 +85,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.device = device;
 
     const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
+    if (feature === 'area-lights') this.areaLightOutlines = new AreaLightOutlines(canvas);
     this.orbitControls = new OrbitControls(canvas, {
       distance: 2,
       yaw: feature === 'lightmap' ? 0 : Math.PI / 4,
@@ -85,19 +98,57 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       zoomSpeed: 0.0015
     });
 
+    document.addEventListener('click', this.handleFrameLights);
     this.loadGLTF();
   }
 
   onFinalize(): void {
     this.isFinalized = true;
+    showLoadingSpinner(this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement, false);
     this.orbitControls.destroy();
     this.billboardController?.destroy();
     this.areaLightController?.destroy();
+    this.areaLightOutlines?.destroy();
+    document.removeEventListener('click', this.handleFrameLights);
 
     destroyScenegraphs(this.scenegraphsFromGLTF);
     this.scenegraphsFromGLTF = undefined;
     this.modelLights = [];
+    this.wallModels.clear();
   }
+
+  private handleFrameLights = (event: MouseEvent): void => {
+    if (!(event.target instanceof HTMLElement)) return;
+    if (event.target instanceof HTMLInputElement && event.target.id === 'show-area-lights') {
+      this.showAreaLights = event.target.checked;
+      return;
+    }
+    if (event.target instanceof HTMLInputElement && event.target.id === 'cutaway-walls') {
+      this.cutawayWalls = event.target.checked;
+      return;
+    }
+    if (event.target.id !== 'frame-area-lights') return;
+    const lights = this.areaLightController?.getLights() || [];
+    if (!lights.length) return;
+    this.center = [0, 1, 2].map(
+      axis => lights.reduce((sum, light) => sum + light.position[axis], 0) / lights.length
+    );
+    const radius = Math.max(
+      ...lights.map(
+        light =>
+          Math.hypot(...light.position.map((value, axis) => value - this.center[axis])) +
+          Math.hypot(...light.halfAxisX) +
+          Math.hypot(...light.halfAxisY)
+      )
+    );
+    this.cameraHeight = this.center[1];
+    this.orbitControls.setProps({
+      target: [this.center[0], this.center[1], this.center[2]],
+      distance: radius * 2.5,
+      yaw: Math.PI / 4,
+      pitch: 0.2
+    });
+  };
 
   getClearColor(): [number, number, number, number] {
     return [0.95, 0.95, 0.97, 1];
@@ -111,6 +162,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         modelUrl: GLTF_FEATURE_PRESETS[this.feature].modelUrl
       })();
       showError();
+      showLoadingSpinner(canvas, true);
       canvas.style.opacity = '0.2';
 
       const preset = GLTF_FEATURE_PRESETS[this.feature];
@@ -157,6 +209,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       destroyScenegraphs(this.scenegraphsFromGLTF);
       this.scenegraphsFromGLTF = scenegraphsFromGLTF;
       this.modelLights = scenegraphsFromGLTF.lights;
+      this.wallModels.clear();
+      if (this.feature === 'area-lights') {
+        const wallIndex = processedGLTF.nodes.findIndex(node => node.name === 'Walls');
+        scenegraphsFromGLTF.gltfNodeIndexToNodeMap.get(wallIndex)?.traverse(node => {
+          if (node instanceof ModelNode) this.wallModels.add(node);
+        });
+      }
       this.areaLightController?.destroy();
       this.areaLightController =
         this.feature === 'area-lights'
@@ -203,6 +262,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         this.cameraFieldOfView = processedGLTF.cameras[0]?.perspective?.yfov || Math.PI / 3;
       }
       canvas.style.opacity = '1';
+      showLoadingSpinner(canvas, false);
       showError();
     } catch (error) {
       if (this.isFinalized) {
@@ -212,6 +272,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       log.error('Failed to load tutorial glTF model', error)();
       canvas.style.opacity = '1';
       showError(error);
+      showLoadingSpinner(canvas, false);
     }
   }
 
@@ -248,6 +309,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           : lightSources;
 
     const areaLights = this.areaLightController?.getLights();
+    this.areaLightOutlines?.update(
+      this.showAreaLights ? areaLights || [] : [],
+      new Matrix4(projectionMatrix).multiplyRight(viewMatrix)
+    );
     for (const {node, modelMatrix, overlay} of this.billboardController!.getDrawEntries({
       viewMatrix
     })) {
@@ -275,6 +340,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           scenegraphsFromGLTF: this.scenegraphsFromGLTF
         }
       });
+      if (this.wallModels.has(node))
+        model.setParameters({cullMode: this.cutawayWalls ? 'back' : 'none'});
       const parameters = model.parameters;
       try {
         if (overlay)
