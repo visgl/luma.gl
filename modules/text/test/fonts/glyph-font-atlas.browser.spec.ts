@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, test, vi} from 'vitest';
-import {isBrowser} from '@probe.gl/env';
+import {isBrowser} from 'probe.gl/env';
 import {ClipSpace} from '@luma.gl/engine';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {GPUTextResources} from '../../src/text-2d/gpu-text-resources';
