@@ -358,7 +358,10 @@ mat3 getTBN(vec2 uv)
 #endif
 
 #ifdef DOUBLE_SIDED
+#ifdef HAS_NORMALS
+  // Derivative normals already face the viewer; only flip an authored basis.
   if (!gl_FrontFacing) tbn = mat3(-tbn[0], -tbn[1], -tbn[2]);
+#endif
 #endif
   return tbn;
 }

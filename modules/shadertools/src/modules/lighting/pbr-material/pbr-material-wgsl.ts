@@ -509,7 +509,10 @@ fn getTBN(uv: vec2f) -> mat3x3f
 #endif
 
 #ifdef DOUBLE_SIDED
+#ifdef HAS_NORMALS
+  // Derivative normals already face the viewer; only flip an authored basis.
   if (!pbr_frontFacing) { tbn = mat3x3f(-tbn[0], -tbn[1], -tbn[2]); }
+#endif
 #endif
   return tbn;
 }

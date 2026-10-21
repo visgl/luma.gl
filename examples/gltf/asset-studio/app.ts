@@ -78,7 +78,16 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
     animationProps: AnimationProps,
     readonly initialExtension?: string
   ) {
-    super(animationProps);
+    const defaultModels: Readonly<Record<string, string>> = {
+      KHR_materials_clearcoat: 'ClearCoatCarPaint',
+      KHR_materials_sheen: 'GlamVelvetSofa',
+      KHR_materials_iridescence: 'IridescenceSuzanne',
+      KHR_materials_anisotropy: 'AnisotropyBarnLamp'
+    };
+    super(animationProps, {
+      modelStorageKey: `showcase-last-gltf-model-v3${initialExtension ? `-${initialExtension}` : ''}`,
+      defaultModelName: defaultModels[initialExtension || ''] || 'RobotExpressive'
+    });
     const {device} = animationProps;
     this.settingsPanel = new ExampleSettingsPanelManager({
       id: 'gltf-settings',
@@ -101,20 +110,6 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
 
     const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
     canvas.style.background = 'linear-gradient(180deg, #9b9b97 0%, #6f6d64 100%)';
-  }
-
-  override getDefaultModelName(): string {
-    const defaultModels: Readonly<Record<string, string>> = {
-      KHR_materials_clearcoat: 'ClearCoatCarPaint',
-      KHR_materials_sheen: 'GlamVelvetSofa',
-      KHR_materials_iridescence: 'IridescenceSuzanne',
-      KHR_materials_anisotropy: 'AnisotropyBarnLamp'
-    };
-    return defaultModels[this.initialExtension || ''] || 'RobotExpressive';
-  }
-
-  override getModelStorageKey(): string {
-    return `showcase-last-gltf-model-v3${this.initialExtension ? `-${this.initialExtension}` : ''}`;
   }
 
   override getClearColor(): [number, number, number, number] {
@@ -140,20 +135,14 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
       getAllModelOptions(models),
       this.extensionDemos
     );
-    const selectedModelOption = getInitialModelOption(
-      this.modelOptions,
-      this.initialExtension ? this.getDefaultModelName() : currentModelName
-    );
+    const selectedModelOption = getInitialModelOption(this.modelOptions, currentModelName);
     this.selectedModelValue = encodeModelOption(selectedModelOption);
     this.syncSettingsPanel();
     return () => {};
   }
 
   override getInitialModelReference(currentModelName: string): GLTFModelReference {
-    return getInitialModelOption(
-      this.modelOptions,
-      this.initialExtension ? this.getDefaultModelName() : currentModelName
-    );
+    return getInitialModelOption(this.modelOptions, currentModelName);
   }
 
   override drawBackground(renderPass: RenderPass): void {

@@ -244,7 +244,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   referenceInitialDrawCpuMilliseconds?: number;
   referenceRenderStage = '';
 
-  constructor({device}: AnimationProps) {
+  constructor(
+    {device}: AnimationProps,
+    readonly catalogOptions: {modelStorageKey?: string; defaultModelName?: string} = {}
+  ) {
     super();
     this.device = device;
     this.referenceCaptureOptions = getGLTFReferenceCaptureOptions(window.location.search);
@@ -363,7 +366,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   getDefaultModelName(): string {
-    return 'CesiumMan';
+    return this.catalogOptions.defaultModelName || 'CesiumMan';
   }
 
   isReferenceCapture(): boolean {
@@ -371,7 +374,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   getModelStorageKey(): string {
-    return LAST_GLTF_MODEL_STORAGE_KEY;
+    return this.catalogOptions.modelStorageKey || LAST_GLTF_MODEL_STORAGE_KEY;
   }
 
   getClearColor(): [number, number, number, number] {
