@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Matrix4} from '@math.gl/core';
+import {assert} from '@luma.gl/core';
 
 export type GLTFAudioEnvironmentZone = {
   environment: number;
@@ -109,4 +110,72 @@ export class GLTFAudioReverbBus {
     this.convolver.disconnect();
     this.output.disconnect();
   }
+}
+
+export type GLTFAudioParametricReverb = {
+  preset?: string;
+  decayTime?: number;
+  decayHFRatio?: number;
+  reflectionsGain?: number;
+  reflectionsDelay?: number;
+  reverbGain?: number;
+  reverbDelay?: number;
+  diffusion?: number;
+  density?: number;
+};
+
+/** Deterministic two-band diffuse response; this is an approximation of the draft parametric model. */
+export function createParametricAudioResponse(
+  context: BaseAudioContext,
+  parameters: GLTFAudioParametricReverb
+): AudioBuffer {
+  // The initial diffuse-response profile supports the default density and diffusion only.
+  assert((parameters.density ?? 1) === 1 && (parameters.diffusion ?? 1) === 1);
+  const presets: Record<string, [number, number, number, number]> = {
+    generic: [1.49, 0.83, 0.007, 0.011],
+    smallRoom: [0.4, 0.83, 0.002, 0.003],
+    mediumRoom: [1.1, 0.83, 0.01, 0.011],
+    largeRoom: [4.32, 0.59, 0.02, 0.03],
+    bathroom: [1.49, 0.54, 0.007, 0.011],
+    concertHall: [3.92, 0.7, 0.02, 0.029],
+    cathedral: [5.5, 0.6, 0.025, 0.04],
+    cave: [2.91, 1.3, 0.015, 0.022],
+    arena: [7.24, 0.33, 0.02, 0.03],
+    hangar: [10.05, 0.23, 0.02, 0.03],
+    corridor: [1.79, 0.59, 0.007, 0.011],
+    forest: [1.49, 0.54, 0.162, 0.088],
+    underwater: [1.49, 0.1, 0.007, 0.011]
+  };
+  const preset = parameters.preset ? presets[parameters.preset] : undefined;
+  // Unknown presets must not silently acquire generic acoustics.
+  assert(!parameters.preset || preset);
+  const decay = parameters.decayTime ?? preset?.[0] ?? 1.5;
+  const highFrequencyDecay = decay * (parameters.decayHFRatio ?? preset?.[1] ?? 0.83);
+  const earlyDelay = parameters.reflectionsDelay ?? preset?.[2] ?? 0.02;
+  const tailDelay = earlyDelay + (parameters.reverbDelay ?? preset?.[3] ?? 0.04);
+  assert(decay > 0 && highFrequencyDecay > 0 && earlyDelay >= 0 && tailDelay >= earlyDelay);
+  const response = context.createBuffer(
+    2,
+    Math.ceil((tailDelay + Math.max(decay, highFrequencyDecay)) * context.sampleRate),
+    context.sampleRate
+  );
+  for (let channel = 0; channel < 2; channel++) {
+    const samples = response.getChannelData(channel);
+    let state = 12345 + channel * 98765;
+    let lowFrequency = 0;
+    const normalization = 1 / Math.sqrt(context.sampleRate * decay);
+    for (let index = Math.ceil(tailDelay * context.sampleRate); index < samples.length; index++) {
+      state = (Math.imul(state, 1664525) + 1013904223) | 0;
+      const noise = state / 2147483648;
+      lowFrequency += 0.15 * (noise - lowFrequency);
+      const time = index / context.sampleRate - tailDelay;
+      samples[index] =
+        (parameters.reverbGain ?? 1) *
+        normalization *
+        (lowFrequency * Math.exp((-Math.log(1000) * time) / decay) +
+          (noise - lowFrequency) * Math.exp((-Math.log(1000) * time) / highFrequencyDecay));
+    }
+    samples[Math.round(earlyDelay * context.sampleRate)] += parameters.reflectionsGain ?? 1;
+  }
+  return response;
 }

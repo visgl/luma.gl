@@ -8,6 +8,8 @@ import type {GroupNode} from '@luma.gl/engine';
 import {GLTFAudioGraph, type GLTFAudioGraphDefinition} from './gltf-audio-graph';
 import {
   GLTFAudioReverbBus,
+  createParametricAudioResponse,
+  type GLTFAudioParametricReverb,
   selectAudioEnvironmentZone,
   type GLTFAudioEnvironmentZone
 } from './gltf-audio-environment';
@@ -88,6 +90,7 @@ export class GLTFAudioController {
   readonly extension: GLTFAudioExtension;
   private readonly options: GLTFAudioControllerOptions;
   private readonly scene: GroupNode;
+  private readonly authoredNodeIndices = new Map<GroupNode, number>();
   private readonly listenerGain: GainNode;
   private readonly emitters: EmitterBinding[] = [];
   private readonly graphs: GLTFAudioGraph[] = [];
@@ -139,6 +142,7 @@ export class GLTFAudioController {
       scenegraphs.gltf.nodes.forEach((node, nodeIndex) => {
         const runtimeNode = scenegraphs.gltfNodeIndexToNodeMap.get(nodeIndex);
         if (runtimeNode && activeNodes.has(runtimeNode)) {
+          this.authoredNodeIndices.set(runtimeNode, nodeIndex);
           const attachment = node.extensions?.['KHR_audio_emitter'];
           // Older draft examples use an array on nodes and lowercase autoplay.
           const indices: number[] =
@@ -293,13 +297,11 @@ export class GLTFAudioController {
         document.scenes[this.options.sceneIndex ?? 0]?.extensions?.['KHR_audio_environment'];
       const bindings: {index: number; nodeIndex: number; matrix: Matrix4}[] = [];
       this.scene.preorderTraversal((runtimeNode, {worldMatrix}) => {
-        for (const [nodeIndex, node] of document.nodes.entries()) {
-          if (this.options.scenegraphs.gltfNodeIndexToNodeMap.get(nodeIndex) !== runtimeNode)
-            continue;
-          const index = node.extensions?.['KHR_audio_environment']?.listener;
-          if (index !== undefined)
-            bindings.push({index, nodeIndex, matrix: new Matrix4(worldMatrix)});
-        }
+        const nodeIndex = this.authoredNodeIndices.get(runtimeNode as GroupNode);
+        if (nodeIndex === undefined) return;
+        const index = document.nodes[nodeIndex].extensions?.['KHR_audio_environment']?.listener;
+        if (index !== undefined)
+          bindings.push({index, nodeIndex, matrix: new Matrix4(worldMatrix)});
       });
       const selected =
         bindings.find(binding => binding.index === sceneExtension?.activeListener) ??
@@ -319,13 +321,12 @@ export class GLTFAudioController {
     const listenerPosition = listenerMatrix.getTranslation();
     const zones: GLTFAudioEnvironmentZone[] = [];
     this.scene.preorderTraversal((runtimeNode, {worldMatrix}) => {
-      this.options.scenegraphs.gltf.nodes.forEach((node, nodeIndex) => {
-        if (this.options.scenegraphs.gltfNodeIndexToNodeMap.get(nodeIndex) !== runtimeNode) return;
-        const zone = node.extensions?.['KHR_audio_environment'] as
-          | Omit<GLTFAudioEnvironmentZone, 'worldMatrix'>
-          | undefined;
-        if (zone?.shape) zones.push({...zone, worldMatrix: new Matrix4(worldMatrix)});
-      });
+      const nodeIndex = this.authoredNodeIndices.get(runtimeNode as GroupNode);
+      if (nodeIndex === undefined) return;
+      const zone = this.options.scenegraphs.gltf.nodes[nodeIndex].extensions?.[
+        'KHR_audio_environment'
+      ] as Omit<GLTFAudioEnvironmentZone, 'worldMatrix'> | undefined;
+      if (zone?.shape) zones.push({...zone, worldMatrix: new Matrix4(worldMatrix)});
     });
     const selectedZone = selectAudioEnvironmentZone(zones, listenerPosition);
     const defaultEnvironment =
@@ -454,7 +455,14 @@ export class GLTFAudioController {
       })
     );
     const environments = scenegraphs.gltf.extensions?.['KHR_audio_environment']?.['environments'] as
-      | {reverb?: {type?: string; audio?: number; mix?: number; normalize?: boolean}}[]
+      | {
+          reverb?: GLTFAudioParametricReverb & {
+            type?: string;
+            audio?: number;
+            mix?: number;
+            normalize?: boolean;
+          };
+        }[]
       | undefined;
     for (const environment of environments || []) {
       if (environment.reverb?.type === 'impulseResponse' && environment.reverb.audio !== undefined)
@@ -486,10 +494,16 @@ export class GLTFAudioController {
       this.buffers = new Map(buffers);
       environments?.forEach((environment, index) => {
         const reverb = environment.reverb;
-        if (reverb?.type !== 'impulseResponse' || reverb.audio === undefined) return;
-        const response = this.buffers.get(reverb.audio);
+        if (!reverb) return;
+        const response =
+          reverb.type === 'impulseResponse'
+            ? this.buffers.get(reverb.audio!)
+            : createParametricAudioResponse(audioContext, reverb);
         assert(response);
-        const bus = new GLTFAudioReverbBus(audioContext, response, this.gain, reverb);
+        const bus = new GLTFAudioReverbBus(audioContext, response, this.gain, {
+          ...reverb,
+          normalize: reverb.type === 'impulseResponse' ? reverb.normalize : false
+        });
         this.reverbBuses.set(index, bus);
         const defaultEnvironment =
           scenegraphs.gltf.scenes[this.options.sceneIndex ?? 0]?.extensions?.[
