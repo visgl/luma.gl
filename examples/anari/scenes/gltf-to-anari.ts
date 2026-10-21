@@ -161,7 +161,8 @@ function makeImportedLights(
     nodeIdentifiers: activeNodeIdentifiers,
     useByteColors: false
   }).flatMap(light => {
-    if (light.type === 'ambient') {
+    // This adapter translates punctual lights; area emitters need an ANARI shape mapping.
+    if (light.type === 'ambient' || light.type === 'rect' || light.type === 'disk') {
       return [];
     }
 
