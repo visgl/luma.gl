@@ -131,8 +131,10 @@ fn solveFriction(firstCollider:u32,secondCollider:u32,contact:Contact,relative:v
  if(determinant>1e-6*firstDiagonal*secondDiagonal&&firstDiagonal>0.0&&secondDiagonal>0.0){
   increment=vec2f(secondDiagonal*slip.x-coupling*slip.y,firstDiagonal*slip.y-coupling*slip.x)/determinant;
  }else{
-  if(firstDiagonal>0.0){increment.x=slip.x/firstDiagonal;}
-  if(secondDiagonal>0.0){increment.y=slip.y/secondDiagonal;}
+  // Locked inertia can make both coordinates describe one rotational DOF.
+  // For a rank-one positive semidefinite K, K+ = K / trace(K)^2.
+  let trace=firstDiagonal+secondDiagonal;
+  if(trace>0.0){increment=vec2f((firstDiagonal/trace)*slip.x+(coupling/trace)*slip.y,(coupling/trace)*slip.x+(secondDiagonal/trace)*slip.y)/max(1e-30,trace);}
  }
  var tangent=contact.tangent.xyz-normal*dot(contact.tangent.xyz,normal)-firstTangent*increment.x-secondTangent*increment.y;
  let magnitude=length(tangent);let staticLimit=frictionCoefficient(firstCollider,secondCollider,false)*contact.impulse.x;

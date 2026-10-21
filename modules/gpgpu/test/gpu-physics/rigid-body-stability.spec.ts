@@ -180,3 +180,42 @@ it.for(['ordered', 'parallel'] as const)(
   },
   120000
 );
+
+it.for([
+  'ordered',
+  'parallel'
+] as const)('does not double friction response with one free rotational axis in %s solving', async (solver, context) => {
+  const states = await runWorld(
+    {
+      solver,
+      iterations: 1,
+      gravity: [0, 0, 0],
+      sleepAfter: 0,
+      bodies: [
+        {
+          position: [0, 0, -0.5],
+          mass: 0,
+          shape: {type: 'box', halfExtents: [5, 5, 0.5]},
+          friction: 1000,
+          restitution: 0
+        },
+        {
+          position: [0, 0, 0.49],
+          mode: 'dynamic',
+          mass: 0,
+          shape: {type: 'sphere', radius: 0.5},
+          centerOfMass: [0.2, 0, 0],
+          inertiaDiagonal: [1, 0, 0],
+          inertiaOrientation: [0, 0, Math.sin(Math.PI / 8), Math.cos(Math.PI / 8)],
+          friction: 1000,
+          restitution: 0
+        }
+      ]
+    },
+    1
+  );
+  if (!states) return context.skip('WebGPU is unavailable');
+  // Penetration bias excites the only free rotation. Sticking friction must
+  // cancel it once, although both tangent coordinates contain that same DOF.
+  expect(Math.hypot(...states[1].angularVelocity)).toBeLessThan(0.0001);
+});

@@ -9,6 +9,7 @@ Generate Vitest JSON reports using the repository test projects, for example:
 
 ```sh
 yarn exec vitest run --project node modules/gltf/test/physics --reporter=json --outputFile=/tmp/physics-import.json
+yarn exec vitest run --project node modules/gpgpu/test/gpu-physics --reporter=json --outputFile=/tmp/physics-node.json
 yarn exec vitest run --project headless modules/gpgpu/test/gpu-physics --reporter=json --outputFile=/tmp/physics-gpu.json
 node --test scripts/physics/qualification-report.test.mjs
 ```
@@ -22,7 +23,7 @@ benchmark against its local URL:
 
 ```sh
 node scripts/physics/benchmark-broad-phase.mjs --url http://127.0.0.1:5197/ --count 10000 --samples 20 > /tmp/physics-discovery.json
-node scripts/physics/qualification-report.mjs /tmp/physics-import.json /tmp/physics-gpu.json /tmp/physics-discovery.json
+node scripts/physics/qualification-report.mjs /tmp/physics-import.json /tmp/physics-node.json /tmp/physics-gpu.json /tmp/physics-discovery.json
 ```
 
 The benchmark disables the example entry point in its own browser page. It reports
