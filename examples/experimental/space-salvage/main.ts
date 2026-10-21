@@ -120,7 +120,17 @@ try {
   async function createMission() {
     const bodies = makeSalvageScene();
     const world = new GPURigidBodyWorld({
-      bodies,
+      bodies: [
+        ...bodies,
+        {
+          position: DOCK,
+          mode: 'static',
+          colliders: [{shape: {type: 'sphere', radius: 2}, isTrigger: true}]
+        }
+      ],
+      failurePolicy: 'rollback',
+      continuous: {bodies: [0]},
+      triggers: [{colliders: [bodies.length], targets: CARGO_IDS}],
       gravity: [0, 0, 0],
       timeStep: 1 / 120,
       iterations: 24,
@@ -212,21 +222,13 @@ try {
             Number(keys.has('KeyS') || keys.has('ArrowDown'));
           const strength = (18 * duration) / Math.max(1, Math.hypot(horizontal, vertical));
           if (horizontal || vertical)
-            mission.world.applyImpulse(
-              0,
-              [horizontal * strength, vertical * strength, 0],
-              ship.position
-            );
+            mission.world.applyImpulse(0, [horizontal * strength, vertical * strength, 0]);
           if (keys.has('Space'))
-            mission.world.applyImpulse(
-              0,
-              [
-                -ship.velocity[0] * Math.min(1, duration * 4) * 2,
-                -ship.velocity[1] * Math.min(1, duration * 4) * 2,
-                0
-              ],
-              ship.position
-            );
+            mission.world.applyImpulse(0, [
+              -ship.velocity[0] * Math.min(1, duration * 4) * 2,
+              -ship.velocity[1] * Math.min(1, duration * 4) * 2,
+              0
+            ]);
           if (
             beamHeld &&
             selected &&
@@ -235,7 +237,7 @@ try {
             !recovered.has(selected.body)
           ) {
             const target = mission.states[selected.body];
-            const delta = [
+            const delta: [number, number] = [
               ship.position[0] - target.position[0],
               ship.position[1] - target.position[1]
             ];
@@ -243,16 +245,16 @@ try {
             // The ray query bounds surface distance; large targets can have centers beyond it.
             if (distance > 1.5) {
               const impulse = Math.min(10, distance * 2) * duration;
-              mission.world.applyImpulse(
-                selected.body,
-                [(delta[0] / distance) * impulse, (delta[1] / distance) * impulse, 0],
-                target.position
-              );
-              mission.world.applyImpulse(
-                0,
-                [(-delta[0] / distance) * impulse * 0.2, (-delta[1] / distance) * impulse * 0.2, 0],
-                ship.position
-              );
+              mission.world.applyImpulse(selected.body, [
+                (delta[0] / distance) * impulse,
+                (delta[1] / distance) * impulse,
+                0
+              ]);
+              mission.world.applyImpulse(0, [
+                (-delta[0] / distance) * impulse * 0.2,
+                (-delta[1] / distance) * impulse * 0.2,
+                0
+              ]);
             }
           }
           const encoder = device.createCommandEncoder();
@@ -264,12 +266,13 @@ try {
         }
         if (now - lastSample > 100) {
           lastSample = now;
-          const [states, events] = await Promise.all([
+          const [states, events, triggers] = await Promise.all([
             mission.world.readState(),
-            mission.world.readContactEvents()
+            mission.world.readContactEvents(),
+            mission.world.readTriggerEvents()
           ]);
           mission.states = states;
-          if (events.dropped || events.saturated)
+          if (events.dropped || events.saturated || triggers.dropped || triggers.saturated)
             throw new Error('Collision event capacity exhausted. Restart the mission.');
           eventCount += events.events.length;
           for (const event of events.events) {
@@ -292,18 +295,17 @@ try {
                     origin: position,
                     direction,
                     maximumDistance: 12,
-                    excludeBody: 0
+                    excludeBody: 0,
+                    colliderIndices: Array.from(
+                      {length: mission.world.colliderCount - 1},
+                      (_, index) => index
+                    )
                   })
                 ).hits[0]
               : undefined;
           queryCount++;
-          const overlap = await mission.world.overlapSphere({
-            center: DOCK,
-            radius: 2.0,
-            colliderIndices: CARGO_IDS.filter(index => !recovered.has(index))
-          });
-          queryCount++;
-          for (const hit of overlap.hits) {
+          for (const hit of triggers.events) {
+            if (hit.phase !== 'enter' || recovered.has(hit.body)) continue;
             recovered.add(hit.body);
             if (selected?.body === hit.body) selected = undefined;
             // Docked bodies are parked outside the arena; invalidate cached contacts after direct writes.

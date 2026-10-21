@@ -22,6 +22,9 @@ export type GPURigidBodySimulationDiagnostics = {
   unresolvedQueries: number;
   incompleteIslandUnions: number;
   incompleteMeshQueries: number;
+  incompleteContinuousBodies: number;
+  incompleteTriggerQueries: number;
+  invalidBodyStates: number;
   maximumCandidatePairs: number;
   maximumCandidateTests: number;
   saturated: boolean;
@@ -42,6 +45,9 @@ export function decodeRigidBodySimulationDiagnostics(
     unresolvedQueries: values[7],
     incompleteIslandUnions: values[8],
     incompleteMeshQueries: values[11],
+    incompleteContinuousBodies: values[12],
+    incompleteTriggerQueries: values[13],
+    invalidBodyStates: values[14],
     maximumCandidatePairs: values[9],
     maximumCandidateTests: values[10],
     saturated: values[15] !== 0,
@@ -57,6 +63,10 @@ export function addRigidBodyDiagnostics<Parameters>(
   id: string,
   statistics: Buffer,
   inputs: {
+    statisticsResource?: GraphBufferHandle;
+    continuous?: DiagnosticSource & {count: number};
+    triggers?: DiagnosticSource & {count: number};
+    validity?: DiagnosticSource & {count: number};
     broadPhase?: DiagnosticSource & {wordOffset: number};
     targets?: DiagnosticSource & {wordOffset: number};
     meshTasks?: DiagnosticSource;
@@ -67,16 +77,21 @@ export function addRigidBodyDiagnostics<Parameters>(
     ...(inputs.broadPhase ? [{name: 'discovery', ...inputs.broadPhase}] : []),
     ...(inputs.targets ? [{name: 'cache', ...inputs.targets}] : []),
     ...(inputs.meshTasks ? [{name: 'mesh', ...inputs.meshTasks}] : []),
-    ...(inputs.parallelState ? [{name: 'islands', ...inputs.parallelState}] : [])
+    ...(inputs.parallelState ? [{name: 'islands', ...inputs.parallelState}] : []),
+    ...(inputs.continuous ? [{name: 'continuous', ...inputs.continuous}] : []),
+    ...(inputs.triggers ? [{name: 'triggers', ...inputs.triggers}] : []),
+    ...(inputs.validity ? [{name: 'validity', ...inputs.validity}] : [])
   ];
   const bindings = [
     {
       name: 'statistics',
       buffer: statistics,
-      resource: graph.importBuffer(
-        {id, byteLength: statistics.byteLength, usage: Buffer.STORAGE},
-        statistics
-      )
+      resource:
+        inputs.statisticsResource ??
+        graph.importBuffer(
+          {id, byteLength: statistics.byteLength, usage: Buffer.STORAGE},
+          statistics
+        )
     },
     ...sources
   ];
@@ -96,6 +111,9 @@ fn accumulate(index:u32,value:u32){
  var incomplete=false;
  for(var index=0u;index<7u;index++){accumulate(index+2u,failures[index]);incomplete=incomplete||failures[index]>0u;}
  ${inputs.meshTasks ? 'accumulate(11u,mesh[3]);incomplete=incomplete||mesh[3]>0u;' : ''}
+ ${inputs.continuous ? `for(var body=0u;body<${inputs.continuous.count}u;body++){let failure=continuous[body*4u];accumulate(12u,failure);incomplete=incomplete||failure!=0u;}` : ''}
+ ${inputs.triggers ? `for(var group=0u;group<${inputs.triggers.count}u;group++){let failure=select(0u,1u,(triggers[group*4u]&4u)!=0u);accumulate(13u,failure);incomplete=incomplete||failure!=0u;}` : ''}
+ ${inputs.validity ? `for(var body=0u;body<${inputs.validity.count}u;body++){accumulate(14u,validity[body]);incomplete=incomplete||validity[body]!=0u;}` : ''}
  accumulate(0u,1u);if(incomplete){accumulate(1u,1u);}
 }`;
   const properties = {

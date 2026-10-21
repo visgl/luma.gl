@@ -55,6 +55,8 @@ try {
     const bodies = makeRigidBodyScene(sceneName);
     const world = new GPURigidBodyWorld({
       bodies,
+      failurePolicy: 'rollback',
+      ...(sceneName === 'continuous' ? {continuous: {bodies: [0]}} : {}),
       iterations: Number(iterations.value),
       solver: solver.value === 'ordered' ? 'ordered' : 'parallel',
       broadPhase: 'hierarchical-grid',

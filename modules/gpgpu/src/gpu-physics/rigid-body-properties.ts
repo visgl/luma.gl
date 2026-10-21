@@ -31,6 +31,8 @@ export type GPURigidBodyCollider = {
   position?: RigidBodyVector;
   orientation?: RigidBodyRotation;
   material?: GPURigidBodyMaterial;
+  /** Queryable sensor geometry, excluded from physical contact response. */
+  isTrigger?: boolean;
   /** Explicit collider indices excluded from collision, resolved before graph construction. */
   excludedColliders?: readonly number[];
 };
