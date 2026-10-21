@@ -1,16 +1,35 @@
-# GPU Rigid Bodies
+# GPU Rigid Body Lab
 
-Run `yarn workspace luma.gl-examples-experimental-gpu-rigid-body-world start`.
+A standalone, procedural physics example independent of glTF assets. Start with
+`yarn workspace luma.gl-examples-experimental-gpu-rigid-body-world start`.
 
-Box stacks, a mixed sphere/box scene and an off-center impact exercise the experimental
-`GPURigidBodyWorld`. Drag to orbit, scroll to zoom, and use **Push a box** to apply an
-impulse away from its center. Reset recreates the selected scene. Rendering binds
-world-owned position and quaternion buffers directly; half-second snapshots only
-update the sleeping counter.
+Open the collapsed luma.gl panel for scene, solver and iteration controls. Info
+explains each scene; GPU Graph and GPU Graph Timeline expose the actual work.
 
-This is a bounded reference solver, limited to 128 sphere/box bodies including static
-colliders. Collision discovery runs parallel GPU SAT and clipped manifolds; an ordered
-GPU sequential-impulse solve provides a stable baseline for future parallel solvers.
-The large sphere example uses `GPUSphereWorld` instead. This path is discrete and does
-not provide CCD: reduce timestep for fast or small bodies. Joints and general convex
-shapes are not part of this example.
+- **Independent stacks:** three five-box stacks sharing a static floor. Sleeping
+  bodies turn gray. Push the first stack to test waking, friction and rotation.
+- **Mixed-shape field:** 256 varying-size boxes and spheres, using hierarchical
+  discovery and sparse contacts beyond the all-pairs reference's 128-body limit.
+- **Unequal-mass impact:** a unit sphere hits a mass-two sphere at restitution one,
+  without gravity or friction. The lighter sphere reverses direction.
+- **Off-center impact:** a sphere transfers angular momentum to a heavier box.
+
+Parallel block-Jacobi and ordered solving share the same scene and fixed timestep.
+Changing solver or iterations resets the scene; comparisons must include both
+accuracy and cost. Parallel mode is experimental, not the module default.
+Rendering binds GPU positions, orientations and sleep state directly. Periodic
+compact collision counters expose incomplete work. The user-triggered push reads
+body state once to locate its application point; it is not a render pose bridge.
+
+The application bounds outstanding frame submissions with a GPU fence, caps catch-up
+at four steps, and slows simulation under sustained overload. Timeline samples do
+not constitute a full qualification report. General-body CCD, joints and unrestricted
+moving mesh collisions are not demonstrated or claimed here.
+
+## Planned companion scenes
+
+Keep glTF examples focused on authored semantics and interoperability. Extend this
+lab with CCD thin-obstacle/rotating-body scenes when CCD is implemented; create a
+mechanism lab for motors, constraints and articulations; and a separate batch/scale
+benchmark for throughput and capacity. Each scene needs quantitative checks as well
+as visual controls. Do not add placeholder simulations for unsupported features.

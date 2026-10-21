@@ -6,19 +6,27 @@ import {luma, Buffer} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {Model} from '@luma.gl/engine';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
-import {GPURigidBodyWorld, type GPURigidBody} from '@luma.gl/gpgpu/gpu-physics';
+import {GPURigidBodyWorld} from '@luma.gl/gpgpu/gpu-physics';
 import {PerspectiveCamera} from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {Matrix4} from '@math.gl/core';
+import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
+import {createRigidBodyPanel} from './info-box';
+import {makeRigidBodyScene, RIGID_BODY_SCENES, type RigidBodyScene} from './scenes';
 
 const status = document.querySelector<HTMLOutputElement>('#status')!;
 const canvas = document.querySelector<HTMLCanvasElement>('#world')!;
 const scene = document.querySelector<HTMLSelectElement>('#scene')!;
+const solver = document.querySelector<HTMLSelectElement>('#solver')!;
+const iterations = document.querySelector<HTMLSelectElement>('#iterations')!;
+const diagnostics = new GPUGraphDiagnostics({traceTitle: 'GPU Graph Timeline'});
+const panel = createRigidBodyPanel(diagnostics);
 const controlsButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('button'));
 try {
   let failure: Error | null = null;
   const device = await luma.createDevice({
     adapters: [webgpuAdapter],
+    optionalFeatures: ['timestamp-query'],
     createCanvasContext: {canvas, autoResize: true},
     onError: error => {
       failure = error;
@@ -34,52 +42,24 @@ try {
     byteLength: 64,
     usage: Buffer.UNIFORM | Buffer.COPY_DST
   });
-  function makeBodies(): GPURigidBody[] {
-    const bodies: GPURigidBody[] = [
-      {
-        shape: {type: 'box', halfExtents: [8, 8, 0.5]},
-        position: [0, 0, -0.5],
-        mass: 0,
-        friction: 0.7
-      }
-    ];
-    if (scene.value === 'impact') {
-      bodies.push({
-        shape: {type: 'box', halfExtents: [0.8, 0.45, 0.6]},
-        position: [0, 0, 0.6],
-        mass: 3
-      });
-      bodies.push({
-        shape: {type: 'sphere', radius: 0.35},
-        position: [-4, 0.3, 0.7],
-        velocity: [6, 0, 0],
-        restitution: 0.5
-      });
-    } else {
-      for (let tower = 0; tower < 3; tower++)
-        for (let level = 0; level < 5; level++) {
-          const angle = tower === 1 ? 0.25 : 0;
-          bodies.push({
-            shape: {type: 'box', halfExtents: [0.5, 0.5, 0.5]},
-            position: [(tower - 1) * 2.5, 0, 0.5 + level * 1.01],
-            orientation: [0, 0, Math.sin(angle / 2), Math.cos(angle / 2)],
-            friction: 0.7,
-            restitution: 0
-          });
-        }
-      if (scene.value === 'mixed')
-        for (let index = 0; index < 8; index++)
-          bodies.push({
-            shape: {type: 'sphere', radius: 0.4},
-            position: [(index % 4) - 1.5, -2, 2 + Math.floor(index / 4)],
-            restitution: 0.4
-          });
-    }
-    return bodies;
-  }
   async function createScene() {
-    const bodies = makeBodies();
-    const world = new GPURigidBodyWorld({bodies, iterations: 20});
+    const sceneName: RigidBodyScene =
+      scene.value === 'mixed'
+        ? 'mixed'
+        : scene.value === 'impact'
+          ? 'impact'
+          : scene.value === 'torque'
+            ? 'torque'
+            : 'stack';
+    const bodies = makeRigidBodyScene(sceneName);
+    const world = new GPURigidBodyWorld({
+      bodies,
+      iterations: Number(iterations.value),
+      solver: solver.value === 'ordered' ? 'ordered' : 'parallel',
+      broadPhase: 'hierarchical-grid',
+      gravity: sceneName === 'impact' ? [0, 0, 0] : [0, 0, -9.81]
+    });
+    document.querySelector('#description')!.textContent = RIGID_BODY_SCENES[sceneName].description;
     const definition = new GPUCommandGraph(device);
     world.addToGraph(definition);
     const graph = await definition.compileAsync().catch(error => {
@@ -91,7 +71,9 @@ try {
         bodies.flatMap(body => {
           const shape = body.shape;
           if (!shape) throw new Error('This renderer requires centered shapes');
-          return shape.type === 'sphere' ? [shape.radius, 0, 0, 0] : [...shape.halfExtents, 1];
+          if (shape.type === 'sphere') return [shape.radius, 0, 0, 0];
+          if (shape.type === 'box') return [...shape.halfExtents, body.mass === 0 ? 2 : 1];
+          throw new Error('The lab renderer supports boxes and spheres');
         })
       ),
       usage: Buffer.STORAGE
@@ -103,7 +85,8 @@ try {
 @group(0) @binding(1) var<storage,read> positions: array<vec4f>;
 @group(0) @binding(2) var<storage,read> orientations: array<vec4f>;
 @group(0) @binding(3) var<storage,read> shapes: array<vec4f>;
-struct Output {@builtin(position) position: vec4f, @location(0) normal: vec3f, @location(1) color: vec3f}
+@group(0) @binding(4) var<storage,read> sleepStates: array<vec4f>;
+struct Output {@builtin(position) position: vec4f, @location(0) normal: vec3f, @location(1) color: vec3f, @location(2) localNormal: vec3f, @location(3) @interpolate(flat) sphere: f32}
 fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotation.xyz,cross(rotation.xyz,vector)+rotation.w*vector);}
 @vertex fn vertexMain(@builtin(vertex_index) vertex: u32,@builtin(instance_index) body: u32)->Output {
  let corners=array<vec2f,6>(vec2f(0,0),vec2f(1,0),vec2f(0,1),vec2f(0,1),vec2f(1,0),vec2f(1,1));
@@ -118,9 +101,9 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
   if(vertex>=36u) {point=vec3f(0);}
  }
  var output:Output;output.position=matrix*vec4f(positions[body].xyz+rotate(orientations[body],point),1);
- output.normal=rotate(orientations[body],normal);output.color=select(vec3f(0.28+0.45*fract(f32(body)*0.27),0.48+0.25*fract(f32(body)*0.39),0.42+0.25*fract(f32(body)*0.17)),vec3f(0.68,0.73,0.67),body==0u);return output;
+ output.localNormal=normal;output.sphere=1.0-shapes[body].w;output.normal=rotate(orientations[body],normal);output.color=select(vec3f(0.28+0.45*fract(f32(body)*0.27),0.48+0.25*fract(f32(body)*0.39),0.42+0.25*fract(f32(body)*0.17)),vec3f(0.68,0.73,0.67),shapes[body].w==2.0);output.color=mix(output.color,vec3f(0.55),select(0.0,0.7,sleepStates[body].y>0.5));return output;
 }
-@fragment fn fragmentMain(input:Output)->@location(0) vec4f {return vec4f(input.color*(0.35+0.65*max(0.0,dot(normalize(input.normal),normalize(vec3f(-0.5,-0.7,1))))),1);}
+@fragment fn fragmentMain(input:Output)->@location(0) vec4f {let band=select(1.0,0.3,input.sphere>0.5&&abs(input.localNormal.z)<0.13);return vec4f(input.color*band*(0.35+0.65*max(0.0,dot(normalize(input.normal),normalize(vec3f(-0.5,-0.7,1))))),1);}
 `,
       vertexCount: 16 * 12 * 6,
       instanceCount: bodies.length,
@@ -129,13 +112,14 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
         matrix: cameraBuffer,
         positions: world.positions!,
         orientations: world.orientations!,
-        shapes
+        shapes,
+        sleepStates: world.sleepStates!
       },
       shaderLayout: {
         attributes: [],
         bindings: [
           {name: 'matrix', group: 0, location: 0, type: 'uniform'},
-          ...['positions', 'orientations', 'shapes'].map((name, index) => ({
+          ...['positions', 'orientations', 'shapes', 'sleepStates'].map((name, index) => ({
             name,
             group: 0,
             location: index + 1,
@@ -145,7 +129,7 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
         ]
       }
     });
-    return {world, graph, model, shapes, bodies};
+    return {world, graph, model, shapes, bodies, sceneName};
   }
   let resources = await createScene();
   let paused = false;
@@ -153,6 +137,7 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
   let alive = true;
   let previous = performance.now();
   let accumulator = 0;
+  let submitted: Promise<void> | null = null;
   let snapshot: Promise<void> | null = null;
   let pushing: Promise<void> | null = null;
   let rebuilding: Promise<typeof resources> | null = null;
@@ -171,9 +156,9 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
     controlsButtons.forEach(button => {
       button.disabled = true;
     });
-    scene.disabled = true;
+    scene.disabled = solver.disabled = iterations.disabled = true;
     try {
-      await Promise.all([snapshot, pushing]);
+      await Promise.all([snapshot, pushing, submitted]);
       if (!alive) return;
       rebuilding = createScene();
       const replacement = await rebuilding;
@@ -181,8 +166,14 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
         destroy(replacement);
         return;
       }
+      diagnostics.clear();
       destroy(resources);
       resources = replacement;
+      camera.position.set(
+        resources.sceneName === 'mixed' ? 24 : 11,
+        resources.sceneName === 'mixed' ? -30 : -16,
+        resources.sceneName === 'mixed' ? 25 : 12
+      );
       accumulator = 0;
       elapsedSimulation = 0;
     } catch (error) {
@@ -193,18 +184,20 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
       controlsButtons.forEach(button => {
         button.disabled = false;
       });
-      scene.disabled = false;
+      scene.disabled = solver.disabled = iterations.disabled = false;
     }
   }
   document.querySelector<HTMLButtonElement>('#reset')!.onclick = reset;
   scene.onchange = reset;
+  solver.onchange = reset;
+  iterations.onchange = reset;
   const pauseButton = document.querySelector<HTMLButtonElement>('#pause')!;
   pauseButton.onclick = () => {
     paused = !paused;
     pauseButton.textContent = paused ? 'Resume' : 'Pause';
   };
   document.querySelector<HTMLButtonElement>('#push')!.onclick = () => {
-    if (loading || !alive || pushing) return;
+    if (loading || !alive || pushing || resources.sceneName === 'impact') return;
     const target = resources;
     pushing = target.world
       .readState()
@@ -228,6 +221,13 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
     if (!alive) return;
     if (failure) {
       status.value = failure.message;
+      document.querySelector('#startup-error')!.textContent = failure.message;
+      return;
+    }
+    panel.update();
+    if (submitted) {
+      previous = now;
+      animation = requestAnimationFrame(frame);
       return;
     }
     const elapsed = Math.min(0.05, (now - previous) / 1000);
@@ -236,7 +236,7 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
       accumulator = Math.min(accumulator + elapsed, 4 / 120);
       const encoder = device.createCommandEncoder();
       while (accumulator >= 1 / 120) {
-        resources.graph.encode(encoder, {parameters: undefined});
+        diagnostics.encode(resources.graph, encoder, {parameters: undefined});
         accumulator -= 1 / 120;
         elapsedSimulation += 1 / 120;
       }
@@ -257,14 +257,32 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
     resources.model.draw(pass);
     pass.end();
     device.submit();
+    const fence = device.createFence();
+    submitted = fence.signaled
+      .catch(error => {
+        failure = error;
+      })
+      .finally(() => {
+        fence.destroy();
+        submitted = null;
+      });
     if (!loading && !snapshot && now - lastSample > 500) {
       lastSample = now;
       const target = resources;
       snapshot = target.world
-        .readState()
-        .then(states => {
-          if (alive && target === resources)
-            status.value = `${states.length - 1} dynamic bodies · ${states.filter(body => body.sleeping).length} sleeping\n${elapsedSimulation.toFixed(1)} s simulated · ${target.graph.stats.nodeOrder.length} GPU operations`;
+        .readCollisionDiagnostics()
+        .then(counters => {
+          if (!alive || target !== resources) return;
+          const broad = counters.broadPhase;
+          const invalid =
+            counters.unresolvedQueries +
+            counters.droppedTriangleQueries +
+            counters.droppedManifolds +
+            counters.incompleteIslandUnions +
+            (broad?.droppedPairs ?? 0) +
+            (broad?.incompleteQueries ?? 0) +
+            (broad?.invalidBounds ?? 0);
+          status.value = `${invalid ? 'INCOMPLETE WORK · ' : ''}${target.bodies.filter(body => body.mass !== 0).length} dynamic bodies · ${target.world.solver} solver\n${elapsedSimulation.toFixed(1)} s simulated · ${target.graph.stats.nodeOrder.length} graph nodes\n${broad?.pairCount ?? 0} candidate pairs · ${broad?.candidateTests ?? 0} candidate tests\n${invalid} unresolved / dropped / invalid / incomplete operations`;
         })
         .catch(error => {
           failure = error;
@@ -282,8 +300,9 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
       alive = false;
       cancelAnimationFrame(animation);
       controls.dispose();
-      void Promise.allSettled([snapshot, pushing, rebuilding]).then(() => {
+      void Promise.allSettled([snapshot, pushing, rebuilding, submitted]).then(() => {
         destroy(resources);
+        panel.destroy();
         cameraBuffer.destroy();
         device.destroy();
       });
@@ -292,4 +311,5 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
   );
 } catch (error) {
   status.value = String(error);
+  document.querySelector('#startup-error')!.textContent = String(error);
 }

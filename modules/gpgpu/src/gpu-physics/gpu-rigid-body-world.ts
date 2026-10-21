@@ -568,7 +568,7 @@ export class GPURigidBodyWorld {
       parallelMarkSleep: ['settings', 'bodies', 'sleepStates', 'parallelState'],
       parallelSleep: ['velocities', 'angularVelocities', 'bodies', 'sleepStates', 'parallelState']
     };
-    parallelBindings.parallelSolve = parallelBindings.parallelPairs;
+    parallelBindings['parallelSolve'] = parallelBindings['parallelPairs'];
     for (const entryPoint of [
       'integrate',
       ...(sparse ? ['prepare', 'bounds'] : []),

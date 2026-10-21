@@ -42,7 +42,7 @@ export function decodeRigidBodyBroadPhaseDiagnostics(values: ArrayLike<number>) 
     droppedPairs: values[1],
     invalidBounds: values[2],
     candidateTests: values[3],
-    occupiedLevels: values[4],
+    occupiedLevelMask: values[4],
     oversizedBounds: values[5],
     incompleteQueries: values[6]
   };

@@ -183,6 +183,19 @@ reproducible performance report. Only then describe the adapter as complete for 
 pinned profile. The 128-body reference limit and pose-bridge limitations cannot remain
 as the general production implementation behind that claim.
 
+### Examples beyond glTF
+
+Use the standalone [Rigid Body Lab](../../examples/experimental/gpu-rigid-body-world/README.md)
+for procedural stacks, mixed-size discovery, unequal-mass impacts, solver comparison and
+sleep/wake diagnostics. Its GPU render path avoids conflating solver behavior with glTF
+import or scenegraph publication. Keep sphere scale and pool as specialized workloads.
+
+Add a fast-motion lab for G3/G11 CCD, a mechanisms lab for G4/G9 joints and articulations,
+and a batch/scale benchmark for G10 throughput and capacity. Each should expose its
+settings, expected behavior, error/overflow counters and timing scope. Introduce these
+scenes with the corresponding implementation, not placeholder approximations. glTF
+examples remain the interoperability and authored-semantics qualification suite.
+
 ### G8. Competitive contact solving and difficult dynamics
 
 Qualify deep stacks, large mass ratios, dense compounds and persistent friction under

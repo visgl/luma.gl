@@ -31,6 +31,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'experimental/deferred-rendering',
   'experimental/gpu-frustum-culling',
   'experimental/gpu-sphere-world',
+  'experimental/gpu-rigid-body-world',
   'experimental/gpu-pool',
   'experimental/gpu-trace-viewer',
   'deck/sketch-edges',

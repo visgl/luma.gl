@@ -449,3 +449,25 @@ The broad-phase report includes total pair demand, dropped pairs, candidate test
 invalid bounds and `incompleteQueries`. Readback is optional and never advances or
 gates physics. Benchmark GPU compute time, encoding time, publication latency and
 memory separately; a multi-step batch duration is not a single-pass timing.
+
+## Experimental parallel rigid-body solver
+
+`GPURigidBodyWorld({solver: 'parallel'})` opts into sparse contact adjacency,
+parallel contact-pair impulse updates and per-body gathering. It uses a bounded
+GPU union/find stage to coordinate island sleeping and waking. A static floor does
+not join otherwise independent dynamic islands. The default remains `'ordered'`;
+parallel mode is under qualification, especially for dense stacks and large mass
+ratios. Both modes support hierarchical discovery.
+
+`iterations` controls the repeated pair/gather work within one semantic solver
+operation. The graph inspector therefore does not show a separate node for every
+iteration. GPU timings include the encoded dispatches. `incompleteIslandUnions` in
+`readCollisionDiagnostics()` reports exhausted island traversal; incomplete islands
+are conservatively kept awake. Collision and capacity diagnostics must also be
+checked before treating a run as valid.
+
+The standalone [Rigid Body Lab](../../../../examples/experimental/gpu-rigid-body-world/README.md)
+compares solver settings on procedural stacks, mixed-size fields and impacts. It
+renders directly from world buffers and provides graph/timeline inspection. These
+scenes complement glTF interoperability tests; they do not claim general CCD,
+unrestricted moving mesh/mesh collision, or complete glTF proposal coverage.
