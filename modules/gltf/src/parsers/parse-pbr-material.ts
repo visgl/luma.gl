@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {GLTFPostprocessed} from '@loaders.gl/gltf';
+import {Matrix3} from '@math.gl/core';
 import type {Device, ExternalImage, SamplerProps, TextureFormat, TypedArray} from '@luma.gl/core';
 import {assert, log, Texture, textureFormatDecoder} from '@luma.gl/core';
 import {type PBRMaterialBindings} from '@luma.gl/shadertools';
@@ -573,8 +574,8 @@ function parseMaterialExtensions(
     assert(Number.isFinite(intensity) && intensity >= 0);
     parsedMaterial.uniforms.lightmapIntensity = intensity;
     parsedMaterial.uniforms.lightmapUVSet = resolveTextureCoordinateSet(lightmap.lightmapTexture);
-    parsedMaterial.uniforms.lightmapUVTransform = getTextureTransformMatrix(
-      resolveTextureTransform(lightmap.lightmapTexture)
+    parsedMaterial.uniforms.lightmapUVTransform = new Matrix3(
+      getTextureTransformMatrix(resolveTextureTransform(lightmap.lightmapTexture))
     );
     // Shared material creation has no primitive attributes; lightmaps use independent primitive materials.
     if (Object.keys(attributes).length > 0)

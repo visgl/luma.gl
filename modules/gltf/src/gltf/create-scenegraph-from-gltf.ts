@@ -88,7 +88,8 @@ export function createScenegraphsFromGLTF(
     gltfMeshIdToNodeMap,
     gltfNodeIdToNodeMap,
     gltfNodeIndexToNodeMap,
-    generatedTextures
+    generatedTextures,
+    materialInstances
   } = parseGLTF(device, gltf, options);
 
   const animations = parseGLTFAnimations(gltf);
@@ -127,7 +128,8 @@ export function createScenegraphsFromGLTF(
     onLightChange: refreshLights,
     animations,
     gltfNodeIdToNodeMap,
-    materials
+    materials,
+    materialInstances
   });
   const variants = new GLTFMaterialVariants(gltf, scenes);
   const extensionSupport = getGLTFExtensionSupport(gltf, device);

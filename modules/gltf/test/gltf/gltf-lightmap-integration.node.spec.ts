@@ -131,3 +131,71 @@ test('KHR_lightmap atlas instance multipliers and transforms survive variants', 
   expect(models.map(getLightmapIntensity)).toEqual([2, 0.5]);
   bundle.destroy();
 });
+
+test('KHR_lightmap expanded atlas models receive their owning skin palette', () => {
+  const source = makeDocument(true);
+  const primitive = source.meshes[0].primitives[0];
+  primitive.attributes.JOINTS_0 = {components: 4, value: new Uint16Array(12)} as any;
+  primitive.attributes.WEIGHTS_0 = {
+    components: 4,
+    value: new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0])
+  } as any;
+  source.nodes[0].skin = 0;
+  const joint = {id: 'joint', translation: [0, 1, 0]} as (typeof source.nodes)[number];
+  source.nodes.push(joint);
+  source.skins.push({id: 'skin', joints: [1]} as (typeof source.skins)[number]);
+  const bundle = createScenegraphsFromGLTF(new NullDevice({}), source);
+  expect(bundle.skins.bindings[0].models).toHaveLength(2);
+  expect(bundle.skins.bindings[0].jointMatrices[13]).toBe(1);
+  for (const model of collectModels(bundle.scenes)) {
+    expect(model.model.shaderInputs.getUniformValues().skin.jointMatrix[13]).toBe(1);
+  }
+  bundle.destroy();
+});
+
+test('KHR_lightmap private materials keep pointer animation while preserving atlas uniforms', () => {
+  const source = makeDocument(true);
+  source.materials[0].pbrMetallicRoughness = {
+    baseColorFactor: [1, 0, 0, 1],
+    metallicFactor: 0,
+    baseColorTexture: {index: 0, texCoord: 1, extensions: {KHR_texture_transform: {offset: [0, 0]}}}
+  } as any;
+  source.accessors.push(
+    {id: 'times', value: new Float32Array([0, 1]), components: 1, count: 2} as any,
+    {
+      id: 'colors',
+      value: new Float32Array([1, 0, 0, 1, 0, 0, 1, 1]),
+      components: 4,
+      count: 2
+    } as any,
+    {id: 'metallic', value: new Float32Array([0, 1]), components: 1, count: 2} as any,
+    {id: 'offset', value: new Float32Array([0, 0, 0.5, 0]), components: 2, count: 2} as any
+  );
+  const pointers = [
+    'pbrMetallicRoughness/baseColorFactor',
+    'pbrMetallicRoughness/metallicFactor',
+    'pbrMetallicRoughness/baseColorTexture/extensions/KHR_texture_transform/offset'
+  ];
+  source.animations.push({
+    name: 'material',
+    samplers: pointers.map((_, index) => ({input: 0, output: index + 1, interpolation: 'LINEAR'})),
+    channels: pointers.map((pointer, index) => ({
+      sampler: index,
+      target: {
+        path: 'pointer',
+        extensions: {KHR_animation_pointer: {pointer: `/materials/0/${pointer}`}}
+      }
+    }))
+  } as any);
+  const bundle = createScenegraphsFromGLTF(new NullDevice({}), source);
+  bundle.animator.setTime(500);
+  const models = collectModels(bundle.scenes);
+  for (const model of models) {
+    const uniforms = model.model.material!.shaderInputs.getUniformValues().pbrMaterial;
+    expect(uniforms.baseColorFactor).toEqual([0.5, 0, 0.5, 1]);
+    expect(uniforms.metallicRoughnessValues[0]).toBe(0.5);
+    expect(uniforms.baseColorUVTransform[6]).toBeCloseTo(0.25);
+  }
+  expect(models.map(getLightmapIntensity)).toEqual([2, 0.5]);
+  bundle.destroy();
+});

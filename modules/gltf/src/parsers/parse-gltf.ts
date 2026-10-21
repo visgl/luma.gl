@@ -60,6 +60,7 @@ export type ParseGLTFOptions = {
 
 type ParseGLTFInternalOptions = Required<ParseGLTFOptions> & {
   generatedTextures: Set<Texture>;
+  materialInstances: Map<number, Material[]>;
 };
 
 const defaultOptions: Required<ParseGLTFOptions> = {
@@ -93,12 +94,15 @@ export function parseGLTF(
   gltfNodeIdToNodeMap: Map<string, GroupNode>;
   /** Textures generated while parsing source materials, primitives, and variants. */
   generatedTextures: Set<Texture>;
+  materialInstances: Map<number, Material[]>;
 } {
   const generatedTextures = new Set<Texture>();
+  const materialInstances = new Map<number, Material[]>();
   const combinedOptions: ParseGLTFInternalOptions = {
     ...defaultOptions,
     ...options,
-    generatedTextures
+    generatedTextures,
+    materialInstances
   };
   const materialFactory = new MaterialFactory(device, {modules: [pbrMaterial]});
   const materials = (gltf.materials || []).map((gltfMaterial, materialIndex) =>
@@ -239,7 +243,8 @@ export function parseGLTF(
     gltfMeshIdToNodeMap,
     gltfNodeIdToNodeMap,
     gltfNodeIndexToNodeMap,
-    generatedTextures
+    generatedTextures,
+    materialInstances
   };
 }
 
@@ -418,6 +423,13 @@ function createNodeForGLTFPrimitive({
     morphTargets: morphTargetState?.targets
   });
 
+  if (gltfPrimitive.material && modelNode.model.material) {
+    const sourceIndex = gltf.materials.findIndex(
+      material => material.id === gltfPrimitive.material.id
+    );
+    registerMaterialInstance(options.materialInstances, sourceIndex, modelNode.model.material);
+  }
+
   if (instancing) {
     modelNode.userData['gltfInstancing'] = instancing;
   }
@@ -459,6 +471,11 @@ function createNodeForGLTFPrimitive({
         }
         material = createGLTFMaterial(device, {parsedPPBRMaterial: variantMaterial});
       }
+      registerMaterialInstance(
+        options.materialInstances,
+        gltf.materials.indexOf(mappedSourceMaterial),
+        material
+      );
       for (const variantIndex of mapping.variants || []) {
         mappings.set(variantIndex, {
           material,
@@ -597,4 +614,15 @@ function createGeometry(
 
 function getGLTFMaterialId(gltfMaterial: GLTFMaterialPostprocessed, materialIndex: number): string {
   return gltfMaterial.name || gltfMaterial.id || `material-${materialIndex}`;
+}
+
+function registerMaterialInstance(
+  instances: Map<number, Material[]>,
+  sourceIndex: number,
+  material: Material
+): void {
+  if (sourceIndex < 0) return;
+  const materials = instances.get(sourceIndex) || [];
+  if (!materials.includes(material)) materials.push(material);
+  instances.set(sourceIndex, materials);
 }
