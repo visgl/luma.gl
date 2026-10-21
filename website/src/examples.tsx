@@ -94,7 +94,8 @@ const loadHelloCubeApp = () => import('../../examples/tutorials/hello-cube/app')
 const loadTwoCubesApp = () => import('../../examples/tutorials/hello-two-cubes/app');
 const loadInstancedCubesApp = () => import('../../examples/tutorials/hello-instanced-cubes/app');
 const loadHelloInstancingApp = () => import('../../examples/tutorials/hello-instancing/app');
-const loadGLTFBillboardApp = () => import('../../examples/showcase/gltf-billboard/app');
+const loadGLTFFeatureApp = () => import('../../examples/gltf/features/app');
+import type {GLTFFeature} from '../../examples/gltf/features/presets';
 const loadHelloGLTFApp = () => import('../../examples/tutorials/hello-gltf/app');
 const loadLightingApp = () => import('../../examples/tutorials/lighting/app');
 const loadShaderHooksApp = () => import('../../examples/tutorials/shader-hooks/app');
@@ -2742,6 +2743,12 @@ export const GLTFPhysicsExample: React.FC<WebsiteExampleProps> = props => (
   />
 );
 
-export const GLTFBillboardExample: React.FC = props => (
-  <LumaExample id="gltf-billboard" directory="showcase" loadTemplate={loadGLTFBillboardApp} config={exampleConfig} showStats={false} {...props} />
-);
+export const GLTFFeatureExample: React.FC<WebsiteExampleProps & {feature: GLTFFeature}> = ({feature, ...props}) => {
+  const loadTemplate = useMemo(() => async () => {
+    const {default: FeatureApp} = await loadGLTFFeatureApp();
+    return {default: class ConfiguredFeatureApp extends FeatureApp {
+      constructor(animationProps: AnimationProps) { super(animationProps, feature); }
+    }};
+  }, [feature]);
+  return <LumaExample id={`gltf-${feature}`} directory="showcase" sourcePath="examples/gltf/features/app.ts" loadTemplate={loadTemplate} config={exampleConfig} showStats={false} {...props} />;
+};

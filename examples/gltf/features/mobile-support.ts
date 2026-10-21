@@ -6,6 +6,7 @@ import type {ExampleSupportDefinition} from '../../example-support';
 
 const exampleSupport = {
   id: 'showcase/gltf-billboard',
+  sourceDirectory: 'gltf/features',
   mobileMode: 'reduced',
   mobileProfile: 'large-data',
   requirements: {backends: ['webgpu', 'webgl2']}

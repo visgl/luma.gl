@@ -16475,9 +16475,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-gltf-billboard@workspace:examples/showcase/gltf-billboard":
+"luma.gl-examples-gltf-features@workspace:examples/gltf/features":
   version: 0.0.0-use.local
-  resolution: "luma.gl-examples-gltf-billboard@workspace:examples/showcase/gltf-billboard"
+  resolution: "luma.gl-examples-gltf-features@workspace:examples/gltf/features"
   dependencies:
     "@loaders.gl/core": "npm:~5.0.0-alpha.11"
     "@loaders.gl/gltf": "npm:~5.0.0-alpha.11"

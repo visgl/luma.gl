@@ -11,8 +11,8 @@ import {Light, LightingProps} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 import {INFO_HTML, showError} from './app-ui';
 
-const MODEL_URL =
-  'https://raw.githubusercontent.com/KhronosGroup/glTF-External-Reference/d15ddd159493698a1c1ce2fab448abbfde56c312/demo/Models/BillboardDemo/glTF/BillboardDemo.gltf';
+import {GLTF_FEATURE_PRESETS, type GLTFFeature} from './presets';
+
 const MAX_CAMERA_TILT = 0.6;
 const CAMERA_TILT_HEIGHT_FACTOR = 0.35;
 
@@ -51,7 +51,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   sceneRadius = 1;
   isFinalized = false;
 
-  constructor({device}: AnimationProps) {
+  constructor(
+    {device}: AnimationProps,
+    readonly feature: GLTFFeature = 'billboard'
+  ) {
     super();
     this.device = device;
 
@@ -89,11 +92,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
 
     try {
-      log.log(0, 'Starting tutorial glTF load', {modelUrl: MODEL_URL})();
+      log.log(0, 'Starting glTF feature load', {
+        modelUrl: GLTF_FEATURE_PRESETS[this.feature].modelUrl
+      })();
       showError();
       canvas.style.opacity = '0.2';
 
-      const gltf = await load(MODEL_URL, GLTFLoader);
+      const gltf = await load(GLTF_FEATURE_PRESETS[this.feature].modelUrl, GLTFLoader);
       if (this.isFinalized) return;
       const processedGLTF = postProcessGLTF(gltf);
       const scenegraphsFromGLTF = createScenegraphsFromGLTF(this.device, processedGLTF, {
@@ -114,7 +119,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.billboardController = new GLTFBillboardController({
         gltf: processedGLTF,
         ...scenegraphsFromGLTF,
-        allowLegacyYAxis: true
+        allowLegacyYAxis: GLTF_FEATURE_PRESETS[this.feature].allowLegacyYAxis
       });
 
       const sceneBounds = scenegraphsFromGLTF.sceneBounds[0] || scenegraphsFromGLTF.modelBounds;

@@ -8,7 +8,7 @@ const repoRoot = fileURLToPath(new URL('..', import.meta.url));
 const examplesRoot = join(repoRoot, 'examples');
 const tscPath = join(repoRoot, 'node_modules', '.bin', 'tsc');
 const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
-  'showcase/gltf-billboard',
+  'gltf/features',
   'deck/city-scene',
   'api/blending',
   'gltf/physics',
