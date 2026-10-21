@@ -3,9 +3,13 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** Only implemented presets appear here; graph/environment will be added with their runtimes. */
-export type GLTFAudioFeature = 'emitter' | 'graph';
+export type GLTFAudioFeature = 'emitter' | 'graph' | 'environment';
 
 export const GLTF_AUDIO_PRESETS = {
+  environment: {
+    modelUrl:
+      'https://raw.githubusercontent.com/rudybear/gltf-webgpu/188965dd2ea0a1492c39dedf69f8e75f730baf9a/examples/drum-kit/drum-kit.gltf'
+  },
   graph: {
     modelUrl:
       'https://raw.githubusercontent.com/rudybear/gltf-webgpu/188965dd2ea0a1492c39dedf69f8e75f730baf9a/examples/drum-kit/drum-kit.gltf'

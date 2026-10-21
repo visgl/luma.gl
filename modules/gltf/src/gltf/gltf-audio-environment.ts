@@ -17,23 +17,36 @@ export type GLTFAudioEnvironmentZone = {
 export function selectAudioEnvironmentZone(
   zones: readonly GLTFAudioEnvironmentZone[],
   position: ArrayLike<number>
-): {environment: number; weight: number} | undefined {
-  let selected: {zone: GLTFAudioEnvironmentZone; volume: number; distance: number} | undefined;
+): {environment: number; weight: number; outsideEnvironment?: number} | undefined {
+  let selected:
+    | {zone: GLTFAudioEnvironmentZone; volume: number; distance: number; boundary: number[]}
+    | undefined;
   for (const zone of zones) {
     const scale = zone.worldMatrix.getScale();
     let distance: number;
     let volume: number;
+    let boundary: number[];
     if (zone.shape.type === 'sphere') {
       const center = zone.worldMatrix.getTranslation();
       const radius = zone.shape.radius * Math.max(...scale);
       distance = radius - Math.hypot(...center.map((value, index) => value - position[index]));
       volume = (4 / 3) * Math.PI * radius ** 3;
+      const offset = center.map((value, index) => position[index] - value);
+      const length = Math.hypot(...offset);
+      boundary = Array.from(center).map(
+        (value, index) =>
+          value + (length ? offset[index] / length : Number(index === 0)) * (radius + 0.00001)
+      );
     } else {
       const local = new Matrix4(zone.worldMatrix).invert().transformAsPoint(Array.from(position));
       const margins = zone.shape.size.map(
         (extent, index) => (extent / 2 - Math.abs(local[index])) * scale[index]
       );
       distance = Math.min(...margins);
+      const axis = margins.indexOf(distance);
+      local[axis] =
+        (Math.sign(local[axis]) || 1) * (zone.shape.size[axis] / 2 + 0.00001 / scale[axis]);
+      boundary = Array.from(zone.worldMatrix.transformAsPoint(local));
       volume = zone.shape.size.reduce(
         (product, extent, index) => product * extent * scale[index],
         1
@@ -45,17 +58,25 @@ export function selectAudioEnvironmentZone(
       (zone.priority ?? 0) > (selected.zone.priority ?? 0) ||
       ((zone.priority ?? 0) === (selected.zone.priority ?? 0) && volume < selected.volume)
     ) {
-      selected = {zone, volume, distance};
+      selected = {zone, volume, distance, boundary};
     }
   }
-  return selected
-    ? {
-        environment: selected.zone.environment,
-        weight: selected.zone.blendDistance
-          ? Math.min(1, selected.distance / selected.zone.blendDistance)
-          : 1
-      }
-    : undefined;
+  if (!selected) return undefined;
+  const weight = selected.zone.blendDistance
+    ? Math.min(1, selected.distance / selected.zone.blendDistance)
+    : 1;
+  const outside =
+    weight < 1
+      ? selectAudioEnvironmentZone(
+          zones.filter(zone => zone !== selected.zone),
+          selected.boundary
+        )
+      : undefined;
+  return {
+    environment: selected.zone.environment,
+    weight,
+    ...(outside ? {outsideEnvironment: outside.environment} : {})
+  };
 }
 
 /** Owns an impulse-response return bus; the decoded response and destinations are borrowed. */

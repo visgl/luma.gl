@@ -41,3 +41,23 @@ test('environment zones measure inward blends and maximum-scale spheres', () => 
   };
   expect(selectAudioEnvironmentZone([box], [6.5, 0, 0])).toEqual({environment: 4, weight: 0.5});
 });
+
+test('zone blend targets the environment just outside its closest boundary', () => {
+  const zones: GLTFAudioEnvironmentZone[] = [
+    {environment: 1, worldMatrix: new Matrix4(), shape: {type: 'box', size: [10, 10, 10]}},
+    {
+      environment: 2,
+      priority: 1,
+      blendDistance: 1,
+      worldMatrix: new Matrix4(),
+      shape: {type: 'sphere', radius: 2}
+    }
+  ];
+  expect(selectAudioEnvironmentZone(zones, [1.5, 0, 0])).toEqual({
+    environment: 2,
+    weight: 0.5,
+    outsideEnvironment: 1
+  });
+  expect(selectAudioEnvironmentZone(zones, [2.1, 0, 0])?.environment).toBe(1);
+  expect(selectAudioEnvironmentZone(zones, [0, 0, 0])).toEqual({environment: 2, weight: 1});
+});

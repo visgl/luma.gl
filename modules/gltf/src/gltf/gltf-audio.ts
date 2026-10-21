@@ -351,7 +351,12 @@ export class GLTFAudioController {
       ]?.environment;
     for (const send of this.environmentSends) {
       const environment = send.forced ?? selectedZone?.environment ?? defaultEnvironment;
-      send.gain.gain.value = send.level * (send.environment === environment ? 1 : 0);
+      const weight = send.forced !== undefined ? 1 : (selectedZone?.weight ?? 1);
+      const outside = selectedZone?.outsideEnvironment ?? defaultEnvironment;
+      send.gain.gain.value =
+        send.level *
+        ((send.environment === environment ? weight : 0) +
+          (send.forced === undefined && send.environment === outside ? 1 - weight : 0));
     }
     const listenerForward = new Vector3(0, 0, -1).transformAsVector(listenerMatrix).normalize();
     const listenerUp = new Vector3(0, 1, 0).transformAsVector(listenerMatrix).normalize();

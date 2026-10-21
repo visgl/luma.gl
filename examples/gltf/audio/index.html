@@ -22,7 +22,7 @@
       document.getElementById('credits').innerHTML = INFO_HTML;
       const type = new URLSearchParams(location.search).get('backend') || 'best-available';
       const feature = new URLSearchParams(location.search).get('feature') || 'emitter';
-      if (feature !== 'emitter' && feature !== 'graph') throw new Error(`Unknown glTF audio feature: ${feature}`);
+      if (feature !== 'emitter' && feature !== 'graph' && feature !== 'environment') throw new Error(`Unknown glTF audio feature: ${feature}`);
       class ConfiguredAudio extends AnimationLoopTemplate {
         constructor(animationProps) { super(animationProps, feature); }
       }

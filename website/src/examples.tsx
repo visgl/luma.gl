@@ -2773,7 +2773,7 @@ export const GLTFAudioExample: React.FC<WebsiteExampleProps & {feature?: GLTFAud
   const loadTemplate = useMemo(() => async () => {
     const {default: AudioApp} = await loadGLTFAudioApp();
     return {default: class ConfiguredAudioApp extends AudioApp {
-      static info = feature === 'graph' ? AudioApp.graphInfo : AudioApp.info;
+      static info = feature === 'environment' ? AudioApp.environmentInfo : feature === 'graph' ? AudioApp.graphInfo : AudioApp.info;
       constructor(animationProps: AnimationProps) { super(animationProps, feature); }
     }};
   }, [feature]);

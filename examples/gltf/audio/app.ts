@@ -9,7 +9,7 @@ import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {GLTFAudioController, createScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {Light, LightingProps} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
-import {INFO_HTML, GRAPH_INFO_HTML} from './app-ui';
+import {INFO_HTML, GRAPH_INFO_HTML, ENVIRONMENT_INFO_HTML} from './app-ui';
 
 import {GLTF_AUDIO_PRESETS, type GLTFAudioFeature} from './presets';
 
@@ -41,6 +41,7 @@ const lightSources = {
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
   static graphInfo = GRAPH_INFO_HTML;
+  static environmentInfo = ENVIRONMENT_INFO_HTML;
 
   device: Device;
   orbitControls: OrbitControls;
@@ -87,7 +88,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     super();
     this.device = device;
     const credits = document.getElementById('credits');
-    if (credits) credits.innerHTML = feature === 'graph' ? GRAPH_INFO_HTML : INFO_HTML;
+    if (credits)
+      credits.innerHTML =
+        feature === 'environment'
+          ? ENVIRONMENT_INFO_HTML
+          : feature === 'graph'
+            ? GRAPH_INFO_HTML
+            : INFO_HTML;
 
     const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
     this.orbitControls = new OrbitControls(canvas, {
@@ -136,7 +143,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       if (this.audio) this.audio.gain.gain.value = this.volume;
     };
     volumeLabel.append(volume);
-    this.status.textContent = feature === 'graph' ? 'Loading Drum Kit…' : 'Loading Boom Box…';
+    this.status.textContent = feature !== 'emitter' ? 'Loading Drum Kit…' : 'Loading Boom Box…';
     this.status.style.display = 'block';
     this.controls.append(playButton, stopButton, volumeLabel, this.status);
     canvas.parentElement?.append(this.controls);

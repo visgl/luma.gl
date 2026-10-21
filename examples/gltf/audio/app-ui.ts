@@ -8,3 +8,7 @@ export const INFO_HTML = `<p>Spatial playback of the draft KHR_audio_emitter ext
 export const GRAPH_INFO_HTML = `<p>Drum Kit uses KHR_audio_graph filters and gain processors before positional emitters. Enable audio to play all eight samples together; restart to hear the processing again.</p>
 <p>This source prototype also declares audio environment and interactivity extensions. Environment effects and its prototype playing-pointer drum-hit controls are not implemented in this preset. The enable/restart button starts the authored sources directly.</p>
 <p>Procedural geometry and synthesized audio: CC0, loaded unmodified from the pinned <a href="https://github.com/rudybear/gltf-webgpu/tree/188965dd2ea0a1492c39dedf69f8e75f730baf9a/examples/drum-kit">Drum Kit source</a>.</p>`;
+
+export const ENVIRONMENT_INFO_HTML = `<p>Drum Kit uses authored processing graphs, emitter sends, and the small-room parametric reverb approximation. Enable audio to play the eight samples together, then orbit and zoom.</p>
+<p>This is a partial audio environment profile. Air absorption, Doppler, custom HRTF data, listener graph hooks, and prototype playing-pointer drum-hit controls are unsupported. Reverb is synthesized from the authored preset, not a measured room response.</p>
+<p>Procedural geometry and synthesized audio: CC0, loaded unmodified from the pinned <a href="https://github.com/rudybear/gltf-webgpu/tree/188965dd2ea0a1492c39dedf69f8e75f730baf9a/examples/drum-kit">Drum Kit source</a>.</p>`;
