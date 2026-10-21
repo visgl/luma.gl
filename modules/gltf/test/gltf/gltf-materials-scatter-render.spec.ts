@@ -109,7 +109,9 @@ test.each([
 ] as const)('thin-wall scatter alpha %s with lightmap %s', async (strengthAlpha, lightmap) => {
   const webgl = await getWebGLTestDevice();
   const webgpu = await getTestDevices(['webgpu-core']);
-  for (const device of webgl ? [webgl, ...webgpu] : webgpu) {
+  const devices = webgl ? [webgl, ...webgpu] : webgpu;
+  expect(devices.length).toBeGreaterThan(0);
+  for (const device of devices) {
     const bundle = createScenegraphsFromGLTF(
       device,
       makeReceiver(strengthAlpha, false, true, lightmap),

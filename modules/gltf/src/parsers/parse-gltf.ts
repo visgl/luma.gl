@@ -120,7 +120,8 @@ export function parseGLTF(
         {
           ...combinedOptions,
           gltf,
-          validateAttributes: false
+          validateAttributes: false,
+          materialResourcesOnly: true
         }
       ),
       materialFactory

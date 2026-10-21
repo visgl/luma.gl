@@ -26,6 +26,7 @@ it('gltf#parseGLTF retains secondary-UV scatter strength textures in shared mate
     id: 'material-0',
     extensions: {
       KHR_materials_transmission: {transmissionFactor: 1},
+      KHR_lightmap: {lightmapTexture: {index: 0, texCoord: 1}, intensity: 1},
       KHR_materials_scatter: {
         scatterStrengthFactor: 1,
         scatterStrengthTexture: {
@@ -104,6 +105,10 @@ it('gltf#parseGLTF retains secondary-UV scatter strength textures in shared mate
     'shared material owns secondary-UV scatter strength binding'
   ).toBe(true);
 
+  expect(
+    bindings.pbr_lightmapSampler,
+    'shared material does not upload primitive-owned lightmaps'
+  ).toBeUndefined();
   materials.forEach(parsedMaterial => parsedMaterial.destroy());
   void 0;
 });

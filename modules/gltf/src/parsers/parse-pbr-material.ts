@@ -232,6 +232,8 @@ export type ParsePBRMaterialOptions = {
   gltf?: GLTFPostprocessed;
   /** run primitive-attribute diagnostics such as missing TEXCOORD_0 / NORMAL */
   validateAttributes?: boolean;
+  /** Shared resource allocation excludes lightmaps owned by individual primitives. */
+  materialResourcesOnly?: boolean;
   /** Defer only lightmap UV assertions until node overrides are selected. */
   validateLightmapAttributes?: boolean;
 };
@@ -317,7 +319,14 @@ export function parsePBRMaterial(
         );
       }
     }
-    parseMaterial(device, material, parsedMaterial, attributes, options.gltf);
+    parseMaterial(
+      device,
+      material,
+      parsedMaterial,
+      attributes,
+      options.gltf,
+      options.materialResourcesOnly
+    );
   }
 
   return parsedMaterial;
@@ -401,7 +410,8 @@ function parseMaterial(
   material: GLTFPBRMaterial,
   parsedMaterial: ParsedPBRMaterial,
   attributes: Record<string, any>,
-  gltf?: GLTFPostprocessed
+  gltf?: GLTFPostprocessed,
+  materialResourcesOnly = false
 ): void {
   parsedMaterial.parameters.cullMode = material.doubleSided ? 'none' : 'back';
   parsedMaterial.defines['DOUBLE_SIDED'] = Boolean(material.doubleSided);
@@ -459,7 +469,14 @@ function parseMaterial(
     });
   }
 
-  parseMaterialExtensions(device, material.extensions, parsedMaterial, gltf, attributes);
+  parseMaterialExtensions(
+    device,
+    material.extensions,
+    parsedMaterial,
+    gltf,
+    attributes,
+    materialResourcesOnly
+  );
 
   switch (material.alphaMode || 'OPAQUE') {
     case 'OPAQUE':
@@ -572,7 +589,8 @@ function parseMaterialExtensions(
   extensions: GLTFMaterialExtensions | undefined,
   parsedMaterial: ParsedPBRMaterial,
   gltf?: GLTFPostprocessed,
-  attributes: Record<string, any> = {}
+  attributes: Record<string, any> = {},
+  materialResourcesOnly = false
 ): void {
   if (!extensions) {
     return;
@@ -589,7 +607,7 @@ function parseMaterialExtensions(
       getTextureTransformMatrix(resolveTextureTransform(lightmap.lightmapTexture))
     );
     // Shared material creation has no primitive attributes; lightmaps use independent primitive materials.
-    if (Object.keys(attributes).length > 0)
+    if (!materialResourcesOnly && Object.keys(attributes).length > 0)
       addTexture(device, lightmap.lightmapTexture, 'pbr_lightmapSampler', parsedMaterial, {
         gltf,
         attributes,
