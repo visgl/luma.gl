@@ -48,6 +48,8 @@ export type GPURigidBodyWorldProps = {
   contactSlop?: number;
   /** Small worlds retain the all-pairs numerical oracle; larger worlds use sparse discovery. */
   broadPhase?: 'all-pairs' | 'hierarchical-grid';
+  /** Parallel block-Jacobi contact solving; ordered impulses remain the numerical oracle. */
+  solver?: 'ordered' | 'parallel';
   /** Power-of-two persistent contact-pair cache capacity, for hierarchical discovery. */
   maximumPairs?: number;
   /** Maximum hash-bucket candidate tests per collider; incomplete traversal is reported. */
@@ -78,6 +80,7 @@ export class GPURigidBodyWorld {
   readonly colliderCount: number;
   private readonly colliderStorageCount: number;
   readonly broadPhase: 'all-pairs' | 'hierarchical-grid';
+  readonly solver: 'ordered' | 'parallel';
   readonly maximumPairs: number;
   positions: Buffer | null = null;
   orientations: Buffer | null = null;
@@ -90,6 +93,7 @@ export class GPURigidBodyWorld {
   private readonly ownedBuffers: Buffer[] = [];
   private manifolds: Buffer | null = null;
   private meshTasks: Buffer | null = null;
+  private parallelState: Buffer | null = null;
   private device: Device | null = null;
   private control: Computation | null = null;
   private controlSettings: Buffer | null = null;
@@ -101,6 +105,9 @@ export class GPURigidBodyWorld {
   constructor(props: GPURigidBodyWorldProps) {
     this.id = props.id ?? 'gpu-rigid-body-world';
     this.count = props.bodies.length;
+    this.solver = props.solver ?? 'ordered';
+    if (!['ordered', 'parallel'].includes(this.solver))
+      throw new Error('Invalid rigid-body solver');
     const colliderCount = props.bodies.reduce(
       (sum, body) => sum + (body.colliders?.length ?? 1),
       0
@@ -427,6 +434,12 @@ export class GPURigidBodyWorld {
       ]),
       true
     );
+    const parallel = this.solver === 'parallel';
+    const parallelByteLength =
+      Math.ceil((4 + this.count * 5 + this.maximumPairs * 2) / 4) * 16 + this.maximumPairs * 64;
+    if (parallel && parallelByteLength > graph.device.limits.maxStorageBufferBindingSize)
+      throw new Error('Rigid-body solver storage exceeds device limits');
+    if (parallel) this.parallelState = allocate('parallel-state', parallelByteLength);
     const buffers = {
       settings,
       positions: this.positions,
@@ -438,6 +451,7 @@ export class GPURigidBodyWorld {
       sleepStates: this.sleepStates,
       targets: this.targets,
       ...(this.meshTasks ? {meshTasks: this.meshTasks} : {}),
+      ...(this.parallelState ? {parallelState: this.parallelState} : {}),
       ...(sparse
         ? {
             minima: allocate('minima', this.colliderStorageCount * 12),
@@ -449,7 +463,15 @@ export class GPURigidBodyWorld {
       name,
       buffer,
       location:
-        name === 'minima' ? 24 : name === 'maxima' ? 25 : location >= 8 ? location + 1 : location,
+        name === 'parallelState'
+          ? 26
+          : name === 'minima'
+            ? 24
+            : name === 'maxima'
+              ? 25
+              : location >= 8
+                ? location + 1
+                : location,
       resource: graph.importBuffer(
         {
           id: `${this.id}-${name}`,
@@ -501,15 +523,72 @@ export class GPURigidBodyWorld {
       this.colliders.some(
         collider => collider.shape.type !== 'sphere' && collider.shape.type !== 'box'
       ),
-      sparseLayout
+      sparseLayout,
+      parallel
     );
+    const parallelBindings: Record<string, readonly string[]> = {
+      parallelReset: ['parallelState'],
+      parallelLink: ['velocities', 'angularVelocities', 'bodies', 'manifolds', 'parallelState'],
+      parallelUnion: ['bodies', 'manifolds', 'parallelState'],
+      parallelCompress: ['sleepStates', 'parallelState'],
+      parallelWakeRoots: ['bodies', 'sleepStates', 'parallelState'],
+      parallelWakeBodies: ['bodies', 'sleepStates', 'parallelState'],
+      parallelWarm: [
+        'positions',
+        'orientations',
+        'velocities',
+        'bodies',
+        'manifolds',
+        'sleepStates',
+        'parallelState'
+      ],
+      parallelPairs: [
+        'settings',
+        'positions',
+        'orientations',
+        'velocities',
+        'angularVelocities',
+        'bodies',
+        'manifolds',
+        'sleepStates',
+        'parallelState'
+      ],
+      parallelGather: ['velocities', 'angularVelocities', 'bodies', 'sleepStates', 'parallelState'],
+      parallelAdvance: [
+        'settings',
+        'positions',
+        'orientations',
+        'velocities',
+        'angularVelocities',
+        'bodies',
+        'sleepStates',
+        'targets',
+        'parallelState'
+      ],
+      parallelMarkSleep: ['settings', 'bodies', 'sleepStates', 'parallelState'],
+      parallelSleep: ['velocities', 'angularVelocities', 'bodies', 'sleepStates', 'parallelState']
+    };
+    parallelBindings.parallelSolve = parallelBindings.parallelPairs;
     for (const entryPoint of [
       'integrate',
       ...(sparse ? ['prepare', 'bounds'] : []),
       'collide',
       ...(extended ? ['meshCollide'] : []),
-      'solve',
-      'finish'
+      ...(parallel
+        ? [
+            ...(extended ? ['meshCollect'] : []),
+            'parallelReset',
+            'parallelLink',
+            'parallelUnion',
+            'parallelCompress',
+            'parallelWakeRoots',
+            'parallelWakeBodies',
+            'parallelSolve',
+            'parallelAdvance',
+            'parallelMarkSleep',
+            'parallelSleep'
+          ]
+        : ['solve', 'finish'])
     ]) {
       if (sparse && entryPoint === 'collide') {
         const bodyBinding = bindings.find(binding => binding.name === 'bodies')!;
@@ -540,40 +619,111 @@ export class GPURigidBodyWorld {
         });
         addGPUCommandNodes(graph, broadPhase.getCommandNodes(graph));
       }
-      const unusedCore =
-        entryPoint === 'prepare'
-          ? bindings
-              .filter(binding => !['targets', 'manifolds'].includes(binding.name))
-              .map(binding => binding.name)
-          : entryPoint === 'bounds'
+      const unusedCore = entryPoint.startsWith('parallel')
+        ? bindings
+            .filter(binding => !parallelBindings[entryPoint].includes(binding.name))
+            .map(binding => binding.name)
+        : entryPoint === 'meshCollect'
+          ? ['velocities', 'angularVelocities', 'sleepStates', 'targets', 'parallelState']
+          : entryPoint === 'prepare'
             ? bindings
-                .filter(
-                  binding =>
-                    ![
-                      'settings',
-                      'positions',
-                      'orientations',
-                      'bodies',
-                      'minima',
-                      'maxima'
-                    ].includes(binding.name)
-                )
+                .filter(binding => !['targets', 'manifolds'].includes(binding.name))
                 .map(binding => binding.name)
-            : entryPoint === 'meshCollide'
-              ? ['velocities', 'angularVelocities', 'manifolds', 'sleepStates', 'targets']
-              : entryPoint === 'integrate'
-                ? ['manifolds']
-                : entryPoint === 'collide'
-                  ? ['sleepStates', ...(extended || sparse ? [] : ['targets'])]
-                  : entryPoint === 'finish'
-                    ? ['manifolds', 'meshTasks']
-                    : ['targets'];
-      const unused = [...unusedCore, ...(entryPoint === 'bounds' ? [] : ['minima', 'maxima'])];
+            : entryPoint === 'bounds'
+              ? bindings
+                  .filter(
+                    binding =>
+                      ![
+                        'settings',
+                        'positions',
+                        'orientations',
+                        'bodies',
+                        'minima',
+                        'maxima'
+                      ].includes(binding.name)
+                  )
+                  .map(binding => binding.name)
+              : entryPoint === 'meshCollide'
+                ? ['velocities', 'angularVelocities', 'manifolds', 'sleepStates', 'targets']
+                : entryPoint === 'integrate'
+                  ? ['manifolds']
+                  : entryPoint === 'collide'
+                    ? ['sleepStates', ...(extended || sparse ? [] : ['targets'])]
+                    : entryPoint === 'finish'
+                      ? ['manifolds', 'meshTasks']
+                      : ['targets'];
+      const unused = [
+        ...unusedCore,
+        ...(entryPoint.startsWith('parallel') ? [] : ['parallelState']),
+        ...(entryPoint === 'bounds' ? [] : ['minima', 'maxima'])
+      ];
       const activeBindings = bindings.filter(binding => !unused.includes(binding.name));
       const activeLayout: ShaderLayout = {
         attributes: [],
         bindings: shaderLayout.bindings!.filter(binding => !unused.includes(binding.name))
       };
+      if (entryPoint === 'parallelSolve') {
+        const stages = ['parallelWarm', 'parallelPairs', 'parallelGather'];
+        const properties = stages.map(stage => ({
+          id: `${this.id}-${stage}`,
+          source,
+          entryPoint: stage,
+          shaderLayout: {
+            attributes: [],
+            bindings: activeLayout.bindings!.filter(binding =>
+              parallelBindings[stage].includes(binding.name)
+            )
+          }
+        }));
+        const executable = (
+          computations: Computation[]
+        ): GPUCommandGraphComputeExecutable<Parameters> => ({
+          encode: ({computePass, getBuffer}) => {
+            const resolved: Record<string, Binding> = {};
+            for (const binding of activeBindings)
+              resolved[binding.name] = getBuffer(binding.resource);
+            for (const [index, computation] of computations.entries())
+              computation.setBindings(
+                Object.fromEntries(
+                  Object.entries(resolved).filter(([name]) =>
+                    parallelBindings[stages[index]].includes(name)
+                  )
+                )
+              );
+            computations[0].dispatch(computePass, Math.ceil(this.maximumPairs / 64));
+            computations[2].dispatch(computePass, Math.ceil(this.count / 64));
+            for (let iteration = 0; iteration < (this.props.iterations ?? 16); iteration++) {
+              computations[1].dispatch(computePass, Math.ceil(this.maximumPairs / 64));
+              computations[2].dispatch(computePass, Math.ceil(this.count / 64));
+            }
+          },
+          destroy: () => {
+            for (const computation of computations) computation.destroy();
+          }
+        });
+        // Iterations share one semantic graph node; dispatch boundaries synchronize pair and body owners.
+        graph.addComputePass({
+          id: `${this.id}-solve`,
+          resources: activeBindings.map(binding => ({
+            buffer: binding.resource,
+            usage:
+              binding.name === 'settings'
+                ? ('uniform' as const)
+                : binding.name === 'bodies'
+                  ? ('storage-read' as const)
+                  : ('storage-read-write' as const)
+          })),
+          compile: ({device}) =>
+            executable(properties.map(properties => new Computation(device, properties))),
+          compileAsync: async ({device}) =>
+            executable(
+              await Promise.all(
+                properties.map(properties => Computation.createAsync(device, properties))
+              )
+            )
+        });
+        continue;
+      }
       const createExecutable = (
         computation: Computation
       ): GPUCommandGraphComputeExecutable<Parameters> => ({
@@ -592,13 +742,17 @@ export class GPURigidBodyWorld {
           } else {
             computation.dispatch(
               computePass,
-              entryPoint === 'collide'
+              ['parallelLink', 'parallelUnion'].includes(entryPoint)
                 ? Math.ceil(this.maximumPairs / 64)
-                : entryPoint === 'bounds'
-                  ? Math.ceil(this.colliderStorageCount / 64)
-                  : entryPoint === 'integrate'
-                    ? Math.ceil(this.count / 64)
-                    : 1
+                : entryPoint.startsWith('parallel')
+                  ? Math.ceil(this.count / 64)
+                  : entryPoint === 'collide'
+                    ? Math.ceil(this.maximumPairs / 64)
+                    : entryPoint === 'bounds'
+                      ? Math.ceil(this.colliderStorageCount / 64)
+                      : entryPoint === 'integrate'
+                        ? Math.ceil(this.count / 64)
+                        : 1
             );
           }
         },
@@ -655,7 +809,8 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       shaderLayout: {
         bindings: [
           ...shaderLayout.bindings!.filter(
-            binding => !['settings', 'meshTasks', 'minima', 'maxima'].includes(binding.name)
+            binding =>
+              !['settings', 'meshTasks', 'parallelState', 'minima', 'maxima'].includes(binding.name)
           ),
           {name: 'command', group: 0, location: 8, type: 'uniform'}
         ]
@@ -663,7 +818,8 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       bindings: {
         ...Object.fromEntries(
           Object.entries(buffers).filter(
-            ([name]) => !['settings', 'meshTasks', 'minima', 'maxima'].includes(name)
+            ([name]) =>
+              !['settings', 'meshTasks', 'parallelState', 'minima', 'maxima'].includes(name)
           )
         ),
         command: this.controlSettings
@@ -780,6 +936,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     triangleQueries: number;
     droppedTriangleQueries: number;
     droppedManifolds: number;
+    incompleteIslandUnions: number;
     broadPhase?: ReturnType<typeof decodeRigidBodyBroadPhaseDiagnostics>;
   }> {
     if (!this.manifolds || this.destroyed) throw new Error('Rigid-body world is not active');
@@ -803,6 +960,9 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       triangleQueries: tasks[0],
       droppedTriangleQueries: tasks[1],
       droppedManifolds,
+      incompleteIslandUnions: this.parallelState
+        ? new Uint32Array((await this.parallelState.readAsync(0, 4)).buffer)[0]
+        : 0,
       broadPhase
     };
   }

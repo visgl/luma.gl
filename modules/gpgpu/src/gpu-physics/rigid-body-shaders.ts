@@ -7,6 +7,7 @@ import {
   RIGID_BODY_BOUNDS_SHADER,
   RIGID_BODY_BOUND_PUBLICATION_SHADER
 } from './rigid-body-bounds-shaders';
+import {RIGID_BODY_PARALLEL_SHADER} from './rigid-body-parallel-shaders';
 import {RIGID_BODY_CONVEX_SHADER} from './rigid-body-convex-shaders';
 import {
   getRigidBodyCacheShader,
@@ -17,7 +18,8 @@ export function getRigidBodyShader(
   iterations: number,
   colliderCount = count,
   extended = false,
-  sparse?: RigidBodySparseShaderLayout
+  sparse?: RigidBodySparseShaderLayout,
+  parallel = false
 ): string {
   return /* wgsl */ `
 const BODY_COUNT: u32 = ${count}u;
@@ -275,6 +277,8 @@ ${extended ? RIGID_BODY_CONVEX_SHADER : ''}
  }
  manifolds[pair].count=contactCount;
 }
+${parallel ? RIGID_BODY_PARALLEL_SHADER : ''}
+${parallel && extended ? '@compute @workgroup_size(1) fn meshCollect(){collectMeshContacts();}' : ''}
 fn root(body: u32) -> u32 {var current=body;for(var iteration=0u;iteration<BODY_COUNT;iteration++) {let parent=u32(sleepStates[current].z);if(parent==current) {break;}current=parent;}return current;}
 @compute @workgroup_size(1) fn solve() {
  ${extended ? 'collectMeshContacts();' : ''}
@@ -324,13 +328,12 @@ fn root(body: u32) -> u32 {var current=body;for(var iteration=0u;iteration<BODY_
   }
  }
 }
-@compute @workgroup_size(1) fn finish() {
- for(var body=0u;body<BODY_COUNT;body++) {
-  if(bodies.bodies[body].motion.x==0.0 || sleepStates[body].y>0.5) {continue;}
+fn finishBody(body:u32) {
+  if(bodies.bodies[body].motion.x==0.0 || sleepStates[body].y>0.5) {return;}
   if(bodies.bodies[body].motion.x==2.0) {
    if(targets.entries[body].position.w>0.0) {positions[body]=vec4f(targets.entries[body].position.xyz,positions[body].w);orientations[body]=targets.entries[body].orientation;}
    else {positions[body]=vec4f(positions[body].xyz+velocities[body].xyz*settings.gravity.w,positions[body].w);let rotation=orientations[body];let angular=angularVelocities[body].xyz;orientations[body]=normalize(rotation+vec4f(rotation.w*angular+cross(angular,rotation.xyz),-dot(angular,rotation.xyz))*(0.5*settings.gravity.w));}
-   continue;
+   return;
   }
   positions[body]=vec4f(positions[body].xyz+velocities[body].xyz*settings.gravity.w,positions[body].w);
   let rotation=orientations[body];let angular=angularVelocities[body].xyz;
@@ -349,6 +352,8 @@ fn root(body: u32) -> u32 {var current=body;for(var iteration=0u;iteration<BODY_
   let quiet=length(velocities[body].xyz)<settings.sleep.y && length(angular)<settings.sleep.z;
   sleepStates[body].x=select(0.0,sleepStates[body].x+settings.gravity.w,quiet);
  }
+@compute @workgroup_size(1) fn finish() {
+ for(var body=0u;body<BODY_COUNT;body++){finishBody(body);}
  for(var body=0u;body<BODY_COUNT;body++) {sleepStates[body].w=1.0;}
  for(var body=0u;body<BODY_COUNT;body++) {if(dynamic(body) && (settings.sleep.x<=0.0 || sleepStates[body].x<settings.sleep.x)) {sleepStates[root(body)].w=0.0;}}
  for(var body=0u;body<BODY_COUNT;body++) {
