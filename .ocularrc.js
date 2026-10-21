@@ -43,6 +43,7 @@ const config = {
         three: '/examples/experimental/three',
         'pool': '/examples/experimental/gpu-pool',
         'rigid-body-lab': '/examples/experimental/gpu-rigid-body-world',
+        'space-salvage': '/examples/experimental/space-salvage',
         'sphere-world': '/examples/experimental/gpu-sphere-world',
         'webxr-kaleidoscope': '/examples/experimental/webxr-kaleidoscope',
         'external-context': '/examples/integrations/external-context',
