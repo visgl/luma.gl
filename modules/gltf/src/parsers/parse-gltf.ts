@@ -21,7 +21,11 @@ import {
   type MorphTargetAttributes
 } from '@luma.gl/engine';
 import {pbrMaterial, SKIN_MAX_JOINTS} from '@luma.gl/shadertools';
-import {createGLTFMaterial, createGLTFModel} from '../gltf/create-gltf-model';
+import {
+  createGLTFMaterial,
+  createGLTFModel,
+  type GLTFCrowdModelConfiguration
+} from '../gltf/create-gltf-model';
 import {type GLTFGPUInstancing, getGLTFNodeInstancing} from '../gltf/gltf-instancing';
 import type {GLTFPrimitiveMaterialVariants} from '../gltf/gltf-material-variants';
 import {type GLTFMorphTargetState, setGLTFMorphWeights} from '../gltf/morph-targets';
@@ -131,6 +135,11 @@ export function parseGLTF(
   const gltfNodeIdToNodeMap = new Map<string, GroupNode>();
   // Step 1/2: Generate a GroupNode for each gltf node. (1:1 mapping).
   const assignedMorphMeshes = new Set<string>();
+  const sceneAnimation = (
+    combinedOptions.modelOptions.userData?.['gltfAnimatedCrowd'] as
+      | GLTFCrowdModelConfiguration
+      | undefined
+  )?.sceneAnimation;
   const assignedMeshes = new Set<string>();
   const independentlySkinnedMeshes = new Set<string>();
   gltf.nodes.forEach((gltfNode, idx) => {
@@ -175,7 +184,9 @@ export function parseGLTF(
       const sharedMesh = gltfMeshIdToNodeMap.get(sourceMesh.id);
       const needsIndependentSkin =
         assignedMeshes.has(sourceMesh.id) &&
-        (gltfNode.skin !== undefined || independentlySkinnedMeshes.has(sourceMesh.id));
+        (sceneAnimation ||
+          gltfNode.skin !== undefined ||
+          independentlySkinnedMeshes.has(sourceMesh.id));
       const ownedMesh =
         needsIndependentSkin && mesh === sharedMesh
           ? createNodeForGLTFMesh(

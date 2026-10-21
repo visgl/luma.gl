@@ -15,6 +15,7 @@ export type {
 // glTF Scenegraph Instantiator
 export {
   createScenegraphsFromGLTF,
+  type CreateGLTFScenegraphsOptions,
   type GLTFScenegraphBounds,
   type GLTFScenegraphs
 } from './gltf/create-scenegraph-from-gltf';
@@ -41,6 +42,10 @@ export {
   type GLTFCrowdPrimitiveGroup
 } from './gltf/gltf-animated-crowd';
 export {
+  type GLTFGPUAnimationFallbackReason,
+  type GLTFGPUAnimationOptions,
+  type GLTFGPUAnimationStats,
+  type GLTFCrowdGPUAnimationFallbackReason,
   type GLTFCrowdGPUAnimationClip,
   type GLTFCrowdGPUAnimationLayout,
   type GLTFCrowdGPUAnimationOptions
