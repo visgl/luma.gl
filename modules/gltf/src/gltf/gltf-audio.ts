@@ -194,7 +194,9 @@ export class GLTFAudioController {
   }
 
   /** Restart sources. Resume the application's AudioContext from a user gesture first. */
-  async play(options: {autoplayOnly?: boolean} = {}): Promise<void> {
+  async play(
+    options: {autoplayOnly?: boolean; sourceIndices?: readonly number[]} = {}
+  ): Promise<void> {
     this.stop();
     const generation = this.playbackGeneration;
     await this.initialize();
@@ -204,12 +206,14 @@ export class GLTFAudioController {
     for (const emitter of this.emitters) {
       if (this.graphEmitters.has(emitter.index)) continue;
       for (const sourceIndex of emitter.definition.sources || []) {
+        if (options.sourceIndices && !options.sourceIndices.includes(sourceIndex)) continue;
         this.startSource(sourceIndex, startTime, options.autoplayOnly, gain =>
           gain.connect(emitter.panner || emitter.gain)
         );
       }
     }
     for (const sourceIndex of this.graphSources) {
+      if (options.sourceIndices && !options.sourceIndices.includes(sourceIndex)) continue;
       this.startSource(sourceIndex, startTime, options.autoplayOnly, gain => {
         for (const graph of this.graphs.values()) graph.connectSource(sourceIndex, gain);
       });

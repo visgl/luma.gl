@@ -509,3 +509,38 @@ test('environment controller crossfades zone sends and falls back outside the zo
   expect(energies[1] / energies[0]).toBeCloseTo(0.25, 3);
   expect(energies[2]).toBeCloseTo(0, 6);
 });
+
+test('source selection isolates drum hits for direct and graph routing', async () => {
+  for (const graphRouting of [false, true]) {
+    for (const selected of [false, true]) {
+      const scenegraphs = await makeScene({global: true});
+      if (graphRouting)
+        scenegraphs.gltf.extensions = {
+          ...scenegraphs.gltf.extensions,
+          KHR_audio_graph: {
+            graphs: [
+              {
+                nodes: [{kind: 'gain', params: {gain: 1}}],
+                connections: [],
+                inputs: [{source: 0, node: 0}],
+                outputs: [{node: 0, emitter: 0}]
+              }
+            ]
+          }
+        };
+      const context = new OfflineAudioContext(2, 4800, 48000);
+      const audio = new GLTFAudioController({
+        scenegraphs,
+        audioContext: context,
+        baseUrl: 'https://example.com/model.gltf'
+      });
+      await audio.play({sourceIndices: selected ? [0] : []});
+      const rendered = await context.startRendering();
+      const renderedEnergy = energy(rendered, 0) + energy(rendered, 1);
+      if (selected) expect(renderedEnergy).toBeGreaterThan(0);
+      else expect(renderedEnergy).toBe(0);
+      audio.destroy();
+      scenegraphs.destroy();
+    }
+  }
+});
