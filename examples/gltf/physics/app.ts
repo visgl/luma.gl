@@ -67,6 +67,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   graph?: CompiledGPUCommandGraph<void>;
   snapshot?: Promise<void>;
   loading = false;
+  loadedSample?: string;
   paused = false;
   previousTime?: number;
   accumulator = 0;
@@ -240,7 +241,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
       const sceneBounds = scenegraphsFromGLTF.sceneBounds[0] || scenegraphsFromGLTF.modelBounds;
       this.sceneRadius = sceneBounds.radius;
-      if (!preserveView) {
+      if (!preserveView || this.loadedSample !== sample) {
         this.center = [...sceneBounds.center];
         this.center[1] =
           (description.bodies.find(body => body.body.mass === 0)?.body.position?.[1] || 0) +
@@ -268,6 +269,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         status.textContent = description.supported
           ? `${description.bodies.length} bodies · GPU simulation · 120 Hz fixed steps`
           : 'Static preview · unsupported physics features';
+      this.loadedSample = sample;
     } catch (error) {
       if (this.isFinalized) {
         return;
