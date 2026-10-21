@@ -8,6 +8,10 @@ explains each scene; GPU Graph and GPU Graph Timeline expose the actual work.
 
 - **Independent stacks:** three five-box stacks sharing a static floor. Sleeping
   bodies turn gray. Push the first stack to test waking, friction and rotation.
+- **Deep stack:** eight boxes, exposing convergence and penetration under load.
+- **Heavy-on-light stack:** a mass-ten box on three mass-one boxes.
+- **Moving support:** a kinematic platform carries boxes through friction.
+- **Static friction:** tangential gravity below the static limit should not cause sliding.
 - **Mixed-shape field:** 256 varying-size boxes and spheres, using hierarchical
   discovery and sparse contacts beyond the all-pairs reference's 128-body limit.
 - **Unequal-mass impact:** a unit sphere hits a mass-two sphere at restitution one,
@@ -18,13 +22,24 @@ Parallel block-Jacobi and ordered solving share the same scene and fixed timeste
 Changing solver or iterations resets the scene; comparisons must include both
 accuracy and cost. Parallel mode is experimental, not the module default.
 Rendering binds GPU positions, orientations and sleep state directly. Periodic
-compact collision counters expose incomplete work. The user-triggered push reads
+lifetime collision counters expose incomplete work, including failures between samples.
+World allocation size is logical buffer capacity, excluding graph scratch and driver overhead. The user-triggered push reads
 body state once to locate its application point; it is not a render pose bridge.
 
 The application bounds outstanding frame submissions with a GPU fence, caps catch-up
 at four steps, and slows simulation under sustained overload. Timeline samples do
 not constitute a full qualification report. General-body CCD, joints and unrestricted
 moving mesh collisions are not demonstrated or claimed here.
+
+## Auto-play
+
+Enable **Auto-play scenarios** to cycle scenes. After at least three simulated
+seconds, one second of quiet motion triggers a two-second pause and advancement.
+Impact and moving-support scenes have eight- and twelve-second demonstration limits;
+other scenes have a twenty-second limit. Timed completion is labeled separately from
+settling. Incomplete simulation stops playback visibly. Reset, manual scene changes,
+pushes and pause/resume restart the settling timer. Auto-play uses optional body
+readback to detect settling; rendering continues to consume GPU buffers directly.
 
 ## Planned companion scenes
 

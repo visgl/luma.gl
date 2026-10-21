@@ -34,7 +34,7 @@ struct CacheKey { key:atomic<u32>, epoch:u32 }
 struct Targets { entries:array<Target,BODY_COUNT>, dispatch:atomic<u32>, vertical:u32, depth:u32 ${sparse ? ', frame:u32, cacheDropped:atomic<u32>, reserved0:u32, reserved1:u32, reserved2:u32, keys:array<CacheKey,PAIR_CAPACITY>' : ''} }
 struct Contact { point: vec4f, normal: vec4f, impulse: vec4f, tangent: vec4f }
 struct Manifold { contacts: array<Contact, 4>, count: u32, first:u32, second:u32, previousCount:u32, padding: vec3u }
-struct Settings { gravity: vec4f, solver: vec4f, sleep: vec4f }
+struct Settings { gravity: vec4f, solver: vec4f, sleep: vec4f, stability: vec4f }
 @group(0) @binding(0) var<uniform> settings: Settings;
 @group(0) @binding(1) var<storage, read_write> positions: array<vec4f>;
 @group(0) @binding(2) var<storage, read_write> orientations: array<vec4f>;
@@ -79,9 +79,9 @@ fn combineMaterial(first: f32, second: f32, firstPolicy: f32, secondPolicy: f32,
  if(policy==2.0) {return max(first,second);} if(policy==3.0) {return first*second;}
  return select(min(first,second),sqrt(first*second),friction);
 }
-fn frictionCoefficient(first: u32, second: u32, speed: f32) -> f32 {
+fn frictionCoefficient(first: u32, second: u32, sliding: bool) -> f32 {
  let firstMaterial=bodies.colliders[first].material;let secondMaterial=bodies.colliders[second].material;
- return combineMaterial(select(firstMaterial.y,firstMaterial.z,speed>0.01),select(secondMaterial.y,secondMaterial.z,speed>0.01),bodies.colliders[first].policies.y,bodies.colliders[second].policies.y,true);
+ return combineMaterial(select(firstMaterial.y,firstMaterial.z,sliding),select(secondMaterial.y,secondMaterial.z,sliding),bodies.colliders[first].policies.y,bodies.colliders[second].policies.y,true);
 }
 fn inverseInertia(body: u32, vector: vec3f) -> vec3f {
  let rotation=principalRotation(body);return rotate(rotation,rotate(vec4f(-rotation.xyz,rotation.w),vector)*bodies.bodies[body].inertia.xyz);
@@ -107,10 +107,40 @@ fn applyImpulse(body: u32, point: vec3f, impulse: vec3f) {
  velocities[body]=vec4f(velocities[body].xyz+impulse*velocities[body].w,velocities[body].w);
  angularVelocities[body]=vec4f(angularVelocities[body].xyz+inverseInertia(body,cross(point-positions[body].xyz,impulse)),0);
 }
-fn effectiveMass(first: u32, second: u32, point: vec3f, direction: vec3f) -> f32 {
- let firstLever=point-positions[first].xyz; let secondLever=point-positions[second].xyz;
- return velocities[first].w+velocities[second].w + dot(direction,
- cross(inverseInertia(first,cross(firstLever,direction)),firstLever)+cross(inverseInertia(second,cross(secondLever,direction)),secondLever));
+fn impulseResponse(first:u32,second:u32,point:vec3f,direction:vec3f)->vec3f {
+ let firstLever=point-positions[first].xyz;let secondLever=point-positions[second].xyz;
+ return direction*(velocities[first].w+velocities[second].w)+
+ cross(inverseInertia(first,cross(firstLever,direction)),firstLever)+cross(inverseInertia(second,cross(secondLever,direction)),secondLever);
+}
+fn effectiveMass(first:u32,second:u32,point:vec3f,direction:vec3f)->f32 {
+ return dot(direction,impulseResponse(first,second,point,direction));
+}
+// Solve the coupled two-dimensional tangent response, then project the accumulated
+// impulse into the static cone or onto the dynamic cone. No arbitrary slip-speed switch.
+fn solveFriction(firstCollider:u32,secondCollider:u32,contact:Contact,relative:vec3f)->vec3f {
+ let first=colliderBody(firstCollider);let second=colliderBody(secondCollider);
+ let normal=contact.normal.xyz;let point=contact.point.xyz;
+ let reference=select(vec3f(1,0,0),vec3f(0,1,0),abs(normal.x)>0.7);
+ let firstTangent=normalize(cross(normal,reference));let secondTangent=cross(normal,firstTangent);
+ let firstResponse=impulseResponse(first,second,point,firstTangent);
+ let secondResponse=impulseResponse(first,second,point,secondTangent);
+ let firstDiagonal=dot(firstTangent,firstResponse);let secondDiagonal=dot(secondTangent,secondResponse);
+ let coupling=dot(firstTangent,secondResponse);let determinant=firstDiagonal*secondDiagonal-coupling*coupling;
+ var increment=vec2f(0);
+ let slip=vec2f(dot(relative,firstTangent),dot(relative,secondTangent));
+ if(determinant>1e-6*firstDiagonal*secondDiagonal&&firstDiagonal>0.0&&secondDiagonal>0.0){
+  increment=vec2f(secondDiagonal*slip.x-coupling*slip.y,firstDiagonal*slip.y-coupling*slip.x)/determinant;
+ }else{
+  if(firstDiagonal>0.0){increment.x=slip.x/firstDiagonal;}
+  if(secondDiagonal>0.0){increment.y=slip.y/secondDiagonal;}
+ }
+ var tangent=contact.tangent.xyz-normal*dot(contact.tangent.xyz,normal)-firstTangent*increment.x-secondTangent*increment.y;
+ let magnitude=length(tangent);let staticLimit=frictionCoefficient(firstCollider,secondCollider,false)*contact.impulse.x;
+ if(magnitude>staticLimit){
+  let dynamicLimit=frictionCoefficient(firstCollider,secondCollider,true)*contact.impulse.x;
+  tangent*=min(1.0,dynamicLimit/max(1e-30,magnitude));
+ }
+ return tangent;
 }
 @compute @workgroup_size(64) fn integrate(@builtin(global_invocation_id) invocation: vec3u) {
  ${extended ? 'if(invocation.x==0u){atomicStore(&meshTasks.count,0u);atomicStore(&meshTasks.overflow,0u);atomicStore(&meshTasks.unresolved,0u);atomicStore(&targets.dispatch,0u);targets.vertical=1u;targets.depth=1u;}' : ''}
@@ -151,8 +181,9 @@ fn storeContact(pair: u32, slot: u32, point: vec3f, normal: vec3f, depth: f32, p
  }
  if(found) {
   contact.normal.w=0.0;
+  contact.impulse.x*=settings.stability.x;contact.tangent=vec4f(contact.tangent.xyz*settings.stability.x,0);
   var tangent=contact.tangent.xyz-normal*dot(contact.tangent.xyz,normal);
-  let limit=frictionCoefficient(firstCollider,secondCollider,0.0)*contact.impulse.x;
+  let limit=frictionCoefficient(firstCollider,secondCollider,false)*contact.impulse.x;
   if(length(tangent)>limit) {tangent*=limit/max(0.000001,length(tangent));}
   contact.tangent=vec4f(tangent,0);
  }
@@ -309,20 +340,14 @@ fn root(body: u32) -> u32 {var current=body;for(var iteration=0u;iteration<BODY_
    for(var slot=0u;slot<manifolds[pair].count;slot++) {
     var contact=manifolds[pair].contacts[slot];let point=contact.point.xyz;let normal=contact.normal.xyz;
     let relative=pointVelocity(second,point)-pointVelocity(first,point);
-    let bias=min(2.0,0.15*max(0.0,contact.point.w-settings.solver.x)/settings.gravity.w);
+    let bias=min(settings.stability.z,settings.stability.y*max(0.0,contact.point.w-settings.solver.x)/settings.gravity.w);
     if(effectiveMass(first,second,point,normal)<=0.0) {continue;}
     let increment=(max(bias,contact.normal.w)-dot(relative,normal))/max(1e-30,effectiveMass(first,second,point,normal));
     let accumulated=max(0.0,contact.impulse.x+increment);let change=accumulated-contact.impulse.x;contact.impulse.x=accumulated;
     applyImpulse(first,point,-normal*change);applyImpulse(second,point,normal*change);
-    let after=pointVelocity(second,point)-pointVelocity(first,point);let slip=after-normal*dot(after,normal);let speed=length(slip);
-    if(speed>0.000001) {
-     let direction=slip/speed;var tangent=contact.tangent.xyz-direction*speed/max(1e-30,effectiveMass(first,second,point,direction));
-     tangent-=normal*dot(tangent,normal);
-     let limit=frictionCoefficient(firstCollider,secondCollider,speed)*accumulated;
-     if(length(tangent)>limit) {tangent*=limit/max(0.000001,length(tangent));}
-     let tangentChange=tangent-contact.tangent.xyz;contact.tangent=vec4f(tangent,0);
-     applyImpulse(first,point,-tangentChange);applyImpulse(second,point,tangentChange);
-    }
+    let tangent=solveFriction(firstCollider,secondCollider,contact,pointVelocity(second,point)-pointVelocity(first,point));
+    let tangentChange=tangent-contact.tangent.xyz;contact.tangent=vec4f(tangent,0);
+    applyImpulse(first,point,-tangentChange);applyImpulse(second,point,tangentChange);
     manifolds[pair].contacts[slot]=contact;
    }
   }

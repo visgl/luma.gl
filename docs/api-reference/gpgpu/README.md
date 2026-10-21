@@ -20,6 +20,12 @@ The `@luma.gl/gpgpu` module performs GPU-based data transformation.
 - [GPU time series](/docs/api-reference/experimental/gpu-timeseries): exact chart envelopes over chunked uniform samples.
 - [`cleanEvaluate`](/docs/api-reference/gpgpu/clean-evaluate)
 
+## GPU Physics
+
+The experimental [GPU physics](./gpu-physics.md) subpath provides separate sphere
+and rigid-body worlds with GPU-resident state, explicit ownership and diagnostics.
+It requires WebGPU; see the world references for supported shapes and limits.
+
 ## GPU Data Primitives
 
 The experimental `@luma.gl/gpgpu/gpu-data` subpath provides Arrow-independent GPU storage

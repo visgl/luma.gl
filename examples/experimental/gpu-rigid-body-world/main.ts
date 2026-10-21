@@ -12,13 +12,20 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {Matrix4} from '@math.gl/core';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {createRigidBodyPanel} from './info-box';
-import {makeRigidBodyScene, RIGID_BODY_SCENES, type RigidBodyScene} from './scenes';
+import {
+  makeRigidBodyScene,
+  getRigidBodySceneGravity,
+  isRigidBodyScene,
+  RIGID_BODY_SCENES
+} from './scenes';
 
 const status = document.querySelector<HTMLOutputElement>('#status')!;
 const canvas = document.querySelector<HTMLCanvasElement>('#world')!;
 const scene = document.querySelector<HTMLSelectElement>('#scene')!;
 const solver = document.querySelector<HTMLSelectElement>('#solver')!;
 const iterations = document.querySelector<HTMLSelectElement>('#iterations')!;
+const autoPlay = document.querySelector<HTMLInputElement>('#auto-play')!;
+const playbackStatus = document.querySelector<HTMLOutputElement>('#playback-status')!;
 const diagnostics = new GPUGraphDiagnostics({traceTitle: 'GPU Graph Timeline'});
 const panel = createRigidBodyPanel(diagnostics);
 const controlsButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('button'));
@@ -44,21 +51,14 @@ try {
     usage: Buffer.UNIFORM | Buffer.COPY_DST
   });
   async function createScene() {
-    const sceneName: RigidBodyScene =
-      scene.value === 'mixed'
-        ? 'mixed'
-        : scene.value === 'impact'
-          ? 'impact'
-          : scene.value === 'torque'
-            ? 'torque'
-            : 'stack';
+    const sceneName = isRigidBodyScene(scene.value) ? scene.value : 'stack';
     const bodies = makeRigidBodyScene(sceneName);
     const world = new GPURigidBodyWorld({
       bodies,
       iterations: Number(iterations.value),
       solver: solver.value === 'ordered' ? 'ordered' : 'parallel',
       broadPhase: 'hierarchical-grid',
-      gravity: sceneName === 'impact' ? [0, 0, 0] : [0, 0, -9.81]
+      gravity: getRigidBodySceneGravity(sceneName)
     });
     document.querySelector('#description')!.textContent = RIGID_BODY_SCENES[sceneName].description;
     const definition = new GPUCommandGraph(device);
@@ -70,7 +70,7 @@ try {
     const shapes = device.createBuffer({
       data: new Float32Array(
         bodies.flatMap(body => {
-          const shape = body.shape;
+          const shape = body.shape ?? body.colliders?.[0]?.shape;
           if (!shape) throw new Error('This renderer requires centered shapes');
           if (shape.type === 'sphere') return [shape.radius, 0, 0, 0];
           if (shape.type === 'box') return [...shape.halfExtents, body.mass === 0 ? 2 : 1];
@@ -130,7 +130,7 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
         ]
       }
     });
-    return {world, graph, model, shapes, bodies, sceneName};
+    return {world, graph, model, shapes, bodies, sceneName, capacity: world.getCapacityInfo()};
   }
   let resources = await createScene();
   let paused = false;
@@ -145,6 +145,17 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
   let lastSample = 0;
   let animation = 0;
   let elapsedSimulation = 0;
+  let playbackStartedAt = 0;
+  let quietSince: number | null = null;
+  let advanceAt: number | null = null;
+  let completionReason = '';
+  const restartPlayback = () => {
+    quietSince = advanceAt = null;
+    completionReason = '';
+    playbackStartedAt = elapsedSimulation;
+    playbackStatus.value = autoPlay.checked ? 'Auto-play · waiting for the scene to settle' : '';
+  };
+  autoPlay.onchange = restartPlayback;
   const destroy = (target: typeof resources) => {
     target.model.destroy();
     target.graph.destroy();
@@ -154,6 +165,7 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
   async function reset() {
     if (loading || !alive) return;
     loading = true;
+    restartPlayback();
     controlsButtons.forEach(button => {
       button.disabled = true;
     });
@@ -179,6 +191,7 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
         );
       accumulator = 0;
       elapsedSimulation = 0;
+      restartPlayback();
     } catch (error) {
       failure = error instanceof Error ? error : new Error(String(error));
     } finally {
@@ -197,10 +210,12 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
   const pauseButton = document.querySelector<HTMLButtonElement>('#pause')!;
   pauseButton.onclick = () => {
     paused = !paused;
+    restartPlayback();
     pauseButton.textContent = paused ? 'Resume' : 'Pause';
   };
   document.querySelector<HTMLButtonElement>('#push')!.onclick = () => {
     if (loading || !alive || pushing || resources.sceneName === 'impact') return;
+    restartPlayback();
     const target = resources;
     pushing = target.world
       .readState()
@@ -228,6 +243,13 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
       return;
     }
     panel.update();
+    if (autoPlay.checked && advanceAt !== null && !paused && !loading) {
+      playbackStatus.value = `${completionReason} · next scene in ${Math.max(0, Math.ceil((advanceAt - now) / 1000))} s`;
+      if (now >= advanceAt) {
+        scene.selectedIndex = (scene.selectedIndex + 1) % scene.options.length;
+        void reset();
+      }
+    }
     if (submitted) {
       previous = now;
       animation = requestAnimationFrame(frame);
@@ -235,7 +257,7 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
     }
     const elapsed = Math.min(0.05, (now - previous) / 1000);
     previous = now;
-    if (!loading && !paused) {
+    if (!loading && !paused && advanceAt === null) {
       accumulator = Math.min(accumulator + elapsed, 4 / 120);
       const encoder = device.createCommandEncoder();
       while (accumulator >= 1 / 120) {
@@ -272,20 +294,46 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
     if (!loading && !snapshot && now - lastSample > 500) {
       lastSample = now;
       const target = resources;
-      snapshot = target.world
-        .readCollisionDiagnostics()
-        .then(counters => {
+      const sampledSimulationTime = elapsedSimulation;
+      snapshot = Promise.all([
+        target.world.readSimulationDiagnostics(),
+        autoPlay.checked ? target.world.readState() : Promise.resolve(null)
+      ])
+        .then(([counters, states]) => {
           if (!alive || target !== resources) return;
-          const broad = counters.broadPhase;
-          const invalid =
-            counters.unresolvedQueries +
-            counters.droppedTriangleQueries +
-            counters.droppedManifolds +
-            counters.incompleteIslandUnions +
-            (broad?.droppedPairs ?? 0) +
-            (broad?.incompleteQueries ?? 0) +
-            (broad?.invalidBounds ?? 0);
-          status.value = `${invalid ? 'INCOMPLETE WORK · ' : ''}${target.bodies.filter(body => body.mass !== 0).length} dynamic bodies · ${target.world.solver} solver\n${elapsedSimulation.toFixed(1)} s simulated · ${target.graph.stats.nodeOrder.length} graph nodes\n${broad?.pairCount ?? 0} candidate pairs · ${broad?.candidateTests ?? 0} candidate tests\n${invalid} unresolved / dropped / invalid / incomplete operations`;
+          if (autoPlay.checked && !counters.complete) {
+            autoPlay.checked = false;
+            restartPlayback();
+            playbackStatus.value =
+              'Auto-play stopped: incomplete simulation. Reset after correcting capacity.';
+          } else if (
+            autoPlay.checked &&
+            states &&
+            !paused &&
+            !loading &&
+            !pushing &&
+            advanceAt === null
+          ) {
+            const quiet = states.every(
+              (body, index) =>
+                target.bodies[index].mass === 0 ||
+                (Math.hypot(...body.velocity) < 0.04 && Math.hypot(...body.angularVelocity) < 0.04)
+            );
+            quietSince = quiet ? (quietSince ?? sampledSimulationTime) : null;
+            const playbackDuration = sampledSimulationTime - playbackStartedAt;
+            const settled =
+              playbackDuration >= 3 &&
+              quietSince !== null &&
+              sampledSimulationTime - quietSince >= 1;
+            const duration =
+              target.sceneName === 'impact' ? 8 : target.sceneName === 'support' ? 12 : 20;
+            if (settled || playbackDuration >= duration) {
+              completionReason = settled ? 'Scene settled' : `${duration} s demonstration complete`;
+              advanceAt = performance.now() + 2000;
+            }
+          }
+          const memory = target.capacity;
+          status.value = `${counters.complete ? '' : 'INCOMPLETE SIMULATION · '}${target.bodies.filter(body => body.mass !== 0).length} moving bodies · ${target.world.solver} solver\n${elapsedSimulation.toFixed(1)} s simulated · ${target.graph.stats.nodeOrder.length} graph nodes\n${counters.maximumCandidatePairs} peak candidate pairs · ${counters.maximumCandidateTests} peak candidate tests\n${counters.incompleteSteps} incomplete steps / ${counters.steps} total · ${(memory.ownedBufferBytes / 1048576).toFixed(2)} MiB world buffers`;
         })
         .catch(error => {
           failure = error;

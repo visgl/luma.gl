@@ -18,7 +18,7 @@ for a pinned glTF physics proposal profile is the first qualification milestone,
 claim about current coverage.
 
 This page explains the architecture rather than prescribing an application API. See the
-[module documentation](https://github.com/visgl/luma.gl/blob/master/modules/gpgpu/src/gpu-physics/README.md)
+[API reference](/docs/api-reference/gpgpu/gpu-physics)
 for API details and limitations, and the
 [roadmap](https://github.com/visgl/luma.gl/blob/master/dev-docs/roadmaps/gpu-physics-roadmap.md)
 for implementation status and qualification gates.
@@ -122,7 +122,7 @@ There are currently two related paths, with different maturity and scope:
   sort/scan operations and bounded contact storage, with out-of-place iterative solving.
   Its state buffers can feed rendering directly.
 - `GPURigidBodyWorld` handles more general shapes and mass properties. Its ordered GPU
-  solver remains the default reference path. The development work adds hierarchical
+  solver remains the default reference path. It includes hierarchical
   discovery, sparse persistent contacts and an opt-in parallel solver; these foundations
   do not yet establish fully qualified large-world general rigid-body simulation.
 
@@ -136,7 +136,7 @@ contact generation and solving become reusable operations. A logical solve opera
 encode multiple dispatches: fewer inspector nodes need not mean fewer GPU kernels or less
 work. The timeline must still expose the actual cost.
 
-The general-body development path uses a size-aware hierarchical grid to avoid forcing
+The general-body path uses a size-aware hierarchical grid to avoid forcing
 small shapes and very large colliders into one cell scale. Sparse contact caches replace
 storage proportional to all possible body pairs. Small all-pairs configurations remain
 valuable correctness references even though they are unsuitable production defaults for
@@ -192,6 +192,12 @@ Capacity planning should consider dense piles, extreme size ratios, mesh complex
 contact-cache churn, not just body count. Recovery may require reallocating and rebuilding
 resources between submissions, retrying from preserved state, or rejecting a scene beyond
 the declared envelope. A failed step must not be labeled valid merely because it rendered.
+
+The rigid world retains lifetime failure counters on the GPU, so infrequent sampling
+does not hide an incomplete step. Its simulation still advances when work is incomplete;
+recovery requires corrected settings and replay from known valid state. Allocation
+preflight catches device-limit violations before state allocation, but cannot predict
+all driver memory failures. See [capacity and diagnostics](/docs/api-reference/gpgpu/gpu-rigid-body-world#capacity-and-diagnostics).
 
 ### Synchronization and portability constrain the design
 

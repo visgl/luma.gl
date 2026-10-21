@@ -42,3 +42,32 @@ The combined qualification report exits with status 2 until every required G1–
 check has evidence. It also reports the remaining G4–G7 features, without allowing
 them to be mistaken for implemented support. Update selectors when tests change;
 missing selectors deliberately fail qualification instead of silently passing.
+
+## Complete rigid-body steps
+
+Start the Rigid Body Lab server, then run its isolated full-step benchmark:
+
+```sh
+node scripts/physics/benchmark-rigid-body.mjs --url http://127.0.0.1:5198/ --fixture deep --solver parallel --iterations 64 --warmup 120 --samples 30 > /tmp/rigid-step.json
+```
+
+Fixtures match the lab: `stack`, `deep`, `massRatio`, `support`, `friction`, `mixed`,
+`impact`, `torque`. Compare ordered and parallel modes at the same timestep,
+iterations, initial state and observation duration, then compare numerical error.
+`--time-step`, `--warm-start-factor` and `--maximum-pairs` expose controlled sweeps.
+`--software` explicitly requests software GPU execution.
+
+Each sample encodes one full physics step, including discovery, contact generation,
+solving, integration and lifetime diagnostics. There is at most one pending step.
+Completion latency includes the 64-byte diagnostic readback; GPU timestamp work and
+span do not include host readback latency. Compilation is reported separately.
+Warmup advances the scene, so sleep/contact density at measurement time affects cost.
+The renderer never starts in the benchmark page. Close other GPU workloads when
+comparing runs, and retain adapter/browser/settings and raw reports.
+
+`executionComplete` requires finite final state, the expected step count and no
+lifetime failure/saturation. Incomplete execution exits with status 2. This field
+is not an accuracy, proposal-conformance or performance-budget qualification, and
+these reports do not automatically satisfy the combined qualification profile.
+Final state is read outside the timed region for independent numerical comparison.
+Logical world-buffer and graph-buffer totals are not measured VRAM residency.

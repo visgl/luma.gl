@@ -36,6 +36,12 @@ import {
   decodeRigidBodyBroadPhaseDiagnostics
 } from './rigid-body-broad-phase';
 import type {RigidBodySparseShaderLayout} from './rigid-body-cache-shaders';
+import {
+  addRigidBodyDiagnostics,
+  decodeRigidBodySimulationDiagnostics,
+  type GPURigidBodySimulationDiagnostics
+} from './rigid-body-diagnostics';
+import {getRigidBodyStorageLayout, type GPURigidBodyCapacityInfo} from './rigid-body-capacity';
 import {getRigidBodyShader} from './rigid-body-shaders';
 
 type Vector3 = readonly [number, number, number];
@@ -46,6 +52,14 @@ export type GPURigidBodyWorldProps = {
   timeStep?: number;
   iterations?: number;
   contactSlop?: number;
+  /** Fraction of cached impulses retained per step, in [0, 1]. Default 1. */
+  warmStartFactor?: number;
+  /** Fraction of penetration corrected through velocity bias per step, in [0, 1]. */
+  penetrationRecoveryFraction?: number;
+  /** Maximum penetration recovery velocity in world units per second. Default 2. */
+  maximumRecoverySpeed?: number;
+  /** Additional under-relaxation for the parallel solver, in (0, 1]. Default 1. */
+  parallelRelaxation?: number;
   /** Small worlds retain the all-pairs numerical oracle; larger worlds use sparse discovery. */
   broadPhase?: 'all-pairs' | 'hierarchical-grid';
   /** Parallel block-Jacobi contact solving; ordered impulses remain the numerical oracle. */
@@ -70,7 +84,7 @@ export type GPURigidBodyState = {
 
 /**
  * Experimental rigid-body dynamics with parallel SAT/GJK contact generation and an
- * ordered GPU impulse solver. Small worlds retain a bounded all-pairs oracle; larger
+ * ordered or opt-in parallel GPU impulse solver. Small worlds retain a bounded all-pairs oracle; larger
  * worlds use hierarchical discovery and sparse persistent manifolds. Buffers are world-owned.
  */
 export class GPURigidBodyWorld {
@@ -88,6 +102,7 @@ export class GPURigidBodyWorld {
   angularVelocities: Buffer | null = null;
   sleepStates: Buffer | null = null;
   private targets: Buffer | null = null;
+  private simulationStatistics: Buffer | null = null;
   private readonly colliders: readonly (GPURigidBodyCollider & {body: number})[];
   private readonly props: GPURigidBodyWorldProps;
   private readonly ownedBuffers: Buffer[] = [];
@@ -117,6 +132,17 @@ export class GPURigidBodyWorld {
       (Math.max(this.count, colliderCount) > 128 ? 'hierarchical-grid' : 'all-pairs');
     this.timeStep = props.timeStep ?? 1 / 120;
     const iterations = props.iterations ?? 16;
+    if (
+      [
+        props.warmStartFactor ?? 1,
+        props.penetrationRecoveryFraction ?? 0.15,
+        props.parallelRelaxation ?? 1
+      ].some(value => !Number.isFinite(value) || value < 0 || value > 1) ||
+      props.parallelRelaxation === 0 ||
+      !Number.isFinite(props.maximumRecoverySpeed ?? 2) ||
+      (props.maximumRecoverySpeed ?? 2) < 0
+    )
+      throw new Error('Invalid rigid-body stability settings');
     const maximumCandidateTests = props.maximumCandidateTestsPerCollider ?? 4096;
     if (
       !Number.isInteger(maximumCandidateTests) ||
@@ -272,13 +298,67 @@ export class GPURigidBodyWorld {
     this.props = structuredClone(props);
   }
 
+  private getStorageLayout() {
+    const packed = packRigidBodyShapes(this.colliders);
+    const sparse = this.broadPhase === 'hierarchical-grid';
+    const extended = this.colliders.some(
+      collider => collider.shape.type !== 'sphere' && collider.shape.type !== 'box'
+    );
+    const parallel = this.solver === 'parallel';
+    return {
+      packed,
+      sparse,
+      extended,
+      parallel,
+      ...getRigidBodyStorageLayout(
+        this.count,
+        this.colliderStorageCount,
+        this.maximumPairs,
+        packed.geometry.length,
+        sparse,
+        extended,
+        parallel
+      )
+    };
+  }
+
+  /** Allocation preflight without GPU allocation. Graph scratch and driver overhead are separate. */
+  getCapacityInfo(): GPURigidBodyCapacityInfo {
+    const {buffers} = this.getStorageLayout();
+    return {
+      bodyCount: this.count,
+      colliderCount: this.colliderCount,
+      maximumPairs: this.maximumPairs,
+      pairWorkgroups: Math.ceil(this.maximumPairs / 64),
+      buffers,
+      ownedBufferBytes: buffers.reduce((total, buffer) => total + buffer.byteLength, 0)
+    };
+  }
+
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
     if (this.device || this.destroyed)
       throw new Error('Rigid-body world already attached or destroyed');
+    const {
+      packed,
+      sparse,
+      extended,
+      parallel,
+      geometryOffset,
+      pairOffset,
+      diagnosticOffset,
+      metadataLength,
+      parallelByteLength,
+      buffers: allocationPlan
+    } = this.getStorageLayout();
     if (Math.ceil(this.maximumPairs / 64) > graph.device.limits.maxComputeWorkgroupsPerDimension)
       throw new Error('Rigid-body pair dispatch exceeds device limits');
-    if (this.maximumPairs * 288 > graph.device.limits.maxStorageBufferBindingSize)
-      throw new Error('Rigid-body pair storage exceeds device limits');
+    for (const buffer of allocationPlan) {
+      const bindingLimit = buffer.uniform
+        ? graph.device.limits.maxUniformBufferBindingSize
+        : graph.device.limits.maxStorageBufferBindingSize;
+      if (buffer.byteLength > Math.min(graph.device.limits.maxBufferSize, bindingLimit))
+        throw new Error(`Rigid-body ${buffer.name} storage exceeds device limits`);
+    }
     this.device = graph.device;
     const allocate = (name: string, data: Float32Array | Uint32Array | number, uniform = false) => {
       const buffer = graph.device.createBuffer({
@@ -297,15 +377,6 @@ export class GPURigidBodyWorld {
     const orientations = new Float32Array(this.count * 4);
     const velocities = new Float32Array(this.count * 4);
     const angular = new Float32Array(this.count * 4);
-    // Three vec4s per body, six per collider and one sparse filter range per collider.
-    const packed = packRigidBodyShapes(this.colliders);
-    const geometryOffset =
-      Math.ceil(
-        (this.count * 12 + this.colliderStorageCount * 24 + this.colliderStorageCount * 2) / 4
-      ) * 4;
-    const sparse = this.broadPhase === 'hierarchical-grid';
-    const pairOffset = Math.ceil((geometryOffset + packed.geometry.length) / 64) * 64;
-    const diagnosticOffset = Math.ceil((pairOffset + this.maximumPairs * 2) / 64) * 64;
     const sparseLayout: RigidBodySparseShaderLayout | undefined = sparse
       ? {
           maximumPairs: this.maximumPairs,
@@ -313,11 +384,6 @@ export class GPURigidBodyWorld {
           diagnosticOffset: diagnosticOffset - geometryOffset
         }
       : undefined;
-    const metadataLength = sparse
-      ? diagnosticOffset + 8
-      : geometryOffset + Math.max(4, packed.geometry.length);
-    if (metadataLength * 4 > graph.device.limits.maxStorageBufferBindingSize)
-      throw new Error('Rigid-body metadata exceeds device limits');
     const metadata = new Float32Array(metadataLength);
     metadata.set(packed.geometry, geometryOffset);
     const bodyColliders: GPURigidBodyCollider[][] = Array.from({length: this.count}, () => []);
@@ -403,7 +469,7 @@ export class GPURigidBodyWorld {
     this.sleepStates = allocate('sleep', this.count * 16);
     this.targets = allocate(
       'targets',
-      this.count * 32 + (sparse ? 32 + this.maximumPairs * 8 : 16)
+      Math.ceil((this.count * 32 + (sparse ? 32 + this.maximumPairs * 8 : 16)) / 16) * 16
     );
     for (const index of this.anchoredBodies) {
       // These bodies cannot be kinematic: preserve the construction-time COM envelope.
@@ -412,9 +478,6 @@ export class GPURigidBodyWorld {
     }
     // Four 64-byte contacts followed by a 32-byte aligned manifold header.
     this.manifolds = allocate('manifolds', this.maximumPairs * 288);
-    const extended = this.colliders.some(
-      collider => collider.shape.type !== 'sphere' && collider.shape.type !== 'box'
-    );
     if (extended) this.meshTasks = allocate('mesh-tasks', 16 + 65536 * 48);
     const bodies = allocate('bodies', metadata);
     if (sparse) this.broadPhaseCounters = {buffer: bodies, byteOffset: diagnosticOffset * 4};
@@ -430,15 +493,14 @@ export class GPURigidBodyWorld {
         this.props.sleepAfter ?? 0.5,
         this.props.sleepLinearSpeed ?? 0.04,
         this.props.sleepAngularSpeed ?? 0.04,
-        0
+        0,
+        this.props.warmStartFactor ?? 1,
+        this.props.penetrationRecoveryFraction ?? 0.15,
+        this.props.maximumRecoverySpeed ?? 2,
+        this.props.parallelRelaxation ?? 1
       ]),
       true
     );
-    const parallel = this.solver === 'parallel';
-    const parallelByteLength =
-      Math.ceil((4 + this.count * 5 + this.maximumPairs * 2) / 4) * 16 + this.maximumPairs * 64;
-    if (parallel && parallelByteLength > graph.device.limits.maxStorageBufferBindingSize)
-      throw new Error('Rigid-body solver storage exceeds device limits');
     if (parallel) this.parallelState = allocate('parallel-state', parallelByteLength);
     const buffers = {
       settings,
@@ -790,6 +852,21 @@ export class GPURigidBodyWorld {
           createExecutable(await Computation.createAsync(device, computationProps))
       });
     }
+    this.simulationStatistics = allocate('simulation-statistics', 64);
+    const diagnosticBinding = (name: string) => {
+      const binding = bindings.find(binding => binding.name === name)!;
+      return {buffer: binding.buffer, resource: binding.resource};
+    };
+    addRigidBodyDiagnostics(graph, `${this.id}-diagnostics`, this.simulationStatistics, {
+      ...(sparse
+        ? {
+            broadPhase: {...diagnosticBinding('bodies'), wordOffset: diagnosticOffset},
+            targets: {...diagnosticBinding('targets'), wordOffset: this.count * 8 + 4}
+          }
+        : {}),
+      ...(extended ? {meshTasks: diagnosticBinding('meshTasks')} : {}),
+      ...(parallel ? {parallelState: diagnosticBinding('parallelState')} : {})
+    });
     this.controlSettings = allocate('control-settings', 64, true);
     this.control = new Computation(graph.device, {
       id: `${this.id}-impulse`,
@@ -928,6 +1005,15 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
         sleeping: arrays[4][offset + 1] > 0.5
       };
     });
+  }
+
+  /** Lifetime counters, including failures in steps between diagnostic snapshots. */
+  async readSimulationDiagnostics(): Promise<GPURigidBodySimulationDiagnostics> {
+    if (!this.simulationStatistics || this.destroyed)
+      throw new Error('Rigid-body world is not active');
+    return decodeRigidBodySimulationDiagnostics(
+      new Uint32Array((await this.simulationStatistics.readAsync()).buffer)
+    );
   }
 
   /** Optional diagnostics readback; never required to advance simulation. */

@@ -98,7 +98,7 @@ fn writePairDeltas(pair:u32,first:u32,second:u32,impulse:vec3f,firstTorque:vec3f
  let firstCollider=getFirstCollider(pair);let secondCollider=getSecondCollider(pair);
  let first=colliderBody(firstCollider);let second=colliderBody(secondCollider);
  if((sleepStates[first].y>0.5||!dynamic(first))&&(sleepStates[second].y>0.5||!dynamic(second))){return;}
- let relaxation=1.0/f32(max(1u,max(atomicLoad(&parallelState.degrees[first]),atomicLoad(&parallelState.degrees[second]))));
+ let relaxation=settings.stability.w/f32(max(1u,max(atomicLoad(&parallelState.degrees[first]),atomicLoad(&parallelState.degrees[second]))));
  var firstLinear=velocities[first].xyz;var secondLinear=velocities[second].xyz;
  var firstAngular=angularVelocities[first].xyz;var secondAngular=angularVelocities[second].xyz;
  for(var slot=0u;slot<manifolds[pair].count;slot++){
@@ -106,22 +106,21 @@ fn writePairDeltas(pair:u32,first:u32,second:u32,impulse:vec3f,firstTorque:vec3f
   let firstLever=point-positions[first].xyz;let secondLever=point-positions[second].xyz;
   let relative=secondLinear+cross(secondAngular,secondLever)-firstLinear-cross(firstAngular,firstLever);
   let normalMass=effectiveMass(first,second,point,normal);if(normalMass<=0.0){continue;}
-  let bias=min(2.0,0.15*max(0.0,contact.point.w-settings.solver.x)/settings.gravity.w);
+  let bias=min(settings.stability.z,settings.stability.y*max(0.0,contact.point.w-settings.solver.x)/settings.gravity.w);
   let desiredImpulse=max(0.0,contact.impulse.x+(max(bias,contact.normal.w)-dot(relative,normal))/normalMass);
   let change=(desiredImpulse-contact.impulse.x)*relaxation;contact.impulse.x+=change;
   var impulse=normal*change;
   if(dynamic(first)){firstLinear-=impulse*velocities[first].w;firstAngular-=inverseInertia(first,cross(firstLever,impulse));}
   if(dynamic(second)){secondLinear+=impulse*velocities[second].w;secondAngular+=inverseInertia(second,cross(secondLever,impulse));}
   let after=secondLinear+cross(secondAngular,secondLever)-firstLinear-cross(firstAngular,firstLever);
-  let slip=after-normal*dot(after,normal);let speed=length(slip);
-  if(speed>0.000001){
-   let direction=slip/speed;var tangent=contact.tangent.xyz-direction*speed/max(1e-30,effectiveMass(first,second,point,direction));
-   tangent-=normal*dot(tangent,normal);let limit=frictionCoefficient(firstCollider,secondCollider,speed)*contact.impulse.x;
-   if(length(tangent)>limit){tangent*=limit/max(0.000001,length(tangent));}
-   impulse=(tangent-contact.tangent.xyz)*relaxation;contact.tangent=vec4f(contact.tangent.xyz+impulse,0);
-   if(dynamic(first)){firstLinear-=impulse*velocities[first].w;firstAngular-=inverseInertia(first,cross(firstLever,impulse));}
-   if(dynamic(second)){secondLinear+=impulse*velocities[second].w;secondAngular+=inverseInertia(second,cross(secondLever,impulse));}
-  }
+  let tangent=solveFriction(firstCollider,secondCollider,contact,after);
+  var relaxedTangent=contact.tangent.xyz+(tangent-contact.tangent.xyz)*relaxation;
+  // A falling normal impulse must shrink the cone even when under-relaxing.
+  let staticLimit=frictionCoefficient(firstCollider,secondCollider,false)*contact.impulse.x;
+  if(length(relaxedTangent)>staticLimit){relaxedTangent*=staticLimit/max(1e-30,length(relaxedTangent));}
+  impulse=relaxedTangent-contact.tangent.xyz;contact.tangent=vec4f(relaxedTangent,0);
+  if(dynamic(first)){firstLinear-=impulse*velocities[first].w;firstAngular-=inverseInertia(first,cross(firstLever,impulse));}
+  if(dynamic(second)){secondLinear+=impulse*velocities[second].w;secondAngular+=inverseInertia(second,cross(secondLever,impulse));}
   manifolds[pair].contacts[slot]=contact;
  }
  parallelState.deltas[pair*4u]=vec4f(firstLinear-velocities[first].xyz,0);
