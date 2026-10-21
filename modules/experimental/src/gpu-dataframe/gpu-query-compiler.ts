@@ -8,10 +8,11 @@ import {
   type Binding,
   type BufferLayout,
   type CommandEncoder,
-  type Device
+  type Device,
+  type DeviceLimits
 } from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
-import {GPUData, GPUVector, type GPUConstant} from '@luma.gl/gpgpu/gpu-data';
+import {Kernel} from '@luma.gl/engine';
+import {GPUData, GPUVector, type GPUConstant, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {
   GPURecordBatch,
   GPUTable,
@@ -27,7 +28,7 @@ import {
   type GraphVectorView
 } from '@luma.gl/gpgpu/gpu-core';
 import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from '@luma.gl/gpgpu/gpu-core';
-import {GPUVisibilityWorkflow} from '@luma.gl/gpgpu/gpu-core';
+import {GPUScan, GPUVisibilityWorkflow} from '@luma.gl/gpgpu/gpu-core';
 import {createTransientView, getViewBinding, getViewElementOffset} from '@luma.gl/gpgpu/gpu-core';
 import type {GPUDataFrame, GPUDataFrameDictionaries, GPUDataFrameValidity} from './gpu-data-frame';
 import type {GPUDataFrameDerivedColumn} from './gpu-data-frame-query';
@@ -44,6 +45,8 @@ import {
 
 const LU_QUERY_WORKGROUP_SIZE = 256;
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
+const MAXIMUM_UINT32 = 0xffffffff;
+const STORAGE_BINDING_ALIGNMENT = 256;
 
 /** Caller-owned scalar values supplied to an already compiled dataframe filter. */
 export type GPUDataFrameQueryParameters = Readonly<Record<string, number | boolean | null>>;
@@ -63,6 +66,52 @@ type GPUQueryDerivedView = {
   values: GraphVectorView<GPUQueryScalarFormat>;
   validity?: GraphVectorView<'uint32'>;
 };
+
+/** One resolved values/validity pair bound by a predicate pass. */
+type GPUQueryPassViews = {
+  values: GraphDataView;
+  validity?: GraphDataView<'uint32'>;
+};
+
+/**
+ * One source batch evaluated by its own predicate pass and visibility workflow. @internal
+ */
+export type GPUQuerySingleBatchSegment = {
+  type: 'batch';
+  /** Index of the source batch. */
+  batchIndex: number;
+  /** Number of rows in the batch. */
+  numRows: number;
+  /** First stable source-row ID of the batch. */
+  sourceStart: number;
+};
+
+/**
+ * Consecutive source batches whose predicate inputs are contiguous views of shared buffers.
+ *
+ * One predicate, scan, scatter, and count chain evaluates every batch of the segment through one
+ * binding per input, while outputs keep one chunk per source batch. @internal
+ */
+export type GPUQueryFusedBatchSegment = {
+  type: 'fused';
+  /** Index of the first source batch in the segment. */
+  firstBatchIndex: number;
+  /** Segment-local first row of every batch. */
+  rowStarts: readonly number[];
+  /** Number of rows in the segment. */
+  rowCount: number;
+  /** First stable source-row ID of every batch. */
+  sourceStarts: readonly number[];
+};
+
+/** A source batch evaluated alone, or a run of contiguous batches evaluated together. @internal */
+export type GPUQueryBatchSegment = GPUQuerySingleBatchSegment | GPUQueryFusedBatchSegment;
+
+/** Chunk placement fields that decide whether consecutive batches can share one binding. */
+type GPUQueryBatchInputChunk = Pick<
+  GPUData,
+  'buffer' | 'byteOffset' | 'byteStride' | 'rowByteLength'
+>;
 
 /** Internal ownership and graph state transferred exactly once to a compiled dataframe query. */
 export type CompiledGPUDataFrameQueryProps<T extends GPUTypeMap> = {
@@ -210,6 +259,7 @@ export function compileGPUDataFrameQuery<
   let selectionMask: GPUVector<'uint32'> | undefined;
   let rowIndices: GPUVector<'uint32'> | undefined;
   let selectedCounts: GPUVector<'uint32'> | undefined;
+  let batchTable: GPUVector<'uint32'> | undefined;
   let compiledGraph: CompiledGPUCommandGraph<GPUDataFrameQueryParameters> | undefined;
 
   try {
@@ -226,31 +276,44 @@ export function compileGPUDataFrameQuery<
     );
     validateGPUQueryBatchCapacity(retainedSource, graph);
     validateGPUQueryBindingCapacity(plan, graph);
+    const segments = getGPUQueryBatchSegments(
+      retainedSource.batches,
+      getGPUQueryBatchInputs(retainedSource, plan),
+      graph.device.limits
+    );
+    const rowLengths = getGPUQueryOutputBufferLayout(segments);
+    const countLengths = rowLengths.map(lengths => lengths.map(() => 1));
+    const fusedSegments = segments.filter(
+      (segment): segment is GPUQueryFusedBatchSegment => segment.type === 'fused'
+    );
 
     selectionMask = createGPUQueryOutputVector(
       graph.device,
       'gpu-dataframe-selection-mask',
-      retainedSource.batches.map(batch => batch.numRows),
+      rowLengths,
       'uint32'
     );
     rowIndices = createGPUQueryOutputVector(
       graph.device,
       'gpu-dataframe-row-indices',
-      retainedSource.batches.map(batch => batch.numRows),
+      rowLengths,
       'uint32',
       true
     );
     selectedCounts = createGPUQueryOutputVector(
       graph.device,
       'gpu-dataframe-selected-counts',
-      retainedSource.batches.map(() => 1),
+      countLengths,
       'uint32'
     );
+    if (fusedSegments.length > 0) {
+      batchTable = createGPUQueryBatchTable(graph.device, fusedSegments);
+    }
     for (const output of plan.outputs) {
       const values = createGPUQueryOutputVector(
         graph.device,
         `gpu-dataframe-derived-${output.index}`,
-        retainedSource.batches.map(batch => batch.numRows),
+        rowLengths,
         output.format,
         false,
         true
@@ -261,7 +324,7 @@ export function compileGPUDataFrameQuery<
         derivedOutput.validity = createGPUQueryOutputVector(
           graph.device,
           `gpu-dataframe-derived-${output.index}-validity`,
-          retainedSource.batches.map(batch => batch.numRows),
+          rowLengths,
           'uint32'
         );
       }
@@ -301,16 +364,33 @@ export function compileGPUDataFrameQuery<
       addGPUQueryControlUpload(graph, queryId, controls, plan);
     }
 
-    let sourceRowOffset = 0;
-    for (const [batchIndex, batch] of retainedSource.batches.entries()) {
-      const mask = maskView.data[batchIndex];
-      if (batch.numRows > 0) {
-        addGPUQueryPredicatePass(graph, {
-          id: `${queryId}-predicate-batch-${batchIndex}`,
-          batchIndex,
-          columns: plan.columns,
+    const batchTableViews = batchTable
+      ? graph.importGPUVector(`${queryId}-batch-table`, batchTable).data
+      : [];
+    for (const segment of segments) {
+      if (segment.type === 'fused') {
+        addGPUQueryFusedBatchPasses(graph, {
+          queryId,
+          segment,
+          plan,
           sourceViews,
           derivedViews,
+          controls,
+          maskView,
+          rowIndexView,
+          countView,
+          batchTableView: batchTableViews[fusedSegments.indexOf(segment)]
+        });
+        continue;
+      }
+      const {batchIndex} = segment;
+      const mask = maskView.data[batchIndex];
+      if (segment.numRows > 0) {
+        addGPUQueryPredicatePass(graph, {
+          id: `${queryId}-predicate-batch-${batchIndex}`,
+          columns: plan.columns,
+          getSourceViews: name => getGPUQueryBatchViews(sourceViews.get(name), batchIndex),
+          getDerivedViews: name => getGPUQueryBatchViews(derivedViews.get(name), batchIndex),
           controls,
           output: mask,
           plan
@@ -324,10 +404,9 @@ export function compileGPUDataFrameQuery<
           outputMask: mask,
           output: rowIndexView.data[batchIndex],
           count: countView.data[batchIndex],
-          firstSourceIndex: batch.sourceInfo?.sourceRowIndexOffset ?? sourceRowOffset
+          firstSourceIndex: segment.sourceStart
         })
       );
-      sourceRowOffset += batch.numRows;
     }
 
     const rowTable = ownedTable ?? (selectedSource.table as GPUTable<Row>);
@@ -360,6 +439,7 @@ export function compileGPUDataFrameQuery<
       sourceViews: [selectedSource, retainedSource],
       ownedTables: [...(ownedTable ? [ownedTable] : []), ...(extensionResult?.ownedTables ?? [])],
       ownedVectors: [
+        ...(batchTable ? [batchTable] : []),
         ...derivedOutputs.flatMap(output =>
           output.validity ? [output.values, output.validity] : [output.values]
         ),
@@ -374,6 +454,7 @@ export function compileGPUDataFrameQuery<
     selectionMask?.destroy();
     rowIndices?.destroy();
     selectedCounts?.destroy();
+    batchTable?.destroy();
     for (const table of extensionResult?.ownedTables ?? []) {
       table.destroy();
     }
@@ -425,21 +506,30 @@ function validateGPUQueryBindingCapacity(
   }
 }
 
-/** Creates one independently owned fixed-width GPU output chunk for every source batch. */
+/**
+ * Creates one fixed-width GPU output chunk for every source batch.
+ *
+ * `bufferLayout` lists chunk lengths per output buffer. A single-batch segment gets its own
+ * buffer. The chunks of a fused segment are consecutive views of one buffer owned by the first
+ * chunk, so fused passes address every batch through one binding; their byte offsets are exact
+ * but generally not storage-offset aligned. A fused segment ends with a nonempty batch, so every
+ * chunk starts inside its buffer.
+ */
 function createGPUQueryOutputVector<Format extends GPUQueryScalarFormat>(
   device: Device,
   name: string,
-  lengths: readonly number[],
+  bufferLayout: readonly (readonly number[])[],
   format: Format,
   indexBuffer = false,
   vertexBuffer = false
 ): GPUVector<Format> {
   const data: GPUData<Format>[] = [];
   try {
-    for (const [batchIndex, length] of lengths.entries()) {
+    for (const lengths of bufferLayout) {
+      const rowCount = lengths.reduce((total, length) => total + length, 0);
       const buffer = device.createBuffer({
-        id: `${name}-batch-${batchIndex}`,
-        byteLength: Math.max(length, 1) * UINT32_BYTE_LENGTH,
+        id: `${name}-batch-${data.length}`,
+        byteLength: Math.max(rowCount, 1) * UINT32_BYTE_LENGTH,
         usage:
           Buffer.STORAGE |
           Buffer.COPY_SRC |
@@ -448,10 +538,25 @@ function createGPUQueryOutputVector<Format extends GPUQueryScalarFormat>(
           (vertexBuffer ? Buffer.VERTEX : 0),
         ...(indexBuffer ? {indexType: 'uint32' as const} : {})
       });
+      const firstChunkIndex = data.length;
+      let byteOffset = 0;
       try {
-        data.push(new GPUData({buffer, format, length, ownsBuffer: true}));
+        for (const length of lengths) {
+          data.push(
+            new GPUData({
+              buffer,
+              format,
+              length,
+              byteOffset,
+              ownsBuffer: data.length === firstChunkIndex
+            })
+          );
+          byteOffset += length * UINT32_BYTE_LENGTH;
+        }
       } catch (error) {
-        buffer.destroy();
+        if (data.length === firstChunkIndex) {
+          buffer.destroy();
+        }
         throw error;
       }
     }
@@ -666,15 +771,30 @@ function addGPUQueryControlUpload(
   });
 }
 
-/** Emits one closed-AST expression kernel for one preserved, nonempty source record batch. */
+/** Selects one batch chunk from imported source or derived vector views. */
+function getGPUQueryBatchViews(
+  views: GPUQuerySourceView | GPUQueryDerivedView | undefined,
+  batchIndex: number
+): Partial<GPUQueryPassViews> {
+  return {
+    values: views?.values.data[batchIndex],
+    validity: views?.validity?.data[batchIndex]
+  };
+}
+
+/**
+ * Emits one closed-AST expression kernel over one row range.
+ *
+ * The range is either one preserved, nonempty source record batch or, for fused layouts, every
+ * batch at once. The output view length defines the number of evaluated rows.
+ */
 function addGPUQueryPredicatePass(
   graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
   props: {
     id: string;
-    batchIndex: number;
     columns: readonly GPUQueryExpressionColumn[];
-    sourceViews: ReadonlyMap<string, GPUQuerySourceView>;
-    derivedViews: ReadonlyMap<string, GPUQueryDerivedView>;
+    getSourceViews: (name: string) => Partial<GPUQueryPassViews>;
+    getDerivedViews: (name: string) => Partial<GPUQueryPassViews>;
     controls?: GraphDataView<'uint32'>;
     output: GraphDataView<'uint32'>;
     plan: GPUQueryExpressionShaderPlan;
@@ -686,8 +806,8 @@ function addGPUQueryPredicatePass(
   let bindingIndex = 0;
 
   for (const column of props.columns) {
-    const views = props.sourceViews.get(column.name);
-    const values = views?.values.data[props.batchIndex];
+    const views = props.getSourceViews(column.name);
+    const values = views.values;
     if (!values) {
       throw new Error('GPUDataFrame expression source chunk is missing');
     }
@@ -701,7 +821,7 @@ function addGPUQueryPredicatePass(
     resources.push({buffer: values, usage: 'storage-read'});
 
     if (column.nullable) {
-      const validity = views?.validity?.data[props.batchIndex];
+      const validity = views.validity;
       if (!validity) {
         throw new Error('GPUDataFrame nullable expression source is missing a validity chunk');
       }
@@ -727,8 +847,8 @@ function addGPUQueryPredicatePass(
 
   const derivedWrites: string[] = [];
   for (const output of props.plan.outputs) {
-    const views = props.derivedViews.get(output.name);
-    const values = views?.values.data[props.batchIndex];
+    const views = props.getDerivedViews(output.name);
+    const values = views.values;
     if (!values) {
       throw new Error('GPUDataFrame derived expression output chunk is missing');
     }
@@ -745,7 +865,7 @@ function addGPUQueryPredicatePass(
     );
 
     if (output.nullable) {
-      const validity = views?.validity?.data[props.batchIndex];
+      const validity = views.validity;
       if (!validity) {
         throw new Error('GPUDataFrame derived expression validity chunk is missing');
       }
@@ -798,7 +918,8 @@ fn main(
     id: props.id,
     resources,
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      // Kernel skips the per-instance shader assembly and ShaderInputs that Computation performs.
+      const kernel = new Kernel(device, {
         id: props.id,
         source,
         shaderLayout: {
@@ -816,10 +937,515 @@ fn main(
           for (const [name, view] of Object.entries(bindings)) {
             resolvedBindings[name] = getViewBinding(view, getBuffer);
           }
-          computation.setBindings(resolvedBindings);
-          computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+          kernel.dispatch(computePass, {
+            bindings: resolvedBindings,
+            x: dispatchLayout.x,
+            y: dispatchLayout.y,
+            z: dispatchLayout.z
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
+      };
+    }
+  });
+}
+
+/** Lists the chunks of every predicate input: each column's values, then its validity. */
+function getGPUQueryBatchInputs<T extends GPUTypeMap>(
+  source: GPUDataFrame<T>,
+  plan: GPUQueryExpressionShaderPlan
+): (readonly GPUData[])[] {
+  return plan.columns.flatMap(column => {
+    const values = source.table.gpuVectors[column.name]?.data ?? [];
+    if (!column.nullable) {
+      return [values];
+    }
+    return [values, source.validity[column.name as keyof T & string]?.data ?? []];
+  });
+}
+
+/** Row count, source-row identity, and predicate input chunks of one source batch. */
+type GPUQueryBatchPlacement = {
+  numRows: number;
+  sourceStart: number;
+  /** Whether the batch may join a fused run: packed uint32 inputs and uint32 source-row IDs. */
+  fusable: boolean;
+  /** Fusable nonempty batches: one chunk per predicate input, in `getGPUQueryBatchInputs()` order. */
+  chunks?: readonly GPUQueryBatchInputChunk[];
+};
+
+/**
+ * Partitions source batches into single-batch segments and fused segments.
+ *
+ * First, consecutive batches whose predicate inputs are contiguous in their buffers form runs, as
+ * produced by slicing one allocation into record batches. Then each run is split so that every
+ * fused segment fits one storage binding per input and one output allocation. Fusing replaces one
+ * predicate, identity, scan, and scatter chain per batch with a constant number of dispatches per
+ * segment. Queries without input columns keep the per-batch path, because nothing indicates that
+ * callers expect shared-buffer output chunks. @internal
+ */
+export function getGPUQueryBatchSegments(
+  batches: readonly Pick<GPURecordBatch, 'numRows' | 'sourceInfo'>[],
+  inputs: readonly (readonly GPUQueryBatchInputChunk[])[],
+  limits: Pick<DeviceLimits, 'maxStorageBufferBindingSize' | 'maxBufferSize'>
+): GPUQueryBatchSegment[] {
+  const placements = getGPUQueryBatchPlacements(batches, inputs);
+  return findGPUQueryContiguousRuns(placements).flatMap(batchIndices =>
+    splitGPUQueryRunByLimits(batchIndices, placements, limits)
+  );
+}
+
+function getGPUQueryBatchPlacements(
+  batches: readonly Pick<GPURecordBatch, 'numRows' | 'sourceInfo'>[],
+  inputs: readonly (readonly GPUQueryBatchInputChunk[])[]
+): GPUQueryBatchPlacement[] {
+  let sourceRowOffset = 0;
+  return batches.map((batch, batchIndex) => {
+    const sourceStart = batch.sourceInfo?.sourceRowIndexOffset ?? sourceRowOffset;
+    sourceRowOffset += batch.numRows;
+    const fusable =
+      inputs.length > 0 &&
+      Number.isSafeInteger(sourceStart) &&
+      sourceStart >= 0 &&
+      sourceStart + Math.max(batch.numRows - 1, 0) <= MAXIMUM_UINT32;
+    if (!fusable || batch.numRows === 0) {
+      return {numRows: batch.numRows, sourceStart, fusable};
+    }
+    const chunks: GPUQueryBatchInputChunk[] = [];
+    for (const input of inputs) {
+      const chunk = input[batchIndex];
+      if (chunk?.byteStride !== UINT32_BYTE_LENGTH || chunk.rowByteLength !== UINT32_BYTE_LENGTH) {
+        return {numRows: batch.numRows, sourceStart, fusable: false};
+      }
+      chunks.push(chunk);
+    }
+    return {numRows: batch.numRows, sourceStart, fusable, chunks};
+  });
+}
+
+/**
+ * Groups consecutive fusable batches whose nonempty input chunks each start where the previous
+ * nonempty batch's chunk of that input ended. Empty batches read no input and join any run.
+ */
+function findGPUQueryContiguousRuns(placements: readonly GPUQueryBatchPlacement[]): number[][] {
+  const runs: number[][] = [];
+  let run: number[] = [];
+  let inputEnds: {buffer: unknown; byteOffset: number}[] | undefined;
+  const closeRun = () => {
+    if (run.length > 0) {
+      runs.push(run);
+    }
+    run = [];
+    inputEnds = undefined;
+  };
+
+  for (const [batchIndex, placement] of placements.entries()) {
+    if (!placement.fusable) {
+      closeRun();
+      runs.push([batchIndex]);
+      continue;
+    }
+    const {chunks} = placement;
+    if (chunks) {
+      const isContiguous =
+        !inputEnds ||
+        chunks.every(
+          (chunk, index) =>
+            chunk.buffer === inputEnds?.[index].buffer &&
+            chunk.byteOffset === inputEnds[index].byteOffset
+        );
+      if (!isContiguous) {
+        closeRun();
+      }
+      inputEnds = chunks.map(chunk => ({
+        buffer: chunk.buffer,
+        byteOffset: chunk.byteOffset + placement.numRows * UINT32_BYTE_LENGTH
+      }));
+    }
+    run.push(batchIndex);
+  }
+  closeRun();
+  return runs;
+}
+
+/**
+ * Splits one contiguous run into fused segments that fit device limits, and single-batch segments.
+ *
+ * A fused segment binds each input from the aligned offset at or before its first row, writes
+ * outputs packed from offset zero, and uploads a batch table of `2 * batchCount + 1` words.
+ */
+function splitGPUQueryRunByLimits(
+  batchIndices: readonly number[],
+  placements: readonly GPUQueryBatchPlacement[],
+  limits: Pick<DeviceLimits, 'maxStorageBufferBindingSize' | 'maxBufferSize'>
+): GPUQueryBatchSegment[] {
+  const maximumBatchCount = Math.floor(
+    (Math.min(limits.maxStorageBufferBindingSize, limits.maxBufferSize) / UINT32_BYTE_LENGTH - 1) /
+      2
+  );
+  const segments: GPUQueryBatchSegment[] = [];
+  let pieceBatchIndices: number[] = [];
+  let rowCount = 0;
+  let bindingPrefixByteLength: number | undefined;
+
+  const fitsLimits = (nextRowCount: number, prefixByteLength: number) =>
+    prefixByteLength + nextRowCount * UINT32_BYTE_LENGTH <= limits.maxStorageBufferBindingSize &&
+    nextRowCount * UINT32_BYTE_LENGTH <= limits.maxBufferSize;
+  const closePiece = () => {
+    segments.push(...getGPUQueryRunSegments(pieceBatchIndices, placements));
+    pieceBatchIndices = [];
+    rowCount = 0;
+    bindingPrefixByteLength = undefined;
+  };
+
+  for (const batchIndex of batchIndices) {
+    const {numRows, chunks} = placements[batchIndex];
+    const prefixByteLength = bindingPrefixByteLength ?? getGPUQueryBindingPrefixByteLength(chunks);
+    if (
+      pieceBatchIndices.length > 0 &&
+      (pieceBatchIndices.length >= maximumBatchCount ||
+        !fitsLimits(rowCount + numRows, prefixByteLength))
+    ) {
+      closePiece();
+    }
+    pieceBatchIndices.push(batchIndex);
+    rowCount += numRows;
+    if (chunks) {
+      bindingPrefixByteLength ??= getGPUQueryBindingPrefixByteLength(chunks);
+    }
+  }
+  closePiece();
+  return segments;
+}
+
+/** Returns the most bytes an aligned input binding covers before a batch's first row. */
+function getGPUQueryBindingPrefixByteLength(
+  chunks: readonly GPUQueryBatchInputChunk[] | undefined
+): number {
+  return Math.max(0, ...(chunks ?? []).map(chunk => chunk.byteOffset % STORAGE_BINDING_ALIGNMENT));
+}
+
+/**
+ * Returns one fused segment for batches with at least two nonempty batches, followed by single
+ * segments for any trailing empty batches, or single segments for every batch otherwise.
+ */
+function getGPUQueryRunSegments(
+  batchIndices: readonly number[],
+  placements: readonly GPUQueryBatchPlacement[]
+): GPUQueryBatchSegment[] {
+  let lastNonemptyIndex = batchIndices.length - 1;
+  while (lastNonemptyIndex >= 0 && placements[batchIndices[lastNonemptyIndex]].numRows === 0) {
+    lastNonemptyIndex--;
+  }
+  const fusedBatchIndices = batchIndices.slice(0, lastNonemptyIndex + 1);
+  const nonemptyCount = fusedBatchIndices.filter(
+    batchIndex => placements[batchIndex].numRows > 0
+  ).length;
+  if (nonemptyCount < 2) {
+    return batchIndices.map(batchIndex => getGPUQuerySingleBatchSegment(batchIndex, placements));
+  }
+
+  const rowStarts: number[] = [];
+  let rowCount = 0;
+  for (const batchIndex of fusedBatchIndices) {
+    rowStarts.push(rowCount);
+    rowCount += placements[batchIndex].numRows;
+  }
+  return [
+    {
+      type: 'fused',
+      firstBatchIndex: fusedBatchIndices[0],
+      rowStarts,
+      rowCount,
+      sourceStarts: fusedBatchIndices.map(batchIndex => placements[batchIndex].sourceStart)
+    },
+    ...batchIndices
+      .slice(lastNonemptyIndex + 1)
+      .map(batchIndex => getGPUQuerySingleBatchSegment(batchIndex, placements))
+  ];
+}
+
+function getGPUQuerySingleBatchSegment(
+  batchIndex: number,
+  placements: readonly GPUQueryBatchPlacement[]
+): GPUQuerySingleBatchSegment {
+  const {numRows, sourceStart} = placements[batchIndex];
+  return {type: 'batch', batchIndex, numRows, sourceStart};
+}
+
+/** Lists the row count of every output chunk, grouped by the output buffer that holds them. */
+function getGPUQueryOutputBufferLayout(segments: readonly GPUQueryBatchSegment[]): number[][] {
+  return segments.map(segment =>
+    segment.type === 'batch'
+      ? [segment.numRows]
+      : segment.rowStarts.map(
+          (rowStart, index) => (segment.rowStarts[index + 1] ?? segment.rowCount) - rowStart
+        )
+  );
+}
+
+/**
+ * Word offsets of the per-segment batch table: every batch's segment-local first row followed by
+ * the segment row count (so batch `b` ends at entry `b + 1`), then every batch's source start.
+ */
+function getGPUQueryBatchTableOffsets(batchCount: number): {
+  rowStarts: number;
+  sourceStarts: number;
+} {
+  return {rowStarts: 0, sourceStarts: batchCount + 1};
+}
+
+/** Uploads one batch table per fused segment; see `getGPUQueryBatchTableOffsets()`. */
+function createGPUQueryBatchTable(
+  device: Device,
+  segments: readonly GPUQueryFusedBatchSegment[]
+): GPUVector<'uint32'> {
+  const data: GPUData<'uint32'>[] = [];
+  try {
+    for (const segment of segments) {
+      const values = Uint32Array.from([
+        ...segment.rowStarts,
+        segment.rowCount,
+        ...segment.sourceStarts
+      ]);
+      const buffer = device.createBuffer({
+        id: `gpu-dataframe-batch-table-${segment.firstBatchIndex}`,
+        usage: Buffer.STORAGE | Buffer.COPY_DST,
+        data: values
+      });
+      try {
+        data.push(new GPUData({buffer, format: 'uint32', length: values.length, ownsBuffer: true}));
+      } catch (error) {
+        buffer.destroy();
+        throw error;
+      }
+    }
+    return new GPUVector({
+      type: 'data',
+      name: 'gpu-dataframe-batch-table',
+      format: 'uint32',
+      data,
+      ownsData: true
+    });
+  } catch (error) {
+    for (const chunk of data) {
+      chunk.destroy();
+    }
+    throw error;
+  }
+}
+
+/** Returns one view spanning every row of a fused segment's contiguous per-batch chunks. */
+function getGPUQuerySpanningView<Format extends GPUVectorFormat>(
+  graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
+  chunks: readonly GraphDataView<Format>[],
+  segment: GPUQueryFusedBatchSegment
+): GraphDataView<Format> {
+  const batchIndex = chunks.findIndex(chunk => chunk.length > 0);
+  const chunk = chunks[batchIndex];
+  return graph.createDataView(chunk.buffer, {
+    format: chunk.format,
+    length: segment.rowCount,
+    byteOffset: chunk.byteOffset - segment.rowStarts[batchIndex] * chunk.rowByteLength,
+    byteStride: chunk.byteStride,
+    rowByteLength: chunk.rowByteLength
+  });
+}
+
+/**
+ * Evaluates the predicate once over every row of one segment, then publishes the same per-batch
+ * outputs as the per-batch path: canonical masks, batch-local compacted source IDs, and counts.
+ *
+ * One segment-wide exclusive scan provides offsets; each batch's local offset is its scanned
+ * offset minus the offset at the batch's first row.
+ */
+function addGPUQueryFusedBatchPasses(
+  graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
+  props: {
+    queryId: string;
+    segment: GPUQueryFusedBatchSegment;
+    plan: GPUQueryExpressionShaderPlan;
+    sourceViews: ReadonlyMap<string, GPUQuerySourceView>;
+    derivedViews: ReadonlyMap<string, GPUQueryDerivedView>;
+    controls?: GraphDataView<'uint32'>;
+    maskView: GraphVectorView<'uint32'>;
+    rowIndexView: GraphVectorView<'uint32'>;
+    countView: GraphVectorView<'uint32'>;
+    batchTableView: GraphDataView<'uint32'>;
+  }
+): void {
+  const {segment} = props;
+  const {firstBatchIndex, rowCount} = segment;
+  const batchCount = segment.rowStarts.length;
+  const batchTableOffsets = getGPUQueryBatchTableOffsets(batchCount);
+  const id = `${props.queryId}-fused-${firstBatchIndex}`;
+  const getSpanningView = <Format extends GPUVectorFormat>(
+    chunks: readonly GraphDataView<Format>[]
+  ): GraphDataView<Format> =>
+    getGPUQuerySpanningView(
+      graph,
+      chunks.slice(firstBatchIndex, firstBatchIndex + batchCount),
+      segment
+    );
+  const getSpanningViews = (
+    views: GPUQuerySourceView | GPUQueryDerivedView | undefined
+  ): Partial<GPUQueryPassViews> => ({
+    values: views && getSpanningView(views.values.data),
+    validity: views?.validity && getSpanningView(views.validity.data)
+  });
+  const mask = getSpanningView(props.maskView.data);
+  const rowIndices = getSpanningView(props.rowIndexView.data);
+  const firstCount = props.countView.data[firstBatchIndex];
+  const counts = graph.createDataView(firstCount.buffer, {
+    format: 'uint32',
+    length: batchCount,
+    byteOffset: firstCount.byteOffset
+  });
+
+  addGPUQueryPredicatePass(graph, {
+    id: `${id}-predicate`,
+    columns: props.plan.columns,
+    getSourceViews: name => getSpanningViews(props.sourceViews.get(name)),
+    getDerivedViews: name => getSpanningViews(props.derivedViews.get(name)),
+    controls: props.controls,
+    output: mask,
+    plan: props.plan
+  });
+
+  const offsets = createTransientView(graph, `${id}-offsets`, 'uint32', rowCount);
+  graph.add(new GPUScan({id: `${id}-scan`, input: mask, output: offsets}));
+
+  const batchTableConstants = `const ROW_STARTS = BATCHTABLE_OFFSET + ${batchTableOffsets.rowStarts}u;
+  const SOURCE_STARTS = BATCHTABLE_OFFSET + ${batchTableOffsets.sourceStarts}u;`;
+  const rowDispatch = getBoundedDispatchLayout(
+    'GPUDataFrame fused compaction',
+    rowCount,
+    LU_QUERY_WORKGROUP_SIZE,
+    graph.device.limits.maxComputeWorkgroupsPerDimension
+  );
+  addGPUQueryStoragePass(graph, {
+    id: `${id}-scatter`,
+    views: {
+      selectionMask: {view: mask, usage: 'storage-read'},
+      offsets: {view: offsets, usage: 'storage-read'},
+      batchTable: {view: props.batchTableView, usage: 'storage-read'},
+      rowIndices: {view: rowIndices, usage: 'storage-write'}
+    },
+    dispatchLayout: rowDispatch,
+    main: `${getBoundedInvocationIndexSource(rowDispatch, LU_QUERY_WORKGROUP_SIZE)}
+  ${batchTableConstants}
+  if (index >= ${rowCount}u || selectionMask[SELECTIONMASK_OFFSET + index] == 0u) {
+    return;
+  }
+  // Finds the last batch that starts at or before this row; empty batches share a start row.
+  var low = 0u;
+  var high = ${batchCount}u;
+  loop {
+    if (high - low <= 1u) {
+      break;
+    }
+    let middle = (low + high) / 2u;
+    if (batchTable[ROW_STARTS + middle] <= index) {
+      low = middle;
+    } else {
+      high = middle;
+    }
+  }
+  let batchStart = batchTable[ROW_STARTS + low];
+  let localOffset = offsets[OFFSETS_OFFSET + index] - offsets[OFFSETS_OFFSET + batchStart];
+  let sourceStart = batchTable[SOURCE_STARTS + low];
+  rowIndices[ROWINDICES_OFFSET + batchStart + localOffset] = sourceStart + index - batchStart;`
+  });
+
+  const batchDispatch = getBoundedDispatchLayout(
+    'GPUDataFrame fused counts',
+    batchCount,
+    LU_QUERY_WORKGROUP_SIZE,
+    graph.device.limits.maxComputeWorkgroupsPerDimension
+  );
+  addGPUQueryStoragePass(graph, {
+    id: `${id}-counts`,
+    views: {
+      selectionMask: {view: mask, usage: 'storage-read'},
+      offsets: {view: offsets, usage: 'storage-read'},
+      batchTable: {view: props.batchTableView, usage: 'storage-read'},
+      selectedCounts: {view: counts, usage: 'storage-write'}
+    },
+    dispatchLayout: batchDispatch,
+    main: `${getBoundedInvocationIndexSource(batchDispatch, LU_QUERY_WORKGROUP_SIZE)}
+  ${batchTableConstants}
+  if (index >= ${batchCount}u) {
+    return;
+  }
+  let batchStart = batchTable[ROW_STARTS + index];
+  let batchEnd = batchTable[ROW_STARTS + index + 1u];
+  var count = 0u;
+  if (batchEnd > batchStart) {
+    let last = batchEnd - 1u;
+    count = offsets[OFFSETS_OFFSET + last] - offsets[OFFSETS_OFFSET + batchStart] +
+      select(0u, 1u, selectionMask[SELECTIONMASK_OFFSET + last] != 0u);
+  }
+  selectedCounts[SELECTEDCOUNTS_OFFSET + index] = count;`
+  });
+}
+
+/** Adds one packed-uint32 storage kernel whose bindings expose `<NAME>_OFFSET` constants. */
+function addGPUQueryStoragePass(
+  graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
+  props: {
+    id: string;
+    views: Record<string, {view: GraphDataView; usage: 'storage-read' | 'storage-write'}>;
+    dispatchLayout: {x: number; y: number; z: number};
+    main: string;
+  }
+): void {
+  const entries = Object.entries(props.views);
+  const source = /* wgsl */ `
+${entries
+  .map(
+    ([name, {view, usage}], location) =>
+      `const ${name.toUpperCase()}_OFFSET: u32 = ${getViewElementOffset(view)}u;
+@group(0) @binding(${location}) var<storage, ${usage === 'storage-read' ? 'read' : 'read_write'}> ${name}: array<u32>;`
+  )
+  .join('\n')}
+
+@compute @workgroup_size(${LU_QUERY_WORKGROUP_SIZE})
+fn main(
+  @builtin(local_invocation_index) localInvocationIndex: u32,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  ${props.main}
+}`;
+  graph.addComputePass({
+    id: props.id,
+    resources: entries.map(([, {view, usage}]) => ({buffer: view, usage})),
+    compile: ({device}) => {
+      const kernel = new Kernel(device, {
+        id: props.id,
+        source,
+        shaderLayout: {
+          bindings: entries.map(([name], location) => ({
+            name,
+            type: 'storage' as const,
+            group: 0,
+            location
+          }))
+        }
+      });
+      return {
+        encode: ({computePass, getBuffer}) => {
+          const bindings: Record<string, Binding> = {};
+          for (const [name, {view}] of entries) {
+            bindings[name] = getViewBinding(view, getBuffer);
+          }
+          kernel.dispatch(computePass, {
+            bindings,
+            x: props.dispatchLayout.x,
+            y: props.dispatchLayout.y,
+            z: props.dispatchLayout.z
+          });
+        },
+        destroy: () => kernel.destroy()
       };
     }
   });
