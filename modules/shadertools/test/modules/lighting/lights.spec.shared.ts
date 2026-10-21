@@ -123,6 +123,18 @@ export function registerLightingTests(test: typeof it): void {
     expect(layout.fields.areaLightCount.offset).toBeGreaterThan(
       layout.fields['lights[4].coneCos'].offset
     );
+    const defaultArea = lighting.getUniforms({
+      lights: [
+        {
+          type: 'rect',
+          position: [0, 0, 1],
+          halfAxisX: [1, 0, 0],
+          halfAxisY: [0, 1, 0],
+          normal: [0, 0, -1]
+        }
+      ]
+    });
+    expect(defaultArea.areaLights[0].color).toEqual([1000, 1000, 1000]);
     const cleared = lighting.getUniforms({lights: []});
     expect(cleared.areaLightCount).toBe(0);
     expect(cleared.enabled).toBe(0);

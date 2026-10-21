@@ -55,7 +55,10 @@ export function packAreaLights(
   return Array.from({length: MAX_AREA_LIGHTS}, (_, index) => {
     const light = lights[index];
     if (!light) return makeEmptyLight();
-    const color = normalizeByteColor3(light.color || [1, 1, 1], useByteColors);
+    const color = normalizeByteColor3(
+      light.color || (useByteColors ? [255, 255, 255] : [1, 1, 1]),
+      useByteColors
+    );
     return {
       position: light.position,
       halfAxisX: light.halfAxisX,
