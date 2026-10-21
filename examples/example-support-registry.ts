@@ -153,6 +153,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'gltf/iridescence': {...support8, id: 'gltf/iridescence', sourceDirectory: 'gltf/asset-studio'},
   'gltf/anisotropy': {...support8, id: 'gltf/anisotropy', sourceDirectory: 'gltf/asset-studio'},
   'showcase/gltf-audio': gltfAudioSupport,
+  'showcase/gltf-audio-environment': {...gltfAudioSupport, id: 'showcase/gltf-audio-environment'},
   'showcase/gltf-audio-graph': {...gltfAudioSupport, id: 'showcase/gltf-audio-graph'},
   'anari/scenes': support9,
   'showcase/lightstorm-megacity': support10,

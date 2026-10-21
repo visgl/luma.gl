@@ -41,3 +41,27 @@ test('parametric small-room response preserves onset and decays across its autho
   expect(energy(480, 2400)).toBeGreaterThan(energy(14400, 18000) * 1000);
   expect(response.duration).toBeCloseTo(0.405, 3);
 });
+
+test('reset clears an existing convolution tail before playback resumes', async () => {
+  const context = new OfflineAudioContext(1, 4800, 48000);
+  const response = context.createBuffer(1, 2400, 48000);
+  response.getChannelData(0)[1440] = 1;
+  const bus = new GLTFAudioReverbBus(context, response, context.destination, {
+    mix: 1,
+    normalize: false
+  });
+  const impulse = context.createBuffer(1, 1, 48000);
+  impulse.getChannelData(0)[0] = 1;
+  const source = context.createBufferSource();
+  source.buffer = impulse;
+  bus.connectSend(source, 1);
+  source.start();
+  const suspended = context.suspend(0.01);
+  const rendering = context.startRendering();
+  await suspended;
+  bus.reset();
+  await context.resume();
+  const samples = (await rendering).getChannelData(0);
+  expect(samples.every(value => Math.abs(value) < 0.00001)).toBe(true);
+  bus.destroy();
+});

@@ -2777,5 +2777,5 @@ export const GLTFAudioExample: React.FC<WebsiteExampleProps & {feature?: GLTFAud
       constructor(animationProps: AnimationProps) { super(animationProps, feature); }
     }};
   }, [feature]);
-  return <LumaExample id={feature === 'graph' ? 'gltf-audio-graph' : 'gltf-audio'} directory="showcase" infoBoxAppearance="cinematic" sourcePath="examples/gltf/audio/app.ts" loadTemplate={loadTemplate} config={exampleConfig} showStats={false} {...props} />;
+  return <LumaExample id={feature === 'environment' ? 'gltf-audio-environment' : feature === 'graph' ? 'gltf-audio-graph' : 'gltf-audio'} directory="showcase" infoBoxAppearance="cinematic" sourcePath="examples/gltf/audio/app.ts" loadTemplate={loadTemplate} config={exampleConfig} showStats={false} {...props} />;
 };

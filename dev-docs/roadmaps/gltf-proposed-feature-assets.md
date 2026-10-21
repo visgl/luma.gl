@@ -111,3 +111,5 @@ DisplayXR's committed `material_grid.glb`, `transmission_test.glb`, and `diffuse
 inspected through their GLB JSON chunks. None contains `KHR_materials_scatter`; exclude them as
 positive fixtures even though the renderer supports that extension. Continue checking proposal-author
 branches or seek an upstream-authored fixture before promising a source-loaded scattering example.
+
+The audio environment preset loads this pinned Drum Kit unchanged. It uses the authored small-room preset through an approximate parametric response. Air absorption and prototype playing-pointer interaction remain explicitly unsupported; the gallery thumbnail is an actual luma.gl render.

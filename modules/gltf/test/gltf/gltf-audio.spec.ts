@@ -467,3 +467,45 @@ test('restarting audio resets relative authored source timing', async () => {
   audio.destroy();
   scenegraphs.destroy();
 });
+
+test('environment controller crossfades zone sends and falls back outside the zone', async () => {
+  const energies: number[] = [];
+  for (const listenerPosition of [0, 1.5, 3]) {
+    const scenegraphs = await makeScene({global: true});
+    const extension = scenegraphs.gltf.extensions!['KHR_audio_emitter'] as GLTFAudioExtension;
+    const response = makeWave();
+    const view = new DataView(response.buffer);
+    for (let index = 0; index < 4800; index++)
+      view.setInt16(44 + index * 2, index === 0 ? 32767 : 0, true);
+    extension.audio.push({uri: `data:audio/wav;base64,${btoa(String.fromCharCode(...response))}`});
+    extension.emitters[0].extensions = {KHR_audio_environment: {directLevel: 0, reverbLevel: 1}};
+    scenegraphs.gltf.extensions!['KHR_audio_environment'] = {
+      environments: [
+        {reverb: {type: 'impulseResponse', audio: 1, mix: 1, normalize: false}},
+        {reverb: {type: 'impulseResponse', audio: 1, mix: 0, normalize: false}}
+      ]
+    };
+    scenegraphs.gltf.scenes[0].extensions ||= {};
+    scenegraphs.gltf.scenes[0].extensions['KHR_audio_environment'] = {environment: 1};
+    scenegraphs.gltf.nodes[1].extensions!['KHR_audio_environment'] = {
+      environment: 0,
+      shape: {type: 'sphere', radius: 2},
+      blendDistance: 1
+    };
+    const context = new OfflineAudioContext(2, 4800, 48000);
+    const audio = new GLTFAudioController({
+      scenegraphs,
+      audioContext: context,
+      baseUrl: 'https://example.com/model.gltf'
+    });
+    await audio.play();
+    audio.update(new Matrix4().translate([listenerPosition, 0, -2]));
+    const rendered = await context.startRendering();
+    energies.push(energy(rendered, 0) + energy(rendered, 1));
+    audio.destroy();
+    scenegraphs.destroy();
+  }
+  expect(energies[0]).toBeGreaterThan(0.001);
+  expect(energies[1] / energies[0]).toBeCloseTo(0.25, 3);
+  expect(energies[2]).toBeCloseTo(0, 6);
+});

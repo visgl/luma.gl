@@ -88,6 +88,12 @@ const GLTF_EXTENSION_SUPPORT_REGISTRY: Record<string, GLTFExtensionSupportDefini
     comment:
       'Opt-in GLTFAudioController provides Web Audio playback; the application owns context activation and listener updates.'
   },
+  KHR_audio_environment: {
+    supportLevel: 'loader-only',
+    standardStatus: 'draft',
+    comment:
+      'Opt-in listener selection, environment zones, emitter sends and impulse-response or approximate parametric reverb. Doppler, air absorption and listener graph hooks remain unsupported.'
+  },
   KHR_audio_graph: {
     supportLevel: 'loader-only',
     standardStatus: 'draft',
