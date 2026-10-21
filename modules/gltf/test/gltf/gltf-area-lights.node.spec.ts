@@ -55,7 +55,7 @@ test('EXT_lights_area disks ignore rectangle aspect and follow live dimensions',
 });
 
 test('matrix reflections preserve the emitting side and unrelated singular nodes are ignored', () => {
-  const reflectedMatrix = [-1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+  const reflectedMatrix = [-1, 0, 0, 0, 0, 1e-10, 0, 0, 0, 0, 1e-9, 0, 0, 0, 0, 1];
   const light = new GroupNode({matrix: reflectedMatrix});
   const unrelated = new GroupNode({matrix: new Array(16).fill(0)});
   const scene = new GroupNode({children: [light, unrelated]});
