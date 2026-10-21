@@ -742,6 +742,15 @@
           "api-reference/gpgpu/gpu-pointcloud",
           {
             "type": "category",
+            "label": "GPU Physics",
+            "items": [
+              "api-reference/gpgpu/gpu-physics",
+              "api-reference/gpgpu/gpu-sphere-world",
+              "api-reference/gpgpu/gpu-rigid-body-world"
+            ]
+          },
+          {
+            "type": "category",
             "label": "GPU Data",
             "items": [
               "api-reference/gpgpu/gpu-constant",

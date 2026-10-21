@@ -117,3 +117,48 @@ it('integrates geometry-free motions without publishing a synthetic collider', a
     world.destroy();
   }
 });
+
+it('retains transient overflow evidence and supports replay with a larger capacity', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU is unavailable');
+  const bodies: GPURigidBody[] = Array.from({length: 3}, (_, index) => ({
+    position: [index * 0.1, 0, 0],
+    shape: {type: 'sphere', radius: 1},
+    restitution: 0
+  }));
+  for (const maximumPairs of [1, 64]) {
+    const world = new GPURigidBodyWorld({
+      bodies,
+      maximumPairs,
+      solver: 'parallel',
+      broadPhase: 'hierarchical-grid',
+      gravity: [0, 0, 0]
+    });
+    const definition = new GPUCommandGraph(device);
+    world.addToGraph(definition);
+    const graph = await definition.compileAsync();
+    try {
+      const encode = () => {
+        const encoder = device.createCommandEncoder();
+        graph.encode(encoder, {parameters: undefined});
+        device.submit(encoder.finish());
+      };
+      encode();
+      const initial = await world.readSimulationDiagnostics();
+      expect(initial.steps).toBe(1);
+      expect(initial.complete).toBe(maximumPairs === 64);
+      if (maximumPairs === 1) expect(initial.droppedPairs).toBe(2);
+      world.positions!.write(new Float32Array([0, 0, 0, 1, 10, 0, 0, 1, 20, 0, 0, 1]));
+      encode();
+      expect((await world.readCollisionDiagnostics()).broadPhase?.droppedPairs).toBe(0);
+      const retained = await world.readSimulationDiagnostics();
+      expect(retained.steps).toBe(2);
+      expect(retained.incompleteSteps).toBe(maximumPairs === 1 ? 1 : 0);
+      expect(retained.complete).toBe(maximumPairs === 64);
+      expect(retained.maximumCandidatePairs).toBe(3);
+    } finally {
+      graph.destroy();
+      world.destroy();
+    }
+  }
+});

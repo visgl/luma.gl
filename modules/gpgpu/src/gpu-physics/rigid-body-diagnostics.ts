@@ -1,0 +1,125 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import {Buffer} from '@luma.gl/core';
+import {Computation} from '@luma.gl/engine';
+import type {
+  GPUCommandGraph,
+  GPUCommandGraphComputeExecutable,
+  GraphBufferHandle
+} from '../gpu-core/gpu-command-graph';
+
+/** Lifetime counters: sampling less often than simulation never hides incomplete steps. */
+export type GPURigidBodySimulationDiagnostics = {
+  steps: number;
+  incompleteSteps: number;
+  droppedPairs: number;
+  droppedManifolds: number;
+  incompleteQueries: number;
+  invalidBounds: number;
+  droppedTriangleQueries: number;
+  unresolvedQueries: number;
+  incompleteIslandUnions: number;
+  maximumCandidatePairs: number;
+  maximumCandidateTests: number;
+  saturated: boolean;
+  complete: boolean;
+};
+
+export function decodeRigidBodySimulationDiagnostics(
+  values: ArrayLike<number>
+): GPURigidBodySimulationDiagnostics {
+  return {
+    steps: values[0],
+    incompleteSteps: values[1],
+    droppedPairs: values[2],
+    droppedManifolds: values[3],
+    incompleteQueries: values[4],
+    invalidBounds: values[5],
+    droppedTriangleQueries: values[6],
+    unresolvedQueries: values[7],
+    incompleteIslandUnions: values[8],
+    maximumCandidatePairs: values[9],
+    maximumCandidateTests: values[10],
+    saturated: values[15] !== 0,
+    complete: values[1] === 0 && values[15] === 0
+  };
+}
+
+type DiagnosticSource = {buffer: Buffer; resource: GraphBufferHandle};
+
+/** One single-invocation dispatch per step; no contact scan or host synchronization. */
+export function addRigidBodyDiagnostics<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  id: string,
+  statistics: Buffer,
+  inputs: {
+    broadPhase?: DiagnosticSource & {wordOffset: number};
+    targets?: DiagnosticSource & {wordOffset: number};
+    meshTasks?: DiagnosticSource;
+    parallelState?: DiagnosticSource;
+  }
+): void {
+  const sources = [
+    ...(inputs.broadPhase ? [{name: 'discovery', ...inputs.broadPhase}] : []),
+    ...(inputs.targets ? [{name: 'cache', ...inputs.targets}] : []),
+    ...(inputs.meshTasks ? [{name: 'mesh', ...inputs.meshTasks}] : []),
+    ...(inputs.parallelState ? [{name: 'islands', ...inputs.parallelState}] : [])
+  ];
+  const bindings = [
+    {
+      name: 'statistics',
+      buffer: statistics,
+      resource: graph.importBuffer(
+        {id, byteLength: statistics.byteLength, usage: Buffer.STORAGE},
+        statistics
+      )
+    },
+    ...sources
+  ];
+  const source = /* wgsl */ `
+${bindings.map(({name}, index) => `@group(0) @binding(${index}) var<storage,${index === 0 ? 'read_write' : 'read'}> ${name}:array<u32>;`).join('\n')}
+fn accumulate(index:u32,value:u32){
+ let previous=statistics[index];
+ if(value>0xffffffffu-previous){statistics[index]=0xffffffffu;statistics[15]=1u;}
+ else {statistics[index]=previous+value;}
+}
+@compute @workgroup_size(1) fn record(){
+ var failures:array<u32,7>;
+ ${inputs.broadPhase ? `failures[0]=discovery[${inputs.broadPhase.wordOffset + 1}u];failures[2]=discovery[${inputs.broadPhase.wordOffset + 6}u];failures[3]=discovery[${inputs.broadPhase.wordOffset + 2}u];statistics[9]=max(statistics[9],discovery[${inputs.broadPhase.wordOffset}u]);statistics[10]=max(statistics[10],discovery[${inputs.broadPhase.wordOffset + 3}u]);` : ''}
+ ${inputs.targets ? `failures[1]=cache[${inputs.targets.wordOffset}u];` : ''}
+ ${inputs.meshTasks ? 'failures[4]=mesh[1];failures[5]=mesh[2];' : ''}
+ ${inputs.parallelState ? 'failures[6]=islands[0];' : ''}
+ var incomplete=false;
+ for(var index=0u;index<7u;index++){accumulate(index+2u,failures[index]);incomplete=incomplete||failures[index]>0u;}
+ accumulate(0u,1u);if(incomplete){accumulate(1u,1u);}
+}`;
+  const properties = {
+    id,
+    source,
+    entryPoint: 'record',
+    shaderLayout: {
+      bindings: bindings.map(({name}, location) => ({
+        name,
+        location,
+        group: 0,
+        type: location === 0 ? ('storage' as const) : ('read-only-storage' as const)
+      }))
+    },
+    bindings: Object.fromEntries(bindings.map(({name, buffer}) => [name, buffer]))
+  };
+  const executable = (computation: Computation): GPUCommandGraphComputeExecutable<Parameters> => ({
+    encode: ({computePass}) => computation.dispatch(computePass, 1),
+    destroy: () => computation.destroy()
+  });
+  graph.addComputePass({
+    id,
+    resources: bindings.map(({resource}, index) => ({
+      buffer: resource,
+      usage: index === 0 ? ('storage-read-write' as const) : ('storage-read' as const)
+    })),
+    compile: ({device}) => executable(new Computation(device, properties)),
+    compileAsync: async ({device}) => executable(await Computation.createAsync(device, properties))
+  });
+}

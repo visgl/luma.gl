@@ -38,6 +38,19 @@ the ordered solver remains the default. These are partial implementations, not c
 tranches. General moving mesh/mesh coverage, general-body CCD, stress qualification and
 multi-adapter whole-step performance evidence remain required.
 
+The capacity/stability follow-up adds allocation preflight and CPU capacity reports,
+GPU lifetime failure counters, and an isolated whole-step benchmark. Coupled
+two-dimensional friction replaces the rigid solver's slip-speed switch; cached
+impulse retention, recovery bias and parallel relaxation are explicit controls.
+Ordered and parallel fixtures cover anisotropic contact response, static friction,
+moving supports and eight-box stacks. The lab adds corresponding scenarios and
+optional automatic scene progression. Public world references now document lifecycle,
+frames, failure recovery and limits separately from the conceptual guide.
+
+These improvements do not close G1 or G3: whole-step timing is not an accuracy
+qualification, allocation preflight is not automatic overflow recovery, and the
+stability fixtures do not establish extreme mass-ratio or general CCD coverage.
+
 Prioritize closing G1 capacity/measurement gaps, G2 general collision semantics and G3
 solver/CCD qualification before broadening the feature surface. Keep G1–G7 identifiers
 aligned with the machine-readable qualification profile. G8–G12 extend the programme

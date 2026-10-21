@@ -89,6 +89,14 @@
           {
             "file": "modules/gpgpu/test/gpu-physics/rigid-body-broad-phase.spec.ts",
             "testPattern": "includes oversized and remote bounds"
+          },
+          {
+            "file": "modules/gpgpu/test/gpu-physics/rigid-body-sparse.spec.ts",
+            "testPattern": "retains transient overflow evidence and supports replay with a larger capacity"
+          },
+          {
+            "file": "modules/gpgpu/test/gpu-physics/rigid-body-capacity.node.spec.ts",
+            "testPattern": "rejects device capacity before allocating or marking the world attached"
           }
         ]
       }
@@ -826,6 +834,36 @@
         "performance"
       ],
       "checks": {}
+    },
+    {
+      "id": "solver.coupled-friction-stability",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: coupled tangent response, static friction, moving support and bounded eight-box stack stability"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpgpu/test/gpu-physics/rigid-body-stability.spec.ts",
+            "testPattern": "solves coupled anisotropic tangential response"
+          },
+          {
+            "file": "modules/gpgpu/test/gpu-physics/rigid-body-stability.spec.ts",
+            "testPattern": "keeps a body stationary inside the static friction cone"
+          },
+          {
+            "file": "modules/gpgpu/test/gpu-physics/rigid-body-stability.spec.ts",
+            "testPattern": "carries resting bodies on a kinematic support"
+          },
+          {
+            "file": "modules/gpgpu/test/gpu-physics/rigid-body-stability.spec.ts",
+            "testPattern": "bounds eight-box stack drift and penetration"
+          }
+        ]
+      }
     }
   ]
 }
