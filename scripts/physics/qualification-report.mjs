@@ -44,10 +44,10 @@ export function makeQualificationReport(profile, reports, tranches = ['G1', 'G2'
             );
             return {
               selector,
-              status: matches.some(report => report.qualified === true)
-                ? 'passed'
+              status: matches.some(report => report.qualified !== true)
+                ? 'failed'
                 : matches.length
-                  ? 'failed'
+                  ? 'passed'
                   : 'missing',
               evidenceCount: matches.length
             };

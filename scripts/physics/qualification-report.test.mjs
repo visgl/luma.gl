@@ -75,3 +75,17 @@ test('the qualification target pins the same draft revisions as the importer', a
   assert.equal(new Set(target.features.map(feature => feature.id)).size, target.features.length);
   assert.ok(target.features.every(feature => feature.requiredChecks.length > 0));
 });
+
+test('failed benchmark evidence cannot be hidden by a successful retry', () => {
+  const benchmarkProfile = {
+    profile: {revision: 'pinned'},
+    features: [{id: 'discovery', tranche: 'G1', fields: [], requiredChecks: ['performance'], checks: {performance: [{benchmark: {stage: 'discovery', fixture: 'mixed', minimumObjectCount: 10000, hardware: true}}]}}]
+  };
+  const passed = {stage: 'discovery', fixture: 'mixed', objectCount: 10000, adapter: {fallback: false}, qualified: true};
+  for (const reports of [[passed, {...passed, qualified: false}], [{...passed, qualified: false}, passed]]) {
+    const result = makeQualificationReport(benchmarkProfile, reports, ['G1']);
+    assert.equal(result.features[0].status, 'failed');
+    assert.equal(result.requestedComplete, false);
+  }
+  assert.equal(makeQualificationReport(benchmarkProfile, [{...passed, adapter: {fallback: true}}], ['G1']).features[0].status, 'missing');
+});
