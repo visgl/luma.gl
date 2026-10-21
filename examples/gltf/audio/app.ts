@@ -58,7 +58,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   playbackGeneration = 0;
   volume = 0.5;
 
-  async playAudio(): Promise<void> {
+  async playAudio(sourceIndex?: number): Promise<void> {
     if (!this.scenegraphsFromGLTF) return;
     const generation = ++this.playbackGeneration;
     try {
@@ -73,9 +73,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.status.textContent = 'Loading audio…';
       await resumed;
       if (this.isFinalized || generation !== this.playbackGeneration) return;
-      await this.audio.play();
+      await this.audio.play({sourceIndices: sourceIndex === undefined ? undefined : [sourceIndex]});
       if (!this.isFinalized && generation === this.playbackGeneration)
-        this.status.textContent = 'Playing — orbit and zoom to hear spatial sound';
+        this.status.textContent =
+          this.feature === 'emitter'
+            ? 'Playing — orbit and zoom to hear spatial sound'
+            : 'One-shot triggered — press a drum button to play again';
     } catch (error) {
       if (!this.isFinalized) this.status.textContent = String(error);
     }
@@ -146,6 +149,26 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.status.textContent = feature !== 'emitter' ? 'Loading Drum Kit…' : 'Loading Boom Box…';
     this.status.style.display = 'block';
     this.controls.append(playButton, stopButton, volumeLabel, this.status);
+    if (feature !== 'emitter') {
+      playButton.textContent = 'Play all once';
+      const drumButtons = document.createElement('div');
+      for (const [sourceIndex, name] of [
+        'Kick',
+        'Snare',
+        'High tom',
+        'Mid tom',
+        'Floor tom',
+        'Hi-hat',
+        'Crash',
+        'Ride'
+      ].entries()) {
+        const drumButton = document.createElement('button');
+        drumButton.textContent = name;
+        drumButton.onclick = () => void this.playAudio(sourceIndex);
+        drumButtons.append(drumButton);
+      }
+      this.controls.append(drumButtons);
+    }
     canvas.parentElement?.append(this.controls);
     void this.loadGLTF();
   }
