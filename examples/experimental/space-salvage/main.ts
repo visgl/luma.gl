@@ -240,7 +240,8 @@ try {
               ship.position[1] - target.position[1]
             ];
             const distance = Math.hypot(...delta);
-            if (distance > 1.5 && distance < 12) {
+            // The ray query bounds surface distance; large targets can have centers beyond it.
+            if (distance > 1.5) {
               const impulse = Math.min(10, distance * 2) * duration;
               mission.world.applyImpulse(
                 selected.body,
