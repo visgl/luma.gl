@@ -30,6 +30,19 @@ await audioContext.close();
 
 External URIs (including data URIs) and embedded buffer views are supported. An optional `fetch` function can supply application authentication or caching. Browser decoding determines available audio formats. Positional emitters follow node world transforms, use local negative Z as forward, and support HRTF panning, directional cones, and linear/inverse/exponential distance attenuation. Global emitters bypass spatial processing. Model coordinates remain in meters; display normalization must also be reflected in listener coordinates.
 
-The implementation follows the [OMI draft schema at revision 4f1fe73](https://github.com/omigroup/gltf-extensions/tree/4f1fe73bff65ed5ca97dace7eb60ffdb64e2e692/extensions/2.0/KHR_audio_emitter). A zero/omitted `maxDistance` means unbounded distance; finite values clamp attenuation. Linear attenuation with no maximum remains constant. The example's older `autoplay` and node `emitters` spellings are accepted alongside `autoPlay` and `emitter`. Custom shapes, codec extensions, audio animation pointers, and `KHR_audio_graph` are not implemented.
+The implementation follows the [OMI draft schema at revision 4f1fe73](https://github.com/omigroup/gltf-extensions/tree/4f1fe73bff65ed5ca97dace7eb60ffdb64e2e692/extensions/2.0/KHR_audio_emitter). A zero/omitted `maxDistance` means unbounded distance; finite values clamp attenuation. Linear attenuation with no maximum remains constant. The example's older `autoplay` and node `emitters` spellings are accepted alongside `autoPlay` and `emitter`. Custom shapes, codec extensions, and audio animation pointers are not implemented.
 
 See the [Spatial Audio example](/examples/showcase/gltf-audio). The Boom Box and music are fetched unchanged from the pinned upstream repository; attribution appears in the example.
+
+
+## Audio graph profile
+
+The controller also reads `KHR_audio_graph` processing graphs from the [pinned draft](https://github.com/rudybear/glTF/tree/c0042d72e74dfd25790566d21e02f71e420b130f). This is a partial profile, registered as loader-only for strict required-extension checks.
+
+Supported processors are gain, delay, compressor, waveshaper, biquad filters, channel splitter/merger, channel mixer, and audio mixer. Only graphs with an explicit output reaching an emitter in the selected scene are activated; authored graph indices remain stable. Graph inputs share one scheduled source per authored source index; explicit graph outputs replace the corresponding emitter's base source routing. Processing nodes are owned and disconnected by the controller. Cycles, invalid endpoint indices, and bypassed splitter/merger nodes are rejected before processor allocation. Multi-port bypass is unsupported in this profile.
+
+`audio.setGraphGain(graphIndex, nodeIndex, gain)` applies an authored gain transition: immediate for zero duration, linear interpolation otherwise, or a normalized custom curve scaled to the target gain. Indices refer to the original graph and node arrays.
+
+Clip sources support playback rate, offset, duration, loop regions, and start times relative to the current playback restart. Procedural sources support sine, square at the default duty cycle, triangle, sawtooth, and custom periodic waves. Nondefault square pulse width is rejected. Browser decoding determines codec support; encoding metadata and source priority are not used to select or schedule voices.
+
+Audio animation/interactivity pointers, dynamic bypass changes, general pulse-width synthesis, are not implemented. Audio environment behavior is described in the [environment profile](./gltf-audio-environment). The shared audio example's `graph` preset loads the unmodified CC0 Drum Kit from its pinned source. Its enable/restart button plays all authored clips; the prototype's playing-pointer drum-hit controls are explicitly unsupported.

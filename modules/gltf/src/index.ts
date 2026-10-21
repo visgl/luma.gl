@@ -142,3 +142,5 @@ export {
   type GLTFAudioControllerOptions,
   type GLTFAudioExtension
 } from './gltf/gltf-audio';
+
+export {GLTFAreaLightController, type GLTFAreaLightControllerProps} from './gltf/gltf-area-lights';
