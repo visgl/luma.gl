@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Log} from '@probe.gl/log';
+import type {Log} from 'probe.gl/log';
 import type {Device, DeviceProps} from './device';
 import {DEVICE_DEFAULT_PROPS} from './device-defaults';
 import {Adapter} from './adapter';

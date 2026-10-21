@@ -137,3 +137,8 @@ export {
   type GLTFBillboardExtension,
   type GLTFBillboardDrawEntry
 } from './gltf/gltf-billboard';
+export {
+  GLTFAudioController,
+  type GLTFAudioControllerOptions,
+  type GLTFAudioExtension
+} from './gltf/gltf-audio';

@@ -10,6 +10,7 @@ const EXAMPLE_DIRECTORY = path.join(REPOSITORY_ROOT, 'examples');
 const SUPPORT_BLOCK_PATTERN = /\n?\s*<!-- luma-example-support -->[\s\S]*?<!-- \/luma-example-support -->\n?/;
 const CATALOG_ALIASES = new Map([
   ['gltf/features', 'showcase/gltf-billboard'],
+  ['gltf/audio', 'showcase/gltf-audio'],
   ['arrow/arrow-instancing', 'showcase/instancing'],
   ['anari/scenes', 'anari/scenes'],
   ['anari/scenes/playground', 'anari/scenes'],
