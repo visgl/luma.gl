@@ -94,6 +94,7 @@ const loadHelloCubeApp = () => import('../../examples/tutorials/hello-cube/app')
 const loadTwoCubesApp = () => import('../../examples/tutorials/hello-two-cubes/app');
 const loadInstancedCubesApp = () => import('../../examples/tutorials/hello-instanced-cubes/app');
 const loadHelloInstancingApp = () => import('../../examples/tutorials/hello-instancing/app');
+const loadGLTFBillboardApp = () => import('../../examples/showcase/gltf-billboard/app');
 const loadHelloGLTFApp = () => import('../../examples/tutorials/hello-gltf/app');
 const loadLightingApp = () => import('../../examples/tutorials/lighting/app');
 const loadShaderHooksApp = () => import('../../examples/tutorials/shader-hooks/app');
@@ -2739,4 +2740,8 @@ export const GLTFPhysicsExample: React.FC<WebsiteExampleProps> = props => (
     devices={['webgpu']}
     {...props}
   />
+);
+
+export const GLTFBillboardExample: React.FC = props => (
+  <LumaExample id="gltf-billboard" directory="showcase" loadTemplate={loadGLTFBillboardApp} config={exampleConfig} showStats={false} {...props} />
 );

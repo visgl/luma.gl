@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import gltfBillboardSupport from './showcase/gltf-billboard/mobile-support';
 import gltfInteractivitySupport from './deck/gltf-interactivity/mobile-support';
 import geometrySupport from './experimental/gpu-geometry/mobile-support';
 import pointCloudSupport from './experimental/gpu-pointcloud/mobile-support';
@@ -197,6 +198,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'tutorials/hello-cube': support49,
   'tutorials/lighting': support50,
   'tutorials/hello-gltf': support51,
+  'showcase/gltf-billboard': gltfBillboardSupport,
   'tutorials/two-cubes': support52,
   'tutorials/instanced-cubes': support53,
   'tutorials/hello-instancing': support54,
