@@ -79,3 +79,25 @@ test('matrix reflections preserve the emitting side and unrelated singular nodes
   expect(result[0].normal[2]).toBeCloseTo(-1);
   expect(result[0].intensity).toBe(1000);
 });
+
+test('EXT_lights_area selects only the rendered scene, excluding inactive roots', () => {
+  const shared = new GroupNode();
+  const inactive = new GroupNode({position: [5, 0, 0]});
+  const gltf = {
+    nodes: [shared, inactive].map(() => ({extensions: {EXT_lights_area: {light: 0}}})),
+    extensions: {EXT_lights_area: {lights: [{type: 'rect'}]}}
+  } as unknown as GLTFPostprocessed;
+  const controller = new GLTFAreaLightController({
+    gltf,
+    scenes: [new GroupNode({children: [shared]}), new GroupNode({children: [inactive]})],
+    gltfNodeIndexToNodeMap: new Map([
+      [0, shared],
+      [1, inactive]
+    ])
+  });
+  expect(controller.getLights()).toHaveLength(1);
+  expect(controller.getLights()[0].position).toEqual([0, 0, 0]);
+  expect(controller.getLights(1)[0].position).toEqual([5, 0, 0]);
+  expect(controller.getLights(2)).toEqual([]);
+  controller.destroy();
+});

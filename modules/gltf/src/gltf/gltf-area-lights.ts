@@ -55,7 +55,9 @@ export class GLTFAreaLightController {
   }
 
   /** Recompute after animation. Scale controls size uniformly and does not change emitting rotation. */
-  getLights(): AreaLight[] {
+  getLights(sceneIndex = 0): AreaLight[] {
+    const scene = this.scenes[sceneIndex];
+    if (!scene) return [];
     const result: AreaLight[] = [];
     const lightBranches = new Set<GroupNode>();
     const collectLightBranches = (node: GroupNode): boolean => {
@@ -66,7 +68,7 @@ export class GLTFAreaLightController {
       if (containsLight) lightBranches.add(node);
       return containsLight;
     };
-    for (const scene of this.scenes) collectLightBranches(scene);
+    collectLightBranches(scene);
     const visit = (node: GroupNode, parentMatrix: Matrix4, parentRotation: Matrix4): void => {
       if (!node.display || !lightBranches.has(node)) return;
       const worldMatrix = new Matrix4(parentMatrix).multiplyRight(node.matrix);
@@ -103,7 +105,7 @@ export class GLTFAreaLightController {
       for (const child of node.children)
         if (child instanceof GroupNode) visit(child, worldMatrix, worldRotation);
     };
-    for (const scene of this.scenes) visit(scene, new Matrix4(), new Matrix4());
+    visit(scene, new Matrix4(), new Matrix4());
     return result;
   }
 
