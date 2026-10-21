@@ -282,7 +282,7 @@ conversion instead of passing invalid faces to the collision kernels.
 `raycast` normalizes the direction and retains the nearest hit within the maximum
 distance; ties select the lowest collider index. Sphere/box rays starting inside
 return the origin with distance zero and a zero normal. Extended-geometry queries
-may return a surface point for initial overlap. `overlapSphere` returns colliders
+may return a surface point with a zero normal for initial solid overlap. `overlapSphere` returns colliders
 in index order, surface points and outward normals; its `distance` is zero.
 `castSphere({...ray, radius})` sweeps a translated sphere against the selected
 surfaces using conservative advancement. Sweeps use a 1e-5 world-unit surface

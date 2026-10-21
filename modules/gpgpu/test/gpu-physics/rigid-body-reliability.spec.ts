@@ -377,6 +377,7 @@ it('queries original mesh surfaces and solid convex interiors with explicit trav
         });
         expect(inside.complete).toBe(true);
         expect(inside.hits).toHaveLength(1);
+        expect(inside.hits[0].normal).toEqual([0,0,0]);
         const miss = await world.raycast({
           origin: [-3, 3, 0],
           direction: [1, 0, 0],

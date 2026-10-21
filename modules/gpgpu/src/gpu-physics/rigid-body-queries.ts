@@ -50,7 +50,7 @@ struct QueryOutput { count:u32, total:u32, reserved:vec2u, hits:array<QueryHit> 
   var point=origin;var normal=vec3f(0);var distance=0.0;var hit=false;
   var complete=1u;
   if(query.settings.x==2u||shape.w>1.0){
-   if(query.settings.x==1u){let surface=closestSurface(collider,origin);hit=surface.distance<=query.origin.w;point=surface.point;normal=(origin-point)/max(length(origin-point),1e-20);complete=surface.complete;if(shape.w==6.0&&shape.z==0.0&&origin.y<0.0){hit=false;}}
+   if(query.settings.x==1u){let surface=closestSurface(collider,origin);hit=surface.distance<=query.origin.w;point=surface.point;normal=select(vec3f(0),(origin-point)/max(length(origin-point),1e-20),surface.distance>0.0);complete=surface.complete;if(shape.w==6.0&&shape.z==0.0&&origin.y<0.0){hit=false;}}
    else{let sweep=sweepSphere(collider,origin,direction,query.direction.w,query.origin.w);hit=sweep.hit!=0u;point=sweep.point;normal=sweep.normal;distance=sweep.distance;complete=sweep.complete;}
   }else if(query.settings.x==1u){
    if(shape.w==0.0){let lengthFromCenter=length(origin);hit=lengthFromCenter<=shape.x+query.origin.w;normal=select(vec3f(1,0,0),origin/max(lengthFromCenter,1e-20),lengthFromCenter>1e-20);point=normal*shape.x;}

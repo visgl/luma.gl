@@ -88,7 +88,7 @@ fn sweepSphere(collider:u32,origin:vec3f,direction:vec3f,maximumDistance:f32,rad
   let center=origin+direction*travelled;let surface=closestSurface(collider,center);
   if(surface.complete==0u){result.complete=0u;return result;}
   let separation=surface.distance-radius;
-  if(separation<=0.00001){result.point=surface.point;result.normal=(center-surface.point)/max(length(center-surface.point),1e-20);result.distance=travelled;result.hit=1u;return result;}
+  if(separation<=0.00001){result.point=surface.point;result.normal=select(vec3f(0),(center-surface.point)/max(length(center-surface.point),1e-20),surface.distance>0.0);result.distance=travelled;result.hit=1u;return result;}
   if(travelled+separation>maximumDistance){return result;}
   let next=travelled+separation;
   if(next<=travelled){result.complete=0u;return result;}travelled=next;
