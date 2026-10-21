@@ -539,7 +539,7 @@ it('imports tapered primitives, signed gravity and scaled authored motion proper
   });
 });
 
-it('reports possible mesh-to-mesh contact before creating a world', () => {
+it('accepts mesh-to-mesh surface contact without a fixed-separation exception', () => {
   const nodes = [0, 1].map(() => ({
     extensions: {
       KHR_physics_rigid_bodies: {
@@ -556,10 +556,8 @@ it('reports possible mesh-to-mesh contact before creating a world', () => {
       indices: [0, 1, 2]
     })
   });
-  expect(description.supported).toBe(false);
-  expect(description.issues.some(issue => issue.code === 'unsupported-backend-configuration')).toBe(
-    true
-  );
+  expect(description.supported).toBe(true);
+  expect(description.issues).toEqual([]);
 });
 
 it('resolves draft geometry.node subtrees and off-scene initial mesh snapshots without aliasing mesh indices', () => {

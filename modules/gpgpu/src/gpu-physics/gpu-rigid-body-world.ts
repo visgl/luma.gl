@@ -15,7 +15,7 @@ import {
   type GPUCommandGraphComputeExecutable
 } from '../gpu-core/gpu-command-graph';
 import {getRigidBodyShapeProperties} from './rigid-body-shape-properties';
-import {packRigidBodyShapes, areFixedMeshesSeparated} from './rigid-body-geometry';
+import {packRigidBodyShapes} from './rigid-body-geometry';
 import {
   getCompoundBodyInertia,
   normalizeRigidBodyRotation,
@@ -68,6 +68,8 @@ export type GPURigidBodyWorldProps = {
   maximumPairs?: number;
   /** Maximum hash-bucket candidate tests per collider; incomplete traversal is reported. */
   maximumCandidateTestsPerCollider?: number;
+  /** Maximum BVH-node and triangle tests per collider pair and discovery traversal. */
+  maximumMeshTraversalTestsPerPair?: number;
   contactMatchDistance?: number;
   restitutionThreshold?: number;
   sleepAfter?: number;
@@ -114,8 +116,6 @@ export class GPURigidBodyWorld {
   private controlSettings: Buffer | null = null;
   private destroyed = false;
   private broadPhaseCounters: {buffer: Buffer; byteOffset: number} | null = null;
-  /** Bodies whose immutable pose envelope is required by a mesh/mesh separation proof. */
-  private readonly anchoredBodies = new Set<number>();
 
   constructor(props: GPURigidBodyWorldProps) {
     this.id = props.id ?? 'gpu-rigid-body-world';
@@ -143,6 +143,13 @@ export class GPURigidBodyWorld {
       (props.maximumRecoverySpeed ?? 2) < 0
     )
       throw new Error('Invalid rigid-body stability settings');
+    const maximumMeshTraversalTests = props.maximumMeshTraversalTestsPerPair ?? 65536;
+    if (
+      !Number.isInteger(maximumMeshTraversalTests) ||
+      maximumMeshTraversalTests < 1 ||
+      maximumMeshTraversalTests > 1048576
+    )
+      throw new Error('Invalid mesh traversal budget');
     const maximumCandidateTests = props.maximumCandidateTestsPerCollider ?? 4096;
     if (
       !Number.isInteger(maximumCandidateTests) ||
@@ -265,35 +272,6 @@ export class GPURigidBodyWorld {
         (this.maximumPairs & (this.maximumPairs - 1)) !== 0)
     )
       throw new Error('Invalid rigid-body pair capacity');
-    const meshes = colliders
-      .map((collider, index) => ({collider, index}))
-      .filter(({collider}) => collider.shape.type === 'triangle-mesh');
-    for (let first = 0; first < meshes.length; first++)
-      for (let second = first + 1; second < meshes.length; second++) {
-        const firstCollider = meshes[first].collider,
-          secondCollider = meshes[second].collider;
-        if (
-          firstCollider.shape.type !== 'triangle-mesh' ||
-          secondCollider.shape.type !== 'triangle-mesh' ||
-          firstCollider.body === secondCollider.body ||
-          firstCollider.excludedColliders?.includes(meshes[second].index) ||
-          secondCollider.excludedColliders?.includes(meshes[first].index)
-        )
-          continue;
-        const firstBody = props.bodies[firstCollider.body],
-          secondBody = props.bodies[secondCollider.body];
-        const staticBody = (body: GPURigidBody) =>
-          (body.mode ?? (body.mass === 0 ? 'static' : 'dynamic')) === 'static';
-        if (
-          !(staticBody(firstBody) && staticBody(secondBody)) &&
-          !areFixedMeshesSeparated(firstCollider, firstBody, secondCollider, secondBody)
-        )
-          throw new Error('Potential mesh/mesh contact is unsupported');
-        if (!(staticBody(firstBody) && staticBody(secondBody))) {
-          this.anchoredBodies.add(firstCollider.body);
-          this.anchoredBodies.add(secondCollider.body);
-        }
-      }
     this.colliders = structuredClone(colliders);
     this.props = structuredClone(props);
   }
@@ -423,7 +401,7 @@ export class GPURigidBodyWorld {
           ...inertiaRotation,
           mode === 'static' ? 0 : mode === 'dynamic' ? 1 : 2,
           body.gravityFactor ?? 1,
-          this.anchoredBodies.has(index) ? (mode === 'static' ? 2 : 1) : 0,
+          0,
           0
         ],
         index * 12
@@ -471,11 +449,6 @@ export class GPURigidBodyWorld {
       'targets',
       Math.ceil((this.count * 32 + (sparse ? 32 + this.maximumPairs * 8 : 16)) / 16) * 16
     );
-    for (const index of this.anchoredBodies) {
-      // These bodies cannot be kinematic: preserve the construction-time COM envelope.
-      this.targets.write(positions.subarray(index * 4, index * 4 + 4), index * 32);
-      this.targets.write(orientations.subarray(index * 4, index * 4 + 4), index * 32 + 16);
-    }
     // Four 64-byte contacts followed by a 32-byte aligned manifold header.
     this.manifolds = allocate('manifolds', this.maximumPairs * 288);
     if (extended) this.meshTasks = allocate('mesh-tasks', 16 + 65536 * 48);
@@ -586,7 +559,8 @@ export class GPURigidBodyWorld {
         collider => collider.shape.type !== 'sphere' && collider.shape.type !== 'box'
       ),
       sparseLayout,
-      parallel
+      parallel,
+      this.props.maximumMeshTraversalTestsPerPair ?? 65536
     );
     const parallelBindings: Record<string, readonly string[]> = {
       parallelReset: ['parallelState'],
@@ -961,10 +935,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     this.device.submit(encoder.finish());
   }
 
-  /**
-   * Clear persistence after direct state writes. Bodies participating in a mesh separation
-   * proof have their COM (and static orientation) restored to their immutable anchor next step.
-   */
+  /** Clear persistence and sleeping after direct state writes between submissions. */
   wake(): void {
     if (this.destroyed) return;
     this.sleepStates?.write(new Float32Array(this.count * 4));
@@ -1021,6 +992,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     unresolvedQueries: number;
     triangleQueries: number;
     droppedTriangleQueries: number;
+    incompleteMeshQueries: number;
     droppedManifolds: number;
     incompleteIslandUnions: number;
     broadPhase?: ReturnType<typeof decodeRigidBodyBroadPhaseDiagnostics>;
@@ -1045,6 +1017,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       unresolvedQueries: tasks[2],
       triangleQueries: tasks[0],
       droppedTriangleQueries: tasks[1],
+      incompleteMeshQueries: tasks[3],
       droppedManifolds,
       incompleteIslandUnions: this.parallelState
         ? new Uint32Array((await this.parallelState.readAsync(0, 4)).buffer)[0]

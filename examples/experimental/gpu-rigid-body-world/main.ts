@@ -67,6 +67,8 @@ try {
       world.destroy();
       throw error;
     });
+    const meshVerticesData: number[] = [];
+    let vertexCount = 16 * 12 * 6;
     const shapes = device.createBuffer({
       data: new Float32Array(
         bodies.flatMap(body => {
@@ -74,9 +76,28 @@ try {
           if (!shape) throw new Error('This renderer requires centered shapes');
           if (shape.type === 'sphere') return [shape.radius, 0, 0, 0];
           if (shape.type === 'box') return [...shape.halfExtents, body.mass === 0 ? 2 : 1];
-          throw new Error('The lab renderer supports boxes and spheres');
+          if (shape.type === 'triangle-mesh' || shape.type === 'convex-hull') {
+            const firstVertex = meshVerticesData.length / 4;
+            for (const index of shape.geometry.indices) {
+              const offset = index * 3;
+              meshVerticesData.push(
+                shape.geometry.positions[offset],
+                shape.geometry.positions[offset + 1],
+                shape.geometry.positions[offset + 2],
+                0
+              );
+            }
+            vertexCount = Math.max(vertexCount, shape.geometry.indices.length);
+            return [firstVertex, shape.geometry.indices.length, body.mass === 0 ? 1 : 0, 3];
+          }
+          throw new Error('The lab renderer supports boxes, spheres and cooked mesh shapes');
         })
       ),
+      usage: Buffer.STORAGE
+    });
+    const meshVertices = device.createBuffer({
+      id: 'lab-mesh-vertices',
+      data: new Float32Array(meshVerticesData.length ? meshVerticesData : [0, 0, 0, 0]),
       usage: Buffer.STORAGE
     });
     const model = new Model(device, {
@@ -87,12 +108,19 @@ try {
 @group(0) @binding(2) var<storage,read> orientations: array<vec4f>;
 @group(0) @binding(3) var<storage,read> shapes: array<vec4f>;
 @group(0) @binding(4) var<storage,read> sleepStates: array<vec4f>;
+@group(0) @binding(5) var<storage,read> meshVertices: array<vec4f>;
 struct Output {@builtin(position) position: vec4f, @location(0) normal: vec3f, @location(1) color: vec3f, @location(2) localNormal: vec3f, @location(3) @interpolate(flat) sphere: f32}
 fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotation.xyz,cross(rotation.xyz,vector)+rotation.w*vector);}
 @vertex fn vertexMain(@builtin(vertex_index) vertex: u32,@builtin(instance_index) body: u32)->Output {
  let corners=array<vec2f,6>(vec2f(0,0),vec2f(1,0),vec2f(0,1),vec2f(0,1),vec2f(1,0),vec2f(1,1));
  let corner=corners[vertex%6u];var point=vec3f(0);var normal=vec3f(0);
- if(shapes[body].w==0.0) {
+ if(shapes[body].w==3.0) {
+  if(vertex<u32(shapes[body].y)) {
+   let first=u32(shapes[body].x)+(vertex/3u)*3u;
+   point=meshVertices[u32(shapes[body].x)+vertex].xyz;
+   normal=normalize(cross(meshVertices[first+1u].xyz-meshVertices[first].xyz,meshVertices[first+2u].xyz-meshVertices[first].xyz));
+  } else {normal=vec3f(0,0,1);}
+ } else if(shapes[body].w==0.0) {
   let tile=vertex/6u;let longitude=(f32(tile%16u)+corner.x)*6.2831853/16.0;let latitude=(f32(tile/16u)+corner.y)*3.14159265/12.0;
   normal=vec3f(cos(longitude)*sin(latitude),sin(longitude)*sin(latitude),cos(latitude));point=normal*shapes[body].x;
  } else {
@@ -102,11 +130,11 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
   if(vertex>=36u) {point=vec3f(0);}
  }
  var output:Output;output.position=matrix*vec4f(positions[body].xyz+rotate(orientations[body],point),1);
- output.localNormal=normal;output.sphere=1.0-shapes[body].w;output.normal=rotate(orientations[body],normal);output.color=select(vec3f(0.28+0.45*fract(f32(body)*0.27),0.48+0.25*fract(f32(body)*0.39),0.42+0.25*fract(f32(body)*0.17)),vec3f(0.68,0.73,0.67),shapes[body].w==2.0);output.color=mix(output.color,vec3f(0.55),select(0.0,0.7,sleepStates[body].y>0.5));return output;
+ output.localNormal=normal;output.sphere=1.0-shapes[body].w;output.normal=rotate(orientations[body],normal);output.color=select(vec3f(0.28+0.45*fract(f32(body)*0.27),0.48+0.25*fract(f32(body)*0.39),0.42+0.25*fract(f32(body)*0.17)),vec3f(0.68,0.73,0.67),(shapes[body].w==2.0||(shapes[body].w==3.0&&shapes[body].z>0.5)));output.color=mix(output.color,vec3f(0.55),select(0.0,0.7,sleepStates[body].y>0.5));return output;
 }
 @fragment fn fragmentMain(input:Output)->@location(0) vec4f {let band=select(1.0,0.3,input.sphere>0.5&&abs(input.localNormal.z)<0.13);return vec4f(input.color*band*(0.35+0.65*max(0.0,dot(normalize(input.normal),normalize(vec3f(-0.5,-0.7,1))))),1);}
 `,
-      vertexCount: 16 * 12 * 6,
+      vertexCount,
       instanceCount: bodies.length,
       parameters: {depthWriteEnabled: true, depthCompare: 'less-equal', depthFormat: 'depth24plus'},
       bindings: {
@@ -114,23 +142,35 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
         positions: world.positions!,
         orientations: world.orientations!,
         shapes,
+        meshVertices,
         sleepStates: world.sleepStates!
       },
       shaderLayout: {
         attributes: [],
         bindings: [
           {name: 'matrix', group: 0, location: 0, type: 'uniform'},
-          ...['positions', 'orientations', 'shapes', 'sleepStates'].map((name, index) => ({
-            name,
-            group: 0,
-            location: index + 1,
-            type: 'read-only-storage' as const,
-            visibility: 1
-          }))
+          ...['positions', 'orientations', 'shapes', 'sleepStates', 'meshVertices'].map(
+            (name, index) => ({
+              name,
+              group: 0,
+              location: index + 1,
+              type: 'read-only-storage' as const,
+              visibility: 1
+            })
+          )
         ]
       }
     });
-    return {world, graph, model, shapes, bodies, sceneName, capacity: world.getCapacityInfo()};
+    return {
+      world,
+      graph,
+      model,
+      shapes,
+      meshVertices,
+      bodies,
+      sceneName,
+      capacity: world.getCapacityInfo()
+    };
   }
   let resources = await createScene();
   let paused = false;
@@ -161,6 +201,7 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
     target.graph.destroy();
     target.world.destroy();
     target.shapes.destroy();
+    target.meshVertices.destroy();
   };
   async function reset() {
     if (loading || !alive) return;

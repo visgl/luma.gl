@@ -59,7 +59,7 @@ export function createPhysicsPanels(diagnostics: GPUGraphDiagnostics) {
 <p>Draft <code>KHR_physics_rigid_bodies</code> and <code>KHR_implicit_shapes</code>.
 WebGPU simulation uses a small CPU pose bridge to the glTF renderer.
 Filtering preserves the authored per-collider systems, including its compound boxes.
-Motion Properties uses analytic tapered primitives, convex hulls and the original nonconvex wheel triangles. This bounded experimental solver does not support general mesh-to-mesh collisions.</p>
+Motion Properties uses analytic tapered primitives, convex hulls and the original nonconvex wheel triangles. Mesh pairs use bounded discrete surface contacts; deep initial containment and fast-motion tunneling remain unsupported.</p>
 <div id="error" role="status"></div>
 <a href="https://github.com/eoineoineoin/glTF_Physics/tree/9dc61cb3474ff9a51f58d3592f79d5c9e572056a/samples" target="_blank" rel="noreferrer">Upstream samples ↗</a>`;
   controls.hidden = true;

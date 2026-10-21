@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Matrix4} from '@math.gl/core';
-import type {GPURigidBody, GPURigidBodyCollider} from './rigid-body-properties';
-import {normalizeRigidBodyRotation, rotateRigidBodyVector} from './rigid-body-properties';
+import type {GPURigidBodyCollider} from './rigid-body-properties';
 
 export function packRigidBodyShapes(colliders: readonly GPURigidBodyCollider[]) {
   const geometry: number[] = [];
@@ -62,73 +60,4 @@ export function packRigidBodyShapes(colliders: readonly GPURigidBodyCollider[]) 
     return [start, excluded.length] as const;
   });
   return {shapes, geometry, filters};
-}
-
-/** Mesh/mesh narrow phase is not implemented. Prove fixed pairs can never meet instead. */
-export function areFixedMeshesSeparated(
-  first: GPURigidBodyCollider,
-  firstBody: GPURigidBody,
-  second: GPURigidBodyCollider,
-  secondBody: GPURigidBody
-): boolean {
-  const bounds = (collider: GPURigidBodyCollider, body: GPURigidBody) => {
-    const mode = body.mode ?? (body.mass === 0 ? 'static' : 'dynamic');
-    if (
-      mode === 'kinematic' ||
-      (mode === 'dynamic' && (body.mass !== 0 || (body.gravityFactor ?? 1) !== 0)) ||
-      (body.velocity ?? []).some(value => value !== 0)
-    )
-      return null;
-    const shape = collider.shape;
-    if (shape.type !== 'triangle-mesh') return null;
-    const center = body.centerOfMass ?? [0, 0, 0];
-    const rotation = normalizeRigidBodyRotation(body.orientation);
-    const offset = collider.position ?? [0, 0, 0];
-    const shapeRotation = new Matrix4().fromQuaternion(
-      normalizeRigidBodyRotation(collider.orientation)
-    );
-    const minimum = [Infinity, Infinity, Infinity],
-      maximum = [-Infinity, -Infinity, -Infinity];
-    let radius = 0;
-    for (let corner = 0; corner < 8; corner++) {
-      const point = shapeRotation.transformAsPoint(
-        [0, 1, 2].map(axis =>
-          corner & (1 << axis) ? shape.geometry.maximum[axis] : shape.geometry.minimum[axis]
-        )
-      );
-      const local: [number, number, number] = [
-        point[0] + offset[0] - center[0],
-        point[1] + offset[1] - center[1],
-        point[2] + offset[2] - center[2]
-      ];
-      radius = Math.max(radius, Math.hypot(...local));
-      const world = rotateRigidBodyVector(rotation, local);
-      for (let axis = 0; axis < 3; axis++) {
-        minimum[axis] = Math.min(minimum[axis], world[axis]);
-        maximum[axis] = Math.max(maximum[axis], world[axis]);
-      }
-    }
-    const translated = rotateRigidBodyVector(rotation, center);
-    return {
-      minimum: minimum.map(
-        (value, axis) =>
-          body.position[axis] + translated[axis] + (mode === 'static' ? value : -radius)
-      ),
-      maximum: maximum.map(
-        (value, axis) =>
-          body.position[axis] + translated[axis] + (mode === 'static' ? value : radius)
-      )
-    };
-  };
-  const firstBounds = bounds(first, firstBody),
-    secondBounds = bounds(second, secondBody);
-  return Boolean(
-    firstBounds &&
-      secondBounds &&
-      firstBounds.minimum.some(
-        (value, axis) =>
-          value > secondBounds.maximum[axis] + 0.01 ||
-          firstBounds.maximum[axis] < secondBounds.minimum[axis] - 0.01
-      )
-  );
 }

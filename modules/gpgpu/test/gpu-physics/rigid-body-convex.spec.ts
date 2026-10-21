@@ -193,7 +193,7 @@ it('rejects a separated rotating mesh before a large box can cover its local BVH
   }
 }, 120000);
 
-it('restores immutable mesh-pair anchors after direct state writes and wake', async context => {
+it('preserves explicit mesh pose edits without hidden fixed-center anchors', async context => {
   const device = await getWebGPUTestDevice();
   if (!device) return context.skip('WebGPU is unavailable');
   const geometry = makeTriangleMeshGeometry([-1, 0, -1, 1, 0, -1, 0, 0, 1], [0, 1, 2]);
@@ -216,16 +216,17 @@ it('restores immutable mesh-pair anchors after direct state writes and wake', as
   try {
     world.positions!.write(new Float32Array([0, 5, 0, 0, 0, 0, 0, 0]));
     world.orientations!.write(new Float32Array([Math.SQRT1_2, 0, 0, Math.SQRT1_2]));
-    world.velocities!.write(new Float32Array([0, -100, 0, 0]), 16);
+    world.velocities!.write(new Float32Array([0, -1, 0, 0]), 16);
     world.wake();
     const encoder = device.createCommandEncoder();
     graph.encode(encoder, {parameters: undefined});
     device.submit(encoder.finish());
     const [fixed, rotating] = await world.readState();
-    expect(fixed.position).toEqual([0, 0, 0]);
-    expect(fixed.orientation).toEqual([0, 0, 0, 1]);
-    expect(rotating.position).toEqual([0, 5, 0]);
-    expect(rotating.velocity).toEqual([0, 0, 0]);
+    expect(fixed.position).toEqual([0, 5, 0]);
+    expect(fixed.orientation[0]).toBeCloseTo(Math.SQRT1_2);
+    expect(fixed.orientation[3]).toBeCloseTo(Math.SQRT1_2);
+    expect(rotating.position[1]).toBeCloseTo(-1 / 120);
+    expect(rotating.velocity).toEqual([0, -1, 0]);
     expect(await world.readCollisionDiagnostics()).toMatchObject({
       triangleQueries: 0,
       unresolvedQueries: 0

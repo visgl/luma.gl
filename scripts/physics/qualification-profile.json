@@ -864,6 +864,39 @@
           }
         ]
       }
+    },
+    {
+      "id": "geometry.bounded-mesh-surface-contacts",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: discrete original-triangle mesh pairs; solid containment and general CCD excluded"
+      ],
+      "requiredChecks": [
+        "behavior",
+        "work-budget"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpgpu/test/gpu-physics/rigid-body-mesh-pairs.spec.ts",
+            "testPattern": "supports a falling triangle-mesh body"
+          },
+          {
+            "file": "modules/gpgpu/test/gpu-physics/rigid-body-mesh-pairs.spec.ts",
+            "testPattern": "preserves a nonconvex mesh opening"
+          },
+          {
+            "file": "modules/gpgpu/test/gpu-physics/rigid-body-mesh-pairs.spec.ts",
+            "testPattern": "exchanges momentum between two moving mesh bodies"
+          }
+        ],
+        "work-budget": [
+          {
+            "file": "modules/gpgpu/test/gpu-physics/rigid-body-mesh-pairs.spec.ts",
+            "testPattern": "reports mesh traversal exhaustion"
+          }
+        ]
+      }
     }
   ]
 }

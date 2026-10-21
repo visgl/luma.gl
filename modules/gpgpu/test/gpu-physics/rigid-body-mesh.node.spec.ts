@@ -73,7 +73,7 @@ it('integrates the cone limit and asymmetric primitive center of mass', () => {
   expect(contained.volume).toBeCloseTo((4 * Math.PI) / 3, 9);
   expect(contained.center[1]).toBeCloseTo(-0.05, 9);
 });
-it('rejects possible mesh/mesh contact but permits fixed, provably separated meshes', () => {
+it('accepts moving mesh pairs without a fixed-center separation exception', () => {
   const geometry = makeTriangleMeshGeometry([-1, 0, -1, 1, 0, -1, 0, 0, 1], [0, 1, 2]);
   const fixed = {
     position: [0, 0, 0] as const,
@@ -86,7 +86,8 @@ it('rejects possible mesh/mesh contact but permits fixed, provably separated mes
     inertiaDiagonal: [0, 1, 0] as const,
     gravityFactor: 0
   };
-  expect(() => new GPURigidBodyWorld({bodies: [fixed, wheel]})).toThrow('mesh/mesh');
+  const overlapping = new GPURigidBodyWorld({bodies: [fixed, wheel]});
+  overlapping.destroy();
   const world = new GPURigidBodyWorld({bodies: [fixed, {...wheel, position: [0, 5, 0]}]});
   expect(world.count).toBe(2);
   world.destroy();
@@ -137,7 +138,7 @@ it('keeps volume and COM inertia invariant under a large local translation', () 
   for (const index of [1, 2, 3, 5, 6, 7]) expect(geometry.tensor[index]).toBeCloseTo(0, 10);
 });
 
-it('rejects invalid masses and gravity-driven meshes that cannot remain separated', () => {
+it('rejects invalid masses while permitting gravity-driven mesh pairs', () => {
   for (const mass of [NaN, Infinity, -1]) {
     expect(
       () =>
@@ -147,21 +148,19 @@ it('rejects invalid masses and gravity-driven meshes that cannot remain separate
     ).toThrow('mass');
   }
   const geometry = makeTriangleMeshGeometry([-1, 0, -1, 1, 0, -1, 0, 0, 1], [0, 1, 2]);
-  expect(
-    () =>
-      new GPURigidBodyWorld({
-        bodies: [
-          {position: [0, 0, 0], mass: 0, shape: {type: 'triangle-mesh', geometry}},
-          {
-            position: [0, 5, 0],
-            mode: 'dynamic',
-            mass: 0,
-            inertiaDiagonal: [0, 1, 0],
-            shape: {type: 'triangle-mesh', geometry}
-          }
-        ]
-      })
-  ).toThrow('mesh/mesh');
+  const world = new GPURigidBodyWorld({
+    bodies: [
+      {position: [0, 0, 0], mass: 0, shape: {type: 'triangle-mesh', geometry}},
+      {
+        position: [0, 5, 0],
+        mode: 'dynamic',
+        mass: 0,
+        inertiaDiagonal: [0, 1, 0],
+        shape: {type: 'triangle-mesh', geometry}
+      }
+    ]
+  });
+  world.destroy();
 });
 
 it('packs sparse collider exclusions in sorted unique ranges', () => {
@@ -174,4 +173,16 @@ it('packs sparse collider exclusions in sorted unique ranges', () => {
   expect(packed.filters[0]).toEqual([0, 2]);
   expect(packed.geometry.slice(0, 2)).toEqual([1, 999]);
   expect(packed.geometry).toHaveLength(4);
+});
+
+it('rejects invalid mesh traversal budgets before GPU attachment', () => {
+  for (const maximumMeshTraversalTestsPerPair of [0, -1, 1.5, NaN, Infinity, 1048577]) {
+    expect(
+      () =>
+        new GPURigidBodyWorld({
+          maximumMeshTraversalTestsPerPair,
+          bodies: [{position: [0, 0, 0], shape: {type: 'sphere', radius: 1}}]
+        })
+    ).toThrow('mesh traversal');
+  }
 });

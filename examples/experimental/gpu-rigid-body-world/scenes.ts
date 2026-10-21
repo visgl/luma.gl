@@ -2,9 +2,18 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPURigidBody} from '@luma.gl/gpgpu/gpu-physics';
+import {
+  makeConvexHullGeometry,
+  makeTriangleMeshGeometry,
+  type GPURigidBody
+} from '@luma.gl/gpgpu/gpu-physics';
 
 export const RIGID_BODY_SCENES = {
+  mesh: {
+    title: 'Mesh openings',
+    description:
+      'Two moving triangle-mesh cubes fall toward an original triangle-mesh frame. One passes through the opening and lands on the floor; the other lands on the frame. Collision uses the original triangles, not a convex hull of the frame. This is discrete surface contact: high-speed tunneling and initially contained meshes still require separate handling.'
+  },
   deep: {
     title: 'Deep stack',
     description:
@@ -49,6 +58,60 @@ export const RIGID_BODY_SCENES = {
 export type RigidBodyScene = keyof typeof RIGID_BODY_SCENES;
 
 export function makeRigidBodyScene(scene: RigidBodyScene): GPURigidBody[] {
+  if (scene === 'mesh') {
+    const cube = makeConvexHullGeometry(
+      Array.from({length: 8}, (_, corner) => [
+        corner & 1 ? 0.25 : -0.25,
+        corner & 2 ? 0.25 : -0.25,
+        corner & 4 ? 0.25 : -0.25
+      ]).flat()
+    );
+    const positions: number[] = [];
+    const indices: number[] = [];
+    for (const [center, halfExtents] of [
+      [
+        [-1.5, 0, 0],
+        [0.5, 2, 0.25]
+      ],
+      [
+        [1.5, 0, 0],
+        [0.5, 2, 0.25]
+      ],
+      [
+        [0, -1.5, 0],
+        [1, 0.5, 0.25]
+      ],
+      [
+        [0, 1.5, 0],
+        [1, 0.5, 0.25]
+      ]
+    ]) {
+      const bar = makeConvexHullGeometry(
+        Array.from({length: 8}, (_, corner) =>
+          center.map((value, axis) => value + (corner & (1 << axis) ? 1 : -1) * halfExtents[axis])
+        ).flat()
+      );
+      const firstVertex = positions.length / 3;
+      positions.push(...bar.positions);
+      indices.push(...bar.indices.map(index => firstVertex + index));
+    }
+    return [
+      {
+        position: [0, 0, -0.5],
+        mass: 0,
+        shape: {type: 'box', halfExtents: [7, 7, 0.5]},
+        restitution: 0
+      },
+      {
+        position: [0, 0, 3],
+        mass: 0,
+        shape: {type: 'triangle-mesh', geometry: makeTriangleMeshGeometry(positions, indices)},
+        restitution: 0
+      },
+      {position: [0, 0, 5], shape: {type: 'triangle-mesh', geometry: cube}, restitution: 0},
+      {position: [1.5, 0, 5], shape: {type: 'triangle-mesh', geometry: cube}, restitution: 0}
+    ];
+  }
   if (scene === 'impact')
     return [
       {

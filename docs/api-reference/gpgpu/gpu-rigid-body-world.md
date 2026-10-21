@@ -63,6 +63,7 @@ recovery guarantee for pipeline compilation or driver allocation.
 | `broadPhase` | Automatic | All-pairs if both body and collider counts are at most 128; hierarchical grid otherwise |
 | `maximumPairs` | Power of two covering `max(64, 16 * colliderCount)` | Sparse candidate and persistent pair-cache capacity |
 | `maximumCandidateTestsPerCollider` | `4096` | Hierarchical traversal budget, 1–65,535 |
+| `maximumMeshTraversalTestsPerPair` | `65536` | Mesh BVH node/triangle visits per collider pair per traversal, 1–1,048,576 |
 | `contactSlop` | `0.002` | Allowed contact penetration in world units |
 | `contactMatchDistance` | `0.05` | Distance for matching persistent contacts |
 | `restitutionThreshold` | `0.5` | Closing-speed threshold for bounce |
@@ -120,11 +121,25 @@ graph attachment. Dynamic mesh geometry must be closed with positive volume.
 Convex cooking changes a nonconvex object's collision shape: cavities disappear.
 Primitive parameters do not require matching render tessellation.
 
-Convex/triangle-mesh contacts have bounded GPU work. General moving mesh/mesh
-collision is unsupported. Potential mesh/mesh interactions are rejected unless
-static/static or covered by a conservative fixed-separation proof; bodies needed
-by that proof cannot subsequently be moved through controls. Do not use arbitrary
-collision filtering to disguise missing shape-pair support.
+Convex/mesh and mesh/mesh contacts use bounded GPU traversal of cooked triangle
+hierarchies. Moving meshes retain their original triangles, including nonconvex
+openings; they are not replaced with convex hulls. Both triangle sides participate.
+Mesh pairs use the existing convex contact query on candidate triangle pairs and
+reduce results into the bounded persistent manifold.
+
+These are **discrete surface contacts**. Deep initial containment without intersecting
+surfaces is not detected, and fast bodies may tunnel between steps. Closed positive
+volume is required for dynamic mass properties, but does not turn the surface query
+into a solid-volume containment query. General CCD remains separate work.
+
+`maximumMeshTraversalTestsPerPair` bounds each of two traversal passes (count and
+write), including BVH nodes and triangle visits. Exhaustion sets
+`incompleteMeshQueries`; the shared 65,536-entry triangle-task queue reports overflow
+as `droppedTriangleQueries`. Both make lifetime execution incomplete. Neither a
+larger queue nor a larger budget repairs an already incomplete step: recreate and
+replay as described below. Static/static pairs remain excluded. Direct pose edits
+are no longer constrained by a fixed-separation proof; follow the normal wake and
+cache-invalidation contract after editing bodies.
 
 ## Contacts, friction and solver choice
 
@@ -210,6 +225,7 @@ but occasional sampling can miss a brief overflow.
 | `droppedPairs`, `droppedManifolds` | Cumulative discovery-output or persistent-cache losses |
 | `incompleteQueries`, `invalidBounds` | Cumulative discovery traversal failures |
 | `droppedTriangleQueries`, `unresolvedQueries` | Cumulative bounded mesh/convex-query failures |
+| `incompleteMeshQueries` | Cumulative collider-pair mesh traversal exhaustion |
 | `incompleteIslandUnions` | Cumulative island propagation exhaustion |
 | `maximumCandidatePairs`, `maximumCandidateTests` | Peak per-step discovery demand/work; zero where that discovery path is absent |
 | `saturated` | A lifetime counter exceeded uint32 capacity; sticky |
@@ -239,7 +255,7 @@ restore already-lost contact impulses. There is no automatic resize/retry mechan
 Tests cover coupled tangent response, static friction, moving supports, eight-box
 stacks, sparse discovery, capacity overflow and recovery by replay. These are bounded
 fixtures with tolerances, not qualification for arbitrary scenes. General rigid-body
-CCD, joints/drives, unrestricted moving mesh/mesh response and cross-device bitwise
+CCD, joints/drives, solid mesh containment and cross-device bitwise
 reproducibility remain outside the current contract.
 
 See the [background guide](/docs/api-guide/gpu/gpu-physics),
