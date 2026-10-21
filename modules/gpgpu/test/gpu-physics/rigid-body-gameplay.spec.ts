@@ -173,11 +173,12 @@ it('does not expose the private storage collider in a geometry-free world', asyn
     expect(world.colliderCount).toBe(0);
     expect(
       await world.raycast({origin: [-1, 0, 0], direction: [1, 0, 0], maximumDistance: 2})
-    ).toEqual({hits: [], totalHits: 0, truncated: false});
+    ).toEqual({hits: [], totalHits: 0, truncated: false, complete: true});
     expect(await world.overlapSphere({center: [0, 0, 0], radius: 2})).toEqual({
       hits: [],
       totalHits: 0,
-      truncated: false
+      truncated: false,
+      complete: true
     });
     await expect(
       world.raycast({

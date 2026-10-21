@@ -60,8 +60,18 @@ export {
 } from './rigid-body-events';
 export type {
   GPURigidBodyRayQuery,
+  GPURigidBodySphereCastQuery,
   GPURigidBodyOverlapQuery,
   GPURigidBodyQueryFilter,
   GPURigidBodyQueryHit,
   GPURigidBodyQueryResult
 } from './rigid-body-queries';
+
+export type {GPURigidBodyContinuousOptions} from './rigid-body-continuous';
+
+export type {
+  GPURigidBodyTrigger,
+  GPURigidBodyTriggerEvent,
+  GPURigidBodyTriggerBatch
+} from './rigid-body-triggers';
+export {decodeRigidBodyTriggerEvents} from './rigid-body-triggers';

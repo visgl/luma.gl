@@ -1,6 +1,6 @@
 # GPU Physics Roadmap
 
-Updated: October 20, 2026
+Updated: October 21, 2026
 
 ## Goal and current status
 
@@ -64,6 +64,125 @@ aligned with the machine-readable qualification profile. G8–G12 extend the pro
 toward a competitive general GPU rigid-body library after the glTF milestone.
 
 For the conceptual background, see [GPU physics](../../docs/api-guide/gpu/gpu-physics.md).
+
+## Remaining tranches after Space Salvage
+
+This checkpoint includes the implementation in [#3494](https://github.com/visgl/luma.gl/pull/3494)
+and its stacked prerequisites; it does not imply that these PRs have landed. Space
+Salvage establishes a real consumer of public contact events and queries. It does
+not close G5: its query kernels scan colliders, its event kernel scans the pair
+cache, and docking samples overlap rather than maintaining simulation-step triggers.
+The [feature cards](../../docs/api-reference/gpgpu/gpu-physics.md#feature-cards)
+distinguish usable APIs from remaining qualification work.
+
+Keep G1–G12 stable: these identifiers already connect documentation, fixtures and
+the executable profile. The table below describes **remaining work**, rather than
+starting another numbering sequence or treating an implemented foundation as a
+completed tranche.
+
+| Tranche | Remaining deliverable | Completion evidence | Example / workload |
+| --- | --- | --- | --- |
+| G1 — Capacity-safe execution | Recover or reject a step transactionally when pair, manifold, mesh or event budgets exhaust; checkpoint/grow/replay policy; active-work compaction and reusable indirect queues | Deliberately overflow every queue; never publish a partially accepted step; measure full-step latency, dispatch count and memory across sparse/dense mixed sizes | Capacity stress controls in Rigid Body Lab |
+| G2 — Qualified collision geometry | Pairwise shape matrix, stable feature IDs, degeneracy and sidedness rules, declared closed-solid containment semantics and robust mesh cooking | Independent separation/penetration references; rotated/scaled compounds, thin triangles, holes and moving nonconvex bodies; explicit unsupported cases | Geometry torture scenes and Mesh Openings |
+| G3 — Reliable dynamics and baseline CCD | Mass-ratio/stack/COM convergence; rotational integration checks; parallel-solver qualification; swept broad phase and bounded time-of-impact processing for an explicitly declared shape envelope | Long-running stack and energy tests; fast thin-obstacle and rotating-body cases; timestep convergence and bounded CCD exhaustion | Fast Motion Lab; high-speed salvage debris |
+| G4 — Constraints, limits and drives | Generic attachment-frame constraints; linear/angular limits, springs, motors, caps and connected-body filtering, solved with contacts | Contact-loaded hinges/sliders, chains and composed joints; drift, actuator response and energy budgets | Mechanisms Lab; a real salvage tow joint |
+| G5 — Complete gameplay and behavior queries | Accelerated/batched rays, overlaps and casts for all declared shapes; persistent compound triggers; scalable event compaction; asynchronous tick ordering and glTF physics behavior bindings | Multiple entries/exits between readbacks, disabled/reused IDs, query saturation, all geometry types and original behavior graphs | Salvage docking/hazard volumes; glTF trigger and ray scenes |
+| G6 — glTF ownership and direct GPU publication | Pose/bounds publication, animation/physics precedence, object-model mutation, collider rebuilds, instances and lifecycle/export semantics | No per-frame pose readback; scene switches, reset, independent instances and export/reimport preserve frames and provenance | Animated and interactive glTF physics scenes |
+| G7 — Complete pinned-profile release | Close every normative profile row, including companion behavior operations; package accuracy and performance reports | No missing normative behavior; no skipped feature counted as supported; reproducible integrated/discrete GPU results and a declared mobile envelope | Pinned external assets plus adversarial conformance corpus |
+| G8 — Competitive difficult-contact solving | Compare solver scheduling and stabilization strategies; deep stacks, extreme mass ratios, dense compounds and persistent friction | Matched quality/cost curves against independent engines; long-duration drift/energy regressions | Warehouse piles and heavy-on-light stacks |
+| G9 — Articulations and mechanisms | Reduced-coordinate articulation evaluation, contact coupling, actuator interfaces and supported loop/topology behavior | Reference trajectories, joint drift, force/torque caps, sleep/wake and high-mass-ratio mechanisms | Robot arm, crane and articulated rover |
+| G10 — Large and batched worlds | Independent-world batching, active-island scheduling, mesh queue optimization, shared cooked assets, streaming and origin shifting | World/event isolation; p50/p95 step latency and batched throughput, memory and recovery on the device matrix | Batch benchmark and large debris field |
+| G11 — Advanced collision/material fidelity | Broader translating/rotating CCD and nonconvex envelopes; explicit optional approximations; calibrated rolling/spinning and velocity-dependent materials | Adversarial repeated impacts and measured material cases with provenance and held-out tolerances | Fast rotating machinery and calibrated pool fixtures |
+| G12 — Production qualification | Versioned APIs/cooked assets, capture/replay, command ordering, device-loss recovery, sustained cross-device correctness/performance gates | Reproducible bug captures, resource/lifecycle stress, documented numerical repeatability and supported release envelopes | Replay/debugger and device qualification runner |
+
+### G1/G2/G3/G5 implementation checkpoint
+
+The reliability follow-up implements an opt-in GPU checkpoint/finite-state check/
+rollback boundary, latched failure handling and explicit reconstruction from accepted
+poses with larger budgets. Two graph operations group checkpoint copies and restore
+dispatches; the finite-state validation remains a separate parallel operation.
+
+Queries now run per collider in parallel with deterministic reduction and bounded
+output readback. Shared distance kernels cover analytic tapered shapes, planes,
+convex interiors and original BVH mesh surfaces. Sphere casts report exhausted work
+explicitly. Mesh cooking rejects zero-area float32 triangles. This does not establish
+solid nonconvex containment or complete pairwise G2 collision qualification.
+
+Selected centered dynamic spheres gain bounded static-surface CCD with restitution
+and remaining-time sweeps; rollback rejects budget exhaustion. The Fast sphere /
+thin walls lab demonstrates the envelope. Dynamic-pair/rotating-convex CCD and
+continuous friction/contact-event fidelity remain open G3 work.
+
+Compound spherical sensors now retain simulation-step enter/exit state per target
+body. Optional linear swept sphere crossings produce paired transitions between
+snapshots. Space Salvage uses the sensor events instead of sampled docking queries.
+General sensor shapes, all intermediate compound transitions, batched indexed queries,
+parallel event compaction and glTF behavior bindings remain open G5 work.
+
+These are executable increments across the requested tranches, not closure of the
+G1/G2/G3/G5 qualification programmes. The remaining-deliverable table above still
+sets the completion criteria; production claims require its missing evidence.
+
+### Recommended delivery order
+
+1. **Execution and geometry reliability:** close the G1 failure/publication contract
+   and the highest-risk G2 geometry gaps. Add checkpoint/replay tests before allowing
+   automatic capacity growth. Prototype GPU queue/compaction primitives here for
+   reuse by event and query processing. Capture the current numerical/performance
+   baseline before changing solver scheduling.
+2. **Fast motion and gameplay correctness:** deliver a bounded G3 CCD envelope and
+   the G5 simulation-step trigger/query foundation. Start with sphere/convex casts;
+   explicitly defer other combinations until qualified. Replace sampled salvage
+   docking with trigger events; add fast-motion fixtures. Share swept broad-phase
+   infrastructure, but keep a query cast distinct from a collision response solver.
+3. **Mechanisms:** implement G4 against the shared solver/island contract. A generic
+   constraint representation should cover the proposal's composed limits and drives;
+   convenience hinge/slider APIs should build on it. Add the Mechanisms Lab and a
+   genuine tow joint rather than relabeling the game's force approximation.
+4. **Authored interoperability:** finish G5 behavior bindings and G6 GPU scenegraph
+   publication/ownership together. Specify tick and animation ordering before wiring
+   callbacks. Reuse GPU transforms/bounds infrastructure instead of making glTF
+   kernels part of the physics solver.
+5. **Profile qualification:** close G7 with numeric tolerances, device measurements
+   and the complete pinned corpus. G8 solver experiments can run earlier when they
+   unblock G3, but profile completeness is a separate milestone from competitive
+   performance.
+6. **Competitive library:** advance G8/G10 quality and throughput, then G9 demanding
+   articulations and G11 advanced fidelity according to measured workloads. Build
+   G12 replay, API ownership and failure contracts throughout; final production
+   qualification closes after the earlier gates, rather than starting diagnostics
+   at the end.
+
+Each delivery package can span multiple implementation PRs. In particular, general
+CCD, complete proposal constraints and articulations are substantial algorithmic
+projects; a single demonstration must not be used to mark them complete.
+
+### What would justify a state-of-the-art claim?
+
+Choose concrete workloads and publish the quality/cost frontier: error at a fixed
+step budget, or cost at a fixed error tolerance. Record p50/p95 full-step GPU time,
+CPU encode cost, end-to-end latency, memory, dispatches, awake bodies, contacts,
+iterations, substeps and failures. Include compilation separately. A 10,000-body
+sparse cloud is a scaling fixture, not evidence for dense stacks or robotics.
+
+Use browser/WASM engines as deployment-relevant correctness and cost references,
+and native GPU engines as architectural/throughput references with backend and
+hardware differences disclosed. PhysX's documented [GPU simulation boundaries](https://nvidia-omniverse.github.io/PhysX/physx/5.4.1/docs/GPURigidBodies.html)
+and [articulation model](https://nvidia-omniverse.github.io/PhysX/physx/5.3.0/docs/Articulations.html)
+are useful comparison checklists, not promises that WebGPU offers the same execution
+facilities. Rapier's [CCD documentation](https://rapier.rs/docs/user_guides/c/rigid_body_ccd/)
+is a useful independent reference for separating continuous detection from discrete
+contact behavior.
+
+Set numerical and device budgets in executable fixtures before claiming a tranche
+complete. Do not promise bitwise cross-adapter determinism; specify same-device
+repeatability and tolerance-based cross-device behavior separately. GPU-resident
+simulation must not require CPU contact solving or per-body readback to advance.
+Optional gameplay/event reads and offline CPU cooking remain valid design choices.
+
+Cloth, soft bodies, fluids, fracture and differentiable simulation remain separate
+programmes. They should not delay a well-qualified rigid-body library or be implied
+by its SOTA target.
 
 ## Active programme: glTF physics qualification first
 
