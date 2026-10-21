@@ -95,3 +95,18 @@ test('audio graph applies authored linear and custom gain transitions', async ()
     graph.destroy();
   }
 });
+
+test('audio graph rejects unsupported multi-port bypass before allocating processors', () => {
+  const context = new OfflineAudioContext(2, 512, 48000);
+  for (const kind of ['splitter', 'channelmerger'] as const) {
+    expect(
+      () =>
+        new GLTFAudioGraph(
+          {nodes: [{kind, bypass: true, params: {}}], connections: []},
+          context,
+          context.destination,
+          () => []
+        )
+    ).toThrow();
+  }
+});

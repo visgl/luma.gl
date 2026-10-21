@@ -398,3 +398,72 @@ test('environment controller loads a separate impulse response and routes a wet-
   audio.destroy();
   scenegraphs.destroy();
 });
+
+test('audio graphs ignore inactive-scene sources and preserve authored graph indices', async () => {
+  const scenegraphs = await makeScene({global: true, inactiveAudio: true});
+  scenegraphs.gltf.extensions!['KHR_audio_graph'] = {
+    graphs: [
+      {
+        nodes: [{kind: 'gain', params: {gain: 1}}],
+        connections: [],
+        inputs: [{source: 1, node: 0}],
+        outputs: [{node: 0, emitter: 99}]
+      },
+      {
+        nodes: [{kind: 'gain', params: {gain: 1}}],
+        connections: [],
+        inputs: [{source: 0, node: 0}],
+        outputs: [{node: 0, emitter: 0}]
+      }
+    ]
+  };
+  const context = new OfflineAudioContext(2, 4800, 48000);
+  const requests: string[] = [];
+  const audio = new GLTFAudioController({
+    scenegraphs,
+    audioContext: context,
+    baseUrl: 'https://example.com/model.gltf',
+    fetch: async (input, options) => {
+      requests.push(String(input));
+      if (!String(input).startsWith('data:')) throw new Error('Inactive source fetched');
+      return fetch(input, options);
+    }
+  });
+  await audio.play();
+  audio.setGraphGain(1, 0, 0.5);
+  expect(requests).toHaveLength(1);
+  const rendered = await context.startRendering();
+  expect(energy(rendered, 0)).toBeGreaterThan(0);
+  audio.destroy();
+  scenegraphs.destroy();
+});
+
+test('restarting audio resets relative authored source timing', async () => {
+  const scenegraphs = await makeScene({global: true});
+  const extension = scenegraphs.gltf.extensions!['KHR_audio_emitter'] as GLTFAudioExtension;
+  extension.audio = [];
+  extension.sources = [
+    {
+      extensions: {
+        KHR_audio_graph: {oscillator: {type: 'sine', frequency: 440}, when: 0.01, duration: 0.02}
+      }
+    }
+  ];
+  const context = new OfflineAudioContext(1, 4800, 48000);
+  const audio = new GLTFAudioController({
+    scenegraphs,
+    audioContext: context,
+    baseUrl: 'https://example.com/model.gltf'
+  });
+  await audio.play();
+  const suspended = context.suspend(0.05);
+  const rendering = context.startRendering();
+  await suspended;
+  await audio.play();
+  await context.resume();
+  const samples = (await rendering).getChannelData(0);
+  expect(samples.slice(2520, 2800).every(value => Math.abs(value) < 0.00001)).toBe(true);
+  expect(samples.slice(3200, 3500).some(value => Math.abs(value) > 0.01)).toBe(true);
+  audio.destroy();
+  scenegraphs.destroy();
+});

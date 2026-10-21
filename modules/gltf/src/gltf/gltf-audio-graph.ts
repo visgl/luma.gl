@@ -52,6 +52,9 @@ export class GLTFAudioGraph {
     destination: AudioNode,
     getEmitterInputs: (index: number) => readonly AudioNode[]
   ) {
+    // Multi-port routing processors cannot be replaced by a one-port bypass gain.
+    for (const node of definition.nodes)
+      assert(!node.bypass || (node.kind !== 'splitter' && node.kind !== 'channelmerger'));
     // Validate graph topology before allocating Web Audio resources.
     const validateEndpoint = (index: number, port = 0): void => {
       // Graph endpoints must name an existing node and a nonnegative integer port.
