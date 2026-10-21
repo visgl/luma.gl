@@ -259,9 +259,10 @@ describe('ExampleSettingsPanelManager', () => {
   });
 
   test.each([
-    'cinematic',
-    'light'
-  ] as const)('renders shared source code with the inherited %s visual theme', async appearance => {
+    ['cinematic', undefined],
+    ['light', undefined],
+    ['cinematic', ['gltf/features/app.ts']]
+  ] as const)('renders shared source code with the inherited %s visual theme', async (appearance, sourcePaths) => {
     const exampleWindow = window as Window & {website?: boolean};
     const previousWebsiteState = exampleWindow.website;
     const previousUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
@@ -278,6 +279,7 @@ describe('ExampleSettingsPanelManager', () => {
       panelManager = new ExamplePanelManager({
         panel: makeExampleTabbedPanel({
           id: 'themed-source-tabs',
+          sourcePaths,
           title: 'Themed example source',
           panels: [
             makeHtmlCustomPanel({
@@ -299,6 +301,11 @@ describe('ExampleSettingsPanelManager', () => {
       sourceButton.click();
 
       await vi.waitFor(() => {
+        if (sourcePaths)
+          expect(fetchMock).toHaveBeenCalledWith(
+            '/example-assets/gltf/features/app.ts',
+            expect.objectContaining({signal: expect.any(AbortSignal)})
+          );
         const sourceViewer = document.querySelector<HTMLElement>('[data-example-source-viewer]');
         expect(sourceViewer?.textContent).toContain('export const sourceTheme = true;');
         expect(sourceViewer?.style.background).toContain('var(--luma-example-surface');

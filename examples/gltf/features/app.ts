@@ -33,7 +33,7 @@ import {GLTF_FEATURE_PRESETS, type GLTFFeature} from './presets';
 
 import {AREA_LIGHT_DEMO_URL} from './area-light-demo';
 import {AreaLightOutlines} from './area-light-outlines';
-import {BoxPanelContainer, PanelManager} from '@deck.gl-community/panels';
+import {BoxPanelContainer, ColumnPanel, PanelManager} from '@deck.gl-community/panels';
 import {
   configurePanelHostElement,
   makeExampleTabbedPanel,
@@ -136,13 +136,19 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const attributions = document.createElement('section');
     attributions.className = 'gltf-example-details';
     attributions.innerHTML = SCATTER_INFO_HTML;
+    attributions.querySelector('#error')?.remove();
     document.getElementById('info')?.remove();
+    const loadError = document.createElement('div');
+    loadError.id = 'error';
+    loadError.setAttribute('role', 'alert');
+    loadError.style.display = 'none';
     canvas.parentElement?.append(host);
     const mountContent = (root: HTMLElement, content: HTMLElement) => {
       configurePanelHostElement(root, 'cinematic');
       root.append(content);
     };
-    const panel = makeExampleTabbedPanel({
+    const tabs = makeExampleTabbedPanel({
+      sourcePaths: ['gltf/features/app.ts'],
       id: 'scatter-tabs',
       title: '',
       theme: 'dark',
@@ -165,6 +171,20 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           html: '',
           onRender: root => mountContent(root, attributions)
         })
+      ]
+    });
+    const panel = new ColumnPanel({
+      id: 'scatter-content',
+      title: '',
+      theme: 'dark',
+      panels: [
+        makeHtmlCustomPanel({
+          id: 'scatter-load-error',
+          title: '',
+          html: '',
+          onRender: root => mountContent(root, loadError)
+        }),
+        tabs
       ]
     });
     this.scatterPanelHost = host;
