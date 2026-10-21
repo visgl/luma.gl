@@ -5,7 +5,7 @@
 import type {GLTFPostprocessed} from '@loaders.gl/gltf';
 import {Buffer, Texture} from '@luma.gl/core';
 import {ModelNode} from '@luma.gl/engine';
-import type {AreaLight} from '@luma.gl/shadertools';
+import {type AreaLight, pbrScene, pbrMaterial, skin} from '@luma.gl/shadertools';
 import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {expect, test} from 'vitest';
@@ -54,7 +54,12 @@ test('area lights render one-sided rectangles and disks with physical size and i
   const devices = webgl ? [webgl, ...webgpu] : webgpu;
   expect(devices.length).toBeGreaterThan(0);
   for (const device of devices) {
-    const bundle = createScenegraphsFromGLTF(device, makeReceiver());
+    const bundle = createScenegraphsFromGLTF(device, makeReceiver(), {
+      modelOptions: {
+        modules: [pbrScene, pbrMaterial, skin],
+        defines: {USE_SCENE_COLOR_MANAGEMENT: true}
+      }
+    });
     const models: ModelNode[] = [];
     bundle.scenes[0].traverse(node => {
       if (node instanceof ModelNode) models.push(node);
@@ -96,6 +101,7 @@ test('area lights render one-sided rectangles and disks with physical size and i
         node.model.shaderInputs.setProps({
           lighting: {lights: [{type: 'ambient', color: [0, 0, 0], intensity: 0}]},
           areaLighting: {lights: [area]},
+          pbrScene: {exposure: 1, toneMapMode: 0, outputEncoding: 0},
           pbrProjection: {
             modelMatrix: new Matrix4(),
             modelViewProjectionMatrix: new Matrix4(),

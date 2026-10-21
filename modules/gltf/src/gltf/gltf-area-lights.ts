@@ -30,14 +30,14 @@ export class GLTFAreaLightController {
 
   constructor({gltf, scenes, gltfNodeIndexToNodeMap}: GLTFAreaLightControllerProps) {
     this.scenes = scenes;
-    const lights = gltf.extensions?.['EXT_lights_area']?.lights as
+    const lights = gltf.extensions?.['EXT_lights_area']?.['lights'] as
       | AreaLightDefinition[]
       | undefined;
     for (const [index, source] of gltf.nodes.entries()) {
       const node = gltfNodeIndexToNodeMap.get(index);
       if (!node) continue;
       this.sourceNodes.set(node, source);
-      const lightIndex = source.extensions?.['EXT_lights_area']?.light;
+      const lightIndex = source.extensions?.['EXT_lights_area']?.['light'];
       if (lightIndex === undefined) continue;
       const definition = lights?.[lightIndex];
       // Every node light reference must resolve to a supported shape and finite physical values.

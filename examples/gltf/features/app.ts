@@ -6,10 +6,14 @@ import {AnimationLoopTemplate, AnimationProps, ModelNode, OrbitControls} from '@
 import {Device, log} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
-import {createScenegraphsFromGLTF, GLTFBillboardController} from '@luma.gl/gltf';
-import {Light, LightingProps} from '@luma.gl/shadertools';
-import {Matrix4} from '@math.gl/core';
-import {INFO_HTML, LIGHTMAP_INFO_HTML, showError} from './app-ui';
+import {
+  createScenegraphsFromGLTF,
+  GLTFBillboardController,
+  GLTFAreaLightController
+} from '@luma.gl/gltf';
+import {Light, LightingProps, pbrMaterial, pbrScene, skin} from '@luma.gl/shadertools';
+import {Matrix4, Vector3} from '@math.gl/core';
+import {INFO_HTML, LIGHTMAP_INFO_HTML, AREA_LIGHT_INFO_HTML, showError} from './app-ui';
 
 import {GLTF_FEATURE_PRESETS, type GLTFFeature} from './presets';
 
@@ -42,7 +46,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
   static getInfo(feature: GLTFFeature): string {
-    return feature === 'lightmap' ? LIGHTMAP_INFO_HTML : INFO_HTML;
+    return feature === 'area-lights'
+      ? AREA_LIGHT_INFO_HTML
+      : feature === 'lightmap'
+        ? LIGHTMAP_INFO_HTML
+        : INFO_HTML;
   }
 
   device: Device;
@@ -50,6 +58,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   scenegraphsFromGLTF?: ReturnType<typeof createScenegraphsFromGLTF>;
   modelLights: Light[] = [];
   billboardController?: GLTFBillboardController;
+  areaLightController?: GLTFAreaLightController;
+  cameraFieldOfView = Math.PI / 3;
   center = [0, 0, 0];
   cameraHeight = 0;
   sceneRadius = 1;
@@ -82,6 +92,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.isFinalized = true;
     this.orbitControls.destroy();
     this.billboardController?.destroy();
+    this.areaLightController?.destroy();
 
     destroyScenegraphs(this.scenegraphsFromGLTF);
     this.scenegraphsFromGLTF = undefined;
@@ -102,13 +113,40 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       showError();
       canvas.style.opacity = '0.2';
 
-      const gltf = await load(GLTF_FEATURE_PRESETS[this.feature].modelUrl, GLTFLoader);
+      const preset = GLTF_FEATURE_PRESETS[this.feature];
+      const gltf = await load(
+        preset.modelUrl,
+        GLTFLoader,
+        this.feature === 'area-lights'
+          ? {
+              fetch: (input: RequestInfo | URL, options?: RequestInit) => {
+                const url =
+                  typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+                const resource =
+                  url === preset.modelUrl
+                    ? url
+                    : url.replace(
+                        'https://raw.githubusercontent.com/',
+                        'https://media.githubusercontent.com/media/'
+                      );
+                return globalThis.fetch(resource, options);
+              }
+            }
+          : {}
+      );
       if (this.isFinalized) return;
       const processedGLTF = postProcessGLTF(gltf);
       const scenegraphsFromGLTF = createScenegraphsFromGLTF(this.device, processedGLTF, {
         lights: true,
         pbrDebug: false,
-        useTangents: true
+        useTangents: true,
+        modelOptions:
+          this.feature === 'area-lights'
+            ? {
+                modules: [pbrScene, pbrMaterial, skin],
+                defines: {USE_SCENE_COLOR_MANAGEMENT: true}
+              }
+            : undefined
       });
 
       if (this.isFinalized) {
@@ -119,6 +157,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       destroyScenegraphs(this.scenegraphsFromGLTF);
       this.scenegraphsFromGLTF = scenegraphsFromGLTF;
       this.modelLights = scenegraphsFromGLTF.lights;
+      this.areaLightController?.destroy();
+      this.areaLightController =
+        this.feature === 'area-lights'
+          ? new GLTFAreaLightController({gltf: processedGLTF, ...scenegraphsFromGLTF})
+          : undefined;
       this.billboardController?.destroy();
       this.billboardController = new GLTFBillboardController({
         gltf: processedGLTF,
@@ -138,6 +181,27 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         maxDistance: Math.max(this.sceneRadius * 32, 12)
       });
 
+      if (this.feature === 'area-lights') {
+        const sourceCameraIndex = processedGLTF.nodes.findIndex(node => node.camera !== undefined);
+        const cameraNode = scenegraphsFromGLTF.gltfNodeIndexToNodeMap.get(sourceCameraIndex);
+        for (const scene of scenegraphsFromGLTF.scenes)
+          scene.preorderTraversal((node, {worldMatrix}) => {
+            if (node !== cameraNode) return;
+            const eye = new Vector3(worldMatrix.getTranslation());
+            const forward = new Vector3(0, 0, -1).transformAsVector(worldMatrix).normalize();
+            const distance = Math.max(this.sceneRadius * 0.5, 0.1);
+            this.center = Array.from(new Vector3(eye).add(forward.scale(distance)));
+            this.cameraHeight = this.center[1];
+            const offset = new Vector3(eye).subtract(this.center);
+            this.orbitControls.setProps({
+              target: [this.center[0], this.center[1], this.center[2]],
+              distance,
+              yaw: Math.atan2(offset[0], offset[2]),
+              pitch: Math.asin(offset[1] / distance)
+            });
+          });
+        this.cameraFieldOfView = processedGLTF.cameras[0]?.perspective?.yfov || Math.PI / 3;
+      }
       canvas.style.opacity = '1';
       showError();
     } catch (error) {
@@ -165,18 +229,25 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const orbitDistance = this.orbitControls.distance;
     const far = Math.max(orbitDistance + this.sceneRadius * 8, 10);
     const near = Math.max(this.sceneRadius / 1000, 0.01);
-    const projectionMatrix = new Matrix4().perspective({fovy: Math.PI / 3, aspect, near, far});
+    const projectionMatrix = new Matrix4().perspective({
+      fovy: this.cameraFieldOfView,
+      aspect,
+      near,
+      far
+    });
     const cameraPos = this.orbitControls.getEyePosition();
-    cameraPos[1] =
-      this.cameraHeight + (cameraPos[1] - this.cameraHeight) * CAMERA_TILT_HEIGHT_FACTOR;
+    if (this.feature !== 'area-lights')
+      cameraPos[1] =
+        this.cameraHeight + (cameraPos[1] - this.cameraHeight) * CAMERA_TILT_HEIGHT_FACTOR;
     const viewMatrix = new Matrix4().lookAt({eye: cameraPos, center: this.center});
     const lighting =
-      this.feature === 'lightmap'
-        ? {lights: []}
+      this.feature === 'lightmap' || this.feature === 'area-lights'
+        ? {lights: [{type: 'ambient' as const, color: [0, 0, 0] as const, intensity: 0}]}
         : this.modelLights.length > 0
           ? {lights: this.modelLights}
           : lightSources;
 
+    const areaLights = this.areaLightController?.getLights();
     for (const {node, modelMatrix, overlay} of this.billboardController!.getDrawEntries({
       viewMatrix
     })) {
@@ -188,6 +259,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
       model.shaderInputs.setProps({
         lighting,
+        ...(areaLights
+          ? {
+              areaLighting: {lights: areaLights},
+              pbrScene: {exposure: 0.03, toneMapMode: 2, outputEncoding: 1}
+            }
+          : {}),
         pbrProjection: {
           camera: cameraPos,
           modelViewProjectionMatrix,

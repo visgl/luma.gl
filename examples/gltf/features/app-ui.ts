@@ -36,3 +36,11 @@ export const LIGHTMAP_INFO_HTML = `
 <p><a href="https://github.com/bhouston/three.js/tree/91de5714e5abaf1f7105f4f1c8858bed93171a25/examples/models/gltf/LightmappedCornellBox">Source and attribution</a></p>
 <div id="error" style="color: #b00020; margin-top: 8px;"></div>
 `;
+
+export const AREA_LIGHT_INFO_HTML = `
+<p>EXT_lights_area draft: rectangle lighting in The Modern Living Room.</p>
+<p>Scene by Wig42, CC BY 3.0. Scene conversion by Benedikt Bitterli; glTF conversion from Foundation Resources.</p>
+<p><a href="https://creativecommons.org/licenses/by/3.0/">License</a> · <a href="https://github.com/mos9527/Foundation-Resources/tree/3c8df40aece172360612d5a01177d91d6b4ab3e6/living-room-3">Source</a></p>
+<p>Downloads 33 MB of geometry plus textures. Direct lighting uses 16 surface samples per light; shadows and indirect bounce are not simulated.</p>
+<div id="error" style="color: #b00020; margin-top: 8px;"></div>
+`;

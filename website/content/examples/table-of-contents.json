@@ -42,7 +42,7 @@
   {
     "type": "category",
     "label": "glTF proposed features",
-    "items": ["showcase/gltf-audio", "showcase/gltf-billboard", "showcase/gltf-lightmap", "gltf/physics"]
+    "items": ["showcase/gltf-audio", "showcase/gltf-billboard", "showcase/gltf-lightmap", "showcase/gltf-area-lights", "gltf/physics"]
   },
   {
     "type": "category",

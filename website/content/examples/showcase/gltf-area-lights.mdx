@@ -1,0 +1,21 @@
+---
+title: glTF Area Lights
+description: Rectangle lighting in the original Modern Living Room scene.
+sidebar_custom_props:
+  backends: [webgpu, webgl2]
+  difficulty: advanced
+  maturity: experimental
+  topics: [gltf, rendering]
+---
+
+import {GLTFFeatureExample} from '@site/src/examples';
+
+<GLTFFeatureExample feature="area-lights" />
+
+The Modern Living Room is by Wig42, licensed [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).
+Scene conversion by Benedikt Bitterli; the glTF conversion is loaded from the pinned
+Foundation Resources source repository, including its original area-light records.
+Geometry is about 33 MB, plus textures delivered from the repository's Git LFS media endpoints.
+
+This experimental profile uses sixteen surface samples per light. Direct PBR
+illumination supports rectangles and disks; shadows and indirect bounce are not simulated.
