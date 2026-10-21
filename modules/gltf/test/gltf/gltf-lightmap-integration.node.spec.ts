@@ -199,3 +199,19 @@ test('KHR_lightmap private materials keep pointer animation while preserving atl
   expect(models.map(getLightmapIntensity)).toEqual([2, 0.5]);
   bundle.destroy();
 });
+
+test('KHR_lightmap validates UVs after complete node overrides replace unused material bindings', () => {
+  const source = makeDocument();
+  const attributes = source.meshes[0].primitives[0].attributes;
+  attributes.TEXCOORD_0 = attributes.TEXCOORD_1;
+  delete attributes.TEXCOORD_1;
+  for (const node of source.nodes)
+    node.extensions = {
+      KHR_lightmap: {lightmaps: [{primitive: 0, lightmapTexture: {index: 0, texCoord: 0}}]}
+    };
+  const bundle = createScenegraphsFromGLTF(new NullDevice({}), source);
+  expect(collectModels(bundle.scenes).map(getLightmapIntensity)).toEqual([1, 1]);
+  bundle.destroy();
+  source.nodes[1].extensions = {};
+  expect(() => createScenegraphsFromGLTF(new NullDevice({}), source)).toThrow();
+});

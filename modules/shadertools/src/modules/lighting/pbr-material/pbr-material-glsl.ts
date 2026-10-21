@@ -1269,6 +1269,7 @@ vec4 pbr_filterColor(vec4 vertexColor)
       }
 #endif
 
+      // The pinned KHR_lightmap draft explicitly defines c_diff = (1 - metallic) * baseColor.
       color += baseColor.rgb * (1.0 - metallic) * lightmapIrradiance / M_PI;
 
 #ifdef HAS_OCCLUSIONMAP

@@ -33,6 +33,7 @@ import {
 import type {GLTFPrimitiveMaterialVariants} from '../gltf/gltf-material-variants';
 import {type GLTFMorphTargetState, setGLTFMorphWeights} from '../gltf/morph-targets';
 import {type PBREnvironment} from '../pbr/pbr-environment';
+import {resolveTextureCoordinateSet} from '../pbr/texture-transform';
 import {
   normalizeGLTFTopology,
   type NormalizedGLTFTopology
@@ -61,6 +62,7 @@ export type ParseGLTFOptions = {
 type ParseGLTFInternalOptions = Required<ParseGLTFOptions> & {
   generatedTextures: Set<Texture>;
   materialInstances: Map<number, Material[]>;
+  validateAttributes?: boolean;
 };
 
 const defaultOptions: Required<ParseGLTFOptions> = {
@@ -128,13 +130,10 @@ export function parseGLTF(
 
   const gltfMeshIdToNodeMap = new Map<string, GroupNode>();
   gltf.meshes.forEach((gltfMesh, idx) => {
-    const newMesh = createNodeForGLTFMesh(
-      device,
-      gltfMesh,
-      gltf,
-      gltfMaterialIdToMaterialMap,
-      combinedOptions
-    );
+    const newMesh = createNodeForGLTFMesh(device, gltfMesh, gltf, gltfMaterialIdToMaterialMap, {
+      ...combinedOptions,
+      validateAttributes: false
+    });
     gltfMeshIdToNodeMap.set(gltfMesh.id, newMesh);
   });
 
@@ -169,6 +168,19 @@ export function parseGLTF(
         | GLTFNodeLightmapExtension
         | undefined;
       if (nodeLightmap) validateGLTFNodeLightmaps(nodeLightmap, sourceMesh.primitives.length);
+      for (const [primitiveIndex, primitive] of sourceMesh.primitives.entries()) {
+        const binding =
+          nodeLightmap?.lightmaps.find(lightmap => lightmap.primitive === primitiveIndex) ||
+          primitive.material?.extensions?.['KHR_lightmap'];
+        if (binding) {
+          const coordinateSet = resolveTextureCoordinateSet(binding.lightmapTexture);
+          // Validate the effective binding, after complete node overrides have been selected.
+          assert(
+            (coordinateSet === 0 || coordinateSet === 1) &&
+              Boolean(primitive.attributes[`TEXCOORD_${coordinateSet}`])
+          );
+        }
+      }
       const hasMorphTargets = sourceMesh.primitives.some(primitive =>
         Boolean(primitive.targets?.length)
       );
