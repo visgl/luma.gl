@@ -49,8 +49,10 @@ struct QueryOutput { count:u32, total:u32, reserved:vec2u, hits:array<QueryHit> 
    if(shape.w==0.0){let lengthFromCenter=length(origin);hit=lengthFromCenter<=shape.x+query.origin.w;normal=select(vec3f(1,0,0),origin/max(lengthFromCenter,1e-20),lengthFromCenter>1e-20);point=normal*shape.x;}
    else {point=clamp(origin,-shape.xyz,shape.xyz);let separation=origin-point;let lengthFromSurface=length(separation);hit=lengthFromSurface<=query.origin.w;normal=separation/max(lengthFromSurface,1e-20);}
   }else if(shape.w==0.0){
-   let projection=dot(origin,direction);let constant=dot(origin,origin)-shape.x*shape.x;let discriminant=projection*projection-constant;
-   if(constant<=0.0){hit=true;}
+   let projection=dot(origin,direction);
+   // Avoid cancellation between large squared distances for distant rays.
+   let perpendicular=origin-direction*projection;let discriminant=shape.x*shape.x-dot(perpendicular,perpendicular);
+   if(dot(origin,origin)<=shape.x*shape.x){hit=true;}
    else if(discriminant>=0.0){distance=-projection-sqrt(discriminant);hit=distance>=0.0;point=origin+direction*distance;normal=normalize(point);}
   }else{
    var enter=0.0;var leave=query.direction.w;hit=true;

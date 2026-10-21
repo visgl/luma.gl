@@ -191,3 +191,31 @@ it('does not expose the private storage collider in a geometry-free world', asyn
     world.destroy();
   }
 });
+
+it('distinguishes distant sphere ray misses without subtracting large squared distances', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU is unavailable');
+  const world = new GPURigidBodyWorld({
+    enableQueries: true,
+    bodies: [{position: [0, 0, 0], shape: {type: 'sphere', radius: 1}}]
+  });
+  const definition = new GPUCommandGraph(device);
+  world.addToGraph(definition);
+  try {
+    expect(
+      (
+        await world.raycast({
+          origin: [10000, 1.5, 0],
+          direction: [-1, 0, 0],
+          maximumDistance: 20000
+        })
+      ).hits
+    ).toEqual([]);
+    const hit = (
+      await world.raycast({origin: [10000, 0.5, 0], direction: [-1, 0, 0], maximumDistance: 20000})
+    ).hits[0];
+    expect(hit.distance).toBeCloseTo(10000 - Math.sqrt(0.75), 2);
+  } finally {
+    world.destroy();
+  }
+});
