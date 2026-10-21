@@ -9,12 +9,14 @@ import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {createSalvagePanel} from './info-box';
 import {CARGO_IDS, DOCK, makeSalvageScene} from './scene';
 import {makeSalvageRenderer} from './renderer';
+import {createCollisionFeedback} from './feedback';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#world')!;
 const status = document.querySelector<HTMLOutputElement>('#status')!;
 const targetLabel = document.querySelector<HTMLElement>('#target')!;
 const overlay = document.querySelector<HTMLElement>('#restart-overlay')!;
 const keys = new Set<string>();
+const feedback = createCollisionFeedback();
 const diagnostics = new GPUGraphDiagnostics({traceTitle: 'GPU Graph Timeline'});
 const panel = createSalvagePanel(diagnostics);
 let aim: [number, number, number] = [0, 0, 0];
@@ -34,6 +36,7 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) releaseControls();
 });
 window.addEventListener('keydown', event => {
+  feedback.unlock();
   if (
     [
       'ArrowUp',
@@ -62,6 +65,7 @@ canvas.addEventListener('pointermove', event => {
   ];
 });
 canvas.addEventListener('pointerdown', event => {
+  feedback.unlock();
   canvas.focus();
   canvas.setPointerCapture(event.pointerId);
   const bounds = canvas.getBoundingClientRect();
@@ -86,6 +90,11 @@ for (const button of document.querySelectorAll<HTMLButtonElement>('[data-key]'))
   };
   button.onpointerup = button.onpointercancel = () => keys.delete(button.dataset.key!);
 }
+document.querySelector<HTMLButtonElement>('#sound')!.onclick = event => {
+  (event.currentTarget as HTMLButtonElement).textContent = feedback.toggleSound()
+    ? 'Sound on'
+    : 'Sound off';
+};
 document.querySelector<HTMLButtonElement>('#reset')!.onclick = () => {
   resetRequested = true;
 };
@@ -151,6 +160,7 @@ try {
     disposed = true;
     destroyMission();
     panel.destroy();
+    feedback.destroy();
     device.destroy();
   };
   const endMission = (success: boolean) => {
@@ -168,6 +178,7 @@ try {
     try {
       if (deviceError) throw deviceError;
       if (resetRequested) {
+        feedback.clear();
         destroyMission();
         diagnostics.clear();
         mission = await createMission();
@@ -261,6 +272,7 @@ try {
             throw new Error('Collision event capacity exhausted. Restart the mission.');
           eventCount += events.events.length;
           for (const event of events.events) {
+            feedback.impact(event, extentX, extentY);
             if (event.phase !== 'end' && event.bodies.includes(0) && event.normalImpulse > 3) {
               hull = Math.max(0, hull - (event.normalImpulse - 3) * 1.2);
             }

@@ -21,7 +21,8 @@ or CPU collision implementation.
 
 Physics advances on the GPU at 120 Hz with at most four catch-up steps and one pending
 frame. Body poses feed rendering directly; asynchronous snapshots drive gameplay and
-UI. Contact events drive hull damage. Diagnostic failures/event loss stop the game
+UI. Contact events drive hull damage, bounded spark bursts and synthesized impact sounds.
+Audio starts only after interaction and can be muted in the InfoBox. Diagnostic failures/event loss stop the game
 rather than accepting incomplete simulation. There is no general CCD; use moderate
 speeds. The collapsed standard InfoBox includes GPU Graph and GPU Graph Timeline tabs.
 

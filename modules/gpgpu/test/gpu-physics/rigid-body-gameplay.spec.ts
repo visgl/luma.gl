@@ -159,3 +159,35 @@ it('reports overwritten contact events instead of silently losing them', async c
     world.destroy();
   }
 });
+
+it('does not expose the private storage collider in a geometry-free world', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU is unavailable');
+  const world = new GPURigidBodyWorld({
+    enableQueries: true,
+    bodies: [{position: [0, 0, 0], colliders: []}]
+  });
+  const definition = new GPUCommandGraph(device);
+  world.addToGraph(definition);
+  try {
+    expect(world.colliderCount).toBe(0);
+    expect(
+      await world.raycast({origin: [-1, 0, 0], direction: [1, 0, 0], maximumDistance: 2})
+    ).toEqual({hits: [], totalHits: 0, truncated: false});
+    expect(await world.overlapSphere({center: [0, 0, 0], radius: 2})).toEqual({
+      hits: [],
+      totalHits: 0,
+      truncated: false
+    });
+    await expect(
+      world.raycast({
+        origin: [0, 0, 0],
+        direction: [1, 0, 0],
+        maximumDistance: 2,
+        colliderIndices: [0]
+      })
+    ).rejects.toThrow('Invalid query collider');
+  } finally {
+    world.destroy();
+  }
+});

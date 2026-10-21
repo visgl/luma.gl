@@ -1136,10 +1136,11 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
           query.excludeBody >= this.count))
     )
       throw new Error('Invalid collision query');
-    const selected = query.colliderIndices ?? this.colliders.map((_, index) => index);
+    const selected =
+      query.colliderIndices ?? Array.from({length: this.colliderCount}, (_, index) => index);
     const selection = new Uint32Array(this.colliderStorageCount);
     for (const index of selected) {
-      if (!Number.isInteger(index) || !this.colliders[index])
+      if (!Number.isInteger(index) || index < 0 || index >= this.colliderCount)
         throw new Error('Invalid query collider');
       const collider = this.colliders[index];
       if (collider.body === query.excludeBody) continue;
