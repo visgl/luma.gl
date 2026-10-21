@@ -21,8 +21,9 @@ import {
   showLoadingSpinner
 } from './app-ui';
 
-import {GLTF_FEATURE_PRESETS, AREA_LIGHT_SOURCE_URL, type GLTFFeature} from './presets';
+import {GLTF_FEATURE_PRESETS, type GLTFFeature} from './presets';
 
+import {AREA_LIGHT_DEMO_URL} from './area-light-demo';
 import {AreaLightOutlines} from './area-light-outlines';
 
 const MAX_CAMERA_TILT = 0.6;
@@ -70,7 +71,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   areaLightOutlines?: AreaLightOutlines;
   showAreaLights = true;
   cutawayWalls = true;
-  areaScene: 'demo' | 'living-room' = 'demo';
+  areaScene: 'demo' | 'living-room' = 'living-room';
   loadGeneration = 0;
   readonly wallModels = new Set<ModelNode>();
   cameraFieldOfView = Math.PI / 3;
@@ -125,7 +126,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   private handleAreaScene = (event: Event): void => {
     if (!(event.target instanceof HTMLSelectElement) || event.target.id !== 'area-light-scene')
       return;
-    this.areaScene = event.target.value === 'living-room' ? 'living-room' : 'demo';
+    this.areaScene = event.target.value === 'demo' ? 'demo' : 'living-room';
     void this.loadGLTF();
   };
 
@@ -191,8 +192,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
       const preset = GLTF_FEATURE_PRESETS[this.feature];
       const modelUrl =
-        this.feature === 'area-lights' && this.areaScene === 'living-room'
-          ? AREA_LIGHT_SOURCE_URL
+        this.feature === 'area-lights' && this.areaScene === 'demo'
+          ? AREA_LIGHT_DEMO_URL
           : preset.modelUrl;
       const gltf = await load(
         modelUrl,

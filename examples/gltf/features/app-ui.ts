@@ -38,9 +38,9 @@ export const LIGHTMAP_INFO_HTML = `
 `;
 
 export const AREA_LIGHT_INFO_HTML = `
-<p>EXT_lights_area draft: warm rectangle and cool disk illuminate a simple room. The visible panels match the actual emitting shapes. Gold outlines are optional diagnostics.</p>
-<p><label>Scene <select id="area-light-scene"><option value="demo">Rectangle and disk</option><option value="living-room">Upstream living room</option></select></label></p>
-<p>Optional upstream living room by Wig42, CC BY 3.0. Scene conversion by Benedikt Bitterli; glTF conversion from Foundation Resources.</p>
+<p>EXT_lights_area draft: the upstream living room has two rectangular emitters. Gold outlines show their positions and sizes. Numerical integration may still show sampling artifacts on glossy surfaces; this profile is experimental.</p>
+<p><label>Scene <select id="area-light-scene"><option value="living-room">Upstream living room</option><option value="demo">Rectangle and disk diagnostic</option></select></label></p>
+<p>Upstream living room by Wig42, CC BY 3.0. Scene conversion by Benedikt Bitterli; glTF conversion from Foundation Resources.</p>
 <p><a href="https://creativecommons.org/licenses/by/3.0/">License</a> · <a href="https://github.com/mos9527/Foundation-Resources/tree/3c8df40aece172360612d5a01177d91d6b4ab3e6/living-room-3">Source</a></p>
 <p><label><input id="cutaway-walls" type="checkbox" checked /> Cutaway walls</label></p>
 <p><label><input id="show-area-lights" type="checkbox" checked /> Show lights</label></p>
