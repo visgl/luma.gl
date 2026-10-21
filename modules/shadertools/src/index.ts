@@ -257,3 +257,5 @@ export {
   type AreaLight,
   type AreaLightingProps
 } from './modules/lighting/area-lighting/area-lighting';
+
+export {createAreaLightLTCTextures} from './modules/lighting/area-lighting/ltc-textures';

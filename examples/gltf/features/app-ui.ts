@@ -38,14 +38,14 @@ export const LIGHTMAP_INFO_HTML = `
 `;
 
 export const AREA_LIGHT_INFO_HTML = `
-<p>EXT_lights_area draft: the upstream living room has two rectangular emitters. Gold outlines show their positions and sizes. Numerical integration may still show sampling artifacts on glossy surfaces; this profile is experimental.</p>
+<p>EXT_lights_area draft: the upstream living room has two rectangular emitters. Gold outlines show their positions and sizes. LTC integrates rectangular emitters continuously for diffuse, isotropic GGX and clearcoat. Disk lights use a 32-sided approximation. Other lobes retain experimental numerical integration.</p>
 <p><label>Scene <select id="area-light-scene"><option value="living-room">Upstream living room</option><option value="demo">Rectangle and disk diagnostic</option></select></label></p>
 <p>Upstream living room by Wig42, CC BY 3.0. Scene conversion by Benedikt Bitterli; glTF conversion from Foundation Resources.</p>
 <p><a href="https://creativecommons.org/licenses/by/3.0/">License</a> · <a href="https://github.com/mos9527/Foundation-Resources/tree/3c8df40aece172360612d5a01177d91d6b4ab3e6/living-room-3">Source</a></p>
 <p><label><input id="cutaway-walls" type="checkbox" checked /> Cutaway walls</label></p>
 <p><label><input id="show-area-lights" type="checkbox" checked /> Show lights</label></p>
 <p><button id="frame-area-lights" type="button">Frame both area lights</button></p>
-<p>The upstream living room downloads 33 MB of geometry plus textures. Direct lighting uses 256 surface samples per light; shadows and indirect bounce are not simulated.</p>
+<p>The upstream living room downloads 33 MB of geometry plus textures. Direct lighting uses LTC for diffuse, GGX and clearcoat; shadows and indirect bounce are not simulated.</p>
 <div id="error" style="color: #b00020; margin-top: 8px;"></div>
 `;
 

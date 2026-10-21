@@ -1489,7 +1489,10 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
           color += calculateFinalColor(pbrInfo, lighting_getSpotLight(i).color / attenuation);
         }
       }
-      for (var areaIndex: i32 = 0; areaIndex < areaLighting.lightCount; areaIndex++) {
+      for (var areaIndex: i32 = 0; areaIndex < areaLighting_getLightCount(); areaIndex++) {
+#ifdef USE_AREA_LIGHT_LTC
+        color += areaLTC_evaluate(areaIndex, fragmentInputs.pbr_vPosition, pbrInfo.n, pbrInfo.v, pbrInfo.perceptualRoughness, pbrInfo.diffuseColor, pbrInfo.reflectance0, pbrInfo.reflectance90);
+#else
         for (var sampleIndex: i32 = 0; sampleIndex < areaLighting.sampleCount; sampleIndex++) {
           let sampleLight = areaLighting_getSample(areaIndex, sampleIndex, fragmentInputs.pbr_vPosition);
           if (dot(sampleLight.color, sampleLight.color) > 0.0) {
@@ -1497,6 +1500,7 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
             color += calculateFinalColor(pbrInfo, sampleLight.color);
           }
         }
+#endif
       }
       #endif
 
@@ -1871,7 +1875,13 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
         );
       }
     }
-      for (var areaIndex: i32 = 0; areaIndex < areaLighting.lightCount; areaIndex++) {
+      for (var areaIndex: i32 = 0; areaIndex < areaLighting_getLightCount(); areaIndex++) {
+#ifdef USE_AREA_LIGHT_LTC
+        // Unsupported fits retain numerical integration rather than silently dropping material lobes.
+        if (anisotropyStrength <= 0.0001 && dot(sheenColor, sheenColor) <= 0.000001 && diffuseTransmission <= 0.0001) {
+        color += areaLTC_evaluate(areaIndex, fragmentInputs.pbr_vPosition, pbrInfo.n, pbrInfo.v, pbrInfo.perceptualRoughness, pbrInfo.diffuseColor, pbrInfo.reflectance0, pbrInfo.reflectance90);
+        color += clearcoatFactor * areaLTC_specular(areaLighting_getLight(areaIndex), fragmentInputs.pbr_vPosition, clearcoatNormal, pbrInfo.v, clearcoatRoughness, vec3f(0.04), vec3f(1.0));
+        } else {
         for (var sampleIndex: i32 = 0; sampleIndex < areaLighting.sampleCount; sampleIndex++) {
           let sampleLight = areaLighting_getSample(areaIndex, sampleIndex, fragmentInputs.pbr_vPosition);
           if (dot(sampleLight.color, sampleLight.color) > 0.0) {
@@ -1882,6 +1892,21 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
               diffuseTransmissionColor, diffuseTransmission, multiscatterColor, thickness);
           }
         }
+
+        }
+#else
+        for (var sampleIndex: i32 = 0; sampleIndex < areaLighting.sampleCount; sampleIndex++) {
+          let sampleLight = areaLighting_getSample(areaIndex, sampleIndex, fragmentInputs.pbr_vPosition);
+          if (dot(sampleLight.color, sampleLight.color) > 0.0) {
+            PBRInfo_setPointLight(&pbrInfo, sampleLight);
+            color += calculateMaterialLightColor(pbrInfo, sampleLight.color, clearcoatNormal,
+              clearcoatFactor, clearcoatRoughness, sheenColor, sheenRoughness, anisotropyTangent, anisotropyStrength);
+            color += calculateDiffuseTransmissionLight(pbrInfo, sampleLight.color,
+              diffuseTransmissionColor, diffuseTransmission, multiscatterColor, thickness);
+          }
+        }
+
+#endif
       }
     #endif
 

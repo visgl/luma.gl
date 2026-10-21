@@ -11,7 +11,14 @@ import {
   GLTFBillboardController,
   GLTFAreaLightController
 } from '@luma.gl/gltf';
-import {Light, LightingProps, pbrMaterial, pbrScene, skin} from '@luma.gl/shadertools';
+import {
+  Light,
+  LightingProps,
+  pbrMaterial,
+  pbrScene,
+  skin,
+  createAreaLightLTCTextures
+} from '@luma.gl/shadertools';
 import {Matrix4, Vector3} from '@math.gl/core';
 import {
   INFO_HTML,
@@ -62,6 +69,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         : INFO_HTML;
   }
 
+  areaLTCTextures?: ReturnType<typeof createAreaLightLTCTextures>;
   device: Device;
   orbitControls: OrbitControls;
   scenegraphsFromGLTF?: ReturnType<typeof createScenegraphsFromGLTF>;
@@ -86,6 +94,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   ) {
     super();
     this.device = device;
+    if (feature === 'area-lights') this.areaLTCTextures = createAreaLightLTCTextures(device);
 
     const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
     if (feature === 'area-lights') this.areaLightOutlines = new AreaLightOutlines(canvas);
@@ -119,6 +128,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     destroyScenegraphs(this.scenegraphsFromGLTF);
     this.scenegraphsFromGLTF = undefined;
+    this.areaLTCTextures?.destroy();
     this.modelLights = [];
     this.wallModels.clear();
   }
@@ -225,7 +235,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           this.feature === 'area-lights'
             ? {
                 modules: [pbrScene, pbrMaterial, skin],
-                defines: {USE_SCENE_COLOR_MANAGEMENT: true}
+                defines: {USE_SCENE_COLOR_MANAGEMENT: true, USE_AREA_LIGHT_LTC: true}
               }
             : undefined
       });
@@ -355,10 +365,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         .multiplyRight(modelMatrix);
 
       model.shaderInputs.setProps({
-        lighting,
+        lighting: areaLights ? {lights: areaLights, useByteColors: false} : lighting,
+        ...(this.areaLTCTextures ? {bindings: this.areaLTCTextures.bindings} : {}),
         ...(areaLights
           ? {
-              areaLighting: {lights: areaLights, sampleCount: 256},
+              areaLighting: {lights: []},
               pbrScene: {exposure: 0.03, toneMapMode: 2, outputEncoding: 1}
             }
           : {}),
