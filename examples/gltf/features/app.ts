@@ -21,7 +21,7 @@ import {
   showLoadingSpinner
 } from './app-ui';
 
-import {GLTF_FEATURE_PRESETS, type GLTFFeature} from './presets';
+import {GLTF_FEATURE_PRESETS, AREA_LIGHT_SOURCE_URL, type GLTFFeature} from './presets';
 
 import {AreaLightOutlines} from './area-light-outlines';
 
@@ -70,6 +70,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   areaLightOutlines?: AreaLightOutlines;
   showAreaLights = true;
   cutawayWalls = true;
+  areaScene: 'demo' | 'living-room' = 'demo';
+  loadGeneration = 0;
   readonly wallModels = new Set<ModelNode>();
   cameraFieldOfView = Math.PI / 3;
   center = [0, 0, 0];
@@ -99,17 +101,20 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
 
     document.addEventListener('click', this.handleFrameLights);
+    document.addEventListener('change', this.handleAreaScene);
     this.loadGLTF();
   }
 
   onFinalize(): void {
     this.isFinalized = true;
+    this.loadGeneration++;
     showLoadingSpinner(this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement, false);
     this.orbitControls.destroy();
     this.billboardController?.destroy();
     this.areaLightController?.destroy();
     this.areaLightOutlines?.destroy();
     document.removeEventListener('click', this.handleFrameLights);
+    document.removeEventListener('change', this.handleAreaScene);
 
     destroyScenegraphs(this.scenegraphsFromGLTF);
     this.scenegraphsFromGLTF = undefined;
@@ -117,7 +122,23 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.wallModels.clear();
   }
 
+  private handleAreaScene = (event: Event): void => {
+    if (!(event.target instanceof HTMLSelectElement) || event.target.id !== 'area-light-scene')
+      return;
+    this.areaScene = event.target.value === 'living-room' ? 'living-room' : 'demo';
+    void this.loadGLTF();
+  };
+
   private handleFrameLights = (event: MouseEvent): void => {
+    requestAnimationFrame(() => {
+      if (this.isFinalized) return;
+      const showLights = document.getElementById('show-area-lights');
+      const cutawayWalls = document.getElementById('cutaway-walls');
+      const scene = document.getElementById('area-light-scene');
+      if (showLights instanceof HTMLInputElement) showLights.checked = this.showAreaLights;
+      if (cutawayWalls instanceof HTMLInputElement) cutawayWalls.checked = this.cutawayWalls;
+      if (scene instanceof HTMLSelectElement) scene.value = this.areaScene;
+    });
     if (!(event.target instanceof HTMLElement)) return;
     if (event.target instanceof HTMLInputElement && event.target.id === 'show-area-lights') {
       this.showAreaLights = event.target.checked;
@@ -151,11 +172,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   };
 
   getClearColor(): [number, number, number, number] {
-    return [0.95, 0.95, 0.97, 1];
+    return this.feature === 'area-lights' && this.areaScene === 'demo'
+      ? [0.035, 0.05, 0.075, 1]
+      : [0.95, 0.95, 0.97, 1];
   }
 
   async loadGLTF(): Promise<void> {
     const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
+    const generation = ++this.loadGeneration;
 
     try {
       log.log(0, 'Starting glTF feature load', {
@@ -166,8 +190,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       canvas.style.opacity = '0.2';
 
       const preset = GLTF_FEATURE_PRESETS[this.feature];
+      const modelUrl =
+        this.feature === 'area-lights' && this.areaScene === 'living-room'
+          ? AREA_LIGHT_SOURCE_URL
+          : preset.modelUrl;
       const gltf = await load(
-        preset.modelUrl,
+        modelUrl,
         GLTFLoader,
         this.feature === 'area-lights'
           ? {
@@ -175,7 +203,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
                 const url =
                   typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
                 const resource =
-                  url === preset.modelUrl
+                  url === modelUrl
                     ? url
                     : url.replace(
                         'https://raw.githubusercontent.com/',
@@ -186,7 +214,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
             }
           : {}
       );
-      if (this.isFinalized) return;
+      if (this.isFinalized || generation !== this.loadGeneration) return;
       const processedGLTF = postProcessGLTF(gltf);
       const scenegraphsFromGLTF = createScenegraphsFromGLTF(this.device, processedGLTF, {
         lights: true,
@@ -201,7 +229,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
             : undefined
       });
 
-      if (this.isFinalized) {
+      if (this.isFinalized || generation !== this.loadGeneration) {
         destroyScenegraphs(scenegraphsFromGLTF);
         return;
       }
@@ -240,7 +268,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         maxDistance: Math.max(this.sceneRadius * 32, 12)
       });
 
-      if (this.feature === 'area-lights') {
+      this.cameraFieldOfView = Math.PI / 3;
+      if (this.feature === 'area-lights' && this.areaScene === 'demo')
+        this.orbitControls.setProps({yaw: Math.PI / 4, pitch: 0.18});
+      if (this.feature === 'area-lights' && this.areaScene === 'living-room') {
         const sourceCameraIndex = processedGLTF.nodes.findIndex(node => node.camera !== undefined);
         const cameraNode = scenegraphsFromGLTF.gltfNodeIndexToNodeMap.get(sourceCameraIndex);
         for (const scene of scenegraphsFromGLTF.scenes)
@@ -265,7 +296,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       showLoadingSpinner(canvas, false);
       showError();
     } catch (error) {
-      if (this.isFinalized) {
+      if (this.isFinalized || generation !== this.loadGeneration) {
         return;
       }
 
@@ -326,7 +357,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         lighting,
         ...(areaLights
           ? {
-              areaLighting: {lights: areaLights},
+              areaLighting: {lights: areaLights, sampleCount: 256},
               pbrScene: {exposure: 0.03, toneMapMode: 2, outputEncoding: 1}
             }
           : {}),

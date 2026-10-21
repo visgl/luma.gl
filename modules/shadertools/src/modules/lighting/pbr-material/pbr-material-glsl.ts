@@ -1265,7 +1265,7 @@ vec4 pbr_filterColor(vec4 vertexColor)
         }
       }
       for (int areaIndex = 0; areaIndex < areaLighting.lightCount; areaIndex++) {
-        for (int sampleIndex = 0; sampleIndex < 16; sampleIndex++) {
+        for (int sampleIndex = 0; sampleIndex < areaLighting.sampleCount; sampleIndex++) {
           PointLight sampleLight = areaLighting_getSample(areaIndex, sampleIndex, pbr_vPosition);
           if (dot(sampleLight.color, sampleLight.color) > 0.0) {
             PBRInfo_setPointLight(pbrInfo, sampleLight);
@@ -1582,7 +1582,7 @@ vec4 pbr_filterColor(vec4 vertexColor)
       }
     }
       for (int areaIndex = 0; areaIndex < areaLighting.lightCount; areaIndex++) {
-        for (int sampleIndex = 0; sampleIndex < 16; sampleIndex++) {
+        for (int sampleIndex = 0; sampleIndex < areaLighting.sampleCount; sampleIndex++) {
           PointLight sampleLight = areaLighting_getSample(areaIndex, sampleIndex, pbr_vPosition);
           if (dot(sampleLight.color, sampleLight.color) > 0.0) {
             PBRInfo_setPointLight(pbrInfo, sampleLight);

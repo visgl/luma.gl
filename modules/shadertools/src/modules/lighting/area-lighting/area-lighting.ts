@@ -22,7 +22,11 @@ export type AreaLight = {
   intensity?: number;
 };
 
-export type AreaLightingProps = {lights?: readonly AreaLight[]; useByteColors?: boolean};
+export type AreaLightingProps = {
+  lights?: readonly AreaLight[];
+  useByteColors?: boolean;
+  sampleCount?: 16 | 64 | 256;
+};
 type AreaLightUniform = {
   color: Readonly<NumberArray3>;
   position: Readonly<NumberArray3>;
@@ -31,7 +35,11 @@ type AreaLightUniform = {
   normal: Readonly<NumberArray3>;
   disk: number;
 };
-type AreaLightingUniforms = {lightCount: number; lights: readonly AreaLightUniform[]};
+type AreaLightingUniforms = {
+  lightCount: number;
+  sampleCount: number;
+  lights: readonly AreaLightUniform[];
+};
 
 const MAX_AREA_LIGHTS = 4;
 function makeEmptyLight(): AreaLightUniform {
@@ -45,15 +53,20 @@ function makeEmptyLight(): AreaLightUniform {
   };
 }
 
-/** Deterministic 16-sample surface quadrature for PBR direct illumination. */
+/** Configurable deterministic surface quadrature for PBR direct illumination. */
 export const areaLighting = {
   name: 'areaLighting',
   props: {} as AreaLightingProps,
   uniforms: {} as AreaLightingUniforms,
   dependencies: [lighting],
-  defaultUniforms: {lightCount: 0, lights: Array.from({length: MAX_AREA_LIGHTS}, makeEmptyLight)},
+  defaultUniforms: {
+    lightCount: 0,
+    sampleCount: 64,
+    lights: Array.from({length: MAX_AREA_LIGHTS}, makeEmptyLight)
+  },
   uniformTypes: {
     lightCount: 'i32',
+    sampleCount: 'i32',
     lights: [
       {
         color: 'vec3<f32>',
@@ -74,6 +87,7 @@ export const areaLighting = {
     const source = props.lights || [];
     return {
       lightCount: Math.min(source.length, MAX_AREA_LIGHTS),
+      sampleCount: props.sampleCount || 64,
       lights: Array.from({length: MAX_AREA_LIGHTS}, (_, index) => {
         const light = source[index];
         if (!light) return makeEmptyLight();

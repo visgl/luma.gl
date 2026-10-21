@@ -1490,7 +1490,7 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
         }
       }
       for (var areaIndex: i32 = 0; areaIndex < areaLighting.lightCount; areaIndex++) {
-        for (var sampleIndex: i32 = 0; sampleIndex < 16; sampleIndex++) {
+        for (var sampleIndex: i32 = 0; sampleIndex < areaLighting.sampleCount; sampleIndex++) {
           let sampleLight = areaLighting_getSample(areaIndex, sampleIndex, fragmentInputs.pbr_vPosition);
           if (dot(sampleLight.color, sampleLight.color) > 0.0) {
             PBRInfo_setPointLight(&pbrInfo, sampleLight);
@@ -1872,7 +1872,7 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
       }
     }
       for (var areaIndex: i32 = 0; areaIndex < areaLighting.lightCount; areaIndex++) {
-        for (var sampleIndex: i32 = 0; sampleIndex < 16; sampleIndex++) {
+        for (var sampleIndex: i32 = 0; sampleIndex < areaLighting.sampleCount; sampleIndex++) {
           let sampleLight = areaLighting_getSample(areaIndex, sampleIndex, fragmentInputs.pbr_vPosition);
           if (dot(sampleLight.color, sampleLight.color) > 0.0) {
             PBRInfo_setPointLight(&pbrInfo, sampleLight);

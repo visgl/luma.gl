@@ -112,7 +112,7 @@ test('area lights render one-sided rectangles and disks with physical size and i
         for (const node of models) {
           node.model.shaderInputs.setProps({
             lighting: {lights: [{type: 'ambient', color: [0, 0, 0], intensity: 0}]},
-            areaLighting: {lights: [area]},
+            areaLighting: {lights: [area], sampleCount: 256},
             pbrScene: {exposure: 1, toneMapMode: 0, outputEncoding: 0},
             pbrProjection: {
               modelMatrix: new Matrix4(),

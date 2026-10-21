@@ -16,7 +16,9 @@ height; width also uses `rect.aspect`. Disk `size` specifies diameter. Both use 
 largest absolute world scale component, while emitting orientation follows node
 rotation independently of TRS scale. Invisible node hierarchies do not emit.
 
-PBR rendering integrates 16 deterministic samples over each emitting surface.
+PBR rendering integrates 64 deterministic samples over each emitting surface by default.
+Set `areaLighting.sampleCount` to 16, 64, or 256 to trade GPU cost for accuracy.
+The gallery uses 256 to reduce visible quadrature highlights.
 Each sample contributes luminance times area, emitter cosine and inverse squared
 distance through the existing core or layered material BRDF. Lights emit toward
 local -Z. Increasing area at constant luminance increases emitted flux.
