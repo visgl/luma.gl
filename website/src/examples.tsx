@@ -851,12 +851,16 @@ export const GLTFExample: React.FC<WebsiteExampleProps & {
     }};
   }, [extension]);
   const referenceDevice = getGLTFReferenceDeviceSelection();
+  const materialTitles = {
+    KHR_materials_clearcoat: 'glTF Clearcoat', KHR_materials_sheen: 'glTF Sheen',
+    KHR_materials_iridescence: 'glTF Iridescence', KHR_materials_anisotropy: 'glTF Anisotropy'
+  };
 
   return (
     <LumaExample
       id="asset-studio"
-      title="glTF Asset Studio"
-      subtitle="Physical materials · animated characters · standards-native glTF"
+      title={extension ? materialTitles[extension] : 'glTF Asset Studio'}
+      subtitle={extension ? `${extension} · published glTF assets` : 'Physical materials · animated characters · standards-native glTF'}
       directory="gltf"
       loadTemplate={loadTemplate}
       infoBoxAppearance="cinematic"

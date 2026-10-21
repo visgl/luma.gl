@@ -21,6 +21,7 @@ import {
   type GLTFScenegraphs,
   type PBREnvironment
 } from '@luma.gl/gltf';
+import {mergeGLTFModelCatalog} from './gltf-model-catalog';
 import {Matrix4} from '@math.gl/core';
 import {GLTF_SAMPLE_ASSETS_MODEL_URL} from './gltf-reference-source';
 import {
@@ -854,7 +855,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       ...studioModels,
       ...catalogModels.filter(isAnimatedGLTFCatalogModel)
     ];
-    return Array.from(new Map(orderedModels.map(model => [model.name, model])).values());
+    return mergeGLTFModelCatalog(
+      Array.from(new Map(orderedModels.map(model => [model.name, model])).values()),
+      catalogModels
+    );
   }
 
   async loadGLTF(modelReference: string | GLTFModelReference) {
