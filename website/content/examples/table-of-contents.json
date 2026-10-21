@@ -32,13 +32,17 @@
   },
   {
     "type": "category",
-    "label": "glTF",
+    "label": "glTF standard features",
     "items": [
       "gltf/asset-studio",
       "tutorials/hello-gltf",
-      "gltf/physics",
       "deck/gltf-interactivity"
     ]
+  },
+  {
+    "type": "category",
+    "label": "glTF proposed features",
+    "items": ["showcase/gltf-audio", "gltf/physics"]
   },
   {
     "type": "category",

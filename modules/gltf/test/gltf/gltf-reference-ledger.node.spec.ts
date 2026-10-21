@@ -30,7 +30,7 @@ describe('glTF reference ledger', () => {
       extension => extension.supported
     );
 
-    expect(supportedEntries).toHaveLength(26);
+    expect(supportedEntries).toHaveLength(27);
     expect(
       supportedEntries
         .filter(extension => !extension.positiveFixture)
@@ -40,7 +40,7 @@ describe('glTF reference ledger', () => {
     for (const extension of supportedEntries) {
       const fixture = extension.positiveFixture!;
       expect(fixture.licenseLocation).toBeTruthy();
-      if (fixture.source === 'khronos-sample-assets') {
+      if (fixture.source !== 'luma.gl') {
         expect(fixture.sourceRevision).toMatch(/^[0-9a-f]{40}$/);
         expect(fixture.assetLocation).toContain(fixture.sourceRevision);
         expect(fixture.licenseLocation).toContain(fixture.sourceRevision);
