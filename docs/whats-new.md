@@ -8,6 +8,7 @@ Target Release Date: Q3, 2026
 
 **General**
 
+- **Draft glTF lightmaps** - Linear irradiance bindings, node atlas overrides and portable instance atlas draws, demonstrated by the source-hosted Cornell Box through the shared glTF viewer.
 - **Draft glTF billboards** - `GLTFBillboardController` provides opt-in full-axis camera-facing transforms, depth-relative scale and ordered overlay draw metadata without changing authored transforms.
 - **glTF spatial audio** - Opt-in `GLTFAudioController` plays draft `KHR_audio_emitter` assets through Web Audio, with camera-relative positional sound and a [Boom Box example](/examples/showcase/gltf-audio).
 

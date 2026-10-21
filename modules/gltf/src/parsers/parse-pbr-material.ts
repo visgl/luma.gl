@@ -3,8 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {GLTFPostprocessed} from '@loaders.gl/gltf';
+import {Matrix3} from '@math.gl/core';
 import type {Device, ExternalImage, SamplerProps, TextureFormat, TypedArray} from '@luma.gl/core';
-import {log, Texture, textureFormatDecoder} from '@luma.gl/core';
+import {assert, log, Texture, textureFormatDecoder} from '@luma.gl/core';
 import {type PBRMaterialBindings} from '@luma.gl/shadertools';
 import {type PBREnvironment} from '../pbr/pbr-environment';
 import {type ParsedPBRMaterial} from '../pbr/pbr-material';
@@ -138,6 +139,7 @@ type GLTFMaterialEmissiveStrengthExtension = {
 };
 
 type GLTFMaterialExtensions = {
+  KHR_lightmap?: {lightmapTexture: GLTFTexture; intensity?: number};
   KHR_materials_unlit?: Record<string, never>;
   KHR_materials_specular?: GLTFMaterialSpecularExtension;
   KHR_materials_ior?: GLTFMaterialIorExtension;
@@ -158,6 +160,7 @@ type TextureEnabledUniformName =
   | 'baseColorMapEnabled'
   | 'normalMapEnabled'
   | 'emissiveMapEnabled'
+  | 'lightmapMapEnabled'
   | 'metallicRoughnessMapEnabled'
   | 'occlusionMapEnabled'
   | 'specularColorMapEnabled'
@@ -295,6 +298,15 @@ export function parsePBRMaterial(
   if (material) {
     if (options.validateAttributes !== false) {
       warnOnMissingExpectedAttributes(material, attributes);
+      const lightmap = material.extensions?.KHR_lightmap;
+      if (lightmap) {
+        const textureCoordinateSet = resolveTextureCoordinateSet(lightmap.lightmapTexture);
+        // Lightmap UVs must exist on the primitive; shared material creation has no attributes yet.
+        assert(
+          (textureCoordinateSet === 0 || textureCoordinateSet === 1) &&
+            hasGLTFAttribute(attributes, textureCoordinateSet === 0 ? 'TEXCOORD_0' : 'TEXCOORD_1')
+        );
+      }
     }
     parseMaterial(device, material, parsedMaterial, attributes, options.gltf);
   }
@@ -553,6 +565,25 @@ function parseMaterialExtensions(
 ): void {
   if (!extensions) {
     return;
+  }
+
+  const lightmap = extensions.KHR_lightmap;
+  if (lightmap) {
+    const intensity = lightmap.intensity ?? 1;
+    // Lightmap irradiance requires a finite nonnegative multiplier.
+    assert(Number.isFinite(intensity) && intensity >= 0);
+    parsedMaterial.uniforms.lightmapIntensity = intensity;
+    parsedMaterial.uniforms.lightmapUVSet = resolveTextureCoordinateSet(lightmap.lightmapTexture);
+    parsedMaterial.uniforms.lightmapUVTransform = new Matrix3(
+      getTextureTransformMatrix(resolveTextureTransform(lightmap.lightmapTexture))
+    );
+    // Shared material creation has no primitive attributes; lightmaps use independent primitive materials.
+    if (Object.keys(attributes).length > 0)
+      addTexture(device, lightmap.lightmapTexture, 'pbr_lightmapSampler', parsedMaterial, {
+        gltf,
+        attributes,
+        featureOptions: {define: 'HAS_LIGHTMAP', enabledUniformName: 'lightmapMapEnabled'}
+      });
   }
 
   if (hasMaterialExtensionShading(extensions)) {

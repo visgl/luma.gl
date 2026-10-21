@@ -2749,6 +2749,7 @@ export const GLTFFeatureExample: React.FC<WebsiteExampleProps & {feature: GLTFFe
   const loadTemplate = useMemo(() => async () => {
     const {default: FeatureApp} = await loadGLTFFeatureApp();
     return {default: class ConfiguredFeatureApp extends FeatureApp {
+      static info = FeatureApp.getInfo(feature);
       constructor(animationProps: AnimationProps) { super(animationProps, feature); }
     }};
   }, [feature]);

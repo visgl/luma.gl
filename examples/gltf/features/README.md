@@ -4,6 +4,7 @@ Website entries select a supported preset through a typed prop:
 
 ```tsx
 <GLTFFeatureExample feature="billboard" />
+<GLTFFeatureExample feature="lightmap" />
 ```
 
 Run `yarn start` in this directory for a standalone preview. Select the same preset with
@@ -16,3 +17,5 @@ independent of the shared implementation directory. Unsupported feature names ar
 
 The application owns its controller and scene bundle. The website owns its device. Destroy the
 scene bundle and feature controllers when replacing a model or finalizing the application.
+
+The lightmap preset loads the pinned MIT Cornell Box (709 KB). Its baked irradiance is shown without additional runtime lights.
