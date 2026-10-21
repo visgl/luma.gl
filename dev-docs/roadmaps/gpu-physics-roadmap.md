@@ -35,7 +35,7 @@ The G1–G3 follow-up has executable qualification tooling, hierarchical discove
 sparse contact storage, plus node-geometry snapshots, plane support and disabled-collider
 handling. An opt-in parallel solver has focused impact and island sleep/wake tests;
 the ordered solver remains the default. These are partial implementations, not closed
-tranches. General moving mesh/mesh coverage, general-body CCD, stress qualification and
+tranches. General mesh collision qualification, general-body CCD, stress qualification and
 multi-adapter whole-step performance evidence remain required.
 
 The capacity/stability follow-up adds allocation preflight and CPU capacity reports,
@@ -50,6 +50,13 @@ frames, failure recovery and limits separately from the conceptual guide.
 These improvements do not close G1 or G3: whole-step timing is not an accuracy
 qualification, allocation preflight is not automatic overflow recovery, and the
 stability fixtures do not establish extreme mass-ratio or general CCD coverage.
+
+The next G1/G2 increment adds bounded moving mesh/mesh surface contacts, original
+triangle-pair queries, explicit per-pair traversal exhaustion, and a Mesh Openings lab
+scene. GPU fixtures check both collider orderings, momentum exchange, preserved holes
+and budget failure. The fixed-separation/immutable-pose exception is removed.
+This does not close G2: deep solid containment, general degeneracy/side semantics,
+large-mesh performance and independent geometry qualification remain outstanding.
 
 Prioritize closing G1 capacity/measurement gaps, G2 general collision semantics and G3
 solver/CCD qualification before broadening the feature surface. Keep G1–G7 identifiers
@@ -83,8 +90,8 @@ for every historical or future draft. Draft migrations require a reviewed matrix
   performance result. Reuse compiled graphs and indirect queues rather than creating
   one graph operation per body/contact/joint. Fuse only where dependencies permit it.
 - No asset-specific exclusions or immutable-pose exceptions count as completed
-  collision coverage. The current wheel/ceiling proof is explicitly transitional;
-  G2 replaces this restriction with supported general collision semantics.
+  collision coverage. Bounded mesh surface contacts replace the wheel/ceiling proof;
+  G2 still requires complete declared collision semantics and qualification.
 - Performance is a gate in every tranche. Record CPU encode time, GPU time per step,
   frame latency, queue depth, memory, candidate/contact counts and overflows. Never
   present a multi-step batch duration as a single-pass duration. Slow devices must
@@ -124,8 +131,8 @@ holes; any allowed approximation must be declared and tested, not inferred silen
 
 Exit: pairwise shape coverage, separation/contact/penetration tests, rotated/scaled
 assets and nonconvex openings pass against independent references. Direct pose changes
-must not invalidate undocumented assumptions. The current fixed-center mesh exception
-is removed. Worst-case traversal, work budgets and overflow recovery are benchmarked.
+must not invalidate undocumented assumptions. The fixed-center mesh exception
+has been removed by the bounded surface-contact increment. Worst-case traversal, work budgets and overflow recovery are benchmarked.
 
 ### G3. Stable dynamics, parallel solving and fast-motion reliability
 
@@ -154,6 +161,13 @@ Exit: hinge, slider, ball/socket and composed-joint fixtures, chains, motors and
 contact-loaded mechanisms pass error, energy, stability and throughput gates.
 
 ### G5. Triggers, queries and physics/interactivity execution
+
+The Space Salvage increment adds an opt-in GPU contact-event ring with begin/end
+and thresholded impact samples, exact sphere/OBB nearest-ray and sphere-overlap
+queries, explicit selection and loss reporting. The game consumes public APIs for
+tractor targeting, sampled docking and impact damage. This is partial G5 work:
+compound trigger enter/exit state, swept queries, general shape casts, large-world
+query/event scaling and glTF behavior bindings remain outstanding.
 
 Support individual and compound trigger volumes with per-collider filtering and
 step-ordered enter/exit events. Add GPU ray-segment queries with nearest hit, source

@@ -23,10 +23,11 @@ and holes; balloons and the rounded box use computed convex hulls. Capsule and c
 contacts use analytic support functions. No collision mesh is inferred from rendering.
 Filtering retains its exact box fast path and independent child collider filters.
 
-The bounded backend supports 128 bodies/colliders and discrete collisions. It does
-not implement general mesh-to-mesh contact: the wheel/ceiling pair is accepted because
-conservative bounds prove it cannot meet. Mesh candidates use a 65,536-entry GPU queue;
-`world.readCollisionDiagnostics()` exposes overflow and unresolved GJK/EPA queries.
+The backend uses discrete collisions. Mesh/mesh contacts preserve original surfaces
+and holes, with a 65,536-entry GPU task queue and a per-pair traversal budget.
+`world.readCollisionDiagnostics()` exposes overflow, incomplete traversal and
+unresolved GJK/EPA queries. Deep solid containment and fast-motion tunneling remain
+unsupported; these scenes do not qualify arbitrary mesh combinations.
 Performance depends on hull complexity and triangle overlap; the four catch-up-step
 limit prevents unbounded simulation work when this detailed scene is GPU-bound.
 Samples appear in Motion Properties, Restitution, Friction, Filtering order, starting

@@ -19,7 +19,7 @@ export async function benchmarkRigidBody(options = {}) {
     maximumPairs: options.maximumPairs === undefined ? undefined : Number(options.maximumPairs)
   };
   if (!['localhost', '127.0.0.1', '[::1]'].includes(baseUrl.hostname) ||
-      !['stack', 'deep', 'massRatio', 'support', 'friction', 'mixed', 'impact', 'torque'].includes(settings.fixture) ||
+      !['stack', 'deep', 'massRatio', 'support', 'friction', 'mesh', 'mixed', 'impact', 'torque'].includes(settings.fixture) ||
       !['ordered', 'parallel'].includes(settings.solver) ||
       !Number.isInteger(settings.iterations) || settings.iterations < 1 || settings.iterations > 64 ||
       !Number.isInteger(settings.samples) || settings.samples < 1 || settings.samples > 1000 ||

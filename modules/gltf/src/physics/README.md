@@ -119,14 +119,12 @@ does not enable or disable physics.
 
 ## Explicitly unsupported
 
-Triggers, joints, animated mesh deformation, plane-to-plane manifolds and general mesh-to-mesh contacts
-are unsupported. Mesh pairs are accepted only when both bodies are static, filtering
-excludes contact, or fixed translation and conservative rotational bounds prove they
-cannot meet. The pinned Motion Properties ceiling/wheel pair satisfies that proof. Such pairs
-require zero gravity factor and initial velocity on the infinite-mass dynamic body.
-Their COM anchors are immutable: integration restores them after direct state-buffer
-writes, and static participants also retain their original orientation. Angular-only
-participants remain free to rotate within the proven rotational envelope.
+Triggers, joints, animated mesh deformation and plane-to-plane manifolds are
+unsupported. Mesh/mesh pairs now use bounded discrete surface contacts over the
+original triangles. They do not require fixed-separation or immutable COM anchors.
+Deep containment without intersecting surfaces and fast-motion tunneling remain
+outside this collision contract. Traversal exhaustion is reported by the world as
+incomplete execution, not as a successful empty contact result.
 Other unsupported features include
 automatic instanced-body expansion, sheared/partially singular transforms, nonuniform sphere
 scaling, reflected motion frames, animation-driven physics properties, and unknown

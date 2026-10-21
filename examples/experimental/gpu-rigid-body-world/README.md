@@ -12,6 +12,10 @@ explains each scene; GPU Graph and GPU Graph Timeline expose the actual work.
 - **Heavy-on-light stack:** a mass-ten box on three mass-one boxes.
 - **Moving support:** a kinematic platform carries boxes through friction.
 - **Static friction:** tangential gravity below the static limit should not cause sliding.
+- **Mesh openings:** two moving triangle-mesh cubes fall toward a nonconvex frame.
+  One passes through the real opening; the other lands on a bar. The renderer uses
+  the original cooked triangles. This demonstrates discrete surface contacts, not CCD
+  or deep initial containment.
 - **Mixed-shape field:** 256 varying-size boxes and spheres, using hierarchical
   discovery and sparse contacts beyond the all-pairs reference's 128-body limit.
 - **Unequal-mass impact:** a unit sphere hits a mass-two sphere at restitution one,

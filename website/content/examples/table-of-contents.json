@@ -59,6 +59,7 @@
     "type": "category",
     "label": "WebGPU",
     "items": [
+      "experimental/space-salvage",
       "showcase/lightstorm-megacity",
       "showcase/llm-network",
       "experimental/lucim-volume-lab",
