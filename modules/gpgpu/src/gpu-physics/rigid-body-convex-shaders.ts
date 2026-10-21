@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {RIGID_BODY_MESH_QUERY_SHADER} from './rigid-body-mesh-query-shaders';
+
 export const RIGID_BODY_CONVEX_SHADER = /* wgsl */ `
 const MESH_TASK_CAPACITY:u32=65536u;
 struct MeshTask { key:vec4u, point:vec4f, normal:vec4f }
-struct MeshTasks { count:atomic<u32>, overflow:atomic<u32>, unresolved:atomic<u32>, reserved:u32, entries:array<MeshTask,65536> }
+struct MeshTasks { count:atomic<u32>, overflow:atomic<u32>, unresolved:atomic<u32>, incomplete:atomic<u32>, entries:array<MeshTask,65536> }
 @group(0) @binding(10) var<storage,read_write> meshTasks:MeshTasks;
 struct SupportVertex { difference: vec3f, first: vec3f, second: vec3f }
 struct Simplex { points: array<SupportVertex,4>, count: u32 }
@@ -160,6 +162,7 @@ fn appendConvexContact(pair:u32,hit:ConvexHit,previous:Manifold,first:u32,second
  if(slot>=4u){slot=0u;for(var index=1u;index<4u;index++){if(manifolds[pair].contacts[index].point.w<manifolds[pair].contacts[slot].point.w){slot=index;}}if(hit.depth<=manifolds[pair].contacts[slot].point.w){return;}}
  storeContact(pair,slot,hit.point,hit.normal,hit.depth,previous,first,second);manifolds[pair].count=min(4u,manifolds[pair].count+1u);
 }
+${RIGID_BODY_MESH_QUERY_SHADER}
 fn collideExtended(pair:u32,first:u32,second:u32,previous:Manifold){
  if(any(abs(colliderPosition(second)-colliderPosition(first))>shapeWorldExtent(first)+shapeWorldExtent(second)+vec3f(settings.solver.x))){return;}
  let firstShape=bodies.colliders[first].shape;let secondShape=bodies.colliders[second].shape;
@@ -172,33 +175,33 @@ fn collideExtended(pair:u32,first:u32,second:u32,previous:Manifold){
  if(firstShape.w==6.0&&secondShape.w==6.0){manifolds[pair].padding.x++;atomicAdd(&meshTasks.unresolved,1u);return;}
  let firstMesh=bodies.colliders[first].shape.w==3.0;let secondMesh=bodies.colliders[second].shape.w==3.0;
  if(!firstMesh&&!secondMesh){appendConvexContact(pair,convexContact(first,second,-1,-1),previous,first,second);return;}
- // Mesh/mesh is rejected at construction unless fixed translation bounds prove separation.
- if(firstMesh&&secondMesh){return;}
+ if(firstMesh&&secondMesh){queueMeshPairContacts(pair,first,second,previous);return;}
  let mesh=select(second,first,firstMesh);let convex=select(first,second,firstMesh);
  var lower=vec3f(0);var upper=vec3f(0);
  for(var index=0u;index<3u;index++){let direction=axis(mesh,index);lower[index]=colliderLocal(mesh,pairShapeSupport(convex,mesh,-direction,-1)-colliderPosition(mesh))[index]-settings.solver.x;upper[index]=colliderLocal(mesh,pairShapeSupport(convex,mesh,direction,-1)-colliderPosition(mesh))[index]+settings.solver.x;}
  let offset=u32(bodies.colliders[mesh].policies.z);let count=u32(bodies.colliders[mesh].policies.w);
  var candidates=0u;var written=0u;var taskStart=0u;var taskCount=0u;
  for(var traversal=0u;traversal<2u;traversal++){
- var node=0u;
- loop{if(node>=count){break;}let minimum=readGeometry(offset+node*3u);let maximum=readGeometry(offset+node*3u+1u);
+ var node=0u;var work=0u;var exhausted=false;
+ loop{if(node>=count){break;}if(work>=MESH_TRAVERSAL_BUDGET){exhausted=true;break;}work++;let minimum=readGeometry(offset+node*3u);let maximum=readGeometry(offset+node*3u+1u);
   if(any(maximum.xyz<lower)||any(minimum.xyz>upper)){node=u32(minimum.w);continue;}
   if(maximum.w>0.0){let start=u32(readGeometry(offset+node*3u+2u).x);for(var index=0u;index<u32(maximum.w);index++){
+   if(work>=MESH_TRAVERSAL_BUDGET){exhausted=true;break;}work++;
    let firstPoint=triangleVertex(mesh,start+index,0u);let secondPoint=triangleVertex(mesh,start+index,1u);let thirdPoint=triangleVertex(mesh,start+index,2u);
    if(any(max(firstPoint,max(secondPoint,thirdPoint))<lower)||any(min(firstPoint,min(secondPoint,thirdPoint))>upper)){continue;}
    if(traversal==0u){candidates++;}
-   else if(written<taskCount){meshTasks.entries[taskStart+written].key=vec4u(first,second,start+index,0);written++;}
+   else if(written<taskCount){meshTasks.entries[taskStart+written].key=vec4u(first,second,select(0xffffffffu,start+index,firstMesh),select(start+index,0xffffffffu,firstMesh));written++;}
   }}
-  node++;
+  if(exhausted){break;}node++;
  }
- if(traversal==0u){let reserved=atomicAdd(&meshTasks.count,candidates);taskStart=min(reserved,MESH_TASK_CAPACITY);taskCount=min(candidates,MESH_TASK_CAPACITY-taskStart);atomicMax(&targets.dispatch,(taskStart+taskCount+31u)/32u);if(taskCount<candidates){atomicAdd(&meshTasks.overflow,candidates-taskCount);}}
+ if(traversal==0u){if(exhausted){addMeshCounter(&meshTasks.incomplete,1u);}let reservation=reserveMeshTasks(candidates);taskStart=reservation.x;taskCount=reservation.y;}
  }
  manifolds[pair].padding=vec3u(previous.count,taskStart,taskCount);
 }
 @compute @workgroup_size(32) fn meshCollide(@builtin(global_invocation_id) invocation:vec3u){
  let index=invocation.x;if(index>=min(atomicLoad(&meshTasks.count),MESH_TASK_CAPACITY)){return;}
- let key=meshTasks.entries[index].key;let firstMesh=bodies.colliders[key.x].shape.w==3.0;
- let hit=convexContact(key.x,key.y,select(-1,i32(key.z),firstMesh),select(i32(key.z),-1,firstMesh));
+ let key=meshTasks.entries[index].key;
+ let hit=convexContact(key.x,key.y,i32(key.z),i32(key.w));
  meshTasks.entries[index].point=vec4f(hit.point,hit.depth);meshTasks.entries[index].normal=vec4f(hit.normal,f32(hit.status));
 }
 fn collectMeshContacts(){

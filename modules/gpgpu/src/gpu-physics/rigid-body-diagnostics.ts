@@ -21,6 +21,7 @@ export type GPURigidBodySimulationDiagnostics = {
   droppedTriangleQueries: number;
   unresolvedQueries: number;
   incompleteIslandUnions: number;
+  incompleteMeshQueries: number;
   maximumCandidatePairs: number;
   maximumCandidateTests: number;
   saturated: boolean;
@@ -40,6 +41,7 @@ export function decodeRigidBodySimulationDiagnostics(
     droppedTriangleQueries: values[6],
     unresolvedQueries: values[7],
     incompleteIslandUnions: values[8],
+    incompleteMeshQueries: values[11],
     maximumCandidatePairs: values[9],
     maximumCandidateTests: values[10],
     saturated: values[15] !== 0,
@@ -93,6 +95,7 @@ fn accumulate(index:u32,value:u32){
  ${inputs.parallelState ? 'failures[6]=islands[0];' : ''}
  var incomplete=false;
  for(var index=0u;index<7u;index++){accumulate(index+2u,failures[index]);incomplete=incomplete||failures[index]>0u;}
+ ${inputs.meshTasks ? 'accumulate(11u,mesh[3]);incomplete=incomplete||mesh[3]>0u;' : ''}
  accumulate(0u,1u);if(incomplete){accumulate(1u,1u);}
 }`;
   const properties = {

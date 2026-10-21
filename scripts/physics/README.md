@@ -52,7 +52,7 @@ Start the Rigid Body Lab server, then run its isolated full-step benchmark:
 node scripts/physics/benchmark-rigid-body.mjs --url http://127.0.0.1:5198/ --fixture deep --solver parallel --iterations 64 --warmup 120 --samples 30 > /tmp/rigid-step.json
 ```
 
-Fixtures match the lab: `stack`, `deep`, `massRatio`, `support`, `friction`, `mixed`,
+Fixtures match the lab: `stack`, `deep`, `massRatio`, `support`, `friction`, `mesh`, `mixed`,
 `impact`, `torque`. Compare ordered and parallel modes at the same timestep,
 iterations, initial state and observation duration, then compare numerical error.
 `--time-step`, `--warm-start-factor` and `--maximum-pairs` expose controlled sweeps.

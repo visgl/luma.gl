@@ -63,6 +63,10 @@ recovery guarantee for pipeline compilation or driver allocation.
 | `broadPhase` | Automatic | All-pairs if both body and collider counts are at most 128; hierarchical grid otherwise |
 | `maximumPairs` | Power of two covering `max(64, 16 * colliderCount)` | Sparse candidate and persistent pair-cache capacity |
 | `maximumCandidateTestsPerCollider` | `4096` | Hierarchical traversal budget, 1–65,535 |
+| `maximumMeshTraversalTestsPerPair` | `65536` | Mesh BVH node/triangle visits per collider pair per traversal, 1–1,048,576 |
+| `eventCapacity` | `0` | Optional GPU contact ring capacity, 0–65,536; zero disables |
+| `impactImpulseThreshold` | `1` | Sustained-contact impulse threshold for impact samples |
+| `enableQueries` | `false` | Allocate exact sphere/box ray and overlap query resources |
 | `contactSlop` | `0.002` | Allowed contact penetration in world units |
 | `contactMatchDistance` | `0.05` | Distance for matching persistent contacts |
 | `restitutionThreshold` | `0.5` | Closing-speed threshold for bounce |
@@ -120,11 +124,25 @@ graph attachment. Dynamic mesh geometry must be closed with positive volume.
 Convex cooking changes a nonconvex object's collision shape: cavities disappear.
 Primitive parameters do not require matching render tessellation.
 
-Convex/triangle-mesh contacts have bounded GPU work. General moving mesh/mesh
-collision is unsupported. Potential mesh/mesh interactions are rejected unless
-static/static or covered by a conservative fixed-separation proof; bodies needed
-by that proof cannot subsequently be moved through controls. Do not use arbitrary
-collision filtering to disguise missing shape-pair support.
+Convex/mesh and mesh/mesh contacts use bounded GPU traversal of cooked triangle
+hierarchies. Moving meshes retain their original triangles, including nonconvex
+openings; they are not replaced with convex hulls. Both triangle sides participate.
+Mesh pairs use the existing convex contact query on candidate triangle pairs and
+reduce results into the bounded persistent manifold.
+
+These are **discrete surface contacts**. Deep initial containment without intersecting
+surfaces is not detected, and fast bodies may tunnel between steps. Closed positive
+volume is required for dynamic mass properties, but does not turn the surface query
+into a solid-volume containment query. General CCD remains separate work.
+
+`maximumMeshTraversalTestsPerPair` bounds each of two traversal passes (count and
+write), including BVH nodes and triangle visits. Exhaustion sets
+`incompleteMeshQueries`; the shared 65,536-entry triangle-task queue reports overflow
+as `droppedTriangleQueries`. Both make lifetime execution incomplete. Neither a
+larger queue nor a larger budget repairs an already incomplete step: recreate and
+replay as described below. Static/static pairs remain excluded. Direct pose edits
+are no longer constrained by a fixed-separation proof; follow the normal wake and
+cache-invalidation contract after editing bodies.
 
 ## Contacts, friction and solver choice
 
@@ -210,6 +228,7 @@ but occasional sampling can miss a brief overflow.
 | `droppedPairs`, `droppedManifolds` | Cumulative discovery-output or persistent-cache losses |
 | `incompleteQueries`, `invalidBounds` | Cumulative discovery traversal failures |
 | `droppedTriangleQueries`, `unresolvedQueries` | Cumulative bounded mesh/convex-query failures |
+| `incompleteMeshQueries` | Cumulative collider-pair mesh traversal exhaustion |
 | `incompleteIslandUnions` | Cumulative island propagation exhaustion |
 | `maximumCandidatePairs`, `maximumCandidateTests` | Peak per-step discovery demand/work; zero where that discovery path is absent |
 | `saturated` | A lifetime counter exceeded uint32 capacity; sticky |
@@ -225,6 +244,75 @@ capacity, geometry or traversal settings, create a replacement world and replay 
 known valid initial/checkpoint state. Increasing capacity after a bad step cannot
 restore already-lost contact impulses. There is no automatic resize/retry mechanism.
 
+## Game-facing collision APIs
+
+Enable contact events with `eventCapacity` and queries with `enableQueries` before
+attaching the world. These optional allocations appear in `getCapacityInfo()`.
+The [Space Salvage example](https://github.com/visgl/luma.gl/tree/master/examples/experimental/space-salvage)
+uses these public APIs for targeting, docking and impact damage.
+
+```ts
+const world = new GPURigidBodyWorld({bodies, eventCapacity: 1024, enableQueries: true});
+// Attach, compile and submit simulation steps first.
+const contacts = await world.readContactEvents();
+const target = await world.raycast({
+  origin: [0, 0, 0], direction: [1, 0, 0], maximumDistance: 20, excludeBody: 0
+});
+const nearby = await world.overlapSphere({
+  center: [4, 0, 0], radius: 2, colliderIndices: [1, 2, 3], maximumHits: 3
+});
+```
+
+`maximumHits` must not exceed the world's collider count. Omit it to retain all
+overlap hits. `colliderIndices` selects explicit construction-time collider IDs;
+`excludeBody` removes every collider owned by a body. Query selection is independent
+of simulation pair exclusions. Queries test static, kinematic and dynamic bodies.
+Selected spheres and oriented boxes are supported exactly, including collider-local
+poses. Selecting another shape type rejects the query rather than approximating it.
+
+`raycast` normalizes the direction and returns the nearest hit within the finite
+maximum distance; ties choose the lowest collider index. A ray starting inside a
+shape returns distance zero, the ray origin and a zero normal. `overlapSphere`
+returns intersecting colliders in index order, with the closest shape point and an
+outward normal (zero for an overlap center inside a box). Its `distance` is zero.
+Both return `{hits, totalHits, truncated}`. Ray `totalHits` counts all intersections
+while retaining only the nearest; ray `truncated` is false by definition. Overlap
+`truncated` explicitly reports a result-capacity loss, including a zero-hit budget.
+
+Queries execute on the GPU against the pose state ordered before their submission,
+without advancing simulation. Results are asynchronously read back. Only one query
+may be pending per world; concurrent requests reject instead of queuing an unbounded
+backlog. Await pending reads/queries before destroying the world. The initial query
+implementation scans selected colliders and is intended for small interactive scenes,
+not a qualified large-world batch-query API. Overlap sampling is not a swept trigger;
+fast crossings between samples can be missed. General shape casts remain future work.
+
+`readContactEvents()` returns new `begin`, `impact` and `end` records since its last
+successful read. Each includes sequence, simulation step, both body/collider IDs,
+a representative contact point, a normal from the first collider toward the second,
+and the summed nonnegative normal impulse. The representative point/normal belongs
+to the strongest manifold contact. End events have zero point, normal and impulse.
+Impact records are sustained-contact samples above `impactImpulseThreshold`, not
+independent impact onsets; resting support impulses may exceed that threshold.
+Consumers should select phases/thresholds suitable for their gameplay. Events follow
+pair-slot scan order within a step; do not assume ordering by collider ID.
+
+The ring persists across graph encodings, so a batched simulation does not hide a
+brief contact. `dropped` reports unread records overwritten by newer ones. Sequence
+and step counters saturate instead of wrapping; `saturated` requires recreating the
+world. Concurrent reads share one snapshot and cursor. Contact events do not certify
+simulation completeness: also inspect `readSimulationDiagnostics()` for lost contact
+work. Direct pose edits plus `wake()` preserve event history so the following step
+can report contact exits/entries.
+
+Advanced GPU consumers may read the world-owned `contactEvents` buffer: a 16-byte
+u32 header (sequence, step, saturated, reserved) followed by `eventCapacity` 64-byte
+records. Each record contains four vec4 fields: u32 sequence/step/phase/reserved,
+u32 body IDs/collider IDs, f32 point/normalImpulse, and f32 normal/reserved. Phase IDs
+are 0 begin, 1 impact, 2 end. Record sequence N occupies slot `(N - 1) % capacity`.
+The recorder is an opt-in single GPU invocation scanning the bounded pair cache;
+large-scene parallel event compaction is a separate performance tranche.
+
 ## Troubleshooting and qualification boundaries
 
 | Symptom | Check |
@@ -239,7 +327,7 @@ restore already-lost contact impulses. There is no automatic resize/retry mechan
 Tests cover coupled tangent response, static friction, moving supports, eight-box
 stacks, sparse discovery, capacity overflow and recovery by replay. These are bounded
 fixtures with tolerances, not qualification for arbitrary scenes. General rigid-body
-CCD, joints/drives, unrestricted moving mesh/mesh response and cross-device bitwise
+CCD, joints/drives, solid mesh containment and cross-device bitwise
 reproducibility remain outside the current contract.
 
 See the [background guide](/docs/api-guide/gpu/gpu-physics),

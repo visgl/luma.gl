@@ -19,12 +19,14 @@ export function getRigidBodyShader(
   colliderCount = count,
   extended = false,
   sparse?: RigidBodySparseShaderLayout,
-  parallel = false
+  parallel = false,
+  maximumMeshTraversalTestsPerPair = 65536
 ): string {
   return /* wgsl */ `
 const BODY_COUNT: u32 = ${count}u;
 const COLLIDER_COUNT: u32 = ${colliderCount}u;
 const ITERATIONS: u32 = ${iterations}u;
+const MESH_TRAVERSAL_BUDGET:u32=${maximumMeshTraversalTestsPerPair}u;
 const PAIR_CAPACITY:u32=${sparse?.maximumPairs ?? colliderCount * colliderCount}u;
 struct Body { inertia: vec4f, inertiaOrientation: vec4f, motion: vec4f }
 struct Collider { shape: vec4f, position: vec4f, orientation: vec4f, material: vec4f, policies: vec4f, padding: vec4f }
@@ -145,14 +147,8 @@ fn solveFriction(firstCollider:u32,secondCollider:u32,contact:Contact,relative:v
  return tangent;
 }
 @compute @workgroup_size(64) fn integrate(@builtin(global_invocation_id) invocation: vec3u) {
- ${extended ? 'if(invocation.x==0u){atomicStore(&meshTasks.count,0u);atomicStore(&meshTasks.overflow,0u);atomicStore(&meshTasks.unresolved,0u);atomicStore(&targets.dispatch,0u);targets.vertical=1u;targets.depth=1u;}' : ''}
+ ${extended ? 'if(invocation.x==0u){atomicStore(&meshTasks.count,0u);atomicStore(&meshTasks.overflow,0u);atomicStore(&meshTasks.unresolved,0u);atomicStore(&meshTasks.incomplete,0u);atomicStore(&targets.dispatch,0u);targets.vertical=1u;targets.depth=1u;}' : ''}
  let body=invocation.x; if(body>=BODY_COUNT) {return;}
- // Preserve the envelope used to admit separated mesh pairs, even after direct buffer writes.
- if(bodies.bodies[body].motion.z>0.0){
-  positions[body]=vec4f(targets.entries[body].position.xyz,positions[body].w);
-  velocities[body]=vec4f(0,0,0,velocities[body].w);
-  if(bodies.bodies[body].motion.z>1.5){orientations[body]=targets.entries[body].orientation;}
- }
  let rotation=orientations[body]; orientations[body]=select(vec4f(0,0,0,1),normalize(rotation),dot(rotation,rotation)>0.000001);
  if(bodies.bodies[body].motion.x==2.0 && targets.entries[body].position.w>0.0) {
   velocities[body]=vec4f((targets.entries[body].position.xyz-positions[body].xyz)/settings.gravity.w,0);

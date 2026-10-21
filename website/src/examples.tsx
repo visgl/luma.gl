@@ -2779,3 +2779,10 @@ export const GLTFAudioExample: React.FC<WebsiteExampleProps & {feature?: GLTFAud
   }, [feature]);
   return <LumaExample id={feature === 'environment' ? 'gltf-audio-environment' : feature === 'graph' ? 'gltf-audio-graph' : 'gltf-audio'} directory="showcase" infoBoxAppearance="cinematic" sourcePath="examples/gltf/audio/app.ts" loadTemplate={loadTemplate} config={exampleConfig} showStats={false} {...props} />;
 };
+
+export const SpaceSalvageExample: React.FC = () => {
+  const source = useBaseUrl('/standalone-examples/space-salvage/index.html');
+  return <ExamplePage style={{background: '#050b18', minHeight: '720px'}}>
+    <iframe title="Space Salvage" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
+  </ExamplePage>;
+};
