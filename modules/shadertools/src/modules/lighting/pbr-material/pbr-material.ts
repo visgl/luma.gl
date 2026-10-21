@@ -30,6 +30,7 @@ export type PBRMaterialBindings = {
   pbr_baseColorSampler?: Texture | null; // #ifdef HAS_BASECOLORMAP
   pbr_normalSampler?: Texture | null; // #ifdef HAS_NORMALMAP
   pbr_emissiveSampler?: Texture | null; // #ifdef HAS_EMISSIVEMAP
+  pbr_lightmapSampler?: Texture | null; // #ifdef HAS_LIGHTMAP
   pbr_metallicRoughnessSampler?: Texture | null; // #ifdef HAS_METALROUGHNESSMAP
   pbr_occlusionSampler?: Texture | null; // #ifdef HAS_OCCLUSIONMAP
 
@@ -63,6 +64,7 @@ export type PBRMaterialUniforms = {
   normalScale?: number; // #ifdef HAS_NORMALMAP
 
   emissiveMapEnabled?: boolean;
+  lightmapMapEnabled?: boolean;
   emissiveFactor?: Readonly<Vector3 | NumberArray3>; // #ifdef HAS_EMISSIVEMAP
 
   metallicRoughnessValues?: Readonly<Vector2 | NumberArray2>;
@@ -122,6 +124,7 @@ export type PBRMaterialUniforms = {
   anisotropyMapEnabled?: boolean;
 
   emissiveStrength?: number;
+  lightmapIntensity?: number;
 
   baseColorUVSet?: number;
   baseColorUVTransform?: Readonly<NumberArray9 | Matrix3>;
@@ -132,7 +135,9 @@ export type PBRMaterialUniforms = {
   occlusionUVSet?: number;
   occlusionUVTransform?: Readonly<NumberArray9 | Matrix3>;
   emissiveUVSet?: number;
+  lightmapUVSet?: number;
   emissiveUVTransform?: Readonly<NumberArray9 | Matrix3>;
+  lightmapUVTransform?: Readonly<NumberArray9 | Matrix3>;
   specularColorUVSet?: number;
   specularColorUVTransform?: Readonly<NumberArray9 | Matrix3>;
   specularIntensityUVSet?: number;
@@ -201,6 +206,7 @@ export const pbrMaterial = {
     normalScale: 1,
 
     emissiveMapEnabled: false,
+    lightmapMapEnabled: false,
     emissiveFactor: [0, 0, 0],
 
     metallicRoughnessValues: [1, 1],
@@ -253,6 +259,7 @@ export const pbrMaterial = {
     anisotropyMapEnabled: false,
 
     emissiveStrength: 1,
+    lightmapIntensity: 1,
     dispersion: 0,
 
     baseColorUVSet: 0,
@@ -264,7 +271,9 @@ export const pbrMaterial = {
     occlusionUVSet: 0,
     occlusionUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
     emissiveUVSet: 0,
+    lightmapUVSet: 0,
     emissiveUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    lightmapUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
     specularColorUVSet: 0,
     specularColorUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
     specularIntensityUVSet: 0,
@@ -317,6 +326,7 @@ export const pbrMaterial = {
     {name: 'pbr_baseColorSampler', group: 3},
     {name: 'pbr_normalSampler', group: 3},
     {name: 'pbr_emissiveSampler', group: 3},
+    {name: 'pbr_lightmapSampler', group: 3},
     {name: 'pbr_metallicRoughnessSampler', group: 3},
     {name: 'pbr_occlusionSampler', group: 3},
     {name: 'pbr_specularColorSampler', group: 3},
@@ -345,6 +355,7 @@ export const pbrMaterial = {
     LIGHTING_FRAGMENT: true,
     HAS_NORMALMAP: false,
     HAS_EMISSIVEMAP: false,
+    HAS_LIGHTMAP: false,
     HAS_OCCLUSIONMAP: false,
     HAS_BASECOLORMAP: false,
     HAS_METALROUGHNESSMAP: false,
@@ -491,6 +502,10 @@ export const pbrMaterial = {
     diffuseTransmissionColorUVSet: 'i32',
     diffuseTransmissionColorUVTransform: 'mat3x3<f32>',
     multiscatterColorUVSet: 'i32',
-    multiscatterColorUVTransform: 'mat3x3<f32>'
+    multiscatterColorUVTransform: 'mat3x3<f32>',
+    lightmapMapEnabled: 'i32',
+    lightmapIntensity: 'f32',
+    lightmapUVSet: 'i32',
+    lightmapUVTransform: 'mat3x3<f32>'
   }
 } as const satisfies ShaderModule<PBRMaterialProps, PBRMaterialUniforms, PBRMaterialBindings>;

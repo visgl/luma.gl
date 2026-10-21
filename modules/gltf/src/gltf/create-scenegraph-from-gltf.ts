@@ -155,6 +155,13 @@ export function createScenegraphsFromGLTF(
       group.preorderTraversal(node => {
         if (node instanceof ModelNode) {
           modelNodes.add(node);
+          const variants = node.userData['gltfMaterialVariants'] as
+            | import('./gltf-material-variants').GLTFPrimitiveMaterialVariants
+            | undefined;
+          if (variants?.defaultMaterial) ownedMaterials.add(variants.defaultMaterial);
+          for (const mapping of variants?.mappings.values() || []) {
+            ownedMaterials.add(mapping.material);
+          }
           if (node.model?.material) {
             ownedMaterials.add(node.model.material);
           }

@@ -181,6 +181,10 @@ layout(std140) uniform pbrMaterialUniforms {
   mat3 diffuseTransmissionColorUVTransform;
   int multiscatterColorUVSet;
   mat3 multiscatterColorUVTransform;
+  bool lightmapMapEnabled;
+  float lightmapIntensity;
+  int lightmapUVSet;
+  mat3 lightmapUVTransform;
 } pbrMaterial;
 
 // Samplers
@@ -192,6 +196,9 @@ uniform sampler2D pbr_normalSampler;
 #endif
 #ifdef HAS_EMISSIVEMAP
 uniform sampler2D pbr_emissiveSampler;
+#endif
+#ifdef HAS_LIGHTMAP
+uniform sampler2D pbr_lightmapSampler;
 #endif
 #ifdef HAS_METALROUGHNESSMAP
 uniform sampler2D pbr_metallicRoughnessSampler;
@@ -1042,6 +1049,7 @@ vec4 pbr_filterColor(vec4 vertexColor)
   vec2 normalUV = getMaterialUV(pbrMaterial.normalUVSet, pbrMaterial.normalUVTransform);
   vec2 occlusionUV = getMaterialUV(pbrMaterial.occlusionUVSet, pbrMaterial.occlusionUVTransform);
   vec2 emissiveUV = getMaterialUV(pbrMaterial.emissiveUVSet, pbrMaterial.emissiveUVTransform);
+  vec2 lightmapUV = getMaterialUV(pbrMaterial.lightmapUVSet, pbrMaterial.lightmapUVTransform);
   vec2 specularColorUV = getMaterialUV(
     pbrMaterial.specularColorUVSet,
     pbrMaterial.specularColorUVTransform
@@ -1116,8 +1124,26 @@ vec4 pbr_filterColor(vec4 vertexColor)
 
   float transmission = 0.0;
 
+  vec3 lightmapIrradiance = vec3(0.0);
+#ifdef HAS_LIGHTMAP
+  if (pbrMaterial.lightmapMapEnabled) {
+    lightmapIrradiance = texture(pbr_lightmapSampler, lightmapUV).rgb * pbrMaterial.lightmapIntensity;
+  }
+#endif
+
   if(pbrMaterial.unlit){
     color.rgb = baseColor.rgb;
+#ifdef HAS_LIGHTMAP
+    if (pbrMaterial.lightmapMapEnabled) {
+      color *= lightmapIrradiance / M_PI;
+#ifdef HAS_OCCLUSIONMAP
+      if (pbrMaterial.occlusionMapEnabled) {
+        float ao = texture(pbr_occlusionSampler, occlusionUV).r;
+        color = mix(color, color * ao, pbrMaterial.occlusionStrength);
+      }
+#endif
+    }
+#endif
   }
   else{
     // Metallic and Roughness material properties are packed together
@@ -1242,6 +1268,8 @@ vec4 pbr_filterColor(vec4 vertexColor)
         color += getIBLContribution(pbrInfo, n, reflection);
       }
 #endif
+
+      color += baseColor.rgb * (1.0 - metallic) * lightmapIrradiance / M_PI;
 
 #ifdef HAS_OCCLUSIONMAP
       if (pbrMaterial.occlusionMapEnabled) {
@@ -1567,6 +1595,9 @@ vec4 pbr_filterColor(vec4 vertexColor)
       color += sheenColor * pbrMaterial.scaleIBLAmbient.x * (1.0 - sheenRoughness) * 0.25;
     }
 #endif
+
+    color += baseColor.rgb * (1.0 - metallic) * (1.0 - transmission) *
+      (1.0 - diffuseTransmission) * baseLayerEnergy * lightmapIrradiance / M_PI;
 
  // Apply optional PBR terms for additional (optional) shading
 #ifdef HAS_OCCLUSIONMAP

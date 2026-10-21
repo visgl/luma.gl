@@ -8,7 +8,7 @@ import {
   type GLTFNodePostprocessed,
   type GLTFPostprocessed
 } from '@loaders.gl/gltf';
-import {Device, type Texture} from '@luma.gl/core';
+import {assert, Device, type Texture} from '@luma.gl/core';
 import {
   decodeMorphTargetAttribute,
   Geometry,
@@ -23,6 +23,13 @@ import {
 import {pbrMaterial, SKIN_MAX_JOINTS} from '@luma.gl/shadertools';
 import {createGLTFMaterial, createGLTFModel} from '../gltf/create-gltf-model';
 import {type GLTFGPUInstancing, getGLTFNodeInstancing} from '../gltf/gltf-instancing';
+import {
+  type GLTFNodeLightmapExtension,
+  type GLTFLightmapInstance,
+  getGLTFLightmapInstances,
+  resolveGLTFLightmapTransform,
+  validateGLTFNodeLightmaps
+} from '../gltf/gltf-lightmap';
 import type {GLTFPrimitiveMaterialVariants} from '../gltf/gltf-material-variants';
 import {type GLTFMorphTargetState, setGLTFMorphWeights} from '../gltf/morph-targets';
 import {type PBREnvironment} from '../pbr/pbr-environment';
@@ -154,18 +161,23 @@ export function parseGLTF(
     if (gltfNode.mesh) {
       const sourceMesh = gltfNode.mesh;
       const instancing = getGLTFNodeInstancing(gltf, gltfNode);
+      const nodeLightmap = gltfNode.extensions?.['KHR_lightmap'] as
+        | GLTFNodeLightmapExtension
+        | undefined;
+      if (nodeLightmap) validateGLTFNodeLightmaps(nodeLightmap, sourceMesh.primitives.length);
       const hasMorphTargets = sourceMesh.primitives.some(primitive =>
         Boolean(primitive.targets?.length)
       );
       const mesh =
-        instancing || (hasMorphTargets && assignedMorphMeshes.has(sourceMesh.id))
+        nodeLightmap || instancing || (hasMorphTargets && assignedMorphMeshes.has(sourceMesh.id))
           ? createNodeForGLTFMesh(
               device,
               sourceMesh,
               gltf,
               gltfMaterialIdToMaterialMap,
               combinedOptions,
-              instancing || undefined
+              instancing || undefined,
+              nodeLightmap
             )
           : gltfMeshIdToNodeMap.get(sourceMesh.id);
       if (!mesh) {
@@ -269,9 +281,40 @@ function createNodeForGLTFMesh(
   gltf: GLTFPostprocessed,
   gltfMaterialIdToMaterialMap: Map<string, Material>,
   options: ParseGLTFInternalOptions,
-  instancing?: GLTFGPUInstancing
+  instancing?: GLTFGPUInstancing,
+  nodeLightmap?: GLTFNodeLightmapExtension,
+  lightmapInstance?: GLTFLightmapInstance
 ): GroupNode {
   const gltfPrimitives = gltfMesh.primitives || [];
+  const lightmapInstances = instancing && getGLTFLightmapInstances(instancing);
+  if (lightmapInstances) {
+    // Atlas batches currently use individual draws to preserve arbitrary I * B transforms on both backends.
+    assert(
+      Boolean(nodeLightmap?.lightmaps.length) ||
+        gltfPrimitives.some(primitive => primitive.material?.extensions?.['KHR_lightmap'])
+    );
+    return new GroupNode({
+      id: gltfMesh.name || gltfMesh.id,
+      children: lightmapInstances.map(
+        (instance, instanceIndex) =>
+          new GroupNode({
+            matrix: instancing.matrices[instanceIndex],
+            children: [
+              createNodeForGLTFMesh(
+                device,
+                gltfMesh,
+                gltf,
+                gltfMaterialIdToMaterialMap,
+                options,
+                undefined,
+                nodeLightmap,
+                instance
+              )
+            ]
+          })
+      )
+    });
+  }
   const primitives = gltfPrimitives.map((gltfPrimitive, i) =>
     createNodeForGLTFPrimitive({
       device,
@@ -281,7 +324,9 @@ function createNodeForGLTFMesh(
       gltf,
       gltfMaterialIdToMaterialMap,
       options,
-      instancing
+      instancing,
+      nodeLightmap,
+      lightmapInstance
     })
   );
   const mesh = new GroupNode({
@@ -302,6 +347,8 @@ type CreateNodeForGLTFPrimitiveOptions = {
   gltfMaterialIdToMaterialMap: Map<string, Material>;
   options: ParseGLTFInternalOptions;
   instancing?: GLTFGPUInstancing;
+  nodeLightmap?: GLTFNodeLightmapExtension;
+  lightmapInstance?: GLTFLightmapInstance;
 };
 
 /** Creates a renderable model node for one glTF primitive. */
@@ -313,7 +360,9 @@ function createNodeForGLTFPrimitive({
   gltf,
   gltfMaterialIdToMaterialMap,
   options,
-  instancing
+  instancing,
+  nodeLightmap,
+  lightmapInstance
 }: CreateNodeForGLTFPrimitiveOptions): ModelNode {
   const id = gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${primitiveIndex}`;
   const sourceVertexCount = getVertexCount(gltfPrimitive.attributes);
@@ -327,19 +376,36 @@ function createNodeForGLTFPrimitive({
   const vertexCount = geometry.vertexCount;
   const morphTargetState = createGLTFMorphTargetState(gltfPrimitive, gltf, geometry);
 
-  const parsedPPBRMaterial = parseOwnedPBRMaterial(
-    device,
-    gltfPrimitive.material,
-    geometry.attributes,
-    {...options, gltf}
+  const lightmapOverride = nodeLightmap?.lightmaps.find(
+    binding => binding.primitive === primitiveIndex
   );
+  const sourceMaterial = lightmapOverride
+    ? {
+        ...gltfPrimitive.material,
+        extensions: {...gltfPrimitive.material?.extensions, KHR_lightmap: lightmapOverride}
+      }
+    : gltfPrimitive.material;
+  const parsedPPBRMaterial = parseOwnedPBRMaterial(device, sourceMaterial, geometry.attributes, {
+    ...options,
+    gltf
+  });
+
+  if (lightmapInstance && sourceMaterial?.extensions?.KHR_lightmap) {
+    const binding = resolveGLTFLightmapTransform(
+      sourceMaterial.extensions.KHR_lightmap,
+      lightmapInstance
+    );
+    parsedPPBRMaterial.uniforms.lightmapUVTransform = binding.transform;
+    parsedPPBRMaterial.uniforms.lightmapIntensity = binding.intensity;
+  }
 
   const modelNode = createGLTFModel(device, {
     id,
     geometry,
-    material: gltfPrimitive.material
-      ? gltfMaterialIdToMaterialMap.get(gltfPrimitive.material.id) || null
-      : null,
+    material:
+      !sourceMaterial?.extensions?.KHR_lightmap && gltfPrimitive.material
+        ? gltfMaterialIdToMaterialMap.get(gltfPrimitive.material.id) || null
+        : null,
     parsedPPBRMaterial,
     modelOptions: options.modelOptions,
     vertexCount,
@@ -364,9 +430,15 @@ function createNodeForGLTFPrimitive({
       {material: Material; parameters: GLTFPrimitiveMaterialVariants['defaultParameters']}
     >();
     for (const mapping of sourceVariantMappings) {
-      const sourceMaterial =
+      const mappedSourceMaterial =
         typeof mapping.material === 'number' ? gltf.materials[mapping.material] : mapping.material;
-      const material = sourceMaterial && gltfMaterialIdToMaterialMap.get(sourceMaterial.id);
+      const sourceMaterial = lightmapOverride
+        ? {
+            ...mappedSourceMaterial,
+            extensions: {...mappedSourceMaterial?.extensions, KHR_lightmap: lightmapOverride}
+          }
+        : mappedSourceMaterial;
+      let material = sourceMaterial && gltfMaterialIdToMaterialMap.get(sourceMaterial.id);
       if (!material) {
         continue;
       }
@@ -376,6 +448,17 @@ function createNodeForGLTFPrimitive({
         geometry.attributes,
         {...options, gltf}
       );
+      if (sourceMaterial.extensions?.KHR_lightmap) {
+        if (lightmapInstance) {
+          const binding = resolveGLTFLightmapTransform(
+            sourceMaterial.extensions.KHR_lightmap,
+            lightmapInstance
+          );
+          variantMaterial.uniforms.lightmapUVTransform = binding.transform;
+          variantMaterial.uniforms.lightmapIntensity = binding.intensity;
+        }
+        material = createGLTFMaterial(device, {parsedPPBRMaterial: variantMaterial});
+      }
       for (const variantIndex of mapping.variants || []) {
         mappings.set(variantIndex, {
           material,

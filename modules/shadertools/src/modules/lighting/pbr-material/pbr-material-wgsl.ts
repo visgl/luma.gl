@@ -28,6 +28,7 @@ uniform pbrMaterialUniforms {
   float normalScale; // #ifdef HAS_NORMALMAP
 
   bool emissiveMapEnabled;
+  bool lightmapMapEnabled;
   vec3 emissiveFactor; // #ifdef HAS_EMISSIVEMAP
 
   vec2 metallicRoughnessValues;
@@ -74,6 +75,7 @@ uniform pbrMaterialUniforms {
   bool anisotropyMapEnabled;
 
   float emissiveStrength;
+  float lightmapIntensity;
   float dispersion;
   
   // IBL
@@ -96,6 +98,9 @@ uniform sampler2D u_NormalSampler;
 #endif
 #ifdef HAS_EMISSIVEMAP
 uniform sampler2D u_EmissiveSampler;
+#endif
+#ifdef HAS_LIGHTMAP
+uniform sampler2D u_LightmapSampler;
 #endif
 #ifdef HAS_METALROUGHNESSMAP
 uniform sampler2D u_MetallicRoughnessSampler;
@@ -315,6 +320,10 @@ struct pbrMaterialUniforms {
   diffuseTransmissionColorUVTransform: mat3x3f,
   multiscatterColorUVSet: i32,
   multiscatterColorUVTransform: mat3x3f,
+  lightmapMapEnabled: u32,
+  lightmapIntensity: f32,
+  lightmapUVSet: i32,
+  lightmapUVTransform: mat3x3f,
 }
 
 @group(3) @binding(auto) var<uniform> pbrMaterial : pbrMaterialUniforms;
@@ -331,6 +340,10 @@ struct pbrMaterialUniforms {
 #ifdef HAS_EMISSIVEMAP
 @group(3) @binding(auto) var pbr_emissiveSampler: texture_2d<f32>;
 @group(3) @binding(auto) var pbr_emissiveSamplerSampler: sampler;
+#endif
+#ifdef HAS_LIGHTMAP
+@group(3) @binding(auto) var pbr_lightmapSampler: texture_2d<f32>;
+@group(3) @binding(auto) var pbr_lightmapSamplerSampler: sampler;
 #endif
 #ifdef HAS_METALROUGHNESSMAP
 @group(3) @binding(auto) var pbr_metallicRoughnessSampler: texture_2d<f32>;
@@ -1253,6 +1266,7 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
   let normalUV = getMaterialUV(pbrMaterial.normalUVSet, pbrMaterial.normalUVTransform);
   let occlusionUV = getMaterialUV(pbrMaterial.occlusionUVSet, pbrMaterial.occlusionUVTransform);
   let emissiveUV = getMaterialUV(pbrMaterial.emissiveUVSet, pbrMaterial.emissiveUVTransform);
+  let lightmapUV = getMaterialUV(pbrMaterial.lightmapUVSet, pbrMaterial.lightmapUVTransform);
   let specularColorUV = getMaterialUV(
     pbrMaterial.specularColorUVSet,
     pbrMaterial.specularColorUVTransform
@@ -1325,8 +1339,26 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
   var color = vec3<f32>(0.0, 0.0, 0.0);
   var transmission = 0.0;
 
+  var lightmapIrradiance = vec3<f32>(0.0);
+  #ifdef HAS_LIGHTMAP
+  if (pbrMaterial.lightmapMapEnabled != 0u) {
+    lightmapIrradiance = textureSample(pbr_lightmapSampler, pbr_lightmapSamplerSampler, lightmapUV).rgb * pbrMaterial.lightmapIntensity;
+  }
+  #endif
+
   if (pbrMaterial.unlit != 0u) {
     color = baseColor.rgb;
+    #ifdef HAS_LIGHTMAP
+    if (pbrMaterial.lightmapMapEnabled != 0u) {
+      color *= lightmapIrradiance / M_PI;
+      #ifdef HAS_OCCLUSIONMAP
+      if (pbrMaterial.occlusionMapEnabled != 0) {
+        let ao = textureSample(pbr_occlusionSampler, pbr_occlusionSamplerSampler, occlusionUV).r;
+        color = mix(color, color * ao, pbrMaterial.occlusionStrength);
+      }
+      #endif
+    }
+    #endif
   } else {
     // Metallic and Roughness material properties are packed together
     // In glTF, these factors can be specified by fixed scalar values
@@ -1458,6 +1490,8 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
         color += getIBLContribution(pbrInfo, n, reflection);
       }
       #endif
+
+      color += baseColor.rgb * (1.0 - metallic) * lightmapIrradiance / M_PI;
 
       #ifdef HAS_OCCLUSIONMAP
       if (pbrMaterial.occlusionMapEnabled != 0) {
@@ -1848,6 +1882,9 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
       color += sheenColor * pbrMaterial.scaleIBLAmbient.x * (1.0 - sheenRoughness) * 0.25;
     }
     #endif
+
+    color += baseColor.rgb * (1.0 - metallic) * (1.0 - transmission) *
+      (1.0 - diffuseTransmission) * baseLayerEnergy * lightmapIrradiance / M_PI;
 
     // Apply optional PBR terms for additional (optional) shading
     #ifdef HAS_OCCLUSIONMAP

@@ -632,3 +632,22 @@ it('gltf#parsePBRMaterial can suppress attribute warnings for shared material pa
 
   void 0;
 });
+
+it('gltf#parsePBRMaterial binds linear lightmap irradiance with UV1 and authored intensity', () => {
+  const material = {
+    extensions: {
+      KHR_lightmap: {
+        lightmapTexture: {...makeCompressedTextureInfo('lightmap'), texCoord: 1},
+        intensity: 8.453125
+      }
+    }
+  };
+  const parsed = parsePBRMaterial(device, material as any, {TEXCOORD_1: {}}, {});
+  expect(parsed.defines.HAS_LIGHTMAP).toBe(true);
+  expect(parsed.uniforms.lightmapMapEnabled).toBe(true);
+  expect(parsed.uniforms.lightmapUVSet).toBe(1);
+  expect(parsed.uniforms.lightmapIntensity).toBe(8.453125);
+  expect(parsed.bindings.pbr_lightmapSampler?.format).toBe('bc7-rgba-unorm');
+  expect(() => parsePBRMaterial(device, material as any, {TEXCOORD_0: {}}, {})).toThrow();
+  destroyParsedTextures(parsed);
+});
