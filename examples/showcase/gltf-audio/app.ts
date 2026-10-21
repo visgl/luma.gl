@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {AnimationLoopTemplate, AnimationProps, ModelNode, OrbitControls} from '@luma.gl/engine';
-import {Color, Device, log} from '@luma.gl/core';
+import {Device, log} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {GLTFAudioController, createScenegraphsFromGLTF} from '@luma.gl/gltf';
@@ -149,7 +149,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.modelLights = [];
   }
 
-  getClearColor(): Color {
+  getClearColor(): [number, number, number, number] {
     return [0.95, 0.95, 0.97, 1];
   }
 
