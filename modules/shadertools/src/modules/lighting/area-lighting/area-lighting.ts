@@ -28,7 +28,7 @@ type AreaLightingUniforms = {
   lights: readonly AreaLightUniform[];
 };
 
-/** Configurable deterministic surface quadrature for PBR direct illumination. */
+/** Area-light compatibility props and shader resources for LTC or numerical reference integration. */
 export const areaLighting = {
   name: 'areaLighting',
   props: {} as AreaLightingProps,

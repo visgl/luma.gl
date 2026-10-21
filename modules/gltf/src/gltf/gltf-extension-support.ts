@@ -68,7 +68,7 @@ const GLTF_EXTENSION_SUPPORT_REGISTRY: Record<string, GLTFExtensionSupportDefini
     supportLevel: 'loader-only',
     standardStatus: 'draft',
     comment:
-      'Opt-in GLTFAreaLightController and PBR areaLighting provide a four-light, configurable 16/64/256-sample rect/disk direct-light profile. Strict loading does not claim full draft conformance.'
+      'Opt-in GLTFAreaLightController feeds the shared Light API. PBR supports four rect/disk lights with LTC diffuse, isotropic GGX and clearcoat; disks use a 32-gon and other lobes retain numerical integration. No shadows or indirect light; strict loading does not claim full draft conformance.'
   },
   KHR_lightmap: {
     supportLevel: 'loader-only',
