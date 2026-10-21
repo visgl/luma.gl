@@ -54,7 +54,7 @@ const config = {
         'hello-cube': '/examples/tutorials/hello-cube',
         'hello-instancing': '/examples/tutorials/hello-instancing',
         'hello-triangle-geometry': '/examples/tutorials/hello-triangle-geometry',
-        'gltf-audio': '/examples/gltf/audio',
+        'gltf-audio': '/examples/showcase/gltf-audio',
         'hello-gltf': '/examples/tutorials/hello-gltf',
         'hello-triangle': '/examples/tutorials/hello-triangle',
         globe: '/examples/showcase/globe',
