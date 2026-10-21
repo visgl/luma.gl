@@ -52,3 +52,7 @@ lab with CCD thin-obstacle/rotating-body scenes when CCD is implemented; create 
 mechanism lab for motors, constraints and articulations; and a separate batch/scale
 benchmark for throughput and capacity. Each scene needs quantitative checks as well
 as visual controls. Do not add placeholder simulations for unsupported features.
+
+The Fast sphere / thin walls scenario uses bounded sphere/static-surface CCD. It
+rejects incomplete steps through GPU rollback and preserves the remaining travel
+after impacts. This does not imply dynamic-pair or rotating-convex CCD support.

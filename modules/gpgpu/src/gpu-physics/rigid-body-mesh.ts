@@ -167,6 +167,14 @@ export function makeTriangleMeshGeometry(
     vertices[index * 3 + 1],
     vertices[index * 3 + 2]
   ];
+  for (let triangle = 0; triangle < triangles.length; triangle += 3) {
+    const first = point(triangles[triangle]);
+    const normal = cross(
+      subtract(point(triangles[triangle + 1]), first),
+      subtract(point(triangles[triangle + 2]), first)
+    );
+    if (normal.every(value => value === 0)) throw new Error('Degenerate mesh triangle');
+  }
   const minimum: Point = [Infinity, Infinity, Infinity],
     maximum: Point = [-Infinity, -Infinity, -Infinity];
   for (let index = 0; index < vertices.length; index++) {

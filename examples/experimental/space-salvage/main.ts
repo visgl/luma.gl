@@ -120,7 +120,17 @@ try {
   async function createMission() {
     const bodies = makeSalvageScene();
     const world = new GPURigidBodyWorld({
-      bodies,
+      bodies: [
+        ...bodies,
+        {
+          position: DOCK,
+          mode: 'static',
+          colliders: [{shape: {type: 'sphere', radius: 2}, isTrigger: true}]
+        }
+      ],
+      failurePolicy: 'rollback',
+      continuous: {bodies: [0]},
+      triggers: [{colliders: [bodies.length], targets: CARGO_IDS}],
       gravity: [0, 0, 0],
       timeStep: 1 / 120,
       iterations: 24,
@@ -264,12 +274,13 @@ try {
         }
         if (now - lastSample > 100) {
           lastSample = now;
-          const [states, events] = await Promise.all([
+          const [states, events, triggers] = await Promise.all([
             mission.world.readState(),
-            mission.world.readContactEvents()
+            mission.world.readContactEvents(),
+            mission.world.readTriggerEvents()
           ]);
           mission.states = states;
-          if (events.dropped || events.saturated)
+          if (events.dropped || events.saturated || triggers.dropped || triggers.saturated)
             throw new Error('Collision event capacity exhausted. Restart the mission.');
           eventCount += events.events.length;
           for (const event of events.events) {
@@ -292,18 +303,17 @@ try {
                     origin: position,
                     direction,
                     maximumDistance: 12,
-                    excludeBody: 0
+                    excludeBody: 0,
+                    colliderIndices: Array.from(
+                      {length: mission.world.colliderCount - 1},
+                      (_, index) => index
+                    )
                   })
                 ).hits[0]
               : undefined;
           queryCount++;
-          const overlap = await mission.world.overlapSphere({
-            center: DOCK,
-            radius: 2.0,
-            colliderIndices: CARGO_IDS.filter(index => !recovered.has(index))
-          });
-          queryCount++;
-          for (const hit of overlap.hits) {
+          for (const hit of triggers.events) {
+            if (hit.phase !== 'enter' || recovered.has(hit.body)) continue;
             recovered.add(hit.body);
             if (selected?.body === hit.body) selected = undefined;
             // Docked bodies are parked outside the arena; invalidate cached contacts after direct writes.

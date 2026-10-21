@@ -778,3 +778,12 @@ ray color, shadows, picking and channels. `RingGeometry` and ANARI `ring`
 geometry add closed annular prisms and capped segments using shared math.gl
 tessellation. The Chart Lighting preset combines these features with retained
 selection identities and an emissive-lighting preview toggle.
+
+### GPU physics reliability and gameplay queries
+
+Experimental rigid-body worlds add opt-in GPU rollback for incomplete or nonfinite
+steps, explicit capacity-growth reconstruction, a bounded sphere/static CCD envelope,
+parallel geometry queries and sphere casts, and persistent compound spherical sensors.
+Space Salvage uses simulation-step docking events; Rigid Body Lab includes a thin-wall
+CCD scenario. See the [rigid-body reference](/docs/api-reference/gpgpu/gpu-rigid-body-world)
+for supported envelopes and remaining qualification work.

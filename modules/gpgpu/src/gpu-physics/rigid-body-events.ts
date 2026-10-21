@@ -53,8 +53,13 @@ export function decodeRigidBodyContactEvents(
   };
 }
 
-export function getRigidBodyEventShader(capacity: number, impulseThreshold: number): string {
+export function getRigidBodyEventShader(
+  capacity: number,
+  impulseThreshold: number,
+  rollback = false
+): string {
   return /* wgsl */ `
+${rollback ? '@group(0) @binding(14) var<storage,read> eventStatistics:array<u32>;' : ''}
 struct ContactEvent { stamp:vec4u, identifiers:vec4u, point:vec4f, normal:vec4f }
 struct EventRing { sequence:u32, step:u32, saturated:u32, reserved:u32, entries:array<ContactEvent,${capacity}> }
 @group(0) @binding(12) var<storage,read_write> contactHistory:array<vec4u>;
@@ -65,6 +70,7 @@ fn emitContact(first:u32,second:u32,phase:u32,point:vec3f,normal:vec3f,impulse:f
  contactEvents.entries[slot]=ContactEvent(vec4u(contactEvents.sequence,contactEvents.step,phase,0),vec4u(colliderBody(first),colliderBody(second),first,second),vec4f(point,impulse),vec4f(normal,0));
 }
 @compute @workgroup_size(1) fn recordContacts(){
+ ${rollback ? 'if(eventStatistics[1]!=0u||eventStatistics[15]!=0u){return;}' : ''}
  if(contactEvents.step==0xffffffffu){contactEvents.saturated=1u;return;}contactEvents.step++;
  for(var pair=0u;pair<PAIR_CAPACITY;pair++){
   let previous=contactHistory[pair];let hasContact=manifolds[pair].count>0u;

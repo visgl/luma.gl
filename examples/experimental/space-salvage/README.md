@@ -13,9 +13,10 @@ occlude the ray. Touch controls provide thrust/braking; touch the scene to aim/t
 `R` or New mission resets the game. High-impulse ship contacts damage the hull.
 
 The tractor applies bounded impulses and a small recoil; it is not a joint or rigid
-tether. Docking uses a sphere-overlap query every 100 ms of wall time, so it is a
-sampled collection field, not a swept trigger. Collected bodies are parked outside
-the arena and contact caches invalidated. Ray/overlap queries are exact for the
+tether. Docking uses a spherical GPU sensor sampled every physics step, with persistent
+enter/exit events retained between gameplay reads. Box cargo uses discrete step-local
+overlap; this is not a swept box trigger. Collected bodies are parked outside
+the arena and contact caches invalidated. Ray queries are exact for the
 sphere and oriented-box colliders used here. Gameplay has no private manifold access
 or CPU collision implementation.
 
@@ -23,8 +24,8 @@ Physics advances on the GPU at 120 Hz with at most four catch-up steps and one p
 frame. Body poses feed rendering directly; asynchronous snapshots drive gameplay and
 UI. Contact events drive hull damage, bounded spark bursts and synthesized impact sounds.
 Audio starts only after interaction and can be muted in the InfoBox. Diagnostic failures/event loss stop the game
-rather than accepting incomplete simulation. There is no general CCD; use moderate
-speeds. The collapsed standard InfoBox includes GPU Graph and GPU Graph Timeline tabs.
+rather than accepting incomplete simulation. The ship uses bounded sphere/static-wall CCD with transactional rollback.
+Cargo and dynamic-pair collisions remain discrete; use moderate speeds. The collapsed standard InfoBox includes GPU Graph and GPU Graph Timeline tabs.
 
 ## Browser smoke check
 

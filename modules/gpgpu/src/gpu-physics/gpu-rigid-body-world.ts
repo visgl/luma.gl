@@ -42,6 +42,16 @@ import {
   type GPURigidBodySimulationDiagnostics
 } from './rigid-body-diagnostics';
 import {getRigidBodyStorageLayout, type GPURigidBodyCapacityInfo} from './rigid-body-capacity';
+import {RIGID_BODY_QUERY_GEOMETRY_SHADER} from './rigid-body-query-geometry';
+import {addRigidBodyContinuous, type GPURigidBodyContinuousOptions} from './rigid-body-continuous';
+import {
+  addRigidBodyTriggers,
+  makeRigidBodyTriggerLayout,
+  decodeRigidBodyTriggerEvents,
+  type GPURigidBodyTrigger,
+  type GPURigidBodyTriggerBatch
+} from './rigid-body-triggers';
+import {addRigidBodyCheckpoint} from './rigid-body-transaction';
 import {getRigidBodyShader} from './rigid-body-shaders';
 
 type Vector3 = readonly [number, number, number];
@@ -53,6 +63,7 @@ import {
 import {
   RIGID_BODY_QUERY_SHADER,
   type GPURigidBodyRayQuery,
+  type GPURigidBodySphereCastQuery,
   type GPURigidBodyOverlapQuery,
   type GPURigidBodyQueryResult
 } from './rigid-body-queries';
@@ -86,8 +97,14 @@ export type GPURigidBodyWorldProps = {
   eventCapacity?: number;
   /** Emit sustained-contact impact samples above this total normal impulse. */
   impactImpulseThreshold?: number;
-  /** Enable exact GPU ray/sphere-overlap queries for sphere and box colliders. */
+  /** Enable GPU ray, sphere-overlap and sphere-sweep queries. */
   enableQueries?: boolean;
+  /** Roll back poses and persistent contacts after an incomplete step; failures latch until reconstruction. */
+  /** Bounded sphere/static-surface CCD; requires rollback failure policy. */
+  continuous?: GPURigidBodyContinuousOptions;
+  failurePolicy?: 'report' | 'rollback';
+  triggers?: readonly GPURigidBodyTrigger[];
+  triggerEventCapacity?: number;
   contactMatchDistance?: number;
   restitutionThreshold?: number;
   sleepAfter?: number;
@@ -123,9 +140,13 @@ export class GPURigidBodyWorld {
   sleepStates: Buffer | null = null;
   /** World-owned GPU event ring; present only when eventCapacity is positive. */
   contactEvents: Buffer | null = null;
+  private triggerEvents: Buffer | null = null;
+  private triggerCursor = 0;
+  private triggerRead: Promise<GPURigidBodyTriggerBatch> | null = null;
   private eventCursor = 0;
   private eventRead: Promise<GPURigidBodyContactBatch> | null = null;
   private queryComputation: Computation | null = null;
+  private queryReduction: Computation | null = null;
   private querySettings: Buffer | null = null;
   private querySelection: Buffer | null = null;
   private queryOutput: Buffer | null = null;
@@ -170,6 +191,8 @@ export class GPURigidBodyWorld {
       (props.maximumRecoverySpeed ?? 2) < 0
     )
       throw new Error('Invalid rigid-body stability settings');
+    if (props.failurePolicy && !['report', 'rollback'].includes(props.failurePolicy))
+      throw new Error('Invalid failure policy');
     const eventCapacity = props.eventCapacity ?? 0;
     if (
       !Number.isInteger(eventCapacity) ||
@@ -308,6 +331,53 @@ export class GPURigidBodyWorld {
         (this.maximumPairs & (this.maximumPairs - 1)) !== 0)
     )
       throw new Error('Invalid rigid-body pair capacity');
+    if (props.continuous) {
+      if (
+        props.failurePolicy !== 'rollback' ||
+        !Number.isInteger(props.continuous.maximumImpacts ?? 4) ||
+        (props.continuous.maximumImpacts ?? 4) < 1 ||
+        (props.continuous.maximumImpacts ?? 4) > 16
+      )
+        throw new Error('Invalid continuous settings');
+      for (const index of props.continuous.bodies) {
+        const body = props.bodies[index];
+        const bodyColliders = colliders.filter(collider => collider.body === index);
+        if (
+          !Number.isInteger(index) ||
+          !body ||
+          (body.mode ?? ((body.mass ?? 1) === 0 ? 'static' : 'dynamic')) !== 'dynamic' ||
+          body.mass === 0 ||
+          bodyColliders.length !== 1 ||
+          bodyColliders[0].isTrigger ||
+          bodyColliders[0].shape.type !== 'sphere' ||
+          (bodyColliders[0].position ?? [0, 0, 0]).some(
+            (value, axis) => value !== (body.centerOfMass ?? [0, 0, 0])[axis]
+          )
+        )
+          throw new Error('Continuous bodies require centered dynamic spheres');
+      }
+      if (
+        colliders.some(collider => {
+          const body = props.bodies[collider.body];
+          return (
+            (body.mode ?? ((body.mass ?? 1) === 0 ? 'static' : 'dynamic')) === 'static' &&
+            !collider.isTrigger &&
+            !['sphere', 'box', 'plane'].includes(collider.shape.type)
+          );
+        })
+      )
+        throw new Error('Continuous static geometry is unsupported');
+    }
+    if (props.triggers?.length) {
+      if (
+        props.failurePolicy !== 'rollback' ||
+        !Number.isInteger(props.triggerEventCapacity ?? 256) ||
+        (props.triggerEventCapacity ?? 256) < 1 ||
+        (props.triggerEventCapacity ?? 256) > 65536
+      )
+        throw new Error('Invalid trigger settings');
+      makeRigidBodyTriggerLayout(props.triggers, colliders);
+    }
     this.colliders = structuredClone(colliders);
     this.props = structuredClone(props);
   }
@@ -319,7 +389,7 @@ export class GPURigidBodyWorld {
       collider => collider.shape.type !== 'sphere' && collider.shape.type !== 'box'
     );
     const parallel = this.solver === 'parallel';
-    return {
+    const storage = {
       packed,
       sparse,
       extended,
@@ -333,9 +403,36 @@ export class GPURigidBodyWorld {
         extended,
         parallel,
         this.props.eventCapacity ?? 0,
-        this.props.enableQueries ?? false
+        this.props.enableQueries ?? false,
+        this.props.failurePolicy === 'rollback',
+        Boolean(this.props.continuous)
       )
     };
+    const triggerLayout = this.props.triggers?.length
+      ? makeRigidBodyTriggerLayout(this.props.triggers, this.colliders)
+      : undefined;
+    if (triggerLayout)
+      storage.buffers.push(
+        {name: 'trigger-previous', byteLength: this.colliderStorageCount * 16, uniform: false},
+        {name: 'trigger-groups', byteLength: triggerLayout.groups.byteLength, uniform: false},
+        {name: 'trigger-pairs', byteLength: triggerLayout.pairs.byteLength, uniform: false},
+        {
+          name: 'trigger-samples',
+          byteLength: Math.max(1, triggerLayout.count) * 16,
+          uniform: false
+        },
+        {
+          name: 'trigger-history',
+          byteLength: Math.max(1, triggerLayout.count) * 16,
+          uniform: false
+        },
+        {
+          name: 'trigger-events',
+          byteLength: 16 + (this.props.triggerEventCapacity ?? 256) * 32,
+          uniform: false
+        }
+      );
+    return {...storage, triggerLayout};
   }
 
   /** Allocation preflight without GPU allocation. Graph scratch and driver overhead are separate. */
@@ -364,6 +461,7 @@ export class GPURigidBodyWorld {
       diagnosticOffset,
       metadataLength,
       parallelByteLength,
+      triggerLayout,
       buffers: allocationPlan
     } = this.getStorageLayout();
     if (Math.ceil(this.maximumPairs / 64) > graph.device.limits.maxComputeWorkgroupsPerDimension)
@@ -466,7 +564,7 @@ export class GPURigidBodyWorld {
           material?.restitution ?? body.restitution ?? 0.1,
           material?.staticFriction ?? body.friction ?? 0.6,
           material?.dynamicFriction ?? body.friction ?? 0.6,
-          0,
+          collider.isTrigger ? 1 : 0,
           material?.restitutionCombine ? policies.indexOf(material.restitutionCombine) : 4,
           material?.frictionCombine ? policies.indexOf(material.frictionCombine) : 4,
           ...shape.policies,
@@ -552,7 +650,7 @@ export class GPURigidBodyWorld {
           usage:
             location === 0
               ? Buffer.UNIFORM
-              : Buffer.STORAGE | (name === 'targets' ? Buffer.INDIRECT : 0)
+              : Buffer.STORAGE | Buffer.COPY_SRC | (name === 'targets' ? Buffer.INDIRECT : 0)
         },
         buffer
       )
@@ -643,6 +741,67 @@ export class GPURigidBodyWorld {
       parallelSleep: ['velocities', 'angularVelocities', 'bodies', 'sleepStates', 'parallelState']
     };
     parallelBindings['parallelSolve'] = parallelBindings['parallelPairs'];
+    this.simulationStatistics = allocate('simulation-statistics', 64);
+    const statisticsResource = graph.importBuffer(
+      {id: `${this.id}-statistics`, byteLength: 64, usage: Buffer.STORAGE},
+      this.simulationStatistics
+    );
+    const restoreCheckpoint =
+      this.props.failurePolicy === 'rollback'
+        ? addRigidBodyCheckpoint(
+            graph,
+            this.id,
+            [
+              'positions',
+              'orientations',
+              'velocities',
+              'angularVelocities',
+              'sleepStates',
+              'targets',
+              'manifolds'
+            ].map(name => {
+              const binding = bindings.find(binding => binding.name === name)!;
+              return {buffer: binding.buffer, resource: binding.resource};
+            }),
+            {buffer: this.simulationStatistics, resource: statisticsResource},
+            allocate
+          )
+        : undefined;
+
+    const continuousSelection = new Uint32Array(this.count);
+    for (const body of this.props.continuous?.bodies ?? [])
+      continuousSelection[body] = this.colliders.findIndex(collider => collider.body === body) + 1;
+    const continuous = this.props.continuous
+      ? addRigidBodyContinuous(
+          graph,
+          this.id,
+          source,
+          this.count,
+          continuousSelection,
+          this.props.continuous.maximumImpacts ?? 4,
+          bindings,
+          allocate
+        )
+      : undefined;
+    const triggers = triggerLayout
+      ? addRigidBodyTriggers(
+          graph,
+          this.id,
+          source,
+          this.colliderStorageCount,
+          triggerLayout,
+          this.props.triggerEventCapacity ?? 256,
+          bindings,
+          {
+            name: 'triggerStatistics',
+            buffer: this.simulationStatistics,
+            resource: statisticsResource,
+            location: 18
+          },
+          allocate
+        )
+      : undefined;
+    this.triggerEvents = triggers?.events ?? null;
     for (const entryPoint of [
       'integrate',
       ...(sparse ? ['prepare', 'bounds'] : []),
@@ -864,12 +1023,18 @@ export class GPURigidBodyWorld {
           createExecutable(await Computation.createAsync(device, computationProps))
       });
     }
-    this.simulationStatistics = allocate('simulation-statistics', 64);
+    continuous?.finish();
+    triggers?.sample();
+    restoreCheckpoint?.validate();
     const diagnosticBinding = (name: string) => {
       const binding = bindings.find(binding => binding.name === name)!;
       return {buffer: binding.buffer, resource: binding.resource};
     };
     addRigidBodyDiagnostics(graph, `${this.id}-diagnostics`, this.simulationStatistics, {
+      statisticsResource,
+      ...(restoreCheckpoint ? {validity: restoreCheckpoint.validity} : {}),
+      ...(triggers ? {triggers: triggers.samples} : {}),
+      ...(continuous ? {continuous: {...continuous.status, count: this.count}} : {}),
       ...(sparse
         ? {
             broadPhase: {...diagnosticBinding('bodies'), wordOffset: diagnosticOffset},
@@ -879,11 +1044,23 @@ export class GPURigidBodyWorld {
       ...(extended ? {meshTasks: diagnosticBinding('meshTasks')} : {}),
       ...(parallel ? {parallelState: diagnosticBinding('parallelState')} : {})
     });
+    restoreCheckpoint?.restore();
+    triggers?.publish();
     if (this.props.eventCapacity) {
       const contactHistory = allocate('contact-history', this.maximumPairs * 16);
       this.contactEvents = allocate('contact-events', 16 + this.props.eventCapacity * 64);
       const eventBindings = [
         ...bindings.filter(binding => ['bodies', 'manifolds'].includes(binding.name)),
+        ...(this.props.failurePolicy === 'rollback'
+          ? [
+              {
+                name: 'eventStatistics',
+                buffer: this.simulationStatistics,
+                resource: statisticsResource,
+                location: 14
+              }
+            ]
+          : []),
         ...[
           {name: 'contactHistory', buffer: contactHistory, location: 12},
           {name: 'contactEvents', buffer: this.contactEvents, location: 13}
@@ -903,14 +1080,20 @@ export class GPURigidBodyWorld {
         id: `${this.id}-contact-events`,
         source:
           source +
-          getRigidBodyEventShader(this.props.eventCapacity, this.props.impactImpulseThreshold ?? 1),
+          getRigidBodyEventShader(
+            this.props.eventCapacity,
+            this.props.impactImpulseThreshold ?? 1,
+            this.props.failurePolicy === 'rollback'
+          ),
         entryPoint: 'recordContacts',
         shaderLayout: {
           bindings: eventBindings.map(({name, location}) => ({
             name,
             location,
             group: 0,
-            type: name === 'bodies' ? ('read-only-storage' as const) : ('storage' as const)
+            type: ['bodies', 'eventStatistics'].includes(name)
+              ? ('read-only-storage' as const)
+              : ('storage' as const)
           }))
         }
       };
@@ -931,8 +1114,9 @@ export class GPURigidBodyWorld {
         id: properties.id,
         resources: eventBindings.map(binding => ({
           buffer: binding.resource,
-          usage:
-            binding.name === 'bodies' ? ('storage-read' as const) : ('storage-read-write' as const)
+          usage: ['bodies', 'eventStatistics'].includes(binding.name)
+            ? ('storage-read' as const)
+            : ('storage-read-write' as const)
         })),
         compile: () => executable(new Computation(graph.device, properties)),
         compileAsync: async () =>
@@ -943,9 +1127,9 @@ export class GPURigidBodyWorld {
       this.querySettings = allocate('query-settings', 48, true);
       this.querySelection = allocate('query-selection', Math.max(4, this.colliderStorageCount * 4));
       this.queryOutput = allocate('query-output', 16 + Math.max(1, this.colliderStorageCount) * 48);
-      this.queryComputation = new Computation(graph.device, {
+      const queryProperties = {
         id: `${this.id}-queries`,
-        source: source + RIGID_BODY_QUERY_SHADER,
+        source: source + RIGID_BODY_QUERY_GEOMETRY_SHADER + RIGID_BODY_QUERY_SHADER,
         entryPoint: 'queryColliders',
         shaderLayout: {
           bindings: [
@@ -961,6 +1145,21 @@ export class GPURigidBodyWorld {
           positions: this.positions,
           orientations: this.orientations,
           bodies,
+          query: this.querySettings,
+          querySelection: this.querySelection,
+          queryOutput: this.queryOutput
+        }
+      } satisfies ConstructorParameters<typeof Computation>[1];
+      this.queryComputation = new Computation(graph.device, queryProperties);
+      this.queryReduction = new Computation(graph.device, {
+        ...queryProperties,
+        entryPoint: 'reduceQueries',
+        shaderLayout: {
+          bindings: queryProperties.shaderLayout.bindings.filter(binding =>
+            ['query', 'querySelection', 'queryOutput'].includes(binding.name)
+          )
+        },
+        bindings: {
           query: this.querySettings,
           querySelection: this.querySelection,
           queryOutput: this.queryOutput
@@ -1100,7 +1299,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
   }
 
   private async runQuery(
-    query: GPURigidBodyRayQuery | GPURigidBodyOverlapQuery
+    query: GPURigidBodyRayQuery | GPURigidBodyOverlapQuery | GPURigidBodySphereCastQuery
   ): Promise<GPURigidBodyQueryResult> {
     if (
       !this.device ||
@@ -1113,13 +1312,16 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     )
       throw new Error('Queries are disabled or busy');
     const ray = 'origin' in query;
+    const cast = ray && 'radius' in query;
     const origin = ray ? query.origin : query.center;
     const direction = ray ? query.direction : [0, 0, 0];
     const length = Math.hypot(...direction);
     const maximumHits = ray ? 1 : (query.maximumHits ?? this.colliderCount);
     if (
+      (cast && (!Number.isFinite(query.radius) || query.radius < 0)) ||
       origin.length !== 3 ||
-      !origin.every(Number.isFinite) ||
+      !origin.every(value => Number.isFinite(Math.fround(value))) ||
+      direction.length !== 3 ||
       !direction.every(Number.isFinite) ||
       (ray
         ? !Number.isFinite(length) ||
@@ -1144,8 +1346,6 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
         throw new Error('Invalid query collider');
       const collider = this.colliders[index];
       if (collider.body === query.excludeBody) continue;
-      if (collider.shape.type !== 'sphere' && collider.shape.type !== 'box')
-        throw new Error('Query shape is unsupported');
       selection[index] = 1;
     }
     this.queryPending = true;
@@ -1153,19 +1353,20 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       const data = new ArrayBuffer(48);
       new Float32Array(data).set([
         ...origin,
-        ray ? 0 : query.radius,
+        ray ? (cast ? query.radius : 0) : query.radius,
         ...direction.map(value => (ray ? value / length : 0)),
         ray ? query.maximumDistance : 1e30
       ]);
-      new Uint32Array(data).set([ray ? 0 : 1, maximumHits, 0, 0], 8);
+      new Uint32Array(data).set([ray ? (cast ? 2 : 0) : 1, maximumHits, 0, 0], 8);
       this.querySettings.write(new Uint8Array(data));
       this.querySelection.write(selection);
       const encoder = this.device.createCommandEncoder();
       const pass = encoder.beginComputePass();
-      this.queryComputation.dispatch(pass, 1);
+      this.queryComputation.dispatch(pass, Math.ceil(this.colliderStorageCount / 64));
+      this.queryReduction!.dispatch(pass, 1);
       pass.end();
       this.device.submit(encoder.finish());
-      const bytes = await this.queryOutput.readAsync();
+      const bytes = await this.queryOutput.readAsync(0, 16 + maximumHits * 48);
       const words = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
       const floats = new Float32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
       const hits = Array.from({length: words[0]}, (_, index) => {
@@ -1186,10 +1387,20 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
           ]
         };
       });
-      return {hits, totalHits: words[1], truncated: !ray && words[1] > words[0]};
+      return {
+        hits,
+        totalHits: words[1],
+        truncated: !ray && words[1] > words[0],
+        complete: words[2] === 0
+      };
     } finally {
       this.queryPending = false;
     }
+  }
+
+  /** Cast a sphere against selected collision surfaces using bounded conservative advancement. */
+  castSphere(query: GPURigidBodySphereCastQuery): Promise<GPURigidBodyQueryResult> {
+    return this.runQuery(query);
   }
 
   async readState(): Promise<GPURigidBodyState[]> {
@@ -1226,6 +1437,58 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
         sleeping: arrays[4][offset + 1] > 0.5
       };
     });
+  }
+
+  /** Read step-ordered trigger transitions without losing intermediate enter/exit changes. */
+  readTriggerEvents(): Promise<GPURigidBodyTriggerBatch> {
+    if (!this.triggerEvents || this.destroyed) throw new Error('Triggers are disabled');
+    if (this.triggerRead) return this.triggerRead;
+    this.triggerRead = this.triggerEvents
+      .readAsync()
+      .then(bytes => {
+        const batch = decodeRigidBodyTriggerEvents(
+          new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4),
+          this.triggerCursor
+        );
+        this.triggerCursor = batch.sequence;
+        return batch;
+      })
+      .finally(() => {
+        this.triggerRead = null;
+      });
+    return this.triggerRead;
+  }
+
+  /** Stop submissions first. Reconstruct with these accepted poses and larger budgets after rollback. */
+  async getRecoveryProps(
+    overrides: Pick<
+      GPURigidBodyWorldProps,
+      'maximumPairs' | 'maximumCandidateTestsPerCollider' | 'maximumMeshTraversalTestsPerPair'
+    > = {}
+  ): Promise<GPURigidBodyWorldProps> {
+    if (this.props.failurePolicy !== 'rollback') throw new Error('Recovery requires rollback');
+    if (this.props.bodies.some(body => body.mode === 'kinematic'))
+      throw new Error('Kinematic recovery requires explicit target replay');
+    const states = await this.readState();
+    return {
+      ...structuredClone(this.props),
+      ...overrides,
+      bodies: this.props.bodies.map((body, index) => {
+        const state = states[index];
+        const offset = rotateRigidBodyVector(state.orientation, body.centerOfMass ?? [0, 0, 0]);
+        return {
+          ...structuredClone(body),
+          position: state.position.map((value, axis) => value - offset[axis]) as [
+            number,
+            number,
+            number
+          ],
+          orientation: state.orientation,
+          velocity: state.velocity,
+          angularVelocity: state.angularVelocity
+        };
+      })
+    };
   }
 
   /** Lifetime counters, including failures in steps between diagnostic snapshots. */
@@ -1282,6 +1545,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     this.destroyed = true;
     this.control?.destroy();
     this.queryComputation?.destroy();
+    this.queryReduction?.destroy();
     for (const buffer of this.ownedBuffers) buffer.destroy();
     this.ownedBuffers.length = 0;
   }

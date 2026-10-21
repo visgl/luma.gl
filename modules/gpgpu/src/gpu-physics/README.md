@@ -3,7 +3,7 @@
 Experimental WebGPU physics with two distinct world implementations. Public API
 contracts live in the website documentation:
 
-- [Overview and integration](../../../../docs/api-reference/gpgpu/gpu-physics.md)
+- [Overview, feature cards and integration](../../../../docs/api-reference/gpgpu/gpu-physics.md)
 - [GPUSphereWorld](../../../../docs/api-reference/gpgpu/gpu-sphere-world.md)
 - [GPURigidBodyWorld](../../../../docs/api-reference/gpgpu/gpu-rigid-body-world.md)
 - [Algorithms and GPU tradeoffs](../../../../docs/api-guide/gpu/gpu-physics.md)

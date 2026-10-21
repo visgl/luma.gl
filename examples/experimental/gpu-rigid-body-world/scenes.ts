@@ -9,6 +9,11 @@ import {
 } from '@luma.gl/gpgpu/gpu-physics';
 
 export const RIGID_BODY_SCENES = {
+  continuous: {
+    title: 'Fast sphere / thin walls',
+    description:
+      'A fast sphere crosses many wall thicknesses each step. Bounded sphere/static-surface CCD catches the walls and restitutes the remaining motion. Failed CCD steps roll back on the GPU. This qualifies translational spheres against static surfaces, not general rotating or dynamic-pair CCD.'
+  },
   mesh: {
     title: 'Mesh openings',
     description:
@@ -58,6 +63,28 @@ export const RIGID_BODY_SCENES = {
 export type RigidBodyScene = keyof typeof RIGID_BODY_SCENES;
 
 export function makeRigidBodyScene(scene: RigidBodyScene): GPURigidBody[] {
+  if (scene === 'continuous')
+    return [
+      {
+        position: [-3, 0, 1],
+        velocity: [180, 0, 0],
+        shape: {type: 'sphere', radius: 0.2},
+        restitution: 1,
+        friction: 0
+      },
+      {
+        position: [-5, 0, 1],
+        mode: 'static',
+        shape: {type: 'box', halfExtents: [0.03, 2, 2]},
+        restitution: 1
+      },
+      {
+        position: [5, 0, 1],
+        mode: 'static',
+        shape: {type: 'box', halfExtents: [0.03, 2, 2]},
+        restitution: 1
+      }
+    ];
   if (scene === 'mesh') {
     const cube = makeConvexHullGeometry(
       Array.from({length: 8}, (_, corner) => [
@@ -223,7 +250,11 @@ export function makeRigidBodyScene(scene: RigidBodyScene): GPURigidBody[] {
 }
 
 export function getRigidBodySceneGravity(scene: RigidBodyScene): [number, number, number] {
-  return scene === 'impact' ? [0, 0, 0] : scene === 'friction' ? [3, 0, -9.81] : [0, 0, -9.81];
+  return scene === 'impact' || scene === 'continuous'
+    ? [0, 0, 0]
+    : scene === 'friction'
+      ? [3, 0, -9.81]
+      : [0, 0, -9.81];
 }
 
 export function isRigidBodyScene(value: string): value is RigidBodyScene {

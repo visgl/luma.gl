@@ -66,7 +66,11 @@ recovery guarantee for pipeline compilation or driver allocation.
 | `maximumMeshTraversalTestsPerPair` | `65536` | Mesh BVH node/triangle visits per collider pair per traversal, 1–1,048,576 |
 | `eventCapacity` | `0` | Optional GPU contact ring capacity, 0–65,536; zero disables |
 | `impactImpulseThreshold` | `1` | Sustained-contact impulse threshold for impact samples |
-| `enableQueries` | `false` | Allocate exact sphere/box ray and overlap query resources |
+| `enableQueries` | `false` | Allocate parallel collider-query and reduction resources |
+| `failurePolicy` | `'report'` | `'rollback'` checkpoints body/contact state and rejects incomplete steps on the GPU |
+| `continuous` | Disabled | `{bodies, maximumImpacts?: 4}`; centered dynamic spheres against static spheres, boxes and planes; rollback required |
+| `triggers` | Disabled | Compound spherical sensor groups with target collider selections and optional swept sphere crossings; rollback required |
+| `triggerEventCapacity` | `256` | Trigger ring capacity, 1–65,536 when triggers are enabled |
 | `contactSlop` | `0.002` | Allowed contact penetration in world units |
 | `contactMatchDistance` | `0.05` | Distance for matching persistent contacts |
 | `restitutionThreshold` | `0.5` | Closing-speed threshold for bounce |
@@ -267,25 +271,35 @@ const nearby = await world.overlapSphere({
 overlap hits. `colliderIndices` selects explicit construction-time collider IDs;
 `excludeBody` removes every collider owned by a body. Query selection is independent
 of simulation pair exclusions. Queries test static, kinematic and dynamic bodies.
-Selected spheres and oriented boxes are supported exactly, including collider-local
-poses. Selecting another shape type rejects the query rather than approximating it.
+Sphere/box rays retain analytic tests. Other shapes use bounded distance queries:
+tapered capsules/cylinders, finite/infinite planes, convex hulls and original triangle
+meshes are supported. Mesh proximity uses the cooked BVH. One-sided planes reject
+queries from their back side. Triangle meshes retain surface semantics: a point deep
+inside a closed mesh is not an overlap unless its query sphere reaches the surface.
+Convex hulls use solid containment. Cooking rejects zero-area triangles after float32
+conversion instead of passing invalid faces to the collision kernels.
 
-`raycast` normalizes the direction and returns the nearest hit within the finite
-maximum distance; ties choose the lowest collider index. A ray starting inside a
-shape returns distance zero, the ray origin and a zero normal. `overlapSphere`
-returns intersecting colliders in index order, with the closest shape point and an
-outward normal (zero for an overlap center inside a box). Its `distance` is zero.
-Both return `{hits, totalHits, truncated}`. Ray `totalHits` counts all intersections
-while retaining only the nearest; ray `truncated` is false by definition. Overlap
-`truncated` explicitly reports a result-capacity loss, including a zero-hit budget.
+`raycast` normalizes the direction and retains the nearest hit within the maximum
+distance; ties select the lowest collider index. Sphere/box rays starting inside
+return the origin with distance zero and a zero normal. Extended-geometry queries
+may return a surface point for initial overlap. `overlapSphere` returns colliders
+in index order, surface points and outward normals; its `distance` is zero.
+`castSphere({...ray, radius})` sweeps a translated sphere against the selected
+surfaces using conservative advancement. Sweeps use a 1e-5 world-unit surface
+tolerance and at most 128 advancement iterations. They do not rotate the query
+shape or advance target bodies. Use an appropriate world scale.
 
-Queries execute on the GPU against the pose state ordered before their submission,
-without advancing simulation. Results are asynchronously read back. Only one query
-may be pending per world; concurrent requests reject instead of queuing an unbounded
-backlog. Await pending reads/queries before destroying the world. The initial query
-implementation scans selected colliders and is intended for small interactive scenes,
-not a qualified large-world batch-query API. Overlap sampling is not a swept trigger;
-fast crossings between samples can be missed. General shape casts remain future work.
+All return `{hits, totalHits, truncated, complete}`. **Check `complete` before using
+results**: false means a bounded geometry traversal or advancement did not finish;
+returned hits/counts are then partial. Ray/cast `totalHits` counts intersections while
+retaining only the nearest; their `truncated` is false. Overlap truncation reports
+output-capacity loss separately, including a zero-hit budget.
+
+Queries run per collider in parallel followed by deterministic reduction. Only the
+requested output prefix is read back. This is still a collider scan with one pending
+query per world, not a batched spatial-index query API. Concurrent requests reject
+instead of building an unbounded queue. Await reads before destruction. Poses are
+those ordered before query submission; queries do not advance physics.
 
 `readContactEvents()` returns new `begin`, `impact` and `end` records since its last
 successful read. Each includes sequence, simulation step, both body/collider IDs,
@@ -312,6 +326,78 @@ u32 body IDs/collider IDs, f32 point/normalImpulse, and f32 normal/reserved. Pha
 are 0 begin, 1 impact, 2 end. Record sequence N occupies slot `(N - 1) % capacity`.
 The recorder is an opt-in single GPU invocation scanning the bounded pair cache;
 large-scene parallel event compaction is a separate performance tranche.
+
+## Rejected steps and recovery
+
+With `failurePolicy: 'rollback'`, a GPU copy operation checkpoints positions,
+orientations, both velocities, sleep state, kinematic targets and persistent contact
+state before each step. After a finite-state check and diagnostics, one rollback graph operation restores
+those buffers if any lifetime failure is recorded. Contact and trigger events from
+rejected steps are not published. Diagnostics retain attempted-step/failure counts;
+further queued steps remain rejected until the world is reconstructed. `invalidBodyStates` reports nonfinite simulation results. No host
+readback is required for that decision. Rendering and queries ordered after the
+complete graph see accepted poses. Do not interleave consumers inside a physics step.
+
+Checkpoint memory and copies are an explicit opt-in cost reported by
+`getCapacityInfo()`. This protects against reported bounded-work failures; it is not
+GPU device-loss recovery or a general validator for arbitrary caller buffer writes.
+Event-ring consumer overwrite remains separately reported through `dropped`.
+
+Stop submissions and pending reads before recovery. For worlds without kinematic
+bodies, `await world.getRecoveryProps({maximumPairs: largerCapacity})` returns a
+construction description with accepted poses/velocities and optional larger discovery
+or mesh budgets. Construct/compile a replacement world, bind its new GPU buffers,
+then dispose the old graph/world. Warm starts, sleep and event cursors restart;
+IDs retain construction order but the replacement is a new event epoch. Kinematic
+worlds require explicit reconstruction and target-command replay. Capacity growth
+is an application-controlled recovery boundary, not allocation inside a GPU step.
+
+## Bounded continuous motion
+
+`continuous: {bodies: [bodyIndex], maximumImpacts: 4}` adds sphere/static-surface
+sweeps after the discrete solver. Selected bodies must be dynamic single spheres
+centered on their COM. Static sphere, box and plane obstacles are supported; filters
+and sensors are respected. Each impact reflects the closing normal velocity using
+the material restitution policy, then sweeps the remaining time. This first CCD
+response does not add tangential impact friction or CCD-specific contact-event
+payloads. Ordinary discrete contacts still provide friction and contact events.
+
+The GPU rejects the step if the impact or sweep budget is exhausted. Inspect
+`incompleteContinuousBodies` along with `complete` in lifetime diagnostics. Dynamic
+pairs, moving kinematic obstacles, rotating convex shapes and meshes still have
+discrete collision behavior. This is a declared CCD envelope, not general CCD.
+The Rigid Body Lab's **Fast sphere / thin walls** scenario demonstrates it.
+
+## Persistent triggers
+
+Mark sensor colliders with `isTrigger: true` to exclude physical response while
+keeping query visibility. Configure `triggers: [{colliders: [sensorIndex], targets:
+[targetIndex]}]`; `colliders` is a union of spherical sensors, and `targets` defaults
+to non-sensor colliders. Each group tracks one state per target body, including
+compound targets; mutual collider exclusions still apply. Source/target IDs are
+fixed for the world lifetime. Sensor mass properties are not automatically removed
+from compound mass calculations; use separate static/kinematic sensor bodies or
+authored body mass properties when appropriate.
+
+`readTriggerEvents()` returns `{sequence, step, dropped, saturated, events}`. Events
+contain `phase: 'enter' | 'exit'`, `trigger`, `body`, `collider`, `triggerCollider` and
+`swept`. Step-local sampling retains transitions across several simulation steps
+between reads. Compound groups do not emit duplicate entries while one member
+remains overlapping. There is no assumed ordering between different groups within
+a step; transitions are emitted in configured group/body order.
+
+`swept: true` requires sphere targets and detects complete crossings along relative
+center segments, emitting enter then exit in the same step. It does not track curved
+rotational trajectories or every intermediate transition through disjoint compound
+members. Non-sphere targets use discrete per-step overlap. Pair state is bounded to
+65,536 configured source/target pairs; geometry exhaustion increments
+`incompleteTriggerQueries` and rejects the step. Publication is gated on successful
+simulation. Ring overwrite and saturation are explicit; concurrent reads share a
+snapshot/cursor. Resetting/reconstructing the world resets trigger state.
+
+Space Salvage uses these step-based events for docking. General sensor shapes,
+spatially batched queries, scalable event compaction and glTF behavior bindings remain
+separate qualification work.
 
 ## Troubleshooting and qualification boundaries
 

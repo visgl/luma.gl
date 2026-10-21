@@ -12,13 +12,43 @@ requires a WebGPU device and has no WebGL or CPU simulation fallback.
 | World | Use it for | Important boundary |
 | --- | --- | --- |
 | [GPUSphereWorld](./gpu-sphere-world.md) | Large sphere fields, rolling balls, pool and small continuous sphere scenes | Dynamic shapes are spheres; continuous mode and events are bounded to small worlds |
-| [GPURigidBodyWorld](./gpu-rigid-body-world.md) | Oriented shapes, compounds, mass properties and glTF physics workloads | Discrete contacts; parallel solving remains experimental |
+| [GPURigidBodyWorld](./gpu-rigid-body-world.md) | Oriented shapes, compounds, mass properties and glTF physics workloads | Discrete contacts with an opt-in sphere/static CCD envelope; parallel solving remains experimental |
 
 These are separate implementations with different controls, storage ownership and
 failure counters. A feature on one world does not imply support on the other.
 Neither establishes complete glTF proposal coverage or state-of-the-art performance.
 The [background guide](/docs/api-guide/gpu/gpu-physics) explains the algorithms and
 GPU tradeoffs; the references below describe the actual contracts.
+
+## Feature cards
+
+**Available** means an implemented API within the limits shown, not full performance
+qualification. **Experimental** marks an opt-in path needing broader numerical or
+scale evidence. **Partial** means important cases remain unsupported. **Planned**
+means no general rigid-body implementation is offered yet. All physics remains
+experimental as a module.
+
+| Feature | Status | What you can use today | Remaining boundary |
+| --- | --- | --- | --- |
+| GPU simulation and rendering | Available | Fixed-step command graphs; position/orientation buffers consumed directly by renderers | Applications own scheduling, catch-up and submission limits; glTF publication is separate |
+| Large sphere worlds | Available | GPU grid discovery, angular dynamics, friction, rolling resistance and sleep/wake | Body count alone is not a frame-rate guarantee; dense contacts can exhaust budgets |
+| General rigid bodies | Available | Oriented boxes, spheres, tapered primitives, convex hulls, planes and compounds; mass, COM and inertia | Pairwise geometry and numerical qualification remain incomplete |
+| Triangle-mesh contacts | Partial | Convex/mesh and bounded moving mesh/mesh surface contacts; original nonconvex openings preserved | Deep solid containment, degenerate geometry and high-speed traversal are not generally covered |
+| Scalable rigid-body discovery | Available | Hierarchical discovery and sparse contact storage; all-pairs reference for small scenes | Dense scenes and mixed-size extremes still require capacity and performance qualification |
+| Parallel rigid-body solving | Experimental | Opt-in parallel contact response, persistent manifolds, coupled friction and island sleep/wake | Ordered solving remains the default; deep stacks and extreme mass ratios need broader evidence |
+| Continuous collision detection | Partial | Bounded small-world continuous mode in `GPUSphereWorld` | Rigid worlds offer opt-in sphere/static-surface CCD; dynamic-pair and rotating-shape CCD remain planned |
+| Collision events | Available | Opt-in rigid-body begin/end and thresholded impact samples with IDs, step ordering and explicit loss reporting | Event recording scans the bounded pair cache; large-world compaction and recoverable consumer overflow remain work |
+| Scene queries | Partial | Parallel collider rays, sphere overlap and bounded sphere casts across analytic shapes and cooked mesh geometry | One pending query per world; bounded casts report incomplete results; spatial batching and general shape casts remain planned |
+| Trigger volumes | Partial | Step-local compound spherical sensors and swept sphere crossings; Space Salvage uses docking events | Arbitrary sensor shapes, curved trajectories and glTF trigger bindings remain planned |
+| Joints and articulations | Planned | Existing impulses and kinematic targets support external controls | General constraints, drives, limits and reduced-coordinate articulations are not implemented |
+| glTF physics | Partial | Pinned draft import, shape/body/material/filter semantics and explicit capability reports | Proposal constraints, triggers, behavior bindings and automatic animation ownership remain incomplete |
+| GPU glTF pose publication | Planned | Procedural examples render GPU poses directly | The glTF example still bridges poses through the CPU; direct scenegraph pose/bounds publication remains work |
+| Capacity and diagnostics | Available | Allocation preflight, logical memory reports, bounded queues and lifetime failure counters | Opt-in GPU rollback and explicit budget-growth reconstruction; automatic growth and kinematic command replay remain work |
+| Qualification and tooling | Partial | GPU regressions, independent fixtures, whole-step benchmark exports and graph/timeline inspection | Multi-device performance/accuracy gates, capture/replay and a fully qualified profile remain work |
+
+See the [remaining tranches](https://github.com/visgl/luma.gl/blob/master/dev-docs/roadmaps/gpu-physics-roadmap.md#remaining-tranches-after-space-salvage)
+for completion gates. The detailed [sphere](./gpu-sphere-world.md) and
+[rigid-body](./gpu-rigid-body-world.md) references define the API contracts.
 
 ## Integration contract
 
@@ -56,7 +86,9 @@ attachment; construct a replacement world.
 
 ## Examples and qualification
 
-The Sphere World, Pool and Rigid Body Lab examples use procedural scenes. The glTF
+The Sphere World, Pool, Rigid Body Lab and Space Salvage examples use procedural scenes.
+Space Salvage exercises public collision events and queries for towing, docking and
+impact feedback. The glTF
 Physics example tests authored semantics through the separate `@luma.gl/gltf/physics`
 adapter. Its supported draft profile and render integration limitations are documented
 in the [adapter reference](https://github.com/visgl/luma.gl/blob/master/modules/gltf/src/physics/README.md).

@@ -197,7 +197,7 @@ ${extended ? RIGID_BODY_CONVEX_SHADER : ''}
      ? `
  let candidate=invocation.x;if(candidate>=candidateCount()){return;}
  let colliders=candidatePair(candidate);let first=colliders.x;let second=colliders.y;
- if(first>=second||colliderBody(first)==colliderBody(second)||excludes(first,second)||excludes(second,first)||(!dynamic(colliderBody(first))&&!dynamic(colliderBody(second)))){return;}
+ if(bodies.colliders[first].material.w!=0.0||bodies.colliders[second].material.w!=0.0||first>=second||colliderBody(first)==colliderBody(second)||excludes(first,second)||excludes(second,first)||(!dynamic(colliderBody(first))&&!dynamic(colliderBody(second)))){return;}
  let pair=claimManifold(first,second);if(pair==DELETED_PAIR){return;}
  `
      : `
@@ -208,7 +208,7 @@ ${extended ? RIGID_BODY_CONVEX_SHADER : ''}
  var previous=manifolds[pair]; ${sparse ? 'previous.count=previous.previousCount;' : ''} manifolds[pair].count=0u;
  ${extended ? 'manifolds[pair].padding=vec3u(0);' : ''}
  let firstBody=colliderBody(first);let secondBody=colliderBody(second);
- if(first>=second || firstBody==secondBody || (excludes(first,second)||excludes(second,first)) || (!dynamic(firstBody) && !dynamic(secondBody))) {return;}
+ if(bodies.colliders[first].material.w!=0.0 || bodies.colliders[second].material.w!=0.0 || first>=second || firstBody==secondBody || (excludes(first,second)||excludes(second,first)) || (!dynamic(firstBody) && !dynamic(secondBody))) {return;}
  ${extended ? 'manifolds[pair].padding=vec3u(0); if(bodies.colliders[first].shape.w>=2.0 || bodies.colliders[second].shape.w>=2.0){collideExtended(pair,first,second,previous);return;}' : ''}
  let difference=colliderPosition(second)-colliderPosition(first);
  let firstSphere=bodies.colliders[first].shape.w==0.0; let secondSphere=bodies.colliders[second].shape.w==0.0;

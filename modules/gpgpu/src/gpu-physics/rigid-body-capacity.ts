@@ -22,7 +22,9 @@ export function getRigidBodyStorageLayout(
   extended: boolean,
   parallel: boolean,
   eventCapacity = 0,
-  enableQueries = false
+  enableQueries = false,
+  rollback = false,
+  continuous = false
 ) {
   const geometryOffset = Math.ceil((bodyCount * 12 + colliderCount * 26) / 4) * 4;
   const pairOffset = Math.ceil((geometryOffset + geometryWords) / 64) * 64;
@@ -71,6 +73,30 @@ export function getRigidBodyStorageLayout(
         ]
       : [])
   ];
+  if (continuous)
+    buffers.push(
+      {name: 'continuous-previous', byteLength: bodyCount * 16, uniform: false},
+      {name: 'continuous-selection', byteLength: bodyCount * 4, uniform: false},
+      {name: 'continuous-status', byteLength: bodyCount * 16, uniform: false}
+    );
+  if (rollback) {
+    buffers.push({name: 'state-validity', byteLength: bodyCount * 4, uniform: false});
+    const names = [
+      'positions',
+      'orientations',
+      'velocities',
+      'angular-velocities',
+      'sleep',
+      'targets',
+      'manifolds'
+    ];
+    const checkpointBuffers = names.map((name, index) => ({
+      name: `checkpoint-${index}`,
+      byteLength: buffers.find(buffer => buffer.name === name)!.byteLength,
+      uniform: false
+    }));
+    buffers.push(...checkpointBuffers);
+  }
   return {
     geometryOffset,
     pairOffset,
