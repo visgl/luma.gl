@@ -23,11 +23,23 @@ when the composed matrix contains shear, but increases draw calls and resource
 usage compared with GPU batching. Ordinary instances without atlas attributes
 continue to use the existing GPU instancing path.
 
-## Implementation status
+## Supported profile
 
-Material parsing, node override bindings, atlas attribute decoding, and WebGL/WGSL
-shader paths are under development. Parser and uniform-layout tests pass; the core
-and layered WGSL paths compile in the browser tests. Rendered atlas fixtures,
-material variant interactions, resource cleanup, and the shared Cornell Box
-example still require validation before this implementation is advertised as
-supported.
+The renderer supports UV0/UV1 material bindings, complete node overrides, and the
+four instance atlas attributes. The node and instance atlas examples from the
+pinned proposal are tested with framebuffer readback on WebGL and WebGPU. The
+shared [Cornell Box example](/examples/showcase/gltf-lightmap) loads the original
+source-hosted asset and isolates baked irradiance from extra punctual lights.
+
+Node and instance bindings are preserved while switching between already
+lightmapped material variants. Changing the primitive's shader feature set through
+variants, additional UV sets, and the broader image-format/HDR combinations are
+outside this tested profile. The support registry retains `loader-only` status so
+strict required-extension loading does not claim complete draft conformance.
+
+```tsx
+<GLTFFeatureExample feature="lightmap" />
+```
+
+The standalone shared viewer accepts `?feature=lightmap&backend=webgl` or
+`?feature=lightmap&backend=webgpu` to select one backend explicitly.

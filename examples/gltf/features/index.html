@@ -5,10 +5,11 @@
     import {webgpuAdapter} from '@luma.gl/core/webgpu';
     import {webgl2Adapter} from '@luma.gl/core/webgl';
     import AnimationLoopTemplate from './app.ts';
-    document.getElementById('info').innerHTML = AnimationLoopTemplate.info;
-    const adapters = new URLSearchParams(location.search).get('backend') === 'webgl' ? [webgl2Adapter] : [webgpuAdapter, webgl2Adapter];
+    const backend = new URLSearchParams(location.search).get('backend');
+    const adapters = backend === 'webgl' ? [webgl2Adapter] : backend === 'webgpu' ? [webgpuAdapter] : [webgpuAdapter, webgl2Adapter];
     const feature = new URLSearchParams(location.search).get('feature') || 'billboard';
-    if (feature !== 'billboard') throw new Error(`Unknown glTF feature: ${feature}`);
+    if (feature !== 'billboard' && feature !== 'lightmap') throw new Error(`Unknown glTF feature: ${feature}`);
+    document.getElementById('info').innerHTML = AnimationLoopTemplate.getInfo(feature);
     class ConfiguredFeature extends AnimationLoopTemplate {
       constructor(animationProps) { super(animationProps, feature); }
     }
@@ -16,6 +17,8 @@
     animationLoop.start();
   </script>
   <style>
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
+    canvas { display: block; width: 100vw !important; height: 100vh !important; }
     body {
       background: black;
       margin: 0;

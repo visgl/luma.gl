@@ -572,12 +572,14 @@ function parseMaterialExtensions(
     // Lightmap irradiance requires a finite nonnegative multiplier.
     assert(Number.isFinite(intensity) && intensity >= 0);
     parsedMaterial.uniforms.lightmapIntensity = intensity;
-    addTexture(device, lightmap.lightmapTexture, 'pbr_lightmapSampler', parsedMaterial, {
-      gltf,
-      attributes,
-      textureTransformSlot: 'lightmap',
-      featureOptions: {define: 'HAS_LIGHTMAP', enabledUniformName: 'lightmapMapEnabled'}
-    });
+    // Shared material creation has no primitive attributes; lightmaps use independent primitive materials.
+    if (Object.keys(attributes).length > 0)
+      addTexture(device, lightmap.lightmapTexture, 'pbr_lightmapSampler', parsedMaterial, {
+        gltf,
+        attributes,
+        textureTransformSlot: 'lightmap',
+        featureOptions: {define: 'HAS_LIGHTMAP', enabledUniformName: 'lightmapMapEnabled'}
+      });
   }
 
   if (hasMaterialExtensionShading(extensions)) {
