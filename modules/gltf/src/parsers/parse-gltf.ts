@@ -63,6 +63,7 @@ type ParseGLTFInternalOptions = Required<ParseGLTFOptions> & {
   generatedTextures: Set<Texture>;
   materialInstances: Map<number, Material[]>;
   validateAttributes?: boolean;
+  validateLightmapAttributes?: boolean;
 };
 
 const defaultOptions: Required<ParseGLTFOptions> = {
