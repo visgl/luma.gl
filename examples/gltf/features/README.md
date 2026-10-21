@@ -5,6 +5,7 @@ Website entries select a supported preset through a typed prop:
 ```tsx
 <GLTFFeatureExample feature="billboard" />
 <GLTFFeatureExample feature="lightmap" />
+<GLTFFeatureExample feature="area-lights" />
 ```
 
 Run `yarn start` in this directory for a standalone preview. Select the same preset with
@@ -19,3 +20,5 @@ The application owns its controller and scene bundle. The website owns its devic
 scene bundle and feature controllers when replacing a model or finalizing the application.
 
 The lightmap preset loads the pinned MIT Cornell Box (709 KB). Its baked irradiance is shown without additional runtime lights.
+
+The area-light preset loads The Modern Living Room by Wig42 (CC BY 3.0), with conversion credit to Benedikt Bitterli and Foundation Resources. Geometry and textures stay in the source repository; the viewer routes Git LFS payloads through its media host.

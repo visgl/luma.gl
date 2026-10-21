@@ -357,6 +357,12 @@ mat3 getTBN(vec2 uv)
   mat3 tbn = pbr_vTBN;
 #endif
 
+#ifdef DOUBLE_SIDED
+#ifdef HAS_NORMALS
+  // Derivative normals already face the viewer; only flip an authored basis.
+  if (!gl_FrontFacing) tbn = mat3(-tbn[0], -tbn[1], -tbn[2]);
+#endif
+#endif
   return tbn;
 }
 
@@ -1261,6 +1267,19 @@ vec4 pbr_filterColor(vec4 vertexColor)
           color += calculateFinalColor(pbrInfo, lighting_getSpotLight(i).color / attenuation);
         }
       }
+      for (int areaIndex = 0; areaIndex < areaLighting_getLightCount(); areaIndex++) {
+#ifdef USE_AREA_LIGHT_LTC
+        color += areaLTC_evaluate(areaIndex, pbr_vPosition, pbrInfo.n, pbrInfo.v, pbrInfo.perceptualRoughness, pbrInfo.diffuseColor, pbrInfo.reflectance0, pbrInfo.reflectance90);
+#else
+        for (int sampleIndex = 0; sampleIndex < areaLighting.sampleCount; sampleIndex++) {
+          PointLight sampleLight = areaLighting_getSample(areaIndex, sampleIndex, pbr_vPosition);
+          if (dot(sampleLight.color, sampleLight.color) > 0.0) {
+            PBRInfo_setPointLight(pbrInfo, sampleLight);
+            color += calculateFinalColor(pbrInfo, sampleLight.color);
+          }
+        }
+#endif
+      }
 #endif
 
 #ifdef USE_IBL
@@ -1569,6 +1588,39 @@ vec4 pbr_filterColor(vec4 vertexColor)
         );
       }
     }
+      for (int areaIndex = 0; areaIndex < areaLighting_getLightCount(); areaIndex++) {
+#ifdef USE_AREA_LIGHT_LTC
+        // Unsupported fits retain numerical integration rather than silently dropping material lobes.
+        if (anisotropyStrength <= 0.0001 && dot(sheenColor, sheenColor) <= 0.000001 && diffuseTransmission <= 0.0001) {
+        color += areaLTC_evaluate(areaIndex, pbr_vPosition, pbrInfo.n, pbrInfo.v, pbrInfo.perceptualRoughness, pbrInfo.diffuseColor, pbrInfo.reflectance0, pbrInfo.reflectance90);
+        color += clearcoatFactor * areaLTC_specular(areaLighting_getLight(areaIndex), pbr_vPosition, clearcoatNormal, pbrInfo.v, clearcoatRoughness, vec3(0.04), vec3(1.0));
+        } else {
+        for (int sampleIndex = 0; sampleIndex < areaLighting.sampleCount; sampleIndex++) {
+          PointLight sampleLight = areaLighting_getSample(areaIndex, sampleIndex, pbr_vPosition);
+          if (dot(sampleLight.color, sampleLight.color) > 0.0) {
+            PBRInfo_setPointLight(pbrInfo, sampleLight);
+            color += calculateMaterialLightColor(pbrInfo, sampleLight.color, clearcoatNormal,
+              clearcoatFactor, clearcoatRoughness, sheenColor, sheenRoughness, anisotropyTangent, anisotropyStrength);
+            color += calculateDiffuseTransmissionLight(pbrInfo, sampleLight.color,
+              diffuseTransmissionColor, diffuseTransmission, multiscatterColor, thickness);
+          }
+        }
+
+        }
+#else
+        for (int sampleIndex = 0; sampleIndex < areaLighting.sampleCount; sampleIndex++) {
+          PointLight sampleLight = areaLighting_getSample(areaIndex, sampleIndex, pbr_vPosition);
+          if (dot(sampleLight.color, sampleLight.color) > 0.0) {
+            PBRInfo_setPointLight(pbrInfo, sampleLight);
+            color += calculateMaterialLightColor(pbrInfo, sampleLight.color, clearcoatNormal,
+              clearcoatFactor, clearcoatRoughness, sheenColor, sheenRoughness, anisotropyTangent, anisotropyStrength);
+            color += calculateDiffuseTransmissionLight(pbrInfo, sampleLight.color,
+              diffuseTransmissionColor, diffuseTransmission, multiscatterColor, thickness);
+          }
+        }
+
+#endif
+      }
 #endif
 
     // Calculate lighting contribution from image based lighting source (IBL)

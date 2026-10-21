@@ -797,6 +797,7 @@
           "api-reference/gltf/gltf-animation",
           "api-reference/gltf/gltf-billboard",
           "api-reference/gltf/gltf-lightmap",
+          "api-reference/gltf/gltf-area-lights",
           "api-reference/gltf/gltf-audio",
           {
             "type": "category",

@@ -396,6 +396,8 @@ function parseMaterial(
   attributes: Record<string, any>,
   gltf?: GLTFPostprocessed
 ): void {
+  parsedMaterial.parameters.cullMode = material.doubleSided ? 'none' : 'back';
+  parsedMaterial.defines['DOUBLE_SIDED'] = Boolean(material.doubleSided);
   parsedMaterial.uniforms.unlit = Boolean(
     material.unlit || material.extensions?.KHR_materials_unlit
   );

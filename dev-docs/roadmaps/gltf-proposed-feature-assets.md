@@ -73,8 +73,15 @@ compatibility candidate. Their subdirectory READMEs explicitly call out nonstand
 Buffers and images are Git LFS objects: raw GitHub endpoints return pointer text, not renderable
 payloads. A source-loader fetch policy must route those dependencies to
 `https://media.githubusercontent.com/media/<repository>/<revision>/<path>` and verify CORS/payload
-availability. Head geometry is 401,180 bytes; Living Room geometry is 33,217,588 bytes. Confirm the
-original PBRT/Bitterli licensing before adopting either for the shipped gallery.
+availability. Head geometry is 401,180 bytes; Living Room geometry is 33,217,588 bytes. The Living Room license is verified in the original
+[PBRT archive](https://benedikt-bitterli.me/resources/pbrt-v4/living-room-3.zip),
+entry `living-room-3/LICENSE.txt`: the scene is **The Modern Living Room by Wig42**,
+licensed [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). Preserve artist
+credit, the license link, and Benedikt Bitterli's scene-conversion attribution.
+The archive license was inspected with HTTP range reads; no inference from the
+Foundation repository's general CC0 statement was used. The pinned Foundation
+geometry and texture media endpoints return HTTP 200 with CORS enabled. Head's
+original-source licensing remains unverified.
 
 ## Layered audio assets
 
