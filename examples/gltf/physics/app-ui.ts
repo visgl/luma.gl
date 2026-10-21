@@ -26,7 +26,7 @@ const SAMPLE_DESCRIPTIONS: Record<string, string> = {
   Filtering:
     '<h3>Filtering · who collides?</h3><p>Blue collides with blue, green collides with green, and both collide with the striped ground. Blue and green deliberately pass through each other: this demonstrates collision filtering, not missing collisions.</p><p>The connected pair forms one rigid body, but its blue and green parts retain separate filters. One part can pass through an obstacle while the matching-color part catches on it. Reset to watch the fall again.</p>',
   MotionProperties:
-    '<h3>Motion properties · mass and motion</h3><p>The bottom-heavy toy wobbles around its offset center of mass. Four balloons rise under reversed gravity and collide with the ceiling. The wheel can rotate around one axis but cannot translate; its original triangle geometry preserves the holes. The rounded box falls onto the cone without rotating because its inertia locks all rotation axes. Reset to replay.</p>'
+    '<h3>Motion properties · mass and motion</h3><p>The bottom-heavy toy wobbles around its offset center of mass. Four balloons rise under reversed gravity and collide with the ceiling. The wheel can rotate around one axis but cannot translate; its original triangle geometry preserves the holes. The rounded box falls onto the cone without rotating because its inertia locks all rotation axes. Reset restores the starting scene and keeps your camera view.</p>'
 };
 
 export function showSampleDescription(sample: string): void {

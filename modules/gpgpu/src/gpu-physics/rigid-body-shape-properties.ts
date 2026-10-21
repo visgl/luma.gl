@@ -14,6 +14,17 @@ export type RigidBodyShapeProperties = {
 /** Geometric properties at unit density, with the tensor measured about its own COM. */
 export function getRigidBodyShapeProperties(shape: GPURigidBodyShape): RigidBodyShapeProperties {
   if (shape.type === 'convex-hull' || shape.type === 'triangle-mesh') return shape.geometry;
+  if (shape.type === 'plane') {
+    if (
+      [shape.sizeX, shape.sizeZ].some(
+        size => size !== undefined && (!Number.isFinite(size) || size <= 0)
+      )
+    )
+      throw new Error('Invalid plane extent');
+    // A zero-volume surface contributes no automatic volume density or inertia.
+    // Applications may supply mass and principal inertia explicitly.
+    return {volume: 0, center: [0, 0, 0], tensor: Array<number>(9).fill(0)};
+  }
   if (shape.type === 'sphere' || shape.type === 'box') {
     const diagonal = getBodyInertia(1, shape);
     const volume =

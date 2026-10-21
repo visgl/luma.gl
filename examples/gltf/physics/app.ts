@@ -12,6 +12,7 @@ import {Matrix4} from '@math.gl/core';
 import {
   createGLTFPhysicsWorld,
   parseGLTFPhysics,
+  makeGLTFPhysicsMeshResolver,
   type GLTFPhysicsDescription
 } from '@luma.gl/gltf/physics';
 import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
@@ -66,6 +67,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   graph?: CompiledGPUCommandGraph<void>;
   snapshot?: Promise<void>;
   loading = false;
+  loadedSample?: string;
   paused = false;
   previousTime?: number;
   accumulator = 0;
@@ -99,6 +101,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const reload = () => {
       void this.loadGLTF();
     };
+    const resetScene = () => {
+      void this.loadGLTF({preserveView: true});
+    };
     const selectNeighbor = (offset: number) => {
       if (!sample || this.loading) return;
       sample.selectedIndex =
@@ -114,13 +119,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       if (pause) pause.textContent = this.paused ? 'Resume' : 'Pause';
     };
     sample?.addEventListener('change', reload);
-    reset?.addEventListener('click', reload);
+    reset?.addEventListener('click', resetScene);
     pause?.addEventListener('click', togglePause);
     this.cleanupControls = () => {
       previous?.removeEventListener('click', selectPrevious);
       next?.removeEventListener('click', selectNext);
       sample?.removeEventListener('change', reload);
-      reset?.removeEventListener('click', reload);
+      reset?.removeEventListener('click', resetScene);
       pause?.removeEventListener('click', togglePause);
     };
     reload();
@@ -145,7 +150,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     return [0.95, 0.95, 0.97, 1];
   }
 
-  async loadGLTF(): Promise<void> {
+  async loadGLTF({preserveView = false}: {preserveView?: boolean} = {}): Promise<void> {
     if (this.loading || this.isFinalized) return;
     this.loading = true;
     this.previousTime = undefined;
@@ -171,8 +176,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       await this.snapshot;
       const gltf = await load(modelUrl, GLTFLoader);
       if (this.isFinalized) return;
+      const physicsScenegraph = new GLTFScenegraph(gltf);
       const description = parseGLTFPhysics(gltf.json, {
-        resolveLegacyMeshGeometry: makeLegacyMeshGeometryResolver(new GLTFScenegraph(gltf))
+        resolveNodeMeshGeometry: makeGLTFPhysicsMeshResolver(physicsScenegraph),
+        resolveLegacyMeshGeometry: makeLegacyMeshGeometryResolver(physicsScenegraph)
       });
       if (description.supported) {
         replacementWorld = createGLTFPhysicsWorld(description, {timeStep: 1 / 120, iterations: 16});
@@ -233,19 +240,20 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
 
       const sceneBounds = scenegraphsFromGLTF.sceneBounds[0] || scenegraphsFromGLTF.modelBounds;
-      this.center = [...sceneBounds.center];
       this.sceneRadius = sceneBounds.radius;
-      this.center[1] =
-        (description.bodies.find(body => body.body.mass === 0)?.body.position?.[1] || 0) +
-        Math.min(this.sceneRadius * 0.15, 1.5);
-      this.cameraHeight = this.center[1];
-      this.orbitControls.setProps({
-        target: [this.center[0], this.cameraHeight, this.center[2]],
-        distance: sceneBounds.recommendedOrbitDistance,
-        minDistance: Math.max(this.sceneRadius * 0.08, 0.025),
-        maxDistance: Math.max(this.sceneRadius * 32, 12)
-      });
-
+      if (!preserveView || this.loadedSample !== sample) {
+        this.center = [...sceneBounds.center];
+        this.center[1] =
+          (description.bodies.find(body => body.body.mass === 0)?.body.position?.[1] || 0) +
+          Math.min(this.sceneRadius * 0.15, 1.5);
+        this.cameraHeight = this.center[1];
+        this.orbitControls.setProps({
+          target: [this.center[0], this.cameraHeight, this.center[2]],
+          distance: sceneBounds.recommendedOrbitDistance,
+          minDistance: Math.max(this.sceneRadius * 0.08, 0.025),
+          maxDistance: Math.max(this.sceneRadius * 32, 12)
+        });
+      }
       canvas.style.opacity = '1';
       showError(
         description.supported
@@ -261,6 +269,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         status.textContent = description.supported
           ? `${description.bodies.length} bodies · GPU simulation · 120 Hz fixed steps`
           : 'Static preview · unsupported physics features';
+      this.loadedSample = sample;
     } catch (error) {
       if (this.isFinalized) {
         return;

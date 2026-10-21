@@ -3,25 +3,38 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** Bounded rigid-body reference path. Pair discovery is parallel; impulses are ordered on GPU. */
+import {
+  RIGID_BODY_BOUNDS_SHADER,
+  RIGID_BODY_BOUND_PUBLICATION_SHADER
+} from './rigid-body-bounds-shaders';
+import {RIGID_BODY_PARALLEL_SHADER} from './rigid-body-parallel-shaders';
 import {RIGID_BODY_CONVEX_SHADER} from './rigid-body-convex-shaders';
+import {
+  getRigidBodyCacheShader,
+  type RigidBodySparseShaderLayout
+} from './rigid-body-cache-shaders';
 export function getRigidBodyShader(
   count: number,
   iterations: number,
   colliderCount = count,
-  extended = false
+  extended = false,
+  sparse?: RigidBodySparseShaderLayout,
+  parallel = false
 ): string {
   return /* wgsl */ `
 const BODY_COUNT: u32 = ${count}u;
 const COLLIDER_COUNT: u32 = ${colliderCount}u;
 const ITERATIONS: u32 = ${iterations}u;
+const PAIR_CAPACITY:u32=${sparse?.maximumPairs ?? colliderCount * colliderCount}u;
 struct Body { inertia: vec4f, inertiaOrientation: vec4f, motion: vec4f }
 struct Collider { shape: vec4f, position: vec4f, orientation: vec4f, material: vec4f, policies: vec4f, padding: vec4f }
-struct Metadata { bodies: array<Body, BODY_COUNT>, colliders: array<Collider, COLLIDER_COUNT>, exclusions: array<f32, COLLIDER_COUNT*COLLIDER_COUNT>, geometry: array<vec4f> }
+struct Metadata { bodies: array<Body, BODY_COUNT>, colliders: array<Collider, COLLIDER_COUNT>, exclusions: array<vec2f, COLLIDER_COUNT>, geometry: array<vec4u> }
 struct Target { position: vec4f, orientation: vec4f }
-struct Targets { entries:array<Target,BODY_COUNT>, dispatch:atomic<u32>, vertical:u32, depth:u32 }
+struct CacheKey { key:atomic<u32>, epoch:u32 }
+struct Targets { entries:array<Target,BODY_COUNT>, dispatch:atomic<u32>, vertical:u32, depth:u32 ${sparse ? ', frame:u32, cacheDropped:atomic<u32>, reserved0:u32, reserved1:u32, reserved2:u32, keys:array<CacheKey,PAIR_CAPACITY>' : ''} }
 struct Contact { point: vec4f, normal: vec4f, impulse: vec4f, tangent: vec4f }
-struct Manifold { contacts: array<Contact, 4>, count: u32, padding: vec3u }
-struct Settings { gravity: vec4f, solver: vec4f, sleep: vec4f }
+struct Manifold { contacts: array<Contact, 4>, count: u32, first:u32, second:u32, previousCount:u32, padding: vec3u }
+struct Settings { gravity: vec4f, solver: vec4f, sleep: vec4f, stability: vec4f }
 @group(0) @binding(0) var<uniform> settings: Settings;
 @group(0) @binding(1) var<storage, read_write> positions: array<vec4f>;
 @group(0) @binding(2) var<storage, read_write> orientations: array<vec4f>;
@@ -31,6 +44,14 @@ struct Settings { gravity: vec4f, solver: vec4f, sleep: vec4f }
 @group(0) @binding(6) var<storage, read_write> manifolds: array<Manifold>;
 @group(0) @binding(7) var<storage, read_write> sleepStates: array<vec4f>;
 @group(0) @binding(9) var<storage, read_write> targets: Targets;
+${
+  sparse
+    ? getRigidBodyCacheShader(sparse)
+    : `
+fn getFirstCollider(pair:u32)->u32{return pair/COLLIDER_COUNT;}
+fn getSecondCollider(pair:u32)->u32{return pair%COLLIDER_COUNT;}
+`
+}
 fn rotate(rotation: vec4f, vector: vec3f) -> vec3f {
   return vector + 2.0 * cross(rotation.xyz, cross(rotation.xyz, vector) + rotation.w * vector);
 }
@@ -41,6 +62,15 @@ fn colliderPosition(collider: u32) -> vec3f {let body=colliderBody(collider);ret
 fn colliderRotation(collider: u32) -> vec4f {return multiplyRotation(orientations[colliderBody(collider)],bodies.colliders[collider].orientation);}
 fn colliderLocal(collider: u32, vector: vec3f) -> vec3f {let rotation=colliderRotation(collider);return rotate(vec4f(-rotation.xyz,rotation.w),vector);}
 fn axis(collider: u32, index: u32) -> vec3f {var unit=vec3f(0);unit[index]=1;return rotate(colliderRotation(collider),unit);}
+fn readGeometry(index:u32)->vec4f{return bitcast<vec4f>(bodies.geometry[index]);}
+fn excludes(first:u32,second:u32)->bool {
+ let range=bodies.exclusions[first];let start=u32(range.x);let count=u32(range.y);
+ var lower=0u;var upper=count;
+ loop{if(lower>=upper){break;}let middle=(lower+upper)/2u;let component=start+middle;
+  if(u32(readGeometry(component/4u)[component%4u])<second){lower=middle+1u;}else{upper=middle;}}
+ let component=start+lower;
+ return lower<count && u32(readGeometry(component/4u)[component%4u])==second;
+}
 fn dynamic(body: u32) -> bool {return bodies.bodies[body].motion.x==1.0;}
 fn principalRotation(body: u32) -> vec4f {return multiplyRotation(orientations[body],bodies.bodies[body].inertiaOrientation);}
 fn combineMaterial(first: f32, second: f32, firstPolicy: f32, secondPolicy: f32, friction: bool) -> f32 {
@@ -49,9 +79,9 @@ fn combineMaterial(first: f32, second: f32, firstPolicy: f32, secondPolicy: f32,
  if(policy==2.0) {return max(first,second);} if(policy==3.0) {return first*second;}
  return select(min(first,second),sqrt(first*second),friction);
 }
-fn frictionCoefficient(first: u32, second: u32, speed: f32) -> f32 {
+fn frictionCoefficient(first: u32, second: u32, sliding: bool) -> f32 {
  let firstMaterial=bodies.colliders[first].material;let secondMaterial=bodies.colliders[second].material;
- return combineMaterial(select(firstMaterial.y,firstMaterial.z,speed>0.01),select(secondMaterial.y,secondMaterial.z,speed>0.01),bodies.colliders[first].policies.y,bodies.colliders[second].policies.y,true);
+ return combineMaterial(select(firstMaterial.y,firstMaterial.z,sliding),select(secondMaterial.y,secondMaterial.z,sliding),bodies.colliders[first].policies.y,bodies.colliders[second].policies.y,true);
 }
 fn inverseInertia(body: u32, vector: vec3f) -> vec3f {
  let rotation=principalRotation(body);return rotate(rotation,rotate(vec4f(-rotation.xyz,rotation.w),vector)*bodies.bodies[body].inertia.xyz);
@@ -77,13 +107,45 @@ fn applyImpulse(body: u32, point: vec3f, impulse: vec3f) {
  velocities[body]=vec4f(velocities[body].xyz+impulse*velocities[body].w,velocities[body].w);
  angularVelocities[body]=vec4f(angularVelocities[body].xyz+inverseInertia(body,cross(point-positions[body].xyz,impulse)),0);
 }
-fn effectiveMass(first: u32, second: u32, point: vec3f, direction: vec3f) -> f32 {
- let firstLever=point-positions[first].xyz; let secondLever=point-positions[second].xyz;
- return velocities[first].w+velocities[second].w + dot(direction,
- cross(inverseInertia(first,cross(firstLever,direction)),firstLever)+cross(inverseInertia(second,cross(secondLever,direction)),secondLever));
+fn impulseResponse(first:u32,second:u32,point:vec3f,direction:vec3f)->vec3f {
+ let firstLever=point-positions[first].xyz;let secondLever=point-positions[second].xyz;
+ return direction*(velocities[first].w+velocities[second].w)+
+ cross(inverseInertia(first,cross(firstLever,direction)),firstLever)+cross(inverseInertia(second,cross(secondLever,direction)),secondLever);
+}
+fn effectiveMass(first:u32,second:u32,point:vec3f,direction:vec3f)->f32 {
+ return dot(direction,impulseResponse(first,second,point,direction));
+}
+// Solve the coupled two-dimensional tangent response, then project the accumulated
+// impulse into the static cone or onto the dynamic cone. No arbitrary slip-speed switch.
+fn solveFriction(firstCollider:u32,secondCollider:u32,contact:Contact,relative:vec3f)->vec3f {
+ let first=colliderBody(firstCollider);let second=colliderBody(secondCollider);
+ let normal=contact.normal.xyz;let point=contact.point.xyz;
+ let reference=select(vec3f(1,0,0),vec3f(0,1,0),abs(normal.x)>0.7);
+ let firstTangent=normalize(cross(normal,reference));let secondTangent=cross(normal,firstTangent);
+ let firstResponse=impulseResponse(first,second,point,firstTangent);
+ let secondResponse=impulseResponse(first,second,point,secondTangent);
+ let firstDiagonal=dot(firstTangent,firstResponse);let secondDiagonal=dot(secondTangent,secondResponse);
+ let coupling=dot(firstTangent,secondResponse);let determinant=firstDiagonal*secondDiagonal-coupling*coupling;
+ var increment=vec2f(0);
+ let slip=vec2f(dot(relative,firstTangent),dot(relative,secondTangent));
+ if(determinant>1e-6*firstDiagonal*secondDiagonal&&firstDiagonal>0.0&&secondDiagonal>0.0){
+  increment=vec2f(secondDiagonal*slip.x-coupling*slip.y,firstDiagonal*slip.y-coupling*slip.x)/determinant;
+ }else{
+  // Locked inertia can make both coordinates describe one rotational DOF.
+  // For a rank-one positive semidefinite K, K+ = K / trace(K)^2.
+  let trace=firstDiagonal+secondDiagonal;
+  if(trace>0.0){increment=vec2f((firstDiagonal/trace)*slip.x+(coupling/trace)*slip.y,(coupling/trace)*slip.x+(secondDiagonal/trace)*slip.y)/max(1e-30,trace);}
+ }
+ var tangent=contact.tangent.xyz-normal*dot(contact.tangent.xyz,normal)-firstTangent*increment.x-secondTangent*increment.y;
+ let magnitude=length(tangent);let staticLimit=frictionCoefficient(firstCollider,secondCollider,false)*contact.impulse.x;
+ if(magnitude>staticLimit){
+  let dynamicLimit=frictionCoefficient(firstCollider,secondCollider,true)*contact.impulse.x;
+  tangent*=min(1.0,dynamicLimit/max(1e-30,magnitude));
+ }
+ return tangent;
 }
 @compute @workgroup_size(64) fn integrate(@builtin(global_invocation_id) invocation: vec3u) {
- ${extended ? 'if(invocation.x==0u){atomicStore(&meshTasks.count,0u);atomicStore(&meshTasks.overflow,0u);atomicStore(&targets.dispatch,0u);targets.vertical=1u;targets.depth=1u;}' : ''}
+ ${extended ? 'if(invocation.x==0u){atomicStore(&meshTasks.count,0u);atomicStore(&meshTasks.overflow,0u);atomicStore(&meshTasks.unresolved,0u);atomicStore(&targets.dispatch,0u);targets.vertical=1u;targets.depth=1u;}' : ''}
  let body=invocation.x; if(body>=BODY_COUNT) {return;}
  // Preserve the envelope used to admit separated mesh pairs, even after direct buffer writes.
  if(bodies.bodies[body].motion.z>0.0){
@@ -121,22 +183,36 @@ fn storeContact(pair: u32, slot: u32, point: vec3f, normal: vec3f, depth: f32, p
  }
  if(found) {
   contact.normal.w=0.0;
+  contact.impulse.x*=settings.stability.x;contact.tangent=vec4f(contact.tangent.xyz*settings.stability.x,0);
   var tangent=contact.tangent.xyz-normal*dot(contact.tangent.xyz,normal);
-  let limit=frictionCoefficient(firstCollider,secondCollider,0.0)*contact.impulse.x;
+  let limit=frictionCoefficient(firstCollider,secondCollider,false)*contact.impulse.x;
   if(length(tangent)>limit) {tangent*=limit/max(0.000001,length(tangent));}
   contact.tangent=vec4f(tangent,0);
  }
  manifolds[pair].contacts[slot]=contact;
 }
+${RIGID_BODY_BOUNDS_SHADER}
+${sparse ? RIGID_BODY_BOUND_PUBLICATION_SHADER : ''}
 ${extended ? RIGID_BODY_CONVEX_SHADER : ''}
 // SAT separates oriented boxes along all six face normals and nine edge cross products.
 @compute @workgroup_size(64) fn collide(@builtin(global_invocation_id) invocation: vec3u) {
- let pair=invocation.x; if(pair>=COLLIDER_COUNT*COLLIDER_COUNT) {return;}
- let first=pair/COLLIDER_COUNT; let second=pair%COLLIDER_COUNT;
- let previous=manifolds[pair]; manifolds[pair].count=0u;
+ ${
+   sparse
+     ? `
+ let candidate=invocation.x;if(candidate>=candidateCount()){return;}
+ let colliders=candidatePair(candidate);let first=colliders.x;let second=colliders.y;
+ if(first>=second||colliderBody(first)==colliderBody(second)||excludes(first,second)||excludes(second,first)||(!dynamic(colliderBody(first))&&!dynamic(colliderBody(second)))){return;}
+ let pair=claimManifold(first,second);if(pair==DELETED_PAIR){return;}
+ `
+     : `
+ let pair=invocation.x; if(pair>=PAIR_CAPACITY) {return;}
+ let first=getFirstCollider(pair); let second=getSecondCollider(pair);
+ `
+ }
+ var previous=manifolds[pair]; ${sparse ? 'previous.count=previous.previousCount;' : ''} manifolds[pair].count=0u;
  ${extended ? 'manifolds[pair].padding=vec3u(0);' : ''}
  let firstBody=colliderBody(first);let secondBody=colliderBody(second);
- if(first>=second || firstBody==secondBody || bodies.exclusions[pair]>0.0 || (!dynamic(firstBody) && !dynamic(secondBody))) {return;}
+ if(first>=second || firstBody==secondBody || (excludes(first,second)||excludes(second,first)) || (!dynamic(firstBody) && !dynamic(secondBody))) {return;}
  ${extended ? 'manifolds[pair].padding=vec3u(0); if(bodies.colliders[first].shape.w>=2.0 || bodies.colliders[second].shape.w>=2.0){collideExtended(pair,first,second,previous);return;}' : ''}
  let difference=colliderPosition(second)-colliderPosition(first);
  let firstSphere=bodies.colliders[first].shape.w==0.0; let secondSphere=bodies.colliders[second].shape.w==0.0;
@@ -234,13 +310,15 @@ ${extended ? RIGID_BODY_CONVEX_SHADER : ''}
  }
  manifolds[pair].count=contactCount;
 }
+${parallel ? RIGID_BODY_PARALLEL_SHADER : ''}
+${parallel && extended ? '@compute @workgroup_size(1) fn meshCollect(){collectMeshContacts();}' : ''}
 fn root(body: u32) -> u32 {var current=body;for(var iteration=0u;iteration<BODY_COUNT;iteration++) {let parent=u32(sleepStates[current].z);if(parent==current) {break;}current=parent;}return current;}
 @compute @workgroup_size(1) fn solve() {
  ${extended ? 'collectMeshContacts();' : ''}
  // Connected components include dynamic bodies only: a shared static floor must not join islands.
  for(var body=0u;body<BODY_COUNT;body++) {sleepStates[body].z=f32(body);}
- for(var pair=0u;pair<COLLIDER_COUNT*COLLIDER_COUNT;pair++) {
-  if(manifolds[pair].count==0u) {continue;}let firstCollider=pair/COLLIDER_COUNT;let secondCollider=pair%COLLIDER_COUNT;let first=colliderBody(firstCollider);let second=colliderBody(secondCollider);
+ for(var pair=0u;pair<PAIR_CAPACITY;pair++) {
+  if(manifolds[pair].count==0u) {continue;}let firstCollider=getFirstCollider(pair);let secondCollider=getSecondCollider(pair);let first=colliderBody(firstCollider);let second=colliderBody(secondCollider);
   if(bodies.bodies[first].motion.x==2.0 && length(velocities[first].xyz)+length(angularVelocities[first].xyz)>0.000001 && dynamic(second)) {sleepStates[second].y=0.0;sleepStates[second].x=0.0;}
   if(bodies.bodies[second].motion.x==2.0 && length(velocities[second].xyz)+length(angularVelocities[second].xyz)>0.000001 && dynamic(first)) {sleepStates[first].y=0.0;sleepStates[first].x=0.0;}
   if(dynamic(first) && dynamic(second)) {let firstRoot=root(first);let secondRoot=root(second);sleepStates[max(firstRoot,secondRoot)].z=f32(min(firstRoot,secondRoot));}
@@ -248,8 +326,9 @@ fn root(body: u32) -> u32 {var current=body;for(var iteration=0u;iteration<BODY_
  for(var body=0u;body<BODY_COUNT;body++) {sleepStates[body].w=1.0;}
  for(var body=0u;body<BODY_COUNT;body++) {if(dynamic(body) && sleepStates[body].y<0.5) {sleepStates[root(body)].w=0.0;}}
  for(var body=0u;body<BODY_COUNT;body++) {if(dynamic(body) && sleepStates[root(body)].w<0.5) {if(sleepStates[body].y>0.5) {sleepStates[body].x=0.0;}sleepStates[body].y=0.0;}}
- for(var pair=0u;pair<COLLIDER_COUNT*COLLIDER_COUNT;pair++) {
-  let firstCollider=pair/COLLIDER_COUNT;let secondCollider=pair%COLLIDER_COUNT;let first=colliderBody(firstCollider);let second=colliderBody(secondCollider);
+ for(var pair=0u;pair<PAIR_CAPACITY;pair++) {
+  if(manifolds[pair].count==0u){continue;}
+  let firstCollider=getFirstCollider(pair);let secondCollider=getSecondCollider(pair);let first=colliderBody(firstCollider);let second=colliderBody(secondCollider);
   if((sleepStates[first].y>0.5 || !dynamic(first)) && (sleepStates[second].y>0.5 || !dynamic(second))) {continue;}
   for(var slot=0u;slot<manifolds[pair].count;slot++) {
    let contact=manifolds[pair].contacts[slot];let impulse=contact.normal.xyz*contact.impulse.x+contact.tangent.xyz;
@@ -257,38 +336,31 @@ fn root(body: u32) -> u32 {var current=body;for(var iteration=0u;iteration<BODY_
   }
  }
  for(var iteration=0u;iteration<ITERATIONS;iteration++) {
-  for(var pair=0u;pair<COLLIDER_COUNT*COLLIDER_COUNT;pair++) {
-   let firstCollider=pair/COLLIDER_COUNT;let secondCollider=pair%COLLIDER_COUNT;let first=colliderBody(firstCollider);let second=colliderBody(secondCollider);
+  for(var pair=0u;pair<PAIR_CAPACITY;pair++) {
+   let firstCollider=getFirstCollider(pair);let secondCollider=getSecondCollider(pair);let first=colliderBody(firstCollider);let second=colliderBody(secondCollider);
    if((sleepStates[first].y>0.5 || !dynamic(first)) && (sleepStates[second].y>0.5 || !dynamic(second))) {continue;}
    for(var slot=0u;slot<manifolds[pair].count;slot++) {
     var contact=manifolds[pair].contacts[slot];let point=contact.point.xyz;let normal=contact.normal.xyz;
     let relative=pointVelocity(second,point)-pointVelocity(first,point);
-    let bias=min(2.0,0.15*max(0.0,contact.point.w-settings.solver.x)/settings.gravity.w);
+    let bias=min(settings.stability.z,settings.stability.y*max(0.0,contact.point.w-settings.solver.x)/settings.gravity.w);
     if(effectiveMass(first,second,point,normal)<=0.0) {continue;}
     let increment=(max(bias,contact.normal.w)-dot(relative,normal))/max(1e-30,effectiveMass(first,second,point,normal));
     let accumulated=max(0.0,contact.impulse.x+increment);let change=accumulated-contact.impulse.x;contact.impulse.x=accumulated;
     applyImpulse(first,point,-normal*change);applyImpulse(second,point,normal*change);
-    let after=pointVelocity(second,point)-pointVelocity(first,point);let slip=after-normal*dot(after,normal);let speed=length(slip);
-    if(speed>0.000001) {
-     let direction=slip/speed;var tangent=contact.tangent.xyz-direction*speed/max(1e-30,effectiveMass(first,second,point,direction));
-     tangent-=normal*dot(tangent,normal);
-     let limit=frictionCoefficient(firstCollider,secondCollider,speed)*accumulated;
-     if(length(tangent)>limit) {tangent*=limit/max(0.000001,length(tangent));}
-     let tangentChange=tangent-contact.tangent.xyz;contact.tangent=vec4f(tangent,0);
-     applyImpulse(first,point,-tangentChange);applyImpulse(second,point,tangentChange);
-    }
+    let tangent=solveFriction(firstCollider,secondCollider,contact,pointVelocity(second,point)-pointVelocity(first,point));
+    let tangentChange=tangent-contact.tangent.xyz;contact.tangent=vec4f(tangent,0);
+    applyImpulse(first,point,-tangentChange);applyImpulse(second,point,tangentChange);
     manifolds[pair].contacts[slot]=contact;
    }
   }
  }
 }
-@compute @workgroup_size(1) fn finish() {
- for(var body=0u;body<BODY_COUNT;body++) {
-  if(bodies.bodies[body].motion.x==0.0 || sleepStates[body].y>0.5) {continue;}
+fn finishBody(body:u32) {
+  if(bodies.bodies[body].motion.x==0.0 || sleepStates[body].y>0.5) {return;}
   if(bodies.bodies[body].motion.x==2.0) {
    if(targets.entries[body].position.w>0.0) {positions[body]=vec4f(targets.entries[body].position.xyz,positions[body].w);orientations[body]=targets.entries[body].orientation;}
    else {positions[body]=vec4f(positions[body].xyz+velocities[body].xyz*settings.gravity.w,positions[body].w);let rotation=orientations[body];let angular=angularVelocities[body].xyz;orientations[body]=normalize(rotation+vec4f(rotation.w*angular+cross(angular,rotation.xyz),-dot(angular,rotation.xyz))*(0.5*settings.gravity.w));}
-   continue;
+   return;
   }
   positions[body]=vec4f(positions[body].xyz+velocities[body].xyz*settings.gravity.w,positions[body].w);
   let rotation=orientations[body];let angular=angularVelocities[body].xyz;
@@ -307,6 +379,8 @@ fn root(body: u32) -> u32 {var current=body;for(var iteration=0u;iteration<BODY_
   let quiet=length(velocities[body].xyz)<settings.sleep.y && length(angular)<settings.sleep.z;
   sleepStates[body].x=select(0.0,sleepStates[body].x+settings.gravity.w,quiet);
  }
+@compute @workgroup_size(1) fn finish() {
+ for(var body=0u;body<BODY_COUNT;body++){finishBody(body);}
  for(var body=0u;body<BODY_COUNT;body++) {sleepStates[body].w=1.0;}
  for(var body=0u;body<BODY_COUNT;body++) {if(dynamic(body) && (settings.sleep.x<=0.0 || sleepStates[body].x<settings.sleep.x)) {sleepStates[root(body)].w=0.0;}}
  for(var body=0u;body<BODY_COUNT;body++) {
