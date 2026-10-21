@@ -74,8 +74,20 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
   imageBasedLightingEnvironment?: PBREnvironment;
   imageBasedLightingEnvironmentPromise?: Promise<PBREnvironment | undefined>;
 
-  constructor(animationProps: AnimationProps) {
-    super(animationProps);
+  constructor(
+    animationProps: AnimationProps,
+    readonly initialExtension?: string
+  ) {
+    const defaultModels: Readonly<Record<string, string>> = {
+      KHR_materials_clearcoat: 'ClearCoatCarPaint',
+      KHR_materials_sheen: 'GlamVelvetSofa',
+      KHR_materials_iridescence: 'IridescenceSuzanne',
+      KHR_materials_anisotropy: 'AnisotropyBarnLamp'
+    };
+    super(animationProps, {
+      modelStorageKey: `showcase-last-gltf-model-v3${initialExtension ? `-${initialExtension}` : ''}`,
+      defaultModelName: defaultModels[initialExtension || ''] || 'RobotExpressive'
+    });
     const {device} = animationProps;
     this.settingsPanel = new ExampleSettingsPanelManager({
       id: 'gltf-settings',
@@ -100,14 +112,6 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
     canvas.style.background = 'linear-gradient(180deg, #9b9b97 0%, #6f6d64 100%)';
   }
 
-  override getDefaultModelName(): string {
-    return 'RobotExpressive';
-  }
-
-  override getModelStorageKey(): string {
-    return 'showcase-last-gltf-model-v3';
-  }
-
   override getClearColor(): [number, number, number, number] {
     return [0.53, 0.52, 0.49, 1];
   }
@@ -118,11 +122,14 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
       this.extensionDemos.map(extensionDemo => extensionDemo.extensionName)
     );
     const storedExtension = window.localStorage[SHOWCASE_EXTENSION_STORAGE_KEY];
-    this.extensionName = this.isReferenceCapture()
-      ? ALL_EXTENSIONS_FILTER
-      : storedExtension === STUDIO_ASSETS_FILTER || activeExtensionNames.has(storedExtension)
-        ? storedExtension
-        : STUDIO_ASSETS_FILTER;
+    this.extensionName =
+      this.initialExtension && activeExtensionNames.has(this.initialExtension)
+        ? this.initialExtension
+        : this.isReferenceCapture()
+          ? ALL_EXTENSIONS_FILTER
+          : storedExtension === STUDIO_ASSETS_FILTER || activeExtensionNames.has(storedExtension)
+            ? storedExtension
+            : STUDIO_ASSETS_FILTER;
     this.modelOptions = getModelOptionsForExtension(
       this.extensionName,
       getAllModelOptions(models),

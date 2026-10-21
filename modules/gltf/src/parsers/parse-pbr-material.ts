@@ -225,6 +225,8 @@ export type ParsePBRMaterialOptions = {
   gltf?: GLTFPostprocessed;
   /** run primitive-attribute diagnostics such as missing TEXCOORD_0 / NORMAL */
   validateAttributes?: boolean;
+  /** Defer only lightmap UV assertions until node overrides are selected. */
+  validateLightmapAttributes?: boolean;
 };
 
 /**
@@ -299,7 +301,7 @@ export function parsePBRMaterial(
     if (options.validateAttributes !== false) {
       warnOnMissingExpectedAttributes(material, attributes);
       const lightmap = material.extensions?.KHR_lightmap;
-      if (lightmap) {
+      if (lightmap && options.validateLightmapAttributes !== false) {
         const textureCoordinateSet = resolveTextureCoordinateSet(lightmap.lightmapTexture);
         // Lightmap UVs must exist on the primitive; shared material creation has no attributes yet.
         assert(
@@ -394,6 +396,8 @@ function parseMaterial(
   attributes: Record<string, any>,
   gltf?: GLTFPostprocessed
 ): void {
+  parsedMaterial.parameters.cullMode = material.doubleSided ? 'none' : 'back';
+  parsedMaterial.defines['DOUBLE_SIDED'] = Boolean(material.doubleSided);
   parsedMaterial.uniforms.unlit = Boolean(
     material.unlit || material.extensions?.KHR_materials_unlit
   );

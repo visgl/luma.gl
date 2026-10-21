@@ -35,6 +35,10 @@
     "label": "glTF standard features",
     "items": [
       "gltf/asset-studio",
+      "gltf/clearcoat",
+      "gltf/sheen",
+      "gltf/iridescence",
+      "gltf/anisotropy",
       "tutorials/hello-gltf",
       "deck/gltf-interactivity"
     ]
@@ -42,7 +46,7 @@
   {
     "type": "category",
     "label": "glTF proposed features",
-    "items": ["showcase/gltf-audio", "showcase/gltf-billboard", "showcase/gltf-lightmap", "showcase/gltf-area-lights", "gltf/physics"]
+    "items": ["gltf/physics", "showcase/gltf-audio", "showcase/gltf-billboard", "showcase/gltf-lightmap", "showcase/gltf-area-lights"]
   },
   {
     "type": "category",

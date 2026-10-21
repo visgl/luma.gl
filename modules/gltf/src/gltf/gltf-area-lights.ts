@@ -121,11 +121,14 @@ function getMatrixRotation(matrix: Matrix4): Matrix4 {
   // Matrix-authored lights require a recoverable orientation.
   assert(horizontal.magnitude() > 0 && vertical.magnitude() > 0);
   horizontal.normalize();
+  vertical.normalize();
   vertical.subtract(new Vector3(horizontal).scale(vertical.dot(horizontal)));
   assert(vertical.magnitude() > 1e-8);
   vertical.normalize();
   const forward = new Vector3(horizontal).cross(vertical).normalize();
   const authoredForward = new Vector3(matrix[8], matrix[9], matrix[10]);
+  assert(authoredForward.magnitude() > 0);
+  authoredForward.normalize();
   // Reflections must retain the authored emitting side after scale removal.
   assert(Math.abs(forward.dot(authoredForward)) > 1e-8);
   if (forward.dot(authoredForward) < 0) forward.negate();
