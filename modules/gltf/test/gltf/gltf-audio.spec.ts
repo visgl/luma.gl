@@ -340,3 +340,61 @@ test('audio graph procedural sources honor asset-clock start and duration withou
   audio.destroy();
   scenegraphs.destroy();
 });
+
+test('environment listener binding applies authored gain independently of application volume', async () => {
+  const energies: number[] = [];
+  for (const listenerGain of [1, 0.5]) {
+    const scenegraphs = await makeScene({global: true});
+    scenegraphs.gltf.extensions ||= {};
+    scenegraphs.gltf.extensions['KHR_audio_environment'] = {listeners: [{gain: listenerGain}]};
+    scenegraphs.gltf.nodes[0].extensions ||= {};
+    scenegraphs.gltf.nodes[0].extensions['KHR_audio_environment'] = {listener: 0};
+    const context = new OfflineAudioContext(2, 4800, 48000);
+    const audio = new GLTFAudioController({
+      scenegraphs,
+      audioContext: context,
+      baseUrl: 'https://example.com/model.gltf'
+    });
+    audio.gain.gain.value = 0.8;
+    await audio.play();
+    audio.update(new Matrix4().translate([100, 0, 0]));
+    expect(context.listener.positionX.value).toBeCloseTo(0);
+    expect(audio.gain.gain.value).toBeCloseTo(0.8);
+    const buffer = await context.startRendering();
+    energies.push(energy(buffer, 0) + energy(buffer, 1));
+    audio.destroy();
+    scenegraphs.destroy();
+  }
+  expect(energies[1] / energies[0]).toBeCloseTo(0.25, 3);
+});
+
+test('environment controller loads a separate impulse response and routes a wet-only emitter', async () => {
+  const scenegraphs = await makeScene({global: true});
+  const extension = scenegraphs.gltf.extensions!['KHR_audio_emitter'] as GLTFAudioExtension;
+  const response = makeWave();
+  // A delayed unit impulse provides a measurable return without normalization.
+  const view = new DataView(response.buffer);
+  for (let index = 0; index < 4800; index++)
+    view.setInt16(44 + index * 2, index === 480 ? 32767 : 0, true);
+  extension.audio.push({uri: `data:audio/wav;base64,${btoa(String.fromCharCode(...response))}`});
+  extension.emitters[0].extensions = {KHR_audio_environment: {directLevel: 0, reverbLevel: 0.5}};
+  scenegraphs.gltf.extensions!['KHR_audio_environment'] = {
+    environments: [{reverb: {type: 'impulseResponse', audio: 1, mix: 0.5, normalize: false}}]
+  };
+  scenegraphs.gltf.scenes[0].extensions ||= {};
+  scenegraphs.gltf.scenes[0].extensions['KHR_audio_environment'] = {environment: 0};
+  const context = new OfflineAudioContext(2, 4800, 48000);
+  const audio = new GLTFAudioController({
+    scenegraphs,
+    audioContext: context,
+    baseUrl: 'https://example.com/model.gltf'
+  });
+  await audio.play();
+  audio.update(new Matrix4());
+  const rendered = await context.startRendering();
+  const samples = rendered.getChannelData(0);
+  expect(samples.slice(0, 400).every(value => Math.abs(value) < 0.00001)).toBe(true);
+  expect(energy(rendered, 0)).toBeGreaterThan(0.001);
+  audio.destroy();
+  scenegraphs.destroy();
+});

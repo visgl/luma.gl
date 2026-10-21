@@ -6,6 +6,11 @@ import {assert} from '@luma.gl/core';
 import {Matrix4, Vector3} from '@math.gl/core';
 import type {GroupNode} from '@luma.gl/engine';
 import {GLTFAudioGraph, type GLTFAudioGraphDefinition} from './gltf-audio-graph';
+import {
+  GLTFAudioReverbBus,
+  selectAudioEnvironmentZone,
+  type GLTFAudioEnvironmentZone
+} from './gltf-audio-environment';
 import type {GLTFScenegraphs} from './create-scenegraph-from-gltf';
 
 type GraphSourceProperties = {
@@ -41,6 +46,9 @@ export type GLTFAudioExtension = {
     type: 'global' | 'positional';
     gain?: number;
     sources?: number[];
+    extensions?: {
+      KHR_audio_environment?: {directLevel?: number; reverbLevel?: number; environment?: number};
+    };
     positional?: {
       shapeType?: 'omnidirectional' | 'cone';
       coneInnerAngle?: number;
@@ -61,6 +69,8 @@ export type GLTFAudioControllerOptions = {
   /** Absolute URL of the glTF document, used to resolve external audio. */
   baseUrl: string;
   sceneIndex?: number;
+  /** Authored camera node used for environment listener selection. */
+  activeCameraNodeIndex?: number;
   fetch?: typeof fetch;
 };
 
@@ -78,8 +88,17 @@ export class GLTFAudioController {
   readonly extension: GLTFAudioExtension;
   private readonly options: GLTFAudioControllerOptions;
   private readonly scene: GroupNode;
+  private readonly listenerGain: GainNode;
   private readonly emitters: EmitterBinding[] = [];
   private readonly graphs: GLTFAudioGraph[] = [];
+  private readonly reverbBuses = new Map<number, GLTFAudioReverbBus>();
+  private readonly directGains: GainNode[] = [];
+  private readonly environmentSends: {
+    gain: GainNode;
+    environment: number;
+    forced?: number;
+    level: number;
+  }[] = [];
   private readonly graphSources = new Set<number>();
   private readonly graphEmitters = new Set<number>();
   private readonly playing = new Map<AudioScheduledSourceNode, GainNode>();
@@ -111,7 +130,9 @@ export class GLTFAudioController {
       for (const output of graph.outputs || []) this.graphEmitters.add(output.emitter);
     }
     this.gain = audioContext.createGain();
-    this.gain.connect(audioContext.destination);
+    this.listenerGain = audioContext.createGain();
+    this.gain.connect(this.listenerGain);
+    this.listenerGain.connect(audioContext.destination);
     const activeNodes = new Set<GroupNode>();
     this.scene.preorderTraversal(node => activeNodes.add(node as GroupNode));
     try {
@@ -257,12 +278,64 @@ export class GLTFAudioController {
       gain.disconnect();
     }
     this.playing.clear();
+    for (const bus of this.reverbBuses.values()) bus.reset();
   }
 
   /** Call after animation updates, with the camera's inverse view matrix. Distances are in meters. */
   update(listenerMatrix: Matrix4): void {
     if (this.destroyed) return;
+    const environmentExtension = this.options.scenegraphs.gltf.extensions?.[
+      'KHR_audio_environment'
+    ] as {listeners?: {gain?: number; spatializationModel?: string}[]} | undefined;
+    if (environmentExtension) {
+      const document = this.options.scenegraphs.gltf;
+      const sceneExtension =
+        document.scenes[this.options.sceneIndex ?? 0]?.extensions?.['KHR_audio_environment'];
+      const bindings: {index: number; nodeIndex: number; matrix: Matrix4}[] = [];
+      this.scene.preorderTraversal((runtimeNode, {worldMatrix}) => {
+        for (const [nodeIndex, node] of document.nodes.entries()) {
+          if (this.options.scenegraphs.gltfNodeIndexToNodeMap.get(nodeIndex) !== runtimeNode)
+            continue;
+          const index = node.extensions?.['KHR_audio_environment']?.listener;
+          if (index !== undefined)
+            bindings.push({index, nodeIndex, matrix: new Matrix4(worldMatrix)});
+        }
+      });
+      const selected =
+        bindings.find(binding => binding.index === sceneExtension?.activeListener) ??
+        bindings.find(binding => binding.nodeIndex === this.options.activeCameraNodeIndex) ??
+        bindings[0];
+      const listenerDefinition = selected
+        ? environmentExtension.listeners?.[selected.index]
+        : undefined;
+      if (selected && listenerDefinition) listenerMatrix = selected.matrix;
+      this.listenerGain.gain.value = listenerDefinition?.gain ?? 1;
+      for (const emitter of this.emitters) {
+        if (emitter.panner)
+          emitter.panner.panningModel =
+            listenerDefinition?.spatializationModel === 'HRTF' ? 'HRTF' : 'equalpower';
+      }
+    }
     const listenerPosition = listenerMatrix.getTranslation();
+    const zones: GLTFAudioEnvironmentZone[] = [];
+    this.scene.preorderTraversal((runtimeNode, {worldMatrix}) => {
+      this.options.scenegraphs.gltf.nodes.forEach((node, nodeIndex) => {
+        if (this.options.scenegraphs.gltfNodeIndexToNodeMap.get(nodeIndex) !== runtimeNode) return;
+        const zone = node.extensions?.['KHR_audio_environment'] as
+          | Omit<GLTFAudioEnvironmentZone, 'worldMatrix'>
+          | undefined;
+        if (zone?.shape) zones.push({...zone, worldMatrix: new Matrix4(worldMatrix)});
+      });
+    });
+    const selectedZone = selectAudioEnvironmentZone(zones, listenerPosition);
+    const defaultEnvironment =
+      this.options.scenegraphs.gltf.scenes[this.options.sceneIndex ?? 0]?.extensions?.[
+        'KHR_audio_environment'
+      ]?.environment;
+    for (const send of this.environmentSends) {
+      const environment = send.forced ?? selectedZone?.environment ?? defaultEnvironment;
+      send.gain.gain.value = send.level * (send.environment === environment ? 1 : 0);
+    }
     const listenerForward = new Vector3(0, 0, -1).transformAsVector(listenerMatrix).normalize();
     const listenerUp = new Vector3(0, 1, 0).transformAsVector(listenerMatrix).normalize();
     const listener = this.options.audioContext.listener;
@@ -307,7 +380,11 @@ export class GLTFAudioController {
       emitter.gain.disconnect();
     }
     for (const graph of this.graphs) graph.destroy();
+    for (const bus of this.reverbBuses.values()) bus.destroy();
+    this.reverbBuses.clear();
+    for (const direct of this.directGains) direct.disconnect();
     this.gain.disconnect();
+    this.listenerGain.disconnect();
     this.buffers.clear();
   }
 
@@ -333,7 +410,11 @@ export class GLTFAudioController {
     }
     const gain = this.options.audioContext.createGain();
     gain.gain.value = definition.gain ?? 1;
-    gain.connect(this.gain);
+    const direct = this.options.audioContext.createGain();
+    direct.gain.value = definition.extensions?.KHR_audio_environment?.directLevel ?? 1;
+    gain.connect(direct);
+    direct.connect(this.gain);
+    this.directGains.push(direct);
     const binding: EmitterBinding = {index, definition, node, gain};
     this.emitters.push(binding);
     if (definition.type === 'positional') {
@@ -372,6 +453,13 @@ export class GLTFAudioController {
         return source.audio;
       })
     );
+    const environments = scenegraphs.gltf.extensions?.['KHR_audio_environment']?.['environments'] as
+      | {reverb?: {type?: string; audio?: number; mix?: number; normalize?: boolean}}[]
+      | undefined;
+    for (const environment of environments || []) {
+      if (environment.reverb?.type === 'impulseResponse' && environment.reverb.audio !== undefined)
+        audioIndices.add(environment.reverb.audio);
+    }
     const buffers = await Promise.all(
       [...audioIndices]
         .filter((index): index is number => index !== undefined)
@@ -394,7 +482,30 @@ export class GLTFAudioController {
           return [audioIndex, await audioContext.decodeAudioData(bytes)] as const;
         })
     );
-    if (!this.destroyed) this.buffers = new Map(buffers);
+    if (!this.destroyed) {
+      this.buffers = new Map(buffers);
+      environments?.forEach((environment, index) => {
+        const reverb = environment.reverb;
+        if (reverb?.type !== 'impulseResponse' || reverb.audio === undefined) return;
+        const response = this.buffers.get(reverb.audio);
+        assert(response);
+        const bus = new GLTFAudioReverbBus(audioContext, response, this.gain, reverb);
+        this.reverbBuses.set(index, bus);
+        const defaultEnvironment =
+          scenegraphs.gltf.scenes[this.options.sceneIndex ?? 0]?.extensions?.[
+            'KHR_audio_environment'
+          ]?.environment;
+        for (const emitter of this.emitters) {
+          const send = emitter.definition.extensions?.KHR_audio_environment;
+          const level = send?.reverbLevel ?? (emitter.definition.type === 'positional' ? 1 : 0);
+          const gain = bus.connectSend(
+            emitter.gain,
+            (send?.environment ?? defaultEnvironment) === index ? level : 0
+          );
+          this.environmentSends.push({gain, environment: index, forced: send?.environment, level});
+        }
+      });
+    }
   }
 }
 
