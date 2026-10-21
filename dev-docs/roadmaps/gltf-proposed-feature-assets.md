@@ -10,7 +10,7 @@ Audit date: October 20, 2026. These findings cover the six proposals selected in
 | `KHR_billboard` | Khronos BillboardDemo (fortress, trees and labels) | Model metadata and repository REUSE attribution: CC BY 4.0 plus Apache 2.0 for Roboto | Suitable source asset with explicit compatibility for its older lowercase `rotationAxis: "y"`; geometry buffer is 67.9 MB |
 | `KHR_lightmap` | `node-atlas.gltf`, `gpu-atlas.gltf`; Lightmapped Cornell Box GLB | Atlas fixtures declare Ben Houston, CC0-1.0; Cornell Box README declares repository MIT license | Prefer Cornell Box for the visual example and both small atlas files for integration checks |
 | `EXT_lights_area` | Foundation Resources `head.gltf` and `living-room-3.gltf` declare rectangular area lights | Repository declares CC0 except where noted; subdirectory READMEs identify original PBRT/Bitterli sources | Candidates, pending confirmation against original-source licenses and full payload delivery; use Git LFS media URLs for buffers/images |
-| `KHR_materials_scatter` | No compatible source-hosted glTF/GLB verified | NVIDIA has a reference implementation and authored C++ tests | Continue searching; do not relabel an older volume-scatter or diffuse-transmission model |
+| `KHR_materials_scatter` | Scatter Strength Thin-Walled, verified on the proposal-author sample-assets branch | CC BY 4.0; pinned source and attribution below | Thin-wall renderer profile; volumetric reference scenes require additional implementation |
 | `KHR_audio_graph` | Procedural Drum Kit | Asset declares CC0; generator synthesizes the MP3 one-shots and model geometry | Suitable pinned source candidate; map its exact graph operations and playback-control profile before claiming compatibility |
 | `KHR_audio_environment` | Same Drum Kit | Same evidence | Suitable pinned source candidate; verify listener, scene environment selection and reverb semantics |
 
@@ -101,22 +101,14 @@ samples and MP3 output rather than copying an unexplained third-party music file
 local binary and eight local MP3 files. Its selection graph writes a prototype source `playing`
 property; that control path requires explicit compatibility work, not silent automatic adaptation.
 
-## Scattering search result
+## Scattering reference assets
 
-No compatible committed `KHR_materials_scatter` glTF/GLB was verified in this pass. NVIDIA's
-[vk_gltf_renderer](https://github.com/nvpro-samples/vk_gltf_renderer) has parser/rendering code and
-unit tests, which are useful reference implementations, but those are not downloadable sample models.
+Verified source revision: KhronosGroup/glTF-Sample-Assets@24871201ac46cf1c23882eda4562bfb993b88ff0, branch mbond/volume_scatter_anisotropy.
 
-DisplayXR's committed `material_grid.glb`, `transmission_test.glb`, and `diffuse_fuzz_test.glb` were
-inspected through their GLB JSON chunks. None contains `KHR_materials_scatter`; exclude them as
-positive fixtures even though the renderer supports that extension. Continue checking proposal-author
-branches or seek an upstream-authored fixture before promising a source-loaded scattering example.
+[Scatter Strength Thin-Walled](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/24871201ac46cf1c23882eda4562bfb993b88ff0/Models/ScatterStrengthThin-Walled) declares actual KHR_materials_scatter and KHR_materials_transmission with scalar and textured strength; it does not declare volume. The shared scatter preset loads the original glTF and its dependencies without rewriting the materials. Its secondary-UV strength map exposed a shared-material texture binding bug, now covered by a CPU regression.
 
-### Authored thin-wall scatter diagnostic
+The model, textures, and reference images are CC BY 4.0. Geometry and textures: Chris Rydalch; original specification and validation: André Mazzone; original scene, inspiration and consultation: Thomas Anagnostou; glTF conversion: Eric Chadwick. The example has a separate Attributions tab.
 
-`examples/gltf/features/scatter-demo.ts` is an original luma.gl diagnostic with
-three actual `KHR_materials_scatter` materials and opposing punctual lights. It
-is selected by the shared `feature="scatter"` preset. This is not a verified
-upstream source-hosted model and does not change the source-asset search result
-above. Its initial renderer profile is thin-wall only; nonzero volume thickness
-is rejected. The gallery thumbnail is an actual luma.gl render of this fixture.
+The same branch includes ScatterAnisotropy, ScatterColorAndDensity, and ScatterStrength volumetric fixtures. They are not offered as supported thin-wall models. ScatteringSkull still uses the older diffuse-transmission/volume-scatter extensions and is not evidence of new-scatter support.
+
+The original luma.gl flat-panel diagnostic remains a source fixture but is not offered in the example model selector. The default is now the upstream thin-wall reference. Rendering with direct lighting is not a pixel-equivalence claim against the source environment-lit reference screenshots.

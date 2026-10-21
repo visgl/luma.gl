@@ -114,7 +114,9 @@ export function parseGLTF(
       parsedPPBRMaterial: parseOwnedPBRMaterial(
         device,
         gltfMaterial as any,
-        {},
+        // Shared material resources must include secondary-UV textures before any primitive is visited.
+        // The primitive pass below validates its actual texture-coordinate attributes.
+        {TEXCOORD_1: true},
         {
           ...combinedOptions,
           gltf,
