@@ -52,3 +52,16 @@ export {
   type GPURigidBodySimulationDiagnostics
 } from './rigid-body-diagnostics';
 export type {GPURigidBodyCapacityInfo} from './rigid-body-capacity';
+
+export {
+  decodeRigidBodyContactEvents,
+  type GPURigidBodyContactEvent,
+  type GPURigidBodyContactBatch
+} from './rigid-body-events';
+export type {
+  GPURigidBodyRayQuery,
+  GPURigidBodyOverlapQuery,
+  GPURigidBodyQueryFilter,
+  GPURigidBodyQueryHit,
+  GPURigidBodyQueryResult
+} from './rigid-body-queries';

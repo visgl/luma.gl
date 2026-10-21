@@ -162,6 +162,13 @@ contact-loaded mechanisms pass error, energy, stability and throughput gates.
 
 ### G5. Triggers, queries and physics/interactivity execution
 
+The Space Salvage increment adds an opt-in GPU contact-event ring with begin/end
+and thresholded impact samples, exact sphere/OBB nearest-ray and sphere-overlap
+queries, explicit selection and loss reporting. The game consumes public APIs for
+tractor targeting, sampled docking and impact damage. This is partial G5 work:
+compound trigger enter/exit state, swept queries, general shape casts, large-world
+query/event scaling and glTF behavior bindings remain outstanding.
+
 Support individual and compound trigger volumes with per-collider filtering and
 step-ordered enter/exit events. Add GPU ray-segment queries with nearest hit, source
 collider/node identity, hit fraction and normal. Bind proposal-defined

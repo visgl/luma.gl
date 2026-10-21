@@ -45,6 +45,18 @@ import {getRigidBodyStorageLayout, type GPURigidBodyCapacityInfo} from './rigid-
 import {getRigidBodyShader} from './rigid-body-shaders';
 
 type Vector3 = readonly [number, number, number];
+import {
+  decodeRigidBodyContactEvents,
+  getRigidBodyEventShader,
+  type GPURigidBodyContactBatch
+} from './rigid-body-events';
+import {
+  RIGID_BODY_QUERY_SHADER,
+  type GPURigidBodyRayQuery,
+  type GPURigidBodyOverlapQuery,
+  type GPURigidBodyQueryResult
+} from './rigid-body-queries';
+
 export type GPURigidBodyWorldProps = {
   id?: string;
   bodies: readonly GPURigidBody[];
@@ -70,6 +82,12 @@ export type GPURigidBodyWorldProps = {
   maximumCandidateTestsPerCollider?: number;
   /** Maximum BVH-node and triangle tests per collider pair and discovery traversal. */
   maximumMeshTraversalTestsPerPair?: number;
+  /** Zero disables the bounded GPU contact-event ring. */
+  eventCapacity?: number;
+  /** Emit sustained-contact impact samples above this total normal impulse. */
+  impactImpulseThreshold?: number;
+  /** Enable exact GPU ray/sphere-overlap queries for sphere and box colliders. */
+  enableQueries?: boolean;
   contactMatchDistance?: number;
   restitutionThreshold?: number;
   sleepAfter?: number;
@@ -103,6 +121,15 @@ export class GPURigidBodyWorld {
   velocities: Buffer | null = null;
   angularVelocities: Buffer | null = null;
   sleepStates: Buffer | null = null;
+  /** World-owned GPU event ring; present only when eventCapacity is positive. */
+  contactEvents: Buffer | null = null;
+  private eventCursor = 0;
+  private eventRead: Promise<GPURigidBodyContactBatch> | null = null;
+  private queryComputation: Computation | null = null;
+  private querySettings: Buffer | null = null;
+  private querySelection: Buffer | null = null;
+  private queryOutput: Buffer | null = null;
+  private queryPending = false;
   private targets: Buffer | null = null;
   private simulationStatistics: Buffer | null = null;
   private readonly colliders: readonly (GPURigidBodyCollider & {body: number})[];
@@ -143,6 +170,15 @@ export class GPURigidBodyWorld {
       (props.maximumRecoverySpeed ?? 2) < 0
     )
       throw new Error('Invalid rigid-body stability settings');
+    const eventCapacity = props.eventCapacity ?? 0;
+    if (
+      !Number.isInteger(eventCapacity) ||
+      eventCapacity < 0 ||
+      eventCapacity > 65536 ||
+      !Number.isFinite(props.impactImpulseThreshold ?? 1) ||
+      (props.impactImpulseThreshold ?? 1) < 0
+    )
+      throw new Error('Invalid contact event settings');
     const maximumMeshTraversalTests = props.maximumMeshTraversalTestsPerPair ?? 65536;
     if (
       !Number.isInteger(maximumMeshTraversalTests) ||
@@ -295,7 +331,9 @@ export class GPURigidBodyWorld {
         packed.geometry.length,
         sparse,
         extended,
-        parallel
+        parallel,
+        this.props.eventCapacity ?? 0,
+        this.props.enableQueries ?? false
       )
     };
   }
@@ -841,6 +879,94 @@ export class GPURigidBodyWorld {
       ...(extended ? {meshTasks: diagnosticBinding('meshTasks')} : {}),
       ...(parallel ? {parallelState: diagnosticBinding('parallelState')} : {})
     });
+    if (this.props.eventCapacity) {
+      const contactHistory = allocate('contact-history', this.maximumPairs * 16);
+      this.contactEvents = allocate('contact-events', 16 + this.props.eventCapacity * 64);
+      const eventBindings = [
+        ...bindings.filter(binding => ['bodies', 'manifolds'].includes(binding.name)),
+        ...[
+          {name: 'contactHistory', buffer: contactHistory, location: 12},
+          {name: 'contactEvents', buffer: this.contactEvents, location: 13}
+        ].map(binding => ({
+          ...binding,
+          resource: graph.importBuffer(
+            {
+              id: `${this.id}-${binding.name}`,
+              byteLength: binding.buffer.byteLength,
+              usage: Buffer.STORAGE
+            },
+            binding.buffer
+          )
+        }))
+      ];
+      const properties = {
+        id: `${this.id}-contact-events`,
+        source:
+          source +
+          getRigidBodyEventShader(this.props.eventCapacity, this.props.impactImpulseThreshold ?? 1),
+        entryPoint: 'recordContacts',
+        shaderLayout: {
+          bindings: eventBindings.map(({name, location}) => ({
+            name,
+            location,
+            group: 0,
+            type: name === 'bodies' ? ('read-only-storage' as const) : ('storage' as const)
+          }))
+        }
+      };
+      const executable = (
+        computation: Computation
+      ): GPUCommandGraphComputeExecutable<Parameters> => ({
+        encode: ({computePass, getBuffer}) => {
+          computation.setBindings(
+            Object.fromEntries(
+              eventBindings.map(binding => [binding.name, getBuffer(binding.resource)])
+            )
+          );
+          computation.dispatch(computePass, 1);
+        },
+        destroy: () => computation.destroy()
+      });
+      graph.addComputePass({
+        id: properties.id,
+        resources: eventBindings.map(binding => ({
+          buffer: binding.resource,
+          usage:
+            binding.name === 'bodies' ? ('storage-read' as const) : ('storage-read-write' as const)
+        })),
+        compile: () => executable(new Computation(graph.device, properties)),
+        compileAsync: async () =>
+          executable(await Computation.createAsync(graph.device, properties))
+      });
+    }
+    if (this.props.enableQueries) {
+      this.querySettings = allocate('query-settings', 48, true);
+      this.querySelection = allocate('query-selection', Math.max(4, this.colliderStorageCount * 4));
+      this.queryOutput = allocate('query-output', 16 + Math.max(1, this.colliderStorageCount) * 48);
+      this.queryComputation = new Computation(graph.device, {
+        id: `${this.id}-queries`,
+        source: source + RIGID_BODY_QUERY_SHADER,
+        entryPoint: 'queryColliders',
+        shaderLayout: {
+          bindings: [
+            ...shaderLayout.bindings!.filter(binding =>
+              ['positions', 'orientations', 'bodies'].includes(binding.name)
+            ),
+            {name: 'query', group: 0, location: 12, type: 'uniform'},
+            {name: 'querySelection', group: 0, location: 13, type: 'read-only-storage'},
+            {name: 'queryOutput', group: 0, location: 14, type: 'storage'}
+          ]
+        },
+        bindings: {
+          positions: this.positions,
+          orientations: this.orientations,
+          bodies,
+          query: this.querySettings,
+          querySelection: this.querySelection,
+          queryOutput: this.queryOutput
+        }
+      });
+    }
     this.controlSettings = allocate('control-settings', 64, true);
     this.control = new Computation(graph.device, {
       id: `${this.id}-impulse`,
@@ -942,6 +1068,130 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     this.manifolds?.write(new Uint8Array(this.maximumPairs * 288));
   }
 
+  /** Optional asynchronous event readback. Concurrent readers share one snapshot/cursor. */
+  readContactEvents(): Promise<GPURigidBodyContactBatch> {
+    if (!this.contactEvents || this.destroyed)
+      return Promise.reject(new Error('Contact events are not enabled'));
+    if (!this.eventRead)
+      this.eventRead = this.contactEvents
+        .readAsync()
+        .then(bytes => {
+          const batch = decodeRigidBodyContactEvents(
+            new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4),
+            this.eventCursor
+          );
+          this.eventCursor = batch.sequence;
+          return batch;
+        })
+        .finally(() => {
+          this.eventRead = null;
+        });
+    return this.eventRead;
+  }
+
+  /** Nearest exact sphere/OBB hit. Origins inside a shape return distance zero and a zero normal. */
+  raycast(query: GPURigidBodyRayQuery): Promise<GPURigidBodyQueryResult> {
+    return this.runQuery(query);
+  }
+
+  /** Exact sphere overlap against selected sphere/OBB colliders, in collider-index order. */
+  overlapSphere(query: GPURigidBodyOverlapQuery): Promise<GPURigidBodyQueryResult> {
+    return this.runQuery(query);
+  }
+
+  private async runQuery(
+    query: GPURigidBodyRayQuery | GPURigidBodyOverlapQuery
+  ): Promise<GPURigidBodyQueryResult> {
+    if (
+      !this.device ||
+      !this.queryComputation ||
+      !this.querySettings ||
+      !this.querySelection ||
+      !this.queryOutput ||
+      this.destroyed ||
+      this.queryPending
+    )
+      throw new Error('Queries are disabled or busy');
+    const ray = 'origin' in query;
+    const origin = ray ? query.origin : query.center;
+    const direction = ray ? query.direction : [0, 0, 0];
+    const length = Math.hypot(...direction);
+    const maximumHits = ray ? 1 : (query.maximumHits ?? this.colliderCount);
+    if (
+      origin.length !== 3 ||
+      !origin.every(Number.isFinite) ||
+      !direction.every(Number.isFinite) ||
+      (ray
+        ? !Number.isFinite(length) ||
+          length === 0 ||
+          !Number.isFinite(query.maximumDistance) ||
+          query.maximumDistance < 0
+        : !Number.isFinite(query.radius) || query.radius < 0) ||
+      !Number.isInteger(maximumHits) ||
+      maximumHits < 0 ||
+      maximumHits > Math.max(1, this.colliderCount) ||
+      (query.excludeBody !== undefined &&
+        (!Number.isInteger(query.excludeBody) ||
+          query.excludeBody < 0 ||
+          query.excludeBody >= this.count))
+    )
+      throw new Error('Invalid collision query');
+    const selected =
+      query.colliderIndices ?? Array.from({length: this.colliderCount}, (_, index) => index);
+    const selection = new Uint32Array(this.colliderStorageCount);
+    for (const index of selected) {
+      if (!Number.isInteger(index) || index < 0 || index >= this.colliderCount)
+        throw new Error('Invalid query collider');
+      const collider = this.colliders[index];
+      if (collider.body === query.excludeBody) continue;
+      if (collider.shape.type !== 'sphere' && collider.shape.type !== 'box')
+        throw new Error('Query shape is unsupported');
+      selection[index] = 1;
+    }
+    this.queryPending = true;
+    try {
+      const data = new ArrayBuffer(48);
+      new Float32Array(data).set([
+        ...origin,
+        ray ? 0 : query.radius,
+        ...direction.map(value => (ray ? value / length : 0)),
+        ray ? query.maximumDistance : 1e30
+      ]);
+      new Uint32Array(data).set([ray ? 0 : 1, maximumHits, 0, 0], 8);
+      this.querySettings.write(new Uint8Array(data));
+      this.querySelection.write(selection);
+      const encoder = this.device.createCommandEncoder();
+      const pass = encoder.beginComputePass();
+      this.queryComputation.dispatch(pass, 1);
+      pass.end();
+      this.device.submit(encoder.finish());
+      const bytes = await this.queryOutput.readAsync();
+      const words = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
+      const floats = new Float32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
+      const hits = Array.from({length: words[0]}, (_, index) => {
+        const offset = 4 + index * 12;
+        return {
+          body: words[offset],
+          collider: words[offset + 1],
+          point: [floats[offset + 4], floats[offset + 5], floats[offset + 6]] as [
+            number,
+            number,
+            number
+          ],
+          distance: floats[offset + 7],
+          normal: [floats[offset + 8], floats[offset + 9], floats[offset + 10]] as [
+            number,
+            number,
+            number
+          ]
+        };
+      });
+      return {hits, totalHits: words[1], truncated: !ray && words[1] > words[0]};
+    } finally {
+      this.queryPending = false;
+    }
+  }
+
   async readState(): Promise<GPURigidBodyState[]> {
     if (
       !this.positions ||
@@ -1031,6 +1281,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     if (this.destroyed) return;
     this.destroyed = true;
     this.control?.destroy();
+    this.queryComputation?.destroy();
     for (const buffer of this.ownedBuffers) buffer.destroy();
     this.ownedBuffers.length = 0;
   }

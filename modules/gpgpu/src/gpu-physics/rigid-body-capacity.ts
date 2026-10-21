@@ -20,7 +20,9 @@ export function getRigidBodyStorageLayout(
   geometryWords: number,
   sparse: boolean,
   extended: boolean,
-  parallel: boolean
+  parallel: boolean,
+  eventCapacity = 0,
+  enableQueries = false
 ) {
   const geometryOffset = Math.ceil((bodyCount * 12 + colliderCount * 26) / 4) * 4;
   const pairOffset = Math.ceil((geometryOffset + geometryWords) / 64) * 64;
@@ -46,6 +48,19 @@ export function getRigidBodyStorageLayout(
     {name: 'settings', byteLength: 64, uniform: true},
     {name: 'control-settings', byteLength: 64, uniform: true},
     {name: 'simulation-statistics', byteLength: 64, uniform: false},
+    ...(eventCapacity
+      ? [
+          {name: 'contact-events', byteLength: 16 + eventCapacity * 64, uniform: false},
+          {name: 'contact-history', byteLength: maximumPairs * 16, uniform: false}
+        ]
+      : []),
+    ...(enableQueries
+      ? [
+          {name: 'query-settings', byteLength: 48, uniform: true},
+          {name: 'query-selection', byteLength: Math.max(4, colliderCount * 4), uniform: false},
+          {name: 'query-output', byteLength: 16 + Math.max(1, colliderCount) * 48, uniform: false}
+        ]
+      : []),
     ...(extended ? [{name: 'mesh-tasks', byteLength: 16 + 65536 * 48, uniform: false}] : []),
     ...(parallel ? [{name: 'parallel-state', byteLength: parallelByteLength, uniform: false}] : []),
     ...(sparse
