@@ -498,7 +498,7 @@ it('reports deferred trigger, joint and render-instancing semantics without part
   );
 });
 
-it('rejects capacity before compiling quadratic pair exclusions', () => {
+it('imports beyond the reference capacity using the sparse GPU backend', () => {
   const nodes = [
     {children: Array.from({length: 129}, (_, index) => index + 1)},
     ...Array.from({length: 129}, () => ({
@@ -506,9 +506,12 @@ it('rejects capacity before compiling quadratic pair exclusions', () => {
     }))
   ];
   const result = parseGLTFPhysics(makePhysicsDocument(nodes));
-  expect(result.supported).toBe(false);
-  expect(result.issues.some(issue => issue.code === 'capacity-exceeded')).toBe(true);
-  expect(() => createGLTFPhysicsWorld(result)).toThrow();
+  expect(result.issues).toEqual([]);
+  expect(result.supported).toBe(true);
+  const world = createGLTFPhysicsWorld(result);
+  expect(world.broadPhase).toBe('hierarchical-grid');
+  expect(world.count).toBe(129);
+  world.destroy();
 });
 
 it('imports tapered primitives, signed gravity and scaled authored motion properties', () => {
@@ -557,4 +560,78 @@ it('reports possible mesh-to-mesh contact before creating a world', () => {
   expect(description.issues.some(issue => issue.code === 'unsupported-backend-configuration')).toBe(
     true
   );
+});
+
+it('resolves draft geometry.node subtrees and off-scene initial mesh snapshots without aliasing mesh indices', () => {
+  const source = makePhysicsDocument([
+    {
+      translation: [10, 0, 0],
+      extensions: {
+        KHR_physics_rigid_bodies: {
+          motion: {mass: 2},
+          collider: {geometry: {node: 1, convexHull: true}}
+        }
+      }
+    },
+    {mesh: 7, translation: [100, 0, 0], children: [2], skin: 0, weights: [0.5]},
+    {mesh: 8, translation: [4, 0, 0]}
+  ]);
+  const calls: number[] = [];
+  const description = parseGLTFPhysics(source, {
+    resolveNodeMeshGeometry: nodeIndex => {
+      calls.push(nodeIndex);
+      // Decoded snapshots include the initial morph/skin deformation in node-local space.
+      return {
+        positions: makeBoxVertices(),
+        indices: [
+          0, 1, 2, 1, 3, 2, 4, 6, 5, 5, 6, 7, 0, 4, 1, 1, 4, 5, 2, 3, 6, 3, 7, 6, 0, 2, 4, 2, 6, 4,
+          1, 5, 3, 3, 5, 7
+        ]
+      };
+    }
+  });
+  expect(calls).toEqual([1, 2]);
+  expect(description.issues).toEqual([]);
+  expect(description.colliders[0]).toMatchObject({
+    nodeIndex: 0,
+    geometryNodeIndex: 1,
+    meshIndex: undefined
+  });
+  const shape = description.colliders[0].collider.shape;
+  expect(shape).toEqual({type: 'box', halfExtents: [3, 1, 1]});
+  expect(description.colliders[0].collider.position).toEqual([4, 3, 4]);
+  expect(parseGLTFPhysics(source).supported).toBe(false);
+});
+
+it('imports independent finite plane extents and rejects invalid plane dimensions', () => {
+  const source = makePhysicsDocument();
+  source.extensions!.KHR_implicit_shapes = {
+    shapes: [{type: 'plane', plane: {sizeX: 4, doubleSided: true}}]
+  };
+  const description = parseGLTFPhysics(source);
+  expect(description.issues).toEqual([]);
+  expect(description.colliders[0].collider.shape).toEqual({
+    type: 'plane',
+    sizeX: 4,
+    sizeZ: undefined,
+    doubleSided: true
+  });
+  source.extensions!.KHR_implicit_shapes = {shapes: [{type: 'plane', plane: {sizeZ: 0}}]};
+  expect(parseGLTFPhysics(source).supported).toBe(false);
+});
+
+it('disables all-zero-scale colliders while retaining geometry-free authored motions', () => {
+  const source = makePhysicsDocument([
+    {
+      scale: [0, 0, 0],
+      extensions: {KHR_physics_rigid_bodies: {motion: {mass: 2}, collider: {geometry: {shape: 0}}}}
+    }
+  ]);
+  const description = parseGLTFPhysics(source);
+  expect(description.issues).toEqual([]);
+  expect(description.colliders).toHaveLength(0);
+  expect(description.bodies[0].body.colliders).toEqual([]);
+  const world = createGLTFPhysicsWorld(description);
+  expect(world.colliderCount).toBe(0);
+  world.destroy();
 });

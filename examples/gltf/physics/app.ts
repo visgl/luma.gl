@@ -12,6 +12,7 @@ import {Matrix4} from '@math.gl/core';
 import {
   createGLTFPhysicsWorld,
   parseGLTFPhysics,
+  makeGLTFPhysicsMeshResolver,
   type GLTFPhysicsDescription
 } from '@luma.gl/gltf/physics';
 import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
@@ -171,8 +172,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       await this.snapshot;
       const gltf = await load(modelUrl, GLTFLoader);
       if (this.isFinalized) return;
+      const physicsScenegraph = new GLTFScenegraph(gltf);
       const description = parseGLTFPhysics(gltf.json, {
-        resolveLegacyMeshGeometry: makeLegacyMeshGeometryResolver(new GLTFScenegraph(gltf))
+        resolveNodeMeshGeometry: makeGLTFPhysicsMeshResolver(physicsScenegraph),
+        resolveLegacyMeshGeometry: makeLegacyMeshGeometryResolver(physicsScenegraph)
       });
       if (description.supported) {
         replacementWorld = createGLTFPhysicsWorld(description, {timeStep: 1 / 120, iterations: 16});

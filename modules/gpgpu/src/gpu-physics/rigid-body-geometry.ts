@@ -13,6 +13,8 @@ export function packRigidBodyShapes(colliders: readonly GPURigidBodyCollider[]) 
     const padding = [0, 0, 0, 0];
     let dimensions: number[];
     if (shape.type === 'sphere') dimensions = [shape.radius, 0, 0, 0];
+    else if (shape.type === 'plane')
+      dimensions = [(shape.sizeX ?? 0) / 2, (shape.sizeZ ?? 0) / 2, shape.doubleSided ? 1 : 0, 6];
     else if (shape.type === 'box') dimensions = [...shape.halfExtents, 1];
     else if (shape.type === 'capsule' || shape.type === 'cylinder')
       dimensions = [

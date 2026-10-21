@@ -4,6 +4,7 @@
 
 import {GPURigidBodyWorld, type GPURigidBodyWorldProps} from '@luma.gl/gpgpu/gpu-physics';
 import type {GLTFPhysicsDescription} from './physics-types';
+export {makeGLTFPhysicsMeshResolver} from './mesh-snapshot';
 export {parseGLTFPhysics, GLTF_PHYSICS_DRAFT} from './parse-gltf-physics';
 export type {
   GLTFPhysicsDocument,

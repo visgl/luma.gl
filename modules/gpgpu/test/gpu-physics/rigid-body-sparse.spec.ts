@@ -91,3 +91,29 @@ it('uses sparse storage beyond the reference cap, including a large floor with a
     world.destroy();
   }
 }, 120000);
+
+it('integrates geometry-free motions without publishing a synthetic collider', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU is unavailable');
+  const world = new GPURigidBodyWorld({
+    bodies: [{colliders: [], position: [0, 0, 0], mass: 2, velocity: [1, 0, 0]}],
+    gravity: [0, -9.81, 0],
+    sleepAfter: 0
+  });
+  const definition = new GPUCommandGraph(device);
+  world.addToGraph(definition);
+  const graph = await definition.compileAsync();
+  try {
+    const encoder = device.createCommandEncoder();
+    graph.encode(encoder, {parameters: undefined});
+    device.submit(encoder.finish());
+    const state = (await world.readState())[0];
+    expect(world.colliderCount).toBe(0);
+    expect(state.position[0]).toBeCloseTo(1 / 120, 6);
+    expect(state.position[1]).toBeLessThan(0);
+    expect(state.velocity[1]).toBeCloseTo(-9.81 / 120, 5);
+  } finally {
+    graph.destroy();
+    world.destroy();
+  }
+});

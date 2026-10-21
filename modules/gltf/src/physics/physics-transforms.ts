@@ -46,6 +46,8 @@ export function decomposePhysicsTransform(matrix: Matrix4): {
     Math.hypot(matrix[4], matrix[5], matrix[6]),
     Math.hypot(matrix[8], matrix[9], matrix[10])
   ];
+  if (scale.every(value => value === 0))
+    return {position: [matrix[12], matrix[13], matrix[14]], rotation: [0, 0, 0, 1], scale};
   if (scale.some(value => value < 1e-10))
     throw new Error('Singular collider transforms are unsupported');
   if (matrix.determinant() < 0) scale[0] = -scale[0];

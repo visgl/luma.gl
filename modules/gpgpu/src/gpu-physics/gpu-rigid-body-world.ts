@@ -76,6 +76,7 @@ export class GPURigidBodyWorld {
   readonly count: number;
   readonly timeStep: number;
   readonly colliderCount: number;
+  private readonly colliderStorageCount: number;
   readonly broadPhase: 'all-pairs' | 'hierarchical-grid';
   readonly maximumPairs: number;
   positions: Buffer | null = null;
@@ -100,7 +101,13 @@ export class GPURigidBodyWorld {
   constructor(props: GPURigidBodyWorldProps) {
     this.id = props.id ?? 'gpu-rigid-body-world';
     this.count = props.bodies.length;
-    this.broadPhase = props.broadPhase ?? (this.count > 128 ? 'hierarchical-grid' : 'all-pairs');
+    const colliderCount = props.bodies.reduce(
+      (sum, body) => sum + (body.colliders?.length ?? 1),
+      0
+    );
+    this.broadPhase =
+      props.broadPhase ??
+      (Math.max(this.count, colliderCount) > 128 ? 'hierarchical-grid' : 'all-pairs');
     this.timeStep = props.timeStep ?? 1 / 120;
     const iterations = props.iterations ?? 16;
     const maximumCandidateTests = props.maximumCandidateTestsPerCollider ?? 4096;
@@ -124,7 +131,7 @@ export class GPURigidBodyWorld {
     for (const [bodyIndex, body] of props.bodies.entries()) {
       if (!Number.isFinite(body.mass ?? 1) || (body.mass ?? 1) < 0)
         throw new Error('Invalid rigid body mass');
-      if (body.shape ? body.colliders !== undefined : !body.colliders?.length)
+      if (body.shape ? body.colliders !== undefined : body.colliders === undefined)
         throw new Error('Supply shape or colliders');
       const shapes: readonly GPURigidBodyCollider[] =
         body.colliders ?? (body.shape ? [{shape: body.shape}] : []);
@@ -137,6 +144,7 @@ export class GPURigidBodyWorld {
         )
           throw new Error('Invalid shape properties');
         if (
+          (collider.shape.type === 'convex-hull' || collider.shape.type === 'triangle-mesh') &&
           body.mode !== 'static' &&
           body.mass !== 0 &&
           (!(properties.volume > 0) ||
@@ -206,10 +214,15 @@ export class GPURigidBodyWorld {
       )
         throw new Error('Invalid collider filter');
     this.colliderCount = colliders.length;
+    this.colliderStorageCount = Math.max(1, colliders.length);
+    // WGSL fixed arrays require a positive size. A lone private collider cannot
+    // collide with itself and lets geometry-free bodies share the normal kernels.
+    if (!colliders.length) colliders.push({body: 0, shape: {type: 'box', halfExtents: [0, 0, 0]}});
     this.maximumPairs =
       this.broadPhase === 'all-pairs'
-        ? this.colliderCount * this.colliderCount
-        : (props.maximumPairs ?? 2 ** Math.ceil(Math.log2(Math.max(64, this.colliderCount * 16))));
+        ? this.colliderStorageCount * this.colliderStorageCount
+        : (props.maximumPairs ??
+          2 ** Math.ceil(Math.log2(Math.max(64, this.colliderStorageCount * 16))));
     if (
       !['all-pairs', 'hierarchical-grid'].includes(this.broadPhase) ||
       !Number.isSafeInteger(this.maximumPairs) ||
@@ -280,7 +293,9 @@ export class GPURigidBodyWorld {
     // Three vec4s per body, six per collider and one sparse filter range per collider.
     const packed = packRigidBodyShapes(this.colliders);
     const geometryOffset =
-      Math.ceil((this.count * 12 + this.colliderCount * 24 + this.colliderCount * 2) / 4) * 4;
+      Math.ceil(
+        (this.count * 12 + this.colliderStorageCount * 24 + this.colliderStorageCount * 2) / 4
+      ) * 4;
     const sparse = this.broadPhase === 'hierarchical-grid';
     const pairOffset = Math.ceil((geometryOffset + packed.geometry.length) / 64) * 64;
     const diagnosticOffset = Math.ceil((pairOffset + this.maximumPairs * 2) / 64) * 64;
@@ -299,7 +314,8 @@ export class GPURigidBodyWorld {
     const metadata = new Float32Array(metadataLength);
     metadata.set(packed.geometry, geometryOffset);
     const bodyColliders: GPURigidBodyCollider[][] = Array.from({length: this.count}, () => []);
-    for (const collider of this.colliders) bodyColliders[collider.body].push(collider);
+    if (this.colliderCount)
+      for (const collider of this.colliders) bodyColliders[collider.body].push(collider);
     for (const [index, body] of this.props.bodies.entries()) {
       const mass = body.mass ?? 1;
       const mode = body.mode ?? (mass === 0 ? 'static' : 'dynamic');
@@ -370,7 +386,7 @@ export class GPURigidBodyWorld {
         this.count * 12 + index * 24
       );
     }
-    const exclusionOffset = this.count * 12 + this.colliderCount * 24;
+    const exclusionOffset = this.count * 12 + this.colliderStorageCount * 24;
     for (const [index, filter] of packed.filters.entries())
       metadata.set(filter, exclusionOffset + index * 2);
     this.positions = allocate('positions', positions);
@@ -424,8 +440,8 @@ export class GPURigidBodyWorld {
       ...(this.meshTasks ? {meshTasks: this.meshTasks} : {}),
       ...(sparse
         ? {
-            minima: allocate('minima', this.colliderCount * 12),
-            maxima: allocate('maxima', this.colliderCount * 12)
+            minima: allocate('minima', this.colliderStorageCount * 12),
+            maxima: allocate('maxima', this.colliderStorageCount * 12)
           }
         : {})
     };
@@ -475,13 +491,13 @@ export class GPURigidBodyWorld {
             },
             objectAttributes
           ),
-          {format: 'uint32', length: this.colliderCount}
+          {format: 'uint32', length: this.colliderStorageCount}
         )
       : undefined;
     const source = getRigidBodyShader(
       this.count,
       this.props.iterations ?? 16,
-      this.colliderCount,
+      this.colliderStorageCount,
       this.colliders.some(
         collider => collider.shape.type !== 'sphere' && collider.shape.type !== 'box'
       ),
@@ -505,11 +521,11 @@ export class GPURigidBodyWorld {
           maximumCandidateTestsPerQuery: this.props.maximumCandidateTestsPerCollider,
           minima: graph.createDataView(minimumBinding.resource, {
             format: 'float32x3',
-            length: this.colliderCount
+            length: this.colliderStorageCount
           }),
           maxima: graph.createDataView(maximumBinding.resource, {
             format: 'float32x3',
-            length: this.colliderCount
+            length: this.colliderStorageCount
           }),
           pairs: graph.createDataView(bodyBinding.resource, {
             format: 'uint32x2',
@@ -579,7 +595,7 @@ export class GPURigidBodyWorld {
               entryPoint === 'collide'
                 ? Math.ceil(this.maximumPairs / 64)
                 : entryPoint === 'bounds'
-                  ? Math.ceil(this.colliderCount / 64)
+                  ? Math.ceil(this.colliderStorageCount / 64)
                   : entryPoint === 'integrate'
                     ? Math.ceil(this.count / 64)
                     : 1

@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Matrix4, Quaternion} from '@math.gl/core';
+import {collectNodeCollisionGeometry} from './node-collision-geometry';
 import {getMeshBoxBounds} from './mesh-box-shape';
 import {
   GPURigidBodyWorld,
@@ -129,6 +130,27 @@ function parseShape(value: unknown, scale: readonly number[]): GPURigidBodyShape
     const radius = scalar(sphere['radius'], 0.5) * absolute[0];
     if (!(radius > 0)) throw new Error('Sphere radius must be positive');
     return {type: 'sphere', radius};
+  }
+  if (source['type'] === 'plane') {
+    checkFields(source, ['type', 'plane']);
+    const parameters = record(source['plane'] ?? {});
+    checkFields(parameters, ['sizeX', 'sizeZ', 'doubleSided']);
+    if (parameters['doubleSided'] !== undefined && typeof parameters['doubleSided'] !== 'boolean')
+      throw new Error('doubleSided must be boolean');
+    const shape: GPURigidBodyShape = {
+      type: 'plane',
+      sizeX:
+        parameters['sizeX'] === undefined
+          ? undefined
+          : scalar(parameters['sizeX'], 1) * Math.abs(scale[0]),
+      sizeZ:
+        parameters['sizeZ'] === undefined
+          ? undefined
+          : scalar(parameters['sizeZ'], 1) * Math.abs(scale[2]),
+      doubleSided: parameters['doubleSided'] === true
+    };
+    getRigidBodyShapeProperties(shape);
+    return shape;
   }
   if (source['type'] === 'box') {
     checkFields(source, ['type', 'box']);
@@ -339,7 +361,11 @@ export function parseGLTFPhysics(
         bodyByNode.set(nodeIndex, definition);
         owner = nodeIndex;
       }
-      if (extension['collider'] !== undefined && owner !== undefined) {
+      if (
+        extension['collider'] !== undefined &&
+        owner !== undefined &&
+        !decomposePhysicsTransform(world).scale.every(value => value === 0)
+      ) {
         const collider = record(extension['collider']);
         checkFields(collider, ['geometry', 'physicsMaterial', 'collisionFilter']);
         const geometry = record(collider['geometry']);
@@ -349,9 +375,10 @@ export function parseGLTFPhysics(
             ? ['shape', 'node', 'convexHull', 'mesh']
             : ['shape', 'node', 'convexHull']
         );
-        const isMesh = geometry['mesh'] !== undefined;
+        const isNodeGeometry = geometry['node'] !== undefined;
+        const isMesh = geometry['mesh'] !== undefined || isNodeGeometry;
         if (
-          geometry['node'] !== undefined ||
+          (geometry['mesh'] !== undefined && isNodeGeometry) ||
           (geometry['shape'] === undefined && !isMesh) ||
           (geometry['shape'] !== undefined && isMesh)
         )
@@ -360,21 +387,32 @@ export function parseGLTFPhysics(
           throw new Error('convexHull must be boolean');
         let shapeIndex: number | undefined;
         let meshIndex: number | undefined;
+        let geometryNodeIndex: number | undefined;
         let shape: unknown;
         let meshShape: GPURigidBodyShape | undefined;
         let meshCenter: readonly number[] = [0, 0, 0];
         if (isMesh) {
           if (
+            !isNodeGeometry &&
             !options.resolveLegacyMeshGeometry &&
             (geometry['convexHull'] !== true || !options.resolveLegacyMeshPositions)
           )
             throw new Error('Legacy meshes require an explicit convex hull resolver');
-          const value = geometry['mesh'];
+          const value = isNodeGeometry ? geometry['node'] : geometry['mesh'];
           if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0)
             throw new Error('Invalid legacy mesh index');
-          meshIndex = value;
-          if (options.resolveLegacyMeshGeometry) {
-            const resolved = options.resolveLegacyMeshGeometry(meshIndex);
+          if (isNodeGeometry) geometryNodeIndex = index(value, nodes);
+          else meshIndex = value;
+          if (isNodeGeometry && !options.resolveNodeMeshGeometry)
+            throw new Error('Node geometry requires an initial mesh snapshot resolver');
+          if (isNodeGeometry || options.resolveLegacyMeshGeometry) {
+            const resolved = isNodeGeometry
+              ? collectNodeCollisionGeometry(
+                  source,
+                  geometryNodeIndex!,
+                  options.resolveNodeMeshGeometry!
+                )
+              : options.resolveLegacyMeshGeometry!(meshIndex!);
             const transform = decomposePhysicsTransform(world);
             const positions = Array.from(
               resolved.positions,
@@ -402,7 +440,7 @@ export function parseGLTFPhysics(
               };
             else throw new Error('Mesh convexHull must be explicit');
           } else {
-            const bounds = getMeshBoxBounds(options.resolveLegacyMeshPositions!(meshIndex));
+            const bounds = getMeshBoxBounds(options.resolveLegacyMeshPositions!(meshIndex!));
             meshCenter = bounds.center;
             shape = {type: 'box', box: {size: bounds.size}};
           }
@@ -453,6 +491,7 @@ export function parseGLTFPhysics(
           colliderIndex,
           shapeIndex,
           meshIndex,
+          geometryNodeIndex,
           materialIndex,
           filterIndex,
           collider: normalized
@@ -481,12 +520,12 @@ export function parseGLTFPhysics(
   } catch (error) {
     report('invalid-scene', '/scenes', error);
   }
-  // Reject capacity before constructing the quadratic collider exclusion table.
-  if (result.bodies.length > 128 || result.colliders.length > 128) {
+  // Body and collider identities occupy sixteen bits in the sparse GPU backend.
+  if (result.bodies.length > 65535 || result.colliders.length > 65535) {
     report(
       'capacity-exceeded',
       '/',
-      'The bounded backend supports at most 128 bodies and 128 colliders'
+      'The GPU backend supports at most 65535 bodies and 65535 colliders'
     );
     return result;
   }
@@ -495,14 +534,6 @@ export function parseGLTFPhysics(
       colliderIndex => result.colliders[colliderIndex]['collider']
     );
     definition.body.colliders = colliders;
-    if (!colliders.length) {
-      report(
-        'empty-body',
-        `/nodes/${definition.nodeIndex}`,
-        'This backend requires at least one supported collider'
-      );
-      continue;
-    }
     const properties = colliders.map(({shape}) => getRigidBodyShapeProperties(shape));
     const volumes = properties.map(property => property.volume);
     const volume = volumes.reduce((sum, value) => sum + value, 0);
@@ -544,11 +575,13 @@ export function parseGLTFPhysics(
   filters.splice(0, filters.length, ...orderedFilters);
   for (const [colliderIndex, collider] of result.colliders.entries())
     collider.colliderIndex = colliderIndex;
-  for (const definition of result.bodies)
-    definition.colliderIndices = result.colliders
-      .filter(collider => collider.bodyIndex === definition.bodyIndex)
-      .map(collider => collider.colliderIndex);
-  for (let first = 0; first < filters.length; first++)
+  for (const definition of result.bodies) definition.colliderIndices = [];
+  for (const collider of result.colliders)
+    result.bodies[collider.bodyIndex].colliderIndices.push(collider.colliderIndex);
+  const hasFiltering = filters.some(
+    filter => filter.include !== undefined || (filter.exclude?.length ?? 0) > 0
+  );
+  for (let first = 0; hasFiltering && first < filters.length; first++)
     for (let second = first + 1; second < filters.length; second++) {
       if (
         !allowsFilter(filters[first], filters[second]) ||

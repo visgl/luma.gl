@@ -35,8 +35,29 @@ fn localShapeSupport(collider:u32,direction:vec3f,triangle:i32)->vec3f {
  return best;
 }
 fn shapeSupport(collider:u32,direction:vec3f,triangle:i32)->vec3f {return colliderPosition(collider)+rotate(colliderRotation(collider),localShapeSupport(collider,colliderLocal(collider,direction),triangle));}
+// Clip an unbounded plane to this pair's conservative footprint. The patch
+// contains every possible contact without putting huge coordinates into GJK.
+fn pairShapeSupport(collider:u32,other:u32,direction:vec3f,triangle:i32)->vec3f {
+ let shape=bodies.colliders[collider].shape;
+ if(shape.w!=6.0){return shapeSupport(collider,direction,triangle);}
+ let center=colliderLocal(collider,colliderPosition(other)-colliderPosition(collider));
+ let extent=shapeWorldExtent(other);let localDirection=colliderLocal(collider,direction);
+ var point=vec3f(0);
+ for(var coordinate=0u;coordinate<2u;coordinate++){
+  let component=coordinate*2u;let halfExtent=shape[coordinate];
+  let radius=dot(abs(axis(collider,component)),extent)+settings.solver.x*2.0;
+  var lower=center[component]-radius;var upper=center[component]+radius;
+  if(halfExtent>0.0){lower=-halfExtent;upper=halfExtent;}
+  point[component]=select(lower,upper,localDirection[component]>=0.0);
+ }
+ return colliderPosition(collider)+rotate(colliderRotation(collider),point);
+}
+fn permitsPlaneContact(plane:u32,other:u32)->bool {
+ let shape=bodies.colliders[plane].shape;
+ return shape.w!=6.0||shape.z!=0.0||dot(colliderPosition(other)-colliderPosition(plane),axis(plane,1u))>=0.0;
+}
 fn minkowski(first:u32,second:u32,direction:vec3f,firstTriangle:i32,secondTriangle:i32)->SupportVertex {
- var vertex:SupportVertex;vertex.first=shapeSupport(first,direction,firstTriangle);vertex.second=shapeSupport(second,-direction,secondTriangle);
+ var vertex:SupportVertex;vertex.first=pairShapeSupport(first,second,direction,firstTriangle);vertex.second=pairShapeSupport(second,first,-direction,secondTriangle);
  vertex.difference=vertex.first-vertex.second+direction/max(length(direction),1e-20)*settings.solver.x;return vertex;
 }
 fn perpendicular(direction:vec3f)->vec3f {return cross(direction,select(vec3f(1,0,0),vec3f(0,1,0),abs(direction.x)>abs(direction.y)));}
@@ -144,15 +165,18 @@ fn collideExtended(pair:u32,first:u32,second:u32,previous:Manifold){
  let firstShape=bodies.colliders[first].shape;let secondShape=bodies.colliders[second].shape;
  var firstRadius=length(firstShape.xyz);var secondRadius=length(secondShape.xyz);
  if(firstShape.w==0.0){firstRadius=firstShape.x;}if(secondShape.w==0.0){secondRadius=secondShape.x;}
- if(firstShape.w>=4.0){firstRadius=max(firstShape.x,firstShape.y)+firstShape.z*0.5;}if(secondShape.w>=4.0){secondRadius=max(secondShape.x,secondShape.y)+secondShape.z*0.5;}
- if(distance(colliderPosition(first),colliderPosition(second))>firstRadius+secondRadius+settings.solver.x){return;}
+ if(firstShape.w==4.0||firstShape.w==5.0){firstRadius=max(firstShape.x,firstShape.y)+firstShape.z*0.5;}if(secondShape.w==4.0||secondShape.w==5.0){secondRadius=max(secondShape.x,secondShape.y)+secondShape.z*0.5;}
+ if(firstShape.w!=6.0&&secondShape.w!=6.0&&distance(colliderPosition(first),colliderPosition(second))>firstRadius+secondRadius+settings.solver.x){return;}
+ if(!permitsPlaneContact(first,second)||!permitsPlaneContact(second,first)){return;}
+ // Two unbounded zero-volume surfaces do not define a finite contact manifold.
+ if(firstShape.w==6.0&&secondShape.w==6.0){manifolds[pair].padding.x++;atomicAdd(&meshTasks.unresolved,1u);return;}
  let firstMesh=bodies.colliders[first].shape.w==3.0;let secondMesh=bodies.colliders[second].shape.w==3.0;
  if(!firstMesh&&!secondMesh){appendConvexContact(pair,convexContact(first,second,-1,-1),previous,first,second);return;}
  // Mesh/mesh is rejected at construction unless fixed translation bounds prove separation.
  if(firstMesh&&secondMesh){return;}
  let mesh=select(second,first,firstMesh);let convex=select(first,second,firstMesh);
  var lower=vec3f(0);var upper=vec3f(0);
- for(var index=0u;index<3u;index++){let direction=axis(mesh,index);lower[index]=colliderLocal(mesh,shapeSupport(convex,-direction,-1)-colliderPosition(mesh))[index]-settings.solver.x;upper[index]=colliderLocal(mesh,shapeSupport(convex,direction,-1)-colliderPosition(mesh))[index]+settings.solver.x;}
+ for(var index=0u;index<3u;index++){let direction=axis(mesh,index);lower[index]=colliderLocal(mesh,pairShapeSupport(convex,mesh,-direction,-1)-colliderPosition(mesh))[index]-settings.solver.x;upper[index]=colliderLocal(mesh,pairShapeSupport(convex,mesh,direction,-1)-colliderPosition(mesh))[index]+settings.solver.x;}
  let offset=u32(bodies.colliders[mesh].policies.z);let count=u32(bodies.colliders[mesh].policies.w);
  var candidates=0u;var written=0u;var taskStart=0u;var taskCount=0u;
  for(var traversal=0u;traversal<2u;traversal++){
