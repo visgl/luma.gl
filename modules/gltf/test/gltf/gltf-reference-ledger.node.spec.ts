@@ -7,11 +7,11 @@ import {describe, expect, test} from 'vitest';
 import type {GLTFPostprocessed} from '@loaders.gl/gltf';
 
 import {assertSupportedGLTFExtensions, getRegisteredGLTFExtensions} from '@luma.gl/gltf';
-import {getGLTFReferenceLedger} from '../../../../examples/showcase/gltf/gltf-reference-ledger';
+import {getGLTFReferenceLedger} from '../../../../examples/gltf/asset-studio/gltf-reference-ledger';
 import {
   getGLTFReferenceCaptureOptions,
   getGLTFReferenceDrawMetrics
-} from '../../../../examples/showcase/gltf/gltf-reference-evidence';
+} from '../../../../examples/gltf/asset-studio/gltf-reference-evidence';
 
 describe('glTF reference ledger', () => {
   test('pins the Khronos assets and viewer revisions', () => {

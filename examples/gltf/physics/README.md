@@ -10,17 +10,27 @@ copied into this repository. Network access to raw.githubusercontent.com is requ
 Parses raw glTF physics metadata before loaders.gl post-processing, creates a
 `GPURigidBodyWorld`, and renders the original meshes/materials with luma.gl's glTF
 renderer. Uses fixed 1/120-second steps with at most four catch-up steps per frame.
-One asynchronous pose readback can be pending at a time. This small example uses
+One simulation submission and asynchronous pose readback can be pending at a time;
+the example waits for publication before queuing more physics to bound input latency. This small example uses
 an explicit CPU pose bridge; it does not claim GPU-driven glTF transform publication.
 The source asset's scale and child transforms are preserved through body pose deltas.
 
-The extensions are drafts, and the importer implements a bounded sphere/box subset.
-Filtering also simulates: its two legacy convex mesh colliders are verified to have
-exact box hulls, then use the GPU box solver with their authored child transforms and
-per-collider filters. This is exact geometry recognition, not bounding-box approximation.
-Motion Properties remains a static preview with diagnostics for its other mesh and
-capsule/cylinder colliders; no partial simulation is created.
-The standard InfoBox starts collapsed, with a sample selector, wrapping previous/next
+The extensions are drafts. All four pinned assets simulate on the GPU, including
+Motion Properties: its bottom-heavy tapered capsule wobbles, balloons rise under
+negative gravity, the nonconvex wheel rotates around its unlocked inertia axis, and
+the rounded box falls without rotating. The wheel retains its original triangles
+and holes; balloons and the rounded box use computed convex hulls. Capsule and cone
+contacts use analytic support functions. No collision mesh is inferred from rendering.
+Filtering retains its exact box fast path and independent child collider filters.
+
+The bounded backend supports 128 bodies/colliders and discrete collisions. It does
+not implement general mesh-to-mesh contact: the wheel/ceiling pair is accepted because
+conservative bounds prove it cannot meet. Mesh candidates use a 65,536-entry GPU queue;
+`world.readCollisionDiagnostics()` exposes overflow and unresolved GJK/EPA queries.
+Performance depends on hull complexity and triangle overlap; the four catch-up-step
+limit prevents unbounded simulation work when this detailed scene is GPU-bound.
+Samples appear in Motion Properties, Restitution, Friction, Filtering order, starting
+with Motion Properties. The standard InfoBox starts collapsed, with a sample selector, wrapping previous/next
 arrows, Pause, and Reset controls.
 Reset reloads the authored scene and simulation. Pause leaves camera controls active.
 

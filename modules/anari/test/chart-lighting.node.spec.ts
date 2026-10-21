@@ -5,8 +5,8 @@ import {ANARIDevice} from '@luma.gl/anari';
 import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 import {NullDevice} from '@luma.gl/test-utils';
 import {expect, it} from 'vitest';
-import {makeChartLightingScene} from '../../../examples/showcase/scene/chart-baseline';
-import {createANARIJSONScene} from '../../../examples/showcase/scene/playground-scene';
+import {makeChartLightingScene} from '../../../examples/anari/scenes/chart-baseline';
+import {createANARIJSONScene} from '../../../examples/anari/scenes/playground-scene';
 import {ANARISceneAdapter} from '../src/anari-scene-adapter';
 
 it('chart lighting keeps authored masks, retained ring identities and explicit emitter settings', () => {

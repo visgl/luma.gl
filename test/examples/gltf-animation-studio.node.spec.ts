@@ -9,21 +9,21 @@ import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 import {createGLTFAnimatedCrowd, createScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {NullDevice} from '@luma.gl/test-utils';
 import {describe, expect, test} from 'vitest';
-import {makeANARIJSONSceneFromGLTF} from '../../examples/showcase/scene/gltf-to-anari';
+import {makeANARIJSONSceneFromGLTF} from '../../examples/anari/scenes/gltf-to-anari';
 import {
   GLTFAnimationStudio,
   getGLTFStudioCameraState
-} from '../../examples/showcase/gltf/gltf-animation-studio';
-import {getGLTFReferenceLedger} from '../../examples/showcase/gltf/gltf-reference-ledger';
+} from '../../examples/gltf/asset-studio/gltf-animation-studio';
+import {getGLTFReferenceLedger} from '../../examples/gltf/asset-studio/gltf-reference-ledger';
 import {
   GLTF_ANIMATION_STUDIO_ASSETS,
   GLTF_STUDIO_ASSETS,
   ROBOT_EXPRESSIVE_SOURCE_REVISION,
   getGLTFStudioAsset
-} from '../../examples/showcase/gltf/gltf-studio-assets';
+} from '../../examples/gltf/asset-studio/gltf-studio-assets';
 
 const ROBOT_PATH = new URL(
-  '../../examples/showcase/scene/public/gltf/RobotExpressive.glb',
+  '../../examples/anari/scenes/public/gltf/RobotExpressive.glb',
   import.meta.url
 );
 
@@ -263,15 +263,15 @@ describe('curated glTF Animation Studio', () => {
 
   test('surfaces licensed animation samples and binary export in the retained-scene tools', async () => {
     const samples = await readFile(
-      new URL('../../examples/showcase/scene/usd-samples.ts', import.meta.url),
+      new URL('../../examples/anari/scenes/usd-samples.ts', import.meta.url),
       'utf8'
     );
     const playground = await readFile(
-      new URL('../../examples/showcase/scene/playground.html', import.meta.url),
+      new URL('../../examples/anari/scenes/playground.html', import.meta.url),
       'utf8'
     );
     const license = await readFile(
-      new URL('../../examples/showcase/scene/public/gltf/ASSET-LICENSE.md', import.meta.url),
+      new URL('../../examples/anari/scenes/public/gltf/ASSET-LICENSE.md', import.meta.url),
       'utf8'
     );
 
@@ -286,7 +286,7 @@ describe('curated glTF Animation Studio', () => {
 
   test('provides the settings host when Animation Studio runs outside the website shell', async () => {
     const standaloneStudio = await readFile(
-      new URL('../../examples/showcase/gltf/index.html', import.meta.url),
+      new URL('../../examples/gltf/asset-studio/index.html', import.meta.url),
       'utf8'
     );
 

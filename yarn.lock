@@ -16510,9 +16510,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-gltf-showcase@workspace:examples/showcase/gltf":
+"luma.gl-examples-gltf-showcase@workspace:examples/gltf/asset-studio":
   version: 0.0.0-use.local
-  resolution: "luma.gl-examples-gltf-showcase@workspace:examples/showcase/gltf"
+  resolution: "luma.gl-examples-gltf-showcase@workspace:examples/gltf/asset-studio"
   dependencies:
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@loaders.gl/core": "npm:~5.0.0-alpha.11"
@@ -16877,9 +16877,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-showcase-scene@workspace:examples/showcase/scene":
+"luma.gl-examples-showcase-scene@workspace:examples/anari/scenes":
   version: 0.0.0-use.local
-  resolution: "luma.gl-examples-showcase-scene@workspace:examples/showcase/scene"
+  resolution: "luma.gl-examples-showcase-scene@workspace:examples/anari/scenes"
   dependencies:
     "@loaders.gl/core": "npm:~5.0.0-alpha.11"
     "@loaders.gl/gltf": "npm:~5.0.0-alpha.11"

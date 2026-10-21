@@ -21,7 +21,7 @@ import {
 } from './hdr-example-catalog.mjs';
 
 const EXPECTED_CATALOG = [
-  ['showcase/gltf', 'website/static/images/examples/showcase/gltf.jpg', 10_000],
+  ['gltf/asset-studio', 'website/static/images/examples/gltf/asset-studio.jpg', 10_000],
   [
     'showcase/instancing',
     'website/static/images/examples/showcase/instancing.jpg',
@@ -293,8 +293,8 @@ test('batch manifest rejects stale versions, wrong dimensions, and invalid peaks
   await assert.rejects(loadBatchCaptureManifest(manifestPath), /exampleId/);
   await writeFile(manifestPath, JSON.stringify(manifest));
   await assert.rejects(
-    loadBatchCaptureManifest(manifestPath, 'showcase/gltf'),
-    /belongs to showcase\/tempest-ocean; expected showcase\/gltf/
+    loadBatchCaptureManifest(manifestPath, 'gltf/asset-studio'),
+    /belongs to showcase\/tempest-ocean; expected gltf\/asset-studio/
   );
 });
 

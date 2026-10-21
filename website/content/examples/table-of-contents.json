@@ -27,11 +27,6 @@
         "type": "doc",
         "id": "showcase/persistence",
         "label": "Effects: Persistence"
-      },
-      {
-        "type": "doc",
-        "id": "experimental/scene-playground",
-        "label": "Scene Playground"
       }
     ]
   },
@@ -39,7 +34,7 @@
     "type": "category",
     "label": "glTF standard features",
     "items": [
-      "showcase/gltf",
+      "gltf/asset-studio",
       "tutorials/hello-gltf",
       "deck/gltf-interactivity"
     ]
@@ -47,9 +42,13 @@
   {
     "type": "category",
     "label": "glTF proposed features",
+    "items": ["showcase/gltf-audio", "gltf/physics"]
+  },
+  {
+    "type": "category",
+    "label": "ANARI",
     "items": [
-      "showcase/gltf-audio",
-      "gltf/physics"
+      "anari/scenes"
     ]
   },
   {
@@ -193,6 +192,15 @@
   },
   {
     "type": "category",
+    "label": "Three.js",
+    "items": [
+      "three/galactic-vortex",
+      "three/deck-layers",
+      "experimental/three"
+    ]
+  },
+  {
+    "type": "category",
     "label": "Integrations",
     "items": [
       "integrations/external-context",
@@ -240,8 +248,7 @@
         "type": "doc",
         "id": "experimental/webxr-kaleidoscope",
         "label": "WebXR: Immersive Prism Portal"
-      },
-      "experimental/three"
+      }
     ]
   },
   {

@@ -16,11 +16,11 @@ import {
   makeInlineSettingsSchema
 } from '../../examples/example-panels';
 import {applyExampleTheme, EXAMPLE_THEME_TOKENS} from '../../examples/example-theme';
-import {makeGltfSettingsSchema} from '../../examples/showcase/gltf/app';
+import {makeGltfSettingsSchema} from '../../examples/gltf/asset-studio/app';
 import {
   formatGLTFCrowdInfo,
   isAnimatedGLTFCatalogModel
-} from '../../examples/showcase/gltf/gltf-catalog-app';
+} from '../../examples/gltf/asset-studio/gltf-catalog-app';
 import {
   type EffectState,
   flattenEffectSettings,

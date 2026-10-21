@@ -399,7 +399,7 @@ it('diagnoses unsupported shapes, shear, singular transforms and draft aliases',
   const source = makePhysicsDocument();
   source.extensions = {
     KHR_implicit_shapes: {
-      shapes: [{type: 'capsule', capsule: {height: 1, radiusTop: 1, radiusBottom: 1}}]
+      shapes: [{type: 'ellipsoid', ellipsoid: {radii: [1, 1, 1]}}]
     }
   };
   expect(
@@ -509,4 +509,52 @@ it('rejects capacity before compiling quadratic pair exclusions', () => {
   expect(result.supported).toBe(false);
   expect(result.issues.some(issue => issue.code === 'capacity-exceeded')).toBe(true);
   expect(() => createGLTFPhysicsWorld(result)).toThrow();
+});
+
+it('imports tapered primitives, signed gravity and scaled authored motion properties', () => {
+  const source = makePhysicsDocument();
+  source.extensions!.KHR_implicit_shapes = {
+    shapes: [{type: 'capsule', capsule: {height: 1, radiusBottom: 0.5, radiusTop: 0.2}}]
+  };
+  source.nodes![0].scale = [2, 2, 2];
+  source.nodes![0].extensions!.KHR_physics_rigid_bodies = {
+    motion: {mass: 2, gravityFactor: -0.5, centerOfMass: [0, -0.2, 0], inertiaDiagonal: [0, 1, 0]},
+    collider: {geometry: {shape: 0}}
+  };
+  const description = parseGLTFPhysics(source);
+  expect(description.issues).toEqual([]);
+  expect(description.colliders[0].collider.shape).toEqual({
+    type: 'capsule',
+    height: 2,
+    radiusBottom: 1,
+    radiusTop: 0.4
+  });
+  expect(description.bodies[0].body).toMatchObject({
+    gravityFactor: -0.5,
+    centerOfMass: [0, -0.4, 0],
+    inertiaDiagonal: [0, 1, 0]
+  });
+});
+
+it('reports possible mesh-to-mesh contact before creating a world', () => {
+  const nodes = [0, 1].map(() => ({
+    extensions: {
+      KHR_physics_rigid_bodies: {
+        motion: {mass: 0, inertiaDiagonal: [0, 1, 0]},
+        collider: {geometry: {mesh: 0, convexHull: false}}
+      }
+    }
+  }));
+  const source = makePhysicsDocument(nodes);
+  source.scenes![0].nodes = [0, 1];
+  const description = parseGLTFPhysics(source, {
+    resolveLegacyMeshGeometry: () => ({
+      positions: [-1, 0, -1, 1, 0, -1, 0, 0, 1],
+      indices: [0, 1, 2]
+    })
+  });
+  expect(description.supported).toBe(false);
+  expect(description.issues.some(issue => issue.code === 'unsupported-backend-configuration')).toBe(
+    true
+  );
 });

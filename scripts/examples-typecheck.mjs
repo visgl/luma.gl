@@ -57,7 +57,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'experimental/antialiasing',
   'showcase/gltf-audio',
   'showcase/algebraic-varieties',
-  'showcase/scene',
+  'anari/scenes',
   'showcase/dof',
   'showcase/gaussian-splats',
   'showcase/billion-point-spatial-atlas',
@@ -97,7 +97,7 @@ const NATIVE_TYPESCRIPT_CONFIG_WORKSPACES = new Set([
   'api/multi-canvas',
   'experimental/fp64',
   'experimental/three',
-  'showcase/scene',
+  'anari/scenes',
   'showcase/raster-lab',
   'showcase/spectral-wave-lab'
 ]);

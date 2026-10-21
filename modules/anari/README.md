@@ -208,7 +208,7 @@ hierarchy, cameras, renderers, frames, supported parameters, defaults, and curre
 
 ## Showcase
 
-The interactive showcase lives at `examples/showcase/scene`. Run it with
+The interactive showcase lives at `examples/anari/scenes`. Run it with
 `yarn workspace luma.gl-examples-showcase-scene start`; add `?backend=webgl` to force the WebGL2
 fallback instead of automatically selecting WebGPU. HDR-capable displays automatically use an
 `rgba16float`, Display P3, extended-tone-mapping WebGPU presentation surface.
@@ -289,7 +289,7 @@ Programmatic surfaces can also supply an explicit `skin: {jointMatrices}` descri
 application owns the palette.
 Animated glTF export remains unsupported; interchange export is currently static.
 
-The format loader lives under `examples/showcase/scene/usd-loader` and follows the loaders.gl
+The format loader lives under `examples/anari/scenes/usd-loader` and follows the loaders.gl
 loader contract so it can eventually move into a dedicated `@loaders.gl/usd` module. It currently
 supports ASCII `.usda` / `.usd` stages and uncompressed `.usdz` packages with an ASCII root layer.
 Binary USDC crates, complete USD layer composition, and arbitrary MaterialX/MDL shading networks
