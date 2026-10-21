@@ -1,0 +1,17 @@
+---
+title: glTF Lightmaps
+description: Baked diffuse irradiance from the original Lightmapped Cornell Box.
+sidebar_custom_props:
+  backends: [webgpu, webgl2]
+  difficulty: advanced
+  maturity: experimental
+  topics: [gltf, rendering]
+---
+
+import {GLTFFeatureExample} from '@site/src/examples';
+
+<GLTFFeatureExample feature="lightmap" />
+
+Loads the original MIT-licensed Cornell Box from Ben Houston's three.js fork at a
+pinned revision. This draft example isolates baked irradiance from additional
+punctual lighting. See the KHR_lightmap documentation for the implementation profile.

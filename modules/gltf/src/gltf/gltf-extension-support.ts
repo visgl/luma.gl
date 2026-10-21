@@ -64,6 +64,18 @@ const GLTF_EXTENSION_SUPPORT_REGISTRY: Record<string, GLTFExtensionSupportDefini
     comment:
       'The optional physics adapter supports sphere/box colliders; shapes alone do not define rendering or simulation.'
   },
+  KHR_lightmap: {
+    supportLevel: 'loader-only',
+    standardStatus: 'draft',
+    comment:
+      'Draft irradiance rendering supports UV0/UV1, node overrides and atlas instances through individual draws. Strict required-extension loading does not claim full draft conformance.'
+  },
+  KHR_billboard: {
+    supportLevel: 'loader-only',
+    standardStatus: 'draft',
+    comment:
+      'Optional GLTFBillboardController supports an explicit full-axis profile. Constrained-axis semantics remain ambiguous; strict required-extension loading does not claim full support.'
+  },
   KHR_audio_emitter: {
     supportLevel: 'parsed-and-wired',
     standardStatus: 'draft',
