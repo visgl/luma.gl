@@ -662,7 +662,8 @@ function parseMaterialExtensions(
     parsedMaterial.uniforms.scatterStrengthFactor = strength;
     parseVolumeScatterExtension(device, scatter, {}, parsedMaterial, gltf, attributes);
     parsedMaterial.uniforms.scatterAnisotropy = anisotropy;
-    parsedMaterial.uniforms.multiscatterColorFactor = scatter.multiscatterColorFactor ?? [1, 1, 1];
+    parsedMaterial.uniforms.multiscatterColorFactor = scatter.multiscatterColorFactor ??
+      scatter.multiscatterColor ?? [1, 1, 1];
   }
   parseDispersionExtension(extensions.KHR_materials_dispersion, parsedMaterial);
   parseClearcoatExtension(

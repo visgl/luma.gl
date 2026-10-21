@@ -12,11 +12,25 @@ import {createScenegraphsFromGLTF} from '../../src/gltf/create-scenegraph-from-g
 function makeReceiver(
   strengthAlpha: number,
   doubleSided = false,
-  authoredNormals = true
+  authoredNormals = true,
+  lightmap = false
 ): GLTFPostprocessed {
   const material = {
     id: 'matte',
     extensions: {
+      ...(lightmap
+        ? {
+            KHR_lightmap: {
+              lightmapTexture: {
+                id: 'irradiance',
+                texture: {
+                  source: {image: new ImageData(new Uint8ClampedArray([255, 255, 255, 255]), 1, 1)},
+                  sampler: {parameters: {}}
+                }
+              }
+            }
+          }
+        : {}),
       KHR_materials_transmission: {transmissionFactor: 1},
       KHR_materials_scatter: {
         scatterStrengthFactor: 1,
@@ -33,7 +47,11 @@ function makeReceiver(
       }
     },
     doubleSided,
-    pbrMetallicRoughness: {metallicFactor: 0, roughnessFactor: 1}
+    pbrMetallicRoughness: {
+      baseColorFactor: lightmap ? [0, 0, 0, 1] : [1, 1, 1, 1],
+      metallicFactor: 0,
+      roughnessFactor: 1
+    }
   };
   const mesh = {
     id: 'receiver',
@@ -84,14 +102,21 @@ function makeReceiver(
 }
 
 test.each([
-  0, 128, 255
-])('thin-wall scatter renders both hemispheres with strength alpha %s', async strengthAlpha => {
+  [0, false],
+  [128, false],
+  [255, false],
+  [255, true]
+] as const)('thin-wall scatter alpha %s with lightmap %s', async (strengthAlpha, lightmap) => {
   const webgl = await getWebGLTestDevice();
   const webgpu = await getTestDevices(['webgpu-core']);
   for (const device of webgl ? [webgl, ...webgpu] : webgpu) {
-    const bundle = createScenegraphsFromGLTF(device, makeReceiver(strengthAlpha), {
-      modelOptions: {modules: [pbrMaterial, skin]}
-    });
+    const bundle = createScenegraphsFromGLTF(
+      device,
+      makeReceiver(strengthAlpha, false, true, lightmap),
+      {
+        modelOptions: {modules: [pbrMaterial, skin]}
+      }
+    );
     const models: ModelNode[] = [];
     bundle.scenes[0].traverse(node => {
       if (node instanceof ModelNode) models.push(node);
@@ -119,14 +144,27 @@ test.each([
       byteLength: layout.byteLength,
       usage: Buffer.COPY_DST | Buffer.MAP_READ
     });
-    const render = async (direction: number[], anisotropy: number) => {
+    const render = async (
+      direction: number[],
+      anisotropy: number,
+      useTexture = true,
+      strength = 1
+    ) => {
       const pass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0], clearDepth: 1});
       for (const node of models) {
         expect(node.model.material).not.toBeNull();
-        node.model.material!.setProps({pbrMaterial: {scatterAnisotropy: anisotropy}});
+        node.model.material!.setProps({
+          pbrMaterial: {
+            scatterAnisotropy: anisotropy,
+            diffuseTransmissionMapEnabled: useTexture,
+            scatterStrengthFactor: strength
+          }
+        });
         node.model.shaderInputs.setProps({
           lighting: {
-            lights: [{type: 'directional', direction, color: [1, 1, 1], intensity: 1}],
+            lights: [
+              {type: 'directional', direction, color: [1, 1, 1], intensity: lightmap ? 0 : 1}
+            ],
             useByteColors: false
           },
           pbrProjection: {
@@ -146,8 +184,15 @@ test.each([
     };
     try {
       const forward = await render([0, 0, -1], 0.9);
+      const scalarReference = await render([0, 0, -1], 0.9, false, strengthAlpha / 255);
+      expect(Math.abs(forward - scalarReference)).toBeLessThanOrEqual(1);
+      if (strengthAlpha === 128) {
+        const fullStrength = await render([0, 0, -1], 0.9, false, 1);
+        expect(forward).toBeLessThan(fullStrength - 10);
+      }
       const backward = await render([0, 0, -1], -0.9);
       if (strengthAlpha === 0) expect(forward).toBe(backward);
+      else if (lightmap) expect(backward).toBeGreaterThan(forward + 10);
       else expect(forward).toBeGreaterThan(backward + 10);
       const reflected = await render([0, 0, 1], -0.9);
       const transmitted = await render([0, 0, 1], 0.9);

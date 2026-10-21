@@ -243,6 +243,18 @@ export function resolveTextureCoordinateSet(textureInfo: Record<string, any> | u
 export function resolveTextureTransformSlot(
   pointerSegments: string[]
 ): PBRTextureTransformSlotDefinition | null {
+  if (pointerSegments[0] === 'extensions' && pointerSegments[1] === 'KHR_materials_scatter') {
+    const slot =
+      pointerSegments[2] === 'scatterStrengthTexture'
+        ? 'diffuseTransmission'
+        : pointerSegments[2] === 'multiscatterColorTexture'
+          ? 'multiscatterColor'
+          : null;
+    if (slot && pointerSegments.length === 3) {
+      // Alias existing uniforms without adding duplicate canonical texture slots.
+      return {...getTextureTransformSlotDefinition(slot), pathSegments: pointerSegments};
+    }
+  }
   return (
     TEXTURE_TRANSFORM_SLOT_DEFINITIONS.find(
       definition =>

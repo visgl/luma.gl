@@ -249,7 +249,11 @@ describe('next-generation glTF PBR materials', () => {
     ],
     ['KHR_materials_volume_scatter', 'multiscatterColorFactor', 'multiscatterColorFactor'],
     ['KHR_materials_volume_scatter', 'multiscatterColor', 'multiscatterColorFactor'],
-    ['KHR_materials_volume_scatter', 'scatterAnisotropy', 'scatterAnisotropy']
+    ['KHR_materials_volume_scatter', 'scatterAnisotropy', 'scatterAnisotropy'],
+    ['KHR_materials_scatter', 'scatterStrengthFactor', 'scatterStrengthFactor'],
+    ['KHR_materials_scatter', 'scatterAnisotropy', 'scatterAnisotropy'],
+    ['KHR_materials_scatter', 'multiscatterColorFactor', 'multiscatterColorFactor'],
+    ['KHR_materials_scatter', 'multiscatterColor', 'multiscatterColorFactor']
   ])('resolves animated %s.%s', (extensionName, sourceProperty, canonicalProperty) => {
     const color = sourceProperty.toLowerCase().includes('color');
     const accessors = [

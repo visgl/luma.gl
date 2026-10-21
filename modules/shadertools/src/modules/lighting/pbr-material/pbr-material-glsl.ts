@@ -1672,8 +1672,13 @@ vec4 pbr_filterColor(vec4 vertexColor)
     }
 #endif
 
+#ifdef HAS_MATERIAL_SCATTER
+    color += (baseColor.rgb * (1.0 - metallic) * (1.0 - originalTransmission) +
+      multiscatterColor * scatterReflection) * baseLayerEnergy * lightmapIrradiance / M_PI;
+#else
     color += baseColor.rgb * (1.0 - metallic) * (1.0 - transmission) *
       (1.0 - diffuseTransmission) * baseLayerEnergy * lightmapIrradiance / M_PI;
+#endif
 
  // Apply optional PBR terms for additional (optional) shading
 #ifdef HAS_OCCLUSIONMAP

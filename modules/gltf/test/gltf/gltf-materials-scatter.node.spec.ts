@@ -4,6 +4,7 @@
 
 import {expect, test} from 'vitest';
 import {NullDevice} from '@luma.gl/test-utils';
+import {resolveTextureTransformSlot} from '../../src/pbr/texture-transform';
 import {parsePBRMaterial} from '../../src/parsers/parse-pbr-material';
 import {
   getSingleScatterAlbedo,
@@ -102,5 +103,29 @@ test('scatter ignores absent transmission and rejects excluded material combinat
         {}
       )
     ).toThrow();
+  }
+});
+
+test('scatter legacy tint and animation texture paths retain canonical uniform slots', () => {
+  const material = parsePBRMaterial(
+    new NullDevice({}),
+    {
+      extensions: {
+        KHR_materials_transmission: {transmissionFactor: 1},
+        KHR_materials_scatter: {multiscatterColor: [0.2, 0.4, 0.6]}
+      }
+    },
+    {},
+    {}
+  );
+  expect(material.uniforms.multiscatterColorFactor).toEqual([0.2, 0.4, 0.6]);
+  for (const [texture, uniform] of [
+    ['scatterStrengthTexture', 'diffuseTransmissionUVTransform'],
+    ['multiscatterColorTexture', 'multiscatterColorUVTransform']
+  ]) {
+    const path = ['extensions', 'KHR_materials_scatter', texture];
+    const slot = resolveTextureTransformSlot(path);
+    expect(slot?.pathSegments).toEqual(path);
+    expect(slot?.uvTransformUniform).toBe(uniform);
   }
 });

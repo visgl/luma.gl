@@ -473,6 +473,20 @@ function resolveMaterialAnimationTarget(
         ? {type: 'material', property: 'diffuseTransmissionColorFactor'}
         : {reason: getUnsupportedMaterialPointerReason(pointerSegments)};
 
+    case 'extensions/KHR_materials_scatter/scatterStrengthFactor':
+      return material['extensions']?.['KHR_materials_scatter']
+        ? {type: 'material', property: 'scatterStrengthFactor'}
+        : {reason: getUnsupportedMaterialPointerReason(pointerSegments)};
+    case 'extensions/KHR_materials_scatter/multiscatterColorFactor':
+    case 'extensions/KHR_materials_scatter/multiscatterColor':
+      return material['extensions']?.['KHR_materials_scatter']
+        ? {type: 'material', property: 'multiscatterColorFactor'}
+        : {reason: getUnsupportedMaterialPointerReason(pointerSegments)};
+    case 'extensions/KHR_materials_scatter/scatterAnisotropy':
+      return material['extensions']?.['KHR_materials_scatter']
+        ? {type: 'material', property: 'scatterAnisotropy'}
+        : {reason: getUnsupportedMaterialPointerReason(pointerSegments)};
+
     case 'extensions/KHR_materials_volume_scatter/multiscatterColorFactor':
     case 'extensions/KHR_materials_volume_scatter/multiscatterColor':
       return material['extensions']?.['KHR_materials_volume_scatter']
