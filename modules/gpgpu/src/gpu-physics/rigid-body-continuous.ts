@@ -57,7 +57,7 @@ export function addRigidBodyContinuous<Parameters>(
  let movingCollider=continuousSelection[body]-1u;let radius=bodies.colliders[movingCollider].shape.x;
  var position=continuousPrevious[body].xyz;var motion=positions[body].xyz-position;var velocity=velocities[body].xyz;var remaining=settings.gravity.w;
  for(var impact=0u;impact<=${maximumImpacts}u;impact++){
-  let magnitude=length(motion);if(magnitude<=1e-8){positions[body]=vec4f(position,positions[body].w);return;}
+  let magnitude=length(motion);if(magnitude<=1e-8){positions[body]=vec4f(position,positions[body].w);velocities[body]=vec4f(velocity,velocities[body].w);return;}
   var nearest=magnitude;var hitCollider=0xffffffffu;var hitNormal=vec3f(0);
   for(var collider=0u;collider<COLLIDER_COUNT;collider++){
    if(bodies.bodies[colliderBody(collider)].motion.x!=0.0||bodies.colliders[collider].material.w!=0.0||excludes(movingCollider,collider)||excludes(collider,movingCollider)){continue;}

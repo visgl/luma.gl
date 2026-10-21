@@ -1176,6 +1176,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
 @group(0) @binding(8) var<uniform> command: Command;
 @compute @workgroup_size(1) fn control() {
  if(command.bodyIndex.y==0u) {applyImpulse(command.bodyIndex.x,command.point.xyz,command.impulse.xyz);}
+ else if(command.bodyIndex.y==2u) {applyImpulse(command.bodyIndex.x,positions[command.bodyIndex.x].xyz,command.impulse.xyz);}
  else {targets.entries[command.bodyIndex.x].position=vec4f(command.point.xyz,1);targets.entries[command.bodyIndex.x].orientation=command.orientation;}
  // Wake and invalidate all connected components conservatively after external changes.
  for(var body=0u;body<BODY_COUNT;body++) {sleepStates[body]=vec4f(0);}
@@ -1203,8 +1204,8 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     });
   }
 
-  /** Submit an impulse at a world-space point; ordered before later graph submissions. */
-  applyImpulse(body: number, impulse: Vector3, point: Vector3): void {
+  /** Submit an impulse at a world-space point, or the current GPU center of mass when omitted. */
+  applyImpulse(body: number, impulse: Vector3, point?: Vector3): void {
     if (
       !this.control ||
       !this.device ||
@@ -1213,12 +1214,13 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       !Number.isInteger(body) ||
       body < 0 ||
       body >= this.count ||
-      ![...impulse, ...point].every(Number.isFinite)
+      ![...impulse, ...(point ?? [])].every(Number.isFinite)
     )
       throw new Error('Invalid rigid-body impulse');
     const data = new ArrayBuffer(64);
-    new Float32Array(data).set([...impulse, 0, ...point, 0]);
+    new Float32Array(data).set([...impulse, 0, ...(point ?? [0, 0, 0]), 0]);
     new Uint32Array(data)[12] = body;
+    new Uint32Array(data)[13] = point ? 0 : 2;
     this.controlSettings.write(new Uint8Array(data));
     const encoder = this.device.createCommandEncoder();
     const pass = encoder.beginComputePass();

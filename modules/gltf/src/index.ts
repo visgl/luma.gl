@@ -132,7 +132,15 @@ export type {
 export {GLTFInteractivity} from './gltf/gltf-interactivity';
 
 export {
+  GLTFBillboardController,
+  type GLTFBillboardControllerProps,
+  type GLTFBillboardExtension,
+  type GLTFBillboardDrawEntry
+} from './gltf/gltf-billboard';
+export {
   GLTFAudioController,
   type GLTFAudioControllerOptions,
   type GLTFAudioExtension
 } from './gltf/gltf-audio';
+
+export {GLTFAreaLightController, type GLTFAreaLightControllerProps} from './gltf/gltf-area-lights';

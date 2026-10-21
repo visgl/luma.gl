@@ -420,3 +420,7 @@ See the [background guide](/docs/api-guide/gpu/gpu-physics),
 [Rigid Body Lab](https://github.com/visgl/luma.gl/tree/master/examples/experimental/gpu-rigid-body-world)
 and [qualification tools](https://github.com/visgl/luma.gl/tree/master/scripts/physics)
 for integration examples and measurement methodology.
+
+Omit the third argument of `applyImpulse(body, impulse)` to apply at the current GPU
+center of mass, avoiding torque from stale CPU position snapshots. Providing a
+world-space point retains off-center impulse behavior.

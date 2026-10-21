@@ -94,6 +94,8 @@ const loadHelloCubeApp = () => import('../../examples/tutorials/hello-cube/app')
 const loadTwoCubesApp = () => import('../../examples/tutorials/hello-two-cubes/app');
 const loadInstancedCubesApp = () => import('../../examples/tutorials/hello-instanced-cubes/app');
 const loadHelloInstancingApp = () => import('../../examples/tutorials/hello-instancing/app');
+const loadGLTFFeatureApp = () => import('../../examples/gltf/features/app');
+import type {GLTFFeature} from '../../examples/gltf/features/presets';
 import type {GLTFAudioFeature} from '../../examples/gltf/audio/presets';
 const loadGLTFAudioApp = () => import('../../examples/gltf/audio/app');
 const loadHelloGLTFApp = () => import('../../examples/tutorials/hello-gltf/app');
@@ -839,16 +841,29 @@ export const ANARIPlaygroundExample: React.FC = () => {
   );
 };
 
-export const GLTFExample: React.FC<WebsiteExampleProps> = props => {
+export const GLTFExample: React.FC<WebsiteExampleProps & {
+  extension?: 'KHR_materials_clearcoat' | 'KHR_materials_sheen' | 'KHR_materials_iridescence' | 'KHR_materials_anisotropy';
+}> = ({extension, ...props}) => {
+  const loadTemplate = useMemo(() => async () => {
+    const {default: AssetStudioApp} = await loadGLTFApp();
+    return {default: class ConfiguredAssetStudioApp extends AssetStudioApp {
+      constructor(animationProps: AnimationProps) { super(animationProps, extension); }
+    }};
+  }, [extension]);
   const referenceDevice = getGLTFReferenceDeviceSelection();
+  const materialTitles = {
+    KHR_materials_clearcoat: 'glTF Clearcoat', KHR_materials_sheen: 'glTF Sheen',
+    KHR_materials_iridescence: 'glTF Iridescence', KHR_materials_anisotropy: 'glTF Anisotropy'
+  };
 
   return (
     <LumaExample
       id="asset-studio"
-      title="glTF Asset Studio"
-      subtitle="Physical materials · animated characters · standards-native glTF"
+      title={extension ? materialTitles[extension] : 'glTF Asset Studio'}
+      subtitle={extension ? `${extension} · published glTF assets` : 'Physical materials · animated characters · standards-native glTF'}
       directory="gltf"
-      loadTemplate={loadGLTFApp}
+      loadTemplate={loadTemplate}
+      infoBoxAppearance="cinematic"
       config={exampleConfig}
       canvasContextProfile="high-dynamic-range"
       devices={referenceDevice ? [referenceDevice] : undefined}
@@ -2743,14 +2758,33 @@ export const GLTFPhysicsExample: React.FC<WebsiteExampleProps> = props => (
   />
 );
 
+export const GLTFFeatureExample: React.FC<WebsiteExampleProps & {feature: GLTFFeature}> = ({feature, ...props}) => {
+  const loadTemplate = useMemo(() => async () => {
+    const {default: FeatureApp} = await loadGLTFFeatureApp();
+    return {default: class ConfiguredFeatureApp extends FeatureApp {
+      static info = FeatureApp.getInfo(feature);
+      constructor(animationProps: AnimationProps) { super(animationProps, feature); }
+    }};
+  }, [feature]);
+  return <LumaExample id={`gltf-${feature}`} directory="showcase" sourcePath="examples/gltf/features/app.ts" infoBoxAppearance="cinematic" loadTemplate={loadTemplate} config={exampleConfig} showStats={false} {...props} />;
+};
+
 export const GLTFAudioExample: React.FC<WebsiteExampleProps & {feature?: GLTFAudioFeature}> = ({feature = 'emitter', ...props}) => {
   const loadTemplate = useMemo(() => async () => {
     const {default: AudioApp} = await loadGLTFAudioApp();
     return {default: class ConfiguredAudioApp extends AudioApp {
+      static info = feature === 'environment' ? AudioApp.environmentInfo : feature === 'graph' ? AudioApp.graphInfo : AudioApp.info;
       constructor(animationProps: AnimationProps) { super(animationProps, feature); }
     }};
   }, [feature]);
-  return <LumaExample id="gltf-audio" directory="showcase" sourcePath="examples/gltf/audio/app.ts" loadTemplate={loadTemplate} config={exampleConfig} showStats={false} {...props} />;
+  return <LumaExample id={feature === 'environment' ? 'gltf-audio-environment' : feature === 'graph' ? 'gltf-audio-graph' : 'gltf-audio'} directory="showcase" infoBoxAppearance="cinematic" sourcePath="examples/gltf/audio/app.ts" loadTemplate={loadTemplate} config={exampleConfig} showStats={false} {...props} />;
+};
+
+export const SpaceSalvageExample: React.FC = () => {
+  const source = useBaseUrl('/standalone-examples/space-salvage/index.html');
+  return <ExamplePage style={{background: '#050b18', minHeight: '720px'}}>
+    <iframe title="Space Salvage" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
+  </ExamplePage>;
 };
 
 export const SpaceSalvageExample: React.FC = () => {

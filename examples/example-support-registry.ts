@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import gltfBillboardSupport from './gltf/features/mobile-support';
 import gltfAudioSupport from './gltf/audio/mobile-support';
 import gltfInteractivitySupport from './deck/gltf-interactivity/mobile-support';
 import geometrySupport from './experimental/gpu-geometry/mobile-support';
@@ -148,7 +149,13 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'experimental/bloom': support6,
   'showcase/persistence': support7,
   'gltf/asset-studio': support8,
+  'gltf/clearcoat': {...support8, id: 'gltf/clearcoat', sourceDirectory: 'gltf/asset-studio'},
+  'gltf/sheen': {...support8, id: 'gltf/sheen', sourceDirectory: 'gltf/asset-studio'},
+  'gltf/iridescence': {...support8, id: 'gltf/iridescence', sourceDirectory: 'gltf/asset-studio'},
+  'gltf/anisotropy': {...support8, id: 'gltf/anisotropy', sourceDirectory: 'gltf/asset-studio'},
   'showcase/gltf-audio': gltfAudioSupport,
+  'showcase/gltf-audio-environment': {...gltfAudioSupport, id: 'showcase/gltf-audio-environment'},
+  'showcase/gltf-audio-graph': {...gltfAudioSupport, id: 'showcase/gltf-audio-graph'},
   'anari/scenes': support9,
   'showcase/lightstorm-megacity': support10,
   'showcase/llm-network': support11,
@@ -205,6 +212,9 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'tutorials/hello-cube': support49,
   'tutorials/lighting': support50,
   'tutorials/hello-gltf': support51,
+  'showcase/gltf-billboard': gltfBillboardSupport,
+  'showcase/gltf-area-lights': {...gltfBillboardSupport, id: 'showcase/gltf-area-lights'},
+  'showcase/gltf-lightmap': {...gltfBillboardSupport, id: 'showcase/gltf-lightmap'},
   'tutorials/two-cubes': support52,
   'tutorials/instanced-cubes': support53,
   'tutorials/hello-instancing': support54,

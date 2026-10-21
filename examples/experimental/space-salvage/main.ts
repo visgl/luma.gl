@@ -222,21 +222,13 @@ try {
             Number(keys.has('KeyS') || keys.has('ArrowDown'));
           const strength = (18 * duration) / Math.max(1, Math.hypot(horizontal, vertical));
           if (horizontal || vertical)
-            mission.world.applyImpulse(
-              0,
-              [horizontal * strength, vertical * strength, 0],
-              ship.position
-            );
+            mission.world.applyImpulse(0, [horizontal * strength, vertical * strength, 0]);
           if (keys.has('Space'))
-            mission.world.applyImpulse(
-              0,
-              [
-                -ship.velocity[0] * Math.min(1, duration * 4) * 2,
-                -ship.velocity[1] * Math.min(1, duration * 4) * 2,
-                0
-              ],
-              ship.position
-            );
+            mission.world.applyImpulse(0, [
+              -ship.velocity[0] * Math.min(1, duration * 4) * 2,
+              -ship.velocity[1] * Math.min(1, duration * 4) * 2,
+              0
+            ]);
           if (
             beamHeld &&
             selected &&
@@ -245,24 +237,21 @@ try {
             !recovered.has(selected.body)
           ) {
             const target = mission.states[selected.body];
-            const delta = [
-              ship.position[0] - target.position[0],
-              ship.position[1] - target.position[1]
-            ];
+            const delta = [ship.position[0] - target.position[0][1] - target.position[1]];
             const distance = Math.hypot(...delta);
             // The ray query bounds surface distance; large targets can have centers beyond it.
             if (distance > 1.5) {
               const impulse = Math.min(10, distance * 2) * duration;
-              mission.world.applyImpulse(
-                selected.body,
-                [(delta[0] / distance) * impulse, (delta[1] / distance) * impulse, 0],
-                target.position
-              );
-              mission.world.applyImpulse(
-                0,
-                [(-delta[0] / distance) * impulse * 0.2, (-delta[1] / distance) * impulse * 0.2, 0],
-                ship.position
-              );
+              mission.world.applyImpulse(selected.body, [
+                (delta[0] / distance) * impulse,
+                (delta[1] / distance) * impulse,
+                0
+              ]);
+              mission.world.applyImpulse(0, [
+                (-delta[0] / distance) * impulse * 0.2,
+                (-delta[1] / distance) * impulse * 0.2,
+                0
+              ]);
             }
           }
           const encoder = device.createCommandEncoder();

@@ -95,12 +95,13 @@ it('queries tapered primitives and one-sided finite planes', async context => {
     ).toEqual([]);
     for (const collider of [1, 2]) {
       const result = await world.overlapSphere({
-        center: [collider * 5, 0, 0],
+        center: [collider * 5, 0.8, 0],
         radius: 0.01,
         colliderIndices: [collider]
       });
       expect(result.complete).toBe(true);
       expect(result.hits).toHaveLength(1);
+      expect(result.hits[0].normal).toEqual([0, 0, 0]);
     }
   } finally {
     world.destroy();
@@ -377,7 +378,7 @@ it('queries original mesh surfaces and solid convex interiors with explicit trav
         });
         expect(inside.complete).toBe(true);
         expect(inside.hits).toHaveLength(1);
-        expect(inside.hits[0].normal).toEqual([0,0,0]);
+        expect(inside.hits[0].normal).toEqual([0, 0, 0]);
         const miss = await world.raycast({
           origin: [-3, 3, 0],
           direction: [1, 0, 0],
@@ -390,5 +391,84 @@ it('queries original mesh surfaces and solid convex interiors with explicit trav
     } finally {
       world.destroy();
     }
+  }
+});
+
+it('persists stopped CCD velocity across later steps', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const world = new GPURigidBodyWorld({
+    failurePolicy: 'rollback',
+    continuous: {bodies: [0]},
+    gravity: [0, 0, 0],
+    timeStep: 0.1,
+    sleepAfter: 0,
+    bodies: [
+      {
+        position: [-5, 0, 0],
+        velocity: [100, 0, 0],
+        restitution: 0,
+        shape: {type: 'sphere', radius: 0.5}
+      },
+      {
+        mode: 'static',
+        position: [0, 0, 0],
+        restitution: 0,
+        shape: {type: 'box', halfExtents: [0.05, 2, 2]}
+      }
+    ]
+  });
+  const definition = new GPUCommandGraph(device);
+  world.addToGraph(definition);
+  const graph = await definition.compileAsync();
+  try {
+    for (let step = 0; step < 3; step++) {
+      const encoder = device.createCommandEncoder();
+      graph.encode(encoder, {parameters: undefined});
+      device.submit(encoder.finish());
+      const state = (await world.readState())[0];
+      expect(state.velocity[0]).toBeCloseTo(0, 5);
+      expect(state.position[0]).toBeCloseTo(-0.55, 3);
+      expect((await world.readSimulationDiagnostics()).complete).toBe(true);
+    }
+  } finally {
+    graph.destroy();
+    world.destroy();
+  }
+});
+
+it('applies center impulses without torque after GPU motion', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const world = new GPURigidBodyWorld({
+    gravity: [0, 0, 0],
+    timeStep: 0.1,
+    bodies: [
+      {
+        position: [0, 0, 0],
+        velocity: [0, 10, 0],
+        mass: 1,
+        centerOfMass: [0.2, 0, 0],
+        shape: {type: 'box', halfExtents: [1, 1, 1]}
+      }
+    ]
+  });
+  const definition = new GPUCommandGraph(device);
+  world.addToGraph(definition);
+  const graph = await definition.compileAsync();
+  try {
+    const encoder = device.createCommandEncoder();
+    graph.encode(encoder, {parameters: undefined});
+    device.submit(encoder.finish());
+    world.applyImpulse(0, [1, 0, 0]);
+    const state = (await world.readState())[0];
+    expect(state.position[1]).toBeGreaterThan(0.9);
+    expect(state.velocity[0]).toBeCloseTo(1, 5);
+    expect(state.angularVelocity).toEqual([0, 0, 0]);
+    world.applyImpulse(0, [1, 0, 0], [0, 0, 0]);
+    expect(Math.abs((await world.readState())[0].angularVelocity[2])).toBeGreaterThan(0.1);
+  } finally {
+    graph.destroy();
+    world.destroy();
   }
 });
