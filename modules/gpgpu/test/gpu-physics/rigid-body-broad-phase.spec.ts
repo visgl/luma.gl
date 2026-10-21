@@ -14,9 +14,9 @@ import {
 
 type Bounds = {minimum: number[]; maximum: number[]};
 
-it('matches all-pairs discovery for mixed-size sparse bounds without a global coarse cell', async () => {
+it('matches all-pairs discovery for mixed-size sparse bounds without a global coarse cell', async context => {
   const device = await getWebGPUTestDevice('core');
-  if (!device) return;
+  if (!device) return context.skip('WebGPU is unavailable');
   const bounds: Bounds[] = [{minimum: [-100, -0.5, -100], maximum: [100, 0.5, 100]}];
   for (let index = 0; index < 1000; index++) {
     const center = [(index % 40) * 3 - 60, 0.4, Math.floor(index / 40) * 3 - 36];
@@ -48,9 +48,9 @@ it('matches all-pairs discovery for mixed-size sparse bounds without a global co
   }
 }, 120000);
 
-it('reports dense output/traversal overflow and invalid bounds explicitly', async () => {
+it('reports dense output/traversal overflow and invalid bounds explicitly', async context => {
   const device = await getWebGPUTestDevice();
-  if (!device) return;
+  if (!device) return context.skip('WebGPU is unavailable');
   const bounds = Array.from({length: 32}, () => ({minimum: [0, 0, 0], maximum: [1, 1, 1]}));
   const fixture = await makeFixture(
     device,
@@ -79,9 +79,9 @@ it('reports dense output/traversal overflow and invalid bounds explicitly', asyn
   }
 }, 120000);
 
-it('includes oversized and remote bounds without relying on integer cell coordinates', async () => {
+it('includes oversized and remote bounds without relying on integer cell coordinates', async context => {
   const device = await getWebGPUTestDevice();
-  if (!device) return;
+  if (!device) return context.skip('WebGPU is unavailable');
   const bounds = [
     {minimum: [-1e8, -1e8, -1e8], maximum: [1e8, 1e8, 1e8]},
     {minimum: [0, 0, 0], maximum: [1, 1, 1]},
@@ -207,9 +207,9 @@ async function makeFixture(
   };
 }
 
-it('suppresses same-body and static/static pairs before consuming output capacity', async () => {
+it('suppresses same-body and static/static pairs before consuming output capacity', async context => {
   const device = await getWebGPUTestDevice('core');
-  if (!device) return;
+  if (!device) return context.skip('WebGPU is unavailable');
   const bounds = Array.from({length: 4}, () => ({minimum: [0, 0, 0], maximum: [1, 1, 1]}));
   const fixture = await makeFixture(
     device,

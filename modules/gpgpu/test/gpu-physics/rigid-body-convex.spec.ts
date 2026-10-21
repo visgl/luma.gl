@@ -14,9 +14,9 @@ import {
   makeTriangleMeshGeometry
 } from '../../src/gpu-physics/rigid-body-mesh';
 
-it('solves convex hull and tapered primitive contacts against boxes and original triangles on GPU', async () => {
+it('solves convex hull and tapered primitive contacts against boxes and original triangles on GPU', async context => {
   const device = await getWebGPUTestDevice();
-  if (!device) return;
+  if (!device) return context.skip('WebGPU is unavailable');
   const geometry = makeConvexHullGeometry(
     Array.from({length: 8}, (_, corner) => [
       corner & 1 ? 0.5 : -0.5,
@@ -75,9 +75,9 @@ it('solves convex hull and tapered primitive contacts against boxes and original
     }
 }, 120000);
 
-it('preserves a nonconvex wheel opening and responds only around its unlocked inertia axis', async () => {
+it('preserves a nonconvex wheel opening and responds only around its unlocked inertia axis', async context => {
   const device = await getWebGPUTestDevice();
-  if (!device) return;
+  if (!device) return context.skip('WebGPU is unavailable');
   const positions: number[] = [],
     indices: number[] = [];
   const segments = 24,
@@ -142,9 +142,9 @@ it('preserves a nonconvex wheel opening and responds only around its unlocked in
   }
 }, 120000);
 
-it('rejects a separated rotating mesh before a large box can cover its local BVH', async () => {
+it('rejects a separated rotating mesh before a large box can cover its local BVH', async context => {
   const device = await getWebGPUTestDevice();
-  if (!device) return;
+  if (!device) return context.skip('WebGPU is unavailable');
   const geometry = makeConvexHullGeometry(
     Array.from({length: 8}, (_, corner) => [
       corner & 1 ? 0.5 : -0.5,
@@ -187,9 +187,9 @@ it('rejects a separated rotating mesh before a large box can cover its local BVH
   }
 }, 120000);
 
-it('restores immutable mesh-pair anchors after direct state writes and wake', async () => {
+it('restores immutable mesh-pair anchors after direct state writes and wake', async context => {
   const device = await getWebGPUTestDevice();
-  if (!device) return;
+  if (!device) return context.skip('WebGPU is unavailable');
   const geometry = makeTriangleMeshGeometry([-1, 0, -1, 1, 0, -1, 0, 0, 1], [0, 1, 2]);
   const world = new GPURigidBodyWorld({
     bodies: [

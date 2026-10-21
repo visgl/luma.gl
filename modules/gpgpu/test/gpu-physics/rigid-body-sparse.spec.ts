@@ -7,9 +7,9 @@ import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {GPUCommandGraph} from '../../src/gpu-core/gpu-command-graph';
 import {GPURigidBodyWorld, type GPURigidBody} from '../../src/gpu-physics/gpu-rigid-body-world';
 
-it('matches the rigid-body oracle with sparse discovery and persistent cache slots', async () => {
+it('matches the rigid-body oracle with sparse discovery and persistent cache slots', async context => {
   const device = await getWebGPUTestDevice('core');
-  if (!device) return;
+  if (!device) return context.skip('WebGPU is unavailable');
   const bodies: GPURigidBody[] = [
     {position: [0, 0, 0], mass: 0, shape: {type: 'box', halfExtents: [10, 0.1, 10]}},
     {position: [-2, 1, 0], mass: 1, shape: {type: 'box', halfExtents: [0.5, 0.5, 0.5]}},
@@ -53,9 +53,9 @@ it('matches the rigid-body oracle with sparse discovery and persistent cache slo
   }
 }, 120000);
 
-it('uses sparse storage beyond the reference cap, including a large floor with a high collider ID', async () => {
+it('uses sparse storage beyond the reference cap, including a large floor with a high collider ID', async context => {
   const device = await getWebGPUTestDevice();
-  if (!device) return;
+  if (!device) return context.skip('WebGPU is unavailable');
   const bodies: GPURigidBody[] = Array.from({length: 200}, (_, index) => ({
     position: [index * 3 - 300, 0.59, 0],
     mass: 1,
