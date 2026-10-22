@@ -4,7 +4,7 @@
 
 import {assert} from '@luma.gl/core';
 
-export type GLTFAudioGraphNode = {
+export type AudioGraphNode = {
   kind:
     | 'gain'
     | 'delay'
@@ -36,18 +36,18 @@ export type GLTFAudioGraphNode = {
     duration?: number;
   };
 };
-export type GLTFAudioGraphDefinition = {
-  nodes: GLTFAudioGraphNode[];
+export type AudioGraphDefinition = {
+  nodes: AudioGraphNode[];
   connections: {from: {node: number; output?: number}; to: {node: number; input?: number}}[];
   inputs?: {source: number; node: number; input?: number}[];
   outputs?: {node: number; output?: number; emitter: number}[];
 };
 
 /** Owns only processing nodes. Scheduled sources and destination nodes remain caller-owned. */
-export class GLTFAudioGraph {
+export class AudioGraph {
   readonly nodes: AudioNode[] = [];
   constructor(
-    readonly definition: GLTFAudioGraphDefinition,
+    readonly definition: AudioGraphDefinition,
     context: BaseAudioContext,
     destination: AudioNode,
     getEmitterInputs: (index: number) => readonly AudioNode[]
@@ -181,7 +181,7 @@ export class GLTFAudioGraph {
 
 function createProcessor(
   context: BaseAudioContext,
-  definition: GLTFAudioGraphNode,
+  definition: AudioGraphNode,
   outputs: number,
   inputs: number
 ): AudioNode {

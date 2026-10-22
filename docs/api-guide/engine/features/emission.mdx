@@ -9,9 +9,9 @@ import {GLTFModelExample} from '@site/src/examples';
 
 Emission makes a surface contribute its own visible radiance, including values above the display white level.
 
-The **CompareEmissiveStrength** sample demonstrates this capability. Drag to orbit and scroll to zoom.
+**BoomBox** and **DamagedHelmet** use core emissive textures. Select **Sample model** to compare them. Drag to orbit and scroll to zoom.
 
-<GLTFModelExample modelUrl="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/723ffc6706725b618b8c14ceb82e3e6904b08a76/Models/CompareEmissiveStrength/glTF/CompareEmissiveStrength.gltf" title="CompareEmissiveStrength" embedded showStats={false} />
+<GLTFModelExample models={["BoomBox", "DamagedHelmet"]} title="Emissive surfaces" embedded showStats={false} />
 
 ## PBRMaterial reference
 
@@ -81,6 +81,8 @@ const material: PBRMaterial = createPBRMaterial(device, {
 
 // Pass material to a compatible Model through its material prop.
 ```
+
+See [emissive strength](/docs/api-guide/engine/features/emissive-strength) for HDR extension comparison samples.
 
 Emission alone does not create a scene light or illuminate nearby geometry. Bloom is a separate rendering effect.
 

@@ -2,15 +2,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {AudioController} from '@luma.gl/engine';
+import {parseGLTFAudio} from '@luma.gl/gltf';
 import {describe, expect, test} from 'vitest';
 import {parse} from '@loaders.gl/core';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {Matrix4} from '@math.gl/core';
-import {
-  GLTFAudioController,
-  type GLTFAudioExtension,
-  createScenegraphsFromGLTF
-} from '@luma.gl/gltf';
+import {type GLTFAudioExtension, createScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {NullDevice} from '@luma.gl/test-utils';
 
 function makeWave(): Uint8Array {
@@ -113,16 +111,18 @@ describe('GLTFAudioController browser audio rendering', () => {
     const scenegraphs = await makeScene({inactiveAudio: true});
     const context = new OfflineAudioContext(2, 4800, 48000);
     const requests: string[] = [];
-    const audio = new GLTFAudioController({
-      scenegraphs,
-      audioContext: context,
-      baseUrl: 'https://example.com/model.gltf',
-      fetch: async (input, options) => {
-        requests.push(String(input));
-        if (!String(input).startsWith('data:')) throw new Error('Inactive clip is unavailable');
-        return fetch(input, options);
-      }
-    });
+    const audio = new AudioController(
+      parseGLTFAudio({
+        scenegraphs,
+        audioContext: context,
+        baseUrl: 'https://example.com/model.gltf',
+        fetch: async (input, options) => {
+          requests.push(String(input));
+          if (!String(input).startsWith('data:')) throw new Error('Inactive clip is unavailable');
+          return fetch(input, options);
+        }
+      })
+    );
     try {
       await audio.initialize();
       await audio.play();
@@ -141,11 +141,13 @@ describe('GLTFAudioController browser audio rendering', () => {
     for (const embedded of [false, true]) {
       const scenegraphs = await makeScene({embedded, legacy: embedded});
       const context = new OfflineAudioContext(2, 4800, 48000);
-      const audio = new GLTFAudioController({
-        scenegraphs,
-        audioContext: context,
-        baseUrl: 'https://example.com/model.gltf'
-      });
+      const audio = new AudioController(
+        parseGLTFAudio({
+          scenegraphs,
+          audioContext: context,
+          baseUrl: 'https://example.com/model.gltf'
+        })
+      );
       await audio.play({autoplayOnly: true});
       audio.update(new Matrix4().translate([0, 0, embedded ? 2 : 0]));
       const buffer = await context.startRendering();
@@ -164,11 +166,13 @@ describe('GLTFAudioController browser audio rendering', () => {
     for (const yaw of [-Math.PI / 2, Math.PI / 2]) {
       const scenegraphs = await makeScene();
       const context = new OfflineAudioContext(2, 4800, 48000);
-      const audio = new GLTFAudioController({
-        scenegraphs,
-        audioContext: context,
-        baseUrl: 'https://example.com/model.gltf'
-      });
+      const audio = new AudioController(
+        parseGLTFAudio({
+          scenegraphs,
+          audioContext: context,
+          baseUrl: 'https://example.com/model.gltf'
+        })
+      );
       await audio.play();
       audio.update(new Matrix4().rotateY(yaw));
       const buffer = await context.startRendering();
@@ -192,11 +196,13 @@ describe('GLTFAudioController browser audio rendering', () => {
           }
         });
         const context = new OfflineAudioContext(2, 4800, 48000);
-        const audio = new GLTFAudioController({
-          scenegraphs,
-          audioContext: context,
-          baseUrl: 'https://example.com/model.gltf'
-        });
+        const audio = new AudioController(
+          parseGLTFAudio({
+            scenegraphs,
+            audioContext: context,
+            baseUrl: 'https://example.com/model.gltf'
+          })
+        );
         try {
           audio.update(new Matrix4().translate([0, 0, distance - 2]));
           await audio.play();
@@ -225,11 +231,13 @@ describe('GLTFAudioController browser audio rendering', () => {
         }
       });
       const context = new OfflineAudioContext(2, 4800, 48000);
-      const audio = new GLTFAudioController({
-        scenegraphs,
-        audioContext: context,
-        baseUrl: 'https://example.com/model.gltf'
-      });
+      const audio = new AudioController(
+        parseGLTFAudio({
+          scenegraphs,
+          audioContext: context,
+          baseUrl: 'https://example.com/model.gltf'
+        })
+      );
       try {
         audio.update(new Matrix4().translate([0, 0, listenerDepth]));
         await audio.play();
@@ -247,11 +255,13 @@ describe('GLTFAudioController browser audio rendering', () => {
   test('stop and destroy prevent pending playback without closing a borrowed context', async () => {
     const scenegraphs = await makeScene({global: true});
     const context = new OfflineAudioContext(2, 4800, 48000);
-    const audio = new GLTFAudioController({
-      scenegraphs,
-      audioContext: context,
-      baseUrl: 'https://example.com/model.gltf'
-    });
+    const audio = new AudioController(
+      parseGLTFAudio({
+        scenegraphs,
+        audioContext: context,
+        baseUrl: 'https://example.com/model.gltf'
+      })
+    );
     const pending = audio.play();
     audio.stop();
     await pending;
@@ -281,11 +291,13 @@ test('audio graph replaces bound emitter base routing without duplicating clip p
       }
     };
     const context = new OfflineAudioContext(2, 4800, 48000);
-    const audio = new GLTFAudioController({
-      scenegraphs,
-      audioContext: context,
-      baseUrl: 'https://example.com/model.gltf'
-    });
+    const audio = new AudioController(
+      parseGLTFAudio({
+        scenegraphs,
+        audioContext: context,
+        baseUrl: 'https://example.com/model.gltf'
+      })
+    );
     await audio.play();
     const rendered = await context.startRendering();
     results.push(energy(rendered, 0) + energy(rendered, 1));
@@ -323,14 +335,16 @@ test('audio graph procedural sources honor asset-clock start and duration withou
     ]
   };
   const context = new OfflineAudioContext(1, 4800, 48000);
-  const audio = new GLTFAudioController({
-    scenegraphs,
-    audioContext: context,
-    baseUrl: 'https://example.com/model.gltf',
-    fetch: async () => {
-      throw new Error('Procedural source must not fetch');
-    }
-  });
+  const audio = new AudioController(
+    parseGLTFAudio({
+      scenegraphs,
+      audioContext: context,
+      baseUrl: 'https://example.com/model.gltf',
+      fetch: async () => {
+        throw new Error('Procedural source must not fetch');
+      }
+    })
+  );
   await audio.play();
   const rendered = await context.startRendering();
   const samples = rendered.getChannelData(0);
@@ -350,11 +364,13 @@ test('environment listener binding applies authored gain independently of applic
     scenegraphs.gltf.nodes[0].extensions ||= {};
     scenegraphs.gltf.nodes[0].extensions['KHR_audio_environment'] = {listener: 0};
     const context = new OfflineAudioContext(2, 4800, 48000);
-    const audio = new GLTFAudioController({
-      scenegraphs,
-      audioContext: context,
-      baseUrl: 'https://example.com/model.gltf'
-    });
+    const audio = new AudioController(
+      parseGLTFAudio({
+        scenegraphs,
+        audioContext: context,
+        baseUrl: 'https://example.com/model.gltf'
+      })
+    );
     audio.gain.gain.value = 0.8;
     await audio.play();
     audio.update(new Matrix4().translate([100, 0, 0]));
@@ -384,11 +400,13 @@ test('environment controller loads a separate impulse response and routes a wet-
   scenegraphs.gltf.scenes[0].extensions ||= {};
   scenegraphs.gltf.scenes[0].extensions['KHR_audio_environment'] = {environment: 0};
   const context = new OfflineAudioContext(2, 4800, 48000);
-  const audio = new GLTFAudioController({
-    scenegraphs,
-    audioContext: context,
-    baseUrl: 'https://example.com/model.gltf'
-  });
+  const audio = new AudioController(
+    parseGLTFAudio({
+      scenegraphs,
+      audioContext: context,
+      baseUrl: 'https://example.com/model.gltf'
+    })
+  );
   await audio.play();
   audio.update(new Matrix4());
   const rendered = await context.startRendering();
@@ -419,16 +437,18 @@ test('audio graphs ignore inactive-scene sources and preserve authored graph ind
   };
   const context = new OfflineAudioContext(2, 4800, 48000);
   const requests: string[] = [];
-  const audio = new GLTFAudioController({
-    scenegraphs,
-    audioContext: context,
-    baseUrl: 'https://example.com/model.gltf',
-    fetch: async (input, options) => {
-      requests.push(String(input));
-      if (!String(input).startsWith('data:')) throw new Error('Inactive source fetched');
-      return fetch(input, options);
-    }
-  });
+  const audio = new AudioController(
+    parseGLTFAudio({
+      scenegraphs,
+      audioContext: context,
+      baseUrl: 'https://example.com/model.gltf',
+      fetch: async (input, options) => {
+        requests.push(String(input));
+        if (!String(input).startsWith('data:')) throw new Error('Inactive source fetched');
+        return fetch(input, options);
+      }
+    })
+  );
   await audio.play();
   audio.setGraphGain(1, 0, 0.5);
   expect(requests).toHaveLength(1);
@@ -450,11 +470,13 @@ test('restarting audio resets relative authored source timing', async () => {
     }
   ];
   const context = new OfflineAudioContext(1, 4800, 48000);
-  const audio = new GLTFAudioController({
-    scenegraphs,
-    audioContext: context,
-    baseUrl: 'https://example.com/model.gltf'
-  });
+  const audio = new AudioController(
+    parseGLTFAudio({
+      scenegraphs,
+      audioContext: context,
+      baseUrl: 'https://example.com/model.gltf'
+    })
+  );
   await audio.play();
   const suspended = context.suspend(0.05);
   const rendering = context.startRendering();
@@ -493,11 +515,13 @@ test('environment controller crossfades zone sends and falls back outside the zo
       blendDistance: 1
     };
     const context = new OfflineAudioContext(2, 4800, 48000);
-    const audio = new GLTFAudioController({
-      scenegraphs,
-      audioContext: context,
-      baseUrl: 'https://example.com/model.gltf'
-    });
+    const audio = new AudioController(
+      parseGLTFAudio({
+        scenegraphs,
+        audioContext: context,
+        baseUrl: 'https://example.com/model.gltf'
+      })
+    );
     await audio.play();
     audio.update(new Matrix4().translate([listenerPosition, 0, -2]));
     const rendered = await context.startRendering();
@@ -529,11 +553,13 @@ test('source selection isolates drum hits for direct and graph routing', async (
           }
         };
       const context = new OfflineAudioContext(2, 4800, 48000);
-      const audio = new GLTFAudioController({
-        scenegraphs,
-        audioContext: context,
-        baseUrl: 'https://example.com/model.gltf'
-      });
+      const audio = new AudioController(
+        parseGLTFAudio({
+          scenegraphs,
+          audioContext: context,
+          baseUrl: 'https://example.com/model.gltf'
+        })
+      );
       await audio.play({sourceIndices: selected ? [0] : []});
       const rendered = await context.startRendering();
       const renderedEnergy = energy(rendered, 0) + energy(rendered, 1);
@@ -552,12 +578,14 @@ test('viewer listener override preserves authored listener gain and uses the sup
   scenegraphs.gltf.nodes[0].extensions ||= {};
   scenegraphs.gltf.nodes[0].extensions.KHR_audio_environment = {listener: 0};
   const context = new OfflineAudioContext(2, 4800, 48000);
-  const audio = new GLTFAudioController({
-    scenegraphs,
-    audioContext: context,
-    baseUrl: 'https://example.com/model.gltf',
-    listenerPose: 'viewer'
-  });
+  const audio = new AudioController(
+    parseGLTFAudio({
+      scenegraphs,
+      audioContext: context,
+      baseUrl: 'https://example.com/model.gltf',
+      listenerPose: 'viewer'
+    })
+  );
   await audio.play();
   audio.update(new Matrix4().translate([4, 3, 2]));
   expect(context.listener.positionX.value).toBeCloseTo(4);
@@ -574,11 +602,13 @@ test('non-restarting drum triggers preserve already playing source voices', asyn
   for (const restart of [true, false]) {
     const scenegraphs = await makeScene({global: true});
     const context = new OfflineAudioContext(2, 4800, 48000);
-    const audio = new GLTFAudioController({
-      scenegraphs,
-      audioContext: context,
-      baseUrl: 'https://example.com/model.gltf'
-    });
+    const audio = new AudioController(
+      parseGLTFAudio({
+        scenegraphs,
+        audioContext: context,
+        baseUrl: 'https://example.com/model.gltf'
+      })
+    );
     await audio.play();
     await audio.play({sourceIndices: [0], restart});
     const rendered = await context.startRendering();
@@ -603,11 +633,13 @@ test('air absorption filters distant emitters and ignores unbounded maximum dist
       }
     });
     const context = new OfflineAudioContext(2, 4800, 48000);
-    const audio = new GLTFAudioController({
-      scenegraphs,
-      audioContext: context,
-      baseUrl: 'https://example.com/model.gltf'
-    });
+    const audio = new AudioController(
+      parseGLTFAudio({
+        scenegraphs,
+        audioContext: context,
+        baseUrl: 'https://example.com/model.gltf'
+      })
+    );
     await audio.play();
     audio.update(new Matrix4().translate([0, 0, 8]));
     const rendered = await context.startRendering();

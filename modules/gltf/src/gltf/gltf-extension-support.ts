@@ -68,7 +68,7 @@ const GLTF_EXTENSION_SUPPORT_REGISTRY: Record<string, GLTFExtensionSupportDefini
     supportLevel: 'loader-only',
     standardStatus: 'draft',
     comment:
-      'Opt-in GLTFAreaLightController feeds the shared Light API. PBR supports four rect/disk lights with LTC diffuse, isotropic GGX and clearcoat; disks use a 32-gon and other lobes retain numerical integration. No shadows or indirect light; strict loading does not claim full draft conformance.'
+      'Opt-in AreaLightController feeds the shared Light API. PBR supports four rect/disk lights with LTC diffuse, isotropic GGX and clearcoat; disks use a 32-gon and other lobes retain numerical integration. No shadows or indirect light; strict loading does not claim full draft conformance.'
   },
   KHR_lightmap: {
     supportLevel: 'loader-only',
@@ -80,13 +80,13 @@ const GLTF_EXTENSION_SUPPORT_REGISTRY: Record<string, GLTFExtensionSupportDefini
     supportLevel: 'loader-only',
     standardStatus: 'draft',
     comment:
-      'Optional GLTFBillboardController supports an explicit full-axis profile. Constrained-axis semantics remain ambiguous; strict required-extension loading does not claim full support.'
+      'Optional BillboardController supports an explicit full-axis profile. Constrained-axis semantics remain ambiguous; strict required-extension loading does not claim full support.'
   },
   KHR_audio_emitter: {
     supportLevel: 'parsed-and-wired',
     standardStatus: 'draft',
     comment:
-      'Opt-in GLTFAudioController provides Web Audio playback; the application owns context activation and listener updates.'
+      'Opt-in AudioController provides Web Audio playback; the application owns context activation and listener updates.'
   },
   KHR_audio_environment: {
     supportLevel: 'loader-only',
@@ -98,7 +98,7 @@ const GLTF_EXTENSION_SUPPORT_REGISTRY: Record<string, GLTFExtensionSupportDefini
     supportLevel: 'loader-only',
     standardStatus: 'draft',
     comment:
-      'Opt-in GLTFAudioController implements a processing and scheduled-source profile; animation pointers and general pulse-width synthesis remain unsupported.'
+      'Opt-in AudioController implements a processing and scheduled-source profile; animation pointers and general pulse-width synthesis remain unsupported.'
   },
   KHR_draco_mesh_compression: {
     supportLevel: 'built-in',

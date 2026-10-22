@@ -2,11 +2,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {AudioController} from '@luma.gl/engine';
+import {parseGLTFAudio} from '@luma.gl/gltf';
 import {AnimationLoopTemplate, AnimationProps, ModelNode, OrbitControls} from '@luma.gl/engine';
 import {Device, log} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
-import {GLTFAudioController, createScenegraphsFromGLTF} from '@luma.gl/gltf';
+import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {Light, LightingProps} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 import {INFO_HTML, GRAPH_INFO_HTML, ENVIRONMENT_INFO_HTML} from './app-ui';
@@ -60,7 +62,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   sceneRadius = 1;
   isFinalized = false;
   audioContext?: AudioContext;
-  audio?: GLTFAudioController;
+  audio?: AudioController;
   controls = document.createElement('div');
   status = document.createElement('span');
   playbackGeneration = 0;
@@ -92,12 +94,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     try {
       this.audioContext ||= new AudioContext();
       const resumed = this.audioContext.resume();
-      this.audio ||= new GLTFAudioController({
-        scenegraphs: this.scenegraphsFromGLTF,
-        audioContext: this.audioContext,
-        listenerPose: 'viewer',
-        baseUrl: GLTF_AUDIO_PRESETS[this.feature].modelUrl
-      });
+      this.audio ||= new AudioController(
+        parseGLTFAudio({
+          scenegraphs: this.scenegraphsFromGLTF,
+          audioContext: this.audioContext,
+          listenerPose: 'viewer',
+          baseUrl: GLTF_AUDIO_PRESETS[this.feature].modelUrl
+        })
+      );
       this.audio.gain.gain.value = this.volume;
       this.status.textContent = 'Loading audio…';
       await resumed;

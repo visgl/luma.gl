@@ -86,6 +86,8 @@ const material: PBRMaterial = createPBRMaterial(device, {
 
 The snippet sets the detail scales only; it needs the appropriate texture bindings and shader defines to produce surface detail. Neither technique displaces mesh vertices.
 
+See [normal mapping](/docs/api-guide/engine/features/normal-mapping) for dedicated core glTF samples and a texture-binding example.
+
 ## glTF support
 
 Core glTF `normalTexture` supplies normal maps. The experimental, unratified `EXT_materials_bump` proposal supplies a linear red-channel height texture. The adapter preserves per-slot UV transforms and composes bump perturbations with conventional normal maps.

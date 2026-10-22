@@ -1,6 +1,6 @@
 # Audio environment profile
 
-`GLTFAudioController` reads an initial profile of the [KHR_audio_environment draft](https://github.com/rudybear/glTF/tree/913251a1157661b105e5c7db189fc624eee3fe17/extensions/2.0/Khronos/KHR_audio_environment). This is partial support, not full draft conformance.
+`AudioController` reads an initial profile of the [KHR_audio_environment draft](https://github.com/rudybear/glTF/tree/913251a1157661b105e5c7db189fc624eee3fe17/extensions/2.0/Khronos/KHR_audio_environment). This is partial support, not full draft conformance.
 
 The active listener is selected from the scene's `activeListener`, the optional controller `activeCameraNodeIndex`, or the first active scene binding in depth-first order. Its node world transform supplies the listening pose by default. Set controller option `listenerPose: 'viewer'` to use the matrix passed to `update()` while retaining the authored listener gain and spatialization properties. This lets interactive viewers orbit and pan their listening position. The authored listener gain multiplies application volume independently. Unsupported spatialization models fall back to equal-power panning; `HRTF` uses the browser's panner.
 

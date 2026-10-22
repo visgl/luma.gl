@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {AudioGraph} from '@luma.gl/engine';
 import {expect, test} from 'vitest';
-import {GLTFAudioGraph} from '../../src/gltf/gltf-audio-graph';
 
 test('audio graph routes fan-in through processing into a borrowed emitter input', async () => {
   const context = new OfflineAudioContext(1, 512, 48000);
-  const graph = new GLTFAudioGraph(
+  const graph = new AudioGraph(
     {
       nodes: [
         {kind: 'gain', params: {gain: 0.25}},
@@ -39,7 +39,7 @@ test('audio graph rejects cycles and bypasses a processing node', async () => {
   const context = new OfflineAudioContext(1, 512, 48000);
   expect(
     () =>
-      new GLTFAudioGraph(
+      new AudioGraph(
         {
           nodes: [{kind: 'gain', params: {gain: 0}}],
           connections: [{from: {node: 0}, to: {node: 0}}]
@@ -49,7 +49,7 @@ test('audio graph rejects cycles and bypasses a processing node', async () => {
         () => []
       )
   ).toThrow();
-  const graph = new GLTFAudioGraph(
+  const graph = new AudioGraph(
     {
       nodes: [{kind: 'gain', bypass: true, params: {gain: 0}}],
       connections: [],
@@ -71,7 +71,7 @@ test('audio graph rejects cycles and bypasses a processing node', async () => {
 test('audio graph applies authored linear and custom gain transitions', async () => {
   for (const interpolation of ['linear', 'custom'] as const) {
     const context = new OfflineAudioContext(1, 4800, 48000);
-    const graph = new GLTFAudioGraph(
+    const graph = new AudioGraph(
       {
         nodes: [
           {kind: 'gain', params: {gain: 0, interpolation, duration: 0.04, curve: [0, 0.25, 1]}}
@@ -101,7 +101,7 @@ test('audio graph rejects unsupported multi-port bypass before allocating proces
   for (const kind of ['splitter', 'channelmerger'] as const) {
     expect(
       () =>
-        new GLTFAudioGraph(
+        new AudioGraph(
           {nodes: [{kind, bypass: true, params: {}}], connections: []},
           context,
           context.destination,

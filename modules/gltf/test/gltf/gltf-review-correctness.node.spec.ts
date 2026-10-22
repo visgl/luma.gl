@@ -46,11 +46,13 @@ describe('reviewed glTF deformation edge cases', () => {
     const device = new NullDevice({});
     const scenegraphs = createScenegraphsFromGLTF(device, source);
     try {
-      const originalSkin = scenegraphs.skins.getBinding(0);
-      const duplicateSkin = scenegraphs.skins.getBinding(duplicateNodeIndex);
+      const originalSkin = scenegraphs.skins.getBinding(scenegraphs.gltfNodeIndexToNodeMap.get(0));
+      const duplicateSkin = scenegraphs.skins.getBinding(
+        scenegraphs.gltfNodeIndexToNodeMap.get(duplicateNodeIndex)
+      );
       expect(originalSkin?.models).toHaveLength(1);
       expect(duplicateSkin?.models).toHaveLength(1);
-      expect(duplicateSkin?.skinIndex).toBe(1);
+      expect(duplicateSkin?.joints).toEqual(originalSkin?.joints.toReversed());
       expect(duplicateSkin?.models[0]).not.toBe(originalSkin?.models[0]);
       expect(duplicateSkin?.jointMatrices).not.toBe(originalSkin?.jointMatrices);
       expect(duplicateSkin?.jointMatrices[12]).not.toBe(originalSkin?.jointMatrices[12]);
@@ -87,7 +89,7 @@ describe('reviewed glTF deformation edge cases', () => {
     const device = new NullDevice({});
     const scenegraphs = createScenegraphsFromGLTF(device, source);
     try {
-      const binding = scenegraphs.skins.getBinding(0);
+      const binding = scenegraphs.skins.getBinding(scenegraphs.gltfNodeIndexToNodeMap.get(0));
       expect(binding?.models).toHaveLength(1);
       expect(binding?.models[0]).toBeInstanceOf(ModelNode);
       expect(binding?.node.children[0].id).toBe(mesh.name || mesh.id);

@@ -1,4 +1,6 @@
-# GLTFBillboardController
+# glTF billboard mapping
+
+`parseGLTFBillboards()` from `@luma.gl/gltf` resolves draft billboard attachments into props for the engine `BillboardController`. See [scene controllers](/docs/api-guide/engine/scene-controllers) for the engine APIs.
 
 Opt-in camera-facing traversal for a **partial, full-axis profile** of the draft
 [`KHR_billboard` proposal](https://github.com/CesiumGS/glTF/tree/aeb5a437219a33aa757743dc1a5d892e3b8e128a/extensions/2.0/Khronos/KHR_billboard).
@@ -13,11 +15,13 @@ specific compatibility profile and preserve upright Y-axis rotation. Current dra
 configurations remain rejected. The source model requires CC BY 4.0 and Apache 2.0 attribution and
 contains a 67.9 MB geometry buffer.
 
-```typescript
-import {GLTFBillboardController} from '@luma.gl/gltf';
+```ts
+import {BillboardController} from '@luma.gl/engine';
+import {parseGLTFBillboards} from '@luma.gl/gltf';
+
 import {ModelNode} from '@luma.gl/engine';
 
-const billboards = new GLTFBillboardController(scenegraphs);
+const billboards = new BillboardController(parseGLTFBillboards(scenegraphs));
 
 // Each frame, after animations update the ordinary node matrices:
 for (const {node, modelMatrix, overlay} of billboards.getDrawEntries({viewMatrix, cameraId: 'main'})) {

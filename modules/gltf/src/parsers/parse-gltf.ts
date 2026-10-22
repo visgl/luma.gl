@@ -30,7 +30,7 @@ import {
   resolveGLTFLightmapTransform,
   validateGLTFNodeLightmaps
 } from '../gltf/gltf-lightmap';
-import type {GLTFPrimitiveMaterialVariants} from '../gltf/gltf-material-variants';
+import type {PrimitiveMaterialVariants} from '@luma.gl/engine';
 import {type GLTFMorphTargetState, setGLTFMorphWeights} from '../gltf/morph-targets';
 import {type PBREnvironment} from '../pbr/pbr-environment';
 import {resolveTextureCoordinateSet} from '../pbr/texture-transform';
@@ -456,7 +456,7 @@ function createNodeForGLTFPrimitive({
   if (sourceVariantMappings.length) {
     const mappings = new Map<
       number,
-      {material: Material; parameters: GLTFPrimitiveMaterialVariants['defaultParameters']}
+      {material: Material; parameters: PrimitiveMaterialVariants['defaultParameters']}
     >();
     for (const mapping of sourceVariantMappings) {
       const mappedSourceMaterial =
@@ -509,7 +509,7 @@ function createNodeForGLTFPrimitive({
       defaultMaterial: modelNode.model.material,
       defaultParameters: {...modelNode.model.parameters},
       mappings
-    } satisfies GLTFPrimitiveMaterialVariants;
+    } satisfies PrimitiveMaterialVariants;
   }
 
   if (morphTargetState) {

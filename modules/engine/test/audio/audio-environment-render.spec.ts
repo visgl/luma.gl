@@ -2,17 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {AudioReverbBus, createParametricAudioResponse} from '@luma.gl/engine';
 import {expect, test} from 'vitest';
-import {
-  GLTFAudioReverbBus,
-  createParametricAudioResponse
-} from '../../src/gltf/gltf-audio-environment';
 
 test('environment impulse response preserves authored delay and send/return gains', async () => {
   const context = new OfflineAudioContext(1, 2048, 48000);
   const response = context.createBuffer(1, 512, 48000);
   response.getChannelData(0)[240] = 0.5;
-  const bus = new GLTFAudioReverbBus(context, response, context.destination, {
+  const bus = new AudioReverbBus(context, response, context.destination, {
     mix: 0.4,
     normalize: false
   });
@@ -46,7 +43,7 @@ test('reset clears an existing convolution tail before playback resumes', async 
   const context = new OfflineAudioContext(1, 4800, 48000);
   const response = context.createBuffer(1, 2400, 48000);
   response.getChannelData(0)[1440] = 1;
-  const bus = new GLTFAudioReverbBus(context, response, context.destination, {
+  const bus = new AudioReverbBus(context, response, context.destination, {
     mix: 1,
     normalize: false
   });

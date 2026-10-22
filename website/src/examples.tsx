@@ -18,6 +18,7 @@ import {
 import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import type {GLTFScenegraphs} from '@luma.gl/gltf';
+import {getGLTFModelOptions, selectGLTFModelOption, type GLTFModelSource} from './components/gltf-model-options';
 
 import {makeHtmlCustomPanel} from '../../examples/example-panels';
 import type {GPUSortExampleHandle} from '../../examples/experimental/gpu-sort/src/app';
@@ -873,16 +874,19 @@ export const GLTFExample: React.FC<WebsiteExampleProps & {
   );
 };
 
-/** A focused glTF viewer configured by asset URL, without the Animation Studio UI. */
+/** Focused viewer: pass an explicit asset URL or a curated subset of Khronos sample names. */
 export const GLTFModelExample: React.FC<
-  WebsiteExampleProps & {
-    modelUrl: string;
+  WebsiteExampleProps & GLTFModelSource & {
     title?: string;
     animate?: boolean;
     materialVariant?: string;
     showVariants?: boolean;
   }
-> = ({modelUrl, title = 'glTF model', animate = false, materialVariant, showVariants, ...props}) => {
+> = ({modelUrl: sourceModelUrl, models, title = 'glTF model', animate = false, materialVariant, showVariants, ...props}) => {
+  const modelOptions = useMemo(() => getGLTFModelOptions(models, sourceModelUrl), [models, sourceModelUrl]);
+  const [selectedModelUrl, setSelectedModelUrl] = useState('');
+  const selectedModel = selectGLTFModelOption(modelOptions, selectedModelUrl);
+  const modelUrl = selectedModel?.url || '';
   const [loadedModel, setLoadedModel] = useState<{
     modelUrl: string;
     scenegraphs: GLTFScenegraphs;
@@ -924,8 +928,24 @@ export const GLTFModelExample: React.FC<
     [modelUrl, animate]
   );
 
+  if (!selectedModel) {
+    return null;
+  }
+
   return (
     <>
+      {modelOptions.length > 1 ? (
+        <div className="margin-bottom--sm">
+          <label>
+            Sample model{' '}
+            <select value={modelUrl} onChange={event => setSelectedModelUrl(event.target.value)}>
+              {modelOptions.map(model => (
+                <option key={model.url} value={model.url}>{model.name}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+      ) : null}
       {showVariants && scenegraphs && scenegraphs.variants.names.length > 0 ? (
         <div className="margin-bottom--sm">
           <label>
