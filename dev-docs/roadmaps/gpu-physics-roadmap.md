@@ -1,6 +1,6 @@
 # GPU Physics Roadmap
 
-Updated: October 21, 2026
+Updated: October 22, 2026
 
 ## Goal and current status
 
@@ -611,3 +611,23 @@ capacity retry and active-work compaction. G2 still needs independent distance/d
 references and adversarial geometry qualification. G4 still needs parallel scheduling,
 joint warm starts, robust difficult-frame qualification, sleeping, springs, breakage
 and full pinned-proposal mapping. These increments do not close their parent tranches.
+
+
+## G4/G6 mechanisms and supporting G1 checkpoint
+
+This package adds persistent joint impulses, implicit distance springs, capped
+position drives, connected passive-joint sleeping and runtime joint enable/disable.
+The Rigid Body Lab adds spring suspension and a servo hinge; Space Salvage uses a
+real spring tow attachment. Constraints remain bounded to 64 on the ordered solver.
+
+The reusable scenegraph adapter snapshots authored geometry/transforms, supports
+explicit collision overrides, and supplies visual bounds. An optional GPU pass
+publishes accepted body-node matrices and AABBs after rollback. The cradle's PBR
+and shadow rendering consumes those matrices. Tick-ordered impulse, kinematic-target
+and joint-toggle journals extend whole-world capture/restore.
+
+Remaining G4: parallel joint scheduling, breakage, difficult-frame/high-mass-ratio
+qualification and full pinned glTF proposal mapping. Remaining G6: automatic glTF
+animation/object-model binding, topology rebuild lifecycle, shared instances and
+export/reimport. Remaining G1: automatic capacity grow/replay, active-work compaction
+and cross-device qualification. This package does not close those parent tranches.

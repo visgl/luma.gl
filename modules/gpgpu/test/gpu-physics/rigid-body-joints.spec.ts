@@ -5,7 +5,12 @@
 import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {GPUCommandGraph} from '../../src/gpu-core';
-import {GPURigidBodyWorld, type GPURigidBodyJoint} from '../../src/gpu-physics';
+import {
+  GPURigidBodyWorld,
+  GPURigidBodyCommandJournal,
+  replayRigidBodyCommands,
+  type GPURigidBodyJoint
+} from '../../src/gpu-physics';
 
 it.for([
   'distance',
@@ -283,3 +288,193 @@ it('moves an offset slider with its rotating kinematic axis', async context => {
     world.destroy();
   }
 });
+
+it('settles a damped suspension at the gravity-loaded spring equilibrium', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const world = new GPURigidBodyWorld({
+    gravity: [0, 0, -10],
+    timeStep: 1 / 120,
+    joints: [
+      {type: 'distance', first: 0, second: 1, distance: 1, spring: {stiffness: 100, damping: 10}}
+    ],
+    bodies: [
+      {position: [0, 0, 3], mass: 0, shape: {type: 'sphere', radius: 0.1}},
+      {position: [0, 0, 1.5], mass: 1, shape: {type: 'sphere', radius: 0.1}}
+    ]
+  });
+  const definition = new GPUCommandGraph(device);
+  world.addToGraph(definition);
+  const graph = await definition.compileAsync();
+  try {
+    const encoder = device.createCommandEncoder();
+    for (let step = 0; step < 600; step++) graph.encode(encoder, {parameters: undefined});
+    device.submit(encoder.finish());
+    const body = (await world.readState())[1];
+    expect(body.position[2]).toBeCloseTo(1.9, 2);
+    expect(Math.abs(body.velocity[2])).toBeLessThan(0.02);
+  } finally {
+    graph.destroy();
+    world.destroy();
+  }
+});
+
+it('replays position drives and joint toggles from a warm checkpoint', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const world = new GPURigidBodyWorld({
+    gravity: [0, 0, 0],
+    timeStep: 1 / 120,
+    joints: [
+      {
+        type: 'hinge',
+        first: 0,
+        second: 1,
+        motor: {position: 0.6, stiffness: 40, damping: 8, maximumForce: 10}
+      }
+    ],
+    bodies: [
+      {position: [0, 0, 0], mass: 0, shape: {type: 'sphere', radius: 0.1}},
+      {position: [0, 0, 0], shape: {type: 'box', halfExtents: [1, 0.2, 0.2]}}
+    ]
+  });
+  const definition = new GPUCommandGraph(device);
+  world.addToGraph(definition);
+  const graph = await definition.compileAsync();
+  const advance = async () => {
+    const encoder = device.createCommandEncoder();
+    graph.encode(encoder, {parameters: undefined});
+    device.submit(encoder.finish());
+  };
+  try {
+    for (let tick = 0; tick < 240; tick++) await advance();
+    const settled = (await world.readState())[1];
+    expect(2 * Math.atan2(settled.orientation[2], settled.orientation[3])).toBeCloseTo(0.6, 2);
+    const journal = new GPURigidBodyCommandJournal(world);
+    await journal.begin();
+    journal.apply(0, {type: 'joint-enabled', joint: 0, enabled: false});
+    journal.apply(0, {type: 'impulse', body: 1, impulse: [1, 0, 0]});
+    await advance();
+    journal.apply(1, {type: 'joint-enabled', joint: 0, enabled: true});
+    await advance();
+    const expected = await world.readState();
+    await replayRigidBodyCommands(world, journal.export(), 2, advance);
+    expect(await world.readState()).toEqual(expected);
+    expect(() => journal.apply(0, {type: 'joint-enabled', joint: 0, enabled: false})).toThrow();
+  } finally {
+    graph.destroy();
+    world.destroy();
+  }
+});
+
+it('publishes body-node matrices and rotated visual bounds with an offset center of mass', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const world = new GPURigidBodyWorld({
+    gravity: [0, 0, 0],
+    publicationBounds: [
+      [
+        [-1, -2, -3],
+        [1, 2, 3]
+      ]
+    ],
+    bodies: [
+      {
+        position: [4, 5, 6],
+        centerOfMass: [1, 0, 0],
+        orientation: [0, 0, Math.SQRT1_2, Math.SQRT1_2],
+        shape: {type: 'box', halfExtents: [1, 2, 3]}
+      }
+    ]
+  });
+  const definition = new GPUCommandGraph(device);
+  world.addToGraph(definition);
+  const graph = await definition.compileAsync();
+  try {
+    const encoder = device.createCommandEncoder();
+    graph.encode(encoder, {parameters: undefined});
+    device.submit(encoder.finish());
+    const matrices = new Float32Array((await world.poseMatrices!.readAsync()).buffer);
+    const bounds = new Float32Array((await world.poseBounds!.readAsync()).buffer);
+    [0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1, 0, 4, 5, 6, 1].forEach((value, index) =>
+      expect(matrices[index]).toBeCloseTo(value, 5)
+    );
+    [2, 4, 3, 0, 6, 6, 9, 0].forEach((value, index) => expect(bounds[index]).toBeCloseTo(value, 5));
+  } finally {
+    graph.destroy();
+    world.destroy();
+  }
+});
+
+it('sleeps passive connected bodies and wakes their joint island on impulse', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const world = new GPURigidBodyWorld({
+    gravity: [0, 0, 0],
+    timeStep: 1 / 60,
+    sleepAfter: 0.1,
+    joints: [{type: 'distance', first: 0, second: 1, distance: 2}],
+    bodies: [
+      {position: [0, 0, 0], shape: {type: 'sphere', radius: 0.1}},
+      {position: [2, 0, 0], shape: {type: 'sphere', radius: 0.1}}
+    ]
+  });
+  const definition = new GPUCommandGraph(device);
+  world.addToGraph(definition);
+  const graph = await definition.compileAsync();
+  try {
+    const encoder = device.createCommandEncoder();
+    for (let tick = 0; tick < 30; tick++) graph.encode(encoder, {parameters: undefined});
+    device.submit(encoder.finish());
+    expect((await world.readState()).map(body => body.sleeping)).toEqual([true, true]);
+    world.applyImpulse(0, [1, 0, 0]);
+    const resumed = device.createCommandEncoder();
+    graph.encode(resumed, {parameters: undefined});
+    device.submit(resumed.finish());
+    const states = await world.readState();
+    expect(states.map(body => body.sleeping)).toEqual([false, false]);
+    expect(states[0].velocity[0]).toBeCloseTo(0.5, 4);
+    expect(states[1].velocity[0]).toBeCloseTo(0.5, 4);
+  } finally {
+    graph.destroy();
+    world.destroy();
+  }
+});
+
+it('combines dormant joints with extended contacts, CCD and trigger sampling', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const world = new GPURigidBodyWorld({
+    failurePolicy: 'rollback',
+    gravity: [0, 0, 0],
+    continuous: {bodies: [0]},
+    triggers: [{colliders: [2], targets: [0]}],
+    joints: [{type: 'distance', first: 0, second: 1, distance: 3, enabled: false}],
+    bodies: [
+      {position: [0, 0, 0], shape: {type: 'sphere', radius: 0.2}},
+      {
+        position: [3, 0, 0],
+        shape: {type: 'capsule', height: 1, radiusTop: 0.2, radiusBottom: 0.2}
+      },
+      {
+        position: [0, 0, 0],
+        mode: 'static',
+        colliders: [{shape: {type: 'sphere', radius: 1}, isTrigger: true}]
+      }
+    ]
+  });
+  const definition = new GPUCommandGraph(device);
+  world.addToGraph(definition);
+  const graph = await definition.compileAsync();
+  try {
+    const encoder = device.createCommandEncoder();
+    graph.encode(encoder, {parameters: undefined});
+    device.submit(encoder.finish());
+    expect((await world.readSimulationDiagnostics()).complete).toBe(true);
+    expect((await world.readTriggerEvents()).events.map(event => event.phase)).toEqual(['enter']);
+    expect((await world.readState())[0].position).toEqual([0, 0, 0]);
+  } finally {
+    graph.destroy();
+    world.destroy();
+  }
+}, 120000);

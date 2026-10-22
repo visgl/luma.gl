@@ -9,6 +9,16 @@ import {
 } from '@luma.gl/gpgpu/gpu-physics';
 
 export const RIGID_BODY_SCENES = {
+  suspension: {
+    title: 'Mechanisms · spring suspension',
+    description:
+      'A suspended platform uses an implicit damped spring. It compresses under gravity and settles; push it to test damping and connected-island waking.'
+  },
+  servo: {
+    title: 'Mechanisms · position-driven hinge',
+    description:
+      'A hinge tracks a 0.8-radian target with a compliant position drive and capped torque. Push the arm to disturb it; the drive returns it to its target within the authored limits.'
+  },
   cradle: {
     title: "Mechanisms · Newton's cradle",
     description:

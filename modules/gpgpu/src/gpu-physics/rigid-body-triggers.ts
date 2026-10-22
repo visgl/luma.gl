@@ -129,7 +129,8 @@ export function addRigidBodyTriggers<Parameters>(
   capacity: number,
   bindings: BoundBuffer[],
   statistics: BoundBuffer,
-  allocate: (name: string, data: number | Uint32Array) => Buffer
+  allocate: (name: string, data: number | Uint32Array) => Buffer,
+  hasJoints = false
 ) {
   const allocations = [
     {name: 'triggerPrevious', key: 'trigger-previous', data: colliderCount * 16},
@@ -260,7 +261,8 @@ fn emitTrigger(group:vec4u,pair:vec2u,phase:u32,swept:u32){
           'triggerPrevious',
           'triggerGroups',
           'triggerPairs',
-          'triggerSamples'
+          'triggerSamples',
+          ...(hasJoints ? ['targets'] : [])
         ],
         layout.count
       ),

@@ -20,6 +20,34 @@ export function makeMechanism(
     mass: 0,
     shape: {type: 'box', halfExtents: [8, 8, 0.5]}
   };
+  if (scene === 'suspension')
+    return {
+      bodies: [
+        floor,
+        {...anchor, position: [0, 0, 4]},
+        {position: [0, 0, 2], mass: 2, shape: {type: 'box', halfExtents: [0.8, 0.5, 0.25]}}
+      ],
+      joints: [
+        {type: 'distance', first: 1, second: 2, distance: 1.5, spring: {stiffness: 80, damping: 6}}
+      ]
+    };
+  if (scene === 'servo')
+    return {
+      bodies: [
+        floor,
+        {...anchor, position: [0, 0, 3]},
+        {position: [0, 0, 3], shape: {type: 'box', halfExtents: [1.5, 0.2, 0.2]}}
+      ],
+      joints: [
+        {
+          type: 'hinge',
+          first: 1,
+          second: 2,
+          limits: [-1.2, 1.2],
+          motor: {position: 0.8, stiffness: 40, damping: 8, maximumForce: 15}
+        }
+      ]
+    };
   if (scene === 'pendulum')
     return {
       bodies: [floor, anchor, {position: [1.5, 0, 2], shape: {type: 'sphere', radius: 0.4}}],

@@ -134,7 +134,15 @@ try {
       gravity: [0, 0, 0],
       timeStep: 1 / 120,
       iterations: 24,
-      solver: 'parallel',
+      solver: 'ordered',
+      joints: Array.from({length: 14}, (_, index) => ({
+        type: 'distance' as const,
+        first: 0,
+        second: index + 1,
+        distance: 1.5,
+        enabled: false,
+        spring: {stiffness: 12, damping: 4}
+      })),
       broadPhase: 'hierarchical-grid',
       eventCapacity: 1024,
       impactImpulseThreshold: 2,
@@ -145,7 +153,7 @@ try {
     world.addToGraph(definition);
     const graph = await definition.compileAsync();
     const renderer = makeSalvageRenderer(device, world, bodies);
-    return {world, graph, renderer, states: await world.readState()};
+    return {world, graph, renderer, states: await world.readState(), towBody: 0};
   }
   let mission = await createMission();
   let recovered = new Set<number>();
@@ -229,33 +237,16 @@ try {
               -ship.velocity[1] * Math.min(1, duration * 4) * 2,
               0
             ]);
-          if (
-            beamHeld &&
-            selected &&
-            selected.body > 0 &&
-            selected.body < 15 &&
-            !recovered.has(selected.body)
-          ) {
-            const target = mission.states[selected.body];
-            const delta: [number, number] = [
-              ship.position[0] - target.position[0],
-              ship.position[1] - target.position[1]
-            ];
-            const distance = Math.hypot(...delta);
-            // The ray query bounds surface distance; large targets can have centers beyond it.
-            if (distance > 1.5) {
-              const impulse = Math.min(10, distance * 2) * duration;
-              mission.world.applyImpulse(selected.body, [
-                (delta[0] / distance) * impulse,
-                (delta[1] / distance) * impulse,
-                0
-              ]);
-              mission.world.applyImpulse(0, [
-                (-delta[0] / distance) * impulse * 0.2,
-                (-delta[1] / distance) * impulse * 0.2,
-                0
-              ]);
-            }
+          const attachedBody = recovered.has(mission.towBody) ? 0 : mission.towBody;
+          const candidateBody =
+            selected && selected.body > 0 && selected.body < 15 && !recovered.has(selected.body)
+              ? selected.body
+              : 0;
+          const towBody = beamHeld ? attachedBody || candidateBody : 0;
+          if (towBody !== mission.towBody) {
+            if (mission.towBody) mission.world.setJointEnabled(mission.towBody - 1, false);
+            if (towBody) mission.world.setJointEnabled(towBody - 1, true);
+            mission.towBody = towBody;
           }
           const encoder = device.createCommandEncoder();
           for (let step = 0; step < steps; step++)
@@ -307,6 +298,10 @@ try {
           for (const hit of triggers.events) {
             if (hit.phase !== 'enter' || recovered.has(hit.body)) continue;
             recovered.add(hit.body);
+            if (mission.towBody === hit.body) {
+              mission.world.setJointEnabled(hit.body - 1, false);
+              mission.towBody = 0;
+            }
             if (selected?.body === hit.body) selected = undefined;
             // Docked bodies are parked outside the arena; invalidate cached contacts after direct writes.
             mission.world.positions!.write(
@@ -324,7 +319,10 @@ try {
         }
       }
       const ship = mission.states[0];
-      const beam = beamHeld && selected && !paused && !finished ? selected.point : null;
+      const beam =
+        beamHeld && mission.towBody && !recovered.has(mission.towBody) && !paused && !finished
+          ? mission.states[mission.towBody].position
+          : null;
       ({extentX, extentY} = mission.renderer.draw(
         now / 1000,
         canvas.clientWidth / canvas.clientHeight,
@@ -343,9 +341,11 @@ try {
       document.querySelector<HTMLElement>('#hull')!.textContent = `HULL ${Math.ceil(hull)}%`;
       document.querySelector('#navigation')!.textContent =
         `NAV ${ship.position[0].toFixed(1)} / ${ship.position[1].toFixed(1)}`;
-      targetLabel.textContent = selected
-        ? `${selected.body <= 5 ? 'CARGO POD' : selected.body < 15 ? 'DEBRIS' : 'BOUNDARY'} · ${selected.distance.toFixed(1)} m${beam ? ' · TRACTOR ACTIVE' : ''}`
-        : 'SCANNER · NO TARGET';
+      targetLabel.textContent = beam
+        ? `TOW ATTACHED · ${mission.towBody <= 5 ? 'CARGO POD' : 'DEBRIS'} · release mouse to detach`
+        : selected
+          ? `${selected.body <= 5 ? 'CARGO POD' : selected.body < 15 ? 'DEBRIS' : 'BOUNDARY'} · ${selected.distance.toFixed(1)} m${beam ? ' · TRACTOR ACTIVE' : ''}`
+          : 'SCANNER · NO TARGET';
       status.value = `${simulationTime.toFixed(1)} s simulated · ${mission.graph.stats.nodeOrder.length} graph nodes\n${eventCount} contact events · ${queryCount} GPU queries\n${Math.hypot(...ship.velocity).toFixed(1)} m/s · ${paused ? 'paused' : 'running'}`;
       panel.update();
       animation = requestAnimationFrame(time => {

@@ -19,7 +19,7 @@ try {
   await page.waitForTimeout(500);
   if (pausedStatus !== await page.locator('#status').textContent()) throw new Error('Simulation advanced while paused');
   await page.locator('#pause').click();
-  await page.locator('button[aria-expanded]').first().click();
+  // Keep the diagnostics panel mounted while reading navigation telemetry.
 
   let previousPosition = [-11, 2];
   let previousTime = 0;
@@ -51,7 +51,25 @@ try {
   // First cargo starts at (-7, 6); this viewport spans 44.8 by 28 world units.
   await page.mouse.move((-7 / 22.4 + 1) * 720, (1 - 6 / 14) * 450);
   await page.mouse.down();
-  await page.waitForFunction(() => document.querySelector('#cargo-count').textContent !== '0 / 5', null, {timeout: 45000});
+  // A real joint transfers equal and opposite impulses: hold station while towing.
+  for (let iteration = 0; iteration < 180; iteration++) {
+    if (await page.locator('#cargo-count').textContent() !== '0 / 5') break;
+    const position = (await page.locator('#navigation').textContent()).match(/-?\d+\.?\d*/g).map(Number);
+    const simulationTime = Number((await page.locator('#status').textContent()).match(/[\d.]+/)[0]);
+    const elapsed = simulationTime - previousTime;
+    const velocity = elapsed > 0 ? position.map((value, index) => (value - previousPosition[index]) / elapsed) : [0, 0];
+    const acceleration = position.map((value, index) => ([-14, 8][index] - value) * 1.4 - velocity[index] * 2.3);
+    for (const key of heldKeys) await page.keyboard.up(key);
+    heldKeys = [];
+    if (Math.abs(acceleration[0]) > 0.5) heldKeys.push(acceleration[0] > 0 ? 'KeyD' : 'KeyA');
+    if (Math.abs(acceleration[1]) > 0.5) heldKeys.push(acceleration[1] > 0 ? 'KeyW' : 'KeyS');
+    for (const key of heldKeys) await page.keyboard.down(key);
+    previousPosition = position;
+    previousTime = simulationTime;
+    await page.waitForTimeout(200);
+  }
+  for (const key of heldKeys) await page.keyboard.up(key);
+  if (await page.locator('#cargo-count').textContent() === '0 / 5') throw new Error(`Tow failed: ${await page.locator('#startup-error').textContent()}`);
   await page.mouse.up();
   console.log('Recovery:', await page.locator('#cargo-count').textContent());
   if (process.env.SPACE_SALVAGE_SCREENSHOT) await page.screenshot({path: process.env.SPACE_SALVAGE_SCREENSHOT});

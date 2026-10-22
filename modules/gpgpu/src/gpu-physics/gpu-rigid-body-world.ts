@@ -57,6 +57,7 @@ import {
   validateRigidBodyJoints,
   type GPURigidBodyJoint
 } from './rigid-body-joints';
+import {addRigidBodyPosePublication, type GPURigidBodyBounds} from './rigid-body-publication';
 import {getRigidBodyShader} from './rigid-body-shaders';
 
 type Vector3 = readonly [number, number, number];
@@ -85,7 +86,9 @@ export type GPURigidBodyCapture = {
 export type GPURigidBodyWorldProps = {
   id?: string;
   bodies: readonly GPURigidBody[];
-  /** Up to 64 ordered-solver joints; connected bodies remain awake. */
+  /** Authored visual bounds in body-node coordinates; enables GPU matrix/AABB publication. */
+  publicationBounds?: readonly GPURigidBodyBounds[];
+  /** Up to 64 ordered-solver joints with persistent impulses and connected-island sleeping. */
   joints?: readonly GPURigidBodyJoint[];
   gravity?: Vector3;
   timeStep?: number;
@@ -152,6 +155,9 @@ export class GPURigidBodyWorld {
   readonly broadPhase: 'all-pairs' | 'hierarchical-grid';
   readonly solver: 'ordered' | 'parallel';
   readonly maximumPairs: number;
+  /** Borrowed by renderers; updated after each accepted or rolled-back step. */
+  poseMatrices: Buffer | null = null;
+  poseBounds: Buffer | null = null;
   positions: Buffer | null = null;
   orientations: Buffer | null = null;
   velocities: Buffer | null = null;
@@ -188,6 +194,16 @@ export class GPURigidBodyWorld {
     for (const damping of [props.linearDamping ?? 0, props.angularDamping ?? 0]) {
       if (!Number.isFinite(damping) || damping < 0) throw new Error('Invalid damping');
     }
+    if (
+      props.publicationBounds &&
+      (props.publicationBounds.length !== props.bodies.length ||
+        props.publicationBounds.some(
+          bounds =>
+            bounds.some(vector => vector.length !== 3 || !vector.every(Number.isFinite)) ||
+            bounds[0].some((value, axis) => value > bounds[1][axis])
+        ))
+    )
+      throw new Error('Invalid publication bounds');
     this.id = props.id ?? 'gpu-rigid-body-world';
     this.count = props.bodies.length;
     this.solver = props.solver ?? 'ordered';
@@ -428,9 +444,16 @@ export class GPURigidBodyWorld {
         this.props.eventCapacity ?? 0,
         this.props.enableQueries ?? false,
         this.props.failurePolicy === 'rollback',
-        Boolean(this.props.continuous)
+        Boolean(this.props.continuous),
+        this.props.joints?.length ?? 0
       )
     };
+    if (this.props.publicationBounds)
+      storage.buffers.push(
+        {name: 'pose-metadata', byteLength: this.count * 48, uniform: false},
+        {name: 'pose-matrices', byteLength: this.count * 64, uniform: false},
+        {name: 'pose-bounds', byteLength: this.count * 32, uniform: false}
+      );
     const triggerLayout = this.props.triggers?.length
       ? makeRigidBodyTriggerLayout(this.props.triggers, this.colliders)
       : undefined;
@@ -606,8 +629,15 @@ export class GPURigidBodyWorld {
     this.sleepStates = allocate('sleep', this.count * 16);
     this.targets = allocate(
       'targets',
-      Math.ceil((this.count * 32 + (sparse ? 32 + this.maximumPairs * 8 : 16)) / 16) * 16
+      Math.ceil((this.count * 32 + (sparse ? 32 + this.maximumPairs * 8 : 16)) / 16) * 16 +
+        (this.props.joints?.length ?? 0) * 48
     );
+    for (const [index, joint] of (this.props.joints ?? []).entries()) {
+      this.targets.write(
+        new Float32Array([joint.enabled === false ? 0 : 1]),
+        this.getJointStateOffset() + index * 48 + 32
+      );
+    }
     // Four 64-byte contacts followed by a 32-byte aligned manifold header.
     this.manifolds = allocate('manifolds', this.maximumPairs * 288);
     if (extended) this.meshTasks = allocate('mesh-tasks', 16 + 65536 * 48);
@@ -723,7 +753,8 @@ export class GPURigidBodyWorld {
       getRigidBodyJointShader(this.props.joints ?? [], this.props.bodies),
       Boolean(this.props.joints?.length),
       this.props.linearDamping ?? 0,
-      this.props.angularDamping ?? 0
+      this.props.angularDamping ?? 0,
+      this.props.joints?.length ?? 0
     );
     const parallelBindings: Record<string, readonly string[]> = {
       parallelReset: ['parallelState'],
@@ -807,7 +838,8 @@ export class GPURigidBodyWorld {
           continuousSelection,
           this.props.continuous.maximumImpacts ?? 4,
           bindings,
-          allocate
+          allocate,
+          Boolean(this.props.joints?.length)
         )
       : undefined;
     const triggers = triggerLayout
@@ -825,7 +857,8 @@ export class GPURigidBodyWorld {
             resource: statisticsResource,
             location: 18
           },
-          allocate
+          allocate,
+          Boolean(this.props.joints?.length)
         )
       : undefined;
     this.triggerEvents = triggers?.events ?? null;
@@ -867,7 +900,7 @@ export class GPURigidBodyWorld {
             'parallelMarkSleep',
             'parallelSleep'
           ]
-        : ['solve', 'finish'])
+        : [...(extended && this.props.joints?.length ? ['meshCollect'] : []), 'solve', 'finish'])
     ]) {
       if (sparse && entryPoint === 'collide') {
         const bodyBinding = bindings.find(binding => binding.name === 'bodies')!;
@@ -927,12 +960,18 @@ export class GPURigidBodyWorld {
                 : entryPoint === 'integrate'
                   ? ['manifolds']
                   : entryPoint === 'collide'
-                    ? ['sleepStates', ...(extended || sparse ? [] : ['targets'])]
+                    ? [
+                        'sleepStates',
+                        ...(extended || sparse || this.props.joints?.length ? [] : ['targets'])
+                      ]
                     : entryPoint === 'finish'
                       ? ['manifolds', 'meshTasks']
-                      : ['targets'];
+                      : this.props.joints?.length
+                        ? []
+                        : ['targets'];
       const unused = [
         ...unusedCore,
+        ...(entryPoint === 'solve' && this.props.joints?.length ? ['meshTasks'] : []),
         ...(entryPoint.startsWith('parallel') ? [] : ['parallelState']),
         ...(entryPoint === 'bounds' ? [] : ['minima', 'maxima'])
       ];
@@ -1094,6 +1133,19 @@ export class GPURigidBodyWorld {
     });
     restoreCheckpoint?.restore();
     triggers?.publish();
+    if (this.props.publicationBounds) {
+      const publication = addRigidBodyPosePublication(
+        graph,
+        this.id,
+        this.props.bodies,
+        this.props.publicationBounds,
+        diagnosticBinding('positions'),
+        diagnosticBinding('orientations'),
+        allocate
+      );
+      this.poseMatrices = publication.matrices;
+      this.poseBounds = publication.bounds;
+    }
     if (this.props.eventCapacity) {
       const contactHistory = allocate('contact-history', this.maximumPairs * 16);
       this.contactEvents = allocate('contact-events', 16 + this.props.eventCapacity * 64);
@@ -1226,10 +1278,12 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
 @compute @workgroup_size(1) fn control() {
  if(command.bodyIndex.y==0u) {applyImpulse(command.bodyIndex.x,command.point.xyz,command.impulse.xyz);}
  else if(command.bodyIndex.y==2u) {applyImpulse(command.bodyIndex.x,positions[command.bodyIndex.x].xyz,command.impulse.xyz);}
+ ${this.props.joints?.length ? 'else if(command.bodyIndex.y==3u){targets.joints[command.bodyIndex.x].control.x=command.impulse.x;}' : ''}
  else {targets.entries[command.bodyIndex.x].position=vec4f(command.point.xyz,1);targets.entries[command.bodyIndex.x].orientation=command.orientation;}
  // Wake and invalidate all connected components conservatively after external changes.
  for(var body=0u;body<BODY_COUNT;body++) {sleepStates[body]=vec4f(0);}
  for(var pair=0u;pair<PAIR_CAPACITY;pair++) {manifolds[pair].count=0u;}
+ ${this.props.joints?.length ? `for(var index=0u;index<${this.props.joints.length}u;index++){for(var row=0u;row<8u;row++){targets.joints[index].impulses[row]=0.0;}}` : ''}
 }`,
       entryPoint: 'control',
       shaderLayout: {
@@ -1311,11 +1365,45 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     this.device.submit(encoder.finish());
   }
 
+  private getJointStateOffset(): number {
+    return (
+      Math.ceil(
+        (this.count * 32 +
+          (this.broadPhase === 'hierarchical-grid' ? 32 + this.maximumPairs * 8 : 16)) /
+          16
+      ) * 16
+    );
+  }
+
+  /** Enable a predeclared joint between submissions; wakes bodies and clears cached impulses. */
+  setJointEnabled(joint: number, enabled: boolean): void {
+    if (
+      !this.control ||
+      !this.controlSettings ||
+      !this.device ||
+      this.destroyed ||
+      !Number.isInteger(joint) ||
+      !this.props.joints?.[joint]
+    )
+      throw new Error('Invalid joint');
+    const data = new ArrayBuffer(64);
+    new Float32Array(data)[0] = enabled ? 1 : 0;
+    new Uint32Array(data).set([joint, 3], 12);
+    this.controlSettings.write(new Uint8Array(data));
+    const encoder = this.device.createCommandEncoder();
+    const pass = encoder.beginComputePass();
+    this.control.dispatch(pass, 1);
+    pass.end();
+    this.device.submit(encoder.finish());
+  }
+
   /** Clear persistence and sleeping after direct state writes between submissions. */
   wake(): void {
     if (this.destroyed) return;
     this.sleepStates?.write(new Float32Array(this.count * 4));
     this.manifolds?.write(new Uint8Array(this.maximumPairs * 288));
+    for (let index = 0; index < (this.props.joints?.length ?? 0); index++)
+      this.targets?.write(new Float32Array(8), this.getJointStateOffset() + index * 48);
   }
 
   /** Optional asynchronous event readback. Concurrent readers share one snapshot/cursor. */
