@@ -25,7 +25,7 @@ binary64 semantics.
 
 Reconciled against `master` at `ca4f7a9d3` on 2026-10-08 (2026-10-09 UTC).
 The dependency upgrade in [#3400](https://github.com/visgl/luma.gl/pull/3400) locks
-`@math.gl/crs` and `@math.gl/projection` to `5.0.0-alpha.13`. This assessment uses installed
+`@math.gl/geospatial/crs` and `@math.gl/geospatial/projection` to `5.0.0-alpha.13`. This assessment uses installed
 package sources and documentation at their published math.gl revision
 `4c52326098194bd1b290a72a512a328d10565bfd`, not unreleased upstream changes.
 
@@ -317,6 +317,6 @@ does not acquire an automatic inverse.
   graduation.
 - `@luma.gl/experimental/gpu-project` owns the evolving program, planners, adaptive compiler,
   projection catalog, and optional math.gl adapters.
-- `@math.gl/crs` and `@math.gl/projection` remain optional CPU-side definition/resolution/oracle
+- `@math.gl/geospatial/crs` and `@math.gl/geospatial/projection` remain optional CPU-side definition/resolution/oracle
   dependencies. They do not enter the low-level GPU execution package.
 - Arrow upload, conversion, and readback remain in `@luma.gl/arrow`.

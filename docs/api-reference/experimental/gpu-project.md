@@ -13,7 +13,7 @@ without requiring native GPU `f64` arithmetic. A JavaScript projection provider 
 coordinate-reference-system semantics; adaptive local polynomial patches provide the GPU execution
 strategy.
 
-That separation supports the wide range of coordinate systems handled by `@math.gl/projection` without
+That separation supports the wide range of coordinate systems handled by `@math.gl/geospatial/projection` without
 reimplementing every projection, datum, or coordinate-reference-system definition in WGSL.
 
 ## When to use it
@@ -68,7 +68,7 @@ published results or cross-machine performance guarantees.
 ```ts
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {GPUProjection, compileProjectionPlan} from '@luma.gl/experimental/gpu-project';
-import {projectionEngine} from '@math.gl/projection';
+import {projectionEngine} from '@math.gl/geospatial/projection';
 
 const projection = projectionEngine.createProjection({
   from: '+proj=utm +zone=10 +datum=WGS84 +units=m +no_defs',
@@ -100,11 +100,11 @@ Bounds are `[minimumX, minimumY, maximumX, maximumY]` in the source coordinate s
 expressed in destination units: `0.01` requests one centimeter of sampled accuracy when the target
 coordinate system uses meters.
 
-`@math.gl/projection` is optional and is not a dependency of `@luma.gl/experimental`. Any function or
+`@math.gl/geospatial/projection` is optional and is not a dependency of `@luma.gl/experimental`. Any function or
 object with a `project(coordinates)` method can provide the projection. For WGS84-to-Web-Mercator
 applications, `createWebMercatorProjection()` provides a zero-dependency alternative:
 
-With math.gl 5, `projectionEngine.createProjection()` also accepts compatible CRS definitions from `@math.gl/crs`,
+With math.gl 5, `projectionEngine.createProjection()` also accepts compatible CRS definitions from `@math.gl/geospatial/crs`,
 including PROJJSON objects, and executes them with the TypeScript projection engine. Use
 `planCRSProjection()` when a broader CRS metadata object may include unsupported vertical or
 compound components; it reports structured reasons for unsupported definitions. CRS metadata
@@ -407,7 +407,7 @@ coordinates or a latitude-first axis without explicitly rearranging/converting t
 This is the provider boundary for current math.gl projections and future engine-created transforms.
 
 ```ts
-import {projectionEngine} from '@math.gl/projection';
+import {projectionEngine} from '@math.gl/geospatial/projection';
 import {planProjection} from '@luma.gl/experimental/gpu-project';
 
 const projection = projectionEngine.createProjection({from: 'EPSG:4326', to: 'EPSG:3857'});
@@ -455,7 +455,7 @@ the application.
 
 ## Optional math.gl CRS planner
 
-Install `@math.gl/crs` and `@math.gl/projection` 5.x separately and import the CPU planner from
+Install `@math.gl/geospatial/crs` and `@math.gl/geospatial/projection` 5.x separately and import the CPU planner from
 `@luma.gl/experimental/gpu-project/crs`. These optional peers are not loaded by the GPU execution
 entry point. Planning allocates no GPU resources and returns either
 `{status: 'ready', strategy, program, compiled, reasons}` or `{status: 'unsupported', reasons}`.
@@ -500,7 +500,7 @@ use the authoritative CPU transform as an opaque oracle, and always produce adap
 They never infer native formulas from a custom engine's CRS labels.
 
 ```ts
-import {lazyProjectionEngine} from '@math.gl/projection/projections/lazy';
+import {lazyProjectionEngine} from '@math.gl/geospatial/projection/projections/lazy';
 import {prepareCRSProjectionAsync} from '@luma.gl/experimental/gpu-project/crs';
 
 const prepared = await prepareCRSProjectionAsync({
@@ -779,7 +779,7 @@ provider's output at the source-domain center; final Float32 rounding is additio
 ### Explicit PROJ pipelines
 
 ```ts
-import {parsePROJString} from '@math.gl/crs';
+import {parsePROJString} from '@math.gl/geospatial/crs';
 import {planProjectionPipeline} from '@luma.gl/experimental/gpu-project/crs';
 
 const result = planProjectionPipeline({
@@ -1054,7 +1054,7 @@ the real `ProjectionTableTransform` CPU adapter with its `GPUProjectionTable` ma
 ```typescript
 const report = await runProjectionTableBenchmark(device, {
   transform, // a prepared ProjectionTableTransform; preparation is outside this runner
-  provider: '@math.gl/projection 5.0.0-alpha.15 TypeScript',
+  provider: '@math.gl/geospatial/projection 5.0.0-alpha.19 TypeScript',
   batches: [{positions: new Float64Array([-122.4, 37.8])}],
   maximumError: 0.001, // destination units, including output encoding/rounding
   warmupIterations: 2,

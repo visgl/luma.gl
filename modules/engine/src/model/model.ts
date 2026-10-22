@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 // A lot of imports, but then Model is where it all comes together...
-import {type TypedArray} from '@math.gl/types';
+import {type TypedArray} from '@math.gl/core/types';
 import {
   type RenderPipelineProps,
   type RenderPipelineParameters,

@@ -8,6 +8,13 @@ Target Release Date: Q3, 2026
 
 **General**
 
+- **Shared math and loader APIs** - Dependencies use math.gl 5.0.0-alpha.19 grouped
+  packages and loaders.gl 5.0.0-alpha.12. Arrow adapters expose
+  `iterateGeoArrowBatchesFromArrowVector` and `getGeoArrowRowViewFromArrowVector`
+  for native GeoArrow chunks and rows without copying coordinate buffers. Views
+  borrow source storage; keep it alive and do not mutate or detach it while in use.
+
+
 - **Engine scene controllers** - Skinning, material variants, billboards, area lights, spatial audio, and interactivity use reusable engine APIs; glTF parsers map source data into those APIs. See [scene controllers](/docs/api-guide/engine/scene-controllers).
 
 - **Draft glTF area lights** - Opt-in animated rectangle/disk light extraction and numerical PBR surface lighting, with a source-loaded Living Room preset in the shared glTF viewer.

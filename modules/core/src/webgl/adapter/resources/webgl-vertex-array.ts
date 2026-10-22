@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {TypedArray, NumericArray} from '@math.gl/types';
+import type {TypedArray, NumericArray} from '@math.gl/core/types';
 import type {AttributeInfo, Device, Buffer, VertexArrayProps} from '../../../index';
 import {VertexArray, getAttributeInfosFromLayouts, getScratchArray} from '../../../index';
 import {GL} from '../../../webgl-constants/index';

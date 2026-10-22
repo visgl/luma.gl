@@ -7,7 +7,7 @@ import {GPUCommandGraph, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import type {GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it} from 'vitest';
-import {projectionEngine} from '@math.gl/projection';
+import {projectionEngine} from '@math.gl/geospatial/projection';
 import {makeVisualizationFixture} from './projection-visualization-fixtures';
 import {runProjectionRoutingBenchmark} from '@luma.gl/experimental/gpu-project/benchmarks';
 import {

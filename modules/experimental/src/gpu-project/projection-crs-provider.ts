@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuProj.
 
-import type {ReadonlyCRSDefinition} from '@math.gl/crs';
+import type {ReadonlyCRSDefinition} from '@math.gl/geospatial/crs';
 import {getUnitFactor} from './projection-crs-lowering';
 import type {ProjectionPlanningReason} from './projection-pipeline';
 import {resolveCRSIdentifier} from './projection-crs-identifiers';

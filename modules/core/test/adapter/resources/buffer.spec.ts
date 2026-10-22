@@ -7,7 +7,7 @@
 import {expect, it, vi} from 'vitest';
 import {getTestDevices, getWebGPUTestDevice, getWebGLTestDevice} from '@luma.gl/test-utils';
 
-import {TypedArray} from '@math.gl/types';
+import {TypedArray} from '@math.gl/core/types';
 import {Buffer, Device} from '@luma.gl/core';
 import {webgl2Adapter} from '@luma.gl/core/webgl';
 import {GL} from '@luma.gl/core/webgl-constants';

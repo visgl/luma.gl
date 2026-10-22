@@ -17,8 +17,8 @@
     "@luma.gl/effects": "10.0.0-alpha.4",
     "@luma.gl/engine": "10.0.0-alpha.4",
     "@luma.gl/shadertools": "10.0.0-alpha.4",
-    "@math.gl/core": "5.0.0-alpha.15",
-    "@math.gl/sun": "5.0.0-alpha.15"
+    "@math.gl/core": "5.0.0-alpha.19",
+    "@math.gl/earth": "5.0.0-alpha.19"
   },
   "devDependencies": {
     "playwright": "^1.58.0",

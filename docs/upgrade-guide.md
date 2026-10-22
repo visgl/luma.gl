@@ -12,6 +12,15 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ## Upgrading to v10.0
 
+### math.gl grouped packages
+
+luma.gl now uses math.gl 5.0.0-alpha.19. Replace standalone math.gl dependencies
+with their grouped package roots: `@math.gl/types` becomes `@math.gl/core/types`,
+`@math.gl/polygon` becomes `@math.gl/geometry/polygon`, and CRS, projection, and
+GeoArrow imports move under `@math.gl/geospatial`. Sun imports move to
+`@math.gl/earth/sun`. Install the package root when using these subpaths.
+
+
 ### Scene controllers move to engine
 
 The glTF-prefixed skin, material-variant, billboard, area-light, audio, and interactivity runtime APIs have been removed from `@luma.gl/gltf`. Import `SkinController`, `MaterialVariants`, `BillboardController`, `AreaLightController`, `AudioController`, and `Interactivity` from `@luma.gl/engine` instead. Audio graph and environment helpers also belong to engine.

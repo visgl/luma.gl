@@ -4,12 +4,13 @@ import {expect, it} from 'vitest';
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {ParquetEncodedPageBatch} from '@loaders.gl/parquet';
-import {ParquetJSWriter} from '@loaders.gl/parquet';
+import {parse} from '@loaders.gl/core';
+import {ParquetJSWriter, ParquetLoader} from '@loaders.gl/parquet';
 import {ParquetSourceLoader} from '@loaders.gl/parquet/parquet-source-loader';
 import {planGPUParquetEncodedPageBatch} from '@luma.gl/gpgpu/gpu-parse';
 
-it('loaders.gl alpha.10 V1 and V2 pages produce mixed GPU batch plans', async () => {
-  expect(ParquetJSWriter.version, 'uses the requested loaders.gl release').toBe('5.0.0-alpha.11');
+it('loaders.gl alpha.12 V1 and V2 pages produce mixed GPU batch plans', async () => {
+  expect(ParquetJSWriter.version, 'uses the requested loaders.gl release').toBe('5.0.0-alpha.12');
 
   for (const useDataPageV2 of [false, true]) {
     const batch = await makeEncodedPageBatch(useDataPageV2);
@@ -329,6 +330,15 @@ async function makeEncodedPageBatch(useDataPageV2: boolean): Promise<ParquetEnco
     },
     {parquet: {dictionary: false, pageSize: 2, useDataPageV2}}
   );
+  const decoded = await parse(bytes, ParquetLoader, {
+    worker: false,
+    parquet: {shape: 'object-row-table'}
+  });
+  expect(decoded.data).toEqual([
+    {value: 1, label: 'alpha'},
+    {value: 2, label: 'beta'},
+    {value: 3, label: null}
+  ]);
   const source = ParquetSourceLoader.createDataSource(new Blob([bytes]), {});
   try {
     for await (const batch of source.readPages({preserveCompression: ['SNAPPY', 'LZ4_RAW']})) {

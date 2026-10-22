@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuProj.
 
-import type {PROJParameter, PROJStringAst} from '@math.gl/crs';
+import type {PROJParameter, PROJStringAst} from '@math.gl/geospatial/crs';
 import {invertProjectionProgram, type ProjectionOperation} from './projection-program';
 import {getConicParameters, type ConicOperation} from './projection-conic';
 

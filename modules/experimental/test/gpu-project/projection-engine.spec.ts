@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {createSpatialReference} from '@math.gl/crs';
+import {createSpatialReference} from '@math.gl/geospatial/crs';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {
   prepareCRSProjection,

@@ -9,7 +9,7 @@ import {
   ProjectionTransform,
   createProjectionDescriptor,
   mercator
-} from '@math.gl/projection';
+} from '@math.gl/geospatial/projection';
 import {
   planProjection,
   ProjectionPlanningError,

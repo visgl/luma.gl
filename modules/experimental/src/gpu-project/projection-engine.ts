@@ -3,10 +3,13 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuProj.
 
-import {projectionEngine} from '@math.gl/projection';
-import type {SpatialReference} from '@math.gl/crs';
-import type {CRSNormalizationOptions, TypeScriptCRSInput} from '@math.gl/projection/core';
-import type {ProjectionEngine, Projection} from '@math.gl/projection/types';
+import {projectionEngine} from '@math.gl/geospatial/projection';
+import type {SpatialReference} from '@math.gl/geospatial/crs';
+import type {
+  CRSNormalizationOptions,
+  TypeScriptCRSInput
+} from '@math.gl/geospatial/projection/core';
+import type {ProjectionEngine, Projection} from '@math.gl/geospatial/projection/types';
 import {prepareProjectionReferences} from './projection-crs-input';
 import {
   planProjection,

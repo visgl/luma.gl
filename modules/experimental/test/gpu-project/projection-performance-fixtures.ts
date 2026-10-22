@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {projectionEngine} from '@math.gl/projection';
+import {projectionEngine} from '@math.gl/geospatial/projection';
 import {
   planCRSProjection,
   createCRSProjectionCPUBenchmarks
@@ -114,7 +114,7 @@ export function makePerformanceOptions(
     position[1] >= bounds[1] &&
     position[0] <= bounds[2] &&
     position[1] <= bounds[3];
-  const providerLabel = '@math.gl/projection 5.0.0-alpha.15 TypeScript';
+  const providerLabel = '@math.gl/geospatial/projection 5.0.0-alpha.19 TypeScript';
   return {
     coordinates: makePerformanceCoordinates(bounds, rowCount),
     consumerCount,

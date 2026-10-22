@@ -33,7 +33,7 @@ for (const precision of ['double-single', 'local-f32'] as const) {
       const pending = runProjectionTableBenchmark(device, {
         transform,
         batches,
-        provider: '@math.gl/projection test',
+        provider: '@math.gl/geospatial/projection test',
         maximumError: precision === 'local-f32' ? 0.002 : 0.001,
         warmupIterations: 0,
         measuredIterations: 1
