@@ -197,10 +197,10 @@ describe('framework capabilities documentation', () => {
       },
       {
         heading: /GPU graph analytics and layout/i,
-        packageName: '@luma.gl/gpgpu/gpu-graph',
+        packageName: '@luma.gl/gpgpu/gpu-graph-algorithms',
         minimumRowCount: 5,
         capabilities: [
-          /GPUGraph/i,
+          /GPUGraphData/i,
           /\bCSR\b|compressed[\s-]+sparse/i,
           /breadth[\s-]+first|\bBFS\b/i,
           /connected[\s-]+components/i,

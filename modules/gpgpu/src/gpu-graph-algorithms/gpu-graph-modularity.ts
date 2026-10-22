@@ -7,7 +7,7 @@ import type {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import type {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUCommandGraph} from '../gpu-core/gpu-command-graph';
-import type {GPUGraph} from './gpu-graph';
+import type {GPUGraphData} from './gpu-graph';
 import {addGPUGraphModularityToGraphWithDispatchLimit} from './gpu-graph-modularity-internals';
 
 const SCALAR_BYTE_LENGTH = 4;
@@ -17,7 +17,7 @@ export type GPUGraphModularityProps = {
   /** Prefix for generated command-graph nodes and imported-resource identifiers. */
   id?: string;
   /** Original directed or undirected edge columns, including their preserved source chunks. */
-  graph: GPUGraph;
+  graph: GPUGraphData;
   /** One existing unsigned community label below `vertexCount` for every graph vertex. */
   communities: GPUVector<'uint32'>;
   /** One caller-owned floating-point Newman modularity score. */
@@ -48,7 +48,7 @@ export class GPUGraphModularity {
   /** Prefix for generated command-graph nodes and imported-resource identifiers. */
   readonly id: string;
   /** Existing caller-owned graph source columns. */
-  readonly graph: GPUGraph;
+  readonly graph: GPUGraphData;
   /** Existing caller-owned vertex-aligned community assignments. */
   readonly communities: GPUVector<'uint32'>;
   /** Caller-owned scalar receiving the floating-point modularity score. */

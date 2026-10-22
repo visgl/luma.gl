@@ -258,7 +258,7 @@ describe('GPU module documentation contract', () => {
         documentation: 'docs/api-reference/experimental'
       },
       {
-        source: 'modules/gpgpu/src/gpu-graph/index.ts',
+        source: 'modules/gpgpu/src/gpu-graph-algorithms/index.ts',
         documentation: 'docs/api-reference/experimental'
       },
       {

@@ -4,11 +4,15 @@
 
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
-import {GPUGraph, GPUGraphTopology, type GPUGraphAdjacency} from '@luma.gl/gpgpu/gpu-graph';
+import {
+  GPUGraphData,
+  GPUGraphTopology,
+  type GPUGraphAdjacency
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it} from 'vitest';
-import {addGPUGraphTopologyToGraphWithDispatchLimit} from '../../src/gpu-graph/gpu-graph-topology-internals';
+import {addGPUGraphTopologyToGraphWithDispatchLimit} from '../../src/gpu-graph-algorithms/gpu-graph-topology-internals';
 
 type ScalarFormat = 'uint32' | 'float32';
 type ScalarValues = Uint32Array | Float32Array;
@@ -58,7 +62,7 @@ type ExecutionFixture = {
   device: Device;
   buffers: Buffer[];
   vectors: GPUVector[];
-  graph: GPUGraph;
+  graph: GPUGraphData;
   topology: GPUGraphTopology;
   commandGraph: GPUCommandGraph;
   compiled?: ReturnType<GPUCommandGraph['compile']>;
@@ -324,7 +328,7 @@ function createExecutionFixture(
         scenario.edgeWeightChunks
       )
     : undefined;
-  const graph = new GPUGraph({
+  const graph = new GPUGraphData({
     vertexCount: scenario.vertexCount,
     sourceVertices,
     targetVertices,

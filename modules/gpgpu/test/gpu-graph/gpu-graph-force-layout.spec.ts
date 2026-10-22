@@ -5,18 +5,18 @@
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
-  GPUGraph,
+  GPUGraphData,
   GPUGraphForceLayout,
   GPUGraphTopology,
   type GPUGraphAdjacency
-} from '@luma.gl/gpgpu/gpu-graph';
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
 import {
   addGPUGraphForceLayoutToGraphWithDispatchLimit,
   getGPUGraphForceLayoutDispatchLayout
-} from '../../src/gpu-graph/gpu-graph-force-layout-internals';
+} from '../../src/gpu-graph-algorithms/gpu-graph-force-layout-internals';
 
 const PHYSICS_TOLERANCE = 1e-4;
 const MINIMUM_SQUARED_DISTANCE = 0.0001;
@@ -65,7 +65,7 @@ type LayoutExecutionFixture = {
   device: Device;
   buffers: Buffer[];
   vectors: GPUVector[];
-  graph: GPUGraph;
+  graph: GPUGraphData;
   topology: GPUGraphTopology;
   layout: GPUGraphForceLayout;
   commandGraph: GPUCommandGraph;
@@ -582,7 +582,7 @@ function createExecutionFixture(
       )
     : undefined;
   const directed = scenario.directed ?? true;
-  const graph = new GPUGraph({
+  const graph = new GPUGraphData({
     vertexCount: scenario.vertexCount,
     sourceVertices,
     targetVertices,

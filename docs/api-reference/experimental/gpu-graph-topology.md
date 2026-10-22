@@ -9,19 +9,19 @@ import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-
 
 <ExperimentalDocsTabs active="gpu-graph-topology" />
 
-## Describe existing relationships with GPUGraph
+## Describe existing relationships with GPUGraphData
 
 **Question: Which existing GPU columns describe the people, accounts, services, or documents in
 this network?**
 
-`GPUGraph` is the ownership-preserving entry point. Construct it when an application already has
+`GPUGraphData` is the ownership-preserving entry point. Construct it when an application already has
 aligned `GPUVector<'uint32'>` source and target identifiers and knows how many vertices exist,
 including isolated vertices that never appear in an edge.
 
 ```ts
-import {GPUGraph} from '@luma.gl/gpgpu/gpu-graph';
+import {GPUGraphData} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 
-const graph = new GPUGraph({
+const graph = new GPUGraphData({
   vertexCount,
   sourceVertices,
   targetVertices,
@@ -54,7 +54,7 @@ only the accounts directly connected to account 42. Its CSR offset interval iden
 account's neighbors without asking each later analysis to rescan the entire edge list.
 
 ```ts
-import {GPUGraphTopology} from '@luma.gl/gpgpu/gpu-graph';
+import {GPUGraphTopology} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 
 const topology = new GPUGraphTopology({
   graph,
@@ -102,7 +102,7 @@ relationships does each vertex have? Use it to identify network hubs, size junct
 detect isolated accounts, or find unusually connected infrastructure and dependency nodes.
 
 ```ts
-import {GPUGraphDegree} from '@luma.gl/gpgpu/gpu-graph';
+import {GPUGraphDegree} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 
 const degree = new GPUGraphDegree({
   topology,

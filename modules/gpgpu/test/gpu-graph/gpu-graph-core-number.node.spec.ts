@@ -6,16 +6,16 @@ import {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import * as experimentalModule from '@luma.gl/experimental';
 import {
-  GPUGraph,
+  GPUGraphData,
   GPUGraphCoreNumber,
   GPUGraphTopology,
   type GPUGraphAdjacency,
   type GPUGraphCoreNumberProps
-} from '@luma.gl/gpgpu/gpu-graph';
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 import {afterEach, describe, expect, test, vi} from 'vitest';
-import {getGPUGraphCoreNumberDispatchLayout} from '../../src/gpu-graph/gpu-graph-core-number-internals';
+import {getGPUGraphCoreNumberDispatchLayout} from '../../src/gpu-graph-algorithms/gpu-graph-core-number-internals';
 
 type ScalarFormat = 'uint32' | 'float32';
 type ScalarValues = Uint32Array | Float32Array;
@@ -42,7 +42,7 @@ afterEach(() => {
 });
 
 describe('GPUGraphCoreNumber optional graph-analysis API', () => {
-  test('exports GPU k-core decomposition only from the optional GPUGraph subpath', () => {
+  test('exports GPU k-core decomposition only from the optional GPUGraphData subpath', () => {
     expect(typeof GPUGraphCoreNumber).toBe('function');
     expect('GPUGraphCoreNumber' in experimentalModule).toBe(false);
   });
@@ -278,7 +278,7 @@ function createCoreNumberProps(
       ])
     : undefined;
   const directed = options.directed ?? true;
-  const graph = new GPUGraph({
+  const graph = new GPUGraphData({
     vertexCount,
     sourceVertices,
     targetVertices,

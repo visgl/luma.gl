@@ -5,20 +5,20 @@
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
-  GPUGraph,
+  GPUGraphData,
   GPUGraphLabelPropagation,
   GPUGraphModularity,
   GPUGraphModularityOptimization,
   GPUGraphTopology,
   type GPUGraphAdjacency
-} from '@luma.gl/gpgpu/gpu-graph';
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
 import {
   addGPUGraphModularityOptimizationToGraphWithDispatchLimit,
   getGPUGraphModularityOptimizationDispatchLayout
-} from '../../src/gpu-graph/gpu-graph-modularity-optimization-internals';
+} from '../../src/gpu-graph-algorithms/gpu-graph-modularity-optimization-internals';
 
 const INVALID_COMMUNITY = 0xffffffff;
 const SCORE_TOLERANCE = 2e-5;
@@ -67,7 +67,7 @@ type OptimizationExecutionFixture = {
   device: Device;
   buffers: Buffer[];
   vectors: GPUVector[];
-  graph: GPUGraph;
+  graph: GPUGraphData;
   topology: GPUGraphTopology;
   optimization: GPUGraphModularityOptimization;
   commandGraph: GPUCommandGraph;
@@ -910,7 +910,7 @@ function createExecutionFixture(
     ? createInputVector(device, buffers, vectors, 'edge-weights', 'float32', scenario.weightChunks)
     : undefined;
   const directed = scenario.directed ?? true;
-  const graph = new GPUGraph({
+  const graph = new GPUGraphData({
     vertexCount: scenario.vertexCount,
     sourceVertices,
     targetVertices,

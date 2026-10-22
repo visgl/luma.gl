@@ -1,5 +1,19 @@
 # Upgrade Guide
 
+
+## GPU graph naming
+
+Graph analytics now use `@luma.gl/gpgpu/gpu-graph-algorithms` and the `GPUGraphData`
+container. Update imports from `@luma.gl/gpgpu/gpu-graph` and replace its `GPUGraph`
+constructor with `GPUGraphData` (`GPUGraphProps` becomes `GPUGraphDataProps`).
+The `gpu-graph` entry point now exposes execution graphs; graph analytics and benchmarks
+must use `gpu-graph-algorithms` and `gpu-graph-algorithms/benchmarks`.
+
+The execution scheduler is now `GPUGraph`, with compiled instances named `CompiledGPUGraph`,
+from `@luma.gl/gpgpu/gpu-graph` (also exported by `gpu-core`). `GPUCommandGraph` and `CompiledGPUCommandGraph` remain
+deprecated aliases of the same constructors. Existing scheduling option and result types
+retain their `GPUCommandGraph` prefixes.
+
 The upgrade guide lists breaking changes in each major and minor version of the luma.gl API, and provides information on how to update applications.
 
 Upgrade instructions assume that you are upgrading from the immediately previous release.

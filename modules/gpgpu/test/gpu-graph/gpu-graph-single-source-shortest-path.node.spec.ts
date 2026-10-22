@@ -6,17 +6,17 @@ import {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import * as experimentalModule from '@luma.gl/experimental';
 import {
-  GPUGraph,
+  GPUGraphData,
   GPUGraphSingleSourceShortestPath,
   GPUGraphTopology,
   type GPUGraphAdjacency,
   type GPUGraphSingleSourceShortestPathDirection,
   type GPUGraphSingleSourceShortestPathProps
-} from '@luma.gl/gpgpu/gpu-graph';
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 import {afterEach, describe, expect, test, vi} from 'vitest';
-import {getGPUGraphSingleSourceShortestPathDispatchLayout} from '../../src/gpu-graph/gpu-graph-single-source-shortest-path-internals';
+import {getGPUGraphSingleSourceShortestPathDispatchLayout} from '../../src/gpu-graph-algorithms/gpu-graph-single-source-shortest-path-internals';
 
 type ScalarFormat = 'uint32' | 'float32';
 type ScalarValues = Uint32Array | Float32Array;
@@ -43,7 +43,7 @@ afterEach(() => {
 });
 
 describe('GPUGraphSingleSourceShortestPath public GPU-resident API', () => {
-  test('exports weighted paths exclusively through the optional GPUGraph subpath', () => {
+  test('exports weighted paths exclusively through the optional GPUGraphData subpath', () => {
     expect(typeof GPUGraphSingleSourceShortestPath).toBe('function');
     expect('GPUGraphSingleSourceShortestPath' in experimentalModule).toBe(false);
   });
@@ -298,7 +298,7 @@ function createShortestPathProps(
         Float32Array.from([2, 4])
       ])
     : undefined;
-  const graph = new GPUGraph({
+  const graph = new GPUGraphData({
     vertexCount,
     sourceVertices,
     targetVertices,

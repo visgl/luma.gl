@@ -5,18 +5,18 @@
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
-  GPUGraph,
+  GPUGraphData,
   GPUGraphPageRank,
   GPUGraphTopology,
   type GPUGraphAdjacency
-} from '@luma.gl/gpgpu/gpu-graph';
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
 import {
   addGPUGraphPageRankToGraphWithDispatchLimit,
   getGPUGraphPageRankDispatchLayout
-} from '../../src/gpu-graph/gpu-graph-page-rank-internals';
+} from '../../src/gpu-graph-algorithms/gpu-graph-page-rank-internals';
 
 const SCORE_TOLERANCE = 2e-5;
 const NORMALIZATION_TOLERANCE = 5e-5;
@@ -55,7 +55,7 @@ type PageRankExecutionFixture = {
   device: Device;
   buffers: Buffer[];
   vectors: GPUVector[];
-  graph: GPUGraph;
+  graph: GPUGraphData;
   topology: GPUGraphTopology;
   pageRank: GPUGraphPageRank;
   commandGraph: GPUCommandGraph;
@@ -432,7 +432,7 @@ function createExecutionFixture(
       )
     : undefined;
   const directed = scenario.directed ?? true;
-  const graph = new GPUGraph({
+  const graph = new GPUGraphData({
     vertexCount: scenario.vertexCount,
     sourceVertices,
     targetVertices,

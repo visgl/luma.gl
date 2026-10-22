@@ -6,7 +6,7 @@ import {
   type GPUGraphBenchmarkDatasetKind,
   type GPUGraphBenchmarkPathReport,
   type GPUGraphBenchmarkReport
-} from '@luma.gl/gpgpu/gpu-graph/benchmarks';
+} from '@luma.gl/gpgpu/gpu-graph-algorithms/benchmarks';
 
 import {createDevice, useStore} from '../../react-luma/store/device-store';
 import {LiveBenchmarkPanel} from './live-benchmark-panel';

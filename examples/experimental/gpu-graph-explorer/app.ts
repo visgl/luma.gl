@@ -16,7 +16,7 @@ import {
   type GraphBufferUse
 } from '@luma.gl/gpgpu/gpu-core';
 import {
-  GPUGraph,
+  GPUGraphData,
   GPUGraphBreadthFirstSearch,
   GPUGraphConnectedComponents,
   GPUGraphDegree,
@@ -26,7 +26,7 @@ import {
   GPUGraphSpatialForceLayout,
   GPUGraphTopology,
   type GPUGraphAdjacency
-} from '@luma.gl/gpgpu/gpu-graph';
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
   ExamplePanelManager,
@@ -96,7 +96,7 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
   static props = {createFramebuffer: true, debug: true};
 
   readonly device: Device;
-  graph!: GPUGraph;
+  graph!: GPUGraphData;
   topology!: GPUGraphTopology;
   degree!: GPUGraphDegree;
   pageRank!: GPUGraphPageRank;
@@ -300,7 +300,7 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
       this.pointModeOverride ?? dataset.vertexCount >= GRAPH_EXPLORER_POINT_VERTEX_COUNT;
     const sourceVertices = this.createChunkedVector('source-vertices', dataset.sourceChunks);
     const targetVertices = this.createChunkedVector('target-vertices', dataset.targetChunks);
-    this.graph = new GPUGraph({
+    this.graph = new GPUGraphData({
       vertexCount: dataset.vertexCount,
       sourceVertices,
       targetVertices,

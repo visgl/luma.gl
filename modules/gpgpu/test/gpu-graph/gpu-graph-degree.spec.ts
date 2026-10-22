@@ -5,19 +5,19 @@
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
-  GPUGraph,
+  GPUGraphData,
   GPUGraphDegree,
   GPUGraphTopology,
   type GPUGraphAdjacency,
   type GPUGraphDegreeDirection
-} from '@luma.gl/gpgpu/gpu-graph';
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
 import {
   addGPUGraphDegreeToGraphWithDispatchLimit,
   getGPUGraphDegreeDispatchLayout
-} from '../../src/gpu-graph/gpu-graph-degree-internals';
+} from '../../src/gpu-graph-algorithms/gpu-graph-degree-internals';
 
 type ScalarFormat = 'uint32' | 'float32';
 
@@ -47,7 +47,7 @@ type DegreeExecutionFixture = {
   device: Device;
   buffers: Buffer[];
   vectors: GPUVector[];
-  graph: GPUGraph;
+  graph: GPUGraphData;
   topology: GPUGraphTopology;
   degree: GPUGraphDegree;
   commandGraph: GPUCommandGraph;
@@ -295,7 +295,7 @@ function createExecutionFixture(
         scenario.weightChunks
       )
     : undefined;
-  const graph = new GPUGraph({
+  const graph = new GPUGraphData({
     vertexCount: scenario.vertexCount,
     sourceVertices,
     targetVertices,

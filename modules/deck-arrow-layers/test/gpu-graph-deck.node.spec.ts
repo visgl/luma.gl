@@ -12,7 +12,7 @@ import {
   GPUGraphNodeLayer
 } from '@deck.gl-community/arrow-layers';
 import * as experimentalModule from '@luma.gl/experimental';
-import * as gpuGraphModule from '@luma.gl/gpgpu/gpu-graph';
+import * as gpuGraphModule from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {describe, expect, test} from 'vitest';
 
 import {createGPUGraphExplorerDeck} from '../../../examples/deck/gpu-graph-explorer/app';
@@ -135,7 +135,7 @@ describe('GPU Graph native deck.gl resident layers', () => {
     expect(GRAPH_EXPLORER_MAX_VISIBLE_EDGES).toBe(65_536);
 
     const effectSource = readFileSync(
-      new URL('../src/gpu-graph/gpu-graph-effect.ts', import.meta.url),
+      new URL('../src/gpu-graph-algorithms/gpu-graph-effect.ts', import.meta.url),
       'utf8'
     );
     expect(effectSource).toContain('GPUGraphDegree');
@@ -170,8 +170,8 @@ describe('GPU Graph native deck.gl resident layers', () => {
 
   test('rebinds same-ID Deck node and edge models after replacing graph allocations', () => {
     for (const path of [
-      '../src/gpu-graph/gpu-graph-node-layer.ts',
-      '../src/gpu-graph/gpu-graph-edge-layer.ts'
+      '../src/gpu-graph-algorithms/gpu-graph-node-layer.ts',
+      '../src/gpu-graph-algorithms/gpu-graph-edge-layer.ts'
     ]) {
       const source = readFileSync(new URL(path, import.meta.url), 'utf8');
 
@@ -246,7 +246,7 @@ describe('GPU Graph native deck.gl resident layers', () => {
     expect(GPU_GRAPH_DECK_EDGE_SHADER).toContain('positions: array<vec2<f32>>');
 
     const effectSource = readFileSync(
-      new URL('../src/gpu-graph/gpu-graph-effect.ts', import.meta.url),
+      new URL('../src/gpu-graph-algorithms/gpu-graph-effect.ts', import.meta.url),
       'utf8'
     );
     expect(effectSource).toContain('this.device.commandEncoder');

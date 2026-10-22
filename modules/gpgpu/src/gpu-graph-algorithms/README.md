@@ -1,8 +1,8 @@
-# @luma.gl/gpgpu/gpu-graph
+# @luma.gl/gpgpu/gpu-graph-algorithms
 
 ## Overview
 
-The experimental `@luma.gl/gpgpu/gpu-graph` subpath analyzes connected data directly on a browser
+The experimental `@luma.gl/gpgpu/gpu-graph-algorithms` subpath analyzes connected data directly on a browser
 WebGPU device. Its
 optional, headless graph model preserves existing source and target vertex columns, stable edge
 identifiers, optional properties, and original GPU vector chunks without uploading or copying them.

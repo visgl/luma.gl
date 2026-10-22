@@ -21,7 +21,7 @@ backbone, whether a proposed community grouping is actually meaningful, how to i
 grouping, and which pages matter because other important pages link to them. Vertices represent
 those entities; edges represent their relationships.
 
-`@luma.gl/gpgpu/gpu-graph` answers these questions directly on a browser WebGPU device. It
+`@luma.gl/gpgpu/gpu-graph-algorithms` answers these questions directly on a browser WebGPU device. It
 describes caller-owned GPU edge columns, builds reusable compressed adjacency, and publishes vertex
 degrees, unweighted shortest-path neighborhoods, weighted least-cost routes, weakly connected
 groups, densely connected communities, per-vertex local clustering, structural core numbers,
@@ -237,7 +237,7 @@ import benchmark-only datasets, CPU references, or measurement code:
 import {
   makeGPUGraphBenchmarkDataset,
   runGPUGraphBenchmark
-} from '@luma.gl/gpgpu/gpu-graph/benchmarks';
+} from '@luma.gl/gpgpu/gpu-graph-algorithms/benchmarks';
 
 const dataset = makeGPUGraphBenchmarkDataset({kind: 'scale-free', vertexCount: 128, seed: 42});
 const report = await runGPUGraphBenchmark(device, {
@@ -362,7 +362,7 @@ published Graphalytics score. Use it to inspect real bounded CPU/GPU runs on you
 
 | Operation | Question it answers | GPU result | Typical bounded work |
 | --- | --- | --- | --- |
-| `GPUGraph` | Which GPU columns describe the graph? | Borrowed graph metadata and original chunks | Metadata only; no GPU dispatch |
+| `GPUGraphData` | Which GPU columns describe the graph? | Borrowed graph metadata and original chunks | Metadata only; no GPU dispatch |
 | `GPUGraphTopology` | Which vertices are adjacent? | Forward and optional reverse compressed adjacency | `O(V + E)` |
 | `GPUGraphDegree` | How many relationships touch each vertex in one direction? | One `uint32` degree per vertex | `O(V)` after adjacency exists |
 | `GPUGraphCoreNumber` | Which vertices remain inside increasingly cohesive network backbones? | One `uint32` core number per vertex and an optional maximum | At most `O(K × sum(degree² × log(degree + 1)))` for `K` bounded rounds |

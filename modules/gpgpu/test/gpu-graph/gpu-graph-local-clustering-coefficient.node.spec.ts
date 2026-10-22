@@ -6,16 +6,16 @@ import {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import * as experimentalModule from '@luma.gl/experimental';
 import {
-  GPUGraph,
+  GPUGraphData,
   GPUGraphLocalClusteringCoefficient,
   GPUGraphTopology,
   type GPUGraphAdjacency,
   type GPUGraphLocalClusteringCoefficientProps
-} from '@luma.gl/gpgpu/gpu-graph';
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 import {afterEach, describe, expect, test, vi} from 'vitest';
-import {getGPUGraphLocalClusteringCoefficientDispatchLayout} from '../../src/gpu-graph/gpu-graph-local-clustering-coefficient-internals';
+import {getGPUGraphLocalClusteringCoefficientDispatchLayout} from '../../src/gpu-graph-algorithms/gpu-graph-local-clustering-coefficient-internals';
 
 type ScalarFormat = 'uint32' | 'float32';
 type ScalarValues = Uint32Array | Float32Array;
@@ -373,7 +373,7 @@ function createClusteringProps(
         Uint32Array.from([30, 40, 50])
       ])
     : undefined;
-  const graph = new GPUGraph({
+  const graph = new GPUGraphData({
     vertexCount,
     sourceVertices,
     targetVertices,

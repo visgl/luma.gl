@@ -3,20 +3,20 @@ import {ClientOnlyLiveExample} from '@site/src/components/docs/client-only-live-
 import {GPUExampleCard} from '@site/src/components/docs/gpu-example-card';
 import {GPUGraphExplorerExample} from '@site/src/examples';
 
-# GPU Graph
+# GPU Graph Algorithms
 
 <ExperimentalDocsTabs active="gpu-graph" />
 
 ## Overview
 
-`@luma.gl/gpgpu/gpu-graph` provides graph-data structures and algorithms that compose inside a
+`@luma.gl/gpgpu/gpu-graph-algorithms` provides graph-data structures and algorithms that compose inside a
 caller-owned `GPUCommandGraph`. It keeps adjacency, traversal frontiers, scores, partitions, and
 layouts GPU-resident so analysis can feed another analysis or a renderer without downloading the
 graph through JavaScript.
 
 ## When to use it
 
-Use GPU Graph for repeated analytics over a graph already stored on the GPU, especially when results
+Use GPU Graph Algorithms for repeated analytics over a graph already stored on the GPU, especially when results
 will drive filtering, styling, layout, or later graph operations. For a single small graph or an
 algorithm whose result is immediately needed on the CPU, a CPU graph library may be simpler.
 
@@ -24,7 +24,7 @@ algorithm whose result is immediately needed on the CPU, a CPU graph library may
 
 ```ts
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
-import {GPUGraph, GPUGraphPageRank, GPUGraphTopology} from '@luma.gl/gpgpu/gpu-graph';
+import {GPUGraphData, GPUGraphPageRank, GPUGraphTopology} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 
 const graph = new GPUCommandGraph({device, id: 'graph-analysis'});
 const topology = new GPUGraphTopology({device, graph, edges, vertexCount});
@@ -39,7 +39,7 @@ back. Operations contribute nodes and graph views only.
 
 ## Core concepts and data model
 
-- `GPUGraph` describes canonical vertex and edge identity.
+- `GPUGraphData` describes canonical vertex and edge identity.
 - `GPUGraphTopology` builds reusable adjacency views for algorithms that need neighbors.
 - Algorithms publish ordinary graph buffers and bounded status so their outputs compose.
 - Iterative operations expose capacity, convergence, and incomplete-result behavior explicitly.
@@ -68,7 +68,7 @@ back. Operations contribute nodes and graph views only.
 
 | Family | Operations |
 | --- | --- |
-| Graph and topology | `GPUGraph`, `GPUGraphTopology`, `GPUGraphDegree` |
+| Graph and topology | `GPUGraphData`, `GPUGraphTopology`, `GPUGraphDegree` |
 | Traversal and paths | `GPUGraphBreadthFirstSearch`, `GPUGraphSingleSourceShortestPath` |
 | Connectivity and communities | `GPUGraphConnectedComponents`, `GPUGraphCoreNumber`, `GPUGraphLabelPropagation`, `GPUGraphModularityOptimization` |
 | Metrics and ranking | `GPUGraphLocalClusteringCoefficient`, `GPUGraphModularity`, `GPUGraphPageRank` |

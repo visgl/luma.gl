@@ -2,14 +2,20 @@ import {GPUCoreDocsTabs} from '@site/src/components/docs/gpu-core-docs-tabs';
 import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-contract';
 import {GPUDataAnalysisExample} from '@site/src/examples';
 
-# GPUCommandGraph
+# GPUGraph
+
+
+Use `GPUGraph` and `CompiledGPUGraph` from `@luma.gl/gpgpu/gpu-graph` for execution scheduling.
+They are also exported by `@luma.gl/gpgpu/gpu-core`. The former names `GPUCommandGraph` and
+`CompiledGPUCommandGraph` remain aliases; option and result types retain their existing prefixes.
+Graph analytics live separately in `@luma.gl/gpgpu/gpu-graph-algorithms`, using `GPUGraphData`.
 
 <GPUCoreDocsTabs active="command-graph" />
 
 ## Overview
 
-`GPUCommandGraph<Parameters>` declares fixed-capacity WebGPU buffer and texture resources plus
-ordered compute, render, and copy nodes. `compile()` returns a `CompiledGPUCommandGraph` through the
+`GPUGraph<Parameters>` declares fixed-capacity WebGPU buffer and texture resources plus
+ordered compute, render, and copy nodes. `compile()` returns a `CompiledGPUGraph` through the
 legacy synchronous pipeline-creation path. `await compileAsync()` prepares independent pipelines in
 parallel where the backend supports it. Both forms return a graph that owns transient resources and
 node state but borrows every import. Render nodes can resolve multisampled attachments and consume
@@ -37,7 +43,7 @@ This example composes reduction, histogram, and grid-binning nodes in one reusab
 <GPUDataAnalysisExample embedded />
 
 ```ts
-const graph = new GPUCommandGraph<{time: number}>(device, {id: 'simulation'});
+const graph = new GPUGraph<{time: number}>(device, {id: 'simulation'});
 const source = graph.importBuffer(
   {id: 'source', byteLength: sourceBuffer.byteLength, usage: sourceBuffer.usage},
   sourceBuffer
@@ -66,7 +72,7 @@ console.log(encoding.stats.cpuEncodeTimeMilliseconds);
 
 A graph definition is mutable until `compile()` or `compileAsync()` is called. Compilation freezes the definition,
 infers a stable node order, plans transient allocation reuse, creates physical transients, and calls
-each node's `compile` callback once. The returned `CompiledGPUCommandGraph` can then be encoded
+each node's `compile` callback once. The returned `CompiledGPUGraph` can then be encoded
 repeatedly with different parameters and compatible imported-resource replacements.
 
 Prefer `compileAsync()` for WebGPU graphs with multiple shader pipelines. It begins every independent
@@ -95,7 +101,7 @@ Small algorithm libraries can implement the structural `GPUProgramPrimitive` int
 
 ```ts
 class GPUAlgorithm implements GPUProgramPrimitive {
-  getCommandNodes<Parameters>(graph: GPUCommandGraph<Parameters>): readonly GPUCommandNode<Parameters>[] {
+  getCommandNodes<Parameters>(graph: GPUGraph<Parameters>): readonly GPUCommandNode<Parameters>[] {
     const output = createTransientView(
       graph,
       'algorithm-output',
@@ -262,7 +268,7 @@ replace both role bindings when encoding later frames:
 
 ```ts
 import {Texture} from '@luma.gl/core';
-import {GPUCommandGraph, GPUTextureHistory} from '@luma.gl/gpgpu/gpu-core';
+import {GPUGraph, GPUTextureHistory} from '@luma.gl/gpgpu/gpu-core';
 
 const descriptor = {
   format: 'rgba16float' as const,
@@ -271,7 +277,7 @@ const descriptor = {
   usage: Texture.SAMPLE | Texture.STORAGE
 };
 const history = new GPUTextureHistory(device, {id: 'radiance', ...descriptor});
-const graph = new GPUCommandGraph(device, {id: 'temporal-renderer'});
+const graph = new GPUGraph(device, {id: 'temporal-renderer'});
 const previous = graph.importTexture(
   {id: 'previous-radiance', ...descriptor},
   history.previousTexture
@@ -420,7 +426,7 @@ A render node without graph-managed `attachments` can select an existing applica
 through its compiled executable's `getRenderPassProps()` callback:
 
 ```ts
-const graph = new GPUCommandGraph<{framebuffer: Framebuffer}>(device);
+const graph = new GPUGraph<{framebuffer: Framebuffer}>(device);
 
 graph.addRenderPass({
   id: 'present-offscreen',
@@ -585,7 +591,7 @@ const autotuner = new GPUCommandGraphAutotuner({
   adapter,
   profile: loadApplicationProfile(adapter.key)
 });
-const graph = new GPUCommandGraph(device, {autotuner});
+const graph = new GPUGraph(device, {autotuner});
 
 const selection = autotuner.selectKernel({
   operation: 'GPUScan',
@@ -712,7 +718,7 @@ Executable contexts expose `getBuffer()`, `getTexture()`, `getTextureView()`, an
 encodings and rebuilt when an imported texture is replaced. Non-default views over frame-scoped
 ordinary textures are refreshed for each frame ID; external textures never enter either cache.
 
-## `CompiledGPUCommandGraph`
+## `CompiledGPUGraph`
 
 ### `encode(commandEncoder, options)`
 

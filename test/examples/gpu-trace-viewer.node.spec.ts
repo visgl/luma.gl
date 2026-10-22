@@ -252,7 +252,7 @@ it('trace analytics cache identity includes scope and selection generation input
   ).toEqual([0, 100]);
 });
 
-it('GPU trace feature cards expose concrete GPUGraph and gpu-trace capabilities', () => {
+it('GPU trace feature cards expose concrete GPUGraphData and gpu-trace capabilities', () => {
   expect(GPU_CORE_FEATURE_CARDS.length, 'lists the GPU Core capability contract').toBe(17);
   expect(GPU_TRACE_FEATURE_CARDS.length, 'lists the GPU Trace capability contract').toBe(19);
   const graphHtml = getTraceFeatureCardsHtml(GPU_CORE_FEATURE_CARDS, 'GPU Core');

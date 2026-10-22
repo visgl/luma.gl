@@ -6,13 +6,13 @@ import {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import * as experimentalModule from '@luma.gl/experimental';
 import {
-  GPUGraph,
+  GPUGraphData,
   GPUGraphBreadthFirstSearch,
   GPUGraphTopology,
   type GPUGraphAdjacency,
   type GPUGraphBreadthFirstSearchDirection,
   type GPUGraphBreadthFirstSearchProps
-} from '@luma.gl/gpgpu/gpu-graph';
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 import {afterEach, describe, expect, test, vi} from 'vitest';
@@ -433,7 +433,7 @@ function createSearchProps(
         Uint32Array.from([30, 40, 50])
       ])
     : undefined;
-  const graph = new GPUGraph({
+  const graph = new GPUGraphData({
     vertexCount,
     sourceVertices,
     targetVertices,

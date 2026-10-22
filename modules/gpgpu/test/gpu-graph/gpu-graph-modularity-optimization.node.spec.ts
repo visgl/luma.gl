@@ -8,12 +8,12 @@ import {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import * as experimentalModule from '@luma.gl/experimental';
 import {
-  GPUGraph,
+  GPUGraphData,
   GPUGraphModularityOptimization,
   GPUGraphTopology,
   type GPUGraphAdjacency,
   type GPUGraphModularityOptimizationProps
-} from '@luma.gl/gpgpu/gpu-graph';
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 import {afterEach, describe, expect, test, vi} from 'vitest';
@@ -49,14 +49,17 @@ afterEach(() => {
 });
 
 describe('GPUGraphModularityOptimization optional graph-analysis contract', () => {
-  test('exports bounded modularity improvement only through the optional GPUGraph entry point', () => {
+  test('exports bounded modularity improvement only through the optional GPUGraphData entry point', () => {
     expect(typeof GPUGraphModularityOptimization).toBe('function');
     expect('GPUGraphModularityOptimization' in experimentalModule).toBe(false);
   });
 
   test('documents deterministic computed-gain ties without promising bitwise weighted stability', () => {
     const source = readFileSync(
-      new URL('../../src/gpu-graph/gpu-graph-modularity-optimization.ts', import.meta.url),
+      new URL(
+        '../../src/gpu-graph-algorithms/gpu-graph-modularity-optimization.ts',
+        import.meta.url
+      ),
       'utf8'
     );
     const normalizedSource = source.replace(/^\s*\*\s?/gm, ' ').replace(/\s+/g, ' ');
@@ -445,7 +448,7 @@ function createOptimizationProps(
       ])
     : undefined;
   const directed = options.directed ?? true;
-  const graph = new GPUGraph({
+  const graph = new GPUGraphData({
     vertexCount,
     sourceVertices,
     targetVertices,

@@ -19,7 +19,7 @@ buffers and typed arrays; the
 
 | Need | Start with |
 | --- | --- |
-| Portable lazy vector expressions on CPU, WebGL 2, or WebGPU | [`@luma.gl/gpgpu`](/docs/api-reference/gpgpu) |
+| Portable lazy vector expressions on CPU, WebGL 2, or WebGPU | [GPU Evaluations with GPUVectorEvaluator](/docs/api-guide/gpu/gpu-evaluations) |
 | Primitive GPU chunks, vectors, and memory formats | [`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/gpgpu/gpu-data) |
 | Batch-preserving GPU tables and schemas | [`@luma.gl/experimental/gpu-tables`](/docs/api-reference/experimental/gpu-tables) |
 | One explicit buffer or texture computation | [Engine compute helpers](/docs/api-guide/engine/transforms) |
@@ -53,6 +53,8 @@ intermediate evaluator results.
 - Choosing a command graph for a single simple operation that has no scheduling problem to solve.
 
 ## Next steps
+
+- [GPU Evaluations](/docs/api-guide/gpu/gpu-evaluations)
 
 - [GPU physics: background and architecture](/docs/api-guide/gpu/gpu-physics)
 

@@ -5,21 +5,21 @@
 import {readFileSync} from 'node:fs';
 
 import * as experimentalModule from '@luma.gl/experimental';
-import * as gpuGraphModule from '@luma.gl/gpgpu/gpu-graph';
-import * as benchmarkModule from '@luma.gl/gpgpu/gpu-graph/benchmarks';
+import * as gpuGraphModule from '@luma.gl/gpgpu/gpu-graph-algorithms';
+import * as benchmarkModule from '@luma.gl/gpgpu/gpu-graph-algorithms/benchmarks';
 import {
   makeGPUGraphBenchmarkDataset,
   type GPUGraphBenchmarkDatasetKind,
   type GPUGraphBenchmarkOptions,
   type GPUGraphBenchmarkPathReport
-} from '@luma.gl/gpgpu/gpu-graph/benchmarks';
+} from '@luma.gl/gpgpu/gpu-graph-algorithms/benchmarks';
 import {describe, expect, expectTypeOf, test} from 'vitest';
 
 import {
   evaluateGPUGraphBenchmarkShortestPath,
   prepareGPUGraphBenchmark,
   summarizeGPUGraphBenchmarkSamples
-} from '../../src/gpu-graph/gpu-graph-benchmark-data';
+} from '../../src/gpu-graph-algorithms/gpu-graph-benchmark-data';
 
 const DATASET_KINDS: GPUGraphBenchmarkDatasetKind[] = [
   'sparse',
@@ -452,7 +452,7 @@ describe('GPU Graph live documentation benchmark isolation', () => {
       'utf8'
     );
 
-    expect(component).toContain("from '@luma.gl/gpgpu/gpu-graph/benchmarks'");
+    expect(component).toContain("from '@luma.gl/gpgpu/gpu-graph-algorithms/benchmarks'");
     expect(component).toContain('<LiveBenchmarkPanel');
     expect(component).toContain('onRun={async () =>');
     expect(component).toContain("typeof navigator === 'undefined'");

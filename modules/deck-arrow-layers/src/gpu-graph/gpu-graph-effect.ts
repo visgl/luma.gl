@@ -10,7 +10,7 @@ import {
   type GPUCommandGraphEncoding
 } from '@luma.gl/gpgpu/gpu-core';
 import {
-  GPUGraph,
+  GPUGraphData,
   GPUGraphBreadthFirstSearch,
   GPUGraphConnectedComponents,
   GPUGraphDegree,
@@ -20,7 +20,7 @@ import {
   GPUGraphSpatialForceLayout,
   GPUGraphTopology,
   type GPUGraphAdjacency
-} from '@luma.gl/gpgpu/gpu-graph';
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 /** Caller-owned graph input preserving original edge partitions and vertex allocations. */
 export type GPUGraphDeckDataset = {
@@ -108,7 +108,7 @@ export class GPUGraphDeckEffect implements Effect {
   readonly useInPicking = false;
   readonly device: Device;
   readonly dataset: GPUGraphDeckDataset;
-  readonly graph: GPUGraph;
+  readonly graph: GPUGraphData;
   readonly topology: GPUGraphTopology;
   readonly degree: GPUGraphDegree;
   readonly pageRank: GPUGraphPageRank;
@@ -187,7 +187,7 @@ export class GPUGraphDeckEffect implements Effect {
       Math.floor(options.maxVisibleEdges ?? GPU_GRAPH_DECK_MAX_VISIBLE_EDGES)
     );
 
-    this.graph = new GPUGraph({
+    this.graph = new GPUGraphData({
       vertexCount: dataset.vertexCount,
       directed: true,
       sourceVertices: this.createChunkedVector('source-vertices', dataset.sourceChunks),

@@ -5,11 +5,11 @@
 import {Buffer} from '@luma.gl/core';
 import * as experimentalModule from '@luma.gl/experimental';
 import {
-  GPUGraph,
+  GPUGraphData,
   GPUGraphTopology,
   type GPUGraphAdjacency,
   type GPUGraphTopologyProps
-} from '@luma.gl/gpgpu/gpu-graph';
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 import {afterEach, describe, expect, test, vi} from 'vitest';
@@ -313,7 +313,7 @@ function createTopologyProps(
         Float32Array.from([1, 4, 8])
       ])
     : undefined;
-  const graph = new GPUGraph({
+  const graph = new GPUGraphData({
     vertexCount: 6,
     sourceVertices,
     targetVertices,

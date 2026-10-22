@@ -7,7 +7,7 @@ import {Buffer, type Device, type QuerySet} from '@luma.gl/core';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPUCommandGraph, type CompiledGPUCommandGraph} from '../gpu-core/gpu-command-graph';
 import {GPUGridIndex} from '../gpu-core/gpu-grid-index';
-import {GPUGraph} from './gpu-graph';
+import {GPUGraphData} from './gpu-graph';
 import {
   LU_GRAPH_BENCHMARK_BOUNDS,
   LU_GRAPH_BENCHMARK_FORCE_PROPS,
@@ -218,7 +218,7 @@ class GPUGraphBenchmarkResources {
   readonly dataset: GPUGraphBenchmarkDataset;
   readonly buffers: Buffer[] = [];
   readonly vectors: GPUVector[] = [];
-  readonly graph: GPUGraph;
+  readonly graph: GPUGraphData;
   readonly topology: GPUGraphTopology;
   readonly search: GPUGraphBreadthFirstSearch;
   readonly shortestPath: GPUGraphSingleSourceShortestPath;
@@ -236,7 +236,7 @@ class GPUGraphBenchmarkResources {
     const vertexCount = context.dataset.vertexCount;
     const edgeCount = context.dataset.edgeCount;
 
-    this.graph = new GPUGraph({
+    this.graph = new GPUGraphData({
       vertexCount,
       directed: true,
       sourceVertices: this.createChunkedVector('sources', 'uint32', context.dataset.sourceChunks),

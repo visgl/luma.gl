@@ -74,7 +74,7 @@
       "api-guide/gpu/gpgpu",
       {
         "type": "category",
-        "label": "First computations",
+        "label": "Simple Computations",
         "items": [
           "tutorials/transform",
           "tutorials/transform-feedback"
@@ -82,12 +82,23 @@
       },
       {
         "type": "category",
-        "label": "GPU Command Graphs",
+        "label": "GPU Evaluations",
+        "items": [
+          "api-guide/gpu/gpu-evaluations",
+          "api-reference/gpgpu/gpu-data-evaluator",
+          "api-reference/gpgpu/operations",
+          "api-reference/gpgpu/clean-evaluate"
+        ]
+      },
+      {
+        "type": "category",
+        "label": "GPU Graph",
         "items": [
           "api-reference/experimental/gpu-core/concepts",
           "api-reference/experimental/gpu-core/webgpu-foundations",
           "api-reference/experimental/gpu-core/execution-techniques",
-          "api-guide/gpu/batch-semantics"
+          "api-guide/gpu/batch-semantics",
+          "api-reference/experimental/gpu-core/debugging"
         ]
       },
       {
@@ -260,7 +271,6 @@
     "label": "Debugging and Performance",
     "items": [
       "developer-guide/debugging",
-      "api-reference/experimental/gpu-core/debugging",
       "developer-guide/profiling",
       "developer-guide/bundling"
     ]
@@ -644,7 +654,7 @@
           "api-reference/experimental/gpu-timeseries",
           {
             "type": "category",
-            "label": "GPU Graph",
+            "label": "GPU Graph Algorithms",
             "items": [
               "api-reference/experimental/gpu-graph",
               "api-reference/experimental/gpu-graph-operations",
@@ -839,10 +849,7 @@
               "api-reference/gpgpu/gpu-vector-format"
             ]
           },
-          "api-reference/gpgpu/gpu-data-evaluator",
-          "api-reference/gpgpu/operations",
-          "api-reference/gpgpu/custom-operation",
-          "api-reference/gpgpu/clean-evaluate"
+          "api-reference/gpgpu/custom-operation"
         ]
       },
       {

@@ -10,7 +10,7 @@ import {
   type GPUGraphBenchmarkDatasetKind,
   type GPUGraphBenchmarkDistribution,
   type GPUGraphBenchmarkReport
-} from '@luma.gl/gpgpu/gpu-graph/benchmarks';
+} from '@luma.gl/gpgpu/gpu-graph-algorithms/benchmarks';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
 

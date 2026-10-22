@@ -7,7 +7,7 @@ import type {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import type {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUCommandGraph} from '../gpu-core/gpu-command-graph';
-import type {GPUGraph} from './gpu-graph';
+import type {GPUGraphData} from './gpu-graph';
 import {addGPUGraphTopologyToGraphWithDispatchLimit} from './gpu-graph-topology-internals';
 
 const MAXIMUM_UINT32 = 0xffffffff;
@@ -34,7 +34,7 @@ export type GPUGraphTopologyProps = {
   /** Prefix for generated command-graph nodes and graph-owned transient resources. */
   id?: string;
   /** Existing graph columns, preserving all source chunk boundaries and metadata. */
-  graph: GPUGraph;
+  graph: GPUGraphData;
   /** Caller-owned forward adjacency and capacity status. */
   forward: GPUGraphAdjacency;
   /** Optional caller-owned transposed adjacency for directed graphs. */
@@ -54,7 +54,7 @@ export class GPUGraphTopology {
   /** Prefix for generated command-graph nodes and graph-owned transient resources. */
   readonly id: string;
   /** Existing caller-owned graph sources. */
-  readonly graph: GPUGraph;
+  readonly graph: GPUGraphData;
   /** Caller-owned compressed forward adjacency. */
   readonly forward: GPUGraphAdjacency;
   /** Optional caller-owned compressed reverse adjacency. */
@@ -105,7 +105,7 @@ export class GPUGraphTopology {
 }
 
 /** Requires caller-owned contiguous packed destinations with matching status and capacities. */
-function validateAdjacency(graph: GPUGraph, adjacency: GPUGraphAdjacency, name: string): void {
+function validateAdjacency(graph: GPUGraphData, adjacency: GPUGraphAdjacency, name: string): void {
   validateTopologyVector(adjacency.offsets, 'uint32', `${name} offsets`);
   validateTopologyVector(adjacency.neighbors, 'uint32', `${name} neighbors`);
   validateTopologyVector(adjacency.edgeIds, 'uint32', `${name} edgeIds`);

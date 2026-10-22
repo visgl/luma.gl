@@ -26,7 +26,7 @@ const graphOperationsDocumentation = [
   .join('\n');
 const graphDocumentation = `${graphOverviewDocumentation}\n${graphOperationsDocumentation}`;
 const packageDocumentation = readFileSync(
-  new URL('../../modules/gpgpu/src/gpu-graph/README.md', import.meta.url),
+  new URL('../../modules/gpgpu/src/gpu-graph-algorithms/README.md', import.meta.url),
   'utf8'
 );
 const experimentalOverview = readFileSync(
@@ -67,7 +67,7 @@ describe('GPU Graph GPU-resident graph analytics documentation', () => {
     expect(experimentalTabs).toContain("href: '/docs/api-reference/experimental/gpu-graph'");
     expect(experimentalOverview).toContain('### GPU Core and GPU analytics');
     expect(experimentalOverview).toContain(
-      '| [`@luma.gl/gpgpu/gpu-graph`](/docs/api-reference/experimental/gpu-graph) |'
+      '| [`@luma.gl/gpgpu/gpu-graph-algorithms`](/docs/api-reference/experimental/gpu-graph) |'
     );
     expect(experimentalOverview).toContain('/docs/api-reference/experimental/gpu-graph');
     expect(packageDocumentation).toContain('/docs/api-reference/experimental/gpu-graph');
@@ -193,7 +193,7 @@ describe('GPU Graph GPU-resident graph analytics documentation', () => {
     expect(graphDocumentation).toContain('label-propagation communities');
     expect(graphDocumentation).toContain('six Graphalytics workload families');
     expect(graphDocumentation).toContain('not\nmillion-vertex benchmarks');
-    expect(graphDocumentation).toContain("from '@luma.gl/gpgpu/gpu-graph/benchmarks';");
+    expect(graphDocumentation).toContain("from '@luma.gl/gpgpu/gpu-graph-algorithms/benchmarks';");
     expect(graphDocumentation).toContain('makeGPUGraphBenchmarkDataset');
     expect(graphDocumentation).toContain('await runGPUGraphBenchmark(device, {');
   });
@@ -246,7 +246,7 @@ describe('GPU Graph GPU-resident graph analytics documentation', () => {
 
   test('introduces every available operation and composes its actual optional entry point', () => {
     for (const graphOperation of [
-      'GPUGraph',
+      'GPUGraphData',
       'GPUGraphTopology',
       'GPUGraphDegree',
       'GPUGraphCoreNumber',
@@ -286,7 +286,7 @@ describe('GPU Graph GPU-resident graph analytics documentation', () => {
     expect(packageDocumentation).toContain('## Weighted routes and local neighborhoods');
     expect(packageDocumentation).toContain('## Durable cores and community quality');
     expect(packageDocumentation).toContain('flat-grid approximation');
-    expect(graphDocumentation).toContain("from '@luma.gl/gpgpu/gpu-graph';");
+    expect(graphDocumentation).toContain("from '@luma.gl/gpgpu/gpu-graph-algorithms';");
     expect(graphDocumentation).toContain('topology.addToGraph(workflow);');
     expect(graphDocumentation).toContain('const compiled = workflow.compile();');
     expect(graphDocumentation).toContain('compiled.encode(encoder, {parameters: undefined});');
