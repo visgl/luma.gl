@@ -22,3 +22,7 @@ scene bundle and feature controllers when replacing a model or finalizing the ap
 The lightmap preset loads the pinned MIT Cornell Box (709 KB). Its baked irradiance is shown without additional runtime lights.
 
 The area-light preset loads The Modern Living Room by Wig42 (CC BY 3.0), with conversion credit to Benedikt Bitterli and Foundation Resources. Geometry and textures stay in the source repository; the viewer routes Git LFS payloads through its media host.
+
+### Scatter reference
+
+Use `?feature=scatter` for the upstream Scatter Strength Thin-Walled asset, pinned to KhronosGroup/glTF-Sample-Assets revision 24871201ac46cf1c23882eda4562bfb993b88ff0. The Model, Info, and Attributions tabs separate selection, explanation, and CC BY 4.0 credits. This exercises real scalar and secondary-UV textured scatter strength. Volumetric mode is not implemented.

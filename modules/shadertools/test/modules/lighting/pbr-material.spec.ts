@@ -147,7 +147,8 @@ const EXPECTED_UNIFORM_BUFFER_LAYOUT = {
   lightmapMapEnabled: {offset: 424, size: 1},
   lightmapIntensity: {offset: 425, size: 1},
   lightmapUVSet: {offset: 426, size: 1},
-  lightmapUVTransform: {offset: 428, size: 12}
+  lightmapUVTransform: {offset: 428, size: 12},
+  scatterStrengthFactor: {offset: 440, size: 1}
 };
 
 const EXPECTED_UNIFORM_NAMES = Object.keys(EXPECTED_UNIFORM_BUFFER_LAYOUT);
@@ -356,7 +357,7 @@ it('shadertools#pbrMaterial uniform buffer layout matches expected std140 packin
   const shaderBlockLayout = makeShaderBlockLayout(pbrMaterial.uniformTypes);
 
   expect(shaderBlockLayout.byteLength, 'uniform buffer layout reports the exact packed size').toBe(
-    1760
+    1776
   );
   expect(
     Object.keys(shaderBlockLayout.fields),
@@ -384,11 +385,11 @@ it('shadertools#pbrMaterial uniform store reports minimum allocation size separa
   expect(
     uniformStore.getUniformBufferByteLength('material'),
     'uniform store keeps the minimum allocation size'
-  ).toBe(1760);
+  ).toBe(1776);
   expect(
     uniformStore.getUniformBufferData('material').byteLength,
     'uniform store serializes only the packed block data'
-  ).toBe(1760);
+  ).toBe(1776);
 
   void 0;
 });

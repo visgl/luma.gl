@@ -126,6 +126,7 @@ export type PBRMaterialUniforms = {
 
   emissiveStrength?: number;
   lightmapIntensity?: number;
+  scatterStrengthFactor?: number;
 
   baseColorUVSet?: number;
   baseColorUVTransform?: Readonly<NumberArray9 | Matrix3>;
@@ -261,6 +262,7 @@ export const pbrMaterial = {
 
     emissiveStrength: 1,
     lightmapIntensity: 1,
+    scatterStrengthFactor: 0,
     dispersion: 0,
 
     baseColorUVSet: 0,
@@ -507,6 +509,7 @@ export const pbrMaterial = {
     lightmapMapEnabled: 'i32',
     lightmapIntensity: 'f32',
     lightmapUVSet: 'i32',
-    lightmapUVTransform: 'mat3x3<f32>'
+    lightmapUVTransform: 'mat3x3<f32>',
+    scatterStrengthFactor: 'f32'
   }
 } as const satisfies ShaderModule<PBRMaterialProps, PBRMaterialUniforms, PBRMaterialBindings>;

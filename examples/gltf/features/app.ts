@@ -24,6 +24,7 @@ import {
   INFO_HTML,
   LIGHTMAP_INFO_HTML,
   AREA_LIGHT_INFO_HTML,
+  SCATTER_INFO_HTML,
   showError,
   showLoadingSpinner
 } from './app-ui';
@@ -32,6 +33,15 @@ import {GLTF_FEATURE_PRESETS, type GLTFFeature} from './presets';
 
 import {AREA_LIGHT_DEMO_URL} from './area-light-demo';
 import {AreaLightOutlines} from './area-light-outlines';
+import {BoxPanelContainer, ColumnPanel, PanelManager} from '@deck.gl-community/panels';
+import {
+  configurePanelHostElement,
+  makeExampleTabbedPanel,
+  makeHtmlCustomPanel
+} from '../../example-panels';
+import {applyExampleTheme} from '../../example-theme';
+import '../gltf-example-panel.css';
+import './scatter-panel.css';
 
 const MAX_CAMERA_TILT = 0.6;
 const CAMERA_TILT_HEIGHT_FACTOR = 0.35;
@@ -62,6 +72,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
   static getInfo(feature: GLTFFeature): string {
+    if (feature === 'scatter') return SCATTER_INFO_HTML;
     return feature === 'area-lights'
       ? AREA_LIGHT_INFO_HTML
       : feature === 'lightmap'
@@ -87,6 +98,111 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   cameraHeight = 0;
   sceneRadius = 1;
   isFinalized = false;
+  scatterPanelHost?: HTMLElement;
+  scatterPanelManager?: PanelManager;
+
+  private createScatterPanel(canvas: HTMLCanvasElement): void {
+    const host = document.createElement('aside');
+    host.className = 'gltf-example-panel gltf-scatter-panel';
+    host.dataset['theme'] = 'dark';
+    Object.assign(host.style, {
+      position: 'absolute',
+      inset: '12px',
+      pointerEvents: 'none',
+      zIndex: '2'
+    });
+    applyExampleTheme(host, 'cinematic');
+    const controls = document.createElement('div');
+    controls.className = 'scatter-model-controls';
+    const label = document.createElement('label');
+    label.textContent = 'Model ';
+    const selection = document.createElement('select');
+    selection.setAttribute('aria-label', 'Model');
+    for (const [value, title] of [['reference', 'Scatter Strength · Thin-Walled']]) {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = title;
+      selection.append(option);
+    }
+    selection.onchange = () => {
+      void this.loadGLTF();
+    };
+    label.append(selection);
+    controls.append(label);
+    const details = document.createElement('section');
+    details.className = 'gltf-example-details';
+    details.innerHTML =
+      '<p><strong>Scattering spreads light through a material.</strong> Instead of passing straight through like clear glass, transmitted light becomes diffuse—like paper, frosted plastic, or a leaf lit from behind.</p><p>This upstream thin-walled test compares two controls: <strong>transmission</strong>, how much light enters, and <strong>scatter strength</strong>, how much of that light is scattered. Look across the labeled shader balls to compare the scalar values and texture patterns.</p><p>Drag to orbit and scroll to zoom. This viewer uses direct lighting; its appearance is not a pixel match for the upstream environment-lit reference renders.</p>';
+    const attributions = document.createElement('section');
+    attributions.className = 'gltf-example-details';
+    attributions.innerHTML = SCATTER_INFO_HTML;
+    attributions.querySelector('#error')?.remove();
+    document.getElementById('info')?.remove();
+    const loadError = document.createElement('div');
+    loadError.id = 'error';
+    loadError.setAttribute('role', 'alert');
+    loadError.style.display = 'none';
+    canvas.parentElement?.append(host);
+    const mountContent = (root: HTMLElement, content: HTMLElement) => {
+      configurePanelHostElement(root, 'cinematic');
+      root.append(content);
+    };
+    const tabs = makeExampleTabbedPanel({
+      sourcePaths: ['gltf/features/app.ts'],
+      id: 'scatter-tabs',
+      title: '',
+      theme: 'dark',
+      panels: [
+        makeHtmlCustomPanel({
+          id: 'scatter-model',
+          title: 'Model',
+          html: '',
+          onRender: root => mountContent(root, controls)
+        }),
+        makeHtmlCustomPanel({
+          id: 'scatter-info',
+          title: 'Info',
+          html: '',
+          onRender: root => mountContent(root, details)
+        }),
+        makeHtmlCustomPanel({
+          id: 'scatter-attributions',
+          title: 'Attributions',
+          html: '',
+          onRender: root => mountContent(root, attributions)
+        })
+      ]
+    });
+    const panel = new ColumnPanel({
+      id: 'scatter-content',
+      title: '',
+      theme: 'dark',
+      panels: [
+        makeHtmlCustomPanel({
+          id: 'scatter-load-error',
+          title: '',
+          html: '',
+          onRender: root => mountContent(root, loadError)
+        }),
+        tabs
+      ]
+    });
+    this.scatterPanelHost = host;
+    this.scatterPanelManager = new PanelManager({parentElement: host});
+    this.scatterPanelManager.setProps({
+      components: [
+        new BoxPanelContainer({
+          id: 'scatter-panel',
+          title: 'luma.gl · Material Scatter',
+          placement: 'top-left',
+          widthPx: 380,
+          collapsible: true,
+          defaultOpen: true,
+          panel
+        })
+      ]
+    });
+  }
 
   constructor(
     {device}: AnimationProps,
@@ -98,6 +214,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
     if (feature === 'area-lights') this.areaLightOutlines = new AreaLightOutlines(canvas);
+    if (feature === 'scatter') this.createScatterPanel(canvas);
     this.orbitControls = new OrbitControls(canvas, {
       distance: 2,
       yaw: feature === 'lightmap' ? 0 : Math.PI / 4,
@@ -116,6 +233,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onFinalize(): void {
+    this.scatterPanelManager?.finalize();
+    this.scatterPanelHost?.remove();
     this.isFinalized = true;
     this.loadGeneration++;
     showLoadingSpinner(this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement, false);
@@ -271,10 +390,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.center = [...sceneBounds.center];
       this.sceneRadius = sceneBounds.radius;
       this.cameraHeight =
-        this.center[1] + (this.feature === 'lightmap' ? 0 : this.sceneRadius * 0.3);
+        this.center[1] +
+        (this.feature === 'lightmap' || this.feature === 'scatter' ? 0 : this.sceneRadius * 0.3);
       this.orbitControls.setProps({
         target: [this.center[0], this.cameraHeight, this.center[2]],
-        distance: sceneBounds.recommendedOrbitDistance * (this.feature === 'lightmap' ? 2 : 1),
+        distance:
+          sceneBounds.recommendedOrbitDistance *
+          (this.feature === 'lightmap' ? 2 : this.feature === 'scatter' ? 1.65 : 1),
         minDistance: Math.max(this.sceneRadius * 0.08, 0.025),
         maxDistance: Math.max(this.sceneRadius * 32, 12)
       });
@@ -319,6 +441,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onRender({aspect, device, time}: AnimationProps): void {
+    this.scatterPanelManager?.onRedraw({viewports: [], layers: []});
     const renderPass = device.beginRenderPass({clearColor: this.getClearColor(), clearDepth: 1});
 
     if (!this.scenegraphsFromGLTF?.scenes?.length) {

@@ -54,6 +54,7 @@ export type GLTFMaterialAnimationProperty =
   | 'sheenColorFactor'
   | 'sheenRoughnessFactor'
   | 'scatterAnisotropy'
+  | 'scatterStrengthFactor'
   | 'specularColorFactor'
   | 'specularIntensityFactor'
   | 'thicknessFactor'

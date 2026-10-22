@@ -258,6 +258,12 @@ const GLTF_EXTENSION_SUPPORT_REGISTRY: Record<string, GLTFExtensionSupportDefini
     comment:
       'The canonical PBR shader separates red, green, and blue transmission using wavelength-dependent refraction.'
   },
+  KHR_materials_scatter: {
+    supportLevel: 'loader-only',
+    standardStatus: 'draft',
+    comment:
+      'Thin-wall rendering supports transmission-gated forward/backward diffuse scattering, alpha strength textures and sRGB scatter color. Volumetric mode is rejected; strict required-extension loading does not claim full draft conformance.'
+  },
   KHR_materials_volume_scatter: {
     supportLevel: 'parsed-and-wired',
     standardStatus: 'draft',

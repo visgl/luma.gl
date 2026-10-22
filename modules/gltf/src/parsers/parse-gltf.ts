@@ -63,6 +63,7 @@ type ParseGLTFInternalOptions = Required<ParseGLTFOptions> & {
   generatedTextures: Set<Texture>;
   materialInstances: Map<number, Material[]>;
   validateAttributes?: boolean;
+  materialResourcesOnly?: boolean;
   validateLightmapAttributes?: boolean;
 };
 
@@ -114,11 +115,14 @@ export function parseGLTF(
       parsedPPBRMaterial: parseOwnedPBRMaterial(
         device,
         gltfMaterial as any,
-        {},
+        // Shared material resources must include secondary-UV textures before any primitive is visited.
+        // The primitive pass below validates its actual texture-coordinate attributes.
+        {TEXCOORD_1: true},
         {
           ...combinedOptions,
           gltf,
-          validateAttributes: false
+          validateAttributes: false,
+          materialResourcesOnly: true
         }
       ),
       materialFactory

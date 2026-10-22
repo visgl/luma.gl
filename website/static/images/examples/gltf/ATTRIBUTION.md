@@ -10,3 +10,7 @@ These are upstream reference screenshots, not luma.gl render captures, from Khro
 Source and full credits: https://github.com/KhronosGroup/glTF-Sample-Assets/tree/15cd02d304e54cb42a4db4eefe719f76190f4b68/Models
 
 Licenses: https://creativecommons.org/licenses/by/4.0/ and https://creativecommons.org/publicdomain/zero/1.0/
+
+## Scatter reference render
+
+`../showcase/gltf-scatter.jpg` is an actual luma.gl WebGPU render of the original Scatter Strength Thin-Walled model at KhronosGroup/glTF-Sample-Assets revision 24871201ac46cf1c23882eda4562bfb993b88ff0. Model and textures: CC BY 4.0. Geometry and textures: Chris Rydalch; original specification and validation: André Mazzone; original scene, inspiration and consultation: Thomas Anagnostou; glTF conversion: Eric Chadwick. Source: https://github.com/KhronosGroup/glTF-Sample-Assets/tree/24871201ac46cf1c23882eda4562bfb993b88ff0/Models/ScatterStrengthThin-Walled

@@ -84,3 +84,5 @@ export function showLoadingSpinner(canvas: HTMLCanvasElement, loading: boolean):
     else animation.pause();
   }
 }
+
+export const SCATTER_INFO_HTML = `<p>Upstream Scatter Strength Thin-Walled: compare scattering strength and transmission factors and textures.</p><p>Geometry and textures: Chris Rydalch; specification and validation: André Mazzone; original scene and consultation: Thomas Anagnostou; glTF conversion: Eric Chadwick. <a href="https://github.com/KhronosGroup/glTF-Sample-Assets/tree/24871201ac46cf1c23882eda4562bfb993b88ff0/Models/ScatterStrengthThin-Walled">Source · CC BY 4.0</a>.</p><div id="error"></div>`;
