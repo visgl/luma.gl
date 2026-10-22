@@ -43,6 +43,7 @@ export type GLTFViewerOptions = {
   animate?: boolean;
   materialVariant?: string;
   onLoad?: (scenegraphs: ReturnType<typeof createScenegraphsFromGLTF>) => void;
+  onUnload?: (scenegraphs: ReturnType<typeof createScenegraphsFromGLTF>) => void;
 };
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
@@ -83,9 +84,20 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.isFinalized = true;
     this.orbitControls.destroy();
 
-    destroyScenegraphs(this.scenegraphsFromGLTF);
+    this.releaseScenegraphs();
+  }
+
+  private releaseScenegraphs(): void {
+    const scenegraphs = this.scenegraphsFromGLTF;
     this.scenegraphsFromGLTF = undefined;
     this.modelLights = [];
+    try {
+      if (scenegraphs) {
+        this.viewerOptions.onUnload?.(scenegraphs);
+      }
+    } finally {
+      destroyScenegraphs(scenegraphs);
+    }
   }
 
   getClearColor(): Color {
@@ -114,7 +126,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         return;
       }
 
-      destroyScenegraphs(this.scenegraphsFromGLTF);
+      this.releaseScenegraphs();
       this.scenegraphsFromGLTF = scenegraphsFromGLTF;
       this.modelLights = scenegraphsFromGLTF.lights;
       if (this.viewerOptions.materialVariant) {

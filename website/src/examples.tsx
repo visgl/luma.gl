@@ -911,7 +911,11 @@ export const GLTFModelExample: React.FC<
             super(animationProps, {
               modelUrl,
               animate,
-              onLoad: loadedScenegraphs => setLoadedModel({modelUrl, scenegraphs: loadedScenegraphs})
+              onLoad: loadedScenegraphs => setLoadedModel({modelUrl, scenegraphs: loadedScenegraphs}),
+              onUnload: unloadedScenegraphs =>
+                setLoadedModel(current =>
+                  current?.scenegraphs === unloadedScenegraphs ? null : current
+                )
             });
           }
         }
