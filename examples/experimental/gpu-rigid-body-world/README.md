@@ -86,3 +86,24 @@ excursions and sustained end-ball swings. A local WebGPU run at 480 Hz completed
 0.6% of the initial value, and a 1.45 m end-ball excursion in the final ten seconds.
 These are bounded regression measurements, not a guarantee of indefinitely lossless
 or perfectly periodic motion.
+
+### Cradle rendering
+
+The cradle uses a retained `GroupNode` / `ModelNode` scenegraph with shared PBR
+materials for the frame, steel balls, tabletop and tethers. The example's pose
+shader reads the physics world's position and orientation buffers directly; it
+never copies moving body transforms back to the CPU. Authored node matrices define
+static placement and the local geometry scale. Tethers read both GPU endpoints.
+The same pose shader drives the shared `ShadowMapRenderer` caster passes, so shadows
+follow the simulated bodies. These render bindings borrow the world's buffers.
+
+The stone uses normal and metallic/roughness maps. Image-based lighting is prepared
+by `PBREnvironmentGenerator`. The steel uses a local reflection probe that captures
+the static tabletop and frame against a bright reflection backdrop once when the
+scene is created. This illumination is independent of the visible charcoal background.
+This shared probe approximates reflections across the five balls; it does not
+include other moving balls or update parallax as each ball swings. The other
+materials retain studio environment fill. One elevated spotlight supplies direct
+lighting and a matching spotlight shadow map. The scenegraph's CPU bounds do not track GPU motion, so
+this example does not use CPU frustum culling or CPU picking for moving nodes.
+Rendering uses at least two device pixels per CSS pixel for smoother silhouettes.
