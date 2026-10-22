@@ -4,9 +4,12 @@
 
 import type {GPURigidBody, GPURigidBodyJoint} from '@luma.gl/gpgpu/gpu-physics';
 
+import type {GroupNode} from '@luma.gl/engine';
+import {makeCradleFrame, makeCradleFrameBodies} from './cradle-geometry';
+
 export function makeMechanism(
   scene: string
-): {bodies: GPURigidBody[]; joints: GPURigidBodyJoint[]} | null {
+): {bodies: GPURigidBody[]; joints: GPURigidBodyJoint[]; frame?: GroupNode} | null {
   const anchor: GPURigidBody = {
     position: [0, 0, 4],
     mass: 0,
@@ -39,18 +42,15 @@ export function makeMechanism(
           position: [horizontal + 2.5 * Math.sin(angle), 0, 4 - 2.5 * Math.cos(angle)],
           mass: 1,
           shape: {type: 'sphere', radius: 0.4},
-          restitution: 1,
-          friction: 0
+          restitution: 0.985,
+          friction: 0.02
         }
       );
       joints.push({type: 'distance', first, second: first + 1, distance: 2.5});
     }
-    bodies.push({
-      position: [0, 0, 4.15],
-      mass: 0,
-      shape: {type: 'box', halfExtents: [2, 0.15, 0.08]}
-    });
-    return {bodies, joints};
+    const frame = makeCradleFrame();
+    bodies.push(...makeCradleFrameBodies(frame));
+    return {bodies, joints, frame};
   }
   if (scene === 'hinge')
     return {

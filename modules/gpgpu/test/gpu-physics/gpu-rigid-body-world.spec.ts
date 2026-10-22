@@ -486,3 +486,66 @@ it('GPURigidBodyWorld preserves world angular momentum for a freely tumbling asy
     fixture.destroy();
   }
 });
+
+it('GPURigidBodyWorld damping follows elapsed time and leaves kinematic motion unchanged', async context => {
+  for (const timeStep of [1 / 60, 1 / 120]) {
+    const simulation = await makeWorld(
+      [
+        {
+          position: [0, 0, 0],
+          shape: {type: 'sphere', radius: 0.2},
+          velocity: [2, 0, 0],
+          angularVelocity: [0, 0, 3]
+        },
+        {
+          position: [0, 10, 0],
+          mode: 'kinematic',
+          shape: {type: 'sphere', radius: 0.2},
+          velocity: [2, 0, 0]
+        }
+      ],
+      {timeStep, linearDamping: 0.8, angularDamping: 1.2}
+    );
+    if (!simulation) {
+      context.skip();
+      return;
+    }
+    try {
+      const state = await simulation.step(Math.round(1 / timeStep));
+      expect(state[0].velocity[0]).toBeCloseTo(2 * Math.exp(-0.8), 3);
+      expect(state[0].angularVelocity[2]).toBeCloseTo(3 * Math.exp(-1.2), 3);
+      expect(state[1].velocity[0]).toBe(2);
+    } finally {
+      simulation.destroy();
+    }
+  }
+});
+
+it('GPURigidBodyWorld rebounds a sphere from the authored cradle post', async context => {
+  const {makeCradleFrame, makeCradleFrameBodies} = await import(
+    '../../../../examples/experimental/gpu-rigid-body-world/cradle-geometry'
+  );
+  const simulation = await makeWorld(
+    [
+      {
+        position: [3.3, 0, 1.95],
+        velocity: [2, 0, 0],
+        shape: {type: 'sphere', radius: 0.4},
+        restitution: 0.985
+      },
+      ...makeCradleFrameBodies(makeCradleFrame())
+    ],
+    {timeStep: 1 / 480, solver: 'ordered', iterations: 8}
+  );
+  if (!simulation) {
+    context.skip();
+    return;
+  }
+  try {
+    const state = await simulation.step(120);
+    expect(state[0].position[0]).toBeLessThan(3.51);
+    expect(state[0].velocity[0]).toBeLessThan(0);
+  } finally {
+    simulation.destroy();
+  }
+});

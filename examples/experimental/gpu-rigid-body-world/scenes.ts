@@ -12,7 +12,7 @@ export const RIGID_BODY_SCENES = {
   cradle: {
     title: "Mechanisms · Newton's cradle",
     description:
-      'Five equal-mass spheres hang from distance constraints. The raised end ball transfers momentum through nearly touching, frictionless balls with restitution one. Reset releases it again. This scene uses 480 Hz substeps and elastic low-speed contacts to resolve closely spaced impacts. Discrete contacts and iterative constraints introduce numerical loss; this is a solver demonstration, not perfectly lossless motion.'
+      'Five equal-mass spheres hang from distance constraints. The raised end ball transfers momentum through nearly touching, polished balls with slightly inelastic impacts. Reset releases it again. This scene uses 480 Hz substeps and low-speed contact settling to resolve closely spaced impacts. Gentle velocity damping models air and suspension losses. The stone frame has matching static colliders, so pushed balls rebound from it. The scene restarts after one simulated minute.'
   },
   pendulum: {
     title: 'Mechanisms · pendulum',

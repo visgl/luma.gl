@@ -77,7 +77,9 @@ try {
       failurePolicy: 'rollback',
       // Resolve the cradle's closely spaced elastic impacts before the next pair closes.
       timeStep: sceneName === 'cradle' ? 1 / 480 : 1 / 120,
-      ...(sceneName === 'cradle' ? {restitutionThreshold: 0} : {}),
+      ...(sceneName === 'cradle'
+        ? {restitutionThreshold: 0.05, linearDamping: 0.08, angularDamping: 0.12}
+        : {}),
       ...(sceneName === 'continuous' ? {continuous: {bodies: [0]}} : {}),
       iterations: Number(iterations.value),
       solver: solver.value === 'ordered' ? 'ordered' : 'parallel',
@@ -243,7 +245,7 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
     return {
       cradle:
         sceneName === 'cradle'
-          ? new CradleScene(device, world.positions!, world.orientations!)
+          ? new CradleScene(device, world.positions!, world.orientations!, mechanism!.frame!)
           : null,
       world,
       graph,
