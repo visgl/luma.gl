@@ -80,7 +80,7 @@
     "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
   },
   "dependencies": {
-    "@math.gl/types": "~5.0.0-alpha.15",
+    "@math.gl/core": "~5.0.0-alpha.19",
     "@types/offscreencanvas": "^2019.7.3",
     "@webgpu/types": "^0.1.69",
     "probe.gl": "^5.0.0"

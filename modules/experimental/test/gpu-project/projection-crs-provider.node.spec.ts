@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {describe, expect, it, vi} from 'vitest';
-import {projectionEngine, ProjectionTransform} from '@math.gl/projection';
+import {projectionEngine, ProjectionTransform} from '@math.gl/geospatial/projection';
 import {
   planCRSProjection,
   planProjectionPipeline,

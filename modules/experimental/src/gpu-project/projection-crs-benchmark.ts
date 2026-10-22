@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuProj.
 
-import {ProjectionBuffer} from '@math.gl/projection/bulk';
-import type {Projection} from '@math.gl/projection/types';
+import {ProjectionBuffer} from '@math.gl/geospatial/projection/bulk';
+import type {Projection} from '@math.gl/geospatial/projection/types';
 import type {ProjectionCoordinates} from './types';
 import type {ProjectionProgramCPUVariant} from './projection-program-cpu-benchmark';
 

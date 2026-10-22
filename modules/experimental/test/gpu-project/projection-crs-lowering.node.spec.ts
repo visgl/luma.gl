@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {describe, expect, it, vi} from 'vitest';
-import type {ReadonlyCRSDefinition} from '@math.gl/crs';
-import {projectionEngine, ProjectionTransform} from '@math.gl/projection';
+import type {ReadonlyCRSDefinition} from '@math.gl/geospatial/crs';
+import {projectionEngine, ProjectionTransform} from '@math.gl/geospatial/projection';
 import {
   evaluateProjectionProgram,
   invertProjectionProgram

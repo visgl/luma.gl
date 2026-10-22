@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {projectionEngine} from '@math.gl/projection';
+import {projectionEngine} from '@math.gl/geospatial/projection';
 import {planProjection, type ProjectionCoordinates} from '@luma.gl/experimental/gpu-project';
 import {runProjectionProgramBenchmark} from '@luma.gl/experimental/gpu-project/benchmarks';
 

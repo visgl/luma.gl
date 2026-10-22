@@ -104,23 +104,18 @@
     "@luma.gl/core": "10.0.0-alpha.3",
     "@luma.gl/engine": "10.0.0-alpha.3",
     "@luma.gl/shadertools": "10.0.0-alpha.3",
-    "@math.gl/crs": "~5.0.0-alpha.15",
-    "@math.gl/projection": "~5.0.0-alpha.15"
+    "@math.gl/geospatial": "~5.0.0-alpha.19"
   },
   "peerDependenciesMeta": {
-    "@math.gl/crs": {
-      "optional": true
-    },
-    "@math.gl/projection": {
+    "@math.gl/geospatial": {
       "optional": true
     }
   },
   "dependencies": {
-    "@loaders.gl/core": "~5.0.0-alpha.11",
-    "@loaders.gl/sql": "~5.0.0-alpha.11",
+    "@loaders.gl/core": "~5.0.0-alpha.12",
+    "@loaders.gl/sql": "~5.0.0-alpha.12",
     "@luma.gl/gpgpu": "10.0.0-alpha.4",
-    "@math.gl/core": "5.0.0-alpha.15",
-    "@math.gl/types": "~5.0.0-alpha.15"
+    "@math.gl/core": "~5.0.0-alpha.19"
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
 }

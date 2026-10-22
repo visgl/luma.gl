@@ -3,10 +3,13 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {describe, expect, it, vi} from 'vitest';
-import {createSpatialReference, type SpatialReference} from '@math.gl/crs';
-import {projectionEngine} from '@math.gl/projection';
-import {createProjectionDescriptor, createProjectionEngine} from '@math.gl/projection/core';
-import {mercator} from '@math.gl/projection/projections/merc';
+import {createSpatialReference, type SpatialReference} from '@math.gl/geospatial/crs';
+import {projectionEngine} from '@math.gl/geospatial/projection';
+import {
+  createProjectionDescriptor,
+  createProjectionEngine
+} from '@math.gl/geospatial/projection/core';
+import {mercator} from '@math.gl/geospatial/projection/projections/merc';
 import {
   prepareCRSProjection,
   prepareCRSProjectionAsync,

@@ -26,7 +26,7 @@ import {
   ShaderAssembler,
   WGSLShaderAssembler
 } from '@luma.gl/shadertools';
-import {type TypedArray, isNumericArray} from '@math.gl/types';
+import {type TypedArray, isNumericArray} from '@math.gl/core/types';
 import {ShaderInputs} from '../shader-inputs';
 import {
   mergeShaderModules,

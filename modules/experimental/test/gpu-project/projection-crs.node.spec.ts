@@ -4,8 +4,8 @@
 
 import {readFileSync} from 'node:fs';
 import {build} from 'esbuild';
-import {parsePROJString, type CRSDefinition} from '@math.gl/crs';
-import {projectionEngine} from '@math.gl/projection';
+import {parsePROJString, type CRSDefinition} from '@math.gl/geospatial/crs';
+import {projectionEngine} from '@math.gl/geospatial/projection';
 import {describe, expect, it, vi} from 'vitest';
 import {
   planCRSProjection,
@@ -67,7 +67,7 @@ describe('optional CRS planner', () => {
       readFileSync(new URL('../../package.json', import.meta.url), 'utf8')
     );
     expect(packageJson.exports['./gpu-project/crs'].types).toBe('./dist/gpu-project/crs.d.ts');
-    expect(packageJson.peerDependenciesMeta['@math.gl/projection'].optional).toBe(true);
+    expect(packageJson.peerDependenciesMeta['@math.gl/geospatial'].optional).toBe(true);
   });
 
   it('lowers a public math.gl AST with signed axes, unit changes, and inverse affine stages', () => {

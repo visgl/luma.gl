@@ -4,7 +4,7 @@
 
 import type {Binding, CompositeShaderType, UniformValue} from '@luma.gl/core';
 import type {ShaderModuleUniformValue} from '@luma.gl/shadertools';
-import {isNumericArray} from '@math.gl/types';
+import {isNumericArray} from '@math.gl/core/types';
 import type {TextureBindingSource} from '../dynamic-texture/texture-binding-source';
 
 /** Shader input value routed through the binding map. */

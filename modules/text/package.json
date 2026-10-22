@@ -58,7 +58,7 @@
     "@luma.gl/experimental": "10.0.0-alpha.4",
     "@luma.gl/gpgpu": "10.0.0-alpha.4",
     "@mapbox/tiny-sdf": "^2.0.7",
-    "@math.gl/core": "5.0.0-alpha.15",
-    "@math.gl/polygon": "~5.0.0-alpha.15"
+    "@math.gl/core": "5.0.0-alpha.19",
+    "@math.gl/geometry": "~5.0.0-alpha.19"
   }
 }

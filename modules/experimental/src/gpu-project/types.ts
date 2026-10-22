@@ -20,7 +20,7 @@ export type ProjectionPrecision = 'local-f32' | 'double-single';
 /**
  * Existing projection-library interface accepted without introducing a runtime dependency.
  *
- * Mutable arrays deliberately match `@math.gl/projection` and other existing JavaScript projection
+ * Mutable arrays deliberately match `@math.gl/geospatial/projection` and other existing JavaScript projection
  * libraries. The compiler always supplies a fresh array and never retains the returned array.
  */
 export type ProjectionProvider =
