@@ -72,3 +72,11 @@ is not an accuracy, proposal-conformance or performance-budget qualification, an
 these reports do not automatically satisfy the combined qualification profile.
 Final state is read outside the timed region for independent numerical comparison.
 Logical world-buffer and graph-buffer totals are not measured VRAM residency.
+
+Mechanisms fixtures `cradle`, `pendulum`, `hinge` and `slider` require `--solver ordered`.
+For example: `node scripts/physics/benchmark-rigid-body.mjs --url http://127.0.0.1:5233/ --fixture hinge --solver ordered`.
+The default is `--failure-policy report`; use `--failure-policy rollback` to include
+checkpoint and restoration passes. `--broad-phase all-pairs` and
+`--broad-phase hierarchical-grid` compare discovery strategies. The cradle uses
+elastic low-speed contacts; use `--time-step 0.0020833333333333333` to match its
+480 Hz example. Compare numerical behavior as well as timings.

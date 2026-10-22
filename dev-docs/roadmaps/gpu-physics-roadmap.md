@@ -595,3 +595,19 @@ See the [adapter profile](../../modules/gltf/src/physics/README.md) for draft ha
 coordinate/ownership rules, schema discrepancies and unsupported features.
 GPU transform/bounds publication (20C), animation ownership (20D), behavior/event
 bindings (20E), and exporter interoperability (20F) remain separate increments.
+
+## Mechanisms implementation checkpoint
+
+The next package adds G1 debug capture/restore of complete world-owned GPU state,
+including failure diagnostics and event cursors; replay still requires the application
+to retain its ordered command history. G2 adds an executable 36 ordered finite-shape
+pair response matrix, separate from independent numerical geometry qualification.
+G4 adds a bounded ordered-solver joint envelope: distance, fixed, hinge and slider
+constraints, attachment frames, connected-body filtering, limits and capped motors.
+The existing Rigid Body Lab gains three Mechanisms scenarios.
+
+Remaining G1 work includes command-journal tooling, portable serialization, automatic
+capacity retry and active-work compaction. G2 still needs independent distance/depth
+references and adversarial geometry qualification. G4 still needs parallel scheduling,
+joint warm starts, robust difficult-frame qualification, sleeping, springs, breakage
+and full pinned-proposal mapping. These increments do not close their parent tranches.

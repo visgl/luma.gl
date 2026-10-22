@@ -11,6 +11,8 @@ import {PerspectiveCamera} from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {Matrix4} from '@math.gl/core';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
+import {makeMechanism} from './mechanisms';
+import {createCradleFrame, CRADLE_MATERIAL_SHADER} from './cradle-rendering';
 import {createRigidBodyPanel} from './info-box';
 import {
   makeRigidBodyScene,
@@ -50,16 +52,32 @@ try {
     byteLength: 64,
     usage: Buffer.UNIFORM | Buffer.COPY_DST
   });
+  const cameraPositionBuffer = device.createBuffer({
+    id: 'rigid-body-camera-position',
+    byteLength: 16,
+    usage: Buffer.UNIFORM | Buffer.COPY_DST
+  });
+  let previousSceneName: string | null = null;
   async function createScene() {
     const sceneName = isRigidBodyScene(scene.value) ? scene.value : 'stack';
-    const bodies = makeRigidBodyScene(sceneName);
+    if (sceneName !== previousSceneName) {
+      iterations.value = sceneName === 'cradle' ? '8' : '32';
+      previousSceneName = sceneName;
+    }
+    const mechanism = makeMechanism(sceneName);
+    const bodies = mechanism?.bodies ?? makeRigidBodyScene(sceneName);
+    if (mechanism) solver.value = 'ordered';
     const world = new GPURigidBodyWorld({
       bodies,
+      joints: mechanism?.joints,
       failurePolicy: 'rollback',
+      // Resolve the cradle's closely spaced elastic impacts before the next pair closes.
+      timeStep: sceneName === 'cradle' ? 1 / 480 : 1 / 120,
+      ...(sceneName === 'cradle' ? {restitutionThreshold: 0} : {}),
       ...(sceneName === 'continuous' ? {continuous: {bodies: [0]}} : {}),
       iterations: Number(iterations.value),
       solver: solver.value === 'ordered' ? 'ordered' : 'parallel',
-      broadPhase: 'hierarchical-grid',
+      broadPhase: sceneName === 'cradle' ? 'all-pairs' : 'hierarchical-grid',
       gravity: getRigidBodySceneGravity(sceneName)
     });
     document.querySelector('#description')!.textContent = RIGID_BODY_SCENES[sceneName].description;
@@ -70,7 +88,9 @@ try {
       throw error;
     });
     const meshVerticesData: number[] = [];
-    let vertexCount = 16 * 12 * 6;
+    const longitudeSegments = sceneName === 'cradle' ? 64 : 16;
+    const latitudeSegments = sceneName === 'cradle' ? 32 : 12;
+    let vertexCount = longitudeSegments * latitudeSegments * 6;
     const shapes = device.createBuffer({
       data: new Float32Array(
         bodies.flatMap(body => {
@@ -111,7 +131,9 @@ try {
 @group(0) @binding(3) var<storage,read> shapes: array<vec4f>;
 @group(0) @binding(4) var<storage,read> sleepStates: array<vec4f>;
 @group(0) @binding(5) var<storage,read> meshVertices: array<vec4f>;
-struct Output {@builtin(position) position: vec4f, @location(0) normal: vec3f, @location(1) color: vec3f, @location(2) localNormal: vec3f, @location(3) @interpolate(flat) sphere: f32}
+@group(0) @binding(6) var<uniform> cameraPosition:vec4f;
+${CRADLE_MATERIAL_SHADER}
+struct Output {@builtin(position) position: vec4f, @location(0) normal: vec3f, @location(1) color: vec3f, @location(2) localNormal: vec3f, @location(3) @interpolate(flat) sphere: f32, @location(4) worldPosition: vec3f, @location(5) @interpolate(flat) body: u32}
 fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotation.xyz,cross(rotation.xyz,vector)+rotation.w*vector);}
 @vertex fn vertexMain(@builtin(vertex_index) vertex: u32,@builtin(instance_index) body: u32)->Output {
  let corners=array<vec2f,6>(vec2f(0,0),vec2f(1,0),vec2f(0,1),vec2f(0,1),vec2f(1,0),vec2f(1,1));
@@ -123,7 +145,7 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
    normal=normalize(cross(meshVertices[first+1u].xyz-meshVertices[first].xyz,meshVertices[first+2u].xyz-meshVertices[first].xyz));
   } else {normal=vec3f(0,0,1);}
  } else if(shapes[body].w==0.0) {
-  let tile=vertex/6u;let longitude=(f32(tile%16u)+corner.x)*6.2831853/16.0;let latitude=(f32(tile/16u)+corner.y)*3.14159265/12.0;
+  let tile=vertex/6u;let longitude=(f32(tile%${longitudeSegments}u)+corner.x)*6.2831853/${longitudeSegments}.0;let latitude=(f32(tile/${longitudeSegments}u)+corner.y)*3.14159265/${latitudeSegments}.0;
   normal=vec3f(cos(longitude)*sin(latitude),sin(longitude)*sin(latitude),cos(latitude));point=normal*shapes[body].x;
  } else {
   let face=(vertex/6u)%6u;let axis=face/2u;let direction=select(-1.0,1.0,face%2u==0u);normal[axis]=direction;point[axis]=direction;
@@ -131,16 +153,36 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
   // Remaining sphere tessellation vertices collapse for boxes.
   if(vertex>=36u) {point=vec3f(0);}
  }
- var output:Output;output.position=matrix*vec4f(positions[body].xyz+rotate(orientations[body],point),1);
+ var output:Output;output.worldPosition=positions[body].xyz+rotate(orientations[body],point);output.body=body;
+ output.position=matrix*vec4f(output.worldPosition,1);
+ ${sceneName === 'cradle' ? 'if(body>0u && shapes[body].w==2.0){output.position=vec4f(0,0,0,1);}' : ''}
  output.localNormal=normal;output.sphere=1.0-shapes[body].w;output.normal=rotate(orientations[body],normal);output.color=select(vec3f(0.28+0.45*fract(f32(body)*0.27),0.48+0.25*fract(f32(body)*0.39),0.42+0.25*fract(f32(body)*0.17)),vec3f(0.68,0.73,0.67),(shapes[body].w==2.0||(shapes[body].w==3.0&&shapes[body].z>0.5)));output.color=mix(output.color,vec3f(0.55),select(0.0,0.7,sleepStates[body].y>0.5));return output;
 }
-@fragment fn fragmentMain(input:Output)->@location(0) vec4f {let band=select(1.0,0.3,input.sphere>0.5&&abs(input.localNormal.z)<0.13);return vec4f(input.color*band*(0.35+0.65*max(0.0,dot(normalize(input.normal),normalize(vec3f(-0.5,-0.7,1))))),1);}
+@fragment fn fragmentMain(input:Output)->@location(0) vec4f {
+ ${
+   sceneName === 'cradle'
+     ? `
+ let normal=normalize(input.normal);
+ if(input.sphere>0.5){return vec4f(steelColor(normal,normalize(cameraPosition.xyz-input.worldPosition)),1);}
+ // Soft contact shadows ground the moving balls without CPU pose readback.
+ var shadow=1.0;
+ for(var index=2u;index<=10u;index+=2u){
+  let center=positions[index].xyz;
+  let distance=length((input.worldPosition.xy-center.xy)/vec2f(0.65,0.5));
+  shadow*=1.0-0.24*exp(-distance*distance*1.8);
+ }
+ return vec4f(vec3f(0.72,0.70,0.66)*shadow,1);
+ `
+     : ''
+ }
+ let band=select(1.0,0.3,input.sphere>0.5&&abs(input.localNormal.z)<0.13);return vec4f(input.color*band*(0.35+0.65*max(0.0,dot(normalize(input.normal),normalize(vec3f(-0.5,-0.7,1))))),1);}
 `,
       vertexCount,
       instanceCount: bodies.length,
       parameters: {depthWriteEnabled: true, depthCompare: 'less-equal', depthFormat: 'depth24plus'},
       bindings: {
         matrix: cameraBuffer,
+        cameraPosition: cameraPositionBuffer,
         positions: world.positions!,
         orientations: world.orientations!,
         shapes,
@@ -151,22 +193,65 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
         attributes: [],
         bindings: [
           {name: 'matrix', group: 0, location: 0, type: 'uniform'},
+          {name: 'cameraPosition', group: 0, location: 6, type: 'uniform'},
           ...['positions', 'orientations', 'shapes', 'sleepStates', 'meshVertices'].map(
             (name, index) => ({
               name,
               group: 0,
               location: index + 1,
               type: 'read-only-storage' as const,
-              visibility: 1
+              visibility: name === 'positions' ? 3 : 1
             })
           )
         ]
       }
     });
+    // Distance joints have no physical rods; thin cylinders visualize their centered attachments.
+    const tethers = mechanism?.joints.filter(joint => joint.type === 'distance') ?? [];
+    const tether =
+      tethers.length > 0
+        ? new Model(device, {
+            id: 'mechanism-tethers',
+            source: `
+@group(0) @binding(0) var<uniform> matrix: mat4x4f;
+@group(0) @binding(1) var<storage,read> positions: array<vec4f>;
+const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(${joint.first}u,${joint.second}u)`).join(',')});
+@vertex fn vertexMain(@builtin(vertex_index) vertex: u32,@builtin(instance_index) tether: u32)->@builtin(position) vec4f {
+ let corners=array<vec2f,6>(vec2f(0,0),vec2f(1,0),vec2f(0,1),vec2f(0,1),vec2f(1,0),vec2f(1,1));
+ let corner=corners[vertex%6u];
+ let first=positions[endpoints[tether].x].xyz;let second=positions[endpoints[tether].y].xyz;
+ let direction=normalize(second-first);
+ let reference=select(vec3f(0,0,1),vec3f(0,1,0),abs(direction.z)>0.9);
+ let tangent=normalize(cross(direction,reference));let bitangent=cross(direction,tangent);
+ let angle=(f32(vertex/6u)+corner.x)*6.2831853/8.0;
+ let offset=0.025*(cos(angle)*tangent+sin(angle)*bitangent);
+ return matrix*vec4f(mix(first,second,corner.y)+offset,1);
+}
+@fragment fn fragmentMain()->@location(0) vec4f {return vec4f(0.12,0.16,0.18,1);}
+`,
+            vertexCount: 8 * 6,
+            instanceCount: tethers.length,
+            parameters: {
+              depthWriteEnabled: true,
+              depthCompare: 'less-equal',
+              depthFormat: 'depth24plus'
+            },
+            bindings: {matrix: cameraBuffer, positions: world.positions!},
+            shaderLayout: {
+              attributes: [],
+              bindings: [
+                {name: 'matrix', group: 0, location: 0, type: 'uniform'},
+                {name: 'positions', group: 0, location: 1, type: 'read-only-storage', visibility: 1}
+              ]
+            }
+          })
+        : null;
     return {
       world,
       graph,
       model,
+      tether,
+      frameModel: sceneName === 'cradle' ? createCradleFrame(device, cameraBuffer) : null,
       shapes,
       meshVertices,
       bodies,
@@ -199,6 +284,8 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
   };
   autoPlay.onchange = restartPlayback;
   const destroy = (target: typeof resources) => {
+    target.frameModel?.destroy();
+    target.tether?.destroy();
     target.model.destroy();
     target.graph.destroy();
     target.world.destroy();
@@ -298,7 +385,8 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
       }
     }
     if (submitted) {
-      previous = now;
+      // Account for this elapsed time after the fence completes. The accumulator
+      // cap below still bounds catch-up work without discarding every waiting frame.
       animation = requestAnimationFrame(frame);
       return;
     }
@@ -307,10 +395,10 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
     if (!loading && !paused && advanceAt === null) {
       accumulator = Math.min(accumulator + elapsed, 4 / 120);
       const encoder = device.createCommandEncoder();
-      while (accumulator >= 1 / 120) {
+      while (accumulator >= resources.world.timeStep) {
         diagnostics.encode(resources.graph, encoder, {parameters: undefined});
-        accumulator -= 1 / 120;
-        elapsedSimulation += 1 / 120;
+        accumulator -= resources.world.timeStep;
+        elapsedSimulation += resources.world.timeStep;
       }
       device.submit(encoder.finish());
     }
@@ -325,8 +413,11 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
     const depth = new Matrix4([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 1]);
     depth.multiplyRight(matrix);
     cameraBuffer.write(new Float32Array(depth));
+    cameraPositionBuffer.write(new Float32Array([...camera.position.toArray(), 1]));
     const pass = device.beginRenderPass({clearColor: [0.9, 0.92, 0.89, 1], clearDepth: 1});
     resources.model.draw(pass);
+    resources.tether?.draw(pass);
+    resources.frameModel?.draw(pass);
     pass.end();
     device.submit();
     const fence = device.createFence();
@@ -401,6 +492,7 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
       void Promise.allSettled([snapshot, pushing, rebuilding, submitted]).then(() => {
         destroy(resources);
         panel.destroy();
+        cameraPositionBuffer.destroy();
         cameraBuffer.destroy();
         device.destroy();
       });

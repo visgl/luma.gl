@@ -56,3 +56,33 @@ as visual controls. Do not add placeholder simulations for unsupported features.
 The Fast sphere / thin walls scenario uses bounded sphere/static-surface CCD. It
 rejects incomplete steps through GPU rollback and preserves the remaining travel
 after impacts. This does not imply dynamic-pair or rotating-convex CCD support.
+
+## Mechanisms collection
+
+The scene selector includes Newton's cradle, a distance pendulum, motorized hinge and powered slider.
+The cradle and pendulum have GPU-driven visible tethers. Reset releases the raised
+cradle ball again. The cradle uses a 1/480-second fixed step (other scenes use
+1/120 second), so each closely spaced impact is resolved before the next pair closes.
+For this 12-body scene, all-pairs discovery and eight solver iterations reduce
+GPU work; switching to another scene restores the 32-iteration default. User-selected
+iteration counts are retained when resetting the same scene.
+Its restitution threshold is zero to retain elastic low-speed contacts. Iterative
+contacts still introduce numerical loss despite restitution one.
+These use the public `joints` API, force the ordered solver and preserve the existing
+Reset, GPU Graph and Timeline controls. Hinge and slider scenes include loose boxes
+so constraint and contact response can be observed together. Joint-connected bodies
+remain awake; this initial envelope is limited to 64 joints and has no joint warm start.
+
+Run the longer cradle regression from the repository root while this example is
+served (`PHYSICS_MECHANISMS_URL` overrides the default `http://127.0.0.1:5233/`):
+
+```bash
+node scripts/playwright/physics-cradle-smoke.mjs
+```
+
+It advances 60 simulated seconds and checks joint drift, energy bounds, middle-ball
+excursions and sustained end-ball swings. A local WebGPU run at 480 Hz completed
+28,800 steps with no incomplete steps, less than 0.06 mm joint error, energy within
+0.6% of the initial value, and a 1.45 m end-ball excursion in the final ten seconds.
+These are bounded regression measurements, not a guarantee of indefinitely lossless
+or perfectly periodic motion.
