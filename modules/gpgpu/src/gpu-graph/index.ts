@@ -10,6 +10,12 @@ export {
   CompiledGPUCommandGraph,
   GPUCommandGraphEncoding,
   GPUCommandGraphExecution,
-  getGPUCommandGraphExecutionPlan
+  getGPUCommandGraphExecutionPlan,
+  GraphBufferHandle,
+  GraphDataView,
+  GraphExternalTextureHandle,
+  GraphTextureHandle,
+  GraphTextureView,
+  GraphVectorView
 } from '../gpu-core/gpu-command-graph';
 export type * from '../gpu-core/gpu-command-graph';

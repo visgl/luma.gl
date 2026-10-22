@@ -59,6 +59,9 @@ const {code: graphCode} = await transform(
 await writeFile(new URL('gpu-graph/index.cjs', graphDistributionDirectory), graphCode);
 const graphApi = require(fileURLToPath(new URL('gpu-graph/index.cjs', graphDistributionDirectory)));
 const gpuCoreApi = require(fileURLToPath(new URL('gpu-core/index.cjs', graphDistributionDirectory)));
+for (const name of ['GraphBufferHandle', 'GraphDataView', 'GraphExternalTextureHandle', 'GraphTextureHandle', 'GraphTextureView', 'GraphVectorView']) {
+  assert.equal(typeof graphApi[name], 'function');
+}
 for (const [name, value] of Object.entries(graphApi)) {
   assert.equal(value, gpuCoreApi[name]);
 }
