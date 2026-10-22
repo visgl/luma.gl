@@ -72,3 +72,8 @@ is not an accuracy, proposal-conformance or performance-budget qualification, an
 these reports do not automatically satisfy the combined qualification profile.
 Final state is read outside the timed region for independent numerical comparison.
 Logical world-buffer and graph-buffer totals are not measured VRAM residency.
+
+Mechanisms fixtures `pendulum`, `hinge` and `slider` require `--solver ordered`.
+For example: `node scripts/physics/benchmark-rigid-body.mjs --url http://127.0.0.1:5233/ --fixture hinge --solver ordered`.
+The benchmark explicitly reports `failurePolicy: report`; optional checkpoint/rollback
+cost is not included in this baseline. Compare numerical behavior as well as timings.

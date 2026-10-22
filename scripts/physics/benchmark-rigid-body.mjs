@@ -19,7 +19,8 @@ export async function benchmarkRigidBody(options = {}) {
     maximumPairs: options.maximumPairs === undefined ? undefined : Number(options.maximumPairs)
   };
   if (!['localhost', '127.0.0.1', '[::1]'].includes(baseUrl.hostname) ||
-      !['stack', 'deep', 'massRatio', 'support', 'friction', 'mesh', 'mixed', 'impact', 'torque'].includes(settings.fixture) ||
+      !['stack', 'deep', 'massRatio', 'support', 'friction', 'mesh', 'mixed', 'impact', 'torque', 'pendulum', 'hinge', 'slider'].includes(settings.fixture) ||
+      (['pendulum', 'hinge', 'slider'].includes(settings.fixture) && settings.solver !== 'ordered') ||
       !['ordered', 'parallel'].includes(settings.solver) ||
       !Number.isInteger(settings.iterations) || settings.iterations < 1 || settings.iterations > 64 ||
       !Number.isInteger(settings.samples) || settings.samples < 1 || settings.samples > 1000 ||
@@ -42,16 +43,18 @@ export async function benchmarkRigidBody(options = {}) {
 
 async function runBenchmark(options) {
   const {root, fixture, solver, samples, warmup, iterations, timeStep, warmStartFactor, maximumPairs} = options;
-  const [{luma}, {webgpuAdapter}, {GPUCommandGraph}, {GPUCommandGraphInspector}, {GPURigidBodyWorld}, {makeRigidBodyScene, getRigidBodySceneGravity}] = await Promise.all([
+  const [{luma}, {webgpuAdapter}, {GPUCommandGraph}, {GPUCommandGraphInspector}, {GPURigidBodyWorld}, {makeRigidBodyScene, getRigidBodySceneGravity}, {makeMechanism}] = await Promise.all([
     import(`${root}/modules/core/src/index.ts`), import(`${root}/modules/core/src/webgpu/index.ts`),
     import(`${root}/modules/gpgpu/src/gpu-core/gpu-command-graph.ts`),
     import(`${root}/modules/gpgpu/src/gpu-core/gpu-command-graph-inspector.ts`),
     import(`${root}/modules/gpgpu/src/gpu-physics/gpu-rigid-body-world.ts`),
-    import(`${root}/examples/experimental/gpu-rigid-body-world/scenes.ts`)
+    import(`${root}/examples/experimental/gpu-rigid-body-world/scenes.ts`),
+    import(`${root}/examples/experimental/gpu-rigid-body-world/mechanisms.ts`)
   ]);
   const device = await luma.createDevice({type: 'webgpu', featureLevel: 'core', optionalFeatures: ['timestamp-query'], adapters: [webgpuAdapter]});
-  const bodies = makeRigidBodyScene(fixture);
-  const world = new GPURigidBodyWorld({bodies, solver, iterations, timeStep, warmStartFactor, maximumPairs, broadPhase: 'hierarchical-grid', gravity: getRigidBodySceneGravity(fixture)});
+  const mechanism = makeMechanism(fixture);
+  const bodies = mechanism?.bodies ?? makeRigidBodyScene(fixture);
+  const world = new GPURigidBodyWorld({bodies, joints: mechanism?.joints, solver, iterations, timeStep, warmStartFactor, maximumPairs, broadPhase: 'hierarchical-grid', gravity: getRigidBodySceneGravity(fixture)});
   let graph;
   try {
     const definition = new GPUCommandGraph(device);
@@ -83,7 +86,7 @@ async function runBenchmark(options) {
       return values.length ? {median: values[Math.floor(values.length * 0.5)], p95: values[Math.min(values.length - 1, Math.floor(values.length * 0.95))], maximum: values.at(-1)} : null;
     };
     return {formatVersion: 1, stage: 'full-rigid-body-step', fixture, objectCount: bodies.length,
-      settings: {solver, iterations, timeStep, warmStartFactor, maximumPairs: world.maximumPairs},
+      settings: {solver, jointCount: mechanism?.joints.length ?? 0, failurePolicy: 'report', iterations, timeStep, warmStartFactor, maximumPairs: world.maximumPairs},
       sampleCount: samples, warmupCount: warmup, adapter: device.info,
       timestampQueries: device.features.has('timestamp-query'), compileMilliseconds,
       graphNodes: graph.stats.nodeOrder.length, capacity: world.getCapacityInfo(),

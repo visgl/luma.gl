@@ -130,9 +130,11 @@ fn jointRow(first:u32,second:u32,firstPoint:vec3f,secondPoint:vec3f,axis:vec3f,e
 fn solveJoints(){
  for(var index=0u;index<${joints.length}u;index++){
   let joint=JOINTS[index];let first=joint.identifiers.x;let second=joint.identifiers.y;let kind=joint.identifiers.z;
-  let firstPoint=positions[first].xyz+rotate(orientations[first],joint.firstAnchor);let secondPoint=positions[second].xyz+rotate(orientations[second],joint.secondAnchor);
+  var firstPoint=positions[first].xyz+rotate(orientations[first],joint.firstAnchor);let secondPoint=positions[second].xyz+rotate(orientations[second],joint.secondAnchor);
   let firstRotation=multiplyRotation(orientations[first],joint.firstFrame);let secondRotation=multiplyRotation(orientations[second],joint.secondFrame);
   let offset=secondPoint-firstPoint;
+  // A slider constrains a point on the moving axis, not the fixed frame origin.
+  if(kind==3u){let axis=rotate(firstRotation,vec3f(0,0,1));firstPoint+=axis*dot(offset,axis);}
   if(kind==0u){let distance=length(offset);let axis=select(rotate(firstRotation,vec3f(1,0,0)),offset/max(distance,1e-20),distance>1e-8);jointRow(first,second,firstPoint,secondPoint,axis,distance-joint.limits.x,false);continue;}
   for(var component=0u;component<select(3u,2u,kind==3u);component++){var basis=vec3f(0);basis[component]=1;let axis=rotate(firstRotation,basis);jointRow(first,second,firstPoint,secondPoint,axis,dot(offset,axis),false);}
   var relative=multiplyRotation(secondRotation,vec4f(-firstRotation.xyz,firstRotation.w));if(relative.w<0){relative=-relative;}
