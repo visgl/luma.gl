@@ -10,6 +10,8 @@ GPU Core is the experimental WebGPU dataflow and scheduling layer in `@luma.gl/g
 
 GPU Core does not own command submission or the application frame loop. This makes it suitable for GPU-resident workflows that combine analysis, culling, indirect rendering, and bounded readback without synchronizing the source dataset through JavaScript.
 
+Read [WebGPU foundations](https://luma.gl/next/docs/api-reference/experimental/gpu-core/webgpu-foundations.md) for the compute and memory primitives, [execution techniques](https://luma.gl/next/docs/api-reference/experimental/gpu-core/execution-techniques.md) for allocation and scheduling, and [debugging](https://luma.gl/next/docs/api-reference/experimental/gpu-core/debugging.md) for the GPU Graph and GPU Trace panels.
+
 ### The small WebGPU leap behind GPU Core[​](#the-small-webgpu-leap-behind-gpu-core "Direct link to The small WebGPU leap behind GPU Core")
 
 note

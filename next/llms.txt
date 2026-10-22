@@ -343,7 +343,9 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [GPU Core](https://luma.gl/next/docs/api-reference/experimental/gpu-core.md): From v10
 - [Compositional GPU architecture](https://luma.gl/next/docs/api-reference/experimental/gpu-core/compositional-architecture.md): Overview
 - [GPU Core Execution and Composition](https://luma.gl/next/docs/api-reference/experimental/gpu-core/concepts.md): Overview
+- [Debugging GPU Command Graphs](https://luma.gl/next/docs/api-reference/experimental/gpu-core/debugging.md): Overview
 - [DrawCommandBuffer](https://luma.gl/next/docs/api-reference/experimental/gpu-core/draw-command-buffer.md): Overview
+- [GPU Command Graph Execution Techniques](https://luma.gl/next/docs/api-reference/experimental/gpu-core/execution-techniques.md): Overview
 - [Adaptive GPU reductions](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-adaptive-reduction.md): Overview
 - [Adaptive CSR SpMV execution](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-adaptive-spmv-execution.md): Overview
 - [GPUAncestorProjection](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-ancestor-projection.md): Overview
@@ -417,6 +419,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [GPUVisibilityWorkflow](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-visibility-workflow.md): Overview
 - [GPU Core Cookbook](https://luma.gl/next/docs/api-reference/experimental/gpu-core/recipes.md): Overview
 - [GPU Core Tutorial](https://luma.gl/next/docs/api-reference/experimental/gpu-core/tutorial.md): Overview
+- [WebGPU Foundations for GPU Command Graphs](https://luma.gl/next/docs/api-reference/experimental/gpu-core/webgpu-foundations.md): Overview
 - [WebGPU runtime control-flow lowering](https://luma.gl/next/docs/api-reference/experimental/gpu-core/webgpu-runtime-control.md): Overview
 - [GPU Crossfilter](https://luma.gl/next/docs/api-reference/experimental/gpu-crossfilter.md): Overview
 - [GPU sparse matrices](https://luma.gl/next/docs/api-reference/experimental/gpu-data/gpu-sparse-matrix.md): Sparse matrices store only nonzero entries. The sparse matrix APIs uses two complementary representations.
