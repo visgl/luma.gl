@@ -498,3 +498,23 @@ it('GPUCommandGraphInspector exposes compiled nodes before the first encoding', 
     'render'
   ]);
 });
+
+it('GPUCommandGraphInspector grouping receives immutable description and resource metadata', () => {
+  const inspector = new GPUCommandGraphInspector({
+    getNodeGroup: node => {
+      if (node.id !== 'prepare') return undefined;
+      expect(node.description).toBe('Build simulation inputs.');
+      expect(node.resources?.[0].id).toBe('body-poses');
+      expect(Object.isFrozen(node.resources)).toBe(true);
+      expect(Object.isFrozen(node.resources?.[0])).toBe(true);
+      return node.resources?.[0].usage === 'storage-read' ? 'simulation-inputs' : undefined;
+    }
+  });
+  inspector.registerGraph(makeGraph('physics'));
+  const encoding = makeEncoding(1, 0.5, 0.5);
+  encoding.stats.nodes[0].resources = [
+    {id: 'body-poses', kind: 'buffer', usage: 'storage-read', byteLength: 64}
+  ];
+  inspector.recordEncoding('physics', encoding);
+  expect(inspector.getSnapshot().graphs[0].nodes[0].group).toBe('simulation-inputs');
+});

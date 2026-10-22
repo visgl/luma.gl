@@ -450,10 +450,17 @@ export class GPUCommandGraphInspector {
         existingNode.resources = copyResources(nodeStats.resources);
       return existingNode;
     }
-    const group = this.getNodeGroup?.({graphId: graph.id, id: nodeStats.id, type: nodeStats.type});
+    const resources = copyResources(nodeStats.resources);
+    const group = this.getNodeGroup?.({
+      graphId: graph.id,
+      id: nodeStats.id,
+      type: nodeStats.type,
+      description: nodeStats.description,
+      resources
+    });
     const node: NodeInspectionState = {
       id: nodeStats.id,
-      resources: copyResources(nodeStats.resources),
+      resources,
       ...(nodeStats.description === undefined ? {} : {description: nodeStats.description}),
       type: nodeStats.type,
       ...(group === undefined ? {} : {group}),

@@ -4,6 +4,10 @@
 
 import {expect, test} from 'vitest';
 import {GPUTracePanelRenderer} from '../../examples/gpu-trace-panel';
+import {
+  createGPUOperationTooltip,
+  renderGPUOperationTooltip
+} from '../../examples/gpu-operation-tooltip';
 
 test('GPU Trace preserves gaps, separates clocks, and safely renders node labels', () => {
   const host = document.createElement('div');
@@ -233,5 +237,43 @@ test('GPU Trace updates never take focus from another panel showing the same spa
     secondRenderer.destroy();
     firstHost.remove();
     secondHost.remove();
+  }
+});
+
+test('operation tooltip reserves space for long descriptions, omitted resources and timing', () => {
+  const tooltip = createGPUOperationTooltip(document);
+  try {
+    renderGPUOperationTooltip(
+      tooltip,
+      {
+        id: 'physics-solve',
+        type: 'compute',
+        description:
+          'Resolve all contact and joint constraints while preserving stable body state. '.repeat(
+            8
+          ),
+        resources: Array.from({length: 12}, (_, index) => ({
+          id: `physics-buffer-${index}`,
+          kind: 'buffer' as const,
+          usage: 'storage-read-write' as const,
+          byteLength: 4096
+        }))
+      },
+      {timing: 'GPU · 1ms duration · 0–1ms'}
+    );
+    tooltip.hidden = false;
+    const rows = tooltip.querySelectorAll('tbody tr');
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.length).toBeLessThan(6);
+    expect(tooltip.scrollHeight).toBeLessThanOrEqual(tooltip.clientHeight);
+    expect(tooltip.getBoundingClientRect().height).toBeLessThanOrEqual(440);
+    expect(tooltip.querySelector('.gpu-operation-resource-overflow')?.textContent).toContain(
+      String(12 - rows.length)
+    );
+    const timingBounds = tooltip.querySelector('.gpu-operation-timing')!.getBoundingClientRect();
+    expect(timingBounds.bottom).toBeLessThan(tooltip.getBoundingClientRect().bottom);
+    for (const row of rows) expect(row.getBoundingClientRect().height).toBeLessThan(30);
+  } finally {
+    tooltip.remove();
   }
 });

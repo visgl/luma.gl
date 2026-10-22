@@ -230,6 +230,9 @@ export class GPUCommandGraphInspectorPanel {
         formatDurationPair(node.gpu)
       );
     });
+    if (this.activeNodeId && !graph.nodes.some(node => node.id === this.activeNodeId)) {
+      this.hideTooltip();
+    }
     const counterRowsElement = this.element.querySelector<HTMLElement>(
       '[data-graph-inspector-counter-rows]'
     )!;

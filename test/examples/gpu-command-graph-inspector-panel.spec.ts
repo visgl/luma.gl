@@ -218,6 +218,17 @@ test('GPU Graph tooltips preserve descriptions as plain text', () => {
     expect(tooltip.hidden).toBe(true);
     row.focus();
     expect(tooltip.hidden).toBe(false);
+    row.blur();
+    row.dispatchEvent(new MouseEvent('mouseover', {bubbles: true}));
+    expect(tooltip.hidden).toBe(false);
+    inspector.registerGraph({
+      id: 'physics',
+      stats: EMPTY_GRAPH_STATS,
+      capabilities: GRAPH_CAPABILITIES
+    });
+    panel.update(inspector.getSnapshot(), 'physics');
+    expect(tooltip.hidden).toBe(true);
+    expect(row.isConnected).toBe(false);
     panel.destroy();
     expect(tooltip.isConnected).toBe(false);
     expect(host.querySelector('contacts')).toBeNull();

@@ -133,11 +133,7 @@ export function renderGPUOperationTooltip(
     }
     const body = table.createTBody();
     const prefix = node.id.slice(0, node.id.lastIndexOf('-') + 1);
-    const maximumRows = Math.max(
-      1,
-      Math.min(6, Math.floor((document.documentElement.clientHeight - 250) / 28))
-    );
-    const visibleResources = node.resources.slice(0, maximumRows);
+    const visibleResources = node.resources.slice(0, 6);
     for (const resource of visibleResources) {
       const row = body.insertRow();
       const access =
@@ -185,18 +181,36 @@ export function renderGPUOperationTooltip(
         sizeCell.title += ` · offset ${resource.byteOffset.toLocaleString()} bytes`;
     }
     section.append(table);
-    const remainingCount = node.resources.length - visibleResources.length;
-    if (remainingCount)
-      append(
-        section,
-        'div',
-        'gpu-operation-resource-overflow',
-        `+ ${remainingCount} more ${remainingCount === 1 ? 'resource' : 'resources'}`
-      );
+    const overflow = append(section, 'div', 'gpu-operation-resource-overflow', '');
+    updateResourceOverflow(overflow, node.resources.length, visibleResources.length);
   }
   if (options.timing) append(content, 'div', 'gpu-operation-timing', options.timing);
   tooltip.querySelector('.gpu-operation-content')?.remove();
   tooltip.append(content);
+  // Measure the complete card, including description, overflow count and timing footer.
+  // A viewport-only row estimate can overflow the card's independent 440px height cap.
+  const wasHidden = tooltip.hidden;
+  tooltip.hidden = false;
+  const body = content.querySelector('tbody');
+  const overflow = content.querySelector<HTMLElement>('.gpu-operation-resource-overflow');
+  while (body?.rows.length && tooltip.scrollHeight > tooltip.clientHeight) {
+    body.deleteRow(-1);
+    updateResourceOverflow(overflow!, node.resources!.length, body.rows.length);
+    if (body.rows.length === 0) body.closest('table')!.hidden = true;
+  }
+  tooltip.hidden = wasHidden;
+}
+
+function updateResourceOverflow(
+  element: HTMLElement,
+  totalCount: number,
+  visibleCount: number
+): void {
+  const remainingCount = totalCount - visibleCount;
+  element.hidden = remainingCount === 0;
+  element.textContent = remainingCount
+    ? `+ ${remainingCount} more ${remainingCount === 1 ? 'resource' : 'resources'}`
+    : '';
 }
 
 const TOOLTIP_CSS = `
