@@ -790,3 +790,10 @@ parallel geometry queries and sphere casts, and persistent compound spherical se
 Space Salvage uses simulation-step docking events; Rigid Body Lab includes a thin-wall
 CCD scenario. See the [rigid-body reference](/docs/api-reference/gpgpu/gpu-rigid-body-world)
 for supported envelopes and remaining qualification work.
+
+### GPU physics mechanisms and debugging
+
+The experimental rigid-body world adds bounded ordered distance, fixed, hinge and
+slider joints, capped velocity motors and limits, plus full GPU state capture/restore
+for debugging. The Rigid Body Lab includes three Mechanisms scenarios. An executable
+finite-shape pair matrix records response coverage separately from numerical qualification.

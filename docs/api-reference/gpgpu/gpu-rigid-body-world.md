@@ -428,3 +428,66 @@ for integration examples and measurement methodology.
 Omit the third argument of `applyImpulse(body, impulse)` to apply at the current GPU
 center of mass, avoiding torque from stale CPU position snapshots. Providing a
 world-space point retains off-center impulse behavior.
+
+## Ordered joints and mechanisms
+
+`joints` accepts up to 64 `distance`, `fixed`, `hinge` or `slider` constraints.
+This initial reference envelope requires `solver: 'ordered'`. Joint rows run in each
+contact-solver iteration; there is no CPU constraint solve or extra graph pass per joint.
+Connected bodies remain awake. Parallel joint scheduling, joint warm starting, breakage,
+springs and reduced-coordinate articulations are not implemented by this increment.
+
+```ts
+const world = new GPURigidBodyWorld({
+  bodies,
+  solver: 'ordered',
+  joints: [{
+    type: 'hinge', first: 0, second: 1,
+    firstFrame: {position: [0, 0, 1]},
+    secondFrame: {position: [0, 0, -1]},
+    limits: [-1, 1],
+    motor: {velocity: 0.5, maximumForce: 10}
+  }]
+});
+```
+
+Anchors are body-node-local positions, including when the body has an offset COM.
+Frame orientations are local quaternions; the frame Z axis is the free hinge/slider
+axis. Fixed joints align both frames. Distance joints preserve the specified anchor
+separation and leave rotation free. Sliders align frame orientations and allow only
+translation along the first frame Z axis. Hinge angles are signed and wrapped to
+[-pi, pi]; limits must lie strictly within that interval. This is not a multi-turn
+angle-tracking API. Start with aligned hinge axes and compatible attachment frames.
+
+Motor velocity is radians/second for hinges and world-units/second for sliders.
+`maximumForce` is a torque cap for hinges and force cap for sliders; its accumulated
+impulse is capped by force times timestep, not multiplied by iteration count. Limits
+are hard constraint rows, independent of the motor cap. They can exert larger forces.
+Connected-body contacts are disabled unless `collideConnected: true`; this excludes
+all collider pairs between the two bodies. Queries remain independent of this filter.
+
+The Rigid Body Lab now includes a Mechanisms collection: pendulum, contact-loaded
+motorized hinge and powered slider. These are bounded reference demonstrations,
+not qualification for arbitrary mechanisms or extreme mass ratios.
+
+## Debug capture and replay
+
+After stopping graph submissions and control calls, `await world.captureState()`
+returns a structured-cloneable `GPURigidBodyCapture`. It includes the construction
+props, every world-owned buffer (poses, caches, targets, sleep, diagnostics, rollback
+checkpoints and event history), and CPU event cursors. Optional captures incur a full
+GPU readback; normal simulation remains GPU-resident.
+
+Create/attach a world with the same props, or reuse the existing idle world, then call
+`world.restoreState(capture)` before replaying the same ordered control calls and
+fixed simulation steps. Restore validates the complete allocation layout before
+writing any buffer. It does not wake bodies, clear failures or reset event cursors.
+A failure capture therefore retains its failure latch; use `getRecoveryProps` for
+recovery rather than expecting replay to repair a rejected step.
+
+Capture format version 1 is an in-memory debugging contract for the same implementation
+and configuration. Use structured clone; plain JSON does not preserve its typed arrays.
+It does not capture application state, command history, graph parameters, rendering
+resources or arbitrary external GPU writes. Callers must record/replay those separately.
+Same-device regression tests reproduce trajectories; cross-device bitwise replay and
+long-term serialized asset compatibility are not promised.

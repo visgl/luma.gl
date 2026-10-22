@@ -20,7 +20,9 @@ export function getRigidBodyShader(
   extended = false,
   sparse?: RigidBodySparseShaderLayout,
   parallel = false,
-  maximumMeshTraversalTestsPerPair = 65536
+  maximumMeshTraversalTestsPerPair = 65536,
+  jointShader = 'fn jointActive(body:u32)->bool{return false;} fn jointExcluded(first:u32,second:u32)->bool{return false;}',
+  hasJoints = false
 ): string {
   return /* wgsl */ `
 const BODY_COUNT: u32 = ${count}u;
@@ -66,6 +68,7 @@ fn colliderLocal(collider: u32, vector: vec3f) -> vec3f {let rotation=colliderRo
 fn axis(collider: u32, index: u32) -> vec3f {var unit=vec3f(0);unit[index]=1;return rotate(colliderRotation(collider),unit);}
 fn readGeometry(index:u32)->vec4f{return bitcast<vec4f>(bodies.geometry[index]);}
 fn excludes(first:u32,second:u32)->bool {
+ if(jointExcluded(colliderBody(first),colliderBody(second))){return true;}
  let range=bodies.exclusions[first];let start=u32(range.x);let count=u32(range.y);
  var lower=0u;var upper=count;
  loop{if(lower>=upper){break;}let middle=(lower+upper)/2u;let component=start+middle;
@@ -149,6 +152,7 @@ fn solveFriction(firstCollider:u32,secondCollider:u32,contact:Contact,relative:v
 @compute @workgroup_size(64) fn integrate(@builtin(global_invocation_id) invocation: vec3u) {
  ${extended ? 'if(invocation.x==0u){atomicStore(&meshTasks.count,0u);atomicStore(&meshTasks.overflow,0u);atomicStore(&meshTasks.unresolved,0u);atomicStore(&meshTasks.incomplete,0u);atomicStore(&targets.dispatch,0u);targets.vertical=1u;targets.depth=1u;}' : ''}
  let body=invocation.x; if(body>=BODY_COUNT) {return;}
+ if(jointActive(body)){sleepStates[body].x=0.0;sleepStates[body].y=0.0;}
  let rotation=orientations[body]; orientations[body]=select(vec4f(0,0,0,1),normalize(rotation),dot(rotation,rotation)>0.000001);
  if(bodies.bodies[body].motion.x==2.0 && targets.entries[body].position.w>0.0) {
   velocities[body]=vec4f((targets.entries[body].position.xyz-positions[body].xyz)/settings.gravity.w,0);
@@ -308,6 +312,7 @@ ${extended ? RIGID_BODY_CONVEX_SHADER : ''}
 }
 ${parallel ? RIGID_BODY_PARALLEL_SHADER : ''}
 ${parallel && extended ? '@compute @workgroup_size(1) fn meshCollect(){collectMeshContacts();}' : ''}
+${jointShader}
 fn root(body: u32) -> u32 {var current=body;for(var iteration=0u;iteration<BODY_COUNT;iteration++) {let parent=u32(sleepStates[current].z);if(parent==current) {break;}current=parent;}return current;}
 @compute @workgroup_size(1) fn solve() {
  ${extended ? 'collectMeshContacts();' : ''}
@@ -332,6 +337,7 @@ fn root(body: u32) -> u32 {var current=body;for(var iteration=0u;iteration<BODY_
   }
  }
  for(var iteration=0u;iteration<ITERATIONS;iteration++) {
+  ${hasJoints ? 'solveJoints();' : ''}
   for(var pair=0u;pair<PAIR_CAPACITY;pair++) {
    let firstCollider=getFirstCollider(pair);let secondCollider=getSecondCollider(pair);let first=colliderBody(firstCollider);let second=colliderBody(secondCollider);
    if((sleepStates[first].y>0.5 || !dynamic(first)) && (sleepStates[second].y>0.5 || !dynamic(second))) {continue;}
@@ -378,7 +384,7 @@ fn finishBody(body:u32) {
 @compute @workgroup_size(1) fn finish() {
  for(var body=0u;body<BODY_COUNT;body++){finishBody(body);}
  for(var body=0u;body<BODY_COUNT;body++) {sleepStates[body].w=1.0;}
- for(var body=0u;body<BODY_COUNT;body++) {if(dynamic(body) && (settings.sleep.x<=0.0 || sleepStates[body].x<settings.sleep.x)) {sleepStates[root(body)].w=0.0;}}
+ for(var body=0u;body<BODY_COUNT;body++) {if(dynamic(body) && (jointActive(body) || settings.sleep.x<=0.0 || sleepStates[body].x<settings.sleep.x)) {sleepStates[root(body)].w=0.0;}}
  for(var body=0u;body<BODY_COUNT;body++) {
   if(dynamic(body) && sleepStates[root(body)].w>0.5) {sleepStates[body].y=1.0;velocities[body]=vec4f(0,0,0,velocities[body].w);angularVelocities[body]=vec4f(0);}
  }

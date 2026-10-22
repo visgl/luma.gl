@@ -11,6 +11,7 @@ import {PerspectiveCamera} from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {Matrix4} from '@math.gl/core';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
+import {makeMechanism} from './mechanisms';
 import {createRigidBodyPanel} from './info-box';
 import {
   makeRigidBodyScene,
@@ -52,9 +53,12 @@ try {
   });
   async function createScene() {
     const sceneName = isRigidBodyScene(scene.value) ? scene.value : 'stack';
-    const bodies = makeRigidBodyScene(sceneName);
+    const mechanism = makeMechanism(sceneName);
+    const bodies = mechanism?.bodies ?? makeRigidBodyScene(sceneName);
+    if (mechanism) solver.value = 'ordered';
     const world = new GPURigidBodyWorld({
       bodies,
+      joints: mechanism?.joints,
       failurePolicy: 'rollback',
       ...(sceneName === 'continuous' ? {continuous: {bodies: [0]}} : {}),
       iterations: Number(iterations.value),

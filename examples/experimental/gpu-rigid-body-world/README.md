@@ -56,3 +56,11 @@ as visual controls. Do not add placeholder simulations for unsupported features.
 The Fast sphere / thin walls scenario uses bounded sphere/static-surface CCD. It
 rejects incomplete steps through GPU rollback and preserves the remaining travel
 after impacts. This does not imply dynamic-pair or rotating-convex CCD support.
+
+## Mechanisms collection
+
+The scene selector includes a distance pendulum, motorized hinge and powered slider.
+These use the public `joints` API, force the ordered solver and preserve the existing
+Reset, GPU Graph and Timeline controls. Hinge and slider scenes include loose boxes
+so constraint and contact response can be observed together. Joint-connected bodies
+remain awake; this initial envelope is limited to 64 joints and has no joint warm start.

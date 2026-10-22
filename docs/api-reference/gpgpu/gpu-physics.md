@@ -40,11 +40,11 @@ experimental as a module.
 | Collision events | Available | Opt-in rigid-body begin/end and thresholded impact samples with IDs, step ordering and explicit loss reporting | Event recording scans the bounded pair cache; large-world compaction and recoverable consumer overflow remain work |
 | Scene queries | Partial | Parallel collider rays, sphere overlap and bounded sphere casts across analytic shapes and cooked mesh geometry | One pending query per world; bounded casts report incomplete results; spatial batching and general shape casts remain planned |
 | Trigger volumes | Partial | Step-local compound spherical sensors and swept sphere crossings; Space Salvage uses docking events | Arbitrary sensor shapes, curved trajectories and glTF trigger bindings remain planned |
-| Joints and articulations | Planned | Existing impulses and kinematic targets support external controls | General constraints, drives, limits and reduced-coordinate articulations are not implemented |
+| Joints and articulations | Partial | Bounded ordered distance/fixed/hinge/slider constraints, frames, limits and capped velocity motors | Parallel scheduling, warm starts, springs, breakage and articulations remain planned |
 | glTF physics | Partial | Pinned draft import, shape/body/material/filter semantics and explicit capability reports | Proposal constraints, triggers, behavior bindings and automatic animation ownership remain incomplete |
 | GPU glTF pose publication | Planned | Procedural examples render GPU poses directly | The glTF example still bridges poses through the CPU; direct scenegraph pose/bounds publication remains work |
 | Capacity and diagnostics | Available | Allocation preflight, logical memory reports, bounded queues and lifetime failure counters | Opt-in GPU rollback and explicit budget-growth reconstruction; automatic growth and kinematic command replay remain work |
-| Qualification and tooling | Partial | GPU regressions, independent fixtures, whole-step benchmark exports and graph/timeline inspection | Multi-device performance/accuracy gates, capture/replay and a fully qualified profile remain work |
+| Qualification and tooling | Partial | GPU regressions, independent fixtures, whole-step benchmark exports and graph/timeline inspection | Same-implementation GPU state capture/restore is available; command journals, multi-device gates and a fully qualified profile remain work |
 
 See the [remaining tranches](https://github.com/visgl/luma.gl/blob/master/dev-docs/roadmaps/gpu-physics-roadmap.md#remaining-tranches-after-space-salvage)
 for completion gates. The detailed [sphere](./gpu-sphere-world.md) and
@@ -96,3 +96,6 @@ in the [adapter reference](https://github.com/visgl/luma.gl/blob/master/modules/
 [Qualification tooling](https://github.com/visgl/luma.gl/blob/master/scripts/physics/README.md)
 separates schema/import evidence, numerical behavior, capacity and performance.
 A successful import, finite poses or zero overflow alone is not proof of accuracy.
+
+See the [collision coverage contract](./gpu-physics-collision-coverage.md) for pairwise
+response fixtures and the distinction between coverage and numerical qualification.

@@ -52,6 +52,11 @@ import {
   type GPURigidBodyTriggerBatch
 } from './rigid-body-triggers';
 import {addRigidBodyCheckpoint} from './rigid-body-transaction';
+import {
+  getRigidBodyJointShader,
+  validateRigidBodyJoints,
+  type GPURigidBodyJoint
+} from './rigid-body-joints';
 import {getRigidBodyShader} from './rigid-body-shaders';
 
 type Vector3 = readonly [number, number, number];
@@ -68,9 +73,20 @@ import {
   type GPURigidBodyQueryResult
 } from './rigid-body-queries';
 
+/** In-memory, structured-cloneable debug capture; tied to this implementation's storage layout. */
+export type GPURigidBodyCapture = {
+  version: 1;
+  props: GPURigidBodyWorldProps;
+  buffers: {name: string; data: Uint8Array}[];
+  contactCursor: number;
+  triggerCursor: number;
+};
+
 export type GPURigidBodyWorldProps = {
   id?: string;
   bodies: readonly GPURigidBody[];
+  /** Up to 64 ordered-solver joints; connected bodies remain awake. */
+  joints?: readonly GPURigidBodyJoint[];
   gravity?: Vector3;
   timeStep?: number;
   iterations?: number;
@@ -171,6 +187,7 @@ export class GPURigidBodyWorld {
     this.solver = props.solver ?? 'ordered';
     if (!['ordered', 'parallel'].includes(this.solver))
       throw new Error('Invalid rigid-body solver');
+    validateRigidBodyJoints(props.joints ?? [], props.bodies, this.solver);
     const colliderCount = props.bodies.reduce(
       (sum, body) => sum + (body.colliders?.length ?? 1),
       0
@@ -696,7 +713,9 @@ export class GPURigidBodyWorld {
       ),
       sparseLayout,
       parallel,
-      this.props.maximumMeshTraversalTestsPerPair ?? 65536
+      this.props.maximumMeshTraversalTestsPerPair ?? 65536,
+      getRigidBodyJointShader(this.props.joints ?? [], this.props.bodies),
+      Boolean(this.props.joints?.length)
     );
     const parallelBindings: Record<string, readonly string[]> = {
       parallelReset: ['parallelState'],
@@ -1459,6 +1478,57 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
         this.triggerRead = null;
       });
     return this.triggerRead;
+  }
+
+  /** Stop graph submissions and controls first; includes diagnostics, caches and event history. */
+  async captureState(): Promise<GPURigidBodyCapture> {
+    if (!this.device || this.destroyed || this.queryPending || this.eventRead || this.triggerRead)
+      throw new Error('Capture requires an idle attached world');
+    return {
+      version: 1,
+      props: structuredClone(this.props),
+      contactCursor: this.eventCursor,
+      triggerCursor: this.triggerCursor,
+      buffers: await Promise.all(
+        this.ownedBuffers.map(async buffer => ({
+          name: buffer.id.slice(this.id.length + 1),
+          data: new Uint8Array(await buffer.readAsync())
+        }))
+      )
+    };
+  }
+
+  /** Restore between submissions on the same configuration and implementation; no implicit wake. */
+  restoreState(capture: GPURigidBodyCapture): void {
+    if (
+      !this.device ||
+      this.destroyed ||
+      this.queryPending ||
+      this.eventRead ||
+      this.triggerRead ||
+      capture.version !== 1 ||
+      capture.buffers.length !== this.ownedBuffers.length ||
+      JSON.stringify({...capture.props, id: undefined}) !==
+        JSON.stringify({...this.props, id: undefined}) ||
+      ![capture.contactCursor, capture.triggerCursor].every(
+        value => Number.isInteger(value) && value >= 0 && value <= 0xffffffff
+      )
+    )
+      throw new Error('Incompatible rigid-body capture');
+    // Validate every allocation before writing any state. Captures are trusted debug artifacts.
+    for (const [index, buffer] of this.ownedBuffers.entries()) {
+      const saved = capture.buffers[index];
+      if (
+        saved.name !== buffer.id.slice(this.id.length + 1) ||
+        !(saved.data instanceof Uint8Array) ||
+        saved.data.byteLength !== buffer.byteLength
+      )
+        throw new Error('Incompatible rigid-body capture storage');
+    }
+    for (const [index, buffer] of this.ownedBuffers.entries())
+      buffer.write(capture.buffers[index].data);
+    this.eventCursor = capture.contactCursor;
+    this.triggerCursor = capture.triggerCursor;
   }
 
   /** Stop submissions first. Reconstruct with these accepted poses and larger budgets after rollback. */

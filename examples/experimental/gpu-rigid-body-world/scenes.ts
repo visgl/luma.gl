@@ -9,6 +9,21 @@ import {
 } from '@luma.gl/gpgpu/gpu-physics';
 
 export const RIGID_BODY_SCENES = {
+  pendulum: {
+    title: 'Mechanisms · pendulum',
+    description:
+      'A distance constraint suspends a sphere. Joint rows share the ordered contact solver. This first joint envelope keeps connected bodies awake and does not warm-start joints.'
+  },
+  hinge: {
+    title: 'Mechanisms · motorized hinge',
+    description:
+      'A hinged bar has angular limits and a torque-capped velocity motor. It can interact with the loose box. The hinge axis is the attachment frame Z axis; angular limits use wrapped radians.'
+  },
+  slider: {
+    title: 'Mechanisms · powered slider',
+    description:
+      'A motor pushes a constrained carriage toward its linear stop and into a loose box. Translation is free only along the attachment Z axis; orientation is locked. Motor force is capped per step, independently of solver iteration count.'
+  },
   continuous: {
     title: 'Fast sphere / thin walls',
     description:
