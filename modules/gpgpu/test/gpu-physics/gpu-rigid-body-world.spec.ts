@@ -549,3 +549,40 @@ it('GPURigidBodyWorld rebounds a sphere from the authored cradle post', async co
     simulation.destroy();
   }
 });
+
+it('the assembled cradle loses swing energy without incomplete steps', async context => {
+  const {makeMechanism} = await import(
+    '../../../../examples/experimental/gpu-rigid-body-world/mechanisms'
+  );
+  const mechanism = makeMechanism('cradle')!;
+  const simulation = await makeWorld(mechanism.bodies, {
+    joints: mechanism.joints,
+    gravity: [0, 0, -9.81],
+    timeStep: 1 / 480,
+    solver: 'ordered',
+    iterations: 8,
+    restitutionThreshold: 0.05,
+    linearDamping: 0.08,
+    angularDamping: 0.12,
+    failurePolicy: 'rollback'
+  });
+  if (!simulation) {
+    context.skip();
+    return;
+  }
+  try {
+    const initialEnergy = 9.81 * (mechanism.bodies[2].position[2] - 1.5);
+    const state = await simulation.step(3840);
+    let energy = 0;
+    for (let index = 2; index <= 10; index += 2) {
+      const body = state[index];
+      energy += 0.5 * body.velocity.reduce((sum, value) => sum + value * value, 0);
+      energy += 0.032 * body.angularVelocity.reduce((sum, value) => sum + value * value, 0);
+      energy += 9.81 * Math.max(0, body.position[2] - 1.5);
+    }
+    expect(energy).toBeLessThan(initialEnergy * 0.9);
+    expect((await simulation.world.readSimulationDiagnostics()).incompleteSteps).toBe(0);
+  } finally {
+    simulation.destroy();
+  }
+}, 120000);
