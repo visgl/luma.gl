@@ -160,6 +160,12 @@ it.for([
     expect(events.events.length > 0).toBe(collideConnected);
     world.restoreState(capture);
     expect(await advance()).toEqual(events);
+    const warmCapture = await world.captureState();
+    const continuedEvents = await advance();
+    const continuedState = await world.readState();
+    world.restoreState(warmCapture);
+    expect(await advance()).toEqual(continuedEvents);
+    expect(await world.readState()).toEqual(continuedState);
   } finally {
     graph.destroy();
     world.destroy();
