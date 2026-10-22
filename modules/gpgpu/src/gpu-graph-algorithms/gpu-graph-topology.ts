@@ -7,14 +7,14 @@ import type {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import type {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUCommandGraph} from '../gpu-core/gpu-command-graph';
-import type {GPUGraphData} from './gpu-graph';
-import {addGPUGraphTopologyToGraphWithDispatchLimit} from './gpu-graph-topology-internals';
+import type {GPUGraphAlgorithmsData} from './gpu-graph';
+import {addGPUGraphAlgorithmsTopologyToGraphWithDispatchLimit} from './gpu-graph-topology-internals';
 
 const MAXIMUM_UINT32 = 0xffffffff;
 const SCALAR_BYTE_LENGTH = 4;
 
 /** Caller-owned packed output vectors for one compressed sparse adjacency direction. */
-export type GPUGraphAdjacency = {
+export type GPUGraphAlgorithmsAdjacency = {
   /** Exclusive offsets for every vertex, followed by the total accepted adjacency count. */
   offsets: GPUVector<'uint32'>;
   /** Capacity-bounded adjacent vertex identifiers in unspecified per-vertex order. */
@@ -30,15 +30,15 @@ export type GPUGraphAdjacency = {
 };
 
 /** Source graph and caller-owned output allocations for a complete GPU topology rebuild. */
-export type GPUGraphTopologyProps = {
+export type GPUGraphAlgorithmsTopologyProps = {
   /** Prefix for generated command-graph nodes and graph-owned transient resources. */
   id?: string;
   /** Existing graph columns, preserving all source chunk boundaries and metadata. */
-  graph: GPUGraphData;
+  graph: GPUGraphAlgorithmsData;
   /** Caller-owned forward adjacency and capacity status. */
-  forward: GPUGraphAdjacency;
+  forward: GPUGraphAlgorithmsAdjacency;
   /** Optional caller-owned transposed adjacency for directed graphs. */
-  reverse?: GPUGraphAdjacency;
+  reverse?: GPUGraphAlgorithmsAdjacency;
   /** One caller-owned row receiving the number of invalid source edge endpoints. */
   invalidEdgeCount: GPUVector<'uint32'>;
 };
@@ -50,20 +50,20 @@ export type GPUGraphTopologyProps = {
  * other output. This conservative ownership contract avoids command-graph handle aliasing even
  * when callers provide non-overlapping slices of one physical allocation.
  */
-export class GPUGraphTopology {
+export class GPUGraphAlgorithmsTopology {
   /** Prefix for generated command-graph nodes and graph-owned transient resources. */
   readonly id: string;
   /** Existing caller-owned graph sources. */
-  readonly graph: GPUGraphData;
+  readonly graph: GPUGraphAlgorithmsData;
   /** Caller-owned compressed forward adjacency. */
-  readonly forward: GPUGraphAdjacency;
+  readonly forward: GPUGraphAlgorithmsAdjacency;
   /** Optional caller-owned compressed reverse adjacency. */
-  readonly reverse?: GPUGraphAdjacency;
+  readonly reverse?: GPUGraphAlgorithmsAdjacency;
   /** Caller-owned invalid source edge count. */
   readonly invalidEdgeCount: GPUVector<'uint32'>;
 
   /** Validates existing source and destination metadata without allocating or submitting work. */
-  constructor(props: GPUGraphTopologyProps) {
+  constructor(props: GPUGraphAlgorithmsTopologyProps) {
     this.id = props.id ?? 'gpu-graph-topology';
     this.graph = props.graph;
     this.forward = props.forward;
@@ -96,7 +96,7 @@ export class GPUGraphTopology {
 
   /** Adds a complete topology rebuild without submitting commands or reading source data back. */
   addToGraph<Parameters>(commandGraph: GPUCommandGraph<Parameters>): void {
-    addGPUGraphTopologyToGraphWithDispatchLimit(
+    addGPUGraphAlgorithmsTopologyToGraphWithDispatchLimit(
       this,
       commandGraph,
       commandGraph.device.limits.maxComputeWorkgroupsPerDimension
@@ -105,7 +105,11 @@ export class GPUGraphTopology {
 }
 
 /** Requires caller-owned contiguous packed destinations with matching status and capacities. */
-function validateAdjacency(graph: GPUGraphData, adjacency: GPUGraphAdjacency, name: string): void {
+function validateAdjacency(
+  graph: GPUGraphAlgorithmsData,
+  adjacency: GPUGraphAlgorithmsAdjacency,
+  name: string
+): void {
   validateTopologyVector(adjacency.offsets, 'uint32', `${name} offsets`);
   validateTopologyVector(adjacency.neighbors, 'uint32', `${name} neighbors`);
   validateTopologyVector(adjacency.edgeIds, 'uint32', `${name} edgeIds`);
@@ -170,7 +174,7 @@ function validateTopologyVector<Format extends 'uint32' | 'float32'>(
 }
 
 /** Rejects shared physical source/destination buffers, including distinct disjoint slices. */
-function validateDistinctAllocations(topology: GPUGraphTopology): void {
+function validateDistinctAllocations(topology: GPUGraphAlgorithmsTopology): void {
   const allocations = new Map<Buffer, string>();
   const sourceVectors = [
     topology.graph.sourceVertices,
@@ -204,7 +208,7 @@ function validateDistinctAllocations(topology: GPUGraphTopology): void {
 
 /** Enumerates caller-owned output vectors without changing vector or chunk identities. */
 function getAdjacencyOutputs(
-  adjacency: GPUGraphAdjacency,
+  adjacency: GPUGraphAlgorithmsAdjacency,
   direction: string
 ): {name: string; vector: GPUVector<'uint32'> | GPUVector<'float32'>}[] {
   return [

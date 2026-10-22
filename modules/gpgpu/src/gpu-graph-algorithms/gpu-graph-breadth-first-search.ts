@@ -7,22 +7,22 @@ import type {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import type {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUCommandGraph} from '../gpu-core/gpu-command-graph';
-import {addGPUGraphBreadthFirstSearchToGraphWithDispatchLimit} from './gpu-graph-breadth-first-search-internals';
-import type {GPUGraphAdjacency, GPUGraphTopology} from './gpu-graph-topology';
+import {addGPUGraphAlgorithmsBreadthFirstSearchToGraphWithDispatchLimit} from './gpu-graph-breadth-first-search-internals';
+import type {GPUGraphAlgorithmsAdjacency, GPUGraphAlgorithmsTopology} from './gpu-graph-topology';
 
 const MAXIMUM_UINT32 = 0xffffffff;
 const MAXIMUM_BREADTH_FIRST_DEPTH = 1024;
 const SCALAR_BYTE_LENGTH = 4;
 
 /** Forward, reverse, or combined orientation for shortest unweighted graph paths. */
-export type GPUGraphBreadthFirstSearchDirection = 'outgoing' | 'incoming' | 'both';
+export type GPUGraphAlgorithmsBreadthFirstSearchDirection = 'outgoing' | 'incoming' | 'both';
 
 /** Caller-owned graph, seeds, GPU-resident controls, and shortest-path destinations. */
-export type GPUGraphBreadthFirstSearchProps = {
+export type GPUGraphAlgorithmsBreadthFirstSearchProps = {
   /** Prefix for generated command-graph nodes and imported-resource identifiers. */
   id?: string;
   /** Existing GPU-resident graph adjacency and its explicit overflow status. */
-  topology: GPUGraphTopology;
+  topology: GPUGraphAlgorithmsTopology;
   /** Stable source vertex identifiers, preserving every original seed chunk. */
   seeds: GPUVector<'uint32'>;
   /** One caller-owned unsigned hop-distance row for every graph vertex. */
@@ -38,7 +38,7 @@ export type GPUGraphBreadthFirstSearchProps = {
   /** Optional caller-owned scalar dynamically limiting the compiled hop count. */
   activeDepth?: GPUVector<'uint32'>;
   /** Forward, reverse, or combined edge orientation. Defaults to outgoing. */
-  direction?: GPUGraphBreadthFirstSearchDirection;
+  direction?: GPUGraphAlgorithmsBreadthFirstSearchDirection;
 };
 
 /**
@@ -49,11 +49,11 @@ export type GPUGraphBreadthFirstSearchProps = {
  * overflow in the selected adjacency direction leaves every distance and predecessor unreachable
  * and clears the optional mask, preventing partial topology from producing misleading paths.
  */
-export class GPUGraphBreadthFirstSearch {
+export class GPUGraphAlgorithmsBreadthFirstSearch {
   /** Prefix for generated command-graph nodes and imported-resource identifiers. */
   readonly id: string;
   /** Existing caller-owned graph topology. */
-  readonly topology: GPUGraphTopology;
+  readonly topology: GPUGraphAlgorithmsTopology;
   /** Existing caller-owned, chunk-preserving seed identifiers. */
   readonly seeds: GPUVector<'uint32'>;
   /** Caller-owned vertex-aligned hop distances. */
@@ -69,10 +69,10 @@ export class GPUGraphBreadthFirstSearch {
   /** Optional GPU-resident active traversal depth. */
   readonly activeDepth?: GPUVector<'uint32'>;
   /** Forward, reverse, or combined edge orientation. */
-  readonly direction: GPUGraphBreadthFirstSearchDirection;
+  readonly direction: GPUGraphAlgorithmsBreadthFirstSearchDirection;
 
   /** Validates caller-owned metadata without allocating, submitting, or reading GPU work. */
-  constructor(props: GPUGraphBreadthFirstSearchProps) {
+  constructor(props: GPUGraphAlgorithmsBreadthFirstSearchProps) {
     this.id = props.id ?? 'gpu-graph-breadth-first-search';
     this.topology = props.topology;
     this.seeds = props.seeds;
@@ -125,7 +125,7 @@ export class GPUGraphBreadthFirstSearch {
 
   /** Adds bounded shortest-path passes without submitting commands or reading GPU results. */
   addToGraph<Parameters>(commandGraph: GPUCommandGraph<Parameters>): void {
-    addGPUGraphBreadthFirstSearchToGraphWithDispatchLimit(
+    addGPUGraphAlgorithmsBreadthFirstSearchToGraphWithDispatchLimit(
       this,
       commandGraph,
       commandGraph.device.limits.maxComputeWorkgroupsPerDimension
@@ -202,7 +202,7 @@ function validatePackedChunk(chunk: GPUData<'uint32'>, name: string): void {
 }
 
 /** Keeps every writable result physically disjoint from all graph sources, controls, and peers. */
-function validateDistinctSearchOutputs(search: GPUGraphBreadthFirstSearch): void {
+function validateDistinctSearchOutputs(search: GPUGraphAlgorithmsBreadthFirstSearch): void {
   const inputVectors = [
     search.topology.graph.sourceVertices,
     search.topology.graph.targetVertices,
@@ -238,7 +238,7 @@ function validateDistinctSearchOutputs(search: GPUGraphBreadthFirstSearch): void
 
 /** Enumerates existing caller-owned adjacency and status vectors without copying their chunks. */
 function getAdjacencyVectors(
-  adjacency: GPUGraphAdjacency
+  adjacency: GPUGraphAlgorithmsAdjacency
 ): (GPUVector<'uint32'> | GPUVector<'float32'>)[] {
   return [
     adjacency.offsets,

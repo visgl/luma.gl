@@ -24,11 +24,11 @@ algorithm whose result is immediately needed on the CPU, a CPU graph library may
 
 ```ts
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
-import {GPUGraphData, GPUGraphPageRank, GPUGraphTopology} from '@luma.gl/gpgpu/gpu-graph-algorithms';
+import {GPUGraphAlgorithmsData, GPUGraphAlgorithmsPageRank, GPUGraphAlgorithmsTopology} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 
 const graph = new GPUCommandGraph({device, id: 'graph-analysis'});
-const topology = new GPUGraphTopology({device, graph, edges, vertexCount});
-const pageRank = new GPUGraphPageRank({device, graph, topology});
+const topology = new GPUGraphAlgorithmsTopology({device, graph, edges, vertexCount});
+const pageRank = new GPUGraphAlgorithmsPageRank({device, graph, topology});
 
 pageRank.addPasses();
 const compiledGraph = graph.compile();
@@ -39,8 +39,8 @@ back. Operations contribute nodes and graph views only.
 
 ## Core concepts and data model
 
-- `GPUGraphData` describes canonical vertex and edge identity.
-- `GPUGraphTopology` builds reusable adjacency views for algorithms that need neighbors.
+- `GPUGraphAlgorithmsData` describes canonical vertex and edge identity.
+- `GPUGraphAlgorithmsTopology` builds reusable adjacency views for algorithms that need neighbors.
 - Algorithms publish ordinary graph buffers and bounded status so their outputs compose.
 - Iterative operations expose capacity, convergence, and incomplete-result behavior explicitly.
 - Weighted, directed, and undirected semantics are operation-specific and documented in the
@@ -68,11 +68,11 @@ back. Operations contribute nodes and graph views only.
 
 | Family | Operations |
 | --- | --- |
-| Graph and topology | `GPUGraphData`, `GPUGraphTopology`, `GPUGraphDegree` |
-| Traversal and paths | `GPUGraphBreadthFirstSearch`, `GPUGraphSingleSourceShortestPath` |
-| Connectivity and communities | `GPUGraphConnectedComponents`, `GPUGraphCoreNumber`, `GPUGraphLabelPropagation`, `GPUGraphModularityOptimization` |
-| Metrics and ranking | `GPUGraphLocalClusteringCoefficient`, `GPUGraphModularity`, `GPUGraphPageRank` |
-| Layout | `GPUGraphForceLayout`, `GPUGraphSpatialForceLayout` |
+| Graph and topology | `GPUGraphAlgorithmsData`, `GPUGraphAlgorithmsTopology`, `GPUGraphAlgorithmsDegree` |
+| Traversal and paths | `GPUGraphAlgorithmsBreadthFirstSearch`, `GPUGraphAlgorithmsSingleSourceShortestPath` |
+| Connectivity and communities | `GPUGraphAlgorithmsConnectedComponents`, `GPUGraphAlgorithmsCoreNumber`, `GPUGraphAlgorithmsLabelPropagation`, `GPUGraphAlgorithmsModularityOptimization` |
+| Metrics and ranking | `GPUGraphAlgorithmsLocalClusteringCoefficient`, `GPUGraphAlgorithmsModularity`, `GPUGraphAlgorithmsPageRank` |
+| Layout | `GPUGraphAlgorithmsForceLayout`, `GPUGraphAlgorithmsSpatialForceLayout` |
 
 The [operations reference](./gpu-graph-operations) documents usage, buffers, execution, capacity,
 validation, and performance for each family.

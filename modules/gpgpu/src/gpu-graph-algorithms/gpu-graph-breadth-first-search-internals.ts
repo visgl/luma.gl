@@ -17,8 +17,8 @@ import {
   getBoundedInvocationIndexSource
 } from '../gpu-core/gpu-dispatch-utils';
 import {getViewBinding, getViewElementOffset} from '../gpu-core/graph-data-view-utils';
-import type {GPUGraphBreadthFirstSearch} from './gpu-graph-breadth-first-search';
-import type {GPUGraphAdjacency} from './gpu-graph-topology';
+import type {GPUGraphAlgorithmsBreadthFirstSearch} from './gpu-graph-breadth-first-search';
+import type {GPUGraphAlgorithmsAdjacency} from './gpu-graph-topology';
 
 const BREADTH_FIRST_SEARCH_WORKGROUP_SIZE = 256;
 const UNREACHABLE_VERTEX = 0xffffffff;
@@ -57,8 +57,8 @@ type BreadthFirstSearchPassProps = {
 };
 
 /** Adds deterministic GPU shortest-hop traversal with an explicit dispatch limit. @internal */
-export function addGPUGraphBreadthFirstSearchToGraphWithDispatchLimit<Parameters>(
-  search: GPUGraphBreadthFirstSearch,
+export function addGPUGraphAlgorithmsBreadthFirstSearchToGraphWithDispatchLimit<Parameters>(
+  search: GPUGraphAlgorithmsBreadthFirstSearch,
   commandGraph: GPUCommandGraph<Parameters>,
   maxComputeWorkgroupsPerDimension: number
 ): void {
@@ -139,7 +139,7 @@ export function addGPUGraphBreadthFirstSearchToGraphWithDispatchLimit<Parameters
 function importSearchAdjacency<Parameters>(
   commandGraph: GPUCommandGraph<Parameters>,
   id: string,
-  adjacency: GPUGraphAdjacency
+  adjacency: GPUGraphAlgorithmsAdjacency
 ): ImportedSearchAdjacency {
   return {
     offsets: commandGraph.importGPUVector(`${id}-offsets`, adjacency.offsets).data[0],
@@ -162,7 +162,7 @@ function addInitializationPass<Parameters>(
     ? `const MASK_OFFSET: u32 = ${getViewElementOffset(state.mask)}u;`
     : '';
   const clearMask = state.mask ? 'atomicStore(&mask[MASK_OFFSET + index], 0u);' : '';
-  const dispatchLayout = getGPUGraphBreadthFirstSearchDispatchLayout(
+  const dispatchLayout = getGPUGraphAlgorithmsBreadthFirstSearchDispatchLayout(
     state.vertexCount,
     state.maxComputeWorkgroupsPerDimension
   );
@@ -230,7 +230,7 @@ function addSeedPass<Parameters>(
     ? `if (${props.seedBase}u + index >= activeSeedCount[ACTIVE_SEED_COUNT_OFFSET]) { return; }`
     : '';
   const publishMask = state.mask ? 'atomicStore(&mask[MASK_OFFSET + vertex], 1u);' : '';
-  const dispatchLayout = getGPUGraphBreadthFirstSearchDispatchLayout(
+  const dispatchLayout = getGPUGraphAlgorithmsBreadthFirstSearchDispatchLayout(
     props.seeds.length,
     state.maxComputeWorkgroupsPerDimension
   );
@@ -305,7 +305,7 @@ function addExpansionPass<Parameters>(
     ? `if (${props.depth}u >= activeDepth[ACTIVE_DEPTH_OFFSET]) { return; }`
     : '';
   const publishMask = state.mask ? 'atomicStore(&mask[MASK_OFFSET + neighbor], 1u);' : '';
-  const dispatchLayout = getGPUGraphBreadthFirstSearchDispatchLayout(
+  const dispatchLayout = getGPUGraphAlgorithmsBreadthFirstSearchDispatchLayout(
     state.vertexCount,
     state.maxComputeWorkgroupsPerDimension
   );
@@ -405,12 +405,12 @@ function addBreadthFirstSearchPass<Parameters>(
 }
 
 /** Plans one bounded three-dimensional breadth-first seed or vertex dispatch. @internal */
-export function getGPUGraphBreadthFirstSearchDispatchLayout(
+export function getGPUGraphAlgorithmsBreadthFirstSearchDispatchLayout(
   elementCount: number,
   maxComputeWorkgroupsPerDimension: number
 ): GPUBoundedDispatchLayout {
   return getBoundedDispatchLayout(
-    'GPUGraphBreadthFirstSearch',
+    'GPUGraphAlgorithmsBreadthFirstSearch',
     elementCount,
     BREADTH_FIRST_SEARCH_WORKGROUP_SIZE,
     maxComputeWorkgroupsPerDimension

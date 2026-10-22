@@ -16,7 +16,7 @@ import {
   getViewBinding,
   getViewElementOffset
 } from '../gpu-core/graph-data-view-utils';
-import type {GPUGraphLabelPropagation} from './gpu-graph-label-propagation';
+import type {GPUGraphAlgorithmsLabelPropagation} from './gpu-graph-label-propagation';
 
 const LABEL_PROPAGATION_WORKGROUP_SIZE = 256;
 const INVALID_COMMUNITY = 0xffffffff;
@@ -50,8 +50,8 @@ type LabelPropagationPassProps = {
 };
 
 /** Adds synchronous deterministic neighborhood-majority community propagation. @internal */
-export function addGPUGraphLabelPropagationToGraphWithDispatchLimit<Parameters>(
-  propagation: GPUGraphLabelPropagation,
+export function addGPUGraphAlgorithmsLabelPropagationToGraphWithDispatchLimit<Parameters>(
+  propagation: GPUGraphAlgorithmsLabelPropagation,
   commandGraph: GPUCommandGraph<Parameters>,
   maxComputeWorkgroupsPerDimension: number
 ): void {
@@ -447,19 +447,19 @@ function getLabelPropagationDispatchLayout(
   state: ImportedLabelPropagation,
   elementCount: number
 ): GPUBoundedDispatchLayout {
-  return getGPUGraphLabelPropagationDispatchLayout(
+  return getGPUGraphAlgorithmsLabelPropagationDispatchLayout(
     elementCount,
     state.maxComputeWorkgroupsPerDimension
   );
 }
 
 /** Plans bounded true three-dimensional community-label or convergence dispatch. @internal */
-export function getGPUGraphLabelPropagationDispatchLayout(
+export function getGPUGraphAlgorithmsLabelPropagationDispatchLayout(
   elementCount: number,
   maxComputeWorkgroupsPerDimension: number
 ): GPUBoundedDispatchLayout {
   return getBoundedDispatchLayout(
-    'GPUGraphLabelPropagation',
+    'GPUGraphAlgorithmsLabelPropagation',
     elementCount,
     LABEL_PROPAGATION_WORKGROUP_SIZE,
     maxComputeWorkgroupsPerDimension

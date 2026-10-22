@@ -7,19 +7,19 @@ import type {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import type {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUCommandGraph} from '../gpu-core/gpu-command-graph';
-import {addGPUGraphCoreNumberToGraphWithDispatchLimit} from './gpu-graph-core-number-internals';
-import type {GPUGraphAdjacency, GPUGraphTopology} from './gpu-graph-topology';
+import {addGPUGraphAlgorithmsCoreNumberToGraphWithDispatchLimit} from './gpu-graph-core-number-internals';
+import type {GPUGraphAlgorithmsAdjacency, GPUGraphAlgorithmsTopology} from './gpu-graph-topology';
 
 const DEFAULT_CORE_NUMBER_ITERATIONS = 32;
 const MAXIMUM_CORE_NUMBER_ITERATIONS = 1024;
 const SCALAR_BYTE_LENGTH = 4;
 
 /** Existing graph topology and caller-owned k-core decomposition destinations. */
-export type GPUGraphCoreNumberProps = {
+export type GPUGraphAlgorithmsCoreNumberProps = {
   /** Prefix for generated command-graph nodes and imported-resource identifiers. */
   id?: string;
   /** Existing compressed adjacency; directed weak neighborhoods require reverse CSR. */
-  topology: GPUGraphTopology;
+  topology: GPUGraphAlgorithmsTopology;
   /** One caller-owned unsigned core-number row per graph vertex. */
   output: GPUVector<'uint32'>;
   /** Maximum synchronized core-refinement rounds; defaults to 32 and is bounded by 1,024. */
@@ -42,11 +42,11 @@ export type GPUGraphCoreNumberProps = {
  * An isolated vertex has core number zero. Overflow in either required adjacency publishes
  * `0xffffffff` output and optional degeneracy sentinels and leaves convergence at zero.
  */
-export class GPUGraphCoreNumber {
+export class GPUGraphAlgorithmsCoreNumber {
   /** Prefix for generated command-graph nodes and imported resources. */
   readonly id: string;
   /** Existing caller-owned GPU graph topology. */
-  readonly topology: GPUGraphTopology;
+  readonly topology: GPUGraphAlgorithmsTopology;
   /** Caller-owned, vertex-aligned unsigned core numbers. */
   readonly output: GPUVector<'uint32'>;
   /** Maximum number of compiled, globally synchronized refinement rounds. */
@@ -57,7 +57,7 @@ export class GPUGraphCoreNumber {
   readonly degeneracy?: GPUVector<'uint32'>;
 
   /** Validates caller-owned metadata without allocating, submitting, or reading GPU work. */
-  constructor(props: GPUGraphCoreNumberProps) {
+  constructor(props: GPUGraphAlgorithmsCoreNumberProps) {
     this.id = props.id ?? 'gpu-graph-core-number';
     this.topology = props.topology;
     this.output = props.output;
@@ -88,7 +88,7 @@ export class GPUGraphCoreNumber {
 
   /** Declares bounded GPU core refinement without queue submission or CPU synchronization. */
   addToGraph<Parameters>(commandGraph: GPUCommandGraph<Parameters>): void {
-    addGPUGraphCoreNumberToGraphWithDispatchLimit(
+    addGPUGraphAlgorithmsCoreNumberToGraphWithDispatchLimit(
       this,
       commandGraph,
       commandGraph.device.limits.maxComputeWorkgroupsPerDimension
@@ -128,7 +128,7 @@ function validateCoreNumberVector(vector: GPUVector<'uint32'>, length: number, n
 }
 
 /** Keeps caller-visible core outputs disjoint from graph sources, CSR, status, and peers. */
-function validateDistinctCoreNumberOutputs(coreNumber: GPUGraphCoreNumber): void {
+function validateDistinctCoreNumberOutputs(coreNumber: GPUGraphAlgorithmsCoreNumber): void {
   const {topology} = coreNumber;
   const inputVectors = [
     topology.graph.sourceVertices,
@@ -162,7 +162,7 @@ function validateDistinctCoreNumberOutputs(coreNumber: GPUGraphCoreNumber): void
 
 /** Enumerates caller-owned adjacency payloads and statuses without changing source identity. */
 function getAdjacencyVectors(
-  adjacency: GPUGraphAdjacency
+  adjacency: GPUGraphAlgorithmsAdjacency
 ): (GPUVector<'uint32'> | GPUVector<'float32'>)[] {
   return [
     adjacency.offsets,

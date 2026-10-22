@@ -22,7 +22,7 @@ import {
   getViewBinding,
   getViewElementOffset
 } from '../gpu-core/graph-data-view-utils';
-import type {GPUGraphModularity} from './gpu-graph-modularity';
+import type {GPUGraphAlgorithmsModularity} from './gpu-graph-modularity';
 
 const MODULARITY_WORKGROUP_SIZE = 256;
 
@@ -62,8 +62,8 @@ type ModularityPass = {
 };
 
 /** Composes weighted Newman modularity directly over original ordered edge batches. @internal */
-export function addGPUGraphModularityToGraphWithDispatchLimit<Parameters>(
-  modularity: GPUGraphModularity,
+export function addGPUGraphAlgorithmsModularityToGraphWithDispatchLimit<Parameters>(
+  modularity: GPUGraphAlgorithmsModularity,
   commandGraph: GPUCommandGraph<Parameters>,
   maxComputeWorkgroupsPerDimension: number
 ): void {
@@ -514,16 +514,19 @@ function getDispatchLayout(
   state: ImportedModularity,
   elementCount: number
 ): GPUBoundedDispatchLayout {
-  return getGPUGraphModularityDispatchLayout(elementCount, state.maxComputeWorkgroupsPerDimension);
+  return getGPUGraphAlgorithmsModularityDispatchLayout(
+    elementCount,
+    state.maxComputeWorkgroupsPerDimension
+  );
 }
 
 /** Plans bounded true three-dimensional edge-chunk, label, or finalization dispatch. @internal */
-export function getGPUGraphModularityDispatchLayout(
+export function getGPUGraphAlgorithmsModularityDispatchLayout(
   elementCount: number,
   maxComputeWorkgroupsPerDimension: number
 ): GPUBoundedDispatchLayout {
   return getBoundedDispatchLayout(
-    'GPUGraphModularity',
+    'GPUGraphAlgorithmsModularity',
     elementCount,
     MODULARITY_WORKGROUP_SIZE,
     maxComputeWorkgroupsPerDimension

@@ -12,13 +12,13 @@ import {
   getBoundedInvocationIndexSource
 } from '../gpu-core/gpu-dispatch-utils';
 import {getViewBinding, getViewElementOffset} from '../gpu-core/graph-data-view-utils';
-import type {GPUGraphDegree} from './gpu-graph-degree';
+import type {GPUGraphAlgorithmsDegree} from './gpu-graph-degree';
 
 const GRAPH_DEGREE_WORKGROUP_SIZE = 256;
 
 /** Adds one exact CSR degree pass using an explicit device dispatch limit. @internal */
-export function addGPUGraphDegreeToGraphWithDispatchLimit<Parameters>(
-  degree: GPUGraphDegree,
+export function addGPUGraphAlgorithmsDegreeToGraphWithDispatchLimit<Parameters>(
+  degree: GPUGraphAlgorithmsDegree,
   commandGraph: GPUCommandGraph<Parameters>,
   maxComputeWorkgroupsPerDimension: number
 ): void {
@@ -32,7 +32,7 @@ export function addGPUGraphDegreeToGraphWithDispatchLimit<Parameters>(
       : degree.topology.forward;
   const offsets = commandGraph.importGPUVector(`${degree.id}-offsets`, adjacency.offsets).data[0];
   const output = commandGraph.importGPUVector(`${degree.id}-output`, degree.output).data[0];
-  const dispatchLayout = getGPUGraphDegreeDispatchLayout(
+  const dispatchLayout = getGPUGraphAlgorithmsDegreeDispatchLayout(
     degree.topology.graph.vertexCount,
     maxComputeWorkgroupsPerDimension
   );
@@ -107,12 +107,12 @@ function addDegreePass<Parameters>(
 }
 
 /** Plans a bounded three-dimensional dispatch for exact vertex degree extraction. @internal */
-export function getGPUGraphDegreeDispatchLayout(
+export function getGPUGraphAlgorithmsDegreeDispatchLayout(
   elementCount: number,
   maxComputeWorkgroupsPerDimension: number
 ): GPUBoundedDispatchLayout {
   return getBoundedDispatchLayout(
-    'GPUGraphDegree',
+    'GPUGraphAlgorithmsDegree',
     elementCount,
     GRAPH_DEGREE_WORKGROUP_SIZE,
     maxComputeWorkgroupsPerDimension

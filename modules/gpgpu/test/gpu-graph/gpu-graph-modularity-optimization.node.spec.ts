@@ -8,11 +8,11 @@ import {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import * as experimentalModule from '@luma.gl/experimental';
 import {
-  GPUGraphData,
-  GPUGraphModularityOptimization,
-  GPUGraphTopology,
-  type GPUGraphAdjacency,
-  type GPUGraphModularityOptimizationProps
+  GPUGraphAlgorithmsData,
+  GPUGraphAlgorithmsModularityOptimization,
+  GPUGraphAlgorithmsTopology,
+  type GPUGraphAlgorithmsAdjacency,
+  type GPUGraphAlgorithmsModularityOptimizationProps
 } from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
@@ -48,10 +48,10 @@ afterEach(() => {
   }
 });
 
-describe('GPUGraphModularityOptimization optional graph-analysis contract', () => {
-  test('exports bounded modularity improvement only through the optional GPUGraphData entry point', () => {
-    expect(typeof GPUGraphModularityOptimization).toBe('function');
-    expect('GPUGraphModularityOptimization' in experimentalModule).toBe(false);
+describe('GPUGraphAlgorithmsModularityOptimization optional graph-analysis contract', () => {
+  test('exports bounded modularity improvement only through the optional GPUGraphAlgorithmsData entry point', () => {
+    expect(typeof GPUGraphAlgorithmsModularityOptimization).toBe('function');
+    expect('GPUGraphAlgorithmsModularityOptimization' in experimentalModule).toBe(false);
   });
 
   test('documents deterministic computed-gain ties without promising bitwise weighted stability', () => {
@@ -87,7 +87,7 @@ describe('GPUGraphModularityOptimization optional graph-analysis contract', () =
     const submit = vi.spyOn(fixture.device, 'submit');
     const readbacks = fixture.buffers.map(buffer => vi.spyOn(buffer, 'readAsync'));
 
-    const operation = new GPUGraphModularityOptimization({
+    const operation = new GPUGraphAlgorithmsModularityOptimization({
       ...props,
       id: 'borrowed-modularity-optimization',
       resolution: 0.5,
@@ -120,7 +120,9 @@ describe('GPUGraphModularityOptimization optional graph-analysis contract', () =
 
   test('defaults to singleton initialization, unit resolution, 32 rounds, and zero gain floor', () => {
     const fixture = createOptimizationFixture();
-    const operation = new GPUGraphModularityOptimization(createOptimizationProps(fixture));
+    const operation = new GPUGraphAlgorithmsModularityOptimization(
+      createOptimizationProps(fixture)
+    );
 
     expect(operation.id).toBe('gpu-graph-modularity-optimization');
     expect(operation.initialCommunities).toBeUndefined();
@@ -134,8 +136,10 @@ describe('GPUGraphModularityOptimization optional graph-analysis contract', () =
   test.each([0, 1, 32, 1024])('accepts a bounded local-moving budget: %s', iterations => {
     const fixture = createOptimizationFixture();
     expect(
-      new GPUGraphModularityOptimization({...createOptimizationProps(fixture), iterations})
-        .iterations
+      new GPUGraphAlgorithmsModularityOptimization({
+        ...createOptimizationProps(fixture),
+        iterations
+      }).iterations
     ).toBe(iterations);
   });
 
@@ -148,15 +152,21 @@ describe('GPUGraphModularityOptimization optional graph-analysis contract', () =
   ])('rejects an invalid local-moving budget: %s', iterations => {
     const fixture = createOptimizationFixture();
     expect(
-      () => new GPUGraphModularityOptimization({...createOptimizationProps(fixture), iterations})
+      () =>
+        new GPUGraphAlgorithmsModularityOptimization({
+          ...createOptimizationProps(fixture),
+          iterations
+        })
     ).toThrow(/iterations|1024|integer/);
   });
 
   test.each([0, 0.125, 1, 2])('accepts a finite nonnegative resolution: %s', resolution => {
     const fixture = createOptimizationFixture();
     expect(
-      new GPUGraphModularityOptimization({...createOptimizationProps(fixture), resolution})
-        .resolution
+      new GPUGraphAlgorithmsModularityOptimization({
+        ...createOptimizationProps(fixture),
+        resolution
+      }).resolution
     ).toBe(resolution);
   });
 
@@ -169,15 +179,21 @@ describe('GPUGraphModularityOptimization optional graph-analysis contract', () =
   ])('rejects invalid modularity resolution: %s', resolution => {
     const fixture = createOptimizationFixture();
     expect(
-      () => new GPUGraphModularityOptimization({...createOptimizationProps(fixture), resolution})
+      () =>
+        new GPUGraphAlgorithmsModularityOptimization({
+          ...createOptimizationProps(fixture),
+          resolution
+        })
     ).toThrow(/resolution|finite|float32|negative/);
   });
 
   test.each([0, 0.001, 1, 2])('accepts a nonnegative strict minimum gain: %s', minimumGain => {
     const fixture = createOptimizationFixture();
     expect(
-      new GPUGraphModularityOptimization({...createOptimizationProps(fixture), minimumGain})
-        .minimumGain
+      new GPUGraphAlgorithmsModularityOptimization({
+        ...createOptimizationProps(fixture),
+        minimumGain
+      }).minimumGain
     ).toBe(minimumGain);
   });
 
@@ -190,20 +206,27 @@ describe('GPUGraphModularityOptimization optional graph-analysis contract', () =
   ])('rejects an invalid strict minimum gain: %s', minimumGain => {
     const fixture = createOptimizationFixture();
     expect(
-      () => new GPUGraphModularityOptimization({...createOptimizationProps(fixture), minimumGain})
+      () =>
+        new GPUGraphAlgorithmsModularityOptimization({
+          ...createOptimizationProps(fixture),
+          minimumGain
+        })
     ).toThrow(/minimumGain|finite|float32|negative/);
   });
 
   test('requires reverse adjacency for exact directed modularity moves', () => {
     const fixture = createOptimizationFixture();
     expect(
-      () => new GPUGraphModularityOptimization(createOptimizationProps(fixture, {reverse: false}))
+      () =>
+        new GPUGraphAlgorithmsModularityOptimization(
+          createOptimizationProps(fixture, {reverse: false})
+        )
     ).toThrow(/directed|reverse/);
   });
 
   test('accepts weighted undirected optimization without reverse adjacency', () => {
     const fixture = createOptimizationFixture();
-    const operation = new GPUGraphModularityOptimization(
+    const operation = new GPUGraphAlgorithmsModularityOptimization(
       createOptimizationProps(fixture, {directed: false, weighted: true})
     );
 
@@ -213,7 +236,7 @@ describe('GPUGraphModularityOptimization optional graph-analysis contract', () =
 
   test('accepts empty caller-owned labels alongside independent scalar score and statuses', () => {
     const fixture = createOptimizationFixture();
-    const operation = new GPUGraphModularityOptimization(
+    const operation = new GPUGraphAlgorithmsModularityOptimization(
       createOptimizationProps(fixture, {vertexCount: 0, statuses: true, seed: true})
     );
 
@@ -225,7 +248,7 @@ describe('GPUGraphModularityOptimization optional graph-analysis contract', () =
   });
 });
 
-describe('GPUGraphModularityOptimization packed GPU vectors and physical ownership', () => {
+describe('GPUGraphAlgorithmsModularityOptimization packed GPU vectors and physical ownership', () => {
   test.each([
     'output',
     'initialCommunities'
@@ -243,15 +266,15 @@ describe('GPUGraphModularityOptimization packed GPU vectors and physical ownersh
       new Uint32Array(2)
     ]);
 
-    expect(() => new GPUGraphModularityOptimization({...props, [vectorName]: floating})).toThrow(
-      new RegExp(`${vectorName}|uint32|packed`)
-    );
-    expect(() => new GPUGraphModularityOptimization({...props, [vectorName]: truncated})).toThrow(
-      new RegExp(`${vectorName}|rows|length`)
-    );
-    expect(() => new GPUGraphModularityOptimization({...props, [vectorName]: partitioned})).toThrow(
-      new RegExp(`${vectorName}|chunk|packed`)
-    );
+    expect(
+      () => new GPUGraphAlgorithmsModularityOptimization({...props, [vectorName]: floating})
+    ).toThrow(new RegExp(`${vectorName}|uint32|packed`));
+    expect(
+      () => new GPUGraphAlgorithmsModularityOptimization({...props, [vectorName]: truncated})
+    ).toThrow(new RegExp(`${vectorName}|rows|length`));
+    expect(
+      () => new GPUGraphAlgorithmsModularityOptimization({...props, [vectorName]: partitioned})
+    ).toThrow(new RegExp(`${vectorName}|chunk|packed`));
   });
 
   test.each([0, 2])('requires exactly one float32 modularity score row: %s', length => {
@@ -261,7 +284,7 @@ describe('GPUGraphModularityOptimization packed GPU vectors and physical ownersh
       new Float32Array(length)
     ]);
 
-    expect(() => new GPUGraphModularityOptimization({...props, modularity})).toThrow(
+    expect(() => new GPUGraphAlgorithmsModularityOptimization({...props, modularity})).toThrow(
       /modularity|float32|rows/
     );
   });
@@ -273,7 +296,7 @@ describe('GPUGraphModularityOptimization packed GPU vectors and physical ownersh
       new Uint32Array(1)
     ]) as unknown as GPUVector<'float32'>;
 
-    expect(() => new GPUGraphModularityOptimization({...props, modularity})).toThrow(
+    expect(() => new GPUGraphAlgorithmsModularityOptimization({...props, modularity})).toThrow(
       /modularity|float32|packed/
     );
   });
@@ -289,7 +312,7 @@ describe('GPUGraphModularityOptimization packed GPU vectors and physical ownersh
     ]);
 
     expect(
-      () => new GPUGraphModularityOptimization({...props, [scalarName]: invalidScalar})
+      () => new GPUGraphAlgorithmsModularityOptimization({...props, [scalarName]: invalidScalar})
     ).toThrow(new RegExp(`${scalarName}|uint32|rows`));
   });
 
@@ -312,14 +335,14 @@ describe('GPUGraphModularityOptimization packed GPU vectors and physical ownersh
       vectorOptions
     );
 
-    expect(() => new GPUGraphModularityOptimization({...props, modularity})).toThrow(
+    expect(() => new GPUGraphAlgorithmsModularityOptimization({...props, modularity})).toThrow(
       /modularity|float32|packed|aligned/
     );
   });
 
   test('accepts legal four-byte slices for seeds, labels, scores, and scalar statuses', () => {
     const fixture = createOptimizationFixture();
-    const operation = new GPUGraphModularityOptimization(
+    const operation = new GPUGraphAlgorithmsModularityOptimization(
       createOptimizationProps(fixture, {seed: true, statuses: true, byteOffset: 4})
     );
 
@@ -357,7 +380,7 @@ describe('GPUGraphModularityOptimization packed GPU vectors and physical ownersh
       buffer: input.data[0].buffer
     });
 
-    expect(() => new GPUGraphModularityOptimization({...props, output})).toThrow(
+    expect(() => new GPUGraphAlgorithmsModularityOptimization({...props, output})).toThrow(
       /distinct|physical|allocation/
     );
   });
@@ -378,9 +401,9 @@ describe('GPUGraphModularityOptimization packed GPU vectors and physical ownersh
       buffer: props[source]!.data[0].buffer
     });
 
-    expect(() => new GPUGraphModularityOptimization({...props, [destination]: aliased})).toThrow(
-      /distinct|physical|allocation/
-    );
+    expect(
+      () => new GPUGraphAlgorithmsModularityOptimization({...props, [destination]: aliased})
+    ).toThrow(/distinct|physical|allocation/);
   });
 
   test('unwraps borrowed DynamicBuffer aliases without destroying caller-owned allocations', () => {
@@ -397,7 +420,7 @@ describe('GPUGraphModularityOptimization packed GPU vectors and physical ownersh
       buffer: wrapper
     });
 
-    expect(() => new GPUGraphModularityOptimization({...props, output})).toThrow(
+    expect(() => new GPUGraphAlgorithmsModularityOptimization({...props, output})).toThrow(
       /distinct|physical|allocation/
     );
     expect(concreteBuffer.destroyed).toBe(false);
@@ -421,7 +444,7 @@ function createOptimizationProps(
     seed?: boolean;
     byteOffset?: number;
   } = {}
-): GPUGraphModularityOptimizationProps {
+): GPUGraphAlgorithmsModularityOptimizationProps {
   const vertexCount = options.vertexCount ?? 4;
   const sourceVertices = createVector(fixture, 'sourceVertices', 'uint32', [
     Uint32Array.from([0, 1]),
@@ -448,7 +471,7 @@ function createOptimizationProps(
       ])
     : undefined;
   const directed = options.directed ?? true;
-  const graph = new GPUGraphData({
+  const graph = new GPUGraphAlgorithmsData({
     vertexCount,
     sourceVertices,
     targetVertices,
@@ -464,7 +487,7 @@ function createOptimizationProps(
   const invalidEdgeCount = createVector(fixture, 'invalidEdgeCount', 'uint32', [
     new Uint32Array(1)
   ]);
-  const topology = new GPUGraphTopology({graph, forward, reverse, invalidEdgeCount});
+  const topology = new GPUGraphAlgorithmsTopology({graph, forward, reverse, invalidEdgeCount});
   const vectorOptions = {byteOffset: options.byteOffset};
   return {
     topology,
@@ -514,7 +537,7 @@ function createAdjacency(
   vertexCount: number,
   capacity: number,
   weighted: boolean
-): GPUGraphAdjacency {
+): GPUGraphAlgorithmsAdjacency {
   return {
     offsets: createVector(fixture, `${name}-offsets`, 'uint32', [new Uint32Array(vertexCount + 1)]),
     neighbors: createVector(fixture, `${name}-neighbors`, 'uint32', [new Uint32Array(capacity)]),
@@ -531,7 +554,10 @@ function createAdjacency(
   };
 }
 
-function getOptimizationInput(props: GPUGraphModularityOptimizationProps, name: string): GPUVector {
+function getOptimizationInput(
+  props: GPUGraphAlgorithmsModularityOptimizationProps,
+  name: string
+): GPUVector {
   if (name === 'sourceVertices') return props.topology.graph.sourceVertices;
   if (name === 'targetVertices') return props.topology.graph.targetVertices;
   if (name === 'edgeWeights') return props.topology.graph.edgeWeights!;
@@ -540,7 +566,7 @@ function getOptimizationInput(props: GPUGraphModularityOptimizationProps, name: 
   if (name === 'initialCommunities') return props.initialCommunities!;
   const [direction, vectorName] = name.split('.');
   const adjacency = direction === 'forward' ? props.topology.forward : props.topology.reverse!;
-  return adjacency[vectorName as keyof GPUGraphAdjacency]!;
+  return adjacency[vectorName as keyof GPUGraphAlgorithmsAdjacency]!;
 }
 
 function createVector<Format extends ScalarFormat>(

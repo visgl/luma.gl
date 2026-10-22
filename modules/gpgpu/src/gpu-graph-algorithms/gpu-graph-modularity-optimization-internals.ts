@@ -21,8 +21,8 @@ import {
   getViewBinding,
   getViewElementOffset
 } from '../gpu-core/graph-data-view-utils';
-import {GPUGraphModularity} from './gpu-graph-modularity';
-import type {GPUGraphModularityOptimization} from './gpu-graph-modularity-optimization';
+import {GPUGraphAlgorithmsModularity} from './gpu-graph-modularity';
+import type {GPUGraphAlgorithmsModularityOptimization} from './gpu-graph-modularity-optimization';
 
 const OPTIMIZATION_WORKGROUP_SIZE = 256;
 const INVALID_COMMUNITY = 0xffffffff;
@@ -78,8 +78,8 @@ type ImportedOptimization = {
 };
 
 /** Composes single-level modularity local moving with stable ties for computed GPU gains. */
-export function addGPUGraphModularityOptimizationToGraphWithDispatchLimit<Parameters>(
-  optimization: GPUGraphModularityOptimization,
+export function addGPUGraphAlgorithmsModularityOptimizationToGraphWithDispatchLimit<Parameters>(
+  optimization: GPUGraphAlgorithmsModularityOptimization,
   commandGraph: GPUCommandGraph<Parameters>,
   maxComputeWorkgroupsPerDimension: number
 ): void {
@@ -252,7 +252,7 @@ export function addGPUGraphModularityOptimizationToGraphWithDispatchLimit<Parame
   }
 
   addFailureFinalizationPass(commandGraph, state);
-  new GPUGraphModularity({
+  new GPUGraphAlgorithmsModularity({
     id: `${optimization.id}-final-modularity`,
     graph: topology.graph,
     communities: optimization.output,
@@ -1034,19 +1034,19 @@ function getDispatchLayout(
   state: ImportedOptimization,
   elementCount: number
 ): GPUBoundedDispatchLayout {
-  return getGPUGraphModularityOptimizationDispatchLayout(
+  return getGPUGraphAlgorithmsModularityOptimizationDispatchLayout(
     elementCount,
     state.maxComputeWorkgroupsPerDimension
   );
 }
 
 /** Plans bounded, true three-dimensional adjacency, edge, vertex, or finalization work. */
-export function getGPUGraphModularityOptimizationDispatchLayout(
+export function getGPUGraphAlgorithmsModularityOptimizationDispatchLayout(
   elementCount: number,
   maxComputeWorkgroupsPerDimension: number
 ): GPUBoundedDispatchLayout {
   return getBoundedDispatchLayout(
-    'GPUGraphModularityOptimization',
+    'GPUGraphAlgorithmsModularityOptimization',
     elementCount,
     OPTIMIZATION_WORKGROUP_SIZE,
     maxComputeWorkgroupsPerDimension

@@ -7,17 +7,17 @@ import type {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import type {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUCommandGraph} from '../gpu-core/gpu-command-graph';
-import type {GPUGraphData} from './gpu-graph';
-import {addGPUGraphModularityToGraphWithDispatchLimit} from './gpu-graph-modularity-internals';
+import type {GPUGraphAlgorithmsData} from './gpu-graph';
+import {addGPUGraphAlgorithmsModularityToGraphWithDispatchLimit} from './gpu-graph-modularity-internals';
 
 const SCALAR_BYTE_LENGTH = 4;
 
 /** Existing GPU graph, vertex-aligned community labels, and caller-owned quality outputs. */
-export type GPUGraphModularityProps = {
+export type GPUGraphAlgorithmsModularityProps = {
   /** Prefix for generated command-graph nodes and imported-resource identifiers. */
   id?: string;
   /** Original directed or undirected edge columns, including their preserved source chunks. */
-  graph: GPUGraphData;
+  graph: GPUGraphAlgorithmsData;
   /** One existing unsigned community label below `vertexCount` for every graph vertex. */
   communities: GPUVector<'uint32'>;
   /** One caller-owned floating-point Newman modularity score. */
@@ -44,11 +44,11 @@ export type GPUGraphModularityProps = {
  * with zero optional validity. Contributions are indexed by community identifier rather than
  * source vertex. Floating-point atomic accumulation can vary slightly with GPU execution order.
  */
-export class GPUGraphModularity {
+export class GPUGraphAlgorithmsModularity {
   /** Prefix for generated command-graph nodes and imported-resource identifiers. */
   readonly id: string;
   /** Existing caller-owned graph source columns. */
-  readonly graph: GPUGraphData;
+  readonly graph: GPUGraphAlgorithmsData;
   /** Existing caller-owned vertex-aligned community assignments. */
   readonly communities: GPUVector<'uint32'>;
   /** Caller-owned scalar receiving the floating-point modularity score. */
@@ -61,7 +61,7 @@ export class GPUGraphModularity {
   readonly valid?: GPUVector<'uint32'>;
 
   /** Validates metadata without allocating, submitting, reading, or destroying GPU resources. */
-  constructor(props: GPUGraphModularityProps) {
+  constructor(props: GPUGraphAlgorithmsModularityProps) {
     this.id = props.id ?? 'gpu-graph-modularity';
     this.graph = props.graph;
     this.communities = props.communities;
@@ -101,7 +101,7 @@ export class GPUGraphModularity {
 
   /** Declares chunk-preserving weighted scoring without submitting or reading commands. */
   addToGraph<Parameters>(commandGraph: GPUCommandGraph<Parameters>): void {
-    addGPUGraphModularityToGraphWithDispatchLimit(
+    addGPUGraphAlgorithmsModularityToGraphWithDispatchLimit(
       this,
       commandGraph,
       commandGraph.device.limits.maxComputeWorkgroupsPerDimension
@@ -146,7 +146,7 @@ function validateModularityVector<Format extends 'uint32' | 'float32'>(
 }
 
 /** Keeps all caller-owned writable results physically disjoint from sources and community input. */
-function validateDistinctModularityOutputs(modularity: GPUGraphModularity): void {
+function validateDistinctModularityOutputs(modularity: GPUGraphAlgorithmsModularity): void {
   const inputs = [
     modularity.graph.sourceVertices,
     modularity.graph.targetVertices,

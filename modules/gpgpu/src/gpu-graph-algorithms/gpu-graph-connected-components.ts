@@ -7,19 +7,19 @@ import type {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import type {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUCommandGraph} from '../gpu-core/gpu-command-graph';
-import {addGPUGraphConnectedComponentsToGraphWithDispatchLimit} from './gpu-graph-connected-components-internals';
-import type {GPUGraphAdjacency, GPUGraphTopology} from './gpu-graph-topology';
+import {addGPUGraphAlgorithmsConnectedComponentsToGraphWithDispatchLimit} from './gpu-graph-connected-components-internals';
+import type {GPUGraphAlgorithmsAdjacency, GPUGraphAlgorithmsTopology} from './gpu-graph-topology';
 
 const DEFAULT_COMPONENT_ITERATIONS = 32;
 const MAXIMUM_COMPONENT_ITERATIONS = 1024;
 const SCALAR_BYTE_LENGTH = 4;
 
 /** Caller-owned GPU graph topology, component labels, and optional convergence status. */
-export type GPUGraphConnectedComponentsProps = {
+export type GPUGraphAlgorithmsConnectedComponentsProps = {
   /** Prefix for generated command-graph node and imported-resource identifiers. */
   id?: string;
   /** Existing forward graph adjacency; reverse adjacency is not required. */
-  topology: GPUGraphTopology;
+  topology: GPUGraphAlgorithmsTopology;
   /** One caller-owned packed unsigned component label for every graph vertex. */
   output: GPUVector<'uint32'>;
   /** Bounded number of compiled relaxation and pointer-jumping iterations. Defaults to 32. */
@@ -36,11 +36,11 @@ export type GPUGraphConnectedComponentsProps = {
  * The optional convergence scalar is one only when the last compiled iteration reaches a fixed
  * point. Forward-adjacency overflow instead publishes `0xffffffff` labels and zero convergence.
  */
-export class GPUGraphConnectedComponents {
+export class GPUGraphAlgorithmsConnectedComponents {
   /** Prefix for generated command-graph node and imported-resource identifiers. */
   readonly id: string;
   /** Existing caller-owned GPU graph topology. */
-  readonly topology: GPUGraphTopology;
+  readonly topology: GPUGraphAlgorithmsTopology;
   /** Caller-owned vertex-aligned component labels. */
   readonly output: GPUVector<'uint32'>;
   /** Number of compiled, explicitly synchronized component-relaxation iterations. */
@@ -49,7 +49,7 @@ export class GPUGraphConnectedComponents {
   readonly converged?: GPUVector<'uint32'>;
 
   /** Validates caller-owned graph metadata without allocating, submitting, or reading GPU work. */
-  constructor(props: GPUGraphConnectedComponentsProps) {
+  constructor(props: GPUGraphAlgorithmsConnectedComponentsProps) {
     this.id = props.id ?? 'gpu-graph-connected-components';
     this.topology = props.topology;
     this.output = props.output;
@@ -72,7 +72,7 @@ export class GPUGraphConnectedComponents {
 
   /** Declares bounded weak-component passes without submitting commands or reading results. */
   addToGraph<Parameters>(commandGraph: GPUCommandGraph<Parameters>): void {
-    addGPUGraphConnectedComponentsToGraphWithDispatchLimit(
+    addGPUGraphAlgorithmsConnectedComponentsToGraphWithDispatchLimit(
       this,
       commandGraph,
       commandGraph.device.limits.maxComputeWorkgroupsPerDimension
@@ -114,7 +114,7 @@ function validateComponentVector(vector: GPUVector<'uint32'>, length: number, na
 }
 
 /** Keeps component labels and optional convergence status disjoint from all graph allocations. */
-function validateDistinctComponentOutputs(components: GPUGraphConnectedComponents): void {
+function validateDistinctComponentOutputs(components: GPUGraphAlgorithmsConnectedComponents): void {
   const topology = components.topology;
   const inputVectors = [
     topology.graph.sourceVertices,
@@ -147,7 +147,7 @@ function validateDistinctComponentOutputs(components: GPUGraphConnectedComponent
 
 /** Enumerates existing caller-owned adjacency and status columns without changing their chunks. */
 function getAdjacencyVectors(
-  adjacency: GPUGraphAdjacency
+  adjacency: GPUGraphAlgorithmsAdjacency
 ): (GPUVector<'uint32'> | GPUVector<'float32'>)[] {
   return [
     adjacency.offsets,

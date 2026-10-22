@@ -5,17 +5,17 @@
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
-  GPUGraphData,
-  GPUGraphPageRank,
-  GPUGraphTopology,
-  type GPUGraphAdjacency
+  GPUGraphAlgorithmsData,
+  GPUGraphAlgorithmsPageRank,
+  GPUGraphAlgorithmsTopology,
+  type GPUGraphAlgorithmsAdjacency
 } from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
 import {
-  addGPUGraphPageRankToGraphWithDispatchLimit,
-  getGPUGraphPageRankDispatchLayout
+  addGPUGraphAlgorithmsPageRankToGraphWithDispatchLimit,
+  getGPUGraphAlgorithmsPageRankDispatchLayout
 } from '../../src/gpu-graph-algorithms/gpu-graph-page-rank-internals';
 
 const SCORE_TOLERANCE = 2e-5;
@@ -55,9 +55,9 @@ type PageRankExecutionFixture = {
   device: Device;
   buffers: Buffer[];
   vectors: GPUVector[];
-  graph: GPUGraphData;
-  topology: GPUGraphTopology;
-  pageRank: GPUGraphPageRank;
+  graph: GPUGraphAlgorithmsData;
+  topology: GPUGraphAlgorithmsTopology;
+  pageRank: GPUGraphAlgorithmsPageRank;
   commandGraph: GPUCommandGraph;
   compiled?: ReturnType<GPUCommandGraph['compile']>;
 };
@@ -243,16 +243,16 @@ const pageRankScenarios: PageRankScenario[] = [
   }
 ];
 
-it('GPUGraphPageRank plans bounded three-dimensional pull and reduction dispatch', () => {
-  expect(getGPUGraphPageRankDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
-  expect(getGPUGraphPageRankDispatchLayout(512, 2)).toEqual({x: 2, y: 1, z: 1});
-  expect(getGPUGraphPageRankDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
-  expect(getGPUGraphPageRankDispatchLayout(1025, 2)).toEqual({x: 2, y: 2, z: 2});
-  expect(() => getGPUGraphPageRankDispatchLayout(2049, 2)).toThrow(/3D dispatch limit/);
+it('GPUGraphAlgorithmsPageRank plans bounded three-dimensional pull and reduction dispatch', () => {
+  expect(getGPUGraphAlgorithmsPageRankDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
+  expect(getGPUGraphAlgorithmsPageRankDispatchLayout(512, 2)).toEqual({x: 2, y: 1, z: 1});
+  expect(getGPUGraphAlgorithmsPageRankDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
+  expect(getGPUGraphAlgorithmsPageRankDispatchLayout(1025, 2)).toEqual({x: 2, y: 2, z: 2});
+  expect(() => getGPUGraphAlgorithmsPageRankDispatchLayout(2049, 2)).toThrow(/3D dispatch limit/);
 });
 
 for (const scenario of pageRankScenarios) {
-  it(`GPUGraphPageRank GPU analytics: ${scenario.name}`, async () => {
+  it(`GPUGraphAlgorithmsPageRank GPU analytics: ${scenario.name}`, async () => {
     const device = await getWebGPUTestDevice();
     if (!device) {
       return;
@@ -274,7 +274,7 @@ for (const scenario of pageRankScenarios) {
   });
 }
 
-it('GPUGraphPageRank reinitializes normalized scores after source updates without hidden GPU work', async () => {
+it('GPUGraphAlgorithmsPageRank reinitializes normalized scores after source updates without hidden GPU work', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     return;
@@ -432,7 +432,7 @@ function createExecutionFixture(
       )
     : undefined;
   const directed = scenario.directed ?? true;
-  const graph = new GPUGraphData({
+  const graph = new GPUGraphAlgorithmsData({
     vertexCount: scenario.vertexCount,
     sourceVertices,
     targetVertices,
@@ -469,7 +469,7 @@ function createExecutionFixture(
     'uint32',
     1
   );
-  const topology = new GPUGraphTopology({graph, forward, reverse, invalidEdgeCount});
+  const topology = new GPUGraphAlgorithmsTopology({graph, forward, reverse, invalidEdgeCount});
   const output = createOutputVector(
     device,
     buffers,
@@ -491,7 +491,7 @@ function createExecutionFixture(
           1,
           scenario.byteOffset
         );
-  const pageRank = new GPUGraphPageRank({
+  const pageRank = new GPUGraphAlgorithmsPageRank({
     topology,
     output,
     damping: scenario.damping,
@@ -542,7 +542,7 @@ function createOutputAdjacency(
   capacity: number,
   weighted: boolean,
   byteOffset = 0
-): GPUGraphAdjacency {
+): GPUGraphAlgorithmsAdjacency {
   return {
     offsets: createOutputVector(
       device,
@@ -603,7 +603,7 @@ function compilePageRank(fixture: PageRankExecutionFixture, maximumWorkgroups?: 
   if (maximumWorkgroups === undefined) {
     fixture.pageRank.addToGraph(fixture.commandGraph);
   } else {
-    addGPUGraphPageRankToGraphWithDispatchLimit(
+    addGPUGraphAlgorithmsPageRankToGraphWithDispatchLimit(
       fixture.pageRank,
       fixture.commandGraph,
       maximumWorkgroups

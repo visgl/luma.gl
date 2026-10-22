@@ -52,9 +52,9 @@ describe('experimental GPU module naming', () => {
     expect(gpuCore.GPUGraph).toBe(gpuCore.GPUCommandGraph);
     expect(gpuCore.CompiledGPUGraph).toBe(gpuCore.CompiledGPUCommandGraph);
     expect(gpuCore.GPUGraph.name).toBe('GPUGraph');
-    expect(gpuGraphModule.GPUGraphData.name).toBe('GPUGraphData');
+    expect(gpuGraphModule.GPUGraphAlgorithmsData.name).toBe('GPUGraphAlgorithmsData');
     expect(executionGraph.GPUGraph).toBe(gpuCore.GPUGraph);
-    expect(gpuCore.GPUGraph).not.toBe(gpuGraphModule.GPUGraphData);
+    expect(gpuCore.GPUGraph).not.toBe(gpuGraphModule.GPUGraphAlgorithmsData);
   });
 
   test('publishes only the canonical package subpaths', () => {
@@ -134,7 +134,7 @@ describe('experimental GPU module naming', () => {
     expect(gpuData.GPUVector).toBeTypeOf('function');
     expect(gpuData.getDataTypeByteLength).toBeTypeOf('function');
     expect(gpuCore.GPUCommandGraph).toBeTypeOf('function');
-    expect(gpuGraphModule.GPUGraphData).toBeTypeOf('function');
+    expect(gpuGraphModule.GPUGraphAlgorithmsData).toBeTypeOf('function');
     expect(gpuVectorSearch.GPUSimilaritySearch).toBeTypeOf('function');
     expect(gpuTables.GPURecordBatch).toBeTypeOf('function');
     expect(gpuTables.GPUTable).toBeTypeOf('function');
@@ -147,7 +147,7 @@ describe('experimental GPU module naming', () => {
     expect(gpuCrossfilter.GPUCrossfilter).toBeTypeOf('function');
     expect(gpuTrace.GPUTraceScene).toBeTypeOf('function');
 
-    for (const exportName of ['GPUData', 'GPUCommandGraph', 'GPUGraphData']) {
+    for (const exportName of ['GPUData', 'GPUCommandGraph', 'GPUGraphAlgorithmsData']) {
       expect(exportName in gpgpuRoot, exportName).toBe(false);
     }
     for (const exportName of ['GPURecordBatch', 'GPUTable', 'PathStorageModel']) {

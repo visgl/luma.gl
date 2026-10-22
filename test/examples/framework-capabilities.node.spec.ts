@@ -200,7 +200,7 @@ describe('framework capabilities documentation', () => {
         packageName: '@luma.gl/gpgpu/gpu-graph-algorithms',
         minimumRowCount: 5,
         capabilities: [
-          /GPUGraphData/i,
+          /GPUGraphAlgorithmsData/i,
           /\bCSR\b|compressed[\s-]+sparse/i,
           /breadth[\s-]+first|\bBFS\b/i,
           /connected[\s-]+components/i,

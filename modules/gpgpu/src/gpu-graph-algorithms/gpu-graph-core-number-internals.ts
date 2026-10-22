@@ -17,7 +17,7 @@ import {
   getViewBinding,
   getViewElementOffset
 } from '../gpu-core/graph-data-view-utils';
-import type {GPUGraphCoreNumber} from './gpu-graph-core-number';
+import type {GPUGraphAlgorithmsCoreNumber} from './gpu-graph-core-number';
 
 const CORE_NUMBER_WORKGROUP_SIZE = 256;
 const INVALID_CORE_NUMBER = 0xffffffff;
@@ -55,8 +55,8 @@ type CoreNumberPassProps = {
 };
 
 /** Adds bounded, exact simple-weak-graph k-core refinement with explicit dispatch limits. */
-export function addGPUGraphCoreNumberToGraphWithDispatchLimit<Parameters>(
-  coreNumber: GPUGraphCoreNumber,
+export function addGPUGraphAlgorithmsCoreNumberToGraphWithDispatchLimit<Parameters>(
+  coreNumber: GPUGraphAlgorithmsCoreNumber,
   commandGraph: GPUCommandGraph<Parameters>,
   maxComputeWorkgroupsPerDimension: number
 ): void {
@@ -523,16 +523,19 @@ function getDispatchLayout(
   state: ImportedCoreNumber,
   elementCount: number
 ): GPUBoundedDispatchLayout {
-  return getGPUGraphCoreNumberDispatchLayout(elementCount, state.maxComputeWorkgroupsPerDimension);
+  return getGPUGraphAlgorithmsCoreNumberDispatchLayout(
+    elementCount,
+    state.maxComputeWorkgroupsPerDimension
+  );
 }
 
 /** Plans one bounded three-dimensional k-core initialization or refinement dispatch. @internal */
-export function getGPUGraphCoreNumberDispatchLayout(
+export function getGPUGraphAlgorithmsCoreNumberDispatchLayout(
   elementCount: number,
   maxComputeWorkgroupsPerDimension: number
 ): GPUBoundedDispatchLayout {
   return getBoundedDispatchLayout(
-    'GPUGraphCoreNumber',
+    'GPUGraphAlgorithmsCoreNumber',
     elementCount,
     CORE_NUMBER_WORKGROUP_SIZE,
     maxComputeWorkgroupsPerDimension

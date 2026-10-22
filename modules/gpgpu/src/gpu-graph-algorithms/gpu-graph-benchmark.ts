@@ -7,31 +7,31 @@ import {Buffer, type Device, type QuerySet} from '@luma.gl/core';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPUCommandGraph, type CompiledGPUCommandGraph} from '../gpu-core/gpu-command-graph';
 import {GPUGridIndex} from '../gpu-core/gpu-grid-index';
-import {GPUGraphData} from './gpu-graph';
+import {GPUGraphAlgorithmsData} from './gpu-graph';
 import {
   LU_GRAPH_BENCHMARK_BOUNDS,
   LU_GRAPH_BENCHMARK_FORCE_PROPS,
   LU_GRAPH_BENCHMARK_LABEL_ITERATIONS,
-  getGPUGraphBenchmarkTime,
-  prepareGPUGraphBenchmark,
-  summarizeGPUGraphBenchmarkSamples,
-  type GPUGraphBenchmarkAlgorithm,
-  type GPUGraphBenchmarkContext,
-  type GPUGraphBenchmarkDataset,
-  type GPUGraphBenchmarkDistribution,
-  type GPUGraphBenchmarkOptions,
-  type GPUGraphBenchmarkPathReport,
-  type GPUGraphBenchmarkReport
+  getGPUGraphAlgorithmsBenchmarkTime,
+  prepareGPUGraphAlgorithmsBenchmark,
+  summarizeGPUGraphAlgorithmsBenchmarkSamples,
+  type GPUGraphAlgorithmsBenchmarkAlgorithm,
+  type GPUGraphAlgorithmsBenchmarkContext,
+  type GPUGraphAlgorithmsBenchmarkDataset,
+  type GPUGraphAlgorithmsBenchmarkDistribution,
+  type GPUGraphAlgorithmsBenchmarkOptions,
+  type GPUGraphAlgorithmsBenchmarkPathReport,
+  type GPUGraphAlgorithmsBenchmarkReport
 } from './gpu-graph-benchmark-data';
-import {GPUGraphBreadthFirstSearch} from './gpu-graph-breadth-first-search';
-import {GPUGraphConnectedComponents} from './gpu-graph-connected-components';
-import {GPUGraphForceLayout} from './gpu-graph-force-layout';
-import {GPUGraphLabelPropagation} from './gpu-graph-label-propagation';
-import {GPUGraphLocalClusteringCoefficient} from './gpu-graph-local-clustering-coefficient';
-import {GPUGraphPageRank} from './gpu-graph-page-rank';
-import {GPUGraphSingleSourceShortestPath} from './gpu-graph-single-source-shortest-path';
-import {GPUGraphSpatialForceLayout} from './gpu-graph-spatial-force-layout';
-import {GPUGraphTopology, type GPUGraphAdjacency} from './gpu-graph-topology';
+import {GPUGraphAlgorithmsBreadthFirstSearch} from './gpu-graph-breadth-first-search';
+import {GPUGraphAlgorithmsConnectedComponents} from './gpu-graph-connected-components';
+import {GPUGraphAlgorithmsForceLayout} from './gpu-graph-force-layout';
+import {GPUGraphAlgorithmsLabelPropagation} from './gpu-graph-label-propagation';
+import {GPUGraphAlgorithmsLocalClusteringCoefficient} from './gpu-graph-local-clustering-coefficient';
+import {GPUGraphAlgorithmsPageRank} from './gpu-graph-page-rank';
+import {GPUGraphAlgorithmsSingleSourceShortestPath} from './gpu-graph-single-source-shortest-path';
+import {GPUGraphAlgorithmsSpatialForceLayout} from './gpu-graph-spatial-force-layout';
+import {GPUGraphAlgorithmsTopology, type GPUGraphAlgorithmsAdjacency} from './gpu-graph-topology';
 
 const SCALAR_BYTE_LENGTH = 4;
 const PAGE_RANK_TOLERANCE = 0.0001;
@@ -41,7 +41,7 @@ const FORCE_LAYOUT_TOLERANCE = 0.0005;
 type BenchmarkScalarFormat = 'uint32' | 'float32';
 
 type CompiledBenchmarkPath = {
-  algorithm: GPUGraphBenchmarkAlgorithm;
+  algorithm: GPUGraphAlgorithmsBenchmarkAlgorithm;
   compiled: CompiledGPUCommandGraph<void>;
 };
 
@@ -67,24 +67,24 @@ type BenchmarkValidation = {
  * validates the accelerated path before its approximation error against exact forces is exposed.
  * No work starts until an application explicitly calls this optional benchmark entry point.
  */
-export async function runGPUGraphBenchmark(
+export async function runGPUGraphAlgorithmsBenchmark(
   device: Device,
-  options: GPUGraphBenchmarkOptions
-): Promise<GPUGraphBenchmarkReport> {
+  options: GPUGraphAlgorithmsBenchmarkOptions
+): Promise<GPUGraphAlgorithmsBenchmarkReport> {
   if (device.type !== 'webgpu') {
     throw new Error('GPU Graph benchmarks require a WebGPU device');
   }
 
-  const context = prepareGPUGraphBenchmark(options);
-  let resources: GPUGraphBenchmarkResources | undefined;
+  const context = prepareGPUGraphAlgorithmsBenchmark(options);
+  let resources: GPUGraphAlgorithmsBenchmarkResources | undefined;
   const compiledPaths: CompiledBenchmarkPath[] = [];
   let compiledIndex: CompiledGPUCommandGraph<void> | undefined;
 
   try {
-    const uploadStartTime = getGPUGraphBenchmarkTime();
-    resources = new GPUGraphBenchmarkResources(device, context);
+    const uploadStartTime = getGPUGraphAlgorithmsBenchmarkTime();
+    resources = new GPUGraphAlgorithmsBenchmarkResources(device, context);
     await waitForBenchmarkFence(device);
-    const uploadTimeMilliseconds = getGPUGraphBenchmarkTime() - uploadStartTime;
+    const uploadTimeMilliseconds = getGPUGraphAlgorithmsBenchmarkTime() - uploadStartTime;
 
     let compilationTimeMilliseconds = 0;
     const contributors = [
@@ -99,21 +99,21 @@ export async function runGPUGraphBenchmark(
       ['spatial-layout', resources.spatialLayout]
     ] as const;
     for (const [algorithm, contributor] of contributors) {
-      const startTime = getGPUGraphBenchmarkTime();
+      const startTime = getGPUGraphAlgorithmsBenchmarkTime();
       const graph = new GPUCommandGraph(device, {id: `gpu-graph-benchmark-${algorithm}`});
       contributor.addToGraph(graph);
       const compiled = graph.compile();
-      compilationTimeMilliseconds += getGPUGraphBenchmarkTime() - startTime;
+      compilationTimeMilliseconds += getGPUGraphAlgorithmsBenchmarkTime() - startTime;
       compiledPaths.push({algorithm, compiled});
     }
 
-    const indexCompilationStartTime = getGPUGraphBenchmarkTime();
+    const indexCompilationStartTime = getGPUGraphAlgorithmsBenchmarkTime();
     compiledIndex = resources.compileSpatialIndex();
-    compilationTimeMilliseconds += getGPUGraphBenchmarkTime() - indexCompilationStartTime;
+    compilationTimeMilliseconds += getGPUGraphAlgorithmsBenchmarkTime() - indexCompilationStartTime;
 
     let readbackTimeMilliseconds = 0;
     let approximationMaxAbsoluteError = 0;
-    const paths: GPUGraphBenchmarkPathReport[] = [];
+    const paths: GPUGraphAlgorithmsBenchmarkPathReport[] = [];
 
     for (const path of compiledPaths) {
       const initialValidation = await validateBenchmarkPath(device, resources, context, path);
@@ -165,14 +165,14 @@ export async function runGPUGraphBenchmark(
           ? {}
           : {iterations: resources.pageRank.iterations, residual: finalValidation.residual}),
         cpuTimeMilliseconds: context.cpuTimeMilliseconds[path.algorithm],
-        cpuEncodeTimeMilliseconds: summarizeGPUGraphBenchmarkSamples(
+        cpuEncodeTimeMilliseconds: summarizeGPUGraphAlgorithmsBenchmarkSamples(
           executions.map(execution => execution.cpuEncodeTimeMilliseconds)
         ),
-        synchronizedTimeMilliseconds: summarizeGPUGraphBenchmarkSamples(
+        synchronizedTimeMilliseconds: summarizeGPUGraphAlgorithmsBenchmarkSamples(
           executions.map(execution => execution.synchronizedTimeMilliseconds)
         ),
         ...(gpuSamples.length > 0
-          ? {gpuTimeMilliseconds: summarizeGPUGraphBenchmarkSamples(gpuSamples)}
+          ? {gpuTimeMilliseconds: summarizeGPUGraphAlgorithmsBenchmarkSamples(gpuSamples)}
           : {}),
         maxAbsoluteError: Math.max(
           initialValidation.maxAbsoluteError,
@@ -213,30 +213,30 @@ export async function runGPUGraphBenchmark(
 }
 
 /** Caller-owned benchmark allocations, vectors, topology, and reusable algorithm contributors. */
-class GPUGraphBenchmarkResources {
+class GPUGraphAlgorithmsBenchmarkResources {
   readonly device: Device;
-  readonly dataset: GPUGraphBenchmarkDataset;
+  readonly dataset: GPUGraphAlgorithmsBenchmarkDataset;
   readonly buffers: Buffer[] = [];
   readonly vectors: GPUVector[] = [];
-  readonly graph: GPUGraphData;
-  readonly topology: GPUGraphTopology;
-  readonly search: GPUGraphBreadthFirstSearch;
-  readonly shortestPath: GPUGraphSingleSourceShortestPath;
-  readonly components: GPUGraphConnectedComponents;
-  readonly communities: GPUGraphLabelPropagation;
-  readonly clustering: GPUGraphLocalClusteringCoefficient;
-  readonly pageRank: GPUGraphPageRank;
-  readonly exactLayout: GPUGraphForceLayout;
-  readonly spatialLayout: GPUGraphSpatialForceLayout;
+  readonly graph: GPUGraphAlgorithmsData;
+  readonly topology: GPUGraphAlgorithmsTopology;
+  readonly search: GPUGraphAlgorithmsBreadthFirstSearch;
+  readonly shortestPath: GPUGraphAlgorithmsSingleSourceShortestPath;
+  readonly components: GPUGraphAlgorithmsConnectedComponents;
+  readonly communities: GPUGraphAlgorithmsLabelPropagation;
+  readonly clustering: GPUGraphAlgorithmsLocalClusteringCoefficient;
+  readonly pageRank: GPUGraphAlgorithmsPageRank;
+  readonly exactLayout: GPUGraphAlgorithmsForceLayout;
+  readonly spatialLayout: GPUGraphAlgorithmsSpatialForceLayout;
   readonly indexMemoryBytes: number;
 
-  constructor(device: Device, context: GPUGraphBenchmarkContext) {
+  constructor(device: Device, context: GPUGraphAlgorithmsBenchmarkContext) {
     this.device = device;
     this.dataset = context.dataset;
     const vertexCount = context.dataset.vertexCount;
     const edgeCount = context.dataset.edgeCount;
 
-    this.graph = new GPUGraphData({
+    this.graph = new GPUGraphAlgorithmsData({
       vertexCount,
       directed: true,
       sourceVertices: this.createChunkedVector('sources', 'uint32', context.dataset.sourceChunks),
@@ -245,14 +245,14 @@ class GPUGraphBenchmarkResources {
     });
     const forward = this.createAdjacency('forward', vertexCount, edgeCount);
     const reverse = this.createAdjacency('reverse', vertexCount, edgeCount);
-    this.topology = new GPUGraphTopology({
+    this.topology = new GPUGraphAlgorithmsTopology({
       id: 'gpu-graph-benchmark-topology',
       graph: this.graph,
       forward,
       reverse,
       invalidEdgeCount: this.createScalarVector('invalid-edges', 'uint32', 1)
     });
-    this.search = new GPUGraphBreadthFirstSearch({
+    this.search = new GPUGraphAlgorithmsBreadthFirstSearch({
       id: 'gpu-graph-benchmark-search',
       topology: this.topology,
       seeds: this.createScalarVector('seeds', 'uint32', 1, new Uint32Array([0])),
@@ -261,7 +261,7 @@ class GPUGraphBenchmarkResources {
       maxDepth: context.options.maxDepth,
       direction: 'outgoing'
     });
-    this.shortestPath = new GPUGraphSingleSourceShortestPath({
+    this.shortestPath = new GPUGraphAlgorithmsSingleSourceShortestPath({
       id: 'gpu-graph-benchmark-shortest-path',
       topology: this.topology,
       sourceVertex: 0,
@@ -271,26 +271,26 @@ class GPUGraphBenchmarkResources {
       invalidWeightCount: this.createScalarVector('invalid-edge-weights', 'uint32', 1),
       direction: 'outgoing'
     });
-    this.components = new GPUGraphConnectedComponents({
+    this.components = new GPUGraphAlgorithmsConnectedComponents({
       id: 'gpu-graph-benchmark-components',
       topology: this.topology,
       output: this.createScalarVector('component-labels', 'uint32', vertexCount),
       converged: this.createScalarVector('component-convergence', 'uint32', 1)
     });
-    this.communities = new GPUGraphLabelPropagation({
+    this.communities = new GPUGraphAlgorithmsLabelPropagation({
       id: 'gpu-graph-benchmark-communities',
       topology: this.topology,
       output: this.createScalarVector('community-labels', 'uint32', vertexCount),
       iterations: LU_GRAPH_BENCHMARK_LABEL_ITERATIONS,
       converged: this.createScalarVector('community-convergence', 'uint32', 1)
     });
-    this.clustering = new GPUGraphLocalClusteringCoefficient({
+    this.clustering = new GPUGraphAlgorithmsLocalClusteringCoefficient({
       id: 'gpu-graph-benchmark-local-clustering',
       topology: this.topology,
       output: this.createScalarVector('local-clustering', 'float32', vertexCount),
       triangles: this.createScalarVector('triangle-counts', 'uint32', vertexCount)
     });
-    this.pageRank = new GPUGraphPageRank({
+    this.pageRank = new GPUGraphAlgorithmsPageRank({
       id: 'gpu-graph-benchmark-page-rank',
       topology: this.topology,
       output: this.createScalarVector('page-rank', 'float32', vertexCount),
@@ -309,7 +309,7 @@ class GPUGraphBenchmarkResources {
     );
     const count = this.createScalarVector('spatial-count', 'uint32', 1);
     const overflow = this.createScalarVector('spatial-overflow', 'uint32', 1);
-    this.spatialLayout = new GPUGraphSpatialForceLayout({
+    this.spatialLayout = new GPUGraphAlgorithmsSpatialForceLayout({
       id: 'gpu-graph-benchmark-spatial-layout',
       layout: approximateLayout,
       gridSize: context.options.gridSize,
@@ -349,7 +349,7 @@ class GPUGraphBenchmarkResources {
   }
 
   /** Restores identical source positions and zero velocity without polluting measured execution. */
-  resetLayout(layout: GPUGraphForceLayout): void {
+  resetLayout(layout: GPUGraphAlgorithmsForceLayout): void {
     getVectorBuffer(layout.positions).write(this.dataset.positions);
     getVectorBuffer(layout.velocities).write(new Float32Array(this.dataset.vertexCount * 2));
   }
@@ -443,7 +443,11 @@ class GPUGraphBenchmarkResources {
   }
 
   /** Allocates complete caller-owned, non-truncated directed CSR storage. */
-  private createAdjacency(name: string, vertexCount: number, edgeCount: number): GPUGraphAdjacency {
+  private createAdjacency(
+    name: string,
+    vertexCount: number,
+    edgeCount: number
+  ): GPUGraphAlgorithmsAdjacency {
     return {
       offsets: this.createScalarVector(`${name}-offsets`, 'uint32', vertexCount + 1),
       neighbors: this.createScalarVector(`${name}-neighbors`, 'uint32', edgeCount),
@@ -455,8 +459,11 @@ class GPUGraphBenchmarkResources {
   }
 
   /** Gives exact and accelerated paths distinct render-ready positions and progressive velocity. */
-  private createForceLayout(name: string, context: GPUGraphBenchmarkContext): GPUGraphForceLayout {
-    return new GPUGraphForceLayout({
+  private createForceLayout(
+    name: string,
+    context: GPUGraphAlgorithmsBenchmarkContext
+  ): GPUGraphAlgorithmsForceLayout {
+    return new GPUGraphAlgorithmsForceLayout({
       id: `gpu-graph-benchmark-${name}-force`,
       topology: this.topology,
       positions: this.createCoordinateVector(`${name}-positions`, context.dataset.positions),
@@ -473,8 +480,8 @@ class GPUGraphBenchmarkResources {
 /** Validates before timings so an incorrect or incomplete implementation never claims a speedup. */
 async function validateBenchmarkPath(
   device: Device,
-  resources: GPUGraphBenchmarkResources,
-  context: GPUGraphBenchmarkContext,
+  resources: GPUGraphAlgorithmsBenchmarkResources,
+  context: GPUGraphAlgorithmsBenchmarkContext,
   path: CompiledBenchmarkPath
 ): Promise<BenchmarkValidation> {
   await resetBenchmarkPath(device, resources, path.algorithm);
@@ -485,8 +492,8 @@ async function validateBenchmarkPath(
 /** Keeps source restores and their queue completion outside every timed submission interval. */
 async function resetBenchmarkPath(
   device: Device,
-  resources: GPUGraphBenchmarkResources,
-  algorithm: GPUGraphBenchmarkAlgorithm | 'spatial-index'
+  resources: GPUGraphAlgorithmsBenchmarkResources,
+  algorithm: GPUGraphAlgorithmsBenchmarkAlgorithm | 'spatial-index'
 ): Promise<void> {
   if (algorithm === 'exact-layout') {
     resources.resetLayout(resources.exactLayout);
@@ -520,11 +527,11 @@ async function executeBenchmarkPath(
 
   try {
     const encoding = compiled.encode(commandEncoder, {parameters: undefined});
-    const startTime = getGPUGraphBenchmarkTime();
+    const startTime = getGPUGraphAlgorithmsBenchmarkTime();
     device.submit(commandEncoder.finish());
     submitted = true;
     await waitForBenchmarkFence(device);
-    const synchronizedTimeMilliseconds = getGPUGraphBenchmarkTime() - startTime;
+    const synchronizedTimeMilliseconds = getGPUGraphAlgorithmsBenchmarkTime() - startTime;
     const timing = await encoding.readTimings();
     return {
       cpuEncodeTimeMilliseconds: timing.cpuEncodeTimeMilliseconds,
@@ -554,10 +561,10 @@ async function waitForBenchmarkFence(device: Device): Promise<void> {
 /** Rebuilds the same explicit uniform-grid buffers in a separate, fully synchronized graph. */
 async function measureSpatialIndexBuild(
   device: Device,
-  resources: GPUGraphBenchmarkResources,
-  context: GPUGraphBenchmarkContext,
+  resources: GPUGraphAlgorithmsBenchmarkResources,
+  context: GPUGraphAlgorithmsBenchmarkContext,
   compiled: CompiledGPUCommandGraph<void>
-): Promise<GPUGraphBenchmarkDistribution> {
+): Promise<GPUGraphAlgorithmsBenchmarkDistribution> {
   for (let iteration = 0; iteration < context.options.warmupIterations; iteration++) {
     await resetBenchmarkPath(device, resources, 'spatial-index');
     await executeBenchmarkPath(device, compiled, `spatial-index-warmup-${iteration}`);
@@ -572,14 +579,14 @@ async function measureSpatialIndexBuild(
     );
     samples.push(execution.synchronizedTimeMilliseconds);
   }
-  return summarizeGPUGraphBenchmarkSamples(samples);
+  return summarizeGPUGraphAlgorithmsBenchmarkSamples(samples);
 }
 
 /** Reads and compares observable outputs only after the synchronized execution window closes. */
 async function readBenchmarkPath(
-  resources: GPUGraphBenchmarkResources,
-  context: GPUGraphBenchmarkContext,
-  algorithm: GPUGraphBenchmarkAlgorithm
+  resources: GPUGraphAlgorithmsBenchmarkResources,
+  context: GPUGraphAlgorithmsBenchmarkContext,
+  algorithm: GPUGraphAlgorithmsBenchmarkAlgorithm
 ): Promise<BenchmarkValidation> {
   let readbackTimeMilliseconds = 0;
   let maxAbsoluteError = 0;
@@ -589,9 +596,9 @@ async function readBenchmarkPath(
   const readOutputs = async (
     ...vectors: (GPUVector<'uint32'> | GPUVector<'float32'> | GPUVector<'float32x2'>)[]
   ): Promise<number[][]> => {
-    const startTime = getGPUGraphBenchmarkTime();
+    const startTime = getGPUGraphAlgorithmsBenchmarkTime();
     const values = await Promise.all(vectors.map(vector => readBenchmarkVector(vector)));
-    readbackTimeMilliseconds += getGPUGraphBenchmarkTime() - startTime;
+    readbackTimeMilliseconds += getGPUGraphAlgorithmsBenchmarkTime() - startTime;
     return values;
   };
 

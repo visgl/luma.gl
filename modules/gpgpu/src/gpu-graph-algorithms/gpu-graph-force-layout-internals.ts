@@ -12,7 +12,7 @@ import {
   getBoundedInvocationIndexSource
 } from '../gpu-core/gpu-dispatch-utils';
 import {getViewBinding, getViewElementOffset} from '../gpu-core/graph-data-view-utils';
-import type {GPUGraphForceLayout} from './gpu-graph-force-layout';
+import type {GPUGraphAlgorithmsForceLayout} from './gpu-graph-force-layout';
 
 const FORCE_LAYOUT_WORKGROUP_SIZE = 256;
 const MINIMUM_REPULSION_DISTANCE_SQUARED = 0.0001;
@@ -55,8 +55,8 @@ type ForceLayoutPassProps = {
 };
 
 /** Adds exact tiled force integration using an explicit bounded dispatch limit. @internal */
-export function addGPUGraphForceLayoutToGraphWithDispatchLimit<Parameters>(
-  layout: GPUGraphForceLayout,
+export function addGPUGraphAlgorithmsForceLayoutToGraphWithDispatchLimit<Parameters>(
+  layout: GPUGraphAlgorithmsForceLayout,
   commandGraph: GPUCommandGraph<Parameters>,
   maxComputeWorkgroupsPerDimension: number
 ): void {
@@ -157,7 +157,7 @@ function addInitializationPass<Parameters>(
     ? ' || reverseOverflow[REVERSE_OVERFLOW_OFFSET] != 0u'
     : '';
   const pinnedGuard = state.pinned ? 'pinned[PINNED_OFFSET + index] != 0u' : 'false';
-  const dispatchLayout = getGPUGraphForceLayoutDispatchLayout(
+  const dispatchLayout = getGPUGraphAlgorithmsForceLayoutDispatchLayout(
     state.vertexCount,
     state.maxComputeWorkgroupsPerDimension
   );
@@ -218,7 +218,7 @@ function addResetClearPass<Parameters>(
   const bindings: Record<string, ForceLayoutBinding> = {
     reset: {view: reset, usage: 'storage-write'}
   };
-  const dispatchLayout = getGPUGraphForceLayoutDispatchLayout(
+  const dispatchLayout = getGPUGraphAlgorithmsForceLayoutDispatchLayout(
     1,
     state.maxComputeWorkgroupsPerDimension
   );
@@ -285,7 +285,7 @@ const REVERSE_OVERFLOW_OFFSET: u32 = ${getViewElementOffset(state.reverseOverflo
   }`
       : '';
   const tileCount = Math.ceil(state.vertexCount / FORCE_LAYOUT_WORKGROUP_SIZE);
-  const dispatchLayout = getGPUGraphForceLayoutDispatchLayout(
+  const dispatchLayout = getGPUGraphAlgorithmsForceLayoutDispatchLayout(
     state.vertexCount,
     state.maxComputeWorkgroupsPerDimension
   );
@@ -408,7 +408,7 @@ function addIntegrationPass<Parameters>(
     ? ' || reverseOverflow[REVERSE_OVERFLOW_OFFSET] != 0u'
     : '';
   const pinned = state.pinned ? ' || pinned[PINNED_OFFSET + index] != 0u' : '';
-  const dispatchLayout = getGPUGraphForceLayoutDispatchLayout(
+  const dispatchLayout = getGPUGraphAlgorithmsForceLayoutDispatchLayout(
     state.vertexCount,
     state.maxComputeWorkgroupsPerDimension
   );
@@ -503,12 +503,12 @@ function addForceLayoutPass<Parameters>(
 }
 
 /** Plans bounded three-dimensional position initialization and force integration. @internal */
-export function getGPUGraphForceLayoutDispatchLayout(
+export function getGPUGraphAlgorithmsForceLayoutDispatchLayout(
   elementCount: number,
   maxComputeWorkgroupsPerDimension: number
 ): GPUBoundedDispatchLayout {
   return getBoundedDispatchLayout(
-    'GPUGraphForceLayout',
+    'GPUGraphAlgorithmsForceLayout',
     elementCount,
     FORCE_LAYOUT_WORKGROUP_SIZE,
     maxComputeWorkgroupsPerDimension

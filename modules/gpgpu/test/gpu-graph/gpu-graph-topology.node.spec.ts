@@ -5,10 +5,10 @@
 import {Buffer} from '@luma.gl/core';
 import * as experimentalModule from '@luma.gl/experimental';
 import {
-  GPUGraphData,
-  GPUGraphTopology,
-  type GPUGraphAdjacency,
-  type GPUGraphTopologyProps
+  GPUGraphAlgorithmsData,
+  GPUGraphAlgorithmsTopology,
+  type GPUGraphAlgorithmsAdjacency,
+  type GPUGraphAlgorithmsTopologyProps
 } from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
@@ -41,10 +41,10 @@ afterEach(() => {
   }
 });
 
-describe('GPUGraphTopology public boundary and ownership', () => {
+describe('GPUGraphAlgorithmsTopology public boundary and ownership', () => {
   test('exposes the topology contributor only through the optional GPU Graph entry point', () => {
-    expect(typeof GPUGraphTopology).toBe('function');
-    expect('GPUGraphTopology' in experimentalModule).toBe(false);
+    expect(typeof GPUGraphAlgorithmsTopology).toBe('function');
+    expect('GPUGraphAlgorithmsTopology' in experimentalModule).toBe(false);
   });
 
   test('preserves borrowed source and output vectors without allocating or executing work', () => {
@@ -55,7 +55,7 @@ describe('GPUGraphTopology public boundary and ownership', () => {
     const submitSpy = vi.spyOn(fixture.device, 'submit');
     const readbackSpies = fixture.buffers.map(buffer => vi.spyOn(buffer, 'readAsync'));
 
-    const topology = new GPUGraphTopology({...props, id: 'borrowed-topology'});
+    const topology = new GPUGraphAlgorithmsTopology({...props, id: 'borrowed-topology'});
 
     expect(topology.id).toBe('borrowed-topology');
     expect(topology.graph).toBe(props.graph);
@@ -78,7 +78,7 @@ describe('GPUGraphTopology public boundary and ownership', () => {
   test('accepts zero-capacity adjacency with one physically allocated empty output chunk', () => {
     const fixture = createTopologyFixture();
     const props = createTopologyProps(fixture, {capacity: 0});
-    const topology = new GPUGraphTopology(props);
+    const topology = new GPUGraphAlgorithmsTopology(props);
 
     expect(topology.forward.neighbors.length).toBe(0);
     expect(topology.forward.neighbors.data).toHaveLength(1);
@@ -86,7 +86,7 @@ describe('GPUGraphTopology public boundary and ownership', () => {
   });
 });
 
-describe('GPUGraphTopology adjacency output validation', () => {
+describe('GPUGraphAlgorithmsTopology adjacency output validation', () => {
   test.each([0, 2])('requires exactly one row in every status vector: %i', statusLength => {
     const fixture = createTopologyFixture();
     const props = createTopologyProps(fixture);
@@ -96,14 +96,18 @@ describe('GPUGraphTopology adjacency output validation', () => {
         new Uint32Array(statusLength)
       ]);
       expect(
-        () => new GPUGraphTopology({...props, forward: {...props.forward, [statusName]: status}})
+        () =>
+          new GPUGraphAlgorithmsTopology({
+            ...props,
+            forward: {...props.forward, [statusName]: status}
+          })
       ).toThrow(new RegExp(`${statusName}|one|length`));
     }
 
     const invalidEdgeCount = createVector(fixture, 'invalid-length', 'uint32', [
       new Uint32Array(statusLength)
     ]);
-    expect(() => new GPUGraphTopology({...props, invalidEdgeCount})).toThrow(
+    expect(() => new GPUGraphAlgorithmsTopology({...props, invalidEdgeCount})).toThrow(
       /invalidEdgeCount|one|length/
     );
   });
@@ -115,9 +119,9 @@ describe('GPUGraphTopology adjacency output validation', () => {
       new Uint32Array(props.graph.vertexCount + delta)
     ]);
 
-    expect(() => new GPUGraphTopology({...props, forward: {...props.forward, offsets}})).toThrow(
-      /offsets|vertexCount/
-    );
+    expect(
+      () => new GPUGraphAlgorithmsTopology({...props, forward: {...props.forward, offsets}})
+    ).toThrow(/offsets|vertexCount/);
   });
 
   test.each([
@@ -135,7 +139,11 @@ describe('GPUGraphTopology adjacency output validation', () => {
     ]) as unknown as GPUVector<'uint32'>;
 
     expect(
-      () => new GPUGraphTopology({...props, forward: {...props.forward, [outputName]: wrongFormat}})
+      () =>
+        new GPUGraphAlgorithmsTopology({
+          ...props,
+          forward: {...props.forward, [outputName]: wrongFormat}
+        })
     ).toThrow(new RegExp(`${outputName}|uint32|packed|format`));
   });
 
@@ -149,11 +157,11 @@ describe('GPUGraphTopology adjacency output validation', () => {
       new Uint32Array(props.forward.neighbors.length)
     ]) as unknown as GPUVector<'float32'>;
 
-    expect(() => new GPUGraphTopology({...props, invalidEdgeCount})).toThrow(
+    expect(() => new GPUGraphAlgorithmsTopology({...props, invalidEdgeCount})).toThrow(
       /invalidEdgeCount|uint32/
     );
     expect(
-      () => new GPUGraphTopology({...props, forward: {...props.forward, edgeWeights}})
+      () => new GPUGraphAlgorithmsTopology({...props, forward: {...props.forward, edgeWeights}})
     ).toThrow(/edgeWeights|float32/);
   });
 
@@ -166,9 +174,9 @@ describe('GPUGraphTopology adjacency output validation', () => {
     const props = createTopologyProps(fixture);
     const count = createVector(fixture, 'unpacked-status', 'uint32', [new Uint32Array(1)], options);
 
-    expect(() => new GPUGraphTopology({...props, forward: {...props.forward, count}})).toThrow(
-      /count|packed|align/
-    );
+    expect(
+      () => new GPUGraphAlgorithmsTopology({...props, forward: {...props.forward, count}})
+    ).toThrow(/count|packed|align/);
   });
 
   test.each([0, 2])('requires exactly one output GPUData chunk: %i chunks', chunkCount => {
@@ -177,9 +185,9 @@ describe('GPUGraphTopology adjacency output validation', () => {
     const chunks = chunkCount === 0 ? [] : [new Uint32Array(2), new Uint32Array(3)];
     const neighbors = createVector(fixture, `neighbor-chunks-${chunkCount}`, 'uint32', chunks);
 
-    expect(() => new GPUGraphTopology({...props, forward: {...props.forward, neighbors}})).toThrow(
-      /neighbors|single|chunk/
-    );
+    expect(
+      () => new GPUGraphAlgorithmsTopology({...props, forward: {...props.forward, neighbors}})
+    ).toThrow(/neighbors|single|chunk/);
   });
 
   test.each([4, 6])('requires stable edge-ID capacity to equal neighbor capacity: %i', capacity => {
@@ -189,9 +197,9 @@ describe('GPUGraphTopology adjacency output validation', () => {
       new Uint32Array(capacity)
     ]);
 
-    expect(() => new GPUGraphTopology({...props, forward: {...props.forward, edgeIds}})).toThrow(
-      /edgeIds|capacity|neighbors/
-    );
+    expect(
+      () => new GPUGraphAlgorithmsTopology({...props, forward: {...props.forward, edgeIds}})
+    ).toThrow(/edgeIds|capacity|neighbors/);
   });
 
   test('requires aligned source and adjacency edge-weight contracts and capacities', () => {
@@ -204,28 +212,28 @@ describe('GPUGraphTopology adjacency output validation', () => {
 
     expect(
       () =>
-        new GPUGraphTopology({
+        new GPUGraphAlgorithmsTopology({
           ...weighted,
           forward: {...weighted.forward, edgeWeights: undefined}
         })
     ).toThrow(/edgeWeights|weight/);
     expect(
       () =>
-        new GPUGraphTopology({
+        new GPUGraphAlgorithmsTopology({
           ...weighted,
           reverse: {...weighted.reverse!, edgeWeights: undefined}
         })
     ).toThrow(/reverse|edgeWeights|weight/);
     expect(
       () =>
-        new GPUGraphTopology({
+        new GPUGraphAlgorithmsTopology({
           ...weighted,
           forward: {...weighted.forward, edgeWeights: shortWeights}
         })
     ).toThrow(/edgeWeights|capacity|neighbors/);
     expect(
       () =>
-        new GPUGraphTopology({
+        new GPUGraphAlgorithmsTopology({
           ...unweighted,
           forward: {...unweighted.forward, edgeWeights: weighted.forward.edgeWeights}
         })
@@ -240,9 +248,9 @@ describe('GPUGraphTopology adjacency output validation', () => {
       buffer: sourceBuffer
     });
 
-    expect(() => new GPUGraphTopology({...props, forward: {...props.forward, count}})).toThrow(
-      /distinct|allocation|alias|source/
-    );
+    expect(
+      () => new GPUGraphAlgorithmsTopology({...props, forward: {...props.forward, count}})
+    ).toThrow(/distinct|allocation|alias|source/);
   });
 
   test('rejects distinct writable views even when their physical buffer ranges do not overlap', () => {
@@ -261,7 +269,7 @@ describe('GPUGraphTopology adjacency output validation', () => {
 
     expect(
       () =>
-        new GPUGraphTopology({
+        new GPUGraphAlgorithmsTopology({
           ...props,
           forward: {...props.forward, count: firstStatus},
           reverse: {...props.reverse!, count: secondStatus}
@@ -273,7 +281,7 @@ describe('GPUGraphTopology adjacency output validation', () => {
     const fixture = createTopologyFixture();
     const props = createTopologyProps(fixture, {directed: false, reverse: true});
 
-    expect(() => new GPUGraphTopology(props)).toThrow(/reverse|undirected|directed/);
+    expect(() => new GPUGraphAlgorithmsTopology(props)).toThrow(/reverse|undirected|directed/);
   });
 
   test('rejects undirected source edge counts that could overflow uint32 adjacency offsets', () => {
@@ -282,7 +290,7 @@ describe('GPUGraphTopology adjacency output validation', () => {
     props.graph.sourceVertices.length = 0x80000000;
     props.graph.targetVertices.length = 0x80000000;
 
-    expect(() => new GPUGraphTopology(props)).toThrow(/undirected|uint32|overflow/);
+    expect(() => new GPUGraphAlgorithmsTopology(props)).toThrow(/undirected|uint32|overflow/);
   });
 });
 
@@ -295,7 +303,7 @@ function createTopologyFixture(): TopologyFixture {
 function createTopologyProps(
   fixture: TopologyFixture,
   options: {weighted?: boolean; directed?: boolean; reverse?: boolean; capacity?: number} = {}
-): GPUGraphTopologyProps {
+): GPUGraphAlgorithmsTopologyProps {
   const sourceVertices = createVector(fixture, 'sources', 'uint32', [
     Uint32Array.from([0, 2]),
     new Uint32Array(0),
@@ -313,7 +321,7 @@ function createTopologyProps(
         Float32Array.from([1, 4, 8])
       ])
     : undefined;
-  const graph = new GPUGraphData({
+  const graph = new GPUGraphAlgorithmsData({
     vertexCount: 6,
     sourceVertices,
     targetVertices,
@@ -338,7 +346,7 @@ function createAdjacency(
   vertexCount: number,
   capacity: number,
   weighted = false
-): GPUGraphAdjacency {
+): GPUGraphAlgorithmsAdjacency {
   return {
     offsets: createVector(fixture, `${name}-offsets`, 'uint32', [new Uint32Array(vertexCount + 1)]),
     neighbors: createVector(fixture, `${name}-neighbors`, 'uint32', [new Uint32Array(capacity)]),

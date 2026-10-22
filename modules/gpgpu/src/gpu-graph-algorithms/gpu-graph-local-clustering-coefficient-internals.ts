@@ -12,7 +12,7 @@ import {
   getBoundedInvocationIndexSource
 } from '../gpu-core/gpu-dispatch-utils';
 import {getViewBinding, getViewElementOffset} from '../gpu-core/graph-data-view-utils';
-import type {GPUGraphLocalClusteringCoefficient} from './gpu-graph-local-clustering-coefficient';
+import type {GPUGraphAlgorithmsLocalClusteringCoefficient} from './gpu-graph-local-clustering-coefficient';
 
 const LOCAL_CLUSTERING_WORKGROUP_SIZE = 256;
 const INVALID_TRIANGLE_COUNT = 0xffffffff;
@@ -37,8 +37,8 @@ type LocalClusteringBinding = {
 };
 
 /** Declares exact Graphalytics clustering across existing unordered weak neighborhoods. @internal */
-export function addGPUGraphLocalClusteringCoefficientToGraphWithDispatchLimit<Parameters>(
-  clustering: GPUGraphLocalClusteringCoefficient,
+export function addGPUGraphAlgorithmsLocalClusteringCoefficientToGraphWithDispatchLimit<Parameters>(
+  clustering: GPUGraphAlgorithmsLocalClusteringCoefficient,
   commandGraph: GPUCommandGraph<Parameters>,
   maxComputeWorkgroupsPerDimension: number
 ): void {
@@ -103,7 +103,7 @@ export function addGPUGraphLocalClusteringCoefficientToGraphWithDispatchLimit<Pa
     output: {view: state.output, usage: 'storage-write'},
     ...(state.triangles ? {triangles: {view: state.triangles, usage: 'storage-write'}} : {})
   };
-  const dispatchLayout = getGPUGraphLocalClusteringCoefficientDispatchLayout(
+  const dispatchLayout = getGPUGraphAlgorithmsLocalClusteringCoefficientDispatchLayout(
     vertexCount,
     maxComputeWorkgroupsPerDimension
   );
@@ -301,12 +301,12 @@ fn main(
 }
 
 /** Plans bounded true three-dimensional vertex-clustering dispatch. @internal */
-export function getGPUGraphLocalClusteringCoefficientDispatchLayout(
+export function getGPUGraphAlgorithmsLocalClusteringCoefficientDispatchLayout(
   elementCount: number,
   maxComputeWorkgroupsPerDimension: number
 ): GPUBoundedDispatchLayout {
   return getBoundedDispatchLayout(
-    'GPUGraphLocalClusteringCoefficient',
+    'GPUGraphAlgorithmsLocalClusteringCoefficient',
     elementCount,
     LOCAL_CLUSTERING_WORKGROUP_SIZE,
     maxComputeWorkgroupsPerDimension

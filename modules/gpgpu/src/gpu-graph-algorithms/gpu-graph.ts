@@ -8,31 +8,31 @@ import type {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 const MAXIMUM_VERTEX_COUNT = 0xfffffffe;
 const MAXIMUM_EDGE_COUNT = 0xffffffff;
 const SCALAR_BYTE_LENGTH = 4;
-const EMPTY_EDGE_BATCHES: readonly GPUGraphRecordBatch[] = Object.freeze([]);
+const EMPTY_EDGE_BATCHES: readonly GPUGraphAlgorithmsRecordBatch[] = Object.freeze([]);
 
 /** Source-row identity retained by a graph property batch. */
-export type GPUGraphRecordBatchSourceInfo = {
+export type GPUGraphAlgorithmsRecordBatchSourceInfo = {
   sourceBatchIndex: number;
   sourceRowIndexOffset: number;
   sourceRowCount: number;
 };
 
-/** Minimal record-batch interface consumed by {@link GPUGraphData}. */
-export type GPUGraphRecordBatch = {
+/** Minimal record-batch interface consumed by {@link GPUGraphAlgorithmsData}. */
+export type GPUGraphAlgorithmsRecordBatch = {
   numRows: number;
   gpuData: Record<string, GPUData>;
-  sourceInfo?: GPUGraphRecordBatchSourceInfo;
+  sourceInfo?: GPUGraphAlgorithmsRecordBatchSourceInfo;
 };
 
-/** Minimal table interface consumed by {@link GPUGraphData}. */
-export type GPUGraphTable = {
+/** Minimal table interface consumed by {@link GPUGraphAlgorithmsData}. */
+export type GPUGraphAlgorithmsTable = {
   numRows: number;
-  batches: readonly GPUGraphRecordBatch[];
+  batches: readonly GPUGraphAlgorithmsRecordBatch[];
   gpuVectors: Record<string, GPUVector>;
 };
 
 /** Existing, caller-owned GPU columns and optional graph property tables. */
-export type GPUGraphDataProps = {
+export type GPUGraphAlgorithmsDataProps = {
   /** Explicit vertex count, including vertices absent from every edge. */
   vertexCount: number;
   /** Stable source vertex identifiers, preserved in their existing chunks. */
@@ -44,9 +44,9 @@ export type GPUGraphDataProps = {
   /** Optional source-aligned stable edge identifiers. */
   edgeIds?: GPUVector<'uint32'>;
   /** Optional caller-owned vertex properties with one row per vertex. */
-  nodeAttributes?: GPUGraphTable;
+  nodeAttributes?: GPUGraphAlgorithmsTable;
   /** Optional caller-owned edge properties preserving original record batches. */
-  edgeAttributes?: GPUGraphTable;
+  edgeAttributes?: GPUGraphAlgorithmsTable;
   /** Whether source-to-target edges are directed. Defaults to true. */
   directed?: boolean;
 };
@@ -57,7 +57,7 @@ export type GPUGraphDataProps = {
  * Construction preserves vector, chunk, record-batch, and source-identity references. It never
  * allocates or destroys buffers, repacks source data, submits commands, or reads GPU memory.
  */
-export class GPUGraphData {
+export class GPUGraphAlgorithmsData {
   /** Explicit vertex count, including isolated vertices. */
   readonly vertexCount: number;
   /** Existing source vertex identifiers in source-batch order. */
@@ -69,9 +69,9 @@ export class GPUGraphData {
   /** Optional existing stable edge identifiers. */
   readonly edgeIds?: GPUVector<'uint32'>;
   /** Optional existing vertex property table. */
-  readonly nodeAttributes?: GPUGraphTable;
+  readonly nodeAttributes?: GPUGraphAlgorithmsTable;
   /** Optional existing edge property table. */
-  readonly edgeAttributes?: GPUGraphTable;
+  readonly edgeAttributes?: GPUGraphAlgorithmsTable;
   /** Whether source-to-target edges are directed. */
   readonly directed: boolean;
 
@@ -85,13 +85,15 @@ export class GPUGraphData {
     nodeAttributes,
     edgeAttributes,
     directed = true
-  }: GPUGraphDataProps) {
+  }: GPUGraphAlgorithmsDataProps) {
     if (
       !Number.isSafeInteger(vertexCount) ||
       vertexCount < 0 ||
       vertexCount > MAXIMUM_VERTEX_COUNT
     ) {
-      throw new Error('GPUGraphData vertexCount must leave room for uint32 adjacency offsets');
+      throw new Error(
+        'GPUGraphAlgorithmsData vertexCount must leave room for uint32 adjacency offsets'
+      );
     }
 
     validateGraphVector(sourceVertices, 'uint32', 'sourceVertices');
@@ -99,7 +101,7 @@ export class GPUGraphData {
     validateMatchingGraphVector(sourceVertices, targetVertices, 'targetVertices');
 
     if (sourceVertices.length > MAXIMUM_EDGE_COUNT) {
-      throw new Error('GPUGraphData edgeCount must fit in uint32');
+      throw new Error('GPUGraphAlgorithmsData edgeCount must fit in uint32');
     }
     if (edgeWeights) {
       validateGraphVector(edgeWeights, 'float32', 'edgeWeights');
@@ -110,7 +112,7 @@ export class GPUGraphData {
       validateMatchingGraphVector(sourceVertices, edgeIds, 'edgeIds');
     }
     if (nodeAttributes && nodeAttributes.numRows !== vertexCount) {
-      throw new Error('GPUGraphData nodeAttributes must contain one row per vertex');
+      throw new Error('GPUGraphAlgorithmsData nodeAttributes must contain one row per vertex');
     }
     if (edgeAttributes) {
       validateEdgeAttributes(edgeAttributes, sourceVertices, targetVertices, edgeWeights, edgeIds);
@@ -132,7 +134,7 @@ export class GPUGraphData {
   }
 
   /** Original edge record batches, including empty batches and source-identity metadata. */
-  get sourceEdgeBatches(): readonly GPUGraphRecordBatch[] {
+  get sourceEdgeBatches(): readonly GPUGraphAlgorithmsRecordBatch[] {
     return this.edgeAttributes?.batches ?? EMPTY_EDGE_BATCHES;
   }
 }
@@ -151,7 +153,7 @@ function validateGraphVector<Format extends 'uint32' | 'float32'>(
     vector.valueLength !== vector.length ||
     vector.bufferLayout
   ) {
-    throw new Error(`GPUGraphData ${name} must contain packed ${format} rows`);
+    throw new Error(`GPUGraphAlgorithmsData ${name} must contain packed ${format} rows`);
   }
   for (const chunk of vector.data) {
     if (
@@ -162,7 +164,7 @@ function validateGraphVector<Format extends 'uint32' | 'float32'>(
       chunk.byteOffset % SCALAR_BYTE_LENGTH !== 0 ||
       chunk.valueLength !== chunk.length
     ) {
-      throw new Error(`GPUGraphData ${name} must contain packed ${format} chunks`);
+      throw new Error(`GPUGraphAlgorithmsData ${name} must contain packed ${format} chunks`);
     }
   }
 }
@@ -178,20 +180,20 @@ function validateMatchingGraphVector(
     vector.data.length !== source.data.length ||
     vector.data.some((chunk, chunkIndex) => chunk.length !== source.data[chunkIndex].length)
   ) {
-    throw new Error(`GPUGraphData ${name} must preserve source edge chunk topology`);
+    throw new Error(`GPUGraphAlgorithmsData ${name} must preserve source edge chunk topology`);
   }
 }
 
 /** Validates optional source-edge properties without requiring a particular property schema. */
 function validateEdgeAttributes(
-  edgeAttributes: GPUGraphTable,
+  edgeAttributes: GPUGraphAlgorithmsTable,
   sourceVertices: GPUVector<'uint32'>,
   targetVertices: GPUVector<'uint32'>,
   edgeWeights?: GPUVector<'float32'>,
   edgeIds?: GPUVector<'uint32'>
 ): void {
   if (edgeAttributes.numRows !== sourceVertices.length) {
-    throw new Error('GPUGraphData edgeAttributes must contain one row per edge');
+    throw new Error('GPUGraphAlgorithmsData edgeAttributes must contain one row per edge');
   }
   if (
     edgeAttributes.batches.length !== sourceVertices.data.length ||
@@ -199,7 +201,9 @@ function validateEdgeAttributes(
       (batch, batchIndex) => batch.numRows !== sourceVertices.data[batchIndex].length
     )
   ) {
-    throw new Error('GPUGraphData edgeAttributes must preserve source edge batch topology');
+    throw new Error(
+      'GPUGraphAlgorithmsData edgeAttributes must preserve source edge batch topology'
+    );
   }
 
   const graphColumns = {
@@ -216,7 +220,9 @@ function validateEdgeAttributes(
         (attributeVector.data.length !== vector.data.length ||
           attributeVector.data.some((chunk, chunkIndex) => chunk !== vector.data[chunkIndex]))
       ) {
-        throw new Error(`GPUGraphData edgeAttributes ${columnName} must preserve source edge data`);
+        throw new Error(
+          `GPUGraphAlgorithmsData edgeAttributes ${columnName} must preserve source edge data`
+        );
       }
     }
   }

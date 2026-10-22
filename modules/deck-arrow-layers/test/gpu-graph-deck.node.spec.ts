@@ -138,9 +138,9 @@ describe('GPU Graph native deck.gl resident layers', () => {
       new URL('../src/gpu-graph/gpu-graph-effect.ts', import.meta.url),
       'utf8'
     );
-    expect(effectSource).toContain('GPUGraphDegree');
-    expect(effectSource).toContain('GPUGraphLabelPropagation');
-    expect(effectSource).toContain('GPUGraphSpatialForceLayout');
+    expect(effectSource).toContain('GPUGraphAlgorithmsDegree');
+    expect(effectSource).toContain('GPUGraphAlgorithmsLabelPropagation');
+    expect(effectSource).toContain('GPUGraphAlgorithmsSpatialForceLayout');
     expect(effectSource).toContain('addSampledLayoutToGraph');
     expect(effectSource).toContain('this.renderedVertexCount = dataset.vertexCount');
     expect(effectSource).toContain('this.renderedEdgeCount = Math.min');
@@ -408,7 +408,9 @@ describe('optional GPU Graph deck.gl gallery and API guide', () => {
     expect(apiGuide).toContain('## When to use it');
     expect(apiGuide).toContain('<GPUGraphExplorerExample embedded embeddedHeight={680} />');
     expect(apiGuide).toContain('<GPUGraphBenchmark />');
-    expect(apiGuide).toContain('## Approximate distant forces with GPUGraphSpatialForceLayout');
+    expect(apiGuide).toContain(
+      '## Approximate distant forces with GPUGraphAlgorithmsSpatialForceLayout'
+    );
     expect(apiGuide).toContain('### Use GPU Graph from deck.gl without copying graph buffers');
     expect(apiGuide).toContain("separate from the native explorer's custom **8-byte**");
     expect(apiGuide).toContain('The deterministic example fixture is uploaded once');

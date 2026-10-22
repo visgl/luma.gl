@@ -7,19 +7,19 @@ import {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import type {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUCommandGraph} from '../gpu-core/gpu-command-graph';
-import {addGPUGraphForceLayoutToGraphWithDispatchLimit} from './gpu-graph-force-layout-internals';
-import type {GPUGraphAdjacency, GPUGraphTopology} from './gpu-graph-topology';
+import {addGPUGraphAlgorithmsForceLayoutToGraphWithDispatchLimit} from './gpu-graph-force-layout-internals';
+import type {GPUGraphAlgorithmsAdjacency, GPUGraphAlgorithmsTopology} from './gpu-graph-topology';
 
 const MAXIMUM_UINT32 = 0xffffffff;
 const MAXIMUM_LAYOUT_ITERATIONS = 1024;
 const SCALAR_BYTE_LENGTH = 4;
 
 /** Existing graph topology and caller-owned, directly renderable force-layout resources. */
-export type GPUGraphForceLayoutProps = {
+export type GPUGraphAlgorithmsForceLayoutProps = {
   /** Prefix for generated command-graph nodes and imported resources. */
   id?: string;
   /** Existing GPU-resident topology; directed graphs require reverse adjacency. */
-  topology: GPUGraphTopology;
+  topology: GPUGraphAlgorithmsTopology;
   /** Caller-owned, vertex-bindable packed two-component positions for every graph vertex. */
   positions: GPUVector<'float32x2'>;
   /** Caller-owned packed two-component velocities for every graph vertex. */
@@ -57,11 +57,11 @@ export type GPUGraphForceLayoutProps = {
  * Pinned positions remain unchanged, and adjacency overflow preserves all positions while clearing
  * velocities.
  */
-export class GPUGraphForceLayout {
+export class GPUGraphAlgorithmsForceLayout {
   /** Prefix for generated command-graph nodes and imported resources. */
   readonly id: string;
   /** Existing caller-owned GPU graph topology. */
-  readonly topology: GPUGraphTopology;
+  readonly topology: GPUGraphAlgorithmsTopology;
   /** Caller-owned, vertex-bindable packed two-component positions. */
   readonly positions: GPUVector<'float32x2'>;
   /** Caller-owned packed two-component progressive velocities. */
@@ -88,7 +88,7 @@ export class GPUGraphForceLayout {
   readonly timeStep: number;
 
   /** Validates caller-owned layout metadata without allocating, submitting, or reading GPU work. */
-  constructor(props: GPUGraphForceLayoutProps) {
+  constructor(props: GPUGraphAlgorithmsForceLayoutProps) {
     this.id = props.id ?? 'gpu-graph-force-layout';
     this.topology = props.topology;
     this.positions = props.positions;
@@ -149,7 +149,7 @@ export class GPUGraphForceLayout {
 
   /** Declares bounded progressive layout passes without submitting commands or reading results. */
   addToGraph<Parameters>(commandGraph: GPUCommandGraph<Parameters>): void {
-    addGPUGraphForceLayoutToGraphWithDispatchLimit(
+    addGPUGraphAlgorithmsForceLayoutToGraphWithDispatchLimit(
       this,
       commandGraph,
       commandGraph.device.limits.maxComputeWorkgroupsPerDimension
@@ -212,7 +212,7 @@ function validateLayoutVector<Format extends 'uint32' | 'float32x2'>(
 }
 
 /** Keeps layout state, pins, and reset controls disjoint from every existing graph allocation. */
-function validateDistinctLayoutVectors(layout: GPUGraphForceLayout): void {
+function validateDistinctLayoutVectors(layout: GPUGraphAlgorithmsForceLayout): void {
   const topology = layout.topology;
   const inputVectors = [
     topology.graph.sourceVertices,
@@ -247,7 +247,7 @@ function validateDistinctLayoutVectors(layout: GPUGraphForceLayout): void {
 
 /** Enumerates existing adjacency and status columns without changing any chunk identities. */
 function getAdjacencyVectors(
-  adjacency: GPUGraphAdjacency
+  adjacency: GPUGraphAlgorithmsAdjacency
 ): (GPUVector<'uint32'> | GPUVector<'float32'>)[] {
   return [
     adjacency.offsets,

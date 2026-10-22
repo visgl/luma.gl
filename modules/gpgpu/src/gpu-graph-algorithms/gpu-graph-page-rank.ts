@@ -7,8 +7,8 @@ import type {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import type {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUCommandGraph} from '../gpu-core/gpu-command-graph';
-import {addGPUGraphPageRankToGraphWithDispatchLimit} from './gpu-graph-page-rank-internals';
-import type {GPUGraphAdjacency, GPUGraphTopology} from './gpu-graph-topology';
+import {addGPUGraphAlgorithmsPageRankToGraphWithDispatchLimit} from './gpu-graph-page-rank-internals';
+import type {GPUGraphAlgorithmsAdjacency, GPUGraphAlgorithmsTopology} from './gpu-graph-topology';
 
 const DEFAULT_PAGE_RANK_DAMPING = 0.85;
 const DEFAULT_PAGE_RANK_ITERATIONS = 40;
@@ -16,11 +16,11 @@ const MAXIMUM_PAGE_RANK_ITERATIONS = 1024;
 const SCALAR_BYTE_LENGTH = 4;
 
 /** Existing graph topology, caller-owned PageRank scores, and optional residual. */
-export type GPUGraphPageRankProps = {
+export type GPUGraphAlgorithmsPageRankProps = {
   /** Prefix for generated command-graph nodes and imported resources. */
   id?: string;
   /** Existing GPU-resident graph topology; directed graphs require reverse adjacency. */
-  topology: GPUGraphTopology;
+  topology: GPUGraphAlgorithmsTopology;
   /** One caller-owned, packed floating-point PageRank score for each graph vertex. */
   output: GPUVector<'float32'>;
   /** Probability of following an outgoing edge rather than teleporting. Defaults to 0.85. */
@@ -39,11 +39,11 @@ export type GPUGraphPageRankProps = {
  * normalizing the published scores. Existing edge weights do not affect this unweighted metric.
  * Overflow in either required adjacency instead publishes zero scores and a zero residual.
  */
-export class GPUGraphPageRank {
+export class GPUGraphAlgorithmsPageRank {
   /** Prefix for generated command-graph nodes and imported resources. */
   readonly id: string;
   /** Existing caller-owned GPU graph topology. */
-  readonly topology: GPUGraphTopology;
+  readonly topology: GPUGraphAlgorithmsTopology;
   /** Caller-owned, vertex-aligned floating-point PageRank scores. */
   readonly output: GPUVector<'float32'>;
   /** Probability of following an outgoing edge rather than teleporting. */
@@ -54,7 +54,7 @@ export class GPUGraphPageRank {
   readonly residual?: GPUVector<'float32'>;
 
   /** Validates existing caller-owned metadata without allocating, submitting, or reading work. */
-  constructor(props: GPUGraphPageRankProps) {
+  constructor(props: GPUGraphAlgorithmsPageRankProps) {
     this.id = props.id ?? 'gpu-graph-page-rank';
     this.topology = props.topology;
     this.output = props.output;
@@ -85,7 +85,7 @@ export class GPUGraphPageRank {
 
   /** Declares bounded graph ranking work without submitting commands or reading results. */
   addToGraph<Parameters>(commandGraph: GPUCommandGraph<Parameters>): void {
-    addGPUGraphPageRankToGraphWithDispatchLimit(
+    addGPUGraphAlgorithmsPageRankToGraphWithDispatchLimit(
       this,
       commandGraph,
       commandGraph.device.limits.maxComputeWorkgroupsPerDimension
@@ -127,7 +127,7 @@ function validatePageRankVector(vector: GPUVector<'float32'>, length: number, na
 }
 
 /** Keeps ranking scores and optional residual disjoint from every existing graph allocation. */
-function validateDistinctPageRankOutputs(pageRank: GPUGraphPageRank): void {
+function validateDistinctPageRankOutputs(pageRank: GPUGraphAlgorithmsPageRank): void {
   const topology = pageRank.topology;
   const inputVectors = [
     topology.graph.sourceVertices,
@@ -160,7 +160,7 @@ function validateDistinctPageRankOutputs(pageRank: GPUGraphPageRank): void {
 
 /** Enumerates existing adjacency and status columns without changing any chunk identities. */
 function getAdjacencyVectors(
-  adjacency: GPUGraphAdjacency
+  adjacency: GPUGraphAlgorithmsAdjacency
 ): (GPUVector<'uint32'> | GPUVector<'float32'>)[] {
   return [
     adjacency.offsets,

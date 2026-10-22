@@ -6,12 +6,12 @@ import {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import * as experimentalModule from '@luma.gl/experimental';
 import {
-  GPUGraphData,
-  GPUGraphForceLayout,
-  GPUGraphSpatialForceLayout,
-  GPUGraphTopology,
-  type GPUGraphAdjacency,
-  type GPUGraphSpatialForceLayoutProps
+  GPUGraphAlgorithmsData,
+  GPUGraphAlgorithmsForceLayout,
+  GPUGraphAlgorithmsSpatialForceLayout,
+  GPUGraphAlgorithmsTopology,
+  type GPUGraphAlgorithmsAdjacency,
+  type GPUGraphAlgorithmsSpatialForceLayoutProps
 } from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
@@ -47,10 +47,10 @@ afterEach(() => {
   }
 });
 
-describe('GPUGraphSpatialForceLayout composition and caller-owned grid resources', () => {
+describe('GPUGraphAlgorithmsSpatialForceLayout composition and caller-owned grid resources', () => {
   test('exposes spatial acceleration only through the optional GPU Graph package entry', () => {
-    expect(typeof GPUGraphSpatialForceLayout).toBe('function');
-    expect('GPUGraphSpatialForceLayout' in experimentalModule).toBe(false);
+    expect(typeof GPUGraphAlgorithmsSpatialForceLayout).toBe('function');
+    expect('GPUGraphAlgorithmsSpatialForceLayout' in experimentalModule).toBe(false);
   });
 
   test('retains the exact base layout and every grid buffer without hidden GPU operations', () => {
@@ -61,7 +61,10 @@ describe('GPUGraphSpatialForceLayout composition and caller-owned grid resources
     const submitSpy = vi.spyOn(fixture.device, 'submit');
     const readbackSpies = fixture.buffers.map(buffer => vi.spyOn(buffer, 'readAsync'));
 
-    const spatial = new GPUGraphSpatialForceLayout({...props, id: 'borrowed-spatial-layout'});
+    const spatial = new GPUGraphAlgorithmsSpatialForceLayout({
+      ...props,
+      id: 'borrowed-spatial-layout'
+    });
 
     expect(spatial.id).toBe('borrowed-spatial-layout');
     expect(spatial.layout).toBe(props.layout);
@@ -92,7 +95,7 @@ describe('GPUGraphSpatialForceLayout composition and caller-owned grid resources
   test('accepts empty graphs and zero-capacity caller-owned vertex-ID indexes', () => {
     const fixture = createSpatialFixture();
     const props = createSpatialProps(fixture, {vertexCount: 0, vertexCapacity: 0, reset: true});
-    const spatial = new GPUGraphSpatialForceLayout(props);
+    const spatial = new GPUGraphAlgorithmsSpatialForceLayout(props);
 
     expect(spatial.layout.positions.length).toBe(0);
     expect(spatial.vertexIds.length).toBe(0);
@@ -102,14 +105,14 @@ describe('GPUGraphSpatialForceLayout composition and caller-owned grid resources
   });
 });
 
-describe('GPUGraphSpatialForceLayout finite grid and honest approximation contracts', () => {
+describe('GPUGraphAlgorithmsSpatialForceLayout finite grid and honest approximation contracts', () => {
   test.each([
     0, 0.001, 0.6, 1, 100
   ])('accepts a nonnegative finite opening criterion: %s', theta => {
     const fixture = createSpatialFixture();
-    expect(new GPUGraphSpatialForceLayout({...createSpatialProps(fixture), theta}).theta).toBe(
-      theta
-    );
+    expect(
+      new GPUGraphAlgorithmsSpatialForceLayout({...createSpatialProps(fixture), theta}).theta
+    ).toBe(theta);
   });
 
   test.each([
@@ -119,9 +122,9 @@ describe('GPUGraphSpatialForceLayout finite grid and honest approximation contra
     Number.POSITIVE_INFINITY
   ])('rejects an invalid far-cell opening criterion: %s', theta => {
     const fixture = createSpatialFixture();
-    expect(() => new GPUGraphSpatialForceLayout({...createSpatialProps(fixture), theta})).toThrow(
-      /theta|finite|negative/
-    );
+    expect(
+      () => new GPUGraphAlgorithmsSpatialForceLayout({...createSpatialProps(fixture), theta})
+    ).toThrow(/theta|finite|negative/);
   });
 
   test.each([
@@ -129,7 +132,7 @@ describe('GPUGraphSpatialForceLayout finite grid and honest approximation contra
   ])('accepts an unsigned exact near-cell radius: %s', nearCellRadius => {
     const fixture = createSpatialFixture();
     expect(
-      new GPUGraphSpatialForceLayout({...createSpatialProps(fixture), nearCellRadius})
+      new GPUGraphAlgorithmsSpatialForceLayout({...createSpatialProps(fixture), nearCellRadius})
         .nearCellRadius
     ).toBe(nearCellRadius);
   });
@@ -143,7 +146,8 @@ describe('GPUGraphSpatialForceLayout finite grid and honest approximation contra
   ])('rejects an invalid exact near-cell radius: %s', nearCellRadius => {
     const fixture = createSpatialFixture();
     expect(
-      () => new GPUGraphSpatialForceLayout({...createSpatialProps(fixture), nearCellRadius})
+      () =>
+        new GPUGraphAlgorithmsSpatialForceLayout({...createSpatialProps(fixture), nearCellRadius})
     ).toThrow(/nearCellRadius|uint32|negative/);
   });
 
@@ -163,7 +167,7 @@ describe('GPUGraphSpatialForceLayout finite grid and honest approximation contra
     const fixture = createSpatialFixture();
     expect(
       () =>
-        new GPUGraphSpatialForceLayout({
+        new GPUGraphAlgorithmsSpatialForceLayout({
           ...createSpatialProps(fixture),
           gridSize: gridSize as unknown as readonly [number, number]
         })
@@ -182,7 +186,7 @@ describe('GPUGraphSpatialForceLayout finite grid and honest approximation contra
     const fixture = createSpatialFixture();
     expect(
       () =>
-        new GPUGraphSpatialForceLayout({
+        new GPUGraphAlgorithmsSpatialForceLayout({
           ...createSpatialProps(fixture),
           bounds: bounds as unknown as readonly [number, number, number, number]
         })
@@ -190,14 +194,14 @@ describe('GPUGraphSpatialForceLayout finite grid and honest approximation contra
   });
 });
 
-describe('GPUGraphSpatialForceLayout packed index outputs and physical allocation safety', () => {
+describe('GPUGraphAlgorithmsSpatialForceLayout packed index outputs and physical allocation safety', () => {
   test.each([6, 8])('requires one exclusive offset per cell plus a trailing total: %i', length => {
     const fixture = createSpatialFixture();
     const props = createSpatialProps(fixture);
     const cellOffsets = createVector(fixture, 'incorrect-offsets', 'uint32', [
       new Uint32Array(length)
     ]);
-    expect(() => new GPUGraphSpatialForceLayout({...props, cellOffsets})).toThrow(
+    expect(() => new GPUGraphAlgorithmsSpatialForceLayout({...props, cellOffsets})).toThrow(
       /cellOffsets|row|cell/
     );
   });
@@ -208,7 +212,7 @@ describe('GPUGraphSpatialForceLayout packed index outputs and physical allocatio
     const cellCenters = createVector(fixture, 'incorrect-centers', 'float32x2', [
       new Float32Array(length * 2)
     ]);
-    expect(() => new GPUGraphSpatialForceLayout({...props, cellCenters})).toThrow(
+    expect(() => new GPUGraphAlgorithmsSpatialForceLayout({...props, cellCenters})).toThrow(
       /cellCenters|row|cell/
     );
   });
@@ -225,7 +229,7 @@ describe('GPUGraphSpatialForceLayout packed index outputs and physical allocatio
     const wrongFormat = createVector(fixture, `float-${name}`, 'float32', [
       new Float32Array(expectedLength)
     ]);
-    expect(() => new GPUGraphSpatialForceLayout({...props, [name]: wrongFormat})).toThrow(
+    expect(() => new GPUGraphAlgorithmsSpatialForceLayout({...props, [name]: wrongFormat})).toThrow(
       new RegExp(`${name}|uint32|packed`)
     );
   });
@@ -236,7 +240,7 @@ describe('GPUGraphSpatialForceLayout packed index outputs and physical allocatio
     const wrongFormat = createVector(fixture, 'scalar-centers', 'float32', [new Float32Array(6)]);
     expect(
       () =>
-        new GPUGraphSpatialForceLayout({
+        new GPUGraphAlgorithmsSpatialForceLayout({
           ...props,
           cellCenters: wrongFormat as GPUVector<'float32x2'>
         })
@@ -262,7 +266,7 @@ describe('GPUGraphSpatialForceLayout packed index outputs and physical allocatio
             new Uint32Array(name === 'cellOffsets' ? 7 : name === 'vertexIds' ? 6 : 1),
             new Uint32Array(0)
           ]);
-    expect(() => new GPUGraphSpatialForceLayout({...props, [name]: vector})).toThrow(
+    expect(() => new GPUGraphAlgorithmsSpatialForceLayout({...props, [name]: vector})).toThrow(
       new RegExp(`${name}|one|single|chunk`)
     );
   });
@@ -282,7 +286,7 @@ describe('GPUGraphSpatialForceLayout packed index outputs and physical allocatio
       [new Float32Array(12)],
       options
     );
-    expect(() => new GPUGraphSpatialForceLayout({...props, cellCenters})).toThrow(
+    expect(() => new GPUGraphAlgorithmsSpatialForceLayout({...props, cellCenters})).toThrow(
       /cellCenters|packed|aligned|float32x2/
     );
   });
@@ -294,7 +298,7 @@ describe('GPUGraphSpatialForceLayout packed index outputs and physical allocatio
       const status = createVector(fixture, `incorrect-${name}-${length}`, 'uint32', [
         new Uint32Array(length)
       ]);
-      expect(() => new GPUGraphSpatialForceLayout({...props, [name]: status})).toThrow(
+      expect(() => new GPUGraphAlgorithmsSpatialForceLayout({...props, [name]: status})).toThrow(
         new RegExp(`${name}|one|row|scalar`)
       );
     }
@@ -320,7 +324,12 @@ describe('GPUGraphSpatialForceLayout packed index outputs and physical allocatio
     const count = createVector(fixture, 'offset-count', 'uint32', [new Uint32Array(1)], {
       byteOffset: 4
     });
-    const spatial = new GPUGraphSpatialForceLayout({...props, cellOffsets, cellCenters, count});
+    const spatial = new GPUGraphAlgorithmsSpatialForceLayout({
+      ...props,
+      cellOffsets,
+      cellCenters,
+      count
+    });
     expect(spatial.cellOffsets.data[0].byteOffset).toBe(4);
     expect(spatial.cellCenters.data[0].byteOffset).toBe(4);
     expect(spatial.count.data[0].byteOffset).toBe(4);
@@ -361,7 +370,7 @@ describe('GPUGraphSpatialForceLayout packed index outputs and physical allocatio
     const vertexIds = createVector(fixture, 'aliased-spatial-ids', 'uint32', [new Uint32Array(1)], {
       buffer: existing.data[0].buffer
     });
-    expect(() => new GPUGraphSpatialForceLayout({...props, vertexIds})).toThrow(
+    expect(() => new GPUGraphAlgorithmsSpatialForceLayout({...props, vertexIds})).toThrow(
       /distinct|physical|allocation/
     );
   });
@@ -379,7 +388,7 @@ describe('GPUGraphSpatialForceLayout packed index outputs and physical allocatio
     const alias = createVector(fixture, `aliased-${name}`, format, [values], {
       buffer: props.cellOffsets.data[0].buffer
     });
-    expect(() => new GPUGraphSpatialForceLayout({...props, [name]: alias})).toThrow(
+    expect(() => new GPUGraphAlgorithmsSpatialForceLayout({...props, [name]: alias})).toThrow(
       /distinct|physical|allocation/
     );
   });
@@ -397,7 +406,7 @@ describe('GPUGraphSpatialForceLayout packed index outputs and physical allocatio
     const vertexIds = createVector(fixture, 'dynamic-aliased-ids', 'uint32', [new Uint32Array(1)], {
       buffer: dynamicBuffer
     });
-    expect(() => new GPUGraphSpatialForceLayout({...props, vertexIds})).toThrow(
+    expect(() => new GPUGraphAlgorithmsSpatialForceLayout({...props, vertexIds})).toThrow(
       /distinct|physical|allocation/
     );
     expect(concreteBuffer.destroyed).toBe(false);
@@ -421,7 +430,7 @@ function createSpatialProps(
     gridSize?: readonly [number, number];
     vertexCapacity?: number;
   } = {}
-): GPUGraphSpatialForceLayoutProps {
+): GPUGraphAlgorithmsSpatialForceLayoutProps {
   const vertexCount = options.vertexCount ?? 6;
   const sourceVertices = createVector(fixture, 'sourceVertices', 'uint32', [
     Uint32Array.from([0, 2]),
@@ -448,7 +457,7 @@ function createSpatialProps(
       ])
     : undefined;
   const directed = options.directed ?? true;
-  const graph = new GPUGraphData({
+  const graph = new GPUGraphAlgorithmsData({
     vertexCount,
     sourceVertices,
     targetVertices,
@@ -460,7 +469,7 @@ function createSpatialProps(
   const reverse = directed
     ? createAdjacency(fixture, 'reverse', vertexCount, 5, options.weighted)
     : undefined;
-  const topology = new GPUGraphTopology({
+  const topology = new GPUGraphAlgorithmsTopology({
     graph,
     forward,
     reverse,
@@ -478,7 +487,13 @@ function createSpatialProps(
   const reset = options.reset
     ? createVector(fixture, 'reset', 'uint32', [new Uint32Array(1)])
     : undefined;
-  const layout = new GPUGraphForceLayout({topology, positions, velocities, pinned, reset});
+  const layout = new GPUGraphAlgorithmsForceLayout({
+    topology,
+    positions,
+    velocities,
+    pinned,
+    reset
+  });
   const gridSize = options.gridSize ?? [3, 2];
   const cellCount = gridSize[0] * gridSize[1];
   return {
@@ -503,7 +518,7 @@ function createAdjacency(
   vertexCount: number,
   capacity: number,
   weighted = false
-): GPUGraphAdjacency {
+): GPUGraphAlgorithmsAdjacency {
   return {
     offsets: createVector(fixture, `${name}-offsets`, 'uint32', [new Uint32Array(vertexCount + 1)]),
     neighbors: createVector(fixture, `${name}-neighbors`, 'uint32', [new Uint32Array(capacity)]),
@@ -516,7 +531,7 @@ function createAdjacency(
   };
 }
 
-function getExistingVector(layout: GPUGraphForceLayout, name: string): GPUVector {
+function getExistingVector(layout: GPUGraphAlgorithmsForceLayout, name: string): GPUVector {
   if (name === 'positions') return layout.positions;
   if (name === 'velocities') return layout.velocities;
   if (name === 'pinned') return layout.pinned!;
@@ -529,7 +544,7 @@ function getExistingVector(layout: GPUGraphForceLayout, name: string): GPUVector
   if (name === 'edgeIds') return topology.graph.edgeIds!;
   const [direction, vectorName] = name.split('.');
   const adjacency = direction === 'forward' ? topology.forward : topology.reverse!;
-  return adjacency[vectorName as keyof GPUGraphAdjacency]!;
+  return adjacency[vectorName as keyof GPUGraphAlgorithmsAdjacency]!;
 }
 
 function createVector<Format extends VectorFormat>(

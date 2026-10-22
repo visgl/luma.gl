@@ -6,17 +6,17 @@ import {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import * as experimentalModule from '@luma.gl/experimental';
 import {
-  GPUGraphData,
-  GPUGraphSingleSourceShortestPath,
-  GPUGraphTopology,
-  type GPUGraphAdjacency,
-  type GPUGraphSingleSourceShortestPathDirection,
-  type GPUGraphSingleSourceShortestPathProps
+  GPUGraphAlgorithmsData,
+  GPUGraphAlgorithmsSingleSourceShortestPath,
+  GPUGraphAlgorithmsTopology,
+  type GPUGraphAlgorithmsAdjacency,
+  type GPUGraphAlgorithmsSingleSourceShortestPathDirection,
+  type GPUGraphAlgorithmsSingleSourceShortestPathProps
 } from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 import {afterEach, describe, expect, test, vi} from 'vitest';
-import {getGPUGraphSingleSourceShortestPathDispatchLayout} from '../../src/gpu-graph-algorithms/gpu-graph-single-source-shortest-path-internals';
+import {getGPUGraphAlgorithmsSingleSourceShortestPathDispatchLayout} from '../../src/gpu-graph-algorithms/gpu-graph-single-source-shortest-path-internals';
 
 type ScalarFormat = 'uint32' | 'float32';
 type ScalarValues = Uint32Array | Float32Array;
@@ -42,17 +42,17 @@ afterEach(() => {
   }
 });
 
-describe('GPUGraphSingleSourceShortestPath public GPU-resident API', () => {
-  test('exports weighted paths exclusively through the optional GPUGraphData subpath', () => {
-    expect(typeof GPUGraphSingleSourceShortestPath).toBe('function');
-    expect('GPUGraphSingleSourceShortestPath' in experimentalModule).toBe(false);
+describe('GPUGraphAlgorithmsSingleSourceShortestPath public GPU-resident API', () => {
+  test('exports weighted paths exclusively through the optional GPUGraphAlgorithmsData subpath', () => {
+    expect(typeof GPUGraphAlgorithmsSingleSourceShortestPath).toBe('function');
+    expect('GPUGraphAlgorithmsSingleSourceShortestPath' in experimentalModule).toBe(false);
   });
 
   test('preserves weighted topology and caller-owned outputs without submitting or reading', () => {
     const fixture = createShortestPathFixture();
     const props = createShortestPathProps(fixture, {weighted: true, statuses: true, reverse: true});
     const submit = vi.spyOn(fixture.device, 'submit');
-    const search = new GPUGraphSingleSourceShortestPath(props);
+    const search = new GPUGraphAlgorithmsSingleSourceShortestPath(props);
 
     expect(search.id).toBe('gpu-graph-single-source-shortest-path');
     expect(search.topology).toBe(props.topology);
@@ -70,16 +70,16 @@ describe('GPUGraphSingleSourceShortestPath public GPU-resident API', () => {
     const fixture = createShortestPathFixture();
     const props = createShortestPathProps(fixture, {vertexCount: 2048});
 
-    expect(new GPUGraphSingleSourceShortestPath(props).maxIterations).toBe(1024);
-    expect(new GPUGraphSingleSourceShortestPath({...props, maxIterations: 0}).maxIterations).toBe(
-      0
-    );
+    expect(new GPUGraphAlgorithmsSingleSourceShortestPath(props).maxIterations).toBe(1024);
+    expect(
+      new GPUGraphAlgorithmsSingleSourceShortestPath({...props, maxIterations: 0}).maxIterations
+    ).toBe(0);
   });
 
   test('accepts source zero and empty vertex-aligned destinations for an empty graph', () => {
     const fixture = createShortestPathFixture();
     const props = createShortestPathProps(fixture, {vertexCount: 0});
-    const search = new GPUGraphSingleSourceShortestPath(props);
+    const search = new GPUGraphAlgorithmsSingleSourceShortestPath(props);
 
     expect(search.sourceVertex).toBe(0);
     expect(search.maxIterations).toBe(0);
@@ -96,7 +96,7 @@ describe('GPUGraphSingleSourceShortestPath public GPU-resident API', () => {
     const fixture = createShortestPathFixture();
     const props = createShortestPathProps(fixture);
 
-    expect(() => new GPUGraphSingleSourceShortestPath({...props, sourceVertex})).toThrow(
+    expect(() => new GPUGraphAlgorithmsSingleSourceShortestPath({...props, sourceVertex})).toThrow(
       /sourceVertex|vertex/
     );
   });
@@ -111,7 +111,7 @@ describe('GPUGraphSingleSourceShortestPath public GPU-resident API', () => {
     const fixture = createShortestPathFixture();
     const props = createShortestPathProps(fixture);
 
-    expect(() => new GPUGraphSingleSourceShortestPath({...props, maxIterations})).toThrow(
+    expect(() => new GPUGraphAlgorithmsSingleSourceShortestPath({...props, maxIterations})).toThrow(
       /maxIterations|1024/
     );
   });
@@ -123,11 +123,13 @@ describe('GPUGraphSingleSourceShortestPath public GPU-resident API', () => {
     const fixture = createShortestPathFixture();
     const props = createShortestPathProps(fixture);
 
-    expect(() => new GPUGraphSingleSourceShortestPath({...props, direction})).toThrow(/reverse/);
-    const reversible = createShortestPathProps(fixture, {reverse: true});
-    expect(new GPUGraphSingleSourceShortestPath({...reversible, direction}).direction).toBe(
-      direction
+    expect(() => new GPUGraphAlgorithmsSingleSourceShortestPath({...props, direction})).toThrow(
+      /reverse/
     );
+    const reversible = createShortestPathProps(fixture, {reverse: true});
+    expect(
+      new GPUGraphAlgorithmsSingleSourceShortestPath({...reversible, direction}).direction
+    ).toBe(direction);
   });
 
   test.each([
@@ -137,19 +139,23 @@ describe('GPUGraphSingleSourceShortestPath public GPU-resident API', () => {
     const fixture = createShortestPathFixture();
     const props = createShortestPathProps(fixture, {directed: false});
 
-    expect(new GPUGraphSingleSourceShortestPath({...props, direction}).direction).toBe(direction);
+    expect(new GPUGraphAlgorithmsSingleSourceShortestPath({...props, direction}).direction).toBe(
+      direction
+    );
   });
 
   test.each(['reverse', '', 'OUTGOING'])('rejects unsupported direction: %s', invalidDirection => {
     const fixture = createShortestPathFixture();
     const props = createShortestPathProps(fixture, {reverse: true});
-    const direction = invalidDirection as GPUGraphSingleSourceShortestPathDirection;
+    const direction = invalidDirection as GPUGraphAlgorithmsSingleSourceShortestPathDirection;
 
-    expect(() => new GPUGraphSingleSourceShortestPath({...props, direction})).toThrow(/direction/);
+    expect(() => new GPUGraphAlgorithmsSingleSourceShortestPath({...props, direction})).toThrow(
+      /direction/
+    );
   });
 });
 
-describe('GPUGraphSingleSourceShortestPath output validation and physical ownership', () => {
+describe('GPUGraphAlgorithmsSingleSourceShortestPath output validation and physical ownership', () => {
   test('requires exactly one packed float32 distance and uint32 predecessor row per vertex', () => {
     const fixture = createShortestPathFixture();
     const props = createShortestPathProps(fixture);
@@ -164,13 +170,14 @@ describe('GPUGraphSingleSourceShortestPath output validation and physical owners
     ]);
 
     expect(
-      () => new GPUGraphSingleSourceShortestPath({...props, distances: wrongDistances})
+      () => new GPUGraphAlgorithmsSingleSourceShortestPath({...props, distances: wrongDistances})
     ).toThrow(/distances|float32/);
     expect(
-      () => new GPUGraphSingleSourceShortestPath({...props, predecessors: wrongPredecessors})
+      () =>
+        new GPUGraphAlgorithmsSingleSourceShortestPath({...props, predecessors: wrongPredecessors})
     ).toThrow(/predecessors|uint32/);
     expect(
-      () => new GPUGraphSingleSourceShortestPath({...props, distances: shortDistances})
+      () => new GPUGraphAlgorithmsSingleSourceShortestPath({...props, distances: shortDistances})
     ).toThrow(/distances|rows/);
   });
 
@@ -185,14 +192,14 @@ describe('GPUGraphSingleSourceShortestPath output validation and physical owners
     ]);
 
     expect(
-      () => new GPUGraphSingleSourceShortestPath({...props, [statusName]: invalidStatus})
+      () => new GPUGraphAlgorithmsSingleSourceShortestPath({...props, [statusName]: invalidStatus})
     ).toThrow(new RegExp(`${statusName}|rows`));
   });
 
   test('accepts legal non-256-aligned scalar views without copying caller-owned data', () => {
     const fixture = createShortestPathFixture();
     const props = createShortestPathProps(fixture, {statuses: true, byteOffset: 4});
-    const search = new GPUGraphSingleSourceShortestPath(props);
+    const search = new GPUGraphAlgorithmsSingleSourceShortestPath(props);
 
     expect(search.distances.data[0].byteOffset).toBe(4);
     expect(search.predecessors.data[0].byteOffset).toBe(4);
@@ -212,7 +219,7 @@ describe('GPUGraphSingleSourceShortestPath output validation and physical owners
       buffer: source.data[0].buffer
     });
 
-    expect(() => new GPUGraphSingleSourceShortestPath({...props, distances})).toThrow(
+    expect(() => new GPUGraphAlgorithmsSingleSourceShortestPath({...props, distances})).toThrow(
       /distinct|physical|allocation/
     );
   });
@@ -228,7 +235,7 @@ describe('GPUGraphSingleSourceShortestPath output validation and physical owners
       {buffer: props.distances.data[0].buffer}
     );
 
-    expect(() => new GPUGraphSingleSourceShortestPath({...props, predecessors})).toThrow(
+    expect(() => new GPUGraphAlgorithmsSingleSourceShortestPath({...props, predecessors})).toThrow(
       /distinct|physical|allocation/
     );
   });
@@ -247,17 +254,33 @@ describe('GPUGraphSingleSourceShortestPath output validation and physical owners
       buffer: wrapper
     });
 
-    expect(() => new GPUGraphSingleSourceShortestPath({...props, distances})).toThrow(
+    expect(() => new GPUGraphAlgorithmsSingleSourceShortestPath({...props, distances})).toThrow(
       /distinct|physical|allocation/
     );
   });
 
   test('plans bounded three-dimensional weighted-path dispatch', () => {
-    expect(getGPUGraphSingleSourceShortestPathDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
-    expect(getGPUGraphSingleSourceShortestPathDispatchLayout(512, 2)).toEqual({x: 2, y: 1, z: 1});
-    expect(getGPUGraphSingleSourceShortestPathDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
-    expect(getGPUGraphSingleSourceShortestPathDispatchLayout(1025, 2)).toEqual({x: 2, y: 2, z: 2});
-    expect(() => getGPUGraphSingleSourceShortestPathDispatchLayout(2049, 2)).toThrow(
+    expect(getGPUGraphAlgorithmsSingleSourceShortestPathDispatchLayout(0, 2)).toEqual({
+      x: 1,
+      y: 1,
+      z: 1
+    });
+    expect(getGPUGraphAlgorithmsSingleSourceShortestPathDispatchLayout(512, 2)).toEqual({
+      x: 2,
+      y: 1,
+      z: 1
+    });
+    expect(getGPUGraphAlgorithmsSingleSourceShortestPathDispatchLayout(513, 2)).toEqual({
+      x: 2,
+      y: 2,
+      z: 1
+    });
+    expect(getGPUGraphAlgorithmsSingleSourceShortestPathDispatchLayout(1025, 2)).toEqual({
+      x: 2,
+      y: 2,
+      z: 2
+    });
+    expect(() => getGPUGraphAlgorithmsSingleSourceShortestPathDispatchLayout(2049, 2)).toThrow(
       /3D dispatch limit/
     );
   });
@@ -279,7 +302,7 @@ function createShortestPathProps(
     statuses?: boolean;
     byteOffset?: number;
   } = {}
-): GPUGraphSingleSourceShortestPathProps {
+): GPUGraphAlgorithmsSingleSourceShortestPathProps {
   const vertexCount = options.vertexCount ?? 4;
   const sourceVertices = createVector(fixture, 'sourceVertices', 'uint32', [
     Uint32Array.from([0, 1]),
@@ -298,7 +321,7 @@ function createShortestPathProps(
         Float32Array.from([2, 4])
       ])
     : undefined;
-  const graph = new GPUGraphData({
+  const graph = new GPUGraphAlgorithmsData({
     vertexCount,
     sourceVertices,
     targetVertices,
@@ -312,7 +335,7 @@ function createShortestPathProps(
   const invalidEdgeCount = createVector(fixture, 'invalidEdgeCount', 'uint32', [
     new Uint32Array(1)
   ]);
-  const topology = new GPUGraphTopology({graph, forward, reverse, invalidEdgeCount});
+  const topology = new GPUGraphAlgorithmsTopology({graph, forward, reverse, invalidEdgeCount});
   const vectorOptions = {byteOffset: options.byteOffset};
   return {
     topology,
@@ -358,7 +381,7 @@ function createAdjacency(
   vertexCount: number,
   capacity: number,
   weighted: boolean
-): GPUGraphAdjacency {
+): GPUGraphAlgorithmsAdjacency {
   return {
     offsets: createVector(fixture, `${name}-offsets`, 'uint32', [new Uint32Array(vertexCount + 1)]),
     neighbors: createVector(fixture, `${name}-neighbors`, 'uint32', [new Uint32Array(capacity)]),
@@ -375,11 +398,14 @@ function createAdjacency(
   };
 }
 
-function getInputVector(props: GPUGraphSingleSourceShortestPathProps, name: string): GPUVector {
+function getInputVector(
+  props: GPUGraphAlgorithmsSingleSourceShortestPathProps,
+  name: string
+): GPUVector {
   if (name === 'sourceVertices') return props.topology.graph.sourceVertices;
   const [direction, vectorName] = name.split('.');
   const adjacency = direction === 'forward' ? props.topology.forward : props.topology.reverse!;
-  return adjacency[vectorName as keyof GPUGraphAdjacency]!;
+  return adjacency[vectorName as keyof GPUGraphAlgorithmsAdjacency]!;
 }
 
 function createVector<Format extends ScalarFormat>(

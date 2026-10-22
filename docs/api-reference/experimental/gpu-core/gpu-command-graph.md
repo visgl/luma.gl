@@ -8,7 +8,7 @@ import {GPUDataAnalysisExample} from '@site/src/examples';
 Use `GPUGraph` and `CompiledGPUGraph` from `@luma.gl/gpgpu/gpu-graph` for execution scheduling.
 They are also exported by `@luma.gl/gpgpu/gpu-core`. The former names `GPUCommandGraph` and
 `CompiledGPUCommandGraph` remain aliases; option and result types retain their existing prefixes.
-Graph analytics live separately in `@luma.gl/gpgpu/gpu-graph-algorithms`, using `GPUGraphData`.
+Graph analytics live separately in `@luma.gl/gpgpu/gpu-graph-algorithms`, using `GPUGraphAlgorithmsData`.
 
 <GPUCoreDocsTabs active="command-graph" />
 

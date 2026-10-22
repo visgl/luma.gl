@@ -9,12 +9,12 @@ import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-
 
 <ExperimentalDocsTabs active="gpu-graph-traversal" />
 
-## Follow unweighted paths with GPUGraphBreadthFirstSearch
+## Follow unweighted paths with GPUGraphAlgorithmsBreadthFirstSearch
 
 **Question: Which entities can I reach within a chosen number of hops, and what shortest path gets
 me there?**
 
-`GPUGraphBreadthFirstSearch` expands outward from one or more selected vertices and records the
+`GPUGraphAlgorithmsBreadthFirstSearch` expands outward from one or more selected vertices and records the
 shortest unweighted hop count to every reachable vertex. Use it to highlight a selected account's
 neighborhood, follow a service's dependencies, or explain how two entities connect.
 
@@ -24,9 +24,9 @@ depends on indirect relationships; choose it over connected components when dist
 or a particular starting vertex matters.
 
 ```ts
-import {GPUGraphBreadthFirstSearch} from '@luma.gl/gpgpu/gpu-graph-algorithms';
+import {GPUGraphAlgorithmsBreadthFirstSearch} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 
-const search = new GPUGraphBreadthFirstSearch({
+const search = new GPUGraphAlgorithmsBreadthFirstSearch({
   topology,
   seeds: selectedVertexIds,
   distances: hopDistances,
@@ -49,7 +49,7 @@ equal-length parent ties select the numerically lowest stable vertex identifier.
 ignored, duplicate seeds are harmless, and the optional mask publishes zero or one per vertex.
 This is an unweighted shortest-path operation, not a weighted route or travel-time solver.
 
-## Find least-cost routes with GPUGraphSingleSourceShortestPath
+## Find least-cost routes with GPUGraphAlgorithmsSingleSourceShortestPath
 
 **Question: Which route from my starting vertex costs the least when each connection has its own
 travel time, distance, latency, or other nonnegative price?**
@@ -57,7 +57,7 @@ travel time, distance, latency, or other nonnegative price?**
 The route with the fewest steps is not necessarily the cheapest. Suppose a direct train takes
 40 minutes, while two connecting trains take 10 minutes each: breadth-first search chooses the
 one-hop direct train, but the least-cost route takes the two connections and arrives in 20 minutes.
-`GPUGraphSingleSourceShortestPath` computes that minimum accumulated nonnegative edge weight from one
+`GPUGraphAlgorithmsSingleSourceShortestPath` computes that minimum accumulated nonnegative edge weight from one
 selected starting vertex to every reachable destination without moving graph columns to the CPU.
 
 Use it for travel-time maps, delivery networks, communication latency, transaction fees, or
@@ -67,9 +67,9 @@ weights can change which route wins. This operation computes routes from **one**
 it does not implement all-pairs routing, negative-weight paths, or A* geographic search.
 
 ```ts
-import {GPUGraphSingleSourceShortestPath} from '@luma.gl/gpgpu/gpu-graph-algorithms';
+import {GPUGraphAlgorithmsSingleSourceShortestPath} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 
-const shortestPaths = new GPUGraphSingleSourceShortestPath({
+const shortestPaths = new GPUGraphAlgorithmsSingleSourceShortestPath({
   topology,
   sourceVertex: selectedVertex,
   distances: routeCosts,

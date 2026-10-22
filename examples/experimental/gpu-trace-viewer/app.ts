@@ -5397,7 +5397,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       if (button) button.dataset.confirmed = 'true';
       if (this.analysisWindowElement) {
         const fullScanInvocations = spanCount * 7;
-        this.analysisWindowElement.textContent = `Full-trace preflight: about ${formatCount(fullScanInvocations)} row invocations plus histogram/time-bucket atomics. GPUGraphData will budget the work across frames. ${button ? 'Click Full trace again to run it.' : 'Use the Full trace button to confirm.'}`;
+        this.analysisWindowElement.textContent = `Full-trace preflight: about ${formatCount(fullScanInvocations)} row invocations plus histogram/time-bucket atomics. GPUGraphAlgorithmsData will budget the work across frames. ${button ? 'Click Full trace again to run it.' : 'Use the Full trace button to confirm.'}`;
       }
       return true;
     };

@@ -6,16 +6,16 @@ import {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import * as experimentalModule from '@luma.gl/experimental';
 import {
-  GPUGraphData,
-  GPUGraphLocalClusteringCoefficient,
-  GPUGraphTopology,
-  type GPUGraphAdjacency,
-  type GPUGraphLocalClusteringCoefficientProps
+  GPUGraphAlgorithmsData,
+  GPUGraphAlgorithmsLocalClusteringCoefficient,
+  GPUGraphAlgorithmsTopology,
+  type GPUGraphAlgorithmsAdjacency,
+  type GPUGraphAlgorithmsLocalClusteringCoefficientProps
 } from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 import {afterEach, describe, expect, test, vi} from 'vitest';
-import {getGPUGraphLocalClusteringCoefficientDispatchLayout} from '../../src/gpu-graph-algorithms/gpu-graph-local-clustering-coefficient-internals';
+import {getGPUGraphAlgorithmsLocalClusteringCoefficientDispatchLayout} from '../../src/gpu-graph-algorithms/gpu-graph-local-clustering-coefficient-internals';
 
 type ScalarFormat = 'uint32' | 'float32';
 type ScalarValues = Uint32Array | Float32Array;
@@ -47,10 +47,10 @@ afterEach(() => {
   }
 });
 
-describe('GPUGraphLocalClusteringCoefficient public contract and ownership', () => {
+describe('GPUGraphAlgorithmsLocalClusteringCoefficient public contract and ownership', () => {
   test('keeps Graphalytics clustering isolated in the optional GPU Graph entry point', () => {
-    expect(typeof GPUGraphLocalClusteringCoefficient).toBe('function');
-    expect('GPUGraphLocalClusteringCoefficient' in experimentalModule).toBe(false);
+    expect(typeof GPUGraphAlgorithmsLocalClusteringCoefficient).toBe('function');
+    expect('GPUGraphAlgorithmsLocalClusteringCoefficient' in experimentalModule).toBe(false);
   });
 
   test('borrows topology and both outputs without allocation, submission, or source readback', () => {
@@ -61,7 +61,10 @@ describe('GPUGraphLocalClusteringCoefficient public contract and ownership', () 
     const submitSpy = vi.spyOn(fixture.device, 'submit');
     const readbackSpies = fixture.buffers.map(buffer => vi.spyOn(buffer, 'readAsync'));
 
-    const clustering = new GPUGraphLocalClusteringCoefficient({...props, id: 'borrowed-triangles'});
+    const clustering = new GPUGraphAlgorithmsLocalClusteringCoefficient({
+      ...props,
+      id: 'borrowed-triangles'
+    });
 
     expect(clustering.id).toBe('borrowed-triangles');
     expect(clustering.topology).toBe(props.topology);
@@ -84,12 +87,16 @@ describe('GPUGraphLocalClusteringCoefficient public contract and ownership', () 
     const fixture = createClusteringFixture();
     const props = createClusteringProps(fixture, {reverse: false});
 
-    expect(() => new GPUGraphLocalClusteringCoefficient(props)).toThrow(/directed|reverse/);
+    expect(() => new GPUGraphAlgorithmsLocalClusteringCoefficient(props)).toThrow(
+      /directed|reverse/
+    );
   });
 
   test('accepts directed reverse CSR without optional triangle output', () => {
     const fixture = createClusteringFixture();
-    const clustering = new GPUGraphLocalClusteringCoefficient(createClusteringProps(fixture));
+    const clustering = new GPUGraphAlgorithmsLocalClusteringCoefficient(
+      createClusteringProps(fixture)
+    );
 
     expect(clustering.id).toBe('gpu-graph-local-clustering-coefficient');
     expect(clustering.topology.graph.directed).toBe(true);
@@ -100,7 +107,7 @@ describe('GPUGraphLocalClusteringCoefficient public contract and ownership', () 
   test('accepts symmetric undirected adjacency without reverse CSR', () => {
     const fixture = createClusteringFixture();
     const props = createClusteringProps(fixture, {directed: false, triangles: true});
-    const clustering = new GPUGraphLocalClusteringCoefficient(props);
+    const clustering = new GPUGraphAlgorithmsLocalClusteringCoefficient(props);
 
     expect(clustering.topology.graph.directed).toBe(false);
     expect(clustering.topology.reverse).toBeUndefined();
@@ -109,7 +116,7 @@ describe('GPUGraphLocalClusteringCoefficient public contract and ownership', () 
 
   test('accepts empty graph coefficient and optional triangle outputs', () => {
     const fixture = createClusteringFixture();
-    const clustering = new GPUGraphLocalClusteringCoefficient(
+    const clustering = new GPUGraphAlgorithmsLocalClusteringCoefficient(
       createClusteringProps(fixture, {vertexCount: 0, triangles: true})
     );
 
@@ -119,29 +126,33 @@ describe('GPUGraphLocalClusteringCoefficient public contract and ownership', () 
   });
 
   test('plans bounded three-dimensional clustering dispatch without truncating vertices', () => {
-    expect(getGPUGraphLocalClusteringCoefficientDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
-    expect(getGPUGraphLocalClusteringCoefficientDispatchLayout(512, 2)).toEqual({
+    expect(getGPUGraphAlgorithmsLocalClusteringCoefficientDispatchLayout(0, 2)).toEqual({
+      x: 1,
+      y: 1,
+      z: 1
+    });
+    expect(getGPUGraphAlgorithmsLocalClusteringCoefficientDispatchLayout(512, 2)).toEqual({
       x: 2,
       y: 1,
       z: 1
     });
-    expect(getGPUGraphLocalClusteringCoefficientDispatchLayout(513, 2)).toEqual({
+    expect(getGPUGraphAlgorithmsLocalClusteringCoefficientDispatchLayout(513, 2)).toEqual({
       x: 2,
       y: 2,
       z: 1
     });
-    expect(getGPUGraphLocalClusteringCoefficientDispatchLayout(1025, 2)).toEqual({
+    expect(getGPUGraphAlgorithmsLocalClusteringCoefficientDispatchLayout(1025, 2)).toEqual({
       x: 2,
       y: 2,
       z: 2
     });
-    expect(() => getGPUGraphLocalClusteringCoefficientDispatchLayout(2049, 2)).toThrow(
+    expect(() => getGPUGraphAlgorithmsLocalClusteringCoefficientDispatchLayout(2049, 2)).toThrow(
       /3D dispatch limit/
     );
   });
 });
 
-describe('GPUGraphLocalClusteringCoefficient output validation', () => {
+describe('GPUGraphAlgorithmsLocalClusteringCoefficient output validation', () => {
   test.each([5, 7])('requires exactly one coefficient row per vertex: %i', length => {
     const fixture = createClusteringFixture();
     const props = createClusteringProps(fixture);
@@ -149,7 +160,7 @@ describe('GPUGraphLocalClusteringCoefficient output validation', () => {
       new Float32Array(length)
     ]);
 
-    expect(() => new GPUGraphLocalClusteringCoefficient({...props, output})).toThrow(
+    expect(() => new GPUGraphAlgorithmsLocalClusteringCoefficient({...props, output})).toThrow(
       /output|float32|rows/
     );
   });
@@ -161,7 +172,7 @@ describe('GPUGraphLocalClusteringCoefficient output validation', () => {
       new Uint32Array(props.topology.graph.vertexCount)
     ]) as unknown as GPUVector<'float32'>;
 
-    expect(() => new GPUGraphLocalClusteringCoefficient({...props, output})).toThrow(
+    expect(() => new GPUGraphAlgorithmsLocalClusteringCoefficient({...props, output})).toThrow(
       /output|float32|packed/
     );
   });
@@ -172,7 +183,7 @@ describe('GPUGraphLocalClusteringCoefficient output validation', () => {
     const chunks = chunkCount === 0 ? [] : [new Float32Array(3), new Float32Array(3)];
     const output = createVector(fixture, 'partitioned-coefficients', 'float32', chunks);
 
-    expect(() => new GPUGraphLocalClusteringCoefficient({...props, output})).toThrow(
+    expect(() => new GPUGraphAlgorithmsLocalClusteringCoefficient({...props, output})).toThrow(
       /output|one|chunk/
     );
   });
@@ -193,7 +204,7 @@ describe('GPUGraphLocalClusteringCoefficient output validation', () => {
       options
     );
 
-    expect(() => new GPUGraphLocalClusteringCoefficient({...props, output})).toThrow(
+    expect(() => new GPUGraphAlgorithmsLocalClusteringCoefficient({...props, output})).toThrow(
       /output|float32|packed|aligned/
     );
   });
@@ -203,7 +214,7 @@ describe('GPUGraphLocalClusteringCoefficient output validation', () => {
     const props = createClusteringProps(fixture);
     const triangles = createVector(fixture, 'triangle-length', 'uint32', [new Uint32Array(length)]);
 
-    expect(() => new GPUGraphLocalClusteringCoefficient({...props, triangles})).toThrow(
+    expect(() => new GPUGraphAlgorithmsLocalClusteringCoefficient({...props, triangles})).toThrow(
       /triangles|uint32|rows/
     );
   });
@@ -215,7 +226,7 @@ describe('GPUGraphLocalClusteringCoefficient output validation', () => {
       new Float32Array(props.topology.graph.vertexCount)
     ]) as unknown as GPUVector<'uint32'>;
 
-    expect(() => new GPUGraphLocalClusteringCoefficient({...props, triangles})).toThrow(
+    expect(() => new GPUGraphAlgorithmsLocalClusteringCoefficient({...props, triangles})).toThrow(
       /triangles|uint32|packed/
     );
   });
@@ -226,7 +237,7 @@ describe('GPUGraphLocalClusteringCoefficient output validation', () => {
     const chunks = chunkCount === 0 ? [] : [new Uint32Array(3), new Uint32Array(3)];
     const triangles = createVector(fixture, 'partitioned-triangles', 'uint32', chunks);
 
-    expect(() => new GPUGraphLocalClusteringCoefficient({...props, triangles})).toThrow(
+    expect(() => new GPUGraphAlgorithmsLocalClusteringCoefficient({...props, triangles})).toThrow(
       /triangles|one|chunk/
     );
   });
@@ -249,7 +260,11 @@ describe('GPUGraphLocalClusteringCoefficient output validation', () => {
       {byteOffset: 4}
     );
 
-    const clustering = new GPUGraphLocalClusteringCoefficient({...props, output, triangles});
+    const clustering = new GPUGraphAlgorithmsLocalClusteringCoefficient({
+      ...props,
+      output,
+      triangles
+    });
     expect(clustering.output.data[0].byteOffset).toBe(4);
     expect(clustering.triangles?.data[0].byteOffset).toBe(4);
   });
@@ -280,7 +295,7 @@ describe('GPUGraphLocalClusteringCoefficient output validation', () => {
       buffer: vector.data[0].buffer
     });
 
-    expect(() => new GPUGraphLocalClusteringCoefficient({...props, output})).toThrow(
+    expect(() => new GPUGraphAlgorithmsLocalClusteringCoefficient({...props, output})).toThrow(
       /output|distinct|physical|allocation/
     );
   });
@@ -300,10 +315,11 @@ describe('GPUGraphLocalClusteringCoefficient output validation', () => {
     });
 
     expect(
-      () => new GPUGraphLocalClusteringCoefficient({...props, triangles: coefficientAlias})
+      () =>
+        new GPUGraphAlgorithmsLocalClusteringCoefficient({...props, triangles: coefficientAlias})
     ).toThrow(/triangles|distinct|physical|allocation/);
     expect(
-      () => new GPUGraphLocalClusteringCoefficient({...props, triangles: topologyAlias})
+      () => new GPUGraphAlgorithmsLocalClusteringCoefficient({...props, triangles: topologyAlias})
     ).toThrow(/triangles|distinct|physical|allocation/);
   });
 
@@ -325,7 +341,7 @@ describe('GPUGraphLocalClusteringCoefficient output validation', () => {
       {buffer: dynamicBuffer}
     );
 
-    expect(() => new GPUGraphLocalClusteringCoefficient({...props, output})).toThrow(
+    expect(() => new GPUGraphAlgorithmsLocalClusteringCoefficient({...props, output})).toThrow(
       /distinct|physical|allocation/
     );
     expect(concreteBuffer.destroyed).toBe(false);
@@ -347,7 +363,7 @@ function createClusteringProps(
     weighted?: boolean;
     triangles?: boolean;
   } = {}
-): GPUGraphLocalClusteringCoefficientProps {
+): GPUGraphAlgorithmsLocalClusteringCoefficientProps {
   const vertexCount = options.vertexCount ?? 6;
   const sourceVertices = createVector(fixture, 'sourceVertices', 'uint32', [
     Uint32Array.from([0, 2]),
@@ -373,7 +389,7 @@ function createClusteringProps(
         Uint32Array.from([30, 40, 50])
       ])
     : undefined;
-  const graph = new GPUGraphData({
+  const graph = new GPUGraphAlgorithmsData({
     vertexCount,
     sourceVertices,
     targetVertices,
@@ -389,7 +405,7 @@ function createClusteringProps(
   const invalidEdgeCount = createVector(fixture, 'invalidEdgeCount', 'uint32', [
     new Uint32Array(1)
   ]);
-  const topology = new GPUGraphTopology({graph, forward, reverse, invalidEdgeCount});
+  const topology = new GPUGraphAlgorithmsTopology({graph, forward, reverse, invalidEdgeCount});
   const output = createVector(fixture, 'local-clustering', 'float32', [
     new Float32Array(vertexCount)
   ]);
@@ -405,7 +421,7 @@ function createAdjacency(
   vertexCount: number,
   capacity: number,
   weighted = false
-): GPUGraphAdjacency {
+): GPUGraphAlgorithmsAdjacency {
   return {
     offsets: createVector(fixture, `${name}-offsets`, 'uint32', [new Uint32Array(vertexCount + 1)]),
     neighbors: createVector(fixture, `${name}-neighbors`, 'uint32', [new Uint32Array(capacity)]),
@@ -418,7 +434,7 @@ function createAdjacency(
   };
 }
 
-function getTopologyVector(topology: GPUGraphTopology, name: string): GPUVector {
+function getTopologyVector(topology: GPUGraphAlgorithmsTopology, name: string): GPUVector {
   if (name === 'invalidEdgeCount') return topology.invalidEdgeCount;
   if (name === 'sourceVertices') return topology.graph.sourceVertices;
   if (name === 'targetVertices') return topology.graph.targetVertices;
@@ -427,7 +443,7 @@ function getTopologyVector(topology: GPUGraphTopology, name: string): GPUVector 
 
   const [direction, vectorName] = name.split('.');
   const adjacency = direction === 'forward' ? topology.forward : topology.reverse!;
-  return adjacency[vectorName as keyof GPUGraphAdjacency]!;
+  return adjacency[vectorName as keyof GPUGraphAlgorithmsAdjacency]!;
 }
 
 function createVector<Format extends ScalarFormat>(

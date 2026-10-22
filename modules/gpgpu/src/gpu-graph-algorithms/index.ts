@@ -3,42 +3,48 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuGraph.
 
-export {GPUGraphData} from './gpu-graph';
+export {GPUGraphAlgorithmsData} from './gpu-graph';
 export type {
-  GPUGraphDataProps,
-  GPUGraphRecordBatch,
-  GPUGraphRecordBatchSourceInfo,
-  GPUGraphTable
+  GPUGraphAlgorithmsDataProps,
+  GPUGraphAlgorithmsRecordBatch,
+  GPUGraphAlgorithmsRecordBatchSourceInfo,
+  GPUGraphAlgorithmsTable
 } from './gpu-graph';
-export {GPUGraphTopology} from './gpu-graph-topology';
-export type {GPUGraphAdjacency, GPUGraphTopologyProps} from './gpu-graph-topology';
-export {GPUGraphDegree} from './gpu-graph-degree';
-export type {GPUGraphDegreeDirection, GPUGraphDegreeProps} from './gpu-graph-degree';
-export {GPUGraphBreadthFirstSearch} from './gpu-graph-breadth-first-search';
+export {GPUGraphAlgorithmsTopology} from './gpu-graph-topology';
 export type {
-  GPUGraphBreadthFirstSearchDirection,
-  GPUGraphBreadthFirstSearchProps
+  GPUGraphAlgorithmsAdjacency,
+  GPUGraphAlgorithmsTopologyProps
+} from './gpu-graph-topology';
+export {GPUGraphAlgorithmsDegree} from './gpu-graph-degree';
+export type {
+  GPUGraphAlgorithmsDegreeDirection,
+  GPUGraphAlgorithmsDegreeProps
+} from './gpu-graph-degree';
+export {GPUGraphAlgorithmsBreadthFirstSearch} from './gpu-graph-breadth-first-search';
+export type {
+  GPUGraphAlgorithmsBreadthFirstSearchDirection,
+  GPUGraphAlgorithmsBreadthFirstSearchProps
 } from './gpu-graph-breadth-first-search';
-export {GPUGraphSingleSourceShortestPath} from './gpu-graph-single-source-shortest-path';
+export {GPUGraphAlgorithmsSingleSourceShortestPath} from './gpu-graph-single-source-shortest-path';
 export type {
-  GPUGraphSingleSourceShortestPathDirection,
-  GPUGraphSingleSourceShortestPathProps
+  GPUGraphAlgorithmsSingleSourceShortestPathDirection,
+  GPUGraphAlgorithmsSingleSourceShortestPathProps
 } from './gpu-graph-single-source-shortest-path';
-export {GPUGraphConnectedComponents} from './gpu-graph-connected-components';
-export type {GPUGraphConnectedComponentsProps} from './gpu-graph-connected-components';
-export {GPUGraphCoreNumber} from './gpu-graph-core-number';
-export type {GPUGraphCoreNumberProps} from './gpu-graph-core-number';
-export {GPUGraphLabelPropagation} from './gpu-graph-label-propagation';
-export type {GPUGraphLabelPropagationProps} from './gpu-graph-label-propagation';
-export {GPUGraphModularity} from './gpu-graph-modularity';
-export type {GPUGraphModularityProps} from './gpu-graph-modularity';
-export {GPUGraphModularityOptimization} from './gpu-graph-modularity-optimization';
-export type {GPUGraphModularityOptimizationProps} from './gpu-graph-modularity-optimization';
-export {GPUGraphLocalClusteringCoefficient} from './gpu-graph-local-clustering-coefficient';
-export type {GPUGraphLocalClusteringCoefficientProps} from './gpu-graph-local-clustering-coefficient';
-export {GPUGraphPageRank} from './gpu-graph-page-rank';
-export type {GPUGraphPageRankProps} from './gpu-graph-page-rank';
-export {GPUGraphForceLayout} from './gpu-graph-force-layout';
-export type {GPUGraphForceLayoutProps} from './gpu-graph-force-layout';
-export {GPUGraphSpatialForceLayout} from './gpu-graph-spatial-force-layout';
-export type {GPUGraphSpatialForceLayoutProps} from './gpu-graph-spatial-force-layout';
+export {GPUGraphAlgorithmsConnectedComponents} from './gpu-graph-connected-components';
+export type {GPUGraphAlgorithmsConnectedComponentsProps} from './gpu-graph-connected-components';
+export {GPUGraphAlgorithmsCoreNumber} from './gpu-graph-core-number';
+export type {GPUGraphAlgorithmsCoreNumberProps} from './gpu-graph-core-number';
+export {GPUGraphAlgorithmsLabelPropagation} from './gpu-graph-label-propagation';
+export type {GPUGraphAlgorithmsLabelPropagationProps} from './gpu-graph-label-propagation';
+export {GPUGraphAlgorithmsModularity} from './gpu-graph-modularity';
+export type {GPUGraphAlgorithmsModularityProps} from './gpu-graph-modularity';
+export {GPUGraphAlgorithmsModularityOptimization} from './gpu-graph-modularity-optimization';
+export type {GPUGraphAlgorithmsModularityOptimizationProps} from './gpu-graph-modularity-optimization';
+export {GPUGraphAlgorithmsLocalClusteringCoefficient} from './gpu-graph-local-clustering-coefficient';
+export type {GPUGraphAlgorithmsLocalClusteringCoefficientProps} from './gpu-graph-local-clustering-coefficient';
+export {GPUGraphAlgorithmsPageRank} from './gpu-graph-page-rank';
+export type {GPUGraphAlgorithmsPageRankProps} from './gpu-graph-page-rank';
+export {GPUGraphAlgorithmsForceLayout} from './gpu-graph-force-layout';
+export type {GPUGraphAlgorithmsForceLayoutProps} from './gpu-graph-force-layout';
+export {GPUGraphAlgorithmsSpatialForceLayout} from './gpu-graph-spatial-force-layout';
+export type {GPUGraphAlgorithmsSpatialForceLayoutProps} from './gpu-graph-spatial-force-layout';

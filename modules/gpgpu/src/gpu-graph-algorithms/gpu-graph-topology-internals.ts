@@ -23,7 +23,7 @@ import {
   getViewBinding,
   getViewElementOffset
 } from '../gpu-core/graph-data-view-utils';
-import type {GPUGraphAdjacency, GPUGraphTopology} from './gpu-graph-topology';
+import type {GPUGraphAlgorithmsAdjacency, GPUGraphAlgorithmsTopology} from './gpu-graph-topology';
 
 const TOPOLOGY_WORKGROUP_SIZE = 256;
 const INVALID_EDGE_SLOT = 0xffffffff;
@@ -64,8 +64,8 @@ type TopologyPassProps = {
 };
 
 /** Adds chunk-preserving GPU CSR construction with an explicit dispatch limit. @internal */
-export function addGPUGraphTopologyToGraphWithDispatchLimit<Parameters>(
-  topology: GPUGraphTopology,
+export function addGPUGraphAlgorithmsTopologyToGraphWithDispatchLimit<Parameters>(
+  topology: GPUGraphAlgorithmsTopology,
   commandGraph: GPUCommandGraph<Parameters>,
   maxComputeWorkgroupsPerDimension: number
 ): void {
@@ -128,7 +128,7 @@ export function addGPUGraphTopologyToGraphWithDispatchLimit<Parameters>(
 function importAdjacency<Parameters>(
   commandGraph: GPUCommandGraph<Parameters>,
   id: string,
-  adjacency: GPUGraphAdjacency
+  adjacency: GPUGraphAlgorithmsAdjacency
 ): ImportedAdjacency {
   return {
     offsets: commandGraph.importGPUVector(`${id}-offsets`, adjacency.offsets).data[0],
@@ -703,7 +703,7 @@ function addTopologyPass<Parameters>(
 }
 
 /** Plans a bounded three-dimensional dispatch for a graph topology pass. @internal */
-export function getGPUGraphTopologyDispatchLayout(
+export function getGPUGraphAlgorithmsTopologyDispatchLayout(
   elementCount: number,
   maxComputeWorkgroupsPerDimension: number
 ): GPUBoundedDispatchLayout {
@@ -715,7 +715,7 @@ function getTopologyDispatchLayout(
   maxComputeWorkgroupsPerDimension: number
 ): GPUBoundedDispatchLayout {
   return getBoundedDispatchLayout(
-    'GPUGraphTopology',
+    'GPUGraphAlgorithmsTopology',
     elementCount,
     TOPOLOGY_WORKGROUP_SIZE,
     maxComputeWorkgroupsPerDimension

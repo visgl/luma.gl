@@ -9,12 +9,12 @@ import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-
 
 <ExperimentalDocsTabs active="gpu-graph-layouts" />
 
-## Reveal relationships with GPUGraphForceLayout
+## Reveal relationships with GPUGraphAlgorithmsForceLayout
 
 **Question: How can I position connected entities so the structure of their relationships becomes
 visible?**
 
-`GPUGraphForceLayout` progressively assigns two-dimensional positions to graph vertices. Imagine
+`GPUGraphAlgorithmsForceLayout` progressively assigns two-dimensional positions to graph vertices. Imagine
 every vertex pushing away from every other vertex while each edge acts like a spring pulling its
 two endpoints together. Over successive frames, tightly connected entities move closer together,
 unrelated vertices spread apart, and a gentle pull toward the origin keeps the network in view.
@@ -27,9 +27,9 @@ layout answers where an application can draw that vertex. Your application still
 renderer, colors, labels, and interaction design.
 
 ```ts
-import {GPUGraphForceLayout} from '@luma.gl/gpgpu/gpu-graph-algorithms';
+import {GPUGraphAlgorithmsForceLayout} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 
-const layout = new GPUGraphForceLayout({
+const layout = new GPUGraphAlgorithmsForceLayout({
   topology,
   positions: nodePositions,
   velocities: nodeVelocities,
@@ -85,13 +85,13 @@ it for very large networks, already meaningful geographic coordinates, or applic
 weighted springs. This implementation does not approximate pairwise interactions and does not
 claim to implement ForceAtlas2 or Barnes–Hut.
 
-## Approximate distant forces with GPUGraphSpatialForceLayout
+## Approximate distant forces with GPUGraphAlgorithmsSpatialForceLayout
 
 **Question: How can I make a larger relationship map easier to explore when exact repulsion spends
 too much time comparing every individual vertex?**
 
-`GPUGraphSpatialForceLayout` adds an explicitly approximate, opt-in execution path around an existing
-`GPUGraphForceLayout`. Imagine looking across a city: nearby pedestrians need individual attention,
+`GPUGraphAlgorithmsSpatialForceLayout` adds an explicitly approximate, opt-in execution path around an existing
+`GPUGraphAlgorithmsForceLayout`. Imagine looking across a city: nearby pedestrians need individual attention,
 but a distant crowd can often be treated as one group at its average position. The spatial layout
 divides the current drawing area into a regular grid, calculates nearby forces exactly, and
 represents sufficiently distant occupied cells by their population and center of mass.
@@ -105,11 +105,11 @@ should not be replaced by a force-directed arrangement.
 
 ```ts
 import {
-  GPUGraphForceLayout,
-  GPUGraphSpatialForceLayout
+  GPUGraphAlgorithmsForceLayout,
+  GPUGraphAlgorithmsSpatialForceLayout
 } from '@luma.gl/gpgpu/gpu-graph-algorithms';
 
-const layout = new GPUGraphForceLayout({
+const layout = new GPUGraphAlgorithmsForceLayout({
   topology,
   positions: nodePositions,
   velocities: nodeVelocities,
@@ -118,7 +118,7 @@ const layout = new GPUGraphForceLayout({
   iterationsPerFrame: 4
 });
 
-const spatialLayout = new GPUGraphSpatialForceLayout({
+const spatialLayout = new GPUGraphAlgorithmsSpatialForceLayout({
   layout,
   gridSize: [32, 32],
   bounds: [-4, -4, 4, 4],
@@ -204,23 +204,23 @@ vectors already exist on the same WebGPU device:
 ```ts
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
-  GPUGraphData,
-  GPUGraphBreadthFirstSearch,
-  GPUGraphConnectedComponents,
-  GPUGraphCoreNumber,
-  GPUGraphDegree,
-  GPUGraphForceLayout,
-  GPUGraphLabelPropagation,
-  GPUGraphLocalClusteringCoefficient,
-  GPUGraphModularity,
-  GPUGraphModularityOptimization,
-  GPUGraphPageRank,
-  GPUGraphSingleSourceShortestPath,
-  GPUGraphSpatialForceLayout,
-  GPUGraphTopology
+  GPUGraphAlgorithmsData,
+  GPUGraphAlgorithmsBreadthFirstSearch,
+  GPUGraphAlgorithmsConnectedComponents,
+  GPUGraphAlgorithmsCoreNumber,
+  GPUGraphAlgorithmsDegree,
+  GPUGraphAlgorithmsForceLayout,
+  GPUGraphAlgorithmsLabelPropagation,
+  GPUGraphAlgorithmsLocalClusteringCoefficient,
+  GPUGraphAlgorithmsModularity,
+  GPUGraphAlgorithmsModularityOptimization,
+  GPUGraphAlgorithmsPageRank,
+  GPUGraphAlgorithmsSingleSourceShortestPath,
+  GPUGraphAlgorithmsSpatialForceLayout,
+  GPUGraphAlgorithmsTopology
 } from '@luma.gl/gpgpu/gpu-graph-algorithms';
 
-const graph = new GPUGraphData({
+const graph = new GPUGraphAlgorithmsData({
   vertexCount,
   sourceVertices,
   targetVertices,
@@ -228,7 +228,7 @@ const graph = new GPUGraphData({
   directed: true
 });
 
-const topology = new GPUGraphTopology({
+const topology = new GPUGraphAlgorithmsTopology({
   graph,
   forward: {
     offsets: outgoingOffsets,
@@ -252,20 +252,20 @@ const topology = new GPUGraphTopology({
 const workflow = new GPUCommandGraph(device);
 
 topology.addToGraph(workflow);
-new GPUGraphDegree({topology, output: outgoingDegrees}).addToGraph(workflow);
-new GPUGraphCoreNumber({
+new GPUGraphAlgorithmsDegree({topology, output: outgoingDegrees}).addToGraph(workflow);
+new GPUGraphAlgorithmsCoreNumber({
   topology,
   output: coreNumbers,
   iterations: 32,
   converged: coresConverged,
   degeneracy: maximumCoreNumber
 }).addToGraph(workflow);
-new GPUGraphLocalClusteringCoefficient({
+new GPUGraphAlgorithmsLocalClusteringCoefficient({
   topology,
   output: clusteringCoefficients,
   triangles: incidentTriangleCounts
 }).addToGraph(workflow);
-new GPUGraphBreadthFirstSearch({
+new GPUGraphAlgorithmsBreadthFirstSearch({
   topology,
   seeds: selectedVertexIds,
   distances: hopDistances,
@@ -274,7 +274,7 @@ new GPUGraphBreadthFirstSearch({
   direction: 'both',
   maxDepth: 6
 }).addToGraph(workflow);
-new GPUGraphSingleSourceShortestPath({
+new GPUGraphAlgorithmsSingleSourceShortestPath({
   topology,
   sourceVertex: selectedVertex,
   distances: routeCosts,
@@ -283,19 +283,19 @@ new GPUGraphSingleSourceShortestPath({
   converged: shortestPathsConverged,
   invalidWeightCount
 }).addToGraph(workflow);
-new GPUGraphConnectedComponents({
+new GPUGraphAlgorithmsConnectedComponents({
   topology,
   output: componentIds,
   iterations: 32,
   converged: componentsConverged
 }).addToGraph(workflow);
-new GPUGraphLabelPropagation({
+new GPUGraphAlgorithmsLabelPropagation({
   topology,
   output: communityIds,
   iterations: 32,
   converged: communitiesConverged
 }).addToGraph(workflow);
-new GPUGraphModularityOptimization({
+new GPUGraphAlgorithmsModularityOptimization({
   topology,
   output: improvedCommunityIds,
   modularity: optimizedModularity,
@@ -306,7 +306,7 @@ new GPUGraphModularityOptimization({
   converged: optimizationConverged,
   valid: optimizationValid
 }).addToGraph(workflow);
-new GPUGraphModularity({
+new GPUGraphAlgorithmsModularity({
   graph,
   communities: improvedCommunityIds,
   output: modularityScore,
@@ -314,14 +314,14 @@ new GPUGraphModularity({
   communityContributions,
   valid: modularityValid
 }).addToGraph(workflow);
-new GPUGraphPageRank({
+new GPUGraphAlgorithmsPageRank({
   topology,
   output: importanceScores,
   damping: 0.85,
   iterations: 40,
   residual: finalRankChange
 }).addToGraph(workflow);
-const layout = new GPUGraphForceLayout({
+const layout = new GPUGraphAlgorithmsForceLayout({
   topology,
   positions: nodePositions,
   velocities: nodeVelocities,
@@ -329,7 +329,7 @@ const layout = new GPUGraphForceLayout({
   reset: resetRequested,
   iterationsPerFrame: 4
 });
-new GPUGraphSpatialForceLayout({
+new GPUGraphAlgorithmsSpatialForceLayout({
   layout,
   gridSize: [32, 32],
   bounds: [-4, -4, 4, 4],

@@ -9,12 +9,12 @@ import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-
 
 <ExperimentalDocsTabs active="gpu-graph-metrics" />
 
-## Find durable network backbones with GPUGraphCoreNumber
+## Find durable network backbones with GPUGraphAlgorithmsCoreNumber
 
 **Question: Which vertices stay connected to a mutually supportive group after peripheral
 relationships disappear?**
 
-`GPUGraphCoreNumber` separates a genuinely cohesive network backbone from a vertex that merely has
+`GPUGraphAlgorithmsCoreNumber` separates a genuinely cohesive network backbone from a vertex that merely has
 many fragile spokes. A vertex belongs to the **k-core** when it remains in a largest subgraph where
 every remaining vertex has at least `k` other remaining neighbors; its core number is the highest
 such `k`. An isolated vertex has core number zero.
@@ -28,9 +28,9 @@ for immediate popularity, local clustering for connections among one vertex's ne
 labels for a proposed group assignment, and core numbers for repeated structural support.
 
 ```ts
-import {GPUGraphCoreNumber} from '@luma.gl/gpgpu/gpu-graph-algorithms';
+import {GPUGraphAlgorithmsCoreNumber} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 
-const cores = new GPUGraphCoreNumber({
+const cores = new GPUGraphAlgorithmsCoreNumber({
   topology,
   output: coreNumbers,
   iterations: 32,
@@ -69,12 +69,12 @@ and distinct weak degree `d`, unsorted CSR deduplication and H-index selection r
 optional bounded reduction workspace when reporting degeneracy; large hubs or insufficient round
 budgets require explicit measurement rather than assumed convergence.
 
-## Measure neighborhood density with GPUGraphLocalClusteringCoefficient
+## Measure neighborhood density with GPUGraphAlgorithmsLocalClusteringCoefficient
 
 **Question: Do this vertex's neighbors actually connect to one another, or do they only share the
 same central contact?**
 
-`GPUGraphLocalClusteringCoefficient` distinguishes a tightly connected friend circle from a loose
+`GPUGraphAlgorithmsLocalClusteringCoefficient` distinguishes a tightly connected friend circle from a loose
 hub. A person with ten friends does not necessarily belong to a close community: if those friends
 also know one another, local clustering is high; if none of them connect, it is zero. Use the
 coefficient to identify closed friendship circles, mutually connected transaction accounts,
@@ -86,9 +86,9 @@ identifier describing a larger connected region. The coefficient describes each 
 surroundings; it does not assign community membership or optimize a global clustering objective.
 
 ```ts
-import {GPUGraphLocalClusteringCoefficient} from '@luma.gl/gpgpu/gpu-graph-algorithms';
+import {GPUGraphAlgorithmsLocalClusteringCoefficient} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 
-const localClustering = new GPUGraphLocalClusteringCoefficient({
+const localClustering = new GPUGraphAlgorithmsLocalClusteringCoefficient({
   topology,
   output: clusteringCoefficients,
   triangles: incidentTriangleCounts
@@ -125,11 +125,11 @@ high-degree hubs can therefore be substantially more expensive than degree or tr
 not a claim of constant-time triangle counting, weighted clustering, or global community
 detection.
 
-## Rank incoming influence with GPUGraphPageRank
+## Rank incoming influence with GPUGraphAlgorithmsPageRank
 
 **Question: Which vertices receive influence from other important vertices?**
 
-`GPUGraphPageRank` estimates vertex importance from the importance flowing through incoming
+`GPUGraphAlgorithmsPageRank` estimates vertex importance from the importance flowing through incoming
 relationships. A citation from an influential paper or a dependency from an important package can
 matter more than many links from otherwise disconnected vertices.
 
@@ -143,9 +143,9 @@ those citations without asking how influential their sources are; PageRank propa
 additional context through the surrounding network.
 
 ```ts
-import {GPUGraphPageRank} from '@luma.gl/gpgpu/gpu-graph-algorithms';
+import {GPUGraphAlgorithmsPageRank} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 
-const importance = new GPUGraphPageRank({
+const importance = new GPUGraphAlgorithmsPageRank({
   topology,
   output: importanceScores,
   damping: 0.85,

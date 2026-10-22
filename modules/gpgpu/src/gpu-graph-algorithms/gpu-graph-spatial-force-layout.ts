@@ -7,19 +7,19 @@ import type {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import type {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUCommandGraph} from '../gpu-core/gpu-command-graph';
-import type {GPUGraphForceLayout} from './gpu-graph-force-layout';
-import {addGPUGraphSpatialForceLayoutToGraphWithDispatchLimit} from './gpu-graph-spatial-force-layout-internals';
-import type {GPUGraphAdjacency} from './gpu-graph-topology';
+import type {GPUGraphAlgorithmsForceLayout} from './gpu-graph-force-layout';
+import {addGPUGraphAlgorithmsSpatialForceLayoutToGraphWithDispatchLimit} from './gpu-graph-spatial-force-layout-internals';
+import type {GPUGraphAlgorithmsAdjacency} from './gpu-graph-topology';
 
 const MAXIMUM_UINT32 = 0xffffffff;
 const SCALAR_BYTE_LENGTH = 4;
 
 /** Exact layout state, spatial approximation controls, and explicit caller-owned grid storage. */
-export type GPUGraphSpatialForceLayoutProps = {
+export type GPUGraphAlgorithmsSpatialForceLayoutProps = {
   /** Prefix for generated command-graph nodes and graph-owned synchronization state. */
   id?: string;
   /** Existing caller-owned progressive force layout, including its render-ready positions. */
-  layout: GPUGraphForceLayout;
+  layout: GPUGraphAlgorithmsForceLayout;
   /** Positive horizontal and vertical uniform-grid cell counts. */
   gridSize: readonly [number, number];
   /** Strictly increasing minimum x/y and maximum x/y spatial domain coordinates. */
@@ -52,11 +52,11 @@ export type GPUGraphSpatialForceLayoutProps = {
  * unchanged and clear velocities. Original caller-owned index buffers expose actual build capacity,
  * acceptance, overflow, and storage overhead without implicit readback or floating-point atomics.
  */
-export class GPUGraphSpatialForceLayout {
+export class GPUGraphAlgorithmsSpatialForceLayout {
   /** Prefix for generated command-graph nodes and graph-owned synchronization state. */
   readonly id: string;
   /** Existing caller-owned exact-layout configuration and progressive vertex state. */
-  readonly layout: GPUGraphForceLayout;
+  readonly layout: GPUGraphAlgorithmsForceLayout;
   /** Horizontal and vertical uniform-grid dimensions. */
   readonly gridSize: readonly [number, number];
   /** Explicit two-dimensional minimum and maximum spatial domain. */
@@ -79,7 +79,7 @@ export class GPUGraphSpatialForceLayout {
   readonly overflow: GPUVector<'uint32'>;
 
   /** Validates existing metadata without allocating GPU storage, submitting, or reading back. */
-  constructor(props: GPUGraphSpatialForceLayoutProps) {
+  constructor(props: GPUGraphAlgorithmsSpatialForceLayoutProps) {
     this.id = props.id ?? 'gpu-graph-spatial-force-layout';
     this.layout = props.layout;
     this.gridSize = props.gridSize;
@@ -133,7 +133,7 @@ export class GPUGraphSpatialForceLayout {
 
   /** Declares bounded index construction and approximate force work without implicit submission. */
   addToGraph<Parameters>(commandGraph: GPUCommandGraph<Parameters>): void {
-    addGPUGraphSpatialForceLayoutToGraphWithDispatchLimit(
+    addGPUGraphAlgorithmsSpatialForceLayoutToGraphWithDispatchLimit(
       this,
       commandGraph,
       commandGraph.device.limits.maxComputeWorkgroupsPerDimension
@@ -185,7 +185,7 @@ function validateSpatialVector<Format extends 'uint32' | 'float32x2'>(
 }
 
 /** Requires every explicit index destination to avoid all topology and mutable layout allocations. */
-function validateDistinctSpatialOutputs(spatial: GPUGraphSpatialForceLayout): void {
+function validateDistinctSpatialOutputs(spatial: GPUGraphAlgorithmsSpatialForceLayout): void {
   const layout = spatial.layout;
   const topology = layout.topology;
   const existingVectors = [
@@ -226,7 +226,7 @@ function validateDistinctSpatialOutputs(spatial: GPUGraphSpatialForceLayout): vo
 
 /** Enumerates existing topology columns without changing any caller-owned chunks or metadata. */
 function getAdjacencyVectors(
-  adjacency: GPUGraphAdjacency
+  adjacency: GPUGraphAlgorithmsAdjacency
 ): (GPUVector<'uint32'> | GPUVector<'float32'>)[] {
   return [
     adjacency.offsets,

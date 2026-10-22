@@ -6,14 +6,14 @@ import {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import * as experimentalModule from '@luma.gl/experimental';
 import {
-  GPUGraphData,
-  GPUGraphModularity,
-  type GPUGraphModularityProps
+  GPUGraphAlgorithmsData,
+  GPUGraphAlgorithmsModularity,
+  type GPUGraphAlgorithmsModularityProps
 } from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 import {afterEach, describe, expect, test, vi} from 'vitest';
-import {getGPUGraphModularityDispatchLayout} from '../../src/gpu-graph-algorithms/gpu-graph-modularity-internals';
+import {getGPUGraphAlgorithmsModularityDispatchLayout} from '../../src/gpu-graph-algorithms/gpu-graph-modularity-internals';
 
 type ScalarFormat = 'uint32' | 'float32';
 type ScalarValues = Uint32Array | Float32Array;
@@ -45,10 +45,10 @@ afterEach(() => {
   }
 });
 
-describe('GPUGraphModularity public contract and borrowed ownership', () => {
+describe('GPUGraphAlgorithmsModularity public contract and borrowed ownership', () => {
   test('keeps weighted partition quality isolated in the optional GPU Graph entry point', () => {
-    expect(typeof GPUGraphModularity).toBe('function');
-    expect('GPUGraphModularity' in experimentalModule).toBe(false);
+    expect(typeof GPUGraphAlgorithmsModularity).toBe('function');
+    expect('GPUGraphAlgorithmsModularity' in experimentalModule).toBe(false);
   });
 
   test('preserves original graph chunks and caller outputs without allocation or synchronization', () => {
@@ -63,7 +63,7 @@ describe('GPUGraphModularity public contract and borrowed ownership', () => {
     const submitSpy = vi.spyOn(fixture.device, 'submit');
     const readbackSpies = fixture.buffers.map(buffer => vi.spyOn(buffer, 'readAsync'));
 
-    const modularity = new GPUGraphModularity({
+    const modularity = new GPUGraphAlgorithmsModularity({
       ...props,
       id: 'borrowed-partition',
       resolution: 0.5
@@ -89,7 +89,7 @@ describe('GPUGraphModularity public contract and borrowed ownership', () => {
 
   test('defaults to directed, unweighted, resolution-one scoring with optional outputs omitted', () => {
     const fixture = createModularityFixture();
-    const modularity = new GPUGraphModularity(createModularityProps(fixture));
+    const modularity = new GPUGraphAlgorithmsModularity(createModularityProps(fixture));
 
     expect(modularity.id).toBe('gpu-graph-modularity');
     expect(modularity.graph.directed).toBe(true);
@@ -101,7 +101,7 @@ describe('GPUGraphModularity public contract and borrowed ownership', () => {
 
   test('accepts weighted undirected graphs without a CSR topology or reverse adjacency', () => {
     const fixture = createModularityFixture();
-    const modularity = new GPUGraphModularity(
+    const modularity = new GPUGraphAlgorithmsModularity(
       createModularityProps(fixture, {directed: false, weighted: true})
     );
 
@@ -112,7 +112,7 @@ describe('GPUGraphModularity public contract and borrowed ownership', () => {
 
   test('accepts empty vertex labels and contributions alongside scalar score and validity', () => {
     const fixture = createModularityFixture();
-    const modularity = new GPUGraphModularity(
+    const modularity = new GPUGraphAlgorithmsModularity(
       createModularityProps(fixture, {vertexCount: 0, contributions: true, valid: true})
     );
 
@@ -130,7 +130,10 @@ describe('GPUGraphModularity public contract and borrowed ownership', () => {
     Math.fround(3.4028234663852886e38)
   ])('accepts a finite nonnegative resolution representable by float32: %s', resolution => {
     const fixture = createModularityFixture();
-    const modularity = new GPUGraphModularity({...createModularityProps(fixture), resolution});
+    const modularity = new GPUGraphAlgorithmsModularity({
+      ...createModularityProps(fixture),
+      resolution
+    });
 
     expect(modularity.resolution).toBe(resolution);
   });
@@ -144,21 +147,23 @@ describe('GPUGraphModularity public contract and borrowed ownership', () => {
   ])('rejects a negative, nonfinite, or float32-overflowing resolution: %s', resolution => {
     const fixture = createModularityFixture();
 
-    expect(() => new GPUGraphModularity({...createModularityProps(fixture), resolution})).toThrow(
-      /resolution|finite|float32|negative/
-    );
+    expect(
+      () => new GPUGraphAlgorithmsModularity({...createModularityProps(fixture), resolution})
+    ).toThrow(/resolution|finite|float32|negative/);
   });
 
   test('plans bounded three-dimensional vertex and edge dispatch without truncation', () => {
-    expect(getGPUGraphModularityDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
-    expect(getGPUGraphModularityDispatchLayout(512, 2)).toEqual({x: 2, y: 1, z: 1});
-    expect(getGPUGraphModularityDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
-    expect(getGPUGraphModularityDispatchLayout(1025, 2)).toEqual({x: 2, y: 2, z: 2});
-    expect(() => getGPUGraphModularityDispatchLayout(2049, 2)).toThrow(/3D dispatch limit/);
+    expect(getGPUGraphAlgorithmsModularityDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
+    expect(getGPUGraphAlgorithmsModularityDispatchLayout(512, 2)).toEqual({x: 2, y: 1, z: 1});
+    expect(getGPUGraphAlgorithmsModularityDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
+    expect(getGPUGraphAlgorithmsModularityDispatchLayout(1025, 2)).toEqual({x: 2, y: 2, z: 2});
+    expect(() => getGPUGraphAlgorithmsModularityDispatchLayout(2049, 2)).toThrow(
+      /3D dispatch limit/
+    );
   });
 });
 
-describe('GPUGraphModularity scalar/vector metadata and physical aliases', () => {
+describe('GPUGraphAlgorithmsModularity scalar/vector metadata and physical aliases', () => {
   test.each([5, 7])('requires exactly one community label for each graph vertex: %i', length => {
     const fixture = createModularityFixture();
     const props = createModularityProps(fixture);
@@ -166,7 +171,7 @@ describe('GPUGraphModularity scalar/vector metadata and physical aliases', () =>
       new Uint32Array(length)
     ]);
 
-    expect(() => new GPUGraphModularity({...props, communities})).toThrow(
+    expect(() => new GPUGraphAlgorithmsModularity({...props, communities})).toThrow(
       /communities|uint32|rows/
     );
   });
@@ -178,7 +183,7 @@ describe('GPUGraphModularity scalar/vector metadata and physical aliases', () =>
       new Float32Array(props.graph.vertexCount)
     ]) as unknown as GPUVector<'uint32'>;
 
-    expect(() => new GPUGraphModularity({...props, communities})).toThrow(
+    expect(() => new GPUGraphAlgorithmsModularity({...props, communities})).toThrow(
       /communities|uint32|packed/
     );
   });
@@ -189,7 +194,9 @@ describe('GPUGraphModularity scalar/vector metadata and physical aliases', () =>
     const chunks = chunkCount === 0 ? [] : [new Uint32Array(3), new Uint32Array(3)];
     const communities = createVector(fixture, 'partitioned-communities', 'uint32', chunks);
 
-    expect(() => new GPUGraphModularity({...props, communities})).toThrow(/communities|one|chunk/);
+    expect(() => new GPUGraphAlgorithmsModularity({...props, communities})).toThrow(
+      /communities|one|chunk/
+    );
   });
 
   test.each([0, 2])('requires exactly one floating-point score scalar: %i', length => {
@@ -197,7 +204,9 @@ describe('GPUGraphModularity scalar/vector metadata and physical aliases', () =>
     const props = createModularityProps(fixture);
     const output = createVector(fixture, 'score-length', 'float32', [new Float32Array(length)]);
 
-    expect(() => new GPUGraphModularity({...props, output})).toThrow(/output|float32|rows/);
+    expect(() => new GPUGraphAlgorithmsModularity({...props, output})).toThrow(
+      /output|float32|rows/
+    );
   });
 
   test('rejects unsigned scores masquerading as modularity scalars', () => {
@@ -207,7 +216,9 @@ describe('GPUGraphModularity scalar/vector metadata and physical aliases', () =>
       new Uint32Array(1)
     ]) as unknown as GPUVector<'float32'>;
 
-    expect(() => new GPUGraphModularity({...props, output})).toThrow(/output|float32|packed/);
+    expect(() => new GPUGraphAlgorithmsModularity({...props, output})).toThrow(
+      /output|float32|packed/
+    );
   });
 
   test.each([
@@ -219,7 +230,7 @@ describe('GPUGraphModularity scalar/vector metadata and physical aliases', () =>
       new Float32Array(length)
     ]);
 
-    expect(() => new GPUGraphModularity({...props, communityContributions})).toThrow(
+    expect(() => new GPUGraphAlgorithmsModularity({...props, communityContributions})).toThrow(
       /communityContributions|float32|rows/
     );
   });
@@ -231,7 +242,7 @@ describe('GPUGraphModularity scalar/vector metadata and physical aliases', () =>
       new Uint32Array(props.graph.vertexCount)
     ]) as unknown as GPUVector<'float32'>;
 
-    expect(() => new GPUGraphModularity({...props, communityContributions})).toThrow(
+    expect(() => new GPUGraphAlgorithmsModularity({...props, communityContributions})).toThrow(
       /communityContributions|float32|packed/
     );
   });
@@ -241,7 +252,7 @@ describe('GPUGraphModularity scalar/vector metadata and physical aliases', () =>
     const props = createModularityProps(fixture);
     const valid = createVector(fixture, 'validity-length', 'uint32', [new Uint32Array(length)]);
 
-    expect(() => new GPUGraphModularity({...props, valid})).toThrow(/valid|uint32|rows/);
+    expect(() => new GPUGraphAlgorithmsModularity({...props, valid})).toThrow(/valid|uint32|rows/);
   });
 
   test.each([
@@ -260,7 +271,7 @@ describe('GPUGraphModularity scalar/vector metadata and physical aliases', () =>
       options
     );
 
-    expect(() => new GPUGraphModularity({...props, output})).toThrow(
+    expect(() => new GPUGraphAlgorithmsModularity({...props, output})).toThrow(
       /output|float32|packed|aligned/
     );
   });
@@ -289,7 +300,7 @@ describe('GPUGraphModularity scalar/vector metadata and physical aliases', () =>
       byteOffset: 4
     });
 
-    const modularity = new GPUGraphModularity({
+    const modularity = new GPUGraphAlgorithmsModularity({
       ...props,
       communities,
       output,
@@ -321,7 +332,7 @@ describe('GPUGraphModularity scalar/vector metadata and physical aliases', () =>
       buffer: input.data[0].buffer
     });
 
-    expect(() => new GPUGraphModularity({...props, output})).toThrow(
+    expect(() => new GPUGraphAlgorithmsModularity({...props, output})).toThrow(
       /output|distinct|physical|allocation/
     );
   });
@@ -353,9 +364,9 @@ describe('GPUGraphModularity scalar/vector metadata and physical aliases', () =>
     );
 
     expect(
-      () => new GPUGraphModularity({...props, communityContributions: contributionAlias})
+      () => new GPUGraphAlgorithmsModularity({...props, communityContributions: contributionAlias})
     ).toThrow(/communityContributions|distinct|physical|allocation/);
-    expect(() => new GPUGraphModularity({...props, valid: validityAlias})).toThrow(
+    expect(() => new GPUGraphAlgorithmsModularity({...props, valid: validityAlias})).toThrow(
       /valid|distinct|physical|allocation/
     );
   });
@@ -374,7 +385,7 @@ describe('GPUGraphModularity scalar/vector metadata and physical aliases', () =>
       buffer: dynamicBuffer
     });
 
-    expect(() => new GPUGraphModularity({...props, output})).toThrow(
+    expect(() => new GPUGraphAlgorithmsModularity({...props, output})).toThrow(
       /distinct|physical|allocation/
     );
     expect(concreteBuffer.destroyed).toBe(false);
@@ -397,7 +408,7 @@ function createModularityProps(
     contributions?: boolean;
     valid?: boolean;
   } = {}
-): GPUGraphModularityProps {
+): GPUGraphAlgorithmsModularityProps {
   const vertexCount = options.vertexCount ?? 6;
   const sourceVertices = createVector(fixture, 'sourceVertices', 'uint32', [
     Uint32Array.from([0, 1]),
@@ -423,7 +434,7 @@ function createModularityProps(
         Uint32Array.from([30, 40, 50])
       ])
     : undefined;
-  const graph = new GPUGraphData({
+  const graph = new GPUGraphAlgorithmsData({
     vertexCount,
     sourceVertices,
     targetVertices,

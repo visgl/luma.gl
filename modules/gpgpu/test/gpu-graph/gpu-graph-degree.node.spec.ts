@@ -6,12 +6,12 @@ import {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import * as experimentalModule from '@luma.gl/experimental';
 import {
-  GPUGraphData,
-  GPUGraphDegree,
-  GPUGraphTopology,
-  type GPUGraphAdjacency,
-  type GPUGraphDegreeDirection,
-  type GPUGraphDegreeProps
+  GPUGraphAlgorithmsData,
+  GPUGraphAlgorithmsDegree,
+  GPUGraphAlgorithmsTopology,
+  type GPUGraphAlgorithmsAdjacency,
+  type GPUGraphAlgorithmsDegreeDirection,
+  type GPUGraphAlgorithmsDegreeProps
 } from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
@@ -47,10 +47,10 @@ afterEach(() => {
   }
 });
 
-describe('GPUGraphDegree optional API and caller ownership', () => {
+describe('GPUGraphAlgorithmsDegree optional API and caller ownership', () => {
   test('keeps degree metrics in the optional GPU Graph subpath', () => {
-    expect(typeof GPUGraphDegree).toBe('function');
-    expect('GPUGraphDegree' in experimentalModule).toBe(false);
+    expect(typeof GPUGraphAlgorithmsDegree).toBe('function');
+    expect('GPUGraphAlgorithmsDegree' in experimentalModule).toBe(false);
   });
 
   test('preserves original graph, topology, and output without allocating or executing work', () => {
@@ -61,7 +61,7 @@ describe('GPUGraphDegree optional API and caller ownership', () => {
     const submitSpy = vi.spyOn(fixture.device, 'submit');
     const readbackSpies = fixture.buffers.map(buffer => vi.spyOn(buffer, 'readAsync'));
 
-    const degree = new GPUGraphDegree({...props, id: 'borrowed-degree'});
+    const degree = new GPUGraphAlgorithmsDegree({...props, id: 'borrowed-degree'});
 
     expect(degree.id).toBe('borrowed-degree');
     expect(degree.topology).toBe(props.topology);
@@ -81,7 +81,7 @@ describe('GPUGraphDegree optional API and caller ownership', () => {
   test('accepts an empty graph with one physically allocated zero-length degree chunk', () => {
     const fixture = createDegreeFixture();
     const props = createDegreeProps(fixture, {vertexCount: 0});
-    const degree = new GPUGraphDegree(props);
+    const degree = new GPUGraphAlgorithmsDegree(props);
 
     expect(degree.output.length).toBe(0);
     expect(degree.output.data).toHaveLength(1);
@@ -99,11 +99,11 @@ describe('GPUGraphDegree optional API and caller ownership', () => {
       {byteOffset: 4}
     );
 
-    expect(new GPUGraphDegree({...props, output}).output.data[0].byteOffset).toBe(4);
+    expect(new GPUGraphAlgorithmsDegree({...props, output}).output.data[0].byteOffset).toBe(4);
   });
 });
 
-describe('GPUGraphDegree direction and output validation', () => {
+describe('GPUGraphAlgorithmsDegree direction and output validation', () => {
   test.each([
     'outgoing',
     'incoming'
@@ -111,7 +111,7 @@ describe('GPUGraphDegree direction and output validation', () => {
     const fixture = createDegreeFixture();
     const props = createDegreeProps(fixture, {reverse: true});
 
-    expect(new GPUGraphDegree({...props, direction}).direction).toBe(direction);
+    expect(new GPUGraphAlgorithmsDegree({...props, direction}).direction).toBe(direction);
   });
 
   test.each([
@@ -121,14 +121,14 @@ describe('GPUGraphDegree direction and output validation', () => {
     const fixture = createDegreeFixture();
     const props = createDegreeProps(fixture, {directed: false});
 
-    expect(new GPUGraphDegree({...props, direction}).direction).toBe(direction);
+    expect(new GPUGraphAlgorithmsDegree({...props, direction}).direction).toBe(direction);
   });
 
   test('requires transposed topology for incoming degree on a directed graph', () => {
     const fixture = createDegreeFixture();
     const props = createDegreeProps(fixture);
 
-    expect(() => new GPUGraphDegree({...props, direction: 'incoming'})).toThrow(
+    expect(() => new GPUGraphAlgorithmsDegree({...props, direction: 'incoming'})).toThrow(
       /incoming|reverse|directed/
     );
   });
@@ -141,9 +141,11 @@ describe('GPUGraphDegree direction and output validation', () => {
   ])('rejects unsupported degree direction: %s', invalidDirection => {
     const fixture = createDegreeFixture();
     const props = createDegreeProps(fixture, {reverse: true});
-    const direction = invalidDirection as GPUGraphDegreeDirection;
+    const direction = invalidDirection as GPUGraphAlgorithmsDegreeDirection;
 
-    expect(() => new GPUGraphDegree({...props, direction})).toThrow(/direction|outgoing|incoming/);
+    expect(() => new GPUGraphAlgorithmsDegree({...props, direction})).toThrow(
+      /direction|outgoing|incoming/
+    );
   });
 
   test.each([5, 7])('requires exactly one degree row per graph vertex: %i rows', length => {
@@ -153,7 +155,9 @@ describe('GPUGraphDegree direction and output validation', () => {
       new Uint32Array(length)
     ]);
 
-    expect(() => new GPUGraphDegree({...props, output})).toThrow(/output|vertexCount|length/);
+    expect(() => new GPUGraphAlgorithmsDegree({...props, output})).toThrow(
+      /output|vertexCount|length/
+    );
   });
 
   test('requires uint32 degree output instead of float32', () => {
@@ -163,7 +167,7 @@ describe('GPUGraphDegree direction and output validation', () => {
       new Float32Array(props.topology.graph.vertexCount)
     ]) as unknown as GPUVector<'uint32'>;
 
-    expect(() => new GPUGraphDegree({...props, output})).toThrow(/output|uint32|packed/);
+    expect(() => new GPUGraphAlgorithmsDegree({...props, output})).toThrow(/output|uint32|packed/);
   });
 
   test.each([0, 2])('requires exactly one physical output chunk: %i chunks', chunkCount => {
@@ -172,7 +176,9 @@ describe('GPUGraphDegree direction and output validation', () => {
     const chunks = chunkCount === 0 ? [] : [new Uint32Array(3), new Uint32Array(3)];
     const output = createVector(fixture, 'partitioned-degree', 'uint32', chunks);
 
-    expect(() => new GPUGraphDegree({...props, output})).toThrow(/output|one|single|chunk/);
+    expect(() => new GPUGraphAlgorithmsDegree({...props, output})).toThrow(
+      /output|one|single|chunk/
+    );
   });
 
   test.each([
@@ -191,7 +197,9 @@ describe('GPUGraphDegree direction and output validation', () => {
       options
     );
 
-    expect(() => new GPUGraphDegree({...props, output})).toThrow(/output|packed|aligned|uint32/);
+    expect(() => new GPUGraphAlgorithmsDegree({...props, output})).toThrow(
+      /output|packed|aligned|uint32/
+    );
   });
 
   test.each([
@@ -221,7 +229,7 @@ describe('GPUGraphDegree direction and output validation', () => {
       buffer
     });
 
-    expect(() => new GPUGraphDegree({...props, output})).toThrow(
+    expect(() => new GPUGraphAlgorithmsDegree({...props, output})).toThrow(
       /output|distinct|physical|allocation/
     );
   });
@@ -244,7 +252,9 @@ describe('GPUGraphDegree direction and output validation', () => {
       {buffer: dynamicBuffer}
     );
 
-    expect(() => new GPUGraphDegree({...props, output})).toThrow(/distinct|physical|allocation/);
+    expect(() => new GPUGraphAlgorithmsDegree({...props, output})).toThrow(
+      /distinct|physical|allocation/
+    );
     expect(concreteBuffer.destroyed).toBe(false);
   });
 });
@@ -258,7 +268,7 @@ function createDegreeFixture(): DegreeFixture {
 function createDegreeProps(
   fixture: DegreeFixture,
   options: {vertexCount?: number; directed?: boolean; reverse?: boolean; weighted?: boolean} = {}
-): GPUGraphDegreeProps {
+): GPUGraphAlgorithmsDegreeProps {
   const vertexCount = options.vertexCount ?? 6;
   const sourceVertices = createVector(fixture, 'sourceVertices', 'uint32', [
     Uint32Array.from([0, 2]),
@@ -284,7 +294,7 @@ function createDegreeProps(
         Uint32Array.from([30, 40, 50])
       ])
     : undefined;
-  const graph = new GPUGraphData({
+  const graph = new GPUGraphAlgorithmsData({
     vertexCount,
     sourceVertices,
     targetVertices,
@@ -299,7 +309,7 @@ function createDegreeProps(
   const invalidEdgeCount = createVector(fixture, 'invalidEdgeCount', 'uint32', [
     new Uint32Array(1)
   ]);
-  const topology = new GPUGraphTopology({graph, forward, reverse, invalidEdgeCount});
+  const topology = new GPUGraphAlgorithmsTopology({graph, forward, reverse, invalidEdgeCount});
   const output = createVector(fixture, 'degree', 'uint32', [new Uint32Array(vertexCount)]);
   return {topology, output};
 }
@@ -310,7 +320,7 @@ function createAdjacency(
   vertexCount: number,
   capacity: number,
   weighted = false
-): GPUGraphAdjacency {
+): GPUGraphAlgorithmsAdjacency {
   return {
     offsets: createVector(fixture, `${name}-offsets`, 'uint32', [new Uint32Array(vertexCount + 1)]),
     neighbors: createVector(fixture, `${name}-neighbors`, 'uint32', [new Uint32Array(capacity)]),
@@ -323,7 +333,7 @@ function createAdjacency(
   };
 }
 
-function getTopologyVector(topology: GPUGraphTopology, name: string): GPUVector {
+function getTopologyVector(topology: GPUGraphAlgorithmsTopology, name: string): GPUVector {
   if (name === 'invalidEdgeCount') return topology.invalidEdgeCount;
   if (name === 'sourceVertices') return topology.graph.sourceVertices;
   if (name === 'targetVertices') return topology.graph.targetVertices;
@@ -332,7 +342,7 @@ function getTopologyVector(topology: GPUGraphTopology, name: string): GPUVector 
 
   const [direction, vectorName] = name.split('.');
   const adjacency = direction === 'forward' ? topology.forward : topology.reverse!;
-  return adjacency[vectorName as keyof GPUGraphAdjacency]!;
+  return adjacency[vectorName as keyof GPUGraphAlgorithmsAdjacency]!;
 }
 
 function createVector<Format extends ScalarFormat>(

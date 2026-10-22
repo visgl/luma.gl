@@ -5,17 +5,17 @@
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
-  GPUGraphData,
-  GPUGraphForceLayout,
-  GPUGraphTopology,
-  type GPUGraphAdjacency
+  GPUGraphAlgorithmsData,
+  GPUGraphAlgorithmsForceLayout,
+  GPUGraphAlgorithmsTopology,
+  type GPUGraphAlgorithmsAdjacency
 } from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
 import {
-  addGPUGraphForceLayoutToGraphWithDispatchLimit,
-  getGPUGraphForceLayoutDispatchLayout
+  addGPUGraphAlgorithmsForceLayoutToGraphWithDispatchLimit,
+  getGPUGraphAlgorithmsForceLayoutDispatchLayout
 } from '../../src/gpu-graph-algorithms/gpu-graph-force-layout-internals';
 
 const PHYSICS_TOLERANCE = 1e-4;
@@ -65,9 +65,9 @@ type LayoutExecutionFixture = {
   device: Device;
   buffers: Buffer[];
   vectors: GPUVector[];
-  graph: GPUGraphData;
-  topology: GPUGraphTopology;
-  layout: GPUGraphForceLayout;
+  graph: GPUGraphAlgorithmsData;
+  topology: GPUGraphAlgorithmsTopology;
+  layout: GPUGraphAlgorithmsForceLayout;
   commandGraph: GPUCommandGraph;
   compiled?: ReturnType<GPUCommandGraph['compile']>;
 };
@@ -321,16 +321,18 @@ const layoutScenarios: ForceLayoutScenario[] = [
   }
 ];
 
-it('GPUGraphForceLayout plans bounded three-dimensional exact repulsion dispatch', () => {
-  expect(getGPUGraphForceLayoutDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
-  expect(getGPUGraphForceLayoutDispatchLayout(512, 2)).toEqual({x: 2, y: 1, z: 1});
-  expect(getGPUGraphForceLayoutDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
-  expect(getGPUGraphForceLayoutDispatchLayout(1025, 2)).toEqual({x: 2, y: 2, z: 2});
-  expect(() => getGPUGraphForceLayoutDispatchLayout(2049, 2)).toThrow(/3D dispatch limit/);
+it('GPUGraphAlgorithmsForceLayout plans bounded three-dimensional exact repulsion dispatch', () => {
+  expect(getGPUGraphAlgorithmsForceLayoutDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
+  expect(getGPUGraphAlgorithmsForceLayoutDispatchLayout(512, 2)).toEqual({x: 2, y: 1, z: 1});
+  expect(getGPUGraphAlgorithmsForceLayoutDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
+  expect(getGPUGraphAlgorithmsForceLayoutDispatchLayout(1025, 2)).toEqual({x: 2, y: 2, z: 2});
+  expect(() => getGPUGraphAlgorithmsForceLayoutDispatchLayout(2049, 2)).toThrow(
+    /3D dispatch limit/
+  );
 });
 
 for (const scenario of layoutScenarios) {
-  it(`GPUGraphForceLayout exact GPU physics: ${scenario.name}`, async () => {
+  it(`GPUGraphAlgorithmsForceLayout exact GPU physics: ${scenario.name}`, async () => {
     const device = await getWebGPUTestDevice();
     if (!device) {
       return;
@@ -358,7 +360,7 @@ for (const scenario of layoutScenarios) {
   });
 }
 
-it('GPUGraphForceLayout progressively warm-starts and repeats deterministic seeded reset', async () => {
+it('GPUGraphAlgorithmsForceLayout progressively warm-starts and repeats deterministic seeded reset', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     return;
@@ -582,7 +584,7 @@ function createExecutionFixture(
       )
     : undefined;
   const directed = scenario.directed ?? true;
-  const graph = new GPUGraphData({
+  const graph = new GPUGraphAlgorithmsData({
     vertexCount: scenario.vertexCount,
     sourceVertices,
     targetVertices,
@@ -619,7 +621,7 @@ function createExecutionFixture(
     'uint32',
     1
   );
-  const topology = new GPUGraphTopology({graph, forward, reverse, invalidEdgeCount});
+  const topology = new GPUGraphAlgorithmsTopology({graph, forward, reverse, invalidEdgeCount});
   const positions = createCoordinateVector(
     device,
     buffers,
@@ -658,7 +660,7 @@ function createExecutionFixture(
           byteOffset: scenario.byteOffset
         })
       : undefined;
-  const layout = new GPUGraphForceLayout({
+  const layout = new GPUGraphAlgorithmsForceLayout({
     topology,
     positions,
     velocities,
@@ -717,7 +719,7 @@ function createOutputAdjacency(
   capacity: number,
   weighted: boolean,
   byteOffset = 0
-): GPUGraphAdjacency {
+): GPUGraphAlgorithmsAdjacency {
   return {
     offsets: createScalarVector(
       device,
@@ -816,7 +818,7 @@ function compileLayout(fixture: LayoutExecutionFixture, maximumWorkgroups?: numb
   if (maximumWorkgroups === undefined) {
     fixture.layout.addToGraph(fixture.commandGraph);
   } else {
-    addGPUGraphForceLayoutToGraphWithDispatchLimit(
+    addGPUGraphAlgorithmsForceLayoutToGraphWithDispatchLimit(
       fixture.layout,
       fixture.commandGraph,
       maximumWorkgroups

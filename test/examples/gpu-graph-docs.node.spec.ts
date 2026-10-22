@@ -194,8 +194,8 @@ describe('GPU Graph GPU-resident graph analytics documentation', () => {
     expect(graphDocumentation).toContain('six Graphalytics workload families');
     expect(graphDocumentation).toContain('not\nmillion-vertex benchmarks');
     expect(graphDocumentation).toContain("from '@luma.gl/gpgpu/gpu-graph-algorithms/benchmarks';");
-    expect(graphDocumentation).toContain('makeGPUGraphBenchmarkDataset');
-    expect(graphDocumentation).toContain('await runGPUGraphBenchmark(device, {');
+    expect(graphDocumentation).toContain('makeGPUGraphAlgorithmsBenchmarkDataset');
+    expect(graphDocumentation).toContain('await runGPUGraphAlgorithmsBenchmark(device, {');
   });
 
   test('distinguishes GPU submission, encoding, validation, approximation, and real convergence', () => {
@@ -246,40 +246,40 @@ describe('GPU Graph GPU-resident graph analytics documentation', () => {
 
   test('introduces every available operation and composes its actual optional entry point', () => {
     for (const graphOperation of [
-      'GPUGraphData',
-      'GPUGraphTopology',
-      'GPUGraphDegree',
-      'GPUGraphCoreNumber',
-      'GPUGraphLocalClusteringCoefficient',
-      'GPUGraphBreadthFirstSearch',
-      'GPUGraphSingleSourceShortestPath',
-      'GPUGraphConnectedComponents',
-      'GPUGraphLabelPropagation',
-      'GPUGraphModularityOptimization',
-      'GPUGraphModularity',
-      'GPUGraphPageRank',
-      'GPUGraphForceLayout',
-      'GPUGraphSpatialForceLayout'
+      'GPUGraphAlgorithmsData',
+      'GPUGraphAlgorithmsTopology',
+      'GPUGraphAlgorithmsDegree',
+      'GPUGraphAlgorithmsCoreNumber',
+      'GPUGraphAlgorithmsLocalClusteringCoefficient',
+      'GPUGraphAlgorithmsBreadthFirstSearch',
+      'GPUGraphAlgorithmsSingleSourceShortestPath',
+      'GPUGraphAlgorithmsConnectedComponents',
+      'GPUGraphAlgorithmsLabelPropagation',
+      'GPUGraphAlgorithmsModularityOptimization',
+      'GPUGraphAlgorithmsModularity',
+      'GPUGraphAlgorithmsPageRank',
+      'GPUGraphAlgorithmsForceLayout',
+      'GPUGraphAlgorithmsSpatialForceLayout'
     ]) {
       expect(graphDocumentation, graphOperation).toContain(graphOperation);
     }
 
     expect(packageDocumentation).toContain('compressed adjacency');
     expect(packageDocumentation).toContain('vertex-degree queries');
-    expect(packageDocumentation).toContain('GPUGraphCoreNumber');
+    expect(packageDocumentation).toContain('GPUGraphAlgorithmsCoreNumber');
     expect(packageDocumentation).toContain('breadth-first shortest paths');
     expect(packageDocumentation).toContain('nonnegative weighted single-source routes');
-    expect(packageDocumentation).toContain('GPUGraphSingleSourceShortestPath');
+    expect(packageDocumentation).toContain('GPUGraphAlgorithmsSingleSourceShortestPath');
     expect(packageDocumentation).toContain('local clustering coefficients');
-    expect(packageDocumentation).toContain('GPUGraphLocalClusteringCoefficient');
+    expect(packageDocumentation).toContain('GPUGraphAlgorithmsLocalClusteringCoefficient');
     expect(packageDocumentation).toContain('weakly connected components');
     expect(packageDocumentation).toContain('deterministic label-propagation communities');
-    expect(packageDocumentation).toContain('GPUGraphLabelPropagation');
-    expect(packageDocumentation).toContain('GPUGraphModularityOptimization');
-    expect(packageDocumentation).toContain('GPUGraphModularity');
+    expect(packageDocumentation).toContain('GPUGraphAlgorithmsLabelPropagation');
+    expect(packageDocumentation).toContain('GPUGraphAlgorithmsModularityOptimization');
+    expect(packageDocumentation).toContain('GPUGraphAlgorithmsModularity');
     expect(packageDocumentation).toContain('normalized PageRank');
     expect(packageDocumentation).toContain('progressive exact force-directed layout');
-    expect(packageDocumentation).toContain('GPUGraphSpatialForceLayout');
+    expect(packageDocumentation).toContain('GPUGraphAlgorithmsSpatialForceLayout');
     expect(packageDocumentation).toContain('## Overview');
     expect(packageDocumentation).toContain('## When to use GPU Graph');
     expect(packageDocumentation).toContain('## Graph Data Council and Graphalytics');
@@ -350,7 +350,7 @@ describe('GPU Graph GPU-resident graph analytics documentation', () => {
 
   test('explains singleton refinement, weighted rounding limits, and bounded modularity optimization', () => {
     expect(graphDocumentation).toContain(
-      '## Improve weighted community partitions with GPUGraphModularityOptimization'
+      '## Improve weighted community partitions with GPUGraphAlgorithmsModularityOptimization'
     );
     expect(graphDocumentation).toContain(
       'social grouping should reflect actual interaction strength'
@@ -358,7 +358,7 @@ describe('GPU Graph GPU-resident graph analytics documentation', () => {
     expect(graphDocumentation).toContain('fraud ring');
     expect(graphDocumentation).toContain('weighted service');
     expect(graphDocumentation).toContain('Three community questions are related but distinct');
-    expect(graphDocumentation).toContain('new GPUGraphModularityOptimization({');
+    expect(graphDocumentation).toContain('new GPUGraphAlgorithmsModularityOptimization({');
     expect(graphDocumentation).toContain('output: improvedCommunityIds');
     expect(graphDocumentation).toContain('modularity: optimizedModularity');
     expect(graphDocumentation).toContain('initialCommunities: proposedCommunityIds');
@@ -407,7 +407,7 @@ describe('GPU Graph GPU-resident graph analytics documentation', () => {
     expect(graphDocumentation).toContain('an invalid warm-start label');
     expect(graphDocumentation).toContain('Every output label then becomes `0xffffffff`');
     expect(graphDocumentation).toContain('validity zero, and convergence one');
-    expect(graphDocumentation).toContain('final `GPUGraphModularity` scoring');
+    expect(graphDocumentation).toContain('final `GPUGraphAlgorithmsModularity` scoring');
     expect(graphDocumentation).toContain('`O(K × (V + E + sum(degree²)))`');
     expect(graphDocumentation).toContain('`O(V + E)` graph-owned packed scratch');
     expect(graphDocumentation).toContain('linear per-round community occupancy and vacancy checks');
@@ -434,7 +434,7 @@ describe('GPU Graph GPU-resident graph analytics documentation', () => {
 
   test('explains bounded simple-weak core decomposition, useful backbones, and exactness limits', () => {
     expect(graphDocumentation).toContain(
-      '## Find durable network backbones with GPUGraphCoreNumber'
+      '## Find durable network backbones with GPUGraphAlgorithmsCoreNumber'
     );
     expect(graphDocumentation).toContain('many fragile spokes');
     expect(graphDocumentation).toContain('100 followers');
@@ -443,7 +443,7 @@ describe('GPU Graph GPU-resident graph analytics documentation', () => {
     expect(graphDocumentation).toContain('core number three');
     expect(graphDocumentation).toContain('resilient social backbones');
     expect(graphDocumentation).toContain('tightly sustained fraud rings');
-    expect(graphDocumentation).toContain('new GPUGraphCoreNumber({');
+    expect(graphDocumentation).toContain('new GPUGraphAlgorithmsCoreNumber({');
     expect(graphDocumentation).toContain('output: coreNumbers');
     expect(graphDocumentation).toContain('converged: coresConverged');
     expect(graphDocumentation).toContain('degeneracy: maximumCoreNumber');
@@ -472,11 +472,13 @@ describe('GPU Graph GPU-resident graph analytics documentation', () => {
   });
 
   test('explains weighted directed partition modularity without claiming community optimization', () => {
-    expect(graphDocumentation).toContain('## Evaluate community quality with GPUGraphModularity');
+    expect(graphDocumentation).toContain(
+      '## Evaluate community quality with GPUGraphAlgorithmsModularity'
+    );
     expect(graphDocumentation).toContain('degree-matched random network');
     expect(graphDocumentation).toContain('compare rival social-network groupings');
     expect(graphDocumentation).toContain('fraud ring concentrates transaction weight');
-    expect(graphDocumentation).toContain('new GPUGraphModularity({');
+    expect(graphDocumentation).toContain('new GPUGraphAlgorithmsModularity({');
     expect(graphDocumentation).toContain('communities: communityIds');
     expect(graphDocumentation).toContain('output: modularityScore');
     expect(graphDocumentation).toContain('resolution: 1');
@@ -504,11 +506,11 @@ describe('GPU Graph GPU-resident graph analytics documentation', () => {
 
   test('explains unique weak-neighborhood triangles and honest local clustering complexity', () => {
     expect(graphDocumentation).toContain(
-      '## Measure neighborhood density with GPUGraphLocalClusteringCoefficient'
+      '## Measure neighborhood density with GPUGraphAlgorithmsLocalClusteringCoefficient'
     );
     expect(graphDocumentation).toContain('tightly connected friend circle');
     expect(graphDocumentation).toContain('mutually connected transaction accounts');
-    expect(graphDocumentation).toContain('new GPUGraphLocalClusteringCoefficient({');
+    expect(graphDocumentation).toContain('new GPUGraphAlgorithmsLocalClusteringCoefficient({');
     expect(graphDocumentation).toContain('output: clusteringCoefficients');
     expect(graphDocumentation).toContain('triangles: incidentTriangleCounts');
     expect(graphDocumentation).toContain("GPUVector<'float32'>");
@@ -532,14 +534,14 @@ describe('GPU Graph GPU-resident graph analytics documentation', () => {
 
   test('distinguishes nonnegative weighted routes from unweighted hops and documents failures', () => {
     expect(graphDocumentation).toContain(
-      '## Find least-cost routes with GPUGraphSingleSourceShortestPath'
+      '## Find least-cost routes with GPUGraphAlgorithmsSingleSourceShortestPath'
     );
     expect(graphDocumentation).toContain('40 minutes');
     expect(graphDocumentation).toContain('20 minutes');
     expect(graphDocumentation).toContain('travel-time maps');
     expect(graphDocumentation).toContain('communication latency');
     expect(graphDocumentation).toContain('service-dependency recovery costs');
-    expect(graphDocumentation).toContain('new GPUGraphSingleSourceShortestPath({');
+    expect(graphDocumentation).toContain('new GPUGraphAlgorithmsSingleSourceShortestPath({');
     expect(graphDocumentation).toContain('sourceVertex: selectedVertex');
     expect(graphDocumentation).toContain('distances: routeCosts');
     expect(graphDocumentation).toContain('predecessors: routeParents');
@@ -563,7 +565,7 @@ describe('GPU Graph GPU-resident graph analytics documentation', () => {
     expect(graphDocumentation).toContain('partially relaxed routes');
     expect(graphDocumentation).toContain('`O(K × (V + E))`');
     expect(graphDocumentation).toContain('`O(V)` graph-owned scratch');
-    expect(graphDocumentation).toContain('new GPUGraphLocalClusteringCoefficient({');
+    expect(graphDocumentation).toContain('new GPUGraphAlgorithmsLocalClusteringCoefficient({');
     expect(graphDocumentation).toContain('}).addToGraph(workflow);');
     expect(graphDocumentation).not.toContain(
       'Choose another tool when the application needs weighted shortest paths'
@@ -575,7 +577,7 @@ describe('GPU Graph GPU-resident graph analytics documentation', () => {
 
   test('explains deterministic GPU communities, practical use cases, and honest limitations', () => {
     expect(graphDocumentation).toContain(
-      '## Discover densely connected communities with GPUGraphLabelPropagation'
+      '## Discover densely connected communities with GPUGraphAlgorithmsLabelPropagation'
     );
     expect(graphDocumentation).toContain('circles of friends');
     expect(graphDocumentation).toContain('transaction accounts');
@@ -583,7 +585,7 @@ describe('GPU Graph GPU-resident graph analytics documentation', () => {
     expect(graphDocumentation).toContain('one weakly\nconnected component');
     expect(graphDocumentation).toContain('different community label');
     expect(graphDocumentation).toContain('Use weak components to find disconnected islands');
-    expect(graphDocumentation).toContain('new GPUGraphLabelPropagation({');
+    expect(graphDocumentation).toContain('new GPUGraphAlgorithmsLabelPropagation({');
     expect(graphDocumentation).toContain('output: communityIds');
     expect(graphDocumentation).toContain('converged: communitiesConverged');
     expect(graphDocumentation).toContain('stable vertex identifier');
@@ -637,7 +639,9 @@ describe('GPU Graph GPU-resident graph analytics documentation', () => {
   });
 
   test('explains exact render-ready force layout, interaction controls, and scalability limits', () => {
-    expect(graphDocumentation).toContain('## Reveal relationships with GPUGraphForceLayout');
+    expect(graphDocumentation).toContain(
+      '## Reveal relationships with GPUGraphAlgorithmsForceLayout'
+    );
     expect(graphDocumentation).toContain('a social graph');
     expect(graphDocumentation).toContain('service dependencies');
     expect(graphDocumentation).toContain('transaction investigation');
@@ -662,12 +666,12 @@ describe('GPU Graph GPU-resident graph analytics documentation', () => {
     );
     expect(graphDocumentation).toContain('does not approximate pairwise interactions');
     expect(graphDocumentation).toContain('ForceAtlas2 or Barnes–Hut');
-    expect(graphDocumentation).toContain('new GPUGraphForceLayout({');
+    expect(graphDocumentation).toContain('new GPUGraphAlgorithmsForceLayout({');
   });
 
   test('explains optional spatial approximation, practical use cases, and honest scaling', () => {
     expect(graphDocumentation).toContain(
-      '## Approximate distant forces with GPUGraphSpatialForceLayout'
+      '## Approximate distant forces with GPUGraphAlgorithmsSpatialForceLayout'
     );
     expect(graphDocumentation).toContain('**Question: How can I make a larger relationship map');
     expect(graphDocumentation).toContain('nearby pedestrians need individual attention');
@@ -713,7 +717,7 @@ describe('GPU Graph GPU-resident graph analytics documentation', () => {
     expect(graphDocumentation).toContain(
       'existing edge-weight columns remain intentionally unused'
     );
-    expect(graphDocumentation).toContain('new GPUGraphSpatialForceLayout({');
+    expect(graphDocumentation).toContain('new GPUGraphAlgorithmsSpatialForceLayout({');
     expect(graphDocumentation).toContain('spatialLayout.addToGraph(workflow);');
     expect(graphDocumentation).toContain(
       'Replace the spatial contributor with `layout.addToGraph(workflow)`'

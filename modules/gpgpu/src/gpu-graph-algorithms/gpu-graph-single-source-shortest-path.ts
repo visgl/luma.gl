@@ -7,21 +7,21 @@ import type {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import type {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUCommandGraph} from '../gpu-core/gpu-command-graph';
-import {addGPUGraphSingleSourceShortestPathToGraphWithDispatchLimit} from './gpu-graph-single-source-shortest-path-internals';
-import type {GPUGraphAdjacency, GPUGraphTopology} from './gpu-graph-topology';
+import {addGPUGraphAlgorithmsSingleSourceShortestPathToGraphWithDispatchLimit} from './gpu-graph-single-source-shortest-path-internals';
+import type {GPUGraphAlgorithmsAdjacency, GPUGraphAlgorithmsTopology} from './gpu-graph-topology';
 
 const MAXIMUM_SHORTEST_PATH_ITERATIONS = 1024;
 const SCALAR_BYTE_LENGTH = 4;
 
 /** Forward, reverse, or combined orientation for weighted shortest-path exploration. */
-export type GPUGraphSingleSourceShortestPathDirection = 'outgoing' | 'incoming' | 'both';
+export type GPUGraphAlgorithmsSingleSourceShortestPathDirection = 'outgoing' | 'incoming' | 'both';
 
 /** Existing topology, one source, and caller-owned weighted shortest-path destinations. */
-export type GPUGraphSingleSourceShortestPathProps = {
+export type GPUGraphAlgorithmsSingleSourceShortestPathProps = {
   /** Prefix for generated command-graph nodes and imported-resource identifiers. */
   id?: string;
   /** Existing GPU-resident compressed adjacency and its explicit overflow status. */
-  topology: GPUGraphTopology;
+  topology: GPUGraphAlgorithmsTopology;
   /** Stable source vertex identifier; zero is also accepted for an empty graph. */
   sourceVertex: number;
   /** One caller-owned floating-point distance for every graph vertex. */
@@ -31,7 +31,7 @@ export type GPUGraphSingleSourceShortestPathProps = {
   /** Maximum compiled relaxation rounds, between zero and 1,024 inclusive. */
   maxIterations?: number;
   /** Forward, reverse, or combined edge orientation. Defaults to outgoing. */
-  direction?: GPUGraphSingleSourceShortestPathDirection;
+  direction?: GPUGraphAlgorithmsSingleSourceShortestPathDirection;
   /** Optional caller-owned scalar reporting whether all shortest distances are final. */
   converged?: GPUVector<'uint32'>;
   /** Optional caller-owned scalar receiving invalid, valid-endpoint source-edge weights. */
@@ -46,11 +46,11 @@ export type GPUGraphSingleSourceShortestPathProps = {
  * unreachable vertices and the source receive the `0xffffffff` predecessor sentinel. Among
  * equally short routes first discovered in the same relaxation round, the lowest parent wins.
  */
-export class GPUGraphSingleSourceShortestPath {
+export class GPUGraphAlgorithmsSingleSourceShortestPath {
   /** Prefix for generated command-graph nodes and imported resources. */
   readonly id: string;
   /** Existing caller-owned graph topology. */
-  readonly topology: GPUGraphTopology;
+  readonly topology: GPUGraphAlgorithmsTopology;
   /** Stable source vertex identifier. */
   readonly sourceVertex: number;
   /** Caller-owned, vertex-aligned weighted distance column. */
@@ -60,14 +60,14 @@ export class GPUGraphSingleSourceShortestPath {
   /** Maximum compiled Bellman-Ford relaxation rounds. */
   readonly maxIterations: number;
   /** Selected graph edge orientation. */
-  readonly direction: GPUGraphSingleSourceShortestPathDirection;
+  readonly direction: GPUGraphAlgorithmsSingleSourceShortestPathDirection;
   /** Optional caller-owned convergence status scalar. */
   readonly converged?: GPUVector<'uint32'>;
   /** Optional caller-owned invalid-source-edge-weight count scalar. */
   readonly invalidWeightCount?: GPUVector<'uint32'>;
 
   /** Validates caller-owned metadata without allocating, submitting, or reading GPU work. */
-  constructor(props: GPUGraphSingleSourceShortestPathProps) {
+  constructor(props: GPUGraphAlgorithmsSingleSourceShortestPathProps) {
     this.id = props.id ?? 'gpu-graph-single-source-shortest-path';
     this.topology = props.topology;
     this.sourceVertex = props.sourceVertex;
@@ -132,7 +132,7 @@ export class GPUGraphSingleSourceShortestPath {
 
   /** Adds bounded weighted-path passes without submitting commands or reading GPU results. */
   addToGraph<Parameters>(commandGraph: GPUCommandGraph<Parameters>): void {
-    addGPUGraphSingleSourceShortestPathToGraphWithDispatchLimit(
+    addGPUGraphAlgorithmsSingleSourceShortestPathToGraphWithDispatchLimit(
       this,
       commandGraph,
       commandGraph.device.limits.maxComputeWorkgroupsPerDimension
@@ -177,7 +177,9 @@ function validateShortestPathVector<Format extends 'uint32' | 'float32'>(
 }
 
 /** Keeps writable shortest-path results physically disjoint from every graph input and peer. */
-function validateDistinctShortestPathOutputs(search: GPUGraphSingleSourceShortestPath): void {
+function validateDistinctShortestPathOutputs(
+  search: GPUGraphAlgorithmsSingleSourceShortestPath
+): void {
   const topology = search.topology;
   const inputVectors = [
     topology.graph.sourceVertices,
@@ -214,7 +216,7 @@ function validateDistinctShortestPathOutputs(search: GPUGraphSingleSourceShortes
 
 /** Enumerates existing adjacency allocations without copying or changing source identity. */
 function getAdjacencyVectors(
-  adjacency: GPUGraphAdjacency
+  adjacency: GPUGraphAlgorithmsAdjacency
 ): (GPUVector<'uint32'> | GPUVector<'float32'>)[] {
   return [
     adjacency.offsets,

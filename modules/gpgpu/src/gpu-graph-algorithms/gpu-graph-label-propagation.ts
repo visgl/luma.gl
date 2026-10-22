@@ -7,19 +7,19 @@ import type {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import type {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUCommandGraph} from '../gpu-core/gpu-command-graph';
-import {addGPUGraphLabelPropagationToGraphWithDispatchLimit} from './gpu-graph-label-propagation-internals';
-import type {GPUGraphAdjacency, GPUGraphTopology} from './gpu-graph-topology';
+import {addGPUGraphAlgorithmsLabelPropagationToGraphWithDispatchLimit} from './gpu-graph-label-propagation-internals';
+import type {GPUGraphAlgorithmsAdjacency, GPUGraphAlgorithmsTopology} from './gpu-graph-topology';
 
 const DEFAULT_LABEL_ITERATIONS = 32;
 const MAXIMUM_LABEL_ITERATIONS = 1024;
 const SCALAR_BYTE_LENGTH = 4;
 
 /** Existing caller-owned graph adjacency, unsigned community labels, and optional GPU status. */
-export type GPUGraphLabelPropagationProps = {
+export type GPUGraphAlgorithmsLabelPropagationProps = {
   /** Prefix for generated command-graph node and imported-resource identifiers. */
   id?: string;
   /** Existing weak-neighborhood adjacency; directed graphs require reverse CSR. */
-  topology: GPUGraphTopology;
+  topology: GPUGraphAlgorithmsTopology;
   /** One caller-owned packed unsigned community label for every stable graph vertex. */
   output: GPUVector<'uint32'>;
   /** Bounded number of synchronous majority-vote iterations. Defaults to 32. */
@@ -41,11 +41,11 @@ export type GPUGraphLabelPropagationProps = {
  * is neither Louvain nor Leiden, does not optimize modularity, and has worst-case
  * `O(sum(degree²))` work per iteration.
  */
-export class GPUGraphLabelPropagation {
+export class GPUGraphAlgorithmsLabelPropagation {
   /** Prefix for generated command-graph node and imported-resource identifiers. */
   readonly id: string;
   /** Existing caller-owned GPU graph topology. */
-  readonly topology: GPUGraphTopology;
+  readonly topology: GPUGraphAlgorithmsTopology;
   /** Caller-owned vertex-aligned community labels. */
   readonly output: GPUVector<'uint32'>;
   /** Number of compiled, explicitly synchronized majority-vote iterations. */
@@ -54,7 +54,7 @@ export class GPUGraphLabelPropagation {
   readonly converged?: GPUVector<'uint32'>;
 
   /** Validates graph metadata without allocating, submitting, destroying, or reading GPU work. */
-  constructor(props: GPUGraphLabelPropagationProps) {
+  constructor(props: GPUGraphAlgorithmsLabelPropagationProps) {
     this.id = props.id ?? 'gpu-graph-label-propagation';
     this.topology = props.topology;
     this.output = props.output;
@@ -81,7 +81,7 @@ export class GPUGraphLabelPropagation {
 
   /** Declares bounded majority-vote passes without queue submission or CPU synchronization. */
   addToGraph<Parameters>(commandGraph: GPUCommandGraph<Parameters>): void {
-    addGPUGraphLabelPropagationToGraphWithDispatchLimit(
+    addGPUGraphAlgorithmsLabelPropagationToGraphWithDispatchLimit(
       this,
       commandGraph,
       commandGraph.device.limits.maxComputeWorkgroupsPerDimension
@@ -123,7 +123,7 @@ function validateLabelVector(vector: GPUVector<'uint32'>, length: number, name: 
 }
 
 /** Protects graph inputs, CSR statuses, and caller-owned output allocations from physical alias. */
-function validateDistinctLabelOutputs(propagation: GPUGraphLabelPropagation): void {
+function validateDistinctLabelOutputs(propagation: GPUGraphAlgorithmsLabelPropagation): void {
   const {topology} = propagation;
   const inputVectors = [
     topology.graph.sourceVertices,
@@ -156,7 +156,7 @@ function validateDistinctLabelOutputs(propagation: GPUGraphLabelPropagation): vo
 
 /** Enumerates existing CSR payloads and statuses without changing their source chunk identity. */
 function getAdjacencyVectors(
-  adjacency: GPUGraphAdjacency
+  adjacency: GPUGraphAlgorithmsAdjacency
 ): (GPUVector<'uint32'> | GPUVector<'float32'>)[] {
   return [
     adjacency.offsets,

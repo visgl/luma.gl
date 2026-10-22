@@ -7,17 +7,17 @@ import type {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import type {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUCommandGraph} from '../gpu-core/gpu-command-graph';
-import {addGPUGraphLocalClusteringCoefficientToGraphWithDispatchLimit} from './gpu-graph-local-clustering-coefficient-internals';
-import type {GPUGraphAdjacency, GPUGraphTopology} from './gpu-graph-topology';
+import {addGPUGraphAlgorithmsLocalClusteringCoefficientToGraphWithDispatchLimit} from './gpu-graph-local-clustering-coefficient-internals';
+import type {GPUGraphAlgorithmsAdjacency, GPUGraphAlgorithmsTopology} from './gpu-graph-topology';
 
 const SCALAR_BYTE_LENGTH = 4;
 
 /** Existing graph adjacency and caller-owned Graphalytics local-clustering outputs. */
-export type GPUGraphLocalClusteringCoefficientProps = {
+export type GPUGraphAlgorithmsLocalClusteringCoefficientProps = {
   /** Prefix for generated command-graph nodes and imported-resource identifiers. */
   id?: string;
   /** Existing GPU graph adjacency; directed weak neighborhoods require reverse CSR. */
-  topology: GPUGraphTopology;
+  topology: GPUGraphAlgorithmsTopology;
   /** One packed, caller-owned floating-point clustering coefficient per vertex. */
   output: GPUVector<'float32'>;
   /** Optional packed per-vertex triangle count or directed neighbor-edge closure count. */
@@ -42,18 +42,18 @@ export type GPUGraphLocalClusteringCoefficientProps = {
  * deduplication and membership scans have cubic worst-case work in vertex degree. No source
  * vectors are sorted, repacked, read back, or implicitly destroyed.
  */
-export class GPUGraphLocalClusteringCoefficient {
+export class GPUGraphAlgorithmsLocalClusteringCoefficient {
   /** Prefix for generated command-graph node and imported-resource identifiers. */
   readonly id: string;
   /** Existing caller-owned GPU graph topology. */
-  readonly topology: GPUGraphTopology;
+  readonly topology: GPUGraphAlgorithmsTopology;
   /** Caller-owned vertex-aligned floating-point local-clustering coefficients. */
   readonly output: GPUVector<'float32'>;
   /** Optional caller-owned unsigned incident-triangle or directed-closure counts. */
   readonly triangles?: GPUVector<'uint32'>;
 
   /** Validates caller metadata without allocating, submitting, reading, or destroying work. */
-  constructor(props: GPUGraphLocalClusteringCoefficientProps) {
+  constructor(props: GPUGraphAlgorithmsLocalClusteringCoefficientProps) {
     this.id = props.id ?? 'gpu-graph-local-clustering-coefficient';
     this.topology = props.topology;
     this.output = props.output;
@@ -82,7 +82,7 @@ export class GPUGraphLocalClusteringCoefficient {
 
   /** Declares bounded GPU clustering without queue submission or CPU graph synchronization. */
   addToGraph<Parameters>(commandGraph: GPUCommandGraph<Parameters>): void {
-    addGPUGraphLocalClusteringCoefficientToGraphWithDispatchLimit(
+    addGPUGraphAlgorithmsLocalClusteringCoefficientToGraphWithDispatchLimit(
       this,
       commandGraph,
       commandGraph.device.limits.maxComputeWorkgroupsPerDimension
@@ -129,7 +129,9 @@ function validateClusteringVector<Format extends 'uint32' | 'float32'>(
 }
 
 /** Protects source graph, CSR/status allocations, and optional triangle output from alias. */
-function validateDistinctClusteringOutputs(clustering: GPUGraphLocalClusteringCoefficient): void {
+function validateDistinctClusteringOutputs(
+  clustering: GPUGraphAlgorithmsLocalClusteringCoefficient
+): void {
   const {topology} = clustering;
   const inputVectors = [
     topology.graph.sourceVertices,
@@ -160,7 +162,7 @@ function validateDistinctClusteringOutputs(clustering: GPUGraphLocalClusteringCo
 
 /** Enumerates existing adjacency payloads and statuses without changing their chunk identity. */
 function getAdjacencyVectors(
-  adjacency: GPUGraphAdjacency
+  adjacency: GPUGraphAlgorithmsAdjacency
 ): (GPUVector<'uint32'> | GPUVector<'float32'>)[] {
   return [
     adjacency.offsets,

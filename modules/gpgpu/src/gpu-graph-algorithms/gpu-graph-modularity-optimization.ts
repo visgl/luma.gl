@@ -7,19 +7,19 @@ import type {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import type {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUCommandGraph} from '../gpu-core/gpu-command-graph';
-import {addGPUGraphModularityOptimizationToGraphWithDispatchLimit} from './gpu-graph-modularity-optimization-internals';
-import type {GPUGraphAdjacency, GPUGraphTopology} from './gpu-graph-topology';
+import {addGPUGraphAlgorithmsModularityOptimizationToGraphWithDispatchLimit} from './gpu-graph-modularity-optimization-internals';
+import type {GPUGraphAlgorithmsAdjacency, GPUGraphAlgorithmsTopology} from './gpu-graph-topology';
 
 const DEFAULT_OPTIMIZATION_ITERATIONS = 32;
 const MAXIMUM_OPTIMIZATION_ITERATIONS = 1024;
 const SCALAR_BYTE_LENGTH = 4;
 
 /** Existing topology, optional community assignments, and caller-owned optimization results. */
-export type GPUGraphModularityOptimizationProps = {
+export type GPUGraphAlgorithmsModularityOptimizationProps = {
   /** Prefix for generated command-graph nodes and imported-resource identifiers. */
   id?: string;
   /** Existing compressed graph adjacency; directed optimization requires reverse adjacency. */
-  topology: GPUGraphTopology;
+  topology: GPUGraphAlgorithmsTopology;
   /** One caller-owned unsigned community identifier for each graph vertex. */
   output: GPUVector<'uint32'>;
   /** One caller-owned floating-point Newman modularity score for the final assignments. */
@@ -45,7 +45,7 @@ export type GPUGraphModularityOptimizationProps = {
  * against an immutable partition and accepts only its single best strictly improving move.
  * Equal computed gains choose the lowest vertex identifier and then the lowest candidate
  * community. Original source-edge weights, multiplicity, direction, self-loops, and resolution
- * follow {@link GPUGraphModularity} exactly.
+ * follow {@link GPUGraphAlgorithmsModularity} exactly.
  *
  * Weighted float32 accumulation uses unordered atomic additions, so low-order rounding,
  * computed gains, threshold decisions, and selected partitions can vary across GPU execution
@@ -57,11 +57,11 @@ export type GPUGraphModularityOptimizationProps = {
  * weight fail closed: community rows receive `0xffffffff`, modularity is zero, and validity and
  * nonempty-graph convergence are zero.
  */
-export class GPUGraphModularityOptimization {
+export class GPUGraphAlgorithmsModularityOptimization {
   /** Prefix for generated command-graph nodes and imported-resource identifiers. */
   readonly id: string;
   /** Existing caller-owned GPU graph topology. */
-  readonly topology: GPUGraphTopology;
+  readonly topology: GPUGraphAlgorithmsTopology;
   /** Caller-owned, vertex-aligned optimized community identifiers. */
   readonly output: GPUVector<'uint32'>;
   /** Caller-owned scalar receiving exact modularity for the final partition. */
@@ -80,7 +80,7 @@ export class GPUGraphModularityOptimization {
   readonly valid?: GPUVector<'uint32'>;
 
   /** Validates metadata without allocating, destroying, submitting, or reading GPU resources. */
-  constructor(props: GPUGraphModularityOptimizationProps) {
+  constructor(props: GPUGraphAlgorithmsModularityOptimizationProps) {
     this.id = props.id ?? 'gpu-graph-modularity-optimization';
     this.topology = props.topology;
     this.output = props.output;
@@ -139,7 +139,7 @@ export class GPUGraphModularityOptimization {
 
   /** Declares bounded GPU local-moving and exact scoring without submission or readback. */
   addToGraph<Parameters>(commandGraph: GPUCommandGraph<Parameters>): void {
-    addGPUGraphModularityOptimizationToGraphWithDispatchLimit(
+    addGPUGraphAlgorithmsModularityOptimizationToGraphWithDispatchLimit(
       this,
       commandGraph,
       commandGraph.device.limits.maxComputeWorkgroupsPerDimension
@@ -184,7 +184,9 @@ function validateOptimizationVector<Format extends 'uint32' | 'float32'>(
 }
 
 /** Keeps every caller-owned result physically separate from inputs, CSR, and peer results. */
-function validateDistinctOptimizationOutputs(optimization: GPUGraphModularityOptimization): void {
+function validateDistinctOptimizationOutputs(
+  optimization: GPUGraphAlgorithmsModularityOptimization
+): void {
   const {topology} = optimization;
   const inputs = [
     topology.graph.sourceVertices,
@@ -218,7 +220,7 @@ function validateDistinctOptimizationOutputs(optimization: GPUGraphModularityOpt
 
 /** Enumerates existing adjacency payload and status vectors without replacing allocations. */
 function getAdjacencyVectors(
-  adjacency: GPUGraphAdjacency
+  adjacency: GPUGraphAlgorithmsAdjacency
 ): (GPUVector<'uint32'> | GPUVector<'float32'>)[] {
   return [
     adjacency.offsets,

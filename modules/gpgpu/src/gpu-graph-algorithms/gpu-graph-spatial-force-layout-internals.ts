@@ -19,7 +19,7 @@ import {
   getViewBinding,
   getViewElementOffset
 } from '../gpu-core/graph-data-view-utils';
-import type {GPUGraphSpatialForceLayout} from './gpu-graph-spatial-force-layout';
+import type {GPUGraphAlgorithmsSpatialForceLayout} from './gpu-graph-spatial-force-layout';
 
 const SPATIAL_FORCE_WORKGROUP_SIZE = 256;
 const MINIMUM_REPULSION_DISTANCE_SQUARED = 0.0001;
@@ -73,8 +73,8 @@ type SpatialPassProps = {
 };
 
 /** Adds honest near-exact/far-monopole force integration with bounded dispatch. @internal */
-export function addGPUGraphSpatialForceLayoutToGraphWithDispatchLimit<Parameters>(
-  spatial: GPUGraphSpatialForceLayout,
+export function addGPUGraphAlgorithmsSpatialForceLayoutToGraphWithDispatchLimit<Parameters>(
+  spatial: GPUGraphAlgorithmsSpatialForceLayout,
   commandGraph: GPUCommandGraph<Parameters>,
   maxComputeWorkgroupsPerDimension: number
 ): void {
@@ -718,19 +718,19 @@ function getSpatialDispatchLayout(
   state: ImportedSpatialLayout,
   elementCount: number
 ): GPUBoundedDispatchLayout {
-  return getGPUGraphSpatialForceLayoutDispatchLayout(
+  return getGPUGraphAlgorithmsSpatialForceLayoutDispatchLayout(
     elementCount,
     state.maxComputeWorkgroupsPerDimension
   );
 }
 
 /** Plans bounded three-dimensional spatial index, cell, and vertex dispatch. @internal */
-export function getGPUGraphSpatialForceLayoutDispatchLayout(
+export function getGPUGraphAlgorithmsSpatialForceLayoutDispatchLayout(
   elementCount: number,
   maxComputeWorkgroupsPerDimension: number
 ): GPUBoundedDispatchLayout {
   return getBoundedDispatchLayout(
-    'GPUGraphSpatialForceLayout',
+    'GPUGraphAlgorithmsSpatialForceLayout',
     elementCount,
     SPATIAL_FORCE_WORKGROUP_SIZE,
     maxComputeWorkgroupsPerDimension

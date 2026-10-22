@@ -21,8 +21,8 @@ import {
   getViewBinding,
   getViewElementOffset
 } from '../gpu-core/graph-data-view-utils';
-import type {GPUGraphSingleSourceShortestPath} from './gpu-graph-single-source-shortest-path';
-import type {GPUGraphAdjacency} from './gpu-graph-topology';
+import type {GPUGraphAlgorithmsSingleSourceShortestPath} from './gpu-graph-single-source-shortest-path';
+import type {GPUGraphAlgorithmsAdjacency} from './gpu-graph-topology';
 
 const SHORTEST_PATH_WORKGROUP_SIZE = 256;
 const POSITIVE_INFINITY_BITS = 0x7f800000;
@@ -71,8 +71,8 @@ type ShortestPathPassProps = {
 };
 
 /** Adds GPU weighted Bellman-Ford passes using an explicit bounded dispatch limit. @internal */
-export function addGPUGraphSingleSourceShortestPathToGraphWithDispatchLimit<Parameters>(
-  search: GPUGraphSingleSourceShortestPath,
+export function addGPUGraphAlgorithmsSingleSourceShortestPathToGraphWithDispatchLimit<Parameters>(
+  search: GPUGraphAlgorithmsSingleSourceShortestPath,
   commandGraph: GPUCommandGraph<Parameters>,
   maxComputeWorkgroupsPerDimension: number
 ): void {
@@ -192,7 +192,7 @@ export function addGPUGraphSingleSourceShortestPathToGraphWithDispatchLimit<Para
 function importShortestPathAdjacency<Parameters>(
   commandGraph: GPUCommandGraph<Parameters>,
   id: string,
-  adjacency: GPUGraphAdjacency
+  adjacency: GPUGraphAlgorithmsAdjacency
 ): ImportedShortestPathAdjacency {
   return {
     offsets: commandGraph.importGPUVector(`${id}-offsets`, adjacency.offsets).data[0],
@@ -695,7 +695,7 @@ function getDispatchLayout(
   state: ImportedShortestPathState,
   elementCount: number
 ): GPUBoundedDispatchLayout {
-  return getGPUGraphSingleSourceShortestPathDispatchLayout(
+  return getGPUGraphAlgorithmsSingleSourceShortestPathDispatchLayout(
     elementCount,
     state.maxComputeWorkgroupsPerDimension
   );
@@ -710,12 +710,12 @@ function getInvocationIndexSource(state: ImportedShortestPathState, elementCount
 }
 
 /** Plans one bounded three-dimensional weighted shortest-path dispatch. @internal */
-export function getGPUGraphSingleSourceShortestPathDispatchLayout(
+export function getGPUGraphAlgorithmsSingleSourceShortestPathDispatchLayout(
   elementCount: number,
   maxComputeWorkgroupsPerDimension: number
 ): GPUBoundedDispatchLayout {
   return getBoundedDispatchLayout(
-    'GPUGraphSingleSourceShortestPath',
+    'GPUGraphAlgorithmsSingleSourceShortestPath',
     elementCount,
     SHORTEST_PATH_WORKGROUP_SIZE,
     maxComputeWorkgroupsPerDimension

@@ -4,7 +4,7 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuGraph.
 
 /** Deterministic graph families compared against their actual browser GPU execution. */
-export type GPUGraphBenchmarkDatasetKind =
+export type GPUGraphAlgorithmsBenchmarkDatasetKind =
   | 'sparse'
   | 'dense'
   | 'scale-free'
@@ -12,8 +12,8 @@ export type GPUGraphBenchmarkDatasetKind =
   | 'high-degree';
 
 /** Explicit workload and repetition controls for an opt-in graph benchmark. */
-export type GPUGraphBenchmarkOptions = {
-  kind: GPUGraphBenchmarkDatasetKind;
+export type GPUGraphAlgorithmsBenchmarkOptions = {
+  kind: GPUGraphAlgorithmsBenchmarkDatasetKind;
   vertexCount: number;
   seed?: number;
   warmupIterations?: number;
@@ -26,8 +26,8 @@ export type GPUGraphBenchmarkOptions = {
 };
 
 /** Source edge batches, including the deliberately preserved empty middle partition. */
-export type GPUGraphBenchmarkDataset = {
-  kind: GPUGraphBenchmarkDatasetKind;
+export type GPUGraphAlgorithmsBenchmarkDataset = {
+  kind: GPUGraphAlgorithmsBenchmarkDatasetKind;
   vertexCount: number;
   edgeCount: number;
   sourceChunks: Uint32Array[];
@@ -38,7 +38,7 @@ export type GPUGraphBenchmarkDataset = {
 };
 
 /** Actual CPU and WebGPU algorithm implementations compared by the live benchmark. */
-export type GPUGraphBenchmarkAlgorithm =
+export type GPUGraphAlgorithmsBenchmarkAlgorithm =
   | 'topology'
   | 'breadth-first-search'
   | 'single-source-shortest-path'
@@ -50,7 +50,7 @@ export type GPUGraphBenchmarkAlgorithm =
   | 'spatial-layout';
 
 /** Non-interpolated nearest-rank summary of real observed durations. */
-export type GPUGraphBenchmarkDistribution = {
+export type GPUGraphAlgorithmsBenchmarkDistribution = {
   minimum: number;
   median: number;
   percentile95: number;
@@ -58,26 +58,26 @@ export type GPUGraphBenchmarkDistribution = {
 };
 
 /** Correctness-gated timings and physical allocations for one real GPU algorithm. */
-export type GPUGraphBenchmarkPathReport = {
-  algorithm: GPUGraphBenchmarkAlgorithm;
+export type GPUGraphAlgorithmsBenchmarkPathReport = {
+  algorithm: GPUGraphAlgorithmsBenchmarkAlgorithm;
   /** Compiled algorithm-iteration budget; this does not imply early stopping or convergence. */
   iterations?: number;
   /** Actual final GPU fixed-point status when the implementation publishes one. */
   converged?: boolean;
   /** Actual final GPU L1 residual when the implementation publishes that metric. */
   residual?: number;
-  cpuTimeMilliseconds: GPUGraphBenchmarkDistribution;
-  cpuEncodeTimeMilliseconds: GPUGraphBenchmarkDistribution;
-  synchronizedTimeMilliseconds: GPUGraphBenchmarkDistribution;
-  gpuTimeMilliseconds?: GPUGraphBenchmarkDistribution;
+  cpuTimeMilliseconds: GPUGraphAlgorithmsBenchmarkDistribution;
+  cpuEncodeTimeMilliseconds: GPUGraphAlgorithmsBenchmarkDistribution;
+  synchronizedTimeMilliseconds: GPUGraphAlgorithmsBenchmarkDistribution;
+  gpuTimeMilliseconds?: GPUGraphAlgorithmsBenchmarkDistribution;
   maxAbsoluteError: number;
   importedBufferBytes: number;
   transientBufferBytes: number;
 };
 
 /** Browser/device-specific results; no result is populated without executing its workload. */
-export type GPUGraphBenchmarkReport = {
-  datasetKind: GPUGraphBenchmarkDatasetKind;
+export type GPUGraphAlgorithmsBenchmarkReport = {
+  datasetKind: GPUGraphAlgorithmsBenchmarkDatasetKind;
   vertexCount: number;
   edgeCount: number;
   warmupIterations: number;
@@ -86,14 +86,14 @@ export type GPUGraphBenchmarkReport = {
   uploadTimeMilliseconds: number;
   compilationTimeMilliseconds: number;
   readbackTimeMilliseconds: number;
-  spatialIndexBuildTimeMilliseconds: GPUGraphBenchmarkDistribution;
+  spatialIndexBuildTimeMilliseconds: GPUGraphAlgorithmsBenchmarkDistribution;
   indexMemoryBytes: number;
   approximationMaxAbsoluteError: number;
-  paths: GPUGraphBenchmarkPathReport[];
+  paths: GPUGraphAlgorithmsBenchmarkPathReport[];
 };
 
 /** @internal Exact CPU outputs used to reject incomplete or incorrect GPU measurements. */
-export type GPUGraphBenchmarkReference = {
+export type GPUGraphAlgorithmsBenchmarkReference = {
   forwardOffsets: Uint32Array;
   forwardNeighbors: Uint32Array;
   forwardWeights: Float32Array;
@@ -117,15 +117,18 @@ export type GPUGraphBenchmarkReference = {
 };
 
 /** @internal Shared validated source rows, independently evaluated references, and CPU timings. */
-export type GPUGraphBenchmarkContext = {
-  options: Required<GPUGraphBenchmarkOptions>;
-  dataset: GPUGraphBenchmarkDataset;
-  reference: GPUGraphBenchmarkReference;
-  cpuTimeMilliseconds: Record<GPUGraphBenchmarkAlgorithm, GPUGraphBenchmarkDistribution>;
+export type GPUGraphAlgorithmsBenchmarkContext = {
+  options: Required<GPUGraphAlgorithmsBenchmarkOptions>;
+  dataset: GPUGraphAlgorithmsBenchmarkDataset;
+  reference: GPUGraphAlgorithmsBenchmarkReference;
+  cpuTimeMilliseconds: Record<
+    GPUGraphAlgorithmsBenchmarkAlgorithm,
+    GPUGraphAlgorithmsBenchmarkDistribution
+  >;
 };
 
-type GPUGraphBenchmarkAdjacency = Pick<
-  GPUGraphBenchmarkReference,
+type GPUGraphAlgorithmsBenchmarkAdjacency = Pick<
+  GPUGraphAlgorithmsBenchmarkReference,
   | 'forwardOffsets'
   | 'forwardNeighbors'
   | 'forwardWeights'
@@ -134,28 +137,31 @@ type GPUGraphBenchmarkAdjacency = Pick<
   | 'reverseWeights'
 >;
 
-type GPUGraphBenchmarkSearch = Pick<GPUGraphBenchmarkReference, 'distances' | 'predecessors'>;
+type GPUGraphAlgorithmsBenchmarkSearch = Pick<
+  GPUGraphAlgorithmsBenchmarkReference,
+  'distances' | 'predecessors'
+>;
 
-type GPUGraphBenchmarkShortestPath = Pick<
-  GPUGraphBenchmarkReference,
+type GPUGraphAlgorithmsBenchmarkShortestPath = Pick<
+  GPUGraphAlgorithmsBenchmarkReference,
   'weightedDistances' | 'weightedPredecessors'
 >;
 
-type GPUGraphBenchmarkCommunities = Pick<
-  GPUGraphBenchmarkReference,
+type GPUGraphAlgorithmsBenchmarkCommunities = Pick<
+  GPUGraphAlgorithmsBenchmarkReference,
   'communities' | 'communityConverged'
 >;
 
-type GPUGraphBenchmarkClustering = Pick<
-  GPUGraphBenchmarkReference,
+type GPUGraphAlgorithmsBenchmarkClustering = Pick<
+  GPUGraphAlgorithmsBenchmarkReference,
   'clusteringCoefficients' | 'triangleCounts'
 >;
 
-type GPUGraphBenchmarkLayout = {positions: Float32Array; velocities: Float32Array};
+type GPUGraphAlgorithmsBenchmarkLayout = {positions: Float32Array; velocities: Float32Array};
 
-type MeasuredGPUGraphBenchmarkValue<Value> = {
+type MeasuredGPUGraphAlgorithmsBenchmarkValue<Value> = {
   value: Value;
-  timeMilliseconds: GPUGraphBenchmarkDistribution;
+  timeMilliseconds: GPUGraphAlgorithmsBenchmarkDistribution;
 };
 
 const UINT32_MAXIMUM = 0xffffffff;
@@ -165,7 +171,7 @@ const MINIMUM_REPULSION_DISTANCE_SQUARED = 0.0001;
 const PAGE_RANK_DAMPING = 0.85;
 /** @internal Fixed, honestly reported synchronous majority-vote workload. */
 export const LU_GRAPH_BENCHMARK_LABEL_ITERATIONS = 8;
-const DATASET_KINDS: readonly GPUGraphBenchmarkDatasetKind[] = [
+const DATASET_KINDS: readonly GPUGraphAlgorithmsBenchmarkDatasetKind[] = [
   'sparse',
   'dense',
   'scale-free',
@@ -193,9 +199,9 @@ export const LU_GRAPH_BENCHMARK_BOUNDS = [-2, -2, 2, 2] as const;
  * The middle source and target chunks stay empty so measured topology construction exercises
  * the same ordered batch contract as streamed graph ingestion.
  */
-export function makeGPUGraphBenchmarkDataset(
-  options: Pick<GPUGraphBenchmarkOptions, 'kind' | 'vertexCount' | 'seed'>
-): GPUGraphBenchmarkDataset {
+export function makeGPUGraphAlgorithmsBenchmarkDataset(
+  options: Pick<GPUGraphAlgorithmsBenchmarkOptions, 'kind' | 'vertexCount' | 'seed'>
+): GPUGraphAlgorithmsBenchmarkDataset {
   const {kind, vertexCount} = options;
   const seed = options.seed ?? 0;
   if (!DATASET_KINDS.includes(kind)) {
@@ -326,37 +332,56 @@ export function makeGPUGraphBenchmarkDataset(
 }
 
 /** @internal Generates every reference independently before any GPU timing is reported. */
-export function prepareGPUGraphBenchmark(
-  options: GPUGraphBenchmarkOptions
-): GPUGraphBenchmarkContext {
-  const normalizedOptions = normalizeGPUGraphBenchmarkOptions(options);
-  const dataset = makeGPUGraphBenchmarkDataset(normalizedOptions);
-  const adjacency = measureGPUGraphBenchmarkValue(normalizedOptions, () =>
-    buildGPUGraphBenchmarkAdjacency(dataset)
+export function prepareGPUGraphAlgorithmsBenchmark(
+  options: GPUGraphAlgorithmsBenchmarkOptions
+): GPUGraphAlgorithmsBenchmarkContext {
+  const normalizedOptions = normalizeGPUGraphAlgorithmsBenchmarkOptions(options);
+  const dataset = makeGPUGraphAlgorithmsBenchmarkDataset(normalizedOptions);
+  const adjacency = measureGPUGraphAlgorithmsBenchmarkValue(normalizedOptions, () =>
+    buildGPUGraphAlgorithmsBenchmarkAdjacency(dataset)
   );
-  const search = measureGPUGraphBenchmarkValue(normalizedOptions, () =>
-    evaluateGPUGraphBenchmarkBreadthFirstSearch(adjacency.value, normalizedOptions.maxDepth)
+  const search = measureGPUGraphAlgorithmsBenchmarkValue(normalizedOptions, () =>
+    evaluateGPUGraphAlgorithmsBenchmarkBreadthFirstSearch(
+      adjacency.value,
+      normalizedOptions.maxDepth
+    )
   );
-  const shortestPath = measureGPUGraphBenchmarkValue(normalizedOptions, () =>
-    evaluateGPUGraphBenchmarkShortestPath(adjacency.value)
+  const shortestPath = measureGPUGraphAlgorithmsBenchmarkValue(normalizedOptions, () =>
+    evaluateGPUGraphAlgorithmsBenchmarkShortestPath(adjacency.value)
   );
-  const components = measureGPUGraphBenchmarkValue(normalizedOptions, () =>
-    evaluateGPUGraphBenchmarkConnectedComponents(dataset)
+  const components = measureGPUGraphAlgorithmsBenchmarkValue(normalizedOptions, () =>
+    evaluateGPUGraphAlgorithmsBenchmarkConnectedComponents(dataset)
   );
-  const communities = measureGPUGraphBenchmarkValue(normalizedOptions, () =>
-    evaluateGPUGraphBenchmarkLabelPropagation(adjacency.value, LU_GRAPH_BENCHMARK_LABEL_ITERATIONS)
+  const communities = measureGPUGraphAlgorithmsBenchmarkValue(normalizedOptions, () =>
+    evaluateGPUGraphAlgorithmsBenchmarkLabelPropagation(
+      adjacency.value,
+      LU_GRAPH_BENCHMARK_LABEL_ITERATIONS
+    )
   );
-  const clustering = measureGPUGraphBenchmarkValue(normalizedOptions, () =>
-    evaluateGPUGraphBenchmarkLocalClustering(adjacency.value)
+  const clustering = measureGPUGraphAlgorithmsBenchmarkValue(normalizedOptions, () =>
+    evaluateGPUGraphAlgorithmsBenchmarkLocalClustering(adjacency.value)
   );
-  const pageRank = measureGPUGraphBenchmarkValue(normalizedOptions, () =>
-    evaluateGPUGraphBenchmarkPageRank(adjacency.value, normalizedOptions.pageRankIterations)
+  const pageRank = measureGPUGraphAlgorithmsBenchmarkValue(normalizedOptions, () =>
+    evaluateGPUGraphAlgorithmsBenchmarkPageRank(
+      adjacency.value,
+      normalizedOptions.pageRankIterations
+    )
   );
-  const exactLayout = measureGPUGraphBenchmarkValue(normalizedOptions, () =>
-    evaluateGPUGraphBenchmarkForceLayout(dataset, adjacency.value, normalizedOptions, false)
+  const exactLayout = measureGPUGraphAlgorithmsBenchmarkValue(normalizedOptions, () =>
+    evaluateGPUGraphAlgorithmsBenchmarkForceLayout(
+      dataset,
+      adjacency.value,
+      normalizedOptions,
+      false
+    )
   );
-  const spatialLayout = measureGPUGraphBenchmarkValue(normalizedOptions, () =>
-    evaluateGPUGraphBenchmarkForceLayout(dataset, adjacency.value, normalizedOptions, true)
+  const spatialLayout = measureGPUGraphAlgorithmsBenchmarkValue(normalizedOptions, () =>
+    evaluateGPUGraphAlgorithmsBenchmarkForceLayout(
+      dataset,
+      adjacency.value,
+      normalizedOptions,
+      true
+    )
   );
 
   return {
@@ -390,14 +415,14 @@ export function prepareGPUGraphBenchmark(
 }
 
 /** @internal Uses the browser's monotonic timer without preventing portable Node execution. */
-export function getGPUGraphBenchmarkTime(): number {
+export function getGPUGraphAlgorithmsBenchmarkTime(): number {
   return globalThis.performance?.now() ?? Date.now();
 }
 
 /** @internal Preserves observed nearest-rank durations without interpolation or synthetic data. */
-export function summarizeGPUGraphBenchmarkSamples(
+export function summarizeGPUGraphAlgorithmsBenchmarkSamples(
   samples: readonly number[]
-): GPUGraphBenchmarkDistribution {
+): GPUGraphAlgorithmsBenchmarkDistribution {
   if (samples.length === 0 || samples.some(sample => !Number.isFinite(sample) || sample < 0)) {
     throw new Error('GPU Graph benchmark samples must contain finite non-negative durations');
   }
@@ -410,9 +435,9 @@ export function summarizeGPUGraphBenchmarkSamples(
   };
 }
 
-function normalizeGPUGraphBenchmarkOptions(
-  options: GPUGraphBenchmarkOptions
-): Required<GPUGraphBenchmarkOptions> {
+function normalizeGPUGraphAlgorithmsBenchmarkOptions(
+  options: GPUGraphAlgorithmsBenchmarkOptions
+): Required<GPUGraphAlgorithmsBenchmarkOptions> {
   const normalizedOptions = {
     kind: options.kind,
     vertexCount: options.vertexCount,
@@ -424,7 +449,7 @@ function normalizeGPUGraphBenchmarkOptions(
     maxDepth: options.maxDepth ?? 8,
     theta: options.theta ?? 0.6,
     gridSize: options.gridSize ?? [8, 8]
-  } satisfies Required<GPUGraphBenchmarkOptions>;
+  } satisfies Required<GPUGraphAlgorithmsBenchmarkOptions>;
 
   validateInteger('warmupIterations', normalizedOptions.warmupIterations, 0, UINT32_MAXIMUM);
   validateInteger('measuredIterations', normalizedOptions.measuredIterations, 1, UINT32_MAXIMUM);
@@ -451,26 +476,26 @@ function validateInteger(name: string, value: number, minimum: number, maximum: 
   }
 }
 
-function measureGPUGraphBenchmarkValue<Value>(
-  options: Required<GPUGraphBenchmarkOptions>,
+function measureGPUGraphAlgorithmsBenchmarkValue<Value>(
+  options: Required<GPUGraphAlgorithmsBenchmarkOptions>,
   evaluate: () => Value
-): MeasuredGPUGraphBenchmarkValue<Value> {
+): MeasuredGPUGraphAlgorithmsBenchmarkValue<Value> {
   for (let iteration = 0; iteration < options.warmupIterations; iteration++) {
     evaluate();
   }
   let value: Value | undefined;
   const samples: number[] = [];
   for (let iteration = 0; iteration < options.measuredIterations; iteration++) {
-    const startTime = getGPUGraphBenchmarkTime();
+    const startTime = getGPUGraphAlgorithmsBenchmarkTime();
     value = evaluate();
-    samples.push(getGPUGraphBenchmarkTime() - startTime);
+    samples.push(getGPUGraphAlgorithmsBenchmarkTime() - startTime);
   }
-  return {value: value!, timeMilliseconds: summarizeGPUGraphBenchmarkSamples(samples)};
+  return {value: value!, timeMilliseconds: summarizeGPUGraphAlgorithmsBenchmarkSamples(samples)};
 }
 
-function buildGPUGraphBenchmarkAdjacency(
-  dataset: GPUGraphBenchmarkDataset
-): GPUGraphBenchmarkAdjacency {
+function buildGPUGraphAlgorithmsBenchmarkAdjacency(
+  dataset: GPUGraphAlgorithmsBenchmarkDataset
+): GPUGraphAlgorithmsBenchmarkAdjacency {
   const forwardOffsets = new Uint32Array(dataset.vertexCount + 1);
   const reverseOffsets = new Uint32Array(dataset.vertexCount + 1);
   forEachBenchmarkEdge(dataset, (source, target) => {
@@ -505,10 +530,10 @@ function buildGPUGraphBenchmarkAdjacency(
   };
 }
 
-function evaluateGPUGraphBenchmarkBreadthFirstSearch(
-  adjacency: GPUGraphBenchmarkAdjacency,
+function evaluateGPUGraphAlgorithmsBenchmarkBreadthFirstSearch(
+  adjacency: GPUGraphAlgorithmsBenchmarkAdjacency,
   maxDepth: number
-): GPUGraphBenchmarkSearch {
+): GPUGraphAlgorithmsBenchmarkSearch {
   const vertexCount = adjacency.forwardOffsets.length - 1;
   const distances = new Uint32Array(vertexCount).fill(UINT32_MAXIMUM);
   const predecessors = new Uint32Array(vertexCount).fill(UINT32_MAXIMUM);
@@ -539,9 +564,9 @@ function evaluateGPUGraphBenchmarkBreadthFirstSearch(
 }
 
 /** @internal Independently evaluates exactly the bounded GPU relaxation workload. */
-export function evaluateGPUGraphBenchmarkShortestPath(
-  adjacency: GPUGraphBenchmarkAdjacency
-): GPUGraphBenchmarkShortestPath {
+export function evaluateGPUGraphAlgorithmsBenchmarkShortestPath(
+  adjacency: GPUGraphAlgorithmsBenchmarkAdjacency
+): GPUGraphAlgorithmsBenchmarkShortestPath {
   const vertexCount = adjacency.forwardOffsets.length - 1;
   const weightedDistances = new Float32Array(vertexCount).fill(Number.POSITIVE_INFINITY);
   const weightedPredecessors = new Uint32Array(vertexCount).fill(UINT32_MAXIMUM);
@@ -586,8 +611,8 @@ export function evaluateGPUGraphBenchmarkShortestPath(
   return {weightedDistances, weightedPredecessors};
 }
 
-function evaluateGPUGraphBenchmarkConnectedComponents(
-  dataset: GPUGraphBenchmarkDataset
+function evaluateGPUGraphAlgorithmsBenchmarkConnectedComponents(
+  dataset: GPUGraphAlgorithmsBenchmarkDataset
 ): Uint32Array {
   const parents = Uint32Array.from({length: dataset.vertexCount}, (_, vertex) => vertex);
   const findRoot = (vertex: number): number => {
@@ -610,10 +635,10 @@ function evaluateGPUGraphBenchmarkConnectedComponents(
 }
 
 /** Independently reproduces duplicate-sensitive, synchronous weak-neighbor community voting. */
-function evaluateGPUGraphBenchmarkLabelPropagation(
-  adjacency: GPUGraphBenchmarkAdjacency,
+function evaluateGPUGraphAlgorithmsBenchmarkLabelPropagation(
+  adjacency: GPUGraphAlgorithmsBenchmarkAdjacency,
   iterations: number
-): GPUGraphBenchmarkCommunities {
+): GPUGraphAlgorithmsBenchmarkCommunities {
   const vertexCount = adjacency.forwardOffsets.length - 1;
   let communities = Uint32Array.from({length: vertexCount}, (_, vertex) => vertex);
   let communityConverged = vertexCount === 0;
@@ -653,9 +678,9 @@ function evaluateGPUGraphBenchmarkLabelPropagation(
 }
 
 /** Evaluates Graphalytics directed closure using unique weak neighbors and actual directed links. */
-function evaluateGPUGraphBenchmarkLocalClustering(
-  adjacency: GPUGraphBenchmarkAdjacency
-): GPUGraphBenchmarkClustering {
+function evaluateGPUGraphAlgorithmsBenchmarkLocalClustering(
+  adjacency: GPUGraphAlgorithmsBenchmarkAdjacency
+): GPUGraphAlgorithmsBenchmarkClustering {
   const vertexCount = adjacency.forwardOffsets.length - 1;
   const clusteringCoefficients = new Float32Array(vertexCount);
   const triangleCounts = new Uint32Array(vertexCount);
@@ -695,8 +720,8 @@ function evaluateGPUGraphBenchmarkLocalClustering(
   return {clusteringCoefficients, triangleCounts};
 }
 
-function evaluateGPUGraphBenchmarkPageRank(
-  adjacency: GPUGraphBenchmarkAdjacency,
+function evaluateGPUGraphAlgorithmsBenchmarkPageRank(
+  adjacency: GPUGraphAlgorithmsBenchmarkAdjacency,
   iterations: number
 ): Float32Array {
   const vertexCount = adjacency.forwardOffsets.length - 1;
@@ -732,12 +757,12 @@ function evaluateGPUGraphBenchmarkPageRank(
   return scores;
 }
 
-function evaluateGPUGraphBenchmarkForceLayout(
-  dataset: GPUGraphBenchmarkDataset,
-  adjacency: GPUGraphBenchmarkAdjacency,
-  options: Required<GPUGraphBenchmarkOptions>,
+function evaluateGPUGraphAlgorithmsBenchmarkForceLayout(
+  dataset: GPUGraphAlgorithmsBenchmarkDataset,
+  adjacency: GPUGraphAlgorithmsBenchmarkAdjacency,
+  options: Required<GPUGraphAlgorithmsBenchmarkOptions>,
   approximate: boolean
-): GPUGraphBenchmarkLayout {
+): GPUGraphAlgorithmsBenchmarkLayout {
   const positions = dataset.positions.slice();
   const velocities = new Float32Array(positions.length);
   const {repulsion, attraction, gravity, damping, maxVelocity, timeStep} =
@@ -745,7 +770,7 @@ function evaluateGPUGraphBenchmarkForceLayout(
 
   for (let iteration = 0; iteration < options.forceIterations; iteration++) {
     const cells = approximate
-      ? buildGPUGraphBenchmarkCells(positions, options.gridSize)
+      ? buildGPUGraphAlgorithmsBenchmarkCells(positions, options.gridSize)
       : undefined;
     if (approximate && !cells) {
       velocities.fill(0);
@@ -772,8 +797,8 @@ function evaluateGPUGraphBenchmarkForceLayout(
 
       if (cells) {
         const [gridWidth, gridHeight] = options.gridSize;
-        const sourceColumn = getGPUGraphBenchmarkCellCoordinate(positionX, gridWidth);
-        const sourceRow = getGPUGraphBenchmarkCellCoordinate(positionY, gridHeight);
+        const sourceColumn = getGPUGraphAlgorithmsBenchmarkCellCoordinate(positionX, gridWidth);
+        const sourceRow = getGPUGraphAlgorithmsBenchmarkCellCoordinate(positionY, gridHeight);
         const cellWidth = 4 / gridWidth;
         const cellHeight = 4 / gridHeight;
         const diameterSquared = cellWidth * cellWidth + cellHeight * cellHeight;
@@ -870,7 +895,7 @@ function evaluateGPUGraphBenchmarkForceLayout(
   return {positions, velocities};
 }
 
-function buildGPUGraphBenchmarkCells(
+function buildGPUGraphAlgorithmsBenchmarkCells(
   positions: Float32Array,
   gridSize: readonly [number, number]
 ): number[][] | undefined {
@@ -889,14 +914,14 @@ function buildGPUGraphBenchmarkCells(
     ) {
       return undefined;
     }
-    const column = getGPUGraphBenchmarkCellCoordinate(positionX, gridWidth);
-    const row = getGPUGraphBenchmarkCellCoordinate(positionY, gridHeight);
+    const column = getGPUGraphAlgorithmsBenchmarkCellCoordinate(positionX, gridWidth);
+    const row = getGPUGraphAlgorithmsBenchmarkCellCoordinate(positionY, gridHeight);
     cells[row * gridWidth + column].push(vertex);
   }
   return cells;
 }
 
-function getGPUGraphBenchmarkCellCoordinate(position: number, size: number): number {
+function getGPUGraphAlgorithmsBenchmarkCellCoordinate(position: number, size: number): number {
   if (position === -2) return 0;
   if (position === 2) return size - 1;
   // Matches GPUGridIndex's signed-bounds normalization path without f32 atomics.
@@ -904,7 +929,7 @@ function getGPUGraphBenchmarkCellCoordinate(position: number, size: number): num
 }
 
 function forEachBenchmarkEdge(
-  dataset: GPUGraphBenchmarkDataset,
+  dataset: GPUGraphAlgorithmsBenchmarkDataset,
   visit: (source: number, target: number, weight: number, edgeIndex: number) => void
 ): void {
   let edgeIndex = 0;

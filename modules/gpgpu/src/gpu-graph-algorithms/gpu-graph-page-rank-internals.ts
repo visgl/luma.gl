@@ -17,7 +17,7 @@ import {
   getViewElementOffset
 } from '../gpu-core/graph-data-view-utils';
 import {getGPUReductionStrategy} from '../gpu-core/gpu-reduction';
-import type {GPUGraphPageRank} from './gpu-graph-page-rank';
+import type {GPUGraphAlgorithmsPageRank} from './gpu-graph-page-rank';
 
 const PAGE_RANK_WORKGROUP_SIZE = 256;
 
@@ -50,8 +50,8 @@ type PageRankPassProps = {
 };
 
 /** Adds dangling-safe GPU PageRank using an explicit bounded dispatch limit. @internal */
-export function addGPUGraphPageRankToGraphWithDispatchLimit<Parameters>(
-  pageRank: GPUGraphPageRank,
+export function addGPUGraphAlgorithmsPageRankToGraphWithDispatchLimit<Parameters>(
+  pageRank: GPUGraphAlgorithmsPageRank,
   commandGraph: GPUCommandGraph<Parameters>,
   maxComputeWorkgroupsPerDimension: number
 ): void {
@@ -166,7 +166,7 @@ function addInitializationPass<Parameters>(
   const clearResidual = state.residual
     ? 'if (index == 0u) { residual[RESIDUAL_OFFSET] = 0.0; }'
     : '';
-  const dispatchLayout = getGPUGraphPageRankDispatchLayout(
+  const dispatchLayout = getGPUGraphAlgorithmsPageRankDispatchLayout(
     Math.max(state.vertexCount, 1),
     state.maxComputeWorkgroupsPerDimension
   );
@@ -246,7 +246,7 @@ function addDanglingGatherPass<Parameters>(
   const reverseOverflow = state.reverseOverflow
     ? ' || reverseOverflow[REVERSE_OVERFLOW_OFFSET] != 0u'
     : '';
-  const dispatchLayout = getGPUGraphPageRankDispatchLayout(
+  const dispatchLayout = getGPUGraphAlgorithmsPageRankDispatchLayout(
     state.vertexCount,
     state.maxComputeWorkgroupsPerDimension
   );
@@ -323,7 +323,7 @@ function addPullPass<Parameters>(
   const incomingOffsetsOffset = state.reverseOverflow
     ? 'INCOMING_OFFSETS_OFFSET'
     : 'FORWARD_OFFSETS_OFFSET';
-  const dispatchLayout = getGPUGraphPageRankDispatchLayout(
+  const dispatchLayout = getGPUGraphAlgorithmsPageRankDispatchLayout(
     state.vertexCount,
     state.maxComputeWorkgroupsPerDimension
   );
@@ -414,7 +414,7 @@ function addNormalizationPass<Parameters>(
   const collectResidual = props.collectResidual
     ? 'workspace[WORKSPACE_OFFSET + index] = difference;'
     : '';
-  const dispatchLayout = getGPUGraphPageRankDispatchLayout(
+  const dispatchLayout = getGPUGraphAlgorithmsPageRankDispatchLayout(
     state.vertexCount,
     state.maxComputeWorkgroupsPerDimension
   );
@@ -495,7 +495,7 @@ function addReductionPass<Parameters>(
     inputValues: {view: props.input, usage: 'storage-read'},
     outputValues: {view: props.output, usage: 'storage-write'}
   };
-  const dispatchLayout = getGPUGraphPageRankDispatchLayout(
+  const dispatchLayout = getGPUGraphAlgorithmsPageRankDispatchLayout(
     props.input.length,
     props.maxComputeWorkgroupsPerDimension
   );
@@ -606,12 +606,12 @@ function addPageRankPass<Parameters>(
 }
 
 /** Plans bounded three-dimensional PageRank vertex and hierarchical-reduction dispatch. @internal */
-export function getGPUGraphPageRankDispatchLayout(
+export function getGPUGraphAlgorithmsPageRankDispatchLayout(
   elementCount: number,
   maxComputeWorkgroupsPerDimension: number
 ): GPUBoundedDispatchLayout {
   return getBoundedDispatchLayout(
-    'GPUGraphPageRank',
+    'GPUGraphAlgorithmsPageRank',
     elementCount,
     PAGE_RANK_WORKGROUP_SIZE,
     maxComputeWorkgroupsPerDimension

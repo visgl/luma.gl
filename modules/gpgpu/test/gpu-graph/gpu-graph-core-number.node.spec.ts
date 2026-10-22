@@ -6,16 +6,16 @@ import {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import * as experimentalModule from '@luma.gl/experimental';
 import {
-  GPUGraphData,
-  GPUGraphCoreNumber,
-  GPUGraphTopology,
-  type GPUGraphAdjacency,
-  type GPUGraphCoreNumberProps
+  GPUGraphAlgorithmsData,
+  GPUGraphAlgorithmsCoreNumber,
+  GPUGraphAlgorithmsTopology,
+  type GPUGraphAlgorithmsAdjacency,
+  type GPUGraphAlgorithmsCoreNumberProps
 } from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 import {afterEach, describe, expect, test, vi} from 'vitest';
-import {getGPUGraphCoreNumberDispatchLayout} from '../../src/gpu-graph-algorithms/gpu-graph-core-number-internals';
+import {getGPUGraphAlgorithmsCoreNumberDispatchLayout} from '../../src/gpu-graph-algorithms/gpu-graph-core-number-internals';
 
 type ScalarFormat = 'uint32' | 'float32';
 type ScalarValues = Uint32Array | Float32Array;
@@ -41,17 +41,17 @@ afterEach(() => {
   }
 });
 
-describe('GPUGraphCoreNumber optional graph-analysis API', () => {
-  test('exports GPU k-core decomposition only from the optional GPUGraphData subpath', () => {
-    expect(typeof GPUGraphCoreNumber).toBe('function');
-    expect('GPUGraphCoreNumber' in experimentalModule).toBe(false);
+describe('GPUGraphAlgorithmsCoreNumber optional graph-analysis API', () => {
+  test('exports GPU k-core decomposition only from the optional GPUGraphAlgorithmsData subpath', () => {
+    expect(typeof GPUGraphAlgorithmsCoreNumber).toBe('function');
+    expect('GPUGraphAlgorithmsCoreNumber' in experimentalModule).toBe(false);
   });
 
   test('preserves topology, distinct destinations, and status without executing GPU work', () => {
     const fixture = createCoreNumberFixture();
     const props = createCoreNumberProps(fixture, {weighted: true, statuses: true});
     const submit = vi.spyOn(fixture.device, 'submit');
-    const operation = new GPUGraphCoreNumber(props);
+    const operation = new GPUGraphAlgorithmsCoreNumber(props);
 
     expect(operation.id).toBe('gpu-graph-core-number');
     expect(operation.topology).toBe(props.topology);
@@ -64,7 +64,7 @@ describe('GPUGraphCoreNumber optional graph-analysis API', () => {
 
   test('does not require optional convergence or graph-degeneracy destinations', () => {
     const fixture = createCoreNumberFixture();
-    const operation = new GPUGraphCoreNumber(createCoreNumberProps(fixture));
+    const operation = new GPUGraphAlgorithmsCoreNumber(createCoreNumberProps(fixture));
 
     expect(operation.converged).toBeUndefined();
     expect(operation.degeneracy).toBeUndefined();
@@ -74,7 +74,7 @@ describe('GPUGraphCoreNumber optional graph-analysis API', () => {
     const fixture = createCoreNumberFixture();
     const props = createCoreNumberProps(fixture);
 
-    expect(new GPUGraphCoreNumber({...props, iterations}).iterations).toBe(iterations);
+    expect(new GPUGraphAlgorithmsCoreNumber({...props, iterations}).iterations).toBe(iterations);
   });
 
   test.each([
@@ -87,27 +87,29 @@ describe('GPUGraphCoreNumber optional graph-analysis API', () => {
     const fixture = createCoreNumberFixture();
     const props = createCoreNumberProps(fixture);
 
-    expect(() => new GPUGraphCoreNumber({...props, iterations})).toThrow(/iterations|1024/);
+    expect(() => new GPUGraphAlgorithmsCoreNumber({...props, iterations})).toThrow(
+      /iterations|1024/
+    );
   });
 
   test('requires reverse CSR for the weak-simple projection of directed graphs', () => {
     const fixture = createCoreNumberFixture();
     const props = createCoreNumberProps(fixture, {reverse: false});
 
-    expect(() => new GPUGraphCoreNumber(props)).toThrow(/directed|weak|reverse/);
+    expect(() => new GPUGraphAlgorithmsCoreNumber(props)).toThrow(/directed|weak|reverse/);
   });
 
   test('reuses symmetric forward CSR for undirected graphs', () => {
     const fixture = createCoreNumberFixture();
     const props = createCoreNumberProps(fixture, {directed: false});
 
-    expect(new GPUGraphCoreNumber(props).topology.reverse).toBeUndefined();
+    expect(new GPUGraphAlgorithmsCoreNumber(props).topology.reverse).toBeUndefined();
   });
 
   test('accepts empty output alongside independent optional scalar statuses', () => {
     const fixture = createCoreNumberFixture();
     const props = createCoreNumberProps(fixture, {vertexCount: 0, statuses: true});
-    const operation = new GPUGraphCoreNumber(props);
+    const operation = new GPUGraphAlgorithmsCoreNumber(props);
 
     expect(operation.output.length).toBe(0);
     expect(operation.converged?.length).toBe(1);
@@ -115,7 +117,7 @@ describe('GPUGraphCoreNumber optional graph-analysis API', () => {
   });
 });
 
-describe('GPUGraphCoreNumber packed vectors and physical caller ownership', () => {
+describe('GPUGraphAlgorithmsCoreNumber packed vectors and physical caller ownership', () => {
   test('rejects floating-point, truncated, and multichunk vertex destinations', () => {
     const fixture = createCoreNumberFixture();
     const props = createCoreNumberProps(fixture);
@@ -128,9 +130,15 @@ describe('GPUGraphCoreNumber packed vectors and physical caller ownership', () =
       new Uint32Array(2)
     ]);
 
-    expect(() => new GPUGraphCoreNumber({...props, output: floatOutput})).toThrow(/uint32|output/);
-    expect(() => new GPUGraphCoreNumber({...props, output: shortOutput})).toThrow(/output|rows/);
-    expect(() => new GPUGraphCoreNumber({...props, output: chunkedOutput})).toThrow(/chunk|output/);
+    expect(() => new GPUGraphAlgorithmsCoreNumber({...props, output: floatOutput})).toThrow(
+      /uint32|output/
+    );
+    expect(() => new GPUGraphAlgorithmsCoreNumber({...props, output: shortOutput})).toThrow(
+      /output|rows/
+    );
+    expect(() => new GPUGraphAlgorithmsCoreNumber({...props, output: chunkedOutput})).toThrow(
+      /chunk|output/
+    );
   });
 
   test.each([
@@ -143,7 +151,7 @@ describe('GPUGraphCoreNumber packed vectors and physical caller ownership', () =
       new Uint32Array(2)
     ]);
 
-    expect(() => new GPUGraphCoreNumber({...props, [statusName]: invalidStatus})).toThrow(
+    expect(() => new GPUGraphAlgorithmsCoreNumber({...props, [statusName]: invalidStatus})).toThrow(
       new RegExp(`${statusName}|rows`)
     );
   });
@@ -151,7 +159,7 @@ describe('GPUGraphCoreNumber packed vectors and physical caller ownership', () =
   test('preserves legal four-byte slices rather than requiring 256-byte logical offsets', () => {
     const fixture = createCoreNumberFixture();
     const props = createCoreNumberProps(fixture, {statuses: true, byteOffset: 4});
-    const operation = new GPUGraphCoreNumber(props);
+    const operation = new GPUGraphAlgorithmsCoreNumber(props);
 
     expect(operation.output.data[0].byteOffset).toBe(4);
     expect(operation.converged?.data[0].byteOffset).toBe(4);
@@ -184,7 +192,7 @@ describe('GPUGraphCoreNumber packed vectors and physical caller ownership', () =
       buffer: input.data[0].buffer
     });
 
-    expect(() => new GPUGraphCoreNumber({...props, output})).toThrow(
+    expect(() => new GPUGraphAlgorithmsCoreNumber({...props, output})).toThrow(
       /distinct|physical|allocation/
     );
   });
@@ -201,7 +209,7 @@ describe('GPUGraphCoreNumber packed vectors and physical caller ownership', () =
       buffer: sourceVector.data[0].buffer
     });
 
-    expect(() => new GPUGraphCoreNumber({...props, [outputName]: output})).toThrow(
+    expect(() => new GPUGraphAlgorithmsCoreNumber({...props, [outputName]: output})).toThrow(
       /distinct|physical|allocation/
     );
   });
@@ -220,18 +228,20 @@ describe('GPUGraphCoreNumber packed vectors and physical caller ownership', () =
       buffer: wrapper
     });
 
-    expect(() => new GPUGraphCoreNumber({...props, output})).toThrow(
+    expect(() => new GPUGraphAlgorithmsCoreNumber({...props, output})).toThrow(
       /distinct|physical|allocation/
     );
     expect(concreteBuffer.destroyed).toBe(false);
   });
 
   test('plans bounded three-dimensional initialization and refinement dispatch', () => {
-    expect(getGPUGraphCoreNumberDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
-    expect(getGPUGraphCoreNumberDispatchLayout(512, 2)).toEqual({x: 2, y: 1, z: 1});
-    expect(getGPUGraphCoreNumberDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
-    expect(getGPUGraphCoreNumberDispatchLayout(1025, 2)).toEqual({x: 2, y: 2, z: 2});
-    expect(() => getGPUGraphCoreNumberDispatchLayout(2049, 2)).toThrow(/3D dispatch limit/);
+    expect(getGPUGraphAlgorithmsCoreNumberDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
+    expect(getGPUGraphAlgorithmsCoreNumberDispatchLayout(512, 2)).toEqual({x: 2, y: 1, z: 1});
+    expect(getGPUGraphAlgorithmsCoreNumberDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
+    expect(getGPUGraphAlgorithmsCoreNumberDispatchLayout(1025, 2)).toEqual({x: 2, y: 2, z: 2});
+    expect(() => getGPUGraphAlgorithmsCoreNumberDispatchLayout(2049, 2)).toThrow(
+      /3D dispatch limit/
+    );
   });
 });
 
@@ -251,7 +261,7 @@ function createCoreNumberProps(
     statuses?: boolean;
     byteOffset?: number;
   } = {}
-): GPUGraphCoreNumberProps {
+): GPUGraphAlgorithmsCoreNumberProps {
   const vertexCount = options.vertexCount ?? 4;
   const sourceVertices = createVector(fixture, 'sourceVertices', 'uint32', [
     Uint32Array.from([0, 1]),
@@ -278,7 +288,7 @@ function createCoreNumberProps(
       ])
     : undefined;
   const directed = options.directed ?? true;
-  const graph = new GPUGraphData({
+  const graph = new GPUGraphAlgorithmsData({
     vertexCount,
     sourceVertices,
     targetVertices,
@@ -294,7 +304,7 @@ function createCoreNumberProps(
   const invalidEdgeCount = createVector(fixture, 'invalidEdgeCount', 'uint32', [
     new Uint32Array(1)
   ]);
-  const topology = new GPUGraphTopology({graph, forward, reverse, invalidEdgeCount});
+  const topology = new GPUGraphAlgorithmsTopology({graph, forward, reverse, invalidEdgeCount});
   const vectorOptions = {byteOffset: options.byteOffset};
   return {
     topology,
@@ -332,7 +342,7 @@ function createAdjacency(
   vertexCount: number,
   capacity: number,
   weighted: boolean
-): GPUGraphAdjacency {
+): GPUGraphAlgorithmsAdjacency {
   return {
     offsets: createVector(fixture, `${name}-offsets`, 'uint32', [new Uint32Array(vertexCount + 1)]),
     neighbors: createVector(fixture, `${name}-neighbors`, 'uint32', [new Uint32Array(capacity)]),
@@ -349,7 +359,7 @@ function createAdjacency(
   };
 }
 
-function getCoreInputVector(props: GPUGraphCoreNumberProps, name: string): GPUVector {
+function getCoreInputVector(props: GPUGraphAlgorithmsCoreNumberProps, name: string): GPUVector {
   if (name === 'sourceVertices') return props.topology.graph.sourceVertices;
   if (name === 'targetVertices') return props.topology.graph.targetVertices;
   if (name === 'edgeWeights') return props.topology.graph.edgeWeights!;
@@ -357,7 +367,7 @@ function getCoreInputVector(props: GPUGraphCoreNumberProps, name: string): GPUVe
   if (name === 'invalidEdgeCount') return props.topology.invalidEdgeCount;
   const [direction, vectorName] = name.split('.');
   const adjacency = direction === 'forward' ? props.topology.forward : props.topology.reverse!;
-  return adjacency[vectorName as keyof GPUGraphAdjacency]!;
+  return adjacency[vectorName as keyof GPUGraphAlgorithmsAdjacency]!;
 }
 
 function createVector<Format extends ScalarFormat>(

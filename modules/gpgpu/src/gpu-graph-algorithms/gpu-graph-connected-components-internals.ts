@@ -12,7 +12,7 @@ import {
   getBoundedInvocationIndexSource
 } from '../gpu-core/gpu-dispatch-utils';
 import {getViewBinding, getViewElementOffset} from '../gpu-core/graph-data-view-utils';
-import type {GPUGraphConnectedComponents} from './gpu-graph-connected-components';
+import type {GPUGraphAlgorithmsConnectedComponents} from './gpu-graph-connected-components';
 
 const CONNECTED_COMPONENTS_WORKGROUP_SIZE = 256;
 const INVALID_COMPONENT = 0xffffffff;
@@ -42,8 +42,8 @@ type ConnectedComponentsPassProps = {
 };
 
 /** Adds bounded GPU weak-component hooking using an explicit dispatch limit. @internal */
-export function addGPUGraphConnectedComponentsToGraphWithDispatchLimit<Parameters>(
-  components: GPUGraphConnectedComponents,
+export function addGPUGraphAlgorithmsConnectedComponentsToGraphWithDispatchLimit<Parameters>(
+  components: GPUGraphAlgorithmsConnectedComponents,
   commandGraph: GPUCommandGraph<Parameters>,
   maxComputeWorkgroupsPerDimension: number
 ): void {
@@ -113,7 +113,7 @@ function addInitializationPass<Parameters>(
     atomicStore(&converged[CONVERGED_OFFSET], select(0u, 1u, emptyAndValid));
   }`
     : '';
-  const dispatchLayout = getGPUGraphConnectedComponentsDispatchLayout(
+  const dispatchLayout = getGPUGraphAlgorithmsConnectedComponentsDispatchLayout(
     Math.max(state.vertexCount, 1),
     state.maxComputeWorkgroupsPerDimension
   );
@@ -157,7 +157,7 @@ function addConvergenceResetPass<Parameters>(
     overflow: {view: state.overflow, usage: 'storage-read'},
     converged: {view: converged, usage: 'storage-write', atomic: true}
   };
-  const dispatchLayout = getGPUGraphConnectedComponentsDispatchLayout(
+  const dispatchLayout = getGPUGraphAlgorithmsConnectedComponentsDispatchLayout(
     1,
     state.maxComputeWorkgroupsPerDimension
   );
@@ -205,7 +205,7 @@ function addHookingPass<Parameters>(
   const markChanged = state.converged
     ? `if (previous > lower) { atomicStore(&converged[CONVERGED_OFFSET], 0u); }`
     : '';
-  const dispatchLayout = getGPUGraphConnectedComponentsDispatchLayout(
+  const dispatchLayout = getGPUGraphAlgorithmsConnectedComponentsDispatchLayout(
     state.vertexCount,
     state.maxComputeWorkgroupsPerDimension
   );
@@ -270,7 +270,7 @@ function addPointerJumpPass<Parameters>(
     atomicStore(&converged[CONVERGED_OFFSET], 0u);
   }`
     : '';
-  const dispatchLayout = getGPUGraphConnectedComponentsDispatchLayout(
+  const dispatchLayout = getGPUGraphAlgorithmsConnectedComponentsDispatchLayout(
     state.vertexCount,
     state.maxComputeWorkgroupsPerDimension
   );
@@ -357,12 +357,12 @@ function addConnectedComponentsPass<Parameters>(
 }
 
 /** Plans a bounded three-dimensional weak-component vertex or status dispatch. @internal */
-export function getGPUGraphConnectedComponentsDispatchLayout(
+export function getGPUGraphAlgorithmsConnectedComponentsDispatchLayout(
   elementCount: number,
   maxComputeWorkgroupsPerDimension: number
 ): GPUBoundedDispatchLayout {
   return getBoundedDispatchLayout(
-    'GPUGraphConnectedComponents',
+    'GPUGraphAlgorithmsConnectedComponents',
     elementCount,
     CONNECTED_COMPONENTS_WORKGROUP_SIZE,
     maxComputeWorkgroupsPerDimension

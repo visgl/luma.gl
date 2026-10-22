@@ -7,24 +7,24 @@ import type {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import type {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUCommandGraph} from '../gpu-core/gpu-command-graph';
-import {addGPUGraphDegreeToGraphWithDispatchLimit} from './gpu-graph-degree-internals';
-import type {GPUGraphAdjacency, GPUGraphTopology} from './gpu-graph-topology';
+import {addGPUGraphAlgorithmsDegreeToGraphWithDispatchLimit} from './gpu-graph-degree-internals';
+import type {GPUGraphAlgorithmsAdjacency, GPUGraphAlgorithmsTopology} from './gpu-graph-topology';
 
 const SCALAR_BYTE_LENGTH = 4;
 
 /** Orientation of graph edges counted for every vertex. */
-export type GPUGraphDegreeDirection = 'outgoing' | 'incoming';
+export type GPUGraphAlgorithmsDegreeDirection = 'outgoing' | 'incoming';
 
 /** Caller-owned graph topology and unsigned vertex-degree destination. */
-export type GPUGraphDegreeProps = {
+export type GPUGraphAlgorithmsDegreeProps = {
   /** Prefix for generated command-graph node and imported-resource identifiers. */
   id?: string;
   /** Existing GPU topology with exact, untruncated compressed sparse row offsets. */
-  topology: GPUGraphTopology;
+  topology: GPUGraphAlgorithmsTopology;
   /** One caller-owned packed unsigned degree row for every graph vertex. */
   output: GPUVector<'uint32'>;
   /** Edge orientation. Undirected adjacency gives the same degree in both directions. */
-  direction?: GPUGraphDegreeDirection;
+  direction?: GPUGraphAlgorithmsDegreeDirection;
 };
 
 /**
@@ -34,18 +34,18 @@ export type GPUGraphDegreeProps = {
  * each, and an undirected self-loop contributes one. Degrees remain exact even when bounded
  * adjacency storage overflows because compressed sparse row offsets are never truncated.
  */
-export class GPUGraphDegree {
+export class GPUGraphAlgorithmsDegree {
   /** Prefix for generated command-graph node and imported-resource identifiers. */
   readonly id: string;
   /** Existing caller-owned GPU topology. */
-  readonly topology: GPUGraphTopology;
+  readonly topology: GPUGraphAlgorithmsTopology;
   /** Caller-owned packed unsigned degree destination. */
   readonly output: GPUVector<'uint32'>;
   /** Outgoing or incoming edge orientation. */
-  readonly direction: GPUGraphDegreeDirection;
+  readonly direction: GPUGraphAlgorithmsDegreeDirection;
 
   /** Validates caller-owned metadata without allocating, submitting, or reading GPU work. */
-  constructor(props: GPUGraphDegreeProps) {
+  constructor(props: GPUGraphAlgorithmsDegreeProps) {
     this.id = props.id ?? 'gpu-graph-degree';
     this.topology = props.topology;
     this.output = props.output;
@@ -63,7 +63,7 @@ export class GPUGraphDegree {
 
   /** Declares one bounded GPU degree pass without submitting commands or reading results. */
   addToGraph<Parameters>(commandGraph: GPUCommandGraph<Parameters>): void {
-    addGPUGraphDegreeToGraphWithDispatchLimit(
+    addGPUGraphAlgorithmsDegreeToGraphWithDispatchLimit(
       this,
       commandGraph,
       commandGraph.device.limits.maxComputeWorkgroupsPerDimension
@@ -106,7 +106,7 @@ function validateDegreeOutput(output: GPUVector<'uint32'>, vertexCount: number, 
 
 /** Prevents degree publication from replacing any original graph or topology allocation. */
 function validateDistinctDegreeOutput(
-  topology: GPUGraphTopology,
+  topology: GPUGraphAlgorithmsTopology,
   output: GPUVector<'uint32'>,
   id: string
 ): void {
@@ -129,7 +129,7 @@ function validateDistinctDegreeOutput(
 
 /** Lists existing caller-owned adjacency and status vectors without changing their identities. */
 function getAdjacencyVectors(
-  adjacency: GPUGraphAdjacency
+  adjacency: GPUGraphAlgorithmsAdjacency
 ): (GPUVector<'uint32'> | GPUVector<'float32'>)[] {
   return [
     adjacency.offsets,

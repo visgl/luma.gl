@@ -237,7 +237,7 @@ describe('GPGPU example catalog navigation', () => {
     ]);
   });
 
-  test('ends with focused GPUGraphData deck.gl integrations', () => {
+  test('ends with focused GPUGraphAlgorithmsData deck.gl integrations', () => {
     const tableOfContents = readTableOfContents();
     const finalEntry = tableOfContents.at(-1);
 
