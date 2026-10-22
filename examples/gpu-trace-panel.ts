@@ -44,10 +44,22 @@ export class GPUTracePanel {
   }
 }
 
+let nextTooltipIdentifier = 0;
+
 /** DOM renderer usable independently of the example tab system. */
 export class GPUTracePanelRenderer {
   private combinedTimeline = false;
-  constructor(private readonly element: HTMLElement) {}
+  private readonly tooltip: HTMLElement;
+  private activeSpanKey: string | undefined;
+
+  constructor(private readonly element: HTMLElement) {
+    this.tooltip = element.ownerDocument.createElement('div');
+    this.tooltip.id = `gpu-trace-tooltip-${nextTooltipIdentifier++}`;
+    this.tooltip.setAttribute('role', 'tooltip');
+    this.tooltip.setAttribute('data-gpu-trace-tooltip', '');
+    this.tooltip.hidden = true;
+    element.ownerDocument.body.append(this.tooltip);
+  }
 
   update(report: GPUCommandGraphTimingReport | undefined, label = ''): void {
     const root = document.createElement('section');
@@ -170,7 +182,7 @@ export class GPUTracePanelRenderer {
           const row = document.createElement('div');
           row.className = 'gpu-trace-row';
           const labelElement = appendText(row, 'span', span.node.operation ?? span.node.type);
-          labelElement.title = span.node.id;
+          labelElement.setAttribute('aria-label', span.node.id);
           const track = document.createElement('div');
           track.className = 'gpu-trace-track';
           const bar = document.createElement('span');
@@ -181,7 +193,9 @@ export class GPUTracePanelRenderer {
           const duration =
             clock === 'cpu' ? span.node.cpuEncodeTimeMilliseconds : span.node.gpuTimeMilliseconds;
           const details = `${span.node.id} (${span.node.type}${span.node.condition?.outcome === 'skipped' ? ', skipped' : ''}): ${formatTime(span.start - origin)}–${formatTime(span.end - origin)}ms; duration ${formatTime(duration ?? span.end - span.start)}ms`;
-          bar.title = details;
+          row.dataset['spanKey'] = JSON.stringify([clock, span.node.id]);
+          row.dataset['spanDetails'] = details;
+          bar.setAttribute('aria-describedby', this.tooltip.id);
           bar.setAttribute('aria-label', details);
           track.append(bar);
           row.append(track);
@@ -193,15 +207,64 @@ export class GPUTracePanelRenderer {
     const detailsElement = appendText(root, 'p', 'Hover or focus a span for details.');
     detailsElement.setAttribute('aria-live', 'polite');
     const showDetails = (event: Event): void => {
-      const bar = (event.target as HTMLElement).closest<HTMLElement>('.gpu-trace-bar');
-      if (bar) detailsElement.textContent = bar.getAttribute('aria-label');
+      const row = (event.target as HTMLElement).closest<HTMLElement>('.gpu-trace-row');
+      if (row) {
+        detailsElement.textContent = row.dataset['spanDetails']!;
+        this.showTooltip(row);
+      }
+    };
+    const hideDetails = (event: Event): void => {
+      const nextTarget = (event as MouseEvent | FocusEvent).relatedTarget;
+      const row = (event.target as HTMLElement).closest<HTMLElement>('.gpu-trace-row');
+      if (!(nextTarget instanceof Node) || !row?.contains(nextTarget)) this.hideTooltip();
     };
     root.addEventListener('mouseover', showDetails);
     root.addEventListener('focusin', showDetails);
+    root.addEventListener('mouseout', hideDetails);
+    root.addEventListener('focusout', hideDetails);
+    root.addEventListener('scroll', () => this.hideTooltip(), true);
+    root.addEventListener('keydown', event => {
+      if (event.key === 'Escape') this.hideTooltip();
+    });
+    const focusedSpanKey =
+      this.element.ownerDocument.activeElement?.closest<HTMLElement>('.gpu-trace-row')?.dataset[
+        'spanKey'
+      ];
+    const activeSpanKey = this.activeSpanKey;
     this.element.replaceChildren(root);
+    const activeRow = Array.from(root.querySelectorAll<HTMLElement>('.gpu-trace-row')).find(
+      row => row.dataset['spanKey'] === activeSpanKey
+    );
+    if (activeRow) {
+      detailsElement.textContent = activeRow.dataset['spanDetails']!;
+      if (focusedSpanKey === activeSpanKey) {
+        activeRow.querySelector<HTMLElement>('.gpu-trace-bar')!.focus({preventScroll: true});
+      }
+      this.showTooltip(activeRow);
+    } else {
+      this.hideTooltip();
+    }
+  }
+
+  private showTooltip(row: HTMLElement): void {
+    this.activeSpanKey = row.dataset['spanKey'];
+    this.tooltip.textContent = row.dataset['spanDetails']!;
+    this.tooltip.hidden = false;
+    const bounds = row.getBoundingClientRect();
+    const viewport = this.element.ownerDocument.documentElement;
+    const tooltipBounds = this.tooltip.getBoundingClientRect();
+    this.tooltip.style.left = `${Math.max(8, Math.min(bounds.left, viewport.clientWidth - tooltipBounds.width - 8))}px`;
+    this.tooltip.style.top = `${Math.max(8, bounds.bottom + tooltipBounds.height + 8 < viewport.clientHeight ? bounds.bottom + 4 : bounds.top - tooltipBounds.height - 4)}px`;
+  }
+
+  private hideTooltip(): void {
+    this.activeSpanKey = undefined;
+    this.tooltip.hidden = true;
   }
 
   destroy(): void {
+    this.hideTooltip();
+    this.tooltip.remove();
     this.element.replaceChildren();
   }
 }
@@ -218,6 +281,9 @@ function formatTime(value: number): string {
 }
 
 const TRACE_STYLE = `
+[data-gpu-trace-tooltip] {position: fixed; z-index: 10000; max-width: min(360px, calc(100vw - 16px)); padding: 8px 10px; border: 1px solid #64748b; border-radius: 5px; background: #0f172a; color: #f1f5f9; box-shadow: 0 4px 16px #0006; font: 11px/1.5 system-ui, sans-serif; overflow-wrap: anywhere; pointer-events: none;}
+[data-gpu-trace-tooltip][hidden] {display: none;}
+
 [data-gpu-trace] {font: 11px/1.5 system-ui, sans-serif; min-width: 0; color: var(--luma-example-text, #cbd5e1);}
 [data-gpu-trace] p {color: var(--luma-example-text-muted, #94a3b8); margin: 6px 0;}
 [data-gpu-trace] h4 {margin: 12px 0 0; font-size: 12px;}

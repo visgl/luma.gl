@@ -16,7 +16,7 @@ GPU-resident workflow. Open its panel controls to inspect graph metrics and samp
 The trace dataset visualized by the example is separate from the execution trace of its own graph.
 
 <ClientOnlyLiveExample activationLabel="Run trace viewer" description="Inspect a GPU-resident workflow and its execution diagnostics. Requires WebGPU." height={640}>
-  <GPUTraceViewerExample />
+  <GPUTraceViewerExample embedded embeddedHeight={640} />
 </ClientOnlyLiveExample>
 
 [Open the full trace viewer](/examples/experimental/gpu-trace-viewer) for more room.
@@ -60,7 +60,15 @@ import {GPUCommandGraphInspector} from '@luma.gl/gpgpu/gpu-core';
 const inspector = new GPUCommandGraphInspector({maxSamples: 120});
 const observation = inspector.observeGraph(compiled);
 
-const commandEncoder = device.createCommandEncoder();
+// A timestamp pair per node; WebGPU query sets allow at most 8192 entries.
+const timestampQueryCount = Math.max(2, compiled.stats.nodeOrder.length * 2);
+const timestampQuerySet =
+  device.features.has('timestamp-query') && timestampQueryCount <= 8192
+    ? device.createQuerySet({type: 'timestamp', count: timestampQueryCount})
+    : undefined;
+const commandEncoder = device.createCommandEncoder({
+  timeProfilingQuerySet: timestampQuerySet
+});
 const encoding = observation.encode(commandEncoder, {parameters});
 device.submit(commandEncoder.finish());
 
@@ -68,11 +76,15 @@ device.submit(commandEncoder.finish());
 graphPanel.update(inspector.getSnapshot(), compiled.id);
 tracePanel.update(encoding.stats, compiled.id);
 
-// Sample after submission, using an encoder configured for timestamp queries.
-if (encoding.canReadGPUTimings) {
-  const report = await observation.recordGPUTimings(encoding);
-  graphPanel.update(inspector.getSnapshot(), compiled.id);
-  tracePanel.update(report, compiled.id);
+// Sample after submission and retain the query set until the read finishes.
+try {
+  if (encoding.canReadGPUTimings) {
+    const report = await observation.recordGPUTimings(encoding);
+    graphPanel.update(inspector.getSnapshot(), compiled.id);
+    tracePanel.update(report, compiled.id);
+  }
+} finally {
+  timestampQuerySet?.destroy();
 }
 ```
 

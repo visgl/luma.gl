@@ -49,7 +49,7 @@ test('GPU Trace preserves gaps, separates clocks, and safely renders node labels
     const gpuBars = host.querySelectorAll<HTMLElement>('[data-trace-clock="gpu"] .gpu-trace-bar');
     expect(gpuBars).toHaveLength(2);
     expect(gpuBars[1].style.left).toBe('80%');
-    expect(gpuBars[1].title).toContain('second');
+    expect(gpuBars[1].getAttribute('aria-label')).toContain('second');
     expect(gpuBars[1].closest('.gpu-trace-row')?.firstElementChild?.textContent).toBe(
       'Query refine'
     );
@@ -114,6 +114,57 @@ test('GPU Trace optionally aligns clocks and falls back when correlation is unav
       host.querySelector<HTMLElement>('[data-trace-clock="gpu"] .gpu-trace-bar')!.style.left
     ).toBe('0%');
     expect(report.nodes[0].gpuStartTimeMilliseconds).toBe(1000);
+  } finally {
+    renderer.destroy();
+    host.remove();
+  }
+});
+
+test('GPU Trace shows immediate tooltips on rows and keyboard focus across samples', () => {
+  const host = document.createElement('div');
+  document.body.append(host);
+  const renderer = new GPUTracePanelRenderer(host);
+  const report = {
+    cpuEncodeTimeMilliseconds: 1,
+    nodes: [
+      {
+        id: '<unsafe-node>',
+        type: 'compute' as const,
+        hasGPUTimestamps: false,
+        cpuEncodeTimeMilliseconds: 1,
+        cpuEncodeStartTimeMilliseconds: 0,
+        cpuEncodeEndTimeMilliseconds: 1
+      }
+    ]
+  };
+  try {
+    renderer.update(report);
+    const bar = host.querySelector<HTMLElement>('.gpu-trace-bar')!;
+    const tooltip = document.getElementById(bar.getAttribute('aria-describedby')!)!;
+    expect(tooltip.hidden).toBe(true);
+    host
+      .querySelector('.gpu-trace-row > span')!
+      .dispatchEvent(new MouseEvent('mouseover', {bubbles: true}));
+    expect(tooltip.hidden).toBe(false);
+    expect(tooltip.textContent).toContain('<unsafe-node>');
+    expect(tooltip.querySelector('unsafe-node')).toBeNull();
+    renderer.update(report);
+    expect(tooltip.hidden).toBe(false);
+    host
+      .querySelector('.gpu-trace-bar')!
+      .dispatchEvent(new MouseEvent('mouseout', {bubbles: true}));
+    expect(tooltip.hidden).toBe(true);
+    host.querySelector<HTMLElement>('.gpu-trace-bar')!.focus();
+    expect(tooltip.hidden).toBe(false);
+    renderer.update(report);
+    expect(document.activeElement).toBe(host.querySelector('.gpu-trace-bar'));
+    expect(tooltip.hidden).toBe(false);
+    host
+      .querySelector('.gpu-trace-bar')!
+      .dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}));
+    expect(tooltip.hidden).toBe(true);
+    renderer.destroy();
+    expect(tooltip.isConnected).toBe(false);
   } finally {
     renderer.destroy();
     host.remove();

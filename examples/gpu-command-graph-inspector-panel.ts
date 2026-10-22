@@ -37,6 +37,9 @@ export class GPUCommandGraphInspectorPanel {
   private selectedGraphId: string | null = null;
   private selectionIsManual = false;
   private graphOptionsSignature = '';
+  private memoryMarkup = '';
+  private readonly nodeRows = new Map<string, HTMLElement>();
+  private readonly counterRows = new Map<string, HTMLElement>();
   private readonly graphDropdown: CompactDropdown;
 
   constructor(element: HTMLElement, props: GPUCommandGraphInspectorPanelProps = {}) {
@@ -99,6 +102,8 @@ export class GPUCommandGraphInspectorPanel {
   destroy(): void {
     this.graphDropdown.destroy();
     this.element.replaceChildren();
+    this.nodeRows.clear();
+    this.counterRows.clear();
   }
 
   private render(): void {
@@ -137,24 +142,53 @@ export class GPUCommandGraphInspectorPanel {
       ? (reusedTransientResourceBytes / logicalTransientResourceBytes) * 100
       : 0;
     const gpuSampleCount = graph.totals.gpu.sampleCount;
-    const rows = graph.nodes
-      .map(
-        node => `<div class="graph-inspector-node" data-node-type="${escapeHtml(node.type)}" data-full-name="${escapeHtml(node.id)}">
-          <span><i title="${escapeHtml(node.type === 'render' ? 'draw' : node.type)}" aria-label="${escapeHtml(node.type === 'render' ? 'draw' : node.type)}"></i>${escapeHtml(getOwnLabel(this.nodeLabels, node.id) === node.id ? getShortNodeId(node.id, graph.id) : this.nodeLabels[node.id])}</span>
-          <strong>${formatDurationPair(node.cpu)}</strong>
-          <strong>${formatDurationPair(node.gpu)}</strong>
-        </div>`
-      )
-      .join('');
-    const counterRows = graph.counters
-      .map(
-        counter => `<div class="graph-inspector-counter" title="${escapeHtml(counter.id)} · ${counter.sampleCount} samples">
-          <span>${escapeHtml(this.getCounterLabel(counter.id))}</span>
-          <strong>${formatCounterValue(counter.latestValue)}</strong>
-          <strong>${formatCounterValue(counter.p50Value)} / ${formatCounterValue(counter.p95Value)}</strong>
-        </div>`
-      )
-      .join('');
+    const nodesElement = this.element.querySelector<HTMLElement>('[data-graph-inspector-nodes]')!;
+    reconcileRows(nodesElement, this.nodeRows, graph.nodes, (element, node) => {
+      if (!element.hasChildNodes()) {
+        element.className = 'graph-inspector-node';
+        element.innerHTML =
+          '<span><i></i><span data-node-label></span></span><strong data-node-cpu></strong><strong data-node-gpu></strong>';
+      }
+      setAttribute(element, 'data-node-type', node.type);
+      setAttribute(element, 'data-full-name', node.id);
+      const icon = element.querySelector<HTMLElement>('i')!;
+      const typeLabel = node.type === 'render' ? 'draw' : node.type;
+      setAttribute(icon, 'title', typeLabel);
+      setAttribute(icon, 'aria-label', typeLabel);
+      const nodeLabel = getOwnLabel(this.nodeLabels, node.id);
+      setElementText(
+        element.querySelector<HTMLElement>('[data-node-label]')!,
+        nodeLabel === node.id ? getShortNodeId(node.id, graph.id) : nodeLabel
+      );
+      setElementText(
+        element.querySelector<HTMLElement>('[data-node-cpu]')!,
+        formatDurationPair(node.cpu)
+      );
+      setElementText(
+        element.querySelector<HTMLElement>('[data-node-gpu]')!,
+        formatDurationPair(node.gpu)
+      );
+    });
+    const counterRowsElement = this.element.querySelector<HTMLElement>(
+      '[data-graph-inspector-counter-rows]'
+    )!;
+    reconcileRows(counterRowsElement, this.counterRows, graph.counters, (element, counter) => {
+      if (!element.hasChildNodes()) {
+        element.className = 'graph-inspector-counter';
+        element.innerHTML =
+          '<span></span><strong data-counter-latest></strong><strong data-counter-percentiles></strong>';
+      }
+      setAttribute(element, 'title', `${counter.id} · ${counter.sampleCount} samples`);
+      setElementText(element.querySelector<HTMLElement>('span')!, this.getCounterLabel(counter.id));
+      setElementText(
+        element.querySelector<HTMLElement>('[data-counter-latest]')!,
+        formatCounterValue(counter.latestValue)
+      );
+      setElementText(
+        element.querySelector<HTMLElement>('[data-counter-percentiles]')!,
+        `${formatCounterValue(counter.p50Value)} / ${formatCounterValue(counter.p95Value)}`
+      );
+    });
     this.setText('encoding-count', String(graph.encodingCount));
     this.setText('cpu-totals', formatDurationPair(graph.totals.cpu));
     this.setText('gpu-totals', formatDurationPair(graph.totals.gpu));
@@ -162,7 +196,7 @@ export class GPUCommandGraphInspectorPanel {
       'gpu-samples',
       `${gpuSampleCount}${graph.timingReadFailureCount ? ` · ${graph.timingReadFailureCount} failed` : ''}`
     );
-    this.element.querySelector<HTMLElement>('[data-graph-inspector-memory]')!.innerHTML = `
+    const memoryMarkup = `
       <span>${graph.stats.nodeOrder.length} nodes</span>
       <span>${formatBytes(graph.stats.logicalResourceBytes)} logical</span>
       <span>${formatBytes(graph.stats.physicalTransientResourceBytes)} scratch</span>
@@ -172,18 +206,22 @@ export class GPUCommandGraphInspectorPanel {
       ${graph.preflight?.writeByteLength ? `<span>${formatBytes(graph.preflight.writeByteLength)} max writes</span>` : ''}
       <span>${reusePercentage ? `${reusePercentage.toFixed(0)}% reuse` : 'no reuse'}</span>
       <span>${gpuSampleCount ? 'GPU timings sampled' : 'CPU timings only'}</span>`;
+    if (memoryMarkup !== this.memoryMarkup) {
+      this.element.querySelector<HTMLElement>('[data-graph-inspector-memory]')!.innerHTML =
+        memoryMarkup;
+      this.memoryMarkup = memoryMarkup;
+    }
     const countersElement = this.element.querySelector<HTMLElement>(
       '[data-graph-inspector-counters]'
     )!;
     countersElement.hidden = graph.counters.length === 0;
-    this.element.querySelector<HTMLElement>('[data-graph-inspector-counter-rows]')!.innerHTML =
-      counterRows;
-    this.element.querySelector<HTMLElement>('[data-graph-inspector-nodes]')!.innerHTML = rows;
   }
 
   private setText(identifier: string, value: string): void {
-    this.element.querySelector<HTMLElement>(`[data-graph-inspector-${identifier}]`)!.textContent =
-      value;
+    setElementText(
+      this.element.querySelector<HTMLElement>(`[data-graph-inspector-${identifier}]`)!,
+      value
+    );
   }
 
   private getGraphLabel(graphId: string): string {
@@ -193,6 +231,40 @@ export class GPUCommandGraphInspectorPanel {
   private getCounterLabel(counterId: string): string {
     return getOwnLabel(this.counterLabels, counterId);
   }
+}
+
+/** Retain row identity and order so sampling does not reset hover, focus, or scrolling. */
+function reconcileRows<Row extends {id: string}>(
+  container: HTMLElement,
+  elements: Map<string, HTMLElement>,
+  rows: readonly Row[],
+  updateRow: (element: HTMLElement, row: Row) => void
+): void {
+  const identifiers = new Set(rows.map(row => row.id));
+  for (const [identifier, element] of elements) {
+    if (!identifiers.has(identifier)) {
+      element.remove();
+      elements.delete(identifier);
+    }
+  }
+  for (const [index, row] of rows.entries()) {
+    let element = elements.get(row.id);
+    if (!element) {
+      element = container.ownerDocument.createElement('div');
+      elements.set(row.id, element);
+    }
+    updateRow(element, row);
+    const currentElement = container.children[index] ?? null;
+    if (currentElement !== element) container.insertBefore(element, currentElement);
+  }
+}
+
+function setElementText(element: HTMLElement, value: string): void {
+  if (element.textContent !== value) element.textContent = value;
+}
+
+function setAttribute(element: HTMLElement, name: string, value: string): void {
+  if (element.getAttribute(name) !== value) element.setAttribute(name, value);
 }
 
 function formatCount(value: number): string {

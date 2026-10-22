@@ -88,4 +88,74 @@ describe('GPUCommandGraphInspectorPanel', () => {
       host.remove();
     }
   });
+
+  test('retains rows, scroll position and unchanged text across samples', () => {
+    const inspector = new GPUCommandGraphInspector();
+    inspector.registerGraph({
+      id: 'graph',
+      stats: EMPTY_GRAPH_STATS,
+      capabilities: GRAPH_CAPABILITIES
+    });
+    inspector.recordCounters('graph', {matches: 1});
+    const graph = inspector.getSnapshot().graphs[0];
+    const makeSnapshot = (identifiers: string[], duration = 1) => ({
+      graphs: [
+        {
+          ...graph,
+          nodes: identifiers.map(id => ({
+            id,
+            type: 'compute' as const,
+            cpu: {sampleCount: 1, p50Milliseconds: duration, p95Milliseconds: duration},
+            gpu: {sampleCount: 0}
+          }))
+        }
+      ]
+    });
+    const identifiers = Array.from({length: 20}, (_, index) => `node-${index}`);
+    const host = document.createElement('div');
+    document.body.append(host);
+    const panel = new GPUCommandGraphInspectorPanel(host);
+    try {
+      panel.update(makeSnapshot(identifiers));
+      const nodes = host.querySelector<HTMLElement>('[data-graph-inspector-nodes]')!;
+      const counterRows = host.querySelector<HTMLElement>('[data-graph-inspector-counter-rows]')!;
+      const firstRow = nodes.firstElementChild!;
+      const firstCounter = counterRows.firstElementChild!;
+      const cpuValue = firstRow.querySelector('[data-node-cpu]')!;
+      nodes.scrollTop = 100;
+      const scrollTop = nodes.scrollTop;
+      const observer = new MutationObserver(() => {});
+      observer.observe(host, {childList: true, subtree: true});
+      panel.update(makeSnapshot(identifiers));
+      expect(observer.takeRecords()).toHaveLength(0);
+      observer.disconnect();
+      panel.update(makeSnapshot(identifiers, 2));
+      expect(nodes.firstElementChild).toBe(firstRow);
+      expect(firstRow.querySelector('[data-node-cpu]')).toBe(cpuValue);
+      expect(cpuValue.textContent).toContain('2');
+      expect(counterRows.firstElementChild).toBe(firstCounter);
+      expect(nodes.scrollTop).toBe(scrollTop);
+      panel.update(makeSnapshot(['inserted', ...identifiers.slice(0, -1)]));
+      expect(nodes.children[1]).toBe(firstRow);
+      expect(nodes.children).toHaveLength(20);
+      panel.update(makeSnapshot(['node-1']));
+      expect(nodes.children).toHaveLength(1);
+      expect(firstRow.isConnected).toBe(false);
+      inspector.recordCounters('graph', {matches: 3, added: 5});
+      panel.update({
+        graphs: [
+          {
+            ...makeSnapshot(['node-1']).graphs[0],
+            counters: inspector.getSnapshot().graphs[0].counters
+          }
+        ]
+      });
+      expect(counterRows.firstElementChild).toBe(firstCounter);
+      expect(firstCounter.textContent).toContain('3');
+      expect(counterRows.children).toHaveLength(2);
+    } finally {
+      panel.destroy();
+      host.remove();
+    }
+  });
 });
