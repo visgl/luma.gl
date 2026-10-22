@@ -51,8 +51,13 @@ try {
     byteLength: 64,
     usage: Buffer.UNIFORM | Buffer.COPY_DST
   });
+  let previousSceneName: string | null = null;
   async function createScene() {
     const sceneName = isRigidBodyScene(scene.value) ? scene.value : 'stack';
+    if (sceneName !== previousSceneName) {
+      iterations.value = sceneName === 'cradle' ? '8' : '32';
+      previousSceneName = sceneName;
+    }
     const mechanism = makeMechanism(sceneName);
     const bodies = mechanism?.bodies ?? makeRigidBodyScene(sceneName);
     if (mechanism) solver.value = 'ordered';
@@ -66,7 +71,7 @@ try {
       ...(sceneName === 'continuous' ? {continuous: {bodies: [0]}} : {}),
       iterations: Number(iterations.value),
       solver: solver.value === 'ordered' ? 'ordered' : 'parallel',
-      broadPhase: 'hierarchical-grid',
+      broadPhase: sceneName === 'cradle' ? 'all-pairs' : 'hierarchical-grid',
       gravity: getRigidBodySceneGravity(sceneName)
     });
     document.querySelector('#description')!.textContent = RIGID_BODY_SCENES[sceneName].description;
@@ -347,7 +352,8 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
       }
     }
     if (submitted) {
-      previous = now;
+      // Account for this elapsed time after the fence completes. The accumulator
+      // cap below still bounds catch-up work without discarding every waiting frame.
       animation = requestAnimationFrame(frame);
       return;
     }

@@ -93,12 +93,10 @@ it('restores caches and diagnostics to reproduce a joint trajectory', async cont
     const reordered = structuredClone(capture);
     reordered.props = {
       ...reordered.props,
-      bodies: reordered.props.bodies.map(body => ({
-        shape: body.shape,
-        mass: body.mass,
-        position: body.position,
-        ...body
-      }))
+      bodies: reordered.props.bodies.map(body => {
+        const {position, ...properties} = body;
+        return {...properties, position};
+      })
     };
     reordered.props = {
       ...Object.fromEntries(Object.entries(reordered.props).reverse()),

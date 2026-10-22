@@ -32,10 +32,11 @@ try {
     const world = new GPURigidBodyWorld({
       ...makeMechanism('cradle'),
       solver: 'ordered',
-      iterations: 32,
+      iterations: 8,
+      failurePolicy: 'rollback',
       timeStep: 1 / 480,
       restitutionThreshold: 0,
-      broadPhase: 'hierarchical-grid',
+      broadPhase: 'all-pairs',
       gravity: [0, 0, -9.81]
     });
     const definition = new GPUCommandGraph(device);
@@ -80,6 +81,10 @@ try {
         Math.abs(sample.balls[4].position[0] - 1.62)
       ])
   );
+  const endMotionRanges = [0, 4].map(index => {
+    const positions = report.samples.slice(-10).map(sample => sample.balls[index].position[0]);
+    return Math.max(...positions) - Math.min(...positions);
+  });
   const initialEnergy = 9.81 * 2.5 * (1 - Math.cos(0.65));
   const energyRatios = report.samples.map(
     sample =>
@@ -97,6 +102,7 @@ try {
         maximumJointError,
         maximumMiddleDisplacement,
         finalEndAmplitude,
+        endMotionRanges,
         minimumEnergyRatio: Math.min(...energyRatios),
         maximumEnergyRatio: Math.max(...energyRatios),
         diagnostics: report.diagnostics
@@ -117,6 +123,10 @@ try {
   assert.ok(
     finalEndAmplitude > 1.2,
     'End-to-end swings must persist through the final ten seconds'
+  );
+  assert.ok(
+    endMotionRanges.every(range => range > 1),
+    'Both end balls must keep moving in the final ten seconds'
   );
   assert.ok(
     Math.min(...energyRatios) > 0.9 && Math.max(...energyRatios) < 1.1,

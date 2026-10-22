@@ -63,6 +63,9 @@ The scene selector includes Newton's cradle, a distance pendulum, motorized hing
 The cradle and pendulum have GPU-driven visible tethers. Reset releases the raised
 cradle ball again. The cradle uses a 1/480-second fixed step (other scenes use
 1/120 second), so each closely spaced impact is resolved before the next pair closes.
+For this 12-body scene, all-pairs discovery and eight solver iterations reduce
+GPU work; switching to another scene restores the 32-iteration default. User-selected
+iteration counts are retained when resetting the same scene.
 Its restitution threshold is zero to retain elastic low-speed contacts. Iterative
 contacts still introduce numerical loss despite restitution one.
 These use the public `joints` API, force the ordered solver and preserve the existing
