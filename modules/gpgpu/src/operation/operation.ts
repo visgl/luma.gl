@@ -6,11 +6,14 @@ import type {Device, Buffer} from '@luma.gl/core';
 import type {TypedArray} from '@math.gl/types';
 import {GPUDataEvaluator} from './gpu-data-evaluator';
 import {backendRegistry} from './backend-registry';
+import type {GPUEvaluationScope} from './gpu-evaluation-scope';
 
 /** Backend implementation for a single lazy GPGPU operation. */
 export type OperationInputs = Record<string, any> | readonly any[];
 
-export type OperationHandler<InputsT extends OperationInputs = any> = (args: {
+export type OperationHandler<InputsT extends OperationInputs = any> = ((args: {
+  /** Optional explicit WebGPU execution scope. */
+  scope?: GPUEvaluationScope;
   /** Device selected for execution. */
   device: Device;
   /** Operation inputs. */
@@ -19,7 +22,10 @@ export type OperationHandler<InputsT extends OperationInputs = any> = (args: {
   output: GPUDataEvaluator;
   /** GPU buffer that receives operation output. */
   target: Buffer;
-}) => OperationHandlerResult | Promise<OperationHandlerResult>;
+}) => OperationHandlerResult | Promise<OperationHandlerResult>) & {
+  /** Whether this handler encodes all work into the supplied scope without submitting. */
+  supportsEvaluationScope?: boolean;
+};
 export type OperationHandlerResult = {
   success: boolean;
   value?: TypedArray;
@@ -55,12 +61,18 @@ export abstract class Operation<InputsT extends OperationInputs = Record<string,
   abstract toString(): string;
 
   /** Evaluates dependencies and writes this operation's result into `target`. */
-  async execute(device: Device, target: Buffer): Promise<OperationHandlerResult> {
-    await this._resolveDependencies(device);
-    return await this._executeWithHandler(
-      await backendRegistry.get(this._getHandlerRegistry(device), this.name),
-      target
-    );
+  async execute(
+    device: Device,
+    target: Buffer,
+    scope?: GPUEvaluationScope
+  ): Promise<OperationHandlerResult> {
+    if (!scope) await this._resolveDependencies(device);
+    const handler = await backendRegistry.get(this._getHandlerRegistry(device, scope), this.name);
+    if (scope && (device.type !== 'webgpu' || !handler.supportsEvaluationScope)) {
+      throw new Error(`${this.name} does not support deferred-submission evaluation`);
+    }
+    if (scope) await this._resolveDependencies(device, scope);
+    return await this._executeWithHandler(handler, target, scope);
   }
 
   /** Evaluates dependencies synchronously and writes this operation's result into `target`. */
@@ -81,15 +93,16 @@ export abstract class Operation<InputsT extends OperationInputs = Record<string,
     return this.output.length <= 1 && Array.from(this.dependencies).every(t => Boolean(t.value));
   }
 
-  private _getHandlerRegistry(device: Device): string {
-    return this.shouldExecuteOnCPU() ? 'cpu' : device.type;
+  private _getHandlerRegistry(device: Device, scope?: GPUEvaluationScope): string {
+    // An explicit scope encodes WebGPU work even when the ordinary CPU fast path applies.
+    return !scope && this.shouldExecuteOnCPU() ? 'cpu' : device.type;
   }
 
-  private async _resolveDependencies(device: Device): Promise<void> {
+  private async _resolveDependencies(device: Device, scope?: GPUEvaluationScope): Promise<void> {
     for (const dep of this.dependencies) {
-      await dep.evaluate(device);
+      await dep.evaluate(device, {scope});
     }
-    const handlerRegistry = this._getHandlerRegistry(device);
+    const handlerRegistry = this._getHandlerRegistry(device, scope);
     if (handlerRegistry === 'cpu' || device.type === 'null') {
       for (const dependency of this.dependencies) {
         await dependency.ensureCPUValue();
@@ -110,17 +123,12 @@ export abstract class Operation<InputsT extends OperationInputs = Record<string,
   }
 
   private _executeWithHandler(
-    handler:
-      | OperationHandler
-      | ((args: {
-          device: Device;
-          inputs: InputsT;
-          output: GPUDataEvaluator;
-          target: Buffer;
-        }) => OperationHandlerResult),
-    target: Buffer
+    handler: OperationHandler,
+    target: Buffer,
+    scope?: GPUEvaluationScope
   ): OperationHandlerResult | Promise<OperationHandlerResult> {
     return handler({
+      scope,
       device: target.device,
       inputs: this.inputs,
       output: this.output,

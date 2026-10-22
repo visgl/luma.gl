@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 // Resources
+export {GPUEvaluationScope} from './operation/gpu-evaluation-scope';
 export {getGPUDataEvaluator, GPUDataEvaluator} from './operation/gpu-data-evaluator';
 export type {
   GPUDataEvaluatorEvaluateOptions,
