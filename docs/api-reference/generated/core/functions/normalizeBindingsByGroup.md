@@ -2,7 +2,7 @@
 
 > **normalizeBindingsByGroup**(`shaderLayout`, `bindingsOrBindGroups?`): [`BindingsByGroup`](https://luma.gl/docs/api-reference/generated/core/type-aliases/BindingsByGroup.md)
 
-Defined in: [modules/core/src/adapter-utils/bind-groups.ts:34](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter-utils/bind-groups.ts#L34)
+Defined in: [modules/core/src/api/adapter-utils/bind-groups.ts:34](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter-utils/bind-groups.ts#L34)
 
 ## Parameters[​](#parameters "Direct link to Parameters")
 

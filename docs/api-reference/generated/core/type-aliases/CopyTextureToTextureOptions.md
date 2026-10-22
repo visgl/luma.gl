@@ -2,7 +2,7 @@
 
 > **CopyTextureToTextureOptions** = `object`
 
-Defined in: [modules/core/src/adapter/resources/command-encoder.ts:71](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L71)
+Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:86](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L86)
 
 ## Properties[​](#properties "Direct link to Properties")
 
@@ -10,7 +10,7 @@ Defined in: [modules/core/src/adapter/resources/command-encoder.ts:71](https://g
 
 > `optional` **aspect?**: `"all"` | `"stencil-only"` | `"depth-only"`
 
-Defined in: [modules/core/src/adapter/resources/command-encoder.ts:79](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L79)
+Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:94](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L94)
 
 Defines which aspects of the GPUImageCopyTexture#texture to copy to/from.
 
@@ -20,7 +20,7 @@ Defines which aspects of the GPUImageCopyTexture#texture to copy to/from.
 
 > `optional` **depthOrArrayLayers?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/command-encoder.ts:93](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L93)
+Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:108](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L108)
 
 ***
 
@@ -28,7 +28,7 @@ Defined in: [modules/core/src/adapter/resources/command-encoder.ts:93](https://g
 
 > `optional` **destinationAspect?**: `"all"` | `"stencil-only"` | `"depth-only"`
 
-Defined in: [modules/core/src/adapter/resources/command-encoder.ts:88](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L88)
+Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:103](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L103)
 
 Defines which aspects of the GPUImageCopyTexture#texture to copy to/from.
 
@@ -38,7 +38,7 @@ Defines which aspects of the GPUImageCopyTexture#texture to copy to/from.
 
 > `optional` **destinationMipLevel?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/command-encoder.ts:84](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L84)
+Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:99](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L99)
 
 Mip-map level of the texture to copy to/from. (Default 0)
 
@@ -48,7 +48,7 @@ Mip-map level of the texture to copy to/from. (Default 0)
 
 > `optional` **destinationOrigin?**: \[`number`, `number`, `number`]
 
-Defined in: [modules/core/src/adapter/resources/command-encoder.ts:86](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L86)
+Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:101](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L101)
 
 Defines the origin of the copy - the minimum corner of the texture sub-region to copy to.
 
@@ -58,7 +58,7 @@ Defines the origin of the copy - the minimum corner of the texture sub-region to
 
 > **destinationTexture**: [`Texture`](https://luma.gl/docs/api-reference/generated/core/classes/Texture.md)
 
-Defined in: [modules/core/src/adapter/resources/command-encoder.ts:82](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L82)
+Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:97](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L97)
 
 Texture to copy to/from.
 
@@ -68,7 +68,7 @@ Texture to copy to/from.
 
 > `optional` **height?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/command-encoder.ts:92](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L92)
+Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:107](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L107)
 
 ***
 
@@ -76,7 +76,7 @@ Defined in: [modules/core/src/adapter/resources/command-encoder.ts:92](https://g
 
 > `optional` **mipLevel?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/command-encoder.ts:75](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L75)
+Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:90](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L90)
 
 Mip-map level of the texture to copy to/from. (Default 0)
 
@@ -86,7 +86,7 @@ Mip-map level of the texture to copy to/from. (Default 0)
 
 > `optional` **origin?**: \[`number`, `number`, `number`]
 
-Defined in: [modules/core/src/adapter/resources/command-encoder.ts:77](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L77)
+Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:92](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L92)
 
 Defines the origin of the copy - the minimum corner of the texture sub-region to copy from.
 
@@ -96,7 +96,7 @@ Defines the origin of the copy - the minimum corner of the texture sub-region to
 
 > **sourceTexture**: [`Texture`](https://luma.gl/docs/api-reference/generated/core/classes/Texture.md)
 
-Defined in: [modules/core/src/adapter/resources/command-encoder.ts:73](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L73)
+Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:88](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L88)
 
 Texture to copy to/from.
 
@@ -106,6 +106,6 @@ Texture to copy to/from.
 
 > `optional` **width?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/command-encoder.ts:91](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L91)
+Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:106](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L106)
 
 Width to copy

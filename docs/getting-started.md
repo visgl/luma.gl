@@ -1,261 +1,220 @@
-![Moonlight illuminating a cinematic, GPU-simulated ocean](/images/examples/showcase/tempest-ocean.jpg)
+# Getting started
 
-Start with what is possible
+Draw a red triangle using one `Model` and a render pass. The example supplies WGSL for WebGPU and GLSL ES 3.00 for WebGL 2, sharing the application lifecycle across both backends. You need basic TypeScript knowledge and a browser supporting at least one backend.
 
-# Your GPU is the canvas.
+## Create a project[​](#create-a-project "Direct link to Create a project")
 
-Build living worlds, simulate light and motion, and move millions of data points—at the speed of the GPU.
+```
+npm create vite@latest luma-demo -- --template vanilla-ts
 
-[Explore live examples↗](https://luma.gl/examples)[See your first triangle→](https://luma.gl/docs/tutorials/hello-triangle.md)
+cd luma-demo
 
-No installation. No account. Just your browser.
+npm install @luma.gl/core @luma.gl/engine
+```
 
-01 · Find your building blocks
+Use matching versions of the luma.gl packages. See [Installing](https://luma.gl/docs/developer-guide/installing.md) for other package managers and smaller installations.
 
-## Pick a capability. Start building.
+## Render the triangle[​](#render-the-triangle "Direct link to Render the triangle")
 
-Focused packages turn captured scenes, declarative worlds, and GPU-resident workflows into interactive experiences.
+Replace `src/main.ts` with:
 
-[![A luminous field of three-dimensional Gaussian splats](/images/examples/showcase/gaussian-splat-viewer.jpg)](https://luma.gl/examples/showcase/gaussian-splat-viewer)
+```
+import {luma} from '@luma.gl/core';
 
-[@luma.gl/splats](https://luma.gl/examples/showcase/gaussian-splat-viewer)
+import {AnimationLoopTemplate, type AnimationProps, makeAnimationLoop, Model} from '@luma.gl/engine';
 
-### [Gaussian Splats](https://luma.gl/examples/showcase/gaussian-splat-viewer)
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
-[Stream complete captured Train and Truck scenes with HDR color, depth-sorted transparency, and portable GPU rendering.](https://luma.gl/examples/showcase/gaussian-splat-viewer)
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
-[Explore captured scenes →](https://luma.gl/examples/showcase/gaussian-splat-viewer)
+const VS_GLSL = /* glsl */ `#version 300 es
 
-[![A physically lit declarative ANARI scene with materials and geometric primitives](/images/examples/experimental/scene-playground.jpg)](https://luma.gl/examples/experimental/scene-playground)
 
-[@luma.gl/scene](https://luma.gl/examples/experimental/scene-playground)
 
-### [Declarative 3D Scenes](https://luma.gl/examples/experimental/scene-playground)
+  const vec2 pos[3] = vec2[3](vec2(0.0, 0.5), vec2(-0.5, -0.5), vec2(0.5, -0.5));
 
-[Describe materials, lighting, geometry, and cameras with an expressive retained-scene API.](https://luma.gl/examples/experimental/scene-playground)
 
-[Build a scene →](https://luma.gl/examples/experimental/scene-playground)
 
-[![A dense interactive trace analyzed and rendered on the GPU](/images/examples/experimental/gpu-trace-viewer.jpg)](https://luma.gl/examples/experimental/gpu-trace-viewer)
+  void main() {
 
-[@luma.gl/experimental](https://luma.gl/examples/experimental/gpu-trace-viewer)
+    gl_Position = vec4(pos[gl_VertexID], 0.0, 1.0);
 
-### [GPU-native analytics](https://luma.gl/examples/experimental/gpu-trace-viewer)
+  }
 
-[Compose culling, sorting, compute, and rendering without moving your data off the GPU.](https://luma.gl/examples/experimental/gpu-trace-viewer)
+`;
 
-[Explore the trace →](https://luma.gl/examples/experimental/gpu-trace-viewer)
+const FS_GLSL = /* glsl */ `\
 
-02 · See it in motion
+#version 300 es
 
-## See what your GPU makes possible.
 
-Every card opens a live, interactive scene. Advanced scenes require WebGPU; Effects: Image Processing also runs on WebGL2.
 
-[![A rain-soaked neon city illuminated by thousands of GPU-driven lights](/images/examples/showcase/lightstorm-megacity.jpg)](https://luma.gl/examples/showcase/lightstorm-megacity)
+precision highp float;
 
-[Real-time lighting](https://luma.gl/examples/showcase/lightstorm-megacity)
 
-### [Lightstorm Megacity](https://luma.gl/examples/showcase/lightstorm-megacity)
 
-[Fly between rain-soaked towers beneath lightning, reflections, and thousands of lights.](https://luma.gl/examples/showcase/lightstorm-megacity)
+layout(location = 0) out vec4 outColor;
 
-[WebGPUHDR](https://luma.gl/examples/showcase/lightstorm-megacity)
 
-[![A moonlit storm ocean with physically simulated waves and luminous foam](/images/examples/showcase/tempest-ocean.jpg)](https://luma.gl/examples/showcase/tempest-ocean)
 
-[Physical simulation](https://luma.gl/examples/showcase/tempest-ocean)
+void main() {
 
-### [Tempest Ocean](https://luma.gl/examples/showcase/tempest-ocean)
+  outColor = vec4(1.0, 0.0, 0.0, 1.0);
 
-[Cross an endless spectral ocean shaped by wind, whitecaps, and moonlight.](https://luma.gl/examples/showcase/tempest-ocean)
+}
 
-[WebGPUHDR](https://luma.gl/examples/showcase/tempest-ocean)
+`;
 
-[![Rainbow caustics refracting through a crystal inside an atmospheric cathedral](/images/examples/experimental/spectral-caustics.jpg)](https://luma.gl/examples/experimental/spectral-caustics)
+const WGSL_SHADER = /* wgsl */ `\
 
-[Light transport](https://luma.gl/examples/experimental/spectral-caustics)
+@vertex
 
-### [Prism Cathedral](https://luma.gl/examples/experimental/spectral-caustics)
+fn vertexMain(@builtin(vertex_index) vertexIndex : u32) -> @builtin(position) vec4<f32> {
 
-[Follow spectral light through glass as rainbow caustics travel across stone.](https://luma.gl/examples/experimental/spectral-caustics)
+  var positions = array<vec2<f32>, 3>(vec2(0.0, 0.5), vec2(-0.5, -0.5), vec2(0.5, -0.5));
 
-[WebGPUCaustics](https://luma.gl/examples/experimental/spectral-caustics)
+  return vec4<f32>(positions[vertexIndex], 0.0, 1.0);
 
-[![Liquid metal pouring and splashing inside an interactive industrial foundry](/images/examples/experimental/fluid-foundry.jpg)](https://luma.gl/examples/experimental/fluid-foundry)
+}
 
-[GPU compute](https://luma.gl/examples/experimental/fluid-foundry)
 
-### [Fluid Foundry](https://luma.gl/examples/experimental/fluid-foundry)
 
-[Pour, splash, and reshape liquid metal without moving simulation data off the GPU.](https://luma.gl/examples/experimental/fluid-foundry)
+@fragment
 
-[WebGPUSimulation](https://luma.gl/examples/experimental/fluid-foundry)
+fn fragmentMain() -> @location(0) vec4<f32> {
 
-[![A vast desert canyon assembled from continuously streaming virtual geometry](/images/examples/experimental/virtual-geometry-canyon.jpg)](https://luma.gl/examples/experimental/virtual-geometry-canyon)
+  return vec4<f32>(1.0, 0.0, 0.0, 1.0);
 
-[Virtual geometry](https://luma.gl/examples/experimental/virtual-geometry-canyon)
+}
 
-### [Virtual Geometry Canyon](https://luma.gl/examples/experimental/virtual-geometry-canyon)
+`;
 
-[Travel across a massive procedural landscape that streams detail as you move.](https://luma.gl/examples/experimental/virtual-geometry-canyon)
 
-[WebGPUGeometry](https://luma.gl/examples/experimental/virtual-geometry-canyon)
 
-[![Colorful animated geometry transformed by a stack of interactive image effects](/images/examples/showcase/postprocessing.jpg)](https://luma.gl/examples/showcase/postprocessing)
+class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
-[Composable effects](https://luma.gl/examples/showcase/postprocessing)
+  model: Model;
 
-### [Effects: Image Processing](https://luma.gl/examples/showcase/postprocessing)
 
-[Layer bloom, color grading, distortion, and film effects over a living scene.](https://luma.gl/examples/showcase/postprocessing)
 
-[WebGPUWebGL2](https://luma.gl/examples/showcase/postprocessing)
+  constructor({device}: AnimationProps) {
 
-03 · Built for ambitious ideas
+    super();
 
-## The luma.gl framework.
 
-Seven focused modules span portable GPU access, rendering, shaders, effects, declarative scenes, Gaussian splats, and compute.
 
-[@luma.gl/core + adapters01](https://luma.gl/docs/api-reference/core.md)
+    this.model = new Model(device, {
 
-[GPU portability](https://luma.gl/docs/api-reference/core.md)
+      source: WGSL_SHADER,
 
-### [Core / WebGPU / WebGL](https://luma.gl/docs/api-reference/core.md)
+      vs: VS_GLSL,
 
-[One low-level GPU portability layer for buffers, pipelines, textures, and rendering across WebGPU and WebGL2.](https://luma.gl/docs/api-reference/core.md)
+      fs: FS_GLSL,
 
-[* WebGPU* WebGL2* GPU resources](https://luma.gl/docs/api-reference/core.md)
+      topology: 'triangle-list',
 
-[Docs](https://luma.gl/docs/api-reference/core.md)
+      vertexCount: 3,
 
-[@luma.gl/engine02](https://luma.gl/docs/api-reference/engine.md)
+      shaderLayout: {
 
-[Rendering toolkit](https://luma.gl/docs/api-reference/engine.md)
+        attributes: [],
 
-### [Engine](https://luma.gl/docs/api-reference/engine.md)
+        bindings: []
 
-[The classic luma.gl API for models, animation loops, geometry, picking, and composable rendering.](https://luma.gl/docs/api-reference/engine.md)
+      },
 
-[* Models* Animation* Geometry](https://luma.gl/docs/api-reference/engine.md)
+      parameters: {
 
-[Docs](https://luma.gl/docs/api-reference/engine.md)
+        depthFormat: 'depth24plus'
 
-[@luma.gl/shadertools03](https://luma.gl/docs/api-reference/shadertools.md)
+      }
 
-[Shader programming](https://luma.gl/docs/api-reference/shadertools.md)
+    });
 
-### [Shader Tools](https://luma.gl/docs/api-reference/shadertools.md)
+  }
 
-[Write, assemble, and share portable shaders with a reusable module library for both WGSL and GLSL.](https://luma.gl/docs/api-reference/shadertools.md)
+  override onRender({device}: AnimationProps): void {
 
-[* WGSL* GLSL* Shader modules](https://luma.gl/docs/api-reference/shadertools.md)
+    const renderPass = device.beginRenderPass({
 
-[Docs](https://luma.gl/docs/api-reference/shadertools.md)
+      clearColor: [0.961, 0.961, 0.961, 1]
 
-[@luma.gl/effects04](https://luma.gl/docs/api-reference/shadertools/shader-passes/image-processing.md)
+    });
 
-[Composable effects](https://luma.gl/docs/api-reference/shadertools/shader-passes/image-processing.md)
 
-### [Effects](https://luma.gl/docs/api-reference/shadertools/shader-passes/image-processing.md)
 
-[Compose reusable shader effects into complete post-processing, lighting, and image-processing pipelines.](https://luma.gl/docs/api-reference/shadertools/shader-passes/image-processing.md)
+    this.model.draw(renderPass);
 
-[* Bloom* Tone mapping* Shader passes](https://luma.gl/docs/api-reference/shadertools/shader-passes/image-processing.md)
 
-[Docs](https://luma.gl/docs/api-reference/shadertools/shader-passes/image-processing.md)
 
-[@luma.gl/scene05](https://luma.gl/docs/api-reference/scene.md)
+    renderPass.end();
 
-[Declarative 3D](https://luma.gl/docs/api-reference/scene.md)
+  }
 
-### [ANARI](https://luma.gl/docs/api-reference/scene.md)
 
-[Describe declarative 3D scenes with glTF and OpenUSD, then switch renderers without rebuilding the world.](https://luma.gl/docs/api-reference/scene.md)
 
-[* glTF* OpenUSD* Renderers](https://luma.gl/docs/api-reference/scene.md)
+  override onFinalize(): void {
 
-[Docs](https://luma.gl/docs/api-reference/scene.md)
+    this.model.destroy();
 
-[@luma.gl/splats06](https://luma.gl/docs/api-reference/splats.md)
+  }
 
-[Captured scenes](https://luma.gl/docs/api-reference/splats.md)
+}
 
-### [Splats](https://luma.gl/docs/api-reference/splats.md)
+const container = document.getElementById('app')!;
 
-[Stream and render Gaussian splats with depth ordering, high-dynamic-range color, and reusable GPU data.](https://luma.gl/docs/api-reference/splats.md)
+const device = await luma.createDevice({
 
-[* Streaming* Gaussian splats* HDR](https://luma.gl/docs/api-reference/splats.md)
+  adapters: [webgpuAdapter, webgl2Adapter],
 
-[Docs](https://luma.gl/docs/api-reference/splats.md)
+  createCanvasContext: {
 
-[@luma.gl/gpgpu07](https://luma.gl/docs/api-reference/gpgpu.md)
+    container,
 
-[GPU compute + rendering](https://luma.gl/docs/api-reference/gpgpu.md)
+    width: 500,
 
-### [GPGPU](https://luma.gl/docs/api-reference/gpgpu.md)
+    height: 500
 
-[Connect reusable compute modules and rendering in a single GPU-native pipeline, without moving data back to the CPU.](https://luma.gl/docs/api-reference/gpgpu.md)
+  }
 
-[* GPU workflows* Compute modules* Zero readback](https://luma.gl/docs/api-reference/gpgpu.md)
+});
 
-[Docs](https://luma.gl/docs/api-reference/gpgpu.md)
+makeAnimationLoop(AppAnimationLoopTemplate, {
 
-01
+  device
 
-### Render without a ceiling.
+}).start();
+```
 
-Compose models, materials, HDR lighting, shader effects, and GPU-driven geometry at interactive frame rates.
+Keep Vite's `index.html` with its `<div id="app"></div>` and `<script type="module" src="/src/main.ts"></script>`. Then start the server:
 
-02
+```
+npm run dev
+```
 
-### Keep your data on the GPU.
+**Loading example**Preparing GPU resources…
 
-Simulate, filter, and visualize millions of records without shuttling data back to the CPU between steps.
+## Follow the frame[​](#follow-the-frame "Direct link to Follow the frame")
 
-03
+1. `luma.createDevice()` selects a supported backend and creates the canvas context.
+2. The model selects backend-appropriate shaders. Its vertex shader uses the vertex index, so this triangle needs no vertex buffer.
+3. `onRender` begins a pass, draws the model, and ends the pass.
+4. `AnimationLoop` submits work after `onRender` returns.
+5. `onFinalize` destroys the model when the loop is destroyed.
 
-### One API. Two ways to render.
+`type: 'best-available'` is the default: supported WebGPU is preferred over WebGL 2. Adapter array order does not set preference. If device creation fails after selection, handle the error explicitly; supplying both adapters does not retry a failed WebGPU creation.
 
-Share portable rendering across WebGPU and WebGL2, connect with deck.gl, and use WebGPU for compute shaders.
+## Troubleshoot[​](#troubleshoot "Direct link to Troubleshoot")
 
-[Explore the complete feature set→](https://luma.gl/docs/capabilities.md)
+* **Blank page:** check the browser console, the `app` element, and the module script path.
+* **Shader error:** check the source for the selected backend; portability requires both shader languages.
+* **WebGPU unavailable:** serve over HTTPS or localhost and check browser support. WebGL 2 can render this example when it is the selected backend.
 
-04 · Find your starting point
+## Next steps[​](#next-steps "Direct link to Next steps")
 
-## Choose your own first adventure.
+* [Hello Cube](https://luma.gl/docs/tutorials/hello-cube.md) adds geometry, uniforms, and depth testing.
+* [Choosing an API layer](https://luma.gl/docs/api-guide.md) explains Engine, Core, and Shadertools.
+* [API reference](https://luma.gl/docs/api-reference.md) provides exact class and resource contracts.
+* [Examples](https://luma.gl/examples) show larger rendering and compute workflows.
 
-Begin with an interactive lesson, or go straight to the part of the GPU stack you want to explore.
-
-[Start here](https://luma.gl/docs/tutorials/hello-triangle.md)
-
-### [Draw your first triangle.](https://luma.gl/docs/tutorials/hello-triangle.md)
-
-[Start with a live, backend-switchable scene, then follow its rendering pipeline one step at a time.](https://luma.gl/docs/tutorials/hello-triangle.md)
-
-[Interactive fundamentals →](https://luma.gl/docs/tutorials/hello-triangle.md)[Build worlds](https://luma.gl/docs/api-guide/engine.md)
-
-### [Meet the rendering engine.](https://luma.gl/docs/api-guide/engine.md)
-
-[Explore models, animation loops, geometry, materials, and reusable shader modules.](https://luma.gl/docs/api-guide/engine.md)
-
-[Engine API guide →](https://luma.gl/docs/api-guide/engine.md)[Move faster](https://luma.gl/docs/capabilities/gpu-data-compute.md)
-
-### [Think in GPU compute.](https://luma.gl/docs/capabilities/gpu-data-compute.md)
-
-[Compare portable data operations with WebGPU-native compute for simulation, filtering, and spatial processing.](https://luma.gl/docs/capabilities/gpu-data-compute.md)
-
-[Choose a GPU data workflow →](https://luma.gl/docs/capabilities/gpu-data-compute.md)[Create effects](https://luma.gl/docs/api-guide/shaders/shader-passes.md)
-
-### [Shape every pixel.](https://luma.gl/docs/api-guide/shaders/shader-passes.md)
-
-[Experiment with live image effects, then compose post-processing passes and reusable shader modules.](https://luma.gl/docs/api-guide/shaders/shader-passes.md)
-
-[Shader and effect passes →](https://luma.gl/docs/api-guide/shaders/shader-passes.md)
-
-## Ready to make something move?
-
-When you are ready to create your own app, the developer guide takes you from local project setup to your first rendered frame.
-
-[Build your first project→](https://luma.gl/docs/developer-guide/installing.md)
+[Learn**Learn the fundamentals**Learn more about the luma.gl API and explore how to render a cube using the Core and Engine APIsAPI overview, Core, Engine](https://luma.gl/docs/fundamentals)[Framework capabilities**Explore the complete feature set**See how GPU-native data, large-scale visualization, compute pipelines, portable rendering, and visual effects fit together.Packages, techniques, and maturity](https://luma.gl/docs/capabilities.md)[Explore**Explore the tutorials**Learn how various GPU techniques work in luma.glInstancing, Lighting, glTF](https://luma.gl/docs/tutorials.md)[See it in action**Explore live GPU examples**Launch interactive scenes for lighting, oceans, fire, Gaussian splats, effects, and data visualization.Interactive examples in your browser](https://luma.gl/examples)[Design and concepts**Browse the API guides**Understand the Engine, portable GPU, and Shader APIs before choosing individual resources.Task-oriented explanations](https://luma.gl/docs/api-guide.md)[Look up details**Use the API reference**Find packages, classes, resource methods, accepted formats, and backend-specific behavior.Organized by npm package](https://luma.gl/docs/api-reference.md)

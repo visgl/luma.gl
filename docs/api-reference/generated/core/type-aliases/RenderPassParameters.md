@@ -2,7 +2,7 @@
 
 > **RenderPassParameters** = `object`
 
-Defined in: [modules/core/src/adapter/types/parameters.ts:185](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/parameters.ts#L185)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:185](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L185)
 
 These parameters are set on the render pass and are thus easy to change frequently
 
@@ -12,7 +12,7 @@ These parameters are set on the render pass and are thus easy to change frequent
 
 > `optional` **blendConstant?**: `NumberArray4`
 
-Defined in: [modules/core/src/adapter/types/parameters.ts:191](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/parameters.ts#L191)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:191](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L191)
 
 Sets constant blend color and alpha values used with "constant" and "one-minus-constant" blend factors.
 
@@ -22,7 +22,7 @@ Sets constant blend color and alpha values used with "constant" and "one-minus-c
 
 > `optional` **colorMask?**: `number`
 
-Defined in: [modules/core/src/adapter/types/parameters.ts:196](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/parameters.ts#L196)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:196](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L196)
 
 Bitmask controlling which channels are are written to when drawing/clearing. defaulting to 0xF
 
@@ -32,7 +32,7 @@ Bitmask controlling which channels are are written to when drawing/clearing. def
 
 > `optional` **scissorRect?**: `NumberArray4`
 
-Defined in: [modules/core/src/adapter/types/parameters.ts:189](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/parameters.ts#L189)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:189](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L189)
 
 Sets scissor rectangle used during rasterization. Discards fragments outside viewport coords \[x, y, width, height].
 
@@ -42,7 +42,7 @@ Sets scissor rectangle used during rasterization. Discards fragments outside vie
 
 > `optional` **stencilReference?**: `number`
 
-Defined in: [modules/core/src/adapter/types/parameters.ts:193](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/parameters.ts#L193)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:193](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L193)
 
 Stencil operation "replace" sets the value to stencilReference
 
@@ -52,6 +52,6 @@ Stencil operation "replace" sets the value to stencilReference
 
 > `optional` **viewport?**: `NumberArray4` | `NumberArray6`
 
-Defined in: [modules/core/src/adapter/types/parameters.ts:187](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/parameters.ts#L187)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:187](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L187)
 
 Linear map from normalized device coordinates to viewport coordinates \[x, y, width, height, minDepth, maxDepth]

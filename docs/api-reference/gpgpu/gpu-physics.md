@@ -1,0 +1,67 @@
+# GPU physics
+
+Loading interactive example…
+
+Newton's cradle runs the rigid-body solver on the GPU and renders its position and orientation buffers directly. Use Reset to release the raised ball again, Pause to inspect a moment, or drag to orbit. Open **GPU Graph** and **GPU Graph Timeline** (the GPU Trace view) in the lab to inspect simulation work. The cradle uses a fixed 1/480-second timestep; its discrete solver approximates contact and constraint response rather than guaranteeing lossless, indefinitely periodic motion.
+
+See [command graph debugging](https://luma.gl/docs/api-reference/experimental/gpu-core/debugging.md) for how to interpret the panels.
+
+`@luma.gl/gpgpu/gpu-physics` provides experimental WebGPU simulation. Import this subpath explicitly; the physics API is not exported from the package root. It requires a WebGPU device and has no WebGL or CPU simulation fallback.
+
+| World                                                                                 | Use it for                                                                  | Important boundary                                                                                 |
+| ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| [GPUSphereWorld](https://luma.gl/docs/api-reference/gpgpu/gpu-sphere-world.md)        | Large sphere fields, rolling balls, pool and small continuous sphere scenes | Dynamic shapes are spheres; continuous mode and events are bounded to small worlds                 |
+| [GPURigidBodyWorld](https://luma.gl/docs/api-reference/gpgpu/gpu-rigid-body-world.md) | Oriented shapes, compounds, mass properties and glTF physics workloads      | Discrete contacts with an opt-in sphere/static CCD envelope; parallel solving remains experimental |
+
+These are separate implementations with different controls, storage ownership and failure counters. A feature on one world does not imply support on the other. Neither establishes complete glTF proposal coverage or state-of-the-art performance. The [background guide](https://luma.gl/docs/api-guide/gpu/gpu-physics.md) explains the algorithms and GPU tradeoffs; the references below describe the actual contracts.
+
+## Feature cards[​](#feature-cards "Direct link to Feature cards")
+
+**Available** means an implemented API within the limits shown, not full performance qualification. **Experimental** marks an opt-in path needing broader numerical or scale evidence. **Partial** means important cases remain unsupported. **Planned** means no general rigid-body implementation is offered yet. All physics remains experimental as a module.
+
+| Feature                        | Status       | What you can use today                                                                                          | Remaining boundary                                                                                                                         |
+| ------------------------------ | ------------ | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| GPU simulation and rendering   | Available    | Fixed-step command graphs; position/orientation buffers consumed directly by renderers                          | Applications own scheduling, catch-up and submission limits; glTF publication is separate                                                  |
+| Large sphere worlds            | Available    | GPU grid discovery, angular dynamics, friction, rolling resistance and sleep/wake                               | Body count alone is not a frame-rate guarantee; dense contacts can exhaust budgets                                                         |
+| General rigid bodies           | Available    | Oriented boxes, spheres, tapered primitives, convex hulls, planes and compounds; mass, COM and inertia          | Pairwise geometry and numerical qualification remain incomplete                                                                            |
+| Triangle-mesh contacts         | Partial      | Convex/mesh and bounded moving mesh/mesh surface contacts; original nonconvex openings preserved                | Deep solid containment, degenerate geometry and high-speed traversal are not generally covered                                             |
+| Scalable rigid-body discovery  | Available    | Hierarchical discovery and sparse contact storage; all-pairs reference for small scenes                         | Dense scenes and mixed-size extremes still require capacity and performance qualification                                                  |
+| Parallel rigid-body solving    | Experimental | Opt-in parallel contact response, persistent manifolds, coupled friction and island sleep/wake                  | Ordered solving remains the default; deep stacks and extreme mass ratios need broader evidence                                             |
+| Continuous collision detection | Partial      | Bounded small-world continuous mode in `GPUSphereWorld`                                                         | Rigid worlds offer opt-in sphere/static-surface CCD; dynamic-pair and rotating-shape CCD remain planned                                    |
+| Collision events               | Available    | Opt-in rigid-body begin/end and thresholded impact samples with IDs, step ordering and explicit loss reporting  | Event recording scans the bounded pair cache; large-world compaction and recoverable consumer overflow remain work                         |
+| Scene queries                  | Partial      | Parallel collider rays, sphere overlap and bounded sphere casts across analytic shapes and cooked mesh geometry | One pending query per world; bounded casts report incomplete results; spatial batching and general shape casts remain planned              |
+| Trigger volumes                | Partial      | Step-local compound spherical sensors and swept sphere crossings; Space Salvage uses docking events             | Arbitrary sensor shapes, curved trajectories and glTF trigger bindings remain planned                                                      |
+| Joints and articulations       | Partial      | Bounded ordered distance/fixed/hinge/slider constraints, frames, limits and capped velocity motors              | Parallel scheduling, warm starts, springs, breakage and articulations remain planned                                                       |
+| glTF physics                   | Partial      | Pinned draft import, shape/body/material/filter semantics and explicit capability reports                       | Proposal constraints, triggers, behavior bindings and automatic animation ownership remain incomplete                                      |
+| GPU glTF pose publication      | Planned      | Procedural examples render GPU poses directly                                                                   | The glTF example still bridges poses through the CPU; direct scenegraph pose/bounds publication remains work                               |
+| Capacity and diagnostics       | Available    | Allocation preflight, logical memory reports, bounded queues and lifetime failure counters                      | Opt-in GPU rollback and explicit budget-growth reconstruction; automatic growth and kinematic command replay remain work                   |
+| Qualification and tooling      | Partial      | GPU regressions, independent fixtures, whole-step benchmark exports and graph/timeline inspection               | Same-implementation GPU state capture/restore is available; command journals, multi-device gates and a fully qualified profile remain work |
+
+See the [remaining tranches](https://github.com/visgl/luma.gl/blob/master/dev-docs/roadmaps/gpu-physics-roadmap.md#remaining-tranches-after-space-salvage) for completion gates. The detailed [sphere](https://luma.gl/docs/api-reference/gpgpu/gpu-sphere-world.md) and [rigid-body](https://luma.gl/docs/api-reference/gpgpu/gpu-rigid-body-world.md) references define the API contracts.
+
+## Integration contract[​](#integration-contract "Direct link to Integration contract")
+
+1. Create the world and add it to a `GPUCommandGraph` on your WebGPU device.
+2. Compile the graph once, then encode it once for every fixed simulation step.
+3. Submit encoded work before issuing immediate body-control commands.
+4. Bind the state buffers directly to rendering where possible. Snapshot readback is optional and should not become a per-frame pose bridge.
+5. Sample failure diagnostics. Incomplete collision work invalidates that run even when it produces a plausible image.
+6. Stop scheduling, finish pending GPU work/readbacks, destroy render bindings and the compiled graph, then destroy the world and any caller-owned state.
+
+The application owns wall time, catch-up limits and queue depth. `timeStep` is simulation time per encoding, not the elapsed duration of a render frame. More iterations improve a step's constraint solve; more substeps also refresh geometry and integrate motion. Neither provides a general CCD guarantee.
+
+Use consistent units. Metres, kilograms and seconds are a useful convention; angular velocities use radians per second and rotations use quaternions in xyzw order. Changing world scale also changes meaningful slop, sleep and speed thresholds.
+
+## Ownership and mutation[​](#ownership-and-mutation "Direct link to Ownership and mutation")
+
+`GPUSphereWorld` borrows required position/velocity buffers and can borrow optional state. `GPURigidBodyWorld` allocates all its state. Exposing a buffer for rendering does not transfer ownership to the renderer. Graph scratch belongs to the compiled graph. A world can be attached to one graph.
+
+Use each world's control methods instead of writing buffers when possible. Direct writes must be ordered between submissions and invalidate the relevant contact and sleep state. The sphere world has `clearContactCache()`; the rigid world has `wake()`. Do not modify geometry, mass or capacity by changing the constructor input after attachment; construct a replacement world.
+
+## Examples and qualification[​](#examples-and-qualification "Direct link to Examples and qualification")
+
+The Sphere World, Pool, Rigid Body Lab and Space Salvage examples use procedural scenes. Space Salvage exercises public collision events and queries for towing, docking and impact feedback. The glTF Physics example tests authored semantics through the separate `@luma.gl/gltf/physics` adapter. Its supported draft profile and render integration limitations are documented in the [adapter reference](https://github.com/visgl/luma.gl/blob/master/modules/gltf/src/physics/README.md).
+
+[Qualification tooling](https://github.com/visgl/luma.gl/blob/master/scripts/physics/README.md) separates schema/import evidence, numerical behavior, capacity and performance. A successful import, finite poses or zero overflow alone is not proof of accuracy.
+
+See the [collision coverage contract](https://luma.gl/docs/api-reference/gpgpu/gpu-physics-collision-coverage.md) for pairwise response fixtures and the distinction between coverage and numerical qualification.

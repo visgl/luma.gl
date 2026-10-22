@@ -16,11 +16,11 @@ Use **GLTF ↓** or **USD ↓** to download the currently valid retained scene. 
 
 Experimental playground format
 
-The JSON format and its optional schema exports are experimental. They are not part of the ANARI C specification and can change with the experimental `@luma.gl/scene` package.
+The JSON format and its optional schema exports are experimental. They are not part of the ANARI C specification and can change with the private `@luma.gl/anari` workspace.
 
 ### Validate scenes with Zod and JSON Schema[​](#validate-scenes-with-zod-and-json-schema "Direct link to Validate scenes with Zod and JSON Schema")
 
-The optional `@luma.gl/scene/schemas` entry point exports separate Zod schemas for geometry, materials, lights, cameras, renderers, surfaces, groups, instances, animations, and complete scenes. Importing ordinary rendering objects from `@luma.gl/scene` does not load Zod:
+The optional `@luma.gl/anari/schemas` entry point exports separate Zod schemas for geometry, materials, lights, cameras, renderers, surfaces, groups, instances, animations, and complete scenes. Importing ordinary rendering objects from `@luma.gl/anari` does not load Zod:
 
 ```
 import {
@@ -31,7 +31,7 @@ import {
 
   ANARI_SCENE_JSON_SCHEMA
 
-} from '@luma.gl/scene/schemas';
+} from '@luma.gl/anari/schemas';
 
 
 
@@ -219,7 +219,7 @@ Both orb instances reference the same named surface. The playground retains that
 
 An instance can describe its transform with `position`, `rotation`, and `scale` three-component vectors, or supply a complete 16-element `matrix`. Rotations use radians and are applied in X, Y, Z order. Instances referencing a `surface` directly share an automatically generated group; use an explicit named `group` when multiple surfaces or group-attached lights are required.
 
-Object subtypes match the package: `triangle`, `sphere`, `cylinder`, `cone`, and `quad` geometry; `matte` and `physicallyBased` materials; `ambient`, `directional`, `point`, and `spot` lights; `perspective` and `orthographic` cameras; and optional renderer presets for `default`, `deferred`, `raytrace`, `debugNormals`, and `debugDepth`. Ray-tracing presets additionally accept `samplesPerPixel`, `maxBounces`, `progressive`, `shadows`, `resolutionScale`, `minimumResolutionScale`, `adaptiveResolution`, `targetFrameTimeMilliseconds`, `temporalReprojection`, and `shadowSamplesPerFrame`.
+Object subtypes match the private package: `triangle`, `sphere`, `cylinder`, `cone`, and `quad` geometry; `matte` and `physicallyBased` materials; `ambient`, `directional`, `point`, and `spot` lights; `perspective` and `orthographic` cameras; and optional renderer presets for `default`, `deferred`, `raytrace`, `debugNormals`, and `debugDepth`. Ray-tracing presets additionally accept `samplesPerPixel`, `maxBounces`, `progressive`, `shadows`, `resolutionScale`, `minimumResolutionScale`, `adaptiveResolution`, `targetFrameTimeMilliseconds`, `temporalReprojection`, and `shadowSamplesPerFrame`.
 
 ### Generate compact triangle meshes and starfields[​](#generate-compact-triangle-meshes-and-starfields "Direct link to Generate compact triangle meshes and starfields")
 
@@ -388,10 +388,10 @@ Both the Observatory and the JSON playground expose an experimental 3D scene sel
 
 The glTF adapter uses the existing loaders.gl GLTF loader, preserves indexed triangle meshes, reuses retained surfaces for repeated nodes, translates physically based materials, and retains all 21 canonical PBR texture slots as fragment-sampled ANARI image samplers. Source wrapping, filter and mipmap settings, color spaces, both UV sets, `KHR_texture_transform`, alpha masking, sidedness, and authored punctual lights are preserved. Joint attributes are imported, while animated joint deformation additionally requires an application-provided retained `surface.skin.jointMatrices` palette. POSITION, NORMAL, and TANGENT morph targets and animated morph weights play through the retained scene automatically.
 
-The optional `@luma.gl/scene/gltf` entry point translates parsed glTF clips and binds their node, material, sampler, and morph channels to existing retained objects:
+The optional `@luma.gl/anari/gltf` entry point translates parsed glTF clips and binds their node, material, sampler, and morph channels to existing retained objects:
 
 ```
-import {makeANARIAnimationScene} from '@luma.gl/scene/gltf';
+import {makeANARIAnimationScene} from '@luma.gl/anari/gltf';
 
 
 

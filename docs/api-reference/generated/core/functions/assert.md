@@ -2,7 +2,7 @@
 
 > **assert**(`condition`, `message?`): `asserts condition`
 
-Defined in: [modules/core/src/utils/assert.ts:6](https://github.com/visgl/luma.gl/blob/master/modules/core/src/utils/assert.ts#L6)
+Defined in: [modules/core/src/api/utils/assert.ts:6](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/utils/assert.ts#L6)
 
 Throws if condition is true and narrows type
 

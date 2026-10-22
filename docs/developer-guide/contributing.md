@@ -2,45 +2,44 @@
 
 [Overview](https://luma.gl/docs/developer-guide.md)[Installing](https://luma.gl/docs/developer-guide/installing.md)[Editing](https://luma.gl/docs/developer-guide/editing.md)[Contributing](https://luma.gl/docs/developer-guide/contributing.md)[Documentation](https://luma.gl/docs/developer-guide/documentation.md)
 
-luma.gl welcomes contributions from the community. Smaller fixes
+Contributions can improve code, examples, tests, or documentation. Work from a branch and open a pull request with the problem, changes, and verification results.
 
-In order to contribute to luma.gl you need to be able to build and test luma.gl itself.
-
-## Development Environment[​](#development-environment "Direct link to Development Environment")
-
-To get started developing luma.gl, first you will want to clone the github repository (or your fork of the repository).
+## Set up the repository[​](#set-up-the-repository "Direct link to Set up the repository")
 
 ```
 git clone git@github.com:visgl/luma.gl.git
+
+cd luma.gl
+
+nvm use
+
+yarn install
 ```
 
-Make sure to install all dependencies from the repository root:
-
-`yarn install`
-
-luma.gl's source code is in the `modules/` directory. Development is most easily done by running the examples in development mode, e.g.:
+Source lives in `modules/`. Run a standalone example while editing:
 
 ```
-cd examples/core/instancing
+cd examples/showcase/instancing
 
-yarn
-
-yarn start-local
+yarn start
 ```
 
-Any modifications made to the source or example code will cause the example to rebuild and the page to refresh, making quick iterations on code changes straightforward.
+Vite reloads changes to source and example code. From the repository root, `yarn website:start` runs the complete documentation and example website.
 
-Testing against the full website can be done after the root install by running `yarn website:start`. This full website take longer to build but makes it easier to test against all examples. This can be helpful when making core changes to luma.gl. As with running the examples in development mode, a rebuild and page refresh will be triggered whenever source or website code is updated.
+## Verify a change[​](#verify-a-change "Direct link to Verify a change")
 
-## Testing[​](#testing "Direct link to Testing")
+Follow the repository's `AGENTS.md` and CI requirements. The main checks are:
 
-Testing is performed on Travis CI and using a precommit hook. Local testing is supported on these environments:
+```
+yarn lint fix
 
-* `yarn test` - runs tests under node using headless.gl and a headless Chrome instance (using [SwiftShader](https://github.com/google/swiftshader)).
-* `yarn test browser` - Tests in your browser, may be helpful to quickly debug test case failures since it autoreloads on changes and gives you full access to your browser's debugger.
+yarn build
 
-When adding new features, please add relevant unit tests to the `test/` directory in the relevant module.
+yarn test
 
-### Helpful Hints[​](#helpful-hints "Direct link to Helpful Hints")
+yarn website:build
+```
 
-* To only run one test from the suite for debugging purposes, change a call to `test` in the relevant spec to `test.only`. Remember to change this back before committing!
+[Test commands and runtime conventions](https://luma.gl/docs/developer-guide/testing.md) explain Node and browser verification. Add focused tests beside the affected module's tests. Use Vitest for new coverage, and remove temporary `test.only` calls before committing.
+
+For documentation changes, follow [Writing documentation](https://luma.gl/docs/developer-guide/documentation.md).

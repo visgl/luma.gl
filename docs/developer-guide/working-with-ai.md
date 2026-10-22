@@ -9,7 +9,7 @@ AI coding agents can help design, implement, and debug luma.gl applications when
 Do not ask an agent to rely on its memory of luma.gl APIs. First give it the application and ask it to identify the installed package versions:
 
 ```
-npm ls @luma.gl/core @luma.gl/engine @luma.gl/shadertools @luma.gl/webgpu @luma.gl/webgl
+npm ls @luma.gl/core @luma.gl/engine @luma.gl/shadertools @luma.gl/core/webgpu @luma.gl/core/webgl
 ```
 
 Use the equivalent command for the project's package manager. The agent should then inspect each installed package's `package.json`, exported TypeScript declarations, and the documentation for that release. Installed declarations are the authority for exact constructor props, methods, and types; current website documentation can describe a newer release.
@@ -20,11 +20,11 @@ When a project is pinned to an older release, use the documentation in the match
 
 Give the agent the smallest API surface appropriate to the task:
 
-| Level        | Start here when                                                                                     | Typical packages                                     |
-| ------------ | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| Engine API   | Building a rendered application, model, animation loop, geometry, picking, or common GPU transform  | `@luma.gl/engine` plus one or more adapters          |
-| Core GPU API | Managing devices, buffers, textures, pipelines, bindings, render passes, or compute passes directly | `@luma.gl/core`, `@luma.gl/webgpu`, `@luma.gl/webgl` |
-| Shader API   | Assembling reusable shader modules, hooks, plugins, or matching WGSL and GLSL implementations       | `@luma.gl/shadertools`, usually with Engine or Core  |
+| Level        | Start here when                                                                                     | Typical packages                                               |
+| ------------ | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| Engine API   | Building a rendered application, model, animation loop, geometry, picking, or common GPU transform  | `@luma.gl/engine` plus one or more adapters                    |
+| Core GPU API | Managing devices, buffers, textures, pipelines, bindings, render passes, or compute passes directly | `@luma.gl/core`, `@luma.gl/core/webgpu`, `@luma.gl/core/webgl` |
+| Shader API   | Assembling reusable shader modules, hooks, plugins, or matching WGSL and GLSL implementations       | `@luma.gl/shadertools`, usually with Engine or Core            |
 
 Most applications should start with `Model` and `AnimationLoop` from Engine, then use Core resources only where explicit control is useful. Shader tooling composes shader code; it does not replace Engine or Core execution. See [A Tale of Three APIs](https://luma.gl/docs/api-guide.md) for the complete object model.
 

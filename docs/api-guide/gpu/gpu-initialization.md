@@ -1,6 +1,6 @@
 # Initialize a GPU device
 
-[Initialization](https://luma.gl/docs/api-guide/gpu/gpu-initialization.md)[Resources](https://luma.gl/docs/api-guide/gpu/gpu-resources.md)
+[Initialization](https://luma.gl/docs/api-guide/gpu/gpu-initialization.md)[Resources](https://luma.gl/docs/api-guide/gpu/gpu-resources.md)[Data processing](https://luma.gl/docs/api-guide/gpu/gpu-data-processing.md)
 
 ## Outcome[​](#outcome "Direct link to Outcome")
 
@@ -16,11 +16,11 @@ Do not infer capabilities from the browser or operating system. The created devi
 
 AdapterConcrete devicePortable APIApplication
 
-`webgpuAdapter`@luma.gl/webgpu
+`webgpuAdapter`@luma.gl/core/webgpu
 
 `WebGPUDevice`WebGPU backend
 
-`webgl2Adapter`@luma.gl/webgl
+`webgl2Adapter`@luma.gl/core/webgl
 
 `WebGLDevice`WebGL 2 backend
 
@@ -41,13 +41,13 @@ Adapters create backend-specific `Device` implementations; application code stay
 Install Core and the WebGPU adapter:
 
 ```
-yarn add @luma.gl/core @luma.gl/webgpu
+yarn add @luma.gl/core
 ```
 
 ```
 import {luma} from '@luma.gl/core';
 
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
 
 
@@ -69,15 +69,15 @@ This request fails rather than falling back when WebGPU cannot satisfy it. Use t
 Register both adapters when the application has WebGPU and WebGL 2 implementations:
 
 ```
-yarn add @luma.gl/core @luma.gl/webgpu @luma.gl/webgl
+yarn add @luma.gl/core
 ```
 
 ```
 import {luma} from '@luma.gl/core';
 
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
 
 

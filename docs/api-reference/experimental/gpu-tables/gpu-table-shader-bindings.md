@@ -41,7 +41,9 @@ const model = new Model(device, {
 
 for (const batch of prepared.batches) {
 
-  model.setAttributes(batch.attributes);
+  if (batch.numRows === 0) continue;
+
+  model.setAttributes(batch.attributes, {byteOffsets: batch.attributeByteOffsets});
 
   model.setBindings(batch.bindings);
 
@@ -91,16 +93,22 @@ The schema and shader layout define the pipeline contract and remain fixed for t
 ```
 type GPUTableShaderBindingBatch = {
 
+  numRows: number;
+
   attributes: Record<string, Buffer | DynamicBuffer>;
 
   attributeBuffers: Array<Buffer | DynamicBuffer>;
+
+  attributeByteOffsets: Record<string, number>;
 
   bindings: Record<string, Binding>;
 
 };
 ```
 
-`attributeBuffers` follows `bufferLayout` order. `attributes` exposes the same resources by logical layout name.
+`numRows` is the source batch row count. Skip zero-row batches before setting bindings, because WebGPU rejects zero-size storage ranges.
+
+`attributeBuffers` follows `bufferLayout` order. `attributes` exposes the same resources by logical layout name. `attributeByteOffsets` uses the same names and holds each chunk's `GPUData.byteOffset`, so chunks that are views into a shared buffer are read from their first row. Pass it to `Model.setAttributes()`. Batches keep one shared `bufferLayout`, so different offsets do not create different pipelines.
 
 ## updateBindings(table)[​](#updatebindingstable "Direct link to updateBindings(table)")
 

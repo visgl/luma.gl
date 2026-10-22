@@ -1,6 +1,6 @@
 # Interface: StatsManager
 
-Defined in: [modules/core/src/utils/stats-manager.ts:32](https://github.com/visgl/luma.gl/blob/master/modules/core/src/utils/stats-manager.ts#L32)
+Defined in: [modules/core/src/api/utils/stats-manager.ts:32](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/utils/stats-manager.ts#L32)
 
 Helper class managing a collection of probe.gl stats objects
 
@@ -10,7 +10,7 @@ Helper class managing a collection of probe.gl stats objects
 
 > **stats**: `Map`<`any`, `any`>
 
-Defined in: [modules/core/src/utils/stats-manager.ts:33](https://github.com/visgl/luma.gl/blob/master/modules/core/src/utils/stats-manager.ts#L33)
+Defined in: [modules/core/src/api/utils/stats-manager.ts:33](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/utils/stats-manager.ts#L33)
 
 ## Methods[​](#methods "Direct link to Methods")
 
@@ -18,7 +18,7 @@ Defined in: [modules/core/src/utils/stats-manager.ts:33](https://github.com/visg
 
 > **get**(`name`): `Stats`
 
-Defined in: [modules/core/src/utils/stats-manager.ts:39](https://github.com/visgl/luma.gl/blob/master/modules/core/src/utils/stats-manager.ts#L39)
+Defined in: [modules/core/src/api/utils/stats-manager.ts:39](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/utils/stats-manager.ts#L39)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 
@@ -36,7 +36,7 @@ Defined in: [modules/core/src/utils/stats-manager.ts:39](https://github.com/visg
 
 > **getStats**(`name`): `Stats`
 
-Defined in: [modules/core/src/utils/stats-manager.ts:35](https://github.com/visgl/luma.gl/blob/master/modules/core/src/utils/stats-manager.ts#L35)
+Defined in: [modules/core/src/api/utils/stats-manager.ts:35](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/utils/stats-manager.ts#L35)
 
 #### Parameters[​](#parameters-1 "Direct link to Parameters")
 

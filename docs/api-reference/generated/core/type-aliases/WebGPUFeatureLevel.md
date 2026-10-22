@@ -2,7 +2,7 @@
 
 > **WebGPUFeatureLevel** = `"core"` | `"max"` | `"compatibility"` | `"best-available"`
 
-Defined in: [modules/core/src/adapter/device.ts:90](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L90)
+Defined in: [modules/core/src/api/adapter/device.ts:90](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/device.ts#L90)
 
 WebGPU feature/limit profile requested during device creation.
 

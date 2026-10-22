@@ -2,7 +2,7 @@
 
 > **RenderPassProps** = [`ResourceProps`](https://luma.gl/docs/api-reference/generated/core/type-aliases/ResourceProps.md) & `object`
 
-Defined in: [modules/core/src/adapter/resources/render-pass.ts:57](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L57)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:57](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L57)
 
 Properties for a RenderPass instance is a required parameter to all draw calls.
 

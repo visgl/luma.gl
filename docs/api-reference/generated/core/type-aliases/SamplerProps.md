@@ -2,7 +2,7 @@
 
 > **SamplerProps** = [`ResourceProps`](https://luma.gl/docs/api-reference/generated/core/type-aliases/ResourceProps.md) & `object`
 
-Defined in: [modules/core/src/adapter/resources/sampler.ts:18](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/sampler.ts#L18)
+Defined in: [modules/core/src/api/adapter/resources/sampler.ts:18](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/sampler.ts#L18)
 
 Properties for initializing a sampler
 

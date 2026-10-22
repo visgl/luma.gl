@@ -2,7 +2,7 @@
 
 > **LogicalAttributeMapping** = `object`
 
-Defined in: [modules/core/src/adapter-utils/buffer-layout-utils.ts:13](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter-utils/buffer-layout-utils.ts#L13)
+Defined in: [modules/core/src/api/adapter-utils/buffer-layout-utils.ts:13](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter-utils/buffer-layout-utils.ts#L13)
 
 Backend-agnostic attribute mapping derived from a shader layout and buffer layout.
 
@@ -12,7 +12,7 @@ Backend-agnostic attribute mapping derived from a shader layout and buffer layou
 
 > **attributeName**: `string`
 
-Defined in: [modules/core/src/adapter-utils/buffer-layout-utils.ts:15](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter-utils/buffer-layout-utils.ts#L15)
+Defined in: [modules/core/src/api/adapter-utils/buffer-layout-utils.ts:15](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter-utils/buffer-layout-utils.ts#L15)
 
 Attribute name from the shader layout.
 
@@ -22,7 +22,7 @@ Attribute name from the shader layout.
 
 > **bufferName**: `string`
 
-Defined in: [modules/core/src/adapter-utils/buffer-layout-utils.ts:17](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter-utils/buffer-layout-utils.ts#L17)
+Defined in: [modules/core/src/api/adapter-utils/buffer-layout-utils.ts:17](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter-utils/buffer-layout-utils.ts#L17)
 
 Logical buffer name supplying this attribute.
 
@@ -32,7 +32,7 @@ Logical buffer name supplying this attribute.
 
 > **byteOffset**: `number`
 
-Defined in: [modules/core/src/adapter-utils/buffer-layout-utils.ts:23](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter-utils/buffer-layout-utils.ts#L23)
+Defined in: [modules/core/src/api/adapter-utils/buffer-layout-utils.ts:23](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter-utils/buffer-layout-utils.ts#L23)
 
 Byte offset of the attribute inside the logical buffer.
 
@@ -42,7 +42,7 @@ Byte offset of the attribute inside the logical buffer.
 
 > **byteStride**: `number`
 
-Defined in: [modules/core/src/adapter-utils/buffer-layout-utils.ts:25](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter-utils/buffer-layout-utils.ts#L25)
+Defined in: [modules/core/src/api/adapter-utils/buffer-layout-utils.ts:25](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter-utils/buffer-layout-utils.ts#L25)
 
 Byte stride of the logical buffer.
 
@@ -52,7 +52,7 @@ Byte stride of the logical buffer.
 
 > **location**: `number`
 
-Defined in: [modules/core/src/adapter-utils/buffer-layout-utils.ts:19](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter-utils/buffer-layout-utils.ts#L19)
+Defined in: [modules/core/src/api/adapter-utils/buffer-layout-utils.ts:19](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter-utils/buffer-layout-utils.ts#L19)
 
 Attribute location in the shader.
 
@@ -62,7 +62,7 @@ Attribute location in the shader.
 
 > **stepMode**: `"vertex"` | `"instance"`
 
-Defined in: [modules/core/src/adapter-utils/buffer-layout-utils.ts:27](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter-utils/buffer-layout-utils.ts#L27)
+Defined in: [modules/core/src/api/adapter-utils/buffer-layout-utils.ts:27](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter-utils/buffer-layout-utils.ts#L27)
 
 Step mode used when advancing the attribute.
 
@@ -72,6 +72,6 @@ Step mode used when advancing the attribute.
 
 > **vertexFormat**: [`VertexFormat`](https://luma.gl/docs/api-reference/generated/core/type-aliases/VertexFormat.md)
 
-Defined in: [modules/core/src/adapter-utils/buffer-layout-utils.ts:21](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter-utils/buffer-layout-utils.ts#L21)
+Defined in: [modules/core/src/api/adapter-utils/buffer-layout-utils.ts:21](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter-utils/buffer-layout-utils.ts#L21)
 
 Vertex format used to read the attribute data.

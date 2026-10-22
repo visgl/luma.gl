@@ -2,7 +2,7 @@
 
 > **ComputePipelineProps** = [`ResourceProps`](https://luma.gl/docs/api-reference/generated/core/type-aliases/ResourceProps.md) & `object`
 
-Defined in: [modules/core/src/adapter/resources/compute-pipeline.ts:13](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pipeline.ts#L13)
+Defined in: [modules/core/src/api/adapter/resources/compute-pipeline.ts:13](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/compute-pipeline.ts#L13)
 
 Properties for a compute pipeline
 

@@ -1,6 +1,6 @@
 # ANARI Cameras, Renderers, and Frames
 
-ExperimentalPublished packageFrom v9.4
+ExperimentalPrivate workspaceFrom v10
 
 An `ANARICamera` describes the view, an `ANARIRenderer` selects shading and presentation settings, and an `ANARIFrame` combines both with a world to produce an image.
 
@@ -127,6 +127,40 @@ newRenderer(
 
 Omitting the subtype selects `default`.
 
+### Renderer feature comparison[​](#renderer-feature-comparison "Direct link to Renderer feature comparison")
+
+This table describes the built-in `@luma.gl/anari` runtimes. **Fallback** means that `deferred` renders the whole scene through the shared forward renderer when it cannot represent the scene in its G-buffer. It does not mean that the deferred lighting pass implements that feature. Registered custom renderers define their own support.
+
+| Feature                                          | `default`                                                        | `deferred`                                                                                   | `raytrace`                                                                               | `debugNormals` / `debugDepth`                   |
+| ------------------------------------------------ | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Backend                                          | WebGPU, WebGL 2                                                  | WebGPU                                                                                       | WebGPU compute; no hardware ray tracing                                                  | WebGPU, WebGL 2                                 |
+| Perspective and orthographic cameras             | Yes                                                              | Yes                                                                                          | Yes                                                                                      | Yes                                             |
+| Retained meshes and instancing                   | Yes                                                              | Yes                                                                                          | Triangle meshes; analytic spheres                                                        | Yes                                             |
+| Matte and scalar metallic-roughness materials    | Yes                                                              | Yes                                                                                          | Yes; diffuse or opaque GGX transport                                                     | Diagnostic output                               |
+| Material image maps                              | Canonical PBR maps and UV transforms                             | Base color, normal, metallic-roughness, emissive, occlusion; advanced materials use fallback | No                                                                                       | Shared raster surface inputs; diagnostic output |
+| Alpha masking                                    | Scalar and texture alpha                                         | Scalar and texture alpha                                                                     | Scalar alpha only, including shadows and queries                                         | Shared raster mask behavior                     |
+| Alpha blending                                   | Yes; sorted forward draws                                        | Fallback                                                                                     | No                                                                                       | Shared raster blend behavior                    |
+| Transmission and advanced PBR extensions         | Yes; supported extensions and captured opaque-scene transmission | Fallback                                                                                     | No                                                                                       | Diagnostic output, not physical transport       |
+| Skeletal skinning and morph targets              | Yes                                                              | Yes through shared raster geometry                                                           | No                                                                                       | Yes through shared raster geometry              |
+| Ambient, directional and point lights            | Yes                                                              | Yes; one directional and up to 64 point lights, otherwise fallback                           | Yes                                                                                      | No lighting; normals or depth                   |
+| Spot lights                                      | Yes                                                              | Fallback                                                                                     | Yes                                                                                      | No lighting                                     |
+| Caller-provided image-based lighting             | Yes                                                              | Fallback                                                                                     | No; background is not an environment light                                               | No lighting                                     |
+| Emissive surface appearance                      | Yes                                                              | Yes                                                                                          | Yes                                                                                      | Diagnostic output                               |
+| Emissive geometry illuminates other surfaces     | No                                                               | No                                                                                           | Opt-in `emitterSampling`; also secondary emission gathering                              | No                                              |
+| Ray-traced direct-light shadows                  | No                                                               | No                                                                                           | Yes                                                                                      | No                                              |
+| Indirect diffuse and specular transport          | No                                                               | No                                                                                           | Opt-in diffuse or opaque PBR bounces, up to 8; no MIS                                    | No                                              |
+| Progressive sampling and adaptive ray resolution | No                                                               | No                                                                                           | Yes                                                                                      | No                                              |
+| Temporal antialiasing / history                  | Raster temporal AA on WebGPU                                     | Raster temporal AA                                                                           | Progressive history and primary-hit reprojection; indirect/PBR changes can reset history | No temporal AA                                  |
+| Guided spatial denoising                         | No                                                               | No                                                                                           | Yes, optional                                                                            | No                                              |
+| Fog                                              | Yes                                                              | Yes                                                                                          | Per-hit approximation                                                                    | Diagnostic output                               |
+| Bloom                                            | Yes, optional                                                    | Yes through shared scene runtime                                                             | No                                                                                       | Disabled                                        |
+| HDR output                                       | Compatible floating-point targets                                | Compatible floating-point targets                                                            | Compatible floating-point targets                                                        | Compatible targets; diagnostic values           |
+| `frame.pick()` and `captureChannels()`           | No                                                               | No, including fallback                                                                       | Yes; output-resolution identity, distance, normals and projected depth                   | No                                              |
+
+Backend availability does not guarantee every device, texture format, imported asset, or material extension is supported. The ray runtime exposes `getRayTracingSceneCapabilities(device)` from `@luma.gl/experimental` for implementation support; it does not report per-scene capacity or allocations. Frame query support belongs to the runtime that last rendered the frame.
+
+Progressive accumulation does not automatically stop rendering at the history sample limit. Applications control scheduling. The Chart Lighting playground demonstrates bounded idle refinement and stopping at the limit; it retains half resolution rather than automatically switching to full resolution when idle.
+
 ### Renderer parameters[​](#renderer-parameters "Direct link to Renderer parameters")
 
 ```
@@ -145,6 +179,10 @@ type ANARIRendererParameters = {
   samplesPerPixel?: number;
 
   maxBounces?: number;
+
+  emitterSampling?: boolean;
+
+  emitterSelection?: 'uniform' | 'power';
 
   progressive?: boolean;
 
@@ -183,7 +221,9 @@ type ANARIRendererParameters = {
 | `toneMapMode`                 | Target-dependent           | `0` disables tone mapping, `1` selects Reinhard, `2` selects Khronos PBR Neutral, and `3` selects ACES. Floating-point targets default to `0`; normalized targets default to `2`. |
 | `outputColorSpace`            | Target-dependent           | Explicitly selects `'linear'` or `'srgb'` output. Floating-point and hardware-sRGB targets default to linear output; other normalized targets default to software sRGB encoding.  |
 | `samplesPerPixel`             | `1`                        | Primary-ray samples per frame in the `raytrace` renderer.                                                                                                                         |
-| `maxBounces`                  | Not applied                | Reserved ray-tracing bounce limit; the current implementation evaluates direct lighting only.                                                                                     |
+| `maxBounces`                  | `0`                        | Secondary diffuse bounce budget, clamped to 0–8. Zero preserves direct lighting. Changing it resets accumulation.                                                                 |
+| `emitterSampling`             | `false`                    | Sample emissive geometry with direct shadow-tested connections.                                                                                                                   |
+| `emitterSelection`            | `'uniform'`                | Select emitters uniformly or by `'power'` (area × luminance), with PDF compensation.                                                                                              |
 | `progressive`                 | `true`                     | Accumulate ray-traced samples across unchanged frames.                                                                                                                            |
 | `shadows`                     | `true`                     | Trace hard shadow rays toward direct lights in the `raytrace` renderer.                                                                                                           |
 | `resolutionScale`             | `0.5`                      | Initial ray-tracing width and height as a fraction of the display resolution.                                                                                                     |
@@ -236,7 +276,7 @@ const renderer = anariDevice.newRenderer('deferred', {
 });
 ```
 
-`deferred` is a WebGPU-only alternate renderer that writes committed ANARI surfaces into a shared `GBuffer`, then resolves opaque PBR lighting with the experimental `deferredLighting` shader pass. It currently supports base color, normal, metallic-roughness, emissive, and occlusion maps, plus ambient, directional, point, and spot lights. Spot lights are mapped onto deferred point lights in this first implementation.
+`deferred` is a WebGPU-only alternate renderer that writes committed ANARI surfaces into a shared `GBuffer`, then resolves opaque PBR lighting with the experimental `deferredLighting` shader pass. It currently supports base color, normal, metallic-roughness, emissive, and occlusion maps, plus ambient, directional, point, and spot lights. Scenes containing spot lights use the shared forward fallback so their cone attenuation is preserved.
 
 Its compact G-buffer uses four color attachments: HDR scene color (`rgba16float`), normal and roughness (`rgba8unorm`), base color and metallic (`rgba8unorm`), and HDR emissive color with occlusion (`rgba16float`). WebGPU charges eight render-target bytes for each format, totaling the default CORE limit of 32 bytes per sample. No elevated device limits or `featureLevel: 'max'` are required. The omitted velocity target previously contained only zeroes; HDR, physically based material channels, direct lighting, and emissive output remain intact.
 
@@ -282,7 +322,9 @@ The default half-resolution internal target traces one quarter as many pixels as
 
 Progressive history is reprojected through previous camera matrices and stable ANARI instance/group/ surface identities. Depth and normal validation plus bounded neighborhood color clamping reject incompatible history; camera cuts, changed topology/materials, changed light counts, and target resizing invalidate it. GPU acceleration updates are encoded only for changed geometry or transforms, while camera-only and lighting-only frames reuse the retained TLAS. Transform-only frames use the retained-permutation gather/refit graph; topology changes and periodic refreshes use the full Morton build graph.
 
-The Morton-sorted TLAS accelerates object and instance selection, while intersected meshes traverse GPU-built Morton-sorted triangle BLASes. Hardware ray tracing and SAH/Karras hierarchy topology are not implemented. Skeletal skinning, morph-target displacement, material textures, alpha/ transmission, and advanced PBR material extensions remain on the forward/deferred renderer paths. Indirect multi-bounce path tracing, denoising, and volumes are also unsupported. `maxBounces` is accepted for forward compatibility but does not enable indirect bounces.
+The Morton-sorted TLAS accelerates object and instance selection, while intersected meshes traverse GPU-built Morton-sorted triangle BLASes. Hardware ray tracing and SAH/Karras hierarchy topology are not implemented. Skeletal skinning, morph-target displacement, material textures, alpha blending/ transmission, and advanced PBR material extensions require raster rendering; deferred uses its forward fallback for unsupported materials. Diffuse secondary transport is opt-in through `maxBounces` (0–8). Each bounce samples a cosine-weighted hemisphere and gathers emission and existing direct lighting at the next hit, so matte surfaces receive color bleeding and emissive illumination. The scalar diffuse throughput in `transportMode: 'diffuse'` is base color × 0.96 × (1 − metallic). `transportMode: 'pbr'` additionally samples opaque GGX reflection; transmission is not sampled. Misses contribute no indirect radiance: `background` is a display color, not an environment light. Ambient lights and fog retain the existing per-hit approximations.
+
+`samplingSeed` controls primary and diffuse paths. Pixel, frame, sample, and bounce indices separate samples; unchanged progressive frames converge through the existing bounded history. Seed and bounce-budget changes invalidate accumulation. With diffuse bounces enabled, geometry, placement, material and light changes reset history even when temporal reprojection is enabled: primary-hit metadata cannot validate indirect illumination. Camera movement resets history when temporal reprojection is disabled; otherwise it uses the existing primary-hit reprojection and camera-cut rejection. Use a stationary scene, full resolution, disabled adaptive resolution and temporal reprojection, and multiple progressive frames for comparison. Small emitters can converge slowly under the default BSDF-only emission gathering. Opt-in explicit emitter sampling, opaque GGX transport and spatial denoising are available; MIS, transmissive transport, advanced temporal denoising and volumes remain planned.
 
 For the rationale behind the TLAS/BLAS split, Morton ordering, refit policy, megakernel execution, and temporal reconstruction policy, see [ray-tracing technique background and tradeoffs](https://luma.gl/docs/api-guide/engine/anari-architecture.md#ray-tracing-technique-background-and-tradeoffs).
 
@@ -378,6 +420,89 @@ graphicsDevice.submit();
 ```
 
 If required world, camera, or renderer parameters are absent from committed frame state, the implementation returns zero-valued statistics without rendering.
+
+### `pick(x, y)`[​](#pickx-y "Direct link to pickx-y")
+
+```
+frame.render();
+
+graphicsDevice.submit();
+
+const hit = await frame.pick(x, y);
+
+if (hit) {
+
+  console.log(hit.surface, hit.instance, hit.position, hit.normal);
+
+}
+```
+
+The built-in WebGPU `raytrace` renderer traces one centered camera ray at the requested output pixel. Coordinates use the frame's drawing-buffer size, with the origin at the top left; convert CSS pointer coordinates before calling. Picking uses full output resolution even when rendering uses reduced resolution or sparse temporal sampling. Submit the rendered frame before picking. The query submits its own command buffer and reads back only 32 bytes; it does not flush pending application commands.
+
+```
+type ANARIPickResult = {
+
+  surface: ANARISurface;
+
+  instance?: ANARIInstance;
+
+  placementId: string;
+
+  position: ANARIVector3;
+
+  normal: ANARIVector3;
+
+  distance: number;
+
+};
+```
+
+`surface` and optional `instance` are the original retained objects. `placementId` identifies their placement and stays stable when the world is reordered. Position and normal are in world space; distance is measured from the camera ray origin, which is on the near plane for orthographic cameras. Queries capture identity mappings before asynchronous readback, so later scene edits cannot reassign a pending result.
+
+Picking uses the runtime that last rendered the frame, even if a different renderer has since been committed. Background, out-of-bounds or non-finite coordinates, unrendered/destroyed frames, and frames last rendered by a built-in raster renderer return `null`. Intersections use the ray renderer's opaque geometry semantics. Scalar alpha masks exclude below-cutoff surfaces; alpha blending and transmission remain unsupported. The experimental `SelectionOutline` overlay draws visible selected placement boundaries. Projected-depth transfer for raster overlays is available through `DepthTextureCopy`.
+
+### `captureChannels()`[​](#capturechannels "Direct link to capturechannels")
+
+```
+frame.render();
+
+graphicsDevice.submit();
+
+const channels = frame.captureChannels();
+
+if (channels) {
+
+  // Bind the textures to a GPU effect or use Texture.readBuffer() for explicit readback.
+
+  // Identifier texel value n > 0 resolves to channels.identifiers[n - 1].
+
+  // Release the snapshot after submitting its final GPU use.
+
+  graphicsDevice.submit();
+
+  channels.destroy();
+
+}
+```
+
+The built-in WebGPU `raytrace` runtime traces one centered primary ray for every output pixel and returns a caller-owned GPU snapshot. Its size matches the drawing-buffer frame size, independently of resolution scaling, jitter, progressive accumulation, or sparse sampling. Texture coordinates use a top-left origin, matching `pick()`. The capture submits its own command buffer, performs no CPU readback, and does not flush application commands. Render and submit the scene before capturing it.
+
+| Property                | Format / meaning                                                                                                                                                         |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `identifierTexture`     | `r32uint`: exact integer placement identifier; zero denotes background.                                                                                                  |
+| `distanceTexture`       | `r32float`: distance from the camera ray origin in world units; zero denotes background. Orthographic origins lie on the near plane. This is not projected device depth. |
+| `normalTexture`         | `rgba32float`: world-space normal in xyz, hit validity in alpha. Background is all zero.                                                                                 |
+| `projectedDepthTexture` | `r32float`: projected WebGPU depth in zero-to-one range, from the last rendered camera; background is one.                                                               |
+| `identifiers`           | Array mapping nonzero texel value `n` to index `n - 1`, containing the original `surface`, optional `instance`, and stable `placementId`.                                |
+| `destroy()`             | Releases all four snapshot textures.                                                                                                                                     |
+
+Identifiers are local to each snapshot: retain its identity table with its textures. Placement IDs remain stable when scene extraction reorders packed primitives. Snapshots are independent of subsequent renders, resizing, and frame destruction; the application must submit commands using the textures before releasing them, while the graphics device is still alive. Each capture allocates 28 bytes per output pixel and performs an additional full-frame traversal, so capture only when needed. Float textures require unfilterable texture bindings; identifiers require unsigned integer bindings. All four support texture sampling and explicit texture-to-buffer copies.
+
+Like picking, capture uses the runtime that last rendered the frame. Unrendered or destroyed frames and frames last rendered by the built-in raster runtime return `null`. Channels use scalar alpha-mask intersection semantics. Texture alpha, blending and transmission remain separate work. Use [`DepthTextureCopy`](https://luma.gl/docs/api-reference/experimental/depth-texture-copy.md) to transfer `projectedDepthTexture` into a color-preserving render pass with a depth attachment before drawing raster overlays with matching camera and viewport conventions.
+
+### Selection outlines[​](#selection-outlines "Direct link to Selection outlines")
+
+Use [`SelectionOutline`](https://luma.gl/docs/api-reference/experimental/selection-outline.md) to draw an inward border over a selected visible placement. Resolve a `pick()` placement ID against the current snapshot identity table, rather than reusing an integer ID from an older snapshot. The JSON playground performs this lookup each frame while a mark is selected.
 
 ### `statistics`[​](#statistics "Direct link to statistics")
 
@@ -491,7 +616,7 @@ type ANARIMatrix4 = readonly number[];
 
 
 
-type ANARIGeometrySubtype = 'triangle' | 'sphere' | 'cylinder' | 'cone' | 'quad';
+type ANARIGeometrySubtype = 'triangle' | 'sphere' | 'cylinder' | 'cone' | 'quad' | 'hexPrism' | 'torus' | 'ring';
 
 type ANARIMaterialSubtype = 'matte' | 'physicallyBased';
 
@@ -514,4 +639,12 @@ type ANARIRendererSubtype =
   | (string & Record<never, never>);
 ```
 
-All parameter interfaces, object classes, subtype aliases, object metadata, and frame statistics are exported from `@luma.gl/scene`.
+All parameter interfaces, object classes, subtype aliases, object metadata, and frame statistics are exported from `@luma.gl/anari`.
+
+### Sampling and quality[​](#sampling-and-quality "Direct link to Sampling and quality")
+
+`raytrace` accepts `samplingSeed` (uint32, default zero) for deterministic primary and diffuse sample rotations. A changed seed resets accumulation; centered picking and hit channels are unaffected. Use the same seed and frame count on the same backend for comparisons. [`getRayTracingQualityPreset`](https://luma.gl/docs/api-reference/experimental/ray-tracing-quality-presets.md) returns explicit interactive/still renderer settings without modifying exposure or seed.
+
+### Emissive lighting and scalar alpha masks[​](#emissive-lighting-and-scalar-alpha-masks "Direct link to Emissive lighting and scalar alpha masks")
+
+`emitterSampling: true` enables explicit emissive-geometry connections with both diffuse and PBR transport, including at zero material bounces. It defaults to false. Scalar `alphaMode: 'mask'` compares committed opacity against `alphaCutoff` for color, secondary/shadow rays, picking and channels. Masked emitters are excluded from the sampling table. See the [ray quality reference](https://luma.gl/docs/api-reference/experimental/ray-tracing-quality-presets.md#explicit-emissive-lighting-and-scalar-masks) for sampling semantics and current limitations. `emitterSelection: 'power'` enables area/luminance-weighted emitter selection; uniform selection remains the default.

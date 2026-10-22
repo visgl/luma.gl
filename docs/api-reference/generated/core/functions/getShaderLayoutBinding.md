@@ -2,7 +2,7 @@
 
 > **getShaderLayoutBinding**(`shaderLayout`, `bindingName`, `options?`): [`BindingDeclaration`](https://luma.gl/docs/api-reference/generated/core/type-aliases/BindingDeclaration.md) | `null`
 
-Defined in: [modules/core/src/adapter-utils/bind-groups.ts:16](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter-utils/bind-groups.ts#L16)
+Defined in: [modules/core/src/api/adapter-utils/bind-groups.ts:16](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter-utils/bind-groups.ts#L16)
 
 ## Parameters[​](#parameters "Direct link to Parameters")
 

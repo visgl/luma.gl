@@ -1,6 +1,6 @@
 # Depth of Field
 
-Keep a selected camera-space distance sharp while softening nearer and farther geometry. `dofShaderPassPipeline` reconstructs depth from the scene attachment and applies separable horizontal and vertical lens blur.
+Keep a selected camera-space distance sharp while softening nearer and farther geometry. `dofCompositeShaderPass` reconstructs depth from the scene attachment and applies separable horizontal and vertical lens blur.
 
 ### Depth of Field
 
@@ -14,13 +14,15 @@ Mobile quality
 // Loading source…
 ```
 
+**Loading example**Preparing GPU resources…
+
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ## At a Glance[​](#at-a-glance "Direct link to At a Glance")
 
 | Property             | Value                                      |
 | -------------------- | ------------------------------------------ |
-| Exports              | `dof` and `dofShaderPassPipeline`          |
+| Exports              | `dof` and `dofCompositeShaderPass`         |
 | Backends             | WebGPU and WebGL2                          |
 | Render passes        | Two separable depth-driven sampling passes |
 | Required binding     | `depthTexture`                             |
@@ -31,13 +33,13 @@ Scroll page · Ctrl/⌘ + scroll to interact
 ```
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
-import {dofShaderPassPipeline} from '@luma.gl/effects';
+import {dofCompositeShaderPass} from '@luma.gl/effects';
 
 
 
 const renderer = new ShaderPassRenderer(device, {
 
-  shaderPasses: [dofShaderPassPipeline]
+  shaderPasses: [dofCompositeShaderPass]
 
 });
 
@@ -88,3 +90,23 @@ The supplied `depthTexture` must correspond to the same camera, viewport, and sc
 * [Tilt Shift](https://luma.gl/docs/api-reference/shadertools/shader-passes/tilt-shift.md) approximates selective focus without a depth attachment.
 * [Depth-Aware Blur](https://luma.gl/docs/api-reference/shadertools/shader-passes/depth-aware-blur.md) smooths intermediate data while preserving depth edges.
 * [Bloom](https://luma.gl/docs/api-reference/shadertools/shader-passes/bloom.md) spreads bright highlights through a separate multiscale optical pipeline.
+
+## Circular aperture bokeh[​](#circular-aperture-bokeh "Direct link to Circular aperture bokeh")
+
+Use `bokehDof` in `shaderPasses` and supply lens uniforms under `bokehDof` instead of `dof` for a single-pass circular aperture. It uses 48 equal-area disk samples, avoiding the rectangular highlights produced by separable blur. The same depth binding and public parameters apply. The maximum blur diameter is 20 source pixels. Zero aperture preserves sharp detail.
+
+```
+import {bokehDof} from '@luma.gl/effects';
+
+
+
+const renderer = new ShaderPassRenderer(device, {
+
+  shaderPasses: [bokehDof],
+
+  colorFormat: 'rgba16float'
+
+});
+```
+
+The normalized gather preserves HDR radiance; choose a floating-point output format and apply bloom and tone mapping afterward. This local gather does not scatter foreground silhouettes or reconstruct hidden surfaces. Large depth discontinuities can still show halos. It costs 48 color samples per defocused pixel, so use the separable pipeline when bandwidth is limited.

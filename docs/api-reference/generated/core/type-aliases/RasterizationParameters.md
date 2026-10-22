@@ -2,7 +2,7 @@
 
 > **RasterizationParameters** = `_RenderParameters` & `object`
 
-Defined in: [modules/core/src/adapter/types/parameters.ts:78](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/parameters.ts#L78)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:78](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L78)
 
 ## Type Declaration[​](#type-declaration "Direct link to Type Declaration")
 

@@ -8,6 +8,8 @@ Every rendered world starts somewhere. This live example turns one `Model` into 
 
 <!-- -->
 
+**Loading example**Preparing GPU resources…
+
 The canvas displays a red triangle. When both backends are available, switch between WebGPU and WebGL2 above the example to see the same application logic run through either GPU API.
 
 ## The mental model[​](#the-mental-model "Direct link to The mental model")
@@ -22,9 +24,9 @@ This first model does not need a vertex buffer. Both shaders use the built-in ve
 2. The animation loop constructs the application with that device.
 3. `onRender` begins a render pass and clears its color attachment.
 4. `model.draw(renderPass)` records the draw.
-5. Ending the pass allows the device to submit and present the frame.
+5. Ending the pass finishes encoding; the animation loop then submits the frame.
 
-**Runnable source**[View on GitHub](https://github.com/visgl/luma.gl/tree/9.4-release/examples/tutorials/hello-triangle)
+**Runnable source**[View on GitHub](https://github.com/visgl/luma.gl/tree/master/examples/tutorials/hello-triangle)
 
 ```
 // Loading canonical example source…
@@ -40,4 +42,6 @@ This first model does not need a vertex buffer. Both shaders use the built-in ve
 
 You created a model, provided backend-appropriate shaders, and drew it through the same render-pass API. Next, [Hello Cube](https://luma.gl/docs/tutorials/hello-cube.md) adds geometry, textures, depth testing, and uniforms.
 
-Want to run the example yourself? The [Installing guide](https://luma.gl/docs/developer-guide/installing.md) sets up a local project. For a glimpse of where these building blocks can lead, explore the complete scenes and simulations in [Getting Started](https://luma.gl/docs/getting-started.md).
+Want to run the example yourself? The [Installing guide](https://luma.gl/docs/developer-guide/installing.md) sets up a local project. For a glimpse of where these building blocks can lead, explore the [live examples](https://luma.gl/examples).
+
+For a complete local triangle program, see [Getting started](https://luma.gl/docs/getting-started.md).

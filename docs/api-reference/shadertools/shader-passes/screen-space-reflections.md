@@ -1,6 +1,6 @@
 # Screen-Space Reflections
 
-Reflect visible scene lighting from glossy and rough surfaces using depth, surface normals, roughness, and temporal reprojection. `createSSRShaderPassPipeline` traces reflection rays through the current frame and resolves them into a stabilized specular contribution.
+Reflect visible scene lighting from glossy and rough surfaces using depth, surface normals, roughness, and temporal reprojection. `createSSRCompositeShaderPass` traces reflection rays through the current frame and resolves them into a stabilized specular contribution.
 
 ### Deferred Rendering: Illumination Lab
 
@@ -14,25 +14,27 @@ Mobile quality
 // Loading source…
 ```
 
+**Loading example**Preparing GPU resources…
+
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ## At a Glance[​](#at-a-glance "Direct link to At a Glance")
 
-| Property            | Value                                                                                      |
-| ------------------- | ------------------------------------------------------------------------------------------ |
-| Export              | `createSSRShaderPassPipeline`                                                              |
-| Backend             | WebGPU                                                                                     |
-| Render passes       | Six: reflection trace, temporal resolve, depth history, two spatial filters, and composite |
-| Required bindings   | `depthTexture`, `normalTexture`, and `velocityTexture`                                     |
-| Persistent state    | `rgba16float` reflection and depth history                                                 |
-| Reflection coverage | Visible scene color and first-layer screen depth                                           |
+| Property            | Value                                                                                                                         |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Export              | `createSSRCompositeShaderPass`                                                                                                |
+| Backend             | WebGPU                                                                                                                        |
+| Render passes       | Six with velocity history; seven with camera history (adds a normal-history copy)                                             |
+| Required bindings   | `depthTexture`, `normalTexture`; velocity mode also requires `velocityTexture`                                                |
+| Persistent state    | `rgba16float` reflections; velocity mode uses float depth, camera mode uses packed depth and normal/roughness in `rgba8unorm` |
+| Reflection coverage | Visible scene color and first-layer screen depth                                                                              |
 
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
-import {createSSGIShaderPassPipeline, createSSRShaderPassPipeline} from '@luma.gl/effects';
+import {createSSGICompositeShaderPass, createSSRCompositeShaderPass} from '@luma.gl/effects';
 
 
 
@@ -42,9 +44,9 @@ const renderer = new ShaderPassRenderer(device, {
 
   shaderPasses: [
 
-    createSSGIShaderPassPipeline({resolutionScale: 0.5}),
+    createSSGICompositeShaderPass({resolutionScale: 0.5}),
 
-    createSSRShaderPassPipeline({resolutionScale: 0.5})
+    createSSRCompositeShaderPass({resolutionScale: 0.5})
 
   ]
 
@@ -89,17 +91,39 @@ renderer.renderToScreen({
 
 ## Parameters[​](#parameters "Direct link to Parameters")
 
-| Parameter         | Default | Range or purpose                                                           |
-| ----------------- | ------- | -------------------------------------------------------------------------- |
-| `resolutionScale` | `1`     | Relative resolution of reflection tracing, history, and spatial filtering. |
-| `intensity`       | `1.35`  | Strength of traced specular reflection before final composition.           |
-| `maxDistance`     | `60`    | Maximum view-space reflection-ray travel distance.                         |
-| `thickness`       | `0.45`  | Accepted depth thickness when testing a possible screen-space hit.         |
-| `sampleCount`     | `48`    | Ray-march budget; supported range is `8` to `96`.                          |
-| `maxRoughness`    | `0.88`  | Highest surface roughness that can contribute reflections.                 |
-| `historyWeight`   | `0.86`  | Contribution from depth-validated reflection history.                      |
-| `depthThreshold`  | `0.018` | Temporal rejection threshold for disoccluded reflected surfaces.           |
-| `strength`        | `1`     | Final `ssrComposite` contribution blended into scene color.                |
+| Parameter         | Default         | Range or purpose                                                            |
+| ----------------- | --------------- | --------------------------------------------------------------------------- |
+| `quality`         | unset           | `fast`, `balanced`, or `detailed`; omitting it preserves existing defaults. |
+| `reprojection`    | `velocity`      | `camera` uses camera matrices plus normal history for static geometry.      |
+| `resolutionScale` | `1` (or preset) | Relative resolution of reflection tracing, history, and spatial filtering.  |
+| `intensity`       | `1.35`          | Strength of traced specular reflection before final composition.            |
+| `maxDistance`     | `60`            | Maximum view-space reflection-ray travel distance.                          |
+| `thickness`       | `0.45`          | Accepted depth thickness when testing a possible screen-space hit.          |
+| `sampleCount`     | `48`            | Ray-march budget; supported range is `8` to `96`.                           |
+| `maxRoughness`    | `0.88`          | Highest surface roughness that can contribute reflections.                  |
+| `historyWeight`   | `0.86`          | Contribution from depth-validated reflection history.                       |
+| `depthThreshold`  | `0.018`         | Temporal rejection threshold for disoccluded reflected surfaces.            |
+| `strength`        | `1`             | Final `ssrComposite` contribution blended into scene color.                 |
+
+## Camera-only history[​](#camera-only-history "Direct link to Camera-only history")
+
+For static geometry without a velocity attachment, use `createSSRCompositeShaderPass({reprojection: 'camera', quality: 'balanced'})`. The factory composes `ssrCameraTemporal`, full-resolution packed depth and normal histories, and the existing tracing, denoising, and composition passes. Supply `currentClipToPreviousClip` (previous view-projection multiplied by inverse current view-projection, using WebGPU clip depth), `currentViewToPreviousView`, and `previousInverseProjectionMatrix`. Form the clip-to-clip product on the CPU to avoid reconstructing large world coordinates in the shader. Matrix conventions and units must match the depth and view-normal attachments.
+
+The pass reads `depthTexture`, `normalTexture`, `historyTexture`, `previousDepthTexture`, and `previousNormalTexture`. The factory maintains three renderer history targets: RGBA16F reflection radiance, RGBA8 packed depth, and RGBA8 encoded view normals plus roughness. It writes depth with `ssrCameraDepthHistoryCopy` and normals with `ssrNormalHistoryCopy` **after** the temporal resolve. It initializes reflection history to zero and packed depth history to `[1, 1, 1, 1]`. The packed depth preserves 24 bits without requiring filterable 32-bit float textures; it is not interchangeable with the red-channel output of `ssrDepthHistoryCopy`.
+
+History defaults to weight `0.8`, relative depth tolerance `0.01`, and normal dot threshold `0.96`. Each bilinear history tap is validated separately against expected previous depth, transformed normals, and roughness before neighborhood clamping. Depth and normal histories can remain full resolution when reflection radiance is half resolution. Reset history on camera cuts, resize, material changes, and scene edits. This is camera-only reprojection: moving geometry needs motion vectors or a caller-controlled reset. Changing water normals can reject history, but reflected view-dependent radiance is still an approximation.
+
+## Quality presets[​](#quality-presets "Direct link to Quality presets")
+
+`SSR_QUALITY_PRESETS` exposes the shared settings used by both reprojection modes:
+
+| Quality    | Resolution scale | Trace samples | Denoising radius | History weight |
+| ---------- | ---------------- | ------------- | ---------------- | -------------- |
+| `fast`     | 0.25             | 32            | 3                | 0.9            |
+| `balanced` | 0.5              | 96            | 2                | 0.8            |
+| `detailed` | 1                | 96            | 2                | 0.8            |
+
+An explicit `resolutionScale` overrides the preset scale. Per-draw uniforms override the preset's tracing, filtering, and history values; for example, set history weight to zero for the first frame. Recreate the renderer to change target resolution, destroy the previous renderer, and reset camera history. Camera depth and normal histories retain full resolution. Velocity-mode depth history retains its original behavior of scaling with reflection history. These are workload choices, not measured device performance tiers. Presets do not change view-space ray distance or thickness.
 
 ## Quality and Limitations[​](#quality-and-limitations "Direct link to Quality and Limitations")
 

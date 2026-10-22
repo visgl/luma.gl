@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GPU Graph × Three.js — Galactic Vortex</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#02030b;color:#e8f7ff;font:14px system-ui}
+canvas{display:block;width:100%;height:100%}
+#galaxy-info{position:fixed;inset:16px;z-index:20;pointer-events:none;--menu-background:var(--luma-example-surface);--menu-text:var(--luma-example-text);--button-text:var(--luma-example-text);--menu-border:1px solid var(--luma-example-border);--menu-shadow:var(--luma-example-shadow)}
+#hud{position:static;padding:0;background:transparent;color:#e8f7ff}
+#hud h1{display:none}
+#hud[hidden]{display:none}
+h1{margin:0 0 8px;font-size:21px;letter-spacing:-.5px}p{line-height:1.5;color:#b5d3e7}
+#galaxy-info [data-setting-row-for]{grid-template-columns:72px minmax(0,1fr)!important;min-height:32px;gap:10px!important}
+#galaxy-info [data-setting-row-for] input[type='range']{min-width:0!important;width:0!important;flex:1 1 0}
+#galaxy-info [data-setting-row-for] input[type='number']{width:56px!important;flex:0 0 56px!important}
+#galaxy-info [data-setting-row-for]>label{min-width:0}
+#status{color:#80e6ff;font:12px monospace}#viewport{position:fixed;inset:0}
+#simulation-time{position:fixed;right:24px;bottom:24px;z-index:10;pointer-events:none;text-align:right;text-shadow:0 2px 8px #000;font-variant-numeric:tabular-nums}#simulation-time output{display:block;font-size:24px;font-weight:500}#simulation-time small{color:#b5d3e7;font-size:11px}
+</style>  <script type="module" crossorigin src="/standalone-examples/three/assets/gpu-graph-galaxy-BgVo2Zh0.js"></script>
+  <link rel="modulepreload" crossorigin href="/standalone-examples/three/assets/shader-type-decoder-BLygFN_M.js">
+  <link rel="modulepreload" crossorigin href="/standalone-examples/three/assets/image-types-BAfTQyZr.js">
+  <link rel="modulepreload" crossorigin href="/standalone-examples/three/assets/OrbitControls-D_EJvESG.js">
+  <link rel="modulepreload" crossorigin href="/standalone-examples/three/assets/buffer-layout-utils-DobW9w6a.js">
+  <link rel="modulepreload" crossorigin href="/standalone-examples/three/assets/wgsl-interface-scan-DCPEvY2t.js">
+  <link rel="modulepreload" crossorigin href="/standalone-examples/three/assets/shader-block-layout-92_aKAG9.js">
+  <link rel="modulepreload" crossorigin href="/standalone-examples/three/assets/gpu-vector-chunks-C_IqND_x.js">
+  <link rel="modulepreload" crossorigin href="/standalone-examples/three/assets/interop-CU0bYHch.js">
+  <link rel="modulepreload" crossorigin href="/standalone-examples/three/assets/computation-BazHRsEW.js">
+  <link rel="modulepreload" crossorigin href="/standalone-examples/three/assets/get-attribute-from-layouts-62jOaQqD.js">
+  <link rel="modulepreload" crossorigin href="/standalone-examples/three/assets/external-texture-Cr5XLoAq.js">
+  <link rel="modulepreload" crossorigin href="/standalone-examples/three/assets/model-DL_gbJz9.js">
+</head><body><div id="viewport"></div><div id="galaxy-info"></div><section id="hud">
+<h1>Galactic Vortex</h1><p>A luma GPU graph animates the positions and colors of 196,608 stars in buffers rendered directly by Three.js.</p>
+
+<div id="status">Loading example modules…</div></section>
+<aside id="simulation-time" aria-label="Elapsed time"><output id="elapsed-time" aria-label="Elapsed time in millions of years">0 Ma</output><small>Galactic orbit ≈ 250 Ma</small></aside></body></html>

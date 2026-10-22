@@ -1,4 +1,4 @@
-# @luma.gl/scene
+# @luma.gl/anari
 
 [![ANARI](/img/standards/anari.svg)](https://www.khronos.org/anari/)
 
@@ -6,9 +6,9 @@ Experimental asset import
 
 [![glTF](/img/standards/gltf.svg)](https://www.khronos.org/gltf/)[![OpenUSD](/img/standards/openusd.png)](https://openusd.org/)
 
-ExperimentalPublished packageFrom v9.4
+ExperimentalPrivate workspaceFrom v10
 
-`@luma.gl/scene` provides a published experimental, independently developed retained rendering API built in the spirit of ANARI on top of luma.gl. Applications describe **what** to render as cameras, worlds, surfaces, materials, lights, and frames. The implementation decides **how** to compile that description into portable WebGPU or WebGL rendering.
+`@luma.gl/anari` provides a private, experimental, independently developed retained rendering API built in the spirit of ANARI on top of luma.gl. Applications describe **what** to render as cameras, worlds, surfaces, materials, lights, and frames. The implementation decides **how** to compile that description into portable WebGPU or WebGL rendering.
 
 Independent, non-conformant proof of concept
 
@@ -28,15 +28,15 @@ This package is inspired by the ANARI object model, but it is not an official AN
 * [ANARI developer guide](https://luma.gl/docs/api-guide/engine/anari-rendering.md): complete setup, scene construction, animation, HDR presentation, debugging, architecture, and limitations.
 * [JSON scene playground](https://luma.gl/docs/api-guide/engine/anari-json-scenes.md#explore-the-json-scene-playground): live deck.gl-style JSON scene editing, reusable object references, animated presets, and retained-scene statistics.
 
-## Published package availability[​](#published-package-availability "Direct link to Published package availability")
+## Private workspace availability[​](#private-workspace-availability "Direct link to Private workspace availability")
 
-`@luma.gl/scene` is published as an experimental package:
+`@luma.gl/anari` is a private, unpublished luma.gl workspace. Install dependencies from a luma.gl checkout:
 
 ```
-yarn add @luma.gl/scene
+yarn install
 ```
 
-Its APIs may evolve without a 9.4 semver compatibility promise. Add `@luma.gl/webgl` if a WebGL 2 fallback is required.
+Another workspace inside the same checkout can depend on it through `"@luma.gl/anari": "workspace:*"`. It cannot currently be installed from npm. Import `webgl2Adapter` from `@luma.gl/core/webgl` if a WebGL 2 fallback is required.
 
 ## Object model[​](#object-model "Direct link to Object model")
 
@@ -97,7 +97,7 @@ import {
 
   ANARIFrame
 
-} from '@luma.gl/scene';
+} from '@luma.gl/anari';
 ```
 
 The package also exports parameter interfaces, subtype unions, object metadata, frame statistics, and shared vector/matrix aliases. Each reference page documents its related exported types.
@@ -105,11 +105,11 @@ The package also exports parameter interfaces, subtype unions, object metadata, 
 Optional functionality is isolated in separate entry points:
 
 ```
-import {ANARIDevice} from '@luma.gl/scene';
+import {ANARIDevice} from '@luma.gl/anari';
 
-import {makeANARIAnimationScene} from '@luma.gl/scene/gltf';
+import {makeANARIAnimationScene} from '@luma.gl/anari/gltf';
 
-import {ANARISceneSchema} from '@luma.gl/scene/schemas';
+import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 ```
 
 The core entry point contains neither a glTF file loader nor Zod. The optional `/gltf` adapter consumes glTF-owned decoded data and reuses the existing engine animation mixer; `/schemas` separately loads the retained JSON validation helpers.
@@ -119,7 +119,7 @@ The core entry point contains neither a glTF file loader nor Zod. The optional `
 | Object type | Supported subtypes                                                                              |
 | ----------- | ----------------------------------------------------------------------------------------------- |
 | Array       | `array1D`                                                                                       |
-| Geometry    | `triangle`, `sphere`, `cylinder`, `cone`, `quad`                                                |
+| Geometry    | `triangle`, `sphere`, `cylinder`, `cone`, `quad`, `hexPrism`, `torus`, `ring`                   |
 | Material    | `matte`, `physicallyBased`                                                                      |
 | Sampler     | `image2D`                                                                                       |
 | Surface     | `default`                                                                                       |
@@ -134,6 +134,8 @@ The core entry point contains neither a glTF file loader nor Zod. The optional `
 Query the actual subtype list with `anariDevice.getObjectSubtypes(type)` instead of assuming future implementations expose the same set.
 
 ## Compatibility[​](#compatibility "Direct link to Compatibility")
+
+For support by renderer subtype, including deferred forward fallback and ray-tracing limitations, see the [renderer feature comparison](https://luma.gl/docs/api-reference/scene/anari-rendering.md#renderer-feature-comparison).
 
 | Capability                                                      | WebGPU                                                    | WebGL 2                     |
 | --------------------------------------------------------------- | --------------------------------------------------------- | --------------------------- |
@@ -160,6 +162,6 @@ See [HDR and backend selection](https://luma.gl/docs/api-guide/engine/anari-firs
 
 ## Experimental JSON playground[​](#experimental-json-playground "Direct link to Experimental JSON playground")
 
-The package includes a JSON scene playground at `examples/showcase/scene/playground.html`. Start it with `yarn workspace luma.gl-examples-showcase-scene start`, then open `/playground.html` on the reported development-server URL. The playground translates deck.gl-inspired `@@type` declarations, named ANARI object references, shared retained surfaces, generated torus/crystal/prism meshes, starfield distributions, composable transform animations, lights following named instances, cameras, and optional renderer presets into the API documented on these pages. The active renderer subtype is selected as frame state outside the renderer-independent scene. The complete Chromatic Atlas, Crystal Cathedral, and Celestial Engine showcase scenes are available as editable JSON presets.
+The private package includes a JSON scene playground at `examples/anari/scenes/playground.html`. Start it with `yarn workspace luma.gl-examples-showcase-scene start`, then open `/playground.html` on the reported development-server URL. The playground translates deck.gl-inspired `@@type` declarations, named ANARI object references, shared retained surfaces, generated torus/crystal/prism meshes, starfield distributions, composable transform animations, lights following named instances, cameras, and optional renderer presets into the API documented on these pages. The active renderer subtype is selected as frame state outside the renderer-independent scene. The complete Chromatic Atlas, Crystal Cathedral, and Celestial Engine showcase scenes are available as editable JSON presets.
 
-The optional `@luma.gl/scene/gltf` entry point binds source node hierarchies, material and texture tracks, animated morph targets, and imported glTF skeletons to existing retained objects. The showcase preserves joint attributes, authored joint nodes, and inverse bind matrices; it creates reusable mesh-local palettes automatically and commits each animated retained surface at most once per frame. Applications can also provide explicit `skin: {jointMatrices}` surface descriptors. The separate `@luma.gl/scene/schemas` entry point exports experimental Zod schemas and generated JSON Schema for editor integration. The scene format is not an official ANARI serialization format. See the [schema API reference](https://luma.gl/docs/api-reference/scene/anari-schemas.md) and the [JSON scene playground developer guide](https://luma.gl/docs/api-guide/engine/anari-json-scenes.md#explore-the-json-scene-playground) for the full schema, animation vocabulary, and editing controls.
+The optional `@luma.gl/anari/gltf` entry point binds source node hierarchies, material and texture tracks, animated morph targets, and imported glTF skeletons to existing retained objects. The showcase preserves joint attributes, authored joint nodes, and inverse bind matrices; it creates reusable mesh-local palettes automatically and commits each animated retained surface at most once per frame. Applications can also provide explicit `skin: {jointMatrices}` surface descriptors. The separate `@luma.gl/anari/schemas` entry point exports experimental Zod schemas and generated JSON Schema for editor integration. The scene format is not an official ANARI serialization format. See the [schema API reference](https://luma.gl/docs/api-reference/scene/anari-schemas.md) and the [JSON scene playground developer guide](https://luma.gl/docs/api-guide/engine/anari-json-scenes.md#explore-the-json-scene-playground) for the full schema, animation vocabulary, and editing controls.

@@ -2,7 +2,7 @@
 
 > **\_getDefaultBindGroupFactory**(`device`): `BindGroupFactory`
 
-Defined in: [modules/core/src/factories/bind-group-factory.ts:129](https://github.com/visgl/luma.gl/blob/master/modules/core/src/factories/bind-group-factory.ts#L129)
+Defined in: [modules/core/src/api/factories/bind-group-factory.ts:129](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/factories/bind-group-factory.ts#L129)
 
 ## Parameters[​](#parameters "Direct link to Parameters")
 

@@ -66,7 +66,9 @@ const compiledGraph = graph.compile();
 
   WebGPU
 
-[Open full page](https://luma.gl/examples/experimental/gpu-data-analysis)[View source](https://github.com/visgl/luma.gl/tree/9.4-release/examples/experimental/gpu-data-analysis)[Inspect graph](https://luma.gl/examples/experimental/gpu-data-analysis?panel=graph)
+[Open full page](https://luma.gl/examples/experimental/gpu-data-analysis)[View source](https://github.com/visgl/luma.gl/tree/master/examples/experimental/gpu-data-analysis)[Inspect graph](https://luma.gl/examples/experimental/gpu-data-analysis?panel=graph)
+
+**Loading example**Preparing GPU resources…
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
@@ -91,6 +93,6 @@ See the [operations reference](https://luma.gl/docs/api-reference/experimental/g
 
 ## Related modules[​](#related-modules "Direct link to Related modules")
 
-* GPU scheduling supplies scheduling and primitives.
+* [GPU Core](https://luma.gl/docs/api-reference/experimental/gpu-core.md) supplies scheduling and primitives.
 * [GPU Crossfilter](https://luma.gl/docs/api-reference/experimental/gpu-crossfilter.md) composes linked interactive selections.
 * [`@luma.gl/gpgpu/gpu-data`](https://luma.gl/docs/api-reference/gpgpu/gpu-data.md) defines primitive GPU storage, while [`@luma.gl/experimental/gpu-tables`](https://luma.gl/docs/api-reference/experimental/gpu-tables.md) defines record batches and tables.

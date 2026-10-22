@@ -34,25 +34,30 @@ Mobile quality
 // Loading source…
 ```
 
+**Loading example**Preparing GPU resources…
+
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ## Module catalog[​](#module-catalog "Direct link to Module catalog")
 
-### GPU data and analytics[​](#gpu-data-and-analytics "Direct link to GPU data and analytics")
+### GPU Core and GPU analytics[​](#gpu-core-and-gpu-analytics "Direct link to GPU Core and GPU analytics")
 
-| Module                                                                                              | Use it for                                                                                                     |
-| --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| [`@luma.gl/gpgpu/gpu-data`](https://luma.gl/docs/api-reference/gpgpu/gpu-data.md)                   | Primitive GPU chunks, views, vectors, constants, memory formats, and basic layout helpers.                     |
-| [`@luma.gl/experimental/gpu-tables`](https://luma.gl/docs/api-reference/experimental/gpu-tables.md) | Record batches, tables, schemas, bindings, computations, and generic table planners.                           |
-| `@luma.gl/experimental/models`                                                                      | Path and polygon rendering models, GPU input helpers, and model-specific planners.                             |
-| [GPU Raster](https://luma.gl/docs/api-reference/experimental/gpu-raster.md)                         | Validity-aware raster overviews, statistics, filters, morphology, contours, and bounded residency.             |
-| [LuCIM](https://luma.gl/docs/api-reference/experimental/lucim.md)                                   | CuCIM-inspired dense 3D volume thresholding, morphology, connected components, and region measurements.        |
-| [GPU Project](https://luma.gl/docs/api-reference/experimental/gpu-project.md)                       | Adaptive high-precision coordinate projection on WebGPU.                                                       |
-| [GPU Trace](https://luma.gl/docs/api-reference/experimental/gpu-trace.md)                           | Large GPU-resident trace scenes, interaction, aggregation, temporal indexing, comparison, and causal analysis. |
-| [GPU Dataframe](https://luma.gl/docs/api-reference/experimental/gpu-dataframe.md)                   | Immutable GPU-resident dataframe expressions, grouping, aggregation, sorting, indexes, and joins.              |
-| [GPU SQL](https://luma.gl/docs/api-reference/experimental/gpu-sql.md)                               | Bounded SQL planning over registered GPU Dataframe inputs.                                                     |
-| [GPU Crossfilter](https://luma.gl/docs/api-reference/experimental/gpu-crossfilter.md)               | Linked GPU filtering, histograms, aggregates, and rendering masks.                                             |
-| [Geospatial kernels](https://luma.gl/docs/api-reference/experimental/geospatial.md)                 | Projection, distance, point-in-polygon, nearest-feature, and spatial-query operations.                         |
+| Module                                                                                              | Use it for                                                                                                          |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| [`@luma.gl/gpgpu/gpu-data`](https://luma.gl/docs/api-reference/gpgpu/gpu-data.md)                   | Primitive GPU chunks, views, vectors, constants, memory formats, and basic layout helpers.                          |
+| [`@luma.gl/experimental/gpu-tables`](https://luma.gl/docs/api-reference/experimental/gpu-tables.md) | Private record batches, tables, schemas, bindings, computations, and generic table planners.                        |
+| `@luma.gl/experimental/models`                                                                      | Private path and polygon rendering models, GPU input helpers, and model-specific planners.                          |
+| [`@luma.gl/gpgpu/gpu-core`](https://luma.gl/docs/api-reference/experimental/gpu-core.md)            | Schedule reusable GPU algorithms, validate resource dependencies, reuse transient storage, and drive indirect work. |
+| [`@luma.gl/gpgpu/gpu-graph`](https://luma.gl/docs/api-reference/experimental/gpu-graph.md)          | GPU-resident topology, traversal, connectivity, ranking, community, and layout algorithms.                          |
+| [GPU Raster](https://luma.gl/docs/api-reference/experimental/gpu-raster.md)                         | Validity-aware raster overviews, statistics, filters, morphology, contours, and bounded residency.                  |
+| [LuCIM](https://luma.gl/docs/api-reference/experimental/lucim.md)                                   | CuCIM-inspired dense 3D volume thresholding, morphology, connected components, and region measurements.             |
+| [GPU Project](https://luma.gl/docs/api-reference/experimental/gpu-project.md)                       | Adaptive high-precision coordinate projection on WebGPU.                                                            |
+| [GPU DGGS cells](https://luma.gl/docs/api-reference/experimental/gpu-dggs.md)                       | H3 and A5 cell-center decoding for GPU-resident split-uint64 indexes.                                               |
+| [GPU Trace](https://luma.gl/docs/api-reference/experimental/gpu-trace.md)                           | Large GPU-resident trace scenes, interaction, aggregation, temporal indexing, comparison, and causal analysis.      |
+| [GPU Dataframe](https://luma.gl/docs/api-reference/experimental/gpu-dataframe.md)                   | Immutable GPU-resident dataframe expressions, grouping, aggregation, sorting, indexes, and joins.                   |
+| [GPU SQL](https://luma.gl/docs/api-reference/experimental/gpu-sql.md)                               | Bounded SQL planning over registered GPU Dataframe inputs.                                                          |
+| [GPU Crossfilter](https://luma.gl/docs/api-reference/experimental/gpu-crossfilter.md)               | Linked GPU filtering, histograms, aggregates, and rendering masks.                                                  |
+| [Geospatial kernels](https://luma.gl/docs/api-reference/experimental/geospatial.md)                 | Projection, distance, point-in-polygon, nearest-feature, and spatial-query operations.                              |
 
 ### Scene rendering and lighting[​](#scene-rendering-and-lighting "Direct link to Scene rendering and lighting")
 
@@ -62,6 +67,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 | [DeferredSceneRenderer](https://luma.gl/docs/api-reference/experimental/deferred-scene-renderer.md) | G-buffer-based opaque lighting with forward fallbacks for unsupported materials. |
 | [PBR environments](https://luma.gl/docs/api-reference/experimental/pbr-environment.md)              | Diffuse irradiance, prefiltered specular cubemaps, and BRDF lookup textures.     |
 | [GBuffer](https://luma.gl/docs/api-reference/experimental/g-buffer.md)                              | Standard scene color, normal, roughness, velocity, and depth attachments.        |
+| [Selection outlines](https://luma.gl/docs/api-reference/experimental/selection-outline.md)          | Visible placement boundaries from exact integer ID textures.                     |
 | [Deferred lighting](https://luma.gl/docs/api-reference/experimental/deferred-lighting.md)           | Fullscreen lighting from G-buffer material targets.                              |
 | [Clustered lighting](https://luma.gl/docs/api-reference/experimental/clustered-lighting.md)         | Compute-binned local lights for deferred shading.                                |
 | [Shadow maps](https://luma.gl/docs/api-reference/experimental/shadow-map-renderer.md)               | Cascaded, spot-array, and point cube-array shadows with PCSS filtering.          |
@@ -88,13 +94,13 @@ Scroll page · Ctrl/⌘ + scroll to interact
 
 ## Core concepts[​](#core-concepts "Direct link to Core concepts")
 
-Experimental modules follow the same ownership model as the rest of luma.gl: callers own the frame loop and command submission unless a reference explicitly says otherwise. GPU scheduling contributors declare work but do not submit it. Renderer and simulation references state which resources they own, borrow, cache, or expose.
+Experimental modules follow the same ownership model as the rest of luma.gl: callers own the frame loop and command submission unless a reference explicitly says otherwise. GPU Core contributors declare work but do not submit it. Renderer and simulation references state which resources they own, borrow, cache, or expose.
 
 Use the [shared glossary](https://luma.gl/docs/glossary.md) for resource, ownership, binding, pipeline, pass, submission, data hazard, indirect work, and GPU residency terminology.
 
 ## Limits and compatibility[​](#limits-and-compatibility "Direct link to Limits and compatibility")
 
-Experimental APIs may change or be removed without the compatibility guarantees of stable packages. Many GPU scheduling and simulation modules require WebGPU; individual references state backend, feature, capacity, and memory requirements. Treat benchmark results as workload- and adapter- specific rather than universal performance claims.
+Experimental APIs may change or be removed without the compatibility guarantees of stable packages. Many GPU Core and simulation modules require WebGPU; individual references state backend, feature, capacity, and memory requirements. Treat benchmark results as workload- and adapter- specific rather than universal performance claims.
 
 ## Related modules[​](#related-modules "Direct link to Related modules")
 
@@ -103,3 +109,7 @@ Experimental APIs may change or be removed without the compatibility guarantees 
 * [Engine API](https://luma.gl/docs/api-reference/engine.md)
 * [Shadertools API](https://luma.gl/docs/api-reference/shadertools.md)
 * [Effects API](https://luma.gl/docs/api-reference/effects.md)
+
+[`DepthTextureCopy`](https://luma.gl/docs/api-reference/experimental/depth-texture-copy.md) transfers projected ray depth to a render attachment for raster overlays.
+
+[`getRayTracingQualityPreset`](https://luma.gl/docs/api-reference/experimental/ray-tracing-quality-presets.md) supplies interactive and still settings without changing camera or sampling seed.

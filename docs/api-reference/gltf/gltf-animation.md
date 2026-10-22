@@ -187,16 +187,14 @@ Extras, structural material switches such as `alphaMode`, `doubleSided`, or `unl
 
 Parsed geometry preserves the glTF `JOINTS_0` and `WEIGHTS_0` attributes. Authored normalized integer joint weights retain their intended normalized interpretation at the consumer boundary. The existing shared `skin` shader module in `@luma.gl/shadertools` applies joint palettes; its current uniform-array capacity is 64 joints.
 
-`createScenegraphsFromGLTF()` automatically builds a source-aware `GLTFSkinController`. Each binding maps one authored mesh node to its source skin, animated joints, optional inverse bind matrices, reusable mesh-local joint palette, and existing primitive models:
+`createScenegraphsFromGLTF()` maps source skins into an engine `SkinController`. Each binding maps one resolved mesh node to its animated joints, optional inverse bind matrices, reusable mesh-local joint palette, and existing primitive models:
 
 ```
 for (const binding of scenegraphs.skins.bindings) {
 
   console.log({
 
-    sourceNode: binding.nodeIndex,
-
-    sourceSkin: binding.skinIndex,
+    node: binding.node.id,
 
     jointCount: binding.joints.length,
 
@@ -208,7 +206,7 @@ for (const binding of scenegraphs.skins.bindings) {
 
 
 
-const skinBinding = scenegraphs.skins.getBinding(2);
+const skinBinding = scenegraphs.skins.getBinding(scenegraphs.gltfNodeIndexToNodeMap.get(2));
 
 console.log(skinBinding?.models.length);
 ```
@@ -223,7 +221,7 @@ scenegraphs.skins.update();
 
 The shared [experimental SceneRenderer](https://luma.gl/docs/api-reference/experimental/scene-renderer.md) consumes the format-independent palette through its surface skin descriptor.
 
-The optional ANARI glTF integration also maps retained source skin bindings to the same generic joint-palette helper and updates its palettes after each animation frame. It remains an optional `@luma.gl/scene/gltf` adapter: the ANARI core does not own a loader, animation mixer, or skinning shader.
+The optional ANARI glTF integration also maps retained source skin bindings to the same generic joint-palette helper and updates its palettes after each animation frame. It remains an optional `@luma.gl/anari/gltf` adapter: the ANARI core does not own a loader, animation mixer, or skinning shader.
 
 ## Morph targets[​](#morph-targets "Direct link to Morph targets")
 

@@ -39,7 +39,7 @@ Unlike older luma.gl APIs, the current `AnimationLoop` does not take a raw WebGL
 ```
 import {luma} from '@luma.gl/core';
 
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
 import {AnimationLoop} from '@luma.gl/engine';
 
@@ -228,7 +228,7 @@ Triggers a redraw and returns the current HTML canvas as a data URL.
 
 ## Experimental Frame Provider[​](#experimental-frame-provider "Direct link to Experimental Frame Provider")
 
-From v9.4Experimental API
+From v10Experimental API
 
 `AnimationLoop` accepts an experimental `animationFrameProvider` for schedulers that carry a per-frame payload. During those frames, `AnimationProps.animationFrame` contains the provider payload; it is `null` for ordinary browser frames.
 

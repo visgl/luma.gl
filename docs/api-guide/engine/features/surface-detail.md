@@ -1,0 +1,97 @@
+# Normal and bump mapping
+
+Normal and height textures add apparent fine surface detail without increasing mesh tessellation.
+
+The **BumpMaterial** sample demonstrates this capability. Drag to orbit and scroll to zoom.
+
+### BumpMaterial
+
+[GitHub](https://github.com/visgl/luma.gl/tree/master/examples/tutorials/hello-gltf)Info
+
+InfoSource
+
+Mobile
+
+```
+// Loading source…
+```
+
+**Loading example**Preparing GPU resources…
+
+Scroll page · Ctrl/⌘ + scroll to interact
+
+## PBRMaterial reference[​](#pbrmaterial-reference "Direct link to PBRMaterial reference")
+
+`PBRMaterial` from `@luma.gl/experimental` is a typed engine `Material` backed by the shared `pbrMaterial` shader module. Its material fields are defined by `PBRMaterialUniforms` from `@luma.gl/shadertools`. Pass them through `createPBRMaterial(device, {uniforms})` or update them with `material.setProps({pbrMaterial: {...}})`.
+
+The fields below are optional. Defaults are the shared shader defaults; imported assets can supply other values.
+
+| Field              | Type      | Default | Description                                      |
+| ------------------ | --------- | ------- | ------------------------------------------------ |
+| `normalScale`      | `number`  | `1`     | Scale of tangent-space normal-map perturbations. |
+| `normalMapEnabled` | `boolean` | `false` | Enables normal texture sampling.                 |
+| `bumpFactor`       | `number`  | `1`     | Scale of height-derived normal perturbations.    |
+| `bumpMapEnabled`   | `boolean` | `false` | Enables height texture sampling.                 |
+
+### PBRMaterialBindings[​](#pbrmaterialbindings "Direct link to PBRMaterialBindings")
+
+Texture resources are supplied separately through `PBRMaterialBindings`. Each field below is optional and accepts `Texture | null`. `createPBRMaterial()` derives map-enabled flags from these resources. Enable the corresponding `Model` shader define listed below when supplying a texture; the helper does not choose the model shader defines.
+
+| Field               | Model define          | Description                             |
+| ------------------- | --------------------- | --------------------------------------- |
+| `pbr_normalSampler` | `HAS_NORMALMAP: true` | Texture resource for the `normal` slot. |
+| `pbr_bumpSampler`   | `HAS_BUMPMAP: true`   | Texture resource for the `bump` slot.   |
+
+## Supporting APIs[​](#supporting-apis "Direct link to Supporting APIs")
+
+### createPBRMaterial[​](#createpbrmaterial "Direct link to createPBRMaterial")
+
+`createPBRMaterial(device, {uniforms, bindings, factory})` from `@luma.gl/experimental` returns a `PBRMaterial`. `uniforms` sets the fields listed above, `bindings` supplies material textures, and the optional `factory` shares a compatible binding schema across materials. The helper derives map-enabled flags from the supplied bindings; explicit uniform values take precedence.
+
+### MaterialFactory[​](#materialfactory "Direct link to MaterialFactory")
+
+`createPBRMaterialFactory(device)` from `@luma.gl/experimental` creates a reusable engine `MaterialFactory` configured with the `pbrMaterial` shader module. Pass this factory to `createPBRMaterial()` when creating several compatible materials.
+
+### Material[​](#material "Direct link to Material")
+
+`Material` from `@luma.gl/engine` owns material uniforms and texture resources. `setProps({pbrMaterial: {...}})` updates uniform values. Pass the material to a compatible `Model` through its `material` prop; models sharing it observe the same updates. Use `clone({bindings: {...}})` when an appearance needs separate texture resources. Adding a texture or changing a shader feature may require matching defines and a compatible model shader layout.
+
+See the [materials guide](https://luma.gl/docs/api-guide/engine/materials.md) and [`pbrMaterial` reference](https://luma.gl/docs/api-reference/shadertools/shader-modules/pbr-material.md).
+
+## Usage[​](#usage "Direct link to Usage")
+
+```
+import {createPBRMaterial, type PBRMaterial} from '@luma.gl/experimental';
+
+
+
+// device is an initialized Device.
+
+const material: PBRMaterial = createPBRMaterial(device, {
+
+  uniforms: {
+
+    normalScale: 1,
+
+    bumpFactor: 0.05
+
+  }
+
+});
+
+
+
+// Pass material to a compatible Model through its material prop.
+```
+
+The snippet sets the detail scales only; it needs the appropriate texture bindings and shader defines to produce surface detail. Neither technique displaces mesh vertices.
+
+See [normal mapping](https://luma.gl/docs/api-guide/engine/features/normal-mapping.md) for dedicated core glTF samples and a texture-binding example.
+
+## glTF support[​](#gltf-support "Direct link to glTF support")
+
+Core glTF `normalTexture` supplies normal maps. The experimental, unratified `EXT_materials_bump` proposal supplies a linear red-channel height texture. The adapter preserves per-slot UV transforms and composes bump perturbations with conventional normal maps.
+
+See [glTF materials and textures](https://luma.gl/docs/api-reference/gltf/gltf-materials.md), [glTF animation](https://luma.gl/docs/api-reference/gltf/gltf-animation.md), and the [extension support matrix](https://luma.gl/docs/api-reference/gltf/gltf-extensions.md) for adapter details and current support limits.
+
+[All engine features](https://luma.gl/docs/api-guide/engine/features.md)

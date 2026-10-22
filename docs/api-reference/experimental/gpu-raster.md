@@ -68,9 +68,11 @@ Read [GPU Raster concepts](https://luma.gl/docs/api-reference/experimental/gpu-r
 
   WebGPU
 
-[Open full page](https://luma.gl/examples/showcase/raster-lab)[View source](https://github.com/visgl/luma.gl/tree/9.4-release/examples/showcase/raster-lab)[Inspect graph](https://luma.gl/examples/showcase/raster-lab?panel=graph)
+[Open full page](https://luma.gl/examples/showcase/raster-lab)[View source](https://github.com/visgl/luma.gl/tree/master/examples/showcase/raster-lab)[Inspect graph](https://luma.gl/examples/showcase/raster-lab?panel=graph)
 
 Preparing GPU experience**GPURaster: Satellite Raster Lab**Loading synthetic satellite bands and the GPU-native raster-analysis graph.
+
+**Loading example**Preparing GPU resources…
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
@@ -96,6 +98,6 @@ The [operations reference](https://luma.gl/docs/api-reference/experimental/gpu-r
 
 ## Related modules[​](#related-modules "Direct link to Related modules")
 
-* GPU scheduling provides scheduling and generic aggregation/indexing primitives.
+* [GPU Core](https://luma.gl/docs/api-reference/experimental/gpu-core.md) provides scheduling and generic aggregation/indexing primitives.
 * [GPU Project](https://luma.gl/docs/api-reference/experimental/gpu-project.md) handles coordinate projection and adaptive patches.
 * [GPU Raster concepts](https://luma.gl/docs/api-reference/experimental/gpu-raster/concepts.md) explains the execution model independently of individual classes.

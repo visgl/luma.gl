@@ -2,7 +2,7 @@
 
 > **getBufferLayoutAttributeNames**(`bufferLayout`): `string`\[]
 
-Defined in: [modules/core/src/adapter-utils/buffer-layout-utils.ts:40](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter-utils/buffer-layout-utils.ts#L40)
+Defined in: [modules/core/src/api/adapter-utils/buffer-layout-utils.ts:40](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter-utils/buffer-layout-utils.ts#L40)
 
 Returns the attribute names referenced by a logical buffer layout.
 

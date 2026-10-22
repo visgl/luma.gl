@@ -1,6 +1,6 @@
 # Screen-Space Global Illumination
 
-Gather colored diffuse light bouncing between surfaces that are visible in the current frame. `createSSGIShaderPassPipeline` traces a screen-space hemisphere, reprojects indirect-light history, denoises across compatible surfaces, and adds the stabilized radiance to scene color.
+Gather colored diffuse light bouncing between surfaces that are visible in the current frame. `createSSGICompositeShaderPass` traces a screen-space hemisphere, reprojects indirect-light history, denoises across compatible surfaces, and adds the stabilized radiance to scene color.
 
 ### Deferred Rendering: Illumination Lab
 
@@ -14,13 +14,15 @@ Mobile quality
 // Loading source…
 ```
 
+**Loading example**Preparing GPU resources…
+
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ## At a Glance[​](#at-a-glance "Direct link to At a Glance")
 
 | Property          | Value                                                                                      |
 | ----------------- | ------------------------------------------------------------------------------------------ |
-| Export            | `createSSGIShaderPassPipeline`                                                             |
+| Export            | `createSSGICompositeShaderPass`                                                            |
 | Backend           | WebGPU                                                                                     |
 | Render passes     | Six: hemisphere trace, temporal resolve, depth history, two spatial filters, and composite |
 | Required bindings | `depthTexture`, `normalTexture`, and `velocityTexture`                                     |
@@ -32,7 +34,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 ```
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
-import {createGTAOShaderPassPipeline, createSSGIShaderPassPipeline} from '@luma.gl/effects';
+import {createGTAOCompositeShaderPass, createSSGICompositeShaderPass} from '@luma.gl/effects';
 
 
 
@@ -42,9 +44,9 @@ const renderer = new ShaderPassRenderer(device, {
 
   shaderPasses: [
 
-    createGTAOShaderPassPipeline(),
+    createGTAOCompositeShaderPass(),
 
-    createSSGIShaderPassPipeline({resolutionScale: 0.5})
+    createSSGICompositeShaderPass({resolutionScale: 0.5})
 
   ]
 

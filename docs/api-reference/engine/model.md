@@ -41,7 +41,7 @@ const dynamicTexture = new DynamicTexture(device, {data: loadImageBitmap(url)});
 
 
 
-const model = new Model(device, {
+const model = await Model.createAsync(device, {
 
   vs: GLSL_VERTEX_SHADER,
 
@@ -155,6 +155,10 @@ Application-owned metadata attached to the model.
 
 Creates a render model for one device.
 
+### `Model.createAsync(device: Device, props: ModelProps): Promise<Model>`[​](#modelcreateasyncdevice-device-props-modelprops-promisemodel "Direct link to modelcreateasyncdevice-device-props-modelprops-promisemodel")
+
+Creates the model through the device's asynchronous render-pipeline path and resolves after its pipeline and vertex array are ready. Prefer it during WebGPU loading when multiple independent models can be created with `Promise.all()`. The `new Model(...)` constructor remains the synchronous compatibility path.
+
 ### `destroy(): void`[​](#destroy-void "Direct link to destroy-void")
 
 Releases cached pipeline and shader references and destroys the internal uniform store.
@@ -226,6 +230,9 @@ Replaces the index buffer.
 ### `setAttributes(buffers: Record<string, Buffer | DynamicBuffer>, options?): void`[​](#setattributesbuffers-recordstring-buffer--dynamicbuffer-options-void "Direct link to setattributesbuffers-recordstring-buffer--dynamicbuffer-options-void")
 
 Sets buffer-valued attributes.
+
+* `options.disableWarnings` suppresses warnings for buffers without a matching layout or attribute.
+* `options.byteOffsets` maps buffer names to the byte offset where their vertex data starts. Buffers without an entry are bound at offset `0`. Use this for views into a shared buffer; the buffer layout and render pipeline do not change.
 
 ### `setConstantAttributes(attributes: Record<string, TypedArray>, options?): void`[​](#setconstantattributesattributes-recordstring-typedarray-options-void "Direct link to setconstantattributesattributes-recordstring-typedarray-options-void")
 

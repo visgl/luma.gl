@@ -1,10 +1,10 @@
 # ANARI Animation and glTF Integration
 
-`@luma.gl/scene/gltf` is an optional entry point that projects glTF-owned animation data onto retained ANARI objects. It reuses `@luma.gl/gltf` parsing and the shared `@luma.gl/engine` animation mixer; the ordinary `@luma.gl/scene` entry point does not import a glTF loader or own a second animation runtime.
+`@luma.gl/anari/gltf` is an optional entry point that projects glTF-owned animation data onto retained ANARI objects. It reuses `@luma.gl/gltf` parsing and the shared `@luma.gl/engine` animation mixer; the ordinary `@luma.gl/anari` entry point does not import a glTF loader or own a second animation runtime.
 
 Experimental optional adapter
 
-`@luma.gl/scene` is a published experimental package. Import the `/gltf` subpath only when glTF animation integration is needed and `@luma.gl/gltf` is available.
+`@luma.gl/anari` is a private, experimental workspace package. Import the `/gltf` subpath only when glTF animation integration is needed and `@luma.gl/gltf` is available.
 
 ## Optional entry-point exports[​](#optional-entry-point-exports "Direct link to Optional entry-point exports")
 
@@ -17,7 +17,7 @@ import {
 
   makeANARIAnimationScene
 
-} from '@luma.gl/scene/gltf';
+} from '@luma.gl/anari/gltf';
 
 
 
@@ -29,7 +29,7 @@ import type {
 
   ANARIGLTFAnimationMappings
 
-} from '@luma.gl/scene/gltf';
+} from '@luma.gl/anari/gltf';
 ```
 
 * `makeANARIAnimationClipsFromGLTF(animations, mappings?)` converts already-decoded glTF clips into JSON-compatible retained tracks.
@@ -41,7 +41,7 @@ None of these functions reads a `.gltf` or `.glb` file. Load/postprocess the ass
 ## Bind a retained animated scene[​](#bind-a-retained-animated-scene "Direct link to Bind a retained animated scene")
 
 ```
-import {makeANARIAnimationDataFromGLTF, makeANARIAnimationScene} from '@luma.gl/scene/gltf';
+import {makeANARIAnimationDataFromGLTF, makeANARIAnimationScene} from '@luma.gl/anari/gltf';
 
 
 
@@ -225,4 +225,4 @@ Source `JOINTS_0` and `WEIGHTS_0` attributes are also preserved, and programmati
 
 ## Validation[​](#validation "Direct link to Validation")
 
-The optional `@luma.gl/scene/schemas` entry point validates animation nodes, targets, tracks, clips, playback settings, parent relationships, retained references, increasing keyframe times, and cubic tangent/value/tangent counts. See [ANARI scene schemas](https://luma.gl/docs/api-reference/scene/anari-schemas.md).
+The optional `@luma.gl/anari/schemas` entry point validates animation nodes, targets, tracks, clips, playback settings, parent relationships, retained references, increasing keyframe times, and cubic tangent/value/tangent counts. See [ANARI scene schemas](https://luma.gl/docs/api-reference/scene/anari-schemas.md).

@@ -2,7 +2,7 @@
 
 > **UniformValue** = `number` | `boolean` | `Readonly`<`NumericArray`>
 
-Defined in: [modules/core/src/adapter/types/uniforms.ts:10](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/uniforms.ts#L10)
+Defined in: [modules/core/src/api/adapter/types/uniforms.ts:10](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/uniforms.ts#L10)
 
 Valid values for uniforms.
 

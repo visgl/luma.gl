@@ -11,8 +11,8 @@ Always assess luma.gl's impact using a minified production build of the actual a
 Applications can build directly on luma.gl's portable GPU abstraction without directly using higher-level engine or shader APIs. This configuration consists of:
 
 * [`@luma.gl/core`](https://luma.gl/docs/api-reference/core.md), which defines the portable `Device` and resource APIs;
-* [`@luma.gl/webgpu`](https://luma.gl/docs/api-reference/webgpu.md), which implements the portable subset using WebGPU; and
-* [`@luma.gl/webgl`](https://luma.gl/docs/api-reference/webgl.md), which implements the portable subset using WebGL 2.
+* [`@luma.gl/core/webgpu`](https://luma.gl/docs/api-reference/webgpu.md), which implements the portable subset using WebGPU; and
+* [`@luma.gl/core/webgl`](https://luma.gl/docs/api-reference/webgl.md), which implements the portable subset using WebGL 2.
 
 The backends share a common API where practical, but they do not have identical capabilities. For example, compute pipelines are available only on WebGPU.
 
@@ -21,9 +21,9 @@ For example, an application can prefer WebGPU and fall back to WebGL:
 ```
 import {luma} from '@luma.gl/core';
 
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
 
 
@@ -38,7 +38,7 @@ const device = await luma.createDevice({
 });
 ```
 
-Import only the adapter or adapters the application can use. A WebGPU-only application should not import `@luma.gl/webgl`, and a WebGL-only application should not import `@luma.gl/webgpu`. See [Installing](https://luma.gl/docs/developer-guide/installing.md#a-minimal-install) for package setup and [WebGPU versus WebGL](https://luma.gl/docs/api-guide/background/webgpu-vs-webgl.md) for backend selection guidance.
+Import only the adapter or adapters the application can use. A WebGPU-only application should not import `@luma.gl/core/webgl`, and a WebGL-only application should not import `@luma.gl/core/webgpu`. See [Installing](https://luma.gl/docs/developer-guide/installing.md#a-minimal-install) for package setup and [WebGPU versus WebGL](https://luma.gl/docs/api-guide/background/webgpu-vs-webgl.md) for backend selection guidance.
 
 ### Portability-layer Bundle Sizes[​](#portability-layer-bundle-sizes "Direct link to Portability-layer Bundle Sizes")
 
@@ -158,7 +158,7 @@ async function loadAdapter(type: 'webgpu' | 'webgl') {
 
   if (type === 'webgpu') {
 
-    const {webgpuAdapter} = await import('@luma.gl/webgpu');
+    const {webgpuAdapter} = await import('@luma.gl/core/webgpu');
 
     return webgpuAdapter;
 
@@ -166,7 +166,7 @@ async function loadAdapter(type: 'webgpu' | 'webgl') {
 
 
 
-  const {webgl2Adapter} = await import('@luma.gl/webgl');
+  const {webgl2Adapter} = await import('@luma.gl/core/webgl');
 
   return webgl2Adapter;
 

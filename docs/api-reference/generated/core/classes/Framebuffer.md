@@ -1,6 +1,6 @@
 # Abstract Class: Framebuffer
 
-Defined in: [modules/core/src/adapter/resources/framebuffer.ts:27](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/framebuffer.ts#L27)
+Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:27](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L27)
 
 Create new textures with correct size for all attachments.
 
@@ -18,7 +18,7 @@ resize() destroys existing textures (if size has changed).
 
 > **new Framebuffer**(`device`, `props?`): `Framebuffer`
 
-Defined in: [modules/core/src/adapter/resources/framebuffer.ts:41](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/framebuffer.ts#L41)
+Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:41](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L41)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 
@@ -44,7 +44,7 @@ Defined in: [modules/core/src/adapter/resources/framebuffer.ts:41](https://githu
 
 > `abstract` **colorAttachments**: [`TextureView`](https://luma.gl/docs/api-reference/generated/core/classes/TextureView.md)\[]
 
-Defined in: [modules/core/src/adapter/resources/framebuffer.ts:37](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/framebuffer.ts#L37)
+Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:37](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L37)
 
 Color attachments
 
@@ -54,7 +54,7 @@ Color attachments
 
 > `abstract` **depthStencilAttachment**: [`TextureView`](https://luma.gl/docs/api-reference/generated/core/classes/TextureView.md) | `null`
 
-Defined in: [modules/core/src/adapter/resources/framebuffer.ts:39](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/framebuffer.ts#L39)
+Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:39](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L39)
 
 Depth-stencil attachment, if provided
 
@@ -64,7 +64,7 @@ Depth-stencil attachment, if provided
 
 > **destroyed**: `boolean` = `false`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:131](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L131)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:131](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L131)
 
 Whether this resource has been destroyed
 
@@ -78,7 +78,7 @@ Whether this resource has been destroyed
 
 > `abstract` `readonly` **device**: [`Device`](https://luma.gl/docs/api-reference/generated/core/classes/Device.md)
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:124](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L124)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:124](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L124)
 
 The device that this resource is associated with
 
@@ -92,7 +92,7 @@ The device that this resource is associated with
 
 > `abstract` `readonly` **handle**: `unknown`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:126](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L126)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:126](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L126)
 
 The handle for the underlying resource, e.g. WebGL object or WebGPU handle
 
@@ -106,7 +106,7 @@ The handle for the underlying resource, e.g. WebGL object or WebGPU handle
 
 > **height**: `number`
 
-Defined in: [modules/core/src/adapter/resources/framebuffer.ts:35](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/framebuffer.ts#L35)
+Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:35](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L35)
 
 Height of all attachments in this framebuffer
 
@@ -116,7 +116,7 @@ Height of all attachments in this framebuffer
 
 > **id**: `string`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:118](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L118)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:118](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L118)
 
 props.id, for debugging.
 
@@ -130,7 +130,7 @@ props.id, for debugging.
 
 > `readonly` **props**: `Required`<`Props`>
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:120](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L120)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:120](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L120)
 
 The props that this resource was created with
 
@@ -144,7 +144,7 @@ The props that this resource was created with
 
 > `readonly` **userData**: `Record`<`string`, `unknown`> = `{}`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:122](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L122)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:122](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L122)
 
 User data object, reserved for the application
 
@@ -158,7 +158,7 @@ User data object, reserved for the application
 
 > **width**: `number`
 
-Defined in: [modules/core/src/adapter/resources/framebuffer.ts:33](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/framebuffer.ts#L33)
+Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:33](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L33)
 
 Width of all attachments in this framebuffer
 
@@ -168,7 +168,7 @@ Width of all attachments in this framebuffer
 
 > `static` **defaultProps**: `Required`<[`FramebufferProps`](https://luma.gl/docs/api-reference/generated/core/type-aliases/FramebufferProps.md)>
 
-Defined in: [modules/core/src/adapter/resources/framebuffer.ts:180](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/framebuffer.ts#L180)
+Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:187](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L187)
 
 Default properties for resource
 
@@ -184,7 +184,7 @@ Default properties for resource
 
 > **get** **\[toStringTag]**(): `string`
 
-Defined in: [modules/core/src/adapter/resources/framebuffer.ts:28](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/framebuffer.ts#L28)
+Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:28](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L28)
 
 ##### Returns[​](#returns-1 "Direct link to Returns")
 
@@ -202,7 +202,7 @@ Defined in: [modules/core/src/adapter/resources/framebuffer.ts:28](https://githu
 
 > **get** **isHandleBorrowed**(): `boolean`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:147](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L147)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:147](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L147)
 
 Whether luma.gl may only reference the opaque externally owned resource handle.
 
@@ -222,7 +222,7 @@ Whether luma.gl may only reference the opaque externally owned resource handle.
 
 > **get** **ownsHandle**(): `boolean`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:140](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L140)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:140](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L140)
 
 Whether luma.gl created and owns the underlying resource handle.
 
@@ -240,7 +240,7 @@ Whether luma.gl created and owns the underlying resource handle.
 
 > **attachResource**(`resource`): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:200](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L200)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:200](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L200)
 
 Attaches a resource. Attached resources are auto destroyed when this resource is destroyed Called automatically when sub resources are auto created but can be called by application
 
@@ -264,7 +264,7 @@ Attaches a resource. Attached resources are auto destroyed when this resource is
 
 > **clone**(`size?`): `Framebuffer`
 
-Defined in: [modules/core/src/adapter/resources/framebuffer.ts:51](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/framebuffer.ts#L51)
+Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:51](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L51)
 
 Create a copy of this framebuffer with new attached textures, with same props but of the specified size.
 
@@ -294,7 +294,7 @@ Does not copy contents of the attached textures.
 
 > **delete**(): `this`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:181](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L181)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:181](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L181)
 
 #### Returns[​](#returns-6 "Direct link to Returns")
 
@@ -314,7 +314,7 @@ Use destroy()
 
 > **destroy**(): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:173](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L173)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:173](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L173)
 
 destroy can be called on any resource to release it before it is garbage collected.
 
@@ -332,7 +332,7 @@ destroy can be called on any resource to release it before it is garbage collect
 
 > **destroyAttachedResource**(`resource`): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:214](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L214)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:214](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L214)
 
 Destroys a resource (only if owned), and removes from the owned (auto-destroy) list for this resource.
 
@@ -356,7 +356,7 @@ Destroys a resource (only if owned), and removes from the owned (auto-destroy) l
 
 > **destroyAttachedResources**(): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:221](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L221)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:221](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L221)
 
 Destroy all owned resources. Make sure the resources are no longer needed before calling.
 
@@ -374,7 +374,7 @@ Destroy all owned resources. Make sure the resources are no longer needed before
 
 > **detachResource**(`resource`): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:207](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L207)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:207](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L207)
 
 Detach an attached resource. The resource will no longer be auto-destroyed when this resource is destroyed.
 
@@ -398,7 +398,7 @@ Detach an attached resource. The resource will no longer be auto-destroyed when 
 
 > **getProps**(): `object`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:190](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L190)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:190](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L190)
 
 Combines a map of user props and default props, only including props from defaultProps
 
@@ -420,7 +420,7 @@ returns a map of overridden default props
 
 > **resize**(`size`): `void`
 
-Defined in: [modules/core/src/adapter/resources/framebuffer.ts:72](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/framebuffer.ts#L72)
+Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:79](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L79)
 
 Resizes all attachments
 
@@ -452,7 +452,7 @@ Use framebuffer.clone()
 
 > **resize**(`size`): `void`
 
-Defined in: [modules/core/src/adapter/resources/framebuffer.ts:73](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/framebuffer.ts#L73)
+Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:80](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L80)
 
 Resizes all attachments
 
@@ -478,7 +478,7 @@ Use framebuffer.clone()
 
 > **resize**(): `void`
 
-Defined in: [modules/core/src/adapter/resources/framebuffer.ts:74](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/framebuffer.ts#L74)
+Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:81](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L81)
 
 Resizes all attachments
 
@@ -500,7 +500,7 @@ Use framebuffer.clone()
 
 > **toJSON**(): `string`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:113](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L113)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:113](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L113)
 
 Compact serialization for assertion diffs and structured debug logs.
 
@@ -518,7 +518,7 @@ Compact serialization for assertion diffs and structured debug logs.
 
 > **toString**(): `string`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:108](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L108)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:108](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L108)
 
 #### Returns[​](#returns-16 "Direct link to Returns")
 

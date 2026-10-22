@@ -2,6 +2,199 @@
 
 *This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the [Legacy What's New](https://luma.gl/docs/legacy/legacy-upgrade-guide) page.*
 
+## Version 10.0[​](#version-100 "Direct link to Version 10.0")
+
+Target Release Date: Q3, 2026
+
+**General**
+
+* **Engine scene controllers** - Skinning, material variants, billboards, area lights, spatial audio, and interactivity use reusable engine APIs; glTF parsers map source data into those APIs. See [scene controllers](https://luma.gl/docs/api-guide/engine/scene-controllers.md).
+
+* **Draft glTF area lights** - Opt-in animated rectangle/disk light extraction and numerical PBR surface lighting, with a source-loaded Living Room preset in the shared glTF viewer.
+
+* **Draft glTF lightmaps** - Linear irradiance bindings, node atlas overrides and portable instance atlas draws, demonstrated by the source-hosted Cornell Box through the shared glTF viewer.
+
+* **Draft glTF billboards** - `BillboardController` provides opt-in full-axis camera-facing transforms, depth-relative scale and ordered overlay draw metadata without changing authored transforms.
+
+* **glTF spatial audio** - Opt-in `AudioController` plays draft `KHR_audio_emitter` assets through Web Audio, with camera-relative positional sound and a [Boom Box example](https://luma.gl/examples/showcase/gltf-audio).
+
+* **WGSL fp64 projection math** - The `fp64` shader module now provides double-single transcendental functions and returned-array vector/matrix helpers for geographic projection on WebGPU. See the [supported functions and precision limits](https://luma.gl/docs/api-reference/shadertools/shader-modules/fp64.md#wgsl-projection-functions).
+
+* **Shared glyph loading** - `@luma.gl/text/fonts` decodes glyph PBF ranges, deduplicates and caches font-stack requests, and builds renderer-independent SDF atlases from server glyph metrics.
+
+* **Public package** - `@luma.gl/text` is included in npm releases, including its CPU font atlas builders under `@luma.gl/text/fonts`.
+
+* **Opaque reflective ray transport** - Opt-in bounded GGX metallic/roughness secondary paths add colored and glossy reflections. Chart Materials demonstrates a retained roughness sweep with transport and bounce controls. The default diffuse mode is unchanged.
+
+* **Ray-tracing diagnostics** - Implementation capability reports, primary-hit debug views, and reference-image error metrics make ray-traced scene captures easier to inspect and compare.
+
+* **Ray-tracing quality controls** - Opt-in guided spatial denoising, configurable history sample limits, and logical owned GPU allocation statistics are available in the renderer and scene playground.
+
+* **GPU-native columnar parsing and indexing** - Composable Parquet parsing, chunk-preserving nested column layouts, and H3 and A5 cell projection add new optional `@luma.gl/gpgpu` workflows.
+
+* **Table-driven planning** - Experimental dataframes can plan queries from loaders.gl SQL expressions and feed batch-preserving GPU evaluation and rendering.
+
+* **Projection engine alignment** - GPU Project can explicitly prepare math.gl engine factories, retain their CPU transforms, and honor spatial-reference axes and units. Public normalization expands adaptive conic coverage; CPU/GPU benchmarks include reusable, flat and bulk CPU APIs.
+
+* **Projection domains and routing** - GPU Project adds explicit disconnected-domain and conservative disk partitions, seam-preserving segment clipping, opt-in indexed patch routing, fixed-arithmetic routing benchmarks and measurement-gated inline/materialized selection.
+
+**Experimental Three.js integration**
+
+* **Shared depth in Three apps** - `@luma.gl/three/interleaved` adds native deck layers to an existing Three WebGL2 canvas and depth buffer. Opaque geometry correctly occludes across both libraries while Three retains its renderer, controls and frame loop. The example compares shared depth with a separate transparent overlay.
+
+* **Deck overlays for Three apps** - Add native deck layers to an existing Three renderer through `@luma.gl/three/overlay`. Three retains its camera, controls and frame loop; the separate transparent canvas follows perspective/orthographic cameras and pixel ratio.
+
+* **Shared prepared scenes** - Multiple `ThreeSceneLayer` instances can share one adapter while retaining independent picking and highlighting. Readiness tracking does not retain borrowed scenes; failed preparation requires disposing and recreating the adapter.
+
+* **Scene placement in deck.gl** - `ThreeSceneLayer.modelMatrix` supports affine placement in Cartesian coordinates and local Mercator meters without changing source transforms. Visible rendering, highlights, object IDs and surface depth picking share that placement.
+
+**New Modules**
+
+* **`@luma.gl/arrow` (currently private)** - Arrow adapters and renderers are being prepared for publication as a standalone module.
+
+**@luma.gl/core**
+
+* **Targeted WebGPU limits** - `DeviceProps.requiredLimits` requests specific WebGPU device limits, such as `maxStorageBuffersPerShaderStage`, without taking every adapter limit and feature through `featureLevel: 'max'`. A development GPU then enforces the limits the application targets.
+* **Vertex buffer byte offsets** - `VertexArray.setBuffer()` accepts an optional `byteOffset`, so vertex data can start inside a shared buffer without changing the buffer layout or render pipeline.
+
+**@luma.gl/gpgpu**
+
+* **Additive GPU point-cloud octrees** - `GPUPointCloudOctree` builds sparse tile metadata and source-ID ranges without reordering positions. The new point-cloud octree example shows tile bounds, additive detail levels and command-graph diagnostics.
+
+* **Experimental GPU sphere physics** - `@luma.gl/gpgpu/gpu-physics` adds grid-based bounded contacts, inverse-mass Jacobi solving, solid-sphere angular dynamics, friction, sleeping and live finite-plane/gravity settings. The standalone sphere-world sandbox renders quaternion-driven cue-ball bands and benchmarks up to 10,000 GPU-resident bodies with explicit capacity diagnostics.
+
+* **Oriented GPU rigid bodies** - A bounded sphere/box world adds rotated inertia, clipped contact manifolds, friction and island sleeping, with stack and large-count sphere examples.
+
+* **glTF physics draft import** - Optional `@luma.gl/gltf/physics` parses a pinned rigid-body/implicit-shape subset with capability reports, compound sphere/box ownership, authored mass/inertia, kinematic targets, collision filters and material policies. GPU scene synchronization and behavior bindings remain separate follow-ups.
+
+* **Persistent physics contacts and calibration** - Opt-in cached sphere/surface impulses, accumulated friction constraints, discarded simulation-time reporting and provenance-aware SI calibration fitting add reproducible numerical evidence.
+
+* **Bounded continuous sphere physics** - Optional small-world sphere/rectangle sweeps, persistent contact and pocket-trigger events, explicit impact/candidate budgets, static box surfaces and analytic material fixtures extend the physics module. Pool uses GPU pocket capture and event-driven clacks/trails, adds beveled jaws, hold-to-charge shooting with Escape cancellation, and automatic re-racking.
+
+* **Space Salvage and rigid-body collision APIs** - A top-down WebGPU salvage game exercises an opt-in GPU contact-event ring, exact sphere/box raycasts and sphere-overlap queries. Events retain begin/end and thresholded impact samples across steps with explicit loss reporting; asynchronous queries expose selection, nearest hits and overlap truncation.
+
+* **GPU pool prototype** - Sphere physics now supports linear/angular impulses, body teleport/wake/enable controls, multiple finite surfaces with individual materials, and explicit interaction snapshots. The standalone pool example adds aiming, power, cushions, six pockets, scratch recovery, and shot completion. Spin practice adds follow/draw setups, separate sliding/rolling/spinning resistance, and raised cushion contacts with speed-dependent restitution.
+
+* **Incremental GPU execution** - [`GPUIncrementalExecution`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-incremental-execution.md) caches explicitly versioned batch partials, preserves borrowed source storage, and submits only changed batch work plus the live merge. The GPU Data Analysis example shows streaming sums, histograms, grouped counts, and unsigned Top-K with reuse instrumentation.
+
+* **Batch-preserving GPU rendering** - `GPUVectorModel` renders chunked vectors without concatenating their source batches.
+
+* **Fixed-size-list GPU columns** - First-class `fixed-size-list<float32,768>` formats describe arbitrary fixed-width storage rows without inventing unsupported vertex formats; vectors retain logical table-row counts, flattened element counts, preserved batches, and caller-owned storage.
+
+* **GPU vector similarity and clustering** - The optional [`@luma.gl/gpgpu/gpu-vector-search`](https://luma.gl/docs/api-reference/gpgpu/gpu-vector-search.md) backend searches ordinary fixed-size-list GPU table columns with exact squared-Euclidean, cosine, and inner-product rankings; GPU-resident linked-selection masks; deterministic bounded top-K output; GPU k-means; and explicitly approximate IVF-flat search. Existing `@luma.gl/arrow` table adapters upload Arrow embedding columns, while source IDs, validity, batch boundaries, ownership, and rendering remain caller-controlled.
+
+* **GPU command graphs** - Experimental WebGPU command graphs compile explicit buffer hazards, fixed capacities, node resources, and transient-buffer reuse while leaving encoding and submission under application control.
+
+* **Parallel command-graph preparation** - `await GPUCommandGraph.compileAsync()` starts independent compute and render pipeline compilations together, resolves only when graph-owned pipelines are ready, and leaves command submission and warm-up execution to the application.
+
+* **Reusable GPU Parquet streams** - Fixed-capacity page-batch streams reuse exact-layout compiled decode graphs and pooled upload/output storage, with explicit FIFO backpressure and application-owned submission completion.
+
+* **Batched compressed Parquet pages** - Compatible Snappy and LZ4\_RAW `BYTE_STREAM_SPLIT` pages share one runtime-described LZ dispatch and one byte-restoration dispatch, replacing per-page pipelines and commands while retaining sequential decompression locality.
+
+* **Reusable command-graph inspection** - `GPUCommandGraphInspector` collects bounded whole-graph and per-node CPU/GPU timing summaries, compile-time allocation statistics, and device capabilities for application-owned diagnostic UIs.
+
+* **Flat GPU scene records** - `GPUScene` owns or borrows a fixed-capacity, table-independent draw database with stable IDs, bounds, transforms, grouping, geometry references, command slots, and typed command-graph views. Validated mutation transactions add bounded insert, patch, removal, stable compaction, overflow, move reporting, and exact queue-write costs without introducing a CPU scene hierarchy.
+
+* **Explicit GPU scene adapters** - `makeGPUSceneFromCPUScene()` maps application-owned hierarchies into ordinary mutable scene records through stable preorder callbacks, while `makeGPUScenePartitionsFromGPUTable()` borrows canonical interleaved records from every preserved table batch without readback, concatenation, or hidden packing. Empty batches retain partition identity, and per-buffer ownership keeps table records borrowed while adapter state is released normally.
+
+* **GPU scene draw generation** - [`GPUSceneDrawGeneration`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-scene-draw-generation.md) deterministically maps active, visible scene rows into explicit fixed-capacity indirect-command slots. Static geometry arguments remain renderer-owned, while GPU-resident required and published counts plus overflow expose out-of-range requests and collisions without CPU draw selection or hidden allocation.
+
+* **GPU scene resource groups** - [`GPUSceneResourceGroups`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-scene-resource-groups.md) classifies generated indirect commands into stable renderer-owned pipeline/resource windows, preserves empty group slots and explicit binding order, and exposes per-group counts plus geometry, slot, and unknown-group overflow without claiming bindless WebGPU behavior.
+
+* **Reusable command-graph contributors** - `GPUCommandGraphContributor` gives small algorithm libraries a structural `addToGraph()` contract, while public aligned-view binding and typed transient-view helpers let those libraries extend command graphs without a runtime registry or hidden submission.
+
+* **GPU scan, compaction, and indirect drawing** - Typed graph views compose hierarchical `uint32` scan, stable ID compaction, and GPU-written `DrawCommandBuffer` instance counts. Scan and compaction accept fixed-width `GPUVector` imports as one logical sequence while preserving chunk topology. The [GPU Trace Viewer](https://luma.gl/examples/experimental/gpu-trace-viewer) demonstrates the path over up to four million spans, while [GPU Frustum Culling](https://luma.gl/examples/experimental/gpu-frustum-culling) applies it to indexed indirect rendering of a 3D instance field.
+
+* **GPU virtual-geometry selection** - [`GPUVirtualGeometrySelection`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-virtual-geometry-selection.md) traverses breadth-level cluster forests with conservative sphere-frustum tests and pixel-scale geometric error, then reuses stable visibility compaction to publish a deterministic cluster frontier and capacity-safe indirect instance count without CPU readback.
+
+* **Virtual Geometry Canyon** - The [WebGPU showcase](https://luma.gl/examples/experimental/virtual-geometry-canyon) drives a 4×4, six-refinement terrain forest through GPU-only LOD selection and one indexed indirect draw. A shared grid, exact parent-triangle geomorphing, and skirts visualize more than 41 million potential leaf triangles without a per-frame traversal or readback on the CPU.
+
+* **GPU trace manipulation primitives** - `GPUMask` composes chunk-preserving selection predicates; `GPUHierarchyLayout` computes scan-based process and thread expansion; `GPUGraphTraversal` expands bounded, cycle-safe CSR dependency frontiers; and `GPUAncestorProjection` reconnects hidden spans to their nearest visible canonical parent. The [GPU Hierarchical Trace Viewer](https://luma.gl/examples/experimental/gpu-trace-viewer) applies all four to live hierarchy controls, topology filters, dependency focusing, GPU picking, projected indirect edges, and collapsed-process activity.
+
+* **Graph-native GPU sort** - `GPUSort` stably orders one paired packed `uint32` domain, while `GPUBatchSort` independently orders aligned GPU vector chunks without hidden packing or lost batch boundaries. Bitonic or binary LSD radix selection occurs per work unit. The [GPU Sort example](https://luma.gl/examples/experimental/gpu-sort) contrasts packed global order with preserved input batches and exposes graph compilation and transient reuse.
+
+* **Reusable 2D GPU FFT** - [`GPUFFT2D`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-fft2d.md) records bounded power-of-two complex transforms into caller-owned WebGPU command encoders. Forward and normalized inverse passes share one explicit scratch field without hidden submission or readback, providing a reusable spectral-simulation and signal-processing foundation.
+
+* **Reusable GPU signal processing** - `GPUFFT1D`, `GPUFFT2D`, `GPUTranspose`, and `GPUConvolution` compose one- and two-dimensional transforms, batched workloads, and graph-native convolution through caller-owned WebGPU command encoders.
+
+* **Graph-native GPU data analysis** - `GPUReduction`, `GPUHistogram`, `GPUGridBinning`, `GPUGridAggregation`, and `GPUGroupAggregation` add deterministic scalar aggregates, equal-width or irregular-edge histogram counts, filtered categorical counts and floating-point statistics, row-major spatial counts, and weighted floating-point sum/min/max/mean cell statistics. GPU-resident histogram edges and group-selection masks can change between encodings without CPU readback or graph recompilation. Analysis operations initialize once and accumulate fixed-width vector chunks without packing. The [GPU Data Analysis example](https://luma.gl/examples/experimental/gpu-data-analysis) composes the operations without hidden submission or readback.
+
+* **GPU graph analytics** - The optional `@luma.gl/gpgpu/gpu-graph` subpath provides GPU-resident topology construction, degree, breadth-first search, shortest paths, connected components, PageRank, community metrics, and force-directed layouts.
+
+* **Bounded GPU hash lookup** - [`GPUHashIndex`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-hash-index.md) builds fixed-capacity sparse `uint32` key/value tables with deterministic duplicate values, bounded linear probing, explicit overflow, and collision-work statistics. `GPUHashIndexQuery` resolves changing key batches without hidden submission, resizing, or readback.
+
+* **Stable sparse GPU joins** - [`GPUHashJoin`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-hash-join.md) composes exact hash lookup, scan, and bounded pair publication into stable many-to-one inner joins. Aligned left-join masks, required counts, overflow, and probe statistics remain GPU-resident and explicit.
+
+* **Batch-preserving sparse GPU joins** - [`GPUBatchHashJoin`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-batch-hash-join.md) independently joins ordered `GraphVectorView` chunks against one shared right index. Per-batch capacities, required counts, source-or-output overflow, and probe statistics preserve streaming source partitions without implicit packing.
+
+**@luma.gl/engine**
+
+* **Attribute byte offsets** - `Model.setAttributes(buffers, {byteOffsets})` binds each named buffer at the byte offset where its vertex data starts.
+* **Awaitable pipeline creation** - `Computation.createAsync()` and `Model.createAsync()` expose native asynchronous WebGPU pipeline creation for application loading phases, backed by cache-aware asynchronous `Device` and `PipelineFactory` methods.
+* **Pinch-roll orbit controls** - Two-pointer gestures can roll the camera while preserving the existing pan, orbit, and zoom interactions.
+
+**@luma.gl/gltf**
+
+* **Larger and richer animated meshes** - Skinning supports larger joint palettes and up to eight influences per vertex, while ordinary morph-weight animation uploads position, normal, and tangent deformation to the GPU.
+* **Meshopt decoding** - glTF loading adopts the loaders.gl v5 `KHR_meshopt_compression` decoder.
+
+**@luma.gl/shadertools**
+
+* **Atmospheric scattering** - The shared GLSL/WGSL `atmosphere` module provides a Rayleigh/Mie sky and metre-space aerial perspective. `AtmosphereLayer` connects the same shader to deck.gl perspective views in [Riverfront soft shadows](https://luma.gl/examples/deck/soft-shadows).
+* **Cloud sunlight extinction** - `clouds_getTransmittance` samples the existing animated cloud density to attenuate direct sunlight on buildings and ground, without separate cloud shadow resources.
+* **Surface weather** - The portable `surfaceWeather` material helpers and frame-rate-independent `integrateSurfaceWeather` function provide wetness, puddle highlights and slope-aware snow cover in [Riverfront weather](https://luma.gl/examples/deck/weather).
+* **Hybrid fp64 arithmetic** - Double-single WGSL arithmetic can select direct floating-point or integer-controlled operations to balance portability and throughput.
+* **`CompositeShaderPass`** - The structured multi-pass postprocessing API and effect factories use composite-pass naming in place of `ShaderPassPipeline`.
+
+**@luma.gl/arrow (Private)**
+
+* **High-dimensional Arrow storage columns** - Existing Arrow table/vector adapters map wide `FixedSizeList` values directly into row-aligned fixed-size-list GPU columns, with optional named validity siblings and preserved parent/child nulls, record batches, and source identity.
+* **Arrow polygon and GeoArrow rendering** - `ArrowPolygonRenderer` converts nested Arrow polygon columns for attribute- or storage-backed rendering, and the [GeoArrow example](https://luma.gl/examples/arrow/arrow-geoarrow) routes mixed DenseUnion geometry through Arrow point, line, and polygon renderers.
+* **Restored deck.gl integrations** - Private Arrow path, polygon, and text layers demonstrate downstream rendering, while the [GPU-Culled deck Trace](https://luma.gl/examples/deck/gpu-culled-trace) shares one GPU selection result between blocks, Arrow labels, and picking.
+* **Arrow shader layouts** - `getArrowBufferLayout()` maps Arrow scalar and `FixedSizeList` columns to shader attribute formats from a shader-first layout, including direct `arrow.Vector` sources and Arrow table path mappings.
+* **Arrow GPU adapters** - Arrow factories, append helpers, and readback helpers bridge Apache Arrow inputs into `@luma.gl/gpgpu/gpu-data` and `@luma.gl/experimental/gpu-tables` objects and preserve chunked UTF-8 GPU vector input for text workflows.
+* **Variable-length Arrow attribute lists** - `GPUVector` can retain chunked nested list columns whose elements contain one to four numeric components, covering scalar streams plus tuple-style data such as XY, XYZ, and XYZM coordinates for path-rendering workflows.
+* **Closed Arrow path normalization** - `closeArrowPaths()` appends explicit closing vertices only for closed Float32 absolute or origin-relative delta path rows whose endpoints differ beyond an epsilon, using WebGPU compute when available with equivalent CPU fallback semantics.
+* **`ArrowPathRenderer` attribute mode** - The Arrow path facade converts prepared Float32 XY, XYZ, and XYZM paths into packed per-segment inputs for `PathAttributeModel`, and supports Float64 source paths through CPU-prepared Float32 deltas plus CPU-updated view origins.
+* **`ArrowPathRenderer` storage modes** - WebGPU storage conversion expands nested prepared Float32 XY, XYZ, and XYZM rows into compact indexed segment records, keeps per-path color, width, and optional view-origin rows as storage bindings, can convert Float64 source paths into Float32 deltas with one `fp64arithmetic` compute pass, and feeds `PathStorageModel` or `PathTripsStorageModel`.
+* **Mesh Arrow geometry** - `ArrowTableGeometry` and `makeGPUGeometryFromArrow()` support loaders.gl-compatible Mesh Arrow tables, including default interleaved vertex buffers and optional index buffers.
+* **Arrow table adapters** - Arrow table/vector upload, append, and readback utilities layer over reusable primitives from `@luma.gl/gpgpu/gpu-data` and private tables from `@luma.gl/experimental/gpu-tables`.
+* **[Supported Arrow Types](https://luma.gl/docs/api-reference/arrow/supported-arrow-types.md) and [GPU Table Lifecycle](https://luma.gl/docs/api-reference/experimental/gpu-tables/gpu-table-lifecycle.md)** - Matrix Arrow vectors, storage-selected table bindings, Arrow adapters, and the generic tables execution layer.
+* **[Apache Arrow GPU examples](https://luma.gl/examples/arrow/arrow-points)** - Examples cover points, nested lines and temporal paths, text and dictionary text, dates and durations, matrices, particles, and global grid identifiers.
+* **[Points Example](https://luma.gl/examples/arrow/arrow-points)** - A ScatterplotLayer-style renderer consumes Arrow point vectors or DenseUnion point rows, supports M-coordinate or timestamp animation, and reports hover identity as full-table row index, batch, and batch-local row.
+* **[Time Columns Example](https://luma.gl/examples/arrow/arrow-time-columns)** - This showcase prepares aligned scalar `DateDay`, `TimeMillisecond`, `TimestampMillisecond`, and `DurationMillisecond` rows into relative Float32 GPU vectors, then renders the same schedule through instanced attributes or WebGPU storage bindings.
+* **[Blinking Stars Example](https://luma.gl/examples/arrow/arrow-temporal-starfield)** - This showcase prepares aligned scalar `TimestampMillisecond` and `DurationMillisecond` rows into relative Float32 GPU vectors, then uses them as per-instance visibility windows and pulse periods through instanced attributes or WebGPU storage bindings.
+* **[Lines Example](https://luma.gl/examples/arrow/arrow-lines)** - This showcase expands nested Arrow XYZM line rows and DenseUnion LineString rows into styled GPU segment instances with attribute-backed and storage-backed models, and uses `PathTripsStorageModel` with aligned `List<Timestamp>` rows for storage-backed trail filtering.
+
+**Arrow-backed text integration**
+
+* **Incremental text streaming** - Arrow chunks produce independent `GPUTextData` objects that append to a stable `TextRenderer` model without rebuilding earlier batches; `GPUTextResources` lets batches and renderers share one uploaded atlas texture.
+* **Arrow text conversion helpers** - `@luma.gl/arrow` exports `makeGPUTextDataFromArrow()` for automatic strategy selection, plus `ArrowTextRenderer`, source mapping, and low-level conversion helpers for specialized workflows.
+* **View-aware Arrow text clipping** - Arrow 2D text accepts optional `FixedSizeList<Float32>[4]` clip rectangles. `ArrowTextLayer` interprets them as world-space anchor offsets, projects them through the active deck viewport, and supports visible-region alignment and pixel cutoffs; omitting `clipRects` retains a constant no-clipping fallback instead of allocating per-row data.
+* **GPU-selected text** - `GPUTextSelection` filters row-indexed compact glyph records from GPU row flags, preserves original row identity, and writes the selected glyph count directly into an indirect draw command.
+
+**@luma.gl/splats**
+
+* **Stable RAD camera retargeting** - `SplatRADHierarchyManager` preserves resolved visible rows while reprioritizing retained branches for a changed camera, traverses offscreen ancestors needed for visible descendants, and keeps bounded traversal, page demand, and active-row capacity coherent across rapid camera updates.
+* **Progressive RAD selection** - `selectView()` selects a fresh complete cut; `refineView()` publishes coherent intermediate replacements while reprioritizing retained detail. Generic CPU-only residency and hierarchy data support worker selection with bounded page demand.
+* **Shared-pass splat rendering** - `GPUPagedSplatRenderer.prepare()` encodes compute work before a host pass, and `draw()` presents inside it without clearing, ending, or submitting the borrowed pass.
+
+**@luma.gl/core/webgpu**
+
+* **Attach to application-created `GPUDevice`s** - `luma.attachDevice(gpuDevice, {adapters: [webgpuAdapter]})` and `webgpuAdapter.attach(gpuDevice)` wrap an existing WebGPU device, so an application and deck.gl can share one device with the application's requested limits and features. `device.destroy()` leaves the `GPUDevice` usable; the application destroys it.
+
+### Experimental Slang package[​](#experimental-slang-package "Direct link to Experimental Slang package")
+
+`@luma.gl/slang` is a public experimental package from v10. It is optional and has no runtime dependencies. The [Slang documentation](https://luma.gl/docs/api-reference/slang.md) includes a live sculpture and links to a WebGPU particle simulation; applications own compiler registration and resource bindings.
+
+### Slang everyday language[​](#slang-everyday-language "Direct link to Slang everyday language")
+
+The experimental Slang module adds `switch` with grouped labels and fallthrough, `do`/`while`, inferred mutable `var` and immutable `let` locals, numeric scalar/vector promotion, vector comparisons, integer shifts, floating-point remainder and component-wise matrix arithmetic. Matrix constructors support scalar broadcast, row vectors and matching matrices. GPU tests compare these features with upstream-generated WGSL and exercise GLSL ES 300. The optional compiler still has no runtime dependencies.
+
+### Slang compute and textures[​](#slang-compute-and-textures "Direct link to Slang compute and textures")
+
+The experimental Slang authoring module now supports integer atomics, byte-address buffers, synchronization diagnostics, texture arrays, multisampled loads, explicit gradients, gathers, dimension queries and more storage dimensions. The [particle vortex example](https://luma.gl/examples/tutorials/slang-particles) simulates and renders one shared Slang source. The compiler remains optional and dependency-free; WebGL uses GLSL ES 300, with diagnostics for operations that require explicit GLSL 450.
+
 ## Version 9.4[​](#version-94 "Direct link to Version 9.4")
 
 Release Date: September 5, 2026
@@ -10,15 +203,10 @@ Version 9.4 expands luma.gl with portable GPU data processing and a broad experi
 
 **Highlights**
 
-* **Borrowed splat passes respect host state** - Prepared paged splats accept optional render pipeline parameters, including depth comparison, while retaining the caller's attachments.
-
 * **Data that goes straight to pixels** - Typed, chunked GPU columns can move through analysis, text, paths, and rendering without a CPU-side object layer.
-
 * **Analysis that stays on the GPU** - [Dataframes](https://luma.gl/docs/api-reference/experimental/gpu-dataframe.md), sorting, aggregation, raster, geospatial, and trace APIs keep intermediate results resident and reusable.
-
 * **Captured and animated worlds** - Stream large Gaussian splat scenes, mix splats with meshes, and animate crowds with shared geometry, GPU sampling, culling, and LOD.
-
-* **Four new experimental modules** - `@luma.gl/text`, `@luma.gl/splats`, `@luma.gl/scene`, and `@luma.gl/experimental` are now published for direct use. These APIs may evolve outside the 9.4 semver contract.
+* **Four new experimental modules** - `@luma.gl/text`, `@luma.gl/splats`, `@luma.gl/anari`, and `@luma.gl/experimental` are now published for direct use. These APIs may evolve outside the 9.4 semver contract.
 
 **A clearer GPU data stack**
 
@@ -48,7 +236,7 @@ Version 9.4 expands luma.gl with portable GPU data processing and a broad experi
 * **`@luma.gl/gpgpu`** - New module for lazy `GPUDataEvaluator` operations and chunk-preserving `GPUVectorEvaluator` transforms with CPU/WebGL/WebGPU backends.
 * **`@luma.gl/text`** - GPU-oriented 2D and 3D text rendering and atlas construction.
 * **`@luma.gl/splats`** - Experimental Gaussian splat rendering with caller-owned GPU data and preserved streaming batches.
-* **`@luma.gl/scene`** - Experimental forward, deferred, glTF, ray-marching, and ray-tracing scene rendering.
+* **`@luma.gl/anari`** - Experimental forward, deferred, glTF, ray-marching, and ray-tracing scene rendering.
 * **`@luma.gl/experimental`** - GPU analytics, simulations, rendering techniques, and WebXR helpers, now published for direct use.
 
 **@luma.gl/engine**
@@ -56,7 +244,6 @@ Version 9.4 expands luma.gl with portable GPU data processing and a broad experi
 * **[Shared keyframe animation](https://luma.gl/docs/api-guide/engine/animation.md)** - `AnimationMixer`, `AnimationClip`, `AnimationTrack`, and `AnimationAction` provide reusable bindings, weighted clip blending, crossfades, playback speed, seeking, and once, repeat, or ping-pong looping.
 * **glTF-compatible interpolation** - Shared samplers evaluate `STEP`, `LINEAR`, and `CUBICSPLINE` tracks, including normalized quaternion interpolation, without depending on glTF-specific scene classes.
 * **[Portable morph-target deformation](https://luma.gl/docs/api-reference/engine/animation/morph-targets.md)** - `applyMorphTargets()` and `updateMorphTargetBuffers()` blend position, normal, and tangent targets into existing interleaved GPU buffers while preserving immutable source geometry and tangent handedness.
-* **Fewer WebGL pipeline rebuilds** - On WebGL, `Model.setParameters()` keeps the model's pipeline and applies the parameters at each draw, so models drawn in several passes with different parameters, such as a picking pass, no longer rebuild their pipeline (since v9.4.3).
 
 **@luma.gl/gltf**
 
@@ -67,18 +254,19 @@ Version 9.4 expands luma.gl with portable GPU data processing and a broad experi
 * **[Lossless animated asset interchange](https://luma.gl/docs/api-reference/gltf/gltf-interchange.md)** - Format-owned `.gltf` and `.glb` export preserves hierarchy, animation clips, material pointers, skins, inverse bind matrices, morph targets, RGBA colors, joint attributes, material variants, GPU instancing, cameras, and punctual lights.
 * **Punctual lights and source-faithful materials** - Source directional, point, and spot lights retain authored colors, intensity, and cones; generic export round-trips supported materials, all map slots, UV sets, texture transforms, and sampler settings.
 
-**@luma.gl/scene (Experimental)**
+**@luma.gl/anari (Experimental)**
 
 * **[Retained physically based rendering](https://luma.gl/docs/api-guide/engine/anari-rendering.md)** - The ANARI-inspired scene API maps committed handles, staged parameters, instances, cameras, lights, and 17 material texture slots onto shared forward and WebGPU deferred scene renderers, including automatic opaque-scene capture for transmissive materials.
+* **Ray lighting quality controls** - Opt-in power-weighted emissive selection preserves exact conditional sampling PDFs and CORE storage limits. The scene playground exposes explicit ray resolution, renderer switching and emitter-distribution comparisons with retained ray settings.
 * **Pluggable interactive GPU-compute ray tracing** - `ANARIDevice.registerRenderer()` registers lazy custom runtimes, while the WebGPU-only `raytrace` subtype adapts committed scenes to the shared experimental `RayTracingSceneRenderer` for GPU-built object/instance BVHs, adaptive half-resolution rendering, interleaved pixel phases, stable-instance temporal reprojection, bounded rotating shadows, progressive sampling, and upsampled HDR presentation within default WebGPU CORE limits.
-* **[Optional glTF animation integration](https://luma.gl/docs/api-reference/scene/anari-animation.md)** - The isolated `@luma.gl/scene/gltf` entry point binds imported node hierarchies, material and sampler pointers, and morph-weight tracks to retained objects while committing each changed object at most once per frame.
+* **[Optional glTF animation integration](https://luma.gl/docs/api-reference/scene/anari-animation.md)** - The isolated `@luma.gl/anari/gltf` entry point binds imported node hierarchies, material and sampler pointers, and morph-weight tracks to retained objects while committing each changed object at most once per frame.
 * **Source-faithful retained assets** - JSON scenes preserve indexed geometry, both UV sets, tangents, RGBA vertex colors, joint attributes, morph targets, authored samplers, punctual lights, and `OPAQUE`/`MASK`/`BLEND` modes; programmatic renderer parameters can additionally supply caller-owned image-based-lighting textures.
 
 **Experimental rendering and GPU workflows**
 
 * **[Shared physical scene rendering](https://luma.gl/docs/api-reference/experimental/scene-renderer.md)** - `SceneRenderer` renders format-independent physically based surfaces on WebGL and WebGPU with reusable instanced geometry, staged material updates, explicit joint palettes, morph deformation, punctual lights, and caller-provided image-based-lighting textures.
 * **[Deferred physical scene rendering](https://luma.gl/docs/api-reference/experimental/deferred-scene-renderer.md)** - `DeferredSceneRenderer` reuses the same scene descriptors through a four-target HDR G-buffer and lighting resolve that fits the default 32-byte WebGPU CORE limit, automatically falling back to the shared forward renderer for unsupported scenes.
-* **Shared interactive GPU-accelerated ray tracing** - `RayTracingSceneRenderer` composes world-space instance bounds, dirty-only GPU bounding-volume hierarchy construction and refitting, nearest-hit traversal, bounded direct-light shadows, adaptive internal resolution, interleaved frame-budget coverage, stable-identity temporal reprojection, progressive accumulation, and upsampled HDR presentation through WebGPU compute/command graphs. Frame pacing uses ordinary animation intervals, the tracing pass uses five storage buffers, the BVH builder uses eight, mesh triangles remain linearly refined, and command submission stays application-owned.
+* **Shared interactive GPU-accelerated ray tracing** - `RayTracingSceneRenderer` composes world-space instance bounds, dirty-only GPU bounding-volume hierarchy construction/refitting, nearest-hit traversal, bounded direct-light shadows, adaptive internal resolution, interleaved frame-budget coverage, stable-identity temporal reprojection, progressive accumulation, and upsampled HDR presentation through WebGPU compute/command graphs. Frame pacing uses ordinary animation intervals, the tracing pass uses five storage buffers, the BVH builder uses eight, mesh triangles remain linearly refined, and command submission stays application-owned.
 * **[Generated physical lighting environments](https://luma.gl/docs/api-reference/experimental/pbr-environment.md)** - `PBREnvironmentGenerator` and `preparePBREnvironment()` integrate equirectangular source textures into GGX-prefiltered specular cubemap mip chains, diffuse irradiance cubemaps, and split-sum BRDF lookup textures on both WebGL and WebGPU.
 * **Scene-color transmission and volume attenuation** - The shared forward renderer captures opaque scene color automatically for transmissive surfaces, then applies screen-space refraction, roughness, Fresnel response, index of refraction, thickness, and Beer-Lambert attenuation while preserving physically opaque output.
 * **`HTMLTexture`** - Experimental copied texture binding source copies HTML-in-Canvas DOM subtrees into GPU textures while the browser API is still experimental.
@@ -86,7 +274,21 @@ Version 9.4 expands luma.gl with portable GPU data processing and a broad experi
 * **GPU-resident trace scenes** - [`GPUTraceScene`](https://luma.gl/docs/api-reference/experimental/gpu-trace/scene.md), from [`@luma.gl/experimental/gpu-trace`](https://luma.gl/docs/api-reference/experimental/gpu-trace.md), preserves canonical span identity, timing, process/thread ownership, hierarchy parents, explicit source batches, dependency links, and bidirectional adjacency while projecting shared GPU scene records for visibility, indirect drawing, and renderer-owned resource groups.
 * **GPU-native trace interactions** - [`GPUTraceInteraction`](https://luma.gl/docs/api-reference/experimental/gpu-trace/interaction.md) and reusable timeline picking live in the optional `@luma.gl/experimental/gpu-trace` submodule, composing process/thread collapse, scanned row layout, time and classification filters, linked-span focus, nearest-visible ancestor projection, stable compaction, and scene indirect draws without CPU draw selection.
 * **Optional GPU geospatial kernels** - The side-effect-free `@luma.gl/experimental/geospatial` subpath contributes cuSpatial-compatible sinusoidal projection, haversine distance, pairwise planar distances, four-state point-in-polygon classification, nearest-linestring results, grid indexing, and point spatial queries to caller-owned command graphs, including raw binary64 coordinate inputs.
-* **GPU projection patches** - The optional `@luma.gl/experimental/gpu-project` subpath compiles arbitrary CPU projection providers into adaptive local polynomial patches and projects chunk-preserving coordinate vectors through WebGPU command graphs without discarding raw binary64 source precision.
+* **GPU projection patches** - The optional `@luma.gl/experimental/gpu-project` subpath compiles arbitrary CPU projection providers into adaptive local polynomial patches and projects chunk-preserving coordinate vectors through WebGPU command graphs. Its fp64-backed double-single mode preserves more than Float32 precision through absolute `float32x4` results, while an optional validity column distinguishes rejected rows from legitimate zero coordinates.
+* **Composable projection programs** - Typed axis, unit, affine, and adaptive operations compile into a shared inline WGSL function and GPU Graph contributor. Programs preserve double-single intermediates, accept double-single output from upstream programs, propagate validity, and support compatible parameter updates without rebuilding the graph.
+* **Broader adaptive PROJJSON coverage** - Lambert Conic Conformal 1SP/2SP and Albers Equal Area definitions use verified EPSG method/parameter mappings and the existing double-single adaptive backend. Custom CRS labels need no registry entry; identifier-only and localized definitions retain explicit units and error budgets. Both planners offer optional `ProjectionPlanningError` throwing without changing their default structured failure results.
+* **Batch-preserving CPU/GPU projection** - `ProjectionTableTransform` uses one prepared CRS transform for batch-atomic CPU execution or explicit GPU table materialization. It preserves batch boundaries and source identity, borrows GPU inputs, exposes validity and output encodings, and keeps upload, submission and readback application-owned.
+* **Explicit projection seams and comparative benchmarks** - Double-single longitude normalization has declared intervals, invalid seam guards, and no automatic many-to-one inverse. The optional program benchmark compares native/adaptive arithmetic and inline/materialized execution against an independent validity-aware oracle, reporting accuracy, buffer memory, planning/compilation, and synchronized execution costs.
+* **Equal-budget projection performance sweeps** - Optional multi-patch UTM/Albers benchmarks compare quadratic/cubic adaptive plans, row counts, and shared-result consumer reuse at a fixed double-single accuracy budget. Reports distinguish timestamp-instrumented runs from normal pass-coalesced execution and include actual patch counts and buffer costs.
+* **Matched CPU projection baselines** - The program benchmark also measures repeated and shared-result CPU consumers, with explicit provider labels and binary64 outputs. GPU-resident speedup includes encoding and synchronized execution but explicitly excludes transfers and setup.
+* **Production table projection measurements** - An optional table-consumer benchmark compares retained CPU execution with GPU-resident, upload/project and CPU round-trip paths, preserving physical batches. Reports separate resident-data speedups from transfer-inclusive round trips and include accuracy, memory, setup and an optional 4K–4M row sweep.
+* **Opt-in native conic projections** - Bounded Lambert Conformal Conic 1SP/2SP and Albers forward/inverse formulas lower from explicit PROJJSON or pipelines with Float32 arithmetic opt-in, guarded inverse footprints and shared inline/graph execution. Default high-precision adaptive coverage is unchanged; equal-budget conic benchmarks qualify optimization trade-offs.
+* **Visualization projection qualification** - Spherical gnomonic/orthographic fixtures qualify prepared double-single plans, public-engine horizon/inverse-domain rejection, inline consumers and CPU/GPU table paths. Horizon-crossing geometry still requires explicit clipping; no new native visualization kernel is implied.
+* **Native Transverse Mercator and UTM** - Explicit Float32 forward/inverse programs support all 60 WGS84 UTM zones, EPSG 9807 PROJJSON conversions, and `utm`/`tmerc` pipelines. Domain and inverse-footprint checks reject unsupported branches. Default higher-precision execution continues to use double-single adaptive patches, now fitted from the normalized binary64 series reference for supported explicit CRS pairs.
+* **Projection metadata and CRS planning** - Projection programs expose immutable precision, domain, validity, inversion, and sampled-error metadata. The optional `@luma.gl/experimental/gpu-project/crs` adapter lowers explicit axis/unit/affine PROJ pipelines and fits bounded CRS transformations through math.gl 5, with structured fallback reasons and independently bounded inverse plans.
+* **Caller-prepared projection planning** - `planProjection()` accepts application-owned synchronous transforms, including preloaded math.gl providers, without resolving their CRS again or importing a projection catalogue. It shares the existing double-single compiler and structured failures while leaving lazy loading with the caller.
+* **Native Web Mercator programs** - Explicitly opt into forward/inverse Float32 formulas through PROJJSON or `webmerc` pipelines, with checked domains, honest arithmetic metadata, and shared inline/graph execution. Default high-precision Web Mercator planning retains double-single adaptive fitting against the validated binary64 formula and declines lossy provider routes.
+* **Native CRS frame changes** - Explicit PROJJSON geographic frames and equivalent Transverse Mercator/Pseudo Mercator conversions now lower to double-single axis/unit/affine programs without sampling. The planner normalizes ellipsoids, prime meridians, conversion parameters, and false origins; preserves datum boundaries; and requires fitting bounds only on adaptive routes.
 * **GPU spectral ocean simulation** - [`SpectralOceanSimulation`](https://luma.gl/docs/api-reference/experimental/spectral-ocean-simulation.md) evolves a deterministic seeded Phillips spectrum, reconstructs three spatial fields on the GPU, and emits render-ready displacement and normal/foam buffers. Surface normals come from the displaced field, whitecaps come from horizontal-displacement compression with bounded temporal history, and command submission remains application-owned. [Tempest Ocean](https://luma.gl/examples/showcase/tempest-ocean) binds those buffers directly to an independently tessellated HDR stormfront surface.
 * **[GPU dataframe analytics](https://luma.gl/docs/api-reference/experimental/gpu-dataframe.md)** - `GPUDataFrame` builds reusable WebGPU plans for null-aware filters, projections, derived columns, aggregations, histograms, batch-preserving joins and lookups, stable sorting, and top-K selection while retaining source batch and row identity.
 * **GPU raster analysis** - The optional `@luma.gl/experimental/gpu-raster` subpath supports bounded tile residency and halos, nodata-aware overviews and statistics, filtering and morphology, connected components, region measurements, and GPU-generated contours.
@@ -111,6 +313,24 @@ Version 9.4 expands luma.gl with portable GPU data processing and a broad experi
 
 **Experimental GPU data and tables**
 
+* **Normalized Arrow color conversion** - `convertArrowColors()` and `convertColors()` lower chunked Uint8, Float16, and Float32 RGB/RGBA rows into canonical `unorm8x4` GPU vectors with opaque RGB expansion, preserved nullable-row metadata, caller-owned input lifetime, and WebGPU compute plus WebGL fallback. Arrow path, polygon, and text layers consume the same conversion boundary.
+* **Universal Arrow-to-GPU planner** - `planArrowGPUConversion()` and `convertArrowToGPUVector()` select and explain zero-copy borrowing, direct or reinterpreted upload, numeric repacking, and semantic color, temporal, or matrix lowering. Table-schema counterparts preserve record batches, source row identity, field/null metadata, and explicit ownership while reporting byte/pass cost and precision warnings before allocation.
+* **Arrow shader layouts** - `getArrowBufferLayout()` maps Arrow scalar and `FixedSizeList` columns to shader attribute formats from a shader-first layout, including direct `arrow.Vector` sources and Arrow table path mappings.
+* **Arrow GPU adapters** - Arrow factories, append helpers, and readback helpers bridge Apache Arrow inputs into `@luma.gl/tables` objects and preserve chunked UTF-8 GPU vector input for text workflows.
+* **High-dimensional Arrow storage columns** - Existing Arrow table/vector adapters map wide `FixedSizeList` values directly into row-aligned fixed-size-list GPU columns, with optional named validity siblings and preserved parent/child nulls, record batches, and source identity.
+* **Variable-length Arrow attribute lists** - `GPUVector` can retain chunked nested list columns whose elements contain one to four numeric components, covering scalar streams plus tuple-style data such as XY, XYZ, and XYZM coordinates for future path-rendering workflows.
+* **Closed Arrow path normalization** - `closeArrowPaths()` appends explicit closing vertices only for closed Float32 absolute or origin-relative delta path rows whose endpoints differ beyond an epsilon, using WebGPU compute when available with equivalent CPU fallback semantics.
+* **`ArrowPathModel`** - New attribute-backed path renderer consumes prepared Float32 XY, XYZ, and XYZM path props, expands path rows into packed per-segment render records, and supports Float64 source paths through CPU-prepared Float32 deltas plus CPU-updated view origins.
+* **`ArrowPathStorageModel`** - New WebGPU-only storage-backed path renderer expands nested prepared Float32 XY, XYZ, and XYZM rows through compute into compact 12-byte indexed segment records using GPU path values plus persistent per-row path ranges, keeps per-path color, width, and optional view-origin rows as storage bindings, can convert Float64 source paths into Float32 deltas with one `fp64arithmetic` compute pass, and can consume reusable `ArrowPathStorageState` objects built by `createArrowPathStorageState`.
+* **Mesh Arrow geometry** - New `ArrowTableGeometry` and `makeGPUGeometryFromArrow()` support loaders.gl-compatible Mesh Arrow tables, including default interleaved vertex buffers and optional index buffers.
+* **Arrow table adapters** - Arrow table/vector upload, append, and readback utilities now layer over reusable generic GPU table objects from `@luma.gl/tables`.
+* **[Supported Arrow Types](https://luma.gl/docs/api-reference/arrow/supported-arrow-types.md) and [GPU Table Lifecycle](https://luma.gl/docs/api-reference/experimental/gpu-tables/gpu-table-lifecycle.md)** - Matrix Arrow vectors, storage-selected table bindings, Arrow adapters, and the generic tables execution layer.
+* **[Apache Arrow GPU Tables examples](https://luma.gl/examples/arrow/arrow-points)** - Points: `FixedSizeList<Float32, 2 | 3 | 4>` and DenseUnion point rows, Lines: `List<FixedSizeList<Float32, 4>>`, DenseUnion LineStrings, and `List<Timestamp>`, GeoArrow: mixed DenseUnion geometry routing, Text: `Utf8`/`Dictionary<Utf8>`, Time: `Date`/`Time`/`Timestamp`/`Duration`, Starfield: `Timestamp`/`Duration`, Matrices: `FixedSizeList<Float32, 16>`, Particles: `FixedSizeList<Float32, 3>`, and Global Grids: `Uint64`, `Utf8` for geohash, quadkey, S2, A5, and H3 now live in the Apache Arrow section.
+* **[Points Example](https://luma.gl/examples/arrow/arrow-points)** - New ScatterplotLayer-style renderer consumes Arrow point vectors or DenseUnion point rows, supports M-coordinate or timestamp animation, and reports hover identity as full-table row index, batch, and batch-local row.
+* **[Time Columns Example](https://luma.gl/examples/arrow/arrow-time-columns)** - New showcase prepares aligned scalar `DateDay`, `TimeMillisecond`, `TimestampMillisecond`, and `DurationMillisecond` rows into relative Float32 GPU vectors, then renders the same schedule through instanced attributes or WebGPU storage bindings.
+* **[Blinking Stars Example](https://luma.gl/examples/arrow/arrow-temporal-starfield)** - New showcase prepares aligned scalar `TimestampMillisecond` and `DurationMillisecond` rows into relative Float32 GPU vectors, then uses them as per-instance visibility windows and pulse periods through instanced attributes or WebGPU storage bindings.
+* **[Lines Example](https://luma.gl/examples/arrow/arrow-lines)** - New showcase expands nested Arrow XYZM line rows and DenseUnion LineString rows into styled GPU segment instances with attribute-backed and storage-backed models, then adds an `ArrowPathTripsStorageModel` mode that prepares aligned `List<Timestamp>` rows into relative Float32 milliseconds for storage-backed trail filtering.
+* **[GeoArrow Example](https://luma.gl/examples/arrow/arrow-geoarrow)** - New mixed-geometry showcase routes one GeoArrow-style DenseUnion column through Arrow point, line, and polygon renderers.
 * **Composite GPU inputs** - `GPUInputSchema.attributeNames` maps one logical table column to several shader attributes, allowing a shared matrix buffer to feed portable vertex attributes or a WebGPU storage binding without repacking. Ordinary inputs retain the singular `attributeName`.
 * **GPU data primitives and experimental tables** - Canonical `GPUData` and `GPUVector` runtime classes live in `@luma.gl/gpgpu/gpu-data`, while `GPURecordBatch` and `GPUTable` provide reusable non-Arrow-specific GPU table ownership and batching from `@luma.gl/experimental/gpu-tables`.
 * **Table-backed rendering** - `GPUTableModel` draws preserved table batches, and `GPUTableGeometry` exposes packed static GPU tables as renderable geometry.
@@ -123,7 +343,7 @@ Version 9.4 expands luma.gl with portable GPU data processing and a broad experi
 * **GPU-only 2D text facade** - `TextRenderer` renders caller-owned `GPUTextData` while selecting attribute, WebGPU storage, or dictionary strategies automatically.
 * **Experimental text strategies** - Specialized model classes and low-level shader/compute contracts remain available from `@luma.gl/text/experimental` for benchmarking.
 * **Packed generated glyph vertex data** - Attribute text uses `expandedGlyphVertexData`, while storage text uses `compactGlyphVertexData`, reducing generated glyph buffer fan-out without folding caller-owned row/style vectors into generated records.
-* **MSDF text fonts** - `@luma.gl/text` can build or load prebuilt BMFont JSON MSDF atlases, including kerning and multi-page atlas metadata, through the same `FontAtlas` format used by generated bitmap and SDF atlases.
+* **Dependency-isolated font preparation** - `@luma.gl/text/fonts` builds bitmap and SDF browser fonts, builds or loads prebuilt BMFont JSON MSDF atlases, measures atlas-backed text, and exposes bundled Helvetiker data without importing luma.gl, loaders.gl, or GPU modules. Existing `@luma.gl/text` font imports remain supported.
 * **GPU UTF-8 shader mapping** - Reusable text-module WGSL helpers compose sparse UTF-8 byte traversal, code point decode, and storage lookup into one-pass text compute kernels.
 
 **@luma.gl/splats** NEW MODULE
@@ -522,3 +742,27 @@ New `Device.features` that enable new GLSL syntax
 * `shader-noperspective-interpolation-webgl`: GLSL vertex outputs and fragment inputs may be declared with a `noperspective` interpolation qualifier.
 * `shader-conservative-depth-webgl`: GLSL `gl_FragDepth` qualifiers `depth_any` `depth_greater` `depth_less` `depth_unchanged` can enable early depth test optimizations.
 * `shader-clip-cull-distance-webgl`: Enables `gl_ClipDistance[] / gl_CullDistance[]`.
+
+### Shared scene lighting examples[​](#shared-scene-lighting-examples "Direct link to Shared scene lighting examples")
+
+The experimental deck.gl GPU layers add optional camera/object motion capture and `SceneShaderPassEffect`, which connects shared HDR color, depth, normals and velocity to existing luma.gl shader-pass graphs. Riverfront fireflies, HDR night lighting, global illumination and light shafts demonstrate this shared infrastructure on WebGPU. `FireflyLayer` and the reusable `firefly` shader module also support WebGL2. Fireflies adds calm-water emitter reflections and adjustable bloom; Fireflies and HDR night lighting request extended-range, floating-point canvas output on HDR-capable displays, with an SDR presentation fallback.
+
+### Retained chart shapes[​](#retained-chart-shapes "Direct link to Retained chart shapes")
+
+ANARI scenes support capped `hexPrism` marks and full or open partial `torus` meshes. The engine exports `TorusGeometry` over shared math.gl tessellation. The Chart Shapes playground preset and `--shapes` capture option use the same geometry and datum identities across raster and ray rendering.
+
+### Bounded ray image export[​](#bounded-ray-image-export "Direct link to Bounded ray image export")
+
+`@luma.gl/experimental` adds `exportRayTracingImage` and `iterateRayTracingImageTiles` for streamed RGBA8 output. Full-image coordinates and explicit sampling-frame indices keep seeded ray paths stable across tiles. Clipped filter/history halos preserve progressive and denoised image seams; per-tile readback and cancellation keep export-owned allocations bounded.
+
+### Emissive chart lighting, masks and ring segments[​](#emissive-chart-lighting-masks-and-ring-segments "Direct link to Emissive chart lighting, masks and ring segments")
+
+Ray renderers add opt-in `emitterSampling` for explicit connections to emissive triangles and transformed analytic spheres. Scalar alpha masks now control ray color, shadows, picking and channels. `RingGeometry` and ANARI `ring` geometry add closed annular prisms and capped segments using shared math.gl tessellation. The Chart Lighting preset combines these features with retained selection identities and an emissive-lighting preview toggle.
+
+### GPU physics reliability and gameplay queries[​](#gpu-physics-reliability-and-gameplay-queries "Direct link to GPU physics reliability and gameplay queries")
+
+Experimental rigid-body worlds add opt-in GPU rollback for incomplete or nonfinite steps, explicit capacity-growth reconstruction, a bounded sphere/static CCD envelope, parallel geometry queries and sphere casts, and persistent compound spherical sensors. Space Salvage uses simulation-step docking events; Rigid Body Lab includes a thin-wall CCD scenario. See the [rigid-body reference](https://luma.gl/docs/api-reference/gpgpu/gpu-rigid-body-world.md) for supported envelopes and remaining qualification work.
+
+### GPU physics mechanisms and debugging[​](#gpu-physics-mechanisms-and-debugging "Direct link to GPU physics mechanisms and debugging")
+
+The experimental rigid-body world adds bounded ordered distance, fixed, hinge and slider joints, capped velocity motors and limits, plus full GPU state capture/restore for debugging. The Rigid Body Lab includes three Mechanisms scenarios. An executable finite-shape pair matrix records response coverage separately from numerical qualification.

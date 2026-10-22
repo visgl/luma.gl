@@ -58,7 +58,7 @@ A more advanced use case is interleaving: two attributes access the same buffer 
   ],
 ```
 
-In the above case case a new buffer name `particles` is defined and `setAttributes({particles: Buffer})` calls will recognize that name and bind the provided buffer to all the interleaved attributes.
+In the above case a new buffer name `particles` is defined and `setAttributes({particles: Buffer})` calls will recognize that name and bind the provided buffer to all the interleaved attributes.
 
 ## `BufferLayout` Fields[​](#bufferlayout-fields "Direct link to bufferlayout-fields")
 

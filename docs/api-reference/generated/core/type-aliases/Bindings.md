@@ -2,6 +2,6 @@
 
 > **Bindings** = `Record`<`string`, [`Binding`](https://luma.gl/docs/api-reference/generated/core/type-aliases/Binding.md)>
 
-Defined in: [modules/core/src/adapter/types/shader-layout.ts:195](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L195)
+Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:195](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L195)
 
 Named binding map

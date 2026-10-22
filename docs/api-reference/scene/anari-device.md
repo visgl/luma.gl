@@ -1,15 +1,15 @@
 # ANARIDevice and Object Lifecycle
 
-ExperimentalPublished packageFrom v9.4
+ExperimentalPrivate workspaceFrom v10
 
 `ANARIDevice` adapts an existing luma.gl `Device` into a retained, ANARI-inspired scene API. It creates scene objects, advertises supported subtypes and extensions, renders frames, and owns the renderer's cached GPU resources.
 
 ```
 import {luma} from '@luma.gl/core';
 
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
-import {ANARIDevice} from '@luma.gl/scene';
+import {ANARIDevice} from '@luma.gl/anari';
 
 
 
@@ -218,7 +218,7 @@ Returns supported subtypes for an object category:
 ```
 anariDevice.getObjectSubtypes('geometry');
 
-// ['triangle', 'sphere', 'cylinder', 'cone', 'quad']
+// ['triangle', 'sphere', 'cylinder', 'cone', 'quad', 'hexPrism', 'torus', 'ring']
 
 
 

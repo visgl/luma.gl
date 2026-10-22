@@ -1,6 +1,6 @@
 # Ground-Truth Ambient Occlusion
 
-Estimate horizon-based ambient visibility with temporally reprojected history and edge-aware spatial denoising. `createGTAOShaderPassPipeline` can attenuate either the complete lit image or only a separately supplied ambient-light contribution.
+Estimate horizon-based ambient visibility with temporally reprojected history and edge-aware spatial denoising. `createGTAOCompositeShaderPass` can attenuate either the complete lit image or only a separately supplied ambient-light contribution.
 
 ### Deferred Rendering: Illumination Lab
 
@@ -14,13 +14,15 @@ Mobile quality
 // Loading source…
 ```
 
+**Loading example**Preparing GPU resources…
+
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ## At a Glance[​](#at-a-glance "Direct link to At a Glance")
 
 | Property          | Value                                                                                |
 | ----------------- | ------------------------------------------------------------------------------------ |
-| Export            | `createGTAOShaderPassPipeline`                                                       |
+| Export            | `createGTAOCompositeShaderPass`                                                      |
 | Backend           | WebGPU                                                                               |
 | Render passes     | Six: evaluation, temporal resolve, depth history, two bilateral blurs, and composite |
 | Required bindings | `depthTexture`, `normalTexture`, and `velocityTexture`                               |
@@ -32,7 +34,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 ```
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
-import {createGTAOShaderPassPipeline} from '@luma.gl/effects';
+import {createGTAOCompositeShaderPass} from '@luma.gl/effects';
 
 
 
@@ -42,7 +44,7 @@ const renderer = new ShaderPassRenderer(device, {
 
   shaderPasses: [
 
-    createGTAOShaderPassPipeline({resolutionScale: 0.5, composition: 'ambient-only'})
+    createGTAOCompositeShaderPass({resolutionScale: 0.5, composition: 'ambient-only'})
 
   ]
 
