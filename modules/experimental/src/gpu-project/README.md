@@ -79,7 +79,7 @@ system's units; when the destination is a meter-based CRS, `0.01` requests a
 sampled error of at most one centimeter.
 
 Projection definitions and datum support remain the provider's responsibility.
-`@math.gl/geospatial/projection` is optional and is not a dependency of `@luma.gl/experimental`.
+The `@math.gl/geospatial` peer is optional and is not loaded by the GPU execution entry point.
 A provider can instead be any object exposing `project(coordinates)` or a
 standalone projection function.
 
@@ -276,8 +276,8 @@ or `unknown`. Native scales propagate a preceding adaptive estimate in destinati
 adaptive stage reports unknown composed error because provider sensitivity and patch continuity
 are not established. Estimates exclude input/native/output rounding and are never certified bounds.
 
-The optional `@luma.gl/experimental/gpu-project/crs` subpath uses public math.gl 5 APIs. Install its
-optional `@math.gl/geospatial/crs` and `@math.gl/geospatial/projection` peers to use:
+The optional `@luma.gl/experimental/gpu-project/crs` subpath uses public math.gl 5 APIs. Install
+`@math.gl/geospatial` version `~5.0.0-alpha.19` as its optional peer to use:
 
 - `planProjectionPipeline({pipeline})`: parse a PROJ string or accept math.gl's AST, then lower
   signed 2D axis swaps, horizontal unit conversions, diagonal affine transforms, and stage inversion.

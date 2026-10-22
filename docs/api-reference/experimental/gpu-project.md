@@ -455,8 +455,8 @@ the application.
 
 ## Optional math.gl CRS planner
 
-Install `@math.gl/geospatial/crs` and `@math.gl/geospatial/projection` 5.x separately and import the CPU planner from
-`@luma.gl/experimental/gpu-project/crs`. These optional peers are not loaded by the GPU execution
+Install `@math.gl/geospatial` version `~5.0.0-alpha.19` and import the CPU planner from
+`@luma.gl/experimental/gpu-project/crs`. This optional peer is not loaded by the GPU execution
 entry point. Planning allocates no GPU resources and returns either
 `{status: 'ready', strategy, program, compiled, reasons}` or `{status: 'unsupported', reasons}`.
 The default is raw binary64 `uint32x4` input and double-single output.
