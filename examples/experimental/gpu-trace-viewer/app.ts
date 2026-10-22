@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '../../../modules/gpu-graph/src/gpu-core/gpu-command-node';
+import {addGPUCommandNodes} from '@luma.gl/gpu-graph/gpu-core';
 import {ColumnPanel, type Panel} from '@deck.gl-community/panels';
 import {type Binding, Buffer, type Device, type RenderBundle} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
