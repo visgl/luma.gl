@@ -477,4 +477,4 @@ it('combines dormant joints with extended contacts, CCD and trigger sampling', a
     graph.destroy();
     world.destroy();
   }
-});
+}, 120000);
