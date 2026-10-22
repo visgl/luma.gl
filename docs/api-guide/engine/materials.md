@@ -83,3 +83,9 @@ In the current luma.gl convention:
 That means a material is the natural owner of per-surface uniform buffers,
 textures, and samplers that can be reused across many draws, while scene-level
 state like lighting stays outside the material itself.
+
+## Explore engine features
+
+Learn each material aspect and rendering capability through its API and a live sample in the
+[engine feature guide](/docs/api-guide/engine/features). glTF core and extension mappings are
+described within each feature page; this reference retains the format-specific contracts.

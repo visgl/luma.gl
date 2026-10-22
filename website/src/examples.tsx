@@ -17,6 +17,7 @@ import {
 } from './react-luma';
 import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
+import type {GLTFScenegraphs} from '@luma.gl/gltf';
 
 import {makeHtmlCustomPanel} from '../../examples/example-panels';
 import type {GPUSortExampleHandle} from '../../examples/experimental/gpu-sort/src/app';
@@ -869,6 +870,99 @@ export const GLTFExample: React.FC<WebsiteExampleProps & {
       devices={referenceDevice ? [referenceDevice] : undefined}
       {...props}
     />
+  );
+};
+
+/** A focused glTF viewer configured by asset URL, without the Animation Studio UI. */
+export const GLTFModelExample: React.FC<
+  WebsiteExampleProps & {
+    modelUrl: string;
+    title?: string;
+    animate?: boolean;
+    materialVariant?: string;
+    showVariants?: boolean;
+  }
+> = ({modelUrl, title = 'glTF model', animate = false, materialVariant, showVariants, ...props}) => {
+  const [loadedModel, setLoadedModel] = useState<{
+    modelUrl: string;
+    scenegraphs: GLTFScenegraphs;
+  } | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState(materialVariant || '');
+  const scenegraphs = loadedModel?.modelUrl === modelUrl ? loadedModel.scenegraphs : null;
+
+  useEffect(() => {
+    if (!scenegraphs) {
+      return;
+    }
+    if (materialVariant) {
+      scenegraphs.variants.selectVariant(materialVariant);
+    } else {
+      scenegraphs.variants.resetVariant();
+    }
+    setSelectedVariant(materialVariant || '');
+  }, [materialVariant, scenegraphs]);
+
+  const loadModelTemplate = useMemo(
+    () => async () => {
+      const {default: GLTFViewer} = await loadHelloGLTFApp();
+      return {
+        default: class extends GLTFViewer {
+          constructor(animationProps: AnimationProps) {
+            super(animationProps, {
+              modelUrl,
+              animate,
+              onLoad: loadedScenegraphs => setLoadedModel({modelUrl, scenegraphs: loadedScenegraphs}),
+              onUnload: unloadedScenegraphs =>
+                setLoadedModel(current =>
+                  current?.scenegraphs === unloadedScenegraphs ? null : current
+                )
+            });
+          }
+        }
+      };
+    },
+    [modelUrl, animate]
+  );
+
+  return (
+    <>
+      {showVariants && scenegraphs && scenegraphs.variants.names.length > 0 ? (
+        <div className="margin-bottom--sm">
+          <label>
+            Material variant{' '}
+            <select
+              value={selectedVariant}
+              onChange={event => {
+                const variantName = event.target.value;
+                if (variantName) {
+                  scenegraphs.variants.selectVariant(variantName);
+                } else {
+                  scenegraphs.variants.resetVariant();
+                }
+                setSelectedVariant(variantName);
+              }}
+            >
+              <option value="">Original</option>
+              {scenegraphs.variants.names.map(variantName => (
+                <option key={variantName} value={variantName}>
+                  {variantName}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      ) : null}
+      <LumaExample
+        key={modelUrl}
+        id="hello-gltf"
+        title={title}
+        directory="tutorials"
+        loadTemplate={loadModelTemplate}
+        config={exampleConfig}
+        canvasContextProfile="high-dynamic-range"
+        {...props}
+      />
+    </>
   );
 };
 
