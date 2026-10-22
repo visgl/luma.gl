@@ -85,7 +85,7 @@ GPUScalar rr    ──┼──▶ graph-owned GPUValueArena ──▶ one stora
 GPUScalar active──┘
 ```
 
-The scalar carries logical identity, type and slot metadata. Once the arena is sealed, it can expose a one-row `GraphDataView` for existing graph resource tracking.
+The scalar carries logical identity, type and slot metadata. It exposes a one-row `GraphDataView` for existing graph resource tracking.
 
 ## One binding, many values[​](#one-binding-many-values "Direct link to One binding, many values")
 
@@ -155,7 +155,7 @@ GPUVector ─┘
 GPUVector ──▶ GPUVectorNorm ──▶ GPUScalar
 ```
 
-Today some primitives model scalar output as a one-row `GraphDataView`. Follow-up work can migrate them to accept `GPUScalar` while retaining arena-backed views internally for graph hazards.
+Use [scalar operations](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-scalar-operation.md) for arithmetic and comparisons, and [the reduction substrate](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-reduction-substrate.md) for dot products and norms.
 
 ## Why this matters for iterative algorithms[​](#why-this-matters-for-iterative-algorithms "Direct link to Why this matters for iterative algorithms")
 
@@ -175,36 +175,7 @@ Reading those values back to JavaScript would introduce GPU/CPU synchronization 
 
 The same abstraction applies to convergence flags, counters, thresholds derived on GPU, adaptive algorithm state and indirect-dispatch metadata.
 
-## Scope of this PR[​](#scope-of-this-pr "Direct link to Scope of this PR")
+## Related APIs[​](#related-apis "Direct link to Related APIs")
 
-This PR establishes only the logical scalar type and WGSL arena access machinery. It deliberately does not add arithmetic. Keeping representation separate lets the next PR define scalar operations cleanly:
-
-```
-GPUValueArena
-
-      ↓
-
- GPUScalar<T>        ← this PR
-
-      ↓
-
-scalar arithmetic
-
-      ↓
-
-scalar broadcast / MADD
-
-      ↓
-
-solver and GPU control flow
-```
-
-## Roadmap[​](#roadmap "Direct link to Roadmap")
-
-1. graph-owned packed `GPUValueArena`
-2. first-class `GPUScalar<T>` and WGSL access helpers
-3. scalar arithmetic and comparisons
-4. reduction outputs as `GPUScalar`
-5. scalar/constants/parameters as broadcast operands in `GPUElementwise`
-6. GPU-resident convergence and conjugate-gradient execution
-7. compiler-driven arena sealing and lifetime-based slot reuse
+* [GPUValueArena](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-value-arena.md) owns packed scalar storage.
+* [Solver integration](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-cg-integration.md) combines scalar and vector work.

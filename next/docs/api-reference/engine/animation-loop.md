@@ -39,7 +39,7 @@ Unlike older luma.gl APIs, the current `AnimationLoop` does not take a raw WebGL
 ```
 import {luma} from '@luma.gl/core';
 
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
 import {AnimationLoop} from '@luma.gl/engine';
 

@@ -2,7 +2,7 @@
 
 > **resolveLogicalAttributeMappings**(`shaderLayout`, `bufferLayout`, `options?`): [`LogicalAttributeMapping`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/LogicalAttributeMapping.md)\[]
 
-Defined in: [modules/core/src/adapter-utils/buffer-layout-utils.ts:113](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter-utils/buffer-layout-utils.ts#L113)
+Defined in: [modules/core/src/api/adapter-utils/buffer-layout-utils.ts:113](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter-utils/buffer-layout-utils.ts#L113)
 
 Resolves backend-agnostic logical attribute mappings from a shader layout and buffer layout.
 

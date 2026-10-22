@@ -2,16 +2,16 @@
 
 [CanvasContext](https://luma.gl/next/docs/api-reference/core/canvas-context.md)[PresentationContext](https://luma.gl/next/docs/api-reference/core/presentation-context.md)[Framebuffer](https://luma.gl/next/docs/api-reference/core/resources/framebuffer.md)
 
-A `CanvasContext` holds a connection between a GPU `Device` and canvas, (either an HTML `<canvas />` element, aka `HTMLCanvasELement`, or an `OffscreenCanvas`).
+A `CanvasContext` connects a GPU `Device` to an `HTMLCanvasElement` or `OffscreenCanvas`.
 
-* A `CanvasContext` enables the application to do GPU render into a canvas.
-* The `CanvasContext` acts as a source of `Framebuffer`s with special `Texture` color attachments that are copied to the screen at the end of a `RenderPass`.
+* A `CanvasContext` lets the application render into a canvas.
+* It supplies current canvas framebuffers. End render passes and submit commands to present WebGPU work.
 * It handles canvas resizing, making sure the returned `Framebuffer`s correspond to the current size of the canvas.
 * It also provides support for device pixel ratios (mapping between device pixels and CSS pixels)
 
 ## Canvas Size Management[​](#canvas-size-management "Direct link to Canvas Size Management")
 
-While an `OffscreenCanvas` only has one size, `HTMLCanvasElements` effectively has three different sizes:
+An `HTMLCanvasElement` has three relevant sizes:
 
 * The *CSS size*, being the size in "logical units" of the canvas
 * The *device pixel size*, being the exact number of "screen pixels" covered by the canvas
@@ -19,18 +19,18 @@ While an `OffscreenCanvas` only has one size, `HTMLCanvasElements` effectively h
 
 Notes:
 
-* For best results, the drawing buffer should match the device pixel size. The `autoResizeDrawingBuffer` and `useDevicePixels` props will ensure this.
+* For best results, the drawing buffer should match the device pixel size. The `autoResize` and `useDevicePixels` props control this.
 * However, significant memory savings are possible by using say half resolution drawing buffers.
-* If the drawing buffer size doesn't exactly match the pixel size, undesired effects like moire patterns can result.The `CanvasContext` pixelWidth and pixelHeight members tracks the exact pixel size (called the "device pixel content box" in browser APIs) is surprisingly hard.
-* Some overlay integrations still expect legacy `Math.round(cssSize * devicePixelRatio)` sizing. Use `pixelSizeSource: 'css-dpr'` when luma.gl must match an external canvas that has not adopted exact device-pixel sizing.
+* A drawing buffer that differs from the device pixel size may introduce resampling artifacts. `devicePixelWidth` and `devicePixelHeight` track the canvas's physical pixel coverage.
+* Use `pixelSizeSource: 'css-dpr'` to match external canvases sized with `Math.floor(cssSize * devicePixelRatio)` rather than exact device-pixel sizing.
 
 ## Canvas Monitoring[​](#canvas-monitoring "Direct link to Canvas Monitoring")
 
-For `HTMLCanvasElements` the `CanvasContext` will monitor changes to the underlying canvas and call callbacks on the associated `Device`, see:
+For HTML canvases, `CanvasContext` monitors changes and calls callbacks on the associated `Device`:
 
 * `DeviceProps.onResize` - called if the size of the "device pixel content box" changes.
 * `DeviceProps.onPositionChange` - called if the absolute position of the canvas changes. Requires `CanvasContextProps.trackPosition`.
-* `DeviceProps.onVisibilityChange` - called if the visibility of the canvas changes (window is closed or occluded).
+* `DeviceProps.onVisibilityChange` - called when the canvas's intersection with the viewport changes.
 * `DeviceProps.onDevicePixelRatioChange` - called if the DPR changes (perhaps by moving the window to another screen or zooming the browser)
 
 ## Usage[​](#usage "Direct link to Usage")
@@ -52,7 +52,7 @@ Because of this, the `Device` class provides a `DeviceProps.createCanvasContext`
 ```
 const device = await luma.createDevice({createCanvasContext: true});
 
-const canvasContext = device.getDefaultCanvasContext()
+const canvasContext = device.getDefaultCanvasContext();
 ```
 
 The application can also provide properties for the default `CanvasContext`:
@@ -60,15 +60,15 @@ The application can also provide properties for the default `CanvasContext`:
 ```
 const device = await luma.createDevice({createCanvasContext: {width, height}}); // Creates a new HTML canvas and adds it to document.body.
 
-const canvasContext = device.getDefaultCanvasContext()
+const canvasContext = device.getDefaultCanvasContext();
 ```
 
 A `CanvasContext` can be associated with an existing canvas:
 
 ```
-const device = await luma.createDevice({createCanvasContext: {canvas: document.getElementById('canvas-id')}}); // Creates a new HTML canvas and adds it to document.body.
+const device = await luma.createDevice({createCanvasContext: {canvas: 'canvas-id'}});
 
-const canvasContext = device.getDefaultCanvasContext()
+const canvasContext = device.getDefaultCanvasContext();
 ```
 
 The same `createCanvasContext` options are also used when attaching to an externally created WebGL context through `luma.attachDevice()` or `webgl2Adapter.attach()`, including compatibility options such as `pixelSizeSource`.
@@ -118,7 +118,7 @@ This is equivalent to
 ```
 const renderPass = device.beginRenderPass({
 
-  framebuffer: device.getDefaultCanvasContext().getFramebuffer()
+  framebuffer: device.getDefaultCanvasContext().getCurrentFramebuffer()
 
 });
 ```
@@ -146,61 +146,62 @@ const newCanvasContext = device.createCanvasContext({canvas: ...});
 
 const renderPass = device.beginRenderPass({
 
-  framebuffer: newCanvasContext.getFramebuffer()
+  framebuffer: newCanvasContext.getCurrentFramebuffer()
 
 });
 ```
 
-On high-DPI screens, the number of pixels in a canvas can be a multiple of the "CSS size" reported by HTMLCanvasElement. Because of this, luma.gl allows the resolution of the textures returned by `canvasContext.getFramebuffer` to be controlled. The `CanvasContextProps.useDevicePixels` prop if set to `true`, multiples the canvas HTML size with the system device pixel ratio. This prop can also a custom ratio (`number`), as well. This allows setting the target texture size to higher or lower resolutions that indicated by an HMTLCanvasElements CSS width and height, to ensure that screen renderings use the maximum resolution of the device (at the cost of using more GPU memory).
+On high-DPI screens, an `HTMLCanvasElement` covers more device pixels than CSS pixels. With automatic resizing enabled, `useDevicePixels: true` matches physical pixel coverage, `false` uses CSS size, and a number applies a fixed pixel ratio to CSS size. Higher resolutions use more GPU memory.
 
 ```
 const newCanvasContext = device.createCanvasContext({canvas: ..., useDevicePixels: true});
 ```
 
-Mote that when using high value (usually more than device pixel ratio), it is possible it can get clamped down outside of luma.gl's control due to system memory limitation, in such cases a warning will be logged to the browser console.
+The backend may clamp dimensions that exceed its drawing-buffer limits.
 
-The `CanvasContext` also provides methods for converting between device and CSS pixels, e.g
+To convert a CSS pixel to drawing-buffer coordinates, use:
 
 ```
-canvasContext.getDevicePixelResolution()
+canvasContext.cssToDevicePixels([x, y]);
 ```
 
 ## Types[​](#types "Direct link to Types")
 
 ### `CanvasContextProps`[​](#canvascontextprops "Direct link to canvascontextprops")
 
-| Property           | Type                                                 |                                                                                          |
-| ------------------ | ---------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `autoResize?`      | `boolean`                                            | Whether to resize drawing buffer when canvas size changes                                |
-| `useDevicePixels?` | `boolean`                                            | Whether to auto resize drawing buffer to device or CSS pixels                            |
-| `pixelSizeSource?` | `'exact' \| 'css-dpr'`                               | How tracked device pixel size is derived for HTML canvases. Defaults to `'exact'`.       |
-| `width?`           | `number`                                             | Width in pixels of the canvas (if `canvas` is not supplied)                              |
-| `height?`          | `number`                                             | Height in pixels of the canvas (if `canvas` is not supplied)                             |
-| `canvas?`          | `HTMLCanvasElement` \| `OffscreenCanvas` \| `string` | A new canvas will be created if not supplied.                                            |
-| `container?`       | `HTMLElement`                                        | Parent DOM element for new canvas. Defaults to first child of `document.body`            |
-| `visible?`         | `boolean`                                            | Visibility (only used if new canvas is created).                                         |
-| `alphaMode?`       | `'opaque' \| 'premultiplied'`                        | WebGPU presentation alpha mode.                                                          |
-| `colorSpace?`      | `'srgb' \| 'display-p3'`                             | Presentation color space. Use `'display-p3'` for wide-gamut HDR output.                  |
-| `colorFormat?`     | `'rgba8unorm' \| 'bgra8unorm' \| 'rgba16float'`      | Optional WebGPU presentation texture format. Use `'rgba16float'` to retain HDR values.   |
-| `toneMapping?`     | `'standard' \| 'extended'`                           | WebGPU presentation tone mapping. `'extended'` preserves colors brighter than SDR white. |
+| Property           | Type                                                 |                                                                                                     |
+| ------------------ | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `autoResize?`      | `boolean`                                            | Whether to resize drawing buffer when canvas size changes                                           |
+| `useDevicePixels?` | `boolean \| number`                                  | Use physical pixels (`true`), CSS pixels (`false`), or a fixed ratio (`number`) when auto-resizing. |
+| `pixelSizeSource?` | `'exact' \| 'css-dpr'`                               | How tracked device pixel size is derived for HTML canvases. Defaults to `'exact'`.                  |
+| `width?`           | `number`                                             | Width in pixels of the canvas (if `canvas` is not supplied)                                         |
+| `height?`          | `number`                                             | Height in pixels of the canvas (if `canvas` is not supplied)                                        |
+| `canvas?`          | `HTMLCanvasElement` \| `OffscreenCanvas` \| `string` | A new canvas will be created if not supplied.                                                       |
+| `container?`       | `HTMLElement \| string \| null`                      | Parent element or element ID for a new canvas. Defaults to `document.body`.                         |
+| `visible?`         | `boolean`                                            | Visibility (only used if new canvas is created).                                                    |
+| `alphaMode?`       | `'opaque' \| 'premultiplied'`                        | WebGPU presentation alpha mode.                                                                     |
+| `colorSpace?`      | `'srgb' \| 'display-p3'`                             | Presentation color space. Use `'display-p3'` for wide-gamut HDR output.                             |
+| `colorFormat?`     | `'rgba8unorm' \| 'bgra8unorm' \| 'rgba16float'`      | Optional WebGPU presentation texture format. Use `'rgba16float'` to retain HDR values.              |
+| `toneMapping?`     | `'standard' \| 'extended'`                           | WebGPU presentation tone mapping. `'extended'` preserves colors brighter than SDR white.            |
 
-### `useDevicePixels: boolean`[​](#usedevicepixels-boolean "Direct link to usedevicepixels-boolean")
+### `useDevicePixels: boolean | number`[​](#usedevicepixels-boolean--number "Direct link to usedevicepixels-boolean--number")
 
 Whether the framebuffer backing this canvas context is auto resized using device pixels.
 
 * `false` - Framebuffer is sized according to CSS pixel size.
 * `true` - Framebuffer is sized according to the device pixel ratio reported by the browser.
+* `number` - Drawing buffer uses CSS size multiplied by this fixed ratio.
 
 ### `pixelSizeSource: 'exact' | 'css-dpr'`[​](#pixelsizesource-exact--css-dpr "Direct link to pixelsizesource-exact--css-dpr")
 
 Controls how `CanvasContext` derives tracked device-pixel size for HTML canvases.
 
 * `'exact'` - Prefer `ResizeObserver.devicePixelContentBoxSize` for pixel-perfect sizing.
-* `'css-dpr'` - Use `Math.round(cssSize * devicePixelRatio)` for compatibility with external overlays that still size canvases this way.
+* `'css-dpr'` - Use `Math.floor(cssSize * devicePixelRatio)` for compatibility with external overlays that size canvases this way.
 
 ## Fields[​](#fields "Direct link to Fields")
 
-### `canvas: HMTLCanvas | OffscreenCanvas`[​](#canvas-hmtlcanvas--offscreencanvas "Direct link to canvas-hmtlcanvas--offscreencanvas")
+### `canvas: HTMLCanvasElement | OffscreenCanvas`[​](#canvas-htmlcanvaselement--offscreencanvas "Direct link to canvas-htmlcanvaselement--offscreencanvas")
 
 ### `initialized: Promise<void>`[​](#initialized-promisevoid "Direct link to initialized-promisevoid")
 
@@ -216,7 +217,7 @@ Becomes `true` once the `CanvasContext` been able to obtain its true pixel size.
 
 info
 
-A `CanvasContext` should not be constructed directly. Default canvas contexts are created when instantiating a `WebGPUDevice` or a `WebGLDevice` by supplying the `canvasContext` property, and can be accessed through the `device.getDefaultCanvasContext()` method. Additional canvas contexts can be explicitly created through `WebGPUDevice.createCanvasContext(...)`.
+A `CanvasContext` should not be constructed directly. Supply `createCanvasContext` when creating a device and access it with `device.getDefaultCanvasContext()`. WebGPU also supports `device.createCanvasContext(...)` for additional renderable canvases.
 
 On `Device` instances that support it (see remarks below) additional canvas contexts are created using `device.createCanvasContext()`. Depending on options passed, this either:
 
@@ -239,16 +240,16 @@ Returns the size in pixels required to cover the canvas at the current device pi
 
 ### `getDrawingBufferSize(): [number, number]`[​](#getdrawingbuffersize-number-number "Direct link to getdrawingbuffersize-number-number")
 
-If `props.autoResize` is true, then this value will always match `getDevicePixelSize()`
+With `autoResize: true` and `useDevicePixels: true`, this follows `getDevicePixelSize()`, subject to backend limits. Other ratios may produce a different drawing-buffer size.
 
 *Note: For an `OffscreenCanvas` this function always returns the same value as `getDevicePixelSize()`*
 
-### `setDrawingBufferSize(size [number, number]): void`[​](#setdrawingbuffersizesize-number-number-void "Direct link to setdrawingbuffersizesize-number-number-void")
+### `setDrawingBufferSize(width: number, height: number): void`[​](#setdrawingbuffersizewidth-number-height-number-void "Direct link to setdrawingbuffersizewidth-number-height-number-void")
 
 Resize the drawing surface. Usually called after the window has been resized.
 
 ```
-canvasContext.setDrawingBufferSize([width: number, height: number]});
+canvasContext.setDrawingBufferSize(width, height);
 ```
 
 * **width**: New drawing surface width.

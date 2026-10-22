@@ -17,7 +17,7 @@ luma.gl WebGPU devices default to the portable `core` feature level. Request onl
 ```
 import {luma} from '@luma.gl/core';
 
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
 
 

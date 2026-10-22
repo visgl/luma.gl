@@ -10,7 +10,7 @@ The returned [`Device`](https://luma.gl/next/docs/api-reference/core/device.md) 
 
 The `@luma.gl/core` module defines abstract API interfaces such as `Device`, `Buffer` etc and is not usable on its own.
 
-One or more GPU backend modules must be imported from a corresponding GPU API backend module (`@luma.gl/webgl` and/or `@luma.gl/webgpu`) and then registered with luma.gl.
+One or more GPU backend modules must be imported from a corresponding GPU API backend module (`@luma.gl/core/webgl` and/or `@luma.gl/core/webgpu`) and then registered with luma.gl.
 
 ## Usage[​](#usage "Direct link to Usage")
 
@@ -19,7 +19,7 @@ Create a WebGL 2 context (throws if WebGL2 not supported)
 ```
 import {luma} from '@luma.gl/core';
 
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
 
 
@@ -45,7 +45,7 @@ Register the WebGL backend, then create a WebGL2 context, auto creating a canvas
 ```
 import {luma} from '@luma.gl/core';
 
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
 luma.registerAdapters([webgl2Adapter]);
 
@@ -57,9 +57,9 @@ It is possible to register more than one device to create an application that ca
 ```
 import {luma} from '@luma.gl/core';
 
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
-import {webgpuDevice} from '@luma.gl/webgl';
+import {webgpuDevice} from '@luma.gl/core/webgl';
 
 luma.registerAdapters([webgl2Adapter, webgpuDevice]);
 
@@ -73,9 +73,9 @@ Install device modules and register adapters to access backends
 ```
 yarn add @luma.gl/core
 
-yarn add @luma.gl/webgl
+yarn add @luma.gl/core
 
-yarn add @luma.gl/webgpu
+yarn add @luma.gl/core
 ```
 
 To create a WebGPU device:
@@ -83,7 +83,7 @@ To create a WebGPU device:
 ```
 import {luma} from '@luma.gl/core';
 
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
 
 
@@ -97,9 +97,9 @@ Pre-register devices
 ```
 import {luma} from '@luma.gl/core';
 
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
 
 
@@ -165,6 +165,8 @@ To create a Device instance, the application calls `luma.createDevice()`.
 * `...deviceProps`: See [`DeviceProps`](https://luma.gl/next/docs/api-reference/core/device.md#deviceprops) for device specific options.
 
 Unless a device `type` is specified a `Device` will be created using the `'best-available'` adapter. luma.gl favors WebGPU over WebGL adapters, whenever WebGPU is available.
+
+When `debug` is enabled in a browser and device creation fails, luma.gl displays the error in a browser alert. To enable debugging from a browser URL, including on a mobile device, append the `debug` query parameter (for example, `?debug`). An explicit `debug` prop passed to `createDevice()` takes precedence over this default.
 
 Note: A specific device type is available and supported if both of the following are true:
 

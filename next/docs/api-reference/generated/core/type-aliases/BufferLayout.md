@@ -2,7 +2,7 @@
 
 > **BufferLayout** = `object`
 
-Defined in: [modules/core/src/adapter/types/buffer-layout.ts:44](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/buffer-layout.ts#L44)
+Defined in: [modules/core/src/api/adapter/types/buffer-layout.ts:44](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/buffer-layout.ts#L44)
 
 Specify memory layout for one buffer, describing how it is used by one or more attribute
 
@@ -54,7 +54,7 @@ A buffer layout is used to specify "non-standard" buffer layouts (buffers with o
 
 > `optional` **attributes?**: [`BufferAttributeLayout`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/BufferAttributeLayout.md)\[]
 
-Defined in: [modules/core/src/adapter/types/buffer-layout.ts:52](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/buffer-layout.ts#L52)
+Defined in: [modules/core/src/api/adapter/types/buffer-layout.ts:52](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/buffer-layout.ts#L52)
 
 Option 1: interleaved attributes that read from this buffer
 
@@ -64,7 +64,7 @@ Option 1: interleaved attributes that read from this buffer
 
 > `optional` **byteStride?**: `number`
 
-Defined in: [modules/core/src/adapter/types/buffer-layout.ts:50](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/buffer-layout.ts#L50)
+Defined in: [modules/core/src/api/adapter/types/buffer-layout.ts:50](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/buffer-layout.ts#L50)
 
 bytes between successive elements. If omitted, stride is set to reflect a "packed" buffer
 
@@ -74,7 +74,7 @@ bytes between successive elements. If omitted, stride is set to reflect a "packe
 
 > `optional` **format?**: [`VertexFormat`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/VertexFormat.md)
 
-Defined in: [modules/core/src/adapter/types/buffer-layout.ts:54](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/buffer-layout.ts#L54)
+Defined in: [modules/core/src/api/adapter/types/buffer-layout.ts:54](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/buffer-layout.ts#L54)
 
 Option 2: Single attribute with same name as buffer.
 
@@ -84,7 +84,7 @@ Option 2: Single attribute with same name as buffer.
 
 > **name**: `string`
 
-Defined in: [modules/core/src/adapter/types/buffer-layout.ts:46](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/buffer-layout.ts#L46)
+Defined in: [modules/core/src/api/adapter/types/buffer-layout.ts:46](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/buffer-layout.ts#L46)
 
 Name of buffer
 
@@ -94,6 +94,6 @@ Name of buffer
 
 > `optional` **stepMode?**: `"vertex"` | `"instance"`
 
-Defined in: [modules/core/src/adapter/types/buffer-layout.ts:48](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/buffer-layout.ts#L48)
+Defined in: [modules/core/src/api/adapter/types/buffer-layout.ts:48](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/buffer-layout.ts#L48)
 
 Is the attribute is instanced. Default: auto-deduced from shader name.

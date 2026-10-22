@@ -19,18 +19,18 @@ The engine API provides higher-level classes like `Model`, `AnimationLoop`, `Buf
 
 The experimental [`SceneRenderer`](https://luma.gl/next/docs/api-reference/experimental/scene-renderer.md) and [`DeferredSceneRenderer`](https://luma.gl/next/docs/api-reference/experimental/deferred-scene-renderer.md) consume format-independent scene descriptions instead of introducing a second glTF renderer. Their [physical lighting environments](https://luma.gl/next/docs/api-reference/experimental/pbr-environment.md) can be prepared from caller-owned equirectangular textures.
 
-For an experimental retained, renderer-independent scene contract, see [Declarative Scene Rendering](https://luma.gl/next/docs/api-guide/engine/anari-rendering.md). It introduces the experimental, private `@luma.gl/scene` workspace, scene objects, committed parameters, instancing, physically based lighting, and HDR presentation.
+For an experimental retained, renderer-independent scene contract, see [Declarative Scene Rendering](https://luma.gl/next/docs/api-guide/engine/anari-rendering.md). It introduces the experimental, private `@luma.gl/anari` workspace, scene objects, committed parameters, instancing, physically based lighting, and HDR presentation.
 
 ## Core[​](#core "Direct link to Core")
 
-The core luma.gl API is designed to expose the capabilities of the GPU and shader programming to web applications. It is a portable API, in the sense that the `@luma.gl/core` module provides an abstract API for writing application code that works with both WebGPU and/or WebGL depending on which adapter modules are installed (`@luma.gl/webgl` and/or `@luma.gl/webgpu`).
+The core luma.gl API is designed to expose the capabilities of the GPU and shader programming to web applications. It is a portable API, in the sense that the `@luma.gl/core` module provides an abstract API for writing application code that works with both WebGPU and/or WebGL depending on which adapter modules are installed (`@luma.gl/core/webgl` and/or `@luma.gl/core/webgpu`).
 
 Core responsibilities for any GPU library are to enable applications to perform:
 
 * [GPU initialization](https://luma.gl/next/docs/api-guide/gpu/gpu-initialization.md) - Open a GPU device and query its capabilities
 * [GPU memory management](https://luma.gl/next/docs/api-guide/gpu/gpu-memory.md) - Create, upload memory to and read from [Buffers](https://luma.gl/next/docs/api-guide/gpu/gpu-buffers.md), [Textures](https://luma.gl/next/docs/api-guide/gpu/gpu-textures.md) etc.
 * [GPU command encoding](https://luma.gl/next/docs/api-guide/gpu/gpu-commands.md) - Decide when to use immediate resource helpers versus explicit `CommandEncoder` recording.
-* [GPU resource management](https://luma.gl/next/docs/api-guide/gpu/gpu-resources.md) - Create `Shader`, `Renderpipeline`, `RenderPass` etc objects.
+* [GPU resource management](https://luma.gl/next/docs/api-guide/gpu/gpu-resources.md) - Create `Shader`, `RenderPipeline`, `RenderPass` etc objects.
 * [GPU binding management](https://luma.gl/next/docs/api-guide/gpu/gpu-bindings.md) - Make attribute buffers, uniforms, textures, samplers available to GPU shaders.
 * [Shader execution / rendering](https://luma.gl/next/docs/api-guide/gpu/gpu-rendering.md) - Drawing into textures, running compute shaders.
 * [GPU parameter management](https://luma.gl/next/docs/api-guide/gpu/gpu-parameters.md) - Configuring blending, clipping, depth tests etc.
@@ -45,7 +45,7 @@ Most applications work with the engine API (`Model`, `AnimationLoop` and related
 
 Most luma.gl applications will:
 
-1. Use the core API to create a `Device` class to access the GPU (either using WebGPU or WebGL).
+1. Use the core API to create a `Device` instance to access the GPU (either using WebGPU or WebGL).
 2. Upload data to the GPU via methods on the `Device`, using `Buffer` and `Texture` objects.
 3. Use the engine API to create one or more `Model` instances from GLSL or WGSL shader code.
 4. Bind attribute buffers and bindings (textures, uniform buffers or uniforms).

@@ -233,15 +233,43 @@ if (encoding) webgpuDevice.submit(commandEncoder.finish());
 console.log(renderer.stats.segmentCount, renderer.stats.activeRowCount);
 ```
 
-`activeRows` contains original batch-local row indices; omit it to render every row in one source page. No source page or GPU column is concatenated, rewritten, or transferred to the renderer. Each sparse source segment projects only its selected rows, evaluates degree-one through degree-three directional harmonics, and applies GPU semantic include/exclude selections. Source bindings, including large harmonic columns, are split into legal device-sized ranges while every compute shader stays within the standard eight-storage-binding WebGPU guarantee.
+`activeRows` contains original batch-local row indices; omit it to render every row in one source page. No source page or GPU column is concatenated, rewritten, or transferred to the renderer. For unsplit pages the renderer borrows `activeRows` directly. Keep that array stable until the next `setFrontier` call, and resubmit it after changing its contents. Camera-only updates rewrite camera uniforms without copying or uploading unchanged row indices. Adding or removing source segments can still rebuild the GPU graph; this is not an incremental graph-compilation API. Each sparse source segment projects only its selected rows, evaluates degree-one through degree-three directional harmonics, and applies GPU semantic include/exclude selections. Source bindings, including large harmonic columns, are split into legal device-sized ranges while every compute shader stays within the standard eight-storage-binding WebGPU guarantee.
 
 Set `lodOpacity: true` for Spark RAD sources whose encoding declares coarse-level opacity. The paged renderer then reconstructs authored parent support and nonlinear opacity, preserves Gaussian energy when adding screen-space antialiasing, and converts display-domain RAD colors correctly when presenting to a linear high-dynamic-range target. Ordinary Gaussian batches retain their existing opacity and floating-point color behavior. Use explicit `toneMapping: 'none'` for already display-referred RAD scenes on standard-dynamic-range canvases.
 
 A global GPU radix sort orders compact four-byte source-row references across every page. The sorted permutation is scattered into separate 48-byte projected output segments, and one shared render pass draws those segments in global depth order using GPU-written indirect commands. This preserves transparency ordering even when rows from different pages overlap or interleave in depth; sorting pages independently would not.
 
+The paged renderer sorts 32-bit linear camera-depth keys instead of quantized projected depth, preserving close-surface ordering across wide clipping ranges. Global center-depth sorting remains an approximation for intersecting Gaussians; it does not eliminate every LOD or transparency artifact.
+
 On a device with a 128 MiB storage-binding limit, the previous single-record graph supports at most 2,796,202 active rows; the paged renderer instead supports up to 33,554,432 simultaneously active four-byte global-sort references. Source datasets may be larger because original pages can enter and leave bounded residency. The four-byte global sort still has its own binding limit, and this renderer does not yet provide a dedicated segmented GPU picker or mixed-mesh helper.
 
 `maxProjectedSplatsPerSegment` can tighten the per-segment limit explicitly. `renderer.stats` reports original versus active rows, source/output segment counts, global sort capacity, exact borrowed-source and renderer-owned GPU bytes, and one indirect draw per output segment. The caller owns command submission and every source batch; destroy the renderer before releasing source pages.
+
+### Drawing inside a host-owned render pass[​](#drawing-inside-a-host-owned-render-pass "Direct link to Drawing inside a host-owned render pass")
+
+For composition with a host such as deck.gl, separate compute preparation from drawing:
+
+```
+renderer.setProps({modelViewProjectionMatrix, cameraPosition, viewportSize});
+
+renderer.prepare(commandEncoder); // Projection and sorting; no render pass is opened.
+
+
+
+const renderPass = commandEncoder.beginRenderPass({clearColor: [0, 0, 0, 0]});
+
+// Draw opaque host geometry here if it should occlude splats.
+
+renderer.draw(renderPass);
+
+renderPass.end();
+
+webgpuDevice.submit(commandEncoder.finish());
+```
+
+`prepare(commandEncoder)` returns an encoding only when data, camera, or style changes require compute work. Call it before opening the host pass. `draw(renderPass)` draws the prepared frontier on every host frame, including frames where `prepare()` returns `undefined`. It never clears, ends, or submits the supplied pass. An empty frontier draws nothing, and destroying the renderer still leaves caller-owned source pages intact.
+
+The host pass must use compatible canvas color/depth formats and sample count. Splats use their prepared camera and viewport; the host owns viewport/scissor configuration. They do not write depth. Supply an OpenGL-style clip matrix (`-w <= z <= w`); presentation converts its depth to WebGPU's `0 <= z <= w` range so opaque host geometry and splats share the same depth test. Separate renderer instances do not share a global transparency sort. Standalone callers can continue to use `encode(commandEncoder)` to prepare and open the renderer-owned pass together; do not use both paths for the same frame.
 
 ## Related pages[​](#related-pages "Direct link to Related pages")
 

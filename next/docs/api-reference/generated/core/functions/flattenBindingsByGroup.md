@@ -2,7 +2,7 @@
 
 > **flattenBindingsByGroup**(`bindGroups`): [`Bindings`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/Bindings.md)
 
-Defined in: [modules/core/src/adapter-utils/bind-groups.ts:60](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter-utils/bind-groups.ts#L60)
+Defined in: [modules/core/src/api/adapter-utils/bind-groups.ts:60](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter-utils/bind-groups.ts#L60)
 
 ## Parameters[​](#parameters "Direct link to Parameters")
 

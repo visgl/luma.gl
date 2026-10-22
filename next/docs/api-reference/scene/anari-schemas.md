@@ -2,7 +2,7 @@
 
 ExperimentalPrivate workspaceFrom v10
 
-`@luma.gl/scene/schemas` exposes optional Zod schemas for the experimental retained-scene JSON format and generates a JSON Schema suitable for Monaco, VS Code, and other schema-aware editors. It is separate from the ordinary `@luma.gl/scene` entry point, so applications that only render scenes do not load Zod.
+`@luma.gl/anari/schemas` exposes optional Zod schemas for the experimental retained-scene JSON format and generates a JSON Schema suitable for Monaco, VS Code, and other schema-aware editors. It is separate from the ordinary `@luma.gl/anari` entry point, so applications that only render scenes do not load Zod.
 
 Experimental scene format
 
@@ -59,7 +59,7 @@ import {
 
   type ANARISceneDescription
 
-} from '@luma.gl/scene/schemas';
+} from '@luma.gl/anari/schemas';
 ```
 
 ## Exported schemas[​](#exported-schemas "Direct link to Exported schemas")
@@ -185,7 +185,7 @@ This fragment supplements the required top-level camera, geometry, material, and
 ## Validate a scene[​](#validate-a-scene "Direct link to Validate a scene")
 
 ```
-import {ANARISceneSchema} from '@luma.gl/scene/schemas';
+import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 
 
 
@@ -232,7 +232,7 @@ Register the generated schema with Monaco's JSON language service:
 ```
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 
-import {ANARI_SCENE_JSON_SCHEMA} from '@luma.gl/scene/schemas';
+import {ANARI_SCENE_JSON_SCHEMA} from '@luma.gl/anari/schemas';
 
 
 

@@ -755,6 +755,13 @@ Consecutive compute nodes share one physical compute pass by default. Node order
 
 If the caller's encoder has a timestamp query set, compute and render passes record timestamp pairs without changing graph code. Compute-pass coalescing is automatically disabled for that encoding so every compute node retains its own GPU timestamp pair. `encoding.canReadGPUTimings` reports whether any pairs were captured. After submitting the command buffer, `await encoding.readTimings()` explicitly reads per-node and total GPU durations. The read is never automatic, and copy nodes remain CPU-timed until the portable command-encoder API exposes standalone timestamp writes.
 
+Reports and their nodes retain the existing `cpuEncodeTimeMilliseconds` and `gpuTimeMilliseconds` durations and expose span endpoints:
+
+* `cpuEncodeStartTimeMilliseconds` and `cpuEncodeEndTimeMilliseconds` use `performance.now()` (or `Date.now()` as a fallback), and are also available synchronously in `encoding.stats`.
+* `gpuStartTimeMilliseconds` and `gpuEndTimeMilliseconds` use the WebGPU timestamp clock. Subtract a shared GPU origin when building a trace. This clock is not correlated with CPU timestamps or wall time. Endpoints are converted to numbers in milliseconds; durations are computed from the integer nanosecond difference before conversion to preserve precision.
+
+Graph GPU endpoints enclose the measured passes, including gaps between them. The existing GPU duration remains the sum of measured node durations, so it can differ from that span. Copy nodes and skipped nodes have no GPU endpoints; duration-only backends omit GPU endpoints rather than synthesizing positions. CPU endpoints are optional in the types for compatibility with externally constructed reports, but graph encoding always supplies them, including for skipped nodes. These fields can be exported as JSON span rows without converting bigint values.
+
 ### `capabilities`[​](#capabilities "Direct link to capabilities")
 
 Snapshots graph-relevant adapter information: timestamp-query support, software-adapter status, maximum buffer and storage-binding sizes, and compute invocation and dispatch limits. Applications can report or gate advanced diagnostics without inspecting backend handles.
@@ -823,3 +830,29 @@ observation.detach();
 `getSnapshot()` returns an immutable view of every registered graph in registration order. Each graph snapshot includes its compile-time `stats` and `capabilities`, encoding and failed-timing-read counts, bounded whole-graph CPU and GPU duration summaries, application-defined scalar counter summaries, and per-node summaries in compiled schedule order. Duration and counter summaries contain the retained sample count plus latest, p50, and p95 values. Counters remain in first-observed order. Pass `getNodeGroup` to the constructor to add application-specific semantic groups to node snapshots; pass `maxSamples` to bound every retained history.
 
 The inspector does not submit commands, poll frames, render a panel, or read GPU timestamps automatically. An observation does not own or destroy its graph. `detach()` stops that observation and removes its registration when it is still current; an old handle cannot remove a replacement with the same graph ID or publish delayed counters into it. A handle accepts timing reads only for encodings it produced and records at most one GPU sample per encoding. `recordCounters()` only stores caller-provided finite, non-negative values; it does not read a buffer or synchronize the device. `clear()` removes all registrations. The lower-level `registerGraph()`, `recordEncoding()`, `recordGPUTimings()`, and `recordCounters()` methods remain available for applications that cannot route graph activity through an observation handle.
+
+### Reusable GPU Trace panel[​](#reusable-gpu-trace-panel "Direct link to Reusable GPU Trace panel")
+
+The examples provide `GPUTracePanel` in `examples/gpu-trace-panel.ts`. Add its `panel` to an example panel collection, then pass it an already collected timing report:
+
+```
+const tracePanel = new GPUTracePanel();
+
+// Include tracePanel.panel in the application's panel collection.
+
+tracePanel.update(await encoding.readTimings(), compiled.id);
+```
+
+Call `readTimings()` after submission, or reuse the report returned by `observation.recordGPUTimings(encoding)` to avoid an extra read. For a CPU-only preview, `tracePanel.update(encoding.stats, compiled.id)` works before GPU readback completes. The panel retains only the latest report across unmounts, shows separate CPU and GPU clocks, keeps gaps between node spans, and exposes node details on hover and keyboard focus. `GPUTracePanelRenderer` provides the same view directly inside an `HTMLElement` with `update(report, label)` and `destroy()` methods. GPU Trace Viewer, Billion-Point Spatial Atlas, and luSpatial Taxi use this panel.
+
+### Estimated combined CPU/GPU timeline[​](#estimated-combined-cpugpu-timeline "Direct link to Estimated combined CPU/GPU timeline")
+
+WebGPU timing reports may include `clockCorrelation`, captured at command-buffer submission. Add `clockCorrelation.offsetMilliseconds` to a raw GPU endpoint to place it on the CPU `performance.now()` timeline. Durations and raw endpoints remain unchanged. This is an estimate, not an exact clock synchronization API. `uncertaintyMilliseconds` represents the half-width of the submission/completion latency interval; hardware/browser timestamp quantization adds further uncertainty. `sampledAtCpuTimeMilliseconds` identifies the CPU time of the completion observation.
+
+Each profiled WebGPU encoder resolves its timestamps into private buffers before later submissions can reuse the query slots. The encoder's `captureTimestampQuerySet(querySet)` returns a snapshot that remains associated with that encoding, including when read after newer submissions. Abandoned encodings reject snapshot reads, and submitted snapshot buffers are released after readback even when no caller reads the report. Direct `QuerySet.readResults()` continues to read mutable query-set state; use encoder snapshots when submission identity matters.
+
+The device correlator intersects compatible bounds from recent submissions, expires the history after one second, and resets on inconsistent intervals. It assumes a stable offset over that short window. It does not wait synchronously or submit calibration work. Correlation is omitted when valid bounds or GPU endpoints are unavailable; WebGL remains duration-only.
+
+The reusable GPU Trace panel offers **Combined timeline (estimated)** when correlation is available. Both lanes then share one origin and scale, and the panel displays alignment uncertainty. Separate CPU/GPU timelines remain the default. No extra `ClockSync` graph operation is required.
+
+For sampled WebGPU diagnostics, `commandEncoder.withTimeProfilingQuerySet?.(querySet, encode)` scopes automatic pass timestamps to a synchronous encoding callback. Supply a fresh timestamp query set for each scope and retain it until submission and timing readback complete. The encoder restores the caller's profiling query set and slot count afterward, including when encoding throws. This WebGPU-only hook avoids enabling a device-wide profiler for every frame; unsupported encoders can encode normally and report CPU spans. The Graph Explorer examples use this path for sampled traces.

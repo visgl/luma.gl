@@ -2,7 +2,7 @@
 
 > **AttributeDeclaration** = `object`
 
-Defined in: [modules/core/src/adapter/types/shader-layout.ts:58](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L58)
+Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:58](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L58)
 
 Declares one for attributes
 
@@ -12,7 +12,7 @@ Declares one for attributes
 
 > **location**: `number`
 
-Defined in: [modules/core/src/adapter/types/shader-layout.ts:62](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L62)
+Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:62](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L62)
 
 The index into the GPU's vertex array buffer bank (usually between 0-15)
 
@@ -22,7 +22,7 @@ The index into the GPU's vertex array buffer bank (usually between 0-15)
 
 > **name**: `string`
 
-Defined in: [modules/core/src/adapter/types/shader-layout.ts:60](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L60)
+Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:60](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L60)
 
 The name of this attribute in the shader
 
@@ -32,7 +32,7 @@ The name of this attribute in the shader
 
 > `optional` **stepMode?**: `"vertex"` | `"instance"`
 
-Defined in: [modules/core/src/adapter/types/shader-layout.ts:66](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L66)
+Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:66](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L66)
 
 Inferred from attribute name.
 
@@ -46,6 +46,6 @@ Technically not part of static structure of shader
 
 > **type**: [`AttributeShaderType`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/AttributeShaderType.md)
 
-Defined in: [modules/core/src/adapter/types/shader-layout.ts:64](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L64)
+Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:64](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L64)
 
 WebGPU-style shader type. The declared format of the attribute in the shader code. Buffer's vertex format needs to map to this.

@@ -8,33 +8,32 @@
   <!-- /luma-example-support -->
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" href="data:," />
-  <title>Globe cloud cover · luma.gl</title>
-  <script type="module" crossorigin src="/next/standalone-examples/globe-clouds/assets/index-BTzRvb0l.js"></script>
-  <link rel="modulepreload" crossorigin href="/next/standalone-examples/globe-clouds/assets/shader-type-decoder-DyLPgL-D.js">
-  <link rel="modulepreload" crossorigin href="/next/standalone-examples/globe-clouds/assets/buffer-layout-utils-DTWE1EXl.js">
-  <link rel="modulepreload" crossorigin href="/next/standalone-examples/globe-clouds/assets/fence-Uc-TBZmV.js">
-  <link rel="modulepreload" crossorigin href="/next/standalone-examples/globe-clouds/assets/get-attribute-from-layouts-B8ajLWeI.js">
-  <link rel="modulepreload" crossorigin href="/next/standalone-examples/globe-clouds/assets/array-utils-flat-B03VLymj.js">
-  <link rel="modulepreload" crossorigin href="/next/standalone-examples/globe-clouds/assets/webgl-device-BySmiIDR.js">
-  <link rel="modulepreload" crossorigin href="/next/standalone-examples/globe-clouds/assets/compute-pipeline-BjeSh0HH.js">
-  <link rel="modulepreload" crossorigin href="/next/standalone-examples/globe-clouds/assets/arithmetic-expression-CIRa3iuM.js">
-  <link rel="modulepreload" crossorigin href="/next/standalone-examples/globe-clouds/assets/external-texture-DT-C7SG4.js">
-  <link rel="modulepreload" crossorigin href="/next/standalone-examples/globe-clouds/assets/convert-colors-C2A3J3Uy.js">
-  <link rel="modulepreload" crossorigin href="/next/standalone-examples/globe-clouds/assets/interleave-4ZEC7G_F.js">
+  <title>Globe weather · luma.gl</title>
+  <script type="module" crossorigin src="/next/standalone-examples/globe-clouds/assets/index-CJgmdtGd.js"></script>
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/globe-clouds/assets/shader-type-decoder-DAw-4A6z.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/globe-clouds/assets/buffer-layout-utils-IrZV0BKG.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/globe-clouds/assets/fence-Bz0gITu5.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/globe-clouds/assets/get-attribute-from-layouts-D85nBJfU.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/globe-clouds/assets/shader-block-layout-gM1OvLV7.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/globe-clouds/assets/webgl-device-CbuBsl1n.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/globe-clouds/assets/compute-pipeline-DMOuMYt6.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/globe-clouds/assets/arithmetic-expression-B8yNOqwZ.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/globe-clouds/assets/external-texture-CUGMREVn.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/globe-clouds/assets/convert-colors-Bg6ki5xq.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/globe-clouds/assets/interleave-ZtnTkz0c.js">
   <link rel="stylesheet" crossorigin href="/next/standalone-examples/globe-clouds/assets/index-CjTYsg4m.css">
 </head><body>
   <div id="scene" aria-label="Interactive globe with cloud cover"></div>
   <aside class="luma-example-infobox luma-example-infobox--overlay">
-    <p class="eyebrow">luma.gl + deck.gl</p><h1>Globe cloud cover</h1>
+    <p class="eyebrow">luma.gl + deck.gl</p><h1>Globe weather</h1>
     <section class="control-card"><h2>Scene</h2>
       <label>Device<select id="backend" aria-label="Device"><option value="webgpu">WebGPU</option><option value="webgl">WebGL2</option></select></label>
       <label class="toggle">Sun<input id="sun" type="checkbox" checked /></label>
       <label class="toggle">Moon<input id="moon" type="checkbox" checked /></label>
       <label class="toggle">Stars<input id="stars" type="checkbox" checked /></label>
-      <div class="sky-actions"><button id="look-sun" type="button">Look at sun</button><button id="look-moon" type="button">Look at moon</button></div>
+      <div class="sky-actions"><button id="center" type="button">Center</button><button id="look-sun" type="button">Sun</button><button id="look-moon" type="button">Moon</button></div>
       <label class="toggle">Clouds<input id="clouds" type="checkbox" checked /></label>
       <label class="toggle">Animate<input id="animate" type="checkbox" checked /></label>
-      <button id="center" type="button">Center</button>
     </section>
     <section class="control-card"><h2>Cloud cover</h2>
       <label>Coverage<input id="cover" type="range" min="0" max="1" step="0.01" value="0.45" /></label>

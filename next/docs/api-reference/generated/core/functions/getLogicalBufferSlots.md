@@ -2,7 +2,7 @@
 
 > **getLogicalBufferSlots**(`shaderLayout`, `bufferLayout`): `Record`<`string`, `number`>
 
-Defined in: [modules/core/src/adapter-utils/buffer-layout-utils.ts:82](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter-utils/buffer-layout-utils.ts#L82)
+Defined in: [modules/core/src/api/adapter-utils/buffer-layout-utils.ts:82](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter-utils/buffer-layout-utils.ts#L82)
 
 Maps logical buffer names to the vertex-array slots implied by a buffer layout.
 

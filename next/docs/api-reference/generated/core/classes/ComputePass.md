@@ -1,6 +1,6 @@
 # Abstract Class: ComputePass
 
-Defined in: [modules/core/src/adapter/resources/compute-pass.ts:21](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L21)
+Defined in: [modules/core/src/api/adapter/resources/compute-pass.ts:21](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/compute-pass.ts#L21)
 
 Base class for GPU (WebGPU/WebGL) Resources
 
@@ -14,7 +14,7 @@ Base class for GPU (WebGPU/WebGL) Resources
 
 > **new ComputePass**(`device`, `props`): `ComputePass`
 
-Defined in: [modules/core/src/adapter/resources/compute-pass.ts:22](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L22)
+Defined in: [modules/core/src/api/adapter/resources/compute-pass.ts:22](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/compute-pass.ts#L22)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 
@@ -40,7 +40,7 @@ Defined in: [modules/core/src/adapter/resources/compute-pass.ts:22](https://gith
 
 > **destroyed**: `boolean` = `false`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:131](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L131)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:131](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L131)
 
 Whether this resource has been destroyed
 
@@ -54,7 +54,7 @@ Whether this resource has been destroyed
 
 > `abstract` `readonly` **device**: [`Device`](https://luma.gl/next/docs/api-reference/generated/core/classes/Device.md)
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:124](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L124)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:124](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L124)
 
 The device that this resource is associated with
 
@@ -68,7 +68,7 @@ The device that this resource is associated with
 
 > `abstract` `readonly` **handle**: `unknown`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:126](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L126)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:126](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L126)
 
 The handle for the underlying resource, e.g. WebGL object or WebGPU handle
 
@@ -82,7 +82,7 @@ The handle for the underlying resource, e.g. WebGL object or WebGPU handle
 
 > **id**: `string`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:118](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L118)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:118](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L118)
 
 props.id, for debugging.
 
@@ -96,7 +96,7 @@ props.id, for debugging.
 
 > `readonly` **props**: `Required`<`Props`>
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:120](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L120)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:120](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L120)
 
 The props that this resource was created with
 
@@ -110,7 +110,7 @@ The props that this resource was created with
 
 > `readonly` **userData**: `Record`<`string`, `unknown`> = `{}`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:122](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L122)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:122](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L122)
 
 User data object, reserved for the application
 
@@ -124,7 +124,7 @@ User data object, reserved for the application
 
 > `static` **defaultProps**: `Required`<[`ComputePassProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ComputePassProps.md)>
 
-Defined in: [modules/core/src/adapter/resources/compute-pass.ts:57](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L57)
+Defined in: [modules/core/src/api/adapter/resources/compute-pass.ts:57](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/compute-pass.ts#L57)
 
 Default properties for resource
 
@@ -140,7 +140,7 @@ Default properties for resource
 
 > **get** **\[toStringTag]**(): `string`
 
-Defined in: [modules/core/src/adapter/resources/compute-pass.ts:64](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L64)
+Defined in: [modules/core/src/api/adapter/resources/compute-pass.ts:64](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/compute-pass.ts#L64)
 
 ##### Returns[​](#returns-1 "Direct link to Returns")
 
@@ -158,7 +158,7 @@ Defined in: [modules/core/src/adapter/resources/compute-pass.ts:64](https://gith
 
 > **get** **isHandleBorrowed**(): `boolean`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:147](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L147)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:147](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L147)
 
 Whether luma.gl may only reference the opaque externally owned resource handle.
 
@@ -178,7 +178,7 @@ Whether luma.gl may only reference the opaque externally owned resource handle.
 
 > **get** **ownsHandle**(): `boolean`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:140](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L140)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:140](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L140)
 
 Whether luma.gl created and owns the underlying resource handle.
 
@@ -196,7 +196,7 @@ Whether luma.gl created and owns the underlying resource handle.
 
 > **attachResource**(`resource`): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:200](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L200)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:200](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L200)
 
 Attaches a resource. Attached resources are auto destroyed when this resource is destroyed Called automatically when sub resources are auto created but can be called by application
 
@@ -220,7 +220,7 @@ Attaches a resource. Attached resources are auto destroyed when this resource is
 
 > **delete**(): `this`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:181](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L181)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:181](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L181)
 
 #### Returns[​](#returns-5 "Direct link to Returns")
 
@@ -240,7 +240,7 @@ Use destroy()
 
 > `abstract` **destroy**(): `void`
 
-Defined in: [modules/core/src/adapter/resources/compute-pass.ts:26](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L26)
+Defined in: [modules/core/src/api/adapter/resources/compute-pass.ts:26](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/compute-pass.ts#L26)
 
 destroy can be called on any resource to release it before it is garbage collected.
 
@@ -258,7 +258,7 @@ destroy can be called on any resource to release it before it is garbage collect
 
 > **destroyAttachedResource**(`resource`): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:214](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L214)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:214](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L214)
 
 Destroys a resource (only if owned), and removes from the owned (auto-destroy) list for this resource.
 
@@ -282,7 +282,7 @@ Destroys a resource (only if owned), and removes from the owned (auto-destroy) l
 
 > **destroyAttachedResources**(): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:221](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L221)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:221](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L221)
 
 Destroy all owned resources. Make sure the resources are no longer needed before calling.
 
@@ -300,7 +300,7 @@ Destroy all owned resources. Make sure the resources are no longer needed before
 
 > **detachResource**(`resource`): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:207](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L207)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:207](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L207)
 
 Detach an attached resource. The resource will no longer be auto-destroyed when this resource is destroyed.
 
@@ -324,7 +324,7 @@ Detach an attached resource. The resource will no longer be auto-destroyed when 
 
 > `abstract` **dispatch**(`x`, `y?`, `z?`): `void`
 
-Defined in: [modules/core/src/adapter/resources/compute-pass.ts:41](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L41)
+Defined in: [modules/core/src/api/adapter/resources/compute-pass.ts:41](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/compute-pass.ts#L41)
 
 Dispatch work to be performed with the current ComputePipeline.
 
@@ -358,7 +358,7 @@ Z dimension of the grid of workgroups to dispatch.
 
 > `abstract` **dispatchIndirect**(`indirectBuffer`, `indirectOffset?`): `void`
 
-Defined in: [modules/core/src/adapter/resources/compute-pass.ts:48](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L48)
+Defined in: [modules/core/src/api/adapter/resources/compute-pass.ts:48](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/compute-pass.ts#L48)
 
 Dispatch work to be performed with the current ComputePipeline.
 
@@ -384,7 +384,7 @@ buffer must be a tightly packed block of three 32-bit unsigned integer values (1
 
 > `abstract` **end**(): `void`
 
-Defined in: [modules/core/src/adapter/resources/compute-pass.ts:28](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L28)
+Defined in: [modules/core/src/api/adapter/resources/compute-pass.ts:28](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/compute-pass.ts#L28)
 
 #### Returns[​](#returns-12 "Direct link to Returns")
 
@@ -396,7 +396,7 @@ Defined in: [modules/core/src/adapter/resources/compute-pass.ts:28](https://gith
 
 > **getProps**(): `object`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:190](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L190)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:190](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L190)
 
 Combines a map of user props and default props, only including props from defaultProps
 
@@ -416,7 +416,7 @@ returns a map of overridden default props
 
 > `abstract` **insertDebugMarker**(`markerLabel`): `void`
 
-Defined in: [modules/core/src/adapter/resources/compute-pass.ts:55](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L55)
+Defined in: [modules/core/src/api/adapter/resources/compute-pass.ts:55](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/compute-pass.ts#L55)
 
 Marks a point in a stream of commands with a label
 
@@ -436,7 +436,7 @@ Marks a point in a stream of commands with a label
 
 > `abstract` **popDebugGroup**(): `void`
 
-Defined in: [modules/core/src/adapter/resources/compute-pass.ts:53](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L53)
+Defined in: [modules/core/src/api/adapter/resources/compute-pass.ts:53](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/compute-pass.ts#L53)
 
 Ends the labeled debug group most recently started by pushDebugGroup()
 
@@ -450,7 +450,7 @@ Ends the labeled debug group most recently started by pushDebugGroup()
 
 > `abstract` **pushDebugGroup**(`groupLabel`): `void`
 
-Defined in: [modules/core/src/adapter/resources/compute-pass.ts:51](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L51)
+Defined in: [modules/core/src/api/adapter/resources/compute-pass.ts:51](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/compute-pass.ts#L51)
 
 Begins a labeled debug group containing subsequent commands
 
@@ -470,7 +470,7 @@ Begins a labeled debug group containing subsequent commands
 
 > `abstract` **setBindings**(`bindings`): `void`
 
-Defined in: [modules/core/src/adapter/resources/compute-pass.ts:33](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L33)
+Defined in: [modules/core/src/api/adapter/resources/compute-pass.ts:33](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/compute-pass.ts#L33)
 
 Replaces the bindings used by subsequent dispatch commands.
 
@@ -490,7 +490,7 @@ Replaces the bindings used by subsequent dispatch commands.
 
 > `abstract` **setPipeline**(`pipeline`): `void`
 
-Defined in: [modules/core/src/adapter/resources/compute-pass.ts:30](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/compute-pass.ts#L30)
+Defined in: [modules/core/src/api/adapter/resources/compute-pass.ts:30](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/compute-pass.ts#L30)
 
 #### Parameters[​](#parameters-9 "Direct link to Parameters")
 
@@ -508,7 +508,7 @@ Defined in: [modules/core/src/adapter/resources/compute-pass.ts:30](https://gith
 
 > **toJSON**(): `string`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:113](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L113)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:113](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L113)
 
 Compact serialization for assertion diffs and structured debug logs.
 
@@ -526,7 +526,7 @@ Compact serialization for assertion diffs and structured debug logs.
 
 > **toString**(): `string`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:108](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L108)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:108](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L108)
 
 #### Returns[​](#returns-20 "Direct link to Returns")
 

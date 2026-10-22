@@ -1,6 +1,6 @@
 # Abstract Class: Adapter
 
-Defined in: [modules/core/src/adapter/adapter.ts:11](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/adapter.ts#L11)
+Defined in: [modules/core/src/api/adapter/adapter.ts:11](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/adapter.ts#L11)
 
 Create and attach devices for a specific backend.
 
@@ -20,7 +20,7 @@ Create and attach devices for a specific backend.
 
 > `abstract` **type**: `string`
 
-Defined in: [modules/core/src/adapter/adapter.ts:13](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/adapter.ts#L13)
+Defined in: [modules/core/src/api/adapter/adapter.ts:13](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/adapter.ts#L13)
 
 ## Accessors[​](#accessors "Direct link to Accessors")
 
@@ -30,7 +30,7 @@ Defined in: [modules/core/src/adapter/adapter.ts:13](https://github.com/visgl/lu
 
 > **get** **pageLoaded**(): `Promise`<`void`>
 
-Defined in: [modules/core/src/adapter/adapter.ts:30](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/adapter.ts#L30)
+Defined in: [modules/core/src/api/adapter/adapter.ts:30](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/adapter.ts#L30)
 
 Page load promise Resolves when the DOM is loaded.
 
@@ -48,7 +48,7 @@ Since are be limitations on number of `load` event listeners, it is recommended 
 
 > `abstract` **attach**(`handle`, `props`): `Promise`<[`Device`](https://luma.gl/next/docs/api-reference/generated/core/classes/Device.md)>
 
-Defined in: [modules/core/src/adapter/adapter.ts:21](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/adapter.ts#L21)
+Defined in: [modules/core/src/api/adapter/adapter.ts:21](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/adapter.ts#L21)
 
 Attach a Device to a valid handle for this backend (GPUDevice, WebGL2RenderingContext etc)
 
@@ -72,7 +72,7 @@ Attach a Device to a valid handle for this backend (GPUDevice, WebGL2RenderingCo
 
 > `abstract` **create**(`props`): `Promise`<[`Device`](https://luma.gl/next/docs/api-reference/generated/core/classes/Device.md)>
 
-Defined in: [modules/core/src/adapter/adapter.ts:19](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/adapter.ts#L19)
+Defined in: [modules/core/src/api/adapter/adapter.ts:19](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/adapter.ts#L19)
 
 Create a new device for this backend
 
@@ -92,7 +92,7 @@ Create a new device for this backend
 
 > `abstract` **isDeviceHandle**(`handle`): `boolean`
 
-Defined in: [modules/core/src/adapter/adapter.ts:17](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/adapter.ts#L17)
+Defined in: [modules/core/src/api/adapter/adapter.ts:17](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/adapter.ts#L17)
 
 Check if the given handle is a valid device handle for this backend
 
@@ -112,7 +112,7 @@ Check if the given handle is a valid device handle for this backend
 
 > `abstract` **isSupported**(): `boolean`
 
-Defined in: [modules/core/src/adapter/adapter.ts:15](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/adapter.ts#L15)
+Defined in: [modules/core/src/api/adapter/adapter.ts:15](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/adapter.ts#L15)
 
 Check if this backend is supported
 

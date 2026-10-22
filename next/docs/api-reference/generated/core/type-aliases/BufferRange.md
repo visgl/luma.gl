@@ -2,7 +2,7 @@
 
 > **BufferRange** = `object`
 
-Defined in: [modules/core/src/adapter/resources/transform-feedback.ts:12](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/transform-feedback.ts#L12)
+Defined in: [modules/core/src/api/adapter/resources/transform-feedback.ts:12](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/transform-feedback.ts#L12)
 
 For bindRange
 
@@ -12,7 +12,7 @@ For bindRange
 
 > **buffer**: [`Buffer`](https://luma.gl/next/docs/api-reference/generated/core/classes/Buffer.md)
 
-Defined in: [modules/core/src/adapter/resources/transform-feedback.ts:13](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/transform-feedback.ts#L13)
+Defined in: [modules/core/src/api/adapter/resources/transform-feedback.ts:13](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/transform-feedback.ts#L13)
 
 ***
 
@@ -20,7 +20,7 @@ Defined in: [modules/core/src/adapter/resources/transform-feedback.ts:13](https:
 
 > `optional` **byteLength?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/transform-feedback.ts:15](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/transform-feedback.ts#L15)
+Defined in: [modules/core/src/api/adapter/resources/transform-feedback.ts:15](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/transform-feedback.ts#L15)
 
 ***
 
@@ -28,4 +28,4 @@ Defined in: [modules/core/src/adapter/resources/transform-feedback.ts:15](https:
 
 > `optional` **byteOffset?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/transform-feedback.ts:14](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/transform-feedback.ts#L14)
+Defined in: [modules/core/src/api/adapter/resources/transform-feedback.ts:14](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/transform-feedback.ts#L14)

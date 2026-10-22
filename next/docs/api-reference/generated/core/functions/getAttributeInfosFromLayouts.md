@@ -2,7 +2,7 @@
 
 > **getAttributeInfosFromLayouts**(`shaderLayout`, `bufferLayout`): `Record`<`string`, [`AttributeInfo`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/AttributeInfo.md)>
 
-Defined in: [modules/core/src/adapter-utils/get-attribute-from-layouts.ts:54](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter-utils/get-attribute-from-layouts.ts#L54)
+Defined in: [modules/core/src/api/adapter-utils/get-attribute-from-layouts.ts:54](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter-utils/get-attribute-from-layouts.ts#L54)
 
 Map from "attribute names" to "resolved attribute infos" containing information about both buffer layouts and shader attribute declarations
 

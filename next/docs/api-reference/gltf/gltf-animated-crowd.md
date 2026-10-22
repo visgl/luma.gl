@@ -42,4 +42,4 @@ The Studio's 100-actor limit is an intentional interactive-demo setting, not a h
 
 * [glTF animation](https://luma.gl/next/docs/api-reference/gltf/gltf-animation.md)
 * [glTF materials](https://luma.gl/next/docs/api-reference/gltf/gltf-materials.md)
-* [Animation Studio](https://luma.gl/next/examples/showcase/gltf)
+* [Animation Studio](https://luma.gl/next/examples/gltf/asset-studio)

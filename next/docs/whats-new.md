@@ -8,8 +8,45 @@ Target Release Date: Q3, 2026
 
 **General**
 
+* **Engine scene controllers** - Skinning, material variants, billboards, area lights, spatial audio, and interactivity use reusable engine APIs; glTF parsers map source data into those APIs. See [scene controllers](https://luma.gl/next/docs/api-guide/engine/scene-controllers.md).
+
+* **Draft glTF area lights** - Opt-in animated rectangle/disk light extraction and numerical PBR surface lighting, with a source-loaded Living Room preset in the shared glTF viewer.
+
+* **Draft glTF lightmaps** - Linear irradiance bindings, node atlas overrides and portable instance atlas draws, demonstrated by the source-hosted Cornell Box through the shared glTF viewer.
+
+* **Draft glTF billboards** - `BillboardController` provides opt-in full-axis camera-facing transforms, depth-relative scale and ordered overlay draw metadata without changing authored transforms.
+
+* **glTF spatial audio** - Opt-in `AudioController` plays draft `KHR_audio_emitter` assets through Web Audio, with camera-relative positional sound and a [Boom Box example](https://luma.gl/next/examples/showcase/gltf-audio).
+
+* **WGSL fp64 projection math** - The `fp64` shader module now provides double-single transcendental functions and returned-array vector/matrix helpers for geographic projection on WebGPU. See the [supported functions and precision limits](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/fp64.md#wgsl-projection-functions).
+
+* **Shared glyph loading** - `@luma.gl/text/fonts` decodes glyph PBF ranges, deduplicates and caches font-stack requests, and builds renderer-independent SDF atlases from server glyph metrics.
+
+* **Public package** - `@luma.gl/text` is included in npm releases, including its CPU font atlas builders under `@luma.gl/text/fonts`.
+
+* **Opaque reflective ray transport** - Opt-in bounded GGX metallic/roughness secondary paths add colored and glossy reflections. Chart Materials demonstrates a retained roughness sweep with transport and bounce controls. The default diffuse mode is unchanged.
+
+* **Ray-tracing diagnostics** - Implementation capability reports, primary-hit debug views, and reference-image error metrics make ray-traced scene captures easier to inspect and compare.
+
+* **Ray-tracing quality controls** - Opt-in guided spatial denoising, configurable history sample limits, and logical owned GPU allocation statistics are available in the renderer and scene playground.
+
 * **GPU-native columnar parsing and indexing** - Composable Parquet parsing, chunk-preserving nested column layouts, and H3 and A5 cell projection add new optional `@luma.gl/gpgpu` workflows.
+
 * **Table-driven planning** - Experimental dataframes can plan queries from loaders.gl SQL expressions and feed batch-preserving GPU evaluation and rendering.
+
+* **Projection engine alignment** - GPU Project can explicitly prepare math.gl engine factories, retain their CPU transforms, and honor spatial-reference axes and units. Public normalization expands adaptive conic coverage; CPU/GPU benchmarks include reusable, flat and bulk CPU APIs.
+
+* **Projection domains and routing** - GPU Project adds explicit disconnected-domain and conservative disk partitions, seam-preserving segment clipping, opt-in indexed patch routing, fixed-arithmetic routing benchmarks and measurement-gated inline/materialized selection.
+
+**Experimental Three.js integration**
+
+* **Shared depth in Three apps** - `@luma.gl/three/interleaved` adds native deck layers to an existing Three WebGL2 canvas and depth buffer. Opaque geometry correctly occludes across both libraries while Three retains its renderer, controls and frame loop. The example compares shared depth with a separate transparent overlay.
+
+* **Deck overlays for Three apps** - Add native deck layers to an existing Three renderer through `@luma.gl/three/overlay`. Three retains its camera, controls and frame loop; the separate transparent canvas follows perspective/orthographic cameras and pixel ratio.
+
+* **Shared prepared scenes** - Multiple `ThreeSceneLayer` instances can share one adapter while retaining independent picking and highlighting. Readiness tracking does not retain borrowed scenes; failed preparation requires disposing and recreating the adapter.
+
+* **Scene placement in deck.gl** - `ThreeSceneLayer.modelMatrix` supports affine placement in Cartesian coordinates and local Mercator meters without changing source transforms. Visible rendering, highlights, object IDs and surface depth picking share that placement.
 
 **New Modules**
 
@@ -21,6 +58,22 @@ Target Release Date: Q3, 2026
 * **Vertex buffer byte offsets** - `VertexArray.setBuffer()` accepts an optional `byteOffset`, so vertex data can start inside a shared buffer without changing the buffer layout or render pipeline.
 
 **@luma.gl/gpgpu**
+
+* **Additive GPU point-cloud octrees** - `GPUPointCloudOctree` builds sparse tile metadata and source-ID ranges without reordering positions. The new point-cloud octree example shows tile bounds, additive detail levels and command-graph diagnostics.
+
+* **Experimental GPU sphere physics** - `@luma.gl/gpgpu/gpu-physics` adds grid-based bounded contacts, inverse-mass Jacobi solving, solid-sphere angular dynamics, friction, sleeping and live finite-plane/gravity settings. The standalone sphere-world sandbox renders quaternion-driven cue-ball bands and benchmarks up to 10,000 GPU-resident bodies with explicit capacity diagnostics.
+
+* **Oriented GPU rigid bodies** - A bounded sphere/box world adds rotated inertia, clipped contact manifolds, friction and island sleeping, with stack and large-count sphere examples.
+
+* **glTF physics draft import** - Optional `@luma.gl/gltf/physics` parses a pinned rigid-body/implicit-shape subset with capability reports, compound sphere/box ownership, authored mass/inertia, kinematic targets, collision filters and material policies. GPU scene synchronization and behavior bindings remain separate follow-ups.
+
+* **Persistent physics contacts and calibration** - Opt-in cached sphere/surface impulses, accumulated friction constraints, discarded simulation-time reporting and provenance-aware SI calibration fitting add reproducible numerical evidence.
+
+* **Bounded continuous sphere physics** - Optional small-world sphere/rectangle sweeps, persistent contact and pocket-trigger events, explicit impact/candidate budgets, static box surfaces and analytic material fixtures extend the physics module. Pool uses GPU pocket capture and event-driven clacks/trails, adds beveled jaws, hold-to-charge shooting with Escape cancellation, and automatic re-racking.
+
+* **Space Salvage and rigid-body collision APIs** - A top-down WebGPU salvage game exercises an opt-in GPU contact-event ring, exact sphere/box raycasts and sphere-overlap queries. Events retain begin/end and thresholded impact samples across steps with explicit loss reporting; asynchronous queries expose selection, nearest hits and overlap truncation.
+
+* **GPU pool prototype** - Sphere physics now supports linear/angular impulses, body teleport/wake/enable controls, multiple finite surfaces with individual materials, and explicit interaction snapshots. The standalone pool example adds aiming, power, cushions, six pockets, scratch recovery, and shot completion. Spin practice adds follow/draw setups, separate sliding/rolling/spinning resistance, and raised cushion contacts with speed-dependent restitution.
 
 * **Incremental GPU execution** - [`GPUIncrementalExecution`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-incremental-execution.md) caches explicitly versioned batch partials, preserves borrowed source storage, and submits only changed batch work plus the live merge. The GPU Data Analysis example shows streaming sums, histograms, grouped counts, and unsigned Top-K with reuse instrumentation.
 
@@ -123,8 +176,10 @@ Target Release Date: Q3, 2026
 **@luma.gl/splats**
 
 * **Stable RAD camera retargeting** - `SplatRADHierarchyManager` preserves resolved visible rows while reprioritizing retained branches for a changed camera, traverses offscreen ancestors needed for visible descendants, and keeps bounded traversal, page demand, and active-row capacity coherent across rapid camera updates.
+* **Progressive RAD selection** - `selectView()` selects a fresh complete cut; `refineView()` publishes coherent intermediate replacements while reprioritizing retained detail. Generic CPU-only residency and hierarchy data support worker selection with bounded page demand.
+* **Shared-pass splat rendering** - `GPUPagedSplatRenderer.prepare()` encodes compute work before a host pass, and `draw()` presents inside it without clearing, ending, or submitting the borrowed pass.
 
-**@luma.gl/webgpu**
+**@luma.gl/core/webgpu**
 
 * **Attach to application-created `GPUDevice`s** - `luma.attachDevice(gpuDevice, {adapters: [webgpuAdapter]})` and `webgpuAdapter.attach(gpuDevice)` wrap an existing WebGPU device, so an application and deck.gl can share one device with the application's requested limits and features. `device.destroy()` leaves the `GPUDevice` usable; the application destroys it.
 
@@ -151,7 +206,7 @@ Version 9.4 expands luma.gl with portable GPU data processing and a broad experi
 * **Data that goes straight to pixels** - Typed, chunked GPU columns can move through analysis, text, paths, and rendering without a CPU-side object layer.
 * **Analysis that stays on the GPU** - [Dataframes](https://luma.gl/next/docs/api-reference/experimental/gpu-dataframe.md), sorting, aggregation, raster, geospatial, and trace APIs keep intermediate results resident and reusable.
 * **Captured and animated worlds** - Stream large Gaussian splat scenes, mix splats with meshes, and animate crowds with shared geometry, GPU sampling, culling, and LOD.
-* **Four new experimental modules** - `@luma.gl/text`, `@luma.gl/splats`, `@luma.gl/scene`, and `@luma.gl/experimental` are now published for direct use. These APIs may evolve outside the 9.4 semver contract.
+* **Four new experimental modules** - `@luma.gl/text`, `@luma.gl/splats`, `@luma.gl/anari`, and `@luma.gl/experimental` are now published for direct use. These APIs may evolve outside the 9.4 semver contract.
 
 **A clearer GPU data stack**
 
@@ -181,7 +236,7 @@ Version 9.4 expands luma.gl with portable GPU data processing and a broad experi
 * **`@luma.gl/gpgpu`** - New module for lazy `GPUDataEvaluator` operations and chunk-preserving `GPUVectorEvaluator` transforms with CPU/WebGL/WebGPU backends.
 * **`@luma.gl/text`** - GPU-oriented 2D and 3D text rendering and atlas construction.
 * **`@luma.gl/splats`** - Experimental Gaussian splat rendering with caller-owned GPU data and preserved streaming batches.
-* **`@luma.gl/scene`** - Experimental forward, deferred, glTF, ray-marching, and ray-tracing scene rendering.
+* **`@luma.gl/anari`** - Experimental forward, deferred, glTF, ray-marching, and ray-tracing scene rendering.
 * **`@luma.gl/experimental`** - GPU analytics, simulations, rendering techniques, and WebXR helpers, now published for direct use.
 
 **@luma.gl/engine**
@@ -199,11 +254,12 @@ Version 9.4 expands luma.gl with portable GPU data processing and a broad experi
 * **[Lossless animated asset interchange](https://luma.gl/next/docs/api-reference/gltf/gltf-interchange.md)** - Format-owned `.gltf` and `.glb` export preserves hierarchy, animation clips, material pointers, skins, inverse bind matrices, morph targets, RGBA colors, joint attributes, material variants, GPU instancing, cameras, and punctual lights.
 * **Punctual lights and source-faithful materials** - Source directional, point, and spot lights retain authored colors, intensity, and cones; generic export round-trips supported materials, all map slots, UV sets, texture transforms, and sampler settings.
 
-**@luma.gl/scene (Experimental)**
+**@luma.gl/anari (Experimental)**
 
 * **[Retained physically based rendering](https://luma.gl/next/docs/api-guide/engine/anari-rendering.md)** - The ANARI-inspired scene API maps committed handles, staged parameters, instances, cameras, lights, and 17 material texture slots onto shared forward and WebGPU deferred scene renderers, including automatic opaque-scene capture for transmissive materials.
+* **Ray lighting quality controls** - Opt-in power-weighted emissive selection preserves exact conditional sampling PDFs and CORE storage limits. The scene playground exposes explicit ray resolution, renderer switching and emitter-distribution comparisons with retained ray settings.
 * **Pluggable interactive GPU-compute ray tracing** - `ANARIDevice.registerRenderer()` registers lazy custom runtimes, while the WebGPU-only `raytrace` subtype adapts committed scenes to the shared experimental `RayTracingSceneRenderer` for GPU-built object/instance BVHs, adaptive half-resolution rendering, interleaved pixel phases, stable-instance temporal reprojection, bounded rotating shadows, progressive sampling, and upsampled HDR presentation within default WebGPU CORE limits.
-* **[Optional glTF animation integration](https://luma.gl/next/docs/api-reference/scene/anari-animation.md)** - The isolated `@luma.gl/scene/gltf` entry point binds imported node hierarchies, material and sampler pointers, and morph-weight tracks to retained objects while committing each changed object at most once per frame.
+* **[Optional glTF animation integration](https://luma.gl/next/docs/api-reference/scene/anari-animation.md)** - The isolated `@luma.gl/anari/gltf` entry point binds imported node hierarchies, material and sampler pointers, and morph-weight tracks to retained objects while committing each changed object at most once per frame.
 * **Source-faithful retained assets** - JSON scenes preserve indexed geometry, both UV sets, tangents, RGBA vertex colors, joint attributes, morph targets, authored samplers, punctual lights, and `OPAQUE`/`MASK`/`BLEND` modes; programmatic renderer parameters can additionally supply caller-owned image-based-lighting textures.
 
 **Experimental rendering and GPU workflows**
@@ -221,11 +277,16 @@ Version 9.4 expands luma.gl with portable GPU data processing and a broad experi
 * **GPU projection patches** - The optional `@luma.gl/experimental/gpu-project` subpath compiles arbitrary CPU projection providers into adaptive local polynomial patches and projects chunk-preserving coordinate vectors through WebGPU command graphs. Its fp64-backed double-single mode preserves more than Float32 precision through absolute `float32x4` results, while an optional validity column distinguishes rejected rows from legitimate zero coordinates.
 * **Composable projection programs** - Typed axis, unit, affine, and adaptive operations compile into a shared inline WGSL function and GPU Graph contributor. Programs preserve double-single intermediates, accept double-single output from upstream programs, propagate validity, and support compatible parameter updates without rebuilding the graph.
 * **Broader adaptive PROJJSON coverage** - Lambert Conic Conformal 1SP/2SP and Albers Equal Area definitions use verified EPSG method/parameter mappings and the existing double-single adaptive backend. Custom CRS labels need no registry entry; identifier-only and localized definitions retain explicit units and error budgets. Both planners offer optional `ProjectionPlanningError` throwing without changing their default structured failure results.
+* **Batch-preserving CPU/GPU projection** - `ProjectionTableTransform` uses one prepared CRS transform for batch-atomic CPU execution or explicit GPU table materialization. It preserves batch boundaries and source identity, borrows GPU inputs, exposes validity and output encodings, and keeps upload, submission and readback application-owned.
 * **Explicit projection seams and comparative benchmarks** - Double-single longitude normalization has declared intervals, invalid seam guards, and no automatic many-to-one inverse. The optional program benchmark compares native/adaptive arithmetic and inline/materialized execution against an independent validity-aware oracle, reporting accuracy, buffer memory, planning/compilation, and synchronized execution costs.
 * **Equal-budget projection performance sweeps** - Optional multi-patch UTM/Albers benchmarks compare quadratic/cubic adaptive plans, row counts, and shared-result consumer reuse at a fixed double-single accuracy budget. Reports distinguish timestamp-instrumented runs from normal pass-coalesced execution and include actual patch counts and buffer costs.
 * **Matched CPU projection baselines** - The program benchmark also measures repeated and shared-result CPU consumers, with explicit provider labels and binary64 outputs. GPU-resident speedup includes encoding and synchronized execution but explicitly excludes transfers and setup.
+* **Production table projection measurements** - An optional table-consumer benchmark compares retained CPU execution with GPU-resident, upload/project and CPU round-trip paths, preserving physical batches. Reports separate resident-data speedups from transfer-inclusive round trips and include accuracy, memory, setup and an optional 4K–4M row sweep.
+* **Opt-in native conic projections** - Bounded Lambert Conformal Conic 1SP/2SP and Albers forward/inverse formulas lower from explicit PROJJSON or pipelines with Float32 arithmetic opt-in, guarded inverse footprints and shared inline/graph execution. Default high-precision adaptive coverage is unchanged; equal-budget conic benchmarks qualify optimization trade-offs.
+* **Visualization projection qualification** - Spherical gnomonic/orthographic fixtures qualify prepared double-single plans, public-engine horizon/inverse-domain rejection, inline consumers and CPU/GPU table paths. Horizon-crossing geometry still requires explicit clipping; no new native visualization kernel is implied.
 * **Native Transverse Mercator and UTM** - Explicit Float32 forward/inverse programs support all 60 WGS84 UTM zones, EPSG 9807 PROJJSON conversions, and `utm`/`tmerc` pipelines. Domain and inverse-footprint checks reject unsupported branches. Default higher-precision execution continues to use double-single adaptive patches, now fitted from the normalized binary64 series reference for supported explicit CRS pairs.
 * **Projection metadata and CRS planning** - Projection programs expose immutable precision, domain, validity, inversion, and sampled-error metadata. The optional `@luma.gl/experimental/gpu-project/crs` adapter lowers explicit axis/unit/affine PROJ pipelines and fits bounded CRS transformations through math.gl 5, with structured fallback reasons and independently bounded inverse plans.
+* **Caller-prepared projection planning** - `planProjection()` accepts application-owned synchronous transforms, including preloaded math.gl providers, without resolving their CRS again or importing a projection catalogue. It shares the existing double-single compiler and structured failures while leaving lazy loading with the caller.
 * **Native Web Mercator programs** - Explicitly opt into forward/inverse Float32 formulas through PROJJSON or `webmerc` pipelines, with checked domains, honest arithmetic metadata, and shared inline/graph execution. Default high-precision Web Mercator planning retains double-single adaptive fitting against the validated binary64 formula and declines lossy provider routes.
 * **Native CRS frame changes** - Explicit PROJJSON geographic frames and equivalent Transverse Mercator/Pseudo Mercator conversions now lower to double-single axis/unit/affine programs without sampling. The planner normalizes ellipsoids, prime meridians, conversion parameters, and false origins; preserves datum boundaries; and requires fitting bounds only on adaptive routes.
 * **GPU spectral ocean simulation** - [`SpectralOceanSimulation`](https://luma.gl/next/docs/api-reference/experimental/spectral-ocean-simulation.md) evolves a deterministic seeded Phillips spectrum, reconstructs three spatial fields on the GPU, and emits render-ready displacement and normal/foam buffers. Surface normals come from the displaced field, whitecaps come from horizontal-displacement compression with bounded temporal history, and command submission remains application-owned. [Tempest Ocean](https://luma.gl/next/examples/showcase/tempest-ocean) binds those buffers directly to an independently tessellated HDR stormfront surface.
@@ -685,3 +746,23 @@ New `Device.features` that enable new GLSL syntax
 ### Shared scene lighting examples[​](#shared-scene-lighting-examples "Direct link to Shared scene lighting examples")
 
 The experimental deck.gl GPU layers add optional camera/object motion capture and `SceneShaderPassEffect`, which connects shared HDR color, depth, normals and velocity to existing luma.gl shader-pass graphs. Riverfront fireflies, HDR night lighting, global illumination and light shafts demonstrate this shared infrastructure on WebGPU. `FireflyLayer` and the reusable `firefly` shader module also support WebGL2. Fireflies adds calm-water emitter reflections and adjustable bloom; Fireflies and HDR night lighting request extended-range, floating-point canvas output on HDR-capable displays, with an SDR presentation fallback.
+
+### Retained chart shapes[​](#retained-chart-shapes "Direct link to Retained chart shapes")
+
+ANARI scenes support capped `hexPrism` marks and full or open partial `torus` meshes. The engine exports `TorusGeometry` over shared math.gl tessellation. The Chart Shapes playground preset and `--shapes` capture option use the same geometry and datum identities across raster and ray rendering.
+
+### Bounded ray image export[​](#bounded-ray-image-export "Direct link to Bounded ray image export")
+
+`@luma.gl/experimental` adds `exportRayTracingImage` and `iterateRayTracingImageTiles` for streamed RGBA8 output. Full-image coordinates and explicit sampling-frame indices keep seeded ray paths stable across tiles. Clipped filter/history halos preserve progressive and denoised image seams; per-tile readback and cancellation keep export-owned allocations bounded.
+
+### Emissive chart lighting, masks and ring segments[​](#emissive-chart-lighting-masks-and-ring-segments "Direct link to Emissive chart lighting, masks and ring segments")
+
+Ray renderers add opt-in `emitterSampling` for explicit connections to emissive triangles and transformed analytic spheres. Scalar alpha masks now control ray color, shadows, picking and channels. `RingGeometry` and ANARI `ring` geometry add closed annular prisms and capped segments using shared math.gl tessellation. The Chart Lighting preset combines these features with retained selection identities and an emissive-lighting preview toggle.
+
+### GPU physics reliability and gameplay queries[​](#gpu-physics-reliability-and-gameplay-queries "Direct link to GPU physics reliability and gameplay queries")
+
+Experimental rigid-body worlds add opt-in GPU rollback for incomplete or nonfinite steps, explicit capacity-growth reconstruction, a bounded sphere/static CCD envelope, parallel geometry queries and sphere casts, and persistent compound spherical sensors. Space Salvage uses simulation-step docking events; Rigid Body Lab includes a thin-wall CCD scenario. See the [rigid-body reference](https://luma.gl/next/docs/api-reference/gpgpu/gpu-rigid-body-world.md) for supported envelopes and remaining qualification work.
+
+### GPU physics mechanisms and debugging[​](#gpu-physics-mechanisms-and-debugging "Direct link to GPU physics mechanisms and debugging")
+
+The experimental rigid-body world adds bounded ordered distance, fixed, hinge and slider joints, capped velocity motors and limits, plus full GPU state capture/restore for debugging. The Rigid Body Lab includes three Mechanisms scenarios. An executable finite-shape pair matrix records response coverage separately from numerical qualification.

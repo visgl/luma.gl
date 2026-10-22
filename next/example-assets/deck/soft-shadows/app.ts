@@ -12,6 +12,7 @@ import {RiverfrontShadowEffect, type ShadowSettings} from './shadow-effect';
 import {ShadowDistrictLayer} from './shadow-layer';
 import {DEFAULT_HOUR, FIRST_HOUR, LAST_HOUR, getRiverfrontSun} from './sun';
 import {getSkyCameraState, SKY_FIELD_OF_VIEW} from './sky-camera';
+import {getRiverfrontSkyLighting} from '../riverfront-sky-lighting';
 
 export function createRiverfrontSoftShadowScene(
   parent: HTMLDivElement,
@@ -67,7 +68,9 @@ export function createRiverfrontSoftShadowScene(
     return {direction, phase: illumination.phase, limbAngle, altitude};
   }
   function getClouds(): CloudProps {
-    const sun = getRiverfrontSun(settings.hour);
+    const lighting = getRiverfrontSkyLighting(settings.hour);
+    const sun = lighting.sun;
+    const daylight = sun.direction[2] > 0;
     return {
       cover: cloudSettings.enabled ? cloudSettings.cover : 0,
       time: cloudSettings.time,
@@ -75,15 +78,23 @@ export function createRiverfrontSoftShadowScene(
         Math.sin((cloudSettings.windDirection * Math.PI) / 180) * cloudSettings.windSpeed,
         Math.cos((cloudSettings.windDirection * Math.PI) / 180) * cloudSettings.windSpeed
       ],
-      sunDirection: [...sun.direction],
-      sunColor: [sun.color[0] / 255, sun.color[1] / 255, sun.color[2] / 255]
+      sunDirection: daylight ? [...sun.direction] : [...lighting.moonDirection],
+      sunColor: daylight
+        ? lighting.sunlight.color
+        : [
+            lighting.moonColor[0] * lighting.moonIntensity,
+            lighting.moonColor[1] * lighting.moonIntensity,
+            lighting.moonColor[2] * lighting.moonIntensity
+          ]
     };
   }
   function getAtmosphere(): AtmosphereProps {
     return {
       enabled: atmosphereSettings.enabled ? 1 : 0,
       sunDirection: [...getRiverfrontSun(settings.hour).direction],
-      haze: atmosphereSettings.haze
+      haze: atmosphereSettings.haze,
+      sunIntensity: 10 * getRiverfrontSkyLighting(settings.hour).sunlight.intensity,
+      groundColor: features.find(feature => feature.kind === 'ground')!.color
     };
   }
   function getLayers() {

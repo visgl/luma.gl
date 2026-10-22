@@ -1,6 +1,6 @@
 # Class: UniformStore\<TPropGroups>
 
-Defined in: [modules/core/src/portable/uniform-store.ts:52](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/uniform-store.ts#L52)
+Defined in: [modules/core/src/api/portable/uniform-store.ts:52](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/uniform-store.ts#L52)
 
 A uniform store holds a uniform values for one or more uniform blocks,
 
@@ -21,7 +21,7 @@ A uniform store holds a uniform values for one or more uniform blocks,
 
 > **new UniformStore**<`TPropGroups`>(`device`, `blocks`): `UniformStore`<`TPropGroups`>
 
-Defined in: [modules/core/src/portable/uniform-store.ts:72](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/uniform-store.ts#L72)
+Defined in: [modules/core/src/api/portable/uniform-store.ts:72](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/uniform-store.ts#L72)
 
 Creates a new UniformStore for the supplied device and block definitions.
 
@@ -45,7 +45,7 @@ Creates a new UniformStore for the supplied device and block definitions.
 
 > `readonly` **device**: [`Device`](https://luma.gl/next/docs/api-reference/generated/core/classes/Device.md)
 
-Defined in: [modules/core/src/portable/uniform-store.ts:59](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/uniform-store.ts#L59)
+Defined in: [modules/core/src/api/portable/uniform-store.ts:59](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/uniform-store.ts#L59)
 
 Device used to infer layout and allocate buffers.
 
@@ -55,7 +55,7 @@ Device used to infer layout and allocate buffers.
 
 > **shaderBlockLayouts**: `Map`\<keyof `TPropGroups`, [`ShaderBlockLayout`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ShaderBlockLayout.md)>
 
-Defined in: [modules/core/src/portable/uniform-store.ts:63](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/uniform-store.ts#L63)
+Defined in: [modules/core/src/api/portable/uniform-store.ts:63](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/uniform-store.ts#L63)
 
 Flattened layout metadata for each block.
 
@@ -65,7 +65,7 @@ Flattened layout metadata for each block.
 
 > **shaderBlockWriters**: `Map`\<keyof `TPropGroups`, [`ShaderBlockWriter`](https://luma.gl/next/docs/api-reference/generated/core/classes/ShaderBlockWriter.md)>
 
-Defined in: [modules/core/src/portable/uniform-store.ts:65](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/uniform-store.ts#L65)
+Defined in: [modules/core/src/api/portable/uniform-store.ts:65](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/uniform-store.ts#L65)
 
 Serializers for block-backed uniform data.
 
@@ -75,7 +75,7 @@ Serializers for block-backed uniform data.
 
 > **uniformBlocks**: `Map`\<keyof `TPropGroups`, [`UniformBlock`](https://luma.gl/next/docs/api-reference/generated/core/classes/UniformBlock.md)<`Record`<`string`, [`UniformValue`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/UniformValue.md)>>>
 
-Defined in: [modules/core/src/portable/uniform-store.ts:61](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/uniform-store.ts#L61)
+Defined in: [modules/core/src/api/portable/uniform-store.ts:61](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/uniform-store.ts#L61)
 
 Stores the uniform values for each uniform block
 
@@ -85,7 +85,7 @@ Stores the uniform values for each uniform block
 
 > **uniformBuffers**: `Map`\<keyof `TPropGroups`, [`Buffer`](https://luma.gl/next/docs/api-reference/generated/core/classes/Buffer.md)>
 
-Defined in: [modules/core/src/portable/uniform-store.ts:67](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/uniform-store.ts#L67)
+Defined in: [modules/core/src/api/portable/uniform-store.ts:67](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/uniform-store.ts#L67)
 
 Actual buffer for the blocks
 
@@ -95,7 +95,7 @@ Actual buffer for the blocks
 
 > **createUniformBuffer**(`uniformBufferName`, `uniforms?`): [`Buffer`](https://luma.gl/next/docs/api-reference/generated/core/classes/Buffer.md)
 
-Defined in: [modules/core/src/portable/uniform-store.ts:153](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/uniform-store.ts#L153)
+Defined in: [modules/core/src/api/portable/uniform-store.ts:153](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/uniform-store.ts#L153)
 
 Creates an unmanaged uniform buffer initialized with the current or supplied values.
 
@@ -119,7 +119,7 @@ keyof `TPropGroups`
 
 > **destroy**(): `void`
 
-Defined in: [modules/core/src/portable/uniform-store.ts:94](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/uniform-store.ts#L94)
+Defined in: [modules/core/src/api/portable/uniform-store.ts:94](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/uniform-store.ts#L94)
 
 Destroy any managed uniform buffers
 
@@ -133,7 +133,7 @@ Destroy any managed uniform buffers
 
 > **getManagedUniformBuffer**(`uniformBufferName`): [`Buffer`](https://luma.gl/next/docs/api-reference/generated/core/classes/Buffer.md)
 
-Defined in: [modules/core/src/portable/uniform-store.ts:172](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/uniform-store.ts#L172)
+Defined in: [modules/core/src/api/portable/uniform-store.ts:172](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/uniform-store.ts#L172)
 
 Returns the managed uniform buffer for the named block.
 
@@ -153,7 +153,7 @@ keyof `TPropGroups`
 
 > **getUniformBufferByteLength**(`uniformBufferName`): `number`
 
-Defined in: [modules/core/src/portable/uniform-store.ts:133](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/uniform-store.ts#L133)
+Defined in: [modules/core/src/api/portable/uniform-store.ts:133](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/uniform-store.ts#L133)
 
 Returns the allocation size for the named uniform buffer.
 
@@ -175,7 +175,7 @@ keyof `TPropGroups`
 
 > **getUniformBufferData**(`uniformBufferName`): `Uint8Array`
 
-Defined in: [modules/core/src/portable/uniform-store.ts:144](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/uniform-store.ts#L144)
+Defined in: [modules/core/src/api/portable/uniform-store.ts:144](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/uniform-store.ts#L144)
 
 Returns packed binary data that can be uploaded to the named uniform buffer.
 
@@ -197,7 +197,7 @@ keyof `TPropGroups`
 
 > **setUniforms**(`uniforms`, `commandEncoder?`): `void`
 
-Defined in: [modules/core/src/portable/uniform-store.ts:109](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/uniform-store.ts#L109)
+Defined in: [modules/core/src/api/portable/uniform-store.ts:109](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/uniform-store.ts#L109)
 
 Set uniforms
 
@@ -225,7 +225,7 @@ Optional encoder used to order managed uniform uploads with later GPU work in th
 
 > **updateUniformBuffer**(`uniformBufferName`, `commandEncoder?`): `string` | `false`
 
-Defined in: [modules/core/src/portable/uniform-store.ts:212](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/uniform-store.ts#L212)
+Defined in: [modules/core/src/api/portable/uniform-store.ts:212](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/uniform-store.ts#L212)
 
 Updates one managed uniform buffer if its corresponding block is dirty.
 
@@ -253,7 +253,7 @@ The redraw reason for the update, or `false` if no write occurred.
 
 > **updateUniformBuffers**(`commandEncoder?`): `string` | `false`
 
-Defined in: [modules/core/src/portable/uniform-store.ts:193](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/uniform-store.ts#L193)
+Defined in: [modules/core/src/api/portable/uniform-store.ts:193](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/uniform-store.ts#L193)
 
 Updates every managed uniform buffer whose source uniforms have changed.
 

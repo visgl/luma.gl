@@ -125,20 +125,21 @@ renderer.renderToScreen({
 
 ## Parameters[​](#parameters "Direct link to Parameters")
 
-| Parameter              | Default | Description                                                                       |
-| ---------------------- | ------- | --------------------------------------------------------------------------------- |
-| `resolutionScale`      | `1`     | Relative resolution of atmospheric integration, history, and bilateral filtering. |
-| `density`              | `0.055` | Participating-media density along each view ray.                                  |
-| `heightFalloff`        | `0.23`  | World-height density attenuation.                                                 |
-| `fogHeight`            | `0.2`   | Reference height of the atmospheric density profile.                              |
-| `anisotropy`           | `0.45`  | Scattering direction preference; supported range is `-0.8` to `0.85`.             |
-| `directionalIntensity` | `2.2`   | Strength of the directional scene light inside the medium.                        |
-| `pointLightIntensity`  | `1.8`   | Strength of retained clustered point-light candidates.                            |
-| `sampleCount`          | `10`    | View-ray integration samples; supported range is `3` to `20`.                     |
-| `godRayIntensity`      | `0`     | Strength of depth-occluded crepuscular light shafts.                              |
-| `godRaySampleCount`    | `18`    | Radial visibility samples when god rays are enabled; maximum is `32`.             |
-| `historyWeight`        | `0.88`  | Contribution from camera- and velocity-reprojected atmospheric history.           |
-| `strength`             | `0.9`   | Final `clusteredVolumetricComposite` contribution.                                |
+| Parameter              | Default | Description                                                                                                                            |
+| ---------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `resolutionScale`      | `1`     | Relative resolution of atmospheric integration, history, and bilateral filtering.                                                      |
+| `density`              | `0.055` | Participating-media density along each view ray.                                                                                       |
+| `heightFalloff`        | `0.23`  | World-height density attenuation.                                                                                                      |
+| `fogHeight`            | `0.2`   | Reference height of the atmospheric density profile.                                                                                   |
+| `anisotropy`           | `0.45`  | Scattering direction preference; supported range is `-0.8` to `0.85`.                                                                  |
+| `directionalIntensity` | `2.2`   | Strength of the directional scene light inside the medium.                                                                             |
+| `pointLightIntensity`  | `1.8`   | Strength of retained clustered point-light candidates.                                                                                 |
+| `sampleCount`          | `10`    | View-ray integration samples; supported range is `3` to `20`.                                                                          |
+| `godRayIntensity`      | `0`     | Strength of depth-occluded crepuscular light shafts.                                                                                   |
+| `godRaySourceRadius`   | `0.08`  | Radius of the luminous source in normalized screen coordinates. A finite source produces shafts instead of illuminating the whole sky. |
+| `godRaySampleCount`    | `18`    | Radial visibility samples when god rays are enabled; maximum is `32`.                                                                  |
+| `historyWeight`        | `0.88`  | Contribution from camera- and velocity-reprojected atmospheric history.                                                                |
+| `strength`             | `0.9`   | Final `clusteredVolumetricComposite` contribution.                                                                                     |
 
 ## Lighting Contract and Cost[​](#lighting-contract-and-cost "Direct link to Lighting Contract and Cost")
 

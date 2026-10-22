@@ -2,7 +2,7 @@
 
 > **MultisampleParameters** = `object`
 
-Defined in: [modules/core/src/adapter/types/parameters.ts:175](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/parameters.ts#L175)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:175](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L175)
 
 Multisample
 
@@ -12,7 +12,7 @@ Multisample
 
 > `optional` **sampleAlphaToCoverageEnabled?**: `boolean`
 
-Defined in: [modules/core/src/adapter/types/parameters.ts:181](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/parameters.ts#L181)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:181](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L181)
 
 When true indicates that a fragment’s alpha channel should be used to generate a sample coverage mask.
 
@@ -22,7 +22,7 @@ When true indicates that a fragment’s alpha channel should be used to generate
 
 > `optional` **sampleCount?**: `number`
 
-Defined in: [modules/core/src/adapter/types/parameters.ts:177](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/parameters.ts#L177)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:177](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L177)
 
 Number of samples per pixel. RenderPipeline will be compatible only with attachment textures with matching sampleCounts.
 
@@ -32,6 +32,6 @@ Number of samples per pixel. RenderPipeline will be compatible only with attachm
 
 > `optional` **sampleMask?**: `number`
 
-Defined in: [modules/core/src/adapter/types/parameters.ts:179](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/parameters.ts#L179)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:179](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L179)
 
 Mask determining which samples are written to. defaulting to 0xFFFFFFFF

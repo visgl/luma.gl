@@ -10,7 +10,12 @@ The `@luma.gl/gpgpu` module performs GPU-based data transformation.
 * [`Custom Operations`](https://luma.gl/next/docs/api-reference/gpgpu/custom-operation.md)
 * [`GPU Evaluators`](https://luma.gl/next/docs/api-reference/gpgpu/gpu-data-evaluator.md)
 * [`GPU Data`](https://luma.gl/next/docs/api-reference/gpgpu/gpu-data.md)
+* [GPU time series](https://luma.gl/next/docs/api-reference/experimental/gpu-timeseries.md): exact chart envelopes over chunked uniform samples.
 * [`cleanEvaluate`](https://luma.gl/next/docs/api-reference/gpgpu/clean-evaluate.md)
+
+## GPU Physics[​](#gpu-physics "Direct link to GPU Physics")
+
+The experimental [GPU physics](https://luma.gl/next/docs/api-reference/gpgpu/gpu-physics.md) subpath provides separate sphere and rigid-body worlds with GPU-resident state, explicit ownership and diagnostics. It requires WebGPU; see the world references for supported shapes and limits.
 
 ## GPU Data Primitives[​](#gpu-data-primitives "Direct link to GPU Data Primitives")
 
@@ -42,7 +47,7 @@ Interleaving two buffers together
 ```
 import {luma} from '@luma.gl/core';
 
-import {webglAdapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
 import {GPUDataEvaluator, add, interleave} from '@luma.gl/gpgpu';
 
@@ -72,7 +77,7 @@ const device = await luma.createDevice({
 
   type: 'webgl',
 
-  adapters: [webglAdapter]
+  adapters: [webgl2Adapter]
 
 });
 
@@ -173,3 +178,8 @@ The CPU backend can be imported from `@luma.gl/gpgpu/cpu` when explicitly regist
 ## Related Engine APIs[​](#related-engine-apis "Direct link to Related Engine APIs")
 
 `@luma.gl/gpgpu` uses engine compute helpers internally, but it does not re-export them. Import [`BufferTransform`](https://luma.gl/next/docs/api-reference/engine/compute/buffer-transform.md), [`TextureTransform`](https://luma.gl/next/docs/api-reference/engine/compute/texture-transform.md), and [`Computation`](https://luma.gl/next/docs/api-reference/engine/compute/computation.md) from `@luma.gl/engine` when you need direct access to those lower-level classes.
+
+## Geometry and point clouds[​](#geometry-and-point-clouds "Direct link to Geometry and point clouds")
+
+* [GPU Geometry](https://luma.gl/next/docs/api-reference/gpgpu/gpu-geometry.md): triangle and vertex normals plus adjacency-based mesh smoothing.
+* [GPU Point Cloud](https://luma.gl/next/docs/api-reference/gpgpu/gpu-pointcloud.md): deterministic voxel sampling and bounded exact radius filtering.

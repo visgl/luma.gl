@@ -4,7 +4,7 @@
 
 Implements Physically Based Shading of a microfacet surface defined by a glTF material.
 
-Lighting is expected to be defined by the `lights` module.
+Lighting is expected to be defined by the `lighting` module.
 
 ## Bind Group Convention[​](#bind-group-convention "Direct link to Bind Group Convention")
 
@@ -24,3 +24,7 @@ See the [Bind Groups and Bindings Guide](https://luma.gl/next/docs/api-guide/gpu
 The GLSL and WGSL material shaders derive from the historical [Khronos glTF-WebGL-PBR reference shader](https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/88eda8c5358efe03128b72b6c5f5f6e5b6d023e1/shaders/pbr-frag.glsl). The version incorporated into luma.gl was distributed under the [MIT License](https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/88eda8c5358efe03128b72b6c5f5f6e5b6d023e1/LICENSE.md) with `Copyright (c) 2016-2017 Mohamad Moneimne and Contributors`. Both shaders preserve that upstream copyright alongside the vis.gl contributors' additions and remain MIT-licensed.
 
 The upstream project has since been renamed [glTF Sample Viewer](https://github.com/KhronosGroup/glTF-Sample-Viewer), and its current releases use the [Apache License 2.0](https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/main/LICENSE.md). That later license does not replace the MIT terms attached to the historical version used here.
+
+### `pbr_filterColorWithSpotShadows(vertexColor, spotVisibility)`[​](#pbr_filtercolorwithspotshadowsvertexcolor-spotvisibility "Direct link to pbr_filtercolorwithspotshadowsvertexcolor-spotvisibility")
+
+Like `pbr_filterColor`, with a `vec4` (`vec4f` in WGSL) containing visibility for spotlights 0–3 in lighting-module order. Zero fully shadows a light; one leaves it unshadowed. Additional spotlights remain unshadowed. Visibility affects only each spotlight's direct PBR contribution, before tone mapping and output encoding. Environment lighting, emission, and other light types are unaffected. The original `pbr_filterColor` entry point remains equivalent to passing all ones.

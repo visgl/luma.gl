@@ -72,3 +72,7 @@ In the current luma.gl convention:
 * group `3` holds material state
 
 That means a material is the natural owner of per-surface uniform buffers, textures, and samplers that can be reused across many draws, while scene-level state like lighting stays outside the material itself.
+
+## Explore engine features[​](#explore-engine-features "Direct link to Explore engine features")
+
+Learn each material aspect and rendering capability through its API and a live sample in the [engine feature guide](https://luma.gl/next/docs/api-guide/engine/features.md). glTF core and extension mappings are described within each feature page; this reference retains the format-specific contracts.

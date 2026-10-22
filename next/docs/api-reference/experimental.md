@@ -67,6 +67,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 | [DeferredSceneRenderer](https://luma.gl/next/docs/api-reference/experimental/deferred-scene-renderer.md) | G-buffer-based opaque lighting with forward fallbacks for unsupported materials. |
 | [PBR environments](https://luma.gl/next/docs/api-reference/experimental/pbr-environment.md)              | Diffuse irradiance, prefiltered specular cubemaps, and BRDF lookup textures.     |
 | [GBuffer](https://luma.gl/next/docs/api-reference/experimental/g-buffer.md)                              | Standard scene color, normal, roughness, velocity, and depth attachments.        |
+| [Selection outlines](https://luma.gl/next/docs/api-reference/experimental/selection-outline.md)          | Visible placement boundaries from exact integer ID textures.                     |
 | [Deferred lighting](https://luma.gl/next/docs/api-reference/experimental/deferred-lighting.md)           | Fullscreen lighting from G-buffer material targets.                              |
 | [Clustered lighting](https://luma.gl/next/docs/api-reference/experimental/clustered-lighting.md)         | Compute-binned local lights for deferred shading.                                |
 | [Shadow maps](https://luma.gl/next/docs/api-reference/experimental/shadow-map-renderer.md)               | Cascaded, spot-array, and point cube-array shadows with PCSS filtering.          |
@@ -108,3 +109,7 @@ Experimental APIs may change or be removed without the compatibility guarantees 
 * [Engine API](https://luma.gl/next/docs/api-reference/engine.md)
 * [Shadertools API](https://luma.gl/next/docs/api-reference/shadertools.md)
 * [Effects API](https://luma.gl/next/docs/api-reference/effects.md)
+
+[`DepthTextureCopy`](https://luma.gl/next/docs/api-reference/experimental/depth-texture-copy.md) transfers projected ray depth to a render attachment for raster overlays.
+
+[`getRayTracingQualityPreset`](https://luma.gl/next/docs/api-reference/experimental/ray-tracing-quality-presets.md) supplies interactive and still settings without changing camera or sampling seed.

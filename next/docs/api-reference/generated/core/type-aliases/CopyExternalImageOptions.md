@@ -2,7 +2,7 @@
 
 > **CopyExternalImageOptions** = `object`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:21](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L21)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:21](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L21)
 
 Options for Texture.copyExternalImage
 
@@ -12,7 +12,7 @@ Options for Texture.copyExternalImage
 
 > `optional` **aspect?**: `"all"` | `"stencil-only"` | `"depth-only"`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:43](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L43)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:43](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L43)
 
 When copying into depth stencil textures (default 'all')
 
@@ -22,7 +22,7 @@ When copying into depth stencil textures (default 'all')
 
 > `optional` **colorSpace?**: `"srgb"`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:45](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L45)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:45](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L45)
 
 Specific color space of image data
 
@@ -32,7 +32,7 @@ Specific color space of image data
 
 > `optional` **depth?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:33](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L33)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:33](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L33)
 
 Copy depth, number of layers/depth slices(default 1)
 
@@ -42,7 +42,7 @@ Copy depth, number of layers/depth slices(default 1)
 
 > `optional` **flipY?**: `boolean`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:57](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L57)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:57](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L57)
 
 Whether to flip the image vertically (default false). On WebGL, this option does not apply to ImageBitmap sources. Supply `imageOrientation: 'flipY'` or `'from-image'` when calling `createImageBitmap()` instead.
 
@@ -52,7 +52,7 @@ Whether to flip the image vertically (default false). On WebGL, this option does
 
 > `optional` **height?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:31](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L31)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:31](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L31)
 
 Copy area height (default 1)
 
@@ -62,7 +62,7 @@ Copy area height (default 1)
 
 > **image**: [`ExternalImage`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ExternalImage.md)
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:23](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L23)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:23](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L23)
 
 Image
 
@@ -72,7 +72,7 @@ Image
 
 > `optional` **mipLevel?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:41](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L41)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:41](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L41)
 
 Which mip-level to copy into (default 0)
 
@@ -82,7 +82,7 @@ Which mip-level to copy into (default 0)
 
 > `optional` **premultipliedAlpha?**: `boolean`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:51](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L51)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:51](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L51)
 
 Whether to premultiply alpha (default false). On WebGL, this option does not apply to ImageBitmap sources. Supply `premultiplyAlpha: 'premultiply'` or `'none'` when calling `createImageBitmap()` instead.
 
@@ -92,7 +92,7 @@ Whether to premultiply alpha (default false). On WebGL, this option does not app
 
 > `optional` **sourceX?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:25](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L25)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:25](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L25)
 
 Copy from image x offset (default 0)
 
@@ -102,7 +102,7 @@ Copy from image x offset (default 0)
 
 > `optional` **sourceY?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:27](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L27)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:27](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L27)
 
 Copy from image y offset (default 0)
 
@@ -112,7 +112,7 @@ Copy from image y offset (default 0)
 
 > `optional` **width?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:29](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L29)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:29](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L29)
 
 Copy area width (default 1)
 
@@ -122,7 +122,7 @@ Copy area width (default 1)
 
 > `optional` **x?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:35](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L35)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:35](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L35)
 
 Start copying into offset x (default 0)
 
@@ -132,7 +132,7 @@ Start copying into offset x (default 0)
 
 > `optional` **y?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:37](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L37)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:37](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L37)
 
 Start copying into offset y (default 0)
 
@@ -142,6 +142,6 @@ Start copying into offset y (default 0)
 
 > `optional` **z?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/texture.ts:39](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/texture.ts#L39)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:39](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L39)
 
 Start copying into layer / depth slice z (default 0)

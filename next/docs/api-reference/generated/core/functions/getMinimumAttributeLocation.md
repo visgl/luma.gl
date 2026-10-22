@@ -2,7 +2,7 @@
 
 > **getMinimumAttributeLocation**(`locations`): `number`
 
-Defined in: [modules/core/src/adapter-utils/buffer-layout-utils.ts:64](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter-utils/buffer-layout-utils.ts#L64)
+Defined in: [modules/core/src/api/adapter-utils/buffer-layout-utils.ts:64](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter-utils/buffer-layout-utils.ts#L64)
 
 Returns the lowest defined attribute location from a set of candidate locations.
 

@@ -2,7 +2,7 @@
 
 > **DeviceLostInfo** = `object`
 
-Defined in: [modules/core/src/adapter/device.ts:103](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L103)
+Defined in: [modules/core/src/api/adapter/device.ts:103](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/device.ts#L103)
 
 Information supplied when a device is lost.
 
@@ -14,7 +14,7 @@ The reason values intentionally mirror WebGPU. `destroyed` means an application-
 
 > `readonly` **message**: `string`
 
-Defined in: [modules/core/src/adapter/device.ts:105](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L105)
+Defined in: [modules/core/src/api/adapter/device.ts:105](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/device.ts#L105)
 
 ***
 
@@ -22,4 +22,4 @@ Defined in: [modules/core/src/adapter/device.ts:105](https://github.com/visgl/lu
 
 > `readonly` **reason**: `"unknown"` | `"destroyed"`
 
-Defined in: [modules/core/src/adapter/device.ts:104](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L104)
+Defined in: [modules/core/src/api/adapter/device.ts:104](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/device.ts#L104)

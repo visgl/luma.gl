@@ -2,7 +2,7 @@
 
 ## Overview[​](#overview "Direct link to Overview")
 
-WebGPU has indirect compute dispatch but no executable graph loop or device-side command launch. Jarnevon therefore lowers semantic runtime control flow into a bounded command sequence whose individual compute dispatches are enabled or disabled entirely on the GPU.
+WebGPU has indirect compute dispatch but no executable graph loop or device-side command launch. luma.gl therefore lowers semantic runtime control flow into a bounded command sequence whose individual compute dispatches are enabled or disabled entirely on the GPU.
 
 ## At a glance
 
@@ -107,4 +107,4 @@ The compiler rejects missing geometry rather than assuming a one-dimensional dis
 
 ## Nested predicates[​](#nested-predicates "Direct link to Nested predicates")
 
-The first WebGPU realization accepts one active runtime predicate at a time. Nested semantic conditionals remain valid IR, but WebGPU lowering will reject them until predicate-conjunction gates are added. This keeps the current implementation explicit rather than silently dropping an outer condition.
+Nested predicates are combined into graph-owned uint32 conjunction values. Each gated dispatch uses the conjunction of its active conditions, preserving outer conditions inside nested loops and conditionals without CPU readback.

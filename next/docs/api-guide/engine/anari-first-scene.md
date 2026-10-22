@@ -26,7 +26,7 @@ This is particularly useful when an application should expose a stable scene con
 
 ## Use the private workspace[​](#use-the-private-workspace "Direct link to Use the private workspace")
 
-`@luma.gl/scene` is a private luma.gl workspace and is not published to npm. Install repository dependencies from a luma.gl checkout:
+`@luma.gl/anari` is a private luma.gl workspace and is not published to npm. Install repository dependencies from a luma.gl checkout:
 
 ```
 yarn install
@@ -39,27 +39,27 @@ Other in-repository workspaces can depend on the private package through:
 
   "dependencies": {
 
-    "@luma.gl/scene": "workspace:*"
+    "@luma.gl/anari": "workspace:*"
 
   }
 
 }
 ```
 
-At least one luma.gl backend is required. Use `@luma.gl/webgpu` for modern browsers and optional HDR presentation, and add `@luma.gl/webgl` when a WebGL 2 fallback is important.
+At least one luma.gl backend is required. Use `@luma.gl/core/webgpu` for modern browsers and optional HDR presentation, and add `@luma.gl/core/webgl` when a WebGL 2 fallback is important.
 
 ## Create a graphics device[​](#create-a-graphics-device "Direct link to Create a graphics device")
 
 Start with an ordinary luma.gl `Device` and wrap it in `ANARIDevice`:
 
 ```
-import {ANARIDevice} from '@luma.gl/scene';
+import {ANARIDevice} from '@luma.gl/anari';
 
 import {luma} from '@luma.gl/core';
 
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
 
 
@@ -97,13 +97,13 @@ Adapter order determines preference: this example uses WebGPU when available and
 The following complete scene adds a metallic sphere, floor, directional light, animated point light, camera, renderer, and animation loop. It assumes a page containing `<canvas></canvas>`.
 
 ```
-import {ANARIDevice} from '@luma.gl/scene';
+import {ANARIDevice} from '@luma.gl/anari';
 
 import {luma} from '@luma.gl/core';
 
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
 import {Matrix4} from '@math.gl/core';
 
@@ -346,7 +346,7 @@ The ANARI adapter passes committed scene descriptors to `RayTracingSceneRenderer
 
 Ray tracing starts at half the display width and height, reducing its initial pixel workload to one quarter of full resolution. Adaptive quality can lower that scale to `0.25`, interleave sampled pixels across animation frames, and rotate one shadowed direct light per frame to approach the default `33.3` millisecond frame budget. The fullscreen resolve upsamples the retained HDR image. Temporal reprojection follows camera and stable instance motion while rejecting incompatible depth, normal, and color history; camera cuts, topology changes, light-count changes, and resolution changes reset invalid history. Retained color and surface-metadata texture pairs exchange their previous/current graph roles after each successful encoding, eliminating the former four full-image history copies. Interleaved frames carry only their untouched pixels through a small coalesced compute dispatch; full-coverage frames perform no history carry. Set `shadowSamplesPerFrame: 0` to evaluate every direct light in one frame. Adaptive timing uses smoothed animation-frame intervals and does not require GPU timestamp queries. Acceleration updates run only when retained transforms or geometry change, so camera-only and lighting-only frames do not rebuild the TLAS. Transform-only frames use the retained-permutation gather/refit path; topology changes and periodic refreshes run the Morton sort path. The ANARI adapter caches normalized surfaces, materials, lights, and analytic primitives by committed world identity. Categorized topology, transform, material, and light revisions let camera-only frames reuse those descriptors without serializing the entire scene; committed instance changes additionally expose their exact stable placement identities.
 
-The Morton-sorted TLAS indexes objects and instances; surviving meshes traverse GPU-built, Morton-sorted per-mesh triangle BLASes. The ray-tracing pass uses exactly eight storage buffers, while every TLAS or BLAS construction pass stays within the default WebGPU CORE limit of eight storage buffers without elevated device features. The hierarchy topology is not SAH-optimized or a Karras-style LBVH. This is software ray tracing, not hardware ray tracing or full path tracing. Skeletal skinning, morph-target deformation, material textures, alpha/transmission, more advanced PBR material extensions, indirect bounces, denoising, and volume objects remain unsupported by this renderer. `maxBounces` is reserved for future multi-bounce transport.
+The Morton-sorted TLAS indexes objects and instances; surviving meshes traverse GPU-built, Morton-sorted per-mesh triangle BLASes. The ray-tracing pass uses exactly eight storage buffers, while every TLAS or BLAS construction pass stays within the default WebGPU CORE limit of eight storage buffers without elevated device features. The hierarchy topology is not SAH-optimized or a Karras-style LBVH. This is software ray tracing, not hardware ray tracing or full path tracing. Skeletal skinning, morph-target deformation, material textures, alpha/transmission, more advanced PBR material extensions, specular/transmissive bounces, denoising, and volume objects remain unsupported by this renderer. `maxBounces` enables 0–8 secondary diffuse bounces; the default is zero. Emissive surfaces can illuminate matte receivers through these paths.
 
 ## Understand staging and commits[​](#understand-staging-and-commits "Direct link to Understand staging and commits")
 
@@ -803,9 +803,9 @@ HDR requires all three pieces:
 ```
 import {luma} from '@luma.gl/core';
 
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
 
 
@@ -855,7 +855,7 @@ The user-visible HDR effect depends on the monitor, browser, operating-system di
 The repository showcase uses `AnimationLoopTemplate` to coordinate drawing, resizing, and cleanup:
 
 ```
-import {ANARIDevice} from '@luma.gl/scene';
+import {ANARIDevice} from '@luma.gl/anari';
 
 import {
 

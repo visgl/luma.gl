@@ -157,6 +157,6 @@ The configured iteration budget remains a static graph bound. GPU convergence di
 
 Vector kernels add only one arena storage binding regardless of how many logical coefficients the solver owns. `rr`, `pDotQ`, `alpha`, `beta`, tolerance and convergence flags all share the graph value arena.
 
-## Performance roadmap[​](#performance-roadmap "Direct link to Performance roadmap")
+## Related APIs[​](#related-apis "Direct link to Related APIs")
 
-This PR establishes the integrated execution model, not the final performance ceiling. The next high-leverage work is hierarchical/subgroup reduction, scalar-expression fusion, dispatch-gate coalescing, compiler-driven arena sealing/lifetime reuse, and adaptive SpMV strategy selection.
+See [adaptive SpMV](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-adaptive-spmv-execution.md), and [execution strategies](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-strategy-selection.md) for current composition and strategy contracts.

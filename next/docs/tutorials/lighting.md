@@ -45,9 +45,9 @@ import {lighting, phongMaterial, ShaderModule} from '@luma.gl/shadertools';
 
 import {Matrix4} from '@math.gl/core';
 
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
 
 

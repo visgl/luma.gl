@@ -7,9 +7,9 @@ ExperimentalPrivate workspaceFrom v10
 ```
 import {luma} from '@luma.gl/core';
 
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
-import {ANARIDevice} from '@luma.gl/scene';
+import {ANARIDevice} from '@luma.gl/anari';
 
 
 
@@ -218,7 +218,7 @@ Returns supported subtypes for an object category:
 ```
 anariDevice.getObjectSubtypes('geometry');
 
-// ['triangle', 'sphere', 'cylinder', 'cone', 'quad']
+// ['triangle', 'sphere', 'cylinder', 'cone', 'quad', 'hexPrism', 'torus', 'ring']
 
 
 

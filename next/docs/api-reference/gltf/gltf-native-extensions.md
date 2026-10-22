@@ -4,7 +4,7 @@
 
 glTF extensions should describe what an asset actually does, not merely which JSON properties survived loading. `@luma.gl/gltf` connects authored material variants, GPU instance transforms, recursive node visibility, typed animation pointers, and required-extension capabilities to the existing luma.gl scenegraph and animation runtime.
 
-The implementation remains format-owned: `@loaders.gl/gltf` reads and postprocesses the asset, `@luma.gl/gltf` resolves glTF extension semantics, and `@luma.gl/engine` owns generic scenegraph, model, and animation behavior. There is no parallel loader, material system, or renderer.
+Source interpretation remains format-owned: `@loaders.gl/gltf` reads and postprocesses the asset, `@luma.gl/gltf` resolves glTF extension semantics, and `@luma.gl/engine` owns generic scenegraph, model, animation, and scene-controller behavior. The optional glTF parsers produce construction props for engine billboard, area-light, and audio controllers; skin and material-variant controllers are returned automatically. There is no parallel loader, material system, or renderer.
 
 ## Load a standards-native scene[​](#load-a-standards-native-scene "Direct link to Load a standards-native scene")
 
@@ -509,7 +509,7 @@ function renderFrame(timestampMilliseconds: number): void {
 
   for (const binding of scenegraphs.skins.bindings) {
 
-    console.log(binding.nodeIndex, binding.joints.length, binding.jointMatrices);
+    console.log(binding.node.id, binding.joints.length, binding.jointMatrices);
 
   }
 
@@ -520,7 +520,7 @@ function renderFrame(timestampMilliseconds: number): void {
 }
 ```
 
-`setTime()` accepts absolute milliseconds; `selectClip()` crossfade duration and `animator.update(deltaSeconds)` use seconds. Imported skin palettes are updated automatically once after all channels evaluate, using existing mesh-local joint matrices and the canonical shared skin shader. `scenegraphs.skins.getBinding(nodeIndex)` exposes a specific reusable skin binding.
+`setTime()` accepts absolute milliseconds; `selectClip()` crossfade duration and `animator.update(deltaSeconds)` use seconds. Imported skin palettes are updated automatically once after all channels evaluate, using existing mesh-local joint matrices and the canonical shared skin shader. `scenegraphs.skins.getBinding(scenegraphs.gltfNodeIndexToNodeMap.get(nodeIndex))` exposes a specific reusable skin binding.
 
 ## Official fixture coverage[​](#official-fixture-coverage "Direct link to Official fixture coverage")
 
@@ -545,7 +545,7 @@ The fixture attribution and pinned source revision are recorded in `modules/gltf
 | `@luma.gl/engine`       | Generic `GroupNode` visibility, reusable `Model` instancing, animation mixing, and deformation utilities.                                      |
 | `@luma.gl/shadertools`  | Canonical PBR material uniforms, physical shading, and reusable skinning.                                                                      |
 | `@luma.gl/experimental` | Optional format-independent physical scene rendering and captured-scene transmission.                                                          |
-| `@luma.gl/scene`        | Optional thin retained-object orchestration through `@luma.gl/scene/gltf`; no loader or BRDF ownership.                                        |
+| `@luma.gl/anari`        | Optional thin retained-object orchestration through `@luma.gl/anari/gltf`; no loader or BRDF ownership.                                        |
 
 The core ANARI package does not import glTF. Its optional glTF adapter imports the existing glTF parsers and engine animation primitives. Camera, punctual-light, and visibility pointer playback currently belongs to the canonical glTF scenegraph; the thin ANARI animation adapter safely ignores unsupported target families instead of creating an independent extension runtime.
 

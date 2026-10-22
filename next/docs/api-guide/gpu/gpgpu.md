@@ -47,7 +47,12 @@ Operations stay lazy until evaluation. `cleanEvaluate()` retains the requested o
 
 ## Next steps[​](#next-steps "Direct link to Next steps")
 
+* [GPU physics: background and architecture](https://luma.gl/next/docs/api-guide/gpu/gpu-physics.md)
+
 * [Choosing a GPU data-processing API](https://luma.gl/next/docs/api-guide/gpu/gpu-data-processing.md)
+
 * [GPU tables](https://luma.gl/next/docs/api-guide/gpu/gpu-tables.md)
+
 * [Tabular data in WGSL](https://luma.gl/next/docs/api-guide/gpu/tabular-data-in-wgsl.md)
+
 * [GPU floating-point precision](https://luma.gl/next/docs/api-guide/shaders/gpu-floating-point-precision.md)

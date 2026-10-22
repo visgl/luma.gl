@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- luma-example-support -->
+  <meta name="luma-example-id" content="deck/gltf-interactivity" />
+  <meta name="luma-example-backends" content="webgl2" />
+  <meta name="luma-example-mobile" content="full" />
+  <meta name="luma-example-mobile-profile" content="standard" />
+  <!-- /luma-example-support -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KHR_interactivity · luma.gl + deck.gl</title>
+  <link rel="icon" href="data:,">
+  <style>
+    html,body {margin:0;width:100%;height:100%;background:#f1f3f7;color:#111;font:11px/1.45 system-ui}
+    #scene {position:absolute;inset:0}
+    #scene-help {position:absolute;bottom:18px;left:50%;transform:translateX(-50%);max-width:calc(100% - 32px);padding:8px 12px;border-radius:8px;background:#080f1be8;color:#dce8f7;font:12px/1.4 system-ui;text-align:center;pointer-events:none;z-index:2}
+    #panels {position:absolute;inset:16px;pointer-events:none;z-index:1}
+  </style>
+  <script type="module" crossorigin src="/next/standalone-examples/gltf-interactivity/assets/index-C81Un86x.js"></script>
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/gltf-interactivity/assets/chunk-DtRyYLXJ.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/gltf-interactivity/assets/preload-helper-BVHhchWG.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/gltf-interactivity/assets/shader-type-decoder-Bdse6Scz.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/gltf-interactivity/assets/buffer-layout-utils-Dgk4trQb.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/gltf-interactivity/assets/fence-Dj71R1zQ.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/gltf-interactivity/assets/external-texture-BLF3u0Ck.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/gltf-interactivity/assets/get-attribute-from-layouts-B51EI0XP.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/gltf-interactivity/assets/shader-block-layout-AGd2jUz5.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/gltf-interactivity/assets/webgl-device-DuhQ1pWI.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/gltf-interactivity/assets/wgsl-interface-scan-D-ju35lh.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/gltf-interactivity/assets/expression-ByeiNmDb.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/gltf-interactivity/assets/buffer-transform-E6GrMvKI.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/gltf-interactivity/assets/webgpu-DgeGVOsc.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/gltf-interactivity/assets/meshopt_decoder-DzCSxwZZ.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/gltf-interactivity/assets/globals-DwKYod15.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/gltf-interactivity/assets/log-CYxK8fOx.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/gltf-interactivity/assets/globals-B4nSVLQx.js">
+  <link rel="stylesheet" crossorigin href="/next/standalone-examples/gltf-interactivity/assets/index-D2hko_3P.css">
+</head>
+<body>
+  <div id="scene"></div>
+  <div id="panels"></div>
+  <div id="scene-help" role="status">Loading sample…</div>
+  <section id="interaction" hidden></section>
+  <section id="info-content" class="gltf-example-details" hidden>
+    <p>Official Khronos <code>KHR_interactivity</code> assets. Branch, Sequence and Switch are self-running test suites, not toggle controls. Run tests executes all checks; Reset clears the results.</p>
+    <p>Traffic Light: click the blue ring on the left post to play its timed sequence, or the ring on the right post to advance one phase. Reset restores both lights.</p>
+    <button id="fit">Fit model</button>
+    <output id="status">Loading asset…</output>
+    <p>Drag to orbit · Scroll to zoom</p>
+    <a id="asset-source" target="_blank" rel="noreferrer">Asset source ↗</a>
+    <p>Assets © 2025 Khronos Group and Needle · CC BY 4.0.</p>
+  </section>
+</body>
+</html>

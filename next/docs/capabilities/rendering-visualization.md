@@ -6,28 +6,28 @@ This matrix groups luma.gl's portable rendering, scene, asset, effects, and simu
 
 ### Devices, resources, and presentation[​](#devices-resources-and-presentation "Direct link to Devices, resources, and presentation")
 
-| Feature                       | Status    | Backend         | Package                                | Details                                                                                     |
-| ----------------------------- | --------- | --------------- | -------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Unified GPU device API        | Available | WebGPU + WebGL2 | `@luma.gl/core`                        | Access adapters, devices, resources, commands, features, and limits through one model.      |
-| Backend adapters              | Available | WebGPU + WebGL2 | `@luma.gl/webgpu` and `@luma.gl/webgl` | Select the native WebGPU adapter or the WebGL2 compatibility adapter.                       |
-| Feature and limit discovery   | Available | WebGPU + WebGL2 | `@luma.gl/core`                        | Inspect device capabilities before enabling optional functionality.                         |
-| GPU buffers                   | Available | WebGPU + WebGL2 | `@luma.gl/core`                        | Create vertex, index, uniform, and compatible readback buffers.                             |
-| GPU storage buffers           | Available | WebGPU          | `@luma.gl/webgpu`                      | Bind supported read-only or writable storage buffers to WebGPU shaders.                     |
-| Typed texture resources       | Available | WebGPU + WebGL2 | `@luma.gl/core`                        | Allocate compatible 2D, array, cubemap, and three-dimensional texture resources.            |
-| Texture views and samplers    | Available | WebGPU + WebGL2 | `@luma.gl/core`                        | Describe texture views, filtering, wrapping, and supported anisotropic sampling.            |
-| Compressed textures           | Evolving  | WebGPU + WebGL2 | `@luma.gl/core`                        | Use BC, ETC2, or ASTC formats when supported by the selected device.                        |
-| Native external textures      | Available | WebGPU          | `@luma.gl/webgpu`                      | Bind compatible browser-owned external image resources without a WebGL fallback.            |
-| Video texture uploads         | Available | WebGPU + WebGL2 | `@luma.gl/engine`                      | Update compatible GPU textures from supported browser video sources.                        |
-| Framebuffers and attachments  | Available | WebGPU + WebGL2 | `@luma.gl/core`                        | Manage color, depth, stencil, and supported multiple-render-target attachments.             |
-| Render pipelines              | Available | WebGPU + WebGL2 | `@luma.gl/core`                        | Configure shader bindings, vertex layouts, depth, stencil, and blend state.                 |
-| Compute shaders and passes    | Available | WebGPU          | `@luma.gl/webgpu`                      | Encode compute pipelines, dispatches, and WebGPU storage-resource workflows.                |
-| Indexed and indirect draws    | Evolving  | WebGPU + WebGL2 | `@luma.gl/core`                        | Indexed drawing is portable; GPU-generated indirect drawing requires WebGPU.                |
-| Render bundles                | Evolving  | WebGPU          | `@luma.gl/webgpu`                      | Reuse compatible recorded render commands.                                                  |
-| Transform feedback            | Available | WebGL2          | `@luma.gl/webgl`                       | Support established WebGL transform-feedback workflows.                                     |
-| Occlusion and timing queries  | Evolving  | WebGPU + WebGL2 | `@luma.gl/core`                        | Use supported query types only when the selected backend advertises them.                   |
-| Multisample resolve           | Available | WebGPU          | `@luma.gl/webgpu`                      | Resolve supported multisampled render attachments.                                          |
-| Canvas sizing and pixel ratio | Available | WebGPU + WebGL2 | `@luma.gl/core`                        | Manage browser canvas configuration, resize, and high-DPI presentation.                     |
-| Extended color and HDR        | Evolving  | WebGPU          | `@luma.gl/webgpu`                      | Present compatible floating-point or display-P3 output when browser and display support it. |
+| Feature                       | Status    | Backend         | Package                                          | Details                                                                                     |
+| ----------------------------- | --------- | --------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| Unified GPU device API        | Available | WebGPU + WebGL2 | `@luma.gl/core`                                  | Access adapters, devices, resources, commands, features, and limits through one model.      |
+| Backend adapters              | Available | WebGPU + WebGL2 | `@luma.gl/core/webgpu` and `@luma.gl/core/webgl` | Select the native WebGPU adapter or the WebGL2 compatibility adapter.                       |
+| Feature and limit discovery   | Available | WebGPU + WebGL2 | `@luma.gl/core`                                  | Inspect device capabilities before enabling optional functionality.                         |
+| GPU buffers                   | Available | WebGPU + WebGL2 | `@luma.gl/core`                                  | Create vertex, index, uniform, and compatible readback buffers.                             |
+| GPU storage buffers           | Available | WebGPU          | `@luma.gl/core/webgpu`                           | Bind supported read-only or writable storage buffers to WebGPU shaders.                     |
+| Typed texture resources       | Available | WebGPU + WebGL2 | `@luma.gl/core`                                  | Allocate compatible 2D, array, cubemap, and three-dimensional texture resources.            |
+| Texture views and samplers    | Available | WebGPU + WebGL2 | `@luma.gl/core`                                  | Describe texture views, filtering, wrapping, and supported anisotropic sampling.            |
+| Compressed textures           | Evolving  | WebGPU + WebGL2 | `@luma.gl/core`                                  | Use BC, ETC2, or ASTC formats when supported by the selected device.                        |
+| Native external textures      | Available | WebGPU          | `@luma.gl/core/webgpu`                           | Bind compatible browser-owned external image resources without a WebGL fallback.            |
+| Video texture uploads         | Available | WebGPU + WebGL2 | `@luma.gl/engine`                                | Update compatible GPU textures from supported browser video sources.                        |
+| Framebuffers and attachments  | Available | WebGPU + WebGL2 | `@luma.gl/core`                                  | Manage color, depth, stencil, and supported multiple-render-target attachments.             |
+| Render pipelines              | Available | WebGPU + WebGL2 | `@luma.gl/core`                                  | Configure shader bindings, vertex layouts, depth, stencil, and blend state.                 |
+| Compute shaders and passes    | Available | WebGPU          | `@luma.gl/core/webgpu`                           | Encode compute pipelines, dispatches, and WebGPU storage-resource workflows.                |
+| Indexed and indirect draws    | Evolving  | WebGPU + WebGL2 | `@luma.gl/core`                                  | Indexed drawing is portable; GPU-generated indirect drawing requires WebGPU.                |
+| Render bundles                | Evolving  | WebGPU          | `@luma.gl/core/webgpu`                           | Reuse compatible recorded render commands.                                                  |
+| Transform feedback            | Available | WebGL2          | `@luma.gl/core/webgl`                            | Support established WebGL transform-feedback workflows.                                     |
+| Occlusion and timing queries  | Evolving  | WebGPU + WebGL2 | `@luma.gl/core`                                  | Use supported query types only when the selected backend advertises them.                   |
+| Multisample resolve           | Available | WebGPU          | `@luma.gl/core/webgpu`                           | Resolve supported multisampled render attachments.                                          |
+| Canvas sizing and pixel ratio | Available | WebGPU + WebGL2 | `@luma.gl/core`                                  | Manage browser canvas configuration, resize, and high-DPI presentation.                     |
+| Extended color and HDR        | Evolving  | WebGPU          | `@luma.gl/core/webgpu`                           | Present compatible floating-point or display-P3 output when browser and display support it. |
 
 ### Engine, geometry, and interaction[​](#engine-geometry-and-interaction "Direct link to Engine, geometry, and interaction")
 
@@ -147,7 +147,7 @@ Try [Lightstorm Megacity](https://luma.gl/next/examples/showcase/lightstorm-mega
 | glTF-routed Gaussian splats                     | Opportunity  | WebGPU + WebGL2 | `@luma.gl/gltf` and `@luma.gl/splats`        | Delegate authored `KHR_gaussian_splatting` scene primitives to the existing optional splat adapter without introducing a second renderer.                                                                                                                     |
 | Compressed glTF asset authoring                 | Opportunity  | WebGPU + WebGL2 | `@luma.gl/gltf`                              | Add opt-in Draco, Meshopt, and Basis/KTX2 encoding only when real external encoder implementations are available.                                                                                                                                             |
 
-The ownership boundaries are intentional: `@loaders.gl/gltf` owns containers, asset decoding, accessor postprocessing, and GLB encoding; `@luma.gl/gltf` interprets the resulting assets, `@luma.gl/shadertools` owns shared shading, `@luma.gl/engine` owns generic animation, `@luma.gl/experimental` explores higher-level rendering, and `@luma.gl/scene` orchestrates retained scene objects. Reuse each capability at its existing layer rather than creating parallel implementations.
+The ownership boundaries are intentional: `@loaders.gl/gltf` owns containers, asset decoding, accessor postprocessing, and GLB encoding; `@luma.gl/gltf` interprets the resulting assets, `@luma.gl/shadertools` owns shared shading, `@luma.gl/engine` owns generic animation, `@luma.gl/experimental` explores higher-level rendering, and `@luma.gl/anari` orchestrates retained scene objects. Reuse each capability at its existing layer rather than creating parallel implementations.
 
 See the [glTF extension support matrix](https://luma.gl/next/docs/api-reference/gltf/gltf-extensions.md), [native glTF runtime behavior](https://luma.gl/next/docs/api-reference/gltf/gltf-native-extensions.md), [materials and texture slots](https://luma.gl/next/docs/api-reference/gltf/gltf-materials.md), and [source-faithful asset interchange](https://luma.gl/next/docs/api-reference/gltf/gltf-interchange.md), or explore [independently animated glTF crowds](https://luma.gl/next/docs/api-reference/gltf/gltf-animated-crowd.md).
 
@@ -155,38 +155,38 @@ See the [glTF extension support matrix](https://luma.gl/next/docs/api-reference/
 
 | Feature                               | Status       | Backend         | Package          | Details                                                                                            |
 | ------------------------------------- | ------------ | --------------- | ---------------- | -------------------------------------------------------------------------------------------------- |
-| ANARI-inspired retained objects       | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Manage retained cameras, geometry, materials, lights, surfaces, instances, and worlds.             |
-| Perspective and orthographic cameras  | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Configure supported camera models through the retained scene API.                                  |
-| Shared geometry instances             | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Reuse compatible surfaces, groups, and geometry across retained instances.                         |
-| Physically based scene materials      | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Describe supported matte and physically based material parameters.                                 |
-| Scene light types                     | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Configure supported ambient, directional, point, and spot lights.                                  |
-| Switchable scene renderers            | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Select supported forward or debug views; deferred and ray-tracing renderers require WebGPU.        |
-| Retained animation playback           | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Play supported transform, material, texture-coordinate, skeletal, and morph-target animations.     |
-| Editable JSON scenes                  | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Inspect and edit supported retained scene descriptions interactively.                              |
-| Experimental OpenUSD import           | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | The ANARI Playground imports supported ASCII USD and ASCII-root USDZ examples.                     |
-| Scene-level skeletal animation        | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Automatically evaluate imported skeletal clips and bind independent mesh-local joint palettes.     |
-| Retained morph-target animation       | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Update supported POSITION, NORMAL, and TANGENT morph targets through retained scene playback.      |
-| Camera-reprojected scene antialiasing | Experimental | WebGPU          | `@luma.gl/scene` | Stabilize compatible forward and deferred raster views with persistent camera-reprojected history. |
+| ANARI-inspired retained objects       | Experimental | WebGPU + WebGL2 | `@luma.gl/anari` | Manage retained cameras, geometry, materials, lights, surfaces, instances, and worlds.             |
+| Perspective and orthographic cameras  | Experimental | WebGPU + WebGL2 | `@luma.gl/anari` | Configure supported camera models through the retained scene API.                                  |
+| Shared geometry instances             | Experimental | WebGPU + WebGL2 | `@luma.gl/anari` | Reuse compatible surfaces, groups, and geometry across retained instances.                         |
+| Physically based scene materials      | Experimental | WebGPU + WebGL2 | `@luma.gl/anari` | Describe supported matte and physically based material parameters.                                 |
+| Scene light types                     | Experimental | WebGPU + WebGL2 | `@luma.gl/anari` | Configure supported ambient, directional, point, and spot lights.                                  |
+| Switchable scene renderers            | Experimental | WebGPU + WebGL2 | `@luma.gl/anari` | Select supported forward or debug views; deferred and ray-tracing renderers require WebGPU.        |
+| Retained animation playback           | Experimental | WebGPU + WebGL2 | `@luma.gl/anari` | Play supported transform, material, texture-coordinate, skeletal, and morph-target animations.     |
+| Editable JSON scenes                  | Experimental | WebGPU + WebGL2 | `@luma.gl/anari` | Inspect and edit supported retained scene descriptions interactively.                              |
+| Experimental OpenUSD import           | Experimental | WebGPU + WebGL2 | `@luma.gl/anari` | The ANARI Playground imports supported ASCII USD and ASCII-root USDZ examples.                     |
+| Scene-level skeletal animation        | Experimental | WebGPU + WebGL2 | `@luma.gl/anari` | Automatically evaluate imported skeletal clips and bind independent mesh-local joint palettes.     |
+| Retained morph-target animation       | Experimental | WebGPU + WebGL2 | `@luma.gl/anari` | Update supported POSITION, NORMAL, and TANGENT morph targets through retained scene playback.      |
+| Camera-reprojected scene antialiasing | Experimental | WebGPU          | `@luma.gl/anari` | Stabilize compatible forward and deferred raster views with persistent camera-reprojected history. |
 
-This is an ANARI-inspired proof of concept, not a claim of complete standards conformance. Explore the [ANARI Playground](https://luma.gl/next/examples/experimental/scene-playground), or read about [retained animation](https://luma.gl/next/docs/api-reference/scene/anari-animation.md) and [switchable scene renderers](https://luma.gl/next/docs/api-reference/scene/anari-rendering.md).
+This is an ANARI-inspired proof of concept, not a claim of complete standards conformance. Explore the [ANARI Playground](https://luma.gl/next/examples/anari/scenes), or read about [retained animation](https://luma.gl/next/docs/api-reference/scene/anari-animation.md) and [switchable scene renderers](https://luma.gl/next/docs/api-reference/scene/anari-rendering.md).
 
 ### GPU ray tracing and progressive rendering[​](#gpu-ray-tracing-and-progressive-rendering "Direct link to GPU ray tracing and progressive rendering")
 
 | Feature                             | Status       | Backend | Package                 | Details                                                                                                                                        |
 | ----------------------------------- | ------------ | ------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | WebGPU software ray tracing         | Experimental | WebGPU  | `@luma.gl/experimental` | Trace supported retained scene geometry through caller-owned GPU command graphs without hardware ray-tracing extensions.                       |
-| Retained ANARI ray tracing          | Experimental | WebGPU  | `@luma.gl/scene`        | Select the `raytrace` renderer for compatible retained cameras, analytic spheres, meshes, and direct lights.                                   |
+| Retained ANARI ray tracing          | Experimental | WebGPU  | `@luma.gl/anari`        | Select the `raytrace` renderer for compatible retained cameras, analytic spheres, meshes, and direct lights.                                   |
 | Morton-sorted scene acceleration    | Experimental | WebGPU  | `@luma.gl/experimental` | Build GPU Morton-sorted top-level acceleration structures (TLAS) with bounding-volume hierarchies (BVH) over compatible objects and instances. |
 | Transform-aware acceleration refits | Experimental | WebGPU  | `@luma.gl/experimental` | Reuse retained leaf permutations and refit compatible scene hierarchies when only instance transforms change.                                  |
 | Triangle-level mesh acceleration    | Experimental | WebGPU  | `@luma.gl/experimental` | Build and reuse GPU Morton-sorted bottom-level acceleration structures (BLAS) over supported mesh triangles.                                   |
 | Nearest-hit and shadow traversal    | Experimental | WebGPU  | `@luma.gl/experimental` | Traverse the scene hierarchy for primary intersections and bounded early-exit direct-light shadow rays.                                        |
-| Progressive ray accumulation        | Experimental | WebGPU  | `@luma.gl/scene`        | Accumulate compatible direct-light samples across unchanged frames; this does not imply multi-bounce transport.                                |
-| Adaptive ray-tracing resolution     | Experimental | WebGPU  | `@luma.gl/scene`        | Adjust internal resolution, sampled-pixel phases, and rotating shadow work toward an explicit frame budget.                                    |
-| Ray-traced temporal reprojection    | Experimental | WebGPU  | `@luma.gl/scene`        | Reuse compatible retained history and reject invalid camera, depth, normal, or scene changes.                                                  |
-| HDR ray-tracing presentation        | Experimental | WebGPU  | `@luma.gl/scene`        | Resolve and upsample supported floating-point ray-traced output to compatible presentation targets.                                            |
+| Progressive ray accumulation        | Experimental | WebGPU  | `@luma.gl/anari`        | Accumulate compatible direct-light samples across unchanged frames; this does not imply multi-bounce transport.                                |
+| Adaptive ray-tracing resolution     | Experimental | WebGPU  | `@luma.gl/anari`        | Adjust internal resolution, sampled-pixel phases, and rotating shadow work toward an explicit frame budget.                                    |
+| Ray-traced temporal reprojection    | Experimental | WebGPU  | `@luma.gl/anari`        | Reuse compatible retained history and reject invalid camera, depth, normal, or scene changes.                                                  |
+| HDR ray-tracing presentation        | Experimental | WebGPU  | `@luma.gl/anari`        | Resolve and upsample supported floating-point ray-traced output to compatible presentation targets.                                            |
 | Advanced acceleration topology      | Opportunity  | WebGPU  | `@luma.gl/experimental` | Extend existing Morton-sorted TLAS/BLAS hierarchies with SAH/Karras topology and richer traversal diagnostics.                                 |
 | Multi-bounce path tracing           | Opportunity  | WebGPU  | `@luma.gl/experimental` | Extend existing direct-light ray tracing with indirect transport, physically based bounces, and denoising.                                     |
-| Ray-traced animated materials       | Opportunity  | WebGPU  | `@luma.gl/scene`        | Extend supported ray tracing toward textured PBR, transmission, skeletal deformation, and animated morph targets.                              |
+| Ray-traced animated materials       | Opportunity  | WebGPU  | `@luma.gl/anari`        | Extend supported ray tracing toward textured PBR, transmission, skeletal deformation, and animated morph targets.                              |
 
 Read the [ANARI ray-tracing renderer](https://luma.gl/next/docs/api-reference/scene/anari-rendering.md) and the [retained rendering architecture](https://luma.gl/next/docs/api-guide/engine/anari-rendering.md).
 

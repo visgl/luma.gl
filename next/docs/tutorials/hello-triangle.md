@@ -24,7 +24,7 @@ This first model does not need a vertex buffer. Both shaders use the built-in ve
 2. The animation loop constructs the application with that device.
 3. `onRender` begins a render pass and clears its color attachment.
 4. `model.draw(renderPass)` records the draw.
-5. Ending the pass allows the device to submit and present the frame.
+5. Ending the pass finishes encoding; the animation loop then submits the frame.
 
 **Runnable source**[View on GitHub](https://github.com/visgl/luma.gl/tree/master/examples/tutorials/hello-triangle)
 
@@ -42,4 +42,6 @@ This first model does not need a vertex buffer. Both shaders use the built-in ve
 
 You created a model, provided backend-appropriate shaders, and drew it through the same render-pass API. Next, [Hello Cube](https://luma.gl/next/docs/tutorials/hello-cube.md) adds geometry, textures, depth testing, and uniforms.
 
-Want to run the example yourself? The [Installing guide](https://luma.gl/next/docs/developer-guide/installing.md) sets up a local project. For a glimpse of where these building blocks can lead, explore the complete scenes and simulations in [Getting Started](https://luma.gl/next/docs/getting-started.md).
+Want to run the example yourself? The [Installing guide](https://luma.gl/next/docs/developer-guide/installing.md) sets up a local project. For a glimpse of where these building blocks can lead, explore the [live examples](https://luma.gl/next/examples).
+
+For a complete local triangle program, see [Getting started](https://luma.gl/next/docs/getting-started.md).

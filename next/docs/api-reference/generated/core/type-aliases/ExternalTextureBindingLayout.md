@@ -2,7 +2,7 @@
 
 > **ExternalTextureBindingLayout** = `object`
 
-Defined in: [modules/core/src/adapter/types/shader-layout.ts:143](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L143)
+Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:143](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L143)
 
 Shader binding declaration for a WebGPU `texture_external` slot.
 
@@ -12,7 +12,7 @@ Shader binding declaration for a WebGPU `texture_external` slot.
 
 > **group**: `number`
 
-Defined in: [modules/core/src/adapter/types/shader-layout.ts:148](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L148)
+Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:148](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L148)
 
 Bind group index. Always 0 in WebGL
 
@@ -22,7 +22,7 @@ Bind group index. Always 0 in WebGL
 
 > **location**: `number`
 
-Defined in: [modules/core/src/adapter/types/shader-layout.ts:150](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L150)
+Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:150](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L150)
 
 Binding index within the bind group
 
@@ -32,7 +32,7 @@ Binding index within the bind group
 
 > **name**: `string`
 
-Defined in: [modules/core/src/adapter/types/shader-layout.ts:146](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L146)
+Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:146](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L146)
 
 Name of the binding. Used by luma to map bindings by name
 
@@ -42,7 +42,7 @@ Name of the binding. Used by luma to map bindings by name
 
 > **type**: `"external-texture"`
 
-Defined in: [modules/core/src/adapter/types/shader-layout.ts:144](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L144)
+Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:144](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L144)
 
 ***
 
@@ -50,6 +50,6 @@ Defined in: [modules/core/src/adapter/types/shader-layout.ts:144](https://github
 
 > `optional` **visibility?**: `number`
 
-Defined in: [modules/core/src/adapter/types/shader-layout.ts:152](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L152)
+Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:152](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L152)
 
 Which shader stages can access this binding

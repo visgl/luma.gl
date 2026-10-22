@@ -2,17 +2,17 @@
 
 ExperimentalPrivate workspaceFrom v10
 
-This page maps the official [ANARI 1.1 specification](https://registry.khronos.org/ANARI/specs/1.1/ANARI-1.1.html) to the experimental, private `@luma.gl/scene` implementation and, where helpful, to comparable THREE.js concepts.
+This page maps the official [ANARI 1.1 specification](https://registry.khronos.org/ANARI/specs/1.1/ANARI-1.1.html) to the experimental, private `@luma.gl/anari` implementation and, where helpful, to comparable THREE.js concepts.
 
 The first column is the authoritative ANARI C vocabulary. The JavaScript column describes what this package **actually implements**, not what a fully conformant ANARI binding would need to implement. The THREE.js column is a conceptual migration aid, not an adapter or dependency.
 
 caution
 
-`@luma.gl/scene` is not a binding to the ANARI C API, is not ABI-compatible with ANARI, and does not claim ANARI conformance. Some mappings are approximate, some are convenience extensions, and many official functions are not implemented.
+`@luma.gl/anari` is not a binding to the ANARI C API, is not ABI-compatible with ANARI, and does not claim ANARI conformance. Some mappings are approximate, some are convenience extensions, and many official functions are not implemented.
 
 ## High-level mental model[​](#high-level-mental-model "Direct link to High-level mental model")
 
-| Rendering concept        | Official ANARI C                    | `@luma.gl/scene`                                   | Comparable THREE.js concept                                                |
+| Rendering concept        | Official ANARI C                    | `@luma.gl/anari`                                   | Comparable THREE.js concept                                                |
 | ------------------------ | ----------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------- |
 | Rendering implementation | `ANARILibrary` + `ANARIDevice`      | Existing luma.gl `Device` wrapped by `ANARIDevice` | `WebGPURenderer` or `WebGLRenderer`                                        |
 | Scene root               | `ANARIWorld`                        | `ANARIWorld`                                       | `Scene`                                                                    |
@@ -30,7 +30,7 @@ THREE.js generally exposes a mutable, renderer-owned object graph. ANARI explici
 
 ## Library and device functions[​](#library-and-device-functions "Direct link to Library and device functions")
 
-| ANARI 1.1 C API               | `@luma.gl/scene`                                                           | THREE.js comparison                            | Status and differences                                                                                   |
+| ANARI 1.1 C API               | `@luma.gl/anari`                                                           | THREE.js comparison                            | Status and differences                                                                                   |
 | ----------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `anariLoadLibrary()`          | No equivalent                                                              | Import `three/webgpu` or `three`               | JavaScript modules are imported normally; no ANARI implementation library is dynamically loaded.         |
 | `anariUnloadLibrary()`        | No equivalent                                                              | No direct equivalent                           | Module loading and process lifetime are managed by the JavaScript runtime.                               |
@@ -58,7 +58,7 @@ The native concept “select an ANARI device implementation” therefore maps to
 
 ## Object creation functions[​](#object-creation-functions "Direct link to Object creation functions")
 
-| ANARI 1.1 C API                                                          | `@luma.gl/scene`                                                     | Comparable THREE.js concept                                  | Support                                                                                                                                 |
+| ANARI 1.1 C API                                                          | `@luma.gl/anari`                                                     | Comparable THREE.js concept                                  | Support                                                                                                                                 |
 | ------------------------------------------------------------------------ | -------------------------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
 | `anariNewArray1D(device, memory, deleter, userData, elementType, count)` | `anariDevice.newArray({data, elementType, dimensions})`              | Typed array + `BufferAttribute`                              | Partial: one-dimensional typed arrays and object-reference arrays; no deleter callback or ownership transfer.                           |
 | `anariNewArray2D()`                                                      | No equivalent                                                        | `DataTexture`, texture image data                            | Not implemented.                                                                                                                        |
@@ -94,7 +94,7 @@ Official ANARI light subtypes include directional, point, spot, HDRI, quad, and 
 
 ## Parameter and commit functions[​](#parameter-and-commit-functions "Direct link to Parameter and commit functions")
 
-| ANARI 1.1 C API                                            | `@luma.gl/scene`                                       | THREE.js comparison                                                                    | Support and differences                                                                                       |
+| ANARI 1.1 C API                                            | `@luma.gl/anari`                                       | THREE.js comparison                                                                    | Support and differences                                                                                       |
 | ---------------------------------------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | `anariSetParameter(device, object, name, dataType, value)` | `object.setParameter(name, value)`                     | Assign `mesh.material.roughness = value`                                               | Supported conceptually. TypeScript and JavaScript values replace explicit `ANARIDataType` and C pointers.     |
 | Repeated `anariSetParameter(...)` calls                    | `object.setParameters({...})`                          | Assign several object/material properties                                              | JavaScript convenience for staging multiple parameters.                                                       |
@@ -122,7 +122,7 @@ The commit boundary is intentionally similar. The parameter typing and ownership
 ### Commit versus THREE.js updates[​](#commit-versus-threejs-updates "Direct link to Commit versus THREE.js updates")
 
 ```
-// @luma.gl/scene
+// @luma.gl/anari
 
 material.setParameter('roughness', 0.15).commitParameters();
 
@@ -137,7 +137,7 @@ THREE.js materials are generally mutated directly. Some operations additionally 
 
 ## Arrays and mapped memory[​](#arrays-and-mapped-memory "Direct link to Arrays and mapped memory")
 
-| ANARI 1.1 C API              | `@luma.gl/scene`             | THREE.js comparison                                      | Support                                                                                               |
+| ANARI 1.1 C API              | `@luma.gl/anari`             | THREE.js comparison                                      | Support                                                                                               |
 | ---------------------------- | ---------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | `anariNewArray1D()`          | `newArray({data})`           | `new BufferAttribute(typedArray, itemSize)`              | Zero-copy JavaScript typed-array storage; no C deleter or reference-count contract.                   |
 | `anariMapArray()`            | Access `array.data` directly | Access `attribute.array`                                 | No explicit map call; retained typed-array data remains directly accessible.                          |
@@ -164,7 +164,7 @@ The array retains the original JavaScript object. `array.length` counts scalar J
 
 ## Discovery, properties, and extensions[​](#discovery-properties-and-extensions "Direct link to Discovery, properties, and extensions")
 
-| ANARI 1.1 C API                                                       | `@luma.gl/scene`                              | THREE.js comparison                                       | Support                                                                                                       |
+| ANARI 1.1 C API                                                       | `@luma.gl/anari`                              | THREE.js comparison                                       | Support                                                                                                       |
 | --------------------------------------------------------------------- | --------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | `anariGetObjectSubtypes(device, objectType)`                          | `anariDevice.getObjectSubtypes(type)`         | Select known constructors / inspect renderer capabilities | Supported with JavaScript string object types.                                                                |
 | `anariGetObjectInfo(device, objectType, subtype, infoName, infoType)` | `anariDevice.getObjectInfo(type)`             | Class/capability inspection                               | Partial: returns `{type, subtypes, extensions}` only, not arbitrary named metadata.                           |
@@ -175,7 +175,7 @@ The array retains the original JavaScript object. `array.length` counts scalar J
 ```
 anariDevice.getObjectSubtypes('geometry');
 
-// ['triangle', 'sphere', 'cylinder', 'cone', 'quad']
+// ['triangle', 'sphere', 'cylinder', 'cone', 'quad', 'hexPrism', 'torus', 'ring']
 
 
 
@@ -188,7 +188,7 @@ The current extension names describe concepts the proof of concept supports; the
 
 ## Frame rendering and presentation[​](#frame-rendering-and-presentation "Direct link to Frame rendering and presentation")
 
-| ANARI 1.1 C API                                                              | `@luma.gl/scene`                                     | THREE.js comparison                       | Support and differences                                                                                                                        |
+| ANARI 1.1 C API                                                              | `@luma.gl/anari`                                     | THREE.js comparison                       | Support and differences                                                                                                                        |
 | ---------------------------------------------------------------------------- | ---------------------------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | `anariRenderFrame(device, frame)`                                            | `frame.render()` or `anariDevice.renderFrame(frame)` | `renderer.render(scene, camera)`          | Supported conceptually, but the JavaScript call immediately encodes/draws instead of exposing official asynchronous frame-operation semantics. |
 | `anariFrameReady(device, frame, waitMask)`                                   | No equivalent                                        | No exact equivalent                       | Not implemented; there is no polling/wait-mask frame API.                                                                                      |
@@ -208,7 +208,7 @@ Official ANARI rendering is specified as asynchronous and may support readiness 
 
 ## Retention and destruction[​](#retention-and-destruction "Direct link to Retention and destruction")
 
-| ANARI 1.1 C API                    | `@luma.gl/scene`        | THREE.js comparison                               | Support                                                                                   |
+| ANARI 1.1 C API                    | `@luma.gl/anari`        | THREE.js comparison                               | Support                                                                                   |
 | ---------------------------------- | ----------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | `anariRetain()`                    | No equivalent           | Keep a JavaScript object reference                | JavaScript object references replace explicit native handle retention.                    |
 | `anariRelease()` on a scene object | No equivalent           | `geometry.dispose()` / `material.dispose()`       | No general per-object reference-count or release method.                                  |
@@ -227,7 +227,7 @@ Only destroy the graphics device when the application no longer shares it with o
 
 ## Geometry subtype comparison[​](#geometry-subtype-comparison "Direct link to Geometry subtype comparison")
 
-| Official ANARI subtype | `@luma.gl/scene`                                      | Comparable THREE.js class                                                 | Important difference                                                                                                                                                                                       |
+| Official ANARI subtype | `@luma.gl/anari`                                      | Comparable THREE.js class                                                 | Important difference                                                                                                                                                                                       |
 | ---------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `triangle`             | `newGeometry('triangle', {...})`                      | `BufferGeometry` + position/normal/tangent/UV/color/skin/index attributes | Supports positions, normals, XYZW tangents, RGB/RGBA colors, two UV sets, joint indices/weights, position/normal/tangent morph targets, and 16/32-bit indices; not the complete official attribute system. |
 | `sphere`               | `newGeometry('sphere', {radius, segments})`           | `SphereGeometry`                                                          | One procedural sphere; official ANARI supports arrays of sphere primitives.                                                                                                                                |
@@ -239,7 +239,7 @@ Only destroy the graphics device when the application no longer shares it with o
 
 ## Material parameter comparison[​](#material-parameter-comparison "Direct link to Material parameter comparison")
 
-| Official ANARI concept                                    | `@luma.gl/scene`                                                                                                                              | Comparable THREE.js property                                    | Notes                                                                                                   |
+| Official ANARI concept                                    | `@luma.gl/anari`                                                                                                                              | Comparable THREE.js property                                    | Notes                                                                                                   |
 | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `matte.color`                                             | `material.color` / `baseColor` / `baseColorTexture`                                                                                           | `material.color` / `map`                                        | Constant RGB/RGBA values optionally multiplied by a retained image map.                                 |
 | `physicallyBased.baseColor`                               | `baseColor` / `baseColorTexture`                                                                                                              | `MeshStandardMaterial.color` / `map`                            | Constant color multiplied by an optional image sampler.                                                 |
@@ -257,7 +257,7 @@ Only destroy the graphics device when the application no longer shares it with o
 
 ## Light and camera comparison[​](#light-and-camera-comparison "Direct link to Light and camera comparison")
 
-| Official ANARI concept                                            | `@luma.gl/scene`                                                      | Comparable THREE.js class/property           | Notes                                                                                |
+| Official ANARI concept                                            | `@luma.gl/anari`                                                      | Comparable THREE.js class/property           | Notes                                                                                |
 | ----------------------------------------------------------------- | --------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------ |
 | Directional light                                                 | `newLight('directional', {direction, irradiance})`                    | `DirectionalLight`                           | Direction and intensity map conceptually; shadow behavior is absent.                 |
 | Point light                                                       | `newLight('point', {position, intensity})`                            | `PointLight`                                 | Fixed attenuation; no official radius/power behavior.                                |
@@ -325,7 +325,7 @@ camera.lookAt(0, 1, 0);
 renderer.render(scene, camera);
 ```
 
-### `@luma.gl/scene`[​](#lumaglscene "Direct link to lumaglscene")
+### `@luma.gl/anari`[​](#lumaglanari "Direct link to lumaglanari")
 
 ```
 const geometry = anariDevice.newGeometry('sphere', {radius: 1, segments: 24});

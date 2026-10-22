@@ -10,6 +10,44 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ## Upgrading to v10.0[​](#upgrading-to-v100 "Direct link to Upgrading to v10.0")
 
+### Scene controllers move to engine[​](#scene-controllers-move-to-engine "Direct link to Scene controllers move to engine")
+
+The glTF-prefixed skin, material-variant, billboard, area-light, audio, and interactivity runtime APIs have been removed from `@luma.gl/gltf`. Import `SkinController`, `MaterialVariants`, `BillboardController`, `AreaLightController`, `AudioController`, and `Interactivity` from `@luma.gl/engine` instead. Audio graph and environment helpers also belong to engine.
+
+Use `parseGLTFSkins()`, `parseGLTFMaterialVariants()`, `parseGLTFBillboards()`, `parseGLTFAreaLights()`, or `parseGLTFAudio()` to map imported data into engine construction props. `createScenegraphsFromGLTF()` already returns engine skin and variant controllers.
+
+`SkinController.getBinding()` now accepts an engine node, not a glTF node index. Resolve an imported index with `scenegraphs.gltfNodeIndexToNodeMap.get(index)` first. Bindings no longer carry glTF node or skin indices. See [scene controllers](https://luma.gl/next/docs/api-guide/engine/scene-controllers.md).
+
+### glTF physics collider provenance[​](#gltf-physics-collider-provenance "Direct link to glTF physics collider provenance")
+
+`GLTFPhysicsCollider.shapeIndex` is now optional. Check it before indexing the implicit-shape array; colliders imported through an explicit legacy mesh resolver instead identify their source with `meshIndex`.
+
+### Device backend package consolidation[​](#device-backend-package-consolidation "Direct link to Device backend package consolidation")
+
+`@luma.gl/webgl`, `@luma.gl/webgpu`, and `@luma.gl/constants` have been removed. Remove them from application dependencies and import their APIs from `@luma.gl/core`. Backend entry points are available at `@luma.gl/core/webgl` and `@luma.gl/core/webgpu`. Import WebGL constants and types from `@luma.gl/core/webgl-constants`, and optional debugging helpers from `@luma.gl/core/webgl-debug`. Replace the former `@luma.gl/core/webgl/debug` import with this dedicated entry point.
+
+```
+import {luma} from '@luma.gl/core';
+
+import {webgl2Adapter} from '@luma.gl/core/webgl';
+
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
+
+import {GL} from '@luma.gl/core/webgl-constants';
+```
+
+### Render pass draw offsets and counts[​](#render-pass-draw-offsets-and-counts "Direct link to Render pass draw offsets and counts")
+
+Indexed WebGL draws now use `firstIndex` in index elements. Replace uses of `firstVertex` as an indexed byte offset with `firstIndex: byteOffset / indexByteSize`. `firstVertex` only applies to non-indexed draws. WebGL now rejects `indexCount` unless the selected vertex array has an index buffer; attribute-less non-indexed draws should use `vertexCount`. WebGPU render passes and render bundles now honor explicit zero draw and instance counts instead of drawing an implicit instance.
+
+### Model parameters on WebGL[​](#model-parameters-on-webgl "Direct link to Model parameters on WebGL")
+
+On WebGL, `Model.setParameters()` no longer replaces `model.pipeline`. `Model.draw()` passes the model's current parameters to every draw call, as before. Code that draws `model.pipeline` directly without passing `parameters` gets the parameters the retained pipeline was created with; pass `model.parameters` to the draw call instead.
+
+### CPU geometry validation[​](#cpu-geometry-validation "Direct link to CPU geometry validation")
+
+Engine geometry now delegates CPU storage and tessellation to `@math.gl/geometry`. Indices must reference valid vertices across the entire supplied index array, including entries after an explicit draw count. Remove invalid unused indices before constructing a geometry. Uint8 indices supplied to the engine compatibility adapter are widened to Uint16. `TruncatedConeGeometry` defaults to a bottom radius of 1; provide explicit nonzero radii for frusta. Primitive tessellation order can change, so derive face metadata from normals rather than relying on vertex or index ordering.
+
 **@luma.gl/gpgpu**
 
 ### GPUFFT2D graph lifecycle[​](#gpufft2d-graph-lifecycle "Direct link to GPUFFT2D graph lifecycle")
@@ -22,7 +60,7 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 * `ShaderPassPipeline`, `ShaderPassPipelineStep`, and `ShaderPassComputeOptimization` have been renamed to `CompositeShaderPass`, `CompositeShaderPassStep`, and `CompositeShaderPassComputeOptimization`. Effect factories and values likewise replace their `ShaderPassPipeline` suffix with `CompositeShaderPass`.
 
-**@luma.gl/webgpu**
+**@luma.gl/core/webgpu**
 
 * `WebGPUDevice.adapter` is now typed `GPUAdapter | null`. It is `null` for devices wrapped with `webgpuAdapter.attach()` / `luma.attachDevice()`, because a `GPUDevice` does not reference its `GPUAdapter`. Devices from `luma.createDevice()` still have an adapter; TypeScript code that reads `device.adapter` needs a null check or non-null assertion. Use `device.adapterInfo` for adapter metadata.
 
@@ -44,11 +82,11 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 * `Model.predraw(commandEncoder)` now requires an explicit command encoder. Call it with the encoder that will be submitted when ordered pre-draw uploads must be shared across multiple draws or viewports. Normal `Model.draw(renderPass)` calls continue to perform their own pre-draw work.
 * `makeGPUGeometry()` now interleaves CPU geometry attributes into a single vertex buffer by default. Callers that require separate attribute buffers should create those buffers and construct `GPUGeometry` explicitly with the corresponding `bufferLayout`.
 
-**@luma.gl/webgl**
+**@luma.gl/core/webgl**
 
-* WebGLDeveloperTools and Spector integration now require `import '@luma.gl/webgl/debug'` before enabling `debugWebGL` or `debugSpectorJS`. This keeps debug-only code and the full GL enum out of normal adapter application bundles.
+* WebGLDeveloperTools and Spector integration now require `import '@luma.gl/core/webgl-debug'` before enabling `debugWebGL` or `debugSpectorJS`. This keeps debug-only code and the full GL enum out of normal adapter application bundles.
 
-**@luma.gl/webgpu**
+**@luma.gl/core/webgpu**
 
 * `getShaderLayoutFromWGSL()` now uses lightweight interface scanning and returns `null` when WGSL is ambiguous or outside the supported subset. Raw render and compute pipelines must provide an explicit `shaderLayout` in that case. Uniform-buffer member reflection is no longer included in the returned layout.
 
@@ -90,7 +128,7 @@ v9.2 brings full WebGPU support. Some additional deprecations and breaking chang
 **Removal of WebGL uniform support**
 
 * The transition from uniforms to uniform buffers is complete, and remaining support for non-buffer uniforms has been removed.
-* `core`: `Renderpipeline.setUniformsWebGL()` dropped, use uniform buffer bindings
+* `core`: `RenderPipeline.setUniformsWebGL()` dropped, use uniform buffer bindings
 * `engine`: `Model.setUniformsWebGL()` deprecated, use uniform buffer bindings
 * `shadertools`: WebGL1 shader modules have been removed, use the new modules uniform buffer-based counterparts.
 
@@ -136,7 +174,7 @@ v9.1 continues to build out WebGPU support. Some additional deprecations and bre
 | `glsl` shader template string | Removed    | `/* glsl */` comment                                                                                                              | Enable syntax highlighting in vscode using before shader string                            |
 | `depth24unorm-stencil8`       | Removed    | `depth24plus-stencil8`                                                                                                            | The `TextureFormat` was dropped from the WebGPU spec                                       |
 | `rgb8unorm-unsized`           | Removed    | `rgb8unorm`                                                                                                                       | Drop support for unsized WebGL1 `TextureFormat`                                            |
-| `rgba8unorm-unsized`          | Removed    | `rgb8aunorm`                                                                                                                      | Drop support for unsized WebGL1 `TextureFormat`                                            |
+| `rgba8unorm-unsized`          | Removed    | `rgba8unorm`                                                                                                                      | Drop support for unsized WebGL1 `TextureFormat`                                            |
 
 **@luma.gl/shadertools**
 
@@ -152,7 +190,7 @@ v9.1 continues to build out WebGPU support. Some additional deprecations and bre
 
 New module. All postprocessing effects that were previously in `@luma.gl/shadertools` are now exported from `@luma.gl/effects`.
 
-**@luma.gl/webgl**
+**@luma.gl/core/webgl**
 
 * `WebGLDeviceContext` - Note that luma.gl v9.1 and onwards set `DeviceProps.webgl.preserveDrawingBuffers` to `true` by default. This can be disabled for some (potential) memory savings and a (potential) minor performance boost on resource limited devices, such as mobile phones, at the cost of not being able to take screenshots or rendering to the screen without clearing it.
 

@@ -3,7 +3,7 @@
 `StructuredVolumeRenderer` renders regularly sampled scalar and vector volumes. Import it from the focused scene renderer entry point:
 
 ```
-import {StructuredVolumeRenderer} from '@luma.gl/scene/raymarch';
+import {StructuredVolumeRenderer} from '@luma.gl/anari/raymarch';
 ```
 
 The API is experimental and currently requires WebGPU. The scene entry point is a stable facade; the implementation remains in `@luma.gl/experimental` while the scene renderer taxonomy evolves.

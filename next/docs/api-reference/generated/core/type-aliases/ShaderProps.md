@@ -2,7 +2,7 @@
 
 > **ShaderProps** = [`ResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ResourceProps.md) & `object`
 
-Defined in: [modules/core/src/adapter/resources/shader.ts:15](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/shader.ts#L15)
+Defined in: [modules/core/src/api/adapter/resources/shader.ts:15](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/shader.ts#L15)
 
 Properties for a Shader
 

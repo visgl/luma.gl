@@ -2,7 +2,7 @@
 
 > **QuerySetProps** = [`ResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ResourceProps.md) & `object`
 
-Defined in: [modules/core/src/adapter/resources/query-set.ts:15](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/query-set.ts#L15)
+Defined in: [modules/core/src/api/adapter/resources/query-set.ts:15](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/query-set.ts#L15)
 
 Properties for creating a QuerySet
 

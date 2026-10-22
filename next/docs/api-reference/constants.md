@@ -1,6 +1,6 @@
-# @luma.gl/constants
+# @luma.gl/core/webgl-constants
 
-`@luma.gl/constants` publishes the typed `GL` constant table and WebGL parameter types used by luma.gl's WebGL adapter and low-level integrations.
+`@luma.gl/core/webgl-constants` publishes the typed `GL` constant table and WebGL parameter types used by luma.gl's WebGL adapter and low-level integrations.
 
 ## When to use it[​](#when-to-use-it "Direct link to When to use it")
 
@@ -9,7 +9,7 @@ Most applications should prefer portable luma.gl string descriptors such as text
 ## Quick start[​](#quick-start "Direct link to Quick start")
 
 ```
-import {GL, type GLBlendFunction} from '@luma.gl/constants';
+import {GL, type GLBlendFunction} from '@luma.gl/core/webgl-constants';
 
 
 
@@ -31,6 +31,6 @@ These constants describe WebGL integration. They do not imply that a portable Co
 
 ## Related modules[​](#related-modules "Direct link to Related modules")
 
-* [`@luma.gl/webgl`](https://luma.gl/next/docs/api-reference/webgl.md)
+* [`@luma.gl/core/webgl`](https://luma.gl/next/docs/api-reference/webgl.md)
 * [`@luma.gl/core`](https://luma.gl/next/docs/api-reference/core.md)
 * [WebGPU versus WebGL](https://luma.gl/next/docs/api-guide/background/webgpu-vs-webgl.md)

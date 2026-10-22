@@ -25,7 +25,7 @@ npm create vite@latest luma-demo -- --template vanilla-ts
 
 cd luma-demo
 
-npm install @luma.gl/engine @luma.gl/webgpu @luma.gl/webgl
+npm install @luma.gl/engine @luma.gl/core
 ```
 
 **yarn**
@@ -35,7 +35,7 @@ yarn create vite luma-demo --template vanilla-ts
 
 cd luma-demo
 
-yarn add @luma.gl/engine @luma.gl/webgpu @luma.gl/webgl
+yarn add @luma.gl/engine @luma.gl/core
 ```
 
 **pnpm**
@@ -45,7 +45,7 @@ pnpm create vite luma-demo --template vanilla-ts
 
 cd luma-demo
 
-pnpm add @luma.gl/engine @luma.gl/webgpu @luma.gl/webgl
+pnpm add @luma.gl/engine @luma.gl/core
 ```
 
 ### Render a Frame[​](#render-a-frame "Direct link to Render a Frame")
@@ -55,9 +55,9 @@ Replace `src/main.ts` with:
 ```
 import {AnimationLoopTemplate, type AnimationProps, makeAnimationLoop} from '@luma.gl/engine';
 
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
 
 
@@ -74,6 +74,10 @@ class App extends AnimationLoopTemplate {
     renderPass.end();
 
   }
+
+
+
+  override onFinalize(): void {}
 
 }
 
@@ -110,7 +114,7 @@ You should see a dark canvas. luma.gl creates the best available device, begins 
 
 ## How Backend Selection Works[​](#how-backend-selection-works "Direct link to How Backend Selection Works")
 
-The application supplies both adapters in preference order. A WebGPU-capable browser uses `webgpuAdapter`; other supported browsers fall back to `webgl2Adapter`. Application code continues to use the same luma.gl `Device`, resource, and render-pass APIs.
+`type: 'best-available'` selects a supported WebGPU adapter before WebGL 2, regardless of adapter array order. It does not retry WebGL after a selected WebGPU adapter fails to create a device; handle that rejection in application code. Portable application code uses the same `Device`, resource, and render-pass APIs with backend-appropriate shaders.
 
 Use only `webgpuAdapter` when your application depends on compute shaders, storage textures, or another WebGPU-only feature. The documentation marks backend-specific features explicitly.
 
@@ -126,7 +130,7 @@ The example should fall back to WebGL2. To debug WebGPU specifically, consult th
 
 ### TypeScript Cannot Resolve a Package[​](#typescript-cannot-resolve-a-package "Direct link to TypeScript Cannot Resolve a Package")
 
-Install all three packages shown above. `@luma.gl/engine` provides `AnimationLoop` and `Model`; `@luma.gl/webgpu` and `@luma.gl/webgl` provide the concrete device adapters.
+Install both packages shown above. `@luma.gl/engine` provides `AnimationLoop` and `Model`; core includes the device adapters at `@luma.gl/core/webgpu` and `@luma.gl/core/webgl`.
 
 ## Next Step[​](#next-step "Direct link to Next Step")
 
@@ -136,16 +140,16 @@ If your goal is a geospatial visualization rather than a GPU framework or custom
 
 ## A Minimal Install[​](#a-minimal-install "Direct link to A Minimal Install")
 
-For lower-level applications, `@luma.gl/core` provides portable GPU devices, buffers, textures, and rendering resources. Pair it with at least one backend adapter: `@luma.gl/webgpu` for WebGPU or `@luma.gl/webgl` for WebGL2.
+For lower-level applications, `@luma.gl/core` provides portable GPU devices, buffers, textures, and rendering resources. Pair it with at least one backend adapter: `@luma.gl/core/webgpu` for WebGPU or `@luma.gl/core/webgl` for WebGL2.
 
 ```
-yarn add @luma.gl/core @luma.gl/webgpu
+yarn add @luma.gl/core
 ```
 
 ```
 import {luma} from '@luma.gl/core';
 
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
 
 
@@ -160,14 +164,14 @@ const device = await luma.createDevice({
 });
 ```
 
-To support both backends, install `@luma.gl/webgl` as well and supply the adapters in preference order:
+To support both backends, import both adapters from core and supply them in the adapter list:
 
 ```
 import {luma} from '@luma.gl/core';
 
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
 
 
@@ -186,11 +190,11 @@ const device = await luma.createDevice({
 
 * `@luma.gl/core` provides portable devices, GPU resources, and rendering primitives.
 * `@luma.gl/engine` adds models, animation loops, geometry, and higher-level rendering tools.
-* `@luma.gl/webgpu` and `@luma.gl/webgl` provide the WebGPU and WebGL2 backends.
+* `@luma.gl/core/webgpu` and `@luma.gl/core/webgl` provide the WebGPU and WebGL2 backends.
 * `@luma.gl/shadertools` assembles reusable shader modules, hooks, and effects.
 
 ```
-yarn add @luma.gl/core @luma.gl/engine @luma.gl/webgpu @luma.gl/webgl @luma.gl/shadertools
+yarn add @luma.gl/core @luma.gl/engine @luma.gl/shadertools
 ```
 
 Explore the [module catalog](https://luma.gl/next/docs/api-reference.md) to choose the packages that match your application.

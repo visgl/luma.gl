@@ -1,53 +1,25 @@
 # FAQ
 
-## How do I draw to the screen in luma.gl?[​](#how-do-i-draw-to-the-screen-in-lumagl "Direct link to How do I draw to the screen in luma.gl?")
+## How do I draw to the screen?[​](#how-do-i-draw-to-the-screen "Direct link to How do I draw to the screen?")
 
-Simply create a `RenderPass` and start rendering.
-
-```
-  // A renderpass without parameters uses the default framebuffer of the device's default CanvasContext 
-
-  const renderPass = device.beginRenderPass();
-
-  model.draw(renderPass);
-
-  renderPass.end();
-```
-
-`device.getDefaultCanvasContext().getDefaultFramebuffer()` returns a special framebuffer that lets you render to screen (into the swap chain). This framebuffer is used by default when a `device.beginRenderPass()` is called without providing a `framebuffer`, equivalent to:
+Create a device with a default canvas context, then draw a model into a render pass:
 
 ```
-  const renderPass = device.beginRenderPass({framebuffer: device.getDefaultCanvasContext().getDefaultFramebuffer()});
+const renderPass = device.beginRenderPass();
 
-  ...
+model.draw(renderPass);
+
+renderPass.end();
+
+device.submit();
 ```
 
-## How do I clear the screen in luma.gl?[​](#how-do-i-clear-the-screen-in-lumagl "Direct link to How do I clear the screen in luma.gl?")
+An `AnimationLoop` submits the device's default encoder after `onRender` returns, so omit the explicit submission inside that callback. See the [rendering workflow](https://luma.gl/next/docs/api-guide/gpu/gpu-rendering.md).
 
-`Framebuffer` attachments are cleared by default when a RenderPass starts. More control is provided via the `clearColor` parameter, setting this will clear the attachments to the corresponding color. The default clear color is fully transparent `[0, 0, 0, 0]`. Clearing can also be disabled by setting `loadOp='load'`.
+## How do I clear or preserve the previous frame?[​](#how-do-i-clear-or-preserve-the-previous-frame "Direct link to How do I clear or preserve the previous frame?")
 
-```
-  const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
+Pass `clearColor`, `clearDepth`, and `clearStencil` to `beginRenderPass()`. Set a clear property to boolean `false` to preserve that attachment. The defaults are opaque black, depth `1`, and stencil `0`. See [RenderPass options](https://luma.gl/next/docs/api-reference/core/resources/render-pass.md#renderpassprops).
 
-  model.draw(renderPass);
+## Which packages and backend should I use?[​](#which-packages-and-backend-should-i-use "Direct link to Which packages and backend should I use?")
 
-  renderPass.end();
-```
-
-Depth and stencil buffers are also cleared to default values:
-
-```
-  const renderPass = device.beginRenderPass({
-
-    clearColor: [0, 0, 0, 1],
-
-    depthClearValue: 1,
-
-    stencilClearValue: 0
-
-  });
-
-  renderPass.end();
-
-  device.submit();
-```
+Start with [Getting started](https://luma.gl/next/docs/getting-started.md) for a portable triangle. Use [Choosing an API layer](https://luma.gl/next/docs/api-guide.md) to decide between Engine, Core, Shadertools, and experimental GPU Core. Check [WebGPU versus WebGL 2](https://luma.gl/next/docs/api-guide/background/webgpu-vs-webgl.md) before depending on compute or other backend-specific features.

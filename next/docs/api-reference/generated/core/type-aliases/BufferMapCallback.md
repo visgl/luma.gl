@@ -2,7 +2,7 @@
 
 > **BufferMapCallback**<`T`> = (`arrayBuffer`, `lifetime`) => `T`
 
-Defined in: [modules/core/src/adapter/resources/buffer.ts:9](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L9)
+Defined in: [modules/core/src/api/adapter/resources/buffer.ts:9](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/buffer.ts#L9)
 
 Callback for Buffer.mapAndReadAsync
 

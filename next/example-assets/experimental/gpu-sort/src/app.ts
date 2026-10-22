@@ -13,7 +13,7 @@ import {
   type GPUSortDirection
 } from '@luma.gl/gpgpu/gpu-core';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import * as arrow from 'apache-arrow';
 import {mountGPUSortExampleUI, type GPUSortExampleElements} from './app-ui';
 

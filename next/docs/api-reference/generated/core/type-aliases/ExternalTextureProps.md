@@ -2,7 +2,7 @@
 
 > **ExternalTextureProps** = [`ResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ResourceProps.md) & `object`
 
-Defined in: [modules/core/src/adapter/resources/external-texture.ts:10](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/external-texture.ts#L10)
+Defined in: [modules/core/src/api/adapter/resources/external-texture.ts:10](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/external-texture.ts#L10)
 
 Properties for one concrete backend external texture binding snapshot.
 

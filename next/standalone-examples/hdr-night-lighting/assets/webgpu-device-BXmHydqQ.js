@@ -1,0 +1,1 @@
+import"./shader-type-decoder-DAw-4A6z.js";import{t as e}from"./webgpu-device-BB6f5m1e.js";export{e as WebGPUDevice};

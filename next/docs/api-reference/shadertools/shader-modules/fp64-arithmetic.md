@@ -26,7 +26,11 @@ Optional interactive GPU benchmark**Explore floating-point precision.**&#x43;omp
 }
 ```
 
-These uniforms are supplied automatically by the module's `defaultUniforms`.
+The module declares default values `ONE = 1.0` and `SPLIT = 4097.0`. The defaults describe the CPU values; the consuming engine object must still bind and upload them before a shader that reads them executes. Leave these implementation constants unchanged.
+
+`Model` handles module updates during its draw preparation. A custom `Computation` must prepare inputs before opening its compute pass, for example by calling `computation.updateShaderInputs()` before `device.beginComputePass()`, or using `computation.predraw(commandEncoder)` when uploads must be ordered on that encoder. `Computation.dispatch()` does not itself upload module uniforms. With a direct pipeline, supply the uniform buffer binding and its contents yourself.
+
+Classic WGSL arithmetic uses these constants for splitting and optimizer workarounds. A zero-filled buffer is not a valid substitute. A shader using only the integer-controlled or raw subtraction helpers may not statically use the uniforms; its automatic pipeline layout can therefore omit their binding. Match the assembled shader and its layout rather than assuming a fixed binding slot.
 
 ## Usage[​](#usage "Direct link to Usage")
 

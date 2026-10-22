@@ -1,6 +1,6 @@
 # Class: ShaderBlockWriter
 
-Defined in: [modules/core/src/portable/shader-block-writer.ts:22](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/shader-block-writer.ts#L22)
+Defined in: [modules/core/src/api/portable/shader-block-writer.ts:22](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/shader-block-writer.ts#L22)
 
 Serializes nested JavaScript uniform values according to a [ShaderBlockLayout](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ShaderBlockLayout.md).
 
@@ -10,7 +10,7 @@ Serializes nested JavaScript uniform values according to a [ShaderBlockLayout](h
 
 > **new ShaderBlockWriter**(`layout`): `ShaderBlockWriter`
 
-Defined in: [modules/core/src/portable/shader-block-writer.ts:29](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/shader-block-writer.ts#L29)
+Defined in: [modules/core/src/api/portable/shader-block-writer.ts:29](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/shader-block-writer.ts#L29)
 
 Creates a writer for a precomputed shader-block layout.
 
@@ -30,7 +30,7 @@ Creates a writer for a precomputed shader-block layout.
 
 > `readonly` **layout**: [`ShaderBlockLayout`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ShaderBlockLayout.md)
 
-Defined in: [modules/core/src/portable/shader-block-writer.ts:24](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/shader-block-writer.ts#L24)
+Defined in: [modules/core/src/api/portable/shader-block-writer.ts:24](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/shader-block-writer.ts#L24)
 
 Layout metadata used to flatten and serialize values.
 
@@ -40,7 +40,7 @@ Layout metadata used to flatten and serialize values.
 
 > **get**(`name`): { `offset`: `number`; `size`: `number`; } | `undefined`
 
-Defined in: [modules/core/src/portable/shader-block-writer.ts:43](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/shader-block-writer.ts#L43)
+Defined in: [modules/core/src/api/portable/shader-block-writer.ts:43](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/shader-block-writer.ts#L43)
 
 Returns offset and size metadata for a flattened field.
 
@@ -60,7 +60,7 @@ Returns offset and size metadata for a flattened field.
 
 > **getData**(`uniformValues`): `Uint8Array`
 
-Defined in: [modules/core/src/portable/shader-block-writer.ts:77](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/shader-block-writer.ts#L77)
+Defined in: [modules/core/src/api/portable/shader-block-writer.ts:77](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/shader-block-writer.ts#L77)
 
 Serializes the supplied values into buffer-backed binary data.
 
@@ -82,7 +82,7 @@ The returned view length matches [ShaderBlockLayout.byteLength](https://luma.gl/
 
 > **getFlatUniformValues**(`uniformValues`): `Record`<`string`, [`UniformValue`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/UniformValue.md)>
 
-Defined in: [modules/core/src/portable/shader-block-writer.ts:54](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/shader-block-writer.ts#L54)
+Defined in: [modules/core/src/api/portable/shader-block-writer.ts:54](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/shader-block-writer.ts#L54)
 
 Flattens nested composite values into leaf-path values understood by [UniformBlock](https://luma.gl/next/docs/api-reference/generated/core/classes/UniformBlock.md).
 
@@ -104,7 +104,7 @@ Top-level values may be supplied either in nested object form matching the decla
 
 > **has**(`name`): `boolean`
 
-Defined in: [modules/core/src/portable/shader-block-writer.ts:36](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/shader-block-writer.ts#L36)
+Defined in: [modules/core/src/api/portable/shader-block-writer.ts:36](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/shader-block-writer.ts#L36)
 
 Returns `true` if the flattened layout contains the given field.
 

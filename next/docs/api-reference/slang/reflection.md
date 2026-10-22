@@ -1,5 +1,7 @@
 # Slang reflection helpers
 
+**Status: Exploration**
+
 ExperimentalSince v10
 
 Start with the [Slang overview](https://luma.gl/next/docs/api-reference/slang.md) to compile source and run the live example.

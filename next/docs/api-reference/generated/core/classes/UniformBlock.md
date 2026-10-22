@@ -1,6 +1,6 @@
 # Class: UniformBlock\<TUniforms>
 
-Defined in: [modules/core/src/portable/uniform-block.ts:18](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/uniform-block.ts#L18)
+Defined in: [modules/core/src/api/portable/uniform-block.ts:18](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/uniform-block.ts#L18)
 
 A uniform block holds values of the of uniform values for one uniform block / buffer. It also does some book keeping on what has changed, to minimize unnecessary writes to uniform buffers.
 
@@ -16,7 +16,7 @@ A uniform block holds values of the of uniform values for one uniform block / bu
 
 > **new UniformBlock**<`TUniforms`>(`props?`): `UniformBlock`<`TUniforms`>
 
-Defined in: [modules/core/src/portable/uniform-block.ts:30](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/uniform-block.ts#L30)
+Defined in: [modules/core/src/api/portable/uniform-block.ts:30](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/uniform-block.ts#L30)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 
@@ -44,7 +44,7 @@ Defined in: [modules/core/src/portable/uniform-block.ts:30](https://github.com/v
 
 > `readonly` **bindingLayout**: `Record`<`string`, [`UniformInfo`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/UniformInfo.md)> = `{}`
 
-Defined in: [modules/core/src/portable/uniform-block.ts:27](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/uniform-block.ts#L27)
+Defined in: [modules/core/src/api/portable/uniform-block.ts:27](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/uniform-block.ts#L27)
 
 ***
 
@@ -52,7 +52,7 @@ Defined in: [modules/core/src/portable/uniform-block.ts:27](https://github.com/v
 
 > **modified**: `boolean` = `true`
 
-Defined in: [modules/core/src/portable/uniform-block.ts:25](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/uniform-block.ts#L25)
+Defined in: [modules/core/src/api/portable/uniform-block.ts:25](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/uniform-block.ts#L25)
 
 ***
 
@@ -60,7 +60,7 @@ Defined in: [modules/core/src/portable/uniform-block.ts:25](https://github.com/v
 
 > **modifiedUniforms**: `Record`\<keyof `TUniforms`, `boolean`>
 
-Defined in: [modules/core/src/portable/uniform-block.ts:24](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/uniform-block.ts#L24)
+Defined in: [modules/core/src/api/portable/uniform-block.ts:24](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/uniform-block.ts#L24)
 
 ***
 
@@ -68,7 +68,7 @@ Defined in: [modules/core/src/portable/uniform-block.ts:24](https://github.com/v
 
 > **name**: `string`
 
-Defined in: [modules/core/src/portable/uniform-block.ts:21](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/uniform-block.ts#L21)
+Defined in: [modules/core/src/api/portable/uniform-block.ts:21](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/uniform-block.ts#L21)
 
 ***
 
@@ -76,7 +76,7 @@ Defined in: [modules/core/src/portable/uniform-block.ts:21](https://github.com/v
 
 > **needsRedraw**: `string` | `false` = `'initialized'`
 
-Defined in: [modules/core/src/portable/uniform-block.ts:28](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/uniform-block.ts#L28)
+Defined in: [modules/core/src/api/portable/uniform-block.ts:28](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/uniform-block.ts#L28)
 
 ***
 
@@ -84,7 +84,7 @@ Defined in: [modules/core/src/portable/uniform-block.ts:28](https://github.com/v
 
 > **uniforms**: `Record`\<keyof `TUniforms`, [`UniformValue`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/UniformValue.md)>
 
-Defined in: [modules/core/src/portable/uniform-block.ts:23](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/uniform-block.ts#L23)
+Defined in: [modules/core/src/api/portable/uniform-block.ts:23](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/uniform-block.ts#L23)
 
 ## Methods[​](#methods "Direct link to Methods")
 
@@ -92,7 +92,7 @@ Defined in: [modules/core/src/portable/uniform-block.ts:23](https://github.com/v
 
 > **getAllUniforms**(): `Record`<`string`, [`UniformValue`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/UniformValue.md)>
 
-Defined in: [modules/core/src/portable/uniform-block.ts:68](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/uniform-block.ts#L68)
+Defined in: [modules/core/src/api/portable/uniform-block.ts:68](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/uniform-block.ts#L68)
 
 Returns all uniforms
 
@@ -106,7 +106,7 @@ Returns all uniforms
 
 > **setNeedsRedraw**(`reason`): `void`
 
-Defined in: [modules/core/src/portable/uniform-block.ts:63](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/uniform-block.ts#L63)
+Defined in: [modules/core/src/api/portable/uniform-block.ts:63](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/uniform-block.ts#L63)
 
 #### Parameters[​](#parameters-1 "Direct link to Parameters")
 
@@ -124,7 +124,7 @@ Defined in: [modules/core/src/portable/uniform-block.ts:63](https://github.com/v
 
 > **setUniforms**(`uniforms`): `void`
 
-Defined in: [modules/core/src/portable/uniform-block.ts:54](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/uniform-block.ts#L54)
+Defined in: [modules/core/src/api/portable/uniform-block.ts:54](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/portable/uniform-block.ts#L54)
 
 Set a map of uniforms
 
