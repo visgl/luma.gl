@@ -219,7 +219,7 @@ A subsequent isolated capture adds CPU baselines to the same 18-case uninstrumen
 [CPU/GPU JSONL reports](data/gpu-project-cpu-comparison-2026-09-16.jsonl).
 These schema-version-2 records ran from 2026-09-16T22:20:19.224Z to 2026-09-16T22:20:50.842Z
 on the same adapter/browser described above. CPU reference versions were
-`@math.gl/geospatial/projection 5.0.0-alpha.5` and `proj4 2.21.0`. This is the JavaScript
+`@math.gl/projection 5.0.0-alpha.5` and `proj4 2.21.0`. This is the JavaScript
 `Projection.project()` implementation, **not native C++ PROJ**.
 
 The oracle wrapper applies the same finite/domain validity checks and calls an already-constructed

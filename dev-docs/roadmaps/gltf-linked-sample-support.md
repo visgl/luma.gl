@@ -163,10 +163,10 @@ this recommendation does not depend on assuming local work is published.
 
 | Need | Existing math.gl support | Recommended ownership |
 | --- | --- | --- |
-| Tapered capsules and cylinders/cones | `@math.gl/geometry/culling` CapsuleShape and CylinderShape expose unequal radii, local support mapping, point containment/distance and ray intersection | Reuse CPU queries for picking/reference tests; implement matching WGSL support functions in gpu-physics |
+| Tapered capsules and cylinders/cones | `@math.gl/culling` CapsuleShape and CylinderShape expose unequal radii, local support mapping, point containment/distance and ray intersection | Reuse CPU queries for picking/reference tests; implement matching WGSL support functions in gpu-physics |
 | Primitive display/debug meshes | `@math.gl/geometry` includes tapered CapsuleGeometry and CylinderGeometry | Reuse for visualization; do not substitute their tessellation for exact collision implicitly |
 | Bounds and transforms | AABB, OBB, spheres, affine transforms and eigen decomposition already exist | Reuse at import/debug boundaries; retain GPU-resident broad phase in gpu-physics |
-| Mesh primitive traversal | `@math.gl/geometry/utils` provides attribute/primitive iterators | Reuse where compatible after loaders.gl resolves accessors; glTF buffer/accessor decoding remains loader/adapter responsibility |
+| Mesh primitive traversal | `@math.gl/geometry-utils` provides attribute/primitive iterators | Reuse where compatible after loaders.gl resolves accessors; glTF buffer/accessor decoding remains loader/adapter responsibility |
 | Convex hull construction | No general 3D hull builder found in the audited source/export surfaces | Good upstream candidate in geometry-utils, as a pure CPU preprocessing utility |
 | Convex/mesh volume, COM and inertia | No corresponding general polyhedral mass integration API found | Candidate for geometry-utils after a concrete reusable API and numerical tests exist; body modes, mass locks and compound dynamics stay in gpu-physics |
 | GJK/EPA, contact manifolds and constraints | No general contact engine found; culling explicitly excludes time-dependent simulation | Implement GPU kernels, persistent contacts and iterative solving in gpu-physics |
