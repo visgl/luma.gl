@@ -3,7 +3,21 @@ title: GPU physics
 description: Choose a WebGPU physics world and integrate its simulation, rendering and diagnostics.
 ---
 
+import {GPUPhysicsExample} from '@site/src/components/docs/gpu-physics-example';
+
 # GPU physics
+
+<GPUPhysicsExample />
+
+Newton's cradle runs the rigid-body solver on the GPU and renders its position and orientation
+buffers directly. Use Reset to release the raised ball again, Pause to inspect a moment, or drag
+to orbit. Open **GPU Graph** and **GPU Graph Timeline** (the GPU Trace view) in the lab to inspect simulation work.
+The cradle uses a fixed 1/480-second timestep; its discrete solver approximates contact and
+constraint response rather than guaranteeing lossless, indefinitely periodic motion.
+
+See [command graph debugging](/docs/api-reference/experimental/gpu-core/debugging) for how to
+interpret the panels.
+
 
 `@luma.gl/gpgpu/gpu-physics` provides experimental WebGPU simulation. Import this
 subpath explicitly; the physics API is not exported from the package root. It

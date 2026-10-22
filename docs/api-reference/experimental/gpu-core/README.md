@@ -25,6 +25,10 @@ GPU Core does not own command submission or the application frame loop. This mak
 GPU-resident workflows that combine analysis, culling, indirect rendering, and bounded readback
 without synchronizing the source dataset through JavaScript.
 
+Read [WebGPU foundations](/docs/api-reference/experimental/gpu-core/webgpu-foundations) for the compute and memory primitives,
+[execution techniques](/docs/api-reference/experimental/gpu-core/execution-techniques) for allocation and scheduling, and
+[debugging](/docs/api-reference/experimental/gpu-core/debugging) for the GPU Graph and GPU Trace panels.
+
 ### The small WebGPU leap behind GPU Core
 
 :::note

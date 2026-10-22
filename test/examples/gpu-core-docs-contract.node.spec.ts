@@ -108,7 +108,15 @@ describe('GPU module documentation contract', () => {
     ).filter(
       filename =>
         filename.endsWith('.md') &&
-        !['README.md', 'concepts.md', 'recipes.md', 'tutorial.md'].includes(filename)
+        ![
+          'README.md',
+          'concepts.md',
+          'recipes.md',
+          'tutorial.md',
+          'webgpu-foundations.md',
+          'execution-techniques.md',
+          'debugging.md'
+        ].includes(filename)
     );
 
     const contractSource = readFileSync(

@@ -487,6 +487,9 @@
                 "label": "Graph Execution",
                 "items": [
                   "api-reference/experimental/gpu-core/concepts",
+                  "api-reference/experimental/gpu-core/webgpu-foundations",
+                  "api-reference/experimental/gpu-core/execution-techniques",
+                  "api-reference/experimental/gpu-core/debugging",
             "api-guide/gpu/batch-semantics",
                   "api-reference/experimental/gpu-core/gpu-command-graph",
                   "api-reference/experimental/gpu-core/gpu-incremental-execution",
