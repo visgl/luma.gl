@@ -13,14 +13,14 @@ test('presentation remains a required gate without blocking coverage collection'
   assert.equal(workflow.jobs.browser_coverage.needs, undefined);
   assert(!workflow.jobs.browser_coverage.steps.some(step => step.run?.includes('test-presentation')));
   assert(workflow.jobs.presentation.steps.some(step => step.run?.includes('test-presentation')));
-  const gate = workflow.jobs.test.steps.find(step => step.name === 'Verify all coverage and visual jobs passed');
+  const gate = workflow.jobs.test.steps.find(step => step.name === 'Verify all coverage and prerequisite jobs passed');
   assert.equal(gate.env.PRESENTATION_RESULT, '${{ needs.presentation.result }}');
   assert(gate.run.includes('"$PRESENTATION_RESULT" != "success"'));
 });
 
 test('package consumers restore one authoritative build from this workflow run', () => {
   assert(workflow.jobs.test.needs.includes('build_packages'));
-  const gate = workflow.jobs.test.steps.find(step => step.name === 'Verify all coverage and visual jobs passed');
+  const gate = workflow.jobs.test.steps.find(step => step.name === 'Verify all coverage and prerequisite jobs passed');
   assert.equal(gate.env.PACKAGE_BUILD_RESULT, '${{ needs.build_packages.result }}');
   assert(gate.run.includes('"$PACKAGE_BUILD_RESULT" != "success"'));
   const builds = Object.values(workflow.jobs).flatMap(job => job.steps || [])
@@ -28,7 +28,7 @@ test('package consumers restore one authoritative build from this workflow run',
   assert.equal(builds.length, 1);
   const upload = workflow.jobs.build_packages.steps.find(step => step.name === 'Upload package outputs');
   assert(upload.with['retention-days'] >= 35, 'artifacts must survive the workflow rerun window');
-  for (const name of ['examples', 'lighting_examples']) {
+  for (const name of ['examples']) {
     const job = workflow.jobs[name];
     assert.equal(job.needs, 'build_packages');
     const download = job.steps.find(step => step.name === 'Download package outputs');
