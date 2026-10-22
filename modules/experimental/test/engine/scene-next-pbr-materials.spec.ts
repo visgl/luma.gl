@@ -381,7 +381,7 @@ it('PBR spotlight shadows preserve image-based lighting and emissive radiance', 
     uniformTypes: {visibility: 'f32'},
     source:
       'struct ShadowTest {visibility:f32}; @group(0) @binding(auto) var<uniform> shadowTest:ShadowTest;',
-    fs: 'layout(std140) uniform ShadowTest {float visibility;} shadowTest;'
+    fs: 'layout(std140) uniform shadowTestUniforms {float visibility;} shadowTest;'
   } as const satisfies ShaderModule;
   for (const device of await getExperimentalMaterialDevices()) {
     if (!supportsPixelReadback(device) || isSoftwareBackedWebGL(device)) continue;

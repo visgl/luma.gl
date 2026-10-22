@@ -202,7 +202,9 @@ const vitestConfig = getVitestConfig({
         environment: 'node',
         // GPU devices and presentation resources are intentionally isolated between test files.
         isolate: true,
-        fileParallelism: !process.env.CI,
+        // Native input needs foreground focus; concurrent pages also contend for one GPU.
+        // Match CI locally instead of scaling GPU/UI concurrency with the CPU core count.
+        fileParallelism: false,
         setupFiles: ['./test/utils/browser-process-shim.mjs'],
         include: runBrowserBenchmarks
           ? browserBenchmarkTestPatterns
@@ -216,7 +218,9 @@ const vitestConfig = getVitestConfig({
         environment: 'node',
         // GPU devices and presentation resources are intentionally isolated between test files.
         isolate: true,
-        fileParallelism: !process.env.CI,
+        // Native input needs foreground focus; concurrent pages also contend for one GPU.
+        // Match CI locally instead of scaling GPU/UI concurrency with the CPU core count.
+        fileParallelism: false,
         setupFiles: ['./test/utils/browser-process-shim.mjs'],
         include: runBrowserBenchmarks
           ? browserBenchmarkTestPatterns
