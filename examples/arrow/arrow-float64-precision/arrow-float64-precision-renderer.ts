@@ -9,7 +9,7 @@ import {
 } from '@luma.gl/arrow';
 import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
 import {type GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {GPURenderable} from '@luma.gl/experimental/gpu-tables';
+import {GPURenderable} from '@luma.gl/gpu-graph/gpu-tables';
 import {PathAttributeModel} from '@luma.gl/experimental/models';
 import type {ShaderInputs} from '@luma.gl/engine';
 import {

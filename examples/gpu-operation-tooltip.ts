@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUCommandGraphNodeEncodingStats} from '@luma.gl/gpgpu/gpu-core';
+import type {GPUCommandGraphNodeEncodingStats} from '@luma.gl/gpu-graph/gpu-core';
 
 let nextTooltipIdentifier = 0;
 

@@ -20,7 +20,7 @@ Compare per-span values with `GPUTraceAnomalyScoring` instead.
 ## Usage
 
 ```ts
-import {GPUTraceComparison} from '@luma.gl/experimental/gpu-trace';
+import {GPUTraceComparison} from '@luma.gl/gpu-graph/gpu-trace';
 
 new GPUTraceComparison({
   current: {counts, durationMeans, errorRates},

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {GPUTraceAnalyticsOutputLayout} from '@luma.gl/experimental/gpu-trace';
+import {GPUTraceAnalyticsOutputLayout} from '@luma.gl/gpu-graph/gpu-trace';
 import {
   TRACE_ERROR_SPAN_FLAG,
   TRACE_FILTER_ERRORS_ONLY,

@@ -39,10 +39,10 @@ let benchmarkPanelProps: MockBenchmarkPanelProps | undefined;
 
 const nativeRequire = createRequire(import.meta.url);
 function requireProjectionBenchmarkDependency(moduleName: string): unknown {
-  if (moduleName === '@luma.gl/experimental/gpu-project') {
+  if (moduleName === '@luma.gl/gpu-graph/gpu-project') {
     return {createWebMercatorProjection};
   }
-  if (moduleName === '@luma.gl/experimental/gpu-project/benchmarks') {
+  if (moduleName === '@luma.gl/gpu-graph/gpu-project/benchmarks') {
     return {runGPUProjectionBenchmark};
   }
   if (moduleName === '../../react-luma/store/device-store') {
@@ -111,7 +111,7 @@ describe('GPU projection live benchmark documentation', () => {
       "import {ProjectionBenchmark} from '@site/src/components/docs/projection-benchmark';"
     );
     expect(documentationContent).toContain('<ProjectionBenchmark />');
-    expect(documentationContent).toContain("'@luma.gl/experimental/gpu-project/benchmarks'");
+    expect(documentationContent).toContain("'@luma.gl/gpu-graph/gpu-project/benchmarks'");
     expect(sidebarContent.match(/"api-reference\/experimental\/gpu-project"/g)).toHaveLength(1);
     expect(experimentalNavigation).toContain(
       "href: '/docs/api-reference/experimental/gpu-project'"

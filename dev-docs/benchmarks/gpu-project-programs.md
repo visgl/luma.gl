@@ -83,7 +83,7 @@ add larger/multi-patch domains and actual consumer workloads. Repeat on addition
 ```sh
 LUMA_TEST_BROWSER_BENCHMARKS=true VITE_LUPROJ_BENCHMARK_ROWS=65536 \
   yarn test-headless --no-coverage --silent=false --reporter=verbose \
-  modules/experimental/test/gpu-project/projection-program-benchmark.spec.ts
+  modules/gpu-graph/test/gpu-project/projection-program-benchmark.spec.ts
 ```
 
 The test prints full JSON reports prefixed with `PROJECTION_PROGRAM_BENCHMARK`, including all

@@ -6,10 +6,7 @@ Experimental features for luma.gl.
 These are experimental features that may change or be removed at any time. Use at your own risk.
 :::
 
-The package currently includes experimental GPU command graphs and data-parallel primitives such
-as scan, compaction, stable key/value sort, two-dimensional FFT, and spectral ocean simulation,
-energy-conserving FFT aperture diffraction and photographic bloom,
-order-independent transparency renderers, composable cross-backend glass and reflective-material
+The package includes order-independent transparency renderers, composable cross-backend glass and reflective-material
 shader modules, packed pixel-format helpers, and v10 work-in-progress WebGPU/WebGL WebXR session
 and frame helpers, with WebGL-only raw camera textures. See the
 [luma.gl API reference](https://luma.gl/docs/api-reference/experimental) for documentation.
@@ -32,7 +29,7 @@ adapted exposure directly and automatically compensates temporal history without
 
 ```ts
 import {Texture} from '@luma.gl/core';
-import {GPUConvolutionBloom, getGPUConvolutionBloomSupport} from '@luma.gl/experimental';
+import {GPUConvolutionBloom, getGPUConvolutionBloomSupport} from '@luma.gl/gpu-graph/gpu-effects';
 
 const support = getGPUConvolutionBloomSupport(device, {width, height, resolutionScale: 0.25});
 if (!support.supported) {
@@ -75,12 +72,14 @@ steady-state dispatches. On devices with `timestamp-query`, create the command e
 
 Optional algorithm entry points keep specialized workflows out of the default experimental bundle:
 
-- `@luma.gl/experimental/geospatial` provides graph-native spatial operations and distance kernels.
-- `@luma.gl/experimental/gpu-project` compiles arbitrary CPU coordinate transformations into
+- `@luma.gl/gpu-graph/geospatial` provides graph-native spatial operations and distance kernels.
+- `@luma.gl/gpu-graph/gpu-project` compiles arbitrary CPU coordinate transformations into
   GPU-evaluated local projection patches with Float32 and double-single result modes.
-- `@luma.gl/experimental/gpu-trace` keeps execution-trace scenes, process/thread interactions,
+- `@luma.gl/gpu-graph/gpu-trace` keeps execution-trace scenes, process/thread interactions,
   dependency focus, and timeline picking separate from generic command-graph primitives.
 
 ## Flow particles
 
 `FlowParticleSimulation` advects fixed-capacity GPU particles through east/north velocity grids on WebGPU and WebGL2. See the [flow particle contract](src/simulation/README.md) for units, geographic bounds, masks, time-step limits, and texture ownership.
+
+Graph scheduling and graph-based processing now live in [`@luma.gl/gpu-graph`](../gpu-graph/README.md), including tables, SQL/dataframes, raster, projection, trace, and volume modules.

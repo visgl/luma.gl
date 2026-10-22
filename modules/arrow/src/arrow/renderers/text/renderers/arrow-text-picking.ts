@@ -10,7 +10,7 @@ import {
 } from '../../../engine/arrow-picking';
 import {indexPicking, Model, type PickingManager, type ShaderInputs} from '@luma.gl/engine';
 import {getGPUDataBuffersForLayout} from '@luma.gl/gpgpu/gpu-data';
-import {type GPUTable} from '@luma.gl/experimental/gpu-tables';
+import {type GPUTable} from '@luma.gl/gpu-graph/gpu-tables';
 import {
   TextAttributeModel,
   TextDictionaryModel,

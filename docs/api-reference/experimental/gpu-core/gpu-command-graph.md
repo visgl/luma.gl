@@ -7,10 +7,10 @@ import {GPUDataAnalysisExample} from '@site/src/examples';
 # GPUGraph
 
 
-Use `GPUGraph` and `CompiledGPUGraph` from `@luma.gl/gpgpu/gpu-graph` for execution scheduling.
-They are also exported by `@luma.gl/gpgpu/gpu-core`. The former names `GPUCommandGraph` and
+Use `GPUGraph` and `CompiledGPUGraph` from `@luma.gl/gpu-graph/gpu-graph` for execution scheduling.
+They are also exported by `@luma.gl/gpu-graph/gpu-core`. The former names `GPUCommandGraph` and
 `CompiledGPUCommandGraph` remain aliases; option and result types retain their existing prefixes.
-Graph analytics live separately in `@luma.gl/gpgpu/gpu-graph-algorithms`, using `GPUGraphAlgorithmsData`.
+Graph analytics live separately in `@luma.gl/gpu-graph/gpu-graph-algorithms`, using `GPUGraphAlgorithmsData`.
 
 <GPUCoreDocsTabs active="command-graph" />
 
@@ -270,7 +270,7 @@ replace both role bindings when encoding later frames:
 
 ```ts
 import {Texture} from '@luma.gl/core';
-import {GPUGraph, GPUTextureHistory} from '@luma.gl/gpgpu/gpu-core';
+import {GPUGraph, GPUTextureHistory} from '@luma.gl/gpu-graph/gpu-core';
 
 const descriptor = {
   format: 'rgba16float' as const,
@@ -812,7 +812,7 @@ routed through the handle. Optional GPU timestamp readback remains explicit and 
 the caller submits the command buffer:
 
 ```ts
-import {GPUCommandGraphInspector} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraphInspector} from '@luma.gl/gpu-graph/gpu-core';
 
 const inspector = new GPUCommandGraphInspector({maxSamples: 120});
 const observation = inspector.observeGraph(compiled);

@@ -4,11 +4,11 @@
 
 import {type Device} from '@luma.gl/core';
 import {getIndexPickingModule, indexPicking, supportsIndexPicking} from '@luma.gl/engine';
-import {GPUTableModel, type GPUTableModelProps} from '@luma.gl/experimental/gpu-tables';
-import {GPURecordBatch} from '@luma.gl/experimental/gpu-tables';
+import {GPUTableModel, type GPUTableModelProps} from '@luma.gl/gpu-graph/gpu-tables';
+import {GPURecordBatch} from '@luma.gl/gpu-graph/gpu-tables';
 import {GPUConstant} from '@luma.gl/gpgpu/gpu-data';
-import type {GPUTypeMap} from '@luma.gl/experimental/gpu-tables';
-import {GPUTable} from '@luma.gl/experimental/gpu-tables';
+import type {GPUTypeMap} from '@luma.gl/gpu-graph/gpu-tables';
+import {GPUTable} from '@luma.gl/gpu-graph/gpu-tables';
 import {getGPUVectorData} from '@luma.gl/gpgpu/gpu-data';
 import {
   assertPolygonGPUVectorInputs,

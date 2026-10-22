@@ -84,10 +84,10 @@ async function runBroadPhaseBenchmark(options) {
   ] = await Promise.all([
     import(`${root}/modules/core/src/index.ts`),
     import(`${root}/modules/core/src/webgpu/index.ts`),
-    import(`${root}/modules/gpgpu/src/gpu-core/gpu-command-graph.ts`),
-    import(`${root}/modules/gpgpu/src/gpu-core/gpu-command-node.ts`),
-    import(`${root}/modules/gpgpu/src/gpu-core/gpu-command-graph-inspector.ts`),
-    import(`${root}/modules/gpgpu/src/gpu-physics/rigid-body-broad-phase.ts`)
+    import(`${root}/modules/gpu-graph/src/gpu-core/gpu-command-graph.ts`),
+    import(`${root}/modules/gpu-graph/src/gpu-core/gpu-command-node.ts`),
+    import(`${root}/modules/gpu-graph/src/gpu-core/gpu-command-graph-inspector.ts`),
+    import(`${root}/modules/gpu-graph/src/gpu-physics/rigid-body-broad-phase.ts`)
   ]);
   const device = await luma.createDevice({
     type: 'webgpu',

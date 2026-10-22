@@ -3,7 +3,10 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getSphereTriggerBodies, type GPUSphereBodyState} from '../../modules/gpgpu/src/gpu-physics';
+import {
+  getSphereTriggerBodies,
+  type GPUSphereBodyState
+} from '../../modules/gpu-graph/src/gpu-physics';
 import {
   makeRack,
   findCuePosition,

@@ -1,6 +1,6 @@
 # GPU Project implementation roadmap
 
-This maintainer roadmap tracks the development of `@luma.gl/experimental/gpu-project` from its
+This maintainer roadmap tracks the development of `@luma.gl/gpu-graph/gpu-project` from its
 current composable 2D native/adaptive programs into a broader, precision-tiered CRS transformation system
 for GPU command graphs. Numbering expresses dependency order, not a release or staffing
 commitment.
@@ -315,7 +315,7 @@ does not acquire an automatic inverse.
   operation modules.
 - `@luma.gl/gpgpu` owns primitive GPU data formats and the graph-safe execution machinery after
   graduation.
-- `@luma.gl/experimental/gpu-project` owns the evolving program, planners, adaptive compiler,
+- `@luma.gl/gpu-graph/gpu-project` owns the evolving program, planners, adaptive compiler,
   projection catalog, and optional math.gl adapters.
 - `@math.gl/geospatial/crs` and `@math.gl/geospatial/projection` remain optional CPU-side definition/resolution/oracle
   dependencies. They do not enter the low-level GPU execution package.

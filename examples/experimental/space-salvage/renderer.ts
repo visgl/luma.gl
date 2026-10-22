@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import {Buffer, type Device} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import type {GPURigidBodyWorld, GPURigidBody} from '@luma.gl/gpgpu/gpu-physics';
+import type {GPURigidBodyWorld, GPURigidBody} from '@luma.gl/gpu-graph/gpu-physics';
 import {Matrix4} from '@math.gl/core';
 
 export function makeSalvageRenderer(

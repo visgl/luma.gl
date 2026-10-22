@@ -11,8 +11,8 @@ import {
   type PathStorageInputProps,
   type PathStorageModelProps
 } from './path-storage-model';
-import {validateGPUInputVectors} from '@luma.gl/experimental/gpu-tables';
-import type {GPUInputSchema} from '@luma.gl/experimental/gpu-tables';
+import {validateGPUInputVectors} from '@luma.gl/gpu-graph/gpu-tables';
+import type {GPUInputSchema} from '@luma.gl/gpu-graph/gpu-tables';
 
 /** Props for storage-backed Trips-style path rendering. */
 export type PathTripsStorageModelProps = PathStorageModelProps & {

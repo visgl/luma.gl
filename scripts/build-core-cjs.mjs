@@ -44,7 +44,7 @@ process.stdout.write('Verified CommonJS device identity and dynamic imports.\n')
 
 // The focused execution-graph entry point must reuse the core scheduler constructors.
 // Bundling it separately would make instanceof checks depend on the import path.
-const graphDistributionDirectory = new URL('../modules/gpgpu/dist/', import.meta.url);
+const graphDistributionDirectory = new URL('../modules/gpu-graph/dist/', import.meta.url);
 const graphEntryPoint = new URL('gpu-graph/index.js', graphDistributionDirectory);
 const graphSource = await readFile(graphEntryPoint, 'utf8');
 const {code: graphCode} = await transform(
@@ -68,3 +68,25 @@ for (const [name, value] of Object.entries(graphApi)) {
 assert.equal(graphApi.GPUGraph, graphApi.GPUCommandGraph);
 assert.equal(graphApi.CompiledGPUGraph, graphApi.CompiledGPUCommandGraph);
 process.stdout.write('Verified CommonJS GPU graph constructor identity.\n');
+
+// The focused package root reuses scheduler and diagnostics constructors without
+// re-exporting the optional algorithms from gpu-core.
+const rootGraphEntryPoint = new URL('index.js', graphDistributionDirectory);
+const rootGraphExportNames = [
+  ...Object.keys(graphApi),
+  'GPUCommandGraphAutotuner',
+  'getGPUCommandGraphAdapterIdentity',
+  'GPUCommandGraphExecutionBudgetController',
+  'GPUCommandGraphInspector'
+];
+const {code: rootGraphCode} = await transform(
+  `export {${rootGraphExportNames.join(',')}} from './gpu-core/index.cjs';`,
+  {format: 'cjs', platform: 'node', target: 'node16', sourcefile: fileURLToPath(rootGraphEntryPoint)}
+);
+await writeFile(new URL('index.cjs', graphDistributionDirectory), rootGraphCode);
+const rootGraphApi = require(fileURLToPath(new URL('index.cjs', graphDistributionDirectory)));
+for (const [name, value] of Object.entries(rootGraphApi)) {
+  assert.equal(value, gpuCoreApi[name]);
+}
+assert.equal('GPUScan' in rootGraphApi, false);
+process.stdout.write('Verified CommonJS GPU Graph package root identity.\n');

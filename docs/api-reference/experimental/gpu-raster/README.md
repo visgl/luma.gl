@@ -8,7 +8,7 @@ import {RasterLabExample} from '@site/src/examples';
 
 ## Overview
 
-`@luma.gl/experimental/gpu-raster` provides nodata-aware raster and spatial-field operations that
+`@luma.gl/gpu-graph/gpu-raster` provides nodata-aware raster and spatial-field operations that
 compose through `GPUCommandGraph`. It makes tile ownership, halos, analytical overviews, residency,
 capacity, and replayable global statistics explicit.
 
@@ -21,8 +21,8 @@ analytical values usually belong in a renderer or shader module instead.
 ## Quick start
 
 ```ts
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
-import {GPURasterBand, GPURasterStatistics} from '@luma.gl/experimental/gpu-raster';
+import {GPUCommandGraph} from '@luma.gl/gpu-graph/gpu-core';
+import {GPURasterBand, GPURasterStatistics} from '@luma.gl/gpu-graph/gpu-raster';
 
 const graph = new GPUCommandGraph({device, id: 'raster-analysis'});
 const band = new GPURasterBand({device, graph, values, validity, width, height});

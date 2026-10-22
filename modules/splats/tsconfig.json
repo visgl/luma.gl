@@ -1,17 +1,34 @@
 {
   "extends": "../../tsconfig.json",
-  "include": ["src/**/*"],
-  "exclude": ["node_modules"],
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules"
+  ],
   "compilerOptions": {
     "composite": true,
     "rootDir": "src",
     "outDir": "dist"
   },
   "references": [
-    {"path": "../core"},
-    {"path": "../engine"},
-    {"path": "../experimental"},
-    {"path": "../shadertools"},
-    {"path": "../gpgpu"}
+    {
+      "path": "../core"
+    },
+    {
+      "path": "../engine"
+    },
+    {
+      "path": "../experimental"
+    },
+    {
+      "path": "../shadertools"
+    },
+    {
+      "path": "../gpgpu"
+    },
+    {
+      "path": "../gpu-graph"
+    }
   ]
 }

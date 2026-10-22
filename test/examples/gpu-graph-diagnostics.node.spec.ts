@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/gpu-graph/gpu-core';
 import {NullDevice} from '@luma.gl/test-utils';
 import {expect, test, vi} from 'vitest';
 import {GPUGraphDiagnostics} from '../../examples/gpu-graph-diagnostics';

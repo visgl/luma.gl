@@ -18,7 +18,7 @@ without copying simulation state through the CPU.
 
 ```ts
 import {Texture} from '@luma.gl/core';
-import {VolumetricFireSimulation} from '@luma.gl/experimental';
+import {VolumetricFireSimulation} from '@luma.gl/gpu-graph/gpu-simulation';
 
 const dimensions = [64, 96, 64] as const;
 const obstacleTexture = device.createTexture({

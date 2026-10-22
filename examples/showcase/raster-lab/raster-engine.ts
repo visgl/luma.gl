@@ -8,7 +8,7 @@ import {
   GPUCommandGraph,
   type CompiledGPUCommandGraph,
   type GraphDataView
-} from '@luma.gl/gpgpu/gpu-core';
+} from '@luma.gl/gpu-graph/gpu-core';
 import {
   GPURasterBandMath,
   GPURasterBoxBlur,
@@ -48,7 +48,7 @@ import {
   type GPURasterPixelBounds,
   type GPURasterRegionMeasurementOutputs,
   type GPURasterTileHaloPlan
-} from '@luma.gl/experimental/gpu-raster';
+} from '@luma.gl/gpu-graph/gpu-raster';
 import {RASTER_LAB_NO_DATA_VALUE, type RasterLabDataset} from './raster-data';
 import {
   RasterLabRenderer,

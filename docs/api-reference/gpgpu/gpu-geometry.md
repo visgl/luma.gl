@@ -1,6 +1,6 @@
 # GPU Geometry
 
-`@luma.gl/gpgpu/gpu-geometry` provides experimental WebGPU mesh operations that compose in a
+`@luma.gl/gpu-graph/gpu-geometry` provides experimental WebGPU mesh operations that compose in a
 caller-owned `GPUCommandGraph`. These are computation operations, independent of engine `Geometry`.
 
 | Operation | Inputs | Output | Cost |
@@ -12,7 +12,7 @@ caller-owned `GPUCommandGraph`. These are computation operations, independent of
 ## Compose smoothing and normals
 
 ```ts
-import {GPUMeshNormals, GPUMeshVertexNormals, GPUMeshSmoothing} from '@luma.gl/gpgpu/gpu-geometry';
+import {GPUMeshNormals, GPUMeshVertexNormals, GPUMeshSmoothing} from '@luma.gl/gpu-graph/gpu-geometry';
 
 // All arguments below are GraphDataViews registered with the same graph.
 graph.add(new GPUMeshSmoothing({

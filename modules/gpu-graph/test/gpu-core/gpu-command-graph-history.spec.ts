@@ -1,0 +1,197 @@
+import {expect, it} from 'vitest';
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import {Buffer, Texture, type Device} from '@luma.gl/core';
+import {Kernel} from '@luma.gl/engine';
+import {GPUCommandGraph, GPUTextureHistory} from '@luma.gl/gpu-graph/gpu-core';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+
+const HISTORY_TEXTURE_USAGE = Texture.SAMPLE | Texture.STORAGE | Texture.COPY_SRC;
+
+it('GPUTextureHistory preserves GPU results across copy-free CORE WebGPU frame rotation', async () => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) {
+    return;
+  }
+
+  const history = new GPUTextureHistory(device, {
+    id: 'core-history',
+    format: 'rgba8unorm',
+    width: 4,
+    height: 4,
+    mipLevels: 2,
+    usage: HISTORY_TEXTURE_USAGE
+  });
+  const graph = new GPUCommandGraph(device, {id: 'core-texture-history'});
+  const previous = graph.importTexture(
+    {
+      id: 'previous',
+      format: 'rgba8unorm',
+      width: 4,
+      height: 4,
+      mipLevels: 2,
+      usage: HISTORY_TEXTURE_USAGE
+    },
+    history.previousTexture
+  );
+  const current = graph.importTexture(
+    {
+      id: 'current',
+      format: 'rgba8unorm',
+      width: 4,
+      height: 4,
+      mipLevels: 2,
+      usage: HISTORY_TEXTURE_USAGE
+    },
+    history.currentTexture
+  );
+  const previousView = graph.createTextureView(previous, {baseMipLevel: 0, mipLevelCount: 1});
+  const currentView = graph.createTextureView(current, {baseMipLevel: 0, mipLevelCount: 1});
+  graph.addComputePass({
+    id: 'accumulate-history',
+    resources: [
+      {texture: previousView, usage: 'sampled'},
+      {texture: currentView, usage: 'storage-write'}
+    ],
+    compile: ({device: compileDevice}) => {
+      const kernel = new Kernel(compileDevice, {
+        id: 'accumulate-core-history',
+        source: `
+@group(0) @binding(0) var previousImage: texture_2d<f32>;
+@group(0) @binding(1) var currentImage: texture_storage_2d<rgba8unorm, write>;
+
+@compute @workgroup_size(4, 4, 1)
+fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
+  let pixel = vec2<i32>(invocation.xy);
+  let previousColor = textureLoad(previousImage, pixel, 0);
+  textureStore(currentImage, pixel, vec4<f32>(previousColor.r + 0.2, 0.0, 0.0, 1.0));
+}`,
+        shaderLayout: {
+          bindings: [
+            {
+              name: 'previousImage',
+              type: 'texture',
+              group: 0,
+              location: 0,
+              sampleType: 'float'
+            },
+            {
+              name: 'currentImage',
+              type: 'storage',
+              group: 0,
+              location: 1,
+              access: 'write-only',
+              format: 'rgba8unorm'
+            }
+          ]
+        }
+      });
+      return {
+        encode: ({computePass, getTextureView}) => {
+          kernel.dispatch(computePass, {
+            bindings: {
+              previousImage: getTextureView(previousView),
+              currentImage: getTextureView(currentView)
+            },
+            x: 1,
+            y: 1,
+            z: 1
+          });
+        },
+        destroy: () => kernel.destroy()
+      };
+    }
+  });
+  const compiled = graph.compile();
+  const textureViewStats = device.statsManager
+    .getStats('Resource Counts')
+    .get('TextureViews Active');
+  const initialTextureViewCount = textureViewStats.count;
+  const initialPreviousTexture = history.previousTexture;
+  const initialCurrentTexture = history.currentTexture;
+
+  try {
+    const rejectedEncoder = device.createCommandEncoder({id: 'rejected-history-alias'});
+    expect(
+      () =>
+        compiled.encode(rejectedEncoder, {
+          parameters: undefined,
+          textures: {previous: history.previousTexture, current: history.previousTexture}
+        }),
+      'read/write aliases fail before any CORE GPU work is recorded'
+    ).toThrow(/previous.*current.*same physical texture/i);
+    rejectedEncoder.destroy();
+    expect(history.previousTexture, 'a failed encoding leaves the previous role unchanged').toBe(
+      initialPreviousTexture
+    );
+    expect(history.currentTexture, 'a failed encoding leaves the current role unchanged').toBe(
+      initialCurrentTexture
+    );
+    expect(textureViewStats.count, 'rejected aliases do not allocate concrete texture views').toBe(
+      initialTextureViewCount
+    );
+
+    for (let frameIndex = 0; frameIndex < 3; frameIndex++) {
+      const outputTexture = history.currentTexture;
+      const commandEncoder = device.createCommandEncoder({id: `history-frame-${frameIndex}`});
+      const encoding = compiled.encode(commandEncoder, {
+        parameters: undefined,
+        textures: history.getBindings('previous', 'current')
+      });
+      expect(encoding.stats.nodeCount, 'history graph encodes only the compute node').toBe(1);
+      expect(encoding.stats.computePassCount, 'the graph opens one CORE compute pass').toBe(1);
+      device.submit(commandEncoder.finish());
+      const pixel = await readHistoryPixel(device, outputTexture);
+      expect(pixel[0], 'the next frame reads the retained previous GPU output').toBe(
+        Math.round((frameIndex + 1) * 0.2 * 255)
+      );
+      history.advance();
+    }
+
+    expect(
+      textureViewStats.count,
+      'repeated role swaps retain only two concrete views per logical graph role'
+    ).toBe(initialTextureViewCount + 4);
+    compiled.destroy();
+    expect(textureViewStats.count, 'destroying the graph releases its cached views').toBe(
+      initialTextureViewCount
+    );
+    expect(
+      Boolean(initialPreviousTexture.destroyed),
+      'the first history texture stays caller-owned'
+    ).toBe(false);
+    expect(
+      Boolean(initialCurrentTexture.destroyed),
+      'the second history texture stays caller-owned'
+    ).toBe(false);
+  } finally {
+    compiled.destroy();
+    history.destroy();
+  }
+
+  expect(
+    Boolean(initialPreviousTexture.destroyed),
+    'history destruction releases the first texture'
+  ).toBe(true);
+  expect(
+    Boolean(initialCurrentTexture.destroyed),
+    'history destruction releases the second texture'
+  ).toBe(true);
+});
+
+async function readHistoryPixel(device: Device, texture: Texture): Promise<Uint8Array> {
+  const layout = texture.computeMemoryLayout({width: 1, height: 1});
+  const buffer = device.createBuffer({
+    id: 'history-readback',
+    byteLength: layout.byteLength,
+    usage: Buffer.COPY_DST | Buffer.MAP_READ
+  });
+  try {
+    texture.readBuffer({width: 1, height: 1}, buffer);
+    return await buffer.readAsync(0, layout.byteLength);
+  } finally {
+    buffer.destroy();
+  }
+}

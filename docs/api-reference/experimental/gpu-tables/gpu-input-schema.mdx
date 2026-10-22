@@ -111,7 +111,7 @@ available to TypeScript while the declaration is checked against the public
 schema type:
 
 ```ts
-import type {GPUInputSchema} from '@luma.gl/experimental/gpu-tables';
+import type {GPUInputSchema} from '@luma.gl/gpu-graph/gpu-tables';
 
 export const PATH_GPU_INPUT_SCHEMA = [
   {
@@ -153,7 +153,7 @@ Only generated inputs need `internal: true`.
 `validateGPUInputVectors()` checks a prepared vector map against a schema:
 
 ```ts
-import {validateGPUInputVectors} from '@luma.gl/experimental/gpu-tables';
+import {validateGPUInputVectors} from '@luma.gl/gpu-graph/gpu-tables';
 
 validateGPUInputVectors('PathModel', PathModel.gpuInputSchema, {
   paths,

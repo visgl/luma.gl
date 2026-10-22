@@ -10,7 +10,7 @@ import {
   type GPUColumn,
   type GPUInputSchema,
   type GPUTable
-} from '@luma.gl/experimental/gpu-tables';
+} from '@luma.gl/gpu-graph/gpu-tables';
 import {
   FS_GLSL,
   PICKING_FS_GLSL,

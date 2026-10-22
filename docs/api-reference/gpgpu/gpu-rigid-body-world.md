@@ -13,8 +13,8 @@ Setup and geometry cooking run on the CPU; simulation does not require pose read
 ## Usage
 
 ```ts
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
-import {GPURigidBodyWorld} from '@luma.gl/gpgpu/gpu-physics';
+import {GPUCommandGraph} from '@luma.gl/gpu-graph/gpu-core';
+import {GPURigidBodyWorld} from '@luma.gl/gpu-graph/gpu-physics';
 
 // device is an existing WebGPU Device.
 const world = new GPURigidBodyWorld({

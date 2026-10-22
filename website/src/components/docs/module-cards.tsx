@@ -40,6 +40,11 @@ const DOCUMENTATION_MODULES: readonly DocumentationModule[] = [
     image: 'experimental/gpu-parquet-constellation'
   },
   {
+    name: 'gpu-graph',
+    description: 'Schedule GPU work and compose graph-based processing pipelines.',
+    image: 'experimental/gpu-parquet-constellation'
+  },
+  {
     name: 'arrow',
     description: 'Upload Apache Arrow columns and connect tabular data to GPU workflows.',
     image: 'arrow/arrow-points'

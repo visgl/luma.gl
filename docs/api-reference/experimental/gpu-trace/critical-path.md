@@ -23,7 +23,7 @@ when spans may have several causal predecessors.
 ## Usage
 
 ```ts
-import {GPUTraceCriticalPath} from '@luma.gl/experimental/gpu-trace';
+import {GPUTraceCriticalPath} from '@luma.gl/gpu-graph/gpu-trace';
 
 new GPUTraceCriticalPath({
   parentIndices,
