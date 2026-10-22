@@ -24,7 +24,8 @@ export function getRigidBodyStorageLayout(
   eventCapacity = 0,
   enableQueries = false,
   rollback = false,
-  continuous = false
+  continuous = false,
+  jointCount = 0
 ) {
   const geometryOffset = Math.ceil((bodyCount * 12 + colliderCount * 26) / 4) * 4;
   const pairOffset = Math.ceil((geometryOffset + geometryWords) / 64) * 64;
@@ -42,7 +43,9 @@ export function getRigidBodyStorageLayout(
     })),
     {
       name: 'targets',
-      byteLength: Math.ceil((bodyCount * 32 + (sparse ? 32 + maximumPairs * 8 : 16)) / 16) * 16,
+      byteLength:
+        Math.ceil((bodyCount * 32 + (sparse ? 32 + maximumPairs * 8 : 16)) / 16) * 16 +
+        jointCount * 48,
       uniform: false
     },
     {name: 'manifolds', byteLength: maximumPairs * 288, uniform: false},

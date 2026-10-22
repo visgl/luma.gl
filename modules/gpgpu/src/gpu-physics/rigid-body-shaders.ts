@@ -24,7 +24,8 @@ export function getRigidBodyShader(
   jointShader = 'fn jointActive(body:u32)->bool{return false;} fn jointExcluded(first:u32,second:u32)->bool{return false;}',
   hasJoints = false,
   linearDamping = 0,
-  angularDamping = 0
+  angularDamping = 0,
+  jointCount = 0
 ): string {
   return /* wgsl */ `
 const BODY_COUNT: u32 = ${count}u;
@@ -37,7 +38,8 @@ struct Collider { shape: vec4f, position: vec4f, orientation: vec4f, material: v
 struct Metadata { bodies: array<Body, BODY_COUNT>, colliders: array<Collider, COLLIDER_COUNT>, exclusions: array<vec2f, COLLIDER_COUNT>, geometry: array<vec4u> }
 struct Target { position: vec4f, orientation: vec4f }
 struct CacheKey { key:atomic<u32>, epoch:u32 }
-struct Targets { entries:array<Target,BODY_COUNT>, dispatch:atomic<u32>, vertical:u32, depth:u32 ${sparse ? ', frame:u32, cacheDropped:atomic<u32>, reserved0:u32, reserved1:u32, reserved2:u32, keys:array<CacheKey,PAIR_CAPACITY>' : ''} }
+struct JointState {impulses:array<f32,8>, control:vec4f}
+struct Targets { entries:array<Target,BODY_COUNT>, dispatch:atomic<u32>, vertical:u32, depth:u32 ${sparse ? ', frame:u32, cacheDropped:atomic<u32>, reserved0:u32, reserved1:u32, reserved2:u32, keys:array<CacheKey,PAIR_CAPACITY>' : ''}${jointCount ? `, joints:array<JointState,${jointCount}>` : ''} }
 struct Contact { point: vec4f, normal: vec4f, impulse: vec4f, tangent: vec4f }
 struct Manifold { contacts: array<Contact, 4>, count: u32, first:u32, second:u32, previousCount:u32, padding: vec3u }
 struct Settings { gravity: vec4f, solver: vec4f, sleep: vec4f, stability: vec4f }
@@ -154,7 +156,6 @@ fn solveFriction(firstCollider:u32,secondCollider:u32,contact:Contact,relative:v
 @compute @workgroup_size(64) fn integrate(@builtin(global_invocation_id) invocation: vec3u) {
  ${extended ? 'if(invocation.x==0u){atomicStore(&meshTasks.count,0u);atomicStore(&meshTasks.overflow,0u);atomicStore(&meshTasks.unresolved,0u);atomicStore(&meshTasks.incomplete,0u);atomicStore(&targets.dispatch,0u);targets.vertical=1u;targets.depth=1u;}' : ''}
  let body=invocation.x; if(body>=BODY_COUNT) {return;}
- if(jointActive(body)){sleepStates[body].x=0.0;sleepStates[body].y=0.0;}
  let rotation=orientations[body]; orientations[body]=select(vec4f(0,0,0,1),normalize(rotation),dot(rotation,rotation)>0.000001);
  if(bodies.bodies[body].motion.x==2.0 && targets.entries[body].position.w>0.0) {
   velocities[body]=vec4f((targets.entries[body].position.xyz-positions[body].xyz)/settings.gravity.w,0);
@@ -327,6 +328,7 @@ fn root(body: u32) -> u32 {var current=body;for(var iteration=0u;iteration<BODY_
   if(bodies.bodies[second].motion.x==2.0 && length(velocities[second].xyz)+length(angularVelocities[second].xyz)>0.000001 && dynamic(first)) {sleepStates[first].y=0.0;sleepStates[first].x=0.0;}
   if(dynamic(first) && dynamic(second)) {let firstRoot=root(first);let secondRoot=root(second);sleepStates[max(firstRoot,secondRoot)].z=f32(min(firstRoot,secondRoot));}
  }
+ ${hasJoints ? 'connectJoints();' : ''}
  for(var body=0u;body<BODY_COUNT;body++) {sleepStates[body].w=1.0;}
  for(var body=0u;body<BODY_COUNT;body++) {if(dynamic(body) && sleepStates[body].y<0.5) {sleepStates[root(body)].w=0.0;}}
  for(var body=0u;body<BODY_COUNT;body++) {if(dynamic(body) && sleepStates[root(body)].w<0.5) {if(sleepStates[body].y>0.5) {sleepStates[body].x=0.0;}sleepStates[body].y=0.0;}}
@@ -339,8 +341,9 @@ fn root(body: u32) -> u32 {var current=body;for(var iteration=0u;iteration<BODY_
    applyImpulse(first,contact.point.xyz,-impulse);applyImpulse(second,contact.point.xyz,impulse);
   }
  }
+ ${hasJoints ? 'solveJoints(true);' : ''}
  for(var iteration=0u;iteration<ITERATIONS;iteration++) {
-  ${hasJoints ? 'solveJoints();' : ''}
+  ${hasJoints ? 'solveJoints(false);' : ''}
   for(var pair=0u;pair<PAIR_CAPACITY;pair++) {
    let firstCollider=getFirstCollider(pair);let secondCollider=getSecondCollider(pair);let first=colliderBody(firstCollider);let second=colliderBody(secondCollider);
    if((sleepStates[first].y>0.5 || !dynamic(first)) && (sleepStates[second].y>0.5 || !dynamic(second))) {continue;}

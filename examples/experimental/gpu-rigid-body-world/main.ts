@@ -73,6 +73,19 @@ try {
     if (mechanism) solver.value = 'ordered';
     const world = new GPURigidBodyWorld({
       bodies,
+      publicationBounds:
+        sceneName === 'cradle'
+          ? bodies.map(body => {
+              const shape = body.shape!;
+              if (shape.type !== 'sphere' && shape.type !== 'box')
+                throw new Error('Cradle visual bounds require primitive geometry');
+              const extent: [number, number, number] =
+                shape.type === 'sphere'
+                  ? [shape.radius, shape.radius, shape.radius]
+                  : [...shape.halfExtents];
+              return [[-extent[0], -extent[1], -extent[2]], extent] as const;
+            })
+          : undefined,
       joints: mechanism?.joints,
       failurePolicy: 'rollback',
       // Resolve the cradle's closely spaced elastic impacts before the next pair closes.
@@ -245,7 +258,13 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
     return {
       cradle:
         sceneName === 'cradle'
-          ? new CradleScene(device, world.positions!, world.orientations!, mechanism!.frame!)
+          ? new CradleScene(
+              device,
+              world.positions!,
+              world.orientations!,
+              world.poseMatrices!,
+              mechanism!.frame!
+            )
           : null,
       world,
       graph,

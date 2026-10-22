@@ -418,7 +418,7 @@ separate qualification work.
 Tests cover coupled tangent response, static friction, moving supports, eight-box
 stacks, sparse discovery, capacity overflow and recovery by replay. These are bounded
 fixtures with tolerances, not qualification for arbitrary scenes. General rigid-body
-CCD, parallel joint solving, joint springs/breakage, solid mesh containment and cross-device bitwise
+CCD, parallel joint solving, joint breakage, solid mesh containment and cross-device bitwise
 reproducibility remain outside the current contract.
 
 See the [background guide](/docs/api-guide/gpu/gpu-physics),
@@ -435,8 +435,10 @@ world-space point retains off-center impulse behavior.
 `joints` accepts up to 64 `distance`, `fixed`, `hinge` or `slider` constraints.
 This initial reference envelope requires `solver: 'ordered'`. Joint rows run in each
 contact-solver iteration; there is no CPU constraint solve or extra graph pass per joint.
-Connected bodies remain awake. Parallel joint scheduling, joint warm starting, breakage,
-springs and reduced-coordinate articulations are not implemented by this increment.
+Joint impulses persist across steps with `warmStartFactor` retention. Passive joints join
+dynamic sleep islands; motors and moving kinematic attachments keep their connected
+bodies active. Parallel joint scheduling, breakage and reduced-coordinate articulations
+remain outside this envelope.
 
 ```ts
 const world = new GPURigidBodyWorld({
@@ -468,7 +470,7 @@ Connected-body contacts are disabled unless `collideConnected: true`; this exclu
 all collider pairs between the two bodies. Queries remain independent of this filter.
 
 The Rigid Body Lab now includes a Mechanisms collection: pendulum, contact-loaded
-motorized hinge and powered slider. These are bounded reference demonstrations,
+motorized hinge, powered slider, spring suspension and position-driven hinge. These are bounded reference demonstrations,
 not qualification for arbitrary mechanisms or extreme mass ratios.
 
 ## Debug capture and replay
@@ -492,3 +494,92 @@ It does not capture application state, command history, graph parameters, render
 resources or arbitrary external GPU writes. Callers must record/replay those separately.
 Same-device regression tests reproduce trajectories; cross-device bitwise replay and
 long-term serialized asset compatibility are not promised.
+
+
+### Springs, position drives and attachment commands
+
+Distance joints accept `spring: {stiffness, damping}`. Stiffness is force per unit
+extension and damping is force per relative anchor speed. The implicit soft row
+settles at the gravity-loaded equilibrium; a spring does not enforce the rest length
+exactly under load. Omit `spring` for a hard distance constraint.
+
+Hinge/slider motors accept `position`, optional `velocity` feed-forward (default 0),
+`stiffness` (default 30), `damping` (default 5), and `maximumForce`. Position is radians
+for a hinge and world units for a slider. The implicit drive uses these spring/damper
+coefficients and retains the force/torque cap across all iterations. Hinge targets use
+the same wrapped coordinate as limits; multi-turn control remains unsupported.
+
+`enabled: false` creates a dormant joint. `world.setJointEnabled(index, enabled)`
+submits an ordered GPU command between steps, invalidates cached impulses and wakes
+bodies. Disabling a joint restores its connected-body collision policy. Space Salvage
+uses this API for its spring tow attachment. Topology, coefficients and endpoints are
+construction-time properties; rebuild the world to change them.
+
+## Scenegraph geometry and GPU pose publication
+
+`PhysicsGeometryNode` retains CPU `Geometry` plus physics authoring metadata.
+`PhysicsGeometryNodeProps` accepts normal scenegraph props, `geometry`, `body`
+(mode/mass/material), and `collision` (an explicit world-space body or `false`).
+`makePhysicsScenegraph(root)` returns a `PhysicsScenegraphSnapshot` containing
+`bodies`, `publicationBounds`, and source-node bindings with a body index and local
+visual matrix. It snapshots accumulated parent transforms without mutating the source.
+Axis-aligned centered cubes become boxes; other geometry is cooked as a convex hull.
+Set `geometryMode: 'triangle-mesh'` explicitly to preserve concavity and openings.
+An explicit collision body overrides inference while visual bounds still come from
+the original geometry. CPU POSITION data must remain available during cooking.
+
+```ts
+const snapshot = makePhysicsScenegraph(authoredRoot);
+const world = new GPURigidBodyWorld({
+  bodies: snapshot.bodies,
+  publicationBounds: snapshot.publicationBounds
+});
+world.addToGraph(graph);
+// After each submitted step, bind world.poseMatrices and world.poseBounds on GPU.
+```
+
+`GPURigidBodyBounds` is `[minimum, maximum]` in body-node coordinates.
+`publicationBounds` enables one compute publication pass after rollback resolution.
+`poseMatrices` holds one column-major `mat4x4<f32>` (64 bytes) per body: rotation plus
+body-node translation, with the rotated COM offset removed. Multiply it by a source
+binding's `localMatrix` for that node's geometry. `poseBounds` holds two padded
+`vec4<f32>` values (32 bytes) per body containing the conservative world visual AABB.
+These buffers are world-owned and null before attachment or when publication is off;
+their contents are initialized by the first physics step. Rendering and shadow passes
+must execute after physics publication. The cradle consumes the same GPU matrices
+in its PBR rendering and shadow passes, without per-frame pose readback.
+
+The adapter is an explicit authoring snapshot, not an automatic scene observer.
+Physics owns dynamic body poses after construction. Animate kinematic bodies through
+`setKinematicTarget` before each step; do not also apply animation transforms to their
+published poses. Rebuild snapshots/worlds after geometry or topology changes. Build
+independent worlds for independent instances; destroy each world's buffers with its
+world. Automatic glTF object-model mutations, exporter integration, shared instances
+and a complete animation binding layer remain follow-up work.
+
+### Tick-ordered command journal
+
+`GPURigidBodyCommandJournal` records `GPURigidBodyCommand` values: `impulse`,
+`kinematic-target`, and `joint-enabled`. `applyRigidBodyCommand` executes one command
+without recording it. The journal's `apply(tick, command)` copies and executes a
+command, preserving insertion order for equal ticks and rejecting decreasing ticks.
+Stop simulation/control calls while awaiting `journal.begin()`; it captures a complete
+checkpoint and starts a fresh command segment. Tick numbers are zero-based relative
+to that checkpoint, owned by the application.
+
+```ts
+const journal = new GPURigidBodyCommandJournal(world);
+await journal.begin();
+journal.apply(0, {type: 'joint-enabled', joint: 0, enabled: true});
+await advanceOneStep();
+const replay = journal.export(); // GPURigidBodyReplay; structured-cloneable
+await replayRigidBodyCommands(world, replay, 1, advanceOneStep);
+```
+
+`replayRigidBodyCommands` restores the checkpoint and invokes the supplied async
+advance function once per tick, applying commands before that tick. Pause normal
+simulation during replay. The callback must use the original fixed-step configuration.
+The journal retains its own checkpoint for export; begin a segment before applying commands. No CPU pose readback occurs
+per command; the initial checkpoint is an explicit debugging readback. Application
+state, geometry rebuilds, arbitrary buffer writes, device loss recovery and portable
+cross-device serialization are outside this journal contract.

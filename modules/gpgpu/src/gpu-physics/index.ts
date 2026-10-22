@@ -79,3 +79,18 @@ export {decodeRigidBodyTriggerEvents} from './rigid-body-triggers';
 export type {GPURigidBodyJoint, GPURigidBodyJointFrame} from './rigid-body-joints';
 
 export type {GPURigidBodyCapture} from './gpu-rigid-body-world';
+
+export type {GPURigidBodyBounds} from './rigid-body-publication';
+export {
+  PhysicsGeometryNode,
+  makePhysicsScenegraph,
+  type PhysicsGeometryNodeProps,
+  type PhysicsScenegraphSnapshot
+} from './physics-scenegraph';
+export {
+  GPURigidBodyCommandJournal,
+  applyRigidBodyCommand,
+  replayRigidBodyCommands,
+  type GPURigidBodyCommand,
+  type GPURigidBodyReplay
+} from './rigid-body-journal';

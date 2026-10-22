@@ -37,7 +37,7 @@ it('cradle colliders follow authored parent transforms and support explicit over
   expect(makeCradleFrameBodies(customized)).toEqual([replacement]);
 });
 
-it('rotated frame geometry produces world-space hull vertices under a transformed parent', () => {
+it('rotated frame geometry produces body-local hull vertices under a transformed parent', () => {
   const frame = new GroupNode({
     matrix: new Matrix4().translate([3, 4, 5]),
     children: [
@@ -49,7 +49,7 @@ it('rotated frame geometry produces world-space hull vertices under a transforme
     ]
   });
   const [body] = makeCradleFrameBodies(frame);
-  expect(body.position).toEqual([0, 0, 0]);
+  expect(body.position).toEqual([3, 4, 5]);
   expect(body.shape?.type).toBe('convex-hull');
   if (body.shape?.type !== 'convex-hull') return;
   const vertices = body.shape.geometry.positions;
@@ -57,9 +57,9 @@ it('rotated frame geometry produces world-space hull vertices under a transforme
     for (const vertical of [-1, 1])
       for (const depth of [-1, 1]) {
         const expected = [
-          3 + (2 * horizontal - vertical) * Math.SQRT1_2,
-          4 + (2 * horizontal + vertical) * Math.SQRT1_2,
-          5 + depth * 0.5
+          (2 * horizontal - vertical) * Math.SQRT1_2,
+          (2 * horizontal + vertical) * Math.SQRT1_2,
+          depth * 0.5
         ];
         let nearest = Infinity;
         for (let index = 0; index < vertices.length; index += 3) {

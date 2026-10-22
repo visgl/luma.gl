@@ -134,7 +134,15 @@ try {
       gravity: [0, 0, 0],
       timeStep: 1 / 120,
       iterations: 24,
-      solver: 'parallel',
+      solver: 'ordered',
+      joints: Array.from({length: 14}, (_, index) => ({
+        type: 'distance' as const,
+        first: 0,
+        second: index + 1,
+        distance: 2.5,
+        enabled: false,
+        spring: {stiffness: 12, damping: 4}
+      })),
       broadPhase: 'hierarchical-grid',
       eventCapacity: 1024,
       impactImpulseThreshold: 2,
@@ -145,7 +153,7 @@ try {
     world.addToGraph(definition);
     const graph = await definition.compileAsync();
     const renderer = makeSalvageRenderer(device, world, bodies);
-    return {world, graph, renderer, states: await world.readState()};
+    return {world, graph, renderer, states: await world.readState(), towBody: 0};
   }
   let mission = await createMission();
   let recovered = new Set<number>();
@@ -229,33 +237,18 @@ try {
               -ship.velocity[1] * Math.min(1, duration * 4) * 2,
               0
             ]);
-          if (
+          const towBody =
             beamHeld &&
             selected &&
             selected.body > 0 &&
             selected.body < 15 &&
             !recovered.has(selected.body)
-          ) {
-            const target = mission.states[selected.body];
-            const delta: [number, number] = [
-              ship.position[0] - target.position[0],
-              ship.position[1] - target.position[1]
-            ];
-            const distance = Math.hypot(...delta);
-            // The ray query bounds surface distance; large targets can have centers beyond it.
-            if (distance > 1.5) {
-              const impulse = Math.min(10, distance * 2) * duration;
-              mission.world.applyImpulse(selected.body, [
-                (delta[0] / distance) * impulse,
-                (delta[1] / distance) * impulse,
-                0
-              ]);
-              mission.world.applyImpulse(0, [
-                (-delta[0] / distance) * impulse * 0.2,
-                (-delta[1] / distance) * impulse * 0.2,
-                0
-              ]);
-            }
+              ? selected.body
+              : 0;
+          if (towBody !== mission.towBody) {
+            if (mission.towBody) mission.world.setJointEnabled(mission.towBody - 1, false);
+            if (towBody) mission.world.setJointEnabled(towBody - 1, true);
+            mission.towBody = towBody;
           }
           const encoder = device.createCommandEncoder();
           for (let step = 0; step < steps; step++)

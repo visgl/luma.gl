@@ -47,10 +47,12 @@ const pose = {
   source: `struct CradlePose {matrix:mat4x4f,viewProjection:mat4x4f,view:mat4x4f,body:i32,anchor:i32};
 @group(0) @binding(auto) var<uniform> cradlePose:CradlePose;
 @group(0) @binding(auto) var<storage,read> bodyPositions:array<vec4f>;
-@group(0) @binding(auto) var<storage,read> bodyOrientations:array<vec4f>;`,
+@group(0) @binding(auto) var<storage,read> bodyOrientations:array<vec4f>;
+@group(0) @binding(auto) var<storage,read> bodyMatrices:array<mat4x4f>;`,
   bindingLayout: [
     {name: 'bodyPositions', group: 0},
-    {name: 'bodyOrientations', group: 0}
+    {name: 'bodyOrientations', group: 0},
+    {name: 'bodyMatrices', group: 0}
   ]
 } as const satisfies ShaderModule;
 
@@ -63,7 +65,7 @@ fn rotate(rotation:vec4f,vector:vec3f)->vec3f {return vector+2.0*cross(rotation.
  var normal=normalize((cradlePose.matrix*vec4f(normals / vec3f(dot(cradlePose.matrix[0].xyz,cradlePose.matrix[0].xyz),dot(cradlePose.matrix[1].xyz,cradlePose.matrix[1].xyz),dot(cradlePose.matrix[2].xyz,cradlePose.matrix[2].xyz)),0)).xyz);
  if(cradlePose.body>=0){
   let rotation=bodyOrientations[u32(cradlePose.body)];
-  point=bodyPositions[u32(cradlePose.body)].xyz+rotate(rotation,point);
+  point=(bodyMatrices[u32(cradlePose.body)]*vec4f(point,1)).xyz;
   normal=rotate(rotation,normal);
  }
  if(cradlePose.anchor>=0){
@@ -111,6 +113,7 @@ export class CradleScene {
     private device: Device,
     positions: Buffer,
     orientations: Buffer,
+    matrices: Buffer,
     frame: GroupNode
   ) {
     // Asset-free studio panorama, integrated by the shared GGX IBL generator.
@@ -266,7 +269,11 @@ export class CradleScene {
           USE_SCENE_ENVIRONMENT: true,
           USE_SCENE_COLOR_MANAGEMENT: true
         },
-        bindings: {bodyPositions: positions, bodyOrientations: orientations},
+        bindings: {
+          bodyPositions: positions,
+          bodyOrientations: orientations,
+          bodyMatrices: matrices
+        },
         parameters: {depthWriteEnabled: true, depthCompare: 'less-equal', cullMode: 'none'},
         depthStencilAttachmentFormat: 'depth24plus'
       });
@@ -297,7 +304,11 @@ export class CradleScene {
             geometry: placement.geometry,
             source: vertexSource + '\n@fragment fn fragmentMain() {}',
             modules: [pose],
-            bindings: {bodyPositions: positions, bodyOrientations: orientations},
+            bindings: {
+              bodyPositions: positions,
+              bodyOrientations: orientations,
+              bodyMatrices: matrices
+            },
             colorAttachmentFormats: [],
             depthStencilAttachmentFormat: 'depth32float',
             parameters: {depthWriteEnabled: true, depthCompare: 'less-equal', cullMode: 'none'}
@@ -328,7 +339,11 @@ export class CradleScene {
             USE_SCENE_ENVIRONMENT: true,
             USE_SCENE_COLOR_MANAGEMENT: true
           },
-          bindings: {bodyPositions: positions, bodyOrientations: orientations},
+          bindings: {
+            bodyPositions: positions,
+            bodyOrientations: orientations,
+            bodyMatrices: matrices
+          },
           colorAttachmentFormats: ['rgba16float'],
           depthStencilAttachmentFormat: 'depth24plus',
           parameters: {depthWriteEnabled: true, depthCompare: 'less-equal', cullMode: 'none'}
