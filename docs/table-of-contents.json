@@ -77,16 +77,24 @@
             "items": [
               "api-guide/engine/features/README",
               "api-guide/engine/features/metallic-roughness",
+              "api-guide/engine/features/base-color",
+              "api-guide/engine/features/opacity",
+              "api-guide/engine/features/double-sided",
+              "api-guide/engine/features/occlusion",
               "api-guide/engine/features/unlit",
               "api-guide/engine/features/emission",
+              "api-guide/engine/features/emissive-strength",
               "api-guide/engine/features/specular",
               "api-guide/engine/features/index-of-refraction",
               "api-guide/engine/features/transmission",
+              "api-guide/engine/features/volume",
+              "api-guide/engine/features/dispersion",
               "api-guide/engine/features/clearcoat",
               "api-guide/engine/features/sheen",
               "api-guide/engine/features/iridescence",
               "api-guide/engine/features/anisotropy",
               "api-guide/engine/features/surface-detail",
+              "api-guide/engine/features/normal-mapping",
               "api-guide/engine/features/diffuse-transmission",
               "api-guide/engine/features/texture-coordinates"
             ]
@@ -106,6 +114,7 @@
           },
           "api-guide/engine/interactivity",
           "api-guide/engine/scenegraph",
+          "api-guide/engine/scene-controllers",
           "api-guide/engine/animation",
           {
             "type": "category",

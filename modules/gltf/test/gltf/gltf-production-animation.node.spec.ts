@@ -2,16 +2,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {SkinController} from '@luma.gl/engine';
+import {parseGLTFSkins} from '@luma.gl/gltf';
 import {readFile} from 'node:fs/promises';
 import {parse} from '@loaders.gl/core';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {GroupNode} from '@luma.gl/engine';
-import {
-  createScenegraphsFromGLTF,
-  type GLTFAnimation,
-  GLTFAnimator,
-  GLTFSkinController
-} from '@luma.gl/gltf';
+import {createScenegraphsFromGLTF, type GLTFAnimation, GLTFAnimator} from '@luma.gl/gltf';
 import {NullDevice} from '@luma.gl/test-utils';
 import {expect, it} from 'vitest';
 
@@ -26,11 +23,13 @@ it('glTF SimpleSkin automatically binds and animates existing primitive joint pa
   const source = await loadSimpleSkin();
   const device = new NullDevice({});
   const scenegraphs = createScenegraphsFromGLTF(device, source);
-  const binding = scenegraphs.skins.getBinding(0);
+  const binding = scenegraphs.skins.getBinding(scenegraphs.gltfNodeIndexToNodeMap.get(0));
 
-  expect(scenegraphs.skins instanceof GLTFSkinController, 'exposes source-owned skins').toBe(true);
+  expect(scenegraphs.skins instanceof SkinController, 'exposes source-owned skins').toBe(true);
   expect(scenegraphs.skins.bindings.length, 'binds the authored skinned node').toBe(1);
-  expect(binding?.skinIndex, 'resolves a postprocessed source skin').toBe(0);
+  expect(binding?.node, 'resolves the authored mesh into an engine node').toBe(
+    scenegraphs.gltfNodeIndexToNodeMap.get(0)
+  );
   expect(binding?.joints.length, 'preserves both authored joints').toBe(2);
   expect(binding?.models.length, 'binds the existing primitive model').toBe(1);
   expect(binding?.jointMatrices.length, 'allocates only authored joint matrices').toBe(32);
@@ -82,19 +81,23 @@ it('GLTFSkinController preserves independent skins and mesh-local transforms', (
     skins: [{joints: [2]}, {joints: [3]}],
     accessors: []
   } as any;
-  const controller = new GLTFSkinController({
-    gltf,
-    scenes: [scene],
-    gltfNodeIndexToNodeMap: new Map([
-      [0, firstMeshNode],
-      [1, secondMeshNode],
-      [2, firstJoint],
-      [3, secondJoint]
-    ])
-  });
+  const controller = new SkinController(
+    parseGLTFSkins({
+      gltf,
+      scenes: [scene],
+      gltfNodeIndexToNodeMap: new Map([
+        [0, firstMeshNode],
+        [1, secondMeshNode],
+        [2, firstJoint],
+        [3, secondJoint]
+      ])
+    })
+  );
 
   expect(controller.bindings.length, 'keeps both authored skins independent').toBe(2);
-  expect(controller.getBinding(0)?.jointMatrices[12], 'localizes the first skin').toBe(2);
+  expect(controller.getBinding(firstMeshNode)?.jointMatrices[12], 'localizes the first skin').toBe(
+    2
+  );
   expect(
     controller.getBinding(secondMeshNode)?.jointMatrices[12],
     'localizes the second skin'
@@ -102,7 +105,10 @@ it('GLTFSkinController preserves independent skins and mesh-local transforms', (
 
   secondJoint.setPosition([28, 0, 0]).updateMatrix();
   controller.update();
-  expect(controller.getBinding(1)?.jointMatrices[12], 'updates only authored transforms').toBe(8);
+  expect(
+    controller.getBinding(secondMeshNode)?.jointMatrices[12],
+    'updates only authored transforms'
+  ).toBe(8);
 });
 
 it('GLTFAnimator advances wall-clock crossfades and supports explicit clip selection', () => {

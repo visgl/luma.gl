@@ -2,15 +2,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {selectAudioEnvironmentZone, type AudioEnvironmentZone} from '@luma.gl/engine';
 import {expect, test} from 'vitest';
 import {Matrix4} from '@math.gl/core';
-import {
-  selectAudioEnvironmentZone,
-  type GLTFAudioEnvironmentZone
-} from '../../src/gltf/gltf-audio-environment';
 
 test('environment zones prioritize authored precedence then transformed volume', () => {
-  const zones: GLTFAudioEnvironmentZone[] = [
+  const zones: AudioEnvironmentZone[] = [
     {environment: 0, worldMatrix: new Matrix4(), shape: {type: 'box', size: [10, 10, 10]}},
     {environment: 1, worldMatrix: new Matrix4(), shape: {type: 'sphere', radius: 1}},
     {
@@ -26,14 +23,14 @@ test('environment zones prioritize authored precedence then transformed volume',
 });
 
 test('environment zones measure inward blends and maximum-scale spheres', () => {
-  const sphere: GLTFAudioEnvironmentZone = {
+  const sphere: AudioEnvironmentZone = {
     environment: 3,
     worldMatrix: new Matrix4().scale([2, 1, 1]),
     shape: {type: 'sphere', radius: 1},
     blendDistance: 1
   };
   expect(selectAudioEnvironmentZone([sphere], [0, 1.5, 0])).toEqual({environment: 3, weight: 0.5});
-  const box: GLTFAudioEnvironmentZone = {
+  const box: AudioEnvironmentZone = {
     environment: 4,
     worldMatrix: new Matrix4().translate([5, 0, 0]).scale([2, 1, 1]),
     shape: {type: 'box', size: [2, 2, 2]},
@@ -43,7 +40,7 @@ test('environment zones measure inward blends and maximum-scale spheres', () => 
 });
 
 test('zone blend targets the environment just outside its closest boundary', () => {
-  const zones: GLTFAudioEnvironmentZone[] = [
+  const zones: AudioEnvironmentZone[] = [
     {environment: 1, worldMatrix: new Matrix4(), shape: {type: 'box', size: [10, 10, 10]}},
     {
       environment: 2,

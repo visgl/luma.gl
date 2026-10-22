@@ -12,6 +12,14 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ## Upgrading to v10.0
 
+### Scene controllers move to engine
+
+The glTF-prefixed skin, material-variant, billboard, area-light, audio, and interactivity runtime APIs have been removed from `@luma.gl/gltf`. Import `SkinController`, `MaterialVariants`, `BillboardController`, `AreaLightController`, `AudioController`, and `Interactivity` from `@luma.gl/engine` instead. Audio graph and environment helpers also belong to engine.
+
+Use `parseGLTFSkins()`, `parseGLTFMaterialVariants()`, `parseGLTFBillboards()`, `parseGLTFAreaLights()`, or `parseGLTFAudio()` to map imported data into engine construction props. `createScenegraphsFromGLTF()` already returns engine skin and variant controllers.
+
+`SkinController.getBinding()` now accepts an engine node, not a glTF node index. Resolve an imported index with `scenegraphs.gltfNodeIndexToNodeMap.get(index)` first. Bindings no longer carry glTF node or skin indices. See [scene controllers](/docs/api-guide/engine/scene-controllers).
+
 ### glTF physics collider provenance
 
 `GLTFPhysicsCollider.shapeIndex` is now optional. Check it before indexing the

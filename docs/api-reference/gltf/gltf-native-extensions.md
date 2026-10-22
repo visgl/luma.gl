@@ -9,9 +9,9 @@ survived loading. `@luma.gl/gltf` connects authored material variants, GPU insta
 recursive node visibility, typed animation pointers, and required-extension capabilities to the
 existing luma.gl scenegraph and animation runtime.
 
-The implementation remains format-owned: `@loaders.gl/gltf` reads and postprocesses the asset,
+Source interpretation remains format-owned: `@loaders.gl/gltf` reads and postprocesses the asset,
 `@luma.gl/gltf` resolves glTF extension semantics, and `@luma.gl/engine` owns generic scenegraph,
-model, and animation behavior. There is no parallel loader, material system, or renderer.
+model, animation, and scene-controller behavior. The optional glTF parsers produce construction props for engine billboard, area-light, and audio controllers; skin and material-variant controllers are returned automatically. There is no parallel loader, material system, or renderer.
 
 ## Load a standards-native scene
 
@@ -388,7 +388,7 @@ function renderFrame(timestampMilliseconds: number): void {
   scenegraphs.animator.setTime(timestampMilliseconds);
 
   for (const binding of scenegraphs.skins.bindings) {
-    console.log(binding.nodeIndex, binding.joints.length, binding.jointMatrices);
+    console.log(binding.node.id, binding.joints.length, binding.jointMatrices);
   }
 
   requestAnimationFrame(renderFrame);
@@ -398,7 +398,7 @@ function renderFrame(timestampMilliseconds: number): void {
 `setTime()` accepts absolute milliseconds; `selectClip()` crossfade duration and
 `animator.update(deltaSeconds)` use seconds. Imported skin palettes are updated automatically once
 after all channels evaluate, using existing mesh-local joint matrices and the canonical shared skin
-shader. `scenegraphs.skins.getBinding(nodeIndex)` exposes a specific reusable skin binding.
+shader. `scenegraphs.skins.getBinding(scenegraphs.gltfNodeIndexToNodeMap.get(nodeIndex))` exposes a specific reusable skin binding.
 
 ## Official fixture coverage
 

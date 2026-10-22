@@ -5,7 +5,7 @@
 import {Matrix4} from '@math.gl/core';
 import {assert} from '@luma.gl/core';
 
-export type GLTFAudioEnvironmentZone = {
+export type AudioEnvironmentZone = {
   environment: number;
   worldMatrix: Matrix4;
   shape: {type: 'box'; size: [number, number, number]} | {type: 'sphere'; radius: number};
@@ -15,11 +15,11 @@ export type GLTFAudioEnvironmentZone = {
 
 /** Select the listener's zone; equal priority favors the smallest transformed volume. */
 export function selectAudioEnvironmentZone(
-  zones: readonly GLTFAudioEnvironmentZone[],
+  zones: readonly AudioEnvironmentZone[],
   position: ArrayLike<number>
 ): {environment: number; weight: number; outsideEnvironment?: number} | undefined {
   let selected:
-    | {zone: GLTFAudioEnvironmentZone; volume: number; distance: number; boundary: number[]}
+    | {zone: AudioEnvironmentZone; volume: number; distance: number; boundary: number[]}
     | undefined;
   for (const zone of zones) {
     const scale = zone.worldMatrix.getScale();
@@ -80,7 +80,7 @@ export function selectAudioEnvironmentZone(
 }
 
 /** Owns an impulse-response return bus; the decoded response and destinations are borrowed. */
-export class GLTFAudioReverbBus {
+export class AudioReverbBus {
   readonly input: GainNode;
   convolver: ConvolverNode;
   readonly output: GainNode;
@@ -133,7 +133,7 @@ export class GLTFAudioReverbBus {
   }
 }
 
-export type GLTFAudioParametricReverb = {
+export type AudioParametricReverb = {
   preset?: string;
   decayTime?: number;
   decayHFRatio?: number;
@@ -148,7 +148,7 @@ export type GLTFAudioParametricReverb = {
 /** Deterministic two-band diffuse response; this is an approximation of the draft parametric model. */
 export function createParametricAudioResponse(
   context: BaseAudioContext,
-  parameters: GLTFAudioParametricReverb
+  parameters: AudioParametricReverb
 ): AudioBuffer {
   // The initial diffuse-response profile supports the default density and diffusion only.
   assert((parameters.density ?? 1) === 1 && (parameters.diffusion ?? 1) === 1);

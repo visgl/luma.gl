@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {BillboardController} from '@luma.gl/engine';
+import {parseGLTFBillboards, type GLTFBillboardDefinition} from '@luma.gl/gltf';
 import {describe, expect, test} from 'vitest';
 import {GroupNode, ScenegraphNode} from '@luma.gl/engine';
 import {Matrix4, Vector3} from '@math.gl/core';
 import type {GLTFPostprocessed} from '@loaders.gl/gltf';
-import {GLTFBillboardController, type GLTFBillboardExtension} from '../../src/gltf/gltf-billboard';
 
-function makeController(definition: GLTFBillboardExtension = {}, allowLegacyYAxis = false) {
+function makeController(definition: GLTFBillboardDefinition = {}, allowLegacyYAxis = false) {
   const leaf = new ScenegraphNode();
   const billboard = new GroupNode({children: [leaf], scale: [2, 3, 4]});
   const parent = new GroupNode({
@@ -19,12 +20,14 @@ function makeController(definition: GLTFBillboardExtension = {}, allowLegacyYAxi
   });
   const scene = new GroupNode([parent]);
   const gltf = {nodes: [{extensions: {KHR_billboard: definition}}]} as unknown as GLTFPostprocessed;
-  const controller = new GLTFBillboardController({
-    gltf,
-    allowLegacyYAxis,
-    scenes: [scene],
-    gltfNodeIndexToNodeMap: new Map([[0, billboard]])
-  });
+  const controller = new BillboardController(
+    parseGLTFBillboards({
+      gltf,
+      allowLegacyYAxis,
+      scenes: [scene],
+      gltfNodeIndexToNodeMap: new Map([[0, billboard]])
+    })
+  );
   return {controller, scene, parent, billboard, leaf};
 }
 

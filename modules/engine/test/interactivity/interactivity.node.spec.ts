@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {Interactivity} from '@luma.gl/engine';
 import {describe, expect, it} from 'vitest';
-import {GLTFInteractivity} from '../../src/gltf/gltf-interactivity';
 
-describe('GLTFInteractivity', () => {
+describe('Interactivity', () => {
   it('executes start event, arithmetic, and variable/set', () => {
     const extension = {
       graphs: [
@@ -31,7 +31,7 @@ describe('GLTFInteractivity', () => {
         }
       ]
     };
-    const runtime = new GLTFInteractivity(extension);
+    const runtime = new Interactivity(extension);
     runtime.start();
     expect(runtime.variables[0]).toEqual([3]);
     runtime.start();
@@ -56,7 +56,7 @@ describe('GLTFInteractivity', () => {
         }
       ]
     };
-    const runtime = new GLTFInteractivity(extension);
+    const runtime = new Interactivity(extension);
     runtime.tick(10);
     expect(runtime.variables[0]).toEqual([0]);
     runtime.tick(12.5);
@@ -66,7 +66,7 @@ describe('GLTFInteractivity', () => {
   it('rejects unsupported operations before execution', () => {
     expect(
       () =>
-        new GLTFInteractivity({
+        new Interactivity({
           graphs: [
             {
               declarations: [{op: 'animation/start'}],
@@ -78,7 +78,7 @@ describe('GLTFInteractivity', () => {
   });
 
   it('limits cyclic flow execution', () => {
-    const runtime = new GLTFInteractivity(
+    const runtime = new Interactivity(
       {
         graphs: [
           {
@@ -96,7 +96,7 @@ describe('GLTFInteractivity', () => {
   });
 
   it('evaluates boolean and integer AND without short-circuiting inputs', () => {
-    const runtime = new GLTFInteractivity({
+    const runtime = new Interactivity({
       graphs: [
         {
           declarations: [{op: 'math/and'}, {op: 'variable/get'}],
@@ -116,7 +116,7 @@ describe('GLTFInteractivity', () => {
 
   it('formats diagnostics and sends custom events before continuing flow', () => {
     const messages: string[] = [];
-    const runtime = new GLTFInteractivity(
+    const runtime = new Interactivity(
       {
         graphs: [
           {
@@ -155,7 +155,7 @@ describe('GLTFInteractivity', () => {
   it('rejects invalid custom event indices before graph execution', () => {
     expect(
       () =>
-        new GLTFInteractivity({
+        new Interactivity({
           graphs: [
             {
               declarations: [{op: 'event/send'}],
@@ -168,7 +168,7 @@ describe('GLTFInteractivity', () => {
 
   it('fills omitted event inputs with fresh declared and type-default values', () => {
     const notifications: Record<string, unknown[]>[] = [];
-    const extension: ConstructorParameters<typeof GLTFInteractivity>[0] = {
+    const extension: ConstructorParameters<typeof Interactivity>[0] = {
       graphs: [
         {
           types: [
@@ -201,7 +201,7 @@ describe('GLTFInteractivity', () => {
         }
       ]
     };
-    new GLTFInteractivity(extension, {
+    new Interactivity(extension, {
       onEvent: (_eventId, values) => notifications.push(values)
     }).start();
     expect(notifications).toEqual([
@@ -213,7 +213,7 @@ describe('GLTFInteractivity', () => {
   });
 
   it('uses a declared type default for an explicit input without a value', () => {
-    const runtime = new GLTFInteractivity({
+    const runtime = new Interactivity({
       graphs: [
         {
           types: [{signature: 'bool'}],
@@ -232,7 +232,7 @@ it.each([
   {cases: [-2147483649, 5]},
   {cases: [2147483648, 5]}
 ])('routes flow/switch to default with omitted or invalid cases: $cases', ({cases}) => {
-  const runtime = new GLTFInteractivity({
+  const runtime = new Interactivity({
     graphs: [
       {
         types: [{signature: 'int'}],
@@ -260,7 +260,7 @@ it.each([
 });
 
 it('uses the math/switch default input when the cases configuration is omitted', () => {
-  const runtime = new GLTFInteractivity({
+  const runtime = new Interactivity({
     graphs: [
       {
         types: [{signature: 'int'}],
@@ -287,7 +287,7 @@ it('uses the math/switch default input when the cases configuration is omitted',
 
 it('dispatches selection only to the selected source node and advances authored delays on ticks', () => {
   const writes: {pointer: string; value: unknown[]}[] = [];
-  const runtime = new GLTFInteractivity(
+  const runtime = new Interactivity(
     {
       graphs: [
         {
@@ -354,7 +354,7 @@ it('dispatches selection only to the selected source node and advances authored 
 });
 
 it('uses a tick clock for start delays and cancels pending activations', () => {
-  const runtime = new GLTFInteractivity({
+  const runtime = new Interactivity({
     graphs: [
       {
         types: [{signature: 'float'}],
@@ -392,7 +392,7 @@ it('uses a tick clock for start delays and cancels pending activations', () => {
 });
 
 it('evaluates the numeric conversions and clamp used by Traffic Light', () => {
-  const runtime = new GLTFInteractivity({
+  const runtime = new Interactivity({
     graphs: [
       {
         declarations: [{op: 'math/clamp'}, {op: 'type/intToFloat'}, {op: 'type/floatToInt'}],
@@ -411,7 +411,7 @@ it('evaluates the numeric conversions and clamp used by Traffic Light', () => {
 
 it('activates elapsed delays in chronological order, once per activation', () => {
   const messages: string[] = [];
-  const runtime = new GLTFInteractivity(
+  const runtime = new Interactivity(
     {
       graphs: [
         {

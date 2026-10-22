@@ -2,15 +2,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {BillboardController, AreaLightController} from '@luma.gl/engine';
+import {parseGLTFAreaLights, parseGLTFBillboards} from '@luma.gl/gltf';
 import {AnimationLoopTemplate, AnimationProps, ModelNode, OrbitControls} from '@luma.gl/engine';
 import {Device, log} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
-import {
-  createScenegraphsFromGLTF,
-  GLTFBillboardController,
-  GLTFAreaLightController
-} from '@luma.gl/gltf';
+import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {
   Light,
   LightingProps,
@@ -85,8 +83,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   orbitControls: OrbitControls;
   scenegraphsFromGLTF?: ReturnType<typeof createScenegraphsFromGLTF>;
   modelLights: Light[] = [];
-  billboardController?: GLTFBillboardController;
-  areaLightController?: GLTFAreaLightController;
+  billboardController?: BillboardController;
+  areaLightController?: AreaLightController;
   areaLightOutlines?: AreaLightOutlines;
   showAreaLights = true;
   cutawayWalls = true;
@@ -377,14 +375,18 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.areaLightController?.destroy();
       this.areaLightController =
         this.feature === 'area-lights'
-          ? new GLTFAreaLightController({gltf: processedGLTF, ...scenegraphsFromGLTF})
+          ? new AreaLightController(
+              parseGLTFAreaLights({gltf: processedGLTF, ...scenegraphsFromGLTF})
+            )
           : undefined;
       this.billboardController?.destroy();
-      this.billboardController = new GLTFBillboardController({
-        gltf: processedGLTF,
-        ...scenegraphsFromGLTF,
-        allowLegacyYAxis: GLTF_FEATURE_PRESETS[this.feature].allowLegacyYAxis
-      });
+      this.billboardController = new BillboardController(
+        parseGLTFBillboards({
+          gltf: processedGLTF,
+          ...scenegraphsFromGLTF,
+          allowLegacyYAxis: GLTF_FEATURE_PRESETS[this.feature].allowLegacyYAxis
+        })
+      );
 
       const sceneBounds = scenegraphsFromGLTF.sceneBounds[0] || scenegraphsFromGLTF.modelBounds;
       this.center = [...sceneBounds.center];

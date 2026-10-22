@@ -84,6 +84,8 @@ const material: PBRMaterial = createPBRMaterial(device, {
 // Pass material to a compatible Model through its material prop.
 ```
 
+See [base color](/docs/api-guide/engine/features/base-color), [ambient occlusion](/docs/api-guide/engine/features/occlusion), and [opacity and cutouts](/docs/api-guide/engine/features/opacity) for independent surface inputs.
+
 ## glTF support
 
 Core glTF `pbrMetallicRoughness` supplies these values without an extension. The adapter maps `metallicFactor` and `roughnessFactor` into the canonical pair. The metallic-roughness texture uses blue for metallic and green for roughness. Legacy `KHR_materials_pbrSpecularGlossiness` data is preserved by the loader but is not converted into this shader path.

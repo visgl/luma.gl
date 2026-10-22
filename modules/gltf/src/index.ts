@@ -61,12 +61,7 @@ export {
   getGLTFExtensionSupportSummary,
   getRegisteredGLTFExtensions
 } from './gltf/gltf-extension-support';
-export {
-  type GLTFSkinBinding,
-  GLTFSkinController,
-  type GLTFSkinControllerProps,
-  resolveGLTFSkinIndex
-} from './gltf/gltf-skin';
+export {parseGLTFSkins, type ParseGLTFSkinsProps, resolveGLTFSkinIndex} from './gltf/gltf-skin';
 export {parseGLTFAnimations} from './parsers/parse-gltf-animations';
 export {type ParseGLTFLightsOptions, parseGLTFLights} from './parsers/parse-gltf-lights';
 export {
@@ -117,11 +112,7 @@ export {
   type GLTFGPUInstancing,
   type GLTFInstanceAttribute
 } from './gltf/gltf-instancing';
-export {
-  GLTFMaterialVariants,
-  type GLTFMaterialVariant,
-  type GLTFPrimitiveMaterialVariants
-} from './gltf/gltf-material-variants';
+export {parseGLTFMaterialVariants} from './gltf/gltf-material-variants';
 export type {
   GLTFCameraAnimationChannel,
   GLTFCameraAnimationProperty,
@@ -129,18 +120,10 @@ export type {
   GLTFLightAnimationProperty
 } from './gltf/animations/animations';
 
-export {GLTFInteractivity} from './gltf/gltf-interactivity';
-
 export {
-  GLTFBillboardController,
-  type GLTFBillboardControllerProps,
-  type GLTFBillboardExtension,
-  type GLTFBillboardDrawEntry
+  parseGLTFBillboards,
+  type GLTFBillboardDefinition,
+  type ParseGLTFBillboardsProps
 } from './gltf/gltf-billboard';
-export {
-  GLTFAudioController,
-  type GLTFAudioControllerOptions,
-  type GLTFAudioExtension
-} from './gltf/gltf-audio';
-
-export {GLTFAreaLightController, type GLTFAreaLightControllerProps} from './gltf/gltf-area-lights';
+export {parseGLTFAudio, type ParseGLTFAudioProps} from './gltf/gltf-audio';
+export {parseGLTFAreaLights, type ParseGLTFAreaLightsProps} from './gltf/gltf-area-lights';

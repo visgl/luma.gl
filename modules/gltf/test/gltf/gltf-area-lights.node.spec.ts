@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {AreaLightController} from '@luma.gl/engine';
+import {parseGLTFAreaLights} from '@luma.gl/gltf';
 import {expect, test} from 'vitest';
 import {GroupNode} from '@luma.gl/engine';
 import type {GLTFPostprocessed} from '@loaders.gl/gltf';
-import {GLTFAreaLightController} from '../../src/gltf/gltf-area-lights';
 
 function makeController(type: 'rect' | 'disk' = 'rect') {
   const light = new GroupNode({position: [1, 0, 0], scale: [-2, 3, 1]});
@@ -23,11 +24,13 @@ function makeController(type: 'rect' | 'disk' = 'rect') {
       }
     }
   } as unknown as GLTFPostprocessed;
-  const controller = new GLTFAreaLightController({
-    gltf,
-    scenes: [scene],
-    gltfNodeIndexToNodeMap: new Map([[0, light]])
-  });
+  const controller = new AreaLightController(
+    parseGLTFAreaLights({
+      gltf,
+      scenes: [scene],
+      gltfNodeIndexToNodeMap: new Map([[0, light]])
+    })
+  );
   return {controller, light, parent};
 }
 
@@ -66,14 +69,16 @@ test('matrix reflections preserve the emitting side and unrelated singular nodes
     ],
     extensions: {EXT_lights_area: {lights: [{type: 'rect'}]}}
   } as unknown as GLTFPostprocessed;
-  const controller = new GLTFAreaLightController({
-    gltf,
-    scenes: [scene],
-    gltfNodeIndexToNodeMap: new Map([
-      [0, light],
-      [1, unrelated]
-    ])
-  });
+  const controller = new AreaLightController(
+    parseGLTFAreaLights({
+      gltf,
+      scenes: [scene],
+      gltfNodeIndexToNodeMap: new Map([
+        [0, light],
+        [1, unrelated]
+      ])
+    })
+  );
   const result = controller.getLights();
   expect(result).toHaveLength(1);
   expect(result[0].normal[2]).toBeCloseTo(-1);
@@ -87,14 +92,16 @@ test('EXT_lights_area selects only the rendered scene, excluding inactive roots'
     nodes: [shared, inactive].map(() => ({extensions: {EXT_lights_area: {light: 0}}})),
     extensions: {EXT_lights_area: {lights: [{type: 'rect'}]}}
   } as unknown as GLTFPostprocessed;
-  const controller = new GLTFAreaLightController({
-    gltf,
-    scenes: [new GroupNode({children: [shared]}), new GroupNode({children: [inactive]})],
-    gltfNodeIndexToNodeMap: new Map([
-      [0, shared],
-      [1, inactive]
-    ])
-  });
+  const controller = new AreaLightController(
+    parseGLTFAreaLights({
+      gltf,
+      scenes: [new GroupNode({children: [shared]}), new GroupNode({children: [inactive]})],
+      gltfNodeIndexToNodeMap: new Map([
+        [0, shared],
+        [1, inactive]
+      ])
+    })
+  );
   expect(controller.getLights()).toHaveLength(1);
   expect(controller.getLights()[0].position).toEqual([0, 0, 0]);
   expect(controller.getLights(1)[0].position).toEqual([5, 0, 0]);

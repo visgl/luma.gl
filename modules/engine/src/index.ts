@@ -222,6 +222,61 @@ export {
   cancelAnimationFramePolyfill
 } from './animation-loop/request-animation-frame';
 
+// Format-independent scene runtime controllers. Source adapters provide resolved bindings.
+export {
+  SkinController,
+  createSkinJointPaletteResource,
+  type SkinBinding,
+  type SkinControllerProps
+} from './scenegraph/controllers/skin-controller';
+export {
+  MaterialVariants,
+  type MaterialVariant,
+  type MaterialVariantBinding,
+  type PrimitiveMaterialVariants,
+  type MaterialVariantsProps
+} from './scenegraph/controllers/material-variants';
+export {
+  BillboardController,
+  type BillboardOrientation,
+  type BillboardBinding,
+  type BillboardDrawEntry,
+  type BillboardControllerProps
+} from './scenegraph/controllers/billboard-controller';
+export {
+  AreaLightController,
+  type AreaLightDefinition,
+  type AreaLightBinding,
+  type AreaLightControllerProps
+} from './scenegraph/controllers/area-light-controller';
+export {
+  Interactivity,
+  type InteractivityValue,
+  type InteractivityNode,
+  type InteractivityGraph,
+  type InteractivityDefinition,
+  type InteractivityValueType,
+  type InteractivityPropertyAdapter,
+  type InteractivityOptions
+} from './interactivity/interactivity';
+export {AudioGraph, type AudioGraphNode, type AudioGraphDefinition} from './audio/audio-graph';
+export {
+  AudioReverbBus,
+  selectAudioEnvironmentZone,
+  createParametricAudioResponse,
+  type AudioEnvironmentZone,
+  type AudioParametricReverb
+} from './audio/audio-environment';
+
+export {
+  AudioController,
+  type AudioControllerOptions,
+  type AudioDefinition,
+  type AudioNodeBinding,
+  type AudioEnvironmentDefinition,
+  type AudioSourceProperties
+} from './audio/audio-controller';
+
 // DEPRECATED
 
 export {LegacyPickingManager} from './modules/picking/legacy-picking-manager';

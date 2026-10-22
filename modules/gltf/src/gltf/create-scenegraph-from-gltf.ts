@@ -9,7 +9,8 @@ import {Light} from '@luma.gl/shadertools';
 import {parseGLTF, type ParseGLTFOptions} from '../parsers/parse-gltf';
 import {parseGLTFLights} from '../parsers/parse-gltf-lights';
 import {GLTFAnimator} from './gltf-animator';
-import {GLTFSkinController} from './gltf-skin';
+import {parseGLTFSkins} from './gltf-skin';
+import {SkinController, MaterialVariants} from '@luma.gl/engine';
 import {parseGLTFAnimations} from '../parsers/parse-gltf-animations';
 import type {GLTFAnimation} from './animations/animations';
 import {
@@ -17,7 +18,7 @@ import {
   getGLTFExtensionSupport,
   type GLTFExtensionSupport
 } from './gltf-extension-support';
-import {GLTFMaterialVariants} from './gltf-material-variants';
+import {parseGLTFMaterialVariants} from './gltf-material-variants';
 
 export type GLTFScenegraphBounds = {
   /** World-space axis-aligned bounds for the scene or model. */
@@ -39,7 +40,7 @@ export type GLTFScenegraphs = {
   /** Materials aligned with the source glTF `materials` array. */
   materials: Material[];
   /** Runtime controller for source-authored `KHR_materials_variants` mappings. */
-  variants: GLTFMaterialVariants;
+  variants: MaterialVariants;
   /** Independent runtime camera projections updated by typed glTF animation pointers. */
   cameras: GLTFPostprocessed['cameras'];
   /** Animation controller for glTF animations. */
@@ -63,7 +64,7 @@ export type GLTFScenegraphs = {
   gltfNodeIdToNodeMap: Map<string, GroupNode>;
 
   /** Automatically updated source skin bindings and reusable mesh-local joint palettes. */
-  skins: GLTFSkinController;
+  skins: SkinController;
 
   /** Original post-processed glTF document. */
   gltf: GLTFPostprocessed;
@@ -131,11 +132,11 @@ export function createScenegraphsFromGLTF(
     materials,
     materialInstances
   });
-  const variants = new GLTFMaterialVariants(gltf, scenes);
+  const variants = new MaterialVariants(parseGLTFMaterialVariants(gltf, scenes));
   const extensionSupport = getGLTFExtensionSupport(gltf, device);
   const sceneBounds = scenes.map(scene => getScenegraphBounds(scene.getBounds()));
   const modelBounds = getCombinedScenegraphBounds(sceneBounds);
-  const skins = new GLTFSkinController({device, gltf, scenes, gltfNodeIndexToNodeMap});
+  const skins = new SkinController(parseGLTFSkins({device, gltf, scenes, gltfNodeIndexToNodeMap}));
   animator.setUpdateHandler(() => skins.update());
 
   let destroyed = false;
@@ -158,7 +159,7 @@ export function createScenegraphsFromGLTF(
         if (node instanceof ModelNode) {
           modelNodes.add(node);
           const variants = node.userData['gltfMaterialVariants'] as
-            | import('./gltf-material-variants').GLTFPrimitiveMaterialVariants
+            | import('@luma.gl/engine').PrimitiveMaterialVariants
             | undefined;
           if (variants?.defaultMaterial) ownedMaterials.add(variants.defaultMaterial);
           for (const mapping of variants?.mappings.values() || []) {

@@ -29,7 +29,7 @@ it('glTF SimpleSkin renders automatically animated retained joints on WebGL and 
 
   for (const graphicsDevice of devices) {
     const scenegraphs = createScenegraphsFromGLTF(graphicsDevice, source);
-    const binding = scenegraphs.skins.getBinding(0);
+    const binding = scenegraphs.skins.getBinding(scenegraphs.gltfNodeIndexToNodeMap.get(0));
     expect(binding?.joints.length, `${graphicsDevice.type} binds authored joints`).toBe(2);
     scenegraphs.animator.setTime(500);
 

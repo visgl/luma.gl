@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {Interactivity} from '@luma.gl/engine';
 import {Deck, OrbitView, COORDINATE_SYSTEM} from '@deck.gl/core';
 import type {GroupNode, Material} from '@luma.gl/engine';
 import {ScenegraphLayer} from '@deck.gl/mesh-layers';
 import {TextLayer} from '@deck.gl/layers';
 import {load} from '@loaders.gl/core';
 import {GLTFLoader} from '@loaders.gl/gltf';
-import {GLTFInteractivity} from '@luma.gl/gltf';
+
 import {getDeckExampleProps} from '../deck-example-device';
 import {createInteractivityInfoBox} from './info-box';
 import {INTERACTIVITY_SAMPLES} from './samples';
@@ -68,14 +69,14 @@ const run = document.querySelector<HTMLButtonElement>('#run')!;
 const result = document.querySelector<HTMLOutputElement>('#result')!;
 const reset = document.querySelector<HTMLButtonElement>('#reset')!;
 const sceneHelp = document.querySelector<HTMLElement>('#scene-help')!;
-let runtime: GLTFInteractivity | null = null;
+let runtime: Interactivity | null = null;
 
 let lastError = '';
 let sourceOperationCount = 0;
 let deck: Deck<OrbitView>;
 let deviceType = 'initializing';
 let modelScene: GroupNode | null = null;
-let sourceExtension: ConstructorParameters<typeof GLTFInteractivity>[0] | null = null;
+let sourceExtension: ConstructorParameters<typeof Interactivity>[0] | null = null;
 const sourceNodes = new Map<number, GroupNode>();
 let sourceMaterials: Material[] = [];
 let initialMaterialColors: number[][] = [];
@@ -156,8 +157,8 @@ function runChecks(): void {
 function createRuntime(
   diagnostics: string[] = [],
   onEvent?: (eventId: string) => void
-): GLTFInteractivity {
-  return new GLTFInteractivity(sourceExtension!, {
+): Interactivity {
+  return new Interactivity(sourceExtension!, {
     properties: {
       get(pointer) {
         const match = /^\/nodes\/(\d+)\/translation$/.exec(pointer);
@@ -341,7 +342,7 @@ function createLayers() {
       run.disabled = sample.id === 'traffic-light';
       if (original) {
         try {
-          new GLTFInteractivity(original);
+          new Interactivity(original);
         } catch (error) {
           run.disabled = true;
           lastError = String(error);

@@ -168,21 +168,20 @@ integer joint weights retain their intended normalized interpretation at the con
 The existing shared `skin` shader module in `@luma.gl/shadertools` applies joint palettes; its
 current uniform-array capacity is 64 joints.
 
-`createScenegraphsFromGLTF()` automatically builds a source-aware `GLTFSkinController`. Each
-binding maps one authored mesh node to its source skin, animated joints, optional inverse bind
+`createScenegraphsFromGLTF()` maps source skins into an engine `SkinController`. Each
+binding maps one resolved mesh node to its animated joints, optional inverse bind
 matrices, reusable mesh-local joint palette, and existing primitive models:
 
 ```ts
 for (const binding of scenegraphs.skins.bindings) {
   console.log({
-    sourceNode: binding.nodeIndex,
-    sourceSkin: binding.skinIndex,
+    node: binding.node.id,
     jointCount: binding.joints.length,
     palette: binding.jointMatrices
   });
 }
 
-const skinBinding = scenegraphs.skins.getBinding(2);
+const skinBinding = scenegraphs.skins.getBinding(scenegraphs.gltfNodeIndexToNodeMap.get(2));
 console.log(skinBinding?.models.length);
 ```
 

@@ -2,43 +2,43 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-// Describe the interpreter's input locally until loaders.gl publishes its interactivity types.
-type GLTFInteractivityValue = {
+// Typed operation graph input, independent of asset loading.
+export type InteractivityValue = {
   type?: number;
   value?: unknown[];
   node?: number;
   socket?: string;
 };
-type GLTFInteractivityNode = {
+export type InteractivityNode = {
   declaration: number;
   configuration?: Record<string, {value: unknown[]}>;
-  values?: Record<string, GLTFInteractivityValue>;
+  values?: Record<string, InteractivityValue>;
   flows?: Record<string, {node: number; socket?: string}>;
 };
-type GLTFInteractivityGraph = {
+export type InteractivityGraph = {
   types?: {signature: string}[];
   events?: {id: string; values?: Record<string, {type: number; value?: unknown[]}>}[];
   variables?: {type?: number; value?: unknown[]}[];
   declarations?: {op: string; extension?: string}[];
-  nodes?: GLTFInteractivityNode[];
+  nodes?: InteractivityNode[];
 };
-type GLTFInteractivityExtension = {
+export type InteractivityDefinition = {
   graph?: number;
-  graphs: GLTFInteractivityGraph[];
+  graphs: InteractivityGraph[];
 };
 
-export type GLTFInteractivityValueType = unknown[];
-export type GLTFInteractivityPropertyAdapter = {
-  get(pointer: string): GLTFInteractivityValueType | undefined;
-  set(pointer: string, value: GLTFInteractivityValueType): boolean;
+export type InteractivityValueType = unknown[];
+export type InteractivityPropertyAdapter = {
+  get(pointer: string): InteractivityValueType | undefined;
+  set(pointer: string, value: InteractivityValueType): boolean;
 };
-export type GLTFInteractivityOptions = {
+export type InteractivityOptions = {
   graph?: number;
   /** Receives custom events sent by the graph to its host. */
   onEvent?: (eventId: string, values: Record<string, unknown[]>) => void;
   /** Receives formatted graph diagnostics and their severity. */
   onLog?: (message: string, severity: number) => void;
-  properties?: GLTFInteractivityPropertyAdapter;
+  properties?: InteractivityPropertyAdapter;
   /** Maximum flow activations per dispatch, protecting against unbounded cycles. */
   maxSteps?: number;
 };
@@ -110,16 +110,16 @@ function getTypeDefaultValue(signature: string | undefined): unknown[] {
 /**
  * Deterministic, GPU-independent interpreter for a defined subset of KHR_interactivity.
  * Unsupported operations fail during construction; no graph is silently partially executed.
- * A renderer supplies the glTF Asset Object Model through the property adapter.
+ * A host supplies application properties through the property adapter.
  */
-export class GLTFInteractivity {
-  readonly extension: GLTFInteractivityExtension;
-  readonly graph: GLTFInteractivityGraph;
+export class Interactivity {
+  readonly definition: InteractivityDefinition;
+  readonly graph: InteractivityGraph;
   readonly variables: unknown[][];
-  readonly properties?: GLTFInteractivityPropertyAdapter;
+  readonly properties?: InteractivityPropertyAdapter;
   readonly maxSteps: number;
-  private readonly onEvent: GLTFInteractivityOptions['onEvent'];
-  private readonly onLog: GLTFInteractivityOptions['onLog'];
+  private readonly onEvent: InteractivityOptions['onEvent'];
+  private readonly onLog: InteractivityOptions['onLog'];
   private started = false;
   private currentTimeSeconds = 0;
   private nextDelayIdentifier = 0;
@@ -133,10 +133,10 @@ export class GLTFInteractivity {
   private lastTick: number | undefined;
   private readonly eventOutputs = new Map<number, Record<string, unknown[]>>();
 
-  constructor(extension: GLTFInteractivityExtension, options: GLTFInteractivityOptions = {}) {
-    this.extension = extension;
-    const graphIndex = options.graph ?? extension.graph ?? 0;
-    const graph = extension.graphs[graphIndex];
+  constructor(definition: InteractivityDefinition, options: InteractivityOptions = {}) {
+    this.definition = definition;
+    const graphIndex = options.graph ?? definition.graph ?? 0;
+    const graph = definition.graphs[graphIndex];
     if (!graph) throw new Error(`KHR_interactivity: graph ${graphIndex} does not exist`);
     this.graph = graph;
     this.properties = options.properties;
@@ -167,11 +167,11 @@ export class GLTFInteractivity {
   }
 
   get graphCount(): number {
-    return this.extension.graphs.length;
+    return this.definition.graphs.length;
   }
 
-  getGraph(index: number): GLTFInteractivityGraph {
-    const graph = this.extension.graphs[index];
+  getGraph(index: number): InteractivityGraph {
+    const graph = this.definition.graphs[index];
     if (!graph) throw new Error(`KHR_interactivity: graph index ${index} is out of range`);
     return graph;
   }
@@ -193,13 +193,13 @@ export class GLTFInteractivity {
     return declaration.extension ? `${declaration.extension}:${declaration.op}` : declaration.op;
   }
 
-  private config(node: GLTFInteractivityNode, name: string): unknown[] {
+  private config(node: InteractivityNode, name: string): unknown[] {
     const value = node.configuration?.[name]?.value;
     if (!value) throw new Error(`KHR_interactivity: missing configuration ${name}`);
     return components(value);
   }
 
-  private getSwitchCases(node: GLTFInteractivityNode): unknown[] {
+  private getSwitchCases(node: InteractivityNode): unknown[] {
     const cases = node.configuration?.['cases']?.value;
     // Missing or invalid configuration uses the operation's default empty list.
     return Array.isArray(cases) &&
@@ -215,7 +215,7 @@ export class GLTFInteractivity {
   }
 
   private input(index: number, name: string, visiting: Set<number>): unknown[] {
-    const value: GLTFInteractivityValue | undefined = this.graph.nodes?.[index]?.values?.[name];
+    const value: InteractivityValue | undefined = this.graph.nodes?.[index]?.values?.[name];
     if (!value) throw new Error(`KHR_interactivity: missing input ${name} on node ${index}`);
     if (value.node !== undefined) {
       if (!value.socket) throw new Error('KHR_interactivity: connected input missing socket');
@@ -491,7 +491,7 @@ export class GLTFInteractivity {
     }
   }
 
-  /** Call once after the glTF asset is ready. */
+  /** Call once after host properties and scene objects are ready. */
   start(): void {
     if (this.started) return;
     this.started = true;
