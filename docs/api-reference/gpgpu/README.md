@@ -20,6 +20,27 @@ The `@luma.gl/gpgpu` module performs GPU-based data transformation.
 - [GPU time series](/docs/api-reference/experimental/gpu-timeseries): exact chart envelopes over chunked uniform samples.
 - [`cleanEvaluate`](/docs/api-reference/gpgpu/clean-evaluate)
 
+## GPU Graph submodules
+
+Each submodule has its own subgroup in this API reference. Import the subpath you need;
+these APIs are not re-exported by the portable evaluator package root.
+
+| Subpath | Reference |
+| --- | --- |
+| `gpu-data` | [GPU Data and GPUVector storage](/docs/api-reference/gpgpu/gpu-data) |
+| `gpu-graph` | [GPUGraph execution scheduling](/docs/api-reference/experimental/gpu-core/gpu-command-graph) |
+| `gpu-core` | [Compute primitives, programs, and execution helpers](/docs/api-reference/experimental/gpu-core) |
+| `gpu-graph-algorithms` | [Graph analytics and layouts](/docs/api-reference/experimental/gpu-graph) |
+| `gpu-parse` | [Encoded columnar page decoding](/docs/api-reference/gpgpu/gpu-parse) |
+| `gpu-physics` | [GPU-resident physics](/docs/api-reference/gpgpu/gpu-physics) |
+| `gpu-vector-search` | [Similarity search](/docs/api-reference/gpgpu/gpu-vector-search) |
+| `gpu-timeseries` | [Time series and chart envelopes](/docs/api-reference/experimental/gpu-timeseries) |
+| `gpu-geometry` | [Geometry computations](/docs/api-reference/gpgpu/gpu-geometry) |
+| `gpu-pointcloud` | [Point-cloud operations](/docs/api-reference/gpgpu/gpu-pointcloud) |
+| `gpu-dggs` | [Discrete global grids](/docs/api-reference/experimental/gpu-dggs) |
+| `gpu-h3` | [H3 cell projection](/docs/api-reference/experimental/gpu-h3) |
+| `gpu-a5` | [A5 cell projection](/docs/api-reference/experimental/gpu-a5) |
+
 ## GPU Physics
 
 The experimental [GPU physics](./gpu-physics.md) subpath provides separate sphere

@@ -8,6 +8,13 @@ Target Release Date: Q3, 2026
 
 **General**
 
+- **Shared math and loader APIs** - Dependencies use math.gl 5.0.0-alpha.19 grouped
+  packages and loaders.gl 5.0.0-alpha.12. Arrow adapters expose
+  `iterateGeoArrowBatchesFromArrowVector` and `getGeoArrowRowViewFromArrowVector`
+  for native GeoArrow chunks and rows without copying coordinate buffers. Views
+  borrow source storage; keep it alive and do not mutate or detach it while in use.
+
+
 - **Engine scene controllers** - Skinning, material variants, billboards, area lights, spatial audio, and interactivity use reusable engine APIs; glTF parsers map source data into those APIs. See [scene controllers](/docs/api-guide/engine/scene-controllers).
 
 - **Draft glTF area lights** - Opt-in animated rectangle/disk light extraction and numerical PBR surface lighting, with a source-loaded Living Room preset in the shared glTF viewer.
@@ -109,7 +116,7 @@ Target Release Date: Q3, 2026
 - **Reusable 2D GPU FFT** - [`GPUFFT2D`](/docs/api-reference/experimental/gpu-core/gpu-fft2d) records bounded power-of-two complex transforms into caller-owned WebGPU command encoders. Forward and normalized inverse passes share one explicit scratch field without hidden submission or readback, providing a reusable spectral-simulation and signal-processing foundation.
 - **Reusable GPU signal processing** - `GPUFFT1D`, `GPUFFT2D`, `GPUTranspose`, and `GPUConvolution` compose one- and two-dimensional transforms, batched workloads, and graph-native convolution through caller-owned WebGPU command encoders.
 - **Graph-native GPU data analysis** - `GPUReduction`, `GPUHistogram`, `GPUGridBinning`, `GPUGridAggregation`, and `GPUGroupAggregation` add deterministic scalar aggregates, equal-width or irregular-edge histogram counts, filtered categorical counts and floating-point statistics, row-major spatial counts, and weighted floating-point sum/min/max/mean cell statistics. GPU-resident histogram edges and group-selection masks can change between encodings without CPU readback or graph recompilation. Analysis operations initialize once and accumulate fixed-width vector chunks without packing. The [GPU Data Analysis example](/examples/experimental/gpu-data-analysis) composes the operations without hidden submission or readback.
-- **GPU graph analytics** - The optional `@luma.gl/gpgpu/gpu-graph` subpath provides GPU-resident topology construction, degree, breadth-first search, shortest paths, connected components, PageRank, community metrics, and force-directed layouts.
+- **GPU graph analytics** - The optional `@luma.gl/gpgpu/gpu-graph-algorithms` subpath provides GPU-resident topology construction, degree, breadth-first search, shortest paths, connected components, PageRank, community metrics, and force-directed layouts.
 - **Bounded GPU hash lookup** - [`GPUHashIndex`](/docs/api-reference/experimental/gpu-core/gpu-hash-index) builds fixed-capacity sparse `uint32` key/value tables with deterministic duplicate values, bounded linear probing, explicit overflow, and collision-work statistics. `GPUHashIndexQuery` resolves changing key batches without hidden submission, resizing, or readback.
 - **Stable sparse GPU joins** - [`GPUHashJoin`](/docs/api-reference/experimental/gpu-core/gpu-hash-join) composes exact hash lookup, scan, and bounded pair publication into stable many-to-one inner joins. Aligned left-join masks, required counts, overflow, and probe statistics remain GPU-resident and explicit.
 - **Batch-preserving sparse GPU joins** - [`GPUBatchHashJoin`](/docs/api-reference/experimental/gpu-core/gpu-batch-hash-join) independently joins ordered `GraphVectorView` chunks against one shared right index. Per-batch capacities, required counts, source-or-output overflow, and probe statistics preserve streaming source partitions without implicit packing.

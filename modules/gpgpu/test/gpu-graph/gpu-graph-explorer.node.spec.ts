@@ -275,8 +275,8 @@ describe('interactive GPU Graph explorer dependency-free rendering integration',
     }
     expect(source).toContain('role="status"');
     expect(source).toContain('aria-live="polite"');
-    expect(source).toContain('GPUGraphLabelPropagation');
-    expect(source).toContain('GPUGraphSpatialForceLayout');
+    expect(source).toContain('GPUGraphAlgorithmsLabelPropagation');
+    expect(source).toContain('GPUGraphAlgorithmsSpatialForceLayout');
     expect(source).toContain('addGraphExplorerSampledLayoutToGraph');
     expect(source).toMatch(/repulsion:\s*useSampledForce\s*\?\s*0\.0015\s*:/);
     expect(source).toMatch(/gravity:\s*useSampledForce\s*\?\s*0\.005\s*:/);
@@ -342,8 +342,8 @@ describe('interactive GPU Graph explorer dependency-free rendering integration',
     expect(explorerSource).toContain('aria-live="polite"');
     expect(explorerSource).toContain('Expand info box');
     expect(explorerSource).toContain('[data-info-box-appearance]');
-    expect(explorerSource).toContain('GPUGraphLabelPropagation');
-    expect(explorerSource).toContain('GPUGraphSpatialForceLayout');
+    expect(explorerSource).toContain('GPUGraphAlgorithmsLabelPropagation');
+    expect(explorerSource).toContain('GPUGraphAlgorithmsSpatialForceLayout');
   });
 
   test('registers the API guide in the canonical documentation navigation tree', () => {

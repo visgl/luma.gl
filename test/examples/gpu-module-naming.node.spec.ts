@@ -6,11 +6,12 @@ import {existsSync, readFileSync} from 'node:fs';
 import path from 'node:path';
 import * as experimentalRoot from '@luma.gl/experimental';
 import * as gpgpuRoot from '@luma.gl/gpgpu';
+import * as executionGraph from '@luma.gl/gpgpu/gpu-graph';
 import * as gpuCore from '@luma.gl/gpgpu/gpu-core';
 import * as gpuData from '@luma.gl/gpgpu/gpu-data';
 import * as gpuCrossfilter from '@luma.gl/experimental/gpu-crossfilter';
 import * as gpuDataframe from '@luma.gl/experimental/gpu-dataframe';
-import * as gpuGraphModule from '@luma.gl/gpgpu/gpu-graph';
+import * as gpuGraphModule from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import * as gpuVectorSearch from '@luma.gl/gpgpu/gpu-vector-search';
 import * as gpuProject from '@luma.gl/experimental/gpu-project';
 import * as gpuRaster from '@luma.gl/experimental/gpu-raster';
@@ -22,7 +23,7 @@ import {describe, expect, test} from 'vitest';
 const GPGPU_MODULES = [
   'gpu-data',
   'gpu-core',
-  'gpu-graph',
+  'gpu-graph-algorithms',
   'gpu-physics',
   'gpu-vector-search'
 ] as const;
@@ -47,6 +48,15 @@ const UNPUBLISHED_WORKING_NAMES = [
 ] as const;
 
 describe('experimental GPU module naming', () => {
+  test('distinguishes execution graphs from graph data while preserving constructor aliases', () => {
+    expect(gpuCore.GPUGraph).toBe(gpuCore.GPUCommandGraph);
+    expect(gpuCore.CompiledGPUGraph).toBe(gpuCore.CompiledGPUCommandGraph);
+    expect(gpuCore.GPUGraph.name).toBe('GPUGraph');
+    expect(gpuGraphModule.GPUGraphAlgorithmsData.name).toBe('GPUGraphAlgorithmsData');
+    expect(executionGraph.GPUGraph).toBe(gpuCore.GPUGraph);
+    expect(gpuCore.GPUGraph).not.toBe(gpuGraphModule.GPUGraphAlgorithmsData);
+  });
+
   test('publishes only the canonical package subpaths', () => {
     const experimentalPackage = JSON.parse(
       readFileSync(path.join(process.cwd(), 'modules/experimental/package.json'), 'utf8')
@@ -58,7 +68,7 @@ describe('experimental GPU module naming', () => {
     for (const moduleName of GPGPU_MODULES) {
       expect(gpgpuPackage.exports[`./${moduleName}`], moduleName).toBeDefined();
     }
-    expect(gpgpuPackage.exports['./gpu-graph/benchmarks']).toBeDefined();
+    expect(gpgpuPackage.exports['./gpu-graph-algorithms/benchmarks']).toBeDefined();
     for (const moduleName of EXPERIMENTAL_MODULES) {
       expect(experimentalPackage.exports[`./${moduleName}`], moduleName).toBeDefined();
     }
@@ -99,9 +109,9 @@ describe('experimental GPU module naming', () => {
     for (const packagePath of [
       '@luma.gl/gpgpu/gpu-data',
       '@luma.gl/gpgpu/gpu-core',
-      '@luma.gl/gpgpu/gpu-graph',
+      '@luma.gl/gpgpu/gpu-graph-algorithms',
       '@luma.gl/gpgpu/gpu-physics',
-      '@luma.gl/gpgpu/gpu-graph/benchmarks',
+      '@luma.gl/gpgpu/gpu-graph-algorithms/benchmarks',
       '@luma.gl/gpgpu/gpu-vector-search',
       '@luma.gl/experimental/gpu-tables',
       '@luma.gl/experimental/models'
@@ -124,7 +134,7 @@ describe('experimental GPU module naming', () => {
     expect(gpuData.GPUVector).toBeTypeOf('function');
     expect(gpuData.getDataTypeByteLength).toBeTypeOf('function');
     expect(gpuCore.GPUCommandGraph).toBeTypeOf('function');
-    expect(gpuGraphModule.GPUGraph).toBeTypeOf('function');
+    expect(gpuGraphModule.GPUGraphAlgorithmsData).toBeTypeOf('function');
     expect(gpuVectorSearch.GPUSimilaritySearch).toBeTypeOf('function');
     expect(gpuTables.GPURecordBatch).toBeTypeOf('function');
     expect(gpuTables.GPUTable).toBeTypeOf('function');
@@ -137,7 +147,7 @@ describe('experimental GPU module naming', () => {
     expect(gpuCrossfilter.GPUCrossfilter).toBeTypeOf('function');
     expect(gpuTrace.GPUTraceScene).toBeTypeOf('function');
 
-    for (const exportName of ['GPUData', 'GPUCommandGraph', 'GPUGraph']) {
+    for (const exportName of ['GPUData', 'GPUCommandGraph', 'GPUGraphAlgorithmsData']) {
       expect(exportName in gpgpuRoot, exportName).toBe(false);
     }
     for (const exportName of ['GPURecordBatch', 'GPUTable', 'PathStorageModel']) {
@@ -148,6 +158,48 @@ describe('experimental GPU module naming', () => {
       expect(Object.keys(moduleExports).some(exportName => /^Lu|^Lux/u.test(exportName))).toBe(
         false
       );
+    }
+  });
+
+  test('gives every public GPU submodule a subgroup in the GPGPU API reference', () => {
+    type DocumentationCategory = {label: string; items: Array<string | DocumentationCategory>};
+    const documentation = JSON.parse(
+      readFileSync(path.join(process.cwd(), 'docs/table-of-contents.json'), 'utf8')
+    ) as DocumentationCategory[];
+    const reference = documentation.find(category => category.label === 'API Reference');
+    const packageReference = reference?.items.find(
+      (category): category is DocumentationCategory =>
+        typeof category !== 'string' && category.label === '@luma.gl/gpgpu'
+    );
+    const moduleGroups: Record<string, string> = {
+      'gpu-data': 'GPU Data',
+      'gpu-core': 'GPU Core',
+      'gpu-graph': 'GPU Graph',
+      'gpu-graph-algorithms': 'GPU Graph Algorithms',
+      'gpu-parse': 'GPU Parse',
+      'gpu-physics': 'GPU Physics',
+      'gpu-vector-search': 'GPU Vector Search',
+      'gpu-timeseries': 'GPU Time Series',
+      'gpu-geometry': 'GPU Geometry',
+      'gpu-pointcloud': 'GPU Point Cloud',
+      'gpu-dggs': 'GPU DGGS',
+      'gpu-h3': 'GPU H3',
+      'gpu-a5': 'GPU A5'
+    };
+    const packageManifest = JSON.parse(
+      readFileSync(path.join(process.cwd(), 'modules/gpgpu/package.json'), 'utf8')
+    ) as {exports: Record<string, unknown>};
+    const publicGPUSubmodules = Object.keys(packageManifest.exports)
+      .filter(subpath => /^\.\/gpu-[^/]+$/.test(subpath))
+      .map(subpath => subpath.slice(2));
+    expect(Object.keys(moduleGroups).sort()).toEqual(publicGPUSubmodules.sort());
+    for (const label of Object.values(moduleGroups)) {
+      const group = packageReference?.items.find(
+        (category): category is DocumentationCategory =>
+          typeof category !== 'string' && category.label === label
+      );
+      expect(group, label).toBeDefined();
+      expect(group?.items.length, label).toBeGreaterThan(0);
     }
   });
 

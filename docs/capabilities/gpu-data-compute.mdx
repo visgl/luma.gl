@@ -49,7 +49,7 @@ See [GPU table structure and lifecycle](/docs/api-reference/experimental/gpu-tab
 | Arrow polygon rendering | Experimental | WebGPU + WebGL2 | `@luma.gl/arrow` | Render supported polygon rows and preserve source-row identity for interaction. |
 | Arrow text rendering | Experimental | WebGPU + WebGL2 | `@luma.gl/arrow` | Render supported string and dictionary-encoded label columns. |
 | Source-row picking | Experimental | WebGPU + WebGL2 | `@luma.gl/arrow` | Map visible geometry and labels back to their original Arrow rows. |
-| GeoArrow tessellation | Experimental | WebGPU + WebGL2 | `@math.gl/geoarrow` with `@luma.gl/arrow` adaptation | Handle supported mixed geometry, polygon holes, coordinate layouts, and renderer color expansion. |
+| GeoArrow tessellation | Experimental | WebGPU + WebGL2 | `@math.gl/geospatial/geoarrow` with `@luma.gl/arrow` adaptation | Handle supported mixed geometry, polygon holes, coordinate layouts, and renderer color expansion. |
 | deck.gl Arrow layers | Experimental | WebGPU + WebGL2 | `@deck.gl-community/arrow-layers` | Connect Arrow-backed paths, polygons, and text to compatible visualization layers. |
 | Text and glyph atlases | Experimental | WebGPU + WebGL2 | `@luma.gl/text` | Render bitmap, SDF, or MSDF glyphs with supported Unicode layout, kerning, and clipping. |
 | Dictionary-compressed labels | Experimental | WebGPU | `@luma.gl/text` | Reuse repeated label values through WebGPU storage-based text strategies. |
@@ -157,25 +157,25 @@ primitives](/docs/api-reference/experimental/gpu-core).
 
 | Feature | Status | Backend | Package | Details |
 | --- | --- | --- | --- | --- |
-| GPU-resident relationship graphs | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph` | `GPUGraph` borrows typed source and target columns without materializing a JavaScript edge list. |
-| Chunk-preserving graph inputs | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph` | Preserve independently owned source batches and caller-controlled graph resource lifetimes. |
-| Compressed graph adjacency | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph` | Build reusable forward and optional reverse compressed sparse row (CSR) adjacency for supported graph operations. |
-| Directional vertex degree | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph` | Compute supported incoming or outgoing degree values directly into GPU result columns. |
-| Structural graph core numbers | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph` | Find bounded simple weak-graph k-core values, convergence, and maximum degeneracy without counting loops or duplicate neighbors. |
-| Breadth-first graph search | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph` | Traverse bounded unweighted neighborhoods and generate deterministic predecessor or selection results. |
-| Weighted single-source shortest paths | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph` | Find least-cost routes over nonnegative single-precision edge weights with bounded relaxation and deterministic predecessors. |
-| Weakly connected components | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph` | Label supported connected groups within an explicit iteration budget and expose convergence information. |
-| Deterministic graph communities | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph` | `GPUGraphLabelPropagation` assigns communities through bounded unweighted majority votes and deterministic label tie-breaking. |
-| Weighted community modularity | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph` | Score existing directed or undirected community partitions while preserving original edge weights and multiplicity. |
-| Single-level modularity optimization | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph` | Improve weighted community partitions through bounded best-gain moves, empty-label splits, and stable tie-breaking; weighted floating-point rounding can vary across runs or devices. |
-| Local clustering coefficients | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph` | Measure exact weak-neighborhood closure with distinct directed links or optional undirected triangle counts. |
-| GPU PageRank | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph` | Rank vertices using iterative GPU execution with supported dangling-node redistribution. |
-| Six Graphalytics workload families | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph` | Implement the [Graph Data Council's six LDBC Graphalytics algorithms](https://ldbcouncil.org/benchmarks/graphalytics/algorithms/) without claiming official validation, certification, or published benchmark results. |
-| Exact force-directed layout | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph` | Generate directly renderable graph positions through supported pairwise attraction and repulsion. |
-| Spatially accelerated layout | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph` | Approximate supported distant forces through a flat GPU spatial grid; this is not hierarchical Barnes-Hut. |
-| Interactive graph exploration | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph` | Coordinate layout, neighborhood highlighting, GPU picking, dragging, and pinned graph vertices. |
+| GPU-resident relationship graphs | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph-algorithms` | `GPUGraphAlgorithmsData` borrows typed source and target columns without materializing a JavaScript edge list. |
+| Chunk-preserving graph inputs | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph-algorithms` | Preserve independently owned source batches and caller-controlled graph resource lifetimes. |
+| Compressed graph adjacency | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph-algorithms` | Build reusable forward and optional reverse compressed sparse row (CSR) adjacency for supported graph operations. |
+| Directional vertex degree | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph-algorithms` | Compute supported incoming or outgoing degree values directly into GPU result columns. |
+| Structural graph core numbers | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph-algorithms` | Find bounded simple weak-graph k-core values, convergence, and maximum degeneracy without counting loops or duplicate neighbors. |
+| Breadth-first graph search | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph-algorithms` | Traverse bounded unweighted neighborhoods and generate deterministic predecessor or selection results. |
+| Weighted single-source shortest paths | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph-algorithms` | Find least-cost routes over nonnegative single-precision edge weights with bounded relaxation and deterministic predecessors. |
+| Weakly connected components | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph-algorithms` | Label supported connected groups within an explicit iteration budget and expose convergence information. |
+| Deterministic graph communities | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph-algorithms` | `GPUGraphAlgorithmsLabelPropagation` assigns communities through bounded unweighted majority votes and deterministic label tie-breaking. |
+| Weighted community modularity | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph-algorithms` | Score existing directed or undirected community partitions while preserving original edge weights and multiplicity. |
+| Single-level modularity optimization | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph-algorithms` | Improve weighted community partitions through bounded best-gain moves, empty-label splits, and stable tie-breaking; weighted floating-point rounding can vary across runs or devices. |
+| Local clustering coefficients | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph-algorithms` | Measure exact weak-neighborhood closure with distinct directed links or optional undirected triangle counts. |
+| GPU PageRank | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph-algorithms` | Rank vertices using iterative GPU execution with supported dangling-node redistribution. |
+| Six Graphalytics workload families | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph-algorithms` | Implement the [Graph Data Council's six LDBC Graphalytics algorithms](https://ldbcouncil.org/benchmarks/graphalytics/algorithms/) without claiming official validation, certification, or published benchmark results. |
+| Exact force-directed layout | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph-algorithms` | Generate directly renderable graph positions through supported pairwise attraction and repulsion. |
+| Spatially accelerated layout | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph-algorithms` | Approximate supported distant forces through a flat GPU spatial grid; this is not hierarchical Barnes-Hut. |
+| Interactive graph exploration | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph-algorithms` | Coordinate layout, neighborhood highlighting, GPU picking, dragging, and pinned graph vertices. |
 | deck.gl-native graph analytics | Experimental | WebGPU | `@deck.gl-community/arrow-layers` | Share supported GPU graph analytics and layout with deck.gl layers while preserving source batches and deck.gl-owned command submission. |
-| CPU and GPU graph benchmarks | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph` | Compare nine bounded reference workloads while separately reporting encoding, completion, setup, and accuracy costs. |
+| CPU and GPU graph benchmarks | Experimental | WebGPU | `@luma.gl/gpgpu/gpu-graph-algorithms` | Compare nine bounded reference workloads while separately reporting encoding, completion, setup, and accuracy costs. |
 
 Read the [GPU-resident graph analytics reference](/docs/api-reference/experimental/gpu-graph),
 the [interactive GPU Graph explorer](/examples/experimental/gpu-graph-explorer), or the

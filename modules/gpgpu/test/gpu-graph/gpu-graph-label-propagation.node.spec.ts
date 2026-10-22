@@ -6,12 +6,12 @@ import {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import * as experimentalModule from '@luma.gl/experimental';
 import {
-  GPUGraph,
-  GPUGraphLabelPropagation,
-  GPUGraphTopology,
-  type GPUGraphAdjacency,
-  type GPUGraphLabelPropagationProps
-} from '@luma.gl/gpgpu/gpu-graph';
+  GPUGraphAlgorithmsData,
+  GPUGraphAlgorithmsLabelPropagation,
+  GPUGraphAlgorithmsTopology,
+  type GPUGraphAlgorithmsAdjacency,
+  type GPUGraphAlgorithmsLabelPropagationProps
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 import {afterEach, describe, expect, test, vi} from 'vitest';
@@ -46,10 +46,10 @@ afterEach(() => {
   }
 });
 
-describe('GPUGraphLabelPropagation public contract and ownership', () => {
+describe('GPUGraphAlgorithmsLabelPropagation public contract and ownership', () => {
   test('keeps community detection isolated in the optional GPU Graph entry point', () => {
-    expect(typeof GPUGraphLabelPropagation).toBe('function');
-    expect('GPUGraphLabelPropagation' in experimentalModule).toBe(false);
+    expect(typeof GPUGraphAlgorithmsLabelPropagation).toBe('function');
+    expect('GPUGraphAlgorithmsLabelPropagation' in experimentalModule).toBe(false);
   });
 
   test('preserves graph topology and caller outputs without allocations, submission, or readback', () => {
@@ -60,7 +60,10 @@ describe('GPUGraphLabelPropagation public contract and ownership', () => {
     const submitSpy = vi.spyOn(fixture.device, 'submit');
     const readbackSpies = fixture.buffers.map(buffer => vi.spyOn(buffer, 'readAsync'));
 
-    const propagation = new GPUGraphLabelPropagation({...props, id: 'borrowed-communities'});
+    const propagation = new GPUGraphAlgorithmsLabelPropagation({
+      ...props,
+      id: 'borrowed-communities'
+    });
 
     expect(propagation.id).toBe('borrowed-communities');
     expect(propagation.topology).toBe(props.topology);
@@ -84,13 +87,13 @@ describe('GPUGraphLabelPropagation public contract and ownership', () => {
     const fixture = createPropagationFixture();
     const props = createPropagationProps(fixture, {reverse: false});
 
-    expect(() => new GPUGraphLabelPropagation(props)).toThrow(/directed|reverse/);
+    expect(() => new GPUGraphAlgorithmsLabelPropagation(props)).toThrow(/directed|reverse/);
   });
 
   test('accepts directed reverse CSR without optional convergence status', () => {
     const fixture = createPropagationFixture();
     const props = createPropagationProps(fixture);
-    const propagation = new GPUGraphLabelPropagation(props);
+    const propagation = new GPUGraphAlgorithmsLabelPropagation(props);
 
     expect(propagation.id).toBe('gpu-graph-label-propagation');
     expect(propagation.topology.graph.directed).toBe(true);
@@ -101,7 +104,7 @@ describe('GPUGraphLabelPropagation public contract and ownership', () => {
   test('accepts symmetric undirected forward adjacency without reverse CSR', () => {
     const fixture = createPropagationFixture();
     const props = createPropagationProps(fixture, {directed: false});
-    const propagation = new GPUGraphLabelPropagation(props);
+    const propagation = new GPUGraphAlgorithmsLabelPropagation(props);
 
     expect(propagation.topology.graph.directed).toBe(false);
     expect(propagation.topology.reverse).toBeUndefined();
@@ -110,7 +113,7 @@ describe('GPUGraphLabelPropagation public contract and ownership', () => {
   test('accepts empty graph outputs and optional uint32 convergence status', () => {
     const fixture = createPropagationFixture();
     const props = createPropagationProps(fixture, {vertexCount: 0, status: true});
-    const propagation = new GPUGraphLabelPropagation(props);
+    const propagation = new GPUGraphAlgorithmsLabelPropagation(props);
 
     expect(propagation.output.length).toBe(0);
     expect(propagation.output.data).toHaveLength(1);
@@ -119,12 +122,14 @@ describe('GPUGraphLabelPropagation public contract and ownership', () => {
   });
 });
 
-describe('GPUGraphLabelPropagation iteration and vector validation', () => {
+describe('GPUGraphAlgorithmsLabelPropagation iteration and vector validation', () => {
   test.each([1, 32, 1024])('accepts a positive bounded iteration count: %i', iterations => {
     const fixture = createPropagationFixture();
     const props = createPropagationProps(fixture);
 
-    expect(new GPUGraphLabelPropagation({...props, iterations}).iterations).toBe(iterations);
+    expect(new GPUGraphAlgorithmsLabelPropagation({...props, iterations}).iterations).toBe(
+      iterations
+    );
   });
 
   test.each([
@@ -138,7 +143,7 @@ describe('GPUGraphLabelPropagation iteration and vector validation', () => {
     const fixture = createPropagationFixture();
     const props = createPropagationProps(fixture);
 
-    expect(() => new GPUGraphLabelPropagation({...props, iterations})).toThrow(
+    expect(() => new GPUGraphAlgorithmsLabelPropagation({...props, iterations})).toThrow(
       /iterations|positive|1024/
     );
   });
@@ -150,7 +155,7 @@ describe('GPUGraphLabelPropagation iteration and vector validation', () => {
       new Uint32Array(length)
     ]);
 
-    expect(() => new GPUGraphLabelPropagation({...props, output})).toThrow(
+    expect(() => new GPUGraphAlgorithmsLabelPropagation({...props, output})).toThrow(
       /output|vertexCount|length/
     );
   });
@@ -162,7 +167,9 @@ describe('GPUGraphLabelPropagation iteration and vector validation', () => {
       new Float32Array(props.topology.graph.vertexCount)
     ]) as unknown as GPUVector<'uint32'>;
 
-    expect(() => new GPUGraphLabelPropagation({...props, output})).toThrow(/output|uint32|packed/);
+    expect(() => new GPUGraphAlgorithmsLabelPropagation({...props, output})).toThrow(
+      /output|uint32|packed/
+    );
   });
 
   test.each([0, 2])('requires exactly one physical component-ID chunk: %i', chunkCount => {
@@ -171,7 +178,7 @@ describe('GPUGraphLabelPropagation iteration and vector validation', () => {
     const chunks = chunkCount === 0 ? [] : [new Uint32Array(3), new Uint32Array(3)];
     const output = createVector(fixture, 'partitioned-components', 'uint32', chunks);
 
-    expect(() => new GPUGraphLabelPropagation({...props, output})).toThrow(
+    expect(() => new GPUGraphAlgorithmsLabelPropagation({...props, output})).toThrow(
       /output|one|single|chunk/
     );
   });
@@ -192,7 +199,7 @@ describe('GPUGraphLabelPropagation iteration and vector validation', () => {
       options
     );
 
-    expect(() => new GPUGraphLabelPropagation({...props, output})).toThrow(
+    expect(() => new GPUGraphAlgorithmsLabelPropagation({...props, output})).toThrow(
       /output|packed|aligned|uint32/
     );
   });
@@ -204,7 +211,7 @@ describe('GPUGraphLabelPropagation iteration and vector validation', () => {
       new Uint32Array(length)
     ]);
 
-    expect(() => new GPUGraphLabelPropagation({...props, converged})).toThrow(
+    expect(() => new GPUGraphAlgorithmsLabelPropagation({...props, converged})).toThrow(
       /converged|one|row|scalar/
     );
   });
@@ -220,12 +227,12 @@ describe('GPUGraphLabelPropagation iteration and vector validation', () => {
       new Uint32Array(0)
     ]);
 
-    expect(() => new GPUGraphLabelPropagation({...props, converged: wrongFormat})).toThrow(
-      /converged|uint32|packed/
-    );
-    expect(() => new GPUGraphLabelPropagation({...props, converged: partitioned})).toThrow(
-      /converged|one|single|chunk/
-    );
+    expect(
+      () => new GPUGraphAlgorithmsLabelPropagation({...props, converged: wrongFormat})
+    ).toThrow(/converged|uint32|packed/);
+    expect(
+      () => new GPUGraphAlgorithmsLabelPropagation({...props, converged: partitioned})
+    ).toThrow(/converged|one|single|chunk/);
   });
 
   test('accepts uint32-aligned component and status ranges at non-256-byte offsets', () => {
@@ -242,7 +249,7 @@ describe('GPUGraphLabelPropagation iteration and vector validation', () => {
       byteOffset: 4
     });
 
-    const propagation = new GPUGraphLabelPropagation({...props, output, converged});
+    const propagation = new GPUGraphAlgorithmsLabelPropagation({...props, output, converged});
     expect(propagation.output.data[0].byteOffset).toBe(4);
     expect(propagation.converged?.data[0].byteOffset).toBe(4);
   });
@@ -273,7 +280,7 @@ describe('GPUGraphLabelPropagation iteration and vector validation', () => {
       buffer: vector.data[0].buffer
     });
 
-    expect(() => new GPUGraphLabelPropagation({...props, output})).toThrow(
+    expect(() => new GPUGraphAlgorithmsLabelPropagation({...props, output})).toThrow(
       /output|distinct|physical|allocation/
     );
   });
@@ -298,12 +305,12 @@ describe('GPUGraphLabelPropagation iteration and vector validation', () => {
       {buffer: props.topology.invalidEdgeCount.data[0].buffer}
     );
 
-    expect(() => new GPUGraphLabelPropagation({...props, converged: outputAlias})).toThrow(
-      /converged|distinct|physical|allocation/
-    );
-    expect(() => new GPUGraphLabelPropagation({...props, converged: topologyAlias})).toThrow(
-      /converged|distinct|physical|allocation/
-    );
+    expect(
+      () => new GPUGraphAlgorithmsLabelPropagation({...props, converged: outputAlias})
+    ).toThrow(/converged|distinct|physical|allocation/);
+    expect(
+      () => new GPUGraphAlgorithmsLabelPropagation({...props, converged: topologyAlias})
+    ).toThrow(/converged|distinct|physical|allocation/);
   });
 
   test('unwraps borrowed DynamicBuffer wrappers when checking physical component aliases', () => {
@@ -324,7 +331,7 @@ describe('GPUGraphLabelPropagation iteration and vector validation', () => {
       {buffer: dynamicBuffer}
     );
 
-    expect(() => new GPUGraphLabelPropagation({...props, output})).toThrow(
+    expect(() => new GPUGraphAlgorithmsLabelPropagation({...props, output})).toThrow(
       /distinct|physical|allocation/
     );
     expect(concreteBuffer.destroyed).toBe(false);
@@ -346,7 +353,7 @@ function createPropagationProps(
     weighted?: boolean;
     status?: boolean;
   } = {}
-): GPUGraphLabelPropagationProps {
+): GPUGraphAlgorithmsLabelPropagationProps {
   const vertexCount = options.vertexCount ?? 6;
   const sourceVertices = createVector(fixture, 'sourceVertices', 'uint32', [
     Uint32Array.from([0, 2]),
@@ -372,7 +379,7 @@ function createPropagationProps(
         Uint32Array.from([30, 40, 50])
       ])
     : undefined;
-  const graph = new GPUGraph({
+  const graph = new GPUGraphAlgorithmsData({
     vertexCount,
     sourceVertices,
     targetVertices,
@@ -388,7 +395,7 @@ function createPropagationProps(
   const invalidEdgeCount = createVector(fixture, 'invalidEdgeCount', 'uint32', [
     new Uint32Array(1)
   ]);
-  const topology = new GPUGraphTopology({graph, forward, reverse, invalidEdgeCount});
+  const topology = new GPUGraphAlgorithmsTopology({graph, forward, reverse, invalidEdgeCount});
   const output = createVector(fixture, 'componentIds', 'uint32', [new Uint32Array(vertexCount)]);
   const converged = options.status
     ? createVector(fixture, 'converged', 'uint32', [new Uint32Array(1)])
@@ -402,7 +409,7 @@ function createAdjacency(
   vertexCount: number,
   capacity: number,
   weighted = false
-): GPUGraphAdjacency {
+): GPUGraphAlgorithmsAdjacency {
   return {
     offsets: createVector(fixture, `${name}-offsets`, 'uint32', [new Uint32Array(vertexCount + 1)]),
     neighbors: createVector(fixture, `${name}-neighbors`, 'uint32', [new Uint32Array(capacity)]),
@@ -415,7 +422,7 @@ function createAdjacency(
   };
 }
 
-function getTopologyVector(topology: GPUGraphTopology, name: string): GPUVector {
+function getTopologyVector(topology: GPUGraphAlgorithmsTopology, name: string): GPUVector {
   if (name === 'invalidEdgeCount') return topology.invalidEdgeCount;
   if (name === 'sourceVertices') return topology.graph.sourceVertices;
   if (name === 'targetVertices') return topology.graph.targetVertices;
@@ -424,7 +431,7 @@ function getTopologyVector(topology: GPUGraphTopology, name: string): GPUVector 
 
   const [direction, vectorName] = name.split('.');
   const adjacency = direction === 'forward' ? topology.forward : topology.reverse!;
-  return adjacency[vectorName as keyof GPUGraphAdjacency]!;
+  return adjacency[vectorName as keyof GPUGraphAlgorithmsAdjacency]!;
 }
 
 function createVector<Format extends ScalarFormat>(

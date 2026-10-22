@@ -1,7 +1,7 @@
 import {ClientOnlyLiveExample} from '@site/src/components/docs/client-only-live-example';
 import {GPUTraceViewerExample} from '@site/src/examples';
 
-# Debugging GPU Command Graphs
+# Debugging GPU Graphs
 
 ## Overview
 

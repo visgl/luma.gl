@@ -53,15 +53,20 @@
       "import": "./dist/gpu-parse/index.js",
       "require": "./dist/gpu-parse/index.cjs"
     },
+    "./gpu-graph-algorithms": {
+      "types": "./dist/gpu-graph-algorithms/index.d.ts",
+      "import": "./dist/gpu-graph-algorithms/index.js",
+      "require": "./dist/gpu-graph-algorithms/index.cjs"
+    },
     "./gpu-graph": {
       "types": "./dist/gpu-graph/index.d.ts",
       "import": "./dist/gpu-graph/index.js",
       "require": "./dist/gpu-graph/index.cjs"
     },
-    "./gpu-graph/benchmarks": {
-      "types": "./dist/gpu-graph/benchmarks.d.ts",
-      "import": "./dist/gpu-graph/benchmarks.js",
-      "require": "./dist/gpu-graph/benchmarks.cjs"
+    "./gpu-graph-algorithms/benchmarks": {
+      "types": "./dist/gpu-graph-algorithms/benchmarks.d.ts",
+      "import": "./dist/gpu-graph-algorithms/benchmarks.js",
+      "require": "./dist/gpu-graph-algorithms/benchmarks.cjs"
     },
     "./gpu-vector-search": {
       "types": "./dist/gpu-vector-search/index.d.ts",
@@ -127,8 +132,7 @@
     "@luma.gl/shadertools": "~10.0.0-alpha.3"
   },
   "dependencies": {
-    "@math.gl/core": "5.0.0-alpha.15",
-    "@math.gl/types": "~5.0.0-alpha.15",
+    "@math.gl/core": "~5.0.0-alpha.19",
     "probe.gl": "^5.0.0"
   }
 }

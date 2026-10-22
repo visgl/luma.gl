@@ -297,7 +297,7 @@ export class GPUCommandGraphExecution<Parameters = void> {
     options: GPUCommandGraphEncodeOptions<Parameters>
   ): GPUCommandGraphExecutionStep {
     if (this.completed) {
-      throw new Error('GPUCommandGraph execution has already completed');
+      throw new Error('GPUGraph execution has already completed');
     }
     const plannedStep = this.plan.steps[this.nextStepIndex];
     const encoding = this.encodeNodeRange(
@@ -337,12 +337,10 @@ export function getGPUCommandGraphExecutionPlan(
   const latencyPriority = options.latencyPriority ?? 'normal';
   const publicationPolicy = options.publicationPolicy ?? 'final';
   if (!['interactive', 'normal', 'background'].includes(latencyPriority)) {
-    throw new Error(`GPUCommandGraph execution latency priority "${latencyPriority}" is invalid`);
+    throw new Error(`GPUGraph execution latency priority "${latencyPriority}" is invalid`);
   }
   if (!['final', 'progressive'].includes(publicationPolicy)) {
-    throw new Error(
-      `GPUCommandGraph execution publication policy "${publicationPolicy}" is invalid`
-    );
+    throw new Error(`GPUGraph execution publication policy "${publicationPolicy}" is invalid`);
   }
   const nodes = preflight.nodes;
   const steps: Readonly<GPUCommandGraphExecutionPlanStep>[] = [];
@@ -466,7 +464,7 @@ function validateGPUCommandGraphExecutionBudget(budget: GPUCommandGraphExecution
   ] as const;
   for (const [name, value] of limits) {
     if (value !== undefined && (!Number.isSafeInteger(value) || value <= 0)) {
-      throw new Error(`GPUCommandGraph execution ${name} must be a positive safe integer`);
+      throw new Error(`GPUGraph execution ${name} must be a positive safe integer`);
     }
   }
 }
@@ -516,7 +514,7 @@ function makeGPUIndirectConditionalComputePass(
         return () => {
           if (dispatchCount > 0) {
             throw new Error(
-              `GPUCommandGraph GPU-conditional compute node "${nodeId}" must encode exactly one dispatch`
+              `GPUGraph GPU-conditional compute node "${nodeId}" must encode exactly one dispatch`
             );
           }
           dispatchCount++;
@@ -526,7 +524,7 @@ function makeGPUIndirectConditionalComputePass(
       if (property === 'dispatchIndirect') {
         return () => {
           throw new Error(
-            `GPUCommandGraph GPU-conditional compute node "${nodeId}" must use dispatch(); the graph supplies its indirect command`
+            `GPUGraph GPU-conditional compute node "${nodeId}" must use dispatch(); the graph supplies its indirect command`
           );
         };
       }
@@ -539,7 +537,7 @@ function makeGPUIndirectConditionalComputePass(
     assertDispatched: () => {
       if (dispatchCount !== 1) {
         throw new Error(
-          `GPUCommandGraph GPU-conditional compute node "${nodeId}" must encode exactly one dispatch`
+          `GPUGraph GPU-conditional compute node "${nodeId}" must encode exactly one dispatch`
         );
       }
     }
@@ -660,7 +658,7 @@ export class GPUCommandGraphEncoding {
  * The graph compiles resource hazards, transient lifetimes, and node resources,
  * but encoding and submission remain controlled by the application.
  */
-export class GPUCommandGraph<Parameters = void> {
+export class GPUGraph<Parameters = void> {
   /** WebGPU device that owns compilation and transient resources. */
   readonly device: Device;
   /** Identifier used as a prefix for graph-owned GPU resources. */
@@ -686,7 +684,7 @@ export class GPUCommandGraph<Parameters = void> {
    */
   constructor(device: Device, props: {id?: string; autotuner?: GPUCommandGraphAutotuner} = {}) {
     if (device.type !== 'webgpu') {
-      throw new Error('GPUCommandGraph requires a WebGPU device');
+      throw new Error('GPUGraph requires a WebGPU device');
     }
     assertDeviceAvailable(device, 'construction');
     this.device = device;
@@ -793,19 +791,19 @@ export class GPUCommandGraph<Parameters = void> {
     vector: GPUVectorLike<T>
   ): GraphVectorView<T> {
     if (vector.bufferLayout) {
-      throw new Error(`GPUCommandGraph import "${id}" does not accept interleaved GPUVector data`);
+      throw new Error(`GPUGraph import "${id}" does not accept interleaved GPUVector data`);
     }
     const format = vector.format ?? vector.data[0]?.format;
     if (!format) {
-      throw new Error(`GPUCommandGraph import "${id}" requires GPUVector.format`);
+      throw new Error(`GPUGraph import "${id}" requires GPUVector.format`);
     }
     if (isVertexListGPUVectorFormat(format) || isValueListGPUVectorFormat(format)) {
-      throw new Error(`GPUCommandGraph import "${id}" requires a fixed-width GPUVector format`);
+      throw new Error(`GPUGraph import "${id}" requires a fixed-width GPUVector format`);
     }
     const formatInfo = getGPUVectorFormatInfo(format);
     const data = vector.data.map((chunk, chunkIndex) => {
       if (chunk.format !== format) {
-        throw new Error(`GPUCommandGraph import "${id}" requires matching GPUVector chunk formats`);
+        throw new Error(`GPUGraph import "${id}" requires matching GPUVector chunk formats`);
       }
       const chunkId = vector.data.length === 1 ? id : `${id}-chunk-${chunkIndex}`;
       return this.importGPUDataView(chunkId, chunk);
@@ -977,11 +975,11 @@ export class GPUCommandGraph<Parameters = void> {
    *
    * @returns An executable graph that owns compiled node state and transient allocations.
    */
-  compile(): CompiledGPUCommandGraph<Parameters> {
+  compile(): CompiledGPUGraph<Parameters> {
     this.assertMutable();
     assertDeviceAvailable(this.device, 'compilation');
     this.compiled = true;
-    return new CompiledGPUCommandGraph(
+    return new CompiledGPUGraph(
       compileGPUCommandGraph({
         device: this.device,
         id: this.id,
@@ -1005,11 +1003,11 @@ export class GPUCommandGraph<Parameters = void> {
    *
    * @returns An executable graph whose pipelines are ready before the promise resolves.
    */
-  async compileAsync(): Promise<CompiledGPUCommandGraph<Parameters>> {
+  async compileAsync(): Promise<CompiledGPUGraph<Parameters>> {
     this.assertMutable();
     assertDeviceAvailable(this.device, 'compilation');
     this.compiled = true;
-    return new CompiledGPUCommandGraph(
+    return new CompiledGPUGraph(
       await compileGPUCommandGraphAsync({
         device: this.device,
         id: this.id,
@@ -1024,54 +1022,52 @@ export class GPUCommandGraph<Parameters = void> {
   private addNode(node: GPUCommandGraphNode<Parameters>): void {
     this.assertMutable();
     if (!node.id) {
-      throw new Error('GPUCommandGraph node id is required');
+      throw new Error('GPUGraph node id is required');
     }
     if (this.nodeIds.has(node.id)) {
-      throw new Error(`GPUCommandGraph node id "${node.id}" is already in use`);
+      throw new Error(`GPUGraph node id "${node.id}" is already in use`);
     }
     for (const [name, value] of Object.entries(node.workload ?? {})) {
       if (name === 'operation' || name === 'variant') {
         if (typeof value !== 'string' || !value) {
-          throw new Error(`GPUCommandGraph node "${node.id}" workload ${name} must be nonempty`);
+          throw new Error(`GPUGraph node "${node.id}" workload ${name} must be nonempty`);
         }
       } else if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
         throw new Error(
-          `GPUCommandGraph node "${node.id}" workload ${name} must be a nonnegative safe integer`
+          `GPUGraph node "${node.id}" workload ${name} must be a nonnegative safe integer`
         );
       }
     }
     if (node.condition) {
       if (!node.condition.id) {
-        throw new Error(`GPUCommandGraph node "${node.id}" condition id is required`);
+        throw new Error(`GPUGraph node "${node.id}" condition id is required`);
       }
       if (node.condition.source === 'cpu') {
         if (typeof node.condition.evaluate !== 'function') {
-          throw new Error(
-            `GPUCommandGraph node "${node.id}" CPU condition requires an evaluate function`
-          );
+          throw new Error(`GPUGraph node "${node.id}" CPU condition requires an evaluate function`);
         }
       } else {
         const gpuCondition = node.condition;
         if (node.type !== 'compute' || gpuCondition.mode !== 'indirect') {
           throw new Error(
-            `GPUCommandGraph node "${node.id}" GPU conditions require an indirect compute node`
+            `GPUGraph node "${node.id}" GPU conditions require an indirect compute node`
           );
         }
         if (!gpuCondition.buffer) {
           throw new Error(
-            `GPUCommandGraph node "${node.id}" GPU condition requires an indirect command buffer`
+            `GPUGraph node "${node.id}" GPU condition requires an indirect command buffer`
           );
         }
         this.assertBuffer(gpuCondition.buffer);
         const byteOffset = gpuCondition.byteOffset ?? 0;
         if (!Number.isSafeInteger(byteOffset) || byteOffset < 0 || byteOffset % 4 !== 0) {
           throw new Error(
-            `GPUCommandGraph node "${node.id}" GPU condition byteOffset must be a nonnegative multiple of 4`
+            `GPUGraph node "${node.id}" GPU condition byteOffset must be a nonnegative multiple of 4`
           );
         }
         if (byteOffset + 3 * UINT32_BYTE_LENGTH > gpuCondition.buffer.byteLength) {
           throw new Error(
-            `GPUCommandGraph node "${node.id}" GPU condition indirect command exceeds buffer "${gpuCondition.buffer.id}"`
+            `GPUGraph node "${node.id}" GPU condition indirect command exceeds buffer "${gpuCondition.buffer.id}"`
           );
         }
         if (
@@ -1092,14 +1088,14 @@ export class GPUCommandGraph<Parameters = void> {
     if (node.publication) {
       if (node.condition) {
         throw new Error(
-          `GPUCommandGraph node "${node.id}" cannot combine conditional execution with a publication boundary`
+          `GPUGraph node "${node.id}" cannot combine conditional execution with a publication boundary`
         );
       }
       if (!node.publication.id) {
-        throw new Error(`GPUCommandGraph node "${node.id}" publication id is required`);
+        throw new Error(`GPUGraph node "${node.id}" publication id is required`);
       }
       if (!['partial', 'complete'].includes(node.publication.completeness)) {
-        throw new Error(`GPUCommandGraph node "${node.id}" publication completeness is invalid`);
+        throw new Error(`GPUGraph node "${node.id}" publication completeness is invalid`);
       }
     }
     for (const resource of node.resources ?? []) {
@@ -1115,10 +1111,10 @@ export class GPUCommandGraph<Parameters = void> {
       } else {
         this.assertExternalTexture(resource.externalTexture);
         if (resource.usage !== 'sampled') {
-          throw new Error('GPUCommandGraph external textures support sampled access only');
+          throw new Error('GPUGraph external textures support sampled access only');
         }
         if (node.type !== 'render') {
-          throw new Error('GPUCommandGraph external textures can be sampled only by render nodes');
+          throw new Error('GPUGraph external textures can be sampled only by render nodes');
         }
       }
     }
@@ -1133,7 +1129,7 @@ export class GPUCommandGraph<Parameters = void> {
       this.textures.has(buffer.id) ||
       this.externalTextures.has(buffer.id)
     ) {
-      throw new Error(`GPUCommandGraph resource id "${buffer.id}" is already in use`);
+      throw new Error(`GPUGraph resource id "${buffer.id}" is already in use`);
     }
     this.buffers.set(buffer.id, buffer);
     return buffer;
@@ -1147,7 +1143,7 @@ export class GPUCommandGraph<Parameters = void> {
       this.textures.has(texture.id) ||
       this.externalTextures.has(texture.id)
     ) {
-      throw new Error(`GPUCommandGraph resource id "${texture.id}" is already in use`);
+      throw new Error(`GPUGraph resource id "${texture.id}" is already in use`);
     }
     this.textures.set(texture.id, texture);
     return texture;
@@ -1159,7 +1155,7 @@ export class GPUCommandGraph<Parameters = void> {
       this.textures.has(texture.id) ||
       this.externalTextures.has(texture.id)
     ) {
-      throw new Error(`GPUCommandGraph resource id "${texture.id}" is already in use`);
+      throw new Error(`GPUGraph resource id "${texture.id}" is already in use`);
     }
     this.externalTextures.set(texture.id, texture);
     return texture;
@@ -1170,7 +1166,7 @@ export class GPUCommandGraph<Parameters = void> {
     data: GPUData<T>
   ): GraphDataView<T> {
     if (!data.format) {
-      throw new Error(`GPUCommandGraph import "${id}" requires GPUData.format`);
+      throw new Error(`GPUGraph import "${id}" requires GPUData.format`);
     }
     const coreBuffer = getCoreBuffer(data.buffer);
     const requirements = {
@@ -1279,13 +1275,13 @@ export class GPUCommandGraph<Parameters = void> {
 
   private assertMutable(): void {
     if (this.compiled) {
-      throw new Error(`GPUCommandGraph "${this.id}" has already been compiled`);
+      throw new Error(`GPUGraph "${this.id}" has already been compiled`);
     }
   }
 
   private validateRenderAttachments(id: string, attachments: GraphRenderPassAttachments): void {
     if (attachments.colorAttachments.length === 0 && !attachments.depthStencilAttachment) {
-      throw new Error(`GPUCommandGraph render node "${id}" requires at least one attachment`);
+      throw new Error(`GPUGraph render node "${id}" requires at least one attachment`);
     }
     const allAttachments = [
       ...attachments.colorAttachments,
@@ -1299,7 +1295,7 @@ export class GPUCommandGraph<Parameters = void> {
         attachment.arrayLayerCount !== 1
       ) {
         throw new Error(
-          `GPUCommandGraph render node "${id}" attachments must be single-mip, single-layer 2d views`
+          `GPUGraph render node "${id}" attachments must be single-mip, single-layer 2d views`
         );
       }
     }
@@ -1311,7 +1307,7 @@ export class GPUCommandGraph<Parameters = void> {
         attachment.texture.samples !== first.texture.samples
       ) {
         throw new Error(
-          `GPUCommandGraph render node "${id}" attachments must have matching extent and samples`
+          `GPUGraph render node "${id}" attachments must have matching extent and samples`
         );
       }
     }
@@ -1324,11 +1320,11 @@ export class GPUCommandGraph<Parameters = void> {
       return;
     }
     if (this.device.type !== 'webgpu') {
-      throw new Error(`GPUCommandGraph render node "${id}" resolve targets require WebGPU`);
+      throw new Error(`GPUGraph render node "${id}" resolve targets require WebGPU`);
     }
     if (resolveTargets.length !== attachments.colorAttachments.length) {
       throw new Error(
-        `GPUCommandGraph render node "${id}" requires one resolve entry per color attachment`
+        `GPUGraph render node "${id}" requires one resolve entry per color attachment`
       );
     }
     for (let index = 0; index < resolveTargets.length; index++) {
@@ -1346,7 +1342,7 @@ export class GPUCommandGraph<Parameters = void> {
         source.height !== target.height
       ) {
         throw new Error(
-          `GPUCommandGraph render node "${id}" resolve target ${index} must match a multisampled source and be single-sampled`
+          `GPUGraph render node "${id}" resolve target ${index} must match a multisampled source and be single-sampled`
         );
       }
       if (
@@ -1356,7 +1352,7 @@ export class GPUCommandGraph<Parameters = void> {
         target.arrayLayerCount !== 1
       ) {
         throw new Error(
-          `GPUCommandGraph render node "${id}" resolve targets must be single-mip, single-layer 2d color views`
+          `GPUGraph render node "${id}" resolve targets must be single-mip, single-layer 2d color views`
         );
       }
     }
@@ -1369,7 +1365,7 @@ export class GPUCommandGraph<Parameters = void> {
  * The compiled graph owns transient allocations, compiled node state, and cached views and
  * framebuffers. Imported buffers and textures remain caller-owned.
  */
-export class CompiledGPUCommandGraph<Parameters = void> {
+export class CompiledGPUGraph<Parameters = void> {
   /** WebGPU device that owns the compiled resources. */
   readonly device: Device;
   /** Identifier inherited from the graph definition. */
@@ -1402,7 +1398,7 @@ export class CompiledGPUCommandGraph<Parameters = void> {
 
   /** String tag used by object inspectors and developer tools. */
   get [Symbol.toStringTag](): string {
-    return 'CompiledGPUCommandGraph';
+    return 'CompiledGPUGraph';
   }
 
   /** Compact graph summary that avoids recursively printing GPU resources. */
@@ -1522,11 +1518,11 @@ export class CompiledGPUCommandGraph<Parameters = void> {
     nextNodeIndex: number
   ): GPUCommandGraphEncoding {
     if (this.destroyed) {
-      throw new Error(`CompiledGPUCommandGraph "${this.id}" has been destroyed`);
+      throw new Error(`CompiledGPUGraph "${this.id}" has been destroyed`);
     }
     assertDeviceAvailable(this.device, 'encoding');
     if (commandEncoder.device !== this.device) {
-      throw new Error('GPUCommandGraph command encoder must belong to the graph device');
+      throw new Error('GPUGraph command encoder must belong to the graph device');
     }
 
     const encodingStartTime = getTimestampMilliseconds();
@@ -1553,7 +1549,7 @@ export class CompiledGPUCommandGraph<Parameters = void> {
         ? this.transientBuffers.get(handle)
         : importedBuffers.get(handle);
       if (!buffer) {
-        throw new Error(`GPUCommandGraph buffer "${handle.id}" is not bound`);
+        throw new Error(`GPUGraph buffer "${handle.id}" is not bound`);
       }
       return buffer;
     };
@@ -1563,7 +1559,7 @@ export class CompiledGPUCommandGraph<Parameters = void> {
         ? this.transientTextures.get(handle)
         : importedTextures.get(handle);
       if (!texture) {
-        throw new Error(`GPUCommandGraph texture "${handle.id}" is not bound`);
+        throw new Error(`GPUGraph texture "${handle.id}" is not bound`);
       }
       return texture;
     };
@@ -1615,7 +1611,7 @@ export class CompiledGPUCommandGraph<Parameters = void> {
     const getExternalTexture = (handle: GraphExternalTextureHandle): ExternalTexture => {
       const texture = externalTextureResult.textures.get(handle);
       if (!texture) {
-        throw new Error(`GPUCommandGraph external texture "${handle.id}" is not bound`);
+        throw new Error(`GPUGraph external texture "${handle.id}" is not bound`);
       }
       return texture;
     };
@@ -1651,7 +1647,7 @@ export class CompiledGPUCommandGraph<Parameters = void> {
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             throw new Error(
-              `GPUCommandGraph CPU condition "${node.condition.id}" failed for node "${node.id}": ${message}`
+              `GPUGraph CPU condition "${node.condition.id}" failed for node "${node.id}": ${message}`
             );
           }
           if (!shouldExecute) {
@@ -1717,12 +1713,12 @@ export class CompiledGPUCommandGraph<Parameters = void> {
             };
             if (node.attachments && renderPassProps.framebuffer !== undefined) {
               throw new Error(
-                `GPUCommandGraph render node "${node.id}" cannot supply framebuffer with graph attachments`
+                `GPUGraph render node "${node.id}" cannot supply framebuffer with graph attachments`
               );
             }
             if (node.attachments?.resolveTargets && renderPassProps.resolveTargets !== undefined) {
               throw new Error(
-                `GPUCommandGraph render node "${node.id}" cannot supply resolveTargets with graph attachments`
+                `GPUGraph render node "${node.id}" cannot supply resolveTargets with graph attachments`
               );
             }
             const framebuffer = node.attachments
@@ -1830,7 +1826,7 @@ export class CompiledGPUCommandGraph<Parameters = void> {
       }
       const importedBuffer = overrides[id] ?? handle.defaultBuffer;
       if (!importedBuffer) {
-        throw new Error(`GPUCommandGraph imported buffer "${id}" is required`);
+        throw new Error(`GPUGraph imported buffer "${id}" is required`);
       }
       validateImportedBuffer(importedBuffer, handle, this.device);
       const coreBuffer = getCoreBuffer(importedBuffer);
@@ -1848,7 +1844,7 @@ export class CompiledGPUCommandGraph<Parameters = void> {
             this.writableImportedBufferHandles.has(handle))
         ) {
           throw new Error(
-            `GPUCommandGraph imported buffers "${previousHandle.id}" and "${id}" resolve to the same physical buffer`
+            `GPUGraph imported buffers "${previousHandle.id}" and "${id}" resolve to the same physical buffer`
           );
         }
         if (!previousHandle) {
@@ -1860,7 +1856,7 @@ export class CompiledGPUCommandGraph<Parameters = void> {
     for (const id of Object.keys(overrides)) {
       const handle = this.buffers.get(id);
       if (!handle || handle.transient) {
-        throw new Error(`GPUCommandGraph has no imported buffer named "${id}"`);
+        throw new Error(`GPUGraph has no imported buffer named "${id}"`);
       }
     }
     return resolved;
@@ -1882,12 +1878,12 @@ export class CompiledGPUCommandGraph<Parameters = void> {
       if (handle.frameScoped) {
         const binding = frameBindings[id];
         if (!binding) {
-          throw new Error(`GPUCommandGraph frame texture "${id}" is required`);
+          throw new Error(`GPUGraph frame texture "${id}" is required`);
         }
         const lastFrameId = this.lastFrameIds.get(handle);
         if (lastFrameId !== undefined && binding.frameId <= lastFrameId) {
           throw new Error(
-            `GPUCommandGraph frame texture "${id}" frameId ${binding.frameId} is stale; expected greater than ${lastFrameId}`
+            `GPUGraph frame texture "${id}" frameId ${binding.frameId} is stale; expected greater than ${lastFrameId}`
           );
         }
         validateImportedTexture(binding.texture, handle, this.device);
@@ -1897,7 +1893,7 @@ export class CompiledGPUCommandGraph<Parameters = void> {
       }
       const importedTexture = overrides[id] ?? handle.defaultTexture;
       if (!importedTexture) {
-        throw new Error(`GPUCommandGraph imported texture "${id}" is required`);
+        throw new Error(`GPUGraph imported texture "${id}" is required`);
       }
       validateImportedTexture(importedTexture, handle, this.device);
       resolved.set(handle, getCoreTexture(importedTexture));
@@ -1905,13 +1901,13 @@ export class CompiledGPUCommandGraph<Parameters = void> {
     for (const id of Object.keys(overrides)) {
       const handle = this.textures.get(id);
       if (!handle || handle.transient || handle.frameScoped) {
-        throw new Error(`GPUCommandGraph has no imported texture named "${id}"`);
+        throw new Error(`GPUGraph has no imported texture named "${id}"`);
       }
     }
     for (const id of Object.keys(frameBindings)) {
       const handle = this.textures.get(id);
       if (!handle?.frameScoped) {
-        throw new Error(`GPUCommandGraph has no frame texture named "${id}"`);
+        throw new Error(`GPUGraph has no frame texture named "${id}"`);
       }
     }
     const activePhysicalTextures = new Map<object, GraphTextureHandle>();
@@ -1932,7 +1928,7 @@ export class CompiledGPUCommandGraph<Parameters = void> {
           this.writableImportedTextureHandles.has(handle))
       ) {
         throw new Error(
-          `GPUCommandGraph imported textures "${previousHandle.id}" and "${handle.id}" resolve to the same physical texture`
+          `GPUGraph imported textures "${previousHandle.id}" and "${handle.id}" resolve to the same physical texture`
         );
       }
       if (!previousHandle) {
@@ -1951,17 +1947,17 @@ export class CompiledGPUCommandGraph<Parameters = void> {
     for (const [id, handle] of this.externalTextures) {
       const binding = bindings[id];
       if (!binding) {
-        throw new Error(`GPUCommandGraph external texture "${id}" is required`);
+        throw new Error(`GPUGraph external texture "${id}" is required`);
       }
       const lastFrameId = this.lastExternalTextureFrameIds.get(handle);
       if (lastFrameId !== undefined && binding.frameId <= lastFrameId) {
         throw new Error(
-          `GPUCommandGraph external texture "${id}" frameId ${binding.frameId} is stale; expected greater than ${lastFrameId}`
+          `GPUGraph external texture "${id}" frameId ${binding.frameId} is stale; expected greater than ${lastFrameId}`
         );
       }
       if (this.consumedExternalTextures.has(binding.texture)) {
         throw new Error(
-          `GPUCommandGraph external texture "${id}" requires a fresh binding for each frame`
+          `GPUGraph external texture "${id}" requires a fresh binding for each frame`
         );
       }
       validateImportedExternalTexture(binding.texture, handle, this.device);
@@ -1970,7 +1966,7 @@ export class CompiledGPUCommandGraph<Parameters = void> {
     }
     for (const id of Object.keys(bindings)) {
       if (!this.externalTextures.has(id)) {
-        throw new Error(`GPUCommandGraph has no external texture named "${id}"`);
+        throw new Error(`GPUGraph has no external texture named "${id}"`);
       }
     }
     return {textures, frameIds};
@@ -2054,7 +2050,7 @@ function doesGraphBufferHandleCoverRequirements(
 function getCoreTexture(texture: GraphImportedTexture): Texture {
   if (texture instanceof DynamicTexture) {
     if (!texture.isReady) {
-      throw new Error(`GPUCommandGraph dynamic texture "${texture.id}" is not ready`);
+      throw new Error(`GPUGraph dynamic texture "${texture.id}" is not ready`);
     }
     return texture.texture;
   }
@@ -2072,10 +2068,10 @@ function validateEncodingFrameId(
     ...Object.entries(externalTextures)
   ]) {
     if (!Number.isSafeInteger(binding.frameId) || binding.frameId < 0) {
-      throw new Error(`GPUCommandGraph frame resource "${id}" requires a valid frameId`);
+      throw new Error(`GPUGraph frame resource "${id}" requires a valid frameId`);
     }
     if (encodingFrameId !== undefined && binding.frameId !== encodingFrameId) {
-      throw new Error('GPUCommandGraph frame resources must share one frameId per encoding');
+      throw new Error('GPUGraph frame resources must share one frameId per encoding');
     }
     encodingFrameId = binding.frameId;
   }
@@ -2126,7 +2122,7 @@ function getGPUCommandGraphCapabilities(device: Device): GPUCommandGraphCapabili
 /** Rejects graph work after a WebGPU device has been lost. */
 function assertDeviceAvailable(device: Device, operation: string): void {
   if (device.isLost) {
-    throw new Error(`GPUCommandGraph cannot perform ${operation} after device loss`);
+    throw new Error(`GPUGraph cannot perform ${operation} after device loss`);
   }
 }
 
@@ -2138,16 +2134,16 @@ function getTimestampMilliseconds(): number {
 /** Validates graph identity, capacity, and usage fields for a logical buffer. */
 function validateGraphBufferDescriptor(descriptor: GraphBufferDescriptor, device: Device): void {
   if (!descriptor.id) {
-    throw new Error('GPUCommandGraph buffer id is required');
+    throw new Error('GPUGraph buffer id is required');
   }
   if (!Number.isSafeInteger(descriptor.byteLength) || descriptor.byteLength < 0) {
-    throw new Error(`GPUCommandGraph buffer "${descriptor.id}" requires a valid byteLength`);
+    throw new Error(`GPUGraph buffer "${descriptor.id}" requires a valid byteLength`);
   }
   if (descriptor.byteLength > device.limits.maxBufferSize) {
-    throw new Error(`GPUCommandGraph buffer "${descriptor.id}" exceeds the device buffer limit`);
+    throw new Error(`GPUGraph buffer "${descriptor.id}" exceeds the device buffer limit`);
   }
   if (!Number.isSafeInteger(descriptor.usage) || descriptor.usage <= 0) {
-    throw new Error(`GPUCommandGraph buffer "${descriptor.id}" requires buffer usage flags`);
+    throw new Error(`GPUGraph buffer "${descriptor.id}" requires buffer usage flags`);
   }
 }
 
@@ -2157,7 +2153,7 @@ function validateGraphExternalTextureDescriptor(
   device: Device
 ): void {
   if (!descriptor.id) {
-    throw new Error('GPUCommandGraph external texture id is required');
+    throw new Error('GPUGraph external texture id is required');
   }
   for (const [name, value] of Object.entries({
     width: descriptor.width,
@@ -2165,7 +2161,7 @@ function validateGraphExternalTextureDescriptor(
   })) {
     if (!Number.isSafeInteger(value) || value <= 0) {
       throw new Error(
-        `GPUCommandGraph external texture "${descriptor.id}" ${name} must be a positive safe integer`
+        `GPUGraph external texture "${descriptor.id}" ${name} must be a positive safe integer`
       );
     }
   }
@@ -2173,9 +2169,7 @@ function validateGraphExternalTextureDescriptor(
     descriptor.width > device.limits.maxTextureDimension2D ||
     descriptor.height > device.limits.maxTextureDimension2D
   ) {
-    throw new Error(
-      `GPUCommandGraph external texture "${descriptor.id}" exceeds device dimension limits`
-    );
+    throw new Error(`GPUGraph external texture "${descriptor.id}" exceeds device dimension limits`);
   }
 }
 
@@ -2185,7 +2179,7 @@ function normalizeGraphTextureDescriptor<Format extends TextureFormat>(
   device: Device
 ): NormalizedGraphTextureDescriptor<Format> {
   if (!descriptor.id) {
-    throw new Error('GPUCommandGraph texture id is required');
+    throw new Error('GPUGraph texture id is required');
   }
   const dimension = descriptor.dimension ?? '2d';
   const depth = dimension === 'cube' ? 6 : (descriptor.depth ?? 1);
@@ -2200,31 +2194,31 @@ function normalizeGraphTextureDescriptor<Format extends TextureFormat>(
   })) {
     if (!Number.isSafeInteger(value) || value <= 0) {
       throw new Error(
-        `GPUCommandGraph texture "${descriptor.id}" ${name} must be a positive safe integer`
+        `GPUGraph texture "${descriptor.id}" ${name} must be a positive safe integer`
       );
     }
   }
   if (!Number.isSafeInteger(descriptor.usage) || descriptor.usage <= 0) {
-    throw new Error(`GPUCommandGraph texture "${descriptor.id}" requires texture usage flags`);
+    throw new Error(`GPUGraph texture "${descriptor.id}" requires texture usage flags`);
   }
   if (!device.isTextureFormatSupported(descriptor.format)) {
     throw new Error(
-      `GPUCommandGraph texture "${descriptor.id}" format ${descriptor.format} is unsupported`
+      `GPUGraph texture "${descriptor.id}" format ${descriptor.format} is unsupported`
     );
   }
   if (dimension === '1d' && (descriptor.height !== 1 || depth !== 1)) {
-    throw new Error(`GPUCommandGraph 1d texture "${descriptor.id}" requires height and depth 1`);
+    throw new Error(`GPUGraph 1d texture "${descriptor.id}" requires height and depth 1`);
   }
   if (dimension === 'cube' && descriptor.width !== descriptor.height) {
-    throw new Error(`GPUCommandGraph cube texture "${descriptor.id}" must be square`);
+    throw new Error(`GPUGraph cube texture "${descriptor.id}" must be square`);
   }
   if (dimension === 'cube-array' && (descriptor.width !== descriptor.height || depth % 6 !== 0)) {
     throw new Error(
-      `GPUCommandGraph cube-array texture "${descriptor.id}" must be square with depth divisible by 6`
+      `GPUGraph cube-array texture "${descriptor.id}" must be square with depth divisible by 6`
     );
   }
   if (mipLevels > device.getMipLevelCount(descriptor.width, descriptor.height, depth)) {
-    throw new Error(`GPUCommandGraph texture "${descriptor.id}" declares too many mip levels`);
+    throw new Error(`GPUGraph texture "${descriptor.id}" declares too many mip levels`);
   }
   const maximumWidth =
     dimension === '1d'
@@ -2241,7 +2235,7 @@ function normalizeGraphTextureDescriptor<Format extends TextureFormat>(
     descriptor.height > maximumHeight ||
     depth > maximumDepth
   ) {
-    throw new Error(`GPUCommandGraph texture "${descriptor.id}" exceeds device dimension limits`);
+    throw new Error(`GPUGraph texture "${descriptor.id}" exceeds device dimension limits`);
   }
   return {
     id: descriptor.id,
@@ -2340,13 +2334,13 @@ function validateImportedBuffer(
 ): void {
   const buffer = getCoreBuffer(importedBuffer);
   if (buffer.device !== device) {
-    throw new Error(`GPUCommandGraph buffer "${descriptor.id}" belongs to another device`);
+    throw new Error(`GPUGraph buffer "${descriptor.id}" belongs to another device`);
   }
   if (buffer.byteLength < descriptor.byteLength) {
-    throw new Error(`GPUCommandGraph buffer "${descriptor.id}" is smaller than compiled capacity`);
+    throw new Error(`GPUGraph buffer "${descriptor.id}" is smaller than compiled capacity`);
   }
   if ((buffer.usage & descriptor.usage) !== descriptor.usage) {
-    throw new Error(`GPUCommandGraph buffer "${descriptor.id}" has incompatible usage flags`);
+    throw new Error(`GPUGraph buffer "${descriptor.id}" has incompatible usage flags`);
   }
 }
 
@@ -2358,7 +2352,7 @@ function validateImportedTexture(
 ): void {
   const texture = getCoreTexture(importedTexture);
   if (texture.device !== device) {
-    throw new Error(`GPUCommandGraph texture "${descriptor.id}" belongs to another device`);
+    throw new Error(`GPUGraph texture "${descriptor.id}" belongs to another device`);
   }
   for (const [name, expected, actual] of [
     ['format', descriptor.format, texture.format],
@@ -2371,12 +2365,12 @@ function validateImportedTexture(
   ] as const) {
     if (actual !== expected) {
       throw new Error(
-        `GPUCommandGraph texture "${descriptor.id}" has incompatible ${name} (${actual} !== ${expected})`
+        `GPUGraph texture "${descriptor.id}" has incompatible ${name} (${actual} !== ${expected})`
       );
     }
   }
   if ((texture.props.usage & descriptor.usage) !== descriptor.usage) {
-    throw new Error(`GPUCommandGraph texture "${descriptor.id}" has incompatible usage flags`);
+    throw new Error(`GPUGraph texture "${descriptor.id}" has incompatible usage flags`);
   }
 }
 
@@ -2387,16 +2381,14 @@ function validateImportedExternalTexture(
   device: Device
 ): void {
   if (texture.device !== device) {
-    throw new Error(
-      `GPUCommandGraph external texture "${descriptor.id}" belongs to another device`
-    );
+    throw new Error(`GPUGraph external texture "${descriptor.id}" belongs to another device`);
   }
   if (texture.destroyed) {
-    throw new Error(`GPUCommandGraph external texture "${descriptor.id}" has been destroyed`);
+    throw new Error(`GPUGraph external texture "${descriptor.id}" has been destroyed`);
   }
   if (texture.width !== descriptor.width || texture.height !== descriptor.height) {
     throw new Error(
-      `GPUCommandGraph external texture "${descriptor.id}" has incompatible dimensions (${texture.width}x${texture.height} !== ${descriptor.width}x${descriptor.height})`
+      `GPUGraph external texture "${descriptor.id}" has incompatible dimensions (${texture.width}x${texture.height} !== ${descriptor.width}x${descriptor.height})`
     );
   }
 }
@@ -2408,9 +2400,7 @@ function validateBufferUseAgainstDescriptor(
 ): void {
   const requiredUsage = getRequiredBufferUsage(usage);
   if ((buffer.usage & requiredUsage) !== requiredUsage) {
-    throw new Error(
-      `GPUCommandGraph buffer "${buffer.id}" does not declare usage required by ${usage}`
-    );
+    throw new Error(`GPUGraph buffer "${buffer.id}" does not declare usage required by ${usage}`);
   }
 }
 
@@ -2421,9 +2411,7 @@ function validateTextureUseAgainstDescriptor(
 ): void {
   const requiredUsage = getRequiredTextureUsage(usage);
   if ((texture.usage & requiredUsage) !== requiredUsage) {
-    throw new Error(
-      `GPUCommandGraph texture "${texture.id}" does not declare usage required by ${usage}`
-    );
+    throw new Error(`GPUGraph texture "${texture.id}" does not declare usage required by ${usage}`);
   }
 }
 
@@ -2437,7 +2425,7 @@ function validateTextureViewForUsage(
     usage.startsWith('storage-') &&
     textureOrView.mipLevelCount !== 1
   ) {
-    throw new Error('GPUCommandGraph storage texture views must contain exactly one mip level');
+    throw new Error('GPUGraph storage texture views must contain exactly one mip level');
   }
 }
 
@@ -2493,3 +2481,8 @@ function isDefaultGraphTextureView(view: GraphTextureView): boolean {
     view.arrayLayerCount === (texture.dimension === '3d' ? 1 : texture.depth)
   );
 }
+
+/** @deprecated Use `GPUGraph`. */
+export {GPUGraph as GPUCommandGraph};
+/** @deprecated Use `CompiledGPUGraph`. */
+export {CompiledGPUGraph as CompiledGPUCommandGraph};

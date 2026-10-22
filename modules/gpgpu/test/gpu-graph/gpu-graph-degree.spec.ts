@@ -5,19 +5,19 @@
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
-  GPUGraph,
-  GPUGraphDegree,
-  GPUGraphTopology,
-  type GPUGraphAdjacency,
-  type GPUGraphDegreeDirection
-} from '@luma.gl/gpgpu/gpu-graph';
+  GPUGraphAlgorithmsData,
+  GPUGraphAlgorithmsDegree,
+  GPUGraphAlgorithmsTopology,
+  type GPUGraphAlgorithmsAdjacency,
+  type GPUGraphAlgorithmsDegreeDirection
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
 import {
-  addGPUGraphDegreeToGraphWithDispatchLimit,
-  getGPUGraphDegreeDispatchLayout
-} from '../../src/gpu-graph/gpu-graph-degree-internals';
+  addGPUGraphAlgorithmsDegreeToGraphWithDispatchLimit,
+  getGPUGraphAlgorithmsDegreeDispatchLayout
+} from '../../src/gpu-graph-algorithms/gpu-graph-degree-internals';
 
 type ScalarFormat = 'uint32' | 'float32';
 
@@ -29,7 +29,7 @@ type DegreeScenario = {
   weightChunks?: number[][];
   directed?: boolean;
   reverse?: boolean;
-  direction?: GPUGraphDegreeDirection;
+  direction?: GPUGraphAlgorithmsDegreeDirection;
   capacity?: number;
   reverseCapacity?: number;
   maximumWorkgroups?: number;
@@ -47,9 +47,9 @@ type DegreeExecutionFixture = {
   device: Device;
   buffers: Buffer[];
   vectors: GPUVector[];
-  graph: GPUGraph;
-  topology: GPUGraphTopology;
-  degree: GPUGraphDegree;
+  graph: GPUGraphAlgorithmsData;
+  topology: GPUGraphAlgorithmsTopology;
+  degree: GPUGraphAlgorithmsDegree;
   commandGraph: GPUCommandGraph;
   compiled?: ReturnType<GPUCommandGraph['compile']>;
 };
@@ -147,16 +147,16 @@ const degreeScenarios: DegreeScenario[] = [
   }
 ];
 
-it('GPUGraphDegree plans bounded three-dimensional direct dispatch', () => {
-  expect(getGPUGraphDegreeDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
-  expect(getGPUGraphDegreeDispatchLayout(512, 2)).toEqual({x: 2, y: 1, z: 1});
-  expect(getGPUGraphDegreeDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
-  expect(getGPUGraphDegreeDispatchLayout(1025, 2)).toEqual({x: 2, y: 2, z: 2});
-  expect(() => getGPUGraphDegreeDispatchLayout(2049, 2)).toThrow(/3D dispatch limit/);
+it('GPUGraphAlgorithmsDegree plans bounded three-dimensional direct dispatch', () => {
+  expect(getGPUGraphAlgorithmsDegreeDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
+  expect(getGPUGraphAlgorithmsDegreeDispatchLayout(512, 2)).toEqual({x: 2, y: 1, z: 1});
+  expect(getGPUGraphAlgorithmsDegreeDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
+  expect(getGPUGraphAlgorithmsDegreeDispatchLayout(1025, 2)).toEqual({x: 2, y: 2, z: 2});
+  expect(() => getGPUGraphAlgorithmsDegreeDispatchLayout(2049, 2)).toThrow(/3D dispatch limit/);
 });
 
 for (const scenario of degreeScenarios) {
-  it(`GPUGraphDegree GPU metrics: ${scenario.name}`, async () => {
+  it(`GPUGraphAlgorithmsDegree GPU metrics: ${scenario.name}`, async () => {
     const device = await getWebGPUTestDevice();
     if (!device) {
       return;
@@ -178,7 +178,7 @@ for (const scenario of degreeScenarios) {
   });
 }
 
-it('GPUGraphDegree recomputes incoming degrees after source updates without hidden execution', async () => {
+it('GPUGraphAlgorithmsDegree recomputes incoming degrees after source updates without hidden execution', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     return;
@@ -295,7 +295,7 @@ function createExecutionFixture(
         scenario.weightChunks
       )
     : undefined;
-  const graph = new GPUGraph({
+  const graph = new GPUGraphAlgorithmsData({
     vertexCount: scenario.vertexCount,
     sourceVertices,
     targetVertices,
@@ -333,7 +333,7 @@ function createExecutionFixture(
     'uint32',
     1
   );
-  const topology = new GPUGraphTopology({graph, forward, reverse, invalidEdgeCount});
+  const topology = new GPUGraphAlgorithmsTopology({graph, forward, reverse, invalidEdgeCount});
   const output = createOutputVector(
     device,
     buffers,
@@ -343,7 +343,7 @@ function createExecutionFixture(
     scenario.vertexCount,
     scenario.outputByteOffset
   );
-  const degree = new GPUGraphDegree({topology, output, direction: scenario.direction});
+  const degree = new GPUGraphAlgorithmsDegree({topology, output, direction: scenario.direction});
   return {
     device,
     buffers,
@@ -387,7 +387,7 @@ function createOutputAdjacency(
   capacity: number,
   weighted: boolean,
   offsetByteOffset = 0
-): GPUGraphAdjacency {
+): GPUGraphAlgorithmsAdjacency {
   return {
     offsets: createOutputVector(
       device,
@@ -448,7 +448,7 @@ function compileMetrics(fixture: DegreeExecutionFixture, maximumWorkgroups?: num
   if (maximumWorkgroups === undefined) {
     fixture.degree.addToGraph(fixture.commandGraph);
   } else {
-    addGPUGraphDegreeToGraphWithDispatchLimit(
+    addGPUGraphAlgorithmsDegreeToGraphWithDispatchLimit(
       fixture.degree,
       fixture.commandGraph,
       maximumWorkgroups

@@ -5,18 +5,18 @@
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
-  GPUGraph,
-  GPUGraphLabelPropagation,
-  GPUGraphTopology,
-  type GPUGraphAdjacency
-} from '@luma.gl/gpgpu/gpu-graph';
+  GPUGraphAlgorithmsData,
+  GPUGraphAlgorithmsLabelPropagation,
+  GPUGraphAlgorithmsTopology,
+  type GPUGraphAlgorithmsAdjacency
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
 import {
-  addGPUGraphLabelPropagationToGraphWithDispatchLimit,
-  getGPUGraphLabelPropagationDispatchLayout
-} from '../../src/gpu-graph/gpu-graph-label-propagation-internals';
+  addGPUGraphAlgorithmsLabelPropagationToGraphWithDispatchLimit,
+  getGPUGraphAlgorithmsLabelPropagationDispatchLayout
+} from '../../src/gpu-graph-algorithms/gpu-graph-label-propagation-internals';
 
 const INVALID_LABEL = 0xffffffff;
 
@@ -56,9 +56,9 @@ type PropagationExecutionFixture = {
   device: Device;
   buffers: Buffer[];
   vectors: GPUVector[];
-  graph: GPUGraph;
-  topology: GPUGraphTopology;
-  propagation: GPUGraphLabelPropagation;
+  graph: GPUGraphAlgorithmsData;
+  topology: GPUGraphAlgorithmsTopology;
+  propagation: GPUGraphAlgorithmsLabelPropagation;
   commandGraph: GPUCommandGraph;
   compiled?: ReturnType<GPUCommandGraph['compile']>;
 };
@@ -276,16 +276,18 @@ const propagationScenarios: PropagationScenario[] = [
   }
 ];
 
-it('GPUGraphLabelPropagation plans bounded three-dimensional vertex dispatch', () => {
-  expect(getGPUGraphLabelPropagationDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
-  expect(getGPUGraphLabelPropagationDispatchLayout(512, 2)).toEqual({x: 2, y: 1, z: 1});
-  expect(getGPUGraphLabelPropagationDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
-  expect(getGPUGraphLabelPropagationDispatchLayout(1025, 2)).toEqual({x: 2, y: 2, z: 2});
-  expect(() => getGPUGraphLabelPropagationDispatchLayout(2049, 2)).toThrow(/3D dispatch limit/);
+it('GPUGraphAlgorithmsLabelPropagation plans bounded three-dimensional vertex dispatch', () => {
+  expect(getGPUGraphAlgorithmsLabelPropagationDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
+  expect(getGPUGraphAlgorithmsLabelPropagationDispatchLayout(512, 2)).toEqual({x: 2, y: 1, z: 1});
+  expect(getGPUGraphAlgorithmsLabelPropagationDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
+  expect(getGPUGraphAlgorithmsLabelPropagationDispatchLayout(1025, 2)).toEqual({x: 2, y: 2, z: 2});
+  expect(() => getGPUGraphAlgorithmsLabelPropagationDispatchLayout(2049, 2)).toThrow(
+    /3D dispatch limit/
+  );
 });
 
 for (const scenario of propagationScenarios) {
-  it(`GPUGraphLabelPropagation GPU labeling: ${scenario.name}`, async () => {
+  it(`GPUGraphAlgorithmsLabelPropagation GPU labeling: ${scenario.name}`, async () => {
     const device = await getWebGPUTestDevice();
     if (!device) {
       return;
@@ -335,7 +337,7 @@ for (const scenario of propagationScenarios) {
   });
 }
 
-it('GPUGraphLabelPropagation rebuilds communities after source updates without hidden execution', async () => {
+it('GPUGraphAlgorithmsLabelPropagation rebuilds communities after source updates without hidden execution', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     return;
@@ -511,7 +513,7 @@ function createExecutionFixture(
         scenario.weightChunks
       )
     : undefined;
-  const graph = new GPUGraph({
+  const graph = new GPUGraphAlgorithmsData({
     vertexCount: scenario.vertexCount,
     sourceVertices,
     targetVertices,
@@ -549,7 +551,7 @@ function createExecutionFixture(
     'uint32',
     1
   );
-  const topology = new GPUGraphTopology({graph, forward, reverse, invalidEdgeCount});
+  const topology = new GPUGraphAlgorithmsTopology({graph, forward, reverse, invalidEdgeCount});
   const output = createOutputVector(
     device,
     buffers,
@@ -571,7 +573,7 @@ function createExecutionFixture(
           1,
           scenario.byteOffset
         );
-  const propagation = new GPUGraphLabelPropagation({
+  const propagation = new GPUGraphAlgorithmsLabelPropagation({
     topology,
     output,
     iterations: scenario.iterations,
@@ -621,7 +623,7 @@ function createOutputAdjacency(
   capacity: number,
   weighted: boolean,
   byteOffset = 0
-): GPUGraphAdjacency {
+): GPUGraphAlgorithmsAdjacency {
   return {
     offsets: createOutputVector(
       device,
@@ -685,7 +687,7 @@ function compilePropagation(
   if (maximumWorkgroups === undefined) {
     fixture.propagation.addToGraph(fixture.commandGraph);
   } else {
-    addGPUGraphLabelPropagationToGraphWithDispatchLimit(
+    addGPUGraphAlgorithmsLabelPropagationToGraphWithDispatchLimit(
       fixture.propagation,
       fixture.commandGraph,
       maximumWorkgroups

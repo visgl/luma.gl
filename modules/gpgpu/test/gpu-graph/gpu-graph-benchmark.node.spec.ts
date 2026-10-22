@@ -5,23 +5,23 @@
 import {readFileSync} from 'node:fs';
 
 import * as experimentalModule from '@luma.gl/experimental';
-import * as gpuGraphModule from '@luma.gl/gpgpu/gpu-graph';
-import * as benchmarkModule from '@luma.gl/gpgpu/gpu-graph/benchmarks';
+import * as gpuGraphModule from '@luma.gl/gpgpu/gpu-graph-algorithms';
+import * as benchmarkModule from '@luma.gl/gpgpu/gpu-graph-algorithms/benchmarks';
 import {
-  makeGPUGraphBenchmarkDataset,
-  type GPUGraphBenchmarkDatasetKind,
-  type GPUGraphBenchmarkOptions,
-  type GPUGraphBenchmarkPathReport
-} from '@luma.gl/gpgpu/gpu-graph/benchmarks';
+  makeGPUGraphAlgorithmsBenchmarkDataset,
+  type GPUGraphAlgorithmsBenchmarkDatasetKind,
+  type GPUGraphAlgorithmsBenchmarkOptions,
+  type GPUGraphAlgorithmsBenchmarkPathReport
+} from '@luma.gl/gpgpu/gpu-graph-algorithms/benchmarks';
 import {describe, expect, expectTypeOf, test} from 'vitest';
 
 import {
-  evaluateGPUGraphBenchmarkShortestPath,
-  prepareGPUGraphBenchmark,
-  summarizeGPUGraphBenchmarkSamples
-} from '../../src/gpu-graph/gpu-graph-benchmark-data';
+  evaluateGPUGraphAlgorithmsBenchmarkShortestPath,
+  prepareGPUGraphAlgorithmsBenchmark,
+  summarizeGPUGraphAlgorithmsBenchmarkSamples
+} from '../../src/gpu-graph-algorithms/gpu-graph-benchmark-data';
 
-const DATASET_KINDS: GPUGraphBenchmarkDatasetKind[] = [
+const DATASET_KINDS: GPUGraphAlgorithmsBenchmarkDatasetKind[] = [
   'sparse',
   'dense',
   'scale-free',
@@ -32,15 +32,15 @@ const DATASET_KINDS: GPUGraphBenchmarkDatasetKind[] = [
 describe('GPU Graph benchmark optional package boundary', () => {
   test('isolates deterministic datasets and GPU benchmark runners from production entry points', () => {
     expect(Object.keys(benchmarkModule).sort()).toEqual([
-      'makeGPUGraphBenchmarkDataset',
-      'runGPUGraphBenchmark'
+      'makeGPUGraphAlgorithmsBenchmarkDataset',
+      'runGPUGraphAlgorithmsBenchmark'
     ]);
-    expect(typeof benchmarkModule.makeGPUGraphBenchmarkDataset).toBe('function');
-    expect(typeof benchmarkModule.runGPUGraphBenchmark).toBe('function');
-    expect('runGPUGraphBenchmark' in experimentalModule).toBe(false);
-    expect('makeGPUGraphBenchmarkDataset' in experimentalModule).toBe(false);
-    expect('runGPUGraphBenchmark' in gpuGraphModule).toBe(false);
-    expect('makeGPUGraphBenchmarkDataset' in gpuGraphModule).toBe(false);
+    expect(typeof benchmarkModule.makeGPUGraphAlgorithmsBenchmarkDataset).toBe('function');
+    expect(typeof benchmarkModule.runGPUGraphAlgorithmsBenchmark).toBe('function');
+    expect('runGPUGraphAlgorithmsBenchmark' in experimentalModule).toBe(false);
+    expect('makeGPUGraphAlgorithmsBenchmarkDataset' in experimentalModule).toBe(false);
+    expect('runGPUGraphAlgorithmsBenchmark' in gpuGraphModule).toBe(false);
+    expect('makeGPUGraphAlgorithmsBenchmarkDataset' in gpuGraphModule).toBe(false);
   });
 
   test('declares a conditional benchmark subpath without adding Apache Arrow dependencies', () => {
@@ -53,10 +53,10 @@ describe('GPU Graph benchmark optional package boundary', () => {
       optionalDependencies?: Record<string, string>;
     };
 
-    expect(packageJson.exports['./gpu-graph/benchmarks']).toEqual({
-      import: './dist/gpu-graph/benchmarks.js',
-      require: './dist/gpu-graph/benchmarks.cjs',
-      types: './dist/gpu-graph/benchmarks.d.ts'
+    expect(packageJson.exports['./gpu-graph-algorithms/benchmarks']).toEqual({
+      import: './dist/gpu-graph-algorithms/benchmarks.js',
+      require: './dist/gpu-graph-algorithms/benchmarks.cjs',
+      types: './dist/gpu-graph-algorithms/benchmarks.d.ts'
     });
     for (const dependencies of [
       packageJson.dependencies,
@@ -68,18 +68,18 @@ describe('GPU Graph benchmark optional package boundary', () => {
   });
 
   test('keeps bounded convergence and final residual metadata optional and backward compatible', () => {
-    expectTypeOf<GPUGraphBenchmarkPathReport>()
+    expectTypeOf<GPUGraphAlgorithmsBenchmarkPathReport>()
       .toHaveProperty('iterations')
       .toEqualTypeOf<number | undefined>();
-    expectTypeOf<GPUGraphBenchmarkPathReport>()
+    expectTypeOf<GPUGraphAlgorithmsBenchmarkPathReport>()
       .toHaveProperty('converged')
       .toEqualTypeOf<boolean | undefined>();
-    expectTypeOf<GPUGraphBenchmarkPathReport>()
+    expectTypeOf<GPUGraphAlgorithmsBenchmarkPathReport>()
       .toHaveProperty('residual')
       .toEqualTypeOf<number | undefined>();
 
     const distribution = {minimum: 1, median: 1, percentile95: 1, maximum: 1};
-    const legacyPath: GPUGraphBenchmarkPathReport = {
+    const legacyPath: GPUGraphAlgorithmsBenchmarkPathReport = {
       algorithm: 'topology',
       cpuTimeMilliseconds: distribution,
       cpuEncodeTimeMilliseconds: distribution,
@@ -99,8 +99,8 @@ describe('GPU Graph benchmark deterministic source datasets', () => {
   test.each(
     DATASET_KINDS
   )('creates repeatable, valid, independently owned %s graph batches and coordinates', kind => {
-    const first = makeGPUGraphBenchmarkDataset({kind, vertexCount: 32, seed: 123});
-    const repeated = makeGPUGraphBenchmarkDataset({kind, vertexCount: 32, seed: 123});
+    const first = makeGPUGraphAlgorithmsBenchmarkDataset({kind, vertexCount: 32, seed: 123});
+    const repeated = makeGPUGraphAlgorithmsBenchmarkDataset({kind, vertexCount: 32, seed: 123});
 
     expect(first.kind).toBe(kind);
     expect(first.vertexCount).toBe(32);
@@ -141,7 +141,11 @@ describe('GPU Graph benchmark deterministic source datasets', () => {
   });
 
   test('dense inputs contain every distinct ordered pair rather than synthetic edge counts', () => {
-    const dataset = makeGPUGraphBenchmarkDataset({kind: 'dense', vertexCount: 12, seed: 7});
+    const dataset = makeGPUGraphAlgorithmsBenchmarkDataset({
+      kind: 'dense',
+      vertexCount: 12,
+      seed: 7
+    });
     const uniqueEdges = new Set<string>();
 
     for (const [chunkIndex, sources] of dataset.sourceChunks.entries()) {
@@ -157,8 +161,12 @@ describe('GPU Graph benchmark deterministic source datasets', () => {
   });
 
   test('sparse and dense datasets have materially different actual edge workloads', () => {
-    const sparse = makeGPUGraphBenchmarkDataset({kind: 'sparse', vertexCount: 32, seed: 9});
-    const dense = makeGPUGraphBenchmarkDataset({kind: 'dense', vertexCount: 32, seed: 9});
+    const sparse = makeGPUGraphAlgorithmsBenchmarkDataset({
+      kind: 'sparse',
+      vertexCount: 32,
+      seed: 9
+    });
+    const dense = makeGPUGraphAlgorithmsBenchmarkDataset({kind: 'dense', vertexCount: 32, seed: 9});
 
     expect(sparse.edgeCount).toBeLessThan(32 * 5);
     expect(dense.edgeCount).toBe(32 * 31);
@@ -167,7 +175,7 @@ describe('GPU Graph benchmark deterministic source datasets', () => {
 
   test('high-degree and scale-free generators contain genuine hub vertices', () => {
     for (const kind of ['high-degree', 'scale-free'] as const) {
-      const dataset = makeGPUGraphBenchmarkDataset({kind, vertexCount: 32, seed: 5});
+      const dataset = makeGPUGraphAlgorithmsBenchmarkDataset({kind, vertexCount: 32, seed: 5});
       const degrees = new Uint32Array(dataset.vertexCount);
       for (const [chunkIndex, sources] of dataset.sourceChunks.entries()) {
         for (const [rowIndex, source] of sources.entries()) {
@@ -180,7 +188,11 @@ describe('GPU Graph benchmark deterministic source datasets', () => {
   });
 
   test('disconnected workloads contain multiple independently discoverable weak components', () => {
-    const dataset = makeGPUGraphBenchmarkDataset({kind: 'disconnected', vertexCount: 24, seed: 9});
+    const dataset = makeGPUGraphAlgorithmsBenchmarkDataset({
+      kind: 'disconnected',
+      vertexCount: 24,
+      seed: 9
+    });
     const neighbors = Array.from({length: dataset.vertexCount}, () => [] as number[]);
     for (const [chunkIndex, sources] of dataset.sourceChunks.entries()) {
       for (const [rowIndex, source] of sources.entries()) {
@@ -207,8 +219,16 @@ describe('GPU Graph benchmark deterministic source datasets', () => {
   });
 
   test('different deterministic seeds actually change graph coordinates', () => {
-    const first = makeGPUGraphBenchmarkDataset({kind: 'scale-free', vertexCount: 24, seed: 1});
-    const second = makeGPUGraphBenchmarkDataset({kind: 'scale-free', vertexCount: 24, seed: 2});
+    const first = makeGPUGraphAlgorithmsBenchmarkDataset({
+      kind: 'scale-free',
+      vertexCount: 24,
+      seed: 1
+    });
+    const second = makeGPUGraphAlgorithmsBenchmarkDataset({
+      kind: 'scale-free',
+      vertexCount: 24,
+      seed: 2
+    });
     expect(Array.from(first.positions)).not.toEqual(Array.from(second.positions));
   });
 
@@ -219,7 +239,7 @@ describe('GPU Graph benchmark deterministic source datasets', () => {
     Number.NaN,
     Number.POSITIVE_INFINITY
   ])('rejects invalid deterministic dataset vertex counts: %s', vertexCount => {
-    expect(() => makeGPUGraphBenchmarkDataset({kind: 'sparse', vertexCount})).toThrow(
+    expect(() => makeGPUGraphAlgorithmsBenchmarkDataset({kind: 'sparse', vertexCount})).toThrow(
       /vertexCount|vertex|uint32|positive/
     );
   });
@@ -230,22 +250,26 @@ describe('GPU Graph benchmark deterministic source datasets', () => {
     0x100000000,
     Number.NaN
   ])('rejects invalid uint32 dataset seeds: %s', seed => {
-    expect(() => makeGPUGraphBenchmarkDataset({kind: 'sparse', vertexCount: 8, seed})).toThrow(
-      /seed|uint32|unsigned/
-    );
+    expect(() =>
+      makeGPUGraphAlgorithmsBenchmarkDataset({kind: 'sparse', vertexCount: 8, seed})
+    ).toThrow(/seed|uint32|unsigned/);
   });
 
   test('rejects unsupported graph families instead of reporting fabricated workload data', () => {
     expect(() =>
-      makeGPUGraphBenchmarkDataset({
-        kind: 'fabricated' as GPUGraphBenchmarkDatasetKind,
+      makeGPUGraphAlgorithmsBenchmarkDataset({
+        kind: 'fabricated' as GPUGraphAlgorithmsBenchmarkDatasetKind,
         vertexCount: 8
       })
     ).toThrow(/kind|dataset|graph/);
   });
 
   test('supports a one-vertex graph while preserving all three explicit source batches', () => {
-    const dataset = makeGPUGraphBenchmarkDataset({kind: 'sparse', vertexCount: 1, seed: 0});
+    const dataset = makeGPUGraphAlgorithmsBenchmarkDataset({
+      kind: 'sparse',
+      vertexCount: 1,
+      seed: 0
+    });
     expect(dataset.positions).toHaveLength(2);
     expect(dataset.sourceChunks).toHaveLength(3);
     expect(dataset.targetChunks).toHaveLength(3);
@@ -256,7 +280,7 @@ describe('GPU Graph benchmark deterministic source datasets', () => {
 
 describe('GPU Graph benchmark independent CPU oracles', () => {
   test.each(DATASET_KINDS)('evaluates all nine real CPU references for %s workloads', kind => {
-    const context = prepareGPUGraphBenchmark({
+    const context = prepareGPUGraphAlgorithmsBenchmark({
       kind,
       vertexCount: 12,
       seed: 42,
@@ -328,7 +352,7 @@ describe('GPU Graph benchmark independent CPU oracles', () => {
   });
 
   test('preserves default controls and isolated unreachable-component semantics', () => {
-    const context = prepareGPUGraphBenchmark({kind: 'disconnected', vertexCount: 8});
+    const context = prepareGPUGraphAlgorithmsBenchmark({kind: 'disconnected', vertexCount: 8});
 
     expect(context.options).toMatchObject({
       seed: 0,
@@ -350,7 +374,7 @@ describe('GPU Graph benchmark independent CPU oracles', () => {
   });
 
   test('uses weighted routes rather than relabeling unweighted hop counts', () => {
-    const context = prepareGPUGraphBenchmark({
+    const context = prepareGPUGraphAlgorithmsBenchmark({
       kind: 'sparse',
       vertexCount: 16,
       seed: 42,
@@ -375,7 +399,7 @@ describe('GPU Graph benchmark independent CPU oracles', () => {
     const forwardNeighbors = Uint32Array.from({length: edgeCount}, (_, vertex) => vertex + 1);
     const forwardWeights = new Float32Array(edgeCount).fill(1);
 
-    const reference = evaluateGPUGraphBenchmarkShortestPath({
+    const reference = evaluateGPUGraphAlgorithmsBenchmarkShortestPath({
       forwardOffsets,
       forwardNeighbors,
       forwardWeights,
@@ -392,7 +416,7 @@ describe('GPU Graph benchmark independent CPU oracles', () => {
   });
 
   test('counts distinct directed closures and normalizes complete graph neighborhoods', () => {
-    const context = prepareGPUGraphBenchmark({
+    const context = prepareGPUGraphAlgorithmsBenchmark({
       kind: 'dense',
       vertexCount: 8,
       warmupIterations: 0,
@@ -417,23 +441,25 @@ describe('GPU Graph benchmark independent CPU oracles', () => {
     [{gridSize: [0, 4]}, /gridSize/],
     [{gridSize: [4, 1.5]}, /gridSize/]
   ] as [
-    Partial<GPUGraphBenchmarkOptions>,
+    Partial<GPUGraphAlgorithmsBenchmarkOptions>,
     RegExp
   ][])('rejects unsupported benchmark controls %j before producing measurements', (invalidOptions, error) => {
     expect(() =>
-      prepareGPUGraphBenchmark({kind: 'sparse', vertexCount: 8, ...invalidOptions})
+      prepareGPUGraphAlgorithmsBenchmark({kind: 'sparse', vertexCount: 8, ...invalidOptions})
     ).toThrow(error);
   });
 
   test('reports observed nearest-rank timings without fabricating or interpolating values', () => {
-    expect(summarizeGPUGraphBenchmarkSamples([8, 1, 5, 3])).toEqual({
+    expect(summarizeGPUGraphAlgorithmsBenchmarkSamples([8, 1, 5, 3])).toEqual({
       minimum: 1,
       median: 3,
       percentile95: 8,
       maximum: 8
     });
     for (const invalidSamples of [[], [-1], [Number.NaN], [Number.POSITIVE_INFINITY]]) {
-      expect(() => summarizeGPUGraphBenchmarkSamples(invalidSamples)).toThrow(/sample|duration/);
+      expect(() => summarizeGPUGraphAlgorithmsBenchmarkSamples(invalidSamples)).toThrow(
+        /sample|duration/
+      );
     }
   });
 });
@@ -452,7 +478,7 @@ describe('GPU Graph live documentation benchmark isolation', () => {
       'utf8'
     );
 
-    expect(component).toContain("from '@luma.gl/gpgpu/gpu-graph/benchmarks'");
+    expect(component).toContain("from '@luma.gl/gpgpu/gpu-graph-algorithms/benchmarks'");
     expect(component).toContain('<LiveBenchmarkPanel');
     expect(component).toContain('onRun={async () =>');
     expect(component).toContain("typeof navigator === 'undefined'");
@@ -465,7 +491,7 @@ describe('GPU Graph live documentation benchmark isolation', () => {
     expect(component).toContain('https://ldbcouncil.org/benchmarks/graphalytics/');
     expect(component).toContain('Graph Data Council');
     expect(component).toContain('not an official benchmark submission');
-    expect(component.match(/await runGPUGraphBenchmark\(/g)).toHaveLength(1);
+    expect(component.match(/await runGPUGraphAlgorithmsBenchmark\(/g)).toHaveLength(1);
     expect(documentation).toContain('<GPUGraphBenchmark />');
     expect(documentation).toContain('explicit completion fence');
   });

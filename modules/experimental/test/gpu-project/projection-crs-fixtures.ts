@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {CRSDefinition} from '@math.gl/crs';
+import type {CRSDefinition} from '@math.gl/geospatial/crs';
 
 export const geographicCRS = {
   type: 'GeographicCRS',

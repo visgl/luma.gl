@@ -91,9 +91,6 @@ describe('getting-started onboarding', () => {
         label: 'Quality and delivery',
         items: [
           'developer-guide/testing',
-          'developer-guide/debugging',
-          'developer-guide/profiling',
-          'developer-guide/bundling',
           'developer-guide/releasing',
           'developer-guide/working-with-ai'
         ]
@@ -117,19 +114,24 @@ describe('getting-started onboarding', () => {
       readFileSync(DOCUMENTATION_TABLE_OF_CONTENTS_PATH, 'utf8')
     ) as Array<string | {label?: string; items?: string[]}>;
 
-    expect(tableOfContents.slice(0, 3)).toEqual([
-      'README',
-      'getting-started',
-      {
-        type: 'category',
-        label: 'Capabilities',
-        items: [
-          'capabilities',
-          'capabilities/gpu-data-compute',
-          'capabilities/rendering-visualization'
-        ]
-      }
-    ]);
+    expect(tableOfContents[0]).toMatchObject({
+      type: 'category',
+      label: 'Getting Started',
+      items: expect.arrayContaining([
+        'README',
+        'getting-started',
+        {
+          type: 'category',
+          label: 'Capabilities and compatibility',
+          items: [
+            'capabilities',
+            'capabilities/gpu-data-compute',
+            'capabilities/rendering-visualization',
+            'api-guide/background/webgpu-vs-webgl'
+          ]
+        }
+      ])
+    });
 
     expect(onboardingSource).toMatch(
       /<a\b(?=[^>]*\bclassName="docs-api-card")(?=[^>]*\bhref="\/docs\/fundamentals")[^>]*>/

@@ -154,7 +154,7 @@ export const EXPERIMENTAL_DOCS_TAB_GROUPS: readonly DocsTabGroup<ExperimentalDoc
   },
   {
     id: 'gpu-graph',
-    label: 'GPU Graph',
+    label: 'GPU Graph Algorithms',
     tabs: [
       {id: 'gpu-graph', label: 'Overview', href: '/docs/api-reference/experimental/gpu-graph'},
       {id: 'gpu-graph-operations', label: 'Operations', href: '/docs/api-reference/experimental/gpu-graph-operations'},

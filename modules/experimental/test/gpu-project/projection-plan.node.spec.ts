@@ -4,7 +4,7 @@
 
 import {readFileSync} from 'node:fs';
 
-import {projectionEngine} from '@math.gl/projection';
+import {projectionEngine} from '@math.gl/geospatial/projection';
 import * as experimentalModule from '@luma.gl/experimental';
 import * as projectionModule from '@luma.gl/experimental/gpu-project';
 import type {GraphDataView} from '@luma.gl/gpgpu/gpu-core';
@@ -92,7 +92,7 @@ describe('@luma.gl/experimental/gpu-project package boundary', () => {
       require: './dist/gpu-project/index.cjs',
       types: './dist/gpu-project/index.d.ts'
     });
-    expect(packageJson.dependencies?.['@math.gl/projection']).toBeUndefined();
+    expect(packageJson.dependencies?.['@math.gl/geospatial/projection']).toBeUndefined();
     expect(packageJson.dependencies?.proj4).toBeUndefined();
   });
 

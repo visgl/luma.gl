@@ -17,7 +17,7 @@
     "@luma.gl/gpgpu": "10.0.0-alpha.4",
     "@luma.gl/shadertools": "10.0.0-alpha.4",
     "@luma.gl/splats": "workspace:*",
-    "@math.gl/core": "5.0.0-alpha.15",
+    "@math.gl/core": "5.0.0-alpha.19",
     "preact": "^10.17.0"
   },
   "devDependencies": {

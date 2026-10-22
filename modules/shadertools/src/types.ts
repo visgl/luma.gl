@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 // MATH TYPES
-export {TypedArray, NumberArray, NumericArray} from '@math.gl/types';
+export {TypedArray, NumberArray, NumericArray} from '@math.gl/core/types';
 
 // export type BigIntOrNumberArray = NumberArray | BigIntTypedArray;
 

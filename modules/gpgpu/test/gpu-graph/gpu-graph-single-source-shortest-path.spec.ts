@@ -5,19 +5,19 @@
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
-  GPUGraph,
-  GPUGraphSingleSourceShortestPath,
-  GPUGraphTopology,
-  type GPUGraphAdjacency,
-  type GPUGraphSingleSourceShortestPathDirection
-} from '@luma.gl/gpgpu/gpu-graph';
+  GPUGraphAlgorithmsData,
+  GPUGraphAlgorithmsSingleSourceShortestPath,
+  GPUGraphAlgorithmsTopology,
+  type GPUGraphAlgorithmsAdjacency,
+  type GPUGraphAlgorithmsSingleSourceShortestPathDirection
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
 import {
-  addGPUGraphSingleSourceShortestPathToGraphWithDispatchLimit,
-  getGPUGraphSingleSourceShortestPathDispatchLayout
-} from '../../src/gpu-graph/gpu-graph-single-source-shortest-path-internals';
+  addGPUGraphAlgorithmsSingleSourceShortestPathToGraphWithDispatchLimit,
+  getGPUGraphAlgorithmsSingleSourceShortestPathDispatchLayout
+} from '../../src/gpu-graph-algorithms/gpu-graph-single-source-shortest-path-internals';
 
 const UNREACHABLE_PREDECESSOR = 0xffffffff;
 
@@ -32,7 +32,7 @@ type ShortestPathScenario = {
   sourceVertex?: number;
   directed?: boolean;
   reverse?: boolean;
-  direction?: GPUGraphSingleSourceShortestPathDirection;
+  direction?: GPUGraphAlgorithmsSingleSourceShortestPathDirection;
   maxIterations?: number;
   capacity?: number;
   reverseCapacity?: number;
@@ -58,9 +58,9 @@ type ShortestPathExecutionFixture = {
   device: Device;
   buffers: Buffer[];
   vectors: GPUVector[];
-  graph: GPUGraph;
-  topology: GPUGraphTopology;
-  search: GPUGraphSingleSourceShortestPath;
+  graph: GPUGraphAlgorithmsData;
+  topology: GPUGraphAlgorithmsTopology;
+  search: GPUGraphAlgorithmsSingleSourceShortestPath;
   commandGraph: GPUCommandGraph;
   compiled?: ReturnType<GPUCommandGraph['compile']>;
 };
@@ -254,19 +254,29 @@ const shortestPathScenarios: ShortestPathScenario[] = [
   }
 ];
 
-it('GPUGraphSingleSourceShortestPath plans bounded three-dimensional GPU work', () => {
-  expect(getGPUGraphSingleSourceShortestPathDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
-  expect(getGPUGraphSingleSourceShortestPathDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
-  expect(getGPUGraphSingleSourceShortestPathDispatchLayout(1025, 2)).toEqual({
+it('GPUGraphAlgorithmsSingleSourceShortestPath plans bounded three-dimensional GPU work', () => {
+  expect(getGPUGraphAlgorithmsSingleSourceShortestPathDispatchLayout(0, 2)).toEqual({
+    x: 1,
+    y: 1,
+    z: 1
+  });
+  expect(getGPUGraphAlgorithmsSingleSourceShortestPathDispatchLayout(513, 2)).toEqual({
+    x: 2,
+    y: 2,
+    z: 1
+  });
+  expect(getGPUGraphAlgorithmsSingleSourceShortestPathDispatchLayout(1025, 2)).toEqual({
     x: 2,
     y: 2,
     z: 2
   });
-  expect(() => getGPUGraphSingleSourceShortestPathDispatchLayout(2049, 2)).toThrow(/3D dispatch/);
+  expect(() => getGPUGraphAlgorithmsSingleSourceShortestPathDispatchLayout(2049, 2)).toThrow(
+    /3D dispatch/
+  );
 });
 
 for (const scenario of shortestPathScenarios) {
-  it(`GPUGraphSingleSourceShortestPath GPU traversal: ${scenario.name}`, async () => {
+  it(`GPUGraphAlgorithmsSingleSourceShortestPath GPU traversal: ${scenario.name}`, async () => {
     const device = await getWebGPUTestDevice();
     if (!device) {
       return;
@@ -284,7 +294,7 @@ for (const scenario of shortestPathScenarios) {
   });
 }
 
-it('GPUGraphSingleSourceShortestPath schedules work without submission or source readback', async () => {
+it('GPUGraphAlgorithmsSingleSourceShortestPath schedules work without submission or source readback', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     return;
@@ -461,7 +471,7 @@ function createExecutionFixture(
   const edgeWeights = scenario.weightChunks
     ? createInputVector(device, buffers, vectors, 'edge-weights', 'float32', scenario.weightChunks)
     : undefined;
-  const graph = new GPUGraph({
+  const graph = new GPUGraphAlgorithmsData({
     vertexCount: scenario.vertexCount,
     sourceVertices,
     targetVertices,
@@ -498,7 +508,7 @@ function createExecutionFixture(
     'uint32',
     1
   );
-  const topology = new GPUGraphTopology({graph, forward, reverse, invalidEdgeCount});
+  const topology = new GPUGraphAlgorithmsTopology({graph, forward, reverse, invalidEdgeCount});
   const distances = createOutputVector(
     device,
     buffers,
@@ -535,7 +545,7 @@ function createExecutionFixture(
     1,
     scenario.byteOffset
   );
-  const search = new GPUGraphSingleSourceShortestPath({
+  const search = new GPUGraphAlgorithmsSingleSourceShortestPath({
     topology,
     sourceVertex: scenario.sourceVertex ?? 0,
     distances,
@@ -590,7 +600,7 @@ function createOutputAdjacency(
   capacity: number,
   weighted: boolean,
   byteOffset = 0
-): GPUGraphAdjacency {
+): GPUGraphAlgorithmsAdjacency {
   return {
     offsets: createOutputVector(
       device,
@@ -663,7 +673,7 @@ function compileShortestPath(
   if (maximumWorkgroups === undefined) {
     fixture.search.addToGraph(fixture.commandGraph);
   } else {
-    addGPUGraphSingleSourceShortestPathToGraphWithDispatchLimit(
+    addGPUGraphAlgorithmsSingleSourceShortestPathToGraphWithDispatchLimit(
       fixture.search,
       fixture.commandGraph,
       maximumWorkgroups

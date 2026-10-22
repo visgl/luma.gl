@@ -5,19 +5,19 @@
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
-  GPUGraph,
-  GPUGraphForceLayout,
-  GPUGraphSpatialForceLayout,
-  GPUGraphTopology,
-  type GPUGraphAdjacency
-} from '@luma.gl/gpgpu/gpu-graph';
+  GPUGraphAlgorithmsData,
+  GPUGraphAlgorithmsForceLayout,
+  GPUGraphAlgorithmsSpatialForceLayout,
+  GPUGraphAlgorithmsTopology,
+  type GPUGraphAlgorithmsAdjacency
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
 import {
-  addGPUGraphSpatialForceLayoutToGraphWithDispatchLimit,
-  getGPUGraphSpatialForceLayoutDispatchLayout
-} from '../../src/gpu-graph/gpu-graph-spatial-force-layout-internals';
+  addGPUGraphAlgorithmsSpatialForceLayoutToGraphWithDispatchLimit,
+  getGPUGraphAlgorithmsSpatialForceLayoutDispatchLayout
+} from '../../src/gpu-graph-algorithms/gpu-graph-spatial-force-layout-internals';
 
 const SPATIAL_TOLERANCE = 2e-4;
 const MINIMUM_SQUARED_DISTANCE = 0.0001;
@@ -80,10 +80,10 @@ type SpatialExecutionFixture = {
   device: Device;
   buffers: Buffer[];
   vectors: GPUVector[];
-  graph: GPUGraph;
-  topology: GPUGraphTopology;
-  layout: GPUGraphForceLayout;
-  spatial: GPUGraphSpatialForceLayout;
+  graph: GPUGraphAlgorithmsData;
+  topology: GPUGraphAlgorithmsTopology;
+  layout: GPUGraphAlgorithmsForceLayout;
+  spatial: GPUGraphAlgorithmsSpatialForceLayout;
   commandGraph: GPUCommandGraph;
   compiled?: ReturnType<GPUCommandGraph['compile']>;
 };
@@ -410,16 +410,22 @@ const spatialScenarios: SpatialScenario[] = [
   }
 ];
 
-it('GPUGraphSpatialForceLayout plans bounded 3D vertex, grid, and centroid dispatch', () => {
-  expect(getGPUGraphSpatialForceLayoutDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
-  expect(getGPUGraphSpatialForceLayoutDispatchLayout(512, 2)).toEqual({x: 2, y: 1, z: 1});
-  expect(getGPUGraphSpatialForceLayoutDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
-  expect(getGPUGraphSpatialForceLayoutDispatchLayout(1025, 2)).toEqual({x: 2, y: 2, z: 2});
-  expect(() => getGPUGraphSpatialForceLayoutDispatchLayout(2049, 2)).toThrow(/3D dispatch limit/);
+it('GPUGraphAlgorithmsSpatialForceLayout plans bounded 3D vertex, grid, and centroid dispatch', () => {
+  expect(getGPUGraphAlgorithmsSpatialForceLayoutDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
+  expect(getGPUGraphAlgorithmsSpatialForceLayoutDispatchLayout(512, 2)).toEqual({x: 2, y: 1, z: 1});
+  expect(getGPUGraphAlgorithmsSpatialForceLayoutDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
+  expect(getGPUGraphAlgorithmsSpatialForceLayoutDispatchLayout(1025, 2)).toEqual({
+    x: 2,
+    y: 2,
+    z: 2
+  });
+  expect(() => getGPUGraphAlgorithmsSpatialForceLayoutDispatchLayout(2049, 2)).toThrow(
+    /3D dispatch limit/
+  );
 });
 
 for (const scenario of spatialScenarios) {
-  it(`GPUGraphSpatialForceLayout GPU spatial physics: ${scenario.name}`, async () => {
+  it(`GPUGraphAlgorithmsSpatialForceLayout GPU spatial physics: ${scenario.name}`, async () => {
     const device = await getWebGPUTestDevice();
     if (!device) {
       return;
@@ -451,7 +457,7 @@ for (const scenario of spatialScenarios) {
   });
 }
 
-it('GPUGraphSpatialForceLayout repeatedly rebuilds spatial cells across warm starts and deterministic reset', async () => {
+it('GPUGraphAlgorithmsSpatialForceLayout repeatedly rebuilds spatial cells across warm starts and deterministic reset', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     return;
@@ -773,7 +779,7 @@ function createExecutionFixture(
       )
     : undefined;
   const directed = scenario.directed ?? true;
-  const graph = new GPUGraph({
+  const graph = new GPUGraphAlgorithmsData({
     vertexCount: scenario.vertexCount,
     sourceVertices,
     targetVertices,
@@ -802,7 +808,7 @@ function createExecutionFixture(
         scenario.byteOffset
       )
     : undefined;
-  const topology = new GPUGraphTopology({
+  const topology = new GPUGraphAlgorithmsTopology({
     graph,
     forward,
     reverse,
@@ -846,7 +852,7 @@ function createExecutionFixture(
           byteOffset: scenario.byteOffset
         })
       : undefined;
-  const layout = new GPUGraphForceLayout({
+  const layout = new GPUGraphAlgorithmsForceLayout({
     topology,
     positions,
     velocities,
@@ -863,7 +869,7 @@ function createExecutionFixture(
   });
   const gridSize = scenario.gridSize ?? [3, 2];
   const cellCount = gridSize[0] * gridSize[1];
-  const spatial = new GPUGraphSpatialForceLayout({
+  const spatial = new GPUGraphAlgorithmsSpatialForceLayout({
     layout,
     gridSize,
     bounds: scenario.bounds ?? [-2, -2, 2, 2],
@@ -949,7 +955,7 @@ function createOutputAdjacency(
   capacity: number,
   weighted: boolean,
   byteOffset = 0
-): GPUGraphAdjacency {
+): GPUGraphAlgorithmsAdjacency {
   return {
     offsets: createScalarVector(
       device,
@@ -1048,7 +1054,7 @@ function compileSpatialLayout(fixture: SpatialExecutionFixture, maximumWorkgroup
   if (maximumWorkgroups === undefined) {
     fixture.spatial.addToGraph(fixture.commandGraph);
   } else {
-    addGPUGraphSpatialForceLayoutToGraphWithDispatchLimit(
+    addGPUGraphAlgorithmsSpatialForceLayoutToGraphWithDispatchLimit(
       fixture.spatial,
       fixture.commandGraph,
       maximumWorkgroups

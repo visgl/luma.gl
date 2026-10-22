@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {projectionEngine} from '@math.gl/projection';
+import {projectionEngine} from '@math.gl/geospatial/projection';
 import {createCRSProjectionCPUBenchmarks} from '@luma.gl/experimental/gpu-project/crs';
 import {measureProjectionProgramCPU} from '@luma.gl/experimental/gpu-project/benchmarks';
 import {makePerformanceOptions, performanceFixtures} from './projection-performance-fixtures';

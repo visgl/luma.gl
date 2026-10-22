@@ -5,16 +5,16 @@
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
-  GPUGraph,
-  GPUGraphLabelPropagation,
-  GPUGraphModularity,
-  GPUGraphTopology,
-  type GPUGraphAdjacency
-} from '@luma.gl/gpgpu/gpu-graph';
+  GPUGraphAlgorithmsData,
+  GPUGraphAlgorithmsLabelPropagation,
+  GPUGraphAlgorithmsModularity,
+  GPUGraphAlgorithmsTopology,
+  type GPUGraphAlgorithmsAdjacency
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
-import {addGPUGraphModularityToGraphWithDispatchLimit} from '../../src/gpu-graph/gpu-graph-modularity-internals';
+import {addGPUGraphAlgorithmsModularityToGraphWithDispatchLimit} from '../../src/gpu-graph-algorithms/gpu-graph-modularity-internals';
 
 type ScalarFormat = 'uint32' | 'float32';
 
@@ -46,8 +46,8 @@ type ModularityExecutionFixture = {
   device: Device;
   buffers: Buffer[];
   vectors: GPUVector[];
-  graph: GPUGraph;
-  modularity: GPUGraphModularity;
+  graph: GPUGraphAlgorithmsData;
+  modularity: GPUGraphAlgorithmsModularity;
   commandGraph: GPUCommandGraph;
   compiled?: ReturnType<GPUCommandGraph['compile']>;
 };
@@ -299,7 +299,7 @@ const modularityScenarios: ModularityScenario[] = [
 ];
 
 for (const scenario of modularityScenarios) {
-  it(`GPUGraphModularity GPU: ${scenario.name}`, async () => {
+  it(`GPUGraphAlgorithmsModularity GPU: ${scenario.name}`, async () => {
     const device = await getWebGPUTestDevice();
     if (!device) {
       return;
@@ -337,7 +337,7 @@ for (const scenario of modularityScenarios) {
   });
 }
 
-it('GPUGraphModularity scores existing GPU label propagation in the same command graph', async () => {
+it('GPUGraphAlgorithmsModularity scores existing GPU label propagation in the same command graph', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     return;
@@ -369,12 +369,12 @@ it('GPUGraphModularity scores existing GPU label propagation in the same command
     'uint32',
     1
   );
-  const topology = new GPUGraphTopology({
+  const topology = new GPUGraphAlgorithmsTopology({
     graph: fixture.graph,
     forward: adjacency,
     invalidEdgeCount
   });
-  const propagation = new GPUGraphLabelPropagation({
+  const propagation = new GPUGraphAlgorithmsLabelPropagation({
     topology,
     output: fixture.modularity.communities,
     iterations: 8
@@ -411,7 +411,7 @@ it('GPUGraphModularity scores existing GPU label propagation in the same command
   }
 });
 
-it('GPUGraphModularity recomputes scores after caller-owned community and source updates', async () => {
+it('GPUGraphAlgorithmsModularity recomputes scores after caller-owned community and source updates', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     return;
@@ -549,7 +549,7 @@ function createExecutionFixture(
   const edgeWeights = scenario.weightChunks
     ? createInputVector(device, buffers, vectors, 'edge-weights', 'float32', scenario.weightChunks)
     : undefined;
-  const graph = new GPUGraph({
+  const graph = new GPUGraphAlgorithmsData({
     vertexCount: scenario.vertexCount,
     sourceVertices,
     targetVertices,
@@ -599,7 +599,7 @@ function createExecutionFixture(
           1,
           scenario.byteOffset
         );
-  const modularity = new GPUGraphModularity({
+  const modularity = new GPUGraphAlgorithmsModularity({
     graph,
     communities,
     output,
@@ -641,7 +641,7 @@ function createOutputAdjacency(
   name: string,
   vertexCount: number,
   capacity: number
-): GPUGraphAdjacency {
+): GPUGraphAlgorithmsAdjacency {
   return {
     offsets: createOutputVector(
       device,
@@ -699,7 +699,7 @@ function compileModularity(fixture: ModularityExecutionFixture, maximumWorkgroup
   if (maximumWorkgroups === undefined) {
     fixture.modularity.addToGraph(fixture.commandGraph);
   } else {
-    addGPUGraphModularityToGraphWithDispatchLimit(
+    addGPUGraphAlgorithmsModularityToGraphWithDispatchLimit(
       fixture.modularity,
       fixture.commandGraph,
       maximumWorkgroups

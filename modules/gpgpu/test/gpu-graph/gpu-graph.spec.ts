@@ -3,12 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
-import {GPUGraph} from '@luma.gl/gpgpu/gpu-graph';
+import {GPUGraphAlgorithmsData} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
 
-it('GPUGraph preserves caller-owned WebGPU graph chunks without executing GPU work', async () => {
+it('GPUGraphAlgorithmsData preserves caller-owned WebGPU graph chunks without executing GPU work', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     return;
@@ -40,7 +40,7 @@ it('GPUGraph preserves caller-owned WebGPU graph chunks without executing GPU wo
   const readbackSpies = buffers.map(buffer => vi.spyOn(buffer, 'readAsync'));
 
   try {
-    const graph = new GPUGraph({
+    const graph = new GPUGraphAlgorithmsData({
       vertexCount: 9,
       sourceVertices,
       targetVertices,

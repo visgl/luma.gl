@@ -6,12 +6,12 @@ import {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import * as experimentalModule from '@luma.gl/experimental';
 import {
-  GPUGraph,
-  GPUGraphPageRank,
-  GPUGraphTopology,
-  type GPUGraphAdjacency,
-  type GPUGraphPageRankProps
-} from '@luma.gl/gpgpu/gpu-graph';
+  GPUGraphAlgorithmsData,
+  GPUGraphAlgorithmsPageRank,
+  GPUGraphAlgorithmsTopology,
+  type GPUGraphAlgorithmsAdjacency,
+  type GPUGraphAlgorithmsPageRankProps
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 import {afterEach, describe, expect, test, vi} from 'vitest';
@@ -46,10 +46,10 @@ afterEach(() => {
   }
 });
 
-describe('GPUGraphPageRank optional API and caller-owned resources', () => {
+describe('GPUGraphAlgorithmsPageRank optional API and caller-owned resources', () => {
   test('exposes PageRank only through the experimental GPU Graph package subpath', () => {
-    expect(typeof GPUGraphPageRank).toBe('function');
-    expect('GPUGraphPageRank' in experimentalModule).toBe(false);
+    expect(typeof GPUGraphAlgorithmsPageRank).toBe('function');
+    expect('GPUGraphAlgorithmsPageRank' in experimentalModule).toBe(false);
   });
 
   test('retains caller-owned topology and float outputs without allocating or executing GPU work', () => {
@@ -60,7 +60,7 @@ describe('GPUGraphPageRank optional API and caller-owned resources', () => {
     const submitSpy = vi.spyOn(fixture.device, 'submit');
     const readbackSpies = fixture.buffers.map(buffer => vi.spyOn(buffer, 'readAsync'));
 
-    const pageRank = new GPUGraphPageRank({...props, id: 'borrowed-page-rank'});
+    const pageRank = new GPUGraphAlgorithmsPageRank({...props, id: 'borrowed-page-rank'});
 
     expect(pageRank.id).toBe('borrowed-page-rank');
     expect(pageRank.topology).toBe(props.topology);
@@ -86,14 +86,14 @@ describe('GPUGraphPageRank optional API and caller-owned resources', () => {
     const directed = createPageRankProps(fixture, {reverse: false});
     const undirected = createPageRankProps(fixture, {directed: false, reverse: false});
 
-    expect(() => new GPUGraphPageRank(directed)).toThrow(/reverse|incoming|directed/);
-    expect(new GPUGraphPageRank(undirected).topology.reverse).toBeUndefined();
+    expect(() => new GPUGraphAlgorithmsPageRank(directed)).toThrow(/reverse|incoming|directed/);
+    expect(new GPUGraphAlgorithmsPageRank(undirected).topology.reverse).toBeUndefined();
   });
 
   test('accepts empty rank output with an optional float32 residual scalar', () => {
     const fixture = createPageRankFixture();
     const props = createPageRankProps(fixture, {vertexCount: 0, residual: true});
-    const pageRank = new GPUGraphPageRank(props);
+    const pageRank = new GPUGraphAlgorithmsPageRank(props);
 
     expect(pageRank.output.length).toBe(0);
     expect(pageRank.output.data).toHaveLength(1);
@@ -102,14 +102,14 @@ describe('GPUGraphPageRank optional API and caller-owned resources', () => {
   });
 });
 
-describe('GPUGraphPageRank bounded parameters and float32 vector validation', () => {
+describe('GPUGraphAlgorithmsPageRank bounded parameters and float32 vector validation', () => {
   test.each([
     0, 0.5, 0.85, 1
   ])('accepts a finite damping factor in the closed unit interval: %s', damping => {
     const fixture = createPageRankFixture();
     const props = createPageRankProps(fixture);
 
-    expect(new GPUGraphPageRank({...props, damping}).damping).toBe(damping);
+    expect(new GPUGraphAlgorithmsPageRank({...props, damping}).damping).toBe(damping);
   });
 
   test.each([
@@ -122,14 +122,16 @@ describe('GPUGraphPageRank bounded parameters and float32 vector validation', ()
     const fixture = createPageRankFixture();
     const props = createPageRankProps(fixture);
 
-    expect(() => new GPUGraphPageRank({...props, damping})).toThrow(/damping|finite|between/);
+    expect(() => new GPUGraphAlgorithmsPageRank({...props, damping})).toThrow(
+      /damping|finite|between/
+    );
   });
 
   test.each([1, 40, 1024])('accepts a positive bounded iteration count: %i', iterations => {
     const fixture = createPageRankFixture();
     const props = createPageRankProps(fixture);
 
-    expect(new GPUGraphPageRank({...props, iterations}).iterations).toBe(iterations);
+    expect(new GPUGraphAlgorithmsPageRank({...props, iterations}).iterations).toBe(iterations);
   });
 
   test.each([
@@ -143,7 +145,9 @@ describe('GPUGraphPageRank bounded parameters and float32 vector validation', ()
     const fixture = createPageRankFixture();
     const props = createPageRankProps(fixture);
 
-    expect(() => new GPUGraphPageRank({...props, iterations})).toThrow(/iterations|positive|1024/);
+    expect(() => new GPUGraphAlgorithmsPageRank({...props, iterations})).toThrow(
+      /iterations|positive|1024/
+    );
   });
 
   test.each([5, 7])('requires exactly one float score per graph vertex: %i', length => {
@@ -153,7 +157,9 @@ describe('GPUGraphPageRank bounded parameters and float32 vector validation', ()
       new Float32Array(length)
     ]);
 
-    expect(() => new GPUGraphPageRank({...props, output})).toThrow(/output|vertexCount|length/);
+    expect(() => new GPUGraphAlgorithmsPageRank({...props, output})).toThrow(
+      /output|vertexCount|length/
+    );
   });
 
   test('requires float32 PageRank scores instead of uint32', () => {
@@ -163,7 +169,9 @@ describe('GPUGraphPageRank bounded parameters and float32 vector validation', ()
       new Uint32Array(props.topology.graph.vertexCount)
     ]) as unknown as GPUVector<'float32'>;
 
-    expect(() => new GPUGraphPageRank({...props, output})).toThrow(/output|float32|packed/);
+    expect(() => new GPUGraphAlgorithmsPageRank({...props, output})).toThrow(
+      /output|float32|packed/
+    );
   });
 
   test.each([0, 2])('requires exactly one physical score chunk: %i', chunkCount => {
@@ -172,7 +180,9 @@ describe('GPUGraphPageRank bounded parameters and float32 vector validation', ()
     const chunks = chunkCount === 0 ? [] : [new Float32Array(3), new Float32Array(3)];
     const output = createVector(fixture, 'partitioned-scores', 'float32', chunks);
 
-    expect(() => new GPUGraphPageRank({...props, output})).toThrow(/output|one|single|chunk/);
+    expect(() => new GPUGraphAlgorithmsPageRank({...props, output})).toThrow(
+      /output|one|single|chunk/
+    );
   });
 
   test.each([
@@ -191,7 +201,9 @@ describe('GPUGraphPageRank bounded parameters and float32 vector validation', ()
       options
     );
 
-    expect(() => new GPUGraphPageRank({...props, output})).toThrow(/output|packed|aligned|float32/);
+    expect(() => new GPUGraphAlgorithmsPageRank({...props, output})).toThrow(
+      /output|packed|aligned|float32/
+    );
   });
 
   test.each([0, 2])('requires exactly one final float32 residual row: %i', length => {
@@ -201,7 +213,9 @@ describe('GPUGraphPageRank bounded parameters and float32 vector validation', ()
       new Float32Array(length)
     ]);
 
-    expect(() => new GPUGraphPageRank({...props, residual})).toThrow(/residual|one|row|scalar/);
+    expect(() => new GPUGraphAlgorithmsPageRank({...props, residual})).toThrow(
+      /residual|one|row|scalar/
+    );
   });
 
   test('requires packed float32 residual data with exactly one chunk', () => {
@@ -215,10 +229,10 @@ describe('GPUGraphPageRank bounded parameters and float32 vector validation', ()
       new Float32Array(0)
     ]);
 
-    expect(() => new GPUGraphPageRank({...props, residual: wrongFormat})).toThrow(
+    expect(() => new GPUGraphAlgorithmsPageRank({...props, residual: wrongFormat})).toThrow(
       /residual|float32|packed/
     );
-    expect(() => new GPUGraphPageRank({...props, residual: partitioned})).toThrow(
+    expect(() => new GPUGraphAlgorithmsPageRank({...props, residual: partitioned})).toThrow(
       /residual|one|single|chunk/
     );
   });
@@ -237,7 +251,7 @@ describe('GPUGraphPageRank bounded parameters and float32 vector validation', ()
       byteOffset: 4
     });
 
-    const pageRank = new GPUGraphPageRank({...props, output, residual});
+    const pageRank = new GPUGraphAlgorithmsPageRank({...props, output, residual});
     expect(pageRank.output.data[0].byteOffset).toBe(4);
     expect(pageRank.residual?.data[0].byteOffset).toBe(4);
   });
@@ -268,7 +282,7 @@ describe('GPUGraphPageRank bounded parameters and float32 vector validation', ()
       buffer: vector.data[0].buffer
     });
 
-    expect(() => new GPUGraphPageRank({...props, output})).toThrow(
+    expect(() => new GPUGraphAlgorithmsPageRank({...props, output})).toThrow(
       /output|distinct|physical|allocation/
     );
   });
@@ -291,10 +305,10 @@ describe('GPUGraphPageRank bounded parameters and float32 vector validation', ()
       {buffer: props.topology.invalidEdgeCount.data[0].buffer}
     );
 
-    expect(() => new GPUGraphPageRank({...props, residual: scoreAlias})).toThrow(
+    expect(() => new GPUGraphAlgorithmsPageRank({...props, residual: scoreAlias})).toThrow(
       /residual|distinct|physical|allocation/
     );
-    expect(() => new GPUGraphPageRank({...props, residual: topologyAlias})).toThrow(
+    expect(() => new GPUGraphAlgorithmsPageRank({...props, residual: topologyAlias})).toThrow(
       /residual|distinct|physical|allocation/
     );
   });
@@ -317,7 +331,9 @@ describe('GPUGraphPageRank bounded parameters and float32 vector validation', ()
       {buffer: dynamicBuffer}
     );
 
-    expect(() => new GPUGraphPageRank({...props, output})).toThrow(/distinct|physical|allocation/);
+    expect(() => new GPUGraphAlgorithmsPageRank({...props, output})).toThrow(
+      /distinct|physical|allocation/
+    );
     expect(concreteBuffer.destroyed).toBe(false);
   });
 });
@@ -337,7 +353,7 @@ function createPageRankProps(
     weighted?: boolean;
     residual?: boolean;
   } = {}
-): GPUGraphPageRankProps {
+): GPUGraphAlgorithmsPageRankProps {
   const vertexCount = options.vertexCount ?? 6;
   const sourceVertices = createVector(fixture, 'sourceVertices', 'uint32', [
     Uint32Array.from([0, 2]),
@@ -364,7 +380,7 @@ function createPageRankProps(
       ])
     : undefined;
   const directed = options.directed ?? true;
-  const graph = new GPUGraph({
+  const graph = new GPUGraphAlgorithmsData({
     vertexCount,
     sourceVertices,
     targetVertices,
@@ -380,7 +396,7 @@ function createPageRankProps(
   const invalidEdgeCount = createVector(fixture, 'invalidEdgeCount', 'uint32', [
     new Uint32Array(1)
   ]);
-  const topology = new GPUGraphTopology({graph, forward, reverse, invalidEdgeCount});
+  const topology = new GPUGraphAlgorithmsTopology({graph, forward, reverse, invalidEdgeCount});
   const output = createVector(fixture, 'pageRankScores', 'float32', [
     new Float32Array(vertexCount)
   ]);
@@ -396,7 +412,7 @@ function createAdjacency(
   vertexCount: number,
   capacity: number,
   weighted = false
-): GPUGraphAdjacency {
+): GPUGraphAlgorithmsAdjacency {
   return {
     offsets: createVector(fixture, `${name}-offsets`, 'uint32', [new Uint32Array(vertexCount + 1)]),
     neighbors: createVector(fixture, `${name}-neighbors`, 'uint32', [new Uint32Array(capacity)]),
@@ -409,7 +425,7 @@ function createAdjacency(
   };
 }
 
-function getTopologyVector(topology: GPUGraphTopology, name: string): GPUVector {
+function getTopologyVector(topology: GPUGraphAlgorithmsTopology, name: string): GPUVector {
   if (name === 'invalidEdgeCount') return topology.invalidEdgeCount;
   if (name === 'sourceVertices') return topology.graph.sourceVertices;
   if (name === 'targetVertices') return topology.graph.targetVertices;
@@ -418,7 +434,7 @@ function getTopologyVector(topology: GPUGraphTopology, name: string): GPUVector 
 
   const [direction, vectorName] = name.split('.');
   const adjacency = direction === 'forward' ? topology.forward : topology.reverse!;
-  return adjacency[vectorName as keyof GPUGraphAdjacency]!;
+  return adjacency[vectorName as keyof GPUGraphAlgorithmsAdjacency]!;
 }
 
 function createVector<Format extends ScalarFormat>(

@@ -4,17 +4,17 @@
 
 import {type Device} from '@luma.gl/core';
 import {
-  makeGPUGraphBenchmarkDataset,
-  runGPUGraphBenchmark,
-  type GPUGraphBenchmarkAlgorithm,
-  type GPUGraphBenchmarkDatasetKind,
-  type GPUGraphBenchmarkDistribution,
-  type GPUGraphBenchmarkReport
-} from '@luma.gl/gpgpu/gpu-graph/benchmarks';
+  makeGPUGraphAlgorithmsBenchmarkDataset,
+  runGPUGraphAlgorithmsBenchmark,
+  type GPUGraphAlgorithmsBenchmarkAlgorithm,
+  type GPUGraphAlgorithmsBenchmarkDatasetKind,
+  type GPUGraphAlgorithmsBenchmarkDistribution,
+  type GPUGraphAlgorithmsBenchmarkReport
+} from '@luma.gl/gpgpu/gpu-graph-algorithms/benchmarks';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
 
-const BENCHMARK_ALGORITHMS: GPUGraphBenchmarkAlgorithm[] = [
+const BENCHMARK_ALGORITHMS: GPUGraphAlgorithmsBenchmarkAlgorithm[] = [
   'topology',
   'breadth-first-search',
   'single-source-shortest-path',
@@ -26,7 +26,7 @@ const BENCHMARK_ALGORITHMS: GPUGraphBenchmarkAlgorithm[] = [
   'spatial-layout'
 ];
 
-const BENCHMARK_DATASETS: GPUGraphBenchmarkDatasetKind[] = [
+const BENCHMARK_DATASETS: GPUGraphAlgorithmsBenchmarkDatasetKind[] = [
   'sparse',
   'dense',
   'disconnected',
@@ -45,8 +45,12 @@ for (const kind of BENCHMARK_DATASETS) {
     const submitSpy = vi.spyOn(device, 'submit');
     try {
       const theta = kind === 'sparse' ? 0 : kind === 'scale-free' ? 1 : 0.6;
-      const expectedDataset = makeGPUGraphBenchmarkDataset({kind, vertexCount: 12, seed: 42});
-      const report = await runGPUGraphBenchmark(device, {
+      const expectedDataset = makeGPUGraphAlgorithmsBenchmarkDataset({
+        kind,
+        vertexCount: 12,
+        seed: 42
+      });
+      const report = await runGPUGraphAlgorithmsBenchmark(device, {
         kind,
         vertexCount: 12,
         seed: 42,
@@ -89,10 +93,10 @@ for (const kind of BENCHMARK_DATASETS) {
 }
 
 function assertBenchmarkReport(
-  report: GPUGraphBenchmarkReport,
+  report: GPUGraphAlgorithmsBenchmarkReport,
   device: Device,
   expected: {
-    kind: GPUGraphBenchmarkDatasetKind;
+    kind: GPUGraphAlgorithmsBenchmarkDatasetKind;
     vertexCount: number;
     edgeCount: number;
     cellCount: number;
@@ -237,7 +241,10 @@ function assertBenchmarkReport(
   expect(device.type, 'reported timings were produced by an actual WebGPU device').toBe('webgpu');
 }
 
-function assertDistribution(distribution: GPUGraphBenchmarkDistribution, label: string): void {
+function assertDistribution(
+  distribution: GPUGraphAlgorithmsBenchmarkDistribution,
+  label: string
+): void {
   for (const value of [
     distribution.minimum,
     distribution.median,

@@ -1,5 +1,25 @@
 # Upgrade Guide
 
+## GPU graph naming
+
+Graph analytics now use `@luma.gl/gpgpu/gpu-graph-algorithms` and a shared
+`GPUGraphAlgorithms` prefix for classes, types, and helpers:
+
+- `GPUGraph` becomes `GPUGraphAlgorithmsData`.
+- `GPUGraphProps` becomes `GPUGraphAlgorithmsDataProps`.
+- `GPUGraphPageRank` becomes `GPUGraphAlgorithmsPageRank`.
+- `GPUGraphTopology` becomes `GPUGraphAlgorithmsTopology`.
+- `runGPUGraphBenchmark` becomes `runGPUGraphAlgorithmsBenchmark`.
+
+Update analytics imports from `@luma.gl/gpgpu/gpu-graph` to
+`@luma.gl/gpgpu/gpu-graph-algorithms`, including the `/benchmarks` entry point.
+The `gpu-graph` entry point now exposes execution scheduling.
+
+The execution scheduler is now `GPUGraph`, with compiled instances named `CompiledGPUGraph`,
+from `@luma.gl/gpgpu/gpu-graph` (also exported by `gpu-core`). `GPUCommandGraph` and
+`CompiledGPUCommandGraph` remain deprecated aliases of the same constructors. Existing
+scheduling option and result types retain their `GPUCommandGraph` prefixes.
+
 The upgrade guide lists breaking changes in each major and minor version of the luma.gl API, and provides information on how to update applications.
 
 Upgrade instructions assume that you are upgrading from the immediately previous release.
@@ -11,6 +31,15 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 *For detailed commit level logs that include alpha and beta releases, see the [CHANGELOG](https://github.com/visgl/luma.gl/blob/master/CHANGELOG.md) in the github repository.*
 
 ## Upgrading to v10.0
+
+### math.gl grouped packages
+
+luma.gl now uses math.gl 5.0.0-alpha.19. Replace standalone math.gl dependencies
+with their grouped package roots: `@math.gl/types` becomes `@math.gl/core/types`,
+`@math.gl/polygon` becomes `@math.gl/geometry/polygon`, and CRS, projection, and
+GeoArrow imports move under `@math.gl/geospatial`. Sun imports move to
+`@math.gl/earth/sun`. Install the package root when using these subpaths.
+
 
 ### Scene controllers move to engine
 

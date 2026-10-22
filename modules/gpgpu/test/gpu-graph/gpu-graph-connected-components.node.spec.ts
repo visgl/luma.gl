@@ -6,12 +6,12 @@ import {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import * as experimentalModule from '@luma.gl/experimental';
 import {
-  GPUGraph,
-  GPUGraphConnectedComponents,
-  GPUGraphTopology,
-  type GPUGraphAdjacency,
-  type GPUGraphConnectedComponentsProps
-} from '@luma.gl/gpgpu/gpu-graph';
+  GPUGraphAlgorithmsData,
+  GPUGraphAlgorithmsConnectedComponents,
+  GPUGraphAlgorithmsTopology,
+  type GPUGraphAlgorithmsAdjacency,
+  type GPUGraphAlgorithmsConnectedComponentsProps
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 import {afterEach, describe, expect, test, vi} from 'vitest';
@@ -46,10 +46,10 @@ afterEach(() => {
   }
 });
 
-describe('GPUGraphConnectedComponents public contract and ownership', () => {
+describe('GPUGraphAlgorithmsConnectedComponents public contract and ownership', () => {
   test('keeps weak connected components isolated in the optional GPU Graph entry point', () => {
-    expect(typeof GPUGraphConnectedComponents).toBe('function');
-    expect('GPUGraphConnectedComponents' in experimentalModule).toBe(false);
+    expect(typeof GPUGraphAlgorithmsConnectedComponents).toBe('function');
+    expect('GPUGraphAlgorithmsConnectedComponents' in experimentalModule).toBe(false);
   });
 
   test('preserves graph topology and caller outputs without allocations, submission, or readback', () => {
@@ -60,7 +60,10 @@ describe('GPUGraphConnectedComponents public contract and ownership', () => {
     const submitSpy = vi.spyOn(fixture.device, 'submit');
     const readbackSpies = fixture.buffers.map(buffer => vi.spyOn(buffer, 'readAsync'));
 
-    const components = new GPUGraphConnectedComponents({...props, id: 'borrowed-components'});
+    const components = new GPUGraphAlgorithmsConnectedComponents({
+      ...props,
+      id: 'borrowed-components'
+    });
 
     expect(components.id).toBe('borrowed-components');
     expect(components.topology).toBe(props.topology);
@@ -83,7 +86,7 @@ describe('GPUGraphConnectedComponents public contract and ownership', () => {
   test('accepts a directed graph without reverse adjacency and without optional convergence output', () => {
     const fixture = createComponentsFixture();
     const props = createComponentsProps(fixture);
-    const components = new GPUGraphConnectedComponents(props);
+    const components = new GPUGraphAlgorithmsConnectedComponents(props);
 
     expect(components.topology.graph.directed).toBe(true);
     expect(components.topology.reverse).toBeUndefined();
@@ -93,7 +96,7 @@ describe('GPUGraphConnectedComponents public contract and ownership', () => {
   test('accepts empty graph outputs and optional uint32 convergence status', () => {
     const fixture = createComponentsFixture();
     const props = createComponentsProps(fixture, {vertexCount: 0, status: true});
-    const components = new GPUGraphConnectedComponents(props);
+    const components = new GPUGraphAlgorithmsConnectedComponents(props);
 
     expect(components.output.length).toBe(0);
     expect(components.output.data).toHaveLength(1);
@@ -102,12 +105,14 @@ describe('GPUGraphConnectedComponents public contract and ownership', () => {
   });
 });
 
-describe('GPUGraphConnectedComponents iteration and vector validation', () => {
+describe('GPUGraphAlgorithmsConnectedComponents iteration and vector validation', () => {
   test.each([1, 32, 1024])('accepts a positive bounded iteration count: %i', iterations => {
     const fixture = createComponentsFixture();
     const props = createComponentsProps(fixture);
 
-    expect(new GPUGraphConnectedComponents({...props, iterations}).iterations).toBe(iterations);
+    expect(new GPUGraphAlgorithmsConnectedComponents({...props, iterations}).iterations).toBe(
+      iterations
+    );
   });
 
   test.each([
@@ -121,7 +126,7 @@ describe('GPUGraphConnectedComponents iteration and vector validation', () => {
     const fixture = createComponentsFixture();
     const props = createComponentsProps(fixture);
 
-    expect(() => new GPUGraphConnectedComponents({...props, iterations})).toThrow(
+    expect(() => new GPUGraphAlgorithmsConnectedComponents({...props, iterations})).toThrow(
       /iterations|positive|1024/
     );
   });
@@ -133,7 +138,7 @@ describe('GPUGraphConnectedComponents iteration and vector validation', () => {
       new Uint32Array(length)
     ]);
 
-    expect(() => new GPUGraphConnectedComponents({...props, output})).toThrow(
+    expect(() => new GPUGraphAlgorithmsConnectedComponents({...props, output})).toThrow(
       /output|vertexCount|length/
     );
   });
@@ -145,7 +150,7 @@ describe('GPUGraphConnectedComponents iteration and vector validation', () => {
       new Float32Array(props.topology.graph.vertexCount)
     ]) as unknown as GPUVector<'uint32'>;
 
-    expect(() => new GPUGraphConnectedComponents({...props, output})).toThrow(
+    expect(() => new GPUGraphAlgorithmsConnectedComponents({...props, output})).toThrow(
       /output|uint32|packed/
     );
   });
@@ -156,7 +161,7 @@ describe('GPUGraphConnectedComponents iteration and vector validation', () => {
     const chunks = chunkCount === 0 ? [] : [new Uint32Array(3), new Uint32Array(3)];
     const output = createVector(fixture, 'partitioned-components', 'uint32', chunks);
 
-    expect(() => new GPUGraphConnectedComponents({...props, output})).toThrow(
+    expect(() => new GPUGraphAlgorithmsConnectedComponents({...props, output})).toThrow(
       /output|one|single|chunk/
     );
   });
@@ -177,7 +182,7 @@ describe('GPUGraphConnectedComponents iteration and vector validation', () => {
       options
     );
 
-    expect(() => new GPUGraphConnectedComponents({...props, output})).toThrow(
+    expect(() => new GPUGraphAlgorithmsConnectedComponents({...props, output})).toThrow(
       /output|packed|aligned|uint32/
     );
   });
@@ -189,7 +194,7 @@ describe('GPUGraphConnectedComponents iteration and vector validation', () => {
       new Uint32Array(length)
     ]);
 
-    expect(() => new GPUGraphConnectedComponents({...props, converged})).toThrow(
+    expect(() => new GPUGraphAlgorithmsConnectedComponents({...props, converged})).toThrow(
       /converged|one|row|scalar/
     );
   });
@@ -205,12 +210,12 @@ describe('GPUGraphConnectedComponents iteration and vector validation', () => {
       new Uint32Array(0)
     ]);
 
-    expect(() => new GPUGraphConnectedComponents({...props, converged: wrongFormat})).toThrow(
-      /converged|uint32|packed/
-    );
-    expect(() => new GPUGraphConnectedComponents({...props, converged: partitioned})).toThrow(
-      /converged|one|single|chunk/
-    );
+    expect(
+      () => new GPUGraphAlgorithmsConnectedComponents({...props, converged: wrongFormat})
+    ).toThrow(/converged|uint32|packed/);
+    expect(
+      () => new GPUGraphAlgorithmsConnectedComponents({...props, converged: partitioned})
+    ).toThrow(/converged|one|single|chunk/);
   });
 
   test('accepts uint32-aligned component and status ranges at non-256-byte offsets', () => {
@@ -227,7 +232,7 @@ describe('GPUGraphConnectedComponents iteration and vector validation', () => {
       byteOffset: 4
     });
 
-    const components = new GPUGraphConnectedComponents({...props, output, converged});
+    const components = new GPUGraphAlgorithmsConnectedComponents({...props, output, converged});
     expect(components.output.data[0].byteOffset).toBe(4);
     expect(components.converged?.data[0].byteOffset).toBe(4);
   });
@@ -258,7 +263,7 @@ describe('GPUGraphConnectedComponents iteration and vector validation', () => {
       buffer: vector.data[0].buffer
     });
 
-    expect(() => new GPUGraphConnectedComponents({...props, output})).toThrow(
+    expect(() => new GPUGraphAlgorithmsConnectedComponents({...props, output})).toThrow(
       /output|distinct|physical|allocation/
     );
   });
@@ -283,12 +288,12 @@ describe('GPUGraphConnectedComponents iteration and vector validation', () => {
       {buffer: props.topology.invalidEdgeCount.data[0].buffer}
     );
 
-    expect(() => new GPUGraphConnectedComponents({...props, converged: outputAlias})).toThrow(
-      /converged|distinct|physical|allocation/
-    );
-    expect(() => new GPUGraphConnectedComponents({...props, converged: topologyAlias})).toThrow(
-      /converged|distinct|physical|allocation/
-    );
+    expect(
+      () => new GPUGraphAlgorithmsConnectedComponents({...props, converged: outputAlias})
+    ).toThrow(/converged|distinct|physical|allocation/);
+    expect(
+      () => new GPUGraphAlgorithmsConnectedComponents({...props, converged: topologyAlias})
+    ).toThrow(/converged|distinct|physical|allocation/);
   });
 
   test('unwraps borrowed DynamicBuffer wrappers when checking physical component aliases', () => {
@@ -309,7 +314,7 @@ describe('GPUGraphConnectedComponents iteration and vector validation', () => {
       {buffer: dynamicBuffer}
     );
 
-    expect(() => new GPUGraphConnectedComponents({...props, output})).toThrow(
+    expect(() => new GPUGraphAlgorithmsConnectedComponents({...props, output})).toThrow(
       /distinct|physical|allocation/
     );
     expect(concreteBuffer.destroyed).toBe(false);
@@ -331,7 +336,7 @@ function createComponentsProps(
     weighted?: boolean;
     status?: boolean;
   } = {}
-): GPUGraphConnectedComponentsProps {
+): GPUGraphAlgorithmsConnectedComponentsProps {
   const vertexCount = options.vertexCount ?? 6;
   const sourceVertices = createVector(fixture, 'sourceVertices', 'uint32', [
     Uint32Array.from([0, 2]),
@@ -357,7 +362,7 @@ function createComponentsProps(
         Uint32Array.from([30, 40, 50])
       ])
     : undefined;
-  const graph = new GPUGraph({
+  const graph = new GPUGraphAlgorithmsData({
     vertexCount,
     sourceVertices,
     targetVertices,
@@ -372,7 +377,7 @@ function createComponentsProps(
   const invalidEdgeCount = createVector(fixture, 'invalidEdgeCount', 'uint32', [
     new Uint32Array(1)
   ]);
-  const topology = new GPUGraphTopology({graph, forward, reverse, invalidEdgeCount});
+  const topology = new GPUGraphAlgorithmsTopology({graph, forward, reverse, invalidEdgeCount});
   const output = createVector(fixture, 'componentIds', 'uint32', [new Uint32Array(vertexCount)]);
   const converged = options.status
     ? createVector(fixture, 'converged', 'uint32', [new Uint32Array(1)])
@@ -386,7 +391,7 @@ function createAdjacency(
   vertexCount: number,
   capacity: number,
   weighted = false
-): GPUGraphAdjacency {
+): GPUGraphAlgorithmsAdjacency {
   return {
     offsets: createVector(fixture, `${name}-offsets`, 'uint32', [new Uint32Array(vertexCount + 1)]),
     neighbors: createVector(fixture, `${name}-neighbors`, 'uint32', [new Uint32Array(capacity)]),
@@ -399,7 +404,7 @@ function createAdjacency(
   };
 }
 
-function getTopologyVector(topology: GPUGraphTopology, name: string): GPUVector {
+function getTopologyVector(topology: GPUGraphAlgorithmsTopology, name: string): GPUVector {
   if (name === 'invalidEdgeCount') return topology.invalidEdgeCount;
   if (name === 'sourceVertices') return topology.graph.sourceVertices;
   if (name === 'targetVertices') return topology.graph.targetVertices;
@@ -408,7 +413,7 @@ function getTopologyVector(topology: GPUGraphTopology, name: string): GPUVector 
 
   const [direction, vectorName] = name.split('.');
   const adjacency = direction === 'forward' ? topology.forward : topology.reverse!;
-  return adjacency[vectorName as keyof GPUGraphAdjacency]!;
+  return adjacency[vectorName as keyof GPUGraphAlgorithmsAdjacency]!;
 }
 
 function createVector<Format extends ScalarFormat>(

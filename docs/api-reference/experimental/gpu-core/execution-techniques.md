@@ -83,5 +83,5 @@ large result in the frame loop.
 ## Measure the result
 
 Track CPU encoding, GPU duration, transient bytes, allocation reuse, output counts, and overflow
-separately. See [debugging GPU command graphs](./debugging) for the GPU Graph and GPU Trace panels,
+separately. See [debugging GPU graphs](./debugging) for the GPU Graph and GPU Trace panels,
 and [execution and composition](./concepts) for the detailed execution contract.
