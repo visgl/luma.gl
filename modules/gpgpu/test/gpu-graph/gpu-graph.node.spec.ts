@@ -69,10 +69,10 @@ describe('@luma.gl/gpgpu/gpu-graph-algorithms package boundary', () => {
 
     expect(packageJson.name).toBe('@luma.gl/gpgpu');
     expect(packageJson.sideEffects).toBe(false);
-    expect(packageJson.exports?.['./gpu-graph']).toEqual({
-      import: './dist/gpu-graph/index.js',
-      require: './dist/gpu-graph/index.cjs',
-      types: './dist/gpu-graph/index.d.ts'
+    expect(packageJson.exports?.['./gpu-graph-algorithms']).toEqual({
+      import: './dist/gpu-graph-algorithms/index.js',
+      require: './dist/gpu-graph-algorithms/index.cjs',
+      types: './dist/gpu-graph-algorithms/index.d.ts'
     });
     for (const dependencies of [
       packageJson.dependencies,

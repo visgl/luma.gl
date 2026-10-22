@@ -53,10 +53,10 @@ describe('GPU Graph benchmark optional package boundary', () => {
       optionalDependencies?: Record<string, string>;
     };
 
-    expect(packageJson.exports['./gpu-graph/benchmarks']).toEqual({
-      import: './dist/gpu-graph/benchmarks.js',
-      require: './dist/gpu-graph/benchmarks.cjs',
-      types: './dist/gpu-graph/benchmarks.d.ts'
+    expect(packageJson.exports['./gpu-graph-algorithms/benchmarks']).toEqual({
+      import: './dist/gpu-graph-algorithms/benchmarks.js',
+      require: './dist/gpu-graph-algorithms/benchmarks.cjs',
+      types: './dist/gpu-graph-algorithms/benchmarks.d.ts'
     });
     for (const dependencies of [
       packageJson.dependencies,
