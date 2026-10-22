@@ -4,7 +4,7 @@
 import {CubeGeometry, GroupNode, ScenegraphNode, type Geometry} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
 import {makeConvexHullGeometry, makeTriangleMeshGeometry} from './rigid-body-mesh';
-import type {GPURigidBody} from './rigid-body-properties';
+import {normalizeRigidBodyRotation, type GPURigidBody} from './rigid-body-properties';
 import type {GPURigidBodyBounds} from './rigid-body-publication';
 
 export type PhysicsGeometryNodeProps = ConstructorParameters<typeof ScenegraphNode>[0] & {
@@ -51,7 +51,9 @@ export function makePhysicsScenegraph(root: GroupNode): PhysicsScenegraphSnapsho
     const position = override?.position ?? ([world[12], world[13], world[14]] as const);
     const bodyMatrix = new Matrix4()
       .translate(position)
-      .multiplyRight(new Matrix4().fromQuaternion(override?.orientation ?? [0, 0, 0, 1]));
+      .multiplyRight(
+        new Matrix4().fromQuaternion(normalizeRigidBodyRotation(override?.orientation))
+      );
     const localMatrix = new Matrix4(bodyMatrix).invert().multiplyRight(world);
     const attribute = node.geometry.attributes['POSITION'];
     if (!attribute || attribute.size !== 3 || attribute.value.length < 9)
@@ -76,9 +78,8 @@ export function makePhysicsScenegraph(root: GroupNode): PhysicsScenegraphSnapsho
     const centeredBox =
       node.geometry instanceof CubeGeometry &&
       [1, 2, 4, 6, 8, 9, 12, 13, 14].every(index => Math.abs(localMatrix[index]) < 1e-8);
-    const shape = override
-      ? override.shape
-      : centeredBox
+    const makeShape = () =>
+      centeredBox
         ? {type: 'box' as const, halfExtents: maximum}
         : node.physics.geometryMode === 'triangle-mesh'
           ? {
@@ -91,10 +92,17 @@ export function makePhysicsScenegraph(root: GroupNode): PhysicsScenegraphSnapsho
               )
             }
           : {type: 'convex-hull' as const, geometry: makeConvexHullGeometry(vertices)};
-    const mode = node.physics.body?.mode ?? 'static';
+    const mode =
+      node.physics.body?.mode ?? ((node.physics.body?.mass ?? 0) === 0 ? 'static' : 'dynamic');
     result.bindings.push({node, body: result.bodies.length, localMatrix});
     result.bodies.push(
-      override ?? {position, shape, mode, mass: mode === 'static' ? 0 : 1, ...node.physics.body}
+      override ?? {
+        position,
+        shape: makeShape(),
+        mode,
+        mass: mode === 'static' ? 0 : 1,
+        ...node.physics.body
+      }
     );
     result.publicationBounds.push([minimum, maximum]);
   });

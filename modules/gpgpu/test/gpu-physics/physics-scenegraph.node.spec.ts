@@ -53,3 +53,15 @@ it('rejects ambiguous duplicate node identities', () => {
   });
   expect(() => makePhysicsScenegraph(root)).toThrow();
 });
+
+it('normalizes override rotation consistently with the physics world', () => {
+  const node = new PhysicsGeometryNode({
+    id: 'rotated-override',
+    geometry: new CubeGeometry(),
+    collision: {position: [0, 0, 0], orientation: [0, 0, 2, 2], shape: {type: 'sphere', radius: 1}}
+  });
+  const snapshot = makePhysicsScenegraph(new GroupNode({children: [node]}));
+  const local = snapshot.bindings[0].localMatrix.transformAsPoint([1, 0, 0]);
+  expect(local[0]).toBeCloseTo(0);
+  expect(local[1]).toBeCloseTo(-1);
+});
