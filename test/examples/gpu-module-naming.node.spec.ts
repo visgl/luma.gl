@@ -167,7 +167,7 @@ describe('experimental GPU module naming', () => {
     expect(existsSync(path.join(gpgpuDocumentation, 'gpu-vector-search.md'))).toBe(true);
     for (const moduleName of [
       'gpu-core',
-      'gpu-graph-algorithms',
+      'gpu-graph',
       'gpu-raster',
       'gpu-project',
       'gpu-dataframe',
