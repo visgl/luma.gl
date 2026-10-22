@@ -109,3 +109,9 @@ materials retain studio environment fill. One elevated spotlight supplies direct
 lighting and a matching spotlight shadow map. The scenegraph's CPU bounds do not track GPU motion, so
 this example does not use CPU frustum culling or CPU picking for moving nodes.
 Rendering uses at least two device pixels per CSS pixel for smoother silhouettes.
+
+### Frame contacts and settling
+
+The frame is authored as a CPU scenegraph of geometry nodes before GPU allocation. Rendering and collision extraction consume the same node geometry and accumulated transforms. Axis-aligned cubes retain box colliders; other convex geometry uses a transformed convex hull. A node may supply a world-space collision override or disable collision explicitly. This example adapter is for convex static frame pieces, not automatic decomposition of arbitrary concave models.
+
+Ball impacts use restitution 0.985, with low-speed restitution disabled below 0.05. Exponential linear/angular damping (0.08/0.12 inverse seconds) approximates air and suspension losses, including collective swings without impacts. The existing one-minute reset remains active. Steel roughness is 0.07 for sharper PBR reflections without raising scene exposure.

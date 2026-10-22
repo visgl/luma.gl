@@ -20,6 +20,7 @@ import {
 } from '@luma.gl/experimental';
 import type {SpotLight, ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
+import {CradleGeometryNode} from './cradle-geometry';
 import {captureReflectionProbe} from './reflection-probe';
 
 const CRADLE_SPOTLIGHT = {
@@ -109,7 +110,8 @@ export class CradleScene {
   constructor(
     private device: Device,
     positions: Buffer,
-    orientations: Buffer
+    orientations: Buffer,
+    frame: GroupNode
   ) {
     // Asset-free studio panorama, integrated by the shared GGX IBL generator.
     const pixels = new Uint8Array(256 * 128 * 4);
@@ -188,7 +190,7 @@ export class CradleScene {
       steel: createPBRMaterial(device, {
         uniforms: {
           baseColorFactor: [0.8, 0.82, 0.85, 1],
-          metallicRoughnessValues: [1, 0.2],
+          metallicRoughnessValues: [1, 0.07],
           IBLenabled: true
         }
       }),
@@ -222,26 +224,17 @@ export class CradleScene {
         geometry: cube,
         matrix: new Matrix4().translate([0, 0, -0.5]).scale([8, 8, 0.5]),
         material: 'table'
-      },
-      {
-        id: 'left-leg',
-        geometry: cube,
-        matrix: new Matrix4().translate([-4.2, 0, 1.95]).scale([0.3, 0.3, 1.95]),
-        material: 'stone'
-      },
-      {
-        id: 'right-leg',
-        geometry: cube,
-        matrix: new Matrix4().translate([4.2, 0, 1.95]).scale([0.3, 0.3, 1.95]),
-        material: 'stone'
-      },
-      {
-        id: 'crossbar',
-        geometry: cube,
-        matrix: new Matrix4().translate([0, 0, 4.2]).scale([4.5, 0.3, 0.3]),
-        material: 'stone'
       }
     ];
+    frame.traverse((node, {worldMatrix}) => {
+      if (!(node instanceof CradleGeometryNode)) return;
+      placements.push({
+        id: node.id,
+        geometry: node.geometry,
+        matrix: new Matrix4(worldMatrix).multiplyRight(node.matrix),
+        material: 'stone'
+      });
+    });
     for (let index = 0; index < 5; index++) {
       placements.push({
         id: `ball-${index}`,

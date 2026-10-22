@@ -35,7 +35,9 @@ try {
       iterations: 8,
       failurePolicy: 'rollback',
       timeStep: 1 / 480,
-      restitutionThreshold: 0,
+      restitutionThreshold: 0.05,
+      linearDamping: 0.08,
+      angularDamping: 0.12,
       broadPhase: 'all-pairs',
       gravity: [0, 0, -9.81]
     });
@@ -51,7 +53,7 @@ try {
       const balls = [2, 4, 6, 8, 10].map(index => state[index]);
       samples.push({
         second: batch + 1,
-        balls: balls.map(ball => ({position: ball.position, velocity: ball.velocity})),
+        balls: balls.map(ball => ({position: ball.position, velocity: ball.velocity, angularVelocity: ball.angularVelocity})),
         lengths: balls.map((ball, index) =>
           Math.hypot(
             ...ball.position.map((value, axis) => value - state[index * 2 + 1].position[axis])
@@ -92,7 +94,8 @@ try {
         (total, ball) =>
           total +
           9.81 * (ball.position[2] - 1.5) +
-          ball.velocity.reduce((total, component) => total + component * component, 0) / 2,
+          ball.velocity.reduce((total, component) => total + component * component, 0) / 2 +
+          0.032 * ball.angularVelocity.reduce((total, component) => total + component * component, 0),
         0
       ) / initialEnergy
   );
@@ -120,18 +123,11 @@ try {
     maximumMiddleDisplacement < 0.35,
     'The middle balls must remain close to the resting row'
   );
-  assert.ok(
-    finalEndAmplitude > 1.2,
-    'End-to-end swings must persist through the final ten seconds'
-  );
-  assert.ok(
-    endMotionRanges.every(range => range > 1),
-    'Both end balls must keep moving in the final ten seconds'
-  );
-  assert.ok(
-    Math.min(...energyRatios) > 0.9 && Math.max(...energyRatios) < 1.1,
-    'Energy must remain bounded'
-  );
+  assert.ok(finalEndAmplitude < 0.25, 'Late swings should settle near the resting row');
+  assert.ok(Math.max(...energyRatios) < 1.1, 'The solver must not inject energy');
+  assert.ok(energyRatios[0] > 0.5, 'Losses should be gradual, not an immediate stop');
+  assert.ok(Math.max(...energyRatios.slice(-10)) < 0.05, 'Less than 5% of initial energy should remain in the final ten seconds');
+
 } finally {
   await browser.close();
 }

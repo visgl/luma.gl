@@ -123,6 +123,9 @@ export type GPURigidBodyWorldProps = {
   triggerEventCapacity?: number;
   contactMatchDistance?: number;
   restitutionThreshold?: number;
+  /** Dynamic-body velocity decay rates in inverse seconds; default zero. */
+  linearDamping?: number;
+  angularDamping?: number;
   sleepAfter?: number;
   sleepLinearSpeed?: number;
   sleepAngularSpeed?: number;
@@ -182,6 +185,9 @@ export class GPURigidBodyWorld {
   private broadPhaseCounters: {buffer: Buffer; byteOffset: number} | null = null;
 
   constructor(props: GPURigidBodyWorldProps) {
+    for (const damping of [props.linearDamping ?? 0, props.angularDamping ?? 0]) {
+      if (!Number.isFinite(damping) || damping < 0) throw new Error('Invalid damping');
+    }
     this.id = props.id ?? 'gpu-rigid-body-world';
     this.count = props.bodies.length;
     this.solver = props.solver ?? 'ordered';
@@ -715,7 +721,9 @@ export class GPURigidBodyWorld {
       parallel,
       this.props.maximumMeshTraversalTestsPerPair ?? 65536,
       getRigidBodyJointShader(this.props.joints ?? [], this.props.bodies),
-      Boolean(this.props.joints?.length)
+      Boolean(this.props.joints?.length),
+      this.props.linearDamping ?? 0,
+      this.props.angularDamping ?? 0
     );
     const parallelBindings: Record<string, readonly string[]> = {
       parallelReset: ['parallelState'],

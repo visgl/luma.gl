@@ -22,7 +22,9 @@ export function getRigidBodyShader(
   parallel = false,
   maximumMeshTraversalTestsPerPair = 65536,
   jointShader = 'fn jointActive(body:u32)->bool{return false;} fn jointExcluded(first:u32,second:u32)->bool{return false;}',
-  hasJoints = false
+  hasJoints = false,
+  linearDamping = 0,
+  angularDamping = 0
 ): string {
   return /* wgsl */ `
 const BODY_COUNT: u32 = ${count}u;
@@ -164,7 +166,8 @@ fn solveFriction(firstCollider:u32,secondCollider:u32,contact:Contact,relative:v
  }
  if(!dynamic(body) || sleepStates[body].y>0.5) {return;}
  velocities[body]=vec4f(velocities[body].xyz+settings.gravity.xyz*settings.gravity.w*bodies.bodies[body].motion.y,velocities[body].w);
-
+ velocities[body]=vec4f(velocities[body].xyz*exp(-f32(${linearDamping})*settings.gravity.w),velocities[body].w);
+ angularVelocities[body]=vec4f(angularVelocities[body].xyz*exp(-f32(${angularDamping})*settings.gravity.w),angularVelocities[body].w);
 }
 fn storeContact(pair: u32, slot: u32, point: vec3f, normal: vec3f, depth: f32, previous: Manifold, firstCollider: u32, secondCollider: u32) {
  let first=colliderBody(firstCollider);let second=colliderBody(secondCollider);
