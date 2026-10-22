@@ -4,7 +4,7 @@
 
 import {AudioController} from '@luma.gl/engine';
 import {parseGLTFAudio} from '@luma.gl/gltf';
-import {describe, expect, test} from 'vitest';
+import {describe, expect, test, vi} from 'vitest';
 import {parse} from '@loaders.gl/core';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {Matrix4} from '@math.gl/core';
@@ -650,4 +650,34 @@ test('air absorption filters distant emitters and ignores unbounded maximum dist
   }
   expect(energies[1]).toBeGreaterThan(0);
   expect(energies[0] / energies[1]).toBeLessThan(0.02);
+});
+
+test('glTF audio parsing borrows active and inactive embedded clips without copying', async () => {
+  const scenegraphs = await makeScene({embedded: true, inactiveAudio: true});
+  const context = new OfflineAudioContext(1, 128, 48000);
+  const inactiveBytes = new Uint8Array(1024);
+  const source = scenegraphs.gltf;
+  const inactiveViewIndex =
+    source.bufferViews.push({...source.bufferViews[0], data: inactiveBytes}) - 1;
+  const extension = source.extensions!['KHR_audio_emitter'] as GLTFAudioExtension;
+  const inactiveAudioIndex = extension.audio.push({bufferView: inactiveViewIndex}) - 1;
+  const props = parseGLTFAudio({
+    scenegraphs,
+    audioContext: context,
+    baseUrl: 'https://example.com/model.gltf'
+  });
+  expect(props.definition.audio[1].data).toBe(source.bufferViews[0].data);
+  expect(props.definition.audio[inactiveAudioIndex].data).toBe(inactiveBytes);
+  const decode = vi.spyOn(context, 'decodeAudioData');
+  const controller = new AudioController(props);
+  try {
+    await controller.initialize();
+    expect(decode).toHaveBeenCalledTimes(1);
+    expect(inactiveBytes.byteLength).toBe(1024);
+    expect(source.bufferViews[0].data.byteLength).toBeGreaterThan(0);
+  } finally {
+    controller.destroy();
+    scenegraphs.destroy();
+    decode.mockRestore();
+  }
 });

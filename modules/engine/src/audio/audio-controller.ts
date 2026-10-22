@@ -32,7 +32,8 @@ export type AudioSourceProperties = {
 
 /** Source-independent audio assets, scheduled sources, and spatial emitters. */
 export type AudioDefinition = {
-  audio: {uri?: string; data?: ArrayBuffer; mimeType?: string}[];
+  /** Embedded bytes are borrowed; only selected clips are copied before decode can detach them. */
+  audio: {uri?: string; data?: ArrayBuffer | ArrayBufferView; mimeType?: string}[];
   sources: {
     audio?: number;
     gain?: number;
@@ -512,7 +513,10 @@ export class AudioController {
           const definition = this.definition.audio[audioIndex];
           let bytes: ArrayBuffer;
           if (definition.data !== undefined) {
-            bytes = definition.data.slice(0);
+            const data = definition.data;
+            bytes = ArrayBuffer.isView(data)
+              ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength).slice().buffer
+              : data.slice(0);
           } else {
             const response = await (this.options.fetch || fetch)(
               new URL(definition.uri!, baseUrl),

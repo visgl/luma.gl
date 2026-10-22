@@ -85,9 +85,7 @@ export function parseGLTFAudio(options: ParseGLTFAudioProps): AudioControllerOpt
     audio: (extension?.audio || []).map(audio => ({
       uri: audio.uri,
       mimeType: audio.mimeType,
-      ...(audio.bufferView !== undefined
-        ? {data: new Uint8Array(gltf.bufferViews[audio.bufferView].data).buffer}
-        : {})
+      ...(audio.bufferView !== undefined ? {data: gltf.bufferViews[audio.bufferView].data} : {})
     })),
     sources: (extension?.sources || []).map(({extensions, autoplay, ...source}) => ({
       ...source,
