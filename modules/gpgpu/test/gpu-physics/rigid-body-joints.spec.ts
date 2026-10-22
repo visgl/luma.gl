@@ -440,3 +440,41 @@ it('sleeps passive connected bodies and wakes their joint island on impulse', as
     world.destroy();
   }
 });
+
+it('combines dormant joints with extended contacts, CCD and trigger sampling', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const world = new GPURigidBodyWorld({
+    failurePolicy: 'rollback',
+    gravity: [0, 0, 0],
+    continuous: {bodies: [0]},
+    triggers: [{colliders: [2], targets: [0]}],
+    joints: [{type: 'distance', first: 0, second: 1, distance: 3, enabled: false}],
+    bodies: [
+      {position: [0, 0, 0], shape: {type: 'sphere', radius: 0.2}},
+      {
+        position: [3, 0, 0],
+        shape: {type: 'capsule', height: 1, radiusTop: 0.2, radiusBottom: 0.2}
+      },
+      {
+        position: [0, 0, 0],
+        mode: 'static',
+        colliders: [{shape: {type: 'sphere', radius: 1}, isTrigger: true}]
+      }
+    ]
+  });
+  const definition = new GPUCommandGraph(device);
+  world.addToGraph(definition);
+  const graph = await definition.compileAsync();
+  try {
+    const encoder = device.createCommandEncoder();
+    graph.encode(encoder, {parameters: undefined});
+    device.submit(encoder.finish());
+    expect((await world.readSimulationDiagnostics()).complete).toBe(true);
+    expect((await world.readTriggerEvents()).events.map(event => event.phase)).toEqual(['enter']);
+    expect((await world.readState())[0].position).toEqual([0, 0, 0]);
+  } finally {
+    graph.destroy();
+    world.destroy();
+  }
+});

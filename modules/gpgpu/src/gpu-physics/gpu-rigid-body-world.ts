@@ -838,7 +838,8 @@ export class GPURigidBodyWorld {
           continuousSelection,
           this.props.continuous.maximumImpacts ?? 4,
           bindings,
-          allocate
+          allocate,
+          Boolean(this.props.joints?.length)
         )
       : undefined;
     const triggers = triggerLayout
@@ -856,7 +857,8 @@ export class GPURigidBodyWorld {
             resource: statisticsResource,
             location: 18
           },
-          allocate
+          allocate,
+          Boolean(this.props.joints?.length)
         )
       : undefined;
     this.triggerEvents = triggers?.events ?? null;
@@ -879,7 +881,7 @@ export class GPURigidBodyWorld {
             'parallelMarkSleep',
             'parallelSleep'
           ]
-        : ['solve', 'finish'])
+        : [...(extended && this.props.joints?.length ? ['meshCollect'] : []), 'solve', 'finish'])
     ]) {
       if (sparse && entryPoint === 'collide') {
         const bodyBinding = bindings.find(binding => binding.name === 'bodies')!;
@@ -935,13 +937,7 @@ export class GPURigidBodyWorld {
                   )
                   .map(binding => binding.name)
               : entryPoint === 'meshCollide'
-                ? [
-                    'velocities',
-                    'angularVelocities',
-                    'manifolds',
-                    'sleepStates',
-                    ...(this.props.joints?.length ? [] : ['targets'])
-                  ]
+                ? ['velocities', 'angularVelocities', 'manifolds', 'sleepStates', 'targets']
                 : entryPoint === 'integrate'
                   ? ['manifolds']
                   : entryPoint === 'collide'
@@ -956,7 +952,7 @@ export class GPURigidBodyWorld {
                         : ['targets'];
       const unused = [
         ...unusedCore,
-        ...(entryPoint === 'solve' ? ['meshTasks'] : []),
+        ...(entryPoint === 'solve' && this.props.joints?.length ? ['meshTasks'] : []),
         ...(entryPoint.startsWith('parallel') ? [] : ['parallelState']),
         ...(entryPoint === 'bounds' ? [] : ['minima', 'maxima'])
       ];

@@ -12,8 +12,11 @@ object within 12 world units. Release the beam to let cargo drift. Rocks and wal
 occlude the ray. Touch controls provide thrust/braking; touch the scene to aim/tow.
 `R` or New mission resets the game. High-impulse ship contacts damage the hull.
 
-The tractor applies bounded impulses and a small recoil; it is not a joint or rigid
-tether. Docking uses a spherical GPU sensor sampled every physics step, with persistent
+The tractor attaches a damped distance-spring joint with a 1.5-unit rest length.
+It stays attached while the button is held, even when the cargo leaves the aiming ray.
+The spring transfers equal and opposite impulses; use thrust and braking to hold
+station or guide cargo into the dock. Release the button to detach. The game uses
+the bounded ordered solver because parallel joint solving is not supported. Docking uses a spherical GPU sensor sampled every physics step, with persistent
 enter/exit events retained between gameplay reads. Box cargo uses discrete step-local
 overlap; this is not a swept box trigger. Collected bodies are parked outside
 the arena and contact caches invalidated. Ray queries are exact for the

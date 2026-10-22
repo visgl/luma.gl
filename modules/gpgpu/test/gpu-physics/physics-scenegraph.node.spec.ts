@@ -65,3 +65,15 @@ it('normalizes override rotation consistently with the physics world', () => {
   expect(local[0]).toBeCloseTo(0);
   expect(local[1]).toBeCloseTo(-1);
 });
+
+it('owns a collision override snapshot independently of later authoring edits', () => {
+  const position: [number, number, number] = [1, 0, 0];
+  const node = new PhysicsGeometryNode({
+    id: 'owned',
+    geometry: new CubeGeometry(),
+    collision: {position, shape: {type: 'sphere', radius: 1}}
+  });
+  const snapshot = makePhysicsScenegraph(new GroupNode({children: [node]}));
+  position[0] = 10;
+  expect(snapshot.bodies[0].position).toEqual([1, 0, 0]);
+});

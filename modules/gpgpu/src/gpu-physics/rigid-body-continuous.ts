@@ -26,7 +26,8 @@ export function addRigidBodyContinuous<Parameters>(
   selected: Uint32Array,
   maximumImpacts: number,
   bindings: BoundBuffer[],
-  allocate: (name: string, data: number | Uint32Array) => Buffer
+  allocate: (name: string, data: number | Uint32Array) => Buffer,
+  hasJoints = false
 ) {
   const previous = allocate('continuous-previous', count * 16);
   const selection = allocate('continuous-selection', selected);
@@ -146,7 +147,8 @@ export function addRigidBodyContinuous<Parameters>(
         'bodies',
         'continuousPrevious',
         'continuousSelection',
-        'continuousStatus'
+        'continuousStatus',
+        ...(hasJoints ? ['targets'] : [])
       ])
   };
 }

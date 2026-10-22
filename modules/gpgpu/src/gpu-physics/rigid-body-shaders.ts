@@ -315,11 +315,11 @@ ${extended ? RIGID_BODY_CONVEX_SHADER : ''}
  manifolds[pair].count=contactCount;
 }
 ${parallel ? RIGID_BODY_PARALLEL_SHADER : ''}
-${parallel && extended ? '@compute @workgroup_size(1) fn meshCollect(){collectMeshContacts();}' : ''}
+${(parallel || hasJoints) && extended ? '@compute @workgroup_size(1) fn meshCollect(){collectMeshContacts();}' : ''}
 ${jointShader}
 fn root(body: u32) -> u32 {var current=body;for(var iteration=0u;iteration<BODY_COUNT;iteration++) {let parent=u32(sleepStates[current].z);if(parent==current) {break;}current=parent;}return current;}
 @compute @workgroup_size(1) fn solve() {
- ${extended ? 'collectMeshContacts();' : ''}
+ ${extended && !hasJoints ? 'collectMeshContacts();' : ''}
  // Connected components include dynamic bodies only: a shared static floor must not join islands.
  for(var body=0u;body<BODY_COUNT;body++) {sleepStates[body].z=f32(body);}
  for(var pair=0u;pair<PAIR_CAPACITY;pair++) {

@@ -96,13 +96,15 @@ export function makePhysicsScenegraph(root: GroupNode): PhysicsScenegraphSnapsho
       node.physics.body?.mode ?? ((node.physics.body?.mass ?? 0) === 0 ? 'static' : 'dynamic');
     result.bindings.push({node, body: result.bodies.length, localMatrix});
     result.bodies.push(
-      override ?? {
-        position,
-        shape: makeShape(),
-        mode,
-        mass: mode === 'static' ? 0 : 1,
-        ...node.physics.body
-      }
+      override
+        ? structuredClone(override)
+        : {
+            position,
+            shape: makeShape(),
+            mode,
+            mass: mode === 'static' ? 0 : 1,
+            ...node.physics.body
+          }
     );
     result.publicationBounds.push([minimum, maximum]);
   });

@@ -139,7 +139,7 @@ try {
         type: 'distance' as const,
         first: 0,
         second: index + 1,
-        distance: 2.5,
+        distance: 1.5,
         enabled: false,
         spring: {stiffness: 12, damping: 4}
       })),
@@ -237,14 +237,12 @@ try {
               -ship.velocity[1] * Math.min(1, duration * 4) * 2,
               0
             ]);
-          const towBody =
-            beamHeld &&
-            selected &&
-            selected.body > 0 &&
-            selected.body < 15 &&
-            !recovered.has(selected.body)
+          const attachedBody = recovered.has(mission.towBody) ? 0 : mission.towBody;
+          const candidateBody =
+            selected && selected.body > 0 && selected.body < 15 && !recovered.has(selected.body)
               ? selected.body
               : 0;
+          const towBody = beamHeld ? attachedBody || candidateBody : 0;
           if (towBody !== mission.towBody) {
             if (mission.towBody) mission.world.setJointEnabled(mission.towBody - 1, false);
             if (towBody) mission.world.setJointEnabled(towBody - 1, true);
@@ -300,6 +298,10 @@ try {
           for (const hit of triggers.events) {
             if (hit.phase !== 'enter' || recovered.has(hit.body)) continue;
             recovered.add(hit.body);
+            if (mission.towBody === hit.body) {
+              mission.world.setJointEnabled(hit.body - 1, false);
+              mission.towBody = 0;
+            }
             if (selected?.body === hit.body) selected = undefined;
             // Docked bodies are parked outside the arena; invalidate cached contacts after direct writes.
             mission.world.positions!.write(
@@ -317,7 +319,10 @@ try {
         }
       }
       const ship = mission.states[0];
-      const beam = beamHeld && selected && !paused && !finished ? selected.point : null;
+      const beam =
+        beamHeld && mission.towBody && !recovered.has(mission.towBody) && !paused && !finished
+          ? mission.states[mission.towBody].position
+          : null;
       ({extentX, extentY} = mission.renderer.draw(
         now / 1000,
         canvas.clientWidth / canvas.clientHeight,
@@ -336,9 +341,11 @@ try {
       document.querySelector<HTMLElement>('#hull')!.textContent = `HULL ${Math.ceil(hull)}%`;
       document.querySelector('#navigation')!.textContent =
         `NAV ${ship.position[0].toFixed(1)} / ${ship.position[1].toFixed(1)}`;
-      targetLabel.textContent = selected
-        ? `${selected.body <= 5 ? 'CARGO POD' : selected.body < 15 ? 'DEBRIS' : 'BOUNDARY'} · ${selected.distance.toFixed(1)} m${beam ? ' · TRACTOR ACTIVE' : ''}`
-        : 'SCANNER · NO TARGET';
+      targetLabel.textContent = beam
+        ? `TOW ATTACHED · ${mission.towBody <= 5 ? 'CARGO POD' : 'DEBRIS'} · release mouse to detach`
+        : selected
+          ? `${selected.body <= 5 ? 'CARGO POD' : selected.body < 15 ? 'DEBRIS' : 'BOUNDARY'} · ${selected.distance.toFixed(1)} m${beam ? ' · TRACTOR ACTIVE' : ''}`
+          : 'SCANNER · NO TARGET';
       status.value = `${simulationTime.toFixed(1)} s simulated · ${mission.graph.stats.nodeOrder.length} graph nodes\n${eventCount} contact events · ${queryCount} GPU queries\n${Math.hypot(...ship.velocity).toFixed(1)} m/s · ${paused ? 'paused' : 'running'}`;
       panel.update();
       animation = requestAnimationFrame(time => {
