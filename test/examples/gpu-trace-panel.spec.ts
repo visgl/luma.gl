@@ -173,3 +173,41 @@ test('GPU Trace shows immediate tooltips on rows and keyboard focus across sampl
     host.remove();
   }
 });
+
+test('GPU Trace updates never take focus from another panel showing the same spans', () => {
+  const firstHost = document.createElement('div');
+  const secondHost = document.createElement('div');
+  document.body.append(firstHost, secondHost);
+  const firstRenderer = new GPUTracePanelRenderer(firstHost);
+  const secondRenderer = new GPUTracePanelRenderer(secondHost);
+  const report = {
+    cpuEncodeTimeMilliseconds: 1,
+    nodes: [
+      {
+        id: 'shared-span',
+        type: 'compute' as const,
+        hasGPUTimestamps: false,
+        cpuEncodeStartTimeMilliseconds: 0,
+        cpuEncodeEndTimeMilliseconds: 1
+      }
+    ]
+  };
+  try {
+    firstRenderer.update(report);
+    secondRenderer.update(report);
+    const firstBar = firstHost.querySelector<HTMLElement>('.gpu-trace-bar')!;
+    firstBar.focus();
+    secondRenderer.update(report);
+    expect(document.activeElement).toBe(firstBar);
+    const secondBar = secondHost.querySelector<HTMLElement>('.gpu-trace-bar')!;
+    const secondTooltip = document.getElementById(secondBar.getAttribute('aria-describedby')!)!;
+    expect(secondTooltip.hidden).toBe(true);
+    firstRenderer.update(report);
+    expect(document.activeElement).toBe(firstHost.querySelector('.gpu-trace-bar'));
+  } finally {
+    firstRenderer.destroy();
+    secondRenderer.destroy();
+    firstHost.remove();
+    secondHost.remove();
+  }
+});

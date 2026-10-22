@@ -226,10 +226,11 @@ export class GPUTracePanelRenderer {
     root.addEventListener('keydown', event => {
       if (event.key === 'Escape') this.hideTooltip();
     });
+    const activeElement = this.element.ownerDocument.activeElement;
     const focusedSpanKey =
-      this.element.ownerDocument.activeElement?.closest<HTMLElement>('.gpu-trace-row')?.dataset[
-        'spanKey'
-      ];
+      activeElement && this.element.contains(activeElement)
+        ? activeElement.closest<HTMLElement>('.gpu-trace-row')?.dataset['spanKey']
+        : undefined;
     const activeSpanKey = this.activeSpanKey;
     this.element.replaceChildren(root);
     const rows = Array.from(root.querySelectorAll<HTMLElement>('.gpu-trace-row'));
