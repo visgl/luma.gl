@@ -82,6 +82,7 @@ async function restart() {
     states = await runner.world.readState();
     samples = [];
     stopped = false;
+    status.value = `READY · tick 0/240 · ${states.length} bodies${paused ? '\nPaused · Resume to advance' : ''}`;
     document.querySelector('#error')!.textContent = '';
     document.querySelector('#description')!.textContent = configuration.description;
   } catch (error) {

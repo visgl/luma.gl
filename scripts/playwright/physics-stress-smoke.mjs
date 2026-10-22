@@ -28,6 +28,7 @@ try {
   await page.locator('#pause').click();
   await page.locator('#reset').click();
   await page.waitForFunction(() => !document.querySelector('#reset')?.disabled);
+  assert.match(await page.locator('#status').textContent(), /READY · tick 0\/240/);
   await page.screenshot({path: '/tmp/physics-stress.png'});
   assert.deepEqual(errors, []);
   console.log(JSON.stringify(reports, null, 2));
