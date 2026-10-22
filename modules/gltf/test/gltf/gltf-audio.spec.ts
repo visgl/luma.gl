@@ -8,7 +8,8 @@ import {describe, expect, test} from 'vitest';
 import {parse} from '@loaders.gl/core';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {Matrix4} from '@math.gl/core';
-import {type GLTFAudioExtension, createScenegraphsFromGLTF} from '@luma.gl/gltf';
+import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
+import type {GLTFAudioExtension} from '../../src/gltf/gltf-audio';
 import {NullDevice} from '@luma.gl/test-utils';
 
 function makeWave(): Uint8Array {
