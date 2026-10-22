@@ -61,7 +61,9 @@ after impacts. This does not imply dynamic-pair or rotating-convex CCD support.
 
 The scene selector includes Newton's cradle, a distance pendulum, motorized hinge and powered slider.
 The cradle and pendulum have GPU-driven visible tethers. Reset releases the raised
-cradle ball again. The cradle uses a 1/480-second fixed step (other scenes use
+cradle ball again. When auto-play is off, the cradle automatically resets after
+60 seconds of simulated motion without moving the camera; pausing also pauses
+this timer. The cradle uses a 1/480-second fixed step (other scenes use
 1/120 second), so each closely spaced impact is resolved before the next pair closes.
 For this 12-body scene, all-pairs discovery and eight solver iterations reduce
 GPU work; switching to another scene restores the 32-iteration default. User-selected

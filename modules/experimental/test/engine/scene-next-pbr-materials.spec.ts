@@ -3,8 +3,10 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device, type Framebuffer, Texture} from '@luma.gl/core';
-import {Geometry} from '@luma.gl/engine';
+import {ClipSpace, Geometry} from '@luma.gl/engine';
 import {SceneRenderer, type SceneRenderOptions, type SceneSurface} from '@luma.gl/experimental';
+import {pbrMaterial, pbrScene, type ShaderModule} from '@luma.gl/shadertools';
+import {PBREnvironmentGenerator} from '@luma.gl/experimental';
 import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {expect, it} from 'vitest';
@@ -372,3 +374,138 @@ async function readMaterialPixel(texture: Texture): Promise<Uint8Array> {
     buffer.destroy();
   }
 }
+
+it('PBR spotlight shadows preserve image-based lighting and emissive radiance', async () => {
+  const visibility = {
+    name: 'shadowTest',
+    uniformTypes: {visibility: 'f32'},
+    source:
+      'struct ShadowTest {visibility:f32}; @group(0) @binding(auto) var<uniform> shadowTest:ShadowTest;',
+    fs: 'layout(std140) uniform ShadowTest {float visibility;} shadowTest;'
+  } as const satisfies ShaderModule;
+  for (const device of await getExperimentalMaterialDevices()) {
+    if (!supportsPixelReadback(device) || isSoftwareBackedWebGL(device)) continue;
+    const target = makeExperimentalMaterialTarget(device);
+    const source = device.createTexture({
+      width: 1,
+      height: 1,
+      format: 'rgba8unorm',
+      data: new Uint8Array([90, 110, 130, 255])
+    });
+    const generator = new PBREnvironmentGenerator(device);
+    const environment = generator.prepare({
+      source,
+      size: 8,
+      irradianceSize: 4,
+      brdfLUTSize: 8,
+      sampleCount: 16
+    });
+    const model = new ClipSpace(device, {
+      modules: [pbrMaterial, pbrScene, visibility],
+      defines: {
+        USE_LIGHTS: true,
+        USE_IBL: true,
+        USE_SCENE_ENVIRONMENT: true,
+        USE_SCENE_COLOR_MANAGEMENT: true,
+        HAS_NORMALS: true,
+        HAS_UV: true,
+        USE_MATERIAL_EXTENSIONS: true
+      },
+      source: `@fragment fn fragmentMain(input:FragmentInputs)->@location(0) vec4f {
+        fragmentInputs.pbr_vPosition=vec3f(input.uv*2.0-1.0,0);
+        fragmentInputs.pbr_vNormal=vec3f(0,0,1);
+        fragmentInputs.pbr_vUV0=input.uv;fragmentInputs.pbr_vUV1=input.uv;
+        return pbr_filterColorWithSpotShadows(vec4f(1),vec4f(shadowTest.visibility,1,1,1));
+      }`,
+      fs: `#version 300 es
+      precision highp float;
+      in vec2 uv; out vec4 color;
+      void main() {
+        color=pbr_filterColorWithSpotShadows(vec4(1.0),vec4(shadowTest.visibility,1.0,1.0,1.0));
+      }`,
+      inject:
+        device.type === 'webgl'
+          ? {
+              'vs:#main-end':
+                'pbr_vPosition=vec3(clipSpacePositions,0.0); pbr_vNormal=vec3(0.0,0.0,1.0); pbr_vUV0=texCoords; pbr_vUV1=texCoords;'
+            }
+          : {},
+      colorAttachmentFormats: ['rgba8unorm'],
+      depthStencilAttachmentFormat: 'depth24plus'
+    });
+    const draw = async (
+      shadowVisibility: number,
+      lightIntensity: number,
+      clearcoatFactor: number
+    ) => {
+      model.shaderInputs.setProps({
+        shadowTest: {visibility: shadowVisibility},
+        pbrProjection: {camera: [0, 0, 3]},
+        pbrMaterial: {
+          baseColorFactor: [0.5, 0.5, 0.5, 1],
+          metallicRoughnessValues: [0, 0.5],
+          IBLenabled: true,
+          emissiveFactor: [0.03, 0.02, 0.01],
+          clearcoatFactor
+        },
+        pbrScene: {
+          outputEncoding: 0,
+          toneMapMode: 0,
+          environmentRotation: 0,
+          environmentMipCount: environment.specularTexture.mipLevels
+        },
+        ibl: {
+          pbr_diffuseEnvSampler: environment.diffuseTexture,
+          pbr_specularEnvSampler: environment.specularTexture,
+          pbr_brdfLUT: environment.brdfLUTTexture
+        },
+        lighting: {
+          lights: [
+            {
+              type: 'spot',
+              position: [0, 0, 3],
+              direction: [0, 0, -1],
+              color: [255, 255, 255],
+              intensity: lightIntensity,
+              innerConeAngle: 0.3,
+              outerConeAngle: 0.6
+            }
+          ]
+        }
+      });
+      const pass = device.beginRenderPass({
+        framebuffer: target.framebuffer,
+        clearColor: [0, 0, 0, 1],
+        clearDepth: 1
+      });
+      model.draw(pass);
+      pass.end();
+      device.submit();
+      return readMaterialPixel(target.color);
+    };
+    try {
+      for (const clearcoat of [0, 0.5]) {
+        const environmentOnly = await draw(1, 0, clearcoat);
+        const shadowed = await draw(0, 2, clearcoat);
+        const illuminated = await draw(1, 2, clearcoat);
+        expect(
+          Array.from(shadowed),
+          `${device.type}: shadows leave IBL and emission unchanged`
+        ).toEqual(Array.from(environmentOnly));
+        expect(shadowed[0], `${device.type}: indirect lighting remains visible`).toBeGreaterThan(
+          10
+        );
+        expect(
+          illuminated[0],
+          `${device.type}: only the direct spotlight is removed`
+        ).toBeGreaterThan(shadowed[0] + 20);
+      }
+    } finally {
+      model.destroy();
+      target.destroy();
+      environment.destroy();
+      generator.destroy();
+      source.destroy();
+    }
+  }
+});

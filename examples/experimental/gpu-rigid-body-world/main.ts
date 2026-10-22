@@ -381,6 +381,17 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
         void reset();
       }
     }
+    // Restart the cradle after one minute of simulated motion. Pausing freezes
+    // this clock, and auto-play retains control when cycling through scenarios.
+    if (
+      resources.sceneName === 'cradle' &&
+      !autoPlay.checked &&
+      !paused &&
+      !loading &&
+      elapsedSimulation >= 60
+    ) {
+      void reset();
+    }
     if (submitted) {
       // Account for this elapsed time after the fence completes. The accumulator
       // cap below still bounds catch-up work without discarding every waiting frame.

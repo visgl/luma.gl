@@ -83,7 +83,7 @@ const fragmentSource = `
  fragmentInputs.pbr_vPosition=input.point;fragmentInputs.pbr_vNormal=normalize(input.normal);
  fragmentInputs.pbr_vUV0=input.uv;fragmentInputs.pbr_vUV1=input.uv;
  let visibility=shadow_getSpotFactor(0,input.point,normalize(input.normal));
- return pbr_filterColor(vec4f(1))*vec4f(vec3f(0.35+0.65*visibility),1);
+ return pbr_filterColorWithSpotShadows(vec4f(1),vec4f(visibility,1,1,1));
 }`;
 
 type Placement = {

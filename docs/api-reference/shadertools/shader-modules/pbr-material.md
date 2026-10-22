@@ -38,3 +38,13 @@ The upstream project has since been renamed
 [glTF Sample Viewer](https://github.com/KhronosGroup/glTF-Sample-Viewer), and its current releases
 use the [Apache License 2.0](https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/main/LICENSE.md).
 That later license does not replace the MIT terms attached to the historical version used here.
+
+
+### `pbr_filterColorWithSpotShadows(vertexColor, spotVisibility)`
+
+Like `pbr_filterColor`, with a `vec4` (`vec4f` in WGSL) containing visibility for
+spotlights 0–3 in lighting-module order. Zero fully shadows a light; one leaves it
+unshadowed. Additional spotlights remain unshadowed. Visibility affects only each
+spotlight's direct PBR contribution, before tone mapping and output encoding.
+Environment lighting, emission, and other light types are unaffected. The original
+`pbr_filterColor` entry point remains equivalent to passing all ones.
