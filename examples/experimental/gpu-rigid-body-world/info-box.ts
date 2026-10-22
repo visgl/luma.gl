@@ -12,7 +12,11 @@ import {InfoBoxPanelContainer} from '../../example-info-box';
 import {applyExampleTheme} from '../../example-theme';
 import type {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 
-export function createRigidBodyPanel(diagnostics: GPUGraphDiagnostics) {
+export function createRigidBodyPanel(
+  diagnostics: GPUGraphDiagnostics,
+  title = 'Rigid Body Lab',
+  subtitle = 'GPU physics · mechanisms and contacts'
+) {
   const host = document.querySelector<HTMLElement>('#info')!;
   applyExampleTheme(host, 'cinematic');
   const controls = document.querySelector<HTMLElement>('#lab-controls')!;
@@ -30,8 +34,8 @@ export function createRigidBodyPanel(diagnostics: GPUGraphDiagnostics) {
   manager.setProps({
     components: [
       new InfoBoxPanelContainer({
-        title: 'Rigid Body Lab',
-        subtitle: 'GPU physics · mechanisms and contacts',
+        title,
+        subtitle,
         websiteBaseUrl: '/',
         appearance: 'cinematic',
         panel: makeExampleTabbedPanel({

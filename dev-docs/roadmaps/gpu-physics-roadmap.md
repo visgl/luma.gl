@@ -631,3 +631,22 @@ qualification and full pinned glTF proposal mapping. Remaining G6: automatic glT
 animation/object-model binding, topology rebuild lifecycle, shared instances and
 export/reimport. Remaining G1: automatic capacity grow/replay, active-work compaction
 and cross-device qualification. This package does not close those parent tranches.
+
+## G1/G2/G3 qualification checkpoint
+
+The recovery runner now performs bounded grow-and-replay for sparse pair and traversal
+budgets, with explicit retry, history and per-world allocation limits. Replay starts
+from initial state and reproduces ordered external commands, including kinematic
+motion. It checks diagnostics asynchronously each tick; active-work compaction and
+GPU-only adaptive recovery remain open. Event delivery across reconstruction is not
+promised, and fixed task/CCD/numerical failures remain explicit rejections.
+
+Independent analytic tests add rotated-box slab distances, scaled sphere intersections,
+elastic unequal-mass momentum/energy, ballistic timestep convergence and swept static
+wall rebound positions. Physics Stress Lab adds capacity shortage, dense mixed-size,
+100:1 loading, ballistic and CCD scenarios with exported completion measurements.
+
+G2 still needs robust general mesh/containment and independent penetration-depth
+qualification. G3 still needs long-duration difficult-stack/high-ratio and rotational
+CCD qualification. These named-case checks are not a claim of complete G1–G3 or SOTA
+performance, and hardware-specific performance gates remain open.

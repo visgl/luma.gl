@@ -94,3 +94,10 @@ export {
   type GPURigidBodyCommand,
   type GPURigidBodyReplay
 } from './rigid-body-journal';
+
+export {
+  GPURigidBodyRecoveryRunner,
+  growRigidBodyBudgets,
+  type GPURigidBodyRecoveryOptions,
+  type GPURigidBodyRecoveryResult
+} from './rigid-body-recovery';

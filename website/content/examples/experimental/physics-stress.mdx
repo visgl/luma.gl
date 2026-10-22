@@ -1,0 +1,19 @@
+---
+title: Physics Stress Lab
+description: Inspect GPU physics capacity recovery, dense contacts, mass ratios and analytic motion references.
+sidebar_custom_props:
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  mobile: full
+  mobileProfile: standard
+  topics: [physics, compute]
+---
+
+import {PhysicsStressExample} from '@site/src/examples';
+
+<PhysicsStressExample />
+
+Select a stress scenario, compare solvers and timesteps, and export a report containing
+completion latency, recovery attempts, buffer budgets and final poses. The diagnostic
+front projection reads GPU poses back to the CPU; these timings are not rendering benchmarks.

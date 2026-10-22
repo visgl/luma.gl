@@ -897,6 +897,150 @@
           }
         ]
       }
+    },
+    {
+      "id": "execution.capacity-replay",
+      "tranche": "G1",
+      "fields": [
+        "engine quality: bounded analytic qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpgpu/test/gpu-physics/rigid-body-recovery.spec.ts",
+            "testPattern": "automatically grows pair capacity and replays to the generous-budget result"
+          }
+        ]
+      }
+    },
+    {
+      "id": "execution.kinematic-replay",
+      "tranche": "G1",
+      "fields": [
+        "engine quality: bounded analytic qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpgpu/test/gpu-physics/rigid-body-recovery.spec.ts",
+            "testPattern": "replays earlier ticks and kinematic targets after a later capacity failure"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.rotated-box-reference",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: bounded analytic qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpgpu/test/gpu-physics/rigid-body-qualification.spec.ts",
+            "testPattern": "qualifies rotated box ray distances against an independent slab reference"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.scaled-sphere-reference",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: bounded analytic qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpgpu/test/gpu-physics/rigid-body-qualification.spec.ts",
+            "testPattern": "qualifies sphere query scale and grazing misses analytically"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.ballistic-convergence",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: bounded analytic qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpgpu/test/gpu-physics/rigid-body-qualification.spec.ts",
+            "testPattern": "qualifies fixed-step convergence against ballistic motion"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.elastic-conservation",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: bounded analytic qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpgpu/test/gpu-physics/rigid-body-qualification.spec.ts",
+            "testPattern": "qualifies unequal-mass elastic momentum and energy"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.ccd-rebound-reference",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: bounded analytic qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpgpu/test/gpu-physics/rigid-body-qualification.spec.ts",
+            "testPattern": "qualifies swept impact position against analytic restitution"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.extended-surface-reference",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: independent primitive and triangle references"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpgpu/test/gpu-physics/rigid-body-qualification.spec.ts",
+            "testPattern": "qualifies extended shape surfaces against primitive and triangle references"
+          }
+        ]
+      }
     }
   ]
 }
