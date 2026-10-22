@@ -1267,7 +1267,8 @@ fn calculateFinalColor(pbrInfo: PBRInfo, lightColor: vec3<f32>) -> vec3<f32> {
   return pbrInfo.NdotL * lightColor * (diffuseContrib + specContrib);
 }
 
-fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
+// Visibility for the first four spotlights; environment and other lights are unaffected.
+fn pbr_filterColorWithSpotShadows(vertexColor: vec4<f32>, spotVisibility: vec4f) -> vec4<f32> {
   let baseColorUV = getMaterialUV(pbrMaterial.baseColorUVSet, pbrMaterial.baseColorUVTransform);
   let metallicRoughnessUV = getMaterialUV(
     pbrMaterial.metallicRoughnessUVSet,
@@ -1490,7 +1491,7 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
             lighting_getSpotLight(i),
             fragmentInputs.pbr_vPosition
           );
-          color += calculateFinalColor(pbrInfo, lighting_getSpotLight(i).color / attenuation);
+          color += calculateFinalColor(pbrInfo, lighting_getSpotLight(i).color * select(1.0, clamp(spotVisibility[min(i, 3)], 0.0, 1.0), i < 4) / attenuation);
         }
       }
       for (var areaIndex: i32 = 0; areaIndex < areaLighting_getLightCount(); areaIndex++) {
@@ -1886,7 +1887,7 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
         let attenuation = getSpotLightAttenuation(lighting_getSpotLight(i), fragmentInputs.pbr_vPosition);
         color += calculateMaterialLightColor(
           pbrInfo,
-          lighting_getSpotLight(i).color / attenuation,
+          lighting_getSpotLight(i).color * select(1.0, clamp(spotVisibility[min(i, 3)], 0.0, 1.0), i < 4) / attenuation,
           clearcoatNormal,
           clearcoatFactor,
           clearcoatRoughness,
@@ -1897,7 +1898,7 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
         );
         color += calculateDiffuseTransmissionLight(
           pbrInfo,
-          lighting_getSpotLight(i).color / attenuation,
+          lighting_getSpotLight(i).color * select(1.0, clamp(spotVisibility[min(i, 3)], 0.0, 1.0), i < 4) / attenuation,
           diffuseTransmissionColor,
           diffuseTransmission,
           multiscatterColor,
@@ -2034,5 +2035,9 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
   let alpha = clamp(baseColor.a * (1.0 - transmission), 0.0, 1.0);
   #endif
   return vec4<f32>(applySceneColorManagement(color), alpha);
+}
+
+fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
+  return pbr_filterColorWithSpotShadows(vertexColor, vec4f(1.0));
 }
 `;

@@ -1046,7 +1046,8 @@ vec3 calculateFinalColor(PBRInfo pbrInfo, vec3 lightColor) {
   return pbrInfo.NdotL * lightColor * (diffuseContrib + specContrib);
 }
 
-vec4 pbr_filterColor(vec4 vertexColor)
+// Visibility for the first four spotlights; environment and other lights are unaffected.
+vec4 pbr_filterColorWithSpotShadows(vec4 vertexColor, vec4 spotVisibility)
 {
   vec2 baseColorUV = getMaterialUV(pbrMaterial.baseColorUVSet, pbrMaterial.baseColorUVTransform);
   vec2 metallicRoughnessUV = getMaterialUV(
@@ -1265,7 +1266,7 @@ vec4 pbr_filterColor(vec4 vertexColor)
         if (i < lighting.spotLightCount) {
           PBRInfo_setSpotLight(pbrInfo, lighting_getSpotLight(i));
           float attenuation = getSpotLightAttenuation(lighting_getSpotLight(i), pbr_vPosition);
-          color += calculateFinalColor(pbrInfo, lighting_getSpotLight(i).color / attenuation);
+          color += calculateFinalColor(pbrInfo, lighting_getSpotLight(i).color * (i < 4 ? clamp(spotVisibility[min(i, 3)], 0.0, 1.0) : 1.0) / attenuation);
         }
       }
       for (int areaIndex = 0; areaIndex < areaLighting_getLightCount(); areaIndex++) {
@@ -1592,7 +1593,7 @@ vec4 pbr_filterColor(vec4 vertexColor)
         float attenuation = getSpotLightAttenuation(lighting_getSpotLight(i), pbr_vPosition);
         color += calculateMaterialLightColor(
           pbrInfo,
-          lighting_getSpotLight(i).color / attenuation,
+          lighting_getSpotLight(i).color * (i < 4 ? clamp(spotVisibility[min(i, 3)], 0.0, 1.0) : 1.0) / attenuation,
           clearcoatNormal,
           clearcoatFactor,
           clearcoatRoughness,
@@ -1603,7 +1604,7 @@ vec4 pbr_filterColor(vec4 vertexColor)
         );
         color += calculateDiffuseTransmissionLight(
           pbrInfo,
-          lighting_getSpotLight(i).color / attenuation,
+          lighting_getSpotLight(i).color * (i < 4 ? clamp(spotVisibility[min(i, 3)], 0.0, 1.0) : 1.0) / attenuation,
           diffuseTransmissionColor,
           diffuseTransmission,
           multiscatterColor,
@@ -1739,5 +1740,9 @@ vec4 pbr_filterColor(vec4 vertexColor)
   float alpha = clamp(baseColor.a * (1.0 - transmission), 0.0, 1.0);
 #endif
   return vec4(applySceneColorManagement(color), alpha);
+}
+
+vec4 pbr_filterColor(vec4 vertexColor) {
+  return pbr_filterColorWithSpotShadows(vertexColor, vec4(1.0));
 }
 `;

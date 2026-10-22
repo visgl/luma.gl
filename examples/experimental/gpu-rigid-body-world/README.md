@@ -61,13 +61,15 @@ after impacts. This does not imply dynamic-pair or rotating-convex CCD support.
 
 The scene selector includes Newton's cradle, a distance pendulum, motorized hinge and powered slider.
 The cradle and pendulum have GPU-driven visible tethers. Reset releases the raised
-cradle ball again. The cradle uses a 1/480-second fixed step (other scenes use
+cradle ball again. When auto-play is off, the cradle automatically resets after
+60 seconds of simulated motion without moving the camera; pausing also pauses
+this timer. The cradle uses a 1/480-second fixed step (other scenes use
 1/120 second), so each closely spaced impact is resolved before the next pair closes.
-For this 12-body scene, all-pairs discovery and eight solver iterations reduce
+For this small scene, all-pairs discovery and eight solver iterations reduce
 GPU work; switching to another scene restores the 32-iteration default. User-selected
 iteration counts are retained when resetting the same scene.
-Its restitution threshold is zero to retain elastic low-speed contacts. Iterative
-contacts still introduce numerical loss despite restitution one.
+Its restitution threshold is 0.05; slightly inelastic impacts and gentle damping
+let the motion decay rather than preserving low-speed elastic contacts.
 These use the public `joints` API, force the ordered solver and preserve the existing
 Reset, GPU Graph and Timeline controls. Hinge and slider scenes include loose boxes
 so constraint and contact response can be observed together. Joint-connected bodies
@@ -80,9 +82,35 @@ served (`PHYSICS_MECHANISMS_URL` overrides the default `http://127.0.0.1:5233/`)
 node scripts/playwright/physics-cradle-smoke.mjs
 ```
 
-It advances 60 simulated seconds and checks joint drift, energy bounds, middle-ball
-excursions and sustained end-ball swings. A local WebGPU run at 480 Hz completed
-28,800 steps with no incomplete steps, less than 0.06 mm joint error, energy within
-0.6% of the initial value, and a 1.45 m end-ball excursion in the final ten seconds.
-These are bounded regression measurements, not a guarantee of indefinitely lossless
-or perfectly periodic motion.
+It advances 60 simulated seconds and checks joint drift, energy decay and middle-ball
+excursions. A local WebGPU run at 480 Hz completed 28,800 steps with no incomplete
+steps, less than 0.046 mm joint error, and less than 5% of initial energy throughout
+the final ten seconds. These are bounded regression measurements, not a guarantee
+of exact real-world dissipation.
+
+### Cradle rendering
+
+The cradle uses a retained `GroupNode` / `ModelNode` scenegraph with shared PBR
+materials for the frame, steel balls, tabletop and tethers. The example's pose
+shader reads the physics world's position and orientation buffers directly; it
+never copies moving body transforms back to the CPU. Authored node matrices define
+static placement and the local geometry scale. Tethers read both GPU endpoints.
+The same pose shader drives the shared `ShadowMapRenderer` caster passes, so shadows
+follow the simulated bodies. These render bindings borrow the world's buffers.
+
+The stone uses normal and metallic/roughness maps. Image-based lighting is prepared
+by `PBREnvironmentGenerator`. The steel uses a local reflection probe that captures
+the static tabletop and frame against a bright reflection backdrop once when the
+scene is created. This illumination is independent of the visible charcoal background.
+This shared probe approximates reflections across the five balls; it does not
+include other moving balls or update parallax as each ball swings. The other
+materials retain studio environment fill. One elevated spotlight supplies direct
+lighting and a matching spotlight shadow map. The scenegraph's CPU bounds do not track GPU motion, so
+this example does not use CPU frustum culling or CPU picking for moving nodes.
+Rendering uses at least two device pixels per CSS pixel for smoother silhouettes.
+
+### Frame contacts and settling
+
+The frame is authored as a CPU scenegraph of geometry nodes before GPU allocation. Rendering and collision extraction consume the same node geometry and accumulated transforms. Axis-aligned cubes retain box colliders; other convex geometry uses a transformed convex hull. A node may supply a world-space collision override or disable collision explicitly. This example adapter is for convex static frame pieces, not automatic decomposition of arbitrary concave models.
+
+Ball impacts use restitution 0.985, with low-speed restitution disabled below 0.05. Exponential linear/angular damping (0.08/0.12 inverse seconds) approximates air and suspension losses, including collective swings without impacts. The existing one-minute reset remains active. Steel roughness is 0.07 for sharper PBR reflections without raising scene exposure.

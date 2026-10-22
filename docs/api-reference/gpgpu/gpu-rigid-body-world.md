@@ -74,6 +74,7 @@ recovery guarantee for pipeline compilation or driver allocation.
 | `contactSlop` | `0.002` | Allowed contact penetration in world units |
 | `contactMatchDistance` | `0.05` | Distance for matching persistent contacts |
 | `restitutionThreshold` | `0.5` | Closing-speed threshold for bounce |
+| `linearDamping`, `angularDamping` | `0` | Nonnegative velocity decay rates in inverse seconds; dynamic bodies only, using exponential decay each fixed step |
 | `sleepAfter` | `0.5` | Quiet simulation seconds before sleeping; zero disables |
 | `sleepLinearSpeed` / `sleepAngularSpeed` | `0.04` / `0.04` | Quiet-motion thresholds |
 | `warmStartFactor` | `1` | Retained fraction of matched cached impulses, 0–1 |

@@ -12,7 +12,7 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {Matrix4} from '@math.gl/core';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {makeMechanism} from './mechanisms';
-import {createCradleFrame, CRADLE_MATERIAL_SHADER} from './cradle-rendering';
+import {CradleScene} from './cradle-scene';
 import {createRigidBodyPanel} from './info-box';
 import {
   makeRigidBodyScene,
@@ -36,7 +36,11 @@ try {
   const device = await luma.createDevice({
     adapters: [webgpuAdapter],
     optionalFeatures: ['timestamp-query'],
-    createCanvasContext: {canvas, autoResize: true},
+    createCanvasContext: {
+      canvas,
+      autoResize: true,
+      useDevicePixels: Math.max(2, window.devicePixelRatio)
+    },
     onError: error => {
       failure = error;
     }
@@ -73,7 +77,9 @@ try {
       failurePolicy: 'rollback',
       // Resolve the cradle's closely spaced elastic impacts before the next pair closes.
       timeStep: sceneName === 'cradle' ? 1 / 480 : 1 / 120,
-      ...(sceneName === 'cradle' ? {restitutionThreshold: 0} : {}),
+      ...(sceneName === 'cradle'
+        ? {restitutionThreshold: 0.05, linearDamping: 0.08, angularDamping: 0.12}
+        : {}),
       ...(sceneName === 'continuous' ? {continuous: {bodies: [0]}} : {}),
       iterations: Number(iterations.value),
       solver: solver.value === 'ordered' ? 'ordered' : 'parallel',
@@ -122,9 +128,12 @@ try {
       data: new Float32Array(meshVerticesData.length ? meshVerticesData : [0, 0, 0, 0]),
       usage: Buffer.STORAGE
     });
-    const model = new Model(device, {
-      id: 'rigid-body-shapes',
-      source: `
+    const model =
+      sceneName === 'cradle'
+        ? null
+        : new Model(device, {
+            id: 'rigid-body-shapes',
+            source: `
 @group(0) @binding(0) var<uniform> matrix: mat4x4f;
 @group(0) @binding(1) var<storage,read> positions: array<vec4f>;
 @group(0) @binding(2) var<storage,read> orientations: array<vec4f>;
@@ -132,7 +141,6 @@ try {
 @group(0) @binding(4) var<storage,read> sleepStates: array<vec4f>;
 @group(0) @binding(5) var<storage,read> meshVertices: array<vec4f>;
 @group(0) @binding(6) var<uniform> cameraPosition:vec4f;
-${CRADLE_MATERIAL_SHADER}
 struct Output {@builtin(position) position: vec4f, @location(0) normal: vec3f, @location(1) color: vec3f, @location(2) localNormal: vec3f, @location(3) @interpolate(flat) sphere: f32, @location(4) worldPosition: vec3f, @location(5) @interpolate(flat) body: u32}
 fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotation.xyz,cross(rotation.xyz,vector)+rotation.w*vector);}
 @vertex fn vertexMain(@builtin(vertex_index) vertex: u32,@builtin(instance_index) body: u32)->Output {
@@ -155,61 +163,49 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
  }
  var output:Output;output.worldPosition=positions[body].xyz+rotate(orientations[body],point);output.body=body;
  output.position=matrix*vec4f(output.worldPosition,1);
- ${sceneName === 'cradle' ? 'if(body>0u && shapes[body].w==2.0){output.position=vec4f(0,0,0,1);}' : ''}
  output.localNormal=normal;output.sphere=1.0-shapes[body].w;output.normal=rotate(orientations[body],normal);output.color=select(vec3f(0.28+0.45*fract(f32(body)*0.27),0.48+0.25*fract(f32(body)*0.39),0.42+0.25*fract(f32(body)*0.17)),vec3f(0.68,0.73,0.67),(shapes[body].w==2.0||(shapes[body].w==3.0&&shapes[body].z>0.5)));output.color=mix(output.color,vec3f(0.55),select(0.0,0.7,sleepStates[body].y>0.5));return output;
 }
 @fragment fn fragmentMain(input:Output)->@location(0) vec4f {
- ${
-   sceneName === 'cradle'
-     ? `
- let normal=normalize(input.normal);
- if(input.sphere>0.5){return vec4f(steelColor(normal,normalize(cameraPosition.xyz-input.worldPosition)),1);}
- // Soft contact shadows ground the moving balls without CPU pose readback.
- var shadow=1.0;
- for(var index=2u;index<=10u;index+=2u){
-  let center=positions[index].xyz;
-  let distance=length((input.worldPosition.xy-center.xy)/vec2f(0.65,0.5));
-  shadow*=1.0-0.24*exp(-distance*distance*1.8);
- }
- return vec4f(vec3f(0.72,0.70,0.66)*shadow,1);
- `
-     : ''
- }
+
  let band=select(1.0,0.3,input.sphere>0.5&&abs(input.localNormal.z)<0.13);return vec4f(input.color*band*(0.35+0.65*max(0.0,dot(normalize(input.normal),normalize(vec3f(-0.5,-0.7,1))))),1);}
 `,
-      vertexCount,
-      instanceCount: bodies.length,
-      parameters: {depthWriteEnabled: true, depthCompare: 'less-equal', depthFormat: 'depth24plus'},
-      bindings: {
-        matrix: cameraBuffer,
-        cameraPosition: cameraPositionBuffer,
-        positions: world.positions!,
-        orientations: world.orientations!,
-        shapes,
-        meshVertices,
-        sleepStates: world.sleepStates!
-      },
-      shaderLayout: {
-        attributes: [],
-        bindings: [
-          {name: 'matrix', group: 0, location: 0, type: 'uniform'},
-          {name: 'cameraPosition', group: 0, location: 6, type: 'uniform'},
-          ...['positions', 'orientations', 'shapes', 'sleepStates', 'meshVertices'].map(
-            (name, index) => ({
-              name,
-              group: 0,
-              location: index + 1,
-              type: 'read-only-storage' as const,
-              visibility: name === 'positions' ? 3 : 1
-            })
-          )
-        ]
-      }
-    });
+            vertexCount,
+            instanceCount: bodies.length,
+            parameters: {
+              depthWriteEnabled: true,
+              depthCompare: 'less-equal',
+              depthFormat: 'depth24plus'
+            },
+            bindings: {
+              matrix: cameraBuffer,
+              cameraPosition: cameraPositionBuffer,
+              positions: world.positions!,
+              orientations: world.orientations!,
+              shapes,
+              meshVertices,
+              sleepStates: world.sleepStates!
+            },
+            shaderLayout: {
+              attributes: [],
+              bindings: [
+                {name: 'matrix', group: 0, location: 0, type: 'uniform'},
+                {name: 'cameraPosition', group: 0, location: 6, type: 'uniform'},
+                ...['positions', 'orientations', 'shapes', 'sleepStates', 'meshVertices'].map(
+                  (name, index) => ({
+                    name,
+                    group: 0,
+                    location: index + 1,
+                    type: 'read-only-storage' as const,
+                    visibility: name === 'positions' ? 3 : 1
+                  })
+                )
+              ]
+            }
+          });
     // Distance joints have no physical rods; thin cylinders visualize their centered attachments.
     const tethers = mechanism?.joints.filter(joint => joint.type === 'distance') ?? [];
     const tether =
-      tethers.length > 0
+      sceneName !== 'cradle' && tethers.length > 0
         ? new Model(device, {
             id: 'mechanism-tethers',
             source: `
@@ -247,11 +243,14 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
           })
         : null;
     return {
+      cradle:
+        sceneName === 'cradle'
+          ? new CradleScene(device, world.positions!, world.orientations!, mechanism!.frame!)
+          : null,
       world,
       graph,
       model,
       tether,
-      frameModel: sceneName === 'cradle' ? createCradleFrame(device, cameraBuffer) : null,
       shapes,
       meshVertices,
       bodies,
@@ -284,9 +283,9 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
   };
   autoPlay.onchange = restartPlayback;
   const destroy = (target: typeof resources) => {
-    target.frameModel?.destroy();
+    target.cradle?.destroy();
     target.tether?.destroy();
-    target.model.destroy();
+    target.model?.destroy();
     target.graph.destroy();
     target.world.destroy();
     target.shapes.destroy();
@@ -384,6 +383,17 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
         void reset();
       }
     }
+    // Restart the cradle after one minute of simulated motion. Pausing freezes
+    // this clock, and auto-play retains control when cycling through scenarios.
+    if (
+      resources.sceneName === 'cradle' &&
+      !autoPlay.checked &&
+      !paused &&
+      !loading &&
+      elapsedSimulation >= 60
+    ) {
+      void reset();
+    }
     if (submitted) {
       // Account for this elapsed time after the fence completes. The accumulator
       // cap below still bounds catch-up work without discarding every waiting frame.
@@ -414,11 +424,21 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
     depth.multiplyRight(matrix);
     cameraBuffer.write(new Float32Array(depth));
     cameraPositionBuffer.write(new Float32Array([...camera.position.toArray(), 1]));
-    const pass = device.beginRenderPass({clearColor: [0.9, 0.92, 0.89, 1], clearDepth: 1});
-    resources.model.draw(pass);
-    resources.tether?.draw(pass);
-    resources.frameModel?.draw(pass);
-    pass.end();
+    if (resources.cradle) {
+      const projection = new Matrix4([
+        1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 1
+      ]).multiplyRight(camera.projectionMatrix.elements);
+      resources.cradle.draw(new Matrix4(camera.matrixWorldInverse.elements), projection, [
+        camera.position.x,
+        camera.position.y,
+        camera.position.z
+      ]);
+    } else {
+      const pass = device.beginRenderPass({clearColor: [0.9, 0.92, 0.89, 1], clearDepth: 1});
+      resources.model?.draw(pass);
+      resources.tether?.draw(pass);
+      pass.end();
+    }
     device.submit();
     const fence = device.createFence();
     submitted = fence.signaled
