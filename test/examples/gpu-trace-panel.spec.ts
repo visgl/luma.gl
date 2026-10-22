@@ -163,6 +163,9 @@ test('GPU Trace shows immediate tooltips on rows and keyboard focus across sampl
       .querySelector('.gpu-trace-bar')!
       .dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}));
     expect(tooltip.hidden).toBe(true);
+    renderer.update(report);
+    expect(document.activeElement).toBe(host.querySelector('.gpu-trace-bar'));
+    expect(tooltip.hidden).toBe(true);
     renderer.destroy();
     expect(tooltip.isConnected).toBe(false);
   } finally {

@@ -232,14 +232,14 @@ export class GPUTracePanelRenderer {
       ];
     const activeSpanKey = this.activeSpanKey;
     this.element.replaceChildren(root);
-    const activeRow = Array.from(root.querySelectorAll<HTMLElement>('.gpu-trace-row')).find(
-      row => row.dataset['spanKey'] === activeSpanKey
-    );
+    const rows = Array.from(root.querySelectorAll<HTMLElement>('.gpu-trace-row'));
+    const focusedRow = rows.find(row => row.dataset['spanKey'] === focusedSpanKey);
+    if (focusedRow) {
+      focusedRow.querySelector<HTMLElement>('.gpu-trace-bar')!.focus({preventScroll: true});
+    }
+    const activeRow = rows.find(row => row.dataset['spanKey'] === activeSpanKey);
     if (activeRow) {
       detailsElement.textContent = activeRow.dataset['spanDetails']!;
-      if (focusedSpanKey === activeSpanKey) {
-        activeRow.querySelector<HTMLElement>('.gpu-trace-bar')!.focus({preventScroll: true});
-      }
       this.showTooltip(activeRow);
     } else {
       this.hideTooltip();
