@@ -161,6 +161,48 @@ describe('experimental GPU module naming', () => {
     }
   });
 
+  test('gives every public GPU submodule a subgroup in the GPGPU API reference', () => {
+    type DocumentationCategory = {label: string; items: Array<string | DocumentationCategory>};
+    const documentation = JSON.parse(
+      readFileSync(path.join(process.cwd(), 'docs/table-of-contents.json'), 'utf8')
+    ) as DocumentationCategory[];
+    const reference = documentation.find(category => category.label === 'API Reference');
+    const packageReference = reference?.items.find(
+      (category): category is DocumentationCategory =>
+        typeof category !== 'string' && category.label === '@luma.gl/gpgpu'
+    );
+    const moduleGroups: Record<string, string> = {
+      'gpu-data': 'GPU Data',
+      'gpu-core': 'GPU Core',
+      'gpu-graph': 'GPU Graph',
+      'gpu-graph-algorithms': 'GPU Graph Algorithms',
+      'gpu-parse': 'GPU Parse',
+      'gpu-physics': 'GPU Physics',
+      'gpu-vector-search': 'GPU Vector Search',
+      'gpu-timeseries': 'GPU Time Series',
+      'gpu-geometry': 'GPU Geometry',
+      'gpu-pointcloud': 'GPU Point Cloud',
+      'gpu-dggs': 'GPU DGGS',
+      'gpu-h3': 'GPU H3',
+      'gpu-a5': 'GPU A5'
+    };
+    const packageManifest = JSON.parse(
+      readFileSync(path.join(process.cwd(), 'modules/gpgpu/package.json'), 'utf8')
+    ) as {exports: Record<string, unknown>};
+    const publicGPUSubmodules = Object.keys(packageManifest.exports)
+      .filter(subpath => /^\.\/gpu-[^/]+$/.test(subpath))
+      .map(subpath => subpath.slice(2));
+    expect(Object.keys(moduleGroups).sort()).toEqual(publicGPUSubmodules.sort());
+    for (const label of Object.values(moduleGroups)) {
+      const group = packageReference?.items.find(
+        (category): category is DocumentationCategory =>
+          typeof category !== 'string' && category.label === label
+      );
+      expect(group, label).toBeDefined();
+      expect(group?.items.length, label).toBeGreaterThan(0);
+    }
+  });
+
   test('publishes only canonical documentation routes', () => {
     const experimentalDocumentation = path.join(process.cwd(), 'docs/api-reference/experimental');
     const gpgpuDocumentation = path.join(process.cwd(), 'docs/api-reference/gpgpu');

@@ -84,10 +84,7 @@
         "type": "category",
         "label": "GPU Evaluations",
         "items": [
-          "api-guide/gpu/gpu-evaluations",
-          "api-reference/gpgpu/gpu-data-evaluator",
-          "api-reference/gpgpu/operations",
-          "api-reference/gpgpu/clean-evaluate"
+          "api-guide/gpu/gpu-evaluations"
         ]
       },
       {
@@ -98,7 +95,15 @@
           "api-reference/experimental/gpu-core/webgpu-foundations",
           "api-reference/experimental/gpu-core/execution-techniques",
           "api-guide/gpu/batch-semantics",
-          "api-reference/experimental/gpu-core/debugging"
+          "api-reference/experimental/gpu-core/debugging",
+          {
+            "type": "category",
+            "label": "Examples",
+            "items": [
+              "api-reference/experimental/gpu-core/tutorial",
+              "api-reference/experimental/gpu-core/recipes"
+            ]
+          }
         ]
       },
       {
@@ -479,194 +484,6 @@
           },
           {
             "type": "category",
-            "label": "GPU Core",
-            "items": [
-              {
-                "type": "category",
-                "label": "Learn GPU Core",
-                "items": [
-                  "api-reference/experimental/gpu-core/README",
-                  "api-reference/experimental/gpu-core/tutorial",
-                  "api-reference/experimental/gpu-core/recipes"
-                ]
-              },
-              {
-                "type": "category",
-                "label": "Compute Foundations",
-                "items": [
-                  "api-reference/experimental/gpu-core/compositional-architecture",
-                  "api-reference/experimental/gpu-core/gpu-value-arena",
-                  "api-reference/experimental/gpu-core/gpu-value-arena-finalization",
-                  "api-reference/experimental/gpu-core/gpu-scalar",
-                  "api-reference/experimental/gpu-core/gpu-scalar-operation",
-                  "api-reference/experimental/gpu-core/gpu-reduction-substrate",
-                  "api-reference/experimental/gpu-core/gpu-cg-integration",
-                  "api-reference/experimental/gpu-core/gpu-transient-lifetimes"
-                ]
-              },
-              {
-                "type": "category",
-                "label": "Semantic Programs",
-                "items": [
-                  "api-reference/experimental/gpu-core/gpu-operation",
-                  "api-reference/experimental/gpu-core/gpu-operation-metadata",
-                  "api-reference/experimental/gpu-core/gpu-control-flow-operation",
-                  "api-reference/experimental/gpu-core/gpu-operation-lowering",
-                  "api-reference/experimental/gpu-core/gpu-program",
-                  "api-reference/experimental/gpu-core/gpu-program-lowering",
-                  "api-reference/experimental/gpu-core/webgpu-runtime-control",
-                  "api-reference/experimental/gpu-core/gpu-program-pcg"
-                ]
-              },
-              {
-                "type": "category",
-                "label": "Sparse Numerics",
-                "items": [
-                  "api-reference/experimental/gpu-data/gpu-sparse-matrix",
-                  "api-reference/experimental/gpu-core/gpu-strategy-selection",
-                  "api-reference/experimental/gpu-core/gpu-adaptive-reduction",
-                  "api-reference/experimental/gpu-core/gpu-adaptive-spmv-execution",
-                  "api-reference/experimental/gpu-core/gpu-coo-to-csr",
-                  "api-reference/experimental/gpu-core/gpu-preconditioned-conjugate-gradient"
-                ]
-              },
-              {
-                "type": "category",
-                "label": "Graph Execution",
-                "items": [
-                  "api-reference/experimental/gpu-core/gpu-command-graph",
-                  "api-reference/experimental/gpu-core/gpu-incremental-execution",
-                  "api-reference/experimental/gpu-core/gpu-texture-history",
-                  "api-reference/experimental/gpu-core/gpu-readback-ring",
-                  "api-reference/experimental/gpu-core/draw-command-buffer"
-                ]
-              },
-              {
-                "type": "category",
-                "label": "Selection and Compaction",
-                "items": [
-                  "api-reference/experimental/gpu-core/gpu-scan",
-                  "api-reference/experimental/gpu-core/gpu-segmented-scan",
-                  "api-reference/experimental/gpu-core/gpu-galloping-search",
-                  "api-reference/experimental/gpu-core/gpu-compaction",
-                  "api-reference/experimental/gpu-core/gpu-scatter",
-                  "api-reference/experimental/gpu-core/gpu-gather",
-                  "api-reference/experimental/gpu-core/gpu-flag-offsets",
-                  "api-reference/experimental/gpu-core/gpu-segment-offsets",
-                  "api-reference/experimental/gpu-core/gpu-segmented-layout",
-                  "api-reference/experimental/gpu-core/gpu-mask",
-                  "api-reference/experimental/gpu-core/gpu-visibility-workflow",
-                  "api-reference/experimental/gpu-core/gpu-virtual-geometry-selection"
-                ]
-              },
-              {
-                "type": "category",
-                "label": "Graph structure and spatial",
-                "items": [
-                  {
-                    "type": "category",
-                    "label": "Hierarchies and Traversal",
-                    "items": [
-                      "api-reference/experimental/gpu-core/gpu-hierarchy-layout",
-                      "api-reference/experimental/gpu-core/gpu-graph-traversal",
-                      "api-reference/experimental/gpu-core/gpu-ancestor-projection"
-                    ]
-                  },
-                  {
-                    "type": "category",
-                    "label": "Sorting and Aggregation",
-                    "items": [
-                      "api-reference/experimental/gpu-core/gpu-sort",
-                      "api-reference/experimental/gpu-core/gpu-segmented-sort",
-                      "api-reference/experimental/gpu-core/gpu-transpose",
-                      "api-reference/experimental/gpu-core/gpu-finite-differences",
-                      "api-reference/experimental/gpu-core/gpu-fft1d",
-                      "api-reference/experimental/gpu-core/gpu-fft2d",
-                      "api-reference/experimental/gpu-core/gpu-convolution",
-                      "api-reference/experimental/gpu-core/gpu-reduction",
-                      "api-reference/experimental/gpu-core/gpu-segmented-reduction",
-                      "api-reference/experimental/gpu-core/gpu-run-length-encode",
-                      "api-reference/experimental/gpu-core/gpu-histogram",
-                      "api-reference/experimental/gpu-core/gpu-group-aggregation"
-                    ]
-                  },
-                  {
-                    "type": "category",
-                    "label": "Dense Compute",
-                    "items": [
-                      "api-reference/experimental/gpu-core/gpu-elementwise",
-                      "api-reference/experimental/gpu-core/gpu-matvec",
-                      "api-reference/experimental/gpu-core/gpu-matmul"
-                    ]
-                  },
-                  {
-                    "type": "category",
-                    "label": "Spatial indexing",
-                    "items": [
-                      {
-                        "type": "category",
-                        "label": "Spatial grids",
-                        "items": [
-                          "api-reference/experimental/gpu-core/gpu-grid-binning",
-                          "api-reference/experimental/gpu-core/gpu-grid-aggregation",
-                          "api-reference/experimental/gpu-core/gpu-grid-index",
-                          "api-reference/experimental/gpu-core/gpu-grid-index-query",
-                          "api-reference/experimental/gpu-core/gpu-point-spatial-filter"
-                        ]
-                      },
-                      {
-                        "type": "category",
-                        "label": "Bounding-volume hierarchies",
-                        "items": [
-                          "api-reference/experimental/gpu-core/gpu-bvh",
-                          "api-reference/experimental/gpu-core/gpu-segmented-bvh",
-                          "api-reference/experimental/gpu-core/gpu-bvh-query",
-                          "api-reference/experimental/gpu-core/gpu-spatial-query-benchmark"
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              },
-              {
-                "type": "category",
-                "label": "GPU Scenes",
-                "items": [
-                  "api-reference/experimental/gpu-core/gpu-scene",
-                  "api-reference/experimental/gpu-core/gpu-scene-adapters",
-                  "api-reference/experimental/gpu-core/gpu-scene-draw-generation",
-                  "api-reference/experimental/gpu-core/gpu-scene-resource-groups",
-                  "api-reference/experimental/gpu-core/gpu-index-picking-target"
-                ]
-              },
-              {
-                "type": "category",
-                "label": "Hash Indexes and Joins",
-                "items": [
-                  "api-reference/experimental/gpu-core/gpu-hash-index",
-                  "api-reference/experimental/gpu-core/gpu-batch-hash-index",
-                  "api-reference/experimental/gpu-core/gpu-hash-join",
-                  "api-reference/experimental/gpu-core/gpu-batch-hash-join"
-                ]
-              }
-            ]
-          },
-          "api-reference/experimental/gpu-timeseries",
-          {
-            "type": "category",
-            "label": "GPU Graph Algorithms",
-            "items": [
-              "api-reference/experimental/gpu-graph",
-              "api-reference/experimental/gpu-graph-operations",
-              "api-reference/experimental/gpu-graph-topology",
-              "api-reference/experimental/gpu-graph-traversal",
-              "api-reference/experimental/gpu-graph-connectivity",
-              "api-reference/experimental/gpu-graph-metrics",
-              "api-reference/experimental/gpu-graph-layouts"
-            ]
-          },
-          {
-            "type": "category",
             "label": "GPU Raster",
             "items": [
               "api-reference/experimental/gpu-raster/README",
@@ -692,10 +509,7 @@
             "label": "GPU Project",
             "items": [
               "api-reference/experimental/gpu-project",
-              "api-reference/experimental/geospatial",
-              "api-reference/experimental/gpu-dggs",
-              "api-reference/experimental/gpu-h3",
-              "api-reference/experimental/gpu-a5"
+              "api-reference/experimental/geospatial"
             ]
           },
           {
@@ -825,9 +639,219 @@
         "label": "@luma.gl/gpgpu",
         "items": [
           "api-reference/gpgpu/README",
-          "api-reference/gpgpu/gpu-vector-search",
-          "api-reference/gpgpu/gpu-geometry",
-          "api-reference/gpgpu/gpu-pointcloud",
+          {
+            "type": "category",
+            "label": "GPU Evaluations",
+            "items": [
+              "api-reference/gpgpu/gpu-data-evaluator",
+              "api-reference/gpgpu/operations",
+              "api-reference/gpgpu/clean-evaluate",
+              "api-reference/gpgpu/custom-operation"
+            ]
+          },
+          {
+            "type": "category",
+            "label": "GPU Data",
+            "items": [
+              "api-reference/gpgpu/gpu-constant",
+              "api-reference/gpgpu/gpu-vector",
+              "api-reference/gpgpu/gpu-data",
+              "api-reference/gpgpu/gpu-data-view",
+              "api-reference/gpgpu/gpu-vector-format",
+              "api-reference/experimental/gpu-data/gpu-sparse-matrix"
+            ]
+          },
+          {
+            "type": "category",
+            "label": "GPU Graph",
+            "items": [
+              "api-reference/experimental/gpu-core/gpu-command-graph"
+            ]
+          },
+          {
+            "type": "category",
+            "label": "GPU Core",
+            "items": [
+              "api-reference/experimental/gpu-core/README",
+              {
+                "type": "category",
+                "label": "Compute Foundations",
+                "items": [
+                  "api-reference/experimental/gpu-core/compositional-architecture",
+                  "api-reference/experimental/gpu-core/gpu-value-arena",
+                  "api-reference/experimental/gpu-core/gpu-value-arena-finalization",
+                  "api-reference/experimental/gpu-core/gpu-scalar",
+                  "api-reference/experimental/gpu-core/gpu-scalar-operation",
+                  "api-reference/experimental/gpu-core/gpu-reduction-substrate",
+                  "api-reference/experimental/gpu-core/gpu-cg-integration",
+                  "api-reference/experimental/gpu-core/gpu-transient-lifetimes"
+                ]
+              },
+              {
+                "type": "category",
+                "label": "Semantic Programs",
+                "items": [
+                  "api-reference/experimental/gpu-core/gpu-operation",
+                  "api-reference/experimental/gpu-core/gpu-operation-metadata",
+                  "api-reference/experimental/gpu-core/gpu-control-flow-operation",
+                  "api-reference/experimental/gpu-core/gpu-operation-lowering",
+                  "api-reference/experimental/gpu-core/gpu-program",
+                  "api-reference/experimental/gpu-core/gpu-program-lowering",
+                  "api-reference/experimental/gpu-core/webgpu-runtime-control",
+                  "api-reference/experimental/gpu-core/gpu-program-pcg"
+                ]
+              },
+              {
+                "type": "category",
+                "label": "Sparse Numerics",
+                "items": [
+                  "api-reference/experimental/gpu-core/gpu-strategy-selection",
+                  "api-reference/experimental/gpu-core/gpu-adaptive-reduction",
+                  "api-reference/experimental/gpu-core/gpu-adaptive-spmv-execution",
+                  "api-reference/experimental/gpu-core/gpu-coo-to-csr",
+                  "api-reference/experimental/gpu-core/gpu-preconditioned-conjugate-gradient"
+                ]
+              },
+              {
+                "type": "category",
+                "label": "Execution Helpers",
+                "items": [
+                  "api-reference/experimental/gpu-core/gpu-incremental-execution",
+                  "api-reference/experimental/gpu-core/gpu-texture-history",
+                  "api-reference/experimental/gpu-core/gpu-readback-ring",
+                  "api-reference/experimental/gpu-core/draw-command-buffer"
+                ]
+              },
+              {
+                "type": "category",
+                "label": "Selection and Compaction",
+                "items": [
+                  "api-reference/experimental/gpu-core/gpu-scan",
+                  "api-reference/experimental/gpu-core/gpu-segmented-scan",
+                  "api-reference/experimental/gpu-core/gpu-galloping-search",
+                  "api-reference/experimental/gpu-core/gpu-compaction",
+                  "api-reference/experimental/gpu-core/gpu-scatter",
+                  "api-reference/experimental/gpu-core/gpu-gather",
+                  "api-reference/experimental/gpu-core/gpu-flag-offsets",
+                  "api-reference/experimental/gpu-core/gpu-segment-offsets",
+                  "api-reference/experimental/gpu-core/gpu-segmented-layout",
+                  "api-reference/experimental/gpu-core/gpu-mask",
+                  "api-reference/experimental/gpu-core/gpu-visibility-workflow",
+                  "api-reference/experimental/gpu-core/gpu-virtual-geometry-selection"
+                ]
+              },
+              {
+                "type": "category",
+                "label": "Graph structure and spatial",
+                "items": [
+                  {
+                    "type": "category",
+                    "label": "Hierarchies and Traversal",
+                    "items": [
+                      "api-reference/experimental/gpu-core/gpu-hierarchy-layout",
+                      "api-reference/experimental/gpu-core/gpu-graph-traversal",
+                      "api-reference/experimental/gpu-core/gpu-ancestor-projection"
+                    ]
+                  },
+                  {
+                    "type": "category",
+                    "label": "Sorting and Aggregation",
+                    "items": [
+                      "api-reference/experimental/gpu-core/gpu-sort",
+                      "api-reference/experimental/gpu-core/gpu-segmented-sort",
+                      "api-reference/experimental/gpu-core/gpu-transpose",
+                      "api-reference/experimental/gpu-core/gpu-finite-differences",
+                      "api-reference/experimental/gpu-core/gpu-fft1d",
+                      "api-reference/experimental/gpu-core/gpu-fft2d",
+                      "api-reference/experimental/gpu-core/gpu-convolution",
+                      "api-reference/experimental/gpu-core/gpu-reduction",
+                      "api-reference/experimental/gpu-core/gpu-segmented-reduction",
+                      "api-reference/experimental/gpu-core/gpu-run-length-encode",
+                      "api-reference/experimental/gpu-core/gpu-histogram",
+                      "api-reference/experimental/gpu-core/gpu-group-aggregation"
+                    ]
+                  },
+                  {
+                    "type": "category",
+                    "label": "Dense Compute",
+                    "items": [
+                      "api-reference/experimental/gpu-core/gpu-elementwise",
+                      "api-reference/experimental/gpu-core/gpu-matvec",
+                      "api-reference/experimental/gpu-core/gpu-matmul"
+                    ]
+                  },
+                  {
+                    "type": "category",
+                    "label": "Spatial indexing",
+                    "items": [
+                      {
+                        "type": "category",
+                        "label": "Spatial grids",
+                        "items": [
+                          "api-reference/experimental/gpu-core/gpu-grid-binning",
+                          "api-reference/experimental/gpu-core/gpu-grid-aggregation",
+                          "api-reference/experimental/gpu-core/gpu-grid-index",
+                          "api-reference/experimental/gpu-core/gpu-grid-index-query",
+                          "api-reference/experimental/gpu-core/gpu-point-spatial-filter"
+                        ]
+                      },
+                      {
+                        "type": "category",
+                        "label": "Bounding-volume hierarchies",
+                        "items": [
+                          "api-reference/experimental/gpu-core/gpu-bvh",
+                          "api-reference/experimental/gpu-core/gpu-segmented-bvh",
+                          "api-reference/experimental/gpu-core/gpu-bvh-query",
+                          "api-reference/experimental/gpu-core/gpu-spatial-query-benchmark"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "category",
+                "label": "GPU Scenes",
+                "items": [
+                  "api-reference/experimental/gpu-core/gpu-scene",
+                  "api-reference/experimental/gpu-core/gpu-scene-adapters",
+                  "api-reference/experimental/gpu-core/gpu-scene-draw-generation",
+                  "api-reference/experimental/gpu-core/gpu-scene-resource-groups",
+                  "api-reference/experimental/gpu-core/gpu-index-picking-target"
+                ]
+              },
+              {
+                "type": "category",
+                "label": "Hash Indexes and Joins",
+                "items": [
+                  "api-reference/experimental/gpu-core/gpu-hash-index",
+                  "api-reference/experimental/gpu-core/gpu-batch-hash-index",
+                  "api-reference/experimental/gpu-core/gpu-hash-join",
+                  "api-reference/experimental/gpu-core/gpu-batch-hash-join"
+                ]
+              }
+            ]
+          },
+          {
+            "type": "category",
+            "label": "GPU Graph Algorithms",
+            "items": [
+              "api-reference/experimental/gpu-graph",
+              "api-reference/experimental/gpu-graph-operations",
+              "api-reference/experimental/gpu-graph-topology",
+              "api-reference/experimental/gpu-graph-traversal",
+              "api-reference/experimental/gpu-graph-connectivity",
+              "api-reference/experimental/gpu-graph-metrics",
+              "api-reference/experimental/gpu-graph-layouts"
+            ]
+          },
+          {
+            "type": "category",
+            "label": "GPU Parse",
+            "items": [
+              "api-reference/gpgpu/gpu-parse"
+            ]
+          },
           {
             "type": "category",
             "label": "GPU Physics",
@@ -840,16 +864,53 @@
           },
           {
             "type": "category",
-            "label": "GPU Data",
+            "label": "GPU Vector Search",
             "items": [
-              "api-reference/gpgpu/gpu-constant",
-              "api-reference/gpgpu/gpu-vector",
-              "api-reference/gpgpu/gpu-data",
-              "api-reference/gpgpu/gpu-data-view",
-              "api-reference/gpgpu/gpu-vector-format"
+              "api-reference/gpgpu/gpu-vector-search"
             ]
           },
-          "api-reference/gpgpu/custom-operation"
+          {
+            "type": "category",
+            "label": "GPU Time Series",
+            "items": [
+              "api-reference/experimental/gpu-timeseries"
+            ]
+          },
+          {
+            "type": "category",
+            "label": "GPU Geometry",
+            "items": [
+              "api-reference/gpgpu/gpu-geometry"
+            ]
+          },
+          {
+            "type": "category",
+            "label": "GPU Point Cloud",
+            "items": [
+              "api-reference/gpgpu/gpu-pointcloud"
+            ]
+          },
+          {
+            "type": "category",
+            "label": "GPU DGGS",
+            "items": [
+              "api-reference/experimental/gpu-dggs"
+            ]
+          },
+          {
+            "type": "category",
+            "label": "GPU H3",
+            "items": [
+              "api-reference/experimental/gpu-h3"
+            ]
+          },
+          {
+            "type": "category",
+            "label": "GPU A5",
+            "items": [
+              "api-reference/experimental/gpu-a5"
+            ]
+          }
         ]
       },
       {
