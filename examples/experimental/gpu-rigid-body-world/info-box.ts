@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {BoxPanelContainer, ColumnPanel, PanelManager} from '@deck.gl-community/panels';
+import {PanelManager} from '@deck.gl-community/panels';
 import {
   configurePanelHostElement,
   makeExampleTabbedPanel,
   makeHtmlCustomPanel
 } from '../../example-panels';
+import {InfoBoxPanelContainer} from '../../example-info-box';
 import {applyExampleTheme} from '../../example-theme';
 import type {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 
@@ -28,36 +29,29 @@ export function createRigidBodyPanel(diagnostics: GPUGraphDiagnostics) {
   const manager = new PanelManager({parentElement: host});
   manager.setProps({
     components: [
-      new BoxPanelContainer({
-        id: 'rigid-body-lab',
-        title: 'luma.gl · Rigid Body Lab',
-        placement: 'top-left',
-        widthPx: 420,
-        collapsible: true,
-        defaultOpen: false,
-        panel: new ColumnPanel({
-          id: 'lab-panel',
+      new InfoBoxPanelContainer({
+        title: 'Rigid Body Lab',
+        subtitle: 'GPU physics · mechanisms and contacts',
+        websiteBaseUrl: '/',
+        appearance: 'cinematic',
+        panel: makeExampleTabbedPanel({
+          id: 'lab-tabs',
+          theme: 'dark',
           panels: [
             makeHtmlCustomPanel({
               id: 'lab-controls-panel',
-              title: '',
+              title: 'Settings',
               html: '',
               onRender: root => mount(controls, root)
             }),
-            makeExampleTabbedPanel({
-              id: 'lab-tabs',
-              theme: 'dark',
-              panels: [
-                makeHtmlCustomPanel({
-                  id: 'lab-details-panel',
-                  title: 'Info',
-                  html: '',
-                  onRender: root => mount(details, root)
-                }),
-                diagnostics.inspectorPanel.panel,
-                diagnostics.tracePanel.panel
-              ]
-            })
+            makeHtmlCustomPanel({
+              id: 'lab-details-panel',
+              title: 'Info',
+              html: '',
+              onRender: root => mount(details, root)
+            }),
+            diagnostics.inspectorPanel.panel,
+            diagnostics.tracePanel.panel
           ]
         })
       })
