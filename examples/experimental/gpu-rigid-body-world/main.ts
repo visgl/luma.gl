@@ -167,10 +167,51 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
         ]
       }
     });
+    // Distance joints have no physical rods; thin cylinders visualize their centered attachments.
+    const tethers = mechanism?.joints.filter(joint => joint.type === 'distance') ?? [];
+    const tether =
+      tethers.length > 0
+        ? new Model(device, {
+            id: 'mechanism-tethers',
+            source: `
+@group(0) @binding(0) var<uniform> matrix: mat4x4f;
+@group(0) @binding(1) var<storage,read> positions: array<vec4f>;
+const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(${joint.first}u,${joint.second}u)`).join(',')});
+@vertex fn vertexMain(@builtin(vertex_index) vertex: u32,@builtin(instance_index) tether: u32)->@builtin(position) vec4f {
+ let corners=array<vec2f,6>(vec2f(0,0),vec2f(1,0),vec2f(0,1),vec2f(0,1),vec2f(1,0),vec2f(1,1));
+ let corner=corners[vertex%6u];
+ let first=positions[endpoints[tether].x].xyz;let second=positions[endpoints[tether].y].xyz;
+ let direction=normalize(second-first);
+ let reference=select(vec3f(0,0,1),vec3f(0,1,0),abs(direction.z)>0.9);
+ let tangent=normalize(cross(direction,reference));let bitangent=cross(direction,tangent);
+ let angle=(f32(vertex/6u)+corner.x)*6.2831853/8.0;
+ let offset=0.025*(cos(angle)*tangent+sin(angle)*bitangent);
+ return matrix*vec4f(mix(first,second,corner.y)+offset,1);
+}
+@fragment fn fragmentMain()->@location(0) vec4f {return vec4f(0.12,0.16,0.18,1);}
+`,
+            vertexCount: 8 * 6,
+            instanceCount: tethers.length,
+            parameters: {
+              depthWriteEnabled: true,
+              depthCompare: 'less-equal',
+              depthFormat: 'depth24plus'
+            },
+            bindings: {matrix: cameraBuffer, positions: world.positions!},
+            shaderLayout: {
+              attributes: [],
+              bindings: [
+                {name: 'matrix', group: 0, location: 0, type: 'uniform'},
+                {name: 'positions', group: 0, location: 1, type: 'read-only-storage', visibility: 1}
+              ]
+            }
+          })
+        : null;
     return {
       world,
       graph,
       model,
+      tether,
       shapes,
       meshVertices,
       bodies,
@@ -203,6 +244,7 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
   };
   autoPlay.onchange = restartPlayback;
   const destroy = (target: typeof resources) => {
+    target.tether?.destroy();
     target.model.destroy();
     target.graph.destroy();
     target.world.destroy();
@@ -331,6 +373,7 @@ fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotati
     cameraBuffer.write(new Float32Array(depth));
     const pass = device.beginRenderPass({clearColor: [0.9, 0.92, 0.89, 1], clearDepth: 1});
     resources.model.draw(pass);
+    resources.tether?.draw(pass);
     pass.end();
     device.submit();
     const fence = device.createFence();

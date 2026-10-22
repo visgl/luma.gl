@@ -1508,8 +1508,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       this.triggerRead ||
       capture.version !== 1 ||
       capture.buffers.length !== this.ownedBuffers.length ||
-      JSON.stringify({...capture.props, id: undefined}) !==
-        JSON.stringify({...this.props, id: undefined}) ||
+      serializeCaptureProps(capture.props) !== serializeCaptureProps(this.props) ||
       ![capture.contactCursor, capture.triggerCursor].every(
         value => Number.isInteger(value) && value >= 0 && value <= 0xffffffff
       )
@@ -1621,4 +1620,17 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     for (const buffer of this.ownedBuffers) buffer.destroy();
     this.ownedBuffers.length = 0;
   }
+}
+
+/** Canonicalize object keys, preserving array order and ignoring the world's debug label. */
+function serializeCaptureProps(props: GPURigidBodyWorldProps): string {
+  return JSON.stringify({...props, id: undefined}, (_key, value: unknown) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+    const record = value as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.keys(record)
+        .sort()
+        .map(key => [key, record[key]])
+    );
+  });
 }

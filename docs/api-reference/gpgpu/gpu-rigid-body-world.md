@@ -417,7 +417,7 @@ separate qualification work.
 Tests cover coupled tangent response, static friction, moving supports, eight-box
 stacks, sparse discovery, capacity overflow and recovery by replay. These are bounded
 fixtures with tolerances, not qualification for arbitrary scenes. General rigid-body
-CCD, joints/drives, solid mesh containment and cross-device bitwise
+CCD, parallel joint solving, joint springs/breakage, solid mesh containment and cross-device bitwise
 reproducibility remain outside the current contract.
 
 See the [background guide](/docs/api-guide/gpu/gpu-physics),

@@ -89,6 +89,27 @@ it('restores caches and diagnostics to reproduce a joint trajectory', async cont
     world.restoreState(capture);
     expect(await advance()).toEqual(first);
     expect(await world.readSimulationDiagnostics()).toEqual(diagnostics);
+    // Reconstructed configurations may have different insertion order at every object level.
+    const reordered = structuredClone(capture);
+    reordered.props = {
+      ...reordered.props,
+      bodies: reordered.props.bodies.map(body => ({
+        shape: body.shape,
+        mass: body.mass,
+        position: body.position,
+        ...body
+      }))
+    };
+    reordered.props = {
+      ...Object.fromEntries(Object.entries(reordered.props).reverse()),
+      bodies: reordered.props.bodies
+    };
+    world.restoreState(reordered);
+    expect(await advance()).toEqual(first);
+    const incompatible = structuredClone(capture);
+    incompatible.props.timeStep = 0.125;
+    expect(() => world.restoreState(incompatible)).toThrow();
+    expect(await world.readState()).toEqual(first);
     const invalid = structuredClone(capture);
     invalid.buffers[0].data = new Uint8Array(4);
     expect(() => world.restoreState(invalid)).toThrow();

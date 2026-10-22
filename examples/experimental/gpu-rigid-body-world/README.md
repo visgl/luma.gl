@@ -59,7 +59,9 @@ after impacts. This does not imply dynamic-pair or rotating-convex CCD support.
 
 ## Mechanisms collection
 
-The scene selector includes a distance pendulum, motorized hinge and powered slider.
+The scene selector includes Newton's cradle, a distance pendulum, motorized hinge and powered slider.
+The cradle and pendulum have GPU-driven visible tethers. Reset releases the raised
+cradle ball again; iterative contacts introduce numerical loss despite restitution one.
 These use the public `joints` API, force the ordered solver and preserve the existing
 Reset, GPU Graph and Timeline controls. Hinge and slider scenes include loose boxes
 so constraint and contact response can be observed together. Joint-connected bodies
