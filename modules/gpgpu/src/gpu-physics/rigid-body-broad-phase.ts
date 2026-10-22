@@ -128,6 +128,11 @@ export class GPURigidBodyBroadPhase {
     };
     const names = Object.keys(views) as (keyof typeof views)[];
     const source = makeBroadPhaseShader(this.props, views);
+    const passDescriptions: Record<string, string> = {
+      clear: 'Reset broad-phase diagnostics and candidate counts.',
+      assign: 'Assign collider bounds to hierarchical spatial grid cells.',
+      discover: 'Discover potentially overlapping collider pairs from the sorted grid.'
+    };
     const pass = (
       entryPoint: string,
       active: readonly (keyof typeof views)[],
@@ -160,6 +165,7 @@ export class GPURigidBodyBroadPhase {
       };
       return createGPUComputeCommandNode<Parameters>({
         id: `${this.id}-${entryPoint}`,
+        description: passDescriptions[entryPoint],
         resources: active.map(name => ({
           buffer: views[name],
           usage: writable.includes(name) ? 'storage-read-write' : 'storage-read'

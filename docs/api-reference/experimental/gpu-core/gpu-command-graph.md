@@ -891,3 +891,17 @@ set for each scope and retain it until submission and timing readback complete. 
 the caller's profiling query set and slot count afterward, including when encoding throws. This
 WebGPU-only hook avoids enabling a device-wide profiler for every frame; unsupported encoders can
 encode normally and report CPU spans. The Graph Explorer examples use this path for sampled traces.
+
+
+### Describing operations
+
+Compute, render, and copy nodes accept an optional `description` string. Use it to explain
+application intent, for example `description: 'Resolve contact and joint constraints.'`.
+Descriptions are plain text displayed in GPU Graph and GPU Trace tooltips. They are retained
+in compiled preflight reports, encoding statistics, timing reports, and inspector snapshots,
+including when those reports are serialized to JSON. They do not affect scheduling or execution.
+
+Tooltips also show declared resource inputs and outputs, access modes, buffer byte ranges,
+and available view formats, row counts, and texture dimensions. These are static declarations,
+not measured traffic or a readback of buffer contents. Serializable resource summaries are
+retained in preflight reports and traces.

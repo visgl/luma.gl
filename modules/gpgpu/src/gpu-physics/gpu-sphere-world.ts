@@ -635,6 +635,26 @@ export class GPUSphereWorld {
       location: number,
       access: PassBinding['access'] = 'read'
     ): PassBinding => ({name, view, location, access});
+    const passDescriptions: Record<string, string> = {
+      clear: 'Reset diagnostics for this simulation substep.',
+      begin: 'Initialize the substep clock and remaining simulation time.',
+      sweep: 'Find the earliest swept-sphere impact to avoid tunneling.',
+      remember: 'Save sphere state before speculative integration.',
+      integrate: 'Apply gravity and advance sphere positions.',
+      cells: 'Assign spheres to spatial grid cells for collision detection.',
+      count: 'Count candidate sphere pairs in neighboring cells.',
+      sentinel: 'Write the final candidate-pair offset.',
+      emit: 'Emit candidate sphere pairs from neighboring grid cells.',
+      restore: 'Restore cached contact data to initialize persistent contact constraints.',
+      warm: 'Warm start contacts using impulses from the previous step.',
+      solve: 'Resolve sphere contacts and friction for this solver iteration.',
+      publish: 'Copy solved sphere positions and velocities into the public simulation state.',
+      store: 'Store solved contact impulses for the next step.',
+      events: 'Publish contact events for the application.',
+      'state-counts': 'Count active and sleeping sphere states.',
+      finalize: 'Finalize sphere positions and velocities after contact solving.',
+      budget: 'Record whether the continuous collision impact budget was exhausted.'
+    };
     const addPass = (
       name: string,
       source: string,
@@ -690,6 +710,8 @@ export class GPUSphereWorld {
       });
       graph.addComputePass({
         id: props.id,
+        description:
+          passDescriptions[name.replace(/^step-\d+-(?:impact-\d+-)?/, '').replace(/-\d+$/, '')],
         resources,
         compile: ({device}) => createExecutable(new Computation(device, props)),
         compileAsync: async ({device}) =>

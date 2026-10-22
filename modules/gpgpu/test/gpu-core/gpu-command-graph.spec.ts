@@ -135,6 +135,7 @@ it('GPUCommandGraph reports adapter capabilities and explicit encoding timings',
   );
   graph.addComputePass({
     id: 'observe-import',
+    description: 'Inspect imported simulation state.',
     resources: [{buffer: imported, usage: 'storage-read'}],
     compile: () => ({encode: () => {}})
   });
@@ -145,6 +146,10 @@ it('GPUCommandGraph reports adapter capabilities and explicit encoding timings',
   });
   const compiled = graph.compile();
 
+  expect(compiled.preflight.nodes[0].description).toBe('Inspect imported simulation state.');
+  expect(compiled.preflight.nodes[0].resources).toEqual([
+    {id: 'imported', kind: 'buffer', usage: 'storage-read', byteOffset: 0, byteLength: 32}
+  ]);
   expect(compiled.stats.importedBufferCount, 'counts imported buffers').toBe(1);
   expect(compiled.stats.importedBufferBytes, 'reports imported buffer capacity').toBe(32);
   expect(compiled.stats.logicalBufferBytes, 'includes imports in logical memory').toBe(32);
@@ -163,6 +168,13 @@ it('GPUCommandGraph reports adapter capabilities and explicit encoding timings',
 
   const commandEncoder = device.createCommandEncoder({id: 'graph-diagnostics-encoding'});
   const encoding = compiled.encode(commandEncoder, {parameters: undefined});
+  expect(encoding.stats.nodes[0].description).toBe('Inspect imported simulation state.');
+  expect(encoding.stats.nodes[0].resources).toBe(compiled.preflight.nodes[0].resources);
+  expect(JSON.parse(JSON.stringify(encoding.stats)).nodes[0].resources[0].id).toBe('imported');
+  expect(JSON.parse(JSON.stringify(encoding.stats)).nodes[0].description).toBe(
+    'Inspect imported simulation state.'
+  );
+  expect(encoding.stats.nodes[1].description).toBeUndefined();
   expect(encoding.stats.nodeCount, 'reports every encoded node').toBe(2);
   expect(encoding.stats.computePassCount, 'reports the number of physical compute passes').toBe(1);
   expect(encoding.stats.coalescedComputeNodeCount, 'reports no merged standalone node').toBe(0);
@@ -198,6 +210,7 @@ it('GPUCommandGraph reports adapter capabilities and explicit encoding timings',
     const commandBuffer = timestampEncoder.finish();
     device.submit(commandBuffer);
     const report = await timestampEncoding.readTimings();
+    expect(report.nodes[0].description).toBe('Inspect imported simulation state.');
     expect(
       timestampEncoding.stats.timestampedNodeCount,
       'timestamps render and compute passes'

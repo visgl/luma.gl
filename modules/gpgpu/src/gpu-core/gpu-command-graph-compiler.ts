@@ -12,6 +12,7 @@ import type {
   GPUCommandGraphPreflightReport,
   GPUCommandGraphRenderExecutable,
   GPUCommandGraphStats,
+  GPUCommandGraphResourceSummary,
   GraphBufferHandle,
   GraphBufferUsage,
   GraphBufferUse,
@@ -380,6 +381,34 @@ function finishGPUCommandGraphCompilation<Parameters>(
   };
 }
 
+function summarizeResource(resource: GraphResourceUse): GPUCommandGraphResourceSummary {
+  if ('buffer' in resource) {
+    const buffer = resource.buffer;
+    const view = 'buffer' in buffer ? buffer : undefined;
+    return Object.freeze({
+      id: view ? view.buffer.id : (buffer as GraphBufferHandle).id,
+      kind: 'buffer',
+      usage: resource.usage,
+      byteOffset: view?.byteOffset ?? 0,
+      byteLength: view
+        ? view.length === 0
+          ? 0
+          : (view.length - 1) * view.byteStride + view.rowByteLength
+        : (buffer as GraphBufferHandle).byteLength,
+      ...(view ? {format: view.format, length: view.length} : {})
+    });
+  }
+  const texture = 'texture' in resource ? resource.texture : resource.externalTexture;
+  return Object.freeze({
+    id: 'texture' in texture ? texture.texture.id : texture.id,
+    kind: 'externalTexture' in resource ? 'external-texture' : 'texture',
+    usage: resource.usage,
+    width: texture.width,
+    height: texture.height,
+    ...('format' in texture ? {format: texture.format, depth: texture.depth} : {})
+  });
+}
+
 function getGPUCommandGraphPreflightReport<Parameters>(
   device: Device,
   buffers: GraphBufferHandle[],
@@ -389,7 +418,9 @@ function getGPUCommandGraphPreflightReport<Parameters>(
     const workload = node.workload ?? {};
     return Object.freeze({
       id: node.id,
+      ...(node.description === undefined ? {} : {description: node.description}),
       type: node.type,
+      resources: Object.freeze((node.resources ?? []).map(summarizeResource)),
       ...(workload.operation ? {operation: workload.operation} : {}),
       ...(workload.variant ? {variant: workload.variant} : {}),
       ...(node.publication ? {publication: Object.freeze({...node.publication})} : {}),

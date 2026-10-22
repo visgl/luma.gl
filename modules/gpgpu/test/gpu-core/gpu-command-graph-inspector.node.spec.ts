@@ -80,6 +80,7 @@ it('GPUCommandGraphInspector summarizes bounded CPU and GPU samples', async () =
 
   const snapshot = inspector.getSnapshot();
   const graph = snapshot.graphs[0];
+  expect(graph.nodes[0].description).toBe('Build simulation inputs.');
   expect(graph.encodingCount, 'counts every synchronous encoding').toBe(3);
   expect(graph.totals.cpu, 'bounds and summarizes whole-graph CPU samples').toEqual({
     sampleCount: 2,
@@ -396,6 +397,7 @@ function makeEncoding(
     nodes: [
       {
         id: 'prepare',
+        description: 'Build simulation inputs.',
         type: 'compute',
         cpuEncodeTimeMilliseconds: prepareCPUTimeMilliseconds,
         hasGPUTimestamps: prepareGPUTimeMilliseconds !== undefined
@@ -495,4 +497,24 @@ it('GPUCommandGraphInspector exposes compiled nodes before the first encoding', 
     'prepare',
     'render'
   ]);
+});
+
+it('GPUCommandGraphInspector grouping receives immutable description and resource metadata', () => {
+  const inspector = new GPUCommandGraphInspector({
+    getNodeGroup: node => {
+      if (node.id !== 'prepare') return undefined;
+      expect(node.description).toBe('Build simulation inputs.');
+      expect(node.resources?.[0].id).toBe('body-poses');
+      expect(Object.isFrozen(node.resources)).toBe(true);
+      expect(Object.isFrozen(node.resources?.[0])).toBe(true);
+      return node.resources?.[0].usage === 'storage-read' ? 'simulation-inputs' : undefined;
+    }
+  });
+  inspector.registerGraph(makeGraph('physics'));
+  const encoding = makeEncoding(1, 0.5, 0.5);
+  encoding.stats.nodes[0].resources = [
+    {id: 'body-poses', kind: 'buffer', usage: 'storage-read', byteLength: 64}
+  ];
+  inspector.recordEncoding('physics', encoding);
+  expect(inspector.getSnapshot().graphs[0].nodes[0].group).toBe('simulation-inputs');
 });

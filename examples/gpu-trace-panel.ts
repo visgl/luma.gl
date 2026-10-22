@@ -4,6 +4,12 @@
 
 import type {GPUCommandGraphTimingReport} from '@luma.gl/gpgpu/gpu-core';
 import {makeHtmlCustomPanel} from './example-panels';
+import {
+  createGPUOperationTooltip,
+  renderGPUOperationTooltip,
+  positionGPUOperationTooltip,
+  formatGPUOperationDetails
+} from './gpu-operation-tooltip';
 
 const TIME_FORMATTER = new Intl.NumberFormat('en-US', {
   maximumSignificantDigits: 3,
@@ -44,24 +50,23 @@ export class GPUTracePanel {
   }
 }
 
-let nextTooltipIdentifier = 0;
-
 /** DOM renderer usable independently of the example tab system. */
 export class GPUTracePanelRenderer {
   private combinedTimeline = false;
   private readonly tooltip: HTMLElement;
   private activeSpanKey: string | undefined;
+  private readonly tooltipNodes = new Map<
+    string,
+    {node: GPUCommandGraphTimingReport['nodes'][number]; timing: string}
+  >();
 
   constructor(private readonly element: HTMLElement) {
-    this.tooltip = element.ownerDocument.createElement('div');
-    this.tooltip.id = `gpu-trace-tooltip-${nextTooltipIdentifier++}`;
-    this.tooltip.setAttribute('role', 'tooltip');
+    this.tooltip = createGPUOperationTooltip(element.ownerDocument);
     this.tooltip.setAttribute('data-gpu-trace-tooltip', '');
-    this.tooltip.hidden = true;
-    element.ownerDocument.body.append(this.tooltip);
   }
 
   update(report: GPUCommandGraphTimingReport | undefined, label = ''): void {
+    this.tooltipNodes.clear();
     const root = document.createElement('section');
     root.setAttribute('data-gpu-trace', '');
     root.setAttribute('aria-label', 'GPU Trace');
@@ -182,7 +187,7 @@ export class GPUTracePanelRenderer {
           const row = document.createElement('div');
           row.className = 'gpu-trace-row';
           const labelElement = appendText(row, 'span', span.node.operation ?? span.node.type);
-          labelElement.setAttribute('aria-label', span.node.id);
+          labelElement.setAttribute('aria-label', formatGPUOperationDetails(span.node));
           const track = document.createElement('div');
           track.className = 'gpu-trace-track';
           const bar = document.createElement('span');
@@ -194,9 +199,14 @@ export class GPUTracePanelRenderer {
             clock === 'cpu' ? span.node.cpuEncodeTimeMilliseconds : span.node.gpuTimeMilliseconds;
           const details = `${span.node.id} (${span.node.type}${span.node.condition?.outcome === 'skipped' ? ', skipped' : ''}): ${formatTime(span.start - origin)}–${formatTime(span.end - origin)}ms; duration ${formatTime(duration ?? span.end - span.start)}ms`;
           row.dataset['spanKey'] = JSON.stringify([clock, span.node.id]);
-          row.dataset['spanDetails'] = details;
+          this.tooltipNodes.set(row.dataset['spanKey'], {
+            node: span.node,
+            timing: `${clock.toUpperCase()} · ${formatTime(duration ?? span.end - span.start)}ms duration · ${formatTime(span.start - origin)}–${formatTime(span.end - origin)}ms${span.node.condition?.outcome === 'skipped' ? ' · skipped' : ''}`
+          });
+          const tooltipDetails = formatGPUOperationDetails(span.node, details);
+          row.dataset['spanDetails'] = tooltipDetails;
           bar.setAttribute('aria-describedby', this.tooltip.id);
-          bar.setAttribute('aria-label', details);
+          bar.setAttribute('aria-label', tooltipDetails);
           track.append(bar);
           row.append(track);
           appendText(row, 'span', `${formatTime(duration ?? span.end - span.start)}ms`);
@@ -249,13 +259,11 @@ export class GPUTracePanelRenderer {
 
   private showTooltip(row: HTMLElement): void {
     this.activeSpanKey = row.dataset['spanKey'];
-    this.tooltip.textContent = row.dataset['spanDetails']!;
+    const details = this.tooltipNodes.get(this.activeSpanKey!);
+    if (!details) return;
+    renderGPUOperationTooltip(this.tooltip, details.node, {timing: details.timing});
     this.tooltip.hidden = false;
-    const bounds = row.getBoundingClientRect();
-    const viewport = this.element.ownerDocument.documentElement;
-    const tooltipBounds = this.tooltip.getBoundingClientRect();
-    this.tooltip.style.left = `${Math.max(8, Math.min(bounds.left, viewport.clientWidth - tooltipBounds.width - 8))}px`;
-    this.tooltip.style.top = `${Math.max(8, bounds.bottom + tooltipBounds.height + 8 < viewport.clientHeight ? bounds.bottom + 4 : bounds.top - tooltipBounds.height - 4)}px`;
+    positionGPUOperationTooltip(this.tooltip, row);
   }
 
   private hideTooltip(): void {
@@ -266,6 +274,7 @@ export class GPUTracePanelRenderer {
   destroy(): void {
     this.hideTooltip();
     this.tooltip.remove();
+    this.tooltipNodes.clear();
     this.element.replaceChildren();
   }
 }

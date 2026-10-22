@@ -549,6 +549,8 @@ export type GPUCommandGraphNodeConditionPreflight = {
 };
 
 type GPUCommandGraphNodeBase<Condition> = {
+  /** Optional plain-text explanation shown in debugging tools and retained in traces. */
+  description?: string;
   /** Graph-wide node identifier. */
   id: string;
   /** Resources read or written by the node, used for validation and hazard inference. */
@@ -589,11 +591,27 @@ export type GPUCommandGraphNodeWorkloadEstimate = {
   writeByteLength?: number;
 };
 
+/** Serializable declared resource range used by a node; does not retain GPU objects. */
+export type GPUCommandGraphResourceSummary = Readonly<{
+  id: string;
+  kind: 'buffer' | 'texture' | 'external-texture';
+  usage: GraphBufferUsage | GraphTextureUsage;
+  byteLength?: number;
+  byteOffset?: number;
+  format?: string;
+  length?: number;
+  width?: number;
+  height?: number;
+  depth?: number;
+}>;
+
 /** Immutable per-node workload entry in a compiled graph preflight report. */
 export type GPUCommandGraphNodePreflight = Readonly<
   Required<Omit<GPUCommandGraphNodeWorkloadEstimate, 'operation' | 'variant'>> & {
     id: string;
     type: GPUCommandGraphNodeType;
+    description?: string;
+    resources?: readonly GPUCommandGraphResourceSummary[];
     operation?: string;
     variant?: string;
     publication?: Readonly<GPUCommandGraphNodePublication>;
@@ -749,6 +767,10 @@ export type GPUCommandGraphStats = {
 
 /** CPU encoding statistics captured synchronously for one scheduled node. */
 export type GPUCommandGraphNodeEncodingStats = {
+  /** Declared resources and ranges, retained from compilation for trace inspection. */
+  resources?: readonly GPUCommandGraphResourceSummary[];
+  /** Application-provided plain-text explanation of this node. */
+  description?: string;
   /** Semantic operation name from the node workload annotation, when available. */
   operation?: string;
   /** CPU clock endpoints in milliseconds (performance.now, or Date.now fallback).
