@@ -72,6 +72,7 @@ export function makeCradleFrameBodies(frame: GroupNode): GPURigidBody[] {
       node.geometry instanceof CubeGeometry && axisAligned
         ? {
             mode: 'static',
+            mass: 0,
             position: [
               (minimum[0] + maximum[0]) / 2,
               (minimum[1] + maximum[1]) / 2,
@@ -90,6 +91,7 @@ export function makeCradleFrameBodies(frame: GroupNode): GPURigidBody[] {
           }
         : {
             mode: 'static',
+            mass: 0,
             position: [0, 0, 0],
             shape: {type: 'convex-hull', geometry: makeConvexHullGeometry(vertices)},
             restitution: 0.25,
