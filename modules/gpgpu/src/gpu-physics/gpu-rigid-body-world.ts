@@ -829,6 +829,25 @@ export class GPURigidBodyWorld {
         )
       : undefined;
     this.triggerEvents = triggers?.events ?? null;
+    const passDescriptions: Record<string, string> = {
+      integrate: 'Apply gravity and advance body velocities and predicted poses for this timestep.',
+      prepare: 'Reset broad-phase counters before generating potential collider pairs.',
+      bounds: 'Compute world-space collider bounds for broad-phase collision detection.',
+      collide: 'Find overlapping collider pairs and generate contact manifolds.',
+      meshCollide: 'Generate contacts against triangle meshes and heightfields.',
+      meshCollect: 'Collect mesh contacts for the parallel constraint solver.',
+      solve: 'Resolve contact and joint constraints, including friction and restitution.',
+      finish: 'Publish solved body poses and update sleeping state.',
+      parallelReset: 'Initialize body ownership for parallel contact islands.',
+      parallelLink: 'Link bodies connected by active contacts or joints.',
+      parallelUnion: 'Merge connected bodies into constraint islands.',
+      parallelCompress: 'Compress island links to their root body.',
+      parallelWakeRoots: 'Mark islands that must wake for active constraints.',
+      parallelWakeBodies: 'Wake bodies belonging to active constraint islands.',
+      parallelAdvance: 'Advance body poses using the solved velocities.',
+      parallelMarkSleep: 'Identify islands whose bodies are quiet enough to sleep.',
+      parallelSleep: 'Put quiet constraint islands to sleep.'
+    };
     for (const entryPoint of [
       'integrate',
       ...(sparse ? ['prepare', 'bounds'] : []),
@@ -964,6 +983,7 @@ export class GPURigidBodyWorld {
         // Iterations share one semantic graph node; dispatch boundaries synchronize pair and body owners.
         graph.addComputePass({
           id: `${this.id}-solve`,
+          description: passDescriptions['solve'],
           resources: activeBindings.map(binding => ({
             buffer: binding.resource,
             usage:
@@ -1026,6 +1046,7 @@ export class GPURigidBodyWorld {
       };
       graph.addComputePass({
         id: computationProps.id,
+        description: passDescriptions[entryPoint],
         resources: [
           ...activeBindings.map(binding => ({
             buffer: binding.resource,
@@ -1139,6 +1160,7 @@ export class GPURigidBodyWorld {
       });
       graph.addComputePass({
         id: properties.id,
+        description: 'Compare contact history and publish contact begin, persist, and end events.',
         resources: eventBindings.map(binding => ({
           buffer: binding.resource,
           usage: ['bodies', 'eventStatistics'].includes(binding.name)

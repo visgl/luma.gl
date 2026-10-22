@@ -46,6 +46,7 @@ export type {
   GPUCommandGraphNodeTiming,
   GPUCommandGraphNodeType,
   GPUCommandGraphNodePreflight,
+  GPUCommandGraphResourceSummary,
   GPUCommandGraphNodePublication,
   GPUCommandGraphNodeWorkloadEstimate,
   GPUCommandGraphPreflightReport,

@@ -107,6 +107,7 @@ export type {
   GPUCommandGraphNodeConditionPreflight,
   GPUCommandGraphNodeEncodingStats,
   GPUCommandGraphNodePreflight,
+  GPUCommandGraphResourceSummary,
   GPUCommandGraphNodePublication,
   GPUCommandGraphNodeTiming,
   GPUCommandGraphNodeType,
@@ -1658,6 +1659,8 @@ export class CompiledGPUCommandGraph<Parameters = void> {
             encodedNodes.push({
               stats: {
                 id: node.id,
+                description: node.description,
+                resources: this.preflight.nodes[nodeIndex].resources,
                 operation: node.workload?.operation,
                 type: node.type,
                 cpuEncodeStartTimeMilliseconds: nodeStartTime,
@@ -1752,6 +1755,8 @@ export class CompiledGPUCommandGraph<Parameters = void> {
         encodedNodes.push({
           stats: {
             id: node.id,
+            description: node.description,
+            resources: this.preflight.nodes[nodeIndex].resources,
             operation: node.workload?.operation,
             type: node.type,
             cpuEncodeStartTimeMilliseconds: nodeStartTime,

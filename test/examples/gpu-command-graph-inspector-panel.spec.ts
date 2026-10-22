@@ -159,3 +159,70 @@ describe('GPUCommandGraphInspectorPanel', () => {
     }
   });
 });
+
+test('GPU Graph tooltips preserve descriptions as plain text', () => {
+  const inspector = new GPUCommandGraphInspector();
+  inspector.registerGraph({
+    id: 'physics',
+    stats: EMPTY_GRAPH_STATS,
+    capabilities: GRAPH_CAPABILITIES
+  });
+  inspector.recordEncoding('physics', {
+    stats: {
+      cpuEncodeTimeMilliseconds: 1,
+      nodeCount: 1,
+      skippedNodeCount: 0,
+      computePassCount: 1,
+      coalescedComputeNodeCount: 0,
+      timestampedNodeCount: 0,
+      nodes: [
+        {
+          id: 'solve',
+          type: 'compute',
+          description: 'Resolve <contacts> & "joints".',
+          resources: [
+            {id: 'body-poses', kind: 'buffer', usage: 'storage-read-write', byteLength: 64}
+          ],
+          cpuEncodeTimeMilliseconds: 1,
+          hasGPUTimestamps: false
+        }
+      ]
+    },
+    readTimings: async () => ({cpuEncodeTimeMilliseconds: 1, nodes: []})
+  });
+  const host = document.createElement('div');
+  document.body.append(host);
+  const panel = new GPUCommandGraphInspectorPanel(host);
+  try {
+    panel.update(inspector.getSnapshot(), 'physics');
+    const row = host.querySelector<HTMLElement>('[data-full-name]')!;
+    row.dispatchEvent(new MouseEvent('mouseover', {bubbles: true}));
+    const tooltip = document.getElementById(row.getAttribute('aria-describedby')!)!;
+    expect(tooltip.parentElement).toBe(document.body);
+    expect(tooltip.textContent).toContain('Resolve <contacts> & "joints".');
+    expect(tooltip.querySelector('tbody tr')?.textContent).toContain('In / out');
+    expect(tooltip.querySelector('tbody tr code')?.textContent).toBe('body-poses');
+    expect(tooltip.querySelector('.gpu-operation-name')?.textContent).toBe('Solve');
+    expect(tooltip.querySelector('.gpu-operation-id')?.textContent).toBe('solve');
+    expect(getComputedStyle(tooltip.querySelector('.gpu-operation-id')!).fontSize).toBe('11px');
+    expect(getComputedStyle(tooltip.querySelector('.gpu-operation-description')!).fontSize).toBe(
+      '16px'
+    );
+    expect(tooltip.querySelectorAll('th')).toHaveLength(4);
+    expect(tooltip.textContent).toContain('64 B');
+    expect(getComputedStyle(tooltip).fontSize).toBe('14px');
+    expect(getComputedStyle(tooltip).position).toBe('fixed');
+    expect(getComputedStyle(tooltip).zIndex).toBe('2147483647');
+    expect(tooltip.querySelector('contacts')).toBeNull();
+    row.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}));
+    expect(tooltip.hidden).toBe(true);
+    row.focus();
+    expect(tooltip.hidden).toBe(false);
+    panel.destroy();
+    expect(tooltip.isConnected).toBe(false);
+    expect(host.querySelector('contacts')).toBeNull();
+  } finally {
+    panel.destroy();
+    host.remove();
+  }
+});

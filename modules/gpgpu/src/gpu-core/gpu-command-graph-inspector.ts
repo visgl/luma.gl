@@ -80,6 +80,9 @@ export type GPUCommandGraphInspectorNodeIdentity = {
   readonly graphId: string;
   /** Stable graph node identifier. */
   readonly id: string;
+  /** Application-provided plain-text explanation of this node. */
+  readonly description?: string;
+  readonly resources?: GPUCommandGraphEncodingStats['nodes'][number]['resources'];
   /** Node execution category. */
   readonly type: GPUCommandGraphNodeType;
 };
@@ -122,6 +125,9 @@ export type GPUCommandGraphInspectorCounterSnapshot = {
 export type GPUCommandGraphInspectorNodeSnapshot = {
   /** Stable graph node identifier. */
   readonly id: string;
+  /** Application-provided plain-text explanation of this node. */
+  readonly description?: string;
+  readonly resources?: GPUCommandGraphEncodingStats['nodes'][number]['resources'];
   /** Node execution category. */
   readonly type: GPUCommandGraphNodeType;
   /** Optional application-specific semantic group. */
@@ -173,6 +179,8 @@ export type GPUCommandGraphInspectorSnapshot = {
 
 type NodeInspectionState = {
   id: string;
+  description?: string;
+  resources?: GPUCommandGraphEncodingStats['nodes'][number]['resources'];
   type: GPUCommandGraphNodeType;
   group?: string;
   cpuSamples: number[];
@@ -430,15 +438,23 @@ export class GPUCommandGraphInspector {
 
   private getNode(
     graph: GraphInspectionState,
-    nodeStats: Pick<GPUCommandGraphEncodingStats['nodes'][number], 'id' | 'type'>
+    nodeStats: Pick<
+      GPUCommandGraphEncodingStats['nodes'][number],
+      'id' | 'type' | 'description' | 'resources'
+    >
   ): NodeInspectionState {
     const existingNode = graph.nodes.get(nodeStats.id);
     if (existingNode) {
+      if (nodeStats.description !== undefined) existingNode.description = nodeStats.description;
+      if (nodeStats.resources !== undefined)
+        existingNode.resources = copyResources(nodeStats.resources);
       return existingNode;
     }
     const group = this.getNodeGroup?.({graphId: graph.id, id: nodeStats.id, type: nodeStats.type});
     const node: NodeInspectionState = {
       id: nodeStats.id,
+      resources: copyResources(nodeStats.resources),
+      ...(nodeStats.description === undefined ? {} : {description: nodeStats.description}),
       type: nodeStats.type,
       ...(group === undefined ? {} : {group}),
       cpuSamples: [],
@@ -473,6 +489,8 @@ export class GPUCommandGraphInspector {
     const nodes = orderedNodes.map(node =>
       Object.freeze({
         id: node.id,
+        resources: node.resources,
+        ...(node.description === undefined ? {} : {description: node.description}),
         type: node.type,
         ...(node.group === undefined ? {} : {group: node.group}),
         cpu: summarizeSamples(node.cpuSamples),
@@ -508,7 +526,11 @@ function copyPreflightReport(
 ): GPUCommandGraphPreflightReport {
   return Object.freeze({
     ...preflight,
-    nodes: Object.freeze(preflight.nodes.map(node => Object.freeze({...node})))
+    nodes: Object.freeze(
+      preflight.nodes.map(node =>
+        Object.freeze({...node, resources: copyResources(node.resources)})
+      )
+    )
   });
 }
 
@@ -541,4 +563,8 @@ function summarizeCounterSamples(
 
 function getPercentile(sortedSamples: readonly number[], percentile: number): number {
   return sortedSamples[Math.ceil(percentile * sortedSamples.length) - 1];
+}
+
+function copyResources(resources: GPUCommandGraphEncodingStats['nodes'][number]['resources']) {
+  return resources && Object.freeze(resources.map(resource => Object.freeze({...resource})));
 }

@@ -60,6 +60,7 @@
     "label": "WebGPU",
     "items": [
       "experimental/space-salvage",
+      "experimental/gpu-rigid-body-world",
       "showcase/lightstorm-megacity",
       "showcase/llm-network",
       "experimental/lucim-volume-lab",

@@ -136,6 +136,7 @@ fn accumulate(index:u32,value:u32){
   });
   graph.addComputePass({
     id,
+    description: 'Summarize contacts, solver limits, and simulation failures for diagnostics.',
     resources: bindings.map(({resource}, index) => ({
       buffer: resource,
       usage: index === 0 ? ('storage-read-write' as const) : ('storage-read' as const)

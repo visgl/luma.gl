@@ -80,6 +80,7 @@ it('GPUCommandGraphInspector summarizes bounded CPU and GPU samples', async () =
 
   const snapshot = inspector.getSnapshot();
   const graph = snapshot.graphs[0];
+  expect(graph.nodes[0].description).toBe('Build simulation inputs.');
   expect(graph.encodingCount, 'counts every synchronous encoding').toBe(3);
   expect(graph.totals.cpu, 'bounds and summarizes whole-graph CPU samples').toEqual({
     sampleCount: 2,
@@ -396,6 +397,7 @@ function makeEncoding(
     nodes: [
       {
         id: 'prepare',
+        description: 'Build simulation inputs.',
         type: 'compute',
         cpuEncodeTimeMilliseconds: prepareCPUTimeMilliseconds,
         hasGPUTimestamps: prepareGPUTimeMilliseconds !== undefined

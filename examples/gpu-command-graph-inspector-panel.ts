@@ -4,6 +4,12 @@
 
 import type {GPUCommandGraphInspectorSnapshot} from '@luma.gl/gpgpu/gpu-core';
 import {CompactDropdown} from './compact-dropdown';
+import {
+  createGPUOperationTooltip,
+  renderGPUOperationTooltip,
+  positionGPUOperationTooltip,
+  formatGPUOperationDetails
+} from './gpu-operation-tooltip';
 
 const STANDARD_COUNTER_FORMATTER = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 1
@@ -41,9 +47,41 @@ export class GPUCommandGraphInspectorPanel {
   private readonly nodeRows = new Map<string, HTMLElement>();
   private readonly counterRows = new Map<string, HTMLElement>();
   private readonly graphDropdown: CompactDropdown;
+  private readonly tooltip: HTMLElement;
+  private readonly tooltipEvents = new AbortController();
+  private activeNodeId: string | undefined;
 
   constructor(element: HTMLElement, props: GPUCommandGraphInspectorPanelProps = {}) {
     this.element = element;
+    this.tooltip = createGPUOperationTooltip(element.ownerDocument);
+    this.tooltip.setAttribute('data-gpu-graph-tooltip', '');
+    const showTooltip = (event: Event): void => {
+      const row = (event.target as HTMLElement).closest<HTMLElement>('[data-full-name]');
+      if (row && this.element.contains(row)) this.showTooltip(row);
+    };
+    const hideTooltip = (event: Event): void => {
+      const row = (event.target as HTMLElement).closest<HTMLElement>('[data-full-name]');
+      const next = (event as MouseEvent | FocusEvent).relatedTarget;
+      if (!(next instanceof Node) || !row?.contains(next)) this.hideTooltip();
+    };
+    const options = {signal: this.tooltipEvents.signal};
+    element.addEventListener('mouseover', showTooltip, options);
+    element.addEventListener('focusin', showTooltip, options);
+    element.addEventListener('mouseout', hideTooltip, options);
+    element.addEventListener('focusout', hideTooltip, options);
+    element.addEventListener('scroll', () => this.hideTooltip(), {...options, capture: true});
+    element.addEventListener(
+      'keydown',
+      event => {
+        if (event.key === 'Escape') this.hideTooltip();
+      },
+      options
+    );
+    element.ownerDocument.defaultView?.addEventListener(
+      'resize',
+      () => this.hideTooltip(),
+      options
+    );
     this.graphLabels = props.graphLabels ?? {};
     this.nodeLabels = props.nodeLabels ?? {};
     this.counterLabels = props.counterLabels ?? {};
@@ -100,10 +138,28 @@ export class GPUCommandGraphInspectorPanel {
 
   /** Removes the panel DOM, portalled popup, and event listeners. */
   destroy(): void {
+    this.tooltipEvents.abort();
+    this.tooltip.remove();
     this.graphDropdown.destroy();
     this.element.replaceChildren();
     this.nodeRows.clear();
     this.counterRows.clear();
+  }
+
+  private showTooltip(row: HTMLElement): void {
+    this.activeNodeId = row.getAttribute('data-full-name') ?? undefined;
+    const graph = this.snapshot.graphs.find(graph => graph.id === this.selectedGraphId);
+    const node = graph?.nodes.find(node => node.id === this.activeNodeId);
+    if (!node) return;
+    const label = getOwnLabel(this.nodeLabels, node.id);
+    renderGPUOperationTooltip(this.tooltip, node, {name: label === node.id ? undefined : label});
+    this.tooltip.hidden = false;
+    positionGPUOperationTooltip(this.tooltip, row);
+  }
+
+  private hideTooltip(): void {
+    this.activeNodeId = undefined;
+    this.tooltip.hidden = true;
   }
 
   private render(): void {
@@ -113,6 +169,7 @@ export class GPUCommandGraphInspectorPanel {
       '[data-graph-inspector-content]'
     )!;
     if (!graph) {
+      this.hideTooltip();
       emptyElement.hidden = false;
       contentElement.hidden = true;
       return;
@@ -151,6 +208,10 @@ export class GPUCommandGraphInspectorPanel {
       }
       setAttribute(element, 'data-node-type', node.type);
       setAttribute(element, 'data-full-name', node.id);
+      setAttribute(element, 'data-operation-details', formatGPUOperationDetails(node));
+      setAttribute(element, 'aria-describedby', this.tooltip.id);
+      element.tabIndex = 0;
+      if (this.activeNodeId === node.id) this.showTooltip(element);
       const icon = element.querySelector<HTMLElement>('i')!;
       const typeLabel = node.type === 'render' ? 'draw' : node.type;
       setAttribute(icon, 'title', typeLabel);
@@ -368,27 +429,6 @@ const GPU_COMMAND_GRAPH_INSPECTOR_CSS = /* css */ `
     border-bottom: 1px solid rgb(137 166 211 / 9%);
     color: #b9c8dc;
     font: 8px/1.25 ui-monospace, monospace;
-  }
-  [data-gpu-command-graph-inspector] .graph-inspector-node:not(.graph-inspector-node-header)::after {
-    position: absolute;
-    z-index: 4;
-    inset: 1px 0;
-    display: flex;
-    align-items: center;
-    padding: 3px 6px;
-    border: 1px solid rgb(114 158 212 / 30%);
-    border-radius: 4px;
-    background: rgb(8 16 27 / 98%);
-    box-shadow: 0 5px 16px rgb(0 0 0 / 35%);
-    color: #e4effc;
-    content: attr(data-full-name);
-    font: 8px/1.25 ui-monospace, monospace;
-    opacity: 0;
-    overflow-wrap: anywhere;
-    pointer-events: none;
-  }
-  [data-gpu-command-graph-inspector] .graph-inspector-node:not(.graph-inspector-node-header):hover::after {
-    opacity: 1;
   }
   [data-gpu-command-graph-inspector] .graph-inspector-node > span {
     overflow: hidden;

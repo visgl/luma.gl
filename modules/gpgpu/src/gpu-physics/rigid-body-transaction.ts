@@ -37,6 +37,7 @@ export function addRigidBodyCheckpoint<Parameters>(
   });
   graph.addCopyPass({
     id: `${id}-checkpoint`,
+    description: 'Save simulation state so an incomplete step can be rolled back.',
     resources: snapshots.flatMap(state => [
       {buffer: state.resource, usage: 'copy-source' as const},
       {buffer: state.snapshotResource, usage: 'copy-destination' as const}
@@ -97,6 +98,7 @@ export function addRigidBodyCheckpoint<Parameters>(
     });
     graph.addComputePass({
       id: `${id}-rollback`,
+      description: 'Restore saved simulation state when diagnostics reject the step.',
       resources: [
         {buffer: statistics.resource, usage: 'storage-read'},
         ...snapshots.flatMap(state => [
@@ -162,6 +164,7 @@ fn finite(value:vec4f)->bool{return all(abs(value)<=vec4f(3.402823466e38));}
     });
     graph.addComputePass({
       id: properties.id,
+      description: 'Validate body state before publishing the completed simulation step.',
       resources: [
         ...states
           .slice(0, 4)
