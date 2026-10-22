@@ -20,6 +20,7 @@ const timestep = document.querySelector<HTMLSelectElement>('#timestep')!;
 const status = document.querySelector<HTMLOutputElement>('#status')!;
 const pause = document.querySelector<HTMLButtonElement>('#pause')!;
 const reset = document.querySelector<HTMLButtonElement>('#reset')!;
+const exportButton = document.querySelector<HTMLButtonElement>('#export')!;
 const diagnostics = new GPUGraphDiagnostics();
 const panel = createRigidBodyPanel(
   diagnostics,
@@ -57,6 +58,7 @@ async function restart() {
   }
   restartRequested = false;
   busy = true;
+  exportButton.disabled = true;
   reset.disabled = select.disabled = solver.disabled = timestep.disabled = true;
   try {
     const nextConfiguration = makeStressScene(
@@ -86,6 +88,7 @@ async function restart() {
     fail(error);
   } finally {
     busy = false;
+    exportButton.disabled = false;
     reset.disabled = select.disabled = solver.disabled = timestep.disabled = false;
   }
 }
@@ -96,7 +99,7 @@ pause.onclick = () => {
   paused = !paused;
   pause.textContent = paused ? 'Resume' : 'Pause';
 };
-document.querySelector<HTMLButtonElement>('#export')!.onclick = () => {
+exportButton.onclick = () => {
   if (!runner) return;
   const report = {
     version: 1,
@@ -130,8 +133,10 @@ function draw() {
     canvas.height = height;
   }
   context.clearRect(0, 0, width, height);
-  const scale = Math.min(width / 19, height / 12);
-  const origin = [width * 0.55, height * 0.85];
+  const minimumHeight =
+    activeScene === 'ballistic' ? Math.min(0, (states[0]?.position[2] ?? 0) - 1) : 0;
+  const scale = Math.min(width / 19, height / (12 - minimumHeight));
+  const origin = [width * 0.55, height * 0.85 + minimumHeight * scale];
   context.strokeStyle = '#344452';
   context.lineWidth = ratio;
   for (let level = 0; level <= 9; level++) {
@@ -178,6 +183,7 @@ function draw() {
 async function advance() {
   if (!runner || busy || paused || stopped || disposed) return;
   busy = true;
+  exportButton.disabled = true;
   try {
     const start = performance.now();
     const result = await runner.advance();
@@ -201,6 +207,7 @@ async function advance() {
     fail(error);
   } finally {
     busy = false;
+    exportButton.disabled = false;
     reset.disabled = select.disabled = solver.disabled = timestep.disabled = false;
     if (disposed) {
       runner?.destroy();

@@ -122,3 +122,20 @@ it('replays earlier ticks and kinematic targets after a later capacity failure',
     reference.destroy();
   }
 }, 120000);
+
+it('automatically retries candidate traversal exhaustion', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const runner = await GPURigidBodyRecoveryRunner.create(device, {
+    ...makeProps(64),
+    maximumCandidateTestsPerCollider: 1
+  });
+  try {
+    const result = await runner.advance();
+    expect(result.accepted).toBe(true);
+    expect(result.retries).toBeGreaterThan(0);
+    expect((await runner.world.readSimulationDiagnostics()).complete).toBe(true);
+  } finally {
+    runner.destroy();
+  }
+}, 120000);
