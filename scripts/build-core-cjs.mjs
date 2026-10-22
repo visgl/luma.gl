@@ -41,3 +41,27 @@ for (const backend of ['webgl', 'webgpu']) {
   assert(implementation[deviceClassName].prototype instanceof coreApi.Device);
 }
 process.stdout.write('Verified CommonJS device identity and dynamic imports.\n');
+
+// The focused execution-graph entry point must reuse the core scheduler constructors.
+// Bundling it separately would make instanceof checks depend on the import path.
+const graphDistributionDirectory = new URL('../modules/gpgpu/dist/', import.meta.url);
+const graphEntryPoint = new URL('gpu-graph/index.js', graphDistributionDirectory);
+const graphSource = await readFile(graphEntryPoint, 'utf8');
+const {code: graphCode} = await transform(
+  graphSource.replace('../gpu-core/gpu-command-graph.js', '../gpu-core/index.cjs'),
+  {
+    format: 'cjs',
+    platform: 'node',
+    target: 'node16',
+    sourcefile: fileURLToPath(graphEntryPoint)
+  }
+);
+await writeFile(new URL('gpu-graph/index.cjs', graphDistributionDirectory), graphCode);
+const graphApi = require(fileURLToPath(new URL('gpu-graph/index.cjs', graphDistributionDirectory)));
+const gpuCoreApi = require(fileURLToPath(new URL('gpu-core/index.cjs', graphDistributionDirectory)));
+for (const [name, value] of Object.entries(graphApi)) {
+  assert.equal(value, gpuCoreApi[name]);
+}
+assert.equal(graphApi.GPUGraph, graphApi.GPUCommandGraph);
+assert.equal(graphApi.CompiledGPUGraph, graphApi.CompiledGPUCommandGraph);
+process.stdout.write('Verified CommonJS GPU graph constructor identity.\n');

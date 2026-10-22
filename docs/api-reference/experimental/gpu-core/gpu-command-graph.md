@@ -2,6 +2,8 @@ import {GPUCoreDocsTabs} from '@site/src/components/docs/gpu-core-docs-tabs';
 import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-contract';
 import {GPUDataAnalysisExample} from '@site/src/examples';
 
+<span id="gpucommandgraph" />
+
 # GPUGraph
 
 
@@ -717,6 +719,8 @@ Executable contexts expose `getBuffer()`, `getTexture()`, `getTextureView()`, an
 `getExternalTexture()`. Concrete ordinary texture views and framebuffers are cached for repeated
 encodings and rebuilt when an imported texture is replaced. Non-default views over frame-scoped
 ordinary textures are refreshed for each frame ID; external textures never enter either cache.
+
+<span id="compiledgpucommandgraph" />
 
 ## `CompiledGPUGraph`
 
