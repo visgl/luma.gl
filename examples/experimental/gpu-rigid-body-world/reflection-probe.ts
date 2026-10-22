@@ -30,8 +30,10 @@ export function captureReflectionProbe(
     format: 'depth24plus',
     usage: Texture.RENDER
   });
+  // Cube cameras use OpenGL face orientations. Flip clip Y for WebGPU
+  // so rendered texels agree with texture_cube sampling at every face edge.
   const projection = new Matrix4([
-    1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 1
+    1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 1
   ]).multiplyRight(new Matrix4().perspective({fovy: Math.PI / 2, aspect: 1, near: 0.05, far: 50}));
   const faces: {direction: NumberArray3; up: NumberArray3}[] = [
     {direction: [1, 0, 0], up: [0, -1, 0]},
