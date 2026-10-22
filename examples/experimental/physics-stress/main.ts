@@ -60,26 +60,29 @@ async function restart() {
   busy = true;
   exportButton.disabled = true;
   reset.disabled = select.disabled = solver.disabled = timestep.disabled = true;
+  let replacement: GPURigidBodyRecoveryRunner | undefined;
+  const nextScene = selectedScene;
   try {
     const nextConfiguration = makeStressScene(
-      selectedScene,
+      nextScene,
       solver.value === 'parallel' ? 'parallel' : 'ordered',
       Number(timestep.value)
     );
     status.value = 'Compiling…';
-    const replacement = await GPURigidBodyRecoveryRunner.create(device, nextConfiguration.props, {
+    replacement = await GPURigidBodyRecoveryRunner.create(device, nextConfiguration.props, {
       maximumReplayTicks: 240
     });
-    if (disposed) {
-      replacement.destroy();
-      return;
-    }
+    if (disposed) return;
+    const nextStates = await replacement.world.readState();
+    if (disposed) return;
+    // Publish poses and their authored bodies together, after all asynchronous work.
     runner?.destroy();
     runner = replacement;
+    replacement = undefined;
     configuration = nextConfiguration;
-    activeScene = selectedScene;
+    activeScene = nextScene;
     diagnostics.clear();
-    states = await runner.world.readState();
+    states = nextStates;
     samples = [];
     stopped = false;
     status.value = `READY · tick 0/240 · ${states.length} bodies${paused ? '\nPaused · Resume to advance' : ''}`;
@@ -88,9 +91,16 @@ async function restart() {
   } catch (error) {
     fail(error);
   } finally {
+    replacement?.destroy();
     busy = false;
     exportButton.disabled = false;
     reset.disabled = select.disabled = solver.disabled = timestep.disabled = false;
+    if (disposed) {
+      runner?.destroy();
+      device.destroy();
+    } else if (restartRequested) {
+      void restart();
+    }
   }
 }
 reset.onclick = restart;
