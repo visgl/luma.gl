@@ -1,0 +1,43 @@
+---
+title: Material variants
+description: Material variants switch authored surface appearances while preserving the scene hierarchy and model identities.
+---
+
+import {GLTFModelExample} from '@site/src/examples';
+
+# Material variants
+
+Material variants switch authored surface appearances while preserving the scene hierarchy and model identities.
+
+The **MaterialsVariantsShoe** sample demonstrates this capability. Drag to orbit and scroll to zoom.
+
+<GLTFModelExample modelUrl="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/723ffc6706725b618b8c14ceb82e3e6904b08a76/Models/MaterialsVariantsShoe/glTF/MaterialsVariantsShoe.gltf" title="MaterialsVariantsShoe" embedded showStats={false} />
+
+## API
+
+For imported assets, `createScenegraphsFromGLTF()` exposes a `variants` controller. Read `names` to discover choices, call `selectVariant(name)` to apply one, and `resetVariant()` to restore authored defaults. The controller updates materials and pipeline state on existing models.
+
+```ts
+import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
+
+const scenegraphs = createScenegraphsFromGLTF(device, gltf);
+const variantName = scenegraphs.variants.names[0];
+if (variantName) {
+  scenegraphs.variants.selectVariant(variantName);
+}
+// Restore the original appearance.
+scenegraphs.variants.resetVariant();
+```
+
+Alternate materials must remain compatible with the original shader feature layout. Selecting a variant does not rebuild the model shader to add previously absent texture or alpha-cutoff defines.
+
+## glTF support
+
+`KHR_materials_variants` defines named primitive-to-material mappings. Unmapped primitives return to their default materials when switching. See [native glTF extensions](/docs/api-reference/gltf/gltf-native-extensions).
+
+See [glTF materials and textures](/docs/api-reference/gltf/gltf-materials),
+[glTF animation](/docs/api-reference/gltf/gltf-animation), and the
+[extension support matrix](/docs/api-reference/gltf/gltf-extensions) for adapter details
+and current support limits.
+
+[All engine features](/docs/api-guide/engine/features)

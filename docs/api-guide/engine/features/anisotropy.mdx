@@ -1,0 +1,98 @@
+---
+title: Anisotropic reflection
+description: Anisotropic reflection stretches highlights along a surface direction, useful for brushed metal and directional surface finishes.
+---
+
+import {GLTFModelExample} from '@site/src/examples';
+
+# Anisotropic reflection
+
+Anisotropic reflection stretches highlights along a surface direction, useful for brushed metal and directional surface finishes.
+
+The **CompareAnisotropy** sample demonstrates this capability. Drag to orbit and scroll to zoom.
+
+<GLTFModelExample modelUrl="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/723ffc6706725b618b8c14ceb82e3e6904b08a76/Models/CompareAnisotropy/glTF/CompareAnisotropy.gltf" title="CompareAnisotropy" embedded showStats={false} />
+
+## PBRMaterial reference
+
+`PBRMaterial` from `@luma.gl/experimental` is a typed engine `Material` backed by the shared
+`pbrMaterial` shader module. Its material fields are defined by `PBRMaterialUniforms` from
+`@luma.gl/shadertools`. Pass them through `createPBRMaterial(device, {uniforms})` or update them with
+`material.setProps({pbrMaterial: {...}})`.
+
+The fields below are optional. Defaults are the shared shader defaults; imported assets can
+supply other values.
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `anisotropyStrength` | `number` | `0` | Strength of directional reflection, in the range 0–1. |
+| `anisotropyRotation` | `number` | `0` | Rotation of the anisotropy direction in radians. |
+| `anisotropyDirection` | `Readonly<Vector2 \| NumberArray2>` | `[1, 0]` | Two-component direction in the surface tangent frame. |
+| `anisotropyMapEnabled` | `boolean` | `false` | Enables anisotropy texture sampling. |
+
+### PBRMaterialBindings
+
+Texture resources are supplied separately through `PBRMaterialBindings`. Each field below is
+optional and accepts `Texture | null`. `createPBRMaterial()` derives map-enabled flags from these resources. A model still needs
+a compatible shader feature layout.
+
+| Field | Description |
+| --- | --- |
+| `pbr_anisotropySampler` | Texture resource for the `anisotropy` slot. |
+
+## Supporting APIs
+
+### createPBRMaterial
+
+`createPBRMaterial(device, {uniforms, bindings, factory})` from `@luma.gl/experimental` returns
+a `PBRMaterial`. `uniforms` sets the fields listed above, `bindings` supplies material textures,
+and the optional `factory` shares a compatible binding schema across materials. The helper
+derives map-enabled flags from the supplied bindings; explicit uniform values take precedence.
+
+### MaterialFactory
+
+`createPBRMaterialFactory(device)` from `@luma.gl/experimental` creates a reusable engine
+`MaterialFactory` configured with the `pbrMaterial` shader module. Pass this factory to
+`createPBRMaterial()` when creating several compatible materials.
+
+### Material
+
+`Material` from `@luma.gl/engine` owns material uniforms and texture resources.
+`setProps({pbrMaterial: {...}})` updates uniform values. Pass the material to a compatible
+`Model` through its `material` prop; models sharing it observe the same updates.
+Use `clone({bindings: {...}})` when an appearance needs separate texture resources.
+Adding a texture or changing a shader feature may require matching defines and a compatible
+model shader layout.
+
+See the [materials guide](/docs/api-guide/engine/materials) and
+[`pbrMaterial` reference](/docs/api-reference/shadertools/shader-modules/pbr-material).
+
+## Usage
+
+```ts
+import {createPBRMaterial, type PBRMaterial} from '@luma.gl/experimental';
+
+// device is an initialized Device.
+const material: PBRMaterial = createPBRMaterial(device, {
+  uniforms: {
+    anisotropyStrength: 0.8,
+    anisotropyRotation: 0.5,
+    anisotropyDirection: [1, 0]
+  }
+});
+
+// Pass material to a compatible Model through its material prop.
+```
+
+The shared shader approximates directional highlights and image-based lighting response; results depend on the surface tangent frame.
+
+## glTF support
+
+`KHR_materials_anisotropy` supplies strength, rotation, and an optional direction map.
+
+See [glTF materials and textures](/docs/api-reference/gltf/gltf-materials),
+[glTF animation](/docs/api-reference/gltf/gltf-animation), and the
+[extension support matrix](/docs/api-reference/gltf/gltf-extensions) for adapter details
+and current support limits.
+
+[All engine features](/docs/api-guide/engine/features)

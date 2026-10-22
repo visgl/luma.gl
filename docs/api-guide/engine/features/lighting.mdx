@@ -1,0 +1,46 @@
+---
+title: Punctual lighting
+description: Directional, point, and spot lights provide explicit scene illumination with controllable direction, intensity, and color.
+---
+
+import {GLTFModelExample} from '@site/src/examples';
+
+# Punctual lighting
+
+Directional, point, and spot lights provide explicit scene illumination with controllable direction, intensity, and color.
+
+The **LightsPunctualLamp** sample demonstrates this capability. Drag to orbit and scroll to zoom.
+
+<GLTFModelExample modelUrl="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/723ffc6706725b618b8c14ceb82e3e6904b08a76/Models/LightsPunctualLamp/glTF/LightsPunctualLamp.gltf" title="LightsPunctualLamp" embedded showStats={false} />
+
+## API
+
+The shared `lighting` shader module accepts `LightingProps`. A compatible model receives scene lighting through `model.shaderInputs.setProps({lighting: ...})`. Directional lights use a direction vector; point and spot lights add position and attenuation controls. Lighting is scene-shared state, separate from material state.
+
+```ts
+import type {LightingProps} from '@luma.gl/shadertools';
+
+const sceneLighting = {
+  ambientLight: {type: 'ambient', color: [255, 255, 255], intensity: 0.2},
+  directionalLights: [{
+    type: 'directional',
+    color: [255, 240, 220],
+    direction: [0.5, -1, 0.3],
+    intensity: 1
+  }]
+} satisfies LightingProps;
+
+// model is a Model whose shader includes lighting.
+model.shaderInputs.setProps({lighting: sceneLighting});
+```
+
+## glTF support
+
+`KHR_lights_punctual` imports directional, point, and spot lights. `createScenegraphsFromGLTF()` exposes them in `scenegraphs.lights`; supported animation pointers update their properties. Environment lighting is configured separately with `loadPBREnvironment()`; `EXT_lights_image_based` is not handled automatically.
+
+See [glTF materials and textures](/docs/api-reference/gltf/gltf-materials),
+[glTF animation](/docs/api-reference/gltf/gltf-animation), and the
+[extension support matrix](/docs/api-reference/gltf/gltf-extensions) for adapter details
+and current support limits.
+
+[All engine features](/docs/api-guide/engine/features)

@@ -872,6 +872,43 @@ export const GLTFExample: React.FC<WebsiteExampleProps & {
   );
 };
 
+/** A focused glTF viewer configured by asset URL, without the Animation Studio UI. */
+export const GLTFModelExample: React.FC<
+  WebsiteExampleProps & {
+    modelUrl: string;
+    title?: string;
+    animate?: boolean;
+    materialVariant?: string;
+  }
+> = ({modelUrl, title = 'glTF model', animate = false, materialVariant, ...props}) => {
+  const loadModelTemplate = useMemo(
+    () => async () => {
+      const {default: GLTFViewer} = await loadHelloGLTFApp();
+      return {
+        default: class extends GLTFViewer {
+          constructor(animationProps: AnimationProps) {
+            super(animationProps, {modelUrl, animate, materialVariant});
+          }
+        }
+      };
+    },
+    [modelUrl, animate, materialVariant]
+  );
+
+  return (
+    <LumaExample
+      key={modelUrl}
+      id="hello-gltf"
+      title={title}
+      directory="tutorials"
+      loadTemplate={loadModelTemplate}
+      config={exampleConfig}
+      canvasContextProfile="high-dynamic-range"
+      {...props}
+    />
+  );
+};
+
 function getGLTFReferenceDeviceSelection(): NonNullable<LumaExampleProps['devices']>[number] | null {
   if (
     typeof window === 'undefined' ||

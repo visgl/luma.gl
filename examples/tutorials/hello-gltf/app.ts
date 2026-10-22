@@ -38,10 +38,17 @@ const lightSources = {
   ]
 } as const satisfies LightingProps;
 
+export type GLTFViewerOptions = {
+  modelUrl?: string;
+  animate?: boolean;
+  materialVariant?: string;
+};
+
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
   device: Device;
+  readonly viewerOptions: GLTFViewerOptions;
   orbitControls: OrbitControls;
   scenegraphsFromGLTF?: ReturnType<typeof createScenegraphsFromGLTF>;
   modelLights: Light[] = [];
@@ -50,9 +57,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   sceneRadius = 1;
   isFinalized = false;
 
-  constructor({device}: AnimationProps) {
+  constructor({device}: AnimationProps, viewerOptions: GLTFViewerOptions = {}) {
     super();
     this.device = device;
+    this.viewerOptions = viewerOptions;
 
     const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
     this.orbitControls = new OrbitControls(canvas, {
@@ -87,11 +95,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
 
     try {
-      log.log(0, 'Starting tutorial glTF load', {modelUrl: MODEL_URL})();
+      const modelUrl = this.viewerOptions.modelUrl || MODEL_URL;
+      log.log(0, 'Starting glTF load', {modelUrl})();
       showError();
       canvas.style.opacity = '0.2';
 
-      const gltf = await load(MODEL_URL, GLTFLoader);
+      const gltf = await load(modelUrl, GLTFLoader);
       const processedGLTF = postProcessGLTF(gltf);
       const scenegraphsFromGLTF = createScenegraphsFromGLTF(this.device, processedGLTF, {
         lights: true,
@@ -107,6 +116,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       destroyScenegraphs(this.scenegraphsFromGLTF);
       this.scenegraphsFromGLTF = scenegraphsFromGLTF;
       this.modelLights = scenegraphsFromGLTF.lights;
+      if (this.viewerOptions.materialVariant) {
+        scenegraphsFromGLTF.variants.selectVariant(this.viewerOptions.materialVariant);
+      }
 
       const sceneBounds = scenegraphsFromGLTF.sceneBounds[0] || scenegraphsFromGLTF.modelBounds;
       this.center = [...sceneBounds.center];
@@ -140,7 +152,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       return;
     }
 
-    this.scenegraphsFromGLTF.animator?.setTime(time);
+    if (this.viewerOptions.animate !== false) {
+      this.scenegraphsFromGLTF.animator?.setTime(time);
+    }
     this.orbitControls.update(time);
 
     const orbitDistance = this.orbitControls.distance;
