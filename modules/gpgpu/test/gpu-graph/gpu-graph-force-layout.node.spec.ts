@@ -6,12 +6,12 @@ import {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import * as experimentalModule from '@luma.gl/experimental';
 import {
-  GPUGraph,
-  GPUGraphForceLayout,
-  GPUGraphTopology,
-  type GPUGraphAdjacency,
-  type GPUGraphForceLayoutProps
-} from '@luma.gl/gpgpu/gpu-graph';
+  GPUGraphAlgorithmsData,
+  GPUGraphAlgorithmsForceLayout,
+  GPUGraphAlgorithmsTopology,
+  type GPUGraphAlgorithmsAdjacency,
+  type GPUGraphAlgorithmsForceLayoutProps
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 import {afterEach, describe, expect, test, vi} from 'vitest';
@@ -47,10 +47,10 @@ afterEach(() => {
   }
 });
 
-describe('GPUGraphForceLayout optional API and render-ready caller-owned buffers', () => {
+describe('GPUGraphAlgorithmsForceLayout optional API and render-ready caller-owned buffers', () => {
   test('exports exact force-directed layout only through the optional GPU Graph subpath', () => {
-    expect(typeof GPUGraphForceLayout).toBe('function');
-    expect('GPUGraphForceLayout' in experimentalModule).toBe(false);
+    expect(typeof GPUGraphAlgorithmsForceLayout).toBe('function');
+    expect('GPUGraphAlgorithmsForceLayout' in experimentalModule).toBe(false);
   });
 
   test('preserves topology, positions, velocities, controls, and all default physics', () => {
@@ -61,7 +61,7 @@ describe('GPUGraphForceLayout optional API and render-ready caller-owned buffers
     const submitSpy = vi.spyOn(fixture.device, 'submit');
     const readbackSpies = fixture.buffers.map(buffer => vi.spyOn(buffer, 'readAsync'));
 
-    const layout = new GPUGraphForceLayout({...props, id: 'borrowed-render-layout'});
+    const layout = new GPUGraphAlgorithmsForceLayout({...props, id: 'borrowed-render-layout'});
 
     expect(layout.id).toBe('borrowed-render-layout');
     expect(layout.topology).toBe(props.topology);
@@ -94,15 +94,15 @@ describe('GPUGraphForceLayout optional API and render-ready caller-owned buffers
     const undirected = createLayoutProps(fixture, {directed: false, reverse: false});
     const weighted = createLayoutProps(fixture, {weighted: true});
 
-    expect(() => new GPUGraphForceLayout(directed)).toThrow(/directed|reverse|adjacency/);
-    expect(new GPUGraphForceLayout(undirected).topology.reverse).toBeUndefined();
-    expect(new GPUGraphForceLayout(weighted).topology.graph.edgeWeights).toBeDefined();
+    expect(() => new GPUGraphAlgorithmsForceLayout(directed)).toThrow(/directed|reverse|adjacency/);
+    expect(new GPUGraphAlgorithmsForceLayout(undirected).topology.reverse).toBeUndefined();
+    expect(new GPUGraphAlgorithmsForceLayout(weighted).topology.graph.edgeWeights).toBeDefined();
   });
 
   test('accepts empty render vectors with a caller-owned optional reset scalar', () => {
     const fixture = createLayoutFixture();
     const props = createLayoutProps(fixture, {vertexCount: 0, reset: true});
-    const layout = new GPUGraphForceLayout(props);
+    const layout = new GPUGraphAlgorithmsForceLayout(props);
 
     expect(layout.positions.length).toBe(0);
     expect(layout.velocities.length).toBe(0);
@@ -111,12 +111,14 @@ describe('GPUGraphForceLayout optional API and render-ready caller-owned buffers
   });
 });
 
-describe('GPUGraphForceLayout bounded deterministic simulation parameters', () => {
+describe('GPUGraphAlgorithmsForceLayout bounded deterministic simulation parameters', () => {
   test.each([
     0, 1, 0xffffffff
   ])('accepts an unsigned deterministic initialization seed: %i', seed => {
     const fixture = createLayoutFixture();
-    expect(new GPUGraphForceLayout({...createLayoutProps(fixture), seed}).seed).toBe(seed);
+    expect(new GPUGraphAlgorithmsForceLayout({...createLayoutProps(fixture), seed}).seed).toBe(
+      seed
+    );
   });
 
   test.each([
@@ -127,7 +129,7 @@ describe('GPUGraphForceLayout bounded deterministic simulation parameters', () =
     Number.POSITIVE_INFINITY
   ])('rejects a seed outside the uint32 domain: %s', seed => {
     const fixture = createLayoutFixture();
-    expect(() => new GPUGraphForceLayout({...createLayoutProps(fixture), seed})).toThrow(
+    expect(() => new GPUGraphAlgorithmsForceLayout({...createLayoutProps(fixture), seed})).toThrow(
       /seed|uint32/
     );
   });
@@ -135,7 +137,7 @@ describe('GPUGraphForceLayout bounded deterministic simulation parameters', () =
   test.each([1, 4, 1024])('accepts a bounded iteration count per frame: %i', iterationsPerFrame => {
     const fixture = createLayoutFixture();
     expect(
-      new GPUGraphForceLayout({...createLayoutProps(fixture), iterationsPerFrame})
+      new GPUGraphAlgorithmsForceLayout({...createLayoutProps(fixture), iterationsPerFrame})
         .iterationsPerFrame
     ).toBe(iterationsPerFrame);
   });
@@ -150,7 +152,7 @@ describe('GPUGraphForceLayout bounded deterministic simulation parameters', () =
   ])('rejects invalid per-frame iterations: %s', iterationsPerFrame => {
     const fixture = createLayoutFixture();
     expect(
-      () => new GPUGraphForceLayout({...createLayoutProps(fixture), iterationsPerFrame})
+      () => new GPUGraphAlgorithmsForceLayout({...createLayoutProps(fixture), iterationsPerFrame})
     ).toThrow(/iterationsPerFrame|iteration|1024/);
   });
 
@@ -161,10 +163,10 @@ describe('GPUGraphForceLayout bounded deterministic simulation parameters', () =
   ] as const)('accepts zero or positive finite %s', parameter => {
     const fixture = createLayoutFixture();
     expect(
-      new GPUGraphForceLayout({...createLayoutProps(fixture), [parameter]: 0})[parameter]
+      new GPUGraphAlgorithmsForceLayout({...createLayoutProps(fixture), [parameter]: 0})[parameter]
     ).toBe(0);
     expect(
-      new GPUGraphForceLayout({...createLayoutProps(fixture), [parameter]: 2})[parameter]
+      new GPUGraphAlgorithmsForceLayout({...createLayoutProps(fixture), [parameter]: 2})[parameter]
     ).toBe(2);
   });
 
@@ -184,17 +186,19 @@ describe('GPUGraphForceLayout bounded deterministic simulation parameters', () =
   ] as const)('rejects invalid %s = %s', (parameter, value) => {
     const fixture = createLayoutFixture();
     expect(
-      () => new GPUGraphForceLayout({...createLayoutProps(fixture), [parameter]: value})
+      () => new GPUGraphAlgorithmsForceLayout({...createLayoutProps(fixture), [parameter]: value})
     ).toThrow(new RegExp(`${parameter}|finite|positive|between`));
   });
 
   test.each([0, 0.5, 1])('accepts damping factors in the closed unit interval: %s', damping => {
     const fixture = createLayoutFixture();
-    expect(new GPUGraphForceLayout({...createLayoutProps(fixture), damping}).damping).toBe(damping);
+    expect(
+      new GPUGraphAlgorithmsForceLayout({...createLayoutProps(fixture), damping}).damping
+    ).toBe(damping);
   });
 });
 
-describe('GPUGraphForceLayout packed vectors and physical allocation safety', () => {
+describe('GPUGraphAlgorithmsForceLayout packed vectors and physical allocation safety', () => {
   test.each([
     'positions',
     'velocities'
@@ -202,7 +206,7 @@ describe('GPUGraphForceLayout packed vectors and physical allocation safety', ()
     const fixture = createLayoutFixture();
     const props = createLayoutProps(fixture);
     const output = createVector(fixture, `short-${field}`, 'float32x2', [new Float32Array(10)]);
-    expect(() => new GPUGraphForceLayout({...props, [field]: output})).toThrow(
+    expect(() => new GPUGraphAlgorithmsForceLayout({...props, [field]: output})).toThrow(
       new RegExp(`${field}|row|vertexCount`)
     );
   });
@@ -218,10 +222,10 @@ describe('GPUGraphForceLayout packed vectors and physical allocation safety', ()
       new Float32Array(6),
       new Float32Array(6)
     ]);
-    expect(() => new GPUGraphForceLayout({...props, [field]: wrongFormat})).toThrow(
+    expect(() => new GPUGraphAlgorithmsForceLayout({...props, [field]: wrongFormat})).toThrow(
       new RegExp(`${field}|float32x2|packed`)
     );
-    expect(() => new GPUGraphForceLayout({...props, [field]: partitioned})).toThrow(
+    expect(() => new GPUGraphAlgorithmsForceLayout({...props, [field]: partitioned})).toThrow(
       new RegExp(`${field}|one|single|chunk`)
     );
   });
@@ -241,7 +245,7 @@ describe('GPUGraphForceLayout packed vectors and physical allocation safety', ()
       [new Float32Array(12)],
       options
     );
-    expect(() => new GPUGraphForceLayout({...props, positions})).toThrow(
+    expect(() => new GPUGraphAlgorithmsForceLayout({...props, positions})).toThrow(
       /positions|packed|aligned|float32x2/
     );
   });
@@ -267,7 +271,7 @@ describe('GPUGraphForceLayout packed vectors and physical allocation safety', ()
         byteOffset: 4
       }
     );
-    const layout = new GPUGraphForceLayout({...props, positions, velocities});
+    const layout = new GPUGraphAlgorithmsForceLayout({...props, positions, velocities});
     expect(layout.positions.data[0].byteOffset).toBe(4);
     expect(layout.velocities.data[0].byteOffset).toBe(4);
   });
@@ -289,10 +293,10 @@ describe('GPUGraphForceLayout packed vectors and physical allocation safety', ()
       [new Float32Array(12)],
       {usage: Buffer.VERTEX | Buffer.COPY_DST | Buffer.COPY_SRC}
     );
-    expect(() => new GPUGraphForceLayout({...props, positions: withoutVertex})).toThrow(
+    expect(() => new GPUGraphAlgorithmsForceLayout({...props, positions: withoutVertex})).toThrow(
       /positions|VERTEX|vertex|render/
     );
-    expect(() => new GPUGraphForceLayout({...props, positions: withoutStorage})).toThrow(
+    expect(() => new GPUGraphAlgorithmsForceLayout({...props, positions: withoutStorage})).toThrow(
       /positions|STORAGE|storage/
     );
   });
@@ -307,7 +311,7 @@ describe('GPUGraphForceLayout packed vectors and physical allocation safety', ()
       [new Float32Array(12)],
       {usage: Buffer.VERTEX | Buffer.COPY_DST | Buffer.COPY_SRC}
     );
-    expect(() => new GPUGraphForceLayout({...props, velocities})).toThrow(
+    expect(() => new GPUGraphAlgorithmsForceLayout({...props, velocities})).toThrow(
       /velocities|STORAGE|storage/
     );
   });
@@ -318,7 +322,9 @@ describe('GPUGraphForceLayout packed vectors and physical allocation safety', ()
     const pinned = createVector(fixture, 'incorrect-pinned-length', 'uint32', [
       new Uint32Array(length)
     ]);
-    expect(() => new GPUGraphForceLayout({...props, pinned})).toThrow(/pinned|row|vertexCount/);
+    expect(() => new GPUGraphAlgorithmsForceLayout({...props, pinned})).toThrow(
+      /pinned|row|vertexCount/
+    );
   });
 
   test('rejects non-uint32 and partitioned pinned masks', () => {
@@ -330,9 +336,10 @@ describe('GPUGraphForceLayout packed vectors and physical allocation safety', ()
       new Uint32Array(3)
     ]);
     expect(
-      () => new GPUGraphForceLayout({...props, pinned: wrongFormat as GPUVector<'uint32'>})
+      () =>
+        new GPUGraphAlgorithmsForceLayout({...props, pinned: wrongFormat as GPUVector<'uint32'>})
     ).toThrow(/pinned|uint32|packed/);
-    expect(() => new GPUGraphForceLayout({...props, pinned: partitioned})).toThrow(
+    expect(() => new GPUGraphAlgorithmsForceLayout({...props, pinned: partitioned})).toThrow(
       /pinned|one|single|chunk/
     );
   });
@@ -343,7 +350,9 @@ describe('GPUGraphForceLayout packed vectors and physical allocation safety', ()
     const reset = createVector(fixture, 'incorrect-reset-length', 'uint32', [
       new Uint32Array(length)
     ]);
-    expect(() => new GPUGraphForceLayout({...props, reset})).toThrow(/reset|one|row|scalar/);
+    expect(() => new GPUGraphAlgorithmsForceLayout({...props, reset})).toThrow(
+      /reset|one|row|scalar/
+    );
   });
 
   test('rejects float and partitioned deterministic reset controls', () => {
@@ -355,9 +364,9 @@ describe('GPUGraphForceLayout packed vectors and physical allocation safety', ()
       new Uint32Array(0)
     ]);
     expect(
-      () => new GPUGraphForceLayout({...props, reset: wrongFormat as GPUVector<'uint32'>})
+      () => new GPUGraphAlgorithmsForceLayout({...props, reset: wrongFormat as GPUVector<'uint32'>})
     ).toThrow(/reset|uint32|packed/);
-    expect(() => new GPUGraphForceLayout({...props, reset: partitioned})).toThrow(
+    expect(() => new GPUGraphAlgorithmsForceLayout({...props, reset: partitioned})).toThrow(
       /reset|one|single|chunk/
     );
   });
@@ -393,7 +402,7 @@ describe('GPUGraphForceLayout packed vectors and physical allocation safety', ()
         buffer: vector.data[0].buffer
       }
     );
-    expect(() => new GPUGraphForceLayout({...props, positions})).toThrow(
+    expect(() => new GPUGraphAlgorithmsForceLayout({...props, positions})).toThrow(
       /distinct|physical|allocation/
     );
   });
@@ -410,7 +419,7 @@ describe('GPUGraphForceLayout packed vectors and physical allocation safety', ()
     const alias = createVector(fixture, `aliased-${field}`, format, [values], {
       buffer: props.positions.data[0].buffer
     });
-    expect(() => new GPUGraphForceLayout({...props, [field]: alias})).toThrow(
+    expect(() => new GPUGraphAlgorithmsForceLayout({...props, [field]: alias})).toThrow(
       /distinct|physical|allocation/
     );
   });
@@ -433,7 +442,7 @@ describe('GPUGraphForceLayout packed vectors and physical allocation safety', ()
       {buffer: dynamicBuffer}
     );
 
-    expect(() => new GPUGraphForceLayout({...props, positions})).toThrow(
+    expect(() => new GPUGraphAlgorithmsForceLayout({...props, positions})).toThrow(
       /distinct|physical|allocation/
     );
     expect(concreteBuffer.destroyed).toBe(false);
@@ -456,7 +465,7 @@ function createLayoutProps(
     pinned?: boolean;
     reset?: boolean;
   } = {}
-): GPUGraphForceLayoutProps {
+): GPUGraphAlgorithmsForceLayoutProps {
   const vertexCount = options.vertexCount ?? 6;
   const sourceVertices = createVector(fixture, 'sourceVertices', 'uint32', [
     Uint32Array.from([0, 2]),
@@ -483,7 +492,7 @@ function createLayoutProps(
       ])
     : undefined;
   const directed = options.directed ?? true;
-  const graph = new GPUGraph({
+  const graph = new GPUGraphAlgorithmsData({
     vertexCount,
     sourceVertices,
     targetVertices,
@@ -499,7 +508,7 @@ function createLayoutProps(
   const invalidEdgeCount = createVector(fixture, 'invalidEdgeCount', 'uint32', [
     new Uint32Array(1)
   ]);
-  const topology = new GPUGraphTopology({graph, forward, reverse, invalidEdgeCount});
+  const topology = new GPUGraphAlgorithmsTopology({graph, forward, reverse, invalidEdgeCount});
   const positions = createVector(fixture, 'renderPositions', 'float32x2', [
     new Float32Array(vertexCount * 2)
   ]);
@@ -521,7 +530,7 @@ function createAdjacency(
   vertexCount: number,
   capacity: number,
   weighted = false
-): GPUGraphAdjacency {
+): GPUGraphAlgorithmsAdjacency {
   return {
     offsets: createVector(fixture, `${name}-offsets`, 'uint32', [new Uint32Array(vertexCount + 1)]),
     neighbors: createVector(fixture, `${name}-neighbors`, 'uint32', [new Uint32Array(capacity)]),
@@ -534,7 +543,7 @@ function createAdjacency(
   };
 }
 
-function getTopologyVector(topology: GPUGraphTopology, name: string): GPUVector {
+function getTopologyVector(topology: GPUGraphAlgorithmsTopology, name: string): GPUVector {
   if (name === 'invalidEdgeCount') return topology.invalidEdgeCount;
   if (name === 'sourceVertices') return topology.graph.sourceVertices;
   if (name === 'targetVertices') return topology.graph.targetVertices;
@@ -543,7 +552,7 @@ function getTopologyVector(topology: GPUGraphTopology, name: string): GPUVector 
 
   const [direction, vectorName] = name.split('.');
   const adjacency = direction === 'forward' ? topology.forward : topology.reverse!;
-  return adjacency[vectorName as keyof GPUGraphAdjacency]!;
+  return adjacency[vectorName as keyof GPUGraphAlgorithmsAdjacency]!;
 }
 
 function createVector<Format extends VectorFormat>(

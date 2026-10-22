@@ -197,10 +197,10 @@ describe('framework capabilities documentation', () => {
       },
       {
         heading: /GPU graph analytics and layout/i,
-        packageName: '@luma.gl/gpgpu/gpu-graph',
+        packageName: '@luma.gl/gpgpu/gpu-graph-algorithms',
         minimumRowCount: 5,
         capabilities: [
-          /GPUGraph/i,
+          /GPUGraphAlgorithmsData/i,
           /\bCSR\b|compressed[\s-]+sparse/i,
           /breadth[\s-]+first|\bBFS\b/i,
           /connected[\s-]+components/i,
@@ -760,22 +760,28 @@ describe('framework capabilities documentation', () => {
     const documentationTableOfContents = JSON.parse(
       readFileSync(path.join(DOCUMENTATION_DIRECTORY, 'table-of-contents.json'), 'utf8')
     ) as Array<string | {label?: string}>;
-    const gettingStartedIndex = documentationTableOfContents.indexOf('getting-started');
 
     const gettingStartedSource = readFileSync(
       path.join(DOCUMENTATION_DIRECTORY, 'getting-started.mdx'),
       'utf8'
     );
 
-    expect(gettingStartedIndex).toBeGreaterThanOrEqual(0);
-    expect(documentationTableOfContents[gettingStartedIndex + 1]).toMatchObject({
+    expect(documentationTableOfContents[0]).toMatchObject({
       type: 'category',
-      label: 'Capabilities',
-      items: [
-        'capabilities',
-        'capabilities/gpu-data-compute',
-        'capabilities/rendering-visualization'
-      ]
+      label: 'Getting Started',
+      items: expect.arrayContaining([
+        'getting-started',
+        {
+          type: 'category',
+          label: 'Capabilities and compatibility',
+          items: [
+            'capabilities',
+            'capabilities/gpu-data-compute',
+            'capabilities/rendering-visualization',
+            'api-guide/background/webgpu-vs-webgl'
+          ]
+        }
+      ])
     });
 
     expect(gettingStartedSource).toContain('/docs/capabilities');

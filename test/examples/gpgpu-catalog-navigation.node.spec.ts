@@ -237,7 +237,7 @@ describe('GPGPU example catalog navigation', () => {
     ]);
   });
 
-  test('ends with focused GPUGraph deck.gl integrations', () => {
+  test('ends with focused GPUGraphAlgorithmsData deck.gl integrations', () => {
     const tableOfContents = readTableOfContents();
     const finalEntry = tableOfContents.at(-1);
 
@@ -256,29 +256,24 @@ describe('GPGPU example catalog navigation', () => {
     const documentationTableOfContents = JSON.parse(
       readFileSync(path.join(DOCUMENTATION_DIRECTORY, 'table-of-contents.json'), 'utf8')
     ) as ExampleSidebarEntry[];
-    const applicationProgrammingInterfaceGuide = documentationTableOfContents.find(
-      (entry): entry is ExampleCategory =>
-        typeof entry !== 'string' && entry.type === 'category' && entry.label === 'API Guide'
-    );
-    const generalPurposeGPUProgramming = applicationProgrammingInterfaceGuide?.items.find(
+    const generalPurposeGPUProgramming = documentationTableOfContents.find(
       (entry): entry is ExampleCategory =>
         typeof entry !== 'string' &&
         entry.type === 'category' &&
-        entry.label === 'GPGPU Programming'
+        entry.label === 'Computing on the GPU'
     );
-    const shaderProgramming = applicationProgrammingInterfaceGuide?.items.find(
+    const shaderProgramming = documentationTableOfContents.find(
       (entry): entry is ExampleCategory =>
-        typeof entry !== 'string' &&
-        entry.type === 'category' &&
-        entry.label === 'Shader-Level Programming'
+        typeof entry !== 'string' && entry.type === 'category' && entry.label === 'Writing Shaders'
     );
     const precisionGuideIdentifier = 'api-guide/shaders/gpu-floating-point-precision';
 
-    expect(applicationProgrammingInterfaceGuide).toBeDefined();
     expect(generalPurposeGPUProgramming).toBeDefined();
     expect(shaderProgramming).toBeDefined();
-    expect(generalPurposeGPUProgramming?.items).toContain(precisionGuideIdentifier);
-    expect(shaderProgramming?.items).not.toContain(precisionGuideIdentifier);
+    expect(readCategoryIdentifiers(generalPurposeGPUProgramming!)).toContain(
+      precisionGuideIdentifier
+    );
+    expect(readCategoryIdentifiers(shaderProgramming!)).not.toContain(precisionGuideIdentifier);
     expect(existsSync(path.join(DOCUMENTATION_DIRECTORY, `${precisionGuideIdentifier}.md`))).toBe(
       true
     );

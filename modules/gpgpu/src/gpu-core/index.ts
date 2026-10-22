@@ -8,7 +8,9 @@ export {GPUMatMul} from './gpu-matmul';
 export type {GPUMatMulProps} from './gpu-matmul';
 
 export {
+  CompiledGPUGraph,
   CompiledGPUCommandGraph,
+  GPUGraph,
   GPUCommandGraph,
   GPUCommandGraphEncoding,
   GPUCommandGraphExecution,

@@ -5,19 +5,19 @@
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
-  GPUGraph,
-  GPUGraphBreadthFirstSearch,
-  GPUGraphTopology,
-  type GPUGraphAdjacency,
-  type GPUGraphBreadthFirstSearchDirection
-} from '@luma.gl/gpgpu/gpu-graph';
+  GPUGraphAlgorithmsData,
+  GPUGraphAlgorithmsBreadthFirstSearch,
+  GPUGraphAlgorithmsTopology,
+  type GPUGraphAlgorithmsAdjacency,
+  type GPUGraphAlgorithmsBreadthFirstSearchDirection
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
 import {
-  addGPUGraphBreadthFirstSearchToGraphWithDispatchLimit,
-  getGPUGraphBreadthFirstSearchDispatchLayout
-} from '../../src/gpu-graph/gpu-graph-breadth-first-search-internals';
+  addGPUGraphAlgorithmsBreadthFirstSearchToGraphWithDispatchLimit,
+  getGPUGraphAlgorithmsBreadthFirstSearchDispatchLayout
+} from '../../src/gpu-graph-algorithms/gpu-graph-breadth-first-search-internals';
 
 const UNREACHABLE_VERTEX = 0xffffffff;
 
@@ -32,7 +32,7 @@ type SearchScenario = {
   weightChunks?: number[][];
   directed?: boolean;
   reverse?: boolean;
-  direction?: GPUGraphBreadthFirstSearchDirection;
+  direction?: GPUGraphAlgorithmsBreadthFirstSearchDirection;
   maxDepth?: number;
   activeSeedCount?: number;
   activeDepth?: number;
@@ -60,9 +60,9 @@ type SearchExecutionFixture = {
   device: Device;
   buffers: Buffer[];
   vectors: GPUVector[];
-  graph: GPUGraph;
-  topology: GPUGraphTopology;
-  search: GPUGraphBreadthFirstSearch;
+  graph: GPUGraphAlgorithmsData;
+  topology: GPUGraphAlgorithmsTopology;
+  search: GPUGraphAlgorithmsBreadthFirstSearch;
   commandGraph: GPUCommandGraph;
   compiled?: ReturnType<GPUCommandGraph['compile']>;
 };
@@ -290,16 +290,22 @@ const searchScenarios: SearchScenario[] = [
   }
 ];
 
-it('GPUGraphBreadthFirstSearch plans bounded three-dimensional seed and vertex dispatch', () => {
-  expect(getGPUGraphBreadthFirstSearchDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
-  expect(getGPUGraphBreadthFirstSearchDispatchLayout(512, 2)).toEqual({x: 2, y: 1, z: 1});
-  expect(getGPUGraphBreadthFirstSearchDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
-  expect(getGPUGraphBreadthFirstSearchDispatchLayout(1025, 2)).toEqual({x: 2, y: 2, z: 2});
-  expect(() => getGPUGraphBreadthFirstSearchDispatchLayout(2049, 2)).toThrow(/3D dispatch limit/);
+it('GPUGraphAlgorithmsBreadthFirstSearch plans bounded three-dimensional seed and vertex dispatch', () => {
+  expect(getGPUGraphAlgorithmsBreadthFirstSearchDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
+  expect(getGPUGraphAlgorithmsBreadthFirstSearchDispatchLayout(512, 2)).toEqual({x: 2, y: 1, z: 1});
+  expect(getGPUGraphAlgorithmsBreadthFirstSearchDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
+  expect(getGPUGraphAlgorithmsBreadthFirstSearchDispatchLayout(1025, 2)).toEqual({
+    x: 2,
+    y: 2,
+    z: 2
+  });
+  expect(() => getGPUGraphAlgorithmsBreadthFirstSearchDispatchLayout(2049, 2)).toThrow(
+    /3D dispatch limit/
+  );
 });
 
 for (const scenario of searchScenarios) {
-  it(`GPUGraphBreadthFirstSearch GPU traversal: ${scenario.name}`, async () => {
+  it(`GPUGraphAlgorithmsBreadthFirstSearch GPU traversal: ${scenario.name}`, async () => {
     const device = await getWebGPUTestDevice();
     if (!device) {
       return;
@@ -327,7 +333,7 @@ for (const scenario of searchScenarios) {
   });
 }
 
-it('GPUGraphBreadthFirstSearch rereads dynamic seeds, depth, and sources on every encoding', async () => {
+it('GPUGraphAlgorithmsBreadthFirstSearch rereads dynamic seeds, depth, and sources on every encoding', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     return;
@@ -503,7 +509,7 @@ function createExecutionFixture(
         scenario.weightChunks
       )
     : undefined;
-  const graph = new GPUGraph({
+  const graph = new GPUGraphAlgorithmsData({
     vertexCount: scenario.vertexCount,
     sourceVertices,
     targetVertices,
@@ -540,7 +546,7 @@ function createExecutionFixture(
     'uint32',
     1
   );
-  const topology = new GPUGraphTopology({graph, forward, reverse, invalidEdgeCount});
+  const topology = new GPUGraphAlgorithmsTopology({graph, forward, reverse, invalidEdgeCount});
   const seeds = createInputVector(
     device,
     buffers,
@@ -604,7 +610,7 @@ function createExecutionFixture(
           [[scenario.activeDepth]],
           scenario.byteOffset
         );
-  const search = new GPUGraphBreadthFirstSearch({
+  const search = new GPUGraphAlgorithmsBreadthFirstSearch({
     topology,
     seeds,
     seedCount,
@@ -667,7 +673,7 @@ function createOutputAdjacency(
   capacity: number,
   weighted: boolean,
   byteOffset = 0
-): GPUGraphAdjacency {
+): GPUGraphAlgorithmsAdjacency {
   return {
     offsets: createOutputVector(
       device,
@@ -728,7 +734,7 @@ function compileSearch(fixture: SearchExecutionFixture, maximumWorkgroups?: numb
   if (maximumWorkgroups === undefined) {
     fixture.search.addToGraph(fixture.commandGraph);
   } else {
-    addGPUGraphBreadthFirstSearchToGraphWithDispatchLimit(
+    addGPUGraphAlgorithmsBreadthFirstSearchToGraphWithDispatchLimit(
       fixture.search,
       fixture.commandGraph,
       maximumWorkgroups

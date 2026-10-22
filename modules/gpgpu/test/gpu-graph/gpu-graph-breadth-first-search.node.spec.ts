@@ -6,13 +6,13 @@ import {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import * as experimentalModule from '@luma.gl/experimental';
 import {
-  GPUGraph,
-  GPUGraphBreadthFirstSearch,
-  GPUGraphTopology,
-  type GPUGraphAdjacency,
-  type GPUGraphBreadthFirstSearchDirection,
-  type GPUGraphBreadthFirstSearchProps
-} from '@luma.gl/gpgpu/gpu-graph';
+  GPUGraphAlgorithmsData,
+  GPUGraphAlgorithmsBreadthFirstSearch,
+  GPUGraphAlgorithmsTopology,
+  type GPUGraphAlgorithmsAdjacency,
+  type GPUGraphAlgorithmsBreadthFirstSearchDirection,
+  type GPUGraphAlgorithmsBreadthFirstSearchProps
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 import {afterEach, describe, expect, test, vi} from 'vitest';
@@ -47,10 +47,10 @@ afterEach(() => {
   }
 });
 
-describe('GPUGraphBreadthFirstSearch public API and caller ownership', () => {
+describe('GPUGraphAlgorithmsBreadthFirstSearch public API and caller ownership', () => {
   test('publishes shortest-path traversal only through the optional GPU Graph subpath', () => {
-    expect(typeof GPUGraphBreadthFirstSearch).toBe('function');
-    expect('GPUGraphBreadthFirstSearch' in experimentalModule).toBe(false);
+    expect(typeof GPUGraphAlgorithmsBreadthFirstSearch).toBe('function');
+    expect('GPUGraphAlgorithmsBreadthFirstSearch' in experimentalModule).toBe(false);
   });
 
   test('preserves topology, chunked seeds, outputs, and controls without executing GPU work', () => {
@@ -66,7 +66,7 @@ describe('GPUGraphBreadthFirstSearch public API and caller ownership', () => {
     const submitSpy = vi.spyOn(fixture.device, 'submit');
     const readbackSpies = fixture.buffers.map(buffer => vi.spyOn(buffer, 'readAsync'));
 
-    const search = new GPUGraphBreadthFirstSearch({...props, id: 'borrowed-search'});
+    const search = new GPUGraphAlgorithmsBreadthFirstSearch({...props, id: 'borrowed-search'});
 
     expect(search.id).toBe('borrowed-search');
     expect(search.topology).toBe(props.topology);
@@ -93,7 +93,7 @@ describe('GPUGraphBreadthFirstSearch public API and caller ownership', () => {
     const fixture = createSearchFixture();
     const props = createSearchProps(fixture, {vertexCount: 0});
     const seeds = createVector(fixture, 'empty-seeds', 'uint32', []);
-    const search = new GPUGraphBreadthFirstSearch({...props, seeds, maxDepth: 0});
+    const search = new GPUGraphAlgorithmsBreadthFirstSearch({...props, seeds, maxDepth: 0});
 
     expect(search.seeds.data).toEqual([]);
     expect(search.distances.length).toBe(0);
@@ -103,7 +103,7 @@ describe('GPUGraphBreadthFirstSearch public API and caller ownership', () => {
   });
 });
 
-describe('GPUGraphBreadthFirstSearch direction and depth contracts', () => {
+describe('GPUGraphAlgorithmsBreadthFirstSearch direction and depth contracts', () => {
   test.each([
     'outgoing',
     'incoming',
@@ -112,7 +112,9 @@ describe('GPUGraphBreadthFirstSearch direction and depth contracts', () => {
     const fixture = createSearchFixture();
     const props = createSearchProps(fixture, {reverse: true});
 
-    expect(new GPUGraphBreadthFirstSearch({...props, direction}).direction).toBe(direction);
+    expect(new GPUGraphAlgorithmsBreadthFirstSearch({...props, direction}).direction).toBe(
+      direction
+    );
   });
 
   test.each([
@@ -123,7 +125,9 @@ describe('GPUGraphBreadthFirstSearch direction and depth contracts', () => {
     const fixture = createSearchFixture();
     const props = createSearchProps(fixture, {directed: false});
 
-    expect(new GPUGraphBreadthFirstSearch({...props, direction}).direction).toBe(direction);
+    expect(new GPUGraphAlgorithmsBreadthFirstSearch({...props, direction}).direction).toBe(
+      direction
+    );
   });
 
   test.each([
@@ -133,7 +137,7 @@ describe('GPUGraphBreadthFirstSearch direction and depth contracts', () => {
     const fixture = createSearchFixture();
     const props = createSearchProps(fixture);
 
-    expect(() => new GPUGraphBreadthFirstSearch({...props, direction})).toThrow(
+    expect(() => new GPUGraphAlgorithmsBreadthFirstSearch({...props, direction})).toThrow(
       /direction|incoming|both|reverse|directed/
     );
   });
@@ -145,16 +149,18 @@ describe('GPUGraphBreadthFirstSearch direction and depth contracts', () => {
   ])('rejects unsupported traversal direction: %s', invalidDirection => {
     const fixture = createSearchFixture();
     const props = createSearchProps(fixture, {reverse: true});
-    const direction = invalidDirection as GPUGraphBreadthFirstSearchDirection;
+    const direction = invalidDirection as GPUGraphAlgorithmsBreadthFirstSearchDirection;
 
-    expect(() => new GPUGraphBreadthFirstSearch({...props, direction})).toThrow(/direction/);
+    expect(() => new GPUGraphAlgorithmsBreadthFirstSearch({...props, direction})).toThrow(
+      /direction/
+    );
   });
 
   test.each([0, 1, 1024])('accepts a bounded maximum traversal depth: %i', maxDepth => {
     const fixture = createSearchFixture();
     const props = createSearchProps(fixture);
 
-    expect(new GPUGraphBreadthFirstSearch({...props, maxDepth}).maxDepth).toBe(maxDepth);
+    expect(new GPUGraphAlgorithmsBreadthFirstSearch({...props, maxDepth}).maxDepth).toBe(maxDepth);
   });
 
   test.each([
@@ -167,13 +173,13 @@ describe('GPUGraphBreadthFirstSearch direction and depth contracts', () => {
     const fixture = createSearchFixture();
     const props = createSearchProps(fixture);
 
-    expect(() => new GPUGraphBreadthFirstSearch({...props, maxDepth})).toThrow(
+    expect(() => new GPUGraphAlgorithmsBreadthFirstSearch({...props, maxDepth})).toThrow(
       /maxDepth|depth|1024/
     );
   });
 });
 
-describe('GPUGraphBreadthFirstSearch vector and control validation', () => {
+describe('GPUGraphAlgorithmsBreadthFirstSearch vector and control validation', () => {
   test.each([
     'distances',
     'predecessors',
@@ -185,9 +191,9 @@ describe('GPUGraphBreadthFirstSearch vector and control validation', () => {
       new Float32Array(props.topology.graph.vertexCount)
     ]) as unknown as GPUVector<'uint32'>;
 
-    expect(() => new GPUGraphBreadthFirstSearch({...props, [outputName]: wrongFormat})).toThrow(
-      new RegExp(`${outputName}|uint32|packed`)
-    );
+    expect(
+      () => new GPUGraphAlgorithmsBreadthFirstSearch({...props, [outputName]: wrongFormat})
+    ).toThrow(new RegExp(`${outputName}|uint32|packed`));
   });
 
   test.each([
@@ -201,9 +207,9 @@ describe('GPUGraphBreadthFirstSearch vector and control validation', () => {
       new Uint32Array(props.topology.graph.vertexCount - 1)
     ]);
 
-    expect(() => new GPUGraphBreadthFirstSearch({...props, [outputName]: shortOutput})).toThrow(
-      new RegExp(`${outputName}|vertexCount|length`)
-    );
+    expect(
+      () => new GPUGraphAlgorithmsBreadthFirstSearch({...props, [outputName]: shortOutput})
+    ).toThrow(new RegExp(`${outputName}|vertexCount|length`));
   });
 
   test.each([
@@ -218,9 +224,9 @@ describe('GPUGraphBreadthFirstSearch vector and control validation', () => {
       new Uint32Array(3)
     ]);
 
-    expect(() => new GPUGraphBreadthFirstSearch({...props, [outputName]: partitioned})).toThrow(
-      new RegExp(`${outputName}|one|single|chunk`)
-    );
+    expect(
+      () => new GPUGraphAlgorithmsBreadthFirstSearch({...props, [outputName]: partitioned})
+    ).toThrow(new RegExp(`${outputName}|one|single|chunk`));
   });
 
   test.each([
@@ -239,7 +245,7 @@ describe('GPUGraphBreadthFirstSearch vector and control validation', () => {
       options
     );
 
-    expect(() => new GPUGraphBreadthFirstSearch({...props, predecessors})).toThrow(
+    expect(() => new GPUGraphAlgorithmsBreadthFirstSearch({...props, predecessors})).toThrow(
       /predecessors|packed|aligned|uint32/
     );
   });
@@ -251,11 +257,13 @@ describe('GPUGraphBreadthFirstSearch vector and control validation', () => {
       Float32Array.from([0, 1])
     ]) as unknown as GPUVector<'uint32'>;
 
-    expect(() => new GPUGraphBreadthFirstSearch({...props, seeds: wrongFormat})).toThrow(
+    expect(() => new GPUGraphAlgorithmsBreadthFirstSearch({...props, seeds: wrongFormat})).toThrow(
       /seeds|uint32|packed/
     );
     Object.defineProperty(props.seeds.data[1], 'format', {value: 'float32'});
-    expect(() => new GPUGraphBreadthFirstSearch(props)).toThrow(/seeds|uint32|packed|chunk/);
+    expect(() => new GPUGraphAlgorithmsBreadthFirstSearch(props)).toThrow(
+      /seeds|uint32|packed|chunk/
+    );
   });
 
   test.each([
@@ -269,17 +277,17 @@ describe('GPUGraphBreadthFirstSearch vector and control validation', () => {
       const control = createVector(fixture, `${controlName}-${length}`, 'uint32', [
         new Uint32Array(length)
       ]);
-      expect(() => new GPUGraphBreadthFirstSearch({...props, [controlName]: control})).toThrow(
-        new RegExp(`${controlName}|one|scalar|row`)
-      );
+      expect(
+        () => new GPUGraphAlgorithmsBreadthFirstSearch({...props, [controlName]: control})
+      ).toThrow(new RegExp(`${controlName}|one|scalar|row`));
     }
 
     const wrongFormat = createVector(fixture, `${controlName}-float`, 'float32', [
       new Float32Array(1)
     ]) as unknown as GPUVector<'uint32'>;
-    expect(() => new GPUGraphBreadthFirstSearch({...props, [controlName]: wrongFormat})).toThrow(
-      new RegExp(`${controlName}|uint32|packed`)
-    );
+    expect(
+      () => new GPUGraphAlgorithmsBreadthFirstSearch({...props, [controlName]: wrongFormat})
+    ).toThrow(new RegExp(`${controlName}|uint32|packed`));
   });
 
   test('accepts uint32-aligned seed, output, and scalar views at non-256-byte offsets', () => {
@@ -299,7 +307,12 @@ describe('GPUGraphBreadthFirstSearch vector and control validation', () => {
       byteOffset: 4
     });
 
-    const search = new GPUGraphBreadthFirstSearch({...props, seeds, distances, seedCount});
+    const search = new GPUGraphAlgorithmsBreadthFirstSearch({
+      ...props,
+      seeds,
+      distances,
+      seedCount
+    });
     expect(search.seeds.data[0].byteOffset).toBe(4);
     expect(search.distances.data[0].byteOffset).toBe(4);
     expect(search.seedCount?.data[0].byteOffset).toBe(4);
@@ -340,7 +353,7 @@ describe('GPUGraphBreadthFirstSearch vector and control validation', () => {
       buffer: vector.data[0].buffer
     });
 
-    expect(() => new GPUGraphBreadthFirstSearch({...props, distances})).toThrow(
+    expect(() => new GPUGraphAlgorithmsBreadthFirstSearch({...props, distances})).toThrow(
       /distances|distinct|physical|allocation/
     );
   });
@@ -361,9 +374,9 @@ describe('GPUGraphBreadthFirstSearch vector and control validation', () => {
       {buffer: sourceVector.data[0].buffer}
     );
 
-    expect(() => new GPUGraphBreadthFirstSearch({...props, [outputName]: output})).toThrow(
-      /distinct|physical|allocation/
-    );
+    expect(
+      () => new GPUGraphAlgorithmsBreadthFirstSearch({...props, [outputName]: output})
+    ).toThrow(/distinct|physical|allocation/);
   });
 
   test('unwraps borrowed DynamicBuffer objects before checking physical output aliases', () => {
@@ -384,7 +397,7 @@ describe('GPUGraphBreadthFirstSearch vector and control validation', () => {
       {buffer: dynamicBuffer}
     );
 
-    expect(() => new GPUGraphBreadthFirstSearch({...props, distances})).toThrow(
+    expect(() => new GPUGraphAlgorithmsBreadthFirstSearch({...props, distances})).toThrow(
       /distinct|physical|allocation/
     );
     expect(concreteBuffer.destroyed).toBe(false);
@@ -407,7 +420,7 @@ function createSearchProps(
     mask?: boolean;
     controls?: boolean;
   } = {}
-): GPUGraphBreadthFirstSearchProps {
+): GPUGraphAlgorithmsBreadthFirstSearchProps {
   const vertexCount = options.vertexCount ?? 6;
   const sourceVertices = createVector(fixture, 'sourceVertices', 'uint32', [
     Uint32Array.from([0, 2]),
@@ -433,7 +446,7 @@ function createSearchProps(
         Uint32Array.from([30, 40, 50])
       ])
     : undefined;
-  const graph = new GPUGraph({
+  const graph = new GPUGraphAlgorithmsData({
     vertexCount,
     sourceVertices,
     targetVertices,
@@ -448,7 +461,7 @@ function createSearchProps(
   const invalidEdgeCount = createVector(fixture, 'invalidEdgeCount', 'uint32', [
     new Uint32Array(1)
   ]);
-  const topology = new GPUGraphTopology({graph, forward, reverse, invalidEdgeCount});
+  const topology = new GPUGraphAlgorithmsTopology({graph, forward, reverse, invalidEdgeCount});
   const seeds = createVector(fixture, 'seeds', 'uint32', [
     Uint32Array.from([0, 3]),
     new Uint32Array(0),
@@ -476,7 +489,7 @@ function createAdjacency(
   vertexCount: number,
   capacity: number,
   weighted = false
-): GPUGraphAdjacency {
+): GPUGraphAlgorithmsAdjacency {
   return {
     offsets: createVector(fixture, `${name}-offsets`, 'uint32', [new Uint32Array(vertexCount + 1)]),
     neighbors: createVector(fixture, `${name}-neighbors`, 'uint32', [new Uint32Array(capacity)]),
@@ -489,7 +502,10 @@ function createAdjacency(
   };
 }
 
-function getSearchInputVector(props: GPUGraphBreadthFirstSearchProps, name: string): GPUVector {
+function getSearchInputVector(
+  props: GPUGraphAlgorithmsBreadthFirstSearchProps,
+  name: string
+): GPUVector {
   if (name === 'seeds') return props.seeds;
   if (name === 'seedCount') return props.seedCount!;
   if (name === 'activeDepth') return props.activeDepth!;
@@ -501,7 +517,7 @@ function getSearchInputVector(props: GPUGraphBreadthFirstSearchProps, name: stri
 
   const [direction, vectorName] = name.split('.');
   const adjacency = direction === 'forward' ? props.topology.forward : props.topology.reverse!;
-  return adjacency[vectorName as keyof GPUGraphAdjacency]!;
+  return adjacency[vectorName as keyof GPUGraphAlgorithmsAdjacency]!;
 }
 
 function createVector<Format extends ScalarFormat>(

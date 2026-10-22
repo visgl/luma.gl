@@ -5,15 +5,15 @@
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
-  GPUGraph,
-  GPUGraphLocalClusteringCoefficient,
-  GPUGraphTopology,
-  type GPUGraphAdjacency
-} from '@luma.gl/gpgpu/gpu-graph';
+  GPUGraphAlgorithmsData,
+  GPUGraphAlgorithmsLocalClusteringCoefficient,
+  GPUGraphAlgorithmsTopology,
+  type GPUGraphAlgorithmsAdjacency
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
-import {addGPUGraphLocalClusteringCoefficientToGraphWithDispatchLimit} from '../../src/gpu-graph/gpu-graph-local-clustering-coefficient-internals';
+import {addGPUGraphAlgorithmsLocalClusteringCoefficientToGraphWithDispatchLimit} from '../../src/gpu-graph-algorithms/gpu-graph-local-clustering-coefficient-internals';
 
 const INVALID_TRIANGLE_COUNT = 0xffffffff;
 
@@ -49,9 +49,9 @@ type ClusteringExecutionFixture = {
   device: Device;
   buffers: Buffer[];
   vectors: GPUVector[];
-  graph: GPUGraph;
-  topology: GPUGraphTopology;
-  clustering: GPUGraphLocalClusteringCoefficient;
+  graph: GPUGraphAlgorithmsData;
+  topology: GPUGraphAlgorithmsTopology;
+  clustering: GPUGraphAlgorithmsLocalClusteringCoefficient;
   commandGraph: GPUCommandGraph;
   compiled?: ReturnType<GPUCommandGraph['compile']>;
 };
@@ -192,7 +192,7 @@ const clusteringScenarios: ClusteringScenario[] = [
 ];
 
 for (const scenario of clusteringScenarios) {
-  it(`GPUGraphLocalClusteringCoefficient GPU: ${scenario.name}`, async () => {
+  it(`GPUGraphAlgorithmsLocalClusteringCoefficient GPU: ${scenario.name}`, async () => {
     const device = await getWebGPUTestDevice();
     if (!device) {
       return;
@@ -228,7 +228,7 @@ for (const scenario of clusteringScenarios) {
   });
 }
 
-it('GPUGraphLocalClusteringCoefficient rebuilds exact triangles after source updates', async () => {
+it('GPUGraphAlgorithmsLocalClusteringCoefficient rebuilds exact triangles after source updates', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     return;
@@ -366,7 +366,7 @@ function createExecutionFixture(
   const edgeWeights = scenario.weightChunks
     ? createInputVector(device, buffers, vectors, 'weights', 'float32', scenario.weightChunks)
     : undefined;
-  const graph = new GPUGraph({
+  const graph = new GPUGraphAlgorithmsData({
     vertexCount: scenario.vertexCount,
     sourceVertices,
     targetVertices,
@@ -404,7 +404,7 @@ function createExecutionFixture(
     'uint32',
     1
   );
-  const topology = new GPUGraphTopology({graph, forward, reverse, invalidEdgeCount});
+  const topology = new GPUGraphAlgorithmsTopology({graph, forward, reverse, invalidEdgeCount});
   const output = createOutputVector(
     device,
     buffers,
@@ -426,7 +426,11 @@ function createExecutionFixture(
           scenario.vertexCount,
           scenario.byteOffset
         );
-  const clustering = new GPUGraphLocalClusteringCoefficient({topology, output, triangles});
+  const clustering = new GPUGraphAlgorithmsLocalClusteringCoefficient({
+    topology,
+    output,
+    triangles
+  });
 
   return {
     device,
@@ -471,7 +475,7 @@ function createOutputAdjacency(
   capacity: number,
   weighted: boolean,
   byteOffset = 0
-): GPUGraphAdjacency {
+): GPUGraphAlgorithmsAdjacency {
   return {
     offsets: createOutputVector(
       device,
@@ -532,7 +536,7 @@ function compileClustering(fixture: ClusteringExecutionFixture, maximumWorkgroup
   if (maximumWorkgroups === undefined) {
     fixture.clustering.addToGraph(fixture.commandGraph);
   } else {
-    addGPUGraphLocalClusteringCoefficientToGraphWithDispatchLimit(
+    addGPUGraphAlgorithmsLocalClusteringCoefficientToGraphWithDispatchLimit(
       fixture.clustering,
       fixture.commandGraph,
       maximumWorkgroups

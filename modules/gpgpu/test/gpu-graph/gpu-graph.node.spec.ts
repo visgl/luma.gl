@@ -6,8 +6,8 @@ import {readFileSync} from 'node:fs';
 
 import {Buffer} from '@luma.gl/core';
 import * as experimentalModule from '@luma.gl/experimental';
-import * as gpuGraphModule from '@luma.gl/gpgpu/gpu-graph';
-import {GPUGraph} from '@luma.gl/gpgpu/gpu-graph';
+import * as gpuGraphModule from '@luma.gl/gpgpu/gpu-graph-algorithms';
+import {GPUGraphAlgorithmsData} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/experimental/gpu-tables';
 import {NullDevice} from '@luma.gl/test-utils';
@@ -54,7 +54,7 @@ afterEach(() => {
   }
 });
 
-describe('@luma.gl/gpgpu/gpu-graph package boundary', () => {
+describe('@luma.gl/gpgpu/gpu-graph-algorithms package boundary', () => {
   test('publishes an optional, side-effect-free conditional export without Apache Arrow', () => {
     const packageJson = JSON.parse(
       readFileSync(new URL('../../package.json', import.meta.url), 'utf8')
@@ -69,10 +69,10 @@ describe('@luma.gl/gpgpu/gpu-graph package boundary', () => {
 
     expect(packageJson.name).toBe('@luma.gl/gpgpu');
     expect(packageJson.sideEffects).toBe(false);
-    expect(packageJson.exports?.['./gpu-graph']).toEqual({
-      import: './dist/gpu-graph/index.js',
-      require: './dist/gpu-graph/index.cjs',
-      types: './dist/gpu-graph/index.d.ts'
+    expect(packageJson.exports?.['./gpu-graph-algorithms']).toEqual({
+      import: './dist/gpu-graph-algorithms/index.js',
+      require: './dist/gpu-graph-algorithms/index.cjs',
+      types: './dist/gpu-graph-algorithms/index.d.ts'
     });
     for (const dependencies of [
       packageJson.dependencies,
@@ -83,7 +83,7 @@ describe('@luma.gl/gpgpu/gpu-graph package boundary', () => {
     }
     for (const sourceFile of ['index.ts', 'gpu-graph.ts']) {
       const source = readFileSync(
-        new URL(`../../src/gpu-graph/${sourceFile}`, import.meta.url),
+        new URL(`../../src/gpu-graph-algorithms/${sourceFile}`, import.meta.url),
         'utf8'
       );
       expect(source).not.toMatch(/['"]apache-arrow['"]/);
@@ -91,12 +91,12 @@ describe('@luma.gl/gpgpu/gpu-graph package boundary', () => {
   });
 
   test('keeps graph runtime exports isolated from the root experimental entry point', () => {
-    expect(gpuGraphModule.GPUGraph).toBe(GPUGraph);
-    expect('GPUGraph' in experimentalModule).toBe(false);
+    expect(gpuGraphModule.GPUGraphAlgorithmsData).toBe(GPUGraphAlgorithmsData);
+    expect('GPUGraphAlgorithmsData' in experimentalModule).toBe(false);
   });
 });
 
-describe('GPUGraph caller-owned graph representation', () => {
+describe('GPUGraphAlgorithmsData caller-owned graph representation', () => {
   test('retains exact edge chunks, buffers, stable identities, record batches, and source metadata', () => {
     const fixture = createGraphFixture();
     const columns = createGraphColumns(fixture);
@@ -104,7 +104,7 @@ describe('GPUGraph caller-owned graph representation', () => {
     const nodeAttributes = createPropertyTable(fixture, 'nodeScore', 'float32', [
       new Float32Array(8)
     ]);
-    const graph = new GPUGraph({
+    const graph = new GPUGraphAlgorithmsData({
       vertexCount: 8,
       ...columns,
       nodeAttributes,
@@ -151,7 +151,7 @@ describe('GPUGraph caller-owned graph representation', () => {
   test('retains explicit directedness without symmetrizing or changing edge identities', () => {
     const fixture = createGraphFixture();
     const {sourceVertices, targetVertices, edgeIds} = createGraphColumns(fixture);
-    const graph = new GPUGraph({
+    const graph = new GPUGraphAlgorithmsData({
       vertexCount: 8,
       sourceVertices,
       targetVertices,
@@ -170,9 +170,13 @@ describe('GPUGraph caller-owned graph representation', () => {
     const fixture = createGraphFixture();
     const sourceVertices = createGraphVector(fixture, 'emptySources', 'uint32', []);
     const targetVertices = createGraphVector(fixture, 'emptyTargets', 'uint32', []);
-    const empty = new GPUGraph({vertexCount: 0, sourceVertices, targetVertices});
-    const isolated = new GPUGraph({vertexCount: 9, sourceVertices, targetVertices});
-    const maximum = new GPUGraph({vertexCount: 0xfffffffe, sourceVertices, targetVertices});
+    const empty = new GPUGraphAlgorithmsData({vertexCount: 0, sourceVertices, targetVertices});
+    const isolated = new GPUGraphAlgorithmsData({vertexCount: 9, sourceVertices, targetVertices});
+    const maximum = new GPUGraphAlgorithmsData({
+      vertexCount: 0xfffffffe,
+      sourceVertices,
+      targetVertices
+    });
 
     expect(empty.vertexCount).toBe(0);
     expect(empty.edgeCount).toBe(0);
@@ -195,7 +199,7 @@ describe('GPUGraph caller-owned graph representation', () => {
     const mappedReadbackSpies = fixture.buffers.map(buffer => vi.spyOn(buffer, 'mapAndReadAsync'));
     const writeSpies = fixture.buffers.map(buffer => vi.spyOn(buffer, 'write'));
 
-    const graph = new GPUGraph({vertexCount: 8, ...columns, edgeAttributes});
+    const graph = new GPUGraphAlgorithmsData({vertexCount: 8, ...columns, edgeAttributes});
 
     expect(graph.edgeCount).toBe(5);
     expect(createBufferSpy).not.toHaveBeenCalled();
@@ -224,7 +228,7 @@ describe('GPUGraph caller-owned graph representation', () => {
     );
     const sourceBuffer = sourceVertices.data[0].buffer;
     const targetBuffer = targetVertices.data[0].buffer;
-    const graph = new GPUGraph({vertexCount: 3, sourceVertices, targetVertices});
+    const graph = new GPUGraphAlgorithmsData({vertexCount: 3, sourceVertices, targetVertices});
 
     expect(Reflect.has(graph, 'destroy')).toBe(false);
     expect(sourceBuffer.destroyed).toBe(false);
@@ -239,7 +243,7 @@ describe('GPUGraph caller-owned graph representation', () => {
   });
 });
 
-describe('GPUGraph bounded graph validation', () => {
+describe('GPUGraphAlgorithmsData bounded graph validation', () => {
   test.each([
     -1,
     1.5,
@@ -252,7 +256,7 @@ describe('GPUGraph bounded graph validation', () => {
     const sourceVertices = createGraphVector(fixture, 'sources', 'uint32', []);
     const targetVertices = createGraphVector(fixture, 'targets', 'uint32', []);
 
-    expect(() => new GPUGraph({vertexCount, sourceVertices, targetVertices})).toThrow(
+    expect(() => new GPUGraphAlgorithmsData({vertexCount, sourceVertices, targetVertices})).toThrow(
       /vertexCount.*uint32/
     );
   });
@@ -266,9 +270,9 @@ describe('GPUGraph bounded graph validation', () => {
     targetVertices.length = 0x100000000;
     targetVertices.valueLength = 0x100000000;
 
-    expect(() => new GPUGraph({vertexCount: 2, sourceVertices, targetVertices})).toThrow(
-      /edgeCount.*uint32/
-    );
+    expect(
+      () => new GPUGraphAlgorithmsData({vertexCount: 2, sourceVertices, targetVertices})
+    ).toThrow(/edgeCount.*uint32/);
   });
 
   test('rejects non-uint32 source and target vertex formats', () => {
@@ -281,7 +285,7 @@ describe('GPUGraph bounded graph validation', () => {
 
     expect(
       () =>
-        new GPUGraph({
+        new GPUGraphAlgorithmsData({
           vertexCount: 2,
           sourceVertices: asVertexVector(signedVertices),
           targetVertices
@@ -289,7 +293,7 @@ describe('GPUGraph bounded graph validation', () => {
     ).toThrow(/sourceVertices.*uint32/);
     expect(
       () =>
-        new GPUGraph({
+        new GPUGraphAlgorithmsData({
           vertexCount: 2,
           sourceVertices,
           targetVertices: asVertexVector(signedVertices)
@@ -303,7 +307,7 @@ describe('GPUGraph bounded graph validation', () => {
 
     expect(
       () =>
-        new GPUGraph({
+        new GPUGraphAlgorithmsData({
           vertexCount: 8,
           sourceVertices,
           targetVertices,
@@ -312,7 +316,7 @@ describe('GPUGraph bounded graph validation', () => {
     ).toThrow(/edgeWeights.*float32/);
     expect(
       () =>
-        new GPUGraph({
+        new GPUGraphAlgorithmsData({
           vertexCount: 8,
           sourceVertices,
           targetVertices,
@@ -344,9 +348,9 @@ describe('GPUGraph bounded graph validation', () => {
       Uint32Array.from([1, 2])
     ]);
 
-    expect(() => new GPUGraph({vertexCount: 3, sourceVertices, targetVertices})).toThrow(
-      /sourceVertices.*packed/
-    );
+    expect(
+      () => new GPUGraphAlgorithmsData({vertexCount: 3, sourceVertices, targetVertices})
+    ).toThrow(/sourceVertices.*packed/);
   });
 
   test('rejects a malformed format on an otherwise empty preserved edge chunk', () => {
@@ -354,9 +358,9 @@ describe('GPUGraph bounded graph validation', () => {
     const {sourceVertices, targetVertices} = createGraphColumns(fixture);
     Object.defineProperty(sourceVertices.data[1], 'format', {value: 'float32'});
 
-    expect(() => new GPUGraph({vertexCount: 8, sourceVertices, targetVertices})).toThrow(
-      /sourceVertices.*uint32.*chunks/
-    );
+    expect(
+      () => new GPUGraphAlgorithmsData({vertexCount: 8, sourceVertices, targetVertices})
+    ).toThrow(/sourceVertices.*uint32.*chunks/);
   });
 
   test.each([
@@ -373,9 +377,9 @@ describe('GPUGraph bounded graph validation', () => {
       chunkLengths.map(chunkLength => new Uint32Array(chunkLength))
     );
 
-    expect(() => new GPUGraph({vertexCount: 8, sourceVertices, targetVertices})).toThrow(
-      /targetVertices.*chunk topology/
-    );
+    expect(
+      () => new GPUGraphAlgorithmsData({vertexCount: 8, sourceVertices, targetVertices})
+    ).toThrow(/targetVertices.*chunk topology/);
   });
 
   test('requires edge weights and stable IDs to preserve every source chunk boundary', () => {
@@ -393,7 +397,7 @@ describe('GPUGraph bounded graph validation', () => {
 
     expect(
       () =>
-        new GPUGraph({
+        new GPUGraphAlgorithmsData({
           vertexCount: 8,
           sourceVertices,
           targetVertices,
@@ -402,7 +406,12 @@ describe('GPUGraph bounded graph validation', () => {
     ).toThrow(/edgeWeights.*chunk topology/);
     expect(
       () =>
-        new GPUGraph({vertexCount: 8, sourceVertices, targetVertices, edgeIds: mismatchedEdgeIds})
+        new GPUGraphAlgorithmsData({
+          vertexCount: 8,
+          sourceVertices,
+          targetVertices,
+          edgeIds: mismatchedEdgeIds
+        })
     ).toThrow(/edgeIds.*chunk topology/);
   });
 
@@ -420,7 +429,7 @@ describe('GPUGraph bounded graph validation', () => {
 
     expect(
       () =>
-        new GPUGraph({
+        new GPUGraphAlgorithmsData({
           vertexCount: 8,
           sourceVertices,
           targetVertices,
@@ -429,7 +438,7 @@ describe('GPUGraph bounded graph validation', () => {
     ).toThrow(/nodeAttributes.*one row per vertex/);
     expect(
       () =>
-        new GPUGraph({
+        new GPUGraphAlgorithmsData({
           vertexCount: 8,
           sourceVertices,
           targetVertices,
@@ -452,7 +461,8 @@ describe('GPUGraph bounded graph validation', () => {
     );
 
     expect(
-      () => new GPUGraph({vertexCount: 8, sourceVertices, targetVertices, edgeAttributes})
+      () =>
+        new GPUGraphAlgorithmsData({vertexCount: 8, sourceVertices, targetVertices, edgeAttributes})
     ).toThrow(/edgeAttributes.*batch topology/);
   });
 
@@ -464,7 +474,12 @@ describe('GPUGraph bounded graph validation', () => {
       new Float32Array(0),
       new Float32Array(3)
     ]);
-    const graph = new GPUGraph({vertexCount: 8, sourceVertices, targetVertices, edgeAttributes});
+    const graph = new GPUGraphAlgorithmsData({
+      vertexCount: 8,
+      sourceVertices,
+      targetVertices,
+      edgeAttributes
+    });
 
     expect(graph.edgeAttributes).toBe(edgeAttributes);
     expect(graph.sourceEdgeBatches).toBe(edgeAttributes.batches);
@@ -479,7 +494,7 @@ describe('GPUGraph bounded graph validation', () => {
       sourceVertices: replacements.sourceVertices
     });
 
-    expect(() => new GPUGraph({vertexCount: 8, ...original, edgeAttributes})).toThrow(
+    expect(() => new GPUGraphAlgorithmsData({vertexCount: 8, ...original, edgeAttributes})).toThrow(
       /edgeAttributes sourceVertices.*source edge data/
     );
   });
@@ -490,7 +505,12 @@ describe('GPUGraph bounded graph validation', () => {
     const sourceVertices = renameGraphVector(fixture, original.sourceVertices, 'fromVertex');
     const targetVertices = renameGraphVector(fixture, original.targetVertices, 'toVertex');
     const edgeAttributes = createNamedEndpointTable(fixture, sourceVertices, targetVertices);
-    const graph = new GPUGraph({vertexCount: 8, sourceVertices, targetVertices, edgeAttributes});
+    const graph = new GPUGraphAlgorithmsData({
+      vertexCount: 8,
+      sourceVertices,
+      targetVertices,
+      edgeAttributes
+    });
 
     expect(graph.sourceVertices.name).toBe('fromVertex');
     expect(graph.targetVertices.name).toBe('toVertex');
@@ -518,7 +538,8 @@ describe('GPUGraph bounded graph validation', () => {
     const edgeAttributes = createNamedEndpointTable(fixture, tableSources, tableTargets);
 
     expect(
-      () => new GPUGraph({vertexCount: 8, sourceVertices, targetVertices, edgeAttributes})
+      () =>
+        new GPUGraphAlgorithmsData({vertexCount: 8, sourceVertices, targetVertices, edgeAttributes})
     ).toThrow(new RegExp(`edgeAttributes ${customName}.*source edge data`));
   });
 });

@@ -9,7 +9,7 @@ import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-cont
 
 `GPUTextureHistory` owns exactly two descriptor-identical, caller-configured textures and rotates
 their previous/current roles without copying texels. Its bindings plug directly into
-[`GPUCommandGraph.encode()`](/docs/api-reference/experimental/gpu-core/gpu-command-graph#compiledgpucommandgraph),
+[`CompiledGPUGraph.encode()`](/docs/api-reference/experimental/gpu-core/gpu-command-graph#compiledgpugraph),
 allowing one compiled graph to reuse retained radiance, temporal metadata, simulation state, or
 feedback buffers across frames.
 

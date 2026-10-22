@@ -5,18 +5,18 @@
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
-  GPUGraph,
-  GPUGraphConnectedComponents,
-  GPUGraphTopology,
-  type GPUGraphAdjacency
-} from '@luma.gl/gpgpu/gpu-graph';
+  GPUGraphAlgorithmsData,
+  GPUGraphAlgorithmsConnectedComponents,
+  GPUGraphAlgorithmsTopology,
+  type GPUGraphAlgorithmsAdjacency
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
 import {
-  addGPUGraphConnectedComponentsToGraphWithDispatchLimit,
-  getGPUGraphConnectedComponentsDispatchLayout
-} from '../../src/gpu-graph/gpu-graph-connected-components-internals';
+  addGPUGraphAlgorithmsConnectedComponentsToGraphWithDispatchLimit,
+  getGPUGraphAlgorithmsConnectedComponentsDispatchLayout
+} from '../../src/gpu-graph-algorithms/gpu-graph-connected-components-internals';
 
 const INVALID_COMPONENT = 0xffffffff;
 
@@ -54,9 +54,9 @@ type ComponentsExecutionFixture = {
   device: Device;
   buffers: Buffer[];
   vectors: GPUVector[];
-  graph: GPUGraph;
-  topology: GPUGraphTopology;
-  components: GPUGraphConnectedComponents;
+  graph: GPUGraphAlgorithmsData;
+  topology: GPUGraphAlgorithmsTopology;
+  components: GPUGraphAlgorithmsConnectedComponents;
   commandGraph: GPUCommandGraph;
   compiled?: ReturnType<GPUCommandGraph['compile']>;
 };
@@ -198,16 +198,30 @@ const componentsScenarios: ComponentsScenario[] = [
   }
 ];
 
-it('GPUGraphConnectedComponents plans bounded three-dimensional vertex dispatch', () => {
-  expect(getGPUGraphConnectedComponentsDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
-  expect(getGPUGraphConnectedComponentsDispatchLayout(512, 2)).toEqual({x: 2, y: 1, z: 1});
-  expect(getGPUGraphConnectedComponentsDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
-  expect(getGPUGraphConnectedComponentsDispatchLayout(1025, 2)).toEqual({x: 2, y: 2, z: 2});
-  expect(() => getGPUGraphConnectedComponentsDispatchLayout(2049, 2)).toThrow(/3D dispatch limit/);
+it('GPUGraphAlgorithmsConnectedComponents plans bounded three-dimensional vertex dispatch', () => {
+  expect(getGPUGraphAlgorithmsConnectedComponentsDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
+  expect(getGPUGraphAlgorithmsConnectedComponentsDispatchLayout(512, 2)).toEqual({
+    x: 2,
+    y: 1,
+    z: 1
+  });
+  expect(getGPUGraphAlgorithmsConnectedComponentsDispatchLayout(513, 2)).toEqual({
+    x: 2,
+    y: 2,
+    z: 1
+  });
+  expect(getGPUGraphAlgorithmsConnectedComponentsDispatchLayout(1025, 2)).toEqual({
+    x: 2,
+    y: 2,
+    z: 2
+  });
+  expect(() => getGPUGraphAlgorithmsConnectedComponentsDispatchLayout(2049, 2)).toThrow(
+    /3D dispatch limit/
+  );
 });
 
 for (const scenario of componentsScenarios) {
-  it(`GPUGraphConnectedComponents GPU labeling: ${scenario.name}`, async () => {
+  it(`GPUGraphAlgorithmsConnectedComponents GPU labeling: ${scenario.name}`, async () => {
     const device = await getWebGPUTestDevice();
     if (!device) {
       return;
@@ -235,7 +249,7 @@ for (const scenario of componentsScenarios) {
   });
 }
 
-it('GPUGraphConnectedComponents rebuilds weak labels after source updates without hidden execution', async () => {
+it('GPUGraphAlgorithmsConnectedComponents rebuilds weak labels after source updates without hidden execution', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     return;
@@ -366,7 +380,7 @@ function createExecutionFixture(
         scenario.weightChunks
       )
     : undefined;
-  const graph = new GPUGraph({
+  const graph = new GPUGraphAlgorithmsData({
     vertexCount: scenario.vertexCount,
     sourceVertices,
     targetVertices,
@@ -403,7 +417,7 @@ function createExecutionFixture(
     'uint32',
     1
   );
-  const topology = new GPUGraphTopology({graph, forward, reverse, invalidEdgeCount});
+  const topology = new GPUGraphAlgorithmsTopology({graph, forward, reverse, invalidEdgeCount});
   const output = createOutputVector(
     device,
     buffers,
@@ -425,7 +439,7 @@ function createExecutionFixture(
           1,
           scenario.byteOffset
         );
-  const components = new GPUGraphConnectedComponents({
+  const components = new GPUGraphAlgorithmsConnectedComponents({
     topology,
     output,
     iterations: scenario.iterations,
@@ -475,7 +489,7 @@ function createOutputAdjacency(
   capacity: number,
   weighted: boolean,
   byteOffset = 0
-): GPUGraphAdjacency {
+): GPUGraphAlgorithmsAdjacency {
   return {
     offsets: createOutputVector(
       device,
@@ -536,7 +550,7 @@ function compileComponents(fixture: ComponentsExecutionFixture, maximumWorkgroup
   if (maximumWorkgroups === undefined) {
     fixture.components.addToGraph(fixture.commandGraph);
   } else {
-    addGPUGraphConnectedComponentsToGraphWithDispatchLimit(
+    addGPUGraphAlgorithmsConnectedComponentsToGraphWithDispatchLimit(
       fixture.components,
       fixture.commandGraph,
       maximumWorkgroups

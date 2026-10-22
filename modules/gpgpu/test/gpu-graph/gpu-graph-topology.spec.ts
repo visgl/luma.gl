@@ -4,11 +4,15 @@
 
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
-import {GPUGraph, GPUGraphTopology, type GPUGraphAdjacency} from '@luma.gl/gpgpu/gpu-graph';
+import {
+  GPUGraphAlgorithmsData,
+  GPUGraphAlgorithmsTopology,
+  type GPUGraphAlgorithmsAdjacency
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it} from 'vitest';
-import {addGPUGraphTopologyToGraphWithDispatchLimit} from '../../src/gpu-graph/gpu-graph-topology-internals';
+import {addGPUGraphAlgorithmsTopologyToGraphWithDispatchLimit} from '../../src/gpu-graph-algorithms/gpu-graph-topology-internals';
 
 type ScalarFormat = 'uint32' | 'float32';
 type ScalarValues = Uint32Array | Float32Array;
@@ -58,8 +62,8 @@ type ExecutionFixture = {
   device: Device;
   buffers: Buffer[];
   vectors: GPUVector[];
-  graph: GPUGraph;
-  topology: GPUGraphTopology;
+  graph: GPUGraphAlgorithmsData;
+  topology: GPUGraphAlgorithmsTopology;
   commandGraph: GPUCommandGraph;
   compiled?: ReturnType<GPUCommandGraph['compile']>;
 };
@@ -165,7 +169,7 @@ const topologyScenarios: TopologyScenario[] = [
 ];
 
 for (const scenario of topologyScenarios) {
-  it(`GPUGraphTopology GPU CSR: ${scenario.name}`, async () => {
+  it(`GPUGraphAlgorithmsTopology GPU CSR: ${scenario.name}`, async () => {
     const device = await getWebGPUTestDevice();
     if (!device) {
       return;
@@ -187,7 +191,7 @@ for (const scenario of topologyScenarios) {
   });
 }
 
-it('GPUGraphTopology rebuilds overflow, invalid edges, and weighted reverse CSR on every encoding', async () => {
+it('GPUGraphAlgorithmsTopology rebuilds overflow, invalid edges, and weighted reverse CSR on every encoding', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     return;
@@ -324,7 +328,7 @@ function createExecutionFixture(
         scenario.edgeWeightChunks
       )
     : undefined;
-  const graph = new GPUGraph({
+  const graph = new GPUGraphAlgorithmsData({
     vertexCount: scenario.vertexCount,
     sourceVertices,
     targetVertices,
@@ -360,7 +364,7 @@ function createExecutionFixture(
     'uint32',
     1
   );
-  const topology = new GPUGraphTopology({graph, forward, reverse, invalidEdgeCount});
+  const topology = new GPUGraphAlgorithmsTopology({graph, forward, reverse, invalidEdgeCount});
 
   return {device, buffers, vectors, graph, topology, commandGraph: new GPUCommandGraph(device)};
 }
@@ -397,7 +401,7 @@ function createOutputAdjacency(
   vertexCount: number,
   capacity: number,
   weighted: boolean
-): GPUGraphAdjacency {
+): GPUGraphAlgorithmsAdjacency {
   return {
     offsets: createOutputVector(
       device,
@@ -454,7 +458,7 @@ function compileTopology(fixture: ExecutionFixture, maximumWorkgroups?: number):
   if (maximumWorkgroups === undefined) {
     fixture.topology.addToGraph(fixture.commandGraph);
   } else {
-    addGPUGraphTopologyToGraphWithDispatchLimit(
+    addGPUGraphAlgorithmsTopologyToGraphWithDispatchLimit(
       fixture.topology,
       fixture.commandGraph,
       maximumWorkgroups
@@ -485,7 +489,7 @@ async function assertTopology(
 
 async function assertAdjacency(
   name: string,
-  adjacency: GPUGraphAdjacency,
+  adjacency: GPUGraphAlgorithmsAdjacency,
   expected: ExpectedAdjacency
 ): Promise<void> {
   const result = await readAdjacency(adjacency);
@@ -553,7 +557,7 @@ function compareAdjacencyRecords(left: AdjacencyRecord, right: AdjacencyRecord):
   );
 }
 
-async function readAdjacency(adjacency: GPUGraphAdjacency): Promise<ReadAdjacency> {
+async function readAdjacency(adjacency: GPUGraphAlgorithmsAdjacency): Promise<ReadAdjacency> {
   const [offsets, neighbors, edgeIds, edgeWeights, count, overflow] = await Promise.all([
     readUint32Vector(adjacency.offsets),
     readUint32Vector(adjacency.neighbors),

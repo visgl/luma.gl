@@ -5,18 +5,18 @@
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
-  GPUGraph,
-  GPUGraphCoreNumber,
-  GPUGraphTopology,
-  type GPUGraphAdjacency
-} from '@luma.gl/gpgpu/gpu-graph';
+  GPUGraphAlgorithmsData,
+  GPUGraphAlgorithmsCoreNumber,
+  GPUGraphAlgorithmsTopology,
+  type GPUGraphAlgorithmsAdjacency
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
 import {
-  addGPUGraphCoreNumberToGraphWithDispatchLimit,
-  getGPUGraphCoreNumberDispatchLayout
-} from '../../src/gpu-graph/gpu-graph-core-number-internals';
+  addGPUGraphAlgorithmsCoreNumberToGraphWithDispatchLimit,
+  getGPUGraphAlgorithmsCoreNumberDispatchLayout
+} from '../../src/gpu-graph-algorithms/gpu-graph-core-number-internals';
 
 const INVALID_CORE_NUMBER = 0xffffffff;
 
@@ -55,9 +55,9 @@ type CoreNumberExecutionFixture = {
   device: Device;
   buffers: Buffer[];
   vectors: GPUVector[];
-  graph: GPUGraph;
-  topology: GPUGraphTopology;
-  operation: GPUGraphCoreNumber;
+  graph: GPUGraphAlgorithmsData;
+  topology: GPUGraphAlgorithmsTopology;
+  operation: GPUGraphAlgorithmsCoreNumber;
   commandGraph: GPUCommandGraph;
   compiled?: ReturnType<GPUCommandGraph['compile']>;
 };
@@ -244,15 +244,15 @@ const coreNumberScenarios: CoreNumberScenario[] = [
   }
 ];
 
-it('GPUGraphCoreNumber plans bounded three-dimensional graph dispatch', () => {
-  expect(getGPUGraphCoreNumberDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
-  expect(getGPUGraphCoreNumberDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
-  expect(getGPUGraphCoreNumberDispatchLayout(1025, 2)).toEqual({x: 2, y: 2, z: 2});
-  expect(() => getGPUGraphCoreNumberDispatchLayout(2049, 2)).toThrow(/3D dispatch limit/);
+it('GPUGraphAlgorithmsCoreNumber plans bounded three-dimensional graph dispatch', () => {
+  expect(getGPUGraphAlgorithmsCoreNumberDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
+  expect(getGPUGraphAlgorithmsCoreNumberDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
+  expect(getGPUGraphAlgorithmsCoreNumberDispatchLayout(1025, 2)).toEqual({x: 2, y: 2, z: 2});
+  expect(() => getGPUGraphAlgorithmsCoreNumberDispatchLayout(2049, 2)).toThrow(/3D dispatch limit/);
 });
 
 for (const scenario of coreNumberScenarios) {
-  it(`GPUGraphCoreNumber GPU decomposition: ${scenario.name}`, async () => {
+  it(`GPUGraphAlgorithmsCoreNumber GPU decomposition: ${scenario.name}`, async () => {
     const device = await getWebGPUTestDevice();
     if (!device) {
       return;
@@ -270,7 +270,7 @@ for (const scenario of coreNumberScenarios) {
   });
 }
 
-it('GPUGraphCoreNumber rereads caller-owned edge columns on each graph encoding', async () => {
+it('GPUGraphAlgorithmsCoreNumber rereads caller-owned edge columns on each graph encoding', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     return;
@@ -302,7 +302,7 @@ it('GPUGraphCoreNumber rereads caller-owned edge columns on each graph encoding'
   }
 });
 
-it('GPUGraphCoreNumber schedules GPU work without submission or source readback', async () => {
+it('GPUGraphAlgorithmsCoreNumber schedules GPU work without submission or source readback', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     return;
@@ -460,7 +460,7 @@ function createExecutionFixture(
     ? createInputVector(device, buffers, vectors, 'edge-weights', 'float32', scenario.weightChunks)
     : undefined;
   const directed = scenario.directed ?? true;
-  const graph = new GPUGraph({
+  const graph = new GPUGraphAlgorithmsData({
     vertexCount: scenario.vertexCount,
     sourceVertices,
     targetVertices,
@@ -497,7 +497,7 @@ function createExecutionFixture(
     'uint32',
     1
   );
-  const topology = new GPUGraphTopology({graph, forward, reverse, invalidEdgeCount});
+  const topology = new GPUGraphAlgorithmsTopology({graph, forward, reverse, invalidEdgeCount});
   const output = createOutputVector(
     device,
     buffers,
@@ -523,7 +523,7 @@ function createExecutionFixture(
           1,
           scenario.byteOffset
         );
-  const operation = new GPUGraphCoreNumber({
+  const operation = new GPUGraphAlgorithmsCoreNumber({
     topology,
     output,
     iterations: scenario.iterations,
@@ -574,7 +574,7 @@ function createOutputAdjacency(
   capacity: number,
   weighted: boolean,
   byteOffset = 0
-): GPUGraphAdjacency {
+): GPUGraphAlgorithmsAdjacency {
   return {
     offsets: createOutputVector(
       device,
@@ -644,7 +644,7 @@ function compileCoreNumber(fixture: CoreNumberExecutionFixture, maximumWorkgroup
   if (maximumWorkgroups === undefined) {
     fixture.operation.addToGraph(fixture.commandGraph);
   } else {
-    addGPUGraphCoreNumberToGraphWithDispatchLimit(
+    addGPUGraphAlgorithmsCoreNumberToGraphWithDispatchLimit(
       fixture.operation,
       fixture.commandGraph,
       maximumWorkgroups

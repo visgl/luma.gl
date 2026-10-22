@@ -5,20 +5,20 @@
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
-  GPUGraph,
-  GPUGraphLabelPropagation,
-  GPUGraphModularity,
-  GPUGraphModularityOptimization,
-  GPUGraphTopology,
-  type GPUGraphAdjacency
-} from '@luma.gl/gpgpu/gpu-graph';
+  GPUGraphAlgorithmsData,
+  GPUGraphAlgorithmsLabelPropagation,
+  GPUGraphAlgorithmsModularity,
+  GPUGraphAlgorithmsModularityOptimization,
+  GPUGraphAlgorithmsTopology,
+  type GPUGraphAlgorithmsAdjacency
+} from '@luma.gl/gpgpu/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
 import {
-  addGPUGraphModularityOptimizationToGraphWithDispatchLimit,
-  getGPUGraphModularityOptimizationDispatchLayout
-} from '../../src/gpu-graph/gpu-graph-modularity-optimization-internals';
+  addGPUGraphAlgorithmsModularityOptimizationToGraphWithDispatchLimit,
+  getGPUGraphAlgorithmsModularityOptimizationDispatchLayout
+} from '../../src/gpu-graph-algorithms/gpu-graph-modularity-optimization-internals';
 
 const INVALID_COMMUNITY = 0xffffffff;
 const SCORE_TOLERANCE = 2e-5;
@@ -67,9 +67,9 @@ type OptimizationExecutionFixture = {
   device: Device;
   buffers: Buffer[];
   vectors: GPUVector[];
-  graph: GPUGraph;
-  topology: GPUGraphTopology;
-  optimization: GPUGraphModularityOptimization;
+  graph: GPUGraphAlgorithmsData;
+  topology: GPUGraphAlgorithmsTopology;
+  optimization: GPUGraphAlgorithmsModularityOptimization;
   commandGraph: GPUCommandGraph;
   compiled?: ReturnType<GPUCommandGraph['compile']>;
 };
@@ -519,17 +519,29 @@ const optimizationScenarios: OptimizationScenario[] = [
   }
 ];
 
-it('GPUGraphModularityOptimization plans bounded three-dimensional graph dispatch', () => {
-  expect(getGPUGraphModularityOptimizationDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
-  expect(getGPUGraphModularityOptimizationDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
-  expect(getGPUGraphModularityOptimizationDispatchLayout(1025, 2)).toEqual({x: 2, y: 2, z: 2});
-  expect(() => getGPUGraphModularityOptimizationDispatchLayout(2049, 2)).toThrow(
+it('GPUGraphAlgorithmsModularityOptimization plans bounded three-dimensional graph dispatch', () => {
+  expect(getGPUGraphAlgorithmsModularityOptimizationDispatchLayout(0, 2)).toEqual({
+    x: 1,
+    y: 1,
+    z: 1
+  });
+  expect(getGPUGraphAlgorithmsModularityOptimizationDispatchLayout(513, 2)).toEqual({
+    x: 2,
+    y: 2,
+    z: 1
+  });
+  expect(getGPUGraphAlgorithmsModularityOptimizationDispatchLayout(1025, 2)).toEqual({
+    x: 2,
+    y: 2,
+    z: 2
+  });
+  expect(() => getGPUGraphAlgorithmsModularityOptimizationDispatchLayout(2049, 2)).toThrow(
     /3D dispatch limit/
   );
 });
 
 for (const scenario of optimizationScenarios) {
-  it(`GPUGraphModularityOptimization GPU: ${scenario.name}`, async () => {
+  it(`GPUGraphAlgorithmsModularityOptimization GPU: ${scenario.name}`, async () => {
     const device = await getWebGPUTestDevice();
     if (!device) {
       return;
@@ -569,7 +581,7 @@ for (const scenario of optimizationScenarios) {
   });
 }
 
-it('GPUGraphModularityOptimization composes label propagation and baseline scoring on GPU', async () => {
+it('GPUGraphAlgorithmsModularityOptimization composes label propagation and baseline scoring on GPU', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     return;
@@ -596,12 +608,12 @@ it('GPUGraphModularityOptimization composes label propagation and baseline scori
     'float32',
     1
   );
-  const propagation = new GPUGraphLabelPropagation({
+  const propagation = new GPUGraphAlgorithmsLabelPropagation({
     topology: fixture.topology,
     output: seed,
     iterations: 8
   });
-  const baseline = new GPUGraphModularity({
+  const baseline = new GPUGraphAlgorithmsModularity({
     graph: fixture.graph,
     communities: seed,
     output: baselineScore
@@ -641,7 +653,7 @@ it('GPUGraphModularityOptimization composes label propagation and baseline scori
   }
 });
 
-it('GPUGraphModularityOptimization rereads live edge columns and warm starts on each encoding', async () => {
+it('GPUGraphAlgorithmsModularityOptimization rereads live edge columns and warm starts on each encoding', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     return;
@@ -910,7 +922,7 @@ function createExecutionFixture(
     ? createInputVector(device, buffers, vectors, 'edge-weights', 'float32', scenario.weightChunks)
     : undefined;
   const directed = scenario.directed ?? true;
-  const graph = new GPUGraph({
+  const graph = new GPUGraphAlgorithmsData({
     vertexCount: scenario.vertexCount,
     sourceVertices,
     targetVertices,
@@ -947,7 +959,7 @@ function createExecutionFixture(
     'uint32',
     1
   );
-  const topology = new GPUGraphTopology({graph, forward, reverse, invalidEdgeCount});
+  const topology = new GPUGraphAlgorithmsTopology({graph, forward, reverse, invalidEdgeCount});
   const initialCommunities = scenario.initialCommunities
     ? createOutputVector(
         device,
@@ -986,7 +998,7 @@ function createExecutionFixture(
     scenario.validity === false
       ? undefined
       : createOutputVector(device, buffers, vectors, 'valid', 'uint32', 1, scenario.byteOffset);
-  const optimization = new GPUGraphModularityOptimization({
+  const optimization = new GPUGraphAlgorithmsModularityOptimization({
     topology,
     output,
     modularity,
@@ -1042,7 +1054,7 @@ function createOutputAdjacency(
   capacity: number,
   weighted: boolean,
   byteOffset = 0
-): GPUGraphAdjacency {
+): GPUGraphAlgorithmsAdjacency {
   return {
     offsets: createOutputVector(
       device,
@@ -1135,7 +1147,7 @@ function compileOptimization(
   if (maximumWorkgroups === undefined) {
     fixture.optimization.addToGraph(fixture.commandGraph);
   } else {
-    addGPUGraphModularityOptimizationToGraphWithDispatchLimit(
+    addGPUGraphAlgorithmsModularityOptimizationToGraphWithDispatchLimit(
       fixture.optimization,
       fixture.commandGraph,
       maximumWorkgroups

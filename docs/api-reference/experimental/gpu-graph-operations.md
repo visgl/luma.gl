@@ -21,7 +21,7 @@ backbone, whether a proposed community grouping is actually meaningful, how to i
 grouping, and which pages matter because other important pages link to them. Vertices represent
 those entities; edges represent their relationships.
 
-`@luma.gl/gpgpu/gpu-graph` answers these questions directly on a browser WebGPU device. It
+`@luma.gl/gpgpu/gpu-graph-algorithms` answers these questions directly on a browser WebGPU device. It
 describes caller-owned GPU edge columns, builds reusable compressed adjacency, and publishes vertex
 degrees, unweighted shortest-path neighborhoods, weighted least-cost routes, weakly connected
 groups, densely connected communities, per-vertex local clustering, structural core numbers,
@@ -235,12 +235,12 @@ import benchmark-only datasets, CPU references, or measurement code:
 
 ```ts
 import {
-  makeGPUGraphBenchmarkDataset,
-  runGPUGraphBenchmark
-} from '@luma.gl/gpgpu/gpu-graph/benchmarks';
+  makeGPUGraphAlgorithmsBenchmarkDataset,
+  runGPUGraphAlgorithmsBenchmark
+} from '@luma.gl/gpgpu/gpu-graph-algorithms/benchmarks';
 
-const dataset = makeGPUGraphBenchmarkDataset({kind: 'scale-free', vertexCount: 128, seed: 42});
-const report = await runGPUGraphBenchmark(device, {
+const dataset = makeGPUGraphAlgorithmsBenchmarkDataset({kind: 'scale-free', vertexCount: 128, seed: 42});
+const report = await runGPUGraphAlgorithmsBenchmark(device, {
   kind: dataset.kind,
   vertexCount: dataset.vertexCount,
   seed: 42,
@@ -362,20 +362,20 @@ published Graphalytics score. Use it to inspect real bounded CPU/GPU runs on you
 
 | Operation | Question it answers | GPU result | Typical bounded work |
 | --- | --- | --- | --- |
-| `GPUGraph` | Which GPU columns describe the graph? | Borrowed graph metadata and original chunks | Metadata only; no GPU dispatch |
-| `GPUGraphTopology` | Which vertices are adjacent? | Forward and optional reverse compressed adjacency | `O(V + E)` |
-| `GPUGraphDegree` | How many relationships touch each vertex in one direction? | One `uint32` degree per vertex | `O(V)` after adjacency exists |
-| `GPUGraphCoreNumber` | Which vertices remain inside increasingly cohesive network backbones? | One `uint32` core number per vertex and an optional maximum | At most `O(K × sum(degree² × log(degree + 1)))` for `K` bounded rounds |
-| `GPUGraphLocalClusteringCoefficient` | How closely are each vertex's neighbors connected to one another? | One `float32` coefficient and optional triangle count per vertex | At most `O(sum(degree³))` with unsorted adjacency |
-| `GPUGraphBreadthFirstSearch` | Which vertices are within a chosen number of unweighted hops? | Distances, deterministic predecessors, and an optional selection mask | At most `O(D × (V + E))` for `D` compiled hops |
-| `GPUGraphSingleSourceShortestPath` | Which routes have the lowest nonnegative total edge cost from a selected source? | One `float32` distance and deterministic predecessor per vertex | At most `O(K × (V + E))` for `K` bounded relaxations |
-| `GPUGraphConnectedComponents` | Which vertices belong to the same weakly connected group? | One `uint32` component identifier per vertex | At most `O(K × (V + E))` for `K` bounded iterations |
-| `GPUGraphLabelPropagation` | Which densely connected communities exist inside a connected network? | One deterministic `uint32` community label per vertex | At most `O(K × sum(degree²))` for `K` bounded iterations |
-| `GPUGraphModularityOptimization` | Which single-vertex community moves can improve a weighted partition? | Improved `uint32` labels, a real `float32` modularity score, and optional statuses | At most `O(K × (V + E + sum(degree²)))` for `K` bounded rounds |
-| `GPUGraphModularity` | Does an existing partition contain more internal relationship weight than chance predicts? | One `float32` partition-quality score and optional per-community contributions | `O(V + E)` |
-| `GPUGraphPageRank` | Which vertices receive influence from other important vertices? | One normalized `float32` score per vertex | `O(K × (V + E))` for `K` iterations |
-| `GPUGraphForceLayout` | How can related vertices be positioned as a readable network? | Directly renderable `float32x2` positions and persistent velocities | `O(V² + E)` per exact force iteration |
-| `GPUGraphSpatialForceLayout` | Can distant graph regions be approximated while nearby relationships remain exact? | The existing renderable layout positions plus explicit uniform-grid diagnostics | `Θ(V × G + P + E)` per spatial force iteration |
+| `GPUGraphAlgorithmsData` | Which GPU columns describe the graph? | Borrowed graph metadata and original chunks | Metadata only; no GPU dispatch |
+| `GPUGraphAlgorithmsTopology` | Which vertices are adjacent? | Forward and optional reverse compressed adjacency | `O(V + E)` |
+| `GPUGraphAlgorithmsDegree` | How many relationships touch each vertex in one direction? | One `uint32` degree per vertex | `O(V)` after adjacency exists |
+| `GPUGraphAlgorithmsCoreNumber` | Which vertices remain inside increasingly cohesive network backbones? | One `uint32` core number per vertex and an optional maximum | At most `O(K × sum(degree² × log(degree + 1)))` for `K` bounded rounds |
+| `GPUGraphAlgorithmsLocalClusteringCoefficient` | How closely are each vertex's neighbors connected to one another? | One `float32` coefficient and optional triangle count per vertex | At most `O(sum(degree³))` with unsorted adjacency |
+| `GPUGraphAlgorithmsBreadthFirstSearch` | Which vertices are within a chosen number of unweighted hops? | Distances, deterministic predecessors, and an optional selection mask | At most `O(D × (V + E))` for `D` compiled hops |
+| `GPUGraphAlgorithmsSingleSourceShortestPath` | Which routes have the lowest nonnegative total edge cost from a selected source? | One `float32` distance and deterministic predecessor per vertex | At most `O(K × (V + E))` for `K` bounded relaxations |
+| `GPUGraphAlgorithmsConnectedComponents` | Which vertices belong to the same weakly connected group? | One `uint32` component identifier per vertex | At most `O(K × (V + E))` for `K` bounded iterations |
+| `GPUGraphAlgorithmsLabelPropagation` | Which densely connected communities exist inside a connected network? | One deterministic `uint32` community label per vertex | At most `O(K × sum(degree²))` for `K` bounded iterations |
+| `GPUGraphAlgorithmsModularityOptimization` | Which single-vertex community moves can improve a weighted partition? | Improved `uint32` labels, a real `float32` modularity score, and optional statuses | At most `O(K × (V + E + sum(degree²)))` for `K` bounded rounds |
+| `GPUGraphAlgorithmsModularity` | Does an existing partition contain more internal relationship weight than chance predicts? | One `float32` partition-quality score and optional per-community contributions | `O(V + E)` |
+| `GPUGraphAlgorithmsPageRank` | Which vertices receive influence from other important vertices? | One normalized `float32` score per vertex | `O(K × (V + E))` for `K` iterations |
+| `GPUGraphAlgorithmsForceLayout` | How can related vertices be positioned as a readable network? | Directly renderable `float32x2` positions and persistent velocities | `O(V² + E)` per exact force iteration |
+| `GPUGraphAlgorithmsSpatialForceLayout` | Can distant graph regions be approximated while nearby relationships remain exact? | The existing renderable layout positions plus explicit uniform-grid diagnostics | `Θ(V × G + P + E)` per spatial force iteration |
 
 `V` is the graph's explicit vertex count, `E` is its source-edge count, `G` is the uniform-grid
 cell count, `P` counts individual interactions in near or insufficiently distant cells, and

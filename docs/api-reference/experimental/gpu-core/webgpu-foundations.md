@@ -1,8 +1,8 @@
-# WebGPU Foundations for GPU Command Graphs
+# WebGPU Foundations for GPU Graphs
 
 ## Overview
 
-A GPU command graph connects compute, copy, and rendering stages while keeping intermediate data
+A GPU graph connects compute, copy, and rendering stages while keeping intermediate data
 on the GPU. WebGPU supplies the execution and memory primitives; GPU Core supplies the resource
 model, dependency analysis, and reusable compiled schedule.
 
