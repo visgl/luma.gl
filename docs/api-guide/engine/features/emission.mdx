@@ -32,12 +32,12 @@ supply other values.
 ### PBRMaterialBindings
 
 Texture resources are supplied separately through `PBRMaterialBindings`. Each field below is
-optional and accepts `Texture | null`. `createPBRMaterial()` derives map-enabled flags from these resources. A model still needs
-a compatible shader feature layout.
+optional and accepts `Texture | null`. `createPBRMaterial()` derives map-enabled flags from these resources. Enable the corresponding `Model` shader define listed below
+when supplying a texture; the helper does not choose the model shader defines.
 
-| Field | Description |
-| --- | --- |
-| `pbr_emissiveSampler` | Texture resource for the `emissive` slot. |
+| Field | Model define | Description |
+| --- | --- | --- |
+| `pbr_emissiveSampler` | `HAS_EMISSIVEMAP: true` | Texture resource for the `emissive` slot. |
 
 ## Supporting APIs
 

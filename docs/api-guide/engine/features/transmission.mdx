@@ -36,13 +36,13 @@ supply other values.
 ### PBRMaterialBindings
 
 Texture resources are supplied separately through `PBRMaterialBindings`. Each field below is
-optional and accepts `Texture | null`. `createPBRMaterial()` derives map-enabled flags from these resources. A model still needs
-a compatible shader feature layout.
+optional and accepts `Texture | null`. `createPBRMaterial()` derives map-enabled flags from these resources. Enable the corresponding `Model` shader define listed below
+when supplying a texture; the helper does not choose the model shader defines.
 
-| Field | Description |
-| --- | --- |
-| `pbr_transmissionSampler` | Texture resource for the `transmission` slot. |
-| `pbr_thicknessSampler` | Texture resource for the `thickness` slot. |
+| Field | Model define | Description |
+| --- | --- | --- |
+| `pbr_transmissionSampler` | `HAS_TRANSMISSIONMAP: true` | Texture resource for the `transmission` slot. |
+| `pbr_thicknessSampler` | `HAS_THICKNESSMAP: true` | Texture resource for the `thickness` slot. |
 
 ## Supporting APIs
 
@@ -71,9 +71,14 @@ model shader layout.
 See the [materials guide](/docs/api-guide/engine/materials) and
 [`pbrMaterial` reference](/docs/api-reference/shadertools/shader-modules/pbr-material).
 
+The extended PBR shader path is disabled by default. Set `USE_MATERIAL_EXTENSIONS: true`
+in the `Model` construction `defines` to enable this feature; uniform values alone do not
+enable it. The glTF material parser supplies this define for imported extension materials.
+
 ## Usage
 
 ```ts
+import {Model} from '@luma.gl/engine';
 import {createPBRMaterial, type PBRMaterial} from '@luma.gl/experimental';
 
 // device is an initialized Device.
@@ -89,7 +94,12 @@ const material: PBRMaterial = createPBRMaterial(device, {
   }
 });
 
-// Pass material to a compatible Model through its material prop.
+// modelProps contains your existing shaders, geometry, and buffer layout.
+const model = new Model(device, {
+  ...modelProps,
+  material,
+  defines: {...modelProps.defines, USE_MATERIAL_EXTENSIONS: true}
+});
 ```
 
 Scene-color refraction requires the shared experimental `SceneRenderer` or ANARI capture path. The inline glTF viewer uses the scenegraph alpha approximation, so this embedded sample does not demonstrate full screen-space refraction or chromatic dispersion.

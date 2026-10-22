@@ -33,13 +33,13 @@ supply other values.
 ### PBRMaterialBindings
 
 Texture resources are supplied separately through `PBRMaterialBindings`. Each field below is
-optional and accepts `Texture | null`. `createPBRMaterial()` derives map-enabled flags from these resources. A model still needs
-a compatible shader feature layout.
+optional and accepts `Texture | null`. `createPBRMaterial()` derives map-enabled flags from these resources. Enable the corresponding `Model` shader define listed below
+when supplying a texture; the helper does not choose the model shader defines.
 
-| Field | Description |
-| --- | --- |
-| `pbr_normalSampler` | Texture resource for the `normal` slot. |
-| `pbr_bumpSampler` | Texture resource for the `bump` slot. |
+| Field | Model define | Description |
+| --- | --- | --- |
+| `pbr_normalSampler` | `HAS_NORMALMAP: true` | Texture resource for the `normal` slot. |
+| `pbr_bumpSampler` | `HAS_BUMPMAP: true` | Texture resource for the `bump` slot. |
 
 ## Supporting APIs
 

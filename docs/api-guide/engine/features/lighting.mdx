@@ -21,13 +21,15 @@ The shared `lighting` shader module accepts `LightingProps`. A compatible model 
 import type {LightingProps} from '@luma.gl/shadertools';
 
 const sceneLighting = {
-  ambientLight: {type: 'ambient', color: [255, 255, 255], intensity: 0.2},
-  directionalLights: [{
-    type: 'directional',
-    color: [255, 240, 220],
-    direction: [0.5, -1, 0.3],
-    intensity: 1
-  }]
+  lights: [
+    {type: 'ambient', color: [255, 255, 255], intensity: 0.2},
+    {
+      type: 'directional',
+      color: [255, 240, 220],
+      direction: [0.5, -1, 0.3],
+      intensity: 1
+    }
+  ]
 } satisfies LightingProps;
 
 // model is a Model whose shader includes lighting.

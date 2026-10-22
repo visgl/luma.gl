@@ -42,6 +42,7 @@ export type GLTFViewerOptions = {
   modelUrl?: string;
   animate?: boolean;
   materialVariant?: string;
+  onLoad?: (scenegraphs: ReturnType<typeof createScenegraphsFromGLTF>) => void;
 };
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
@@ -133,6 +134,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
       canvas.style.opacity = '1';
       showError();
+      this.viewerOptions.onLoad?.(scenegraphsFromGLTF);
     } catch (error) {
       if (this.isFinalized) {
         return;

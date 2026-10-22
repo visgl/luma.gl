@@ -37,14 +37,14 @@ supply other values.
 ### PBRMaterialBindings
 
 Texture resources are supplied separately through `PBRMaterialBindings`. Each field below is
-optional and accepts `Texture | null`. `createPBRMaterial()` derives map-enabled flags from these resources. A model still needs
-a compatible shader feature layout.
+optional and accepts `Texture | null`. `createPBRMaterial()` derives map-enabled flags from these resources. Enable the corresponding `Model` shader define listed below
+when supplying a texture; the helper does not choose the model shader defines.
 
-| Field | Description |
-| --- | --- |
-| `pbr_diffuseTransmissionSampler` | Texture resource for the `diffuseTransmission` slot. |
-| `pbr_diffuseTransmissionColorSampler` | Texture resource for the `diffuseTransmissionColor` slot. |
-| `pbr_multiscatterColorSampler` | Texture resource for the `multiscatterColor` slot. |
+| Field | Model define | Description |
+| --- | --- | --- |
+| `pbr_diffuseTransmissionSampler` | `HAS_DIFFUSETRANSMISSIONMAP: true` | Texture resource for the `diffuseTransmission` slot. |
+| `pbr_diffuseTransmissionColorSampler` | `HAS_DIFFUSETRANSMISSIONCOLORMAP: true` | Texture resource for the `diffuseTransmissionColor` slot. |
+| `pbr_multiscatterColorSampler` | `HAS_MULTISCATTERCOLORMAP: true` | Texture resource for the `multiscatterColor` slot. |
 
 ## Supporting APIs
 
@@ -73,9 +73,14 @@ model shader layout.
 See the [materials guide](/docs/api-guide/engine/materials) and
 [`pbrMaterial` reference](/docs/api-reference/shadertools/shader-modules/pbr-material).
 
+The extended PBR shader path is disabled by default. Set `USE_MATERIAL_EXTENSIONS: true`
+in the `Model` construction `defines` to enable this feature; uniform values alone do not
+enable it. The glTF material parser supplies this define for imported extension materials.
+
 ## Usage
 
 ```ts
+import {Model} from '@luma.gl/engine';
 import {createPBRMaterial, type PBRMaterial} from '@luma.gl/experimental';
 
 // device is an initialized Device.
@@ -89,7 +94,12 @@ const material: PBRMaterial = createPBRMaterial(device, {
   }
 });
 
-// Pass material to a compatible Model through its material prop.
+// modelProps contains your existing shaders, geometry, and buffer layout.
+const model = new Model(device, {
+  ...modelProps,
+  material,
+  defines: {...modelProps.defines, USE_MATERIAL_EXTENSIONS: true}
+});
 ```
 
 Scattering is a local, thickness-aware single-scattering approximation. Screen-space diffusion and random-walk multiple scattering are not implemented.
