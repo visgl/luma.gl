@@ -1,0 +1,94 @@
+---
+title: Unlit surfaces
+description: Unlit surfaces preserve their surface color without evaluating scene lighting, useful for signs, diagrams, and baked artwork.
+---
+
+import {GLTFModelExample} from '@site/src/examples';
+
+# Unlit surfaces
+
+Unlit surfaces preserve their surface color without evaluating scene lighting, useful for signs, diagrams, and baked artwork.
+
+The **UnlitTest** sample demonstrates this capability. Drag to orbit and scroll to zoom.
+
+<GLTFModelExample modelUrl="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/723ffc6706725b618b8c14ceb82e3e6904b08a76/Models/UnlitTest/glTF/UnlitTest.gltf" title="UnlitTest" embedded showStats={false} />
+
+## PBRMaterial reference
+
+`PBRMaterial` from `@luma.gl/experimental` is a typed engine `Material` backed by the shared
+`pbrMaterial` shader module. Its material fields are defined by `PBRMaterialUniforms` from
+`@luma.gl/shadertools`. Pass them through `createPBRMaterial(device, {uniforms})` or update them with
+`material.setProps({pbrMaterial: {...}})`.
+
+The fields below are optional. Defaults are the shared shader defaults; imported assets can
+supply other values.
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `unlit` | `boolean` | `false` | Bypasses the lighting response while retaining the material surface color. |
+| `baseColorFactor` | `Readonly<Vector4 \| NumberArray4>` | `[1, 1, 1, 1]` | RGBA base color multiplied by the base-color texture when enabled. |
+| `baseColorMapEnabled` | `boolean` | `false` | Enables base-color texture sampling. |
+
+### PBRMaterialBindings
+
+Texture resources are supplied separately through `PBRMaterialBindings`. Each field below is
+optional and accepts `Texture | null`. `createPBRMaterial()` derives map-enabled flags from these resources. Enable the corresponding `Model` shader define listed below
+when supplying a texture; the helper does not choose the model shader defines.
+
+| Field | Model define | Description |
+| --- | --- | --- |
+| `pbr_baseColorSampler` | `HAS_BASECOLORMAP: true` | Texture resource for the `baseColor` slot. |
+
+## Supporting APIs
+
+### createPBRMaterial
+
+`createPBRMaterial(device, {uniforms, bindings, factory})` from `@luma.gl/experimental` returns
+a `PBRMaterial`. `uniforms` sets the fields listed above, `bindings` supplies material textures,
+and the optional `factory` shares a compatible binding schema across materials. The helper
+derives map-enabled flags from the supplied bindings; explicit uniform values take precedence.
+
+### MaterialFactory
+
+`createPBRMaterialFactory(device)` from `@luma.gl/experimental` creates a reusable engine
+`MaterialFactory` configured with the `pbrMaterial` shader module. Pass this factory to
+`createPBRMaterial()` when creating several compatible materials.
+
+### Material
+
+`Material` from `@luma.gl/engine` owns material uniforms and texture resources.
+`setProps({pbrMaterial: {...}})` updates uniform values. Pass the material to a compatible
+`Model` through its `material` prop; models sharing it observe the same updates.
+Use `clone({bindings: {...}})` when an appearance needs separate texture resources.
+Adding a texture or changing a shader feature may require matching defines and a compatible
+model shader layout.
+
+See the [materials guide](/docs/api-guide/engine/materials) and
+[`pbrMaterial` reference](/docs/api-reference/shadertools/shader-modules/pbr-material).
+
+## Usage
+
+```ts
+import {createPBRMaterial, type PBRMaterial} from '@luma.gl/experimental';
+
+// device is an initialized Device.
+const material: PBRMaterial = createPBRMaterial(device, {
+  uniforms: {
+    unlit: true,
+    baseColorFactor: [0.2, 0.6, 1, 1]
+  }
+});
+
+// Pass material to a compatible Model through its material prop.
+```
+
+## glTF support
+
+`KHR_materials_unlit` selects unlit shading on imported materials. It does not require a separate engine material family.
+
+See [glTF materials and textures](/docs/api-reference/gltf/gltf-materials),
+[glTF animation](/docs/api-reference/gltf/gltf-animation), and the
+[extension support matrix](/docs/api-reference/gltf/gltf-extensions) for adapter details
+and current support limits.
+
+[All engine features](/docs/api-guide/engine/features)

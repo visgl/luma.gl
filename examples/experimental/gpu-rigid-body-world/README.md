@@ -65,11 +65,11 @@ cradle ball again. When auto-play is off, the cradle automatically resets after
 60 seconds of simulated motion without moving the camera; pausing also pauses
 this timer. The cradle uses a 1/480-second fixed step (other scenes use
 1/120 second), so each closely spaced impact is resolved before the next pair closes.
-For this 12-body scene, all-pairs discovery and eight solver iterations reduce
+For this small scene, all-pairs discovery and eight solver iterations reduce
 GPU work; switching to another scene restores the 32-iteration default. User-selected
 iteration counts are retained when resetting the same scene.
-Its restitution threshold is zero to retain elastic low-speed contacts. Iterative
-contacts still introduce numerical loss despite restitution one.
+Its restitution threshold is 0.05; slightly inelastic impacts and gentle damping
+let the motion decay rather than preserving low-speed elastic contacts.
 These use the public `joints` API, force the ordered solver and preserve the existing
 Reset, GPU Graph and Timeline controls. Hinge and slider scenes include loose boxes
 so constraint and contact response can be observed together. Joint-connected bodies
@@ -82,12 +82,11 @@ served (`PHYSICS_MECHANISMS_URL` overrides the default `http://127.0.0.1:5233/`)
 node scripts/playwright/physics-cradle-smoke.mjs
 ```
 
-It advances 60 simulated seconds and checks joint drift, energy bounds, middle-ball
-excursions and sustained end-ball swings. A local WebGPU run at 480 Hz completed
-28,800 steps with no incomplete steps, less than 0.06 mm joint error, energy within
-0.6% of the initial value, and a 1.45 m end-ball excursion in the final ten seconds.
-These are bounded regression measurements, not a guarantee of indefinitely lossless
-or perfectly periodic motion.
+It advances 60 simulated seconds and checks joint drift, energy decay and middle-ball
+excursions. A local WebGPU run at 480 Hz completed 28,800 steps with no incomplete
+steps, less than 0.046 mm joint error, and less than 5% of initial energy throughout
+the final ten seconds. These are bounded regression measurements, not a guarantee
+of exact real-world dissipation.
 
 ### Cradle rendering
 

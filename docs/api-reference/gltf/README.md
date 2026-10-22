@@ -244,3 +244,9 @@ It supports compound ownership, authored mass properties, kinematics, material
 policies and filtering. This adapter creates a bounded WebGPU simulation; render
 scenegraph synchronization and automatic animation/behavior integration are later
 increments. Ordinary scenegraph loading does not start physics.
+
+## Explore engine features
+
+Learn each material aspect and rendering capability through its API and a live sample in the
+[engine feature guide](/docs/api-guide/engine/features). glTF core and extension mappings are
+described within each feature page; this reference retains the format-specific contracts.

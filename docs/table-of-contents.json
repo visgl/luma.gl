@@ -71,6 +71,39 @@
         "items": [
           "api-guide/engine/engine",
           "api-guide/engine/cookbook",
+          {
+            "type": "category",
+            "label": "PBR Materials",
+            "items": [
+              "api-guide/engine/features/README",
+              "api-guide/engine/features/metallic-roughness",
+              "api-guide/engine/features/unlit",
+              "api-guide/engine/features/emission",
+              "api-guide/engine/features/specular",
+              "api-guide/engine/features/index-of-refraction",
+              "api-guide/engine/features/transmission",
+              "api-guide/engine/features/clearcoat",
+              "api-guide/engine/features/sheen",
+              "api-guide/engine/features/iridescence",
+              "api-guide/engine/features/anisotropy",
+              "api-guide/engine/features/surface-detail",
+              "api-guide/engine/features/diffuse-transmission",
+              "api-guide/engine/features/texture-coordinates"
+            ]
+          },
+          {
+            "type": "category",
+            "label": "Scene capabilities",
+            "items": [
+              "api-guide/engine/features/material-variants",
+              "api-guide/engine/features/animation",
+              "api-guide/engine/features/instancing",
+              "api-guide/engine/features/lighting",
+              "api-guide/engine/features/asset-compression",
+              "api-guide/engine/features/visibility",
+              "api-guide/engine/features/animated-crowds"
+            ]
+          },
           "api-guide/engine/interactivity",
           "api-guide/engine/scenegraph",
           "api-guide/engine/animation",
