@@ -60,6 +60,9 @@ try {
       bodies,
       joints: mechanism?.joints,
       failurePolicy: 'rollback',
+      // Resolve the cradle's closely spaced elastic impacts before the next pair closes.
+      timeStep: sceneName === 'cradle' ? 1 / 480 : 1 / 120,
+      ...(sceneName === 'cradle' ? {restitutionThreshold: 0} : {}),
       ...(sceneName === 'continuous' ? {continuous: {bodies: [0]}} : {}),
       iterations: Number(iterations.value),
       solver: solver.value === 'ordered' ? 'ordered' : 'parallel',
@@ -353,10 +356,10 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
     if (!loading && !paused && advanceAt === null) {
       accumulator = Math.min(accumulator + elapsed, 4 / 120);
       const encoder = device.createCommandEncoder();
-      while (accumulator >= 1 / 120) {
+      while (accumulator >= resources.world.timeStep) {
         diagnostics.encode(resources.graph, encoder, {parameters: undefined});
-        accumulator -= 1 / 120;
-        elapsedSimulation += 1 / 120;
+        accumulator -= resources.world.timeStep;
+        elapsedSimulation += resources.world.timeStep;
       }
       device.submit(encoder.finish());
     }
