@@ -159,6 +159,8 @@ colliders; each previous point can be consumed only once. Analytic shapes identi
 faces/edges/caps, cooked hulls identify a supporting surface, and mesh contacts retain
 the actual cooked triangle ID. A feature change or excessive local drift discards the
 cached impulse. Coplanar mesh seams are not welded into a common feature.
+Box support keys use the local normal rather than the penetrating midpoint, so
+settling depth changes alone do not discard impulses.
 Four 96-byte contacts plus the aligned header occupy 416 bytes per manifold
 (previously 288 bytes). Capacity reports and rollback checkpoints include this cost.
 Reset and reconstruction invalidate the cache. Persistent manifolds retain accumulated impulses. New impacts capture restitution;
@@ -411,7 +413,9 @@ and linear/angular speed bounds drive conservative advancement (64 distance and
 coordinate-precision floor; it is not an absolute world-space accuracy guarantee. Centered
 sphere spin does not inflate the geometric angular bound. One invocation chooses the earliest TOI, using collider
 IDs to break exact ties, advances all trajectories and applies coupled normal/angular
-and Coulomb friction impulses. The remaining timestep is swept again. Nonimpacted
+and Coulomb friction impulses. Up to 16 coupled normal/tangent projections are followed
+by a nonclosing normal correction, so offset friction cannot restore inward speed
+before the remaining timestep is swept again. Nonimpacted
 bodies preserve their discrete final poses; kinematic targets retain their authored
 end poses. No CPU readback is required between rounds.
 

@@ -290,11 +290,26 @@ fn continuousImpactPoint(first:u32,second:u32,point:vec3f,normal:vec3f)->vec3f {
  let response=effectiveMass(first,second,point,normal);
  if(response<=1e-20||length(normal)<0.5){continuousStatus[0].x=1u;continuousWork.finished=1u;return;}
  let restitution=select(0.0,combineMaterial(bodies.colliders[firstCollider].material.x,bodies.colliders[secondCollider].material.x,bodies.colliders[firstCollider].policies.x,bodies.colliders[secondCollider].policies.x,false),-closing>settings.solver.z);
- let impulse=normal*max(0.0,-closing)*(1.0+restitution)/response;
- applyImpulse(first,point,impulse);applyImpulse(second,point,-impulse);
- var contact:Contact;contact.point=vec4f(point,0);contact.normal=vec4f(-normal,0);contact.impulse=vec4f(length(impulse),0,0,0);
- let tangent=solveFriction(firstCollider,secondCollider,contact,pointVelocity(second,point)-pointVelocity(first,point));
- applyImpulse(first,point,-tangent);applyImpulse(second,point,tangent);
+ let reboundSpeed=max(0.0,-closing)*restitution;
+ var contact:Contact;contact.point=vec4f(point,0);contact.normal=vec4f(-normal,0);
+ // Normal and tangent responses are coupled for offset contacts and general inertia.
+ // Project accumulated impulses, then enforce nonclosing speed after the last tangent update.
+ for(var iteration=0u;iteration<16u;iteration++){
+  let speed=dot(pointVelocity(first,point)-pointVelocity(second,point),normal);
+  let nextNormal=max(0.0,contact.impulse.x+(reboundSpeed-speed)/response);
+  let normalIncrement=normal*(nextNormal-contact.impulse.x);contact.impulse.x=nextNormal;
+  applyImpulse(first,point,normalIncrement);applyImpulse(second,point,-normalIncrement);
+  let tangent=solveFriction(firstCollider,secondCollider,contact,pointVelocity(second,point)-pointVelocity(first,point));
+  let tangentIncrement=tangent-contact.tangent.xyz;contact.tangent=vec4f(tangent,0);
+  applyImpulse(first,point,-tangentIncrement);applyImpulse(second,point,tangentIncrement);
+  if(all(normalIncrement==vec3f(0))&&all(tangentIncrement==vec3f(0))){break;}
+ }
+ let residual=dot(pointVelocity(first,point)-pointVelocity(second,point),normal);
+ if(residual<0.0){
+  // This only increases the normal impulse, so the retained tangent stays inside its friction cone.
+  let correction=normal*(-residual/response);
+  applyImpulse(first,point,correction);applyImpulse(second,point,-correction);
+ }
  if(dynamic(first)){sleepStates[first]=vec4f(0);}
  if(dynamic(second)){sleepStates[second]=vec4f(0);}
  continuousStatus[first].y++;continuousStatus[second].y++;

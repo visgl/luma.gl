@@ -386,3 +386,42 @@ it.for([
   expect(Math.abs(result.state[selected].velocity[0])).toBeCloseTo(120, 2);
   expect(Math.hypot(...result.state[selected].angularVelocity)).toBeLessThan(0.001);
 });
+
+it('keeps an offset impact nonclosing after coupled friction without adding energy', async context => {
+  const result = await run({
+    gravity: [0, 0, 0],
+    sleepAfter: 0,
+    restitutionThreshold: 0,
+    failurePolicy: 'rollback',
+    continuous: {mode: 'convex', bodies: [0]},
+    bodies: [
+      {
+        position: [-3, -1, 0],
+        velocity: [240, 240, 0],
+        inertiaDiagonal: [1, 1, 1],
+        colliders: [
+          {position: [1, 1, 0], shape: {type: 'sphere', radius: 0.2}, friction: 1, restitution: 0}
+        ]
+      },
+      {
+        mode: 'static',
+        position: [0, 0, 0],
+        shape: {type: 'box', halfExtents: [0.05, 6, 1]},
+        friction: 1,
+        restitution: 0
+      }
+    ]
+  });
+  if (!result) return context.skip('WebGPU unavailable');
+  expect(result.diagnostics.complete).toBe(true);
+  const state = result.state[0];
+  const rotation = state.orientation;
+  const offsetX = 1 - 2 * rotation[2] * rotation[2] - 2 * rotation[3] * rotation[2];
+  const offsetY = 1 - 2 * rotation[2] * rotation[2] + 2 * rotation[3] * rotation[2];
+  expect(state.velocity[0] - state.angularVelocity[2] * offsetY).toBeLessThan(0.01);
+  expect(state.position[0] + offsetX + 0.2).toBeLessThanOrEqual(-0.05 + 0.001);
+  const energy =
+    0.5 * state.velocity.reduce((sum, value) => sum + value * value, 0) +
+    0.5 * state.angularVelocity.reduce((sum, value) => sum + value * value, 0);
+  expect(energy).toBeLessThanOrEqual(240 ** 2 + 0.1);
+});

@@ -179,10 +179,12 @@ fn contactFeature(collider:u32,point:vec3f,normal:vec3f)->u32 {
  if(shape.w==0.0){return 1u;}
  if(shape.w==1.0){
   var key=0u;
-  let tolerance=max(1e-7,settings.solver.w*0.1);
+  // The midpoint moves inside the box as depth changes. Identify its supporting
+  // face/edge/vertex from the outward local normal, independently of penetration.
+  let tolerance=max(abs(normal.x),max(abs(normal.y),abs(normal.z)))*1e-4;
   for(var component=0u;component<3u;component++){
    var side=0u;
-   if(abs(abs(point[component])-shape[component])<=tolerance){side=select(1u,2u,point[component]>=0.0);}
+   if(abs(normal[component])>tolerance){side=select(1u,2u,normal[component]>=0.0);}
    key+=side*(1u<<(component*2u));
   }
   return key+1u;

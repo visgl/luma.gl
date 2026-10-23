@@ -1410,6 +1410,10 @@
           {
             "file": "modules/graph/test/gpu-physics/rigid-body-persistent-anchors.spec.ts",
             "testPattern": "retains local anchors under common motion with hierarchical-grid"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-persistent-anchors.spec.ts",
+            "testPattern": "retains box face keys and impulses across penetration changes"
           }
         ]
       }
@@ -1506,6 +1510,10 @@
           {
             "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
             "testPattern": "applies swept Coulomb friction"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "keeps an offset impact nonclosing"
           }
         ]
       }
