@@ -5,7 +5,13 @@
 import {describe, expect, it, vi} from 'vitest';
 import {GPUDataEvaluator, GPUVectorEvaluator, add, multiply} from '@luma.gl/gpgpu';
 import {GPUSimpleGraph, GPUSimpleGraphOperation} from '@luma.gl/gpu-graph/gpu-simple-graph';
-import {GPUProgram, composite} from '@luma.gl/gpu-graph/gpu-core';
+import {
+  GPUProgram,
+  GPUProgramScalarLiteral,
+  GPUProgramVectorMADD,
+  GPULoopOperation,
+  composite
+} from '@luma.gl/gpu-graph/gpu-core';
 import {NullDevice} from '@luma.gl/test-utils';
 
 describe('GPUSimpleGraph prototype', () => {
@@ -186,6 +192,124 @@ describe('GPUSimpleGraph semantic composition', () => {
     expect(() => graph.compile({outputs: ['missing']})).toThrow();
     expect(() => graph.compile()).toThrow();
     expect(() => graph.add([])).toThrow();
+    device.destroy();
+  });
+});
+
+describe('SimpleGraph semantic subset', () => {
+  it('executes existing scalar literals and owns only adapter-created evaluators', async () => {
+    const device = new NullDevice({});
+    const program = new GPUProgram();
+    const scale = program.scalar('scale', 'float32');
+    program.add(new GPUProgramScalarLiteral({output: scale, value: 2}));
+    const borrowed = GPUDataEvaluator.fromConstant(5);
+    const destroyBorrowed = vi.spyOn(borrowed, 'destroy');
+    const graph = new GPUSimpleGraph(device).add(program.operations);
+    graph.addEvaluator('borrowed', borrowed);
+    const compiled = graph.compile({outputs: ['scale', 'borrowed']});
+    const outputs = await compiled.run();
+    expect(outputs.scale.length).toBe(1);
+    expect((await compiled.run()).scale).toBe(outputs.scale);
+    compiled.destroy();
+    compiled.destroy();
+    expect(destroyBorrowed).not.toHaveBeenCalled();
+    await expect(compiled.run()).rejects.toThrow();
+    borrowed.destroy();
+    device.destroy();
+  });
+
+  it('rejects control-flow composites atomically', () => {
+    const device = new NullDevice({});
+    const program = new GPUProgram();
+    const literal = new GPUProgramScalarLiteral({
+      output: program.scalar('scale', 'float32'),
+      value: 2
+    });
+    const graph = new GPUSimpleGraph(device);
+    expect(() =>
+      graph.add([literal, new GPULoopOperation({body: [], maximumIterations: 2})])
+    ).toThrow();
+    expect(graph.operationTree).toEqual([]);
+    graph.add(literal).compile().destroy();
+    device.destroy();
+  });
+
+  it('rejects missing bindings, unsupported formats, and repeated writes', () => {
+    const device = new NullDevice({});
+    const program = new GPUProgram();
+    const scale = program.scalar('scale', 'float32');
+    const input = program.vector('input', 'float32', 3, {external: true});
+    const output = program.vector('output', 'float32', 3);
+    const literal = new GPUProgramScalarLiteral({output: scale, value: 2});
+    const operation = new GPUProgramVectorMADD({input, addend: input, output, scale});
+    expect(() => new GPUSimpleGraph(device).add([literal, operation]).compile()).toThrow();
+    expect(() =>
+      new GPUSimpleGraph(device)
+        .add([literal, new GPUProgramScalarLiteral({id: 'rewrite', output: scale, value: 3})])
+        .compile()
+    ).toThrow();
+    expect(() =>
+      new GPUSimpleGraph(device)
+        .add(
+          new GPUProgramScalarLiteral({
+            output: program.scalar('integer', 'uint32'),
+            value: 2
+          })
+        )
+        .compile()
+    ).toThrow();
+    device.destroy();
+  });
+});
+
+describe('SimpleGraph inspection metadata', () => {
+  it('derives canonical formats before evaluation without allocating buffers', () => {
+    const device = new NullDevice({});
+    const createBuffer = vi.spyOn(device, 'createBuffer');
+    const values = [
+      GPUDataEvaluator.fromArray(new Float32Array([1, 2, 3]), {size: 3}),
+      GPUDataEvaluator.fromConstant(2),
+      GPUDataEvaluator.fromArray(new Uint8Array([0, 127, 255, 255]), {size: 4, normalized: true})
+    ];
+    const vector = GPUVectorEvaluator.fromGPUDataEvaluators([values[0]]);
+    const graph = new GPUSimpleGraph(device);
+    for (const [index, evaluator] of [...values, vector].entries()) {
+      graph.addEvaluator(`value-${index}`, evaluator);
+    }
+    const compiled = graph.compile({outputs: ['value-0', 'value-1', 'value-2', 'value-3']});
+    expect(graph.operationTree.map(operation => operation.metadata?.outputs?.[0].format)).toEqual([
+      'float32x3',
+      'float32',
+      'unorm8x4',
+      'float32x3'
+    ]);
+    expect(compiled.nodes.map(node => node.format)).toEqual([
+      'float32x3',
+      'float32',
+      'unorm8x4',
+      'float32x3'
+    ]);
+    expect(createBuffer).not.toHaveBeenCalled();
+    compiled.destroy();
+    vector.destroy();
+    values[1].destroy();
+    values[2].destroy();
+    device.destroy();
+  });
+
+  it('maps selected aliases to their shared dependency node', async () => {
+    const device = new NullDevice({});
+    const evaluator = GPUDataEvaluator.fromConstant(2);
+    const graph = new GPUSimpleGraph(device);
+    graph.addEvaluator('first', evaluator);
+    graph.addEvaluator('second', evaluator);
+    const compiled = graph.compile({outputs: ['second']});
+    expect(compiled.nodes.map(node => node.id)).toEqual(['first']);
+    expect(compiled.outputNodes).toEqual({second: 'first'});
+    expect(Object.isFrozen(compiled.outputNodes)).toBe(true);
+    expect(Object.keys(await compiled.run())).toEqual(['second']);
+    compiled.destroy();
+    evaluator.destroy();
     device.destroy();
   });
 });
