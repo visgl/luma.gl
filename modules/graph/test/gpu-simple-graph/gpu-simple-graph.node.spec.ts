@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {describe, expect, it, vi} from 'vitest';
-import {GPUDataEvaluator, GPUVectorEvaluator, add, multiply} from '@luma.gl/gpgpu';
+import {GPUDataEvaluator, GPUVectorEvaluator, add, multiply, sqrt} from '@luma.gl/gpgpu';
 import {GPUSimpleGraph, GPUSimpleGraphOperation} from '@luma.gl/graph/gpu-simple-graph';
 import {
   GPUProgram,
@@ -411,4 +411,49 @@ it('preserves float32 rounding between semantic scalar operations', async () => 
     }
   }
   device.destroy();
+});
+
+it('materializes shared scalar dependencies once before collecting vector chunks', async () => {
+  const device = new NullDevice({});
+  const input = GPUDataEvaluator.fromConstant(4);
+  const scale = sqrt(input);
+  const alias = new GPUDataEvaluator({
+    type: 'float32',
+    size: 1,
+    length: 1,
+    isConstant: true,
+    source: scale
+  });
+  const chunks = [add(alias, 1), add(alias, 2)];
+  const vector = GPUVectorEvaluator.fromGPUDataEvaluators(chunks);
+  const graph = new GPUSimpleGraph(device);
+  graph.addEvaluator('result', vector);
+  const compiled = graph.compile();
+  const evaluateScale = vi.spyOn(scale, 'evaluate');
+  let pending = false;
+  const originalEvaluate = scale.evaluate.bind(scale);
+  evaluateScale.mockImplementation(async (...args) => {
+    expect(pending).toBe(false);
+    pending = true;
+    try {
+      return await originalEvaluate(...args);
+    } finally {
+      pending = false;
+    }
+  });
+  try {
+    const result = await compiled.run();
+    expect(result.result.data).toHaveLength(2);
+    expect(Array.from(await chunks[0].readValue())).toEqual([3]);
+    expect(Array.from(await chunks[1].readValue())).toEqual([4]);
+    expect((await compiled.run()).result).toBe(result.result);
+  } finally {
+    evaluateScale.mockRestore();
+    compiled.destroy();
+    vector.destroy();
+    alias.destroy();
+    scale.destroy();
+    input.destroy();
+    device.destroy();
+  }
 });

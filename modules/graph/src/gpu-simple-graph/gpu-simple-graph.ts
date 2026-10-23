@@ -250,8 +250,19 @@ export class CompiledGPUSimpleGraph {
     this.running = true;
     try {
       const results: [string, GPUVector][] = [];
+      const evaluated = new Set<GPUSimpleGraphEvaluator>();
+      const evaluateDependencies = async (evaluator: GPUSimpleGraphEvaluator): Promise<void> => {
+        if (evaluated.has(evaluator)) return;
+        for (const dependency of getDependencies(evaluator)) {
+          await evaluateDependencies(dependency);
+        }
+        // Materialize shared inputs before vector collection starts parallel chunk evaluation.
+        await evaluator.evaluate(this.device);
+        evaluated.add(evaluator);
+      };
       for (const {id, evaluator} of this.executionPlan) {
-        results.push([id, await evaluator.evaluate(this.device)]);
+        await evaluateDependencies(evaluator);
+        results.push([id, evaluator.gpuVector]);
       }
       return Object.fromEntries(results);
     } finally {
