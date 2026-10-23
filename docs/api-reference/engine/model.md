@@ -21,13 +21,12 @@ pipelines, and applies its dynamic draw state to a
 
 ## GPUVectorModel base
 
-`Model` extends `GPUVectorModel`, exported from `@luma.gl/engine`. There is one
-implementation; the existing `@luma.gl/gpgpu/gpu-data` export refers to the same class.
+`Model` extends `GPUVectorModel`, exported from `@luma.gl/engine`. The
+`@luma.gl/gpgpu/gpu-data` export refers to the same class.
 The base owns the shared rendering state, contiguous vector `setGPUVectors()` API,
 and aligned vector `drawBatches()` API. Vector byte offsets are preserved.
-Existing shader assembly, geometry, uniform, and binding conveniences remain available
-on both classes during this initial extraction. Buffer layouts are still explicit;
-this change does not introduce automatic layout inference or change `RenderKernel`.
+Both classes support shader assembly, geometry, uniforms, and bindings. Buffer layouts
+are explicit and supplied by the caller.
 `BufferTransform` and `TextureTransform` use `GPUVectorModel` directly; `TableTransform`
 inherits that implementation through `BufferTransform`.
 

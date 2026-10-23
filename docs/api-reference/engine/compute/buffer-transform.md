@@ -49,8 +49,8 @@ The transform borrows the vectors, preserves chunk byte offsets, and infers vert
 from input row count. Direct vector bindings require at most one chunk per vector; no
 packing occurs. Output vectors must match the shader outputs and use separate, tightly
 packed transform-feedback streams. For multi-chunk table workloads, use
-`TableTransform.dispatchBatches()`. Existing buffer-valued options remain supported;
-vector bindings take precedence when both forms are supplied for the same input or output.
+`TableTransform.dispatchBatches()`. Buffer-valued options are also supported. Vector
+bindings take precedence when both forms are supplied for the same input or output.
 
 ## Types
 
