@@ -145,6 +145,7 @@ it('rejects a saturated swept queue without publishing any body state', async co
 
 it.for(['box', 'sphere', 'capsule', 'cylinder', 'convex-hull'] as const)(
   'qualifies translating %s against a thin wall across scale',
+  {timeout: 120000},
   async (type, context) => {
     for (const scale of [0.01, 1, 100]) {
       const shape =
@@ -195,8 +196,7 @@ it.for(['box', 'sphere', 'capsule', 'cylinder', 'convex-hull'] as const)(
       expect(result.state[0].velocity[0] / scale).toBeCloseTo(-240, 0);
       expect(result.state[0].position[0] / scale).toBeCloseTo(-2.56, 2);
     }
-  },
-  120000
+  }
 );
 
 it('detects a rotating gate crossing a stationary sphere between samples', async context => {
