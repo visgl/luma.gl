@@ -11,6 +11,10 @@ const DEFAULT_BROWSER_TEST_WEIGHT = 3;
 // Include page/import overhead: GPU test-body durations alone underweight Arrow and Deck specs.
 // Keep the current source paths here when suites move between packages.
 export const SLOW_BROWSER_TEST_WEIGHTS: Readonly<Record<string, number>> = {
+  // Stack qualification preserves six simulated seconds; avoid concentrating it in one shard.
+  'modules/gpu-graph/test/gpu-physics/rigid-body-difficult-stacks.spec.ts': 360,
+  'modules/gpu-graph/test/gpu-physics/rigid-body-mass-ratio-stacks.spec.ts': 240,
+  'modules/gpu-graph/test/gpu-physics/rigid-body-offset-stacks.spec.ts': 120,
   'modules/arrow/test/arrow/arrow-path-model.spec.ts': 15,
   'modules/arrow/test/arrow/dggs-gpu-polygons.spec.ts': 12,
   'modules/deck-arrow-layers/test/gpu-graph-deck.spec.ts': 15,

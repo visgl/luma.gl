@@ -664,7 +664,8 @@ recovery, broader active-island scheduling and throughput qualification remain G
 Independent signed-depth and normal references cover sphere/sphere, rotated aligned
 box faces, sphere/box faces/edges/corners, capsule sides, compound offsets and scale.
 Six-second stacks run with sleeping disabled at two timesteps and both solvers,
-including eight boxes, 10:1 loading and offset COM. The stress lab exposes corresponding
+including eight boxes, 10:1 loading and offset COM, under an explicit damped
+stabilization profile (64 slots/iterations, warm start 0.8, recovery fraction 0.1). The stress lab exposes corresponding
 scenarios and compact/full-scan workgroup diagnostics. General penetration-depth
 geometry, nonconvex containment, extreme ratios, rotational CCD and cross-device
 quality/cost evidence remain open; this increment does not close G1–G3.

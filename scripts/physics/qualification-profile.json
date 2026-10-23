@@ -1128,6 +1128,14 @@
           {
             "file": "modules/gpu-graph/test/gpu-physics/rigid-body-difficult-stacks.spec.ts",
             "testPattern": "bounds sustained penetration, drift and residual energy"
+          },
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-mass-ratio-stacks.spec.ts",
+            "testPattern": "bounds sustained penetration, drift and residual energy"
+          },
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-offset-stacks.spec.ts",
+            "testPattern": "bounds sustained penetration, drift and residual energy"
           }
         ]
       }

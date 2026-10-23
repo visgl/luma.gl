@@ -133,11 +133,14 @@ export function makeStressScene(
     return {
       description:
         scene === 'deepStack'
-          ? 'Eight unit boxes run for six simulated seconds with sleeping disabled and 64 iterations. Numerical checks sample support separation, height drift and residual energy at 1/120 and 1/240 s. Other timesteps are exploratory.'
+          ? 'Eight unit boxes run for six simulated seconds with sleeping disabled, 64 iterations, warm-start factor 0.8 and recovery fraction 0.1. Numerical checks sample support separation, height drift and residual energy at 1/120 and 1/240 s. Other timesteps are exploratory.'
           : 'Four unit boxes have a 0.1-unit center-of-mass offset. The six-second numerical fixture measures drift, support separation and residual energy with sleeping disabled. Compare the ordered and parallel solvers.',
       props: {
         ...props,
         iterations: 64,
+        maximumPairs: 64,
+        warmStartFactor: 0.8,
+        penetrationRecoveryFraction: 0.1,
         gravity: [0, 0, -9.81],
         bodies: [
           {...props.bodies[0], friction: 0.8},

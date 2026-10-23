@@ -617,11 +617,17 @@ edges/corners and compound collider offsets. Rectangle-membership references che
 nonconvex mesh openings, both ray directions, rotated surfaces, winding and scale. These are quantitative named cases;
 they do not qualify arbitrary convex penetration, mesh containment or degeneracies.
 
-`rigid-body-difficult-stacks.spec.ts` runs eight-box, 10:1 heavy-on-light and offset-COM
+The difficult-stack, mass-ratio-stack and offset-stack suites run eight-box, 10:1 heavy-on-light and offset-COM
 stacks for six simulated seconds at 1/120 and 1/240 s, with sleeping disabled and
-64 iterations, for ordered and parallel solvers. Sampled height drift stays below
+64 iterations, 64 pair slots, warm-start factor 0.8 and penetration recovery fraction
+0.1, for ordered and parallel solvers. Sampled height drift stays below
 0.12 units, adjacent COM height separation stays above 0.94, lateral COM drift below
 0.12 and final kinetic energy below 0.02 in the fixtures' units. COM separation is
 a stack-specific proxy, not an oriented geometry penetration measurement. Sampling
 occurs every 60 steps and does not bound every intermediate tick. The 100:1 stress
 scene, extreme stacks, cross-device performance and rotational CCD remain exploratory.
+
+The numeric bounds above apply to this explicit stabilization profile; default settings
+and extreme loads are not qualified by these fixtures. Each timestep is a separate
+test and the three physical scenarios are weighted across browser shards so long
+simulation duration does not become one combined test timeout.

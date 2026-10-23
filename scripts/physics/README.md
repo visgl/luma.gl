@@ -108,6 +108,6 @@ with a proportional full-step speedup.
 
 `rigid-body-compaction.spec.ts` checks scan parity, empty/rebuilt queues, capture/restore,
 and 80 independent contacts spanning two workgroups. `rigid-body-contact-geometry.spec.ts`
-uses closed-form signed depths and normals. `rigid-body-difficult-stacks.spec.ts` bounds
+uses closed-form signed depths and normals. The three stack qualification suites bound
 sampled drift, support separation and final energy across two timesteps, with sleeping
-disabled. Each test describes a bounded numeric envelope, not general SOTA coverage.
+disabled, 64 pair slots, 64 iterations, warm-start factor 0.8 and recovery fraction 0.1. Each test describes a bounded numeric envelope, not general SOTA coverage.
