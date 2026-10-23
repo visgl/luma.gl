@@ -13,6 +13,7 @@ import {
 import {ClipSpace, Computation} from '@luma.gl/engine';
 import {
   getFragmentShaderForRenderPass,
+  initializeShaderModule,
   textureTransform,
   type ShaderPass,
   type CompositeShaderPass,
@@ -173,17 +174,28 @@ function lowerShaderPipeline<Parameters>(
       }
       return target;
     };
+    const steps: CompositeShaderPassStep[] =
+      'steps' in definition ? definition.steps : [{shaderPass: definition}];
+    const moduleDefaults = Object.fromEntries(
+      steps.map(({shaderPass}) => {
+        initializeShaderModule(shaderPass);
+        return [shaderPass.name, {...shaderPass.defaultUniforms, ...shaderPass.uniforms}];
+      })
+    );
     const optimization = 'steps' in definition ? definition.compute : undefined;
     // Existing compute kernels address texels directly; flipped fragment sampling needs the fallback.
     const useCompute =
       optimization && (props.flipY ?? true) && supportsCompute(optimization, targets);
     if (useCompute) {
-      emitCompute(optimization, resolve(optimization.input), targets);
+      emitCompute(
+        optimization,
+        resolve(optimization.input),
+        targets,
+        moduleDefaults[optimization.uniformModule] || {}
+      );
       for (const name of Object.values(optimization.outputs))
         writtenTargets.add(targets[name].view);
     }
-    const steps: CompositeShaderPassStep[] =
-      'steps' in definition ? definition.steps : [{shaderPass: definition}];
     for (const step of steps) {
       if (useCompute && optimization.replacedPasses.includes(step.shaderPass.name)) continue;
       const subpasses = step.shaderPass.passes || [];
@@ -272,6 +284,7 @@ function lowerShaderPipeline<Parameters>(
             model.shaderInputs.setProps({textureTransform: {scale, flipY: flipY ? 1 : 0}});
             model.shaderInputs.setProps({
               [shaderPass.name]: {
+                ...shaderPass.defaultUniforms,
                 ...shaderPass.uniforms,
                 ...props.uniforms?.[shaderPass.name],
                 ...uniforms,
@@ -326,7 +339,8 @@ function lowerShaderPipeline<Parameters>(
   function emitCompute(
     optimization: CompositeShaderPassComputeOptimization,
     source: Target,
-    targets: Record<string, Target>
+    targets: Record<string, Target>,
+    moduleDefaults: Record<string, unknown>
   ): void {
     const entries = Object.entries(optimization.outputs);
     if (entries.some(([, name]) => targets[name].view.texture === source.view.texture))
@@ -380,6 +394,7 @@ function lowerShaderPipeline<Parameters>(
         return {
           prepare: encoding => {
             const values = {
+              ...moduleDefaults,
               ...props.uniforms?.[optimization.uniformModule],
               ...optimization.uniforms,
               ...getRuntimeUniforms(encoding)[optimization.uniformModule]

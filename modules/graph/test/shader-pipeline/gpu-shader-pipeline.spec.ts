@@ -18,7 +18,8 @@ const increment: ShaderPass = {
       return vec4f(color.rgb + vec3f(graphIncrement.amount, 0.0, 0.0), color.a);
     }`,
   uniformTypes: {amount: 'f32'},
-  uniforms: {amount: 0},
+  uniforms: {},
+  propTypes: {amount: {value: 0.25, min: 0, max: 1}},
   passes: [{filter: true}]
 };
 
@@ -66,7 +67,7 @@ test('shader pipelines compose through one graph with ordered per-encoding unifo
     external: true
   });
   const getUniforms = vi.fn((parameters: {amount: number}) => ({
-    graphIncrement: {amount: parameters.amount}
+    graphIncrement: parameters.amount ? {amount: parameters.amount} : {}
   }));
   program.add([
     new GPUShaderPipeline<{amount: number}>({
@@ -119,7 +120,7 @@ test('shader pipelines compose through one graph with ordered per-encoding unifo
       width: 2,
       height: 2
     });
-    compiled.encode(commandEncoder, {parameters: {amount: 0.4}});
+    compiled.encode(commandEncoder, {parameters: {amount: 0}});
     commandEncoder.copyTextureToBuffer({
       sourceTexture: outputTexture,
       mipLevel: 1,
@@ -137,8 +138,8 @@ test('shader pipelines compose through one graph with ordered per-encoding unifo
     const second = await secondReadback.readAsync();
     expect(first[0]).toBeGreaterThanOrEqual(75);
     expect(first[0]).toBeLessThanOrEqual(78);
-    expect(second[0]).toBeGreaterThanOrEqual(126);
-    expect(second[0]).toBeLessThanOrEqual(129);
+    expect(second[0]).toBeGreaterThanOrEqual(88);
+    expect(second[0]).toBeLessThanOrEqual(91);
     expect([
       first[1],
       first[5],
@@ -188,7 +189,6 @@ test('composite compute replacements and fragment fallbacks produce the same out
     uniformModule: 'graphIncrement',
     uniformBinding: 'parameters',
     uniformNames: ['amount'],
-    uniforms: {amount: 0.25},
     input: 'previous',
     outputs: {smallResultTexture: 'small', resultTexture: 'scratch'},
     replacedPasses: ['graphIncrement'],
@@ -229,7 +229,6 @@ test('composite compute replacements and fragment fallbacks produce the same out
           flipY,
           input,
           output,
-          uniforms: {graphIncrement: {amount: 0.25}},
           shaderPasses: [
             {
               name: 'compositeIncrement',
