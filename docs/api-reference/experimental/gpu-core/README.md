@@ -259,3 +259,8 @@ Trace-domain algorithms are indexed from the
 - [GPU Raster](/docs/api-reference/experimental/gpu-raster) provides raster and field operations.
 - [GPU Dataframe](/docs/api-reference/experimental/gpu-dataframe) provides dataframe-style GPU analysis.
 - [`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/gpgpu/gpu-data) defines Arrow-independent GPU data containers.
+
+## Buffer and texture management
+
+See [Buffers and textures](/docs/api-reference/experimental/gpu-core/resources) for logical values,
+views, imported and transient ownership, hazard tracking, history, resizing, and encoding contracts.

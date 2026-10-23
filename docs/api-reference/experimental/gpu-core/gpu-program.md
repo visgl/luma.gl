@@ -56,7 +56,7 @@ const graph = compilation.graph;
 
 Arrays are root-level construction sugar. `GPUCompositeOperation` preserves semantic grouping.
 
-The public semantic value and operation types are `GPUProgramScalar`, `GPUProgramVector`,
+The public semantic value and operation types are `GPUProgramScalar`, `GPUProgramVector`, `GPUProgramTexture`, `GPUProgramTextureView`,
 `GPUProgramScalarLiteral`, `GPUProgramScalarOperation`, `GPUProgramVectorMADD`,
 `GPUProgramDotProduct`, `GPUProgramCSRMatrix`, and `GPUProgramSpMV`. The WebGPU
 `GPUProgramCompiler` lowers these built-ins through its `GPUOperationLoweringRegistry`; custom
@@ -178,3 +178,14 @@ vector-binding type. `GPUProgramBindings` is only a TypeScript object type for t
 not a runtime wrapper. `GPUProgramVector` remains a symbolic declaration: it can describe transient
 storage before a device or buffer exists. Keeping this declaration separate avoids adding program
 identity, external-binding flags, or compiler allocation state to ordinary `GPUVector` instances.
+
+## Buffer and texture management
+
+See [Buffers and textures](/docs/api-reference/experimental/gpu-core/resources) for logical values,
+views, imported and transient ownership, hazard tracking, history, resizing, and encoding contracts.
+
+`program.texture(id, props)` declares logical texture storage using the graph texture descriptor
+fields plus `external`. `program.textureView(texture, props)` selects subresources without allocating
+storage. `GPUProgramCompiler.compile()` accepts optional `textures` defaults; imported textures may
+also be supplied when encoding. `compilation.textures` exposes logical graph texture handles.
+Custom lowerers resolve storage with `resolveTexture()` and views with `resolveTextureView()`.

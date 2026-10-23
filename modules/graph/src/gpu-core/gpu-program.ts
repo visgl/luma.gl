@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {TextureFormat} from '@luma.gl/core';
+import type {GraphTextureViewProps} from './gpu-command-graph';
+
 import {
   GPUCompositeOperation,
   getGPUOperationTree,
@@ -11,6 +14,9 @@ import {
 } from './gpu-operation';
 import {
   GPUProgramScalar,
+  GPUProgramTexture,
+  GPUProgramTextureView,
+  type GPUProgramTextureProps,
   GPUProgramVector,
   type GPUProgramScalarFormat,
   type GPUProgramVectorFormat
@@ -22,6 +28,7 @@ export class GPUProgram {
   private readonly programOperations: GPUProgramOperation[] = [];
   private readonly programScalars = new Map<string, GPUProgramScalar>();
   private readonly programVectors = new Map<string, GPUProgramVector>();
+  private readonly programTextures = new Map<string, GPUProgramTexture>();
   constructor(props: {id?: string} = {}) {
     this.id = props.id ?? 'gpu-program';
   }
@@ -47,6 +54,27 @@ export class GPUProgram {
     this.programVectors.set(id, vector);
     return vector;
   }
+  texture<Format extends TextureFormat>(
+    id: string,
+    props: GPUProgramTextureProps<Format>
+  ): GPUProgramTexture<Format> {
+    this.assertValueId(id);
+    const texture = new GPUProgramTexture({...props, id});
+    this.programTextures.set(id, texture);
+    return texture;
+  }
+  textureView<Format extends TextureFormat>(
+    texture: GPUProgramTexture<Format>,
+    props: GraphTextureViewProps = {}
+  ): GPUProgramTextureView<Format> {
+    if (this.programTextures.get(texture.id) !== texture) {
+      throw new Error(`Undeclared program texture "${texture.id}"`);
+    }
+    return new GPUProgramTextureView(texture, props);
+  }
+  get textures(): readonly GPUProgramTexture[] {
+    return Object.freeze([...this.programTextures.values()]);
+  }
   get scalars(): readonly GPUProgramScalar[] {
     return Object.freeze([...this.programScalars.values()]);
   }
@@ -60,7 +88,7 @@ export class GPUProgram {
     return Object.freeze(this.programOperations.map(getGPUOperationTree));
   }
   private assertValueId(id: string): void {
-    if (this.programScalars.has(id) || this.programVectors.has(id))
+    if (this.programScalars.has(id) || this.programVectors.has(id) || this.programTextures.has(id))
       throw new Error(`${this.id} value "${id}" already exists`);
   }
   private addOperationLike(operation: GPUOperationLike): void {

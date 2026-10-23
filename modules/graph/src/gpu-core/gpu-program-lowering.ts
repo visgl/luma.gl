@@ -2,9 +2,17 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {TextureFormat} from '@luma.gl/core';
+import type {GraphTextureHandle, GraphTextureView} from './gpu-command-graph';
+
 import type {GPUCommandGraph, GraphVectorView} from './gpu-command-graph';
 import type {GPUScalar} from './gpu-scalar';
-import type {GPUProgramScalar, GPUProgramVector} from './gpu-program-value';
+import type {
+  GPUProgramScalar,
+  GPUProgramVector,
+  GPUProgramTexture,
+  GPUProgramTextureView
+} from './gpu-program-value';
 import type {GPUOperationPredicate} from './gpu-control-flow-operation';
 import type {GPUOperation, GPUProgramOperation} from './gpu-operation';
 export type GPUProgramBackendCapabilities = {
@@ -30,6 +38,12 @@ export type GPUOperationLoweringContext<Parameters = void> = {
   resolveVector: <T extends 'float32' | 'uint32' | 'sint32'>(
     vector: GPUProgramVector<T>
   ) => GraphVectorView<T>;
+  resolveTexture: <Format extends TextureFormat>(
+    texture: GPUProgramTexture<Format>
+  ) => GraphTextureHandle<Format>;
+  resolveTextureView: <Format extends TextureFormat>(
+    texture: GPUProgramTexture<Format> | GPUProgramTextureView<Format>
+  ) => GraphTextureView<Format>;
   recordDecision: (decision: GPUOperationLoweringDecision) => void;
 };
 export type GPUOperationLowerer<

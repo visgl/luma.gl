@@ -2217,7 +2217,10 @@ function normalizeGraphTextureDescriptor<Format extends TextureFormat>(
       `GPUGraph cube-array texture "${descriptor.id}" must be square with depth divisible by 6`
     );
   }
-  if (mipLevels > device.getMipLevelCount(descriptor.width, descriptor.height, depth)) {
+  if (
+    mipLevels >
+    device.getMipLevelCount(descriptor.width, descriptor.height, dimension === '3d' ? depth : 1)
+  ) {
     throw new Error(`GPUGraph texture "${descriptor.id}" declares too many mip levels`);
   }
   const maximumWidth =

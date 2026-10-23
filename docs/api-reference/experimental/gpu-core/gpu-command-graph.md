@@ -915,3 +915,8 @@ Tooltips also show declared resource inputs and outputs, access modes, buffer by
 and available view formats, row counts, and texture dimensions. These are static declarations,
 not measured traffic or a readback of buffer contents. Serializable resource summaries are
 retained in preflight reports and traces.
+
+## Buffer and texture management
+
+See [Buffers and textures](/docs/api-reference/experimental/gpu-core/resources) for logical values,
+views, imported and transient ownership, hazard tracking, history, resizing, and encoding contracts.
