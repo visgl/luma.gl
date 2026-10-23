@@ -602,7 +602,11 @@ export class GPUDataEvaluator {
   private _getEvaluationBuffer(device: Device): Buffer {
     const target = this._targetBuffer;
     if (!target) {
-      return bufferPool.createOrReuse(device, this.byteLength);
+      // CPU uploads include the entire view, including leading/trailing layout padding.
+      return bufferPool.createOrReuse(
+        device,
+        Math.max(this.offset + this.byteLength, this._value?.byteLength ?? 0)
+      );
     }
 
     if (target.buffer.device !== device) {
