@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {evaluateSimpleGraphExpression} from '../../../../examples/v10/gpgpu/src/simple-graph-expression';
 import {expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {GPUDataEvaluator} from '@luma.gl/gpgpu';
@@ -17,6 +18,25 @@ for (const [backend, getDevice] of [
   ['webgl', getWebGLTestDevice],
   ['webgpu', getWebGPUTestDevice]
 ] as const) {
+  it(`preserves wide expression output readback in the example on ${backend}`, async ({skip}) => {
+    const device = await getDevice();
+    if (!device) return skip();
+    const coordinates = GPUDataEvaluator.fromArray(new Float32Array([1, 2, 3, 4, 5, 6]), {size: 3});
+    const result = await evaluateSimpleGraphExpression(
+      device,
+      'interleave(coordinates, coordinates)',
+      {coordinates}
+    );
+    try {
+      expect(result.output.size).toBe(6);
+      expect(Array.from(await result.output.readValue())).toEqual([
+        1, 2, 3, 1, 2, 3, 4, 5, 6, 4, 5, 6
+      ]);
+    } finally {
+      result.destroy();
+      coordinates.destroy();
+    }
+  });
   it(`composes graph values, uploads, and borrowed GPU inputs on ${backend}`, async ({skip}) => {
     const device = await getDevice();
     if (!device) return skip();

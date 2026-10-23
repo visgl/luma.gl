@@ -52,7 +52,20 @@ export async function evaluateSimpleGraphExpression(
   try {
     const results = await compiled.run();
     // Borrow the result for the shared viewer's existing paged readback adapter.
-    const output = GPUDataEvaluator.fromGPUData(results.output.data[0]);
+    const source = compiled.outputs.output;
+    if (!(source instanceof GPUDataEvaluator))
+      throw new Error('Expected a single-chunk expression');
+    const output = new GPUDataEvaluator({
+      id: expression,
+      buffer: results.output.data[0].buffer,
+      type: source.type,
+      size: source.size,
+      length: source.length,
+      offset: source.offset,
+      stride: source.stride,
+      normalized: source.normalized,
+      format: source.format
+    });
     return {
       output,
       nodeCount: compiled.nodes.length,
