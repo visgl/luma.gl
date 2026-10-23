@@ -16395,6 +16395,22 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-experimental-physics-stress@workspace:examples/experimental/physics-stress":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-experimental-physics-stress@workspace:examples/experimental/physics-stress"
+  dependencies:
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
+    "@luma.gl/core": "npm:10.0.0-alpha.4"
+    "@luma.gl/engine": "npm:10.0.0-alpha.4"
+    "@luma.gl/experimental": "npm:10.0.0-alpha.4"
+    "@luma.gl/gpu-graph": "npm:10.0.0-alpha.4"
+    "@luma.gl/shadertools": "npm:10.0.0-alpha.4"
+    preact: "npm:^10.17.0"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-experimental-shadow-map@workspace:examples/experimental/shadow-map":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-experimental-shadow-map@workspace:examples/experimental/shadow-map"

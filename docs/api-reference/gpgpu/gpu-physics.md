@@ -57,8 +57,8 @@ experimental as a module.
 | Joints and articulations | Partial | Bounded ordered distance/fixed/hinge/slider constraints, frames, limits, warm starts, springs, position/velocity drives and island sleeping | Parallel scheduling, breakage and articulations remain planned |
 | glTF physics | Partial | Pinned draft import, shape/body/material/filter semantics and explicit capability reports | Proposal constraints, triggers, behavior bindings and automatic animation ownership remain incomplete |
 | GPU scenegraph pose publication | Partial | Reusable geometry snapshots and GPU body-node matrices/visual AABBs; cradle PBR and shadows consume published matrices | The glTF example still bridges poses through the CPU; automatic animation/object-model binding remains work |
-| Capacity and diagnostics | Available | Allocation preflight, logical memory reports, bounded queues and lifetime failure counters | Opt-in GPU rollback and explicit budget-growth reconstruction; automatic growth and kinematic command replay remain work |
-| Qualification and tooling | Partial | GPU regressions, independent fixtures, whole-step benchmark exports and graph/timeline inspection | Same-implementation GPU state capture/restore is available; tick-ordered command journals are available; multi-device gates and a fully qualified profile remain work |
+| Capacity and diagnostics | Available | Allocation preflight, bounded queues, lifetime diagnostics and GPU rollback; opt-in bounded automatic growth/replay for sparse pair and traversal budgets | Recovery synchronizes each tick and replays from initial state; fixed mesh-task/CCD failures, event continuity and GPU-only adaptive growth remain work |
+| Qualification and tooling | Partial | Independent analytic shape/motion references, command replay, whole-step measurements and Physics Stress Lab with JSON exports | Named-case evidence only; difficult-contact, multi-device and full-profile qualification remain work |
 
 See the [remaining tranches](https://github.com/visgl/luma.gl/blob/master/dev-docs/roadmaps/gpu-physics-roadmap.md#remaining-tranches-after-space-salvage)
 for completion gates. The detailed [sphere](./gpu-sphere-world.md) and
@@ -113,3 +113,54 @@ A successful import, finite poses or zero overflow alone is not proof of accurac
 
 See the [collision coverage contract](./gpu-physics-collision-coverage.md) for pairwise
 response fixtures and the distinction between coverage and numerical qualification.
+
+## Capacity recovery and numerical qualification
+
+`GPURigidBodyRecoveryRunner` is an opt-in asynchronous owner of a world and its graph.
+It checks completion after each fixed tick. Recoverable sparse-pair or traversal
+exhaustion grows the relevant budget, reconstructs a world and replays the accepted
+command history plus the pending tick from the authored initial state. This avoids
+copying incompatible contact caches and preserves kinematic targets and joint toggles.
+A replacement becomes visible only after the complete replay succeeds.
+
+```typescript
+const runner = await GPURigidBodyRecoveryRunner.create(device, {
+  bodies,
+  broadPhase: 'hierarchical-grid',
+  maximumPairs: 16
+}, {maximumRetries: 8, maximumReplayTicks: 4096});
+const result = await runner.advance([
+  {type: 'impulse', body: 0, impulse: [1, 0, 0]}
+]);
+if (!result.accepted) {
+  // Stop and inspect result.diagnostics; this runner will reject subsequent advances.
+}
+// Rebind render buffers from runner.world after advance: recovery replaces the world.
+runner.destroy();
+```
+
+All external mutations must use `advance(commands)`. Do not encode `runner.graph` or
+mutate `runner.world` independently; those accessors support inspection and rendering.
+Calls must be serialized. `maximumReplayTicks` bounds retained command history and is
+also the maximum accepted run length; reaching it requires creating a new runner.
+`maximumOwnedBufferBytes` defaults to 256 MiB **per world**. Recovery temporarily keeps
+both old and candidate worlds, and graph scratch/pipelines/driver memory are additional.
+An allocation or compilation failure throws and blocks the runner; exhaustion without
+a viable growth plan returns `accepted: false`. Destroy it after inspection.
+
+Ticks with commands also capture pre-command state for atomic rejection; this adds a full
+state readback on those ticks. The runner reads compact diagnostics each tick and replays from initial conditions,
+not from a portable checkpoint. It is intended for bounded sessions, tools and
+qualification, not a zero-readback high-throughput simulation loop. Event rings retain
+their existing explicit overflow semantics; this runner does not guarantee delivery
+of every event across world replacement. Consumer event cursors must not be carried
+across replacements. Numerical/geometry failures and CCD impact-budget exhaustion
+are rejected instead of being disguised as capacity problems.
+
+The **Physics Stress Lab** exposes recovery counters, buffer capacities, completion
+p50/p95 and JSON reports. Independent GPU qualification tests cover rotated-box slab
+intersections, sphere ray intersections across scales, convex/capsule/cylinder/triangle
+surfaces, elastic momentum/energy,
+ballistic timestep convergence and analytic sphere/static-wall rebound positions.
+These qualify named cases; general mesh containment, rotational CCD, deep stacks and
+cross-device performance still require separate evidence.

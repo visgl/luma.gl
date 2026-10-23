@@ -4,6 +4,7 @@
 
 import {makeShaderBlockLayout, ShaderBlockWriter, UniformStore} from '@luma.gl/core';
 import {
+  GLSLShaderAssembler,
   getShaderModuleUniformBlockFields,
   getShaderModuleUniformLayoutValidationResult,
   getShaderModuleUniforms,
@@ -607,5 +608,22 @@ it('shadertools#pbrMaterial compiles lightmap irradiance for core and layered We
     } finally {
       shader.destroy();
     }
+  }
+});
+
+it('shadertools#pbrMaterial declares scene uniforms before GLSL consumers regardless of module order', () => {
+  for (const modules of [[pbrMaterial], [pbrMaterial, pbrScene], [pbrScene, pbrMaterial]]) {
+    const assembled = new GLSLShaderAssembler().assembleGLSLShaderPair({
+      platformInfo: {...WEBGPU_PLATFORM, type: 'webgl', shaderLanguage: 'glsl'},
+      modules,
+      defines: {USE_SCENE_ENVIRONMENT: true, USE_SCENE_COLOR_MANAGEMENT: true, USE_IBL: true},
+      vs: '#version 300 es\nvoid main() { gl_Position = vec4(0.0); }',
+      fs: '#version 300 es\nprecision highp float;\nout vec4 color;\nvoid main() { color = vec4(1.0); }'
+    });
+    const declarationOffset = assembled.fs.indexOf('} pbrScene;');
+    const consumerOffset = assembled.fs.indexOf('pbrScene.environmentMipCount');
+    expect(declarationOffset).toBeGreaterThanOrEqual(0);
+    expect(consumerOffset).toBeGreaterThan(declarationOffset);
+    expect(assembled.fs.match(/} pbrScene;/g)).toHaveLength(1);
   }
 });

@@ -80,3 +80,18 @@ checkpoint and restoration passes. `--broad-phase all-pairs` and
 `--broad-phase hierarchical-grid` compare discovery strategies. The cradle uses
 elastic low-speed contacts; use `--time-step 0.0020833333333333333` to match its
 480 Hz example. Compare numerical behavior as well as timings.
+
+## Recovery and analytic qualification
+
+The profile also tracks the recovery and analytic fixtures in
+`rigid-body-recovery.spec.ts` and `rigid-body-qualification.spec.ts`. Run those through
+`yarn test-headless --no-coverage` for focused development, then run the full suite.
+Recovery checks compare a small-budget replay to a generous-budget world, including
+failure on a later tick after kinematic commands. Numerical checks use independent
+slab, sphere-intersection, ballistic and elastic-impact formulas, rather than treating
+one GPU implementation as the only accuracy oracle.
+
+The Physics Stress Lab (`yarn workspace luma.gl-examples-experimental-physics-stress start`)
+exports per-tick completion measurements and recovery counts. This includes host/GPU
+synchronization and readback, and replay samples include compilation. These exports
+are exploratory evidence, not automatic hardware qualification passes.

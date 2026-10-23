@@ -24,6 +24,7 @@ import {areaLighting} from '../area-lighting/area-lighting';
 import {fs, vs} from './pbr-material-glsl';
 import {source} from './pbr-material-wgsl';
 import {pbrProjection} from './pbr-projection';
+import {pbrScene} from './pbr-scene';
 
 /** Non-uniform block bindings for pbr module */
 export type PBRMaterialBindings = {
@@ -349,7 +350,8 @@ export const pbrMaterial = {
     {name: 'pbr_diffuseTransmissionColorSampler', group: 3},
     {name: 'pbr_multiscatterColorSampler', group: 3}
   ],
-  dependencies: [lighting, areaLighting, ibl, pbrProjection],
+  // GLSL requires scene uniforms to be declared before the material functions that use them.
+  dependencies: [lighting, areaLighting, ibl, pbrProjection, pbrScene],
   source,
   vs,
   fs,
