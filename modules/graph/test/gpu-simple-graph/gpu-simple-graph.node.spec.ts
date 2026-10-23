@@ -477,7 +477,7 @@ it('binds chunked output targets without retargeting borrowed evaluators', async
     const result = await compiled.run();
     expect(result.value.data.map(chunk => chunk.length)).toEqual([2, 1]);
     expect(result.value.data.map(chunk => chunk.buffer)).toEqual(targets);
-    expect(vector.gpuVector.data[0].buffer).not.toBe(targets[0]);
+    expect(chunks[0].buffer).not.toBe(targets[0]);
     for (const [index, expected] of [
       [0, [1, 2]],
       [1, [3]]
@@ -488,7 +488,8 @@ it('binds chunked output targets without retargeting borrowed evaluators', async
     }
   } finally {
     compiled.destroy();
-    expect(vector.evaluated).toBe(true);
+    expect(chunks.every(chunk => chunk.evaluated)).toBe(true);
+    expect((await vector.evaluate(device)).data).toHaveLength(2);
     expect(targets.every(buffer => !buffer.destroyed)).toBe(true);
     vector.destroy();
     for (const target of targets) target.destroy();
