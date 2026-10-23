@@ -152,15 +152,15 @@ semantic groups; fused evaluator dependencies can differ from that authored tree
 
 Existing `GPUSimpleGraphOperation` and `addEvaluator()` remain available for wrapping
 GPGPU expressions. Semantic scalar literals/arithmetic and vector multiply-add continue
-to work unchanged. The full GPUCommandGraph semantic operations and GPGPU operation implementations
-are unchanged. Dynamic rebinding, texture/render operations, and transient resource planning
-remain outside this first pass.
+to work unchanged. The full GPUGraph semantic operations and GPGPU operation implementations
+are unchanged. Render operations use the shared graph resource planner described below;
+evaluator storage and operation selection retain their existing implementation.
 
 ## Shared render operations
 
 `GPURenderOperation` (from `@luma.gl/graph/gpu-core`) contributes ordinary graph render
 nodes. Add it to a SimpleGraph with `graph.add(operation)`, or add the same operation
-to a WebGPU `GPUGraph` or `GPUProgram`. Its factory is called for each compilation;
+to a WebGPU `GPUCommandGraph` or an authored `GPUGraph`. Its factory is called for each compilation;
 create logical resources in the factory and shaders/models in each node's `compile`
 callback. The full graph sees each pass and its declared resource accesses, rather
 than an opaque operation that submits another graph.
@@ -204,5 +204,14 @@ WebGL passes execute immediately. On WebGPU, `run({scope})` appends render passe
 to the same evaluation scope encoder and leaves submission to the caller.
 
 Only the render primitive is portable to the full graph: evaluator execution is
-still a SimpleGraph phase. `GPUGraph` continues to require WebGPU. This API does not
+still a SimpleGraph phase. `GPUCommandGraph` continues to require WebGPU. This API does not
 promise WebGL compute, storage textures, indirect dispatch, or multisample resolves.
+
+WebGL sampled textures must use the full default view. Selected mip/layer ranges are
+rejected because WebGL sampler bindings cannot represent those texture views. Render
+attachments may still select supported individual mip levels and layers.
+
+Before the first synchronous evaluator run, eagerly register its backend, for example
+`await backendRegistry.add('webgl', import('@luma.gl/gpgpu/operations/webgl'))` using
+`backendRegistry` from `@luma.gl/gpgpu`. Synchronous execution cannot wait for lazy
+backend imports. Render-only graphs do not need evaluator backend registration.

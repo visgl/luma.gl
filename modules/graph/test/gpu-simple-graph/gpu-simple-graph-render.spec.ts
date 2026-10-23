@@ -5,7 +5,7 @@
 import {expect, it, vi} from 'vitest';
 import {Buffer, Texture, type Device} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import {GPUEvaluationScope} from '@luma.gl/gpgpu';
+import {GPUEvaluationScope, backendRegistry} from '@luma.gl/gpgpu';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {
   GPUCommandGraph,
@@ -13,7 +13,11 @@ import {
   GPUGraph,
   GPUGraphCompiler
 } from '@luma.gl/graph/gpu-core';
-import {GPUSimpleGraph} from '@luma.gl/graph/gpu-simple-graph';
+import {
+  GPUSimpleGraph,
+  GPUSimpleGraphValue,
+  simpleGraphOperations
+} from '@luma.gl/graph/gpu-simple-graph';
 
 function makeOperation(output: Texture, destroy: () => void): GPURenderOperation {
   return new GPURenderOperation({
@@ -188,3 +192,143 @@ it('lowers the same render primitive into separate full graph nodes through GPUG
     output.destroy();
   }
 });
+
+it('rejects sampled WebGL subresource views instead of silently sampling the full texture', async ({
+  skip
+}) => {
+  const device = await getWebGLTestDevice();
+  if (!device) return skip();
+  for (const props of [
+    {baseMipLevel: 1, mipLevelCount: 1},
+    {baseMipLevel: 0, mipLevelCount: 1}
+  ]) {
+    const graph = new GPUSimpleGraph(device);
+    graph.add(
+      new GPURenderOperation({
+        id: 'mip',
+        createNodes: resources => {
+          const texture = resources.createTransientTexture({
+            id: 'texture',
+            format: 'rgba8unorm',
+            width: 4,
+            height: 4,
+            mipLevels: 2,
+            usage: Texture.SAMPLE | Texture.RENDER
+          });
+          return [
+            {
+              type: 'render',
+              id: 'sample-mip',
+              resources: [{texture: resources.createTextureView(texture, props), usage: 'sampled'}],
+              compile: () => ({encode: () => {}})
+            }
+          ];
+        }
+      })
+    );
+    expect(() => graph.compile()).toThrow(/full-resource view/);
+  }
+});
+
+for (const [backend, getDevice] of [
+  ['webgl', getWebGLTestDevice],
+  ['webgpu', getWebGPUTestDevice]
+] as const) {
+  it(`draws from evaluator output targets in order on ${backend}`, async ({skip}) => {
+    const device = await getDevice();
+    if (!device) return skip();
+    const output = makeTarget(device);
+    const colors = device.createBuffer({
+      byteLength: 12,
+      usage: Buffer.VERTEX | Buffer.COPY_DST | Buffer.COPY_SRC
+    });
+    const graph = new GPUSimpleGraph(device);
+    graph.addValue(
+      'colors',
+      simpleGraphOperations.multiply(
+        GPUSimpleGraphValue.upload(new Float32Array([0.5, 0.5, 0.5])),
+        2
+      )
+    );
+    graph.add(
+      new GPURenderOperation({
+        id: 'draw-colors',
+        createNodes: resources => {
+          const buffer = resources.importBuffer(
+            {id: 'colors', byteLength: 12, usage: Buffer.VERTEX},
+            colors
+          );
+          const texture = resources.importTexture(
+            {id: 'target', format: 'rgba8unorm', width: 4, height: 4, usage: Texture.RENDER},
+            output
+          );
+          return [
+            {
+              type: 'render',
+              id: 'draw',
+              resources: [{buffer, usage: 'vertex'}],
+              attachments: {colorAttachments: [resources.createTextureView(texture)]},
+              compile: () => {
+                const model = new Model(device, {
+                  source: `struct VertexOutput { @builtin(position) position: vec4<f32>, @location(0) color: f32 };
+@vertex fn vertexMain(@builtin(vertex_index) index: u32, @location(0) colorValue: f32) -> VertexOutput {
+  let positions = array<vec2<f32>, 3>(vec2(-1.0, -1.0), vec2(3.0, -1.0), vec2(-1.0, 3.0));
+  var output: VertexOutput;
+  output.position = vec4(positions[index], 0.0, 1.0);
+  output.color = colorValue;
+  return output;
+}
+@fragment fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> { return vec4(input.color, 0.0, 0.0, 1.0); }`,
+                  vs: `#version 300 es
+in float colorValue;
+out float color;
+void main() { vec2 positions[3] = vec2[3](vec2(-1., -1.), vec2(3., -1.), vec2(-1., 3.));
+gl_Position = vec4(positions[gl_VertexID], 0., 1.); color = colorValue; }`,
+                  fs: `#version 300 es
+precision highp float;
+in float color;
+out vec4 result;
+void main() { result = vec4(color, 0., 0., 1.); }`,
+                  vertexCount: 3,
+                  colorAttachmentFormats: ['rgba8unorm'],
+                  bufferLayout: [{name: 'colorValue', format: 'float32'}],
+                  shaderLayout: {
+                    attributes: [{name: 'colorValue', location: 0, type: 'f32'}],
+                    bindings: []
+                  }
+                });
+                return {
+                  encode: ({renderPass, getBuffer}) => {
+                    model.setAttributes({colorValue: getBuffer(buffer)});
+                    model.draw(renderPass);
+                  },
+                  destroy: () => model.destroy()
+                };
+              }
+            }
+          ];
+        }
+      })
+    );
+    const compiled = graph.compile({outputTargets: {colors: {buffer: colors}}});
+    try {
+      if (backend === 'webgl') {
+        await backendRegistry.add('webgl', import('@luma.gl/gpgpu/operations/webgl'));
+        compiled.runSync();
+      } else {
+        const scope = new GPUEvaluationScope(device);
+        const submit = vi.spyOn(device, 'submit');
+        await compiled.run({scope});
+        expect(submit).not.toHaveBeenCalled();
+        scope.submit();
+        expect(submit).toHaveBeenCalledTimes(1);
+        submit.mockRestore();
+      }
+      expect(await readFirstPixel(output)).toEqual([255, 0, 0, 255]);
+    } finally {
+      compiled.destroy();
+      colors.destroy();
+      output.destroy();
+    }
+  });
+}

@@ -174,7 +174,7 @@ and [texture history](/docs/api-reference/experimental/gpu-core/gpu-texture-hist
 ## Portable render primitives
 
 `GPURenderOperation` packages a factory of ordinary render nodes for both WebGPU
-`GPUGraph` / `GPUProgram` and WebGL-capable `GPUSimpleGraph`. Its
+`GPUCommandGraph` / `GPUGraph` and WebGL-capable `GPUSimpleGraph`. Its
 `GPURenderOperationResources` interface exposes the same buffer imports, texture
 imports, transient textures, and texture views described above. Each compilation
 creates independent handles and executable state. Declare resource reads and
