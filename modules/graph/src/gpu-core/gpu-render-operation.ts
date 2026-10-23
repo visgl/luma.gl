@@ -6,7 +6,7 @@ import type {GPUCommandGraph} from './gpu-command-graph';
 import type {GPURenderCommandNode} from './gpu-command-node';
 
 /** Resource declarations shared by SimpleGraph and full WebGPU graphs. */
-export type GPURenderOperationResources<Parameters = void> = Pick<
+export type GPURenderOperationResources<Parameters = unknown> = Pick<
   GPUCommandGraph<Parameters>,
   'device' | 'importBuffer' | 'importTexture' | 'createTransientTexture' | 'createTextureView'
 >;
@@ -14,8 +14,9 @@ export type GPURenderOperationResources<Parameters = void> = Pick<
 /**
  * A reusable render primitive. Each compilation creates fresh logical resources and executables.
  * Declare every buffer and texture access so the containing graph can schedule its passes.
+ * Omit the parameter type for passes that do not inspect application parameters.
  */
-export class GPURenderOperation<Parameters = void> {
+export class GPURenderOperation<Parameters = unknown> {
   readonly type = 'render-operation';
   readonly id: string;
   private readonly createNodes: (

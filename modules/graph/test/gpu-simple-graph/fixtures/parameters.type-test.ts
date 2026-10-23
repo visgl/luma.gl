@@ -7,7 +7,7 @@ import {GPUSimpleGraph} from '@luma.gl/graph/gpu-simple-graph';
 import {
   GPURenderOperation,
   GPUCompositeOperation,
-  GPUGraph,
+  GPUCommandGraph,
   composite
 } from '@luma.gl/graph/gpu-core';
 declare const device: Device;
@@ -31,7 +31,7 @@ const graph = new GPUSimpleGraph<{dirty: boolean}>(device);
 graph.add(operation);
 graph.add([operation, [composite([operation])]]);
 graph.add(new GPUCompositeOperation([operation]));
-new GPUGraph<{dirty: boolean}>(device).add(operation);
+new GPUCommandGraph<{dirty: boolean}>(device).add(operation);
 const compiled = graph.compile();
 compiled.run({parameters: {dirty: true}});
 compiled.runSync({parameters: {dirty: false}});
@@ -40,6 +40,11 @@ new GPUSimpleGraph(device).add(operation);
 // @ts-expect-error Required render parameters cannot disappear through nested arrays.
 new GPUSimpleGraph(device).add([[operation]]);
 const stateless = new GPURenderOperation({id: 'stateless', createNodes: () => []});
+graph.add(stateless);
+graph.addRenderOperation(stateless);
+graph.add(composite([stateless, operation]));
+graph.add([stateless, [composite([operation, stateless])]]);
+new GPUCommandGraph<{dirty: boolean}>(device).add(stateless);
 // @ts-expect-error A compatible sibling must not hide an incompatible operation.
 new GPUSimpleGraph(device).add([stateless, operation]);
 // @ts-expect-error Mixed composite children preserve every parameter requirement.

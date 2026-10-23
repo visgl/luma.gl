@@ -9,7 +9,7 @@ import {Buffer} from '@luma.gl/core';
 import {GPUData} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import {GPUSimpleGraph, GPUSimpleGraphValue} from '@luma.gl/graph/gpu-simple-graph';
-import {GPUProgram, GPUProgramScalarLiteral, GPUProgramVectorMADD} from '@luma.gl/graph/gpu-core';
+import {GPUGraph, GPUGraphScalarLiteral, GPUGraphVectorMADD} from '@luma.gl/graph/gpu-core';
 
 it('checks render parameter requirements through direct, array, and composite additions', () => {
   const fixture = resolve('modules/graph/test/gpu-simple-graph/fixtures/parameters.type-test.ts');
@@ -36,7 +36,7 @@ for (const uploadFirst of [true, false]) {
   it(`rejects invalidation input-name collisions with upload first=${uploadFirst}`, () => {
     const device = new NullDevice({});
     const buffer = device.createBuffer({byteLength: 8, usage: Buffer.VERTEX | Buffer.STORAGE});
-    const program = new GPUProgram();
+    const program = new GPUGraph();
     const input = program.vector('input', 'float32', 2, {external: true});
     const output = program.vector('output', 'float32', 2);
     const scale = program.scalar('scale', 'float32');
@@ -45,8 +45,8 @@ for (const uploadFirst of [true, false]) {
       graph.addValue('input', GPUSimpleGraphValue.upload(new Float32Array([1, 2])));
     if (uploadFirst) addUpload();
     graph.add([
-      new GPUProgramScalarLiteral({output: scale, value: 2}),
-      new GPUProgramVectorMADD({input, addend: input, output, scale})
+      new GPUGraphScalarLiteral({output: scale, value: 2}),
+      new GPUGraphVectorMADD({input, addend: input, output, scale})
     ]);
     if (!uploadFirst) addUpload();
     try {

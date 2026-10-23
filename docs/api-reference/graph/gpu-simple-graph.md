@@ -225,7 +225,7 @@ or `GPUSimpleGraphValue.fromGPUData(chunk)`, then reference that value from your
 expressions. After changing the original typed array or writing to the borrowed GPU
 buffer, call `compiled.invalidate(['positions'])`. The next run recomputes only the
 reachable dependent results. Unrelated cached outputs keep their existing buffers.
-External semantic vector bindings are addressable by their GPUProgram input IDs too.
+External semantic vector bindings are addressable by their GPUGraph input IDs too.
 
 Invalidation accepts named leaf inputs owned by the compilation, including chunked
 inputs. Compilation rejects duplicate input names across uploads and semantic bindings. It rejects unknown names, intermediate expressions, and borrowed legacy
@@ -268,6 +268,8 @@ await compiled.run({
 ```
 
 Typed parameters are required when the graph declares a non-void parameter type.
+A `GPURenderOperation` without an explicit parameter type is parameter-independent
+(`unknown`) and can be mixed with parameterized passes in either graph API.
 `add()` checks render-operation parameter types through inferred arrays and shared
 `composite()` / `GPUCompositeOperation` groups. Keep the inferred group type rather
 than widening it to the general `GPUOperation` interface, which erases that information.
