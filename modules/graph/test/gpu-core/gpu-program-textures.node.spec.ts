@@ -183,3 +183,30 @@ test('array layers do not increase the valid mip count', () => {
   expect(() => new GPUProgramCompiler(device).compile(program)).toThrow(/too many mip levels/);
   device.destroy();
 });
+
+test('delegating lowerers decorate copy dependencies exactly once', () => {
+  const device = createDevice();
+  const compiler = new GPUProgramCompiler(device);
+  compiler.lowerings.register('delegate', (_operation, context) => {
+    context.lower({id: 'child', type: 'copies'});
+  });
+  compiler.lowerings.register('copies', (_operation, context) => {
+    context.graph.addCopyPass({id: 'first', resources: [], compile: () => ({encode: () => {}})});
+    context.graph.addCopyPass({
+      id: 'second',
+      dependsOn: ['first'],
+      resources: [],
+      compile: () => ({encode: () => {}})
+    });
+  });
+  const program = new GPUProgram();
+  program.add({id: 'parent', type: 'delegate'});
+  const compilation = compiler.compile(program);
+  expect(compilation.lowering.nodes).toEqual([
+    {nodeId: 'first', nodeType: 'copy', operationPath: ['parent', 'child']},
+    {nodeId: 'second', nodeType: 'copy', operationPath: ['parent', 'child']}
+  ]);
+  const compiled = compilation.graph.compile();
+  compiled.destroy();
+  device.destroy();
+});

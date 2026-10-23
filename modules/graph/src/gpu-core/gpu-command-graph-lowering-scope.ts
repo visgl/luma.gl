@@ -27,12 +27,16 @@ export class GPUCommandLoweringGraph<Parameters = void> extends GPUCommandGraph<
       ...node,
       type: 'render'
     };
-    for (const lower of [...this.otherLowerings].reverse()) lowered = lower(lowered);
+    // The innermost compiler scope already contains the complete semantic operation path.
+    const lower = this.otherLowerings.at(-1);
+    if (lower) lowered = lower(lowered);
     super.addRenderPass(lowered as GPURenderCommandNode<Parameters>);
   }
   override addCopyPass(node: Omit<GPUCopyCommandNode<Parameters>, 'type'>): void {
     let lowered: GPUCommandNode<Parameters> = {...node, type: 'copy'};
-    for (const lower of [...this.otherLowerings].reverse()) lowered = lower(lowered);
+    // The innermost compiler scope already contains the complete semantic operation path.
+    const lower = this.otherLowerings.at(-1);
+    if (lower) lowered = lower(lowered);
     super.addCopyPass(lowered as GPUCopyCommandNode<Parameters>);
   }
   withOtherLowering<Result>(
