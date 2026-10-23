@@ -117,6 +117,20 @@ it('GPUVectorGeometry binds sliced indices without taking ownership', () => {
   expect(overridden.firstIndex).toBe(1);
   expect(overridden.firstVertex).toBe(2);
   overridden.destroy();
+  for (const indexCount of [0, 3]) {
+    const replacement = new GPUVectorModel(device, {
+      ...SHADERS,
+      geometry: new GPUVectorGeometry({attributes: {positions}, indices}),
+      indexBuffer: buffer,
+      indexCount,
+      firstVertex: 2,
+      firstIndex: 1
+    });
+    expect(replacement.indexCount).toBe(indexCount);
+    expect(replacement.firstVertex).toBe(2);
+    expect(replacement.firstIndex).toBe(1);
+    replacement.destroy();
+  }
   model.setIndexBuffer(buffer);
   expect(model.indexCount).toBeUndefined();
   expect(model.firstVertex).toBe(0);

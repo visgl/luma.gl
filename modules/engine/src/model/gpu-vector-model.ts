@@ -572,6 +572,7 @@ export class GPUVectorModel {
       bufferLayout: this.pipeline.bufferLayout
     });
     this._initializeAttributes();
+    if (props.indexBuffer) this.setIndexBuffer(props.indexBuffer);
     if (props.indexCount !== undefined) this.setIndexCount(props.indexCount);
     if (this.constructorDrawOffsets.firstVertex !== undefined)
       this.firstVertex = this.constructorDrawOffsets.firstVertex;
@@ -582,7 +583,6 @@ export class GPUVectorModel {
       this.setInstanceCount(this.constructorDrawCounts.instanceCount);
     if (this.constructorDrawCounts.vertexCount !== undefined)
       this.setVertexCount(this.constructorDrawCounts.vertexCount);
-    if (props.indexBuffer) this.setIndexBuffer(props.indexBuffer);
     if (props.attributes) this.setAttributes(props.attributes);
     if (props.constantAttributes) this.setConstantAttributes(props.constantAttributes);
     if (props.bindings) this.setBindings(props.bindings);
