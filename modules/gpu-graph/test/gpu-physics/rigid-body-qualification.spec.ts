@@ -264,7 +264,7 @@ it('qualifies extended shape surfaces against primitive and triangle references'
         direction: [1, 0, 0],
         maximumDistance: 6
       });
-      expect(result.complete).toBe(true);
+      expect(result.complete, fixture.shape.type).toBe(true);
       expect(result.hits).toHaveLength(1);
       expect(result.hits[0].distance).toBeCloseTo(fixture.distance, 3);
       const miss = await world.raycast({

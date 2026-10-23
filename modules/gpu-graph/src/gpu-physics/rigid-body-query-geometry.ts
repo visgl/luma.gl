@@ -22,10 +22,6 @@ fn closestTriangle(point:vec3f,first:vec3f,second:vec3f,third:vec3f)->vec3f{
  }
  return nearest;
 }
-fn queryTriangleVertex(collider:u32,triangle:u32,corner:u32)->vec3f{
- let indices=readGeometry(u32(bodies.colliders[collider].padding.z)+triangle);
- return readGeometry(u32(bodies.colliders[collider].padding.x)+u32(indices[corner])).xyz;
-}
 fn closestSurface(collider:u32,point:vec3f)->SurfacePoint{
  let shape=bodies.colliders[collider].shape;var nearest=point;var inside=false;var complete=1u;
  if(shape.w==0.0){let magnitude=length(point);nearest=point/max(magnitude,1e-20)*shape.x;if(magnitude==0.0){nearest=vec3f(shape.x,0,0);}inside=magnitude<=shape.x;}
@@ -61,7 +57,7 @@ fn closestSurface(collider:u32,point:vec3f)->SurfacePoint{
   inside=shape.w==2.0;
   if(inside){for(var triangle=0u;triangle<u32(bodies.colliders[collider].padding.w);triangle++){
    if(work>=MESH_TRAVERSAL_BUDGET){complete=0u;break;}work++;
-   let first=queryTriangleVertex(collider,triangle,0u);let second=queryTriangleVertex(collider,triangle,1u);let third=queryTriangleVertex(collider,triangle,2u);
+   let first=triangleVertex(collider,triangle,0u);let second=triangleVertex(collider,triangle,1u);let third=triangleVertex(collider,triangle,2u);
    if(dot(point-first,cross(second-first,third-first))>0.0){inside=false;break;}
   }}
   loop{
@@ -71,7 +67,7 @@ fn closestSurface(collider:u32,point:vec3f)->SurfacePoint{
    if(upper.w>0.0){let start=u32(readGeometry(nodeOffset+node*3u+2u).x);
     for(var offset=0u;offset<u32(upper.w);offset++){
      if(work>=MESH_TRAVERSAL_BUDGET){complete=0u;break;}work++;
-     let candidate=closestTriangle(point,queryTriangleVertex(collider,start+offset,0u),queryTriangleVertex(collider,start+offset,1u),queryTriangleVertex(collider,start+offset,2u));
+     let candidate=closestTriangle(point,triangleVertex(collider,start+offset,0u),triangleVertex(collider,start+offset,1u),triangleVertex(collider,start+offset,2u));
      let separation=distance(point,candidate);if(separation<best){best=separation;nearest=candidate;}
     }
    }if(complete==0u){break;}node++;
@@ -213,7 +209,7 @@ fn sweepMesh(collider:u32,origin:vec3f,direction:vec3f,maximumDistance:f32,radiu
   if(upper.w>0.0){let start=u32(readGeometry(nodeOffset+node*3u+2u).x);
    for(var offset=0u;offset<u32(upper.w);offset++){
     if(work>=MESH_TRAVERSAL_BUDGET){result.complete=0u;return result;}work++;
-    let candidate=sweepTriangle(origin,direction,nearest,radius,queryTriangleVertex(collider,start+offset,0u),queryTriangleVertex(collider,start+offset,1u),queryTriangleVertex(collider,start+offset,2u),skipSeparating);
+    let candidate=sweepTriangle(origin,direction,nearest,radius,triangleVertex(collider,start+offset,0u),triangleVertex(collider,start+offset,1u),triangleVertex(collider,start+offset,2u),skipSeparating);
     if(candidate.hit!=0u){nearest=candidate.distance;result=candidate;}
    }
   }node++;
@@ -248,7 +244,9 @@ fn sweepSphere(collider:u32,origin:vec3f,direction:vec3f,maximumDistance:f32,rad
   let center=origin+direction*travelled;
   result.point=vec3f(center.x,0,center.z);result.normal=vec3f(0,side,0);result.distance=travelled;result.hit=1u;return result;
  }
- let tolerance=max(1e-8,min(1e-5,radius*1e-5));
+ // Radius-zero rays still need a local-feature tolerance above float32 roundoff.
+ // Never derive this from an elongated world AABB or the whole mesh bounds.
+ let tolerance=max(1e-8,min(1e-5,max(radius,contactFeatureScale(collider,-1))*1e-6));
  for(var iteration=0u;iteration<128u;iteration++){
   let center=origin+direction*travelled;let surface=closestSurface(collider,center);
   if(surface.complete==0u){result.complete=0u;return result;}

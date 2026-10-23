@@ -386,7 +386,7 @@ boxes (faces, finite edges and corners), and unbounded planes use analytic sweep
 Triangle meshes use analytic triangle face/edge/corner sweeps with bounded BVH
 traversal, skipping a separating initial touch per triangle so other walls remain
 candidates. Curved/convex surfaces use at most 128 conservative-advancement
-iterations. Advancement tolerance depends on the moving radius, is capped at
+iterations. Advancement tolerance uses the moving radius and local obstacle radius/thickness, is capped at
 1e-5 world units (with a 1e-8 numerical floor), and does not grow with unrelated
 obstacle dimensions. Exhausted work returns an explicit incomplete result. Triangle meshes retain two-sided
 surface semantics and preserve holes; they do not acquire solid containment. Each impact reflects the closing normal velocity using
@@ -406,9 +406,15 @@ The Physics Stress Lab's **Fast Motion Lab** scenarios demonstrate curved static
 obstacles, a real mesh opening and intentional impact-budget rejection. Paths show
 sampled centers, so trail segments do not reconstruct intermediate ricochets.
 
-Convex GJK/EPA uses a pair-relative length scale for convergence, excluding infinite
-plane broad-phase sentinels. Independent polyhedral SAT tests qualify rotated
-cube/box and tetrahedron pairs over the documented scale ranges. This is named-case
+Convex GJK/EPA normalizes distances using the smaller local feature: primitive
+radius/minimum extent, local hull bounds, or the selected triangle edge size.
+Planes contribute the other collider's feature scale. EPA's intentional convergence
+tolerance is additionally capped at 1e-4 world units; float32 precision limitations
+still apply. Search directions are bounded before support mapping to avoid
+overflow when a feature has a long axis. Independent polyhedral SAT tests qualify rotated
+cube/box and tetrahedron pairs over the documented scale ranges. Separate
+analytic depth checks cover capsules, cylinders and original triangles with
+lengths 10 and 1000, including reversed collider order. This is named-case
 evidence, not a complete shape-pair or degeneracy qualification. Constant-world-spin
 orientation integration uses a quaternion exponential; asymmetric torque-free
 dynamics remain timestep dependent, and this is not rotational CCD.

@@ -1343,6 +1343,32 @@
           }
         ]
       }
+    },
+    {
+      "id": "geometry.local-feature-depth",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-geometry-robustness.spec.ts",
+            "testPattern": "qualifies local contact depth against elongated capsule features"
+          },
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-geometry-robustness.spec.ts",
+            "testPattern": "qualifies local contact depth against elongated cylinder features"
+          },
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-geometry-robustness.spec.ts",
+            "testPattern": "qualifies local contact depth against elongated triangle-mesh features"
+          }
+        ]
+      }
     }
   ]
 }

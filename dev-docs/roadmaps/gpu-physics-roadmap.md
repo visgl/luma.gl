@@ -672,10 +672,13 @@ quality/cost evidence remain open; this increment does not close G1–G3.
 
 ### G2 geometry robustness / G3 fast-motion checkpoint
 
-The follow-up normalizes convex GJK/EPA distances per pair, with an infinite-plane
-exception, and uses exact float32 orientation for thin hull seed decisions. Mesh
+The follow-up normalizes convex GJK/EPA distances by the smaller local feature
+(primitive radius/minimum extent, hull bounds or selected triangle edges), caps
+intentional EPA convergence tolerance in world units, bounds support directions, and uses exact float32 orientation for thin hull seed decisions. Mesh
 capacity checks run before copying input. Independent rectangle and polyhedron SAT
 references qualify named cube/box and tetrahedron penetration cases across scale.
+Analytic depth cases qualify elongated capsule/cylinder and per-triangle contacts
+at lengths 10 and 1000 with reversed order; whole-mesh bounds do not set accuracy.
 
 Sphere/static CCD now accepts all static shape families. Analytic sphere, rounded-box
 unbounded-plane and triangle-feature sweeps complement bounded capsule/cylinder/convex

@@ -367,3 +367,68 @@ it('qualifies coplanar mesh ray edges while rejecting offset parallel rays', asy
     world.destroy();
   }
 }, 120000);
+
+it.for(['capsule', 'cylinder', 'triangle-mesh'] as const)(
+  'qualifies local contact depth against elongated %s features',
+  async (type, context) => {
+    const device = await getWebGPUTestDevice();
+    if (!device) return context.skip('WebGPU unavailable');
+    for (const height of [10, 1000])
+      for (const reverse of [false, true]) {
+        const shape: GPURigidBodyShape =
+          type === 'triangle-mesh'
+            ? {
+                type,
+                geometry: makeTriangleMeshGeometry(
+                  [0, -height, -height, 0, height, -height, 0, 0, height],
+                  [0, 1, 2]
+                )
+              }
+            : {type, height, radiusBottom: 0.5, radiusTop: 0.5};
+        const bodies: GPURigidBody[] = [
+          {
+            position: [type === 'triangle-mesh' ? 0.45 : 0.95, 0, 0],
+            shape: {type: 'sphere', radius: 0.5}
+          },
+          {mode: 'static', position: [0, 0, 0], shape}
+        ];
+        if (reverse) bodies.reverse();
+        const world = new GPURigidBodyWorld({
+          bodies,
+          gravity: [0, 0, 0],
+          contactSlop: 0,
+          penetrationRecoveryFraction: 0,
+          maximumPairs: 8
+        });
+        const definition = new GPUCommandGraph(device);
+        world.addToGraph(definition);
+        const graph = await definition.compileAsync();
+        try {
+          const encoder = device.createCommandEncoder();
+          graph.encode(encoder, {parameters: undefined});
+          device.submit(encoder.finish());
+          expect(
+            (await world.readSimulationDiagnostics()).complete,
+            `${type} height ${height}`
+          ).toBe(true);
+          const bytes = (await world.captureState()).buffers.find(
+            buffer => buffer.name === 'manifolds'
+          )!.data;
+          const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+          let count = 0;
+          for (let offset = 0; offset < bytes.byteLength; offset += 288)
+            for (let slot = 0; slot < view.getUint32(offset + 256, true); slot++) {
+              count++;
+              expect(Math.abs(view.getFloat32(offset + slot * 64 + 12, true) - 0.05)).toBeLessThan(
+                0.001
+              );
+            }
+          expect(count).toBeGreaterThan(0);
+        } finally {
+          graph.destroy();
+          world.destroy();
+        }
+      }
+  },
+  120000
+);

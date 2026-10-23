@@ -14,10 +14,6 @@ struct Simplex { points: array<SupportVertex,4>, count: u32 }
 struct ConvexHit { point: vec3f, normal: vec3f, depth: f32, status: u32 }
 struct EPAFace { indices: vec3u, normal: vec3f, distance: f32 }
 fn meshVertex(collider:u32, index:u32)->vec3f {return readGeometry(u32(bodies.colliders[collider].padding.x)+index).xyz;}
-fn triangleVertex(collider:u32, triangle:u32, corner:u32)->vec3f {
- let indices=readGeometry(u32(bodies.colliders[collider].padding.z)+triangle);
- return meshVertex(collider,u32(indices[corner]));
-}
 fn localShapeSupport(collider:u32,direction:vec3f,triangle:i32)->vec3f {
  let shape=bodies.colliders[collider].shape;
  let magnitude=length(direction);let unit=select(vec3f(1,0,0),direction/max(magnitude,1e-20),magnitude>1e-20);
@@ -59,8 +55,10 @@ fn permitsPlaneContact(plane:u32,other:u32)->bool {
  return shape.w!=6.0||shape.z!=0.0||dot(colliderPosition(other)-colliderPosition(plane),axis(plane,1u))>=0.0;
 }
 fn minkowski(first:u32,second:u32,direction:vec3f,firstTriangle:i32,secondTriangle:i32,scale:f32)->SupportVertex {
- var vertex:SupportVertex;vertex.first=pairShapeSupport(first,second,direction,firstTriangle);vertex.second=pairShapeSupport(second,first,-direction,secondTriangle);
- vertex.difference=(vertex.first-vertex.second+direction/max(length(direction),1e-20)*settings.solver.x)/scale;return vertex;
+ let maximumComponent=max(abs(direction.x),max(abs(direction.y),abs(direction.z)));
+ let searchDirection=direction/max(maximumComponent,1e-30);
+ var vertex:SupportVertex;vertex.first=pairShapeSupport(first,second,searchDirection,firstTriangle);vertex.second=pairShapeSupport(second,first,-searchDirection,secondTriangle);
+ vertex.difference=(vertex.first-vertex.second+searchDirection/max(length(searchDirection),1e-20)*settings.solver.x)/scale;return vertex;
 }
 fn perpendicular(direction:vec3f)->vec3f {return cross(direction,select(vec3f(1,0,0),vec3f(0,1,0),abs(direction.x)>abs(direction.y)));}
 fn reduceLine(simplex:ptr<function,Simplex>)->vec3f {
@@ -116,10 +114,9 @@ fn faceHit(vertices:ptr<function,array<SupportVertex,64>>,face:EPAFace,scale:f32
  hit.normal=face.normal;hit.depth=face.distance*scale-settings.solver.x;hit.status=1u;return hit;
 }
 fn convexContact(first:u32,second:u32,firstTriangle:i32,secondTriangle:i32)->ConvexHit {
- // Normalize Minkowski distances so convergence thresholds describe relative shape accuracy.
- let firstExtent=length(shapeWorldExtent(first));let secondExtent=length(shapeWorldExtent(second));
- // Infinite planes are clipped to the other shape, so their broad-phase sentinel is not a scale.
- let scale=max(max(select(firstExtent,secondExtent,bodies.colliders[first].shape.w==6.0),select(secondExtent,firstExtent,bodies.colliders[second].shape.w==6.0)),1e-12);
+ // Normalize by local feature size and independently cap EPA's world-space tolerance.
+ let scale=max(min(contactFeatureScale(first,firstTriangle),contactFeatureScale(second,secondTriangle)),1e-12);
+ let distanceTolerance=min(0.0001,0.0001/scale);
  var miss:ConvexHit;var simplex:Simplex;simplex.count=1u;var direction=colliderPosition(second)-colliderPosition(first);if(length(direction)<1e-8){direction=vec3f(1,0,0);}
  simplex.points[0]=minkowski(first,second,direction,firstTriangle,secondTriangle,scale);direction=-simplex.points[0].difference;
  var intersected=false;
@@ -139,7 +136,7 @@ fn convexContact(first:u32,second:u32,firstTriangle:i32,secondTriangle:i32)->Con
   for(var index=0u;index<faceCount;index++){if(dot(faces[index].normal,faces[index].normal)>0.5&&faces[index].distance<distance){distance=faces[index].distance;nearest=index;}}
   if(distance==1e30){miss.status=2u;return miss;}
   let face=faces[nearest];let vertex=minkowski(first,second,face.normal,firstTriangle,secondTriangle,scale);
-  if(dot(vertex.difference,face.normal)-distance<0.0001){return faceHit(&vertices,face,scale);}
+  if(dot(vertex.difference,face.normal)-distance<distanceTolerance){return faceHit(&vertices,face,scale);}
   if(vertexCount>=64u){miss.status=2u;return miss;}
   var edges:array<vec2u,256>;var edgeCount=0u;var retained=0u;
   for(var index=0u;index<faceCount;index++){
