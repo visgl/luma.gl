@@ -66,7 +66,7 @@ export function inspectEvaluators(
         dependencies: Object.freeze(dependencyIds),
         type: evaluator.type,
         size: evaluator.size,
-        format: getEvaluatorFormat(evaluator),
+        format: getGPUDataEvaluatorFormat(evaluator),
         length: evaluator.length,
         normalized: evaluator.normalized,
         isConstant: evaluator.isConstant,
@@ -83,7 +83,8 @@ export function inspectEvaluators(
   return Object.freeze({outputs: Object.freeze(outputs), nodes: Object.freeze(nodes)});
 }
 
-function getEvaluatorFormat(evaluator: GPUDataEvaluator): GPUDataEvaluator['format'] {
+/** Resolves one evaluator's storage format without traversing dependencies. */
+export function getGPUDataEvaluatorFormat(evaluator: GPUDataEvaluator): GPUDataEvaluator['format'] {
   if (evaluator.format) return evaluator.format;
   const components = evaluator.size;
   if (components !== 1 && components !== 2 && components !== 3 && components !== 4)

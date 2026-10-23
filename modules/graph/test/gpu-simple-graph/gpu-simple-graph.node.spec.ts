@@ -16,6 +16,20 @@ import {
 import {NullDevice} from '@luma.gl/test-utils';
 
 describe('GPUSimpleGraph prototype', () => {
+  it('resolves authored metadata without inspecting each dependency tree', () => {
+    const input = GPUDataEvaluator.fromConstant(4);
+    const expressions = [input];
+    for (let index = 0; index < 20; index++) expressions.push(sqrt(expressions[index]));
+    const inspect = vi.spyOn(GPUDataEvaluator.prototype, 'getInspection');
+    for (const [index, evaluator] of expressions.entries()) {
+      const operation = new GPUSimpleGraphOperation({id: `value-${index}`, evaluator});
+      expect(operation.metadata.outputs?.[0].format).toBe('float32');
+    }
+    expect(inspect).not.toHaveBeenCalled();
+    inspect.mockRestore();
+    for (const evaluator of expressions) evaluator.destroy();
+  });
+
   it('compiles lazily, evaluates selected outputs, and exposes dependency order', async () => {
     const device = new NullDevice({});
     const createBuffer = vi.spyOn(device, 'createBuffer');

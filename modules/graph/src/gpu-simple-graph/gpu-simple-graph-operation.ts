@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
-import {GPUDataEvaluator, GPUVectorEvaluator} from '@luma.gl/gpgpu';
+import {GPUDataEvaluator, GPUVectorEvaluator, getGPUDataEvaluatorFormat} from '@luma.gl/gpgpu';
 import type {GPUOperation, GPUOperationMetadata} from '@luma.gl/graph/gpu-core';
 
 export type GPUSimpleGraphEvaluator = GPUDataEvaluator | GPUVectorEvaluator;
@@ -41,8 +41,7 @@ export function getSimpleGraphEvaluatorFormat(
   evaluator: GPUSimpleGraphEvaluator
 ): GPUVectorFormat | undefined {
   if (evaluator.format) return evaluator.format;
-  const inspection = evaluator.getInspection();
-  const formats = new Map(inspection.nodes.map(node => [node.id, node.format]));
-  const outputFormats = inspection.outputs.map(id => formats.get(id));
-  return outputFormats.every(format => format === outputFormats[0]) ? outputFormats[0] : undefined;
+  if (evaluator instanceof GPUDataEvaluator) return getGPUDataEvaluatorFormat(evaluator);
+  const formats = evaluator.gpuDataEvaluators.map(getGPUDataEvaluatorFormat);
+  return formats.every(format => format === formats[0]) ? formats[0] : undefined;
 }
