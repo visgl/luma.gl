@@ -108,7 +108,7 @@ export {
 export {makeRigidBodyJointsFromScenegraph} from './scenegraph-joints';
 export {ScenegraphPhysicsBehaviors} from './scenegraph-behaviors';
 export type {ScenegraphPhysicsBehaviorProps} from './scenegraph-behaviors';
-export {ScenegraphPhysicsMotion} from './scenegraph-motion';
+export {ScenegraphPhysicsMotion, type ScenegraphPhysicsColliderTarget} from './scenegraph-motion';
 
 export {ScenegraphPhysicsProperties, type PhysicsPropertyTarget} from './scenegraph-properties';
 export {ScenegraphPhysicsInstance, type ScenegraphPhysicsDefinition} from './scenegraph-instance';

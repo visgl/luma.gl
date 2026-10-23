@@ -1902,6 +1902,9 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     this.invalidateState(pass);
     pass.end();
     this.device.submit(encoder.finish());
+    const joints = [...this.props.joints!];
+    joints[joint] = {...joints[joint], enabled};
+    this.props.joints = joints;
   }
 
   /** Clear persistence and sleeping after direct state writes between submissions. */

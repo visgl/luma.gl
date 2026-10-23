@@ -274,22 +274,19 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         );
         if (node) targets.set(node, bodyIndex);
       }
-      const colliderTargets = new Map(
-        description.animatedColliderIndices.map(index => {
-          const collider = description.colliders[index];
-          return [
-            scenegraphsFromGLTF.gltfNodeIndexToNodeMap.get(collider.nodeIndex)!,
-            {
-              index,
-              body: scenegraphsFromGLTF.gltfNodeIndexToNodeMap.get(
-                description.bodies[collider.bodyIndex].nodeIndex
-              )!
-            }
-          ] as const;
-        })
-      );
+      const colliderTargets = description.animatedColliderIndices.map(index => {
+        const collider = description.colliders[index];
+        return {
+          node: scenegraphsFromGLTF.gltfNodeIndexToNodeMap.get(collider.nodeIndex)!,
+          index,
+          body: scenegraphsFromGLTF.gltfNodeIndexToNodeMap.get(
+            description.bodies[collider.bodyIndex].nodeIndex
+          )!,
+          localMatrix: collider.localMatrix
+        };
+      });
       this.motion =
-        this.world && (targets.size || colliderTargets.size)
+        this.world && (targets.size || colliderTargets.length)
           ? new ScenegraphPhysicsMotion(
               this.world,
               scenegraphsFromGLTF.scenes,

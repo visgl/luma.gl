@@ -5,7 +5,11 @@
 import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {GPUCommandGraph} from '../../src/gpu-core';
-import {GPURigidBodyWorld, type GPURigidBodyJoint} from '../../src/gpu-physics';
+import {
+  GPURigidBodyWorld,
+  ScenegraphPhysicsProperties,
+  type GPURigidBodyJoint
+} from '../../src/gpu-physics';
 
 it.for([
   1, 2, 3
@@ -506,6 +510,60 @@ it.for([
     for (let component = 0; component < 3; component++)
       expect(velocity[component]).toBeCloseTo(speed * axis[component], 5);
   } finally {
+    graph.destroy();
+    world.destroy();
+  }
+});
+
+it('keeps disabled joints disabled through property edits and checkpoint restoration', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const world = new GPURigidBodyWorld({
+    gravity: [0, 0, 0],
+    joints: [
+      {
+        type: 'general',
+        first: 0,
+        second: 1,
+        axes: [0],
+        drive: {velocityTarget: 1, damping: 10, maximumForce: 2}
+      }
+    ],
+    bodies: [
+      {mode: 'static', position: [0, 0, 0], colliders: []},
+      {position: [0, 0, 0], shape: {type: 'sphere', radius: 0.2}}
+    ]
+  });
+  const definition = new GPUCommandGraph(device);
+  world.addToGraph(definition);
+  const graph = await definition.compileAsync();
+  const checkpoint = world.createGPUCheckpoint();
+  const properties = new ScenegraphPhysicsProperties(
+    world,
+    new Map([['drive', {type: 'joint', joints: [0], property: 'velocityTarget', drive: true}]])
+  );
+  const advance = async () => {
+    const encoder = device.createCommandEncoder();
+    for (let step = 0; step < 10; step++) graph.encode(encoder, {parameters: undefined});
+    device.submit(encoder.finish());
+    return (await world.readState())[1];
+  };
+  try {
+    world.setJointEnabled(0, false);
+    expect(world.getJointParameters(0).enabled).toBe(false);
+    properties.set('drive', [2]);
+    expect(world.getJointParameters(0).enabled).toBe(false);
+    expect((await advance()).velocity[0]).toBe(0);
+    checkpoint.save();
+    world.setJointEnabled(0, true);
+    expect(world.getJointParameters(0).enabled).toBe(true);
+    expect((await advance()).velocity[0]).toBeGreaterThan(0);
+    checkpoint.restore();
+    expect(world.getJointParameters(0).enabled).toBe(false);
+    properties.set('drive', [3]);
+    expect((await advance()).velocity[0]).toBe(0);
+  } finally {
+    checkpoint.destroy();
     graph.destroy();
     world.destroy();
   }

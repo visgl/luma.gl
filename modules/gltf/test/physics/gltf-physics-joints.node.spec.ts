@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {expect, it} from 'vitest';
+import {expect, it, vi} from 'vitest';
+import {Matrix4} from '@math.gl/core';
+import {ScenegraphPhysicsMotion} from '@luma.gl/graph/gpu-physics';
 import {
   parseGLTFPhysics,
   createGLTFPhysicsWorld,
@@ -132,4 +134,87 @@ it.for([
     {axes, minimum: 0.1, maximum: 1, stiffness: 20, damping: 4, angular: false},
     {axes, minimum: 0, maximum: 0.5, stiffness: 10, damping: 2, angular: true}
   ]);
+});
+
+it('animates every collider on a child node while preserving off-center cooked frames', () => {
+  const source: GLTFPhysicsDocument = {
+    scenes: [{nodes: [0]}],
+    nodes: [
+      {
+        translation: [10, 0, 0],
+        children: [1],
+        extensions: {KHR_physics_rigid_bodies: {motion: {mass: 1}}}
+      },
+      {
+        translation: [3, 0, 0],
+        scale: [2, 2, 2],
+        extensions: {
+          KHR_physics_rigid_bodies: {
+            collider: {geometry: {node: 2, convexHull: true}},
+            trigger: {geometry: {shape: 0}}
+          }
+        }
+      },
+      {mesh: 0}
+    ],
+    extensions: {KHR_implicit_shapes: {shapes: [{type: 'sphere', sphere: {radius: 0.25}}]}},
+    animations: [{channels: [{target: {node: 1, path: 'translation'}}]}]
+  };
+  const description = parseGLTFPhysics(source, {
+    animationOwnership: 'scenegraph',
+    resolveNodeMeshGeometry: () => ({
+      positions: Array.from({length: 8}, (_, index) => [
+        index & 1 ? 2 : 0,
+        index & 2 ? 0.5 : -0.5,
+        index & 4 ? 0.5 : -0.5
+      ]).flat(),
+      indices: [
+        0, 1, 3, 0, 3, 2, 4, 6, 7, 4, 7, 5, 0, 4, 5, 0, 5, 1, 2, 3, 7, 2, 7, 6, 0, 2, 6, 0, 6, 4, 1,
+        5, 7, 1, 7, 3
+      ]
+    })
+  });
+  expect(description.issues).toEqual([]);
+  expect(description.animatedColliderIndices).toEqual([0, 1]);
+  const world = createGLTFPhysicsWorld(description);
+  const setTransform = vi.spyOn(world, 'setColliderTransform').mockImplementation(() => {});
+  const motion = new ScenegraphPhysicsMotion(
+    world,
+    description.sceneRoots,
+    new Map(),
+    description.animatedColliderIndices.map(index => {
+      const collider = description.colliders[index];
+      return {
+        index,
+        node: description.sceneNodes.get(collider.nodeIndex)!,
+        body: description.sceneNodes.get(description.bodies[collider.bodyIndex].nodeIndex)!,
+        localMatrix: collider.localMatrix
+      };
+    })
+  );
+  try {
+    motion.update();
+    expect(setTransform.mock.calls.map(call => [call[0], ...call[1]])).toEqual([
+      [0, 5, 0, 0],
+      [1, 3, 0, 0]
+    ]);
+    setTransform.mockClear();
+    description.sceneNodes.get(1)!.setMatrix(
+      new Matrix4()
+        .translate([4, 0, 0])
+        .rotateZ(Math.PI / 2)
+        .scale([2, 2, 2])
+    );
+    motion.update();
+    const calls = setTransform.mock.calls;
+    expect(calls).toHaveLength(2);
+    expect(calls.map(call => call[0])).toEqual([0, 1]);
+    expect(calls[0][1][0]).toBeCloseTo(4);
+    expect(calls[0][1][1]).toBeCloseTo(2);
+    expect(calls[1][1]).toEqual([4, 0, 0]);
+    expect(calls[0][2][2]).toBeCloseTo(Math.SQRT1_2);
+  } finally {
+    setTransform.mockRestore();
+    world.destroy();
+  }
 });

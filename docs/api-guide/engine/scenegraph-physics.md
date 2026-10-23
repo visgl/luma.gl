@@ -152,7 +152,10 @@ the same render-scene node references. Explicit rebuilds read state once; ordina
 keep poses on the GPU. `destroy()` waits for pending work before releasing resources.
 
 Animated child-collider translation and rotation use `ScenegraphPhysicsMotion` without
-taking ownership of their parent body's motion. These are collider teleports: they do
+taking ownership of their parent body's motion. Bindings are a list of collider targets,
+so one node can animate both a solid collider and a trigger. Each target can supply a
+`localMatrix` for its cooked frame relative to the node; glTF descriptions retain this
+matrix so off-center mesh bounds keep their offset during animation. These are collider teleports: they do
 not promise physical response to shape deformation.
 
 The shared representation does not yet provide automatic collider reconstruction for
