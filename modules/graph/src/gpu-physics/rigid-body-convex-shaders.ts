@@ -89,8 +89,12 @@ fn convexContact(first:u32,second:u32,firstTriangle:i32,secondTriangle:i32)->Con
   let triangle=u32(select(firstTriangle,secondTriangle,sphereFirst));
   let center=colliderLocal(mesh,colliderPosition(sphere)-colliderPosition(mesh));
   let firstPoint=triangleVertex(mesh,triangle,0u);let secondPoint=triangleVertex(mesh,triangle,1u);let thirdPoint=triangleVertex(mesh,triangle,2u);
-  let weights=triangleWeights(center,firstPoint,secondPoint,thirdPoint);
-  let closest=firstPoint*weights.x+secondPoint*weights.y+thirdPoint*weights.z;
+  let extent=max(abs(secondPoint-firstPoint),abs(thirdPoint-firstPoint));
+  let normalization=max(max(extent.x,max(extent.y,extent.z)),1e-20);
+  let firstEdge=(secondPoint-firstPoint)/normalization;let secondEdge=(thirdPoint-firstPoint)/normalization;
+  let weights=triangleWeights((center-firstPoint)/normalization,vec3f(0),firstEdge,secondEdge);
+  let closest=firstPoint+(secondPoint-firstPoint)*weights.y+(thirdPoint-firstPoint)*weights.z;
+  let faceNormal=normalize(cross(firstEdge,secondEdge));
   let delta=center-closest;let magnitude=length(delta);let radius=bodies.colliders[sphere].shape.x;
   var hit:ConvexHit;if(magnitude>radius+settings.solver.x){return hit;}
   let internalEdges=u32(readGeometry(u32(bodies.colliders[mesh].padding.z)+triangle).w)%8u;
@@ -98,12 +102,11 @@ fn convexContact(first:u32,second:u32,firstTriangle:i32,secondTriangle:i32)->Con
   // not collision ridges: their adjacent triangle owns the face witness instead.
   for(var edge=0u;edge<3u;edge++){
    if((internalEdges&(1u<<edge))!=0u&&weights[(edge+2u)%3u]<=1e-7&&weights[edge]>1e-7&&weights[(edge+1u)%3u]>1e-7){
-    let faceNormal=normalize(cross(secondPoint-firstPoint,thirdPoint-firstPoint));
     let tangential=delta-faceNormal*dot(delta,faceNormal);
     if(length(tangential)>max(1e-8,radius*1e-6)){return hit;}
    }
   }
-  var normal=normalize(cross(secondPoint-firstPoint,thirdPoint-firstPoint));
+  var normal=faceNormal;
   if(magnitude>1e-12){normal=delta/magnitude;}
   let worldNormal=rotate(colliderRotation(mesh),normal);
   let worldClosest=colliderPosition(mesh)+rotate(colliderRotation(mesh),closest);

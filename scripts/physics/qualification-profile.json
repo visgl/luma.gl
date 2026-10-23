@@ -1544,6 +1544,10 @@
           {
             "file": "modules/graph/test/gpu-physics/rigid-body-seam-continuity.spec.ts",
             "testPattern": "preserves authored boundary"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-seam-continuity.spec.ts",
+            "testPattern": "normalizes tiny triangle face witnesses"
           }
         ]
       }

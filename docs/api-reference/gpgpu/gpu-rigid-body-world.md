@@ -750,7 +750,9 @@ Duplicated position vertices can share an edge; gaps, creases, overlapping same-
 triangles and nonmanifold edges are not welded. This changes packed internal geometry
 metadata, not authored topology or the public mesh geometry type.
 
-Sphere/triangle contacts use analytic closest-point witnesses and discard false ridges
+Sphere/triangle contacts normalize the local triangle before evaluating analytic
+closest-point witnesses, avoiding an absolute barycentric denominator floor at tiny
+scales. They and discard false ridges
 on the interiors of internal coplanar edges. Vertices are retained conservatively;
 complete vertex-fan welding remains future work. Adjacent triangles retain the real face contact. Outer edges
 and openings remain collision boundaries. Mesh and hull warm starts use surface keys

@@ -127,3 +127,56 @@ it.for([
     }
   }
 );
+
+it('normalizes tiny triangle face witnesses before closest-point evaluation', {
+  timeout: 120000
+}, async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const scale = 1e-6;
+  const geometry = makeTriangleMeshGeometry(
+    [-2, -2, 0, 2, -2, 0, 2, 2, 0, -2, 2, 0].map(value => value * scale),
+    [0, 1, 2, 0, 2, 3]
+  );
+  const world = new GPURigidBodyWorld({
+    gravity: [0, 0, 0],
+    contactSlop: 0,
+    sleepAfter: 0,
+    penetrationRecoveryFraction: 0,
+    bodies: [
+      {mode: 'static', position: [0, 0, 0], shape: {type: 'triangle-mesh', geometry}},
+      {
+        position: [0.5 * scale, 0, 0.49 * scale],
+        mass: 1,
+        inertiaDiagonal: [1, 1, 1],
+        shape: {type: 'sphere', radius: 0.5 * scale}
+      }
+    ]
+  });
+  const definition = new GPUCommandGraph(device);
+  world.addToGraph(definition);
+  const graph = await definition.compileAsync();
+  try {
+    const encoder = device.createCommandEncoder();
+    graph.encode(encoder, {parameters: undefined});
+    device.submit(encoder.finish());
+    const bytes = (await world.captureState()).buffers.find(
+      buffer => buffer.name === 'manifolds'
+    )!.data;
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    let contacts = 0;
+    for (let offset = 0; offset < bytes.byteLength; offset += 416)
+      for (let slot = 0; slot < view.getUint32(offset + 384, true); slot++) {
+        const start = offset + slot * 96;
+        expect(view.getFloat32(start + 12, true)).toBeCloseTo(0.01 * scale, 12);
+        expect(view.getFloat32(start + 24, true)).toBeCloseTo(1, 5);
+        expect(Math.abs(view.getFloat32(start + 16, true))).toBeLessThan(1e-5);
+        contacts++;
+      }
+    expect(contacts).toBeGreaterThan(0);
+    expect((await world.readSimulationDiagnostics()).complete).toBe(true);
+  } finally {
+    graph.destroy();
+    world.destroy();
+  }
+});
