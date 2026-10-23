@@ -27,7 +27,7 @@ compiled.destroy();
 ```
 
 Upload inputs use the existing array layout rules: optional `type`, `size`, `normalized`,
-and scalar-element `offset`/`stride`. Typed arrays are borrowed until materialization;
+and byte `offset`/`stride`. Typed arrays are borrowed until materialization;
 plain arrays are converted during compilation. Compilation allocates no GPU storage.
 Repeated runs use cached results; editing the input array does not update a materialized
 upload. Build a new graph for new data. Uploads can issue immediate queue writes even

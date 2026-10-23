@@ -19,7 +19,7 @@ export type GPUSimpleGraphUploadProps = {
   data: TypedArray | number[];
   type?: SignedDataType;
   size?: number;
-  /** Source offset and stride in scalar elements, matching GPGPU array layout. */
+  /** Source offset and stride in bytes, matching GPGPU array layout. */
   offset?: number;
   stride?: number;
   normalized?: boolean;

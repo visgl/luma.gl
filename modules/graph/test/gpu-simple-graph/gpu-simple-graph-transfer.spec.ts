@@ -25,8 +25,10 @@ for (const [backend, getDevice] of [
     });
     const upload = new GPUSimpleGraphUploadOperation({
       id: 'input',
-      data: new Float32Array([1, 2, 3]),
-      size: 1
+      data: new Float32Array([-1, 1, -1, 2, -1, 3]),
+      size: 1,
+      offset: 4,
+      stride: 8
     });
     const graph = new GPUSimpleGraph(device).add([
       upload,
