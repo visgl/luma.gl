@@ -47,7 +47,7 @@ export default class OctreeExample extends AnimationLoopTemplate {
   static info = makeExamplePanelHostHtml();
   readonly buffers: Buffer[] = [];
   readonly inspector = new GPUCommandGraphInspector();
-  readonly debugPanel = new GPUCommandGraphDebugPanel();
+  readonly debugPanel = new GPUCommandGraphDebugPanel({inspector: this.inspector});
   readonly panels: ExamplePanelManager;
   readonly orbit: OrbitControls | null;
   readonly view: Buffer;

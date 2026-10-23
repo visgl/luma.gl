@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {GPUResourcePreview} from './gpu-resource-preview';
 import type {CommandEncoder} from '@luma.gl/core';
 import type {GPUCommandGraphEncoding} from './gpu-command-graph';
 import type {
@@ -30,7 +31,8 @@ export type GPUCommandGraphInspectorGraph = {
 export type GPUCommandGraphInspectorEncoding = Pick<
   GPUCommandGraphEncoding,
   'stats' | 'readTimings'
->;
+> &
+  Partial<Pick<GPUCommandGraphEncoding, 'readResource'>>;
 
 /** Minimal executable graph surface supported by {@link GPUCommandGraphInspector.observeGraph}. */
 export type GPUCommandGraphInspectorObservableGraph<
@@ -188,6 +190,7 @@ type NodeInspectionState = {
 };
 
 type GraphInspectionState = {
+  encoding?: GPUCommandGraphInspectorEncoding;
   id: string;
   stats: GPUCommandGraphInspectorStatsSnapshot;
   capabilities: Readonly<GPUCommandGraphCapabilities>;
@@ -205,7 +208,8 @@ const DEFAULT_MAX_SAMPLES = 120;
 /**
  * Collects bounded timing and caller-published scalar-counter histories for compiled graphs.
  *
- * The inspector has no DOM or submission responsibilities. {@link observeGraph} provides a
+ * The inspector has no DOM or automatic submission responsibilities. Explicit resource previews
+ * may submit diagnostic copies after application submission. {@link observeGraph} provides a
  * reusable encoding, timing, and counter lifecycle for executable graphs. The lower-level
  * {@link registerGraph}, {@link recordEncoding}, {@link recordGPUTimings}, and
  * {@link recordCounters} methods remain available when an application cannot route activity
@@ -334,6 +338,20 @@ export class GPUCommandGraphInspector {
     this.recordGraphEncoding(graph, encoding);
   }
 
+  /** Explicit bounded readback of current contents after application submission. */
+  async readResource(
+    graphId: string,
+    nodeId: string,
+    resourceIndex: number
+  ): Promise<GPUResourcePreview> {
+    const graph = this.getGraph(graphId);
+    if (!graph.encoding?.readResource) throw new Error('No live resource readback is available.');
+    const preview = await graph.encoding.readResource(nodeId, resourceIndex);
+    if (this.graphs.get(graphId) !== graph)
+      throw new Error('Graph registration changed during readback.');
+    return preview;
+  }
+
   /** Records one sample for each named scalar counter on a registered graph. */
   recordCounters(graphId: string, counters: Readonly<Record<string, number>>): void {
     this.recordGraphCounters(this.getGraph(graphId), counters);
@@ -343,6 +361,7 @@ export class GPUCommandGraphInspector {
     graph: GraphInspectionState,
     encoding: GPUCommandGraphInspectorEncoding
   ): void {
+    graph.encoding = encoding;
     this.encodingGraphs.set(encoding, graph);
     const {stats} = encoding;
     graph.encodingCount++;

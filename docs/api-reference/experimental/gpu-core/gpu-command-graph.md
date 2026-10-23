@@ -832,6 +832,13 @@ const snapshot = inspector.getSnapshot();
 observation.detach();
 ```
 
+`readResource(graphId, nodeId, resourceIndex)` explicitly reads a bounded preview from the latest
+recorded encoding, after application submission. It returns tightly packed bytes and, for textures,
+the preview dimensions and format. This reads current allocation contents, not historical per-node
+values, and can submit a diagnostic copy. Unsupported or expired resources reject with an explanation.
+See [Graph Resources](./debugging#graph-resources-inspect-buffers-and-textures) for the panel, limits,
+and required resource usage.
+
 `getSnapshot()` returns an immutable view of every registered graph in registration order. Each
 graph snapshot includes its compile-time `stats` and `capabilities`, encoding and failed-timing-read
 counts, bounded whole-graph CPU and GPU duration summaries, application-defined scalar counter

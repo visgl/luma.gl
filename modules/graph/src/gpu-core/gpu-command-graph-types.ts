@@ -595,6 +595,11 @@ export type GPUCommandGraphNodeWorkloadEstimate = {
 export type GPUCommandGraphResourceSummary = Readonly<{
   id: string;
   kind: 'buffer' | 'texture' | 'external-texture';
+  baseMipLevel?: number;
+  baseArrayLayer?: number;
+  mipLevelCount?: number;
+  arrayLayerCount?: number;
+  aspect?: GraphTextureAspect;
   usage: GraphBufferUsage | GraphTextureUsage;
   byteLength?: number;
   byteOffset?: number;

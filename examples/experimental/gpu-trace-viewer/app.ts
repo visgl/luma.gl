@@ -4952,6 +4952,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
             this.inspectorPanel = new GPUCommandGraphInspectorPanel(
               root.querySelector<HTMLElement>('[data-command-graph-inspector]')!,
               {
+                inspector: this.graphInspector,
                 graphLabels: {[TRACE_GRAPH_ID]: 'Trace interaction + LOD + draw'},
                 counterLabels: TRACE_INSPECTOR_COUNTER_LABELS
               }

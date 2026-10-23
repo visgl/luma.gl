@@ -8,6 +8,7 @@ Target Release Date: Q3, 2026
 
 **General**
 
+- **Graph resource inspection** - The graph inspector adds a Graph Resources tab with selectable buffer/texture views, a persistent content viewer, and on-demand hover previews. See [resource inspection](/docs/api-reference/experimental/gpu-core/debugging#graph-resources-inspect-buffers-and-textures).
 - **Program texture resources** - `GPUProgram` now describes texture storage and subresource views, with caller-owned imports and graph-owned transients. See [buffer and texture management](/docs/api-reference/experimental/gpu-core/resources).
 
 - **Shared math and loader APIs** - Dependencies use math.gl 5.0.0-alpha.19 grouped

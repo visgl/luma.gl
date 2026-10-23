@@ -651,3 +651,5 @@ export type {
   GPUIncrementalExecutionProps,
   GPUIncrementalExecutionStats
 } from './gpu-incremental-execution';
+
+export type {GPUResourcePreview} from './gpu-resource-preview';

@@ -105,7 +105,7 @@ export function createSpatialLabTemplate(mode: 'geometry' | 'pointcloud') {
     readonly models: Model[] = [];
     readonly panels: ExamplePanelManager;
     readonly graphInspector = new GPUCommandGraphInspector({maxSamples: 90});
-    readonly graphDebugPanel = new GPUCommandGraphDebugPanel();
+    readonly graphDebugPanel = new GPUCommandGraphDebugPanel({inspector: this.graphInspector});
     countText = 'Source: 6,000 · Filtered: …';
     readonly viewUniforms: Buffer;
     compiled: CompiledGPUCommandGraph<void> | null = null;
