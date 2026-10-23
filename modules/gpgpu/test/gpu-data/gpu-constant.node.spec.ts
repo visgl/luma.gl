@@ -5,7 +5,7 @@ import {expect, it} from 'vitest';
 
 import {NullDevice} from '@luma.gl/test-utils';
 import {GPUConstant, GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {GPURecordBatch, GPUTable} from '@luma.gl/experimental/gpu-tables';
+import {GPURecordBatch, GPUTable} from '@luma.gl/gpu-graph/gpu-tables';
 
 it('GPUConstant validates and owns one fixed-width payload', () => {
   const sourceValue = new Uint8Array([10, 20, 30, 40]);

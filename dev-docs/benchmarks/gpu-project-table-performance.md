@@ -85,7 +85,7 @@ Run without concurrent builds/tests:
 ```sh
 VITE_LUPROJ_TABLE_ROWS=4096,65536 VITE_LUPROJ_TABLE_BATCH_ROWS=4096,65536 \
   yarn test-browser-benchmarks --silent=false --reporter=verbose \
-  modules/experimental/test/gpu-project/projection-table-performance.spec.ts
+  modules/gpu-graph/test/gpu-project/projection-table-performance.spec.ts
 ```
 
 Without explicit rows the suite is a small smoke run and emits no measurement record. Hardware
@@ -122,7 +122,7 @@ builds/tests:
 
 ```sh
 VITE_LUPROJ_TABLE_LARGE=true yarn test-browser-benchmarks --silent=false --reporter=verbose \
-  modules/experimental/test/gpu-project/projection-table-performance.spec.ts
+  modules/gpu-graph/test/gpu-project/projection-table-performance.spec.ts
 ```
 
 Explicit `VITE_LUPROJ_TABLE_ROWS` and `VITE_LUPROJ_TABLE_BATCH_ROWS` override the large preset.

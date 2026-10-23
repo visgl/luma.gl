@@ -177,7 +177,7 @@ describe('framework capabilities documentation', () => {
     for (const {heading, packageName, capabilities, minimumRowCount} of [
       {
         heading: /GPU dataframe analytics/i,
-        packageName: '@luma.gl/experimental/gpu-dataframe',
+        packageName: '@luma.gl/gpu-graph/gpu-dataframe',
         minimumRowCount: 7,
         capabilities: [
           /GPUDataFrame/i,
@@ -197,7 +197,7 @@ describe('framework capabilities documentation', () => {
       },
       {
         heading: /GPU graph analytics and layout/i,
-        packageName: '@luma.gl/gpgpu/gpu-graph-algorithms',
+        packageName: '@luma.gl/gpu-graph/gpu-graph-algorithms',
         minimumRowCount: 5,
         capabilities: [
           /GPUGraphAlgorithmsData/i,
@@ -212,7 +212,7 @@ describe('framework capabilities documentation', () => {
       },
       {
         heading: /GPU raster and satellite analysis/i,
-        packageName: '@luma.gl/experimental/gpu-raster',
+        packageName: '@luma.gl/gpu-graph/gpu-raster',
         minimumRowCount: 7,
         capabilities: [
           /GPURaster/i,
@@ -739,7 +739,7 @@ describe('framework capabilities documentation', () => {
     );
     const dataframeJoinOpportunities = opportunityRows.filter(
       row =>
-        row.packageName.includes('@luma.gl/experimental/gpu-dataframe') &&
+        row.packageName.includes('@luma.gl/gpu-graph/gpu-dataframe') &&
         /join/i.test(`${row.feature} ${row.details}`)
     );
 

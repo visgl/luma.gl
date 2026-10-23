@@ -1,6 +1,6 @@
 # GPU Point Cloud
 
-`@luma.gl/gpgpu/gpu-pointcloud` provides experimental WebGPU voxel sampling, radius filtering and additive octree construction
+`@luma.gl/gpu-graph/gpu-pointcloud` provides experimental WebGPU voxel sampling, radius filtering and additive octree construction
 as operations in a caller-owned `GPUCommandGraph`.
 
 | Operation | Result | Cost |
@@ -12,7 +12,7 @@ as operations in a caller-owned `GPUCommandGraph`.
 ## Compose downsampling and filtering
 
 ```ts
-import {GPUPointCloudVoxelDownsample, GPUPointCloudRadiusFilter} from '@luma.gl/gpgpu/gpu-pointcloud';
+import {GPUPointCloudVoxelDownsample, GPUPointCloudRadiusFilter} from '@luma.gl/gpu-graph/gpu-pointcloud';
 
 // Inputs and outputs are caller-allocated GraphDataViews in the same graph.
 graph.add(new GPUPointCloudVoxelDownsample({
@@ -85,7 +85,7 @@ Across the complete tree every accepted source row occurs exactly once, includin
 with identical coordinates. No position or other attribute buffers are reordered.
 
 ```ts
-import {GPUPointCloudOctree, GPU_POINT_CLOUD_OCTREE_NODE_STRIDE} from '@luma.gl/gpgpu/gpu-pointcloud';
+import {GPUPointCloudOctree, GPU_POINT_CLOUD_OCTREE_NODE_STRIDE} from '@luma.gl/gpu-graph/gpu-pointcloud';
 
 // Caller-created, packed GraphDataViews in the same graph:
 // positions: float32x3[N], pointIndices: uint32[N],

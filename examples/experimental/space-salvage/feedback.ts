@@ -1,7 +1,7 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
-import type {GPURigidBodyContactEvent} from '@luma.gl/gpgpu/gpu-physics';
+import type {GPURigidBodyContactEvent} from '@luma.gl/gpu-graph/gpu-physics';
 
 /** Bounded cosmetic feedback driven by public contact events, never collision solving. */
 export function createCollisionFeedback() {

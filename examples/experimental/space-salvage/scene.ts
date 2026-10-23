@@ -1,7 +1,7 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
-import type {GPURigidBody} from '@luma.gl/gpgpu/gpu-physics';
+import type {GPURigidBody} from '@luma.gl/gpu-graph/gpu-physics';
 export const DOCK: [number, number, number] = [-14, 7, 0];
 export const CARGO_IDS = [1, 2, 3, 4, 5];
 export function makeSalvageScene(): GPURigidBody[] {

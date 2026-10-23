@@ -27,7 +27,7 @@ layout answers where an application can draw that vertex. Your application still
 renderer, colors, labels, and interaction design.
 
 ```ts
-import {GPUGraphAlgorithmsForceLayout} from '@luma.gl/gpgpu/gpu-graph-algorithms';
+import {GPUGraphAlgorithmsForceLayout} from '@luma.gl/gpu-graph/gpu-graph-algorithms';
 
 const layout = new GPUGraphAlgorithmsForceLayout({
   topology,
@@ -107,7 +107,7 @@ should not be replaced by a force-directed arrangement.
 import {
   GPUGraphAlgorithmsForceLayout,
   GPUGraphAlgorithmsSpatialForceLayout
-} from '@luma.gl/gpgpu/gpu-graph-algorithms';
+} from '@luma.gl/gpu-graph/gpu-graph-algorithms';
 
 const layout = new GPUGraphAlgorithmsForceLayout({
   topology,
@@ -202,7 +202,7 @@ assumes that the source columns, packed result vectors, spatial index buffers, a
 vectors already exist on the same WebGPU device:
 
 ```ts
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/gpu-graph/gpu-core';
 import {
   GPUGraphAlgorithmsData,
   GPUGraphAlgorithmsBreadthFirstSearch,
@@ -218,7 +218,7 @@ import {
   GPUGraphAlgorithmsSingleSourceShortestPath,
   GPUGraphAlgorithmsSpatialForceLayout,
   GPUGraphAlgorithmsTopology
-} from '@luma.gl/gpgpu/gpu-graph-algorithms';
+} from '@luma.gl/gpu-graph/gpu-graph-algorithms';
 
 const graph = new GPUGraphAlgorithmsData({
   vertexCount,

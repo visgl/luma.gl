@@ -7,7 +7,7 @@ import type {LayerContext} from '@deck.gl/core';
 import {LuSpatialPointLayer} from '@deck.gl-community/gpu-layers';
 import type {Buffer, Device, RenderPass} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
-import type {DrawCommandBuffer} from '@luma.gl/gpgpu/gpu-core';
+import type {DrawCommandBuffer} from '@luma.gl/gpu-graph/gpu-core';
 import {describe, expect, test, vi} from 'vitest';
 
 function makeLayer(
@@ -186,6 +186,7 @@ describe('@deck.gl-community/gpu-layers package boundary', () => {
       '@luma.gl/engine',
       '@luma.gl/experimental',
       '@luma.gl/gpgpu',
+      '@luma.gl/gpu-graph',
       '@luma.gl/shadertools',
       '@luma.gl/text',
       '@math.gl/core',

@@ -8,6 +8,7 @@ const alias = {
   '@luma.gl/splats': `${__dirname}/../../../modules/splats/src`,
   '@luma.gl/shadertools': `${__dirname}/../../../modules/shadertools/src`,
   '@luma.gl/gpgpu': `${__dirname}/../../../modules/gpgpu/src`,
+  '@luma.gl/gpu-graph': `${__dirname}/../../../modules/gpu-graph/src`,
   '@luma.gl/text': `${__dirname}/../../../modules/text/src`,
   '@luma.gl/core/webgpu': `${__dirname}/../../../modules/core/src/webgpu`
 };

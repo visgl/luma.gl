@@ -2,7 +2,7 @@
 
 ## GPU graph naming
 
-Graph analytics now use `@luma.gl/gpgpu/gpu-graph-algorithms` and a shared
+Graph analytics now use `@luma.gl/gpu-graph/gpu-graph-algorithms` and a shared
 `GPUGraphAlgorithms` prefix for classes, types, and helpers:
 
 - `GPUGraph` becomes `GPUGraphAlgorithmsData`.
@@ -11,12 +11,12 @@ Graph analytics now use `@luma.gl/gpgpu/gpu-graph-algorithms` and a shared
 - `GPUGraphTopology` becomes `GPUGraphAlgorithmsTopology`.
 - `runGPUGraphBenchmark` becomes `runGPUGraphAlgorithmsBenchmark`.
 
-Update analytics imports from `@luma.gl/gpgpu/gpu-graph` to
-`@luma.gl/gpgpu/gpu-graph-algorithms`, including the `/benchmarks` entry point.
+Update analytics imports from `@luma.gl/gpu-graph/gpu-graph` to
+`@luma.gl/gpu-graph/gpu-graph-algorithms`, including the `/benchmarks` entry point.
 The `gpu-graph` entry point now exposes execution scheduling.
 
 The execution scheduler is now `GPUGraph`, with compiled instances named `CompiledGPUGraph`,
-from `@luma.gl/gpgpu/gpu-graph` (also exported by `gpu-core`). `GPUCommandGraph` and
+from `@luma.gl/gpu-graph/gpu-graph` (also exported by `gpu-core`). `GPUCommandGraph` and
 `CompiledGPUCommandGraph` remain deprecated aliases of the same constructors. Existing
 scheduling option and result types retain their `GPUCommandGraph` prefixes.
 
@@ -289,3 +289,7 @@ removed. The three range/scatter primitives that also publish scratch views expo
 `GPUProgramBindings.vectors` now accepts typed `GPUData`, readonly `GPUData[]`, or `GPUVector`
 instead of raw buffers. Compiler vector resolution returns `GraphVectorView`; access physical
 chunks through `.data` or canonical logical descriptors through `.chunks`.
+
+## GPU Graph package
+
+Execution graphs and graph-based modules now live in `@luma.gl/gpu-graph`. Import `GPUGraph` from the package root. Replace `@luma.gl/gpgpu/gpu-core` and graph-based domain subpaths with `@luma.gl/gpu-graph/<subpath>`. Experimental GPU tables, dataframe, SQL, crossfilter, trace, projection, raster, geospatial, and volume modules use the corresponding new subpaths. GPU data primitives and immediate operations remain in `@luma.gl/gpgpu`.

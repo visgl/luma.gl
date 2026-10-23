@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUVolumeMetadata} from '@luma.gl/experimental/lucim';
+import type {GPUVolumeMetadata} from '@luma.gl/gpu-graph/lucim';
 
 /** Reproducible CT-like density samples and source-aligned observation validity. */
 export type VolumeLabDataset = {

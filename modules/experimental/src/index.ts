@@ -164,23 +164,7 @@ export type {
   GBufferShaderPassBindings
 } from './rendering/g-buffer';
 export {GBuffer} from './rendering/g-buffer';
-export type {
-  BloomPointSpreadFunction,
-  BloomPointSpreadFunctionOptions,
-  BloomSpectralPointSpreadFunction,
-  GPUConvolutionBloomEncodeOptions,
-  GPUConvolutionBloomLensOptions,
-  GPUConvolutionBloomProps,
-  GPUConvolutionBloomStats,
-  GPUConvolutionBloomSupport
-} from './rendering/fft-bloom';
-export {
-  getGPUConvolutionBloomSupport,
-  GPUConvolutionBloom,
-  makeBloomPointSpreadFunction,
-  makeBloomSpectralPointSpreadFunction,
-  makeGPUConvolutionBloomStats
-} from './rendering/fft-bloom';
+
 export type {DeferredAmbientLightingProps} from './rendering/deferred-ambient-lighting';
 export {
   createDeferredAmbientLightingCompositeShaderPass,
@@ -270,19 +254,6 @@ export {
   MLS_MPM_FLUID_STAGE_ORDER,
   MLSMPMFluidSimulation
 } from './rendering/mls-mpm-fluid-simulation';
-export type {
-  VolumetricFireEmitter,
-  VolumetricFireSimulationBindings,
-  VolumetricFireSimulationProps,
-  VolumetricFireSimulationStepOptions
-} from './rendering/volumetric-fire-simulation';
-export {
-  DEFAULT_VOLUMETRIC_FIRE_DIMENSIONS,
-  DEFAULT_VOLUMETRIC_FIRE_PRESSURE_ITERATIONS,
-  makeVolumetricFireSimulationUniformData,
-  MAX_VOLUMETRIC_FIRE_EMITTERS,
-  VolumetricFireSimulation
-} from './rendering/volumetric-fire-simulation';
 
 export type {ComparisonSplitterProps} from './controls/comparison-splitter';
 export {ComparisonSplitter} from './controls/comparison-splitter';
@@ -298,8 +269,6 @@ export type {
 export {FlatController, RectangleSelectController} from './controls/flat-controller';
 
 export * from './webxr/index';
-
-export {GPUGridIndex, GraphVectorView} from '@luma.gl/gpgpu/gpu-core';
 
 export * from './simulation/index';
 

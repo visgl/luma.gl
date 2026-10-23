@@ -15,7 +15,7 @@ import {
   type GPUCommandGraph,
   type GPUIncrementalBatch,
   type GraphDataView
-} from '@luma.gl/gpgpu/gpu-core';
+} from '@luma.gl/gpu-graph/gpu-core';
 
 /** A borrowed source batch may itself contain multiple chunks with different boundaries. */
 export type StreamingAnalyticsBatch = {

@@ -7,7 +7,7 @@ Install the optional `@luma.gl/gpgpu` peer when using this subpath.
 
 ```typescript
 import {parseGLTFPhysics, createGLTFPhysicsWorld} from '@luma.gl/gltf/physics';
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/gpu-graph/gpu-core';
 
 const description = parseGLTFPhysics(loadedAsset.json);
 if (!description.supported) {

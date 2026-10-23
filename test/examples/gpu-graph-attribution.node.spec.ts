@@ -5,7 +5,10 @@
 import {readdirSync, readFileSync} from 'node:fs';
 import {describe, expect, test} from 'vitest';
 
-const SOURCE_DIRECTORY = new URL('../../modules/gpgpu/src/gpu-graph-algorithms/', import.meta.url);
+const SOURCE_DIRECTORY = new URL(
+  '../../modules/gpu-graph/src/gpu-graph-algorithms/',
+  import.meta.url
+);
 const DOCUMENTATION_URL = new URL(
   '../../docs/api-reference/experimental/gpu-graph-operations.md',
   import.meta.url

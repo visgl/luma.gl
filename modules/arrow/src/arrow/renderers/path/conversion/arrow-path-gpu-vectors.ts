@@ -4,10 +4,7 @@
 
 import {Buffer, type Device, type ShaderLayout} from '@luma.gl/core';
 import {type VertexList} from '@luma.gl/gpgpu/gpu-data';
-import {
-  planGeneratedBufferBatches,
-  type GeneratedBufferBatch
-} from '@luma.gl/experimental/gpu-tables';
+import {planGeneratedBufferBatches, type GeneratedBufferBatch} from '@luma.gl/gpu-graph/gpu-tables';
 import {
   Bool,
   BufferType,

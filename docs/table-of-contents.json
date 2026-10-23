@@ -469,99 +469,6 @@
           "api-reference/experimental/README",
           {
             "type": "category",
-            "label": "GPU Tables",
-            "items": [
-              "api-reference/experimental/gpu-tables/README",
-              "api-reference/experimental/gpu-tables/gpu-table-structure",
-              "api-reference/experimental/gpu-tables/gpu-table-lifecycle",
-              "api-reference/experimental/gpu-tables/gpu-table",
-              "api-reference/experimental/gpu-tables/gpu-record-batch",
-              "api-reference/experimental/gpu-tables/gpu-schema",
-              "api-reference/experimental/gpu-tables/gpu-input-schema",
-              "api-reference/experimental/gpu-tables/gpu-table-shader-bindings",
-              "api-reference/experimental/gpu-tables/gpu-table-buffer-planner"
-            ]
-          },
-          {
-            "type": "category",
-            "label": "GPU Raster",
-            "items": [
-              "api-reference/experimental/gpu-raster/README",
-              "api-reference/experimental/gpu-raster/concepts",
-              "api-reference/experimental/gpu-raster/operations",
-              {
-                "type": "category",
-                "label": "Operation Families",
-                "items": [
-                  "api-reference/experimental/gpu-raster/operations-storage-residency",
-                  "api-reference/experimental/gpu-raster/operations-overviews",
-                  "api-reference/experimental/gpu-raster/operations-statistics",
-                  "api-reference/experimental/gpu-raster/operations-pixel",
-                  "api-reference/experimental/gpu-raster/operations-filters-morphology",
-                  "api-reference/experimental/gpu-raster/operations-regions-contours"
-                ]
-              }
-            ]
-          },
-          "api-reference/experimental/lucim",
-          {
-            "type": "category",
-            "label": "GPU Project",
-            "items": [
-              "api-reference/experimental/gpu-project",
-              "api-reference/experimental/geospatial"
-            ]
-          },
-          {
-            "type": "category",
-            "label": "GPU Trace",
-            "items": [
-              "api-reference/experimental/gpu-trace",
-              "api-reference/experimental/gpu-trace-algorithms",
-              {
-                "type": "category",
-                "label": "Scene and interaction",
-                "items": [
-                  "api-reference/experimental/gpu-trace/scene",
-                  "api-reference/experimental/gpu-trace/interaction",
-                  "api-reference/experimental/gpu-trace/temporal-index",
-                  "api-reference/experimental/gpu-trace/critical-path"
-                ]
-              },
-              {
-                "type": "category",
-                "label": "Analysis",
-                "items": [
-                  "api-reference/experimental/gpu-trace/anomaly-scoring",
-                  "api-reference/experimental/gpu-trace/comparison",
-                  "api-reference/experimental/gpu-trace/aggregation",
-                  "api-reference/experimental/gpu-trace/picking"
-                ]
-              }
-            ]
-          },
-          {
-            "type": "category",
-            "label": "GPU Dataframe",
-            "items": [
-              "api-reference/experimental/gpu-dataframe",
-              "api-reference/experimental/gpu-dataframe-operations",
-              "api-reference/experimental/gpu-dataframe-expressions",
-              "api-reference/experimental/gpu-dataframe-aggregation",
-              "api-reference/experimental/gpu-dataframe-sorting",
-              "api-reference/experimental/gpu-dataframe-indexes-joins",
-              "api-reference/experimental/gpu-sql"
-            ]
-          },
-          {
-            "type": "category",
-            "label": "GPU Crossfilter",
-            "items": [
-              "api-reference/experimental/gpu-crossfilter"
-            ]
-          },
-          {
-            "type": "category",
             "label": "Renderer",
             "items": [
               "api-reference/experimental/comparison-splitter",
@@ -657,10 +564,16 @@
               "api-reference/gpgpu/gpu-vector",
               "api-reference/gpgpu/gpu-data",
               "api-reference/gpgpu/gpu-data-view",
-              "api-reference/gpgpu/gpu-vector-format",
-              "api-reference/experimental/gpu-data/gpu-sparse-matrix"
+              "api-reference/gpgpu/gpu-vector-format"
             ]
-          },
+          }
+        ]
+      },
+      {
+        "type": "category",
+        "label": "@luma.gl/gpu-graph",
+        "items": [
+          "api-reference/gpu-graph/README",
           {
             "type": "category",
             "label": "GPU Graph",
@@ -829,7 +742,8 @@
                   "api-reference/experimental/gpu-core/gpu-hash-join",
                   "api-reference/experimental/gpu-core/gpu-batch-hash-join"
                 ]
-              }
+              },
+              "api-reference/experimental/gpu-data/gpu-sparse-matrix"
             ]
           },
           {
@@ -909,6 +823,99 @@
             "label": "GPU A5",
             "items": [
               "api-reference/experimental/gpu-a5"
+            ]
+          },
+          {
+            "type": "category",
+            "label": "GPU Tables",
+            "items": [
+              "api-reference/experimental/gpu-tables/README",
+              "api-reference/experimental/gpu-tables/gpu-table-structure",
+              "api-reference/experimental/gpu-tables/gpu-table-lifecycle",
+              "api-reference/experimental/gpu-tables/gpu-table",
+              "api-reference/experimental/gpu-tables/gpu-record-batch",
+              "api-reference/experimental/gpu-tables/gpu-schema",
+              "api-reference/experimental/gpu-tables/gpu-input-schema",
+              "api-reference/experimental/gpu-tables/gpu-table-shader-bindings",
+              "api-reference/experimental/gpu-tables/gpu-table-buffer-planner"
+            ]
+          },
+          {
+            "type": "category",
+            "label": "GPU Raster",
+            "items": [
+              "api-reference/experimental/gpu-raster/README",
+              "api-reference/experimental/gpu-raster/concepts",
+              "api-reference/experimental/gpu-raster/operations",
+              {
+                "type": "category",
+                "label": "Operation Families",
+                "items": [
+                  "api-reference/experimental/gpu-raster/operations-storage-residency",
+                  "api-reference/experimental/gpu-raster/operations-overviews",
+                  "api-reference/experimental/gpu-raster/operations-statistics",
+                  "api-reference/experimental/gpu-raster/operations-pixel",
+                  "api-reference/experimental/gpu-raster/operations-filters-morphology",
+                  "api-reference/experimental/gpu-raster/operations-regions-contours"
+                ]
+              }
+            ]
+          },
+          "api-reference/experimental/lucim",
+          {
+            "type": "category",
+            "label": "GPU Project",
+            "items": [
+              "api-reference/experimental/gpu-project",
+              "api-reference/experimental/geospatial"
+            ]
+          },
+          {
+            "type": "category",
+            "label": "GPU Trace",
+            "items": [
+              "api-reference/experimental/gpu-trace",
+              "api-reference/experimental/gpu-trace-algorithms",
+              {
+                "type": "category",
+                "label": "Scene and interaction",
+                "items": [
+                  "api-reference/experimental/gpu-trace/scene",
+                  "api-reference/experimental/gpu-trace/interaction",
+                  "api-reference/experimental/gpu-trace/temporal-index",
+                  "api-reference/experimental/gpu-trace/critical-path"
+                ]
+              },
+              {
+                "type": "category",
+                "label": "Analysis",
+                "items": [
+                  "api-reference/experimental/gpu-trace/anomaly-scoring",
+                  "api-reference/experimental/gpu-trace/comparison",
+                  "api-reference/experimental/gpu-trace/aggregation",
+                  "api-reference/experimental/gpu-trace/picking"
+                ]
+              }
+            ]
+          },
+          {
+            "type": "category",
+            "label": "GPU Dataframe",
+            "items": [
+              "api-reference/experimental/gpu-dataframe",
+              "api-reference/experimental/gpu-dataframe-operations",
+              "api-reference/experimental/gpu-dataframe-expressions",
+              "api-reference/experimental/gpu-dataframe-aggregation",
+              "api-reference/experimental/gpu-dataframe-sorting",
+              "api-reference/experimental/gpu-dataframe-indexes-joins",
+              "api-reference/experimental/gpu-sql"
+            ]
+          },
+          {
+            "type": "category",
+            "label": "GPU Crossfilter",
+            "items": [
+              "api-reference/experimental/gpu-crossfilter"
             ]
           }
         ]

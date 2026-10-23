@@ -5,12 +5,12 @@ import {DGGSCellProjectionBenchmark} from '@site/src/components/docs/dggs-cell-p
 
 <ExperimentalDocsTabs active="gpu-h3" />
 
-`@luma.gl/gpgpu/gpu-h3` decodes GPU-resident H3 cell indexes into center coordinates. It covers
+`@luma.gl/gpu-graph/gpu-h3` decodes GPU-resident H3 cell indexes into center coordinates. It covers
 every H3 resolution, pentagon topology, and face transition while retaining one output row per
 input cell.
 
 ```ts
-import {GPUH3CellProjection} from '@luma.gl/gpgpu/gpu-h3';
+import {GPUH3CellProjection} from '@luma.gl/gpu-graph/gpu-h3';
 
 new GPUH3CellProjection({
   cells,

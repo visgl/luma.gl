@@ -6,7 +6,7 @@ import {DGGSCellProjectionBenchmark} from '@site/src/components/docs/dggs-cell-p
 <ExperimentalDocsTabs active="gpu-dggs" />
 
 Discrete global grid indexes are compact, stable identifiers. Rendering and spatial analysis need
-coordinates. The experimental `@luma.gl/gpgpu/gpu-dggs` module connects those two representations
+coordinates. The experimental `@luma.gl/gpu-graph/gpu-dggs` module connects those two representations
 without pulling a large cell column back to JavaScript.
 
 | Input | Shared GPU primitive | Output |
@@ -33,15 +33,15 @@ inside a larger GPU pipeline, not a claim about end-to-end file ingestion.
 
 | Entry point | Primary class | Best fit |
 | --- | --- | --- |
-| `@luma.gl/gpgpu/gpu-dggs` | `GPUDGGSCellProjection` | Runtime-selected H3/A5 workflows and reusable planners |
-| `@luma.gl/gpgpu/gpu-h3` | `GPUH3CellProjection` | H3-specific pipelines and the clearest static types |
-| `@luma.gl/gpgpu/gpu-a5` | `GPUA5CellProjection` | A5-specific pipelines and the clearest static types |
+| `@luma.gl/gpu-graph/gpu-dggs` | `GPUDGGSCellProjection` | Runtime-selected H3/A5 workflows and reusable planners |
+| `@luma.gl/gpu-graph/gpu-h3` | `GPUH3CellProjection` | H3-specific pipelines and the clearest static types |
+| `@luma.gl/gpu-graph/gpu-a5` | `GPUA5CellProjection` | A5-specific pipelines and the clearest static types |
 
 All three classes implement `GPUCommandGraphContributor`. They add one bounded compute pass; they
 do not submit commands, allocate hidden result buffers, or read output back.
 
 ```ts
-import {GPUDGGSCellProjection} from '@luma.gl/gpgpu/gpu-dggs';
+import {GPUDGGSCellProjection} from '@luma.gl/gpu-graph/gpu-dggs';
 
 new GPUDGGSCellProjection({
   family: selectedGrid, // 'h3' | 'a5'
@@ -115,7 +115,7 @@ The live page uses an isolated optional entry point, keeping measurement code ou
 bundles:
 
 ```ts
-import {runGPUDGGSCellProjectionBenchmark} from '@luma.gl/gpgpu/gpu-dggs/benchmarks';
+import {runGPUDGGSCellProjectionBenchmark} from '@luma.gl/gpu-graph/gpu-dggs/benchmarks';
 
 const report = await runGPUDGGSCellProjectionBenchmark(device, {
   family: 'h3',

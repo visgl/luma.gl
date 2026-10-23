@@ -7,7 +7,7 @@ import {
   GPUCommandGraphInspector,
   type GPUCommandGraphCapabilities,
   type GPUCommandGraphStats
-} from '@luma.gl/gpgpu/gpu-core';
+} from '@luma.gl/gpu-graph/gpu-core';
 import {GPUCommandGraphInspectorPanel} from '../../examples/gpu-command-graph-inspector-panel';
 
 const EMPTY_GRAPH_STATS: GPUCommandGraphStats = {

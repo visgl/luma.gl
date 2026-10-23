@@ -115,36 +115,36 @@ describe('GPGPU example catalog navigation', () => {
       label: 'GPURaster: Satellite Raster Lab'
     });
     expect(rasterLabExampleSource).toContain('<RasterLabExample />');
-    expect(rasterLabExampleSource).toContain('@luma.gl/experimental/gpu-raster');
+    expect(rasterLabExampleSource).toContain('@luma.gl/gpu-graph/gpu-raster');
     expect(spatialAtlasExample).toBe('showcase/billion-point-spatial-atlas');
     expect(taxiExample).toEqual({
       type: 'doc',
       id: 'deck/luspatial-taxi',
       label: 'luProj + luSpatial: Taxi Explorer'
     });
-    expect(spatialAtlasSource).toContain("from '@luma.gl/experimental/geospatial'");
-    expect(spatialAtlasSource).not.toContain("from '@luma.gl/experimental/gpu-project'");
-    expect(taxiExampleSource).toContain('@luma.gl/experimental/gpu-project');
-    expect(taxiExampleSource).toContain('@luma.gl/experimental/geospatial');
+    expect(spatialAtlasSource).toContain("from '@luma.gl/gpu-graph/geospatial'");
+    expect(spatialAtlasSource).not.toContain("from '@luma.gl/gpu-graph/gpu-project'");
+    expect(taxiExampleSource).toContain('@luma.gl/gpu-graph/gpu-project');
+    expect(taxiExampleSource).toContain('@luma.gl/gpu-graph/geospatial');
   });
 
-  test('registers GPUCrossfilter throughout experimental API navigation', () => {
+  test('registers GPUCrossfilter throughout GPU Graph API navigation', () => {
     const documentationTableOfContents = JSON.parse(
       readFileSync(path.join(DOCUMENTATION_DIRECTORY, 'table-of-contents.json'), 'utf8')
     ) as ExampleSidebarEntry[];
-    const experimentalCategories: ExampleCategory[] = [];
+    const graphCategories: ExampleCategory[] = [];
 
-    const collectExperimentalCategories = (entries: ExampleSidebarEntry[]): void => {
+    const collectGraphCategories = (entries: ExampleSidebarEntry[]): void => {
       for (const entry of entries) {
         if (typeof entry === 'string' || entry.type !== 'category') continue;
-        if (entry.label === '@luma.gl/experimental') experimentalCategories.push(entry);
-        collectExperimentalCategories(entry.items);
+        if (entry.label === '@luma.gl/gpu-graph') graphCategories.push(entry);
+        collectGraphCategories(entry.items);
       }
     };
 
-    collectExperimentalCategories(documentationTableOfContents);
-    expect(experimentalCategories).toHaveLength(1);
-    const crossfilterCategory = experimentalCategories[0].items.find(
+    collectGraphCategories(documentationTableOfContents);
+    expect(graphCategories).toHaveLength(1);
+    const crossfilterCategory = graphCategories[0].items.find(
       entry => typeof entry !== 'string' && entry.label === 'GPU Crossfilter'
     );
     expect(crossfilterCategory).toBeDefined();

@@ -4,7 +4,7 @@
 
 import {Matrix4} from '@math.gl/core';
 import type {GLTFPhysicsBody} from '@luma.gl/gltf/physics';
-import type {GPURigidBodyState} from '@luma.gl/gpgpu/gpu-physics';
+import type {GPURigidBodyState} from '@luma.gl/gpu-graph/gpu-physics';
 
 /** Convert a center-of-mass pose to a delta applied to the authored mesh world matrix. */
 export function makePhysicsBodyDelta(body: GLTFPhysicsBody, state: GPURigidBodyState): Matrix4 {

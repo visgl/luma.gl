@@ -5,8 +5,8 @@
 import '../gpu-spatial-lab.css';
 import {Buffer, type Device} from '@luma.gl/core';
 import {AnimationLoopTemplate, Model, OrbitControls, type AnimationProps} from '@luma.gl/engine';
-import {GPUCommandGraph, GPUCommandGraphInspector} from '@luma.gl/gpgpu/gpu-core';
-import {GPUPointCloudOctree} from '@luma.gl/gpgpu/gpu-pointcloud';
+import {GPUCommandGraph, GPUCommandGraphInspector} from '@luma.gl/gpu-graph/gpu-core';
+import {GPUPointCloudOctree} from '@luma.gl/gpu-graph/gpu-pointcloud';
 import {GPUCommandGraphDebugPanel} from '../../gpu-command-graph-debug-panel';
 import {
   ExamplePanelManager,

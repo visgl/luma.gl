@@ -10,8 +10,8 @@ import {
   makeConvexHullGeometry,
   makeTriangleMeshGeometry,
   getRigidBodyShapeProperties
-} from '@luma.gl/gpgpu/gpu-physics';
-import type {GPURigidBodyMaterial, GPURigidBodyShape} from '@luma.gl/gpgpu/gpu-physics';
+} from '@luma.gl/gpu-graph/gpu-physics';
+import type {GPURigidBodyMaterial, GPURigidBodyShape} from '@luma.gl/gpu-graph/gpu-physics';
 import type {
   GLTFPhysicsDescription,
   GLTFPhysicsDocument,

@@ -6,7 +6,7 @@ import {
   makeConvexHullGeometry,
   makeTriangleMeshGeometry,
   type GPURigidBody
-} from '@luma.gl/gpgpu/gpu-physics';
+} from '@luma.gl/gpu-graph/gpu-physics';
 
 export const RIGID_BODY_SCENES = {
   suspension: {

@@ -4,7 +4,7 @@ Experimental, composable WebGPU operations for turning encoded columnar page buf
 data without a decode/readback/re-upload round trip.
 
 The initial focus is Apache Parquet. This package starts below the file-reader layer: a caller parses
-Thrift metadata, selects a page, and uploads its bytes. `@luma.gl/gpgpu/gpu-parse` plans the serial control
+Thrift metadata, selects a page, and uploads its bytes. `@luma.gl/gpu-graph/gpu-parse` plans the serial control
 data and contributes decoding operations to a `GPUGraph`. Decoded physical bytes, lengths,
 offsets, indices, and levels stay GPU-resident for later table, rendering, or GPGPU work.
 
@@ -27,7 +27,7 @@ later adapter.
 
 ## Generic graph operations
 
-These `@luma.gl/gpgpu/gpu-core` operations were extracted because they are useful beyond Parquet.
+These `@luma.gl/gpu-graph/gpu-core` operations were extracted because they are useful beyond Parquet.
 
 | Operation | Use when | Result |
 | --- | --- | --- |
@@ -233,12 +233,12 @@ Request encoded pages and preserve only codecs that `gpu-parse` can decompress:
 
 ```ts
 import {ParquetSourceLoader} from '@loaders.gl/parquet/parquet-source-loader';
-import {GPUGraph} from '@luma.gl/gpgpu/gpu-core';
+import {GPUGraph} from '@luma.gl/gpu-graph/gpu-core';
 import {
   addGPUParquetEncodedPageBatchToGraph,
   createGPUParquetEncodedPageBatchInputBuffer,
   planGPUParquetEncodedPageBatch
-} from '@luma.gl/gpgpu/gpu-parse';
+} from '@luma.gl/gpu-graph/gpu-parse';
 
 const source = ParquetSourceLoader.createDataSource(parquetBlob, {});
 

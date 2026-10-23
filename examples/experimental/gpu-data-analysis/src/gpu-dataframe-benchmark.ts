@@ -9,7 +9,7 @@ import {
   GPUCommandGraph,
   GPU_HASH_INDEX_STATISTICS_LENGTH,
   type CompiledGPUCommandGraph
-} from '@luma.gl/gpgpu/gpu-core';
+} from '@luma.gl/gpu-graph/gpu-core';
 import {
   GPUDataFrame,
   and,
@@ -20,7 +20,7 @@ import {
   type CompiledGPUDataFrameQuery,
   type CompiledGPUDataFrameSort,
   type GPUDataFrameQueryParameters
-} from '@luma.gl/experimental/gpu-dataframe';
+} from '@luma.gl/gpu-graph/gpu-dataframe';
 import {GPUVector, type GPUData} from '@luma.gl/gpgpu/gpu-data';
 import * as arrow from 'apache-arrow';
 

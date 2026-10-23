@@ -10,7 +10,7 @@ import {GPUTraceSceneExample} from '@site/src/examples';
 
 `getGPUTracePickingShader` generates a small WebGPU compute shader that resolves a timeline
 coordinate into the lowest matching visible canonical span row. It belongs to the optional
-[`@luma.gl/experimental/gpu-trace`](/docs/api-reference/experimental/gpu-trace) submodule because its
+[`@luma.gl/gpu-graph/gpu-trace`](/docs/api-reference/experimental/gpu-trace) submodule because its
 inputs understand execution-span timing, process/thread lane topology, hierarchy collapse, and
 trace-specific visibility policies.
 
@@ -72,7 +72,7 @@ any UI synchronization.
 ## Usage
 
 ```ts
-import {getGPUTracePickingShader} from '@luma.gl/experimental/gpu-trace';
+import {getGPUTracePickingShader} from '@luma.gl/gpu-graph/gpu-trace';
 
 const lanesPerThread = 4;
 const source = getGPUTracePickingShader(trace.stats.spanCount, lanesPerThread);

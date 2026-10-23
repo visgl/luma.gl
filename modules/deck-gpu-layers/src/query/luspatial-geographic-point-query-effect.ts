@@ -12,19 +12,19 @@ import {
   type GPUCommandGraphInspectorObservation,
   type GPUCommandGraphTimingReport,
   type GPUCommandGraphInspectorSnapshot
-} from '@luma.gl/gpgpu/gpu-core';
+} from '@luma.gl/gpu-graph/gpu-core';
 import {
   GPUGridIndex,
   type GPUGridIndexBounds,
   type GPUGridIndexSize,
   GPUPointSpatialQuery
-} from '@luma.gl/experimental/geospatial';
+} from '@luma.gl/gpu-graph/geospatial';
 import {
   compileProjectionPlan,
   GPUProjection,
   type ProjectionBounds,
   type ProjectionPlan
-} from '@luma.gl/experimental/gpu-project';
+} from '@luma.gl/gpu-graph/gpu-project';
 
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const STORAGE_BUFFER_OFFSET_ALIGNMENT = 256;

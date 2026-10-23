@@ -66,7 +66,7 @@
 
 ## GPU table API boundaries
 - `@luma.gl/gpgpu/gpu-data` owns primitive GPU concepts: `GPUData`, `GPUDataView`, `GPUVector`, `GPUConstant`, and `GPUVectorFormat`.
-- `@luma.gl/experimental/gpu-tables` owns higher-level `GPURecordBatch`, `GPUTable`, `GPUSchema`, table bindings, computations, and generic planners.
+- `@luma.gl/gpu-graph/gpu-tables` owns higher-level `GPURecordBatch`, `GPUTable`, `GPUSchema`, table bindings, computations, and generic planners.
 - `@luma.gl/experimental/models` owns specialized path and polygon rendering models and their GPU input helpers.
 - `@luma.gl/gpgpu` and `@luma.gl/experimental` should not depend on `apache-arrow`. Arrow conversion, upload, and readback helpers belong in `@luma.gl/arrow`.
 - `GPUVector.format` is the canonical type metadata. Arrow `dataType` is adapter/readback compatibility metadata, not the primary GPU type.
@@ -102,3 +102,8 @@
 ## Documentation
 - `docs/upgrade-guide.md` should focus on breaking changes and deprecations only.
 - Do not add new-feature bullets to the upgrade guide; put those in release notes such as `docs/whats-new.md`.
+
+## GPU Graph package boundaries
+- `@luma.gl/gpu-graph` exposes `GPUGraph` and execution graph infrastructure.
+- Graph-based algorithms and table processing use explicit `@luma.gl/gpu-graph/*` subpaths.
+- `@luma.gl/gpgpu` retains GPU data primitives and immediate operations and must not depend on `@luma.gl/gpu-graph`.
