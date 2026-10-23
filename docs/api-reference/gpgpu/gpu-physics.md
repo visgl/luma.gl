@@ -26,7 +26,7 @@ requires a WebGPU device and has no WebGL or CPU simulation fallback.
 | World | Use it for | Important boundary |
 | --- | --- | --- |
 | [GPUSphereWorld](./gpu-sphere-world.md) | Large sphere fields, rolling balls, pool and small continuous sphere scenes | Dynamic shapes are spheres; continuous mode and events are bounded to small worlds |
-| [GPURigidBodyWorld](./gpu-rigid-body-world.md) | Oriented shapes, compounds, mass properties and glTF physics workloads | Discrete contacts with an opt-in sphere/static CCD envelope; parallel solving remains experimental |
+| [GPURigidBodyWorld](./gpu-rigid-body-world.md) | Oriented shapes, compounds, mass properties and glTF physics workloads | Discrete contacts with opt-in sphere/static and bounded moving-convex CCD envelopes; parallel solving remains experimental |
 
 These are separate implementations with different controls, storage ownership and
 failure counters. A feature on one world does not imply support on the other.
@@ -50,7 +50,7 @@ experimental as a module.
 | Triangle-mesh contacts | Partial | Convex/mesh and bounded moving mesh/mesh surface contacts; original nonconvex openings preserved | Deep solid containment, degenerate geometry and high-speed traversal are not generally covered |
 | Scalable rigid-body discovery | Available | Hierarchical discovery and sparse contact storage; all-pairs reference for small scenes | Dense scenes and mixed-size extremes still require capacity and performance qualification |
 | Parallel rigid-body solving | Experimental | Opt-in parallel contact response, GPU contact compaction/indirect work, persistent manifolds, coupled friction and island sleep/wake | Ordered solving remains the default; deep stacks and extreme mass ratios need broader evidence |
-| Continuous collision detection | Partial | Bounded small-world continuous mode in `GPUSphereWorld` | Rigid worlds offer opt-in sphere/static-surface CCD; dynamic-pair and rotating-shape CCD remain planned |
+| Continuous collision detection | Partial | Bounded small-world continuous mode in `GPUSphereWorld` | Rigid worlds offer sphere/static-surface CCD and opt-in moving-convex CCD with swept queues, angular bounds, friction and rollback; jointed/nonconvex continuous coverage remains open |
 | Collision events | Available | Opt-in rigid-body begin/end and thresholded impact samples with IDs, step ordering and explicit loss reporting | Event recording scans the bounded pair cache; large-world compaction and recoverable consumer overflow remain work |
 | Scene queries | Partial | Parallel collider rays, sphere overlap and bounded sphere casts across analytic shapes and cooked mesh geometry | One pending query per world; bounded casts report incomplete results; spatial batching and general shape casts remain planned |
 | Trigger volumes | Partial | Step-local compound spherical sensors and swept sphere crossings; Space Salvage uses docking events | Arbitrary sensor shapes, curved trajectories and glTF trigger bindings remain planned |

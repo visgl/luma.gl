@@ -34,12 +34,12 @@ try {
       value.startsWith('ACCEPTED') && Number(value.match(/tick (\d+)\//)?.[1]) >= expected.minimum;
   }, {minimum, scene, afterGeneration}, {timeout: 120000});
   const reports = [];
-  for (const scene of ['capacity', 'dense', 'massRatio', 'ballistic', 'continuous', 'sparseContacts', 'geometry', 'deepStack', 'offsetStack', 'geometryConvex', 'geometryOpenings', 'fastPrimitives', 'fastMesh']) {
+  for (const scene of ['capacity', 'dense', 'massRatio', 'ballistic', 'continuous', 'sparseContacts', 'geometry', 'deepStack', 'offsetStack', 'geometryConvex', 'geometryOpenings', 'fastPrimitives', 'fastMesh', 'persistentContacts', 'fastConvexPairs', 'fastMovingWall', 'fastRotatingGate']) {
     const previousGeneration = await getGeneration();
     if (scene !== 'capacity') await page.locator('#scene').selectOption(scene);
     // Numerical duration/accuracy belongs in GPU specs; UI smoke checks live scene switching.
     // Ballistic playback must continue beyond the former 240-step cutoff.
-    await waitForTicks(scene === 'ballistic' ? 300 : 12, scene, scene === 'capacity' ? 0 : previousGeneration);
+    await waitForTicks(['ballistic','fastConvexPairs','fastMovingWall','fastRotatingGate'].includes(scene) ? 300 : 12, scene, scene === 'capacity' ? 0 : previousGeneration);
     const status = await page.locator('#status').textContent();
     assert.match(status, /ACCEPTED/);
     assert.match(status, /\/14400/);
@@ -58,10 +58,12 @@ try {
     }
     if (scene === 'dense') await page.screenshot({path: '/tmp/physics-stress-thumbnail.jpg', type: 'jpeg', quality: 85});
   }
-  await page.locator('#scene').selectOption('fastBudget');
+  for(const rejectedScene of ['fastConvexQueue','fastBudget']) {
+  await page.locator('#scene').selectOption(rejectedScene);
   await page.waitForFunction(() => document.querySelector('#status')?.textContent?.startsWith('REJECTED'), undefined, {timeout: 120000});
   assert.match(await page.locator('#status').textContent(), /tick 0\/14400/);
   assert.equal(await page.locator('#error').textContent(), '');
+  }
   const rejectedGeneration = await getGeneration();
   await page.locator('#scene').selectOption('geometryOpenings');
   await waitForTicks(12, 'geometryOpenings', rejectedGeneration);

@@ -15,7 +15,7 @@ it('reports sparse owned allocation capacities without attaching a device', () =
     });
     const report = world.getCapacityInfo();
     expect(report.maximumPairs).toBe(64);
-    expect(report.buffers.find(buffer => buffer.name === 'manifolds')?.byteLength).toBe(64 * 288);
+    expect(report.buffers.find(buffer => buffer.name === 'manifolds')?.byteLength).toBe(64 * 416);
     expect(report.buffers.some(buffer => buffer.name === 'parallel-state')).toBe(
       solver === 'parallel'
     );
@@ -80,4 +80,44 @@ it('rejects device capacity before allocating or marking the world attached', ()
     ).toThrow('storage exceeds');
     expect(world.positions).toBe(null);
   }
+});
+
+it('accounts for bounded convex queues without allocating unused mesh task storage', () => {
+  const world = new GPURigidBodyWorld({
+    failurePolicy: 'rollback',
+    continuous: {mode: 'convex', bodies: [0], maximumCandidates: 17},
+    bodies: [{position: [0, 0, 0], shape: {type: 'box', halfExtents: [1, 1, 1]}}]
+  });
+  const buffers = world.getCapacityInfo().buffers;
+  expect(buffers.find(buffer => buffer.name === 'continuous-work')?.byteLength).toBe(
+    16 + 64 + 17 * 48
+  );
+  expect(buffers.find(buffer => buffer.name === 'continuous-dispatch')?.byteLength).toBe(16);
+  expect(buffers.some(buffer => ['mesh-tasks', 'continuous-previous'].includes(buffer.name))).toBe(
+    false
+  );
+  world.destroy();
+});
+
+it('rejects undeclared convex CCD geometries and invalid work capacities', () => {
+  for (const maximumCandidates of [0, 1.5, NaN, Infinity])
+    expect(
+      () =>
+        new GPURigidBodyWorld({
+          failurePolicy: 'rollback',
+          continuous: {mode: 'convex', bodies: [0], maximumCandidates},
+          bodies: [{position: [0, 0, 0], shape: {type: 'sphere', radius: 1}}]
+        })
+    ).toThrow('continuous');
+  expect(
+    () =>
+      new GPURigidBodyWorld({
+        failurePolicy: 'rollback',
+        continuous: {mode: 'convex', bodies: [0]},
+        bodies: [
+          {position: [0, 0, 1], shape: {type: 'box', halfExtents: [1, 1, 1]}},
+          {mode: 'static', position: [0, 0, 0], shape: {type: 'plane'}}
+        ]
+      })
+  ).toThrow('continuous');
 });

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {RIGID_BODY_SUPPORT_SHADER} from './rigid-body-support-shaders';
 import {RIGID_BODY_MESH_QUERY_SHADER} from './rigid-body-mesh-query-shaders';
 
 export const RIGID_BODY_CONVEX_SHADER = /* wgsl */ `
@@ -9,29 +10,10 @@ const MESH_TASK_CAPACITY:u32=65536u;
 struct MeshTask { key:vec4u, point:vec4f, normal:vec4f }
 struct MeshTasks { count:atomic<u32>, overflow:atomic<u32>, unresolved:atomic<u32>, incomplete:atomic<u32>, entries:array<MeshTask,65536> }
 @group(0) @binding(10) var<storage,read_write> meshTasks:MeshTasks;
-struct SupportVertex { difference: vec3f, first: vec3f, second: vec3f }
+${RIGID_BODY_SUPPORT_SHADER}
 struct Simplex { points: array<SupportVertex,4>, count: u32 }
 struct ConvexHit { point: vec3f, normal: vec3f, depth: f32, status: u32 }
 struct EPAFace { indices: vec3u, normal: vec3f, distance: f32 }
-fn meshVertex(collider:u32, index:u32)->vec3f {return readGeometry(u32(bodies.colliders[collider].padding.x)+index).xyz;}
-fn localShapeSupport(collider:u32,direction:vec3f,triangle:i32)->vec3f {
- let shape=bodies.colliders[collider].shape;
- let magnitude=length(direction);let unit=select(vec3f(1,0,0),direction/max(magnitude,1e-20),magnitude>1e-20);
- if(triangle>=0){var best=triangleVertex(collider,u32(triangle),0u);for(var corner=1u;corner<3u;corner++){let candidate=triangleVertex(collider,u32(triangle),corner);if(dot(candidate,direction)>dot(best,direction)){best=candidate;}}return best;}
- if(shape.w==0.0){return unit*shape.x;}
- if(shape.w==1.0){return select(-shape.xyz,shape.xyz,direction>=vec3f(0));}
- if(shape.w==4.0){let bottom=unit*shape.x-vec3f(0,shape.z*0.5,0);let top=unit*shape.y+vec3f(0,shape.z*0.5,0);return select(bottom,top,dot(top,direction)>dot(bottom,direction));}
- if(shape.w==5.0){let radial=length(direction.xz);let ring=select(vec2f(1,0),direction.xz/max(radial,1e-20),radial>1e-20);let bottom=vec3f(ring.x*shape.x,-shape.z*0.5,ring.y*shape.x);let top=vec3f(ring.x*shape.y,shape.z*0.5,ring.y*shape.y);return select(bottom,top,dot(top,direction)>dot(bottom,direction));}
- let nodeOffset=u32(bodies.colliders[collider].policies.z);let nodeCount=u32(bodies.colliders[collider].policies.w);
- var best=meshVertex(collider,0u);var projection=dot(best,direction);var node=0u;
- loop {if(node>=nodeCount){break;}let lower=readGeometry(nodeOffset+node*3u);let upper=readGeometry(nodeOffset+node*3u+1u);
-  let bound=dot(select(lower.xyz,upper.xyz,direction>=vec3f(0)),direction);
-  if(bound<projection){node=u32(lower.w);continue;}
-  if(upper.w>0.0){let start=u32(readGeometry(nodeOffset+node*3u+2u).x);for(var face=0u;face<u32(upper.w);face++){for(var corner=0u;corner<3u;corner++){let candidate=triangleVertex(collider,start+face,corner);let value=dot(candidate,direction);if(value>projection){best=candidate;projection=value;}}}}
-  node++;
- }
- return best;
-}
 fn shapeSupport(collider:u32,direction:vec3f,triangle:i32)->vec3f {return colliderPosition(collider)+rotate(colliderRotation(collider),localShapeSupport(collider,colliderLocal(collider,direction),triangle));}
 // Clip an unbounded plane to this pair's conservative footprint. The patch
 // contains every possible contact without putting huge coordinates into GJK.
@@ -92,21 +74,6 @@ fn makeEPAFace(vertices:ptr<function,array<SupportVertex,64>>,first:u32,second:u
  if(dot(normal,interior-point)>0.0){normal=-normal;result.indices=vec3u(first,third,second);}
  result.normal=normal/max(length(normal),1e-20);result.distance=dot(result.normal,point);return result;
 }
-fn triangleWeights(point:vec3f,first:vec3f,second:vec3f,third:vec3f)->vec3f {
- let firstEdge=second-first;let secondEdge=third-first;let delta=point-first;let firstProjection=dot(firstEdge,delta);let secondProjection=dot(secondEdge,delta);
- if(firstProjection<=0.0&&secondProjection<=0.0){return vec3f(1,0,0);}
- let secondDelta=point-second;let thirdProjection=dot(firstEdge,secondDelta);let fourthProjection=dot(secondEdge,secondDelta);
- if(thirdProjection>=0.0&&fourthProjection<=thirdProjection){return vec3f(0,1,0);}
- let edgeRegion=firstProjection*fourthProjection-thirdProjection*secondProjection;
- if(edgeRegion<=0.0&&firstProjection>=0.0&&thirdProjection<=0.0){let weight=firstProjection/(firstProjection-thirdProjection);return vec3f(1-weight,weight,0);}
- let thirdDelta=point-third;let fifthProjection=dot(firstEdge,thirdDelta);let sixthProjection=dot(secondEdge,thirdDelta);
- if(sixthProjection>=0.0&&fifthProjection<=sixthProjection){return vec3f(0,0,1);}
- let secondRegion=fifthProjection*secondProjection-firstProjection*sixthProjection;
- if(secondRegion<=0.0&&secondProjection>=0.0&&sixthProjection<=0.0){let weight=secondProjection/(secondProjection-sixthProjection);return vec3f(1-weight,0,weight);}
- let thirdRegion=thirdProjection*sixthProjection-fifthProjection*fourthProjection;
- if(thirdRegion<=0.0&&(fourthProjection-thirdProjection)>=0.0&&(fifthProjection-sixthProjection)>=0.0){let weight=(fourthProjection-thirdProjection)/((fourthProjection-thirdProjection)+(fifthProjection-sixthProjection));return vec3f(0,1-weight,weight);}
- let inverse=1.0/max(thirdRegion+secondRegion+edgeRegion,1e-20);return vec3f(thirdRegion,secondRegion,edgeRegion)*inverse;
-}
 fn faceHit(vertices:ptr<function,array<SupportVertex,64>>,face:EPAFace,scale:f32)->ConvexHit {
  let first=(*vertices)[face.indices.x];let second=(*vertices)[face.indices.y];let third=(*vertices)[face.indices.z];
  let weights=triangleWeights(face.normal*face.distance,first.difference,second.difference,third.difference);
@@ -155,13 +122,13 @@ fn convexContact(first:u32,second:u32,firstTriangle:i32,secondTriangle:i32)->Con
  }
  miss.status=2u;return miss;
 }
-fn appendConvexContact(pair:u32,hit:ConvexHit,previous:Manifold,first:u32,second:u32){
+fn appendConvexContact(pair:u32,hit:ConvexHit,previous:Manifold,first:u32,second:u32,firstTriangle:i32,secondTriangle:i32){
  if(hit.status==2u){manifolds[pair].padding.x++;atomicAdd(&meshTasks.unresolved,1u);return;}
  if(hit.status!=1u||hit.depth < -settings.solver.x){return;}
  var slot=manifolds[pair].count;
- for(var index=0u;index<slot;index++){if(distance(manifolds[pair].contacts[index].point.xyz,hit.point)<settings.solver.w&&dot(manifolds[pair].contacts[index].normal.xyz,hit.normal)>0.95){if(hit.depth>manifolds[pair].contacts[index].point.w){storeContact(pair,index,hit.point,hit.normal,hit.depth,previous,first,second);}return;}}
+ for(var index=0u;index<slot;index++){if(distance(manifolds[pair].contacts[index].point.xyz,hit.point)<settings.solver.w&&dot(manifolds[pair].contacts[index].normal.xyz,hit.normal)>0.95){if(hit.depth>manifolds[pair].contacts[index].point.w){storeFeatureContact(pair,index,hit.point,hit.normal,hit.depth,previous,first,second,firstTriangle,secondTriangle);}return;}}
  if(slot>=4u){slot=0u;for(var index=1u;index<4u;index++){if(manifolds[pair].contacts[index].point.w<manifolds[pair].contacts[slot].point.w){slot=index;}}if(hit.depth<=manifolds[pair].contacts[slot].point.w){return;}}
- storeContact(pair,slot,hit.point,hit.normal,hit.depth,previous,first,second);manifolds[pair].count=min(4u,manifolds[pair].count+1u);
+ storeFeatureContact(pair,slot,hit.point,hit.normal,hit.depth,previous,first,second,firstTriangle,secondTriangle);manifolds[pair].count=min(4u,manifolds[pair].count+1u);
 }
 ${RIGID_BODY_MESH_QUERY_SHADER}
 fn collideExtended(pair:u32,first:u32,second:u32,previous:Manifold){
@@ -175,7 +142,7 @@ fn collideExtended(pair:u32,first:u32,second:u32,previous:Manifold){
  // Two unbounded zero-volume surfaces do not define a finite contact manifold.
  if(firstShape.w==6.0&&secondShape.w==6.0){manifolds[pair].padding.x++;atomicAdd(&meshTasks.unresolved,1u);return;}
  let firstMesh=bodies.colliders[first].shape.w==3.0;let secondMesh=bodies.colliders[second].shape.w==3.0;
- if(!firstMesh&&!secondMesh){appendConvexContact(pair,convexContact(first,second,-1,-1),previous,first,second);return;}
+ if(!firstMesh&&!secondMesh){appendConvexContact(pair,convexContact(first,second,-1,-1),previous,first,second,-1,-1);return;}
  if(firstMesh&&secondMesh){queueMeshPairContacts(pair,first,second,previous);return;}
  let mesh=select(second,first,firstMesh);let convex=select(first,second,firstMesh);
  var lower=vec3f(0);var upper=vec3f(0);
@@ -212,7 +179,7 @@ fn collectMeshContacts(){
   var previous=manifolds[pair];previous.count=previous.padding.x;
   let start=manifolds[pair].padding.y;let count=manifolds[pair].padding.z;
   manifolds[pair].count=0u;manifolds[pair].padding.x=0u;
-  for(var index=0u;index<count;index++){let task=meshTasks.entries[start+index];var hit:ConvexHit;hit.point=task.point.xyz;hit.depth=task.point.w;hit.normal=task.normal.xyz;hit.status=u32(task.normal.w);appendConvexContact(pair,hit,previous,first,second);}
+  for(var index=0u;index<count;index++){let task=meshTasks.entries[start+index];var hit:ConvexHit;hit.point=task.point.xyz;hit.depth=task.point.w;hit.normal=task.normal.xyz;hit.status=u32(task.normal.w);appendConvexContact(pair,hit,previous,first,second,i32(task.key.z),i32(task.key.w));}
  }
 }
 `;

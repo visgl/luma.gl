@@ -9,7 +9,10 @@ import {
   isQualificationScene
 } from './qualification-scenes';
 
+import {CONTINUOUS_SCENES, isContinuousScene, makeContinuousScene} from './continuous-scenes';
+
 export const STRESS_SCENES = {
+  ...CONTINUOUS_SCENES,
   ...QUALIFICATION_SCENES,
   capacity: 'Capacity recovery',
   dense: 'Dense mixed-size pile',
@@ -45,6 +48,7 @@ export function makeStressScene(
       }
     ]
   };
+  if (isContinuousScene(scene)) return makeContinuousScene(scene, props);
   if (isQualificationScene(scene)) return makeQualificationScene(scene, props);
   if (scene === 'ballistic')
     return {

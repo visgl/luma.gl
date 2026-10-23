@@ -1369,6 +1369,124 @@
           }
         ]
       }
+    },
+    {
+      "id": "execution.convex-swept-capacity",
+      "tranche": "G1",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "rejects a saturated swept queue"
+          },
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "rejects impact exhaustion"
+          }
+        ]
+      }
+    },
+    {
+      "id": "contacts.local-anchor-persistence",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-persistent-anchors.spec.ts",
+            "testPattern": "retains local anchors under common motion with all-pairs"
+          },
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-persistent-anchors.spec.ts",
+            "testPattern": "retains local anchors under common motion with hierarchical-grid"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.moving-convex-pairs",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "resolves a moving box pair with conserved momentum and energy"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.convex-shape-sweeps",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "qualifies translating box"
+          },
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "qualifies translating sphere"
+          },
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "qualifies translating capsule"
+          },
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "qualifies translating cylinder"
+          },
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "qualifies translating convex-hull"
+          },
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "rebounds from a translating kinematic"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.rotating-convex-sweep",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "detects a rotating gate crossing"
+          }
+        ]
+      }
     }
   ]
 }
