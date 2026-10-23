@@ -39,6 +39,13 @@ export function makeGPUVectorGeometryFromGPUGeometry(geometry: GPUGeometry): GPU
       ]
     };
   }
+  if (geometry.indices) {
+    // Legacy attributes may have different spare capacity; expose their common addressable rows.
+    const length = Math.min(...Object.values(attributes).map(vector => vector.length));
+    for (const [name, vector] of Object.entries(attributes)) {
+      attributes[name] = {...vector, length, data: vector.data.map(chunk => ({...chunk, length}))};
+    }
+  }
   const buffer = geometry.indices;
   const byteStride = buffer?.indexType === 'uint32' ? 4 : buffer?.indexType === 'uint8' ? 1 : 2;
   const length = buffer ? buffer.byteLength / byteStride : 0;

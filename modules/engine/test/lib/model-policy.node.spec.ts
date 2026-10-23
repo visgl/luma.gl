@@ -187,3 +187,33 @@ it.each([
   model.destroy();
   device.destroy();
 });
+
+it('Model accepts indexed legacy attributes with unequal spare capacity', () => {
+  const device = new NullDevice({});
+  const positions = device.createBuffer({byteLength: 4 * 12});
+  const colors = device.createBuffer({byteLength: 8 * 4});
+  const indices = device.createBuffer({
+    data: new Uint16Array([0, 1, 2, 2, 1, 3]),
+    usage: Buffer.INDEX
+  });
+  const geometry = new GPUGeometry({
+    attributes: {positions, colors},
+    indices,
+    vertexCount: 6,
+    topology: 'triangle-list',
+    bufferLayout: [
+      {name: 'positions', format: 'float32x3'},
+      {name: 'colors', format: 'unorm8x4'}
+    ]
+  });
+  const model = new Model(device, {
+    vs: VERTEX_SHADER,
+    fs: FRAGMENT_SHADER,
+    geometry,
+    shaderLayout: SHADER_LAYOUT
+  });
+  expect(model.vertexCount).toBe(6);
+  expect(model.indexCount).toBeUndefined();
+  model.destroy();
+  device.destroy();
+});

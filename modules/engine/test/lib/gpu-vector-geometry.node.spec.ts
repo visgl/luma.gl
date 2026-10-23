@@ -117,6 +117,10 @@ it('GPUVectorGeometry binds sliced indices without taking ownership', () => {
   expect(overridden.firstIndex).toBe(1);
   expect(overridden.firstVertex).toBe(2);
   overridden.destroy();
+  model.setIndexBuffer(buffer);
+  expect(model.indexCount).toBeUndefined();
+  expect(model.firstVertex).toBe(0);
+  expect(model.firstIndex).toBe(0);
   model.setIndexVector(null);
   expect(model.indexBuffer).toBeNull();
   expect(model.indexCount).toBeUndefined();
@@ -420,5 +424,77 @@ it('layout-less data updates preserve explicit vertex stepping on instanced mode
   expect(model.bufferLayout.find(layout => layout.name === 'positions')?.stepMode).toBe('vertex');
   model.destroy();
   positions.data[0].buffer.destroy();
+  device.destroy();
+});
+
+it.each([
+  {countName: 'vertexCount', limit: 0},
+  {countName: 'instanceCount', limit: 0},
+  {countName: 'vertexCount', limit: 3},
+  {countName: 'instanceCount', limit: 3}
+] as const)('automatic batches honor $countName limit $limit', ({countName, limit}) => {
+  const device = new NullDevice({});
+  const positions = new GPUVector({
+    name: 'positions',
+    type: 'data',
+    format: 'float32x2',
+    data: [2, 3].map(
+      length =>
+        new GPUData({
+          buffer: device.createBuffer({byteLength: length * 8}),
+          format: 'float32x2',
+          length
+        })
+    )
+  });
+  const colors = new GPUVector({
+    name: 'colors',
+    type: 'data',
+    format: 'unorm8x4',
+    data: [2, 3].map(
+      length =>
+        new GPUData({
+          buffer: device.createBuffer({byteLength: length * 4}),
+          format: 'unorm8x4',
+          length
+        })
+    )
+  });
+  const model = new GPUVectorModel(device, {
+    ...SHADERS,
+    isInstanced: true,
+    geometry: new GPUVectorGeometry({attributes: {positions}}),
+    attributeVectors: {colors},
+    [countName]: limit
+  });
+  const renderPass = device.getDefaultRenderPass();
+  const calls: number[][] = [];
+  const draw = renderPass.draw.bind(renderPass);
+  renderPass.draw = options => {
+    calls.push([options.vertexCount!, options.instanceCount!]);
+    return draw(options);
+  };
+  expect(model.draw(renderPass)).toBe(true);
+  expect(calls).toEqual(
+    limit === 0
+      ? []
+      : countName === 'vertexCount'
+        ? [
+            [2, 2],
+            [2, 3],
+            [1, 2],
+            [1, 3]
+          ]
+        : [
+            [2, 2],
+            [2, 1],
+            [3, 2],
+            [3, 1]
+          ]
+  );
+  expect(model[countName]).toBe(limit);
+  model.destroy();
+  renderPass.destroy();
+  for (const vector of [positions, colors]) for (const chunk of vector.data) chunk.buffer.destroy();
   device.destroy();
 });

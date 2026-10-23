@@ -884,6 +884,7 @@ export class GPUVectorModel {
           chunk.byteOffset % this.indexVector.byteStride === 0
       );
     }
+    this.indexVector = null;
     this.setIndexBuffer(chunk?.buffer ?? null);
     this.indexVector = vector;
     this.indexCount = vector?.length;
@@ -1248,6 +1249,11 @@ export class GPUVectorModel {
    * @todo - how to unset it if we change geometry?
    */
   setIndexBuffer(indexBuffer: ModelBuffer | null): void {
+    if (this.indexVector) {
+      this.indexCount = undefined;
+      this.firstVertex = 0;
+      this.firstIndex = 0;
+    }
     this.indexVector = null;
     const resolvedIndexBuffer =
       indexBuffer instanceof DynamicBuffer ? indexBuffer.buffer : indexBuffer;

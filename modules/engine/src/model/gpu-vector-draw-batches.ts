@@ -3,13 +3,18 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {GPUVectorModel} from './gpu-vector-model';
-import type {GPUVectorBindings} from './gpu-vector-bindings';
+import type {GPUVectorBindings, GPUVectorModelAttributes} from './gpu-vector-bindings';
 
 /** Draws aligned mesh/attribute batches, or the product of independent instanced batches. */
 export function drawGPUVectorGroups(
   model: Pick<
     GPUVectorModel,
-    'vertexCount' | 'instanceCount' | 'isInstanced' | 'setVertexCount' | 'setInstanceCount'
+    | 'vertexCount'
+    | 'instanceCount'
+    | 'isInstanced'
+    | 'indexBuffer'
+    | 'setVertexCount'
+    | 'setInstanceCount'
   >,
   geometry: GPUVectorBindings,
   attributes: GPUVectorBindings,
@@ -29,6 +34,8 @@ export function drawGPUVectorGroups(
   const attributeBatches = Array.from({length: attributeBatchCount}, (_, batchIndex) =>
     attributes.getBatch(batchIndex)
   );
+  const geometryOffsets = getBatchOffsets(geometryBatches);
+  const attributeOffsets = getBatchOffsets(attributeBatches);
   const vertexCount = model.vertexCount;
   const instanceCount = model.instanceCount;
   let success = true;
@@ -52,8 +59,36 @@ export function drawGPUVectorGroups(
         attributeStepMode
       );
       syncBindings();
-      model.setVertexCount(geometry.rowCount ?? attributes.vertexCount ?? vertexCount);
-      if (attributes.instanceCount !== undefined) model.setInstanceCount(attributes.instanceCount);
+      const vertexOffset =
+        geometry.rowCount !== undefined
+          ? geometryOffsets[geometryBatchIndex]
+          : attributes.vertexCount !== undefined
+            ? attributeOffsets[attributeBatchIndex]
+            : 0;
+      model.setVertexCount(
+        Math.max(
+          0,
+          Math.min(
+            geometry.rowCount ?? attributes.vertexCount ?? vertexCount,
+            vertexCount - vertexOffset
+          )
+        )
+      );
+      if (attributes.instanceCount !== undefined)
+        model.setInstanceCount(
+          Math.max(
+            0,
+            Math.min(
+              attributes.instanceCount,
+              instanceCount - attributeOffsets[attributeBatchIndex]
+            )
+          )
+        );
+      if (
+        (!model.indexBuffer && model.vertexCount === 0) ||
+        (model.isInstanced && model.instanceCount === 0)
+      )
+        continue;
       success = draw() && success;
     }
   } finally {
@@ -64,4 +99,18 @@ export function drawGPUVectorGroups(
     model.setInstanceCount(instanceCount);
   }
   return success;
+}
+
+function getBatchOffsets(batches: GPUVectorModelAttributes[]): number[] {
+  let rowOffset = 0;
+  return batches.map(batch => {
+    const offset = rowOffset;
+    for (const vector of Object.values(batch)) {
+      if (vector && 'data' in vector) {
+        rowOffset += vector.length;
+        break;
+      }
+    }
+    return offset;
+  });
 }
