@@ -112,6 +112,7 @@
         "label": "GPGPU Graph",
         "items": [
           "v10/gpgpu",
+          "v10/gpu-simple-graph",
           "experimental/gpu-frustum-culling",
           "experimental/gpu-trace-viewer",
           "experimental/gpu-graph-explorer",

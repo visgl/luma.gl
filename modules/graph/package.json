@@ -169,6 +169,11 @@
       "types": "./dist/gpu-effects/index.d.ts",
       "import": "./dist/gpu-effects/index.js",
       "require": "./dist/gpu-effects/index.cjs"
+    },
+    "./gpu-simple-graph": {
+      "types": "./dist/gpu-simple-graph/index.d.ts",
+      "import": "./dist/gpu-simple-graph/index.js",
+      "require": "./dist/gpu-simple-graph/index.cjs"
     }
   },
   "peerDependencies": {

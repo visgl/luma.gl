@@ -1,5 +1,14 @@
 # What's New
 
+## SimpleGraph and evaluator inspection
+
+`@luma.gl/graph/gpu-simple-graph` provides an evaluator-backed subset of graph operation
+composition, with a dedicated SimpleGraph example. GPGPU data and vector evaluators now
+expose read-only `getInspection()` snapshots. WebGPU evaluation scopes also accept
+chunk-preserving vector evaluators, with one explicit submission and cancellation rollback.
+Ordinary evaluator execution remains unchanged; `@luma.gl/gpgpu` remains independent of graph.
+
+
 _This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the [Legacy What's New](/docs/legacy/legacy-upgrade-guide) page._
 
 ## Version 10.0

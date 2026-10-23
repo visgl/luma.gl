@@ -64,3 +64,8 @@ export {Operation} from './operation/operation';
 export type {OperationHandler, OperationHandlerResult} from './operation/operation';
 export {cleanEvaluate} from './utils/clean-evaluate';
 export {cleanEvaluateSync} from './utils/clean-evaluate';
+
+export type {
+  GPUEvaluatorInspection,
+  GPUEvaluatorInspectionNode
+} from './operation/gpu-evaluator-inspection';
