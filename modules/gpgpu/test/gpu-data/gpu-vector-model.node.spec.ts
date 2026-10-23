@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import type {Buffer, ShaderLayout} from '@luma.gl/core';
+import {Buffer, type ShaderLayout} from '@luma.gl/core';
 import {GPUVectorModel as EngineGPUVectorModel, Model} from '@luma.gl/engine';
 import {NullDevice} from '@luma.gl/test-utils';
 import {
@@ -284,4 +284,41 @@ it('GPUVectorModel direct vector binding rejects implicit multi-chunk packing', 
   expect(() => model.setGPUVectors({positions})).toThrow();
   model.destroy();
   positions.destroy();
+});
+
+it.each([
+  'instance',
+  'vertex'
+] as const)('GPUVectorModel restores automatic indexed draw counts after %s batching', gpuVectorCount => {
+  const device = new NullDevice({});
+  const positions = makeVector(device, 'positions', 'float32x2', [3]);
+  const indexBuffer = device.createBuffer({
+    data: new Uint16Array([0, 1, 2]),
+    usage: Buffer.INDEX,
+    indexType: 'uint16'
+  });
+  const model = new GPUVectorModel(device, {
+    vs: VERTEX_SHADER,
+    fs: FRAGMENT_SHADER,
+    shaderLayout: SHADER_LAYOUT,
+    bufferLayout: [{name: 'positions', format: 'float32x2', stepMode: 'instance'}],
+    attributes: {positions: positions.data[0].buffer},
+    indexBuffer,
+    gpuVectorCount
+  });
+  const renderPass = device.getDefaultRenderPass();
+  const draws: Array<{indexCount?: number; instanceCount?: number}> = [];
+  const draw = renderPass.draw.bind(renderPass);
+  renderPass.draw = options => {
+    draws.push({indexCount: options.indexCount, instanceCount: options.instanceCount});
+    return draw(options);
+  };
+  expect(model.drawBatches(renderPass, {vectors: {positions}})).toBe(true);
+  expect(model.isInstanced).toBeUndefined();
+  expect(model.draw(renderPass)).toBe(true);
+  expect(draws[draws.length - 1]).toEqual({indexCount: 3, instanceCount: undefined});
+  model.destroy();
+  positions.destroy();
+  indexBuffer.destroy();
+  renderPass.destroy();
 });

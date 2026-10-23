@@ -773,11 +773,17 @@ export class GPUVectorModel {
   ): boolean {
     const batches = getGPUVectorModelBatches(this.id, vectors);
     validateGPUVectorModelLayouts(this.id, vectors, this.bufferLayout);
+    for (const name of Object.keys(vectors)) {
+      // Transient batches replace existing attributes so every binding can be restored afterward.
+      assert(!vectors[name] || this.currentAttributes[name]);
+    }
     const previousAttributes = {...this.currentAttributes};
     const previousAttributeByteOffsets = {...this.currentAttributeByteOffsets};
     const previousBindings = {...this.bindings};
     const previousInstanceCount = this.instanceCount;
     const previousVertexCount = this.vertexCount;
+    const previousIsInstanced = this.isInstanced;
+    const previousVertexCountSet = this._vertexCountSet;
     let drawSuccess = true;
     try {
       for (const batch of batches) {
@@ -794,6 +800,8 @@ export class GPUVectorModel {
       this.setBindings(previousBindings);
       this.setInstanceCount(previousInstanceCount);
       this.setVertexCount(previousVertexCount);
+      this.isInstanced = previousIsInstanced;
+      this._vertexCountSet = previousVertexCountSet;
     }
     return drawSuccess;
   }
