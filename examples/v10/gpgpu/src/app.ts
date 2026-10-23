@@ -26,12 +26,6 @@ import {
 const DEFAULT_ROW_COUNT = 5_000_000;
 const MAXIMUM_ROW_COUNT = 10_000_000;
 const EXPRESSION_QUERY_PARAMETER = 'expression';
-const EXPRESSION_PRESETS = [
-  {label: 'Float32 coordinates', expression: 'fround(coordinates)'},
-  {label: 'Scale coordinates', expression: 'fround(coordinates) * 2'},
-  {label: 'Coordinate length', expression: 'length(fround(coordinates))'},
-  {label: 'Scale sample metrics', expression: 'sampleMetrics.values * 2'}
-] as const;
 
 export type GPGPUShowcaseHandle = {
   destroy: () => void;
@@ -59,7 +53,6 @@ export function initializeGPGPUShowcase(props: GPGPUShowcaseProps = {}): GPGPUSh
   let renderer: VirtualGPUTableRenderer | null = null;
   let submitHandler: ((event: SubmitEvent) => void) | null = null;
   let presetHandler: (() => void) | null = null;
-  let inputHandler: (() => void) | null = null;
   let beforeUnloadHandler: (() => void) | null = null;
 
   const destroy = (): void => {
@@ -80,10 +73,6 @@ export function initializeGPGPUShowcase(props: GPGPUShowcaseProps = {}): GPGPUSh
       expressionElements.preset.removeEventListener('change', presetHandler);
       presetHandler = null;
     }
-    if (inputHandler) {
-      expressionElements.input.removeEventListener('input', inputHandler);
-      inputHandler = null;
-    }
     if (beforeUnloadHandler) {
       window.removeEventListener('beforeunload', beforeUnloadHandler);
       beforeUnloadHandler = null;
@@ -98,27 +87,13 @@ export function initializeGPGPUShowcase(props: GPGPUShowcaseProps = {}): GPGPUSh
   if (requestedExpression !== null) {
     expressionElements.input.value = requestedExpression;
   }
-  expressionElements.preset.replaceChildren(
-    new Option('Custom expression', ''),
-    ...EXPRESSION_PRESETS.map(({label, expression}) => new Option(label, expression))
-  );
-  const syncPreset = (): void => {
-    const expression = expressionElements.input.value.trim();
-    expressionElements.preset.value = EXPRESSION_PRESETS.some(
-      preset => preset.expression === expression
-    )
-      ? expression
-      : '';
-  };
   presetHandler = () => {
     if (expressionElements.preset.value) {
       expressionElements.input.value = expressionElements.preset.value;
+      expressionElements.preset.value = '';
     }
   };
-  inputHandler = syncPreset;
   expressionElements.preset.addEventListener('change', presetHandler);
-  expressionElements.input.addEventListener('input', inputHandler);
-  syncPreset();
 
   animationFrameId = window.requestAnimationFrame(() => {
     animationFrameId = null;

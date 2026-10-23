@@ -696,7 +696,7 @@ const GPGPU_EXAMPLE_STYLE = `
 
   .gpgpu-showcase .expression-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(180px, 0.45fr) auto;
+    grid-template-columns: minmax(0, 1fr) 108px auto;
     gap: 8px;
   }
 
@@ -819,20 +819,6 @@ const GPGPU_EXAMPLE_STYLE = `
 
     .gpgpu-showcase .metadata-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .gpgpu-showcase .expression-row {
-      grid-template-columns: minmax(0, 1fr) auto;
-    }
-
-    .gpgpu-showcase .expression-row select {
-      grid-column: 1 / -1;
-      grid-row: 1;
-    }
-
-    .gpgpu-showcase .expression-row input,
-    .gpgpu-showcase .expression-row button {
-      grid-row: 2;
     }
 
     .gpgpu-showcase .table-row-grid {
@@ -1484,7 +1470,13 @@ export const GPGPUExample: React.FC<{useSimpleGraph?: boolean}> = ({useSimpleGra
               defaultValue="fround(coordinates)"
               spellCheck={false}
             />
-            <select id="expression-preset" aria-label="Expression preset" />
+            <select id="expression-preset" aria-label="Expression examples" defaultValue="">
+              <option value="">Examples</option>
+              <option value="fround(coordinates)">Float32 coordinates</option>
+              <option value="fround(coordinates) * 2">Scale coordinates</option>
+              <option value="length(fround(coordinates))">Coordinate length</option>
+              <option value="sampleMetrics.values * 2">Scale sample metrics</option>
+            </select>
             <button id="expression-run" type="submit" disabled>
               Run
             </button>

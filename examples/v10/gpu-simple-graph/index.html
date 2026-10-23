@@ -83,7 +83,7 @@
 
     .expression-row {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(180px, 0.45fr) auto;
+      grid-template-columns: minmax(0, 1fr) 108px auto;
       gap: 8px;
     }
 
@@ -208,20 +208,6 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
-      .expression-row {
-        grid-template-columns: minmax(0, 1fr) auto;
-      }
-
-      .expression-row select {
-        grid-column: 1 / -1;
-        grid-row: 1;
-      }
-
-      .expression-row input,
-      .expression-row button {
-        grid-row: 2;
-      }
-
       .table-row-grid {
         grid-template-columns: var(--table-grid-template, 96px 260px 120px 280px);
       }
@@ -258,7 +244,13 @@
       <label for="expression-input">Expression</label>
       <div class="expression-row">
         <input id="expression-input" type="text" value="fround(coordinates)" spellcheck="false" />
-        <select id="expression-preset" aria-label="Expression preset"></select>
+        <select id="expression-preset" aria-label="Expression examples">
+          <option value="">Examples</option>
+          <option value="fround(coordinates)">Float32 coordinates</option>
+          <option value="fround(coordinates) * 2">Scale coordinates</option>
+          <option value="length(fround(coordinates))">Coordinate length</option>
+          <option value="sampleMetrics.values * 2">Scale sample metrics</option>
+        </select>
         <button id="expression-run" type="submit" disabled>Run</button>
       </div>
       <div id="expression-message" class="expression-note">
