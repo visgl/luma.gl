@@ -107,7 +107,9 @@ it.each([
   void 0;
 });
 
-it('GPUVectorModel binds chunk offsets and rejects incompatible formats', () => {
+it.each([
+  0, 8
+])('GPUVectorModel accounts for layout offset %s when binding chunk offsets', layoutOffset => {
   const device = new NullDevice({});
   const buffer = device.createBuffer({byteLength: 24});
   const positions = new GPUVector<'float32x2'>({
@@ -121,7 +123,13 @@ it('GPUVectorModel binds chunk offsets and rejects incompatible formats', () => 
     vs: VERTEX_SHADER,
     fs: FRAGMENT_SHADER,
     shaderLayout: SHADER_LAYOUT,
-    bufferLayout: [{name: 'positions', format: 'float32x2', stepMode: 'instance'}],
+    bufferLayout: [
+      {
+        name: 'positions',
+        stepMode: 'instance',
+        attributes: [{attribute: 'positions', format: 'float32x2', byteOffset: layoutOffset}]
+      }
+    ],
     attributes: {positions: buffer},
     isInstanced: true,
     vertexCount: 1
@@ -131,10 +139,12 @@ it('GPUVectorModel binds chunk offsets and rejects incompatible formats', () => 
   expect(
     model.drawBatches(renderPass, {
       vectors: {positions},
-      onBatch: () => expect(model.vertexArray.attributeByteOffsets[0]).toBe(8)
+      onBatch: () => expect(model.vertexArray.attributeByteOffsets[0]).toBe(8 - layoutOffset)
     })
   ).toBe(true);
   expect(model.vertexArray.attributeByteOffsets[0]).toBe(0);
+  model.setGPUVectors({positions});
+  expect(model.vertexArray.attributeByteOffsets[0]).toBe(8 - layoutOffset);
   const colors = new GPUVector<'unorm8x4'>({
     type: 'data',
     name: 'positions',

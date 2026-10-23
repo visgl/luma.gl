@@ -48,6 +48,8 @@ export class BufferTransform {
   readonly device: Device;
   readonly model: GPUVectorModel;
   readonly transformFeedback: TransformFeedback;
+  private outputVectors: GPUVectorModelInputs = {};
+  private outputBuffers: Record<string, Buffer | BufferRange> = {};
 
   static defaultProps: Required<BufferTransformProps> = {
     ...GPUVectorModel.defaultProps,
@@ -68,6 +70,7 @@ export class BufferTransform {
     }
 
     this.device = device;
+    this.outputBuffers = props.feedbackBuffers || {};
     const {inputVectors, outputVectors, ...modelProps} = props;
 
     this.model = new GPUVectorModel(this.device, {
@@ -117,8 +120,10 @@ export class BufferTransform {
       options ?? {};
     if (inputBuffers) this.model.setAttributes(inputBuffers);
     if (inputVectors) this.model.setGPUVectors(inputVectors, {count: 'vertex'});
-    if (outputBuffers) this.transformFeedback.setBuffers(outputBuffers);
-    if (outputVectors) this.setOutputVectors(outputVectors);
+    if (outputBuffers) this.outputBuffers = outputBuffers;
+    if (outputBuffers || outputVectors || Object.keys(this.outputVectors).length > 0) {
+      this.setOutputVectors(outputVectors ?? this.outputVectors);
+    }
     const renderPass = this.device.beginRenderPass({discard: true, ...renderPassProps});
     try {
       this.model.draw(renderPass);
@@ -134,8 +139,10 @@ export class BufferTransform {
     const batches = getGPUVectorModelBatches(this.model.id, vectors);
     // A transform run binds one output range per varying; use table batches for chunked outputs.
     assert(batches.length <= 1);
-    this.transformFeedback.setBuffers(
-      Object.fromEntries(
+    this.outputVectors = vectors;
+    this.transformFeedback.setBuffers({
+      ...this.outputBuffers,
+      ...Object.fromEntries(
         Object.entries(batches[0]?.data ?? {}).map(([name, data]) => {
           // Transform feedback writes each varying contiguously, without arbitrary per-row padding.
           assert(data.byteStride === data.rowByteLength);
@@ -149,7 +156,7 @@ export class BufferTransform {
           ];
         })
       )
-    );
+    });
   }
 
   // DEPRECATED METHODS

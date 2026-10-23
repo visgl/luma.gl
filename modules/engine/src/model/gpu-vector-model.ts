@@ -807,7 +807,13 @@ export class GPUVectorModel {
       Object.fromEntries(Object.entries(data).map(([name, chunk]) => [name, chunk.buffer])),
       {
         byteOffsets: Object.fromEntries(
-          Object.entries(data).map(([name, chunk]) => [name, chunk.byteOffset])
+          Object.entries(data).map(([name, chunk]) => {
+            const layout = this.bufferLayout.find(layout => layout.name === name);
+            const byteOffset = chunk.byteOffset - (layout?.attributes?.[0]?.byteOffset ?? 0);
+            // The layout offset and binding offset together address the start of the chunk.
+            assert(byteOffset >= 0);
+            return [name, byteOffset];
+          })
         )
       }
     );

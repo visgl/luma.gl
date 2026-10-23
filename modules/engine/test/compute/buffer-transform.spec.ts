@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
-import {BufferTransform, GPUVectorModel} from '@luma.gl/engine';
+import {BufferTransform, DynamicBuffer, GPUVectorModel} from '@luma.gl/engine';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {Buffer, Device} from '@luma.gl/core';
 
@@ -104,4 +104,55 @@ it('BufferTransform borrows vector ranges and infers the input vertex count', as
   output.destroy();
   inputBuffer.destroy();
   outputBuffer.destroy();
+});
+
+it('BufferTransform merges raw outputs with vector outputs and refreshes resized buffers', async () => {
+  const device = await getWebGLTestDevice();
+  const inputBuffer = device.createBuffer({data: new Float32Array([2, 3])});
+  const rawOutput = device.createBuffer({byteLength: 8});
+  const ignoredOutput = device.createBuffer({data: new Float32Array([-1, -1])});
+  const dynamicOutput = new DynamicBuffer(device, {byteLength: 16});
+  const output = new GPUVector({
+    type: 'data',
+    name: 'squared',
+    format: 'float32',
+    data: [new GPUData({buffer: dynamicOutput, byteOffset: 4, length: 2, format: 'float32'})]
+  });
+  const transform = new BufferTransform(device, {
+    vs: `#version 300 es
+in float src;
+out float incremented;
+out float squared;
+void main() { incremented = src + 1.0; squared = src * src; }`,
+    bufferLayout: [{name: 'src', format: 'float32'}],
+    attributes: {src: inputBuffer},
+    vertexCount: 2,
+    outputs: ['incremented', 'squared']
+  });
+  transform.run({
+    outputBuffers: {incremented: rawOutput, squared: ignoredOutput},
+    outputVectors: {squared: output}
+  });
+  let bytes = await rawOutput.readAsync();
+  expect(new Float32Array(bytes.buffer, bytes.byteOffset, 2)).toEqual(new Float32Array([3, 4]));
+  bytes = await dynamicOutput.readAsync(4, 8);
+  expect(new Float32Array(bytes.buffer, bytes.byteOffset, 2)).toEqual(new Float32Array([4, 9]));
+  bytes = await ignoredOutput.readAsync();
+  expect(new Float32Array(bytes.buffer, bytes.byteOffset, 2)).toEqual(new Float32Array([-1, -1]));
+  const previousBuffer = dynamicOutput.buffer;
+  dynamicOutput.resize({byteLength: 32});
+  inputBuffer.write(new Float32Array([3, 4]));
+  transform.run();
+  expect(previousBuffer.destroyed).toBe(true);
+  bytes = await dynamicOutput.readAsync(4, 8);
+  expect(new Float32Array(bytes.buffer, bytes.byteOffset, 2)).toEqual(new Float32Array([9, 16]));
+  bytes = await rawOutput.readAsync();
+  expect(new Float32Array(bytes.buffer, bytes.byteOffset, 2)).toEqual(new Float32Array([4, 5]));
+  transform.destroy();
+  expect(dynamicOutput.buffer.destroyed).toBe(false);
+  inputBuffer.destroy();
+  rawOutput.destroy();
+  ignoredOutput.destroy();
+  output.destroy();
+  dynamicOutput.destroy();
 });

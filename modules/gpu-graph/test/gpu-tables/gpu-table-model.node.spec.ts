@@ -688,13 +688,32 @@ it('GPUTableModel preserves table batching alongside inherited vector batching',
   const model = makeTableModel(device, table, {vertexCount: 1});
   const renderPass = device.getDefaultRenderPass();
   const vectorBatchRows: number[] = [];
+  const vectorTable = makeBatchedPositionsTable(device, [1, 2]);
+  const actualDrawCounts: (number | undefined)[] = [];
+  const draw = renderPass.draw.bind(renderPass);
+  renderPass.draw = options => {
+    actualDrawCounts.push(options.instanceCount);
+    return draw(options);
+  };
   expect(
     model.drawBatches(renderPass, {
-      vectors: table.gpuVectors,
+      vectors: vectorTable.gpuVectors,
       onBatch: batch => vectorBatchRows.push(batch.rowCount)
     })
   ).toBe(true);
-  expect(vectorBatchRows).toEqual([3]);
+  expect(vectorBatchRows).toEqual([1, 2]);
+  expect(actualDrawCounts).toEqual([1, 2]);
+  expect(() =>
+    model.drawBatches(renderPass, {
+      vectors: vectorTable.gpuVectors,
+      onBatch: () => {
+        throw new Error('batch callback failed');
+      }
+    })
+  ).toThrow('batch callback failed');
+  model.setInstanceCount(99);
+  model.predraw(device.commandEncoder);
+  expect(model.instanceCount).toBe(3);
   const tableBatchRows: number[] = [];
   expect(
     model.drawBatches(renderPass, {
@@ -705,4 +724,5 @@ it('GPUTableModel preserves table batching alongside inherited vector batching',
   model.destroy();
   renderPass.destroy();
   table.destroy();
+  vectorTable.destroy();
 });

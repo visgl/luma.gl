@@ -31,8 +31,8 @@ transform.run();
 
 Supply `inputVectors` at construction or in `run({inputVectors})` to bind borrowed,
 contiguous GPU vectors by buffer-layout name. Input row count sets vertex count and
-chunk byte offsets are preserved. Buffer layouts are explicit. Multi-chunk vectors
-are handled batch by batch without implicit packing. The output is `targetTexture`.
+chunk byte offsets are preserved. Buffer layouts are explicit. Each input vector must have at most one chunk.
+For multi-chunk inputs, callers must bind and run each chunk separately. The output is `targetTexture`.
 
 ## Types
 

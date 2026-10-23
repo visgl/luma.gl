@@ -170,7 +170,13 @@ export class GPUTableModel extends Model {
     options: GPUTableModelDrawBatchesOptions | GPUVectorModelDrawBatchesOptions<Inputs> = {}
   ): boolean {
     if ('vectors' in options) {
-      return super.drawBatches(renderPass, options);
+      const drawingTableBatches = this.drawingTableBatches;
+      this.drawingTableBatches = true;
+      try {
+        return super.drawBatches(renderPass, options);
+      } finally {
+        this.drawingTableBatches = drawingTableBatches;
+      }
     }
     const table = this.table;
     if (!(table instanceof GPUTable)) {
