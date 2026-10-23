@@ -104,7 +104,7 @@ export class GPUCommandGraphInspectorPanel {
         const row = (event.target as HTMLElement).closest<HTMLElement>('[data-resource-key]');
         if (row && (event.key === 'Enter' || event.key === ' ')) {
           event.preventDefault();
-          void this.selectResource(row.dataset.resourceKey!);
+          void this.selectResource(row.dataset['resourceKey']!);
         }
       },
       options
@@ -160,10 +160,10 @@ export class GPUCommandGraphInspectorPanel {
           for (const candidate of element.querySelectorAll<HTMLElement>('[data-inspector-tab]'))
             candidate.setAttribute('aria-selected', String(candidate === tab));
           for (const view of element.querySelectorAll<HTMLElement>('[data-inspector-view]'))
-            view.hidden = view.dataset.inspectorView !== tab.dataset.inspectorTab;
+            view.hidden = view.dataset['inspectorView'] !== tab.dataset['inspectorTab'];
         }
         const row = target.closest<HTMLElement>('[data-resource-key]');
-        if (row) void this.selectResource(row.dataset.resourceKey!);
+        if (row) void this.selectResource(row.dataset['resourceKey']!);
         if (target.closest('[data-resource-refresh]') && this.selectedResourceKey)
           void this.selectResource(this.selectedResourceKey);
       },
@@ -227,7 +227,7 @@ export class GPUCommandGraphInspectorPanel {
   }
 
   private async showResourceTooltip(row: HTMLElement): Promise<void> {
-    const key = row.dataset.resourceKey!;
+    const key = row.dataset['resourceKey']!;
     if (this.activeResourceKey === key) return;
     this.hideTooltip();
     this.activeResourceKey = key;
