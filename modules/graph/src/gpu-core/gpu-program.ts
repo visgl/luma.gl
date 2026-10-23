@@ -107,9 +107,9 @@ export class GPUProgram {
       throw new Error(`${this.id} accepts GPU operations only`);
   }
 }
-export function composite(
-  operations: readonly GPUProgramOperation[],
+export function composite<Operation extends GPUProgramOperation>(
+  operations: readonly Operation[],
   props: {id?: string} = {}
-): GPUCompositeOperation {
+): GPUCompositeOperation<Operation> {
   return new GPUCompositeOperation({id: props.id, operations});
 }
