@@ -101,7 +101,16 @@ export class GPUSimpleGraph<Parameters = void> {
   }
 
   /** Accepts evaluator operations, semantic composites, and recursively nested arrays. */
-  add(operation: GPUOperationLike): this {
+  add<Operation extends GPUOperationLike>(
+    operation: Operation &
+      (true extends HasIncompatibleRenderParameters<NoInfer<Operation>, Parameters>
+        ? never
+        : unknown)
+  ): this {
+    return this.addOperations(operation);
+  }
+
+  private addOperations(operation: GPUOperationLike): this {
     // Compilation freezes the builder, as it does for GPUCommandGraph.
     assert(!this.compiled);
     const pending: (SimpleOperation | GPURenderOperation<Parameters>)[] = [];
@@ -171,7 +180,7 @@ export class GPUSimpleGraph<Parameters = void> {
     identifier: string,
     value: Value
   ): Value {
-    this.add(new GPUSimpleGraphValueOperation({id: identifier, value}));
+    this.addOperations(new GPUSimpleGraphValueOperation({id: identifier, value}));
     return value;
   }
 
@@ -180,13 +189,13 @@ export class GPUSimpleGraph<Parameters = void> {
     identifier: string,
     evaluator: Evaluator
   ): Evaluator {
-    this.add(new GPUSimpleGraphOperation({id: identifier, evaluator}));
+    this.addOperations(new GPUSimpleGraphOperation({id: identifier, evaluator}));
     return evaluator;
   }
 
   /** Appends shared render passes after the evaluator phase. Use the same operation in GPUGraph. */
   addRenderOperation(operation: GPURenderOperation<Parameters>): this {
-    return this.add(operation);
+    return this.addOperations(operation);
   }
 
   get operationTree(): readonly GPUOperationTree[] {
@@ -481,3 +490,16 @@ function getDependencies(evaluator: GPUSimpleGraphEvaluator): readonly GPUSimple
   if (evaluator.source instanceof GPUDataEvaluator) return [evaluator.source];
   return evaluator.source?.dependencies ?? [];
 }
+
+/** Preserve render parameter requirements without expanding the recursive GPUOperationLike type. */
+type HasIncompatibleRenderParameters<Operation, Parameters> = GPUOperationLike extends Operation
+  ? false
+  : Operation extends GPURenderOperation<infer RequiredParameters>
+    ? [Parameters] extends [RequiredParameters]
+      ? false
+      : true
+    : Operation extends GPUCompositeOperation<infer Child>
+      ? HasIncompatibleRenderParameters<Child, Parameters>
+      : Operation extends readonly (infer Child)[]
+        ? HasIncompatibleRenderParameters<Child, Parameters>
+        : false;

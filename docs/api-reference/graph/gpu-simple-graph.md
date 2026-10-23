@@ -228,7 +228,7 @@ reachable dependent results. Unrelated cached outputs keep their existing buffer
 External semantic vector bindings are addressable by their GPUProgram input IDs too.
 
 Invalidation accepts named leaf inputs owned by the compilation, including chunked
-inputs. It rejects unknown names, intermediate expressions, and borrowed legacy
+inputs. Compilation rejects duplicate input names across uploads and semantic bindings. It rejects unknown names, intermediate expressions, and borrowed legacy
 evaluators without changing their caches. Calls are forbidden during a run or while
 an evaluation scope is pending. Input lengths, formats, chunk boundaries, and layouts
 remain fixed; rebuild the graph to change them. Empty invalidation lists do nothing.
@@ -268,6 +268,9 @@ await compiled.run({
 ```
 
 Typed parameters are required when the graph declares a non-void parameter type.
+`add()` checks render-operation parameter types through inferred arrays and shared
+`composite()` / `GPUCompositeOperation` groups. Keep the inferred group type rather
+than widening it to the general `GPUOperation` interface, which erases that information.
 WebGL `runSync(options)` accepts the same bindings and parameters. Conditions are
 explicit: rebinding a resource does not automatically mark a channel dirty. A skipped
 producer must leave valid data for any consumer that still runs. Use imported storage
