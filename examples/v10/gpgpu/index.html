@@ -81,11 +81,12 @@
 
     .expression-row {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-columns: minmax(0, 1fr) minmax(180px, 0.45fr) auto;
       gap: 8px;
     }
 
     .expression-row input,
+    .expression-row select,
     .expression-row button {
       border: 1px solid #cfd6e2;
       border-radius: 8px;
@@ -205,6 +206,20 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
+      .expression-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+      }
+
+      .expression-row select {
+        grid-column: 1 / -1;
+        grid-row: 1;
+      }
+
+      .expression-row input,
+      .expression-row button {
+        grid-row: 2;
+      }
+
       .table-row-grid {
         grid-template-columns: var(--table-grid-template, 96px 260px 120px 280px);
       }
@@ -241,6 +256,7 @@
       <label for="expression-input">Expression</label>
       <div class="expression-row">
         <input id="expression-input" type="text" value="fround(coordinates)" spellcheck="false" />
+        <select id="expression-preset" aria-label="Expression preset"></select>
         <button id="expression-run" type="submit" disabled>Run</button>
       </div>
       <div id="expression-message" class="expression-note">

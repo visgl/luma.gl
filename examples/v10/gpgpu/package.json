@@ -13,6 +13,7 @@
     "@luma.gl/core": "10.0.0-alpha.4",
     "@luma.gl/engine": "10.0.0-alpha.4",
     "@luma.gl/gpgpu": "10.0.0-alpha.4",
+    "@luma.gl/gpu-graph": "10.0.0-alpha.4",
     "@luma.gl/shadertools": "10.0.0-alpha.4",
     "@tanstack/virtual-core": "^3.16.0",
     "acorn": "^8.16.0",

@@ -696,11 +696,12 @@ const GPGPU_EXAMPLE_STYLE = `
 
   .gpgpu-showcase .expression-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 0.45fr) auto;
     gap: 8px;
   }
 
   .gpgpu-showcase .expression-row input,
+  .gpgpu-showcase .expression-row select,
   .gpgpu-showcase .expression-row button {
     border: 1px solid #cfd6e2;
     border-radius: 8px;
@@ -818,6 +819,20 @@ const GPGPU_EXAMPLE_STYLE = `
 
     .gpgpu-showcase .metadata-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .gpgpu-showcase .expression-row {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .gpgpu-showcase .expression-row select {
+      grid-column: 1 / -1;
+      grid-row: 1;
+    }
+
+    .gpgpu-showcase .expression-row input,
+    .gpgpu-showcase .expression-row button {
+      grid-row: 2;
     }
 
     .gpgpu-showcase .table-row-grid {
@@ -1383,14 +1398,14 @@ export const ArrowDggsPolygonsExample: React.FC = props => (
   />
 );
 
-export const GPGPUExample: React.FC = () => {
+export const GPGPUExample: React.FC<{useSimpleGraph?: boolean}> = ({useSimpleGraph = false}) => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const deviceType = useStore(store => store.deviceType);
   const device = useStore(store => store.device);
 
   useEffect(() => {
-    if (!deviceType?.startsWith('webgpu-') || !device) {
+    if ((!deviceType?.startsWith('webgpu-') && !(useSimpleGraph && deviceType === 'webgl')) || !device) {
       return;
     }
 
@@ -1402,7 +1417,7 @@ export const GPGPUExample: React.FC = () => {
       start: async () => {
         const {initializeGPGPUShowcase} = await loadGPGPUShowcaseExample();
         if (!isCancelled) {
-          handle = initializeGPGPUShowcase({device});
+          handle = initializeGPGPUShowcase({device, useSimpleGraph});
           setIsRunning(true);
         }
       },
@@ -1424,7 +1439,7 @@ export const GPGPUExample: React.FC = () => {
       isCancelled = true;
       stopExclusiveExample();
     };
-  }, [deviceType, device]);
+  }, [deviceType, device, useSimpleGraph]);
 
   return (
     <ExamplePage
@@ -1433,11 +1448,12 @@ export const GPGPUExample: React.FC = () => {
     >
       <style>{GPGPU_EXAMPLE_STYLE}</style>
       <main id="app" className="gpgpu-showcase">
-        <DeviceTabs devices={['webgpu']} style={{marginBottom: 16}} />
-        <h1>@luma.gl/gpgpu evaluator showcase</h1>
+        <DeviceTabs devices={useSimpleGraph ? ['webgpu', 'webgl2'] : ['webgpu']} style={{marginBottom: 16}} />
+        <h1>{useSimpleGraph ? '@luma.gl/gpu-graph SimpleGraph showcase' : '@luma.gl/gpgpu evaluator showcase'}</h1>
         <p className="subtitle">
-          Arrow-backed source columns are extracted as typed-array views and wrapped in
-          GPUDataEvaluator inputs.
+          {useSimpleGraph
+            ? 'Arrow-backed inputs and expression outputs are composed as SimpleGraph operations and evaluated on WebGPU or WebGL2.'
+            : 'Arrow-backed source columns are extracted as typed-array views and wrapped in GPUDataEvaluator inputs.'}
         </p>
 
         <div className="metadata-grid">
@@ -1468,6 +1484,7 @@ export const GPGPUExample: React.FC = () => {
               defaultValue="fround(coordinates)"
               spellCheck={false}
             />
+            <select id="expression-preset" aria-label="Expression preset" />
             <button id="expression-run" type="submit" disabled>
               Run
             </button>
@@ -1497,6 +1514,8 @@ export const GPGPUExample: React.FC = () => {
     </ExamplePage>
   );
 };
+
+export const GPUSimpleGraphExample: React.FC = () => <GPGPUExample useSimpleGraph />;
 
 /** Docusaurus wrapper for the graph-native paired GPU sort example. */
 export const GPUSortExample: React.FC<WebsiteExampleProps> = ({embeddedHeight, ...props}) => {
