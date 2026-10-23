@@ -52,8 +52,6 @@ import {
   ShaderAssembler
 } from '@luma.gl/shadertools';
 
-import type {Geometry} from '@math.gl/geometry';
-import {GPUGeometry, makeGPUGeometry} from '../geometry/gpu-geometry';
 import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
 import {debugFramebuffer} from '../debug/debug-framebuffer';
 import {deepEqual} from '../utils/deep-equal';
@@ -80,7 +78,6 @@ import {
   isTextureBindingSource,
   type TextureBindingSource
 } from '../dynamic-texture/texture-binding-source';
-import {Material} from '../material/material';
 
 const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;
@@ -94,10 +91,10 @@ const DEPTH_STENCIL_ATTACHMENT_FORMATS: TextureFormatDepthStencil[] = [
   'depth32float-stencil8'
 ];
 /** Resource accepted by one model binding slot. */
-type ModelBinding = Binding | TextureBindingSource | DynamicBuffer | DynamicBufferRange;
+export type ModelBinding = Binding | TextureBindingSource | DynamicBuffer | DynamicBufferRange;
 type ModelBuffer = Buffer | DynamicBuffer;
 /** Shader layout subset needed while resolving texture binding sources. */
-type AnyShaderLayout = Pick<ShaderLayout | ComputeShaderLayout, 'bindings'>;
+export type AnyShaderLayout = Pick<ShaderLayout | ComputeShaderLayout, 'bindings'>;
 
 export type GPUVectorModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
   /** Draw count updated from each vector batch. Defaults to `instance`. */
@@ -117,17 +114,12 @@ export type GPUVectorModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindi
 
   /** Shader inputs, used to generate uniform buffers and bindings. */
   shaderInputs?: ShaderInputs;
-  /** Material-owned group-3 bindings */
-  material?: Material;
   /** Shader resource bindings, including dynamic buffers and dynamic textures. */
   bindings?: Record<string, ModelBinding>;
   /** WebGL-only uniforms */
   uniforms?: Record<string, unknown>;
   /** Parameters that are built into the pipeline */
   parameters?: RenderPipelineParameters;
-
-  /** Geometry */
-  geometry?: GPUGeometry | Geometry | null;
 
   /** @deprecated Use instanced rendering? Will be auto-detected in 9.1 */
   isInstanced?: boolean;
@@ -227,13 +219,16 @@ export type GPUVectorModelDrawBatchesOptions<
  */
 export class GPUVectorModel {
   /** Creates a model while allowing the backend to compile its render pipeline asynchronously. */
-  static async createAsync<ModelType extends GPUVectorModel>(
+  static async createAsync<
+    ModelType extends GPUVectorModel,
+    Props extends GPUVectorModelProps = GPUVectorModelProps
+  >(
     this: new (
       device: Device,
-      props: GPUVectorModelProps
+      props: Props
     ) => ModelType,
     device: Device,
-    props: GPUVectorModelProps
+    props: Props
   ): Promise<ModelType> {
     const ownsCompilation = !PipelineFactory.getAsyncCompilation(device);
     const asyncCompilation = ownsCompilation
@@ -271,7 +266,6 @@ export class GPUVectorModel {
     defines: {},
     modules: [],
     plugins: [],
-    geometry: null,
     indexBuffer: null,
     indexCount: undefined!,
     firstVertex: 0,
@@ -287,7 +281,6 @@ export class GPUVectorModel {
     vertexCount: 0,
 
     shaderInputs: undefined!,
-    material: undefined!,
     pipelineFactory: undefined!,
     shaderFactory: undefined!,
     transformFeedback: undefined!,
@@ -367,13 +360,11 @@ export class GPUVectorModel {
   /** ShaderInputs instance */
   // @ts-expect-error Assigned in function called by constructor
   shaderInputs: ShaderInputs;
-  material: Material | null = null;
   // @ts-expect-error Assigned in function called by constructor
   _uniformStore: UniformStore;
 
   _attributeInfos: Record<string, AttributeInfo> = {};
-  _gpuGeometry: GPUGeometry | null = null;
-  private props: Required<GPUVectorModelProps>;
+  protected props: Required<GPUVectorModelProps>;
   private currentAttributes: NonNullable<GPUVectorModelProps['attributes']> = {};
   private currentAttributeByteOffsets: Record<string, number> = {};
   private _dynamicIndexBufferSource: {source: DynamicBuffer; generation: number} | null = null;
@@ -423,7 +414,22 @@ export class GPUVectorModel {
 
     Object.assign(this.userData, props.userData);
 
-    this.material = props.material || null;
+    this.vertexCount = this.props.vertexCount;
+    this.indexCount = this.props.indexCount;
+    this.firstVertex = this.props.firstVertex;
+    this.firstIndex = this.props.firstIndex;
+    this.instanceCount = this.props.instanceCount;
+
+    this.topology = this.props.topology;
+    this.bufferLayout = this.props.bufferLayout;
+    this.parameters = this.props.parameters;
+    // Seed attachment formats before creating the initial WebGPU pipeline. This is required for
+    // depth-only models whose intentional empty color target list must not fall back to the canvas
+    // format before the first render pass can synchronize attachment state.
+    this._colorAttachmentFormats = this.props.colorAttachmentFormats;
+    this._depthStencilAttachmentFormat = this.props.depthStencilAttachmentFormat;
+
+    this._initializeProps(props);
 
     const platformInfo = getPlatformInfo(device);
     const resolvedPlugins = resolveShaderPlugins(this.props.plugins, platformInfo.shaderLanguage);
@@ -525,26 +531,6 @@ export class GPUVectorModel {
       this._bindingTable = [];
     }
 
-    this.vertexCount = this.props.vertexCount;
-    this.indexCount = this.props.indexCount;
-    this.firstVertex = this.props.firstVertex;
-    this.firstIndex = this.props.firstIndex;
-    this.instanceCount = this.props.instanceCount;
-
-    this.topology = this.props.topology;
-    this.bufferLayout = this.props.bufferLayout;
-    this.parameters = this.props.parameters;
-    // Seed attachment formats before creating the initial WebGPU pipeline. This is required for
-    // depth-only models whose intentional empty color target list must not fall back to the canvas
-    // format before the first render pass can synchronize attachment state.
-    this._colorAttachmentFormats = this.props.colorAttachmentFormats;
-    this._depthStencilAttachmentFormat = this.props.depthStencilAttachmentFormat;
-
-    // Geometry, if provided, sets topology and vertex cound
-    if (props.geometry) {
-      this.setGeometry(props.geometry);
-    }
-
     this.pipelineFactory =
       props.pipelineFactory || PipelineFactory.getDefaultPipelineFactory(this.device);
     this.shaderFactory = props.shaderFactory || ShaderFactory.getDefaultShaderFactory(this.device);
@@ -559,17 +545,31 @@ export class GPUVectorModel {
     }
   }
 
+  /** Initializes subclass input policies before shader and pipeline creation. */
+  protected _initializeProps(props: GPUVectorModelProps): void {
+    void props;
+  }
+
+  /** Whether this model manages the uniform buffer for a shader-input module. */
+  protected _usesManagedUniformBuffer(moduleName: string): boolean {
+    void moduleName;
+    return true;
+  }
+
   private async _initializePipelineAsync(props: GPUVectorModelProps): Promise<void> {
     await this._updatePipelineAsync();
     this._initializePipelineResources(props);
   }
+
+  /** Initializes subclass attributes before explicit constructor bindings are applied. */
+  protected _initializeAttributes(): void {}
 
   private _initializePipelineResources(props: GPUVectorModelProps): void {
     this.vertexArray = this.device.createVertexArray({
       shaderLayout: this.pipeline.shaderLayout,
       bufferLayout: this.pipeline.bufferLayout
     });
-    if (this._gpuGeometry) this._setGeometryAttributes(this._gpuGeometry);
+    this._initializeAttributes();
     if ('isInstanced' in props) this.isInstanced = props.isInstanced;
     if (props.instanceCount) this.setInstanceCount(props.instanceCount);
     if (props.vertexCount) this.setVertexCount(props.vertexCount);
@@ -592,8 +592,6 @@ export class GPUVectorModel {
         }
       }
       this._uniformStore.destroy();
-      // TODO - mark resource as managed and destroyIfManaged() ?
-      this._gpuGeometry?.destroy();
       this._destroyed = true;
     }
   }
@@ -631,7 +629,6 @@ export class GPUVectorModel {
     // Update uniform buffers if needed
     this._syncDynamicBuffers();
     this.updateShaderInputs(commandEncoder);
-    this.material?.updateShaderInputs(commandEncoder);
     // Check if the pipeline is invalidated
     this.pipeline = this._updatePipeline();
   }
@@ -664,7 +661,6 @@ export class GPUVectorModel {
         // across multiple draws/viewports must call predraw(commandEncoder)
         // before beginRenderPass().
         this.updateShaderInputs();
-        this.material?.updateShaderInputs();
         this._syncDynamicBuffers();
         this.pipeline = this._updatePipeline();
       } else {
@@ -831,28 +827,6 @@ export class GPUVectorModel {
   // Update fixed fields (can trigger pipeline rebuild)
 
   /**
-   * Updates the optional geometry
-   * Geometry, set topology and bufferLayout
-   * @note Can trigger a pipeline rebuild / pipeline cache fetch on WebGPU
-   */
-  setGeometry(geometry: GPUGeometry | Geometry | null): void {
-    this._gpuGeometry?.destroy();
-    const gpuGeometry = geometry && makeGPUGeometry(this.device, geometry);
-    if (gpuGeometry) {
-      this.setTopology(gpuGeometry.topology || 'triangle-list');
-      const bufferLayoutHelper = new BufferLayoutHelper(this.bufferLayout);
-      this.bufferLayout = bufferLayoutHelper.mergeBufferLayouts(
-        gpuGeometry.bufferLayout,
-        this.bufferLayout
-      );
-      if (this.vertexArray) {
-        this._setGeometryAttributes(gpuGeometry);
-      }
-    }
-    this._gpuGeometry = gpuGeometry;
-  }
-
-  /**
    * Updates the primitive topology ('triangle-list', 'triangle-strip' etc).
    * @note Triggers a pipeline rebuild / pipeline cache fetch on WebGPU
    */
@@ -868,10 +842,7 @@ export class GPUVectorModel {
    * @note Triggers a pipeline rebuild / pipeline cache fetch
    */
   setBufferLayout(bufferLayout: BufferLayout[]): void {
-    const bufferLayoutHelper = new BufferLayoutHelper(this.bufferLayout);
-    const nextBufferLayout = this._gpuGeometry
-      ? bufferLayoutHelper.mergeBufferLayouts(bufferLayout, this._gpuGeometry.bufferLayout)
-      : bufferLayout;
+    const nextBufferLayout = bufferLayout;
     if (deepEqual(nextBufferLayout, this.bufferLayout, -1)) {
       return;
     }
@@ -888,11 +859,6 @@ export class GPUVectorModel {
       shaderLayout: this.pipeline.shaderLayout,
       bufferLayout: this.pipeline.bufferLayout
     });
-
-    // Reapply geometry attributes to the new vertex array
-    if (this._gpuGeometry) {
-      this._setGeometryAttributes(this._gpuGeometry);
-    }
   }
 
   /**
@@ -957,7 +923,7 @@ export class GPUVectorModel {
     this._uniformStore = new UniformStore(this.device, this.shaderInputs.modules);
     // Create uniform buffer bindings for all modules that actually have uniforms
     for (const [moduleName, module] of Object.entries(this.shaderInputs.modules)) {
-      if (shaderModuleHasUniforms(module) && !this.material?.ownsModule(moduleName)) {
+      if (shaderModuleHasUniforms(module) && this._usesManagedUniformBuffer(moduleName)) {
         const uniformBuffer = this._uniformStore.getManagedUniformBuffer(moduleName);
         this.bindings[`${moduleName}Uniforms`] = uniformBuffer;
       }
@@ -965,24 +931,24 @@ export class GPUVectorModel {
     this.setNeedsRedraw('shaderInputs');
   }
 
-  setMaterial(material: Material | null): void {
-    this.material = material;
-    this.setNeedsRedraw('material');
-  }
-
   /** Update uniform buffers from the model's shader inputs */
   /**
    * Flushes current shader-input values into managed uniform buffers and
-   * non-material bindings.
+   * resource bindings.
    *
    * @param commandEncoder - Optional encoder used to order uniform uploads with
    * subsequent draw commands.
    */
   updateShaderInputs(commandEncoder?: CommandEncoder): void {
     this._uniformStore.setUniforms(this.shaderInputs.getUniformValues(), commandEncoder);
-    this.setBindings(this._getNonMaterialBindings(this.shaderInputs.getBindingValues()));
+    this.setBindings(this._getShaderInputBindings());
     // TODO - this is already tracked through buffer/texture update times?
     this.setNeedsRedraw('shaderInputs');
+  }
+
+  /** Resolves resource bindings supplied by shader inputs. */
+  protected _getShaderInputBindings(): Record<string, ModelBinding> {
+    return this.shaderInputs.getBindingValues();
   }
 
   /**
@@ -1135,11 +1101,6 @@ export class GPUVectorModel {
         return binding.id;
       }
     }
-    for (const binding of Object.values(this.material?.bindings || {})) {
-      if (isTextureBindingSource(binding) && !binding.isReady) {
-        return binding.id;
-      }
-    }
     return false;
   }
 
@@ -1163,7 +1124,7 @@ export class GPUVectorModel {
   }
 
   /**
-   * Groups resolved model and material bindings for the current shader layout.
+   * Groups resolved resource bindings for the current shader layout.
    * @param shaderLayout Reflected bindings used to group logical binding names.
    * @param bindings GPUVectorModel bindings already resolved for this draw preparation.
    */
@@ -1171,30 +1132,13 @@ export class GPUVectorModel {
     shaderLayout: AnyShaderLayout = this._getCurrentShaderLayout(),
     bindings: Record<string, Binding> = this._getBindings(shaderLayout)
   ): BindingsByGroup {
-    const bindGroups = shaderLayout.bindings.length
+    return shaderLayout.bindings.length
       ? normalizeBindingsByGroup(shaderLayout, bindings)
       : {0: bindings};
-
-    if (!this.material) {
-      return bindGroups;
-    }
-
-    for (const [groupKey, groupBindings] of Object.entries(
-      this.material.getBindingsByGroup(shaderLayout)
-    )) {
-      const group = Number(groupKey);
-      bindGroups[group] = {
-        ...(bindGroups[group] || {}),
-        ...groupBindings
-      };
-    }
-
-    return bindGroups;
   }
 
   _getBindGroupCacheKeys(): Partial<Record<number, object>> {
-    const bindGroupCacheKey = this.material?.getBindGroupCacheKey(3);
-    return bindGroupCacheKey ? {3: bindGroupCacheKey} : {};
+    return {};
   }
 
   /** Get the timestamp of the latest updated bound GPU memory resource (buffer/texture). */
@@ -1231,34 +1175,7 @@ export class GPUVectorModel {
         );
       }
     }
-    return Math.max(timestamp, this.material?.getBindingsUpdateTimestamp() || 0);
-  }
-
-  /**
-   * Updates the optional geometry attributes
-   * Geometry, sets several attributes, indexBuffer, and also vertex count
-   * @note Can trigger a pipeline rebuild / pipeline cache fetch on WebGPU
-   */
-  _setGeometryAttributes(gpuGeometry: GPUGeometry): void {
-    // Filter geometry attribute so that we don't issue warnings for unused attributes
-    const attributes = {...gpuGeometry.attributes};
-    for (const [attributeName] of Object.entries(attributes)) {
-      if (
-        !this.pipeline.shaderLayout.attributes.find(layout => layout.name === attributeName) &&
-        attributeName !== 'positions'
-      ) {
-        delete attributes[attributeName];
-      }
-    }
-
-    // TODO - delete previous geometry?
-    this.vertexCount = gpuGeometry.vertexCount;
-    this._vertexCountSet = true;
-    this.setIndexBuffer(gpuGeometry.indices || null);
-    this.setAttributes(gpuGeometry.attributes, {disableWarnings: true});
-    this.setAttributes(attributes, {disableWarnings: this.props.disableWarnings});
-
-    this.setNeedsRedraw('geometry attributes');
+    return timestamp;
   }
 
   /** Mark pipeline as needing update */
@@ -1458,24 +1375,8 @@ export class GPUVectorModel {
     return typedArray.toString();
   }
 
-  private _getNonMaterialBindings(
-    bindings: Record<string, ModelBinding>
-  ): Record<string, ModelBinding> {
-    if (!this.material) {
-      return bindings;
-    }
-
-    const filteredBindings: Record<string, ModelBinding> = {};
-    for (const [name, binding] of Object.entries(bindings)) {
-      if (!this.material.ownsBinding(name)) {
-        filteredBindings[name] = binding;
-      }
-    }
-    return filteredBindings;
-  }
-
   /** Returns the current reflected shader layout or the pre-reflection empty layout. */
-  private _getCurrentShaderLayout(): AnyShaderLayout {
+  protected _getCurrentShaderLayout(): AnyShaderLayout {
     return this.pipeline?.shaderLayout || this.props.shaderLayout || {bindings: []};
   }
 

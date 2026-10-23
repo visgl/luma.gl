@@ -25,8 +25,9 @@ pipelines, and applies its dynamic draw state to a
 `@luma.gl/gpgpu/gpu-data` export refers to the same class.
 The base owns the shared rendering state, contiguous vector `setGPUVectors()` API,
 and aligned vector `drawBatches()` API. Vector byte offsets are preserved.
-Both classes support shader assembly, geometry, uniforms, and bindings. Buffer layouts
-are explicit and supplied by the caller.
+`GPUVectorModel` supports shader assembly, uniforms, and resource bindings. `Model`
+also adapts `Geometry` and `GPUGeometry` inputs and manages material bindings and uniforms.
+Buffer layouts are explicit for vector inputs; geometry inputs supply their layouts.
 `BufferTransform` and `TextureTransform` use `GPUVectorModel` directly; `TableTransform`
 inherits that implementation through `BufferTransform`.
 

@@ -13,8 +13,8 @@ import {
   type UpdateParameters
 } from '@deck.gl/core';
 import {type Buffer, type RenderPass} from '@luma.gl/core';
-import type {Model} from '@luma.gl/engine';
-import {GPUVectorModel, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {Model} from '@luma.gl/engine';
+import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
   createGPUVectorStyleBuffer,
   getGPUVectorStyleBufferBinding,
@@ -41,7 +41,7 @@ export type GPUArcLayerProps = Omit<LayerProps, 'data'> & {
 };
 
 type GPUArcLayerState = {
-  model: GPUVectorModel | null;
+  model: Model | null;
   styleBuffer: Buffer | null;
   defaults: Buffer[];
 };
@@ -186,7 +186,7 @@ export class GPUArcLayer extends Layer<GPUArcLayerProps> {
       device.createBuffer({data: new Float32Array([1])}),
       device.createBuffer({data: new Float32Array([1])})
     ];
-    const model = new GPUVectorModel(device, {
+    const model = new Model(device, {
       ...this.getShaders({modules: [project32, picking], source: GPU_ARC_SHADER}),
       id: `${this.id}-model`,
       topology: 'triangle-list',

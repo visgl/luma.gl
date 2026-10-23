@@ -14,8 +14,8 @@ import {
   type UpdateParameters
 } from '@deck.gl/core';
 import {type Buffer, type RenderPass} from '@luma.gl/core';
-import type {Model} from '@luma.gl/engine';
-import {GPUVectorModel, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {Model} from '@luma.gl/engine';
+import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
   createGPUVectorStyleBuffer,
   getGPUVectorStyleBufferBinding,
@@ -37,7 +37,7 @@ export type GPUScatterplotLayerProps = Omit<LayerProps, 'data'> & {
   radiusMaxPixels?: number;
 };
 
-type GPUScatterplotLayerState = {model: GPUVectorModel | null; styleBuffer: Buffer | null};
+type GPUScatterplotLayerState = {model: Model | null; styleBuffer: Buffer | null};
 
 const GPU_SCATTERPLOT_SHADER = /* wgsl */ `
 struct ScatterStyle {
@@ -138,7 +138,7 @@ export class GPUScatterplotLayer extends Layer<GPUScatterplotLayerProps> {
       id: `${this.id}-default-color`,
       data: new Uint8Array([0, 0, 0, 255])
     });
-    const model = new GPUVectorModel(device, {
+    const model = new Model(device, {
       ...this.getShaders({modules: [project32, picking], source: GPU_SCATTERPLOT_SHADER}),
       id: `${this.id}-model`,
       topology: 'triangle-list',
