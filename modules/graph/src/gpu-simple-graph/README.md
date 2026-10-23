@@ -2,28 +2,28 @@
 
 A thin evaluator-backed executor using GPUOperation metadata and GPUCompositeOperation grouping. Import it from `@luma.gl/graph/gpu-simple-graph`.
 
-`GPUSimpleGraphOperation` implements the shared semantic operation interface. Its evaluator still owns execution, fusion, caching, backend selection, and results. GPGPU needs no changes for this adapter.
+New code uses `GPUSimpleGraphValue` and `simpleGraphOperations` to author expressions.
+The compiled graph owns the internal evaluators and their dependencies. The existing
+GPGPU algorithms, shaders, fusion, and evaluation implementation are reused unchanged.
 
 ```typescript
-import {GPUDataEvaluator, multiply} from '@luma.gl/gpgpu';
-import {GPUProgram, composite} from '@luma.gl/graph/gpu-core';
-import {GPUSimpleGraph, GPUSimpleGraphOperation} from '@luma.gl/graph/gpu-simple-graph';
+import {
+  GPUSimpleGraph, GPUSimpleGraphValue, simpleGraphOperations
+} from '@luma.gl/graph/gpu-simple-graph';
 
-const input = GPUDataEvaluator.fromArray(new Float32Array([1, 2, 3]), {size: 1});
-const output = multiply(input, 2);
-const operations = composite([
-  new GPUSimpleGraphOperation({id: 'input', evaluator: input}),
-  new GPUSimpleGraphOperation({id: 'output', evaluator: output})
-], {id: 'scale'});
-
-// Both containers accept and inspect the same semantic grouping.
-const program = new GPUProgram().add(operations);
-const graph = new GPUSimpleGraph(device).add([operations]);
-const compiled = graph.compile({outputs: ['output']});
-console.log(program.operationTree, compiled.operationTree);
+const input = GPUSimpleGraphValue.upload(new Float32Array([1, 2, 3]));
+const output = simpleGraphOperations.multiply(input, 2);
+const graph = new GPUSimpleGraph(device);
+graph.addValue('output', output);
+const compiled = graph.compile();
 const {output: result} = await compiled.run();
 // result is a GPUVector; CPU readback remains explicit.
+compiled.destroy(); // after consumers finish
 ```
+
+`GPUSimpleGraphValueOperation` places a value in an operation array or composite group.
+`GPUSimpleGraphOperation` and `addEvaluator()` remain compatibility adapters that borrow
+caller-owned evaluators. No GPGPU APIs are removed in this first phase.
 
 ## Existing semantic operations
 
@@ -73,6 +73,7 @@ releases those resources. Input buffers and explicitly supplied evaluator wrappe
 ## Composition and lifecycle
 
 - `add(operation)` accepts GPUSimpleGraphOperation, the semantic subset above, ordinary shared composites, and nested arrays. It returns the graph. Unsupported semantic operations and command producers are rejected before registration.
+- `addValue(id, value)` registers a graph value or an ordered array of chunk values. It returns the value unchanged. Compiled graphs own their generated evaluation trees.
 - `addEvaluator(id, evaluator)` wraps and registers an evaluator, returning it unchanged for convenient expression composition.
 - `compile({outputs})` freezes the builder, including when compilation fails. Rebuilding requires a new graph. The default output is the last leaf output (a logical value ID for semantic operations).
 - Compilation allocates no GPU resources. It captures selected evaluator operations as an execution plan; `run()` evaluates those roots, allowing GPGPU to traverse dependencies and fuse operations.

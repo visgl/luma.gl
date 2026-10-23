@@ -26,7 +26,14 @@ import {
 } from './gpu-simple-graph-transfer';
 import {GPUSimpleGraphOperation} from './gpu-simple-graph-operation';
 
+import {
+  GPUSimpleGraphValue,
+  GPUSimpleGraphValueOperation,
+  lowerSimpleGraphValue
+} from './gpu-simple-graph-value';
+
 export type SimpleOperation =
+  | GPUSimpleGraphValueOperation
   | GPUSimpleGraphOperation
   | GPUSimpleGraphUploadOperation
   | GPUSimpleGraphCopyOperation
@@ -38,6 +45,7 @@ export type SimpleOperation =
 export class SimpleGraphLowering {
   readonly owned = new Set<GPUDataEvaluator | GPUVectorEvaluator>();
   readonly outputs = new Map<string, GPUSimpleGraphOperation>();
+  private readonly graphValues = new Map<GPUSimpleGraphValue, GPUDataEvaluator>();
   private readonly scalars = new Map<object, GPUDataEvaluator>();
   private readonly vectors = new Map<object, GPUVectorEvaluator>();
   private readonly values = new Map<string, object>();
@@ -45,7 +53,17 @@ export class SimpleGraphLowering {
   constructor(private readonly bindings: GPUProgramBindings) {}
 
   lower(operation: SimpleOperation): void {
-    if (operation instanceof GPUSimpleGraphOperation) {
+    if (operation instanceof GPUSimpleGraphValueOperation) {
+      const value = operation.props.value;
+      const lower = (chunk: GPUSimpleGraphValue) =>
+        lowerSimpleGraphValue(chunk, this.graphValues, this.owned);
+      const evaluator =
+        value instanceof GPUSimpleGraphValue
+          ? lower(value)
+          : GPUVectorEvaluator.fromGPUDataEvaluators(value.map(lower));
+      this.owned.add(evaluator);
+      this.registerOutput(operation.id, evaluator);
+    } else if (operation instanceof GPUSimpleGraphOperation) {
       this.registerOutput(operation.id, operation.evaluator);
     } else if (operation instanceof GPUSimpleGraphUploadOperation) {
       const evaluator = this.own(GPUDataEvaluator.fromArray(operation.props.data, operation.props));
