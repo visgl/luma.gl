@@ -217,7 +217,7 @@ export class CompiledGPUSimpleGraph {
     nodes: readonly GPUSimpleGraphNode[],
     roots: readonly GPUSimpleGraphOperation[],
     operationTree: readonly GPUOperationTree[],
-    private readonly ownedEvaluators: ReadonlySet<GPUDataEvaluator> = new Set(),
+    private readonly ownedEvaluators: ReadonlySet<GPUSimpleGraphEvaluator> = new Set(),
     outputNodes: Readonly<Record<string, string>> = {}
   ) {
     this.device = device;

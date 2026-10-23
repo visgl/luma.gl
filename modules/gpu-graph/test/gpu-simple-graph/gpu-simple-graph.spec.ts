@@ -120,6 +120,7 @@ for (const [backend, getDevice] of [
       }
     } finally {
       compiled.destroy();
+      await expect(compiled.outputs.output.evaluate(device)).rejects.toThrow('destroyed');
       for (const buffer of buffers) buffer.destroy();
     }
   });

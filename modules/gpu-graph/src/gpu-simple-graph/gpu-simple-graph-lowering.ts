@@ -29,7 +29,7 @@ export type SimpleOperation =
 
 /** Compilation-local adapter; existing semantic operations and bindings are borrowed. */
 export class SimpleGraphLowering {
-  readonly owned = new Set<GPUDataEvaluator>();
+  readonly owned = new Set<GPUDataEvaluator | GPUVectorEvaluator>();
   readonly outputs = new Map<string, GPUSimpleGraphOperation>();
   private readonly scalars = new Map<object, GPUDataEvaluator>();
   private readonly vectors = new Map<object, GPUVectorEvaluator>();
@@ -80,6 +80,7 @@ export class SimpleGraphLowering {
         id: output.id,
         format: 'float32'
       });
+      this.owned.add(evaluator);
       this.vectors.set(output, evaluator);
       this.registerOutput(output.id, evaluator);
     }
@@ -185,6 +186,7 @@ export class SimpleGraphLowering {
       data.map(chunk => this.own(GPUDataEvaluator.fromGPUData(chunk))),
       {id: vector.id, format: vector.format}
     );
+    this.owned.add(evaluator);
     this.vectors.set(vector, evaluator);
     return evaluator;
   }
