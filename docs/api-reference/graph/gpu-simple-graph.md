@@ -155,3 +155,54 @@ GPGPU expressions. Semantic scalar literals/arithmetic and vector multiply-add c
 to work unchanged. The full GPUGraph semantic operations and GPGPU operation implementations
 are unchanged. Dynamic rebinding, texture/render operations, and transient resource planning
 remain outside this first pass.
+
+## Shared render operations
+
+`GPURenderOperation` (from `@luma.gl/graph/gpu-core`) contributes ordinary graph render
+nodes. Add it to a SimpleGraph with `graph.add(operation)`, or add the same operation
+to a WebGPU `GPUGraph` or `GPUProgram`. Its factory is called for each compilation;
+create logical resources in the factory and shaders/models in each node's `compile`
+callback. The full graph sees each pass and its declared resource accesses, rather
+than an opaque operation that submits another graph.
+
+```typescript
+const clear = new GPURenderOperation({
+  id: 'clear',
+  createNodes: graph => {
+    const target = graph.importTexture({
+      id: 'target', format: 'rgba8unorm', width: 256, height: 256,
+      usage: Texture.RENDER
+    }, outputTexture);
+    return [{
+      type: 'render', id: 'clear-target',
+      attachments: {colorAttachments: [graph.createTextureView(target)]},
+      compile: () => ({
+        getRenderPassProps: () => ({clearColor: [0, 0, 0, 1]}),
+        encode: () => {}
+      })
+    }];
+  }
+});
+simpleGraph.add(clear);
+const compiled = simpleGraph.compile();
+compiled.runSync(); // WebGL; asynchronous run() also supports WebGPU
+```
+
+Declare sampled textures and buffer reads/writes in `resources`. Attachment writes
+are inferred from `attachments`. The shared graph compiler validates usage, views,
+and hazards, allocates transient textures, and owns framebuffers and compiled node
+state. Imported buffers and textures remain caller-owned. Destroy the compiled
+SimpleGraph after its work is no longer in use; its `renderGraph` exposes the usual
+resource statistics, preflight metadata, and inspection APIs. Transient textures
+may alias when lifetimes do not overlap; publish persistent results into imports.
+
+In this first pass, render operations follow all evaluator operations. Adding
+an evaluator operation after a render operation is rejected. Use explicit output
+buffer targets to connect evaluator results to render inputs. `runSync()` supports
+WebGL evaluators that already have synchronous execution; it does not read data back.
+WebGL passes execute immediately. On WebGPU, `run({scope})` appends render passes
+to the same evaluation scope encoder and leaves submission to the caller.
+
+Only the render primitive is portable to the full graph: evaluator execution is
+still a SimpleGraph phase. `GPUGraph` continues to require WebGPU. This API does not
+promise WebGL compute, storage textures, indirect dispatch, or multisample resolves.

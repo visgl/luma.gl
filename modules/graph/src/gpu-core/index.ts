@@ -653,3 +653,6 @@ export type {
 } from './gpu-incremental-execution';
 
 export type {GPUResourcePreview} from './gpu-resource-preview';
+
+export {GPURenderOperation} from './gpu-render-operation';
+export type {GPURenderOperationResources} from './gpu-render-operation';
