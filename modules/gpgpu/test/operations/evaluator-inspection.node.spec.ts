@@ -6,16 +6,16 @@ import {expect, it, vi} from 'vitest';
 import {GPUDataEvaluator, GPUVectorEvaluator, add, swizzle} from '@luma.gl/gpgpu';
 
 it('inspects shared dependencies and ordered chunks without evaluation or CPU payloads', () => {
-  const input = GPUDataEvaluator.fromArray(new Float32Array([1, 2, 3, 4]), {size: 2, id: 'input'});
-  const first = swizzle(input, [1, 0]);
-  const second = add(first, 1);
+  const input = GPUDataEvaluator.fromArray(new Float32Array([1, 2, 3, 4]), {size: 2});
+  const first = add(input, 1);
+  const second = swizzle(first, [1, 0]);
   const vector = GPUVectorEvaluator.fromGPUDataEvaluators([first, second, first]);
   const evaluate = vi.spyOn(input, 'evaluate');
   const inspection = vector.getInspection();
   expect(inspection.outputs).toHaveLength(3);
   expect(inspection.outputs[0]).toBe(inspection.outputs[2]);
   expect(new Set(inspection.nodes.map(node => node.id)).size).toBe(inspection.nodes.length);
-  const inputNode = inspection.nodes.find(node => node.label === 'input');
+  const inputNode = inspection.nodes.find(node => node.label === input.id);
   expect(inputNode).toMatchObject({
     kind: 'source',
     format: 'float32x2',

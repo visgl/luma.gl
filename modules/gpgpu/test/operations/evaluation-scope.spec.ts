@@ -281,8 +281,8 @@ it('vector scopes preserve chunks, roll back cancellation, and retain cached vec
 }) => {
   const device = await getWebGPUTestDevice();
   if (!device) return skip();
-  const first = GPUDataEvaluator.fromArray(new Float32Array([1, 2]));
-  const second = GPUDataEvaluator.fromArray(new Float32Array([3, 4, 5]));
+  const first = GPUDataEvaluator.fromArray(new Float32Array([1, 2]), {});
+  const second = GPUDataEvaluator.fromArray(new Float32Array([3, 4, 5]), {});
   const outputs = [add(first, 10), add(second, 10)];
   const vector = GPUVectorEvaluator.fromGPUDataEvaluators(outputs);
   const submit = vi.spyOn(device, 'submit');
@@ -323,8 +323,8 @@ it('a failing vector chunk cancels earlier chunks and permits ordinary evaluatio
 }) => {
   const device = await getWebGPUTestDevice();
   if (!device) return skip();
-  const first = GPUDataEvaluator.fromArray(new Float32Array([1, 2]));
-  const second = GPUDataEvaluator.fromArray(new Float32Array([3, 4]));
+  const first = GPUDataEvaluator.fromArray(new Float32Array([1, 2]), {});
+  const second = GPUDataEvaluator.fromArray(new Float32Array([3, 4]), {});
   const vector = GPUVectorEvaluator.fromGPUDataEvaluators([first, second]);
   const failure = vi.spyOn(second, 'evaluate').mockRejectedValueOnce(new Error('chunk failed'));
   const scope = new GPUEvaluationScope(device);
