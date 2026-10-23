@@ -31,3 +31,8 @@ The root exposes scheduling, compilation, encoding, inspection, and autotuning. 
 GPU data primitives and immediate operations remain in `@luma.gl/gpgpu`. Engine renderers and application adapters consume these graph APIs from their own packages.
 
 See the [execution guide](/docs/api-reference/experimental/gpu-core/concepts), [scheduler reference](/docs/api-reference/experimental/gpu-core/gpu-command-graph), and [migration guide](/docs/upgrade-guide).
+
+## Buffer and texture management
+
+See [Buffers and textures](/docs/api-reference/experimental/gpu-core/resources) for logical values,
+views, imported and transient ownership, hazard tracking, history, resizing, and encoding contracts.

@@ -597,8 +597,17 @@ export type {
   GPUOperationPredicate
 } from './gpu-control-flow-operation';
 export {composite, GPUProgram} from './gpu-program';
-export {GPUProgramScalar, GPUProgramVector} from './gpu-program-value';
-export type {GPUProgramScalarFormat, GPUProgramVectorFormat} from './gpu-program-value';
+export {
+  GPUProgramScalar,
+  GPUProgramVector,
+  GPUProgramTexture,
+  GPUProgramTextureView
+} from './gpu-program-value';
+export type {
+  GPUProgramScalarFormat,
+  GPUProgramVectorFormat,
+  GPUProgramTextureProps
+} from './gpu-program-value';
 export {GPUProgramCompiler} from './gpu-program-compiler';
 export type {
   GPUProgramBindings,

@@ -2,6 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {TextureFormat} from '@luma.gl/core';
+import type {GraphTextureHandle, GraphImportedTexture} from './gpu-command-graph';
+import {GPUProgramTextureView, type GPUProgramTexture} from './gpu-program-value';
+
 import {type Device} from '@luma.gl/core';
 import type {GPUVectorInput} from '@luma.gl/gpgpu/gpu-data';
 import {type GPUCommandGraph, GraphVectorView} from './gpu-command-graph';
@@ -48,7 +52,10 @@ import {
 import {validateGPUProgram, type GPUProgramValidationReport} from './gpu-program-validation';
 import type {GPUProgramScalar, GPUProgramVector} from './gpu-program-value';
 import type {GPUProgram} from './gpu-program';
-export type GPUProgramBindings = {vectors?: Readonly<Record<string, GPUVectorInput>>};
+export type GPUProgramBindings = {
+  vectors?: Readonly<Record<string, GPUVectorInput>>;
+  textures?: Readonly<Record<string, GraphImportedTexture>>;
+};
 export type GPUProgramLoweredNode = {
   nodeId: string;
   nodeType: 'compute' | 'render' | 'copy';
@@ -64,6 +71,7 @@ export type GPUProgramCompilation<Parameters = void> = {
   graph: GPUCommandGraph<Parameters>;
   scalars: ReadonlyMap<string, GPUScalar>;
   vectors: ReadonlyMap<string, GraphVectorView>;
+  textures: ReadonlyMap<string, GraphTextureHandle>;
   validation: GPUProgramValidationReport;
   lowering: GPUProgramLoweringReport;
 };
@@ -74,6 +82,8 @@ type LoweringState = {
   predicates: GPUOperationPredicate[];
   scalars: Map<string, GPUScalar>;
   vectors: Map<string, GraphVectorView>;
+  textures: Map<string, GraphTextureHandle>;
+  textureValues: readonly GPUProgramTexture[];
   predicateConjunctions: Map<string, GPUScalar<'uint32'>>;
   commandNodeIds: Set<string>;
 };
@@ -158,6 +168,13 @@ export class GPUProgramCompiler<Parameters = void> {
       }
       vectors.set(vector.id, resolved);
     }
+    const textures = new Map<string, GraphTextureHandle>();
+    for (const texture of program.textures) {
+      const handle = texture.external
+        ? graph.importTexture(texture, bindings.textures?.[texture.id])
+        : graph.createTransientTexture(texture);
+      textures.set(texture.id, handle);
+    }
     const state: LoweringState = {
       path: [],
       nodes: [],
@@ -165,6 +182,8 @@ export class GPUProgramCompiler<Parameters = void> {
       predicates: [],
       scalars,
       vectors,
+      textures,
+      textureValues: program.textures,
       predicateConjunctions: new Map(),
       commandNodeIds: new Set()
     };
@@ -174,6 +193,7 @@ export class GPUProgramCompiler<Parameters = void> {
       graph,
       scalars,
       vectors,
+      textures,
       validation,
       lowering: Object.freeze({
         operations: program.operationTree,
@@ -346,6 +366,12 @@ export class GPUProgramCompiler<Parameters = void> {
               },
               resolveScalar: s => this.resolveScalar(s, state),
               resolveVector: v => this.resolveVector(v, state),
+              resolveTexture: texture => this.resolveTexture(texture, state),
+              resolveTextureView: value => {
+                const texture = value instanceof GPUProgramTextureView ? value.texture : value;
+                const props = value instanceof GPUProgramTextureView ? value.props : {};
+                return graph.createTextureView(this.resolveTexture(texture, state), props);
+              },
               recordDecision: d => state.decisions.push(d)
             });
           if (operation instanceof GPUConditionalOperation || operation instanceof GPULoopOperation)
@@ -403,7 +429,18 @@ export class GPUProgramCompiler<Parameters = void> {
   ): Result {
     return graph.withComputeLowering(
       node => this.decorateComputeNode(graph, node, state),
-      callback
+      () =>
+        graph.withOtherLowering(node => {
+          if (state.predicates.length)
+            throw new Error(`GPU predicates do not support ${node.type} node "${node.id}"`);
+          const decorated = this.makeCommandNodeIdUnique(node, state);
+          state.nodes.push({
+            nodeId: decorated.id,
+            nodeType: decorated.type,
+            operationPath: [...state.path]
+          });
+          return decorated;
+        }, callback)
     );
   }
   private decorateComputeNode(
@@ -473,6 +510,16 @@ export class GPUProgramCompiler<Parameters = void> {
     state.commandNodeIds.add(id);
     return {...node, id};
   }
+  private resolveTexture<Format extends TextureFormat>(
+    texture: GPUProgramTexture<Format>,
+    state: LoweringState
+  ): GraphTextureHandle<Format> {
+    if (!state.textureValues.includes(texture))
+      throw new Error(`Undeclared program texture "${texture.id}"`);
+    // The map erases formats; identity validation above preserves the declared texture's format.
+    return state.textures.get(texture.id)! as GraphTextureHandle<Format>;
+  }
+
   private resolveScalar<T extends 'float32' | 'uint32' | 'sint32'>(
     s: GPUProgramScalar<T>,
     state: LoweringState

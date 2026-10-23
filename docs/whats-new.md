@@ -8,6 +8,8 @@ Target Release Date: Q3, 2026
 
 **General**
 
+- **Program texture resources** - `GPUProgram` now describes texture storage and subresource views, with caller-owned imports and graph-owned transients. See [buffer and texture management](/docs/api-reference/experimental/gpu-core/resources).
+
 - **Shared math and loader APIs** - Dependencies use math.gl 5.0.0-alpha.19 grouped
   packages and loaders.gl 5.0.0-alpha.12. Arrow adapters expose
   `iterateGeoArrowBatchesFromArrowVector` and `getGeoArrowRowViewFromArrowVector`

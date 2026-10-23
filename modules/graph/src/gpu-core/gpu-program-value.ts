@@ -2,6 +2,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {TextureFormat} from '@luma.gl/core';
+import type {
+  GraphTextureDescriptor,
+  GraphTextureDimension,
+  GraphTextureViewProps
+} from './gpu-command-graph';
+
 /** Scalar/vector formats portable across current Jarnevon execution backends. */
 export type GPUProgramScalarFormat = 'float32' | 'uint32' | 'sint32';
 export type GPUProgramVectorFormat = GPUProgramScalarFormat;
@@ -55,5 +62,50 @@ export class GPUProgramVector<T extends GPUProgramVectorFormat = GPUProgramVecto
       }
       this.chunkLengths = Object.freeze([...props.chunkLengths]);
     }
+  }
+}
+
+/** Logical texture storage. Allocation and device validation belong to the graph compiler. */
+export class GPUProgramTexture<Format extends TextureFormat = TextureFormat> {
+  readonly id: string;
+  readonly format: Format;
+  readonly width: number;
+  readonly height: number;
+  readonly usage: number;
+  readonly dimension?: GraphTextureDimension;
+  readonly depth?: number;
+  readonly mipLevels?: number;
+  readonly samples?: number;
+  /** Caller-owned storage, optionally bound at compilation or supplied when encoding. */
+  readonly external: boolean;
+
+  constructor(props: GPUProgramTextureProps<Format> & {id: string}) {
+    this.id = props.id;
+    this.format = props.format;
+    this.width = props.width;
+    this.height = props.height;
+    this.usage = props.usage;
+    this.dimension = props.dimension;
+    this.depth = props.depth;
+    this.mipLevels = props.mipLevels;
+    this.samples = props.samples;
+    this.external = props.external ?? false;
+  }
+}
+
+/** Uses the same descriptor vocabulary as GPUGraph; defaults are applied during lowering. */
+export type GPUProgramTextureProps<Format extends TextureFormat = TextureFormat> = Omit<
+  GraphTextureDescriptor<Format>,
+  'id'
+> & {external?: boolean};
+
+/** A subresource selection, never an allocation or an independently owned texture. */
+export class GPUProgramTextureView<Format extends TextureFormat = TextureFormat> {
+  readonly texture: GPUProgramTexture<Format>;
+  readonly props: Readonly<GraphTextureViewProps>;
+
+  constructor(texture: GPUProgramTexture<Format>, props: GraphTextureViewProps = {}) {
+    this.texture = texture;
+    this.props = Object.freeze({...props});
   }
 }

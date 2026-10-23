@@ -597,7 +597,8 @@
                   "api-reference/experimental/gpu-core/gpu-scalar-operation",
                   "api-reference/experimental/gpu-core/gpu-reduction-substrate",
                   "api-reference/experimental/gpu-core/gpu-cg-integration",
-                  "api-reference/experimental/gpu-core/gpu-transient-lifetimes"
+                  "api-reference/experimental/gpu-core/gpu-transient-lifetimes",
+                  "api-reference/experimental/gpu-core/resources"
                 ]
               },
               {

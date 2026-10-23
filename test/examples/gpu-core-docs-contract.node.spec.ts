@@ -115,7 +115,8 @@ describe('GPU module documentation contract', () => {
           'tutorial.md',
           'webgpu-foundations.md',
           'execution-techniques.md',
-          'debugging.md'
+          'debugging.md',
+          'resources.md'
         ].includes(filename)
     );
 
