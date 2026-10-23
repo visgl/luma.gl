@@ -19,14 +19,14 @@ import {
   GPUReadbackRing,
   type GPUReadbackTicket,
   INDEX_PICKING_READBACK_BYTE_LENGTH
-} from '@luma.gl/gpgpu/gpu-core';
+} from '@luma.gl/gpu-graph/gpu-core';
 import {
   GPUGridIndex,
   type GPUGridIndexBounds,
   type GPUGridIndexSize,
   GPUPointSpatialQuery,
   type GPUPointSpatialQueryKind
-} from '@luma.gl/experimental/geospatial';
+} from '@luma.gl/gpu-graph/geospatial';
 import {CompactDropdown} from '../../compact-dropdown';
 import {
   ExamplePanelManager,

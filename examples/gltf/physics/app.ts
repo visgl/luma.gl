@@ -15,8 +15,8 @@ import {
   makeGLTFPhysicsMeshResolver,
   type GLTFPhysicsDescription
 } from '@luma.gl/gltf/physics';
-import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
-import type {GPURigidBodyWorld, GPURigidBodyState} from '@luma.gl/gpgpu/gpu-physics';
+import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/gpu-graph/gpu-core';
+import type {GPURigidBodyWorld, GPURigidBodyState} from '@luma.gl/gpu-graph/gpu-physics';
 import type {ScenegraphNode} from '@luma.gl/engine';
 import {INFO_HTML, showError, showSampleDescription, createPhysicsPanels} from './app-ui';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';

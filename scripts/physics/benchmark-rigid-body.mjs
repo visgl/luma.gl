@@ -47,9 +47,9 @@ async function runBenchmark(options) {
   const {root, fixture, solver, broadPhase, failurePolicy, samples, warmup, iterations, timeStep, warmStartFactor, maximumPairs} = options;
   const [{luma}, {webgpuAdapter}, {GPUCommandGraph}, {GPUCommandGraphInspector}, {GPURigidBodyWorld}, {makeRigidBodyScene, getRigidBodySceneGravity}, {makeMechanism}] = await Promise.all([
     import(`${root}/modules/core/src/index.ts`), import(`${root}/modules/core/src/webgpu/index.ts`),
-    import(`${root}/modules/gpgpu/src/gpu-core/gpu-command-graph.ts`),
-    import(`${root}/modules/gpgpu/src/gpu-core/gpu-command-graph-inspector.ts`),
-    import(`${root}/modules/gpgpu/src/gpu-physics/gpu-rigid-body-world.ts`),
+    import(`${root}/modules/gpu-graph/src/gpu-core/gpu-command-graph.ts`),
+    import(`${root}/modules/gpu-graph/src/gpu-core/gpu-command-graph-inspector.ts`),
+    import(`${root}/modules/gpu-graph/src/gpu-physics/gpu-rigid-body-world.ts`),
     import(`${root}/examples/experimental/gpu-rigid-body-world/scenes.ts`),
     import(`${root}/examples/experimental/gpu-rigid-body-world/mechanisms.ts`)
   ]);

@@ -37,13 +37,13 @@
       "checks": {
         "behavior": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-broad-phase.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-broad-phase.spec.ts",
             "testPattern": "matches all-pairs discovery for mixed-size sparse bounds"
           }
         ],
         "work-budget": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-broad-phase.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-broad-phase.spec.ts",
             "testPattern": "matches all-pairs discovery for mixed-size sparse bounds"
           }
         ]
@@ -61,11 +61,11 @@
       "checks": {
         "behavior": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-sparse.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-sparse.spec.ts",
             "testPattern": "matches the rigid-body oracle with sparse discovery"
           },
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-sparse.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-sparse.spec.ts",
             "testPattern": "uses sparse storage beyond the reference cap"
           }
         ]
@@ -83,19 +83,19 @@
       "checks": {
         "behavior": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-broad-phase.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-broad-phase.spec.ts",
             "testPattern": "reports dense output/traversal overflow"
           },
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-broad-phase.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-broad-phase.spec.ts",
             "testPattern": "includes oversized and remote bounds"
           },
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-sparse.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-sparse.spec.ts",
             "testPattern": "retains transient overflow evidence and supports replay with a larger capacity"
           },
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-capacity.node.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-capacity.node.spec.ts",
             "testPattern": "rejects device capacity before allocating or marking the world attached"
           }
         ]
@@ -142,7 +142,7 @@
         ],
         "behavior": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/gpu-rigid-body-world.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/gpu-rigid-body-world.spec.ts",
             "testPattern": "resolves sphere impact against an oriented box"
           }
         ]
@@ -167,7 +167,7 @@
         ],
         "behavior": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/gpu-rigid-body-world.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/gpu-rigid-body-world.spec.ts",
             "testPattern": "resolves sphere impact against an oriented box"
           }
         ]
@@ -192,7 +192,7 @@
         ],
         "behavior": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-convex.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-convex.spec.ts",
             "testPattern": "solves convex hull and tapered primitive contacts"
           }
         ]
@@ -217,7 +217,7 @@
         ],
         "behavior": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-convex.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-convex.spec.ts",
             "testPattern": "solves convex hull and tapered primitive contacts"
           }
         ]
@@ -250,7 +250,7 @@
       "checks": {
         "behavior": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-convex.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-convex.spec.ts",
             "testPattern": "solves convex hull and tapered primitive contacts"
           }
         ]
@@ -303,7 +303,7 @@
       "checks": {
         "behavior": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-convex.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-convex.spec.ts",
             "testPattern": "preserves a nonconvex wheel opening"
           }
         ]
@@ -359,11 +359,11 @@
         ],
         "behavior": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/gpu-rigid-body-world.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/gpu-rigid-body-world.spec.ts",
             "testPattern": "kinematic motion pushes dynamic bodies"
           },
           {
-            "file": "modules/gpgpu/test/gpu-physics/gpu-rigid-body-world.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/gpu-rigid-body-world.spec.ts",
             "testPattern": "holds exact kinematic node targets"
           }
         ]
@@ -390,7 +390,7 @@
         ],
         "behavior": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/gpu-rigid-body-world.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/gpu-rigid-body-world.spec.ts",
             "testPattern": "uses authored center of mass and rotated principal inertia"
           }
         ]
@@ -417,11 +417,11 @@
         ],
         "behavior": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/gpu-rigid-body-world.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/gpu-rigid-body-world.spec.ts",
             "testPattern": "preserves infinite mass and locked principal axes independently"
           },
           {
-            "file": "modules/gpgpu/test/gpu-physics/gpu-rigid-body-world.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/gpu-rigid-body-world.spec.ts",
             "testPattern": "preserves authored spin on infinite-inertia axes"
           }
         ]
@@ -471,7 +471,7 @@
         ],
         "behavior": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/gpu-rigid-body-world.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/gpu-rigid-body-world.spec.ts",
             "testPattern": "transfers an offset compound contact into body rotation"
           }
         ]
@@ -500,11 +500,11 @@
         ],
         "behavior": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/gpu-rigid-body-world.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/gpu-rigid-body-world.spec.ts",
             "testPattern": "follows material combine precedence"
           },
           {
-            "file": "modules/gpgpu/test/gpu-physics/gpu-rigid-body-world.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/gpu-rigid-body-world.spec.ts",
             "testPattern": "distinguishes static friction from sliding friction"
           }
         ]
@@ -532,7 +532,7 @@
         ],
         "behavior": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/gpu-rigid-body-world.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/gpu-rigid-body-world.spec.ts",
             "testPattern": "collider exclusions suppress response symmetrically"
           }
         ]
@@ -562,7 +562,7 @@
       "checks": {
         "behavior": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-sparse.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-sparse.spec.ts",
             "testPattern": "matches the rigid-body oracle with sparse discovery"
           }
         ]
@@ -580,7 +580,7 @@
       "checks": {
         "behavior": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/gpu-rigid-body-world.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/gpu-rigid-body-world.spec.ts",
             "testPattern": "holds a rotated box stack and sleeps and wakes the connected stack"
           }
         ]
@@ -622,7 +622,7 @@
       "checks": {
         "behavior": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/gpu-rigid-body-world.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/gpu-rigid-body-world.spec.ts",
             "testPattern": "settled stacks converge across timestep and iteration budgets"
           }
         ]
@@ -847,19 +847,19 @@
       "checks": {
         "behavior": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-stability.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-stability.spec.ts",
             "testPattern": "solves coupled anisotropic tangential response"
           },
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-stability.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-stability.spec.ts",
             "testPattern": "keeps a body stationary inside the static friction cone"
           },
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-stability.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-stability.spec.ts",
             "testPattern": "carries resting bodies on a kinematic support"
           },
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-stability.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-stability.spec.ts",
             "testPattern": "bounds eight-box stack drift and penetration"
           }
         ]
@@ -878,21 +878,21 @@
       "checks": {
         "behavior": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-mesh-pairs.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-mesh-pairs.spec.ts",
             "testPattern": "supports a falling triangle-mesh body"
           },
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-mesh-pairs.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-mesh-pairs.spec.ts",
             "testPattern": "preserves a nonconvex mesh opening"
           },
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-mesh-pairs.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-mesh-pairs.spec.ts",
             "testPattern": "exchanges momentum between two moving mesh bodies"
           }
         ],
         "work-budget": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-mesh-pairs.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-mesh-pairs.spec.ts",
             "testPattern": "reports mesh traversal exhaustion"
           }
         ]
@@ -910,7 +910,7 @@
       "checks": {
         "behavior": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-recovery.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-recovery.spec.ts",
             "testPattern": "automatically grows pair capacity and replays to the generous-budget result"
           }
         ]
@@ -928,7 +928,7 @@
       "checks": {
         "behavior": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-recovery.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-recovery.spec.ts",
             "testPattern": "replays earlier ticks and kinematic targets after a later capacity failure"
           }
         ]
@@ -946,7 +946,7 @@
       "checks": {
         "behavior": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-qualification.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-qualification.spec.ts",
             "testPattern": "qualifies rotated box ray distances against an independent slab reference"
           }
         ]
@@ -964,7 +964,7 @@
       "checks": {
         "behavior": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-qualification.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-qualification.spec.ts",
             "testPattern": "qualifies sphere query scale and grazing misses analytically"
           }
         ]
@@ -982,7 +982,7 @@
       "checks": {
         "behavior": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-qualification.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-qualification.spec.ts",
             "testPattern": "qualifies fixed-step convergence against ballistic motion"
           }
         ]
@@ -1000,7 +1000,7 @@
       "checks": {
         "behavior": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-qualification.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-qualification.spec.ts",
             "testPattern": "qualifies unequal-mass elastic momentum and energy"
           }
         ]
@@ -1018,7 +1018,7 @@
       "checks": {
         "behavior": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-qualification.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-qualification.spec.ts",
             "testPattern": "qualifies swept impact position against analytic restitution"
           }
         ]
@@ -1036,7 +1036,7 @@
       "checks": {
         "behavior": [
           {
-            "file": "modules/gpgpu/test/gpu-physics/rigid-body-qualification.spec.ts",
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-qualification.spec.ts",
             "testPattern": "qualifies extended shape surfaces against primitive and triangle references"
           }
         ]

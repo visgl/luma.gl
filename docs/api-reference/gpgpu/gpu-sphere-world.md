@@ -6,7 +6,7 @@ description: GPU-resident sphere dynamics, controls, contacts, events and bounde
 # GPUSphereWorld
 
 `GPUSphereWorld` is the specialized sphere solver in the experimental WebGPU
-`@luma.gl/gpgpu/gpu-physics` module.
+`@luma.gl/gpu-graph/gpu-physics` module.
 `GPUSphereWorld` composes existing `GPUSort`, `GPUScan`, and command-graph resource
 scheduling. Simulation state stays on the GPU and can be bound directly to rendering.
 It is a discrete sphere solver, not a general-purpose rigid-body engine.
@@ -14,8 +14,8 @@ It is a discrete sphere solver, not a general-purpose rigid-body engine.
 ## Use
 
 ```typescript
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
-import {GPUSphereWorld} from '@luma.gl/gpgpu/gpu-physics';
+import {GPUCommandGraph} from '@luma.gl/gpu-graph/gpu-core';
+import {GPUSphereWorld} from '@luma.gl/gpu-graph/gpu-physics';
 
 const definition = new GPUCommandGraph(device);
 const world = new GPUSphereWorld({

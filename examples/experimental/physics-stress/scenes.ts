@@ -1,7 +1,7 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
-import type {GPURigidBodyWorldProps} from '@luma.gl/gpgpu/gpu-physics';
+import type {GPURigidBodyWorldProps} from '@luma.gl/gpu-graph/gpu-physics';
 
 export const STRESS_SCENES = {
   capacity: 'Capacity recovery',

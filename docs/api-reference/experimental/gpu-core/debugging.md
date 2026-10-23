@@ -55,7 +55,7 @@ import `GPUCommandGraphInspectorPanel` from `examples/gpu-command-graph-inspecto
 panel collection and give the graph panel its own host element.
 
 ```ts
-import {GPUCommandGraphInspector} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraphInspector} from '@luma.gl/gpu-graph/gpu-core';
 
 const inspector = new GPUCommandGraphInspector({maxSamples: 120});
 const observation = inspector.observeGraph(compiled);

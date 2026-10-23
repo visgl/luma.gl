@@ -9,8 +9,8 @@ import {
   GPUCommandGraph,
   GPUCommandGraphInspector,
   type CompiledGPUCommandGraph
-} from '@luma.gl/gpgpu/gpu-core';
-import {GPUTimeSeries, GPUTimeSeriesEnvelope} from '@luma.gl/gpgpu/gpu-timeseries';
+} from '@luma.gl/gpu-graph/gpu-core';
+import {GPUTimeSeries, GPUTimeSeriesEnvelope} from '@luma.gl/gpu-graph/gpu-timeseries';
 import {GAP_END, GAP_START, INCIDENT_SAMPLE, SAMPLE_COUNT, SERIES, makeTelemetry} from './data';
 
 import {

@@ -21,7 +21,7 @@ is intended for explainable policy scores, not model training or an embedded obs
 ## Usage
 
 ```ts
-import {GPUTraceAnomalyScoring} from '@luma.gl/experimental/gpu-trace';
+import {GPUTraceAnomalyScoring} from '@luma.gl/gpu-graph/gpu-trace';
 
 new GPUTraceAnomalyScoring({
   groupIndices,

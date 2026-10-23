@@ -55,6 +55,12 @@
       ],
       "@luma.gl/core/wgsl-binding-scan": [
         "./modules/core/src/wgsl-binding-scan.ts"
+      ],
+      "@luma.gl/gpu-graph": [
+        "./modules/gpu-graph/src/index.ts"
+      ],
+      "@luma.gl/gpu-graph/*": [
+        "./modules/gpu-graph/src/*"
       ]
     }
   },
@@ -62,7 +68,7 @@
     "./modules/shadertools/test/lib/uniform-types.spec.ts",
     "./modules/engine/test/shader-inputs-types.spec.ts",
     "./modules/gpgpu/test/gpu-data/gpu-data-types.node.spec.ts",
-    "./modules/experimental/test/geospatial/geospatial-types.spec.ts"
+    "./modules/gpu-graph/test/geospatial/geospatial-types.spec.ts"
   ],
   "exclude": [
     "./modules/**/dist",

@@ -49,10 +49,10 @@ stable Engine models and Shadertools passes.
 | Module | Use it for |
 | --- | --- |
 | [`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/gpgpu/gpu-data) | Primitive GPU chunks, views, vectors, constants, memory formats, and basic layout helpers. |
-| [`@luma.gl/experimental/gpu-tables`](/docs/api-reference/experimental/gpu-tables) | Private record batches, tables, schemas, bindings, computations, and generic table planners. |
+| [`@luma.gl/gpu-graph/gpu-tables`](/docs/api-reference/experimental/gpu-tables) | Private record batches, tables, schemas, bindings, computations, and generic table planners. |
 | `@luma.gl/experimental/models` | Private path and polygon rendering models, GPU input helpers, and model-specific planners. |
-| [`@luma.gl/gpgpu/gpu-core`](/docs/api-reference/experimental/gpu-core) | Schedule reusable GPU algorithms, validate resource dependencies, reuse transient storage, and drive indirect work. |
-| [`@luma.gl/gpgpu/gpu-graph-algorithms`](/docs/api-reference/experimental/gpu-graph) | GPU-resident topology, traversal, connectivity, ranking, community, and layout algorithms. |
+| [`@luma.gl/gpu-graph/gpu-core`](/docs/api-reference/experimental/gpu-core) | Schedule reusable GPU algorithms, validate resource dependencies, reuse transient storage, and drive indirect work. |
+| [`@luma.gl/gpu-graph/gpu-graph-algorithms`](/docs/api-reference/experimental/gpu-graph) | GPU-resident topology, traversal, connectivity, ranking, community, and layout algorithms. |
 | [GPU Raster](/docs/api-reference/experimental/gpu-raster) | Validity-aware raster overviews, statistics, filters, morphology, contours, and bounded residency. |
 | [LuCIM](/docs/api-reference/experimental/lucim) | CuCIM-inspired dense 3D volume thresholding, morphology, connected components, and region measurements. |
 | [GPU Project](/docs/api-reference/experimental/gpu-project) | Adaptive high-precision coordinate projection on WebGPU. |

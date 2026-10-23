@@ -20,10 +20,9 @@ The `@luma.gl/gpgpu` module performs GPU-based data transformation.
 - [GPU time series](/docs/api-reference/experimental/gpu-timeseries): exact chart envelopes over chunked uniform samples.
 - [`cleanEvaluate`](/docs/api-reference/gpgpu/clean-evaluate)
 
-## GPU Graph submodules
+## GPU Graph package
 
-Each submodule has its own subgroup in this API reference. Import the subpath you need;
-these APIs are not re-exported by the portable evaluator package root.
+Graph-based submodules now belong to [`@luma.gl/gpu-graph`](/docs/api-reference/gpu-graph). Import graph subpaths from that package; GPU data primitives remain in `@luma.gl/gpgpu/gpu-data`.
 
 | Subpath | Reference |
 | --- | --- |
@@ -74,7 +73,7 @@ Runtime format strings describe GPU memory, including fixed-width formats such a
 normalized formats such as `unorm8x4`, and variable-length formats such as
 `vertex-list<float32x3>`. Shader compatibility is checked at adapter and model boundaries.
 
-[`@luma.gl/experimental/gpu-tables`](/docs/api-reference/experimental/gpu-tables) adds record
+[`@luma.gl/gpu-graph/gpu-tables`](/docs/api-reference/experimental/gpu-tables) adds record
 batches, schemas, table bindings, computations, and planners above these primitives.
 [`@luma.gl/arrow`](/docs/api-reference/arrow) converts Apache Arrow inputs to the shared GPU data
 objects; the GPU data types do not depend on Apache Arrow.

@@ -9,13 +9,13 @@ import {
   type RenderPass,
   type ShaderLayout
 } from '@luma.gl/core';
-import {GPUTableModel, type GPUTableModelProps} from '@luma.gl/experimental/gpu-tables';
-import type {GPUTable} from '@luma.gl/experimental/gpu-tables';
+import {GPUTableModel, type GPUTableModelProps} from '@luma.gl/gpu-graph/gpu-tables';
+import type {GPUTable} from '@luma.gl/gpu-graph/gpu-tables';
 import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getGPUDataBuffersForLayout, getGPUDataByteOffsetsForLayout} from '@luma.gl/gpgpu/gpu-data';
 import {isVertexListGPUVectorFormat, type VertexList} from '@luma.gl/gpgpu/gpu-data';
-import type {GeneratedBufferBatch} from '@luma.gl/experimental/gpu-tables';
-import {type GPUInputSchema, validateGPUInputVectors} from '@luma.gl/experimental/gpu-tables';
+import type {GeneratedBufferBatch} from '@luma.gl/gpu-graph/gpu-tables';
+import {type GPUInputSchema, validateGPUInputVectors} from '@luma.gl/gpu-graph/gpu-tables';
 
 const SEGMENT_START_POSITIONS_COLUMN = 'segmentStartPositions';
 const SEGMENT_END_POSITIONS_COLUMN = 'segmentEndPositions';

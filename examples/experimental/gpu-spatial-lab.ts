@@ -12,12 +12,16 @@ import {
   GPUCommandGraphInspector,
   GPUReduction,
   type CompiledGPUCommandGraph
-} from '@luma.gl/gpgpu/gpu-core';
-import {GPUMeshNormals, GPUMeshVertexNormals, GPUMeshSmoothing} from '@luma.gl/gpgpu/gpu-geometry';
+} from '@luma.gl/gpu-graph/gpu-core';
+import {
+  GPUMeshNormals,
+  GPUMeshVertexNormals,
+  GPUMeshSmoothing
+} from '@luma.gl/gpu-graph/gpu-geometry';
 import {
   GPUPointCloudVoxelDownsample,
   GPUPointCloudRadiusFilter
-} from '@luma.gl/gpgpu/gpu-pointcloud';
+} from '@luma.gl/gpu-graph/gpu-pointcloud';
 import {
   ExamplePanelManager,
   makeExamplePanelHostHtml,

@@ -10,6 +10,7 @@ export default defineConfig({
       '@luma.gl/experimental': __dirname + '/../../../modules/experimental/src',
       '@luma.gl/shadertools': __dirname + '/../../../modules/shadertools/src',
       '@luma.gl/gpgpu': __dirname + '/../../../modules/gpgpu/src',
+      '@luma.gl/gpu-graph': __dirname + '/../../../modules/gpu-graph/src',
       '@luma.gl/text': __dirname + '/../../../modules/text/src'
     }
   },

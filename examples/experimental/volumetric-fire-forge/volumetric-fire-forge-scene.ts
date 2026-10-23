@@ -5,7 +5,7 @@
 import type {
   VolumetricFireEmitter,
   VolumetricFireSimulationStepOptions
-} from '@luma.gl/experimental';
+} from '@luma.gl/gpu-graph/gpu-simulation';
 
 export const VOLUMETRIC_FIRE_FORGE_VOLUME_BOUNDS = {
   minimum: [-6, 0, -5],

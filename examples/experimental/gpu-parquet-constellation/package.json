@@ -15,6 +15,7 @@
     "@luma.gl/core": "10.0.0-alpha.4",
     "@luma.gl/engine": "10.0.0-alpha.4",
     "@luma.gl/gpgpu": "10.0.0-alpha.4",
+    "@luma.gl/gpu-graph": "10.0.0-alpha.4",
     "@luma.gl/shadertools": "10.0.0-alpha.4",
     "apache-arrow": "^21.1.0",
     "compress-utils": "^0.8.0"

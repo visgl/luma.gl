@@ -9,7 +9,7 @@ import {
   type GPUCommandGraphEncodeOptions,
   type GPUCommandGraphEncoding,
   type GPUCommandGraphInspectorGraph
-} from '@luma.gl/gpgpu/gpu-core';
+} from '@luma.gl/gpu-graph/gpu-core';
 import {GPUCommandGraphDebugPanel} from './gpu-command-graph-debug-panel';
 import {GPUTracePanel} from './gpu-trace-panel';
 

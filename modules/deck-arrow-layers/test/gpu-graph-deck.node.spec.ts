@@ -12,7 +12,7 @@ import {
   GPUGraphNodeLayer
 } from '@deck.gl-community/arrow-layers';
 import * as experimentalModule from '@luma.gl/experimental';
-import * as gpuGraphModule from '@luma.gl/gpgpu/gpu-graph-algorithms';
+import * as gpuGraphModule from '@luma.gl/gpu-graph/gpu-graph-algorithms';
 import {describe, expect, test} from 'vitest';
 
 import {createGPUGraphExplorerDeck} from '../../../examples/deck/gpu-graph-explorer/app';

@@ -31,23 +31,23 @@ describe('GPU Dataframe documentation and opt-in Arrow benchmark integration', (
     const tableOfContents = JSON.parse(
       readFileSync(path.join(REPOSITORY_DIRECTORY, 'docs/table-of-contents.json'), 'utf8')
     ) as DocumentationEntry[];
-    const experimentalCategories: DocumentationCategory[] = [];
+    const graphCategories: DocumentationCategory[] = [];
 
     const visit = (entries: readonly DocumentationEntry[]): void => {
       for (const entry of entries) {
         if (typeof entry === 'string' || entry.type !== 'category') {
           continue;
         }
-        if (entry.label === '@luma.gl/experimental') {
-          experimentalCategories.push(entry);
+        if (entry.label === '@luma.gl/gpu-graph') {
+          graphCategories.push(entry);
         }
         visit(entry.items);
       }
     };
     visit(tableOfContents);
 
-    expect(experimentalCategories).toHaveLength(1);
-    const dataframesCategory = experimentalCategories[0].items.find(
+    expect(graphCategories).toHaveLength(1);
+    const dataframesCategory = graphCategories[0].items.find(
       entry => typeof entry !== 'string' && entry.label === 'GPU Dataframe'
     );
     expect(dataframesCategory).toBeDefined();
@@ -70,7 +70,7 @@ describe('GPU Dataframe documentation and opt-in Arrow benchmark integration', (
     const documentation = readGPUDataFrameDocumentation();
 
     expect(documentation).toContain("from '@luma.gl/arrow'");
-    expect(documentation).toContain("from '@luma.gl/experimental/gpu-dataframe'");
+    expect(documentation).toContain("from '@luma.gl/gpu-graph/gpu-dataframe'");
     expect(documentation).toContain('makeGPUAnalyticsTableFromArrowTable');
     expect(documentation).toContain('GPUCommandGraph');
     expect(documentation).toContain('selectionMask');
@@ -133,7 +133,7 @@ describe('GPU Dataframe documentation and opt-in Arrow benchmark integration', (
     };
 
     expect(benchmark).toContain("from '@luma.gl/arrow'");
-    expect(benchmark).toContain("from '@luma.gl/experimental/gpu-dataframe'");
+    expect(benchmark).toContain("from '@luma.gl/gpu-graph/gpu-dataframe'");
     expect(benchmark).toContain("from 'apache-arrow'");
     expect(benchmark).toContain('makeGPUAnalyticsTableFromArrowTable');
     expect(benchmark).toContain('runGPUDataFrameBenchmark');

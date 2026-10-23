@@ -47,7 +47,7 @@ const nodeOnlyTestPatterns = [
   'modules/engine/test/shader-inputs.spec.{ts,js}',
   'modules/text/test/text-2d/{text-layout,arrow-text,text-utils}.spec.{ts,js}',
   'modules/text/test/text-3d/**/*.spec.{ts,js}',
-  'modules/experimental/test/gpu-tables/{gpu-table-model,generated-buffer-batches,table-buffer-planner}.spec.{ts,js}',
+  'modules/gpu-graph/test/gpu-tables/{gpu-table-model,generated-buffer-batches,table-buffer-planner}.spec.{ts,js}',
   'modules/core/test/webgpu/adapter/helpers/get-vertex-buffer-layout.spec.{ts,js}',
   'modules/core/test/webgpu/adapter/resources/webgpu-render-pass.spec.{ts,js}',
   'modules/core/test/webgpu/wgsl/**/*.spec.{ts,js}',
@@ -63,11 +63,11 @@ const nodeOnlyTestPatterns = [
   'modules/gltf/test/webgl-to-webgpu/**/*.spec.{ts,js}',
   'modules/gpgpu/test/gpu-vector/gpu-data-evaluator-types.spec.{ts,js}',
   'modules/gpgpu/test/operations/arithmetic-operation.spec.{ts,js}',
-  'modules/gpgpu/test/gpu-core/{gpu-scalar,gpu-matvec,gpu-matmul,gpu-elementwise,gpu-coo-to-csr}.spec.{ts,js}',
+  'modules/gpu-graph/test/gpu-core/{gpu-scalar,gpu-matvec,gpu-matmul,gpu-elementwise,gpu-coo-to-csr}.spec.{ts,js}',
   'modules/gpgpu/test/utils/{expression,webgpu-dispatch}.spec.{ts,js}',
   'modules/splats/test/{splat-rad-hierarchy,splat-browser-coverage}.spec.{ts,js}',
   'modules/test-utils/test/null-device/**/*.spec.{ts,js}',
-  'modules/experimental/test/geospatial/geospatial-types.spec.{ts,js}',
+  'modules/gpu-graph/test/geospatial/geospatial-types.spec.{ts,js}',
   'modules/experimental/test/textures/packed-pixels.spec.{ts,js}',
   'modules/experimental/test/webxr/webxr-animation-frame-provider.spec.{ts,js}',
   'modules/shadertools/test/lib/preprocessor/**/*.spec.{ts,js}',
@@ -105,7 +105,7 @@ const nodeWrapperSourcePatterns = [
   'modules/shadertools/test/lib/preprocessor/preprocessor.spec.{ts,js}',
   'modules/shadertools/test/modules/lighting/{gouraud-material,lambert-material,lights,phong-material}.spec.{ts,js}',
   'modules/splats/test/{splat-browser-coverage,splat-rad-hierarchy}.spec.{ts,js}',
-  'modules/experimental/test/gpu-tables/gpu-table-model.spec.{ts,js}',
+  'modules/gpu-graph/test/gpu-tables/gpu-table-model.spec.{ts,js}',
   'modules/core/test/webgl/adapter/helpers/{parse-shader-compiler-log,webgl-topology-utils}.spec.{ts,js}'
 ];
 const nodeCoverageIncludePatterns = [
@@ -121,11 +121,11 @@ const nodeCoverageNativePatterns = [
   'modules/arrow/test/arrow/{arrow-colors,arrow-gpu-conversion,arrow-gpu-data,arrow-renderer-preparation}.node.spec.{ts,js}',
   'modules/arrow/test/geoarrow/{geoarrow-dense-union,arrow-polygon-tessellation}.node.spec.{ts,js}',
   'modules/splats/test/{splat-renderer,gpu-paged-splat-renderer,splat-residency,splat-hierarchy}.node.spec.{ts,js}',
-  'modules/gpgpu/test/gpu-core/gpu-command-graph-{history,passes,planning}.node.spec.{ts,js}',
+  'modules/gpu-graph/test/gpu-core/gpu-command-graph-{history,passes,planning}.node.spec.{ts,js}',
   'modules/gpgpu/test/operations/{cast-data,convert-colors}.node.spec.{ts,js}',
   'modules/deck-arrow-layers/test/layers/arrow-layers.node.spec.{ts,js}',
-  'modules/experimental/test/gpu-raster/{gpu-raster-tile-source,gpu-raster-tile-cache,gpu-raster-cross-tile-components}.node.spec.{ts,js}',
-  'modules/experimental/test/gpu-sql/lu-sql.node.spec.{ts,js}'
+  'modules/gpu-graph/test/gpu-raster/{gpu-raster-tile-source,gpu-raster-tile-cache,gpu-raster-cross-tile-components}.node.spec.{ts,js}',
+  'modules/gpu-graph/test/gpu-sql/lu-sql.node.spec.{ts,js}'
 ];
 const nodeCoveragePatterns = [
   ...nodeCoverageIncludePatterns,
@@ -134,18 +134,18 @@ const nodeCoveragePatterns = [
 // Benchmarks answer performance questions but do not add stable correctness coverage. Keep them
 // out of every pull request's instrumented browser run and expose them through an opt-in project.
 const browserBenchmarkTestPatterns = [
-  'modules/gpgpu/test/gpu-core/gpu-kernel-benchmark.spec.ts',
-  'modules/gpgpu/test/gpu-core/gpu-fragmentation-benchmark.spec.ts',
-  'modules/gpgpu/test/gpu-core/gpu-spatial-query-benchmark.spec.ts',
-  'modules/gpgpu/test/gpu-core/gpu-workgroup-reduction-benchmark.spec.ts',
-  'modules/gpgpu/test/gpu-core/gpu-workgroup-scan-benchmark.spec.ts',
-  'modules/gpgpu/test/gpu-graph/gpu-graph-benchmark.spec.ts',
-  'modules/experimental/test/gpu-project/projection-benchmark.spec.ts',
-  'modules/experimental/test/gpu-project/projection-performance.spec.ts',
-  'modules/experimental/test/gpu-project/projection-conic-performance.spec.ts',
-  'modules/experimental/test/gpu-project/projection-routing-performance.spec.ts',
-  'modules/experimental/test/gpu-project/projection-table-performance.spec.ts',
-  'modules/experimental/test/gpu-project/projection-program-benchmark.spec.ts'
+  'modules/gpu-graph/test/gpu-core/gpu-kernel-benchmark.spec.ts',
+  'modules/gpu-graph/test/gpu-core/gpu-fragmentation-benchmark.spec.ts',
+  'modules/gpu-graph/test/gpu-core/gpu-spatial-query-benchmark.spec.ts',
+  'modules/gpu-graph/test/gpu-core/gpu-workgroup-reduction-benchmark.spec.ts',
+  'modules/gpu-graph/test/gpu-core/gpu-workgroup-scan-benchmark.spec.ts',
+  'modules/gpu-graph/test/gpu-graph/gpu-graph-benchmark.spec.ts',
+  'modules/gpu-graph/test/gpu-project/projection-benchmark.spec.ts',
+  'modules/gpu-graph/test/gpu-project/projection-performance.spec.ts',
+  'modules/gpu-graph/test/gpu-project/projection-conic-performance.spec.ts',
+  'modules/gpu-graph/test/gpu-project/projection-routing-performance.spec.ts',
+  'modules/gpu-graph/test/gpu-project/projection-table-performance.spec.ts',
+  'modules/gpu-graph/test/gpu-project/projection-program-benchmark.spec.ts'
 ];
 const runBrowserBenchmarks = process.env.LUMA_TEST_BROWSER_BENCHMARKS === 'true';
 const runNodeCoverage = process.env.LUMA_TEST_NODE_COVERAGE === 'true';

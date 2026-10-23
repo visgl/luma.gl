@@ -67,7 +67,7 @@ case preserves batch boundaries and reports the algorithm selected independently
 <GPUSortExample embedded />
 
 ```ts
-import {GPUCommandGraph, GPUSort} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph, GPUSort} from '@luma.gl/gpu-graph/gpu-core';
 
 const graph = new GPUCommandGraph(device, {id: 'sort-records'});
 const keyChunks = graph.importGPUVector('keys', keyVector);
@@ -102,7 +102,7 @@ device.submit(commandEncoder.finish());
 For independent batch order, import aligned input and output vectors directly:
 
 ```ts
-import {GPUBatchSort, GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {GPUBatchSort, GPUCommandGraph} from '@luma.gl/gpu-graph/gpu-core';
 
 const graph = new GPUCommandGraph(device, {id: 'sort-stream'});
 const sort = new GPUBatchSort({

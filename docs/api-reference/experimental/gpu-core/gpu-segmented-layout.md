@@ -68,7 +68,7 @@ segmentOffsets    [0, 2, 3, 5]
 ## Usage
 
 ```ts
-import {GPUCommandGraph, GPUSegmentedLayout} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph, GPUSegmentedLayout} from '@luma.gl/gpu-graph/gpu-core';
 
 const graph = new GPUCommandGraph(device, {id: 'column-layout'});
 

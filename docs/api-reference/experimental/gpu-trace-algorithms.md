@@ -6,7 +6,7 @@ import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-
 
 ## Overview
 
-`@luma.gl/experimental/gpu-trace` keeps trace identity, selection, analysis, and most intermediate
+`@luma.gl/gpu-graph/gpu-trace` keeps trace identity, selection, analysis, and most intermediate
 results on the GPU. It does not prescribe one renderer or take ownership of command submission.
 Instead, it contributes trace-aware operations to a caller-owned
 [`GPUCommandGraph`](/docs/api-reference/experimental/gpu-core/gpu-command-graph), and exposes

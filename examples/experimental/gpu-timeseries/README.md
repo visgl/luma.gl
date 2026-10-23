@@ -1,6 +1,6 @@
 # Signal Room
 
-A WebGPU-only example for `@luma.gl/gpgpu/gpu-timeseries`: three linked charts with
+A WebGPU-only example for `@luma.gl/gpu-graph/gpu-timeseries`: three linked charts with
 3,145,728 synthetic observations, spike-preserving envelopes, explicit gaps and source-ID inspection.
 
 Run from the repository root:

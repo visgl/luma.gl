@@ -11,7 +11,7 @@ import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-
 
 ## Overview
 
-`@luma.gl/experimental/gpu-dataframe` provides immutable, visualization-oriented dataframe operations on
+`@luma.gl/gpu-graph/gpu-dataframe` provides immutable, visualization-oriented dataframe operations on
 existing WebGPU-resident tables. Filters, derived columns, reductions, histograms, categorical
 grouping, stable per-batch sorting, and bounded hash joins compile into reusable
 `GPUCommandGraph` work. Source record batches, null masks, stable row identifiers, and results stay
@@ -52,12 +52,12 @@ index construction, fenced GPU execution, explicit validation readback, and CPU 
 
 Import the dataframe facade only from its optional subpath. Arrow-specific upload helpers belong to
 `@luma.gl/arrow`; generic GPU storage remains in `@luma.gl/gpgpu/gpu-data`, while record batches and
-tables come from `@luma.gl/experimental/gpu-tables`. Neither GPU package requires Apache Arrow as a
+tables come from `@luma.gl/gpu-graph/gpu-tables`. Neither GPU package requires Apache Arrow as a
 runtime dependency.
 
 ```ts
 import {makeGPUAnalyticsTableFromArrowTable} from '@luma.gl/arrow';
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/gpu-graph/gpu-core';
 import {
   GPUDataFrame,
   and,
@@ -65,7 +65,7 @@ import {
   literal,
   parameter,
   type GPUDataFrameQueryParameters
-} from '@luma.gl/experimental/gpu-dataframe';
+} from '@luma.gl/gpu-graph/gpu-dataframe';
 ```
 
 The root `@luma.gl/experimental` entry point does not export `GPUDataFrame`; applications that do

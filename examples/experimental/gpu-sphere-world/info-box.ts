@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {BoxPanelContainer, PanelManager} from '@deck.gl-community/panels';
-import {GPUCommandGraphInspector, type CompiledGPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraphInspector, type CompiledGPUCommandGraph} from '@luma.gl/gpu-graph/gpu-core';
 import {
   configurePanelHostElement,
   makeExampleTabbedPanel,

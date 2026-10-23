@@ -7,7 +7,7 @@ import {Buffer, Texture} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {GPUConstant, GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {GPUTable, GPUTableModel, type GPUInputSchema} from '@luma.gl/experimental/gpu-tables';
+import {GPUTable, GPUTableModel, type GPUInputSchema} from '@luma.gl/gpu-graph/gpu-tables';
 
 const CONSTANT_ATTRIBUTE_SHADER = /* wgsl */ `
 struct VertexInputs {

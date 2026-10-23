@@ -24,7 +24,7 @@ depends on indirect relationships; choose it over connected components when dist
 or a particular starting vertex matters.
 
 ```ts
-import {GPUGraphAlgorithmsBreadthFirstSearch} from '@luma.gl/gpgpu/gpu-graph-algorithms';
+import {GPUGraphAlgorithmsBreadthFirstSearch} from '@luma.gl/gpu-graph/gpu-graph-algorithms';
 
 const search = new GPUGraphAlgorithmsBreadthFirstSearch({
   topology,
@@ -67,7 +67,7 @@ weights can change which route wins. This operation computes routes from **one**
 it does not implement all-pairs routing, negative-weight paths, or A* geographic search.
 
 ```ts
-import {GPUGraphAlgorithmsSingleSourceShortestPath} from '@luma.gl/gpgpu/gpu-graph-algorithms';
+import {GPUGraphAlgorithmsSingleSourceShortestPath} from '@luma.gl/gpu-graph/gpu-graph-algorithms';
 
 const shortestPaths = new GPUGraphAlgorithmsSingleSourceShortestPath({
   topology,

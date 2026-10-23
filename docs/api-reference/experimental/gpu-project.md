@@ -8,7 +8,7 @@ import {ProjectionBenchmark} from '@site/src/components/docs/projection-benchmar
 
 ## Overview
 
-`@luma.gl/experimental/gpu-project` reprojects GPU-resident coordinates through WebGPU command graphs
+`@luma.gl/gpu-graph/gpu-project` reprojects GPU-resident coordinates through WebGPU command graphs
 without requiring native GPU `f64` arithmetic. A JavaScript projection provider defines the
 coordinate-reference-system semantics; adaptive local polynomial patches provide the GPU execution
 strategy.
@@ -66,8 +66,8 @@ published results or cross-machine performance guarantees.
 ## Quick start
 
 ```ts
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
-import {GPUProjection, compileProjectionPlan} from '@luma.gl/experimental/gpu-project';
+import {GPUCommandGraph} from '@luma.gl/gpu-graph/gpu-core';
+import {GPUProjection, compileProjectionPlan} from '@luma.gl/gpu-graph/gpu-project';
 import {projectionEngine} from '@math.gl/geospatial/projection';
 
 const projection = projectionEngine.createProjection({
@@ -114,7 +114,7 @@ by itself does not transform coordinates.
 import {
   compileProjectionPlan,
   createWebMercatorProjection
-} from '@luma.gl/experimental/gpu-project';
+} from '@luma.gl/gpu-graph/gpu-project';
 
 const plan = compileProjectionPlan({
   projection: createWebMercatorProjection(),
@@ -182,7 +182,7 @@ import {
   GPUProjectionProgram,
   invertProjectionProgram,
   type ProjectionProgram
-} from '@luma.gl/experimental/gpu-project';
+} from '@luma.gl/gpu-graph/gpu-project';
 
 const program: ProjectionProgram = {
   precision: 'double-single',
@@ -275,18 +275,18 @@ still rounds at the final origin-relative output boundary.
 
 ## Batch-preserving CPU/GPU table projection
 
-`ProjectionTableTransform` from `@luma.gl/experimental/gpu-project/crs` uses a ready
+`ProjectionTableTransform` from `@luma.gl/gpu-graph/gpu-project/crs` uses a ready
 `prepareCRSProjection()` result for explicit CPU or GPU execution. This first table adapter is
 strictly 2D and requires the default raw-binary64 input format (`uint32x4` on GPU).
 It retains the prepared CPU transform, original spatial references and sampled GPU error metadata.
 Keep the prepared transform and its program unchanged while using the consumer.
 
 ```typescript
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/gpu-graph/gpu-core';
 import {
   prepareCRSProjection,
   ProjectionTableTransform
-} from '@luma.gl/experimental/gpu-project/crs';
+} from '@luma.gl/gpu-graph/gpu-project/crs';
 
 const prepared = prepareCRSProjection({
   from: 'EPSG:4326',
@@ -357,7 +357,7 @@ The adapter rejects indexed tables, missing/constant selected columns, nonpacked
 null bitmaps and wrong-device/non-storage buffers. A batch declaring null rows requires an explicit
 validity column; convert null bitmaps in a source adapter. Arrow ingestion/readback remains in
 `@luma.gl/arrow`, not GPU Project. `GPUProjectionTable` is also exported from the engine-independent
-`@luma.gl/experimental/gpu-project` entry point for already compiled binary64-input programs.
+`@luma.gl/gpu-graph/gpu-project` entry point for already compiled binary64-input programs.
 
 ## Explicit longitude normalization
 
@@ -408,7 +408,7 @@ This is the provider boundary for current math.gl projections and future engine-
 
 ```ts
 import {projectionEngine} from '@math.gl/geospatial/projection';
-import {planProjection} from '@luma.gl/experimental/gpu-project';
+import {planProjection} from '@luma.gl/gpu-graph/gpu-project';
 
 const projection = projectionEngine.createProjection({from: 'EPSG:4326', to: 'EPSG:3857'});
 const result = planProjection({
@@ -456,14 +456,14 @@ the application.
 ## Optional math.gl CRS planner
 
 Install `@math.gl/geospatial` version `~5.0.0-alpha.19` and import the CPU planner from
-`@luma.gl/experimental/gpu-project/crs`. This optional peer is not loaded by the GPU execution
+`@luma.gl/gpu-graph/gpu-project/crs`. This optional peer is not loaded by the GPU execution
 entry point. Planning allocates no GPU resources and returns either
 `{status: 'ready', strategy, program, compiled, reasons}` or `{status: 'unsupported', reasons}`.
 The default is raw binary64 `uint32x4` input and double-single output.
 
 ```ts
-import {planCRSProjection} from '@luma.gl/experimental/gpu-project/crs';
-import {GPUProjectionProgram} from '@luma.gl/experimental/gpu-project';
+import {planCRSProjection} from '@luma.gl/gpu-graph/gpu-project/crs';
+import {GPUProjectionProgram} from '@luma.gl/gpu-graph/gpu-project';
 
 const result = planCRSProjection({
   from: 'EPSG:4326',
@@ -501,7 +501,7 @@ They never infer native formulas from a custom engine's CRS labels.
 
 ```ts
 import {lazyProjectionEngine} from '@math.gl/geospatial/projection/projections/lazy';
-import {prepareCRSProjectionAsync} from '@luma.gl/experimental/gpu-project/crs';
+import {prepareCRSProjectionAsync} from '@luma.gl/gpu-graph/gpu-project/crs';
 
 const prepared = await prepareCRSProjectionAsync({
   engine: lazyProjectionEngine,
@@ -780,7 +780,7 @@ provider's output at the source-domain center; final Float32 rounding is additio
 
 ```ts
 import {parsePROJString} from '@math.gl/geospatial/crs';
-import {planProjectionPipeline} from '@luma.gl/experimental/gpu-project/crs';
+import {planProjectionPipeline} from '@luma.gl/gpu-graph/gpu-project/crs';
 
 const result = planProjectionPipeline({
   pipeline: parsePROJString(`+proj=pipeline
@@ -906,11 +906,11 @@ is unambiguous.
 Benchmark infrastructure is isolated behind an optional package entry point:
 
 ```ts
-import {createWebMercatorProjection} from '@luma.gl/experimental/gpu-project';
+import {createWebMercatorProjection} from '@luma.gl/gpu-graph/gpu-project';
 import {
   runGPUProjectionBenchmark,
   runProjectionBenchmark
-} from '@luma.gl/experimental/gpu-project/benchmarks';
+} from '@luma.gl/gpu-graph/gpu-project/benchmarks';
 
 const options = {
   projection: createWebMercatorProjection(),
@@ -952,7 +952,7 @@ const report = await runProjectionProgramBenchmark(device, {
 });
 ```
 
-Import this helper from `@luma.gl/experimental/gpu-project/benchmarks`. All variants receive the
+Import this helper from `@luma.gl/gpu-graph/gpu-project/benchmarks`. All variants receive the
 same raw binary64 input rows and must share output precision; origin-relative output must also
 share its destination origin. Arithmetic metadata remains separate from output storage. Budgets
 are Euclidean destination-unit errors including native formula, fitting, and output rounding.
@@ -1039,7 +1039,7 @@ The four reproducible fixtures cover Web Mercator, northern/southern UTM, and in
 ```sh
 LUMA_TEST_BROWSER_BENCHMARKS=true VITE_LUPROJ_BENCHMARK_ROWS=65536 \
   yarn test-headless --no-coverage --silent=false --reporter=verbose \
-  modules/experimental/test/gpu-project/projection-program-benchmark.spec.ts
+  modules/gpu-graph/test/gpu-project/projection-program-benchmark.spec.ts
 ```
 
 The opt-in fixtures default to 32 rows; ordinary hardware tests retain the failure-gate and
@@ -1101,7 +1101,7 @@ Reproduce the UTM/Albers physical-batch sweep (same cubic double-single plan and
 ```sh
 VITE_LUPROJ_TABLE_ROWS=4096,65536 VITE_LUPROJ_TABLE_BATCH_ROWS=4096,65536 \
   yarn test-browser-benchmarks --silent=false --reporter=verbose \
-  modules/experimental/test/gpu-project/projection-table-performance.spec.ts
+  modules/gpu-graph/test/gpu-project/projection-table-performance.spec.ts
 ```
 
 This compares the current production CPU table adapter's reusable scalar API, not the fastest
@@ -1125,7 +1125,7 @@ scaling without conflating a Float32 precision reduction with a performance impr
 LUMA_TEST_BROWSER_BENCHMARKS=true \
   VITE_LUPROJ_SWEEP_ROWS=1024,16384,65536 VITE_LUPROJ_SWEEP_CONSUMERS=1,4 \
   yarn test-headless --no-coverage --silent=false --reporter=verbose \
-  modules/experimental/test/gpu-project/projection-performance.spec.ts
+  modules/gpu-graph/test/gpu-project/projection-performance.spec.ts
 ```
 
 Rows are deterministic; each requested count adds nine valid boundary/seam probes and two invalid
@@ -1158,7 +1158,7 @@ import {
   indexProjectionPlan,
   compileProjectionProgram,
   clipProjectionSegment
-} from '@luma.gl/experimental/gpu-project';
+} from '@luma.gl/gpu-graph/gpu-project';
 
 const partition = compileProjectionPartition({
   branches: [

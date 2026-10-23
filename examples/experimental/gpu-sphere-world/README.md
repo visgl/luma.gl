@@ -3,7 +3,7 @@
 Run `yarn start` in this directory. Requires WebGPU. `yarn build` runs strict
 TypeScript checks and builds the standalone example. Debug alias: `sphere-world`.
 
-The example consumes `GPUSphereWorld` from `@luma.gl/gpgpu/gpu-physics`; it does not
+The example consumes `GPUSphereWorld` from `@luma.gl/gpu-graph/gpu-physics`; it does not
 contain a second physics solver. Select 64, 1,024 or 10,000 equal-mass spheres with
 varied radii. State remains GPU-resident and feeds an instanced analytic sphere
 renderer. A single dark cue-ball band is attached to each quaternion orientation,
