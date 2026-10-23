@@ -147,7 +147,7 @@ export class Interactivity {
   }[] = [];
   private startTime = 0;
   private lastTick: number | undefined;
-  private readonly eventOutputs = new Map<number, Record<string, unknown[]>>();
+  private eventOutputs = new Map<number, Record<string, unknown[]>>();
 
   constructor(definition: InteractivityDefinition, options: InteractivityOptions = {}) {
     this.physics = options.physics;
@@ -436,6 +436,8 @@ export class Interactivity {
           );
           follow('out');
         } else if (operation === PHYSICS_PREFIX + 'rigid_body/rayCast') {
+          // Each continuation retains the event and query payloads that activated it.
+          const activationOutputs = new Map(this.eventOutputs);
           const pending = this.physics
             .rayCast(
               vector('rayStart'),
@@ -443,15 +445,21 @@ export class Interactivity {
               number(read('collisionFilterIndex', [-1]))
             )
             .then(hit => {
-              steps = 0;
-              this.eventOutputs.delete(index);
-              if (hit)
-                this.eventOutputs.set(index, {
-                  hitNodeIndex: [hit.node],
-                  hitFraction: [hit.fraction],
-                  hitNormal: [...hit.normal]
-                });
-              follow(hit ? 'hit' : 'miss');
+              const previousOutputs = this.eventOutputs;
+              this.eventOutputs = activationOutputs;
+              try {
+                steps = 0;
+                this.eventOutputs.delete(index);
+                if (hit)
+                  this.eventOutputs.set(index, {
+                    hitNodeIndex: [hit.node],
+                    hitFraction: [hit.fraction],
+                    hitNormal: [...hit.normal]
+                  });
+                follow(hit ? 'hit' : 'miss');
+              } finally {
+                this.eventOutputs = previousOutputs;
+              }
             })
             .catch(error => {
               this.physicsErrors.push(error);
