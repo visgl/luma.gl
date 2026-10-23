@@ -29,7 +29,7 @@ adapted exposure directly and automatically compensates temporal history without
 
 ```ts
 import {Texture} from '@luma.gl/core';
-import {GPUConvolutionBloom, getGPUConvolutionBloomSupport} from '@luma.gl/gpu-graph/gpu-effects';
+import {GPUConvolutionBloom, getGPUConvolutionBloomSupport} from '@luma.gl/graph/gpu-effects';
 
 const support = getGPUConvolutionBloomSupport(device, {width, height, resolutionScale: 0.25});
 if (!support.supported) {
@@ -72,14 +72,14 @@ steady-state dispatches. On devices with `timestamp-query`, create the command e
 
 Optional algorithm entry points keep specialized workflows out of the default experimental bundle:
 
-- `@luma.gl/gpu-graph/geospatial` provides graph-native spatial operations and distance kernels.
-- `@luma.gl/gpu-graph/gpu-project` compiles arbitrary CPU coordinate transformations into
+- `@luma.gl/graph/geospatial` provides graph-native spatial operations and distance kernels.
+- `@luma.gl/graph/gpu-project` compiles arbitrary CPU coordinate transformations into
   GPU-evaluated local projection patches with Float32 and double-single result modes.
-- `@luma.gl/gpu-graph/gpu-trace` keeps execution-trace scenes, process/thread interactions,
+- `@luma.gl/graph/gpu-trace` keeps execution-trace scenes, process/thread interactions,
   dependency focus, and timeline picking separate from generic command-graph primitives.
 
 ## Flow particles
 
 `FlowParticleSimulation` advects fixed-capacity GPU particles through east/north velocity grids on WebGPU and WebGL2. See the [flow particle contract](src/simulation/README.md) for units, geographic bounds, masks, time-step limits, and texture ownership.
 
-Graph scheduling and graph-based processing now live in [`@luma.gl/gpu-graph`](../gpu-graph/README.md), including tables, SQL/dataframes, raster, projection, trace, and volume modules.
+Graph scheduling and graph-based processing now live in [`@luma.gl/graph`](../graph/README.md), including tables, SQL/dataframes, raster, projection, trace, and volume modules.

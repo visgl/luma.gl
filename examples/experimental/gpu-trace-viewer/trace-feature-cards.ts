@@ -75,7 +75,7 @@ export const GPU_CORE_FEATURE_CARDS: readonly TraceFeatureCard[] = [
     capability: 'Primitive library',
     outcome:
       'Composes scans, sorting, traversal, BVHs, reductions, histograms, FFTs, picking, and readback.',
-    surface: '@luma.gl/gpu-graph GPU* APIs'
+    surface: '@luma.gl/graph GPU* APIs'
   },
   {
     capability: 'Contributor composition',

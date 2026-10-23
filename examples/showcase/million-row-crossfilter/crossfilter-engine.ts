@@ -8,10 +8,10 @@ import {
   type CompiledGPUCommandGraph,
   type GPUCommandGraphStats,
   type GraphDataView
-} from '@luma.gl/gpu-graph/gpu-core';
-import {GPUCrossfilter} from '@luma.gl/gpu-graph/gpu-crossfilter';
+} from '@luma.gl/graph/gpu-core';
+import {GPUCrossfilter} from '@luma.gl/graph/gpu-crossfilter';
 import {GPUData} from '@luma.gl/gpgpu/gpu-data';
-import type {GPUDataFrame} from '@luma.gl/gpu-graph/gpu-dataframe';
+import type {GPUDataFrame} from '@luma.gl/graph/gpu-dataframe';
 import {
   CROSS_FILTER_CATEGORY_NAMES,
   CROSS_FILTER_DOMAINS,

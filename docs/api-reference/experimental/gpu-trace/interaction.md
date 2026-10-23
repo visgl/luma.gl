@@ -16,7 +16,7 @@ bidirectional dependency focus, ancestor projection, stable visibility compactio
 scene draw generation.
 
 Import this trace-specific workflow from
-[`@luma.gl/gpu-graph/gpu-trace`](/docs/api-reference/experimental/gpu-trace). Its generic hierarchy,
+[`@luma.gl/graph/gpu-trace`](/docs/api-reference/experimental/gpu-trace). Its generic hierarchy,
 traversal, visibility, command-graph, and indirect-rendering building blocks remain independent
 of the trace domain.
 
@@ -149,7 +149,7 @@ so it can feed `selectedSpans` directly when linked-span focus should follow the
 ## Usage
 
 ```ts
-import {GPUTraceInteraction} from '@luma.gl/gpu-graph/gpu-trace';
+import {GPUTraceInteraction} from '@luma.gl/graph/gpu-trace';
 
 const source = trace.importToGraph(graph);
 

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '@luma.gl/gpu-graph/gpu-core';
+import {addGPUCommandNodes} from '@luma.gl/graph/gpu-core';
 import {ColumnPanel, type Panel} from '@deck.gl-community/panels';
 import {type Binding, Buffer, type Device, type RenderBundle} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
@@ -36,7 +36,7 @@ import {
   GraphVectorView,
   decodeGPUIndexPickInfo,
   getGPUCommandGraphAdapterIdentity
-} from '@luma.gl/gpu-graph/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 import {
   FlatController,
   type FlatControllerPick,
@@ -53,7 +53,7 @@ import {
   GPUTraceTemporalIndex,
   GPUTraceTemporalIndexBuilder,
   GPUTraceTimeBuckets
-} from '@luma.gl/gpu-graph/gpu-trace';
+} from '@luma.gl/graph/gpu-trace';
 import {buildSdfFontAtlas} from '@luma.gl/text';
 import {DictionaryTextRenderer} from '@luma.gl/text/experimental';
 import {

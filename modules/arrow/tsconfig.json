@@ -31,7 +31,7 @@
       "path": "../text"
     },
     {
-      "path": "../gpu-graph"
+      "path": "../graph"
     }
   ]
 }

@@ -13,11 +13,11 @@ import typescript from 'typescript';
 
 const require = createRequire(import.meta.url);
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const packageRoot = path.join(repositoryRoot, 'modules/gpu-graph');
+const packageRoot = path.join(repositoryRoot, 'modules/graph');
 const packageJson = JSON.parse(readFileSync(path.join(packageRoot, 'package.json'), 'utf8'));
 const gpuRasterExport = packageJson.exports?.['./gpu-raster'];
 
-assert.equal(packageJson.name, '@luma.gl/gpu-graph');
+assert.equal(packageJson.name, '@luma.gl/graph');
 assert.notEqual(packageJson.private, true, 'the GPU Graph package is publishable');
 assert.equal(packageJson.sideEffects, false, 'the optional subpath remains side-effect free');
 assert.deepEqual(gpuRasterExport, {
@@ -353,7 +353,7 @@ const temporaryDirectory = mkdtempSync(path.join(tmpdir(), 'luma-gpu-raster-pack
 try {
   const temporaryPackageScope = path.join(temporaryDirectory, 'node_modules', '@luma.gl');
   mkdirSync(temporaryPackageScope, {recursive: true});
-  symlinkSync(packageRoot, path.join(temporaryPackageScope, 'gpu-graph'));
+  symlinkSync(packageRoot, path.join(temporaryPackageScope, 'graph'));
   symlinkSync(path.join(repositoryRoot, 'modules/gpgpu'), path.join(temporaryPackageScope, 'gpgpu'));
   const typeTestPath = path.join(temporaryDirectory, 'index.mts');
   writeFileSync(
@@ -498,12 +498,12 @@ try {
   type GPURasterTileSourceMetadata,
   type RasterDeviceLimits,
   type RasterDispatchStripe
-} from '@luma.gl/gpu-graph/gpu-raster';
+} from '@luma.gl/graph/gpu-raster';
 import type {
   CompiledGPUCommandGraph,
   GPUReductionMask,
   GraphDataView
-} from '@luma.gl/gpu-graph/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 
 // Experimental raster builders retain their own mutation API until their domain migration.
 type RasterCommandBuilder = Pick<GPURasterBandMath, 'addToGraph'>;
@@ -1664,87 +1664,87 @@ void tileLease;
 void tileReader;
 
 // @ts-expect-error Raster algorithms stay isolated from the graph root.
-import {GPURaster as RootGPURaster} from '@luma.gl/gpu-graph';
+import {GPURaster as RootGPURaster} from '@luma.gl/graph';
 void RootGPURaster;
 // @ts-expect-error Pointwise contributors stay isolated from the graph root.
-import {GPURasterNDVI as RootGPURasterNDVI} from '@luma.gl/gpu-graph';
+import {GPURasterNDVI as RootGPURasterNDVI} from '@luma.gl/graph';
 void RootGPURasterNDVI;
 // @ts-expect-error Contour contributors stay isolated from the graph root.
-import {GPURasterContours as RootGPURasterContours} from '@luma.gl/gpu-graph';
+import {GPURasterContours as RootGPURasterContours} from '@luma.gl/graph';
 void RootGPURasterContours;
 // @ts-expect-error Neighborhood contributors stay isolated from the graph root.
-import {GPURasterGaussianBlur as RootGPURasterGaussianBlur} from '@luma.gl/gpu-graph';
+import {GPURasterGaussianBlur as RootGPURasterGaussianBlur} from '@luma.gl/graph';
 void RootGPURasterGaussianBlur;
 // @ts-expect-error Analytical gradient contributors stay isolated from the graph root.
-import {GPURasterGradient as RootGPURasterGradient} from '@luma.gl/gpu-graph';
+import {GPURasterGradient as RootGPURasterGradient} from '@luma.gl/graph';
 void RootGPURasterGradient;
 // @ts-expect-error Gradient-magnitude contributors stay isolated from the graph root.
-import {GPURasterGradientMagnitude as RootGPURasterGradientMagnitude} from '@luma.gl/gpu-graph';
+import {GPURasterGradientMagnitude as RootGPURasterGradientMagnitude} from '@luma.gl/graph';
 void RootGPURasterGradientMagnitude;
 // @ts-expect-error Morphology contributors remain isolated from the graph root.
-import {GPURasterMorphology as RootGPURasterMorphology} from '@luma.gl/gpu-graph';
+import {GPURasterMorphology as RootGPURasterMorphology} from '@luma.gl/graph';
 void RootGPURasterMorphology;
 // @ts-expect-error Composed morphology remains isolated from the graph root.
-import {GPURasterClosing as RootGPURasterClosing} from '@luma.gl/gpu-graph';
+import {GPURasterClosing as RootGPURasterClosing} from '@luma.gl/graph';
 void RootGPURasterClosing;
 // @ts-expect-error Raster connected-component labeling stays isolated from the graph root.
-import {GPURasterConnectedComponents as RootGPURasterConnectedComponents} from '@luma.gl/gpu-graph';
+import {GPURasterConnectedComponents as RootGPURasterConnectedComponents} from '@luma.gl/graph';
 void RootGPURasterConnectedComponents;
 // @ts-expect-error Dense raster component relabeling stays isolated from the graph root.
-import {GPURasterDenseComponents as RootGPURasterDenseComponents} from '@luma.gl/gpu-graph';
+import {GPURasterDenseComponents as RootGPURasterDenseComponents} from '@luma.gl/graph';
 void RootGPURasterDenseComponents;
 // @ts-expect-error Cross-tile region reconciliation stays isolated from the graph root.
-import {GPURasterCrossTileComponents as RootGPURasterCrossTileComponents} from '@luma.gl/gpu-graph';
+import {GPURasterCrossTileComponents as RootGPURasterCrossTileComponents} from '@luma.gl/graph';
 void RootGPURasterCrossTileComponents;
 // @ts-expect-error Raster region measurement stays isolated from the graph root.
-import {GPURasterRegionMeasurements as RootGPURasterRegionMeasurements} from '@luma.gl/gpu-graph';
+import {GPURasterRegionMeasurements as RootGPURasterRegionMeasurements} from '@luma.gl/graph';
 void RootGPURasterRegionMeasurements;
 // @ts-expect-error High-precision raster centroid helpers remain in the raster subpath.
-import {getRasterRegionWorldCentroid as getRootRasterRegionWorldCentroid} from '@luma.gl/gpu-graph';
+import {getRasterRegionWorldCentroid as getRootRasterRegionWorldCentroid} from '@luma.gl/graph';
 void getRootRasterRegionWorldCentroid;
 // @ts-expect-error External raster tile sources remain isolated from the graph root.
-import {GPURasterTileReader as RootGPURasterTileReader} from '@luma.gl/gpu-graph';
+import {GPURasterTileReader as RootGPURasterTileReader} from '@luma.gl/graph';
 void RootGPURasterTileReader;
 // @ts-expect-error Budgeted tile residency stays isolated from the graph root.
-import {GPURasterTileCache as RootGPURasterTileCache} from '@luma.gl/gpu-graph';
+import {GPURasterTileCache as RootGPURasterTileCache} from '@luma.gl/graph';
 void RootGPURasterTileCache;
 // @ts-expect-error Fence-safe graph leases stay isolated from the graph root.
-import {GPURasterTileGraphLease as RootGPURasterTileGraphLease} from '@luma.gl/gpu-graph';
+import {GPURasterTileGraphLease as RootGPURasterTileGraphLease} from '@luma.gl/graph';
 void RootGPURasterTileGraphLease;
 // @ts-expect-error Fence-safe resident tile leases stay isolated from the graph root.
-import {GPURasterTileLease as RootGPURasterTileLease} from '@luma.gl/gpu-graph';
+import {GPURasterTileLease as RootGPURasterTileLease} from '@luma.gl/graph';
 void RootGPURasterTileLease;
 // @ts-expect-error Cumulative halo planners stay isolated from the graph root.
-import {GPURasterTileHaloAssembler as RootGPURasterTileHaloAssembler} from '@luma.gl/gpu-graph';
+import {GPURasterTileHaloAssembler as RootGPURasterTileHaloAssembler} from '@luma.gl/graph';
 void RootGPURasterTileHaloAssembler;
 // @ts-expect-error Graph-native halo assembly stays isolated from the graph root.
-import {GPURasterTileHaloFill as RootGPURasterTileHaloFill} from '@luma.gl/gpu-graph';
+import {GPURasterTileHaloFill as RootGPURasterTileHaloFill} from '@luma.gl/graph';
 void RootGPURasterTileHaloFill;
 // @ts-expect-error Core-only extraction stays isolated from the graph root.
-import {GPURasterTileCoreExtract as RootGPURasterTileCoreExtract} from '@luma.gl/gpu-graph';
+import {GPURasterTileCoreExtract as RootGPURasterTileCoreExtract} from '@luma.gl/graph';
 void RootGPURasterTileCoreExtract;
 // @ts-expect-error Generated numerical overviews stay isolated from the graph root.
-import {GPURasterOverview as RootGPURasterOverview} from '@luma.gl/gpu-graph';
+import {GPURasterOverview as RootGPURasterOverview} from '@luma.gl/graph';
 void RootGPURasterOverview;
 // @ts-expect-error Exact categorical overviews stay isolated from the graph root.
-import {GPURasterCategoricalOverview as RootGPURasterCategoricalOverview} from '@luma.gl/gpu-graph';
+import {GPURasterCategoricalOverview as RootGPURasterCategoricalOverview} from '@luma.gl/graph';
 void RootGPURasterCategoricalOverview;
 // @ts-expect-error Overview spatial metadata helpers stay isolated from the graph root.
-import {makeRasterOverviewMetadata as makeRootRasterOverviewMetadata} from '@luma.gl/gpu-graph';
+import {makeRasterOverviewMetadata as makeRootRasterOverviewMetadata} from '@luma.gl/graph';
 void makeRootRasterOverviewMetadata;
 // @ts-expect-error Global accumulator initialization stays isolated from the graph root.
-import {GPURasterGlobalInitialize as RootGPURasterGlobalInitialize} from '@luma.gl/gpu-graph';
+import {GPURasterGlobalInitialize as RootGPURasterGlobalInitialize} from '@luma.gl/graph';
 void RootGPURasterGlobalInitialize;
 // @ts-expect-error Replayable global histogram merge stays isolated from the graph root.
-import {GPURasterGlobalHistogramMerge as RootGPURasterGlobalHistogramMerge} from '@luma.gl/gpu-graph';
+import {GPURasterGlobalHistogramMerge as RootGPURasterGlobalHistogramMerge} from '@luma.gl/graph';
 void RootGPURasterGlobalHistogramMerge;
 // @ts-expect-error Overflow-aware global percentile stays isolated from the graph root.
-import {GPURasterGlobalPercentile as RootGPURasterGlobalPercentile} from '@luma.gl/gpu-graph';
+import {GPURasterGlobalPercentile as RootGPURasterGlobalPercentile} from '@luma.gl/graph';
 void RootGPURasterGlobalPercentile;
 `
   );
   assert.equal(
-    createRequire(typeTestPath).resolve('@luma.gl/gpu-graph/gpu-raster'),
+    createRequire(typeTestPath).resolve('@luma.gl/graph/gpu-raster'),
     commonJsEntry,
     "the temporary consumer resolves this worktree's experimental package"
   );
@@ -1772,4 +1772,4 @@ void RootGPURasterGlobalPercentile;
   rmSync(temporaryDirectory, {force: true, recursive: true});
 }
 
-console.log('Verified @luma.gl/gpu-graph/gpu-raster ESM, CJS, and declaration imports.');
+console.log('Verified @luma.gl/graph/gpu-raster ESM, CJS, and declaration imports.');

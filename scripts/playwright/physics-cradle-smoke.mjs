@@ -24,8 +24,8 @@ try {
       await Promise.all([
         import(`${root}/modules/core/src/index.ts`),
         import(`${root}/modules/core/src/webgpu/index.ts`),
-        import(`${root}/modules/gpu-graph/src/gpu-core/gpu-command-graph.ts`),
-        import(`${root}/modules/gpu-graph/src/gpu-physics/gpu-rigid-body-world.ts`),
+        import(`${root}/modules/graph/src/gpu-core/gpu-command-graph.ts`),
+        import(`${root}/modules/graph/src/gpu-physics/gpu-rigid-body-world.ts`),
         import(`${root}/examples/experimental/gpu-rigid-body-world/mechanisms.ts`)
       ]);
     const device = await luma.createDevice({adapters: [webgpuAdapter]});

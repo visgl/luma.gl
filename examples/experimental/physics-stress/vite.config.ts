@@ -10,7 +10,7 @@ export default defineConfig({
         'webgpu',
         'constants',
         'gpgpu',
-        'gpu-graph',
+        'graph',
         'experimental'
       ].map(name => [`@luma.gl/${name}`, `${__dirname}/../../../modules/${name}/src`])
     )

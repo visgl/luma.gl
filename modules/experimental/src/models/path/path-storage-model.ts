@@ -13,7 +13,7 @@ import {
 import {DynamicBuffer, Model, type ModelProps} from '@luma.gl/engine';
 import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {type GPUVectorFormat, type VertexList} from '@luma.gl/gpgpu/gpu-data';
-import {planGeneratedBufferBatches} from '@luma.gl/gpu-graph/gpu-tables';
+import {planGeneratedBufferBatches} from '@luma.gl/graph/gpu-tables';
 import {
   createGpuPathExpansionInput,
   createGpuPathGeneratedState,
@@ -21,7 +21,7 @@ import {
   dispatchGpuPathExpansionCompute
 } from './gpu/gpu-path-expansion';
 import {resolvePathStorageInputs, type PathStorageBatchInputs} from './gpu/path-storage-gpu-inputs';
-import type {GPUInputSchema} from '@luma.gl/gpu-graph/gpu-tables';
+import type {GPUInputSchema} from '@luma.gl/graph/gpu-tables';
 
 const SEGMENT_START_POINT_INDICES_COLUMN = 'segmentStartPointIndices';
 const SEGMENT_END_POINT_INDICES_COLUMN = 'segmentEndPointIndices';

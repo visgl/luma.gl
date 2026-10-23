@@ -42,7 +42,7 @@ export default defineConfig(({mode}) => ({
       '@luma.gl/core/webgpu',
       '@luma.gl/effects',
       '@luma.gl/engine',
-      '@luma.gl/gpu-graph/gpu-core',
+      '@luma.gl/graph/gpu-core',
       '@luma.gl/shadertools',
       '@luma.gl/three/interop',
       'three/webgpu',

@@ -23,7 +23,7 @@ import {
   DrawCommandBuffer,
   GPUCommandGraph,
   GPUVirtualGeometrySelection
-} from '@luma.gl/gpu-graph/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 
 const drawCommands = new DrawCommandBuffer(device, {
   type: 'draw-indexed',

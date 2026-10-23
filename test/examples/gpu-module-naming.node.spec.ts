@@ -6,18 +6,18 @@ import {existsSync, readFileSync} from 'node:fs';
 import path from 'node:path';
 import * as experimentalRoot from '@luma.gl/experimental';
 import * as gpgpuRoot from '@luma.gl/gpgpu';
-import * as executionGraph from '@luma.gl/gpu-graph/gpu-graph';
-import * as gpuCore from '@luma.gl/gpu-graph/gpu-core';
+import * as executionGraph from '@luma.gl/graph/gpu-graph';
+import * as gpuCore from '@luma.gl/graph/gpu-core';
 import * as gpuData from '@luma.gl/gpgpu/gpu-data';
-import * as gpuCrossfilter from '@luma.gl/gpu-graph/gpu-crossfilter';
-import * as gpuDataframe from '@luma.gl/gpu-graph/gpu-dataframe';
-import * as gpuGraphModule from '@luma.gl/gpu-graph/gpu-graph-algorithms';
-import * as gpuVectorSearch from '@luma.gl/gpu-graph/gpu-vector-search';
-import * as gpuProject from '@luma.gl/gpu-graph/gpu-project';
-import * as gpuRaster from '@luma.gl/gpu-graph/gpu-raster';
-import * as gpuTables from '@luma.gl/gpu-graph/gpu-tables';
+import * as gpuCrossfilter from '@luma.gl/graph/gpu-crossfilter';
+import * as gpuDataframe from '@luma.gl/graph/gpu-dataframe';
+import * as gpuGraphModule from '@luma.gl/graph/gpu-graph-algorithms';
+import * as gpuVectorSearch from '@luma.gl/graph/gpu-vector-search';
+import * as gpuProject from '@luma.gl/graph/gpu-project';
+import * as gpuRaster from '@luma.gl/graph/gpu-raster';
+import * as gpuTables from '@luma.gl/graph/gpu-tables';
 import * as models from '@luma.gl/experimental/models';
-import * as gpuTrace from '@luma.gl/gpu-graph/gpu-trace';
+import * as gpuTrace from '@luma.gl/graph/gpu-trace';
 import {describe, expect, test} from 'vitest';
 
 const GPGPU_MODULES = ['gpu-data'] as const;
@@ -77,7 +77,7 @@ describe('experimental GPU module naming', () => {
     ) as {exports: Record<string, unknown>};
 
     const graphPackage = JSON.parse(
-      readFileSync(path.join(process.cwd(), 'modules/gpu-graph/package.json'), 'utf8')
+      readFileSync(path.join(process.cwd(), 'modules/graph/package.json'), 'utf8')
     ) as {exports: Record<string, unknown>};
     for (const moduleName of GRAPH_MODULES) {
       expect(graphPackage.exports[`./${moduleName}`], moduleName).toBeDefined();
@@ -115,7 +115,7 @@ describe('experimental GPU module naming', () => {
     }
     for (const moduleName of GRAPH_MODULES) {
       expect(
-        existsSync(path.join(process.cwd(), 'modules/gpu-graph/src', moduleName)),
+        existsSync(path.join(process.cwd(), 'modules/graph/src', moduleName)),
         moduleName
       ).toBe(true);
     }
@@ -133,12 +133,12 @@ describe('experimental GPU module naming', () => {
   test('resolves new package subpaths and rejects removed package paths', () => {
     for (const packagePath of [
       '@luma.gl/gpgpu/gpu-data',
-      '@luma.gl/gpu-graph/gpu-core',
-      '@luma.gl/gpu-graph/gpu-graph-algorithms',
-      '@luma.gl/gpu-graph/gpu-physics',
-      '@luma.gl/gpu-graph/gpu-graph-algorithms/benchmarks',
-      '@luma.gl/gpu-graph/gpu-vector-search',
-      '@luma.gl/gpu-graph/gpu-tables',
+      '@luma.gl/graph/gpu-core',
+      '@luma.gl/graph/gpu-graph-algorithms',
+      '@luma.gl/graph/gpu-physics',
+      '@luma.gl/graph/gpu-graph-algorithms/benchmarks',
+      '@luma.gl/graph/gpu-vector-search',
+      '@luma.gl/graph/gpu-tables',
       '@luma.gl/experimental/models'
     ]) {
       expect(() => import.meta.resolve(packagePath), packagePath).not.toThrow();
@@ -202,7 +202,7 @@ describe('experimental GPU module naming', () => {
     const moduleGroups: Record<string, string> = {'gpu-data': 'GPU Data'};
     const graphReference = reference?.items.find(
       (category): category is DocumentationCategory =>
-        typeof category !== 'string' && category.label === '@luma.gl/gpu-graph'
+        typeof category !== 'string' && category.label === '@luma.gl/graph'
     );
     for (const label of [
       'GPU Core',

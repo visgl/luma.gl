@@ -7,8 +7,8 @@ import {
   GPUCommandGraph,
   type CompiledGPUCommandGraph,
   type GraphDataView
-} from '@luma.gl/gpu-graph/gpu-core';
-import {GPUJacobiPCG} from '@luma.gl/gpu-graph/gpu-core/gpu-pcg';
+} from '@luma.gl/graph/gpu-core';
+import {GPUJacobiPCG} from '@luma.gl/graph/gpu-core/gpu-pcg';
 import {
   applyPoissonCSR,
   makeManufacturedPoissonProblem,

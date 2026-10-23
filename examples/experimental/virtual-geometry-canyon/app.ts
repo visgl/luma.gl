@@ -9,7 +9,7 @@ import {
   GPUCommandGraph,
   GPUVirtualGeometrySelection,
   type CompiledGPUCommandGraph
-} from '@luma.gl/gpu-graph/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 import {Matrix4} from '@math.gl/core';
 import {ColumnPanel, type Panel} from '@deck.gl-community/panels';
 import {

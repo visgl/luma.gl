@@ -9,7 +9,7 @@ import {AnimationLoopTemplate, OrbitControls, type AnimationProps} from '@luma.g
 import {
   GPUCommandGraphInspector,
   type GPUCommandGraphInspectorGraph
-} from '@luma.gl/gpu-graph/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 import {
   GPUPagedSplatRenderer,
   GPUSplatGraphRenderer,

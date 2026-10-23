@@ -8,7 +8,7 @@ import {
   GPUCommandGraph,
   type CompiledGPUCommandGraph,
   type GPUCommandGraphEncoding
-} from '@luma.gl/gpu-graph/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 import {
   GPUGraphAlgorithmsData,
   GPUGraphAlgorithmsBreadthFirstSearch,
@@ -20,7 +20,7 @@ import {
   GPUGraphAlgorithmsSpatialForceLayout,
   GPUGraphAlgorithmsTopology,
   type GPUGraphAlgorithmsAdjacency
-} from '@luma.gl/gpu-graph/gpu-graph-algorithms';
+} from '@luma.gl/graph/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 /** Caller-owned graph input preserving original edge partitions and vertex allocations. */
 export type GPUGraphDeckDataset = {

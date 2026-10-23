@@ -4,8 +4,8 @@
 
 import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import type {GPUCommandGraph, GraphBufferUse, GraphDataView} from '@luma.gl/gpu-graph/gpu-core';
-import type {GPUGraphAlgorithmsForceLayout} from '@luma.gl/gpu-graph/gpu-graph-algorithms';
+import type {GPUCommandGraph, GraphBufferUse, GraphDataView} from '@luma.gl/graph/gpu-core';
+import type {GPUGraphAlgorithmsForceLayout} from '@luma.gl/graph/gpu-graph-algorithms';
 
 const WORKGROUP_SIZE = 256;
 const REPULSION_SAMPLE_COUNT = 4;

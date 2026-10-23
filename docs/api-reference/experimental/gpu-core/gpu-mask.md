@@ -32,7 +32,7 @@ consumer instead needs a dense list and count. `GPUMask` only combines existing 
 not evaluate geometric, temporal, or application-specific predicates itself.
 
 ```ts
-import {GPUMask} from '@luma.gl/gpu-graph/gpu-core';
+import {GPUMask} from '@luma.gl/graph/gpu-core';
 
 graph.add(new GPUMask({
   id: 'visible-focused-records',

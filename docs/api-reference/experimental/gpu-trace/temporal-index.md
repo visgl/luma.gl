@@ -10,7 +10,7 @@ import {GPUTraceViewerExample} from '@site/src/examples';
 
 `GPUTraceTemporalIndex` converts immutable per-batch trace summaries into stable, source-ordered
 candidate lists for the current viewport and semantic zoom level. It is exported from
-`@luma.gl/gpu-graph/gpu-trace` because time intervals, span duration, and trace renderer groups
+`@luma.gl/graph/gpu-trace` because time intervals, span duration, and trace renderer groups
 are domain concepts; its scan and stable compaction stages reuse generic GPU Core primitives.
 
 <GPUTraceViewerExample embedded />
@@ -27,7 +27,7 @@ flickering as the view changes.
 import {
   GPUTraceTemporalIndex,
   GPUTraceTemporalIndexBuilder
-} from '@luma.gl/gpu-graph/gpu-trace';
+} from '@luma.gl/graph/gpu-trace';
 
 new GPUTraceTemporalIndexBuilder({
   id: 'timeline-index-builder',

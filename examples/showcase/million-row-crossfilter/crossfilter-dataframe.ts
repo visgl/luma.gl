@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUCommandGraph, GraphDataView} from '@luma.gl/gpu-graph/gpu-core';
-import {GPUGroupAggregation} from '@luma.gl/gpu-graph/gpu-core';
+import type {GPUCommandGraph, GraphDataView} from '@luma.gl/graph/gpu-core';
+import {GPUGroupAggregation} from '@luma.gl/graph/gpu-core';
 import {GPUVector, type GPUData} from '@luma.gl/gpgpu/gpu-data';
-import {GPUTable} from '@luma.gl/gpu-graph/gpu-tables';
-import {GPUDataFrame} from '@luma.gl/gpu-graph/gpu-dataframe';
+import {GPUTable} from '@luma.gl/graph/gpu-tables';
+import {GPUDataFrame} from '@luma.gl/graph/gpu-dataframe';
 import {CROSS_FILTER_CATEGORY_NAMES} from './crossfilter-data';
 
 export type CrossfilterDataFrameSchema = {

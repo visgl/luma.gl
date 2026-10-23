@@ -20,7 +20,7 @@ import {
   GPURecordBatch,
   GPUTable,
   TableTransform
-} from '@luma.gl/gpu-graph/gpu-tables';
+} from '@luma.gl/graph/gpu-tables';
 import * as arrow from 'apache-arrow';
 import {
   COMPUTE_SHADER_LAYOUT,
