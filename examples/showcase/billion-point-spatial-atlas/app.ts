@@ -2409,6 +2409,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
         this.graphInspectorElement = graphInspectorElement;
         this.graphInspectorPanel = graphInspectorElement
           ? new GPUCommandGraphInspectorPanel(graphInspectorElement, {
+              inspector: this.graphInspector,
               graphLabels: ATLAS_GRAPH_LABELS,
               counterLabels: ATLAS_COUNTER_LABELS
             })

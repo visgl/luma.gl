@@ -28,7 +28,7 @@ const BIN_COUNT = 1024;
 export default class TimeSeriesExample extends AnimationLoopTemplate {
   static info = makeExamplePanelHostHtml();
   readonly graphInspector = new GPUCommandGraphInspector({maxSamples: 90});
-  readonly graphDebugPanel = new GPUCommandGraphDebugPanel();
+  readonly graphDebugPanel = new GPUCommandGraphDebugPanel({inspector: this.graphInspector});
   readonly controls = document.createElement('div');
   readonly panels: ExamplePanelManager;
   readonly device: Device;

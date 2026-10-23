@@ -405,6 +405,15 @@ function summarizeResource(resource: GraphResourceUse): GPUCommandGraphResourceS
     usage: resource.usage,
     width: texture.width,
     height: texture.height,
+    ...('texture' in texture
+      ? {
+          baseMipLevel: texture.baseMipLevel,
+          baseArrayLayer: texture.baseArrayLayer,
+          mipLevelCount: texture.mipLevelCount,
+          arrayLayerCount: texture.arrayLayerCount,
+          aspect: texture.aspect
+        }
+      : {}),
     ...('format' in texture ? {format: texture.format, depth: texture.depth} : {})
   });
 }

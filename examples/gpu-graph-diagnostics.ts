@@ -15,9 +15,9 @@ import {GPUTracePanel} from './gpu-trace-panel';
 
 /** Example-owned diagnostics; the renderer remains responsible for queue submission. */
 export class GPUGraphDiagnostics {
-  readonly inspectorPanel = new GPUCommandGraphDebugPanel();
-  readonly tracePanel: GPUTracePanel;
   private readonly inspector = new GPUCommandGraphInspector();
+  readonly inspectorPanel = new GPUCommandGraphDebugPanel({inspector: this.inspector});
+  readonly tracePanel: GPUTracePanel;
   private readonly graphs = new Map<string, GPUCommandGraphInspectorGraph>();
   private readonly sampleCounts = new Map<string, number>();
   private latestEncoding: GPUCommandGraphEncoding | null = null;

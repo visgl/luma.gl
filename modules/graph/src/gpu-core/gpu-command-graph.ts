@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {readGPUResourcePreview, type GPUResourcePreview} from './gpu-resource-preview';
 import {Buffer, Texture} from '@luma.gl/core';
 import type {
   CommandEncoder,
@@ -548,7 +549,8 @@ function makeGPUIndirectConditionalComputePass(
  * Synchronous encoding statistics plus optional explicit GPU timing readback.
  *
  * Creating this result never maps a buffer, submits commands, or waits for the GPU. Call
- * `readTimings()` only after the caller submits the encoded command buffer.
+ * `readTimings()` and `readResource()` only after the caller submits the encoded command buffer.
+ * Resource reads inspect current allocations and may submit separate diagnostic copies.
  */
 export class GPUCommandGraphEncoding {
   /** CPU encoding statistics available immediately after `encode()`. */
@@ -566,7 +568,8 @@ export class GPUCommandGraphEncoding {
       node => node.stats.type === 'compute' && node.stats.condition?.outcome !== 'skipped'
     ).length,
     cpuEncodeStartTimeMilliseconds?: number,
-    cpuEncodeEndTimeMilliseconds?: number
+    cpuEncodeEndTimeMilliseconds?: number,
+    readonly readResource?: (nodeId: string, resourceIndex: number) => Promise<GPUResourcePreview>
   ) {
     this.nodes = nodes;
     this.canReadGPUTimings = nodes.some(node => node.timestamp !== undefined);
@@ -1784,7 +1787,32 @@ export class CompiledGPUGraph<Parameters = void> {
       encodingEndTime - encodingStartTime,
       computePassCount,
       encodingStartTime,
-      encodingEndTime
+      encodingEndTime,
+      async (nodeId, resourceIndex) => {
+        if (this.destroyed) throw new Error('Graph has been destroyed.');
+        const nodeIndex = this.compiledNodes.findIndex(({node}) => node.id === nodeId);
+        const use = this.compiledNodes[nodeIndex]?.node.resources?.[resourceIndex];
+        const summary = this.preflight.nodes[nodeIndex]?.resources?.[resourceIndex];
+        if (!use || !summary) throw new Error('Resource is unavailable.');
+        if ('externalTexture' in use) throw new Error('External images cannot be read back.');
+        const handle =
+          'buffer' in use ? getBufferHandle(use.buffer) : getTextureHandle(use.texture);
+        if ('frameScoped' in handle && handle.frameScoped)
+          throw new Error('Frame textures expire after presentation.');
+        const resource = 'buffer' in use ? getBuffer(use.buffer) : getTexture(use.texture);
+        // A pooled allocation may now hold a later logical resource. Never label those bytes as this resource.
+        const aliases = resource instanceof Buffer ? this.transientBuffers : this.transientTextures;
+        if (
+          handle.transient &&
+          [...aliases].some(
+            ([candidate, allocation]) => candidate !== handle && allocation === resource
+          )
+        )
+          throw new Error(
+            'Transient allocation is reused; logical contents are no longer available.'
+          );
+        return readGPUResourcePreview(resource, summary);
+      }
     );
   }
 

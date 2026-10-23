@@ -48,6 +48,7 @@ export function createSphereInfoBox(
     if (!inspectorRoot) return;
     inspectorPanel?.destroy();
     inspectorPanel = new GPUCommandGraphInspectorPanel(inspectorRoot, {
+      inspector,
       graphLabels: {[graph.id]: 'Sphere physics'},
       nodeLabels: Object.fromEntries(
         graph.stats.nodeOrder.map(id => [

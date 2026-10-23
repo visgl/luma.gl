@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {describe, expect, test} from 'vitest';
+import {describe, expect, test, vi} from 'vitest';
 import {
   GPUCommandGraphInspector,
   type GPUCommandGraphCapabilities,
@@ -232,6 +232,86 @@ test('GPU Graph tooltips preserve descriptions as plain text', () => {
     panel.destroy();
     expect(tooltip.isConnected).toBe(false);
     expect(host.querySelector('contacts')).toBeNull();
+  } finally {
+    panel.destroy();
+    host.remove();
+  }
+});
+
+test('resource tab shows textures, reads selected data and ignores stale hover results', async () => {
+  const inspector = new GPUCommandGraphInspector();
+  inspector.registerGraph({
+    id: 'resources',
+    stats: EMPTY_GRAPH_STATS,
+    capabilities: GRAPH_CAPABILITIES
+  });
+  let complete: ((value: {data: Uint8Array}) => void) | undefined;
+  const read = vi
+    .spyOn(inspector, 'readResource')
+    .mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          complete = resolve;
+        })
+    )
+    .mockResolvedValue({
+      data: new Uint8Array([10, 20, 30, 255]),
+      width: 1,
+      height: 1,
+      format: 'rgba8unorm'
+    });
+  const host = document.createElement('div');
+  document.body.append(host);
+  const panel = new GPUCommandGraphInspectorPanel(host, {inspector});
+  try {
+    panel.update({
+      graphs: [
+        {
+          ...inspector.getSnapshot().graphs[0],
+          nodes: [
+            {
+              id: 'draw',
+              type: 'render',
+              cpu: {sampleCount: 0},
+              gpu: {sampleCount: 0},
+              resources: [
+                {id: '<buffer>', kind: 'buffer', usage: 'storage-read', byteLength: 4},
+                {
+                  id: 'image',
+                  kind: 'texture',
+                  usage: 'sampled',
+                  width: 1,
+                  height: 1,
+                  format: 'rgba8unorm'
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    });
+    expect(read).not.toHaveBeenCalled();
+    host.querySelector<HTMLButtonElement>('[data-inspector-tab="resources"]')!.click();
+    const rows = host.querySelectorAll<HTMLElement>('[data-resource-key]');
+    expect(rows).toHaveLength(2);
+    expect(rows[0].textContent).toContain('<buffer>');
+    expect(rows[0].querySelector('buffer')).toBeNull();
+    rows[0].dispatchEvent(new MouseEvent('mouseover', {bubbles: true}));
+    const tooltip = document.querySelector<HTMLElement>('[data-gpu-graph-tooltip]')!;
+    expect(tooltip.textContent).toContain('Reading');
+    rows[0].dispatchEvent(new MouseEvent('mouseout', {bubbles: true}));
+    rows[1].click();
+    await vi.waitFor(() =>
+      expect(host.querySelector('[data-resource-viewer]')!.textContent).toContain('10, 20, 30, 255')
+    );
+    expect(host.querySelector('[data-resource-viewer] canvas')).not.toBeNull();
+    complete!({data: new Uint8Array([99])});
+    await Promise.resolve();
+    expect(tooltip.hidden).toBe(true);
+    expect(host.querySelector('[data-resource-viewer]')!.textContent).not.toContain('99');
+    expect(read).toHaveBeenCalledTimes(2);
+    host.querySelector<HTMLButtonElement>('[data-resource-refresh]')!.click();
+    await vi.waitFor(() => expect(read).toHaveBeenCalledTimes(3));
   } finally {
     panel.destroy();
     host.remove();

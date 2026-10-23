@@ -462,6 +462,7 @@ export default class GPUTraceSceneAnimationLoopTemplate extends AnimationLoopTem
     this.controls = root;
     const inspectorHost = root.querySelector<HTMLElement>('[data-scene-trace-inspector]')!;
     this.inspectorPanel = new GPUCommandGraphInspectorPanel(inspectorHost, {
+      inspector: this.graphInspector,
       graphLabels: {[this.resources.compiled.id]: 'Scene interaction + picking + draw'}
     });
     this.inspectorPanel.update(this.graphInspector.getSnapshot(), this.resources.compiled.id);

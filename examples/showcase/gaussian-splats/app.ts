@@ -903,7 +903,9 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
 
     if (this.graphInspector && graphDetails && graphInspectorElement) {
       graphDetails.hidden = false;
-      const inspectorPanel = new GPUCommandGraphInspectorPanel(graphInspectorElement);
+      const inspectorPanel = new GPUCommandGraphInspectorPanel(graphInspectorElement, {
+        inspector: this.graphInspector
+      });
       this.graphInspectorPanels.push(inspectorPanel);
       this.controlDisposers.push(() => {
         inspectorPanel.destroy();
