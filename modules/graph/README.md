@@ -11,6 +11,7 @@ import {GPUDataFrame} from '@luma.gl/graph/gpu-dataframe';
 The root exposes execution graph scheduling, compilation, encoding, inspection, and autotuning. Domain APIs use explicit subpaths:
 
 - `gpu-core`
+- `shader-pipeline`
 - `gpu-graph-algorithms`
 - `gpu-parse`
 - `gpu-vector-search`

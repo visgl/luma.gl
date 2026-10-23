@@ -169,6 +169,11 @@
       "types": "./dist/gpu-effects/index.d.ts",
       "import": "./dist/gpu-effects/index.js",
       "require": "./dist/gpu-effects/index.cjs"
+    },
+    "./shader-pipeline": {
+      "types": "./dist/shader-pipeline/index.d.ts",
+      "import": "./dist/shader-pipeline/index.js",
+      "require": "./dist/shader-pipeline/index.cjs"
     }
   },
   "peerDependencies": {

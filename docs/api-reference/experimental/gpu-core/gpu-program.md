@@ -189,3 +189,73 @@ fields plus `external`. `program.textureView(texture, props)` selects subresourc
 storage. `GPUProgramCompiler.compile()` accepts optional `textures` defaults; imported textures may
 also be supplied when encoding. `compilation.textures` exposes logical graph texture handles.
 Custom lowerers resolve storage with `resolveTexture()` and views with `resolveTextureView()`.
+
+## Shader pipelines
+
+Shader pipelines are available from `@luma.gl/graph/shader-pipeline`:
+
+```typescript
+import {Texture} from '@luma.gl/core';
+import {GPUProgram, GPUProgramCompiler} from '@luma.gl/graph/gpu-core';
+import {
+  GPUShaderPipeline,
+  registerShaderPipelineOperations
+} from '@luma.gl/graph/shader-pipeline';
+
+const program = new GPUProgram({id: 'image-processing'});
+const input = program.texture('input', {
+  format: 'rgba8unorm', width, height, usage: Texture.SAMPLE, external: true
+});
+const intermediate = program.texture('intermediate', {
+  format: 'rgba8unorm', width, height, usage: Texture.SAMPLE | Texture.RENDER
+});
+const output = program.texture('output', {
+  format: 'rgba8unorm', width, height,
+  usage: Texture.RENDER | Texture.COPY_SRC, external: true
+});
+program.add([
+  new GPUShaderPipeline({
+    id: 'blur', input, output: intermediate, shaderPasses: [blurPass]
+  }),
+  new GPUShaderPipeline({
+    id: 'color', input: intermediate, output, shaderPasses: [colorPass]
+  })
+]);
+const compiler = new GPUProgramCompiler(device);
+registerShaderPipelineOperations(compiler);
+const compilation = compiler.compile(program, {
+  textures: {input: sourceTexture, output: destinationTexture}
+});
+// Additional operations can use compilation.textures handles before graph compilation.
+const executable = compilation.graph.compile();
+const encoder = device.createCommandEncoder();
+executable.encode(encoder, {parameters: undefined});
+device.submit(encoder.finish());
+// Retain executable for repeated encoding. Destroy it when no longer needed.
+```
+
+`GPUShaderPipeline` reuses `ShaderPass` and `CompositeShaderPass` definitions,
+including named transient targets, subpasses, texture routing, target scales,
+samplers, and supported WebGPU compute replacements. Each actual pass is visible
+to graph scheduling and diagnostics. Source normalization and final output draws
+are explicit nodes. Intermediate allocations and compiled models belong to the
+compiled graph; input and output imports remain caller-owned.
+
+`uniforms` supplies module-indexed defaults. `getUniforms(parameters)` supplies
+per-encoding overrides. `bindings` maps additional sampled texture names to
+program texture values. Bindings are declared at compilation so resource hazards
+remain visible. Pass preparation records uniform uploads before the enclosing
+render or compute pass, including when several encodings share one command buffer.
+
+This first integration supports WebGPU and stateless pipelines. History targets
+and GPU-predicated render pipelines are rejected at compilation. It does not
+replace `ShaderPassRenderer` yet; that renderer retains the existing WebGL and
+history behavior. Resize, temporal history, presentation, external image bindings,
+and buffer bindings require further integration. It never evaluates or submits a
+private graph inside the pipeline operation.
+
+Pipeline `input`, `output`, and additional sampled `bindings` accept program textures or explicit
+color-texture views. Use `program.textureView()` to select a 2D mip/layer from array storage; the
+pipeline uses the selected view extent, not the backing texture extent. Outputs select one mip and
+layer and are single-sampled. General texture resource ownership is defined by the foundation's
+[buffer and texture guide](/docs/api-reference/experimental/gpu-core/resources).
