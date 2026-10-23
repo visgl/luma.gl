@@ -197,7 +197,13 @@ export class SimpleGraphLowering {
     this.outputs.set(id, new GPUSimpleGraphOperation({id, evaluator}));
     const chunks =
       evaluator instanceof GPUVectorEvaluator ? evaluator.gpuDataEvaluators : [evaluator];
-    if (chunks.every(chunk => !chunk.source)) this.inputs.set(id, evaluator);
+    if (chunks.every(chunk => !chunk.source)) this.registerInput(id, evaluator);
+  }
+
+  private registerInput(id: string, evaluator: GPUDataEvaluator | GPUVectorEvaluator): void {
+    // An invalidation name must identify exactly one input, including semantic vector bindings.
+    assert(!this.inputs.has(id) || this.inputs.get(id) === evaluator);
+    this.inputs.set(id, evaluator);
   }
 
   private resolveVector(vector: GPUProgramVector<'float32'>): GPUVectorEvaluator {
@@ -225,7 +231,7 @@ export class SimpleGraphLowering {
     );
     this.owned.add(evaluator);
     this.vectors.set(vector, evaluator);
-    this.inputs.set(vector.id, evaluator);
+    this.registerInput(vector.id, evaluator);
     return evaluator;
   }
 }
