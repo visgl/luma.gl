@@ -242,7 +242,13 @@ export class VirtualGPUTableRenderer {
       }
     }
     if (changed) {
+      const container = this.elements.scrollContainer;
+      const atRightEdge = container.scrollLeft + container.clientWidth >= container.scrollWidth - 1;
       this.applyGridLayout();
+      if (atRightEdge) {
+        container.scrollLeft = container.scrollWidth;
+        this.syncHeaderScroll();
+      }
     }
   }
 

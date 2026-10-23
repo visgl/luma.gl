@@ -326,14 +326,60 @@ change its submission policy, fuse additional shaders, or replace the command-gr
 
 ### Deliberate POC limits
 
-Only single-chunk `GPUDataEvaluator` evaluation and opt-in WebGPU row handlers are supported:
+`GPUDataEvaluator`, chunk-preserving `GPUVectorEvaluator`, and opt-in WebGPU row handlers are supported:
 arithmetic, dot, equalAll, fround, interleave, length, select, and swizzle. CPU fallback,
-`GPUVectorEvaluator`, multi-pass extent, gather, segmentedMap, sequence, color conversion,
+multi-pass extent, gather, segmentedMap, sequence, color conversion,
 and raw-byte casts are not included. Unsupported handlers fail explicitly rather than internally
 submitting. The existing immediate-submission API remains available for those operations.
 
-Before promoting this API, extend supported handlers and chunk-preserving vector evaluation,
+Before promoting this API, extend supported handlers,
 measure representative deck.gl frame workloads, and decide whether this execution scope should
 instead lower into the existing GPU command graph. Caller-owned encoders and a coordinated
 submission receipt would also need an explicit lifetime design; a bare `submit: false` flag is
 insufficient.
+
+## Inspection metadata
+
+`GPUDataEvaluator.getInspection()` and `GPUVectorEvaluator.getInspection()` return an
+immutable snapshot of the lazy dependency graph without allocating GPU resources,
+resolving backend handlers, executing work, or reading back data. `outputs` contains
+ordered node references (one per vector chunk); `nodes` describes operation names,
+dependencies, layout, canonical format when representable, and current evaluation state.
+Shared evaluators appear once, even when several chunks reference them. IDs are local
+to each snapshot. Nodes describe execution dependencies after expression fusion, so
+an authored arithmetic chain may appear as one operation. Snapshots contain no buffer
+handles or CPU payloads. Request another snapshot to observe later evaluation state.
+
+```typescript
+const inspection = vectorEvaluator.getInspection();
+for (const node of inspection.nodes) {
+  console.log(node.id, node.operation, node.dependencies, node.format);
+}
+```
+
+## Vector evaluation scopes
+
+`GPUEvaluationScope.evaluate()` accepts both data and vector evaluators. On WebGPU,
+vector chunks are recorded sequentially into the scope's encoder, preserving their
+order and boundaries and reusing shared dependencies. Supported backend handlers
+must explicitly support deferred submission.
+
+```typescript
+const scope = new GPUEvaluationScope(device);
+try {
+  const vector = await scope.evaluate(vectorEvaluator);
+  // Bind vector chunks in further commands on scope.commandEncoder here.
+  scope.submit();
+} finally {
+  scope.cancel(); // Harmless after submission; discards work on failure.
+}
+```
+
+Await each evaluation before starting another or submitting. Pending outputs must
+not be read or consumed outside this encoder until submission. Evaluators and their
+chunks, including cached outputs, remain retained until submission or cancellation.
+Cancellation discards newly cached outputs and preserves previously evaluated ones;
+a failing chunk cancels the whole scope. Borrowed buffers must remain alive and
+unchanged until submission. Ordinary `evaluate()` retains its existing caching and
+parallel chunk evaluation behavior. These APIs belong to `@luma.gl/gpgpu` and do not
+depend on `@luma.gl/graph`.

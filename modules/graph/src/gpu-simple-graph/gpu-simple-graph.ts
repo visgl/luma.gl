@@ -16,7 +16,7 @@ import {
   type GPUOperationLike,
   type GPUOperationTree,
   type GPUProgramOperation
-} from '@luma.gl/gpu-graph/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 import {
   GPUSimpleGraphOperation,
   getSimpleGraphEvaluatorFormat,

@@ -4,7 +4,7 @@
 
 import {describe, expect, it, vi} from 'vitest';
 import {GPUDataEvaluator, GPUVectorEvaluator, add, multiply} from '@luma.gl/gpgpu';
-import {GPUSimpleGraph, GPUSimpleGraphOperation} from '@luma.gl/gpu-graph/gpu-simple-graph';
+import {GPUSimpleGraph, GPUSimpleGraphOperation} from '@luma.gl/graph/gpu-simple-graph';
 import {
   GPUProgram,
   GPUProgramScalarLiteral,
@@ -12,7 +12,7 @@ import {
   GPUProgramVectorMADD,
   GPULoopOperation,
   composite
-} from '@luma.gl/gpu-graph/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 import {NullDevice} from '@luma.gl/test-utils';
 
 describe('GPUSimpleGraph prototype', () => {

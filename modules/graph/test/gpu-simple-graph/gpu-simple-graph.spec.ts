@@ -7,7 +7,7 @@ import {GPUData} from '@luma.gl/gpgpu/gpu-data';
 import {expect, it} from 'vitest';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {GPUDataEvaluator, add, multiply} from '@luma.gl/gpgpu';
-import {GPUSimpleGraph, GPUSimpleGraphOperation} from '@luma.gl/gpu-graph/gpu-simple-graph';
+import {GPUSimpleGraph, GPUSimpleGraphOperation} from '@luma.gl/graph/gpu-simple-graph';
 import {
   GPUProgram,
   GPUProgramScalarLiteral,
@@ -15,7 +15,7 @@ import {
   GPUProgramVectorMADD,
   GPUProgramCompiler,
   composite
-} from '@luma.gl/gpu-graph/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 
 for (const [backend, getDevice] of [
   ['webgl', getWebGLTestDevice],

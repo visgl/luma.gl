@@ -1,13 +1,13 @@
 # GPUSimpleGraph
 
-A thin evaluator-backed executor using GPUOperation metadata and GPUCompositeOperation grouping. Import it from `@luma.gl/gpu-graph/gpu-simple-graph`.
+A thin evaluator-backed executor using GPUOperation metadata and GPUCompositeOperation grouping. Import it from `@luma.gl/graph/gpu-simple-graph`.
 
 `GPUSimpleGraphOperation` implements the shared semantic operation interface. Its evaluator still owns execution, fusion, caching, backend selection, and results. GPGPU needs no changes for this adapter.
 
 ```typescript
 import {GPUDataEvaluator, multiply} from '@luma.gl/gpgpu';
-import {GPUProgram, composite} from '@luma.gl/gpu-graph/gpu-core';
-import {GPUSimpleGraph, GPUSimpleGraphOperation} from '@luma.gl/gpu-graph/gpu-simple-graph';
+import {GPUProgram, composite} from '@luma.gl/graph/gpu-core';
+import {GPUSimpleGraph, GPUSimpleGraphOperation} from '@luma.gl/graph/gpu-simple-graph';
 
 const input = GPUDataEvaluator.fromArray(new Float32Array([1, 2, 3]), {size: 1});
 const output = multiply(input, 2);
@@ -33,7 +33,7 @@ operations without changing their definitions or the full graph compiler:
 ```typescript
 import {
   GPUProgram, GPUProgramScalarLiteral, GPUProgramVectorMADD
-} from '@luma.gl/gpu-graph/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 
 const program = new GPUProgram();
 const input = program.vector('input', 'float32', inputVector.length, {external: true});

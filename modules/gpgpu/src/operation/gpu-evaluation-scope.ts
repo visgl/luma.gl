@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {GPUVectorEvaluator} from './gpu-vector-evaluator';
 import type {CommandEncoder, Device} from '@luma.gl/core';
 import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUDataEvaluator, GPUDataEvaluatorEvaluateOptions} from './gpu-data-evaluator';
@@ -10,7 +11,7 @@ import type {GPUDataEvaluator, GPUDataEvaluatorEvaluateOptions} from './gpu-data
  * Experimental WebGPU evaluation scope with explicit submission.
  *
  * @remarks
- * This proof of concept supports single-chunk evaluators and opt-in WebGPU handlers.
+ * Supports data and chunk-preserving vector evaluators with opt-in WebGPU handlers.
  * Await each evaluation before starting another or submitting. Returned vectors can be
  * bound by later commands on this encoder, but must not be read or used elsewhere until
  * submission. Borrowed buffers must remain alive and unchanged until submission.
@@ -36,7 +37,7 @@ export class GPUEvaluationScope {
 
   /** Encodes an evaluator and its dependencies without submitting or waiting for GPU completion. */
   async evaluate(
-    evaluator: GPUDataEvaluator,
+    evaluator: GPUDataEvaluator | GPUVectorEvaluator,
     options: Omit<GPUDataEvaluatorEvaluateOptions, 'scope'> = {}
   ): Promise<GPUVector> {
     this.assertOpen();

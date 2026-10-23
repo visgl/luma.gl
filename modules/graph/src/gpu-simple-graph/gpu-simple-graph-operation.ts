@@ -5,7 +5,7 @@
 import {vertexFormatDecoder} from '@luma.gl/core';
 import type {GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {GPUDataEvaluator, GPUVectorEvaluator} from '@luma.gl/gpgpu';
-import type {GPUOperation, GPUOperationMetadata} from '@luma.gl/gpu-graph/gpu-core';
+import type {GPUOperation, GPUOperationMetadata} from '@luma.gl/graph/gpu-core';
 
 export type GPUSimpleGraphEvaluator = GPUDataEvaluator | GPUVectorEvaluator;
 

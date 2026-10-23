@@ -18,7 +18,7 @@ import {
   GPUProgramVectorMADD,
   type GPUProgramBindings,
   type GPUProgramVector
-} from '@luma.gl/gpu-graph/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 import {GPUSimpleGraphOperation} from './gpu-simple-graph-operation';
 
 export type SimpleOperation =

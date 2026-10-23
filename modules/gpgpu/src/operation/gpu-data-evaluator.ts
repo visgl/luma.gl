@@ -1,6 +1,7 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+import {inspectEvaluators, type GPUEvaluatorInspection} from './gpu-evaluator-inspection';
 import {
   Device,
   Buffer,
@@ -379,6 +380,11 @@ export class GPUDataEvaluator {
   /** Whether a single-chunk `GPUVector` has been materialized for this evaluator. */
   get evaluated(): boolean {
     return Boolean(this._gpuVector);
+  }
+
+  /** Returns metadata without evaluating or reading GPU resources. */
+  getInspection(): GPUEvaluatorInspection {
+    return inspectEvaluators([this]);
   }
 
   /** Optional debug id. */

@@ -222,7 +222,7 @@ async function evaluateSimpleGraph(
   expressionInputs: Parameters<typeof evaluateExpression>[1],
   output: GPUDataEvaluator
 ): Promise<number> {
-  const {GPUSimpleGraph} = await import('@luma.gl/gpu-graph/gpu-simple-graph');
+  const {GPUSimpleGraph} = await import('@luma.gl/graph/gpu-simple-graph');
   const graph = new GPUSimpleGraph(device);
   for (const [name, input] of Object.entries(expressionInputs)) {
     if (input instanceof GPUDataEvaluator) {

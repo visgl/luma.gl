@@ -1439,7 +1439,7 @@ export const GPGPUExample: React.FC<{useSimpleGraph?: boolean}> = ({useSimpleGra
       <style>{GPGPU_EXAMPLE_STYLE}</style>
       <main id="app" className="gpgpu-showcase">
         <DeviceTabs devices={useSimpleGraph ? ['webgpu', 'webgl2'] : ['webgpu']} style={{marginBottom: 16}} />
-        <h1>{useSimpleGraph ? '@luma.gl/gpu-graph SimpleGraph showcase' : '@luma.gl/gpgpu evaluator showcase'}</h1>
+        <h1>{useSimpleGraph ? '@luma.gl/graph SimpleGraph showcase' : '@luma.gl/gpgpu evaluator showcase'}</h1>
         <p className="subtitle">
           {useSimpleGraph
             ? 'Arrow-backed inputs and expression outputs are composed as SimpleGraph operations and evaluated on WebGPU or WebGL2.'
