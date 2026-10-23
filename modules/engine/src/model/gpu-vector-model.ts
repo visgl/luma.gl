@@ -785,7 +785,9 @@ export class GPUVectorModel {
 
   /** Replaces per-vertex mesh vectors while preserving supplemental attributes. */
   setGeometryVectors(vectors: GPUVectorModelAttributes, bufferLayouts?: BufferLayout[]): void {
-    bufferLayouts ??= this.getExplicitVectorLayouts(vectors);
+    bufferLayouts ??=
+      this.getExplicitVectorLayouts(vectors) ??
+      this.getExplicitVectorLayouts(vectors, this.geometryVectorBindings.sourceLayouts);
     validateGPUVectorBatchStructure(vectors);
     if (!this.isInstanced || this.attributeVectorBindings.vertexCount !== undefined)
       validateGPUVectorBatchStructure([
@@ -806,7 +808,9 @@ export class GPUVectorModel {
 
   /** Replaces supplemental vectors; instanced models default these inputs to instance step mode. */
   setAttributeVectors(vectors: GPUVectorModelAttributes, bufferLayouts?: BufferLayout[]): void {
-    bufferLayouts ??= this.getExplicitVectorLayouts(vectors);
+    bufferLayouts ??=
+      this.getExplicitVectorLayouts(vectors) ??
+      this.getExplicitVectorLayouts(vectors, this.attributeVectorBindings.sourceLayouts);
     if (
       this.isInstanced === undefined &&
       (bufferLayouts?.some(layout => layout.stepMode === 'instance') ||
@@ -882,7 +886,7 @@ export class GPUVectorModel {
     }
     this.setIndexBuffer(chunk?.buffer ?? null);
     this.indexVector = vector;
-    this.setIndexCount(vector?.length);
+    this.indexCount = vector?.length;
     this.setDrawOffsets({
       firstVertex: chunk?.byteOffset ?? 0,
       firstIndex: chunk ? chunk.byteOffset / this.indexVector!.byteStride : 0
@@ -897,9 +901,12 @@ export class GPUVectorModel {
     );
   }
 
-  private getExplicitVectorLayouts(vectors: GPUVectorModelAttributes): BufferLayout[] | undefined {
+  private getExplicitVectorLayouts(
+    vectors: GPUVectorModelAttributes,
+    sourceLayouts: BufferLayout[] = this.explicitBufferLayout
+  ): BufferLayout[] | undefined {
     const names = new Set(Object.keys(vectors));
-    const layouts = this.explicitBufferLayout.filter(
+    const layouts = sourceLayouts.filter(
       layout =>
         names.has(layout.name) ||
         layout.attributes?.some(attribute => names.has(attribute.attribute))

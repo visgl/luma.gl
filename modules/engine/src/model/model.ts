@@ -33,6 +33,7 @@ export class Model extends GPUVectorModel {
 
   declare material: Material | null;
   declare _gpuGeometry: GPUGeometry | null;
+  private declare indexCountOverride: number | undefined;
 
   constructor(device: Device, props: ModelProps) {
     const sourceGeometry =
@@ -65,10 +66,9 @@ export class Model extends GPUVectorModel {
   }
 
   protected override _initializeAttributes(): void {
-    const indexCount = this.indexCount;
     super._initializeAttributes();
     // Legacy geometry selects indexed draw counts through vertexCount unless explicitly overridden.
-    if (this._gpuGeometry) this.setIndexCount(indexCount);
+    if (this._gpuGeometry) super.setIndexCount(this.indexCountOverride);
   }
 
   override destroy(): void {
@@ -79,7 +79,6 @@ export class Model extends GPUVectorModel {
 
   /** Adapts CPU and legacy buffer geometry into the GPU vector geometry API. */
   override setGeometry(geometry: GPUVectorGeometry | GPUGeometry | Geometry | null): void {
-    const indexCount = this.indexCount;
     this._gpuGeometry?.destroy();
     this._gpuGeometry =
       geometry && !(geometry instanceof GPUVectorGeometry)
@@ -89,7 +88,12 @@ export class Model extends GPUVectorModel {
       ? makeGPUVectorGeometryFromGPUGeometry(this._gpuGeometry)
       : geometry;
     super.setGeometry(vectorGeometry instanceof GPUVectorGeometry ? vectorGeometry : null);
-    if (!(geometry instanceof GPUVectorGeometry)) this.setIndexCount(indexCount);
+    if (!(geometry instanceof GPUVectorGeometry)) super.setIndexCount(this.indexCountOverride);
+  }
+
+  override setIndexCount(indexCount: number | undefined): void {
+    this.indexCountOverride = indexCount;
+    super.setIndexCount(indexCount);
   }
 
   setMaterial(material: Material | null): void {

@@ -4,10 +4,12 @@
 
 import {expect, it, vi} from 'vitest';
 import {Buffer, assert, type ShaderLayout} from '@luma.gl/core';
+import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 import {
   Geometry,
   GPUGeometry,
+  GPUVectorGeometry,
   GPUVectorModel,
   MaterialFactory,
   Model,
@@ -147,5 +149,41 @@ it.each([
   expect(indexCounts).toEqual([vertexCount ?? 3]);
   model.destroy();
   renderPass.destroy();
+  device.destroy();
+});
+
+it.each([
+  undefined,
+  2
+])('switching typed geometry to legacy geometry retains only caller index count %s', indexCount => {
+  const device = new NullDevice({});
+  const indices = device.createBuffer({
+    data: new Uint16Array([0, 1, 2, 2, 1, 3]),
+    usage: Buffer.INDEX
+  });
+  const indexVector = new GPUVector({
+    name: 'indices',
+    type: 'data',
+    format: 'uint16',
+    data: [new GPUData({buffer: indices, format: 'uint16', length: 6})]
+  });
+  const model = new Model(device, {
+    vs: VERTEX_SHADER,
+    fs: FRAGMENT_SHADER,
+    geometry: new GPUVectorGeometry({attributes: {}, indices: indexVector})
+  });
+  if (indexCount !== undefined) model.setIndexCount(indexCount);
+  model.setGeometry(
+    new GPUGeometry({
+      attributes: {},
+      indices,
+      vertexCount: 3,
+      topology: 'triangle-list',
+      bufferLayout: []
+    })
+  );
+  expect(model.indexCount).toBe(indexCount);
+  expect(model.vertexCount).toBe(3);
+  model.destroy();
   device.destroy();
 });

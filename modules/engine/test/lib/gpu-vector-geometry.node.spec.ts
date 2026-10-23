@@ -352,6 +352,8 @@ it('layout updates reach typed groups and removed names can be rebound as raw bu
   });
   model.setBufferLayout([{name: 'colors', format: 'unorm8x4', stepMode: 'instance'}]);
   expect(model.bufferLayout.find(layout => layout.name === 'colors')?.stepMode).toBe('instance');
+  model.setAttributeVectors({colors});
+  expect(model.bufferLayout.find(layout => layout.name === 'colors')?.stepMode).toBe('instance');
   model.setAttributeVectors({});
   model.setBufferLayout([{name: 'colors', format: 'unorm8x4', stepMode: 'vertex'}]);
   model.setAttributes({colors: buffer});
@@ -402,5 +404,21 @@ it('out-of-order shader locations do not recreate vertex arrays while drawing ba
   renderPass.destroy();
   positions.data[0].buffer.destroy();
   for (const chunk of colors.data) chunk.buffer.destroy();
+  device.destroy();
+});
+
+it('layout-less data updates preserve explicit vertex stepping on instanced models', () => {
+  const device = new NullDevice({});
+  const positions = makePositions(device, 4);
+  const model = new GPUVectorModel(device, {
+    ...SHADERS,
+    isInstanced: true,
+    attributeVectors: {positions},
+    bufferLayout: [{name: 'positions', format: 'float32x2', stepMode: 'vertex'}]
+  });
+  model.setAttributeVectors({positions});
+  expect(model.bufferLayout.find(layout => layout.name === 'positions')?.stepMode).toBe('vertex');
+  model.destroy();
+  positions.data[0].buffer.destroy();
   device.destroy();
 });
