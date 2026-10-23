@@ -81,11 +81,12 @@
 
     .expression-row {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-columns: minmax(0, 1fr) 108px auto;
       gap: 8px;
     }
 
     .expression-row input,
+    .expression-row select,
     .expression-row button {
       border: 1px solid #cfd6e2;
       border-radius: 8px;
@@ -93,6 +94,12 @@
       color: inherit;
       font: 14px/1.4 ui-monospace, "SFMono-Regular", Consolas, monospace;
       padding: 9px 10px;
+    }
+
+    .expression-row input,
+    .expression-row select {
+      min-width: 0;
+      width: 100%;
     }
 
     .expression-row button {
@@ -124,7 +131,6 @@
     }
 
     .table-header {
-      min-width: 880px;
       will-change: transform;
     }
 
@@ -164,7 +170,6 @@
 
     .row-layer {
       position: relative;
-      min-width: 880px;
     }
 
     .data-row {
@@ -241,6 +246,13 @@
       <label for="expression-input">Expression</label>
       <div class="expression-row">
         <input id="expression-input" type="text" value="fround(coordinates)" spellcheck="false" />
+        <select id="expression-preset" aria-label="Expression examples">
+          <option value="">Examples</option>
+          <option value="fround(coordinates)">Float32 coordinates</option>
+          <option value="fround(coordinates) * 2">Scale coordinates</option>
+          <option value="length(fround(coordinates))">Coordinate length</option>
+          <option value="sampleMetrics.values * 2">Scale sample metrics</option>
+        </select>
         <button id="expression-run" type="submit" disabled>Run</button>
       </div>
       <div id="expression-message" class="expression-note">

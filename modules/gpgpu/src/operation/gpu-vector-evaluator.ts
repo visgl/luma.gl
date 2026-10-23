@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {GPUEvaluationScope} from './gpu-evaluation-scope';
+import {inspectEvaluators, type GPUEvaluatorInspection} from './gpu-evaluator-inspection';
 import type {Device} from '@luma.gl/core';
 import {GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {GPUDataEvaluator, type GPUDataEvaluatorEvaluateOptions} from './gpu-data-evaluator';
@@ -59,6 +61,7 @@ export class GPUVectorEvaluator {
   private _gpuVector?: GPUVector;
   private readonly _ownsGPUDataEvaluators: boolean;
   private _destroyed = false;
+  private _evaluationScope?: GPUEvaluationScope;
 
   /**
    * Creates one lazy vector evaluator over an existing fixed-width `GPUVector`.
@@ -128,6 +131,11 @@ export class GPUVectorEvaluator {
     return Boolean(this._gpuVector);
   }
 
+  /** Returns a read-only snapshot without evaluating or reading GPU resources. */
+  getInspection(): GPUEvaluatorInspection {
+    return inspectEvaluators(this.gpuDataEvaluators);
+  }
+
   /** Materialized `GPUVector` resource. */
   get gpuVector(): GPUVector {
     if (!this._gpuVector) {
@@ -160,18 +168,35 @@ export class GPUVectorEvaluator {
     device: Device,
     options: GPUVectorEvaluatorEvaluateOptions = {}
   ): Promise<GPUVector> {
-    if (options.scope)
-      throw new Error('Deferred-submission vector evaluation is outside this proof of concept');
+    this.assertScopeAccess(options.scope);
     if (this._destroyed) {
       throw new Error(`GPUVectorEvaluator ${this} already destroyed`);
     }
-    if (this._gpuVector) {
-      return this._gpuVector;
+    const scope = options.scope;
+    let gpuVectors: GPUVector[];
+    if (scope) {
+      scope.assertEvaluating(device);
+      if (!this._evaluationScope) {
+        const originalVector = this._gpuVector;
+        this._evaluationScope = scope;
+        scope.retain(submitted => {
+          this._evaluationScope = undefined;
+          if (!submitted) this._gpuVector = originalVector;
+        });
+      }
+      // Retain and validate cached chunks too. Sequential evaluation avoids races on
+      // shared dependencies while recording into the scope's single encoder.
+      gpuVectors = [];
+      for (const evaluator of this.gpuDataEvaluators) {
+        gpuVectors.push(await evaluator.evaluate(device, options));
+      }
+      if (this._gpuVector) return this._gpuVector;
+    } else {
+      if (this._gpuVector) return this._gpuVector;
+      gpuVectors = await Promise.all(
+        this.gpuDataEvaluators.map(evaluator => evaluator.evaluate(device, options))
+      );
     }
-
-    const gpuVectors = await Promise.all(
-      this.gpuDataEvaluators.map(evaluator => evaluator.evaluate(device, options))
-    );
     const firstVector = gpuVectors[0];
     const data = gpuVectors.map(getSingleGPUVectorData);
     const format = options.format ?? this.format ?? firstVector.format;
@@ -191,6 +216,7 @@ export class GPUVectorEvaluator {
   /** Materializes every chunk evaluator synchronously and returns one chunk-preserving `GPUVector`. */
   evaluateSync(device: Device, options: GPUVectorEvaluatorEvaluateOptions = {}): GPUVector {
     if (options.scope) throw new Error('Use scope.evaluate() for deferred submission');
+    this.assertScopeAccess();
     if (this._destroyed) {
       throw new Error(`GPUVectorEvaluator ${this} already destroyed`);
     }
@@ -219,6 +245,7 @@ export class GPUVectorEvaluator {
 
   /** Releases cached GPU resources owned through child `GPUDataEvaluator` instances. */
   destroy(): void {
+    this.assertScopeAccess();
     if (this._ownsGPUDataEvaluators) {
       for (const evaluator of this.gpuDataEvaluators) {
         evaluator.destroy();
@@ -226,6 +253,12 @@ export class GPUVectorEvaluator {
     }
     this._gpuVector = undefined;
     this._destroyed = true;
+  }
+
+  private assertScopeAccess(scope?: GPUEvaluationScope): void {
+    if (this._evaluationScope && this._evaluationScope !== scope) {
+      throw new Error('Evaluator is retained by an unsubmitted scope');
+    }
   }
 
   /** Returns the debug id or class name. */

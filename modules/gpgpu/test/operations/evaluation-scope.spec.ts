@@ -12,6 +12,7 @@ import {
   extent,
   interleave,
   GPUDataEvaluator,
+  GPUVectorEvaluator,
   GPUEvaluationScope
 } from '@luma.gl/gpgpu';
 
@@ -272,5 +273,70 @@ it('interleave binds a GPU-computed constant alongside row data', async ({skip})
     output.destroy();
     rows.destroy();
     constant.destroy();
+  }
+});
+
+it('vector scopes preserve chunks, roll back cancellation, and retain cached vectors', async ({
+  skip
+}) => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return skip();
+  const first = GPUDataEvaluator.fromArray(new Float32Array([1, 2]), {});
+  const second = GPUDataEvaluator.fromArray(new Float32Array([3, 4, 5]), {});
+  const outputs = [add(first, 10), add(second, 10)];
+  const vector = GPUVectorEvaluator.fromGPUDataEvaluators(outputs);
+  const submit = vi.spyOn(device, 'submit');
+  let scope = new GPUEvaluationScope(device);
+  try {
+    const pending = await scope.evaluate(vector);
+    expect(pending.data.map(data => data.length)).toEqual([2, 3]);
+    expect(submit).not.toHaveBeenCalled();
+    await expect(vector.evaluate(device)).rejects.toThrow('unsubmitted scope');
+    expect(() => vector.evaluateSync(device)).toThrow('unsubmitted scope');
+    expect(() => vector.destroy()).toThrow('unsubmitted scope');
+    scope.cancel();
+    expect(vector.evaluated).toBe(false);
+    expect(outputs.every(output => !output.evaluated)).toBe(true);
+    scope = new GPUEvaluationScope(device);
+    const result = await scope.evaluate(vector);
+    scope.submit();
+    expect(submit).toHaveBeenCalledTimes(1);
+    expect(Array.from(await outputs[0].readValue())).toEqual([11, 12]);
+    expect(Array.from(await outputs[1].readValue())).toEqual([13, 14, 15]);
+    expect(await vector.evaluate(device)).toBe(result);
+    scope = new GPUEvaluationScope(device);
+    expect(await scope.evaluate(vector)).toBe(result);
+    expect(() => outputs[0].destroy()).toThrow('unsubmitted scope');
+    scope.cancel();
+    expect(await vector.evaluate(device)).toBe(result);
+  } finally {
+    scope.cancel();
+    submit.mockRestore();
+    vector.destroy();
+    first.destroy();
+    second.destroy();
+  }
+});
+
+it('a failing vector chunk cancels earlier chunks and permits ordinary evaluation afterward', async ({
+  skip
+}) => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return skip();
+  const first = GPUDataEvaluator.fromArray(new Float32Array([1, 2]), {});
+  const second = GPUDataEvaluator.fromArray(new Float32Array([3, 4]), {});
+  const vector = GPUVectorEvaluator.fromGPUDataEvaluators([first, second]);
+  const failure = vi.spyOn(second, 'evaluate').mockRejectedValueOnce(new Error('chunk failed'));
+  const scope = new GPUEvaluationScope(device);
+  try {
+    await expect(scope.evaluate(vector)).rejects.toThrow('chunk failed');
+    expect(first.evaluated).toBe(false);
+    expect(vector.evaluated).toBe(false);
+    expect(() => scope.submit()).toThrow('cancelled');
+    expect((await vector.evaluate(device)).data).toHaveLength(2);
+  } finally {
+    failure.mockRestore();
+    scope.cancel();
+    vector.destroy();
   }
 });

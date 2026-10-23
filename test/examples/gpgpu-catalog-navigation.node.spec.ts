@@ -26,6 +26,7 @@ const GENERAL_PURPOSE_GPU_EXAMPLE_IDENTIFIERS = [
   'showcase/billion-point-spatial-atlas',
   'experimental/gpt-2',
   'v10/gpgpu',
+  'v10/gpu-simple-graph',
   'experimental/gpu-frustum-culling',
   'experimental/gpu-trace-viewer',
   'experimental/gpu-trace-scene',
@@ -191,7 +192,7 @@ describe('GPGPU example catalog navigation', () => {
       expect(
         getExampleSupportDefinition(exampleIdentifier)?.requirements?.backends,
         `${exampleIdentifier} requires a WebGPU device`
-      ).toEqual(['webgpu']);
+      ).toEqual(exampleIdentifier === 'v10/gpu-simple-graph' ? ['webgpu', 'webgl2'] : ['webgpu']);
       const frontmatter = readFileSync(examplePath, 'utf8').match(/^---\n([\s\S]*?)\n---/);
       const metadata = parse(frontmatter![1]) as {sidebar_custom_props?: {topics?: string[]}};
       expect(
@@ -213,6 +214,7 @@ describe('GPGPU example catalog navigation', () => {
     ]);
     expect(readCategoryIdentifiers(nestedCategories[0])).toEqual([
       'v10/gpgpu',
+      'v10/gpu-simple-graph',
       'experimental/gpu-frustum-culling',
       'experimental/gpu-trace-viewer',
       'experimental/gpu-graph-explorer',

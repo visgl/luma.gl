@@ -60,6 +60,7 @@ import support18 from './experimental/advanced-effects/mobile-support';
 import support19 from './experimental/deferred-rendering/mobile-support';
 import support20 from './experimental/shadow-map/mobile-support';
 import support21 from './v10/gpgpu/mobile-support';
+import gpuSimpleGraphSupport from './v10/gpu-simple-graph/mobile-support';
 import support22 from './experimental/gpu-frustum-culling/mobile-support';
 import parquetSupport from './experimental/gpu-parquet-constellation/mobile-support';
 import support23 from './experimental/gpu-trace-viewer/mobile-support';
@@ -170,6 +171,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'experimental/deferred-rendering': support19,
   'experimental/shadow-map': support20,
   'v10/gpgpu': support21,
+  'v10/gpu-simple-graph': gpuSimpleGraphSupport,
   'experimental/gpu-frustum-culling': support22,
   'experimental/gpu-trace-viewer': support23,
   'experimental/gpu-graph-explorer': support24,
