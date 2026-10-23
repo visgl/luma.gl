@@ -50,6 +50,8 @@ it.for([
       {
         position: [0, 0, 0.5],
         velocity: [12, 0, 0],
+        // Isolate common translation from tiny contact-induced rotations at zero slop.
+        inertiaDiagonal: [0, 0, 0],
         shape: {type: 'box', halfExtents: [0.5, 0.5, 0.5]},
         friction: 1
       }
@@ -76,7 +78,10 @@ it.for([
     expect(second.map(contact => [contact.firstFeature, contact.secondFeature])).toEqual(
       first.map(contact => [contact.firstFeature, contact.secondFeature])
     );
-    expect(second.every(contact => contact.impulse > 0)).toBe(true);
+    expect(second.reduce((sum, contact) => sum + contact.impulse, 0)).toBeCloseTo(
+      10 * world.timeStep,
+      4
+    );
     expect((await world.readState())[1].velocity[0]).toBeCloseTo(12, 3);
   } finally {
     graph.destroy();

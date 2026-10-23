@@ -110,7 +110,7 @@ export function makeContinuousScene(
   if (scene === 'fastMovingWall')
     return {
       description:
-        'A fast sphere meets an approaching kinematic wall. The rebound is computed in the wall contact frame; the moving wall can add kinetic energy. Convex CCD includes translation and rotation of both colliders. Initial overlaps stay with the discrete solver.',
+        'A fast sphere meets an approaching kinematic wall. The rebound is computed in the wall contact frame; the moving wall can add kinetic energy. Convex CCD includes translation and rotation of both colliders. Initial overlaps stay with the discrete solver. The view follows the sphere after its moving-frame rebound.',
       props: {
         ...props,
         bodies: [
@@ -126,8 +126,7 @@ export function makeContinuousScene(
             position: [1, 0, 3],
             velocity: [-60, 0, 0],
             shape: {type: 'box', halfExtents: [0.1, 1, 1]}
-          },
-          ...walls
+          }
         ]
       }
     };

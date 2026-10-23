@@ -200,7 +200,9 @@ function draw() {
   const scale = Math.min(width / 19, height / (12 - minimumHeight));
   const origin = [
     width * 0.55 -
-      (activeScene === 'persistentContacts' ? (states[0]?.position[0] ?? 0) * scale : 0),
+      (activeScene === 'persistentContacts' || activeScene === 'fastMovingWall'
+        ? (states[0]?.position[0] ?? 0) * scale
+        : 0),
     height * 0.85 + minimumHeight * scale
   ];
   context.strokeStyle = '#344452';

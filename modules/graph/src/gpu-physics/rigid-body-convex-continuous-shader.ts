@@ -236,7 +236,7 @@ fn continuousRadius(collider:u32)->f32 {
    if(time==0.0){complete=true;break;}
    continuousWork.candidates[slot].colliders.z=1u;
    continuousWork.candidates[slot].point=vec4f(distance.point,time);
-   continuousWork.candidates[slot].normal=vec4f(lastNormal,0);complete=true;break;
+   continuousWork.candidates[slot].normal=vec4f(lastNormal,tolerance);complete=true;break;
   }
   lastNormal=distance.normal;
   let closing=-dot(relative,distance.normal)+angularBound;
@@ -251,9 +251,9 @@ fn continuousRadius(collider:u32)->f32 {
 fn continuousBoxShell(collider:u32,point:vec3f,tolerance:f32)->bool {
  return all(abs(colliderLocal(collider,point-colliderPosition(collider)))<=bodies.colliders[collider].shape.xyz+vec3f(tolerance));
 }
-fn continuousImpactPoint(first:u32,second:u32,point:vec3f,normal:vec3f)->vec4f {
+fn continuousImpactPoint(first:u32,second:u32,point:vec3f,normal:vec3f,queryTolerance:f32)->vec4f {
  if(bodies.colliders[first].shape.w!=1.0||bodies.colliders[second].shape.w!=1.0){return vec4f(point,1);}
- let tolerance=max(1e-5,max(length(colliderPosition(first)),length(colliderPosition(second)))*2e-6);
+ let tolerance=max(queryTolerance*2.0,max(1e-5,max(length(colliderPosition(first)),length(colliderPosition(second)))*2e-6));
  var reference=first;var faceAxis=0u;var maximumAlignment=0.0;
  for(var side=0u;side<2u;side++){
   let collider=select(first,second,side==1u);
@@ -263,6 +263,24 @@ fn continuousImpactPoint(first:u32,second:u32,point:vec3f,normal:vec3f)->vec4f {
   }
  }
  if(maximumAlignment>0.99999){
+  // Preserve the exact authored center when an entire support face is contained.
+  // Averaging translated world corners can otherwise create a tiny artificial torque.
+  var contained=vec4f(0);var smallestArea=1e30;
+  for(var side=0u;side<2u;side++){
+   let collider=select(first,second,side==1u);let other=select(second,first,side==1u);
+   let direction=select(-normal,normal,side==1u);
+   for(var coordinate=0u;coordinate<3u;coordinate++){
+    let faceDirection=axis(collider,coordinate);if(abs(dot(faceDirection,direction))<0.99999){continue;}
+    let faceCenter=colliderPosition(collider)+faceDirection*bodies.colliders[collider].shape[coordinate]*select(-1.0,1.0,dot(faceDirection,direction)>=0.0);
+    let firstTangent=axis(collider,(coordinate+1u)%3u)*bodies.colliders[collider].shape[(coordinate+1u)%3u];
+    let secondTangent=axis(collider,(coordinate+2u)%3u)*bodies.colliders[collider].shape[(coordinate+2u)%3u];
+    let area=length(firstTangent)*length(secondTangent);
+    if(area<smallestArea&&continuousBoxShell(other,faceCenter-firstTangent-secondTangent,tolerance)&&continuousBoxShell(other,faceCenter+firstTangent-secondTangent,tolerance)&&continuousBoxShell(other,faceCenter+firstTangent+secondTangent,tolerance)&&continuousBoxShell(other,faceCenter-firstTangent+secondTangent,tolerance)){
+     contained=vec4f(faceCenter,1);smallestArea=area;
+    }
+   }
+  }
+  if(contained.w>0.0){return contained;}
   let incident=select(first,second,reference==first);
   let direction=select(-normal,normal,reference==second);
   let referenceNormal=axis(reference,faceAxis)*select(-1.0,1.0,dot(axis(reference,faceAxis),direction)>=0.0);
@@ -325,7 +343,7 @@ fn continuousImpactPoint(first:u32,second:u32,point:vec3f,normal:vec3f)->vec4f {
  continuousWork.remaining-=nearest;
  if(selected==0xffffffffu){continuousWork.finished=1u;return;}
  let candidate=continuousWork.candidates[selected];let firstCollider=candidate.colliders.x;let secondCollider=candidate.colliders.y;
- let first=colliderBody(firstCollider);let second=colliderBody(secondCollider);let normal=candidate.normal.xyz;let witness=continuousImpactPoint(firstCollider,secondCollider,candidate.point.xyz,normal);
+ let first=colliderBody(firstCollider);let second=colliderBody(secondCollider);let normal=candidate.normal.xyz;let witness=continuousImpactPoint(firstCollider,secondCollider,candidate.point.xyz,normal,candidate.normal.w);
  if(witness.w==0.0){continuousStatus[0].x=1u;continuousWork.finished=1u;return;}
  let point=witness.xyz;
  let closing=dot(pointVelocity(first,point)-pointVelocity(second,point),normal);
