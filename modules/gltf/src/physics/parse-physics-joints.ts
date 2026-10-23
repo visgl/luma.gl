@@ -6,6 +6,7 @@ import {parseGLTFJointDeclarations} from '../parsers/parse-gltf-joints';
 import {Matrix4} from '@math.gl/core';
 import {makeRigidBodyJointsFromScenegraph} from '@luma.gl/graph/gpu-physics';
 import {GroupNode, JointController} from '@luma.gl/engine';
+import {readPhysicsRotation, readPhysicsVector} from './physics-transforms';
 import type {GLTFPhysicsDescription} from './physics-types';
 
 /** Resolve both attachment nodes after scene traversal, including forward references. */
@@ -15,12 +16,15 @@ export function parsePhysicsJoints(
   parents: ReadonlyMap<number, number>
 ): void {
   const sceneNodes = new Map(
-    Array.from(worlds, ([nodeIndex, world]) => {
-      const parent = parents.get(nodeIndex);
-      const matrix =
-        parent === undefined
-          ? world
-          : new Matrix4(worlds.get(parent)!).invert().multiplyRight(world);
+    Array.from(worlds.keys(), nodeIndex => {
+      const source = description.source.nodes![nodeIndex];
+      // Local authored transforms remain defined even when a parent has zero scale.
+      const matrix = source.matrix
+        ? new Matrix4(source.matrix)
+        : new Matrix4()
+            .translate(readPhysicsVector(source.translation, [0, 0, 0]))
+            .multiplyRight(new Matrix4().fromQuaternion(readPhysicsRotation(source.rotation)))
+            .scale(readPhysicsVector(source.scale, [1, 1, 1]));
       return [nodeIndex, new GroupNode({id: `node-${nodeIndex}`, matrix})] as const;
     })
   );

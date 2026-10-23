@@ -1,8 +1,8 @@
-import type {GroupNode, ScenegraphJoint} from '@luma.gl/engine';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {GroupNode, ScenegraphJoint} from '@luma.gl/engine';
 import type {
   GPURigidBody,
   GPURigidBodyCollider,
@@ -26,6 +26,7 @@ export type GLTFPhysicsDocument = {
     scale?: readonly number[];
     extensions?: Record<string, unknown>;
   }[];
+  skins?: readonly {joints: readonly number[]}[];
   extensions?: Record<string, unknown>;
   extensionsUsed?: readonly string[];
   extensionsRequired?: readonly string[];

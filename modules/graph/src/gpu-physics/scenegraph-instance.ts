@@ -5,7 +5,7 @@
 import type {Device} from '@luma.gl/core';
 import {Vector3} from '@math.gl/core';
 import type {ScenegraphNode} from '@luma.gl/engine';
-import {GPUCommandGraph} from '../gpu-core';
+import {GPUCommandGraph} from '../gpu-core/index';
 import {GPURigidBodyWorld, type GPURigidBodyWorldProps} from './gpu-rigid-body-world';
 import {rotateRigidBodyVector} from './rigid-body-properties';
 

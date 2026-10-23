@@ -679,3 +679,54 @@ it('rejects repeated off-scene geometry children before exponential expansion', 
     result.issues.some(issue => issue.message.includes('Invalid collision geometry subtree'))
   ).toBe(true);
 });
+
+it('keeps disabled collider descendants under zero-scaled parents importable', () => {
+  const source = makePhysicsDocument([
+    {scale: [0, 0, 0], children: [1]},
+    {
+      translation: [1, 0, 0],
+      extensions: {KHR_physics_rigid_bodies: {motion: {mass: 2}, collider: {geometry: {shape: 0}}}}
+    }
+  ]);
+  const description = parseGLTFPhysics(source);
+  expect(description.issues).toEqual([]);
+  expect(description.colliders).toHaveLength(0);
+  expect(description.sceneNodes.get(1)!.matrix[12]).toBe(1);
+});
+
+it('reports animated collision mesh deformation instead of silently retaining the initial shape', () => {
+  const source = makePhysicsDocument([
+    {extensions: {KHR_physics_rigid_bodies: {collider: {geometry: {node: 1, convexHull: false}}}}},
+    {mesh: 0, weights: [0]}
+  ]);
+  source.animations = [{channels: [{target: {node: 1, path: 'weights'}}]}];
+  const description = parseGLTFPhysics(source, {
+    animationOwnership: 'scenegraph',
+    resolveNodeMeshGeometry: () => ({positions: [0, 0, 0, 1, 0, 0, 0, 1, 0], indices: [0, 1, 2]})
+  });
+  expect(description.issues.map(issue => issue.code)).toEqual([
+    'animation-requires-collider-rebuild'
+  ]);
+});
+
+it('distinguishes rigid skeleton motion from animated collision-skin deformation', () => {
+  const source = makePhysicsDocument([
+    {
+      children: [1, 2],
+      extensions: {KHR_physics_rigid_bodies: {collider: {geometry: {node: 1, convexHull: false}}}}
+    },
+    {mesh: 0, skin: 0},
+    {}
+  ]);
+  source.skins = [{joints: [2]}];
+  const options = {
+    animationOwnership: 'scenegraph' as const,
+    resolveNodeMeshGeometry: () => ({positions: [0, 0, 0, 1, 0, 0, 0, 1, 0], indices: [0, 1, 2]})
+  };
+  source.animations = [{channels: [{target: {node: 0, path: 'translation'}}]}];
+  expect(parseGLTFPhysics(source, options).issues).toEqual([]);
+  source.animations = [{channels: [{target: {node: 2, path: 'rotation'}}]}];
+  expect(parseGLTFPhysics(source, options).issues.map(issue => issue.code)).toEqual([
+    'animation-requires-collider-rebuild'
+  ]);
+});

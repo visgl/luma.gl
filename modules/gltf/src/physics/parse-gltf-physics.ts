@@ -734,6 +734,45 @@ export function parseGLTFPhysics(
       current = parents.get(current);
     }
   }
+  const geometryNodes = new Set<number>();
+  const geometryDescendants = new Set<number>();
+  const skinTransforms = new Set<number>();
+  const allParents = new Map<number, number>();
+  for (const [parent, node] of nodes.entries())
+    for (const child of node.children ?? []) allParents.set(child, parent);
+  const collectGeometryDependencies = (
+    nodeIndex: number,
+    descendant: boolean,
+    visited = new Set<number>()
+  ) => {
+    if (visited.has(nodeIndex)) return;
+    visited.add(nodeIndex);
+    geometryNodes.add(nodeIndex);
+    if (descendant) geometryDescendants.add(nodeIndex);
+    const node = nodes[nodeIndex];
+    const ancestorsOf = (index: number) => {
+      const ancestors = new Set<number>();
+      let ancestor: number | undefined = index;
+      while (ancestor !== undefined && !ancestors.has(ancestor)) {
+        ancestors.add(ancestor);
+        ancestor = allParents.get(ancestor);
+      }
+      return ancestors;
+    };
+    if (node.skin !== undefined)
+      for (const joint of source.skins?.[node.skin]?.joints ?? []) {
+        const meshAncestors = ancestorsOf(nodeIndex);
+        const jointAncestors = ancestorsOf(joint);
+        // A common ancestor moves the mesh and its bones together and cancels in the skin palette.
+        for (const ancestor of new Set([...meshAncestors, ...jointAncestors]))
+          if (meshAncestors.has(ancestor) !== jointAncestors.has(ancestor))
+            skinTransforms.add(ancestor);
+      }
+    for (const child of node.children ?? []) collectGeometryDependencies(child, true, visited);
+  };
+  for (const collider of result.colliders)
+    if (collider.geometryNodeIndex !== undefined)
+      collectGeometryDependencies(collider.geometryNodeIndex, false);
   for (const [animationIndex, animation] of (source.animations ?? []).entries())
     for (const channel of animation.channels) {
       const pointerExtension = channel.target.extensions?.['KHR_animation_pointer'];
@@ -743,7 +782,7 @@ export function parseGLTFPhysics(
           : undefined;
       const nodeMatch =
         typeof pointer === 'string'
-          ? pointer.match(/^\/nodes\/(\d+)\/(translation|rotation|scale)$/)
+          ? pointer.match(/^\/nodes\/(\d+)\/(translation|rotation|scale|weights)$/)
           : null;
       if (
         options.propertyBindings &&
@@ -758,6 +797,19 @@ export function parseGLTFPhysics(
           Boolean(nodeMatch && relevant.has(Number(nodeMatch[1]))));
       const targetNode = nodeMatch ? Number(nodeMatch[1]) : channel.target.node;
       const targetPath = nodeMatch ? nodeMatch[2] : channel.target.path;
+      if (
+        targetNode !== undefined &&
+        ((targetPath === 'weights' && geometryNodes.has(targetNode)) ||
+          (['translation', 'rotation', 'scale'].includes(targetPath ?? '') &&
+            (geometryDescendants.has(targetNode) || skinTransforms.has(targetNode))))
+      ) {
+        report(
+          'animation-requires-collider-rebuild',
+          `/animations/${animationIndex}`,
+          'Animated collision mesh snapshots require explicit reconstruction'
+        );
+        continue;
+      }
       if (
         options.animationOwnership === 'scenegraph' &&
         targetNode !== undefined &&
