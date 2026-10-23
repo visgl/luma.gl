@@ -643,6 +643,11 @@ export class GPUVectorModel {
    * @returns `true` if the draw call was executed, `false` if resources were not ready.
    */
   draw(renderPass: RenderPass): boolean {
+    if (this.indexVector?.length === 0) {
+      this._lastDrawTimestamp = this.device.timestamp;
+      this._needsRedraw = false;
+      return true;
+    }
     if (
       !this.drawingVectorBatches &&
       (this.geometryVectorBindings.batchCount !== 1 ||
@@ -856,7 +861,8 @@ export class GPUVectorModel {
   }
 
   private bindIndexVector(): void {
-    const chunk = this.indexVector?.data[0];
+    const vector = this.indexVector;
+    const chunk = vector?.data[0];
     if (chunk && this.indexVector) {
       const buffer = chunk.buffer instanceof DynamicBuffer ? chunk.buffer.buffer : chunk.buffer;
       // Core index-buffer metadata must agree with the vector format and aligned byte offset.
@@ -866,7 +872,8 @@ export class GPUVectorModel {
       );
     }
     this.setIndexBuffer(chunk?.buffer ?? null);
-    this.setIndexCount(this.indexVector?.length);
+    this.indexVector = vector;
+    this.setIndexCount(vector?.length);
     this.setDrawOffsets({
       firstVertex: chunk?.byteOffset ?? 0,
       firstIndex: chunk ? chunk.byteOffset / this.indexVector!.byteStride : 0
@@ -950,13 +957,18 @@ export class GPUVectorModel {
     const vertexCountSet = this._vertexCountSet;
     this.drawingVectorBatches = true;
     try {
-      return drawGPUVectorGroups(
+      const success = drawGPUVectorGroups(
         this,
         this.geometryVectorBindings,
         this.attributeVectorBindings,
         () => this.syncVectorBindings(),
         () => GPUVectorModel.prototype.draw.call(this, renderPass)
       );
+      if (success) {
+        this._lastDrawTimestamp = this.device.timestamp;
+        this._needsRedraw = false;
+      }
+      return success;
     } finally {
       this._vertexCountSet = vertexCountSet;
       this.drawingVectorBatches = drawingVectorBatches;
@@ -1189,6 +1201,7 @@ export class GPUVectorModel {
    * @todo - how to unset it if we change geometry?
    */
   setIndexBuffer(indexBuffer: ModelBuffer | null): void {
+    this.indexVector = null;
     const resolvedIndexBuffer =
       indexBuffer instanceof DynamicBuffer ? indexBuffer.buffer : indexBuffer;
     this.indexBuffer = resolvedIndexBuffer;

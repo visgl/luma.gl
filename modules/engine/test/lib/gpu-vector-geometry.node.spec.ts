@@ -271,3 +271,38 @@ it('constructor layouts override inferred attribute step modes', () => {
   colors.data[0].buffer.destroy();
   device.destroy();
 });
+
+it('empty index vectors skip drawing and raw index replacement clears the typed state', () => {
+  const device = new NullDevice({});
+  const positions = makePositions(device, 4);
+  const indices = new GPUVector<'uint16'>({
+    type: 'data',
+    name: 'indices',
+    format: 'uint16',
+    data: []
+  });
+  const model = new GPUVectorModel(device, {
+    ...SHADERS,
+    geometry: new GPUVectorGeometry({attributes: {positions}, indices})
+  });
+  const renderPass = device.getDefaultRenderPass();
+  let drawCount = 0;
+  const draw = renderPass.draw.bind(renderPass);
+  renderPass.draw = options => {
+    drawCount++;
+    return draw(options);
+  };
+  expect(model.draw(renderPass)).toBe(true);
+  expect(drawCount).toBe(0);
+  expect(model.needsRedraw()).toBe(false);
+  const buffer = device.createBuffer({data: new Uint16Array([0, 1, 2]), usage: Buffer.INDEX});
+  model.setIndexBuffer(buffer);
+  model.setIndexCount(3);
+  expect(model.draw(renderPass)).toBe(true);
+  expect(drawCount).toBe(1);
+  model.destroy();
+  renderPass.destroy();
+  buffer.destroy();
+  positions.data[0].buffer.destroy();
+  device.destroy();
+});
