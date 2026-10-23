@@ -298,4 +298,71 @@ it('rejects a CCD step when initial mesh distance traversal is incomplete', asyn
     graph.destroy();
     world.destroy();
   }
-});
+}, 120000);
+
+it('retains other walls in one mesh after a separating rebound', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const positions: number[] = [],
+    indices: number[] = [];
+  for (const horizontal of [-1, 1]) {
+    const base = positions.length / 3;
+    positions.push(
+      horizontal,
+      -100,
+      -100,
+      horizontal,
+      100,
+      -100,
+      horizontal,
+      100,
+      100,
+      horizontal,
+      -100,
+      100
+    );
+    indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+  }
+  const world = new GPURigidBodyWorld({
+    failurePolicy: 'rollback',
+    continuous: {bodies: [0], maximumImpacts: 8},
+    gravity: [0, 0, 0],
+    sleepAfter: 0,
+    timeStep: 1 / 60,
+    restitutionThreshold: 0,
+    bodies: [
+      {
+        position: [0, 0, 0],
+        velocity: [600, 0, 0],
+        shape: {type: 'sphere', radius: 0.1},
+        restitution: 1,
+        friction: 0
+      },
+      {
+        mode: 'static',
+        position: [0, 0, 0],
+        shape: {type: 'triangle-mesh', geometry: makeTriangleMeshGeometry(positions, indices)},
+        restitution: 1,
+        friction: 0
+      }
+    ]
+  });
+  const definition = new GPUCommandGraph(device);
+  world.addToGraph(definition);
+  const graph = await definition.compileAsync();
+  try {
+    for (let tick = 1; tick <= 12; tick++) {
+      const encoder = device.createCommandEncoder();
+      graph.encode(encoder, {parameters: undefined});
+      device.submit(encoder.finish());
+      expect((await world.readSimulationDiagnostics()).complete).toBe(true);
+      const [state] = await world.readState();
+      const phase = (10 * tick + 0.9) % 3.6;
+      expect(Math.abs(state.position[0] - (0.9 - Math.abs(phase - 1.8)))).toBeLessThan(0.005);
+      expect(state.velocity[0]).toBeCloseTo(phase < 1.8 ? 600 : -600, 1);
+    }
+  } finally {
+    graph.destroy();
+    world.destroy();
+  }
+}, 120000);

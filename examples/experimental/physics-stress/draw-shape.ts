@@ -7,19 +7,46 @@ export function drawStressShape(
   context: CanvasRenderingContext2D,
   shape: GPURigidBodyShape,
   orientation: readonly number[],
-  scale: number
+  scale: number,
+  depthFactor = 0
 ) {
   const project = (point: readonly number[]): [number, number] => {
     const [rotationX, rotationY, rotationZ, scalar] = orientation;
     const crossX = 2 * (rotationY * point[2] - rotationZ * point[1]);
     const crossY = 2 * (rotationZ * point[0] - rotationX * point[2]);
     const crossZ = 2 * (rotationX * point[1] - rotationY * point[0]);
+    const horizontal = point[0] + scalar * crossX + rotationY * crossZ - rotationZ * crossY;
+    const depth = point[1] + scalar * crossY + rotationZ * crossX - rotationX * crossZ;
+    const vertical = point[2] + scalar * crossZ + rotationX * crossY - rotationY * crossX;
     return [
-      (point[0] + scalar * crossX + rotationY * crossZ - rotationZ * crossY) * scale,
-      -(point[2] + scalar * crossZ + rotationX * crossY - rotationY * crossX) * scale
+      (horizontal + depthFactor * depth) * scale,
+      -(vertical + 0.7 * depthFactor * depth) * scale
     ];
   };
-  if (shape.type === 'convex-hull' || shape.type === 'triangle-mesh') {
+  if (shape.type === 'box') {
+    const vertices = Array.from({length: 8}, (_, corner) =>
+      project(shape.halfExtents.map((value, axis) => (corner & (1 << axis) ? value : -value)))
+    );
+    context.globalAlpha = 0.4;
+    context.strokeStyle = '#8ea3b2';
+    for (const face of [
+      [0, 1, 3, 2],
+      [4, 5, 7, 6],
+      [0, 1, 5, 4],
+      [2, 3, 7, 6],
+      [0, 2, 6, 4],
+      [1, 3, 7, 5]
+    ]) {
+      context.beginPath();
+      face.forEach((index, corner) => {
+        if (corner === 0) context.moveTo(...vertices[index]);
+        else context.lineTo(...vertices[index]);
+      });
+      context.closePath();
+      context.fill();
+      context.stroke();
+    }
+  } else if (shape.type === 'convex-hull' || shape.type === 'triangle-mesh') {
     context.lineWidth = Math.max(1, scale * 0.015);
     context.strokeStyle = shape.type === 'triangle-mesh' ? '#e7b77c' : '#8ea3b2';
     context.globalAlpha = 0.9;

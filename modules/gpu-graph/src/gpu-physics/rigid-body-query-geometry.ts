@@ -84,6 +84,16 @@ struct SphereSweep { point:vec3f, normal:vec3f, distance:f32, hit:u32, complete:
 // Testing features separately preserves open corners instead of inflating an AABB.
 fn sweepBox(origin:vec3f,direction:vec3f,maximumDistance:f32,radius:f32,extent:vec3f)->SphereSweep{
  var result:SphereSweep;result.complete=1u;var nearest=maximumDistance;
+ if(radius==0.0){
+  var enter=0.0;var leave=maximumDistance;
+  for(var coordinate=0u;coordinate<3u;coordinate++){
+   if(direction[coordinate]==0.0){if(abs(origin[coordinate])>extent[coordinate]){return result;}}
+   else{let first=(-extent[coordinate]-origin[coordinate])/direction[coordinate];let second=(extent[coordinate]-origin[coordinate])/direction[coordinate];let lower=min(first,second);
+    if(lower>=enter){enter=lower;result.normal=vec3f(0);result.normal[coordinate]=select(1.0,-1.0,direction[coordinate]>0.0);}leave=min(leave,max(first,second));}
+  }
+  if(enter<=leave){result.hit=1u;result.distance=enter;result.point=origin+direction*enter;}
+  return result;
+ }
  let initial=clamp(origin,-extent,extent);let initialDelta=origin-initial;
  if(length(initialDelta)<=radius){result.hit=1u;result.point=initial;result.normal=initialDelta/max(length(initialDelta),1e-20);return result;}
  for(var coordinate=0u;coordinate<3u;coordinate++){
@@ -119,10 +129,87 @@ fn sweepBox(origin:vec3f,direction:vec3f,maximumDistance:f32,radius:f32,extent:v
  if(result.hit!=0u){result.distance=nearest;result.point=origin+direction*nearest-result.normal*radius;}
  return result;
 }
-fn sweepSphere(collider:u32,origin:vec3f,direction:vec3f,maximumDistance:f32,radius:f32)->SphereSweep{
+// A triangle's sphere expansion is convex. Ignore only a departing initial touch
+// on that triangle; other triangles in the same nonconvex mesh remain candidates.
+fn sweepTriangle(origin:vec3f,direction:vec3f,maximumDistance:f32,radius:f32,first:vec3f,second:vec3f,third:vec3f,skipSeparating:bool)->SphereSweep{
+ var result:SphereSweep;result.complete=1u;var nearest=maximumDistance;
+ let firstEdge=second-first;let secondEdge=third-first;
+ let edgeScale=max(max(max(abs(firstEdge.x),abs(firstEdge.y)),abs(firstEdge.z)),max(max(abs(secondEdge.x),abs(secondEdge.y)),abs(secondEdge.z)));
+ let rawNormal=cross(firstEdge/max(edgeScale,1e-30),secondEdge/max(edgeScale,1e-30));
+ let normal=rawNormal/max(length(rawNormal),1e-20);
+ let initial=closestTriangle(origin,first,second,third);let delta=origin-initial;
+ let tolerance=max(1e-8,min(1e-5,radius*1e-5));
+ if(length(delta)<=radius+tolerance){
+  result.normal=select(normal,(delta)/max(length(delta),1e-20),length(delta)>0.0);
+  if(skipSeparating&&dot(direction,result.normal)>=0.0){return result;}
+  result.hit=1u;result.point=initial;return result;
+ }
+ let denominator=dot(direction,normal);
+ if(abs(denominator)>0.0){for(var side=0u;side<2u;side++){
+  let sign=select(-1.0,1.0,side==1u);if(denominator*sign>=0.0){continue;}
+  let travelled=(sign*radius-dot(origin-first,normal))/denominator;
+  let point=origin+direction*travelled-normal*(sign*radius);
+  if(travelled<0.0||travelled>nearest){continue;}
+  if(dot(cross((second-first)/edgeScale,(point-first)/edgeScale),normal)>=0.0&&dot(cross((third-second)/edgeScale,(point-second)/edgeScale),normal)>=0.0&&dot(cross((first-third)/edgeScale,(point-third)/edgeScale),normal)>=0.0){
+   nearest=travelled;result.hit=1u;result.normal=normal*sign;
+  }
+ }}
+ if(radius>0.0){
+  var vertices=array<vec3f,3>(first,second,third);
+  for(var edge=0u;edge<3u;edge++){
+   let start=vertices[edge];let segment=vertices[(edge+1u)%3u]-start;
+   let segmentLength=length(segment);let axis=segment/max(segmentLength,1e-20);
+   let offset=origin-start;let radial=offset-axis*dot(offset,axis);let radialDirection=direction-axis*dot(direction,axis);
+   let squared=dot(radialDirection,radialDirection);
+   if(squared>0.0){
+    let projection=dot(radial,radialDirection)/squared;let perpendicular=radial-radialDirection*projection;
+    let discriminant=(radius*radius-dot(perpendicular,perpendicular))/squared;
+    if(discriminant>=-1e-6*radius*radius/squared){
+     let travelled=-projection-sqrt(max(0.0,discriminant));let center=origin+direction*travelled;let along=dot(center-start,axis);
+     if(travelled>=0.0&&travelled<=nearest&&along>=0.0&&along<=segmentLength){nearest=travelled;result.hit=1u;result.normal=(center-start-axis*along)/radius;}
+    }
+   }
+   let projection=dot(offset,direction);let perpendicular=offset-direction*projection;
+   let discriminant=radius*radius-dot(perpendicular,perpendicular);
+   if(discriminant>=-1e-6*radius*radius){
+    let travelled=-projection-sqrt(max(0.0,discriminant));
+    if(travelled>=0.0&&travelled<=nearest){nearest=travelled;result.hit=1u;result.normal=(origin+direction*travelled-start)/radius;}
+   }
+  }
+ }
+ if(result.hit!=0u){result.distance=nearest;result.point=origin+direction*nearest-result.normal*radius;}
+ return result;
+}
+fn intersectsSweepBounds(origin:vec3f,direction:vec3f,maximumDistance:f32,lower:vec3f,upper:vec3f)->bool{
+ var enter=0.0;var leave=maximumDistance;
+ for(var coordinate=0u;coordinate<3u;coordinate++){
+  if(direction[coordinate]==0.0){if(origin[coordinate]<lower[coordinate]||origin[coordinate]>upper[coordinate]){return false;}}
+  else{let first=(lower[coordinate]-origin[coordinate])/direction[coordinate];let second=(upper[coordinate]-origin[coordinate])/direction[coordinate];enter=max(enter,min(first,second));leave=min(leave,max(first,second));}
+ }
+ return enter<=leave;
+}
+fn sweepMesh(collider:u32,origin:vec3f,direction:vec3f,maximumDistance:f32,radius:f32,skipSeparating:bool)->SphereSweep{
+ var result:SphereSweep;result.complete=1u;var nearest=maximumDistance;var work=0u;var node=0u;
+ let nodeOffset=u32(bodies.colliders[collider].policies.z);let nodeCount=u32(bodies.colliders[collider].policies.w);
+ loop{
+  if(node>=nodeCount){break;}if(work>=MESH_TRAVERSAL_BUDGET){result.complete=0u;return result;}work++;
+  let lower=readGeometry(nodeOffset+node*3u);let upper=readGeometry(nodeOffset+node*3u+1u);
+  if(!intersectsSweepBounds(origin,direction,nearest,lower.xyz-vec3f(radius),upper.xyz+vec3f(radius))){node=u32(lower.w);continue;}
+  if(upper.w>0.0){let start=u32(readGeometry(nodeOffset+node*3u+2u).x);
+   for(var offset=0u;offset<u32(upper.w);offset++){
+    if(work>=MESH_TRAVERSAL_BUDGET){result.complete=0u;return result;}work++;
+    let candidate=sweepTriangle(origin,direction,nearest,radius,queryTriangleVertex(collider,start+offset,0u),queryTriangleVertex(collider,start+offset,1u),queryTriangleVertex(collider,start+offset,2u),skipSeparating);
+    if(candidate.hit!=0u){nearest=candidate.distance;result=candidate;}
+   }
+  }node++;
+ }
+ return result;
+}
+fn sweepSphere(collider:u32,origin:vec3f,direction:vec3f,maximumDistance:f32,radius:f32,skipSeparating:bool)->SphereSweep{
  var result:SphereSweep;result.complete=1u;var travelled=0.0;
  let shape=bodies.colliders[collider].shape;
  if(shape.w==6.0&&shape.z==0.0&&origin.y<0.0){return result;}
+ if(shape.w==3.0){return sweepMesh(collider,origin,direction,maximumDistance,radius,skipSeparating);}
  if(shape.w==1.0){return sweepBox(origin,direction,maximumDistance,radius,shape.xyz);}
  if(shape.w==0.0){
   let inflated=shape.x+radius;let projection=dot(origin,direction);
@@ -146,7 +233,7 @@ fn sweepSphere(collider:u32,origin:vec3f,direction:vec3f,maximumDistance:f32,rad
   let center=origin+direction*travelled;
   result.point=vec3f(center.x,0,center.z);result.normal=vec3f(0,side,0);result.distance=travelled;result.hit=1u;return result;
  }
- let tolerance=max(1e-8,1e-6*max(radius,length(shape.xyz)));
+ let tolerance=max(1e-8,min(1e-5,radius*1e-5));
  for(var iteration=0u;iteration<128u;iteration++){
   let center=origin+direction*travelled;let surface=closestSurface(collider,center);
   if(surface.complete==0u){result.complete=0u;return result;}

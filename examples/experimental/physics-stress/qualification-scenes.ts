@@ -57,7 +57,7 @@ export function makeQualificationScene(
   if (scene === 'geometryConvex')
     return {
       description:
-        'Geometry Torture: the same cooked convex cube appears at three sizes with rotated faces. Contact depths are qualified separately against independent rectangle SAT at scales 0.001, 1 and 1000, with reversed collider order. The front projection displays original hull triangles. This does not qualify all convex shapes or stable feature identity.',
+        'Geometry Torture: the same cooked convex cube appears at three sizes with rotated faces. Contact depths are qualified separately against independent rectangle SAT at scales 0.001, 1 and 1000, with reversed collider order. The diagnostic projection displays original hull triangles. This does not qualify all convex shapes or stable feature identity.',
       props: {
         ...base,
         bodies: [
@@ -87,7 +87,7 @@ export function makeQualificationScene(
     return {
       description:
         scene === 'geometryOpenings'
-          ? 'Geometry Torture: original triangles form a two-sided surface with a real central opening. The center sphere fits through; the outer spheres meet the rim. No convex hull fills the hole. Meshes retain surface semantics: a closed mesh does not imply solid-volume containment.'
+          ? 'Geometry Torture: original triangles form a two-sided surface with a real central opening. An oblique projection reveals the opening. The center sphere fits through; the outer spheres meet the rim. No convex hull fills the hole. Meshes retain surface semantics: a closed mesh does not imply solid-volume containment.'
           : 'Fast Motion Lab: selected spheres sweep against the original mesh triangles. The center trajectory passes through the opening; rim trajectories rebound. Trails reveal motion between readbacks. Only centered spheres versus static geometry have CCD; rotating and dynamic obstacles retain discrete response.',
       props: {
         ...base,

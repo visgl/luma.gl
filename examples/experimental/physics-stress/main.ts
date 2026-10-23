@@ -186,6 +186,7 @@ function draw() {
     canvas.height = height;
   }
   context.clearRect(0, 0, width, height);
+  const depthFactor = activeScene === 'geometryOpenings' || activeScene === 'fastMesh' ? 0.45 : 0;
   const minimumHeight =
     activeScene === 'ballistic' ? Math.min(0, (states[0]?.position[2] ?? 0) - 1) : 0;
   const scale = Math.min(width / 19, height / (12 - minimumHeight));
@@ -204,8 +205,8 @@ function draw() {
     context.lineWidth = ratio;
     context.beginPath();
     trail.forEach((point, index) => {
-      const horizontal = origin[0] + point[0] * scale,
-        vertical = origin[1] - point[2] * scale;
+      const horizontal = origin[0] + (point[0] + depthFactor * point[1]) * scale,
+        vertical = origin[1] - (point[2] + 0.7 * depthFactor * point[1]) * scale;
       if (index === 0) context.moveTo(horizontal, vertical);
       else context.lineTo(horizontal, vertical);
     });
@@ -228,21 +229,28 @@ function draw() {
       rotationScalar * doubledCross[0] +
       rotationY * doubledCross[2] -
       rotationZ * doubledCross[1];
+    const offsetY =
+      offset[1] +
+      rotationScalar * doubledCross[1] +
+      rotationZ * doubledCross[0] -
+      rotationX * doubledCross[2];
     const offsetZ =
       offset[2] +
       rotationScalar * doubledCross[2] +
       rotationX * doubledCross[1] -
       rotationY * doubledCross[0];
     context.translate(
-      origin[0] + (state.position[0] - offsetX) * scale,
-      origin[1] - (state.position[2] - offsetZ) * scale
+      origin[0] +
+        (state.position[0] - offsetX + depthFactor * (state.position[1] - offsetY)) * scale,
+      origin[1] -
+        (state.position[2] - offsetZ + 0.7 * depthFactor * (state.position[1] - offsetY)) * scale
     );
     // Front diagnostic projection; boxes use their authored extents, not a 3D silhouette.
     if (shape?.type === 'sphere') {
       context.beginPath();
       context.arc(0, 0, shape.radius * scale, 0, 2 * Math.PI);
       context.fill();
-    } else if (shape?.type === 'box') {
+    } else if (shape?.type === 'box' && depthFactor === 0) {
       const [horizontal, vertical, depth, scalar] = state.orientation;
       context.rotate(
         Math.atan2(
@@ -257,7 +265,7 @@ function draw() {
         2 * shape.halfExtents[2] * scale
       );
     } else if (shape) {
-      drawStressShape(context, shape, state.orientation, scale);
+      drawStressShape(context, shape, state.orientation, scale, depthFactor);
     }
     context.restore();
   }

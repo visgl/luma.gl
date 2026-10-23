@@ -678,8 +678,9 @@ capacity checks run before copying input. Independent rectangle and polyhedron S
 references qualify named cube/box and tetrahedron penetration cases across scale.
 
 Sphere/static CCD now accepts all static shape families. Analytic sphere, rounded-box
-and unbounded-plane sweeps complement bounded capsule/cylinder/convex/triangle
-surface advancement. Initial-distance traversal exhaustion rejects the step.
+unbounded-plane and triangle-feature sweeps complement bounded capsule/cylinder/convex
+surface advancement. Mesh sweeps traverse the BVH and retain other triangles after
+a separating touch. Curved-shape tolerance is capped independently of obstacle length. Initial-distance traversal exhaustion rejects the step.
 Qualification covers transformed obstacles, scale, timestep, mesh holes and both
 sides, repeated ricochets, and latched rollback after impact/traversal exhaustion.
 Constant-world-spin quaternion integration removes normalized-Euler phase lag;

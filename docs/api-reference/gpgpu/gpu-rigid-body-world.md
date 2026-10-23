@@ -383,8 +383,12 @@ sweeps after the discrete solver. Selected bodies must be dynamic single spheres
 centered on their COM. Static spheres, boxes, planes, capsules, cylinders, convex hulls and original
 triangle surfaces are supported; filters and sensors are respected. Spheres, rounded
 boxes (faces, finite edges and corners), and unbounded planes use analytic sweeps.
-Other surfaces use at most 128 conservative-advancement iterations, with bounded
-mesh traversal and explicit incomplete results. Triangle meshes retain two-sided
+Triangle meshes use analytic triangle face/edge/corner sweeps with bounded BVH
+traversal, skipping a separating initial touch per triangle so other walls remain
+candidates. Curved/convex surfaces use at most 128 conservative-advancement
+iterations. Advancement tolerance depends on the moving radius, is capped at
+1e-5 world units (with a 1e-8 numerical floor), and does not grow with unrelated
+obstacle dimensions. Exhausted work returns an explicit incomplete result. Triangle meshes retain two-sided
 surface semantics and preserve holes; they do not acquire solid containment. Each impact reflects the closing normal velocity using
 the material restitution policy, then sweeps the remaining time. This first CCD
 response does not add tangential impact friction or CCD-specific contact-event

@@ -69,7 +69,7 @@ export function addRigidBodyContinuous<Parameters>(
    if(initialSurface.complete==0u){continuousStatus[body].x=1u;return;}
    if(initialSurface.distance<radius-tolerance){continue;}
    let origin=colliderLocal(collider,position-colliderPosition(collider));let direction=colliderLocal(collider,motion/magnitude);
-   let result=sweepSphere(collider,origin,direction,magnitude,radius);
+   let result=sweepSphere(collider,origin,direction,magnitude,radius,true);
    if(result.complete==0u){continuousStatus[body].x=1u;return;}
    if(result.hit==0u){continue;}
    let normal=rotate(colliderRotation(collider),result.normal);

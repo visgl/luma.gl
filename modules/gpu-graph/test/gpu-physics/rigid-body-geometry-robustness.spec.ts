@@ -5,7 +5,13 @@ import {expect, it} from 'vitest';
 import {getPolyhedronSeparation} from './convex-reference';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {GPUCommandGraph} from '../../src/gpu-core';
-import {GPURigidBodyWorld, makeConvexHullGeometry, type GPURigidBody} from '../../src/gpu-physics';
+import {
+  GPURigidBodyWorld,
+  makeConvexHullGeometry,
+  makeTriangleMeshGeometry,
+  type GPURigidBody,
+  type GPURigidBodyShape
+} from '../../src/gpu-physics';
 
 // Independent 2D rectangle SAT plus the common Z axis. Neither GJK nor EPA is used.
 function getReferenceDepth(angle: number, center: number[]): number {
@@ -263,4 +269,46 @@ it('qualifies tetrahedral convex depths against independent face and edge SAT', 
         world.destroy();
       }
     }
+}, 120000);
+
+it('keeps sweep tolerances local on elongated curved and mesh obstacles and preserves zero-radius box normals', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const shapes: GPURigidBodyShape[] = [
+    {type: 'capsule', height: 1_000_000, radiusBottom: 0.5, radiusTop: 0.5},
+    {type: 'cylinder', height: 1_000_000, radiusBottom: 0.5, radiusTop: 0.5},
+    {
+      type: 'triangle-mesh',
+      geometry: makeTriangleMeshGeometry(
+        [0, -500000, -0.5, 0, 500000, -0.5, 0, 500000, 0.5, 0, -500000, 0.5],
+        [0, 1, 2, 0, 2, 3]
+      )
+    },
+    {type: 'box', halfExtents: [0.5, 0.5, 0.5]}
+  ];
+  for (const shape of shapes) {
+    const world = new GPURigidBodyWorld({
+      enableQueries: true,
+      bodies: [{mode: 'static', position: [0, 0, 0], shape}]
+    });
+    world.addToGraph(new GPUCommandGraph(device));
+    try {
+      const box = shape.type === 'box';
+      const result = await world.castSphere({
+        origin: box ? [-3, 0.5, 0.5] : [-1, 0, 0],
+        direction: [1, 0, 0],
+        radius: box ? 0 : 0.1,
+        maximumDistance: 4
+      });
+      expect(result.complete).toBe(true);
+      expect(result.hits).toHaveLength(1);
+      expect(result.hits[0].distance).toBeCloseTo(
+        box ? 2.5 : shape.type === 'triangle-mesh' ? 0.9 : 0.4,
+        4
+      );
+      expect(result.hits[0].normal[0]).toBeCloseTo(-1, 4);
+    } finally {
+      world.destroy();
+    }
+  }
 }, 120000);
