@@ -7,6 +7,7 @@ import {GPUCommandGraph} from '../../src/gpu-core';
 import {
   GPURigidBodyWorld,
   makeConvexHullGeometry,
+  type GPURigidBody,
   type GPURigidBodyWorldProps
 } from '../../src/gpu-physics';
 
@@ -336,4 +337,52 @@ it('applies swept Coulomb friction with angular response without adding impact e
     0.5 * state.velocity.reduce((sum, value) => sum + value * value, 0) +
     0.5 * 0.025 * state.angularVelocity.reduce((sum, value) => sum + value * value, 0);
   expect(energy).toBeLessThanOrEqual(0.5 * (240 ** 2 + 30 ** 2) + 0.1);
+});
+
+it.for([
+  false,
+  true
+])('preserves free-box rebound trajectories against offset thin walls (reversed %s)', async (reverse, context) => {
+  const bodies: GPURigidBody[] = [
+    {
+      position: [0, 0, 4.2],
+      velocity: [120, 0, 0],
+      shape: {type: 'box', halfExtents: [0.35, 0.3, 0.35]},
+      friction: 0,
+      restitution: 1
+    },
+    ...[-6, 6].map(horizontal => ({
+      mode: 'static' as const,
+      position: [horizontal, 0, 4] as const,
+      shape: {type: 'box' as const, halfExtents: [0.05, 2, 5] as const},
+      friction: 0,
+      restitution: 1
+    }))
+  ];
+  if (reverse) bodies.reverse();
+  const selected = reverse ? 2 : 0;
+  const result = await run(
+    {
+      gravity: [0, 0, 0],
+      sleepAfter: 0,
+      restitutionThreshold: 0,
+      contactSlop: 0,
+      failurePolicy: 'rollback',
+      continuous: {mode: 'convex', bodies: [selected]},
+      bodies
+    },
+    30
+  );
+  if (!result) return context.skip('WebGPU unavailable');
+  expect(
+    result.diagnostics,
+    JSON.stringify({work: result.work, state: result.state[selected]})
+  ).toMatchObject({steps: 30, complete: true});
+  // Independent folded trajectory in [-5.6,5.6], with 60 units travelled.
+  const limit = 5.6,
+    unfolded = (limit + 60) % (4 * limit);
+  const expected = (unfolded <= 2 * limit ? unfolded : 4 * limit - unfolded) - limit;
+  expect(result.state[selected].position[0]).toBeCloseTo(expected, 2);
+  expect(Math.abs(result.state[selected].velocity[0])).toBeCloseTo(120, 2);
+  expect(Math.hypot(...result.state[selected].angularVelocity)).toBeLessThan(0.001);
 });

@@ -76,6 +76,35 @@ fn continuousVertex(first:u32,second:u32,direction:vec3f,time:f32,scale:f32)->Su
 fn continuousDistance(first:u32,second:u32,time:f32,tolerance:f32)->ContinuousDistance {
  // Exact point-to-OBB distance avoids a near-contact smooth-support GJK degeneracy.
  let firstShape=bodies.colliders[first].shape;let secondShape=bodies.colliders[second].shape;
+ if(firstShape.w==1.0&&secondShape.w==1.0){
+  let firstBody=colliderBody(first);let secondBody=colliderBody(second);
+  let firstBodyRotation=continuousRotation(orientations[firstBody],continuousAngular(firstBody),time);
+  let secondBodyRotation=continuousRotation(orientations[secondBody],continuousAngular(secondBody),time);
+  let firstRotation=multiplyRotation(firstBodyRotation,bodies.colliders[first].orientation);
+  let secondRotation=multiplyRotation(secondBodyRotation,bodies.colliders[second].orientation);
+  let firstCenter=positions[firstBody].xyz+continuousVelocity(firstBody)*time+rotate(firstBodyRotation,bodies.colliders[first].position.xyz);
+  let secondCenter=positions[secondBody].xyz+continuousVelocity(secondBody)*time+rotate(secondBodyRotation,bodies.colliders[second].position.xyz);
+  var axes:array<vec3f,6>;
+  for(var coordinate=0u;coordinate<3u;coordinate++){
+   var unit=vec3f(0);unit[coordinate]=1.0;axes[coordinate]=rotate(firstRotation,unit);axes[coordinate+3u]=rotate(secondRotation,unit);
+  }
+  var separation= -1e30;var normal=vec3f(1,0,0);
+  for(var index=0u;index<15u;index++){
+   var direction=vec3f(0);
+   if(index<6u){direction=axes[index];}else{let edge=index-6u;direction=cross(axes[edge/3u],axes[3u+edge%3u]);}
+   let magnitude=length(direction);if(magnitude<1e-7){continue;}direction/=magnitude;
+   var firstExtent=0.0;var secondExtent=0.0;
+   for(var coordinate=0u;coordinate<3u;coordinate++){
+    firstExtent+=abs(dot(direction,axes[coordinate]))*firstShape[coordinate];
+    secondExtent+=abs(dot(direction,axes[coordinate+3u]))*secondShape[coordinate];
+   }
+   let projection=dot(firstCenter-secondCenter,direction);let gap=abs(projection)-firstExtent-secondExtent;
+   if(gap>separation){separation=gap;normal=direction*select(-1.0,1.0,projection>=0.0);}
+  }
+  // The largest separating-axis gap is a conservative Euclidean distance bound.
+  var bounds:ContinuousDistance;bounds.complete=1u;bounds.distance=max(0.0,separation);bounds.normal=normal;
+  bounds.point=(continuousSupport(first,-normal,time)+continuousSupport(second,normal,time))*0.5;return bounds;
+ }
  if((firstShape.w==0.0&&secondShape.w==1.0)||(firstShape.w==1.0&&secondShape.w==0.0)){
   let sphere=select(second,first,firstShape.w==0.0);let box=select(first,second,firstShape.w==0.0);
   let sphereBody=colliderBody(sphere);let boxBody=colliderBody(box);
@@ -216,6 +245,23 @@ fn continuousRadius(collider:u32)->f32 {
  }
  if(!complete){continuousWork.candidates[slot].colliders.z=2u;}
 }
+fn continuousImpactPoint(first:u32,second:u32,point:vec3f,normal:vec3f)->vec3f {
+ if(bodies.colliders[first].shape.w!=1.0||bodies.colliders[second].shape.w!=1.0){return point;}
+ let tolerance=max(1e-5,max(length(colliderPosition(first)),length(colliderPosition(second)))*1e-6);
+ var result=point;var smallestArea=1e30;
+ for(var side=0u;side<2u;side++){
+  let collider=select(first,second,side==1u);let other=select(second,first,side==1u);
+  let direction=colliderLocal(collider,normal)*select(-1.0,1.0,side==1u);
+  for(var coordinate=0u;coordinate<3u;coordinate++){
+   if(abs(direction[coordinate])<0.999){continue;}
+   var localPoint=vec3f(0);localPoint[coordinate]=bodies.colliders[collider].shape[coordinate]*select(-1.0,1.0,direction[coordinate]>=0.0);
+   let candidate=colliderPosition(collider)+rotate(colliderRotation(collider),localPoint);
+   let area=bodies.colliders[collider].shape[(coordinate+1u)%3u]*bodies.colliders[collider].shape[(coordinate+2u)%3u];
+   if(area<smallestArea&&all(abs(colliderLocal(other,candidate-colliderPosition(other)))<=bodies.colliders[other].shape.xyz+vec3f(tolerance))){result=candidate;smallestArea=area;}
+  }
+ }
+ return result;
+}
 @compute @workgroup_size(1) fn resolveConvexContinuous(){
  if(continuousWork.finished!=0u){return;}
  continuousStatus[0].w=max(continuousStatus[0].w,atomicLoad(&continuousWork.count));
@@ -239,7 +285,7 @@ fn continuousRadius(collider:u32)->f32 {
  continuousWork.remaining-=nearest;
  if(selected==0xffffffffu){continuousWork.finished=1u;return;}
  let candidate=continuousWork.candidates[selected];let firstCollider=candidate.colliders.x;let secondCollider=candidate.colliders.y;
- let first=colliderBody(firstCollider);let second=colliderBody(secondCollider);let point=candidate.point.xyz;let normal=candidate.normal.xyz;
+ let first=colliderBody(firstCollider);let second=colliderBody(secondCollider);let normal=candidate.normal.xyz;let point=continuousImpactPoint(firstCollider,secondCollider,candidate.point.xyz,normal);
  let closing=dot(pointVelocity(first,point)-pointVelocity(second,point),normal);
  let response=effectiveMass(first,second,point,normal);
  if(response<=1e-20||length(normal)<0.5){continuousStatus[0].x=1u;continuousWork.finished=1u;return;}

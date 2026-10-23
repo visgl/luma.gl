@@ -273,6 +273,7 @@ function addConvexContinuous<Parameters>(
     const properties = (entryPoint: string) => {
       const entries = active.filter(binding => entryBindings[entryPoint].includes(binding.name));
       return {
+        id: `${id}-${entryPoint}`,
         source: shader,
         entryPoint,
         shaderLayout: {

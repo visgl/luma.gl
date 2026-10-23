@@ -1428,6 +1428,10 @@
           {
             "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
             "testPattern": "resolves a moving box pair with conserved momentum and energy"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "preserves free-box rebound trajectories"
           }
         ]
       }
@@ -1484,6 +1488,24 @@
           {
             "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
             "testPattern": "detects a rotating gate crossing"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.convex-impact-friction",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "applies swept Coulomb friction"
           }
         ]
       }

@@ -405,7 +405,7 @@ pairs retain discrete collision detection.
 
 Each impact round builds a bounded swept candidate queue in parallel. COM-centered
 bounding spheres include collider offsets and conservatively cover rotation. An
-indirect dispatch searches only queued candidates. Support-plane distance bounds
+indirect dispatch searches only queued candidates. Support-plane distance bounds (including box/box separating axes and exact sphere/box distance)
 and linear/angular speed bounds drive conservative advancement (64 distance and
 128 advancement iterations). Distance stopping uses local feature size and a float32
 coordinate-precision floor; it is not an absolute world-space accuracy guarantee. Centered
