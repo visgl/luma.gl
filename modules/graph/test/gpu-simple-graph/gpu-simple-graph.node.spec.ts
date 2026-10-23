@@ -429,9 +429,9 @@ it('materializes shared scalar dependencies once before collecting vector chunks
   const graph = new GPUSimpleGraph(device);
   graph.addEvaluator('result', vector);
   const compiled = graph.compile();
+  const originalEvaluate = scale.evaluate.bind(scale);
   const evaluateScale = vi.spyOn(scale, 'evaluate');
   let pending = false;
-  const originalEvaluate = scale.evaluate.bind(scale);
   evaluateScale.mockImplementation(async (...args) => {
     expect(pending).toBe(false);
     pending = true;
