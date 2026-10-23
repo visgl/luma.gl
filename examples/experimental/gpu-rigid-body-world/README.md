@@ -37,10 +37,9 @@ moving mesh collisions are not demonstrated or claimed here.
 
 ## Auto-play
 
-Enable **Auto-play scenarios** to cycle scenes. After at least three simulated
-seconds, one second of quiet motion triggers a two-second pause and advancement.
-Impact and moving-support scenes have eight- and twelve-second demonstration limits;
-other scenes have a twenty-second limit. Timed completion is labeled separately from
+Enable **Auto-play scenarios** to cycle scenes. After at least ten simulated
+seconds, three seconds of quiet motion trigger a two-second pause and advancement.
+Active scenes can run for up to two simulated minutes. Timed completion is labeled separately from
 settling. Incomplete simulation stops playback visibly. Reset, manual scene changes,
 pushes and pause/resume restart the settling timer. Auto-play uses optional body
 readback to detect settling; rendering continues to consume GPU buffers directly.
@@ -115,4 +114,3 @@ The frame is authored as a CPU scenegraph of geometry nodes before GPU allocatio
 
 Ball impacts use restitution 0.985, with low-speed restitution disabled below 0.05. Exponential linear/angular damping (0.08/0.12 inverse seconds) approximates air and suspension losses, including collective swings without impacts. The two-minute reset remains active. Steel roughness is 0.07 for sharper PBR reflections without raising scene exposure.
 
-Auto-play now waits at least 10 simulated seconds and three quiet seconds before switching scenes; active mechanisms get up to two minutes.
