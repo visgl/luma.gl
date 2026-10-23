@@ -9,7 +9,7 @@ import {GPUGraphExplorerExample} from '@site/src/examples';
 
 ## Overview
 
-`@luma.gl/gpu-graph/gpu-graph-algorithms` provides graph-data structures and algorithms that compose inside a
+`@luma.gl/graph/gpu-graph-algorithms` provides graph-data structures and algorithms that compose inside a
 caller-owned `GPUCommandGraph`. It keeps adjacency, traversal frontiers, scores, partitions, and
 layouts GPU-resident so analysis can feed another analysis or a renderer without downloading the
 graph through JavaScript.
@@ -23,8 +23,8 @@ algorithm whose result is immediately needed on the CPU, a CPU graph library may
 ## Quick start
 
 ```ts
-import {GPUCommandGraph} from '@luma.gl/gpu-graph/gpu-core';
-import {GPUGraphAlgorithmsData, GPUGraphAlgorithmsPageRank, GPUGraphAlgorithmsTopology} from '@luma.gl/gpu-graph/gpu-graph-algorithms';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
+import {GPUGraphAlgorithmsData, GPUGraphAlgorithmsPageRank, GPUGraphAlgorithmsTopology} from '@luma.gl/graph/gpu-graph-algorithms';
 
 const graph = new GPUCommandGraph({device, id: 'graph-analysis'});
 const topology = new GPUGraphAlgorithmsTopology({device, graph, edges, vertexCount});

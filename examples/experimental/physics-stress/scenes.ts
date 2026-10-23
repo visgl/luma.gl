@@ -1,7 +1,7 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
-import type {GPURigidBody, GPURigidBodyWorldProps} from '@luma.gl/gpu-graph/gpu-physics';
+import type {GPURigidBody, GPURigidBodyWorldProps} from '@luma.gl/graph/gpu-physics';
 
 import {
   QUALIFICATION_SCENES,

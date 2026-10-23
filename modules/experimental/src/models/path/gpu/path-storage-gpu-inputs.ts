@@ -7,7 +7,7 @@ import {DynamicBuffer} from '@luma.gl/engine';
 import {getGPUVectorFormatInfo, isVertexListGPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUData} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {type GPUInputSchema, validateGPUInputVectors} from '@luma.gl/gpu-graph/gpu-tables';
+import {type GPUInputSchema, validateGPUInputVectors} from '@luma.gl/graph/gpu-tables';
 import type {PathStorageInputProps} from '../path-storage-model';
 
 /** Per-source-batch storage bindings and path range metadata. */

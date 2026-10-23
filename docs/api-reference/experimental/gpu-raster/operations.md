@@ -11,7 +11,7 @@ import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-
 
 ## Overview
 
-`@luma.gl/gpu-graph/gpu-raster` provides optional, graph-native WebGPU operations for
+`@luma.gl/graph/gpu-raster` provides optional, graph-native WebGPU operations for
 two-dimensional scientific and geospatial rasters. Applications control image decoding,
 coordinate transforms, source buffers and textures, output allocation, command submission, and
 optional readback; an explicitly selected residency cache can upload and own source buffers on

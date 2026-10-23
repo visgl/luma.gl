@@ -1,7 +1,7 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
-import type {GPURigidBodyShape} from '@luma.gl/gpu-graph/gpu-physics';
+import type {GPURigidBodyShape} from '@luma.gl/graph/gpu-physics';
 
 export function drawStressShape(
   context: CanvasRenderingContext2D,

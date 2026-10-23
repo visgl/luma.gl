@@ -1,7 +1,7 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
-import type {GPURigidBodyWorldProps} from '@luma.gl/gpu-graph/gpu-physics';
+import type {GPURigidBodyWorldProps} from '@luma.gl/graph/gpu-physics';
 
 export const CONTINUOUS_SCENES = {
   persistentContacts: 'Persistent contacts · moving platform',

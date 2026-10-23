@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPURasterMetadata} from '@luma.gl/gpu-graph/gpu-raster';
+import type {GPURasterMetadata} from '@luma.gl/graph/gpu-raster';
 
 /** Explicit reflectance bands and a source-aligned cloud validity mask. */
 export type RasterLabDataset = {

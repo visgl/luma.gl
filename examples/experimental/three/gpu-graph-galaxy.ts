@@ -6,7 +6,7 @@
 import {Buffer, luma, log} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph} from '@luma.gl/gpu-graph/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {ThreeBufferBridge, getThreeBufferBridgeSupport} from '@luma.gl/three/interop';
 import {
   WebGPURenderer,

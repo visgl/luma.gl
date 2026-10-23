@@ -11,7 +11,7 @@ import {
   vertexFormatDecoder
 } from '@luma.gl/core';
 import {GPUVector, getGPUVectorData} from '@luma.gl/gpgpu/gpu-data';
-import {GPURecordBatch, GPUTable, GPUTableGeometry} from '@luma.gl/gpu-graph/gpu-tables';
+import {GPURecordBatch, GPUTable, GPUTableGeometry} from '@luma.gl/graph/gpu-tables';
 import {Binary, DataType, Float, Int, Precision, Table, Vector} from 'apache-arrow';
 import type {ArrowMeshTable, ArrowMeshTopology} from './arrow-mesh-types';
 

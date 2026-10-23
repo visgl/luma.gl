@@ -19,7 +19,7 @@ See [command graph debugging](/docs/api-reference/experimental/gpu-core/debuggin
 interpret the panels.
 
 
-`@luma.gl/gpu-graph/gpu-physics` provides experimental WebGPU simulation. Import this
+`@luma.gl/graph/gpu-physics` provides experimental WebGPU simulation. Import this
 subpath explicitly; the physics API is not exported from the package root. It
 requires a WebGPU device and has no WebGL or CPU simulation fallback.
 

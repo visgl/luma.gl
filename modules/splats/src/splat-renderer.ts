@@ -17,7 +17,7 @@ import {
   GPUTable,
   GPUTableModel,
   type GPUInputSchema
-} from '@luma.gl/gpu-graph/gpu-tables';
+} from '@luma.gl/graph/gpu-tables';
 import {GPUSplatData} from './splat-data';
 import {projectSplatCovarianceToScreen} from './splat-covariance';
 import {acceptsSplatSemantic, type SplatSemanticFilter} from './splat-filter';

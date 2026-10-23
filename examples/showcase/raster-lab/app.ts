@@ -12,7 +12,7 @@ import {
   type GPURasterTileGraphLease,
   type GPURasterTileLease,
   type GPURasterTileRequest
-} from '@luma.gl/gpu-graph/gpu-raster';
+} from '@luma.gl/graph/gpu-raster';
 import type {RasterLabDataset} from './raster-data';
 import {
   RasterLabEngine,

@@ -11,7 +11,7 @@ import {
   type CompiledGPUCommandGraph,
   type GPUSortAlgorithm,
   type GPUSortDirection
-} from '@luma.gl/gpu-graph/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import * as arrow from 'apache-arrow';

@@ -17,8 +17,8 @@ import {
   type GPUReadbackTicket,
   type GPUScene,
   type GraphDataView
-} from '@luma.gl/gpu-graph/gpu-core';
-import {makeGPUSceneFromCPUScene} from '@luma.gl/gpu-graph/gpu-tables';
+} from '@luma.gl/graph/gpu-core';
+import {makeGPUSceneFromCPUScene} from '@luma.gl/graph/gpu-tables';
 import {
   ExamplePanelManager,
   makeExamplePanelHostHtml,

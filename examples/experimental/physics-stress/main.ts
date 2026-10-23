@@ -7,7 +7,7 @@ import {
   GPURigidBodyRecoveryRunner,
   type GPURigidBodyRecoveryResult,
   type GPURigidBodyState
-} from '@luma.gl/gpu-graph/gpu-physics';
+} from '@luma.gl/graph/gpu-physics';
 import {drawStressShape} from './draw-shape';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {createRigidBodyPanel} from '../gpu-rigid-body-world/info-box';

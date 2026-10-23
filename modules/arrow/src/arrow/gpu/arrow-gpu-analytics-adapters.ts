@@ -10,7 +10,7 @@ import {
   isGPUTableIndexColumnName,
   type GPUField,
   type GPUTypeMap
-} from '@luma.gl/gpu-graph/gpu-tables';
+} from '@luma.gl/graph/gpu-tables';
 import {
   DataType,
   Dictionary,

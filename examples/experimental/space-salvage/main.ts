@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import {luma} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
-import {GPUCommandGraph} from '@luma.gl/gpu-graph/gpu-core';
-import {GPURigidBodyWorld, type GPURigidBodyQueryHit} from '@luma.gl/gpu-graph/gpu-physics';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
+import {GPURigidBodyWorld, type GPURigidBodyQueryHit} from '@luma.gl/graph/gpu-physics';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {createSalvagePanel} from './info-box';
 import {CARGO_IDS, DOCK, makeSalvageScene} from './scene';

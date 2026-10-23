@@ -261,7 +261,7 @@ geometry, defaulting to one interleaved vertex buffer plus a separate optional
 index buffer.
 
 For lower-level table pipelines, import `GPUTableBufferPlanner` from
-`@luma.gl/gpu-graph/gpu-tables` to produce deterministic GPU allocation plans from column
+`@luma.gl/graph/gpu-tables` to produce deterministic GPU allocation plans from column
 descriptors while respecting device vertex and storage buffer limits.
 
 ## GPU Input Programming Guidelines
@@ -279,7 +279,7 @@ ArrowInputSchema
   -> validates the result against GPUInputSchema
 ```
 
-`GPUInputSchema` belongs to `@luma.gl/gpu-graph/gpu-tables`. It declares required and optional
+`GPUInputSchema` belongs to `@luma.gl/graph/gpu-tables`. It declares required and optional
 prepared vector names, accepted `GPUVector.format` values, semantic kinds, and
 which inputs are internal. It deliberately does not mention Arrow `DataType`
 objects, source column paths, temporal origins, tessellation, text dictionaries,

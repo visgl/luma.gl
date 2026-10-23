@@ -25,7 +25,7 @@ PR head before merge.
 
 Implementation references on master:
 
-- [Module API and limitations](../../modules/gpu-graph/src/gpu-physics/README.md)
+- [Module API and limitations](../../modules/graph/src/gpu-physics/README.md)
 - [Sphere world example](../../examples/experimental/gpu-sphere-world/)
 - [Pool example and controls](../../examples/experimental/gpu-pool/README.md)
 

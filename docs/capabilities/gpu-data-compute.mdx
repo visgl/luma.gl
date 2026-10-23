@@ -17,18 +17,18 @@ Return to the [capabilities overview](/docs/capabilities) for rendering and visu
 | Owned or borrowed GPU chunks | Experimental | WebGPU + WebGL2 | `@luma.gl/gpgpu/gpu-data` | Each `GPUData` object owns or borrows exactly one GPU buffer. |
 | Typed GPU vectors | Experimental | WebGPU + WebGL2 | `@luma.gl/gpgpu/gpu-data` | `GPUVector` preserves an ordered list of independent data chunks. |
 | Strided and child views | Experimental | WebGPU + WebGL2 | `@luma.gl/gpgpu/gpu-data` | `GPUDataView` describes views and struct children without duplicating GPU storage. |
-| GPU record batches | Experimental | WebGPU + WebGL2 | `@luma.gl/gpu-graph/gpu-tables` | `GPURecordBatch` groups aligned named columns without erasing batch identity. |
-| Chunk-preserving tables | Experimental | WebGPU + WebGL2 | `@luma.gl/gpu-graph/gpu-tables` | `GPUTable` keeps streamed record batches instead of implicitly repacking them. |
+| GPU record batches | Experimental | WebGPU + WebGL2 | `@luma.gl/graph/gpu-tables` | `GPURecordBatch` groups aligned named columns without erasing batch identity. |
+| Chunk-preserving tables | Experimental | WebGPU + WebGL2 | `@luma.gl/graph/gpu-tables` | `GPUTable` keeps streamed record batches instead of implicitly repacking them. |
 | Constant values | Experimental | WebGPU + WebGL2 | `@luma.gl/gpgpu/gpu-data` | `GPUConstant` represents scalar or row-level constant inputs. |
 | Explicit vector formats | Experimental | WebGPU + WebGL2 | `@luma.gl/gpgpu/gpu-data` | `GPUVectorFormat` describes stored bytes independently of shader value types. |
-| GPU schemas | Experimental | WebGPU + WebGL2 | `@luma.gl/gpu-graph/gpu-tables` | `GPUSchema` and input schemas describe column names, formats, and bindings. |
-| Shader binding synthesis | Experimental | WebGPU + WebGL2 | `@luma.gl/gpu-graph/gpu-tables` | Table-aware helpers connect compatible columns to vertex attributes or storage. |
-| Buffer budget planning | Experimental | WebGPU + WebGL2 | `@luma.gl/gpu-graph/gpu-tables` | `GPUTableBufferPlanner` bounds bindings and respects available device limits. |
-| Explicit packing | Experimental | WebGPU + WebGL2 | `@luma.gl/gpu-graph/gpu-tables` | Packing is an explicit operation, never a hidden side effect of streaming. |
-| Ownership-aware destruction | Experimental | WebGPU + WebGL2 | `@luma.gl/gpu-graph/gpu-tables` | Aggregate destruction does not release buffers borrowed from their original owners. |
-| Table-backed rendering | Experimental | WebGPU + WebGL2 | `@luma.gl/gpu-graph/gpu-tables` | `GPUTableModel` and table geometry connect columnar data directly to drawing. |
-| Table transform feedback | Experimental | WebGL2 | `@luma.gl/gpu-graph/gpu-tables` | Apply supported table transforms through WebGL transform feedback. |
-| Table compute dispatch | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-tables` | Compose typed GPU table inputs and outputs through WebGPU compute. |
+| GPU schemas | Experimental | WebGPU + WebGL2 | `@luma.gl/graph/gpu-tables` | `GPUSchema` and input schemas describe column names, formats, and bindings. |
+| Shader binding synthesis | Experimental | WebGPU + WebGL2 | `@luma.gl/graph/gpu-tables` | Table-aware helpers connect compatible columns to vertex attributes or storage. |
+| Buffer budget planning | Experimental | WebGPU + WebGL2 | `@luma.gl/graph/gpu-tables` | `GPUTableBufferPlanner` bounds bindings and respects available device limits. |
+| Explicit packing | Experimental | WebGPU + WebGL2 | `@luma.gl/graph/gpu-tables` | Packing is an explicit operation, never a hidden side effect of streaming. |
+| Ownership-aware destruction | Experimental | WebGPU + WebGL2 | `@luma.gl/graph/gpu-tables` | Aggregate destruction does not release buffers borrowed from their original owners. |
+| Table-backed rendering | Experimental | WebGPU + WebGL2 | `@luma.gl/graph/gpu-tables` | `GPUTableModel` and table geometry connect columnar data directly to drawing. |
+| Table transform feedback | Experimental | WebGL2 | `@luma.gl/graph/gpu-tables` | Apply supported table transforms through WebGL transform feedback. |
+| Table compute dispatch | Experimental | WebGPU | `@luma.gl/graph/gpu-tables` | Compose typed GPU table inputs and outputs through WebGPU compute. |
 
 See [GPU table structure and lifecycle](/docs/api-reference/experimental/gpu-tables).
 
@@ -131,24 +131,24 @@ See [GPU primitive documentation](/docs/api-reference/experimental/gpu-core).
 
 | Feature | Status | Backend | Package | Details |
 | --- | --- | --- | --- | --- |
-| GPU-resident dataframes | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-dataframe` | `GPUDataFrame` wraps typed GPU tables without taking implicit ownership of borrowed source buffers. |
-| Immutable query plans | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-dataframe` | Build reusable filter, projection, aggregation, histogram, and ordering plans without eagerly dispatching GPU work. |
-| Chunk-preserving source tables | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-dataframe` | Retain source record-batch boundaries, row identities, ownership, and compatible dictionary metadata. |
-| Typed column expressions | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-dataframe` | Compose supported numeric, comparison, boolean, literal, and parameter expressions over named columns. |
-| Reusable query parameters | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-dataframe` | Re-encode compatible parameterized filters and derived computations without rebuilding the source dataframe. |
-| Null-aware filtering | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-dataframe` | Apply `filter()` predicates with explicit validity masks and supported null checks. |
-| Column projection | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-dataframe` | Use `select()` to project ordered source columns without silently copying or repacking their GPU buffers. |
-| Nullable derived columns | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-dataframe` | Use `withColumn()` to evaluate compatible GPU-resident arithmetic while propagating source validity. |
-| Dense grouped aggregation | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-dataframe` | Use `groupBy()` with dense unsigned categories and dictionary or explicit cardinality; aggregate compatible floating-point values. |
-| Global dataframe reductions | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-dataframe` | Use `aggregate()` for non-nullable row counts and validity-aware sums, extrema, and means. |
-| Null-aware dataframe histograms | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-dataframe` | Use `histogram()` with compatible numeric columns, explicit domains, irregular edges, and source validity. |
-| Batch-preserving dataframe inner joins | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-dataframe` | Use `innerJoin()` with unique-right unsigned keys, stable source-row identifiers, preserved batches, and explicit bounded overflow. |
-| Source-aligned dataframe lookups | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-dataframe` | Use `lookup()` to publish compatible right-row identifiers and match masks without compacting or repacking left rows. |
-| Stable dataframe sorting | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-dataframe` | Use `sortBy()` independently within each source batch with explicit numeric ordering and null/NaN placement. |
-| Per-batch top-K selection | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-dataframe` | Use `topK()` to retain a bounded number of stably ordered rows per source batch without flattening independent inputs. |
-| Graph-compiled query execution | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-dataframe` | Compile compatible dataframe plans into reusable `GPUCommandGraph` work while preserving explicit command submission. |
+| GPU-resident dataframes | Experimental | WebGPU | `@luma.gl/graph/gpu-dataframe` | `GPUDataFrame` wraps typed GPU tables without taking implicit ownership of borrowed source buffers. |
+| Immutable query plans | Experimental | WebGPU | `@luma.gl/graph/gpu-dataframe` | Build reusable filter, projection, aggregation, histogram, and ordering plans without eagerly dispatching GPU work. |
+| Chunk-preserving source tables | Experimental | WebGPU | `@luma.gl/graph/gpu-dataframe` | Retain source record-batch boundaries, row identities, ownership, and compatible dictionary metadata. |
+| Typed column expressions | Experimental | WebGPU | `@luma.gl/graph/gpu-dataframe` | Compose supported numeric, comparison, boolean, literal, and parameter expressions over named columns. |
+| Reusable query parameters | Experimental | WebGPU | `@luma.gl/graph/gpu-dataframe` | Re-encode compatible parameterized filters and derived computations without rebuilding the source dataframe. |
+| Null-aware filtering | Experimental | WebGPU | `@luma.gl/graph/gpu-dataframe` | Apply `filter()` predicates with explicit validity masks and supported null checks. |
+| Column projection | Experimental | WebGPU | `@luma.gl/graph/gpu-dataframe` | Use `select()` to project ordered source columns without silently copying or repacking their GPU buffers. |
+| Nullable derived columns | Experimental | WebGPU | `@luma.gl/graph/gpu-dataframe` | Use `withColumn()` to evaluate compatible GPU-resident arithmetic while propagating source validity. |
+| Dense grouped aggregation | Experimental | WebGPU | `@luma.gl/graph/gpu-dataframe` | Use `groupBy()` with dense unsigned categories and dictionary or explicit cardinality; aggregate compatible floating-point values. |
+| Global dataframe reductions | Experimental | WebGPU | `@luma.gl/graph/gpu-dataframe` | Use `aggregate()` for non-nullable row counts and validity-aware sums, extrema, and means. |
+| Null-aware dataframe histograms | Experimental | WebGPU | `@luma.gl/graph/gpu-dataframe` | Use `histogram()` with compatible numeric columns, explicit domains, irregular edges, and source validity. |
+| Batch-preserving dataframe inner joins | Experimental | WebGPU | `@luma.gl/graph/gpu-dataframe` | Use `innerJoin()` with unique-right unsigned keys, stable source-row identifiers, preserved batches, and explicit bounded overflow. |
+| Source-aligned dataframe lookups | Experimental | WebGPU | `@luma.gl/graph/gpu-dataframe` | Use `lookup()` to publish compatible right-row identifiers and match masks without compacting or repacking left rows. |
+| Stable dataframe sorting | Experimental | WebGPU | `@luma.gl/graph/gpu-dataframe` | Use `sortBy()` independently within each source batch with explicit numeric ordering and null/NaN placement. |
+| Per-batch top-K selection | Experimental | WebGPU | `@luma.gl/graph/gpu-dataframe` | Use `topK()` to retain a bounded number of stably ordered rows per source batch without flattening independent inputs. |
+| Graph-compiled query execution | Experimental | WebGPU | `@luma.gl/graph/gpu-dataframe` | Compile compatible dataframe plans into reusable `GPUCommandGraph` work while preserving explicit command submission. |
 
-The `@luma.gl/gpu-graph/gpu-dataframe` entry point is private and experimental; its graph-native
+The `@luma.gl/graph/gpu-dataframe` entry point is private and experimental; its graph-native
 operations are implemented, but non-unique, outer, or multi-key joins, temporal windows, and
 cross-batch global ordering remain opportunities. See [GPU command graphs and reusable
 primitives](/docs/api-reference/experimental/gpu-core).
@@ -157,25 +157,25 @@ primitives](/docs/api-reference/experimental/gpu-core).
 
 | Feature | Status | Backend | Package | Details |
 | --- | --- | --- | --- | --- |
-| GPU-resident relationship graphs | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-graph-algorithms` | `GPUGraphAlgorithmsData` borrows typed source and target columns without materializing a JavaScript edge list. |
-| Chunk-preserving graph inputs | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-graph-algorithms` | Preserve independently owned source batches and caller-controlled graph resource lifetimes. |
-| Compressed graph adjacency | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-graph-algorithms` | Build reusable forward and optional reverse compressed sparse row (CSR) adjacency for supported graph operations. |
-| Directional vertex degree | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-graph-algorithms` | Compute supported incoming or outgoing degree values directly into GPU result columns. |
-| Structural graph core numbers | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-graph-algorithms` | Find bounded simple weak-graph k-core values, convergence, and maximum degeneracy without counting loops or duplicate neighbors. |
-| Breadth-first graph search | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-graph-algorithms` | Traverse bounded unweighted neighborhoods and generate deterministic predecessor or selection results. |
-| Weighted single-source shortest paths | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-graph-algorithms` | Find least-cost routes over nonnegative single-precision edge weights with bounded relaxation and deterministic predecessors. |
-| Weakly connected components | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-graph-algorithms` | Label supported connected groups within an explicit iteration budget and expose convergence information. |
-| Deterministic graph communities | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-graph-algorithms` | `GPUGraphAlgorithmsLabelPropagation` assigns communities through bounded unweighted majority votes and deterministic label tie-breaking. |
-| Weighted community modularity | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-graph-algorithms` | Score existing directed or undirected community partitions while preserving original edge weights and multiplicity. |
-| Single-level modularity optimization | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-graph-algorithms` | Improve weighted community partitions through bounded best-gain moves, empty-label splits, and stable tie-breaking; weighted floating-point rounding can vary across runs or devices. |
-| Local clustering coefficients | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-graph-algorithms` | Measure exact weak-neighborhood closure with distinct directed links or optional undirected triangle counts. |
-| GPU PageRank | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-graph-algorithms` | Rank vertices using iterative GPU execution with supported dangling-node redistribution. |
-| Six Graphalytics workload families | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-graph-algorithms` | Implement the [Graph Data Council's six LDBC Graphalytics algorithms](https://ldbcouncil.org/benchmarks/graphalytics/algorithms/) without claiming official validation, certification, or published benchmark results. |
-| Exact force-directed layout | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-graph-algorithms` | Generate directly renderable graph positions through supported pairwise attraction and repulsion. |
-| Spatially accelerated layout | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-graph-algorithms` | Approximate supported distant forces through a flat GPU spatial grid; this is not hierarchical Barnes-Hut. |
-| Interactive graph exploration | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-graph-algorithms` | Coordinate layout, neighborhood highlighting, GPU picking, dragging, and pinned graph vertices. |
+| GPU-resident relationship graphs | Experimental | WebGPU | `@luma.gl/graph/gpu-graph-algorithms` | `GPUGraphAlgorithmsData` borrows typed source and target columns without materializing a JavaScript edge list. |
+| Chunk-preserving graph inputs | Experimental | WebGPU | `@luma.gl/graph/gpu-graph-algorithms` | Preserve independently owned source batches and caller-controlled graph resource lifetimes. |
+| Compressed graph adjacency | Experimental | WebGPU | `@luma.gl/graph/gpu-graph-algorithms` | Build reusable forward and optional reverse compressed sparse row (CSR) adjacency for supported graph operations. |
+| Directional vertex degree | Experimental | WebGPU | `@luma.gl/graph/gpu-graph-algorithms` | Compute supported incoming or outgoing degree values directly into GPU result columns. |
+| Structural graph core numbers | Experimental | WebGPU | `@luma.gl/graph/gpu-graph-algorithms` | Find bounded simple weak-graph k-core values, convergence, and maximum degeneracy without counting loops or duplicate neighbors. |
+| Breadth-first graph search | Experimental | WebGPU | `@luma.gl/graph/gpu-graph-algorithms` | Traverse bounded unweighted neighborhoods and generate deterministic predecessor or selection results. |
+| Weighted single-source shortest paths | Experimental | WebGPU | `@luma.gl/graph/gpu-graph-algorithms` | Find least-cost routes over nonnegative single-precision edge weights with bounded relaxation and deterministic predecessors. |
+| Weakly connected components | Experimental | WebGPU | `@luma.gl/graph/gpu-graph-algorithms` | Label supported connected groups within an explicit iteration budget and expose convergence information. |
+| Deterministic graph communities | Experimental | WebGPU | `@luma.gl/graph/gpu-graph-algorithms` | `GPUGraphAlgorithmsLabelPropagation` assigns communities through bounded unweighted majority votes and deterministic label tie-breaking. |
+| Weighted community modularity | Experimental | WebGPU | `@luma.gl/graph/gpu-graph-algorithms` | Score existing directed or undirected community partitions while preserving original edge weights and multiplicity. |
+| Single-level modularity optimization | Experimental | WebGPU | `@luma.gl/graph/gpu-graph-algorithms` | Improve weighted community partitions through bounded best-gain moves, empty-label splits, and stable tie-breaking; weighted floating-point rounding can vary across runs or devices. |
+| Local clustering coefficients | Experimental | WebGPU | `@luma.gl/graph/gpu-graph-algorithms` | Measure exact weak-neighborhood closure with distinct directed links or optional undirected triangle counts. |
+| GPU PageRank | Experimental | WebGPU | `@luma.gl/graph/gpu-graph-algorithms` | Rank vertices using iterative GPU execution with supported dangling-node redistribution. |
+| Six Graphalytics workload families | Experimental | WebGPU | `@luma.gl/graph/gpu-graph-algorithms` | Implement the [Graph Data Council's six LDBC Graphalytics algorithms](https://ldbcouncil.org/benchmarks/graphalytics/algorithms/) without claiming official validation, certification, or published benchmark results. |
+| Exact force-directed layout | Experimental | WebGPU | `@luma.gl/graph/gpu-graph-algorithms` | Generate directly renderable graph positions through supported pairwise attraction and repulsion. |
+| Spatially accelerated layout | Experimental | WebGPU | `@luma.gl/graph/gpu-graph-algorithms` | Approximate supported distant forces through a flat GPU spatial grid; this is not hierarchical Barnes-Hut. |
+| Interactive graph exploration | Experimental | WebGPU | `@luma.gl/graph/gpu-graph-algorithms` | Coordinate layout, neighborhood highlighting, GPU picking, dragging, and pinned graph vertices. |
 | deck.gl-native graph analytics | Experimental | WebGPU | `@deck.gl-community/arrow-layers` | Share supported GPU graph analytics and layout with deck.gl layers while preserving source batches and deck.gl-owned command submission. |
-| CPU and GPU graph benchmarks | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-graph-algorithms` | Compare nine bounded reference workloads while separately reporting encoding, completion, setup, and accuracy costs. |
+| CPU and GPU graph benchmarks | Experimental | WebGPU | `@luma.gl/graph/gpu-graph-algorithms` | Compare nine bounded reference workloads while separately reporting encoding, completion, setup, and accuracy costs. |
 
 Read the [GPU-resident graph analytics reference](/docs/api-reference/experimental/gpu-graph),
 the [interactive GPU Graph explorer](/examples/experimental/gpu-graph-explorer), or the
@@ -191,45 +191,45 @@ community optimization go beyond its six standardized workload families.
 
 | Feature | Status | Backend | Package | Details |
 | --- | --- | --- | --- | --- |
-| GPU-resident raster bands | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | `GPURaster` describes compatible raster dimensions, bands, metadata, coordinate systems, and ownership. |
-| Application-owned raster tile sources | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Validate caller-owned raster source, transport, decoding, and submission contracts before optional framework-managed upload and caching. |
-| Source-provided raster overviews | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Select compatible source windows, source-provided overview levels, coordinate metadata, and cancellable tile requests. |
-| Bounded raster tile residency | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | `GPURasterTileCache` controls independently bounded decoded CPU tiles, uploaded GPU buffers, and compatible compiled graphs. |
-| Deterministic raster tile eviction | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Reuse cache hits and evict eligible unpinned raster tiles and graphs within explicit byte and entry-count budgets. |
-| Cancellation-safe raster tile requests | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Deduplicate compatible in-flight source requests without canceling other waiting callers. |
-| Fence-protected raster tile leases | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Pin raster tiles and reusable graphs until an application-owned post-submission completion fence resolves. |
-| Compiled raster graph reuse | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Reuse shape-compatible compiled analysis graphs while rebinding the current tile's borrowed GPU buffers. |
-| Seam-safe cross-tile raster halos | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Assemble real neighboring samples on the GPU, preserve cumulative receptive fields, and publish each half-open tile core exactly once. |
-| Nodata-aware analytical overviews | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Generate calibrated, valid-sample-weighted floating means with explicit sums, counts, masks, and odd-edge coverage. |
-| Exact categorical raster overviews | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Preserve native signed and unsigned class identifiers with deterministic nearest or valid-label mode policies. |
-| Dataset-wide tiled raster statistics | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Merge valid tile counts, calibrated sums, and extrema into explicitly initialized GPU-resident global accumulators. |
-| Stable-domain global histogram replay | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Replay every owned tile core against the finalized dataset-wide value domain before merging compatible bins. |
-| GPU global percentiles and thresholds | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Derive histogram-estimated global percentiles and consistent Otsu thresholds without downloading raster samples. |
-| Overflow-aware global raster reductions | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Saturate global counts and bins, expose sticky overflow flags, and invalidate unsafe percentile results. |
-| Buffer and texture conversion | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Convert supported raster bands between GPU buffers and textures without downloading source pixels. |
-| Calibrated raster band math | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Combine supported numeric bands while applying explicit scale, offset, validity, and nodata contracts. |
-| GPU vegetation index | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Compute normalized-difference vegetation index (NDVI) from compatible red and near-infrared bands. |
-| Nodata-aware raster statistics | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Calculate supported valid-pixel counts, sums, means, extrema, and scalar summaries. |
-| Raster histograms | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Derive valid-pixel distributions with supported explicit or GPU-inferred histogram domains. |
-| Automatic Otsu thresholds | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Select supported image thresholds from GPU-resident histogram distributions. |
-| Raster threshold classification | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Classify compatible pixel values against explicit thresholds without CPU-side source traversal. |
-| Raster contrast adjustment | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Apply supported contrast remapping while preserving raster validity and domain semantics. |
-| Neighborhood convolution | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Evaluate bounded kernels with supported raster borders and nodata-aware neighborhood policies. |
-| Gaussian and box smoothing | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Smooth compatible raster bands without implicitly filling invalid neighboring pixels. |
-| Sobel and Scharr gradients | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Evaluate supported directional derivatives and edge responses from GPU-resident raster neighborhoods. |
-| Gradient magnitude and Laplacian | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Derive gradient magnitude and compatible second-order edge information from valid raster pixels. |
-| Binary and grayscale morphology | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Process supported binary masks or grayscale raster bands with explicit structuring elements, borders, and nodata policies. |
-| Raster dilation and erosion | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Expand or contract compatible raster features through bounded square or Manhattan-diamond neighborhoods. |
-| Raster opening and closing | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Compose supported erosion/dilation sequences to remove small features or close compatible raster gaps. |
-| Deterministic raster connected components | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Assign sparse minimum-root foreground labels with explicit four/eight-neighbor connectivity while preserving valid background and nodata barriers. |
-| Convergence-gated raster component labels | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Publish GPU convergence and optional actual iteration counts; clear all labels and validity when a bounded graph cannot prove convergence. |
-| Dense raster component identifiers | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Compact converged sparse representatives into deterministic contiguous row-major region IDs without losing valid background. |
-| Bounded raster region counts and overflow | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Publish exact required and capacity-clamped component populations, invalidate truncated foreground, and expose per-execution overflow. |
-| Masked per-region intensity statistics | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Publish separate exact geometric and valid-intensity populations with calibrated floating sums, minima, maxima, and means. |
-| Region centroids and affine areas | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Retain mergeable local pixel moments, preserve double-precision world translation, and report area in square CRS coordinate units. |
-| Marching-squares contours | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Classify bounded raster cells and generate supported vector contour segments directly on the GPU. |
-| Indirect contour overlays | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Draw GPU-generated contour geometry without downloading or rebuilding every segment on the CPU. |
-| Device-aware raster dispatch | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-raster` | Plan bounded dispatch stripes against the selected device's actual compute limits. |
+| GPU-resident raster bands | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | `GPURaster` describes compatible raster dimensions, bands, metadata, coordinate systems, and ownership. |
+| Application-owned raster tile sources | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Validate caller-owned raster source, transport, decoding, and submission contracts before optional framework-managed upload and caching. |
+| Source-provided raster overviews | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Select compatible source windows, source-provided overview levels, coordinate metadata, and cancellable tile requests. |
+| Bounded raster tile residency | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | `GPURasterTileCache` controls independently bounded decoded CPU tiles, uploaded GPU buffers, and compatible compiled graphs. |
+| Deterministic raster tile eviction | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Reuse cache hits and evict eligible unpinned raster tiles and graphs within explicit byte and entry-count budgets. |
+| Cancellation-safe raster tile requests | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Deduplicate compatible in-flight source requests without canceling other waiting callers. |
+| Fence-protected raster tile leases | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Pin raster tiles and reusable graphs until an application-owned post-submission completion fence resolves. |
+| Compiled raster graph reuse | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Reuse shape-compatible compiled analysis graphs while rebinding the current tile's borrowed GPU buffers. |
+| Seam-safe cross-tile raster halos | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Assemble real neighboring samples on the GPU, preserve cumulative receptive fields, and publish each half-open tile core exactly once. |
+| Nodata-aware analytical overviews | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Generate calibrated, valid-sample-weighted floating means with explicit sums, counts, masks, and odd-edge coverage. |
+| Exact categorical raster overviews | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Preserve native signed and unsigned class identifiers with deterministic nearest or valid-label mode policies. |
+| Dataset-wide tiled raster statistics | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Merge valid tile counts, calibrated sums, and extrema into explicitly initialized GPU-resident global accumulators. |
+| Stable-domain global histogram replay | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Replay every owned tile core against the finalized dataset-wide value domain before merging compatible bins. |
+| GPU global percentiles and thresholds | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Derive histogram-estimated global percentiles and consistent Otsu thresholds without downloading raster samples. |
+| Overflow-aware global raster reductions | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Saturate global counts and bins, expose sticky overflow flags, and invalidate unsafe percentile results. |
+| Buffer and texture conversion | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Convert supported raster bands between GPU buffers and textures without downloading source pixels. |
+| Calibrated raster band math | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Combine supported numeric bands while applying explicit scale, offset, validity, and nodata contracts. |
+| GPU vegetation index | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Compute normalized-difference vegetation index (NDVI) from compatible red and near-infrared bands. |
+| Nodata-aware raster statistics | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Calculate supported valid-pixel counts, sums, means, extrema, and scalar summaries. |
+| Raster histograms | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Derive valid-pixel distributions with supported explicit or GPU-inferred histogram domains. |
+| Automatic Otsu thresholds | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Select supported image thresholds from GPU-resident histogram distributions. |
+| Raster threshold classification | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Classify compatible pixel values against explicit thresholds without CPU-side source traversal. |
+| Raster contrast adjustment | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Apply supported contrast remapping while preserving raster validity and domain semantics. |
+| Neighborhood convolution | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Evaluate bounded kernels with supported raster borders and nodata-aware neighborhood policies. |
+| Gaussian and box smoothing | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Smooth compatible raster bands without implicitly filling invalid neighboring pixels. |
+| Sobel and Scharr gradients | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Evaluate supported directional derivatives and edge responses from GPU-resident raster neighborhoods. |
+| Gradient magnitude and Laplacian | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Derive gradient magnitude and compatible second-order edge information from valid raster pixels. |
+| Binary and grayscale morphology | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Process supported binary masks or grayscale raster bands with explicit structuring elements, borders, and nodata policies. |
+| Raster dilation and erosion | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Expand or contract compatible raster features through bounded square or Manhattan-diamond neighborhoods. |
+| Raster opening and closing | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Compose supported erosion/dilation sequences to remove small features or close compatible raster gaps. |
+| Deterministic raster connected components | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Assign sparse minimum-root foreground labels with explicit four/eight-neighbor connectivity while preserving valid background and nodata barriers. |
+| Convergence-gated raster component labels | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Publish GPU convergence and optional actual iteration counts; clear all labels and validity when a bounded graph cannot prove convergence. |
+| Dense raster component identifiers | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Compact converged sparse representatives into deterministic contiguous row-major region IDs without losing valid background. |
+| Bounded raster region counts and overflow | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Publish exact required and capacity-clamped component populations, invalidate truncated foreground, and expose per-execution overflow. |
+| Masked per-region intensity statistics | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Publish separate exact geometric and valid-intensity populations with calibrated floating sums, minima, maxima, and means. |
+| Region centroids and affine areas | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Retain mergeable local pixel moments, preserve double-precision world translation, and report area in square CRS coordinate units. |
+| Marching-squares contours | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Classify bounded raster cells and generate supported vector contour segments directly on the GPU. |
+| Indirect contour overlays | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Draw GPU-generated contour geometry without downloading or rebuilding every segment on the CPU. |
+| Device-aware raster dispatch | Experimental | WebGPU | `@luma.gl/graph/gpu-raster` | Plan bounded dispatch stripes against the selected device's actual compute limits. |
 
 Start with the [GPURaster concepts and execution guide](/docs/api-reference/experimental/gpu-raster/concepts),
 read the [GPURaster API reference](/docs/api-reference/experimental/gpu-raster), or experiment
@@ -239,17 +239,17 @@ with the [Satellite Raster Lab](/examples/showcase/raster-lab).
 
 | Feature | Status | Backend | Package | Details |
 | --- | --- | --- | --- | --- |
-| Linked crossfiltering | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-crossfilter` | Maintain linked scalar ranges and two-dimensional brushes over GPU-resident data. |
-| Self-excluding histograms | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-crossfilter` | Recalculate brush histograms without counting the active dimension against itself. |
-| Stable selected row IDs | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-crossfilter` | Preserve row identity for linked charts and renderable selection masks. |
-| High-precision projection | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-project` | Build local error-bounded projection patches from compatible CPU projection providers. |
-| Binary64 coordinate transport | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-project` | Transport 64-bit source coordinates as integer words and subtract a local origin. |
-| Web Mercator support | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-project` | Project supported geospatial coordinates while retaining local precision. |
-| Geographic distance | Experimental | WebGPU | `@luma.gl/gpu-graph/geospatial` | Evaluate supported Haversine, point, segment, and linestring distances. |
-| Polygon containment | Experimental | WebGPU | `@luma.gl/gpu-graph/geospatial` | Test supported polygon boundary and containment relationships. |
-| Hierarchical trace views | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-trace` | Filter, project, and render supported process, thread, and dependency hierarchies. |
-| GPU-driven timeline picking | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-trace` | Link trace visibility, indirect timeline draws, and GPU-aware picking. |
-| Chunk-aware trace dependencies | Experimental | WebGPU | `@luma.gl/gpu-graph/gpu-trace` | Route visible dependency endpoints across supported independent source-span batches. |
+| Linked crossfiltering | Experimental | WebGPU | `@luma.gl/graph/gpu-crossfilter` | Maintain linked scalar ranges and two-dimensional brushes over GPU-resident data. |
+| Self-excluding histograms | Experimental | WebGPU | `@luma.gl/graph/gpu-crossfilter` | Recalculate brush histograms without counting the active dimension against itself. |
+| Stable selected row IDs | Experimental | WebGPU | `@luma.gl/graph/gpu-crossfilter` | Preserve row identity for linked charts and renderable selection masks. |
+| High-precision projection | Experimental | WebGPU | `@luma.gl/graph/gpu-project` | Build local error-bounded projection patches from compatible CPU projection providers. |
+| Binary64 coordinate transport | Experimental | WebGPU | `@luma.gl/graph/gpu-project` | Transport 64-bit source coordinates as integer words and subtract a local origin. |
+| Web Mercator support | Experimental | WebGPU | `@luma.gl/graph/gpu-project` | Project supported geospatial coordinates while retaining local precision. |
+| Geographic distance | Experimental | WebGPU | `@luma.gl/graph/geospatial` | Evaluate supported Haversine, point, segment, and linestring distances. |
+| Polygon containment | Experimental | WebGPU | `@luma.gl/graph/geospatial` | Test supported polygon boundary and containment relationships. |
+| Hierarchical trace views | Experimental | WebGPU | `@luma.gl/graph/gpu-trace` | Filter, project, and render supported process, thread, and dependency hierarchies. |
+| GPU-driven timeline picking | Experimental | WebGPU | `@luma.gl/graph/gpu-trace` | Link trace visibility, indirect timeline draws, and GPU-aware picking. |
+| Chunk-aware trace dependencies | Experimental | WebGPU | `@luma.gl/graph/gpu-trace` | Route visible dependency endpoints across supported independent source-span batches. |
 | Bounded dataset residency | Experimental | WebGPU | Application-owned example | Stream large source corpora with an application-managed bounded GPU-resident working set. |
 | Portable path and polygon models | Experimental | WebGPU + WebGL2 | `@luma.gl/experimental/models` | Render table-backed paths and polygons using compatible attribute-driven strategies. |
 | Storage-backed path models | Experimental | WebGPU | `@luma.gl/experimental/models` | Process compatible path, polygon, and trip columns directly through storage buffers. |

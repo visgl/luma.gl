@@ -21,7 +21,7 @@ computed/reused/removed batches, submitted batch and merge commands, and persist
 ## Usage: streaming sum
 
 ```ts
-import {GPUIncrementalExecution, GPUReduction} from '@luma.gl/gpu-graph/gpu-core';
+import {GPUIncrementalExecution, GPUReduction} from '@luma.gl/graph/gpu-core';
 import type {GPUData, GPUVectorLike} from '@luma.gl/gpgpu/gpu-data';
 
 // output is a caller-owned one-row GPUData<'uint32'>.

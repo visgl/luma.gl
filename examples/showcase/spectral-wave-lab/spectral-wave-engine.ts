@@ -9,7 +9,7 @@ import {
   GPUCommandGraph,
   makeGPUFFT2DStats,
   type CompiledGPUCommandGraph
-} from '@luma.gl/gpu-graph/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 
 const WORKGROUP_SIZE = 256;
 const TWO_PI = 2 * Math.PI;
