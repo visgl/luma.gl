@@ -48,7 +48,7 @@ export class BufferTransform {
   readonly device: Device;
   readonly model: GPUVectorModel;
   readonly transformFeedback: TransformFeedback;
-  private outputVectors: GPUVectorModelInputs = {};
+  private outputVectorBindings: GPUVectorModelInputs = {};
   private outputBuffers: Record<string, Buffer | BufferRange> = {};
 
   static defaultProps: Required<BufferTransformProps> = {
@@ -121,8 +121,8 @@ export class BufferTransform {
     if (inputBuffers) this.model.setAttributes(inputBuffers);
     if (inputVectors) this.model.setGPUVectors(inputVectors, {count: 'vertex'});
     if (outputBuffers) this.outputBuffers = outputBuffers;
-    if (outputBuffers || outputVectors || Object.keys(this.outputVectors).length > 0) {
-      this.setOutputVectors(outputVectors ?? this.outputVectors);
+    if (outputBuffers || outputVectors || Object.keys(this.outputVectorBindings).length > 0) {
+      this.setOutputVectors(outputVectors ?? this.outputVectorBindings);
     }
     const renderPass = this.device.beginRenderPass({discard: true, ...renderPassProps});
     try {
@@ -135,11 +135,11 @@ export class BufferTransform {
   /** Binds borrowed output ranges without taking ownership or repacking vector chunks. */
   setOutputVectors(vectors: GPUVectorModelInputs): void {
     // Vector output bindings describe separate, tightly packed transform-feedback streams.
-    assert(this.model.pipeline.props.bufferMode !== GL_INTERLEAVED_ATTRIBS);
     const batches = getGPUVectorModelBatches(this.model.id, vectors);
+    assert(batches.length === 0 || this.model.pipeline.props.bufferMode !== GL_INTERLEAVED_ATTRIBS);
     // A transform run binds one output range per varying; use table batches for chunked outputs.
     assert(batches.length <= 1);
-    this.outputVectors = vectors;
+    this.outputVectorBindings = vectors;
     this.transformFeedback.setBuffers({
       ...this.outputBuffers,
       ...Object.fromEntries(

@@ -97,7 +97,7 @@ it('GPUVectorModel manages module uniforms without geometry or material policy',
   model.predraw(device.commandEncoder);
   const uniformBuffer = model.bindings['surfaceUniforms'] as Buffer;
   expect(new Float32Array(uniformBuffer.debugData, 0, 1)[0]).toBe(4);
-  expect('setGeometry' in model).toBe(false);
+  expect('setGeometryVectors' in model).toBe(true);
   expect('setMaterial' in model).toBe(false);
   model.destroy();
   expect(uniformBuffer.destroyed).toBe(true);

@@ -13,7 +13,7 @@ import {
   type UpdateParameters
 } from '@deck.gl/core';
 import {type Buffer, type RenderPass} from '@luma.gl/core';
-import {Model} from '@luma.gl/engine';
+import {GPUVectorModel} from '@luma.gl/engine';
 import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
   createGPUVectorStyleBuffer,
@@ -38,7 +38,7 @@ export type GPULineLayerProps = Omit<LayerProps, 'data'> & {
 };
 
 type GPULineLayerState = {
-  model: Model | null;
+  model: GPUVectorModel | null;
   styleBuffer: Buffer | null;
   defaults: Buffer[];
 };
@@ -141,7 +141,7 @@ export class GPULineLayer extends Layer<GPULineLayerProps> {
       id: `${this.id}-default-width`,
       data: new Float32Array([1])
     });
-    const model = new Model(device, {
+    const model = new GPUVectorModel(device, {
       ...this.getShaders({modules: [project32, picking], source: GPU_LINE_SHADER}),
       id: `${this.id}-model`,
       topology: 'triangle-list',
@@ -189,7 +189,7 @@ export class GPULineLayer extends Layer<GPULineLayerProps> {
     } satisfies GPULineLayerState);
   }
 
-  override getModels(): Model[] {
+  override getModels(): GPUVectorModel[] {
     const model = (this.state as GPULineLayerState).model;
     return model ? [model] : [];
   }

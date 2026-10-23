@@ -156,3 +156,24 @@ void main() { incremented = src + 1.0; squared = src * src; }`,
   output.destroy();
   dynamicOutput.destroy();
 });
+
+it('BufferTransform supports raw interleaved outputs', async () => {
+  const device = await getWebGLTestDevice();
+  const inputBuffer = device.createBuffer({data: new Float32Array([2, 3])});
+  const outputBuffer = device.createBuffer({byteLength: 8});
+  const transform = new BufferTransform(device, {
+    vs: VS,
+    fs: FS,
+    vertexCount: 2,
+    attributes: {src: inputBuffer},
+    bufferLayout: [{name: 'src', format: 'float32'}],
+    outputs: ['dst'],
+    feedbackBufferMode: 'interleaved'
+  });
+  transform.run({outputBuffers: {dst: outputBuffer}});
+  const bytes = await outputBuffer.readAsync();
+  expect(new Float32Array(bytes.buffer, bytes.byteOffset, 2)).toEqual(new Float32Array([4, 9]));
+  transform.destroy();
+  inputBuffer.destroy();
+  outputBuffer.destroy();
+});

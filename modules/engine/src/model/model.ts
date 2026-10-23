@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Geometry} from '@math.gl/geometry';
-import type {BufferLayout, CommandEncoder, Device, Binding, BindingsByGroup} from '@luma.gl/core';
+import type {CommandEncoder, Device, Binding, BindingsByGroup} from '@luma.gl/core';
 import {
   GPUVectorModel,
   type GPUVectorModelProps,
@@ -12,23 +12,22 @@ import {
 } from './gpu-vector-model';
 import {GPUGeometry, makeGPUGeometry} from '../geometry/gpu-geometry';
 import {Material} from '../material/material';
-import {BufferLayoutHelper} from '../utils/buffer-layout-helper';
+import {GPUVectorGeometry} from '../geometry/gpu-vector-geometry';
+import {makeGPUVectorGeometryFromGPUGeometry} from '../geometry/gpu-vector-geometry-adapter';
 import {isTextureBindingSource} from '../dynamic-texture/texture-binding-source';
 
 /** Properties for the high-level rendering model. */
-export type ModelProps = Omit<GPUVectorModelProps, 'gpuVectorCount'> & {
+export type ModelProps = Omit<GPUVectorModelProps, 'gpuVectorCount' | 'geometry'> & {
   /** Geometry adapted into GPU attributes, buffer layouts, topology, and draw counts. */
-  geometry?: GPUGeometry | Geometry | null;
+  geometry?: GPUVectorGeometry | GPUGeometry | Geometry | null;
   /** Material-owned group-3 bindings and uniforms. */
   material?: Material;
 };
 
 /** Rendering model with geometry adaptation and material bindings. */
 export class Model extends GPUVectorModel {
-  static override defaultProps: typeof GPUVectorModel.defaultProps &
-    Required<Pick<ModelProps, 'geometry' | 'material'>> = {
+  static override defaultProps: typeof GPUVectorModel.defaultProps & {material: Material} = {
     ...GPUVectorModel.defaultProps,
-    geometry: null,
     material: undefined!
   };
 
@@ -36,17 +35,28 @@ export class Model extends GPUVectorModel {
   declare _gpuGeometry: GPUGeometry | null;
 
   constructor(device: Device, props: ModelProps) {
-    super(device, props);
+    const sourceGeometry =
+      props.geometry === undefined ? new.target.defaultProps.geometry : props.geometry;
+    const gpuGeometry =
+      sourceGeometry && !(sourceGeometry instanceof GPUVectorGeometry)
+        ? makeGPUGeometry(device, sourceGeometry)
+        : null;
+    const geometry = gpuGeometry
+      ? makeGPUVectorGeometryFromGPUGeometry(gpuGeometry)
+      : sourceGeometry;
+    try {
+      super(device, {...props, geometry: geometry instanceof GPUVectorGeometry ? geometry : null});
+    } catch (error) {
+      gpuGeometry?.destroy();
+      throw error;
+    }
+    this._gpuGeometry = gpuGeometry;
   }
 
-  protected override _initializeProps(props: ModelProps): void {
+  protected override _initializeProps(props: GPUVectorModelProps & {material?: Material}): void {
     this.material = props.material || null;
     this._gpuGeometry = null;
-    if (props.geometry) this.setGeometry(props.geometry);
-  }
-
-  protected override _initializeAttributes(): void {
-    if (this._gpuGeometry) this._setGeometryAttributes(this._gpuGeometry);
+    super._initializeProps(props);
   }
 
   override destroy(): void {
@@ -55,66 +65,17 @@ export class Model extends GPUVectorModel {
     this._gpuGeometry = null;
   }
 
-  /**
-   * Updates the optional geometry
-   * Geometry, set topology and bufferLayout
-   * @note Can trigger a pipeline rebuild / pipeline cache fetch on WebGPU
-   */
-  setGeometry(geometry: GPUGeometry | Geometry | null): void {
+  /** Adapts CPU and legacy buffer geometry into the GPU vector geometry API. */
+  override setGeometry(geometry: GPUVectorGeometry | GPUGeometry | Geometry | null): void {
     this._gpuGeometry?.destroy();
-    const gpuGeometry = geometry && makeGPUGeometry(this.device, geometry);
-    if (gpuGeometry) {
-      this.setTopology(gpuGeometry.topology || 'triangle-list');
-      const bufferLayoutHelper = new BufferLayoutHelper(this.bufferLayout);
-      this.bufferLayout = bufferLayoutHelper.mergeBufferLayouts(
-        gpuGeometry.bufferLayout,
-        this.bufferLayout
-      );
-      if (this.vertexArray) {
-        this._setGeometryAttributes(gpuGeometry);
-      }
-    }
-    this._gpuGeometry = gpuGeometry;
-  }
-
-  /**
-   * Updates the optional geometry attributes
-   * Geometry, sets several attributes, indexBuffer, and also vertex count
-   * @note Can trigger a pipeline rebuild / pipeline cache fetch on WebGPU
-   */
-  _setGeometryAttributes(gpuGeometry: GPUGeometry): void {
-    // Filter geometry attribute so that we don't issue warnings for unused attributes
-    const attributes = {...gpuGeometry.attributes};
-    for (const [attributeName] of Object.entries(attributes)) {
-      if (
-        !this.pipeline.shaderLayout.attributes.find(layout => layout.name === attributeName) &&
-        attributeName !== 'positions'
-      ) {
-        delete attributes[attributeName];
-      }
-    }
-
-    // TODO - delete previous geometry?
-    this.setVertexCount(gpuGeometry.vertexCount);
-    this.setIndexBuffer(gpuGeometry.indices || null);
-    this.setAttributes(gpuGeometry.attributes, {disableWarnings: true});
-    this.setAttributes(attributes, {disableWarnings: this.props.disableWarnings});
-
-    this.setNeedsRedraw('geometry attributes');
-  }
-
-  override setBufferLayout(bufferLayout: BufferLayout[]): void {
-    const nextBufferLayout = this._gpuGeometry
-      ? new BufferLayoutHelper(this.bufferLayout).mergeBufferLayouts(
-          bufferLayout,
-          this._gpuGeometry.bufferLayout
-        )
-      : bufferLayout;
-    const previousVertexArray = this.vertexArray;
-    super.setBufferLayout(nextBufferLayout);
-    if (this.vertexArray !== previousVertexArray && this._gpuGeometry) {
-      this._setGeometryAttributes(this._gpuGeometry);
-    }
+    this._gpuGeometry =
+      geometry && !(geometry instanceof GPUVectorGeometry)
+        ? makeGPUGeometry(this.device, geometry)
+        : null;
+    const vectorGeometry = this._gpuGeometry
+      ? makeGPUVectorGeometryFromGPUGeometry(this._gpuGeometry)
+      : geometry;
+    super.setGeometry(vectorGeometry instanceof GPUVectorGeometry ? vectorGeometry : null);
   }
 
   setMaterial(material: Material | null): void {

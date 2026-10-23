@@ -301,3 +301,11 @@ export {
   type GPUVectorModelBatch,
   type GPUVectorModelDrawBatchesOptions
 } from './model/gpu-vector-model';
+
+export {GPUVectorGeometry, type GPUVectorGeometryProps} from './geometry/gpu-vector-geometry';
+export type {GPUVectorModelAttributes, GPUVectorModelConstant} from './model/gpu-vector-bindings';
+
+export {
+  validateGPUVectorBatchStructure,
+  type GPUVectorBatchStructureInput
+} from './utils/gpu-vector-batch-structure';

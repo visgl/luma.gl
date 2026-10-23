@@ -7,7 +7,6 @@ import {
   type RenderPipelineProps,
   type RenderPipelineParameters,
   type BufferLayout,
-  type VertexFormat,
   type TextureFormatColor,
   type TextureFormatDepthStencil,
   type Shader,
@@ -34,7 +33,6 @@ import {
   assert,
   log,
   dataTypeDecoder,
-  vertexFormatDecoder,
   getAttributeInfosFromLayouts,
   normalizeBindingsByGroup
 } from '@luma.gl/core';
@@ -66,6 +64,29 @@ import {
 } from '../utils/shader-module-utils';
 import {getPlatformInfo} from '../utils/get-platform-info';
 import {uid} from '../utils/uid';
+import {
+  getGPUVectorModelBatches,
+  validateGPUVectorModelLayouts,
+  type GPUVectorModelCount,
+  type GPUVectorModelData,
+  type GPUVectorModelInput,
+  type GPUVectorModelInputs,
+  type GPUVectorModelDrawBatchesOptions
+} from './gpu-vector-model-batches';
+export {
+  getGPUVectorModelBatches,
+  type GPUVectorModelCount,
+  type GPUVectorModelData,
+  type GPUVectorModelInput,
+  type GPUVectorModelInputs,
+  type GPUVectorModelBatch,
+  type GPUVectorModelDrawBatchesOptions
+} from './gpu-vector-model-batches';
+
+import {validateGPUVectorBatchStructure} from '../utils/gpu-vector-batch-structure';
+import {drawGPUVectorGroups} from './gpu-vector-draw-batches';
+import {GPUVectorGeometry} from '../geometry/gpu-vector-geometry';
+import {GPUVectorBindings, type GPUVectorModelAttributes} from './gpu-vector-bindings';
 import {ShaderInputs} from '../shader-inputs';
 import {
   DynamicBuffer,
@@ -97,6 +118,10 @@ type ModelBuffer = Buffer | DynamicBuffer;
 export type AnyShaderLayout = Pick<ShaderLayout | ComputeShaderLayout, 'bindings'>;
 
 export type GPUVectorModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
+  /** GPU-only mesh inputs, indices, and topology. */
+  geometry?: GPUVectorGeometry | null;
+  /** Supplemental vertex or instance vectors and constants. */
+  attributeVectors?: GPUVectorModelAttributes;
   /** Draw count updated from each vector batch. Defaults to `instance`. */
   gpuVectorCount?: GPUVectorModelCount;
   source?: string;
@@ -160,48 +185,6 @@ export type GPUVectorModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindi
   shaderAssembler?: ShaderAssembler;
 };
 
-/** Controls which draw count follows each physical vector batch row count. */
-export type GPUVectorModelCount = 'instance' | 'vertex' | 'none';
-
-/** Borrowed physical chunk required by vector rendering, independent of its producer. */
-export type GPUVectorModelData = {
-  readonly buffer: ModelBuffer;
-  readonly byteOffset: number;
-  readonly length: number;
-  readonly format?: unknown;
-  readonly byteStride: number;
-  readonly rowByteLength: number;
-};
-
-/** Structural input contract implemented by GPUVector without an engine-to-gpgpu dependency. */
-export type GPUVectorModelInput<Data extends GPUVectorModelData = GPUVectorModelData> = {
-  readonly name: string;
-  readonly format?: string;
-  readonly length: number;
-  readonly byteStride: number;
-  readonly rowByteLength: number;
-  readonly data: readonly Data[];
-};
-
-/** One borrowed, row-aligned set of physical vector chunks. */
-export type GPUVectorModelBatch<Data extends GPUVectorModelData = GPUVectorModelData> = {
-  batchIndex: number;
-  rowIndexOffset: number;
-  rowCount: number;
-  data: Record<string, Data>;
-};
-
-/** Named vector inputs, which may have different physical formats. */
-export type GPUVectorModelInputs = Record<string, GPUVectorModelInput | undefined>;
-
-/** Per-draw options for rendering aligned vectors without creating table wrappers. */
-export type GPUVectorModelDrawBatchesOptions<
-  Inputs extends GPUVectorModelInputs = GPUVectorModelInputs
-> = {
-  vectors: Inputs;
-  onBatch?: (batch: GPUVectorModelBatch<NonNullable<Inputs[keyof Inputs]>['data'][number]>) => void;
-};
-
 /**
  * High level draw API for luma.gl.
  *
@@ -219,10 +202,7 @@ export type GPUVectorModelDrawBatchesOptions<
  */
 export class GPUVectorModel {
   /** Creates a model while allowing the backend to compile its render pipeline asynchronously. */
-  static async createAsync<
-    ModelType extends GPUVectorModel,
-    Props extends GPUVectorModelProps = GPUVectorModelProps
-  >(
+  static async createAsync<ModelType extends GPUVectorModel, Props = GPUVectorModelProps>(
     this: new (
       device: Device,
       props: Props
@@ -256,6 +236,8 @@ export class GPUVectorModel {
   static defaultProps: Required<GPUVectorModelProps> = {
     ...RenderPipeline.defaultProps,
     gpuVectorCount: 'instance',
+    geometry: null,
+    attributeVectors: undefined!,
     source: undefined!,
     sourceLanguage: undefined!,
     vs: null,
@@ -365,6 +347,12 @@ export class GPUVectorModel {
 
   _attributeInfos: Record<string, AttributeInfo> = {};
   protected props: Required<GPUVectorModelProps>;
+  private geometryVectorBindings!: GPUVectorBindings;
+  private attributeVectorBindings!: GPUVectorBindings;
+  private explicitBufferLayout: BufferLayout[] = [];
+  private constructorDrawOffsets: Pick<GPUVectorModelProps, 'firstVertex' | 'firstIndex'>;
+  private drawingVectorBatches = false;
+  private indexVector: GPUVectorModelInput | null = null;
   private currentAttributes: NonNullable<GPUVectorModelProps['attributes']> = {};
   private currentAttributeByteOffsets: Record<string, number> = {};
   private _dynamicIndexBufferSource: {source: DynamicBuffer; generation: number} | null = null;
@@ -395,6 +383,7 @@ export class GPUVectorModel {
   }
 
   constructor(device: Device, props: GPUVectorModelProps) {
+    this.constructorDrawOffsets = {firstVertex: props.firstVertex, firstIndex: props.firstIndex};
     const defaultProps = (this.constructor as typeof GPUVectorModel).defaultProps;
     const defaultShaderAssembler = defaultProps.shaderAssembler;
     const vertexCountSet = Object.hasOwn(props, 'vertexCount');
@@ -429,6 +418,10 @@ export class GPUVectorModel {
     this._colorAttachmentFormats = this.props.colorAttachmentFormats;
     this._depthStencilAttachmentFormat = this.props.depthStencilAttachmentFormat;
 
+    this.isInstanced = props.isInstanced ?? (props.instanceCount ? true : undefined);
+    this.explicitBufferLayout = this.bufferLayout;
+    this.geometryVectorBindings = new GPUVectorBindings(device, `${this.id}-geometry`);
+    this.attributeVectorBindings = new GPUVectorBindings(device, `${this.id}-attributes`);
     this._initializeProps(props);
 
     const platformInfo = getPlatformInfo(device);
@@ -547,7 +540,8 @@ export class GPUVectorModel {
 
   /** Initializes subclass input policies before shader and pipeline creation. */
   protected _initializeProps(props: GPUVectorModelProps): void {
-    void props;
+    if (props.geometry) this.setGeometry(props.geometry);
+    if (props.attributeVectors) this.setAttributeVectors(props.attributeVectors);
   }
 
   /** Whether this model manages the uniform buffer for a shader-input module. */
@@ -562,7 +556,10 @@ export class GPUVectorModel {
   }
 
   /** Initializes subclass attributes before explicit constructor bindings are applied. */
-  protected _initializeAttributes(): void {}
+  protected _initializeAttributes(): void {
+    this.applyVectorAttributes();
+    if (this.indexVector) this.bindIndexVector();
+  }
 
   private _initializePipelineResources(props: GPUVectorModelProps): void {
     this.vertexArray = this.device.createVertexArray({
@@ -570,7 +567,12 @@ export class GPUVectorModel {
       bufferLayout: this.pipeline.bufferLayout
     });
     this._initializeAttributes();
-    if ('isInstanced' in props) this.isInstanced = props.isInstanced;
+    if (props.indexCount !== undefined) this.setIndexCount(props.indexCount);
+    if (this.constructorDrawOffsets.firstVertex !== undefined)
+      this.firstVertex = this.constructorDrawOffsets.firstVertex;
+    if (this.constructorDrawOffsets.firstIndex !== undefined)
+      this.firstIndex = this.constructorDrawOffsets.firstIndex;
+    if (props.isInstanced !== undefined) this.isInstanced = props.isInstanced;
     if (props.instanceCount) this.setInstanceCount(props.instanceCount);
     if (props.vertexCount) this.setVertexCount(props.vertexCount);
     if (props.indexBuffer) this.setIndexBuffer(props.indexBuffer);
@@ -591,6 +593,8 @@ export class GPUVectorModel {
           this.shaderFactory.release(this.pipeline.fs);
         }
       }
+      this.geometryVectorBindings.destroy();
+      this.attributeVectorBindings.destroy();
       this._uniformStore.destroy();
       this._destroyed = true;
     }
@@ -639,6 +643,13 @@ export class GPUVectorModel {
    * @returns `true` if the draw call was executed, `false` if resources were not ready.
    */
   draw(renderPass: RenderPass): boolean {
+    if (
+      !this.drawingVectorBatches &&
+      (this.geometryVectorBindings.batchCount !== 1 ||
+        this.attributeVectorBindings.batchCount !== 1)
+    ) {
+      return this.drawVectorGroups(renderPass);
+    }
     if (this._drawBlockedReason && !this._pipelineNeedsUpdate) {
       log.info(LOG_DRAW_PRIORITY, `>>> DRAWING ABORTED ${this.id}: ${this._drawBlockedReason}`)();
       return false;
@@ -752,6 +763,178 @@ export class GPUVectorModel {
     return drawSuccess;
   }
 
+  /** Binds a GPU-only mesh. CPU geometry adaptation belongs in Model. */
+  setGeometry(geometry: GPUVectorGeometry | null): void {
+    if (geometry) this.setTopology(geometry.topology);
+    this.setGeometryVectors(geometry?.attributes ?? {}, geometry?.bufferLayout);
+    this.setIndexVector(geometry?.indices ?? null);
+    if (geometry?.vertexCount !== undefined) this.setVertexCount(geometry.vertexCount);
+  }
+
+  /** Replaces per-vertex mesh vectors while preserving supplemental attributes. */
+  setGeometryVectors(vectors: GPUVectorModelAttributes, bufferLayouts?: BufferLayout[]): void {
+    bufferLayouts ??= this.getExplicitVectorLayouts(vectors);
+    validateGPUVectorBatchStructure(vectors);
+    if (!this.isInstanced || this.attributeVectorBindings.vertexCount !== undefined)
+      validateGPUVectorBatchStructure([
+        ...Object.values(vectors),
+        ...Object.values(this.attributeVectorBindings.inputs)
+      ]);
+    this.geometryVectorBindings.setInputs(vectors, bufferLayouts, 'vertex');
+    this.syncVectorBindings();
+    const rowCount = this.geometryVectorBindings.rowCount;
+    assert(
+      rowCount === undefined ||
+        this.attributeVectorBindings.vertexCount === undefined ||
+        rowCount === this.attributeVectorBindings.vertexCount
+    );
+    this.setVertexCount(rowCount ?? this.attributeVectorBindings.vertexCount ?? 0);
+  }
+
+  /** Replaces supplemental vectors; instanced models default these inputs to instance step mode. */
+  setAttributeVectors(vectors: GPUVectorModelAttributes, bufferLayouts?: BufferLayout[]): void {
+    bufferLayouts ??= this.getExplicitVectorLayouts(vectors);
+    if (
+      this.isInstanced === undefined &&
+      (bufferLayouts?.some(layout => layout.stepMode === 'instance') ||
+        Object.values(vectors).some(
+          vector => vector && 'data' in vector && vector.bufferLayout?.stepMode === 'instance'
+        ))
+    )
+      this.isInstanced = true;
+    const usesVertexRows =
+      !this.isInstanced ||
+      Object.entries(vectors).some(
+        ([name, vector]) =>
+          vector &&
+          'data' in vector &&
+          (bufferLayouts?.find(
+            layout =>
+              layout.name === name ||
+              layout.attributes?.some(attribute => attribute.attribute === name)
+          )?.stepMode ?? vector.bufferLayout?.stepMode) === 'vertex'
+      );
+    if (usesVertexRows)
+      validateGPUVectorBatchStructure([
+        ...Object.values(this.geometryVectorBindings.inputs),
+        ...Object.values(vectors)
+      ]);
+    this.attributeVectorBindings.setInputs(
+      vectors,
+      bufferLayouts,
+      this.isInstanced ? 'instance' : 'vertex'
+    );
+    this.syncVectorBindings();
+    if (this.attributeVectorBindings.instanceCount !== undefined)
+      this.setInstanceCount(this.attributeVectorBindings.instanceCount);
+    const vertexCount = this.attributeVectorBindings.vertexCount;
+    if (vertexCount !== undefined) {
+      const geometryRowCount = this.geometryVectorBindings.rowCount;
+      // Supplemental vertex columns describe the same rows as the geometry columns.
+      assert(geometryRowCount === undefined || geometryRowCount === vertexCount);
+      if (geometryRowCount === undefined) this.setVertexCount(vertexCount);
+    }
+  }
+
+  /** Binds typed columns using caller-resolved layouts, including packed groups. */
+  setGPUAttributes(vectors: GPUVectorModelAttributes, bufferLayouts: BufferLayout[]): void {
+    this.setAttributeVectors(vectors, bufferLayouts);
+  }
+
+  /** Replaces the borrowed contiguous uint16/uint32 index vector. */
+  setIndexVector(vector: GPUVectorModelInput | null): void {
+    if (vector) {
+      // Indexed draws consume one contiguous, tightly packed index stream.
+      assert(vector.format === 'uint8' || vector.format === 'uint16' || vector.format === 'uint32');
+      assert(vector.data.length <= 1);
+      assert(
+        vector.byteStride === (vector.format === 'uint32' ? 4 : vector.format === 'uint16' ? 2 : 1)
+      );
+    }
+    this.indexVector = vector;
+    if (this.vertexArray) this.bindIndexVector();
+  }
+
+  private bindIndexVector(): void {
+    const chunk = this.indexVector?.data[0];
+    if (chunk && this.indexVector) {
+      const buffer = chunk.buffer instanceof DynamicBuffer ? chunk.buffer.buffer : chunk.buffer;
+      // Core index-buffer metadata must agree with the vector format and aligned byte offset.
+      assert(
+        buffer.indexType === this.indexVector.format &&
+          chunk.byteOffset % this.indexVector.byteStride === 0
+      );
+    }
+    this.setIndexBuffer(chunk?.buffer ?? null);
+    this.setIndexCount(this.indexVector?.length);
+    this.setDrawOffsets({
+      firstVertex: chunk?.byteOffset ?? 0,
+      firstIndex: chunk ? chunk.byteOffset / this.indexVector!.byteStride : 0
+    });
+  }
+
+  private getExplicitVectorLayouts(vectors: GPUVectorModelAttributes): BufferLayout[] | undefined {
+    const names = new Set(Object.keys(vectors));
+    const layouts = this.explicitBufferLayout.filter(
+      layout =>
+        names.has(layout.name) ||
+        layout.attributes?.some(attribute => names.has(attribute.attribute))
+    );
+    return layouts.length ? layouts : undefined;
+  }
+
+  private getVectorBufferLayout(): BufferLayout[] {
+    const groups = [this.geometryVectorBindings, this.attributeVectorBindings];
+    const explicitLayouts = this.explicitBufferLayout.filter(
+      layout =>
+        !groups.some(
+          group =>
+            group.claimedNames.has(layout.name) ||
+            layout.attributes?.some(attribute => group.claimedNames.has(attribute.attribute))
+        )
+    );
+    return [
+      ...explicitLayouts,
+      ...this.geometryVectorBindings.layouts,
+      ...this.attributeVectorBindings.layouts
+    ];
+  }
+
+  private syncVectorBindings(): void {
+    const layouts = this.getVectorBufferLayout();
+    if (this.vertexArray) {
+      this.applyBufferLayout(layouts);
+      this.applyVectorAttributes();
+    } else this.bufferLayout = layouts;
+  }
+
+  private applyVectorAttributes(): void {
+    const activeNames = new Set(this.bufferLayout.map(layout => layout.name));
+    for (const name of Object.keys(this.currentAttributes)) {
+      if (!activeNames.has(name)) delete this.currentAttributes[name];
+    }
+    this.setAttributes(
+      {
+        ...this.currentAttributes,
+        ...this.geometryVectorBindings.buffers,
+        ...this.attributeVectorBindings.buffers
+      },
+      {
+        byteOffsets: {
+          ...this.currentAttributeByteOffsets,
+          ...this.geometryVectorBindings.byteOffsets,
+          ...this.attributeVectorBindings.byteOffsets
+        },
+        disableWarnings: true
+      }
+    );
+    if (this.device.type === 'webgl')
+      this.setConstantAttributes({
+        ...this.geometryVectorBindings.constants,
+        ...this.attributeVectorBindings.constants
+      });
+  }
+
   /** Binds contiguous borrowed vectors; use drawBatches() for multi-chunk inputs. */
   setGPUVectors(vectors: GPUVectorModelInputs, options?: {count?: GPUVectorModelCount}): void {
     const batches = getGPUVectorModelBatches(this.id, vectors);
@@ -760,6 +943,24 @@ export class GPUVectorModel {
     validateGPUVectorModelLayouts(this.id, vectors, this.bufferLayout);
     if (batches[0]) this.setGPUData(batches[0].data);
     this.setBatchDrawCount(batches[0]?.rowCount ?? 0, options?.count);
+  }
+
+  private drawVectorGroups(renderPass: RenderPass): boolean {
+    const drawingVectorBatches = this.drawingVectorBatches;
+    const vertexCountSet = this._vertexCountSet;
+    this.drawingVectorBatches = true;
+    try {
+      return drawGPUVectorGroups(
+        this,
+        this.geometryVectorBindings,
+        this.attributeVectorBindings,
+        () => this.syncVectorBindings(),
+        () => GPUVectorModel.prototype.draw.call(this, renderPass)
+      );
+    } finally {
+      this._vertexCountSet = vertexCountSet;
+      this.drawingVectorBatches = drawingVectorBatches;
+    }
   }
 
   /** Draws each aligned physical chunk without retaining or taking ownership of input vectors. */
@@ -780,6 +981,8 @@ export class GPUVectorModel {
     const previousVertexCount = this.vertexCount;
     const previousIsInstanced = this.isInstanced;
     const previousVertexCountSet = this._vertexCountSet;
+    const drawingVectorBatches = this.drawingVectorBatches;
+    this.drawingVectorBatches = true;
     let drawSuccess = true;
     try {
       for (const batch of batches) {
@@ -798,6 +1001,7 @@ export class GPUVectorModel {
       this.setVertexCount(previousVertexCount);
       this.isInstanced = previousIsInstanced;
       this._vertexCountSet = previousVertexCountSet;
+      this.drawingVectorBatches = drawingVectorBatches;
     }
     return drawSuccess;
   }
@@ -848,7 +1052,11 @@ export class GPUVectorModel {
    * @note Triggers a pipeline rebuild / pipeline cache fetch
    */
   setBufferLayout(bufferLayout: BufferLayout[]): void {
-    const nextBufferLayout = bufferLayout;
+    this.explicitBufferLayout = bufferLayout;
+    this.applyBufferLayout(this.getVectorBufferLayout());
+  }
+
+  private applyBufferLayout(nextBufferLayout: BufferLayout[]): void {
     if (deepEqual(nextBufferLayout, this.bufferLayout, -1)) {
       return;
     }
@@ -865,6 +1073,9 @@ export class GPUVectorModel {
       shaderLayout: this.pipeline.shaderLayout,
       bufferLayout: this.pipeline.bufferLayout
     });
+    this._dynamicAttributeBufferSources = {};
+    this.applyVectorAttributes();
+    if (this.indexBuffer) this.vertexArray.setIndexBuffer(this.indexBuffer);
   }
 
   /**
@@ -1539,92 +1750,4 @@ function asDepthStencilAttachmentFormat(
 
 function isDepthStencilAttachmentFormat(format: string): format is TextureFormatDepthStencil {
   return DEPTH_STENCIL_ATTACHMENT_FORMATS.includes(format as TextureFormatDepthStencil);
-}
-
-function validateGPUVectorModelLayouts(
-  ownerName: string,
-  vectors: GPUVectorModelInputs,
-  bufferLayouts: BufferLayout[]
-): void {
-  for (const [name, vector] of Object.entries(vectors)) {
-    if (!vector) continue;
-    if (!vector.format) {
-      throw new Error(`${ownerName} GPUVector "${name}" requires a format`);
-    }
-    const bufferLayout = bufferLayouts.find(layout => layout.name === name);
-    if (!bufferLayout) {
-      throw new Error(`${ownerName} GPUVector "${name}" requires a Model buffer layout`);
-    }
-    const attributeLayouts = bufferLayout.attributes ?? [];
-    if (attributeLayouts.length > 1) {
-      throw new Error(`${ownerName} GPUVector "${name}" does not support interleaved layouts`);
-    }
-    const attributeLayout = attributeLayouts[0];
-    const format = bufferLayout.format ?? attributeLayout?.format;
-    const formatInfo = getVectorVertexFormatInfo(ownerName, name, vector.format);
-    const byteStride = bufferLayout.byteStride ?? formatInfo.byteLength;
-    if (
-      format !== vector.format ||
-      byteStride !== vector.byteStride ||
-      vector.rowByteLength !== formatInfo.byteLength
-    ) {
-      throw new Error(`${ownerName} GPUVector "${name}" must match its Model buffer layout`);
-    }
-  }
-}
-
-/** Validates fixed-width vector alignment and returns borrowed batch-local chunk references. */
-export function getGPUVectorModelBatches<Inputs extends GPUVectorModelInputs>(
-  ownerName: string,
-  vectors: Inputs
-): GPUVectorModelBatch<NonNullable<Inputs[keyof Inputs]>['data'][number]>[] {
-  type Data = NonNullable<Inputs[keyof Inputs]>['data'][number];
-  const entries = Object.entries(vectors).filter(
-    (entry): entry is [string, NonNullable<Inputs[keyof Inputs]>] => entry[1] !== undefined
-  );
-  if (entries.length === 0) return [];
-  const [primaryName, primaryVector] = entries[0];
-  for (const [name, vector] of entries) {
-    if (!vector.format) {
-      throw new Error(`${ownerName} GPUVector "${name}" requires a format`);
-    }
-    getVectorVertexFormatInfo(ownerName, name, vector.format);
-    if (vector.length !== primaryVector.length) {
-      throw new Error(`${ownerName} GPUVector "${name}" rows must match "${primaryName}" rows`);
-    }
-    if (vector.data.length !== primaryVector.data.length) {
-      throw new Error(`${ownerName} GPUVector chunk counts must align`);
-    }
-  }
-
-  let rowIndexOffset = 0;
-  return primaryVector.data.map((primaryData, batchIndex) => {
-    const data: Record<string, Data> = {};
-    for (const [name, vector] of entries) {
-      // Entries retain the concrete chunk types of the supplied vector collection.
-      const chunk = vector.data[batchIndex] as Data | undefined;
-      if (!chunk || chunk.length !== primaryData.length) {
-        throw new Error(`${ownerName} GPUVector chunk ${batchIndex} row counts must align`);
-      }
-      if (
-        chunk.format !== vector.format ||
-        chunk.byteStride !== vector.byteStride ||
-        chunk.rowByteLength !== vector.rowByteLength
-      ) {
-        throw new Error(`${ownerName} GPUVector "${name}" chunk layout must be stable`);
-      }
-      data[name] = chunk;
-    }
-    const batch = {batchIndex, rowIndexOffset, rowCount: primaryData.length, data};
-    rowIndexOffset += primaryData.length;
-    return batch;
-  });
-}
-
-/** Only fixed-width vertex formats can be consumed by the generic vector draw path. */
-function getVectorVertexFormatInfo(ownerName: string, name: string, format: string) {
-  if (format.includes('<')) {
-    throw new Error(`${ownerName} GPUVector "${name}" requires a fixed-width scalar format`);
-  }
-  return vertexFormatDecoder.getVertexFormatInfo(format as VertexFormat);
 }
