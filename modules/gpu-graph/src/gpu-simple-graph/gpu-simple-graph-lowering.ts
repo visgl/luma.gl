@@ -127,8 +127,17 @@ export class SimpleGraphLowering {
         // Comparisons, integer arithmetic, min and max are outside the current semantic subset.
         assert(false);
     }
-    this.scalars.set(output, this.own(evaluator));
-    this.registerOutput(output.id, evaluator);
+    // An alias prevents expression merging across semantic operations, preserving float32 rounding.
+    const result = this.own(
+      new GPUDataEvaluator({
+        source: this.own(evaluator),
+        type: 'float32',
+        size: 1,
+        isConstant: evaluator.isConstant
+      })
+    );
+    this.scalars.set(output, result);
+    this.registerOutput(output.id, result);
   }
 
   destroy(): void {

@@ -380,3 +380,35 @@ it('lowers chained existing scalar arithmetic and rejects unsupported scalar ope
   expect(() => new GPUSimpleGraph(device).add(program.operations).compile()).toThrow();
   device.destroy();
 });
+
+it('preserves float32 rounding between semantic scalar operations', async () => {
+  const device = new NullDevice({});
+  const program = new GPUProgram();
+  const large = program.scalar('large', 'float32');
+  const one = program.scalar('one', 'float32');
+  const sum = program.scalar('sum', 'float32');
+  const difference = program.scalar('difference', 'float32');
+  program.add([
+    new GPUProgramScalarLiteral({output: large, value: 16777216}),
+    new GPUProgramScalarLiteral({output: one, value: 1}),
+    new GPUProgramScalarOperation({operation: 'add', left: large, right: one, output: sum}),
+    new GPUProgramScalarOperation({
+      operation: 'subtract',
+      left: sum,
+      right: large,
+      output: difference
+    })
+  ]);
+  for (const outputs of [['difference'], ['sum', 'difference']]) {
+    const compiled = new GPUSimpleGraph(device).add(program.operations).compile({outputs});
+    try {
+      const results = await compiled.run();
+      const reader = GPUDataEvaluator.fromGPUData(results.difference.data[0]);
+      expect(Array.from(await reader.readValue())).toEqual([0]);
+      reader.destroy();
+    } finally {
+      compiled.destroy();
+    }
+  }
+  device.destroy();
+});
