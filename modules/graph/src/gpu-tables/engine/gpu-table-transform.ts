@@ -26,7 +26,7 @@ export type TableTransformBatchOptions = RenderPassProps & {
 };
 
 /** Props for creating a WebGL transform backed by a GPU-resident table. */
-export type TableTransformProps = BufferTransformProps & {
+export type TableTransformProps = Omit<BufferTransformProps, 'inputVectors' | 'outputVectors'> & {
   /** Existing GPU table used as the source for transform input buffers. */
   table?: GPUTable;
   /** Existing GPU vectors converted into the transform input table. */
@@ -112,7 +112,7 @@ export class TableTransform extends BufferTransform {
       return;
     }
     assertNoExplicitOutputBuffers(
-      options?.outputBuffers,
+      options?.outputBuffers || options?.outputVectors,
       'TableTransform.run() cannot combine outputBuffers with copyOutputToInputVectors'
     );
     super.run({...options, outputBuffers: this.getAutomaticOutputBuffers()});
@@ -441,10 +441,7 @@ function assertSameOutputNames(declaredOutputs: string[], inferredOutputs: strin
   }
 }
 
-function assertNoExplicitOutputBuffers(
-  outputBuffers: TableTransformBufferMap | undefined,
-  errorMessage: string
-): void {
+function assertNoExplicitOutputBuffers(outputBuffers: unknown, errorMessage: string): void {
   if (outputBuffers) {
     throw new Error(errorMessage);
   }
