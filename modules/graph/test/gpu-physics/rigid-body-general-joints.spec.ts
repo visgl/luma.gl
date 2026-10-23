@@ -450,3 +450,63 @@ it.for([
     world.destroy();
   }
 });
+
+it.for([
+  2, 3
+])('uses the radial spring metric for a large %s-dimensional zero-cone error', async (dimensions, context) => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const axis = [
+    1 / Math.sqrt(dimensions),
+    1 / Math.sqrt(dimensions),
+    dimensions === 3 ? 1 / Math.sqrt(3) : 0
+  ];
+  const angle = 1.2;
+  const timeStep = 1 / 120;
+  const world = new GPURigidBodyWorld({
+    gravity: [0, 0, 0],
+    timeStep,
+    iterations: 1,
+    bodies: [
+      {mode: 'static', position: [0, 0, 0], colliders: []},
+      {
+        position: [0, 0, 0],
+        orientation: [
+          axis[0] * Math.sin(angle / 2),
+          axis[1] * Math.sin(angle / 2),
+          axis[2] * Math.sin(angle / 2),
+          Math.cos(angle / 2)
+        ],
+        inertiaDiagonal: [1, 1, 1],
+        shape: {type: 'sphere', radius: 0.1}
+      }
+    ],
+    joints: [
+      {
+        type: 'general',
+        first: 0,
+        second: 1,
+        axes: [0, 1, 2].slice(0, dimensions),
+        angular: true,
+        maximum: 0,
+        stiffness: 2,
+        damping: 0
+      }
+    ]
+  });
+  const definition = new GPUCommandGraph(device);
+  world.addToGraph(definition);
+  const graph = await definition.compileAsync();
+  try {
+    const encoder = device.createCommandEncoder();
+    graph.encode(encoder, {parameters: undefined});
+    device.submit(encoder.finish());
+    const velocity = (await world.readState())[1].angularVelocity;
+    const speed = (-timeStep * 2 * angle) / (1 + timeStep * timeStep * 2);
+    for (let component = 0; component < 3; component++)
+      expect(velocity[component]).toBeCloseTo(speed * axis[component], 5);
+  } finally {
+    graph.destroy();
+    world.destroy();
+  }
+});

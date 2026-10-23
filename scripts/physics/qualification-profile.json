@@ -745,6 +745,10 @@
           {
             "file": "modules/graph/test/gpu-physics/rigid-body-general-joints.spec.ts",
             "testPattern": "balances a capped torque"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-general-joints.spec.ts",
+            "testPattern": "uses the radial spring metric for a large"
           }
         ]
       }

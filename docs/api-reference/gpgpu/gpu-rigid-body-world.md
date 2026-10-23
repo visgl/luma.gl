@@ -229,12 +229,25 @@ Buffers become available after `addToGraph` and are world-owned. Each body row i
 
 After graph attachment:
 
-- `applyImpulse(index, impulse, worldPoint)` applies one impulse at a required
-  world-space point and wakes affected state.
+- `applyImpulse(index, impulse, worldPoint?)` applies one world-space impulse. Omit
+  the point to apply at the current GPU COM.
+- `applyAngularImpulse(index, impulse)` applies a world-space angular impulse.
+- `setBodyParameters(index, parameters)` updates configured mass, COM, principal
+  inertia, velocity, angular velocity, gravity factor or motion mode. COM changes
+  preserve the body-node pose and transport COM velocity consistently. A mutation
+  outside the configured CCD envelope is rejected.
+- `setColliderMaterial(index, material)` replaces one collider's material response.
+- `setColliderTransform(index, position, orientation)` teleports a collider in its
+  body's node frame. This is not a deformable-body or moving-surface velocity model.
+- `setJointParameters(index, parameters)` updates response parameters while keeping
+  joint type, body indices and attachment frames unchanged. Use `getJointParameters`
+  for a copy of the current configuration.
+- `getBodyParameters(index)` and `getColliderMaterial(index)` return configured
+  properties, not a readback of evolving simulated velocity.
 - `setKinematicTarget(index, position, orientation)` supplies a world-space node
   target, reached in the next step and then held. Contact velocity derives from
   this motion. A large target jump is still subject to discrete collision limits.
-- `wake()` invalidates cached contacts and wakes bodies. Call it after intentional
+- `wake()` invalidates cached contacts and wakes bodies in a parallel GPU pass. Call it after intentional
   direct state edits ordered between submissions.
 - `await readState()` returns position, orientation, velocity, angular velocity and
   `sleeping` for each body. It is an explicit full-state readback, not part of stepping.
@@ -604,6 +617,31 @@ The Rigid Body Lab now includes a Mechanisms collection: pendulum, contact-loade
 motorized hinge, powered slider, spring suspension and position-driven hinge. These are bounded reference demonstrations,
 not qualification for arbitrary mechanisms or extreme mass ratios.
 
+### General attachment constraints
+
+`type: 'general'` composes a single limit or drive over `axes: [0, 1, 2]` (choose
+one, two or three distinct axes). `angular: true` selects rotation. Linear metrics
+are signed displacement for one axis and radial distance for two or three. Angular
+metrics are twist, cone angle and total relative rotation respectively. Several
+rows can share the same attachment frames to describe a complete mechanism.
+
+`minimum` and `maximum` are optional. Omitted `stiffness` makes a hard limit;
+finite `stiffness` and `damping` make a compliant limit. Hard zero-radius constraints
+use independent rows to avoid a singular radial Jacobian. Soft limits retain the
+radial/conical metric, including at large angular errors.
+
+A one-axis `drive` accepts `mode: 'force' | 'acceleration'`, `positionTarget`,
+`velocityTarget`, `stiffness`, `damping` and `maximumForce`. Acceleration mode scales
+gains by effective mass; the force/torque cap still limits the accumulated impulse
+per timestep rather than granting a new cap per solver iteration. General rows use
+current attachment-coordinate gradients and rebuild their scalar impulses each step.
+They do not imply reduced-coordinate articulation support or general singular-frame
+qualification.
+
+`makeRigidBodyJointsFromScenegraph` compiles `JointController.resolve(...)` results
+into these rows. Cross-references are scene object references until this backend
+boundary resolves body indices.
+
 ## Debug capture and replay
 
 After stopping graph submissions and control calls, `await world.captureState()`
@@ -758,3 +796,28 @@ and openings remain collision boundaries. Mesh and hull warm starts use surface 
 rather than individual triangle IDs, while normal alignment, both local-anchor distance
 limits and one-to-one point ownership still guard impulse transfer. This does not yet
 provide general convex multi-point manifold coherence through arbitrary feature changes.
+
+
+## Reusable GPU checkpoints and scene instances
+
+`createGPUCheckpoint()` returns `{byteLength, save(), restore(), destroy()}`. It owns
+same-world GPU copies of persistent buffers and saves the associated configured
+properties and event cursors. `save()` and `restore()` submit copies without CPU
+readback. Finish pending query/event reads first. These checkpoints are not portable
+across a different world or storage layout; destroy them when no longer needed.
+The world also destroys outstanding checkpoints during teardown. Capacity preflight
+reports the base world; checkpoint memory is additional.
+
+`ScenegraphPhysicsInstance.create(device, {world, bodies})` owns a world/graph pair
+and a map from stable scene-node references to body indices. `advance()` submits one
+fixed step. `reset()` restores authored physics without touching scene nodes or
+cameras. `rebuild(definition, preserveState = true)` compiles replacement resources
+before committing and preserves dynamic node poses by reference. Rebuilds explicitly
+read state once, reset contact/event histories and increment `revision`; rebind render
+buffers and event consumers after a successful replacement. A rejected rebuild leaves
+the previous execution usable. `destroy()` waits for the instance's pending operation.
+
+Use `ScenegraphPhysicsProperties` for configured property addresses shared by
+interactivity and animation. `makeGLTFPhysicsProperties` only resolves source addresses;
+mutations remain in the generic physics runtime. See
+[scenegraph physics integration](../../api-guide/engine/scenegraph-physics.md).

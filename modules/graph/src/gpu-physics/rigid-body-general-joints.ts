@@ -92,8 +92,8 @@ fn solveGeneralJoint(index:u32,firstPoint:vec3f,secondPoint:vec3f,firstRotation:
  let count=dot(constraint.axes.xyz,vec3f(1));let offset=secondPoint-firstPoint;
  var relative=multiplyRotation(vec4f(-firstRotation.xyz,firstRotation.w),secondRotation);
  if(relative.w<0.0){relative=-relative;}
- // A zero-radius ball/socket or cone is singular as one radial row; resolve its independent axes.
- if(count>1.0&&constraint.limits.x<=0.0&&constraint.limits.y==0.0&&constraint.control.y==0.0){
+ // A hard zero-radius ball/socket or cone needs independent rows. Soft limits retain their radial metric.
+ if(count>1.0&&constraint.limits.x<=0.0&&constraint.limits.y==0.0&&constraint.control.y==0.0&&constraint.control.x==0.0){
   for(var component=0u;component<3u;component++){
    if(constraint.axes[component]==0.0){continue;}var basis=vec3f(0);basis[component]=1.0;
    let axis=rotate(firstRotation,basis);
