@@ -425,3 +425,60 @@ it('keeps an offset impact nonclosing after coupled friction without adding ener
     0.5 * state.angularVelocity.reduce((sum, value) => sum + value * value, 0);
   expect(energy).toBeLessThanOrEqual(240 ** 2 + 0.1);
 });
+
+it.for([
+  {reverse: false, angle: 0},
+  {reverse: true, angle: 0},
+  {reverse: false, angle: 0.37},
+  {reverse: true, angle: 0.37}
+])('uses the real grazing box face patch for impact arms (reversed $reverse, rotated $angle)', async ({
+  reverse,
+  angle
+}, context) => {
+  const cosine = Math.cos(angle),
+    sine = Math.sin(angle);
+  const orientation = [0, 0, Math.sin(angle / 2), Math.cos(angle / 2)] as const;
+  const bodies: GPURigidBody[] = [
+    {
+      position: [-4.99 * cosine, -4.99 * sine, 0],
+      orientation,
+      velocity: [240 * cosine, 240 * sine, 0],
+      inertiaDiagonal: [1, 1, 1],
+      shape: {type: 'box', halfExtents: [0.5, 1, 1]},
+      friction: 0,
+      restitution: 1
+    },
+    {
+      mode: 'static',
+      position: [-2.9 * sine, 2.9 * cosine, 0],
+      orientation,
+      shape: {type: 'box', halfExtents: [0.5, 2, 1]},
+      friction: 0,
+      restitution: 1
+    }
+  ];
+  if (reverse) bodies.reverse();
+  const selected = reverse ? 1 : 0;
+  const result = await run({
+    gravity: [0, 0, 0],
+    sleepAfter: 0,
+    restitutionThreshold: 0,
+    contactSlop: 0,
+    failurePolicy: 'rollback',
+    continuous: {mode: 'convex', bodies: [selected]},
+    bodies
+  });
+  if (!result) return context.skip('WebGPU unavailable');
+  expect(result.diagnostics.complete).toBe(true);
+  const state = result.state[selected],
+    impulse = 240 - state.velocity[0] * cosine - state.velocity[1] * sine;
+  // In the authored frame, face overlap is Y=[0.9,1], Z=[-1,1], with centroid Y=0.95.
+  const expectedImpulse = 480 / (1 + 0.95 ** 2);
+  expect(state.angularVelocity[2] / impulse).toBeCloseTo(0.95, 4);
+  expect(impulse).toBeCloseTo(expectedImpulse, 1);
+  expect(state.angularVelocity[2]).toBeCloseTo(0.95 * expectedImpulse, 1);
+  const energy =
+    0.5 * state.velocity.reduce((sum, value) => sum + value * value, 0) +
+    0.5 * state.angularVelocity.reduce((sum, value) => sum + value * value, 0);
+  expect(Math.abs(energy - 0.5 * 240 ** 2)).toBeLessThan(0.5);
+});

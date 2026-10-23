@@ -1436,6 +1436,10 @@
           {
             "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
             "testPattern": "preserves free-box rebound trajectories"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "uses the real grazing box face patch"
           }
         ]
       }

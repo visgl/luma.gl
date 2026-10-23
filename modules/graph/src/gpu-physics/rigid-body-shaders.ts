@@ -241,6 +241,35 @@ fn storeFeatureContact(pair: u32, slot: u32, point: vec3f, normal: vec3f, depth:
  }
  manifolds[pair].contacts[slot]=contact;
 }
+struct BoxContactPatch { points:array<vec3f,16>, count:u32 }
+fn clipBoxContact(reference:u32,incident:u32,faceAxis:u32,referenceNormal:vec3f,tolerance:f32)->BoxContactPatch {
+ let referenceCenter=colliderPosition(reference)+referenceNormal*bodies.colliders[reference].shape[faceAxis];
+ var incidentAxis=0u;var maximumAlignment=0.0;
+ for(var index=0u;index<3u;index++) {let alignment=abs(dot(axis(incident,index),referenceNormal));if(alignment>maximumAlignment) {maximumAlignment=alignment;incidentAxis=index;}}
+ let incidentNormal=axis(incident,incidentAxis)*select(1.0,-1.0,dot(axis(incident,incidentAxis),referenceNormal)>0.0);
+ let incidentCenter=colliderPosition(incident)+incidentNormal*bodies.colliders[incident].shape[incidentAxis];
+ let firstTangent=axis(incident,(incidentAxis+1u)%3u)*bodies.colliders[incident].shape[(incidentAxis+1u)%3u];
+ let secondTangent=axis(incident,(incidentAxis+2u)%3u)*bodies.colliders[incident].shape[(incidentAxis+2u)%3u];
+ var polygon: array<vec3f, 16>;var temporary: array<vec3f, 16>;
+ polygon[0]=incidentCenter-firstTangent-secondTangent;polygon[1]=incidentCenter+firstTangent-secondTangent;
+ polygon[2]=incidentCenter+firstTangent+secondTangent;polygon[3]=incidentCenter-firstTangent+secondTangent;
+ var vertexCount=4u;
+ for(var boundary=0u;boundary<4u;boundary++) {
+  let tangentAxis=(faceAxis+1u+boundary/2u)%3u;
+  let direction=axis(reference,tangentAxis)*select(-1.0,1.0,boundary%2u==0u);
+  let limit=bodies.colliders[reference].shape[tangentAxis];var outputCount=0u;
+  for(var index=0u;index<vertexCount;index++) {
+   let start=polygon[index];let end=polygon[(index+1u)%vertexCount];
+   let startDistance=dot(start-referenceCenter,direction)-limit;let endDistance=dot(end-referenceCenter,direction)-limit;
+   if(startDistance<=0.0) {temporary[outputCount]=start;outputCount++;}
+   if((startDistance<=0.0)!=(endDistance<=0.0)) {temporary[outputCount]=mix(start,end,startDistance/(startDistance-endDistance));outputCount++;}
+  }
+  vertexCount=outputCount;for(var index=0u;index<vertexCount;index++) {polygon[index]=temporary[index];}
+ }
+ var contactPatch:BoxContactPatch;
+ for(var index=0u;index<vertexCount;index++) {if(dot(referenceCenter-polygon[index],referenceNormal)>=-tolerance) {contactPatch.points[contactPatch.count]=polygon[index];contactPatch.count++;}}
+ return contactPatch;
+}
 fn storeContact(pair:u32,slot:u32,point:vec3f,normal:vec3f,depth:f32,previous:Manifold,first:u32,second:u32){
  storeFeatureContact(pair,slot,point,normal,depth,previous,first,second,-1,-1);
 }
@@ -331,34 +360,11 @@ ${extended ? RIGID_BODY_CONVEX_SHADER : ''}
  let reference=faceBody;let incident=select(first,second,reference==first);
  let referenceNormal=select(-normal,normal,reference==first);
  let referenceCenter=colliderPosition(reference)+referenceNormal*bodies.colliders[reference].shape[faceAxis];
- var incidentAxis=0u;var maximumAlignment=0.0;
- for(var index=0u;index<3u;index++) {let alignment=abs(dot(axis(incident,index),referenceNormal));if(alignment>maximumAlignment) {maximumAlignment=alignment;incidentAxis=index;}}
- let incidentNormal=axis(incident,incidentAxis)*select(1.0,-1.0,dot(axis(incident,incidentAxis),referenceNormal)>0.0);
- let incidentCenter=colliderPosition(incident)+incidentNormal*bodies.colliders[incident].shape[incidentAxis];
- let firstTangent=axis(incident,(incidentAxis+1u)%3u)*bodies.colliders[incident].shape[(incidentAxis+1u)%3u];
- let secondTangent=axis(incident,(incidentAxis+2u)%3u)*bodies.colliders[incident].shape[(incidentAxis+2u)%3u];
- var polygon: array<vec3f, 16>;var temporary: array<vec3f, 16>;
- polygon[0]=incidentCenter-firstTangent-secondTangent;polygon[1]=incidentCenter+firstTangent-secondTangent;
- polygon[2]=incidentCenter+firstTangent+secondTangent;polygon[3]=incidentCenter-firstTangent+secondTangent;
- var vertexCount=4u;
- for(var boundary=0u;boundary<4u;boundary++) {
-  let tangentAxis=(faceAxis+1u+boundary/2u)%3u;
-  let direction=axis(reference,tangentAxis)*select(-1.0,1.0,boundary%2u==0u);
-  let limit=bodies.colliders[reference].shape[tangentAxis];var outputCount=0u;
-  for(var index=0u;index<vertexCount;index++) {
-   let start=polygon[index];let end=polygon[(index+1u)%vertexCount];
-   let startDistance=dot(start-referenceCenter,direction)-limit;let endDistance=dot(end-referenceCenter,direction)-limit;
-   if(startDistance<=0.0) {temporary[outputCount]=start;outputCount++;}
-   if((startDistance<=0.0)!=(endDistance<=0.0)) {temporary[outputCount]=mix(start,end,startDistance/(startDistance-endDistance));outputCount++;}
-  }
-  vertexCount=outputCount;for(var index=0u;index<vertexCount;index++) {polygon[index]=temporary[index];}
- }
- // Spread four retained points around the clipped polygon rather than taking adjacent vertices.
- var accepted: array<vec3f, 16>;var acceptedCount=0u;
- for(var index=0u;index<vertexCount;index++) {if(dot(referenceCenter-polygon[index],referenceNormal)>=-settings.solver.x) {accepted[acceptedCount]=polygon[index];acceptedCount++;}}
+ let contactPatch=clipBoxContact(reference,incident,faceAxis,referenceNormal,settings.solver.x);
+ let acceptedCount=contactPatch.count;
  let contactCount=min(4u,acceptedCount);
  for(var index=0u;index<contactCount;index++) {
-  let point=accepted[index*acceptedCount/contactCount];let separation=dot(referenceCenter-point,referenceNormal);
+  let point=contactPatch.points[index*acceptedCount/contactCount];let separation=dot(referenceCenter-point,referenceNormal);
   storeContact(pair,index,point+referenceNormal*separation*0.5,normal,separation,previous,first,second);
  }
  manifolds[pair].count=contactCount;

@@ -413,7 +413,9 @@ and linear/angular speed bounds drive conservative advancement (64 distance and
 coordinate-precision floor; it is not an absolute world-space accuracy guarantee. Centered
 sphere spin does not inflate the geometric angular bound. One invocation chooses the earliest TOI, using collider
 IDs to break exact ties, advances all trajectories and applies coupled normal/angular
-and Coulomb friction impulses. Up to 16 coupled normal/tangent projections are followed
+and Coulomb friction impulses. Box impact points come from the same clipped face
+polygons used by discrete manifolds, or closest supporting finite edges. Missing or
+invalid surface witnesses reject the step. Up to 16 coupled normal/tangent projections are followed
 by a nonclosing normal correction, so offset friction cannot restore inward speed
 before the remaining timestep is swept again. Nonimpacted
 bodies preserve their discrete final poses; kinematic targets retain their authored

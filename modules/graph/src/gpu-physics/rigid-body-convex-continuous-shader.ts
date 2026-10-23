@@ -162,7 +162,10 @@ fn continuousDistance(first:u32,second:u32,time:f32,tolerance:f32)->ContinuousDi
    if(abs(determinant)>1e-25){
     let coordinates=vec3f(dot(-origin,cross(secondEdge,thirdEdge)),dot(firstEdge,cross(-origin,thirdEdge)),dot(firstEdge,cross(secondEdge,-origin)))/determinant;
     if(all(coordinates>=vec3f(0))&&coordinates.x+coordinates.y+coordinates.z<=1.0){
-     result.complete=1u;result.distance=0.0;result.point=(witnessFirst+witnessSecond)*0.5;return result;
+     let weights=vec4f(1.0-coordinates.x-coordinates.y-coordinates.z,coordinates);
+     var firstPoint=vec3f(0);var secondPoint=vec3f(0);
+     for(var corner=0u;corner<4u;corner++){firstPoint+=simplex[corner].first*weights[corner];secondPoint+=simplex[corner].second*weights[corner];}
+     result.complete=1u;result.distance=0.0;result.point=(firstPoint+secondPoint)*0.5;return result;
     }
    }
   }
@@ -245,22 +248,59 @@ fn continuousRadius(collider:u32)->f32 {
  }
  if(!complete){continuousWork.candidates[slot].colliders.z=2u;}
 }
-fn continuousImpactPoint(first:u32,second:u32,point:vec3f,normal:vec3f)->vec3f {
- if(bodies.colliders[first].shape.w!=1.0||bodies.colliders[second].shape.w!=1.0){return point;}
- let tolerance=max(1e-5,max(length(colliderPosition(first)),length(colliderPosition(second)))*1e-6);
- var result=point;var smallestArea=1e30;
+fn continuousBoxShell(collider:u32,point:vec3f,tolerance:f32)->bool {
+ return all(abs(colliderLocal(collider,point-colliderPosition(collider)))<=bodies.colliders[collider].shape.xyz+vec3f(tolerance));
+}
+fn continuousImpactPoint(first:u32,second:u32,point:vec3f,normal:vec3f)->vec4f {
+ if(bodies.colliders[first].shape.w!=1.0||bodies.colliders[second].shape.w!=1.0){return vec4f(point,1);}
+ let tolerance=max(1e-5,max(length(colliderPosition(first)),length(colliderPosition(second)))*2e-6);
+ var reference=first;var faceAxis=0u;var maximumAlignment=0.0;
  for(var side=0u;side<2u;side++){
-  let collider=select(first,second,side==1u);let other=select(second,first,side==1u);
-  let direction=colliderLocal(collider,normal)*select(-1.0,1.0,side==1u);
+  let collider=select(first,second,side==1u);
   for(var coordinate=0u;coordinate<3u;coordinate++){
-   if(abs(direction[coordinate])<0.999){continue;}
-   var localPoint=vec3f(0);localPoint[coordinate]=bodies.colliders[collider].shape[coordinate]*select(-1.0,1.0,direction[coordinate]>=0.0);
-   let candidate=colliderPosition(collider)+rotate(colliderRotation(collider),localPoint);
-   let area=bodies.colliders[collider].shape[(coordinate+1u)%3u]*bodies.colliders[collider].shape[(coordinate+2u)%3u];
-   if(area<smallestArea&&all(abs(colliderLocal(other,candidate-colliderPosition(other)))<=bodies.colliders[other].shape.xyz+vec3f(tolerance))){result=candidate;smallestArea=area;}
+   let alignment=abs(dot(axis(collider,coordinate),normal));
+   if(alignment>maximumAlignment){maximumAlignment=alignment;reference=collider;faceAxis=coordinate;}
   }
  }
- return result;
+ if(maximumAlignment>0.99999){
+  let incident=select(first,second,reference==first);
+  let direction=select(-normal,normal,reference==second);
+  let referenceNormal=axis(reference,faceAxis)*select(-1.0,1.0,dot(axis(reference,faceAxis),direction)>=0.0);
+  let referenceCenter=colliderPosition(reference)+referenceNormal*bodies.colliders[reference].shape[faceAxis];
+  let contactPatch=clipBoxContact(reference,incident,faceAxis,referenceNormal,tolerance);
+  var total=vec3f(0);var count=0u;
+  for(var index=0u;index<contactPatch.count;index++){
+   let separation=dot(referenceCenter-contactPatch.points[index],referenceNormal);
+   if(abs(separation)<=tolerance*4.0){total+=contactPatch.points[index]+referenceNormal*separation*0.5;count++;}
+  }
+  if(count>0u){
+   let centroid=total/f32(count);
+   if(continuousBoxShell(first,centroid,tolerance*4.0)&&continuousBoxShell(second,centroid,tolerance*4.0)){return vec4f(centroid,1);}
+  }
+  // No valid clipped witness is a failed query, never permission to use an off-surface point.
+  return vec4f(0);
+ }
+ // Edge/edge SAT axes use closest points on the actual supporting finite segments.
+ var firstAxis=0u;var secondAxis=0u;var maximumCrossAlignment=0.0;
+ for(var horizontal=0u;horizontal<3u;horizontal++){
+  for(var vertical=0u;vertical<3u;vertical++){
+   let direction=cross(axis(first,horizontal),axis(second,vertical));let magnitude=length(direction);
+   if(magnitude>1e-7){let alignment=abs(dot(direction/magnitude,normal));if(alignment>maximumCrossAlignment){maximumCrossAlignment=alignment;firstAxis=horizontal;secondAxis=vertical;}}
+  }
+ }
+ if(maximumCrossAlignment<0.99999){return vec4f(0);}
+ let firstDirection=axis(first,firstAxis);let secondDirection=axis(second,secondAxis);
+ var firstCenter=continuousSupport(first,-normal,0.0);var secondCenter=continuousSupport(second,normal,0.0);
+ firstCenter-=firstDirection*dot(firstCenter-colliderPosition(first),firstDirection);
+ secondCenter-=secondDirection*dot(secondCenter-colliderPosition(second),secondDirection);
+ let delta=firstCenter-secondCenter;let alignment=dot(firstDirection,secondDirection);let denominator=1.0-alignment*alignment;
+ if(denominator<=1e-12){return vec4f(0);}
+ var firstDistance=clamp((alignment*dot(secondDirection,delta)-dot(firstDirection,delta))/denominator,-bodies.colliders[first].shape[firstAxis],bodies.colliders[first].shape[firstAxis]);
+ let secondDistance=clamp(dot(secondDirection,delta)+alignment*firstDistance,-bodies.colliders[second].shape[secondAxis],bodies.colliders[second].shape[secondAxis]);
+ firstDistance=clamp(alignment*secondDistance-dot(firstDirection,delta),-bodies.colliders[first].shape[firstAxis],bodies.colliders[first].shape[firstAxis]);
+ let witness=(firstCenter+firstDirection*firstDistance+secondCenter+secondDirection*secondDistance)*0.5;
+ if(continuousBoxShell(first,witness,tolerance*4.0)&&continuousBoxShell(second,witness,tolerance*4.0)){return vec4f(witness,1);}
+ return vec4f(0);
 }
 @compute @workgroup_size(1) fn resolveConvexContinuous(){
  if(continuousWork.finished!=0u){return;}
@@ -285,7 +325,9 @@ fn continuousImpactPoint(first:u32,second:u32,point:vec3f,normal:vec3f)->vec3f {
  continuousWork.remaining-=nearest;
  if(selected==0xffffffffu){continuousWork.finished=1u;return;}
  let candidate=continuousWork.candidates[selected];let firstCollider=candidate.colliders.x;let secondCollider=candidate.colliders.y;
- let first=colliderBody(firstCollider);let second=colliderBody(secondCollider);let normal=candidate.normal.xyz;let point=continuousImpactPoint(firstCollider,secondCollider,candidate.point.xyz,normal);
+ let first=colliderBody(firstCollider);let second=colliderBody(secondCollider);let normal=candidate.normal.xyz;let witness=continuousImpactPoint(firstCollider,secondCollider,candidate.point.xyz,normal);
+ if(witness.w==0.0){continuousStatus[0].x=1u;continuousWork.finished=1u;return;}
+ let point=witness.xyz;
  let closing=dot(pointVelocity(first,point)-pointVelocity(second,point),normal);
  let response=effectiveMass(first,second,point,normal);
  if(response<=1e-20||length(normal)<0.5){continuousStatus[0].x=1u;continuousWork.finished=1u;return;}
