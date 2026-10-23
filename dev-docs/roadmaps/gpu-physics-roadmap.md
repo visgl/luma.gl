@@ -715,3 +715,26 @@ asymmetric rotational convergence remain open. This package does not close G1–
 Physics Stress Lab adds persistent moving supports, fast dynamic boxes, translating
 walls, rotating gates and intentional swept-queue exhaustion. These are diagnostic
 scenarios with explicit limits, not evidence of complete cross-device SOTA qualification.
+
+
+### G2 contact continuity / G3 impact continuity / G1 spatial swept queues
+
+The follow-up welds exact coplanar connected triangle features using shared geometric
+edges, retaining crease, hole and nonmanifold boundaries. Analytic sphere/triangle
+witnesses suppress false internal-edge ridges; local-anchor matching survives named
+seam-crossing cases. General convex multi-point manifold continuity remains open.
+
+Convex CCD now rebuilds an axis-adaptive sorted swept-bounds index on the GPU. Interval
+pruning feeds the existing bounded indirect TOI queue. Sparse comparison counters and
+non-power-of-two fixtures expose discovery behavior; dense intervals remain quadratic
+and sorting increases dispatch count. Full-step performance qualification remains G1.
+
+Closing initial touches and impacts driven by another contact receive zero-time
+revisits. Rotating contact exits and subsequent advancement use conservative support
+velocity/curvature bounds; unresolved searches reject transactionally. Simultaneous
+impacts use a declared deterministic ordered law with a global impact budget. A general
+coupled multi-impact material model, jointed/nonconvex CCD, deep initial penetration,
+and swept event payloads remain open G3/G11 work.
+
+Physics Stress Lab adds Seam Sliding, Touching Chain, Simultaneous Impacts and Swept
+Queue Scaling. These named-case regressions do not close G1–G3 or establish SOTA status.

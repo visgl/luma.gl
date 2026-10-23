@@ -33,3 +33,16 @@ initial overlaps stay with discrete solving, and jointed/nonconvex CCD is unsupp
 solid volumes. Rejection is expected in the budget scenario; no partial step is accepted.
 
 Numerical qualification fixtures keep their independently documented duration.
+
+
+Contact/impact continuity scenarios:
+
+- **Seam Sliding** crosses coplanar triangle diagonals with persistent surface keys and analytic sphere witnesses.
+- **Touching Chain** transfers a fast impact through initially touching spheres.
+- **Simultaneous Impacts** demonstrates the bounded deterministic ordered impact law.
+- **Swept Queue Scaling** shows 65 moving spheres and spatial comparisons versus 2,080 possible pairs.
+
+The sorted swept index prunes interval-separated bodies but retains quadratic dense
+worst cases. Its sort stages add dispatches. Compare full-step timing and accuracy,
+not only candidate counts, when evaluating performance. The lab remains a diagnostic
+CPU-readback view of GPU physics, not a GPU rendering benchmark.

@@ -1525,6 +1525,84 @@
           }
         ]
       }
+    },
+    {
+      "id": "geometry.coplanar-contact-continuity",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-seam-continuity.spec.ts",
+            "testPattern": "slides across a triangulated seam"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-seam-continuity.spec.ts",
+            "testPattern": "preserves authored boundary"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-seam-continuity.spec.ts",
+            "testPattern": "normalizes tiny triangle face witnesses"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.impact-continuity",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-impact-continuity.spec.ts",
+            "testPattern": "propagates an impact through an initially touching chain"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-impact-continuity.spec.ts",
+            "testPattern": "resolves simultaneous opposing impacts"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-impact-continuity.spec.ts",
+            "testPattern": "rechecks a separating initial touch"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-impact-continuity.spec.ts",
+            "testPattern": "rejects an exhausted simultaneous-impact budget"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-impact-continuity.spec.ts",
+            "testPattern": "sustains rotating contact exits"
+          }
+        ]
+      }
+    },
+    {
+      "id": "execution.spatial-swept-pruning",
+      "tranche": "G1",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-impact-continuity.spec.ts",
+            "testPattern": "spatially prunes sparse swept bounds"
+          }
+        ]
+      }
     }
   ]
 }

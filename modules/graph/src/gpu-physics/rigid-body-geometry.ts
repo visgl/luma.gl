@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {makeCoplanarFeatures} from './rigid-body-contact-features';
 import type {GPURigidBodyCollider} from './rigid-body-properties';
 
 export function packRigidBodyShapes(colliders: readonly GPURigidBodyCollider[]) {
@@ -34,8 +35,14 @@ export function packRigidBodyShapes(colliders: readonly GPURigidBodyCollider[]) 
         );
       padding[2] = geometry.length / 4;
       padding[3] = mesh.indices.length / 3;
+      const {features, internalEdges} = makeCoplanarFeatures(mesh);
       for (let index = 0; index < mesh.indices.length; index += 3)
-        geometry.push(mesh.indices[index], mesh.indices[index + 1], mesh.indices[index + 2], 0);
+        geometry.push(
+          mesh.indices[index],
+          mesh.indices[index + 1],
+          mesh.indices[index + 2],
+          features[index / 3] * 8 + internalEdges[index / 3]
+        );
       policies[0] = geometry.length / 4;
       policies[1] = mesh.nodes.length / 12;
       // Avoid a spread argument for large BVHs.

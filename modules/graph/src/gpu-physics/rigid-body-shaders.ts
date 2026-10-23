@@ -202,7 +202,11 @@ fn contactFeature(collider:u32,point:vec3f,normal:vec3f)->u32 {
   let score=separation+(1.0-alignment)*settings.solver.w;
   if(score<nearest){nearest=score;feature=triangle;}
  }
- return feature+1u;
+ return u32(readGeometry(u32(bodies.colliders[collider].padding.z)+feature).w)/8u;
+}
+fn cookedContactFeature(collider:u32,triangle:i32,fallback:u32)->u32 {
+ if(triangle<0){return fallback;}
+ return u32(readGeometry(u32(bodies.colliders[collider].padding.z)+u32(triangle)).w)/8u;
 }
 fn storeFeatureContact(pair: u32, slot: u32, point: vec3f, normal: vec3f, depth: f32, previous: Manifold, firstCollider: u32, secondCollider: u32, firstTriangle:i32, secondTriangle:i32) {
  let first=colliderBody(firstCollider);let second=colliderBody(secondCollider);
@@ -212,8 +216,8 @@ fn storeFeatureContact(pair: u32, slot: u32, point: vec3f, normal: vec3f, depth:
  // Match in material coordinates: common translation must not invalidate a contact.
  let firstAnchor=colliderLocal(firstCollider,point-colliderPosition(firstCollider));
  let secondAnchor=colliderLocal(secondCollider,point-colliderPosition(secondCollider));
- let firstFeature=select(contactFeature(firstCollider,firstAnchor,colliderLocal(firstCollider,normal)),u32(firstTriangle)+1u,firstTriangle>=0);
- let secondFeature=select(contactFeature(secondCollider,secondAnchor,colliderLocal(secondCollider,-normal)),u32(secondTriangle)+1u,secondTriangle>=0);
+ let firstFeature=cookedContactFeature(firstCollider,firstTriangle,contactFeature(firstCollider,firstAnchor,colliderLocal(firstCollider,normal)));
+ let secondFeature=cookedContactFeature(secondCollider,secondTriangle,contactFeature(secondCollider,secondAnchor,colliderLocal(secondCollider,-normal)));
  contact.firstAnchor=vec4f(firstAnchor,f32(firstFeature));
  contact.secondAnchor=vec4f(secondAnchor,f32(secondFeature));
  var nearest=2.0*settings.solver.w*settings.solver.w; var found=false;

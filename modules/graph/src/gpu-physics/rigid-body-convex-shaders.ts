@@ -81,6 +81,39 @@ fn faceHit(vertices:ptr<function,array<SupportVertex,64>>,face:EPAFace,scale:f32
  hit.normal=face.normal;hit.depth=face.distance*scale-settings.solver.x;hit.status=1u;return hit;
 }
 fn convexContact(first:u32,second:u32,firstTriangle:i32,secondTriangle:i32)->ConvexHit {
+ // Analytic sphere/triangle witnesses avoid EPA noise at coplanar tessellation seams.
+ let sphereFirst=bodies.colliders[first].shape.w==0.0&&secondTriangle>=0;
+ let sphereSecond=bodies.colliders[second].shape.w==0.0&&firstTriangle>=0;
+ if(sphereFirst||sphereSecond){
+  let sphere=select(second,first,sphereFirst);let mesh=select(first,second,sphereFirst);
+  let triangle=u32(select(firstTriangle,secondTriangle,sphereFirst));
+  let center=colliderLocal(mesh,colliderPosition(sphere)-colliderPosition(mesh));
+  let firstPoint=triangleVertex(mesh,triangle,0u);let secondPoint=triangleVertex(mesh,triangle,1u);let thirdPoint=triangleVertex(mesh,triangle,2u);
+  let extent=max(abs(secondPoint-firstPoint),abs(thirdPoint-firstPoint));
+  let normalization=max(max(extent.x,max(extent.y,extent.z)),1e-20);
+  let firstEdge=(secondPoint-firstPoint)/normalization;let secondEdge=(thirdPoint-firstPoint)/normalization;
+  let weights=triangleWeights((center-firstPoint)/normalization,vec3f(0),firstEdge,secondEdge);
+  let closest=firstPoint+(secondPoint-firstPoint)*weights.y+(thirdPoint-firstPoint)*weights.z;
+  let faceNormal=normalize(cross(firstEdge,secondEdge));
+  let delta=center-closest;let magnitude=length(delta);let radius=bodies.colliders[sphere].shape.x;
+  var hit:ConvexHit;if(magnitude>radius+settings.solver.x){return hit;}
+  let internalEdges=u32(readGeometry(u32(bodies.colliders[mesh].padding.z)+triangle).w)%8u;
+  // Opposite barycentric coordinate identifies an edge. Internal coplanar edges are
+  // not collision ridges: their adjacent triangle owns the face witness instead.
+  for(var edge=0u;edge<3u;edge++){
+   if((internalEdges&(1u<<edge))!=0u&&weights[(edge+2u)%3u]<=1e-7&&weights[edge]>1e-7&&weights[(edge+1u)%3u]>1e-7){
+    let tangential=delta-faceNormal*dot(delta,faceNormal);
+    if(length(tangential)>max(1e-8,radius*1e-6)){return hit;}
+   }
+  }
+  var normal=faceNormal;
+  if(magnitude>1e-12){normal=delta/magnitude;}
+  let worldNormal=rotate(colliderRotation(mesh),normal);
+  let worldClosest=colliderPosition(mesh)+rotate(colliderRotation(mesh),closest);
+  hit.point=(worldClosest+colliderPosition(sphere)-worldNormal*radius)*0.5;
+  hit.normal=select(worldNormal,-worldNormal,sphereFirst);hit.depth=radius-magnitude;hit.status=1u;return hit;
+ }
+
  // Normalize by local feature size and independently cap EPA's world-space tolerance.
  let scale=max(min(contactFeatureScale(first,firstTriangle),contactFeatureScale(second,secondTriangle)),1e-12);
  let distanceTolerance=min(0.0001,0.0001/scale);

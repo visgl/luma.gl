@@ -405,10 +405,17 @@ support mapping. Planes, triangle meshes and worlds with joints are rejected in 
 mode; use the default sphere/static mode for original mesh surfaces. Nonselected
 pairs retain discrete collision detection.
 
-Each impact round builds a bounded swept candidate queue in parallel. COM-centered
+Each impact round builds conservative swept bounds, selects the axis with the widest
+center spread, and bitonic-sorts bounds on the GPU. Interval scans stop when the next
+lower bound exceeds the current upper bound, then test the other axes and filters
+before reserving a bounded candidate. Padded power-of-two sort entries are sentinels;
+collider IDs provide stable tie ordering. The index is rebuilt after each impact.
+Sparse scenes prune discovery work; dense overlapping intervals still have quadratic
+worst-case scans. Sorting adds O(log² N) dispatches per round and is not a universal
+speedup over a small all-pairs scene. COM-centered
 bounding spheres include collider offsets and conservatively cover rotation. An
 indirect dispatch searches only queued candidates. Support-plane distance bounds (including box/box separating axes and exact sphere/box distance)
-and linear/angular speed bounds drive conservative advancement (64 distance and
+and conservative support-point velocity/curvature bounds drive advancement (64 distance and
 128 advancement iterations). Distance stopping uses local feature size and a float32
 coordinate-precision floor; it is not an absolute world-space accuracy guarantee. Centered
 sphere spin does not inflate the geometric angular bound. One invocation chooses the earliest TOI, using collider
@@ -427,21 +434,32 @@ end poses. No CPU readback is required between rounds.
 `maximumCandidates` defaults to `maximumPairs`. Queue, distance, advancement or
 impact exhaustion marks `incompleteContinuousBodies` and rejects the entire step,
 including persistent contacts. Failure remains latched. Capacity is not automatically
-grown by the recovery runner. `readContinuousWork()` optionally reads 16 bytes for
-last-attempt peak candidates, candidate workgroups, resolved impacts and incomplete
-status; Physics Stress Lab displays and exports these counters. Candidate generation currently scans collider pairs;
-the expensive TOI searches are compacted, but discovery is not a scalable spatial
-index yet. This is a bounded reference path, not a large-world throughput claim.
+grown by the recovery runner. `readContinuousWork()` optionally reads two 16-byte ranges
+for last-attempt peak candidates, candidate workgroups, resolved impacts, incomplete
+status, `peakSpatialTests` (interval-overlap comparisons before filtering) and `rounds`.
+Physics Stress Lab displays and exports these counters. They measure queue work,
+not GPU duration or a cross-device throughput qualification.
 
-Initial touching/overlapping pairs remain owned by the discrete solver for that
-step. General repeated recontact of an initially touching rotating pair, simultaneous
-multi-contact impact solving, jointed/nonconvex CCD and swept contact-event payloads
-remain unqualified. Trajectories use constant world angular velocity between impacts;
+Initially touching closing sphere/box pairs can resolve at time zero, including a
+pair driven closed by another impact. Separating fixed-orientation convex trajectories
+cannot re-enter before another impulse; each rebuilt queue revisits them. Rotating
+initial contacts use bounded exit searches and support-plane quadratic lower bounds,
+within a contact envelope of eight query tolerances. This envelope covers float32
+TOI publication/recomposition error; it is used consistently for arrival and exit. Box
+corners retain independent initial gaps and rates so support-face changes cannot
+combine unrelated extrema or stall ordinary grazing approaches. An unresolved exit rejects the step. A generic zero-distance simplex without a
+qualified normal after a different impact also rejects; only the immediately preceding
+impact may reuse its known plane at an unchanged pose.
+Simultaneous impacts use deterministic sequential pair impulses and zero-time revisits
+within the global impact budget; this is an explicit ordered impact law, not a unique
+coupled multi-impact restitution model. General penetrating initial configurations,
+jointed/nonconvex CCD and swept contact-event payloads remain unqualified. Trajectories use constant world angular velocity between impacts;
 this does not qualify asymmetric torque-free continuous dynamics. Extreme aspect
 ratios, grazing motion and float32 conditioning can reject otherwise valid steps.
 
 The lab adds **dynamic convex pairs**, **translating wall**, **rotating gate** and
-**swept queue rejection** scenarios. Trails show sampled centers, not exact TOI paths.
+**swept queue rejection**, **seam sliding**, **touching chain**, **simultaneous impacts**
+and **sparse moving field** scenarios. Trails show sampled centers, not exact TOI paths.
 
 ## Bounded continuous motion
 
@@ -721,3 +739,22 @@ The numeric bounds above apply to this explicit stabilization profile; default s
 and extreme loads are not qualified by these fixtures. Each timestep is a separate
 test and the three physical scenarios are weighted across browser shards so long
 simulation duration does not become one combined test timeout.
+
+
+### Coplanar contact continuity
+
+Cooked triangles store connected coplanar surface keys and internal-edge masks in their
+existing metadata lane. Welding requires an exact orientation predicate on float32
+coordinates, an edge with exactly two uses, and opposite-side coverage of that edge.
+Duplicated position vertices can share an edge; gaps, creases, overlapping same-side
+triangles and nonmanifold edges are not welded. This changes packed internal geometry
+metadata, not authored topology or the public mesh geometry type.
+
+Sphere/triangle contacts normalize the local triangle before evaluating analytic
+closest-point witnesses, avoiding an absolute barycentric denominator floor at tiny
+scales. They discard false ridges on the interiors of internal coplanar edges. Vertices are retained conservatively;
+complete vertex-fan welding remains future work. Adjacent triangles retain the real face contact. Outer edges
+and openings remain collision boundaries. Mesh and hull warm starts use surface keys
+rather than individual triangle IDs, while normal alignment, both local-anchor distance
+limits and one-to-one point ownership still guard impulse transfer. This does not yet
+provide general convex multi-point manifold coherence through arbitrary feature changes.

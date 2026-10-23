@@ -194,12 +194,25 @@ function draw() {
     canvas.height = height;
   }
   context.clearRect(0, 0, width, height);
-  const depthFactor = activeScene === 'geometryOpenings' || activeScene === 'fastMesh' ? 0.45 : 0;
+  const depthFactor =
+    activeScene === 'geometryOpenings' ||
+    activeScene === 'fastMesh' ||
+    activeScene === 'seamSliding'
+      ? 0.45
+      : 0;
   const minimumHeight =
     activeScene === 'ballistic' ? Math.min(0, (states[0]?.position[2] ?? 0) - 1) : 0;
-  const scale = Math.min(width / 19, height / (12 - minimumHeight));
+  const followsImpacts = activeScene === 'impactChain' || activeScene === 'simultaneousImpacts';
+  const horizontalPositions = followsImpacts ? states.map(state => state.position[0]) : [];
+  const minimumHorizontal = Math.min(-7, ...horizontalPositions);
+  const maximumHorizontal = Math.max(7, ...horizontalPositions);
+  const scale = Math.min(
+    width / (maximumHorizontal - minimumHorizontal + 5),
+    height / (12 - minimumHeight)
+  );
   const origin = [
     width * 0.55 -
+      (followsImpacts ? (minimumHorizontal + maximumHorizontal) * 0.5 * scale : 0) -
       (activeScene === 'persistentContacts' || activeScene === 'fastMovingWall'
         ? (states[0]?.position[0] ?? 0) * scale
         : 0),
@@ -330,7 +343,7 @@ async function advance() {
       activeScene === 'ballistic'
         ? `\nVertical error: ${Math.abs(states[0].position[2] - (8 - 5 * time * time)).toFixed(5)}`
         : '';
-    status.value = `${result.accepted ? 'ACCEPTED' : 'REJECTED'} · tick ${runner.tick}/${stepCount} · ${time.toFixed(2)} s\nRetries: ${samples.reduce((total, sample) => total + sample.result.retries, 0)} · replayed: ${samples.reduce((total, sample) => total + sample.result.replayedTicks, 0)} ticks\nPairs: ${capacity.maximumPairs} · buffers: ${(capacity.ownedBufferBytes / 1048576).toFixed(2)} MiB\nNodes: ${runner.graph.stats.nodeOrder.length} · peak candidates: ${result.diagnostics.maximumCandidatePairs}\nIncomplete CCD bodies: ${result.diagnostics.incompleteContinuousBodies}\nCompletion p50: ${sorted[Math.floor((sorted.length - 1) * 0.5)].toFixed(2)} ms\nCompletion p95: ${sorted[Math.floor((sorted.length - 1) * 0.95)].toFixed(2)} ms${lastSolverWork ? `\nPair workgroups/iteration: ${lastSolverWork.pairWorkgroups} / ${Math.ceil(capacity.maximumPairs / 64)} capacity${lastSolverWork.compacted ? ` · ${lastSolverWork.activeContacts} contacts` : ' · scan'}` : ''}${lastContinuousWork ? `\nSwept queue peak: ${lastContinuousWork.peakCandidates} / ${lastContinuousWork.candidateCapacity} · ${lastContinuousWork.peakCandidateWorkgroups} workgroups · ${lastContinuousWork.impacts} impacts` : ''}${error}`;
+    status.value = `${result.accepted ? 'ACCEPTED' : 'REJECTED'} · tick ${runner.tick}/${stepCount} · ${time.toFixed(2)} s\nRetries: ${samples.reduce((total, sample) => total + sample.result.retries, 0)} · replayed: ${samples.reduce((total, sample) => total + sample.result.replayedTicks, 0)} ticks\nPairs: ${capacity.maximumPairs} · buffers: ${(capacity.ownedBufferBytes / 1048576).toFixed(2)} MiB\nNodes: ${runner.graph.stats.nodeOrder.length} · peak candidates: ${result.diagnostics.maximumCandidatePairs}\nIncomplete CCD bodies: ${result.diagnostics.incompleteContinuousBodies}\nCompletion p50: ${sorted[Math.floor((sorted.length - 1) * 0.5)].toFixed(2)} ms\nCompletion p95: ${sorted[Math.floor((sorted.length - 1) * 0.95)].toFixed(2)} ms${lastSolverWork ? `\nPair workgroups/iteration: ${lastSolverWork.pairWorkgroups} / ${Math.ceil(capacity.maximumPairs / 64)} capacity${lastSolverWork.compacted ? ` · ${lastSolverWork.activeContacts} contacts` : ' · scan'}` : ''}${lastContinuousWork ? `\nSwept queue peak: ${lastContinuousWork.peakCandidates} / ${lastContinuousWork.candidateCapacity} · ${lastContinuousWork.peakCandidateWorkgroups} workgroups · ${lastContinuousWork.impacts} impacts\nSpatial tests peak: ${lastContinuousWork.peakSpatialTests} · ${lastContinuousWork.rounds} rounds` : ''}${error}`;
     const quiet = states.every((state, index) => {
       const body = configuration.props.bodies[index];
       return (

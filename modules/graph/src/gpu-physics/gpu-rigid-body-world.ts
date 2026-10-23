@@ -454,7 +454,8 @@ export class GPURigidBodyWorld {
       storage.buffers.push({
         name: 'continuous-work',
         byteLength:
-          16 +
+          64 +
+          2 ** Math.ceil(Math.log2(Math.max(1, this.colliders.length))) * 32 +
           this.count * 64 +
           (this.props.continuous.maximumCandidates ?? this.maximumPairs) * 48,
         uniform: false
@@ -526,8 +527,10 @@ export class GPURigidBodyWorld {
       throw new Error('Rigid-body pair dispatch exceeds device limits');
     if (
       this.props.continuous?.mode === 'convex' &&
-      Math.ceil((this.props.continuous.maximumCandidates ?? this.maximumPairs) / 64) >
-        graph.device.limits.maxComputeWorkgroupsPerDimension
+      Math.max(
+        Math.ceil((this.props.continuous.maximumCandidates ?? this.maximumPairs) / 64),
+        Math.ceil(2 ** Math.ceil(Math.log2(Math.max(1, this.colliders.length))) / 64)
+      ) > graph.device.limits.maxComputeWorkgroupsPerDimension
     )
       throw new Error('Continuous candidate dispatch exceeds device limits');
     for (const buffer of allocationPlan) {
@@ -1756,9 +1759,11 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     };
   }
 
-  /** Optional 16-byte readback of the last convex CCD attempt; never needed for execution. */
+  /** Optional bounded readback of the last convex CCD attempt; never needed for execution. */
   async readContinuousWork(): Promise<{
     candidateCapacity: number;
+    peakSpatialTests: number;
+    rounds: number;
     peakCandidates: number;
     peakCandidateWorkgroups: number;
     impacts: number;
@@ -1769,7 +1774,12 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     if (!buffer) return null;
     const bytes = await buffer.readAsync(0, 16);
     const values = new Uint32Array(bytes.buffer, bytes.byteOffset, 4);
+    const work = this.ownedBuffers.find(buffer => buffer.id === `${this.id}-continuous-work`)!;
+    const statistics = await work.readAsync(16, 16);
+    const spatial = new Uint32Array(statistics.buffer, statistics.byteOffset, 4);
     return {
+      peakSpatialTests: spatial[1],
+      rounds: spatial[2],
       candidateCapacity: this.props.continuous.maximumCandidates ?? this.maximumPairs,
       peakCandidates: values[3],
       peakCandidateWorkgroups: Math.ceil(
