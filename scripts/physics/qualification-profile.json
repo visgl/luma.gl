@@ -1041,6 +1041,114 @@
           }
         ]
       }
+    },
+    {
+      "id": "execution.compact-contact-queue",
+      "tranche": "G1",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-compaction.spec.ts",
+            "testPattern": "matches the scan solver and clears/rebuilds contact queues"
+          }
+        ]
+      }
+    },
+    {
+      "id": "execution.multi-workgroup-contact-queue",
+      "tranche": "G1",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-compaction.spec.ts",
+            "testPattern": "compacts more than one workgroup of contacts"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.closed-form-contact-depths",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-contact-geometry.spec.ts",
+            "testPattern": "qualifies signed contact depths and reversed normals"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.compound-edge-corner-depths",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-contact-geometry.spec.ts",
+            "testPattern": "qualifies sphere/box edge and corner depths"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.sustained-stack-envelope",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-difficult-stacks.spec.ts",
+            "testPattern": "bounds sustained penetration, drift and residual energy"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.mesh-opening-ray-reference",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: nonconvex surface ray queries"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-contact-geometry.spec.ts",
+            "testPattern": "preserves nonconvex mesh openings and two-sided ray distances"
+          }
+        ]
+      }
     }
   ]
 }

@@ -34,7 +34,9 @@ export function getRigidBodyStorageLayout(
     ? diagnosticOffset + 8
     : geometryOffset + Math.max(4, geometryWords);
   const parallelByteLength =
-    Math.ceil((4 + bodyCount * 5 + maximumPairs * 2) / 4) * 16 + maximumPairs * 64;
+    Math.ceil((4 + bodyCount * 5 + maximumPairs * 2) / 4) * 16 +
+    maximumPairs * 64 +
+    Math.ceil(maximumPairs / 4) * 16;
   const buffers = [
     ...['positions', 'orientations', 'velocities', 'angular-velocities', 'sleep'].map(name => ({
       name,
@@ -67,7 +69,12 @@ export function getRigidBodyStorageLayout(
         ]
       : []),
     ...(extended ? [{name: 'mesh-tasks', byteLength: 16 + 65536 * 48, uniform: false}] : []),
-    ...(parallel ? [{name: 'parallel-state', byteLength: parallelByteLength, uniform: false}] : []),
+    ...(parallel
+      ? [
+          {name: 'parallel-state', byteLength: parallelByteLength, uniform: false},
+          {name: 'parallel-dispatch', byteLength: 16, uniform: false}
+        ]
+      : []),
     ...(sparse
       ? [
           {name: 'minima', byteLength: colliderCount * 12, uniform: false},

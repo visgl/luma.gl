@@ -1,0 +1,149 @@
+{
+  "measuredDate": "2026-10-23",
+  "notes": [
+    "Exploratory single-adapter comparison, no exclusive GPU ownership.",
+    "30 samples after zero warmup; contacts separate early and later samples include empty queues.",
+    "GPU work sums node timestamp durations. Completion includes encode, queue completion and diagnostic readback.",
+    "This is not a cross-device performance or statistical confidence claim."
+  ],
+  "reports": [
+    {
+      "mode": "compact",
+      "fixture": "sparseContacts",
+      "objectCount": 48,
+      "settings": {
+        "solver": "parallel",
+        "compactContacts": true,
+        "jointCount": 0,
+        "failurePolicy": "report",
+        "broadPhase": "hierarchical-grid",
+        "iterations": 32,
+        "timeStep": 0.008333333333333333,
+        "warmStartFactor": 1,
+        "maximumPairs": 8192
+      },
+      "sampleCount": 30,
+      "warmupCount": 0,
+      "adapter": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "timestampQueries": true,
+      "graphNodes": 21,
+      "graphBufferBytes": 3129440,
+      "perStepMilliseconds": {
+        "cpuEncode": {
+          "median": 0.5999999046325684,
+          "p95": 1.0999999046325684,
+          "maximum": 3.1000001430511475
+        },
+        "completionWithDiagnostics": {
+          "median": 2.5,
+          "p95": 10.5,
+          "maximum": 28.100000143051147
+        },
+        "gpuWork": {
+          "median": 0.6098089999999999,
+          "p95": 1.2232070000000002,
+          "maximum": 1.253535
+        },
+        "gpuSpan": {
+          "median": 0.7225480079650879,
+          "p95": 3.9244589805603027,
+          "maximum": 5.823628187179565
+        }
+      },
+      "solverWork": {
+        "compacted": true,
+        "activeContacts": 0,
+        "pairCapacity": 8192,
+        "pairWorkgroups": 0
+      },
+      "finiteState": true,
+      "executionComplete": true,
+      "browserVersion": "151.0.7922.34",
+      "nodeVersion": "22.22.1"
+    },
+    {
+      "mode": "scan",
+      "fixture": "sparseContacts",
+      "objectCount": 48,
+      "settings": {
+        "solver": "parallel",
+        "compactContacts": false,
+        "jointCount": 0,
+        "failurePolicy": "report",
+        "broadPhase": "hierarchical-grid",
+        "iterations": 32,
+        "timeStep": 0.008333333333333333,
+        "warmStartFactor": 1,
+        "maximumPairs": 8192
+      },
+      "sampleCount": 30,
+      "warmupCount": 0,
+      "adapter": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "timestampQueries": true,
+      "graphNodes": 19,
+      "graphBufferBytes": 3129440,
+      "perStepMilliseconds": {
+        "cpuEncode": {
+          "median": 0.5999999046325684,
+          "p95": 0.7999999523162842,
+          "maximum": 3.3000001907348633
+        },
+        "completionWithDiagnostics": {
+          "median": 2.6000001430511475,
+          "p95": 10.5,
+          "maximum": 13.900000095367432
+        },
+        "gpuWork": {
+          "median": 1.041266,
+          "p95": 1.5962429999999999,
+          "maximum": 3.243531
+        },
+        "gpuSpan": {
+          "median": 1.0820090770721436,
+          "p95": 2.156435012817383,
+          "maximum": 6.4100661277771
+        }
+      },
+      "solverWork": {
+        "compacted": false,
+        "activeContacts": null,
+        "pairCapacity": 8192,
+        "pairWorkgroups": 128
+      },
+      "finiteState": true,
+      "executionComplete": true,
+      "browserVersion": "151.0.7922.34",
+      "nodeVersion": "22.22.1"
+    }
+  ]
+}

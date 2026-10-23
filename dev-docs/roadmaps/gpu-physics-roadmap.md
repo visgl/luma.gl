@@ -650,3 +650,21 @@ G2 still needs robust general mesh/containment and independent penetration-depth
 qualification. G3 still needs long-duration difficult-stack/high-ratio and rotational
 CCD qualification. These named-case checks are not a claim of complete G1–G3 or SOTA
 performance, and hardware-specific performance gates remain open.
+
+
+## G1 compaction and G2/G3 named-case qualification checkpoint
+
+Parallel rigid-body worlds now default to a bounded GPU queue of nonempty manifold
+IDs and GPU-produced indirect arguments. Island pair work and repeated warm/solve
+passes consume the queue. A full-scan option remains an executable comparison.
+The queue retains sleeping contacts and original cache identity. Body passes, contact
+discovery, mesh/event work and ordered solving are not compacted. Full GPU adaptive
+recovery, broader active-island scheduling and throughput qualification remain G1 work.
+
+Independent signed-depth and normal references cover sphere/sphere, rotated aligned
+box faces, sphere/box faces/edges/corners, capsule sides, compound offsets and scale.
+Six-second stacks run with sleeping disabled at two timesteps and both solvers,
+including eight boxes, 10:1 loading and offset COM. The stress lab exposes corresponding
+scenarios and compact/full-scan workgroup diagnostics. General penetration-depth
+geometry, nonconvex containment, extreme ratios, rotational CCD and cross-device
+quality/cost evidence remain open; this increment does not close G1–G3.
