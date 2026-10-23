@@ -61,7 +61,7 @@ historical inputs or outputs at a particular node. They are not continuously ref
 
 Readback requires `COPY_SRC` on the physical resource. The inspector does not modify resource
 usage or disable transient reuse. Reused transient allocations, frame/presentation textures,
-external images, multisampled textures, compressed formats, and depth/stencil textures report
+external images, multisampled textures, compressed or packed formats, and depth/stencil textures report
 an explicit unavailable message. This avoids displaying another logical resource's bytes or
 issuing invalid GPU copies. Transient and borrowed ownership is unchanged; temporary readback
 buffers are released after use. See [Buffers and textures](./resources) for ownership details.

@@ -47,3 +47,23 @@ test('resource previews bound buffer reads and reject unsupported resources befo
     device.destroy();
   }
 });
+
+test.each([
+  'rgb10a2unorm',
+  'rgb10a2uint',
+  'rg11b10ufloat',
+  'rgb9e5ufloat'
+] as const)('packed texture %s rejects before staging allocation', async format => {
+  const device = new NullDevice({});
+  const texture = device.createTexture({format, width: 2, height: 2, usage: Texture.COPY_SRC});
+  const allocate = vi.spyOn(device, 'createBuffer');
+  try {
+    await expect(
+      readGPUResourcePreview(texture, {id: 'packed', kind: 'texture', usage: 'copy-source'})
+    ).rejects.toThrow('Packed');
+    expect(allocate).not.toHaveBeenCalled();
+  } finally {
+    texture.destroy();
+    device.destroy();
+  }
+});

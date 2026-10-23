@@ -30,13 +30,15 @@ export async function readGPUResourcePreview(
       format: summary.format
     };
   }
+  const formatInfo = resource.device.getTextureFormatInfo(resource.format);
+  // Packed-format byte sizes are not yet reliable in the shared format metadata.
+  if (formatInfo.packed) throw new Error('Packed texture previews are not supported.');
   if (resource.device.type !== 'webgpu') throw new Error('Texture previews require WebGPU.');
   if (!((resource.props.usage ?? 0) & Texture.COPY_SRC))
     throw new Error('Preview requires COPY_SRC usage.');
-  const info = resource.device.getTextureFormatInfo(resource.format);
   if (
     resource.samples !== 1 ||
-    info.compressed ||
+    formatInfo.compressed ||
     resource.format.startsWith('depth') ||
     resource.format.startsWith('stencil')
   )
@@ -63,7 +65,7 @@ export async function readGPUResourcePreview(
     });
     resource.device.submit(encoder.finish());
     const padded = await staging.readAsync();
-    const rowByteLength = width * info.bytesPerPixel;
+    const rowByteLength = width * formatInfo.bytesPerPixel;
     const data = new Uint8Array(rowByteLength * height);
     for (let row = 0; row < height; row++)
       data.set(
