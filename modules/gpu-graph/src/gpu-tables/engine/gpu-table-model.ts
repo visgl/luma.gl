@@ -9,7 +9,13 @@ import {
   type CommandEncoder,
   type RenderPass
 } from '@luma.gl/core';
-import {DynamicBuffer, Model, type ModelProps} from '@luma.gl/engine';
+import {
+  DynamicBuffer,
+  Model,
+  type ModelProps,
+  type GPUVectorModelInputs,
+  type GPUVectorModelDrawBatchesOptions
+} from '@luma.gl/engine';
 import type {GPUInputSchema} from './gpu-input-schema';
 import {GPUTableShaderBindings} from './gpu-table-shader-bindings';
 import type {GPURecordBatch} from '../table/gpu-record-batch';
@@ -154,7 +160,18 @@ export class GPUTableModel extends Model {
    * zero-size bindings that WebGPU rejects. The table and its batches are not modified.
    * The table-level attributes and bindings are restored before returning.
    */
-  drawBatches(renderPass: RenderPass, options: GPUTableModelDrawBatchesOptions = {}): boolean {
+  override drawBatches<Inputs extends GPUVectorModelInputs = GPUVectorModelInputs>(
+    renderPass: RenderPass,
+    options: GPUVectorModelDrawBatchesOptions<Inputs>
+  ): boolean;
+  override drawBatches(renderPass: RenderPass, options?: GPUTableModelDrawBatchesOptions): boolean;
+  override drawBatches<Inputs extends GPUVectorModelInputs = GPUVectorModelInputs>(
+    renderPass: RenderPass,
+    options: GPUTableModelDrawBatchesOptions | GPUVectorModelDrawBatchesOptions<Inputs> = {}
+  ): boolean {
+    if ('vectors' in options) {
+      return super.drawBatches(renderPass, options);
+    }
     const table = this.table;
     if (!(table instanceof GPUTable)) {
       throw new Error('GPUTableModel.drawBatches() requires a GPUTable');

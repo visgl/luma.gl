@@ -289,3 +289,15 @@ export const AsyncTexture = DynamicTexture;
 export type AsyncTextureProps = DynamicTextureProps;
 
 export {RingGeometry, type RingGeometryProps} from './geometry/ring-geometry';
+
+export {
+  GPUVectorModel,
+  getGPUVectorModelBatches,
+  type GPUVectorModelProps,
+  type GPUVectorModelCount,
+  type GPUVectorModelData,
+  type GPUVectorModelInput,
+  type GPUVectorModelInputs,
+  type GPUVectorModelBatch,
+  type GPUVectorModelDrawBatchesOptions
+} from './model/gpu-vector-model';

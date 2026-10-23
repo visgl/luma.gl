@@ -4,7 +4,8 @@
 
 import {expect, it} from 'vitest';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
-import {BufferTransform} from '@luma.gl/engine';
+import {BufferTransform, GPUVectorModel} from '@luma.gl/engine';
+import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {Buffer, Device} from '@luma.gl/core';
 
 const VS = /* glsl */ `\
@@ -24,7 +25,10 @@ void main() { fragColor.x = dst; }
 it('BufferTransform#constructor', async () => {
   const webglDevice = await getWebGLTestDevice();
 
-  expect(createBufferTransform(webglDevice), 'WebGL succeeds').toBeTruthy();
+  const transform = createBufferTransform(webglDevice);
+  expect(transform, 'WebGL succeeds').toBeTruthy();
+  expect(transform.model.constructor).toBe(GPUVectorModel);
+  transform.destroy();
 });
 
 it('BufferTransform#run', async () => {
@@ -62,3 +66,42 @@ function createBufferTransform(
     feedbackBuffers: dst ? {dst} : undefined
   });
 }
+
+it('BufferTransform borrows vector ranges and infers the input vertex count', async () => {
+  const device = await getWebGLTestDevice();
+  const inputBuffer = device.createBuffer({data: new Float32Array([-1, 2, 3, 4, -1])});
+  const outputBuffer = device.createBuffer({data: new Float32Array([-1, -1, -1, -1, -1])});
+  const input = new GPUVector({
+    type: 'data',
+    name: 'src',
+    format: 'float32',
+    data: [new GPUData({buffer: inputBuffer, byteOffset: 4, length: 3, format: 'float32'})]
+  });
+  const output = new GPUVector({
+    type: 'data',
+    name: 'dst',
+    format: 'float32',
+    data: [new GPUData({buffer: outputBuffer, byteOffset: 4, length: 3, format: 'float32'})]
+  });
+  const transform = new BufferTransform(device, {
+    vs: VS,
+    fs: FS,
+    bufferLayout: [{name: 'src', format: 'float32'}],
+    outputs: ['dst'],
+    inputVectors: {src: input},
+    outputVectors: {dst: output}
+  });
+  expect(transform.model.vertexCount).toBe(3);
+  transform.run({inputVectors: {src: input}, outputVectors: {dst: output}});
+  const bytes = await outputBuffer.readAsync();
+  expect(new Float32Array(bytes.buffer, bytes.byteOffset, 5)).toEqual(
+    new Float32Array([-1, 4, 9, 16, -1])
+  );
+  transform.destroy();
+  expect(inputBuffer.destroyed).toBe(false);
+  expect(outputBuffer.destroyed).toBe(false);
+  input.destroy();
+  output.destroy();
+  inputBuffer.destroy();
+  outputBuffer.destroy();
+});

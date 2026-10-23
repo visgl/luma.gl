@@ -5,7 +5,7 @@ import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
 <EngineDocsTabs group="compute" active="texture-transform" />
 
 `TextureTransform` is the engine helper for texture-to-texture transform passes.
-It builds an internal [`Model`](/docs/api-reference/engine/model), manages a framebuffer for the target texture, and renders into that texture.
+It builds an internal [`GPUVectorModel`](/docs/api-reference/engine/model), manages a framebuffer for the target texture, and renders into that texture.
 
 `TextureTransform` is currently exported but marked deprecated in source.
 
@@ -27,13 +27,22 @@ const transform = new TextureTransform(device, {
 transform.run();
 ```
 
+## GPU vector inputs
+
+Supply `inputVectors` at construction or in `run({inputVectors})` to bind borrowed,
+contiguous GPU vectors by buffer-layout name. Input row count sets vertex count and
+chunk byte offsets are preserved. Buffer layouts remain explicit; multi-chunk vectors
+must be handled batch by batch rather than implicitly packed. The output remains
+`targetTexture`.
+
 ## Types
 
 ### `TextureTransformProps`
 
 ```ts
-export type TextureTransformProps = Omit<ModelProps, 'fs'> & {
-  fs?: ModelProps['fs'];
+export type TextureTransformProps = Omit<GPUVectorModelProps, 'fs'> & {
+  fs?: GPUVectorModelProps['fs'];
+  inputVectors?: GPUVectorModelInputs;
   inject?: Record<string, string>;
   framebuffer?: Framebuffer;
   sourceBuffers?: Record<string, Buffer>;

@@ -681,3 +681,28 @@ function makeIndexSliceVector(
     ownsBuffer: true
   });
 }
+
+it('GPUTableModel preserves table batching alongside inherited vector batching', () => {
+  const device = new NullDevice({});
+  const table = makePositionsTable(device, 3);
+  const model = makeTableModel(device, table, {vertexCount: 1});
+  const renderPass = device.getDefaultRenderPass();
+  const vectorBatchRows: number[] = [];
+  expect(
+    model.drawBatches(renderPass, {
+      vectors: table.gpuVectors,
+      onBatch: batch => vectorBatchRows.push(batch.rowCount)
+    })
+  ).toBe(true);
+  expect(vectorBatchRows).toEqual([3]);
+  const tableBatchRows: number[] = [];
+  expect(
+    model.drawBatches(renderPass, {
+      onBatch: batch => tableBatchRows.push(batch.numRows)
+    })
+  ).toBe(true);
+  expect(tableBatchRows).toEqual([3]);
+  model.destroy();
+  renderPass.destroy();
+  table.destroy();
+});
