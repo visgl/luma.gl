@@ -694,3 +694,24 @@ original geometry projection, sampled trails, reset and GPU graph/trace inspecti
 This checkpoint does not close G2 or G3: general convex degeneracies and persistent
 feature IDs, solid containment, moving/rotating/dynamic-pair CCD, extreme stacks and
 competitive cross-device quality/cost gates remain open.
+
+
+### G2 persistent contacts / G3 moving-convex CCD / G1 swept queues
+
+Manifolds now retain collider-local anchors and analytic/cooked feature keys, including
+actual mesh triangle IDs. Matching requires compatible keys, local drift limits,
+aligned normals and unique old-point ownership. Reset/rollback/reconstruction preserve
+the existing cache lifecycle. Coplanar seam welding and motion-coherent general convex
+multi-point manifolds remain G2 work; feature keys do not close the geometry matrix.
+
+Opt-in convex CCD supports single-convex selected dynamics versus translating/rotating
+convex bodies. Swept COM-sphere bounds feed a bounded parallel candidate queue and
+indirect support-plane TOI searches. Exclusive earliest-impact resolution includes
+angular response, friction and remaining time. Exhaustion rejects the whole step.
+Discovery still scans collider pairs; spatial swept indexing, scalable impact scheduling,
+initial-touch recontact, simultaneous impacts, jointed/nonconvex CCD, swept events and
+asymmetric rotational convergence remain open. This package does not close G1–G3.
+
+Physics Stress Lab adds persistent moving supports, fast dynamic boxes, translating
+walls, rotating gates and intentional swept-queue exhaustion. These are diagnostic
+scenarios with explicit limits, not evidence of complete cross-device SOTA qualification.

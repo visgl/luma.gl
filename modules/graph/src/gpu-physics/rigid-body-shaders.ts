@@ -42,7 +42,7 @@ struct Target { position: vec4f, orientation: vec4f }
 struct CacheKey { key:atomic<u32>, epoch:u32 }
 struct JointState {impulses:array<f32,8>, control:vec4f}
 struct Targets { entries:array<Target,BODY_COUNT>, dispatch:atomic<u32>, vertical:u32, depth:u32 ${sparse ? ', frame:u32, cacheDropped:atomic<u32>, reserved0:u32, reserved1:u32, reserved2:u32, keys:array<CacheKey,PAIR_CAPACITY>' : ''}${jointCount ? `, joints:array<JointState,${jointCount}>` : ''} }
-struct Contact { point: vec4f, normal: vec4f, impulse: vec4f, tangent: vec4f }
+struct Contact { point: vec4f, normal: vec4f, impulse: vec4f, tangent: vec4f, firstAnchor:vec4f, secondAnchor:vec4f }
 struct Manifold { contacts: array<Contact, 4>, count: u32, first:u32, second:u32, previousCount:u32, padding: vec3u }
 struct Settings { gravity: vec4f, solver: vec4f, sleep: vec4f, stability: vec4f }
 @group(0) @binding(0) var<uniform> settings: Settings;
@@ -172,19 +172,63 @@ fn solveFriction(firstCollider:u32,secondCollider:u32,contact:Contact,relative:v
  velocities[body]=vec4f(velocities[body].xyz*exp(-f32(${linearDamping})*settings.gravity.w),velocities[body].w);
  angularVelocities[body]=vec4f(angularVelocities[body].xyz*exp(-f32(${angularDamping})*settings.gravity.w),angularVelocities[body].w);
 }
-fn storeContact(pair: u32, slot: u32, point: vec3f, normal: vec3f, depth: f32, previous: Manifold, firstCollider: u32, secondCollider: u32) {
+// Keys describe analytic features or a deterministic cooked surface triangle.
+// Anchor distance remains mandatory: equal face keys alone cannot transfer friction.
+fn contactFeature(collider:u32,point:vec3f,normal:vec3f)->u32 {
+ let shape=bodies.colliders[collider].shape;
+ if(shape.w==0.0){return 1u;}
+ if(shape.w==1.0){
+  var key=0u;
+  // The midpoint moves inside the box as depth changes. Identify its supporting
+  // face/edge/vertex from the outward local normal, independently of penetration.
+  let tolerance=max(abs(normal.x),max(abs(normal.y),abs(normal.z)))*1e-4;
+  for(var component=0u;component<3u;component++){
+   var side=0u;
+   if(abs(normal[component])>tolerance){side=select(1u,2u,normal[component]>=0.0);}
+   key+=side*(1u<<(component*2u));
+  }
+  return key+1u;
+ }
+ if(shape.w==6.0){return select(1u,2u,normal.y<0.0);}
+ if(shape.w==4.0||shape.w==5.0){return select(select(2u,3u,point.y>shape.z*0.5-1e-6),1u,point.y< -shape.z*0.5+1e-6);}
+ if(shape.w==3.0){return 0u;}
+ var nearest=1e30;var feature=0u;
+ // Bounded by cooked triangle count. Mesh callers can supply the exact triangle key.
+ for(var triangle=0u;triangle<u32(bodies.colliders[collider].padding.w);triangle++){
+  let first=triangleVertex(collider,triangle,0u);let second=triangleVertex(collider,triangle,1u);let third=triangleVertex(collider,triangle,2u);
+  let crossProduct=cross(second-first,third-first);let magnitude=length(crossProduct);
+  let separation=abs(dot(point-first,crossProduct))/max(magnitude,1e-20);
+  let alignment=abs(dot(normal,crossProduct))/max(magnitude,1e-20);
+  let score=separation+(1.0-alignment)*settings.solver.w;
+  if(score<nearest){nearest=score;feature=triangle;}
+ }
+ return feature+1u;
+}
+fn storeFeatureContact(pair: u32, slot: u32, point: vec3f, normal: vec3f, depth: f32, previous: Manifold, firstCollider: u32, secondCollider: u32, firstTriangle:i32, secondTriangle:i32) {
  let first=colliderBody(firstCollider);let second=colliderBody(secondCollider);
  var contact: Contact; contact.point=vec4f(point,depth); contact.normal=vec4f(normal,0);
  let closing=dot(pointVelocity(second,point)-pointVelocity(first,point),normal);
  contact.normal.w=select(0.0,-closing*combineMaterial(bodies.colliders[firstCollider].material.x,bodies.colliders[secondCollider].material.x,bodies.colliders[firstCollider].policies.x,bodies.colliders[secondCollider].policies.x,false),closing < -settings.solver.z);
- var nearest=settings.solver.w*settings.solver.w; var found=false;
+ // Match in material coordinates: common translation must not invalidate a contact.
+ let firstAnchor=colliderLocal(firstCollider,point-colliderPosition(firstCollider));
+ let secondAnchor=colliderLocal(secondCollider,point-colliderPosition(secondCollider));
+ let firstFeature=select(contactFeature(firstCollider,firstAnchor,colliderLocal(firstCollider,normal)),u32(firstTriangle)+1u,firstTriangle>=0);
+ let secondFeature=select(contactFeature(secondCollider,secondAnchor,colliderLocal(secondCollider,-normal)),u32(secondTriangle)+1u,secondTriangle>=0);
+ contact.firstAnchor=vec4f(firstAnchor,f32(firstFeature));
+ contact.secondAnchor=vec4f(secondAnchor,f32(secondFeature));
+ var nearest=2.0*settings.solver.w*settings.solver.w; var found=false;
  for(var old=0u;old<previous.count;old++) {
   var used=false;
-  for(var retained=0u;retained<slot;retained++) {if(manifolds[pair].contacts[retained].impulse.y==f32(old+1u)) {used=true;}}
+  for(var retained=0u;retained<max(slot,manifolds[pair].count);retained++) {if(retained!=slot&&manifolds[pair].contacts[retained].impulse.y==f32(old+1u)) {used=true;}}
   if(used) {continue;}
-  let distance=dot(previous.contacts[old].point.xyz-point,previous.contacts[old].point.xyz-point);
-  if(distance<nearest && dot(previous.contacts[old].normal.xyz,normal)>0.95) {
-   nearest=distance; contact.impulse=previous.contacts[old].impulse; contact.tangent=previous.contacts[old].tangent; contact.impulse.y=f32(old+1u); found=true;
+  let cached=previous.contacts[old];
+  if(u32(cached.firstAnchor.w)!=firstFeature||u32(cached.secondAnchor.w)!=secondFeature){continue;}
+  let firstDelta=cached.firstAnchor.xyz-firstAnchor;let secondDelta=cached.secondAnchor.xyz-secondAnchor;
+  let firstDistance=dot(firstDelta,firstDelta);let secondDistance=dot(secondDelta,secondDelta);
+  if(max(firstDistance,secondDistance)>settings.solver.w*settings.solver.w){continue;}
+  let distance=firstDistance+secondDistance;
+  if(distance<nearest && dot(cached.normal.xyz,normal)>0.95) {
+   nearest=distance; contact.impulse=cached.impulse; contact.tangent=cached.tangent; contact.impulse.y=f32(old+1u); found=true;
   }
  }
  if(found) {
@@ -196,6 +240,38 @@ fn storeContact(pair: u32, slot: u32, point: vec3f, normal: vec3f, depth: f32, p
   contact.tangent=vec4f(tangent,0);
  }
  manifolds[pair].contacts[slot]=contact;
+}
+struct BoxContactPatch { points:array<vec3f,16>, count:u32 }
+fn clipBoxContact(reference:u32,incident:u32,faceAxis:u32,referenceNormal:vec3f,tolerance:f32)->BoxContactPatch {
+ let referenceCenter=colliderPosition(reference)+referenceNormal*bodies.colliders[reference].shape[faceAxis];
+ var incidentAxis=0u;var maximumAlignment=0.0;
+ for(var index=0u;index<3u;index++) {let alignment=abs(dot(axis(incident,index),referenceNormal));if(alignment>maximumAlignment) {maximumAlignment=alignment;incidentAxis=index;}}
+ let incidentNormal=axis(incident,incidentAxis)*select(1.0,-1.0,dot(axis(incident,incidentAxis),referenceNormal)>0.0);
+ let incidentCenter=colliderPosition(incident)+incidentNormal*bodies.colliders[incident].shape[incidentAxis];
+ let firstTangent=axis(incident,(incidentAxis+1u)%3u)*bodies.colliders[incident].shape[(incidentAxis+1u)%3u];
+ let secondTangent=axis(incident,(incidentAxis+2u)%3u)*bodies.colliders[incident].shape[(incidentAxis+2u)%3u];
+ var polygon: array<vec3f, 16>;var temporary: array<vec3f, 16>;
+ polygon[0]=incidentCenter-firstTangent-secondTangent;polygon[1]=incidentCenter+firstTangent-secondTangent;
+ polygon[2]=incidentCenter+firstTangent+secondTangent;polygon[3]=incidentCenter-firstTangent+secondTangent;
+ var vertexCount=4u;
+ for(var boundary=0u;boundary<4u;boundary++) {
+  let tangentAxis=(faceAxis+1u+boundary/2u)%3u;
+  let direction=axis(reference,tangentAxis)*select(-1.0,1.0,boundary%2u==0u);
+  let limit=bodies.colliders[reference].shape[tangentAxis];var outputCount=0u;
+  for(var index=0u;index<vertexCount;index++) {
+   let start=polygon[index];let end=polygon[(index+1u)%vertexCount];
+   let startDistance=dot(start-referenceCenter,direction)-limit;let endDistance=dot(end-referenceCenter,direction)-limit;
+   if(startDistance<=0.0) {temporary[outputCount]=start;outputCount++;}
+   if((startDistance<=0.0)!=(endDistance<=0.0)) {temporary[outputCount]=mix(start,end,startDistance/(startDistance-endDistance));outputCount++;}
+  }
+  vertexCount=outputCount;for(var index=0u;index<vertexCount;index++) {polygon[index]=temporary[index];}
+ }
+ var contactPatch:BoxContactPatch;
+ for(var index=0u;index<vertexCount;index++) {if(dot(referenceCenter-polygon[index],referenceNormal)>=-tolerance) {contactPatch.points[contactPatch.count]=polygon[index];contactPatch.count++;}}
+ return contactPatch;
+}
+fn storeContact(pair:u32,slot:u32,point:vec3f,normal:vec3f,depth:f32,previous:Manifold,first:u32,second:u32){
+ storeFeatureContact(pair,slot,point,normal,depth,previous,first,second,-1,-1);
 }
 ${RIGID_BODY_BOUNDS_SHADER}
 ${sparse ? RIGID_BODY_BOUND_PUBLICATION_SHADER : ''}
@@ -284,34 +360,11 @@ ${extended ? RIGID_BODY_CONVEX_SHADER : ''}
  let reference=faceBody;let incident=select(first,second,reference==first);
  let referenceNormal=select(-normal,normal,reference==first);
  let referenceCenter=colliderPosition(reference)+referenceNormal*bodies.colliders[reference].shape[faceAxis];
- var incidentAxis=0u;var maximumAlignment=0.0;
- for(var index=0u;index<3u;index++) {let alignment=abs(dot(axis(incident,index),referenceNormal));if(alignment>maximumAlignment) {maximumAlignment=alignment;incidentAxis=index;}}
- let incidentNormal=axis(incident,incidentAxis)*select(1.0,-1.0,dot(axis(incident,incidentAxis),referenceNormal)>0.0);
- let incidentCenter=colliderPosition(incident)+incidentNormal*bodies.colliders[incident].shape[incidentAxis];
- let firstTangent=axis(incident,(incidentAxis+1u)%3u)*bodies.colliders[incident].shape[(incidentAxis+1u)%3u];
- let secondTangent=axis(incident,(incidentAxis+2u)%3u)*bodies.colliders[incident].shape[(incidentAxis+2u)%3u];
- var polygon: array<vec3f, 16>;var temporary: array<vec3f, 16>;
- polygon[0]=incidentCenter-firstTangent-secondTangent;polygon[1]=incidentCenter+firstTangent-secondTangent;
- polygon[2]=incidentCenter+firstTangent+secondTangent;polygon[3]=incidentCenter-firstTangent+secondTangent;
- var vertexCount=4u;
- for(var boundary=0u;boundary<4u;boundary++) {
-  let tangentAxis=(faceAxis+1u+boundary/2u)%3u;
-  let direction=axis(reference,tangentAxis)*select(-1.0,1.0,boundary%2u==0u);
-  let limit=bodies.colliders[reference].shape[tangentAxis];var outputCount=0u;
-  for(var index=0u;index<vertexCount;index++) {
-   let start=polygon[index];let end=polygon[(index+1u)%vertexCount];
-   let startDistance=dot(start-referenceCenter,direction)-limit;let endDistance=dot(end-referenceCenter,direction)-limit;
-   if(startDistance<=0.0) {temporary[outputCount]=start;outputCount++;}
-   if((startDistance<=0.0)!=(endDistance<=0.0)) {temporary[outputCount]=mix(start,end,startDistance/(startDistance-endDistance));outputCount++;}
-  }
-  vertexCount=outputCount;for(var index=0u;index<vertexCount;index++) {polygon[index]=temporary[index];}
- }
- // Spread four retained points around the clipped polygon rather than taking adjacent vertices.
- var accepted: array<vec3f, 16>;var acceptedCount=0u;
- for(var index=0u;index<vertexCount;index++) {if(dot(referenceCenter-polygon[index],referenceNormal)>=-settings.solver.x) {accepted[acceptedCount]=polygon[index];acceptedCount++;}}
+ let contactPatch=clipBoxContact(reference,incident,faceAxis,referenceNormal,settings.solver.x);
+ let acceptedCount=contactPatch.count;
  let contactCount=min(4u,acceptedCount);
  for(var index=0u;index<contactCount;index++) {
-  let point=accepted[index*acceptedCount/contactCount];let separation=dot(referenceCenter-point,referenceNormal);
+  let point=contactPatch.points[index*acceptedCount/contactCount];let separation=dot(referenceCenter-point,referenceNormal);
   storeContact(pair,index,point+referenceNormal*separation*0.5,normal,separation,previous,first,second);
  }
  manifolds[pair].count=contactCount;

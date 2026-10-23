@@ -61,6 +61,9 @@ let stepCount = 0;
 let quietSince: number | null = null;
 let lastSolverWork: Awaited<ReturnType<GPURigidBodyRecoveryRunner['world']['readSolverWork']>> =
   null;
+let lastContinuousWork: Awaited<
+  ReturnType<GPURigidBodyRecoveryRunner['world']['readContinuousWork']>
+> = null;
 let trails: number[][][] = [];
 let samples: {milliseconds: number; result: GPURigidBodyRecoveryResult}[] = [];
 let device: Awaited<ReturnType<typeof luma.createDevice>>;
@@ -114,6 +117,7 @@ async function restart() {
     status.dataset.generation = String(++runGeneration);
     status.dataset.scene = activeScene;
     lastSolverWork = null;
+    lastContinuousWork = null;
     diagnostics.clear();
     states = nextStates;
     samples = [];
@@ -163,6 +167,7 @@ exportButton.onclick = () => {
     configuration: configuration.props,
     capacity: runner.world.getCapacityInfo(),
     solverWork: lastSolverWork,
+    continuousWork: lastContinuousWork,
     samples,
     finalState: states,
     notes: [
@@ -193,7 +198,13 @@ function draw() {
   const minimumHeight =
     activeScene === 'ballistic' ? Math.min(0, (states[0]?.position[2] ?? 0) - 1) : 0;
   const scale = Math.min(width / 19, height / (12 - minimumHeight));
-  const origin = [width * 0.55, height * 0.85 + minimumHeight * scale];
+  const origin = [
+    width * 0.55 -
+      (activeScene === 'persistentContacts' || activeScene === 'fastMovingWall'
+        ? (states[0]?.position[0] ?? 0) * scale
+        : 0),
+    height * 0.85 + minimumHeight * scale
+  ];
   context.strokeStyle = '#344452';
   context.lineWidth = ratio;
   for (let level = 0; level <= 9; level++) {
@@ -299,6 +310,7 @@ async function advance() {
     samples.push({milliseconds, result});
     if (runner.encoding) diagnostics.record(runner.graph, runner.encoding);
     states = await runner.world.readState();
+    lastContinuousWork = await runner.world.readContinuousWork();
     if (activeScene.startsWith('fast') || activeScene === 'continuous')
       for (const [index, state] of states.entries()) {
         if (configuration.props.bodies[index].mode === 'static') continue;
@@ -318,7 +330,7 @@ async function advance() {
       activeScene === 'ballistic'
         ? `\nVertical error: ${Math.abs(states[0].position[2] - (8 - 5 * time * time)).toFixed(5)}`
         : '';
-    status.value = `${result.accepted ? 'ACCEPTED' : 'REJECTED'} · tick ${runner.tick}/${stepCount} · ${time.toFixed(2)} s\nRetries: ${samples.reduce((total, sample) => total + sample.result.retries, 0)} · replayed: ${samples.reduce((total, sample) => total + sample.result.replayedTicks, 0)} ticks\nPairs: ${capacity.maximumPairs} · buffers: ${(capacity.ownedBufferBytes / 1048576).toFixed(2)} MiB\nNodes: ${runner.graph.stats.nodeOrder.length} · peak candidates: ${result.diagnostics.maximumCandidatePairs}\nIncomplete CCD bodies: ${result.diagnostics.incompleteContinuousBodies}\nCompletion p50: ${sorted[Math.floor((sorted.length - 1) * 0.5)].toFixed(2)} ms\nCompletion p95: ${sorted[Math.floor((sorted.length - 1) * 0.95)].toFixed(2)} ms${lastSolverWork ? `\nPair workgroups/iteration: ${lastSolverWork.pairWorkgroups} / ${Math.ceil(capacity.maximumPairs / 64)} capacity${lastSolverWork.compacted ? ` · ${lastSolverWork.activeContacts} contacts` : ' · scan'}` : ''}${error}`;
+    status.value = `${result.accepted ? 'ACCEPTED' : 'REJECTED'} · tick ${runner.tick}/${stepCount} · ${time.toFixed(2)} s\nRetries: ${samples.reduce((total, sample) => total + sample.result.retries, 0)} · replayed: ${samples.reduce((total, sample) => total + sample.result.replayedTicks, 0)} ticks\nPairs: ${capacity.maximumPairs} · buffers: ${(capacity.ownedBufferBytes / 1048576).toFixed(2)} MiB\nNodes: ${runner.graph.stats.nodeOrder.length} · peak candidates: ${result.diagnostics.maximumCandidatePairs}\nIncomplete CCD bodies: ${result.diagnostics.incompleteContinuousBodies}\nCompletion p50: ${sorted[Math.floor((sorted.length - 1) * 0.5)].toFixed(2)} ms\nCompletion p95: ${sorted[Math.floor((sorted.length - 1) * 0.95)].toFixed(2)} ms${lastSolverWork ? `\nPair workgroups/iteration: ${lastSolverWork.pairWorkgroups} / ${Math.ceil(capacity.maximumPairs / 64)} capacity${lastSolverWork.compacted ? ` · ${lastSolverWork.activeContacts} contacts` : ' · scan'}` : ''}${lastContinuousWork ? `\nSwept queue peak: ${lastContinuousWork.peakCandidates} / ${lastContinuousWork.candidateCapacity} · ${lastContinuousWork.peakCandidateWorkgroups} workgroups · ${lastContinuousWork.impacts} impacts` : ''}${error}`;
     const quiet = states.every((state, index) => {
       const body = configuration.props.bodies[index];
       return (

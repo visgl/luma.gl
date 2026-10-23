@@ -83,11 +83,11 @@ it.for([0.001, 1, 1000])(
             )!.data;
             const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
             let count = 0;
-            for (let offset = 0; offset < bytes.byteLength; offset += 288)
-              for (let slot = 0; slot < view.getUint32(offset + 256, true); slot++) {
+            for (let offset = 0; offset < bytes.byteLength; offset += 416)
+              for (let slot = 0; slot < view.getUint32(offset + 384, true); slot++) {
                 count++;
                 expect(
-                  Math.abs(view.getFloat32(offset + slot * 64 + 12, true) - expected) / scale
+                  Math.abs(view.getFloat32(offset + slot * 96 + 12, true) - expected) / scale
                 ).toBeLessThan(0.001);
               }
             expect(count > 0).toBe(expected > 0);
@@ -256,11 +256,11 @@ it('qualifies tetrahedral convex depths against independent face and edge SAT', 
         )!.data;
         const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
         let count = 0;
-        for (let offset = 0; offset < bytes.byteLength; offset += 288)
-          for (let slot = 0; slot < view.getUint32(offset + 256, true); slot++) {
+        for (let offset = 0; offset < bytes.byteLength; offset += 416)
+          for (let slot = 0; slot < view.getUint32(offset + 384, true); slot++) {
             count++;
             expect(
-              Math.abs(view.getFloat32(offset + slot * 64 + 12, true) - expected) / scale
+              Math.abs(view.getFloat32(offset + slot * 96 + 12, true) - expected) / scale
             ).toBeLessThan(0.002);
           }
         expect(count > 0).toBe(expected > 0);
@@ -416,10 +416,10 @@ it.for(['capsule', 'cylinder', 'triangle-mesh'] as const)(
           )!.data;
           const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
           let count = 0;
-          for (let offset = 0; offset < bytes.byteLength; offset += 288)
-            for (let slot = 0; slot < view.getUint32(offset + 256, true); slot++) {
+          for (let offset = 0; offset < bytes.byteLength; offset += 416)
+            for (let slot = 0; slot < view.getUint32(offset + 384, true); slot++) {
               count++;
-              expect(Math.abs(view.getFloat32(offset + slot * 64 + 12, true) - 0.05)).toBeLessThan(
+              expect(Math.abs(view.getFloat32(offset + slot * 96 + 12, true) - 0.05)).toBeLessThan(
                 0.001
               );
             }

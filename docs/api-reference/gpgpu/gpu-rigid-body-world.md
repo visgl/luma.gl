@@ -68,11 +68,11 @@ recovery guarantee for pipeline compilation or driver allocation.
 | `impactImpulseThreshold` | `1` | Sustained-contact impulse threshold for impact samples |
 | `enableQueries` | `false` | Allocate parallel collider-query and reduction resources |
 | `failurePolicy` | `'report'` | `'rollback'` checkpoints body/contact state and rejects incomplete steps on the GPU |
-| `continuous` | Disabled | `{bodies, maximumImpacts?: 4}`; centered dynamic spheres against all static shape families; rollback required |
+| `continuous` | Disabled | `{bodies, mode?: 'sphere-static', maximumImpacts?: 4, maximumCandidates?}`; see the two bounded modes below; rollback required |
 | `triggers` | Disabled | Compound spherical sensor groups with target collider selections and optional swept sphere crossings; rollback required |
 | `triggerEventCapacity` | `256` | Trigger ring capacity, 1–65,536 when triggers are enabled |
 | `contactSlop` | `0.002` | Allowed contact penetration in world units |
-| `contactMatchDistance` | `0.05` | Distance for matching persistent contacts |
+| `contactMatchDistance` | `0.05` | Local-anchor distance for matching persistent contacts |
 | `restitutionThreshold` | `0.5` | Closing-speed threshold for bounce |
 | `linearDamping`, `angularDamping` | `0` | Nonnegative velocity decay rates in inverse seconds; dynamic bodies only, using exponential decay each fixed step |
 | `sleepAfter` | `0.5` | Quiet simulation seconds before sleeping; zero disables |
@@ -152,8 +152,18 @@ cache-invalidation contract after editing bodies.
 ## Contacts, friction and solver choice
 
 Boxes use separating-axis tests with clipped face or edge contacts. Convex shapes
-use bounded support-mapping queries. Persistent manifolds match nearby aligned
-contact points and retain accumulated impulses. New impacts capture restitution;
+use bounded support-mapping queries. Persistent manifolds store collider-local
+anchors and feature keys, so common translation does not invalidate the warm start.
+Matches require compatible feature keys, aligned normals and nearby anchors on both
+colliders; each previous point can be consumed only once. Analytic shapes identify
+faces/edges/caps, cooked hulls identify a supporting surface, and mesh contacts retain
+the actual cooked triangle ID. A feature change or excessive local drift discards the
+cached impulse. Coplanar mesh seams are not welded into a common feature.
+Box support keys use the local normal rather than the penetrating midpoint, so
+settling depth changes alone do not discard impulses.
+Four 96-byte contacts plus the aligned header occupy 416 bytes per manifold
+(previously 288 bytes). Capacity reports and rollback checkpoints include this cost.
+Reset and reconstruction invalidate the cache. Persistent manifolds retain accumulated impulses. New impacts capture restitution;
 normal impulses remain nonnegative.
 
 Each collider can specify `staticFriction`, `dynamicFriction`, `restitution`,
@@ -376,6 +386,63 @@ IDs retain construction order but the replacement is a new event epoch. Kinemati
 worlds require explicit reconstruction and target-command replay. Capacity growth
 is an application-controlled recovery boundary, not allocation inside a GPU step.
 
+## Moving convex CCD
+
+```typescript
+continuous: {
+  mode: 'convex',
+  bodies: [0, 1],
+  maximumImpacts: 8,
+  maximumCandidates: 256
+},
+failurePolicy: 'rollback'
+```
+
+This opt-in mode supports selected single-convex dynamic bodies and convex obstacles
+that are static, dynamic or kinematic. Supported shapes are sphere, box, capsule,
+cylinder and cooked convex hull. Collider-local offsets and rotations participate in
+support mapping. Planes, triangle meshes and worlds with joints are rejected in this
+mode; use the default sphere/static mode for original mesh surfaces. Nonselected
+pairs retain discrete collision detection.
+
+Each impact round builds a bounded swept candidate queue in parallel. COM-centered
+bounding spheres include collider offsets and conservatively cover rotation. An
+indirect dispatch searches only queued candidates. Support-plane distance bounds (including box/box separating axes and exact sphere/box distance)
+and linear/angular speed bounds drive conservative advancement (64 distance and
+128 advancement iterations). Distance stopping uses local feature size and a float32
+coordinate-precision floor; it is not an absolute world-space accuracy guarantee. Centered
+sphere spin does not inflate the geometric angular bound. One invocation chooses the earliest TOI, using collider
+IDs to break exact ties, advances all trajectories and applies coupled normal/angular
+and Coulomb friction impulses. Box impact points come from the same clipped face
+polygons used by discrete manifolds, or closest supporting finite edges. Missing or
+invalid surface witnesses reject the step. Restitution is applied once, followed by
+up to 16 dissipative friction/nonclosing projections and a final nonclosing correction.
+Friction increments are limited by contact work; normal corrections only increase the
+normal impulse. This prevents offset friction from adding energy or restoring inward
+speed before the remaining time is swept. Strongly coupled offset contacts prioritize
+energy admissibility over an exact Newton normal-restitution target. Nonimpacted
+bodies preserve their discrete final poses; kinematic targets retain their authored
+end poses. No CPU readback is required between rounds.
+
+`maximumCandidates` defaults to `maximumPairs`. Queue, distance, advancement or
+impact exhaustion marks `incompleteContinuousBodies` and rejects the entire step,
+including persistent contacts. Failure remains latched. Capacity is not automatically
+grown by the recovery runner. `readContinuousWork()` optionally reads 16 bytes for
+last-attempt peak candidates, candidate workgroups, resolved impacts and incomplete
+status; Physics Stress Lab displays and exports these counters. Candidate generation currently scans collider pairs;
+the expensive TOI searches are compacted, but discovery is not a scalable spatial
+index yet. This is a bounded reference path, not a large-world throughput claim.
+
+Initial touching/overlapping pairs remain owned by the discrete solver for that
+step. General repeated recontact of an initially touching rotating pair, simultaneous
+multi-contact impact solving, jointed/nonconvex CCD and swept contact-event payloads
+remain unqualified. Trajectories use constant world angular velocity between impacts;
+this does not qualify asymmetric torque-free continuous dynamics. Extreme aspect
+ratios, grazing motion and float32 conditioning can reject otherwise valid steps.
+
+The lab adds **dynamic convex pairs**, **translating wall**, **rotating gate** and
+**swept queue rejection** scenarios. Trails show sampled centers, not exact TOI paths.
+
 ## Bounded continuous motion
 
 `continuous: {bodies: [bodyIndex], maximumImpacts: 4}` adds sphere/static-surface
@@ -399,9 +466,9 @@ penetrating pair for that step while still sweeping other obstacles. This does n
 guarantee recovery from arbitrary deep overlap.
 
 The GPU rejects the step if the impact or sweep budget is exhausted. Inspect
-`incompleteContinuousBodies` along with `complete` in lifetime diagnostics. Dynamic
-pairs, moving kinematic obstacles, rotating convex shapes and meshes still have
-discrete collision behavior. This is a declared CCD envelope, not general CCD.
+`incompleteContinuousBodies` along with `complete` in lifetime diagnostics. In this default mode, dynamic
+pairs, moving kinematic obstacles and rotating shapes still have discrete collision
+behavior; opt into the convex mode above for its separate declared envelope. This is a declared CCD envelope, not general CCD.
 The Physics Stress Lab's **Fast Motion Lab** scenarios demonstrate curved static
 obstacles, a real mesh opening and intentional impact-budget rejection. Paths show
 sampled centers, so trail segments do not reconstruct intermediate ricochets.

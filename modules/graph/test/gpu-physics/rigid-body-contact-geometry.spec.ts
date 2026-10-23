@@ -109,11 +109,11 @@ it.for(cases)(
             const bytes = capture.buffers.find(buffer => buffer.name === 'manifolds')!.data;
             const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
             let contacts = 0;
-            for (let offset = 0; offset < bytes.byteLength; offset += 288) {
-              const count = view.getUint32(offset + 256, true);
+            for (let offset = 0; offset < bytes.byteLength; offset += 416) {
+              const count = view.getUint32(offset + 384, true);
               for (let slot = 0; slot < count; slot++) {
                 contacts++;
-                const contact = offset + slot * 64;
+                const contact = offset + slot * 96;
                 const depth = view.getFloat32(contact + 12, true);
                 expect(
                   Math.abs(depth + gap * scale),
@@ -179,9 +179,9 @@ it('qualifies sphere/box edge and corner depths with compound collider offsets',
       )!.data;
       const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
       let contacts = 0;
-      for (let offset = 0; offset < bytes.byteLength; offset += 288)
-        for (let slot = 0; slot < view.getUint32(offset + 256, true); slot++) {
-          const contact = offset + slot * 64;
+      for (let offset = 0; offset < bytes.byteLength; offset += 416)
+        for (let slot = 0; slot < view.getUint32(offset + 384, true); slot++) {
+          const contact = offset + slot * 96;
           contacts++;
           expect(view.getFloat32(contact + 12, true)).toBeCloseTo(depth, 4);
           const alignment = separation.reduce(

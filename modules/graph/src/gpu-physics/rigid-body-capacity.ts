@@ -50,7 +50,7 @@ export function getRigidBodyStorageLayout(
         jointCount * 48,
       uniform: false
     },
-    {name: 'manifolds', byteLength: maximumPairs * 288, uniform: false},
+    {name: 'manifolds', byteLength: maximumPairs * 416, uniform: false},
     {name: 'bodies', byteLength: metadataLength * 4, uniform: false},
     {name: 'settings', byteLength: 64, uniform: true},
     {name: 'control-settings', byteLength: 64, uniform: true},

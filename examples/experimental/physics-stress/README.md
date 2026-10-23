@@ -1,6 +1,6 @@
 # GPU Physics Stress Lab
 
-Run `yarn start` here. Fourteen bounded scenarios exercise automatic pair-budget recovery,
+Run `yarn start` here. Nineteen bounded scenarios exercise automatic pair-budget recovery,
 dense mixed-size contacts, a 100:1 stack, ballistic convergence and sphere/static CCD.
 Additional scenarios show sparse-contact compaction, rotated geometry, sustained eight-box stacks and offset COM stacks. Settings select the solver, compact/full-scan pair work and timestep. Reset reconstructs initial conditions. Export
 report records adapter identity, configuration, accepted ticks, retries, replay work,
@@ -24,8 +24,12 @@ and intentional impact-budget rejection. Select scenarios in Settings, or use
 `?scene=fastMesh` or `?scene=fastBudget`. Reset reconstructs the starting state.
 Gold trails join sampled centers; they do not reconstruct between-impact paths.
 
-CCD applies to selected centered spheres against static obstacles only. Rotating
-and dynamic obstacles remain discrete. Meshes are two-sided triangle surfaces, not
+The original CCD scenarios use selected centered spheres against static obstacles.
+New `fastConvexPairs`, `fastMovingWall` and `fastRotatingGate` scenarios use opt-in
+moving-convex CCD; `fastConvexQueue` deliberately rejects queue exhaustion.
+`persistentContacts` demonstrates local-anchor warm starts on a moving platform.
+Convex CCD uses bounded parallel candidate/TOI searches and exclusive impact resolution;
+initial overlaps stay with discrete solving, and jointed/nonconvex CCD is unsupported. Meshes are two-sided triangle surfaces, not
 solid volumes. Rejection is expected in the budget scenario; no partial step is accepted.
 
 Numerical qualification fixtures keep their independently documented duration.

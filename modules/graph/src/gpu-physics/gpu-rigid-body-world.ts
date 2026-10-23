@@ -378,7 +378,14 @@ export class GPURigidBodyWorld {
         props.failurePolicy !== 'rollback' ||
         !Number.isInteger(props.continuous.maximumImpacts ?? 4) ||
         (props.continuous.maximumImpacts ?? 4) < 1 ||
-        (props.continuous.maximumImpacts ?? 4) > 16
+        (props.continuous.maximumImpacts ?? 4) > 16 ||
+        !['sphere-static', 'convex'].includes(props.continuous.mode ?? 'sphere-static') ||
+        !Number.isSafeInteger(props.continuous.maximumCandidates ?? this.maximumPairs) ||
+        (props.continuous.maximumCandidates ?? this.maximumPairs) < 1 ||
+        (props.continuous.maximumCandidates ?? this.maximumPairs) > 0x40000000 ||
+        (props.continuous.mode === 'convex' &&
+          (Boolean(props.joints?.length) ||
+            colliders.some(collider => ['plane', 'triangle-mesh'].includes(collider.shape.type))))
       )
         throw new Error('Invalid continuous settings');
       for (const index of props.continuous.bodies) {
@@ -391,12 +398,13 @@ export class GPURigidBodyWorld {
           body.mass === 0 ||
           bodyColliders.length !== 1 ||
           bodyColliders[0].isTrigger ||
-          bodyColliders[0].shape.type !== 'sphere' ||
-          (bodyColliders[0].position ?? [0, 0, 0]).some(
-            (value, axis) => value !== (body.centerOfMass ?? [0, 0, 0])[axis]
-          )
+          (props.continuous.mode !== 'convex' && bodyColliders[0].shape.type !== 'sphere') ||
+          (props.continuous.mode !== 'convex' &&
+            (bodyColliders[0].position ?? [0, 0, 0]).some(
+              (value, axis) => value !== (body.centerOfMass ?? [0, 0, 0])[axis]
+            ))
         )
-          throw new Error('Continuous bodies require centered dynamic spheres');
+          throw new Error('Invalid continuous body geometry');
       }
     }
     if (props.triggers?.length) {
@@ -440,6 +448,18 @@ export class GPURigidBodyWorld {
         this.props.joints?.length ?? 0
       )
     };
+    if (this.props.continuous?.mode === 'convex') {
+      storage.buffers = storage.buffers.filter(buffer => buffer.name !== 'continuous-previous');
+      storage.buffers.push({name: 'continuous-dispatch', byteLength: 16, uniform: false});
+      storage.buffers.push({
+        name: 'continuous-work',
+        byteLength:
+          16 +
+          this.count * 64 +
+          (this.props.continuous.maximumCandidates ?? this.maximumPairs) * 48,
+        uniform: false
+      });
+    }
     if (this.props.publicationBounds)
       storage.buffers.push(
         {name: 'pose-metadata', byteLength: this.count * 48, uniform: false},
@@ -504,6 +524,12 @@ export class GPURigidBodyWorld {
     } = this.getStorageLayout();
     if (Math.ceil(this.maximumPairs / 64) > graph.device.limits.maxComputeWorkgroupsPerDimension)
       throw new Error('Rigid-body pair dispatch exceeds device limits');
+    if (
+      this.props.continuous?.mode === 'convex' &&
+      Math.ceil((this.props.continuous.maximumCandidates ?? this.maximumPairs) / 64) >
+        graph.device.limits.maxComputeWorkgroupsPerDimension
+    )
+      throw new Error('Continuous candidate dispatch exceeds device limits');
     for (const buffer of allocationPlan) {
       const bindingLimit = buffer.uniform
         ? graph.device.limits.maxUniformBufferBindingSize
@@ -520,7 +546,9 @@ export class GPURigidBodyWorld {
           (uniform ? Buffer.UNIFORM : Buffer.STORAGE) |
           Buffer.COPY_DST |
           Buffer.COPY_SRC |
-          (['targets', 'parallel-dispatch'].includes(name) ? Buffer.INDIRECT : 0)
+          (['targets', 'parallel-dispatch', 'continuous-dispatch'].includes(name)
+            ? Buffer.INDIRECT
+            : 0)
       });
       this.ownedBuffers.push(buffer);
       return buffer;
@@ -630,8 +658,8 @@ export class GPURigidBodyWorld {
         this.getJointStateOffset() + index * 48 + 32
       );
     }
-    // Four 64-byte contacts followed by a 32-byte aligned manifold header.
-    this.manifolds = allocate('manifolds', this.maximumPairs * 288);
+    // Four 96-byte contacts followed by a 32-byte aligned manifold header.
+    this.manifolds = allocate('manifolds', this.maximumPairs * 416);
     if (extended) this.meshTasks = allocate('mesh-tasks', 16 + 65536 * 48);
     const bodies = allocate('bodies', metadata);
     if (sparse) this.broadPhaseCounters = {buffer: bodies, byteOffset: diagnosticOffset * 4};
@@ -745,9 +773,7 @@ export class GPURigidBodyWorld {
       this.count,
       this.props.iterations ?? 16,
       this.colliderStorageCount,
-      this.colliders.some(
-        collider => collider.shape.type !== 'sphere' && collider.shape.type !== 'box'
-      ),
+      extended,
       sparseLayout,
       parallel,
       this.props.maximumMeshTraversalTestsPerPair ?? 65536,
@@ -843,7 +869,13 @@ export class GPURigidBodyWorld {
           this.props.continuous.maximumImpacts ?? 4,
           bindings,
           allocate,
-          Boolean(this.props.joints?.length)
+          Boolean(this.props.joints?.length),
+          this.props.continuous.mode === 'convex'
+            ? (this.props.continuous.maximumCandidates ?? this.maximumPairs)
+            : 0,
+          this.colliderStorageCount,
+          extended,
+          this.colliders.some(collider => collider.shape.type === 'convex-hull')
         )
       : undefined;
     const triggers = triggerLayout
@@ -945,7 +977,7 @@ export class GPURigidBodyWorld {
             .filter(binding => !parallelBindings[entryPoint].includes(binding.name))
             .map(binding => binding.name)
         : entryPoint === 'meshCollect'
-          ? ['orientations', 'sleepStates', 'targets', 'parallelState']
+          ? ['sleepStates', 'targets', 'parallelState']
           : entryPoint === 'prepare'
             ? bindings
                 .filter(binding => !['targets', 'manifolds'].includes(binding.name))
@@ -1445,7 +1477,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
   wake(): void {
     if (this.destroyed) return;
     this.sleepStates?.write(new Float32Array(this.count * 4));
-    this.manifolds?.write(new Uint8Array(this.maximumPairs * 288));
+    this.manifolds?.write(new Uint8Array(this.maximumPairs * 416));
     for (let index = 0; index < (this.props.joints?.length ?? 0); index++)
       this.targets?.write(new Float32Array(8), this.getJointStateOffset() + index * 48);
   }
@@ -1721,6 +1753,30 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
           angularVelocity: state.angularVelocity
         };
       })
+    };
+  }
+
+  /** Optional 16-byte readback of the last convex CCD attempt; never needed for execution. */
+  async readContinuousWork(): Promise<{
+    candidateCapacity: number;
+    peakCandidates: number;
+    peakCandidateWorkgroups: number;
+    impacts: number;
+    incomplete: boolean;
+  } | null> {
+    if (this.props.continuous?.mode !== 'convex') return null;
+    const buffer = this.ownedBuffers.find(buffer => buffer.id === `${this.id}-continuous-status`);
+    if (!buffer) return null;
+    const bytes = await buffer.readAsync(0, 16);
+    const values = new Uint32Array(bytes.buffer, bytes.byteOffset, 4);
+    return {
+      candidateCapacity: this.props.continuous.maximumCandidates ?? this.maximumPairs,
+      peakCandidates: values[3],
+      peakCandidateWorkgroups: Math.ceil(
+        Math.min(values[3], this.props.continuous.maximumCandidates ?? this.maximumPairs) / 64
+      ),
+      impacts: values[2],
+      incomplete: values[0] !== 0
     };
   }
 
