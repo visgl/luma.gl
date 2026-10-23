@@ -56,6 +56,7 @@ let restartRequested = false;
 let stopped = false;
 let disposed = false;
 let states: GPURigidBodyState[] = [];
+let runGeneration = 0;
 let stepCount = 0;
 let quietSince: number | null = null;
 let lastSolverWork: Awaited<ReturnType<GPURigidBodyRecoveryRunner['world']['readSolverWork']>> =
@@ -110,6 +111,8 @@ async function restart() {
     configuration = nextConfiguration;
     activeScene = nextScene;
     stepCount = nextStepCount;
+    status.dataset.generation = String(++runGeneration);
+    status.dataset.scene = activeScene;
     lastSolverWork = null;
     diagnostics.clear();
     states = nextStates;

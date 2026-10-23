@@ -307,6 +307,15 @@ it('keeps sweep tolerances local on elongated curved and mesh obstacles and pres
         4
       );
       expect(result.hits[0].normal[0]).toBeCloseTo(-1, 4);
+      if (shape.type === 'triangle-mesh') {
+        const parallel = await world.raycast({
+          origin: [0.1, 0, 0],
+          direction: [0, 1, 0],
+          maximumDistance: 4
+        });
+        expect(parallel.complete).toBe(true);
+        expect(parallel.hits).toHaveLength(0);
+      }
     } finally {
       world.destroy();
     }
