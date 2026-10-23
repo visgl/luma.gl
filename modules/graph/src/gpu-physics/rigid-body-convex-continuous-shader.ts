@@ -350,17 +350,24 @@ fn continuousImpactPoint(first:u32,second:u32,point:vec3f,normal:vec3f,queryTole
  let response=effectiveMass(first,second,point,normal);
  if(response<=1e-20||length(normal)<0.5){continuousStatus[0].x=1u;continuousWork.finished=1u;return;}
  let restitution=select(0.0,combineMaterial(bodies.colliders[firstCollider].material.x,bodies.colliders[secondCollider].material.x,bodies.colliders[firstCollider].policies.x,bodies.colliders[secondCollider].policies.x,false),-closing>settings.solver.z);
- let reboundSpeed=max(0.0,-closing)*restitution;
  var contact:Contact;contact.point=vec4f(point,0);contact.normal=vec4f(-normal,0);
- // Normal and tangent responses are coupled for offset contacts and general inertia.
- // Project accumulated impulses, then enforce nonclosing speed after the last tangent update.
+ // Apply restitution once. Restoring its velocity target after friction can inject energy.
+ contact.impulse.x=max(0.0,-closing)*(1.0+restitution)/response;
+ let reboundImpulse=normal*contact.impulse.x;
+ applyImpulse(first,point,reboundImpulse);applyImpulse(second,point,-reboundImpulse);
  for(var iteration=0u;iteration<16u;iteration++){
   let speed=dot(pointVelocity(first,point)-pointVelocity(second,point),normal);
-  let nextNormal=max(0.0,contact.impulse.x+(reboundSpeed-speed)/response);
-  let normalIncrement=normal*(nextNormal-contact.impulse.x);contact.impulse.x=nextNormal;
+  let normalIncrement=normal*(max(0.0,-speed)/response);
+  contact.impulse.x+=length(normalIncrement);
   applyImpulse(first,point,normalIncrement);applyImpulse(second,point,-normalIncrement);
-  let tangent=solveFriction(firstCollider,secondCollider,contact,pointVelocity(second,point)-pointVelocity(first,point));
-  let tangentIncrement=tangent-contact.tangent.xyz;contact.tangent=vec4f(tangent,0);
+  let relative=pointVelocity(second,point)-pointVelocity(first,point);
+  let tangent=solveFriction(firstCollider,secondCollider,contact,relative);
+  var tangentIncrement=tangent-contact.tangent.xyz;
+  // Minimize contact work along the candidate increment; never accept positive friction work.
+  let slope=dot(relative,tangentIncrement);
+  let curvature=dot(tangentIncrement,impulseResponse(first,second,point,tangentIncrement));
+  if(slope>=0.0){tangentIncrement=vec3f(0);}else if(curvature>0.0){tangentIncrement*=min(1.0,-slope/curvature);}
+  contact.tangent=vec4f(contact.tangent.xyz+tangentIncrement,0);
   applyImpulse(first,point,-tangentIncrement);applyImpulse(second,point,tangentIncrement);
   if(all(normalIncrement==vec3f(0))&&all(tangentIncrement==vec3f(0))){break;}
  }

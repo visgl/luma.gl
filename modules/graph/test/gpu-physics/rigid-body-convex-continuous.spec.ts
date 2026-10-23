@@ -400,7 +400,11 @@ it('keeps an offset impact nonclosing after coupled friction without adding ener
         velocity: [240, 240, 0],
         inertiaDiagonal: [1, 1, 1],
         colliders: [
-          {position: [1, 1, 0], shape: {type: 'sphere', radius: 0.2}, friction: 1, restitution: 0}
+          {
+            position: [1, 1, 0],
+            shape: {type: 'sphere', radius: 0.2},
+            material: {staticFriction: 1, dynamicFriction: 1, restitution: 0}
+          }
         ]
       },
       {
@@ -481,4 +485,50 @@ it.for([
     0.5 * state.velocity.reduce((sum, value) => sum + value * value, 0) +
     0.5 * state.angularVelocity.reduce((sum, value) => sum + value * value, 0);
   expect(Math.abs(energy - 0.5 * 240 ** 2)).toBeLessThan(0.5);
+});
+
+it.for([
+  {sliding: -120, restitution: 1},
+  {sliding: 120, restitution: 1},
+  {sliding: -240, restitution: 0.5},
+  {sliding: 240, restitution: 0.5}
+])('does not add offset-impact energy at restitution $restitution and slip $sliding', async ({
+  sliding,
+  restitution
+}, context) => {
+  const result = await run({
+    gravity: [0, 0, 0],
+    sleepAfter: 0,
+    restitutionThreshold: 0,
+    failurePolicy: 'rollback',
+    continuous: {mode: 'convex', bodies: [0]},
+    bodies: [
+      {
+        position: [-3, -1, 0],
+        velocity: [240, sliding, 0],
+        inertiaDiagonal: [1, 1, 1],
+        colliders: [
+          {
+            position: [1, 1, 0],
+            shape: {type: 'sphere', radius: 0.2},
+            material: {staticFriction: 1, dynamicFriction: 1, restitution}
+          }
+        ]
+      },
+      {
+        mode: 'static',
+        position: [0, 0, 0],
+        shape: {type: 'box', halfExtents: [0.05, 6, 1]},
+        friction: 1,
+        restitution
+      }
+    ]
+  });
+  if (!result) return context.skip('WebGPU unavailable');
+  expect(result.diagnostics.complete).toBe(true);
+  const state = result.state[0];
+  const energy =
+    0.5 * state.velocity.reduce((sum, value) => sum + value * value, 0) +
+    0.5 * state.angularVelocity.reduce((sum, value) => sum + value * value, 0);
+  expect(energy).toBeLessThanOrEqual(0.5 * (240 ** 2 + sliding ** 2) + 0.1);
 });

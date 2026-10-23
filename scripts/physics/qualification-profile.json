@@ -1518,6 +1518,10 @@
           {
             "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
             "testPattern": "keeps an offset impact nonclosing"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "does not add offset-impact energy"
           }
         ]
       }
