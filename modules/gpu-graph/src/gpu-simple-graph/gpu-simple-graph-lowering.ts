@@ -3,9 +3,18 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {assert} from '@luma.gl/core';
-import {GPUDataEvaluator, GPUVectorEvaluator, add, multiply} from '@luma.gl/gpgpu';
+import {
+  GPUDataEvaluator,
+  GPUVectorEvaluator,
+  add,
+  subtract,
+  multiply,
+  divide,
+  sqrt
+} from '@luma.gl/gpgpu';
 import {
   GPUProgramScalarLiteral,
+  GPUProgramScalarOperation,
   GPUProgramVectorMADD,
   type GPUProgramBindings,
   type GPUProgramVector
@@ -14,6 +23,7 @@ import {GPUSimpleGraphOperation} from './gpu-simple-graph-operation';
 
 export type SimpleOperation =
   | GPUSimpleGraphOperation
+  | GPUProgramScalarOperation
   | GPUProgramScalarLiteral
   | GPUProgramVectorMADD;
 
@@ -38,6 +48,8 @@ export class SimpleGraphLowering {
       const evaluator = this.own(GPUDataEvaluator.fromConstant(value));
       this.scalars.set(output, evaluator);
       this.registerOutput(output.id, evaluator);
+    } else if (operation instanceof GPUProgramScalarOperation) {
+      this.lowerScalar(operation);
     } else {
       const {input, scale, addend, output} = operation.props;
       const source = this.resolveVector(input);
@@ -71,6 +83,52 @@ export class SimpleGraphLowering {
       this.vectors.set(output, evaluator);
       this.registerOutput(output.id, evaluator);
     }
+  }
+
+  private lowerScalar(operation: GPUProgramScalarOperation): void {
+    const {left, right, output} = operation;
+    this.registerValue(left);
+    if (right) this.registerValue(right);
+    this.registerValue(output);
+    const leftEvaluator = this.scalars.get(left);
+    const rightEvaluator = right && this.scalars.get(right);
+    // Scalar operands must already be defined; this subset uses float32 single-assignment values.
+    assert(
+      left.format === 'float32' &&
+        output.format === 'float32' &&
+        leftEvaluator &&
+        !this.scalars.has(output)
+    );
+    assert(!right || (right.format === 'float32' && rightEvaluator));
+    let evaluator: GPUDataEvaluator;
+    switch (operation.operation) {
+      case 'copy':
+        evaluator = new GPUDataEvaluator({
+          source: leftEvaluator,
+          type: 'float32',
+          size: 1,
+          isConstant: leftEvaluator.isConstant
+        });
+        break;
+      case 'sqrt':
+        evaluator = sqrt(leftEvaluator);
+        break;
+      case 'add':
+      case 'subtract':
+      case 'multiply':
+      case 'divide': {
+        // Binary operations require both initialized operands.
+        assert(rightEvaluator);
+        const operations = {add, subtract, multiply, divide};
+        evaluator = operations[operation.operation](leftEvaluator, rightEvaluator);
+        break;
+      }
+      default:
+        // Comparisons, integer arithmetic, min and max are outside the current semantic subset.
+        assert(false);
+    }
+    this.scalars.set(output, this.own(evaluator));
+    this.registerOutput(output.id, evaluator);
   }
 
   destroy(): void {

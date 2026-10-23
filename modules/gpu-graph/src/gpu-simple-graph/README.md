@@ -27,7 +27,7 @@ const {output: result} = await compiled.run();
 
 ## Existing semantic operations
 
-SimpleGraph executes the existing `GPUProgramScalarLiteral` and `GPUProgramVectorMADD`
+SimpleGraph executes the existing `GPUProgramScalarLiteral`, `GPUProgramScalarOperation`, and `GPUProgramVectorMADD`
 operations without changing their definitions or the full graph compiler:
 
 ```typescript
@@ -54,7 +54,13 @@ compiled.destroy();
 
 The same program and bindings can be passed to `GPUProgramCompiler.compile(program, bindings)`.
 Bindings use its existing `GPUProgramBindings` type: vectors, GPUData chunks, or arrays of chunks.
-Semantic outputs are selected by logical value ID, not operation ID.
+Semantic outputs are selected by logical value ID, not operation ID. Semantic operation IDs may
+repeat, including default multiply-add IDs. Chains, branches, nested composites, and multiple
+selected outputs are supported; explicit evaluator output IDs must remain unique.
+
+Scalar arithmetic supports float32 `copy`, `add`, `subtract`, `multiply`, `divide`, and `sqrt`.
+Comparisons, integer arithmetic, `min`, and `max` remain unsupported. Scalar copy is a logical
+value copy and may share evaluator storage; it is not a buffer-copy operation.
 
 This initial subset supports float32, nonempty chunk lists, matching input/addend chunk
 partitions, and single-assignment internal outputs. Define scalars and intermediate vectors before

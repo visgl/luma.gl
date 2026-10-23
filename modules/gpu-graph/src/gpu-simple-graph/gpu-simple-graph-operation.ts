@@ -49,6 +49,16 @@ export function getSimpleGraphEvaluatorFormat(
   const components = evaluator.size;
   if (components !== 1 && components !== 2 && components !== 3 && components !== 4)
     return undefined;
+  // The constructor helper excludes these WebGL-only formats; the decoder still validates them.
+  if (
+    components === 3 &&
+    !evaluator.normalized &&
+    (evaluator.type === 'uint8' || evaluator.type === 'sint8')
+  ) {
+    const format = evaluator.type === 'uint8' ? 'uint8x3-webgl' : 'sint8x3-webgl';
+    vertexFormatDecoder.getVertexFormatInfo(format);
+    return format;
+  }
   try {
     return vertexFormatDecoder.makeVertexFormat(evaluator.type, components, evaluator.normalized);
   } catch {

@@ -11,6 +11,7 @@ import {GPUSimpleGraph, GPUSimpleGraphOperation} from '@luma.gl/gpu-graph/gpu-si
 import {
   GPUProgram,
   GPUProgramScalarLiteral,
+  GPUProgramScalarOperation,
   GPUProgramVectorMADD,
   GPUProgramCompiler,
   composite
@@ -48,7 +49,7 @@ for (const [backend, getDevice] of [
   ['webgl', getWebGLTestDevice],
   ['webgpu', getWebGPUTestDevice]
 ] as const) {
-  it(`executes unchanged semantic operations with chunked bindings on ${backend}`, async () => {
+  it(`executes semantic chains and branches with default operation IDs and chunked bindings on ${backend}`, async () => {
     const device = await getDevice();
     const buffers: Buffer[] = [];
     const makeChunk = (values: number[]) => {
@@ -62,17 +63,25 @@ for (const [backend, getDevice] of [
     const bindings = {vectors: {input: [makeChunk([1, 2]), makeChunk([3, 4])]}};
     const program = new GPUProgram();
     const input = program.vector('input', 'float32', 4, {external: true, chunkLengths: [2, 2]});
+    const middle = program.vector('middle', 'float32', 4, {chunkLengths: [2, 2]});
     const output = program.vector('output', 'float32', 4, {chunkLengths: [2, 2]});
+    const branch = program.vector('branch', 'float32', 4, {chunkLengths: [2, 2]});
+    const initialScale = program.scalar('initial-scale', 'float32');
     const scale = program.scalar('scale', 'float32');
     program.add(
       composite([
-        new GPUProgramScalarLiteral({output: scale, value: 2}),
-        new GPUProgramVectorMADD({input, addend: input, output, scale})
+        new GPUProgramScalarLiteral({output: initialScale, value: 4}),
+        new GPUProgramScalarOperation({operation: 'sqrt', left: initialScale, output: scale}),
+        new GPUProgramVectorMADD({input, addend: input, output: middle, scale}),
+        composite([
+          new GPUProgramVectorMADD({input: middle, addend: input, output, scale}),
+          new GPUProgramVectorMADD({input: middle, addend: middle, output: branch, scale})
+        ])
       ])
     );
     const compiled = new GPUSimpleGraph(device)
       .add(program.operations)
-      .compile({bindings, outputs: ['output']});
+      .compile({bindings, outputs: ['middle', 'output', 'branch']});
     try {
       expect(compiled.operationTree).toEqual(program.operationTree);
       const result = await compiled.run();
@@ -83,7 +92,19 @@ for (const [backend, getDevice] of [
         values.push(...(await reader.readValue()));
         reader.destroy();
       }
-      expect(values).toEqual([3, 6, 9, 12]);
+      expect(values).toEqual([7, 14, 21, 28]);
+      for (const [name, expected] of [
+        ['middle', [3, 6, 9, 12]],
+        ['branch', [9, 18, 27, 36]]
+      ] as const) {
+        const actual: number[] = [];
+        for (const chunk of result[name].data) {
+          const reader = GPUDataEvaluator.fromGPUData(chunk);
+          actual.push(...(await reader.readValue()));
+          reader.destroy();
+        }
+        expect(actual).toEqual(expected);
+      }
       expect((await compiled.run()).output).toBe(result.output);
       if (backend === 'webgpu') {
         // The identical program and bindings are accepted by the unchanged full compiler.

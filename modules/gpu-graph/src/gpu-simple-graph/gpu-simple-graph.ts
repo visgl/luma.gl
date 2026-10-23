@@ -9,6 +9,7 @@ import type {GPUVector, GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {
   GPUCompositeOperation,
   GPUProgramScalarLiteral,
+  GPUProgramScalarOperation,
   GPUProgramVectorMADD,
   type GPUProgramBindings,
   getGPUOperationTree,
@@ -48,7 +49,8 @@ export type GPUSimpleGraphCompileOptions = {
 export class GPUSimpleGraph {
   readonly device: Device;
   readonly id: string;
-  private readonly evaluators = new Map<string, SimpleOperation>();
+  private readonly leafOperations: SimpleOperation[] = [];
+  private readonly evaluatorIds = new Set<string>();
   private readonly programOperations: GPUProgramOperation[] = [];
   private compiled = false;
 
@@ -68,7 +70,8 @@ export class GPUSimpleGraph {
   add(operation: GPUOperationLike): this {
     // Compilation freezes the builder, as it does for GPUGraph.
     assert(!this.compiled);
-    const pending = new Map<string, SimpleOperation>();
+    const pending: SimpleOperation[] = [];
+    const pendingEvaluatorIds = new Set<string>();
     const operations: GPUProgramOperation[] = [];
     const visit = (value: GPUOperationLike): void => {
       if (Array.isArray(value)) {
@@ -82,11 +85,18 @@ export class GPUSimpleGraph {
         assert(
           value instanceof GPUSimpleGraphOperation ||
             value instanceof GPUProgramScalarLiteral ||
+            value instanceof GPUProgramScalarOperation ||
             value instanceof GPUProgramVectorMADD
         );
-        // Operation names must be nonempty and unique, including within one group.
-        assert(value.id && !this.evaluators.has(value.id) && !pending.has(value.id));
-        pending.set(value.id, value);
+        if (value instanceof GPUSimpleGraphOperation) {
+          // Explicit evaluator output names must be nonempty and unique within the graph.
+          assert(
+            value.id && !this.evaluatorIds.has(value.id) && !pendingEvaluatorIds.has(value.id)
+          );
+          pendingEvaluatorIds.add(value.id);
+        }
+        // Semantic operation IDs are labels, not output identifiers, and may repeat.
+        pending.push(value);
       }
     };
     const collect = (value: GPUOperationLike): void => {
@@ -99,7 +109,8 @@ export class GPUSimpleGraph {
     };
     visit(operation);
     collect(operation);
-    for (const [identifier, value] of pending) this.evaluators.set(identifier, value);
+    this.leafOperations.push(...pending);
+    for (const identifier of pendingEvaluatorIds) this.evaluatorIds.add(identifier);
     this.programOperations.push(...operations);
     return this;
   }
@@ -124,7 +135,7 @@ export class GPUSimpleGraph {
     this.compiled = true;
     const lowering = new SimpleGraphLowering(options.bindings ?? {});
     try {
-      for (const operation of this.evaluators.values()) lowering.lower(operation);
+      for (const operation of this.leafOperations) lowering.lower(operation);
       const evaluators = lowering.outputs;
       const lastIdentifier = Array.from(evaluators.keys()).at(-1);
       const outputNames = options.outputs ?? (lastIdentifier === undefined ? [] : [lastIdentifier]);

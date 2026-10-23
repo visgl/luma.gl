@@ -8,6 +8,7 @@ import {GPUSimpleGraph, GPUSimpleGraphOperation} from '@luma.gl/gpu-graph/gpu-si
 import {
   GPUProgram,
   GPUProgramScalarLiteral,
+  GPUProgramScalarOperation,
   GPUProgramVectorMADD,
   GPULoopOperation,
   composite
@@ -312,4 +313,70 @@ describe('SimpleGraph inspection metadata', () => {
     evaluator.destroy();
     device.destroy();
   });
+});
+
+it('keeps WebGL byte-triplet formats in pre-execution inspection', () => {
+  const device = new NullDevice({});
+  const evaluators = [
+    GPUDataEvaluator.fromArray(new Uint8Array([1, 2, 3]), {size: 3}),
+    GPUDataEvaluator.fromArray(new Int8Array([-1, 2, 3]), {size: 3})
+  ];
+  const graph = new GPUSimpleGraph(device);
+  evaluators.forEach((evaluator, index) => graph.addEvaluator(`triplet-${index}`, evaluator));
+  const compiled = graph.compile({outputs: ['triplet-0', 'triplet-1']});
+  expect(compiled.operationTree.map(operation => operation.metadata?.outputs?.[0].format)).toEqual([
+    'uint8x3-webgl',
+    'sint8x3-webgl'
+  ]);
+  expect(compiled.nodes.map(node => node.format)).toEqual(['uint8x3-webgl', 'sint8x3-webgl']);
+  compiled.destroy();
+  evaluators.forEach(evaluator => evaluator.destroy());
+  device.destroy();
+});
+
+it('lowers chained existing scalar arithmetic and rejects unsupported scalar operations', async () => {
+  const device = new NullDevice({});
+  const program = new GPUProgram();
+  const first = program.scalar('first', 'float32');
+  const second = program.scalar('second', 'float32');
+  program.add([
+    new GPUProgramScalarLiteral({output: first, value: 9}),
+    new GPUProgramScalarLiteral({output: second, value: 3})
+  ]);
+  let previous = first;
+  const expected = [9, 3, 6, 3, 9, 3];
+  for (const operation of ['copy', 'sqrt', 'add', 'subtract', 'multiply', 'divide'] as const) {
+    const output = program.scalar(operation, 'float32');
+    program.add(
+      new GPUProgramScalarOperation({
+        operation,
+        left: previous,
+        right: operation === 'copy' || operation === 'sqrt' ? undefined : second,
+        output
+      })
+    );
+    previous = output;
+  }
+  const names = ['copy', 'sqrt', 'add', 'subtract', 'multiply', 'divide'];
+  const compiled = new GPUSimpleGraph(device).add(program.operations).compile({outputs: names});
+  try {
+    const results = await compiled.run();
+    for (const [index, name] of names.entries()) {
+      const reader = GPUDataEvaluator.fromGPUData(results[name].data[0]);
+      expect(Array.from(await reader.readValue())).toEqual([expected[index]]);
+      reader.destroy();
+    }
+  } finally {
+    compiled.destroy();
+  }
+  program.add(
+    new GPUProgramScalarOperation({
+      operation: 'min',
+      left: first,
+      right: second,
+      output: program.scalar('minimum', 'float32')
+    })
+  );
+  expect(() => new GPUSimpleGraph(device).add(program.operations).compile()).toThrow();
+  device.destroy();
 });
