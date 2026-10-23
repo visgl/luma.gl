@@ -215,6 +215,7 @@ export class GPURigidBodyWorld {
   private parallelDispatch: Buffer | null = null;
   private device: Device | null = null;
   private control: Computation | null = null;
+  private invalidation: Computation | null = null;
   private controlSettings: Buffer | null = null;
   private destroyed = false;
   private readonly gpuCheckpoints = new Set<GPURigidBodyGPUCheckpoint>();
@@ -1381,7 +1382,7 @@ export class GPURigidBodyWorld {
       });
     }
     this.controlSettings = allocate('control-settings', 64, true);
-    this.control = new Computation(graph.device, {
+    const controlProperties = {
       id: `${this.id}-impulse`,
       source:
         source +
@@ -1405,10 +1406,12 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
  else if(command.bodyIndex.y==2u) {applyImpulse(command.bodyIndex.x,positions[command.bodyIndex.x].xyz,command.impulse.xyz);}
  ${this.props.joints?.length ? 'else if(command.bodyIndex.y==3u){targets.joints[command.bodyIndex.x].control.x=command.impulse.x;}' : ''}
  else {targets.entries[command.bodyIndex.x].position=vec4f(command.point.xyz,1);targets.entries[command.bodyIndex.x].orientation=command.orientation;}
- // Wake and invalidate all connected components conservatively after external changes.
- for(var body=0u;body<BODY_COUNT;body++) {sleepStates[body]=vec4f(0);}
- for(var pair=0u;pair<PAIR_CAPACITY;pair++) {manifolds[pair].count=0u;}
- ${this.props.joints?.length ? `for(var index=0u;index<${this.props.joints.length}u;index++){for(var row=0u;row<8u;row++){targets.joints[index].impulses[row]=0.0;}}` : ''}
+}
+@compute @workgroup_size(64) fn invalidate(@builtin(global_invocation_id) invocation:vec3u) {
+ let index=invocation.x+invocation.y*4194240u;
+ if(index<BODY_COUNT){sleepStates[index]=vec4f(0);}
+ if(index<PAIR_CAPACITY){manifolds[index].count=0u;}
+ ${this.props.joints?.length ? `if(index<${this.props.joints.length}u){for(var row=0u;row<8u;row++){targets.joints[index].impulses[row]=0.0;}}` : ''}
 }`,
       entryPoint: 'control',
       shaderLayout: {
@@ -1443,7 +1446,47 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
         ),
         command: this.controlSettings
       }
+    } satisfies ConstructorParameters<typeof Computation>[1];
+    this.control = new Computation(graph.device, {
+      ...controlProperties,
+      shaderLayout: {
+        bindings: controlProperties.shaderLayout.bindings.filter(
+          binding => !['sleepStates', 'manifolds'].includes(binding.name)
+        )
+      },
+      bindings: Object.fromEntries(
+        Object.entries(controlProperties.bindings).filter(
+          ([name]) => !['sleepStates', 'manifolds'].includes(name)
+        )
+      )
     });
+    const invalidationBindings = [
+      'sleepStates',
+      'manifolds',
+      ...(this.props.joints?.length ? ['targets'] : [])
+    ];
+    this.invalidation = new Computation(graph.device, {
+      ...controlProperties,
+      id: `${this.id}-invalidate`,
+      entryPoint: 'invalidate',
+      shaderLayout: {
+        bindings: controlProperties.shaderLayout.bindings.filter(binding =>
+          invalidationBindings.includes(binding.name)
+        )
+      },
+      bindings: Object.fromEntries(
+        Object.entries(controlProperties.bindings).filter(([name]) =>
+          invalidationBindings.includes(name)
+        )
+      )
+    });
+  }
+
+  private invalidateState(pass: Parameters<Computation['dispatch']>[0]): void {
+    const workgroups = Math.ceil(
+      Math.max(this.count, this.maximumPairs, this.props.joints?.length ?? 0) / 64
+    );
+    this.invalidation!.dispatch(pass, Math.min(65535, workgroups), Math.ceil(workgroups / 65535));
   }
 
   /** Inspect the declared motion mode without exposing mutable world configuration. */
@@ -1475,6 +1518,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     const encoder = this.device.createCommandEncoder();
     const pass = encoder.beginComputePass();
     this.control.dispatch(pass, 1);
+    this.invalidateState(pass);
     pass.end();
     this.device.submit(encoder.finish());
   }
@@ -1601,7 +1645,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       .filter(candidate => candidate.body === bodyIndex)
       .map(({body, ...candidate}) => candidate);
     const bodies = [...this.props.bodies];
-    bodies[bodyIndex] = {...properties, colliders: structuredClone(updated)};
+    bodies[bodyIndex] = {...properties, colliders: updated};
     this.props.bodies = bodies;
   }
 
@@ -1728,6 +1772,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     const encoder = this.device.createCommandEncoder();
     const pass = encoder.beginComputePass();
     this.control.dispatch(pass, 1);
+    this.invalidateState(pass);
     pass.end();
     this.device.submit(encoder.finish());
     const bodies = [...this.props.bodies];
@@ -1756,6 +1801,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     const encoder = this.device.createCommandEncoder();
     const pass = encoder.beginComputePass();
     this.control.dispatch(pass, 1);
+    this.invalidateState(pass);
     pass.end();
     this.device.submit(encoder.finish());
   }
@@ -1789,6 +1835,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     const encoder = this.device.createCommandEncoder();
     const pass = encoder.beginComputePass();
     this.control.dispatch(pass, 1);
+    this.invalidateState(pass);
     pass.end();
     this.device.submit(encoder.finish());
   }
@@ -1852,20 +1899,19 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     const encoder = this.device.createCommandEncoder();
     const pass = encoder.beginComputePass();
     this.control.dispatch(pass, 1);
+    this.invalidateState(pass);
     pass.end();
     this.device.submit(encoder.finish());
   }
 
   /** Clear persistence and sleeping after direct state writes between submissions. */
   wake(): void {
-    if (this.destroyed) return;
-    this.sleepStates?.write(new Float32Array(this.count * 4));
-    this.manifolds?.write(new Uint8Array(this.maximumPairs * 416));
-    for (let index = 0; index < (this.props.joints?.length ?? 0); index++)
-      this.targets?.write(
-        new Float32Array(8),
-        this.getJointStateOffset() + index * RIGID_BODY_JOINT_STATE_BYTES
-      );
+    if (this.destroyed || !this.device || !this.invalidation) return;
+    const encoder = this.device.createCommandEncoder();
+    const pass = encoder.beginComputePass();
+    this.invalidateState(pass);
+    pass.end();
+    this.device.submit(encoder.finish());
   }
 
   /** Optional asynchronous event readback. Concurrent readers share one snapshot/cursor. */
@@ -2321,6 +2367,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     for (const checkpoint of this.gpuCheckpoints) checkpoint.destroy();
     this.destroyed = true;
     this.control?.destroy();
+    this.invalidation?.destroy();
     this.queryComputation?.destroy();
     this.queryReduction?.destroy();
     for (const buffer of this.ownedBuffers) buffer.destroy();
