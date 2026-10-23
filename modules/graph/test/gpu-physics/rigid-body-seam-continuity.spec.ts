@@ -79,12 +79,12 @@ it.for(['ordered', 'parallel'] as const)(
 );
 
 it.for([
-  [2.2, 0, 0.4],
-  [2.2, 2.2, 0.4]
+  {kind: 'edge', position: [2.2, 0, 0.4]},
+  {kind: 'corner', position: [2.2, 2.2, 0.4]}
 ] as const)(
-  'preserves authored outer edge and corner contacts at %j',
+  'preserves authored boundary $kind contacts',
   {timeout: 120000},
-  async (position, context) => {
+  async ({position}, context) => {
     const device = await getWebGPUTestDevice();
     if (!device) return context.skip('WebGPU unavailable');
     const geometry = makeTriangleMeshGeometry(

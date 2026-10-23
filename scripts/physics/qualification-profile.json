@@ -1543,7 +1543,7 @@
           },
           {
             "file": "modules/graph/test/gpu-physics/rigid-body-seam-continuity.spec.ts",
-            "testPattern": "preserves authored outer edge and corner"
+            "testPattern": "preserves authored boundary"
           }
         ]
       }
