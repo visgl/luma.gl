@@ -153,8 +153,8 @@ semantic groups; fused evaluator dependencies can differ from that authored tree
 Existing `GPUSimpleGraphOperation` and `addEvaluator()` remain available for wrapping
 GPGPU expressions. Semantic scalar literals/arithmetic and vector multiply-add continue
 to work unchanged. The full GPUGraph semantic operations and GPGPU operation implementations
-are unchanged. Dynamic rebinding, texture/render operations, and transient resource planning
-remain outside this first pass.
+are unchanged. Render operations use the shared graph resource planner described below;
+evaluator storage and operation selection retain their existing implementation.
 
 ## Shared render operations
 
@@ -206,3 +206,12 @@ to the same evaluation scope encoder and leaves submission to the caller.
 Only the render primitive is portable to the full graph: evaluator execution is
 still a SimpleGraph phase. `GPUGraph` continues to require WebGPU. This API does not
 promise WebGL compute, storage textures, indirect dispatch, or multisample resolves.
+
+WebGL sampled textures must use the full default view. Selected mip/layer ranges are
+rejected because WebGL sampler bindings cannot represent those texture views. Render
+attachments may still select supported individual mip levels and layers.
+
+Before the first synchronous evaluator run, eagerly register its backend, for example
+`await backendRegistry.add('webgl', import('@luma.gl/gpgpu/operations/webgl'))` using
+`backendRegistry` from `@luma.gl/gpgpu`. Synchronous execution cannot wait for lazy
+backend imports. Render-only graphs do not need evaluator backend registration.

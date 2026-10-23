@@ -1112,6 +1112,15 @@ export class GPUCommandGraphBuilder<Parameters = void> {
         this.assertTexture(texture);
         validateTextureUseAgainstDescriptor(texture, resource.usage);
         validateTextureViewForUsage(resource.texture, resource.usage);
+        // WebGL sampler bindings use the underlying texture, not a selected view range.
+        if (
+          this.device.type === 'webgl' &&
+          resource.usage === 'sampled' &&
+          resource.texture instanceof GraphTextureView &&
+          !isDefaultGraphTextureView(resource.texture)
+        ) {
+          throw new Error('WebGL sampled textures require a full-resource view');
+        }
       } else {
         this.assertExternalTexture(resource.externalTexture);
         if (resource.usage !== 'sampled') {
