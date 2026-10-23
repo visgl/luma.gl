@@ -4,7 +4,8 @@
 
 import {describe, expect, it, vi} from 'vitest';
 import {GPUDataEvaluator, GPUVectorEvaluator, add, multiply} from '@luma.gl/gpgpu';
-import {GPUSimpleGraph} from '@luma.gl/gpu-graph/gpu-simple-graph';
+import {GPUSimpleGraph, GPUSimpleGraphOperation} from '@luma.gl/gpu-graph/gpu-simple-graph';
+import {GPUProgram, composite} from '@luma.gl/gpu-graph/gpu-core';
 import {NullDevice} from '@luma.gl/test-utils';
 
 describe('GPUSimpleGraph prototype', () => {
@@ -12,9 +13,9 @@ describe('GPUSimpleGraph prototype', () => {
     const device = new NullDevice({});
     const createBuffer = vi.spyOn(device, 'createBuffer');
     const graph = new GPUSimpleGraph(device);
-    const source = graph.add('source', GPUDataEvaluator.fromConstant(7));
-    const result = graph.add('result', add(multiply(source, 2), 3));
-    const unused = graph.add('unused', GPUDataEvaluator.fromConstant(99));
+    const source = graph.addEvaluator('source', GPUDataEvaluator.fromConstant(7));
+    const result = graph.addEvaluator('result', add(multiply(source, 2), 3));
+    const unused = graph.addEvaluator('unused', GPUDataEvaluator.fromConstant(99));
     const unusedEvaluate = vi.spyOn(unused, 'evaluate');
     const compiled = graph.compile({outputs: ['result']});
 
@@ -39,12 +40,12 @@ describe('GPUSimpleGraph prototype', () => {
   it('captures a reusable snapshot and borrows evaluator ownership', async () => {
     const device = new NullDevice({});
     const graph = new GPUSimpleGraph(device);
-    const source = graph.add('source', GPUDataEvaluator.fromConstant(4));
-    const result = graph.add('result', multiply(source, 2));
+    const source = graph.addEvaluator('source', GPUDataEvaluator.fromConstant(4));
+    const result = graph.addEvaluator('result', multiply(source, 2));
     const destroy = vi.spyOn(result, 'destroy');
     const compiled = graph.compile();
-    graph.clear();
-    graph.add('replacement', GPUDataEvaluator.fromConstant(100));
+    expect(() => graph.compile()).toThrow();
+    expect(() => graph.addEvaluator('replacement', source)).toThrow();
 
     const first = await compiled.run();
     const second = await compiled.run();
@@ -62,7 +63,7 @@ describe('GPUSimpleGraph prototype', () => {
     const source = GPUVectorEvaluator.fromGPUDataEvaluators(chunks);
     const mapped = source.mapGPUData(chunk => add(chunk, 10));
     const graph = new GPUSimpleGraph(device);
-    graph.add('mapped', mapped);
+    graph.addEvaluator('mapped', mapped);
     const compiled = graph.compile();
     const outputs = await compiled.run();
 
@@ -80,8 +81,8 @@ describe('GPUSimpleGraph prototype', () => {
     const device = new NullDevice({});
     const graph = new GPUSimpleGraph(device);
     const source = GPUDataEvaluator.fromConstant(2);
-    const shared = graph.add('shared', multiply(source, 3));
-    const alias = graph.add(
+    const shared = graph.addEvaluator('shared', multiply(source, 3));
+    const alias = graph.addEvaluator(
       'alias',
       new GPUDataEvaluator({source: shared, type: shared.type, size: shared.size})
     );
@@ -97,7 +98,7 @@ describe('GPUSimpleGraph prototype', () => {
   it('propagates backend errors and permits an explicit retry', async () => {
     const device = new NullDevice({});
     const graph = new GPUSimpleGraph(device);
-    const output = graph.add('output', GPUDataEvaluator.fromConstant(2));
+    const output = graph.addEvaluator('output', GPUDataEvaluator.fromConstant(2));
     vi.spyOn(output, 'evaluate').mockRejectedValueOnce(new Error('unsupported backend operation'));
     const compiled = graph.compile();
 
@@ -110,10 +111,10 @@ describe('GPUSimpleGraph prototype', () => {
   it('rejects duplicate names, missing outputs, and dependency cycles', () => {
     const device = new NullDevice({});
     const graph = new GPUSimpleGraph(device);
-    const source = graph.add('source', GPUDataEvaluator.fromConstant(1));
-    expect(() => graph.add('source', source)).toThrow();
-    expect(() => graph.compile({outputs: ['missing']})).toThrow();
-    const cyclic = graph.add('cyclic', add(source, 1));
+    const source = graph.addEvaluator('source', GPUDataEvaluator.fromConstant(1));
+    expect(() => graph.addEvaluator('source', source)).toThrow();
+    expect(() => new GPUSimpleGraph(device).compile({outputs: ['missing']})).toThrow();
+    const cyclic = graph.addEvaluator('cyclic', add(source, 1));
     const operation = cyclic.source;
     if (!operation || operation instanceof GPUDataEvaluator) throw new Error('Expected operation');
     operation.dependencies.push(cyclic);
@@ -128,6 +129,63 @@ describe('GPUSimpleGraph prototype', () => {
     const createBuffer = vi.spyOn(device, 'createBuffer');
     expect(await new GPUSimpleGraph(device).compile().run()).toEqual({});
     expect(createBuffer).not.toHaveBeenCalled();
+    device.destroy();
+  });
+});
+
+describe('GPUSimpleGraph semantic composition', () => {
+  it('shares semantic composites and inspection with GPUProgram', async () => {
+    const device = new NullDevice({});
+    const source = GPUDataEvaluator.fromConstant(3);
+    const output = multiply(source, 4);
+    const inputOperation = new GPUSimpleGraphOperation({id: 'input', evaluator: source});
+    const outputOperation = new GPUSimpleGraphOperation({id: 'output', evaluator: output});
+    const group = composite([inputOperation, composite([outputOperation], {id: 'inner'})], {
+      id: 'outer'
+    });
+    const program = new GPUProgram().add([group]);
+    const graph = new GPUSimpleGraph(device);
+    expect(graph.add([[group]])).toBe(graph);
+    expect(graph.operationTree).toEqual(program.operationTree);
+    expect(graph.operationTree[0].children?.[1].children?.[0]).toMatchObject({
+      id: 'output',
+      type: 'simple-graph-evaluator',
+      metadata: {outputs: [{name: 'output', kind: 'vector', shape: [1]}]}
+    });
+    const compiled = graph.compile({outputs: ['output']});
+    expect(compiled.operationTree).toEqual(program.operationTree);
+    expect(Object.keys(await compiled.run())).toEqual(['output']);
+    expect(Array.from(await output.readValue())).toEqual([12]);
+    expect(graph.capabilities).toEqual({
+      callerControlledSubmission: false,
+      dynamicBindings: false,
+      transientAllocation: false
+    });
+    output.destroy();
+    source.destroy();
+    device.destroy();
+  });
+
+  it('validates a whole group before registering any of it', async () => {
+    const device = new NullDevice({});
+    const source = GPUDataEvaluator.fromConstant(3);
+    const operation = new GPUSimpleGraphOperation({id: 'value', evaluator: source});
+    const graph = new GPUSimpleGraph(device);
+    expect(() => graph.add([operation, operation])).toThrow();
+    expect(() => graph.add(composite([operation, {id: 'unsupported', type: 'custom'}]))).toThrow();
+    expect(graph.operationTree).toEqual([]);
+    graph.add(operation);
+    expect((await graph.compile().run()).value.length).toBe(1);
+    source.destroy();
+    device.destroy();
+  });
+
+  it('freezes compilation after a validation failure', () => {
+    const device = new NullDevice({});
+    const graph = new GPUSimpleGraph(device);
+    expect(() => graph.compile({outputs: ['missing']})).toThrow();
+    expect(() => graph.compile()).toThrow();
+    expect(() => graph.add([])).toThrow();
     device.destroy();
   });
 });

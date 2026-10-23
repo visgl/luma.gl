@@ -5,6 +5,8 @@
 export {GPUSimpleGraph, CompiledGPUSimpleGraph} from './gpu-simple-graph';
 export type {
   GPUSimpleGraphCompileOptions,
-  GPUSimpleGraphEvaluator,
   GPUSimpleGraphNode
 } from './gpu-simple-graph';
+
+export {GPUSimpleGraphOperation} from './gpu-simple-graph-operation';
+export type {GPUSimpleGraphEvaluator} from './gpu-simple-graph-operation';

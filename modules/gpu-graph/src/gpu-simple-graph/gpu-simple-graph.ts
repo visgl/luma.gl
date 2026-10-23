@@ -6,8 +6,14 @@ import {assert, type Device} from '@luma.gl/core';
 import {GPUDataEvaluator, GPUVectorEvaluator} from '@luma.gl/gpgpu';
 import type {GPUVector, GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 
-/** Lazy, evaluator-backed value accepted by the simple graph prototype. */
-export type GPUSimpleGraphEvaluator = GPUDataEvaluator | GPUVectorEvaluator;
+import {
+  GPUCompositeOperation,
+  getGPUOperationTree,
+  type GPUOperationLike,
+  type GPUOperationTree,
+  type GPUProgramOperation
+} from '@luma.gl/gpu-graph/gpu-core';
+import {GPUSimpleGraphOperation, type GPUSimpleGraphEvaluator} from './gpu-simple-graph-operation';
 
 /** Inspection record for one evaluator in dependency order. */
 export type GPUSimpleGraphNode = {
@@ -32,36 +38,84 @@ export type GPUSimpleGraphCompileOptions = {
 export class GPUSimpleGraph {
   readonly device: Device;
   readonly id: string;
-  private readonly evaluators = new Map<string, GPUSimpleGraphEvaluator>();
+  private readonly evaluators = new Map<string, GPUSimpleGraphOperation>();
+  private readonly programOperations: GPUProgramOperation[] = [];
+  private compiled = false;
+
+  /** Execution capabilities; evaluators retain control of backend submission. */
+  readonly capabilities = Object.freeze({
+    callerControlledSubmission: false,
+    dynamicBindings: false,
+    transientAllocation: false
+  });
 
   constructor(device: Device, props: {id?: string} = {}) {
     this.device = device;
     this.id = props.id ?? 'simple-graph';
   }
 
-  /** Registers a lazy value and returns it unchanged for use by later operations. */
-  add<Evaluator extends GPUSimpleGraphEvaluator>(
+  /** Accepts evaluator operations, semantic composites, and recursively nested arrays. */
+  add(operation: GPUOperationLike): this {
+    // Compilation freezes the builder, as it does for GPUGraph.
+    assert(!this.compiled);
+    const pending = new Map<string, GPUSimpleGraphOperation>();
+    const operations: GPUProgramOperation[] = [];
+    const visit = (value: GPUOperationLike): void => {
+      if (Array.isArray(value)) {
+        for (const child of value) visit(child);
+      } else if (value instanceof GPUCompositeOperation) {
+        for (const child of value.operations) visit(child);
+      } else {
+        // This executor only supports evaluator-backed semantic operations.
+        assert(value instanceof GPUSimpleGraphOperation);
+        // Operation names must be nonempty and unique, including within one group.
+        assert(value.id && !this.evaluators.has(value.id) && !pending.has(value.id));
+        pending.set(value.id, value);
+      }
+    };
+    const collect = (value: GPUOperationLike): void => {
+      if (Array.isArray(value)) {
+        for (const child of value) collect(child);
+      } else {
+        // Arrays were handled above; this is one semantic operation or group.
+        operations.push(value as GPUProgramOperation);
+      }
+    };
+    visit(operation);
+    collect(operation);
+    for (const [identifier, value] of pending) this.evaluators.set(identifier, value);
+    this.programOperations.push(...operations);
+    return this;
+  }
+
+  /** Convenience adapter preserving the existing expression-authoring style. */
+  addEvaluator<Evaluator extends GPUSimpleGraphEvaluator>(
     identifier: string,
     evaluator: Evaluator
   ): Evaluator {
-    // Each registered value needs a unique name within this graph.
-    assert(!this.evaluators.has(identifier));
-    this.evaluators.set(identifier, evaluator);
+    this.add(new GPUSimpleGraphOperation({id: identifier, evaluator}));
     return evaluator;
+  }
+
+  get operationTree(): readonly GPUOperationTree[] {
+    return Object.freeze(this.programOperations.map(getGPUOperationTree));
   }
 
   /** Captures selected roots and an inspectable dependency plan without executing work. */
   compile(options: GPUSimpleGraphCompileOptions = {}): CompiledGPUSimpleGraph {
+    // A graph is compiled once, including when compilation fails.
+    assert(!this.compiled);
+    this.compiled = true;
     const lastIdentifier = Array.from(this.evaluators.keys()).at(-1);
     const outputNames = options.outputs ?? (lastIdentifier === undefined ? [] : [lastIdentifier]);
     const roots = outputNames.map(identifier => {
-      const evaluator = this.evaluators.get(identifier);
+      const operation = this.evaluators.get(identifier);
       // Selected outputs must be registered before compiling the graph.
-      assert(evaluator);
-      return {identifier, evaluator};
+      assert(operation);
+      return operation;
     });
     const identifiers = new Map<GPUSimpleGraphEvaluator, string>();
-    for (const [identifier, evaluator] of this.evaluators) {
+    for (const [identifier, {evaluator}] of this.evaluators) {
       if (!identifiers.has(evaluator)) identifiers.set(evaluator, identifier);
     }
     const usedIdentifiers = new Set(this.evaluators.keys());
@@ -100,12 +154,7 @@ export class GPUSimpleGraph {
       visited.add(evaluator);
     };
     for (const {evaluator} of roots) visit(evaluator);
-    return new CompiledGPUSimpleGraph(this.device, nodes, roots);
-  }
-
-  /** Forgets registration metadata without releasing caller-owned evaluators or buffers. */
-  clear(): void {
-    this.evaluators.clear();
+    return new CompiledGPUSimpleGraph(this.device, nodes, roots, this.operationTree);
   }
 }
 
@@ -113,18 +162,27 @@ export class GPUSimpleGraph {
 export class CompiledGPUSimpleGraph {
   readonly nodes: readonly GPUSimpleGraphNode[];
   readonly outputs: Readonly<Record<string, GPUSimpleGraphEvaluator>>;
+  readonly operationTree: readonly GPUOperationTree[];
+  private readonly executionPlan: readonly GPUSimpleGraphOperation[];
   private readonly device: Device;
   private running = false;
 
   constructor(
     device: Device,
     nodes: readonly GPUSimpleGraphNode[],
-    roots: readonly {identifier: string; evaluator: GPUSimpleGraphEvaluator}[]
+    roots: readonly GPUSimpleGraphOperation[],
+    operationTree: readonly GPUOperationTree[]
   ) {
     this.device = device;
-    this.nodes = nodes;
-    this.outputs = Object.fromEntries(
-      roots.map(({identifier, evaluator}) => [identifier, evaluator])
+    this.nodes = Object.freeze(
+      nodes.map(node =>
+        Object.freeze({...node, dependencies: Object.freeze([...node.dependencies])})
+      )
+    );
+    this.executionPlan = Object.freeze([...roots]);
+    this.operationTree = operationTree;
+    this.outputs = Object.freeze(
+      Object.fromEntries(roots.map(({id, evaluator}) => [id, evaluator]))
     );
   }
 
@@ -138,8 +196,8 @@ export class CompiledGPUSimpleGraph {
     this.running = true;
     try {
       const results: [string, GPUVector][] = [];
-      for (const [identifier, evaluator] of Object.entries(this.outputs)) {
-        results.push([identifier, await evaluator.evaluate(this.device)]);
+      for (const {id, evaluator} of this.executionPlan) {
+        results.push([id, await evaluator.evaluate(this.device)]);
       }
       return Object.fromEntries(results);
     } finally {

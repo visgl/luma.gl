@@ -5,7 +5,8 @@
 import {expect, it} from 'vitest';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {GPUDataEvaluator, add, multiply} from '@luma.gl/gpgpu';
-import {GPUSimpleGraph} from '@luma.gl/gpu-graph/gpu-simple-graph';
+import {GPUSimpleGraph, GPUSimpleGraphOperation} from '@luma.gl/gpu-graph/gpu-simple-graph';
+import {composite} from '@luma.gl/gpu-graph/gpu-core';
 
 for (const [backend, getDevice] of [
   ['webgl', getWebGLTestDevice],
@@ -14,11 +15,14 @@ for (const [backend, getDevice] of [
   it(`GPUSimpleGraph executes a row map on ${backend} without graph-managed readback`, async () => {
     const device = await getDevice();
     const graph = new GPUSimpleGraph(device);
-    const source = graph.add(
+    const source = graph.addEvaluator(
       'source',
       GPUDataEvaluator.fromArray(new Float32Array([1, 2, 3]), {size: 1})
     );
-    const output = graph.add('output', add(multiply(source, 2), 1));
+    const output = add(multiply(source, 2), 1);
+    graph.add([
+      composite([new GPUSimpleGraphOperation({id: 'output', evaluator: output})], {id: 'map'})
+    ]);
     const compiled = graph.compile();
     try {
       const result = await compiled.run();
