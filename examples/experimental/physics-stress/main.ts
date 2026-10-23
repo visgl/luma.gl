@@ -24,6 +24,7 @@ const context = canvas.getContext('2d')!;
 const select = document.querySelector<HTMLSelectElement>('#scene')!;
 const solver = document.querySelector<HTMLSelectElement>('#solver')!;
 const pairWork = document.querySelector<HTMLSelectElement>('#pair-work')!;
+const runLimit = document.querySelector<HTMLSelectElement>('#run-limit')!;
 const timestep = document.querySelector<HTMLSelectElement>('#timestep')!;
 const status = document.querySelector<HTMLOutputElement>('#status')!;
 const pause = document.querySelector<HTMLButtonElement>('#pause')!;
@@ -55,7 +56,8 @@ let restartRequested = false;
 let stopped = false;
 let disposed = false;
 let states: GPURigidBodyState[] = [];
-let stepCount = 240;
+let stepCount = 0;
+let quietSince: number | null = null;
 let lastSolverWork: Awaited<ReturnType<GPURigidBodyRecoveryRunner['world']['readSolverWork']>> =
   null;
 let trails: number[][][] = [];
@@ -74,7 +76,13 @@ async function restart() {
   restartRequested = false;
   busy = true;
   exportButton.disabled = true;
-  reset.disabled = select.disabled = solver.disabled = timestep.disabled = pairWork.disabled = true;
+  reset.disabled =
+    select.disabled =
+    solver.disabled =
+    timestep.disabled =
+    runLimit.disabled =
+    pairWork.disabled =
+      true;
   let replacement: GPURigidBodyRecoveryRunner | undefined;
   const nextScene = selectedScene;
   try {
@@ -84,7 +92,10 @@ async function restart() {
       Number(timestep.value)
     );
     nextConfiguration.props.compactContacts = pairWork.value === 'compact';
-    const nextStepCount = getStressStepCount(nextScene, nextConfiguration.props.timeStep!);
+    const nextStepCount = getStressStepCount(
+      nextConfiguration.props.timeStep!,
+      Number(runLimit.value)
+    );
     status.value = 'Compiling…';
     replacement = await GPURigidBodyRecoveryRunner.create(device, nextConfiguration.props, {
       maximumReplayTicks: nextStepCount
@@ -104,6 +115,7 @@ async function restart() {
     states = nextStates;
     samples = [];
     trails = [];
+    quietSince = null;
     stopped = false;
     delete status.dataset.accepted;
     status.value = `READY · tick 0/${stepCount} · ${states.length} bodies${paused ? '\nPaused · Resume to advance' : ''}`;
@@ -119,6 +131,7 @@ async function restart() {
       select.disabled =
       solver.disabled =
       timestep.disabled =
+      runLimit.disabled =
       pairWork.disabled =
         false;
     if (disposed) {
@@ -132,6 +145,7 @@ async function restart() {
 reset.onclick = restart;
 solver.onchange = restart;
 timestep.onchange = restart;
+runLimit.onchange = restart;
 pairWork.onchange = restart;
 pause.onclick = () => {
   paused = !paused;
@@ -294,7 +308,20 @@ async function advance() {
         ? `\nVertical error: ${Math.abs(states[0].position[2] - (8 - 5 * time * time)).toFixed(5)}`
         : '';
     status.value = `${result.accepted ? 'ACCEPTED' : 'REJECTED'} · tick ${runner.tick}/${stepCount} · ${time.toFixed(2)} s\nRetries: ${samples.reduce((total, sample) => total + sample.result.retries, 0)} · replayed: ${samples.reduce((total, sample) => total + sample.result.replayedTicks, 0)} ticks\nPairs: ${capacity.maximumPairs} · buffers: ${(capacity.ownedBufferBytes / 1048576).toFixed(2)} MiB\nNodes: ${runner.graph.stats.nodeOrder.length} · peak candidates: ${result.diagnostics.maximumCandidatePairs}\nIncomplete CCD bodies: ${result.diagnostics.incompleteContinuousBodies}\nCompletion p50: ${sorted[Math.floor((sorted.length - 1) * 0.5)].toFixed(2)} ms\nCompletion p95: ${sorted[Math.floor((sorted.length - 1) * 0.95)].toFixed(2)} ms${lastSolverWork ? `\nPair workgroups/iteration: ${lastSolverWork.pairWorkgroups} / ${Math.ceil(capacity.maximumPairs / 64)} capacity${lastSolverWork.compacted ? ` · ${lastSolverWork.activeContacts} contacts` : ' · scan'}` : ''}${error}`;
-    stopped = !result.accepted || runner.tick === stepCount;
+    const quiet = states.every((state, index) => {
+      const body = configuration.props.bodies[index];
+      return (
+        body.mode === 'static' ||
+        (body.mass === 0 && body.mode !== 'dynamic') ||
+        (Math.hypot(...state.velocity) < 0.04 && Math.hypot(...state.angularVelocity) < 0.04)
+      );
+    });
+    quietSince = quiet ? (quietSince ?? time) : null;
+    const settled = time >= 30 && quietSince !== null && time - quietSince >= 2;
+    stopped = !result.accepted || settled || runner.tick >= stepCount;
+    if (settled) status.value += '\nSettled · Reset to replay';
+    else if (runner.tick >= stepCount)
+      status.value += '\nRun limit reached · increase limit or Reset to replay';
   } catch (error) {
     fail(error);
   } finally {
@@ -304,6 +331,7 @@ async function advance() {
       select.disabled =
       solver.disabled =
       timestep.disabled =
+      runLimit.disabled =
       pairWork.disabled =
         false;
     if (disposed) {

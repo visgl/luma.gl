@@ -141,7 +141,7 @@ export function makeStressScene(
     return {
       description:
         scene === 'deepStack'
-          ? 'Eight unit boxes run for six simulated seconds with sleeping disabled, 64 iterations, warm-start factor 0.8 and recovery fraction 0.1. Numerical checks sample support separation, height drift and residual energy at 1/120 and 1/240 s. Other timesteps are exploratory.'
+          ? 'Eight unit boxes use sleeping disabled, 64 iterations, warm-start factor 0.8 and recovery fraction 0.1. The six-second numerical reference checks sample support separation, height drift and residual energy at 1/120 and 1/240 s; longer interactive runs are exploratory. Other timesteps are exploratory.'
           : 'Four unit boxes have a 0.1-unit center-of-mass offset. The six-second numerical fixture measures drift, support separation and residual energy with sleeping disabled. Compare the ordered and parallel solvers.',
       props: {
         ...props,
@@ -198,6 +198,6 @@ export function isStressScene(value: string): value is StressScene {
   return Object.hasOwn(STRESS_SCENES, value);
 }
 
-export function getStressStepCount(scene: StressScene, timeStep: number): number {
-  return scene === 'deepStack' || scene === 'offsetStack' ? Math.round(6 / timeStep) : 240;
+export function getStressStepCount(timeStep: number, maximumSeconds: number): number {
+  return Math.round(maximumSeconds / timeStep);
 }

@@ -62,7 +62,7 @@ after impacts. This does not imply dynamic-pair or rotating-convex CCD support.
 The scene selector includes Newton's cradle, a distance pendulum, motorized hinge and powered slider.
 The cradle and pendulum have GPU-driven visible tethers. Reset releases the raised
 cradle ball again. When auto-play is off, the cradle automatically resets after
-60 seconds of simulated motion without moving the camera; pausing also pauses
+120 seconds of simulated motion without moving the camera; pausing also pauses
 this timer. The cradle uses a 1/480-second fixed step (other scenes use
 1/120 second), so each closely spaced impact is resolved before the next pair closes.
 For this small scene, all-pairs discovery and eight solver iterations reduce
@@ -113,4 +113,6 @@ Rendering uses at least two device pixels per CSS pixel for smoother silhouettes
 
 The frame is authored as a CPU scenegraph of geometry nodes before GPU allocation. Rendering and collision extraction consume the same node geometry and accumulated transforms. Axis-aligned cubes retain box colliders; other convex geometry uses a transformed convex hull. A node may supply a world-space collision override or disable collision explicitly. This example adapter is for convex static frame pieces, not automatic decomposition of arbitrary concave models.
 
-Ball impacts use restitution 0.985, with low-speed restitution disabled below 0.05. Exponential linear/angular damping (0.08/0.12 inverse seconds) approximates air and suspension losses, including collective swings without impacts. The existing one-minute reset remains active. Steel roughness is 0.07 for sharper PBR reflections without raising scene exposure.
+Ball impacts use restitution 0.985, with low-speed restitution disabled below 0.05. Exponential linear/angular damping (0.08/0.12 inverse seconds) approximates air and suspension losses, including collective swings without impacts. The two-minute reset remains active. Steel roughness is 0.07 for sharper PBR reflections without raising scene exposure.
+
+Auto-play now waits at least 10 simulated seconds and three quiet seconds before switching scenes; active mechanisms get up to two minutes.

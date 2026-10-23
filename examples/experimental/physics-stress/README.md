@@ -27,3 +27,7 @@ Gold trails join sampled centers; they do not reconstruct between-impact paths.
 CCD applies to selected centered spheres against static obstacles only. Rotating
 and dynamic obstacles remain discrete. Meshes are two-sided triangle surfaces, not
 solid volumes. Rejection is expected in the budget scenario; no partial step is accepted.
+
+Interactive runs now allow 30 seconds to two minutes of simulated time. They stop
+after at least 30 seconds plus two seconds of quiet motion, or at the selected
+limit. Numerical qualification fixtures keep their independently documented duration.
