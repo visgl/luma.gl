@@ -170,3 +170,16 @@ mipmap generation, cross-graph scheduling, and native heap residency are not pro
 For exact method contracts and examples, see [GPUCommandGraph](/docs/api-reference/experimental/gpu-core/gpu-command-graph),
 [transient lifetimes](/docs/api-reference/experimental/gpu-core/gpu-transient-lifetimes),
 and [texture history](/docs/api-reference/experimental/gpu-core/gpu-texture-history).
+
+## Portable render primitives
+
+`GPURenderOperation` packages a factory of ordinary render nodes for both WebGPU
+`GPUGraph` / `GPUProgram` and WebGL-capable `GPUSimpleGraph`. Its
+`GPURenderOperationResources` interface exposes the same buffer imports, texture
+imports, transient textures, and texture views described above. Each compilation
+creates independent handles and executable state. Declare resource reads and
+writes on each node; the containing graph owns scheduling, framebuffers, and
+transient textures, while imported resources remain borrowed.
+
+See [SimpleGraph shared render operations](../../graph/gpu-simple-graph.md#shared-render-operations)
+for the portable execution contract and an example.
