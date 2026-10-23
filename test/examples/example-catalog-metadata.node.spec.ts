@@ -137,7 +137,7 @@ describe('live example catalog metadata', () => {
   });
 
   test('provides complete, curated filters for every sidebar example', () => {
-    expect(LIVE_EXAMPLES).toHaveLength(127);
+    expect(LIVE_EXAMPLES).toHaveLength(128);
 
     for (const {id, metadata} of LIVE_EXAMPLES) {
       expect(metadata, `${id} requires sidebar_custom_props`).toBeDefined();
@@ -281,11 +281,13 @@ describe('live example catalog metadata', () => {
     for (const {id, categories, metadata} of LIVE_EXAMPLES) {
       const expectedBackends = WEBGL_ONLY_EXAMPLES.has(id)
         ? ['webgl2']
-        : ['WebGPU', 'GPGPU'].includes(categories[0]) ||
-            categories[0].startsWith('GPU Graph Layers') ||
-            WEBGPU_ONLY_EXAMPLES.has(id)
-          ? ['webgpu']
-          : ['webgpu', 'webgl2'];
+        : id === 'v10/gpu-simple-graph'
+          ? ['webgpu', 'webgl2']
+          : ['WebGPU', 'GPGPU'].includes(categories[0]) ||
+              categories[0].startsWith('GPU Graph Layers') ||
+              WEBGPU_ONLY_EXAMPLES.has(id)
+            ? ['webgpu']
+            : ['webgpu', 'webgl2'];
 
       expect(metadata?.backends, `${id} has inaccurate backend metadata`).toEqual(expectedBackends);
     }
