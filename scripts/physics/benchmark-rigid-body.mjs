@@ -59,7 +59,7 @@ async function runBenchmark(options) {
   const mechanism = makeMechanism(fixture);
   const stress = fixture === 'sparseContacts' ? makeStressScene('sparseContacts', solver, timeStep).props : null;
   const bodies = stress?.bodies ?? mechanism?.bodies ?? makeRigidBodyScene(fixture);
-  const world = new GPURigidBodyWorld({bodies, joints: mechanism?.joints, solver, compactContacts, iterations, timeStep, warmStartFactor, maximumPairs, broadPhase, failurePolicy, ...(fixture === 'cradle' ? {restitutionThreshold: 0} : {}), gravity: stress?.gravity ?? getRigidBodySceneGravity(fixture)});
+  const world = new GPURigidBodyWorld({...stress, bodies, joints: mechanism?.joints ?? stress?.joints, solver, compactContacts, iterations, timeStep, warmStartFactor, maximumPairs: maximumPairs ?? stress?.maximumPairs, broadPhase, failurePolicy, ...(fixture === 'cradle' ? {restitutionThreshold: 0} : {}), gravity: stress?.gravity ?? getRigidBodySceneGravity(fixture)});
   let graph;
   try {
     const definition = new GPUCommandGraph(device);
@@ -92,7 +92,7 @@ async function runBenchmark(options) {
     };
     return {formatVersion: 1, stage: 'full-rigid-body-step', fixture, objectCount: bodies.length,
       solverWork: await world.readSolverWork(),
-      settings: {solver, compactContacts, jointCount: mechanism?.joints.length ?? 0, failurePolicy, broadPhase, iterations, timeStep, warmStartFactor, maximumPairs: world.maximumPairs},
+      settings: {solver, compactContacts, sleepAfter: stress?.sleepAfter ?? 0.5, restitutionThreshold: stress?.restitutionThreshold ?? (fixture === 'cradle' ? 0 : 0.5), jointCount: mechanism?.joints.length ?? 0, failurePolicy, broadPhase, iterations, timeStep, warmStartFactor, maximumPairs: world.maximumPairs},
       sampleCount: samples, warmupCount: warmup, adapter: device.info,
       timestampQueries: device.features.has('timestamp-query'), compileMilliseconds,
       graphNodes: graph.stats.nodeOrder.length, capacity: world.getCapacityInfo(),

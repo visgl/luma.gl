@@ -54,11 +54,11 @@ fixture retains 80 simultaneous contacts in two workgroups, compared with 64 ful
 capacity workgroups at 4096 slots. Body gathers and collision discovery still run.
 
 An exploratory Apple/Metal-3 run (30 samples, no warmup) measured median full-step
-GPU work of 0.610 ms compacted versus 1.041 ms scanning. Median completion with
-diagnostics was 2.5 versus 2.6 ms. The two extra compaction passes and host/submission
+GPU work of 0.332 ms compacted versus 0.426 ms scanning. Median completion with
+diagnostics was 15.5 versus 15.8 ms. The two extra compaction passes and host/submission
 costs remain part of these totals. Contacts separate early; this is predominantly
-an empty/sparse queue measurement, not a dense-pile result. Other browser work was
-allowed on the machine. No cross-device or statistical performance gate is claimed.
+an empty/sparse queue measurement, not a dense-pile result. Stack qualification and website validation ran concurrently on the machine; host/GPU
+contention strongly affects completion latency. No cross-device or statistical performance gate is claimed.
 
 The machine-readable summary is [gpu-physics-compaction.json](./gpu-physics-compaction.json).
 Reproduce both modes using the same timestep, solver iterations and capacity:

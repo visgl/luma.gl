@@ -138,8 +138,9 @@ export function makeStressScene(
       props: {
         ...props,
         iterations: 64,
+        gravity: [0, 0, -9.81],
         bodies: [
-          ...props.bodies,
+          {...props.bodies[0], friction: 0.8},
           ...Array.from(
             {length: scene === 'deepStack' ? 8 : 4},
             (_, level): GPURigidBody => ({

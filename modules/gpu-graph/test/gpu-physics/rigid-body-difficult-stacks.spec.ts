@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import {expect, it} from 'vitest';
+import {Matrix4} from '@math.gl/core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {GPUCommandGraph} from '../../src/gpu-core';
 import {GPURigidBodyWorld, type GPURigidBody, type GPURigidBodyState} from '../../src/gpu-physics';
@@ -81,11 +82,24 @@ it.for(
         for (let level = 1; level < finalState.length; level++) {
           const mass = level === scenario.levels ? scenario.load : 1;
           const body = finalState[level];
+          // Unit-cube inertia about the authored COM: the parallel-axis term affects Y/Z.
+          // Rotate world angular velocity back to that body frame before contracting the tensor.
+          const localAngularVelocity = new Matrix4()
+            .fromQuaternion(body.orientation)
+            .invert()
+            .transformAsVector(body.angularVelocity);
+          const inertia = [
+            mass / 6,
+            mass * (1 / 6 + scenario.centerOffset ** 2),
+            mass * (1 / 6 + scenario.centerOffset ** 2)
+          ];
           kineticEnergy +=
             0.5 *
-            mass *
-            (body.velocity.reduce((sum, value) => sum + value * value, 0) +
-              body.angularVelocity.reduce((sum, value) => sum + value * value, 0) / 6);
+            (mass * body.velocity.reduce((sum, value) => sum + value * value, 0) +
+              localAngularVelocity.reduce(
+                (sum, value, axis) => sum + inertia[axis] * value * value,
+                0
+              ));
           expect(body.sleeping).toBe(false);
         }
         expect(kineticEnergy).toBeLessThan(0.02);
