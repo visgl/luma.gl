@@ -5,12 +5,12 @@ import {DGGSCellProjectionBenchmark} from '@site/src/components/docs/dggs-cell-p
 
 <ExperimentalDocsTabs active="gpu-a5" />
 
-`@luma.gl/gpu-graph/gpu-a5` brings the same GPU-resident cell-center workflow to A5 indexes. Its API is
+`@luma.gl/graph/gpu-a5` brings the same GPU-resident cell-center workflow to A5 indexes. Its API is
 intentionally identical to the H3 adapter, allowing graph builders to change the grid family
 without changing buffer layouts or downstream coordinate consumers.
 
 ```ts
-import {GPUA5CellProjection} from '@luma.gl/gpu-graph/gpu-a5';
+import {GPUA5CellProjection} from '@luma.gl/graph/gpu-a5';
 
 new GPUA5CellProjection({
   cells,

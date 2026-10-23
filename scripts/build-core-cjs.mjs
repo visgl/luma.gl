@@ -44,7 +44,7 @@ process.stdout.write('Verified CommonJS device identity and dynamic imports.\n')
 
 // The focused execution-graph entry point must reuse the core scheduler constructors.
 // Bundling it separately would make instanceof checks depend on the import path.
-const graphDistributionDirectory = new URL('../modules/gpu-graph/dist/', import.meta.url);
+const graphDistributionDirectory = new URL('../modules/graph/dist/', import.meta.url);
 const graphEntryPoint = new URL('gpu-graph/index.js', graphDistributionDirectory);
 const graphSource = await readFile(graphEntryPoint, 'utf8');
 const {code: graphCode} = await transform(

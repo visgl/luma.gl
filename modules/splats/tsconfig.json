@@ -28,7 +28,7 @@
       "path": "../gpgpu"
     },
     {
-      "path": "../gpu-graph"
+      "path": "../graph"
     }
   ]
 }

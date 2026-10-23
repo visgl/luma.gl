@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPURigidBody, GPURigidBodyJoint} from '@luma.gl/gpu-graph/gpu-physics';
+import type {GPURigidBody, GPURigidBodyJoint} from '@luma.gl/graph/gpu-physics';
 
 import type {GroupNode} from '@luma.gl/engine';
 import {makeCradleFrame, makeCradleFrameBodies} from './cradle-geometry';

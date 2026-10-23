@@ -95,7 +95,7 @@ encodings (Float32, double-single and raw binary64):
 
 ```sh
 yarn test-headless --no-coverage \
-  modules/gpu-graph/test/gpu-project/projection-routing.spec.ts
+  modules/graph/test/gpu-project/projection-routing.spec.ts
 ```
 
 Then collect uninstrumented, production-like samples (two warmups, five measurements):
@@ -105,7 +105,7 @@ VITE_LUPROJ_REVISION=<commit-or-described-working-tree> \
 VITE_LUPROJ_ROUTING_ROWS=4096,65536,262144 \
 VITE_LUPROJ_ROUTING_CONSUMERS=1,4 \
 yarn test-browser-benchmarks --silent=false --reporter=verbose \
-  modules/gpu-graph/test/gpu-project/projection-routing-performance.spec.ts
+  modules/graph/test/gpu-project/projection-routing-performance.spec.ts
 ```
 
 For a **separate** instrumented kernel capture, add `VITE_LUPROJ_ROUTING_GPU_TIMING=true`.

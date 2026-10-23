@@ -15,15 +15,15 @@ import {
   GPUReduction,
   GPUScan,
   type CompiledGPUCommandGraph
-} from '@luma.gl/gpu-graph/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 import {
   GPUDataFrame,
   type CompiledGPUDataFrameQuery,
   type GPUDataFrameQueryParameters
-} from '@luma.gl/gpu-graph/gpu-dataframe';
-import {planGPUDataFrameQuery} from '@luma.gl/gpu-graph/gpu-sql';
+} from '@luma.gl/graph/gpu-dataframe';
+import {planGPUDataFrameQuery} from '@luma.gl/graph/gpu-sql';
 import {type GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {GPURecordBatch, GPUTable} from '@luma.gl/gpu-graph/gpu-tables';
+import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import * as arrow from 'apache-arrow';
 import {

@@ -10,7 +10,7 @@ predicting motion under forces and finding impulses that prevent objects from pa
 through each other while allowing bouncing, sliding, rolling and constrained movement.
 The difficult part is making those interactions stable and fast when many bodies touch.
 
-luma.gl's experimental `@luma.gl/gpu-graph/gpu-physics` module approaches physics as a GPU
+luma.gl's experimental `@luma.gl/graph/gpu-physics` module approaches physics as a GPU
 computation pipeline. It reuses sorting, scanning and command-graph infrastructure,
 keeps simulation state in buffers, and makes that state available to rendering. The
 long-term goal is a state-of-the-art GPU rigid-body library. Complete, performant support
@@ -267,6 +267,6 @@ GPU physics library.
 
 - [GPGPU programming](/docs/api-guide/gpu/gpgpu)
 - [GPU command graphs](/docs/api-reference/experimental/gpu-core/gpu-command-graph)
-- [Physics implementation and limitations](https://github.com/visgl/luma.gl/blob/master/modules/gpu-graph/src/gpu-physics/README.md)
+- [Physics implementation and limitations](https://github.com/visgl/luma.gl/blob/master/modules/graph/src/gpu-physics/README.md)
 - [glTF physics adapter profile](https://github.com/visgl/luma.gl/blob/master/modules/gltf/src/physics/README.md)
 - [Physics roadmap](https://github.com/visgl/luma.gl/blob/master/dev-docs/roadmaps/gpu-physics-roadmap.md)

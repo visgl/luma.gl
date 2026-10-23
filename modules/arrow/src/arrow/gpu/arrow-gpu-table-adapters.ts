@@ -26,7 +26,7 @@ import {
   GPUTable,
   type GPURecordBatchSourceInfo,
   type GPUField
-} from '@luma.gl/gpu-graph/gpu-tables';
+} from '@luma.gl/graph/gpu-tables';
 import {
   Data,
   DataType,

@@ -5,7 +5,7 @@
 import {Buffer, Framebuffer, type ShaderLayout} from '@luma.gl/core';
 import {makeArrowFixedSizeListVector, makeGPUTableFromArrowTable} from '@luma.gl/arrow';
 import {getGPUVectorBuffer, getRequiredGPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {TableTransform} from '@luma.gl/gpu-graph/gpu-tables';
+import {TableTransform} from '@luma.gl/graph/gpu-tables';
 import {
   AnimationLoopTemplate,
   AnimationProps,

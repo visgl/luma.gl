@@ -84,7 +84,7 @@ The two APIs exchange caller-owned table resources without repacking them. A mat
 result is a `GPUVector`, which can be imported into a command graph:
 
 ```ts
-import {GPUCommandGraph} from '@luma.gl/gpu-graph/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 
 const evaluatedVector = await adjusted.evaluate(webgpuDevice);
 

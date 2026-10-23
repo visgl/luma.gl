@@ -53,6 +53,10 @@ const config = getDocusaurusConfig({
       {
         redirects: [
           {
+            from: ['/docs/api-reference/gpu-graph'],
+            to: '/docs/api-reference/graph'
+          },
+          {
             from: ['/examples/showcase/crossfilter-supremacy'],
             to: '/examples/showcase/million-row-crossfilter'
           },

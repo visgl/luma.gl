@@ -1,10 +1,10 @@
 import React, {type ReactNode, useEffect, useId, useState} from 'react';
 
-import type {DGGSCellFamily, DGGSCellProjectionKind} from '@luma.gl/gpu-graph/gpu-dggs';
+import type {DGGSCellFamily, DGGSCellProjectionKind} from '@luma.gl/graph/gpu-dggs';
 import {
   runGPUDGGSCellProjectionBenchmark,
   type GPUDGGSCellProjectionBenchmarkReport
-} from '@luma.gl/gpu-graph/gpu-dggs/benchmarks';
+} from '@luma.gl/graph/gpu-dggs/benchmarks';
 
 import {createDevice, useStore} from '../../react-luma/store/device-store';
 import {LiveBenchmarkPanel} from './live-benchmark-panel';

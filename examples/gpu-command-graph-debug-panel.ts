@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUCommandGraphInspectorSnapshot} from '@luma.gl/gpu-graph/gpu-core';
+import type {GPUCommandGraphInspectorSnapshot} from '@luma.gl/graph/gpu-core';
 import {makeHtmlCustomPanel} from './example-panels';
 import {
   GPUCommandGraphInspectorPanel,

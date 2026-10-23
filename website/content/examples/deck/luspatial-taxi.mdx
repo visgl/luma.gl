@@ -15,8 +15,8 @@ import {DeckGPUSpatialTaxiExample} from '@site/src/examples';
 
 This focused integration keeps projection, spatial compute, and map rendering in their natural
 layers. The deck.gl `MapView` owns pan, zoom, picking, and the camera; MapLibre supplies a
-synchronized OpenFreeMap dark basemap; `@luma.gl/gpu-graph/gpu-project` projects the source coordinates; and
-`@luma.gl/gpu-graph/geospatial` indexes and queries the resident points.
+synchronized OpenFreeMap dark basemap; `@luma.gl/graph/gpu-project` projects the source coordinates; and
+`@luma.gl/graph/geospatial` indexes and queries the resident points.
 
 The uniform grid stores position-row indices, keeping candidate addressing distinct from optional
 application IDs. Both the viewport and radius queries use the default row-index output and write it

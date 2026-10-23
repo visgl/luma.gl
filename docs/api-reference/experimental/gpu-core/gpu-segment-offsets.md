@@ -41,7 +41,7 @@ without inventing an empty child. Empty input writes zero to both `segmentOffset
 ## Usage
 
 ```ts
-import {GPUFlagOffsets, GPUSegmentOffsets} from '@luma.gl/gpu-graph/gpu-core';
+import {GPUFlagOffsets, GPUSegmentOffsets} from '@luma.gl/graph/gpu-core';
 
 graph.add([
   new GPUFlagOffsets({

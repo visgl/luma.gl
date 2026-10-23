@@ -21,7 +21,7 @@ buffers and typed arrays; the
 | --- | --- |
 | Portable lazy vector expressions on CPU, WebGL 2, or WebGPU | [GPU Evaluations with GPUVectorEvaluator](/docs/api-guide/gpu/gpu-evaluations) |
 | Primitive GPU chunks, vectors, and memory formats | [`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/gpgpu/gpu-data) |
-| Batch-preserving GPU tables and schemas | [`@luma.gl/gpu-graph/gpu-tables`](/docs/api-reference/experimental/gpu-tables) |
+| Batch-preserving GPU tables and schemas | [`@luma.gl/graph/gpu-tables`](/docs/api-reference/experimental/gpu-tables) |
 | One explicit buffer or texture computation | [Engine compute helpers](/docs/api-guide/engine/transforms) |
 | Several dependent WebGPU operations, indirect work, or transient reuse | [GPU Core](/docs/api-reference/experimental/gpu-core) |
 
@@ -41,7 +41,7 @@ intermediate evaluator results.
 ## Decisions and tradeoffs
 
 - Prefer GPGPU evaluators when portability and expression composition matter most.
-- Prefer `@luma.gl/gpu-graph/gpu-core` when WebGPU-only scheduling, GPU-written work counts, or multi-pass resource
+- Prefer `@luma.gl/graph/gpu-core` when WebGPU-only scheduling, GPU-written work counts, or multi-pass resource
   planning matter more than backend portability.
 - Preserve source chunks in GPU vectors and tables instead of silently repacking streaming data.
 - Avoid readback between operations unless the CPU actually needs the result.

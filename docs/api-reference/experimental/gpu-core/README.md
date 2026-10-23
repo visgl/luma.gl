@@ -16,7 +16,7 @@ import {GPUCorePipelineTutorial} from '@site/src/components/docs/gpu-core-pipeli
 ## Overview
 
 GPU Core is the experimental WebGPU dataflow and scheduling layer in
-`@luma.gl/gpu-graph/gpu-core`.
+`@luma.gl/graph/gpu-core`.
 Applications and reusable contributors declare resources, compute/copy/render nodes, dependencies,
 conditions, and work estimates. A compiled graph allocates compatible transient resources, orders
 read/write hazards (resource conflicts), and records work into a caller-owned command encoder.
@@ -155,7 +155,7 @@ together.
 ## Quick start
 
 ```ts
-import {GPUCommandGraph, GPUScan} from '@luma.gl/gpu-graph/gpu-core';
+import {GPUCommandGraph, GPUScan} from '@luma.gl/graph/gpu-core';
 
 const graph = new GPUCommandGraph(device, {id: 'prefix-sum'});
 const input = graph.importBuffer(
@@ -242,7 +242,7 @@ application outcomes to the operations that compose them.
 | Hash indexes and joins | [`GPUHashIndex`](/docs/api-reference/experimental/gpu-core/gpu-hash-index), [`GPUBatchHashIndex`](/docs/api-reference/experimental/gpu-core/gpu-batch-hash-index), [`GPUHashJoin`](/docs/api-reference/experimental/gpu-core/gpu-hash-join), [`GPUBatchHashJoin`](/docs/api-reference/experimental/gpu-core/gpu-batch-hash-join) |
 
 Trace-domain algorithms are indexed from the
-[`@luma.gl/gpu-graph/gpu-trace` overview](/docs/api-reference/experimental/gpu-trace).
+[`@luma.gl/graph/gpu-trace` overview](/docs/api-reference/experimental/gpu-trace).
 
 ## Limits and compatibility
 
@@ -254,7 +254,7 @@ Trace-domain algorithms are indexed from the
 
 ## Related modules
 
-- [`@luma.gl/gpu-graph/gpu-trace`](/docs/api-reference/experimental/gpu-trace) adds trace semantics.
+- [`@luma.gl/graph/gpu-trace`](/docs/api-reference/experimental/gpu-trace) adds trace semantics.
 - [GPU Graph Algorithms](/docs/api-reference/experimental/gpu-graph) provides graph-data analytics.
 - [GPU Raster](/docs/api-reference/experimental/gpu-raster) provides raster and field operations.
 - [GPU Dataframe](/docs/api-reference/experimental/gpu-dataframe) provides dataframe-style GPU analysis.

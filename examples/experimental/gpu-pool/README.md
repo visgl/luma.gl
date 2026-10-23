@@ -1,6 +1,6 @@
 # GPU Pool
 
-A free-practice pool table built on `@luma.gl/gpu-graph/gpu-physics`. Sixteen balls,
+A free-practice pool table built on `@luma.gl/graph/gpu-physics`. Sixteen balls,
 cloth, finite cushions and beveled pocket jaws are simulated on WebGPU. Rendering consumes the
 position and orientation buffers directly; stripes rotate with the balls.
 

@@ -47,7 +47,7 @@ all four execution strategies, and borrowed-buffer ownership.
 Run the CPU benchmark explicitly:
 
 ```sh
-LUMA_TEST_FRAGMENTATION_BENCHMARK=true yarn test-node --no-coverage --reporter=verbose modules/gpu-graph/test/gpu-core/gpu-fragmentation-benchmark.node.spec.ts
+LUMA_TEST_FRAGMENTATION_BENCHMARK=true yarn test-node --no-coverage --reporter=verbose modules/graph/test/gpu-core/gpu-fragmentation-benchmark.node.spec.ts
 ```
 
 It reports range lookup, validation and graph compilation at 1,024, 4,096 and 16,384 chunks.
@@ -57,7 +57,7 @@ include identity assertions and view construction; compilation includes NullDevi
 Run the GPU benchmark explicitly:
 
 ```sh
-yarn test-browser-benchmarks --reporter=verbose modules/gpu-graph/test/gpu-core/gpu-fragmentation-benchmark.spec.ts
+yarn test-browser-benchmarks --reporter=verbose modules/graph/test/gpu-core/gpu-fragmentation-benchmark.spec.ts
 ```
 
 It holds data volume at 256 rows/nonzeros and varies contiguous, four-chunk, sixteen-chunk and
