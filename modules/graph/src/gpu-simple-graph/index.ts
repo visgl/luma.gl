@@ -5,8 +5,15 @@
 export {GPUSimpleGraph, CompiledGPUSimpleGraph} from './gpu-simple-graph';
 export type {
   GPUSimpleGraphCompileOptions,
+  GPUSimpleGraphRunOptions,
   GPUSimpleGraphNode
 } from './gpu-simple-graph';
 
 export {GPUSimpleGraphOperation} from './gpu-simple-graph-operation';
 export type {GPUSimpleGraphEvaluator} from './gpu-simple-graph-operation';
+
+export {
+  GPUSimpleGraphUploadOperation,
+  GPUSimpleGraphCopyOperation
+} from './gpu-simple-graph-transfer';
+export type {GPUSimpleGraphUploadProps} from './gpu-simple-graph-transfer';

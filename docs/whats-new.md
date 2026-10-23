@@ -1,5 +1,11 @@
 # What's New
 
+## SimpleGraph uploads, copies, and scoped execution
+
+SimpleGraph now supports declarative uploads and copies, borrowed per-chunk output targets,
+and WebGPU `run({scope})` with explicit submission and cancellation. Dependency inspection
+reuses the evaluator snapshots. Existing GPGPU operations and ordinary execution are unchanged.
+
 ## SimpleGraph and evaluator inspection
 
 `@luma.gl/graph/gpu-simple-graph` provides an evaluator-backed subset of graph operation

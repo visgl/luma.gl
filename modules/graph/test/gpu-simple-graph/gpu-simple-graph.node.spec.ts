@@ -457,3 +457,41 @@ it('materializes shared scalar dependencies once before collecting vector chunks
     device.destroy();
   }
 });
+
+it('binds chunked output targets without retargeting borrowed evaluators', async () => {
+  const device = new NullDevice({});
+  const chunks = [
+    GPUDataEvaluator.fromArray(new Float32Array([1, 2]), {}),
+    GPUDataEvaluator.fromArray(new Float32Array([3]), {})
+  ];
+  const vector = GPUVectorEvaluator.fromGPUDataEvaluators(chunks);
+  const targets = [device.createBuffer({byteLength: 16}), device.createBuffer({byteLength: 8})];
+  const graph = new GPUSimpleGraph(device);
+  graph.addEvaluator('value', vector);
+  const compiled = graph.compile({
+    outputTargets: {value: targets.map(buffer => ({buffer, byteOffset: 4}))}
+  });
+  try {
+    expect(vector.evaluated).toBe(false);
+    expect(new Set(compiled.nodes.map(node => node.id)).size).toBe(compiled.nodes.length);
+    const result = await compiled.run();
+    expect(result.value.data.map(chunk => chunk.length)).toEqual([2, 1]);
+    expect(result.value.data.map(chunk => chunk.buffer)).toEqual(targets);
+    expect(vector.gpuVector.data[0].buffer).not.toBe(targets[0]);
+    for (const [index, expected] of [
+      [0, [1, 2]],
+      [1, [3]]
+    ] as const) {
+      const reader = GPUDataEvaluator.fromGPUData(result.value.data[index]);
+      expect(Array.from(await reader.readValue())).toEqual(expected);
+      reader.destroy();
+    }
+  } finally {
+    compiled.destroy();
+    expect(vector.evaluated).toBe(true);
+    expect(targets.every(buffer => !buffer.destroyed)).toBe(true);
+    vector.destroy();
+    for (const target of targets) target.destroy();
+    device.destroy();
+  }
+});

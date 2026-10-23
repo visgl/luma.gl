@@ -108,8 +108,8 @@ dependencies. Semantic adapters are owned by the compiled graph and need only `c
 
 GPUSimpleGraphOperation is currently executable only by GPUSimpleGraph. Acceptance by GPUProgram provides shared composition and inspection, not a lowering in GPUProgramCompiler or compatibility with GPUGraph.add().
 
-The graph reports no caller-controlled submission, dynamic bindings, or transient allocation. There is no encode() method: run() delegates submission to evaluators. Backend operation support and the existing CPU constant fast path remain unchanged; the wrapper introduces no CPU fallback or readback.
+WebGPU graphs support caller-controlled submission through `run({scope})`; dynamic bindings and transient allocation remain unsupported. There is no standalone encode() method. Backend operation support and the existing CPU constant fast path remain unchanged; the wrapper introduces no CPU fallback or readback.
 
-Snapshots borrow evaluator objects rather than cloning their computation. Treat the evaluator dependencies as immutable after compilation. Concurrent runs over shared evaluators remain unsupported. There is no indirect execution, graph-wide cancellation, or render/copy command support.
+Snapshots borrow evaluator objects rather than cloning their computation. Treat the evaluator dependencies as immutable after compilation. Concurrent runs over shared evaluators remain unsupported. There is no indirect execution or render command support. Scoped execution cancels all recorded work on failure.
 
-Later phases can expand the supported semantic subset and investigate deferred submission and buffer/texture transform operations.
+See the [SimpleGraph reference](/docs/api-reference/graph/gpu-simple-graph) for declarative upload/copy operations, borrowed output targets, inspection, and scoped execution.
