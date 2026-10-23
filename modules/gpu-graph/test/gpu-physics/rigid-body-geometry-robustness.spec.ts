@@ -321,3 +321,49 @@ it('keeps sweep tolerances local on elongated curved and mesh obstacles and pres
     }
   }
 }, 120000);
+
+it('qualifies coplanar mesh ray edges while rejecting offset parallel rays', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const world = new GPURigidBodyWorld({
+    enableQueries: true,
+    bodies: [
+      {
+        mode: 'static',
+        position: [0, 0, 0],
+        shape: {
+          type: 'triangle-mesh',
+          geometry: makeTriangleMeshGeometry([0, -1, 0, 0, 1, 0, 2, 0, 0], [0, 1, 2])
+        }
+      }
+    ]
+  });
+  world.addToGraph(new GPUCommandGraph(device));
+  try {
+    for (const height of [-1, 0, 1]) {
+      const result = await world.raycast({
+        origin: [-1, 0, height],
+        direction: [1, 0, 0],
+        maximumDistance: 4
+      });
+      expect(result.complete).toBe(true);
+      expect(result.hits.length).toBe(height === 0 ? 1 : 0);
+      if (height === 0) {
+        expect(result.hits[0].distance).toBeCloseTo(1, 5);
+        expect(result.hits[0].normal[0]).toBeCloseTo(-1, 5);
+      }
+    }
+    expect(
+      (await world.raycast({origin: [-1, 0, 0], direction: [-1, 0, 0], maximumDistance: 4})).hits
+    ).toHaveLength(0);
+    expect(
+      (await world.raycast({origin: [-1, 0, 0], direction: [1, 0, 0], maximumDistance: 0.5})).hits
+    ).toHaveLength(0);
+    expect(
+      (await world.raycast({origin: [1, 2, 0], direction: [0, -1, 0], maximumDistance: 4})).hits[0]
+        .distance
+    ).toBeCloseTo(1.5, 5);
+  } finally {
+    world.destroy();
+  }
+}, 120000);

@@ -145,6 +145,21 @@ fn sweepTriangle(origin:vec3f,direction:vec3f,maximumDistance:f32,radius:f32,fir
   result.hit=1u;result.point=initial;return result;
  }
  let denominator=dot(direction,normal);
+ // Clip a coplanar zero-radius ray against the triangle's three inward half-spaces.
+ // A parallel offset ray remains a miss; coplanar picking retains edge intersections.
+ if(radius==0.0&&denominator==0.0&&abs(dot(origin-first,normal))<=tolerance){
+  var enter=0.0;var leave=maximumDistance;var enterNormal=normal;
+  let corners=array<vec3f,3>(first,second,third);
+  for(var edge=0u;edge<3u;edge++){
+   let start=corners[edge];let side=(corners[(edge+1u)%3u]-start)/edgeScale;
+   let offset=dot(cross(side,(origin-start)/edgeScale),normal);
+   let change=dot(cross(side,direction/edgeScale),normal);
+   if(change==0.0){if(offset<0.0){return result;}}
+   else{let boundary=-offset/change;if(change>0.0){if(boundary>=enter){enter=boundary;enterNormal=normalize(cross(side,normal));}}else{leave=min(leave,boundary);}}
+  }
+  if(enter<=leave){result.hit=1u;result.distance=enter;result.point=origin+direction*enter;result.normal=enterNormal;}
+  return result;
+ }
  if(abs(denominator)>0.0){for(var side=0u;side<2u;side++){
   let sign=select(-1.0,1.0,side==1u);if(denominator*sign>=0.0){continue;}
   let travelled=(sign*radius-dot(origin-first,normal))/denominator;
