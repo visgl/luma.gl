@@ -5,7 +5,14 @@
 import {expect, it, vi} from 'vitest';
 import {Buffer, assert, type ShaderLayout} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/test-utils';
-import {Geometry, GPUVectorModel, MaterialFactory, Model, ShaderInputs} from '../../src';
+import {
+  Geometry,
+  GPUGeometry,
+  GPUVectorModel,
+  MaterialFactory,
+  Model,
+  ShaderInputs
+} from '../../src';
 import type {ShaderModule} from '@luma.gl/shadertools';
 
 const VERTEX_SHADER =
@@ -101,5 +108,44 @@ it('GPUVectorModel manages module uniforms without geometry or material policy',
   expect('setMaterial' in model).toBe(false);
   model.destroy();
   expect(uniformBuffer.destroyed).toBe(true);
+  device.destroy();
+});
+
+it.each([
+  undefined,
+  2,
+  0
+])('Model preserves legacy indexed draw counts with vertexCount %s', vertexCount => {
+  const device = new NullDevice({});
+  const positions = device.createBuffer({data: new Float32Array(12)});
+  const indices = device.createBuffer({
+    data: new Uint16Array([0, 1, 2, 2, 1, 3]),
+    usage: Buffer.INDEX
+  });
+  const geometry = new GPUGeometry({
+    attributes: {positions},
+    indices,
+    topology: 'triangle-list',
+    vertexCount: 3,
+    bufferLayout: [{name: 'positions', format: 'float32x3'}]
+  });
+  const model = new Model(device, {
+    vs: VERTEX_SHADER,
+    fs: FRAGMENT_SHADER,
+    shaderLayout: SHADER_LAYOUT,
+    geometry,
+    ...(vertexCount === undefined ? {} : {vertexCount})
+  });
+  const renderPass = device.getDefaultRenderPass();
+  const indexCounts: (number | undefined)[] = [];
+  const draw = renderPass.draw.bind(renderPass);
+  renderPass.draw = options => {
+    indexCounts.push(options.indexCount);
+    return draw(options);
+  };
+  expect(model.draw(renderPass)).toBe(true);
+  expect(indexCounts).toEqual([vertexCount ?? 3]);
+  model.destroy();
+  renderPass.destroy();
   device.destroy();
 });

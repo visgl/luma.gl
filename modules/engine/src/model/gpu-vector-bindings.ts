@@ -54,6 +54,7 @@ export class GPUVectorBindings {
     stepMode: 'vertex' | 'instance'
   ): void {
     validateGPUVectorBatchStructure(columns);
+    this.claimedNames.clear();
     this.inputs = columns;
     this.sourceLayouts = explicitLayouts;
     this.stepMode = stepMode;

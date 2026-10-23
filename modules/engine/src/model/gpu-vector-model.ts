@@ -350,6 +350,7 @@ export class GPUVectorModel {
   private geometryVectorBindings!: GPUVectorBindings;
   private attributeVectorBindings!: GPUVectorBindings;
   private explicitBufferLayout: BufferLayout[] = [];
+  private constructorDrawCounts: Pick<GPUVectorModelProps, 'vertexCount' | 'instanceCount'>;
   private constructorDrawOffsets: Pick<GPUVectorModelProps, 'firstVertex' | 'firstIndex'>;
   private drawingVectorBatches = false;
   private indexVector: GPUVectorModelInput | null = null;
@@ -385,6 +386,10 @@ export class GPUVectorModel {
   constructor(device: Device, props: GPUVectorModelProps) {
     this.constructorDrawOffsets = {firstVertex: props.firstVertex, firstIndex: props.firstIndex};
     const defaultProps = (this.constructor as typeof GPUVectorModel).defaultProps;
+    this.constructorDrawCounts = {
+      vertexCount: props.vertexCount ?? (defaultProps.vertexCount || undefined),
+      instanceCount: props.instanceCount ?? (defaultProps.instanceCount || undefined)
+    };
     const defaultShaderAssembler = defaultProps.shaderAssembler;
     const vertexCountSet = Object.hasOwn(props, 'vertexCount');
     this.props = {
@@ -573,8 +578,10 @@ export class GPUVectorModel {
     if (this.constructorDrawOffsets.firstIndex !== undefined)
       this.firstIndex = this.constructorDrawOffsets.firstIndex;
     if (props.isInstanced !== undefined) this.isInstanced = props.isInstanced;
-    if (props.instanceCount) this.setInstanceCount(props.instanceCount);
-    if (props.vertexCount) this.setVertexCount(props.vertexCount);
+    if (this.constructorDrawCounts.instanceCount !== undefined)
+      this.setInstanceCount(this.constructorDrawCounts.instanceCount);
+    if (this.constructorDrawCounts.vertexCount !== undefined)
+      this.setVertexCount(this.constructorDrawCounts.vertexCount);
     if (props.indexBuffer) this.setIndexBuffer(props.indexBuffer);
     if (props.attributes) this.setAttributes(props.attributes);
     if (props.constantAttributes) this.setConstantAttributes(props.constantAttributes);
@@ -786,6 +793,7 @@ export class GPUVectorModel {
         ...Object.values(this.attributeVectorBindings.inputs)
       ]);
     this.geometryVectorBindings.setInputs(vectors, bufferLayouts, 'vertex');
+    this.claimVectorLayouts(this.geometryVectorBindings);
     this.syncVectorBindings();
     const rowCount = this.geometryVectorBindings.rowCount;
     assert(
@@ -829,6 +837,7 @@ export class GPUVectorModel {
       bufferLayouts,
       this.isInstanced ? 'instance' : 'vertex'
     );
+    this.claimVectorLayouts(this.attributeVectorBindings);
     this.syncVectorBindings();
     if (this.attributeVectorBindings.instanceCount !== undefined)
       this.setInstanceCount(this.attributeVectorBindings.instanceCount);
@@ -878,6 +887,14 @@ export class GPUVectorModel {
       firstVertex: chunk?.byteOffset ?? 0,
       firstIndex: chunk ? chunk.byteOffset / this.indexVector!.byteStride : 0
     });
+  }
+
+  private claimVectorLayouts(group: GPUVectorBindings): void {
+    this.explicitBufferLayout = this.explicitBufferLayout.filter(
+      layout =>
+        !group.claimedNames.has(layout.name) &&
+        !layout.attributes?.some(attribute => group.claimedNames.has(attribute.attribute))
+    );
   }
 
   private getExplicitVectorLayouts(vectors: GPUVectorModelAttributes): BufferLayout[] | undefined {
@@ -1065,10 +1082,33 @@ export class GPUVectorModel {
    */
   setBufferLayout(bufferLayout: BufferLayout[]): void {
     this.explicitBufferLayout = bufferLayout;
+    const geometry = this.geometryVectorBindings;
+    const attributes = this.attributeVectorBindings;
+    const geometryLayouts =
+      this.getExplicitVectorLayouts(geometry.inputs) ?? geometry.sourceLayouts;
+    const attributeLayouts =
+      this.getExplicitVectorLayouts(attributes.inputs) ?? attributes.sourceLayouts;
+    geometry.setInputs(geometry.inputs, geometryLayouts, 'vertex');
+    attributes.setInputs(
+      attributes.inputs,
+      attributeLayouts,
+      this.isInstanced ? 'instance' : 'vertex'
+    );
+    if (!this.isInstanced || attributes.vertexCount !== undefined)
+      validateGPUVectorBatchStructure([
+        ...Object.values(geometry.inputs),
+        ...Object.values(attributes.inputs)
+      ]);
+    this.claimVectorLayouts(geometry);
+    this.claimVectorLayouts(attributes);
     this.applyBufferLayout(this.getVectorBufferLayout());
   }
 
   private applyBufferLayout(nextBufferLayout: BufferLayout[]): void {
+    nextBufferLayout = sortedBufferLayoutByShaderSourceLocations(
+      this.pipeline.shaderLayout,
+      nextBufferLayout
+    );
     if (deepEqual(nextBufferLayout, this.bufferLayout, -1)) {
       return;
     }
