@@ -76,7 +76,7 @@ it('TextureTransform#attribute', async () => {
 it('TextureTransform#inputVectors', async () => {
   const webglDevice = await getWebGLTestDevice();
 
-  const src = webglDevice.createBuffer({data: new Float32Array([10, 20, 30, 70, 80, 90])});
+  const sourceBuffer = webglDevice.createBuffer({data: new Float32Array([10, 20, 30, 70, 80, 90])});
   const targetTexture = webglDevice.createTexture({
     data: new Float32Array([201, 202, 203, 1.0]),
     width: 1,
@@ -87,7 +87,7 @@ it('TextureTransform#inputVectors', async () => {
     type: 'data',
     name: 'src',
     format: 'float32',
-    data: [new GPUData({buffer: src, length: 6, format: 'float32'})]
+    data: [new GPUData({buffer: sourceBuffer, length: 6, format: 'float32'})]
   });
   const transform = new TextureTransform(webglDevice, {
     vs: SUM_VS,
@@ -116,9 +116,9 @@ it('TextureTransform#inputVectors', async () => {
   expect(sum[0], 'computes sum').toBe(300);
 
   transform.destroy();
-  expect(src.destroyed).toBe(false);
+  expect(sourceBuffer.destroyed).toBe(false);
   input.destroy();
-  src.destroy();
+  sourceBuffer.destroy();
   targetTexture.destroy();
 });
 
