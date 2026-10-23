@@ -1,0 +1,114 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import {ShaderPass} from './shader-pass';
+
+/**
+ * Gets fragment shader source for a shader pass sub pass
+ * @param options
+ * @returns
+ */
+export function getFragmentShaderForRenderPass(options: {
+  shaderPass: ShaderPass;
+  action: 'filter' | 'sample';
+  shadingLanguage: 'wgsl' | 'glsl';
+}): string {
+  const {shaderPass, action, shadingLanguage} = options;
+  switch (action) {
+    case 'filter':
+      const filterFunc = `${shaderPass.name}_filterColor_ext`;
+      return shadingLanguage === 'wgsl'
+        ? getFilterShaderWGSL(filterFunc)
+        : getFilterShaderGLSL(filterFunc);
+
+    case 'sample':
+      const samplerFunc = `${shaderPass.name}_sampleColor`;
+      return shadingLanguage === 'wgsl'
+        ? getSamplerShaderWGSL(samplerFunc)
+        : getSamplerShaderGLSL(samplerFunc);
+
+    default:
+      throw new Error(`${shaderPass.name} no fragment shader generated for shader pass`);
+  }
+}
+
+/** Get a filtering WGSL fragment shader */
+function getFilterShaderWGSL(func: string) {
+  return /* wgsl */ `\
+@group(0) @binding(auto) var sourceTexture: texture_2d<f32>;
+@group(0) @binding(auto) var sourceTextureSampler: sampler;
+
+@fragment
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
+  let texCoord = shaderPassRenderer_getTextureUV(inputs.coordinate);
+  let texSize = vec2f(textureDimensions(sourceTexture));
+
+  var fragColor = textureSample(sourceTexture, sourceTextureSampler, texCoord);
+  fragColor = ${func}(fragColor, texSize, texCoord);
+  return fragColor;
+}
+`;
+}
+
+/** Get a sampling WGSL fragment shader */
+function getSamplerShaderWGSL(func: string) {
+  return /* wgsl */ `\
+@group(0) @binding(auto) var sourceTexture: texture_2d<f32>;
+@group(0) @binding(auto) var sourceTextureSampler: sampler;
+
+@fragment
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
+  let texCoord = shaderPassRenderer_getTextureUV(inputs.coordinate);
+  let texSize = vec2f(textureDimensions(sourceTexture));
+  return ${func}(sourceTexture, sourceTextureSampler, texSize, texCoord);
+}
+`;
+}
+
+/** Get a filtering GLSL fragment shader */
+function getFilterShaderGLSL(func: string) {
+  return /* glsl */ `\
+#version 300 es
+
+uniform sampler2D sourceTexture;
+
+in vec2 position;
+in vec2 coordinate;
+in vec2 uv;
+
+out vec4 fragColor;
+
+void main() {
+  vec2 texCoord = shaderPassRenderer_getTextureUV(coordinate);
+  ivec2 iTexSize = textureSize(sourceTexture, 0);
+  vec2 texSize = vec2(float(iTexSize.x), float(iTexSize.y));
+
+  fragColor = texture(sourceTexture, texCoord);
+  fragColor = ${func}(fragColor, texSize, texCoord);
+}
+`;
+}
+
+/** Get a sampling GLSL fragment shader */
+function getSamplerShaderGLSL(func: string) {
+  return /* glsl */ `\
+#version 300 es
+
+uniform sampler2D sourceTexture;
+
+in vec2 position;
+in vec2 coordinate;
+in vec2 uv;
+
+out vec4 fragColor;
+
+void main() {
+  vec2 texCoord = shaderPassRenderer_getTextureUV(coordinate);
+  ivec2 iTexSize = textureSize(sourceTexture, 0);
+  vec2 texSize = vec2(float(iTexSize.x), float(iTexSize.y));
+
+  fragColor = ${func}(sourceTexture, texSize, texCoord);
+}
+`;
+}

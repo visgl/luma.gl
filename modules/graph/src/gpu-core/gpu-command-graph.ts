@@ -1669,6 +1669,10 @@ export class CompiledGPUGraph<Parameters = void> {
             continue;
           }
         }
+        if ('prepare' in executable && executable.prepare) {
+          endActiveComputePass();
+          executable.prepare(baseContext);
+        }
         let timestamp: GPUCommandGraphNodeTimestamp | undefined;
         switch (node.type) {
           case 'compute': {

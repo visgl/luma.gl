@@ -259,3 +259,6 @@ export {
 } from './modules/lighting/area-lighting/area-lighting';
 
 export {createAreaLightLTCTextures} from './modules/lighting/area-lighting/ltc-textures';
+
+export {getFragmentShaderForRenderPass} from './lib/shader-module/get-fragment-shader';
+export {textureTransform} from './lib/shader-module/texture-transform-module';

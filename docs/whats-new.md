@@ -8,6 +8,8 @@ Target Release Date: Q3, 2026
 
 **General**
 
+- **Graph shader pipelines** - `GPUShaderPipeline` lowers reusable shader-pass definitions into individually tracked render and compute nodes in a shared `GPUProgram` and `GPUGraph`.
+
 - **Program texture resources** - `GPUProgram` now describes texture storage and subresource views, with caller-owned imports and graph-owned transients. See [buffer and texture management](/docs/api-reference/experimental/gpu-core/resources).
 
 - **Shared math and loader APIs** - Dependencies use math.gl 5.0.0-alpha.19 grouped
