@@ -40,6 +40,11 @@ new GPUSimpleGraph(device).add(operation);
 // @ts-expect-error Required render parameters cannot disappear through nested arrays.
 new GPUSimpleGraph(device).add([[operation]]);
 const stateless = new GPURenderOperation({id: 'stateless', createNodes: () => []});
+graph.add(stateless);
+graph.addRenderOperation(stateless);
+graph.add(composite([stateless, operation]));
+graph.add([stateless, [composite([operation, stateless])]]);
+new GPUGraph<{dirty: boolean}>(device).add(stateless);
 // @ts-expect-error A compatible sibling must not hide an incompatible operation.
 new GPUSimpleGraph(device).add([stateless, operation]);
 // @ts-expect-error Mixed composite children preserve every parameter requirement.

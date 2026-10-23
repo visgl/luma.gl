@@ -268,6 +268,8 @@ await compiled.run({
 ```
 
 Typed parameters are required when the graph declares a non-void parameter type.
+A `GPURenderOperation` without an explicit parameter type is parameter-independent
+(`unknown`) and can be mixed with parameterized passes in either graph API.
 `add()` checks render-operation parameter types through inferred arrays and shared
 `composite()` / `GPUCompositeOperation` groups. Keep the inferred group type rather
 than widening it to the general `GPUOperation` interface, which erases that information.
