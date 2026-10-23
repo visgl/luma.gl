@@ -3,6 +3,27 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 export const RIGID_BODY_BOUNDS_SHADER = /* wgsl */ `
+fn triangleVertex(collider:u32, triangle:u32, corner:u32)->vec3f {
+ let indices=readGeometry(u32(bodies.colliders[collider].padding.z)+triangle);
+ return readGeometry(u32(bodies.colliders[collider].padding.x)+u32(indices[corner])).xyz;
+}
+// Use the smaller local contact feature, not an elongated world AABB or an
+// entire nonconvex mesh. A plane contributes no finite scale of its own.
+fn contactFeatureScale(collider:u32,triangle:i32)->f32 {
+ if(triangle>=0){
+  let first=triangleVertex(collider,u32(triangle),0u);let second=triangleVertex(collider,u32(triangle),1u);let third=triangleVertex(collider,u32(triangle),2u);
+  return min(length(second-first),min(length(third-second),length(first-third)));
+ }
+ let shape=bodies.colliders[collider].shape;
+ if(shape.w==0.0){return shape.x;}
+ if(shape.w==6.0){return 1e30;}
+ if(shape.w==4.0){return max(shape.x,shape.y);}
+ if(shape.w==5.0){return min(max(shape.x,shape.y),shape.z*0.5);}
+ if(shape.w==1.0){return min(shape.x,min(shape.y,shape.z));}
+ let root=u32(bodies.colliders[collider].policies.z);
+ let extent=(readGeometry(root+1u).xyz-readGeometry(root).xyz)*0.5;
+ return min(extent.x,min(extent.y,extent.z));
+}
 // Conservative world-space extents prevent a large rotated box's mesh-local
 // AABB from expanding into unnecessary whole-mesh traversal.
 fn shapeWorldExtent(collider:u32)->vec3f {

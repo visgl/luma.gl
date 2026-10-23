@@ -186,3 +186,44 @@ it('rejects invalid mesh traversal budgets before GPU attachment', () => {
     ).toThrow('mesh traversal');
   }
 });
+
+it('cooks thin noncoplanar hulls using exact float32 orientation instead of an aspect-ratio cutoff', () => {
+  for (const scale of [0.001, 1, 1000]) {
+    const geometry = makeConvexHullGeometry([
+      0,
+      0,
+      0,
+      scale,
+      0,
+      0,
+      0,
+      scale,
+      0,
+      0,
+      0,
+      scale * 1e-11
+    ]);
+    expect(geometry.closed).toBe(true);
+    expect(geometry.indices).toHaveLength(12);
+    expect(Math.abs(geometry.volume / ((scale ** 3 * 1e-11) / 6) - 1)).toBeLessThan(1e-6);
+  }
+});
+
+it('rejects invalid mesh capacities before touching source elements', () => {
+  for (const length of [-3, 3.5, Infinity, 3_000_003]) {
+    const source = {
+      length,
+      get 0(): number {
+        throw new Error('source accessed');
+      }
+    };
+    expect(() => makeTriangleMeshGeometry(source, [0, 1, 2])).toThrow(/geometry/);
+    expect(() => makeTriangleMeshGeometry([0, 0, 0], source)).toThrow(/geometry/);
+  }
+  expect(() => makeTriangleMeshGeometry([0, 0, 0, 1e40, 0, 0, 0, 1, 0], [0, 1, 2])).toThrow(
+    'Invalid mesh'
+  );
+  expect(() => makeTriangleMeshGeometry([0, 0, 0, 1, 0, 0, 1 + 1e-10, 0, 0], [0, 1, 2])).toThrow(
+    'Degenerate'
+  );
+});

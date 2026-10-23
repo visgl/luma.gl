@@ -12,7 +12,7 @@ import type {
 import {RIGID_BODY_QUERY_GEOMETRY_SHADER} from './rigid-body-query-geometry';
 
 export type GPURigidBodyContinuousOptions = {
-  /** Centered single-sphere dynamic bodies. Other dynamic pairs retain discrete response. */
+  /** Centered single-sphere dynamic bodies versus static shapes. Dynamic/kinematic obstacles retain discrete response. */
   bodies: readonly number[];
   maximumImpacts?: number;
 };
@@ -56,6 +56,7 @@ export function addRigidBodyContinuous<Parameters>(
 @compute @workgroup_size(64) fn resolveContinuous(@builtin(global_invocation_id) invocation:vec3u){
  let body=invocation.x;if(body>=BODY_COUNT||continuousSelection[body]==0u){return;}
  let movingCollider=continuousSelection[body]-1u;let radius=bodies.colliders[movingCollider].shape.x;
+ let tolerance=max(1e-8,radius*1e-5);
  var position=continuousPrevious[body].xyz;var motion=positions[body].xyz-position;var velocity=velocities[body].xyz;var remaining=settings.gravity.w;
  for(var impact=0u;impact<=${maximumImpacts}u;impact++){
   let magnitude=length(motion);if(magnitude<=1e-8){positions[body]=vec4f(position,positions[body].w);velocities[body]=vec4f(velocity,velocities[body].w);return;}
@@ -64,20 +65,22 @@ export function addRigidBodyContinuous<Parameters>(
    if(bodies.bodies[colliderBody(collider)].motion.x!=0.0||bodies.colliders[collider].material.w!=0.0||excludes(movingCollider,collider)||excludes(collider,movingCollider)){continue;}
    // Initial penetration belongs to the discrete solver; still sweep other obstacles.
    let initialOrigin=colliderLocal(collider,continuousPrevious[body].xyz-colliderPosition(collider));
-   if(closestSurface(collider,initialOrigin).distance<radius-1e-5){continue;}
+   let initialSurface=closestSurface(collider,initialOrigin);
+   if(initialSurface.complete==0u){continuousStatus[body].x=1u;return;}
+   if(initialSurface.distance<radius-tolerance){continue;}
    let origin=colliderLocal(collider,position-colliderPosition(collider));let direction=colliderLocal(collider,motion/magnitude);
-   let result=sweepSphere(collider,origin,direction,magnitude,radius);
+   let result=sweepSphere(collider,origin,direction,magnitude,radius,true);
    if(result.complete==0u){continuousStatus[body].x=1u;return;}
    if(result.hit==0u){continue;}
    let normal=rotate(colliderRotation(collider),result.normal);
    // Touching and separating bodies must not repeatedly collide at time zero.
-   if(result.distance<=1e-5&&dot(motion,normal)>=0.0&&length(normal)>0.5){continue;}
+   if(result.distance<=tolerance&&dot(motion,normal)>=0.0&&length(normal)>0.5){continue;}
    if(length(normal)<0.5){continuousStatus[body].x=1u;return;}
    if(result.distance<=nearest){nearest=result.distance;hitCollider=collider;hitNormal=normal;}
   }
   if(hitCollider==0xffffffffu){positions[body]=vec4f(position+motion,positions[body].w);velocities[body]=vec4f(velocity,velocities[body].w);return;}
   if(impact==${maximumImpacts}u){continuousStatus[body].x=1u;return;}
-  position+=motion*(nearest/magnitude)+hitNormal*1e-5;
+  position+=motion*(nearest/magnitude)+hitNormal*tolerance;
   remaining*=max(0.0,1.0-nearest/magnitude);
   let closing=dot(velocity,hitNormal);
   let restitution=select(0.0,combineMaterial(bodies.colliders[movingCollider].material.x,bodies.colliders[hitCollider].material.x,bodies.colliders[movingCollider].policies.x,bodies.colliders[hitCollider].policies.x,false),-closing>settings.solver.z);

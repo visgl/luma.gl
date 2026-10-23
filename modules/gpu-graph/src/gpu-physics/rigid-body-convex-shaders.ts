@@ -14,10 +14,6 @@ struct Simplex { points: array<SupportVertex,4>, count: u32 }
 struct ConvexHit { point: vec3f, normal: vec3f, depth: f32, status: u32 }
 struct EPAFace { indices: vec3u, normal: vec3f, distance: f32 }
 fn meshVertex(collider:u32, index:u32)->vec3f {return readGeometry(u32(bodies.colliders[collider].padding.x)+index).xyz;}
-fn triangleVertex(collider:u32, triangle:u32, corner:u32)->vec3f {
- let indices=readGeometry(u32(bodies.colliders[collider].padding.z)+triangle);
- return meshVertex(collider,u32(indices[corner]));
-}
 fn localShapeSupport(collider:u32,direction:vec3f,triangle:i32)->vec3f {
  let shape=bodies.colliders[collider].shape;
  let magnitude=length(direction);let unit=select(vec3f(1,0,0),direction/max(magnitude,1e-20),magnitude>1e-20);
@@ -58,9 +54,11 @@ fn permitsPlaneContact(plane:u32,other:u32)->bool {
  let shape=bodies.colliders[plane].shape;
  return shape.w!=6.0||shape.z!=0.0||dot(colliderPosition(other)-colliderPosition(plane),axis(plane,1u))>=0.0;
 }
-fn minkowski(first:u32,second:u32,direction:vec3f,firstTriangle:i32,secondTriangle:i32)->SupportVertex {
- var vertex:SupportVertex;vertex.first=pairShapeSupport(first,second,direction,firstTriangle);vertex.second=pairShapeSupport(second,first,-direction,secondTriangle);
- vertex.difference=vertex.first-vertex.second+direction/max(length(direction),1e-20)*settings.solver.x;return vertex;
+fn minkowski(first:u32,second:u32,direction:vec3f,firstTriangle:i32,secondTriangle:i32,scale:f32)->SupportVertex {
+ let maximumComponent=max(abs(direction.x),max(abs(direction.y),abs(direction.z)));
+ let searchDirection=direction/max(maximumComponent,1e-30);
+ var vertex:SupportVertex;vertex.first=pairShapeSupport(first,second,searchDirection,firstTriangle);vertex.second=pairShapeSupport(second,first,-searchDirection,secondTriangle);
+ vertex.difference=(vertex.first-vertex.second+searchDirection/max(length(searchDirection),1e-20)*settings.solver.x)/scale;return vertex;
 }
 fn perpendicular(direction:vec3f)->vec3f {return cross(direction,select(vec3f(1,0,0),vec3f(0,1,0),abs(direction.x)>abs(direction.y)));}
 fn reduceLine(simplex:ptr<function,Simplex>)->vec3f {
@@ -109,19 +107,22 @@ fn triangleWeights(point:vec3f,first:vec3f,second:vec3f,third:vec3f)->vec3f {
  if(thirdRegion<=0.0&&(fourthProjection-thirdProjection)>=0.0&&(fifthProjection-sixthProjection)>=0.0){let weight=(fourthProjection-thirdProjection)/((fourthProjection-thirdProjection)+(fifthProjection-sixthProjection));return vec3f(0,1-weight,weight);}
  let inverse=1.0/max(thirdRegion+secondRegion+edgeRegion,1e-20);return vec3f(thirdRegion,secondRegion,edgeRegion)*inverse;
 }
-fn faceHit(vertices:ptr<function,array<SupportVertex,64>>,face:EPAFace)->ConvexHit {
+fn faceHit(vertices:ptr<function,array<SupportVertex,64>>,face:EPAFace,scale:f32)->ConvexHit {
  let first=(*vertices)[face.indices.x];let second=(*vertices)[face.indices.y];let third=(*vertices)[face.indices.z];
  let weights=triangleWeights(face.normal*face.distance,first.difference,second.difference,third.difference);
  var hit:ConvexHit;hit.point=((first.first+first.second)*weights.x+(second.first+second.second)*weights.y+(third.first+third.second)*weights.z)*0.5;
- hit.normal=face.normal;hit.depth=face.distance-settings.solver.x;hit.status=1u;return hit;
+ hit.normal=face.normal;hit.depth=face.distance*scale-settings.solver.x;hit.status=1u;return hit;
 }
 fn convexContact(first:u32,second:u32,firstTriangle:i32,secondTriangle:i32)->ConvexHit {
+ // Normalize by local feature size and independently cap EPA's world-space tolerance.
+ let scale=max(min(contactFeatureScale(first,firstTriangle),contactFeatureScale(second,secondTriangle)),1e-12);
+ let distanceTolerance=min(0.0001,0.0001/scale);
  var miss:ConvexHit;var simplex:Simplex;simplex.count=1u;var direction=colliderPosition(second)-colliderPosition(first);if(length(direction)<1e-8){direction=vec3f(1,0,0);}
- simplex.points[0]=minkowski(first,second,direction,firstTriangle,secondTriangle);direction=-simplex.points[0].difference;
+ simplex.points[0]=minkowski(first,second,direction,firstTriangle,secondTriangle,scale);direction=-simplex.points[0].difference;
  var intersected=false;
  for(var iteration=0u;iteration<48u;iteration++){
   if(length(direction)<1e-12){direction=vec3f(0,1,0);}
-  let vertex=minkowski(first,second,direction,firstTriangle,secondTriangle);if(dot(vertex.difference,direction)<0.0){return miss;}
+  let vertex=minkowski(first,second,direction,firstTriangle,secondTriangle,scale);if(dot(vertex.difference,direction)<0.0){return miss;}
   for(var index=simplex.count;index>0u;index--){simplex.points[index]=simplex.points[index-1u];}simplex.points[0]=vertex;simplex.count++;
   if(simplex.count==2u){direction=reduceLine(&simplex);}else if(simplex.count==3u){direction=reduceTriangle(&simplex);}else{let reduced=reduceTetrahedron(&simplex);if(reduced.w>0.5){intersected=true;break;}direction=reduced.xyz;}
  }
@@ -134,8 +135,8 @@ fn convexContact(first:u32,second:u32,firstTriangle:i32,secondTriangle:i32)->Con
   var nearest=0u;var distance=1e30;
   for(var index=0u;index<faceCount;index++){if(dot(faces[index].normal,faces[index].normal)>0.5&&faces[index].distance<distance){distance=faces[index].distance;nearest=index;}}
   if(distance==1e30){miss.status=2u;return miss;}
-  let face=faces[nearest];let vertex=minkowski(first,second,face.normal,firstTriangle,secondTriangle);
-  if(dot(vertex.difference,face.normal)-distance<0.0001){return faceHit(&vertices,face);}
+  let face=faces[nearest];let vertex=minkowski(first,second,face.normal,firstTriangle,secondTriangle,scale);
+  if(dot(vertex.difference,face.normal)-distance<distanceTolerance){return faceHit(&vertices,face,scale);}
   if(vertexCount>=64u){miss.status=2u;return miss;}
   var edges:array<vec2u,256>;var edgeCount=0u;var retained=0u;
   for(var index=0u;index<faceCount;index++){

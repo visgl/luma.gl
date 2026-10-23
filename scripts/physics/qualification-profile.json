@@ -1157,6 +1157,218 @@
           }
         ]
       }
+    },
+    {
+      "id": "geometry.convex-sat-scale",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-geometry-robustness.spec.ts",
+            "testPattern": "qualifies convex penetration"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.tetrahedral-sat",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-geometry-robustness.spec.ts",
+            "testPattern": "qualifies tetrahedral"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.rounded-box-casts",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-geometry-robustness.spec.ts",
+            "testPattern": "qualifies rounded box"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.static-shape-ccd",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-fast-motion.spec.ts",
+            "testPattern": "qualifies fast sphere rebounds against static box across"
+          },
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-fast-motion.spec.ts",
+            "testPattern": "qualifies fast sphere rebounds against static sphere across"
+          },
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-fast-motion.spec.ts",
+            "testPattern": "qualifies fast sphere rebounds against static capsule across"
+          },
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-fast-motion.spec.ts",
+            "testPattern": "qualifies fast sphere rebounds against static cylinder across"
+          },
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-fast-motion.spec.ts",
+            "testPattern": "qualifies fast sphere rebounds against static convex-hull across"
+          },
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-fast-motion.spec.ts",
+            "testPattern": "qualifies fast sphere rebounds against static triangle-mesh across"
+          },
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-fast-motion.spec.ts",
+            "testPattern": "qualifies fast sphere rebounds against static plane across"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.mesh-opening-ccd",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-fast-motion.spec.ts",
+            "testPattern": "preserves a mesh opening"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.repeated-impact-rollback",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-fast-motion.spec.ts",
+            "testPattern": "qualifies repeated CCD"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.mesh-sweep-budget",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-fast-motion.spec.ts",
+            "testPattern": "rejects a CCD step"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.constant-world-spin",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-rotation-qualification.spec.ts",
+            "testPattern": "qualifies high constant world spin"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.coplanar-mesh-rays",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-geometry-robustness.spec.ts",
+            "testPattern": "qualifies coplanar mesh ray edges"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.local-feature-depth",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-geometry-robustness.spec.ts",
+            "testPattern": "qualifies local contact depth against elongated capsule features"
+          },
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-geometry-robustness.spec.ts",
+            "testPattern": "qualifies local contact depth against elongated cylinder features"
+          },
+          {
+            "file": "modules/gpu-graph/test/gpu-physics/rigid-body-geometry-robustness.spec.ts",
+            "testPattern": "qualifies local contact depth against elongated triangle-mesh features"
+          }
+        ]
+      }
     }
   ]
 }

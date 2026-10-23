@@ -8,6 +8,7 @@ import {
   type GPURigidBodyRecoveryResult,
   type GPURigidBodyState
 } from '@luma.gl/gpu-graph/gpu-physics';
+import {drawStressShape} from './draw-shape';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {createRigidBodyPanel} from '../gpu-rigid-body-world/info-box';
 import {
@@ -23,6 +24,7 @@ const context = canvas.getContext('2d')!;
 const select = document.querySelector<HTMLSelectElement>('#scene')!;
 const solver = document.querySelector<HTMLSelectElement>('#solver')!;
 const pairWork = document.querySelector<HTMLSelectElement>('#pair-work')!;
+const runLimit = document.querySelector<HTMLSelectElement>('#run-limit')!;
 const timestep = document.querySelector<HTMLSelectElement>('#timestep')!;
 const status = document.querySelector<HTMLOutputElement>('#status')!;
 const pause = document.querySelector<HTMLButtonElement>('#pause')!;
@@ -35,8 +37,10 @@ const panel = createRigidBodyPanel(
   'GPU physics · recovery and qualification'
 );
 for (const [value, title] of Object.entries(STRESS_SCENES)) select.add(new Option(title, value));
-let selectedScene: StressScene = 'capacity';
-let activeScene: StressScene = 'capacity';
+const requestedScene = new URLSearchParams(location.search).get('scene') ?? '';
+let selectedScene: StressScene = isStressScene(requestedScene) ? requestedScene : 'capacity';
+select.value = selectedScene;
+let activeScene: StressScene = selectedScene;
 select.onchange = () => {
   if (isStressScene(select.value)) {
     selectedScene = select.value;
@@ -52,9 +56,12 @@ let restartRequested = false;
 let stopped = false;
 let disposed = false;
 let states: GPURigidBodyState[] = [];
-let stepCount = 240;
+let runGeneration = 0;
+let stepCount = 0;
+let quietSince: number | null = null;
 let lastSolverWork: Awaited<ReturnType<GPURigidBodyRecoveryRunner['world']['readSolverWork']>> =
   null;
+let trails: number[][][] = [];
 let samples: {milliseconds: number; result: GPURigidBodyRecoveryResult}[] = [];
 let device: Awaited<ReturnType<typeof luma.createDevice>>;
 function fail(error: unknown) {
@@ -70,7 +77,13 @@ async function restart() {
   restartRequested = false;
   busy = true;
   exportButton.disabled = true;
-  reset.disabled = select.disabled = solver.disabled = timestep.disabled = pairWork.disabled = true;
+  reset.disabled =
+    select.disabled =
+    solver.disabled =
+    timestep.disabled =
+    runLimit.disabled =
+    pairWork.disabled =
+      true;
   let replacement: GPURigidBodyRecoveryRunner | undefined;
   const nextScene = selectedScene;
   try {
@@ -80,7 +93,10 @@ async function restart() {
       Number(timestep.value)
     );
     nextConfiguration.props.compactContacts = pairWork.value === 'compact';
-    const nextStepCount = getStressStepCount(nextScene, nextConfiguration.props.timeStep!);
+    const nextStepCount = getStressStepCount(
+      nextConfiguration.props.timeStep!,
+      Number(runLimit.value)
+    );
     status.value = 'Compiling…';
     replacement = await GPURigidBodyRecoveryRunner.create(device, nextConfiguration.props, {
       maximumReplayTicks: nextStepCount
@@ -95,11 +111,16 @@ async function restart() {
     configuration = nextConfiguration;
     activeScene = nextScene;
     stepCount = nextStepCount;
+    status.dataset.generation = String(++runGeneration);
+    status.dataset.scene = activeScene;
     lastSolverWork = null;
     diagnostics.clear();
     states = nextStates;
     samples = [];
+    trails = [];
+    quietSince = null;
     stopped = false;
+    delete status.dataset.accepted;
     status.value = `READY · tick 0/${stepCount} · ${states.length} bodies${paused ? '\nPaused · Resume to advance' : ''}`;
     document.querySelector('#error')!.textContent = '';
     document.querySelector('#description')!.textContent = configuration.description;
@@ -113,6 +134,7 @@ async function restart() {
       select.disabled =
       solver.disabled =
       timestep.disabled =
+      runLimit.disabled =
       pairWork.disabled =
         false;
     if (disposed) {
@@ -126,6 +148,7 @@ async function restart() {
 reset.onclick = restart;
 solver.onchange = restart;
 timestep.onchange = restart;
+runLimit.onchange = restart;
 pairWork.onchange = restart;
 pause.onclick = () => {
   paused = !paused;
@@ -166,6 +189,7 @@ function draw() {
     canvas.height = height;
   }
   context.clearRect(0, 0, width, height);
+  const depthFactor = activeScene === 'geometryOpenings' || activeScene === 'fastMesh' ? 0.45 : 0;
   const minimumHeight =
     activeScene === 'ballistic' ? Math.min(0, (states[0]?.position[2] ?? 0) - 1) : 0;
   const scale = Math.min(width / 19, height / (12 - minimumHeight));
@@ -176,6 +200,19 @@ function draw() {
     context.beginPath();
     context.moveTo(0, origin[1] - level * scale);
     context.lineTo(width, origin[1] - level * scale);
+    context.stroke();
+  }
+  for (const trail of trails) {
+    if (!trail) continue;
+    context.strokeStyle = '#dfb46f';
+    context.lineWidth = ratio;
+    context.beginPath();
+    trail.forEach((point, index) => {
+      const horizontal = origin[0] + (point[0] + depthFactor * point[1]) * scale,
+        vertical = origin[1] - (point[2] + 0.7 * depthFactor * point[1]) * scale;
+      if (index === 0) context.moveTo(horizontal, vertical);
+      else context.lineTo(horizontal, vertical);
+    });
     context.stroke();
   }
   for (const [index, state] of states.entries()) {
@@ -195,21 +232,28 @@ function draw() {
       rotationScalar * doubledCross[0] +
       rotationY * doubledCross[2] -
       rotationZ * doubledCross[1];
+    const offsetY =
+      offset[1] +
+      rotationScalar * doubledCross[1] +
+      rotationZ * doubledCross[0] -
+      rotationX * doubledCross[2];
     const offsetZ =
       offset[2] +
       rotationScalar * doubledCross[2] +
       rotationX * doubledCross[1] -
       rotationY * doubledCross[0];
     context.translate(
-      origin[0] + (state.position[0] - offsetX) * scale,
-      origin[1] - (state.position[2] - offsetZ) * scale
+      origin[0] +
+        (state.position[0] - offsetX + depthFactor * (state.position[1] - offsetY)) * scale,
+      origin[1] -
+        (state.position[2] - offsetZ + 0.7 * depthFactor * (state.position[1] - offsetY)) * scale
     );
     // Front diagnostic projection; boxes use their authored extents, not a 3D silhouette.
     if (shape?.type === 'sphere') {
       context.beginPath();
       context.arc(0, 0, shape.radius * scale, 0, 2 * Math.PI);
       context.fill();
-    } else if (shape?.type === 'box') {
+    } else if (shape?.type === 'box' && depthFactor === 0) {
       const [horizontal, vertical, depth, scalar] = state.orientation;
       context.rotate(
         Math.atan2(
@@ -223,6 +267,8 @@ function draw() {
         2 * shape.halfExtents[0] * scale,
         2 * shape.halfExtents[2] * scale
       );
+    } else if (shape) {
+      drawStressShape(context, shape, state.orientation, scale, depthFactor);
     }
     context.restore();
   }
@@ -253,18 +299,40 @@ async function advance() {
     samples.push({milliseconds, result});
     if (runner.encoding) diagnostics.record(runner.graph, runner.encoding);
     states = await runner.world.readState();
+    if (activeScene.startsWith('fast') || activeScene === 'continuous')
+      for (const [index, state] of states.entries()) {
+        if (configuration.props.bodies[index].mode === 'static') continue;
+        if (!trails[index]) trails[index] = [];
+        const trail = trails[index];
+        trail.push([...state.position]);
+        if (trail.length > 240) trail.shift();
+      }
     lastSolverWork = await runner.world.readSolverWork();
     const sorted = samples
       .map(sample => sample.milliseconds)
       .sort((first, second) => first - second);
     const capacity = runner.world.getCapacityInfo();
     const time = runner.tick * runner.world.timeStep;
+    status.dataset.accepted = String(result.accepted);
     const error =
       activeScene === 'ballistic'
         ? `\nVertical error: ${Math.abs(states[0].position[2] - (8 - 5 * time * time)).toFixed(5)}`
         : '';
-    status.value = `${result.accepted ? 'ACCEPTED' : 'REJECTED'} · tick ${runner.tick}/${stepCount} · ${time.toFixed(2)} s\nRetries: ${samples.reduce((total, sample) => total + sample.result.retries, 0)} · replayed: ${samples.reduce((total, sample) => total + sample.result.replayedTicks, 0)} ticks\nPairs: ${capacity.maximumPairs} · buffers: ${(capacity.ownedBufferBytes / 1048576).toFixed(2)} MiB\nNodes: ${runner.graph.stats.nodeOrder.length} · peak candidates: ${result.diagnostics.maximumCandidatePairs}\nCompletion p50: ${sorted[Math.floor((sorted.length - 1) * 0.5)].toFixed(2)} ms\nCompletion p95: ${sorted[Math.floor((sorted.length - 1) * 0.95)].toFixed(2)} ms${lastSolverWork ? `\nPair workgroups/iteration: ${lastSolverWork.pairWorkgroups} / ${Math.ceil(capacity.maximumPairs / 64)} capacity${lastSolverWork.compacted ? ` · ${lastSolverWork.activeContacts} contacts` : ' · scan'}` : ''}${error}`;
-    stopped = !result.accepted || runner.tick === stepCount;
+    status.value = `${result.accepted ? 'ACCEPTED' : 'REJECTED'} · tick ${runner.tick}/${stepCount} · ${time.toFixed(2)} s\nRetries: ${samples.reduce((total, sample) => total + sample.result.retries, 0)} · replayed: ${samples.reduce((total, sample) => total + sample.result.replayedTicks, 0)} ticks\nPairs: ${capacity.maximumPairs} · buffers: ${(capacity.ownedBufferBytes / 1048576).toFixed(2)} MiB\nNodes: ${runner.graph.stats.nodeOrder.length} · peak candidates: ${result.diagnostics.maximumCandidatePairs}\nIncomplete CCD bodies: ${result.diagnostics.incompleteContinuousBodies}\nCompletion p50: ${sorted[Math.floor((sorted.length - 1) * 0.5)].toFixed(2)} ms\nCompletion p95: ${sorted[Math.floor((sorted.length - 1) * 0.95)].toFixed(2)} ms${lastSolverWork ? `\nPair workgroups/iteration: ${lastSolverWork.pairWorkgroups} / ${Math.ceil(capacity.maximumPairs / 64)} capacity${lastSolverWork.compacted ? ` · ${lastSolverWork.activeContacts} contacts` : ' · scan'}` : ''}${error}`;
+    const quiet = states.every((state, index) => {
+      const body = configuration.props.bodies[index];
+      return (
+        body.mode === 'static' ||
+        (body.mass === 0 && body.mode !== 'dynamic') ||
+        (Math.hypot(...state.velocity) < 0.04 && Math.hypot(...state.angularVelocity) < 0.04)
+      );
+    });
+    quietSince = quiet ? (quietSince ?? time) : null;
+    const settled = time >= 30 && quietSince !== null && time - quietSince >= 2;
+    stopped = !result.accepted || settled || runner.tick >= stepCount;
+    if (settled) status.value += '\nSettled · Reset to replay';
+    else if (runner.tick >= stepCount)
+      status.value += '\nRun limit reached · increase limit or Reset to replay';
   } catch (error) {
     fail(error);
   } finally {
@@ -274,6 +342,7 @@ async function advance() {
       select.disabled =
       solver.disabled =
       timestep.disabled =
+      runLimit.disabled =
       pairWork.disabled =
         false;
     if (disposed) {
