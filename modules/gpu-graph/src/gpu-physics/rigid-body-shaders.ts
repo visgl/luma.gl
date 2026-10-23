@@ -25,9 +25,11 @@ export function getRigidBodyShader(
   hasJoints = false,
   linearDamping = 0,
   angularDamping = 0,
-  jointCount = 0
+  jointCount = 0,
+  compactContacts = true
 ): string {
   return /* wgsl */ `
+const COMPACT_CONTACTS:bool=${compactContacts};
 const BODY_COUNT: u32 = ${count}u;
 const COLLIDER_COUNT: u32 = ${colliderCount}u;
 const ITERATIONS: u32 = ${iterations}u;

@@ -12,9 +12,28 @@ struct ParallelState {
  flags:array<atomic<u32>,BODY_COUNT>,
  forced:array<atomic<u32>,BODY_COUNT>,
  next:array<u32,PAIR_CAPACITY*2u>,
- deltas:array<vec4f,PAIR_CAPACITY*4u>
+ deltas:array<vec4f,PAIR_CAPACITY*4u>,
+ activePairs:array<u32,PAIR_CAPACITY>
 }
 @group(0) @binding(26) var<storage,read_write> parallelState:ParallelState;
+@group(0) @binding(27) var<storage,read_write> parallelDispatch:array<u32,4>;
+fn parallelPair(index:u32)->u32 {
+ if(COMPACT_CONTACTS){
+  if(index>=atomicLoad(&parallelState.diagnostics[1])){return PAIR_CAPACITY;}
+  return parallelState.activePairs[index];
+ }
+ return index;
+}
+// One bounded scan builds the queue; every iterative solve reuses original manifold IDs.
+@compute @workgroup_size(64) fn parallelCompact(@builtin(global_invocation_id) invocation:vec3u){
+ let pair=invocation.x;if(pair>=PAIR_CAPACITY||manifolds[pair].count==0u){return;}
+ let slot=atomicAdd(&parallelState.diagnostics[1],1u);
+ parallelState.activePairs[slot]=pair;
+}
+@compute @workgroup_size(1) fn parallelDispatchCount(){
+ parallelDispatch[0]=(atomicLoad(&parallelState.diagnostics[1])+63u)/64u;
+ parallelDispatch[1]=1u;parallelDispatch[2]=1u;parallelDispatch[3]=0u;
+}
 fn parallelRoot(body:u32)->u32 {
  var current=body;
  for(var iteration=0u;iteration<64u;iteration++){
@@ -34,7 +53,7 @@ fn parallelRoot(body:u32)->u32 {
  atomicStore(&parallelState.roots[body],body);atomicStore(&parallelState.flags[body],1u);atomicStore(&parallelState.forced[body],0u);
 }
 @compute @workgroup_size(64) fn parallelLink(@builtin(global_invocation_id) invocation:vec3u){
- let pair=invocation.x;if(pair>=PAIR_CAPACITY||manifolds[pair].count==0u){return;}
+ let pair=parallelPair(invocation.x);if(pair>=PAIR_CAPACITY||manifolds[pair].count==0u){return;}
  let first=colliderBody(getFirstCollider(pair));let second=colliderBody(getSecondCollider(pair));
  for(var endpoint=0u;endpoint<2u;endpoint++){
   let body=select(first,second,endpoint==1u);let other=select(second,first,endpoint==1u);
@@ -46,7 +65,7 @@ fn parallelRoot(body:u32)->u32 {
  }
 }
 @compute @workgroup_size(64) fn parallelUnion(@builtin(global_invocation_id) invocation:vec3u){
- let pair=invocation.x;if(pair>=PAIR_CAPACITY||manifolds[pair].count==0u){return;}
+ let pair=parallelPair(invocation.x);if(pair>=PAIR_CAPACITY||manifolds[pair].count==0u){return;}
  let first=colliderBody(getFirstCollider(pair));let second=colliderBody(getSecondCollider(pair));
  if(!dynamic(first)||!dynamic(second)){return;}
  for(var iteration=0u;iteration<64u;iteration++){
@@ -79,7 +98,7 @@ fn writePairDeltas(pair:u32,first:u32,second:u32,impulse:vec3f,firstTorque:vec3f
  parallelState.deltas[pair*4u+3u]=vec4f(select(vec3f(0),inverseInertia(second,secondTorque),dynamic(second)),0);
 }
 @compute @workgroup_size(64) fn parallelWarm(@builtin(global_invocation_id) invocation:vec3u){
- let pair=invocation.x;if(pair>=PAIR_CAPACITY){return;}
+ let pair=parallelPair(invocation.x);if(pair>=PAIR_CAPACITY){return;}
  for(var index=0u;index<4u;index++){parallelState.deltas[pair*4u+index]=vec4f(0);}
  if(manifolds[pair].count==0u){return;}
  let first=colliderBody(getFirstCollider(pair));let second=colliderBody(getSecondCollider(pair));
@@ -92,7 +111,7 @@ fn writePairDeltas(pair:u32,first:u32,second:u32,impulse:vec3f,firstTorque:vec3f
  writePairDeltas(pair,first,second,impulse,firstTorque,secondTorque);
 }
 @compute @workgroup_size(64) fn parallelPairs(@builtin(global_invocation_id) invocation:vec3u){
- let pair=invocation.x;if(pair>=PAIR_CAPACITY){return;}
+ let pair=parallelPair(invocation.x);if(pair>=PAIR_CAPACITY){return;}
  for(var index=0u;index<4u;index++){parallelState.deltas[pair*4u+index]=vec4f(0);}
  if(manifolds[pair].count==0u){return;}
  let firstCollider=getFirstCollider(pair);let secondCollider=getSecondCollider(pair);

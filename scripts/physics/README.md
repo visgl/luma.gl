@@ -95,3 +95,19 @@ The Physics Stress Lab (`yarn workspace luma.gl-examples-experimental-physics-st
 exports per-tick completion measurements and recovery counts. This includes host/GPU
 synchronization and readback, and replay samples include compilation. These exports
 are exploratory evidence, not automatic hardware qualification passes.
+
+
+## Compaction and difficult-contact qualification
+
+Use `--full-scan` with `benchmark-rigid-body.mjs` to compare against the default compact
+parallel queue at identical solver settings and pair capacity. `--fixture sparseContacts
+--maximum-pairs 8192 --warmup 0` exercises an overprovisioned sparse world; impacts
+separate early, so later samples include empty-contact steps. Reports include last-step
+`solverWork` and full-step GPU/completion timings. Do not equate pair invocation reduction
+with a proportional full-step speedup.
+
+`rigid-body-compaction.spec.ts` checks scan parity, empty/rebuilt queues, capture/restore,
+and 80 independent contacts spanning two workgroups. `rigid-body-contact-geometry.spec.ts`
+uses closed-form signed depths and normals. The three stack qualification suites bound
+sampled drift, support separation and final energy across two timesteps, with sleeping
+disabled, 64 pair slots, 64 iterations, warm-start factor 0.8 and recovery fraction 0.1. Each test describes a bounded numeric envelope, not general SOTA coverage.

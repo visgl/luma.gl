@@ -106,6 +106,8 @@ export type GPURigidBodyWorldProps = {
   broadPhase?: 'all-pairs' | 'hierarchical-grid';
   /** Parallel block-Jacobi contact solving; ordered impulses remain the numerical oracle. */
   solver?: 'ordered' | 'parallel';
+  /** Reuse a GPU compact contact queue for parallel iterations; false retains the scan oracle. */
+  compactContacts?: boolean;
   /** Power-of-two persistent contact-pair cache capacity, for hierarchical discovery. */
   maximumPairs?: number;
   /** Maximum hash-bucket candidate tests per collider; incomplete traversal is reported. */
@@ -184,6 +186,7 @@ export class GPURigidBodyWorld {
   private manifolds: Buffer | null = null;
   private meshTasks: Buffer | null = null;
   private parallelState: Buffer | null = null;
+  private parallelDispatch: Buffer | null = null;
   private device: Device | null = null;
   private control: Computation | null = null;
   private controlSettings: Buffer | null = null;
@@ -528,7 +531,7 @@ export class GPURigidBodyWorld {
           (uniform ? Buffer.UNIFORM : Buffer.STORAGE) |
           Buffer.COPY_DST |
           Buffer.COPY_SRC |
-          (name === 'targets' ? Buffer.INDIRECT : 0)
+          (['targets', 'parallel-dispatch'].includes(name) ? Buffer.INDIRECT : 0)
       });
       this.ownedBuffers.push(buffer);
       return buffer;
@@ -663,7 +666,10 @@ export class GPURigidBodyWorld {
       ]),
       true
     );
-    if (parallel) this.parallelState = allocate('parallel-state', parallelByteLength);
+    if (parallel) {
+      this.parallelState = allocate('parallel-state', parallelByteLength);
+      this.parallelDispatch = allocate('parallel-dispatch', 16);
+    }
     const buffers = {
       settings,
       positions: this.positions,
@@ -675,7 +681,9 @@ export class GPURigidBodyWorld {
       sleepStates: this.sleepStates,
       targets: this.targets,
       ...(this.meshTasks ? {meshTasks: this.meshTasks} : {}),
-      ...(this.parallelState ? {parallelState: this.parallelState} : {}),
+      ...(this.parallelState
+        ? {parallelState: this.parallelState, parallelDispatch: this.parallelDispatch!}
+        : {}),
       ...(sparse
         ? {
             minima: allocate('minima', this.colliderStorageCount * 12),
@@ -687,15 +695,17 @@ export class GPURigidBodyWorld {
       name,
       buffer,
       location:
-        name === 'parallelState'
-          ? 26
-          : name === 'minima'
-            ? 24
-            : name === 'maxima'
-              ? 25
-              : location >= 8
-                ? location + 1
-                : location,
+        name === 'parallelDispatch'
+          ? 27
+          : name === 'parallelState'
+            ? 26
+            : name === 'minima'
+              ? 24
+              : name === 'maxima'
+                ? 25
+                : location >= 8
+                  ? location + 1
+                  : location,
       resource: graph.importBuffer(
         {
           id: `${this.id}-${name}`,
@@ -703,7 +713,9 @@ export class GPURigidBodyWorld {
           usage:
             location === 0
               ? Buffer.UNIFORM
-              : Buffer.STORAGE | Buffer.COPY_SRC | (name === 'targets' ? Buffer.INDIRECT : 0)
+              : Buffer.STORAGE |
+                Buffer.COPY_SRC |
+                (['targets', 'parallelDispatch'].includes(name) ? Buffer.INDIRECT : 0)
         },
         buffer
       )
@@ -754,10 +766,13 @@ export class GPURigidBodyWorld {
       Boolean(this.props.joints?.length),
       this.props.linearDamping ?? 0,
       this.props.angularDamping ?? 0,
-      this.props.joints?.length ?? 0
+      this.props.joints?.length ?? 0,
+      this.props.compactContacts ?? true
     );
     const parallelBindings: Record<string, readonly string[]> = {
       parallelReset: ['parallelState'],
+      parallelCompact: ['manifolds', 'parallelState'],
+      parallelDispatchCount: ['parallelState', 'parallelDispatch'],
       parallelLink: ['velocities', 'angularVelocities', 'bodies', 'manifolds', 'parallelState'],
       parallelUnion: ['bodies', 'manifolds', 'parallelState'],
       parallelCompress: ['sleepStates', 'parallelState'],
@@ -872,6 +887,8 @@ export class GPURigidBodyWorld {
       solve: 'Resolve contact and joint constraints, including friction and restitution.',
       finish: 'Publish solved body poses and update sleeping state.',
       parallelReset: 'Initialize body ownership for parallel contact islands.',
+      parallelCompact: 'Compact live contact manifolds into a reusable GPU work queue.',
+      parallelDispatchCount: 'Build indirect workgroup counts from the compact contact queue.',
       parallelLink: 'Link bodies connected by active contacts or joints.',
       parallelUnion: 'Merge connected bodies into constraint islands.',
       parallelCompress: 'Compress island links to their root body.',
@@ -890,6 +907,9 @@ export class GPURigidBodyWorld {
         ? [
             ...(extended ? ['meshCollect'] : []),
             'parallelReset',
+            ...(this.props.compactContacts !== false
+              ? ['parallelCompact', 'parallelDispatchCount']
+              : []),
             'parallelLink',
             'parallelUnion',
             'parallelCompress',
@@ -972,7 +992,7 @@ export class GPURigidBodyWorld {
       const unused = [
         ...unusedCore,
         ...(entryPoint === 'solve' && this.props.joints?.length ? ['meshTasks'] : []),
-        ...(entryPoint.startsWith('parallel') ? [] : ['parallelState']),
+        ...(entryPoint.startsWith('parallel') ? [] : ['parallelState', 'parallelDispatch']),
         ...(entryPoint === 'bounds' ? [] : ['minima', 'maxima'])
       ];
       const activeBindings = bindings.filter(binding => !unused.includes(binding.name));
@@ -980,6 +1000,14 @@ export class GPURigidBodyWorld {
         attributes: [],
         bindings: shaderLayout.bindings!.filter(binding => !unused.includes(binding.name))
       };
+      const indirectPairs =
+        parallel &&
+        this.props.compactContacts !== false &&
+        ['parallelSolve', 'parallelLink', 'parallelUnion'].includes(entryPoint);
+      const dispatchBinding = bindings.find(binding => binding.name === 'parallelDispatch');
+      const indirectResources = indirectPairs
+        ? [{buffer: dispatchBinding!.resource, usage: 'indirect' as const}]
+        : [];
       if (entryPoint === 'parallelSolve') {
         const stages = ['parallelWarm', 'parallelPairs', 'parallelGather'];
         const properties = stages.map(stage => ({
@@ -1008,10 +1036,15 @@ export class GPURigidBodyWorld {
                   )
                 )
               );
-            computations[0].dispatch(computePass, Math.ceil(this.maximumPairs / 64));
+            const dispatchPairs = (computation: Computation) => {
+              if (indirectPairs)
+                computation.dispatchIndirect(computePass, getBuffer(dispatchBinding!.resource), 0);
+              else computation.dispatch(computePass, Math.ceil(this.maximumPairs / 64));
+            };
+            dispatchPairs(computations[0]);
             computations[2].dispatch(computePass, Math.ceil(this.count / 64));
             for (let iteration = 0; iteration < (this.props.iterations ?? 16); iteration++) {
-              computations[1].dispatch(computePass, Math.ceil(this.maximumPairs / 64));
+              dispatchPairs(computations[1]);
               computations[2].dispatch(computePass, Math.ceil(this.count / 64));
             }
           },
@@ -1023,15 +1056,18 @@ export class GPURigidBodyWorld {
         graph.addComputePass({
           id: `${this.id}-solve`,
           description: passDescriptions['solve'],
-          resources: activeBindings.map(binding => ({
-            buffer: binding.resource,
-            usage:
-              binding.name === 'settings'
-                ? ('uniform' as const)
-                : binding.name === 'bodies'
-                  ? ('storage-read' as const)
-                  : ('storage-read-write' as const)
-          })),
+          resources: [
+            ...indirectResources,
+            ...activeBindings.map(binding => ({
+              buffer: binding.resource,
+              usage:
+                binding.name === 'settings'
+                  ? ('uniform' as const)
+                  : binding.name === 'bodies'
+                    ? ('storage-read' as const)
+                    : ('storage-read-write' as const)
+            }))
+          ],
           compile: ({device}) =>
             executable(properties.map(properties => new Computation(device, properties))),
           compileAsync: async ({device}) =>
@@ -1051,7 +1087,9 @@ export class GPURigidBodyWorld {
           for (const binding of activeBindings)
             resolved[binding.name] = getBuffer(binding.resource);
           computation.setBindings(resolved);
-          if (entryPoint === 'meshCollide') {
+          if (indirectPairs) {
+            computation.dispatchIndirect(computePass, getBuffer(dispatchBinding!.resource), 0);
+          } else if (entryPoint === 'meshCollide') {
             const targetBinding = bindings.find(binding => binding.name === 'targets')!;
             computation.dispatchIndirect(
               computePass,
@@ -1061,17 +1099,19 @@ export class GPURigidBodyWorld {
           } else {
             computation.dispatch(
               computePass,
-              ['parallelLink', 'parallelUnion'].includes(entryPoint)
+              ['parallelLink', 'parallelUnion', 'parallelCompact'].includes(entryPoint)
                 ? Math.ceil(this.maximumPairs / 64)
-                : entryPoint.startsWith('parallel')
-                  ? Math.ceil(this.count / 64)
-                  : entryPoint === 'collide'
-                    ? Math.ceil(this.maximumPairs / 64)
-                    : entryPoint === 'bounds'
-                      ? Math.ceil(this.colliderStorageCount / 64)
-                      : entryPoint === 'integrate'
-                        ? Math.ceil(this.count / 64)
-                        : 1
+                : entryPoint === 'parallelDispatchCount'
+                  ? 1
+                  : entryPoint.startsWith('parallel')
+                    ? Math.ceil(this.count / 64)
+                    : entryPoint === 'collide'
+                      ? Math.ceil(this.maximumPairs / 64)
+                      : entryPoint === 'bounds'
+                        ? Math.ceil(this.colliderStorageCount / 64)
+                        : entryPoint === 'integrate'
+                          ? Math.ceil(this.count / 64)
+                          : 1
             );
           }
         },
@@ -1087,6 +1127,7 @@ export class GPURigidBodyWorld {
         id: computationProps.id,
         description: passDescriptions[entryPoint],
         resources: [
+          ...indirectResources,
           ...activeBindings.map(binding => ({
             buffer: binding.resource,
             usage:
@@ -1290,7 +1331,14 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
         bindings: [
           ...shaderLayout.bindings!.filter(
             binding =>
-              !['settings', 'meshTasks', 'parallelState', 'minima', 'maxima'].includes(binding.name)
+              ![
+                'settings',
+                'meshTasks',
+                'parallelState',
+                'parallelDispatch',
+                'minima',
+                'maxima'
+              ].includes(binding.name)
           ),
           {name: 'command', group: 0, location: 8, type: 'uniform'}
         ]
@@ -1299,7 +1347,14 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
         ...Object.fromEntries(
           Object.entries(buffers).filter(
             ([name]) =>
-              !['settings', 'meshTasks', 'parallelState', 'minima', 'maxima'].includes(name)
+              ![
+                'settings',
+                'meshTasks',
+                'parallelState',
+                'parallelDispatch',
+                'minima',
+                'maxima'
+              ].includes(name)
           )
         ),
         command: this.controlSettings
@@ -1677,6 +1732,25 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
           angularVelocity: state.angularVelocity
         };
       })
+    };
+  }
+
+  /** Optional diagnostic readback of the last parallel queue; never required for execution. */
+  async readSolverWork(): Promise<{
+    compacted: boolean;
+    activeContacts: number | null;
+    pairCapacity: number;
+    pairWorkgroups: number;
+  } | null> {
+    if (!this.parallelState || this.destroyed) return null;
+    const bytes = await this.parallelState.readAsync(0, 16);
+    const counters = new Uint32Array(bytes.buffer, bytes.byteOffset, 4);
+    const compacted = this.props.compactContacts !== false;
+    return {
+      compacted,
+      activeContacts: compacted ? counters[1] : null,
+      pairCapacity: this.maximumPairs,
+      pairWorkgroups: Math.ceil((compacted ? counters[1] : this.maximumPairs) / 64)
     };
   }
 

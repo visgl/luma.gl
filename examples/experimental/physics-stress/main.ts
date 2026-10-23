@@ -10,12 +10,19 @@ import {
 } from '@luma.gl/gpu-graph/gpu-physics';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {createRigidBodyPanel} from '../gpu-rigid-body-world/info-box';
-import {makeStressScene, isStressScene, STRESS_SCENES, type StressScene} from './scenes';
+import {
+  makeStressScene,
+  getStressStepCount,
+  isStressScene,
+  STRESS_SCENES,
+  type StressScene
+} from './scenes';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#world')!;
 const context = canvas.getContext('2d')!;
 const select = document.querySelector<HTMLSelectElement>('#scene')!;
 const solver = document.querySelector<HTMLSelectElement>('#solver')!;
+const pairWork = document.querySelector<HTMLSelectElement>('#pair-work')!;
 const timestep = document.querySelector<HTMLSelectElement>('#timestep')!;
 const status = document.querySelector<HTMLOutputElement>('#status')!;
 const pause = document.querySelector<HTMLButtonElement>('#pause')!;
@@ -33,6 +40,7 @@ let activeScene: StressScene = 'capacity';
 select.onchange = () => {
   if (isStressScene(select.value)) {
     selectedScene = select.value;
+    if (selectedScene === 'sparseContacts') solver.value = 'parallel';
     void restart();
   }
 };
@@ -44,6 +52,9 @@ let restartRequested = false;
 let stopped = false;
 let disposed = false;
 let states: GPURigidBodyState[] = [];
+let stepCount = 240;
+let lastSolverWork: Awaited<ReturnType<GPURigidBodyRecoveryRunner['world']['readSolverWork']>> =
+  null;
 let samples: {milliseconds: number; result: GPURigidBodyRecoveryResult}[] = [];
 let device: Awaited<ReturnType<typeof luma.createDevice>>;
 function fail(error: unknown) {
@@ -59,7 +70,7 @@ async function restart() {
   restartRequested = false;
   busy = true;
   exportButton.disabled = true;
-  reset.disabled = select.disabled = solver.disabled = timestep.disabled = true;
+  reset.disabled = select.disabled = solver.disabled = timestep.disabled = pairWork.disabled = true;
   let replacement: GPURigidBodyRecoveryRunner | undefined;
   const nextScene = selectedScene;
   try {
@@ -68,9 +79,11 @@ async function restart() {
       solver.value === 'parallel' ? 'parallel' : 'ordered',
       Number(timestep.value)
     );
+    nextConfiguration.props.compactContacts = pairWork.value === 'compact';
+    const nextStepCount = getStressStepCount(nextScene, nextConfiguration.props.timeStep!);
     status.value = 'Compiling…';
     replacement = await GPURigidBodyRecoveryRunner.create(device, nextConfiguration.props, {
-      maximumReplayTicks: 240
+      maximumReplayTicks: nextStepCount
     });
     if (disposed) return;
     const nextStates = await replacement.world.readState();
@@ -81,11 +94,13 @@ async function restart() {
     replacement = undefined;
     configuration = nextConfiguration;
     activeScene = nextScene;
+    stepCount = nextStepCount;
+    lastSolverWork = null;
     diagnostics.clear();
     states = nextStates;
     samples = [];
     stopped = false;
-    status.value = `READY · tick 0/240 · ${states.length} bodies${paused ? '\nPaused · Resume to advance' : ''}`;
+    status.value = `READY · tick 0/${stepCount} · ${states.length} bodies${paused ? '\nPaused · Resume to advance' : ''}`;
     document.querySelector('#error')!.textContent = '';
     document.querySelector('#description')!.textContent = configuration.description;
   } catch (error) {
@@ -94,7 +109,12 @@ async function restart() {
     replacement?.destroy();
     busy = false;
     exportButton.disabled = false;
-    reset.disabled = select.disabled = solver.disabled = timestep.disabled = false;
+    reset.disabled =
+      select.disabled =
+      solver.disabled =
+      timestep.disabled =
+      pairWork.disabled =
+        false;
     if (disposed) {
       runner?.destroy();
       device.destroy();
@@ -106,6 +126,7 @@ async function restart() {
 reset.onclick = restart;
 solver.onchange = restart;
 timestep.onchange = restart;
+pairWork.onchange = restart;
 pause.onclick = () => {
   paused = !paused;
   pause.textContent = paused ? 'Resume' : 'Pause';
@@ -118,6 +139,7 @@ exportButton.onclick = () => {
     adapter: device.info,
     configuration: configuration.props,
     capacity: runner.world.getCapacityInfo(),
+    solverWork: lastSolverWork,
     samples,
     finalState: states,
     notes: [
@@ -161,19 +183,47 @@ function draw() {
       shape = body.shape;
     context.fillStyle = body.mode === 'static' ? '#576675' : state.sleeping ? '#8b9b9f' : '#64c9dd';
     context.save();
-    context.translate(origin[0] + state.position[0] * scale, origin[1] - state.position[2] * scale);
+    const [rotationX, rotationY, rotationZ, rotationScalar] = state.orientation;
+    const offset = body.centerOfMass ?? [0, 0, 0];
+    const doubledCross = [
+      2 * (rotationY * offset[2] - rotationZ * offset[1]),
+      2 * (rotationZ * offset[0] - rotationX * offset[2]),
+      2 * (rotationX * offset[1] - rotationY * offset[0])
+    ];
+    const offsetX =
+      offset[0] +
+      rotationScalar * doubledCross[0] +
+      rotationY * doubledCross[2] -
+      rotationZ * doubledCross[1];
+    const offsetZ =
+      offset[2] +
+      rotationScalar * doubledCross[2] +
+      rotationX * doubledCross[1] -
+      rotationY * doubledCross[0];
+    context.translate(
+      origin[0] + (state.position[0] - offsetX) * scale,
+      origin[1] - (state.position[2] - offsetZ) * scale
+    );
     // Front diagnostic projection; boxes use their authored extents, not a 3D silhouette.
     if (shape?.type === 'sphere') {
       context.beginPath();
       context.arc(0, 0, shape.radius * scale, 0, 2 * Math.PI);
       context.fill();
-    } else if (shape?.type === 'box')
+    } else if (shape?.type === 'box') {
+      const [horizontal, vertical, depth, scalar] = state.orientation;
+      context.rotate(
+        Math.atan2(
+          2 * (scalar * vertical + horizontal * depth),
+          1 - 2 * (horizontal * horizontal + vertical * vertical)
+        )
+      );
       context.fillRect(
         -shape.halfExtents[0] * scale,
         -shape.halfExtents[2] * scale,
         2 * shape.halfExtents[0] * scale,
         2 * shape.halfExtents[2] * scale
       );
+    }
     context.restore();
   }
   if (activeScene === 'ballistic' && runner) {
@@ -203,6 +253,7 @@ async function advance() {
     samples.push({milliseconds, result});
     if (runner.encoding) diagnostics.record(runner.graph, runner.encoding);
     states = await runner.world.readState();
+    lastSolverWork = await runner.world.readSolverWork();
     const sorted = samples
       .map(sample => sample.milliseconds)
       .sort((first, second) => first - second);
@@ -212,14 +263,19 @@ async function advance() {
       activeScene === 'ballistic'
         ? `\nVertical error: ${Math.abs(states[0].position[2] - (8 - 5 * time * time)).toFixed(5)}`
         : '';
-    status.value = `${result.accepted ? 'ACCEPTED' : 'REJECTED'} · tick ${runner.tick}/240 · ${time.toFixed(2)} s\nRetries: ${samples.reduce((total, sample) => total + sample.result.retries, 0)} · replayed: ${samples.reduce((total, sample) => total + sample.result.replayedTicks, 0)} ticks\nPairs: ${capacity.maximumPairs} · buffers: ${(capacity.ownedBufferBytes / 1048576).toFixed(2)} MiB\nNodes: ${runner.graph.stats.nodeOrder.length} · peak candidates: ${result.diagnostics.maximumCandidatePairs}\nCompletion p50: ${sorted[Math.floor((sorted.length - 1) * 0.5)].toFixed(2)} ms\nCompletion p95: ${sorted[Math.floor((sorted.length - 1) * 0.95)].toFixed(2)} ms${error}`;
-    stopped = !result.accepted || runner.tick === 240;
+    status.value = `${result.accepted ? 'ACCEPTED' : 'REJECTED'} · tick ${runner.tick}/${stepCount} · ${time.toFixed(2)} s\nRetries: ${samples.reduce((total, sample) => total + sample.result.retries, 0)} · replayed: ${samples.reduce((total, sample) => total + sample.result.replayedTicks, 0)} ticks\nPairs: ${capacity.maximumPairs} · buffers: ${(capacity.ownedBufferBytes / 1048576).toFixed(2)} MiB\nNodes: ${runner.graph.stats.nodeOrder.length} · peak candidates: ${result.diagnostics.maximumCandidatePairs}\nCompletion p50: ${sorted[Math.floor((sorted.length - 1) * 0.5)].toFixed(2)} ms\nCompletion p95: ${sorted[Math.floor((sorted.length - 1) * 0.95)].toFixed(2)} ms${lastSolverWork ? `\nPair workgroups/iteration: ${lastSolverWork.pairWorkgroups} / ${Math.ceil(capacity.maximumPairs / 64)} capacity${lastSolverWork.compacted ? ` · ${lastSolverWork.activeContacts} contacts` : ' · scan'}` : ''}${error}`;
+    stopped = !result.accepted || runner.tick === stepCount;
   } catch (error) {
     fail(error);
   } finally {
     busy = false;
     exportButton.disabled = false;
-    reset.disabled = select.disabled = solver.disabled = timestep.disabled = false;
+    reset.disabled =
+      select.disabled =
+      solver.disabled =
+      timestep.disabled =
+      pairWork.disabled =
+        false;
     if (disposed) {
       runner?.destroy();
       device.destroy();

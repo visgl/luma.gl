@@ -43,3 +43,27 @@ The discrete grid benchmark does not measure the small-world continuous sweep or
 pool event path. Those are bounded to 256 bodies and have separate regression
 coverage. Warm starting and alternative dense-cell acceleration remain experiments,
 not measured improvements claimed by this report.
+
+
+## Parallel contact compaction checkpoint (2026-10-23)
+
+The new sparse-contact fixture reserves 8192 pair slots for 24 independent impacts.
+At the end of the run the compact queue has zero contacts and dispatches zero pair
+workgroups per iteration; full-scan mode dispatches 128. A separate correctness
+fixture retains 80 simultaneous contacts in two workgroups, compared with 64 full
+capacity workgroups at 4096 slots. Body gathers and collision discovery still run.
+
+An exploratory Apple/Metal-3 run (30 samples, no warmup) measured median full-step
+GPU work of 0.332 ms compacted versus 0.426 ms scanning. Median completion with
+diagnostics was 15.5 versus 15.8 ms. The two extra compaction passes and host/submission
+costs remain part of these totals. Contacts separate early; this is predominantly
+an empty/sparse queue measurement, not a dense-pile result. Stack qualification and website validation ran concurrently on the machine; host/GPU
+contention strongly affects completion latency. No cross-device or statistical performance gate is claimed.
+
+The machine-readable summary is [gpu-physics-compaction.json](./gpu-physics-compaction.json).
+Reproduce both modes using the same timestep, solver iterations and capacity:
+
+```bash
+node scripts/physics/benchmark-rigid-body.mjs --url http://127.0.0.1:5236/ --fixture sparseContacts --solver parallel --maximum-pairs 8192 --warmup 0 --samples 30
+node scripts/physics/benchmark-rigid-body.mjs --url http://127.0.0.1:5236/ --fixture sparseContacts --solver parallel --maximum-pairs 8192 --warmup 0 --samples 30 --full-scan
+```

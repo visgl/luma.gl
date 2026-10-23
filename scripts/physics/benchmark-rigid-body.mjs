@@ -12,6 +12,7 @@ import {getPlaywrightLaunchOptions} from '../playwright/get-playwright-launch-op
 export async function benchmarkRigidBody(options = {}) {
   const baseUrl = new URL(options.url || 'http://127.0.0.1:5198/');
   const settings = {
+    compactContacts: options.compactContacts !== false,
     fixture: options.fixture ?? 'deep', broadPhase: options.broadPhase ?? 'hierarchical-grid', failurePolicy: options.failurePolicy ?? 'report', solver: options.solver ?? 'parallel',
     iterations: Number(options.iterations ?? 32), samples: Number(options.samples ?? 30),
     warmup: Number(options.warmup ?? 120), timeStep: Number(options.timeStep ?? 1 / 120),
@@ -19,7 +20,7 @@ export async function benchmarkRigidBody(options = {}) {
     maximumPairs: options.maximumPairs === undefined ? undefined : Number(options.maximumPairs)
   };
   if (!['localhost', '127.0.0.1', '[::1]'].includes(baseUrl.hostname) ||
-      !['stack', 'deep', 'massRatio', 'support', 'friction', 'mesh', 'mixed', 'impact', 'torque', 'cradle', 'pendulum', 'hinge', 'slider'].includes(settings.fixture) ||
+      !['sparseContacts', 'stack', 'deep', 'massRatio', 'support', 'friction', 'mesh', 'mixed', 'impact', 'torque', 'cradle', 'pendulum', 'hinge', 'slider'].includes(settings.fixture) ||
       (['cradle', 'pendulum', 'hinge', 'slider'].includes(settings.fixture) && settings.solver !== 'ordered') ||
       !['ordered', 'parallel'].includes(settings.solver) ||
       !['all-pairs', 'hierarchical-grid'].includes(settings.broadPhase) ||
@@ -44,19 +45,21 @@ export async function benchmarkRigidBody(options = {}) {
 }
 
 async function runBenchmark(options) {
-  const {root, fixture, solver, broadPhase, failurePolicy, samples, warmup, iterations, timeStep, warmStartFactor, maximumPairs} = options;
-  const [{luma}, {webgpuAdapter}, {GPUCommandGraph}, {GPUCommandGraphInspector}, {GPURigidBodyWorld}, {makeRigidBodyScene, getRigidBodySceneGravity}, {makeMechanism}] = await Promise.all([
+  const {root, fixture, solver, broadPhase, failurePolicy, samples, warmup, iterations, timeStep, warmStartFactor, maximumPairs, compactContacts} = options;
+  const [{luma}, {webgpuAdapter}, {GPUCommandGraph}, {GPUCommandGraphInspector}, {GPURigidBodyWorld}, {makeRigidBodyScene, getRigidBodySceneGravity}, {makeMechanism}, {makeStressScene}] = await Promise.all([
     import(`${root}/modules/core/src/index.ts`), import(`${root}/modules/core/src/webgpu/index.ts`),
     import(`${root}/modules/gpu-graph/src/gpu-core/gpu-command-graph.ts`),
     import(`${root}/modules/gpu-graph/src/gpu-core/gpu-command-graph-inspector.ts`),
     import(`${root}/modules/gpu-graph/src/gpu-physics/gpu-rigid-body-world.ts`),
     import(`${root}/examples/experimental/gpu-rigid-body-world/scenes.ts`),
-    import(`${root}/examples/experimental/gpu-rigid-body-world/mechanisms.ts`)
+    import(`${root}/examples/experimental/gpu-rigid-body-world/mechanisms.ts`),
+    import(`${root}/examples/experimental/physics-stress/scenes.ts`)
   ]);
   const device = await luma.createDevice({type: 'webgpu', featureLevel: 'core', optionalFeatures: ['timestamp-query'], adapters: [webgpuAdapter]});
   const mechanism = makeMechanism(fixture);
-  const bodies = mechanism?.bodies ?? makeRigidBodyScene(fixture);
-  const world = new GPURigidBodyWorld({bodies, joints: mechanism?.joints, solver, iterations, timeStep, warmStartFactor, maximumPairs, broadPhase, failurePolicy, ...(fixture === 'cradle' ? {restitutionThreshold: 0} : {}), gravity: getRigidBodySceneGravity(fixture)});
+  const stress = fixture === 'sparseContacts' ? makeStressScene('sparseContacts', solver, timeStep).props : null;
+  const bodies = stress?.bodies ?? mechanism?.bodies ?? makeRigidBodyScene(fixture);
+  const world = new GPURigidBodyWorld({...stress, bodies, joints: mechanism?.joints ?? stress?.joints, solver, compactContacts, iterations, timeStep, warmStartFactor, maximumPairs: maximumPairs ?? stress?.maximumPairs, broadPhase, failurePolicy, ...(fixture === 'cradle' ? {restitutionThreshold: 0} : {}), gravity: stress?.gravity ?? getRigidBodySceneGravity(fixture)});
   let graph;
   try {
     const definition = new GPUCommandGraph(device);
@@ -88,7 +91,8 @@ async function runBenchmark(options) {
       return values.length ? {median: values[Math.floor(values.length * 0.5)], p95: values[Math.min(values.length - 1, Math.floor(values.length * 0.95))], maximum: values.at(-1)} : null;
     };
     return {formatVersion: 1, stage: 'full-rigid-body-step', fixture, objectCount: bodies.length,
-      settings: {solver, jointCount: mechanism?.joints.length ?? 0, failurePolicy, broadPhase, iterations, timeStep, warmStartFactor, maximumPairs: world.maximumPairs},
+      solverWork: await world.readSolverWork(),
+      settings: {solver, compactContacts, sleepAfter: stress?.sleepAfter ?? 0.5, restitutionThreshold: stress?.restitutionThreshold ?? (fixture === 'cradle' ? 0 : 0.5), jointCount: mechanism?.joints.length ?? 0, failurePolicy, broadPhase, iterations, timeStep, warmStartFactor, maximumPairs: world.maximumPairs},
       sampleCount: samples, warmupCount: warmup, adapter: device.info,
       timestampQueries: device.features.has('timestamp-query'), compileMilliseconds,
       graphNodes: graph.stats.nodeOrder.length, capacity: world.getCapacityInfo(),
@@ -106,8 +110,8 @@ async function runBenchmark(options) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
-  const {values} = parseArgs({options: {url: {type: 'string'}, fixture: {type: 'string'}, solver: {type: 'string'}, 'broad-phase': {type: 'string'}, 'failure-policy': {type: 'string'}, iterations: {type: 'string'}, samples: {type: 'string'}, warmup: {type: 'string'}, 'time-step': {type: 'string'}, 'warm-start-factor': {type: 'string'}, 'maximum-pairs': {type: 'string'}, software: {type: 'boolean'}}});
-  benchmarkRigidBody({...values, broadPhase: values['broad-phase'], failurePolicy: values['failure-policy'], timeStep: values['time-step'], warmStartFactor: values['warm-start-factor'], maximumPairs: values['maximum-pairs'], softwareGpu: values.software}).then(report => {
+  const {values} = parseArgs({options: {url: {type: 'string'}, fixture: {type: 'string'}, solver: {type: 'string'}, 'broad-phase': {type: 'string'}, 'failure-policy': {type: 'string'}, iterations: {type: 'string'}, samples: {type: 'string'}, warmup: {type: 'string'}, 'time-step': {type: 'string'}, 'warm-start-factor': {type: 'string'}, 'maximum-pairs': {type: 'string'}, 'full-scan': {type: 'boolean'}, software: {type: 'boolean'}}});
+  benchmarkRigidBody({...values, compactContacts: !values['full-scan'], broadPhase: values['broad-phase'], failurePolicy: values['failure-policy'], timeStep: values['time-step'], warmStartFactor: values['warm-start-factor'], maximumPairs: values['maximum-pairs'], softwareGpu: values.software}).then(report => {
     console.log(JSON.stringify(report, null, 2));if (!report.executionComplete) process.exitCode = 2;
   }).catch(error => {console.error(error);process.exitCode = 1;});
 }

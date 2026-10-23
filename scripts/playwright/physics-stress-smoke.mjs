@@ -28,21 +28,30 @@ try {
   await page.getByRole('button', {name: 'Expand info box', exact: true}).first().click();
   await page.waitForFunction(() => document.querySelector('#status')?.textContent?.includes('tick 240/240'), undefined, {timeout: 120000});
   const reports = [];
-  for (const scene of ['capacity', 'dense', 'massRatio', 'ballistic', 'continuous']) {
+  for (const scene of ['capacity', 'dense', 'massRatio', 'ballistic', 'continuous', 'sparseContacts', 'geometry', 'deepStack', 'offsetStack']) {
     if (scene !== 'capacity') {
       await page.locator('#scene').selectOption(scene);
-      await page.waitForFunction(() => document.querySelector('#status')?.textContent?.includes('tick 240/240'), undefined, {timeout: 120000});
+      const steps = scene === 'deepStack' || scene === 'offsetStack' ? 720 : 240;
+      await page.waitForFunction(expected => document.querySelector('#status')?.textContent?.includes(`tick ${expected}/${expected}`), steps, {timeout: 120000});
     }
     const status = await page.locator('#status').textContent();
     assert.match(status, /ACCEPTED/);
     assert.equal(await page.locator('#error').textContent(), '');
     reports.push({scene, status});
+    if (scene === 'sparseContacts') {
+      assert.match(status, /Pair workgroups\/iteration: 0 \/ 128 capacity/);
+      await page.locator('#pair-work').selectOption('scan');
+      await page.waitForFunction(() => document.querySelector('#status')?.textContent?.includes('tick 240/240'), undefined, {timeout: 120000});
+      assert.match(await page.locator('#status').textContent(), /Pair workgroups\/iteration: 128 \/ 128 capacity/);
+      await page.locator('#pair-work').selectOption('compact');
+      await page.waitForFunction(() => document.querySelector('#status')?.textContent?.includes('tick 240/240'), undefined, {timeout: 120000});
+    }
     if (scene === 'dense') await page.screenshot({path: '/tmp/physics-stress-thumbnail.jpg', type: 'jpeg', quality: 85});
   }
   await page.locator('#pause').click();
   await page.locator('#reset').click();
   await page.waitForFunction(() => !document.querySelector('#reset')?.disabled);
-  assert.match(await page.locator('#status').textContent(), /READY · tick 0\/240/);
+  assert.match(await page.locator('#status').textContent(), /READY · tick 0\/720/);
   await page.screenshot({path: '/tmp/physics-stress.png'});
   // Leave synchronously after starting a rebuild, before its asynchronous creation finishes.
   await page.evaluate(() => {
