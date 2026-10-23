@@ -243,6 +243,13 @@ export class GPUVectorEvaluator {
     return this._gpuVector;
   }
 
+  /** Clears only the collected vector view. Invalidate changed children separately. */
+  invalidate(): void {
+    this.assertScopeAccess();
+    if (this._destroyed) throw new Error('Cannot invalidate a destroyed evaluator');
+    this._gpuVector = undefined;
+  }
+
   /** Releases cached GPU resources owned through child `GPUDataEvaluator` instances. */
   destroy(): void {
     this.assertScopeAccess();
