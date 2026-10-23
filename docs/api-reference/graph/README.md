@@ -17,6 +17,7 @@ The root exposes scheduling, compilation, encoding, inspection, and autotuning. 
 
 | Subpath | Capability |
 | --- | --- |
+| [`gpu-simple-graph`](/docs/api-reference/graph/gpu-simple-graph) | Portable evaluator-backed composition, upload/copy, scoped runs, and output storage |
 | `gpu-core` | Graph primitives, GPU programs, resource planning, and execution helpers |
 | `gpu-graph-algorithms` | Graph topology, analytics, and layouts |
 | `gpu-parse` | Encoded columnar page decoding |

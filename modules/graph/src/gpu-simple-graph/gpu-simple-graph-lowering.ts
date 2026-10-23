@@ -19,10 +19,17 @@ import {
   type GPUProgramBindings,
   type GPUProgramVector
 } from '@luma.gl/graph/gpu-core';
+import {
+  GPUSimpleGraphUploadOperation,
+  GPUSimpleGraphCopyOperation,
+  makeCopyEvaluator
+} from './gpu-simple-graph-transfer';
 import {GPUSimpleGraphOperation} from './gpu-simple-graph-operation';
 
 export type SimpleOperation =
   | GPUSimpleGraphOperation
+  | GPUSimpleGraphUploadOperation
+  | GPUSimpleGraphCopyOperation
   | GPUProgramScalarOperation
   | GPUProgramScalarLiteral
   | GPUProgramVectorMADD;
@@ -40,6 +47,14 @@ export class SimpleGraphLowering {
   lower(operation: SimpleOperation): void {
     if (operation instanceof GPUSimpleGraphOperation) {
       this.registerOutput(operation.id, operation.evaluator);
+    } else if (operation instanceof GPUSimpleGraphUploadOperation) {
+      const evaluator = this.own(GPUDataEvaluator.fromArray(operation.props.data, operation.props));
+      this.registerOutput(operation.id, evaluator);
+    } else if (operation instanceof GPUSimpleGraphCopyOperation) {
+      const source = this.outputs.get(operation.props.input);
+      // Named copy inputs must precede their consumers.
+      assert(source);
+      this.registerOutput(operation.id, makeCopyEvaluator(source.evaluator, this.owned));
     } else if (operation instanceof GPUProgramScalarLiteral) {
       const {output, value} = operation.props;
       this.registerValue(output);

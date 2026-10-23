@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {vertexFormatDecoder} from '@luma.gl/core';
+import {assert, vertexFormatDecoder} from '@luma.gl/core';
 import {GPUDataEvaluator} from './gpu-data-evaluator';
 
 /** One evaluator output in a snapshot of the lazy dependency graph. */
@@ -33,14 +33,25 @@ export type GPUEvaluatorInspection = Readonly<{
   nodes: readonly GPUEvaluatorInspectionNode[];
 }>;
 
-/** Builds a snapshot without evaluating, reading back, or resolving backend handlers. @internal */
-export function inspectEvaluators(evaluators: readonly GPUDataEvaluator[]): GPUEvaluatorInspection {
+/**
+ * Builds a snapshot without evaluating, reading back, or resolving backend handlers.
+ * Optional getId integrates the snapshot with a caller's namespace; it must return unique IDs
+ * for distinct evaluators. Without it, IDs are local to this snapshot.
+ */
+export function inspectEvaluators(
+  evaluators: readonly GPUDataEvaluator[],
+  getId?: (evaluator: GPUDataEvaluator, index: number) => string
+): GPUEvaluatorInspection {
   const identities = new Map<GPUDataEvaluator, string>();
   const nodes: GPUEvaluatorInspectionNode[] = [];
+  const visiting = new Set<GPUDataEvaluator>();
   function visit(evaluator: GPUDataEvaluator): string {
+    // Mutable custom operations must not introduce dependency cycles.
+    assert(!visiting.has(evaluator));
     const existing = identities.get(evaluator);
     if (existing) return existing;
-    const id = `value-${identities.size}`;
+    const id = getId?.(evaluator, identities.size) ?? `value-${identities.size}`;
+    visiting.add(evaluator);
     identities.set(evaluator, id);
     const source = evaluator.source;
     const alias = source instanceof GPUDataEvaluator;
@@ -55,7 +66,7 @@ export function inspectEvaluators(evaluators: readonly GPUDataEvaluator[]): GPUE
         dependencies: Object.freeze(dependencyIds),
         type: evaluator.type,
         size: evaluator.size,
-        format: getEvaluatorFormat(evaluator),
+        format: getGPUDataEvaluatorFormat(evaluator),
         length: evaluator.length,
         normalized: evaluator.normalized,
         isConstant: evaluator.isConstant,
@@ -65,13 +76,15 @@ export function inspectEvaluators(evaluators: readonly GPUDataEvaluator[]): GPUE
         evaluated: evaluator.evaluated
       })
     );
+    visiting.delete(evaluator);
     return id;
   }
   const outputs = evaluators.map(visit);
   return Object.freeze({outputs: Object.freeze(outputs), nodes: Object.freeze(nodes)});
 }
 
-function getEvaluatorFormat(evaluator: GPUDataEvaluator): GPUDataEvaluator['format'] {
+/** Resolves one evaluator's storage format without traversing dependencies. */
+export function getGPUDataEvaluatorFormat(evaluator: GPUDataEvaluator): GPUDataEvaluator['format'] {
   if (evaluator.format) return evaluator.format;
   const components = evaluator.size;
   if (components !== 1 && components !== 2 && components !== 3 && components !== 4)

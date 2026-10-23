@@ -69,3 +69,8 @@ export type {
   GPUEvaluatorInspection,
   GPUEvaluatorInspectionNode
 } from './operation/gpu-evaluator-inspection';
+
+export {
+  inspectEvaluators as getGPUDataEvaluatorInspection,
+  getGPUDataEvaluatorFormat
+} from './operation/gpu-evaluator-inspection';

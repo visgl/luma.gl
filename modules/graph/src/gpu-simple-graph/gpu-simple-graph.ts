@@ -3,7 +3,13 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {assert, type Device} from '@luma.gl/core';
-import {GPUDataEvaluator, GPUVectorEvaluator} from '@luma.gl/gpgpu';
+import {
+  GPUDataEvaluator,
+  GPUVectorEvaluator,
+  getGPUDataEvaluatorInspection,
+  type GPUEvaluationScope,
+  type GPUDataEvaluatorTargetBuffer
+} from '@luma.gl/gpgpu';
 import type {GPUVector, GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 
 import {
@@ -22,6 +28,11 @@ import {
   getSimpleGraphEvaluatorFormat,
   type GPUSimpleGraphEvaluator
 } from './gpu-simple-graph-operation';
+import {
+  GPUSimpleGraphUploadOperation,
+  GPUSimpleGraphCopyOperation,
+  makeCopyEvaluator
+} from './gpu-simple-graph-transfer';
 import {SimpleGraphLowering, type SimpleOperation} from './gpu-simple-graph-lowering';
 
 /** Inspection record for one evaluator in dependency order. */
@@ -38,7 +49,16 @@ export type GPUSimpleGraphCompileOptions = {
   outputs?: readonly string[];
   /** Fixed vector bindings, using the existing GPUProgramCompiler convention. */
   bindings?: GPUProgramBindings;
+  /** Borrowed storage for selected outputs. Vector outputs require one target per chunk.
+   * This first pass copies final results into targets without retargeting borrowed evaluators.
+   */
+  outputTargets?: Readonly<
+    Record<string, GPUDataEvaluatorTargetBuffer | readonly GPUDataEvaluatorTargetBuffer[]>
+  >;
 };
+
+/** Run options; scopes defer submission until the caller submits or cancels. */
+export type GPUSimpleGraphRunOptions = {scope?: GPUEvaluationScope};
 
 /**
  * Prototype graph-shaped interface to the existing lazy GPGPU evaluator.
@@ -55,15 +75,20 @@ export class GPUSimpleGraph {
   private compiled = false;
 
   /** Execution capabilities; evaluators retain control of backend submission. */
-  readonly capabilities = Object.freeze({
-    callerControlledSubmission: false,
-    dynamicBindings: false,
-    transientAllocation: false
-  });
+  readonly capabilities: Readonly<{
+    callerControlledSubmission: boolean;
+    dynamicBindings: false;
+    transientAllocation: false;
+  }>;
 
   constructor(device: Device, props: {id?: string} = {}) {
     this.device = device;
     this.id = props.id ?? 'simple-graph';
+    this.capabilities = Object.freeze({
+      callerControlledSubmission: device.type === 'webgpu',
+      dynamicBindings: false,
+      transientAllocation: false
+    });
   }
 
   /** Accepts evaluator operations, semantic composites, and recursively nested arrays. */
@@ -84,11 +109,17 @@ export class GPUSimpleGraph {
         // Only the initial portable semantic subset and explicit evaluator adapters are supported.
         assert(
           value instanceof GPUSimpleGraphOperation ||
+            value instanceof GPUSimpleGraphUploadOperation ||
+            value instanceof GPUSimpleGraphCopyOperation ||
             value instanceof GPUProgramScalarLiteral ||
             value instanceof GPUProgramScalarOperation ||
             value instanceof GPUProgramVectorMADD
         );
-        if (value instanceof GPUSimpleGraphOperation) {
+        if (
+          value instanceof GPUSimpleGraphOperation ||
+          value instanceof GPUSimpleGraphUploadOperation ||
+          value instanceof GPUSimpleGraphCopyOperation
+        ) {
           // Explicit evaluator output names must be nonempty and unique within the graph.
           assert(
             value.id && !this.evaluatorIds.has(value.id) && !pendingEvaluatorIds.has(value.id)
@@ -145,13 +176,27 @@ export class GPUSimpleGraph {
         assert(operation);
         return operation;
       });
+      for (const [id, target] of Object.entries(options.outputTargets ?? {})) {
+        const rootIndex = roots.findIndex(root => root.id === id);
+        // Output bindings address selected roots only, avoiding hidden writes to unused values.
+        assert(rootIndex >= 0);
+        const evaluator = makeCopyEvaluator(roots[rootIndex].evaluator, lowering.owned);
+        const chunks =
+          evaluator instanceof GPUVectorEvaluator ? evaluator.gpuDataEvaluators : [evaluator];
+        const targets = 'buffer' in target ? [target] : target;
+        assert(targets.length === chunks.length);
+        for (const [index, chunk] of chunks.entries()) {
+          assert(targets[index].buffer.device === this.device);
+          chunk.setTargetBuffer(targets[index]);
+        }
+        roots[rootIndex] = new GPUSimpleGraphOperation({id, evaluator});
+      }
       const identifiers = new Map<GPUSimpleGraphEvaluator, string>();
       for (const [identifier, {evaluator}] of evaluators) {
+        if (roots.some(root => root.id === identifier && root.evaluator !== evaluator)) continue;
         if (!identifiers.has(evaluator)) identifiers.set(evaluator, identifier);
       }
       const usedIdentifiers = new Set(evaluators.keys());
-      const visiting = new Set<GPUSimpleGraphEvaluator>();
-      const visited = new Set<GPUSimpleGraphEvaluator>();
       const nodes: GPUSimpleGraphNode[] = [];
       let nextIdentifier = 0;
 
@@ -167,24 +212,39 @@ export class GPUSimpleGraph {
         return identifier;
       };
 
-      const visit = (evaluator: GPUSimpleGraphEvaluator): void => {
-        if (visited.has(evaluator)) return;
-        // Mutable custom operations must not introduce dependency cycles.
-        assert(!visiting.has(evaluator));
-        visiting.add(evaluator);
-        const dependencies = getDependencies(evaluator);
-        for (const dependency of dependencies) visit(dependency);
+      // The GPGPU snapshot owns dependency traversal, cycle checks, and format inference.
+      // Graph adds only named output identities and chunk-collection nodes.
+      for (const {id, evaluator} of roots) {
+        if (!identifiers.has(evaluator)) identifiers.set(evaluator, id);
+      }
+      const dataRoots = roots.flatMap(({evaluator}) =>
+        evaluator instanceof GPUVectorEvaluator ? [...evaluator.gpuDataEvaluators] : [evaluator]
+      );
+      const inspection = getGPUDataEvaluatorInspection(dataRoots, getIdentifier);
+      for (const node of inspection.nodes) {
         nodes.push({
-          id: getIdentifier(evaluator),
-          operation: getOperationName(evaluator),
-          dependencies: dependencies.map(getIdentifier),
-          rowCount: evaluator.length,
-          format: getSimpleGraphEvaluatorFormat(evaluator)
+          id: node.id,
+          operation:
+            node.operation ??
+            (node.kind === 'alias' ? 'alias' : node.isConstant ? 'constant' : 'input'),
+          dependencies: node.dependencies,
+          rowCount: node.length,
+          format: node.format
         });
-        visiting.delete(evaluator);
-        visited.add(evaluator);
-      };
-      for (const {evaluator} of roots) visit(evaluator);
+      }
+      const collected = new Set<GPUVectorEvaluator>();
+      for (const {evaluator} of roots) {
+        if (evaluator instanceof GPUVectorEvaluator && !collected.has(evaluator)) {
+          collected.add(evaluator);
+          nodes.push({
+            id: getIdentifier(evaluator),
+            operation: 'collect-chunks',
+            dependencies: evaluator.gpuDataEvaluators.map(getIdentifier),
+            rowCount: evaluator.length,
+            format: getSimpleGraphEvaluatorFormat(evaluator)
+          });
+        }
+      }
       return new CompiledGPUSimpleGraph(
         this.device,
         nodes,
@@ -211,6 +271,7 @@ export class CompiledGPUSimpleGraph {
   private readonly device: Device;
   private running = false;
   private destroyed = false;
+  private pendingScope?: GPUEvaluationScope;
 
   constructor(
     device: Device,
@@ -237,16 +298,25 @@ export class CompiledGPUSimpleGraph {
   /** Releases semantic evaluator results, preserving borrowed inputs and wrappers. */
   destroy(): void {
     // Results must no longer be in use; borrowed evaluators and input buffers remain caller-owned.
-    assert(!this.running);
+    assert(!this.running && !this.pendingScope);
     if (this.destroyed) return;
     for (const evaluator of this.ownedEvaluators) evaluator.destroy();
     this.destroyed = true;
   }
 
   /** Materializes selected outputs without CPU readback. Semantic results live until destroy(). */
-  async run(): Promise<Record<string, GPUVector>> {
+  async run({scope}: GPUSimpleGraphRunOptions = {}): Promise<Record<string, GPUVector>> {
     // The underlying evaluators do not support concurrent evaluation of shared outputs.
-    assert(!this.running && !this.destroyed);
+    assert(!this.running && !this.destroyed && !this.pendingScope);
+    if (scope) {
+      // One compiled graph has one device and stays leased until the scope finishes.
+      assert(scope.device === this.device);
+      scope.assertIdle();
+      scope.retain(() => {
+        this.pendingScope = undefined;
+      });
+      this.pendingScope = scope;
+    }
     this.running = true;
     try {
       const results: [string, GPUVector][] = [];
@@ -261,10 +331,14 @@ export class CompiledGPUSimpleGraph {
         evaluated.add(evaluator);
       };
       for (const {id, evaluator} of this.executionPlan) {
-        await evaluateDependencies(evaluator);
+        if (scope) await scope.evaluate(evaluator);
+        else await evaluateDependencies(evaluator);
         results.push([id, evaluator.gpuVector]);
       }
       return Object.fromEntries(results);
+    } catch (error) {
+      scope?.cancel();
+      throw error;
     } finally {
       this.running = false;
     }
@@ -275,10 +349,4 @@ function getDependencies(evaluator: GPUSimpleGraphEvaluator): readonly GPUSimple
   if (evaluator instanceof GPUVectorEvaluator) return evaluator.gpuDataEvaluators;
   if (evaluator.source instanceof GPUDataEvaluator) return [evaluator.source];
   return evaluator.source?.dependencies ?? [];
-}
-
-function getOperationName(evaluator: GPUSimpleGraphEvaluator): string {
-  if (evaluator instanceof GPUVectorEvaluator) return 'collect-chunks';
-  if (evaluator.source instanceof GPUDataEvaluator) return 'alias';
-  return evaluator.source?.name ?? (evaluator.isConstant ? 'constant' : 'input');
 }

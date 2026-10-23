@@ -574,6 +574,7 @@
         "label": "@luma.gl/graph",
         "items": [
           "api-reference/graph/README",
+          "api-reference/graph/gpu-simple-graph",
           {
             "type": "category",
             "label": "GPU Graph",

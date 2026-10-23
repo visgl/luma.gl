@@ -95,7 +95,8 @@ export class GPUEvaluationScope {
     }
   }
 
-  private assertIdle(): void {
+  /** Checks that callers can start a scoped graph or submit work. @internal */
+  assertIdle(): void {
     this.assertOpen();
     if (this.evaluating) {
       throw new Error('Await scope evaluation before submitting or cancelling');
