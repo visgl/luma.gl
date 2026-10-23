@@ -109,12 +109,23 @@ is already present.
 
 Removes a previously registered default module.
 
-### `addShaderHook(hook: string, opts?: object): void`
+### `addShaderHook(hook: string, options?: ShaderHookOptions): void`
 
 Registers a stage-prefixed hook function that modules can inject into. GLSL
 hook signatures use GLSL syntax, for example
 `vs:OFFSET_POSITION(inout vec4 position)`. WGSL hook signatures use WGSL syntax,
 for example `vs:OFFSET_POSITION(position: ptr<function, vec4<f32>>)`.
+`options.header` and `options.footer` are emitted at the start and end of the
+generated hook function.
+
+Registering the same stage-prefixed hook name again replaces the earlier
+declaration (last registration wins); it does not throw.
+
+### `resetShaderHooks(): void`
+
+Removes every hook registered with `addShaderHook()`. Default modules are not
+affected. Use this instead of mutating assembler internals when an application
+needs to re-register its hooks.
 
 ### `GLSLShaderAssembler.assembleGLSLShaderPair(props: AssembleShaderProps)`
 
@@ -169,6 +180,27 @@ fn vertexMain(@location(0) position: vec2<f32>) -> @builtin(position) vec4<f32> 
   return shaderPosition;
 }
 ```
+
+### Hook validation
+
+Named hook injections must target a hook registered for the stage being
+assembled. Otherwise assembly throws `Unknown shader hook <name>`, listing the
+registered hooks. Register the hook before injecting into it:
+
+```typescript
+shaderAssembler.addShaderHook('fs:FILTER_COLOR(inout vec4 color)');
+// Throws: 'fs:FILTER_COLR' is not registered.
+shaderAssembler.assembleGLSLShaderPair({...props, inject: {'fs:FILTER_COLR': 'color.r = 1.0;'}});
+```
+
+- GLSL validates application `inject`, plugin injections, and module `inject`
+  entries for the stage being assembled. A `vs:` injection does not match an
+  `fs:` hook with the same name.
+- WGSL validates application `inject` and plugin injections. Module `inject`
+  entries are not language-specific and often contain GLSL, so WGSL applies a
+  module injection only when its hook is registered and otherwise skips it.
+- `vs:#decl`, `vs:#main-start`, other `#` anchors, and source-pattern
+  injections are not hooks and are not validated.
 
 Standard named injections are also available:
 

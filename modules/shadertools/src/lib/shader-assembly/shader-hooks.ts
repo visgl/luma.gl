@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {ShaderInjection} from './shader-injections';
+import type {ShaderInjection} from './shader-injections';
 
 // A normalized hook function
 /**
@@ -21,24 +21,42 @@ export type ShaderHook = {
   will also be used as the name of the shader hook */
   hook: string;
   /** Code always included at the beginning of a hook function */
-  header: string;
+  header?: string;
   /** Code always included at the end of a hook function */
-  footer: string;
+  footer?: string;
   /** To Be Documented */
   signature?: string;
 };
 
-/** Normalized shader hooks per shader */
-export type ShaderHooks = {
-  /** Normalized shader hooks for vertex shader */
-  vertex: Record<string, ShaderHook>;
-  /** Normalized shader hooks for fragment shader */
-  fragment: Record<string, ShaderHook>;
+/** Optional source included before or after every injection in a hook function. */
+export type ShaderHookOptions = Pick<ShaderHook, 'header' | 'footer'>;
+
+/** A parsed shader hook declaration. */
+export type NormalizedShaderHook = {
+  /** Stage-prefixed hook name without its function signature. */
+  hook: string;
+  /** Parsed function signature without the shader stage prefix. */
+  signature: string;
+  /** Code always included at the beginning of a hook function. */
+  header: string;
+  /** Code always included at the end of a hook function. */
+  footer: string;
 };
+
+/** Normalized shader hook declarations grouped by shader stage. */
+export type ShaderHookRegistry = {
+  /** Normalized shader hooks for vertex shader */
+  vertex: Record<string, NormalizedShaderHook>;
+  /** Normalized shader hooks for fragment shader */
+  fragment: Record<string, NormalizedShaderHook>;
+};
+
+/** Hook declarations accepted by shader assembly. */
+export type ShaderHookDeclarations = readonly (ShaderHook | string)[];
 
 /** Generate hook source code */
 export function getShaderHooks(
-  hookFunctions: Record<string, ShaderHook>,
+  hookFunctions: Record<string, NormalizedShaderHook>,
   hookInjections: Record<string, ShaderInjection[]>,
   shaderLanguage: 'glsl' | 'wgsl' = 'glsl'
 ): string {
@@ -67,39 +85,81 @@ export function getShaderHooks(
 }
 
 /**
- * Parse string based hook functions
- * And split per shader
+ * Parse string based hook functions and split them per shader stage.
+ * A later declaration of the same stage-prefixed hook name replaces an earlier one.
  */
-export function normalizeShaderHooks(hookFunctions: (string | ShaderHook)[]): ShaderHooks {
-  const result: ShaderHooks = {vertex: {}, fragment: {}};
+export function normalizeShaderHooks(hookFunctions: ShaderHookDeclarations): ShaderHookRegistry {
+  const result: ShaderHookRegistry = {vertex: {}, fragment: {}};
 
   for (const hookFunction of hookFunctions) {
-    let opts: ShaderHook;
-    let hook: string;
-    if (typeof hookFunction !== 'string') {
-      opts = hookFunction;
-      hook = opts.hook;
-    } else {
-      opts = {} as ShaderHook;
-      hook = hookFunction;
-    }
-    hook = hook.trim();
-    const stageSeparatorIndex = hook.indexOf(':');
-    const shaderStage = hook.slice(0, stageSeparatorIndex);
-    const signature = hook.slice(stageSeparatorIndex + 1);
-    const name = hook.replace(/\(.+/, '');
-    const normalizedHook: ShaderHook = Object.assign(opts, {signature});
-    switch (shaderStage) {
-      case 'vs':
-        result.vertex[name] = normalizedHook;
-        break;
-      case 'fs':
-        result.fragment[name] = normalizedHook;
-        break;
-      default:
-        throw new Error(shaderStage);
-    }
+    addShaderHookToRegistry(result, hookFunction);
   }
 
   return result;
+}
+
+/** Returns true if a stage-prefixed hook name such as `vs:MY_HOOK` is declared. */
+export function isShaderHookRegistered(registry: ShaderHookRegistry, hookName: string): boolean {
+  const stageRegistry = hookName.startsWith('vs:') ? registry.vertex : registry.fragment;
+  return Boolean(stageRegistry[hookName]);
+}
+
+/**
+ * Throws if a named hook injection targets a hook that is not declared for this assembly.
+ * @param stage Only validate injections for this GLSL stage. WGSL validates both stages.
+ */
+export function validateShaderHookInjections(
+  registry: ShaderHookRegistry,
+  hookInjections: Record<string, ShaderInjection[]>,
+  stage?: 'vertex' | 'fragment'
+): void {
+  const stagePrefix = stage === 'vertex' ? 'vs:' : stage === 'fragment' ? 'fs:' : null;
+
+  for (const hookName of Object.keys(hookInjections)) {
+    if (stagePrefix && !hookName.startsWith(stagePrefix)) {
+      continue;
+    }
+
+    if (!isShaderHookRegistered(registry, hookName)) {
+      // Unknown shader hook: the injection targets a hook that was never declared with
+      // `ShaderAssembler.addShaderHook()` (or `hookFunctions`). Check the hook name and stage
+      // prefix against the registered hooks listed in the message.
+      const registeredHookNames = [
+        ...Object.keys(registry.vertex),
+        ...Object.keys(registry.fragment)
+      ].sort();
+      throw new Error(
+        `Unknown shader hook ${hookName} (registered: ${registeredHookNames.join(', ') || 'none'})`
+      );
+    }
+  }
+}
+
+function addShaderHookToRegistry(
+  registry: ShaderHookRegistry,
+  hookFunction: ShaderHook | string
+): void {
+  const options: ShaderHookOptions = typeof hookFunction === 'string' ? {} : hookFunction;
+  const hook = (typeof hookFunction === 'string' ? hookFunction : hookFunction.hook).trim();
+  const stageSeparatorIndex = hook.indexOf(':');
+  const shaderStage = hook.slice(0, stageSeparatorIndex);
+  const signature = hook.slice(stageSeparatorIndex + 1);
+  const name = hook.replace(/\(.+/, '');
+  const normalizedHook: NormalizedShaderHook = {
+    hook: name,
+    signature,
+    header: options.header || '',
+    footer: options.footer || ''
+  };
+
+  switch (shaderStage) {
+    case 'vs':
+      registry.vertex[name] = normalizedHook;
+      break;
+    case 'fs':
+      registry.fragment[name] = normalizedHook;
+      break;
+    default:
+      throw new Error(shaderStage);
+  }
 }
