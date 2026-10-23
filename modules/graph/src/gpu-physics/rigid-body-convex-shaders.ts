@@ -97,7 +97,7 @@ fn convexContact(first:u32,second:u32,firstTriangle:i32,secondTriangle:i32)->Con
   // Opposite barycentric coordinate identifies an edge. Internal coplanar edges are
   // not collision ridges: their adjacent triangle owns the face witness instead.
   for(var edge=0u;edge<3u;edge++){
-   if((internalEdges&(1u<<edge))!=0u&&weights[(edge+2u)%3u]<=1e-7){
+   if((internalEdges&(1u<<edge))!=0u&&weights[(edge+2u)%3u]<=1e-7&&weights[edge]>1e-7&&weights[(edge+1u)%3u]>1e-7){
     let faceNormal=normalize(cross(secondPoint-firstPoint,thirdPoint-firstPoint));
     let tangential=delta-faceNormal*dot(delta,faceNormal);
     if(length(tangential)>max(1e-8,radius*1e-6)){return hit;}

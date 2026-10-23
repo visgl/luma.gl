@@ -1540,6 +1540,10 @@
           {
             "file": "modules/graph/test/gpu-physics/rigid-body-seam-continuity.spec.ts",
             "testPattern": "slides across a triangulated seam"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-seam-continuity.spec.ts",
+            "testPattern": "preserves authored outer edge and corner"
           }
         ]
       }
@@ -1570,6 +1574,10 @@
           {
             "file": "modules/graph/test/gpu-physics/rigid-body-impact-continuity.spec.ts",
             "testPattern": "rejects an exhausted simultaneous-impact budget"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-impact-continuity.spec.ts",
+            "testPattern": "sustains rotating contact exits"
           }
         ]
       }

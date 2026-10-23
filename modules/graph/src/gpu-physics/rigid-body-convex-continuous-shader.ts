@@ -36,6 +36,9 @@ fn continuousVelocity(body:u32)->vec3f {
 fn continuousAngular(body:u32)->vec3f {
  return select(angularVelocities[body].xyz,vec3f(0),bodies.bodies[body].motion.x==0.0);
 }
+fn continuousPointVelocity(body:u32,point:vec3f,time:f32)->vec3f {
+ return continuousVelocity(body)+cross(continuousAngular(body),point-positions[body].xyz-continuousVelocity(body)*time);
+}
 fn continuousSupport(collider:u32,direction:vec3f,time:f32)->vec3f {
  let body=colliderBody(collider);
  let rotation=continuousRotation(orientations[body],continuousAngular(body),time);
@@ -277,6 +280,41 @@ fn continuousSupportRate(collider:u32,direction:vec3f,normal:vec3f,time:f32)->f3
  }
  return dot(continuousVelocity(body),normal)-length(angular)*continuousRadius(collider);
 }
+fn continuousQuadraticLimit(available:f32,rate:f32,curvature:f32)->f32 {
+ if(available<=0.0){return 0.0;}
+ if(curvature>1e-20){let root=sqrt(rate*rate+2.0*curvature*available);return select(2.0*available/(root-rate),(root+rate)/curvature,rate>=0.0);}
+ if(rate<0.0){return available/(-rate);}return 1e30;
+}
+fn continuousAdvance(first:u32,second:u32,normal:vec3f,time:f32,margin:f32)->f32 {
+ let firstBody=colliderBody(first);let secondBody=colliderBody(second);
+ let firstRadius=select(continuousRadius(first),length(bodies.colliders[first].position.xyz),bodies.colliders[first].shape.w==0.0);
+ let secondRadius=select(continuousRadius(second),length(bodies.colliders[second].position.xyz),bodies.colliders[second].shape.w==0.0);
+ let curvature=dot(continuousAngular(firstBody),continuousAngular(firstBody))*firstRadius+dot(continuousAngular(secondBody),continuousAngular(secondBody))*secondRadius;
+ if(bodies.colliders[first].shape.w==1.0||bodies.colliders[second].shape.w==1.0){
+  let box=select(second,first,bodies.colliders[first].shape.w==1.0);let other=select(first,second,box==first);
+  let planeNormal=select(-normal,normal,box==first);let body=colliderBody(box);
+  let rotation=continuousRotation(orientations[body],continuousAngular(body),time);
+  let colliderOrientation=multiplyRotation(rotation,bodies.colliders[box].orientation);
+  let center=positions[body].xyz+continuousVelocity(body)*time+rotate(rotation,bodies.colliders[box].position.xyz);
+  let otherPoint=continuousSupport(other,planeNormal,time);
+  let otherRate=continuousSupportRate(other,planeNormal,-planeNormal,time);
+  var limit=1e30;
+  // Each corner carries its own initial gap and rate. Taking their minimum stays
+  // conservative through face changes without combining one corner's small gap
+  // with a different, distant corner's worst angular velocity.
+  for(var corner=0u;corner<8u;corner++){
+   let signs=vec3f(select(-1.0,1.0,(corner&1u)!=0u),select(-1.0,1.0,(corner&2u)!=0u),select(-1.0,1.0,(corner&4u)!=0u));
+   let point=center+rotate(colliderOrientation,signs*bodies.colliders[box].shape.xyz);
+   let gap=dot(point-otherPoint,planeNormal)-margin;
+   let rate=dot(continuousPointVelocity(body,point,time),planeNormal)+otherRate;
+   limit=min(limit,continuousQuadraticLimit(gap,rate,curvature));
+  }
+  return limit;
+ }
+ let gap=dot(continuousSupport(first,-normal,time)-continuousSupport(second,normal,time),normal)-margin;
+ let rate=continuousSupportRate(first,-normal,normal,time)+continuousSupportRate(second,normal,-normal,time);
+ return continuousQuadraticLimit(gap,rate,curvature);
+}
 @compute @workgroup_size(64) fn findContinuousImpacts(@builtin(global_invocation_id) invocation:vec3u){
  let slot=invocation.x;if(slot>=min(atomicLoad(&continuousWork.count),CONTINUOUS_CAPACITY)||continuousWork.finished!=0u){return;}
  let pair=continuousWork.candidates[slot].colliders.xy;let first=pair.x;let second=pair.y;
@@ -288,6 +326,7 @@ fn continuousSupportRate(collider:u32,direction:vec3f,normal:vec3f,time:f32)->f3
  let angularBound=length(continuousAngular(firstBody))*firstAngularRadius+length(continuousAngular(secondBody))*secondAngularRadius;
  let coordinate=max(length(positions[firstBody].xyz),length(positions[secondBody].xyz));
  let tolerance=max(max(1e-7,coordinate*8e-7),min(1e-5,min(contactFeatureScale(first,-1),contactFeatureScale(second,-1))*1e-4));
+ let contactEnvelope=tolerance*8.0;
  var time=0.0;var lastNormal=vec3f(0);var complete=false;var leavingContact=false;var exitNormal=vec3f(0);
  for(var iteration=0u;iteration<128u;iteration++){
   var distance=continuousDistance(first,second,time,tolerance);
@@ -296,7 +335,7 @@ fn continuousSupportRate(collider:u32,direction:vec3f,normal:vec3f,time:f32)->f3
    distance.normal=continuousWork.lastNormal.xyz;
   }
   if(distance.complete==0u){break;}
-  if(time==0.0&&distance.distance<=tolerance){
+  if(time==0.0&&distance.distance<=contactEnvelope){
    // A fresh closing contact can be caused by another simultaneous impact.
    let normal=distance.normal;var closing=false;
    // A different impact may have driven an initially touching generic simplex closed.
@@ -310,19 +349,24 @@ fn continuousSupportRate(collider:u32,direction:vec3f,normal:vec3f,time:f32)->f3
    }
   }
   if(leavingContact){
-   if(distance.distance>tolerance){leavingContact=false;}else{
+   if(length(distance.normal)>0.5){
+    // Refresh the separating plane as the obstacle rotates. An old plane can cut
+    // through disjoint shapes and must not be mistaken for actual penetration.
+    exitNormal=distance.normal;
+    let speed=dot(continuousPointVelocity(firstBody,distance.point,time)-continuousPointVelocity(secondBody,distance.point,time),exitNormal);
+    if(time>0.0&&distance.distance<=contactEnvelope&&speed< -1e-5){
+     continuousWork.candidates[slot].colliders.z=1u;
+     continuousWork.candidates[slot].point=vec4f(distance.point,time);
+     continuousWork.candidates[slot].normal=vec4f(exitNormal,contactEnvelope);complete=true;break;
+    }
+   }
+   if(distance.distance>contactEnvelope){leavingContact=false;}else{
     // Bound fixed-plane curvature rather than sampling at velocity-sized intervals.
     // Every support-point trajectory stays above this quadratic lower envelope.
-    var increment=tolerance*0.5/max(length(relative)+angularBound,1e-20);
+    var increment=contactEnvelope*0.5/max(length(relative)+angularBound,1e-20);
     if(length(exitNormal)>0.5){
-     let rate=continuousSupportRate(first,-exitNormal,exitNormal,time)+continuousSupportRate(second,exitNormal,-exitNormal,time);
-     let curvature=dot(continuousAngular(firstBody),continuousAngular(firstBody))*firstAngularRadius+dot(continuousAngular(secondBody),continuousAngular(secondBody))*secondAngularRadius;
-     let gap=dot(continuousSupport(first,-exitNormal,time)-continuousSupport(second,exitNormal,time),exitNormal);
-     let available=gap+tolerance;
-     if(available<=0.0){break;}
-     if(curvature>1e-20){let root=sqrt(rate*rate+2.0*curvature*available);increment=select(2.0*available/(root-rate),(root+rate)/curvature,rate>=0.0);}
-     else if(rate>=0.0){increment=continuousWork.remaining-time;}
-     else{increment=available/(-rate);}
+     increment=continuousAdvance(first,second,exitNormal,time,-contactEnvelope);
+     if(increment<=0.0){break;}
     }
     if(time+increment>=continuousWork.remaining){
      // The entire remaining interval is certified within the contact envelope.
@@ -331,18 +375,13 @@ fn continuousSupportRate(collider:u32,direction:vec3f,normal:vec3f,time:f32)->f3
     time+=increment;continue;
    }
   }
-  if(distance.distance<=tolerance){
+  if(distance.distance<=contactEnvelope){
    continuousWork.candidates[slot].colliders.z=1u;
    continuousWork.candidates[slot].point=vec4f(distance.point,time);
-   continuousWork.candidates[slot].normal=vec4f(lastNormal,tolerance);complete=true;break;
+   continuousWork.candidates[slot].normal=vec4f(lastNormal,contactEnvelope);complete=true;break;
   }
   lastNormal=distance.normal;
-  let rate=continuousSupportRate(first,-distance.normal,distance.normal,time)+continuousSupportRate(second,distance.normal,-distance.normal,time);
-  let curvature=dot(continuousAngular(firstBody),continuousAngular(firstBody))*firstAngularRadius+dot(continuousAngular(secondBody),continuousAngular(secondBody))*secondAngularRadius;
-  let available=distance.distance-tolerance*0.5;
-  var increment=continuousWork.remaining-time;
-  if(curvature>1e-20){let root=sqrt(rate*rate+2.0*curvature*available);increment=select(2.0*available/(root-rate),(root+rate)/curvature,rate>=0.0);}
-  else if(rate<0.0){increment=available/(-rate);}else{complete=true;break;}
+  let increment=continuousAdvance(first,second,distance.normal,time,contactEnvelope*0.5);
   if(time+increment>continuousWork.remaining){complete=true;break;}
   if(increment<=max(1e-12,continuousWork.remaining*1e-8)){break;}
   time+=increment;

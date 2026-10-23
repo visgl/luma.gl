@@ -77,3 +77,53 @@ it.for(['ordered', 'parallel'] as const)(
     }
   }
 );
+
+it.for([
+  [2.2, 0, 0.4],
+  [2.2, 2.2, 0.4]
+] as const)(
+  'preserves authored outer edge and corner contacts at %j',
+  {timeout: 120000},
+  async (position, context) => {
+    const device = await getWebGPUTestDevice();
+    if (!device) return context.skip('WebGPU unavailable');
+    const geometry = makeTriangleMeshGeometry(
+      [-2, -2, 0, 2, -2, 0, 2, 2, 0, -2, 2, 0],
+      [0, 1, 2, 0, 2, 3]
+    );
+    const world = new GPURigidBodyWorld({
+      gravity: [0, 0, 0],
+      sleepAfter: 0,
+      penetrationRecoveryFraction: 0,
+      bodies: [
+        {mode: 'static', position: [0, 0, 0], shape: {type: 'triangle-mesh', geometry}},
+        {position, shape: {type: 'sphere', radius: 0.5}}
+      ]
+    });
+    const definition = new GPUCommandGraph(device);
+    world.addToGraph(definition);
+    const graph = await definition.compileAsync();
+    try {
+      const encoder = device.createCommandEncoder();
+      graph.encode(encoder, {parameters: undefined});
+      device.submit(encoder.finish());
+      const capture = await world.captureState();
+      const bytes = capture.buffers.find(buffer => buffer.name === 'manifolds')!.data;
+      const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+      let contacts = 0;
+      for (let offset = 0; offset < bytes.byteLength; offset += 416)
+        for (let slot = 0; slot < view.getUint32(offset + 384, true); slot++) {
+          const start = offset + slot * 96;
+          expect(view.getFloat32(start + 12, true)).toBeGreaterThan(0);
+          expect(view.getFloat32(start + 16, true)).toBeGreaterThan(0.4);
+          if (position[1] > 0) expect(view.getFloat32(start + 20, true)).toBeGreaterThan(0.4);
+          contacts++;
+        }
+      expect(contacts).toBeGreaterThan(0);
+      expect((await world.readSimulationDiagnostics()).complete).toBe(true);
+    } finally {
+      graph.destroy();
+      world.destroy();
+    }
+  }
+);

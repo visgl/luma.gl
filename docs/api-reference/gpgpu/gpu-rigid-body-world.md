@@ -444,7 +444,10 @@ Initially touching closing sphere/box pairs can resolve at time zero, including 
 pair driven closed by another impact. Separating fixed-orientation convex trajectories
 cannot re-enter before another impulse; each rebuilt queue revisits them. Rotating
 initial contacts use bounded exit searches and support-plane quadratic lower bounds,
-with the query tolerance as the contact envelope. An unresolved exit rejects the step. A generic zero-distance simplex without a
+within a contact envelope of eight query tolerances. This envelope covers float32
+TOI publication/recomposition error; it is used consistently for arrival and exit. Box
+corners retain independent initial gaps and rates so support-face changes cannot
+combine unrelated extrema or stall ordinary grazing approaches. An unresolved exit rejects the step. A generic zero-distance simplex without a
 qualified normal after a different impact also rejects; only the immediately preceding
 impact may reuse its known plane at an unchanged pose.
 Simultaneous impacts use deterministic sequential pair impulses and zero-time revisits
@@ -748,7 +751,8 @@ triangles and nonmanifold edges are not welded. This changes packed internal geo
 metadata, not authored topology or the public mesh geometry type.
 
 Sphere/triangle contacts use analytic closest-point witnesses and discard false ridges
-on internal coplanar edges. Adjacent triangles retain the real face contact. Outer edges
+on the interiors of internal coplanar edges. Vertices are retained conservatively;
+complete vertex-fan welding remains future work. Adjacent triangles retain the real face contact. Outer edges
 and openings remain collision boundaries. Mesh and hull warm starts use surface keys
 rather than individual triangle IDs, while normal alignment, both local-anchor distance
 limits and one-to-one point ownership still guard impulse transfer. This does not yet

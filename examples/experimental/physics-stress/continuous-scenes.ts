@@ -164,24 +164,26 @@ export function makeContinuousScene(
         ]
       }
     };
-  if (scene === 'fastRotatingGate')
+  if (scene === 'fastRotatingGate') {
+    const gateMaterial = {restitution: 0.8, friction: 0};
     return {
       description:
-        'A kinematic gate sweeps through a stationary sphere between samples. Conservative advancement includes an angular speed bound, and the impulse uses velocity at the moving contact point. A 128-iteration bound rejects unresolved grazing cases. This is bounded rotational CCD, not an unqualified guarantee for every angular speed or geometry.',
+        'A kinematic gate sweeps through a stationary sphere between samples. Conservative advancement includes an angular speed bound, and the impulse uses velocity at the moving contact point. A 128-iteration bound rejects unresolved grazing cases. Dissipative impacts keep this continuously driven scene from accumulating lossless rebound energy. This is bounded rotational CCD, not an unqualified guarantee for every angular speed or geometry.',
       props: {
         ...props,
+        continuous: {...props.continuous!, maximumImpacts: 16},
         bodies: [
-          {...material, position: [0, 0, 4.2], shape: {type: 'sphere', radius: 0.15}},
+          {...gateMaterial, position: [0, 0, 4.2], shape: {type: 'sphere', radius: 0.15}},
           {
-            ...material,
+            ...gateMaterial,
             mode: 'kinematic',
             position: [0, 0, 3],
             angularVelocity: [0, 120, 0],
             shape: {type: 'box', halfExtents: [2, 0.15, 0.05]}
           },
-          ...walls,
+          ...walls.map(wall => ({...wall, ...gateMaterial})),
           ...[0, 9].map(vertical => ({
-            ...material,
+            ...gateMaterial,
             mode: 'static' as const,
             position: [0, 0, vertical] as const,
             shape: {type: 'box' as const, halfExtents: [6, 2, 0.05] as const}
@@ -189,6 +191,7 @@ export function makeContinuousScene(
         ]
       }
     };
+  }
   if (scene === 'fastMovingWall')
     return {
       description:
