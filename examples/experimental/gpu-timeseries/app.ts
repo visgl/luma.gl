@@ -9,8 +9,8 @@ import {
   GPUCommandGraph,
   GPUCommandGraphInspector,
   type CompiledGPUCommandGraph
-} from '@luma.gl/gpu-graph/gpu-core';
-import {GPUTimeSeries, GPUTimeSeriesEnvelope} from '@luma.gl/gpu-graph/gpu-timeseries';
+} from '@luma.gl/graph/gpu-core';
+import {GPUTimeSeries, GPUTimeSeriesEnvelope} from '@luma.gl/graph/gpu-timeseries';
 import {GAP_END, GAP_START, INCIDENT_SAMPLE, SAMPLE_COUNT, SERIES, makeTelemetry} from './data';
 
 import {
@@ -28,7 +28,7 @@ const BIN_COUNT = 1024;
 export default class TimeSeriesExample extends AnimationLoopTemplate {
   static info = makeExamplePanelHostHtml();
   readonly graphInspector = new GPUCommandGraphInspector({maxSamples: 90});
-  readonly graphDebugPanel = new GPUCommandGraphDebugPanel();
+  readonly graphDebugPanel = new GPUCommandGraphDebugPanel({inspector: this.graphInspector});
   readonly controls = document.createElement('div');
   readonly panels: ExamplePanelManager;
   readonly device: Device;

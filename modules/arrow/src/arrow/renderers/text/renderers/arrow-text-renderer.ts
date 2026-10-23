@@ -17,7 +17,7 @@ import {convertArrowToGPUVector} from '../../../gpu/arrow-gpu-conversion';
 import {type ModelProps} from '@luma.gl/engine';
 import {GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shadertools';
 import {GPUVector, getRequiredGPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {GPURenderable, GPUTable} from '@luma.gl/gpu-graph/gpu-tables';
+import {GPURenderable, GPUTable} from '@luma.gl/graph/gpu-tables';
 import {GPUTextResources, TextRenderer, type FontAtlas, type GPUTextData} from '@luma.gl/text';
 import {canConvertColors} from '../../../arrow-colors';
 import {

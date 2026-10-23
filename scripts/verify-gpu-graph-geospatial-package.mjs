@@ -12,7 +12,7 @@ import typescript from 'typescript';
 
 const require = createRequire(import.meta.url);
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const packageJson = require('../modules/gpu-graph/package.json');
+const packageJson = require('../modules/graph/package.json');
 const runtimeExportNames = [
   'GPUHaversineDistance',
   'GPUPairwisePointDistance',
@@ -33,10 +33,10 @@ assert.deepEqual(packageJson.exports?.['./geospatial'], {
   types: './dist/geospatial/index.d.ts'
 });
 
-const ecmaScriptGeospatialModule = await import('@luma.gl/gpu-graph/geospatial');
-const commonJsGeospatialModule = require('@luma.gl/gpu-graph/geospatial');
-const ecmaScriptRootModule = await import('@luma.gl/gpu-graph');
-const commonJsRootModule = require('@luma.gl/gpu-graph');
+const ecmaScriptGeospatialModule = await import('@luma.gl/graph/geospatial');
+const commonJsGeospatialModule = require('@luma.gl/graph/geospatial');
+const ecmaScriptRootModule = await import('@luma.gl/graph');
+const commonJsRootModule = require('@luma.gl/graph');
 
 for (const exportName of runtimeExportNames) {
   assert.equal(typeof ecmaScriptGeospatialModule[exportName], 'function');
@@ -107,8 +107,8 @@ try {
   type GPUPointInPolygonClassification,
   type GPUPointSpatialQueryProps,
   type GPUSpatialQueryOutput
-} from '@luma.gl/gpu-graph/geospatial';
-import type {GPUProgramPrimitive} from '@luma.gl/gpu-graph/gpu-core';
+} from '@luma.gl/graph/geospatial';
+import type {GPUProgramPrimitive} from '@luma.gl/graph/gpu-core';
 
 const constructors = [
   GPUHaversineDistance,
@@ -140,11 +140,11 @@ void queryOutput;
 void GPU_POINT_IN_POLYGON_CLASSIFICATION;
 
 // @ts-expect-error Geospatial algorithms stay isolated from the graph root.
-import {GPUHaversineDistance as RootGPUHaversineDistance} from '@luma.gl/gpu-graph';
+import {GPUHaversineDistance as RootGPUHaversineDistance} from '@luma.gl/graph';
 void RootGPUHaversineDistance;
 
 // @ts-expect-error The classification constant stays isolated from the graph root.
-import {GPU_POINT_IN_POLYGON_CLASSIFICATION as RootClassification} from '@luma.gl/gpu-graph';
+import {GPU_POINT_IN_POLYGON_CLASSIFICATION as RootClassification} from '@luma.gl/graph';
 void RootClassification;
 `
   );
@@ -172,4 +172,4 @@ void RootClassification;
   rmSync(temporaryDirectory, {force: true, recursive: true});
 }
 
-console.log('Verified @luma.gl/gpu-graph/geospatial ESM, CJS, and declaration imports.');
+console.log('Verified @luma.gl/graph/geospatial ESM, CJS, and declaration imports.');

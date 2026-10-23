@@ -40,7 +40,7 @@ const DOCUMENTATION_MODULES: readonly DocumentationModule[] = [
     image: 'experimental/gpu-parquet-constellation'
   },
   {
-    name: 'gpu-graph',
+    name: 'graph',
     description: 'Schedule GPU work and compose graph-based processing pipelines.',
     image: 'experimental/gpu-parquet-constellation'
   },

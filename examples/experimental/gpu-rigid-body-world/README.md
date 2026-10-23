@@ -37,10 +37,9 @@ moving mesh collisions are not demonstrated or claimed here.
 
 ## Auto-play
 
-Enable **Auto-play scenarios** to cycle scenes. After at least three simulated
-seconds, one second of quiet motion triggers a two-second pause and advancement.
-Impact and moving-support scenes have eight- and twelve-second demonstration limits;
-other scenes have a twenty-second limit. Timed completion is labeled separately from
+Enable **Auto-play scenarios** to cycle scenes. After at least ten simulated
+seconds, three seconds of quiet motion trigger a two-second pause and advancement.
+Active scenes can run for up to two simulated minutes. Timed completion is labeled separately from
 settling. Incomplete simulation stops playback visibly. Reset, manual scene changes,
 pushes and pause/resume restart the settling timer. Auto-play uses optional body
 readback to detect settling; rendering continues to consume GPU buffers directly.
@@ -62,7 +61,7 @@ after impacts. This does not imply dynamic-pair or rotating-convex CCD support.
 The scene selector includes Newton's cradle, a distance pendulum, motorized hinge and powered slider.
 The cradle and pendulum have GPU-driven visible tethers. Reset releases the raised
 cradle ball again. When auto-play is off, the cradle automatically resets after
-60 seconds of simulated motion without moving the camera; pausing also pauses
+120 seconds of simulated motion without moving the camera; pausing also pauses
 this timer. The cradle uses a 1/480-second fixed step (other scenes use
 1/120 second), so each closely spaced impact is resolved before the next pair closes.
 For this small scene, all-pairs discovery and eight solver iterations reduce
@@ -113,4 +112,5 @@ Rendering uses at least two device pixels per CSS pixel for smoother silhouettes
 
 The frame is authored as a CPU scenegraph of geometry nodes before GPU allocation. Rendering and collision extraction consume the same node geometry and accumulated transforms. Axis-aligned cubes retain box colliders; other convex geometry uses a transformed convex hull. A node may supply a world-space collision override or disable collision explicitly. This example adapter is for convex static frame pieces, not automatic decomposition of arbitrary concave models.
 
-Ball impacts use restitution 0.985, with low-speed restitution disabled below 0.05. Exponential linear/angular damping (0.08/0.12 inverse seconds) approximates air and suspension losses, including collective swings without impacts. The existing one-minute reset remains active. Steel roughness is 0.07 for sharper PBR reflections without raising scene exposure.
+Ball impacts use restitution 0.985, with low-speed restitution disabled below 0.05. Exponential linear/angular damping (0.08/0.12 inverse seconds) approximates air and suspension losses, including collective swings without impacts. The two-minute reset remains active. Steel roughness is 0.07 for sharper PBR reflections without raising scene exposure.
+

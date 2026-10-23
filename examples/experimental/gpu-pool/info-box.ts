@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {BoxPanelContainer, PanelManager} from '@deck.gl-community/panels';
-import {GPUCommandGraphInspector, type CompiledGPUCommandGraph} from '@luma.gl/gpu-graph/gpu-core';
+import {GPUCommandGraphInspector, type CompiledGPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {
   configurePanelHostElement,
   makeExampleTabbedPanel,
@@ -58,6 +58,7 @@ export function createPoolInfoBox(graph: CompiledGPUCommandGraph<void>) {
             inspectorPanel = new GPUCommandGraphInspectorPanel(
               root.querySelector<HTMLElement>('[data-pool-graph-inspector]')!,
               {
+                inspector,
                 graphLabels: {[graph.id]: 'Pool physics'},
                 nodeLabels: Object.fromEntries(
                   graph.stats.nodeOrder.map(id => [id, formatPoolNodeLabel(id)])

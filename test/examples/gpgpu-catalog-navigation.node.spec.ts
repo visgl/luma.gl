@@ -116,17 +116,17 @@ describe('GPGPU example catalog navigation', () => {
       label: 'GPURaster: Satellite Raster Lab'
     });
     expect(rasterLabExampleSource).toContain('<RasterLabExample />');
-    expect(rasterLabExampleSource).toContain('@luma.gl/gpu-graph/gpu-raster');
+    expect(rasterLabExampleSource).toContain('@luma.gl/graph/gpu-raster');
     expect(spatialAtlasExample).toBe('showcase/billion-point-spatial-atlas');
     expect(taxiExample).toEqual({
       type: 'doc',
       id: 'deck/luspatial-taxi',
       label: 'luProj + luSpatial: Taxi Explorer'
     });
-    expect(spatialAtlasSource).toContain("from '@luma.gl/gpu-graph/geospatial'");
-    expect(spatialAtlasSource).not.toContain("from '@luma.gl/gpu-graph/gpu-project'");
-    expect(taxiExampleSource).toContain('@luma.gl/gpu-graph/gpu-project');
-    expect(taxiExampleSource).toContain('@luma.gl/gpu-graph/geospatial');
+    expect(spatialAtlasSource).toContain("from '@luma.gl/graph/geospatial'");
+    expect(spatialAtlasSource).not.toContain("from '@luma.gl/graph/gpu-project'");
+    expect(taxiExampleSource).toContain('@luma.gl/graph/gpu-project');
+    expect(taxiExampleSource).toContain('@luma.gl/graph/geospatial');
   });
 
   test('registers GPUCrossfilter throughout GPU Graph API navigation', () => {
@@ -138,7 +138,7 @@ describe('GPGPU example catalog navigation', () => {
     const collectGraphCategories = (entries: ExampleSidebarEntry[]): void => {
       for (const entry of entries) {
         if (typeof entry === 'string' || entry.type !== 'category') continue;
-        if (entry.label === '@luma.gl/gpu-graph') graphCategories.push(entry);
+        if (entry.label === '@luma.gl/graph') graphCategories.push(entry);
         collectGraphCategories(entry.items);
       }
     };

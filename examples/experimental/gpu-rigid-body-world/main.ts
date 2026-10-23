@@ -5,8 +5,8 @@
 import {luma, Buffer} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {Model} from '@luma.gl/engine';
-import {GPUCommandGraph} from '@luma.gl/gpu-graph/gpu-core';
-import {GPURigidBodyWorld} from '@luma.gl/gpu-graph/gpu-physics';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
+import {GPURigidBodyWorld} from '@luma.gl/graph/gpu-physics';
 import {PerspectiveCamera} from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {Matrix4} from '@math.gl/core';
@@ -402,14 +402,14 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
         void reset();
       }
     }
-    // Restart the cradle after one minute of simulated motion. Pausing freezes
+    // Restart the cradle after two minutes of simulated motion. Pausing freezes
     // this clock, and auto-play retains control when cycling through scenarios.
     if (
       resources.sceneName === 'cradle' &&
       !autoPlay.checked &&
       !paused &&
       !loading &&
-      elapsedSimulation >= 60
+      elapsedSimulation >= 120
     ) {
       void reset();
     }
@@ -499,11 +499,10 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
             quietSince = quiet ? (quietSince ?? sampledSimulationTime) : null;
             const playbackDuration = sampledSimulationTime - playbackStartedAt;
             const settled =
-              playbackDuration >= 3 &&
+              playbackDuration >= 10 &&
               quietSince !== null &&
-              sampledSimulationTime - quietSince >= 1;
-            const duration =
-              target.sceneName === 'impact' ? 8 : target.sceneName === 'support' ? 12 : 20;
+              sampledSimulationTime - quietSince >= 3;
+            const duration = 120;
             if (settled || playbackDuration >= duration) {
               completionReason = settled ? 'Scene settled' : `${duration} s demonstration complete`;
               advanceAt = performance.now() + 2000;

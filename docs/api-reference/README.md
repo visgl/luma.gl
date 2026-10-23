@@ -23,11 +23,12 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 | [`@luma.gl/shadertools`][shadertools] | Recommended | Reusable shader modules, portable shader assembly, and application-defined shader hooks. |
 | [`@luma.gl/slang`][slang] | Experimental (v10) | Optional TypeScript transpilation of a documented Slang shader subset to GLSL and WGSL. |
 | [`@luma.gl/effects`][effects] | Optional | Composable post-processing effects, screen-space lighting, and reusable shader-pass pipelines. |
-| [`@luma.gl/gpgpu`][gpgpu] | Optional | Portable GPU evaluation plus experimental `gpu-data`, `gpu-core`, and `gpu-graph` subpaths. |
+| [`@luma.gl/gpgpu`][gpgpu] | Optional | Portable GPU evaluation and GPU data primitives. |
+| [`@luma.gl/graph`][graph] | Experimental (v10) | GPU execution graphs, programs, and graph-based processing through explicit subpaths. |
 | [`@luma.gl/arrow`][arrow] | Experimental / Private | Apache Arrow adapters for GPU layouts and GPU table objects from Arrow data. |
 | [`@luma.gl/text`][text] | Experimental | `TextRenderer` facade and caller-owned GPU text data. |
 | [`@luma.gl/splats`][splats] | Experimental / Private | Gaussian splat rendering and caller-owned prepared GPU splat data. |
-| [`@luma.gl/experimental`][experimental] | Experimental / Private | Incubating APIs, including `gpu-tables`, rendering `models`, WebXR, and GPU analytics. |
+| [`@luma.gl/experimental`][experimental] | Experimental / Private | Incubating rendering models and WebXR APIs. |
 | [`@luma.gl/gltf`][gltf] | Optional | Standards-first glTF assets, physical materials, character animation, and lossless interchange. |
 | [`@luma.gl/test-utils`][test-utils] | Optional | Test setups, in particular support for rendering and comparing images. |
 
@@ -41,7 +42,8 @@ Select at least one adapter from the core backend subpaths when creating a devic
 - [`@luma.gl/shadertools`][shadertools] for shader modules and shader assembly.
 - [`@luma.gl/slang`][slang] for experimental Slang shader authoring on WebGL 2 and WebGPU, available from v10.
 - [`@luma.gl/effects`][effects] for reusable image processing, bloom, and supported screen-space effects.
-- [`@luma.gl/gpgpu`][gpgpu] for portable GPU evaluation, plus its experimental `gpu-data`, `gpu-core`, and `gpu-graph` subpaths.
+- [`@luma.gl/gpgpu`][gpgpu] for portable GPU evaluation and GPU data primitives.
+- [`@luma.gl/graph`][graph] for `GPUGraph`, `GPUProgram`, GPU tables, and graph-based processing.
 - [GPGPU data][gpu-data] for primitive `GPUData`/`GPUVector` APIs, and [Experimental GPU Tables][gpu-tables] for private `GPURecordBatch`/`GPUTable` APIs.
 - [`@luma.gl/text`][text] for `TextRenderer` and GPU text data; use [`@luma.gl/arrow`][arrow] for Arrow conversion.
 - [`@luma.gl/splats`][splats] for experimental Gaussian splat rendering and caller-owned prepared GPU data.
@@ -58,6 +60,7 @@ Select at least one adapter from the core backend subpaths when creating a devic
 [slang]: /docs/api-reference/slang
 [effects]: /docs/api-guide/shaders/shader-passes
 [gpgpu]: /docs/api-reference/gpgpu
+[graph]: /docs/api-reference/graph
 [gpu-data]: /docs/api-reference/gpgpu/gpu-data
 [gpu-tables]: /docs/api-reference/experimental/gpu-tables
 [arrow]: /docs/api-reference/arrow

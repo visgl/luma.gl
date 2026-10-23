@@ -12,16 +12,12 @@ import {
   GPUCommandGraphInspector,
   GPUReduction,
   type CompiledGPUCommandGraph
-} from '@luma.gl/gpu-graph/gpu-core';
-import {
-  GPUMeshNormals,
-  GPUMeshVertexNormals,
-  GPUMeshSmoothing
-} from '@luma.gl/gpu-graph/gpu-geometry';
+} from '@luma.gl/graph/gpu-core';
+import {GPUMeshNormals, GPUMeshVertexNormals, GPUMeshSmoothing} from '@luma.gl/graph/gpu-geometry';
 import {
   GPUPointCloudVoxelDownsample,
   GPUPointCloudRadiusFilter
-} from '@luma.gl/gpu-graph/gpu-pointcloud';
+} from '@luma.gl/graph/gpu-pointcloud';
 import {
   ExamplePanelManager,
   makeExamplePanelHostHtml,
@@ -109,7 +105,7 @@ export function createSpatialLabTemplate(mode: 'geometry' | 'pointcloud') {
     readonly models: Model[] = [];
     readonly panels: ExamplePanelManager;
     readonly graphInspector = new GPUCommandGraphInspector({maxSamples: 90});
-    readonly graphDebugPanel = new GPUCommandGraphDebugPanel();
+    readonly graphDebugPanel = new GPUCommandGraphDebugPanel({inspector: this.graphInspector});
     countText = 'Source: 6,000 · Filtered: …';
     readonly viewUniforms: Buffer;
     compiled: CompiledGPUCommandGraph<void> | null = null;

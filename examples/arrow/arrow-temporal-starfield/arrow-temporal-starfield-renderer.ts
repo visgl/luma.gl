@@ -26,7 +26,7 @@ import {
   GPUTable,
   GPUTableModel,
   type GPUTypeMap
-} from '@luma.gl/gpu-graph/gpu-tables';
+} from '@luma.gl/graph/gpu-tables';
 import * as arrow from 'apache-arrow';
 import {
   CURRENT_TIME_RATE_MILLISECONDS_PER_SECOND,

@@ -13,12 +13,12 @@ import {
   type CompiledGPUCommandGraph,
   type GPUReadbackTicket,
   type GraphDataView
-} from '@luma.gl/gpu-graph/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 import {
   GPUTraceInteraction,
   GPUTraceScene,
   getGPUTracePickingShader
-} from '@luma.gl/gpu-graph/gpu-trace';
+} from '@luma.gl/graph/gpu-trace';
 import {
   ExamplePanelManager,
   makeExamplePanelHostHtml,
@@ -462,6 +462,7 @@ export default class GPUTraceSceneAnimationLoopTemplate extends AnimationLoopTem
     this.controls = root;
     const inspectorHost = root.querySelector<HTMLElement>('[data-scene-trace-inspector]')!;
     this.inspectorPanel = new GPUCommandGraphInspectorPanel(inspectorHost, {
+      inspector: this.graphInspector,
       graphLabels: {[this.resources.compiled.id]: 'Scene interaction + picking + draw'}
     });
     this.inspectorPanel.update(this.graphInspector.getSnapshot(), this.resources.compiled.id);

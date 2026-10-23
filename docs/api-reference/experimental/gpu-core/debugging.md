@@ -37,6 +37,35 @@ CPU time measures command encoding. GPU time measures sampled GPU work. A missin
 not a zero-duration result. Counter collection is explicit: the inspector stores supplied scalar
 values and does not read their buffers itself.
 
+## Graph Resources: inspect buffers and textures
+
+Inside the graph inspector, select **Graph Resources** to see the declared buffer ranges and
+texture views. The resource list sits above a persistent viewer. Select a resource (or focus it
+and press Enter) to read its current contents; **Refresh selected resource** reads it again.
+Hovering or focusing a row also shows a quick preview popup. Texture entries include format,
+extent, mip level, and array layer. RGBA8/BGRA8 previews include a pixel thumbnail.
+
+Connect a live inspector to the example panel with `{inspector}`. Snapshot-only panels still
+list resources, but cannot read data. Application renderers must submit their graph command
+buffers before the UI requests a preview. The data-only inspector exposes the same explicit API:
+
+```typescript
+const preview = await inspector.readResource(compiled.id, nodeId, resourceIndex);
+```
+
+`resourceIndex` addresses the node's declared resources in the inspector snapshot. Reads are
+on demand, capped at 256 buffer bytes or the top-left 32 × 32 pixels of the first selected mip
+and layer. Raw bytes are always available for supported formats; float32 and uint32 vector
+buffers also receive a numeric interpretation. Previews show current allocation contents, not
+historical inputs or outputs at a particular node. They are not continuously refreshed.
+
+Readback requires `COPY_SRC` on the physical resource. The inspector does not modify resource
+usage or disable transient reuse. Reused transient allocations, frame/presentation textures,
+external images, multisampled textures, compressed or packed formats, and depth/stencil textures report
+an explicit unavailable message. This avoids displaying another logical resource's bytes or
+issuing invalid GPU copies. Transient and borrowed ownership is unchanged; temporary readback
+buffers are released after use. See [Buffers and textures](./resources) for ownership details.
+
 ## GPU Trace: inspect one encoding
 
 `GPUTracePanel` displays the latest report as CPU and GPU spans, preserving gaps between nodes.
@@ -55,7 +84,7 @@ import `GPUCommandGraphInspectorPanel` from `examples/gpu-command-graph-inspecto
 panel collection and give the graph panel its own host element.
 
 ```ts
-import {GPUCommandGraphInspector} from '@luma.gl/gpu-graph/gpu-core';
+import {GPUCommandGraphInspector} from '@luma.gl/graph/gpu-core';
 
 const inspector = new GPUCommandGraphInspector({maxSamples: 120});
 const observation = inspector.observeGraph(compiled);

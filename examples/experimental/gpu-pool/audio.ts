@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUSphereEvent} from '@luma.gl/gpu-graph/gpu-physics';
+import type {GPUSphereEvent} from '@luma.gl/graph/gpu-physics';
 
 /** Small, asset-free contact sounds. Audio is optional and never controls game state. */
 export class PoolAudio {

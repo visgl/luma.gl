@@ -4,21 +4,21 @@
 
 import {expect, it, vi} from 'vitest';
 import type {Device} from '@luma.gl/core';
-import {Model} from '../../src/model/model';
+import * as gpuGeometry from '../../src/geometry/gpu-geometry';
 import {NullDevice} from '@luma.gl/test-utils';
 import {Geometry} from '../../src/geometry/geometry';
 import {ClipSpace} from '../../src/models/clip-space';
 
 it('ClipSpace preserves the quad default and interpolates identical coordinates for both geometries', () => {
   const device: Device = new NullDevice({});
-  const setGeometry = vi.spyOn(Model.prototype, 'setGeometry');
+  const makeGPUGeometry = vi.spyOn(gpuGeometry, 'makeGPUGeometry');
   try {
     for (const geometryType of [undefined, 'quad', 'triangle'] as const) {
       const model = new ClipSpace(device, {
         geometryType,
         fs: '#version 300 es\nprecision highp float;\nout vec4 color;\nvoid main() { color = vec4(1.0); }'
       });
-      const geometry = setGeometry.mock.lastCall![0];
+      const geometry = makeGPUGeometry.mock.lastCall![1];
       if (!(geometry instanceof Geometry)) {
         throw new Error('Expected CPU geometry');
       }
@@ -81,7 +81,7 @@ it('ClipSpace preserves the quad default and interpolates identical coordinates 
       }
     }
   } finally {
-    setGeometry.mockRestore();
+    makeGPUGeometry.mockRestore();
     device.destroy();
   }
 });

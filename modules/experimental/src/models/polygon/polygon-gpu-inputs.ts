@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPURecordBatchSourceInfo} from '@luma.gl/gpu-graph/gpu-tables';
+import type {GPURecordBatchSourceInfo} from '@luma.gl/graph/gpu-tables';
 import type {GPUConstant} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import type {VertexList} from '@luma.gl/gpgpu/gpu-data';
-import {type GPUInputSchema, validateGPUInputVectors} from '@luma.gl/gpu-graph/gpu-tables';
+import {type GPUInputSchema, validateGPUInputVectors} from '@luma.gl/graph/gpu-tables';
 
 /** Prepared generated GPU inputs consumed by filled polygon models. */
 export const POLYGON_GPU_INPUT_SCHEMA = [

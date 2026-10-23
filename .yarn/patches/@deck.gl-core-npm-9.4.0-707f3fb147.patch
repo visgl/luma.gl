@@ -1782,3 +1782,9 @@ diff --git a/src/shaderlib/project/viewport-uniforms.ts b/src/shaderlib/project/
  
  import {PROJECTION_MODE} from '../../lib/constants';
  
+diff --git a/dist/lib/layer.d.ts b/dist/lib/layer.d.ts
+--- a/dist/lib/layer.d.ts
++++ b/dist/lib/layer.d.ts
+@@ -8,1 +8,1 @@
+-import type { Model } from '@luma.gl/engine';
++import type { GPUVectorModel as Model } from '@luma.gl/engine';

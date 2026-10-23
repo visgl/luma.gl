@@ -71,7 +71,7 @@ Reproduce from the repository root after other task builds/tests finish:
 ```sh
 VITE_LUPROJ_SWEEP_ROWS=4096,65536 VITE_LUPROJ_SWEEP_CONSUMERS=1,4 \
   yarn test-browser-benchmarks --silent=false --reporter=verbose \
-  modules/gpu-graph/test/gpu-project/projection-performance.spec.ts
+  modules/graph/test/gpu-project/projection-performance.spec.ts
 ```
 
 ## Historical baseline — 2026-09-16
@@ -204,7 +204,7 @@ LUMA_TEST_BROWSER_BENCHMARKS=true \
   VITE_LUPROJ_SWEEP_ROWS=1024,16384,65536 VITE_LUPROJ_SWEEP_CONSUMERS=1,4 \
   VITE_LUPROJ_SWEEP_GPU_TIMING=false \
   yarn test-headless --no-coverage --silent=false --reporter=verbose --fileParallelism=false \
-  modules/gpu-graph/test/gpu-project/projection-performance.spec.ts
+  modules/graph/test/gpu-project/projection-performance.spec.ts
 ```
 
 For the separate profile, set `VITE_LUPROJ_SWEEP_ROWS=65536`,

@@ -17,8 +17,8 @@ import {
   type GPUReadbackTicket,
   type GPUScene,
   type GraphDataView
-} from '@luma.gl/gpu-graph/gpu-core';
-import {makeGPUSceneFromCPUScene} from '@luma.gl/gpu-graph/gpu-tables';
+} from '@luma.gl/graph/gpu-core';
+import {makeGPUSceneFromCPUScene} from '@luma.gl/graph/gpu-tables';
 import {
   ExamplePanelManager,
   makeExamplePanelHostHtml,
@@ -379,6 +379,7 @@ export default class GPUSceneGraphAnimationLoopTemplate extends AnimationLoopTem
     this.controls = root;
     const host = root.querySelector<HTMLElement>('[data-scene-graph-inspector]')!;
     this.inspectorPanel = new GPUCommandGraphInspectorPanel(host, {
+      inspector: this.graphInspector,
       graphLabels: {[this.resources.compiled.id]: 'Hierarchy → scene → visibility → draw'}
     });
     this.inspectorPanel.update(this.graphInspector.getSnapshot(), this.resources.compiled.id);

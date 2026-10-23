@@ -101,7 +101,7 @@ describe('GPUCrossfilter live crossfilter documentation', () => {
       'utf8'
     );
     const packageDocumentation = readFileSync(
-      new URL('../../modules/gpu-graph/src/gpu-crossfilter/README.md', import.meta.url),
+      new URL('../../modules/graph/src/gpu-crossfilter/README.md', import.meta.url),
       'utf8'
     );
 

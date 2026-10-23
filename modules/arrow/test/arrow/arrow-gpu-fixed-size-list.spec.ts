@@ -14,7 +14,7 @@ import {
   type GPUVectorFormatForArrowType
 } from '@luma.gl/arrow';
 import type {ShaderLayout} from '@luma.gl/core';
-import {GPURecordBatch, GPUTable} from '@luma.gl/gpu-graph/gpu-tables';
+import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
 import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice, NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';

@@ -13,8 +13,8 @@ Setup and geometry cooking run on the CPU; simulation does not require pose read
 ## Usage
 
 ```ts
-import {GPUCommandGraph} from '@luma.gl/gpu-graph/gpu-core';
-import {GPURigidBodyWorld} from '@luma.gl/gpu-graph/gpu-physics';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
+import {GPURigidBodyWorld} from '@luma.gl/graph/gpu-physics';
 
 // device is an existing WebGPU Device.
 const world = new GPURigidBodyWorld({
@@ -68,11 +68,11 @@ recovery guarantee for pipeline compilation or driver allocation.
 | `impactImpulseThreshold` | `1` | Sustained-contact impulse threshold for impact samples |
 | `enableQueries` | `false` | Allocate parallel collider-query and reduction resources |
 | `failurePolicy` | `'report'` | `'rollback'` checkpoints body/contact state and rejects incomplete steps on the GPU |
-| `continuous` | Disabled | `{bodies, maximumImpacts?: 4}`; centered dynamic spheres against static spheres, boxes and planes; rollback required |
+| `continuous` | Disabled | `{bodies, mode?: 'sphere-static', maximumImpacts?: 4, maximumCandidates?}`; see the two bounded modes below; rollback required |
 | `triggers` | Disabled | Compound spherical sensor groups with target collider selections and optional swept sphere crossings; rollback required |
 | `triggerEventCapacity` | `256` | Trigger ring capacity, 1–65,536 when triggers are enabled |
 | `contactSlop` | `0.002` | Allowed contact penetration in world units |
-| `contactMatchDistance` | `0.05` | Distance for matching persistent contacts |
+| `contactMatchDistance` | `0.05` | Local-anchor distance for matching persistent contacts |
 | `restitutionThreshold` | `0.5` | Closing-speed threshold for bounce |
 | `linearDamping`, `angularDamping` | `0` | Nonnegative velocity decay rates in inverse seconds; dynamic bodies only, using exponential decay each fixed step |
 | `sleepAfter` | `0.5` | Quiet simulation seconds before sleeping; zero disables |
@@ -152,8 +152,18 @@ cache-invalidation contract after editing bodies.
 ## Contacts, friction and solver choice
 
 Boxes use separating-axis tests with clipped face or edge contacts. Convex shapes
-use bounded support-mapping queries. Persistent manifolds match nearby aligned
-contact points and retain accumulated impulses. New impacts capture restitution;
+use bounded support-mapping queries. Persistent manifolds store collider-local
+anchors and feature keys, so common translation does not invalidate the warm start.
+Matches require compatible feature keys, aligned normals and nearby anchors on both
+colliders; each previous point can be consumed only once. Analytic shapes identify
+faces/edges/caps, cooked hulls identify a supporting surface, and mesh contacts retain
+the actual cooked triangle ID. A feature change or excessive local drift discards the
+cached impulse. Coplanar mesh seams are not welded into a common feature.
+Box support keys use the local normal rather than the penetrating midpoint, so
+settling depth changes alone do not discard impulses.
+Four 96-byte contacts plus the aligned header occupy 416 bytes per manifold
+(previously 288 bytes). Capacity reports and rollback checkpoints include this cost.
+Reset and reconstruction invalidate the cache. Persistent manifolds retain accumulated impulses. New impacts capture restitution;
 normal impulses remain nonnegative.
 
 Each collider can specify `staticFriction`, `dynamicFriction`, `restitution`,
@@ -174,6 +184,29 @@ gathers them per body with degree-based relaxation. Bounded island propagation
 coordinates sleeping and waking without joining separate stacks through a static
 floor. `parallelRelaxation` can reduce updates further, at a convergence cost.
 Both solver modes can use either discovery path.
+
+Parallel solving defaults to `compactContacts: true`. After contact generation and
+mesh collection, a bounded GPU scan appends nonempty manifold IDs into a world-owned
+queue. A GPU pass writes indirect dispatch arguments. Island linking, union, warm
+starting and each pair iteration reuse this queue; no CPU count readback is needed.
+Body gather passes still cover all bodies. Sleeping contact pairs remain in the queue
+so connected islands can wake correctly. Zero contacts produce zero pair workgroups.
+
+Set `compactContacts: false` to compare with the full-capacity parallel scan. This
+option is ignored by the ordered solver. Compaction adds two graph passes, four bytes
+per pair slot (rounded to 16-byte allocation alignment), and a 16-byte argument buffer.
+It reduces repeated pair invocations; it does not reduce the iteration count, body
+work, narrow-phase scan, event scan or broad-phase budgets. Dense contact scenes can
+pay more overhead than they save, so benchmark the complete step.
+
+`await world.readSolverWork()` optionally returns `{compacted, activeContacts,
+pairCapacity, pairWorkgroups}` for the last generated parallel queue, or `null` for
+an ordered/unattached/destroyed world. `activeContacts` counts nonempty manifolds,
+including sleeping pairs; it is `null` in full-scan mode. A rejected step's queue is
+attempt diagnostics, not accepted-state evidence. Read only after queued submissions
+complete and stop overlapping mutations while reading. The solver never calls this
+method internally. Capture/restore includes queue storage and dispatch arguments;
+each new step rebuilds them.
 
 More iterations cost more dispatch work even when the graph inspector shows one
 semantic solver node. A large connected pile and many independent pairs are not
@@ -353,12 +386,95 @@ IDs retain construction order but the replacement is a new event epoch. Kinemati
 worlds require explicit reconstruction and target-command replay. Capacity growth
 is an application-controlled recovery boundary, not allocation inside a GPU step.
 
+## Moving convex CCD
+
+```typescript
+continuous: {
+  mode: 'convex',
+  bodies: [0, 1],
+  maximumImpacts: 8,
+  maximumCandidates: 256
+},
+failurePolicy: 'rollback'
+```
+
+This opt-in mode supports selected single-convex dynamic bodies and convex obstacles
+that are static, dynamic or kinematic. Supported shapes are sphere, box, capsule,
+cylinder and cooked convex hull. Collider-local offsets and rotations participate in
+support mapping. Planes, triangle meshes and worlds with joints are rejected in this
+mode; use the default sphere/static mode for original mesh surfaces. Nonselected
+pairs retain discrete collision detection.
+
+Each impact round builds conservative swept bounds, selects the axis with the widest
+center spread, and bitonic-sorts bounds on the GPU. Interval scans stop when the next
+lower bound exceeds the current upper bound, then test the other axes and filters
+before reserving a bounded candidate. Padded power-of-two sort entries are sentinels;
+collider IDs provide stable tie ordering. The index is rebuilt after each impact.
+Sparse scenes prune discovery work; dense overlapping intervals still have quadratic
+worst-case scans. Sorting adds O(log² N) dispatches per round and is not a universal
+speedup over a small all-pairs scene. COM-centered
+bounding spheres include collider offsets and conservatively cover rotation. An
+indirect dispatch searches only queued candidates. Support-plane distance bounds (including box/box separating axes and exact sphere/box distance)
+and conservative support-point velocity/curvature bounds drive advancement (64 distance and
+128 advancement iterations). Distance stopping uses local feature size and a float32
+coordinate-precision floor; it is not an absolute world-space accuracy guarantee. Centered
+sphere spin does not inflate the geometric angular bound. One invocation chooses the earliest TOI, using collider
+IDs to break exact ties, advances all trajectories and applies coupled normal/angular
+and Coulomb friction impulses. Box impact points come from the same clipped face
+polygons used by discrete manifolds, or closest supporting finite edges. Missing or
+invalid surface witnesses reject the step. Restitution is applied once, followed by
+up to 16 dissipative friction/nonclosing projections and a final nonclosing correction.
+Friction increments are limited by contact work; normal corrections only increase the
+normal impulse. This prevents offset friction from adding energy or restoring inward
+speed before the remaining time is swept. Strongly coupled offset contacts prioritize
+energy admissibility over an exact Newton normal-restitution target. Nonimpacted
+bodies preserve their discrete final poses; kinematic targets retain their authored
+end poses. No CPU readback is required between rounds.
+
+`maximumCandidates` defaults to `maximumPairs`. Queue, distance, advancement or
+impact exhaustion marks `incompleteContinuousBodies` and rejects the entire step,
+including persistent contacts. Failure remains latched. Capacity is not automatically
+grown by the recovery runner. `readContinuousWork()` optionally reads two 16-byte ranges
+for last-attempt peak candidates, candidate workgroups, resolved impacts, incomplete
+status, `peakSpatialTests` (interval-overlap comparisons before filtering) and `rounds`.
+Physics Stress Lab displays and exports these counters. They measure queue work,
+not GPU duration or a cross-device throughput qualification.
+
+Initially touching closing sphere/box pairs can resolve at time zero, including a
+pair driven closed by another impact. Separating fixed-orientation convex trajectories
+cannot re-enter before another impulse; each rebuilt queue revisits them. Rotating
+initial contacts use bounded exit searches and support-plane quadratic lower bounds,
+within a contact envelope of eight query tolerances. This envelope covers float32
+TOI publication/recomposition error; it is used consistently for arrival and exit. Box
+corners retain independent initial gaps and rates so support-face changes cannot
+combine unrelated extrema or stall ordinary grazing approaches. An unresolved exit rejects the step. A generic zero-distance simplex without a
+qualified normal after a different impact also rejects; only the immediately preceding
+impact may reuse its known plane at an unchanged pose.
+Simultaneous impacts use deterministic sequential pair impulses and zero-time revisits
+within the global impact budget; this is an explicit ordered impact law, not a unique
+coupled multi-impact restitution model. General penetrating initial configurations,
+jointed/nonconvex CCD and swept contact-event payloads remain unqualified. Trajectories use constant world angular velocity between impacts;
+this does not qualify asymmetric torque-free continuous dynamics. Extreme aspect
+ratios, grazing motion and float32 conditioning can reject otherwise valid steps.
+
+The lab adds **dynamic convex pairs**, **translating wall**, **rotating gate** and
+**swept queue rejection**, **seam sliding**, **touching chain**, **simultaneous impacts**
+and **sparse moving field** scenarios. Trails show sampled centers, not exact TOI paths.
+
 ## Bounded continuous motion
 
 `continuous: {bodies: [bodyIndex], maximumImpacts: 4}` adds sphere/static-surface
 sweeps after the discrete solver. Selected bodies must be dynamic single spheres
-centered on their COM. Static sphere, box and plane obstacles are supported; filters
-and sensors are respected. Each impact reflects the closing normal velocity using
+centered on their COM. Static spheres, boxes, planes, capsules, cylinders, convex hulls and original
+triangle surfaces are supported; filters and sensors are respected. Spheres, rounded
+boxes (faces, finite edges and corners), and unbounded planes use analytic sweeps.
+Triangle meshes use analytic triangle face/edge/corner sweeps with bounded BVH
+traversal, skipping a separating initial touch per triangle so other walls remain
+candidates. Curved/convex surfaces use at most 128 conservative-advancement
+iterations. Advancement tolerance uses the moving radius and local obstacle radius/thickness, is capped at
+1e-5 world units (with a 1e-8 numerical floor), and does not grow with unrelated
+obstacle dimensions. Exhausted work returns an explicit incomplete result. Triangle meshes retain two-sided
+surface semantics and preserve holes; they do not acquire solid containment. Each impact reflects the closing normal velocity using
 the material restitution policy, then sweeps the remaining time. This first CCD
 response does not add tangential impact friction or CCD-specific contact-event
 payloads. Ordinary discrete contacts still provide friction and contact events.
@@ -368,10 +484,25 @@ penetrating pair for that step while still sweeping other obstacles. This does n
 guarantee recovery from arbitrary deep overlap.
 
 The GPU rejects the step if the impact or sweep budget is exhausted. Inspect
-`incompleteContinuousBodies` along with `complete` in lifetime diagnostics. Dynamic
-pairs, moving kinematic obstacles, rotating convex shapes and meshes still have
-discrete collision behavior. This is a declared CCD envelope, not general CCD.
-The Rigid Body Lab's **Fast sphere / thin walls** scenario demonstrates it.
+`incompleteContinuousBodies` along with `complete` in lifetime diagnostics. In this default mode, dynamic
+pairs, moving kinematic obstacles and rotating shapes still have discrete collision
+behavior; opt into the convex mode above for its separate declared envelope. This is a declared CCD envelope, not general CCD.
+The Physics Stress Lab's **Fast Motion Lab** scenarios demonstrate curved static
+obstacles, a real mesh opening and intentional impact-budget rejection. Paths show
+sampled centers, so trail segments do not reconstruct intermediate ricochets.
+
+Convex GJK/EPA normalizes distances using the smaller local feature: primitive
+radius/minimum extent, local hull bounds, or the selected triangle edge size.
+Planes contribute the other collider's feature scale. EPA's intentional convergence
+tolerance is additionally capped at 1e-4 world units; float32 precision limitations
+still apply. Search directions are bounded before support mapping to avoid
+overflow when a feature has a long axis. Independent polyhedral SAT tests qualify rotated
+cube/box and tetrahedron pairs over the documented scale ranges. Separate
+analytic depth checks cover capsules, cylinders and original triangles with
+lengths 10 and 1000, including reversed collider order. This is named-case
+evidence, not a complete shape-pair or degeneracy qualification. Constant-world-spin
+orientation integration uses a quaternion exponential; asymmetric torque-free
+dynamics remain timestep dependent, and this is not rotational CCD.
 
 ## Persistent triggers
 
@@ -583,3 +714,47 @@ The journal retains its own checkpoint for export; begin a segment before applyi
 per command; the initial checkpoint is an explicit debugging readback. Application
 state, geometry rebuilds, arbitrary buffer writes, device loss recovery and portable
 cross-device serialization are outside this journal contract.
+
+
+## Named geometry and difficult-stack qualification
+
+`rigid-body-contact-geometry.spec.ts` checks signed separation/depth and normal direction
+against closed-form sphere, aligned-face box and capsule-side references. Fixtures vary
+scale (0.25, 1 and 4), world rotation, body order, separated/overlapping poses, box
+edges/corners and compound collider offsets. Rectangle-membership references check
+nonconvex mesh openings, both ray directions, rotated surfaces, winding and scale. These are quantitative named cases;
+they do not qualify arbitrary convex penetration, mesh containment or degeneracies.
+
+The difficult-stack, mass-ratio-stack and offset-stack suites run eight-box, 10:1 heavy-on-light and offset-COM
+stacks for six simulated seconds at 1/120 and 1/240 s, with sleeping disabled and
+64 iterations, 64 pair slots, warm-start factor 0.8 and penetration recovery fraction
+0.1, for ordered and parallel solvers. Sampled height drift stays below
+0.12 units, adjacent COM height separation stays above 0.94, lateral COM drift below
+0.12 and final kinetic energy below 0.02 in the fixtures' units. COM separation is
+a stack-specific proxy, not an oriented geometry penetration measurement. Sampling
+occurs every 60 steps and does not bound every intermediate tick. The 100:1 stress
+scene, extreme stacks, cross-device performance and rotational CCD remain exploratory.
+
+The numeric bounds above apply to this explicit stabilization profile; default settings
+and extreme loads are not qualified by these fixtures. Each timestep is a separate
+test and the three physical scenarios are weighted across browser shards so long
+simulation duration does not become one combined test timeout.
+
+
+### Coplanar contact continuity
+
+Cooked triangles store connected coplanar surface keys and internal-edge masks in their
+existing metadata lane. Welding requires an exact orientation predicate on float32
+coordinates, an edge with exactly two uses, and opposite-side coverage of that edge.
+Duplicated position vertices can share an edge; gaps, creases, overlapping same-side
+triangles and nonmanifold edges are not welded. This changes packed internal geometry
+metadata, not authored topology or the public mesh geometry type.
+
+Sphere/triangle contacts normalize the local triangle before evaluating analytic
+closest-point witnesses, avoiding an absolute barycentric denominator floor at tiny
+scales. They discard false ridges on the interiors of internal coplanar edges. Vertices are retained conservatively;
+complete vertex-fan welding remains future work. Adjacent triangles retain the real face contact. Outer edges
+and openings remain collision boundaries. Mesh and hull warm starts use surface keys
+rather than individual triangle IDs, while normal alignment, both local-anchor distance
+limits and one-to-one point ownership still guard impulse transfer. This does not yet
+provide general convex multi-point manifold coherence through arbitrary feature changes.

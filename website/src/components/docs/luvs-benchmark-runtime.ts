@@ -8,14 +8,14 @@ import {
   GPUCommandGraph,
   type GPUCommandGraphEncoding,
   type GraphDataView
-} from '@luma.gl/gpu-graph/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 import {
   GPUIVFFlatIndex,
   GPUSimilaritySearch,
   importGPUEmbeddingTable
-} from '@luma.gl/gpu-graph/gpu-vector-search';
+} from '@luma.gl/graph/gpu-vector-search';
 import {GPUData, type FixedSizeList} from '@luma.gl/gpgpu/gpu-data';
-import {GPURecordBatch, GPUTable} from '@luma.gl/gpu-graph/gpu-tables';
+import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
 
 export const LUVS_BENCHMARK_WARMUP_ITERATIONS = 1;
 export const LUVS_BENCHMARK_MEASURED_ITERATIONS = 5;

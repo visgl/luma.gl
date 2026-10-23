@@ -5,8 +5,8 @@
 import '../gpu-spatial-lab.css';
 import {Buffer, type Device} from '@luma.gl/core';
 import {AnimationLoopTemplate, Model, OrbitControls, type AnimationProps} from '@luma.gl/engine';
-import {GPUCommandGraph, GPUCommandGraphInspector} from '@luma.gl/gpu-graph/gpu-core';
-import {GPUPointCloudOctree} from '@luma.gl/gpu-graph/gpu-pointcloud';
+import {GPUCommandGraph, GPUCommandGraphInspector} from '@luma.gl/graph/gpu-core';
+import {GPUPointCloudOctree} from '@luma.gl/graph/gpu-pointcloud';
 import {GPUCommandGraphDebugPanel} from '../../gpu-command-graph-debug-panel';
 import {
   ExamplePanelManager,
@@ -47,7 +47,7 @@ export default class OctreeExample extends AnimationLoopTemplate {
   static info = makeExamplePanelHostHtml();
   readonly buffers: Buffer[] = [];
   readonly inspector = new GPUCommandGraphInspector();
-  readonly debugPanel = new GPUCommandGraphDebugPanel();
+  readonly debugPanel = new GPUCommandGraphDebugPanel({inspector: this.inspector});
   readonly panels: ExamplePanelManager;
   readonly orbit: OrbitControls | null;
   readonly view: Buffer;

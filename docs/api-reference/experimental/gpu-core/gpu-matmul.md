@@ -70,7 +70,7 @@ This is the first major difference between GEMM and simpler elementwise GPU oper
 ## Contract
 
 ```ts
-import {GPUMatMul} from '@luma.gl/gpu-graph/gpu-core';
+import {GPUMatMul} from '@luma.gl/graph/gpu-core';
 
 graph.add(new GPUMatMul({
   left: a,

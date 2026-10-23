@@ -1,6 +1,6 @@
 # gpu-trace implementation roadmap
 
-This maintainer roadmap tracks implementation work for `@luma.gl/gpu-graph/gpu-trace`. User-facing
+This maintainer roadmap tracks implementation work for `@luma.gl/graph/gpu-trace`. User-facing
 algorithm contracts and current behavior belong in the
 [gpu-trace algorithm documentation](../../docs/api-reference/experimental/gpu-trace-algorithms.md).
 

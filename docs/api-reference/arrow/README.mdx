@@ -44,7 +44,7 @@ and temporal conversion helpers.
 
 `@luma.gl/arrow` adapts Apache Arrow objects into primitive
 [`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/gpgpu/gpu-data) objects and higher-level
-[`@luma.gl/gpu-graph/gpu-tables`](/docs/api-reference/experimental/gpu-tables) objects:
+[`@luma.gl/graph/gpu-tables`](/docs/api-reference/experimental/gpu-tables) objects:
 
 - `makeGPUDataFromArrowData()` uploads one Arrow `Data` chunk into a `GPUData`.
 - `makeGPUVectorFromArrow()` uploads one Arrow `Vector` into a `GPUVector`.
@@ -58,7 +58,7 @@ and temporal conversion helpers.
   reconstructing nullable numeric/dictionary columns and either preserved per-batch selection or
   explicitly requested global ordering. Combined with
   [`LuSQLContext`](/docs/api-reference/experimental/gpu-sql) from the separate
-  `@luma.gl/gpu-graph/gpu-sql` subpath, this provides an Arrow input → GPU dataframe execution →
+  `@luma.gl/graph/gpu-sql` subpath, this provides an Arrow input → GPU dataframe execution →
   Arrow output workflow without adding Apache Arrow to generic table or SQL packages.
 - `makeGPUSplatDataFromArrow()` prepares independently owned Gaussian splat batches for
   [`@luma.gl/splats`](/docs/api-reference/splats), decoding GraphDECO encodings without

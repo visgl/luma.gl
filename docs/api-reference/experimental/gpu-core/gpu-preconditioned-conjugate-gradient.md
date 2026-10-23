@@ -92,7 +92,7 @@ follows the right-hand side topology and remains graph-owned. Input storage is b
 solution and declared scratch are written.
 
 ```ts
-import {GPUJacobiPCG} from '@luma.gl/gpu-graph/gpu-core/gpu-pcg';
+import {GPUJacobiPCG} from '@luma.gl/graph/gpu-core/gpu-pcg';
 
 const solver = new GPUJacobiPCG({
   rowOffsets, columnIndices, values, rhs, solution,

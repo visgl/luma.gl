@@ -6,7 +6,7 @@ A GPU graph connects compute, copy, and rendering stages while keeping intermedi
 on the GPU. WebGPU supplies the execution and memory primitives; GPU Core supplies the resource
 model, dependency analysis, and reusable compiled schedule.
 
-This page describes command graphs in `@luma.gl/gpu-graph/gpu-core`. The separate
+This page describes command graphs in `@luma.gl/graph/gpu-core`. The separate
 [GPU Graph module](../gpu-graph) analyzes graph datasets such as networks of vertices and edges.
 
 ## The features that make it possible

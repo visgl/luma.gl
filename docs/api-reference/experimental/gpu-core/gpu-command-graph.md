@@ -7,10 +7,10 @@ import {GPUDataAnalysisExample} from '@site/src/examples';
 # GPUGraph
 
 
-Use `GPUGraph` and `CompiledGPUGraph` from `@luma.gl/gpu-graph/gpu-graph` for execution scheduling.
-They are also exported by `@luma.gl/gpu-graph/gpu-core`. The former names `GPUCommandGraph` and
+Use `GPUGraph` and `CompiledGPUGraph` from `@luma.gl/graph/gpu-graph` for execution scheduling.
+They are also exported by `@luma.gl/graph/gpu-core`. The former names `GPUCommandGraph` and
 `CompiledGPUCommandGraph` remain aliases; option and result types retain their existing prefixes.
-Graph analytics live separately in `@luma.gl/gpu-graph/gpu-graph-algorithms`, using `GPUGraphAlgorithmsData`.
+Graph analytics live separately in `@luma.gl/graph/gpu-graph-algorithms`, using `GPUGraphAlgorithmsData`.
 
 <GPUCoreDocsTabs active="command-graph" />
 
@@ -270,7 +270,7 @@ replace both role bindings when encoding later frames:
 
 ```ts
 import {Texture} from '@luma.gl/core';
-import {GPUGraph, GPUTextureHistory} from '@luma.gl/gpu-graph/gpu-core';
+import {GPUGraph, GPUTextureHistory} from '@luma.gl/graph/gpu-core';
 
 const descriptor = {
   format: 'rgba16float' as const,
@@ -812,7 +812,7 @@ routed through the handle. Optional GPU timestamp readback remains explicit and 
 the caller submits the command buffer:
 
 ```ts
-import {GPUCommandGraphInspector} from '@luma.gl/gpu-graph/gpu-core';
+import {GPUCommandGraphInspector} from '@luma.gl/graph/gpu-core';
 
 const inspector = new GPUCommandGraphInspector({maxSamples: 120});
 const observation = inspector.observeGraph(compiled);
@@ -831,6 +831,13 @@ observation.recordCounters({candidates, matches});
 const snapshot = inspector.getSnapshot();
 observation.detach();
 ```
+
+`readResource(graphId, nodeId, resourceIndex)` explicitly reads a bounded preview from the latest
+recorded encoding, after application submission. It returns tightly packed bytes and, for textures,
+the preview dimensions and format. This reads current allocation contents, not historical per-node
+values, and can submit a diagnostic copy. Unsupported or expired resources reject with an explanation.
+See [Graph Resources](./debugging#graph-resources-inspect-buffers-and-textures) for the panel, limits,
+and required resource usage.
 
 `getSnapshot()` returns an immutable view of every registered graph in registration order. Each
 graph snapshot includes its compile-time `stats` and `capabilities`, encoding and failed-timing-read
@@ -915,3 +922,8 @@ Tooltips also show declared resource inputs and outputs, access modes, buffer by
 and available view formats, row counts, and texture dimensions. These are static declarations,
 not measured traffic or a readback of buffer contents. Serializable resource summaries are
 retained in preflight reports and traces.
+
+## Buffer and texture management
+
+See [Buffers and textures](/docs/api-reference/experimental/gpu-core/resources) for logical values,
+views, imported and transient ownership, hazard tracking, history, resizing, and encoding contracts.

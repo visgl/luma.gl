@@ -25,7 +25,7 @@ PR head before merge.
 
 Implementation references on master:
 
-- [Module API and limitations](../../modules/gpu-graph/src/gpu-physics/README.md)
+- [Module API and limitations](../../modules/graph/src/gpu-physics/README.md)
 - [Sphere world example](../../examples/experimental/gpu-sphere-world/)
 - [Pool example and controls](../../examples/experimental/gpu-pool/README.md)
 
@@ -650,3 +650,91 @@ G2 still needs robust general mesh/containment and independent penetration-depth
 qualification. G3 still needs long-duration difficult-stack/high-ratio and rotational
 CCD qualification. These named-case checks are not a claim of complete G1–G3 or SOTA
 performance, and hardware-specific performance gates remain open.
+
+
+## G1 compaction and G2/G3 named-case qualification checkpoint
+
+Parallel rigid-body worlds now default to a bounded GPU queue of nonempty manifold
+IDs and GPU-produced indirect arguments. Island pair work and repeated warm/solve
+passes consume the queue. A full-scan option remains an executable comparison.
+The queue retains sleeping contacts and original cache identity. Body passes, contact
+discovery, mesh/event work and ordered solving are not compacted. Full GPU adaptive
+recovery, broader active-island scheduling and throughput qualification remain G1 work.
+
+Independent signed-depth and normal references cover sphere/sphere, rotated aligned
+box faces, sphere/box faces/edges/corners, capsule sides, compound offsets and scale.
+Six-second stacks run with sleeping disabled at two timesteps and both solvers,
+including eight boxes, 10:1 loading and offset COM, under an explicit damped
+stabilization profile (64 slots/iterations, warm start 0.8, recovery fraction 0.1). The stress lab exposes corresponding
+scenarios and compact/full-scan workgroup diagnostics. General penetration-depth
+geometry, nonconvex containment, extreme ratios, rotational CCD and cross-device
+quality/cost evidence remain open; this increment does not close G1–G3.
+
+### G2 geometry robustness / G3 fast-motion checkpoint
+
+The follow-up normalizes convex GJK/EPA distances by the smaller local feature
+(primitive radius/minimum extent, hull bounds or selected triangle edges), caps
+intentional EPA convergence tolerance in world units, bounds support directions, and uses exact float32 orientation for thin hull seed decisions. Mesh
+capacity checks run before copying input. Independent rectangle and polyhedron SAT
+references qualify named cube/box and tetrahedron penetration cases across scale.
+Analytic depth cases qualify elongated capsule/cylinder and per-triangle contacts
+at lengths 10 and 1000 with reversed order; whole-mesh bounds do not set accuracy.
+
+Sphere/static CCD now accepts all static shape families. Analytic sphere, rounded-box
+unbounded-plane and triangle-feature sweeps complement bounded capsule/cylinder/convex
+surface advancement. Mesh sweeps traverse the BVH and retain other triangles after
+a separating touch. Curved-shape tolerance is capped independently of obstacle length. Initial-distance traversal exhaustion rejects the step.
+Qualification covers transformed obstacles, scale, timestep, mesh holes and both
+sides, repeated ricochets, and latched rollback after impact/traversal exhaustion.
+Constant-world-spin quaternion integration removes normalized-Euler phase lag;
+dynamic isotropic and kinematic spheres are checked against analytic rotations.
+
+Geometry Torture and Fast Motion Lab scenarios live in Physics Stress Lab with
+original geometry projection, sampled trails, reset and GPU graph/trace inspection.
+This checkpoint does not close G2 or G3: general convex degeneracies and persistent
+feature IDs, solid containment, moving/rotating/dynamic-pair CCD, extreme stacks and
+competitive cross-device quality/cost gates remain open.
+
+
+### G2 persistent contacts / G3 moving-convex CCD / G1 swept queues
+
+Manifolds now retain collider-local anchors and analytic/cooked feature keys, including
+actual mesh triangle IDs. Matching requires compatible keys, local drift limits,
+aligned normals and unique old-point ownership. Reset/rollback/reconstruction preserve
+the existing cache lifecycle. Coplanar seam welding and motion-coherent general convex
+multi-point manifolds remain G2 work; feature keys do not close the geometry matrix.
+
+Opt-in convex CCD supports single-convex selected dynamics versus translating/rotating
+convex bodies. Swept COM-sphere bounds feed a bounded parallel candidate queue and
+indirect support-plane TOI searches. Exclusive earliest-impact resolution includes
+angular response, friction and remaining time. Exhaustion rejects the whole step.
+Discovery still scans collider pairs; spatial swept indexing, scalable impact scheduling,
+initial-touch recontact, simultaneous impacts, jointed/nonconvex CCD, swept events and
+asymmetric rotational convergence remain open. This package does not close G1–G3.
+
+Physics Stress Lab adds persistent moving supports, fast dynamic boxes, translating
+walls, rotating gates and intentional swept-queue exhaustion. These are diagnostic
+scenarios with explicit limits, not evidence of complete cross-device SOTA qualification.
+
+
+### G2 contact continuity / G3 impact continuity / G1 spatial swept queues
+
+The follow-up welds exact coplanar connected triangle features using shared geometric
+edges, retaining crease, hole and nonmanifold boundaries. Analytic sphere/triangle
+witnesses suppress false internal-edge ridges; local-anchor matching survives named
+seam-crossing cases. General convex multi-point manifold continuity remains open.
+
+Convex CCD now rebuilds an axis-adaptive sorted swept-bounds index on the GPU. Interval
+pruning feeds the existing bounded indirect TOI queue. Sparse comparison counters and
+non-power-of-two fixtures expose discovery behavior; dense intervals remain quadratic
+and sorting increases dispatch count. Full-step performance qualification remains G1.
+
+Closing initial touches and impacts driven by another contact receive zero-time
+revisits. Rotating contact exits and subsequent advancement use conservative support
+velocity/curvature bounds; unresolved searches reject transactionally. Simultaneous
+impacts use a declared deterministic ordered law with a global impact budget. A general
+coupled multi-impact material model, jointed/nonconvex CCD, deep initial penetration,
+and swept event payloads remain open G3/G11 work.
+
+Physics Stress Lab adds Seam Sliding, Touching Chain, Simultaneous Impacts and Swept
+Queue Scaling. These named-case regressions do not close G1–G3 or establish SOTA status.

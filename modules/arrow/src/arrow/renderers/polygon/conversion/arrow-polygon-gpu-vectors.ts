@@ -4,7 +4,7 @@
 
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUConstant, GPUVector, type VertexList} from '@luma.gl/gpgpu/gpu-data';
-import {type GPURecordBatchSourceInfo} from '@luma.gl/gpu-graph/gpu-tables';
+import {type GPURecordBatchSourceInfo} from '@luma.gl/graph/gpu-tables';
 import {
   tesselateAsync,
   tessellateArrowPolygons,

@@ -21,7 +21,7 @@ backbone, whether a proposed community grouping is actually meaningful, how to i
 grouping, and which pages matter because other important pages link to them. Vertices represent
 those entities; edges represent their relationships.
 
-`@luma.gl/gpu-graph/gpu-graph-algorithms` answers these questions directly on a browser WebGPU device. It
+`@luma.gl/graph/gpu-graph-algorithms` answers these questions directly on a browser WebGPU device. It
 describes caller-owned GPU edge columns, builds reusable compressed adjacency, and publishes vertex
 degrees, unweighted shortest-path neighborhoods, weighted least-cost routes, weakly connected
 groups, densely connected communities, per-vertex local clustering, structural core numbers,
@@ -237,7 +237,7 @@ import benchmark-only datasets, CPU references, or measurement code:
 import {
   makeGPUGraphAlgorithmsBenchmarkDataset,
   runGPUGraphAlgorithmsBenchmark
-} from '@luma.gl/gpu-graph/gpu-graph-algorithms/benchmarks';
+} from '@luma.gl/graph/gpu-graph-algorithms/benchmarks';
 
 const dataset = makeGPUGraphAlgorithmsBenchmarkDataset({kind: 'scale-free', vertexCount: 128, seed: 42});
 const report = await runGPUGraphAlgorithmsBenchmark(device, {

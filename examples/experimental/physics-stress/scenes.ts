@@ -1,14 +1,28 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
-import type {GPURigidBodyWorldProps} from '@luma.gl/gpu-graph/gpu-physics';
+import type {GPURigidBody, GPURigidBodyWorldProps} from '@luma.gl/graph/gpu-physics';
+
+import {
+  QUALIFICATION_SCENES,
+  makeQualificationScene,
+  isQualificationScene
+} from './qualification-scenes';
+
+import {CONTINUOUS_SCENES, isContinuousScene, makeContinuousScene} from './continuous-scenes';
 
 export const STRESS_SCENES = {
+  ...CONTINUOUS_SCENES,
+  ...QUALIFICATION_SCENES,
   capacity: 'Capacity recovery',
   dense: 'Dense mixed-size pile',
   massRatio: 'Heavy-on-light stack',
   ballistic: 'Ballistic convergence',
-  continuous: 'Fast sphere / thin walls'
+  continuous: 'Fast sphere / thin walls',
+  sparseContacts: 'Sparse contact queue',
+  geometry: 'Rotated geometry torture',
+  deepStack: 'Eight-box sustained stack',
+  offsetStack: 'Offset COM stack'
 };
 export type StressScene = keyof typeof STRESS_SCENES;
 export function makeStressScene(
@@ -34,6 +48,8 @@ export function makeStressScene(
       }
     ]
   };
+  if (isContinuousScene(scene)) return makeContinuousScene(scene, props);
+  if (isQualificationScene(scene)) return makeQualificationScene(scene, props);
   if (scene === 'ballistic')
     return {
       description:
@@ -70,6 +86,89 @@ export function makeStressScene(
         ]
       }
     };
+  if (scene === 'sparseContacts')
+    return {
+      description:
+        '24 independent impacts reserve 8192 pair slots. Select Parallel and compare Compact queue with Full scan. The queue is built once on GPU and reused by every solver iteration. Empty steps dispatch zero pair workgroups. This measures work reduction; timing also includes fixed discovery and body work.',
+      props: {
+        ...props,
+        gravity: [0, 0, 0],
+        maximumPairs: 8192,
+        restitutionThreshold: 0,
+        bodies: Array.from(
+          {length: 48},
+          (_, index): GPURigidBody => ({
+            position: [
+              ((Math.floor(index / 2) % 6) - 2.5) * 2 + (index % 2 ? 0.23 : -0.23),
+              0,
+              1 + Math.floor(index / 12) * 2
+            ],
+            velocity: [index % 2 ? -1 : 1, 0, 0],
+            shape: {type: 'sphere', radius: 0.23},
+            restitution: 1,
+            friction: 0
+          })
+        )
+      }
+    };
+  if (scene === 'geometry')
+    return {
+      description:
+        'Spheres meet rotated thin boxes and edge/corner features. The companion numerical tests independently check signed depths, normal direction, scale and reversed collider order. This diagnostic projection shows X/Z rotation; general mesh containment remains outside this qualification.',
+      props: {
+        ...props,
+        bodies: [
+          ...props.bodies,
+          ...[-3, 0, 3].map(
+            (horizontal, index): GPURigidBody => ({
+              mode: 'static' as const,
+              position: [horizontal, 0, 1 + index],
+              orientation: [0, Math.sin((index - 1) * 0.25), 0, Math.cos((index - 1) * 0.25)],
+              shape: {type: 'box' as const, halfExtents: [1.2, 0.5, 0.12] as const},
+              restitution: 0,
+              friction: 0.5
+            })
+          ),
+          ...Array.from(
+            {length: 12},
+            (_, index): GPURigidBody => ({
+              position: [((index % 6) - 2.5) * 1.1, 0, 5 + Math.floor(index / 6)],
+              shape: {type: 'sphere' as const, radius: 0.2 + (index % 3) * 0.07},
+              restitution: 0.1,
+              friction: 0.5
+            })
+          )
+        ]
+      }
+    };
+  if (scene === 'deepStack' || scene === 'offsetStack')
+    return {
+      description:
+        scene === 'deepStack'
+          ? 'Eight unit boxes use sleeping disabled, 64 iterations, warm-start factor 0.8 and recovery fraction 0.1. The six-second numerical reference checks sample support separation, height drift and residual energy at 1/120 and 1/240 s; longer interactive runs are exploratory. Other timesteps are exploratory.'
+          : 'Four unit boxes have a 0.1-unit center-of-mass offset. The six-second numerical fixture measures drift, support separation and residual energy with sleeping disabled. Compare the ordered and parallel solvers.',
+      props: {
+        ...props,
+        iterations: 64,
+        maximumPairs: 64,
+        warmStartFactor: 0.8,
+        penetrationRecoveryFraction: 0.1,
+        gravity: [0, 0, -9.81],
+        bodies: [
+          {...props.bodies[0], friction: 0.8},
+          ...Array.from(
+            {length: scene === 'deepStack' ? 8 : 4},
+            (_, level): GPURigidBody => ({
+              position: [0, 0, level + 0.5],
+              centerOfMass: [scene === 'offsetStack' ? 0.1 : 0, 0, 0],
+              shape: {type: 'box' as const, halfExtents: [0.5, 0.5, 0.5] as const},
+              restitution: 0,
+              friction: 0.8
+            })
+          )
+        ]
+      }
+    };
   const bodies = [...props.bodies];
   const count = scene === 'dense' ? 64 : scene === 'massRatio' ? 5 : 12;
   for (let index = 0; index < count; index++) {
@@ -101,4 +200,8 @@ export function makeStressScene(
 
 export function isStressScene(value: string): value is StressScene {
   return Object.hasOwn(STRESS_SCENES, value);
+}
+
+export function getStressStepCount(timeStep: number, maximumSeconds: number): number {
+  return Math.round(maximumSeconds / timeStep);
 }

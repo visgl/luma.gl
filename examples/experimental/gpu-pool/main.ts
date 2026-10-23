@@ -4,12 +4,12 @@
 
 import {luma, Buffer} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
-import {GPUCommandGraph} from '@luma.gl/gpu-graph/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {
   GPUSphereWorld,
   decodeGPUSphereWorldDiagnostics,
   type GPUSphereBodyState
-} from '@luma.gl/gpu-graph/gpu-physics';
+} from '@luma.gl/graph/gpu-physics';
 import {
   BALL_RADIUS,
   POCKET_RADIUS,
