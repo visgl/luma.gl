@@ -13,10 +13,12 @@ struct ParallelState {
  forced:array<atomic<u32>,BODY_COUNT>,
  next:array<u32,PAIR_CAPACITY*2u>,
  deltas:array<vec4f,PAIR_CAPACITY*4u>,
- activePairs:array<u32,PAIR_CAPACITY>
+ activePairs:array<u32,PAIR_CAPACITY>,
+ solvePairs:array<u32,PAIR_CAPACITY>,
+ awakeBodies:array<u32,BODY_COUNT>
 }
 @group(0) @binding(26) var<storage,read_write> parallelState:ParallelState;
-@group(0) @binding(27) var<storage,read_write> parallelDispatch:array<u32,4>;
+@group(0) @binding(27) var<storage,read_write> parallelDispatch:array<u32,12>;
 fn parallelPair(index:u32)->u32 {
  if(COMPACT_CONTACTS){
   if(index>=atomicLoad(&parallelState.diagnostics[1])){return PAIR_CAPACITY;}
@@ -33,6 +35,30 @@ fn parallelPair(index:u32)->u32 {
 @compute @workgroup_size(1) fn parallelDispatchCount(){
  parallelDispatch[0]=(atomicLoad(&parallelState.diagnostics[1])+63u)/64u;
  parallelDispatch[1]=1u;parallelDispatch[2]=1u;parallelDispatch[3]=0u;
+}
+// Build solver work only after island wake propagation has completed.
+@compute @workgroup_size(64) fn parallelActive(@builtin(global_invocation_id) invocation:vec3u){
+ let index=invocation.x;
+ if(index<BODY_COUNT&&dynamic(index)&&sleepStates[index].y<0.5){
+  let slot=atomicAdd(&parallelState.diagnostics[2],1u);parallelState.awakeBodies[slot]=index;
+ }
+ let pair=parallelPair(index);
+ if(pair>=PAIR_CAPACITY||manifolds[pair].count==0u){return;}
+ let first=colliderBody(getFirstCollider(pair));let second=colliderBody(getSecondCollider(pair));
+ if((dynamic(first)&&sleepStates[first].y<0.5)||(dynamic(second)&&sleepStates[second].y<0.5)){
+  let slot=atomicAdd(&parallelState.diagnostics[3],1u);parallelState.solvePairs[slot]=pair;
+ }
+}
+@compute @workgroup_size(1) fn parallelActiveCount(){
+ parallelDispatch[4]=(atomicLoad(&parallelState.diagnostics[3])+63u)/64u;
+ parallelDispatch[5]=1u;parallelDispatch[6]=1u;parallelDispatch[7]=0u;
+ parallelDispatch[8]=(atomicLoad(&parallelState.diagnostics[2])+63u)/64u;
+ parallelDispatch[9]=1u;parallelDispatch[10]=1u;parallelDispatch[11]=0u;
+}
+fn parallelSolvePair(index:u32)->u32 {
+ if(!COMPACT_CONTACTS){return index;}
+ if(index>=atomicLoad(&parallelState.diagnostics[3])){return PAIR_CAPACITY;}
+ return parallelState.solvePairs[index];
 }
 fn parallelRoot(body:u32)->u32 {
  var current=body;
@@ -98,7 +124,7 @@ fn writePairDeltas(pair:u32,first:u32,second:u32,impulse:vec3f,firstTorque:vec3f
  parallelState.deltas[pair*4u+3u]=vec4f(select(vec3f(0),inverseInertia(second,secondTorque),dynamic(second)),0);
 }
 @compute @workgroup_size(64) fn parallelWarm(@builtin(global_invocation_id) invocation:vec3u){
- let pair=parallelPair(invocation.x);if(pair>=PAIR_CAPACITY){return;}
+ let pair=parallelSolvePair(invocation.x);if(pair>=PAIR_CAPACITY){return;}
  for(var index=0u;index<4u;index++){parallelState.deltas[pair*4u+index]=vec4f(0);}
  if(manifolds[pair].count==0u){return;}
  let first=colliderBody(getFirstCollider(pair));let second=colliderBody(getSecondCollider(pair));
@@ -111,7 +137,7 @@ fn writePairDeltas(pair:u32,first:u32,second:u32,impulse:vec3f,firstTorque:vec3f
  writePairDeltas(pair,first,second,impulse,firstTorque,secondTorque);
 }
 @compute @workgroup_size(64) fn parallelPairs(@builtin(global_invocation_id) invocation:vec3u){
- let pair=parallelPair(invocation.x);if(pair>=PAIR_CAPACITY){return;}
+ let pair=parallelSolvePair(invocation.x);if(pair>=PAIR_CAPACITY){return;}
  for(var index=0u;index<4u;index++){parallelState.deltas[pair*4u+index]=vec4f(0);}
  if(manifolds[pair].count==0u){return;}
  let firstCollider=getFirstCollider(pair);let secondCollider=getSecondCollider(pair);
@@ -148,7 +174,8 @@ fn writePairDeltas(pair:u32,first:u32,second:u32,impulse:vec3f,firstTorque:vec3f
  parallelState.deltas[pair*4u+3u]=vec4f(secondAngular-angularVelocities[second].xyz,0);
 }
 @compute @workgroup_size(64) fn parallelGather(@builtin(global_invocation_id) invocation:vec3u){
- let body=invocation.x;if(body>=BODY_COUNT||!dynamic(body)||sleepStates[body].y>0.5){return;}
+ var body=invocation.x;
+ if(COMPACT_CONTACTS){if(body>=atomicLoad(&parallelState.diagnostics[2])){return;}body=parallelState.awakeBodies[body];}if(body>=BODY_COUNT||!dynamic(body)||sleepStates[body].y>0.5){return;}
  var linear=vec3f(0);var angular=vec3f(0);var edge=atomicLoad(&parallelState.heads[body]);
  loop{if(edge==0xffffffffu){break;}let pair=edge/2u;let endpoint=edge%2u;
   linear+=parallelState.deltas[pair*4u+endpoint*2u].xyz;angular+=parallelState.deltas[pair*4u+endpoint*2u+1u].xyz;edge=parallelState.next[edge];

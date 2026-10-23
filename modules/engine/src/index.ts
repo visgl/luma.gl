@@ -309,3 +309,50 @@ export {
   validateGPUVectorBatchStructure,
   type GPUVectorBatchStructureInput
 } from './utils/gpu-vector-batch-structure';
+
+export {JointController} from './scenegraph/controllers/joint-controller';
+export type {
+  ScenegraphJoint,
+  ScenegraphJointLimit,
+  ScenegraphJointDrive,
+  ScenegraphJointAttachment,
+  ResolvedScenegraphJoint
+} from './scenegraph/controllers/joint-controller';
+export {
+  decomposePhysicsTransform,
+  readPhysicsRotation,
+  readPhysicsVector,
+  transformPhysicsVector
+} from './scenegraph/physics-transforms';
+export type {PhysicsVector, PhysicsRotation} from './scenegraph/physics-transforms';
+
+export {publishedTransforms} from './scenegraph/published-transforms';
+
+export type {InteractivityPhysics} from './interactivity/physics';
+
+export {setMorphWeights} from './scenegraph/controllers/morph-controller';
+export type {MorphTargetState, MorphWeightState} from './scenegraph/controllers/morph-controller';
+export {makeNodeAnimationBinding} from './animation/node-animation-binding';
+export type {NodeAnimationProperty} from './animation/node-animation-binding';
+
+export {
+  ScenegraphAnimator,
+  MixerAnimationClip,
+  type AnimationSelectionOptions,
+  type ScenegraphAnimationClip
+} from './animation/scenegraph-animator';
+export {
+  makeMaterialAnimationBinding,
+  makeTextureTransformAnimationBinding,
+  makePropertyAnimationBinding,
+  type MaterialAnimationTarget,
+  type TextureTransformAnimationTarget,
+  type MaterialTextureTransformState
+} from './animation/property-animation-binding';
+export {
+  getTextureTransformMatrix,
+  getTextureTransformDeltaMatrix,
+  type PBRTextureTransform
+} from './animation/texture-transform';
+
+export {makeAdapterAnimationBinding} from './animation/property-animation-binding';

@@ -1,8 +1,14 @@
+import type {GroupNode, ScenegraphJoint} from '@luma.gl/engine';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPURigidBody, GPURigidBodyCollider} from '@luma.gl/graph/gpu-physics';
+import type {
+  GPURigidBody,
+  GPURigidBodyCollider,
+  GPURigidBodyJoint,
+  GPURigidBodyTrigger
+} from '@luma.gl/graph/gpu-physics';
 
 /** Raw glTF JSON, before loaders.gl replaces node indices with objects. */
 export type GLTFPhysicsDocument = {
@@ -69,10 +75,27 @@ export type GLTFPhysicsDescription = {
   issues: GLTFPhysicsIssue[];
   bodies: GLTFPhysicsBody[];
   colliders: GLTFPhysicsCollider[];
+  triggers: {nodeIndex: number; trigger: GPURigidBodyTrigger}[];
+  animatedBodyIndices: number[];
+  animatedColliderIndices: number[];
+  querySelections: number[][];
+  sceneJoints: ScenegraphJoint[];
+  sceneNodes: Map<number, GroupNode>;
+  sceneRoots: GroupNode[];
+  joints: {
+    nodeIndex: number;
+    connectedNodeIndex: number;
+    jointIndex: number;
+    joint: GPURigidBodyJoint;
+  }[];
   /** Preserved independently for inspection/export; the source document is never mutated. */
   source: GLTFPhysicsDocument;
 };
 export type ParseGLTFPhysicsOptions = {
+  /** Host will bind authored motion, material and joint property pointers before playback. */
+  propertyBindings?: boolean;
+  /** Bind rigid node translation/rotation channels through ScenegraphPhysicsMotion. */
+  animationOwnership?: 'scenegraph';
   scene?: number;
   /** Decode one node's own mesh at its initial pose in that node's local space.
    * Include initial skinning and morph weights; the adapter combines child transforms.

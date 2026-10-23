@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import {Buffer} from '@luma.gl/core';
+import {Matrix4} from '@math.gl/core';
+import {normalizeRigidBodyRotation} from './rigid-body-properties';
 import {Computation} from '@luma.gl/engine';
 import type {
   GPUCommandGraph,
@@ -33,7 +35,15 @@ export function addRigidBodyPosePublication<Parameters>(
     );
   }
   const metadata = allocate('pose-metadata', inputs);
-  const matrices = allocate('pose-matrices', bodies.length * 64);
+  const initialMatrices = new Float32Array(bodies.length * 16);
+  for (const [index, body] of bodies.entries())
+    initialMatrices.set(
+      new Matrix4()
+        .translate(body.position)
+        .multiplyRight(new Matrix4().fromQuaternion(normalizeRigidBodyRotation(body.orientation))),
+      index * 16
+    );
+  const matrices = allocate('pose-matrices', initialMatrices);
   const worldBounds = allocate('pose-bounds', bodies.length * 32);
   const imported = (name: string, buffer: Buffer) => ({
     buffer,

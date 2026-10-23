@@ -108,6 +108,9 @@ it('compacts more than one workgroup of contacts without losing original manifol
     expect(await world.readSolverWork()).toEqual({
       compacted: true,
       activeContacts: 80,
+      awakeBodies: 160,
+      awakeContacts: 80,
+      bodyWorkgroups: 3,
       pairCapacity: 4096,
       pairWorkgroups: 2
     });
@@ -120,3 +123,49 @@ it('compacts more than one workgroup of contacts without losing original manifol
     world.destroy();
   }
 }, 120000);
+
+it('omits sleeping islands from iterative work and restores the complete island on impulse', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const world = new GPURigidBodyWorld({
+    solver: 'parallel',
+    gravity: [0, 0, 0],
+    sleepAfter: 0.1,
+    bodies: [0, 1].map(position => ({
+      position: [position, 0, 0] as [number, number, number],
+      shape: {type: 'sphere' as const, radius: 0.5}
+    }))
+  });
+  const definition = new GPUCommandGraph(device);
+  world.addToGraph(definition);
+  const graph = await definition.compileAsync();
+  const advance = async (steps: number) => {
+    const encoder = device.createCommandEncoder();
+    for (let step = 0; step < steps; step++) graph.encode(encoder, {parameters: undefined});
+    device.submit(encoder.finish());
+    return world.readState();
+  };
+  try {
+    expect((await advance(60)).every(body => body.sleeping)).toBe(true);
+    expect(await world.readSolverWork()).toMatchObject({
+      activeContacts: 1,
+      awakeContacts: 0,
+      awakeBodies: 0,
+      pairWorkgroups: 0,
+      bodyWorkgroups: 0
+    });
+    world.applyImpulse(0, [1, 0, 0]);
+    const state = await advance(1);
+    expect(state.every(body => !body.sleeping)).toBe(true);
+    expect(await world.readSolverWork()).toMatchObject({
+      awakeContacts: 1,
+      awakeBodies: 2,
+      pairWorkgroups: 1,
+      bodyWorkgroups: 1
+    });
+    expect((await world.readSimulationDiagnostics()).complete).toBe(true);
+  } finally {
+    graph.destroy();
+    world.destroy();
+  }
+});

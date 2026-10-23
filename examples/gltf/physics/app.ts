@@ -2,7 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {AnimationLoopTemplate, AnimationProps, ModelNode, OrbitControls} from '@luma.gl/engine';
+import {
+  AnimationLoopTemplate,
+  AnimationProps,
+  ModelNode,
+  OrbitControls,
+  Interactivity,
+  type InteractivityDefinition
+} from '@luma.gl/engine';
 import {Device, log} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
 import {GLTFLoader, GLTFScenegraph, postProcessGLTF} from '@loaders.gl/gltf';
@@ -11,20 +18,27 @@ import {Light, LightingProps} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 import {
   createGLTFPhysicsWorld,
+  makeGLTFPhysicsBehaviors,
+  makeGLTFPhysicsProperties,
   parseGLTFPhysics,
   makeGLTFPhysicsMeshResolver,
   type GLTFPhysicsDescription
 } from '@luma.gl/gltf/physics';
 import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/graph/gpu-core';
-import type {GPURigidBodyWorld, GPURigidBodyState} from '@luma.gl/graph/gpu-physics';
+import {ScenegraphPhysicsMotion, type GPURigidBodyWorld} from '@luma.gl/graph/gpu-physics';
 import type {ScenegraphNode} from '@luma.gl/engine';
 import {INFO_HTML, showError, showSampleDescription, createPhysicsPanels} from './app-ui';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
-import {makePhysicsBodyDelta} from './body-transforms';
 import {makeLegacyMeshGeometryResolver} from './legacy-mesh-positions';
 
 const SAMPLE_REVISION = '9dc61cb3474ff9a51f58d3592f79d5c9e572056a';
 const SAMPLE_BASE_URL = `https://raw.githubusercontent.com/eoineoineoin/glTF_Physics/${SAMPLE_REVISION}/samples`;
+const LOCAL_SAMPLES: Record<string, string> = {
+  AnimatedPlatform: new URL('./assets/AnimatedPlatform.gltf', import.meta.url).href,
+  JointPendulum: new URL('./assets/JointPendulum.gltf', import.meta.url).href,
+  DrivenHinge: new URL('./assets/DrivenHinge.gltf', import.meta.url).href,
+  TriggerVolume: new URL('./assets/TriggerVolume.gltf', import.meta.url).href
+};
 const MAX_CAMERA_TILT = 0.6;
 
 const lightSources = {
@@ -64,6 +78,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   isFinalized = false;
   description?: GLTFPhysicsDescription;
   world?: GPURigidBodyWorld;
+  motion?: ScenegraphPhysicsMotion;
+  behavior?: Interactivity;
+  behaviorPhysics?: ReturnType<typeof makeGLTFPhysicsBehaviors>;
+  simulationTime = 0;
+  hasPhysicsAnimation = false;
   graph?: CompiledGPUCommandGraph<void>;
   snapshot?: Promise<void>;
   loading = false;
@@ -72,7 +91,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   previousTime?: number;
   accumulator = 0;
   bodyModels = new Map<ScenegraphNode, number>();
-  bodyDeltas: Matrix4[] = [];
+  bodyInverseMatrices: Matrix4[] = [];
   cleanupControls?: () => void;
 
   constructor({device}: AnimationProps) {
@@ -136,12 +155,17 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.orbitControls.destroy();
     this.cleanupControls?.();
     this.panels.finalize();
-    this.graph?.destroy();
+    const graph = this.graph;
     const world = this.world;
-    void this.snapshot?.finally(() => world?.destroy());
-    if (!this.snapshot) world?.destroy();
+    const scene = this.scenegraphsFromGLTF;
+    const destroy = () => {
+      graph?.destroy();
+      world?.destroy();
+      destroyScenegraphs(scene);
+    };
+    if (this.snapshot) void this.snapshot.finally(destroy);
+    else destroy();
 
-    destroyScenegraphs(this.scenegraphsFromGLTF);
     this.scenegraphsFromGLTF = undefined;
     this.modelLights = [];
   }
@@ -163,7 +187,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
     const sample =
       document.querySelector<HTMLSelectElement>('#physics-sample')?.value || 'MotionProperties';
-    const modelUrl = `${SAMPLE_BASE_URL}/${sample}/${sample}.glb`;
+    const modelUrl = LOCAL_SAMPLES[sample] ?? `${SAMPLE_BASE_URL}/${sample}/${sample}.glb`;
     showSampleDescription(sample);
     let replacementWorld: GPURigidBodyWorld | undefined;
     let replacementGraph: CompiledGPUCommandGraph<void> | undefined;
@@ -178,23 +202,38 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       if (this.isFinalized) return;
       const physicsScenegraph = new GLTFScenegraph(gltf);
       const description = parseGLTFPhysics(gltf.json, {
+        animationOwnership: 'scenegraph',
+        propertyBindings: true,
         resolveNodeMeshGeometry: makeGLTFPhysicsMeshResolver(physicsScenegraph),
         resolveLegacyMeshGeometry: makeLegacyMeshGeometryResolver(physicsScenegraph)
       });
       if (description.supported) {
-        replacementWorld = createGLTFPhysicsWorld(description, {timeStep: 1 / 120, iterations: 16});
+        replacementWorld = createGLTFPhysicsWorld(description, {
+          timeStep: 1 / 120,
+          iterations: 16,
+          publishPoses: true,
+          enableQueries: Boolean(gltf.json.extensions?.KHR_interactivity)
+        });
         const definition = new GPUCommandGraph(this.device);
         replacementWorld.addToGraph(definition);
         replacementGraph = await definition.compileAsync();
       }
       if (this.isFinalized) return;
+      const physicsProperties = replacementWorld
+        ? makeGLTFPhysicsProperties(replacementWorld, description)
+        : undefined;
       const processedGLTF = postProcessGLTF(gltf);
       const scenegraphsFromGLTF = createScenegraphsFromGLTF(this.device, processedGLTF, {
+        properties: physicsProperties,
+        publishedTransforms: replacementWorld?.poseMatrices ?? undefined,
         lights: true,
         pbrDebug: false,
         useTangents: true
       });
       replacementScene = scenegraphsFromGLTF;
+      this.hasPhysicsAnimation = scenegraphsFromGLTF.animations.some(animation =>
+        animation.channels.some(channel => channel.type === 'property')
+      );
 
       if (this.isFinalized) {
         return;
@@ -210,11 +249,17 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       replacementWorld = undefined;
       replacementScene = undefined;
       this.accumulator = 0;
+      this.simulationTime = 0;
       this.paused = false;
       const pause = document.querySelector<HTMLButtonElement>('#physics-pause');
       if (pause) pause.textContent = 'Pause';
       this.bodyModels.clear();
-      this.bodyDeltas = description.bodies.map(() => new Matrix4());
+      this.bodyInverseMatrices = description.bodies.map(body =>
+        new Matrix4()
+          .translate(body.body.position)
+          .multiplyRight(new Matrix4().fromQuaternion(body.body.orientation ?? [0, 0, 0, 1]))
+          .invert()
+      );
       for (const body of description.bodies) {
         scenegraphsFromGLTF.gltfNodeIndexToNodeMap.get(body.nodeIndex)?.traverse(node => {
           this.bodyModels.set(node, body.bodyIndex);
@@ -222,6 +267,62 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
       destroyScenegraphs(this.scenegraphsFromGLTF);
       this.scenegraphsFromGLTF = scenegraphsFromGLTF;
+      const targets = new Map<ScenegraphNode, number>();
+      for (const bodyIndex of description.animatedBodyIndices) {
+        const node = scenegraphsFromGLTF.gltfNodeIndexToNodeMap.get(
+          description.bodies[bodyIndex].nodeIndex
+        );
+        if (node) targets.set(node, bodyIndex);
+      }
+      const colliderTargets = new Map(
+        description.animatedColliderIndices.map(index => {
+          const collider = description.colliders[index];
+          return [
+            scenegraphsFromGLTF.gltfNodeIndexToNodeMap.get(collider.nodeIndex)!,
+            {
+              index,
+              body: scenegraphsFromGLTF.gltfNodeIndexToNodeMap.get(
+                description.bodies[collider.bodyIndex].nodeIndex
+              )!
+            }
+          ] as const;
+        })
+      );
+      this.motion =
+        this.world && (targets.size || colliderTargets.size)
+          ? new ScenegraphPhysicsMotion(
+              this.world,
+              scenegraphsFromGLTF.scenes,
+              targets,
+              colliderTargets
+            )
+          : undefined;
+
+      this.behavior = undefined;
+      this.behaviorPhysics = undefined;
+      const behaviorStatus = document.querySelector('#physics-behavior');
+      if (behaviorStatus) behaviorStatus.textContent = '';
+      const behaviorDefinition = gltf.json.extensions?.KHR_interactivity as
+        | InteractivityDefinition
+        | undefined;
+      if (this.world && behaviorDefinition) {
+        this.behaviorPhysics = makeGLTFPhysicsBehaviors(
+          this.world,
+          description,
+          scenegraphsFromGLTF
+        );
+        this.behavior = new Interactivity(behaviorDefinition, {
+          physics: this.behaviorPhysics,
+          properties: physicsProperties,
+          onEvent: (event, values) => {
+            if (behaviorStatus)
+              behaviorStatus.textContent = `${event} · collider ${values.collider?.[0] ?? '—'}`;
+          }
+        });
+        this.behavior.start();
+        await this.behavior.flushPhysics();
+      }
+
       // Authored glTF point/spot intensities need inverse-square distance falloff.
       this.modelLights = scenegraphsFromGLTF.lights.map(light =>
         light.type === 'point' || light.type === 'spot'
@@ -289,10 +390,30 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
   }
 
-  updateBodyTransforms(states: GPURigidBodyState[]): void {
-    for (const body of this.description?.bodies || []) {
-      const state = states[body.bodyIndex];
-      this.bodyDeltas[body.bodyIndex] = makePhysicsBodyDelta(body, state);
+  private async advanceInteractive(steps: number): Promise<void> {
+    const behavior = this.behavior!;
+    const bridge = this.behaviorPhysics!;
+    const graph = this.graph!;
+    for (let step = 0; step < steps && !this.isFinalized; step++) {
+      this.simulationTime += 1 / 120;
+      this.scenegraphsFromGLTF!.animator.setTime(this.simulationTime * 1000);
+      this.motion?.update();
+      for (const [bodyIndex, inverse] of this.motion?.inverseBodyFrames ?? [])
+        this.bodyInverseMatrices[bodyIndex] = inverse;
+      behavior.tick(this.simulationTime);
+      await behavior.flushPhysics();
+      if (this.isFinalized) return;
+      const encoder = this.device.createCommandEncoder();
+      this.diagnostics.encode(graph, encoder, {parameters: undefined});
+      this.device.submit(encoder.finish());
+      const fence = this.device.createFence();
+      try {
+        await fence.signaled;
+      } finally {
+        fence.destroy();
+      }
+      await bridge.dispatchTriggers(behavior);
+      this.accumulator -= 1 / 120;
     }
   }
 
@@ -307,18 +428,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       // Keep at most one simulation submission awaiting publication. A slow GPU must
       // not accumulate seconds of queued physics while rendering continues.
       if (this.accumulator >= 1 / 120 && !this.snapshot) {
-        const encoder = device.createCommandEncoder();
-        while (this.accumulator >= 1 / 120) {
-          this.diagnostics.encode(this.graph, encoder, {parameters: undefined});
-          this.accumulator -= 1 / 120;
-        }
-        device.submit(encoder.finish());
-        if (!this.snapshot) {
-          this.snapshot = this.world
-            .readState()
-            .then(states => {
-              if (!this.isFinalized) this.updateBodyTransforms(states);
-            })
+        if (this.behavior) {
+          this.snapshot = this.advanceInteractive(Math.min(4, Math.floor(this.accumulator * 120)))
             .catch(error => {
               this.paused = true;
               showError(error);
@@ -326,6 +437,34 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
             .finally(() => {
               this.snapshot = undefined;
             });
+        } else {
+          let encoder = device.createCommandEncoder();
+          while (this.accumulator >= 1 / 120) {
+            this.simulationTime += 1 / 120;
+            this.scenegraphsFromGLTF?.animator.setTime(this.simulationTime * 1000);
+            this.motion?.update();
+            for (const [bodyIndex, inverse] of this.motion?.inverseBodyFrames ?? [])
+              this.bodyInverseMatrices[bodyIndex] = inverse;
+            this.diagnostics.encode(this.graph, encoder, {parameters: undefined});
+            if (this.motion || this.hasPhysicsAnimation) {
+              device.submit(encoder.finish());
+              encoder = device.createCommandEncoder();
+            }
+            this.accumulator -= 1 / 120;
+          }
+          device.submit(encoder.finish());
+          if (!this.snapshot) {
+            const fence = device.createFence();
+            this.snapshot = fence.signaled
+              .catch(error => {
+                this.paused = true;
+                showError(error);
+              })
+              .finally(() => {
+                fence.destroy();
+                this.snapshot = undefined;
+              });
+          }
         }
       }
     }
@@ -350,11 +489,18 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       const {model} = node as ModelNode;
       const bodyIndex = this.bodyModels.get(node);
       if (bodyIndex !== undefined)
-        modelMatrix = new Matrix4(this.bodyDeltas[bodyIndex]).multiplyRight(modelMatrix);
+        modelMatrix = new Matrix4(this.bodyInverseMatrices[bodyIndex]).multiplyRight(modelMatrix);
       const modelViewProjectionMatrix = new Matrix4(projectionMatrix)
         .multiplyRight(viewMatrix)
         .multiplyRight(modelMatrix);
 
+      if (this.world?.poseMatrices)
+        model.shaderInputs.setProps({
+          publishedTransforms: {
+            bodyIndex: bodyIndex ?? -1,
+            viewProjection: new Matrix4(projectionMatrix).multiplyRight(viewMatrix)
+          }
+        });
       model.shaderInputs.setProps({
         lighting,
         pbrProjection: {

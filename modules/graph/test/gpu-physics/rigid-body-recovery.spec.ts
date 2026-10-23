@@ -139,3 +139,67 @@ it('automatically retries candidate traversal exhaustion', async context => {
     runner.destroy();
   }
 }, 120000);
+
+it('reuses GPU command checkpoints without downloading the world state', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const runner = await GPURigidBodyRecoveryRunner.create(device, makeProps(64));
+  const originalCapture = runner.world.captureState;
+  runner.world.captureState = async () => {
+    throw new Error('Unexpected CPU capture');
+  };
+  try {
+    const positions = runner.world.positions;
+    for (let tick = 0; tick < 3; tick++)
+      expect(
+        (await runner.advance([{type: 'impulse', body: 0, impulse: [0.1, 0, 0]}])).accepted
+      ).toBe(true);
+    expect(runner.world.positions).toBe(positions);
+    expect(runner.tick).toBe(3);
+  } finally {
+    runner.world.captureState = originalCapture;
+    runner.destroy();
+  }
+});
+
+it('grows an exhausted swept-candidate queue while preserving the accepted trajectory', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const props: GPURigidBodyWorldProps = {
+    gravity: [0, 0, 0],
+    timeStep: 1 / 120,
+    continuous: {mode: 'convex', bodies: [0], maximumCandidates: 1},
+    bodies: [
+      {
+        position: [-2, 0, 0],
+        velocity: [240, 0, 0],
+        shape: {type: 'box', halfExtents: [0.2, 0.2, 0.2]}
+      },
+      ...[0, 1].map(horizontal => ({
+        mode: 'static' as const,
+        position: [horizontal, 0, 0] as const,
+        shape: {type: 'box' as const, halfExtents: [0.03, 1, 1] as const}
+      }))
+    ]
+  };
+  const runner = await GPURigidBodyRecoveryRunner.create(device, props);
+  const reference = await GPURigidBodyRecoveryRunner.create(device, {
+    ...props,
+    continuous: {...props.continuous!, maximumCandidates: 64}
+  });
+  try {
+    const result = await runner.advance();
+    expect(result.accepted).toBe(true);
+    expect(result.retries).toBeGreaterThan(0);
+    expect((await reference.advance()).accepted).toBe(true);
+    const actual = (await runner.world.readState())[0];
+    const expected = (await reference.world.readState())[0];
+    for (let axis = 0; axis < 3; axis++) {
+      expect(actual.position[axis]).toBeCloseTo(expected.position[axis], 4);
+      expect(actual.velocity[axis]).toBeCloseTo(expected.velocity[axis], 4);
+    }
+  } finally {
+    runner.destroy();
+    reference.destroy();
+  }
+});

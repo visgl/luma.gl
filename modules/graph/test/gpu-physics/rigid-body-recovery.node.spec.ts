@@ -41,3 +41,21 @@ it('grows only recoverable budgets and respects traversal ceilings', () => {
     )
   ).toBeNull();
 });
+
+it('grows swept queues only with explicit candidate overflow evidence', () => {
+  const diagnostics = {
+    ...decodeRigidBodySimulationDiagnostics(new Uint32Array(16)),
+    complete: false,
+    incompleteContinuousBodies: 1
+  };
+  const props = {bodies: [], continuous: {mode: 'convex' as const, maximumCandidates: 4}};
+  expect(growRigidBodyBudgets(props, diagnostics, 16)).toBeNull();
+  expect(
+    growRigidBodyBudgets(props, diagnostics, 16, {candidateCapacity: 4, peakCandidates: 4})
+  ).toBeNull();
+  expect(
+    growRigidBodyBudgets(props, diagnostics, 16, {candidateCapacity: 4, peakCandidates: 11})
+      ?.continuous?.maximumCandidates
+  ).toBe(11);
+  expect(props.continuous.maximumCandidates).toBe(4);
+});

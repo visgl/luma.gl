@@ -49,7 +49,7 @@ it('glTF AnimatedMorphCube updates GPU weights through the existing animator', a
     const model = modelNode.model;
     const vertexBuffer = model._gpuGeometry!.attributes['geometry'];
     const initialBytes = new Uint8Array(await vertexBuffer.readAsync());
-    const morphWeights = modelNode.userData['gltfMorphWeights'] as {
+    const morphWeights = modelNode.userData['morphWeightTransport'] as {
       values: Float32Array;
       data: unknown;
       packedTargetCount: number;

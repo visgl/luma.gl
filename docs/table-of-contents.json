@@ -158,6 +158,7 @@
         "label": "Scenes, assets, and animation",
         "items": [
           "api-guide/engine/scenegraph",
+          "api-guide/engine/scenegraph-physics",
           "api-guide/engine/scene-controllers",
           "api-guide/engine/animation",
           {

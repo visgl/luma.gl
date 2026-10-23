@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {InteractivityPhysics} from './physics';
+
 // Typed operation graph input, independent of asset loading.
 export type InteractivityValue = {
   type?: number;
@@ -33,6 +35,7 @@ export type InteractivityPropertyAdapter = {
   set(pointer: string, value: InteractivityValueType): boolean;
 };
 export type InteractivityOptions = {
+  physics?: InteractivityPhysics;
   graph?: number;
   /** Receives custom events sent by the graph to its host. */
   onEvent?: (eventId: string, values: Record<string, unknown[]>) => void;
@@ -67,6 +70,16 @@ const VALUE_OPS = new Set([
   'type/intToFloat',
   'type/floatToInt'
 ]);
+const PHYSICS_PREFIX = 'KHR_physics_rigid_bodies:';
+const PHYSICS_OPS = new Set(
+  [
+    'rigid_body/applyImpulse',
+    'rigid_body/applyPointImpulse',
+    'rigid_body/rayCast',
+    'event/rigid_body_triggerEntered',
+    'event/rigid_body_triggerExited'
+  ].map(operation => PHYSICS_PREFIX + operation)
+);
 const FLOW_OPS = new Set([
   'event/onStart',
   'event/onTick',
@@ -113,6 +126,9 @@ function getTypeDefaultValue(signature: string | undefined): unknown[] {
  * A host supplies application properties through the property adapter.
  */
 export class Interactivity {
+  private readonly physics?: InteractivityPhysics;
+  private readonly physicsPending = new Set<Promise<void>>();
+  private readonly physicsErrors: unknown[] = [];
   readonly definition: InteractivityDefinition;
   readonly graph: InteractivityGraph;
   readonly variables: unknown[][];
@@ -134,6 +150,7 @@ export class Interactivity {
   private readonly eventOutputs = new Map<number, Record<string, unknown[]>>();
 
   constructor(definition: InteractivityDefinition, options: InteractivityOptions = {}) {
+    this.physics = options.physics;
     this.definition = definition;
     const graphIndex = options.graph ?? definition.graph ?? 0;
     const graph = definition.graphs[graphIndex];
@@ -149,8 +166,22 @@ export class Interactivity {
     this.variables = (graph.variables ?? []).map(variable => copy(variable.value ?? [0]));
     for (const [index, node] of (graph.nodes ?? []).entries()) {
       const op = this.getOperation(graphIndex, index);
-      if (!VALUE_OPS.has(op) && !FLOW_OPS.has(op)) {
+      if (!VALUE_OPS.has(op) && !FLOW_OPS.has(op) && !(this.physics && PHYSICS_OPS.has(op))) {
         throw new Error(`KHR_interactivity: unsupported operation ${op}`);
+      }
+      if (op.startsWith(PHYSICS_PREFIX + 'event/')) {
+        const triggerNode = number(this.config(node, 'nodeIndex'));
+        if (
+          !this.physics?.isTriggerNode(triggerNode) ||
+          (graph.nodes ?? [])
+            .slice(0, index)
+            .some(
+              (other, previous) =>
+                this.getOperation(graphIndex, previous) === op &&
+                other.configuration?.['nodeIndex']?.value[0] === triggerNode
+            )
+        )
+          throw new Error('Invalid or duplicate physics trigger event');
       }
       if (op === 'event/send') {
         const eventIndex = number(this.config(node, 'event'));
@@ -376,6 +407,62 @@ export class Interactivity {
         const target = node.flows?.[socket];
         if (target) execute(target.node, target.socket ?? 'in');
       };
+      if (PHYSICS_OPS.has(operation) && this.physics) {
+        const read = (socket: string, fallback?: unknown[]) =>
+          node.values?.[socket]
+            ? this.input(index, socket, visiting)
+            : (fallback ?? this.input(index, socket, visiting));
+        const vector = (socket: string, fallback?: number[]) => {
+          const values = read(socket, fallback);
+          if (
+            values.length !== 3 ||
+            !values.every(value => typeof value === 'number' && Number.isFinite(value))
+          )
+            throw new Error('Invalid physics vector');
+          return values as number[];
+        };
+        if (operation === PHYSICS_PREFIX + 'rigid_body/applyImpulse') {
+          this.physics.applyImpulse(
+            number(read('nodeIndex')),
+            vector('linearImpulse', [0, 0, 0]),
+            vector('angularImpulse', [0, 0, 0])
+          );
+          follow('out');
+        } else if (operation === PHYSICS_PREFIX + 'rigid_body/applyPointImpulse') {
+          this.physics.applyPointImpulse(
+            number(read('nodeIndex')),
+            vector('impulse'),
+            vector('position')
+          );
+          follow('out');
+        } else if (operation === PHYSICS_PREFIX + 'rigid_body/rayCast') {
+          const pending = this.physics
+            .rayCast(
+              vector('rayStart'),
+              vector('rayEnd'),
+              number(read('collisionFilterIndex', [-1]))
+            )
+            .then(hit => {
+              steps = 0;
+              this.eventOutputs.delete(index);
+              if (hit)
+                this.eventOutputs.set(index, {
+                  hitNodeIndex: [hit.node],
+                  hitFraction: [hit.fraction],
+                  hitNormal: [...hit.normal]
+                });
+              follow(hit ? 'hit' : 'miss');
+            })
+            .catch(error => {
+              this.physicsErrors.push(error);
+            })
+            .finally(() => {
+              this.physicsPending.delete(pending);
+            });
+          this.physicsPending.add(pending);
+        } else throw new Error('Physics event is not an input flow');
+        return;
+      }
       switch (operation) {
         case 'flow/setDelay': {
           const duration = number(this.input(index, 'duration', visiting));
@@ -489,6 +576,35 @@ export class Interactivity {
         if (target) execute(target.node, target.socket ?? 'in');
       }
     }
+  }
+
+  /** Await asynchronous physics query continuations before advancing the next simulation tick. */
+  async flushPhysics(): Promise<void> {
+    let rounds = 0;
+    while (this.physicsPending.size) {
+      if (++rounds > this.maxSteps) throw new Error('Physics continuation limit exceeded');
+      await Promise.all(this.physicsPending);
+    }
+    if (this.physicsErrors.length) throw this.physicsErrors.shift();
+  }
+
+  /** Deliver simulation-step sensor events, including multiple events between rendering ticks. */
+  notifyPhysicsTrigger(
+    phase: 'enter' | 'exit',
+    triggerNode: number,
+    colliderNode: number,
+    motionNode: number
+  ): void {
+    if (!this.physics?.isTriggerNode(triggerNode)) throw new Error('Invalid physics trigger node');
+    this.dispatch(
+      PHYSICS_PREFIX +
+        (phase === 'enter' ? 'event/rigid_body_triggerEntered' : 'event/rigid_body_triggerExited'),
+      {
+        colliderNodeIndex: [colliderNode],
+        motionNodeIndex: [motionNode]
+      },
+      triggerNode
+    );
   }
 
   /** Call once after host properties and scene objects are ready. */

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Buffer} from '@luma.gl/core';
+import {Buffer, type BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import type {
   GPUCommandGraph,
@@ -13,10 +13,14 @@ import type {GPURigidBodyCollider} from './rigid-body-properties';
 import {RIGID_BODY_QUERY_GEOMETRY_SHADER} from './rigid-body-query-geometry';
 
 export type GPURigidBodyTrigger = {
-  /** Union of spherical sensor colliders; one enter/exit state per target body. */
+  /** Union of sensor colliders; one enter/exit state per target body. */
   colliders: readonly number[];
+  /** Emit independent transitions for each target collider instead of merging by body. */
+  perCollider?: boolean;
   /** Target collider selection; defaults to all non-sensor colliders. */
   targets?: readonly number[];
+  /** Omit selected sensor/target pairs from this union without changing other triggers. */
+  excludedPairs?: readonly (readonly [number, number])[];
   /** Detect complete crossings for sphere targets using linear relative center trajectories. */
   swept?: boolean;
 };
@@ -52,10 +56,10 @@ export function makeRigidBodyTriggerLayout(
         index =>
           !Number.isInteger(index) ||
           !colliders[index]?.isTrigger ||
-          colliders[index].shape.type !== 'sphere'
+          (trigger.swept && colliders[index].shape.type !== 'sphere')
       )
     )
-      throw new Error('Triggers require sphere sensor colliders');
+      throw new Error('Invalid sensor colliders or swept trigger shapes');
     const selected = [
       ...new Set(
         trigger.targets ??
@@ -71,12 +75,28 @@ export function makeRigidBodyTriggerLayout(
       )
     )
       throw new Error('Invalid trigger targets');
-    const bodyIndices = [...new Set(selected.map(index => colliders[index].body))];
-    for (const body of bodyIndices) {
+    const excludedPairs = new Set(
+      (trigger.excludedPairs ?? []).map(([source, target]) => {
+        if (!sources.includes(source) || !selected.includes(target))
+          throw new Error('Invalid excluded trigger pair');
+        return `${source}:${target}`;
+      })
+    );
+    const selections = trigger.perCollider
+      ? selected.map(index => [index])
+      : [...new Set(selected.map(index => colliders[index].body))].map(body =>
+          selected.filter(index => colliders[index].body === body)
+        );
+    for (const selection of selections) {
+      const body = colliders[selection[0]].body;
       const start = pairs.length / 2;
       for (const source of sources)
-        for (const target of selected) {
-          if (colliders[target].body === body && colliders[source].body !== body)
+        for (const target of selection) {
+          if (
+            colliders[target].body === body &&
+            colliders[source].body !== body &&
+            !excludedPairs.has(`${source}:${target}`)
+          )
             pairs.push(source, target);
         }
       const count = pairs.length / 2 - start;
@@ -130,7 +150,8 @@ export function addRigidBodyTriggers<Parameters>(
   bindings: BoundBuffer[],
   statistics: BoundBuffer,
   allocate: (name: string, data: number | Uint32Array) => Buffer,
-  hasJoints = false
+  hasJoints = false,
+  extended = false
 ) {
   const allocations = [
     {name: 'triggerPrevious', key: 'trigger-previous', data: colliderCount * 16},
@@ -170,11 +191,33 @@ struct TriggerRing {sequence:u32,step:u32,saturated:u32,reserved:u32,entries:arr
  let index=invocation.x;if(index>=${layout.count}u){return;}let group=triggerGroups[index];var overlapping=false;var crossed=false;var incomplete=false;var selected=vec2u(0);
  for(var offset=0u;offset<(group.w&0x7fffffffu);offset++){
   let pair=triggerPairs[group.z+offset];if(excludes(pair.x,pair.y)||excludes(pair.y,pair.x)){continue;}
+  let radius=bodies.colliders[pair.x].shape.x;
+  if(bodies.colliders[pair.x].shape.w==0.0){
   let center=colliderLocal(pair.y,colliderPosition(pair.x)-colliderPosition(pair.y));
   let targetShape=bodies.colliders[pair.y].shape;if(targetShape.w==6.0&&targetShape.z==0.0&&center.y<0.0){continue;}
-  let surface=closestSurface(pair.y,center);let radius=bodies.colliders[pair.x].shape.x;
+  let surface=closestSurface(pair.y,center);
   incomplete=incomplete||surface.complete==0u;
   if(surface.distance<=radius){overlapping=true;selected=pair;}
+  }${
+    extended
+      ? `else {
+    let firstMesh=bodies.colliders[pair.x].shape.w==3.0;let secondMesh=bodies.colliders[pair.y].shape.w==3.0;
+    let firstCount=select(1u,u32(bodies.colliders[pair.x].padding.w),firstMesh);
+    let secondCount=select(1u,u32(bodies.colliders[pair.y].padding.w),secondMesh);
+    var tested=0u;var found=false;
+    for(var firstTriangle=0u;firstTriangle<firstCount&&!found;firstTriangle++){
+      for(var secondTriangle=0u;secondTriangle<secondCount;secondTriangle++){
+        if(tested>=MESH_TRAVERSAL_BUDGET){incomplete=true;break;}tested++;
+        if(!permitsPlaneContact(pair.x,pair.y)||!permitsPlaneContact(pair.y,pair.x)){continue;}
+        let hit=convexContact(pair.x,pair.y,select(-1,i32(firstTriangle),firstMesh),select(-1,i32(secondTriangle),secondMesh));
+        incomplete=incomplete||hit.status==2u;
+        if(hit.status==1u&&hit.depth>=0.0){overlapping=true;selected=pair;found=true;break;}
+      }
+      if(tested>=MESH_TRAVERSAL_BUDGET){break;}
+    }
+  }`
+      : ''
+  }
   if((group.w&0x80000000u)!=0u){
    let start=triggerPrevious[pair.y].xyz-triggerPrevious[pair.x].xyz;
    let finish=colliderPosition(pair.y)-colliderPosition(pair.x);
@@ -212,14 +255,12 @@ fn emitTrigger(group:vec4u,pair:vec2u,phase:u32,swept:u32){
       source: shader,
       entryPoint,
       shaderLayout: {
-        bindings: selected.map(binding => ({
-          name: binding.name,
-          location: binding.location,
-          group: 0,
-          type: readOnly.includes(binding.name)
-            ? ('read-only-storage' as const)
-            : ('storage' as const)
-        }))
+        bindings: selected.map((binding): BindingDeclaration => {
+          const base = {name: binding.name, location: binding.location, group: 0};
+          return binding.name === 'settings'
+            ? {...base, type: 'uniform'}
+            : {...base, type: readOnly.includes(binding.name) ? 'read-only-storage' : 'storage'};
+        })
       },
       bindings: Object.fromEntries(selected.map(binding => [binding.name, binding.buffer]))
     };
@@ -235,9 +276,12 @@ fn emitTrigger(group:vec4u,pair:vec2u,phase:u32,swept:u32){
       id: properties.id,
       resources: selected.map(binding => ({
         buffer: binding.resource,
-        usage: readOnly.includes(binding.name)
-          ? ('storage-read' as const)
-          : ('storage-read-write' as const)
+        usage:
+          binding.name === 'settings'
+            ? ('uniform' as const)
+            : readOnly.includes(binding.name)
+              ? ('storage-read' as const)
+              : ('storage-read-write' as const)
       })),
       compile: () => executable(new Computation(graph.device, properties)),
       compileAsync: async () => executable(await Computation.createAsync(graph.device, properties))
@@ -255,6 +299,7 @@ fn emitTrigger(group:vec4u,pair:vec2u,phase:u32,swept:u32){
       addStage(
         'sampleTriggers',
         [
+          ...(extended ? ['settings'] : []),
           'positions',
           'orientations',
           'bodies',

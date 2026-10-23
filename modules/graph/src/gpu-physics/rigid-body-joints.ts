@@ -2,6 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {
+  getGeneralJointShader,
+  validateGeneralJoint,
+  type GPURigidBodyGeneralConstraint
+} from './rigid-body-general-joints';
 import type {GPURigidBody} from './rigid-body-properties';
 import {normalizeRigidBodyRotation} from './rigid-body-properties';
 
@@ -36,6 +41,7 @@ export type GPURigidBodyJoint = JointBase &
   (
     | {type: 'distance'; distance: number; spring?: {stiffness: number; damping: number}}
     | {type: 'fixed'}
+    | ({type: 'general'} & GPURigidBodyGeneralConstraint)
     | ({type: 'hinge' | 'slider'} & JointDrive)
   );
 
@@ -49,7 +55,7 @@ export function validateRigidBodyJoints(
     throw new Error('Unsupported joint configuration');
   for (const joint of joints) {
     if (
-      !['distance', 'fixed', 'hinge', 'slider'].includes(joint.type) ||
+      !['distance', 'fixed', 'hinge', 'slider', 'general'].includes(joint.type) ||
       joint.first === joint.second ||
       [joint.first, joint.second].some(
         index => !Number.isInteger(index) || index < 0 || index >= bodies.length
@@ -61,6 +67,7 @@ export function validateRigidBodyJoints(
       )
     )
       throw new Error('Invalid joint bodies');
+    if (joint.type === 'general') validateGeneralJoint(joint);
     for (const frame of [joint.firstFrame, joint.secondFrame]) {
       if (
         frame?.position &&
@@ -112,26 +119,30 @@ export function validateRigidBodyJoints(
 
 export function getRigidBodyJointShader(
   joints: readonly GPURigidBodyJoint[],
-  bodies: readonly GPURigidBody[]
+  _bodies: readonly GPURigidBody[]
 ): string {
   if (!joints.length)
     return 'fn jointActive(body:u32)->bool{return false;} fn jointExcluded(first:u32,second:u32)->bool{return false;}';
   const vector = (values: readonly number[]) =>
     `vec${values.length}f(${values.map(value => `${Math.fround(value)}`).join(',')})`;
-  const frame = (index: number, value?: GPURigidBodyJointFrame) => {
-    const center = bodies[index].centerOfMass ?? [0, 0, 0];
-    return `${vector((value?.position ?? [0, 0, 0]).map((component, axis) => component - center[axis]))},${vector(normalizeRigidBodyRotation(value?.orientation ?? [0, 0, 0, 1]))}`;
+  const frame = (_index: number, value?: GPURigidBodyJointFrame) => {
+    return `${vector(value?.position ?? [0, 0, 0])},${vector(normalizeRigidBodyRotation(value?.orientation ?? [0, 0, 0, 1]))}`;
   };
   const records = joints.map(joint => {
     const driven = joint.type === 'hinge' || joint.type === 'slider' ? joint : undefined;
-    return `Joint(vec4u(${joint.first},${joint.second},${['distance', 'fixed', 'hinge', 'slider'].indexOf(joint.type)},${joint.collideConnected ? 1 : 0}),${frame(joint.first, joint.firstFrame)},${frame(joint.second, joint.secondFrame)},${vector([joint.type === 'distance' ? joint.distance : 0, driven?.limits?.[0] ?? 0, driven?.limits?.[1] ?? 0, driven?.limits ? 1 : 0])},${vector([driven?.motor?.velocity ?? 0, driven?.motor?.maximumForce ?? 0, driven?.motor ? 1 : 0, 0])},${vector([driven?.motor?.position ?? 0, driven?.motor?.stiffness ?? 30, driven?.motor?.damping ?? 5, driven?.motor?.position !== undefined ? 1 : 0])},${vector([joint.type === 'distance' ? (joint.spring?.stiffness ?? 0) : 0, joint.type === 'distance' ? (joint.spring?.damping ?? 0) : 0, joint.type === 'distance' && joint.spring ? 1 : 0, 0])})`;
+    return `Joint(vec4u(${joint.first},${joint.second},${['distance', 'fixed', 'hinge', 'slider', 'general'].indexOf(joint.type)},${joint.collideConnected ? 1 : 0}),${frame(joint.first, joint.firstFrame)},${frame(joint.second, joint.secondFrame)},${vector([joint.type === 'distance' ? joint.distance : 0, driven?.limits?.[0] ?? 0, driven?.limits?.[1] ?? 0, driven?.limits ? 1 : 0])},${vector([driven?.motor?.velocity ?? 0, driven?.motor?.maximumForce ?? 0, driven?.motor ? 1 : 0, 0])},${vector([driven?.motor?.position ?? 0, driven?.motor?.stiffness ?? 30, driven?.motor?.damping ?? 5, driven?.motor?.position !== undefined ? 1 : 0])},${vector([joint.type === 'distance' ? (joint.spring?.stiffness ?? 0) : 0, joint.type === 'distance' ? (joint.spring?.damping ?? 0) : 0, joint.type === 'distance' && joint.spring ? 1 : 0, 0])})`;
   });
   return /* wgsl */ `
 struct Joint { identifiers:vec4u, firstAnchor:vec3f, firstFrame:vec4f, secondAnchor:vec3f, secondFrame:vec4f, limits:vec4f, motor:vec4f, drive:vec4f, spring:vec4f }
 const JOINTS:array<Joint,${joints.length}>=array<Joint,${joints.length}>(${records.join(',')});
-fn jointActive(body:u32)->bool {for(var index=0u;index<${joints.length}u;index++){let joint=JOINTS[index];if(targets.joints[index].control.x<0.5){continue;}if(joint.identifiers.x==body||joint.identifiers.y==body){let first=joint.identifiers.x;let second=joint.identifiers.y;if(joint.motor.z>0.0 || (bodies.bodies[first].motion.x==2.0 && length(velocities[first].xyz)+length(angularVelocities[first].xyz)>1e-6) || (bodies.bodies[second].motion.x==2.0 && length(velocities[second].xyz)+length(angularVelocities[second].xyz)>1e-6)){return true;}}}return false;}
-fn connectJoints(){for(var index=0u;index<${joints.length}u;index++){if(targets.joints[index].control.x<0.5){continue;}let joint=JOINTS[index];let first=joint.identifiers.x;let second=joint.identifiers.y;if(dynamic(first)&&dynamic(second)){let firstRoot=root(first);let secondRoot=root(second);sleepStates[max(firstRoot,secondRoot)].z=f32(min(firstRoot,secondRoot));}}}
-fn jointExcluded(first:u32,second:u32)->bool {for(var index=0u;index<${joints.length}u;index++){let identifiers=JOINTS[index].identifiers;if(targets.joints[index].control.x>0.5&&identifiers.w==0u&&((identifiers.x==first&&identifiers.y==second)||(identifiers.y==first&&identifiers.x==second))){return true;}}return false;}
+fn liveJoint(index:u32)->Joint {
+ var joint=JOINTS[index];let state=targets.joints[index];
+ joint.identifiers.w=u32(state.control.y);joint.limits=state.limits;joint.motor=state.motor;joint.drive=state.drive;joint.spring=state.spring;return joint;
+}
+${getGeneralJointShader()}
+fn jointActive(body:u32)->bool {for(var index=0u;index<${joints.length}u;index++){let joint=liveJoint(index);if(targets.joints[index].control.x<0.5){continue;}if(joint.identifiers.x==body||joint.identifiers.y==body){let first=joint.identifiers.x;let second=joint.identifiers.y;if(joint.motor.z>0.0 || generalJointDriven(index) || (bodies.bodies[first].motion.x==2.0 && length(velocities[first].xyz)+length(angularVelocities[first].xyz)>1e-6) || (bodies.bodies[second].motion.x==2.0 && length(velocities[second].xyz)+length(angularVelocities[second].xyz)>1e-6)){return true;}}}return false;}
+fn connectJoints(){for(var index=0u;index<${joints.length}u;index++){if(targets.joints[index].control.x<0.5){continue;}let joint=liveJoint(index);let first=joint.identifiers.x;let second=joint.identifiers.y;if(dynamic(first)&&dynamic(second)){let firstRoot=root(first);let secondRoot=root(second);sleepStates[max(firstRoot,secondRoot)].z=f32(min(firstRoot,secondRoot));}}}
+fn jointExcluded(first:u32,second:u32)->bool {for(var index=0u;index<${joints.length}u;index++){let identifiers=liveJoint(index).identifiers;if(targets.joints[index].control.x>0.5&&identifiers.w==0u&&((identifiers.x==first&&identifiers.y==second)||(identifiers.y==first&&identifiers.x==second))){return true;}}return false;}
 fn jointMass(first:u32,second:u32,firstPoint:vec3f,secondPoint:vec3f,axis:vec3f,angular:bool)->f32 {
  if(angular){return dot(axis,inverseInertia(first,axis)+inverseInertia(second,axis));}
  let firstLever=firstPoint-positions[first].xyz;let secondLever=secondPoint-positions[second].xyz;
@@ -157,11 +168,12 @@ fn jointRow(index:u32,row:u32,first:u32,second:u32,firstPoint:vec3f,secondPoint:
 fn solveJoints(warm:bool){
  for(var index=0u;index<${joints.length}u;index++){
   if(targets.joints[index].control.x<0.5){continue;}
-  let joint=JOINTS[index];let first=joint.identifiers.x;let second=joint.identifiers.y;let kind=joint.identifiers.z;
+  let joint=liveJoint(index);let first=joint.identifiers.x;let second=joint.identifiers.y;let kind=joint.identifiers.z;
   if((!dynamic(first)||sleepStates[first].y>0.5)&&(!dynamic(second)||sleepStates[second].y>0.5)){continue;}
-  var firstPoint=positions[first].xyz+rotate(orientations[first],joint.firstAnchor);let secondPoint=positions[second].xyz+rotate(orientations[second],joint.secondAnchor);
+  var firstPoint=positions[first].xyz+rotate(orientations[first],joint.firstAnchor-bodyCenter(first));let secondPoint=positions[second].xyz+rotate(orientations[second],joint.secondAnchor-bodyCenter(second));
   let firstRotation=multiplyRotation(orientations[first],joint.firstFrame);let secondRotation=multiplyRotation(orientations[second],joint.secondFrame);
   let offset=secondPoint-firstPoint;
+  if(kind==4u){solveGeneralJoint(index,firstPoint,secondPoint,firstRotation,secondRotation,warm);continue;}
   // A slider constrains a point on the moving axis, not the fixed frame origin.
   if(kind==3u){let axis=rotate(firstRotation,vec3f(0,0,1));firstPoint+=axis*dot(offset,axis);}
   if(kind==0u){let distance=length(offset);let axis=select(rotate(firstRotation,vec3f(1,0,0)),offset/max(distance,1e-20),distance>1e-8);jointRow(index,0u,first,second,firstPoint,secondPoint,axis,distance-joint.limits.x,false,joint.spring,warm);continue;}
@@ -194,4 +206,80 @@ fn solveJoints(warm:bool){
  }
 }
 `;
+}
+
+export const RIGID_BODY_JOINT_STATE_BYTES = 176;
+
+export function packRigidBodyJointState(joint: GPURigidBodyJoint): Float32Array {
+  const state = new Float32Array(RIGID_BODY_JOINT_STATE_BYTES / 4);
+  const driven = joint.type === 'hinge' || joint.type === 'slider' ? joint : undefined;
+  state.set([joint.enabled === false ? 0 : 1, joint.collideConnected ? 1 : 0, 0, 0], 8);
+  state.set(
+    [
+      joint.type === 'distance' ? joint.distance : 0,
+      driven?.limits?.[0] ?? 0,
+      driven?.limits?.[1] ?? 0,
+      driven?.limits ? 1 : 0
+    ],
+    12
+  );
+  state.set(
+    [driven?.motor?.velocity ?? 0, driven?.motor?.maximumForce ?? 0, driven?.motor ? 1 : 0, 0],
+    16
+  );
+  state.set(
+    [
+      driven?.motor?.position ?? 0,
+      driven?.motor?.stiffness ?? 30,
+      driven?.motor?.damping ?? 5,
+      driven?.motor?.position !== undefined ? 1 : 0
+    ],
+    20
+  );
+  state.set(
+    [
+      joint.type === 'distance' ? (joint.spring?.stiffness ?? 0) : 0,
+      joint.type === 'distance' ? (joint.spring?.damping ?? 0) : 0,
+      joint.type === 'distance' && joint.spring ? 1 : 0,
+      0
+    ],
+    24
+  );
+  const constraint = joint.type === 'general' ? joint : undefined;
+  state.set(
+    [
+      ...[0, 1, 2].map(axis => (constraint?.axes.includes(axis) ? 1 : 0)),
+      constraint?.angular ? 1 : 0
+    ],
+    28
+  );
+  state.set(
+    [
+      constraint?.minimum ?? -1e30,
+      constraint?.maximum ?? 1e30,
+      constraint?.stiffness ?? 0,
+      constraint?.damping ?? 0
+    ],
+    32
+  );
+  const drive = constraint?.drive;
+  state.set(
+    [
+      constraint?.stiffness !== undefined ? 1 : 0,
+      drive ? 1 : 0,
+      drive?.mode === 'acceleration' ? 1 : 0,
+      drive?.maximumForce ?? 1e30
+    ],
+    36
+  );
+  state.set(
+    [
+      drive?.positionTarget ?? 0,
+      drive?.velocityTarget ?? 0,
+      drive?.stiffness ?? 0,
+      drive?.damping ?? 0
+    ],
+    40
+  );
+  return state;
 }

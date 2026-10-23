@@ -1,17 +1,137 @@
-# Scene controllers
+import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
 
-Scene controllers in `@luma.gl/engine` operate on engine nodes, materials, and resolved resource bindings. Applications can construct these inputs directly. glTF is a core supported source: `@luma.gl/gltf` maps its asset records and extensions into the same engine APIs.
+# Scenegraph Controllers and Deformation
 
-| API | Inputs | Per-frame operation | Ownership |
-| --- | --- | --- | --- |
-| `SkinController` | Scenes and `SkinBinding[]` with mesh nodes, joint nodes, inverse bind matrices, and palette storage | `update()` refreshes mesh-local joint palettes and bound model uniforms | `destroy()` releases supplied palette GPU transports; model and joint nodes remain caller-owned |
-| `MaterialVariants` | Named variants and per-model material/parameter mappings | `selectVariant(name)` or `resetVariant()` changes existing models | Materials and models remain caller-owned |
-| `BillboardController` | Scenes and node orientation bindings | `getDrawEntries({viewMatrix, cameraId})` returns camera-facing transforms without mutating nodes | `destroy()` clears controller state; nodes remain caller-owned |
-| `AreaLightController` | Scenes and area-light bindings with shape, width, height, color, and intensity | `getLights(sceneIndex)` resolves visible lights using current transforms | `destroy()` clears bindings; nodes remain caller-owned |
-| `AudioController` | Scene, audio/source/emitter definitions, node bindings, optional processing graphs and environments | `update(listenerMatrix)` updates listener and emitter spatial state | The controller owns its processing nodes and sources; the application owns and activates its `BaseAudioContext` |
-| `Interactivity` | Typed operation graphs and a host property adapter | `start()`, `tick(timeSeconds)`, and host events execute the graph | Host properties and scene objects remain caller-owned |
+<EngineDocsTabs group="scenegraph" active="controllers" />
 
-## Construct engine inputs directly
+Controllers operate on resolved scene objects. They do not require glTF source arrays,
+node indices or JSON pointers during playback. This page describes the engine runtime;
+asset decoding remains the importer's responsibility.
+
+## Animation Bindings and Playback
+
+An `AnimationBinding` reads and writes a numeric property. `AnimationTrack` supplies
+its keyframes, `AnimationClip` groups tracks, and `AnimationMixer` blends active actions.
+The engine provides bindings for node transforms, morph weights, visibility, material
+uniforms, texture transforms, and resolved camera or light properties.
+
+```ts
+import {
+  AnimationClip, AnimationMixer, AnimationTrack, GroupNode,
+  makeNodeAnimationBinding
+} from '@luma.gl/engine';
+
+const carriage = new GroupNode({id: 'carriage'});
+const track = new AnimationTrack({
+  times: [0, 1, 2],
+  values: [[0, 0, 0], [2, 0, 0], [0, 0, 0]],
+  binding: makeNodeAnimationBinding(carriage, 'translation', {
+    id: 'carriage.translation'
+  })
+});
+const clip = new AnimationClip({name: 'travel', tracks: [track]});
+const mixer = new AnimationMixer();
+mixer.clipAction(clip).play();
+mixer.update(0.5);
+```
+
+Node bindings update the local matrix after changing translation, quaternion rotation
+or scale. Rotation tracks must select `valueType: 'quaternion'`. Visibility bindings
+can invoke a callback when dependent scene state, such as light collection, needs refresh.
+
+`ScenegraphAnimator` adds named clip selection, optional crossfades, autoplay policy,
+and one dependent-update callback after a mixer update. `MixerAnimationClip` adapts an
+engine clip to its playback controller interface. Applications that already own a
+clock and playback policy can use `AnimationMixer` directly.
+
+See [Animation and deformation](/docs/api-guide/engine/animation) for interpolation,
+looping, weights and blending.
+
+## Materials, Texture Transforms and Variants
+
+`makeMaterialAnimationBinding()` targets resolved material instances and a uniform
+property, optionally one vector component. A glTF importer supplies all instances of
+a source material, including inactive variants, so changing variants does not expose
+stale animation state.
+
+`makeTextureTransformAnimationBinding()` updates an offset, rotation or scale and
+writes a UV-transform delta relative to the authored base transform. The importer
+resolves the texture slot to its shader uniform; the engine performs the transform
+math and runtime update. Share its transform-state map among channels addressing the
+same material slot so independent offset and rotation channels compose correctly.
+
+`MaterialVariants` stores named variants and bindings to `ModelNode` objects. Calling
+`selectVariant(name)` updates both material and pipeline parameters. Unmapped primitives
+return to their default appearance; `resetVariant()` restores every default. Variant
+selection does not duplicate geometry or change spatial hierarchy.
+
+## Skeletal Skinning
+
+A skinning joint is an ordinary node used in a deformation palette. `SkinBinding`
+contains:
+
+- The mesh-owning `GroupNode`.
+- Ordered joint node references and optional inverse bind matrices.
+- A reusable `Float32Array` of joint matrices.
+- The affected `ModelNode` objects.
+- An optional GPU buffer or texture for palettes exceeding uniform limits.
+
+`SkinController.update()` traverses the scene roots, evaluates world matrices, builds
+mesh-local joint matrices and updates each bound model. The relationship is conceptually
+`inverse(meshWorld) × jointWorld × inverseBind`. Palette ordering must match the mesh's
+joint indices; joint names do not establish that ordering.
+
+Call it after animating the skeleton and before drawing. Imported glTF bundles arrange
+this dependent update through their animator. Programmatic scenes can construct
+`SkinController` from their own roots and bindings.
+
+**Current execution boundary:** palette calculation happens on the CPU. The resulting
+palette is supplied to GPU skinning through uniforms, a storage buffer or a texture.
+A GPU physics pose buffer does not automatically update skin palettes. Physics-driven
+skeletal deformation needs an explicit bridge or a future GPU palette stage.
+
+Skinning joints do not imply physical constraints, mass, collider shapes or motor
+limits. See [Physical joints](/docs/api-guide/engine/scenegraph-physics#physical-joints)
+for the separate constraint representation.
+
+## Morph Targets
+
+Morph targets retain base geometry attributes plus attribute deltas. `setMorphWeights()`
+updates a mesh-owning node's registered morph primitives. Where GPU morph-weight
+transport is available, it uploads weights; the fallback updates the model's existing
+vertex buffers. It does not rebuild the scene tree for every animation frame.
+
+Morph state currently uses explicit `userData` records (`morphMeshes`, `morphTargets`,
+`morphWeights` and `morphWeightTransport`). Programmatic users must register those
+records consistently; arbitrary geometry does not acquire morph behavior just because
+a weights array is attached to a node.
+
+Visual morphing does not rebuild physics collision shapes. Keep deforming render
+geometry separate from rigid collision geometry unless an application explicitly
+updates or reconstructs the physics representation.
+
+## Camera, Light and Behavior State
+
+`makePropertyAnimationBinding()` binds a numeric property on an already resolved
+runtime object. An optional component index supports vector channels; an `onChange`
+callback refreshes derived state such as punctual-light parameters. This does not
+introduce a universal camera or light node class: projection and lighting definitions
+remain referenced scene state.
+
+`Interactivity` evaluates supported behavior graphs. Its external host interfaces
+let applications connect operations to rendering or physics without making the engine
+depend on an asset format or physics backend. Asynchronous physics queries require
+explicit completion handling before their continuation results are consumed.
+
+## Billboards, Area Lights and Audio
+
+| Controller | Runtime behavior | Ownership |
+| --- | --- | --- |
+| `BillboardController` | Produces camera-facing draw transforms without mutating nodes | Borrows scene nodes |
+| `AreaLightController` | Resolves visible area lights from node transforms and authored dimensions | Borrows scene nodes |
+| `AudioController` | Updates spatial emitters and listener state | Owns its sources/processing nodes, borrows the audio context |
+
+### Construct Engine Inputs Directly
 
 A rectangle light uses width and height directly. It does not need a source document or extension object:
 

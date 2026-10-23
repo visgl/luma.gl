@@ -78,7 +78,11 @@ export {decodeRigidBodyTriggerEvents} from './rigid-body-triggers';
 
 export type {GPURigidBodyJoint, GPURigidBodyJointFrame} from './rigid-body-joints';
 
-export type {GPURigidBodyCapture} from './gpu-rigid-body-world';
+export type {
+  GPURigidBodyCapture,
+  GPURigidBodyGPUCheckpoint,
+  GPURigidBodyParameters
+} from './gpu-rigid-body-world';
 
 export type {GPURigidBodyBounds} from './rigid-body-publication';
 export {
@@ -101,3 +105,10 @@ export {
   type GPURigidBodyRecoveryOptions,
   type GPURigidBodyRecoveryResult
 } from './rigid-body-recovery';
+export {makeRigidBodyJointsFromScenegraph} from './scenegraph-joints';
+export {ScenegraphPhysicsBehaviors} from './scenegraph-behaviors';
+export type {ScenegraphPhysicsBehaviorProps} from './scenegraph-behaviors';
+export {ScenegraphPhysicsMotion} from './scenegraph-motion';
+
+export {ScenegraphPhysicsProperties, type PhysicsPropertyTarget} from './scenegraph-properties';
+export {ScenegraphPhysicsInstance, type ScenegraphPhysicsDefinition} from './scenegraph-instance';

@@ -53,11 +53,11 @@ experimental as a module.
 | Continuous collision detection | Partial | Bounded small-world continuous mode in `GPUSphereWorld` | Rigid worlds offer sphere/static-surface CCD and opt-in moving-convex CCD with swept queues, angular bounds, friction and rollback; jointed/nonconvex continuous coverage remains open |
 | Collision events | Available | Opt-in rigid-body begin/end and thresholded impact samples with IDs, step ordering and explicit loss reporting | Event recording scans the bounded pair cache; large-world compaction and recoverable consumer overflow remain work |
 | Scene queries | Partial | Parallel collider rays, sphere overlap and bounded sphere casts across analytic shapes and cooked mesh geometry | One pending query per world; bounded casts report incomplete results; spatial batching and general shape casts remain planned |
-| Trigger volumes | Partial | Step-local compound spherical sensors and swept sphere crossings; Space Salvage uses docking events | Arbitrary sensor shapes, curved trajectories and glTF trigger bindings remain planned |
+| Trigger volumes | Partial | Step-local compound sensors, per-collider glTF events, bounded general geometry and swept sphere crossings | Curved trajectories, general swept sensor geometry and large-world event throughput remain work |
 | Joints and articulations | Partial | Bounded ordered distance/fixed/hinge/slider constraints, frames, limits, warm starts, springs, position/velocity drives and island sleeping | Parallel scheduling, breakage and articulations remain planned |
-| glTF physics | Partial | Pinned draft import, shape/body/material/filter semantics and explicit capability reports | Proposal constraints, triggers, behavior bindings and automatic animation ownership remain incomplete |
-| GPU scenegraph pose publication | Partial | Reusable geometry snapshots and GPU body-node matrices/visual AABBs; cradle PBR and shadows consume published matrices | The glTF example still bridges poses through the CPU; automatic animation/object-model binding remains work |
-| Capacity and diagnostics | Available | Allocation preflight, bounded queues, lifetime diagnostics and GPU rollback; opt-in bounded automatic growth/replay for sparse pair and traversal budgets | Recovery synchronizes each tick and replays from initial state; fixed mesh-task/CCD failures, event continuity and GPU-only adaptive growth remain work |
+| glTF physics | Partial | Pinned draft import, shape/body/material/filter semantics and explicit capability reports | General attachment constraints, nested triggers, behavior operations and resolved motion/material/joint property bindings are implemented; scale/deformation rebuilds and full-profile qualification remain work |
+| GPU scenegraph pose publication | Partial | Reusable geometry snapshots and GPU body-node matrices/visual AABBs; cradle PBR and shadows consume published matrices | The glTF gallery consumes GPU matrices directly and binds rigid animation targets; deformation, live scene edits and export/reimport remain work |
+| Capacity and diagnostics | Available | Allocation preflight, bounded queues, lifetime diagnostics and GPU rollback; opt-in bounded automatic growth/replay for sparse pair, traversal and swept-candidate budgets | Recovery synchronizes each tick and replays from initial state; fixed mesh-task/CCD impact failures, event continuity and GPU-only adaptive growth remain work |
 | Qualification and tooling | Partial | Independent analytic shape/motion references, command replay, whole-step measurements and Physics Stress Lab with JSON exports | Named-case evidence only; difficult-contact, multi-device and full-profile qualification remain work |
 
 See the [remaining tranches](https://github.com/visgl/luma.gl/blob/master/dev-docs/roadmaps/gpu-physics-roadmap.md#remaining-tranches-after-space-salvage)
@@ -148,8 +148,9 @@ both old and candidate worlds, and graph scratch/pipelines/driver memory are add
 An allocation or compilation failure throws and blocks the runner; exhaustion without
 a viable growth plan returns `accepted: false`. Destroy it after inspection.
 
-Ticks with commands also capture pre-command state for atomic rejection; this adds a full
-state readback on those ticks. The runner reads compact diagnostics each tick and replays from initial conditions,
+Ticks with commands save pre-command state into a reusable GPU checkpoint for atomic
+rejection. These copies stay on the GPU; there is no full-state readback on commanded
+ticks. Checkpoint allocations count against the per-world memory budget. The runner reads compact diagnostics each tick and replays from initial conditions,
 not from a portable checkpoint. It is intended for bounded sessions, tools and
 qualification, not a zero-readback high-throughput simulation loop. Event rings retain
 their existing explicit overflow semantics; this runner does not guarantee delivery
@@ -164,3 +165,22 @@ surfaces, elastic momentum/energy,
 ballistic timestep convergence and analytic sphere/static-wall rebound positions.
 These qualify named cases; general mesh containment, rotational CCD, deep stacks and
 cross-device performance still require separate evidence.
+
+
+### Awake solver work
+
+With `solver: 'parallel'` and contact compaction enabled, island construction retains
+all contact edges so wake propagation remains correct. After waking connected bodies,
+the engine compacts awake bodies and contacts into separate GPU queues. Iterative pair
+solving and body gathering use indirect dispatches over those queues. Sleeping islands
+retain their manifolds without participating in iterative work.
+
+`readSolverWork()` reports contact-cache occupancy (`activeContacts`) separately from
+`awakeContacts` and `awakeBodies`, with the actual pair/body workgroup counts. Reading
+these diagnostics is optional; queue construction and dispatch require no CPU readback.
+`compactContacts: false` retains the scan path for numerical and performance comparisons.
+
+`createGPUCheckpoint()` returns a reusable, same-world checkpoint with `save()`,
+`restore()` and `destroy()`. It copies buffers on the GPU and retains CPU-side event
+cursors and mutable joint settings. It is not a portable capture; use `captureState()`
+for downloadable debug artifacts. Checkpoints are also destroyed with their world.
