@@ -81,7 +81,8 @@ export function makeConvexHullGeometry(positions: ArrayLike<number>): RigidBodyM
     }
   }
   const scale = Math.max(...line.map(Math.abs), 1e-12);
-  if (maximum < 1e-10 * scale ** 3) throw new Error('Degenerate convex hull');
+  if (maximum === 0 || orient(first, second, third, fourth) === 0)
+    throw new Error('Degenerate convex hull');
   const center: Point = [0, 1, 2].map(
     axis =>
       (points[first][axis] + points[second][axis] + points[third][axis] + points[fourth][axis]) / 4
@@ -151,8 +152,17 @@ export function makeTriangleMeshGeometry(
   positions: ArrayLike<number>,
   indices: ArrayLike<number>
 ): RigidBodyMeshGeometry {
-  if (positions.length % 3 || indices.length % 3 || !positions.length || !indices.length)
+  if (
+    !Number.isSafeInteger(positions.length) ||
+    !Number.isSafeInteger(indices.length) ||
+    positions.length < 3 ||
+    indices.length < 3 ||
+    positions.length % 3 ||
+    indices.length % 3
+  )
     throw new Error('Incomplete mesh geometry');
+  if (positions.length > 3_000_000 || indices.length > 3_000_000)
+    throw new Error('Mesh geometry capacity exceeded');
   const vertices = Array.from(positions, Math.fround);
   const triangles = Array.from(indices);
   if (
@@ -160,8 +170,6 @@ export function makeTriangleMeshGeometry(
     triangles.some(index => !Number.isInteger(index) || index < 0 || index >= vertices.length / 3)
   )
     throw new Error('Invalid mesh geometry');
-  if (vertices.length / 3 > 1_000_000 || triangles.length / 3 > 1_000_000)
-    throw new Error('Mesh geometry capacity exceeded');
   const point = (index: number): Point => [
     vertices[index * 3],
     vertices[index * 3 + 1],

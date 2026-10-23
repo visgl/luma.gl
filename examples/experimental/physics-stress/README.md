@@ -16,3 +16,14 @@ The runner stops after 240 ticks, or six simulated seconds for the sustained sta
 budgets only; numerical failures, fixed mesh-task exhaustion, CCD impact exhaustion
 and unsupported geometry remain explicit failures. A 100:1 stack is an adversarial
 fixture, not an advertised supported mass ratio.
+
+Geometry Torture adds scaled cooked hulls and original triangle surfaces with a real opening.
+Fast Motion Lab adds capsule/cylinder ricochets, sphere/mesh opening and rim trajectories,
+and intentional impact-budget rejection. Select scenarios in Settings, or use
+`?scene=geometryConvex`, `?scene=geometryOpenings`, `?scene=fastPrimitives`,
+`?scene=fastMesh` or `?scene=fastBudget`. Reset reconstructs the starting state.
+Gold trails join sampled centers; they do not reconstruct between-impact paths.
+
+CCD applies to selected centered spheres against static obstacles only. Rotating
+and dynamic obstacles remain discrete. Meshes are two-sided triangle surfaces, not
+solid volumes. Rejection is expected in the budget scenario; no partial step is accepted.

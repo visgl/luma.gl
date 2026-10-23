@@ -669,3 +669,24 @@ stabilization profile (64 slots/iterations, warm start 0.8, recovery fraction 0.
 scenarios and compact/full-scan workgroup diagnostics. General penetration-depth
 geometry, nonconvex containment, extreme ratios, rotational CCD and cross-device
 quality/cost evidence remain open; this increment does not close G1–G3.
+
+### G2 geometry robustness / G3 fast-motion checkpoint
+
+The follow-up normalizes convex GJK/EPA distances per pair, with an infinite-plane
+exception, and uses exact float32 orientation for thin hull seed decisions. Mesh
+capacity checks run before copying input. Independent rectangle and polyhedron SAT
+references qualify named cube/box and tetrahedron penetration cases across scale.
+
+Sphere/static CCD now accepts all static shape families. Analytic sphere, rounded-box
+and unbounded-plane sweeps complement bounded capsule/cylinder/convex/triangle
+surface advancement. Initial-distance traversal exhaustion rejects the step.
+Qualification covers transformed obstacles, scale, timestep, mesh holes and both
+sides, repeated ricochets, and latched rollback after impact/traversal exhaustion.
+Constant-world-spin quaternion integration removes normalized-Euler phase lag;
+dynamic isotropic and kinematic spheres are checked against analytic rotations.
+
+Geometry Torture and Fast Motion Lab scenarios live in Physics Stress Lab with
+original geometry projection, sampled trails, reset and GPU graph/trace inspection.
+This checkpoint does not close G2 or G3: general convex degeneracies and persistent
+feature IDs, solid containment, moving/rotating/dynamic-pair CCD, extreme stacks and
+competitive cross-device quality/cost gates remain open.

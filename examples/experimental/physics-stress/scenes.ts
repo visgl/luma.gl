@@ -3,7 +3,14 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import type {GPURigidBody, GPURigidBodyWorldProps} from '@luma.gl/gpu-graph/gpu-physics';
 
+import {
+  QUALIFICATION_SCENES,
+  makeQualificationScene,
+  isQualificationScene
+} from './qualification-scenes';
+
 export const STRESS_SCENES = {
+  ...QUALIFICATION_SCENES,
   capacity: 'Capacity recovery',
   dense: 'Dense mixed-size pile',
   massRatio: 'Heavy-on-light stack',
@@ -38,6 +45,7 @@ export function makeStressScene(
       }
     ]
   };
+  if (isQualificationScene(scene)) return makeQualificationScene(scene, props);
   if (scene === 'ballistic')
     return {
       description:

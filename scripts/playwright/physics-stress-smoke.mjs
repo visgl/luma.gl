@@ -28,7 +28,7 @@ try {
   await page.getByRole('button', {name: 'Expand info box', exact: true}).first().click();
   await page.waitForFunction(() => document.querySelector('#status')?.textContent?.includes('tick 240/240'), undefined, {timeout: 120000});
   const reports = [];
-  for (const scene of ['capacity', 'dense', 'massRatio', 'ballistic', 'continuous', 'sparseContacts', 'geometry', 'deepStack', 'offsetStack']) {
+  for (const scene of ['capacity', 'dense', 'massRatio', 'ballistic', 'continuous', 'sparseContacts', 'geometry', 'deepStack', 'offsetStack', 'geometryConvex', 'geometryOpenings', 'fastPrimitives', 'fastMesh']) {
     if (scene !== 'capacity') {
       await page.locator('#scene').selectOption(scene);
       const steps = scene === 'deepStack' || scene === 'offsetStack' ? 720 : 240;
@@ -48,6 +48,12 @@ try {
     }
     if (scene === 'dense') await page.screenshot({path: '/tmp/physics-stress-thumbnail.jpg', type: 'jpeg', quality: 85});
   }
+  await page.locator('#scene').selectOption('fastBudget');
+  await page.waitForFunction(() => document.querySelector('#status')?.textContent?.startsWith('REJECTED'), undefined, {timeout: 120000});
+  assert.match(await page.locator('#status').textContent(), /tick 0\/240/);
+  assert.equal(await page.locator('#error').textContent(), '');
+  await page.locator('#scene').selectOption('offsetStack');
+  await page.waitForFunction(() => document.querySelector('#status')?.textContent?.includes('tick 720/720'), undefined, {timeout: 120000});
   await page.locator('#pause').click();
   await page.locator('#reset').click();
   await page.waitForFunction(() => !document.querySelector('#reset')?.disabled);

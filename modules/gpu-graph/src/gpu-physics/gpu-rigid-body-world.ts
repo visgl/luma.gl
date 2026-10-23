@@ -398,17 +398,6 @@ export class GPURigidBodyWorld {
         )
           throw new Error('Continuous bodies require centered dynamic spheres');
       }
-      if (
-        colliders.some(collider => {
-          const body = props.bodies[collider.body];
-          return (
-            (body.mode ?? ((body.mass ?? 1) === 0 ? 'static' : 'dynamic')) === 'static' &&
-            !collider.isTrigger &&
-            !['sphere', 'box', 'plane'].includes(collider.shape.type)
-          );
-        })
-      )
-        throw new Error('Continuous static geometry is unsupported');
     }
     if (props.triggers?.length) {
       if (

@@ -11,7 +11,7 @@ fn closestSegment(point:vec3f,first:vec3f,second:vec3f)->vec3f{
 fn closestTriangle(point:vec3f,first:vec3f,second:vec3f,third:vec3f)->vec3f{
  let firstEdge=second-first;let secondEdge=third-first;let normal=cross(firstEdge,secondEdge);
  let squared=dot(normal,normal);
- if(squared>1e-24){
+ if(squared>0.0){
   let projected=point-normal*(dot(point-first,normal)/squared);
   if(dot(cross(second-first,projected-first),normal)>=0.0&&dot(cross(third-second,projected-second),normal)>=0.0&&dot(cross(first-third,projected-third),normal)>=0.0){return projected;}
  }
@@ -80,15 +80,78 @@ fn closestSurface(collider:u32,point:vec3f)->SurfacePoint{
  return SurfacePoint(nearest,select(distance(point,nearest),0.0,inside),complete);
 }
 struct SphereSweep { point:vec3f, normal:vec3f, distance:f32, hit:u32, complete:u32 }
+// Exact rounded-box cast: face rectangles, finite edge cylinders and corner spheres.
+// Testing features separately preserves open corners instead of inflating an AABB.
+fn sweepBox(origin:vec3f,direction:vec3f,maximumDistance:f32,radius:f32,extent:vec3f)->SphereSweep{
+ var result:SphereSweep;result.complete=1u;var nearest=maximumDistance;
+ let initial=clamp(origin,-extent,extent);let initialDelta=origin-initial;
+ if(length(initialDelta)<=radius){result.hit=1u;result.point=initial;result.normal=initialDelta/max(length(initialDelta),1e-20);return result;}
+ for(var coordinate=0u;coordinate<3u;coordinate++){
+  let first=(coordinate+1u)%3u;let second=(coordinate+2u)%3u;
+  for(var side=0u;side<2u;side++){
+   let sign=select(-1.0,1.0,side==1u);
+   if(direction[coordinate]*sign>=0.0){continue;}
+   let travelled=(sign*(extent[coordinate]+radius)-origin[coordinate])/direction[coordinate];
+   let center=origin+direction*travelled;
+   if(travelled>=0.0&&travelled<=nearest&&abs(center[first])<=extent[first]&&abs(center[second])<=extent[second]){
+    nearest=travelled;result.hit=1u;result.normal=vec3f(0);result.normal[coordinate]=sign;
+   }
+  }
+  for(var corner=0u;corner<4u;corner++){
+   var center=vec3f(0);center[first]=select(-extent[first],extent[first],(corner&1u)!=0u);center[second]=select(-extent[second],extent[second],(corner&2u)!=0u);
+   var delta=origin-center;delta[coordinate]=0.0;var radialDirection=direction;radialDirection[coordinate]=0.0;
+   let squared=dot(radialDirection,radialDirection);if(squared==0.0){continue;}
+   let projection=dot(delta,radialDirection)/squared;let perpendicular=delta-radialDirection*projection;
+   let discriminant=(radius*radius-dot(perpendicular,perpendicular))/squared;if(discriminant < -1e-6*radius*radius/squared){continue;}
+   let travelled=-projection-sqrt(max(0.0,discriminant));let point=origin+direction*travelled;
+   if(travelled>=0.0&&travelled<=nearest&&abs(point[coordinate])<=extent[coordinate]){
+    nearest=travelled;result.hit=1u;center[coordinate]=point[coordinate];result.normal=(point-center)/max(radius,1e-20);
+   }
+  }
+ }
+ for(var corner=0u;corner<8u;corner++){
+  let center=select(-extent,extent,vec3u(corner&1u,corner&2u,corner&4u)!=vec3u(0));
+  let delta=origin-center;let projection=dot(delta,direction);let perpendicular=delta-direction*projection;
+  let discriminant=radius*radius-dot(perpendicular,perpendicular);if(discriminant < -1e-6*radius*radius){continue;}
+  let travelled=-projection-sqrt(max(0.0,discriminant));
+  if(travelled>=0.0&&travelled<=nearest){nearest=travelled;result.hit=1u;result.normal=(origin+direction*travelled-center)/max(radius,1e-20);}
+ }
+ if(result.hit!=0u){result.distance=nearest;result.point=origin+direction*nearest-result.normal*radius;}
+ return result;
+}
 fn sweepSphere(collider:u32,origin:vec3f,direction:vec3f,maximumDistance:f32,radius:f32)->SphereSweep{
  var result:SphereSweep;result.complete=1u;var travelled=0.0;
  let shape=bodies.colliders[collider].shape;
  if(shape.w==6.0&&shape.z==0.0&&origin.y<0.0){return result;}
+ if(shape.w==1.0){return sweepBox(origin,direction,maximumDistance,radius,shape.xyz);}
+ if(shape.w==0.0){
+  let inflated=shape.x+radius;let projection=dot(origin,direction);
+  let perpendicular=origin-direction*projection;let discriminant=inflated*inflated-dot(perpendicular,perpendicular);
+  if(length(origin)>inflated){
+   if(discriminant < -1e-6*inflated*inflated){return result;}
+   travelled=-projection-sqrt(max(0.0,discriminant));
+   if(travelled<0.0||travelled>maximumDistance){return result;}
+  }
+  let center=origin+direction*travelled;let normal=center/max(length(center),1e-20);
+  result.point=normal*shape.x;result.normal=normal;result.distance=travelled;result.hit=1u;return result;
+ }
+ // Unbounded planes have an exact intersection, including parallel and tangent casts.
+ if(shape.w==6.0&&shape.x==0.0&&shape.y==0.0){
+  let side=select(-1.0,1.0,origin.y>=0.0);
+  if(abs(origin.y)>radius){
+   if(direction.y*side>=0.0){return result;}
+   travelled=(side*radius-origin.y)/direction.y;
+   if(travelled>maximumDistance){return result;}
+  }
+  let center=origin+direction*travelled;
+  result.point=vec3f(center.x,0,center.z);result.normal=vec3f(0,side,0);result.distance=travelled;result.hit=1u;return result;
+ }
+ let tolerance=max(1e-8,1e-6*max(radius,length(shape.xyz)));
  for(var iteration=0u;iteration<128u;iteration++){
   let center=origin+direction*travelled;let surface=closestSurface(collider,center);
   if(surface.complete==0u){result.complete=0u;return result;}
   let separation=surface.distance-radius;
-  if(separation<=0.00001){result.point=surface.point;result.normal=select(vec3f(0),(center-surface.point)/max(length(center-surface.point),1e-20),surface.distance>0.0);result.distance=travelled;result.hit=1u;return result;}
+  if(separation<=tolerance){result.point=surface.point;result.normal=select(vec3f(0),(center-surface.point)/max(length(center-surface.point),1e-20),surface.distance>0.0);result.distance=travelled;result.hit=1u;return result;}
   if(travelled+separation>maximumDistance){return result;}
   let next=travelled+separation;
   if(next<=travelled){result.complete=0u;return result;}travelled=next;

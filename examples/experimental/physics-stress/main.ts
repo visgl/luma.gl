@@ -8,6 +8,7 @@ import {
   type GPURigidBodyRecoveryResult,
   type GPURigidBodyState
 } from '@luma.gl/gpu-graph/gpu-physics';
+import {drawStressShape} from './draw-shape';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {createRigidBodyPanel} from '../gpu-rigid-body-world/info-box';
 import {
@@ -35,8 +36,10 @@ const panel = createRigidBodyPanel(
   'GPU physics · recovery and qualification'
 );
 for (const [value, title] of Object.entries(STRESS_SCENES)) select.add(new Option(title, value));
-let selectedScene: StressScene = 'capacity';
-let activeScene: StressScene = 'capacity';
+const requestedScene = new URLSearchParams(location.search).get('scene') ?? '';
+let selectedScene: StressScene = isStressScene(requestedScene) ? requestedScene : 'capacity';
+select.value = selectedScene;
+let activeScene: StressScene = selectedScene;
 select.onchange = () => {
   if (isStressScene(select.value)) {
     selectedScene = select.value;
@@ -55,6 +58,7 @@ let states: GPURigidBodyState[] = [];
 let stepCount = 240;
 let lastSolverWork: Awaited<ReturnType<GPURigidBodyRecoveryRunner['world']['readSolverWork']>> =
   null;
+let trails: number[][][] = [];
 let samples: {milliseconds: number; result: GPURigidBodyRecoveryResult}[] = [];
 let device: Awaited<ReturnType<typeof luma.createDevice>>;
 function fail(error: unknown) {
@@ -99,7 +103,9 @@ async function restart() {
     diagnostics.clear();
     states = nextStates;
     samples = [];
+    trails = [];
     stopped = false;
+    delete status.dataset.accepted;
     status.value = `READY · tick 0/${stepCount} · ${states.length} bodies${paused ? '\nPaused · Resume to advance' : ''}`;
     document.querySelector('#error')!.textContent = '';
     document.querySelector('#description')!.textContent = configuration.description;
@@ -178,6 +184,19 @@ function draw() {
     context.lineTo(width, origin[1] - level * scale);
     context.stroke();
   }
+  for (const trail of trails) {
+    if (!trail) continue;
+    context.strokeStyle = '#dfb46f';
+    context.lineWidth = ratio;
+    context.beginPath();
+    trail.forEach((point, index) => {
+      const horizontal = origin[0] + point[0] * scale,
+        vertical = origin[1] - point[2] * scale;
+      if (index === 0) context.moveTo(horizontal, vertical);
+      else context.lineTo(horizontal, vertical);
+    });
+    context.stroke();
+  }
   for (const [index, state] of states.entries()) {
     const body = configuration.props.bodies[index],
       shape = body.shape;
@@ -223,6 +242,8 @@ function draw() {
         2 * shape.halfExtents[0] * scale,
         2 * shape.halfExtents[2] * scale
       );
+    } else if (shape) {
+      drawStressShape(context, shape, state.orientation, scale);
     }
     context.restore();
   }
@@ -253,17 +274,26 @@ async function advance() {
     samples.push({milliseconds, result});
     if (runner.encoding) diagnostics.record(runner.graph, runner.encoding);
     states = await runner.world.readState();
+    if (activeScene.startsWith('fast') || activeScene === 'continuous')
+      for (const [index, state] of states.entries()) {
+        if (configuration.props.bodies[index].mode === 'static') continue;
+        if (!trails[index]) trails[index] = [];
+        const trail = trails[index];
+        trail.push([...state.position]);
+        if (trail.length > 240) trail.shift();
+      }
     lastSolverWork = await runner.world.readSolverWork();
     const sorted = samples
       .map(sample => sample.milliseconds)
       .sort((first, second) => first - second);
     const capacity = runner.world.getCapacityInfo();
     const time = runner.tick * runner.world.timeStep;
+    status.dataset.accepted = String(result.accepted);
     const error =
       activeScene === 'ballistic'
         ? `\nVertical error: ${Math.abs(states[0].position[2] - (8 - 5 * time * time)).toFixed(5)}`
         : '';
-    status.value = `${result.accepted ? 'ACCEPTED' : 'REJECTED'} · tick ${runner.tick}/${stepCount} · ${time.toFixed(2)} s\nRetries: ${samples.reduce((total, sample) => total + sample.result.retries, 0)} · replayed: ${samples.reduce((total, sample) => total + sample.result.replayedTicks, 0)} ticks\nPairs: ${capacity.maximumPairs} · buffers: ${(capacity.ownedBufferBytes / 1048576).toFixed(2)} MiB\nNodes: ${runner.graph.stats.nodeOrder.length} · peak candidates: ${result.diagnostics.maximumCandidatePairs}\nCompletion p50: ${sorted[Math.floor((sorted.length - 1) * 0.5)].toFixed(2)} ms\nCompletion p95: ${sorted[Math.floor((sorted.length - 1) * 0.95)].toFixed(2)} ms${lastSolverWork ? `\nPair workgroups/iteration: ${lastSolverWork.pairWorkgroups} / ${Math.ceil(capacity.maximumPairs / 64)} capacity${lastSolverWork.compacted ? ` · ${lastSolverWork.activeContacts} contacts` : ' · scan'}` : ''}${error}`;
+    status.value = `${result.accepted ? 'ACCEPTED' : 'REJECTED'} · tick ${runner.tick}/${stepCount} · ${time.toFixed(2)} s\nRetries: ${samples.reduce((total, sample) => total + sample.result.retries, 0)} · replayed: ${samples.reduce((total, sample) => total + sample.result.replayedTicks, 0)} ticks\nPairs: ${capacity.maximumPairs} · buffers: ${(capacity.ownedBufferBytes / 1048576).toFixed(2)} MiB\nNodes: ${runner.graph.stats.nodeOrder.length} · peak candidates: ${result.diagnostics.maximumCandidatePairs}\nIncomplete CCD bodies: ${result.diagnostics.incompleteContinuousBodies}\nCompletion p50: ${sorted[Math.floor((sorted.length - 1) * 0.5)].toFixed(2)} ms\nCompletion p95: ${sorted[Math.floor((sorted.length - 1) * 0.95)].toFixed(2)} ms${lastSolverWork ? `\nPair workgroups/iteration: ${lastSolverWork.pairWorkgroups} / ${Math.ceil(capacity.maximumPairs / 64)} capacity${lastSolverWork.compacted ? ` · ${lastSolverWork.activeContacts} contacts` : ' · scan'}` : ''}${error}`;
     stopped = !result.accepted || runner.tick === stepCount;
   } catch (error) {
     fail(error);

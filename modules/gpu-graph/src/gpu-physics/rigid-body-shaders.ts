@@ -365,11 +365,18 @@ fn root(body: u32) -> u32 {var current=body;for(var iteration=0u;iteration<BODY_
   }
  }
 }
+// Exact constant-world-angular-velocity update. This removes the normalized Euler
+// phase lag at high spin; torque-free asymmetric-body dynamics remain timestep dependent.
+fn advanceOrientation(rotation:vec4f,angular:vec3f)->vec4f {
+ let speed=length(angular);let halfAngle=speed*settings.gravity.w*0.5;
+ let factor=select(settings.gravity.w*0.5,sin(halfAngle)/max(speed,1e-20),speed>1e-10);
+ return normalize(multiplyRotation(vec4f(angular*factor,cos(halfAngle)),rotation));
+}
 fn finishBody(body:u32) {
   if(bodies.bodies[body].motion.x==0.0 || sleepStates[body].y>0.5) {return;}
   if(bodies.bodies[body].motion.x==2.0) {
    if(targets.entries[body].position.w>0.0) {positions[body]=vec4f(targets.entries[body].position.xyz,positions[body].w);orientations[body]=targets.entries[body].orientation;}
-   else {positions[body]=vec4f(positions[body].xyz+velocities[body].xyz*settings.gravity.w,positions[body].w);let rotation=orientations[body];let angular=angularVelocities[body].xyz;orientations[body]=normalize(rotation+vec4f(rotation.w*angular+cross(angular,rotation.xyz),-dot(angular,rotation.xyz))*(0.5*settings.gravity.w));}
+   else {positions[body]=vec4f(positions[body].xyz+velocities[body].xyz*settings.gravity.w,positions[body].w);let rotation=orientations[body];let angular=angularVelocities[body].xyz;orientations[body]=advanceOrientation(rotation,angular);}
    return;
   }
   positions[body]=vec4f(positions[body].xyz+velocities[body].xyz*settings.gravity.w,positions[body].w);
@@ -380,8 +387,7 @@ fn finishBody(body:u32) {
   let principalAngular=rotate(vec4f(-principal.xyz,principal.w),angular);
   let principalMomentum=principalAngular/select(vec3f(1),inversePrincipalInertia,movableAxes);
   let momentum=rotate(principal,select(vec3f(0),principalMomentum,movableAxes));
-  let derivative=vec4f(rotation.w*angular+cross(angular,rotation.xyz),-dot(angular,rotation.xyz));
-  orientations[body]=normalize(rotation+derivative*(0.5*settings.gravity.w));
+  orientations[body]=advanceOrientation(rotation,angular);
   // Preserve world angular momentum as the inertia tensor rotates.
   // Infinite inertia blocks torque response without erasing prescribed spin.
   let preservedSpin=rotate(principalRotation(body),select(principalAngular,vec3f(0),movableAxes));
