@@ -38,7 +38,7 @@ describe('GPU Dataframe documentation and opt-in Arrow benchmark integration', (
         if (typeof entry === 'string' || entry.type !== 'category') {
           continue;
         }
-        if (entry.label === '@luma.gl/gpu-graph') {
+        if (entry.label === '@luma.gl/graph') {
           graphCategories.push(entry);
         }
         visit(entry.items);
@@ -70,7 +70,7 @@ describe('GPU Dataframe documentation and opt-in Arrow benchmark integration', (
     const documentation = readGPUDataFrameDocumentation();
 
     expect(documentation).toContain("from '@luma.gl/arrow'");
-    expect(documentation).toContain("from '@luma.gl/gpu-graph/gpu-dataframe'");
+    expect(documentation).toContain("from '@luma.gl/graph/gpu-dataframe'");
     expect(documentation).toContain('makeGPUAnalyticsTableFromArrowTable');
     expect(documentation).toContain('GPUCommandGraph');
     expect(documentation).toContain('selectionMask');
@@ -133,7 +133,7 @@ describe('GPU Dataframe documentation and opt-in Arrow benchmark integration', (
     };
 
     expect(benchmark).toContain("from '@luma.gl/arrow'");
-    expect(benchmark).toContain("from '@luma.gl/gpu-graph/gpu-dataframe'");
+    expect(benchmark).toContain("from '@luma.gl/graph/gpu-dataframe'");
     expect(benchmark).toContain("from 'apache-arrow'");
     expect(benchmark).toContain('makeGPUAnalyticsTableFromArrowTable');
     expect(benchmark).toContain('runGPUDataFrameBenchmark');

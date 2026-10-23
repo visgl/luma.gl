@@ -28,7 +28,7 @@ for immediate popularity, local clustering for connections among one vertex's ne
 labels for a proposed group assignment, and core numbers for repeated structural support.
 
 ```ts
-import {GPUGraphAlgorithmsCoreNumber} from '@luma.gl/gpu-graph/gpu-graph-algorithms';
+import {GPUGraphAlgorithmsCoreNumber} from '@luma.gl/graph/gpu-graph-algorithms';
 
 const cores = new GPUGraphAlgorithmsCoreNumber({
   topology,
@@ -86,7 +86,7 @@ identifier describing a larger connected region. The coefficient describes each 
 surroundings; it does not assign community membership or optimize a global clustering objective.
 
 ```ts
-import {GPUGraphAlgorithmsLocalClusteringCoefficient} from '@luma.gl/gpu-graph/gpu-graph-algorithms';
+import {GPUGraphAlgorithmsLocalClusteringCoefficient} from '@luma.gl/graph/gpu-graph-algorithms';
 
 const localClustering = new GPUGraphAlgorithmsLocalClusteringCoefficient({
   topology,
@@ -143,7 +143,7 @@ those citations without asking how influential their sources are; PageRank propa
 additional context through the surrounding network.
 
 ```ts
-import {GPUGraphAlgorithmsPageRank} from '@luma.gl/gpu-graph/gpu-graph-algorithms';
+import {GPUGraphAlgorithmsPageRank} from '@luma.gl/graph/gpu-graph-algorithms';
 
 const importance = new GPUGraphAlgorithmsPageRank({
   topology,

@@ -5,8 +5,8 @@
 import {luma, Buffer} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {Model} from '@luma.gl/engine';
-import {GPUCommandGraph} from '@luma.gl/gpu-graph/gpu-core';
-import {GPURigidBodyWorld} from '@luma.gl/gpu-graph/gpu-physics';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
+import {GPURigidBodyWorld} from '@luma.gl/graph/gpu-physics';
 import {PerspectiveCamera} from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {Matrix4} from '@math.gl/core';

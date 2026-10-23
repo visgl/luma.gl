@@ -9,7 +9,7 @@ import {
   type GPURasterTileRequest,
   type GPURasterTileSource,
   type GPURasterTileSourceMetadata
-} from '@luma.gl/gpu-graph/gpu-raster';
+} from '@luma.gl/graph/gpu-raster';
 import {makeRasterLabDataset, RASTER_LAB_NO_DATA_VALUE, type RasterLabDataset} from './raster-data';
 import type {RasterLabSourceTile} from './raster-interface';
 

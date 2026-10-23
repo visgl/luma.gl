@@ -1,8 +1,22 @@
 # Upgrade Guide
 
+## Graph package rename
+
+`@luma.gl/gpu-graph` is renamed to `@luma.gl/graph`. Replace the package in your
+project dependencies and update the package prefix in every import:
+
+```typescript
+import {GPUGraph} from '@luma.gl/graph';
+import {GPUProgram} from '@luma.gl/graph/gpu-core';
+```
+
+All existing subpath suffixes and exported API names are unchanged. For example,
+`@luma.gl/gpu-graph/gpu-tables` becomes `@luma.gl/graph/gpu-tables`.
+The source package directory is now `modules/graph`.
+
 ## GPU graph naming
 
-Graph analytics now use `@luma.gl/gpu-graph/gpu-graph-algorithms` and a shared
+Graph analytics now use `@luma.gl/graph/gpu-graph-algorithms` and a shared
 `GPUGraphAlgorithms` prefix for classes, types, and helpers:
 
 - `GPUGraph` becomes `GPUGraphAlgorithmsData`.
@@ -11,12 +25,12 @@ Graph analytics now use `@luma.gl/gpu-graph/gpu-graph-algorithms` and a shared
 - `GPUGraphTopology` becomes `GPUGraphAlgorithmsTopology`.
 - `runGPUGraphBenchmark` becomes `runGPUGraphAlgorithmsBenchmark`.
 
-Update analytics imports from `@luma.gl/gpu-graph/gpu-graph` to
-`@luma.gl/gpu-graph/gpu-graph-algorithms`, including the `/benchmarks` entry point.
+Update analytics imports from `@luma.gl/graph/gpu-graph` to
+`@luma.gl/graph/gpu-graph-algorithms`, including the `/benchmarks` entry point.
 The `gpu-graph` entry point now exposes execution scheduling.
 
 The execution scheduler is now `GPUGraph`, with compiled instances named `CompiledGPUGraph`,
-from `@luma.gl/gpu-graph/gpu-graph` (also exported by `gpu-core`). `GPUCommandGraph` and
+from `@luma.gl/graph/gpu-graph` (also exported by `gpu-core`). `GPUCommandGraph` and
 `CompiledGPUCommandGraph` remain deprecated aliases of the same constructors. Existing
 scheduling option and result types retain their `GPUCommandGraph` prefixes.
 
@@ -292,4 +306,4 @@ chunks through `.data` or canonical logical descriptors through `.chunks`.
 
 ## GPU Graph package
 
-Execution graphs and graph-based modules now live in `@luma.gl/gpu-graph`. Import `GPUGraph` from the package root. Replace `@luma.gl/gpgpu/gpu-core` and graph-based domain subpaths with `@luma.gl/gpu-graph/<subpath>`. Experimental GPU tables, dataframe, SQL, crossfilter, trace, projection, raster, geospatial, and volume modules use the corresponding new subpaths. GPU data primitives and immediate operations remain in `@luma.gl/gpgpu`.
+Execution graphs and graph-based modules now live in `@luma.gl/graph`. Import `GPUGraph` from the package root. Replace `@luma.gl/gpgpu/gpu-core` and graph-based domain subpaths with `@luma.gl/graph/<subpath>`. Experimental GPU tables, dataframe, SQL, crossfilter, trace, projection, raster, geospatial, and volume modules use the corresponding new subpaths. GPU data primitives and immediate operations remain in `@luma.gl/gpgpu`.

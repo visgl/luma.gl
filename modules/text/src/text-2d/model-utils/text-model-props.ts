@@ -8,7 +8,7 @@ import {
   validateGPUInputVectors,
   type GPUInputSchema,
   type GPUInputVectors
-} from '@luma.gl/gpu-graph/gpu-tables';
+} from '@luma.gl/graph/gpu-tables';
 import type {FontAtlas} from '../../fonts/atlas/font-atlas';
 
 const TEXT_DICTIONARY_INDEX_FORMATS = [

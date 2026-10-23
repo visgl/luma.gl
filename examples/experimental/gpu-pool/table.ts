@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUSpherePlane, GPUSphereBodyState} from '@luma.gl/gpu-graph/gpu-physics';
+import type {GPUSpherePlane, GPUSphereBodyState} from '@luma.gl/graph/gpu-physics';
 
 export const BALL_RADIUS = 0.18;
 export const POCKET_RADIUS = 0.39;

@@ -13,7 +13,7 @@ import {
   type GPUVectorFormat
 } from '@luma.gl/gpgpu/gpu-data';
 import {castData, fround, GPUDataEvaluator} from '@luma.gl/gpgpu';
-import {GPURecordBatch, GPUTable, type GPUField} from '@luma.gl/gpu-graph/gpu-tables';
+import {GPURecordBatch, GPUTable, type GPUField} from '@luma.gl/graph/gpu-tables';
 import {
   DataType,
   Field,

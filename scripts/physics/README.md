@@ -9,8 +9,8 @@ Generate Vitest JSON reports using the repository test projects, for example:
 
 ```sh
 yarn exec vitest run --project node modules/gltf/test/physics --reporter=json --outputFile=/tmp/physics-import.json
-yarn exec vitest run --project node modules/gpu-graph/test/gpu-physics --reporter=json --outputFile=/tmp/physics-node.json
-yarn exec vitest run --project headless modules/gpu-graph/test/gpu-physics --reporter=json --outputFile=/tmp/physics-gpu.json
+yarn exec vitest run --project node modules/graph/test/gpu-physics --reporter=json --outputFile=/tmp/physics-node.json
+yarn exec vitest run --project headless modules/graph/test/gpu-physics --reporter=json --outputFile=/tmp/physics-gpu.json
 node --test scripts/physics/qualification-report.test.mjs
 ```
 

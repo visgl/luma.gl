@@ -13,7 +13,7 @@ import {
   type ShaderPassRendererRenderOptions
 } from '@luma.gl/engine';
 import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/effects';
-import {SpectralOceanSimulation} from '@luma.gl/gpu-graph/gpu-simulation';
+import {SpectralOceanSimulation} from '@luma.gl/graph/gpu-simulation';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 import {

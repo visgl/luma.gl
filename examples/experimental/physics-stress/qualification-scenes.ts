@@ -6,7 +6,7 @@ import {
   makeTriangleMeshGeometry,
   type GPURigidBody,
   type GPURigidBodyWorldProps
-} from '@luma.gl/gpu-graph/gpu-physics';
+} from '@luma.gl/graph/gpu-physics';
 
 export const QUALIFICATION_SCENES = {
   geometryConvex: 'Geometry Torture · scaled convex hulls',

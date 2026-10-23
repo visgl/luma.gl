@@ -14,7 +14,7 @@ import {
   type GraphBufferHandle,
   type GraphDataView,
   type GraphImportedBuffer
-} from '@luma.gl/gpu-graph/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 import {GPUSplatData} from './splat-data';
 import {
   GPU_SPLAT_FEATURE_SHADER,

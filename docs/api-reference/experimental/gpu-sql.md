@@ -6,7 +6,7 @@ import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-
 
 ## Overview
 
-`@luma.gl/gpu-graph/gpu-sql` provides a bounded SQL frontend for
+`@luma.gl/graph/gpu-sql` provides a bounded SQL frontend for
 [`GPUDataFrame`](/docs/api-reference/experimental/gpu-dataframe). `LuSQLContext` registers
 existing GPU dataframes by name and lowers supported statements into the same immutable GPU
 dataframe planner. Planning does not upload, submit, allocate query output, or read GPU buffers.
@@ -26,8 +26,8 @@ that already emits `TableQueryOptions` and `SQLPredicate` values:
 
 ```ts
 import {parseSQLPredicate} from '@loaders.gl/sql';
-import {GPUCommandGraph} from '@luma.gl/gpu-graph/gpu-core';
-import {planGPUDataFrameQuery} from '@luma.gl/gpu-graph/gpu-sql';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
+import {planGPUDataFrameQuery} from '@luma.gl/graph/gpu-sql';
 
 const predicate = parseSQLPredicate('fare >= :minimum AND category IN (0, 1)', {
   preserveParameters: true
