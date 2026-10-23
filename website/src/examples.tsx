@@ -711,6 +711,12 @@ const GPGPU_EXAMPLE_STYLE = `
     padding: 9px 10px;
   }
 
+  .gpgpu-showcase .expression-row input,
+  .gpgpu-showcase .expression-row select {
+    min-width: 0;
+    width: 100%;
+  }
+
   .gpgpu-showcase .expression-row button {
     min-width: 76px;
     background: #eef2f7;
@@ -740,7 +746,6 @@ const GPGPU_EXAMPLE_STYLE = `
   }
 
   .gpgpu-showcase .table-header {
-    min-width: 880px;
     will-change: transform;
   }
 
@@ -780,7 +785,6 @@ const GPGPU_EXAMPLE_STYLE = `
 
   .gpgpu-showcase .row-layer {
     position: relative;
-    min-width: 880px;
   }
 
   .gpgpu-showcase .data-row {
