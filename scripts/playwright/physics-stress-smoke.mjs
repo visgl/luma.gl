@@ -32,14 +32,16 @@ try {
     const value = output?.textContent ?? '';
     return output?.dataset.scene === expected.scene && Number(output?.dataset.generation) > expected.afterGeneration &&
       value.startsWith('ACCEPTED') && Number(value.match(/tick (\d+)\//)?.[1]) >= expected.minimum;
-  }, {minimum, scene, afterGeneration}, {timeout: 120000});
+  }, {minimum, scene, afterGeneration}, {timeout: 120000}).catch(async error => {
+    throw new Error(`${scene}: ${await page.locator('#status').textContent()}\n${await page.locator('#error').textContent()}`, {cause: error});
+  });
   const reports = [];
-  for (const scene of ['capacity', 'dense', 'massRatio', 'ballistic', 'continuous', 'sparseContacts', 'geometry', 'deepStack', 'offsetStack', 'geometryConvex', 'geometryOpenings', 'fastPrimitives', 'fastMesh', 'persistentContacts', 'fastConvexPairs', 'fastMovingWall', 'fastRotatingGate']) {
+  for (const scene of ['capacity', 'dense', 'massRatio', 'ballistic', 'continuous', 'sparseContacts', 'geometry', 'deepStack', 'offsetStack', 'geometryConvex', 'geometryOpenings', 'fastPrimitives', 'fastMesh', 'persistentContacts', 'fastConvexPairs', 'fastMovingWall', 'fastRotatingGate', 'seamSliding', 'impactChain', 'simultaneousImpacts', 'sweptQueueScaling']) {
     const previousGeneration = await getGeneration();
     if (scene !== 'capacity') await page.locator('#scene').selectOption(scene);
     // Numerical duration/accuracy belongs in GPU specs; UI smoke checks live scene switching.
     // Ballistic playback must continue beyond the former 240-step cutoff.
-    await waitForTicks(['ballistic','fastConvexPairs','fastMovingWall','fastRotatingGate'].includes(scene) ? 300 : 12, scene, scene === 'capacity' ? 0 : previousGeneration);
+    await waitForTicks(['ballistic','fastConvexPairs','fastMovingWall','fastRotatingGate','seamSliding','impactChain','simultaneousImpacts','sweptQueueScaling'].includes(scene) ? 300 : 12, scene, scene === 'capacity' ? 0 : previousGeneration);
     const status = await page.locator('#status').textContent();
     assert.match(status, /ACCEPTED/);
     assert.match(status, /\/14400/);

@@ -1,9 +1,13 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
-import type {GPURigidBodyWorldProps} from '@luma.gl/graph/gpu-physics';
+import {makeTriangleMeshGeometry, type GPURigidBodyWorldProps} from '@luma.gl/graph/gpu-physics';
 
 export const CONTINUOUS_SCENES = {
+  seamSliding: 'Contact Continuity · seam sliding',
+  impactChain: 'Impact Continuity · touching chain',
+  simultaneousImpacts: 'Impact Continuity · simultaneous impacts',
+  sweptQueueScaling: 'Swept Queue Scaling · sparse moving field',
   persistentContacts: 'Persistent contacts · moving platform',
   fastConvexPairs: 'Fast Motion Lab · dynamic convex pairs',
   fastMovingWall: 'Fast Motion Lab · translating wall',
@@ -33,6 +37,84 @@ export function makeContinuousScene(
     continuous: {mode: 'convex', bodies: [0], maximumImpacts: 8, maximumCandidates: 128},
     bodies: []
   };
+  if (scene === 'seamSliding')
+    return {
+      description:
+        'Spheres slide across the diagonals of an authored triangle strip. Exactly coplanar shared edges use one persistent surface feature, and analytic sphere contacts suppress internal-edge ridges. Outer boundaries and creases remain collidable. The spheres eventually leave the strip; reset restores their starting positions. This tests seam continuity, not general nonconvex CCD.',
+      props: {
+        ...base,
+        failurePolicy: 'rollback',
+        contactMatchDistance: 0.1,
+        gravity: [0, 0, -10],
+        bodies: [
+          {
+            mode: 'static',
+            position: [0, 0, 0],
+            friction: 0,
+            shape: {
+              type: 'triangle-mesh',
+              geometry: makeTriangleMeshGeometry(
+                [-7, -2, 1, 0, -2, 1, 7, -2, 1, -7, 2, 1, 0, 2, 1, 7, 2, 1],
+                [0, 1, 4, 0, 4, 3, 1, 2, 5, 1, 5, 4]
+              )
+            }
+          },
+          ...[-1, 0, 1].map(depth => ({
+            friction: 0,
+            position: [-6, depth, 1.35] as const,
+            velocity: [0.8, 0, 0] as const,
+            shape: {type: 'sphere' as const, radius: 0.35}
+          }))
+        ]
+      }
+    };
+  if (scene === 'impactChain' || scene === 'simultaneousImpacts') {
+    const opposing = scene === 'simultaneousImpacts';
+    return {
+      description: opposing
+        ? 'Two equal-speed spheres strike the middle sphere at the same time. Deterministic pair ordering and zero-time revisits transfer the impulses until the contacts separate. This bounded ordered impact law is not a unique coupled multi-impact material model. Exhausting the global impact budget rejects the whole step.'
+        : 'A fast sphere strikes a line of touching spheres. The queue is rebuilt after each impact, so a newly closing contact is resolved even when its starting separation is zero. Energy transfers to the far sphere. The view follows the moving group; reset repeats the shot.',
+      props: {
+        ...props,
+        continuous: {mode: 'convex', bodies: [0, 1, 2], maximumImpacts: 8},
+        bodies: [
+          {
+            ...material,
+            position: [-3, 0, 3],
+            velocity: [12, 0, 0],
+            shape: {type: 'sphere', radius: 0.5}
+          },
+          {...material, position: [0, 0, 3], shape: {type: 'sphere', radius: 0.5}},
+          {
+            ...material,
+            position: [opposing ? 3 : 1, 0, 3],
+            velocity: [opposing ? -12 : 0, 0, 0],
+            shape: {type: 'sphere', radius: 0.5}
+          }
+        ]
+      }
+    };
+  }
+  if (scene === 'sweptQueueScaling')
+    return {
+      description:
+        'Sixty-five separated moving spheres exercise a non-power-of-two spatial index. GPU bitonic sorting orders swept bounds along the widest center-spread axis, then interval scans stop early and reject the other two axes. Compare the reported spatial tests with 2,080 possible pairs. Dense overlapping intervals can still take quadratic work; sorting also adds dispatches and is not a universal speedup.',
+      props: {
+        ...props,
+        maximumPairs: 128,
+        continuous: {
+          mode: 'convex',
+          bodies: Array.from({length: 65}, (_, index) => index),
+          maximumCandidates: 8
+        },
+        bodies: Array.from({length: 65}, (_, index) => ({
+          ...material,
+          position: [(index % 9) * 1.6 - 6.4, 0, 1 + Math.floor(index / 9)] as const,
+          velocity: [0.1, 0, 0] as const,
+          shape: {type: 'sphere' as const, radius: 0.15}
+        }))
+      }
+    };
   if (scene === 'persistentContacts')
     return {
       description:

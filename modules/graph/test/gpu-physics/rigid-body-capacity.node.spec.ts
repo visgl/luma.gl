@@ -90,7 +90,7 @@ it('accounts for bounded convex queues without allocating unused mesh task stora
   });
   const buffers = world.getCapacityInfo().buffers;
   expect(buffers.find(buffer => buffer.name === 'continuous-work')?.byteLength).toBe(
-    16 + 64 + 17 * 48
+    64 + 32 + 64 + 17 * 48
   );
   expect(buffers.find(buffer => buffer.name === 'continuous-dispatch')?.byteLength).toBe(16);
   expect(buffers.some(buffer => ['mesh-tasks', 'continuous-previous'].includes(buffer.name))).toBe(

@@ -195,12 +195,13 @@ function addConvexContinuous<Parameters>(
   colliderCount: number,
   hasHulls: boolean
 ) {
+  const spatialCapacity = 2 ** Math.ceil(Math.log2(Math.max(1, colliderCount)));
   const extra = [
     {name: 'continuousSelection', buffer: allocate('continuous-selection', selected), location: 13},
     {name: 'continuousStatus', buffer: allocate('continuous-status', count * 16), location: 14},
     {
       name: 'continuousWork',
-      buffer: allocate('continuous-work', 16 + count * 64 + capacity * 48),
+      buffer: allocate('continuous-work', 64 + spatialCapacity * 32 + count * 64 + capacity * 48),
       location: 15
     },
     {name: 'continuousDispatch', buffer: allocate('continuous-dispatch', 16), location: 16}
@@ -221,7 +222,7 @@ function addConvexContinuous<Parameters>(
 @group(0) @binding(13) var<storage,read> continuousSelection:array<u32>;
 @group(0) @binding(14) var<storage,read_write> continuousStatus:array<vec4u>;
 ` +
-    getConvexContinuousShader(capacity, maximumImpacts, hasHulls);
+    getConvexContinuousShader(capacity, maximumImpacts, hasHulls, spatialCapacity);
   const add = (stage: string, stages: {entryPoint: string; groups: number}[], names: string[]) => {
     const active = [...bindings, ...extra].filter(binding => names.includes(binding.name));
     const entryBindings: Record<string, string[]> = {
@@ -234,10 +235,9 @@ function addConvexContinuous<Parameters>(
         'bodies',
         'continuousWork'
       ],
+      boundContinuousQueue: ['positions', 'velocities', 'bodies', 'continuousWork'],
       resetContinuousQueue: ['continuousWork', 'continuousDispatch'],
       buildContinuousQueue: [
-        'positions',
-        'velocities',
         'bodies',
         'continuousSelection',
         'continuousWork',
@@ -271,7 +271,9 @@ function addConvexContinuous<Parameters>(
       ]
     };
     const properties = (entryPoint: string) => {
-      const entries = active.filter(binding => entryBindings[entryPoint].includes(binding.name));
+      const entries = active.filter(binding =>
+        (entryBindings[entryPoint] ?? ['continuousWork']).includes(binding.name)
+      );
       return {
         id: `${id}-${entryPoint}`,
         source: shader,
@@ -350,7 +352,14 @@ function addConvexContinuous<Parameters>(
         'resolve',
         [
           {entryPoint: 'prepareConvexContinuous', groups: Math.ceil(count / 64)},
+          {entryPoint: 'boundContinuousQueue', groups: Math.ceil(spatialCapacity / 64)},
           {entryPoint: 'resetContinuousQueue', groups: 1},
+          ...Array.from({length: Math.log2(spatialCapacity)}, (_, level) =>
+            Array.from({length: level + 1}, (_, pass) => ({
+              entryPoint: `sortContinuous${2 ** (level + 1)}_${2 ** (level - pass)}`,
+              groups: Math.ceil(spatialCapacity / 64)
+            }))
+          ).flat(),
           {entryPoint: 'buildContinuousQueue', groups: Math.ceil(colliderCount / 64)},
           {entryPoint: 'findContinuousImpacts', groups: Math.ceil(capacity / 64)},
           {entryPoint: 'resolveConvexContinuous', groups: 1},

@@ -6,13 +6,18 @@
 export function getConvexContinuousShader(
   capacity: number,
   maximumImpacts: number,
-  hasHulls: boolean
+  hasHulls: boolean,
+  spatialCapacity: number
 ) {
   return /* wgsl */ `
 const CONTINUOUS_CAPACITY:u32=${capacity}u;
 struct ContinuousCandidate { colliders:vec4u, point:vec4f, normal:vec4f }
+struct ContinuousBounds { lower:vec4f, upper:vec4f }
 struct ContinuousWork {
  count:atomic<u32>, overflow:atomic<u32>, remaining:f32, finished:u32,
+ tests:atomic<u32>, peakTests:u32, rounds:u32, axis:u32,
+ lastPair:vec4u, lastNormal:vec4f,
+ bounds:array<ContinuousBounds,${spatialCapacity}>,
  previousPositions:array<vec4f,BODY_COUNT>, previousOrientations:array<vec4f,BODY_COUNT>,
  finalPositions:array<vec4f,BODY_COUNT>, finalOrientations:array<vec4f,BODY_COUNT>,
  candidates:array<ContinuousCandidate,CONTINUOUS_CAPACITY>
@@ -76,6 +81,14 @@ fn continuousVertex(first:u32,second:u32,direction:vec3f,time:f32,scale:f32)->Su
 fn continuousDistance(first:u32,second:u32,time:f32,tolerance:f32)->ContinuousDistance {
  // Exact point-to-OBB distance avoids a near-contact smooth-support GJK degeneracy.
  let firstShape=bodies.colliders[first].shape;let secondShape=bodies.colliders[second].shape;
+ if(firstShape.w==0.0&&secondShape.w==0.0){
+  let firstBody=colliderBody(first);let secondBody=colliderBody(second);
+  let firstCenter=positions[firstBody].xyz+continuousVelocity(firstBody)*time+rotate(continuousRotation(orientations[firstBody],continuousAngular(firstBody),time),bodies.colliders[first].position.xyz);
+  let secondCenter=positions[secondBody].xyz+continuousVelocity(secondBody)*time+rotate(continuousRotation(orientations[secondBody],continuousAngular(secondBody),time),bodies.colliders[second].position.xyz);
+  let offset=firstCenter-secondCenter;let magnitude=length(offset);let normal=offset/max(magnitude,1e-20);
+  var exact:ContinuousDistance;exact.complete=1u;exact.distance=max(0.0,magnitude-firstShape.x-secondShape.x);exact.normal=normal;
+  exact.point=(firstCenter-normal*firstShape.x+secondCenter+normal*secondShape.x)*0.5;return exact;
+ }
  if(firstShape.w==1.0&&secondShape.w==1.0){
   let firstBody=colliderBody(first);let secondBody=colliderBody(second);
   let firstBodyRotation=continuousRotation(orientations[firstBody],continuousAngular(firstBody),time);
@@ -195,25 +208,74 @@ fn continuousRadius(collider:u32)->f32 {
  // Preserve discrete positional recovery while replaying the accepted velocity trajectory.
  positions[body]=vec4f(positions[body].xyz-continuousVelocity(body)*settings.gravity.w,positions[body].w);
  orientations[body]=continuousWork.previousOrientations[body];
- if(body==0u){continuousWork.remaining=settings.gravity.w;continuousWork.finished=0u;}
+ if(body==0u){continuousWork.remaining=settings.gravity.w;continuousWork.finished=0u;continuousWork.peakTests=0u;continuousWork.rounds=0u;continuousWork.lastPair=vec4u(0xffffffffu);}
 }
-@compute @workgroup_size(1) fn resetContinuousQueue(){atomicStore(&continuousDispatch[0],0u);atomicStore(&continuousDispatch[1],1u);atomicStore(&continuousDispatch[2],1u);atomicStore(&continuousWork.count,0u);atomicStore(&continuousWork.overflow,0u);}
+@compute @workgroup_size(64) fn boundContinuousQueue(@builtin(global_invocation_id) invocation:vec3u){
+ let collider=invocation.x;if(collider>=${spatialCapacity}u){return;}
+ var bounds:ContinuousBounds;bounds.lower=vec4f(3.4e38);bounds.upper=vec4f(3.4e38);
+ if(collider<COLLIDER_COUNT){
+  let body=colliderBody(collider);let start=positions[body].xyz;
+  let end=start+continuousVelocity(body)*continuousWork.remaining;let radius=vec3f(continuousRadius(collider));
+  bounds.lower=vec4f(min(start,end)-radius,bitcast<f32>(collider));bounds.upper=vec4f(max(start,end)+radius,0);
+ }
+ continuousWork.bounds[collider]=bounds;
+}
+@compute @workgroup_size(1) fn resetContinuousQueue(){
+ atomicStore(&continuousDispatch[0],0u);atomicStore(&continuousDispatch[1],1u);atomicStore(&continuousDispatch[2],1u);
+ atomicStore(&continuousWork.count,0u);atomicStore(&continuousWork.overflow,0u);atomicStore(&continuousWork.tests,0u);
+ var lower=vec3f(3.4e38);var upper=vec3f(-3.4e38);
+ for(var index=0u;index<COLLIDER_COUNT;index++){
+  let bounds=continuousWork.bounds[index];let center=bounds.lower.xyz*0.5+bounds.upper.xyz*0.5;
+  lower=min(lower,center);upper=max(upper,center);
+ }
+ let extent=upper-lower;var coordinate=0u;
+ if(extent.y>extent.x){coordinate=1u;}if(extent.z>extent[coordinate]){coordinate=2u;}continuousWork.axis=coordinate;
+}
+${Array.from({length: Math.log2(spatialCapacity)}, (_, level) => {
+  const width = 2 ** (level + 1);
+  return Array.from({length: level + 1}, (_, pass) => {
+    const stride = 2 ** (level - pass);
+    return `@compute @workgroup_size(64) fn sortContinuous${width}_${stride}(@builtin(global_invocation_id) invocation:vec3u){
+ let index=invocation.x;let partner=index^${stride}u;if(index>=${spatialCapacity}u||partner<=index){return;}
+ let first=continuousWork.bounds[index];let second=continuousWork.bounds[partner];let coordinate=continuousWork.axis;
+ let greater=first.lower[coordinate]>second.lower[coordinate]||(first.lower[coordinate]==second.lower[coordinate]&&bitcast<u32>(first.lower.w)>bitcast<u32>(second.lower.w));
+ if(greater==((index&${width}u)==0u)){continuousWork.bounds[index]=second;continuousWork.bounds[partner]=first;}
+}`;
+  }).join('\n');
+}).join('\n')}
 @compute @workgroup_size(64) fn buildContinuousQueue(@builtin(global_invocation_id) invocation:vec3u){
- let first=invocation.x;if(first>=COLLIDER_COUNT||continuousWork.finished!=0u){return;}
- let firstBody=colliderBody(first);let firstStart=positions[firstBody].xyz;
- let firstEnd=firstStart+continuousVelocity(firstBody)*continuousWork.remaining;
- let firstRadius=vec3f(continuousRadius(first));
- for(var second=first+1u;second<COLLIDER_COUNT;second++){
-  let secondBody=colliderBody(second);
+ let index=invocation.x;if(index>=COLLIDER_COUNT||continuousWork.finished!=0u){return;}
+ let firstBounds=continuousWork.bounds[index];let originalFirst=bitcast<u32>(firstBounds.lower.w);
+ for(var other=index+1u;other<COLLIDER_COUNT;other++){
+  let secondBounds=continuousWork.bounds[other];
+  if(secondBounds.lower[continuousWork.axis]>firstBounds.upper[continuousWork.axis]){break;}
+  atomicAdd(&continuousWork.tests,1u);
+  let originalSecond=bitcast<u32>(secondBounds.lower.w);let first=min(originalFirst,originalSecond);let second=max(originalFirst,originalSecond);
+  let firstBody=colliderBody(first);let secondBody=colliderBody(second);
   if(firstBody==secondBody||(continuousSelection[firstBody]==0u&&continuousSelection[secondBody]==0u)||bodies.colliders[first].material.w!=0.0||bodies.colliders[second].material.w!=0.0||excludes(first,second)||excludes(second,first)){continue;}
-  let secondStart=positions[secondBody].xyz;let secondEnd=secondStart+continuousVelocity(secondBody)*continuousWork.remaining;
-  let secondRadius=vec3f(continuousRadius(second));
-  if(any(min(firstStart,firstEnd)-firstRadius>max(secondStart,secondEnd)+secondRadius)||any(min(secondStart,secondEnd)-secondRadius>max(firstStart,firstEnd)+firstRadius)){continue;}
+  if(any(firstBounds.lower.xyz>secondBounds.upper.xyz)||any(secondBounds.lower.xyz>firstBounds.upper.xyz)){continue;}
   let slot=atomicAdd(&continuousWork.count,1u);
   if(slot>=CONTINUOUS_CAPACITY){atomicStore(&continuousWork.overflow,1u);continue;}
   continuousWork.candidates[slot].colliders=vec4u(first,second,0,0);
   atomicMax(&continuousDispatch[0],slot/64u+1u);
  }
+}
+// Lower bound on the fixed-plane gap rate over every material point.
+// Including non-supporting box corners keeps the bound valid through feature changes.
+fn continuousSupportRate(collider:u32,direction:vec3f,normal:vec3f,time:f32)->f32 {
+ let body=colliderBody(collider);let angular=continuousAngular(body);
+ let rotation=continuousRotation(orientations[body],angular,time);
+ let colliderOrientation=multiplyRotation(rotation,bodies.colliders[collider].orientation);
+ let offset=rotate(rotation,bodies.colliders[collider].position.xyz);
+ let base=dot(continuousVelocity(body)+cross(angular,offset),normal);
+ let shape=bodies.colliders[collider].shape;
+ if(shape.w==0.0){return base;}
+ if(shape.w==1.0){
+  let coefficients=rotate(vec4f(-colliderOrientation.xyz,colliderOrientation.w),cross(normal,angular));
+  let rate=base-dot(abs(coefficients),shape.xyz);
+  return rate;
+ }
+ return dot(continuousVelocity(body),normal)-length(angular)*continuousRadius(collider);
 }
 @compute @workgroup_size(64) fn findContinuousImpacts(@builtin(global_invocation_id) invocation:vec3u){
  let slot=invocation.x;if(slot>=min(atomicLoad(&continuousWork.count),CONTINUOUS_CAPACITY)||continuousWork.finished!=0u){return;}
@@ -226,22 +288,61 @@ fn continuousRadius(collider:u32)->f32 {
  let angularBound=length(continuousAngular(firstBody))*firstAngularRadius+length(continuousAngular(secondBody))*secondAngularRadius;
  let coordinate=max(length(positions[firstBody].xyz),length(positions[secondBody].xyz));
  let tolerance=max(max(1e-7,coordinate*8e-7),min(1e-5,min(contactFeatureScale(first,-1),contactFeatureScale(second,-1))*1e-4));
- var time=0.0;var lastNormal=vec3f(0);var complete=false;
+ var time=0.0;var lastNormal=vec3f(0);var complete=false;var leavingContact=false;var exitNormal=vec3f(0);
  for(var iteration=0u;iteration<128u;iteration++){
-  let distance=continuousDistance(first,second,time,tolerance);
+  var distance=continuousDistance(first,second,time,tolerance);
+  if(time==0.0&&length(distance.normal)<0.5&&all(continuousWork.lastPair.xy==pair)){
+   // The immediately preceding impulse owns a qualified plane at this unchanged pose.
+   distance.normal=continuousWork.lastNormal.xyz;
+  }
   if(distance.complete==0u){break;}
+  if(time==0.0&&distance.distance<=tolerance){
+   // A fresh closing contact can be caused by another simultaneous impact.
+   let normal=distance.normal;var closing=false;
+   // A different impact may have driven an initially touching generic simplex closed.
+   // Without a qualified plane, never silently call that pair separating.
+   if(length(normal)<0.5&&continuousWork.rounds>0u){break;}
+   if(length(normal)>0.5){closing=dot(pointVelocity(firstBody,distance.point)-pointVelocity(secondBody,distance.point),normal)< -1e-5;}
+   if(closing){lastNormal=normal;}else{
+    // Fixed-orientation separating convex trajectories cannot re-enter until another impact.
+    if(angularBound<=1e-8){complete=true;break;}
+    leavingContact=true;exitNormal=normal;
+   }
+  }
+  if(leavingContact){
+   if(distance.distance>tolerance){leavingContact=false;}else{
+    // Bound fixed-plane curvature rather than sampling at velocity-sized intervals.
+    // Every support-point trajectory stays above this quadratic lower envelope.
+    var increment=tolerance*0.5/max(length(relative)+angularBound,1e-20);
+    if(length(exitNormal)>0.5){
+     let rate=continuousSupportRate(first,-exitNormal,exitNormal,time)+continuousSupportRate(second,exitNormal,-exitNormal,time);
+     let curvature=dot(continuousAngular(firstBody),continuousAngular(firstBody))*firstAngularRadius+dot(continuousAngular(secondBody),continuousAngular(secondBody))*secondAngularRadius;
+     let gap=dot(continuousSupport(first,-exitNormal,time)-continuousSupport(second,exitNormal,time),exitNormal);
+     let available=gap+tolerance;
+     if(available<=0.0){break;}
+     if(curvature>1e-20){let root=sqrt(rate*rate+2.0*curvature*available);increment=select(2.0*available/(root-rate),(root+rate)/curvature,rate>=0.0);}
+     else if(rate>=0.0){increment=continuousWork.remaining-time;}
+     else{increment=available/(-rate);}
+    }
+    if(time+increment>=continuousWork.remaining){
+     // The entire remaining interval is certified within the contact envelope.
+     complete=true;break;
+    }
+    time+=increment;continue;
+   }
+  }
   if(distance.distance<=tolerance){
-   // Contacts already overlapping at the start remain owned by the discrete solver.
-   // A positive support distance before reaching the envelope is required for TOI.
-   if(time==0.0){complete=true;break;}
    continuousWork.candidates[slot].colliders.z=1u;
    continuousWork.candidates[slot].point=vec4f(distance.point,time);
    continuousWork.candidates[slot].normal=vec4f(lastNormal,tolerance);complete=true;break;
   }
   lastNormal=distance.normal;
-  let closing=-dot(relative,distance.normal)+angularBound;
-  if(closing<=1e-12){complete=true;break;}
-  let increment=(distance.distance-tolerance*0.5)/closing;
+  let rate=continuousSupportRate(first,-distance.normal,distance.normal,time)+continuousSupportRate(second,distance.normal,-distance.normal,time);
+  let curvature=dot(continuousAngular(firstBody),continuousAngular(firstBody))*firstAngularRadius+dot(continuousAngular(secondBody),continuousAngular(secondBody))*secondAngularRadius;
+  let available=distance.distance-tolerance*0.5;
+  var increment=continuousWork.remaining-time;
+  if(curvature>1e-20){let root=sqrt(rate*rate+2.0*curvature*available);increment=select(2.0*available/(root-rate),(root+rate)/curvature,rate>=0.0);}
+  else if(rate<0.0){increment=available/(-rate);}else{complete=true;break;}
   if(time+increment>continuousWork.remaining){complete=true;break;}
   if(increment<=max(1e-12,continuousWork.remaining*1e-8)){break;}
   time+=increment;
@@ -322,6 +423,7 @@ fn continuousImpactPoint(first:u32,second:u32,point:vec3f,normal:vec3f,queryTole
 }
 @compute @workgroup_size(1) fn resolveConvexContinuous(){
  if(continuousWork.finished!=0u){return;}
+ continuousWork.peakTests=max(continuousWork.peakTests,atomicLoad(&continuousWork.tests));continuousWork.rounds++;
  continuousStatus[0].w=max(continuousStatus[0].w,atomicLoad(&continuousWork.count));
  if(atomicLoad(&continuousWork.overflow)!=0u){continuousStatus[0].x=1u;continuousWork.finished=1u;return;}
  var nearest=continuousWork.remaining;var selected=0xffffffffu;
@@ -379,6 +481,7 @@ fn continuousImpactPoint(first:u32,second:u32,point:vec3f,normal:vec3f,queryTole
  }
  if(dynamic(first)){sleepStates[first]=vec4f(0);}
  if(dynamic(second)){sleepStates[second]=vec4f(0);}
+ continuousWork.lastPair=vec4u(firstCollider,secondCollider,0,0);continuousWork.lastNormal=vec4f(normal,0);
  continuousStatus[first].y++;continuousStatus[second].y++;
 }
 @compute @workgroup_size(64) fn checkConvexContinuous(@builtin(global_invocation_id) invocation:vec3u){
