@@ -9,9 +9,12 @@ centered sharp boxes and rigid center-to-center distance joints.
 
 Use Node from `.nvmrc`, CMake >= 3.22, a C17 compiler, Git, and the repository's installed
 Playwright Chromium. The reference builder fetches the exact commit in
-`box3d-reference.json` into the system temporary directory and compiles Release with
+`box3d-reference.json` into a fresh, private, exclusively created temporary directory
+and compiles Release with
 SIMD enabled and float32 positions. It does not install or vendor Box3D into luma.gl.
-A supplied `--source` must be clean and at that exact revision. The report records the
+Default runs do not reuse predictable shared directories. To reuse a build, pass
+`--source` and `--build` pointing to trusted directories you own; the builder CLI
+prints both paths. A supplied `--source` must be clean and at that exact revision. The report records the
 license, revision, compiler configuration, host and actual worker count.
 
 ```sh

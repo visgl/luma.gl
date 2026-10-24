@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import {execFileSync} from 'node:child_process';
-import {readFileSync, existsSync, mkdirSync, writeFileSync} from 'node:fs';
+import {readFileSync, existsSync, mkdirSync, mkdtempSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
@@ -11,8 +11,12 @@ const directory = path.dirname(fileURLToPath(import.meta.url));
 export const reference = JSON.parse(
   readFileSync(path.join(directory, 'box3d-reference.json'), 'utf8')
 );
+/** Atomically create a private cache; never trust a predictable shared CMake directory. */
+export function createReferenceCache() {
+  return mkdtempSync(path.join(tmpdir(), 'luma-box3d-'));
+}
 export function buildReference(options = {}) {
-  const root = path.join(tmpdir(), `luma-box3d-${reference.commit}`);
+  const root = options.source && options.build ? null : createReferenceCache();
   const source = path.resolve(options.source ?? path.join(root, 'source'));
   const build = path.resolve(options.build ?? path.join(root, 'build'));
   const execute = (program, args, cwd) =>
@@ -60,7 +64,7 @@ export function buildReference(options = {}) {
     license: readFileSync(path.join(source, 'LICENSE'), 'utf8')
   };
   writeFileSync(`${executable}.json`, JSON.stringify(metadata, null, 2));
-  return {executable, metadata};
+  return {executable, metadata, source, build};
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   const {values} = parseArgs({options: {source: {type: 'string'}, build: {type: 'string'}}});
