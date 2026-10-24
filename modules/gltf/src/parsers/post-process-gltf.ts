@@ -507,7 +507,7 @@ class GLTFPostProcessor {
   ): GLTFTypedArray {
     const byteLength = length * ArrayType.BYTES_PER_ELEMENT;
     // Sparse data must fit within its buffer view.
-    assert(byteOffset + byteLength <= bufferView.byteLength);
+    assert(byteOffset >= 0 && byteLength >= 0 && byteOffset + byteLength <= bufferView.byteLength);
     const buffer = bufferView.buffer;
     const absoluteByteOffset = buffer.byteOffset + (bufferView.byteOffset || 0) + byteOffset;
     const arrayBuffer = copyToArrayBuffer(buffer.arrayBuffer, absoluteByteOffset, byteLength);
@@ -567,18 +567,27 @@ class GLTFPostProcessor {
 
   _resolveBufferView(gltfBufferView: GLTFBufferView, index: number): GLTFBufferViewPostprocessed {
     const bufferIndex = gltfBufferView.buffer;
-    const arrayBuffer = this.buffers[bufferIndex].arrayBuffer;
-    // Add offset of buffer, then offset of buffer view
-    let byteOffset = this.buffers[bufferIndex].byteOffset || 0;
-    if (gltfBufferView.byteOffset) {
-      byteOffset += gltfBufferView.byteOffset;
-    }
+    const buffer = this.buffers[bufferIndex];
+    // Views must stay inside both the supplied buffer range and its backing allocation.
+    assert(buffer);
+    assert(
+      buffer.byteOffset >= 0 &&
+        buffer.byteLength >= 0 &&
+        buffer.byteOffset + buffer.byteLength <= buffer.arrayBuffer.byteLength
+    );
+    const relativeByteOffset = gltfBufferView.byteOffset || 0;
+    assert(
+      relativeByteOffset >= 0 &&
+        gltfBufferView.byteLength >= 0 &&
+        relativeByteOffset + gltfBufferView.byteLength <= buffer.byteLength
+    );
+    const byteOffset = buffer.byteOffset + relativeByteOffset;
 
     const bufferView: GLTFBufferViewPostprocessed = {
       id: `bufferView-${index}`,
       ...gltfBufferView,
       buffer: this.buffers[bufferIndex],
-      data: new Uint8Array(arrayBuffer, byteOffset, gltfBufferView.byteLength)
+      data: new Uint8Array(buffer.arrayBuffer, byteOffset, gltfBufferView.byteLength)
     };
 
     return bufferView;

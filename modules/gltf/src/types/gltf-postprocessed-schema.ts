@@ -14,7 +14,7 @@ export type GlTfId = number;
  * Indices of those attributes that deviate from their initialization value.
  */
 export type AccessorSparseIndices = {
-  id: string;
+  id?: string;
 
   // GLTF attributes (possibly overridden)
   /**
@@ -38,7 +38,7 @@ export type AccessorSparseIndices = {
  * Array of size `accessor.sparse.count` times number of components storing the displaced accessor attributes pointed by `accessor.sparse.indices`.
  */
 export type AccessorSparseValues = {
-  id: string;
+  id?: string;
 
   // GLTF attributes (possibly overridden)
   /**
@@ -58,7 +58,7 @@ export type AccessorSparseValues = {
  * Sparse storage of attributes that deviate from their initialization value.
  */
 export type AccessorSparse = {
-  id: string;
+  id?: string;
 
   // GLTF attributes (possibly overridden)
   /**
@@ -147,7 +147,7 @@ export type GLTFAccessorPostprocessed = {
  * The index of the node and TRS property that an animation channel targets.
  */
 export type AnimationChannelTarget = {
-  id: string;
+  id?: string;
 
   // GLTF attributes (possibly overridden)
   /**
@@ -167,7 +167,7 @@ export type AnimationChannelTarget = {
  * Targets an animation's sampler at a node's property.
  */
 export type AnimationChannel = {
-  id: string;
+  id?: string;
 
   // GLTF attributes (possibly overridden)
   /**
@@ -187,7 +187,7 @@ export type AnimationChannel = {
  * Combines input and output accessors with an interpolation algorithm to define a keyframe graph (but not its target).
  */
 export type AnimationSampler = {
-  id: string;
+  id?: string;
 
   // GLTF attributes (possibly overridden)
   /**
@@ -211,7 +211,7 @@ export type AnimationSampler = {
  * A keyframe animation.
  */
 export type GLTFAnimationPostprocessed = {
-  id: string;
+  id?: string;
 
   // GLTF attributes (possibly overridden)
   /** An array of channels, each of which targets an animation's sampler at a node's property. Different channels of the same animation can't have equal targets. */
@@ -315,7 +315,7 @@ export type GLTFBufferViewPostprocessed = {
  * An orthographic camera containing properties to create an orthographic projection matrix.
  */
 export type CameraOrthographic = {
-  id: string;
+  id?: string;
 
   // GLTF attributes (possibly overridden)
   /**
@@ -343,7 +343,7 @@ export type CameraOrthographic = {
  * A perspective camera containing properties to create a perspective projection matrix.
  */
 export type CameraPerspective = {
-  id: string;
+  id?: string;
 
   // GLTF attributes (possibly overridden)
   /**
@@ -433,7 +433,7 @@ export type GLTFImagePostprocessed = {
  * Reference to a texture.
  */
 export type GLTFTextureInfoPostprocessed = {
-  id: string;
+  id?: string;
   texture: GLTFTexturePostprocessed;
 
   // GLTF attributes (possibly overridden)
@@ -454,7 +454,7 @@ export type GLTFTextureInfoPostprocessed = {
  * A set of parameter values that are used to define the metallic-roughness material model from Physically-Based Rendering (PBR) methodology.
  */
 export type MaterialPbrMetallicRoughnessPostprocessed = {
-  id: string;
+  id?: string;
 
   // GLTF attributes (possibly overridden)
   /**
@@ -483,7 +483,7 @@ export type MaterialPbrMetallicRoughnessPostprocessed = {
 };
 
 export type MaterialNormalTextureInfoPostprocessed = {
-  id: string;
+  id?: string;
   texture: GLTFTexturePostprocessed;
 
   // GLTF attributes (possibly overridden)
@@ -499,7 +499,7 @@ export type MaterialNormalTextureInfoPostprocessed = {
 };
 
 export type MaterialOcclusionTextureInfoPostprocessed = {
-  id: string;
+  id?: string;
   texture: GLTFTexturePostprocessed;
 
   // GLTF attributes (possibly overridden)
@@ -751,7 +751,7 @@ export type GLTFTexturePostprocessed = {
  * The root object for a glTF asset.
  */
 export type GLTFPostprocessed = {
-  id: string;
+  id?: string;
 
   // GLTF attributes (possibly overridden)
   /** Names of glTF extensions used somewhere in this asset. */

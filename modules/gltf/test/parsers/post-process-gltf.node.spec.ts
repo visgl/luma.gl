@@ -44,7 +44,10 @@ describe('luma-owned glTF postprocessing', () => {
   test('keeps loaders.gl input and output structurally compatible', () => {
     expectTypeOf<LoaderGLTFWithBuffers>().toExtend<GLTFWithBuffers>();
     expectTypeOf<LoaderGLTFPostprocessed>().toExtend<GLTFPostprocessed>();
-    expectTypeOf<GLTFPostprocessed>().toExtend<LoaderGLTFPostprocessed>();
+    expectTypeOf<GLTFPostprocessed['id']>().toEqualTypeOf<string | undefined>();
+    expectTypeOf<GLTFPostprocessed['animations'][number]['id']>().toEqualTypeOf<
+      string | undefined
+    >();
     expectTypeOf<
       Parameters<typeof createScenegraphsFromGLTF>[1]
     >().toEqualTypeOf<GLTFPostprocessed>();
@@ -145,6 +148,60 @@ describe('luma-owned glTF postprocessing', () => {
     );
     expect(source.json.meshes![0].primitives[0].mode).toBe(mode);
     expect(source.json.meshes![0].primitives[0].indices).toBeUndefined();
+  });
+
+  test.each([
+    {byteOffset: 4, byteLength: 4},
+    {byteOffset: -1, byteLength: 4}
+  ])('rejects buffer views outside a supplied range without needing accessors: %j', view => {
+    expect(() =>
+      postProcessGLTF({
+        json: {asset: {version: '2.0'}, bufferViews: [{buffer: 0, ...view}]},
+        buffers: [{arrayBuffer: new ArrayBuffer(32), byteOffset: 8, byteLength: 4}]
+      })
+    ).toThrow();
+  });
+
+  test('rejects negative sparse offsets before reading borrowed bytes', () => {
+    expect(() =>
+      postProcessGLTF({
+        json: {
+          asset: {version: '2.0'},
+          bufferViews: [{buffer: 0, byteLength: 4}],
+          accessors: [
+            {
+              componentType: 5121,
+              count: 1,
+              type: 'SCALAR',
+              sparse: {
+                count: 1,
+                indices: {bufferView: 0, byteOffset: -1, componentType: 5121},
+                values: {bufferView: 0}
+              }
+            }
+          ]
+        },
+        buffers: [{arrayBuffer: new ArrayBuffer(32), byteOffset: 8, byteLength: 4}]
+      })
+    ).toThrow();
+  });
+
+  test('keeps absent source IDs optional while generating IDs for resolved scene objects', () => {
+    const source = makeTriangle();
+    source.json.animations = [
+      {
+        channels: [{sampler: 0, target: {node: 0, path: 'translation'}}],
+        samplers: [{input: 0, output: 0}]
+      }
+    ];
+    const gltf = postProcessGLTF(source);
+    expect(gltf.id).toBeUndefined();
+    expect(gltf.animations[0].id).toBeUndefined();
+    expect(gltf.animations[0].channels[0].id).toBeUndefined();
+    expect(gltf.animations[0].channels[0].target.id).toBeUndefined();
+    expect(gltf.animations[0].samplers[0].id).toBeUndefined();
+    expect(gltf.nodes[0].id).toBe('node-0');
+    expect(gltf.meshes[0].id).toBe('mesh-0');
   });
 
   test('links materials, images, cameras and skins without copying borrowed images', () => {
