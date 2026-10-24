@@ -3,6 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {postProcessGLTF, type GLTFImageData, type GLTFImagePostprocessed} from '@luma.gl/gltf';
+import type {
+  CompressedImageDataArray,
+  CompressedImageMipmapArray,
+  CompressedMipLevel
+} from '@luma.gl/gltf/parsers/parse-pbr-material';
 import {expect, expectTypeOf, test} from 'vitest';
 
 test('glTF image types cover missing resources and borrowed browser images', () => {
@@ -36,3 +41,23 @@ test.runIf(typeof createImageBitmap === 'function' && typeof document !== 'undef
     }
   }
 );
+
+test('glTF postprocessing accepts and borrows compressed data and mipmap arrays', () => {
+  expectTypeOf<CompressedImageDataArray>().toExtend<GLTFImageData>();
+  expectTypeOf<CompressedImageMipmapArray>().toExtend<GLTFImageData>();
+  const level: CompressedMipLevel = {
+    data: new Uint8Array(16),
+    width: 4,
+    height: 4,
+    textureFormat: 'bc7-rgba-unorm'
+  };
+  const dataImage: CompressedImageDataArray = {compressed: true, mipmaps: true, data: [level]};
+  const mipmapImage: CompressedImageMipmapArray = {compressed: true, mipmaps: [level]};
+  const gltf = postProcessGLTF({
+    json: {asset: {version: '2.0'}, images: [{uri: 'data.ktx2'}, {uri: 'mipmaps.ktx2'}]},
+    buffers: [],
+    images: [dataImage, mipmapImage]
+  });
+  expect(gltf.images[0].image).toBe(dataImage);
+  expect(gltf.images[1].image).toBe(mipmapImage);
+});

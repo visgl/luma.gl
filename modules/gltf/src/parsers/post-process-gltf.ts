@@ -5,7 +5,6 @@
 import type {GLTFWithBuffers, GLTFImageData} from '../types/gltf-types';
 
 import type {
-  GLTF,
   GLTFAccessor,
   GLTFAsset,
   GLTFBufferView,
@@ -148,7 +147,7 @@ class GLTFPostProcessor {
   // Convert indexed glTF structure into tree structure
   // cross-link index resolution, enum lookup, convenience calculations
   // eslint-disable-next-line complexity, max-statements
-  _resolveTree(gltf: GLTF): GLTFPostprocessed {
+  _resolveTree(gltf: GLTFWithBuffers['json']): GLTFPostprocessed {
     // References are replaced below in dependency order.
     const json = {
       ...gltf,
@@ -424,7 +423,10 @@ class GLTFPostProcessor {
     return material;
   }
 
-  _resolveAccessor(gltfAccessor: GLTFAccessor, index: number): GLTFAccessorPostprocessed {
+  _resolveAccessor(
+    gltfAccessor: GLTFAccessor & {value?: GLTFTypedArray},
+    index: number
+  ): GLTFAccessorPostprocessed {
     // Look up enums
     const bytesPerComponent = getBytesFromComponentType(gltfAccessor.componentType);
     const components = getSizeFromAccessorType(gltfAccessor.type);
@@ -449,7 +451,12 @@ class GLTFPostProcessor {
     // Create TypedArray for the accessor
     // Note: The canonical way to instantiate is to ignore this array and create
     // WebGLBuffer's using the bufferViews.
-    if (accessor.bufferView) {
+    if (gltfAccessor.value) {
+      // A decoder supplies one complete dense array for this accessor.
+      assert(gltfAccessor.value.length === accessor.count * accessor.components);
+      // Sparse replacements must not mutate borrowed decoded storage.
+      accessor.value = gltfAccessor.sparse ? gltfAccessor.value.slice() : gltfAccessor.value;
+    } else if (accessor.bufferView) {
       accessor.value = readAccessorValues(accessor, accessor.bufferView);
     } else {
       const {ArrayType} = getAccessorArrayTypeAndLength(accessor, {

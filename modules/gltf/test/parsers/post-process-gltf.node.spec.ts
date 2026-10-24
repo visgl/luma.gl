@@ -229,6 +229,54 @@ describe('luma-owned glTF postprocessing', () => {
     expect(gltf.scenes).toEqual([]);
   });
 
+  test('preserves decoder-supplied values on accessors referenced by primitive indices', () => {
+    const source = makeTriangle();
+    const values = new Float32Array([0, 0, 0, 2, 0, 0, 0, 2, 0]);
+    const accessor = {...source.json.accessors![0], value: values, max: [2, 2, 0]};
+    delete accessor.bufferView;
+    source.json.accessors = [accessor];
+    const gltf = postProcessGLTF(source);
+    expect(gltf.accessors[0].value).toBe(values);
+    expect(gltf.meshes[0].primitives[0].attributes['POSITION']).toBe(gltf.accessors[0]);
+    const scenegraphs = createScenegraphsFromGLTF(new NullDevice({}), gltf);
+    expect(scenegraphs.modelBounds.bounds).toEqual([
+      [0, 0, 0],
+      [2, 2, 0]
+    ]);
+    scenegraphs.destroy();
+  });
+
+  test('copies decoder-provided values before applying sparse replacements', () => {
+    const bytes = new Uint8Array(16);
+    new Float32Array(bytes.buffer, 4, 3).set([4, 5, 6]);
+    const values = new Float32Array([1, 2, 3]);
+    const gltf = postProcessGLTF({
+      json: {
+        asset: {version: '2.0'},
+        bufferViews: [
+          {buffer: 0, byteLength: 1},
+          {buffer: 0, byteOffset: 4, byteLength: 12}
+        ],
+        accessors: [
+          {
+            componentType: 5126,
+            type: 'VEC3',
+            count: 1,
+            value: values,
+            sparse: {
+              count: 1,
+              indices: {bufferView: 0, componentType: 5121},
+              values: {bufferView: 1}
+            }
+          }
+        ]
+      },
+      buffers: [{arrayBuffer: bytes.buffer, byteOffset: 0, byteLength: bytes.byteLength}]
+    });
+    expect(gltf.accessors[0].value).toEqual(new Float32Array([4, 5, 6]));
+    expect(values).toEqual(new Float32Array([1, 2, 3]));
+  });
+
   test('links materials, images, cameras and skins without copying borrowed images', () => {
     const image = {width: 1, height: 1, data: new Uint8Array(4)};
     const source = makeTriangle();

@@ -82,7 +82,8 @@ export type AccessorSparse = {
  * A typed view into a bufferView.  A bufferView contains raw binary data.  An accessor provides a typed view into a bufferView or a subset of a bufferView similar to how WebGL's `vertexAttribPointer()` defines an attribute in a buffer.
  */
 export type GLTFAccessorPostprocessed = {
-  id: string;
+  /** May be absent on inline loader-decoded accessors. */
+  id?: string;
   components: number;
   bytesPerComponent: number;
   bytesPerElement: number;
