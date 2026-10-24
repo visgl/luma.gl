@@ -46,3 +46,12 @@ The sorted swept index prunes interval-separated bodies but retains quadratic de
 worst cases. Its sort stages add dispatches. Compare full-step timing and accuracy,
 not only candidate counts, when evaluating performance. The lab remains a diagnostic
 CPU-readback view of GPU physics, not a GPU rendering benchmark.
+
+## Matched Box3D scenarios
+
+The six `matched*` scenarios share their inputs with the native Box3D/WebGPU comparison
+suite: pile, mixed sizes, tall stacks, distance-joint chain, fast rotating bars and a
+ballistic control. Select them in the existing panel or use `?scene=matchedChain`.
+The diagnostic view's readbacks are not benchmark timings. See
+[`scripts/physics/matched`](../../../scripts/physics/matched/README.md) for repeatable
+performance and independent quality replays, raw reports and comparison limits.
