@@ -661,8 +661,9 @@ export class GPUCommandGraphEncoding {
  * The graph compiles resource hazards, transient lifetimes, and node resources,
  * but encoding and submission remain controlled by the application.
  */
-export class GPUGraph<Parameters = void> {
-  /** WebGPU device that owns compilation and transient resources. */
+/** @internal Shared resource planner and executor builder used by SimpleGraph render passes. */
+export class GPUCommandGraphBuilder<Parameters = void> {
+  /** Device that owns compilation and transient resources. */
   readonly device: Device;
   /** Identifier used as a prefix for graph-owned GPU resources. */
   readonly id: string;
@@ -681,14 +682,10 @@ export class GPUGraph<Parameters = void> {
   /**
    * Creates a mutable graph definition.
    *
-   * @param device WebGPU device used to compile and execute the graph.
+   * @param device Device used to compile and execute the graph.
    * @param props Optional graph identity and generic adaptive-kernel selector.
-   * @throws If `device` is not a WebGPU device.
    */
   constructor(device: Device, props: {id?: string; autotuner?: GPUCommandGraphAutotuner} = {}) {
-    if (device.type !== 'webgpu') {
-      throw new Error('GPUGraph requires a WebGPU device');
-    }
     assertDeviceAvailable(device, 'construction');
     this.device = device;
     this.id = props.id ?? 'gpu-command-graph';
@@ -1023,6 +1020,10 @@ export class GPUGraph<Parameters = void> {
   }
 
   private addNode(node: GPUCommandGraphNode<Parameters>): void {
+    // SimpleGraph only exposes render passes on WebGL. Compute requires WebGPU.
+    if (this.device.type !== 'webgpu' && node.type !== 'render') {
+      throw new Error('WebGL graphs support render passes only');
+    }
     this.assertMutable();
     if (!node.id) {
       throw new Error('GPUGraph node id is required');
@@ -1111,6 +1112,15 @@ export class GPUGraph<Parameters = void> {
         this.assertTexture(texture);
         validateTextureUseAgainstDescriptor(texture, resource.usage);
         validateTextureViewForUsage(resource.texture, resource.usage);
+        // WebGL sampler bindings use the underlying texture, not a selected view range.
+        if (
+          this.device.type === 'webgl' &&
+          resource.usage === 'sampled' &&
+          resource.texture instanceof GraphTextureView &&
+          !isDefaultGraphTextureView(resource.texture)
+        ) {
+          throw new Error('WebGL sampled textures require a full-resource view');
+        }
       } else {
         this.assertExternalTexture(resource.externalTexture);
         if (resource.usage !== 'sampled') {
@@ -2511,6 +2521,16 @@ function isDefaultGraphTextureView(view: GraphTextureView): boolean {
     view.baseArrayLayer === 0 &&
     view.arrayLayerCount === (texture.dimension === '3d' ? 1 : texture.depth)
   );
+}
+
+/** WebGPU command graph. SimpleGraph reuses its resource planner for portable render passes. */
+export class GPUGraph<Parameters = void> extends GPUCommandGraphBuilder<Parameters> {
+  constructor(device: Device, props: {id?: string; autotuner?: GPUCommandGraphAutotuner} = {}) {
+    if (device.type !== 'webgpu') {
+      throw new Error('GPUGraph requires a WebGPU device');
+    }
+    super(device, props);
+  }
 }
 
 /** @deprecated Use `GPUGraph`. */
