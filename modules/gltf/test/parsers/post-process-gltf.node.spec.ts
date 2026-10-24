@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {readFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
 import {Buffer} from 'node:buffer';
 import './post-process-gltf-half-float.spec';
 import './post-process-gltf-images.spec';
@@ -327,15 +328,27 @@ describe('luma-owned glTF postprocessing', () => {
   });
 
   test.each([
-    'AnimatedMorphCube.glb',
-    'SimpleSkin.gltf'
-  ])('loads and animates decoded geometry for %s', async filename => {
+    {
+      filename: 'AnimatedMorphCube.glb',
+      digest: '4aba93918adba56c1cc688a38c527bc647e26f2c386802e119b4d01b7250dd23'
+    },
+    {
+      filename: 'SimpleSkin.gltf',
+      digest: '28fb3a2d0d38b157a378839bae082e842d2025783e43b3431ac84ecc4a87ea30'
+    }
+  ])('loads and animates decoded geometry for $filename', async ({filename, digest}) => {
     const bytes = await readFile(
       new URL(`../../../../examples/anari/scenes/public/gltf/${filename}`, import.meta.url)
     );
     const source = await parse(bytes, GLTFLoader, {gltf: {loadImages: false}});
     const gltf = postProcessGLTF(source);
-    expect(gltf.accessors.length).toBeGreaterThan(0);
+    // Fixed fingerprints cover every decoded geometry and animation value, independently of loaders.gl.
+    // Derived from the fixtures' authored accessor byte ranges, excluding stride padding.
+    const decodedValues = createHash('sha256');
+    for (const {value} of gltf.accessors) {
+      decodedValues.update(new Uint8Array(value.buffer, value.byteOffset, value.byteLength));
+    }
+    expect(decodedValues.digest('hex')).toBe(digest);
     expect(gltf.animations.length).toBeGreaterThan(0);
     const device = new NullDevice({});
     const scenegraphs = createScenegraphsFromGLTF(device, gltf);

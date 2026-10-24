@@ -389,3 +389,25 @@ test.each([
   expect(output.accessors[0].value.constructor).toBe(values.constructor);
   expect(output.accessors[0].value).toEqual(values);
 });
+
+test('buffer-backed accessor values are independent copies and image URIs remain authored', () => {
+  const values = new Float32Array([1, 2, 3]);
+  const source: GLTFWithBuffers = {
+    baseUri: 'https://example.com/models/',
+    json: {
+      asset: {version: '2.0'},
+      buffers: [{byteLength: values.byteLength}],
+      bufferViews: [{buffer: 0, byteLength: values.byteLength}],
+      accessors: [{bufferView: 0, componentType: 5126, count: 1, type: 'VEC3'}],
+      images: [{uri: 'fallback.png'}]
+    },
+    buffers: [{arrayBuffer: values.buffer, byteOffset: 0, byteLength: values.byteLength}]
+  };
+  const output = postProcessGLTF(source);
+  expect(output.accessors[0].value).toEqual(values);
+  expect(output.accessors[0].value.buffer).not.toBe(values.buffer);
+  values[0] = 99;
+  expect(output.accessors[0].value[0]).toBe(1);
+  expect(output.images[0].uri).toBe('fallback.png');
+  expect(output.images[0].image).toBeNull();
+});

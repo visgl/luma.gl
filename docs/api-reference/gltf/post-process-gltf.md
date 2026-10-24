@@ -39,9 +39,10 @@ optional `baseUri`. Each loaded buffer supplies an `arrayBuffer`, `byteOffset`, 
 Load/decode all referenced resources before calling this function. It does not fetch resources,
 decode Draco or meshopt, transcode textures, or write GLB files. Those operations remain loader-owned.
 
-Source JSON and borrowed bytes/images remain unchanged. Packed accessor arrays borrow storage
-where possible; interleaved, unaligned, padded-matrix, and sparse accessors materialize packed values.
-Sparse replacements never change borrowed storage, including decoder-provided values and Node buffers.
+Source JSON and borrowed bytes/images remain unchanged. Accessors backed by buffer views always
+materialize packed values in new storage, including tightly packed inputs. Decoder-provided `value`
+arrays are reused unless sparse replacements require a copy. Sparse replacements never change
+borrowed storage, including decoder-provided values and Node buffers.
 Retain the original indexed container for editing, conversion, or serialization.
 
 ## Resolved output
@@ -54,7 +55,8 @@ Retain the original indexed container for editing, conversion, or serialization.
   Omitted buffer views supply implicit zeros; sparse substitutions apply to the base values.
   Normalization flags remain metadata; integer values are not converted to normalized floats.
 - Images borrow decoded resources in `image.image`. Missing resources remain `null`; relative URIs
-  resolve against `baseUri`. Draft glTF 2.1 `asset.thumbnail` resolves to its image object.
+  remain unchanged; callers must resolve relative URIs themselves. Draft glTF 2.1 `asset.thumbnail`
+  resolves to its image object.
 - Texture `source` and `sampler` resolve to image and sampler objects. Missing samplers receive a
   default. Sampler `parameters` use WebGL numeric constants for filters and wrapping.
 - Material texture-info objects retain their numeric `index` and add a resolved `texture` reference.
