@@ -215,9 +215,13 @@ function draw() {
   const horizontalPositions = followsImpacts ? states.map(state => state.position[0]) : [];
   const minimumHorizontal = Math.min(-7, ...horizontalPositions);
   const maximumHorizontal = Math.max(7, ...horizontalPositions);
+  const maximumHeight =
+    activeScene === 'matchedChain'
+      ? Math.max(12, ...states.map(state => state.position[2] + 2))
+      : 12;
   const scale = Math.min(
     width / (maximumHorizontal - minimumHorizontal + 5),
-    height / (12 - minimumHeight)
+    height / (maximumHeight - minimumHeight)
   );
   const origin = [
     width * 0.55 -
