@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {readFile} from 'node:fs/promises';
+import {Buffer} from 'node:buffer';
 import './post-process-gltf-half-float.spec';
 import './post-process-gltf-images.spec';
 import {parse} from '@loaders.gl/core';
@@ -275,6 +276,36 @@ describe('luma-owned glTF postprocessing', () => {
     });
     expect(gltf.accessors[0].value).toEqual(new Float32Array([4, 5, 6]));
     expect(values).toEqual(new Float32Array([1, 2, 3]));
+  });
+
+  test('copies Node Buffer payloads before sparse replacements', () => {
+    const values = Buffer.from([1, 2]);
+    const bytes = new Uint8Array([1, 9]);
+    const gltf = postProcessGLTF({
+      json: {
+        asset: {version: '2.0'},
+        bufferViews: [
+          {buffer: 0, byteLength: 1},
+          {buffer: 0, byteOffset: 1, byteLength: 1}
+        ],
+        accessors: [
+          {
+            componentType: 5121,
+            type: 'SCALAR',
+            count: 2,
+            value: values,
+            sparse: {
+              count: 1,
+              indices: {bufferView: 0, componentType: 5121},
+              values: {bufferView: 1}
+            }
+          }
+        ]
+      },
+      buffers: [{arrayBuffer: bytes.buffer, byteOffset: 0, byteLength: bytes.byteLength}]
+    });
+    expect([...gltf.accessors[0].value]).toEqual([1, 9]);
+    expect([...values]).toEqual([1, 2]);
   });
 
   test('links materials, images, cameras and skins without copying borrowed images', () => {

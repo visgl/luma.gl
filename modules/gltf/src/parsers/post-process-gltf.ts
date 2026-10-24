@@ -454,8 +454,11 @@ class GLTFPostProcessor {
     if (gltfAccessor.value) {
       // A decoder supplies one complete dense array for this accessor.
       assert(gltfAccessor.value.length === accessor.count * accessor.components);
+      // Use the native typed-array copy; Node Buffer.slice() creates a shared view.
       // Sparse replacements must not mutate borrowed decoded storage.
-      accessor.value = gltfAccessor.sparse ? gltfAccessor.value.slice() : gltfAccessor.value;
+      accessor.value = gltfAccessor.sparse
+        ? Uint8Array.prototype.slice.call(gltfAccessor.value)
+        : gltfAccessor.value;
     } else if (accessor.bufferView) {
       accessor.value = readAccessorValues(accessor, accessor.bufferView);
     } else {
