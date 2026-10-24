@@ -122,3 +122,16 @@ test('matching audits mass and the inertia tensor rather than accepting equal po
   parameters[2].inertia[0] *= 2;
   expect(checkMassProperties(fixture, parameters)).toBe(false);
 });
+
+test('large stack fixtures keep every box over the supporting slab', () => {
+  for (const count of [32, 512, 2048, 4096]) {
+    const {bodies} = makeMatchedFixture('matchedStack', count);
+    const slab = bodies[0];
+    for (const body of bodies.slice(1)) {
+      for (const axis of [0, 1])
+        expect(
+          Math.abs(body.position[axis] - slab.position[axis]) + body.halfExtents[axis]
+        ).toBeLessThanOrEqual(slab.halfExtents[axis]);
+    }
+  }
+});

@@ -118,14 +118,16 @@ export function makeMatchedFixture(scene: MatchedScene, count = 32, seed = 42): 
   } else {
     const width = Math.ceil(Math.sqrt(scene === 'matchedStack' ? Math.ceil(count / 8) : count));
     add([0, 0, -0.5], [width * 1.5 + 4, width * 1.5 + 4, 0.5], 0);
+    const gridWidth = scene === 'matchedStack' ? width : 4;
+    const center = (gridWidth - 1) / 2;
     for (let index = 0; index < count; index++) {
       const layer = scene === 'matchedStack' ? index % 8 : Math.floor(index / 16);
       const column = scene === 'matchedStack' ? Math.floor(index / 8) : index % 16;
       const size = scene === 'matchedMixed' ? 0.2 + random() * 0.3 : 0.45;
       const body = add(
         [
-          ((column % 4) - 1.5) * 1.4,
-          (Math.floor(column / 4) - 1.5) * 1.4,
+          ((column % gridWidth) - center) * 1.4,
+          (Math.floor(column / gridWidth) - center) * 1.4,
           0.5 + layer * (scene === 'matchedStack' ? 0.92 : 1.4)
         ],
         [size, size, size],
