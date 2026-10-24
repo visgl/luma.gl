@@ -35,6 +35,7 @@ const EXAMPLES_DIRECTORY = path.join(process.cwd(), 'website/content/examples');
 const WEBGPU_ONLY_EXAMPLES = new Set([
   'three/galactic-vortex',
   'gltf/physics',
+  'gltf/authored-scene-stress',
   'api/render-bundles',
   'arrow/arrow-columns',
   'arrow/arrow-dggs-polygons',
@@ -137,7 +138,7 @@ describe('live example catalog metadata', () => {
   });
 
   test('provides complete, curated filters for every sidebar example', () => {
-    expect(LIVE_EXAMPLES).toHaveLength(128);
+    expect(LIVE_EXAMPLES).toHaveLength(129);
 
     for (const {id, metadata} of LIVE_EXAMPLES) {
       expect(metadata, `${id} requires sidebar_custom_props`).toBeDefined();
