@@ -4,7 +4,8 @@
 
 import {readFile} from 'node:fs/promises';
 import {parse} from '@loaders.gl/core';
-import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/gltf';
+import {postProcessGLTF} from '@luma.gl/gltf';
 import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 import {createGLTFAnimatedCrowd, createScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {NullDevice} from '@luma.gl/test-utils';

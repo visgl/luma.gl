@@ -6,7 +6,7 @@ import type {
   GLTFNodePostprocessed,
   GLTFPostprocessed,
   GLTFTexturePostprocessed
-} from '@loaders.gl/gltf';
+} from '@luma.gl/gltf';
 import type {ANARIAnimationNodeDescription, ANARIVector3} from '@luma.gl/anari';
 import {makeANARIAnimationClipsFromGLTF} from '@luma.gl/anari/gltf';
 import {
