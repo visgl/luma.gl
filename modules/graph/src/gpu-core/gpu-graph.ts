@@ -10,25 +10,25 @@ import {
   getGPUOperationTree,
   type GPUOperationLike,
   type GPUOperationTree,
-  type GPUProgramOperation
+  type GPUGraphOperation
 } from './gpu-operation';
 import {
-  GPUProgramScalar,
-  GPUProgramTexture,
-  GPUProgramTextureView,
-  type GPUProgramTextureProps,
-  GPUProgramVector,
-  type GPUProgramScalarFormat,
-  type GPUProgramVectorFormat
-} from './gpu-program-value';
+  GPUGraphScalar,
+  GPUGraphTexture,
+  GPUGraphTextureView,
+  type GPUGraphTextureProps,
+  GPUGraphVector,
+  type GPUGraphScalarFormat,
+  type GPUGraphVectorFormat
+} from './gpu-graph-value';
 
 /** Backend-independent semantic GPU program. */
-export class GPUProgram {
+export class GPUGraph {
   readonly id: string;
-  private readonly programOperations: GPUProgramOperation[] = [];
-  private readonly programScalars = new Map<string, GPUProgramScalar>();
-  private readonly programVectors = new Map<string, GPUProgramVector>();
-  private readonly programTextures = new Map<string, GPUProgramTexture>();
+  private readonly programOperations: GPUGraphOperation[] = [];
+  private readonly programScalars = new Map<string, GPUGraphScalar>();
+  private readonly programVectors = new Map<string, GPUGraphVector>();
+  private readonly programTextures = new Map<string, GPUGraphTexture>();
   constructor(props: {id?: string} = {}) {
     this.id = props.id ?? 'gpu-program';
   }
@@ -37,51 +37,51 @@ export class GPUProgram {
     this.addOperationLike(operation);
     return this;
   }
-  scalar<T extends GPUProgramScalarFormat>(id: string, format: T): GPUProgramScalar<T> {
+  scalar<T extends GPUGraphScalarFormat>(id: string, format: T): GPUGraphScalar<T> {
     this.assertValueId(id);
-    const scalar = new GPUProgramScalar(id, format);
+    const scalar = new GPUGraphScalar(id, format);
     this.programScalars.set(id, scalar);
     return scalar;
   }
-  vector<T extends GPUProgramVectorFormat>(
+  vector<T extends GPUGraphVectorFormat>(
     id: string,
     format: T,
     length: number,
     props: {external?: boolean; chunkLengths?: readonly number[]} = {}
-  ): GPUProgramVector<T> {
+  ): GPUGraphVector<T> {
     this.assertValueId(id);
-    const vector = new GPUProgramVector({id, format, length, ...props});
+    const vector = new GPUGraphVector({id, format, length, ...props});
     this.programVectors.set(id, vector);
     return vector;
   }
   texture<Format extends TextureFormat>(
     id: string,
-    props: GPUProgramTextureProps<Format>
-  ): GPUProgramTexture<Format> {
+    props: GPUGraphTextureProps<Format>
+  ): GPUGraphTexture<Format> {
     this.assertValueId(id);
-    const texture = new GPUProgramTexture({...props, id});
+    const texture = new GPUGraphTexture({...props, id});
     this.programTextures.set(id, texture);
     return texture;
   }
   textureView<Format extends TextureFormat>(
-    texture: GPUProgramTexture<Format>,
+    texture: GPUGraphTexture<Format>,
     props: GraphTextureViewProps = {}
-  ): GPUProgramTextureView<Format> {
+  ): GPUGraphTextureView<Format> {
     if (this.programTextures.get(texture.id) !== texture) {
       throw new Error(`Undeclared program texture "${texture.id}"`);
     }
-    return new GPUProgramTextureView(texture, props);
+    return new GPUGraphTextureView(texture, props);
   }
-  get textures(): readonly GPUProgramTexture[] {
+  get textures(): readonly GPUGraphTexture[] {
     return Object.freeze([...this.programTextures.values()]);
   }
-  get scalars(): readonly GPUProgramScalar[] {
+  get scalars(): readonly GPUGraphScalar[] {
     return Object.freeze([...this.programScalars.values()]);
   }
-  get vectors(): readonly GPUProgramVector[] {
+  get vectors(): readonly GPUGraphVector[] {
     return Object.freeze([...this.programVectors.values()]);
   }
-  get operations(): readonly GPUProgramOperation[] {
+  get operations(): readonly GPUGraphOperation[] {
     return Object.freeze([...this.programOperations]);
   }
   get operationTree(): readonly GPUOperationTree[] {
@@ -96,7 +96,7 @@ export class GPUProgram {
       for (const child of operation) this.addOperationLike(child);
       return;
     }
-    this.programOperations.push(operation as GPUProgramOperation);
+    this.programOperations.push(operation as GPUGraphOperation);
   }
   private assertOperationLike(operation: GPUOperationLike): void {
     if (Array.isArray(operation)) {
@@ -108,7 +108,7 @@ export class GPUProgram {
   }
 }
 export function composite(
-  operations: readonly GPUProgramOperation[],
+  operations: readonly GPUGraphOperation[],
   props: {id?: string} = {}
 ): GPUCompositeOperation {
   return new GPUCompositeOperation({id: props.id, operations});

@@ -3,20 +3,20 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {GPUOperation, GPUOperationMetadata} from './gpu-operation';
-import type {GPUProgramScalar, GPUProgramVector} from './gpu-program-value';
+import type {GPUGraphScalar, GPUGraphVector} from './gpu-graph-value';
 
 /** Semantic broadcast multiply-add: output = scale * input + addend. */
-export class GPUProgramVectorMADD implements GPUOperation {
+export class GPUGraphVectorMADD implements GPUOperation {
   readonly type = 'vector-madd';
   readonly id: string;
   readonly metadata: GPUOperationMetadata;
   constructor(
     readonly props: {
       id?: string;
-      input: GPUProgramVector<'float32'>;
-      scale: GPUProgramScalar<'float32'>;
-      addend: GPUProgramVector<'float32'>;
-      output: GPUProgramVector<'float32'>;
+      input: GPUGraphVector<'float32'>;
+      scale: GPUGraphScalar<'float32'>;
+      addend: GPUGraphVector<'float32'>;
+      output: GPUGraphVector<'float32'>;
     }
   ) {
     this.id = props.id ?? 'gpu-vector-madd';
@@ -28,16 +28,16 @@ export class GPUProgramVectorMADD implements GPUOperation {
 }
 
 /** Semantic float32 dot product writing one scalar. */
-export class GPUProgramDotProduct implements GPUOperation {
+export class GPUGraphDotProduct implements GPUOperation {
   readonly type = 'dot-product';
   readonly id: string;
   readonly metadata: GPUOperationMetadata;
   constructor(
     readonly props: {
       id?: string;
-      left: GPUProgramVector<'float32'>;
-      right: GPUProgramVector<'float32'>;
-      output: GPUProgramScalar<'float32'>;
+      left: GPUGraphVector<'float32'>;
+      right: GPUGraphVector<'float32'>;
+      output: GPUGraphScalar<'float32'>;
     }
   ) {
     this.id = props.id ?? 'gpu-dot-product';

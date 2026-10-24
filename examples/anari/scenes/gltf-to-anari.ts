@@ -6,7 +6,7 @@ import type {
   GLTFNodePostprocessed,
   GLTFPostprocessed,
   GLTFTexturePostprocessed
-} from '@loaders.gl/gltf';
+} from '@luma.gl/gltf';
 import type {ANARIAnimationNodeDescription, ANARIVector3} from '@luma.gl/anari';
 import {makeANARIAnimationClipsFromGLTF} from '@luma.gl/anari/gltf';
 import {
@@ -661,7 +661,13 @@ function getImageSource(
   if (cached) {
     return cached;
   }
-  const data = image.bufferView?.data || image.image?.data;
+  const decodedImage = image.image;
+  const decodedData = decodedImage && 'data' in decodedImage ? decodedImage.data : undefined;
+  const data =
+    image.bufferView?.data ||
+    (ArrayBuffer.isView(decodedData)
+      ? new Uint8Array(decodedData.buffer, decodedData.byteOffset, decodedData.byteLength)
+      : undefined);
   const source = data
     ? URL.createObjectURL(new Blob([new Uint8Array(data)], {type: image.mimeType || 'image/png'}))
     : image.uri;

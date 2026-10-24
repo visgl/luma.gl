@@ -27,21 +27,21 @@ caller-owned evaluators. No GPGPU APIs are removed in this first phase.
 
 ## Existing semantic operations
 
-SimpleGraph executes the existing `GPUProgramScalarLiteral`, `GPUProgramScalarOperation`, and `GPUProgramVectorMADD`
+SimpleGraph executes the existing `GPUGraphScalarLiteral`, `GPUGraphScalarOperation`, and `GPUGraphVectorMADD`
 operations without changing their definitions or the full graph compiler:
 
 ```typescript
 import {
-  GPUProgram, GPUProgramScalarLiteral, GPUProgramVectorMADD
+  GPUGraph, GPUGraphScalarLiteral, GPUGraphVectorMADD
 } from '@luma.gl/graph/gpu-core';
 
-const program = new GPUProgram();
+const program = new GPUGraph();
 const input = program.vector('input', 'float32', inputVector.length, {external: true});
 const output = program.vector('output', 'float32', inputVector.length);
 const scale = program.scalar('scale', 'float32');
 program.add([
-  new GPUProgramScalarLiteral({output: scale, value: 2}),
-  new GPUProgramVectorMADD({input, scale, addend: input, output})
+  new GPUGraphScalarLiteral({output: scale, value: 2}),
+  new GPUGraphVectorMADD({input, scale, addend: input, output})
 ]);
 const bindings = {vectors: {input: inputVector}};
 const compiled = new GPUSimpleGraph(device).add(program.operations).compile({
@@ -52,8 +52,8 @@ const result = await compiled.run();
 compiled.destroy();
 ```
 
-The same program and bindings can be passed to `GPUProgramCompiler.compile(program, bindings)`.
-Bindings use its existing `GPUProgramBindings` type: vectors, GPUData chunks, or arrays of chunks.
+The same program and bindings can be passed to `GPUGraphCompiler.compile(program, bindings)`.
+Bindings use its existing `GPUGraphBindings` type: vectors, GPUData chunks, or arrays of chunks.
 Semantic outputs are selected by logical value ID, not operation ID. Semantic operation IDs may
 repeat, including default multiply-add IDs. Chains, branches, nested composites, and multiple
 selected outputs are supported; explicit evaluator output IDs must remain unique.
@@ -107,7 +107,7 @@ dependencies. Semantic adapters are owned by the compiled graph and need only `c
 
 ## Capabilities and limits
 
-GPUSimpleGraphOperation is currently executable only by GPUSimpleGraph. Acceptance by GPUProgram provides shared composition and inspection, not a lowering in GPUProgramCompiler or compatibility with GPUGraph.add().
+GPUSimpleGraphOperation is currently executable only by GPUSimpleGraph. Acceptance by GPUGraph provides shared composition and inspection, not a lowering in GPUGraphCompiler or compatibility with GPUCommandGraph.add().
 
 WebGPU graphs support caller-controlled submission through `run({scope})`; dynamic bindings and transient allocation remain unsupported. There is no standalone encode() method. Backend operation support and the existing CPU constant fast path remain unchanged; the wrapper introduces no CPU fallback or readback.
 

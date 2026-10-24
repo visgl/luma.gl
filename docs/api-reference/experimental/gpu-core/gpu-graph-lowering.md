@@ -1,15 +1,15 @@
 import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-contract';
 
-# GPU program lowering
+# GPU graph lowering
 
 ## Overview
 
-`GPUProgram` is semantic. A backend compiler owns every decision that turns those semantics into executable work.
+`GPUGraph` is semantic. A backend compiler owns every decision that turns those semantics into executable work.
 
-<GPUOperationContract operation="gpu-program-lowering" />
+<GPUOperationContract operation="gpu-graph-lowering" />
 
 ```text
-GPUProgram
+GPUGraph
   GPUOperation
   Composite
   Conditional
@@ -57,7 +57,7 @@ Loops without runtime predicates can already lower by bounded unrolling. Runtime
 
 ## Execution primitives
 
-Semantic operations use registered backend lowerers. Concrete `GPUProgramPrimitive` objects return
+Semantic operations use registered backend lowerers. Concrete `GPUGraphPrimitive` objects return
 nodes through `getCommandNodes(graph)`; their decision is recorded as `explicit-command-nodes`.
 Construction may allocate graph-owned scratch but cannot schedule work. There is no legacy mutation
 fallback.
@@ -81,4 +81,4 @@ PCG
     reason: N exceeds single-workgroup capacity
 ```
 
-This decision record is the beginning of the planner/compiler interface that Ploor can later own without changing `GPUProgram` or `GPUCommandGraph`.
+This decision record is the beginning of the planner/compiler interface that Ploor can later own without changing `GPUGraph` or `GPUCommandGraph`.

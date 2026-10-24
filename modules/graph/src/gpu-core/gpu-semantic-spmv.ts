@@ -3,25 +3,25 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {GPUOperation, GPUOperationMetadata} from './gpu-operation';
-import type {GPUProgramVector} from './gpu-program-value';
+import type {GPUGraphVector} from './gpu-graph-value';
 import type {GPUSpMVRowStatistics, GPUSpMVStrategyId} from './gpu-spmv-strategy';
 
 /** Backend-independent CSR sparse matrix resource assembled from logical program vectors. */
-export class GPUProgramCSRMatrix {
+export class GPUGraphCSRMatrix {
   readonly id: string;
   readonly rows: number;
   readonly columns: number;
-  readonly rowOffsets: GPUProgramVector<'uint32'>;
-  readonly columnIndices: GPUProgramVector<'uint32'>;
-  readonly values: GPUProgramVector<'float32'>;
+  readonly rowOffsets: GPUGraphVector<'uint32'>;
+  readonly columnIndices: GPUGraphVector<'uint32'>;
+  readonly values: GPUGraphVector<'float32'>;
   readonly statistics?: GPUSpMVRowStatistics;
   constructor(props: {
     id: string;
     rows: number;
     columns: number;
-    rowOffsets: GPUProgramVector<'uint32'>;
-    columnIndices: GPUProgramVector<'uint32'>;
-    values: GPUProgramVector<'float32'>;
+    rowOffsets: GPUGraphVector<'uint32'>;
+    columnIndices: GPUGraphVector<'uint32'>;
+    values: GPUGraphVector<'float32'>;
     statistics?: GPUSpMVRowStatistics;
   }) {
     this.id = props.id;
@@ -39,16 +39,16 @@ export class GPUProgramCSRMatrix {
 }
 
 /** Semantic `output = matrix * vector`. Strategy selection belongs to the backend compiler. */
-export class GPUProgramSpMV implements GPUOperation {
+export class GPUGraphSpMV implements GPUOperation {
   readonly type = 'spmv';
   readonly id: string;
   readonly metadata: GPUOperationMetadata;
   constructor(
     readonly props: {
       id?: string;
-      matrix: GPUProgramCSRMatrix;
-      vector: GPUProgramVector<'float32'>;
-      output: GPUProgramVector<'float32'>;
+      matrix: GPUGraphCSRMatrix;
+      vector: GPUGraphVector<'float32'>;
+      output: GPUGraphVector<'float32'>;
       /** Optional benchmark/debug hint, not portable semantics. */
       strategy?: GPUSpMVStrategyId;
     }

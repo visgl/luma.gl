@@ -12,7 +12,8 @@ animation mixer, interpolation implementation, or skinning shader.
 
 ```ts
 import {load} from '@loaders.gl/core';
-import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/gltf';
+import {postProcessGLTF} from '@luma.gl/gltf';
 import {createScenegraphsFromGLTF, parseGLTFAnimations} from '@luma.gl/gltf';
 
 const asset = await load('/models/character.glb', GLTFLoader);

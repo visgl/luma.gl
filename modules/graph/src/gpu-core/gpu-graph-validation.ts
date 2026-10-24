@@ -2,27 +2,27 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUProgram} from './gpu-program';
-import {GPUCompositeOperation, type GPUProgramOperation} from './gpu-operation';
+import type {GPUGraph} from './gpu-graph';
+import {GPUCompositeOperation, type GPUGraphOperation} from './gpu-operation';
 import {GPUConditionalOperation, GPULoopOperation} from './gpu-control-flow-operation';
-import type {GPUProgramBindings} from './gpu-program-compiler';
-export type GPUProgramValidationIssue = {
+import type {GPUGraphBindings} from './gpu-graph-compiler';
+export type GPUGraphValidationIssue = {
   level: 'error' | 'warning';
   code: string;
   message: string;
   operationId?: string;
   valueId?: string;
 };
-export type GPUProgramValidationReport = {
+export type GPUGraphValidationReport = {
   valid: boolean;
-  issues: readonly GPUProgramValidationIssue[];
+  issues: readonly GPUGraphValidationIssue[];
 };
 /** Validates semantic structure and required external bindings before WebGPU graph allocation/lowering. */
-export function validateGPUProgram(
-  program: GPUProgram,
-  bindings: GPUProgramBindings = {}
-): GPUProgramValidationReport {
-  const issues: GPUProgramValidationIssue[] = [];
+export function validateGPUGraph(
+  program: GPUGraph,
+  bindings: GPUGraphBindings = {}
+): GPUGraphValidationReport {
+  const issues: GPUGraphValidationIssue[] = [];
   const scalars = new Set(program.scalars.map(value => value.id));
   for (const vector of program.vectors)
     if (vector.external && !bindings.vectors?.[vector.id])
@@ -32,7 +32,7 @@ export function validateGPUProgram(
         valueId: vector.id,
         message: `External vector "${vector.id}" has no WebGPU binding`
       });
-  const visit = (operation: GPUProgramOperation): void => {
+  const visit = (operation: GPUGraphOperation): void => {
     const id = 'id' in operation && typeof operation.id === 'string' ? operation.id : undefined;
     if (operation instanceof GPUConditionalOperation || operation instanceof GPULoopOperation) {
       const predicate = operation.predicate;

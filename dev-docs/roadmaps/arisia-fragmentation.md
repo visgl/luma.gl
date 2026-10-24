@@ -3,7 +3,7 @@
 ## Scope
 
 This tranche reduces shared CPU planning costs and the multiplicative sparse-matrix routing cost.
-It preserves the existing GPUVector, GPUProgram, graph.add and Kernel APIs, borrowed source buffers,
+It preserves the existing GPUVector, GPUGraph, graph.add and Kernel APIs, borrowed source buffers,
 chunk boundaries, graph hazards and GPU-controlled execution. There is no implicit packing API,
 compatibility facade or new public program wrapper.
 

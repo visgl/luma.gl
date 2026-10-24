@@ -45,7 +45,7 @@ Target Release Date: Q3, 2026
 **General**
 
 - **Graph resource inspection** - The graph inspector adds a Graph Resources tab with selectable buffer/texture views, a persistent content viewer, and on-demand hover previews. See [resource inspection](/docs/api-reference/experimental/gpu-core/debugging#graph-resources-inspect-buffers-and-textures).
-- **Program texture resources** - `GPUProgram` now describes texture storage and subresource views, with caller-owned imports and graph-owned transients. See [buffer and texture management](/docs/api-reference/experimental/gpu-core/resources).
+- **Program texture resources** - `GPUGraph` now describes texture storage and subresource views, with caller-owned imports and graph-owned transients. See [buffer and texture management](/docs/api-reference/experimental/gpu-core/resources).
 
 - **Shared math and loader APIs** - Dependencies use math.gl 5.0.0-alpha.19 grouped
   packages and loaders.gl 5.0.0-alpha.12. Arrow adapters expose
@@ -859,3 +859,4 @@ glTF adds live deformation cooking snapshots and explicit native state export. T
 Authored Scene Stress Lab exercises shared assets and repeated lifecycle operations.
 See [scenegraph physics](./api-guide/engine/scenegraph-physics.md) for the supported
 contracts and remaining qualification limits.
+

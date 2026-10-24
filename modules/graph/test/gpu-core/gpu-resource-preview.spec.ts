@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, Texture} from '@luma.gl/core';
-import {GPUGraph, GPUCommandGraphInspector} from '@luma.gl/graph/gpu-core';
+import {GPUCommandGraph, GPUCommandGraphInspector} from '@luma.gl/graph/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, test} from 'vitest';
 
@@ -27,7 +27,7 @@ test('inspector reads bounded current buffer and texture contents after graph su
     mipLevels: 2,
     usage: Texture.COPY_SRC | Texture.COPY_DST
   });
-  const graph = new GPUGraph(device);
+  const graph = new GPUCommandGraph(device);
   const bufferHandle = graph.importBuffer(
     {id: 'buffer', byteLength: source.byteLength, usage: Buffer.COPY_SRC},
     source

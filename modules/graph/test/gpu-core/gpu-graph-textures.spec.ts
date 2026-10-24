@@ -3,14 +3,14 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, Texture} from '@luma.gl/core';
-import {GPUProgram, GPUProgramCompiler} from '@luma.gl/graph/gpu-core';
+import {GPUGraph, GPUGraphCompiler} from '@luma.gl/graph/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, test, vi} from 'vitest';
 
 test('program texture subresources and rebound imports compose in one submission', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) return;
-  const program = new GPUProgram();
+  const program = new GPUGraph();
   const source = program.texture('source', {
     format: 'rgba8unorm',
     width: 2,
@@ -41,7 +41,7 @@ test('program texture subresources and rebound imports compose in one submission
     usage: Texture.COPY_DST | Texture.COPY_SRC,
     external: true
   });
-  const compiler = new GPUProgramCompiler(device);
+  const compiler = new GPUGraphCompiler(device);
   let physicalScratch: Texture | undefined;
   compiler.lowerings.register('copy', (_operation, context) => {
     const input = context.resolveTexture(source);
