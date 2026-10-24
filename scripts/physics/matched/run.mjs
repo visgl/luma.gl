@@ -176,15 +176,16 @@ export async function runSuite(options = {}) {
   if (!['localhost', '127.0.0.1', '[::1]'].includes(baseUrl.hostname))
     throw new Error('Use a local Vite server');
   const reference = buildReference(options);
-  const browser = await chromium.launch(
-    getPlaywrightLaunchOptions({
-      headless: true,
-      backend: 'webgpu-core',
-      softwareGpu: Boolean(options.software)
-    })
-  );
+  let browser;
   const results = [];
   try {
+    browser = await chromium.launch(
+      getPlaywrightLaunchOptions({
+        headless: true,
+        backend: 'webgpu-core',
+        softwareGpu: Boolean(options.software)
+      })
+    );
     const page = await browser.newPage();
     await page.route('**/main.ts*', route =>
       route.fulfill({contentType: 'text/javascript', body: ''})
@@ -368,7 +369,11 @@ export async function runSuite(options = {}) {
       ]
     };
   } finally {
-    await browser.close();
+    try {
+      await browser?.close();
+    } finally {
+      reference.destroy();
+    }
   }
 }
 async function runGPUReplay({root, props, settings, quality, profile = false}) {

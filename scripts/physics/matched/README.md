@@ -12,9 +12,11 @@ Playwright Chromium. The reference builder fetches the exact commit in
 `box3d-reference.json` into a fresh, private, exclusively created temporary directory
 and compiles Release with
 SIMD enabled and float32 positions. It does not install or vendor Box3D into luma.gl.
-Default runs do not reuse predictable shared directories. To reuse a build, pass
+Default suite runs remove their automatic checkout/build directory after completion or
+failure; caller-supplied directories are retained. Failed builds also remove their
+automatic directories. Default runs do not reuse predictable shared directories. To reuse a build, pass
 `--source` and `--build` pointing to trusted directories you own; the builder CLI
-prints both paths. A supplied `--source` must be clean and at that exact revision. The report records the
+prints both paths and deliberately retains a successful standalone build for reuse. A supplied `--source` must be clean and at that exact revision. The report records the
 license, revision, compiler configuration, host and actual worker count.
 
 ```sh

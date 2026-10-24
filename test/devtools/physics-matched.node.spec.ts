@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import {expect, test} from 'vitest';
-import {statSync, rmSync} from 'node:fs';
+import {statSync, existsSync} from 'node:fs';
 import {createReferenceCache} from '../../scripts/physics/matched/build-reference.mjs';
 import {
   makeMatchedFixture,
@@ -148,18 +148,21 @@ test('hardware ratios require positively identified hardware on every replay', (
   expect(isHardwareAdapter({fallback: false, gpu: 'nvidia', gpuType: 'discrete'})).toBe(true);
 });
 
-test('reference caches are exclusively created private directories', () => {
+test('reference caches are private, unique and explicitly disposable', () => {
   const first = createReferenceCache();
   const second = createReferenceCache();
   try {
-    expect(first).not.toBe(second);
+    expect(first.root).not.toBe(second.root);
     for (const directory of [first, second]) {
-      const metadata = statSync(directory);
+      const metadata = statSync(directory.root);
       expect(metadata.isDirectory()).toBe(true);
       if (process.platform !== 'win32') expect(metadata.mode & 0o077).toBe(0);
     }
   } finally {
-    rmSync(first, {recursive: true});
-    rmSync(second, {recursive: true});
+    first.destroy();
+    second.destroy();
   }
+  expect(existsSync(first.root)).toBe(false);
+  expect(existsSync(second.root)).toBe(false);
+  expect(() => first.destroy()).not.toThrow();
 });
