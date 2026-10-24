@@ -182,6 +182,7 @@ export default class AuthoredSceneStress extends PhysicsApp {
 
   private synchronize() {
     if (!this.session) return;
+    if (this.graph !== this.session.graph) this.diagnostics.clear();
     this.world = this.session.world;
     this.graph = this.session.graph;
     this.publication = this.session.publication;
