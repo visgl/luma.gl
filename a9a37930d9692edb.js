@@ -1,0 +1,1 @@
+window=this,"u"<typeof console&&(console={log:function(){},error:function(){}});

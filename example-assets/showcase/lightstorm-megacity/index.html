@@ -1,0 +1,44 @@
+<!doctype html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lightstorm Megacity</title>
+  <style>
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #01030c; }
+    canvas { display: block; width: 100vw !important; height: 100vh !important; }
+  </style>
+</head>
+<script type="module">
+  import {luma} from '@luma.gl/core';
+  import {makeAnimationLoop} from '@luma.gl/engine';
+  import {webgpuAdapter} from '@luma.gl/webgpu';
+  import AnimationLoopTemplate from './app.ts';
+
+  const supportsHighDynamicRange =
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(dynamic-range: high)').matches;
+
+  let device;
+  try {
+    device = await luma.createDevice({
+      id: 'lightstorm-megacity',
+      adapters: [webgpuAdapter],
+      createCanvasContext: supportsHighDynamicRange
+        ? {colorFormat: 'rgba16float', colorSpace: 'display-p3', toneMapping: 'extended'}
+        : true
+    });
+  } catch (error) {
+    if (!supportsHighDynamicRange) {
+      throw error;
+    }
+    device = await luma.createDevice({
+      id: 'lightstorm-megacity-sdr-fallback',
+      adapters: [webgpuAdapter],
+      createCanvasContext: true
+    });
+  }
+
+  const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {device});
+  animationLoop.start();
+</script>
+<body></body>

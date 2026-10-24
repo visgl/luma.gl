@@ -1,0 +1,45 @@
+<!doctype html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Effects: Image Processing</title>
+  <style>
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      background: #020617;
+      color-scheme: dark;
+      margin: 0;
+    }
+
+    canvas {
+      display: block;
+      width: 100vw !important;
+      height: 100vh !important;
+    }
+  </style>
+</head>
+<script type="module">
+  import {luma} from '@luma.gl/core';
+  import {webgl2Adapter} from '@luma.gl/webgl';
+  import {webgpuAdapter} from '@luma.gl/webgpu';
+  import {makeAnimationLoop} from '@luma.gl/engine';
+  import AnimationLoopTemplate from './app.ts';
+
+  const requestedDevice = new URLSearchParams(window.location.search).get('device');
+  const adapters =
+    requestedDevice === 'webgl'
+      ? [webgl2Adapter]
+      : requestedDevice === 'webgpu'
+        ? [webgpuAdapter]
+        : [webgpuAdapter, webgl2Adapter];
+  const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters});
+  animationLoop.start();
+</script>
+<body>
+</body>

@@ -1,0 +1,27 @@
+{
+  "name": "luma.gl-examples-v10-gpgpu",
+  "version": "10.0.0-alpha.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "vite",
+    "build": "tsc && vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "@luma.gl/arrow": "10.0.0-alpha.1",
+    "@luma.gl/core": "10.0.0-alpha.1",
+    "@luma.gl/engine": "10.0.0-alpha.1",
+    "@luma.gl/gpgpu": "10.0.0-alpha.1",
+    "@luma.gl/shadertools": "10.0.0-alpha.1",
+    "@luma.gl/webgl": "10.0.0-alpha.1",
+    "@luma.gl/webgpu": "10.0.0-alpha.1",
+    "@tanstack/virtual-core": "^3.16.0",
+    "acorn": "^8.16.0",
+    "apache-arrow": "^17.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vite": "^8.0.0"
+  }
+}

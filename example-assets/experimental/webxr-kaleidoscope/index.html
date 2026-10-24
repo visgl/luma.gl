@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebXR: Immersive Prism Portal | luma.gl</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      }
+
+      html,
+      body,
+      #scene {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+      }
+
+      body {
+        background: #020411;
+        color: #f8fafc;
+      }
+
+      #scene canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      .portal-panel {
+        position: fixed;
+        z-index: 2;
+        top: 26px;
+        left: 26px;
+        box-sizing: border-box;
+        width: min(390px, calc(100vw - 40px));
+        padding: 22px;
+        border: 1px solid rgba(103, 232, 249, 0.2);
+        border-radius: 20px;
+        background: linear-gradient(145deg, rgba(6, 12, 28, 0.94), rgba(15, 23, 42, 0.81));
+        box-shadow: 0 20px 80px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(18px);
+      }
+
+      .portal-panel__eyebrow {
+        margin: 0 0 9px;
+        color: #67e8f9;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.19em;
+        text-transform: uppercase;
+      }
+
+      .portal-panel h1 {
+        margin: 0;
+        font-size: 27px;
+        font-weight: 670;
+        letter-spacing: -0.055em;
+      }
+
+      .portal-panel p {
+        margin: 10px 0 0;
+        color: #a5b4c8;
+        font-size: 13px;
+        line-height: 1.58;
+      }
+
+      .portal-panel__actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px;
+        margin-top: 18px;
+      }
+
+      button {
+        padding: 9px 14px;
+        border: 1px solid rgba(103, 232, 249, 0.42);
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.9);
+        color: #ecfeff;
+        cursor: pointer;
+        font: 600 12px Inter, ui-sans-serif, system-ui, sans-serif;
+      }
+
+      button:hover {
+        border-color: #67e8f9;
+        background: rgba(14, 116, 144, 0.34);
+      }
+
+      button:focus-visible {
+        outline: 2px solid #a5f3fc;
+        outline-offset: 3px;
+      }
+
+      #backend-status,
+      #session-status {
+        display: block;
+        margin-top: 13px;
+        color: #cbd5e1;
+        font-size: 11px;
+        line-height: 1.55;
+      }
+
+      #session-status[data-error='true'] {
+        color: #fda4af;
+      }
+
+      .preview-hint {
+        position: fixed;
+        right: 24px;
+        bottom: 20px;
+        color: rgba(203, 213, 225, 0.72);
+        font-size: 11px;
+        letter-spacing: 0.04em;
+      }
+
+      @media (max-width: 540px) {
+        .portal-panel {
+          top: 14px;
+          left: 14px;
+          padding: 16px;
+        }
+
+        .portal-panel h1 {
+          font-size: 23px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main id="scene" aria-label="Animated stereoscopic prism portal preview"></main>
+    <aside class="portal-panel">
+      <div class="portal-panel__eyebrow">luma.gl · spatial rendering</div>
+      <h1>Immersive Prism Portal</h1>
+      <p>
+        GPU-driven prism rings, luminous particle ribbons, and real stereo depth. A headset is
+        optional for the live desktop preview.
+      </p>
+      <div class="portal-panel__actions">
+        <button id="enter-vr" type="button">Enter VR</button>
+        <button id="enter-ar" type="button">Enter AR</button>
+        <button id="switch-backend" type="button">Use WebGL2</button>
+      </div>
+      <span id="backend-status" role="status">Preparing GPU renderer…</span>
+      <span id="session-status" aria-live="polite"></span>
+    </aside>
+    <div class="preview-hint">Drag to orbit · Scroll to move through the portal</div>
+
+    <script type="module">
+      import {luma} from '@luma.gl/core';
+      import {makeAnimationLoop} from '@luma.gl/engine';
+      import {webgl2Adapter} from '@luma.gl/webgl';
+      import {webgpuAdapter} from '@luma.gl/webgpu';
+      import AnimationLoopTemplate from './app.ts';
+
+      const sceneElement = document.getElementById('scene');
+      const backendStatus = document.getElementById('backend-status');
+      const sessionStatus = document.getElementById('session-status');
+      const switchBackendButton = document.getElementById('switch-backend');
+      let animationLoop = null;
+      let currentDevice = null;
+
+      function makeDeviceProps(type, xrCompatible = false) {
+        return {
+          id: `immersive-prism-portal-${type}`,
+          type,
+          adapters: [webgpuAdapter, webgl2Adapter],
+          xrCompatible,
+          createCanvasContext: {container: sceneElement, alphaMode: 'opaque'}
+        };
+      }
+
+      async function createPreferredDevice(type = 'webgpu') {
+        if (type === 'webgl') {
+          return await luma.createDevice(makeDeviceProps('webgl'));
+        }
+
+        try {
+          return await luma.createDevice(makeDeviceProps('webgpu', true));
+        } catch {
+          try {
+            return await luma.createDevice(makeDeviceProps('webgpu'));
+          } catch {
+            return await luma.createDevice(makeDeviceProps('webgl'));
+          }
+        }
+      }
+
+      async function startRenderer(type = 'webgpu') {
+        animationLoop?.destroy();
+        currentDevice?.destroy();
+        sceneElement.replaceChildren();
+        sessionStatus.textContent = '';
+
+        currentDevice = await createPreferredDevice(type);
+        animationLoop = makeAnimationLoop(AnimationLoopTemplate, {device: currentDevice});
+        await animationLoop.start();
+
+        if (currentDevice.type === 'webgpu') {
+          const supportsNativeXR = currentDevice.props.xrCompatible && 'XRGPUBinding' in window;
+          backendStatus.textContent = supportsNativeXR
+            ? 'WebGPU · native XR projection layers available when a headset is connected'
+            : 'WebGPU desktop preview · switch to WebGL2 for immersive headset fallback';
+          switchBackendButton.textContent = 'Use WebGL2';
+        } else {
+          backendStatus.textContent = 'WebGL2 · portable stereo and optional AR camera access';
+          switchBackendButton.textContent = 'Use WebGPU';
+        }
+      }
+
+      async function toggleSession(mode) {
+        const application = AnimationLoopTemplate.current;
+        if (!application) {
+          return;
+        }
+
+        try {
+          sessionStatus.dataset.error = 'false';
+          if (application.xrSessionMode === mode) {
+            await application.exitXR();
+            sessionStatus.textContent = 'Returned to the live desktop preview';
+          } else {
+            if (application.xrSession) {
+              await application.exitXR();
+            }
+            await application.enterXR(mode);
+            sessionStatus.textContent = `${mode === 'immersive-ar' ? 'AR' : 'VR'} session active`;
+          }
+        } catch (error) {
+          sessionStatus.dataset.error = 'true';
+          sessionStatus.textContent = error instanceof Error ? error.message : String(error);
+        }
+      }
+
+      document.getElementById('enter-vr').addEventListener('click', () => {
+        void toggleSession('immersive-vr');
+      });
+      document.getElementById('enter-ar').addEventListener('click', () => {
+        void toggleSession('immersive-ar');
+      });
+      switchBackendButton.addEventListener('click', () => {
+        void startRenderer(currentDevice?.type === 'webgpu' ? 'webgl' : 'webgpu').catch(error => {
+          sessionStatus.dataset.error = 'true';
+          sessionStatus.textContent = error instanceof Error ? error.message : String(error);
+        });
+      });
+
+      startRenderer().catch(error => {
+        sessionStatus.dataset.error = 'true';
+        sessionStatus.textContent = error instanceof Error ? error.message : String(error);
+      });
+    </script>
+  </body>
+</html>

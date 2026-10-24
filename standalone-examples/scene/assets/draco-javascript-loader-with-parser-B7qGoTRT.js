@@ -1,0 +1,1 @@
+import{t as e}from"./library-utils-DNA6jbzT.js";import{n as t,t as n}from"./parse-draco-Bo-ZW4da.js";import{t as r}from"./draco-loader-Bfnim78_.js";var{preload:i,...a}=r,o={...a,parse:async(r,i)=>await n(r,i,async()=>await t(e(i),`js`))};export{o as DracoJavaScriptLoaderWithParser};

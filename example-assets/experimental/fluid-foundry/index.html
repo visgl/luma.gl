@@ -1,0 +1,62 @@
+<!doctype html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fluid Foundry: Liquid Metal Press</title>
+  <style>
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #020306;
+      color-scheme: dark;
+    }
+  </style>
+</head>
+<body>
+  <div id="fluid-foundry-status" style="margin: 24px; font: 14px system-ui; color: #9cdfff">
+    Loading Fluid Foundry…
+  </div>
+  <script type="module">
+    const status = document.querySelector('#fluid-foundry-status');
+
+    try {
+      const [{luma}, {makeAnimationLoop}, {webgpuAdapter}, {default: AnimationLoopTemplate}] =
+        await Promise.all([
+          import('@luma.gl/core'),
+          import('@luma.gl/engine'),
+          import('@luma.gl/webgpu'),
+          import('./app.ts')
+        ]);
+      const supportsHighDynamicRange =
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(dynamic-range: high)').matches;
+      status.textContent = 'Acquiring WebGPU device…';
+      const device = await luma.createDevice({
+        id: 'fluid-foundry-liquid-metal-press',
+        adapters: [webgpuAdapter],
+        featureLevel: 'best-available',
+        powerPreference: 'high-performance',
+        waitForPageLoad: false,
+        createCanvasContext: supportsHighDynamicRange
+          ? {colorFormat: 'rgba16float', colorSpace: 'display-p3', toneMapping: 'extended'}
+          : true
+      });
+      if (device.info.featureLevel !== 'core') {
+        throw new Error('Fluid Foundry requires core WebGPU shader limits.');
+      }
+      status.textContent = 'Starting MLS-MPM simulation…';
+      const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {device});
+      await animationLoop.start();
+      status.remove();
+    } catch (error) {
+      console.error('Fluid Foundry failed to start.', error);
+      status.id = 'fluid-foundry-startup-error';
+      status.textContent = error instanceof Error ? error.stack || error.message : String(error);
+      status.style.cssText =
+        'margin:24px;color:#fff;background:#630;padding:16px;white-space:pre-wrap;font:13px/1.45 monospace';
+    }
+  </script>
+</body>

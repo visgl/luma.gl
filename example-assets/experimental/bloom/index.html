@@ -1,0 +1,72 @@
+<!doctype html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+    }
+
+    body {
+      overflow: hidden;
+      background: #020617;
+      color-scheme: dark;
+      margin: 0;
+    }
+
+    canvas {
+      display: block;
+      width: 100vw !important;
+      height: 100vh !important;
+    }
+
+    #example-panel-container {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 1;
+      width: min(360px, calc(100vw - 32px));
+      max-height: calc(100vh - 32px);
+      overflow: auto;
+      border: 1px solid rgb(255 255 255 / 15%);
+      border-radius: 8px;
+      background: rgb(3 7 18 / 82%);
+      color: white;
+      backdrop-filter: blur(12px);
+    }
+  </style>
+</head>
+<script type="module">
+  import {luma} from '@luma.gl/core';
+  import {webgl2Adapter} from '@luma.gl/webgl';
+  import {webgpuAdapter} from '@luma.gl/webgpu';
+  import {makeAnimationLoop} from '@luma.gl/engine';
+  import AnimationLoopTemplate from './app.ts';
+
+  const requestedDevice = new URLSearchParams(window.location.search).get('device');
+  const adapters =
+    requestedDevice === 'webgl'
+      ? [webgl2Adapter]
+      : requestedDevice === 'webgpu'
+        ? [webgpuAdapter]
+        : [webgpuAdapter, webgl2Adapter];
+  const supportsHighDynamicRange =
+    requestedDevice !== 'webgl' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(dynamic-range: high)').matches;
+  const device = luma.createDevice({
+    id: 'bloom',
+    adapters,
+    createCanvasContext: supportsHighDynamicRange
+      ? {colorFormat: 'rgba16float', colorSpace: 'display-p3', toneMapping: 'extended'}
+      : true
+  });
+  const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {device});
+  animationLoop.start();
+</script>
+<body>
+  <aside id="example-panel-container">
+    <div id="example-panel-host" data-example-panel-host></div>
+  </aside>
+</body>
