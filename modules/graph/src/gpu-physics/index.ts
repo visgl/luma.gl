@@ -118,3 +118,7 @@ export {
 } from './scenegraph-instance';
 
 export {scaleRigidBodyShape} from './scale-shape';
+export {ScenegraphPhysicsPublication} from './scenegraph-publication';
+export type {ScenegraphPhysicsRenderBinding} from './scenegraph-publication';
+export {ScenegraphPhysicsSession} from './scenegraph-session';
+export type {ScenegraphPhysicsScene, ScenegraphPhysicsSessionCapture} from './scenegraph-session';

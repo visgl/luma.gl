@@ -19,7 +19,8 @@ import {
   validateOptions,
   referenceInput,
   checkInitialState,
-  checkMassProperties
+  checkMassProperties,
+  isHardwareAdapter
 } from '../../scripts/physics/matched/run.mjs';
 
 test('fixtures are deterministic, seeded, and shared without changing body order or dimensions', () => {
@@ -134,4 +135,13 @@ test('large stack fixtures keep every box over the supporting slab', () => {
         ).toBeLessThanOrEqual(slab.halfExtents[axis]);
     }
   }
+});
+
+test('hardware ratios require positively identified hardware on every replay', () => {
+  expect(isHardwareAdapter({fallback: false, gpu: 'unknown', gpuType: 'unknown'})).toBe(false);
+  expect(isHardwareAdapter({fallback: false, gpu: 'software', gpuType: 'discrete'})).toBe(false);
+  expect(isHardwareAdapter({fallback: true, gpu: 'nvidia', gpuType: 'discrete'})).toBe(false);
+  expect(isHardwareAdapter({gpu: 'apple', gpuType: 'integrated'})).toBe(false);
+  expect(isHardwareAdapter({fallback: false, gpu: 'apple', gpuType: 'integrated'})).toBe(true);
+  expect(isHardwareAdapter({fallback: false, gpu: 'nvidia', gpuType: 'discrete'})).toBe(true);
 });

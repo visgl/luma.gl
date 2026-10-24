@@ -12,6 +12,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'deck/city-scene',
   'api/blending',
   'gltf/physics',
+  'gltf/authored-scene-stress',
   'deck/gltf-interactivity',
   'api/multi-canvas',
   'api/render-bundles',

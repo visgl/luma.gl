@@ -4,6 +4,11 @@ on:
   pull_request:
     paths:
       - 'scripts/physics/matched/**'
+      - 'scripts/playwright/get-playwright-launch-options.mjs'
+      - 'modules/graph/src/gpu-physics/**'
+      - 'modules/graph/src/gpu-core/**'
+      - 'modules/core/src/**'
+      - 'modules/gpgpu/src/**'
       - 'examples/experimental/physics-stress/matched-fixtures.ts'
       - 'test/devtools/physics-matched.node.spec.ts'
       - '.github/workflows/physics-reference.yml'

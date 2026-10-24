@@ -7,6 +7,7 @@ import {
   type Binding,
   type BindingDeclaration,
   type Device,
+  type CommandEncoder,
   type ShaderLayout
 } from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
@@ -188,6 +189,7 @@ export class GPURigidBodyWorld {
   /** Borrowed by renderers; updated after each accepted or rolled-back step. */
   poseMatrices: Buffer | null = null;
   poseBounds: Buffer | null = null;
+  private encodePosePublication?: (encoder: CommandEncoder) => void;
   positions: Buffer | null = null;
   orientations: Buffer | null = null;
   velocities: Buffer | null = null;
@@ -233,8 +235,10 @@ export class GPURigidBodyWorld {
       (props.publicationBounds.length !== props.bodies.length ||
         props.publicationBounds.some(
           bounds =>
-            bounds.some(vector => vector.length !== 3 || !vector.every(Number.isFinite)) ||
-            bounds[0].some((value, axis) => value > bounds[1][axis])
+            bounds.some(
+              vector =>
+                vector.length !== 3 || !vector.every(value => Number.isFinite(Math.fround(value)))
+            ) || bounds[0].some((value, axis) => value > bounds[1][axis])
         ))
     )
       throw new Error('Invalid publication bounds');
@@ -1260,6 +1264,7 @@ export class GPURigidBodyWorld {
         diagnosticBinding('orientations'),
         allocate
       );
+      this.encodePosePublication = publication.encode;
       this.poseMatrices = publication.matrices;
       this.poseBounds = this.props.publicationBounds ? publication.bounds : null;
     }
@@ -1527,7 +1532,10 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
   }
 
   /** Read configured motion properties; use readState() for simulated pose and velocity. */
-  getBodyParameters(body: number): GPURigidBodyParameters {
+  getBodyParameters(
+    body: number,
+    {deriveInertia = true}: {deriveInertia?: boolean} = {}
+  ): GPURigidBodyParameters {
     const definition = this.props.bodies[body];
     if (!definition || this.destroyed) throw new Error('Invalid body');
     const {
@@ -1549,13 +1557,50 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       mode: mode ?? ((mass ?? 1) === 0 ? 'static' : 'dynamic'),
       mass: mass ?? 1,
       centerOfMass: centerOfMass ?? [0, 0, 0],
-      inertiaDiagonal: inertiaDiagonal ?? compound.diagonal,
+      inertiaDiagonal: inertiaDiagonal ?? (deriveInertia ? compound.diagonal : undefined),
       inertiaOrientation:
-        inertiaOrientation ?? (inertiaDiagonal ? [0, 0, 0, 1] : compound.orientation),
+        inertiaOrientation ??
+        (deriveInertia ? (inertiaDiagonal ? [0, 0, 0, 1] : compound.orientation) : undefined),
       velocity: velocity ?? [0, 0, 0],
       angularVelocity: angularVelocity ?? [0, 0, 0],
       gravityFactor: gravityFactor ?? 1
     });
+  }
+
+  /** Refresh render outputs without integrating or solving a simulation step. */
+  publishPoses(): void {
+    if (!this.device || this.destroyed) throw new Error('Unavailable physics world');
+    if (!this.encodePosePublication) return;
+    const encoder = this.device.createCommandEncoder();
+    this.encodePosePublication(encoder);
+    this.device.submit(encoder.finish());
+  }
+
+  /** Update visual bounds independently of collision geometry, before the next submission. */
+  setPublicationBounds(bounds: readonly GPURigidBodyBounds[]): void {
+    if (
+      !this.poseBounds ||
+      bounds.length !== this.count ||
+      bounds.some(
+        bound =>
+          bound.length !== 2 ||
+          bound.some(
+            vector =>
+              vector.length !== 3 || !vector.every(value => Number.isFinite(Math.fround(value)))
+          ) ||
+          bound[0].some((value, axis) => value > bound[1][axis])
+      )
+    )
+      throw new Error('Invalid publication bounds');
+    const metadata = this.ownedBuffers.find(buffer => buffer.id === `${this.id}-pose-metadata`)!;
+    const data = new Float32Array(this.count * 12);
+    for (const [index, body] of this.props.bodies.entries())
+      data.set(
+        [...(body.centerOfMass ?? [0, 0, 0]), 0, ...bounds[index][0], 0, ...bounds[index][1], 0],
+        index * 12
+      );
+    metadata.write(data);
+    this.props.publicationBounds = structuredClone(bounds);
   }
 
   /** Applied scale relative to the initially cooked analytic shape. */
@@ -1934,6 +1979,16 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
 
   /** Update an existing constraint's response without recompiling or changing attachment topology. */
   setJointParameters(index: number, parameters: GPURigidBodyJoint): void {
+    this.setJointParameterEdits([{index, parameters}]);
+  }
+
+  /** Validate every shared-resource edit before submitting any control writes. */
+  setJointParameterEdits(edits: readonly {index: number; parameters: GPURigidBodyJoint}[]): void {
+    for (const {index, parameters} of edits) this.validateJointParameters(index, parameters);
+    for (const {index, parameters} of edits) this.writeJointParameters(index, parameters);
+  }
+
+  private validateJointParameters(index: number, parameters: GPURigidBodyJoint): void {
     const previous = this.props.joints?.[index];
     if (
       !previous ||
@@ -1947,10 +2002,13 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     )
       throw new Error('Joint topology must remain unchanged');
     validateRigidBodyJoints([parameters], this.props.bodies, this.solver);
+  }
+
+  private writeJointParameters(index: number, parameters: GPURigidBodyJoint): void {
     const joints = [...this.props.joints!];
     joints[index] = structuredClone(parameters);
     this.props.joints = joints;
-    this.targets.write(
+    this.targets!.write(
       packRigidBodyJointState(parameters),
       this.getJointStateOffset() + index * RIGID_BODY_JOINT_STATE_BYTES
     );
@@ -2222,6 +2280,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       device.submit(encoder.finish());
     };
     let shapeScales = structuredClone(this.colliderShapeScales);
+    let publicationBounds = structuredClone(this.props.publicationBounds);
     const checkpoint: GPURigidBodyGPUCheckpoint = {
       byteLength: snapshots.reduce((sum, buffer) => sum + buffer.byteLength, 0),
       save: () => {
@@ -2229,6 +2288,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
         joints = structuredClone(this.props.joints);
         bodyDefinitions = structuredClone(this.props.bodies);
         shapeScales = structuredClone(this.colliderShapeScales);
+        publicationBounds = structuredClone(this.props.publicationBounds);
         contactCursor = this.eventCursor;
         triggerCursor = this.triggerCursor;
         saved = true;
@@ -2240,6 +2300,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
         this.props.bodies = structuredClone(bodyDefinitions);
         this.restoreColliderDefinitions();
         this.colliderShapeScales = structuredClone(shapeScales);
+        this.props.publicationBounds = structuredClone(publicationBounds);
         this.eventCursor = contactCursor;
         this.triggerCursor = triggerCursor;
       },
@@ -2309,6 +2370,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       buffer.write(capture.buffers[index].data);
     this.props.joints = structuredClone(capture.props.joints);
     this.props.bodies = structuredClone(capture.props.bodies);
+    this.props.publicationBounds = structuredClone(capture.props.publicationBounds);
     this.restoreColliderDefinitions();
     this.colliderShapeScales = structuredClone(shapeScales);
     this.eventCursor = capture.contactCursor;
@@ -2471,6 +2533,9 @@ function serializeCaptureProps(props: GPURigidBodyWorldProps): string {
     {
       ...props,
       id: undefined,
+      publicationBounds: props.publicationBounds
+        ? props.publicationBounds.map(() => true)
+        : undefined,
       bodies: props.bodies.map(body => ({
         ...body,
         shape: undefined,

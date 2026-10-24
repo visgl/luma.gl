@@ -356,3 +356,5 @@ export {
 } from './animation/texture-transform';
 
 export {makeAdapterAnimationBinding} from './animation/property-animation-binding';
+
+export {deformPositions} from './animation/deform-positions';

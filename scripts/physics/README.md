@@ -118,3 +118,12 @@ The [matched benchmark suite](./matched/README.md) builds a pinned real Box3D re
 runs the same authored boxes/joints through native CPU and browser WebGPU adapters,
 and reports independent simulation-quality metrics alongside repeated timing samples.
 The corresponding `matched*` scenarios are available in Physics Stress Lab.
+
+## Authored-scene publication qualification
+
+`benchmark-publication.mjs --url http://127.0.0.1:5241/ --count 10000 --samples 30`
+measures and verifies the GPU body-node matrix/AABB publisher. Start the
+`examples/gltf/authored-scene-stress` Vite server first. Add `--software-gpu` for
+separate fallback evidence. Feed the JSON report to `qualification-report.mjs`
+alongside node/headless JSON reports. The G6 publication selector requires hardware.
+See `dev-docs/benchmarks/gpu-physics-publication.md` for timing boundaries.

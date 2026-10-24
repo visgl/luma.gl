@@ -90,7 +90,8 @@ error, 20 cm ballistic error, 0.001 quaternion error, 5% energy gain, 10% absolu
 error for conservative scenes, and no escapes. These are **bounded comparison budgets**,
 not SOTA certification. Reports retain raw metrics and failures; ratios are withheld
 unless both engines meet the budgets, all GPU steps complete, initial states match and
-the GPU is hardware. Dissipative pile scenes are not penalized for expected energy loss.
+every GPU replay reports a non-fallback integrated or discrete adapter. Unknown adapter
+identities do not qualify as hardware evidence. Dissipative pile scenes are not penalized for expected energy loss.
 Sampled overlap is not an exact swept-contact oracle; transient errors between samples
 can be missed. Independent replays may diverge chaotically without either being wrong.
 

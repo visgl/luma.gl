@@ -848,4 +848,15 @@ finite-shape pair matrix records response coverage separately from numerical qua
 
 ## Dedicated GPU Graph package
 
-`@luma.gl/graph` exposes `GPUCommandGraph` at its root and graph-based processing through focused subpaths. GPU tables, dataframe/SQL, raster, spatial processing, trace analytics, volume operations, simulations, and graph algorithms now share one package. GPU data primitives and immediate operations remain in `@luma.gl/gpgpu`.
+`@luma.gl/graph` exposes `GPUGraph` at its root and graph-based processing through focused subpaths. GPU tables, dataframe/SQL, raster, spatial processing, trace analytics, volume operations, simulations, and graph algorithms now share one package. GPU data primitives and immediate operations remain in `@luma.gl/gpgpu`.
+
+### Authored GPU physics sessions
+
+The experimental physics module adds `ScenegraphPhysicsSession` for shared engine/glTF
+animation ownership, transactional recooking, captures and revision-safe GPU render
+publication. Component property pointers and shared joint edits use the same runtime.
+glTF adds live deformation cooking snapshots and explicit native state export. The
+Authored Scene Stress Lab exercises shared assets and repeated lifecycle operations.
+See [scenegraph physics](./api-guide/engine/scenegraph-physics.md) for the supported
+contracts and remaining qualification limits.
+

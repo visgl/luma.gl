@@ -157,6 +157,14 @@ export function checkMassProperties(fixture, parameters) {
     );
   });
 }
+/** Unknown devices are not hardware evidence, even when fallback is false. */
+export function isHardwareAdapter(adapter) {
+  return (
+    adapter?.fallback === false &&
+    adapter.gpu !== 'software' &&
+    ['integrated', 'discrete'].includes(adapter.gpuType)
+  );
+}
 export async function runSuite(options = {}) {
   const settings = validateOptions(options);
   const scenes = options.scenes ?? Object.keys(MATCHED_SCENES);
@@ -273,7 +281,9 @@ export async function runSuite(options = {}) {
         const gpuTiming = summarize(
           gpu.flatMap(run => run.timings.map(sample => sample.completion))
         );
-        const hardware = !gpu[0].adapter.fallback && gpu[0].adapter.gpu !== 'software';
+        const hardware = [...gpu, gpuQuality, ...(profile ? [profile] : [])].every(run =>
+          isHardwareAdapter(run.adapter)
+        );
         const row = {
           scene,
           fixtureHash,
