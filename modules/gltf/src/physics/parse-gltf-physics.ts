@@ -508,6 +508,7 @@ export function parseGLTFPhysics(
             bodyIndex: definition.bodyIndex,
             colliderIndex,
             localMatrix: new Matrix4().translate(meshCenter),
+            cookedScale: transform.scale.map(Math.abs),
             shapeIndex,
             meshIndex,
             geometryNodeIndex,

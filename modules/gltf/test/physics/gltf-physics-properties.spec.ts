@@ -144,9 +144,18 @@ it('animates shared implicit shape pointers with per-instance scale and automati
     motion.update();
     expect(world.getColliderShape(0)).toEqual({type: 'sphere', radius: 1.5});
     expect(properties.get(pointer)).toEqual([0.5]);
+    const rebound = makeGLTFPhysicsProperties(world, description);
+    expect(rebound.get(pointer)).toEqual([0.5]);
+    rebound.set(pointer, [1]);
+    expect(world.getColliderShape(0)).toEqual({type: 'sphere', radius: 3});
+    rebound.set(pointer, [0.5]);
     const capture = await world.captureState();
     properties.set(pointer, [1]);
     world.restoreState(capture);
+    const restored = makeGLTFPhysicsProperties(world, description);
+    expect(restored.get(pointer)).toEqual([0.5]);
+    restored.set(pointer, [0.5]);
+    expect(world.getColliderShape(0)).toEqual({type: 'sphere', radius: 1.5});
     expect(properties.get(pointer)).toEqual([0.5]);
     expect(() => properties.set(pointer, [-1])).toThrow();
     expect(properties.get(pointer)).toEqual([0.5]);

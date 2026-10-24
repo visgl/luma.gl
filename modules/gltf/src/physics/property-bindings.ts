@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Matrix4} from '@math.gl/core';
-import {GroupNode, decomposePhysicsTransform} from '@luma.gl/engine';
+import {decomposePhysicsTransform} from '@luma.gl/engine';
 import {
   ScenegraphPhysicsProperties,
   type GPURigidBodyWorld,
@@ -70,13 +70,6 @@ export function makeGLTFPhysicsProperties(
         | {shapes?: Record<string, unknown>[]}
         | undefined
     )?.shapes ?? [];
-  const worldMatrices = new Map<GroupNode, Matrix4>();
-  const visit = (node: GroupNode, parent: Matrix4) => {
-    const matrix = new Matrix4(parent).multiplyRight(node.matrix);
-    worldMatrices.set(node, matrix);
-    for (const child of node.children) if (child instanceof GroupNode) visit(child, matrix);
-  };
-  for (const root of description.sceneRoots) visit(root, new Matrix4());
   for (const [shapeIndex, source] of shapes.entries()) {
     const type = source['type'];
     const fields =
@@ -96,8 +89,7 @@ export function makeGLTFPhysicsProperties(
     for (const [field, property] of Object.entries(fields)) {
       if (!property) continue;
       const colliders = definitions.map(definition => {
-        const node = description.sceneNodes.get(definition.nodeIndex)!;
-        const scale = decomposePhysicsTransform(worldMatrices.get(node)!).scale.map(Math.abs);
+        const scale = definition.cookedScale;
         return {
           index: definition.colliderIndex,
           scaleAxes:
