@@ -7,8 +7,8 @@ import {expect, test, vi} from 'vitest';
 import {NullDevice} from '@luma.gl/test-utils';
 import {
   GPUCommandGraph,
-  GPUProgram,
-  GPUProgramCompiler,
+  GPUGraph,
+  GPUGraphCompiler,
   type GPUNode,
   GPUScan,
   type GPUCommandNodeProducer,
@@ -134,7 +134,7 @@ test('graph.add recursively expands groups, arrays and primitives in depth-first
   device.destroy();
 });
 
-test('GPUProgram lowers structural execution groups through graph.add', () => {
+test('GPUGraph lowers structural execution groups through graph.add', () => {
   const device = new NullDevice({});
   Object.defineProperty(device, 'type', {value: 'webgpu'});
   // A graph-independent leaf lets this test inspect scheduling without allocating GPU resources.
@@ -157,9 +157,9 @@ test('GPUProgram lowers structural execution groups through graph.add', () => {
       ];
     }
   };
-  const program = new GPUProgram();
+  const program = new GPUGraph();
   program.add(group);
-  const result = new GPUProgramCompiler(device).compile(program);
+  const result = new GPUGraphCompiler(device).compile(program);
   expect(result.lowering.nodes.map(node => node.nodeType)).toEqual(['compute']);
   expect(
     result.lowering.decisions.some(decision => decision.lowering === 'explicit-command-nodes')

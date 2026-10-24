@@ -13,11 +13,11 @@ import {
   sqrt
 } from '@luma.gl/gpgpu';
 import {
-  GPUProgramScalarLiteral,
-  GPUProgramScalarOperation,
-  GPUProgramVectorMADD,
-  type GPUProgramBindings,
-  type GPUProgramVector
+  GPUGraphScalarLiteral,
+  GPUGraphScalarOperation,
+  GPUGraphVectorMADD,
+  type GPUGraphBindings,
+  type GPUGraphVector
 } from '@luma.gl/graph/gpu-core';
 import {
   GPUSimpleGraphUploadOperation,
@@ -37,9 +37,9 @@ export type SimpleOperation =
   | GPUSimpleGraphOperation
   | GPUSimpleGraphUploadOperation
   | GPUSimpleGraphCopyOperation
-  | GPUProgramScalarOperation
-  | GPUProgramScalarLiteral
-  | GPUProgramVectorMADD;
+  | GPUGraphScalarOperation
+  | GPUGraphScalarLiteral
+  | GPUGraphVectorMADD;
 
 /** Compilation-local adapter; existing semantic operations and bindings are borrowed. */
 export class SimpleGraphLowering {
@@ -50,7 +50,7 @@ export class SimpleGraphLowering {
   private readonly vectors = new Map<object, GPUVectorEvaluator>();
   private readonly values = new Map<string, object>();
 
-  constructor(private readonly bindings: GPUProgramBindings) {}
+  constructor(private readonly bindings: GPUGraphBindings) {}
 
   lower(operation: SimpleOperation): void {
     if (operation instanceof GPUSimpleGraphValueOperation) {
@@ -73,7 +73,7 @@ export class SimpleGraphLowering {
       // Named copy inputs must precede their consumers.
       assert(source);
       this.registerOutput(operation.id, makeCopyEvaluator(source.evaluator, this.owned));
-    } else if (operation instanceof GPUProgramScalarLiteral) {
+    } else if (operation instanceof GPUGraphScalarLiteral) {
       const {output, value} = operation.props;
       this.registerValue(output);
       // The initial portable subset supports float32, single-assignment values only.
@@ -81,7 +81,7 @@ export class SimpleGraphLowering {
       const evaluator = this.own(GPUDataEvaluator.fromConstant(value));
       this.scalars.set(output, evaluator);
       this.registerOutput(output.id, evaluator);
-    } else if (operation instanceof GPUProgramScalarOperation) {
+    } else if (operation instanceof GPUGraphScalarOperation) {
       this.lowerScalar(operation);
     } else {
       const {input, scale, addend, output} = operation.props;
@@ -119,7 +119,7 @@ export class SimpleGraphLowering {
     }
   }
 
-  private lowerScalar(operation: GPUProgramScalarOperation): void {
+  private lowerScalar(operation: GPUGraphScalarOperation): void {
     const {left, right, output} = operation;
     this.registerValue(left);
     if (right) this.registerValue(right);
@@ -196,7 +196,7 @@ export class SimpleGraphLowering {
     this.outputs.set(id, new GPUSimpleGraphOperation({id, evaluator}));
   }
 
-  private resolveVector(vector: GPUProgramVector<'float32'>): GPUVectorEvaluator {
+  private resolveVector(vector: GPUGraphVector<'float32'>): GPUVectorEvaluator {
     this.registerValue(vector);
     const existing = this.vectors.get(vector);
     if (existing) return existing;

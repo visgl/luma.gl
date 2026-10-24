@@ -10,15 +10,15 @@ import type {
 } from './gpu-command-graph';
 
 /** Scalar/vector formats portable across current Jarnevon execution backends. */
-export type GPUProgramScalarFormat = 'float32' | 'uint32' | 'sint32';
-export type GPUProgramVectorFormat = GPUProgramScalarFormat;
+export type GPUGraphScalarFormat = 'float32' | 'uint32' | 'sint32';
+export type GPUGraphVectorFormat = GPUGraphScalarFormat;
 
-/** Backend-independent scalar state owned by a GPUProgram. */
-export class GPUProgramScalar<T extends GPUProgramScalarFormat = GPUProgramScalarFormat> {
+/** Backend-independent scalar state owned by a GPUGraph. */
+export class GPUGraphScalar<T extends GPUGraphScalarFormat = GPUGraphScalarFormat> {
   readonly id: string;
   readonly format: T;
   constructor(id: string, format: T) {
-    if (!id) throw new Error('GPUProgramScalar id is required');
+    if (!id) throw new Error('GPUGraphScalar id is required');
     this.id = id;
     this.format = format;
   }
@@ -31,7 +31,7 @@ export class GPUProgramScalar<T extends GPUProgramScalarFormat = GPUProgramScala
  * compilers decide allocation, packing and binding. `external` vectors represent program I/O whose
  * concrete storage is supplied to compilation; transient vectors are compiler-owned scratch/state.
  */
-export class GPUProgramVector<T extends GPUProgramVectorFormat = GPUProgramVectorFormat> {
+export class GPUGraphVector<T extends GPUGraphVectorFormat = GPUGraphVectorFormat> {
   readonly id: string;
   readonly format: T;
   readonly length: number;
@@ -45,7 +45,7 @@ export class GPUProgramVector<T extends GPUProgramVectorFormat = GPUProgramVecto
     external?: boolean;
     chunkLengths?: readonly number[];
   }) {
-    if (!props.id) throw new Error('GPUProgramVector id is required');
+    if (!props.id) throw new Error('GPUGraphVector id is required');
     if (!Number.isSafeInteger(props.length) || props.length < 0) {
       throw new Error(`${props.id} vector length must be a non-negative safe integer`);
     }
@@ -66,7 +66,7 @@ export class GPUProgramVector<T extends GPUProgramVectorFormat = GPUProgramVecto
 }
 
 /** Logical texture storage. Allocation and device validation belong to the graph compiler. */
-export class GPUProgramTexture<Format extends TextureFormat = TextureFormat> {
+export class GPUGraphTexture<Format extends TextureFormat = TextureFormat> {
   readonly id: string;
   readonly format: Format;
   readonly width: number;
@@ -79,7 +79,7 @@ export class GPUProgramTexture<Format extends TextureFormat = TextureFormat> {
   /** Caller-owned storage, optionally bound at compilation or supplied when encoding. */
   readonly external: boolean;
 
-  constructor(props: GPUProgramTextureProps<Format> & {id: string}) {
+  constructor(props: GPUGraphTextureProps<Format> & {id: string}) {
     this.id = props.id;
     this.format = props.format;
     this.width = props.width;
@@ -93,18 +93,18 @@ export class GPUProgramTexture<Format extends TextureFormat = TextureFormat> {
   }
 }
 
-/** Uses the same descriptor vocabulary as GPUGraph; defaults are applied during lowering. */
-export type GPUProgramTextureProps<Format extends TextureFormat = TextureFormat> = Omit<
+/** Uses the same descriptor vocabulary as GPUCommandGraph; defaults are applied during lowering. */
+export type GPUGraphTextureProps<Format extends TextureFormat = TextureFormat> = Omit<
   GraphTextureDescriptor<Format>,
   'id'
 > & {external?: boolean};
 
 /** A subresource selection, never an allocation or an independently owned texture. */
-export class GPUProgramTextureView<Format extends TextureFormat = TextureFormat> {
-  readonly texture: GPUProgramTexture<Format>;
+export class GPUGraphTextureView<Format extends TextureFormat = TextureFormat> {
+  readonly texture: GPUGraphTexture<Format>;
   readonly props: Readonly<GraphTextureViewProps>;
 
-  constructor(texture: GPUProgramTexture<Format>, props: GraphTextureViewProps = {}) {
+  constructor(texture: GPUGraphTexture<Format>, props: GraphTextureViewProps = {}) {
     this.texture = texture;
     this.props = Object.freeze({...props});
   }

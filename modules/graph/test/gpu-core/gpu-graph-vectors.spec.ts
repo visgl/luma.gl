@@ -7,11 +7,11 @@ import {Buffer} from '@luma.gl/core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {GPUData} from '@luma.gl/gpgpu/gpu-data';
 import {
-  GPUProgram,
-  GPUProgramCompiler,
-  GPUProgramVectorMADD,
-  GPUProgramDotProduct,
-  GPUProgramScalarLiteral,
+  GPUGraph,
+  GPUGraphCompiler,
+  GPUGraphVectorMADD,
+  GPUGraphDotProduct,
+  GPUGraphScalarLiteral,
   GPUConditionalOperation
 } from '@luma.gl/graph/gpu-core';
 
@@ -36,7 +36,7 @@ for (const enabled of [0, 1]) {
       usage: Buffer.COPY_DST | Buffer.COPY_SRC
     });
     buffers.push(totalBuffer);
-    const program = new GPUProgram();
+    const program = new GPUGraph();
     const input = program.vector('input', 'float32', 5, {external: true});
     const addend = program.vector('addend', 'float32', 5, {external: true});
     const output = program.vector('output', 'float32', 5, {external: true});
@@ -44,18 +44,18 @@ for (const enabled of [0, 1]) {
     const total = program.scalar('total', 'float32');
     const active = program.scalar('active', 'uint32');
     program.add([
-      new GPUProgramScalarLiteral({output: active, value: enabled}),
-      new GPUProgramScalarLiteral({output: total, value: 37}),
-      new GPUProgramScalarLiteral({output: scale, value: 2}),
+      new GPUGraphScalarLiteral({output: active, value: enabled}),
+      new GPUGraphScalarLiteral({output: total, value: 37}),
+      new GPUGraphScalarLiteral({output: scale, value: 2}),
       new GPUConditionalOperation({
         predicate: {id: 'enabled', source: 'gpu', value: active},
         body: [
-          new GPUProgramVectorMADD({input, addend, output, scale}),
-          new GPUProgramDotProduct({left: input, right: addend, output: total})
+          new GPUGraphVectorMADD({input, addend, output, scale}),
+          new GPUGraphDotProduct({left: input, right: addend, output: total})
         ]
       })
     ]);
-    const compilation = new GPUProgramCompiler(device).compile(program, {
+    const compilation = new GPUGraphCompiler(device).compile(program, {
       vectors: {input: inputData, addend: addendData, output: outputData}
     });
     const totalView = compilation.scalars.get('total')!.view;
@@ -119,17 +119,17 @@ for (const outputAlias of ['input', 'addend', 'both'] as const) {
         });
       const inputData = chunks(chunked ? [[1, 2], [], [3, 4, 5]] : [[1, 2, 3, 4, 5]]);
       const addendData = chunks(chunked ? [[10], [20, 30, 40, 50]] : [[10, 20, 30, 40, 50]]);
-      const program = new GPUProgram();
+      const program = new GPUGraph();
       const input = program.vector('input', 'float32', 5, {external: true});
       const addend =
         outputAlias === 'both' ? input : program.vector('addend', 'float32', 5, {external: true});
       const output = outputAlias === 'addend' ? addend : input;
       const scale = program.scalar('scale', 'float32');
       program.add([
-        new GPUProgramScalarLiteral({output: scale, value: 2}),
-        new GPUProgramVectorMADD({input, addend, output, scale})
+        new GPUGraphScalarLiteral({output: scale, value: 2}),
+        new GPUGraphVectorMADD({input, addend, output, scale})
       ]);
-      const compilation = new GPUProgramCompiler(device).compile(program, {
+      const compilation = new GPUGraphCompiler(device).compile(program, {
         vectors: {input: inputData, addend: addendData}
       });
       const executable = compilation.graph.compile();

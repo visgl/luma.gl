@@ -6,10 +6,10 @@ import {describe, expect, it, vi} from 'vitest';
 import {GPUDataEvaluator, GPUVectorEvaluator, add, multiply, sqrt} from '@luma.gl/gpgpu';
 import {GPUSimpleGraph, GPUSimpleGraphOperation} from '@luma.gl/graph/gpu-simple-graph';
 import {
-  GPUProgram,
-  GPUProgramScalarLiteral,
-  GPUProgramScalarOperation,
-  GPUProgramVectorMADD,
+  GPUGraph,
+  GPUGraphScalarLiteral,
+  GPUGraphScalarOperation,
+  GPUGraphVectorMADD,
   GPULoopOperation,
   composite
 } from '@luma.gl/graph/gpu-core';
@@ -155,7 +155,7 @@ describe('GPUSimpleGraph prototype', () => {
 });
 
 describe('GPUSimpleGraph semantic composition', () => {
-  it('shares semantic composites and inspection with GPUProgram', async () => {
+  it('shares semantic composites and inspection with GPUGraph', async () => {
     const device = new NullDevice({});
     const source = GPUDataEvaluator.fromConstant(3);
     const output = multiply(source, 4);
@@ -164,7 +164,7 @@ describe('GPUSimpleGraph semantic composition', () => {
     const group = composite([inputOperation, composite([outputOperation], {id: 'inner'})], {
       id: 'outer'
     });
-    const program = new GPUProgram().add([group]);
+    const program = new GPUGraph().add([group]);
     const graph = new GPUSimpleGraph(device);
     expect(graph.add([[group]])).toBe(graph);
     expect(graph.operationTree).toEqual(program.operationTree);
@@ -214,9 +214,9 @@ describe('GPUSimpleGraph semantic composition', () => {
 describe('SimpleGraph semantic subset', () => {
   it('executes existing scalar literals and owns only adapter-created evaluators', async () => {
     const device = new NullDevice({});
-    const program = new GPUProgram();
+    const program = new GPUGraph();
     const scale = program.scalar('scale', 'float32');
-    program.add(new GPUProgramScalarLiteral({output: scale, value: 2}));
+    program.add(new GPUGraphScalarLiteral({output: scale, value: 2}));
     const borrowed = GPUDataEvaluator.fromConstant(5);
     const destroyBorrowed = vi.spyOn(borrowed, 'destroy');
     const graph = new GPUSimpleGraph(device).add(program.operations);
@@ -235,8 +235,8 @@ describe('SimpleGraph semantic subset', () => {
 
   it('rejects control-flow composites atomically', () => {
     const device = new NullDevice({});
-    const program = new GPUProgram();
-    const literal = new GPUProgramScalarLiteral({
+    const program = new GPUGraph();
+    const literal = new GPUGraphScalarLiteral({
       output: program.scalar('scale', 'float32'),
       value: 2
     });
@@ -251,22 +251,22 @@ describe('SimpleGraph semantic subset', () => {
 
   it('rejects missing bindings, unsupported formats, and repeated writes', () => {
     const device = new NullDevice({});
-    const program = new GPUProgram();
+    const program = new GPUGraph();
     const scale = program.scalar('scale', 'float32');
     const input = program.vector('input', 'float32', 3, {external: true});
     const output = program.vector('output', 'float32', 3);
-    const literal = new GPUProgramScalarLiteral({output: scale, value: 2});
-    const operation = new GPUProgramVectorMADD({input, addend: input, output, scale});
+    const literal = new GPUGraphScalarLiteral({output: scale, value: 2});
+    const operation = new GPUGraphVectorMADD({input, addend: input, output, scale});
     expect(() => new GPUSimpleGraph(device).add([literal, operation]).compile()).toThrow();
     expect(() =>
       new GPUSimpleGraph(device)
-        .add([literal, new GPUProgramScalarLiteral({id: 'rewrite', output: scale, value: 3})])
+        .add([literal, new GPUGraphScalarLiteral({id: 'rewrite', output: scale, value: 3})])
         .compile()
     ).toThrow();
     expect(() =>
       new GPUSimpleGraph(device)
         .add(
-          new GPUProgramScalarLiteral({
+          new GPUGraphScalarLiteral({
             output: program.scalar('integer', 'uint32'),
             value: 2
           })
@@ -350,19 +350,19 @@ it('keeps WebGL byte-triplet formats in pre-execution inspection', () => {
 
 it('lowers chained existing scalar arithmetic and rejects unsupported scalar operations', async () => {
   const device = new NullDevice({});
-  const program = new GPUProgram();
+  const program = new GPUGraph();
   const first = program.scalar('first', 'float32');
   const second = program.scalar('second', 'float32');
   program.add([
-    new GPUProgramScalarLiteral({output: first, value: 9}),
-    new GPUProgramScalarLiteral({output: second, value: 3})
+    new GPUGraphScalarLiteral({output: first, value: 9}),
+    new GPUGraphScalarLiteral({output: second, value: 3})
   ]);
   let previous = first;
   const expected = [9, 3, 6, 3, 9, 3];
   for (const operation of ['copy', 'sqrt', 'add', 'subtract', 'multiply', 'divide'] as const) {
     const output = program.scalar(operation, 'float32');
     program.add(
-      new GPUProgramScalarOperation({
+      new GPUGraphScalarOperation({
         operation,
         left: previous,
         right: operation === 'copy' || operation === 'sqrt' ? undefined : second,
@@ -384,7 +384,7 @@ it('lowers chained existing scalar arithmetic and rejects unsupported scalar ope
     compiled.destroy();
   }
   program.add(
-    new GPUProgramScalarOperation({
+    new GPUGraphScalarOperation({
       operation: 'min',
       left: first,
       right: second,
@@ -397,16 +397,16 @@ it('lowers chained existing scalar arithmetic and rejects unsupported scalar ope
 
 it('preserves float32 rounding between semantic scalar operations', async () => {
   const device = new NullDevice({});
-  const program = new GPUProgram();
+  const program = new GPUGraph();
   const large = program.scalar('large', 'float32');
   const one = program.scalar('one', 'float32');
   const sum = program.scalar('sum', 'float32');
   const difference = program.scalar('difference', 'float32');
   program.add([
-    new GPUProgramScalarLiteral({output: large, value: 16777216}),
-    new GPUProgramScalarLiteral({output: one, value: 1}),
-    new GPUProgramScalarOperation({operation: 'add', left: large, right: one, output: sum}),
-    new GPUProgramScalarOperation({
+    new GPUGraphScalarLiteral({output: large, value: 16777216}),
+    new GPUGraphScalarLiteral({output: one, value: 1}),
+    new GPUGraphScalarOperation({operation: 'add', left: large, right: one, output: sum}),
+    new GPUGraphScalarOperation({
       operation: 'subtract',
       left: sum,
       right: large,

@@ -14,14 +14,14 @@ import type {GPUVector, GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 
 import {
   GPUCompositeOperation,
-  GPUProgramScalarLiteral,
-  GPUProgramScalarOperation,
-  GPUProgramVectorMADD,
-  type GPUProgramBindings,
+  GPUGraphScalarLiteral,
+  GPUGraphScalarOperation,
+  GPUGraphVectorMADD,
+  type GPUGraphBindings,
   getGPUOperationTree,
   type GPUOperationLike,
   type GPUOperationTree,
-  type GPUProgramOperation
+  type GPUGraphOperation
 } from '@luma.gl/graph/gpu-core';
 import {
   GPUSimpleGraphOperation,
@@ -48,8 +48,8 @@ export type GPUSimpleGraphNode = {
 export type GPUSimpleGraphCompileOptions = {
   /** Named values to materialize. Defaults to the last registered value. */
   outputs?: readonly string[];
-  /** Fixed vector bindings, using the existing GPUProgramCompiler convention. */
-  bindings?: GPUProgramBindings;
+  /** Fixed vector bindings, using the existing GPUGraphCompiler convention. */
+  bindings?: GPUGraphBindings;
   /** Borrowed storage for selected outputs. Vector outputs require one target per chunk.
    * This first pass copies final results into targets without retargeting borrowed evaluators.
    */
@@ -72,7 +72,7 @@ export class GPUSimpleGraph {
   readonly id: string;
   private readonly leafOperations: SimpleOperation[] = [];
   private readonly evaluatorIds = new Set<string>();
-  private readonly programOperations: GPUProgramOperation[] = [];
+  private readonly programOperations: GPUGraphOperation[] = [];
   private compiled = false;
 
   /** Execution capabilities; evaluators retain control of backend submission. */
@@ -94,11 +94,11 @@ export class GPUSimpleGraph {
 
   /** Accepts evaluator operations, semantic composites, and recursively nested arrays. */
   add(operation: GPUOperationLike): this {
-    // Compilation freezes the builder, as it does for GPUGraph.
+    // Compilation freezes the builder, as it does for GPUCommandGraph.
     assert(!this.compiled);
     const pending: SimpleOperation[] = [];
     const pendingEvaluatorIds = new Set<string>();
-    const operations: GPUProgramOperation[] = [];
+    const operations: GPUGraphOperation[] = [];
     const visit = (value: GPUOperationLike): void => {
       if (Array.isArray(value)) {
         for (const child of value) visit(child);
@@ -113,9 +113,9 @@ export class GPUSimpleGraph {
             value instanceof GPUSimpleGraphOperation ||
             value instanceof GPUSimpleGraphUploadOperation ||
             value instanceof GPUSimpleGraphCopyOperation ||
-            value instanceof GPUProgramScalarLiteral ||
-            value instanceof GPUProgramScalarOperation ||
-            value instanceof GPUProgramVectorMADD
+            value instanceof GPUGraphScalarLiteral ||
+            value instanceof GPUGraphScalarOperation ||
+            value instanceof GPUGraphVectorMADD
         );
         if (
           value instanceof GPUSimpleGraphValueOperation ||
@@ -138,7 +138,7 @@ export class GPUSimpleGraph {
         for (const child of value) collect(child);
       } else {
         // Arrays were handled above; this is one semantic operation or group.
-        operations.push(value as GPUProgramOperation);
+        operations.push(value as GPUGraphOperation);
       }
     };
     visit(operation);

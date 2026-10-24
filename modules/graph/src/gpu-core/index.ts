@@ -8,9 +8,7 @@ export {GPUMatMul} from './gpu-matmul';
 export type {GPUMatMulProps} from './gpu-matmul';
 
 export {
-  CompiledGPUGraph,
   CompiledGPUCommandGraph,
-  GPUGraph,
   GPUCommandGraph,
   GPUCommandGraphEncoding,
   GPUCommandGraphExecution,
@@ -584,8 +582,8 @@ export type {
   GPUOperationResource,
   GPUOperationTree,
   GPUOperationWorkload,
-  GPUProgramOperation,
-  GPUProgramPrimitive
+  GPUGraphOperation,
+  GPUGraphPrimitive
 } from './gpu-operation';
 export {
   GPUConditionalOperation,
@@ -596,48 +594,48 @@ export type {
   GPUControlFlowLowering,
   GPUOperationPredicate
 } from './gpu-control-flow-operation';
-export {composite, GPUProgram} from './gpu-program';
+export {composite, GPUGraph} from './gpu-graph';
 export {
-  GPUProgramScalar,
-  GPUProgramVector,
-  GPUProgramTexture,
-  GPUProgramTextureView
-} from './gpu-program-value';
+  GPUGraphScalar,
+  GPUGraphVector,
+  GPUGraphTexture,
+  GPUGraphTextureView
+} from './gpu-graph-value';
 export type {
-  GPUProgramScalarFormat,
-  GPUProgramVectorFormat,
-  GPUProgramTextureProps
-} from './gpu-program-value';
-export {GPUProgramCompiler} from './gpu-program-compiler';
+  GPUGraphScalarFormat,
+  GPUGraphVectorFormat,
+  GPUGraphTextureProps
+} from './gpu-graph-value';
+export {GPUGraphCompiler} from './gpu-graph-compiler';
 export type {
-  GPUProgramBindings,
-  GPUProgramCompilation,
-  GPUProgramLoweredNode,
-  GPUProgramLoweringReport
-} from './gpu-program-compiler';
-export {GPUOperationLoweringRegistry} from './gpu-program-lowering';
+  GPUGraphBindings,
+  GPUGraphCompilation,
+  GPUGraphLoweredNode,
+  GPUGraphLoweringReport
+} from './gpu-graph-compiler';
+export {GPUOperationLoweringRegistry} from './gpu-graph-lowering';
 export type {
   GPUOperationLowerer,
   GPUOperationLoweringContext,
   GPUOperationLoweringDecision,
-  GPUProgramBackendCapabilities
-} from './gpu-program-lowering';
-export {inspectGPUProgramCompilation} from './gpu-program-inspector';
-export type {GPUProgramCompilationSummary} from './gpu-program-inspector';
-export {validateGPUProgram} from './gpu-program-validation';
+  GPUGraphBackendCapabilities
+} from './gpu-graph-lowering';
+export {inspectGPUGraphCompilation} from './gpu-graph-inspector';
+export type {GPUGraphCompilationSummary} from './gpu-graph-inspector';
+export {validateGPUGraph} from './gpu-graph-validation';
 export type {
-  GPUProgramValidationIssue,
-  GPUProgramValidationReport
-} from './gpu-program-validation';
-export {GPUProgramScalarLiteral} from './gpu-semantic-state-operation';
+  GPUGraphValidationIssue,
+  GPUGraphValidationReport
+} from './gpu-graph-validation';
+export {GPUGraphScalarLiteral} from './gpu-semantic-state-operation';
 export {
-  GPUProgramScalarOperation,
+  GPUGraphScalarOperation,
   scalarArithmetic,
   scalarCompare
 } from './gpu-semantic-scalar-operation';
-export {GPUProgramDotProduct, GPUProgramVectorMADD} from './gpu-semantic-vector-operation';
-export {GPUProgramCSRMatrix, GPUProgramSpMV} from './gpu-semantic-spmv';
-export {createGPUConjugateGradientProgram} from './gpu-conjugate-gradient-program';
+export {GPUGraphDotProduct, GPUGraphVectorMADD} from './gpu-semantic-vector-operation';
+export {GPUGraphCSRMatrix, GPUGraphSpMV} from './gpu-semantic-spmv';
+export {createGPUConjugateGradientGraph} from './gpu-conjugate-gradient-program';
 
 export {GPUCOOToCSR} from './gpu-coo-to-csr';
 export type {GPUCOOToCSRProps} from './gpu-coo-to-csr';

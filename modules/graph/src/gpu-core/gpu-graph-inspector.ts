@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUProgramCompilation} from './gpu-program-compiler';
+import type {GPUGraphCompilation} from './gpu-graph-compiler';
 
-export type GPUProgramCompilationSummary = {
+export type GPUGraphCompilationSummary = {
   programId: string;
   semanticOperationCount: number;
   loweredNodeCount: number;
@@ -18,9 +18,9 @@ export type GPUProgramCompilationSummary = {
 };
 
 /** Compact semantic/backend summary suitable for examples, diagnostics and future inspector UI. */
-export function inspectGPUProgramCompilation(
-  compilation: GPUProgramCompilation
-): GPUProgramCompilationSummary {
+export function inspectGPUGraphCompilation(
+  compilation: GPUGraphCompilation
+): GPUGraphCompilationSummary {
   const decisions = compilation.lowering.decisions.map(
     decision => `${decision.operationId}: ${decision.lowering} — ${decision.reason}`
   );

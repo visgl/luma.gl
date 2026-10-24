@@ -10,13 +10,13 @@ import {Buffer} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/test-utils';
 import {GPUData, GPUVector, type GPUVectorLike} from '@luma.gl/gpgpu/gpu-data';
 import {
-  GPUProgram,
+  GPUGraph,
   GPUCommandGraph,
-  createGPUConjugateGradientProgram,
-  GPUProgramCompiler,
-  GPUProgramVectorMADD,
-  GPUProgramDotProduct,
-  GPUProgramScalarLiteral,
+  createGPUConjugateGradientGraph,
+  GPUGraphCompiler,
+  GPUGraphVectorMADD,
+  GPUGraphDotProduct,
+  GPUGraphScalarLiteral,
   GPUConditionalOperation
 } from '@luma.gl/graph/gpu-core';
 
@@ -56,9 +56,9 @@ test('program binding preserves zero-copy chunks, empty batches, shared buffers 
   const allocate = vi.spyOn(device, 'createBuffer');
   const structural: GPUVectorLike<'float32'> = {format: 'float32', length: 5, data};
   for (const binding of [data, source, structural]) {
-    const program = new GPUProgram();
+    const program = new GPUGraph();
     program.vector('input', 'float32', 5, {external: true, chunkLengths: [2, 0, 3]});
-    const compilation = new GPUProgramCompiler(device).compile(program, {
+    const compilation = new GPUGraphCompiler(device).compile(program, {
       vectors: {input: binding}
     });
     const vector = compilation.vectors.get('input')!;
@@ -88,10 +88,10 @@ test('program binding preserves zero-copy chunks, empty batches, shared buffers 
 
 test('program transients retain explicit partition lengths and binding shape is checked', () => {
   const device = makeDevice();
-  const program = new GPUProgram();
+  const program = new GPUGraph();
   program.vector('scratch', 'float32', 5, {chunkLengths: [2, 0, 3]});
   expect(
-    new GPUProgramCompiler(device)
+    new GPUGraphCompiler(device)
       .compile(program)
       .vectors.get('scratch')!
       .data.map(chunk => chunk.length)
@@ -99,13 +99,13 @@ test('program transients retain explicit partition lengths and binding shape is 
   expect(() => program.vector('invalid', 'float32', 5, {chunkLengths: [2, 2]})).toThrow(
     /chunk lengths/
   );
-  const external = new GPUProgram();
+  const external = new GPUGraph();
   external.vector('input', 'float32', 5, {external: true, chunkLengths: [2, 3]});
   expect(() =>
-    new GPUProgramCompiler(device).compile(external, {vectors: {input: makeChunk(device, 4)}})
+    new GPUGraphCompiler(device).compile(external, {vectors: {input: makeChunk(device, 4)}})
   ).toThrow(/length/);
   expect(() =>
-    new GPUProgramCompiler(device).compile(external, {vectors: {input: makeChunk(device, 5)}})
+    new GPUGraphCompiler(device).compile(external, {vectors: {input: makeChunk(device, 5)}})
   ).toThrow(/topology/);
   const wrongFormat = new GPUData({
     buffer: makeChunk(device, 5).buffer,
@@ -113,14 +113,14 @@ test('program transients retain explicit partition lengths and binding shape is 
     length: 5
   });
   expect(() =>
-    new GPUProgramCompiler(device).compile(external, {vectors: {input: wrongFormat}})
+    new GPUGraphCompiler(device).compile(external, {vectors: {input: wrongFormat}})
   ).toThrow(/format/i);
   device.destroy();
 });
 
 test('MADD and dot product lower differing chunk boundaries, including GPU predicates', () => {
   const device = makeDevice();
-  const program = new GPUProgram();
+  const program = new GPUGraph();
   const input = program.vector('input', 'float32', 5, {external: true});
   const addend = program.vector('addend', 'float32', 5, {external: true});
   const output = program.vector('output', 'float32', 5, {chunkLengths: [3, 2]});
@@ -128,17 +128,17 @@ test('MADD and dot product lower differing chunk boundaries, including GPU predi
   const total = program.scalar('total', 'float32');
   const active = program.scalar('active', 'uint32');
   program.add([
-    new GPUProgramScalarLiteral({output: active, value: 1}),
-    new GPUProgramScalarLiteral({output: scale, value: 2}),
+    new GPUGraphScalarLiteral({output: active, value: 1}),
+    new GPUGraphScalarLiteral({output: scale, value: 2}),
     new GPUConditionalOperation({
       predicate: {id: 'enabled', source: 'gpu', value: active},
       body: [
-        new GPUProgramVectorMADD({id: 'madd', input, addend, output, scale}),
-        new GPUProgramDotProduct({id: 'dot', left: input, right: addend, output: total})
+        new GPUGraphVectorMADD({id: 'madd', input, addend, output, scale}),
+        new GPUGraphDotProduct({id: 'dot', left: input, right: addend, output: total})
       ]
     })
   ]);
-  const compilation = new GPUProgramCompiler(device).compile(program, {
+  const compilation = new GPUGraphCompiler(device).compile(program, {
     vectors: {
       input: [makeChunk(device, 2), makeChunk(device, 0), makeChunk(device, 3)],
       addend: [makeChunk(device, 1), makeChunk(device, 4)]
@@ -153,11 +153,11 @@ test('MADD and dot product lower differing chunk boundaries, including GPU predi
 
 test('an empty chunk array remains an empty logical vector and dot writes zero', () => {
   const device = makeDevice();
-  const program = new GPUProgram();
+  const program = new GPUGraph();
   const input = program.vector('empty', 'float32', 0, {external: true});
   const output = program.scalar('total', 'float32');
-  program.add(new GPUProgramDotProduct({left: input, right: input, output}));
-  const compilation = new GPUProgramCompiler(device).compile(program, {vectors: {empty: []}});
+  program.add(new GPUGraphDotProduct({left: input, right: input, output}));
+  const compilation = new GPUGraphCompiler(device).compile(program, {vectors: {empty: []}});
   expect(compilation.vectors.get('empty')!.data).toHaveLength(0);
   expect(compilation.lowering.nodes).toHaveLength(1);
   device.destroy();
@@ -168,9 +168,9 @@ test('implicit transient topology respects storage binding capacity', () => {
   Object.defineProperty(device, 'limits', {
     value: {...device.limits, maxStorageBufferBindingSize: 16}
   });
-  const program = new GPUProgram();
+  const program = new GPUGraph();
   program.vector('large', 'float32', 11);
-  const compilation = new GPUProgramCompiler(device).compile(program);
+  const compilation = new GPUGraphCompiler(device).compile(program);
   expect(
     compilation.vectors.get('large')!.chunks.map(chunk => [chunk.offset, chunk.length])
   ).toEqual([
@@ -235,7 +235,7 @@ test('alignment preserves identical views and distinguishes different subranges'
 test('conjugate-gradient program lowers its in-place vector updates', () => {
   const device = makeDevice();
   const {program, rowOffsets, columnIndices, values, rhs, solution} =
-    createGPUConjugateGradientProgram({
+    createGPUConjugateGradientGraph({
       size: 2,
       nonZeros: 2,
       maxIterations: 2,
@@ -247,7 +247,7 @@ test('conjugate-gradient program lowers its in-place vector updates', () => {
       format,
       length
     });
-  const result = new GPUProgramCompiler(device).compile(program, {
+  const result = new GPUGraphCompiler(device).compile(program, {
     vectors: {
       [rowOffsets.id]: makeData('uint32', 3),
       [columnIndices.id]: makeData('uint32', 2),
