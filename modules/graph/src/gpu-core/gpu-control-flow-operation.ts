@@ -5,16 +5,16 @@
 import {
   GPUCompositeOperation,
   type GPUOperation,
-  type GPUProgramOperation,
+  type GPUGraphOperation,
   type GPUOperationMetadata
 } from './gpu-operation';
-import type {GPUProgramScalar} from './gpu-program-value';
+import type {GPUGraphScalar} from './gpu-graph-value';
 
 /** Semantic boolean predicate backed by a logical uint32 program scalar (zero=false, nonzero=true). */
 export type GPUOperationPredicate = {
   id: string;
   source: 'gpu';
-  value: GPUProgramScalar<'uint32'>;
+  value: GPUGraphScalar<'uint32'>;
   expression?: string;
 };
 export type GPUControlFlowLowering = 'auto' | 'unroll' | 'dynamic-gpu';
@@ -26,11 +26,11 @@ export class GPUConditionalOperation extends GPUCompositeOperation {
   constructor(props: {
     id?: string;
     predicate: GPUOperationPredicate;
-    body: GPUProgramOperation | readonly GPUProgramOperation[];
+    body: GPUGraphOperation | readonly GPUGraphOperation[];
     metadata?: GPUOperationMetadata;
     lowering?: GPUControlFlowLowering;
   }) {
-    const operations = Array.isArray(props.body) ? props.body : [props.body as GPUProgramOperation];
+    const operations = Array.isArray(props.body) ? props.body : [props.body as GPUGraphOperation];
     super({id: props.id ?? 'gpu-conditional-operation', operations, metadata: props.metadata});
     this.predicate = Object.freeze({...props.predicate});
     this.lowering = props.lowering ?? 'auto';
@@ -44,14 +44,14 @@ export class GPULoopOperation extends GPUCompositeOperation {
   readonly lowering: GPUControlFlowLowering;
   constructor(props: {
     id?: string;
-    body: GPUProgramOperation | readonly GPUProgramOperation[];
+    body: GPUGraphOperation | readonly GPUGraphOperation[];
     predicate?: GPUOperationPredicate;
     maximumIterations: number;
     minimumIterations?: number;
     metadata?: GPUOperationMetadata;
     lowering?: GPUControlFlowLowering;
   }) {
-    const operations = Array.isArray(props.body) ? props.body : [props.body as GPUProgramOperation];
+    const operations = Array.isArray(props.body) ? props.body : [props.body as GPUGraphOperation];
     super({id: props.id ?? 'gpu-loop-operation', operations, metadata: props.metadata});
     if (!Number.isSafeInteger(props.maximumIterations) || props.maximumIterations < 1)
       throw new Error(`${this.id} maximumIterations must be a positive safe integer`);

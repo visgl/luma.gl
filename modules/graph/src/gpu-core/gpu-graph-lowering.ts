@@ -8,14 +8,14 @@ import type {GraphTextureHandle, GraphTextureView} from './gpu-command-graph';
 import type {GPUCommandGraph, GraphVectorView} from './gpu-command-graph';
 import type {GPUScalar} from './gpu-scalar';
 import type {
-  GPUProgramScalar,
-  GPUProgramVector,
-  GPUProgramTexture,
-  GPUProgramTextureView
-} from './gpu-program-value';
+  GPUGraphScalar,
+  GPUGraphVector,
+  GPUGraphTexture,
+  GPUGraphTextureView
+} from './gpu-graph-value';
 import type {GPUOperationPredicate} from './gpu-control-flow-operation';
-import type {GPUOperation, GPUProgramOperation} from './gpu-operation';
-export type GPUProgramBackendCapabilities = {
+import type {GPUOperation, GPUGraphOperation} from './gpu-operation';
+export type GPUGraphBackendCapabilities = {
   backend: string;
   gpuConditionals: boolean;
   nativeLoops: boolean;
@@ -29,20 +29,20 @@ export type GPUOperationLoweringDecision = {
 };
 export type GPUOperationLoweringContext<Parameters = void> = {
   graph: GPUCommandGraph<Parameters>;
-  capabilities: GPUProgramBackendCapabilities;
-  lower: (operation: GPUProgramOperation) => void;
-  lowerConditional: (predicate: GPUOperationPredicate, operation: GPUProgramOperation) => void;
+  capabilities: GPUGraphBackendCapabilities;
+  lower: (operation: GPUGraphOperation) => void;
+  lowerConditional: (predicate: GPUOperationPredicate, operation: GPUGraphOperation) => void;
   resolveScalar: <T extends 'float32' | 'uint32' | 'sint32'>(
-    scalar: GPUProgramScalar<T>
+    scalar: GPUGraphScalar<T>
   ) => GPUScalar<T>;
   resolveVector: <T extends 'float32' | 'uint32' | 'sint32'>(
-    vector: GPUProgramVector<T>
+    vector: GPUGraphVector<T>
   ) => GraphVectorView<T>;
   resolveTexture: <Format extends TextureFormat>(
-    texture: GPUProgramTexture<Format>
+    texture: GPUGraphTexture<Format>
   ) => GraphTextureHandle<Format>;
   resolveTextureView: <Format extends TextureFormat>(
-    texture: GPUProgramTexture<Format> | GPUProgramTextureView<Format>
+    texture: GPUGraphTexture<Format> | GPUGraphTextureView<Format>
   ) => GraphTextureView<Format>;
   recordDecision: (decision: GPUOperationLoweringDecision) => void;
 };

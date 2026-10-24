@@ -4,12 +4,12 @@ import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-cont
 
 ## Overview
 
-The conjugate-gradient program is the first end-to-end pressure test of the semantic GPU program layer. The solver itself contains no WebGPU buffers, command nodes, bindings, WGSL, dispatch counts, or indirect-command implementation details.
+The conjugate-gradient program is the first end-to-end pressure test of the semantic GPU graph layer. The solver itself contains no WebGPU buffers, command nodes, bindings, WGSL, dispatch counts, or indirect-command implementation details.
 
-<GPUOperationContract operation="gpu-program-pcg" />
+<GPUOperationContract operation="gpu-graph-pcg" />
 
 ```text
-GPUProgram
+GPUGraph
   external CSR matrix
   external rhs + initial solution
   scalar literals
@@ -24,7 +24,7 @@ GPUProgram
     scalar compare
         |
         v
-GPUProgramCompiler (WebGPU)
+GPUGraphCompiler (WebGPU)
         |
         +-- external vectors -> imported graph buffers
         +-- scratch vectors  -> transient graph storage
@@ -37,17 +37,17 @@ GPUCommandGraph
 
 ## External resource binding
 
-`GPUProgram` declares logical external vectors. Typed GPUData chunks are supplied only when the program is compiled:
+`GPUGraph` declares logical external vectors. Typed GPUData chunks are supplied only when the program is compiled:
 
 ```ts
-const solver = createGPUConjugateGradientProgram({
+const solver = createGPUConjugateGradientGraph({
   size: n,
   nonZeros: nnz,
   maxIterations: 128,
   toleranceSquared: 1e-10
 });
 
-const compilation = new GPUProgramCompiler(device).compile(solver.program, {
+const compilation = new GPUGraphCompiler(device).compile(solver.program, {
   vectors: {
     [solver.rowOffsets.id]: rowOffsetsData,
     [solver.columnIndices.id]: columnIndicesData,

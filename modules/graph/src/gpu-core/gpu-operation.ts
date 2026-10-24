@@ -5,7 +5,7 @@
 import type {GPUCommandNode, GPUNode} from './gpu-command-node';
 import type {GPUCommandGraph} from './gpu-command-graph';
 
-export interface GPUProgramPrimitive {
+export interface GPUGraphPrimitive {
   getCommandNodes<Parameters>(
     graph: GPUCommandGraph<Parameters>
   ): readonly GPUCommandNode<Parameters>[];
@@ -27,10 +27,10 @@ export type GPUOperationMetadata = {
 };
 
 /**
- * Semantic unit in a GPUProgram.
+ * Semantic unit in a GPUGraph.
  *
  * Operations describe intent and contain no execution-graph mutation API. Backends lower them
- * through GPUProgramCompiler. Concrete primitives construct execution nodes explicitly.
+ * through GPUGraphCompiler. Concrete primitives construct execution nodes explicitly.
  */
 export interface GPUOperation {
   readonly id: string;
@@ -38,38 +38,38 @@ export interface GPUOperation {
   readonly metadata?: GPUOperationMetadata;
 }
 
-/** Semantic operations and concrete execution primitives accepted by GPUProgram. */
-export type GPUProgramOperation =
+/** Semantic operations and concrete execution primitives accepted by GPUGraph. */
+export type GPUGraphOperation =
   | GPUOperation
-  | GPUProgramPrimitive
+  | GPUGraphPrimitive
   | {getNodes<Parameters>(): readonly GPUNode<Parameters>[]};
-export type GPUOperationLike = GPUProgramOperation | readonly GPUOperationLike[];
+export type GPUOperationLike = GPUGraphOperation | readonly GPUOperationLike[];
 
 /** Semantic hierarchy. Grouping never implies synchronization or a command-graph child graph. */
 export class GPUCompositeOperation implements GPUOperation {
   readonly id: string;
   readonly type: string = 'composite';
-  readonly operations: readonly GPUProgramOperation[];
+  readonly operations: readonly GPUGraphOperation[];
   readonly metadata?: GPUOperationMetadata;
 
   constructor(
     props:
-      | readonly GPUProgramOperation[]
+      | readonly GPUGraphOperation[]
       | {
           id?: string;
-          operations: readonly GPUProgramOperation[];
+          operations: readonly GPUGraphOperation[];
           metadata?: GPUOperationMetadata;
         }
   ) {
     const normalized: {
       id?: string;
-      operations: readonly GPUProgramOperation[];
+      operations: readonly GPUGraphOperation[];
       metadata?: GPUOperationMetadata;
     } = Array.isArray(props)
-      ? {operations: props as readonly GPUProgramOperation[]}
+      ? {operations: props as readonly GPUGraphOperation[]}
       : (props as {
           id?: string;
-          operations: readonly GPUProgramOperation[];
+          operations: readonly GPUGraphOperation[];
           metadata?: GPUOperationMetadata;
         });
     this.id = normalized.id ?? 'gpu-composite-operation';
@@ -85,12 +85,12 @@ export type GPUOperationTree = {
   children?: readonly GPUOperationTree[];
 };
 
-export function isGPUOperation(operation: GPUProgramOperation): operation is GPUOperation {
+export function isGPUOperation(operation: GPUGraphOperation): operation is GPUOperation {
   const candidate = operation as Partial<GPUOperation>;
   return typeof candidate.id === 'string' && typeof candidate.type === 'string';
 }
 
-export function getGPUOperationTree(operation: GPUProgramOperation): GPUOperationTree {
+export function getGPUOperationTree(operation: GPUGraphOperation): GPUOperationTree {
   if (operation instanceof GPUCompositeOperation) {
     return Object.freeze({
       id: operation.id,
@@ -114,7 +114,7 @@ export function getGPUOperationTree(operation: GPUProgramOperation): GPUOperatio
 
 /** Identifies concrete execution primitives. */
 export function isGPUCommandNodeProducer(
-  operation: GPUProgramOperation
-): operation is GPUProgramPrimitive {
-  return typeof (operation as GPUProgramPrimitive).getCommandNodes === 'function';
+  operation: GPUGraphOperation
+): operation is GPUGraphPrimitive {
+  return typeof (operation as GPUGraphPrimitive).getCommandNodes === 'function';
 }

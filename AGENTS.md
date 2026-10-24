@@ -104,6 +104,6 @@
 - Do not add new-feature bullets to the upgrade guide; put those in release notes such as `docs/whats-new.md`.
 
 ## GPU Graph package boundaries
-- `@luma.gl/graph` exposes `GPUGraph` and execution graph infrastructure.
+- `@luma.gl/graph` exposes `GPUGraph` authoring, `GPUGraphCompiler`, and `GPUCommandGraph` execution infrastructure.
 - Graph-based algorithms and table processing use explicit `@luma.gl/graph/*` subpaths.
 - `@luma.gl/gpgpu` retains GPU data primitives and immediate operations and must not depend on `@luma.gl/graph`.

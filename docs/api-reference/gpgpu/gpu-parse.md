@@ -5,7 +5,7 @@ data without a decode/readback/re-upload round trip.
 
 The initial focus is Apache Parquet. This package starts below the file-reader layer: a caller parses
 Thrift metadata, selects a page, and uploads its bytes. `@luma.gl/graph/gpu-parse` plans the serial control
-data and contributes decoding operations to a `GPUGraph`. Decoded physical bytes, lengths,
+data and contributes decoding operations to a `GPUCommandGraph`. Decoded physical bytes, lengths,
 offsets, indices, and levels stay GPU-resident for later table, rendering, or GPGPU work.
 
 The submodule is experimental while its page-buffer APIs settle.
@@ -17,7 +17,7 @@ payloads. The package splits those concerns:
 
 1. CPU `parse...Plan` functions inspect headers and create compact `Uint32Array` descriptors.
 2. The caller uploads the original bytes and descriptor arrays as packed `uint32` graph views.
-3. `GPU...` classes add operations to a `GPUGraph`; they do not submit or read back work.
+3. `GPU...` classes add operations to a `GPUCommandGraph`; they do not submit or read back work.
 4. Composite decoders reuse generic scan, gather, and LZ operations, with graph-owned transient
    buffers between stages.
 
@@ -233,7 +233,7 @@ Request encoded pages and preserve only codecs that `gpu-parse` can decompress:
 
 ```ts
 import {ParquetSourceLoader} from '@loaders.gl/parquet/parquet-source-loader';
-import {GPUGraph} from '@luma.gl/graph/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {
   addGPUParquetEncodedPageBatchToGraph,
   createGPUParquetEncodedPageBatchInputBuffer,
@@ -250,7 +250,7 @@ for await (const encodedBatch of source.readPages({
     minimumGPUByteLength: 64 * 1024
   });
   const inputBuffer = createGPUParquetEncodedPageBatchInputBuffer(device, plan);
-  const graph = new GPUGraph(device);
+  const graph = new GPUCommandGraph(device);
   const decodedBatch = addGPUParquetEncodedPageBatchToGraph(graph, plan, inputBuffer);
 
   // Add table, filtering, rendering, or readback operations that consume decodedBatch.pages.

@@ -4,7 +4,7 @@ A `GPUVector` is an ordered logical array backed by `GPUData[]`. Chunk boundarie
 storage, not independent problems. A global reduction produces one global result, and a scan
 carries state across chunks. Empty chunks contain no rows and remain in the caller's topology.
 
-`GPUVectorLike` and `GPUVectorInput` remain the binding foundation. `GPUProgramVector` declares a
+`GPUVectorLike` and `GPUVectorInput` remain the binding foundation. `GPUGraphVector` declares a
 symbolic resource; binding it does not concatenate or upload its chunks. Changing formats, lengths,
 or partitions requires recompilation. Imported contents may change between encodings.
 
@@ -25,8 +25,8 @@ explicit graph-owned scratch.
 
 | Family | Work and result shape | Partitions and layout | Empty input / reset |
 | --- | --- | --- | --- |
-| MADD (`GPUProgramVectorMADD`) | Row-wise, same logical length and order | Equal lengths; independent input/addend/output boundaries; packed `float32` | No writes for zero rows; each encoding overwrites its destination |
-| Dot (`GPUProgramDotProduct`) | Global aggregate, one scalar | Equal lengths; independent boundaries; packed `float32` | Zero; first partial overwrites, subsequent partials accumulate on every encoding |
+| MADD (`GPUGraphVectorMADD`) | Row-wise, same logical length and order | Equal lengths; independent input/addend/output boundaries; packed `float32` | No writes for zero rows; each encoding overwrites its destination |
+| Dot (`GPUGraphDotProduct`) | Global aggregate, one scalar | Equal lengths; independent boundaries; packed `float32` | Zero; first partial overwrites, subsequent partials accumulate on every encoding |
 | `GPUScan` | Stateful prefix, same logical row order | Packed `uint32`; input and segment flags cover the scanned rows, scalar destinations may provide extra capacity, and all may use independent chunk boundaries | No writes for zero rows; carry is rebuilt per encoding |
 | `GPUScanUint64` | Inclusive modulo-2^64 prefix over split low/high words | Four packed `uint32` operands may use independent atomic/vector boundaries; inputs have equal lengths and outputs cover them | No writes for zero rows; spare capacity is untouched; carry is rebuilt per encoding |
 | `GPUMask` | Row-wise boolean composition, canonical zero/one output | Packed `uint32`; inputs and output require equal logical lengths and may use independent atomic/vector boundaries | No writes for zero rows; output is overwritten for every encoded row |

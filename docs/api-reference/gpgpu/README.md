@@ -27,7 +27,7 @@ Graph-based submodules now belong to [`@luma.gl/graph`](/docs/api-reference/grap
 | Subpath | Reference |
 | --- | --- |
 | `gpu-data` | [GPU Data and GPUVector storage](/docs/api-reference/gpgpu/gpu-data) |
-| `gpu-graph` | [GPUGraph execution scheduling](/docs/api-reference/experimental/gpu-core/gpu-command-graph) |
+| `gpu-graph` | [GPUCommandGraph execution scheduling](/docs/api-reference/experimental/gpu-core/gpu-command-graph) |
 | `gpu-core` | [Compute primitives, programs, and execution helpers](/docs/api-reference/experimental/gpu-core) |
 | `gpu-graph-algorithms` | [Graph analytics and layouts](/docs/api-reference/experimental/gpu-graph) |
 | `gpu-parse` | [Encoded columnar page decoding](/docs/api-reference/gpgpu/gpu-parse) |

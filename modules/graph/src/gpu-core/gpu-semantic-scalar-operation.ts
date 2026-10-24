@@ -3,29 +3,29 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {GPUOperation, GPUOperationMetadata} from './gpu-operation';
-import type {GPUProgramScalar} from './gpu-program-value';
+import type {GPUGraphScalar} from './gpu-graph-value';
 import type {
   GPUScalarArithmeticOperation,
   GPUScalarComparisonOperation,
   GPUScalarOperation
 } from './gpu-scalar-operation';
 
-/** Backend-independent scalar arithmetic/comparison in a GPUProgram. */
-export class GPUProgramScalarOperation implements GPUOperation {
+/** Backend-independent scalar arithmetic/comparison in a GPUGraph. */
+export class GPUGraphScalarOperation implements GPUOperation {
   readonly id: string;
   readonly type = 'scalar-operation';
   readonly operation: GPUScalarOperation;
-  readonly left: GPUProgramScalar;
-  readonly right?: GPUProgramScalar;
-  readonly output: GPUProgramScalar;
+  readonly left: GPUGraphScalar;
+  readonly right?: GPUGraphScalar;
+  readonly output: GPUGraphScalar;
   readonly metadata: GPUOperationMetadata;
 
   constructor(props: {
     id?: string;
     operation: GPUScalarOperation;
-    left: GPUProgramScalar;
-    right?: GPUProgramScalar;
-    output: GPUProgramScalar;
+    left: GPUGraphScalar;
+    right?: GPUGraphScalar;
+    output: GPUGraphScalar;
   }) {
     this.id = props.id ?? `gpu-scalar-${props.operation}`;
     this.operation = props.operation;
@@ -47,24 +47,24 @@ export class GPUProgramScalarOperation implements GPUOperation {
 export function scalarArithmetic(props: {
   id?: string;
   operation: GPUScalarArithmeticOperation;
-  left: GPUProgramScalar;
-  right?: GPUProgramScalar;
-  output: GPUProgramScalar;
-}): GPUProgramScalarOperation {
-  return new GPUProgramScalarOperation(props);
+  left: GPUGraphScalar;
+  right?: GPUGraphScalar;
+  output: GPUGraphScalar;
+}): GPUGraphScalarOperation {
+  return new GPUGraphScalarOperation(props);
 }
 
 export function scalarCompare(props: {
   id?: string;
   operation: GPUScalarComparisonOperation;
-  left: GPUProgramScalar;
-  right: GPUProgramScalar;
-  output: GPUProgramScalar<'uint32'>;
-}): GPUProgramScalarOperation {
-  return new GPUProgramScalarOperation(props);
+  left: GPUGraphScalar;
+  right: GPUGraphScalar;
+  output: GPUGraphScalar<'uint32'>;
+}): GPUGraphScalarOperation {
+  return new GPUGraphScalarOperation(props);
 }
 
-function validateScalarOperation(operation: GPUProgramScalarOperation): void {
+function validateScalarOperation(operation: GPUGraphScalarOperation): void {
   const unary = operation.operation === 'copy' || operation.operation === 'sqrt';
   const comparison = isComparison(operation.operation);
   if (!unary && !operation.right) {

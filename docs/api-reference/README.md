@@ -43,7 +43,7 @@ Select at least one adapter from the core backend subpaths when creating a devic
 - [`@luma.gl/slang`][slang] for experimental Slang shader authoring on WebGL 2 and WebGPU, available from v10.
 - [`@luma.gl/effects`][effects] for reusable image processing, bloom, and supported screen-space effects.
 - [`@luma.gl/gpgpu`][gpgpu] for portable GPU evaluation and GPU data primitives.
-- [`@luma.gl/graph`][graph] for `GPUGraph`, `GPUProgram`, GPU tables, and graph-based processing.
+- [`@luma.gl/graph`][graph] for `GPUCommandGraph`, `GPUGraph`, GPU tables, and graph-based processing.
 - [GPGPU data][gpu-data] for primitive `GPUData`/`GPUVector` APIs, and [Experimental GPU Tables][gpu-tables] for private `GPURecordBatch`/`GPUTable` APIs.
 - [`@luma.gl/text`][text] for `TextRenderer` and GPU text data; use [`@luma.gl/arrow`][arrow] for Arrow conversion.
 - [`@luma.gl/splats`][splats] for experimental Gaussian splat rendering and caller-owned prepared GPU data.
