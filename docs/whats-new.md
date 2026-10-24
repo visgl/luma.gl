@@ -13,6 +13,14 @@ adds an animated collider-scale scene. Scene instances support transactional liv
 capture/restore and tracked asynchronous queries while preserving authored Reset
 behavior. Mesh deformation and full-profile qualification remain separate work.
 
+### SimpleGraph value authoring
+
+`@luma.gl/graph/gpu-simple-graph` now offers `GPUSimpleGraphValue`,
+`simpleGraphOperations`, and `addValue()` for expression authoring without constructing
+evaluators. Compilation owns the existing GPGPU execution machinery and its resources;
+legacy evaluator adapters remain supported. The SimpleGraph example uses the new path.
+
+
 ## SimpleGraph uploads, copies, and scoped execution
 
 SimpleGraph now supports declarative uploads and copies, borrowed per-chunk output targets,

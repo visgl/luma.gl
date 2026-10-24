@@ -191,21 +191,27 @@ async function runExpression({
     }
     evaluationStartedAt = performance.now();
     messageElement.textContent = 'Evaluating expression...';
-    const output = evaluateExpression(trimmedExpression, expressionInputs);
-
     const device = await evaluationDevicePromise;
-    const graphNodeCount = useSimpleGraph
-      ? await evaluateSimpleGraph(device, expressionInputs, output)
+    const graphResult = useSimpleGraph
+      ? await (await import('./simple-graph-expression')).evaluateSimpleGraphExpression(
+          device,
+          trimmedExpression,
+          expressionInputs
+        )
       : null;
+    const output = graphResult?.output ?? evaluateExpression(trimmedExpression, expressionInputs);
+    const graphNodeCount = graphResult?.nodeCount ?? null;
     if (!useSimpleGraph) {
-      await cleanEvaluate(device, {
-        ...expressionInputs,
-        output
-      });
+      await cleanEvaluate(device, {...expressionInputs, output});
     }
 
-    const outputColumn = await makeOutputTableColumn(output, renderer.rowCount, sourceColumns);
-    renderer.setColumns([...sourceColumns, outputColumn]);
+    try {
+      const outputColumn = await makeOutputTableColumn(output, renderer.rowCount, sourceColumns);
+      renderer.setColumns([...sourceColumns, outputColumn], graphResult?.destroy);
+    } catch (error) {
+      graphResult?.destroy();
+      throw error;
+    }
     renderer.scrollToLastColumn();
     messageElement.textContent = `output = ${output} · ${graphNodeCount === null ? '' : `${graphNodeCount} graph nodes · `}evaluated in ${formatDuration(performance.now() - evaluationStartedAt)}`;
   } catch (error) {
@@ -214,32 +220,6 @@ async function runExpression({
       evaluationStartedAt === null
         ? message
         : `${message} · failed after ${formatDuration(performance.now() - evaluationStartedAt)}`;
-  }
-}
-
-async function evaluateSimpleGraph(
-  device: Device,
-  expressionInputs: Parameters<typeof evaluateExpression>[1],
-  output: GPUDataEvaluator
-): Promise<number> {
-  const {GPUSimpleGraph} = await import('@luma.gl/graph/gpu-simple-graph');
-  const graph = new GPUSimpleGraph(device);
-  for (const [name, input] of Object.entries(expressionInputs)) {
-    if (input instanceof GPUDataEvaluator) {
-      graph.addEvaluator(name, input);
-    } else {
-      graph.addEvaluator(`${name}.values`, input.values);
-      graph.addEvaluator(`${name}.startIndices`, input.startIndices);
-    }
-  }
-  graph.addEvaluator('output', output);
-  const compiled = graph.compile({outputs: ['output']});
-  try {
-    await compiled.run();
-    await cleanEvaluate(device, {...expressionInputs, output});
-    return compiled.nodes.length;
-  } finally {
-    compiled.destroy();
   }
 }
 

@@ -33,6 +33,7 @@ import {
   GPUSimpleGraphCopyOperation,
   makeCopyEvaluator
 } from './gpu-simple-graph-transfer';
+import {GPUSimpleGraphValue, GPUSimpleGraphValueOperation} from './gpu-simple-graph-value';
 import {SimpleGraphLowering, type SimpleOperation} from './gpu-simple-graph-lowering';
 
 /** Inspection record for one evaluator in dependency order. */
@@ -108,7 +109,8 @@ export class GPUSimpleGraph {
       } else {
         // Only the initial portable semantic subset and explicit evaluator adapters are supported.
         assert(
-          value instanceof GPUSimpleGraphOperation ||
+          value instanceof GPUSimpleGraphValueOperation ||
+            value instanceof GPUSimpleGraphOperation ||
             value instanceof GPUSimpleGraphUploadOperation ||
             value instanceof GPUSimpleGraphCopyOperation ||
             value instanceof GPUProgramScalarLiteral ||
@@ -116,6 +118,7 @@ export class GPUSimpleGraph {
             value instanceof GPUProgramVectorMADD
         );
         if (
+          value instanceof GPUSimpleGraphValueOperation ||
           value instanceof GPUSimpleGraphOperation ||
           value instanceof GPUSimpleGraphUploadOperation ||
           value instanceof GPUSimpleGraphCopyOperation
@@ -146,7 +149,16 @@ export class GPUSimpleGraph {
     return this;
   }
 
-  /** Convenience adapter preserving the existing expression-authoring style. */
+  /** Publish a graph value; compilation owns its internal execution state. */
+  addValue<Value extends GPUSimpleGraphValue | readonly GPUSimpleGraphValue[]>(
+    identifier: string,
+    value: Value
+  ): Value {
+    this.add(new GPUSimpleGraphValueOperation({id: identifier, value}));
+    return value;
+  }
+
+  /** Compatibility adapter for existing evaluator-based callers. Prefer addValue() for new code. */
   addEvaluator<Evaluator extends GPUSimpleGraphEvaluator>(
     identifier: string,
     evaluator: Evaluator

@@ -70,6 +70,8 @@ export class VirtualGPUTableRenderer {
   columns: TableColumn[];
   readonly elements: RenderedTableElements;
   readonly virtualizer: Virtualizer<HTMLElement, Element>;
+  private isDestroyed = false;
+  private outputCleanup: (() => void) | undefined;
   private cleanupCallback: (() => void) | undefined;
   private readonly handleHeaderScroll = (): void => this.syncHeaderScroll();
   private renderVersion = 0;
@@ -95,7 +97,13 @@ export class VirtualGPUTableRenderer {
     });
   }
 
-  setColumns(columns: TableColumn[]): void {
+  setColumns(columns: TableColumn[], cleanup?: () => void): void {
+    if (this.isDestroyed) {
+      cleanup?.();
+      return;
+    }
+    this.outputCleanup?.();
+    this.outputCleanup = cleanup;
     this.columns = columns;
     this.updateGridLayout();
     this.renderHeader();
@@ -118,6 +126,9 @@ export class VirtualGPUTableRenderer {
   }
 
   destroy(): void {
+    this.isDestroyed = true;
+    this.outputCleanup?.();
+    this.outputCleanup = undefined;
     this.elements.scrollContainer.removeEventListener('scroll', this.handleHeaderScroll);
     this.cleanupCallback?.();
     this.cleanupCallback = undefined;
