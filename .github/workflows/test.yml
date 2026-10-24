@@ -124,13 +124,13 @@ jobs:
           done
 
   browser_coverage:
-    name: Browser coverage (${{ matrix.shard }}/3)
+    name: Browser coverage (${{ matrix.shard }}/6)
     runs-on: ubuntu-22.04
     timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4, 5, 6]
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -190,7 +190,7 @@ jobs:
           # Include browser process failures alongside WebGPU test assertions.
           DEBUG: pw:browser
         run: |
-          yarn test-coverage --shard=${{ matrix.shard }}/3
+          yarn test-coverage --shard=${{ matrix.shard }}/6
 
       - name: Report disk usage after coverage
         if: always()
@@ -314,9 +314,7 @@ jobs:
         run: |
           node ./test/utils/merge-lcov.mjs \
             --output coverage/lcov.info \
-            coverage/shards/browser-coverage-lcov-1/lcov.info \
-            coverage/shards/browser-coverage-lcov-2/lcov.info \
-            coverage/shards/browser-coverage-lcov-3/lcov.info \
+            coverage/shards/browser-coverage-lcov-*/lcov.info \
             coverage/shards/node-coverage-lcov/lcov.info
 
       - name: Upload combined coverage to Coveralls
