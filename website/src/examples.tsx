@@ -2930,3 +2930,9 @@ export const PhysicsStressExample: React.FC = () => {
     <iframe title="Physics Stress Lab" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
   </ExamplePage>;
 };
+
+export const AuthoredSceneStressExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample id="authored-scene-stress" title="Authored Scene Stress Lab" directory="gltf"
+    loadTemplate={() => import('../../examples/gltf/authored-scene-stress/app')}
+    config={exampleConfig} devices={['webgpu']} {...props} />
+);

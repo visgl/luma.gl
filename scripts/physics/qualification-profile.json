@@ -981,7 +981,28 @@
         "import",
         "behavior"
       ],
-      "checks": {}
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-session.spec.ts",
+            "testPattern": "qualifies imported ancestor ownership"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-session.spec.ts",
+            "testPattern": "qualifies animation takeover"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-session.spec.ts",
+            "testPattern": "qualifies blended mixer"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-session.spec.ts",
+            "testPattern": "retains animation release ownership"
+          }
+        ]
+      }
     },
     {
       "id": "binding.object-model",
@@ -993,7 +1014,32 @@
         "import",
         "behavior"
       ],
-      "checks": {}
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-pointer.node.spec.ts",
+            "testPattern": "qualifies declared motion"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-session.spec.ts",
+            "testPattern": "qualifies imported component pointers"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-session.spec.ts",
+            "testPattern": "rejects a shared joint edit"
+          },
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-properties.spec.ts",
+            "testPattern": "binds authored motion and material pointers"
+          },
+          {
+            "file": "modules/gltf/test/physics/mesh-snapshot.node.spec.ts",
+            "testPattern": "snapshots initial and live morphs"
+          }
+        ]
+      }
     },
     {
       "id": "binding.instances-and-lifecycle",
@@ -1005,7 +1051,32 @@
         "import",
         "behavior"
       ],
-      "checks": {}
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-session.spec.ts",
+            "testPattern": "native export reimport"
+          },
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-session.spec.ts",
+            "testPattern": "reimports automatically derived inertia"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-session.spec.ts",
+            "testPattern": "qualifies scene lifecycle"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-session.spec.ts",
+            "testPattern": "retains animation release ownership"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-session.spec.ts",
+            "testPattern": "rolls back render binding failure"
+          }
+        ]
+      }
     },
     {
       "id": "binding.gpu-render-publication",
@@ -1017,7 +1088,28 @@
         "behavior",
         "performance"
       ],
-      "checks": {}
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-session.spec.ts",
+            "testPattern": "qualifies hierarchy publication"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-instance.spec.ts",
+            "testPattern": "publishes COM-correct matrices"
+          }
+        ],
+        "performance": [
+          {
+            "benchmark": {
+              "stage": "publication",
+              "fixture": "pose-bounds",
+              "minimumObjectCount": 10000,
+              "hardware": true
+            }
+          }
+        ]
+      }
     },
     {
       "id": "qualification.external-assets",

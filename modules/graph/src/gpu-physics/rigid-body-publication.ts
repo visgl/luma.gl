@@ -1,7 +1,7 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
-import {Buffer} from '@luma.gl/core';
+import {Buffer, type CommandEncoder} from '@luma.gl/core';
 import {Matrix4} from '@math.gl/core';
 import {normalizeRigidBodyRotation} from './rigid-body-properties';
 import {Computation} from '@luma.gl/engine';
@@ -91,12 +91,16 @@ fn rotate(rotation:vec4f,point:vec3f)->vec3f{return point+2.0*cross(rotation.xyz
       Object.entries(entries).map(([name, entry]) => [name, entry.buffer])
     )
   };
-  const executable = (computation: Computation): GPUCommandGraphComputeExecutable<Parameters> => ({
-    encode: ({computePass}) => {
-      computation.dispatch(computePass, Math.ceil(bodies.length / 64));
-    },
-    destroy: () => computation.destroy()
-  });
+  let publicationComputation: Computation;
+  const executable = (computation: Computation): GPUCommandGraphComputeExecutable<Parameters> => {
+    publicationComputation = computation;
+    return {
+      encode: ({computePass}) => {
+        computation.dispatch(computePass, Math.ceil(bodies.length / 64));
+      },
+      destroy: () => computation.destroy()
+    };
+  };
   graph.addComputePass({
     id: properties.id,
     resources: Object.values(entries).map((entry, index) => ({
@@ -106,5 +110,13 @@ fn rotate(rotation:vec4f,point:vec3f)->vec3f{return point+2.0*cross(rotation.xyz
     compile: () => executable(new Computation(graph.device, properties)),
     compileAsync: async () => executable(await Computation.createAsync(graph.device, properties))
   });
-  return {matrices, bounds: worldBounds};
+  return {
+    matrices,
+    bounds: worldBounds,
+    encode: (encoder: CommandEncoder) => {
+      const pass = encoder.beginComputePass();
+      publicationComputation.dispatch(pass, Math.ceil(bodies.length / 64));
+      pass.end();
+    }
+  };
 }

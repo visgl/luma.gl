@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Matrix4} from '@math.gl/core';
+import {deformPositions, type ScenegraphNode} from '@luma.gl/engine';
 import type {GLTFScenegraph} from '@loaders.gl/gltf';
 import {
   MAX_COLLISION_SNAPSHOT_VERTICES,
@@ -11,7 +12,10 @@ import {
 import {readPhysicsRotation, readPhysicsVector} from './physics-transforms';
 
 /** Decode the initial mesh pose for geometry.node, before glTF postprocessing mutates indices. */
-export function makeGLTFPhysicsMeshResolver(scenegraph: GLTFScenegraph) {
+export function makeGLTFPhysicsMeshResolver(
+  scenegraph: GLTFScenegraph,
+  liveNodes?: ReadonlyMap<number, ScenegraphNode>
+) {
   const nodes = scenegraph.gltf.json.nodes ?? [];
   const parents = new Map<number, number>();
   for (const [parentIndex, node] of nodes.entries())
@@ -27,12 +31,15 @@ export function makeGLTFPhysicsMeshResolver(scenegraph: GLTFScenegraph) {
     const node = nodes[nodeIndex];
     if (!node || visiting.has(nodeIndex)) throw new Error('Invalid skin hierarchy');
     visiting.add(nodeIndex);
-    const local = node.matrix
-      ? new Matrix4(node.matrix)
-      : new Matrix4()
-          .translate(readPhysicsVector(node.translation, [0, 0, 0]))
-          .multiplyRight(new Matrix4().fromQuaternion(readPhysicsRotation(node.rotation)))
-          .scale(readPhysicsVector(node.scale, [1, 1, 1]));
+    const live = liveNodes?.get(nodeIndex);
+    const local = live
+      ? new Matrix4(live.matrix)
+      : node.matrix
+        ? new Matrix4(node.matrix)
+        : new Matrix4()
+            .translate(readPhysicsVector(node.translation, [0, 0, 0]))
+            .multiplyRight(new Matrix4().fromQuaternion(readPhysicsRotation(node.rotation)))
+            .scale(readPhysicsVector(node.scale, [1, 1, 1]));
     const parentIndex = parents.get(nodeIndex);
     const world =
       parentIndex === undefined ? local : worldMatrix(parentIndex).clone().multiplyRight(local);
@@ -65,55 +72,27 @@ export function makeGLTFPhysicsMeshResolver(scenegraph: GLTFScenegraph) {
     for (const primitive of mesh.primitives) {
       if (primitive.mode !== undefined && primitive.mode !== 4)
         throw new Error('Collision geometry requires triangle primitives');
-      const vertices = readAccessor(scenegraph, primitive.attributes['POSITION'], 'VEC3');
-      for (const [targetIndex, target] of (primitive.targets ?? []).entries()) {
-        const weight = weights[targetIndex] ?? 0;
-        if (!weight || target['POSITION'] === undefined) continue;
-        const delta = readAccessor(scenegraph, target['POSITION'], 'VEC3');
-        if (delta.length !== vertices.length) throw new Error('Invalid collision morph target');
-        for (let index = 0; index < vertices.length; index++)
-          vertices[index] += weight * delta[index];
-      }
-      if (jointMatrices) {
-        const influences: {joints: number[]; weights: number[]}[] = [];
-        for (
-          let setIndex = 0;
-          primitive.attributes[`JOINTS_${setIndex}`] !== undefined;
-          setIndex++
-        ) {
+      const positionsSource = readAccessor(scenegraph, primitive.attributes['POSITION'], 'VEC3');
+      const targets = (primitive.targets ?? []).map(target =>
+        target['POSITION'] === undefined
+          ? new Float32Array(positionsSource.length)
+          : new Float32Array(readAccessor(scenegraph, target['POSITION'], 'VEC3'))
+      );
+      const influences: {joints: number[]; weights: number[]}[] = [];
+      if (jointMatrices)
+        for (let setIndex = 0; primitive.attributes[`JOINTS_${setIndex}`] !== undefined; setIndex++)
           influences.push({
             joints: readAccessor(scenegraph, primitive.attributes[`JOINTS_${setIndex}`], 'VEC4'),
             weights: readAccessor(scenegraph, primitive.attributes[`WEIGHTS_${setIndex}`], 'VEC4')
           });
-        }
-        if (!influences.length) throw new Error('Missing collision skin influences');
-        for (let vertex = 0; vertex < vertices.length / 3; vertex++) {
-          const original = vertices.slice(vertex * 3, vertex * 3 + 3);
-          const point = [0, 0, 0];
-          let totalWeight = 0;
-          for (const influence of influences) {
-            if (
-              influence.joints.length !== (vertices.length / 3) * 4 ||
-              influence.weights.length !== influence.joints.length
-            )
-              throw new Error('Invalid collision skin influences');
-            for (let component = 0; component < 4; component++) {
-              const offset = vertex * 4 + component,
-                weight = influence.weights[offset];
-              if (!weight) continue;
-              const joint = jointMatrices[influence.joints[offset]];
-              if (!joint || !Number.isFinite(weight) || weight < 0)
-                throw new Error('Invalid collision skin joint');
-              const transformed = joint.transformAsPoint(original);
-              for (let axis = 0; axis < 3; axis++) point[axis] += weight * transformed[axis];
-              totalWeight += weight;
-            }
-          }
-          if (!(totalWeight > 0)) throw new Error('Empty collision skin weights');
-          for (let axis = 0; axis < 3; axis++)
-            vertices[vertex * 3 + axis] = point[axis] / totalWeight;
-        }
-      }
+      const liveWeights = liveNodes?.get(nodeIndex)?.userData['morphWeights'];
+      const vertices = deformPositions({
+        positions: new Float32Array(positionsSource),
+        targets,
+        weights: Array.isArray(liveWeights) ? liveWeights : weights,
+        jointMatrices,
+        influences
+      });
       const primitiveIndices =
         primitive.indices === undefined
           ? Array.from({length: vertices.length / 3}, (_, index) => index)

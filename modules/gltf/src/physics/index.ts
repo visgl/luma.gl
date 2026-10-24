@@ -94,3 +94,8 @@ export function makeGLTFPhysicsDefinition(
     }
   };
 }
+export {makeGLTFPhysicsScene} from './scene-bindings';
+
+export {exportGLTFPhysicsState} from './export-state';
+
+export {snapshotGLTFPhysicsScene} from './snapshot-scene';

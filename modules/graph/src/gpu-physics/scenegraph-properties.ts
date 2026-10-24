@@ -62,6 +62,8 @@ export class ScenegraphPhysicsProperties implements InteractivityPropertyAdapter
   get(pointer: string): unknown[] | undefined {
     const target = this.targets.get(pointer);
     if (!target) {
+      const component = this.resolveComponent(pointer);
+      if (component) return [component.values[component.index]];
       const constant = this.constants.get(pointer);
       return constant ? [...constant] : undefined;
     }
@@ -117,9 +119,26 @@ export class ScenegraphPhysicsProperties implements InteractivityPropertyAdapter
     return [values?.[target.property as keyof typeof values] ?? fallback];
   }
 
+  /** Component pointers address a declared vector; they cannot create absent fields. */
+  private resolveComponent(pointer: string) {
+    const match = /^(.*)\/(0|[1-9]\d*)$/.exec(pointer);
+    if (!match || !this.targets.has(match[1])) return undefined;
+    const values = this.get(match[1]);
+    const index = Number(match[2]);
+    if (!values || values.length < 2 || index >= values.length) return undefined;
+    return {pointer: match[1], values, index};
+  }
+
   set(pointer: string, value: unknown[]): boolean {
     const target = this.targets.get(pointer);
-    if (!target) return false;
+    if (!target) {
+      const component = this.resolveComponent(pointer);
+      if (!component) return false;
+      if (value.length !== 1) throw new Error('Expected one property component');
+      const values = [...component.values];
+      values[component.index] = value[0];
+      return this.set(component.pointer, values);
+    }
     if (target.type === 'shape') {
       const boolean = target.property === 'doubleSided';
       const size = target.property === 'halfExtents' ? 3 : 1;
@@ -164,11 +183,15 @@ export class ScenegraphPhysicsProperties implements InteractivityPropertyAdapter
     if (target.type === 'joint' && target.property === 'collideConnected') {
       if (value.length !== 1 || typeof value[0] !== 'boolean')
         throw new Error('Expected collision boolean');
-      for (const index of target.joints)
-        this.world.setJointParameters(index, {
-          ...this.world.getJointParameters(index),
-          collideConnected: value[0]
-        });
+      this.world.setJointParameterEdits(
+        target.joints.map(index => ({
+          index,
+          parameters: {
+            ...this.world.getJointParameters(index),
+            collideConnected: value[0] as boolean
+          }
+        }))
+      );
       return true;
     }
     if (!value.every(component => typeof component === 'number' && Number.isFinite(component)))
@@ -192,21 +215,26 @@ export class ScenegraphPhysicsProperties implements InteractivityPropertyAdapter
       });
     } else {
       if (components.length !== 1) throw new Error('Expected scalar physics property');
-      if (target.type === 'material')
-        for (const collider of target.colliders)
-          this.world.setColliderMaterial(collider, {
+      if (target.type === 'material') {
+        const edits = target.colliders.map(collider => ({
+          collider,
+          material: {
             ...this.world.getColliderMaterial(collider),
             [target.property]: components[0]
-          });
-      else
-        for (const index of target.joints) {
-          const joint = this.world.getJointParameters(index);
-          if (joint.type !== 'general') throw new Error('Property requires a general constraint');
-          const parameters: GPURigidBodyGeneralConstraint = target.drive
-            ? {...joint, drive: {...joint.drive, [target.property]: components[0]}}
-            : {...joint, [target.property]: components[0]};
-          this.world.setJointParameters(index, {...joint, ...parameters});
-        }
+          }
+        }));
+        for (const edit of edits) this.world.setColliderMaterial(edit.collider, edit.material);
+      } else
+        this.world.setJointParameterEdits(
+          target.joints.map(index => {
+            const joint = this.world.getJointParameters(index);
+            if (joint.type !== 'general') throw new Error('Property requires a general constraint');
+            const parameters: GPURigidBodyGeneralConstraint = target.drive
+              ? {...joint, drive: {...joint.drive, [target.property]: components[0]}}
+              : {...joint, [target.property]: components[0]};
+            return {index, parameters: {...joint, ...parameters}};
+          })
+        );
     }
     return true;
   }

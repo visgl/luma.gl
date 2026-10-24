@@ -190,3 +190,81 @@ morphed/skinned geometry, general scene edits, or arbitrary glTF export/reimport
 live simulation state. Direct GPU physics-to-skinning palette generation also remains
 separate work. These boundaries are explicit so a programmatic scene and an imported
 glTF scene receive the same behavior rather than different hidden implementations.
+
+## Authored-scene sessions
+
+`ScenegraphPhysicsSession` coordinates an engine scene and a physics instance. glTF
+resolves source indices once with `makeGLTFPhysicsScene`; simulation, ownership,
+properties and render publication use the same objects as programmatic scenes.
+
+```typescript
+const session = await ScenegraphPhysicsSession.create(
+  device,
+  makeGLTFPhysicsScene(description, {
+    roots: rendered.scenes,
+    nodes: rendered.gltfNodeIndexToNodeMap
+  })
+);
+await session.step(animatedNodes, () => mixer.update(fixedTimeStep));
+```
+
+Pass the nodes with active transform tracks after blending. Animated ancestors own
+descendant body poses. Paused tracks keep ownership; stopped tracks release it.
+Release restores the requested body mode and retains the accepted pose and velocity.
+Seeking is an authored kinematic movement and can inject energy. Keep animation time
+and action state in the application; a physics capture does not serialize the mixer.
+
+`session.publication` exposes borrowed GPU `matrices`, world `bounds`, and a map of
+mesh-to-body `localMatrix`, `body`, and inherited `visible` values. A renderer multiplies
+its mesh-local matrix by the published body matrix in both visible and shadow passes.
+Refresh every buffer binding when `session.revision` changes, including draws whose
+body index is -1: a declared storage binding must still point to a live buffer.
+Visual bounds come from leaf geometry (including renderer-supplied instance and
+deformation bounds). They are independent of collider bounds. Recompute them after
+geometry edits; a CPU frustum test against stale authoring transforms is not valid for
+GPU-moved bodies.
+
+`capture()` records live physics, scene transforms, visibility, child references and
+animation ownership. `restore()` rebuilds all bindings before publishing the revision;
+`reset()` restores the authored scene and leaves the external camera alone.
+`rebuild(cook, preserveState)` accepts a new scene, including a different selected
+scene when `preserveState` is false. Cooking should build detached resources; the
+session can roll back node transforms but cannot undo arbitrary external resource edits.
+Instances may share immutable meshes and materials, but need separate mutable node
+objects when animated independently.
+
+Use `withWorld` for asynchronous queries. Behavior bindings invalidate queued work
+and drain active query/event reads before replacement or disposal. New session
+operations reject while another operation is pending; `destroy()` drains it.
+Do not retain `world`, property adapters, render buffers or behavior bindings across
+revisions. The authored-scene stress lab exercises this lifecycle repeatedly.
+
+### Deformation and native glTF export
+
+For an explicit skin/morph cooking revision, `snapshotGLTFPhysicsScene(source, nodes)`
+copies current local transforms and morph weights, and
+`makeGLTFPhysicsMeshResolver(sourceScenegraph, nodes)` decodes a fresh collision
+snapshot. It delegates deformation to the engine's `deformPositions`; create a new
+resolver for each revision. Use the resulting description with `session.rebuild`.
+Continuous deformable-body dynamics and automatic per-frame mesh recooking are not
+provided.
+
+`exportGLTFPhysicsState(source, description, world)` returns native glTF JSON with
+live body poses/velocities and configured physics properties, preserving source
+geometry references and other fields. It explicitly reads state and does not export
+solver caches. Existing animation clips remain intact and can replace exported poses
+when played. JSON and its referenced binary resources must be saved together.
+Shared resource edits must agree; divergent low-level edits and unreconciled animated
+scale require recooking before export. Version-specific captures are a separate API
+and are not portable glTF files.
+
+Native export preserves current world poses when simulation rotates a body below a
+nonuniformly scaled ancestor. If the resulting local transform would require shear,
+the exporter promotes that body node to a root of its containing scenes, retaining
+its node index, subtree and resource references. The saved pose remains exact, but
+ancestor animation no longer drives that promoted body; review or reauthor those
+animation channels before using the exported snapshot as a new animated asset.
+
+New session revisions publish matrices and bounds before becoming visible, including
+while paused. This publication-only dispatch does not integrate bodies or advance
+simulation time.

@@ -4,13 +4,14 @@
 
 import {expect, it} from 'vitest';
 import {GLTFScenegraph} from '@loaders.gl/gltf';
+import {GroupNode} from '@luma.gl/engine';
 import {
   collectNodeCollisionGeometry,
   MAX_COLLISION_SNAPSHOT_VERTICES
 } from '../../src/physics/node-collision-geometry';
 import {makeGLTFPhysicsMeshResolver} from '../../src/physics/mesh-snapshot';
 
-it('snapshots initial morphs before skinning with sparse deltas and normalized weights', () => {
+it('snapshots initial and live morphs before skinning with sparse deltas and normalized weights', () => {
   const data = [
     new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
     new Uint8Array([0]),
@@ -54,6 +55,19 @@ it('snapshots initial morphs before skinning with sparse deltas and normalized w
   const resolve = makeGLTFPhysicsMeshResolver(scenegraph);
   expect(resolve(0)).toEqual({positions: [-7, 0, 0, -7, 0, 0, -8, 1, 0], indices: [0, 1, 2]});
   expect(resolve(1)).toBeUndefined();
+  const meshNode = new GroupNode({position: [10, 0, 0]});
+  meshNode.userData['morphWeights'] = [0.5];
+  const jointNode = new GroupNode({position: [4, 0, 0]});
+  const live = makeGLTFPhysicsMeshResolver(
+    scenegraph,
+    new Map([
+      [0, meshNode],
+      [1, jointNode]
+    ])
+  );
+  expect(live(0)).toEqual({positions: [-5.5, 0, 0, -5, 0, 0, -6, 1, 0], indices: [0, 1, 2]});
+  // Each resolver represents one cooking revision; immutable source buffers remain shared.
+
   expect(Array.from(data[0])).toEqual([0, 0, 0, 1, 0, 0, 0, 1, 0]);
 });
 

@@ -54,6 +54,7 @@ const config = {
         gltf: '/examples/gltf/asset-studio',
         'gltf-interactivity': '/examples/deck/gltf-interactivity',
         'gltf-physics': '/examples/gltf/physics',
+        'authored-scene-stress': '/examples/gltf/authored-scene-stress',
         'hello-cube': '/examples/tutorials/hello-cube',
         'hello-instancing': '/examples/tutorials/hello-instancing',
         'hello-triangle-geometry': '/examples/tutorials/hello-triangle-geometry',
