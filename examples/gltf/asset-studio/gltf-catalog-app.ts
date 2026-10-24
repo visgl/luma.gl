@@ -3,7 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {load} from '@loaders.gl/core';
-import {GLTFLoader, type GLTFPostprocessed, postProcessGLTF} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/gltf';
+import {type GLTFPostprocessed, postProcessGLTF} from '@luma.gl/gltf';
 import {Device, log, RenderPass} from '@luma.gl/core';
 import {
   AnimationLoopTemplate,

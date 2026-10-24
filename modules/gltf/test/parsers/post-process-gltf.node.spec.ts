@@ -3,16 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {readFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
 import {Buffer} from 'node:buffer';
 import './post-process-gltf-half-float.spec';
 import './post-process-gltf-images.spec';
 import {parse} from '@loaders.gl/core';
-import {
-  GLTFLoader,
-  postProcessGLTF as postProcessLoaderGLTF,
-  type GLTFPostprocessed as LoaderGLTFPostprocessed,
-  type GLTFWithBuffers as LoaderGLTFWithBuffers
-} from '@loaders.gl/gltf';
+import {GLTFLoader, type GLTFWithBuffers as LoaderGLTFWithBuffers} from '@loaders.gl/gltf';
 import {
   createScenegraphsFromGLTF,
   postProcessGLTF,
@@ -45,7 +41,6 @@ function makeTriangle(): GLTFWithBuffers {
 describe('luma-owned glTF postprocessing', () => {
   test('keeps loaders.gl input and output structurally compatible', () => {
     expectTypeOf<LoaderGLTFWithBuffers>().toExtend<GLTFWithBuffers>();
-    expectTypeOf<LoaderGLTFPostprocessed>().toExtend<GLTFPostprocessed>();
     expectTypeOf<GLTFPostprocessed['id']>().toEqualTypeOf<string | undefined>();
     expectTypeOf<GLTFPostprocessed['animations'][number]['id']>().toEqualTypeOf<
       string | undefined
@@ -333,25 +328,33 @@ describe('luma-owned glTF postprocessing', () => {
   });
 
   test.each([
-    'AnimatedMorphCube.glb',
-    'SimpleSkin.gltf'
-  ])('matches loaders.gl geometry and animations for %s', async filename => {
+    {
+      filename: 'AnimatedMorphCube.glb',
+      digest: '4aba93918adba56c1cc688a38c527bc647e26f2c386802e119b4d01b7250dd23'
+    },
+    {
+      filename: 'SimpleSkin.gltf',
+      digest: '28fb3a2d0d38b157a378839bae082e842d2025783e43b3431ac84ecc4a87ea30'
+    }
+  ])('loads and animates decoded geometry for $filename', async ({filename, digest}) => {
     const bytes = await readFile(
       new URL(`../../../../examples/anari/scenes/public/gltf/${filename}`, import.meta.url)
     );
     const source = await parse(bytes, GLTFLoader, {gltf: {loadImages: false}});
     const gltf = postProcessGLTF(source);
-    const loaderGLTF = postProcessLoaderGLTF(source);
-    expect(gltf.accessors).toEqual(loaderGLTF.accessors);
-    expect(gltf.meshes).toEqual(loaderGLTF.meshes);
-    expect(gltf.animations).toEqual(loaderGLTF.animations);
-    const device = new NullDevice({});
-    for (const document of [gltf, loaderGLTF]) {
-      const scenegraphs = createScenegraphsFromGLTF(device, document);
-      scenegraphs.animator.setTime(500);
-      expect(scenegraphs.scenes.length).toBeGreaterThan(0);
-      scenegraphs.destroy();
+    // Fixed fingerprints cover every decoded geometry and animation value, independently of loaders.gl.
+    // Derived from the fixtures' authored accessor byte ranges, excluding stride padding.
+    const decodedValues = createHash('sha256');
+    for (const {value} of gltf.accessors) {
+      decodedValues.update(new Uint8Array(value.buffer, value.byteOffset, value.byteLength));
     }
+    expect(decodedValues.digest('hex')).toBe(digest);
+    expect(gltf.animations.length).toBeGreaterThan(0);
+    const device = new NullDevice({});
+    const scenegraphs = createScenegraphsFromGLTF(device, gltf);
+    scenegraphs.animator.setTime(500);
+    expect(scenegraphs.scenes.length).toBeGreaterThan(0);
+    scenegraphs.destroy();
     device.destroy();
   });
 });

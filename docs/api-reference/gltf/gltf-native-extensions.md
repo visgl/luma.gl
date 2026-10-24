@@ -17,7 +17,8 @@ model, animation, and scene-controller behavior. The optional glTF parsers produ
 
 ```ts
 import {load} from '@loaders.gl/core';
-import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/gltf';
+import {postProcessGLTF} from '@luma.gl/gltf';
 import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
 
 const asset = await load('/models/product.glb', GLTFLoader);
@@ -33,7 +34,7 @@ console.log(scenegraphs.extensionSupport);
 console.log(scenegraphs.animations.map(animation => animation.name));
 ```
 
-`postProcessGLTF()` is explicit: loaders.gl v4 does not support the historical
+`postProcessGLTF()` is an explicit luma.gl operation. The decoder does not support the historical
 `{gltf: {postProcess: true}}` loader option. Use `useByteColors: false` when consuming punctual
 light colors as glTF-authored linear RGB values. Strict extension handling is described below.
 

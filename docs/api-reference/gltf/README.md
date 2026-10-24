@@ -283,3 +283,6 @@ increments. Ordinary scenegraph loading does not start physics.
 Learn each material aspect and rendering capability through its API and a live sample in the
 [engine feature guide](/docs/api-guide/engine/features). glTF core and extension mappings are
 described within each feature page; this reference retains the format-specific contracts.
+
+See [`postProcessGLTF`](/docs/api-reference/gltf/post-process-gltf) for the input/output contract,
+resolved types, resource ownership, and migration from loaders.gl.

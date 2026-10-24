@@ -959,6 +959,7 @@
         "label": "@luma.gl/gltf",
         "items": [
           "api-reference/gltf/README",
+          "api-reference/gltf/post-process-gltf",
           "api-reference/gltf/gltf-materials",
           "api-reference/gltf/gltf-native-extensions",
           "api-reference/gltf/gltf-animation",
