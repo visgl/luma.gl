@@ -17,3 +17,10 @@ export {
   GPUSimpleGraphCopyOperation
 } from './gpu-simple-graph-transfer';
 export type {GPUSimpleGraphUploadProps} from './gpu-simple-graph-transfer';
+
+export {
+  GPUSimpleGraphValue,
+  GPUSimpleGraphValueOperation,
+  simpleGraphOperations
+} from './gpu-simple-graph-value';
+export type {GPUSimpleGraphOperations} from './gpu-simple-graph-value';

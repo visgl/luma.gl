@@ -5,6 +5,57 @@ operations on WebGL and WebGPU. The existing operations, expression fusion, and
 materialization logic remain the implementation. Evaluator objects are a compatibility
 interface; upload, copy, execution, and output storage can be expressed through the graph.
 
+## Author expressions with graph values
+
+New code can use graph values instead of constructing or managing evaluators:
+
+```typescript
+import {
+  GPUSimpleGraph, GPUSimpleGraphValue, simpleGraphOperations
+} from '@luma.gl/graph/gpu-simple-graph';
+
+const input = GPUSimpleGraphValue.upload(new Float32Array([1, 2, 3]));
+const output = simpleGraphOperations.add(simpleGraphOperations.multiply(input, 2), 1);
+const graph = new GPUSimpleGraph(device);
+graph.addValue('output', output);
+const compiled = graph.compile();
+const results = await compiled.run(); // results.output is a GPUVector
+// Consume results.output on the GPU; readback is explicit.
+compiled.destroy(); // after all consumers finish
+```
+
+`GPUSimpleGraphValue.upload(data, options)` describes a CPU input. `constant(value)`
+describes a scalar or vector literal. `fromGPUData(chunk)` borrows an existing GPU chunk.
+`simpleGraphOperations` exposes the existing GPGPU arithmetic, dot, length, extent,
+fround, gather, interleave, equalAll, select, sequence, segmentedMap, swizzle, castData,
+and convertColorData functions with graph-value operands. Their arguments, output layouts,
+backend support, and numerical behavior are unchanged. These recipes do not extend the
+operation set supported by WebGL or promise a full GPUGraph lowering.
+
+`graph.addValue(name, value)` publishes a named output and returns the same value.
+A shared value is lowered once per compilation; reuse across compiled graphs creates
+independent execution state. Compilation creates internal evaluators without GPU allocation.
+The compiled graph owns the entire generated evaluator tree, including literal and fused
+operation dependencies. It borrows external GPU buffers. Graph values need no `destroy()`;
+keep input arrays and buffers alive until their consumers finish. Results owned by the
+compiled graph become invalid when it is destroyed. Do not mutate recipes after authoring.
+
+For chunked vectors, supply an ordered array of graph values. Mapping is explicit, so
+reductions remain per chunk and the API never silently repacks or merges chunks:
+
+```typescript
+const chunks = inputVector.data.map(chunk =>
+  simpleGraphOperations.multiply(GPUSimpleGraphValue.fromGPUData(chunk), 2)
+);
+graph.addValue('scaled', chunks);
+```
+
+Use `new GPUSimpleGraphValueOperation({id, value})` when composing with operation arrays
+or shared composite groups. `compiled.outputs` and `addEvaluator()` remain compatibility
+interfaces for existing evaluator users; new consumers use the GPUVectors returned by `run()`.
+No GPGPU exports are removed or deprecated in this first phase. Dynamic input rebinding,
+full GPUGraph lowering, and migration of legacy table-viewer readback adapters remain follow-ups.
+
 ## Upload and copy
 
 ```typescript
