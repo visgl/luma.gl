@@ -24,7 +24,10 @@ export function deformPositions(props: {
     targets.map(POSITION => ({POSITION})),
     weights
   ).POSITION!;
-  if (!jointMatrices) return result;
+  if (!jointMatrices) {
+    if (!result.every(Number.isFinite)) throw new Error('Nonfinite deformation');
+    return result;
+  }
   if (
     !influences.length ||
     influences.some(

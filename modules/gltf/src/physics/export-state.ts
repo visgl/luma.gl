@@ -57,12 +57,7 @@ export async function exportGLTFPhysicsState<T extends GLTFPhysicsDocument>(
   // Native object-model pointers preserve shared references. Reject divergent low-level edits
   // instead of silently exporting only the first collider/joint of a shared resource.
   for (const [pointer, target] of properties.targets) {
-    if (
-      target.type === 'motion' &&
-      ['inertiaDiagonal', 'inertiaOrientation'].includes(target.property) &&
-      world.getBodyParameters(target.body, {deriveInertia: false})[target.property] === undefined
-    )
-      continue;
+    if (target.type === 'motion') continue;
     const value = properties.get(pointer);
     if (!value) continue;
     if (target.type === 'material') {
@@ -132,8 +127,31 @@ export async function exportGLTFPhysicsState<T extends GLTFPhysicsDocument>(
     node.translation = transform.position;
     node.rotation = transform.rotation;
     node.scale = transform.scale;
-    if (world.getBodyMode(body.bodyIndex) !== 'static') {
+    const mode = world.getBodyMode(body.bodyIndex);
+    if (mode === 'static') {
+      const extension = node.extensions?.['KHR_physics_rigid_bodies'] as
+        | Record<string, unknown>
+        | undefined;
+      if (extension) delete extension['motion'];
+    } else {
       const motion = `/nodes/${body.nodeIndex}/extensions/KHR_physics_rigid_bodies/motion/`;
+      const parameters = world.getBodyParameters(body.bodyIndex, {deriveInertia: false});
+      const scale = decomposePhysicsTransform(matrix).scale;
+      const motionValues = {
+        isKinematic: mode === 'kinematic',
+        mass: parameters.mass,
+        gravityFactor: parameters.gravityFactor,
+        centerOfMass: parameters.centerOfMass?.map((value, axis) => value / scale[axis]),
+        inertiaDiagonal: parameters.inertiaDiagonal,
+        inertiaOrientation: parameters.inertiaOrientation
+      };
+      // Replace the declaration so absent derived inertia remains implicit after recooking.
+      writePointer(
+        output,
+        motion.slice(0, -1),
+        Object.fromEntries(Object.entries(motionValues).filter(([, value]) => value !== undefined))
+      );
+
       writePointer(
         output,
         `${motion}linearVelocity`,

@@ -126,3 +126,27 @@ it('reimports automatically derived inertia under nonuniform box scale', async c
     await session.destroy();
   }
 });
+
+it('exports static and reactivated motion modes without retaining stale declarations', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const source = document();
+  const description = parseGLTFPhysics(source);
+  const session = await ScenegraphPhysicsSession.create(device, makeGLTFPhysicsScene(description));
+  try {
+    session.world.setBodyParameters(0, {mode: 'static'});
+    const frozen = await exportGLTFPhysicsState(source, description, session.world);
+    expect(parseGLTFPhysics(frozen).bodies[0].body.mode).toBe('static');
+    const frozenDescription = parseGLTFPhysics(frozen);
+    await session.rebuild(async () => makeGLTFPhysicsScene(frozenDescription), false);
+    session.world.setBodyParameters(0, {mode: 'dynamic', mass: 2});
+    const activated = parseGLTFPhysics(
+      await exportGLTFPhysicsState(frozen, frozenDescription, session.world)
+    );
+    expect(activated.issues).toEqual([]);
+    expect(activated.bodies[0].body.mode).toBe('dynamic');
+    expect(activated.bodies[0].body.mass).toBe(2);
+  } finally {
+    await session.destroy();
+  }
+});

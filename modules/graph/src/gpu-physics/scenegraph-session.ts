@@ -271,25 +271,34 @@ function snapshotNodes(roots: readonly ScenegraphNode[]): NodeState[] {
   return result;
 }
 function validateNodes(states: readonly NodeState[], roots: readonly ScenegraphNode[]) {
-  const nodes = new Set(snapshotNodes(roots).map(state => state.node));
+  const nodes = new Map(states.map(state => [state.node, state]));
   if (
-    states.length !== nodes.size ||
-    new Set(states.map(state => state.node)).size !== nodes.size ||
+    nodes.size !== states.length ||
     states.some(
       state =>
-        !nodes.has(state.node) ||
         state.matrix.length !== 16 ||
         state.position.length !== 3 ||
         state.scale.length !== 3 ||
-        state.rotation.length !== 3 ||
+        ![3, 4].includes(state.rotation.length) ||
         typeof state.display !== 'boolean' ||
         [...state.matrix, ...state.position, ...state.rotation, ...state.scale].some(
           value => !Number.isFinite(value)
-        )
+        ) ||
+        (state.node instanceof GroupNode ? !state.children : state.children !== undefined)
     )
   )
     throw new Error('Incompatible scene capture');
+  const visited = new Set<ScenegraphNode>();
+  const visit = (node: ScenegraphNode) => {
+    const state = nodes.get(node);
+    if (!state || visited.has(node)) throw new Error('Incompatible captured hierarchy');
+    visited.add(node);
+    state.children?.forEach(visit);
+  };
+  roots.forEach(visit);
+  if (visited.size !== nodes.size) throw new Error('Detached captured node');
 }
+
 function restoreNodes(states: readonly NodeState[]) {
   for (const state of states) {
     state.node.setMatrixComponents({

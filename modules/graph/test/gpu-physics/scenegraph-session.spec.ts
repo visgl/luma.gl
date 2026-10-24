@@ -317,3 +317,27 @@ it('drains active GPU behavior queries and rejects stale queued continuations on
   await rejected;
   await destroyed;
 });
+
+it('restores captured hierarchy after edits and rejects cyclic capture references atomically', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const {scene, root, body, mesh} = fixture();
+  const session = await ScenegraphPhysicsSession.create(device, scene);
+  try {
+    body.setRotation([0, 0, 0, 1]);
+    const capture = await session.capture();
+    body.add(new BoundsNode({id: 'temporary'}));
+    body.setRotation([0, 0, 0]);
+    await session.restore(capture);
+    expect(body.children).toEqual([mesh]);
+    expect(Array.from(body.rotation)).toEqual([0, 0, 0, 1]);
+    const previousWorld = session.world;
+    const capturedRoot = capture.nodes.find(state => state.node === root)!;
+    capturedRoot.children = [root];
+    await expect(session.restore(capture)).rejects.toThrow('hierarchy');
+    expect(session.world).toBe(previousWorld);
+    await session.step();
+  } finally {
+    await session.destroy();
+  }
+});

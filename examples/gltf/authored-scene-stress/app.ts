@@ -196,20 +196,37 @@ export default class AuthoredSceneStress extends PhysicsApp {
 
   override onRender(props: AnimationProps): void {
     this.synchronize();
-    if (!this.loading && !this.paused && this.session && !this.operation && !this.snapshot) {
+    const elapsed =
+      this.previousTime === undefined
+        ? 0
+        : Math.max(0, Math.min((props.time - this.previousTime) / 1000, 0.05));
+    if (!this.loading && !this.paused && !this.operation)
+      this.accumulator = Math.min(this.accumulator + elapsed, 4 / 120);
+    if (
+      !this.loading &&
+      !this.paused &&
+      this.session &&
+      !this.operation &&
+      !this.snapshot &&
+      this.accumulator >= 1 / 120
+    ) {
       const session = this.session;
+      const steps = Math.min(4, Math.floor(this.accumulator * 120));
       this.snapshot = (async () => {
-        if (!this.holdPose) this.simulationTime += 1 / 120;
-        await session.step(
-          this.animationOwns ? this.activeNodes : new Set(),
-          () => {
-            if (this.animationOwns)
-              this.scenegraphsFromGLTF?.animator.setTime(this.simulationTime * 1000);
-          },
-          (graph, encoder) => {
-            this.diagnostics.encode(graph, encoder, {parameters: undefined});
-          }
-        );
+        for (let step = 0; step < steps && !this.isFinalized; step++) {
+          this.accumulator -= 1 / 120;
+          if (!this.holdPose) this.simulationTime += 1 / 120;
+          await session.step(
+            this.animationOwns ? this.activeNodes : new Set(),
+            () => {
+              if (this.animationOwns)
+                this.scenegraphsFromGLTF?.animator.setTime(this.simulationTime * 1000);
+            },
+            (graph, encoder) => {
+              this.diagnostics.encode(graph, encoder, {parameters: undefined});
+            }
+          );
+        }
         if (this.stressRunning && this.simulationTime >= 3) {
           const capture = await session.capture();
           await session.reset();
