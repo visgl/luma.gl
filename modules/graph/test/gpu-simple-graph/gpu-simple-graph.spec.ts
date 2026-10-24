@@ -9,11 +9,11 @@ import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {GPUDataEvaluator, add, multiply} from '@luma.gl/gpgpu';
 import {GPUSimpleGraph, GPUSimpleGraphOperation} from '@luma.gl/graph/gpu-simple-graph';
 import {
-  GPUProgram,
-  GPUProgramScalarLiteral,
-  GPUProgramScalarOperation,
-  GPUProgramVectorMADD,
-  GPUProgramCompiler,
+  GPUGraph,
+  GPUGraphScalarLiteral,
+  GPUGraphScalarOperation,
+  GPUGraphVectorMADD,
+  GPUGraphCompiler,
   composite
 } from '@luma.gl/graph/gpu-core';
 
@@ -61,7 +61,7 @@ for (const [backend, getDevice] of [
       return new GPUData({buffer, format: 'float32', length: values.length});
     };
     const bindings = {vectors: {input: [makeChunk([1, 2]), makeChunk([3, 4])]}};
-    const program = new GPUProgram();
+    const program = new GPUGraph();
     const input = program.vector('input', 'float32', 4, {external: true, chunkLengths: [2, 2]});
     const middle = program.vector('middle', 'float32', 4, {chunkLengths: [2, 2]});
     const output = program.vector('output', 'float32', 4, {chunkLengths: [2, 2]});
@@ -70,12 +70,12 @@ for (const [backend, getDevice] of [
     const scale = program.scalar('scale', 'float32');
     program.add(
       composite([
-        new GPUProgramScalarLiteral({output: initialScale, value: 4}),
-        new GPUProgramScalarOperation({operation: 'sqrt', left: initialScale, output: scale}),
-        new GPUProgramVectorMADD({input, addend: input, output: middle, scale}),
+        new GPUGraphScalarLiteral({output: initialScale, value: 4}),
+        new GPUGraphScalarOperation({operation: 'sqrt', left: initialScale, output: scale}),
+        new GPUGraphVectorMADD({input, addend: input, output: middle, scale}),
         composite([
-          new GPUProgramVectorMADD({input: middle, addend: input, output, scale}),
-          new GPUProgramVectorMADD({input: middle, addend: middle, output: branch, scale})
+          new GPUGraphVectorMADD({input: middle, addend: input, output, scale}),
+          new GPUGraphVectorMADD({input: middle, addend: middle, output: branch, scale})
         ])
       ])
     );
@@ -108,7 +108,7 @@ for (const [backend, getDevice] of [
       expect((await compiled.run()).output).toBe(result.output);
       if (backend === 'webgpu') {
         // The identical program and bindings are accepted by the unchanged full compiler.
-        const fullCompilation = new GPUProgramCompiler(device).compile(program, bindings);
+        const fullCompilation = new GPUGraphCompiler(device).compile(program, bindings);
         const fullGraph = fullCompilation.graph.compile();
         try {
           const encoder = device.createCommandEncoder();

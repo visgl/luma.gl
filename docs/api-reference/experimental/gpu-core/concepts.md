@@ -146,7 +146,7 @@ indirect draws, readback cadence, and GPU duration. Row count alone is not a suf
 ## Related APIs
 
 - [GPU Core cookbook](./recipes) starts from application outcomes rather than individual classes.
-- [`GPUGraph`](./gpu-command-graph) documents construction and compiled execution.
+- [`GPUCommandGraph`](./gpu-command-graph) documents construction and compiled execution.
 - [`GPUTextureHistory`](./gpu-texture-history) manages rotating retained texture state.
 - [`GPUReadbackRing`](./gpu-readback-ring) supports bounded asynchronous readback.
 - The [GPU Core overview](/docs/api-reference/experimental/gpu-core) indexes reusable operations and domain modules.

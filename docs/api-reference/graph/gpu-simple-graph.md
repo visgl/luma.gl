@@ -30,7 +30,7 @@ describes a scalar or vector literal. `fromGPUData(chunk)` borrows an existing G
 fround, gather, interleave, equalAll, select, sequence, segmentedMap, swizzle, castData,
 and convertColorData functions with graph-value operands. Their arguments, output layouts,
 backend support, and numerical behavior are unchanged. These recipes do not extend the
-operation set supported by WebGL or promise a full GPUGraph lowering.
+operation set supported by WebGL or promise a full GPUCommandGraph lowering.
 
 `graph.addValue(name, value)` publishes a named output and returns the same value.
 A shared value is lowered once per compilation; reuse across compiled graphs creates
@@ -54,7 +54,7 @@ Use `new GPUSimpleGraphValueOperation({id, value})` when composing with operatio
 or shared composite groups. `compiled.outputs` and `addEvaluator()` remain compatibility
 interfaces for existing evaluator users; new consumers use the GPUVectors returned by `run()`.
 No GPGPU exports are removed or deprecated in this first phase. Dynamic input rebinding,
-full GPUGraph lowering, and migration of legacy table-viewer readback adapters remain follow-ups.
+full GPUCommandGraph lowering, and migration of legacy table-viewer readback adapters remain follow-ups.
 
 ## Upload and copy
 
@@ -140,7 +140,7 @@ lifetime responsibility.
 `run()` without a scope retains immediate evaluation and caching behavior. Scoped runs
 require WebGPU and opted-in operation handlers. `capabilities.callerControlledSubmission`
 indicates device support; it does not guarantee every operation supports scopes. This
-API does not yet register evaluator passes as full GPUGraph resource-aware operations.
+API does not yet register evaluator passes as full GPUCommandGraph resource-aware operations.
 
 ## Inspection and composition
 
@@ -152,6 +152,6 @@ semantic groups; fused evaluator dependencies can differ from that authored tree
 
 Existing `GPUSimpleGraphOperation` and `addEvaluator()` remain available for wrapping
 GPGPU expressions. Semantic scalar literals/arithmetic and vector multiply-add continue
-to work unchanged. The full GPUGraph semantic operations and GPGPU operation implementations
+to work unchanged. The full GPUCommandGraph semantic operations and GPGPU operation implementations
 are unchanged. Dynamic rebinding, texture/render operations, and transient resource planning
 remain outside this first pass.

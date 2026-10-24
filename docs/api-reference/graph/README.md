@@ -8,7 +8,7 @@ description: Schedule GPU work and compose graph-based algorithms and processing
 `@luma.gl/graph` owns GPU execution graphs and graph-based processing.
 
 ```typescript
-import {GPUGraph} from '@luma.gl/graph';
+import {GPUGraph, GPUGraphCompiler, GPUCommandGraph} from '@luma.gl/graph';
 import {GPUScan} from '@luma.gl/graph/gpu-core';
 import {GPUDataFrame} from '@luma.gl/graph/gpu-dataframe';
 ```
@@ -37,3 +37,8 @@ See the [execution guide](/docs/api-reference/experimental/gpu-core/concepts), [
 
 See [Buffers and textures](/docs/api-reference/experimental/gpu-core/resources) for logical values,
 views, imported and transient ownership, hazard tracking, history, resizing, and encoding contracts.
+
+`GPUGraph` describes application operations and logical values. `GPUGraphCompiler`
+lowers those operations to a `GPUCommandGraph`, which schedules concrete GPU passes
+and resources. `CompiledGPUCommandGraph` encodes the resulting commands. The existing
+compiler remains WebGPU-only; `GPUSimpleGraph` is the separate portable evaluator API.

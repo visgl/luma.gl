@@ -93,7 +93,7 @@ partials when histogram domain changes.
 ## Supported decompositions and broader recomputation
 
 This is an explicit composition API. It does not automatically incrementalize arbitrary
-`GPUProgram` operations or dataframe queries.
+`GPUGraph` operations or dataframe queries.
 
 | Operation | Reusable partial | Merge and invalidation rule |
 | --- | --- | --- |

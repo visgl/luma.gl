@@ -611,10 +611,10 @@
                   "api-reference/experimental/gpu-core/gpu-operation-metadata",
                   "api-reference/experimental/gpu-core/gpu-control-flow-operation",
                   "api-reference/experimental/gpu-core/gpu-operation-lowering",
-                  "api-reference/experimental/gpu-core/gpu-program",
-                  "api-reference/experimental/gpu-core/gpu-program-lowering",
+                  "api-reference/experimental/gpu-core/gpu-graph",
+                  "api-reference/experimental/gpu-core/gpu-graph-lowering",
                   "api-reference/experimental/gpu-core/webgpu-runtime-control",
-                  "api-reference/experimental/gpu-core/gpu-program-pcg"
+                  "api-reference/experimental/gpu-core/gpu-graph-pcg"
                 ]
               },
               {

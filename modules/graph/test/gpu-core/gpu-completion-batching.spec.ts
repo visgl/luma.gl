@@ -18,11 +18,11 @@ import {
 import {GPUAdaptiveSpMV} from '../../src/gpu-core/gpu-adaptive-spmv';
 import {GPUData} from '@luma.gl/gpgpu/gpu-data';
 import {
-  GPUProgram,
-  GPUProgramCSRMatrix,
-  GPUProgramCompiler,
-  GPUProgramSpMV,
-  GPUProgramScalarLiteral,
+  GPUGraph,
+  GPUGraphCSRMatrix,
+  GPUGraphCompiler,
+  GPUGraphSpMV,
+  GPUGraphScalarLiteral,
   GPUConditionalOperation
 } from '@luma.gl/graph/gpu-core';
 import {BatchConformanceFixture} from './batch-conformance-utils';
@@ -425,8 +425,8 @@ for (const enabled of [0, 1]) {
         )
       ])
     );
-    const program = new GPUProgram();
-    const matrix = new GPUProgramCSRMatrix({
+    const program = new GPUGraph();
+    const matrix = new GPUGraphCSRMatrix({
       id: 'matrix',
       rows: 2,
       columns: 3,
@@ -438,13 +438,13 @@ for (const enabled of [0, 1]) {
     const result = program.vector('output', 'float32', 2, {external: true});
     const active = program.scalar('active', 'uint32');
     program.add([
-      new GPUProgramScalarLiteral({output: active, value: enabled}),
+      new GPUGraphScalarLiteral({output: active, value: enabled}),
       new GPUConditionalOperation({
         predicate: {id: 'active', source: 'gpu', value: active},
-        body: [new GPUProgramSpMV({matrix, vector: input, output: result})]
+        body: [new GPUGraphSpMV({matrix, vector: input, output: result})]
       })
     ]);
-    const compilation = new GPUProgramCompiler(device).compile(program, {vectors: bindings});
+    const compilation = new GPUGraphCompiler(device).compile(program, {vectors: bindings});
     expect(compilation.vectors.get('rowOffsets')!.data.map(chunk => chunk.length)).toEqual([
       1, 0, 2
     ]);

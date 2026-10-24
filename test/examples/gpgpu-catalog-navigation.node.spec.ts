@@ -258,7 +258,7 @@ describe('GPGPU example catalog navigation', () => {
     const documentationTableOfContents = JSON.parse(
       readFileSync(path.join(DOCUMENTATION_DIRECTORY, 'table-of-contents.json'), 'utf8')
     ) as ExampleSidebarEntry[];
-    const generalPurposeGPUProgramming = documentationTableOfContents.find(
+    const generalPurposeGPUGraphming = documentationTableOfContents.find(
       (entry): entry is ExampleCategory =>
         typeof entry !== 'string' &&
         entry.type === 'category' &&
@@ -270,9 +270,9 @@ describe('GPGPU example catalog navigation', () => {
     );
     const precisionGuideIdentifier = 'api-guide/shaders/gpu-floating-point-precision';
 
-    expect(generalPurposeGPUProgramming).toBeDefined();
+    expect(generalPurposeGPUGraphming).toBeDefined();
     expect(shaderProgramming).toBeDefined();
-    expect(readCategoryIdentifiers(generalPurposeGPUProgramming!)).toContain(
+    expect(readCategoryIdentifiers(generalPurposeGPUGraphming!)).toContain(
       precisionGuideIdentifier
     );
     expect(readCategoryIdentifiers(shaderProgramming!)).not.toContain(precisionGuideIdentifier);

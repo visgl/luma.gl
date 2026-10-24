@@ -59,13 +59,13 @@ const UNPUBLISHED_WORKING_NAMES = [
 ] as const;
 
 describe('experimental GPU module naming', () => {
-  test('distinguishes execution graphs from graph data while preserving constructor aliases', () => {
-    expect(gpuCore.GPUGraph).toBe(gpuCore.GPUCommandGraph);
-    expect(gpuCore.CompiledGPUGraph).toBe(gpuCore.CompiledGPUCommandGraph);
-    expect(gpuCore.GPUGraph.name).toBe('GPUGraph');
-    expect(gpuGraphModule.GPUGraphAlgorithmsData.name).toBe('GPUGraphAlgorithmsData');
+  test('distinguishes semantic graphs, command graphs, and graph analytics', () => {
     expect(executionGraph.GPUGraph).toBe(gpuCore.GPUGraph);
-    expect(gpuCore.GPUGraph).not.toBe(gpuGraphModule.GPUGraphAlgorithmsData);
+    expect(gpuCore.GPUGraph).not.toBe(gpuCore.GPUCommandGraph);
+    expect(gpuCore.GPUCommandGraph.name).toBe('GPUCommandGraph');
+    expect(gpuGraphModule.GPUGraphAlgorithmsData.name).toBe('GPUGraphAlgorithmsData');
+    expect(executionGraph.GPUCommandGraph).toBe(gpuCore.GPUCommandGraph);
+    expect(gpuCore.GPUCommandGraph).not.toBe(gpuGraphModule.GPUGraphAlgorithmsData);
   });
 
   test('publishes only the canonical package subpaths', () => {

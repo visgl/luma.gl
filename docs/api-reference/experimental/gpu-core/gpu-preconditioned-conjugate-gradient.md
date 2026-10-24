@@ -117,7 +117,7 @@ Such a solve preserves its last valid solution instead of dividing by zero. This
 these checks do not establish that an arbitrary input matrix is positive definite. Small positive
 curvature and ill-conditioned inputs remain subject to ordinary float32 accuracy limits.
 
-`createGPUConjugateGradientProgram()` provides the unpreconditioned semantic program path. It
+`createGPUConjugateGradientGraph()` provides the unpreconditioned semantic program path. It
 also checks the initial residual before entering its loop, stops on nonpositive curvature, and
 returns `residualSquared` and `breakdown` program scalars in addition to its resource bindings.
 

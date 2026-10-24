@@ -10,7 +10,7 @@ import {
   createTransientView,
   DispatchCommandBuffer,
   DrawCommandBuffer,
-  GPUGraph,
+  GPUCommandGraph,
   GPUCompaction,
   GPUScan,
   GPUTextSelection,
@@ -31,13 +31,13 @@ import {
   getGPUScanStrategy
 } from '../../src/gpu-core/gpu-scan';
 
-it('GPUGraph compiles dependencies and reuses transient buffers', async () => {
+it('GPUCommandGraph compiles dependencies and reuses transient buffers', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     return;
   }
 
-  const graph = new GPUGraph(device, {id: 'graph-scheduling-test'});
+  const graph = new GPUCommandGraph(device, {id: 'graph-scheduling-test'});
   const first = graph.createTransientBuffer({
     id: 'first',
     byteLength: 64,
@@ -73,9 +73,10 @@ it('GPUGraph compiles dependencies and reuses transient buffers', async () => {
   });
 
   const compiled = graph.compile();
-  const debugString = 'CompiledGPUGraph:"graph-scheduling-test":3 nodes:128B transient:active';
+  const debugString =
+    'CompiledGPUCommandGraph:"graph-scheduling-test":3 nodes:128B transient:active';
   expect(Object.prototype.toString.call(compiled), 'exposes a compact object-inspection tag').toBe(
-    '[object CompiledGPUGraph]'
+    '[object CompiledGPUCommandGraph]'
   );
   expect(compiled.toString(), 'summarizes graph identity, size, and lifecycle').toBe(debugString);
   expect(compiled.toJSON(), 'serializes without recursive resource graphs').toBe(debugString);
@@ -116,7 +117,7 @@ it('GPUGraph compiles dependencies and reuses transient buffers', async () => {
   expect(compiled.toString(), 'reports destroyed graph state compactly').toMatch(/:destroyed$/);
 });
 
-it('GPUGraph reports adapter capabilities and explicit encoding timings', async () => {
+it('GPUCommandGraph reports adapter capabilities and explicit encoding timings', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     return;
@@ -127,7 +128,7 @@ it('GPUGraph reports adapter capabilities and explicit encoding timings', async 
     byteLength: 32,
     usage: Buffer.STORAGE
   });
-  const graph = new GPUGraph(device, {id: 'graph-diagnostics-test'});
+  const graph = new GPUCommandGraph(device, {id: 'graph-diagnostics-test'});
   const imported = graph.importBuffer(
     {id: 'imported', byteLength: importedBuffer.byteLength, usage: Buffer.STORAGE},
     importedBuffer
@@ -235,14 +236,14 @@ it('GPUGraph reports adapter capabilities and explicit encoding timings', async 
   importedBuffer.destroy();
 });
 
-it('GPUGraph spreads workload-annotated nodes across bounded execution steps', async () => {
+it('GPUCommandGraph spreads workload-annotated nodes across bounded execution steps', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     return;
   }
 
   const encodedNodeIds: string[] = [];
-  const graph = new GPUGraph(device, {id: 'graph-bounded-execution-test'});
+  const graph = new GPUCommandGraph(device, {id: 'graph-bounded-execution-test'});
   for (const [id, maximumInvocationCount] of [
     ['initialize', 0],
     ['partition-0', 300],
@@ -322,12 +323,12 @@ it('GPUGraph spreads workload-annotated nodes across bounded execution steps', a
   compiled.destroy();
 });
 
-it('GPUGraph rejects explicit dependency cycles', async () => {
+it('GPUCommandGraph rejects explicit dependency cycles', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     return;
   }
-  const graph = new GPUGraph(device, {id: 'cycle-test'});
+  const graph = new GPUCommandGraph(device, {id: 'cycle-test'});
   graph.addCopyPass({
     id: 'left',
     dependsOn: ['right'],
@@ -341,7 +342,7 @@ it('GPUGraph rejects explicit dependency cycles', async () => {
   expect(() => graph.compile(), 'cycle is rejected').toThrow(/dependency cycle/);
 });
 
-it('GPUGraph preserves fixed-width GPUVector chunks and borrowed ownership', async () => {
+it('GPUCommandGraph preserves fixed-width GPUVector chunks and borrowed ownership', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     return;
@@ -375,7 +376,7 @@ it('GPUGraph preserves fixed-width GPUVector chunks and borrowed ownership', asy
     data: [firstChunk, secondChunk, thirdChunk],
     ownsData: true
   });
-  const graph = new GPUGraph(device, {id: 'gpu-vector-import-test'});
+  const graph = new GPUCommandGraph(device, {id: 'gpu-vector-import-test'});
   const firstView = graph.importGPUData('first-data', firstChunk);
   const vectorView = graph.importGPUVector('values', vector);
 
@@ -431,7 +432,7 @@ it('GPUGraph preserves fixed-width GPUVector chunks and borrowed ownership', asy
   );
 });
 
-it('GPUGraph rejects interleaved and variable-length GPUVector imports', async () => {
+it('GPUCommandGraph rejects interleaved and variable-length GPUVector imports', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     return;
@@ -461,7 +462,7 @@ it('GPUGraph rejects interleaved and variable-length GPUVector imports', async (
     data: [listData],
     ownsData: true
   });
-  const graph = new GPUGraph(device);
+  const graph = new GPUCommandGraph(device);
 
   expect(
     () => graph.importGPUVector('interleaved', interleaved),
@@ -476,16 +477,16 @@ it('GPUGraph rejects interleaved and variable-length GPUVector imports', async (
   variableLength.destroy();
 });
 
-it('GPUGraph exposes safe extension-library helpers', async () => {
+it('GPUCommandGraph exposes safe extension-library helpers', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     return;
   }
 
-  const graph = new GPUGraph(device);
+  const graph = new GPUCommandGraph(device);
   let contributorOutputUsage = 0;
   const contributor = {
-    getCommandNodes: (targetGraph: GPUGraph) => {
+    getCommandNodes: (targetGraph: GPUCommandGraph) => {
       const output = createTransientView(
         targetGraph,
         'contributor-output',
@@ -565,7 +566,7 @@ it('GPUGraph exposes safe extension-library helpers', async () => {
   bindingBuffer.destroy();
 });
 
-it('GPUGraph validates resources and overlapping lifetimes', async () => {
+it('GPUCommandGraph validates resources and overlapping lifetimes', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     return;
@@ -573,7 +574,7 @@ it('GPUGraph validates resources and overlapping lifetimes', async () => {
 
   const nullDevice = await getNullTestDevice();
   const wrongDeviceBuffer = nullDevice.createBuffer({byteLength: 16, usage: Buffer.STORAGE});
-  const wrongDeviceGraph = new GPUGraph(device);
+  const wrongDeviceGraph = new GPUCommandGraph(device);
   expect(
     () =>
       wrongDeviceGraph.importBuffer(
@@ -583,7 +584,7 @@ it('GPUGraph validates resources and overlapping lifetimes', async () => {
     'wrong-device imports are rejected'
   ).toThrow(/another device/);
 
-  const validationGraph = new GPUGraph(device);
+  const validationGraph = new GPUCommandGraph(device);
   const copyOnly = validationGraph.createTransientBuffer({
     id: 'copy-only',
     byteLength: 16,
@@ -685,7 +686,7 @@ it('GPUGraph validates resources and overlapping lifetimes', async () => {
     'logical textures cannot exceed adapter dimension limits'
   ).toThrow(/device dimension limits/);
 
-  const overlapGraph = new GPUGraph(device);
+  const overlapGraph = new GPUCommandGraph(device);
   const first = overlapGraph.createTransientBuffer({
     id: 'overlap-first',
     byteLength: 32,
@@ -723,13 +724,13 @@ it('GPUGraph validates resources and overlapping lifetimes', async () => {
   wrongDeviceBuffer.destroy();
 });
 
-it('CompiledGPUGraph rejects encoding after device loss', async () => {
+it('CompiledGPUCommandGraph rejects encoding after device loss', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     return;
   }
 
-  const graph = new GPUGraph(device, {id: 'device-loss-test'});
+  const graph = new GPUCommandGraph(device, {id: 'device-loss-test'});
   graph.addCopyPass({id: 'copy', compile: () => ({encode: () => {}})});
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'lost-device-encoding'});
@@ -751,7 +752,7 @@ it('CompiledGPUGraph rejects encoding after device loss', async () => {
   compiled.destroy();
 });
 
-it('CompiledGPUGraph resolves DynamicBuffer replacements and preserves imports', async () => {
+it('CompiledGPUCommandGraph resolves DynamicBuffer replacements and preserves imports', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     return;
@@ -761,7 +762,7 @@ it('CompiledGPUGraph resolves DynamicBuffer replacements and preserves imports',
     byteLength: 16,
     usage: Buffer.STORAGE
   });
-  const graph = new GPUGraph(device);
+  const graph = new GPUCommandGraph(device);
   const imported = graph.importBuffer(
     {id: 'dynamic', byteLength: 16, usage: Buffer.STORAGE},
     dynamicBuffer
@@ -791,7 +792,7 @@ it('CompiledGPUGraph resolves DynamicBuffer replacements and preserves imports',
   ).toBe(false);
   dynamicBuffer.destroy();
 
-  const missingGraph = new GPUGraph(device);
+  const missingGraph = new GPUCommandGraph(device);
   missingGraph.importBuffer({id: 'required', byteLength: 16, usage: Buffer.STORAGE});
   const missingCompiled = missingGraph.compile();
   expect(
@@ -976,7 +977,7 @@ it('GPUScan computes exclusive uint32 prefixes', async () => {
       byteLength: Math.max(length, 1) * Uint32Array.BYTES_PER_ELEMENT,
       usage: Buffer.STORAGE | Buffer.COPY_SRC
     });
-    const graph = new GPUGraph(device, {id: `scan-${length}`});
+    const graph = new GPUCommandGraph(device, {id: `scan-${length}`});
     const inputHandle = graph.importBuffer(
       {id: 'input', byteLength: inputBuffer.byteLength, usage: inputBuffer.usage},
       inputBuffer
@@ -1172,7 +1173,7 @@ it('GPUCompaction preserves selected order and writes indirect instance count', 
     type: 'draw',
     commands: [{vertexCount: 6, instanceCount: 0}]
   });
-  const graph = new GPUGraph(device, {id: 'compaction-test'});
+  const graph = new GPUCommandGraph(device, {id: 'compaction-test'});
   const valuesHandle = graph.importBuffer(
     {id: 'values', byteLength: valuesBuffer.byteLength, usage: valuesBuffer.usage},
     valuesBuffer
@@ -1255,7 +1256,7 @@ it('GPUTextSelection gathers selected row-indexed glyph records and indirect cou
     type: 'draw',
     commands: [{vertexCount: 6, instanceCount: 0}]
   });
-  const graph = new GPUGraph(device, {id: 'text-selection-test'});
+  const graph = new GPUCommandGraph(device, {id: 'text-selection-test'});
   const recordsHandle = graph.importBuffer(
     {id: 'records', byteLength: recordBuffer.byteLength, usage: recordBuffer.usage},
     recordBuffer
@@ -1442,7 +1443,7 @@ it('GPUCompaction gives atomic input and chunked output passes unique node IDs',
     byteLength: Uint32Array.BYTES_PER_ELEMENT,
     usage: Buffer.STORAGE | Buffer.COPY_SRC
   });
-  const graph = new GPUGraph(device, {id: 'atomic-input-output'});
+  const graph = new GPUCommandGraph(device, {id: 'atomic-input-output'});
   const valuesHandle = graph.importBuffer(
     {id: 'values', byteLength: valuesBuffer.byteLength, usage: valuesBuffer.usage},
     valuesBuffer
@@ -1616,7 +1617,7 @@ async function runVectorScan(
   const segmentFlagsFixture = options.segmentFlagChunks
     ? createUint32VectorFixture(device, 'segment-flags', options.segmentFlagChunks)
     : null;
-  const graph = new GPUGraph(device, {id: 'vector-scan'});
+  const graph = new GPUCommandGraph(device, {id: 'vector-scan'});
   const input = graph.importGPUVector('input', inputFixture.vector);
   const output = graph.importGPUVector('output', outputFixture.vector);
   const segmentFlags = segmentFlagsFixture
@@ -1669,7 +1670,7 @@ async function runScan(
         usage: Buffer.STORAGE | Buffer.COPY_DST
       })
     : null;
-  const graph = new GPUGraph(device, {id: 'scan-variant'});
+  const graph = new GPUCommandGraph(device, {id: 'scan-variant'});
   const inputHandle = graph.importBuffer(
     {id: 'input', byteLength: inputBuffer.byteLength, usage: inputBuffer.usage},
     inputBuffer
@@ -1749,7 +1750,7 @@ async function runVectorCompaction(
     byteLength: Uint32Array.BYTES_PER_ELEMENT,
     usage: Buffer.STORAGE | Buffer.COPY_SRC
   });
-  const graph = new GPUGraph(device, {id: 'vector-compaction'});
+  const graph = new GPUCommandGraph(device, {id: 'vector-compaction'});
   const values = graph.importGPUVector('values', valuesFixture.vector);
   const flags = graph.importGPUVector('flags', flagsFixture.vector);
   const output = graph.importGPUVector('output', outputFixture.vector);
@@ -1861,7 +1862,7 @@ async function runCompaction(
     byteLength: Uint32Array.BYTES_PER_ELEMENT,
     usage: Buffer.STORAGE | Buffer.COPY_SRC
   });
-  const graph = new GPUGraph(device, {id: `compaction-${id}`});
+  const graph = new GPUCommandGraph(device, {id: `compaction-${id}`});
   const valuesHandle = graph.importBuffer(
     {id: 'values', byteLength: valuesBuffer.byteLength, usage: valuesBuffer.usage},
     valuesBuffer

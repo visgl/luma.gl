@@ -4,7 +4,7 @@
 
 import type {TextureFormat} from '@luma.gl/core';
 import type {GraphTextureHandle, GraphImportedTexture} from './gpu-command-graph';
-import {GPUProgramTextureView, type GPUProgramTexture} from './gpu-program-value';
+import {GPUGraphTextureView, type GPUGraphTexture} from './gpu-graph-value';
 
 import {type Device} from '@luma.gl/core';
 import type {GPUVectorInput} from '@luma.gl/gpgpu/gpu-data';
@@ -24,10 +24,10 @@ import {GPUVectorScalarMADD} from './gpu-elementwise-scalar';
 import {GPUDotProductScalar} from './gpu-dot-product-scalar';
 import {GPUAdaptiveSpMV} from './gpu-adaptive-spmv';
 import {GPUPredicateConjunction} from './gpu-predicate-conjunction';
-import {GPUProgramScalarOperation} from './gpu-semantic-scalar-operation';
-import {GPUProgramScalarLiteral} from './gpu-semantic-state-operation';
-import {GPUProgramVectorMADD, GPUProgramDotProduct} from './gpu-semantic-vector-operation';
-import {GPUProgramSpMV} from './gpu-semantic-spmv';
+import {GPUGraphScalarOperation} from './gpu-semantic-scalar-operation';
+import {GPUGraphScalarLiteral} from './gpu-semantic-state-operation';
+import {GPUGraphVectorMADD, GPUGraphDotProduct} from './gpu-semantic-vector-operation';
+import {GPUGraphSpMV} from './gpu-semantic-spmv';
 import {
   setGPUComputeDispatchWorkgroups,
   getGPUComputeDispatchWorkgroups
@@ -36,7 +36,7 @@ import {
   GPUCompositeOperation,
   isGPUCommandNodeProducer,
   isGPUOperation,
-  type GPUProgramOperation,
+  type GPUGraphOperation,
   type GPUOperationTree
 } from './gpu-operation';
 import {
@@ -47,49 +47,49 @@ import {
 import {
   GPUOperationLoweringRegistry,
   type GPUOperationLoweringDecision,
-  type GPUProgramBackendCapabilities
-} from './gpu-program-lowering';
-import {validateGPUProgram, type GPUProgramValidationReport} from './gpu-program-validation';
-import type {GPUProgramScalar, GPUProgramVector} from './gpu-program-value';
-import type {GPUProgram} from './gpu-program';
-export type GPUProgramBindings = {
+  type GPUGraphBackendCapabilities
+} from './gpu-graph-lowering';
+import {validateGPUGraph, type GPUGraphValidationReport} from './gpu-graph-validation';
+import type {GPUGraphScalar, GPUGraphVector} from './gpu-graph-value';
+import type {GPUGraph} from './gpu-graph';
+export type GPUGraphBindings = {
   vectors?: Readonly<Record<string, GPUVectorInput>>;
   textures?: Readonly<Record<string, GraphImportedTexture>>;
 };
-export type GPUProgramLoweredNode = {
+export type GPUGraphLoweredNode = {
   nodeId: string;
   nodeType: 'compute' | 'render' | 'copy';
   operationPath: readonly string[];
 };
-export type GPUProgramLoweringReport = {
+export type GPUGraphLoweringReport = {
   operations: readonly GPUOperationTree[];
-  nodes: readonly GPUProgramLoweredNode[];
+  nodes: readonly GPUGraphLoweredNode[];
   decisions: readonly GPUOperationLoweringDecision[];
 };
-export type GPUProgramCompilation<Parameters = void> = {
-  program: GPUProgram;
+export type GPUGraphCompilation<Parameters = void> = {
+  program: GPUGraph;
   graph: GPUCommandGraph<Parameters>;
   scalars: ReadonlyMap<string, GPUScalar>;
   vectors: ReadonlyMap<string, GraphVectorView>;
   textures: ReadonlyMap<string, GraphTextureHandle>;
-  validation: GPUProgramValidationReport;
-  lowering: GPUProgramLoweringReport;
+  validation: GPUGraphValidationReport;
+  lowering: GPUGraphLoweringReport;
 };
 type LoweringState = {
   path: string[];
-  nodes: GPUProgramLoweredNode[];
+  nodes: GPUGraphLoweredNode[];
   decisions: GPUOperationLoweringDecision[];
   predicates: GPUOperationPredicate[];
   scalars: Map<string, GPUScalar>;
   vectors: Map<string, GraphVectorView>;
   textures: Map<string, GraphTextureHandle>;
-  textureValues: readonly GPUProgramTexture[];
+  textureValues: readonly GPUGraphTexture[];
   predicateConjunctions: Map<string, GPUScalar<'uint32'>>;
   commandNodeIds: Set<string>;
 };
-export class GPUProgramCompiler<Parameters = void> {
+export class GPUGraphCompiler<Parameters = void> {
   readonly device: Device;
-  readonly capabilities: GPUProgramBackendCapabilities;
+  readonly capabilities: GPUGraphBackendCapabilities;
   readonly lowerings = new GPUOperationLoweringRegistry<Parameters>();
   constructor(device: Device) {
     this.device = device;
@@ -101,14 +101,11 @@ export class GPUProgramCompiler<Parameters = void> {
     });
     this.registerCoreLowerings();
   }
-  compile(
-    program: GPUProgram,
-    bindings: GPUProgramBindings = {}
-  ): GPUProgramCompilation<Parameters> {
-    const validation = validateGPUProgram(program, bindings);
+  compile(program: GPUGraph, bindings: GPUGraphBindings = {}): GPUGraphCompilation<Parameters> {
+    const validation = validateGPUGraph(program, bindings);
     if (!validation.valid)
       throw new Error(
-        `GPUProgram "${program.id}" validation failed: ${validation.issues
+        `GPUGraph "${program.id}" validation failed: ${validation.issues
           .filter(i => i.level === 'error')
           .map(i => i.message)
           .join('; ')}`
@@ -207,7 +204,7 @@ export class GPUProgramCompiler<Parameters = void> {
     });
   }
   protected registerCoreLowerings(): void {
-    this.lowerings.register<GPUProgramScalarLiteral>('scalar-literal', (o, c) => {
+    this.lowerings.register<GPUGraphScalarLiteral>('scalar-literal', (o, c) => {
       const e = new GPUScalarLiteral({
         id: o.id,
         output: c.resolveScalar(o.props.output),
@@ -221,7 +218,7 @@ export class GPUProgramCompiler<Parameters = void> {
         reason: 'host-known literal lowers to one compute command node'
       });
     });
-    this.lowerings.register<GPUProgramScalarOperation>('scalar-operation', (o, c) => {
+    this.lowerings.register<GPUGraphScalarOperation>('scalar-operation', (o, c) => {
       const e = new GPUScalarCompute({
         id: o.id,
         operation: o.operation,
@@ -237,7 +234,7 @@ export class GPUProgramCompiler<Parameters = void> {
         reason: 'scalar operation lowers to one compute command node'
       });
     });
-    this.lowerings.register<GPUProgramVectorMADD>('vector-madd', (o, c) => {
+    this.lowerings.register<GPUGraphVectorMADD>('vector-madd', (o, c) => {
       const p = o.props,
         e = new GPUVectorScalarMADD({
           id: o.id,
@@ -254,7 +251,7 @@ export class GPUProgramCompiler<Parameters = void> {
         reason: 'dense float32 MADD lowers through explicit command nodes'
       });
     });
-    this.lowerings.register<GPUProgramDotProduct>('dot-product', (o, c) => {
+    this.lowerings.register<GPUGraphDotProduct>('dot-product', (o, c) => {
       const p = o.props,
         e = new GPUDotProductScalar({
           id: o.id,
@@ -270,7 +267,7 @@ export class GPUProgramCompiler<Parameters = void> {
         reason: 'chunk dot products use bounded hierarchical reductions into the scalar arena'
       });
     });
-    this.lowerings.register<GPUProgramSpMV>('spmv', (o, c) => {
+    this.lowerings.register<GPUGraphSpMV>('spmv', (o, c) => {
       const p = o.props,
         m = p.matrix,
         e = new GPUAdaptiveSpMV({
@@ -329,7 +326,7 @@ export class GPUProgramCompiler<Parameters = void> {
   }
   protected lower(
     graph: GPUCommandLoweringGraph<Parameters>,
-    operation: GPUProgramOperation,
+    operation: GPUGraphOperation,
     state: LoweringState
   ): void {
     const id =
@@ -368,8 +365,8 @@ export class GPUProgramCompiler<Parameters = void> {
               resolveVector: v => this.resolveVector(v, state),
               resolveTexture: texture => this.resolveTexture(texture, state),
               resolveTextureView: value => {
-                const texture = value instanceof GPUProgramTextureView ? value.texture : value;
-                const props = value instanceof GPUProgramTextureView ? value.props : {};
+                const texture = value instanceof GPUGraphTextureView ? value.texture : value;
+                const props = value instanceof GPUGraphTextureView ? value.props : {};
                 return graph.createTextureView(this.resolveTexture(texture, state), props);
               },
               recordDecision: d => state.decisions.push(d)
@@ -390,7 +387,7 @@ export class GPUProgramCompiler<Parameters = void> {
         this.withNodeDecoration(graph, state, () => graph.add(operation));
         return;
       }
-      throw new Error(`GPUProgram operation "${id}" has no WebGPU lowering`);
+      throw new Error(`GPUGraph operation "${id}" has no WebGPU lowering`);
     } finally {
       state.path.pop();
     }
@@ -511,7 +508,7 @@ export class GPUProgramCompiler<Parameters = void> {
     return {...node, id};
   }
   private resolveTexture<Format extends TextureFormat>(
-    texture: GPUProgramTexture<Format>,
+    texture: GPUGraphTexture<Format>,
     state: LoweringState
   ): GraphTextureHandle<Format> {
     if (!state.textureValues.includes(texture))
@@ -521,21 +518,21 @@ export class GPUProgramCompiler<Parameters = void> {
   }
 
   private resolveScalar<T extends 'float32' | 'uint32' | 'sint32'>(
-    s: GPUProgramScalar<T>,
+    s: GPUGraphScalar<T>,
     state: LoweringState
   ): GPUScalar<T> {
     const r = state.scalars.get(s.id);
     if (!r || r.format !== s.format)
-      throw new Error(`GPUProgram scalar "${s.id}" is not part of compilation`);
+      throw new Error(`GPUGraph scalar "${s.id}" is not part of compilation`);
     return r as GPUScalar<T>;
   }
   private resolveVector<T extends 'float32' | 'uint32' | 'sint32'>(
-    v: GPUProgramVector<T>,
+    v: GPUGraphVector<T>,
     state: LoweringState
   ): GraphVectorView<T> {
     const r = state.vectors.get(v.id);
     if (!r || r.format !== v.format || r.length !== v.length)
-      throw new Error(`GPUProgram vector "${v.id}" is not part of compilation`);
+      throw new Error(`GPUGraph vector "${v.id}" is not part of compilation`);
     return r as GraphVectorView<T>;
   }
 }

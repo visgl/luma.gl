@@ -6,7 +6,7 @@ import {GPUCoreDocsTabs} from '@site/src/components/docs/gpu-core-docs-tabs';
 
 ## Overview
 
-`GPUProgram` describes logical values. `GPUGraph` turns those values into scheduled GPU work.
+`GPUGraph` describes logical values. `GPUCommandGraph` turns those values into scheduled GPU work.
 A compiled graph owns temporary allocations and records commands into an encoder supplied by the
 application. It does not submit commands, present a frame, or take ownership of imported resources.
 
@@ -14,8 +14,8 @@ application. It does not submit commands, present a frame, or take ownership of 
 
 | Layer | Buffer-backed data | Textures |
 | --- | --- | --- |
-| Program values | `GPUProgramScalar`, `GPUProgramVector` | `GPUProgramTexture` |
-| Program subresources | Vector chunks describe logical partitions | `GPUProgramTextureView` selects mip, layer, and aspect ranges |
+| Program values | `GPUGraphScalar`, `GPUGraphVector` | `GPUGraphTexture` |
+| Program subresources | Vector chunks describe logical partitions | `GPUGraphTextureView` selects mip, layer, and aspect ranges |
 | Graph storage | `GraphBufferHandle` | `GraphTextureHandle` |
 | Graph views | `GraphDataView`, ordered `GraphVectorView` chunks | `GraphTextureView` |
 | Physical resources | `Buffer` | `Texture` and cached `TextureView` objects |
@@ -24,7 +24,7 @@ A handle identifies storage. A view describes how an operation uses part of that
 a view does not allocate another buffer or texture, copy data, or transfer ownership. Derive views
 from one canonical handle when several passes access the same writable storage.
 
-`GPUProgramVector` is a typed one-dimensional logical value; it is not a general raw-buffer
+`GPUGraphVector` is a typed one-dimensional logical value; it is not a general raw-buffer
 allocation API. Use the graph's buffer APIs for byte-addressed scratch storage, indirect commands,
 vertex/index buffers, or custom layouts. Importing GPU vectors preserves their existing chunks;
 packing is explicit.
@@ -86,9 +86,9 @@ every device; the selected operation and device must support the intended usage.
 
 ```typescript
 import {Texture} from '@luma.gl/core';
-import {GPUProgram, GPUProgramCompiler} from '@luma.gl/graph/gpu-core';
+import {GPUGraph, GPUGraphCompiler} from '@luma.gl/graph/gpu-core';
 
-const program = new GPUProgram({id: 'images'});
+const program = new GPUGraph({id: 'images'});
 const image = program.texture('image', {
   format: 'rgba16float',
   dimension: '2d-array',
@@ -109,7 +109,7 @@ const layerMip = program.textureView(image, {
 
 // Pass image or layerMip to a semantic operation. Its registered lowerer uses
 // context.resolveTexture(image) or context.resolveTextureView(layerMip).
-const compiler = new GPUProgramCompiler(device);
+const compiler = new GPUGraphCompiler(device);
 const compilation = compiler.compile(program, {textures: {image: applicationTexture}});
 ```
 
@@ -167,6 +167,6 @@ Render and copy nodes under GPU predicates are rejected rather than run uncondit
 Format-reinterpreting views, automatic usage inference, automatic resize expressions, automatic
 mipmap generation, cross-graph scheduling, and native heap residency are not provided here.
 
-For exact method contracts and examples, see [GPUGraph](/docs/api-reference/experimental/gpu-core/gpu-command-graph),
+For exact method contracts and examples, see [GPUCommandGraph](/docs/api-reference/experimental/gpu-core/gpu-command-graph),
 [transient lifetimes](/docs/api-reference/experimental/gpu-core/gpu-transient-lifetimes),
 and [texture history](/docs/api-reference/experimental/gpu-core/gpu-texture-history).

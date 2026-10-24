@@ -6,7 +6,7 @@ import {expect, test} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {GPUData} from '@luma.gl/gpgpu/gpu-data';
-import {createGPUConjugateGradientProgram, GPUProgramCompiler} from '@luma.gl/graph/gpu-core';
+import {createGPUConjugateGradientGraph, GPUGraphCompiler} from '@luma.gl/graph/gpu-core';
 import {GPUJacobiPCG} from '../../src/gpu-core/gpu-pcg';
 import {BatchConformanceFixture} from './batch-conformance-utils';
 
@@ -118,14 +118,14 @@ for (const initial of [
       buffers.push(buffer);
       return new GPUData({buffer, format, length: values.length});
     };
-    const solver = createGPUConjugateGradientProgram({
+    const solver = createGPUConjugateGradientGraph({
       size: 2,
       nonZeros: 4,
       maxIterations: 5,
       toleranceSquared: 1e-10
     });
     const solution = [chunk(initial.slice(0, 1), 'float32'), chunk(initial.slice(1), 'float32')];
-    const compilation = new GPUProgramCompiler(device).compile(solver.program, {
+    const compilation = new GPUGraphCompiler(device).compile(solver.program, {
       vectors: {
         [solver.rowOffsets.id]: [chunk([0], 'uint32'), chunk([2, 4], 'uint32')],
         [solver.columnIndices.id]: [chunk([0, 1, 0], 'uint32'), chunk([1], 'uint32')],
@@ -168,14 +168,14 @@ test('semantic CG reports zero curvature and preserves finite state', async () =
     buffers.push(buffer);
     return new GPUData({buffer, format, length: values.length});
   };
-  const solver = createGPUConjugateGradientProgram({
+  const solver = createGPUConjugateGradientGraph({
     size: 1,
     nonZeros: 1,
     maxIterations: 3,
     toleranceSquared: 1e-10
   });
   const solution = data([0], 'float32');
-  const compilation = new GPUProgramCompiler(device).compile(solver.program, {
+  const compilation = new GPUGraphCompiler(device).compile(solver.program, {
     vectors: {
       [solver.rowOffsets.id]: data([0, 1], 'uint32'),
       [solver.columnIndices.id]: data([0], 'uint32'),

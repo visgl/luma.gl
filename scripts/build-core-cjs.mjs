@@ -65,8 +65,8 @@ for (const name of ['GraphBufferHandle', 'GraphDataView', 'GraphExternalTextureH
 for (const [name, value] of Object.entries(graphApi)) {
   assert.equal(value, gpuCoreApi[name]);
 }
-assert.equal(graphApi.GPUGraph, graphApi.GPUCommandGraph);
-assert.equal(graphApi.CompiledGPUGraph, graphApi.CompiledGPUCommandGraph);
+assert.notEqual(graphApi.GPUGraph, graphApi.GPUCommandGraph);
+assert.equal(graphApi.GPUGraph.name, 'GPUGraph');
 process.stdout.write('Verified CommonJS GPU graph constructor identity.\n');
 
 // The focused package root reuses scheduler and diagnostics constructors without
