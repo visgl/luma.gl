@@ -4,6 +4,7 @@
 
 import {readFile} from 'node:fs/promises';
 import './post-process-gltf-half-float.spec';
+import './post-process-gltf-images.spec';
 import {parse} from '@loaders.gl/core';
 import {
   GLTFLoader,
@@ -202,6 +203,30 @@ describe('luma-owned glTF postprocessing', () => {
     expect(gltf.animations[0].samplers[0].id).toBeUndefined();
     expect(gltf.nodes[0].id).toBe('node-0');
     expect(gltf.meshes[0].id).toBe('mesh-0');
+  });
+
+  test('keeps emissive textures dark unless an emissive factor is authored', () => {
+    const source = makeTriangle();
+    source.json.images = [{uri: 'emissive.png'}];
+    source.json.textures = [{source: 0}];
+    source.json.materials = [
+      {emissiveTexture: {index: 0}},
+      {emissiveTexture: {index: 0}, emissiveFactor: [0.2, 0.3, 0.4]}
+    ];
+    const gltf = postProcessGLTF(source);
+    expect(gltf.materials[0].emissiveFactor).toEqual([0, 0, 0]);
+    expect(gltf.materials[1].emissiveFactor).toEqual([0.2, 0.3, 0.4]);
+    expect(source.json.materials[0].emissiveFactor).toBeUndefined();
+  });
+
+  test('normalizes explicitly undefined optional collections', () => {
+    const gltf = postProcessGLTF({
+      json: {asset: {version: '2.0'}, meshes: undefined, nodes: undefined, scenes: undefined},
+      buffers: []
+    });
+    expect(gltf.meshes).toEqual([]);
+    expect(gltf.nodes).toEqual([]);
+    expect(gltf.scenes).toEqual([]);
   });
 
   test('links materials, images, cameras and skins without copying borrowed images', () => {

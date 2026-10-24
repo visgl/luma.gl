@@ -191,4 +191,9 @@ export type {
   GLTFTexturePostprocessed,
   GLTFPostprocessed
 } from './types/gltf-postprocessed-schema';
-export type {GLTFWithBuffers, GLTFExternalBuffer, GLTFTypedArray} from './types/gltf-types';
+export type {
+  GLTFWithBuffers,
+  GLTFExternalBuffer,
+  GLTFTypedArray,
+  GLTFImageData
+} from './types/gltf-types';

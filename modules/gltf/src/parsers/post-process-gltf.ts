@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GLTFWithBuffers} from '../types/gltf-types';
+import type {GLTFWithBuffers, GLTFImageData} from '../types/gltf-types';
 
 import type {
   GLTF,
@@ -126,7 +126,7 @@ class GLTFPostProcessor {
     byteOffset: number;
     byteLength: number;
   }[] = [];
-  images: any[] = [];
+  images: (GLTFImageData | null)[] = [];
 
   postProcess(gltf: GLTFWithBuffers) {
     const {json, buffers = [], images = []} = gltf;
@@ -151,22 +151,22 @@ class GLTFPostProcessor {
   _resolveTree(gltf: GLTF): GLTFPostprocessed {
     // References are replaced below in dependency order.
     const json = {
-      accessors: [],
-      animations: [],
-      buffers: [],
-      bufferViews: [],
-      cameras: [],
-      images: [],
-      materials: [],
-      meshes: [],
-      nodes: [],
-      samplers: [],
-      scenes: [],
-      skins: [],
-      textures: [],
-      extensionsUsed: [],
-      extensionsRequired: [],
-      ...gltf
+      ...gltf,
+      accessors: gltf.accessors ?? [],
+      animations: gltf.animations ?? [],
+      buffers: gltf.buffers ?? [],
+      bufferViews: gltf.bufferViews ?? [],
+      cameras: gltf.cameras ?? [],
+      images: gltf.images ?? [],
+      materials: gltf.materials ?? [],
+      meshes: gltf.meshes ?? [],
+      nodes: gltf.nodes ?? [],
+      samplers: gltf.samplers ?? [],
+      scenes: gltf.scenes ?? [],
+      skins: gltf.skins ?? [],
+      textures: gltf.textures ?? [],
+      extensionsUsed: gltf.extensionsUsed ?? [],
+      extensionsRequired: gltf.extensionsRequired ?? []
     } as unknown as GLTFPostprocessed;
     this.json = json;
 
@@ -400,7 +400,7 @@ class GLTFPostProcessor {
       material.emissiveTexture.texture = this.getTexture(material.emissiveTexture.index);
     }
     if (!material.emissiveFactor) {
-      material.emissiveFactor = material.emissiveTexture ? [1, 1, 1] : [0, 0, 0];
+      material.emissiveFactor = [0, 0, 0];
     }
 
     if (material.pbrMetallicRoughness) {
@@ -551,16 +551,10 @@ class GLTFPostProcessor {
       ...gltfImage,
       // @ts-expect-error id could already be present, glTF standard does not prevent it
       id: gltfImage.id || `image-${index}`,
-      image: null!,
+      image: this.images[index] ?? null,
       bufferView:
         gltfImage.bufferView !== undefined ? this.getBufferView(gltfImage.bufferView) : undefined
     };
-
-    // Keep the decoded image borrowed from the caller.
-    const preloadedImage = this.images[index];
-    if (preloadedImage) {
-      image.image = preloadedImage;
-    }
 
     return image;
   }

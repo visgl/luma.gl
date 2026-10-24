@@ -4,7 +4,7 @@
 // Types forked from https://github.com/bwasty/gltf-loader-ts under MIT license
 // Generated from official JSON schema using `npm run generate-type` = on 2018-02-24
 
-import type {GLTFTypedArray} from './gltf-types';
+import type {GLTFTypedArray, GLTFImageData} from './gltf-types';
 
 export type GlTfId = number;
 
@@ -398,15 +398,8 @@ export type GLTFCameraPostprocessed = {
  */
 export type GLTFImagePostprocessed = {
   id: string;
-  // TODO - extend
-  image: {
-    data: Uint8Array;
-    compressed?: boolean;
-    height?: number;
-    width?: number;
-    components?: number;
-    mimeType?: string;
-  };
+  /** Borrowed decoded image, or null when image resources were not supplied. */
+  image: GLTFImageData | null;
 
   compressed?: boolean;
 

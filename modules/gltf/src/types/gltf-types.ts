@@ -5,6 +5,7 @@
 /// <reference lib="es2025.float16" preserve="true" />
 
 import type {GLTF} from './gltf-json-schema';
+import type {ExternalImage} from '@luma.gl/core';
 
 /** Numeric storage accepted by resolved glTF accessors, including loader extensions. */
 export type GLTFTypedArray =
@@ -28,6 +29,19 @@ export type GLTFExternalBuffer = {
   byteLength: number;
 };
 
+/** Borrowed native images or decoded pixel/compressed image data. */
+export type GLTFImageData =
+  | ExternalImage
+  | {
+      data: ArrayBufferView;
+      compressed?: boolean;
+      mipmaps?: boolean;
+      height?: number;
+      width?: number;
+      components?: number;
+      mimeType?: string;
+    };
+
 /** Standard glTF JSON with resources supplied by the caller or an optional loader.
  * Compression and transcoding must be resolved before postprocessing.
  * Resources are borrowed; postprocessing does not fetch or destroy them.
@@ -35,7 +49,7 @@ export type GLTFExternalBuffer = {
 export type GLTFWithBuffers = {
   json: GLTF;
   buffers: GLTFExternalBuffer[];
-  images?: unknown[];
+  images?: (GLTFImageData | null)[];
   binary?: ArrayBuffer;
   baseUri?: string;
 };
