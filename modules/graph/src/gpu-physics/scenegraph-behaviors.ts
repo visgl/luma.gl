@@ -25,6 +25,8 @@ export class ScenegraphPhysicsBehaviors implements InteractivityPhysics {
   private readonly bodyByNode = new Map<ScenegraphNode, number>();
   private readonly nodeIndices: ReadonlyMap<ScenegraphNode, number>;
   private readonly motionNodes = new Map<number, number>();
+  private active = true;
+  private readonly dispatches = new Set<Promise<void>>();
   private queryTail: Promise<unknown> = Promise.resolve();
 
   constructor(
@@ -45,6 +47,7 @@ export class ScenegraphPhysicsBehaviors implements InteractivityPhysics {
   }
 
   private body(nodeIndex: number): number | undefined {
+    if (!this.active) throw new Error('Disposed physics behavior binding');
     if (!Number.isInteger(nodeIndex)) throw new Error('Invalid behavior node index');
     const node = this.props.nodes.get(nodeIndex);
     if (!node) throw new Error('Unknown behavior node');
@@ -77,6 +80,7 @@ export class ScenegraphPhysicsBehaviors implements InteractivityPhysics {
     const origin = [...start];
     const destination = [...end];
     const run = async () => {
+      if (!this.active) throw new Error('Disposed physics behavior binding');
       validateVector(origin);
       validateVector(destination);
       if (
@@ -98,6 +102,7 @@ export class ScenegraphPhysicsBehaviors implements InteractivityPhysics {
         maximumDistance: length,
         colliderIndices: filter === -1 ? undefined : this.props.querySelections![filter]
       });
+      if (!this.active) throw new Error('Disposed physics behavior binding');
       if (!result.complete || result.truncated) throw new Error('Incomplete behavior ray query');
       const hit = result.hits[0];
       if (!hit) return null;
@@ -111,6 +116,12 @@ export class ScenegraphPhysicsBehaviors implements InteractivityPhysics {
     return result;
   }
 
+  /** Invalidate queued continuations and wait for the currently borrowed query transport. */
+  async destroy(): Promise<void> {
+    this.active = false;
+    await Promise.allSettled([this.queryTail, ...this.dispatches]);
+  }
+
   isTriggerNode(node: number): boolean {
     return (
       Number.isInteger(node) &&
@@ -120,12 +131,21 @@ export class ScenegraphPhysicsBehaviors implements InteractivityPhysics {
     );
   }
 
-  async dispatchTriggers(behavior: Interactivity): Promise<void> {
+  dispatchTriggers(behavior: Interactivity): Promise<void> {
+    const operation = this.dispatchTriggerBatch(behavior);
+    this.dispatches.add(operation);
+    void operation.finally(() => this.dispatches.delete(operation)).catch(() => {});
+    return operation;
+  }
+
+  private async dispatchTriggerBatch(behavior: Interactivity): Promise<void> {
+    if (!this.active) throw new Error('Disposed physics behavior binding');
     if (!this.props.triggerNodes.length) {
       await behavior.flushPhysics();
       return;
     }
     const batch = await this.world.readTriggerEvents();
+    if (!this.active) throw new Error('Disposed physics behavior binding');
     if (batch.dropped || batch.saturated) throw new Error('Behavior trigger events lost');
     for (const event of batch.events) {
       const triggerNode = this.nodeIndices.get(this.props.triggerNodes[event.trigger]);

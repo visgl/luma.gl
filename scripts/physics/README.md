@@ -111,3 +111,12 @@ and 80 independent contacts spanning two workgroups. `rigid-body-contact-geometr
 uses closed-form signed depths and normals. The three stack qualification suites bound
 sampled drift, support separation and final energy across two timesteps, with sleeping
 disabled, 64 pair slots, 64 iterations, warm-start factor 0.8 and recovery fraction 0.1. Each test describes a bounded numeric envelope, not general SOTA coverage.
+
+## Authored-scene publication qualification
+
+`benchmark-publication.mjs --url http://127.0.0.1:5241/ --count 10000 --samples 30`
+measures and verifies the GPU body-node matrix/AABB publisher. Start the
+`examples/gltf/authored-scene-stress` Vite server first. Add `--software-gpu` for
+separate fallback evidence. Feed the JSON report to `qualification-report.mjs`
+alongside node/headless JSON reports. The G6 publication selector requires hardware.
+See `dev-docs/benchmarks/gpu-physics-publication.md` for timing boundaries.

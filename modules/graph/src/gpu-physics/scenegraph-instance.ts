@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Device} from '@luma.gl/core';
+import type {Device, CommandEncoder} from '@luma.gl/core';
 import {Vector3} from '@math.gl/core';
 import type {ScenegraphNode} from '@luma.gl/engine';
 import {GPUCommandGraph} from '../gpu-core/index';
@@ -78,7 +78,10 @@ export class ScenegraphPhysicsInstance {
   }
 
   /** Atomically restore live state, commands, caches and events, retaining the captured reset state. */
-  async restore(capture: ScenegraphPhysicsCapture): Promise<void> {
+  async restore(
+    capture: ScenegraphPhysicsCapture,
+    prepare?: (world: GPURigidBodyWorld) => void
+  ): Promise<void> {
     if (capture.version !== 1) throw new Error('Unsupported scene physics capture');
     validateDefinition(capture.authored);
     const authored = cloneDefinition(capture.authored);
@@ -90,6 +93,7 @@ export class ScenegraphPhysicsInstance {
       const replacement = await compile(this.device, state.props);
       try {
         replacement.world.restoreState(state);
+        prepare?.(replacement.world);
       } catch (error) {
         replacement.graph.destroy();
         replacement.world.destroy();
@@ -105,32 +109,42 @@ export class ScenegraphPhysicsInstance {
   }
 
   /** Advance one fixed step; state remains on GPU and only submission completion is awaited. */
-  async advance(): Promise<void> {
+  async advance(
+    beforeStep?: (world: GPURigidBodyWorld) => void,
+    encode?: (graph: Execution['graph'], encoder: CommandEncoder) => void
+  ): Promise<void> {
     return this.exclusive(async () => {
+      beforeStep?.(this.world);
       const encoder = this.device.createCommandEncoder();
-      this.graph.encode(encoder, {parameters: undefined});
+      if (encode) encode(this.graph, encoder);
+      else this.graph.encode(encoder, {parameters: undefined});
       this.device.submit(encoder.finish());
       await this.finishSubmission();
     });
   }
 
   /** Restore this instance's authored state. Does not modify scene nodes or the camera. */
-  async reset(): Promise<void> {
-    return this.replace(this.definition, false, false);
+  async reset(prepare?: (world: GPURigidBodyWorld) => void): Promise<void> {
+    return this.replace(this.definition, false, false, prepare);
   }
 
   /** Re-cook upstream first, then atomically install the resulting geometry and bindings.
    * Preserves dynamic node poses and velocities by object identity. New/static/kinematic
    * nodes use the new authored state. Contact caches and event histories start a new revision.
    */
-  async rebuild(definition: ScenegraphPhysicsDefinition, preserveState = true): Promise<void> {
-    return this.replace(definition, preserveState, true);
+  async rebuild(
+    definition: ScenegraphPhysicsDefinition,
+    preserveState = true,
+    prepare?: (world: GPURigidBodyWorld) => void
+  ): Promise<void> {
+    return this.replace(definition, preserveState, true, prepare);
   }
 
   private async replace(
     definition: ScenegraphPhysicsDefinition,
     preserveState: boolean,
-    updateAuthored: boolean
+    updateAuthored: boolean,
+    prepare?: (world: GPURigidBodyWorld) => void
   ): Promise<void> {
     // Validate and snapshot caller-owned data before accepting an asynchronous operation.
     validateDefinition(definition);
@@ -180,6 +194,13 @@ export class ScenegraphPhysicsInstance {
         props.bodies = bodies;
       }
       const replacement = await compile(this.device, props);
+      try {
+        prepare?.(replacement.world);
+      } catch (error) {
+        replacement.graph.destroy();
+        replacement.world.destroy();
+        throw error;
+      }
       const previous = this.execution;
       this.execution = replacement;
       if (updateAuthored) this.definition = authored;

@@ -25,7 +25,11 @@ import {
   type GLTFPhysicsDescription
 } from '@luma.gl/gltf/physics';
 import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/graph/gpu-core';
-import {ScenegraphPhysicsMotion, type GPURigidBodyWorld} from '@luma.gl/graph/gpu-physics';
+import {
+  ScenegraphPhysicsMotion,
+  type GPURigidBodyWorld,
+  type ScenegraphPhysicsPublication
+} from '@luma.gl/graph/gpu-physics';
 import type {ScenegraphNode} from '@luma.gl/engine';
 import {INFO_HTML, showError, showSampleDescription, createPhysicsPanels} from './app-ui';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
@@ -80,6 +84,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   description?: GLTFPhysicsDescription;
   world?: GPURigidBodyWorld;
   motion?: ScenegraphPhysicsMotion;
+  publication?: ScenegraphPhysicsPublication;
   behavior?: Interactivity;
   behaviorPhysics?: ReturnType<typeof makeGLTFPhysicsBehaviors>;
   simulationTime = 0;
@@ -175,6 +180,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     return [0.95, 0.95, 0.97, 1];
   }
 
+  protected getSampleUrl(sample: string): string {
+    return LOCAL_SAMPLES[sample] ?? `${SAMPLE_BASE_URL}/${sample}/${sample}.glb`;
+  }
+
   async loadGLTF({preserveView = false}: {preserveView?: boolean} = {}): Promise<void> {
     if (this.loading || this.isFinalized) return;
     this.loading = true;
@@ -188,7 +197,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
     const sample =
       document.querySelector<HTMLSelectElement>('#physics-sample')?.value || 'MotionProperties';
-    const modelUrl = LOCAL_SAMPLES[sample] ?? `${SAMPLE_BASE_URL}/${sample}/${sample}.glb`;
+    const modelUrl = this.getSampleUrl(sample);
     showSampleDescription(sample);
     let replacementWorld: GPURigidBodyWorld | undefined;
     let replacementGraph: CompiledGPUCommandGraph<void> | undefined;
@@ -485,8 +494,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.scenegraphsFromGLTF.scenes[0].traverse((node, {worldMatrix: modelMatrix}) => {
       const {model} = node as ModelNode;
-      const bodyIndex = this.bodyModels.get(node);
-      if (bodyIndex !== undefined)
+      const binding = this.publication?.bindings.get(node);
+      if (binding && !binding.visible) return;
+      const bodyIndex = binding?.body ?? this.bodyModels.get(node);
+      if (binding) {
+        modelMatrix = binding.localMatrix;
+      } else if (bodyIndex !== undefined)
         modelMatrix = new Matrix4(this.bodyInverseMatrices[bodyIndex]).multiplyRight(modelMatrix);
       const modelViewProjectionMatrix = new Matrix4(projectionMatrix)
         .multiplyRight(viewMatrix)
@@ -495,6 +508,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       if (this.world?.poseMatrices)
         model.shaderInputs.setProps({
           publishedTransforms: {
+            publishedBodyMatrices: this.world.poseMatrices,
             bodyIndex: bodyIndex ?? -1,
             viewProjection: new Matrix4(projectionMatrix).multiplyRight(viewMatrix)
           }
