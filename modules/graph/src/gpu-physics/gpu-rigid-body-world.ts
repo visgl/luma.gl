@@ -1569,6 +1569,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
 
   /** Refresh render outputs without integrating or solving a simulation step. */
   publishPoses(): void {
+    if (!this.device || this.destroyed) throw new Error('Unavailable physics world');
     if (!this.encodePosePublication) return;
     const encoder = this.device.createCommandEncoder();
     this.encodePosePublication(encoder);
