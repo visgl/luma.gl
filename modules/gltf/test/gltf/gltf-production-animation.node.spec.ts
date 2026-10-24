@@ -3,12 +3,19 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {SkinController} from '@luma.gl/engine';
-import {parseGLTFSkins} from '@luma.gl/gltf';
+import {
+  parseGLTFSkins,
+  postProcessGLTF,
+  createScenegraphsFromGLTF,
+  type GLTFAnimation,
+  GLTFAnimator
+} from '@luma.gl/gltf';
 import {readFile} from 'node:fs/promises';
 import {parse} from '@loaders.gl/core';
-import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/gltf';
+
 import {GroupNode} from '@luma.gl/engine';
-import {createScenegraphsFromGLTF, type GLTFAnimation, GLTFAnimator} from '@luma.gl/gltf';
+
 import {NullDevice} from '@luma.gl/test-utils';
 import {expect, it} from 'vitest';
 

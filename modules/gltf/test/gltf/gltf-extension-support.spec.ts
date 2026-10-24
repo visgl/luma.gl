@@ -2,18 +2,17 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GLTFPostprocessed} from '@loaders.gl/gltf';
-import type {TextureFormat} from '@luma.gl/core';
-import {NullDevice} from '@luma.gl/test-utils';
-import {expect, it} from 'vitest';
-
 import {
+  type GLTFPostprocessed,
   assertSupportedGLTFExtensions,
   createScenegraphsFromGLTF,
   getGLTFExtensionSupport,
   getGLTFExtensionSupportSummary,
   getRegisteredGLTFExtensions
 } from '@luma.gl/gltf';
+import type {TextureFormat} from '@luma.gl/core';
+import {NullDevice} from '@luma.gl/test-utils';
+import {expect, it} from 'vitest';
 
 class CompressedTextureNullDevice extends NullDevice {
   override isTextureFormatSupported(_format: TextureFormat): boolean {

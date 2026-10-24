@@ -3,7 +3,10 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {isGLTFPhysicsPropertyPointer} from './parse-gltf-physics-pointer';
-import {type GLTFAccessorPostprocessed, type GLTFPostprocessed} from '@loaders.gl/gltf';
+import {
+  type GLTFAccessorPostprocessed,
+  type GLTFPostprocessed
+} from '../types/gltf-postprocessed-schema';
 import {log} from '@luma.gl/core';
 import {
   type GLTFAnimation,

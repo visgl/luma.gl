@@ -8,7 +8,7 @@ import {
   type AreaLightBinding,
   type GroupNode
 } from '@luma.gl/engine';
-import type {GLTFPostprocessed} from '@loaders.gl/gltf';
+import type {GLTFPostprocessed} from '../types/gltf-postprocessed-schema';
 import {assert} from '@luma.gl/core';
 
 export type ParseGLTFAreaLightsProps = {

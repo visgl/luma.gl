@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, test, vi} from 'vitest';
-import type {GLTFPostprocessed} from '@loaders.gl/gltf';
+import type {GLTFPostprocessed} from '@luma.gl/gltf';
 import {ModelNode, type GroupNode} from '@luma.gl/engine';
 import {log} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/test-utils';

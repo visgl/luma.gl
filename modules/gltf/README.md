@@ -13,8 +13,8 @@ native animation pointers, and source-faithful `.gltf` / `.glb` interchange on W
 
 ```ts
 import {load} from '@loaders.gl/core';
-import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
-import {createScenegraphsFromGLTF, exportGLTF} from '@luma.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/gltf';
+import {createScenegraphsFromGLTF, exportGLTF, postProcessGLTF} from '@luma.gl/gltf';
 
 const asset = await load('/models/model.glb', GLTFLoader);
 const gltf = postProcessGLTF(asset);

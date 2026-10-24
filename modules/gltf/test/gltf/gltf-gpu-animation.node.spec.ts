@@ -5,10 +5,11 @@
 import {readFile} from 'node:fs/promises';
 
 import {parse} from '@loaders.gl/core';
-import {GLTFLoader, type GLTFPostprocessed, postProcessGLTF} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/gltf';
+import {type GLTFPostprocessed, postProcessGLTF, createGLTFAnimatedCrowd} from '@luma.gl/gltf';
 import {Texture} from '@luma.gl/core';
 import {AnimationAction} from '@luma.gl/engine';
-import {createGLTFAnimatedCrowd} from '@luma.gl/gltf';
+
 import {NullDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {describe, expect, test, vi} from 'vitest';

@@ -3,12 +3,13 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {AudioController} from '@luma.gl/engine';
-import {parseGLTFAudio} from '@luma.gl/gltf';
+import {parseGLTFAudio, postProcessGLTF, createScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {describe, expect, test, vi} from 'vitest';
 import {parse} from '@loaders.gl/core';
-import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/gltf';
+
 import {Matrix4} from '@math.gl/core';
-import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
+
 import type {GLTFAudioExtension} from '../../src/gltf/gltf-audio';
 import {NullDevice} from '@luma.gl/test-utils';
 

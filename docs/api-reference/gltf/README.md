@@ -40,8 +40,8 @@ A rendering application also needs a configured `Device` from `@luma.gl/core`, b
 
 ```ts
 import {load} from '@loaders.gl/core';
-import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
-import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/gltf';
+import {createScenegraphsFromGLTF, postProcessGLTF} from '@luma.gl/gltf';
 
 const asset = await load('/models/model.glb', GLTFLoader);
 const gltf = postProcessGLTF(asset);
@@ -68,15 +68,20 @@ requestAnimationFrame(renderFrame);
 [glTF animation and deformation](/docs/api-reference/gltf/gltf-animation) before mixing the
 legacy wall-clock API with direct mixer controls.
 
-## What loaders.gl already provides
+## Loading and postprocessing
 
-`@loaders.gl/gltf` is the asset decoder for the complete luma.gl pipeline. Its `GLTFLoader`,
-`postProcessGLTF()`, and `GLBWriter` already own these format-level capabilities:
+`@luma.gl/gltf` owns its glTF document types and `postProcessGLTF()`. The postprocessor accepts
+standard glTF JSON plus resolved buffers and images, without fetching resources or importing
+loaders.gl. `GLTFLoader` remains an optional application-level decoder for file loading,
+compression, and texture transcoding. The package still uses loaders.gl for GLB writing and
+PBR environment image loading in this migration stage.
+
+The pipeline separates these responsibilities:
 
 | Loader capability | Existing behavior |
 | --- | --- |
 | `.gltf` and `.glb` containers | Parse JSON and binary glTF containers, linked binary buffers, embedded data URIs, and referenced images. |
-| Postprocessed accessors | Resolve scene references and materialize typed accessor values, including interleaved buffer views and authored normalization metadata. |
+| Postprocessed accessors (luma.gl) | Resolve scene references and materialize typed accessor values, including interleaved and sparse buffer views and authored normalization metadata. |
 | `KHR_draco_mesh_compression` | Decompress supported Draco mesh primitives before luma.gl builds GPU geometry. |
 | `EXT_meshopt_compression` | Decode meshopt-compressed buffer views before their accessor values reach the renderer. |
 | `KHR_meshopt_compression` | Decode Khronos meshopt-compressed buffer views before their accessor values reach the renderer. |
@@ -87,9 +92,10 @@ legacy wall-clock API with direct mixer controls.
 | Legacy `KHR_texture_transform` preprocessing | Optionally bake supported source UV transforms. Runtime per-slot shader transforms and animated texture pointers remain renderer-owned. |
 | Binary GLB output | Encode aligned GLB container headers and JSON/BIN chunks through the existing `GLBWriter`. |
 
-Call `postProcessGLTF()` explicitly: loaders.gl v4 does not apply it automatically. Runtime
-animation and geometry consume the resulting accessor `value` and `components`; luma.gl does not
-need a second buffer-view decoder. `exportGLTF()` still owns scene-to-glTF descriptor mapping,
+Call luma.gl's `postProcessGLTF()` explicitly after loading. Existing loaders.gl postprocessed
+results remain structurally compatible with luma.gl's scenegraph, material, and animation APIs.
+Runtime animation and geometry consume the resulting accessor `value` and `components`.
+`exportGLTF()` still owns scene-to-glTF descriptor mapping,
 while `GLBWriter` owns the binary container envelope.
 
 The installed loader supports both `EXT_meshopt_compression` and the newer
@@ -101,14 +107,41 @@ loaders.gl also has a legacy CPU `KHR_texture_transform` preprocessing path. lum
 shader-side per-material transforms because animated pointers and independent texture slots are
 render-time concerns; an authored transform must not be applied twice across those layers.
 
+## `postProcessGLTF()` and document types
+
+```ts
+import {postProcessGLTF, type GLTFWithBuffers} from '@luma.gl/gltf';
+
+const asset: GLTFWithBuffers = {
+  json: gltfJSON,
+  buffers: [{arrayBuffer: binaryBuffer, byteOffset: 0, byteLength: binaryBuffer.byteLength}],
+  images: decodedImages
+};
+const gltf = postProcessGLTF(asset);
+```
+
+`GLTF` describes indexed source JSON. `GLTFWithBuffers` pairs that JSON with caller-supplied
+buffer ranges and optional decoded images. `GLTFPostprocessed` describes resolved runtime
+references and typed accessor values. These types are exported by `@luma.gl/gltf`, along with
+their accessor, mesh, node, material, texture, scene, and skin types. Source animation types
+are exported as `GLTFAnimationJSON`, `GLTFAnimationChannelJSON`, and `GLTFAnimationSamplerJSON`
+to distinguish them from the existing runtime animation API. The source sampler type is
+`GLTFSamplerJSON`; `GLTFSampler` retains its existing sampler conversion meaning.
+
+Postprocessing preserves the input JSON and resource bytes and borrows decoded images.
+It does not decompress Draco or meshopt data, transcode textures, or load external URIs.
+Supply resources in the same array order as the source JSON, with compression extensions
+already decoded by a loader when necessary. Animation accessor and node indices remain
+available to luma.gl's animation parser. Call postprocessing once on the loaded container;
+pass its resolved result directly to `createScenegraphsFromGLTF()`.
+
 ## `createScenegraphsFromGLTF()`
 
 ```ts
 const scenegraphs = createScenegraphsFromGLTF(device, gltf, options);
 ```
 
-`gltf` is the object returned by calling `postProcessGLTF()` on the loaded asset. loaders.gl v4
-does not postprocess automatically. The returned `GLTFScenegraphs`
+`gltf` is the object returned by calling `postProcessGLTF()` on the loaded asset. The returned `GLTFScenegraphs`
 bundle contains:
 
 | Property | Contents |
