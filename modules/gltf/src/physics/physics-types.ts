@@ -60,6 +60,8 @@ export type GLTFPhysicsCollider = {
   colliderIndex: number;
   /** Cooked collider frame relative to the source node, before node scale. */
   localMatrix: readonly number[];
+  /** Original scale used when cooking this collider, independent of live scene animation. */
+  cookedScale: readonly number[];
   shapeIndex?: number;
   /** Present only for explicitly enabled legacy mesh geometry. */
   meshIndex?: number;

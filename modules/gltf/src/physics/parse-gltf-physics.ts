@@ -508,6 +508,7 @@ export function parseGLTFPhysics(
             bodyIndex: definition.bodyIndex,
             colliderIndex,
             localMatrix: new Matrix4().translate(meshCenter),
+            cookedScale: transform.scale.map(Math.abs),
             shapeIndex,
             meshIndex,
             geometryNodeIndex,
@@ -810,6 +811,45 @@ export function parseGLTFPhysics(
           'Animated collision mesh snapshots require explicit reconstruction'
         );
         continue;
+      }
+      if (
+        options.animationOwnership === 'scenegraph' &&
+        targetNode !== undefined &&
+        targetPath === 'scale'
+      ) {
+        const colliders = result.colliders.filter(collider => {
+          let ancestor: number | undefined = collider.nodeIndex;
+          while (ancestor !== undefined && ancestor >= 0) {
+            if (ancestor === targetNode) return true;
+            ancestor = parents.get(ancestor);
+          }
+          return false;
+        });
+        if (colliders.length && colliders.every(collider => collider.shapeIndex !== undefined)) {
+          for (const collider of colliders)
+            if (!result.animatedColliderIndices.includes(collider.colliderIndex))
+              result.animatedColliderIndices.push(collider.colliderIndex);
+          // Scaling above a body also displaces its authored world origin. Static and
+          // kinematic descendants follow that pose; dynamic descendants need explicit ownership.
+          for (const body of result.bodies) {
+            let ancestor = parents.get(body.nodeIndex);
+            while (ancestor !== undefined && ancestor >= 0 && ancestor !== targetNode)
+              ancestor = parents.get(ancestor);
+            if (ancestor !== targetNode) continue;
+            if (body.body.mode === 'dynamic') {
+              report(
+                'animation-requires-runtime-binding',
+                `/animations/${animationIndex}`,
+                'Ancestor scale on a dynamic body requires explicit pose ownership'
+              );
+            } else {
+              body.body.mode = 'kinematic';
+              if (!result.animatedBodyIndices.includes(body.bodyIndex))
+                result.animatedBodyIndices.push(body.bodyIndex);
+            }
+          }
+          continue;
+        }
       }
       if (
         options.animationOwnership === 'scenegraph' &&

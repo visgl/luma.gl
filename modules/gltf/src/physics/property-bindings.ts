@@ -63,6 +63,62 @@ export function makeGLTFPhysicsProperties(
         property
       });
   }
+  // Source indices and unit conversion belong to the importer; runtime mutation is shared.
+  const shapes =
+    (
+      description.source.extensions?.['KHR_implicit_shapes'] as
+        | {shapes?: Record<string, unknown>[]}
+        | undefined
+    )?.shapes ?? [];
+  for (const [shapeIndex, source] of shapes.entries()) {
+    const type = source['type'];
+    const fields =
+      type === 'sphere'
+        ? {radius: 'radius'}
+        : type === 'box'
+          ? {size: 'halfExtents'}
+          : type === 'plane'
+            ? {sizeX: 'sizeX', sizeZ: 'sizeZ', doubleSided: 'doubleSided'}
+            : type === 'capsule' || type === 'cylinder'
+              ? {height: 'height', radiusBottom: 'radiusBottom', radiusTop: 'radiusTop'}
+              : {};
+    const definitions = description.colliders.filter(
+      collider => collider.shapeIndex === shapeIndex
+    );
+    if (!definitions.length) continue;
+    for (const [field, property] of Object.entries(fields)) {
+      if (!property) continue;
+      const colliders = definitions.map(definition => {
+        const scale = definition.cookedScale;
+        return {
+          index: definition.colliderIndex,
+          scaleAxes:
+            field === 'doubleSided'
+              ? undefined
+              : field === 'size'
+                ? [0, 1, 2]
+                : [field === 'height' ? 1 : field === 'sizeZ' ? 2 : 0],
+          scale:
+            field === 'size'
+              ? scale.map(component => component / 2)
+              : [
+                  field === 'doubleSided'
+                    ? 1
+                    : field === 'height'
+                      ? scale[1]
+                      : field === 'sizeZ'
+                        ? scale[2]
+                        : scale[0]
+                ]
+        };
+      });
+      targets.set(`/extensions/KHR_implicit_shapes/shapes/${shapeIndex}/${type}/${field}`, {
+        type: 'shape',
+        colliders,
+        property: property as Extract<PhysicsPropertyTarget, {type: 'shape'}>['property']
+      });
+    }
+  }
   const rowCounts = new Map<number, {limits: number; drives: number}>();
   const mergeJoint = (pointer: string, target: Extract<PhysicsPropertyTarget, {type: 'joint'}>) => {
     const previous = targets.get(pointer);

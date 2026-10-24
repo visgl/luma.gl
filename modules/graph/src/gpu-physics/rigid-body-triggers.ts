@@ -192,12 +192,15 @@ struct TriggerRing {sequence:u32,step:u32,saturated:u32,reserved:u32,entries:arr
  for(var offset=0u;offset<(group.w&0x7fffffffu);offset++){
   let pair=triggerPairs[group.z+offset];if(excludes(pair.x,pair.y)||excludes(pair.y,pair.x)){continue;}
   let radius=bodies.colliders[pair.x].shape.x;
-  if(bodies.colliders[pair.x].shape.w==0.0){
-  let center=colliderLocal(pair.y,colliderPosition(pair.x)-colliderPosition(pair.y));
-  let targetShape=bodies.colliders[pair.y].shape;if(targetShape.w==6.0&&targetShape.z==0.0&&center.y<0.0){continue;}
-  let surface=closestSurface(pair.y,center);
+  // Sphere-vs-surface distance is symmetric: avoid GJK/EPA degeneracy when the sphere is the target.
+  if(bodies.colliders[pair.x].shape.w==0.0||bodies.colliders[pair.y].shape.w==0.0){
+  let sphere=select(pair.y,pair.x,bodies.colliders[pair.x].shape.w==0.0);
+  let surfaceCollider=select(pair.x,pair.y,sphere==pair.x);
+  let center=colliderLocal(surfaceCollider,colliderPosition(sphere)-colliderPosition(surfaceCollider));
+  let targetShape=bodies.colliders[surfaceCollider].shape;if(targetShape.w==6.0&&targetShape.z==0.0&&center.y<0.0){continue;}
+  let surface=closestSurface(surfaceCollider,center);
   incomplete=incomplete||surface.complete==0u;
-  if(surface.distance<=radius){overlapping=true;selected=pair;}
+  if(surface.distance<=bodies.colliders[sphere].shape.x){overlapping=true;selected=pair;}
   }${
     extended
       ? `else {

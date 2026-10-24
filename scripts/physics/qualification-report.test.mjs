@@ -89,3 +89,12 @@ test('failed benchmark evidence cannot be hidden by a successful retry', () => {
   }
   assert.equal(makeQualificationReport(benchmarkProfile, [{...passed, adapter: {fallback: true}}], ['G1']).features[0].status, 'missing');
 });
+
+test('a passing parameter case cannot hide a skipped case selected by the same pattern', () => {
+  const result = makeQualificationReport(profile, [
+    report('import.spec.ts', 'passed', 'imports shape'),
+    report('gpu.spec.ts', 'passed', 'collides shape sphere'),
+    report('gpu.spec.ts', 'pending', 'collides shape capsule')
+  ], ['G2']);
+  assert.equal(result.features[0].checks.behavior.status, 'missing');
+});

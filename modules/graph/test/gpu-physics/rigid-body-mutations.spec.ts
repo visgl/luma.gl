@@ -181,3 +181,91 @@ it('moves child collider frames independently and restores their query geometry'
     world.destroy();
   }
 });
+
+it('updates shared analytic geometry atomically with derived inertia and capture restoration', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const world = new GPURigidBodyWorld({
+    gravity: [0, 0, 0],
+    enableQueries: true,
+    bodies: [0, 4].map(position => ({
+      position: [position, 0, 0] as [number, number, number],
+      mass: 2,
+      shape: {type: 'sphere' as const, radius: 0.5}
+    }))
+  });
+  const definition = new GPUCommandGraph(device);
+  world.addToGraph(definition);
+  const graph = await definition.compileAsync();
+  try {
+    const capture = await world.captureState();
+    const before = await world.readState();
+    world.setColliderShapes(
+      [0, 1].map(collider => ({collider, shape: {type: 'sphere', radius: 1}}))
+    );
+    expect(await world.readState()).toEqual(before);
+    expect(world.getBodyParameters(0).inertiaDiagonal).toEqual([0.8, 0.8, 0.8]);
+    world.applyAngularImpulse(0, [0, 0.8, 0]);
+    expect((await world.readState())[0].angularVelocity[1]).toBeCloseTo(1, 5);
+    expect(() =>
+      world.setColliderShapes([
+        {collider: 0, shape: {type: 'sphere', radius: 2}},
+        {collider: 1, shape: {type: 'sphere', radius: -1}}
+      ])
+    ).toThrow();
+    expect(world.getColliderShape(0)).toEqual({type: 'sphere', radius: 1});
+    expect(() =>
+      world.setColliderShapes([{collider: 0, shape: {type: 'box', halfExtents: [1, 1, 1]}}])
+    ).toThrow();
+    world.restoreState(capture);
+    expect(world.getColliderShape(0)).toEqual({type: 'sphere', radius: 0.5});
+    expect(await world.readState()).toEqual(before);
+    world.applyAngularImpulse(0, [0, 0.2, 0]);
+    expect((await world.readState())[0].angularVelocity[1]).toBeCloseTo(1, 5);
+  } finally {
+    graph.destroy();
+    world.destroy();
+  }
+});
+
+it('scales animated analytic child colliders without moving their dynamic parent or accumulating scale', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const {GroupNode} = await import('@luma.gl/engine');
+  const {ScenegraphPhysicsMotion} = await import('../../src/gpu-physics');
+  const child = new GroupNode();
+  const root = new GroupNode({children: [child]});
+  const world = new GPURigidBodyWorld({
+    gravity: [0, 0, 0],
+    enableQueries: true,
+    bodies: [{position: [0, 0, 0], mass: 1, shape: {type: 'sphere', radius: 0.5}}]
+  });
+  const definition = new GPUCommandGraph(device);
+  world.addToGraph(definition);
+  const graph = await definition.compileAsync();
+  const motion = new ScenegraphPhysicsMotion(world, [root], new Map(), [
+    {node: child, body: root, index: 0}
+  ]);
+  try {
+    child.setMatrixComponents({scale: [2, 2, 2]});
+    motion.update();
+    expect(world.getColliderShape(0)).toEqual({type: 'sphere', radius: 1});
+    motion.update();
+    expect(world.getColliderShape(0)).toEqual({type: 'sphere', radius: 1});
+    expect(world.getBodyMode(0)).toBe('dynamic');
+    expect((await world.readState())[0].position).toEqual([0, 0, 0]);
+    expect(
+      (await world.raycast({origin: [-3, 0, 0], direction: [1, 0, 0], maximumDistance: 5})).hits[0]
+        .distance
+    ).toBeCloseTo(2, 5);
+    child.setMatrixComponents({scale: [1, 2, 1]});
+    expect(() => motion.update()).toThrow();
+    expect(world.getColliderShape(0)).toEqual({type: 'sphere', radius: 1});
+    child.setMatrixComponents({scale: [1, 1, 1]});
+    motion.update();
+    expect(world.getColliderShape(0)).toEqual({type: 'sphere', radius: 0.5});
+  } finally {
+    graph.destroy();
+    world.destroy();
+  }
+});

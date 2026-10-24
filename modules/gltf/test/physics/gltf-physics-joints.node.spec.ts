@@ -218,3 +218,39 @@ it('animates every collider on a child node while preserving off-center cooked f
     world.destroy();
   }
 });
+
+it('routes analytic scale channels to collider updates without stealing dynamic motion ownership', () => {
+  const source: GLTFPhysicsDocument = {
+    scenes: [{nodes: [0]}],
+    nodes: [
+      {children: [1], extensions: {KHR_physics_rigid_bodies: {motion: {mass: 1}}}},
+      {extensions: {KHR_physics_rigid_bodies: {collider: {geometry: {shape: 0}}}}}
+    ],
+    extensions: {KHR_implicit_shapes: {shapes: [{type: 'box', box: {size: [1, 1, 1]}}]}},
+    animations: [{channels: [{target: {node: 0, path: 'scale'}}]}]
+  };
+  const description = parseGLTFPhysics(source, {animationOwnership: 'scenegraph'});
+  expect(description.issues).toEqual([]);
+  expect(description.animatedBodyIndices).toEqual([]);
+  expect(description.animatedColliderIndices).toEqual([0]);
+  expect(description.bodies[0].body.mode).toBe('dynamic');
+});
+
+it('binds static descendant body poses displaced by ancestor scale', () => {
+  const source: GLTFPhysicsDocument = {
+    scenes: [{nodes: [0]}],
+    nodes: [
+      {children: [1]},
+      {
+        translation: [1, 0, 0],
+        extensions: {KHR_physics_rigid_bodies: {collider: {geometry: {shape: 0}}}}
+      }
+    ],
+    extensions: {KHR_implicit_shapes: {shapes: [{type: 'box', box: {size: [1, 1, 1]}}]}},
+    animations: [{channels: [{target: {node: 0, path: 'scale'}}]}]
+  };
+  const description = parseGLTFPhysics(source, {animationOwnership: 'scenegraph'});
+  expect(description.issues).toEqual([]);
+  expect(description.animatedBodyIndices).toEqual([0]);
+  expect(description.bodies[0].body.mode).toBe('kinematic');
+});

@@ -116,9 +116,9 @@ coverage rather than inferring completeness from one working scene.
 
 ## Runtime Property Bindings
 
-`ScenegraphPhysicsProperties` resolves property addresses to body, collider-material or
+`ScenegraphPhysicsProperties` resolves property addresses to body, collider-material, analytic-shape or
 joint indices. It calls `setBodyParameters`, `setColliderMaterial` and
-`setJointParameters` between submitted steps. glTF builds this address table with
+`setJointParameters` and `setColliderShapes` between submitted steps. glTF builds this address table with
 `makeGLTFPhysicsProperties`; the runtime does not retain glTF parsing logic.
 The same adapter works with `Interactivity` and the engine’s
 `makeAdapterAnimationBinding` for programmatic animation tracks.
@@ -134,6 +134,20 @@ use the asynchronous `readState()` diagnostics API. Submit each physics step bef
 applying the next step’s property values; queue writes cannot be interleaved inside an
 already encoded command buffer. The gallery demonstrates this with an animated hinge
 actuator target.
+
+Analytic shape bindings cover sphere radius, box size, tapered capsule/cylinder height
+and radii, and plane extents/sidedness. Shared glTF shapes update all referring
+colliders with their own scale conversion. A batch validates every shape before
+writing GPU metadata, recalculates derived inertia, wakes affected bodies and
+invalidates contact caches. Explicit mass, COM, inertia and visual publication bounds
+remain caller-owned. Resizing does not conserve angular momentum automatically:
+velocities are retained, so shape animation is an authored energy input.
+
+`ScenegraphPhysicsMotion` also applies exact analytic scale changes before stepping.
+Boxes permit nonuniform scale; spheres and capsules require uniform scale, and
+cylinders require equal radial scale. Singular scale, ellipsoids and mesh deformation
+are rejected rather than approximated. The Animated collider scale gallery scene
+shows a growing platform supporting a dynamic box.
 
 ## Lifecycle and Current Limits
 
@@ -151,15 +165,28 @@ identities. Use `makeGLTFPhysicsDefinition` to bind an updated glTF collision sn
 the same render-scene node references. Explicit rebuilds read state once; ordinary steps
 keep poses on the GPU. `destroy()` waits for pending work before releasing resources.
 
-Animated child-collider translation and rotation use `ScenegraphPhysicsMotion` without
+Animated child-collider translation, rotation and supported analytic scale use `ScenegraphPhysicsMotion` without
 taking ownership of their parent body's motion. Bindings are a list of collider targets,
 so one node can animate both a solid collider and a trigger. Each target can supply a
 `localMatrix` for its cooked frame relative to the node; glTF descriptions retain this
 matrix so off-center mesh bounds keep their offset during animation. These are collider teleports: they do
 not promise physical response to shape deformation.
 
+`capture()` explicitly reads live simulation buffers and stores the authored reset
+definition alongside them. `restore(capture)` compiles and validates a replacement
+before publishing it; failed restoration leaves the accepted execution usable.
+Restoration increments `revision`, so replace borrowed renderer/behavior bindings.
+Reset after restoration still returns to the captured authored starting state.
+Captures retain scene object references and are tied to the implementation version;
+they are not a portable glTF export or a cross-device binary format.
+
+Wrap asynchronous queries in `instance.withWorld(world => world.raycast(query))` when
+using instance-managed lifetimes. Reset/rebuild/advance reject while the operation is
+pending; destruction waits for it. Direct calls on borrowed `instance.world` remain
+the caller's responsibility. Do not call another instance operation inside this callback.
+
 The shared representation does not yet provide automatic collider reconstruction for
-morphed geometry, animated scale, general scene edits, or arbitrary export/reimport of
+morphed/skinned geometry, general scene edits, or arbitrary glTF export/reimport of
 live simulation state. Direct GPU physics-to-skinning palette generation also remains
 separate work. These boundaries are explicit so a programmatic scene and an imported
 glTF scene receive the same behavior rather than different hidden implementations.

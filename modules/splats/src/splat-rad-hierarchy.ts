@@ -208,6 +208,11 @@ type SplatRADFrontierCandidate<TData extends SplatRADHierarchyData = GPUSplatDat
   registeredPage: RegisteredSplatRADPage<TData>;
   globalRowIndex: number;
   localRowIndex: number;
+  /** Inclusive row bounds on this immutable parent chain, for cheap cycle rejection. */
+  depth: number;
+  blockAncestor?: SplatRADFrontierCandidate<TData>;
+  minimumAncestorRowIndex: number;
+  maximumAncestorRowIndex: number;
   node: SplatHierarchyNode;
   priority: number;
   isFallback: boolean;
@@ -1681,6 +1686,22 @@ export class SplatRADHierarchyManager<TData extends SplatRADHierarchyData = GPUS
     candidate: SplatRADFrontierCandidate<TData>,
     selectedRows: ReadonlyMap<number, SplatRADFrontierCandidate<TData>>
   ): boolean {
+    // A narrow frontier should not scan a deep retained chain once per queued row.
+    // Immutable block links let each selected row be checked at its exact depth.
+    if (selectedRows.size < candidate.depth / 32) {
+      for (const selected of selectedRows.values()) {
+        if (selected.depth >= candidate.depth) continue;
+        let ancestor = candidate.parent!;
+        while (ancestor.depth > selected.depth) {
+          ancestor =
+            ancestor.blockAncestor && ancestor.blockAncestor.depth >= selected.depth
+              ? ancestor.blockAncestor
+              : ancestor.parent!;
+        }
+        if (ancestor === selected) return true;
+      }
+      return false;
+    }
     let ancestor = candidate.parent;
     while (ancestor) {
       if (selectedRows.get(ancestor.globalRowIndex) === ancestor) {
@@ -1898,6 +1919,16 @@ export class SplatRADHierarchyManager<TData extends SplatRADHierarchyData = GPUS
       registeredPage,
       globalRowIndex,
       localRowIndex,
+      depth: parent ? parent.depth + 1 : 0,
+      blockAncestor: parent && parent.depth % 32 === 0 ? parent : parent?.blockAncestor,
+      minimumAncestorRowIndex: Math.min(
+        globalRowIndex,
+        parent?.minimumAncestorRowIndex ?? globalRowIndex
+      ),
+      maximumAncestorRowIndex: Math.max(
+        globalRowIndex,
+        parent?.maximumAncestorRowIndex ?? globalRowIndex
+      ),
       node,
       priority,
       isFallback: false,
@@ -2769,6 +2800,10 @@ function hasSplatRADAncestor<TData extends SplatRADHierarchyData>(
   candidate: SplatRADFrontierCandidate<TData>,
   rowIndex: number
 ): boolean {
+  // Forward-only source trees cannot cycle outside the retained ancestor range.
+  // Keep the exact walk for arbitrary source ordering and malformed back edges.
+  if (rowIndex < candidate.minimumAncestorRowIndex || rowIndex > candidate.maximumAncestorRowIndex)
+    return false;
   let current: SplatRADFrontierCandidate<TData> | undefined = candidate;
   while (current) {
     if (current.globalRowIndex === rowIndex) {

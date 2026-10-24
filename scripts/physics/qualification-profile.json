@@ -653,7 +653,24 @@
         "import",
         "behavior"
       ],
-      "checks": {}
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-joints.node.spec.ts",
+            "testPattern": "imports composed joints with forward attachment references"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-joints.spec.ts",
+            "testPattern": "retains a rotated hinge anchor"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-joints.spec.ts",
+            "testPattern": "preserves explicit connected-body collision policy"
+          }
+        ]
+      }
     },
     {
       "id": "constraints.linear-limits",
@@ -805,7 +822,60 @@
         "import",
         "behavior"
       ],
-      "checks": {}
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-triggers.node.spec.ts",
+            "testPattern": "imports nested trigger unions"
+          },
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-triggers.node.spec.ts",
+            "testPattern": "preserves intermediate branch filters"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/authored-trigger-qualification.spec.ts",
+            "testPattern": "qualifies sphere trigger geometry"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/authored-trigger-qualification.spec.ts",
+            "testPattern": "qualifies box trigger geometry"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/authored-trigger-qualification.spec.ts",
+            "testPattern": "qualifies capsule trigger geometry"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/authored-trigger-qualification.spec.ts",
+            "testPattern": "qualifies cylinder trigger geometry"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/authored-trigger-qualification.spec.ts",
+            "testPattern": "qualifies plane trigger geometry"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/authored-trigger-qualification.spec.ts",
+            "testPattern": "qualifies convex-hull trigger geometry"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/authored-trigger-qualification.spec.ts",
+            "testPattern": "qualifies triangle-mesh trigger geometry"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/authored-trigger-qualification.spec.ts",
+            "testPattern": "reports trigger ring loss"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-reliability.spec.ts",
+            "testPattern": "records swept sensor entry"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-reliability.spec.ts",
+            "testPattern": "unions compound sensors"
+          }
+        ]
+      }
     },
     {
       "id": "queries.ray-segment",
@@ -816,7 +886,30 @@
       "requiredChecks": [
         "behavior"
       ],
-      "checks": {}
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-behaviors.spec.ts",
+            "testPattern": "qualifies bounded filtered behavior segments"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-qualification.spec.ts",
+            "testPattern": "qualifies rotated box ray"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-qualification.spec.ts",
+            "testPattern": "qualifies sphere query scale"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-qualification.spec.ts",
+            "testPattern": "qualifies extended shape surfaces"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-reliability.spec.ts",
+            "testPattern": "queries original mesh surfaces"
+          }
+        ]
+      }
     },
     {
       "id": "interaction.impulses",
@@ -828,7 +921,22 @@
       "requiredChecks": [
         "behavior"
       ],
-      "checks": {}
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-behaviors.spec.ts",
+            "testPattern": "qualifies behavior point impulses"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-behaviors.spec.ts",
+            "testPattern": "resolves a real GPU ray hit"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-reliability.spec.ts",
+            "testPattern": "applies center impulses without torque"
+          }
+        ]
+      }
     },
     {
       "id": "interaction.trigger-events",
@@ -842,7 +950,26 @@
       "requiredChecks": [
         "behavior"
       ],
-      "checks": {}
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-behaviors.spec.ts",
+            "testPattern": "preserves independent collider identities"
+          },
+          {
+            "file": "modules/engine/test/interactivity/physics.node.spec.ts",
+            "testPattern": "preserves each trigger activation"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/authored-trigger-qualification.spec.ts",
+            "testPattern": "reports trigger ring loss"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-behaviors.spec.ts",
+            "testPattern": "delivers GPU trigger transitions"
+          }
+        ]
+      }
     },
     {
       "id": "binding.animation-precedence",
@@ -1855,6 +1982,79 @@
           {
             "file": "modules/graph/test/gpu-physics/rigid-body-mutations.spec.ts",
             "testPattern": "moves child collider frames"
+          }
+        ]
+      }
+    },
+    {
+      "id": "binding.analytic-shape-mutation",
+      "tranche": "G6",
+      "fields": [
+        "analytic dimensions and shared scaled shape pointers; topology changes require rebuild"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-joints.node.spec.ts",
+            "testPattern": "routes analytic scale channels"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-properties.spec.ts",
+            "testPattern": "animates shared implicit shape pointers"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-mutations.spec.ts",
+            "testPattern": "updates shared analytic geometry atomically"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-mutations.spec.ts",
+            "testPattern": "scales animated analytic child colliders"
+          }
+        ]
+      }
+    },
+    {
+      "id": "binding.live-scene-capture",
+      "tranche": "G6",
+      "fields": [
+        "implementation-version live capture with stable object bindings and authored reset state"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-instance.spec.ts",
+            "testPattern": "roundtrips live scene state"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-instance.spec.ts",
+            "testPattern": "holds borrowed world lifetime"
+          }
+        ]
+      }
+    },
+    {
+      "id": "binding.publication-no-pose-bridge",
+      "tranche": "G6",
+      "fields": [
+        "COM-correct GPU matrix and authored bounds publication"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-instance.spec.ts",
+            "testPattern": "publishes COM-correct matrices"
           }
         ]
       }

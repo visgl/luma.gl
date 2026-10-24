@@ -2208,6 +2208,28 @@ it.each([
   void 0;
 });
 
+it('SplatRADHierarchyManager rejects cycles in nonmonotonic source row order', () => {
+  const device = new NullDevice({});
+  const page = makeRADPage(device, {
+    id: 'nonmonotonic-cycle',
+    rowIndexBase: 0,
+    positions: new Array(9).fill(0),
+    childCounts: [1, 1, 1],
+    childStarts: [2, 0, 1]
+  });
+  const manager = new SplatRADHierarchyManager({
+    pages: [page],
+    maximumScreenSpaceError: 0,
+    maxTraversalRows: 16
+  });
+  manager.update(makeRADView());
+  expect(manager.hasPendingTraversal).toBe(false);
+  expect(Array.from(manager.frontier[0]?.activeRows ?? [])).toEqual([1]);
+  manager.destroy();
+  page.data.destroy();
+  device.destroy();
+});
+
 it('SplatRADHierarchyManager bounds queue coverage checks during a small camera retarget', () => {
   const device = new NullDevice({});
   const rowCount = 8_191;

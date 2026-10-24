@@ -5,6 +5,9 @@
 /** Address syntax only; scene construction resolves indices and supplies runtime bindings. */
 export function isGLTFPhysicsPropertyPointer(pointer: string): boolean {
   return (
+    /^\/extensions\/KHR_implicit_shapes\/shapes\/\d+\/(sphere\/radius|box\/size|(?:capsule|cylinder)\/(height|radiusBottom|radiusTop)|plane\/(sizeX|sizeZ|doubleSided))$/.test(
+      pointer
+    ) ||
     /^\/nodes\/\d+\/extensions\/KHR_physics_rigid_bodies\/(motion\/(isKinematic|mass|centerOfMass|inertiaDiagonal|inertiaOrientation|linearVelocity|angularVelocity|gravityFactor)|joint\/enableCollision)$/.test(
       pointer
     ) ||
