@@ -51,7 +51,7 @@ graph.add([
 ]);
 
 const compilation = new GPUGraphCompiler(device).compile(graph);
-const graph = compilation.graph;
+const commandGraph = compilation.graph;
 ```
 
 Arrays are root-level construction sugar. `GPUCompositeOperation` preserves semantic grouping.
