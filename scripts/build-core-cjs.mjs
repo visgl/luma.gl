@@ -42,13 +42,13 @@ for (const backend of ['webgl', 'webgpu']) {
 }
 process.stdout.write('Verified CommonJS device identity and dynamic imports.\n');
 
-// The focused execution-graph entry point must reuse the core scheduler constructors.
+// The focused graph entry point must reuse all core authoring and scheduler constructors.
 // Bundling it separately would make instanceof checks depend on the import path.
 const graphDistributionDirectory = new URL('../modules/graph/dist/', import.meta.url);
 const graphEntryPoint = new URL('gpu-graph/index.js', graphDistributionDirectory);
 const graphSource = await readFile(graphEntryPoint, 'utf8');
 const {code: graphCode} = await transform(
-  graphSource.replace('../gpu-core/gpu-command-graph.js', '../gpu-core/index.cjs'),
+  graphSource.replace(/(['"])\.\.\/gpu-core\/[^'"]+\.js\1/g, "'../gpu-core/index.cjs'"),
   {
     format: 'cjs',
     platform: 'node',
