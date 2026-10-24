@@ -3,8 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {parse} from '@loaders.gl/core';
-import {GLBWriter, GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
-import {exportGLTF, type GLTFExportScene} from '@luma.gl/gltf';
+import {GLBWriter, GLTFLoader} from '@loaders.gl/gltf';
+import {postProcessGLTF, exportGLTF, type GLTFExportScene} from '@luma.gl/gltf';
+
 import {describe, expect, test, vi} from 'vitest';
 
 describe('source-faithful glTF asset export', () => {

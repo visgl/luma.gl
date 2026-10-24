@@ -3,11 +3,14 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {BillboardController} from '@luma.gl/engine';
-import {parseGLTFBillboards, type GLTFBillboardDefinition} from '@luma.gl/gltf';
+import {
+  parseGLTFBillboards,
+  type GLTFBillboardDefinition,
+  type GLTFPostprocessed
+} from '@luma.gl/gltf';
 import {describe, expect, test} from 'vitest';
 import {GroupNode, ScenegraphNode} from '@luma.gl/engine';
 import {Matrix4, Vector3} from '@math.gl/core';
-import type {GLTFPostprocessed} from '@loaders.gl/gltf';
 
 function makeController(definition: GLTFBillboardDefinition = {}, allowLegacyYAxis = false) {
   const leaf = new ScenegraphNode();

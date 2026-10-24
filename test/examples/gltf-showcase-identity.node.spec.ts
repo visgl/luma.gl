@@ -52,7 +52,7 @@ describe('glTF module and showcase identity', () => {
     expect(tabs).toContain('/docs/api-reference/gltf/gltf-interchange');
   });
 
-  test('documents existing loader-owned capabilities without claiming unsupported extensions', () => {
+  test('documents loading and luma-owned postprocessing without claiming unsupported extensions', () => {
     const overview = readFileSync(
       path.join(process.cwd(), 'docs/api-reference/gltf/README.md'),
       'utf8'
@@ -70,7 +70,11 @@ describe('glTF module and showcase identity', () => {
       'utf8'
     );
 
-    expect(overview).toMatch(/^## What loaders\.gl already provides$/m);
+    expect(overview).toMatch(/^## Loading and postprocessing$/m);
+    expect(overview).toContain(
+      '`@luma.gl/gltf` owns its glTF document types and `postProcessGLTF()`'
+    );
+    expect(overview).toContain('Existing loaders.gl postprocessed');
     for (const capability of [
       'GLTFLoader',
       'postProcessGLTF()',

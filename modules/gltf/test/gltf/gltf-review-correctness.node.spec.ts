@@ -4,9 +4,10 @@
 
 import {readFile} from 'node:fs/promises';
 import {parse} from '@loaders.gl/core';
-import {GLTFLoader, postProcessGLTF, type GLTFPostprocessed} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/gltf';
+import {postProcessGLTF, type GLTFPostprocessed, createScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {ModelNode} from '@luma.gl/engine';
-import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
+
 import {NullDevice} from '@luma.gl/test-utils';
 import {describe, expect, test} from 'vitest';
 

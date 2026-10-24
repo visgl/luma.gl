@@ -4,13 +4,16 @@
 
 import {readFile} from 'node:fs/promises';
 import {parse} from '@loaders.gl/core';
-import {GLTFLoader, type GLTFPostprocessed, postProcessGLTF} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/gltf';
 import {
+  type GLTFPostprocessed,
+  postProcessGLTF,
   assertSupportedGLTFExtensions,
   generateGLTFLODLevels,
   getGLTFExtensionSupport,
   getGLTFNodeLODs
 } from '@luma.gl/gltf';
+
 import {describe, expect, test} from 'vitest';
 
 async function loadGLTF(url: URL): Promise<GLTFPostprocessed> {

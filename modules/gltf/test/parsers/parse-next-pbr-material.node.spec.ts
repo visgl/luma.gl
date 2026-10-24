@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GLTFPostprocessed} from '@loaders.gl/gltf';
 import {
+  type GLTFPostprocessed,
   exportGLTF,
   getGLTFExtensionSupport,
   getTextureTransformSlotDefinitions
 } from '@luma.gl/gltf';
+
 import {parseGLTFAnimations} from '@luma.gl/gltf/parsers/parse-gltf-animations';
 import {parsePBRMaterial} from '@luma.gl/gltf/parsers/parse-pbr-material';
 import {NullDevice} from '@luma.gl/test-utils';

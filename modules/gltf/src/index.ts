@@ -127,3 +127,73 @@ export {
 } from './gltf/gltf-billboard';
 export {parseGLTFAudio, type ParseGLTFAudioProps} from './gltf/gltf-audio';
 export {parseGLTFAreaLights, type ParseGLTFAreaLightsProps} from './gltf/gltf-area-lights';
+
+// glTF document types and resource-independent postprocessing.
+export {postProcessGLTF} from './parsers/post-process-gltf';
+export type {
+  GLTFId,
+  GLTFAccessorSparseIndices,
+  GLTFAccessorSparseValues,
+  GLTFAccessorSparse,
+  GLTFAccessor,
+  GLTFAnimationChannelTarget,
+  GLTFAnimationChannel as GLTFAnimationChannelJSON,
+  GLTFAnimationSampler as GLTFAnimationSamplerJSON,
+  GLTFAnimation as GLTFAnimationJSON,
+  GLTFAsset,
+  GLTFBuffer,
+  GLTFBufferView,
+  GLTFCameraOrthographic,
+  GLTFCameraPerspective,
+  GLTFCamera,
+  GLTFImage,
+  GLTFFile,
+  GLTFExternalAsset,
+  GLTFTextureInfo,
+  GLTFTextureInfoMetadata,
+  GLTFMaterialPbrMetallicRoughness,
+  GLTFMaterialNormalTextureInfo,
+  GLTFMaterialOcclusionTextureInfo,
+  GLTFMaterial,
+  GLTFMeshPrimitive,
+  GLTFMesh,
+  GLTFNode,
+  GLTFSampler as GLTFSamplerJSON,
+  GLTFScene,
+  GLTFSkin,
+  GLTFTexture,
+  GLTF,
+  GLTFObject,
+  GLTF_KHR_binary_glTF,
+  GLTF_KHR_draco_mesh_compression,
+  GLTF_KHR_texture_basisu,
+  GLTF_EXT_meshopt_compression,
+  GLTF_KHR_meshopt_compression,
+  GLTF_EXT_texture_webp,
+  GLTF_EXT_texture_avif,
+  GLTF_MSFT_texture_dds
+} from './types/gltf-json-schema';
+export type {
+  GLTFAccessorPostprocessed,
+  GLTFAnimationPostprocessed,
+  GLTFBufferPostprocessed,
+  GLTFBufferViewPostprocessed,
+  GLTFCameraPostprocessed,
+  GLTFImagePostprocessed,
+  GLTFTextureInfoPostprocessed,
+  GLTFMaterialPostprocessed,
+  GLTFMeshPrimitivePostprocessed,
+  GLTFMeshPostprocessed,
+  GLTFNodePostprocessed,
+  GLTFSamplerPostprocessed,
+  GLTFScenePostprocessed,
+  GLTFSkinPostprocessed,
+  GLTFTexturePostprocessed,
+  GLTFPostprocessed
+} from './types/gltf-postprocessed-schema';
+export type {
+  GLTFWithBuffers,
+  GLTFExternalBuffer,
+  GLTFTypedArray,
+  GLTFImageData
+} from './types/gltf-types';

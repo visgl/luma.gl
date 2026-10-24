@@ -4,9 +4,12 @@
 
 import {existsSync, readFileSync} from 'node:fs';
 import {describe, expect, test} from 'vitest';
-import type {GLTFPostprocessed} from '@loaders.gl/gltf';
+import {
+  type GLTFPostprocessed,
+  assertSupportedGLTFExtensions,
+  getRegisteredGLTFExtensions
+} from '@luma.gl/gltf';
 
-import {assertSupportedGLTFExtensions, getRegisteredGLTFExtensions} from '@luma.gl/gltf';
 import {getGLTFReferenceLedger} from '../../../../examples/gltf/asset-studio/gltf-reference-ledger';
 import {
   getGLTFReferenceCaptureOptions,

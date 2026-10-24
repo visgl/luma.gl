@@ -2,9 +2,21 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GLTFPostprocessed} from '@loaders.gl/gltf';
+import type {GLTFPostprocessed} from '../types/gltf-postprocessed-schema';
+import type {
+  CompressedImage,
+  CompressedImageDataArray,
+  CompressedImageMipmapArray,
+  CompressedMipLevel
+} from '../types/gltf-types';
+export type {
+  CompressedImage,
+  CompressedImageDataArray,
+  CompressedImageMipmapArray,
+  CompressedMipLevel
+} from '../types/gltf-types';
 import {Matrix3} from '@math.gl/core';
-import type {Device, ExternalImage, SamplerProps, TextureFormat, TypedArray} from '@luma.gl/core';
+import type {Device, ExternalImage, SamplerProps, TextureFormat} from '@luma.gl/core';
 import {assert, log, Texture, textureFormatDecoder} from '@luma.gl/core';
 import {type PBRMaterialBindings} from '@luma.gl/shadertools';
 import {type PBREnvironment} from '../pbr/pbr-environment';
@@ -1312,43 +1324,6 @@ function resolveTextureInfo(gltfTexture: GLTFTexture, gltf?: GLTFPostprocessed):
     texture: resolvedTextureEntry
   };
 }
-
-/** One mip level as produced by loaders.gl compressed texture parsers */
-export type CompressedMipLevel = {
-  data: TypedArray;
-  width: number;
-  height: number;
-  textureFormat?: TextureFormat;
-};
-
-/**
- * Compressed image from current loaders.gl releases.
- * - `mipmaps` is a boolean (true), NOT an array
- * - `data` is an Array of TextureLevel-like objects
- * - Per-level `textureFormat` is already a luma.gl TextureFormat
- * - Top-level `width`/`height` may be undefined
- */
-export type CompressedImageDataArray = {
-  compressed: true;
-  mipmaps?: boolean;
-  width?: number;
-  height?: number;
-  data: CompressedMipLevel[];
-};
-
-/**
- * Hypothetical future format where `mipmaps` is an actual array.
- * Kept for forward compatibility.
- */
-export type CompressedImageMipmapArray = {
-  compressed: true;
-  width?: number;
-  height?: number;
-  mipmaps: CompressedMipLevel[];
-};
-
-/** Union of all known loaders.gl compressed image shapes */
-export type CompressedImage = CompressedImageDataArray | CompressedImageMipmapArray;
 
 function createCompressedTextureFallback(
   device: Device,

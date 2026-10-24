@@ -7,11 +7,15 @@ import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import '@loaders.gl/polyfills';
 import {load} from '@loaders.gl/core';
-import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
-import type {GLTFPostprocessed} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/gltf';
+import {
+  postProcessGLTF,
+  type GLTFPostprocessed,
+  createScenegraphsFromGLTF,
+  loadPBREnvironment
+} from '@luma.gl/gltf';
 
 import {DynamicTexture} from '@luma.gl/engine';
-import {createScenegraphsFromGLTF, loadPBREnvironment} from '@luma.gl/gltf';
 
 it('gltf#loading', async () => {
   const webglDevice = await getWebGLTestDevice();

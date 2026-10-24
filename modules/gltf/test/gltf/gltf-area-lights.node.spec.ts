@@ -3,10 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {AreaLightController} from '@luma.gl/engine';
-import {parseGLTFAreaLights} from '@luma.gl/gltf';
+import {parseGLTFAreaLights, type GLTFPostprocessed} from '@luma.gl/gltf';
 import {expect, test} from 'vitest';
 import {GroupNode} from '@luma.gl/engine';
-import type {GLTFPostprocessed} from '@loaders.gl/gltf';
 
 function makeController(type: 'rect' | 'disk' = 'rect') {
   const light = new GroupNode({position: [1, 0, 0], scale: [-2, 3, 1]});

@@ -10,7 +10,7 @@ import {
   type MaterialVariantBinding,
   type PrimitiveMaterialVariants
 } from '@luma.gl/engine';
-import type {GLTFPostprocessed} from '@loaders.gl/gltf';
+import type {GLTFPostprocessed} from '../types/gltf-postprocessed-schema';
 
 /** Resolve glTF variant declarations and primitive mappings for the engine runtime. */
 export function parseGLTFMaterialVariants(

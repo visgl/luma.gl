@@ -7,7 +7,7 @@ import {
   type GLTFMeshPostprocessed,
   type GLTFNodePostprocessed,
   type GLTFPostprocessed
-} from '@loaders.gl/gltf';
+} from '../types/gltf-postprocessed-schema';
 import {assert, Device, type Texture, type Buffer} from '@luma.gl/core';
 import {
   decodeMorphTargetAttribute,

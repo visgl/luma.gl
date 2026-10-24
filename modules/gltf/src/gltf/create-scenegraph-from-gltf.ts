@@ -5,7 +5,7 @@
 import {parseGLTFJointDeclarations} from '../parsers/parse-gltf-joints';
 import {Device} from '@luma.gl/core';
 import {GroupNode, Material, ModelNode, JointController} from '@luma.gl/engine';
-import {GLTFPostprocessed} from '@loaders.gl/gltf';
+import {GLTFPostprocessed} from '../types/gltf-postprocessed-schema';
 import {Light} from '@luma.gl/shadertools';
 import {parseGLTF, type ParseGLTFOptions} from '../parsers/parse-gltf';
 import {parseGLTFLights} from '../parsers/parse-gltf-lights';
