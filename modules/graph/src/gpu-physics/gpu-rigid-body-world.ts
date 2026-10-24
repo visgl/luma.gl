@@ -7,6 +7,7 @@ import {
   type Binding,
   type BindingDeclaration,
   type Device,
+  type CommandEncoder,
   type ShaderLayout
 } from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
@@ -188,6 +189,7 @@ export class GPURigidBodyWorld {
   /** Borrowed by renderers; updated after each accepted or rolled-back step. */
   poseMatrices: Buffer | null = null;
   poseBounds: Buffer | null = null;
+  private encodePosePublication?: (encoder: CommandEncoder) => void;
   positions: Buffer | null = null;
   orientations: Buffer | null = null;
   velocities: Buffer | null = null;
@@ -1262,6 +1264,7 @@ export class GPURigidBodyWorld {
         diagnosticBinding('orientations'),
         allocate
       );
+      this.encodePosePublication = publication.encode;
       this.poseMatrices = publication.matrices;
       this.poseBounds = this.props.publicationBounds ? publication.bounds : null;
     }
@@ -1562,6 +1565,14 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       angularVelocity: angularVelocity ?? [0, 0, 0],
       gravityFactor: gravityFactor ?? 1
     });
+  }
+
+  /** Refresh render outputs without integrating or solving a simulation step. */
+  publishPoses(): void {
+    if (!this.encodePosePublication) return;
+    const encoder = this.device.createCommandEncoder();
+    this.encodePosePublication(encoder);
+    this.device.submit(encoder.finish());
   }
 
   /** Update visual bounds independently of collision geometry, before the next submission. */

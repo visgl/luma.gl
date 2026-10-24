@@ -75,7 +75,9 @@ export class ScenegraphPhysicsSession {
       withPublication(scene.definition)
     );
     try {
-      return new ScenegraphPhysicsSession(device, scene, instance);
+      const session = new ScenegraphPhysicsSession(device, scene, instance);
+      await instance.publish();
+      return session;
     } catch (error) {
       await instance.destroy();
       throw error;

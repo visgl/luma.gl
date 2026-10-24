@@ -341,3 +341,36 @@ it('restores captured hierarchy after edits and rejects cyclic capture reference
     await session.destroy();
   }
 });
+
+it('publishes bounds before exposing create reset restore and recook revisions without stepping', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const {scene, body, mesh} = fixture();
+  body.setMatrixComponents({position: [10, 0, 0]});
+  scene.definition.world.bodies = [
+    {...scene.definition.world.bodies[0], position: [10, 0, 0], velocity: [1, 0, 0]}
+  ];
+  const session = await ScenegraphPhysicsSession.create(device, scene);
+  const check = async (position: number, extent: number) => {
+    const bounds = new Float32Array((await session.publication.bounds.readAsync()).buffer);
+    const matrices = new Float32Array((await session.publication.matrices.readAsync()).buffer);
+    expect(bounds[0]).toBeCloseTo(position - extent);
+    expect(bounds[4]).toBeCloseTo(position + extent);
+    expect(matrices[12]).toBeCloseTo(position);
+    expect((await session.world.readState())[0].position[0]).toBeCloseTo(position);
+  };
+  try {
+    await check(10, 0.5);
+    await session.step();
+    const capture = await session.capture();
+    await session.reset();
+    await check(10, 0.5);
+    await session.restore(capture);
+    await check(10.1, 0.5);
+    mesh.extent = 2;
+    await session.rebuild(async () => scene);
+    await check(10.1, 2);
+  } finally {
+    await session.destroy();
+  }
+});

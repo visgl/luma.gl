@@ -48,7 +48,18 @@ export class ScenegraphPhysicsInstance {
   ): Promise<ScenegraphPhysicsInstance> {
     validateDefinition(definition);
     const saved = cloneDefinition(definition);
-    return new ScenegraphPhysicsInstance(device, saved, await compile(device, saved.world));
+    const instance = new ScenegraphPhysicsInstance(
+      device,
+      saved,
+      await compile(device, saved.world)
+    );
+    try {
+      await instance.publish();
+      return instance;
+    } catch (error) {
+      await instance.destroy();
+      throw error;
+    }
   }
   get world(): GPURigidBodyWorld {
     return this.execution.world;
@@ -94,6 +105,8 @@ export class ScenegraphPhysicsInstance {
       try {
         replacement.world.restoreState(state);
         prepare?.(replacement.world);
+        replacement.world.publishPoses();
+        await this.finishSubmission();
       } catch (error) {
         replacement.graph.destroy();
         replacement.world.destroy();
@@ -105,6 +118,14 @@ export class ScenegraphPhysicsInstance {
       this.revision++;
       previous.graph.destroy();
       previous.world.destroy();
+    });
+  }
+
+  /** Publish current poses and bounds without advancing simulation time. */
+  async publish(): Promise<void> {
+    return this.exclusive(async () => {
+      this.world.publishPoses();
+      await this.finishSubmission();
     });
   }
 
@@ -196,6 +217,8 @@ export class ScenegraphPhysicsInstance {
       const replacement = await compile(this.device, props);
       try {
         prepare?.(replacement.world);
+        replacement.world.publishPoses();
+        await this.finishSubmission();
       } catch (error) {
         replacement.graph.destroy();
         replacement.world.destroy();

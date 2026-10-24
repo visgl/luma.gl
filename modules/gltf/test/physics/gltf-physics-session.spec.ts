@@ -150,3 +150,42 @@ it('exports static and reactivated motion modes without retaining stale declarat
     await session.destroy();
   }
 });
+
+it('exports rotating bodies beneath unequal parent scale by preserving world poses as scene roots', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const source = document();
+  source.nodes![0].scale = [2, 1, 1];
+  const description = parseGLTFPhysics(source);
+  expect(description.issues).toEqual([]);
+  const session = await ScenegraphPhysicsSession.create(
+    device,
+    makeGLTFPhysicsScene(description, undefined, {gravity: [0, 0, 0]})
+  );
+  let reopened: ScenegraphPhysicsSession | undefined;
+  try {
+    session.world.setBodyParameters(0, {angularVelocity: [0, 0, 2]});
+    await session.step();
+    const before = await session.world.readState();
+    const saved = await exportGLTFPhysicsState(source, description, session.world);
+    expect(saved.nodes![0].children).not.toContain(1);
+    expect(saved.scenes![0].nodes).toContain(1);
+    expect(source.nodes![0].children).toEqual([1, 2]);
+    const imported = parseGLTFPhysics(saved);
+    expect(imported.issues).toEqual([]);
+    reopened = await ScenegraphPhysicsSession.create(device, makeGLTFPhysicsScene(imported));
+    const after = await reopened.world.readState();
+    for (const body of description.bodies) {
+      const restored = imported.bodies.find(candidate => candidate.nodeIndex === body.nodeIndex)!;
+      for (const field of ['position', 'orientation', 'velocity', 'angularVelocity'] as const) {
+        for (let axis = 0; axis < before[body.bodyIndex][field].length; axis++)
+          expect(after[restored.bodyIndex][field][axis]).toBeCloseTo(
+            before[body.bodyIndex][field][axis]
+          );
+      }
+    }
+  } finally {
+    await reopened?.destroy();
+    await session.destroy();
+  }
+});

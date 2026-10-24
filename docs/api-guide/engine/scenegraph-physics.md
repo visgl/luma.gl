@@ -257,3 +257,14 @@ when played. JSON and its referenced binary resources must be saved together.
 Shared resource edits must agree; divergent low-level edits and unreconciled animated
 scale require recooking before export. Version-specific captures are a separate API
 and are not portable glTF files.
+
+Native export preserves current world poses when simulation rotates a body below a
+nonuniformly scaled ancestor. If the resulting local transform would require shear,
+the exporter promotes that body node to a root of its containing scenes, retaining
+its node index, subtree and resource references. The saved pose remains exact, but
+ancestor animation no longer drives that promoted body; review or reauthor those
+animation channels before using the exported snapshot as a new animated asset.
+
+New session revisions publish matrices and bounds before becoming visible, including
+while paused. This publication-only dispatch does not integrate bodies or advance
+simulation time.

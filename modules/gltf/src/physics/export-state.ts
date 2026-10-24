@@ -121,7 +121,29 @@ export async function exportGLTFPhysicsState<T extends GLTFPhysicsDocument>(
       parent === undefined
         ? matrix
         : new Matrix4(currentWorld(parent)).invert().multiplyRight(matrix);
-    const transform = decomposePhysicsTransform(local);
+    let transform: ReturnType<typeof decomposePhysicsTransform>;
+    try {
+      transform = decomposePhysicsTransform(local);
+    } catch (error) {
+      if (parent === undefined) throw error;
+      // A rigid world rotation under unequal ancestor scale needs local shear. glTF TRS
+      // cannot represent it: keep the node index and subtree, but promote it to a scene root.
+      transform = decomposePhysicsTransform(matrix);
+      const ancestors = new Set<number>();
+      let ancestor: number | undefined = parent;
+      while (ancestor !== undefined) {
+        ancestors.add(ancestor);
+        ancestor = parents.get(ancestor);
+      }
+      nodes[parent].children = nodes[parent].children?.filter(index => index !== body.nodeIndex);
+      for (const scene of output.scenes ?? []) {
+        if (
+          scene.nodes?.some(index => ancestors.has(index)) &&
+          !scene.nodes.includes(body.nodeIndex)
+        )
+          scene.nodes = [...scene.nodes, body.nodeIndex];
+      }
+    }
     const node = nodes[body.nodeIndex];
     delete node.matrix;
     node.translation = transform.position;
