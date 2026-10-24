@@ -100,6 +100,12 @@ export function makeGLTFPhysicsProperties(
         const scale = decomposePhysicsTransform(worldMatrices.get(node)!).scale.map(Math.abs);
         return {
           index: definition.colliderIndex,
+          scaleAxes:
+            field === 'doubleSided'
+              ? undefined
+              : field === 'size'
+                ? [0, 1, 2]
+                : [field === 'height' ? 1 : field === 'sizeZ' ? 2 : 0],
           scale:
             field === 'size'
               ? scale.map(component => component / 2)

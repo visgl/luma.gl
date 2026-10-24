@@ -828,7 +828,25 @@ export function parseGLTFPhysics(
           for (const collider of colliders)
             if (!result.animatedColliderIndices.includes(collider.colliderIndex))
               result.animatedColliderIndices.push(collider.colliderIndex);
-          // Scale changes geometry, not ownership of the body's simulated translation/rotation.
+          // Scaling above a body also displaces its authored world origin. Static and
+          // kinematic descendants follow that pose; dynamic descendants need explicit ownership.
+          for (const body of result.bodies) {
+            let ancestor = parents.get(body.nodeIndex);
+            while (ancestor !== undefined && ancestor >= 0 && ancestor !== targetNode)
+              ancestor = parents.get(ancestor);
+            if (ancestor !== targetNode) continue;
+            if (body.body.mode === 'dynamic') {
+              report(
+                'animation-requires-runtime-binding',
+                `/animations/${animationIndex}`,
+                'Ancestor scale on a dynamic body requires explicit pose ownership'
+              );
+            } else {
+              body.body.mode = 'kinematic';
+              if (!result.animatedBodyIndices.includes(body.bodyIndex))
+                result.animatedBodyIndices.push(body.bodyIndex);
+            }
+          }
           continue;
         }
       }

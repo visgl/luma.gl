@@ -84,6 +84,7 @@ export type GPURigidBodyCapture = {
   buffers: {name: string; data: Uint8Array}[];
   contactCursor: number;
   triggerCursor: number;
+  colliderShapeScales?: [number, number[]][];
 };
 
 /** Mutable motion properties; topology and authored pose use explicit scene reconstruction. */
@@ -219,6 +220,7 @@ export class GPURigidBodyWorld {
   private invalidation: Computation | null = null;
   private controlSettings: Buffer | null = null;
   private destroyed = false;
+  private colliderShapeScales = new Map<number, number[]>();
   private readonly gpuCheckpoints = new Set<GPURigidBodyGPUCheckpoint>();
   private broadPhaseCounters: {buffer: Buffer; byteOffset: number} | null = null;
 
@@ -1556,6 +1558,12 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     });
   }
 
+  /** Applied scale relative to the initially cooked analytic shape. */
+  getColliderShapeScale(colliderIndex: number): number[] {
+    this.getColliderShape(colliderIndex);
+    return [...(this.colliderShapeScales.get(colliderIndex) ?? [1, 1, 1])];
+  }
+
   /** Return a detached copy of the configured collision geometry. */
   getColliderShape(colliderIndex: number): GPURigidBodyShape {
     const collider = this.colliders[colliderIndex];
@@ -1568,12 +1576,20 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
    * All edits are validated before publication. Shape kinds and mesh topology require rebuild().
    * Explicit mass/COM/inertia and authored visual bounds remain caller-owned.
    */
-  setColliderShapes(edits: readonly {collider: number; shape: GPURigidBodyShape}[]): void {
+  setColliderShapes(
+    edits: readonly {collider: number; shape: GPURigidBodyShape; shapeScale?: readonly number[]}[]
+  ): void {
     if (!this.device || this.destroyed) throw new Error('World is not attached');
     const indices = new Set<number>();
     const shapes = edits.map(edit => {
       const previous = this.getColliderShape(edit.collider);
       const shape = structuredClone(edit.shape);
+      if (
+        edit.shapeScale &&
+        (edit.shapeScale.length !== 3 ||
+          edit.shapeScale.some(value => !Number.isFinite(value) || value <= 0))
+      )
+        throw new Error('Invalid collider shape scale');
       if (
         indices.has(edit.collider) ||
         previous.type !== shape.type ||
@@ -1593,13 +1609,19 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
         ].every(value => Number.isFinite(Math.fround(value)))
       )
         throw new Error('Shape exceeds float32 range');
-      return {collider: edit.collider, shape, dimensions: packed.dimensions};
+      return {
+        collider: edit.collider,
+        shape,
+        dimensions: packed.dimensions,
+        shapeScale: edit.shapeScale
+      };
     });
     const metadata = this.ownedBuffers.find(buffer => buffer.id === `${this.id}-bodies`);
     if (!metadata) throw new Error('World is not attached');
     for (const edit of shapes) {
       metadata.write(new Float32Array(edit.dimensions), this.count * 48 + edit.collider * 96);
       this.colliders[edit.collider].shape = edit.shape;
+      if (edit.shapeScale) this.colliderShapeScales.set(edit.collider, [...edit.shapeScale]);
     }
     for (const body of new Set(shapes.map(edit => this.colliders[edit.collider].body))) {
       this.updateColliderDefinitions(body);
@@ -2199,12 +2221,14 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
         });
       device.submit(encoder.finish());
     };
+    let shapeScales = structuredClone(this.colliderShapeScales);
     const checkpoint: GPURigidBodyGPUCheckpoint = {
       byteLength: snapshots.reduce((sum, buffer) => sum + buffer.byteLength, 0),
       save: () => {
         copy(false);
         joints = structuredClone(this.props.joints);
         bodyDefinitions = structuredClone(this.props.bodies);
+        shapeScales = structuredClone(this.colliderShapeScales);
         contactCursor = this.eventCursor;
         triggerCursor = this.triggerCursor;
         saved = true;
@@ -2215,6 +2239,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
         this.props.joints = structuredClone(joints);
         this.props.bodies = structuredClone(bodyDefinitions);
         this.restoreColliderDefinitions();
+        this.colliderShapeScales = structuredClone(shapeScales);
         this.eventCursor = contactCursor;
         this.triggerCursor = triggerCursor;
       },
@@ -2236,6 +2261,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     return {
       version: 1,
       props: structuredClone(this.props),
+      colliderShapeScales: structuredClone([...this.colliderShapeScales]),
       contactCursor: this.eventCursor,
       triggerCursor: this.triggerCursor,
       buffers: await Promise.all(
@@ -2263,6 +2289,12 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       )
     )
       throw new Error('Incompatible rigid-body capture');
+    const shapeScales = new Map(capture.colliderShapeScales ?? []);
+    for (const [index, scale] of shapeScales) {
+      this.getColliderShape(index);
+      if (scale.length !== 3 || scale.some(value => !Number.isFinite(value) || value <= 0))
+        throw new Error('Invalid captured collider scale');
+    }
     // Validate every allocation before writing any state. Captures are trusted debug artifacts.
     for (const [index, buffer] of this.ownedBuffers.entries()) {
       const saved = capture.buffers[index];
@@ -2278,6 +2310,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     this.props.joints = structuredClone(capture.props.joints);
     this.props.bodies = structuredClone(capture.props.bodies);
     this.restoreColliderDefinitions();
+    this.colliderShapeScales = structuredClone(shapeScales);
     this.eventCursor = capture.contactCursor;
     this.triggerCursor = capture.triggerCursor;
   }

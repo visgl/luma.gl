@@ -21,7 +21,11 @@ export type PhysicsPropertyTarget =
     }
   | {
       type: 'shape';
-      colliders: readonly {index: number; scale: readonly number[]}[];
+      colliders: readonly {
+        index: number;
+        scale: readonly number[];
+        scaleAxes?: readonly number[];
+      }[];
       property:
         | 'radius'
         | 'halfExtents'
@@ -91,7 +95,12 @@ export class ScenegraphPhysicsProperties implements InteractivityPropertyAdapter
       if (typeof value === 'boolean') return [value];
       if (value === undefined) return undefined;
       return (Array.isArray(value) ? value : [value]).map(
-        (component, index) => component / collider.scale[index]
+        (component, index) =>
+          component /
+          (collider.scale[index] *
+            (collider.scaleAxes
+              ? this.world.getColliderShapeScale(collider.index)[collider.scaleAxes[index]]
+              : 1))
       );
     }
     const joint = this.world.getJointParameters(target.joints[0]);
@@ -132,7 +141,13 @@ export class ScenegraphPhysicsProperties implements InteractivityPropertyAdapter
           )
             throw new Error('Incompatible shape property');
           const components = value.map((component, index) =>
-            boolean ? component : Number(component) * collider.scale[index]
+            boolean
+              ? component
+              : Number(component) *
+                collider.scale[index] *
+                (collider.scaleAxes
+                  ? this.world.getColliderShapeScale(collider.index)[collider.scaleAxes[index]]
+                  : 1)
           );
           Reflect.set(shape, target.property, size === 1 ? components[0] : components);
           return {collider: collider.index, shape};

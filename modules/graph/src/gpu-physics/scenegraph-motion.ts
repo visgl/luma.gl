@@ -63,6 +63,9 @@ export class ScenegraphPhysicsMotion {
         {
           collider: collider.index,
           scale,
+          shapeScale: this.world
+            .getColliderShapeScale(collider.index)
+            .map((value, index) => (value * scale[index]) / previous[index]),
           shape: scaleRigidBodyShape(
             this.world.getColliderShape(collider.index),
             scale.map((value, index) => value / previous[index])
