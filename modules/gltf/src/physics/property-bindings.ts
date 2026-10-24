@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Matrix4} from '@math.gl/core';
-import {decomposePhysicsTransform} from '@luma.gl/engine';
+import {GroupNode, decomposePhysicsTransform} from '@luma.gl/engine';
 import {
   ScenegraphPhysicsProperties,
   type GPURigidBodyWorld,
@@ -62,6 +62,64 @@ export function makeGLTFPhysicsProperties(
         colliders,
         property
       });
+  }
+  // Source indices and unit conversion belong to the importer; runtime mutation is shared.
+  const shapes =
+    (
+      description.source.extensions?.['KHR_implicit_shapes'] as
+        | {shapes?: Record<string, unknown>[]}
+        | undefined
+    )?.shapes ?? [];
+  const worldMatrices = new Map<GroupNode, Matrix4>();
+  const visit = (node: GroupNode, parent: Matrix4) => {
+    const matrix = new Matrix4(parent).multiplyRight(node.matrix);
+    worldMatrices.set(node, matrix);
+    for (const child of node.children) if (child instanceof GroupNode) visit(child, matrix);
+  };
+  for (const root of description.sceneRoots) visit(root, new Matrix4());
+  for (const [shapeIndex, source] of shapes.entries()) {
+    const type = source['type'];
+    const fields =
+      type === 'sphere'
+        ? {radius: 'radius'}
+        : type === 'box'
+          ? {size: 'halfExtents'}
+          : type === 'plane'
+            ? {sizeX: 'sizeX', sizeZ: 'sizeZ', doubleSided: 'doubleSided'}
+            : type === 'capsule' || type === 'cylinder'
+              ? {height: 'height', radiusBottom: 'radiusBottom', radiusTop: 'radiusTop'}
+              : {};
+    const definitions = description.colliders.filter(
+      collider => collider.shapeIndex === shapeIndex
+    );
+    if (!definitions.length) continue;
+    for (const [field, property] of Object.entries(fields)) {
+      if (!property) continue;
+      const colliders = definitions.map(definition => {
+        const node = description.sceneNodes.get(definition.nodeIndex)!;
+        const scale = decomposePhysicsTransform(worldMatrices.get(node)!).scale.map(Math.abs);
+        return {
+          index: definition.colliderIndex,
+          scale:
+            field === 'size'
+              ? scale.map(component => component / 2)
+              : [
+                  field === 'doubleSided'
+                    ? 1
+                    : field === 'height'
+                      ? scale[1]
+                      : field === 'sizeZ'
+                        ? scale[2]
+                        : scale[0]
+                ]
+        };
+      });
+      targets.set(`/extensions/KHR_implicit_shapes/shapes/${shapeIndex}/${type}/${field}`, {
+        type: 'shape',
+        colliders,
+        property: property as Extract<PhysicsPropertyTarget, {type: 'shape'}>['property']
+      });
+    }
   }
   const rowCounts = new Map<number, {limits: number; drives: number}>();
   const mergeJoint = (pointer: string, target: Extract<PhysicsPropertyTarget, {type: 'joint'}>) => {

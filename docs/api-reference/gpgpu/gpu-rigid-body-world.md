@@ -821,3 +821,29 @@ Use `ScenegraphPhysicsProperties` for configured property addresses shared by
 interactivity and animation. `makeGLTFPhysicsProperties` only resolves source addresses;
 mutations remain in the generic physics runtime. See
 [scenegraph physics integration](../../api-guide/engine/scenegraph-physics.md).
+
+
+## Analytic geometry mutation
+
+`getColliderShape(index)` returns a detached configured shape. Use
+`setColliderShapes([{collider, shape}, ...])` between submissions to change analytic
+dimensions or plane sidedness. Every edit must retain its current shape kind; mesh
+and topology edits use `ScenegraphPhysicsInstance.rebuild()` instead. All shapes are
+validated before any writes. Derived inertia is recomputed; explicit mass, COM,
+inertia and visual bounds remain authored values. Simulated poses/velocities are
+preserved, contact caches are invalidated, and affected bodies wake. Dimension edits
+are included in CPU captures and same-world GPU checkpoints.
+
+## Scene capture and asynchronous lifetime
+
+`instance.capture()` returns a `ScenegraphPhysicsCapture` with the authored definition,
+node references and full live world state. This is an explicit readback operation.
+`instance.restore(capture)` validates and compiles replacement resources before
+commit, increments `revision`, and restores live motion, caches and event cursors.
+A later `reset()` uses the captured authored definition. These implementation-version
+captures are not portable glTF exports. Rebind borrowed render buffers after restore.
+
+`instance.withWorld(async world => ...)` tracks a query/readback lifetime. Concurrent
+instance edits or steps reject; `destroy()` waits for the callback. Do not nest
+instance operations inside the callback. Direct borrowed-world operations are not
+tracked automatically.

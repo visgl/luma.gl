@@ -20,6 +20,19 @@ export type PhysicsPropertyTarget =
       property: 'staticFriction' | 'dynamicFriction' | 'restitution';
     }
   | {
+      type: 'shape';
+      colliders: readonly {index: number; scale: readonly number[]}[];
+      property:
+        | 'radius'
+        | 'halfExtents'
+        | 'height'
+        | 'radiusBottom'
+        | 'radiusTop'
+        | 'sizeX'
+        | 'sizeZ'
+        | 'doubleSided';
+    }
+  | {
       type: 'joint';
       joints: readonly number[];
       property:
@@ -71,6 +84,16 @@ export class ScenegraphPhysicsProperties implements InteractivityPropertyAdapter
       const value = this.world.getColliderMaterial(target.colliders[0])[target.property];
       return [value ?? (target.property === 'restitution' ? 0.1 : 0.6)];
     }
+    if (target.type === 'shape') {
+      const collider = target.colliders[0];
+      const shape = this.world.getColliderShape(collider.index);
+      const value = Reflect.get(shape, target.property);
+      if (typeof value === 'boolean') return [value];
+      if (value === undefined) return undefined;
+      return (Array.isArray(value) ? value : [value]).map(
+        (component, index) => component / collider.scale[index]
+      );
+    }
     const joint = this.world.getJointParameters(target.joints[0]);
     if (target.property === 'collideConnected') return [joint.collideConnected ?? false];
     if (joint.type !== 'general') throw new Error('Property requires a general constraint');
@@ -88,6 +111,35 @@ export class ScenegraphPhysicsProperties implements InteractivityPropertyAdapter
   set(pointer: string, value: unknown[]): boolean {
     const target = this.targets.get(pointer);
     if (!target) return false;
+    if (target.type === 'shape') {
+      const boolean = target.property === 'doubleSided';
+      const size = target.property === 'halfExtents' ? 3 : 1;
+      if (
+        value.length !== size ||
+        !value.every(component =>
+          boolean
+            ? typeof component === 'boolean'
+            : typeof component === 'number' && Number.isFinite(component)
+        )
+      )
+        throw new Error('Invalid shape property');
+      this.world.setColliderShapes(
+        target.colliders.map(collider => {
+          const shape = this.world.getColliderShape(collider.index);
+          if (
+            !(target.property in shape) &&
+            !(shape.type === 'plane' && ['sizeX', 'sizeZ', 'doubleSided'].includes(target.property))
+          )
+            throw new Error('Incompatible shape property');
+          const components = value.map((component, index) =>
+            boolean ? component : Number(component) * collider.scale[index]
+          );
+          Reflect.set(shape, target.property, size === 1 ? components[0] : components);
+          return {collider: collider.index, shape};
+        })
+      );
+      return true;
+    }
     if (target.type === 'motion' && target.property === 'mode') {
       if (value.length !== 1 || typeof value[0] !== 'boolean')
         throw new Error('Expected kinematic boolean');

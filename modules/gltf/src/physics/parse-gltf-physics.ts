@@ -814,6 +814,27 @@ export function parseGLTFPhysics(
       if (
         options.animationOwnership === 'scenegraph' &&
         targetNode !== undefined &&
+        targetPath === 'scale'
+      ) {
+        const colliders = result.colliders.filter(collider => {
+          let ancestor: number | undefined = collider.nodeIndex;
+          while (ancestor !== undefined && ancestor >= 0) {
+            if (ancestor === targetNode) return true;
+            ancestor = parents.get(ancestor);
+          }
+          return false;
+        });
+        if (colliders.length && colliders.every(collider => collider.shapeIndex !== undefined)) {
+          for (const collider of colliders)
+            if (!result.animatedColliderIndices.includes(collider.colliderIndex))
+              result.animatedColliderIndices.push(collider.colliderIndex);
+          // Scale changes geometry, not ownership of the body's simulated translation/rotation.
+          continue;
+        }
+      }
+      if (
+        options.animationOwnership === 'scenegraph' &&
+        targetNode !== undefined &&
         ['translation', 'rotation'].includes(targetPath ?? '')
       ) {
         const affected = result.bodies.filter(body => {

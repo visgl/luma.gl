@@ -1,5 +1,18 @@
 # What's New
 
+## Authored GPU physics qualification
+
+The pinned physics qualification profile now covers joint attachment frames, filtered
+ray segments, analytic impulse response, seven trigger shape kinds and authored
+trigger-event delivery. A 10,000-object hardware broad-phase baseline records
+correctness and performance separately from full-step simulation.
+
+Analytic collider dimensions can change between GPU steps through shared scenegraph
+property bindings, including glTF implicit-shape pointers. The glTF Physics gallery
+adds an animated collider-scale scene. Scene instances support transactional live
+capture/restore and tracked asynchronous queries while preserving authored Reset
+behavior. Mesh deformation and full-profile qualification remain separate work.
+
 ## SimpleGraph uploads, copies, and scoped execution
 
 SimpleGraph now supports declarative uploads and copies, borrowed per-chunk output targets,

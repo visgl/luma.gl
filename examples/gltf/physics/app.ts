@@ -34,6 +34,7 @@ import {makeLegacyMeshGeometryResolver} from './legacy-mesh-positions';
 const SAMPLE_REVISION = '9dc61cb3474ff9a51f58d3592f79d5c9e572056a';
 const SAMPLE_BASE_URL = `https://raw.githubusercontent.com/eoineoineoin/glTF_Physics/${SAMPLE_REVISION}/samples`;
 const LOCAL_SAMPLES: Record<string, string> = {
+  AnimatedScale: new URL('./assets/AnimatedScale.gltf', import.meta.url).href,
   AnimatedPlatform: new URL('./assets/AnimatedPlatform.gltf', import.meta.url).href,
   JointPendulum: new URL('./assets/JointPendulum.gltf', import.meta.url).href,
   DrivenHinge: new URL('./assets/DrivenHinge.gltf', import.meta.url).href,

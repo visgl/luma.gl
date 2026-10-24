@@ -29,6 +29,35 @@ Implementation references on master:
 - [Sphere world example](../../examples/experimental/gpu-sphere-world/)
 - [Pool example and controls](../../examples/experimental/gpu-pool/README.md)
 
+## Authored qualification closure — October 24, 2026
+
+The executable G4/G5 profile now has 12 passing rows with no missing checks in the
+recorded authored qualification run. Joint-frame evidence includes forward references,
+world anchors, rotated attachment frames, COM offsets and connected-body collision
+policies. Gameplay evidence includes independent ray references, filtered finite
+segments, analytic point impulses, all seven trigger shape kinds, bounded event loss,
+and GPU events delivered through authored behavior graphs. These are pinned-profile
+qualification claims, not universal mechanism stability or query scalability claims.
+
+The 10,000-object mixed hardware discovery benchmark also passes its G1 row;
+[the measured baseline](../benchmarks/gpu-physics-authored-broad-phase.md) records
+pair correctness, capacity, GPU work and end-to-end discovery latency separately.
+Whole-step and cross-device performance remain required for a broader G1 release.
+
+G6 gains analytic shape-pointer animation, exact supported node-scale updates,
+atomic shared-shape edits, implementation-version live scene captures and tracked
+asynchronous world lifetimes. The gallery adds Animated collider scale. Explicit
+mass/COM/inertia and visual bounds remain caller-owned. Shape edits preserve
+velocities and may inject energy; they are not a deformable-body solver.
+
+Of the ten previously missing G1/G4/G5/G6 rows, six now have qualifying evidence.
+The four broader G6 rows remain open: animation precedence across all ownership
+transitions, complete object-model mutation, complete imported-instance lifecycle,
+and performance-qualified render publication. New narrow G6 rows record the added
+behavior without relabeling those broader obligations. Skin/morph recooking, arbitrary
+scene edits, portable glTF state export and multi-device publication measurements
+remain outstanding. See the executable profile for exact selectors.
+
 ## Authored runtime and GPU execution checkpoint — October 23, 2026
 
 The current package shares joint attachment references, animation playback, morph

@@ -61,7 +61,7 @@ export function makeQualificationReport(profile, reports, tranches = ['G1', 'G2'
             selector,
             status: matches.some(assertion => assertion.status === 'failed')
               ? 'failed'
-              : matches.some(assertion => assertion.status === 'passed')
+              : matches.length > 0 && matches.every(assertion => assertion.status === 'passed')
                 ? 'passed'
                 : 'missing',
             evidenceCount: matches.length

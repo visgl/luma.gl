@@ -19,6 +19,8 @@ const CARET =
   '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" role="presentation" focusable="false"><path d="m10 3-5 5 5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 const SAMPLE_DESCRIPTIONS: Record<string, string> = {
+  AnimatedScale:
+    '<p>The platform grows and shrinks through an authored scale animation. Its analytic box collider changes on the GPU before each fixed step, so the falling box lands on the current surface. Body poses stay on the GPU; no shader recompilation or pose readback is needed.</p>',
   AnimatedPlatform:
     '<p>Authored glTF translation animation owns the kinematic platform. Its scenegraph pose becomes a fixed-step physics target and pushes the dynamic box through contact.</p>',
   JointPendulum:
@@ -53,6 +55,7 @@ export function createPhysicsPanels(diagnostics: GPUGraphDiagnostics) {
 <option value="MotionProperties">Motion properties</option>
 <option value="Materials_Restitution">Restitution</option>
 <option value="Materials_Friction">Friction</option>
+<option value="AnimatedScale">Animated collider scale</option>
 <option value="AnimatedPlatform">Animated platform</option>
 <option value="JointPendulum">Joint pendulum</option>
 <option value="DrivenHinge">Driven hinge</option>

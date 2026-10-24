@@ -80,3 +80,58 @@ it('binds authored motion and material pointers through shared animation and GPU
     world.destroy();
   }
 });
+
+it('animates shared implicit shape pointers with per-instance scale and automatic inertia', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const pointer = '/extensions/KHR_implicit_shapes/shapes/0/sphere/radius';
+  const source: GLTFPhysicsDocument = {
+    scenes: [{nodes: [0, 1]}],
+    nodes: [1, 2].map((scale, index) => ({
+      translation: [index * 5, 0, 0],
+      scale: [scale, scale, scale],
+      extensions: {KHR_physics_rigid_bodies: {motion: {mass: 1}, collider: {geometry: {shape: 0}}}}
+    })),
+    extensions: {KHR_implicit_shapes: {shapes: [{type: 'sphere', sphere: {radius: 0.5}}]}},
+    animations: [{channels: [{target: {extensions: {KHR_animation_pointer: {pointer}}}}]}]
+  };
+  const description = parseGLTFPhysics(source, {propertyBindings: true});
+  expect(description.issues).toEqual([]);
+  const world = createGLTFPhysicsWorld(description, {gravity: [0, 0, 0]});
+  const definition = new GPUCommandGraph(device);
+  world.addToGraph(definition);
+  const graph = await definition.compileAsync();
+  const properties = makeGLTFPhysicsProperties(world, description);
+  try {
+    const animator = new GLTFAnimator({
+      gltfNodeIdToNodeMap: new Map(),
+      properties,
+      animations: [
+        {
+          name: 'grow',
+          channels: [
+            {
+              type: 'property',
+              pointer,
+              sampler: {input: [0, 1], output: [[0.5], [1.5]], interpolation: 'LINEAR'}
+            }
+          ]
+        }
+      ]
+    });
+    animator.setTime(500);
+    expect(properties.get(pointer)).toEqual([1]);
+    expect(world.getColliderShape(0)).toEqual({type: 'sphere', radius: 1});
+    expect(world.getColliderShape(1)).toEqual({type: 'sphere', radius: 2});
+    expect(world.getBodyParameters(0).inertiaDiagonal![0]).toBeCloseTo(0.4, 5);
+    expect(world.getBodyParameters(1).inertiaDiagonal![0]).toBeCloseTo(1.6, 5);
+    expect(() => properties.set(pointer, [-1])).toThrow();
+    expect(properties.get(pointer)).toEqual([1]);
+    expect(source.extensions).toEqual({
+      KHR_implicit_shapes: {shapes: [{type: 'sphere', sphere: {radius: 0.5}}]}
+    });
+  } finally {
+    graph.destroy();
+    world.destroy();
+  }
+});

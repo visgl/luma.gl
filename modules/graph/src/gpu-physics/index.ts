@@ -111,4 +111,10 @@ export type {ScenegraphPhysicsBehaviorProps} from './scenegraph-behaviors';
 export {ScenegraphPhysicsMotion, type ScenegraphPhysicsColliderTarget} from './scenegraph-motion';
 
 export {ScenegraphPhysicsProperties, type PhysicsPropertyTarget} from './scenegraph-properties';
-export {ScenegraphPhysicsInstance, type ScenegraphPhysicsDefinition} from './scenegraph-instance';
+export {
+  ScenegraphPhysicsInstance,
+  type ScenegraphPhysicsDefinition,
+  type ScenegraphPhysicsCapture
+} from './scenegraph-instance';
+
+export {scaleRigidBodyShape} from './scale-shape';

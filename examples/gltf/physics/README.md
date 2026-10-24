@@ -41,3 +41,11 @@ compiled simulation, and GPU Graph Timeline shows CPU encoding and GPU timestamp
 lanes. GPU timestamps are sampled when the adapter exposes `timestamp-query`;
 otherwise the timeline retains CPU encoding measurements. Selecting a static
 preview clears diagnostics from the previous simulation.
+
+### Animated collider scale
+
+The local AnimatedScale fixture animates a kinematic platform's scale while a dynamic
+box lands on it. The engine animation drives both the rendered node and the analytic
+box collider. Dimensions and derived inertia update between fixed steps without pose
+readback or graph recompilation. Reset restores the source state and keeps the camera.
+Mesh deformation and arbitrary nonuniform rounded-shape scaling still require recooking.

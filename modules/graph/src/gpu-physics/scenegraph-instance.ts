@@ -6,13 +6,23 @@ import type {Device} from '@luma.gl/core';
 import {Vector3} from '@math.gl/core';
 import type {ScenegraphNode} from '@luma.gl/engine';
 import {GPUCommandGraph} from '../gpu-core/index';
-import {GPURigidBodyWorld, type GPURigidBodyWorldProps} from './gpu-rigid-body-world';
+import {
+  GPURigidBodyWorld,
+  type GPURigidBodyWorldProps,
+  type GPURigidBodyCapture
+} from './gpu-rigid-body-world';
 import {rotateRigidBodyVector} from './rigid-body-properties';
 
 export type ScenegraphPhysicsDefinition = {
   world: GPURigidBodyWorldProps;
   /** Stable scene object references; fixed synthetic bodies need not have a node. */
   bodies: ReadonlyMap<ScenegraphNode, number>;
+};
+/** Implementation-version capture. Node identities remain caller-owned object references. */
+export type ScenegraphPhysicsCapture = {
+  version: 1;
+  authored: ScenegraphPhysicsDefinition;
+  state: GPURigidBodyCapture;
 };
 type Execution = {
   world: GPURigidBodyWorld;
@@ -48,6 +58,50 @@ export class ScenegraphPhysicsInstance {
   }
   get bodies(): ReadonlyMap<ScenegraphNode, number> {
     return this.definition.bodies;
+  }
+
+  /** Track queries/readbacks so reset, rebuild and destruction cannot invalidate their buffers. */
+  async withWorld<T>(operation: (world: GPURigidBodyWorld) => Promise<T>): Promise<T> {
+    return this.exclusive(() => operation(this.world));
+  }
+
+  /** Explicit editing/debugging readback; never part of advance(). Includes authored reset state. */
+  async capture(): Promise<ScenegraphPhysicsCapture> {
+    return this.exclusive(async () => {
+      await this.finishSubmission();
+      return {
+        version: 1,
+        authored: cloneDefinition(this.definition),
+        state: await this.world.captureState()
+      };
+    });
+  }
+
+  /** Atomically restore live state, commands, caches and events, retaining the captured reset state. */
+  async restore(capture: ScenegraphPhysicsCapture): Promise<void> {
+    if (capture.version !== 1) throw new Error('Unsupported scene physics capture');
+    validateDefinition(capture.authored);
+    const authored = cloneDefinition(capture.authored);
+    const state = structuredClone(capture.state);
+    if (state.props.bodies.length !== authored.world.bodies.length)
+      throw new Error('Invalid captured scene bindings');
+    return this.exclusive(async () => {
+      await this.finishSubmission();
+      const replacement = await compile(this.device, state.props);
+      try {
+        replacement.world.restoreState(state);
+      } catch (error) {
+        replacement.graph.destroy();
+        replacement.world.destroy();
+        throw error;
+      }
+      const previous = this.execution;
+      this.execution = replacement;
+      this.definition = authored;
+      this.revision++;
+      previous.graph.destroy();
+      previous.world.destroy();
+    });
   }
 
   /** Advance one fixed step; state remains on GPU and only submission completion is awaited. */
@@ -138,7 +192,8 @@ export class ScenegraphPhysicsInstance {
   private async exclusive<T>(operation: () => Promise<T>): Promise<T> {
     if (this.pending || this.destroying || this.destroyed)
       throw new Error('Physics instance is busy or destroyed');
-    const pending = operation();
+    // Claim the lifetime before invoking caller code, including synchronous re-entry.
+    const pending = Promise.resolve().then(operation);
     this.pending = pending;
     try {
       return await pending;

@@ -52,6 +52,8 @@ export class ScenegraphPhysicsBehaviors implements InteractivityPhysics {
   }
 
   applyImpulse(node: number, linear: readonly number[], angular: readonly number[]): void {
+    validateVector(linear);
+    validateVector(angular);
     const body = this.body(node);
     if (body === undefined) return;
     this.world.applyImpulse(body, [linear[0], linear[1], linear[2]]);
@@ -59,6 +61,8 @@ export class ScenegraphPhysicsBehaviors implements InteractivityPhysics {
   }
 
   applyPointImpulse(node: number, impulse: readonly number[], position: readonly number[]): void {
+    validateVector(impulse);
+    validateVector(position);
     const body = this.body(node);
     if (body !== undefined)
       this.world.applyImpulse(
@@ -69,7 +73,12 @@ export class ScenegraphPhysicsBehaviors implements InteractivityPhysics {
   }
 
   rayCast(start: readonly number[], end: readonly number[], filter: number) {
+    // Snapshot caller-owned inputs before waiting for the shared query transport.
+    const origin = [...start];
+    const destination = [...end];
     const run = async () => {
+      validateVector(origin);
+      validateVector(destination);
       if (
         !Number.isInteger(filter) ||
         filter < -1 ||
@@ -77,14 +86,14 @@ export class ScenegraphPhysicsBehaviors implements InteractivityPhysics {
       )
         throw new Error('Invalid query filter');
       const direction: [number, number, number] = [
-        end[0] - start[0],
-        end[1] - start[1],
-        end[2] - start[2]
+        destination[0] - origin[0],
+        destination[1] - origin[1],
+        destination[2] - origin[2]
       ];
       const length = Math.hypot(...direction);
       if (!length) return null;
       const result = await this.world.raycast({
-        origin: [start[0], start[1], start[2]],
+        origin: [origin[0], origin[1], origin[2]],
         direction,
         maximumDistance: length,
         colliderIndices: filter === -1 ? undefined : this.props.querySelections![filter]
@@ -132,4 +141,9 @@ export class ScenegraphPhysicsBehaviors implements InteractivityPhysics {
     }
     await behavior.flushPhysics();
   }
+}
+
+function validateVector(vector: readonly number[]): void {
+  if (vector.length !== 3 || !vector.every(value => Number.isFinite(Math.fround(value))))
+    throw new Error('Expected finite three-component physics vector');
 }

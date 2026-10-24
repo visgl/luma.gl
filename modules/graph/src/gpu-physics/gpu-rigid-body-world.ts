@@ -21,6 +21,7 @@ import {
   normalizeRigidBodyRotation,
   rotateRigidBodyVector,
   type GPURigidBody,
+  type GPURigidBodyShape,
   type GPURigidBodyCollider,
   type GPURigidBodyMaterial
 } from './rigid-body-properties';
@@ -1555,6 +1556,58 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     });
   }
 
+  /** Return a detached copy of the configured collision geometry. */
+  getColliderShape(colliderIndex: number): GPURigidBodyShape {
+    const collider = this.colliders[colliderIndex];
+    if (!Number.isInteger(colliderIndex) || !collider || this.destroyed)
+      throw new Error('Invalid collider');
+    return structuredClone(collider.shape);
+  }
+
+  /** Edit analytic dimensions without recompiling or reading body state back to the CPU.
+   * All edits are validated before publication. Shape kinds and mesh topology require rebuild().
+   * Explicit mass/COM/inertia and authored visual bounds remain caller-owned.
+   */
+  setColliderShapes(edits: readonly {collider: number; shape: GPURigidBodyShape}[]): void {
+    if (!this.device || this.destroyed) throw new Error('World is not attached');
+    const indices = new Set<number>();
+    const shapes = edits.map(edit => {
+      const previous = this.getColliderShape(edit.collider);
+      const shape = structuredClone(edit.shape);
+      if (
+        indices.has(edit.collider) ||
+        previous.type !== shape.type ||
+        shape.type === 'convex-hull' ||
+        shape.type === 'triangle-mesh'
+      )
+        throw new Error('Shape edit requires a topology rebuild');
+      indices.add(edit.collider);
+      const properties = getRigidBodyShapeProperties(shape);
+      const packed = packRigidBodyShapes([{shape}]).shapes[0];
+      if (
+        ![
+          ...packed.dimensions,
+          properties.volume,
+          ...properties.tensor,
+          ...properties.center
+        ].every(value => Number.isFinite(Math.fround(value)))
+      )
+        throw new Error('Shape exceeds float32 range');
+      return {collider: edit.collider, shape, dimensions: packed.dimensions};
+    });
+    const metadata = this.ownedBuffers.find(buffer => buffer.id === `${this.id}-bodies`);
+    if (!metadata) throw new Error('World is not attached');
+    for (const edit of shapes) {
+      metadata.write(new Float32Array(edit.dimensions), this.count * 48 + edit.collider * 96);
+      this.colliders[edit.collider].shape = edit.shape;
+    }
+    for (const body of new Set(shapes.map(edit => this.colliders[edit.collider].body))) {
+      this.updateColliderDefinitions(body);
+      // Recalculate derived inertia while preserving simulated velocities and the node origin.
+      this.setBodyParameters(body, {});
+    }
+  }
+
   /** Change an existing collider material between submissions, invalidating cached friction. */
   setColliderMaterial(colliderIndex: number, material: GPURigidBodyMaterial): void {
     const collider = this.colliders[colliderIndex];
@@ -1663,6 +1716,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       for (const collider of this.colliders)
         if (collider.body === bodyIndex) {
           const definition = definitions[index++];
+          collider.shape = structuredClone(definition.shape);
           collider.material = structuredClone(definition.material);
           collider.position = structuredClone(definition.position);
           collider.orientation = structuredClone(definition.orientation);
@@ -2389,6 +2443,10 @@ function serializeCaptureProps(props: GPURigidBodyWorldProps): string {
         shape: undefined,
         colliders: (body.colliders ?? [{shape: body.shape}]).map(collider => ({
           ...collider,
+          shape:
+            collider.shape?.type === 'convex-hull' || collider.shape?.type === 'triangle-mesh'
+              ? collider.shape
+              : {type: collider.shape?.type},
           material: undefined,
           position: undefined,
           orientation: undefined
