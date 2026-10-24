@@ -31,6 +31,11 @@ by `GLTFAnimator`. `scenegraphs.animations` retains the parsed source channels;
 `scenegraphs.animator` owns their shared runtime actions; `scenegraphs.skins` owns reusable,
 automatically updated source skin palettes.
 
+`GLTFAnimator` is an import adapter over engine `ScenegraphAnimator`; playback,
+property updates and texture-transform math are shared with programmatic scenes.
+See [Scenegraph controllers](/docs/api-guide/engine/scene-controllers) for the runtime
+architecture, deformation paths and resource ownership.
+
 ## `GLTFAnimator`
 
 ```ts

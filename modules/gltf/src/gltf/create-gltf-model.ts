@@ -1,3 +1,4 @@
+import {publishedTransforms} from '@luma.gl/engine';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -242,17 +243,29 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 #endif
 #endif
 
-  let worldPosition = pbrProjection.modelMatrix * position;
+  var resolvedModelMatrix = pbrProjection.modelMatrix;
+  var resolvedNormalMatrix = pbrProjection.normalMatrix;
+#ifdef HAS_PUBLISHED_TRANSFORMS
+  if(publishedTransforms.bodyIndex>=0){
+    let bodyMatrix=publishedBodyMatrices[u32(publishedTransforms.bodyIndex)];
+    resolvedModelMatrix=bodyMatrix*resolvedModelMatrix;
+    resolvedNormalMatrix=bodyMatrix*resolvedNormalMatrix;
+  }
+#endif
+  let worldPosition = resolvedModelMatrix * position;
 
 #ifdef HAS_NORMALS
-  normal = normalize((pbrProjection.normalMatrix * vec4f(normal, 0.0)).xyz);
+  normal = normalize((resolvedNormalMatrix * vec4f(normal, 0.0)).xyz);
 #endif
 #ifdef HAS_TANGENTS
-  let worldTangent = normalize((pbrProjection.modelMatrix * vec4f(tangent.xyz, 0.0)).xyz);
+  let worldTangent = normalize((resolvedModelMatrix * vec4f(tangent.xyz, 0.0)).xyz);
   outputs.pbrTangent = vec4f(worldTangent, tangent.w);
 #endif
 
   outputs.position = pbrProjection.modelViewProjectionMatrix * position;
+#ifdef HAS_PUBLISHED_TRANSFORMS
+  if(publishedTransforms.bodyIndex>=0){outputs.position=publishedTransforms.viewProjection*worldPosition;}
+#endif
   outputs.pbrPosition = worldPosition.xyz / worldPosition.w;
   outputs.pbrUV0 = uv0;
   outputs.pbrUV1 = uv1;
@@ -472,6 +485,8 @@ const fs = /* glsl */ `\
 
 /** Options used to instantiate a `ModelNode` for one glTF primitive. */
 export type CreateGLTFModelOptions = {
+  /** Borrowed GPU rigid matrices; enable per draw with publishedTransforms.bodyIndex. */
+  publishedTransforms?: Buffer;
   /** Optional id assigned to the generated model. */
   id?: string;
   /** Vertex count override for non-indexed primitives. */
@@ -564,6 +579,8 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     usesLargeSkinPalette = false,
     morphTargets = []
   } = options;
+  if (options.publishedTransforms && device.type !== 'webgpu')
+    throw new Error('Published transforms require WebGPU');
   const crowd = modelOptions.userData?.['gltfAnimatedCrowd'] as
     | GLTFCrowdModelConfiguration
     | undefined;
@@ -753,7 +770,12 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     geometry,
     topology: geometry.topology,
     vertexCount,
-    modules: [pbrMaterial, skin, ...(crowd || morphTargetData ? [gpuAnimation] : [])],
+    modules: [
+      pbrMaterial,
+      skin,
+      ...(crowd || morphTargetData ? [gpuAnimation] : []),
+      ...(options.publishedTransforms ? [publishedTransforms] : [])
+    ],
     ...modelOptions,
 
     ...(instanceMatrices || crowd
@@ -766,6 +788,7 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
       : {}),
     defines: {
       ...parsedPPBRMaterial.defines,
+      ...(options.publishedTransforms ? {HAS_PUBLISHED_TRANSFORMS: true} : {}),
       ...modelOptions.defines,
       ...(instanceMatrices || crowd ? {HAS_GLTF_INSTANCING: true} : {}),
       ...(hasInstancedSkin
@@ -805,6 +828,10 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     sceneShaderInputValues
   );
   model.shaderInputs.setProps(sceneShaderInputProps);
+  if (options.publishedTransforms)
+    model.shaderInputs.setProps({
+      publishedTransforms: {publishedBodyMatrices: options.publishedTransforms, bodyIndex: -1}
+    });
   if (skinJointMatrices) {
     model.shaderInputs.setProps({skin: {jointMatrices: [], skinJointMatrices}});
   }
@@ -825,7 +852,7 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
   });
   modelNode.userData['gltfLargeSkinPalette'] = hasLargeSkinPalette;
   if (morphWeights && morphWeightData && !crowd) {
-    modelNode.userData['gltfMorphWeights'] = {
+    modelNode.userData['morphWeightTransport'] = {
       values: morphWeights,
       data: morphWeightData,
       packedTargetCount: Math.ceil(morphTargetCount / 4)

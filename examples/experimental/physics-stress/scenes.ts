@@ -20,6 +20,7 @@ export const STRESS_SCENES = {
   ballistic: 'Ballistic convergence',
   continuous: 'Fast sphere / thin walls',
   sparseContacts: 'Sparse contact queue',
+  sleepingIslands: 'Sleeping islands / selective wake',
   geometry: 'Rotated geometry torture',
   deepStack: 'Eight-box sustained stack',
   offsetStack: 'Offset COM stack'
@@ -84,6 +85,31 @@ export function makeStressScene(
             friction: 0
           }))
         ]
+      }
+    };
+  if (scene === 'sleepingIslands')
+    return {
+      description:
+        '48 independent touching pairs settle with gravity disabled. Awake contact and body queues should fall to zero while manifolds remain cached. Every four seconds the lab impulses one pair; only that connected island should wake. Compare Compact queue with Full scan at the same iteration count.',
+      props: {
+        ...props,
+        gravity: [0, 0, 0],
+        sleepAfter: 0.3,
+        linearDamping: 2,
+        maximumPairs: 8192,
+        bodies: Array.from(
+          {length: 96},
+          (_, index): GPURigidBody => ({
+            position: [
+              ((Math.floor(index / 2) % 8) - 3.5) * 1.6 + (index % 2 ? 0.2 : -0.2),
+              0,
+              1 + Math.floor(index / 16) * 1.2
+            ],
+            shape: {type: 'sphere', radius: 0.2},
+            restitution: 0,
+            friction: 0.5
+          })
+        )
       }
     };
   if (scene === 'sparseContacts')

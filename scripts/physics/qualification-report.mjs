@@ -106,13 +106,16 @@ export function makeQualificationReport(profile, reports, tranches = ['G1', 'G2'
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
-  const files = process.argv.slice(2);
+  const argumentsList = process.argv.slice(2);
+  const trancheArgument = argumentsList.find(value => value.startsWith('--tranches='));
+  const tranches = trancheArgument?.slice('--tranches='.length).split(',');
+  const files = argumentsList.filter(value => value !== trancheArgument);
   if (!files.length)
     throw new Error('Provide Vitest JSON reports and physics benchmark JSON reports');
   const reports = await Promise.all(
     files.map(async file => JSON.parse(await readFile(file, 'utf8')))
   );
-  const result = makeQualificationReport(await loadQualificationProfile(), reports);
+  const result = makeQualificationReport(await loadQualificationProfile(), reports, tranches);
   console.log(JSON.stringify(result, null, 2));
   if (!result.requestedComplete) process.exitCode = 2;
 }

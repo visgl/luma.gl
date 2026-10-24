@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {isGLTFPhysicsPropertyPointer} from '../parsers/parse-gltf-physics-pointer';
+import {parsePhysicsJoints} from './parse-physics-joints';
 import {Matrix4, Quaternion} from '@math.gl/core';
 import {collectNodeCollisionGeometry} from './node-collision-geometry';
 import {getMeshBoxBounds} from './mesh-box-shape';
@@ -202,6 +204,14 @@ export function parseGLTFPhysics(
     issues: [],
     bodies: [],
     colliders: [],
+    joints: [],
+    triggers: [],
+    sceneJoints: [],
+    animatedBodyIndices: [],
+    animatedColliderIndices: [],
+    querySelections: [],
+    sceneNodes: new Map(),
+    sceneRoots: [],
     source
   };
   const report = (code: string, path: string, error: unknown) =>
@@ -278,13 +288,13 @@ export function parseGLTFPhysics(
           path,
           'Authored render instances do not define independent physics bodies'
         );
-      if (extension['trigger'] !== undefined)
-        report('unsupported-trigger', path, 'Trigger events require later integration');
-      if (extension['joint'] !== undefined)
-        report('unsupported-joint', path, 'Joint import requires constraint support');
+
       if (
         extension['motion'] !== undefined ||
-        (extension['collider'] !== undefined && owner === undefined)
+        ((extension['collider'] !== undefined ||
+          (extension['trigger'] !== undefined &&
+            record(extension['trigger'])['geometry'] !== undefined)) &&
+          owner === undefined)
       ) {
         const transform = decomposePhysicsTransform(world);
         const motion = extension['motion'] === undefined ? {} : record(extension['motion']);
@@ -361,143 +371,153 @@ export function parseGLTFPhysics(
         bodyByNode.set(nodeIndex, definition);
         owner = nodeIndex;
       }
-      if (
-        extension['collider'] !== undefined &&
-        owner !== undefined &&
-        !decomposePhysicsTransform(world).scale.every(value => value === 0)
-      ) {
-        const collider = record(extension['collider']);
-        checkFields(collider, ['geometry', 'physicsMaterial', 'collisionFilter']);
-        const geometry = record(collider['geometry']);
-        checkFields(
-          geometry,
-          options.resolveLegacyMeshPositions || options.resolveLegacyMeshGeometry
-            ? ['shape', 'node', 'convexHull', 'mesh']
-            : ['shape', 'node', 'convexHull']
-        );
-        const isNodeGeometry = geometry['node'] !== undefined;
-        const isMesh = geometry['mesh'] !== undefined || isNodeGeometry;
+      for (const kind of ['collider', 'trigger'] as const) {
         if (
-          (geometry['mesh'] !== undefined && isNodeGeometry) ||
-          (geometry['shape'] === undefined && !isMesh) ||
-          (geometry['shape'] !== undefined && isMesh)
-        )
-          throw new Error('Mesh-derived collision geometry is unsupported');
-        if (geometry['convexHull'] !== undefined && typeof geometry['convexHull'] !== 'boolean')
-          throw new Error('convexHull must be boolean');
-        let shapeIndex: number | undefined;
-        let meshIndex: number | undefined;
-        let geometryNodeIndex: number | undefined;
-        let shape: unknown;
-        let meshShape: GPURigidBodyShape | undefined;
-        let meshCenter: readonly number[] = [0, 0, 0];
-        if (isMesh) {
+          extension[kind] !== undefined &&
+          (kind === 'collider' || record(extension[kind])['geometry'] !== undefined) &&
+          owner !== undefined &&
+          !decomposePhysicsTransform(world).scale.every(value => value === 0)
+        ) {
+          const collider = record(extension[kind]);
+          checkFields(
+            collider,
+            kind === 'collider'
+              ? ['geometry', 'physicsMaterial', 'collisionFilter']
+              : ['geometry', 'collisionFilter']
+          );
+          const geometry = record(collider['geometry']);
+          checkFields(
+            geometry,
+            options.resolveLegacyMeshPositions || options.resolveLegacyMeshGeometry
+              ? ['shape', 'node', 'convexHull', 'mesh']
+              : ['shape', 'node', 'convexHull']
+          );
+          const isNodeGeometry = geometry['node'] !== undefined;
+          const isMesh = geometry['mesh'] !== undefined || isNodeGeometry;
           if (
-            !isNodeGeometry &&
-            !options.resolveLegacyMeshGeometry &&
-            (geometry['convexHull'] !== true || !options.resolveLegacyMeshPositions)
+            (geometry['mesh'] !== undefined && isNodeGeometry) ||
+            (geometry['shape'] === undefined && !isMesh) ||
+            (geometry['shape'] !== undefined && isMesh)
           )
-            throw new Error('Legacy meshes require an explicit convex hull resolver');
-          const value = isNodeGeometry ? geometry['node'] : geometry['mesh'];
-          if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0)
-            throw new Error('Invalid legacy mesh index');
-          if (isNodeGeometry) geometryNodeIndex = index(value, nodes);
-          else meshIndex = value;
-          if (isNodeGeometry && !options.resolveNodeMeshGeometry)
-            throw new Error('Node geometry requires an initial mesh snapshot resolver');
-          if (isNodeGeometry || options.resolveLegacyMeshGeometry) {
-            const resolved = isNodeGeometry
-              ? collectNodeCollisionGeometry(
-                  source,
-                  geometryNodeIndex!,
-                  options.resolveNodeMeshGeometry!
-                )
-              : options.resolveLegacyMeshGeometry!(meshIndex!);
-            const transform = decomposePhysicsTransform(world);
-            const positions = Array.from(
-              resolved.positions,
-              (value, index) => value * transform.scale[index % 3]
-            );
-            if (geometry['convexHull'] === true) {
-              try {
-                const bounds = getMeshBoxBounds(positions);
-                meshCenter = bounds.center.map((value, index) => value / transform.scale[index]);
-                shape = {
-                  type: 'box',
-                  box: {
-                    size: bounds.size.map(
-                      (value, index) => value / Math.abs(transform.scale[index])
-                    )
-                  }
+            throw new Error('Mesh-derived collision geometry is unsupported');
+          if (geometry['convexHull'] !== undefined && typeof geometry['convexHull'] !== 'boolean')
+            throw new Error('convexHull must be boolean');
+          let shapeIndex: number | undefined;
+          let meshIndex: number | undefined;
+          let geometryNodeIndex: number | undefined;
+          let shape: unknown;
+          let meshShape: GPURigidBodyShape | undefined;
+          let meshCenter: readonly number[] = [0, 0, 0];
+          if (isMesh) {
+            if (
+              !isNodeGeometry &&
+              !options.resolveLegacyMeshGeometry &&
+              (geometry['convexHull'] !== true || !options.resolveLegacyMeshPositions)
+            )
+              throw new Error('Legacy meshes require an explicit convex hull resolver');
+            const value = isNodeGeometry ? geometry['node'] : geometry['mesh'];
+            if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0)
+              throw new Error('Invalid legacy mesh index');
+            if (isNodeGeometry) geometryNodeIndex = index(value, nodes);
+            else meshIndex = value;
+            if (isNodeGeometry && !options.resolveNodeMeshGeometry)
+              throw new Error('Node geometry requires an initial mesh snapshot resolver');
+            if (isNodeGeometry || options.resolveLegacyMeshGeometry) {
+              const resolved = isNodeGeometry
+                ? collectNodeCollisionGeometry(
+                    source,
+                    geometryNodeIndex!,
+                    options.resolveNodeMeshGeometry!
+                  )
+                : options.resolveLegacyMeshGeometry!(meshIndex!);
+              const transform = decomposePhysicsTransform(world);
+              const positions = Array.from(
+                resolved.positions,
+                (value, index) => value * transform.scale[index % 3]
+              );
+              if (geometry['convexHull'] === true) {
+                try {
+                  const bounds = getMeshBoxBounds(positions);
+                  meshCenter = bounds.center.map((value, index) => value / transform.scale[index]);
+                  shape = {
+                    type: 'box',
+                    box: {
+                      size: bounds.size.map(
+                        (value, index) => value / Math.abs(transform.scale[index])
+                      )
+                    }
+                  };
+                } catch {
+                  meshShape = {type: 'convex-hull', geometry: makeConvexHullGeometry(positions)};
+                }
+              } else if (geometry['convexHull'] === false)
+                meshShape = {
+                  type: 'triangle-mesh',
+                  geometry: makeTriangleMeshGeometry(positions, resolved.indices)
                 };
-              } catch {
-                meshShape = {type: 'convex-hull', geometry: makeConvexHullGeometry(positions)};
-              }
-            } else if (geometry['convexHull'] === false)
-              meshShape = {
-                type: 'triangle-mesh',
-                geometry: makeTriangleMeshGeometry(positions, resolved.indices)
-              };
-            else throw new Error('Mesh convexHull must be explicit');
+              else throw new Error('Mesh convexHull must be explicit');
+            } else {
+              const bounds = getMeshBoxBounds(options.resolveLegacyMeshPositions!(meshIndex!));
+              meshCenter = bounds.center;
+              shape = {type: 'box', box: {size: bounds.size}};
+            }
           } else {
-            const bounds = getMeshBoxBounds(options.resolveLegacyMeshPositions!(meshIndex!));
-            meshCenter = bounds.center;
-            shape = {type: 'box', box: {size: bounds.size}};
+            shapeIndex = index(geometry['shape'], shapes);
+            shape = shapes[shapeIndex];
           }
-        } else {
-          shapeIndex = index(geometry['shape'], shapes);
-          shape = shapes[shapeIndex];
+          const transform = decomposePhysicsTransform(world);
+          const definition = bodyByNode.get(owner)!;
+          const bodyRotation = readPhysicsRotation(definition.body.orientation);
+          const inverseRotation = new Matrix4().fromQuaternion(bodyRotation).invert();
+          const bodyPosition = definition.body.position;
+          const colliderCenter = Array.from(world.transformAsPoint(meshCenter));
+          const offset = colliderCenter.map((value, axis) => value - bodyPosition[axis]);
+          const relativeRotation = new Quaternion([
+            -bodyRotation[0],
+            -bodyRotation[1],
+            -bodyRotation[2],
+            bodyRotation[3]
+          ])
+            .multiplyRight(transform.rotation)
+            .normalize();
+          const materialIndex =
+            collider['physicsMaterial'] === undefined
+              ? undefined
+              : index(collider['physicsMaterial'], materials);
+          const filterIndex =
+            collider['collisionFilter'] === undefined
+              ? undefined
+              : index(collider['collisionFilter'], collisionFilters);
+          const filter = parseFilter(
+            filterIndex === undefined ? undefined : collisionFilters[filterIndex]
+          );
+          const normalized = {
+            isTrigger: kind === 'trigger',
+            shape: meshShape ?? parseShape(shape, transform.scale),
+            position: transformPhysicsVector(inverseRotation, offset),
+            orientation: readPhysicsRotation(Array.from(relativeRotation)),
+            material: parseMaterial(
+              materialIndex === undefined ? undefined : materials[materialIndex]
+            ),
+            excludedColliders: [] as number[]
+          };
+          const colliderIndex = result.colliders.length;
+          result.colliders.push({
+            id: `node-${nodeIndex}-${kind}`,
+            nodeIndex,
+            bodyIndex: definition.bodyIndex,
+            colliderIndex,
+            localMatrix: new Matrix4().translate(meshCenter),
+            shapeIndex,
+            meshIndex,
+            geometryNodeIndex,
+            materialIndex,
+            filterIndex,
+            collider: normalized
+          });
+          definition.colliderIndices.push(colliderIndex);
+          filters.push(filter);
         }
-        const transform = decomposePhysicsTransform(world);
-        const definition = bodyByNode.get(owner)!;
-        const bodyRotation = readPhysicsRotation(definition.body.orientation);
-        const inverseRotation = new Matrix4().fromQuaternion(bodyRotation).invert();
-        const bodyPosition = definition.body.position;
-        const colliderCenter = Array.from(world.transformAsPoint(meshCenter));
-        const offset = colliderCenter.map((value, axis) => value - bodyPosition[axis]);
-        const relativeRotation = new Quaternion([
-          -bodyRotation[0],
-          -bodyRotation[1],
-          -bodyRotation[2],
-          bodyRotation[3]
-        ])
-          .multiplyRight(transform.rotation)
-          .normalize();
-        const materialIndex =
-          collider['physicsMaterial'] === undefined
-            ? undefined
-            : index(collider['physicsMaterial'], materials);
-        const filterIndex =
-          collider['collisionFilter'] === undefined
-            ? undefined
-            : index(collider['collisionFilter'], collisionFilters);
-        const filter = parseFilter(
-          filterIndex === undefined ? undefined : collisionFilters[filterIndex]
-        );
-        const normalized = {
-          shape: meshShape ?? parseShape(shape, transform.scale),
-          position: transformPhysicsVector(inverseRotation, offset),
-          orientation: readPhysicsRotation(Array.from(relativeRotation)),
-          material: parseMaterial(
-            materialIndex === undefined ? undefined : materials[materialIndex]
-          ),
-          excludedColliders: [] as number[]
-        };
-        const colliderIndex = result.colliders.length;
-        result.colliders.push({
-          id: `node-${nodeIndex}-collider`,
-          nodeIndex,
-          bodyIndex: definition.bodyIndex,
-          colliderIndex,
-          shapeIndex,
-          meshIndex,
-          geometryNodeIndex,
-          materialIndex,
-          filterIndex,
-          collider: normalized
-        });
-        definition.colliderIndices.push(colliderIndex);
-        filters.push(filter);
       }
       const nextAncestry = new Set(ancestry).add(nodeIndex);
       for (const child of node.children ?? []) {
@@ -519,6 +539,11 @@ export function parseGLTFPhysics(
       visit(root, new Matrix4(), undefined, new Set());
   } catch (error) {
     report('invalid-scene', '/scenes', error);
+  }
+  try {
+    parsePhysicsJoints(result, worlds, parents);
+  } catch (error) {
+    report('invalid-joints', '/extensions/KHR_physics_rigid_bodies/physicsJoints', error);
   }
   // Body and collider identities occupy sixteen bits in the sparse GPU backend.
   if (result.bodies.length > 65535 || result.colliders.length > 65535) {
@@ -546,12 +571,14 @@ export function parseGLTFPhysics(
     );
     definition.body.colliders = colliders;
     const properties = colliders.map(({shape}) => getRigidBodyShapeProperties(shape));
-    const volumes = properties.map(property => property.volume);
+    const volumes = properties.map((property, index) =>
+      colliders[index].isTrigger ? 0 : property.volume
+    );
     const volume = volumes.reduce((sum, value) => sum + value, 0);
     if (definition.body['mass'] === undefined)
       definition.body['mass'] = definition.body.mode === 'static' ? 0 : density * volume;
     const motion = record(
-      record(nodes[definition.nodeIndex].extensions?.[PHYSICS] ?? {})['motion'] ?? {}
+      record(nodes[definition.nodeIndex]?.extensions?.[PHYSICS] ?? {})['motion'] ?? {}
     );
     if (motion['centerOfMass'] === undefined) {
       const center: [number, number, number] = [0, 0, 0];
@@ -603,14 +630,150 @@ export function parseGLTFPhysics(
     }
   for (const [colliderIndex, collider] of result.colliders.entries())
     collider.collider.excludedColliders = exclusions[colliderIndex];
+  try {
+    result.querySelections = collisionFilters.map(value => {
+      const filter = parseFilter(value);
+      return result.colliders
+        .filter(
+          collider =>
+            allowsFilter(filter, filters[collider.colliderIndex]) &&
+            allowsFilter(filters[collider.colliderIndex], filter)
+        )
+        .map(collider => collider.colliderIndex);
+    });
+  } catch (error) {
+    report('invalid-query-filter', '/extensions/KHR_physics_rigid_bodies/collisionFilters', error);
+  }
+  const resolveTrigger = (
+    nodeIndex: number,
+    ancestors = new Set<number>()
+  ): {collider: number; filters: ReturnType<typeof parseFilter>[]}[] => {
+    if (ancestors.has(nodeIndex)) throw new Error('Cyclic compound trigger');
+    const declaration = record(record(nodes[nodeIndex].extensions?.[PHYSICS] ?? {})['trigger']);
+    checkFields(declaration, ['geometry', 'nodes', 'collisionFilter']);
+    if ((declaration['geometry'] === undefined) === (declaration['nodes'] === undefined))
+      throw new Error('Trigger requires geometry or nodes');
+    const localFilters =
+      declaration['collisionFilter'] === undefined
+        ? []
+        : [parseFilter(collisionFilters[index(declaration['collisionFilter'], collisionFilters)])];
+    if (declaration['geometry'] !== undefined) {
+      const sensors = result.colliders.filter(
+        collider => collider.collider.isTrigger && collider.nodeIndex === nodeIndex
+      );
+      if (sensors.length !== 1) throw new Error('Missing trigger geometry');
+      return [{collider: sensors[0].colliderIndex, filters: localFilters}];
+    }
+    const children = array(declaration['nodes']).map(value => index(value, nodes));
+    if (!children.length) throw new Error('Empty compound trigger');
+    const nextAncestors = new Set([...ancestors, nodeIndex]);
+    return [
+      ...new Set(
+        children.flatMap(child => {
+          let ancestor = parents.get(child);
+          while (ancestor !== undefined && ancestor !== nodeIndex) ancestor = parents.get(ancestor);
+          if (ancestor !== nodeIndex) throw new Error('Compound trigger needs descendant nodes');
+          return resolveTrigger(child, nextAncestors).map(source => ({
+            collider: source.collider,
+            filters: [...localFilters, ...source.filters]
+          }));
+        })
+      )
+    ];
+  };
+  for (const nodeIndex of worlds.keys()) {
+    const trigger = record(nodes[nodeIndex].extensions?.[PHYSICS] ?? {})['trigger'];
+    if (trigger === undefined) continue;
+    try {
+      const declaration = record(trigger);
+      const branches = resolveTrigger(nodeIndex);
+      const sources = [...new Set(branches.map(branch => branch.collider))];
+      const filter = parseFilter(
+        declaration['collisionFilter'] === undefined
+          ? undefined
+          : collisionFilters[index(declaration['collisionFilter'], collisionFilters)]
+      );
+      const targets = result.colliders
+        .filter(
+          collider =>
+            !collider.collider.isTrigger &&
+            (declaration['collisionFilter'] === undefined ||
+              (allowsFilter(filter, filters[collider.colliderIndex]) &&
+                allowsFilter(filters[collider.colliderIndex], filter)))
+        )
+        .map(collider => collider.colliderIndex);
+      const excludedPairs: [number, number][] = [];
+      for (const source of sources)
+        for (const target of targets) {
+          const accepted = branches.some(
+            branch =>
+              branch.collider === source &&
+              branch.filters.every(
+                filter =>
+                  allowsFilter(filter, filters[target]) && allowsFilter(filters[target], filter)
+              )
+          );
+          if (!accepted) excludedPairs.push([source, target]);
+        }
+      result.triggers.push({
+        nodeIndex,
+        trigger: {colliders: sources, targets, excludedPairs, perCollider: true}
+      });
+    } catch (error) {
+      report(
+        'unsupported-or-invalid-trigger',
+        `/nodes/${nodeIndex}/extensions/${PHYSICS}/trigger`,
+        error
+      );
+    }
+  }
   const relevant = new Set<number>();
   for (const {nodeIndex} of [...result.bodies, ...result.colliders]) {
-    let current: number | undefined = nodeIndex;
+    let current: number | undefined = nodeIndex >= 0 ? nodeIndex : undefined;
     while (current !== undefined) {
       relevant.add(current);
       current = parents.get(current);
     }
   }
+  const geometryNodes = new Set<number>();
+  const geometryDescendants = new Set<number>();
+  const skinTransforms = new Set<number>();
+  const allParents = new Map<number, number>();
+  for (const [parent, node] of nodes.entries())
+    for (const child of node.children ?? []) allParents.set(child, parent);
+  const collectGeometryDependencies = (
+    nodeIndex: number,
+    descendant: boolean,
+    visited = new Set<number>()
+  ) => {
+    if (visited.has(nodeIndex)) return;
+    visited.add(nodeIndex);
+    geometryNodes.add(nodeIndex);
+    if (descendant) geometryDescendants.add(nodeIndex);
+    const node = nodes[nodeIndex];
+    const ancestorsOf = (index: number) => {
+      const ancestors = new Set<number>();
+      let ancestor: number | undefined = index;
+      while (ancestor !== undefined && !ancestors.has(ancestor)) {
+        ancestors.add(ancestor);
+        ancestor = allParents.get(ancestor);
+      }
+      return ancestors;
+    };
+    if (node.skin !== undefined)
+      for (const joint of source.skins?.[node.skin]?.joints ?? []) {
+        const meshAncestors = ancestorsOf(nodeIndex);
+        const jointAncestors = ancestorsOf(joint);
+        // A common ancestor moves the mesh and its bones together and cancels in the skin palette.
+        for (const ancestor of new Set([...meshAncestors, ...jointAncestors]))
+          if (meshAncestors.has(ancestor) !== jointAncestors.has(ancestor))
+            skinTransforms.add(ancestor);
+      }
+    for (const child of node.children ?? []) collectGeometryDependencies(child, true, visited);
+  };
+  for (const collider of result.colliders)
+    if (collider.geometryNodeIndex !== undefined)
+      collectGeometryDependencies(collider.geometryNodeIndex, false);
   for (const [animationIndex, animation] of (source.animations ?? []).entries())
     for (const channel of animation.channels) {
       const pointerExtension = channel.target.extensions?.['KHR_animation_pointer'];
@@ -620,13 +783,68 @@ export function parseGLTFPhysics(
           : undefined;
       const nodeMatch =
         typeof pointer === 'string'
-          ? pointer.match(/^\/nodes\/(\d+)\/(translation|rotation|scale)$/)
+          ? pointer.match(/^\/nodes\/(\d+)\/(translation|rotation|scale|weights)$/)
           : null;
+      if (
+        options.propertyBindings &&
+        typeof pointer === 'string' &&
+        isGLTFPhysicsPropertyPointer(pointer)
+      )
+        continue;
       const physicsPointer =
         typeof pointer === 'string' &&
         (pointer.includes(PHYSICS) ||
           pointer.includes(SHAPES) ||
           Boolean(nodeMatch && relevant.has(Number(nodeMatch[1]))));
+      const targetNode = nodeMatch ? Number(nodeMatch[1]) : channel.target.node;
+      const targetPath = nodeMatch ? nodeMatch[2] : channel.target.path;
+      if (
+        targetNode !== undefined &&
+        ((targetPath === 'weights' && geometryNodes.has(targetNode)) ||
+          (['translation', 'rotation', 'scale'].includes(targetPath ?? '') &&
+            (geometryDescendants.has(targetNode) || skinTransforms.has(targetNode))))
+      ) {
+        report(
+          'animation-requires-collider-rebuild',
+          `/animations/${animationIndex}`,
+          'Animated collision mesh snapshots require explicit reconstruction'
+        );
+        continue;
+      }
+      if (
+        options.animationOwnership === 'scenegraph' &&
+        targetNode !== undefined &&
+        ['translation', 'rotation'].includes(targetPath ?? '')
+      ) {
+        const affected = result.bodies.filter(body => {
+          let ancestor: number | undefined = body.nodeIndex;
+          while (ancestor !== undefined && ancestor >= 0) {
+            if (ancestor === targetNode) return true;
+            ancestor = parents.get(ancestor);
+          }
+          return false;
+        });
+        const affectedColliders = result.colliders.filter(collider => {
+          let ancestor: number | undefined = collider.nodeIndex;
+          const owner = result.bodies[collider.bodyIndex].nodeIndex;
+          while (ancestor !== undefined && ancestor !== owner) {
+            if (ancestor === targetNode) return true;
+            ancestor = parents.get(ancestor);
+          }
+          return false;
+        });
+        for (const collider of affectedColliders)
+          if (!result.animatedColliderIndices.includes(collider.colliderIndex))
+            result.animatedColliderIndices.push(collider.colliderIndex);
+        if (affected.length || affectedColliders.length) {
+          for (const body of affected) {
+            body.body.mode = 'kinematic';
+            if (!result.animatedBodyIndices.includes(body.bodyIndex))
+              result.animatedBodyIndices.push(body.bodyIndex);
+          }
+          continue;
+        }
+      }
       if (
         (channel.target['node'] !== undefined &&
           relevant.has(channel.target['node']) &&
@@ -645,7 +863,10 @@ export function parseGLTFPhysics(
     try {
       // Validate backend pair capabilities before advertising a simulatable description.
       const world = new GPURigidBodyWorld({
-        bodies: result.bodies.map(definition => definition.body)
+        failurePolicy: 'rollback',
+        bodies: result.bodies.map(definition => definition.body),
+        joints: result.joints.map(definition => definition.joint),
+        triggers: result.triggers.map(definition => definition.trigger)
       });
       world.destroy();
     } catch (error) {

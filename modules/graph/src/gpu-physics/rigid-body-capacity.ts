@@ -1,3 +1,4 @@
+import {RIGID_BODY_JOINT_STATE_BYTES} from './rigid-body-joints';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -36,7 +37,7 @@ export function getRigidBodyStorageLayout(
   const parallelByteLength =
     Math.ceil((4 + bodyCount * 5 + maximumPairs * 2) / 4) * 16 +
     maximumPairs * 64 +
-    Math.ceil(maximumPairs / 4) * 16;
+    Math.ceil((maximumPairs * 2 + bodyCount) / 4) * 16;
   const buffers = [
     ...['positions', 'orientations', 'velocities', 'angular-velocities', 'sleep'].map(name => ({
       name,
@@ -47,7 +48,7 @@ export function getRigidBodyStorageLayout(
       name: 'targets',
       byteLength:
         Math.ceil((bodyCount * 32 + (sparse ? 32 + maximumPairs * 8 : 16)) / 16) * 16 +
-        jointCount * 48,
+        jointCount * RIGID_BODY_JOINT_STATE_BYTES,
       uniform: false
     },
     {name: 'manifolds', byteLength: maximumPairs * 416, uniform: false},
@@ -72,7 +73,7 @@ export function getRigidBodyStorageLayout(
     ...(parallel
       ? [
           {name: 'parallel-state', byteLength: parallelByteLength, uniform: false},
-          {name: 'parallel-dispatch', byteLength: 16, uniform: false}
+          {name: 'parallel-dispatch', byteLength: 48, uniform: false}
         ]
       : []),
     ...(sparse

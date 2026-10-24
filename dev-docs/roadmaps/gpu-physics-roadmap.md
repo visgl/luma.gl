@@ -29,6 +29,31 @@ Implementation references on master:
 - [Sphere world example](../../examples/experimental/gpu-sphere-world/)
 - [Pool example and controls](../../examples/experimental/gpu-pool/README.md)
 
+## Authored runtime and GPU execution checkpoint — October 23, 2026
+
+The current package shares joint attachment references, animation playback, morph
+runtime and property bindings between engine scenes and glTF import. General GPU
+constraints implement 1D/2D/3D metrics, compliant limits and capped force/acceleration
+drives. The qualification corpus now checks spring/load equilibria, half-turn limits,
+large-swing twist gradients, force caps and capture of live actuator settings.
+
+The glTF gallery publishes GPU poses directly and includes pendulum, animated hinge,
+kinematic platform and authored trigger scenes. Nested trigger filters retain branch
+semantics; behavior queries return collider identity and execute continuations before
+the next step. Configured motion/material/joint pointers share GPU mutation APIs.
+Rigid child-collider animation is distinct from parent-body animation ownership.
+Explicit scene instances support transactional re-cooking/rebuild, reset and independent
+resource lifetimes. Automatic scale/deformation rebuilding and arbitrary live-state
+export/reimport remain outside this implemented envelope; full G6/G7 closure must not
+be inferred from these narrower qualification rows.
+
+Parallel solving now compacts awake bodies and contacts after island wake propagation.
+The recovery runner uses reusable GPU checkpoints for commanded steps and can grow
+an exhausted swept-candidate queue when diagnostics prove capacity exhaustion.
+The sleeping-islands benchmark records both improvements and costs: fewer GPU solver
+workgroups, two added dispatches and higher CPU encoding cost on the measured adapter.
+It is not a general throughput or multi-adapter qualification claim.
+
 ## Current development checkpoint
 
 The G1–G3 follow-up has executable qualification tooling, hierarchical discovery and

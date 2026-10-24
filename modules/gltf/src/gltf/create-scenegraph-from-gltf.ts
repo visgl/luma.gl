@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {parseGLTFJointDeclarations} from '../parsers/parse-gltf-joints';
 import {Device} from '@luma.gl/core';
-import {GroupNode, Material, ModelNode} from '@luma.gl/engine';
+import {GroupNode, Material, ModelNode, JointController} from '@luma.gl/engine';
 import {GLTFPostprocessed} from '@loaders.gl/gltf';
 import {Light} from '@luma.gl/shadertools';
 import {parseGLTF, type ParseGLTFOptions} from '../parsers/parse-gltf';
@@ -35,6 +36,9 @@ export type GLTFScenegraphBounds = {
 
 /** Scenegraph bundle returned from a parsed glTF asset. */
 export type GLTFScenegraphs = {
+  /** Shared physical joint declarations, separate from skeletal skinning. */
+  joints: JointController;
+  jointIssues: {code: string; path: string; message: string}[];
   /** Scene roots produced from the glTF scenes array. */
   scenes: GroupNode[];
   /** Materials aligned with the source glTF `materials` array. */
@@ -93,6 +97,8 @@ export function createScenegraphsFromGLTF(
     materialInstances
   } = parseGLTF(device, gltf, options);
 
+  const jointDeclarations = parseGLTFJointDeclarations(gltf, gltfNodeIndexToNodeMap);
+  const joints = new JointController(jointDeclarations.declarations.map(item => item.joint));
   const animations = parseGLTFAnimations(gltf);
   const sourceLights =
     (gltf as GLTFPostprocessed & {lights?: Record<string, any>[]}).lights ||
@@ -123,6 +129,7 @@ export function createScenegraphsFromGLTF(
     lights.splice(0, lights.length, ...parseGLTFLights(gltf, lightOptions));
   };
   const animator = new GLTFAnimator({
+    properties: options?.properties ?? undefined,
     onVisibilityChange: refreshLights,
     cameras,
     lightDefinitions,
@@ -191,6 +198,8 @@ export function createScenegraphsFromGLTF(
     scenes,
     materials,
     variants,
+    joints,
+    jointIssues: jointDeclarations.issues,
     cameras,
     animator,
     animations,

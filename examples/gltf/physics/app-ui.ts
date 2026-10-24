@@ -19,6 +19,15 @@ const CARET =
   '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" role="presentation" focusable="false"><path d="m10 3-5 5 5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 const SAMPLE_DESCRIPTIONS: Record<string, string> = {
+  AnimatedPlatform:
+    '<p>Authored glTF translation animation owns the kinematic platform. Its scenegraph pose becomes a fixed-step physics target and pushes the dynamic box through contact.</p>',
+  JointPendulum:
+    '<p>A glTF joint uses two scenegraph attachment nodes. A radial linear limit holds the pendulum pivot and angular limits leave one swing axis free.</p>',
+  DrivenHinge:
+    '<p>A composed hinge constrains translation and two angular axes. A glTF animation changes the force-limited spring drive’s target angle. The shared animation runtime updates the GPU constraint before each physics step.</p>',
+  TriggerVolume:
+    '<p>The translucent box is a sensor. The moving box passes through without physical response; simulation-step enter and exit events are retained on the GPU.</p>',
+
   Materials_Restitution:
     '<h3>Restitution · bounce</h3><p>Watch the two balls fall onto the floor. Their materials have different restitution: the basketball rebounds strongly, while the bowling ball loses more energy on impact. Reset to compare their bounces from the same starting positions.</p>',
   Materials_Friction:
@@ -44,6 +53,10 @@ export function createPhysicsPanels(diagnostics: GPUGraphDiagnostics) {
 <option value="MotionProperties">Motion properties</option>
 <option value="Materials_Restitution">Restitution</option>
 <option value="Materials_Friction">Friction</option>
+<option value="AnimatedPlatform">Animated platform</option>
+<option value="JointPendulum">Joint pendulum</option>
+<option value="DrivenHinge">Driven hinge</option>
+<option value="TriggerVolume">Trigger volume</option>
 <option value="Filtering">Filtering</option>
 </select>
 <button id="physics-next" class="gltf-example-caret gltf-example-caret-next" data-physics-control aria-label="Next sample" title="Next sample">${CARET}</button>
@@ -57,9 +70,10 @@ export function createPhysicsPanels(diagnostics: GPUGraphDiagnostics) {
 <p>Drag to orbit · Scroll to zoom · Reset to replay.</p>
 <section id="physics-description" aria-live="polite"></section>
 <p>Draft <code>KHR_physics_rigid_bodies</code> and <code>KHR_implicit_shapes</code>.
-WebGPU simulation uses a small CPU pose bridge to the glTF renderer.
+WebGPU simulation publishes body transforms directly to the scenegraph renderer.
 Filtering preserves the authored per-collider systems, including its compound boxes.
 Motion Properties uses analytic tapered primitives, convex hulls and the original nonconvex wheel triangles. Mesh pairs use bounded discrete surface contacts; deep initial containment and fast-motion tunneling remain unsupported.</p>
+<div id="physics-behavior" role="status"></div>
 <div id="error" role="status"></div>
 <a href="https://github.com/eoineoineoin/glTF_Physics/tree/9dc61cb3474ff9a51f58d3592f79d5c9e572056a/samples" target="_blank" rel="noreferrer">Upstream samples ↗</a>`;
   controls.hidden = true;

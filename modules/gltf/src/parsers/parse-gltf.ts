@@ -8,7 +8,7 @@ import {
   type GLTFNodePostprocessed,
   type GLTFPostprocessed
 } from '@loaders.gl/gltf';
-import {assert, Device, type Texture} from '@luma.gl/core';
+import {assert, Device, type Texture, type Buffer} from '@luma.gl/core';
 import {
   decodeMorphTargetAttribute,
   Geometry,
@@ -43,6 +43,10 @@ import {parsePBRMaterial} from './parse-pbr-material';
 
 /** Options that influence how a post-processed glTF is turned into a luma.gl scenegraph. */
 export type ParseGLTFOptions = {
+  /** Resolved host properties for animation pointers, such as physics motion and drives. */
+  properties?: import('@luma.gl/engine').InteractivityPropertyAdapter | null;
+  /** Borrowed rigid GPU matrices. The renderer selects a body and local transform per draw. */
+  publishedTransforms?: Buffer | null;
   /** Additional model props applied to each generated primitive model. */
   modelOptions?: Partial<ModelProps>;
   /** Enables shader-level PBR debug output. */
@@ -68,6 +72,8 @@ type ParseGLTFInternalOptions = Required<ParseGLTFOptions> & {
 };
 
 const defaultOptions: Required<ParseGLTFOptions> = {
+  properties: null,
+  publishedTransforms: null,
   modelOptions: {},
   pbrDebug: false,
   imageBasedLightingEnvironment: undefined!,
@@ -190,7 +196,10 @@ export function parseGLTF(
         Boolean(primitive.targets?.length)
       );
       const mesh =
-        nodeLightmap || instancing || (hasMorphTargets && assignedMorphMeshes.has(sourceMesh.id))
+        nodeLightmap ||
+        instancing ||
+        (combinedOptions.publishedTransforms && assignedMeshes.has(sourceMesh.id)) ||
+        (hasMorphTargets && assignedMorphMeshes.has(sourceMesh.id))
           ? createNodeForGLTFMesh(
               device,
               sourceMesh,
@@ -430,6 +439,7 @@ function createNodeForGLTFPrimitive({
         : null,
     parsedPPBRMaterial,
     modelOptions: options.modelOptions,
+    publishedTransforms: options.publishedTransforms ?? undefined,
     vertexCount,
     bounds: [gltfPrimitive.attributes.POSITION.min, gltfPrimitive.attributes.POSITION.max],
     instanceMatrices: instancing?.matrices,

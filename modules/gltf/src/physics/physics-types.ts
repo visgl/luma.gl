@@ -2,7 +2,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPURigidBody, GPURigidBodyCollider} from '@luma.gl/graph/gpu-physics';
+import type {GroupNode, ScenegraphJoint} from '@luma.gl/engine';
+import type {
+  GPURigidBody,
+  GPURigidBodyCollider,
+  GPURigidBodyJoint,
+  GPURigidBodyTrigger
+} from '@luma.gl/graph/gpu-physics';
 
 /** Raw glTF JSON, before loaders.gl replaces node indices with objects. */
 export type GLTFPhysicsDocument = {
@@ -20,6 +26,7 @@ export type GLTFPhysicsDocument = {
     scale?: readonly number[];
     extensions?: Record<string, unknown>;
   }[];
+  skins?: readonly {joints: readonly number[]}[];
   extensions?: Record<string, unknown>;
   extensionsUsed?: readonly string[];
   extensionsRequired?: readonly string[];
@@ -51,6 +58,8 @@ export type GLTFPhysicsCollider = {
   nodeIndex: number;
   bodyIndex: number;
   colliderIndex: number;
+  /** Cooked collider frame relative to the source node, before node scale. */
+  localMatrix: readonly number[];
   shapeIndex?: number;
   /** Present only for explicitly enabled legacy mesh geometry. */
   meshIndex?: number;
@@ -69,10 +78,27 @@ export type GLTFPhysicsDescription = {
   issues: GLTFPhysicsIssue[];
   bodies: GLTFPhysicsBody[];
   colliders: GLTFPhysicsCollider[];
+  triggers: {nodeIndex: number; trigger: GPURigidBodyTrigger}[];
+  animatedBodyIndices: number[];
+  animatedColliderIndices: number[];
+  querySelections: number[][];
+  sceneJoints: ScenegraphJoint[];
+  sceneNodes: Map<number, GroupNode>;
+  sceneRoots: GroupNode[];
+  joints: {
+    nodeIndex: number;
+    connectedNodeIndex: number;
+    jointIndex: number;
+    joint: GPURigidBodyJoint;
+  }[];
   /** Preserved independently for inspection/export; the source document is never mutated. */
   source: GLTFPhysicsDocument;
 };
 export type ParseGLTFPhysicsOptions = {
+  /** Host will bind authored motion, material and joint property pointers before playback. */
+  propertyBindings?: boolean;
+  /** Bind rigid node translation/rotation channels through ScenegraphPhysicsMotion. */
+  animationOwnership?: 'scenegraph';
   scene?: number;
   /** Decode one node's own mesh at its initial pose in that node's local space.
    * Include initial skinning and morph weights; the adapter combines child transforms.

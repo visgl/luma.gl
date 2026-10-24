@@ -86,7 +86,9 @@ export function getCompoundBodyInertia(
   center: RigidBodyVector
 ): {diagonal: [number, number, number]; orientation: [number, number, number, number]} {
   const properties = colliders.map(({shape}) => getRigidBodyShapeProperties(shape));
-  const volumes = properties.map(property => property.volume);
+  const volumes = properties.map((property, index) =>
+    colliders[index].isTrigger ? 0 : property.volume
+  );
   const total = volumes.reduce((sum, value) => sum + value, 0);
   const tensor = Array<number>(9).fill(0);
   for (const [index, collider] of colliders.entries()) {

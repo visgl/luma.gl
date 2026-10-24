@@ -135,7 +135,14 @@ export type GLTFLightAnimationChannel = {
 };
 
 /** Parsed glTF animation channel. */
+export type GLTFPropertyAnimationChannel = {
+  type: 'property';
+  pointer: string;
+  sampler: GLTFAnimationSampler;
+};
+
 export type GLTFAnimationChannel =
+  | GLTFPropertyAnimationChannel
   | GLTFNodeAnimationChannel
   | GLTFMaterialAnimationChannel
   | GLTFTextureTransformAnimationChannel

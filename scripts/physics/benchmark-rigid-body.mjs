@@ -20,7 +20,7 @@ export async function benchmarkRigidBody(options = {}) {
     maximumPairs: options.maximumPairs === undefined ? undefined : Number(options.maximumPairs)
   };
   if (!['localhost', '127.0.0.1', '[::1]'].includes(baseUrl.hostname) ||
-      !['sparseContacts', 'stack', 'deep', 'massRatio', 'support', 'friction', 'mesh', 'mixed', 'impact', 'torque', 'cradle', 'pendulum', 'hinge', 'slider'].includes(settings.fixture) ||
+      !['sleepingIslands', 'sparseContacts', 'stack', 'deep', 'massRatio', 'support', 'friction', 'mesh', 'mixed', 'impact', 'torque', 'cradle', 'pendulum', 'hinge', 'slider'].includes(settings.fixture) ||
       (['cradle', 'pendulum', 'hinge', 'slider'].includes(settings.fixture) && settings.solver !== 'ordered') ||
       !['ordered', 'parallel'].includes(settings.solver) ||
       !['all-pairs', 'hierarchical-grid'].includes(settings.broadPhase) ||
@@ -57,7 +57,7 @@ async function runBenchmark(options) {
   ]);
   const device = await luma.createDevice({type: 'webgpu', featureLevel: 'core', optionalFeatures: ['timestamp-query'], adapters: [webgpuAdapter]});
   const mechanism = makeMechanism(fixture);
-  const stress = fixture === 'sparseContacts' ? makeStressScene('sparseContacts', solver, timeStep).props : null;
+  const stress = ['sparseContacts', 'sleepingIslands'].includes(fixture) ? makeStressScene(fixture, solver, timeStep).props : null;
   const bodies = stress?.bodies ?? mechanism?.bodies ?? makeRigidBodyScene(fixture);
   const world = new GPURigidBodyWorld({...stress, bodies, joints: mechanism?.joints ?? stress?.joints, solver, compactContacts, iterations, timeStep, warmStartFactor, maximumPairs: maximumPairs ?? stress?.maximumPairs, broadPhase, failurePolicy, ...(fixture === 'cradle' ? {restitutionThreshold: 0} : {}), gravity: stress?.gravity ?? getRigidBodySceneGravity(fixture)});
   let graph;

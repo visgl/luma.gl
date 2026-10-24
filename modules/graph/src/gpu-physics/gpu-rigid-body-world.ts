@@ -54,6 +54,8 @@ import {
 import {addRigidBodyCheckpoint} from './rigid-body-transaction';
 import {
   getRigidBodyJointShader,
+  packRigidBodyJointState,
+  RIGID_BODY_JOINT_STATE_BYTES,
   validateRigidBodyJoints,
   type GPURigidBodyJoint
 } from './rigid-body-joints';
@@ -83,11 +85,28 @@ export type GPURigidBodyCapture = {
   triggerCursor: number;
 };
 
+/** Mutable motion properties; topology and authored pose use explicit scene reconstruction. */
+export type GPURigidBodyParameters = Partial<
+  Pick<
+    GPURigidBody,
+    | 'mode'
+    | 'mass'
+    | 'centerOfMass'
+    | 'inertiaDiagonal'
+    | 'inertiaOrientation'
+    | 'velocity'
+    | 'angularVelocity'
+    | 'gravityFactor'
+  >
+>;
+
 export type GPURigidBodyWorldProps = {
   id?: string;
   bodies: readonly GPURigidBody[];
   /** Authored visual bounds in body-node coordinates; enables GPU matrix/AABB publication. */
   publicationBounds?: readonly GPURigidBodyBounds[];
+  /** Publish rigid body-node matrices without requiring authored visual bounds. */
+  publishPoses?: boolean;
   /** Up to 64 ordered-solver joints with persistent impulses and connected-island sleeping. */
   joints?: readonly GPURigidBodyJoint[];
   gravity?: Vector3;
@@ -148,6 +167,13 @@ export type GPURigidBodyState = {
  * ordered or opt-in parallel GPU impulse solver. Small worlds retain a bounded all-pairs oracle; larger
  * worlds use hierarchical discovery and sparse persistent manifolds. Buffers are world-owned.
  */
+export type GPURigidBodyGPUCheckpoint = {
+  readonly byteLength: number;
+  save(): void;
+  restore(): void;
+  destroy(): void;
+};
+
 export class GPURigidBodyWorld {
   readonly id: string;
   readonly count: number;
@@ -189,8 +215,10 @@ export class GPURigidBodyWorld {
   private parallelDispatch: Buffer | null = null;
   private device: Device | null = null;
   private control: Computation | null = null;
+  private invalidation: Computation | null = null;
   private controlSettings: Buffer | null = null;
   private destroyed = false;
+  private readonly gpuCheckpoints = new Set<GPURigidBodyGPUCheckpoint>();
   private broadPhaseCounters: {buffer: Buffer; byteOffset: number} | null = null;
 
   constructor(props: GPURigidBodyWorldProps) {
@@ -425,7 +453,9 @@ export class GPURigidBodyWorld {
     const packed = packRigidBodyShapes(this.colliders);
     const sparse = this.broadPhase === 'hierarchical-grid';
     const extended = this.colliders.some(
-      collider => collider.shape.type !== 'sphere' && collider.shape.type !== 'box'
+      collider =>
+        (collider.shape.type !== 'sphere' && collider.shape.type !== 'box') ||
+        (collider.isTrigger && collider.shape.type !== 'sphere')
     );
     const parallel = this.solver === 'parallel';
     const storage = {
@@ -461,7 +491,7 @@ export class GPURigidBodyWorld {
         uniform: false
       });
     }
-    if (this.props.publicationBounds)
+    if (this.props.publicationBounds || this.props.publishPoses)
       storage.buffers.push(
         {name: 'pose-metadata', byteLength: this.count * 48, uniform: false},
         {name: 'pose-matrices', byteLength: this.count * 64, uniform: false},
@@ -602,12 +632,12 @@ export class GPURigidBodyWorld {
       metadata.set(
         [
           ...inertia.map(value => (mode === 'dynamic' && value ? 1 / value : 0)),
-          0,
+          center[0],
           ...inertiaRotation,
           mode === 'static' ? 0 : mode === 'dynamic' ? 1 : 2,
           body.gravityFactor ?? 1,
-          0,
-          0
+          center[1],
+          center[2]
         ],
         index * 12
       );
@@ -653,12 +683,12 @@ export class GPURigidBodyWorld {
     this.targets = allocate(
       'targets',
       Math.ceil((this.count * 32 + (sparse ? 32 + this.maximumPairs * 8 : 16)) / 16) * 16 +
-        (this.props.joints?.length ?? 0) * 48
+        (this.props.joints?.length ?? 0) * RIGID_BODY_JOINT_STATE_BYTES
     );
     for (const [index, joint] of (this.props.joints ?? []).entries()) {
       this.targets.write(
-        new Float32Array([joint.enabled === false ? 0 : 1]),
-        this.getJointStateOffset() + index * 48 + 32
+        packRigidBodyJointState(joint),
+        this.getJointStateOffset() + index * RIGID_BODY_JOINT_STATE_BYTES
       );
     }
     // Four 96-byte contacts followed by a 32-byte aligned manifold header.
@@ -688,7 +718,7 @@ export class GPURigidBodyWorld {
     );
     if (parallel) {
       this.parallelState = allocate('parallel-state', parallelByteLength);
-      this.parallelDispatch = allocate('parallel-dispatch', 16);
+      this.parallelDispatch = allocate('parallel-dispatch', 48);
     }
     const buffers = {
       settings,
@@ -791,6 +821,8 @@ export class GPURigidBodyWorld {
       parallelReset: ['parallelState'],
       parallelCompact: ['manifolds', 'parallelState'],
       parallelDispatchCount: ['parallelState', 'parallelDispatch'],
+      parallelActive: ['bodies', 'sleepStates', 'manifolds', 'parallelState'],
+      parallelActiveCount: ['parallelState', 'parallelDispatch'],
       parallelLink: ['velocities', 'angularVelocities', 'bodies', 'manifolds', 'parallelState'],
       parallelUnion: ['bodies', 'manifolds', 'parallelState'],
       parallelCompress: ['sleepStates', 'parallelState'],
@@ -897,7 +929,8 @@ export class GPURigidBodyWorld {
             location: 18
           },
           allocate,
-          Boolean(this.props.joints?.length)
+          Boolean(this.props.joints?.length),
+          extended
         )
       : undefined;
     this.triggerEvents = triggers?.events ?? null;
@@ -918,6 +951,8 @@ export class GPURigidBodyWorld {
       parallelCompress: 'Compress island links to their root body.',
       parallelWakeRoots: 'Mark islands that must wake for active constraints.',
       parallelWakeBodies: 'Wake bodies belonging to active constraint islands.',
+      parallelActive: 'Compact awake bodies and contacts after connected islands wake.',
+      parallelActiveCount: 'Build indirect dispatches for awake solver work.',
       parallelAdvance: 'Advance body poses using the solved velocities.',
       parallelMarkSleep: 'Identify islands whose bodies are quiet enough to sleep.',
       parallelSleep: 'Put quiet constraint islands to sleep.'
@@ -939,6 +974,9 @@ export class GPURigidBodyWorld {
             'parallelCompress',
             'parallelWakeRoots',
             'parallelWakeBodies',
+            ...(this.props.compactContacts !== false
+              ? ['parallelActive', 'parallelActiveCount']
+              : []),
             'parallelSolve',
             'parallelAdvance',
             'parallelMarkSleep',
@@ -1062,14 +1100,19 @@ export class GPURigidBodyWorld {
               );
             const dispatchPairs = (computation: Computation) => {
               if (indirectPairs)
-                computation.dispatchIndirect(computePass, getBuffer(dispatchBinding!.resource), 0);
+                computation.dispatchIndirect(computePass, getBuffer(dispatchBinding!.resource), 16);
               else computation.dispatch(computePass, Math.ceil(this.maximumPairs / 64));
             };
+            const dispatchBodies = (computation: Computation) => {
+              if (indirectPairs)
+                computation.dispatchIndirect(computePass, getBuffer(dispatchBinding!.resource), 32);
+              else computation.dispatch(computePass, Math.ceil(this.count / 64));
+            };
             dispatchPairs(computations[0]);
-            computations[2].dispatch(computePass, Math.ceil(this.count / 64));
+            dispatchBodies(computations[2]);
             for (let iteration = 0; iteration < (this.props.iterations ?? 16); iteration++) {
               dispatchPairs(computations[1]);
-              computations[2].dispatch(computePass, Math.ceil(this.count / 64));
+              dispatchBodies(computations[2]);
             }
           },
           destroy: () => {
@@ -1125,17 +1168,19 @@ export class GPURigidBodyWorld {
               computePass,
               ['parallelLink', 'parallelUnion', 'parallelCompact'].includes(entryPoint)
                 ? Math.ceil(this.maximumPairs / 64)
-                : entryPoint === 'parallelDispatchCount'
-                  ? 1
-                  : entryPoint.startsWith('parallel')
-                    ? Math.ceil(this.count / 64)
-                    : entryPoint === 'collide'
-                      ? Math.ceil(this.maximumPairs / 64)
-                      : entryPoint === 'bounds'
-                        ? Math.ceil(this.colliderStorageCount / 64)
-                        : entryPoint === 'integrate'
-                          ? Math.ceil(this.count / 64)
-                          : 1
+                : entryPoint === 'parallelActive'
+                  ? Math.ceil(Math.max(this.maximumPairs, this.count) / 64)
+                  : ['parallelDispatchCount', 'parallelActiveCount'].includes(entryPoint)
+                    ? 1
+                    : entryPoint.startsWith('parallel')
+                      ? Math.ceil(this.count / 64)
+                      : entryPoint === 'collide'
+                        ? Math.ceil(this.maximumPairs / 64)
+                        : entryPoint === 'bounds'
+                          ? Math.ceil(this.colliderStorageCount / 64)
+                          : entryPoint === 'integrate'
+                            ? Math.ceil(this.count / 64)
+                            : 1
             );
           }
         },
@@ -1198,18 +1243,22 @@ export class GPURigidBodyWorld {
     });
     restoreCheckpoint?.restore();
     triggers?.publish();
-    if (this.props.publicationBounds) {
+    if (this.props.publicationBounds || this.props.publishPoses) {
       const publication = addRigidBodyPosePublication(
         graph,
         this.id,
         this.props.bodies,
-        this.props.publicationBounds,
+        this.props.publicationBounds ??
+          this.props.bodies.map(() => [
+            [0, 0, 0],
+            [0, 0, 0]
+          ]),
         diagnosticBinding('positions'),
         diagnosticBinding('orientations'),
         allocate
       );
       this.poseMatrices = publication.matrices;
-      this.poseBounds = publication.bounds;
+      this.poseBounds = this.props.publicationBounds ? publication.bounds : null;
     }
     if (this.props.eventCapacity) {
       const contactHistory = allocate('contact-history', this.maximumPairs * 16);
@@ -1333,7 +1382,7 @@ export class GPURigidBodyWorld {
       });
     }
     this.controlSettings = allocate('control-settings', 64, true);
-    this.control = new Computation(graph.device, {
+    const controlProperties = {
       id: `${this.id}-impulse`,
       source:
         source +
@@ -1342,13 +1391,27 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
 @group(0) @binding(8) var<uniform> command: Command;
 @compute @workgroup_size(1) fn control() {
  if(command.bodyIndex.y==0u) {applyImpulse(command.bodyIndex.x,command.point.xyz,command.impulse.xyz);}
+ else if(command.bodyIndex.y==6u){
+  let body=command.bodyIndex.x;let shift=rotate(orientations[body],command.impulse.xyz);
+  positions[body]=vec4f(positions[body].xyz+shift,positions[body].w);
+  var linear=velocities[body].xyz+cross(angularVelocities[body].xyz,shift);
+  var angular=angularVelocities[body].xyz;
+  if(command.point.w>0.0){linear=command.point.xyz;}
+  if(command.orientation.w>0.0){angular=command.orientation.xyz;}
+  if(bodies.bodies[body].motion.x==0.0){linear=vec3f(0);angular=vec3f(0);}
+  velocities[body]=vec4f(linear,command.impulse.w);angularVelocities[body]=vec4f(angular,0);
+  if(command.bodyIndex.z!=0u){targets.entries[body].position.w=0.0;}
+ }
+ else if(command.bodyIndex.y==5u){let body=command.bodyIndex.x;if(dynamic(body)){angularVelocities[body]=vec4f(angularVelocities[body].xyz+inverseInertia(body,command.impulse.xyz),0);}}
  else if(command.bodyIndex.y==2u) {applyImpulse(command.bodyIndex.x,positions[command.bodyIndex.x].xyz,command.impulse.xyz);}
  ${this.props.joints?.length ? 'else if(command.bodyIndex.y==3u){targets.joints[command.bodyIndex.x].control.x=command.impulse.x;}' : ''}
  else {targets.entries[command.bodyIndex.x].position=vec4f(command.point.xyz,1);targets.entries[command.bodyIndex.x].orientation=command.orientation;}
- // Wake and invalidate all connected components conservatively after external changes.
- for(var body=0u;body<BODY_COUNT;body++) {sleepStates[body]=vec4f(0);}
- for(var pair=0u;pair<PAIR_CAPACITY;pair++) {manifolds[pair].count=0u;}
- ${this.props.joints?.length ? `for(var index=0u;index<${this.props.joints.length}u;index++){for(var row=0u;row<8u;row++){targets.joints[index].impulses[row]=0.0;}}` : ''}
+}
+@compute @workgroup_size(64) fn invalidate(@builtin(global_invocation_id) invocation:vec3u) {
+ let index=invocation.x+invocation.y*4194240u;
+ if(index<BODY_COUNT){sleepStates[index]=vec4f(0);}
+ if(index<PAIR_CAPACITY){manifolds[index].count=0u;}
+ ${this.props.joints?.length ? `if(index<${this.props.joints.length}u){for(var row=0u;row<8u;row++){targets.joints[index].impulses[row]=0.0;}}` : ''}
 }`,
       entryPoint: 'control',
       shaderLayout: {
@@ -1383,7 +1446,55 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
         ),
         command: this.controlSettings
       }
+    } satisfies ConstructorParameters<typeof Computation>[1];
+    this.control = new Computation(graph.device, {
+      ...controlProperties,
+      shaderLayout: {
+        bindings: controlProperties.shaderLayout.bindings.filter(
+          binding => !['sleepStates', 'manifolds'].includes(binding.name)
+        )
+      },
+      bindings: Object.fromEntries(
+        Object.entries(controlProperties.bindings).filter(
+          ([name]) => !['sleepStates', 'manifolds'].includes(name)
+        )
+      )
     });
+    const invalidationBindings = [
+      'sleepStates',
+      'manifolds',
+      ...(this.props.joints?.length ? ['targets'] : [])
+    ];
+    this.invalidation = new Computation(graph.device, {
+      ...controlProperties,
+      id: `${this.id}-invalidate`,
+      entryPoint: 'invalidate',
+      shaderLayout: {
+        bindings: controlProperties.shaderLayout.bindings.filter(binding =>
+          invalidationBindings.includes(binding.name)
+        )
+      },
+      bindings: Object.fromEntries(
+        Object.entries(controlProperties.bindings).filter(([name]) =>
+          invalidationBindings.includes(name)
+        )
+      )
+    });
+  }
+
+  private invalidateState(pass: Parameters<Computation['dispatch']>[0]): void {
+    const workgroups = Math.ceil(
+      Math.max(this.count, this.maximumPairs, this.props.joints?.length ?? 0) / 64
+    );
+    this.invalidation!.dispatch(pass, Math.min(65535, workgroups), Math.ceil(workgroups / 65535));
+  }
+
+  /** Inspect the declared motion mode without exposing mutable world configuration. */
+  getBodyMode(body: number): 'static' | 'dynamic' | 'kinematic' | undefined {
+    const definition = this.props.bodies[body];
+    return definition
+      ? (definition.mode ?? ((definition.mass ?? 1) === 0 ? 'static' : 'dynamic'))
+      : undefined;
   }
 
   /** Submit an impulse at a world-space point, or the current GPU center of mass when omitted. */
@@ -1407,6 +1518,290 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     const encoder = this.device.createCommandEncoder();
     const pass = encoder.beginComputePass();
     this.control.dispatch(pass, 1);
+    this.invalidateState(pass);
+    pass.end();
+    this.device.submit(encoder.finish());
+  }
+
+  /** Read configured motion properties; use readState() for simulated pose and velocity. */
+  getBodyParameters(body: number): GPURigidBodyParameters {
+    const definition = this.props.bodies[body];
+    if (!definition || this.destroyed) throw new Error('Invalid body');
+    const {
+      mode,
+      mass,
+      centerOfMass,
+      inertiaDiagonal,
+      inertiaOrientation,
+      velocity,
+      angularVelocity,
+      gravityFactor
+    } = definition;
+    const compound = getCompoundBodyInertia(
+      mass ?? 1,
+      this.colliders.filter(collider => collider.body === body),
+      centerOfMass ?? [0, 0, 0]
+    );
+    return structuredClone({
+      mode: mode ?? ((mass ?? 1) === 0 ? 'static' : 'dynamic'),
+      mass: mass ?? 1,
+      centerOfMass: centerOfMass ?? [0, 0, 0],
+      inertiaDiagonal: inertiaDiagonal ?? compound.diagonal,
+      inertiaOrientation:
+        inertiaOrientation ?? (inertiaDiagonal ? [0, 0, 0, 1] : compound.orientation),
+      velocity: velocity ?? [0, 0, 0],
+      angularVelocity: angularVelocity ?? [0, 0, 0],
+      gravityFactor: gravityFactor ?? 1
+    });
+  }
+
+  /** Change an existing collider material between submissions, invalidating cached friction. */
+  setColliderMaterial(colliderIndex: number, material: GPURigidBodyMaterial): void {
+    const collider = this.colliders[colliderIndex];
+    if (!this.device || this.destroyed || !Number.isInteger(colliderIndex) || !collider)
+      throw new Error('Invalid collider');
+    const policies: (GPURigidBodyMaterial['frictionCombine'] | undefined)[] = [
+      'average',
+      'minimum',
+      'maximum',
+      'multiply'
+    ];
+    if (
+      [
+        material.staticFriction ?? 0.6,
+        material.dynamicFriction ?? 0.6,
+        material.restitution ?? 0.1
+      ].some(value => !Number.isFinite(Math.fround(value)) || value < 0) ||
+      (material.restitution ?? 0.1) > 1 ||
+      [material.frictionCombine, material.restitutionCombine].some(
+        value => value !== undefined && !policies.includes(value)
+      )
+    )
+      throw new Error('Invalid collider material');
+    const body = this.props.bodies[collider.body];
+    const metadata = this.ownedBuffers.find(buffer => buffer.id === `${this.id}-bodies`);
+    if (!metadata) throw new Error('World is not attached');
+    metadata.write(
+      new Float32Array([
+        material.restitution ?? body.restitution ?? 0.1,
+        material.staticFriction ?? body.friction ?? 0.6,
+        material.dynamicFriction ?? body.friction ?? 0.6
+      ]),
+      this.count * 48 + colliderIndex * 96 + 48
+    );
+    metadata.write(
+      new Float32Array([
+        material.restitutionCombine ? policies.indexOf(material.restitutionCombine) : 4,
+        material.frictionCombine ? policies.indexOf(material.frictionCombine) : 4
+      ]),
+      this.count * 48 + colliderIndex * 96 + 64
+    );
+    collider.material = structuredClone(material);
+    this.updateColliderDefinitions(collider.body);
+    this.wake();
+  }
+
+  /** Teleport a collider in its body-node frame, preserving the body pose and explicit COM. */
+  setColliderTransform(
+    colliderIndex: number,
+    position: Vector3,
+    orientation: readonly [number, number, number, number]
+  ): void {
+    const collider = this.colliders[colliderIndex];
+    if (
+      this.destroyed ||
+      !this.device ||
+      !collider ||
+      !position.every(value => Number.isFinite(Math.fround(value)))
+    )
+      throw new Error('Invalid collider transform');
+    const rotation = normalizeRigidBodyRotation(orientation);
+    const center = this.props.bodies[collider.body].centerOfMass ?? [0, 0, 0];
+    if (
+      this.props.continuous?.mode !== 'convex' &&
+      this.props.continuous?.bodies.includes(collider.body) &&
+      position.some((value, axis) => value !== center[axis])
+    )
+      throw new Error('Collider transform exceeds continuous envelope');
+    const metadata = this.ownedBuffers.find(buffer => buffer.id === `${this.id}-bodies`);
+    if (!metadata) throw new Error('World is not attached');
+    metadata.write(
+      new Float32Array([
+        ...position.map((value, axis) => value - center[axis]),
+        collider.body,
+        ...rotation
+      ]),
+      this.count * 48 + colliderIndex * 96 + 16
+    );
+    collider.position = [...position];
+    collider.orientation = rotation;
+    this.updateColliderDefinitions(collider.body);
+    this.setBodyParameters(collider.body, {});
+  }
+
+  private updateColliderDefinitions(bodyIndex: number): void {
+    const {shape, colliders, ...properties} = this.props.bodies[bodyIndex];
+    const updated = this.colliders
+      .filter(candidate => candidate.body === bodyIndex)
+      .map(({body, ...candidate}) => candidate);
+    const bodies = [...this.props.bodies];
+    bodies[bodyIndex] = {...properties, colliders: updated};
+    this.props.bodies = bodies;
+  }
+
+  getColliderMaterial(collider: number): GPURigidBodyMaterial {
+    const definition = this.colliders[collider];
+    if (!definition || this.destroyed) throw new Error('Invalid collider');
+    return structuredClone(definition.material ?? {});
+  }
+
+  private restoreColliderDefinitions(): void {
+    for (const [bodyIndex, body] of this.props.bodies.entries()) {
+      const definitions: readonly GPURigidBodyCollider[] =
+        body.colliders ?? (body.shape ? [{shape: body.shape}] : []);
+      let index = 0;
+      for (const collider of this.colliders)
+        if (collider.body === bodyIndex) {
+          const definition = definitions[index++];
+          collider.material = structuredClone(definition.material);
+          collider.position = structuredClone(definition.position);
+          collider.orientation = structuredClone(definition.orientation);
+        }
+    }
+  }
+
+  /** Update motion properties between submissions; preserve the node pose when its COM changes. */
+  setBodyParameters(bodyIndex: number, parameters: GPURigidBodyParameters): void {
+    if (
+      !this.device ||
+      !this.control ||
+      !this.controlSettings ||
+      this.destroyed ||
+      !Number.isInteger(bodyIndex) ||
+      !this.props.bodies[bodyIndex]
+    )
+      throw new Error('Invalid body mutation');
+    const previous = this.props.bodies[bodyIndex];
+    const next = {...previous, ...structuredClone(parameters)};
+    const mass = next.mass ?? 1;
+    const mode = next.mode ?? (mass === 0 ? 'static' : 'dynamic');
+    const center: Vector3 = next.centerOfMass ?? [0, 0, 0];
+    const oldCenter: Vector3 = previous.centerOfMass ?? [0, 0, 0];
+    if (
+      !['static', 'dynamic', 'kinematic'].includes(mode) ||
+      !Number.isFinite(Math.fround(mass)) ||
+      mass < 0 ||
+      ![
+        ...center,
+        ...(next.velocity ?? []),
+        ...(next.angularVelocity ?? []),
+        next.gravityFactor ?? 1
+      ].every(value => Number.isFinite(Math.fround(value))) ||
+      (next.inertiaDiagonal ?? []).some(
+        value => !Number.isFinite(Math.fround(value)) || value < 0
+      ) ||
+      (next.inertiaOrientation && !next.inertiaDiagonal)
+    )
+      throw new Error('Invalid motion properties');
+    const colliders = this.colliders.filter(collider => collider.body === bodyIndex);
+    for (const collider of colliders)
+      if (
+        (collider.shape.type === 'convex-hull' || collider.shape.type === 'triangle-mesh') &&
+        mode !== 'static' &&
+        mass > 0 &&
+        (!collider.shape.geometry.closed ||
+          !(getRigidBodyShapeProperties(collider.shape).volume > 0))
+      )
+        throw new Error('Dynamic meshes require closed positive-volume geometry');
+    if (
+      this.props.continuous?.bodies.includes(bodyIndex) &&
+      (mode !== 'dynamic' ||
+        mass === 0 ||
+        (this.props.continuous.mode !== 'convex' &&
+          (colliders[0].position ?? [0, 0, 0]).some((value, axis) => value !== center[axis])))
+    )
+      throw new Error('Mutation exceeds the continuous body envelope');
+    const compound = getCompoundBodyInertia(mass, colliders, center);
+    const inertia = next.inertiaDiagonal ?? compound.diagonal;
+    const rotation = normalizeRigidBodyRotation(
+      next.inertiaOrientation ?? (next.inertiaDiagonal ? undefined : compound.orientation)
+    );
+    const metadata = this.ownedBuffers.find(buffer => buffer.id === `${this.id}-bodies`)!;
+    metadata.write(
+      new Float32Array([
+        ...inertia.map(value => (mode === 'dynamic' && value ? 1 / value : 0)),
+        center[0],
+        ...rotation,
+        mode === 'static' ? 0 : mode === 'dynamic' ? 1 : 2,
+        next.gravityFactor ?? 1,
+        center[1],
+        center[2]
+      ]),
+      bodyIndex * 48
+    );
+    const attributes = this.ownedBuffers.find(
+      buffer => buffer.id === `${this.id}-object-attributes`
+    );
+    for (const [index, collider] of this.colliders.entries())
+      if (collider.body === bodyIndex) {
+        metadata.write(
+          new Float32Array(
+            (collider.position ?? [0, 0, 0]).map((value, axis) => value - center[axis])
+          ),
+          this.count * 48 + index * 96 + 16
+        );
+        attributes?.write(
+          new Uint32Array([bodyIndex | (mode === 'dynamic' ? 0x10000 : 0)]),
+          index * 4
+        );
+      }
+    this.ownedBuffers
+      .find(buffer => buffer.id === `${this.id}-pose-metadata`)
+      ?.write(new Float32Array(center), bodyIndex * 48);
+    const data = new ArrayBuffer(64);
+    new Float32Array(data).set([
+      ...center.map((value, axis) => value - oldCenter[axis]),
+      mode === 'dynamic' && mass ? 1 / mass : 0,
+      ...(parameters.velocity ?? [0, 0, 0]),
+      parameters.velocity ? 1 : 0,
+      ...(parameters.angularVelocity ?? [0, 0, 0]),
+      parameters.angularVelocity ? 1 : 0
+    ]);
+    new Uint32Array(data).set([bodyIndex, 6, mode !== this.getBodyMode(bodyIndex) ? 1 : 0], 12);
+    this.controlSettings.write(new Uint8Array(data));
+    const encoder = this.device.createCommandEncoder();
+    const pass = encoder.beginComputePass();
+    this.control.dispatch(pass, 1);
+    this.invalidateState(pass);
+    pass.end();
+    this.device.submit(encoder.finish());
+    const bodies = [...this.props.bodies];
+    bodies[bodyIndex] = next;
+    this.props.bodies = bodies;
+  }
+
+  /** Apply a world-space angular impulse at the current GPU pose. */
+  applyAngularImpulse(body: number, impulse: Vector3): void {
+    if (
+      !this.control ||
+      !this.device ||
+      !this.controlSettings ||
+      this.destroyed ||
+      !Number.isInteger(body) ||
+      body < 0 ||
+      body >= this.count ||
+      !impulse.every(Number.isFinite)
+    )
+      throw new Error('Invalid angular impulse');
+    const data = new ArrayBuffer(64);
+    new Float32Array(data).set(impulse);
+    new Uint32Array(data)[12] = body;
+    new Uint32Array(data)[13] = 5;
+    this.controlSettings.write(new Uint8Array(data));
+    const encoder = this.device.createCommandEncoder();
+    const pass = encoder.beginComputePass();
+    this.control.dispatch(pass, 1);
+    this.invalidateState(pass);
     pass.end();
     this.device.submit(encoder.finish());
   }
@@ -1440,6 +1835,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     const encoder = this.device.createCommandEncoder();
     const pass = encoder.beginComputePass();
     this.control.dispatch(pass, 1);
+    this.invalidateState(pass);
     pass.end();
     this.device.submit(encoder.finish());
   }
@@ -1452,6 +1848,37 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
           16
       ) * 16
     );
+  }
+
+  getJointParameters(index: number): GPURigidBodyJoint {
+    const joint = this.props.joints?.[index];
+    if (!joint || this.destroyed) throw new Error('Invalid joint');
+    return structuredClone(joint);
+  }
+
+  /** Update an existing constraint's response without recompiling or changing attachment topology. */
+  setJointParameters(index: number, parameters: GPURigidBodyJoint): void {
+    const previous = this.props.joints?.[index];
+    if (
+      !previous ||
+      !this.targets ||
+      this.destroyed ||
+      previous.type !== parameters.type ||
+      previous.first !== parameters.first ||
+      previous.second !== parameters.second ||
+      JSON.stringify(previous.firstFrame) !== JSON.stringify(parameters.firstFrame) ||
+      JSON.stringify(previous.secondFrame) !== JSON.stringify(parameters.secondFrame)
+    )
+      throw new Error('Joint topology must remain unchanged');
+    validateRigidBodyJoints([parameters], this.props.bodies, this.solver);
+    const joints = [...this.props.joints!];
+    joints[index] = structuredClone(parameters);
+    this.props.joints = joints;
+    this.targets.write(
+      packRigidBodyJointState(parameters),
+      this.getJointStateOffset() + index * RIGID_BODY_JOINT_STATE_BYTES
+    );
+    this.setJointEnabled(index, parameters.enabled !== false);
   }
 
   /** Enable a predeclared joint between submissions; wakes bodies and clears cached impulses. */
@@ -1472,17 +1899,22 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     const encoder = this.device.createCommandEncoder();
     const pass = encoder.beginComputePass();
     this.control.dispatch(pass, 1);
+    this.invalidateState(pass);
     pass.end();
     this.device.submit(encoder.finish());
+    const joints = [...this.props.joints!];
+    joints[joint] = {...joints[joint], enabled};
+    this.props.joints = joints;
   }
 
   /** Clear persistence and sleeping after direct state writes between submissions. */
   wake(): void {
-    if (this.destroyed) return;
-    this.sleepStates?.write(new Float32Array(this.count * 4));
-    this.manifolds?.write(new Uint8Array(this.maximumPairs * 416));
-    for (let index = 0; index < (this.props.joints?.length ?? 0); index++)
-      this.targets?.write(new Float32Array(8), this.getJointStateOffset() + index * 48);
+    if (this.destroyed || !this.device || !this.invalidation) return;
+    const encoder = this.device.createCommandEncoder();
+    const pass = encoder.beginComputePass();
+    this.invalidateState(pass);
+    pass.end();
+    this.device.submit(encoder.finish());
   }
 
   /** Optional asynchronous event readback. Concurrent readers share one snapshot/cursor. */
@@ -1677,6 +2109,72 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     return this.triggerRead;
   }
 
+  /** Reusable same-world GPU checkpoint; copies state without CPU pose or buffer readback. */
+  createGPUCheckpoint(): GPURigidBodyGPUCheckpoint {
+    if (!this.device || this.destroyed) throw new Error('Checkpoint requires an attached world');
+    const device = this.device;
+    const snapshots: Buffer[] = [];
+    let released = false;
+    let saved = false;
+    let joints = structuredClone(this.props.joints);
+    let bodyDefinitions = structuredClone(this.props.bodies);
+    let contactCursor = 0;
+    let triggerCursor = 0;
+    try {
+      for (const buffer of this.ownedBuffers)
+        snapshots.push(
+          device.createBuffer({
+            id: `${buffer.id}-recovery`,
+            byteLength: buffer.byteLength,
+            usage: Buffer.COPY_SRC | Buffer.COPY_DST
+          })
+        );
+    } catch (error) {
+      for (const buffer of snapshots) buffer.destroy();
+      throw error;
+    }
+    const copy = (restore: boolean) => {
+      if (released || this.destroyed || this.queryPending || this.eventRead || this.triggerRead)
+        throw new Error('Checkpoint requires an idle live world');
+      const encoder = device.createCommandEncoder();
+      for (const [index, buffer] of this.ownedBuffers.entries())
+        encoder.copyBufferToBuffer({
+          sourceBuffer: restore ? snapshots[index] : buffer,
+          destinationBuffer: restore ? buffer : snapshots[index],
+          size: buffer.byteLength
+        });
+      device.submit(encoder.finish());
+    };
+    const checkpoint: GPURigidBodyGPUCheckpoint = {
+      byteLength: snapshots.reduce((sum, buffer) => sum + buffer.byteLength, 0),
+      save: () => {
+        copy(false);
+        joints = structuredClone(this.props.joints);
+        bodyDefinitions = structuredClone(this.props.bodies);
+        contactCursor = this.eventCursor;
+        triggerCursor = this.triggerCursor;
+        saved = true;
+      },
+      restore: () => {
+        if (!saved) throw new Error('Checkpoint has not been saved');
+        copy(true);
+        this.props.joints = structuredClone(joints);
+        this.props.bodies = structuredClone(bodyDefinitions);
+        this.restoreColliderDefinitions();
+        this.eventCursor = contactCursor;
+        this.triggerCursor = triggerCursor;
+      },
+      destroy: () => {
+        if (released) return;
+        released = true;
+        for (const buffer of snapshots) buffer.destroy();
+        this.gpuCheckpoints.delete(checkpoint);
+      }
+    };
+    this.gpuCheckpoints.add(checkpoint);
+    return checkpoint;
+  }
+
   /** Stop graph submissions and controls first; includes diagnostics, caches and event history. */
   async captureState(): Promise<GPURigidBodyCapture> {
     if (!this.device || this.destroyed || this.queryPending || this.eventRead || this.triggerRead)
@@ -1723,6 +2221,9 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     }
     for (const [index, buffer] of this.ownedBuffers.entries())
       buffer.write(capture.buffers[index].data);
+    this.props.joints = structuredClone(capture.props.joints);
+    this.props.bodies = structuredClone(capture.props.bodies);
+    this.restoreColliderDefinitions();
     this.eventCursor = capture.contactCursor;
     this.triggerCursor = capture.triggerCursor;
   }
@@ -1794,6 +2295,9 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
   async readSolverWork(): Promise<{
     compacted: boolean;
     activeContacts: number | null;
+    awakeBodies: number | null;
+    awakeContacts: number | null;
+    bodyWorkgroups: number;
     pairCapacity: number;
     pairWorkgroups: number;
   } | null> {
@@ -1804,8 +2308,11 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     return {
       compacted,
       activeContacts: compacted ? counters[1] : null,
+      awakeBodies: compacted ? counters[2] : null,
+      awakeContacts: compacted ? counters[3] : null,
+      bodyWorkgroups: Math.ceil((compacted ? counters[2] : this.count) / 64),
       pairCapacity: this.maximumPairs,
-      pairWorkgroups: Math.ceil((compacted ? counters[1] : this.maximumPairs) / 64)
+      pairWorkgroups: Math.ceil((compacted ? counters[3] : this.maximumPairs) / 64)
     };
   }
 
@@ -1860,8 +2367,10 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
   /** Destroy the compiled graph and finish readbacks before destroying its world. */
   destroy(): void {
     if (this.destroyed) return;
+    for (const checkpoint of this.gpuCheckpoints) checkpoint.destroy();
     this.destroyed = true;
     this.control?.destroy();
+    this.invalidation?.destroy();
     this.queryComputation?.destroy();
     this.queryReduction?.destroy();
     for (const buffer of this.ownedBuffers) buffer.destroy();
@@ -1871,13 +2380,44 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
 
 /** Canonicalize object keys, preserving array order and ignoring the world's debug label. */
 function serializeCaptureProps(props: GPURigidBodyWorldProps): string {
-  return JSON.stringify({...props, id: undefined}, (_key, value: unknown) => {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
-    const record = value as Record<string, unknown>;
-    return Object.fromEntries(
-      Object.keys(record)
-        .sort()
-        .map(key => [key, record[key]])
-    );
-  });
+  return JSON.stringify(
+    {
+      ...props,
+      id: undefined,
+      bodies: props.bodies.map(body => ({
+        ...body,
+        shape: undefined,
+        colliders: (body.colliders ?? [{shape: body.shape}]).map(collider => ({
+          ...collider,
+          material: undefined,
+          position: undefined,
+          orientation: undefined
+        })),
+        mode: undefined,
+        mass: undefined,
+        centerOfMass: undefined,
+        inertiaDiagonal: undefined,
+        inertiaOrientation: undefined,
+        velocity: undefined,
+        angularVelocity: undefined,
+        gravityFactor: undefined
+      })),
+      joints: props.joints?.map(joint => ({
+        type: joint.type,
+        first: joint.first,
+        second: joint.second,
+        firstFrame: joint.firstFrame,
+        secondFrame: joint.secondFrame
+      }))
+    },
+    (_key, value: unknown) => {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+      const record = value as Record<string, unknown>;
+      return Object.fromEntries(
+        Object.keys(record)
+          .sort()
+          .map(key => [key, record[key]])
+      );
+    }
+  );
 }

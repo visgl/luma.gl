@@ -40,7 +40,8 @@ struct Collider { shape: vec4f, position: vec4f, orientation: vec4f, material: v
 struct Metadata { bodies: array<Body, BODY_COUNT>, colliders: array<Collider, COLLIDER_COUNT>, exclusions: array<vec2f, COLLIDER_COUNT>, geometry: array<vec4u> }
 struct Target { position: vec4f, orientation: vec4f }
 struct CacheKey { key:atomic<u32>, epoch:u32 }
-struct JointState {impulses:array<f32,8>, control:vec4f}
+struct GeneralConstraint {axes:vec4f,limits:vec4f,control:vec4f,drive:vec4f}
+struct JointState {impulses:array<f32,8>, control:vec4f, limits:vec4f, motor:vec4f, drive:vec4f, spring:vec4f, general:GeneralConstraint}
 struct Targets { entries:array<Target,BODY_COUNT>, dispatch:atomic<u32>, vertical:u32, depth:u32 ${sparse ? ', frame:u32, cacheDropped:atomic<u32>, reserved0:u32, reserved1:u32, reserved2:u32, keys:array<CacheKey,PAIR_CAPACITY>' : ''}${jointCount ? `, joints:array<JointState,${jointCount}>` : ''} }
 struct Contact { point: vec4f, normal: vec4f, impulse: vec4f, tangent: vec4f, firstAnchor:vec4f, secondAnchor:vec4f }
 struct Manifold { contacts: array<Contact, 4>, count: u32, first:u32, second:u32, previousCount:u32, padding: vec3u }
@@ -82,6 +83,7 @@ fn excludes(first:u32,second:u32)->bool {
  let component=start+lower;
  return lower<count && u32(readGeometry(component/4u)[component%4u])==second;
 }
+fn bodyCenter(body:u32)->vec3f {let metadata=bodies.bodies[body];return vec3f(metadata.inertia.w,metadata.motion.zw);}
 fn dynamic(body: u32) -> bool {return bodies.bodies[body].motion.x==1.0;}
 fn principalRotation(body: u32) -> vec4f {return multiplyRotation(orientations[body],bodies.bodies[body].inertiaOrientation);}
 fn combineMaterial(first: f32, second: f32, firstPolicy: f32, secondPolicy: f32, friction: bool) -> f32 {

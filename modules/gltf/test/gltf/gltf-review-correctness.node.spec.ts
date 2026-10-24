@@ -143,7 +143,7 @@ describe('reviewed glTF deformation edge cases', () => {
 
       const vertexBuffer = modelNode!.model._gpuGeometry!.attributes['geometry'];
       const previousBytes = new Uint8Array(await vertexBuffer.readAsync());
-      const morphWeights = modelNode!.userData['gltfMorphWeights'] as {
+      const morphWeights = modelNode!.userData['morphWeightTransport'] as {
         values: Float32Array;
         data: unknown;
         packedTargetCount: number;

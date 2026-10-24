@@ -6,7 +6,7 @@ import type {Device} from '@luma.gl/core';
 import {GPUCommandGraph, type GPUCommandGraphEncoding} from '../gpu-core/gpu-command-graph';
 import {
   GPURigidBodyWorld,
-  type GPURigidBodyCapture,
+  type GPURigidBodyGPUCheckpoint,
   type GPURigidBodyWorldProps
 } from './gpu-rigid-body-world';
 import type {GPURigidBodySimulationDiagnostics} from './rigid-body-diagnostics';
@@ -26,6 +26,7 @@ export type GPURigidBodyRecoveryResult = {
 };
 type Execution = {
   world: GPURigidBodyWorld;
+  checkpoint?: GPURigidBodyGPUCheckpoint;
   encoding?: GPUCommandGraphEncoding;
   graph: Awaited<ReturnType<GPUCommandGraph['compileAsync']>>;
 };
@@ -34,7 +35,8 @@ type Execution = {
 export function growRigidBodyBudgets(
   props: GPURigidBodyWorldProps,
   diagnostics: GPURigidBodySimulationDiagnostics,
-  maximumPairs: number
+  maximumPairs: number,
+  continuousWork?: {candidateCapacity: number; peakCandidates: number} | null
 ): GPURigidBodyWorldProps | null {
   if (
     diagnostics.saturated ||
@@ -42,13 +44,27 @@ export function growRigidBodyBudgets(
     diagnostics.invalidBodyStates ||
     diagnostics.unresolvedQueries ||
     diagnostics.incompleteIslandUnions ||
-    diagnostics.incompleteContinuousBodies ||
+    (diagnostics.incompleteContinuousBodies &&
+      !(
+        props.continuous?.mode === 'convex' &&
+        continuousWork &&
+        continuousWork.peakCandidates > continuousWork.candidateCapacity
+      )) ||
     diagnostics.incompleteTriggerQueries ||
     diagnostics.droppedTriangleQueries
   )
     return null;
   const next = structuredClone(props);
   let changed = false;
+  if (diagnostics.incompleteContinuousBodies && next.continuous && continuousWork) {
+    const capacity = continuousWork.candidateCapacity;
+    if (capacity >= 0x40000000) return null;
+    next.continuous.maximumCandidates = Math.min(
+      0x40000000,
+      Math.max(capacity * 2, continuousWork.peakCandidates)
+    );
+    changed = true;
+  }
   if (diagnostics.droppedPairs || diagnostics.droppedManifolds) {
     if (props.broadPhase !== 'hierarchical-grid' || maximumPairs >= 0x40000000) return null;
     next.maximumPairs = maximumPairs * 2;
@@ -132,7 +148,7 @@ export class GPURigidBodyRecoveryRunner {
       throw new Error('Recovery runner is unavailable');
     this.busy = true;
     const original = this.execution;
-    let checkpoint: GPURigidBodyCapture | undefined;
+    let checkpoint: GPURigidBodyGPUCheckpoint | undefined;
     let retries = 0;
     let replayedTicks = 0;
     let candidate: Execution | undefined;
@@ -140,12 +156,26 @@ export class GPURigidBodyRecoveryRunner {
       const saved = structuredClone([...commands]);
       // Controls mutate GPU state before the graph checkpoint. Preserve pre-command state
       // so rejecting a tick also rejects its external mutations. Uncommanded ticks stay GPU-only.
-      if (saved.length) checkpoint = await original.world.captureState();
+      if (saved.length) {
+        if (!original.checkpoint) {
+          if (
+            original.world.getCapacityInfo().ownedBufferBytes * 2 >
+            this.options.maximumOwnedBufferBytes
+          )
+            throw new Error('Recovery checkpoint memory budget exhausted');
+          original.checkpoint = original.world.createGPUCheckpoint();
+        }
+        checkpoint = original.checkpoint;
+        checkpoint.save();
+      }
       let diagnostics = await advanceExecution(this.device, this.execution, saved);
       let props = this.props;
       let maximumPairs = this.world.maximumPairs;
+      let continuousWork = diagnostics.incompleteContinuousBodies
+        ? await this.world.readContinuousWork()
+        : null;
       while (!diagnostics.complete && retries < this.options.maximumRetries) {
-        const grown = growRigidBodyBudgets(props, diagnostics, maximumPairs);
+        const grown = growRigidBodyBudgets(props, diagnostics, maximumPairs, continuousWork);
         if (!grown) break;
         props = grown;
         candidate = await createExecution(this.device, props, this.options.maximumOwnedBufferBytes);
@@ -156,6 +186,9 @@ export class GPURigidBodyRecoveryRunner {
           if (!diagnostics.complete) break;
         }
         maximumPairs = candidate.world.maximumPairs;
+        continuousWork = diagnostics.incompleteContinuousBodies
+          ? await candidate.world.readContinuousWork()
+          : null;
         if (diagnostics.complete) {
           destroyExecution(this.execution);
           this.execution = candidate;
@@ -168,12 +201,12 @@ export class GPURigidBodyRecoveryRunner {
       }
       if (diagnostics.complete) this.history.push(saved);
       else {
-        if (checkpoint) original.world.restoreState(checkpoint);
+        if (checkpoint) checkpoint.restore();
         this.blocked = true;
       }
       return {accepted: diagnostics.complete, tick: this.tick, retries, replayedTicks, diagnostics};
     } catch (error) {
-      if (checkpoint && this.execution === original) original.world.restoreState(checkpoint);
+      if (checkpoint && this.execution === original) checkpoint.restore();
       this.blocked = true;
       throw error;
     } finally {

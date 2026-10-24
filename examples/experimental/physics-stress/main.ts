@@ -44,7 +44,8 @@ let activeScene: StressScene = selectedScene;
 select.onchange = () => {
   if (isStressScene(select.value)) {
     selectedScene = select.value;
-    if (selectedScene === 'sparseContacts') solver.value = 'parallel';
+    if (selectedScene === 'sparseContacts' || selectedScene === 'sleepingIslands')
+      solver.value = 'parallel';
     void restart();
   }
 };
@@ -317,7 +318,12 @@ async function advance() {
   exportButton.disabled = true;
   try {
     const start = performance.now();
-    const result = await runner.advance();
+    const wakeInterval = Math.round(4 / runner.world.timeStep);
+    const wakeIsland =
+      activeScene === 'sleepingIslands' && runner.tick > 0 && runner.tick % wakeInterval === 0;
+    const result = await runner.advance(
+      wakeIsland ? [{type: 'impulse', body: 0, impulse: [0.1, 0, 0]}] : []
+    );
     const milliseconds = performance.now() - start;
     if (disposed) return;
     samples.push({milliseconds, result});
@@ -343,7 +349,7 @@ async function advance() {
       activeScene === 'ballistic'
         ? `\nVertical error: ${Math.abs(states[0].position[2] - (8 - 5 * time * time)).toFixed(5)}`
         : '';
-    status.value = `${result.accepted ? 'ACCEPTED' : 'REJECTED'} · tick ${runner.tick}/${stepCount} · ${time.toFixed(2)} s\nRetries: ${samples.reduce((total, sample) => total + sample.result.retries, 0)} · replayed: ${samples.reduce((total, sample) => total + sample.result.replayedTicks, 0)} ticks\nPairs: ${capacity.maximumPairs} · buffers: ${(capacity.ownedBufferBytes / 1048576).toFixed(2)} MiB\nNodes: ${runner.graph.stats.nodeOrder.length} · peak candidates: ${result.diagnostics.maximumCandidatePairs}\nIncomplete CCD bodies: ${result.diagnostics.incompleteContinuousBodies}\nCompletion p50: ${sorted[Math.floor((sorted.length - 1) * 0.5)].toFixed(2)} ms\nCompletion p95: ${sorted[Math.floor((sorted.length - 1) * 0.95)].toFixed(2)} ms${lastSolverWork ? `\nPair workgroups/iteration: ${lastSolverWork.pairWorkgroups} / ${Math.ceil(capacity.maximumPairs / 64)} capacity${lastSolverWork.compacted ? ` · ${lastSolverWork.activeContacts} contacts` : ' · scan'}` : ''}${lastContinuousWork ? `\nSwept queue peak: ${lastContinuousWork.peakCandidates} / ${lastContinuousWork.candidateCapacity} · ${lastContinuousWork.peakCandidateWorkgroups} workgroups · ${lastContinuousWork.impacts} impacts\nSpatial tests peak: ${lastContinuousWork.peakSpatialTests} · ${lastContinuousWork.rounds} rounds` : ''}${error}`;
+    status.value = `${result.accepted ? 'ACCEPTED' : 'REJECTED'} · tick ${runner.tick}/${stepCount} · ${time.toFixed(2)} s\nRetries: ${samples.reduce((total, sample) => total + sample.result.retries, 0)} · replayed: ${samples.reduce((total, sample) => total + sample.result.replayedTicks, 0)} ticks\nPairs: ${capacity.maximumPairs} · buffers: ${(capacity.ownedBufferBytes / 1048576).toFixed(2)} MiB\nNodes: ${runner.graph.stats.nodeOrder.length} · peak candidates: ${result.diagnostics.maximumCandidatePairs}\nIncomplete CCD bodies: ${result.diagnostics.incompleteContinuousBodies}\nCompletion p50: ${sorted[Math.floor((sorted.length - 1) * 0.5)].toFixed(2)} ms\nCompletion p95: ${sorted[Math.floor((sorted.length - 1) * 0.95)].toFixed(2)} ms${lastSolverWork ? `\nPair workgroups/iteration: ${lastSolverWork.pairWorkgroups} / ${Math.ceil(capacity.maximumPairs / 64)} capacity${lastSolverWork.compacted ? ` · ${lastSolverWork.awakeContacts}/${lastSolverWork.activeContacts} awake contacts · ${lastSolverWork.awakeBodies} awake bodies (${lastSolverWork.bodyWorkgroups} body groups)` : ' · scan'}` : ''}${lastContinuousWork ? `\nSwept queue peak: ${lastContinuousWork.peakCandidates} / ${lastContinuousWork.candidateCapacity} · ${lastContinuousWork.peakCandidateWorkgroups} workgroups · ${lastContinuousWork.impacts} impacts\nSpatial tests peak: ${lastContinuousWork.peakSpatialTests} · ${lastContinuousWork.rounds} rounds` : ''}${error}`;
     const quiet = states.every((state, index) => {
       const body = configuration.props.bodies[index];
       return (
