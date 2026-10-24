@@ -189,3 +189,49 @@ it('exports rotating bodies beneath unequal parent scale by preserving world pos
     await session.destroy();
   }
 });
+
+it('preserves a frozen nested body independently of its moving ancestor on reimport', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const source = document();
+  source.nodes![0].children = [1];
+  source.nodes![1].children = [2];
+  const description = parseGLTFPhysics(source);
+  expect(description.issues).toEqual([]);
+  const session = await ScenegraphPhysicsSession.create(device, makeGLTFPhysicsScene(description));
+  try {
+    const child = description.bodies.find(body => body.nodeIndex === 2)!;
+    session.world.setBodyParameters(child.bodyIndex, {mode: 'static'});
+    const saved = await exportGLTFPhysicsState(source, description, session.world);
+    const imported = parseGLTFPhysics(saved);
+    expect(imported.issues).toEqual([]);
+    expect(imported.bodies).toHaveLength(2);
+    const frozen = imported.bodies.find(body => body.nodeIndex === 2)!;
+    expect(frozen.body.mode).toBe('static');
+    expect(saved.nodes![1].children).not.toContain(2);
+    expect(saved.scenes![0].nodes).toContain(2);
+    for (let axis = 0; axis < 3; axis++)
+      expect(frozen.worldMatrix[12 + axis]).toBeCloseTo(child.worldMatrix[12 + axis]);
+    expect(source.nodes![1].children).toEqual([2]);
+  } finally {
+    await session.destroy();
+  }
+});
+
+it('rejects exporting explicit inertia under unequal scale instead of returning an unreopenable file', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const source = document();
+  source.nodes![1].scale = [2, 1, 3];
+  const description = parseGLTFPhysics(source);
+  const session = await ScenegraphPhysicsSession.create(device, makeGLTFPhysicsScene(description));
+  try {
+    session.world.setBodyParameters(0, {inertiaDiagonal: [1, 2, 3]});
+    await expect(exportGLTFPhysicsState(source, description, session.world)).rejects.toThrow(
+      'Cannot export explicit inertia under unequal scale'
+    );
+    expect(source.nodes![1].scale).toEqual([2, 1, 3]);
+  } finally {
+    await session.destroy();
+  }
+});

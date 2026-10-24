@@ -264,6 +264,10 @@ the exporter promotes that body node to a root of its containing scenes, retaini
 its node index, subtree and resource references. The saved pose remains exact, but
 ancestor animation no longer drives that promoted body; review or reauthor those
 animation channels before using the exported snapshot as a new animated asset.
+Frozen bodies nested beneath other physics bodies are also promoted to preserve
+independent static colliders on reimport. Explicit inertia under unequal world
+scale cannot currently round-trip: export rejects this state before returning a
+document. Recook the geometry with its scale baked in before exporting such edits.
 
 New session revisions publish matrices and bounds before becoming visible, including
 while paused. This publication-only dispatch does not integrate bodies or advance

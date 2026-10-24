@@ -25,6 +25,7 @@ export default class AuthoredSceneStress extends PhysicsApp {
   stressCycles = 0;
   private controls?: HTMLElement;
   private operation?: Promise<void>;
+  private sceneLoading = false;
   private activeNodes = new Set<ScenegraphNode>();
 
   constructor(props: AnimationProps) {
@@ -54,7 +55,7 @@ export default class AuthoredSceneStress extends PhysicsApp {
       const button = (event.target as HTMLElement).closest<HTMLButtonElement>(
         'button[data-action]'
       );
-      if (!button || this.operation || !this.session) return;
+      if (!button || this.sceneLoading || this.operation || !this.session) return;
       this.operation = Promise.resolve(this.snapshot)
         .then(() => this.act(button.dataset.action!, button))
         .catch(showError)
@@ -72,23 +73,28 @@ export default class AuthoredSceneStress extends PhysicsApp {
   }
 
   override async loadGLTF(options: {preserveView?: boolean} = {}): Promise<void> {
-    await this.operation;
-    await this.snapshot;
-    if (this.session) {
-      await this.session.destroy();
-      this.scenegraphsFromGLTF?.destroy();
-      this.scenegraphsFromGLTF = undefined;
-      this.session = undefined;
-      this.world = undefined;
-      this.graph = undefined;
-      this.publication = undefined;
-    }
-    // The initial asynchronous load starts after subclass construction and default selection.
-    await Promise.resolve();
-    await super.loadGLTF(options);
-    if (!this.description?.supported || !this.scenegraphsFromGLTF || this.isFinalized) return;
+    if (this.sceneLoading || this.loading || this.isFinalized) return;
+    this.sceneLoading = true;
     this.loading = true;
     try {
+      await this.operation;
+      await this.snapshot;
+      if (this.session) {
+        await this.session.destroy();
+        this.scenegraphsFromGLTF?.destroy();
+        this.scenegraphsFromGLTF = undefined;
+        this.session = undefined;
+        this.world = undefined;
+        this.graph = undefined;
+        this.publication = undefined;
+      }
+      // The initial asynchronous load starts after subclass construction and default selection.
+      await Promise.resolve();
+      // The parent owns its loading flag; the outer guard covers teardown and session creation.
+      this.loading = false;
+      await super.loadGLTF(options);
+      this.loading = true;
+      if (!this.description?.supported || !this.scenegraphsFromGLTF || this.isFinalized) return;
       const rendered = this.scenegraphsFromGLTF;
       const scene = makeGLTFPhysicsScene(
         this.description,
@@ -124,6 +130,7 @@ export default class AuthoredSceneStress extends PhysicsApp {
     } catch (error) {
       showError(error);
     } finally {
+      this.sceneLoading = false;
       this.loading = false;
     }
   }
@@ -195,6 +202,7 @@ export default class AuthoredSceneStress extends PhysicsApp {
   }
 
   override onRender(props: AnimationProps): void {
+    if (this.sceneLoading) return;
     this.synchronize();
     const elapsed =
       this.previousTime === undefined

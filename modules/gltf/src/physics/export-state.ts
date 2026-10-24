@@ -113,6 +113,7 @@ export async function exportGLTFPhysicsState<T extends GLTFPhysicsDocument>(
     matrices.set(index, matrix);
     return matrix;
   };
+  const bodyNodes = new Set(description.bodies.map(body => body.nodeIndex));
   for (const body of description.bodies) {
     if (body.nodeIndex < 0) continue;
     const matrix = currentWorld(body.nodeIndex);
@@ -121,11 +122,21 @@ export async function exportGLTFPhysicsState<T extends GLTFPhysicsDocument>(
       parent === undefined
         ? matrix
         : new Matrix4(currentWorld(parent)).invert().multiplyRight(matrix);
+    const mode = world.getBodyMode(body.bodyIndex);
+    // Without motion, a nested collider is folded into its nearest ancestor body on import.
+    let ancestorBody = parent;
+    while (ancestorBody !== undefined && !bodyNodes.has(ancestorBody))
+      ancestorBody = parents.get(ancestorBody);
+    let promote = mode === 'static' && ancestorBody !== undefined;
     let transform: ReturnType<typeof decomposePhysicsTransform>;
     try {
       transform = decomposePhysicsTransform(local);
     } catch (error) {
       if (parent === undefined) throw error;
+      promote = true;
+      transform = decomposePhysicsTransform(matrix);
+    }
+    if (promote && parent !== undefined) {
       // A rigid world rotation under unequal ancestor scale needs local shear. glTF TRS
       // cannot represent it: keep the node index and subtree, but promote it to a scene root.
       transform = decomposePhysicsTransform(matrix);
@@ -149,7 +160,6 @@ export async function exportGLTFPhysicsState<T extends GLTFPhysicsDocument>(
     node.translation = transform.position;
     node.rotation = transform.rotation;
     node.scale = transform.scale;
-    const mode = world.getBodyMode(body.bodyIndex);
     if (mode === 'static') {
       const extension = node.extensions?.['KHR_physics_rigid_bodies'] as
         | Record<string, unknown>
@@ -159,6 +169,13 @@ export async function exportGLTFPhysicsState<T extends GLTFPhysicsDocument>(
       const motion = `/nodes/${body.nodeIndex}/extensions/KHR_physics_rigid_bodies/motion/`;
       const parameters = world.getBodyParameters(body.bodyIndex, {deriveInertia: false});
       const scale = decomposePhysicsTransform(matrix).scale;
+      if (
+        parameters.inertiaDiagonal !== undefined &&
+        Math.max(...scale) - Math.min(...scale) > 1e-5 * Math.max(...scale)
+      )
+        throw new Error(
+          'Cannot export explicit inertia under unequal scale; recook geometry first'
+        );
       const motionValues = {
         isKinematic: mode === 'kinematic',
         mass: parameters.mass,
