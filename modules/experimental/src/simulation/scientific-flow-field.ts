@@ -46,6 +46,10 @@ export class ScientificFlowField {
       input.northward.length === width * height &&
       input.valid.length === width * height);
     const geographic = input.geographic;
+    if (geographic && (geographic.longitudeStep <= 0 || geographic.latitudeStep <= 0 ||
+      !Object.values(geographic).every(Number.isFinite))) {
+      throw new Error('ScientificFlowField: expected eastward/south-to-north regular grid');
+    }
     const bounds: readonly [number, number, number, number] = props.bounds ??
       (geographic ? [
         geographic.longitudeStart,
