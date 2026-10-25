@@ -1,0 +1,989 @@
+{
+  "browser": "151.0.7922.34",
+  "results": [
+    {
+      "repeat": 0,
+      "options": {
+        "worlds": 1024,
+        "bodies": 32,
+        "activeFraction": 0.01,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "sparse",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 11,
+      "scheduler": {
+        "activeInstances": 11,
+        "activeBodies": 352,
+        "instanceStatusSummary": {
+          "enabled": 11,
+          "active": 11,
+          "acceptedSteps": 660,
+          "rejectedSteps": 0,
+          "sharedFailures": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 1.0681152343747224e-05,
+        "passed": true,
+        "scope": "Finite states, world equivalence and analytic ballistic position within 0.01 units."
+      },
+      "setupMilliseconds": 865.4000000953674,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 12.099999904632568,
+        "p95": 18
+      },
+      "encodingMilliseconds": {
+        "p50": 0.5,
+        "p95": 1
+      },
+      "worldStepsPerSecond": 823.599880850547,
+      "bodyStepsPerSecond": 26355.196187217505,
+      "beforeReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75534752,
+        "graphTransientBytes": 655360,
+        "residentBytes": 76198464,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75534752,
+        "graphTransientBytes": 655360,
+        "residentBytes": 76198464,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting."
+    },
+    {
+      "repeat": 0,
+      "options": {
+        "worlds": 1024,
+        "bodies": 32,
+        "activeFraction": 0.1,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "sparse",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 103,
+      "scheduler": {
+        "activeInstances": 103,
+        "activeBodies": 3296,
+        "instanceStatusSummary": {
+          "enabled": 103,
+          "active": 103,
+          "acceptedSteps": 6180,
+          "rejectedSteps": 0,
+          "sharedFailures": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 1.0681152343747224e-05,
+        "passed": true,
+        "scope": "Finite states, world equivalence and analytic ballistic position within 0.01 units."
+      },
+      "setupMilliseconds": 344.2999999523163,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 14.099999904632568,
+        "p95": 18
+      },
+      "encodingMilliseconds": {
+        "p50": 0.40000009536743164,
+        "p95": 0.5999999046325684
+      },
+      "worldStepsPerSecond": 7464.8499823852935,
+      "bodyStepsPerSecond": 238875.1994363294,
+      "beforeReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75534752,
+        "graphTransientBytes": 655360,
+        "residentBytes": 76198464,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75534752,
+        "graphTransientBytes": 655360,
+        "residentBytes": 76198464,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting."
+    },
+    {
+      "repeat": 0,
+      "options": {
+        "worlds": 1024,
+        "bodies": 32,
+        "activeFraction": 0.5,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "sparse",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 512,
+      "scheduler": {
+        "activeInstances": 512,
+        "activeBodies": 16384,
+        "instanceStatusSummary": {
+          "enabled": 512,
+          "active": 512,
+          "acceptedSteps": 30720,
+          "rejectedSteps": 0,
+          "sharedFailures": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 1.0681152343747224e-05,
+        "passed": true,
+        "scope": "Finite states, world equivalence and analytic ballistic position within 0.01 units."
+      },
+      "setupMilliseconds": 328.5,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 11.799999952316284,
+        "p95": 18.899999856948853
+      },
+      "encodingMilliseconds": {
+        "p50": 0.40000009536743164,
+        "p95": 0.5
+      },
+      "worldStepsPerSecond": 39245.7458827212,
+      "bodyStepsPerSecond": 1255863.8682470785,
+      "beforeReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75534752,
+        "graphTransientBytes": 655360,
+        "residentBytes": 76198464,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75534752,
+        "graphTransientBytes": 655360,
+        "residentBytes": 76198464,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting."
+    },
+    {
+      "repeat": 0,
+      "options": {
+        "worlds": 1024,
+        "bodies": 32,
+        "activeFraction": 1,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "sparse",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 1024,
+      "scheduler": {
+        "activeInstances": 1024,
+        "activeBodies": 32768,
+        "instanceStatusSummary": {
+          "enabled": 1024,
+          "active": 1024,
+          "acceptedSteps": 61440,
+          "rejectedSteps": 0,
+          "sharedFailures": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 1.0681152343747224e-05,
+        "passed": true,
+        "scope": "Finite states, world equivalence and analytic ballistic position within 0.01 units."
+      },
+      "setupMilliseconds": 281.5,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 12.299999952316284,
+        "p95": 18.299999952316284
+      },
+      "encodingMilliseconds": {
+        "p50": 0.40000009536743164,
+        "p95": 0.5
+      },
+      "worldStepsPerSecond": 77050.41387264145,
+      "bodyStepsPerSecond": 2465613.2439245265,
+      "beforeReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75534752,
+        "graphTransientBytes": 655360,
+        "residentBytes": 76198464,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75534752,
+        "graphTransientBytes": 655360,
+        "residentBytes": 76198464,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting."
+    },
+    {
+      "repeat": 1,
+      "options": {
+        "worlds": 1024,
+        "bodies": 32,
+        "activeFraction": 1,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "sparse",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 1024,
+      "scheduler": {
+        "activeInstances": 1024,
+        "activeBodies": 32768,
+        "instanceStatusSummary": {
+          "enabled": 1024,
+          "active": 1024,
+          "acceptedSteps": 61440,
+          "rejectedSteps": 0,
+          "sharedFailures": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 1.0681152343747224e-05,
+        "passed": true,
+        "scope": "Finite states, world equivalence and analytic ballistic position within 0.01 units."
+      },
+      "setupMilliseconds": 341.39999985694885,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 12.599999904632568,
+        "p95": 19.5
+      },
+      "encodingMilliseconds": {
+        "p50": 0.5,
+        "p95": 0.7999999523162842
+      },
+      "worldStepsPerSecond": 73426.07204720136,
+      "bodyStepsPerSecond": 2349634.3055104436,
+      "beforeReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75534752,
+        "graphTransientBytes": 655360,
+        "residentBytes": 76198464,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75534752,
+        "graphTransientBytes": 655360,
+        "residentBytes": 76198464,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting."
+    },
+    {
+      "repeat": 1,
+      "options": {
+        "worlds": 1024,
+        "bodies": 32,
+        "activeFraction": 0.5,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "sparse",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 512,
+      "scheduler": {
+        "activeInstances": 512,
+        "activeBodies": 16384,
+        "instanceStatusSummary": {
+          "enabled": 512,
+          "active": 512,
+          "acceptedSteps": 30720,
+          "rejectedSteps": 0,
+          "sharedFailures": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 1.0681152343747224e-05,
+        "passed": true,
+        "scope": "Finite states, world equivalence and analytic ballistic position within 0.01 units."
+      },
+      "setupMilliseconds": 301.7999999523163,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 12.700000047683716,
+        "p95": 18.100000143051147
+      },
+      "encodingMilliseconds": {
+        "p50": 0.40000009536743164,
+        "p95": 0.5
+      },
+      "worldStepsPerSecond": 38664.85420150081,
+      "bodyStepsPerSecond": 1237275.334448026,
+      "beforeReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75534752,
+        "graphTransientBytes": 655360,
+        "residentBytes": 76198464,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75534752,
+        "graphTransientBytes": 655360,
+        "residentBytes": 76198464,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting."
+    },
+    {
+      "repeat": 1,
+      "options": {
+        "worlds": 1024,
+        "bodies": 32,
+        "activeFraction": 0.1,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "sparse",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 103,
+      "scheduler": {
+        "activeInstances": 103,
+        "activeBodies": 3296,
+        "instanceStatusSummary": {
+          "enabled": 103,
+          "active": 103,
+          "acceptedSteps": 6180,
+          "rejectedSteps": 0,
+          "sharedFailures": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 1.0681152343747224e-05,
+        "passed": true,
+        "scope": "Finite states, world equivalence and analytic ballistic position within 0.01 units."
+      },
+      "setupMilliseconds": 301.2999999523163,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 11.399999856948853,
+        "p95": 15.799999952316284
+      },
+      "encodingMilliseconds": {
+        "p50": 0.40000009536743164,
+        "p95": 0.5
+      },
+      "worldStepsPerSecond": 8590.492086979815,
+      "bodyStepsPerSecond": 274895.7467833541,
+      "beforeReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75534752,
+        "graphTransientBytes": 655360,
+        "residentBytes": 76198464,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75534752,
+        "graphTransientBytes": 655360,
+        "residentBytes": 76198464,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting."
+    },
+    {
+      "repeat": 1,
+      "options": {
+        "worlds": 1024,
+        "bodies": 32,
+        "activeFraction": 0.01,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "sparse",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 11,
+      "scheduler": {
+        "activeInstances": 11,
+        "activeBodies": 352,
+        "instanceStatusSummary": {
+          "enabled": 11,
+          "active": 11,
+          "acceptedSteps": 660,
+          "rejectedSteps": 0,
+          "sharedFailures": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 1.0681152343747224e-05,
+        "passed": true,
+        "scope": "Finite states, world equivalence and analytic ballistic position within 0.01 units."
+      },
+      "setupMilliseconds": 291.59999990463257,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 14.699999809265137,
+        "p95": 17.100000143051147
+      },
+      "encodingMilliseconds": {
+        "p50": 0.40000009536743164,
+        "p95": 0.5
+      },
+      "worldStepsPerSecond": 790.5706471300211,
+      "bodyStepsPerSecond": 25298.260708160677,
+      "beforeReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75534752,
+        "graphTransientBytes": 655360,
+        "residentBytes": 76198464,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75534752,
+        "graphTransientBytes": 655360,
+        "residentBytes": 76198464,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting."
+    },
+    {
+      "repeat": 2,
+      "options": {
+        "worlds": 1024,
+        "bodies": 32,
+        "activeFraction": 0.01,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "sparse",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 11,
+      "scheduler": {
+        "activeInstances": 11,
+        "activeBodies": 352,
+        "instanceStatusSummary": {
+          "enabled": 11,
+          "active": 11,
+          "acceptedSteps": 660,
+          "rejectedSteps": 0,
+          "sharedFailures": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 1.0681152343747224e-05,
+        "passed": true,
+        "scope": "Finite states, world equivalence and analytic ballistic position within 0.01 units."
+      },
+      "setupMilliseconds": 303.09999990463257,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 11.5,
+        "p95": 16.700000047683716
+      },
+      "encodingMilliseconds": {
+        "p50": 0.40000009536743164,
+        "p95": 0.5
+      },
+      "worldStepsPerSecond": 890.5440398693615,
+      "bodyStepsPerSecond": 28497.40927581957,
+      "beforeReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75534752,
+        "graphTransientBytes": 655360,
+        "residentBytes": 76198464,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75534752,
+        "graphTransientBytes": 655360,
+        "residentBytes": 76198464,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting."
+    },
+    {
+      "repeat": 2,
+      "options": {
+        "worlds": 1024,
+        "bodies": 32,
+        "activeFraction": 0.1,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "sparse",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 103,
+      "scheduler": {
+        "activeInstances": 103,
+        "activeBodies": 3296,
+        "instanceStatusSummary": {
+          "enabled": 103,
+          "active": 103,
+          "acceptedSteps": 6180,
+          "rejectedSteps": 0,
+          "sharedFailures": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 1.0681152343747224e-05,
+        "passed": true,
+        "scope": "Finite states, world equivalence and analytic ballistic position within 0.01 units."
+      },
+      "setupMilliseconds": 280,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 11.299999952316284,
+        "p95": 18.09999990463257
+      },
+      "encodingMilliseconds": {
+        "p50": 0.40000009536743164,
+        "p95": 0.5
+      },
+      "worldStepsPerSecond": 8314.497906315353,
+      "bodyStepsPerSecond": 266063.9330020913,
+      "beforeReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75534752,
+        "graphTransientBytes": 655360,
+        "residentBytes": 76198464,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75534752,
+        "graphTransientBytes": 655360,
+        "residentBytes": 76198464,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting."
+    },
+    {
+      "repeat": 2,
+      "options": {
+        "worlds": 1024,
+        "bodies": 32,
+        "activeFraction": 0.5,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "sparse",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 512,
+      "scheduler": {
+        "activeInstances": 512,
+        "activeBodies": 16384,
+        "instanceStatusSummary": {
+          "enabled": 512,
+          "active": 512,
+          "acceptedSteps": 30720,
+          "rejectedSteps": 0,
+          "sharedFailures": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 1.0681152343747224e-05,
+        "passed": true,
+        "scope": "Finite states, world equivalence and analytic ballistic position within 0.01 units."
+      },
+      "setupMilliseconds": 309,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 14.200000047683716,
+        "p95": 18.5
+      },
+      "encodingMilliseconds": {
+        "p50": 0.40000009536743164,
+        "p95": 0.7999999523162842
+      },
+      "worldStepsPerSecond": 36015.756847735036,
+      "bodyStepsPerSecond": 1152504.2191275212,
+      "beforeReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75534752,
+        "graphTransientBytes": 655360,
+        "residentBytes": 76198464,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75534752,
+        "graphTransientBytes": 655360,
+        "residentBytes": 76198464,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting."
+    },
+    {
+      "repeat": 2,
+      "options": {
+        "worlds": 1024,
+        "bodies": 32,
+        "activeFraction": 1,
+        "frames": 60,
+        "warmup": 10,
+        "steps": 1,
+        "scene": "sparse",
+        "pairsPerBody": 2,
+        "submission": "ensemble"
+      },
+      "activeWorlds": 1024,
+      "scheduler": {
+        "activeInstances": 1024,
+        "activeBodies": 32768,
+        "instanceStatusSummary": {
+          "enabled": 1024,
+          "active": 1024,
+          "acceptedSteps": 61440,
+          "rejectedSteps": 0,
+          "sharedFailures": 0
+        }
+      },
+      "device": {
+        "type": "webgpu",
+        "vendor": "apple",
+        "renderer": "",
+        "version": "",
+        "gpu": "apple",
+        "gpuType": "unknown",
+        "gpuBackend": "unknown",
+        "gpuArchitecture": "metal-3",
+        "fallback": false,
+        "featureLevel": "core",
+        "subgroupMinSize": 32,
+        "subgroupMaxSize": 32,
+        "shadingLanguage": "wgsl",
+        "shadingLanguageVersion": 100
+      },
+      "complete": true,
+      "quality": {
+        "finite": true,
+        "maximumWorldDifference": 0,
+        "maximumBallisticError": 1.0681152343747224e-05,
+        "passed": true,
+        "scope": "Finite states, world equivalence and analytic ballistic position within 0.01 units."
+      },
+      "setupMilliseconds": 274.7000000476837,
+      "reuseMilliseconds": null,
+      "latencyMilliseconds": {
+        "p50": 12.399999856948853,
+        "p95": 17.600000143051147
+      },
+      "encodingMilliseconds": {
+        "p50": 0.40000009536743164,
+        "p95": 0.5
+      },
+      "worldStepsPerSecond": 76520.69943065854,
+      "bodyStepsPerSecond": 2448662.3817810733,
+      "beforeReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75534752,
+        "graphTransientBytes": 655360,
+        "residentBytes": 76198464,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "afterReuse": {
+        "instances": 1024,
+        "bodies": 32768,
+        "worldBufferBytes": 75534752,
+        "graphTransientBytes": 655360,
+        "residentBytes": 76198464,
+        "checkpointBytes": 8352,
+        "reusedSlots": 0
+      },
+      "graphEncodingsPerStep": 1,
+      "qualification": "Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting."
+    }
+  ]
+}

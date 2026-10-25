@@ -3,11 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** Bounded rigid-body reference path. Pair discovery is parallel; impulses are ordered on GPU. */
+import {getEnsembleShader} from './rigid-body-ensemble-shaders';
 import {
   RIGID_BODY_BOUNDS_SHADER,
   RIGID_BODY_BOUND_PUBLICATION_SHADER
 } from './rigid-body-bounds-shaders';
-import {RIGID_BODY_PARALLEL_SHADER} from './rigid-body-parallel-shaders';
+import {getRigidBodyParallelShader} from './rigid-body-parallel-shaders';
 import {RIGID_BODY_CONVEX_SHADER} from './rigid-body-convex-shaders';
 import {
   getRigidBodyCacheShader,
@@ -27,7 +28,8 @@ export function getRigidBodyShader(
   angularDamping = 0,
   jointCount = 0,
   compactContacts = true,
-  collisionPartitionSize?: number
+  collisionPartitionSize?: number,
+  ensembleBodiesPerInstance?: number
 ): string {
   return /* wgsl */ `
 const COMPACT_CONTACTS:bool=${compactContacts};
@@ -56,6 +58,7 @@ struct Settings { gravity: vec4f, solver: vec4f, sleep: vec4f, stability: vec4f 
 @group(0) @binding(6) var<storage, read_write> manifolds: array<Manifold>;
 @group(0) @binding(7) var<storage, read_write> sleepStates: array<vec4f>;
 @group(0) @binding(9) var<storage, read_write> targets: Targets;
+${getEnsembleShader(count, colliderCount, ensembleBodiesPerInstance, collisionPartitionSize)}
 ${
   sparse
     ? getRigidBodyCacheShader(sparse)
@@ -161,7 +164,7 @@ fn solveFriction(firstCollider:u32,secondCollider:u32,contact:Contact,relative:v
 }
 @compute @workgroup_size(64) fn integrate(@builtin(global_invocation_id) invocation: vec3u) {
  ${extended ? 'if(invocation.x==0u){atomicStore(&meshTasks.count,0u);atomicStore(&meshTasks.overflow,0u);atomicStore(&meshTasks.unresolved,0u);atomicStore(&meshTasks.incomplete,0u);atomicStore(&targets.dispatch,0u);targets.vertical=1u;targets.depth=1u;}' : ''}
- let body=invocation.x; if(body>=BODY_COUNT) {return;}
+ let work=invocation.x;if(work>=scheduledBodyCount()){return;}let body=scheduledBody(work);
  let rotation=orientations[body]; orientations[body]=select(vec4f(0,0,0,1),normalize(rotation),dot(rotation,rotation)>0.000001);
  if(bodies.bodies[body].motion.x==2.0 && targets.entries[body].position.w>0.0) {
   velocities[body]=vec4f((targets.entries[body].position.xyz-positions[body].xyz)/settings.gravity.w,0);
@@ -377,7 +380,7 @@ ${extended ? RIGID_BODY_CONVEX_SHADER : ''}
  }
  manifolds[pair].count=contactCount;
 }
-${parallel ? RIGID_BODY_PARALLEL_SHADER : ''}
+${parallel ? getRigidBodyParallelShader(Boolean(ensembleBodiesPerInstance)) : ''}
 ${(parallel || hasJoints) && extended ? '@compute @workgroup_size(1) fn meshCollect(){collectMeshContacts();}' : ''}
 ${jointShader}
 fn root(body: u32) -> u32 {var current=body;for(var iteration=0u;iteration<BODY_COUNT;iteration++) {let parent=u32(sleepStates[current].z);if(parent==current) {break;}current=parent;}return current;}
@@ -434,7 +437,7 @@ fn advanceOrientation(rotation:vec4f,angular:vec3f)->vec4f {
  return normalize(multiplyRotation(vec4f(angular*factor,cos(halfAngle)),rotation));
 }
 fn finishBody(body:u32) {
-  if(bodies.bodies[body].motion.x==0.0 || sleepStates[body].y>0.5) {return;}
+  if(!bodyScheduled(body)||bodies.bodies[body].motion.x==0.0 || sleepStates[body].y>0.5) {return;}
   if(bodies.bodies[body].motion.x==2.0) {
    if(targets.entries[body].position.w>0.0) {positions[body]=vec4f(targets.entries[body].position.xyz,positions[body].w);orientations[body]=targets.entries[body].orientation;}
    else {positions[body]=vec4f(positions[body].xyz+velocities[body].xyz*settings.gravity.w,positions[body].w);let rotation=orientations[body];let angular=angularVelocities[body].xyz;orientations[body]=advanceOrientation(rotation,angular);}

@@ -44,6 +44,8 @@ var<workgroup> cacheEpoch:u32;
  if(invocation==0u){targets.frame++;cacheEpoch=targets.frame;atomicStore(&targets.cacheDropped,0u);}
  workgroupBarrier();
  for(var pair=invocation;pair<PAIR_CAPACITY;pair+=64u){
+  let existing=atomicLoad(&targets.keys[pair].key);
+  if(existing!=EMPTY_PAIR&&existing!=DELETED_PAIR&&!colliderScheduled(manifolds[pair].first)){targets.keys[pair].epoch=cacheEpoch;continue;}
   manifolds[pair].previousCount=manifolds[pair].count;
   manifolds[pair].count=0u;manifolds[pair].padding=vec3u(0);
   let key=atomicLoad(&targets.keys[pair].key);

@@ -11,6 +11,7 @@ import {
 
 export type BatchBenchmarkOptions = {
   worlds: number;
+  activeFraction?: number;
   bodies: number;
   frames: number;
   warmup: number;
@@ -76,6 +77,9 @@ export async function runBatchBenchmark(
   diagnostics?: GPUGraphDiagnostics
 ) {
   if (
+    !Number.isFinite(options.activeFraction ?? 1) ||
+    (options.activeFraction ?? 1) <= 0 ||
+    (options.activeFraction ?? 1) > 1 ||
     !Number.isInteger(options.pairsPerBody ?? 16) ||
     (options.pairsPerBody ?? 16) < 1 ||
     (options.pairsPerBody ?? 16) > 64 ||
@@ -120,6 +124,11 @@ export async function runBatchBenchmark(
     } else
       for (let index = 0; index < options.worlds; index++)
         handles.push(await batch.acquire('fixture', `world-${index}`, [index * 1e9, 0, 0]));
+    const activeWorlds = Math.max(1, Math.ceil(options.worlds * (options.activeFraction ?? 1)));
+    for (let instance = activeWorlds; instance < options.worlds; instance++) {
+      if (ensemble) ensemble.setActive(instance, false);
+      else batch.setActive(handles[instance], false);
+    }
     const setupMilliseconds = performance.now() - setupStart;
     const timings: number[] = [];
     const encoding: number[] = [];
@@ -181,17 +190,19 @@ export async function runBatchBenchmark(
           Number.isFinite
         );
         for (let axis = 0; axis < 3; axis++) {
-          maximumWorldDifference = Math.max(
-            maximumWorldDifference,
-            Math.abs(state.position[axis] - states[index].position[axis])
-          );
+          if (instance < activeWorlds)
+            maximumWorldDifference = Math.max(
+              maximumWorldDifference,
+              Math.abs(state.position[axis] - states[index].position[axis])
+            );
           if (options.scene === 'sparse')
             maximumBallisticError = Math.max(
               maximumBallisticError,
               Math.abs(
                 state.position[axis] -
                   fixture.bodies[index].position[axis] -
-                  (fixture.bodies[index].velocity?.[axis] ?? 0) * duration
+                  (fixture.bodies[index].velocity?.[axis] ?? 0) *
+                    (instance < activeWorlds ? duration : 0)
               )
             );
         }
@@ -226,6 +237,8 @@ export async function runBatchBenchmark(
     const reuseMilliseconds = performance.now() - recycleStart;
     return {
       options,
+      activeWorlds,
+      scheduler: ensemble ? await ensemble.readStatus() : undefined,
       device: device.info,
       complete,
       quality,
@@ -235,16 +248,15 @@ export async function runBatchBenchmark(
       encodingMilliseconds: {p50: percentile(encoding, 0.5), p95: percentile(encoding, 0.95)},
       worldStepsPerSecond:
         complete && quality.passed
-          ? (timings.length * options.worlds * options.steps * 1000) / elapsed
+          ? (timings.length * activeWorlds * options.steps * 1000) / elapsed
           : null,
       bodyStepsPerSecond:
         complete && quality.passed
-          ? (timings.length * options.worlds * options.steps * fixture.bodies.length * 1000) /
-            elapsed
+          ? (timings.length * activeWorlds * options.steps * fixture.bodies.length * 1000) / elapsed
           : null,
       beforeReuse,
       afterReuse: ensemble ? {...ensemble.getStats(), reusedSlots: 0} : batch.getStats(),
-      graphEncodingsPerStep: ensemble ? 1 : options.worlds,
+      graphEncodingsPerStep: ensemble ? 1 : activeWorlds,
       states,
       qualification:
         'Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.'

@@ -291,16 +291,42 @@ The ensemble forces the parallel solver, hierarchical broad phase and rollback f
 `maximumPairs` is a shared power-of-two capacity: exhaustion rejects the entire ensemble step,
 not just one instance. Total bodies and colliders must each fit within 65,535 and adapter buffer
 limits. Joints, authored triggers and CCD are currently rejected. Queries inspect every instance;
-map returned global body indices back to instance ranges. Per-instance pause, eviction and reset
-are not provided. Whole-world checkpoint/capture APIs remain available on `ensemble.world`.
+map returned global body indices back to instance ranges. Eviction and per-instance streaming are
+not provided. Whole-world checkpoint/capture APIs remain available on `ensemble.world`.
 
-No additional reset checkpoint is allocated automatically. Statistics cover world-owned buffers
-and graph scratch, excluding driver allocations and compilation peaks. Explicit checkpoints made
+`setActive(instance, false)` pauses an instance without changing its poses, velocities or cached
+contacts; `setActive(instance, true)` resumes it. A resumed sleeping instance remains asleep until
+`wake(instance)` or a world control wakes it. Kinematic instances remain scheduled even when
+stationary, so new targets can take effect. Apply controls between submissions: do not change
+activation or reset after encoding work but before submitting it.
+
+`await reset(instance)` restores its creation-time body state, materials, collider transforms and
+pose metadata, clears its contact cache and counters, and preserves its enabled flag. Other
+instances are unchanged. Reset respects the current origin after rebasing. The reset excludes
+shared simulation diagnostics: after a latched shared failure, reconstruct the ensemble instead.
+While reset is pending, ensemble encoding, control and destruction are rejected. Do not bypass
+this guard through the borrowed world. Reset invalidation scans shared contact capacity.
+
+`await readStatus()` reports the most recently scheduled active instance/body count, plus each
+instance's enabled/active flags, accepted/rejected participation counters and shared-failure flag.
+Counters saturate at uint32 maximum and reset per instance. An active flag describes participation
+in the last step, not whether its bodies ended that step asleep. A shared failure is reported for
+all instances; this API does not identify which instance caused shared capacity exhaustion.
+
+One template-sized GPU reset image is retained automatically, regardless of instance count.
+`checkpointBytes` reports this image and its reset uniform. `residentBytes` includes it, world-owned
+buffers and graph scratch, excluding driver allocations and compilation peaks. Explicit checkpoints made
 through the borrowed world add allocations outside these statistics. Repeated references to the
 same cooked mesh object share packed vertex, triangle and BVH data within an ensemble; distinct
 mesh objects are not content-deduplicated. Shared metadata storage remains owned by the world.
 
-The existing GPU compact awake-body/contact queues operate across the ensemble. This does not
-eliminate broad-phase scans over sleeping bodies and is not an active-only broad-phase claim.
+A GPU queue compacts enabled instances containing awake dynamic bodies or kinematics. Indirect
+integration, bounds generation and pose advancement visit only queued ranges. Broad-phase insertion
+and discovery use active collider hash buckets rather than sorting the whole population; collision
+domain and exact cell tests preserve isolation. Sleeping/paused contacts retain their cache slots.
+Wake detection, bucket clearing, contact-cache/solver preparation and rollback copies still scale
+with total capacity. Low active fractions therefore reduce some work, not all frame cost.
+The Physics Batch Lab and `scripts/physics/batch/run.mjs --active-fractions 0.01,0.1,0.5,1`
+measure this distinction with actual rounded active counts and active-body throughput.
 Destroy the ensemble after submitting its encoded work; do not independently destroy its borrowed
 world or graph. Destroying the ensemble releases its world, graph and any world-owned checkpoints.

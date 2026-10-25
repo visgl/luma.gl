@@ -14,7 +14,12 @@ export type GPUPhysicsEnsembleProps = {
   /** All instances share solver settings and topology, but have independent dynamic state. */
   template: Omit<
     GPURigidBodyWorldProps,
-    'joints' | 'triggers' | 'continuous' | 'collisionPartitionSize' | 'maximumPairs'
+    | 'joints'
+    | 'triggers'
+    | 'continuous'
+    | 'collisionPartitionSize'
+    | 'ensembleBodiesPerInstance'
+    | 'maximumPairs'
   >;
   instances: number;
   /** Shared power-of-two contact capacity. Overflow rejects the entire ensemble step. */
@@ -31,6 +36,8 @@ export class GPUPhysicsEnsemble {
   private graph!: CompiledGPUCommandGraph<undefined>;
   private encoding?: GPUCommandGraphEncoding;
   private destroyed = false;
+  private preparing = false;
+  private resetBytes = 0;
 
   private constructor(props: GPUPhysicsEnsembleProps) {
     const template: GPURigidBodyWorldProps = props.template;
@@ -79,7 +86,8 @@ export class GPUPhysicsEnsemble {
       solver: 'parallel',
       failurePolicy: 'rollback',
       maximumPairs: props.maximumPairs,
-      collisionPartitionSize: colliderCount
+      collisionPartitionSize: colliderCount,
+      ensembleBodiesPerInstance: this.bodiesPerInstance
     });
   }
 
@@ -91,6 +99,7 @@ export class GPUPhysicsEnsemble {
       const commands = new GPUCommandGraph<undefined>(device);
       ensemble.world.addToGraph(commands);
       ensemble.graph = await commands.compileAsync();
+      ensemble.resetBytes = ensemble.world.initializeEnsembleReset();
       if (ensemble.getStats().residentBytes > props.maximumResidentBytes)
         throw new Error('Ensemble residency budget exhausted');
       return ensemble;
@@ -104,6 +113,7 @@ export class GPUPhysicsEnsemble {
   getBodyIndex(instance: number, body: number): number {
     if (
       this.destroyed ||
+      this.preparing ||
       !Number.isSafeInteger(instance) ||
       instance < 0 ||
       instance >= this.instances ||
@@ -115,9 +125,52 @@ export class GPUPhysicsEnsemble {
     return instance * this.bodiesPerInstance + body;
   }
 
+  setActive(instance: number, active: boolean): void {
+    this.getBodyIndex(instance, 0);
+    this.world.setEnsembleActive(instance, active);
+  }
+
+  wake(instance: number): void {
+    this.getBodyIndex(instance, 0);
+    this.world.wakeEnsembleInstance(instance);
+  }
+
+  async reset(instance: number): Promise<void> {
+    this.getBodyIndex(instance, 0);
+    this.preparing = true;
+    try {
+      if (!(await this.world.readSimulationDiagnostics()).complete)
+        throw new Error('Reconstruct after shared ensemble failure');
+      this.world.resetEnsembleInstance(instance);
+    } finally {
+      this.preparing = false;
+    }
+  }
+
+  async readStatus() {
+    const state = await this.world.readEnsembleState();
+    return {
+      activeInstances: state[0],
+      activeBodies: state[0] * this.bodiesPerInstance,
+      instances: Array.from({length: this.instances}, (_, instance) => ({
+        enabled: Boolean(state[16 + instance * 8]),
+        active: Boolean(state[17 + instance * 8]),
+        acceptedSteps: state[18 + instance * 8],
+        rejectedSteps: state[19 + instance * 8],
+        sharedFailure: Boolean(state[20 + instance * 8])
+      }))
+    };
+  }
+
   /** One graph encoding per step regardless of instance count. No submission or readback. */
   encode(encoder: CommandEncoder, steps = 1): void {
-    if (this.destroyed || !Number.isSafeInteger(steps) || steps < 0 || steps > 1024)
+    if (
+      this.destroyed ||
+      this.preparing ||
+      !Number.isSafeInteger(steps) ||
+      steps < 0 ||
+      steps > 1024
+    )
       throw new Error('Invalid ensemble step');
     for (let step = 0; step < steps; step++)
       this.encoding = this.graph.encode(encoder, {parameters: undefined});
@@ -135,13 +188,14 @@ export class GPUPhysicsEnsemble {
       bodies: this.world.count,
       worldBufferBytes,
       graphTransientBytes,
-      residentBytes: worldBufferBytes + graphTransientBytes,
-      checkpointBytes: 0
+      residentBytes: worldBufferBytes + graphTransientBytes + this.resetBytes,
+      checkpointBytes: this.resetBytes
     };
   }
 
   destroy(): void {
     if (this.destroyed) return;
+    if (this.preparing) throw new Error('Ensemble operation pending');
     this.graph?.destroy();
     this.world.destroy();
     this.destroyed = true;

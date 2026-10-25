@@ -35,6 +35,7 @@ button.onclick = async () => {
       device,
       {
         worlds: number('worlds'),
+        activeFraction: number('active'),
         bodies: number('bodies'),
         frames: number('frames'),
         warmup: 10,
@@ -54,7 +55,7 @@ button.onclick = async () => {
       },
       diagnostics
     );
-    status.textContent = `Complete: ${report.complete}\nBatch p50 / p95: ${report.latencyMilliseconds.p50.toFixed(2)} / ${report.latencyMilliseconds.p95.toFixed(2)} ms\nBody-steps/s: ${report.bodyStepsPerSecond?.toFixed(0) ?? 'incomplete'}\nResident: ${(report.afterReuse.residentBytes / 1048576).toFixed(1)} MiB\nSetup: ${report.setupMilliseconds.toFixed(0)} ms\nRecycle: ${report.reuseMilliseconds === null ? 'not retained' : `${report.reuseMilliseconds.toFixed(1)} ms`}\nReused slots: ${report.afterReuse.reusedSlots}`;
+    status.textContent = `Active worlds: ${report.activeWorlds}/${report.options.worlds}\nComplete: ${report.complete}\nBatch p50 / p95: ${report.latencyMilliseconds.p50.toFixed(2)} / ${report.latencyMilliseconds.p95.toFixed(2)} ms\nBody-steps/s: ${report.bodyStepsPerSecond?.toFixed(0) ?? 'incomplete'}\nResident: ${(report.afterReuse.residentBytes / 1048576).toFixed(1)} MiB\nSetup: ${report.setupMilliseconds.toFixed(0)} ms\nRecycle: ${report.reuseMilliseconds === null ? 'not retained' : `${report.reuseMilliseconds.toFixed(1)} ms`}\nReused slots: ${report.afterReuse.reusedSlots}`;
     canvas.width = innerWidth * devicePixelRatio;
     canvas.height = innerHeight * devicePixelRatio;
     const context = canvas.getContext('2d')!;
