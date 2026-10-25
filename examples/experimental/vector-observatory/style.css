@@ -4,3 +4,5 @@
 @media(min-width:801px) and (max-height:760px){aside{top:85px;padding:16px}aside>.eyebrow{margin-bottom:14px}label{margin-bottom:12px}.note{margin-top:12px;font-size:9px}h1{font-size:70px}}
 
 #toggle-controls{display:none;flex:none}@media(max-width:800px){#toggle-controls{display:block;position:absolute;right:0;top:40px;padding:8px 14px;background:#1d2e3b;color:#cbd9dc}aside{display:none}.controls-open aside{display:block}.live{font-size:8px}main{z-index:1}}
+
+#trace-status{display:block;font-variant-numeric:tabular-nums}#trace-status:empty{display:none}select:disabled{opacity:.45}

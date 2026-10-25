@@ -1,5 +1,15 @@
 # What's New
 
+## Adaptive scientific particle tracing
+
+`ScientificFlowTracer` adds GPU RKF45 integration with physical-unit local error
+tolerances, bounded continuation, explicit seeds and persistent termination states.
+Vector Observatory adds tolerance controls, step-size/status coloring and GPU
+timing when supported. Analytic trajectory tests and an opt-in accuracy/cost
+benchmark qualify the implementation. See the
+[tracer API](api-reference/experimental/scientific-flow-tracer.md) for numerical
+limits and continuation semantics.
+
 ## Time-dependent scientific advection
 
 `ScientificFlowGraph` now accepts timestamped field pairs, samples each Runge–Kutta

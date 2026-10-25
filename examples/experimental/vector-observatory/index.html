@@ -6,11 +6,14 @@
 <aside><p class="eyebrow">01 / EXPERIMENT CONTROLS</p>
 <label>Vector field<select id="field"><option value="gyre">Evolving double gyre</option><option value="vortex">Vortex pair</option><option value="jet">Meandering jet</option></select></label>
 <label>Particles<select id="count"><option value="65536">65,536</option><option value="262144" selected>262,144</option><option value="1048576">1,048,576</option></select></label>
-<label>Integration<select id="integrator"><option value="rk4">Runge–Kutta 4</option><option value="rk2">Midpoint / RK2</option></select></label>
+<label>Integration<select id="integrator"><option value="rk4">Runge–Kutta 4</option><option value="rk2">Midpoint / RK2</option><option value="rk45">Adaptive RK45 · scientific</option></select></label>
+<label>RK45 tolerance<select id="tolerance" disabled><option value="0.001">1e-3 · exploratory</option><option value="0.00001" selected>1e-5 · precise</option><option value="0.0000001">1e-7 · demanding</option></select></label>
+<label>RK45 coloring<select id="coloring" disabled><option value="speed">Speed</option><option value="step">Accepted step size</option><option value="status">Particle status</option></select></label>
 <label>Time scale <output id="speed-value">1.0×</output><input id="speed" type="range" min="0.1" max="3" step="0.1" value="1"></label>
 <label>Simulation time <output id="simulation-time">0.00 s</output></label>
 <label>Exposure <input id="exposure" type="range" min="0.15" max="1.5" step="0.05" value="0.6"></label>
 <div class="buttons"><button id="pause">Pause</button><button id="reset">Reseed</button></div>
+<p id="trace-status" class="note" aria-live="polite"></p>
 <p class="note">Synthetic fields on a 256² grid. The double gyre evolves over a 10-second cycle; snapshots arrive every 0.25 s. Color encodes speed; streaks connect consecutive GPU states.</p></aside>
-<footer><div><span class="eyebrow">ADVECTION / GPU RESIDENT</span><strong id="status">Initializing WebGPU…</strong></div><div class="legend"><span>LOW VELOCITY</span><i></i><span>HIGH</span></div><span>NO PARTICLE READBACK</span></footer>
+<footer><div><span class="eyebrow">ADVECTION / GPU RESIDENT</span><strong id="status">Initializing WebGPU…</strong></div><div class="legend"><span id="legend-low">LOW VELOCITY</span><i id="legend-ramp"></i><span id="legend-high">HIGH</span></div><span>GPU PARTICLE STATE</span></footer>
 <div id="error" role="alert" hidden></div><script type="module" src="./main.ts"></script></body></html>

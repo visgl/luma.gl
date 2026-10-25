@@ -23,3 +23,6 @@ export {ScientificFlowGraph} from './scientific-flow-graph';
 
 export {ScientificFlowCompute} from './scientific-flow-compute';
 export type {ScientificFlowGraphProps} from './scientific-flow-graph';
+
+export {ScientificFlowTracer, ScientificParticleStatus} from './scientific-flow-tracer';
+export type {ScientificFlowTracerProps, ScientificFlowTraceResult} from './scientific-flow-tracer';

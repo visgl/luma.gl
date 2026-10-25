@@ -19,3 +19,18 @@ Controls support 65,536 through 1,048,576 particles, RK2/RK4, pause/resume, rese
 speed and exposure. History is cleared when the field, integrator, density or
 viewport changes. Pause preserves the accumulated image. Resource cleanup runs
 when the page is left.
+
+Adaptive RK45 mode traces a single scientific release with stable particle identity.
+Select a local absolute error tolerance, accepted-step coloring or status coloring.
+Stopped particles remain visible: gray means expired, orange means outside the
+domain, purple means missing data, and red means tolerance/numerical failure.
+Reseed starts a new release. Tolerance controls integration error, not interpolation
+or total trajectory error.
+
+RK45 performs one bounded dispatch per frame, reads nine counters (36 bytes), and
+shows pending particles plus queued simulation time when work falls behind.
+Particle positions stay on the GPU. The clock advances only when a requested
+horizon completes; particles can have different intermediate times while pending.
+The GPU timer, when available, measures compute only, excluding counter readback
+and rendering. See the [tracer API](../../../docs/api-reference/experimental/scientific-flow-tracer.md)
+for status codes, accuracy limits and the opt-in accuracy/cost benchmark.

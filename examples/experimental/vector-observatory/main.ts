@@ -4,7 +4,11 @@
 import {luma, Buffer, Texture, type Framebuffer} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {Model} from '@luma.gl/engine';
-import {ScientificFlowGraph} from '@luma.gl/experimental';
+import {
+  ScientificFlowGraph,
+  ScientificFlowTracer,
+  type ScientificFlowTraceResult
+} from '@luma.gl/experimental';
 import {makeField} from './fields';
 import './style.css';
 
@@ -18,23 +22,26 @@ const count = element<HTMLSelectElement>('count');
 const integrator = element<HTMLSelectElement>('integrator');
 const speed = element<HTMLInputElement>('speed');
 const exposure = element<HTMLInputElement>('exposure');
+const tolerance = element<HTMLSelectElement>('tolerance');
+const coloring = element<HTMLSelectElement>('coloring');
 const pause = element<HTMLButtonElement>('pause');
 element<HTMLButtonElement>('toggle-controls').onclick = () => {
   const opened = document.body.classList.toggle('controls-open');
   element<HTMLButtonElement>('toggle-controls').setAttribute('aria-expanded', String(opened));
 };
 const source = /* wgsl */ `
-struct View {size: vec4f};
+struct View {size: vec4f, options: vec4f};
 @group(0) @binding(0) var<uniform> view: View;
 @group(0) @binding(1) var<storage, read> current: array<vec4f>;
 @group(0) @binding(2) var<storage, read> previous: array<vec4f>;
+@group(0) @binding(3) var<storage, read> diagnostics: array<vec4f>;
 const CORNERS = array<vec2f, 6>(vec2f(0,-1),vec2f(1,-1),vec2f(0,1),vec2f(0,1),vec2f(1,-1),vec2f(1,1));
 struct Vertex {@builtin(position) position: vec4f, @location(0) color: vec3f, @location(1) edge: vec2f};
 @vertex fn vertexMain(@builtin(vertex_index) vertex: u32, @builtin(instance_index) index: u32) -> Vertex {
   let particle = current[index];
   let before = previous[index];
   let displacement = particle.xy - before.xy;
-  let velocity = length(displacement) / max(view.size.z, 0.00001);
+  let velocity = length(displacement) / max(particle.z - before.z, 0.00001);
   let corner = CORNERS[vertex];
   let aspect = view.size.x / view.size.y;
   let extent = vec2f(min(1.18, 1.6 / aspect), 1.6);
@@ -46,6 +53,20 @@ struct Vertex {@builtin(position) position: vec4f, @location(0) color: vec3f, @l
   if (particle.z < 0.0 || particle.w != before.w) {output.position = vec4f(3,3,0,1);}
   let cold = mix(vec3f(0.05,0.16,0.42),vec3f(0.07,0.8,0.85),smoothstep(0.0,0.15,velocity));
   output.color = mix(cold,vec3f(1.0,0.68,0.3),smoothstep(0.15,0.3,velocity));
+  if (view.options.y > 0.5) {
+    let particleDiagnostics = diagnostics[index];
+    if (view.options.x > 0.5 && view.options.x < 1.5) {
+      let stepScale = clamp(log2(max(particleDiagnostics.w, 0.0001) / 0.0001) / log2(10000.0), 0.0, 1.0);
+      output.color = mix(vec3f(0.7,0.12,0.7), vec3f(0.2,1.0,0.65), stepScale);
+    }
+    if (particleDiagnostics.z > 0.5) {
+      output.position = vec4f((particle.xy - 0.5) * extent + vec2f(0.07,0) + vec2f((corner.x - 0.5) * 2.0, corner.y) * 3.0 / view.size.xy, 0, 1);
+      output.color = vec3f(1.0,0.45,0.12);
+      if (particleDiagnostics.z == 1.0) {output.color = vec3f(0.5);}
+      if (particleDiagnostics.z == 3.0) {output.color = vec3f(0.85,0.2,0.85);}
+      if (particleDiagnostics.z >= 4.0) {output.color = vec3f(1.0,0.1,0.15);}
+    } else if (view.options.x > 1.5) {output.color = vec3f(0.2,1.0,0.65);}
+  }
   output.color *= view.size.w * (0.25 + 0.75 * min(particle.z, 1.0));
   output.edge = corner;
   return output;
@@ -58,12 +79,13 @@ struct Vertex {@builtin(position) position: vec4f, @location(0) color: vec3f, @l
 try {
   const device = await luma.createDevice({
     adapters: [webgpuAdapter],
+    optionalFeatures: ['timestamp-query'],
     createCanvasContext: {canvas, autoResize: true},
     onError: error => {
       throw error;
     }
   });
-  const view = device.createBuffer({byteLength: 16, usage: Buffer.UNIFORM | Buffer.COPY_DST});
+  const view = device.createBuffer({byteLength: 32, usage: Buffer.UNIFORM | Buffer.COPY_DST});
   let history: Framebuffer;
   let historyTexture: Texture;
   let historyWidth = 0;
@@ -125,9 +147,29 @@ struct Vertex {@builtin(position) position: vec4f};
     device.submit();
     present.setBindings({history: historyTexture});
   }
-  let graph: ScientificFlowGraph;
+  let graph: ScientificFlowGraph | ScientificFlowTracer;
+  let activeField = field.value;
+  let activeIntegrator = integrator.value;
+  let activeCount = Number(count.value);
+  let restartRequested = false;
+  let queuedTime = 0;
+  let traceResult: ScientificFlowTraceResult | undefined;
   let particles: Model;
   let paused = false;
+  function updateLegend() {
+    const mode = activeIntegrator === 'rk45' ? coloring.value : 'speed';
+    element<HTMLElement>('legend-low').textContent =
+      mode === 'step' ? 'SHORT STEP' : mode === 'status' ? 'ACTIVE' : 'LOW VELOCITY';
+    element<HTMLElement>('legend-high').textContent =
+      mode === 'step' ? 'LONG STEP' : mode === 'status' ? 'STOPPED' : 'HIGH';
+    element<HTMLElement>('legend-ramp').style.background =
+      mode === 'step'
+        ? 'linear-gradient(90deg,#b31fb3,#33ffa6)'
+        : mode === 'status'
+          ? 'linear-gradient(90deg,#33ffa6,#888,#ff731f,#d933d9,#ff1a26)'
+          : 'linear-gradient(90deg,#164d9b,#24d8db,#c7e9a0,#ffb365)';
+  }
+  coloring.onchange = updateLegend;
   let snapshotEnd = 0.25;
   let previousFrame = performance.now();
   function restart() {
@@ -135,17 +177,47 @@ struct Vertex {@builtin(position) position: vec4f};
     graph?.destroy();
     snapshotEnd = 0.25;
     previousFrame = performance.now();
-    graph = new ScientificFlowGraph(device, {
-      input: makeField(field.value, 0),
-      ...(field.value === 'gyre'
-        ? {nextInput: makeField(field.value, snapshotEnd), timeRange: [0, snapshotEnd] as const}
+    activeField = field.value;
+    activeIntegrator = integrator.value;
+    activeCount = Number(count.value);
+    queuedTime = 0;
+    traceResult = undefined;
+    const fields = {
+      input: makeField(activeField, 0),
+      ...(activeField === 'gyre'
+        ? {nextInput: makeField(activeField, snapshotEnd), timeRange: [0, snapshotEnd] as const}
         : {}),
-      bounds: [0, 0, 1, 1],
-      particleCount: Number(count.value),
-      lifetime: 45,
-      seed: 17,
-      integrator: integrator.value === 'rk2' ? 'rk2' : 'rk4'
-    });
+      bounds: [0, 0, 1, 1] as const,
+      lifetime: 45
+    };
+    if (activeIntegrator === 'rk45') {
+      const positions = new Float32Array(activeCount * 2);
+      const side = Math.ceil(Math.sqrt(activeCount));
+      for (let index = 0; index < activeCount; index++) {
+        positions[index * 2] = ((index % side) + 0.5) / side;
+        positions[index * 2 + 1] = (Math.floor(index / side) + 0.5) / side;
+      }
+      graph = new ScientificFlowTracer(device, {
+        ...fields,
+        positions,
+        tolerance: Number(tolerance.value),
+        maximumAttempts: 16
+      });
+    } else {
+      graph = new ScientificFlowGraph(device, {
+        ...fields,
+        particleCount: activeCount,
+        seed: 17,
+        integrator: activeIntegrator === 'rk2' ? 'rk2' : 'rk4'
+      });
+      graph.step(0);
+    }
+    tolerance.disabled = coloring.disabled = activeIntegrator !== 'rk45';
+    updateLegend();
+    element<HTMLElement>('trace-status').textContent =
+      activeIntegrator === 'rk45'
+        ? 'Scientific release · stopped particles retain identity. Reseed to restart.'
+        : '';
     particles = new Model(device, {
       id: 'scientific-flow-streaks',
       source,
@@ -156,7 +228,8 @@ struct Vertex {@builtin(position) position: vec4f};
         bindings: [
           {name: 'view', type: 'uniform', group: 0, location: 0},
           {name: 'current', type: 'read-only-storage', group: 0, location: 1, visibility: 1},
-          {name: 'previous', type: 'read-only-storage', group: 0, location: 2, visibility: 1}
+          {name: 'previous', type: 'read-only-storage', group: 0, location: 2, visibility: 1},
+          {name: 'diagnostics', type: 'read-only-storage', group: 0, location: 3, visibility: 1}
         ]
       },
       parameters: {
@@ -167,14 +240,21 @@ struct Vertex {@builtin(position) position: vec4f};
         depthWriteEnabled: false
       }
     });
-    graph.step(0);
     element<HTMLOutputElement>('simulation-time').value = '0.00 s';
     historyWidth = 0;
     resizeHistory();
   }
   restart();
-  field.onchange = count.onchange = integrator.onchange = restart;
-  element<HTMLButtonElement>('reset').onclick = restart;
+  field.onchange =
+    count.onchange =
+    integrator.onchange =
+    tolerance.onchange =
+      () => {
+        restartRequested = true;
+      };
+  element<HTMLButtonElement>('reset').onclick = () => {
+    restartRequested = true;
+  };
   pause.onclick = () => {
     paused = !paused;
     pause.textContent = paused ? 'Resume' : 'Pause';
@@ -186,34 +266,62 @@ struct Vertex {@builtin(position) position: vec4f};
   let lastReport = performance.now();
   let animationFrame = 0;
   let stopped = false;
-  function animate(now: number) {
+  let currentFrame: Promise<void> | undefined;
+  async function animate(now: number) {
     if (stopped) return;
     try {
+      if (restartRequested) {
+        restart();
+        restartRequested = false;
+      }
       // Discard long background-tab gaps; normal playback follows elapsed wall time.
       let deltaTime =
         Math.min(0.1, Math.max(0, (now - previousFrame) / 1000)) * Number(speed.value);
       previousFrame = now;
       resizeHistory();
       if (!paused) {
-        let remainingTime = deltaTime;
+        queuedTime += deltaTime;
         let firstSegment = true;
-        while (remainingTime > 0) {
-          if (field.value === 'gyre' && graph.remainingTime === 0) {
+        while (queuedTime > 0 || (graph instanceof ScientificFlowTracer && graph.hasPendingWork)) {
+          if (
+            activeField === 'gyre' &&
+            graph.remainingTime === 0 &&
+            !(graph instanceof ScientificFlowTracer && graph.hasPendingWork)
+          ) {
             snapshotEnd += 0.25;
-            graph.setNextSnapshot(makeField(field.value, snapshotEnd), snapshotEnd);
+            graph.setNextSnapshot(makeField(activeField, snapshotEnd), snapshotEnd);
           }
           deltaTime =
-            field.value === 'gyre' ? Math.min(remainingTime, graph.remainingTime) : remainingTime;
-          graph.advance(deltaTime);
+            activeField === 'gyre' ? Math.min(queuedTime, graph.remainingTime) : queuedTime;
+          if (graph instanceof ScientificFlowTracer) {
+            if (graph.hasPendingWork) traceResult = await graph.continue();
+            else {
+              queuedTime -= deltaTime;
+              traceResult = await graph.advance(deltaTime);
+            }
+          } else {
+            graph.advance(deltaTime);
+            queuedTime -= deltaTime;
+          }
+          if (stopped) return;
           view.write(
             new Float32Array([
               canvas.width,
               canvas.height,
               deltaTime,
-              (Number(exposure.value) * 1.2 * 65536) / Number(count.value)
+              (Number(exposure.value) * 1.2 * 65536) / activeCount,
+              coloring.value === 'step' ? 1 : coloring.value === 'status' ? 2 : 0,
+              activeIntegrator === 'rk45' ? 1 : 0,
+              0,
+              0
             ])
           );
-          particles.setBindings({view, current: graph.output, previous: graph.previous});
+          particles.setBindings({
+            view,
+            current: graph.output,
+            previous: graph.previous,
+            diagnostics: graph instanceof ScientificFlowTracer ? graph.diagnostics : graph.output
+          });
           const pass = device.beginRenderPass({framebuffer: history, clearColor: false});
           if (firstSegment) fade.draw(pass);
           particles.draw(pass);
@@ -221,7 +329,7 @@ struct Vertex {@builtin(position) position: vec4f};
           // Submit this segment before the next advance reuses its state and uniform buffers.
           device.submit();
           firstSegment = false;
-          remainingTime -= deltaTime;
+          if (graph instanceof ScientificFlowTracer) break; // One bounded dispatch per animation frame.
         }
         element<HTMLOutputElement>('simulation-time').value = graph.time.toFixed(2) + ' s';
       }
@@ -231,29 +339,40 @@ struct Vertex {@builtin(position) position: vec4f};
       device.submit();
       frames++;
       if (now - lastReport > 500) {
-        status.textContent = `${Number(count.value).toLocaleString()} particles · ${Math.round((frames * 1000) / (now - lastReport))} fps · ${integrator.value.toUpperCase()}${paused ? ' · paused' : ''}`;
+        status.textContent = `${activeCount.toLocaleString()} particles · ${Math.round((frames * 1000) / (now - lastReport))} fps · ${activeIntegrator.toUpperCase()}${paused ? ' · paused' : ''}`;
+        if (traceResult) {
+          element<HTMLElement>('trace-status').textContent =
+            `${traceResult.active.toLocaleString()} active · ${(activeCount - traceResult.active).toLocaleString()} stopped · ${traceResult.pending.toLocaleString()} pending · ${traceResult.acceptedSteps.toLocaleString()} accepted / ${traceResult.rejectedSteps.toLocaleString()} rejected trials · ${traceResult.gpuMilliseconds === undefined ? 'GPU timer unavailable' : traceResult.gpuMilliseconds.toFixed(2) + ' ms GPU'} · ${queuedTime.toFixed(2)} s queued`;
+        }
         frames = 0;
         lastReport = now;
       }
-      animationFrame = requestAnimationFrame(animate);
+      animationFrame = requestAnimationFrame(now => {
+        currentFrame = animate(now);
+      });
     } catch (error) {
       fail(error);
     }
   }
-  animationFrame = requestAnimationFrame(animate);
+  animationFrame = requestAnimationFrame(now => {
+    currentFrame = animate(now);
+  });
   window.addEventListener(
     'pagehide',
     () => {
       stopped = true;
       cancelAnimationFrame(animationFrame);
-      particles.destroy();
-      graph.destroy();
-      view.destroy();
-      fade.destroy();
-      present.destroy();
-      history.destroy();
-      historyTexture.destroy();
-      device.destroy();
+      // Await the sole in-flight counter readback before releasing GPU resources.
+      void (currentFrame ?? Promise.resolve()).then(() => {
+        particles.destroy();
+        graph.destroy();
+        view.destroy();
+        fade.destroy();
+        present.destroy();
+        history.destroy();
+        historyTexture.destroy();
+        device.destroy();
+      });
     },
     {once: true}
   );
