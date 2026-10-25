@@ -1,0 +1,140 @@
+{
+  "publicPackages": [
+    "core",
+    "effects",
+    "engine",
+    "gltf",
+    "gpgpu",
+    "graph",
+    "shadertools",
+    "slang",
+    "test-utils",
+    "text"
+  ],
+  "sources": [
+    {
+      "files": [
+        "modules/core/src/webgpu/adapter/helpers/generate-mipmaps-webgpu.ts"
+      ],
+      "markers": [
+        "Gregg Tavares",
+        "webgpu-utils"
+      ],
+      "notices": [
+        "modules/core/licenses/webgpu-utils.txt"
+      ]
+    },
+    {
+      "files": [
+        "modules/shadertools/src/modules/lighting/pbr-material/pbr-material-glsl.ts",
+        "modules/shadertools/src/modules/lighting/pbr-material/pbr-material-wgsl.ts"
+      ],
+      "markers": [
+        "2016-2017 Mohamad Moneimne and Contributors"
+      ],
+      "notices": [
+        "modules/shadertools/licenses/pbr.txt"
+      ]
+    },
+    {
+      "files": [
+        "modules/shadertools/src/modules/math/fp16/fp16-utils.ts"
+      ],
+      "markers": [
+        "three.js authors",
+        "THREE.js"
+      ],
+      "notices": [
+        "modules/shadertools/licenses/three.txt"
+      ]
+    },
+    {
+      "files": [
+        "modules/splats/src/splat-rad-hierarchy.ts",
+        "modules/splats/src/gpu-paged-splat-shaders.ts"
+      ],
+      "markers": [
+        "Spark",
+        "WORLD LABS TECHNOLOGIES"
+      ],
+      "notices": [
+        "modules/splats/licenses/spark.txt"
+      ]
+    },
+    {
+      "files": [
+        "modules/text/src/fonts/helvetiker.ts"
+      ],
+      "markers": [
+        "three.js authors",
+        "MAGENTA Ltd."
+      ],
+      "notices": [
+        "modules/text/licenses/three.txt",
+        "modules/text/licenses/magenta-font.txt"
+      ]
+    },
+    {
+      "files": [
+        "modules/effects/src/passes/postprocessing/fxaa/fxaa.ts"
+      ],
+      "markers": [
+        "2014-2015, NVIDIA CORPORATION",
+        "cesium.js"
+      ],
+      "notices": [
+        "modules/effects/licenses/nvidia-fxaa.txt",
+        "modules/effects/licenses/cesium.txt"
+      ]
+    },
+    {
+      "files": [
+        "modules/core/src/webgl-debug/spector-types.ts"
+      ],
+      "markers": [
+        "BabylonJS/Spector.js"
+      ],
+      "notices": [
+        "modules/core/licenses/spector.txt"
+      ]
+    },
+    {
+      "files": [
+        "examples/api/texture-3d/app.ts"
+      ],
+      "markers": [
+        "PicoGL.js"
+      ],
+      "notices": [
+        "examples/licenses/picogl.txt"
+      ]
+    },
+    {
+      "files": [
+        "modules/gltf/src/types/gltf-json-schema.ts",
+        "modules/gltf/src/types/gltf-postprocessed-schema.ts"
+      ],
+      "markers": [
+        "2018 Benjamin Wasty",
+        "bwasty/gltf-loader-ts"
+      ],
+      "notices": [
+        "modules/gltf/licenses/gltf-loader-ts.txt"
+      ]
+    },
+    {
+      "files": [
+        "modules/shadertools/src/modules/lighting/area-lighting/ltc-data.ts"
+      ],
+      "markers": [
+        "LicenseRef-LTC",
+        "Eric Heitz, Jonathan Dupuy, Stephen Hill and David Neubelt",
+        "31e5e96b54f98f33098f8503003119ba2231a1c6"
+      ],
+      "notices": [
+        "modules/shadertools/src/modules/lighting/area-lighting/LTC-LICENSE.txt"
+      ]
+    }
+  ],
+  "auditedBaseCommit": "5021c4893"
+}
