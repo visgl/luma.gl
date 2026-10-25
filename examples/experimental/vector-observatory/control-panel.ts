@@ -189,7 +189,7 @@ export class ObservatoryControlPanel {
   private updateGraphNotice(notice: HTMLElement): void {
     notice.textContent =
       this.settings.integrator === 'rk45'
-        ? 'RK45 uses bounded direct compute dispatches rather than a compiled command graph. Its real compute timings and particle outcomes are available in Diagnostics.'
+        ? 'Live RK45 graph: reset counters, then bounded adaptive integration. Trace samples every 60 dispatches; copy nodes show CPU cost only. Counter readback and trail rendering are outside the graph.'
         : 'Live compiled advection graph. Timings are sampled every 60 encodings; trail rendering is submitted separately.';
   }
 
@@ -228,6 +228,13 @@ export class ObservatoryControlPanel {
       ['Queued time', `${telemetry.queuedTime.toFixed(2)} s`]
     ];
     if (result) {
+      entries.push(
+        [
+          'Dispatch',
+          `${result.dispatchIndex} · ${result.isContinuation ? 'continuation' : 'new horizon'}`
+        ],
+        ['Target time', `${result.targetTime.toFixed(2)} s`]
+      );
       entries.push([
         'Compute time',
         result.gpuMilliseconds === undefined
