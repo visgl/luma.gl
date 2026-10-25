@@ -62,6 +62,7 @@
       "experimental/space-salvage",
       "experimental/gpu-rigid-body-world",
       "experimental/physics-stress",
+      "experimental/physics-batch",
       "experimental/vector-observatory",
       "showcase/lightstorm-megacity",
       "showcase/llm-network",

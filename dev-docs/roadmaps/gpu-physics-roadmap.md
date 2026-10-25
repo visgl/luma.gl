@@ -814,3 +814,19 @@ kernels; measured active-island scheduling within large worlds; cross-partition 
 migration; hard peak-allocation admission; long-duration churn/device-loss qualification; and
 p50/p95 quality-gated throughput evidence across supported adapters. Keep independent-world
 throughput distinct from the performance of one large interacting world.
+
+
+## G10 follow-up — fused homogeneous ensembles
+
+The next package adds `GPUPhysicsEnsemble`: independent copies of a scene share body/contact
+storage and one parallel solver graph. Collision-domain hashing avoids all-to-all candidate work
+for coincident local scenes; exact domain checks retain isolation under hash collisions. Repeated
+cooked mesh references share packed geometry. The standalone Physics Batch Lab compares this
+path against the resident-slot batch API with declared completion and quality gates.
+
+This advances fused execution and within-ensemble geometry sharing, but does not close G10.
+Remaining gates: active-only broad-phase queues; demand-grown contact pages; shared assets across
+resident slots; heterogeneous fused worlds; per-instance reset/pause/streaming; joints/CCD in
+ensembles; hard peak-memory admission; interacting spatial partitions; and hardware qualification.
+The current 16-bit body/collider identity limit still bounds each ensemble to 65,535 entries.
+Larger resident populations require separate ensembles until identity and cache keys are widened.

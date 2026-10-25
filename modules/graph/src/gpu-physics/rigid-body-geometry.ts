@@ -3,10 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {makeCoplanarFeatures} from './rigid-body-contact-features';
+import type {RigidBodyMeshGeometry} from './rigid-body-mesh';
 import type {GPURigidBodyCollider} from './rigid-body-properties';
 
 export function packRigidBodyShapes(colliders: readonly GPURigidBodyCollider[]) {
   const geometry: number[] = [];
+  const packedMeshes = new Map<RigidBodyMeshGeometry, {padding: number[]; policies: number[]}>();
   const shapes = colliders.map(({shape}) => {
     const policies = [0, 0];
     const padding = [0, 0, 0, 0];
@@ -24,29 +26,36 @@ export function packRigidBodyShapes(colliders: readonly GPURigidBodyCollider[]) 
       ];
     else {
       const mesh = shape.geometry;
-      padding[0] = geometry.length / 4;
-      padding[1] = mesh.positions.length / 3;
-      for (let index = 0; index < mesh.positions.length; index += 3)
-        geometry.push(
-          mesh.positions[index],
-          mesh.positions[index + 1],
-          mesh.positions[index + 2],
-          0
-        );
-      padding[2] = geometry.length / 4;
-      padding[3] = mesh.indices.length / 3;
-      const {features, internalEdges} = makeCoplanarFeatures(mesh);
-      for (let index = 0; index < mesh.indices.length; index += 3)
-        geometry.push(
-          mesh.indices[index],
-          mesh.indices[index + 1],
-          mesh.indices[index + 2],
-          features[index / 3] * 8 + internalEdges[index / 3]
-        );
-      policies[0] = geometry.length / 4;
-      policies[1] = mesh.nodes.length / 12;
-      // Avoid a spread argument for large BVHs.
-      for (const value of mesh.nodes) geometry.push(value);
+      const shared = packedMeshes.get(mesh);
+      if (shared) {
+        padding.splice(0, padding.length, ...shared.padding);
+        policies.splice(0, policies.length, ...shared.policies);
+      } else {
+        padding[0] = geometry.length / 4;
+        padding[1] = mesh.positions.length / 3;
+        for (let index = 0; index < mesh.positions.length; index += 3)
+          geometry.push(
+            mesh.positions[index],
+            mesh.positions[index + 1],
+            mesh.positions[index + 2],
+            0
+          );
+        padding[2] = geometry.length / 4;
+        padding[3] = mesh.indices.length / 3;
+        const {features, internalEdges} = makeCoplanarFeatures(mesh);
+        for (let index = 0; index < mesh.indices.length; index += 3)
+          geometry.push(
+            mesh.indices[index],
+            mesh.indices[index + 1],
+            mesh.indices[index + 2],
+            features[index / 3] * 8 + internalEdges[index / 3]
+          );
+        policies[0] = geometry.length / 4;
+        policies[1] = mesh.nodes.length / 12;
+        // Avoid a spread argument for large BVHs.
+        for (const value of mesh.nodes) geometry.push(value);
+        packedMeshes.set(mesh, {padding: [...padding], policies: [...policies]});
+      }
       dimensions = [
         ...mesh.minimum.map((value, axis) =>
           Math.max(Math.abs(value), Math.abs(mesh.maximum[axis]))

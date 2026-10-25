@@ -1,15 +1,15 @@
 # Large-world and batch qualification
 
-Run the Physics Stress Lab dev server, then run the benchmark suite from the repository root:
+Run the Physics Batch Lab dev server, then run the benchmark suite from the repository root:
 
 ```sh
-(cd examples/experimental/physics-stress && yarn start --host 127.0.0.1 --port 5244)
+(cd examples/experimental/physics-batch && yarn start --host 127.0.0.1 --port 5244)
 node scripts/physics/batch/run.mjs --url http://127.0.0.1:5244 \
   --cases 1x128,8x128,1x1024,8x1024,1x10000 --frames 120 --repeats 3
 ```
 
-Open `/batch.html` for the interactive Batch Lab. Sparse debris isolates traversal/dispatch
-cost; `--scene pile` stresses contacts. Each repetition reverses the submission-mode order.
+Open `/` for the interactive Batch Lab. Sparse debris isolates traversal/dispatch
+cost; `--scene pile` stresses contacts. Each repetition reverses the mode order across fused ensemble, batched submissions and separate submissions.
 One-world cases measure single-world latency; many-world cases measure aggregate throughput.
 Do not compare different body counts, solver settings or simulated time as batching speedups.
 
@@ -32,3 +32,30 @@ command buffer is not necessarily faster: separate submissions can overlap CPU e
 GPU execution. `planSubmissions()` permits bounded groups instead of enforcing one policy.
 
 See [the October 25 qualification report](./QUALIFICATION.md) for measured results and limits.
+
+## Fused ensembles
+
+`GPUPhysicsEnsemble` uses a shared allocation and one graph encoding per step. Domain IDs enter
+spatial hashing and exact pair rejection, so coincident instances remain independent without
+quadratic cross-world exclusions. It reuses the existing parallel solver and compact active-contact
+queues. Repeated references to one cooked mesh share packed geometry within the ensemble.
+
+Ensembles have fixed membership, common solver settings, a shared contact budget and rollback
+boundary. They omit the additional reset checkpoint retained by `GPUPhysicsBatch`; recycling is
+reported as null. This memory difference is intentional and is not a kernel speedup. Limits are
+65,535 total bodies/colliders plus adapter buffer limits. Joints, authored triggers and CCD are
+currently rejected. Queries address the entire ensemble; body indices map through `getBodyIndex`.
+
+The three-mode suite supports up to 128 separate worlds; use the interactive ensemble mode for
+larger instance counts, or select `--modes ensemble`. For example:
+
+```sh
+node scripts/physics/batch/run.mjs --url http://127.0.0.1:5245 --cases 1024x8,1x32768 --modes ensemble --pairs-per-body 2 --frames 40 --repeats 2
+```
+
+Pair capacity rounds up to a power of two with a minimum of 64 per template instance; the ensemble
+receives the sum rounded up to a power of two. Smaller budgets must pass completion checks before
+results are accepted. Shared geometry across separate resident slots and interacting streamed
+partitions remain future work.
+
+See [the fused ensemble report](./ENSEMBLE-QUALIFICATION.md) for the 22-run follow-up through 32,768 bodies and 1,024 independent instances.

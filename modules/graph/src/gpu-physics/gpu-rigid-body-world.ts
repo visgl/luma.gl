@@ -129,6 +129,8 @@ export type GPURigidBodyWorldProps = {
   /** Additional under-relaxation for the parallel solver, in (0, 1]. Default 1. */
   parallelRelaxation?: number;
   /** Small worlds retain the all-pairs numerical oracle; larger worlds use sparse discovery. */
+  /** Independent equal collider blocks; currently excludes joints, CCD and authored triggers. */
+  collisionPartitionSize?: number;
   broadPhase?: 'all-pairs' | 'hierarchical-grid';
   /** Parallel block-Jacobi contact solving; ordered impulses remain the numerical oracle. */
   solver?: 'ordered' | 'parallel';
@@ -394,6 +396,15 @@ export class GPURigidBodyWorld {
         )
       )
         throw new Error('Invalid collider filter');
+    if (
+      props.collisionPartitionSize !== undefined &&
+      (!Number.isSafeInteger(props.collisionPartitionSize) ||
+        props.collisionPartitionSize < 1 ||
+        !colliders.length ||
+        colliders.length % props.collisionPartitionSize !== 0 ||
+        Boolean(props.joints?.length || props.continuous || props.triggers?.length))
+    )
+      throw new Error('Invalid collision partitions');
     this.colliderCount = colliders.length;
     this.colliderStorageCount = Math.max(1, colliders.length);
     // WGSL fixed arrays require a positive size. A lone private collider cannot
@@ -457,8 +468,10 @@ export class GPURigidBodyWorld {
         throw new Error('Invalid trigger settings');
       makeRigidBodyTriggerLayout(props.triggers, colliders);
     }
-    this.colliders = structuredClone(colliders);
-    this.props = structuredClone(props);
+    // Clone together so collider edits preserve geometry identity in captured body definitions.
+    const definitions = structuredClone({colliders, props});
+    this.colliders = definitions.colliders;
+    this.props = definitions.props;
   }
 
   private getStorageLayout() {
@@ -827,7 +840,8 @@ export class GPURigidBodyWorld {
       this.props.linearDamping ?? 0,
       this.props.angularDamping ?? 0,
       this.props.joints?.length ?? 0,
-      this.props.compactContacts ?? true
+      this.props.compactContacts ?? true,
+      this.props.collisionPartitionSize
     );
     const parallelBindings: Record<string, readonly string[]> = {
       parallelReset: ['parallelState'],
@@ -1003,6 +1017,7 @@ export class GPURigidBodyWorld {
         const broadPhase = new GPURigidBodyBroadPhase({
           id: `${this.id}-broad-phase`,
           objectMetadata: objectAttributeView,
+          partitionSize: this.props.collisionPartitionSize,
           maximumCandidateTestsPerQuery: this.props.maximumCandidateTestsPerCollider,
           minima: graph.createDataView(minimumBinding.resource, {
             format: 'float32x3',
@@ -1815,18 +1830,16 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
   }
 
   private restoreColliderDefinitions(): void {
-    for (const [bodyIndex, body] of this.props.bodies.entries()) {
-      const definitions: readonly GPURigidBodyCollider[] =
-        body.colliders ?? (body.shape ? [{shape: body.shape}] : []);
-      let index = 0;
-      for (const collider of this.colliders)
-        if (collider.body === bodyIndex) {
-          const definition = definitions[index++];
-          collider.shape = structuredClone(definition.shape);
-          collider.material = structuredClone(definition.material);
-          collider.position = structuredClone(definition.position);
-          collider.orientation = structuredClone(definition.orientation);
-        }
+    // Body definitions are already world-owned. Keep their shared geometry identities.
+    const definitions = this.props.bodies.flatMap(
+      body => body.colliders ?? (body.shape ? [{shape: body.shape}] : [])
+    );
+    for (const [index, definition] of definitions.entries()) {
+      const collider = this.colliders[index];
+      collider.shape = definition.shape;
+      collider.material = definition.material;
+      collider.position = definition.position;
+      collider.orientation = definition.orientation;
     }
   }
 

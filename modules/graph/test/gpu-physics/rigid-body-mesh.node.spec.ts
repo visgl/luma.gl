@@ -227,3 +227,18 @@ it('rejects invalid mesh capacities before touching source elements', () => {
     'Degenerate'
   );
 });
+
+it('packs shared cooked geometry once while retaining per-collider exclusion lists', () => {
+  const geometry = makeConvexHullGeometry(cube);
+  const shape = {type: 'convex-hull' as const, geometry};
+  const single = packRigidBodyShapes([{shape}]);
+  const shared = packRigidBodyShapes([{shape, excludedColliders: [1]}, {shape}]);
+  expect(shared.shapes[0]).toEqual(shared.shapes[1]);
+  expect(shared.geometry.length).toBe(single.geometry.length + 4);
+  expect(shared.geometry[shared.filters[0][0]]).toBe(1);
+  const distinct = packRigidBodyShapes([
+    {shape},
+    {shape: {...shape, geometry: structuredClone(geometry)}}
+  ]);
+  expect(distinct.geometry.length).toBe(single.geometry.length * 2);
+});

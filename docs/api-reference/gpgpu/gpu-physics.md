@@ -60,7 +60,7 @@ experimental as a module.
 | glTF physics | Partial | Pinned draft import, shape/body/material/filter semantics and explicit capability reports | Pinned G4/G5 qualification covers attachment constraints, triggers and behavior operations; analytic shape mutation/scale and live scene capture are implemented, while mesh-deformation recooking and full-profile qualification remain work |
 | GPU scenegraph pose publication | Partial | Reusable geometry snapshots and GPU body-node matrices/visual AABBs; cradle PBR and shadows consume published matrices | The glTF gallery consumes GPU matrices directly and binds rigid animation targets; deformation, live scene edits and export/reimport remain work |
 | Capacity and diagnostics | Available | Allocation preflight, bounded queues, lifetime diagnostics and GPU rollback; opt-in bounded automatic growth/replay for sparse pair, traversal and swept-candidate budgets | Recovery synchronizes each tick and replays from initial state; fixed mesh-task/CCD impact failures, event continuity and GPU-only adaptive growth remain work |
-| Large worlds and batching | Partial | Independent leases, bounded residency, explicit streaming, GPU slot resets, local origins/rebasing and measured submission groups | Separate solver graphs; fused kernels, shared GPU geometry, interacting streamed partitions and cross-device qualification remain work |
+| Large worlds and batching | Partial | Independent leases, bounded residency, explicit streaming, GPU slot resets, local origins/rebasing and measured submission groups | Fused homogeneous ensembles and shared mesh packing; cross-slot GPU geometry sharing, interacting streamed partitions and cross-device qualification remain work |
 | Qualification and tooling | Partial | Independent analytic shape/motion references, command replay, whole-step measurements and Physics Stress Lab with JSON exports | Named-case evidence only; difficult-contact, multi-device and full-profile qualification remain work |
 
 See the [remaining tranches](https://github.com/visgl/luma.gl/blob/master/dev-docs/roadmaps/gpu-physics-roadmap.md#remaining-tranches-after-space-salvage)
@@ -257,8 +257,50 @@ recover precision already lost. Apply the matching origin change to external sce
 
 ### Qualification
 
-The Physics Stress Lab's **Batch Lab** compares separate and batched submissions, sparse debris
+The standalone **Physics Batch Lab** compares fused ensembles, separate and batched submissions, sparse debris
 and dense settling piles, reports p50/p95 completion latency and throughput, and exercises slot
 reuse. See `scripts/physics/batch/README.md` for repeatable scale runs. No universal batching
-speedup or cross-device G10 completion is claimed. Fused multi-world solver dispatches, shared
-GPU cooked assets and seamless interaction across streamed partitions remain open.
+speedup or cross-device G10 completion is claimed. Shared GPU cooked assets across separately resident slots and seamless interaction across streamed partitions remain open.
+
+### Fused independent ensembles
+
+`GPUPhysicsEnsemble` runs identical scene topologies with independent state in a single solver
+graph. World identity participates in spatial hashing and exact collision rejection. Instances
+can occupy identical local coordinates without generating cross-instance contacts. All instances
+share the timestep and solver settings; use `GPUPhysicsBatch` when membership, residency or
+solver settings must vary independently.
+
+```typescript
+import {GPUPhysicsEnsemble} from '@luma.gl/graph/gpu-physics';
+
+const ensemble = await GPUPhysicsEnsemble.create(device, {
+  template: worldProps,
+  instances: 1024,
+  maximumPairs: 16384,
+  maximumResidentBytes: 256 * 1024 * 1024
+});
+const encoder = device.createCommandEncoder();
+ensemble.encode(encoder);
+device.submit(encoder.finish());
+const selectedBody = ensemble.getBodyIndex(42, 0);
+// ensemble.world exposes controls, contact events and GPU pose publication.
+// Global transforms for rendering each instance remain application-owned.
+```
+
+The ensemble forces the parallel solver, hierarchical broad phase and rollback failure policy.
+`maximumPairs` is a shared power-of-two capacity: exhaustion rejects the entire ensemble step,
+not just one instance. Total bodies and colliders must each fit within 65,535 and adapter buffer
+limits. Joints, authored triggers and CCD are currently rejected. Queries inspect every instance;
+map returned global body indices back to instance ranges. Per-instance pause, eviction and reset
+are not provided. Whole-world checkpoint/capture APIs remain available on `ensemble.world`.
+
+No additional reset checkpoint is allocated automatically. Statistics cover world-owned buffers
+and graph scratch, excluding driver allocations and compilation peaks. Explicit checkpoints made
+through the borrowed world add allocations outside these statistics. Repeated references to the
+same cooked mesh object share packed vertex, triangle and BVH data within an ensemble; distinct
+mesh objects are not content-deduplicated. Shared metadata storage remains owned by the world.
+
+The existing GPU compact awake-body/contact queues operate across the ensemble. This does not
+eliminate broad-phase scans over sleeping bodies and is not an active-only broad-phase claim.
+Destroy the ensemble after submitting its encoded work; do not independently destroy its borrowed
+world or graph. Destroying the ensemble releases its world, graph and any world-owned checkpoints.
