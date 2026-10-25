@@ -88,15 +88,15 @@ it('rebases contacts and global origins without changing dynamics and restores t
   try {
     batch.registerTemplate('pair', fixture);
     const reference = await batch.acquire('pair', 'reference');
-    const shifted = await batch.acquire('pair', 'shifted', [1e12, 0, 0]);
+    const shifted = await batch.acquire('pair', 'shifted', [1e20, 0, 0]);
     const world = batch.getWorld(shifted);
     const encoder = device.createCommandEncoder();
     batch.encode(encoder, 7);
     device.submit(encoder.finish());
     const before = await world.readState();
     world.shiftOrigin([16, 0, 0]);
-    expect(batch.getOrigin(shifted)).toEqual([1e12 + 16, 0, 0]);
-    expect(batch.getRenderTranslation(shifted, [1e12, 0, 0])).toEqual([16, 0, 0]);
+    expect(batch.getOrigin(shifted)).toEqual([1e20 + 16, 0, 0]);
+    expect(batch.getRenderTranslation(shifted, [1e20, 0, 0])).toEqual([16, 0, 0]);
     const rebased = await world.readState();
     for (let index = 0; index < before.length; index++) {
       expect(rebased[index].position[0] + 16).toBeCloseTo(before[index].position[0], 4);

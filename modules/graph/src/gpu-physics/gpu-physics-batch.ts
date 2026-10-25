@@ -206,10 +206,13 @@ export class GPUPhysicsBatch {
     handle: GPUPhysicsWorldHandle,
     cameraOrigin: readonly [number, number, number]
   ): [number, number, number] {
-    return this.getOrigin(handle).map((value, axis) => value - cameraOrigin[axis]) as [
-      number,
-      number,
-      number
+    const slot = this.getSlot(handle);
+    const offset = slot.world.origin;
+    // Subtract large origins before adding the small local rebase displacement.
+    return [
+      slot.origin[0] - cameraOrigin[0] + offset[0],
+      slot.origin[1] - cameraOrigin[1] + offset[1],
+      slot.origin[2] - cameraOrigin[2] + offset[2]
     ];
   }
 
