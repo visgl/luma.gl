@@ -34,3 +34,16 @@ horizon completes; particles can have different intermediate times while pending
 The GPU timer, when available, measures compute only, excluding counter readback
 and rendering. See the [tracer API](../../../docs/api-reference/experimental/scientific-flow-tracer.md)
 for status codes, accuracy limits and the opt-in accuracy/cost benchmark.
+
+The example uses the shared cinematic InfoBox and schema-driven Settings panel.
+Expand the InfoBox to access Settings, Info, Diagnostics, Graph, Trace, and bundled Source tabs.
+Settings and the simulation persist when switching tabs or collapsing the panel.
+RK45-specific controls appear only in adaptive mode. Diagnostics reports every
+particle termination reason separately. The same collapsible, resizable panel
+works in standalone and embedded views, including on mobile.
+
+Graph and Trace inspect actual RK2/RK4 command encodings, resources and sampled
+GPU timestamps. RK45 currently submits direct bounded compute dispatches; those
+tabs explain this distinction and clear prior graphs when the integrator changes.
+Its measured compute time and per-status counts remain available in Diagnostics.
+Graph timings cover advection, not the separately submitted trail renderer.

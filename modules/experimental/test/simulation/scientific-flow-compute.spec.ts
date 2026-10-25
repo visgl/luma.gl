@@ -36,7 +36,12 @@ for (const integrator of ['rk2', 'rk4'] as const) {
       for (let index = 0; index < 129; index++) initial.set([0.75, 0.5, 0, 3], index * 4);
       graph.output.write(initial);
       const first = graph.output;
-      for (let index = 0; index < 30; index++) graph.step(1 / 30);
+      const encoder = device.createCommandEncoder();
+      const encoding = graph.record(encoder, 1 / 30);
+      expect(encoding.stats.nodeCount).toBe(1);
+      expect(encoding.stats.nodes[0].id).toBe('advect-particles');
+      device.submit(encoder.finish());
+      for (let index = 1; index < 30; index++) graph.step(1 / 30);
       const result = new Float32Array((await graph.output.readAsync()).buffer);
       for (const index of [0, 128]) {
         expect(result[index * 4]).toBeCloseTo(

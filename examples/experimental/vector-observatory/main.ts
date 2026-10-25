@@ -10,6 +10,7 @@ import {
   type ScientificFlowTraceResult
 } from '@luma.gl/experimental';
 import {makeField} from './fields';
+import {ObservatoryControlPanel} from './control-panel';
 import './style.css';
 
 function element<ElementType extends HTMLElement>(identifier: string): ElementType {
@@ -17,18 +18,6 @@ function element<ElementType extends HTMLElement>(identifier: string): ElementTy
 }
 const canvas = element<HTMLCanvasElement>('flow');
 const status = element<HTMLElement>('status');
-const field = element<HTMLSelectElement>('field');
-const count = element<HTMLSelectElement>('count');
-const integrator = element<HTMLSelectElement>('integrator');
-const speed = element<HTMLInputElement>('speed');
-const exposure = element<HTMLInputElement>('exposure');
-const tolerance = element<HTMLSelectElement>('tolerance');
-const coloring = element<HTMLSelectElement>('coloring');
-const pause = element<HTMLButtonElement>('pause');
-element<HTMLButtonElement>('toggle-controls').onclick = () => {
-  const opened = document.body.classList.toggle('controls-open');
-  element<HTMLButtonElement>('toggle-controls').setAttribute('aria-expanded', String(opened));
-};
 const source = /* wgsl */ `
 struct View {size: vec4f, options: vec4f};
 @group(0) @binding(0) var<uniform> view: View;
@@ -44,12 +33,12 @@ struct Vertex {@builtin(position) position: vec4f, @location(0) color: vec3f, @l
   let velocity = length(displacement) / max(particle.z - before.z, 0.00001);
   let corner = CORNERS[vertex];
   let aspect = view.size.x / view.size.y;
-  let extent = vec2f(min(1.18, 1.6 / aspect), 1.6);
+  let extent = 1.8 * vec2f(min(1.0, 1.0 / aspect), min(1.0, aspect));
   let direction = displacement * extent * view.size.xy;
   let normal = vec2f(-direction.y, direction.x) / max(length(direction), 0.001);
   var output: Vertex;
   let center = mix(before.xy, particle.xy, corner.x);
-  output.position = vec4f((center - 0.5) * extent + vec2f(0.07,0) + normal * corner.y * 1.1 / view.size.xy, 0, 1);
+  output.position = vec4f((center - 0.5) * extent + normal * corner.y * 1.1 / view.size.xy, 0, 1);
   if (particle.z < 0.0 || particle.w != before.w) {output.position = vec4f(3,3,0,1);}
   let cold = mix(vec3f(0.05,0.16,0.42),vec3f(0.07,0.8,0.85),smoothstep(0.0,0.15,velocity));
   output.color = mix(cold,vec3f(1.0,0.68,0.3),smoothstep(0.15,0.3,velocity));
@@ -60,7 +49,7 @@ struct Vertex {@builtin(position) position: vec4f, @location(0) color: vec3f, @l
       output.color = mix(vec3f(0.7,0.12,0.7), vec3f(0.2,1.0,0.65), stepScale);
     }
     if (particleDiagnostics.z > 0.5) {
-      output.position = vec4f((particle.xy - 0.5) * extent + vec2f(0.07,0) + vec2f((corner.x - 0.5) * 2.0, corner.y) * 3.0 / view.size.xy, 0, 1);
+      output.position = vec4f((particle.xy - 0.5) * extent + vec2f((corner.x - 0.5) * 2.0, corner.y) * 3.0 / view.size.xy, 0, 1);
       output.color = vec3f(1.0,0.45,0.12);
       if (particleDiagnostics.z == 1.0) {output.color = vec3f(0.5);}
       if (particleDiagnostics.z == 3.0) {output.color = vec3f(0.85,0.2,0.85);}
@@ -148,16 +137,26 @@ struct Vertex {@builtin(position) position: vec4f};
     present.setBindings({history: historyTexture});
   }
   let graph: ScientificFlowGraph | ScientificFlowTracer;
-  let activeField = field.value;
-  let activeIntegrator = integrator.value;
-  let activeCount = Number(count.value);
+  let activeField = 'gyre';
+  let activeIntegrator = 'rk4';
+  let activeCount = 262144;
   let restartRequested = false;
   let queuedTime = 0;
+  let graphSamples = 0;
   let traceResult: ScientificFlowTraceResult | undefined;
   let particles: Model;
-  let paused = false;
+  const controls = new ObservatoryControlPanel(
+    element<HTMLElement>('observatory-panels'),
+    restart => {
+      restartRequested ||= restart;
+      updateLegend();
+    },
+    () => {
+      restartRequested = true;
+    }
+  );
   function updateLegend() {
-    const mode = activeIntegrator === 'rk45' ? coloring.value : 'speed';
+    const mode = activeIntegrator === 'rk45' ? controls.settings.coloring : 'speed';
     element<HTMLElement>('legend-low').textContent =
       mode === 'step' ? 'SHORT STEP' : mode === 'status' ? 'ACTIVE' : 'LOW VELOCITY';
     element<HTMLElement>('legend-high').textContent =
@@ -169,17 +168,18 @@ struct Vertex {@builtin(position) position: vec4f};
           ? 'linear-gradient(90deg,#33ffa6,#888,#ff731f,#d933d9,#ff1a26)'
           : 'linear-gradient(90deg,#164d9b,#24d8db,#c7e9a0,#ffb365)';
   }
-  coloring.onchange = updateLegend;
   let snapshotEnd = 0.25;
   let previousFrame = performance.now();
   function restart() {
+    controls.resetGraphDiagnostics();
+    graphSamples = 0;
     particles?.destroy();
     graph?.destroy();
     snapshotEnd = 0.25;
     previousFrame = performance.now();
-    activeField = field.value;
-    activeIntegrator = integrator.value;
-    activeCount = Number(count.value);
+    activeField = controls.settings.field;
+    activeIntegrator = controls.settings.integrator;
+    activeCount = controls.settings.particleCount;
     queuedTime = 0;
     traceResult = undefined;
     const fields = {
@@ -200,7 +200,7 @@ struct Vertex {@builtin(position) position: vec4f};
       graph = new ScientificFlowTracer(device, {
         ...fields,
         positions,
-        tolerance: Number(tolerance.value),
+        tolerance: controls.settings.tolerance,
         maximumAttempts: 16
       });
     } else {
@@ -212,17 +212,20 @@ struct Vertex {@builtin(position) position: vec4f};
       });
       graph.step(0);
     }
-    tolerance.disabled = coloring.disabled = activeIntegrator !== 'rk45';
+    controls.updateTelemetry({
+      time: graph.time,
+      queuedTime,
+      particleCount: activeCount,
+      integrator: activeIntegrator,
+      framesPerSecond: 0,
+      traceResult
+    });
     updateLegend();
-    element<HTMLElement>('trace-status').textContent =
-      activeIntegrator === 'rk45'
-        ? 'Scientific release · stopped particles retain identity. Reseed to restart.'
-        : '';
     particles = new Model(device, {
       id: 'scientific-flow-streaks',
       source,
       vertexCount: 6,
-      instanceCount: Number(count.value),
+      instanceCount: controls.settings.particleCount,
       shaderLayout: {
         attributes: [],
         bindings: [
@@ -240,28 +243,10 @@ struct Vertex {@builtin(position) position: vec4f};
         depthWriteEnabled: false
       }
     });
-    element<HTMLOutputElement>('simulation-time').value = '0.00 s';
     historyWidth = 0;
     resizeHistory();
   }
   restart();
-  field.onchange =
-    count.onchange =
-    integrator.onchange =
-    tolerance.onchange =
-      () => {
-        restartRequested = true;
-      };
-  element<HTMLButtonElement>('reset').onclick = () => {
-    restartRequested = true;
-  };
-  pause.onclick = () => {
-    paused = !paused;
-    pause.textContent = paused ? 'Resume' : 'Pause';
-  };
-  speed.oninput = () => {
-    element<HTMLOutputElement>('speed-value').value = Number(speed.value).toFixed(1) + '×';
-  };
   let frames = 0;
   let lastReport = performance.now();
   let animationFrame = 0;
@@ -276,10 +261,11 @@ struct Vertex {@builtin(position) position: vec4f};
       }
       // Discard long background-tab gaps; normal playback follows elapsed wall time.
       let deltaTime =
-        Math.min(0.1, Math.max(0, (now - previousFrame) / 1000)) * Number(speed.value);
+        Math.min(0.1, Math.max(0, (now - previousFrame) / 1000)) * controls.settings.timeScale;
       previousFrame = now;
       resizeHistory();
-      if (!paused) {
+      controls.redraw();
+      if (!controls.settings.paused) {
         queuedTime += deltaTime;
         let firstSegment = true;
         while (queuedTime > 0 || (graph instanceof ScientificFlowTracer && graph.hasPendingWork)) {
@@ -300,7 +286,20 @@ struct Vertex {@builtin(position) position: vec4f};
               traceResult = await graph.advance(deltaTime);
             }
           } else {
-            graph.advance(deltaTime);
+            const substeps = Math.max(1, Math.ceil(deltaTime / graph.simulation.maximumTimeStep));
+            const querySet =
+              graphSamples++ % 60 === 0 && device.features.has('timestamp-query')
+                ? device.createQuerySet({type: 'timestamp', count: 2})
+                : undefined;
+            try {
+              const encoder = device.createCommandEncoder({timeProfilingQuerySet: querySet});
+              const encoding = graph.record(encoder, deltaTime / substeps, substeps);
+              device.submit(encoder.finish());
+              controls.diagnostics.record(graph.commandGraph, encoding, querySet);
+            } catch (error) {
+              querySet?.destroy();
+              throw error;
+            }
             queuedTime -= deltaTime;
           }
           if (stopped) return;
@@ -309,8 +308,12 @@ struct Vertex {@builtin(position) position: vec4f};
               canvas.width,
               canvas.height,
               deltaTime,
-              (Number(exposure.value) * 1.2 * 65536) / activeCount,
-              coloring.value === 'step' ? 1 : coloring.value === 'status' ? 2 : 0,
+              (controls.settings.exposure * 1.2 * 65536) / activeCount,
+              controls.settings.coloring === 'step'
+                ? 1
+                : controls.settings.coloring === 'status'
+                  ? 2
+                  : 0,
               activeIntegrator === 'rk45' ? 1 : 0,
               0,
               0
@@ -331,7 +334,6 @@ struct Vertex {@builtin(position) position: vec4f};
           firstSegment = false;
           if (graph instanceof ScientificFlowTracer) break; // One bounded dispatch per animation frame.
         }
-        element<HTMLOutputElement>('simulation-time').value = graph.time.toFixed(2) + ' s';
       }
       const screen = device.beginRenderPass({clearColor: [0.018, 0.035, 0.055, 1]});
       present.draw(screen);
@@ -339,11 +341,15 @@ struct Vertex {@builtin(position) position: vec4f};
       device.submit();
       frames++;
       if (now - lastReport > 500) {
-        status.textContent = `${activeCount.toLocaleString()} particles · ${Math.round((frames * 1000) / (now - lastReport))} fps · ${activeIntegrator.toUpperCase()}${paused ? ' · paused' : ''}`;
-        if (traceResult) {
-          element<HTMLElement>('trace-status').textContent =
-            `${traceResult.active.toLocaleString()} active · ${(activeCount - traceResult.active).toLocaleString()} stopped · ${traceResult.pending.toLocaleString()} pending · ${traceResult.acceptedSteps.toLocaleString()} accepted / ${traceResult.rejectedSteps.toLocaleString()} rejected trials · ${traceResult.gpuMilliseconds === undefined ? 'GPU timer unavailable' : traceResult.gpuMilliseconds.toFixed(2) + ' ms GPU'} · ${queuedTime.toFixed(2)} s queued`;
-        }
+        status.textContent = `${activeCount.toLocaleString()} particles · ${Math.round((frames * 1000) / (now - lastReport))} fps · ${activeIntegrator.toUpperCase()}${controls.settings.paused ? ' · paused' : ''}`;
+        controls.updateTelemetry({
+          time: graph.time,
+          queuedTime,
+          particleCount: activeCount,
+          integrator: activeIntegrator,
+          framesPerSecond: Math.round((frames * 1000) / (now - lastReport)),
+          traceResult
+        });
         frames = 0;
         lastReport = now;
       }
@@ -364,6 +370,7 @@ struct Vertex {@builtin(position) position: vec4f};
       cancelAnimationFrame(animationFrame);
       // Await the sole in-flight counter readback before releasing GPU resources.
       void (currentFrame ?? Promise.resolve()).then(() => {
+        controls.destroy();
         particles.destroy();
         graph.destroy();
         view.destroy();
