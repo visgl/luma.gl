@@ -2936,3 +2936,10 @@ export const AuthoredSceneStressExample: React.FC<WebsiteExampleProps> = props =
     loadTemplate={() => import('../../examples/gltf/authored-scene-stress/app')}
     config={exampleConfig} devices={['webgpu']} {...props} />
 );
+
+export const VectorObservatoryExample: React.FC = () => {
+  const source = useBaseUrl('/standalone-examples/vector-observatory/index.html');
+  return <ExamplePage style={{background: '#050c14', minHeight: '820px'}}>
+    <iframe title="Vector Observatory" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
+  </ExamplePage>;
+};

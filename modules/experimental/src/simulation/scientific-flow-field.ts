@@ -37,42 +37,61 @@ export class ScientificFlowField {
   constructor(device: Device, props: ScientificFlowFieldProps) {
     const {input} = props;
     const [height, width] = input.shape;
-    assert(Number.isSafeInteger(width) && width >= 2 &&
-      Number.isSafeInteger(height) && height >= 2 &&
-      width * height <= 4194304);
-    assert(width <= device.limits.maxTextureDimension2D &&
-      height <= device.limits.maxTextureDimension2D);
-    assert(input.eastward.length === width * height &&
-      input.northward.length === width * height &&
-      input.valid.length === width * height);
+    assert(
+      Number.isSafeInteger(width) &&
+        width >= 2 &&
+        Number.isSafeInteger(height) &&
+        height >= 2 &&
+        width * height <= 4194304
+    );
+    assert(
+      width <= device.limits.maxTextureDimension2D && height <= device.limits.maxTextureDimension2D
+    );
+    assert(
+      input.eastward.length === width * height &&
+        input.northward.length === width * height &&
+        input.valid.length === width * height
+    );
     const geographic = input.geographic;
-    if (geographic && (geographic.longitudeStep <= 0 || geographic.latitudeStep <= 0 ||
-      !Object.values(geographic).every(Number.isFinite))) {
+    if (
+      geographic &&
+      (geographic.longitudeStep <= 0 ||
+        geographic.latitudeStep <= 0 ||
+        !Object.values(geographic).every(Number.isFinite))
+    ) {
       throw new Error('ScientificFlowField: expected eastward/south-to-north regular grid');
     }
-    const bounds: readonly [number, number, number, number] = props.bounds ??
-      (geographic ? [
-        geographic.longitudeStart,
-        geographic.latitudeStart,
-        geographic.longitudeStart + geographic.longitudeStep * (width - 1),
-        geographic.latitudeStart + geographic.latitudeStep * (height - 1)
-      ] : (() => {throw new Error('ScientificFlowField: bounds required');})());
+    const bounds: readonly [number, number, number, number] =
+      props.bounds ??
+      (geographic
+        ? [
+            geographic.longitudeStart,
+            geographic.latitudeStart,
+            geographic.longitudeStart + geographic.longitudeStep * (width - 1),
+            geographic.latitudeStart + geographic.latitudeStep * (height - 1)
+          ]
+        : (() => {
+            throw new Error('ScientificFlowField: bounds required');
+          })());
     const coordinates = props.coordinates ?? (geographic ? 'lnglat' : 'cartesian');
     validateFlowParticleDomain({bounds, coordinates});
     // Preserve missing samples as finite values; shader validity is authoritative.
     const texels = new Float32Array(width * height * 4);
-    for (let i = 0; i < width * height; i++) {
-      if (input.valid[i]) {
-        const u = input.eastward[i], v = input.northward[i];
-        assert(Number.isFinite(u) && Number.isFinite(v));
-        texels[4 * i] = u;
-        texels[4 * i + 1] = v;
-        texels[4 * i + 2] = 1;
+    for (let index = 0; index < width * height; index++) {
+      if (input.valid[index]) {
+        const eastward = input.eastward[index],
+          northward = input.northward[index];
+        assert(Number.isFinite(eastward) && Number.isFinite(northward));
+        texels[4 * index] = eastward;
+        texels[4 * index + 1] = northward;
+        texels[4 * index + 2] = 1;
       }
     }
     this.texture = device.createTexture({
       id: props.id ?? 'scientific-flow-field',
-      width, height, format: 'rgba32float',
+      width,
+      height,
+      format: 'rgba32float',
       usage: Texture.SAMPLE | Texture.COPY_DST | Texture.COPY_SRC,
       data: texels,
       sampler: {minFilter: 'nearest', magFilter: 'nearest'}

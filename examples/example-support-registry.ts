@@ -18,6 +18,7 @@ import poolSupport from './experimental/gpu-pool/mobile-support';
 import sphereWorldSupport from './experimental/gpu-sphere-world/mobile-support';
 import sphereScaleSupport from './experimental/gpu-sphere-scale/mobile-support';
 import spaceSalvageSupport from './experimental/space-salvage/mobile-support';
+import vectorObservatorySupport from './experimental/vector-observatory/mobile-support';
 import physicsStressSupport from './experimental/physics-stress/mobile-support';
 import rigidBodyWorldSupport from './experimental/gpu-rigid-body-world/mobile-support';
 import sketchSupport from './deck/sketch-edges/mobile-support';
@@ -210,6 +211,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'experimental/gpu-sphere-world': sphereWorldSupport,
   'experimental/gpu-sphere-scale': sphereScaleSupport,
   'experimental/gpu-rigid-body-world': rigidBodyWorldSupport,
+  'experimental/vector-observatory': vectorObservatorySupport,
   'experimental/physics-stress': physicsStressSupport,
   'experimental/space-salvage': spaceSalvageSupport,
   'integrations/react-strict-mode': support46,

@@ -1,0 +1,18 @@
+{
+  "name": "luma.gl-examples-vector-observatory",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "vite",
+    "build": "vite build",
+    "build:website": "vite build --base ./ --outDir ../../../website/.generated/example-assets/standalone-examples/vector-observatory"
+  },
+  "dependencies": {
+    "@luma.gl/core": "workspace:*",
+    "@luma.gl/engine": "workspace:*",
+    "@luma.gl/experimental": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "^8.0.0"
+  }
+}

@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Vector Observatory · luma.gl</title></head>
+<body><canvas id="flow" aria-label="GPU particle vector field simulation"></canvas>
+<header><a href="https://luma.gl">luma.gl / experimental</a><button id="toggle-controls" aria-expanded="false">Controls</button><span class="live">WEBGPU · LIVE</span></header>
+<main><p class="eyebrow">A FIELD GUIDE TO INVISIBLE MOTION</p><h1>Vector<br><em>Observatory.</em></h1><p class="intro">Follow the currents. Trace the eddies.<br>A quarter million journeys, unfolding on the GPU.</p></main>
+<aside><p class="eyebrow">01 / EXPERIMENT CONTROLS</p>
+<label>Vector field<select id="field"><option value="gyre">Ocean gyres</option><option value="vortex">Vortex pair</option><option value="jet">Meandering jet</option></select></label>
+<label>Particles<select id="count"><option value="65536">65,536</option><option value="262144" selected>262,144</option><option value="1048576">1,048,576</option></select></label>
+<label>Integration<select id="integrator"><option value="rk4">Runge–Kutta 4</option><option value="rk2">Midpoint / RK2</option></select></label>
+<label>Time scale <output id="speed-value">1.0×</output><input id="speed" type="range" min="0.1" max="3" step="0.1" value="1"></label>
+<label>Exposure <input id="exposure" type="range" min="0.15" max="1.5" step="0.05" value="0.6"></label>
+<div class="buttons"><button id="pause">Pause</button><button id="reset">Reseed</button></div>
+<p class="note">Analytic benchmark fields sampled onto a 256² scientific grid. Color encodes speed; streaks connect consecutive GPU states.</p></aside>
+<footer><div><span class="eyebrow">ADVECTION / GPU RESIDENT</span><strong id="status">Initializing WebGPU…</strong></div><div class="legend"><span>LOW VELOCITY</span><i></i><span>HIGH</span></div><span>NO PARTICLE READBACK</span></footer>
+<div id="error" role="alert" hidden></div><script type="module" src="./main.ts"></script></body></html>
