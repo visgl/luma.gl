@@ -60,7 +60,7 @@ const LIVE_EXAMPLES = readLiveExamples();
 const requireCommonJSModule = createRequire(import.meta.url);
 
 describe('live example catalog metadata', () => {
-  test('groups Three integrations while retaining the private prototype metadata', () => {
+  test('groups Three integrations while retaining experimental example metadata', () => {
     const example = LIVE_EXAMPLES.find(({id}) => id === 'experimental/three');
     expect(example?.categories).toContain('Three.js');
     expect(
@@ -73,7 +73,8 @@ describe('live example catalog metadata', () => {
     const packageDefinition = JSON.parse(
       readFileSync(path.join(process.cwd(), 'modules/three/package.json'), 'utf8')
     );
-    expect(packageDefinition.private).toBe(true);
+    expect(packageDefinition.private).not.toBe(true);
+    expect(packageDefinition.publishConfig.access).toBe('public');
   });
   test('discovers Triangle Geometry immediately after Hello Triangle with a real thumbnail', () => {
     const tutorialExamples = LIVE_EXAMPLES.filter(({categories}) => categories[0] === 'Tutorials');
