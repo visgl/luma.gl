@@ -30,15 +30,9 @@
   "files": [
     "src",
     "dist",
-    "dist.min.js",
     "README.md"
   ],
   "sideEffects": false,
-  "scripts": {
-    "build-minified-bundle": "ocular-bundle ./bundle.ts --output=dist/dist.min.js",
-    "build-dev-bundle": "ocular-bundle ./bundle.ts --output=dist/dist.dev.js --env=dev",
-    "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
-  },
   "dependencies": {
     "@luma.gl/core": "10.0.0-alpha.4",
     "@luma.gl/engine": "10.0.0-alpha.4",
