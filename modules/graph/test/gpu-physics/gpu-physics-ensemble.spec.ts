@@ -475,22 +475,27 @@ it('restores selected collider scales while retaining peer shape edits', async c
 it('rejects adversarial hash bucket traversal instead of silently ignoring the work budget', async context => {
   const device = await getWebGPUTestDevice();
   if (!device) return context.skip('WebGPU unavailable');
-  // Radius 0.5 plus contact margin uses grid level 11 (cell size 2). Pick 128
+  // Radius 0.5 plus an exactly representable 0.125 margin uses level 12 (cell size 4). Pick 128
   // distinct cells with the same low 8 hash bits, without overlapping bodies.
   const coordinates: number[] = [];
   for (let coordinate = 0; coordinates.length < 128; coordinate++) {
-    let hash = Math.imul(coordinate, 73856093) ^ Math.imul(11, 2654435761);
+    let hash = Math.imul(coordinate, 73856093) ^ Math.imul(12, 2654435761);
     hash = Math.imul(hash ^ (hash >>> 16), 2246822519);
     hash ^= hash >>> 13;
-    if ((hash & 255) === 0) coordinates.push(coordinate);
+    if (
+      (hash & 255) === 0 &&
+      (!coordinates.length || coordinate - coordinates[coordinates.length - 1] >= 3)
+    )
+      coordinates.push(coordinate);
   }
   const ensemble = await GPUPhysicsEnsemble.create(device, {
     template: {
       gravity: [0, 0, 0],
       sleepAfter: 0,
       maximumCandidateTestsPerCollider: 1,
+      contactSlop: 0.125,
       bodies: coordinates.map(coordinate => ({
-        position: [coordinate * 2, 0, 0],
+        position: [coordinate * 4, 0, 0],
         shape: {type: 'sphere', radius: 0.5}
       }))
     },
@@ -506,6 +511,24 @@ it('rejects adversarial hash bucket traversal instead of silently ignoring the w
     const diagnostics = await ensemble.world.readSimulationDiagnostics();
     expect(diagnostics.complete).toBe(false);
     expect(diagnostics.incompleteQueries).toBeGreaterThan(0);
+    expect(diagnostics.droppedPairs).toBe(0);
+    expect(diagnostics.maximumCandidateTests).toBeLessThanOrEqual(coordinates.length);
+    const capture = await ensemble.world.captureState({includeRollbackScratch: false});
+    const minima = new Float32Array(
+      capture.buffers.find(buffer => buffer.name === 'minima')!.data.buffer
+    );
+    const maxima = new Float32Array(
+      capture.buffers.find(buffer => buffer.name === 'maxima')!.data.buffer
+    );
+    for (let index = 0; index < coordinates.length; index++) {
+      const size = Math.max(
+        ...[0, 1, 2].map(axis => maxima[index * 3 + axis] - minima[index * 3 + axis])
+      );
+      expect(Math.ceil(Math.log2(size * 2 * 1024))).toBe(12);
+      expect(Math.floor((minima[index * 3] * 0.5 + maxima[index * 3] * 0.5) / 4)).toBe(
+        coordinates[index]
+      );
+    }
     expect(await ensemble.world.readState()).toEqual(initial);
   } finally {
     ensemble.destroy();
