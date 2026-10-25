@@ -9,6 +9,10 @@ module owns body state, collision detection and constraint solving. glTF imports
 programmatic scenes meet at the same engine representation before the graph adapter
 creates GPU simulation data.
 
+For attachment declarations and an inline constraint example, see
+[Physical joints](./scenegraph-joints.mdx). For skeleton deformation, see
+[Skins](./scenegraph-skins.mdx); skin palettes and physics constraints have separate update paths.
+
 ## Physical Joints
 
 `JointController` holds `ScenegraphJoint` declarations. Each joint references two

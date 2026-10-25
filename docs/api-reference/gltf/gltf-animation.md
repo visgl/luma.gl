@@ -174,6 +174,9 @@ integer joint weights retain their intended normalized interpretation at the con
 The existing shared `skin` shader module in `@luma.gl/shadertools` applies joint palettes; its
 current uniform-array capacity is 64 joints.
 
+For native palette construction, ownership, and update order, see
+[Skins and skeletal deformation](/docs/api-guide/engine/scenegraph-skins).
+
 `createScenegraphsFromGLTF()` maps source skins into an engine `SkinController`. Each
 binding maps one resolved mesh node to its animated joints, optional inverse bind
 matrices, reusable mesh-local joint palette, and existing primitive models:

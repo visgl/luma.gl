@@ -14,28 +14,42 @@ viewer opens that asset and retains the studio controls for exploring it.
 
 <GLTFExample embedded showStats={false} />
 
-## API
+## Engine playback API
 
-The engine animation mixer underlies imported clip playback. The glTF adapter exposes it through `scenegraphs.animator`: `selectClip()` activates a source clip, `crossFadeDuration` is in seconds, and `setTime()` advances to absolute milliseconds. `setGLTFMorphWeights()` changes the weights of a mapped mesh node.
+`AnimationBinding`, `AnimationTrack`, `AnimationClip`, and `AnimationMixer` belong to
+`@luma.gl/engine`. They sample and blend resolved runtime properties without reading a source
+asset during playback. `ScenegraphAnimator` adds clip selection and a dependent-update callback
+for skin palettes and other controllers.
 
 ```ts
-import {createScenegraphsFromGLTF, setGLTFMorphWeights} from '@luma.gl/gltf';
+import {AnimationMixer, MixerAnimationClip, ScenegraphAnimator} from '@luma.gl/engine';
 
-const scenegraphs = createScenegraphsFromGLTF(device, gltf);
-scenegraphs.animator.selectClip('Walking');
-scenegraphs.animator.selectClip('Running', {crossFadeDuration: 0.3});
-scenegraphs.animator.setTime(1000);
+// walkingClip and runningClip are resolved engine AnimationClip objects.
+const mixer = new AnimationMixer();
+const animator = new ScenegraphAnimator([
+  new MixerAnimationClip(walkingClip, mixer),
+  new MixerAnimationClip(runningClip, mixer)
+], mixer, {autoplay: 'first', onUpdate: () => skins.update()});
 
-// Node 13 is the face in the RobotExpressive sample.
-const faceNode = scenegraphs.gltfNodeIndexToNodeMap.get(13);
-if (faceNode) {
-  setGLTFMorphWeights(faceNode, [0.8, 0, 0]);
-}
+animator.selectClip(walkingClip.name);
+animator.selectClip(runningClip.name, {crossFadeDuration: 0.3});
+animator.update(1 / 60);
 ```
 
-Clip names and node indices are asset-specific. Active morph animation may overwrite manually set weights on subsequent frames.
+`update()` advances by delta seconds; the compatibility `setTime()` method accepts absolute
+milliseconds. Crossfade durations are seconds. Do not advance the mixer independently as well
+as through its animator during the same frame. Active tracks may overwrite manual edits to the
+same property.
 
-## glTF support
+See [Animation](../animation.md) for native track construction and interpolation,
+[Skins](../scenegraph-skins.mdx) for palette updates, and
+[Morph targets](../scenegraph-morphs.mdx) for weight updates.
+
+## glTF conversion
+
+`createScenegraphsFromGLTF()` decodes source tracks and exposes the shared engine animator as
+`scenegraphs.animator`. It resolves source node indices into bindings and arranges dependent
+skin updates. Imported clip names and node indices are asset-specific.
 
 Node translation, rotation, scale, skins, and morph-weight animation are core glTF features. `KHR_animation_pointer` additionally targets supported material, texture-transform, camera, light, and visibility properties. The [animation reference](/docs/api-reference/gltf/gltf-animation) describes playback and supported targets.
 
