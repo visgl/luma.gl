@@ -19,8 +19,10 @@ export class ScientificFlowGraph {
     particleCount?: number;
     lifetime?: number;
     seed?: number;
+    bounds?: readonly [number, number, number, number];
+    coordinates?: 'cartesian' | 'lnglat';
   }) {
-    this.field = new ScientificFlowField(device, {input: props.input});
+    this.field = new ScientificFlowField(device, {input: props.input, bounds: props.bounds, coordinates: props.coordinates});
     try {
       this.simulation = new FlowParticleSimulation(device, {
         field: this.field.field,
