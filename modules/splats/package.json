@@ -29,7 +29,10 @@
   "files": [
     "src",
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE",
+    "THIRD-PARTY-NOTICES.md",
+    "licenses"
   ],
   "sideEffects": false,
   "dependencies": {

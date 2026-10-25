@@ -29,6 +29,7 @@
     "build": "ocular-clean && yarn build-webgl-constants && ocular-build && node scripts/build-core-cjs.mjs",
     "bundle-size": "node ./scripts/bundle-size.mjs",
     "lint": "ocular-lint",
+    "check:attributions": "node scripts/check-attributions.mjs",
     "publish-beta": "ocular-publish version-only-beta",
     "publish-prod": "ocular-publish version-only-prod",
     "test": "yarn test-node && yarn test-headless",
