@@ -119,13 +119,14 @@ async function makeFixture(
   bounds: readonly Bounds[],
   capacity: number,
   maximumCandidateTestsPerQuery?: number,
-  objectMetadata?: Uint32Array
+  objectMetadata?: Uint32Array,
+  bucketByteOffset?: number
 ) {
   const owned: Buffer[] = [];
   const allocate = (data: Float32Array | Uint32Array | number) => {
     const buffer = device.createBuffer({
       ...(typeof data === 'number' ? {byteLength: Math.max(8, data)} : {data}),
-      usage: Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST
+      usage: Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST | Buffer.INDIRECT
     });
     owned.push(buffer);
     return buffer;
@@ -173,7 +174,39 @@ async function makeFixture(
         {format: 'uint32', length: bounds.length}
       )
     : undefined;
+  const bucketLength =
+    2 ** Math.ceil(Math.log2(Math.max(1, bounds.length * 2))) + bounds.length + 2;
+  const bucketWords = new Uint32Array((bucketByteOffset ?? 0) / 4 + bucketLength);
+  bucketWords.fill(0x12345678, 0, (bucketByteOffset ?? 0) / 4);
+  const buckets = bucketByteOffset === undefined ? undefined : allocate(bucketWords);
+  const schedulerWords = new Uint32Array(25);
+  schedulerWords[0] = 1;
+  schedulerWords.set([Math.ceil(bounds.length / 64), 1, 1], 8);
+  const scheduler = buckets ? allocate(schedulerWords) : undefined;
   const broadPhase = new GPURigidBodyBroadPhase({
+    ...(buckets && scheduler
+      ? {
+          partitionSize: bounds.length,
+          activeInstances: graph.createDataView(
+            graph.importBuffer(
+              {
+                id: 'scheduler',
+                byteLength: scheduler.byteLength,
+                usage: Buffer.STORAGE | Buffer.INDIRECT
+              },
+              scheduler
+            ),
+            {format: 'uint32', length: 25}
+          ),
+          bucketState: graph.createDataView(
+            graph.importBuffer(
+              {id: 'buckets', byteLength: buckets.byteLength, usage: Buffer.STORAGE},
+              buckets
+            ),
+            {format: 'uint32', byteOffset: bucketByteOffset, length: bucketLength}
+          )
+        }
+      : {}),
     objectMetadata: attributeView,
     minima: minimumView,
     maxima: maximumView,
@@ -186,6 +219,7 @@ async function makeFixture(
   return {
     minima,
     maxima,
+    buckets,
     async run() {
       const encoder = device.createCommandEncoder();
       compiled.encode(encoder, {parameters: undefined});
@@ -226,3 +260,25 @@ it('suppresses same-body and static/static pairs before consuming output capacit
     fixture.destroy();
   }
 }, 120000);
+
+it('preserves bucket-view prefixes across initialization and sparse clearing', async context => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return context.skip('WebGPU unavailable');
+  const bounds = [
+    {minimum: [0, 0, 0], maximum: [1, 1, 1]},
+    {minimum: [0.5, 0, 0], maximum: [1.5, 1, 1]}
+  ];
+  const fixture = await makeFixture(device, bounds, 4, undefined, undefined, 12);
+  try {
+    for (let iteration = 0; iteration < 3; iteration++) {
+      expect((await fixture.run()).pairs).toEqual(['0:1']);
+      const words = new Uint32Array((await fixture.buckets!.readAsync()).buffer);
+      expect(Array.from(words.slice(0, 3))).toEqual([0x12345678, 0x12345678, 0x12345678]);
+    }
+    fixture.minima.write(new Float32Array([10, 10, 10]), 12);
+    fixture.maxima.write(new Float32Array([11, 11, 11]), 12);
+    expect((await fixture.run()).pairs).toEqual([]);
+  } finally {
+    fixture.destroy();
+  }
+});

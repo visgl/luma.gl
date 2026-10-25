@@ -286,7 +286,17 @@ fn storeContact(pair:u32,slot:u32,point:vec3f,normal:vec3f,depth:f32,previous:Ma
 }
 ${RIGID_BODY_BOUNDS_SHADER}
 ${sparse ? RIGID_BODY_BOUND_PUBLICATION_SHADER : ''}
-${extended ? RIGID_BODY_CONVEX_SHADER : ''}
+${
+  extended
+    ? ensembleBodiesPerInstance
+      ? RIGID_BODY_CONVEX_SHADER.replace(
+          'for(var pair=0u;pair<PAIR_CAPACITY;pair++){',
+          // Only contacts touched by this step own current mesh tasks. Paused caches retain their payloads.
+          'for(var index=0u;index<atomicLoad(&targets.reserved0);index++){let pair=targets.journalSlots[index];if(manifolds[pair].padding.z==0u){continue;}'
+        )
+      : RIGID_BODY_CONVEX_SHADER
+    : ''
+}
 // SAT separates oriented boxes along all six face normals and nine edge cross products.
 @compute @workgroup_size(64) fn collide(@builtin(global_invocation_id) invocation: vec3u) {
  ${

@@ -69,14 +69,19 @@ noise floor; these observations support bounded work rather than an exact reside
 
 ## Correctness and limits
 
-The 23-test GPU ensemble regression suite covers collision isolation, bounded/adversarial hash traversal,
+The 24-test GPU ensemble regression suite covers collision isolation, bounded/adversarial hash traversal,
 paused manifold/event preservation with compact and noncompact solving, default-limit extended
 geometry, selective reset/rebase/shape restoration, sleeping/wake notifications, contact retirement
 and slot reuse, repeated overflow, and rollback after successful cached-contact steps. The latter
 checks body vectors, existing/new manifold payloads, cache keys, epochs, links and instance heads.
 Tiny 1/2/4-slot budgets verify WGSL alignment; a capacity preflight preserves the previous default
 storage-binding ceiling. Parallel finite-state validation rejects an overflowing angular integration
-and clears its counter on the next idle step.
+and clears its counter on the next idle step. Paused control wakes survive disabled steps; triangle-mesh
+contacts remain unchanged while peers run and when an active step rolls back. A separate broad-phase
+regression checks nonzero bucket-view offsets through initialization, reuse and moved bounds.
+
+The recorded timings identify the measured commit in each JSON report. Subsequent review fixes
+cover these edge cases; the historical observations are not relabeled as measurements of later commits.
 
 Remaining capacity-dependent work is explicit: scheduler/status scans instance records; optional
 events, pose publication and noncompact fallback can scan bodies/contacts. Reset invalidation,

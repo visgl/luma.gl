@@ -29,7 +29,7 @@ export type GPURigidBodyBroadPhaseProps = {
   partitionSize?: number;
   /** GPU compact instance queue produced by the rigid-body ensemble scheduler. */
   activeInstances?: GraphDataView<'uint32'>;
-  /** Optional persistent bucket storage for clearing only previously touched buckets. */
+  /** Optional initially zeroed persistent bucket storage for clearing only previously touched buckets. */
   bucketState?: GraphDataView<'uint32'>;
   objectMetadata?: GraphDataView<'uint32'>;
   /** Canonical source-row pairs. Order is unspecified; each pair occurs once. */
@@ -109,14 +109,17 @@ export class GPURigidBodyBroadPhase {
       maximumCandidates > 65535
     )
       throw new Error('Invalid rigid-body broad-phase layout');
-    const writable = [props.pairs, props.diagnostics];
+    const writable = [
+      props.pairs,
+      props.diagnostics,
+      ...(props.bucketState ? [props.bucketState] : [])
+    ];
     for (const output of writable)
       for (const input of [
         props.minima,
         props.maxima,
         ...(props.objectMetadata ? [props.objectMetadata] : []),
         ...(props.activeInstances ? [props.activeInstances] : []),
-        ...(props.bucketState ? [props.bucketState] : []),
         ...writable.filter(view => view !== output)
       ])
         if (output.buffer === input.buffer) {
@@ -386,14 +389,14 @@ fn activeCount()->u32{return activeInstances[${offsets['activeInstances']}u]*${p
 fn activeObject(index:u32)->u32{return activeInstances[${queueOffset}u+index/${props.partitionSize}u]*${props.partitionSize}u+index%${props.partitionSize}u;}
 @compute @workgroup_size(64) fn clearBuckets(@builtin(global_invocation_id) invocation:vec3u){
  // First use initializes the table; subsequent steps clear only buckets touched last step.
- let initialized=${props.bucketState ? `atomicLoad(&heads[${bucketCount + 1}u])` : '0u'};
- let count=select(${bucketCount}u,atomicLoad(&heads[${bucketCount}u]),initialized!=0u);
+ let initialized=${props.bucketState ? `atomicLoad(&heads[${offsets['heads']}u+${bucketCount + 1}u])` : '0u'};
+ let count=select(${bucketCount}u,atomicLoad(&heads[${offsets['heads']}u+${bucketCount}u]),initialized!=0u);
  for(var index=invocation.x;index<count;index+=64u){
-  var bucket=index;if(initialized!=0u){bucket=atomicLoad(&heads[${bucketCount + 2}u+index]);}
-  atomicStore(&heads[bucket],0xffffffffu);
+  var bucket=index;if(initialized!=0u){bucket=atomicLoad(&heads[${offsets['heads']}u+${bucketCount + 2}u+index]);}
+  atomicStore(&heads[${offsets['heads']}u+bucket],0xffffffffu);
  }
  storageBarrier();
- if(invocation.x==0u){atomicStore(&heads[${bucketCount}u],0u);atomicStore(&heads[${bucketCount + 1}u],1u);}
+ if(invocation.x==0u){atomicStore(&heads[${offsets['heads']}u+${bucketCount}u],0u);atomicStore(&heads[${offsets['heads']}u+${bucketCount + 1}u],1u);}
 }
 `;
     source = source
@@ -408,10 +411,13 @@ fn activeObject(index:u32)->u32{return activeInstances[${queueOffset}u+index/${p
       )
       .replace(
         'keys[' + offsets['keys'] + 'u+index]=hash(cell(index,level),level,domain(index));',
-        `let key=hash(cell(index,level),level,domain(index));let bucket=key&${bucketMask}u;let previous=atomicExchange(&heads[bucket],index);values[${offsets['values']}u+index]=previous;
- if(previous==0xffffffffu){let touched=atomicAdd(&heads[${bucketCount}u],1u);atomicStore(&heads[${bucketCount + 2}u+touched],bucket);}`
+        `let key=hash(cell(index,level),level,domain(index));let bucket=key&${bucketMask}u;let previous=atomicExchange(&heads[${offsets['heads']}u+bucket],index);values[${offsets['values']}u+index]=previous;
+ if(previous==0xffffffffu){let touched=atomicAdd(&heads[${offsets['heads']}u+${bucketCount}u],1u);atomicStore(&heads[${offsets['heads']}u+${bucketCount + 2}u+touched],bucket);}`
       )
-      .replace('var cursor=lowerBound(key);', `var cursor=atomicLoad(&heads[key&${bucketMask}u]);`)
+      .replace(
+        'var cursor=lowerBound(key);',
+        `var cursor=atomicLoad(&heads[${offsets['heads']}u+(key&${bucketMask}u)]);`
+      )
       .replace(
         `if(cursor>=BODY_COUNT||sortedKeys[${offsets['sortedKeys']}u+cursor]!=key){break;}let second=sortedValues[${offsets['sortedValues']}u+cursor];cursor++;`,
         `if(cursor>=BODY_COUNT){break;}if(bucketVisits>=${Math.min(0xffffffff, (props.maximumCandidateTestsPerQuery ?? 4096) * 32)}u){atomicAdd(&diagnostics[${offsets['diagnostics']}u+6u],1u);return;}bucketVisits++;let second=cursor;cursor=values[${offsets['values']}u+second];if(domain(first)!=domain(second)||(levels[${offsets['levels']}u+second]&63u)!=level||any(cell(second,level)!=coordinate)){continue;}`

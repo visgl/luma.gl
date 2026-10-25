@@ -46,6 +46,8 @@ fn scheduledCollider(index:u32)->u32{return atomicLoad(&ensemble[INSTANCE_QUEUE+
 }
 @compute @workgroup_size(64) fn ensembleMark(@builtin(global_invocation_id) invocation:vec3u){
  let instance=invocation.x;if(instance>=INSTANCE_COUNT){return;}let offset=16u+instance*8u;
+ // Controls must remain pending across disabled steps after the shared wake flag is consumed.
+ if(atomicLoad(&ensemble[1])!=0u){atomicStore(&ensemble[offset+6u],1u);}
  if(atomicLoad(&ensemble[offset])==0u){return;}
  if(atomicLoad(&ensemble[offset+5u])!=0u||atomicLoad(&ensemble[offset+6u])!=0u||atomicLoad(&ensemble[1])!=0u){
   atomicStore(&ensemble[offset+1u],1u);atomicStore(&ensemble[offset+6u],0u);

@@ -7,6 +7,7 @@ import {
   GPUPhysicsEnsemble,
   GPURigidBodyWorld,
   makeConvexHullGeometry,
+  makeTriangleMeshGeometry,
   type GPURigidBodyWorldProps
 } from '../../src/gpu-physics';
 
@@ -575,8 +576,12 @@ it('copies active payloads independently of resident contact capacity and preser
       allocatorSnapshotBytes: 40
     });
     await step(8);
+    ensemble.setActive(7, false);
     ensemble.world.applyImpulse(7, [1, 0, 0]);
-    await step();
+    await step(8);
+    expect((await ensemble.world.readState())[7].position[0]).toBe(0);
+    ensemble.setActive(7, true);
+    expect((await step()).activeInstances).toBe(1);
     expect((await ensemble.world.readState())[7].position[0]).toBeGreaterThan(0);
     expect((await ensemble.world.readSimulationDiagnostics()).complete).toBe(true);
   } finally {
@@ -777,6 +782,61 @@ it('rejects non-finite active-body integration and clears validation counts for 
     ensemble.encode(idle);
     device.submit(idle.finish());
     expect((await ensemble.world.readSimulationDiagnostics()).invalidBodyStates).toBe(1);
+  } finally {
+    ensemble.destroy();
+  }
+});
+
+it('preserves paused triangle-mesh contacts through active collection and rollback', async context => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return context.skip('WebGPU unavailable');
+  const geometry = makeTriangleMeshGeometry(
+    [-5, 0, -5, 5, 0, -5, 5, 0, 5, -5, 0, 5],
+    [0, 2, 1, 0, 3, 2]
+  );
+  const ensemble = await GPUPhysicsEnsemble.create(device, {
+    template: {
+      gravity: [0, -9.81, 0],
+      sleepAfter: 0,
+      bodies: [
+        {position: [0, 0.49, 0], velocity: [0.5, 0, 0], shape: {type: 'sphere', radius: 0.5}},
+        {position: [0, 0, 0], mass: 0, shape: {type: 'triangle-mesh', geometry}}
+      ]
+    },
+    instances: 2,
+    maximumPairs: 64,
+    maximumResidentBytes: 16 * 1024 * 1024
+  });
+  const step = async () => {
+    const encoder = device.createCommandEncoder();
+    ensemble.encode(encoder);
+    device.submit(encoder.finish());
+    return ensemble.world.captureState();
+  };
+  const contacts = (capture: Awaited<ReturnType<typeof step>>) =>
+    capture.buffers.find(buffer => buffer.name === 'manifolds')!.data;
+  const pausedContacts = (capture: Awaited<ReturnType<typeof step>>) => {
+    const data = contacts(capture);
+    const words = new Uint32Array(data.buffer, data.byteOffset, data.byteLength / 4);
+    return Array.from({length: 64}, (_, slot) => slot)
+      .filter(slot => words[slot * 104 + 97] >= 2 && words[slot * 104 + 96] > 0)
+      .map(slot => ({slot, data: data.slice(slot * 416, (slot + 1) * 416)}));
+  };
+  try {
+    const settled = await step();
+    const paused = pausedContacts(settled);
+    expect(paused.length).toBeGreaterThan(0);
+    ensemble.setActive(1, false);
+    for (let index = 0; index < 4; index++) {
+      expect(pausedContacts(await step())).toEqual(paused);
+    }
+    expect((await ensemble.world.readSimulationDiagnostics()).complete).toBe(true);
+    ensemble.world.applyAngularImpulse(0, [1e37, 0, 0]);
+    const before = await ensemble.world.captureState();
+    const rejected = await step();
+    expect((await ensemble.world.readSimulationDiagnostics()).invalidBodyStates).toBeGreaterThan(0);
+    expect(contacts(rejected)).toEqual(contacts(before));
+    expect(pausedContacts(rejected)).toEqual(pausedContacts(before));
   } finally {
     ensemble.destroy();
   }
