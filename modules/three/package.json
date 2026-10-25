@@ -47,6 +47,11 @@
       "require": "./dist/interleaved.cjs"
     }
   },
+  "files": [
+    "src",
+    "dist",
+    "README.md"
+  ],
   "sideEffects": false,
   "dependencies": {
     "@luma.gl/core": "10.0.0-alpha.4"
