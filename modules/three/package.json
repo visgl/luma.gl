@@ -62,5 +62,12 @@
     "@deck.gl/core": {
       "optional": true
     }
-  }
+  },
+  "files": [
+    "src",
+    "dist",
+    "README.md",
+    "LICENSE",
+    "THIRD-PARTY-NOTICES.md"
+  ]
 }
