@@ -181,8 +181,7 @@
         "items": [
           "api-guide/shaders/shader-passes",
           "api-guide/shaders/rendering-techniques",
-          "api-guide/shaders/transparency",
-          "api-guide/shaders/glass-effects"
+          "api-guide/shaders/transparency"
         ]
       },
       {
@@ -207,7 +206,7 @@
   },
   {
     "type": "category",
-    "label": "Materials and Lighting",
+    "label": "Materials",
     "items": [
       "api-guide/engine/materials",
       "tutorials/lighting",
@@ -218,6 +217,8 @@
         "items": [
           "api-guide/engine/features/README",
           "api-guide/engine/features/metallic-roughness",
+          "api-guide/engine/features/metallic",
+          "api-guide/engine/features/roughness",
           "api-guide/engine/features/base-color",
           "api-guide/engine/features/opacity",
           "api-guide/engine/features/double-sided",
@@ -236,11 +237,19 @@
           "api-guide/engine/features/anisotropy",
           "api-guide/engine/features/surface-detail",
           "api-guide/engine/features/normal-mapping",
+          "api-guide/engine/features/bump-mapping",
           "api-guide/engine/features/diffuse-transmission",
-          "api-guide/engine/features/texture-coordinates"
+          "api-guide/engine/features/volume-scattering",
+          "api-guide/engine/features/thin-wall-scattering",
+          "api-guide/engine/features/texture-coordinates",
+          "api-guide/engine/features/lightmaps"
         ]
       },
-      "api-guide/engine/features/material-variants"
+      "api-guide/engine/features/material-variants",
+      "api-guide/shaders/glass-effects",
+      "api-reference/experimental/glass-material",
+      "api-reference/experimental/reflective-material",
+      "api-reference/experimental/pbr-environment"
     ]
   },
   {
@@ -481,8 +490,7 @@
                   "api-reference/experimental/deferred-scene-renderer",
                   "api-reference/experimental/selection-outline",
                   "api-reference/experimental/depth-texture-copy",
-                  "api-reference/experimental/ray-tracing-quality-presets",
-                  "api-reference/experimental/pbr-environment"
+                  "api-reference/experimental/ray-tracing-quality-presets"
                 ]
               },
               {
@@ -500,8 +508,6 @@
                 "label": "Materials and Transparency",
                 "items": [
                   "api-reference/experimental/spectral-caustics-renderer",
-                  "api-reference/experimental/glass-material",
-                  "api-reference/experimental/reflective-material",
                   "api-reference/experimental/a-buffer-renderer",
                   "api-reference/experimental/wboit-renderer"
                 ]

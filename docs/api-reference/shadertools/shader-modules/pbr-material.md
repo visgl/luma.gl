@@ -4,7 +4,11 @@ import {ShaderModuleDocsTabs} from '@site/src/components/docs/shader-module-docs
 
 <ShaderModuleDocsTabs group="lighting" active="pbr-material" />
 
-Implements Physically Based Shading of a microfacet surface defined by a glTF material.
+Implements luma.gl's shared physically based microfacet surface shading. Materials can be
+configured directly or populated by importers such as the glTF converter.
+
+See [Materials](/docs/api-guide/engine/materials) for individual capabilities, texture semantics,
+and inline examples.
 
 Lighting is expected to be defined by the `lighting` module.
 
