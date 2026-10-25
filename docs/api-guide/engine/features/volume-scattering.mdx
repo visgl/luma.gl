@@ -17,6 +17,7 @@ material.setProps({
   pbrMaterial: {
     metallicRoughnessValues: [0, 0.4],
     thicknessFactor: 0.6,
+    attenuationDistance: 0.6,
     diffuseTransmissionFactor: 0.7,
     multiscatterColorFactor: [0.9, 0.35, 0.18],
     scatterAnisotropy: 0.25
@@ -27,6 +28,13 @@ material.setProps({
 ## Parameters and textures
 
 This capability is experimental. `multiscatterColorFactor` supplies scattering color and its texture uses sRGB RGB. `scatterAnisotropy` ranges from `-1` to `1` and controls the Henyey–Greenstein phase response. The implementation is a local thickness-aware approximation; it does not perform spatial diffusion, a subsurface random walk, or multiple-surface transport. The glTF volume-scatter mapping follows an unratified draft.
+
+`attenuationDistance` controls the optical distance over which scattering becomes significant,
+using the same units as thickness. Set it to a value comparable to `thicknessFactor`: the
+example uses `0.6` for both, giving a scattering probability of approximately `0.63` from
+`1 - exp(-thickness / attenuationDistance)`. The default distance of `1e9` makes volume
+scattering effectively invisible at this thickness. Increasing the distance weakens scattering
+for a fixed thickness; decreasing it strengthens scattering.
 
 ## Model integration
 
