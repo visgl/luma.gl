@@ -198,14 +198,12 @@ struct Vertex {@builtin(position) position: vec4f};
         let remainingTime = deltaTime;
         let firstSegment = true;
         while (remainingTime > 0) {
-          if (field.value === 'gyre' && snapshotEnd - graph.time < 1e-10) {
+          if (field.value === 'gyre' && graph.remainingTime === 0) {
             snapshotEnd += 0.25;
             graph.setNextSnapshot(makeField(field.value, snapshotEnd), snapshotEnd);
           }
           deltaTime =
-            field.value === 'gyre'
-              ? Math.min(remainingTime, snapshotEnd - graph.time)
-              : remainingTime;
+            field.value === 'gyre' ? Math.min(remainingTime, graph.remainingTime) : remainingTime;
           graph.advance(deltaTime);
           view.write(
             new Float32Array([

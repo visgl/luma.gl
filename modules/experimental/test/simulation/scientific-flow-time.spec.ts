@@ -301,3 +301,38 @@ it('ScientificFlowGraph reaches the exact final snapshot after fifty GPU substep
     graph.destroy();
   }
 });
+
+for (const epoch of [0, 1700000000]) {
+  it(`ScientificFlowGraph rotates after frame-sized steps at epoch ${epoch}`, async context => {
+    const device = await getTestDevice('webgpu');
+    if (!device) return context.skip();
+    const graph = new ScientificFlowGraph(device, {
+      input: makeUniformField(0),
+      nextInput: makeUniformField(0.2),
+      timeRange: [epoch, epoch + 0.25],
+      bounds: [0, 0, 1, 1],
+      particleCount: 1,
+      lifetime: 10
+    });
+    try {
+      graph.output.write(new Float32Array([0.2, 0.5, 0, 4]));
+      for (let frame = 0; frame < 15; frame++) graph.advance(1 / 60);
+      expect(graph.remainingTime).toBe(0);
+      expect(graph.time).toBe(epoch + 0.25);
+      expect((await readParticle(graph))[0]).toBeCloseTo(0.225, 6);
+      graph.setNextSnapshot(makeUniformField(0.4), epoch + 0.5);
+      // This remainder fits the demo's old 1e-10 heuristic but is still real motion.
+      graph.advance(0.25 - 5e-11);
+      expect(graph.remainingTime).toBeGreaterThan(0);
+      expect(() => graph.setNextSnapshot(makeUniformField(0.6), epoch + 0.75)).toThrow();
+      graph.advance(graph.remainingTime);
+      expect(graph.remainingTime).toBe(0);
+      expect(graph.time).toBe(epoch + 0.5);
+      graph.setNextSnapshot(makeUniformField(0.6), epoch + 0.75);
+      expect(graph.remainingTime).toBe(0.25);
+      expect((await readParticle(graph))[0]).toBeCloseTo(0.3, 6);
+    } finally {
+      graph.destroy();
+    }
+  });
+}

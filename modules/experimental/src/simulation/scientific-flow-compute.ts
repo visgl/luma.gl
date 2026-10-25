@@ -110,7 +110,8 @@ export class ScientificFlowCompute {
   private field: ScientificFlowField;
   private nextField: ScientificFlowField;
   private timeRange: readonly [number, number] | undefined;
-  private currentTime = 0;
+  private elapsedTime = 0;
+  private timeCompensation = 0;
   private readonly lifetime: number;
   private readonly seed: number;
   readonly integrator: 'rk2' | 'rk4';
@@ -197,10 +198,7 @@ export class ScientificFlowCompute {
       field.texture.height !== nextField.texture.height ||
       field.field.coordinates !== nextField.field.coordinates ||
       !field.field.bounds.every((value, index) => value === nextField.field.bounds[index]) ||
-      (this.timeRange &&
-        (timeRange[0] !== this.currentTime ||
-          Math.abs(this.currentTime - this.timeRange[1]) >
-            1e-12 * (this.timeRange[1] - this.timeRange[0])))
+      (this.timeRange && (timeRange[0] !== this.time || this.remainingTime !== 0))
     ) {
       throw new Error('Invalid scientific flow interval');
     }
@@ -208,11 +206,17 @@ export class ScientificFlowCompute {
     this.field = field;
     this.nextField = nextField;
     this.timeRange = [timeRange[0], timeRange[1]];
-    this.currentTime = timeRange[0];
+    this.elapsedTime = 0;
+    this.timeCompensation = 0;
   }
 
   get time(): number {
-    return this.currentTime;
+    return (this.timeRange?.[0] ?? 0) + this.elapsedTime;
+  }
+
+  /** Seconds to the next snapshot; infinity for steady fields. Avoid epoch subtraction. */
+  get remainingTime(): number {
+    return this.timeRange ? this.timeRange[1] - this.timeRange[0] - this.elapsedTime : Infinity;
   }
 
   /** Half-cell travel bound for either snapshot, also capped at 1/30 second. */
@@ -224,7 +228,7 @@ export class ScientificFlowCompute {
   }
 
   validateStep(deltaTime: number, substeps = 1): void {
-    const endTime = this.currentTime + deltaTime * substeps;
+    const endTime = this.elapsedTime + deltaTime * substeps;
     if (
       !Number.isFinite(deltaTime) ||
       deltaTime < 0 ||
@@ -233,8 +237,7 @@ export class ScientificFlowCompute {
       substeps < 1 ||
       substeps > 4096 ||
       !Number.isFinite(endTime) ||
-      (this.timeRange &&
-        endTime > this.timeRange[1] + 1e-12 * (this.timeRange[1] - this.timeRange[0]))
+      (this.timeRange && endTime > (this.timeRange[1] - this.timeRange[0]) * (1 + 1e-12))
     ) {
       throw new Error('ScientificFlowCompute requires a bounded timestep within its interval');
     }
@@ -264,10 +267,8 @@ export class ScientificFlowCompute {
     ].forEach((value, index) => view.setUint32(32 + index * 4, value, true));
     const duration = this.timeRange ? this.timeRange[1] - this.timeRange[0] : 1;
     [
-      this.timeRange ? (this.currentTime - this.timeRange[0]) / duration : 0,
-      this.timeRange
-        ? Math.min(1, (this.currentTime + deltaTime * substeps - this.timeRange[0]) / duration)
-        : 0,
+      this.timeRange ? this.elapsedTime / duration : 0,
+      this.timeRange ? Math.min(1, (this.elapsedTime + deltaTime * substeps) / duration) : 0,
       substeps,
       0
     ].forEach((value, index) => view.setFloat32(48 + index * 4, value, true));
@@ -284,8 +285,15 @@ export class ScientificFlowCompute {
     });
     this.current = 1 - this.current;
     this.frame = (this.frame + substeps) >>> 0;
-    this.currentTime += deltaTime * substeps;
-    if (this.timeRange) this.currentTime = Math.min(this.currentTime, this.timeRange[1]);
+    // Compensated, interval-relative accumulation avoids adding frame durations to an epoch.
+    const increment = deltaTime * substeps - this.timeCompensation;
+    const endTime = this.elapsedTime + increment;
+    this.timeCompensation = endTime - this.elapsedTime - increment;
+    this.elapsedTime = endTime;
+    if (this.timeRange && Math.abs(this.elapsedTime - duration) <= 1e-12 * duration) {
+      this.elapsedTime = duration;
+      this.timeCompensation = 0;
+    }
   }
   get output(): Buffer {
     return this.state[this.current];

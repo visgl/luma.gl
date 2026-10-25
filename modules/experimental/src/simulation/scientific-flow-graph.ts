@@ -137,6 +137,11 @@ export class ScientificFlowGraph {
     return this.simulation.time;
   }
 
+  /** Seconds remaining in the resident interval, or infinity for a steady field. */
+  get remainingTime(): number {
+    return this.simulation.remainingTime;
+  }
+
   /** Advance an interval using half-cell/1/30-second bounded substeps in one GPU dispatch. */
   advance(deltaTime: number): Buffer {
     const substeps = Math.max(1, Math.ceil(deltaTime / this.simulation.maximumTimeStep));

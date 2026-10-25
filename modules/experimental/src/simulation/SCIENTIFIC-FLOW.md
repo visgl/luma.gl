@@ -66,10 +66,12 @@ An upload/compatibility failure leaves the existing pair usable.
 
 Sampling is bilinear in space and linear in time. Every RK2/RK4 stage uses its
 own timestamp. A snapshot's validity mask contributes only when its interpolation
-weight is nonzero; between timestamps both snapshots must be valid. Shader time
-is relative to the current interval to avoid losing subsecond precision when
-input timestamps are large. CPU `time` is a JavaScript double; very small steps
-relative to a large epoch are still subject to double-precision rounding.
+weight is nonzero; between timestamps both snapshots must be valid. GPU time and compensated CPU elapsed time are relative to the current interval,
+so repeated frame durations are never accumulated onto a large epoch. Endpoints
+snap within 1e-12 of the interval duration. Use `remainingTime` to split requests
+at an endpoint, then rotate when it is zero; it is infinity for steady fields.
+The absolute `time` getter is a JavaScript double and may round small increments
+at large epochs, so do not calculate scheduling remainders by subtracting it.
 
 The clock advances when commands are encoded, so caller-owned commands must be
 submitted in order and must not be discarded. Submit each `record()`/`encode()`
