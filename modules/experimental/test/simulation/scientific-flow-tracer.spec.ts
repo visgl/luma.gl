@@ -337,3 +337,31 @@ it('ScientificFlowTracer reports float32 time stagnation without changing a part
     tracer.destroy();
   }
 });
+
+it('ScientificFlowTracer completes repeated horizons with roundoff-sized final remainders', async context => {
+  const device = await getTestDevice('webgpu');
+  if (!device) return context.skip();
+  for (const maximumAttempts of [32, 256]) {
+    const tracer = new ScientificFlowTracer(device, {
+      input: uniform(0.001),
+      bounds: [0, 0, 1, 1],
+      positions: new Float32Array([0.5, 0.5]),
+      tolerance: 1e-5,
+      maximumTimeStep: 0.01,
+      maximumAttempts
+    });
+    try {
+      for (let request = 0; request < 32; request++) {
+        const {result} = await finish(tracer, 1);
+        expect(result.active).toBe(1);
+        expect(result.numericalFailure).toBe(0);
+      }
+      expect(tracer.time).toBe(32);
+      const particle = await read(tracer.output);
+      expect(particle[0]).toBeCloseTo(0.532, 4);
+      expect(particle[2]).toBeCloseTo(32, 4);
+    } finally {
+      tracer.destroy();
+    }
+  }
+});

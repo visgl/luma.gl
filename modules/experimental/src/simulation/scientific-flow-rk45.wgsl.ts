@@ -79,6 +79,8 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
   previous[index] = particle;
   var state = diagnostics[index]; // request elapsed, proposed dt, status, last accepted dt
   if (parameters.counters.w != 0u) {state.x = 0.0;}
+  let startingAge = particle.z;
+  let startingElapsed = state.x;
   var accepted = 0u;
   var rejected = 0u;
   for (var attempt = 0u; attempt < parameters.counters.z; attempt++) {
@@ -89,7 +91,11 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
     let remaining = parameters.temporal.z - state.x;
     let remainingLife = parameters.integration.w - particle.z;
     let deltaTime = min(min(state.y, parameters.integration.z), min(remaining, remainingLife));
-    if (!(deltaTime > 0.0) || !(state.x + deltaTime > state.x) || !(particle.z + deltaTime > particle.z)) {
+    // A final roundoff-sized remainder still needs integration, but may be smaller
+    // than one age-clock ULP. Ordinary substeps must remain representable.
+    let requestTail = state.x > 0.0 && deltaTime == remaining;
+    if (!(deltaTime > 0.0) || !(state.x + deltaTime > state.x) ||
+        (!(particle.z + deltaTime > particle.z) && !requestTail)) {
       state.z = 5.0; break;
     }
     let candidate = trial(particle.xy, state.x, deltaTime);
@@ -107,8 +113,10 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
       state.y = max(parameters.integration.y, deltaTime * 0.5);
       continue;
     }
-    particle = vec4<f32>(particle.xy + candidate.displacement, particle.z + deltaTime, particle.w);
     state.x = select(state.x + deltaTime, parameters.temporal.z, deltaTime == remaining);
+    // Anchor age to this dispatch instead of accumulating one age rounding error per trial.
+    particle = vec4<f32>(particle.xy + candidate.displacement,
+      startingAge + (state.x - startingElapsed), particle.w);
     state.w = deltaTime;
     state.y = min(parameters.integration.z, select(deltaTime, deltaTime * 2.0, error < parameters.integration.x * 0.1));
     accepted++;

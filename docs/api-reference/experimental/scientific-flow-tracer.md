@@ -45,7 +45,9 @@ Invalid trial positions first trigger step reduction; an unrecoverable trial sto
 the particle at its last accepted position.
 
 Computation uses float32. A non-finite calculation or an increment too small to
-advance the particle's age/request clock produces `NumericalFailure`. Very strict
+advance the particle's age/request clock produces `NumericalFailure`. A final
+roundoff-sized request remainder is still integrated and checked against the
+tolerance, even when it is smaller than the age clock can represent. Very strict
 tolerances can reach float32 limits. This API supports forward tracing on regular
 collocated 2D grids; curvilinear/staggered grids, 3D fields, diffusion, boundary
 sliding and global trajectory-error guarantees are outside its current scope.
@@ -108,7 +110,7 @@ samples, domain exit, lifetime and numerical/tolerance failures. Run the opt-in
 accuracy/cost benchmark with:
 
 ```sh
-LUMA_TEST_BROWSER_BENCHMARKS=true yarn test-headless --no-coverage modules/experimental/test/simulation/scientific-flow-benchmark.spec.ts
+LUMA_TEST_BROWSER_BENCHMARKS=true yarn test-headless --no-coverage --silent=false modules/experimental/test/simulation/scientific-flow-benchmark.spec.ts
 ```
 
 The benchmark compares 65,536 identical rotation trajectories over two seconds,
