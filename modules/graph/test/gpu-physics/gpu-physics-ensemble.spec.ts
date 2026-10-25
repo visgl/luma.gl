@@ -5,9 +5,12 @@ import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {
   GPUPhysicsEnsemble,
+  GPURigidBodyWorld,
   makeConvexHullGeometry,
   type GPURigidBodyWorldProps
 } from '../../src/gpu-physics';
+
+import {GPUCommandGraph} from '../../src/gpu-core/gpu-command-graph';
 
 const template: GPURigidBodyWorldProps = {
   gravity: [0, 0, 0],
@@ -208,10 +211,25 @@ it('preserves shared mesh packing through checkpoints and streamed captures', as
     checkpoint.save();
     checkpoint.restore();
     expect(ensemble.getStats().worldBufferBytes).toBe(bytes);
+    ensemble.world.setColliderMaterial(0, {staticFriction: 0.8});
+    ensemble.world.setColliderTransform(1, [0.1, 0, 0], [0, 0, 0, 1]);
     const capture = await ensemble.world.captureState({includeRollbackScratch: false});
     ensemble.world.restoreState(capture);
     expect(ensemble.getStats().worldBufferBytes).toBe(bytes);
     checkpoint.destroy();
+    const rebuilt = new GPURigidBodyWorld(capture.props);
+    const commands = new GPUCommandGraph(device);
+    rebuilt.addToGraph(commands);
+    const graph = await commands.compileAsync();
+    try {
+      expect(rebuilt.getCapacityInfo().ownedBufferBytes).toBe(bytes);
+      rebuilt.restoreState(capture);
+      expect(await rebuilt.readState()).toEqual(await ensemble.world.readState());
+      expect(rebuilt.getColliderMaterial(0).staticFriction).toBe(0.8);
+    } finally {
+      graph.destroy();
+      rebuilt.destroy();
+    }
   } finally {
     ensemble.destroy();
   }

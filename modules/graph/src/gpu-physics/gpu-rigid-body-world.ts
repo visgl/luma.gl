@@ -468,8 +468,10 @@ export class GPURigidBodyWorld {
         throw new Error('Invalid trigger settings');
       makeRigidBodyTriggerLayout(props.triggers, colliders);
     }
-    this.colliders = structuredClone(colliders);
-    this.props = structuredClone(props);
+    // Clone together so collider edits preserve geometry identity in captured body definitions.
+    const definitions = structuredClone({colliders, props});
+    this.colliders = definitions.colliders;
+    this.props = definitions.props;
   }
 
   private getStorageLayout() {
@@ -1828,9 +1830,9 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
   }
 
   private restoreColliderDefinitions(): void {
-    // Clone the full set once: per-collider clones duplicate shared cooked geometry.
-    const definitions = structuredClone(
-      this.props.bodies.flatMap(body => body.colliders ?? (body.shape ? [{shape: body.shape}] : []))
+    // Body definitions are already world-owned. Keep their shared geometry identities.
+    const definitions = this.props.bodies.flatMap(
+      body => body.colliders ?? (body.shape ? [{shape: body.shape}] : [])
     );
     for (const [index, definition] of definitions.entries()) {
       const collider = this.colliders[index];
