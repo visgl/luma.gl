@@ -28,6 +28,8 @@ requires a WebGPU device and has no WebGL or CPU simulation fallback.
 | [GPUSphereWorld](./gpu-sphere-world.md) | Large sphere fields, rolling balls, pool and small continuous sphere scenes | Dynamic shapes are spheres; continuous mode and events are bounded to small worlds |
 | [GPURigidBodyWorld](./gpu-rigid-body-world.md) | Oriented shapes, compounds, mass properties and glTF physics workloads | Discrete contacts with opt-in sphere/static and bounded moving-convex CCD envelopes; parallel solving remains experimental |
 
+`GPUPhysicsBatch` manages independent rigid-body instances, residency and submission groups; see [large worlds](#large-and-independently-batched-worlds).
+
 These are separate implementations with different controls, storage ownership and
 failure counters. A feature on one world does not imply support on the other.
 Neither establishes complete glTF proposal coverage or state-of-the-art performance.
@@ -58,6 +60,7 @@ experimental as a module.
 | glTF physics | Partial | Pinned draft import, shape/body/material/filter semantics and explicit capability reports | Pinned G4/G5 qualification covers attachment constraints, triggers and behavior operations; analytic shape mutation/scale and live scene capture are implemented, while mesh-deformation recooking and full-profile qualification remain work |
 | GPU scenegraph pose publication | Partial | Reusable geometry snapshots and GPU body-node matrices/visual AABBs; cradle PBR and shadows consume published matrices | The glTF gallery consumes GPU matrices directly and binds rigid animation targets; deformation, live scene edits and export/reimport remain work |
 | Capacity and diagnostics | Available | Allocation preflight, bounded queues, lifetime diagnostics and GPU rollback; opt-in bounded automatic growth/replay for sparse pair, traversal and swept-candidate budgets | Recovery synchronizes each tick and replays from initial state; fixed mesh-task/CCD impact failures, event continuity and GPU-only adaptive growth remain work |
+| Large worlds and batching | Partial | Independent leases, bounded residency, explicit streaming, GPU slot resets, local origins/rebasing and measured submission groups | Separate solver graphs; fused kernels, shared GPU geometry, interacting streamed partitions and cross-device qualification remain work |
 | Qualification and tooling | Partial | Independent analytic shape/motion references, command replay, whole-step measurements and Physics Stress Lab with JSON exports | Named-case evidence only; difficult-contact, multi-device and full-profile qualification remain work |
 
 See the [remaining tranches](https://github.com/visgl/luma.gl/blob/master/dev-docs/roadmaps/gpu-physics-roadmap.md#remaining-tranches-after-space-salvage)
@@ -184,3 +187,78 @@ these diagnostics is optional; queue construction and dispatch require no CPU re
 `restore()` and `destroy()`. It copies buffers on the GPU and retains CPU-side event
 cursors and mutable joint settings. It is not a portable capture; use `captureState()`
 for downloadable debug artifacts. Checkpoints are also destroyed with their world.
+
+## Large and independently batched worlds
+
+`GPUPhysicsBatch` manages a bounded set of resident `GPURigidBodyWorld` instances. Worlds
+have independent contacts, events, queries, joints and recovery state. They may occupy the same
+local coordinates without colliding. This is **independent-world batching**, not decomposition
+of one interacting world; bodies in different slots cannot exchange contacts.
+
+```typescript
+import {GPUPhysicsBatch} from '@luma.gl/graph/gpu-physics';
+
+const batch = new GPUPhysicsBatch({
+  device,
+  maximumResidentWorlds: 16,
+  maximumResidentBytes: 256 * 1024 * 1024
+});
+batch.registerTemplate('debris', worldProps);
+const handle = await batch.acquire('debris', 'region-42', [1e12, 0, 0]);
+for (const group of batch.planSubmissions(4, 4096)) {
+  const encoder = device.createCommandEncoder();
+  batch.encode(encoder, 1, group.handles);
+  device.submit(encoder.finish());
+}
+```
+
+World handles identify one lease, not merely a reusable body index. Released handles are rejected.
+The world returned by `getWorld()` is borrowed: do not destroy it or keep using it after release.
+`setActive(handle, false)` skips the entire graph without losing state. Sleeping bodies remain
+managed by each world's existing solver. `encode()` never submits commands or reads back poses.
+Submission groups bound world/body counts; an indivisible oversized world is explicitly flagged.
+Finish submitting encoded work before changing residency, issuing controls or resetting.
+Finish asynchronous world readbacks before releasing or recycling a lease. Residency changes
+are serialized; simultaneous acquisition is rejected rather than silently oversubscribing memory.
+
+### Streaming and memory reuse
+
+`release()` retains a compiled slot for reuse. Acquiring the same template restores an initial
+GPU checkpoint, resetting contacts, events, controls and poses without reallocating or compiling.
+`reset()` performs that same reset for an existing lease. `trim()` destroys unused slots; when a
+new template requires space, unused slots are evicted before any live lease can be affected.
+
+For persistence, `streamOut()` explicitly downloads accepted state and releases the lease.
+`streamIn()` restores that snapshot into a compatible registered template. These transfers are
+not hidden in stepping and should be scheduled separately from latency-sensitive rendering.
+Snapshots are implementation-specific debug captures, not a portable asset format.
+
+`getStats()` separates world-buffer, reset-checkpoint and graph-transient bytes and counts created,
+reused and evicted slots. The budget covers retained buffer allocations, not driver/pipeline
+memory. Compilation can temporarily allocate scratch before the final budget check. A retained
+initial checkpoint omits rollback scratch, which is overwritten before its next use; it still duplicates persistent buffers, including geometry. Sharing immutable
+GPU cooked assets and reducing checkpoint scope remain further memory optimizations.
+
+### Large coordinates and rebasing
+
+The batch stores a JavaScript double-precision global origin for each instance. Supply nearby
+local coordinates to the float32 solver. `getRenderTranslation(handle, cameraOrigin)` subtracts
+origins before upload so render transforms stay small. Large origins do not increase the solver's
+local precision or make a single huge interacting world safe automatically.
+
+`world.shiftOrigin([1024, 0, 0])` subtracts that displacement from GPU poses, active kinematic
+targets, cached world-space contact points, swept-trigger history and queued contact points.
+Velocities, body-local joint anchors, contact impulses and sleep state are retained. Pose
+publication is refreshed. Future controls, queries and returned event points use the new local
+frame. CPU snapshots and GPU reset checkpoints retain their own origin and restore it with state.
+Use exactly representable float32 displacements, typically grid-aligned powers of two. Rebase
+before local coordinate magnitudes lose the precision the application needs; rebasing cannot
+recover precision already lost. Apply the matching origin change to external scene/camera state.
+
+### Qualification
+
+The Physics Stress Lab's **Batch Lab** compares separate and batched submissions, sparse debris
+and dense settling piles, reports p50/p95 completion latency and throughput, and exercises slot
+reuse. See `scripts/physics/batch/README.md` for repeatable scale runs. No universal batching
+speedup or cross-device G10 completion is claimed. Fused multi-world solver dispatches, shared
+GPU cooked assets and seamless interaction across streamed partitions remain open.

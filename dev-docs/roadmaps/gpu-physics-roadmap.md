@@ -799,3 +799,18 @@ and swept event payloads remain open G3/G11 work.
 
 Physics Stress Lab adds Seam Sliding, Touching Chain, Simultaneous Impacts and Swept
 Queue Scaling. These named-case regressions do not close G1–G3 or establish SOTA status.
+
+### October 25 — G10 residency and throughput implementation
+
+Added independent-world identities, active-world scheduling, template-backed compiled slot reuse,
+GPU checkpoint reset, explicit CPU stream-out/in, resident-buffer budgets and eviction, bounded
+submission groups, double-precision instance origins and GPU rebasing of persistent world-space
+state. Added Batch Lab and an alternating-order latency/throughput suite with sparse and dense
+workloads. Residency counts world buffers, checkpoints and graph scratch separately.
+
+This closes the first executable G10 lifecycle contract, not the full G10 qualification gate.
+Remaining work: shared immutable GPU cooked assets; smaller reset snapshots; fused multi-world
+kernels; measured active-island scheduling within large worlds; cross-partition interactions and
+migration; hard peak-allocation admission; long-duration churn/device-loss qualification; and
+p50/p95 quality-gated throughput evidence across supported adapters. Keep independent-world
+throughput distinct from the performance of one large interacting world.
