@@ -16,3 +16,7 @@ export type {
 
 export {FlowFieldAtlas, MAX_FLOW_FIELD_SAMPLES} from './flow-field-atlas';
 export type {FlowFieldAtlasProps} from './flow-field-atlas';
+
+export {ScientificFlowField} from './scientific-flow-field';
+export type {ScientificVectorFieldInput, ScientificFlowFieldProps} from './scientific-flow-field';
+export {ScientificFlowGraph} from './scientific-flow-graph';
