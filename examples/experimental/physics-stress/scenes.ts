@@ -9,9 +9,17 @@ import {
   isQualificationScene
 } from './qualification-scenes';
 
+import {
+  MATCHED_SCENES,
+  makeMatchedFixture,
+  makeMatchedWorld,
+  isMatchedScene
+} from './matched-fixtures';
+
 import {CONTINUOUS_SCENES, isContinuousScene, makeContinuousScene} from './continuous-scenes';
 
 export const STRESS_SCENES = {
+  ...MATCHED_SCENES,
   ...CONTINUOUS_SCENES,
   ...QUALIFICATION_SCENES,
   capacity: 'Capacity recovery',
@@ -31,6 +39,16 @@ export function makeStressScene(
   solver: 'ordered' | 'parallel',
   timeStep: number
 ): {description: string; props: GPURigidBodyWorldProps} {
+  if (isMatchedScene(scene)) {
+    const fixture = makeMatchedFixture(
+      scene,
+      scene === 'matchedChain' ? 12 : scene === 'matchedFast' ? 4 : 32
+    );
+    return {
+      description: fixture.description,
+      props: makeMatchedWorld(fixture, timeStep, scene === 'matchedChain' ? 'ordered' : solver)
+    };
+  }
   const props: GPURigidBodyWorldProps = {
     solver,
     timeStep,

@@ -8,6 +8,7 @@ import {
   type GPURigidBodyRecoveryResult,
   type GPURigidBodyState
 } from '@luma.gl/graph/gpu-physics';
+import {isMatchedScene} from './matched-fixtures';
 import {drawStressShape} from './draw-shape';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {createRigidBodyPanel} from '../gpu-rigid-body-world/info-box';
@@ -90,6 +91,7 @@ async function restart() {
       true;
   let replacement: GPURigidBodyRecoveryRunner | undefined;
   const nextScene = selectedScene;
+  if (nextScene === 'matchedChain') solver.value = 'ordered';
   try {
     const nextConfiguration = makeStressScene(
       nextScene,
@@ -198,18 +200,28 @@ function draw() {
   const depthFactor =
     activeScene === 'geometryOpenings' ||
     activeScene === 'fastMesh' ||
-    activeScene === 'seamSliding'
+    activeScene === 'seamSliding' ||
+    isMatchedScene(activeScene)
       ? 0.45
       : 0;
   const minimumHeight =
-    activeScene === 'ballistic' ? Math.min(0, (states[0]?.position[2] ?? 0) - 1) : 0;
-  const followsImpacts = activeScene === 'impactChain' || activeScene === 'simultaneousImpacts';
+    activeScene === 'ballistic' || activeScene === 'matchedBallistic'
+      ? Math.min(0, (states[0]?.position[2] ?? 0) - 1)
+      : 0;
+  const followsImpacts =
+    activeScene === 'impactChain' ||
+    activeScene === 'simultaneousImpacts' ||
+    activeScene === 'matchedBallistic';
   const horizontalPositions = followsImpacts ? states.map(state => state.position[0]) : [];
   const minimumHorizontal = Math.min(-7, ...horizontalPositions);
   const maximumHorizontal = Math.max(7, ...horizontalPositions);
+  const maximumHeight =
+    activeScene === 'matchedChain'
+      ? Math.max(12, ...states.map(state => state.position[2] + 2))
+      : 12;
   const scale = Math.min(
     width / (maximumHorizontal - minimumHorizontal + 5),
-    height / (12 - minimumHeight)
+    height / (maximumHeight - minimumHeight)
   );
   const origin = [
     width * 0.55 -
@@ -239,6 +251,18 @@ function draw() {
       else context.lineTo(horizontal, vertical);
     });
     context.stroke();
+  }
+  if (activeScene === 'matchedChain') {
+    context.strokeStyle = '#b8c8d4';
+    for (const joint of configuration.props.joints ?? []) {
+      const first = states[joint.first]?.position,
+        second = states[joint.second]?.position;
+      if (!first || !second) continue;
+      context.beginPath();
+      context.moveTo(origin[0] + first[0] * scale, origin[1] - first[2] * scale);
+      context.lineTo(origin[0] + second[0] * scale, origin[1] - second[2] * scale);
+      context.stroke();
+    }
   }
   for (const [index, state] of states.entries()) {
     const body = configuration.props.bodies[index],
@@ -330,7 +354,11 @@ async function advance() {
     if (runner.encoding) diagnostics.record(runner.graph, runner.encoding);
     states = await runner.world.readState();
     lastContinuousWork = await runner.world.readContinuousWork();
-    if (activeScene.startsWith('fast') || activeScene === 'continuous')
+    if (
+      activeScene.startsWith('fast') ||
+      activeScene === 'continuous' ||
+      activeScene === 'matchedFast'
+    ) {
       for (const [index, state] of states.entries()) {
         if (configuration.props.bodies[index].mode === 'static') continue;
         if (!trails[index]) trails[index] = [];
@@ -338,6 +366,7 @@ async function advance() {
         trail.push([...state.position]);
         if (trail.length > 240) trail.shift();
       }
+    }
     lastSolverWork = await runner.world.readSolverWork();
     const sorted = samples
       .map(sample => sample.milliseconds)

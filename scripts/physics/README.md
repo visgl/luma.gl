@@ -112,6 +112,13 @@ uses closed-form signed depths and normals. The three stack qualification suites
 sampled drift, support separation and final energy across two timesteps, with sleeping
 disabled, 64 pair slots, 64 iterations, warm-start factor 0.8 and recovery fraction 0.1. Each test describes a bounded numeric envelope, not general SOTA coverage.
 
+## Box3D comparison
+
+The [matched benchmark suite](./matched/README.md) builds a pinned real Box3D reference,
+runs the same authored boxes/joints through native CPU and browser WebGPU adapters,
+and reports independent simulation-quality metrics alongside repeated timing samples.
+The corresponding `matched*` scenarios are available in Physics Stress Lab.
+
 ## Authored-scene publication qualification
 
 `benchmark-publication.mjs --url http://127.0.0.1:5241/ --count 10000 --samples 30`

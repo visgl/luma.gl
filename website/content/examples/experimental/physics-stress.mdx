@@ -18,3 +18,9 @@ Select a stress scenario, compare solvers and timesteps, and export a report con
 completion latency, recovery attempts, buffer budgets, compact contact workload and final poses.
 Sparse-contact, rotated-geometry and sustained-stack scenarios supplement the original fixtures. The diagnostic
 front projection reads GPU poses back to the CPU; these timings are not rendering benchmarks.
+
+The **Box3D comparison** scenarios use the same authored inputs as the matched native
+CPU/WebGPU benchmark suite: box piles, mixed sizes, stacks, joint chains, rotating fast
+bars and ballistic motion. The live view is for diagnosis. The command-line runner
+measures fresh worlds without rendering and reports quality separately from performance;
+see the [benchmark protocol](https://github.com/visgl/luma.gl/blob/master/scripts/physics/matched/README.md).
