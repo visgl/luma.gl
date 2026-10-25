@@ -887,7 +887,9 @@ export class GPURigidBodyWorld {
                 6 * this.maximumPairs +
                 8) /
                 4
-            ) * 16
+            ) *
+              16 +
+            this.maximumPairs * 416
           : 0)
     );
     for (const [index, joint] of (this.props.joints ?? []).entries()) {
@@ -897,10 +899,7 @@ export class GPURigidBodyWorld {
       );
     }
     // Four 96-byte contacts followed by a 32-byte aligned manifold header.
-    this.manifolds = allocate(
-      'manifolds',
-      this.maximumPairs * 416 * (this.props.ensembleBodiesPerInstance ? 2 : 1)
-    );
+    this.manifolds = allocate('manifolds', this.maximumPairs * 416);
     if (extended) this.meshTasks = allocate('mesh-tasks', 16 + 65536 * 48);
     const bodies = allocate('bodies', metadata);
     if (sparse) this.broadPhaseCounters = {buffer: bodies, byteOffset: diagnosticOffset * 4};

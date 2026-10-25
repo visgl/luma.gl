@@ -79,7 +79,7 @@ var<workgroup> cacheEpoch:u32;
 fn journalManifold(pair:u32,key:u32){
  if(targets.journalMarks[pair]!=0u){return;}
  targets.journalKeys[pair]=vec2u(key,targets.keys[pair].epoch);targets.journalLinks[pair]=targets.links[pair];
- manifolds[PAIR_CAPACITY+pair]=manifolds[pair];targets.journalMarks[pair]=1u;
+ targets.journalManifolds[pair]=manifolds[pair];targets.journalMarks[pair]=1u;
  let index=atomicAdd(&targets.reserved0,1u);targets.journalSlots[index]=pair;
 }
 @compute @workgroup_size(64) fn prepareStart(@builtin(local_invocation_index) invocation:u32){

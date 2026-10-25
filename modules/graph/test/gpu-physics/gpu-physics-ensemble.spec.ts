@@ -726,3 +726,21 @@ it('restores existing contacts and new claims when a later step exhausts discove
     ensemble.destroy();
   }
 });
+
+it('keeps the journal within default binding limits at the previous contact-capacity ceiling', () => {
+  const world = new GPURigidBodyWorld({
+    ...template,
+    solver: 'parallel',
+    broadPhase: 'hierarchical-grid',
+    failurePolicy: 'rollback',
+    ensembleBodiesPerInstance: 1,
+    collisionPartitionSize: 1,
+    maximumPairs: 262144
+  });
+  const buffers = world.getCapacityInfo().buffers;
+  expect(buffers.find(buffer => buffer.name === 'manifolds')!.byteLength).toBe(262144 * 416);
+  expect(Math.max(...buffers.map(buffer => buffer.byteLength))).toBeLessThanOrEqual(
+    128 * 1024 * 1024
+  );
+  world.destroy();
+});

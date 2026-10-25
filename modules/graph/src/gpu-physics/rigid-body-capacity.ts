@@ -51,13 +51,13 @@ export function getRigidBodyStorageLayout(
         Math.ceil((bodyCount * 32 + (sparse ? 32 + maximumPairs * 8 : 16)) / 16) * 16 +
         jointCount * RIGID_BODY_JOINT_STATE_BYTES +
         (ensembleInstances
-          ? Math.ceil((ensembleInstances * 4 + maximumPairs * 6 + 8) / 4) * 16
+          ? Math.ceil((ensembleInstances * 4 + maximumPairs * 6 + 8) / 4) * 16 + maximumPairs * 416
           : 0),
       uniform: false
     },
     {
       name: 'manifolds',
-      byteLength: maximumPairs * 416 * (ensembleInstances ? 2 : 1),
+      byteLength: maximumPairs * 416,
       uniform: false
     },
     {name: 'bodies', byteLength: metadataLength * 4, uniform: false},

@@ -131,7 +131,7 @@ export function addEnsembleCheckpoint<GraphParameters>(
  let count=targets[${bodyCount * 8 + 5}u];
  for(var work=invocation.x;work<count*104u;work+=64u){
   let pair=targets[${journalOffset}u+work/104u];let word=work%104u;
-  manifolds[pair*104u+word]=manifolds[(${maximumPairs}u+pair)*104u+word];
+  manifolds[pair*104u+word]=targets[${savedHeaderOffset + 8}u+pair*104u+word];
  }
 }`
     );
