@@ -27,8 +27,9 @@ export class ScientificFlowGraph {
   constructor(device: Device, props: ScientificFlowGraphProps) {
     this.device = device;
     this.field = new ScientificFlowField(device, props);
+    let simulation: ScientificFlowCompute | undefined;
     try {
-      this.simulation = new ScientificFlowCompute(device, this.field, {
+      simulation = this.simulation = new ScientificFlowCompute(device, this.field, {
         particleCount: props.particleCount ?? 65536,
         lifetime: props.lifetime ?? 20,
         seed: props.seed ?? 1,
@@ -75,7 +76,7 @@ export class ScientificFlowGraph {
       });
       this.commandGraph = graph.compile();
     } catch (error) {
-      this.simulation?.destroy();
+      simulation?.destroy();
       this.field.destroy();
       throw error;
     }
