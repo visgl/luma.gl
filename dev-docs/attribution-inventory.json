@@ -134,6 +134,24 @@
       "notices": [
         "modules/shadertools/src/modules/lighting/area-lighting/LTC-LICENSE.txt"
       ]
+    },
+    {
+      "files": [
+        "modules/effects/src/passes/postprocessing/image-adjust-filters/brightnesscontrast.ts",
+        "modules/effects/src/passes/postprocessing/image-adjust-filters/denoise.ts",
+        "modules/effects/src/passes/postprocessing/image-adjust-filters/huesaturation.ts",
+        "modules/effects/src/passes/postprocessing/image-adjust-filters/noise.ts",
+        "modules/effects/src/passes/postprocessing/image-adjust-filters/sepia.ts",
+        "modules/effects/src/passes/postprocessing/image-adjust-filters/vibrance.ts",
+        "modules/effects/src/passes/postprocessing/image-adjust-filters/vignette.ts"
+      ],
+      "markers": [
+        "2011 by Evan Wallace",
+        "glfx.js"
+      ],
+      "notices": [
+        "modules/effects/licenses/glfx.txt"
+      ]
     }
   ],
   "auditedBaseCommit": "5021c4893"
