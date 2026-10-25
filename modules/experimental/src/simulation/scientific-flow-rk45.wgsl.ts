@@ -90,7 +90,8 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
     if (initialValidity < 0.5) {state.z = select(3.0, 2.0, initialValidity < 0.0); break;}
     let remaining = parameters.temporal.z - state.x;
     let remainingLife = parameters.integration.w - particle.z;
-    let deltaTime = min(min(state.y, parameters.integration.z), min(remaining, remainingLife));
+    let proposedTimeStep = min(state.y, parameters.integration.z);
+    let deltaTime = min(proposedTimeStep, min(remaining, remainingLife));
     // A final roundoff-sized remainder still needs integration, but may be smaller
     // than one age-clock ULP. Ordinary substeps must remain representable.
     let requestTail = state.x > 0.0 && deltaTime == remaining;
@@ -118,7 +119,11 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
     particle = vec4<f32>(particle.xy + candidate.displacement,
       startingAge + (state.x - startingElapsed), particle.w);
     state.w = deltaTime;
-    state.y = min(parameters.integration.z, select(deltaTime, deltaTime * 2.0, error < parameters.integration.x * 0.1));
+    // An endpoint clip says nothing about the useful proposal for the next request.
+    // Preserve it unless a rejected trial already reduced it.
+    state.y = select(
+      min(parameters.integration.z, select(deltaTime, deltaTime * 2.0, error < parameters.integration.x * 0.1)),
+      proposedTimeStep, deltaTime < proposedTimeStep);
     accepted++;
     if (deltaTime == remainingLife) {particle.z = parameters.integration.w; state.z = 1.0;}
   }

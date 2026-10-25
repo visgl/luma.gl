@@ -365,3 +365,26 @@ it('ScientificFlowTracer completes repeated horizons with roundoff-sized final r
     }
   }
 });
+
+it('ScientificFlowTracer preserves its step proposal across tiny endpoint clips', async context => {
+  const device = await getTestDevice('webgpu');
+  if (!device) return context.skip();
+  const tracer = new ScientificFlowTracer(device, {
+    input: uniform(),
+    bounds: [0, 0, 1, 1],
+    positions: new Float32Array([0.5, 0.5]),
+    tolerance: 1e-5
+  });
+  try {
+    await finish(tracer, 64);
+    expect((await finish(tracer, 1 + 2 ** -23)).result.active).toBe(1);
+    expect((await read(tracer.diagnostics))[1]).toBe(1);
+    const {result, accepted} = await finish(tracer, 1);
+    expect(result.active).toBe(1);
+    expect(result.numericalFailure).toBe(0);
+    expect(accepted).toBe(1);
+    expect((await read(tracer.output))[2]).toBe(66);
+  } finally {
+    tracer.destroy();
+  }
+});
