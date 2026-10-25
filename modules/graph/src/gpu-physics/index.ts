@@ -122,3 +122,10 @@ export {ScenegraphPhysicsPublication} from './scenegraph-publication';
 export type {ScenegraphPhysicsRenderBinding} from './scenegraph-publication';
 export {ScenegraphPhysicsSession} from './scenegraph-session';
 export type {ScenegraphPhysicsScene, ScenegraphPhysicsSessionCapture} from './scenegraph-session';
+
+export {GPUPhysicsBatch} from './gpu-physics-batch';
+export type {
+  GPUPhysicsBatchProps,
+  GPUPhysicsWorldHandle,
+  GPUPhysicsStreamedWorld
+} from './gpu-physics-batch';

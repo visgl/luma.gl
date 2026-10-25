@@ -15,6 +15,7 @@ import {
   GPUCommandGraph,
   type GPUCommandGraphComputeExecutable
 } from '../gpu-core/gpu-command-graph';
+import {shiftRigidBodyBuffers} from './rigid-body-origin';
 import {getRigidBodyShapeProperties} from './rigid-body-shape-properties';
 import {packRigidBodyShapes} from './rigid-body-geometry';
 import {
@@ -81,6 +82,9 @@ import {
 /** In-memory, structured-cloneable debug capture; tied to this implementation's storage layout. */
 export type GPURigidBodyCapture = {
   version: 1;
+  origin?: [number, number, number];
+  /** False omits temporary rollback buffers, rebuilt before the next step. */
+  includeRollbackScratch?: boolean;
   props: GPURigidBodyWorldProps;
   buffers: {name: string; data: Uint8Array}[];
   contactCursor: number;
@@ -178,6 +182,7 @@ export type GPURigidBodyGPUCheckpoint = {
 };
 
 export class GPURigidBodyWorld {
+  private worldOrigin: [number, number, number] = [0, 0, 0];
   readonly id: string;
   readonly count: number;
   readonly timeStep: number;
@@ -1497,6 +1502,40 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     this.invalidation!.dispatch(pass, Math.min(65535, workgroups), Math.ceil(workgroups / 65535));
   }
 
+  /** Double-precision global origin. GPU poses, controls, queries and event points are local. */
+  get origin(): readonly [number, number, number] {
+    return [...this.worldOrigin];
+  }
+
+  /** Rebase between submissions, preserving velocities, contact impulses and sleeping state. */
+  shiftOrigin(shift: Vector3): void {
+    if (!this.device || this.destroyed || this.queryPending || this.eventRead || this.triggerRead)
+      throw new Error('Origin shifting requires an idle attached world');
+    // Exact float32 shifts keep the CPU origin and GPU subtraction consistent.
+    if (
+      shift.length !== 3 ||
+      shift.some(value => !Number.isFinite(value) || Math.fround(value) !== value)
+    )
+      throw new Error('Origin shift must be an exactly representable float32 vector');
+    if (shift.every(value => value === 0)) return;
+    shiftRigidBodyBuffers(
+      this.device,
+      this.id,
+      this.ownedBuffers,
+      this.count,
+      this.colliderStorageCount,
+      this.maximumPairs,
+      this.props.eventCapacity ?? 0,
+      shift
+    );
+    this.worldOrigin = this.worldOrigin.map((value, axis) => value + shift[axis]) as [
+      number,
+      number,
+      number
+    ];
+    this.publishPoses();
+  }
+
   /** Inspect the declared motion mode without exposing mutable world configuration. */
   getBodyMode(body: number): 'static' | 'dynamic' | 'kinematic' | undefined {
     const definition = this.props.bodies[body];
@@ -2243,19 +2282,28 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     return this.triggerRead;
   }
 
+  private getSnapshotBuffers(includeRollbackScratch = true): Buffer[] {
+    return this.ownedBuffers.filter(
+      buffer => includeRollbackScratch || !buffer.id.startsWith(`${this.id}-checkpoint-`)
+    );
+  }
+
   /** Reusable same-world GPU checkpoint; copies state without CPU pose or buffer readback. */
-  createGPUCheckpoint(): GPURigidBodyGPUCheckpoint {
+  createGPUCheckpoint(options: {includeRollbackScratch?: boolean} = {}): GPURigidBodyGPUCheckpoint {
     if (!this.device || this.destroyed) throw new Error('Checkpoint requires an attached world');
     const device = this.device;
+    // Rollback scratch is overwritten at the start of every step, before it can be restored.
+    const checkpointBuffers = this.getSnapshotBuffers(options.includeRollbackScratch);
     const snapshots: Buffer[] = [];
     let released = false;
     let saved = false;
+    let origin = [...this.worldOrigin] as [number, number, number];
     let joints = structuredClone(this.props.joints);
     let bodyDefinitions = structuredClone(this.props.bodies);
     let contactCursor = 0;
     let triggerCursor = 0;
     try {
-      for (const buffer of this.ownedBuffers)
+      for (const buffer of checkpointBuffers)
         snapshots.push(
           device.createBuffer({
             id: `${buffer.id}-recovery`,
@@ -2271,7 +2319,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       if (released || this.destroyed || this.queryPending || this.eventRead || this.triggerRead)
         throw new Error('Checkpoint requires an idle live world');
       const encoder = device.createCommandEncoder();
-      for (const [index, buffer] of this.ownedBuffers.entries())
+      for (const [index, buffer] of checkpointBuffers.entries())
         encoder.copyBufferToBuffer({
           sourceBuffer: restore ? snapshots[index] : buffer,
           destinationBuffer: restore ? buffer : snapshots[index],
@@ -2285,6 +2333,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       byteLength: snapshots.reduce((sum, buffer) => sum + buffer.byteLength, 0),
       save: () => {
         copy(false);
+        origin = [...this.worldOrigin];
         joints = structuredClone(this.props.joints);
         bodyDefinitions = structuredClone(this.props.bodies);
         shapeScales = structuredClone(this.colliderShapeScales);
@@ -2296,6 +2345,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       restore: () => {
         if (!saved) throw new Error('Checkpoint has not been saved');
         copy(true);
+        this.worldOrigin = [...origin];
         this.props.joints = structuredClone(joints);
         this.props.bodies = structuredClone(bodyDefinitions);
         this.restoreColliderDefinitions();
@@ -2316,17 +2366,21 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
   }
 
   /** Stop graph submissions and controls first; includes diagnostics, caches and event history. */
-  async captureState(): Promise<GPURigidBodyCapture> {
+  async captureState(
+    options: {includeRollbackScratch?: boolean} = {}
+  ): Promise<GPURigidBodyCapture> {
     if (!this.device || this.destroyed || this.queryPending || this.eventRead || this.triggerRead)
       throw new Error('Capture requires an idle attached world');
     return {
       version: 1,
+      origin: [...this.worldOrigin],
+      includeRollbackScratch: options.includeRollbackScratch !== false,
       props: structuredClone(this.props),
       colliderShapeScales: structuredClone([...this.colliderShapeScales]),
       contactCursor: this.eventCursor,
       triggerCursor: this.triggerCursor,
       buffers: await Promise.all(
-        this.ownedBuffers.map(async buffer => ({
+        this.getSnapshotBuffers(options.includeRollbackScratch).map(async buffer => ({
           name: buffer.id.slice(this.id.length + 1),
           data: new Uint8Array(await buffer.readAsync())
         }))
@@ -2336,6 +2390,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
 
   /** Restore between submissions on the same configuration and implementation; no implicit wake. */
   restoreState(capture: GPURigidBodyCapture): void {
+    const checkpointBuffers = this.getSnapshotBuffers(capture.includeRollbackScratch);
     if (
       !this.device ||
       this.destroyed ||
@@ -2343,7 +2398,9 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       this.eventRead ||
       this.triggerRead ||
       capture.version !== 1 ||
-      capture.buffers.length !== this.ownedBuffers.length ||
+      (capture.origin !== undefined &&
+        (capture.origin.length !== 3 || !capture.origin.every(Number.isFinite))) ||
+      capture.buffers.length !== checkpointBuffers.length ||
       serializeCaptureProps(capture.props) !== serializeCaptureProps(this.props) ||
       ![capture.contactCursor, capture.triggerCursor].every(
         value => Number.isInteger(value) && value >= 0 && value <= 0xffffffff
@@ -2357,7 +2414,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
         throw new Error('Invalid captured collider scale');
     }
     // Validate every allocation before writing any state. Captures are trusted debug artifacts.
-    for (const [index, buffer] of this.ownedBuffers.entries()) {
+    for (const [index, buffer] of checkpointBuffers.entries()) {
       const saved = capture.buffers[index];
       if (
         saved.name !== buffer.id.slice(this.id.length + 1) ||
@@ -2366,13 +2423,14 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       )
         throw new Error('Incompatible rigid-body capture storage');
     }
-    for (const [index, buffer] of this.ownedBuffers.entries())
+    for (const [index, buffer] of checkpointBuffers.entries())
       buffer.write(capture.buffers[index].data);
     this.props.joints = structuredClone(capture.props.joints);
     this.props.bodies = structuredClone(capture.props.bodies);
     this.props.publicationBounds = structuredClone(capture.props.publicationBounds);
     this.restoreColliderDefinitions();
     this.colliderShapeScales = structuredClone(shapeScales);
+    this.worldOrigin = [...(capture.origin ?? [0, 0, 0])];
     this.eventCursor = capture.contactCursor;
     this.triggerCursor = capture.triggerCursor;
   }
